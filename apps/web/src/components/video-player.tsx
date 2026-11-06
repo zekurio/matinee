@@ -1,4 +1,5 @@
 import { Slider } from "@base-ui/react/slider"
+import type { Subtitles } from "@matinee/contracts"
 import { Spinner } from "@matinee/ui/components/spinner"
 import { cn } from "@matinee/ui/lib/utils"
 import {
@@ -16,11 +17,15 @@ import {
 import {
   type FocusEvent,
   type ReactNode,
+  type Ref,
   useCallback,
   useEffect,
   useRef,
   useState,
 } from "react"
+
+import { SubtitlesMenu } from "./subtitles-menu"
+import { useSubtitles } from "./use-subtitles"
 
 const IDLE_MS = 2500
 const SKIP_S = 10
@@ -54,6 +59,9 @@ function useIdle(ms: number): boolean {
   return idle
 }
 
+const controlButtonClass =
+  "grid size-10 shrink-0 place-items-center rounded-full text-white outline-none transition-colors hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white [@media(pointer:coarse)]:size-11 [&_svg]:size-5"
+
 function ControlButton({
   label,
   onClick,
@@ -71,10 +79,7 @@ function ControlButton({
       aria-label={label}
       title={label}
       onClick={onClick}
-      className={cn(
-        "grid size-10 shrink-0 place-items-center rounded-full text-white outline-none transition-colors hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white [@media(pointer:coarse)]:size-11 [&_svg]:size-5",
-        className,
-      )}
+      className={cn(controlButtonClass, className)}
     >
       {children}
     </button>
@@ -96,6 +101,7 @@ function SkipIcon({ direction }: { direction: "back" | "forward" }) {
 
 /** The track used for seeking and volume: white on translucent white. */
 function MediaSlider({
+  ref,
   label,
   value,
   max,
@@ -106,6 +112,7 @@ function MediaSlider({
   onCommit,
   className,
 }: {
+  ref?: Ref<HTMLDivElement>
   label: string
   value: number
   max: number
@@ -119,6 +126,7 @@ function MediaSlider({
   const safeMax = max > 0 ? max : 1
   return (
     <Slider.Root
+      ref={ref}
       value={Math.min(value, safeMax)}
       min={0}
       max={safeMax}
@@ -154,10 +162,6 @@ function MediaSlider({
   )
 }
 
-/**
- * Full-screen player with themed controls. Space or K plays and pauses,
- * arrows or J/L skip ten seconds, M mutes, F toggles full screen.
- */
 export type ProgressReport = {
   positionSeconds: number
   durationSeconds?: number
@@ -167,10 +171,17 @@ export type ProgressReport = {
 
 const REPORT_EVERY_MS = 10_000
 
+/**
+ * Full-screen player with themed controls. Space or K plays and pauses,
+ * arrows or J/L skip ten seconds, M mutes, F toggles full screen, C turns
+ * subtitles on and off.
+ */
 export function VideoPlayer({
   src,
   title,
   subtitle,
+  subtitles,
+  subtitleSrc,
   startAt,
   onBack,
   onUnsupported,
@@ -180,6 +191,10 @@ export function VideoPlayer({
   src: string
   title: string
   subtitle: string
+  /** The file's subtitle tracks. Undefined while they load. */
+  subtitles?: Subtitles
+  /** Where a subtitle track's WebVTT loads from. */
+  subtitleSrc: (trackId: string) => string
   /** Seconds to resume from once the video can seek. */
   startAt?: number
   onBack: () => void
@@ -191,6 +206,7 @@ export function VideoPlayer({
 }) {
   const container = useRef<HTMLDivElement>(null)
   const video = useRef<HTMLVideoElement>(null)
+  const controls = useRef<HTMLDivElement>(null)
   // The latest callback, read by the timer and unmount report.
   const progressRef = useRef(onProgress)
   useEffect(() => {
@@ -232,9 +248,12 @@ export function VideoPlayer({
   const [muted, setMuted] = useState(false)
   const [fullscreen, setFullscreen] = useState(false)
   const idle = useIdle(IDLE_MS)
-  // Controls never hide while they hold keyboard focus.
+  // Controls never hide while they hold keyboard focus or a menu is open.
   const [focused, setFocused] = useState(false)
-  const hidden = idle && playing && scrub === null && !focused
+  const [menuOpen, setMenuOpen] = useState(false)
+  const hidden = idle && playing && scrub === null && !focused && !menuOpen
+  const subs = useSubtitles(subtitles, video, controls, !hidden)
+  const toggleSubtitles = subs.toggle
   const focusHandlers = {
     onFocus: () => setFocused(true),
     onBlur: (event: FocusEvent<HTMLElement>) => {
@@ -271,8 +290,13 @@ export function VideoPlayer({
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       const target = event.target instanceof Element ? event.target : null
-      // Sliders and buttons handle their own keys.
-      if (target?.closest('[role="slider"], input, textarea')) return
+      // Sliders, buttons, and open menus handle their own keys.
+      if (
+        target?.closest(
+          '[role="slider"], [role="menu"], [role="dialog"], input, textarea',
+        )
+      )
+        return
       if (event.metaKey || event.ctrlKey || event.altKey) return
       const back = () => skip(-SKIP_S)
       const ahead = () => skip(SKIP_S)
@@ -285,6 +309,7 @@ export function VideoPlayer({
         ["l", ahead],
         ["m", toggleMute],
         ["f", toggleFullscreen],
+        ["c", toggleSubtitles],
       ])
       const action = actions.get(event.key)
       if (!action) return
@@ -294,7 +319,7 @@ export function VideoPlayer({
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-  }, [toggle, skip, toggleMute, toggleFullscreen])
+  }, [toggle, skip, toggleMute, toggleFullscreen, toggleSubtitles])
 
   const VolumeIcon =
     muted || volume === 0
@@ -313,7 +338,6 @@ export function VideoPlayer({
       )}
     >
       {/* Clicks on the picture play and pause; keyboard users have Space. */}
-      {/* oxlint-disable-next-line jsx-a11y/media-has-caption -- subtitles arrive with metadata */}
       <video
         ref={video}
         src={src}
@@ -361,7 +385,18 @@ export function VideoPlayer({
             onUnsupported()
           }
         }}
-      />
+      >
+        {subs.current && (
+          <track
+            key={subs.current.id}
+            data-track-id={subs.current.id}
+            kind="subtitles"
+            src={subtitleSrc(subs.current.id)}
+            srcLang={subs.current.language ?? undefined}
+            label={subs.current.label}
+          />
+        )}
+      </video>
 
       {waiting && (
         <div className="pointer-events-none absolute inset-0 grid place-items-center">
@@ -397,6 +432,7 @@ export function VideoPlayer({
         )}
       >
         <MediaSlider
+          ref={controls}
           label="Seek"
           value={shown}
           max={duration}
@@ -454,13 +490,25 @@ export function VideoPlayer({
           <span className="ml-2 text-[13px] text-white/80 tabular-nums">
             {formatTime(shown)} / {formatTime(duration)}
           </span>
-          <ControlButton
-            label={fullscreen ? "Exit full screen" : "Full screen"}
-            onClick={toggleFullscreen}
-            className="ml-auto"
-          >
-            {fullscreen ? <MinimizeIcon /> : <MaximizeIcon />}
-          </ControlButton>
+          <div className="ml-auto flex items-center gap-1">
+            {subs.tracks.length > 0 && (
+              <SubtitlesMenu
+                tracks={subs.tracks}
+                selectedId={subs.selected}
+                loading={subs.loading}
+                onSelect={subs.select}
+                onOpenChange={setMenuOpen}
+                container={container}
+                triggerClassName={controlButtonClass}
+              />
+            )}
+            <ControlButton
+              label={fullscreen ? "Exit full screen" : "Full screen"}
+              onClick={toggleFullscreen}
+            >
+              {fullscreen ? <MinimizeIcon /> : <MaximizeIcon />}
+            </ControlButton>
+          </div>
         </div>
       </div>
     </div>

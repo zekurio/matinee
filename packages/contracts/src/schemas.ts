@@ -251,6 +251,41 @@ export const MediaItem = z.object({
 })
 export type MediaItem = z.infer<typeof MediaItem>
 
+export const SUBTITLE_SOURCES = ["sidecar", "embedded"] as const
+/** A file next to the video, or a stream inside it. */
+export const SubtitleSource = z.enum(SUBTITLE_SOURCES)
+export type SubtitleSource = z.infer<typeof SubtitleSource>
+
+/** A subtitle track of a file. Load it as WebVTT from `subtitlePath()`. */
+export const SubtitleTrack = z.object({
+  id: z.string(),
+  /** The language, plus the track's own title if it has one. */
+  label: z.string(),
+  /** BCP 47 tag, like `en` or `pt-BR`. Null when the file doesn't say. */
+  language: z.string().nullable(),
+  /** Translates only foreign dialogue and signs. */
+  forced: z.boolean(),
+  /** Also describes sounds, for deaf and hard of hearing viewers (SDH, CC). */
+  sdh: z.boolean(),
+  /** The file marks it as the track to show by default. */
+  default: z.boolean(),
+  source: SubtitleSource,
+  /**
+   * False for picture-based subtitles (PGS, VobSub, DVB), which can't be
+   * shown without burning them into the video.
+   */
+  available: z.boolean(),
+})
+export type SubtitleTrack = z.infer<typeof SubtitleTrack>
+
+export const Subtitles = z.object({
+  /** Files next to the video first, then streams in file order. */
+  tracks: z.array(SubtitleTrack),
+  /** Language of the audio that plays first, for picking forced tracks. */
+  audioLanguage: z.string().nullable(),
+})
+export type Subtitles = z.infer<typeof Subtitles>
+
 export const ShelfEntry = z.object({
   title: TitleSummary,
   /** The title's first file, which Play starts. */

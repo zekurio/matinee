@@ -3,14 +3,20 @@ import { spawn } from "node:child_process"
 const PROCESS_TIMEOUT_MS = 30_000
 
 /** Run a command and resolve with its stdout, or reject with its stderr. */
-export function run(command: string, args: string[]): Promise<string> {
+export function run(
+  command: string,
+  args: string[],
+  timeoutMs = PROCESS_TIMEOUT_MS,
+): Promise<string> {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, { stdio: ["ignore", "pipe", "pipe"] })
     let stdout = ""
     let stderr = ""
-    child.stdout.on("data", (chunk: Buffer) => (stdout += chunk.toString()))
+    // Decoding in the stream keeps characters split across chunks whole.
+    child.stdout.setEncoding("utf8")
+    child.stdout.on("data", (chunk: string) => (stdout += chunk))
     child.stderr.on("data", (chunk: Buffer) => (stderr += chunk.toString()))
-    const timer = setTimeout(() => child.kill("SIGKILL"), PROCESS_TIMEOUT_MS)
+    const timer = setTimeout(() => child.kill("SIGKILL"), timeoutMs)
     child.on("error", (error) => {
       clearTimeout(timer)
       reject(error)

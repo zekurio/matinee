@@ -100,6 +100,24 @@ Providers live in `apps/server/src/metadata`. Adding one means implementing
 `MetadataSource` in `types.ts`, listing it in `sources.ts`, and adding its id
 to `METADATA_PROVIDERS` in the contract.
 
+## Subtitles
+
+The player shows subtitle files beside a video and text subtitles inside it.
+
+- Files: `Movie.srt`, `Movie.en.srt`, `Movie.eng.forced.srt`,
+  `Movie.de.sdh.srt`, also `.vtt`, `.ass`, and `.ssa`, in the video's folder or
+  a `Subs` or `Subtitles` folder next to it. Release packs with
+  `Subs/<video name>/2_English.srt` work too. A scan picks them up.
+- Streams: SubRip, ASS/SSA, mov_text, and WebVTT inside the file. The first
+  time someone turns one on, ffmpeg extracts it into
+  `$MATINEE_DATA_DIR/subtitles`, where it stays until the file changes.
+- Browsers get WebVTT. ASS and SSA lose their styling on the way.
+
+A file starts with the viewer's last language if they had subtitles on, else a
+forced track in the audio's language, else a track the file marks default.
+The player remembers the last choice, a language or Off, for the next file.
+Press C to toggle subtitles.
+
 ## Running in production
 
 ```sh
@@ -132,6 +150,8 @@ Until the first account exists, the server logs a setup token. Enter it on
 
 - Transcoding and remuxing. MKV, AVI, and HEVC files only play where the
   browser supports them.
+- Picture subtitles (PGS, VobSub, DVB), which need burning in. The player
+  lists them as unavailable. ASS and SSA play without their styling.
 - Metadata from NFO files and local artwork, absolute episode numbering for
   anime, and provider keys set in admin settings instead of the environment.
 - User management for admins, and a sign-in flow that hands tokens to TV and

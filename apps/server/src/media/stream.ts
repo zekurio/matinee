@@ -8,7 +8,9 @@ import { Hono } from "hono"
 
 import { readSession } from "../auth/session"
 import { db } from "../db"
+import { ifNoneMatchSatisfied } from "./http-conditional"
 import { mimeType } from "./mime"
+import { openSubtitle } from "./subtitles"
 import { thumbnailFor } from "./thumbnails"
 
 const RANGE = /^bytes=(\d*)-(\d*)$/
@@ -61,6 +63,31 @@ streamRoutes.get("/:id/thumbnail", async (c) => {
       "Cache-Control": "private, max-age=86400",
     },
   )
+})
+
+streamRoutes.get("/:id/subtitles/:trackId", async (c) => {
+  if (!(await readSession(c))) return c.body(null, 401)
+  const id = c.req.param("id")
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return c.body(null, 404)
+
+  const [item] = await db.select().from(mediaItem).where(eq(mediaItem.id, id))
+  if (!item) return c.body(null, 404)
+  const track = await openSubtitle(item, c.req.param("trackId"))
+  if (!track) return c.body(null, 404)
+  // The URL stays the same when the file changes, so check every time.
+  const headers = {
+    "Cache-Control": "private, no-cache",
+    ETag: track.etag,
+  }
+  if (ifNoneMatchSatisfied(c.req.header("if-none-match"), track.etag)) {
+    return c.body(null, 304, headers)
+  }
+  const text = await track.read()
+  if (text === null) return c.body(null, 404)
+  return c.body(text, 200, {
+    ...headers,
+    "Content-Type": "text/vtt; charset=utf-8",
+  })
 })
 
 streamRoutes.on(["GET", "HEAD"], "/:id/stream", async (c) => {
