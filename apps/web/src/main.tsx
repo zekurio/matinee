@@ -18,7 +18,13 @@ const router = createRouter({
 sessionLost.handler = () => {
   queryClient.setQueryData(orpc.auth.session.queryKey(), { user: null })
   const { pathname, href } = router.state.location
-  if (pathname === "/login" || pathname === "/setup") return
+  if (
+    pathname === "/login" ||
+    pathname === "/setup" ||
+    pathname.startsWith("/invite/")
+  ) {
+    return
+  }
   void router.navigate({ to: "/login", search: { redirect: href } })
 }
 

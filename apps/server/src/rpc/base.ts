@@ -18,11 +18,14 @@ export const authed = pub.use(async ({ context, next }) => {
 })
 
 export const admin = authed.use(async ({ context, next }) => {
-  if (context.user.role !== "admin") {
-    throw new ORPCError("FORBIDDEN", { message: "Only admins can do this." })
-  }
+  if (context.user.role !== "admin") throw forbidden()
   return next()
 })
+
+/** What a user who isn't an admin gets for an admin procedure. */
+export function forbidden(): ORPCError<"FORBIDDEN", unknown> {
+  return new ORPCError("FORBIDDEN", { message: "Only admins can do this." })
+}
 
 export function badRequest(message: string): ORPCError<"BAD_REQUEST", unknown> {
   return new ORPCError("BAD_REQUEST", { message })
