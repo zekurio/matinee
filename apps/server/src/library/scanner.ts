@@ -7,6 +7,7 @@ import { and, eq, inArray, isNull, lt, sql } from "drizzle-orm"
 import { db } from "../db"
 import { log } from "../log"
 import { videoContainer } from "../media/mime"
+import { probeLibrary } from "../media/probe"
 import { titleFromFilename } from "../media/title"
 import { refreshLibrary } from "../metadata/refresh"
 import { syncSubtitles } from "./subtitles"
@@ -101,6 +102,8 @@ async function flush(
         sizeBytes: sql`excluded.size_bytes`,
         modifiedAt: sql`excluded.modified_at`,
         seenAt: sql`excluded.seen_at`,
+        // A file that changed gets probed again.
+        probedAt: sql`case when ${mediaItem.sizeBytes} = excluded.size_bytes and ${mediaItem.modifiedAt} = excluded.modified_at then ${mediaItem.probedAt} else null end`,
       },
     })
 }
@@ -167,7 +170,7 @@ export function isScanning(libraryId: string): boolean {
 
 /**
  * Start a scan unless one is already running. Resolves when it ends; the
- * metadata refresh it starts afterwards runs on its own.
+ * metadata refresh and media probes it starts afterwards run on their own.
  */
 export function scanLibrary(libraryId: string): Promise<void> {
   const existing = running.get(libraryId)
@@ -175,8 +178,10 @@ export function scanLibrary(libraryId: string): Promise<void> {
   const scan = (async () => {
     try {
       await runScan(libraryId)
-      // Metadata runs on its own; the scan is over once the files are in.
+      // Metadata and probes run on their own; the scan is over once the
+      // files are in.
       void refreshLibrary(libraryId)
+      void probeLibrary(libraryId)
     } catch (cause) {
       log.error(`Scan of library ${libraryId} failed`, cause)
     } finally {
@@ -189,7 +194,8 @@ export function scanLibrary(libraryId: string): Promise<void> {
 
 /**
  * On start: scan libraries with files from before titles existed, and
- * refresh metadata that went stale while the server was down.
+ * refresh metadata that went stale and probe files that weren't probed
+ * while the server was down.
  */
 export async function catchUpLibraries(): Promise<void> {
   const untitled = await db
@@ -199,6 +205,9 @@ export async function catchUpLibraries(): Promise<void> {
   const toScan = new Set(untitled.map((row) => row.libraryId))
   for (const { id } of await db.select({ id: library.id }).from(library)) {
     if (toScan.has(id)) void scanLibrary(id)
-    else void refreshLibrary(id)
+    else {
+      void refreshLibrary(id)
+      void probeLibrary(id)
+    }
   }
 }

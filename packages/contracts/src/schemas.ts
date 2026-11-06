@@ -107,6 +107,28 @@ export const OidcAccount = z.object({
 })
 export type OidcAccount = z.infer<typeof OidcAccount>
 
+/**
+ * What a sign-in link an admin made is for: `invite` is the first sign-in of
+ * a new account, `recovery` adds a passkey to one that lost its own.
+ */
+export const INVITE_KINDS = ["invite", "recovery"] as const
+export const InviteKind = z.enum(INVITE_KINDS)
+export type InviteKind = z.infer<typeof InviteKind>
+
+/** The secret part of an invite or recovery link: 32 random bytes. */
+export const InviteToken = z
+  .string()
+  .regex(/^[A-Za-z0-9_-]{43}$/, "This link is incomplete. Copy the whole link.")
+
+/** What the person opening a link sees before they use it. */
+export const Invite = z.object({
+  kind: InviteKind,
+  username: z.string(),
+  displayName: z.string().nullable(),
+  expiresAt: z.date(),
+})
+export type Invite = z.infer<typeof Invite>
+
 export const LIBRARY_KINDS = ["movies", "shows", "other"] as const
 export const LibraryKind = z.enum(LIBRARY_KINDS)
 export type LibraryKind = z.infer<typeof LibraryKind>
@@ -226,6 +248,96 @@ export const EpisodeInfo = z.object({
 })
 export type EpisodeInfo = z.infer<typeof EpisodeInfo>
 
+/** Stream index in the file, as `ffmpeg -map 0:<index>` takes it. */
+const StreamIndex = z.number().int().nonnegative()
+
+/** ISO 639-2 code from the file, like `eng` or `ger`. Null when unset. */
+const StreamLanguage = z.string().nullable()
+
+export const HDR_FORMATS = ["hdr10", "hlg", "dolby-vision"] as const
+export const HdrFormat = z.enum(HDR_FORMATS)
+export type HdrFormat = z.infer<typeof HdrFormat>
+
+/**
+ * `text` subtitles (SubRip, ASS, WebVTT, ...) convert to WebVTT. `bitmap`
+ * ones (PGS, VobSub, DVB) are pictures that only burning in can show.
+ */
+export const SUBTITLE_KINDS = ["text", "bitmap"] as const
+export const SubtitleKind = z.enum(SUBTITLE_KINDS)
+export type SubtitleKind = z.infer<typeof SubtitleKind>
+
+export const VideoStream = z.object({
+  index: StreamIndex,
+  /** ffmpeg's codec name, like `h264`, `hevc`, or `av1`. */
+  codec: z.string(),
+  /** Such as `High` or `Main 10`. */
+  profile: z.string().nullable(),
+  /** As ffprobe reports it: 41 for H.264 level 4.1, 120 for HEVC 4. */
+  level: z.number().int().nullable(),
+  width: z.number().int(),
+  height: z.number().int(),
+  /** Average frames per second. */
+  frameRate: z.number().nullable(),
+  /** Such as `yuv420p` or `yuv420p10le`. */
+  pixelFormat: z.string().nullable(),
+  bitDepth: z.number().int().nullable(),
+  /** Such as `bt709`, `smpte2084` (PQ), or `arib-std-b67` (HLG). */
+  colorTransfer: z.string().nullable(),
+  /** Null for SDR. HDR10+ isn't detected; it reads as `hdr10`. */
+  hdr: HdrFormat.nullable(),
+  /** Dolby Vision profile, like 5, 7, or 8. */
+  dolbyVisionProfile: z.number().int().nullable(),
+})
+export type VideoStream = z.infer<typeof VideoStream>
+
+export const AudioStream = z.object({
+  index: StreamIndex,
+  /** ffmpeg's codec name, like `aac`, `eac3`, `truehd`, or `dts`. */
+  codec: z.string(),
+  /** Such as `LC`, `DTS-HD MA`, or `Dolby TrueHD + Dolby Atmos`. */
+  profile: z.string().nullable(),
+  channels: z.number().int().nullable(),
+  /** Such as `stereo` or `5.1(side)`. */
+  channelLayout: z.string().nullable(),
+  language: StreamLanguage,
+  title: z.string().nullable(),
+  default: z.boolean(),
+})
+export type AudioStream = z.infer<typeof AudioStream>
+
+export const SubtitleStream = z.object({
+  index: StreamIndex,
+  /** ffmpeg's codec name, like `subrip`, `ass`, or `hdmv_pgs_subtitle`. */
+  codec: z.string(),
+  /** Null for codecs that are neither, such as teletext. */
+  kind: SubtitleKind.nullable(),
+  language: StreamLanguage,
+  title: z.string().nullable(),
+  default: z.boolean(),
+  forced: z.boolean(),
+  /** SDH: also describes sounds, for deaf and hard of hearing viewers. */
+  hearingImpaired: z.boolean(),
+})
+export type SubtitleStream = z.infer<typeof SubtitleStream>
+
+/** What ffprobe read from a file. */
+export const MediaProbe = z.object({
+  format: z.object({
+    /** ffmpeg's demuxer names, like `matroska,webm` or `mov,mp4,m4a,3gp,3g2,mj2`. */
+    name: z.string(),
+    durationSeconds: z.number().nullable(),
+    /** Overall bits per second. */
+    bitRate: z.number().int().nullable(),
+  }),
+  /** The main video stream, without cover art. Null in audio-only files. */
+  video: VideoStream.nullable(),
+  /** In file order. */
+  audio: z.array(AudioStream),
+  /** In file order. */
+  subtitles: z.array(SubtitleStream),
+})
+export type MediaProbe = z.infer<typeof MediaProbe>
+
 export const MediaItem = z.object({
   id: z.uuid(),
   libraryId: z.uuid(),
@@ -246,6 +358,8 @@ export const MediaItem = z.object({
   modifiedAt: z.date(),
   /** Null until the server or a player has measured it. */
   durationSeconds: z.number().nullable(),
+  /** Streams and container. Null until probed, or when ffprobe couldn't read the file. */
+  probe: MediaProbe.nullable(),
   /** Null when the signed-in user hasn't started it. */
   progress: WatchState.nullable(),
 })

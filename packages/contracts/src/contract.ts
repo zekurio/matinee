@@ -1,12 +1,20 @@
 import { oc } from "@orpc/contract"
 import { z } from "zod"
 
-import { AdminAuthSettings, OidcSettingsInput } from "./admin"
+import {
+  AdminAuthSettings,
+  AdminUser,
+  CreateUserInput,
+  IssuedLink,
+  OidcSettingsInput,
+} from "./admin"
 import {
   AuthConfig,
   AuthenticationResponse,
   DirectoryListing,
   IdInput,
+  Invite,
+  InviteToken,
   Library,
   LibraryInput,
   MediaItem,
@@ -24,6 +32,7 @@ import {
   TitleSummary,
   User,
   Username,
+  UserRole,
 } from "./schemas"
 
 /**
@@ -54,6 +63,26 @@ export const contract = {
       signUp: oc
         .input(
           z.object({ challengeId: z.uuid(), response: RegistrationResponse }),
+        )
+        .output(User),
+    },
+    /**
+     * Invite and recovery links an admin made. The token from the link
+     * stands in for a session: it adds a passkey to its account and signs
+     * in, once. The OIDC route takes it too, see `OIDC_INVITE_PATH`.
+     */
+    invite: {
+      get: oc.input(z.object({ token: InviteToken })).output(Invite),
+      registerOptions: oc
+        .input(z.object({ token: InviteToken }))
+        .output(PasskeyCreation),
+      register: oc
+        .input(
+          z.object({
+            token: InviteToken,
+            challengeId: z.uuid(),
+            response: RegistrationResponse,
+          }),
         )
         .output(User),
     },
@@ -199,6 +228,19 @@ export const contract = {
     setWatched: oc
       .input(z.object({ itemId: z.uuid(), watched: z.boolean() }))
       .output(z.void()),
+    /**
+     * Mark every file of a title watched or unwatched. `season` narrows to
+     * one season as in `titles.items`; null picks the files without one.
+     */
+    setTitleWatched: oc
+      .input(
+        z.object({
+          titleId: z.uuid(),
+          season: z.number().int().min(0).nullable().optional(),
+          watched: z.boolean(),
+        }),
+      )
+      .output(z.void()),
   },
   home: {
     /** Files the user started and didn't finish, most recent first. */
@@ -219,6 +261,34 @@ export const contract = {
       get: oc.output(AdminAuthSettings),
       /** Save the OIDC provider. Applies to the next sign-in, no restart. */
       updateOidc: oc.input(OidcSettingsInput).output(AdminAuthSettings),
+    },
+    /**
+     * Accounts. The server keeps at least one admin who can sign in, so
+     * demoting or deleting the last one fails.
+     */
+    users: {
+      /** Everyone, oldest account first. */
+      list: oc.output(z.array(AdminUser)),
+      /** Create an account and the invite link its owner signs in with. */
+      create: oc
+        .input(CreateUserInput)
+        .output(IssuedLink.extend({ user: AdminUser })),
+      /** Takes effect on the user's next request. */
+      setRole: oc
+        .input(z.object({ id: z.uuid(), role: UserRole }))
+        .output(AdminUser),
+      /** Delete the account with its sessions, passkeys, and progress. */
+      remove: oc.input(IdInput).output(z.void()),
+      /** End the user's sessions. Yours keeps the one making the call. */
+      signOut: oc.input(IdInput).output(z.object({ ended: z.number().int() })),
+      links: {
+        /**
+         * A new sign-in link: an invite while the account has no way to
+         * sign in, recovery after. Replaces the user's earlier links.
+         */
+        create: oc.input(z.object({ userId: z.uuid() })).output(IssuedLink),
+        revoke: oc.input(IdInput).output(z.void()),
+      },
     },
   },
 }

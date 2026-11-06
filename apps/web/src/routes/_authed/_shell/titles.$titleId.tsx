@@ -4,6 +4,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@matinee/ui/components/dropdown-menu"
 import { Skeleton } from "@matinee/ui/components/skeleton"
@@ -27,7 +28,18 @@ import {
   IdentifyDialog,
   invalidateTitleData,
 } from "@/components/identify-dialog"
-import { Picture, Thumb, tone } from "@/components/media-item"
+import {
+  Picture,
+  StreamLine,
+  Thumb,
+  tone,
+  WatchedBadge,
+} from "@/components/media-item"
+import {
+  ItemMenu,
+  useSetTitleWatched,
+  WatchedMenuItems,
+} from "@/components/watched-menu"
 import { formatBytes, formatDate } from "@/lib/format"
 import {
   art,
@@ -276,7 +288,7 @@ function TitleHeader({ title }: { title: Title }) {
 
           <div className="mt-6 flex items-center gap-2">
             <PlayButton title={title} />
-            <AdminMenu title={title} />
+            <TitleMenu title={title} />
           </div>
           <MatchNote title={title} />
         </div>
@@ -343,11 +355,39 @@ function useLibraryProvider(libraryId: string) {
   return id ? (providers.data?.find((p) => p.id === id) ?? null) : null
 }
 
-/** Fix match and refresh, for admins in libraries with a provider. */
-function AdminMenu({ title }: { title: Title }) {
+/**
+ * How many of the title's files are watched, and whether any is watched or
+ * in progress. Shows count by season; movies and folders load their files,
+ * which the page lists anyway.
+ */
+function useTitleProgress(title: Title) {
+  const items = useQuery({
+    ...orpc.titles.items.queryOptions({ input: { id: title.id } }),
+    enabled: title.kind !== "show",
+  })
+  if (title.kind === "show") {
+    const watched = title.seasons.reduce((n, s) => n + s.watchedCount, 0)
+    // Next is the file in progress, if there is one.
+    return { watched, started: watched > 0 || title.next?.progress != null }
+  }
+  const files = items.data ?? []
+  return {
+    watched: files.filter((item) => item.progress?.completed).length,
+    started: files.some((item) => item.progress !== null),
+  }
+}
+
+/**
+ * Mark watched for everyone. Admins in libraries with a provider also get
+ * fix match and refresh.
+ */
+function TitleMenu({ title }: { title: Title }) {
   const { user } = Route.useRouteContext()
   const queryClient = useQueryClient()
   const provider = useLibraryProvider(title.libraryId)
+  const progress = useTitleProgress(title)
+  const setWatched = useSetTitleWatched()
+  const pinSeason = usePinSeason(title)
   const [identifying, setIdentifying] = useState(false)
   const refresh = useMutation({
     mutationFn: () => client.titles.refresh({ id: title.id }),
@@ -357,9 +397,11 @@ function AdminMenu({ title }: { title: Title }) {
     },
     onError: (error) => toast.error(errorMessage(error)),
   })
-  if (user.role !== "admin" || !provider || title.kind === "folder") {
-    return null
-  }
+  // Set when the user can fix the match and refresh.
+  const adminProvider =
+    user.role === "admin" && title.kind !== "folder" ? provider : null
+  const hasFiles = title.itemCount > 0
+  if (!hasFiles && !adminProvider) return null
   return (
     <>
       <DropdownMenu>
@@ -376,25 +418,43 @@ function AdminMenu({ title }: { title: Title }) {
           <EllipsisIcon />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" sideOffset={6} className="min-w-52">
-          <DropdownMenuItem onClick={() => setIdentifying(true)}>
-            <SearchIcon />
-            Fix match…
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            disabled={refresh.isPending}
-            onClick={() => refresh.mutate()}
-          >
-            <RefreshCwIcon />
-            Refresh metadata
-          </DropdownMenuItem>
+          {hasFiles && (
+            <WatchedMenuItems
+              scope={title.itemCount > 1 ? "all" : "as"}
+              watched={progress.watched >= title.itemCount}
+              started={progress.started}
+              onSelect={(watched) => {
+                pinSeason()
+                setWatched.mutate({ titleId: title.id, watched })
+              }}
+            />
+          )}
+          {hasFiles && adminProvider && <DropdownMenuSeparator />}
+          {adminProvider && (
+            <>
+              <DropdownMenuItem onClick={() => setIdentifying(true)}>
+                <SearchIcon />
+                Fix match…
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                disabled={refresh.isPending}
+                onClick={() => refresh.mutate()}
+              >
+                <RefreshCwIcon />
+                Refresh metadata
+              </DropdownMenuItem>
+            </>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
-      <IdentifyDialog
-        title={title}
-        providerName={provider.name}
-        open={identifying}
-        onOpenChange={setIdentifying}
-      />
+      {adminProvider && (
+        <IdentifyDialog
+          title={title}
+          providerName={adminProvider.name}
+          open={identifying}
+          onOpenChange={setIdentifying}
+        />
+      )}
     </>
   )
 }
@@ -416,15 +476,46 @@ function seasonKey(season: Season): number {
   return season.number ?? NO_SEASON
 }
 
+/**
+ * The season on screen: the one in the URL, else the one Play is in, else
+ * the first that isn't specials.
+ */
+function shownSeason(
+  title: Title,
+  wanted: number | undefined,
+): Season | undefined {
+  return (
+    title.seasons.find((s) => seasonKey(s) === wanted) ??
+    title.seasons.find((s) => s.number === title.next?.seasonNumber) ??
+    title.seasons.find((s) => s.number !== 0) ??
+    title.seasons[0]
+  )
+}
+
+/**
+ * Puts the season on screen in the URL. Marking files watched moves Play,
+ * and without this the episode list would follow it to another season.
+ */
+function usePinSeason(title: Title) {
+  const { season: wanted } = Route.useSearch()
+  const navigate = Route.useNavigate()
+  return () => {
+    const shown = shownSeason(title, wanted)
+    if (wanted !== undefined || !shown) return
+    void navigate({
+      search: { season: seasonKey(shown) },
+      replace: true,
+      resetScroll: false,
+    })
+  }
+}
+
 /** Season picker and the chosen season's episodes. */
 function Episodes({ title }: { title: Title }) {
   const { season: wanted } = Route.useSearch()
   const navigate = Route.useNavigate()
-  const fallback =
-    title.seasons.find((s) => s.number === title.next?.seasonNumber) ??
-    title.seasons.find((s) => s.number !== 0) ??
-    title.seasons[0]
-  const current = title.seasons.find((s) => seasonKey(s) === wanted) ?? fallback
+  const pinSeason = usePinSeason(title)
+  const current = shownSeason(title, wanted)
   const items = useQuery({
     ...orpc.titles.items.queryOptions({
       input: {
@@ -445,11 +536,22 @@ function Episodes({ title }: { title: Title }) {
         >
           {title.seasons.length > 1 ? "Episodes" : current.name}
         </h2>
-        {current.watchedCount > 0 && (
-          <span className="text-muted-foreground text-sm tabular-nums">
-            {current.watchedCount} of {current.itemCount} watched
-          </span>
-        )}
+        <div className="flex items-center gap-1">
+          {current.watchedCount > 0 && (
+            <span className="text-muted-foreground text-sm tabular-nums">
+              {current.watchedCount} of {current.itemCount} watched
+            </span>
+          )}
+          {/* With one season, the menu at the top covers it. */}
+          {title.seasons.length > 1 && (
+            <SeasonMenu
+              title={title}
+              season={current}
+              items={items.data}
+              onMark={pinSeason}
+            />
+          )}
+        </div>
       </div>
       {title.seasons.length > 1 && (
         <nav aria-label="Seasons" className={cn(chipRow, "mb-4")}>
@@ -503,7 +605,7 @@ function Episodes({ title }: { title: Title }) {
           )}
         >
           {items.data?.map((item) => (
-            <EpisodeRow key={item.id} item={item} />
+            <EpisodeRow key={item.id} item={item} onMark={pinSeason} />
           ))}
         </ol>
       )}
@@ -511,11 +613,65 @@ function Episodes({ title }: { title: Title }) {
   )
 }
 
+/** Mark the season on screen watched or unwatched. */
+function SeasonMenu({
+  title,
+  season,
+  items,
+  onMark,
+}: {
+  title: Title
+  season: Season
+  /** The season's files, once loaded. They change before the counts do. */
+  items: MediaItem[] | undefined
+  onMark: () => void
+}) {
+  const setWatched = useSetTitleWatched()
+  const watched = items
+    ? items.every((item) => item.progress?.completed)
+    : season.watchedCount >= season.itemCount
+  const started = items
+    ? items.some((item) => item.progress !== null)
+    : season.watchedCount > 0
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={`More actions for ${season.name}`}
+            className="text-muted-foreground [@media(pointer:coarse)]:size-11"
+          />
+        }
+      >
+        <EllipsisIcon />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" sideOffset={4} className="min-w-52">
+        <WatchedMenuItems
+          scope="season"
+          watched={watched}
+          started={started}
+          onSelect={(next) => {
+            onMark()
+            setWatched.mutate({
+              titleId: title.id,
+              season: season.number,
+              watched: next,
+            })
+          }}
+        />
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
 /**
  * One episode: its still, number and name, air date and runtime, and what
- * happens in it. The whole row plays it.
+ * happens in it. The whole row plays it; the "⋯" in its corner marks it
+ * watched.
  */
-function EpisodeRow({ item }: { item: MediaItem }) {
+function EpisodeRow({ item, onMark }: { item: MediaItem; onMark: () => void }) {
   const label = itemLabel(item)
   const watched = item.progress?.completed ?? false
   const runtime = formatRuntime(
@@ -530,7 +686,7 @@ function EpisodeRow({ item }: { item: MediaItem }) {
   ].filter(Boolean)
   const overview = item.episode?.overview
   return (
-    <li>
+    <li className="group/item relative">
       <Link
         to="/watch/$itemId"
         params={{ itemId: item.id }}
@@ -544,7 +700,7 @@ function EpisodeRow({ item }: { item: MediaItem }) {
           compact
           className={overview ? "w-36 sm:w-56" : "w-36 sm:w-44"}
         />
-        <span className="min-w-0 py-0.5">
+        <span className="min-w-0 py-0.5 pr-8 [@media(pointer:coarse)]:pr-10">
           <span className="flex items-baseline gap-2">
             {item.episodeNumber !== null && (
               <span className="text-muted-foreground text-sm tabular-nums">
@@ -565,6 +721,7 @@ function EpisodeRow({ item }: { item: MediaItem }) {
               {facts.join(" · ")}
             </span>
           )}
+          <StreamLine item={item} />
           {overview && (
             <span className="text-muted-foreground mt-1.5 line-clamp-2 text-sm leading-5 max-sm:hidden">
               {overview}
@@ -578,6 +735,12 @@ function EpisodeRow({ item }: { item: MediaItem }) {
           </span>
         )}
       </Link>
+      <ItemMenu
+        item={item}
+        label={label.title}
+        onMark={onMark}
+        className="absolute top-2 right-2"
+      />
     </li>
   )
 }
@@ -597,35 +760,52 @@ function Files({ title }: { title: Title }) {
         {items.data.length > 1 ? "Files" : "File"}
       </h2>
       <ul className="divide-y rounded-lg border">
-        {items.data.map((item) => (
-          <li key={item.id}>
-            <Link
-              to="/watch/$itemId"
-              params={{ itemId: item.id }}
-              className="hover:bg-accent/40 focus-visible:ring-ring flex items-center gap-3 px-3 py-2.5 outline-none focus-visible:ring-2"
-            >
-              <PlayIcon className="text-muted-foreground size-4 shrink-0" />
-              <span className="min-w-0 flex-1">
-                <span className="block truncate font-mono text-[13px]">
-                  {item.relativePath.split("/").at(-1)}
+        {items.data.map((item) => {
+          const name = item.relativePath.split("/").at(-1) ?? item.fileTitle
+          const watched = item.progress?.completed ?? false
+          return (
+            <li key={item.id} className="group/item relative">
+              <Link
+                to="/watch/$itemId"
+                params={{ itemId: item.id }}
+                className="hover:bg-accent/40 focus-visible:ring-ring flex items-center gap-3 px-3 py-2.5 pr-12 outline-none focus-visible:ring-2 [@media(pointer:coarse)]:pr-14"
+              >
+                {watched ? (
+                  // A little wider than the icon; the margin keeps the text in line.
+                  <WatchedBadge className="bg-foreground/15 -mx-0.5" />
+                ) : (
+                  <PlayIcon className="text-muted-foreground size-4 shrink-0" />
+                )}
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-mono text-[13px]">
+                    {name}
+                  </span>
+                  <span className="text-muted-foreground block text-xs">
+                    {[
+                      item.container.toUpperCase(),
+                      formatBytes(item.sizeBytes),
+                      item.progress && !watched
+                        ? timeLeft(item)
+                        : formatRuntime(
+                            item.durationSeconds
+                              ? Math.round(item.durationSeconds / 60)
+                              : null,
+                          ),
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </span>
+                  <StreamLine item={item} />
                 </span>
-                <span className="text-muted-foreground block text-xs">
-                  {[
-                    item.container.toUpperCase(),
-                    formatBytes(item.sizeBytes),
-                    formatRuntime(
-                      item.durationSeconds
-                        ? Math.round(item.durationSeconds / 60)
-                        : null,
-                    ),
-                  ]
-                    .filter(Boolean)
-                    .join(" · ")}
-                </span>
-              </span>
-            </Link>
-          </li>
-        ))}
+              </Link>
+              <ItemMenu
+                item={item}
+                label={name}
+                className="absolute top-1/2 right-1.5 -translate-y-1/2"
+              />
+            </li>
+          )
+        })}
       </ul>
     </section>
   )

@@ -7,6 +7,7 @@ export type ChallengePurpose =
   | "passkey-sign-in"
   | "passkey-sign-up"
   | "passkey-register"
+  | "passkey-invite"
   | "oidc"
 
 export async function createChallenge(input: {

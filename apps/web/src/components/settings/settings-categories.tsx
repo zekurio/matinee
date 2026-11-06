@@ -4,6 +4,7 @@ import {
   LibraryBigIcon,
   type LucideIcon,
   UserIcon,
+  UsersIcon,
 } from "lucide-react"
 import { type ComponentType, useMemo } from "react"
 
@@ -12,6 +13,7 @@ import type { SettingsSectionId } from "@/lib/settings"
 import { AccountPanel } from "./account-panel"
 import { AuthPanel } from "./auth-panel"
 import { LibrariesPanel } from "./libraries-panel"
+import { UsersPanel } from "./users-panel"
 
 export type SettingsGroup = "account" | "admin"
 
@@ -57,6 +59,26 @@ const CATEGORIES: SettingsCategory[] = [
     keywords: ["Add library", "Folders", "Scan now", "Media", "Remove library"],
     icon: LibraryBigIcon,
     Panel: LibrariesPanel,
+  },
+  {
+    id: "users",
+    group: "admin",
+    label: "Users",
+    description: "Accounts, invite links, and roles",
+    keywords: [
+      "Add user",
+      "Invite",
+      "Invite link",
+      "Recovery link",
+      "Lost passkey",
+      "Admin",
+      "Role",
+      "Delete user",
+      "Sign out everywhere",
+      "Sessions",
+    ],
+    icon: UsersIcon,
+    Panel: UsersPanel,
   },
   {
     id: "authentication",
