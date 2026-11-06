@@ -4,6 +4,7 @@ import { and, asc, eq, gt, isNull } from "drizzle-orm"
 
 import { db } from "../db"
 import { log } from "../log"
+import { shutdownSignal } from "../shutdown"
 import { runFfprobe } from "./ffprobe"
 import { limiter, processFailureKind } from "./process"
 
@@ -39,7 +40,8 @@ async function probeAndStore(row: MediaItemRow): Promise<MediaProbe | null> {
   }
   // A failure is stored too, so a broken file waits until it changes.
   // Matching size and time skips the write when a scan saw the file change
-  // meanwhile; it cleared probedAt and the file gets probed again.
+  // meanwhile; it cleared probedAt and the file gets probed again. Matching
+  // the path does the same for a file a scan moved, whose old path failed.
   await db
     .update(mediaItem)
     .set({
@@ -53,6 +55,7 @@ async function probeAndStore(row: MediaItemRow): Promise<MediaProbe | null> {
         eq(mediaItem.id, row.id),
         eq(mediaItem.sizeBytes, row.sizeBytes),
         eq(mediaItem.modifiedAt, row.modifiedAt),
+        eq(mediaItem.path, row.path),
       ),
     )
   return probe
@@ -78,7 +81,8 @@ async function probePass(
   let read = 0
   let failed = 0
   let after: string | null = null
-  while (true) {
+  // The rest waits for the next start once shutdown is requested.
+  while (!shutdownSignal.aborted) {
     const rows = await db
       .select()
       .from(mediaItem)

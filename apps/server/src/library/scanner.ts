@@ -16,7 +16,7 @@ import { probeLibrary } from "../media/probe"
 import { titleFromFilename } from "../media/title"
 import { refreshLibrary } from "../metadata/refresh"
 import { shutdownSignal } from "../shutdown"
-import { isIgnored } from "./entries"
+import { isIgnored, subtitleFormat } from "./entries"
 import { indexMoves, matchMoves, mayBeMoved } from "./moves"
 import {
   below,
@@ -24,11 +24,12 @@ import {
   fate,
   type Folder,
   folderOf,
+  type Listing,
   newWalkState,
   planScan,
   type WalkState,
 } from "./plan"
-import { syncSubtitles } from "./subtitles"
+import { syncSidecars } from "./subtitles"
 import { addTarget, errorCode, isInside, type Targets } from "./targets"
 import { assignTitles, topLevelKey } from "./titles"
 
@@ -44,8 +45,9 @@ type FoundFile = {
 
 /**
  * Walk a folder for video files, or with `deep` false look only at its own
- * entries. Skips hidden entries and symlink loops, and notes what it
- * couldn't read so the scan keeps the files there.
+ * entries. Skips hidden entries and symlink loops, notes what it couldn't
+ * read so the scan keeps the files there, and keeps each listing's
+ * subtitle files and folders for finding sidecars after.
  */
 async function* walk(
   root: string,
@@ -74,6 +76,8 @@ async function* walk(
     state.unreadable.add(dir)
     return
   }
+  const listing: Listing = { subtitles: [], folders: [] }
+  state.listed.set(dir, listing)
   for (const entry of entries) {
     if (shutdownSignal.aborted) return
     if (isIgnored(entry.name)) continue
@@ -91,13 +95,17 @@ async function* walk(
       isFile = target.isFile()
     }
     if (isDir) {
+      listing.folders.push(entry.name)
       if (deep) yield* walk(root, path, true, state)
       else state.notEntered.add(path)
       continue
     }
     if (!isFile) continue
     const container = videoContainer(entry.name)
-    if (!container) continue
+    if (!container) {
+      if (subtitleFormat(entry.name)) listing.subtitles.push(entry.name)
+      continue
+    }
     const info = await stat(path).catch(() => null)
     if (!info) {
       state.unreadable.add(path)
@@ -189,6 +197,9 @@ async function moveFiles(
   seenAt: Date,
 ): Promise<void> {
   for (const [row, file] of moves) {
+    const changed =
+      row.sizeBytes !== file.sizeBytes ||
+      row.modifiedAt.getTime() !== file.modifiedAt.getTime()
     await db
       .update(mediaItem)
       .set({
@@ -200,6 +211,9 @@ async function moveFiles(
         sizeBytes: file.sizeBytes,
         modifiedAt: file.modifiedAt,
         seenAt,
+        // A move matched on name can bring a new mtime, so probe it again.
+        // Undefined leaves the column as is.
+        probedAt: changed ? null : undefined,
         // The regroup after the scan sets it. If the scan stops first, a
         // file without a title makes the next one regroup everything.
         titleId: null,
@@ -229,16 +243,22 @@ async function hasUntitledFiles(libraryId: string): Promise<boolean> {
   return row !== undefined
 }
 
+/** The targets that no other target contains. */
+function outermost(targets: Targets): string[] {
+  const roots: string[] = []
+  for (const dir of [...targets.keys()].sort((a, b) => a.length - b.length)) {
+    if (!roots.some((root) => isInside(dir, root))) roots.push(dir)
+  }
+  return roots
+}
+
 /** Files from earlier scans below the targets, by path. */
 async function loadKnown(
   libraryId: string,
   targets: Targets,
 ): Promise<Map<string, KnownFile>> {
   const known = new Map<string, KnownFile>()
-  const loaded: string[] = []
-  for (const dir of [...targets.keys()].sort((a, b) => a.length - b.length)) {
-    if (loaded.some((done) => isInside(dir, done))) continue
-    loaded.push(dir)
+  for (const dir of outermost(targets)) {
     const rows = await db
       .select({
         id: mediaItem.id,
@@ -315,6 +335,28 @@ async function settle(
   counts.gone = gone.length
   for (const row of gone) touched.add(topLevelKey(row.relativePath))
   return true
+}
+
+/**
+ * Find the subtitle files of the videos in the folders the walk listed. A
+ * failure is logged and doesn't fail the scan.
+ */
+async function updateSidecars(
+  name: string,
+  libraryId: string,
+  targets: Targets,
+  state: WalkState,
+): Promise<void> {
+  try {
+    const counts = await syncSidecars(libraryId, outermost(targets), state)
+    if (counts.written + counts.moved + counts.gone > 0) {
+      log.info(
+        `Subtitle files in library ${name}: ${counts.written} new or changed, ${counts.moved} moved, ${counts.gone} gone`,
+      )
+    }
+  } catch (cause) {
+    log.warn(`Couldn't update subtitles of library ${name}`, cause)
+  }
 }
 
 async function runScan(libraryId: string, request: ScanRequest): Promise<void> {
@@ -398,7 +440,7 @@ async function runScan(libraryId: string, request: ScanRequest): Promise<void> {
     return
   }
 
-  await syncSubtitles(libraryId)
+  await updateSidecars(lib.name, libraryId, targets, state)
   if (regroupAll) await assignTitles(libraryId, lib.kind)
   else if (touched.size > 0) await assignTitles(libraryId, lib.kind, touched)
   if (!request.targets) {

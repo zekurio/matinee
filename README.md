@@ -73,8 +73,8 @@ since settings can't be opened before setup.
 ## Scanning
 
 A scan looks only at the folders it is given and writes only what changed:
-new and changed files, files that are gone, and the titles they belong to.
-Scans run one at a time. They start from:
+new and changed files, files that are gone, their subtitle files, and the
+titles they belong to. Scans run one at a time. They start from:
 
 - The watcher, for the folders that changed. See below.
 - A full scan of every library a minute after the server starts, for what
@@ -85,9 +85,11 @@ Scans run one at a time. They start from:
 
 The watcher watches every folder in a library. Once a library's files have
 stopped changing for 10 seconds, it scans a folder that appeared with
-everything in it, and for a folder where a file came, changed, or went, just
-that folder's own entries. An import from Sonarr or Radarr shows up on its
-own that way. Watching uses inotify, with one watch per folder. Two limits:
+everything in it, and for a folder where a video or subtitle file came,
+changed, or went, just that folder's own entries. A change in a `Subs`
+folder rescans the folder of its videos. An import from Sonarr or Radarr, or
+a subtitle from Bazarr, shows up on its own that way. Watching uses inotify,
+with one watch per folder. Two limits:
 
 - inotify only sees changes made on the same machine. On an NFS or SMB share
   that another host writes to, nothing fires, and changes show up with the
@@ -100,7 +102,8 @@ scans still run.
 
 A file that was moved or renamed keeps its row, and with it everyone's watch
 progress, when one scan sees both its old and new path: same size, and the
-same file name or the same modification time.
+same file name or the same modification time. Its subtitle files keep their
+rows too when they move with it.
 
 Scans skip hidden entries and NAS system folders such as `@eaDir` and
 `#recycle`. So that storage going away doesn't empty a library, a scan:
@@ -110,7 +113,7 @@ Scans skip hidden entries and NAS system folders such as `@eaDir` and
   warning. If the folder really is empty now, remove it from the library.
   This only covers library folders, so point a library at a share's mount
   point, not at a folder above it.
-- Keeps the files below a folder it couldn't list completely.
+- Keeps the files and subtitles below a folder it couldn't list completely.
 - Deletes nothing when the server stops partway through.
 
 ## Metadata
@@ -155,7 +158,9 @@ The player shows subtitle files beside a video and text subtitles inside it.
 - Files: `Movie.srt`, `Movie.en.srt`, `Movie.eng.forced.srt`,
   `Movie.de.sdh.srt`, also `.vtt`, `.ass`, and `.ssa`, in the video's folder or
   a `Subs` or `Subtitles` folder next to it. Release packs with
-  `Subs/<video name>/2_English.srt` work too. A scan picks them up.
+  `Subs/<video name>/2_English.srt` work too. A scan of the video's folder
+  picks them up, and the watcher sees them come and go like videos. A file
+  in `Subs` with no video's name goes to the folder's only video.
 - Streams: text subtitles inside the file, such as SubRip, ASS/SSA,
   mov_text, and WebVTT. The first
   time someone turns one on, ffmpeg extracts it into

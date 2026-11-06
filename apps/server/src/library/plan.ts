@@ -6,7 +6,7 @@ import { and, type Column, count, eq, sql } from "drizzle-orm"
 
 import { db } from "../db"
 import { log } from "../log"
-import { isIgnored } from "./entries"
+import { isIgnored, subtitleOwnerFolder } from "./entries"
 import {
   addTarget,
   errorCode,
@@ -17,6 +17,9 @@ import {
 
 export type Folder = typeof libraryFolder.$inferSelect
 
+/** A folder's subtitle files and subfolders, by name, for finding sidecars. */
+export type Listing = { subtitles: string[]; folders: string[] }
+
 /** What a walk saw besides the files it found. */
 export type WalkState = {
   /** Real paths of folders already walked, to skip symlink loops. */
@@ -25,10 +28,17 @@ export type WalkState = {
   unreadable: Set<string>
   /** Folders a listing-only walk saw but didn't enter. Files below them aren't its business. */
   notEntered: Set<string>
+  /** Folders the walk listed in full, for the subtitles of their videos. */
+  listed: Map<string, Listing>
 }
 
 export function newWalkState(): WalkState {
-  return { visited: new Set(), unreadable: new Set(), notEntered: new Set() }
+  return {
+    visited: new Set(),
+    unreadable: new Set(),
+    notEntered: new Set(),
+    listed: new Map(),
+  }
 }
 
 /** Rows whose path is below a folder. */
@@ -89,10 +99,10 @@ export function folderOf(folders: Folder[], path: string): Folder | undefined {
 
 /**
  * The folders to walk: every library folder for a full scan, else the
- * requested ones. Skips library folders that are offline and marks them
- * so nothing below them goes, and moves a target that went away up to the
- * nearest folder that's still there. Returns the targets and how many
- * files the offline folders keep.
+ * requested ones, plus the folder above a `Subs` target. Skips library
+ * folders that are offline and marks them so nothing below them goes, and
+ * moves a target that went away up to the nearest folder that's still
+ * there. Returns the targets and how many files the offline folders keep.
  */
 export async function planScan(
   libraryId: string,
@@ -112,6 +122,11 @@ export async function planScan(
       if (!folder) continue
       const targets: Targets = wanted.get(folder) ?? new Map()
       addTarget(targets, path, deep)
+      // Subtitles in a Subs folder belong to the videos beside it.
+      const owner = subtitleOwnerFolder(path)
+      if (owner && isInside(owner, folder.path)) {
+        addTarget(targets, owner, false)
+      }
       wanted.set(folder, targets)
     }
   }
