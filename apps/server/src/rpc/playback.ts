@@ -2,7 +2,12 @@ import { mediaItem, title, watchProgress } from "@matinee/db"
 import { and, desc, eq, inArray, ne, sql } from "drizzle-orm"
 
 import { db } from "../db"
-import { episodeOrder, publicItems } from "../media/items"
+import {
+  episodeOrder,
+  inSeason,
+  publicItems,
+  reverseEpisodeOrder,
+} from "../media/items"
 import { authed, notFound } from "./base"
 
 // Past this share of the runtime, a file counts as watched.
@@ -105,6 +110,56 @@ export const playback = {
         set: { completed: true, updatedAt: new Date() },
       })
   }),
+
+  setTitleWatched: authed.playback.setTitleWatched.handler(
+    async ({ context, input }) => {
+      const [row] = await db
+        .select({ id: title.id })
+        .from(title)
+        .where(eq(title.id, input.titleId))
+      if (!row) {
+        throw notFound("This title isn't in any library. Reload the page.")
+      }
+      const files = and(eq(mediaItem.titleId, row.id), inSeason(input.season))
+      if (!input.watched) {
+        await db
+          .delete(watchProgress)
+          .where(
+            and(
+              eq(watchProgress.userId, context.user.id),
+              inArray(
+                watchProgress.mediaItemId,
+                db.select({ id: mediaItem.id }).from(mediaItem).where(files),
+              ),
+            ),
+          )
+        return
+      }
+      // One statement, so every file gets the same time; reverseEpisodeOrder
+      // then counts the last one as the latest for Play and next up.
+      await db
+        .insert(watchProgress)
+        .select(
+          db
+            .select({
+              userId: sql`${context.user.id}::uuid`.as("user_id"),
+              mediaItemId: mediaItem.id,
+              positionSeconds:
+                sql`coalesce(${mediaItem.durationSeconds}, 0)`.as(
+                  "position_seconds",
+                ),
+              completed: sql`true`.as("completed"),
+              updatedAt: sql`now()`.as("updated_at"),
+            })
+            .from(mediaItem)
+            .where(files),
+        )
+        .onConflictDoUpdate({
+          target: [watchProgress.userId, watchProgress.mediaItemId],
+          set: { completed: true, updatedAt: sql`now()` },
+        })
+    },
+  ),
 }
 
 export const home = {
@@ -150,7 +205,11 @@ export const home = {
           ne(title.kind, "movie"),
         ),
       )
-      .orderBy(mediaItem.titleId, desc(watchProgress.updatedAt))
+      .orderBy(
+        mediaItem.titleId,
+        desc(watchProgress.updatedAt),
+        ...reverseEpisodeOrder,
+      )
     finished.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
 
     const next = []

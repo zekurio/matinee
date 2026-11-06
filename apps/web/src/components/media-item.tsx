@@ -20,6 +20,8 @@ import {
   timeLeft,
 } from "@/lib/media"
 
+import { ItemMenu } from "./watched-menu"
+
 // Neutral steps far enough apart that neighbouring shows look different.
 const TONES = [
   "bg-gradient-to-br from-[#26262a] to-[#1a1a1d]",
@@ -70,6 +72,22 @@ export function Picture({
         className,
       )}
     />
+  )
+}
+
+/** The round check on a watched file. */
+export function WatchedBadge({ className }: { className?: string }) {
+  return (
+    <span
+      role="img"
+      aria-label="Watched"
+      className={cn(
+        "grid size-5 shrink-0 place-items-center rounded-full bg-black/70 text-white",
+        className,
+      )}
+    >
+      <CheckIcon className="size-3" />
+    </span>
   )
 }
 
@@ -131,14 +149,7 @@ export function Thumb({
           {pill}
         </span>
       )}
-      {watched && (
-        <span
-          aria-label="Watched"
-          className="absolute top-1.5 right-1.5 grid size-5 place-items-center rounded-full bg-black/70 text-white"
-        >
-          <CheckIcon className="size-3" />
-        </span>
-      )}
+      {watched && <WatchedBadge className="absolute top-1.5 right-1.5" />}
       {progress != null && progress > 0 && !watched && (
         <span
           aria-hidden
@@ -185,17 +196,17 @@ export function StreamLine({ item }: { item: MediaItem }) {
 
 /**
  * One file in a folder list, under its folder header. The whole row starts
- * playback.
+ * playback; the "⋯" at its end marks it watched.
  */
 export function MediaRow({ item }: { item: MediaItem }) {
   const label = itemLabel(item)
   const watched = item.progress?.completed ?? false
   return (
-    <li>
+    <li className="group/item relative">
       <Link
         to="/watch/$itemId"
         params={{ itemId: item.id }}
-        className="group hover:bg-accent/50 focus-visible:bg-accent/50 focus-visible:ring-ring flex items-center gap-4 rounded-lg p-2 outline-none focus-visible:ring-2"
+        className="group hover:bg-accent/50 focus-visible:bg-accent/50 focus-visible:ring-ring flex items-center gap-4 rounded-lg p-2 pr-12 outline-none focus-visible:ring-2 [@media(pointer:coarse)]:pr-14"
       >
         <Thumb
           sources={[mediaThumbnailPath(item.id)]}
@@ -227,6 +238,11 @@ export function MediaRow({ item }: { item: MediaItem }) {
           <StreamLine item={item} />
         </span>
       </Link>
+      <ItemMenu
+        item={item}
+        label={label.title}
+        className="absolute top-1/2 right-2 -translate-y-1/2"
+      />
     </li>
   )
 }
@@ -238,12 +254,14 @@ const cardClass =
 function CardText({
   primary,
   secondary,
+  className,
 }: {
   primary: string
   secondary?: ReactNode
+  className?: string
 }) {
   return (
-    <span className="mt-2 block min-w-0">
+    <span className={cn("mt-2 block min-w-0", className)}>
       <span className="block truncate text-sm leading-5 font-medium">
         {primary}
       </span>
@@ -315,34 +333,46 @@ export function TitleLink({
 /**
  * An episode or movie to start or resume, for "continue watching" and
  * "next up". The picture is the episode, the show leads the text, and the
- * episode follows.
+ * episode follows. The "⋯" beside the text marks it watched.
  */
 export function EpisodeCard({ item }: { item: MediaItem }) {
   const label = itemLabel(item)
   const code = episodeCode(item)
   const resume = item.progress && !item.progress.completed
+  const name = code ? `${label.showName}, ${code}: ${label.title}` : label.title
   return (
-    <Link
-      to="/watch/$itemId"
-      params={{ itemId: item.id }}
-      title={code ? `${label.showName}, ${code}: ${label.title}` : label.title}
-      className={cardClass}
-    >
-      <Thumb
-        sources={landscapeSources(item)}
-        toneKey={label.showKey}
-        progress={progressRatio(item)}
-        className="group-hover:border-foreground/25 w-full"
+    <div className="group/item relative">
+      <Link
+        to="/watch/$itemId"
+        params={{ itemId: item.id }}
+        title={name}
+        className={cardClass}
+      >
+        <Thumb
+          sources={landscapeSources(item)}
+          toneKey={label.showKey}
+          progress={progressRatio(item)}
+          watched={item.progress?.completed}
+          className="group-hover:border-foreground/25 w-full"
+        />
+        <CardText
+          primary={code ? label.showName : label.title}
+          secondary={
+            code
+              ? `${code}: ${label.title}`
+              : ((resume ? timeLeft(item) : label.year) ?? undefined)
+          }
+          className="pr-9 [@media(pointer:coarse)]:pr-11"
+        />
+      </Link>
+      {/* Beside the first line of text. A top margin in percent follows the
+          card's width, so 56.25% clears the 16:9 picture. */}
+      <ItemMenu
+        item={item}
+        label={name}
+        className="absolute top-0 right-0 mt-[calc(56.25%+2px)] [@media(pointer:coarse)]:mt-[56.25%]"
       />
-      <CardText
-        primary={code ? label.showName : label.title}
-        secondary={
-          code
-            ? `${code}: ${label.title}`
-            : ((resume ? timeLeft(item) : label.year) ?? undefined)
-        }
-      />
-    </Link>
+    </div>
   )
 }
 
