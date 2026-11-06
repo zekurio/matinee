@@ -108,12 +108,16 @@ async function nextItem(
   if (latest) {
     const index = files.findIndex((file) => file.id === latest.id)
     if (latest.completed) {
-      // Files marked watched by hand can sit ahead of the latest one.
+      // Files marked watched by hand can sit ahead of the latest one, and
+      // unwatched ones behind it.
       const watched = new Set(
         progress.filter((p) => p.completed).map((p) => p.id),
       )
+      const unwatched = (file: { id: string }) => !watched.has(file.id)
       pick =
-        files.slice(index + 1).find((file) => !watched.has(file.id)) ?? files[0]
+        files.slice(index + 1).find(unwatched) ??
+        files.find(unwatched) ??
+        files[0]
     } else {
       pick = files[index] ?? files[0]
     }
