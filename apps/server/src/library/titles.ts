@@ -2,7 +2,7 @@ import { basename, dirname } from "node:path"
 
 import type { LibraryKind, TitleKind } from "@matinee/contracts"
 import { mediaItem, title } from "@matinee/db"
-import { and, eq, inArray, sql } from "drizzle-orm"
+import { and, type Column, eq, inArray, sql } from "drizzle-orm"
 
 import { db } from "../db"
 import { videoContainer } from "../media/mime"
@@ -67,9 +67,14 @@ function movieKey(relativePath: string, perFolder: Map<string, number>) {
 }
 
 /** A show is its top-level folder; a loose file stands alone. */
-function topLevelKey(relativePath: string): string {
+export function topLevelKey(relativePath: string): string {
   const slash = relativePath.indexOf("/")
   return slash > 0 ? relativePath.slice(0, slash) : relativePath
+}
+
+/** Paths that start with one of the top-level entries. */
+function inTopLevels(column: Column, keys: string[]) {
+  return sql`split_part(${column}, '/', 1) = any(${sql.param(keys)}::text[])`
 }
 
 type Assignment = {
@@ -83,12 +88,17 @@ type Assignment = {
  * Group a library's files into titles after a scan: create titles for new
  * folders, point every file at its title, and drop titles left empty.
  * Titles that already matched keep their provider's name.
+ *
+ * A title never spans two top-level entries of a library folder, so a scan
+ * that changed a few passes `topLevels` to regroup only those.
  */
 export async function assignTitles(
   libraryId: string,
   libraryKind: LibraryKind,
+  topLevels?: ReadonlySet<string>,
 ): Promise<void> {
   const kind = KINDS[libraryKind]
+  const scope = topLevels ? [...topLevels] : null
   const items = await db
     .select({
       id: mediaItem.id,
@@ -99,7 +109,12 @@ export async function assignTitles(
       episodeNumber: mediaItem.episodeNumber,
     })
     .from(mediaItem)
-    .where(eq(mediaItem.libraryId, libraryId))
+    .where(
+      and(
+        eq(mediaItem.libraryId, libraryId),
+        scope ? inTopLevels(mediaItem.relativePath, scope) : undefined,
+      ),
+    )
 
   const perFolder = new Map<string, number>()
   if (kind === "movie") {
@@ -193,7 +208,12 @@ export async function assignTitles(
   const existing = await db
     .select({ id: title.id, path: title.path })
     .from(title)
-    .where(eq(title.libraryId, libraryId))
+    .where(
+      and(
+        eq(title.libraryId, libraryId),
+        scope ? inTopLevels(title.path, scope) : undefined,
+      ),
+    )
   const stale = existing.filter((row) => !groups.has(row.path))
   for (let i = 0; i < stale.length; i += BATCH_SIZE) {
     await db.delete(title).where(

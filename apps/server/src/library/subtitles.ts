@@ -1,22 +1,18 @@
-import type { Dirent } from "node:fs"
 import { readdir, stat } from "node:fs/promises"
 import { basename, dirname, extname, join } from "node:path"
 
 import { mediaItem, subtitleFile } from "@matinee/db"
-import { eq, inArray, sql } from "drizzle-orm"
+import { and, eq, inArray, sql } from "drizzle-orm"
 
 import { db } from "../db"
 import { log } from "../log"
 import { languageFromName, languageTag } from "../media/language"
-import { limiter } from "../media/process"
+import { shutdownSignal } from "../shutdown"
+import { isIgnored, isSubtitleFolder, subtitleFormat } from "./entries"
+import { below, directlyIn, type Listing, type WalkState } from "./plan"
+import { errorCode, isInside, type Targets } from "./targets"
 
-/** Extensions of subtitle files. `sup` (PGS) and `idx` (VobSub) are pictures. */
-const SUBTITLE_FORMATS = new Set(["srt", "vtt", "ass", "ssa", "sup", "idx"])
-// Folders beside a video that hold its subtitles, in lower case.
-const SUBTITLE_FOLDERS = new Set(["subs", "subtitles"])
 const BATCH_SIZE = 500
-// Listing a folder is quick on a local disk and slow on a network share.
-const withSlot = limiter(8)
 
 type SidecarInfo = {
   language: string | null
@@ -34,10 +30,11 @@ type FoundSubtitle = SidecarInfo & {
   format: string
 }
 
-function subtitleFormat(name: string): string | null {
-  const ext = extname(name).slice(1).toLowerCase()
-  return SUBTITLE_FORMATS.has(ext) ? ext : null
-}
+/** A row from an earlier scan, with the folder its video is in now. */
+type KnownSubtitle = FoundSubtitle & { id: string; videoDir: string }
+
+/** What a scan did to subtitle rows, for its log line. */
+export type SidecarCounts = { written: number; moved: number; gone: number }
 
 /**
  * Read the language and flags from what follows the video's name in a
@@ -78,41 +75,56 @@ function parseSidecarName(rest: string): SidecarInfo {
   return info
 }
 
-/** Whether a folder entry is a file or folder, following symlinks. */
-async function entryKind(
+/**
+ * List a Subs folder the walk didn't enter. Null when it can't be read;
+ * that and entries it can't stat go to `unreadable`, so their rows stay.
+ */
+async function readListing(
   dir: string,
-  entry: Dirent,
-): Promise<"file" | "dir" | null> {
-  if (entry.isFile()) return "file"
-  if (entry.isDirectory()) return "dir"
-  if (!entry.isSymbolicLink()) return null
-  const target = await stat(join(dir, entry.name)).catch(() => null)
-  if (target?.isFile()) return "file"
-  if (target?.isDirectory()) return "dir"
-  return null
-}
-
-async function list(dir: string): Promise<Dirent[]> {
-  const entries = await readdir(dir, { withFileTypes: true })
-  return entries.filter((entry) => !entry.name.startsWith("."))
+  unreadable: Set<string>,
+): Promise<Listing | null> {
+  let entries
+  try {
+    entries = await readdir(dir, { withFileTypes: true })
+  } catch (cause) {
+    log.warn(
+      `Couldn't read ${dir} (${errorCode(cause) ?? "unknown error"}), keeping its subtitles`,
+    )
+    unreadable.add(dir)
+    return null
+  }
+  const listing: Listing = { subtitles: [], folders: [] }
+  for (const entry of entries) {
+    if (isIgnored(entry.name)) continue
+    let isDir = entry.isDirectory()
+    let isFile = entry.isFile()
+    if (entry.isSymbolicLink()) {
+      const target = await stat(join(dir, entry.name)).catch(() => null)
+      if (!target) {
+        unreadable.add(join(dir, entry.name))
+        continue
+      }
+      isDir = target.isDirectory()
+      isFile = target.isFile()
+    }
+    if (isDir) listing.folders.push(entry.name)
+    else if (isFile && subtitleFormat(entry.name)) {
+      listing.subtitles.push(entry.name)
+    }
+  }
+  return listing
 }
 
 /**
  * Subtitle files that belong to the videos in one folder: `<video>.*.srt`
  * beside them or in a Subs folder, any subtitle in `Subs/<video>/`, and any
- * subtitle in Subs when the folder holds one video. Null when the folder
- * can't be read.
+ * subtitle in Subs when the folder holds one video.
  */
 async function findInFolder(
   dir: string,
   videos: Video[],
-): Promise<FoundSubtitle[] | null> {
-  let entries
-  try {
-    entries = await list(dir)
-  } catch {
-    return null
-  }
+  lookup: (dir: string) => Promise<Listing | null>,
+): Promise<FoundSubtitle[]> {
   // The longest name wins, so `Movie.Extended.en.srt` goes to
   // `Movie.Extended.mkv` and not to `Movie.mkv`.
   const owner = (name: string) => {
@@ -125,7 +137,9 @@ async function findInFolder(
     return best
   }
   const found: FoundSubtitle[] = []
-  const add = (video: Video, path: string, format: string) => {
+  const add = (video: Video, path: string) => {
+    const format = subtitleFormat(path)
+    if (!format) return
     let rest = basename(path).slice(0, -(format.length + 1))
     if (rest.toLowerCase().startsWith(`${video.stem.toLowerCase()}.`)) {
       rest = rest.slice(video.stem.length + 1)
@@ -140,45 +154,28 @@ async function findInFolder(
     })
   }
 
-  // Names are checked before types, so only likely entries cost a stat.
-  for (const entry of entries) {
-    const path = join(dir, entry.name)
-    const format = subtitleFormat(entry.name)
-    if (format) {
-      const video = owner(entry.name)
-      if (video && (await entryKind(dir, entry)) === "file") {
-        add(video, path, format)
-      }
-      continue
+  const listing = await lookup(dir)
+  for (const name of listing?.subtitles ?? []) {
+    const video = owner(name)
+    if (video) add(video, join(dir, name))
+  }
+  for (const name of listing?.folders ?? []) {
+    if (!isSubtitleFolder(name)) continue
+    const subs = join(dir, name)
+    const inner = await lookup(subs)
+    for (const file of inner?.subtitles ?? []) {
+      const video = owner(file) ?? (videos.length === 1 ? videos[0] : null)
+      if (video) add(video, join(subs, file))
     }
-    if (
-      !SUBTITLE_FOLDERS.has(entry.name.toLowerCase()) ||
-      (await entryKind(dir, entry)) !== "dir"
-    ) {
-      continue
-    }
-    for (const inner of await list(path).catch(() => [])) {
-      const innerPath = join(path, inner.name)
-      const innerFormat = subtitleFormat(inner.name)
-      if (innerFormat) {
-        const video =
-          owner(inner.name) ?? (videos.length === 1 ? videos[0] : undefined)
-        if (video && (await entryKind(path, inner)) === "file") {
-          add(video, innerPath, innerFormat)
-        }
-        continue
-      }
-      // Release packs put each episode's subtitles in `Subs/<episode>/`.
+    // Release packs put each episode's subtitles in `Subs/<episode>/`.
+    for (const folder of inner?.folders ?? []) {
       const video = videos.find(
-        (candidate) =>
-          candidate.stem.toLowerCase() === inner.name.toLowerCase(),
+        (candidate) => candidate.stem.toLowerCase() === folder.toLowerCase(),
       )
-      if (!video || (await entryKind(path, inner)) !== "dir") continue
-      for (const file of await list(innerPath).catch(() => [])) {
-        const fileFormat = subtitleFormat(file.name)
-        if (fileFormat && (await entryKind(innerPath, file)) === "file") {
-          add(video, join(innerPath, file.name), fileFormat)
-        }
+      if (!video) continue
+      const files = await lookup(join(subs, folder))
+      for (const file of files?.subtitles ?? []) {
+        add(video, join(subs, folder, file))
       }
     }
   }
@@ -196,62 +193,186 @@ function sameInfo(a: FoundSubtitle, b: FoundSubtitle): boolean {
   )
 }
 
-async function runSync(libraryId: string): Promise<void> {
-  const items = await db
-    .select({ id: mediaItem.id, path: mediaItem.path })
-    .from(mediaItem)
-    .where(eq(mediaItem.libraryId, libraryId))
-  const folders = new Map<string, Video[]>()
-  for (const item of items) {
-    const dir = dirname(item.path)
-    const video = { id: item.id, stem: basename(item.path, extname(item.path)) }
-    const videos = folders.get(dir)
-    if (videos) videos.push(video)
-    else folders.set(dir, [video])
+const key = (row: { mediaItemId: string; path: string }) =>
+  `${row.mediaItemId}\0${row.path}`
+
+/** The same track of the same video, whatever its path. */
+const trackKey = (row: FoundSubtitle) =>
+  JSON.stringify([
+    row.mediaItemId,
+    row.format,
+    row.language,
+    row.title,
+    row.forced,
+    row.sdh,
+    row.isDefault,
+  ])
+
+/**
+ * Pair rows whose file is gone with new files of the same track, so a
+ * subtitle that moved or was renamed with its video keeps its id. Only
+ * pairs where each side has one candidate.
+ */
+function matchMoves(
+  gone: KnownSubtitle[],
+  added: FoundSubtitle[],
+): [KnownSubtitle, FoundSubtitle][] {
+  const group = <Row extends FoundSubtitle>(rows: Row[]) => {
+    const groups = new Map<string, Row[]>()
+    for (const row of rows) {
+      const same = groups.get(trackKey(row))
+      if (same) same.push(row)
+      else groups.set(trackKey(row), [row])
+    }
+    return groups
+  }
+  const files = group(added)
+  const pairs: [KnownSubtitle, FoundSubtitle][] = []
+  for (const [track, rows] of group(gone)) {
+    const fits = files.get(track) ?? []
+    const [row] = rows
+    const [file] = fits
+    if (rows.length === 1 && fits.length === 1 && row && file) {
+      pairs.push([row, file])
+    }
+  }
+  return pairs
+}
+
+/**
+ * True when a row's file is gone: its video moved away from it, or every
+ * folder between them was read. One that couldn't be read keeps it.
+ */
+function isGone(row: KnownSubtitle, unreadable: Set<string>): boolean {
+  if (!isInside(row.path, row.videoDir)) return true
+  for (let at = row.path; at !== row.videoDir; at = dirname(at)) {
+    if (unreadable.has(at)) return false
+  }
+  return true
+}
+
+/**
+ * Videos in the folders the walk listed, and their subtitle rows. A
+ * listing-only target lists just its own folder.
+ */
+async function loadVideos(
+  libraryId: string,
+  targets: Targets,
+  listed: Map<string, Listing>,
+): Promise<{
+  videos: Map<string, Video[]>
+  known: Map<string, KnownSubtitle>
+}> {
+  const videos = new Map<string, Video[]>()
+  const known = new Map<string, KnownSubtitle>()
+  for (const [target, deep] of targets) {
+    const rows = await db
+      .select({
+        id: mediaItem.id,
+        path: mediaItem.path,
+        subtitle: subtitleFile,
+      })
+      .from(mediaItem)
+      .leftJoin(subtitleFile, eq(subtitleFile.mediaItemId, mediaItem.id))
+      .where(
+        and(
+          eq(mediaItem.libraryId, libraryId),
+          deep
+            ? below(mediaItem.path, target)
+            : directlyIn(mediaItem.path, target),
+        ),
+      )
+    const seen = new Set<string>()
+    for (const row of rows) {
+      const dir = dirname(row.path)
+      if (!listed.has(dir)) continue
+      if (row.subtitle) {
+        known.set(key(row.subtitle), { ...row.subtitle, videoDir: dir })
+      }
+      if (seen.has(row.id)) continue
+      seen.add(row.id)
+      const video = { id: row.id, stem: basename(row.path, extname(row.path)) }
+      const inDir = videos.get(dir)
+      if (inDir) inDir.push(video)
+      else videos.set(dir, [video])
+    }
+  }
+  return { videos, known }
+}
+
+/**
+ * Bring the subtitle rows of the videos in the folders the walk listed up
+ * to date, from those listings and their Subs folders. Rows of other
+ * videos aren't touched, rows below a folder that couldn't be read stay,
+ * and nothing is deleted once shutdown is requested.
+ */
+export async function syncSidecars(
+  libraryId: string,
+  targets: Targets,
+  state: WalkState,
+): Promise<SidecarCounts> {
+  const counts: SidecarCounts = { written: 0, moved: 0, gone: 0 }
+  const { videos, known } = await loadVideos(libraryId, targets, state.listed)
+  // Subs folders a listing-only walk didn't enter get listed here, once.
+  const extra = new Map<string, Promise<Listing | null>>()
+  const lookup = (dir: string) => {
+    const listed = state.listed.get(dir)
+    if (listed) return Promise.resolve(listed)
+    if (state.unreadable.has(dir)) return Promise.resolve(null)
+    let listing = extra.get(dir)
+    if (!listing) {
+      listing = readListing(dir, state.unreadable)
+      extra.set(dir, listing)
+    }
+    return listing
+  }
+  const found = new Map<string, FoundSubtitle>()
+  for (const [dir, inDir] of videos) {
+    if (shutdownSignal.aborted) return counts
+    for (const file of await findInFolder(dir, inDir, lookup)) {
+      found.set(key(file), file)
+    }
   }
 
-  const key = (row: { mediaItemId: string; path: string }) =>
-    `${row.mediaItemId}\0${row.path}`
-  const found = new Map<string, FoundSubtitle>()
-  // Items whose folder was read. The rest keep their rows.
-  const checked = new Set<string>()
-  await Promise.all(
-    [...folders].map(([dir, videos]) =>
-      withSlot(async () => {
-        const files = await findInFolder(dir, videos)
-        if (!files) return
-        for (const video of videos) checked.add(video.id)
-        for (const file of files) found.set(key(file), file)
-      }),
-    ),
-  )
-
-  const existing = await db
-    .select({
-      id: subtitleFile.id,
-      mediaItemId: subtitleFile.mediaItemId,
-      path: subtitleFile.path,
-      format: subtitleFile.format,
-      language: subtitleFile.language,
-      title: subtitleFile.title,
-      forced: subtitleFile.forced,
-      sdh: subtitleFile.sdh,
-      isDefault: subtitleFile.isDefault,
-    })
-    .from(subtitleFile)
-    .innerJoin(mediaItem, eq(mediaItem.id, subtitleFile.mediaItemId))
-    .where(eq(mediaItem.libraryId, libraryId))
-  const known = new Map(existing.map((row) => [key(row), row]))
-
-  // Upsert on the file's path, so a track keeps its id across scans.
+  const added = [...found.values()].filter((file) => !known.has(key(file)))
   const changed = [...found.values()].filter((file) => {
     const row = known.get(key(file))
-    return !row || !sameInfo(row, file)
+    return row && !sameInfo(row, file)
   })
-  for (let i = 0; i < changed.length; i += BATCH_SIZE) {
+  const leftover = [...known.values()].filter(
+    (row) => !found.has(key(row)) && isGone(row, state.unreadable),
+  )
+  const moves = matchMoves(leftover, added)
+  const movedRows = new Set<KnownSubtitle>()
+  const movedFiles = new Set<FoundSubtitle>()
+  for (const [row, file] of moves) {
+    movedRows.add(row)
+    movedFiles.add(file)
+    await db
+      .update(subtitleFile)
+      .set({ path: file.path })
+      .where(eq(subtitleFile.id, row.id))
+  }
+  counts.moved = moves.length
+
+  // Upsert on the file's path, so a track keeps its id across scans.
+  const writes = [
+    ...added.filter((file) => !movedFiles.has(file)),
+    ...changed,
+  ].map((file) => ({
+    mediaItemId: file.mediaItemId,
+    path: file.path,
+    format: file.format,
+    language: file.language,
+    title: file.title,
+    forced: file.forced,
+    sdh: file.sdh,
+    isDefault: file.isDefault,
+  }))
+  for (let i = 0; i < writes.length; i += BATCH_SIZE) {
     await db
       .insert(subtitleFile)
-      .values(changed.slice(i, i + BATCH_SIZE))
+      .values(writes.slice(i, i + BATCH_SIZE))
       .onConflictDoUpdate({
         target: [subtitleFile.mediaItemId, subtitleFile.path],
         set: {
@@ -264,30 +385,17 @@ async function runSync(libraryId: string): Promise<void> {
         },
       })
   }
-  const gone = existing
-    .filter((row) => checked.has(row.mediaItemId) && !found.has(key(row)))
+  counts.written = writes.length
+
+  const gone = leftover
+    .filter((row) => !movedRows.has(row))
     .map((row) => row.id)
+  if (gone.length > 0 && shutdownSignal.aborted) return counts
   for (let i = 0; i < gone.length; i += BATCH_SIZE) {
     await db
       .delete(subtitleFile)
       .where(inArray(subtitleFile.id, gone.slice(i, i + BATCH_SIZE)))
   }
-  if (changed.length > 0 || gone.length > 0) {
-    log.info(
-      `Subtitles in library ${libraryId}: ${changed.length} new or changed, ${gone.length} gone`,
-    )
-  }
-}
-
-/**
- * Bring the subtitle files of a library's videos up to date. Runs after a
- * scan. Folders that can't be read keep their rows, as the scan keeps the
- * files of a missing folder. A failure is logged and doesn't fail the scan.
- */
-export async function syncSubtitles(libraryId: string): Promise<void> {
-  try {
-    await runSync(libraryId)
-  } catch (cause) {
-    log.warn(`Couldn't update subtitles of library ${libraryId}`, cause)
-  }
+  counts.gone = gone.length
+  return counts
 }

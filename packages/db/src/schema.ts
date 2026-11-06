@@ -319,7 +319,7 @@ export const mediaItem = pgTable(
     /** Why the last probe failed. */
     probeError: text(),
     createdAt: createdAt(),
-    /** Start of the last scan that found the file. Older rows are gone. */
+    /** Start of the last scan that found the file new, changed, or moved. */
     seenAt: createdAt(),
   },
   (t) => [

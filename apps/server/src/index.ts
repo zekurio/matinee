@@ -6,15 +6,17 @@ import { deleteExpiredSessions } from "./auth/session"
 import { initSetupToken } from "./auth/setup"
 import { db, pool } from "./db"
 import { env } from "./env"
-import { catchUpLibraries } from "./library/scanner"
+import { stopScans } from "./library/scanner"
+import { startScheduledScans, stopScheduledScans } from "./library/schedule"
+import { startWatching, stopWatching } from "./library/watcher"
 import { log } from "./log"
+import { requestShutdown } from "./shutdown"
 
 await migrateDb(db, env.MATINEE_MIGRATIONS_DIR)
 await initSetupToken()
 await deleteExpiredSessions()
-void catchUpLibraries().catch((cause) =>
-  log.warn("Couldn't check libraries for pending work", cause),
-)
+startScheduledScans(env.MATINEE_SCAN_INTERVAL_HOURS)
+if (env.MATINEE_WATCH_LIBRARIES) startWatching()
 
 const server = serve(
   { fetch: createApp().fetch, hostname: env.HOST, port: env.PORT },
@@ -36,10 +38,18 @@ cleanup.unref()
 
 function shutdown(signal: string) {
   log.info(`${signal} received, shutting down`)
-  server.close(() => {
-    void pool.end().finally(() => process.exit(0))
-  })
   setTimeout(() => process.exit(1), 10_000).unref()
+  requestShutdown()
+  clearInterval(cleanup)
+  stopScheduledScans()
+  // Scans stop between files. Let them finish before the pool closes.
+  void Promise.all([stopWatching(), stopScans()])
+    .catch((cause) => log.warn("Couldn't stop library scans", cause))
+    .finally(() =>
+      server.close(() => {
+        void pool.end().finally(() => process.exit(0))
+      }),
+    )
 }
 process.once("SIGINT", () => shutdown("SIGINT"))
 process.once("SIGTERM", () => shutdown("SIGTERM"))

@@ -60,6 +60,8 @@ ones that matter for a real deployment:
 
 - `PUBLIC_URL`: the https origin people use. Passkeys only work on this origin.
 - `MATINEE_WEB_DIST`: path to the built web app, served by the server.
+- `MATINEE_WATCH_LIBRARIES` and `MATINEE_SCAN_INTERVAL_HOURS`: when libraries
+  get scanned. See [Scanning](#scanning).
 
 Single sign-on is set up by an admin under Settings → Authentication, and takes
 effect on the next sign-in without a restart. The redirect URI to register with
@@ -67,6 +69,52 @@ the provider is `$PUBLIC_URL/api/auth/oidc/callback`. The `MATINEE_OIDC_*`
 variables are optional defaults for that form: an empty field falls back to
 them. Set them if the admin account itself should be created through OIDC,
 since settings can't be opened before setup.
+
+## Scanning
+
+A scan looks only at the folders it is given and writes only what changed:
+new and changed files, files that are gone, their subtitle files, and the
+titles they belong to. Scans run one at a time. They start from:
+
+- The watcher, for the folders that changed. See below.
+- A full scan of every library a minute after the server starts, for what
+  changed while it was down.
+- A full scan every `MATINEE_SCAN_INTERVAL_HOURS`, 12 by default, for what
+  the watcher can't see. 0 turns it off.
+- Scan now in Settings → Libraries, and adding or editing a library.
+
+The watcher watches every folder in a library. Once a library's files have
+stopped changing for 10 seconds, it scans a folder that appeared with
+everything in it, and for a folder where a video or subtitle file came,
+changed, or went, just that folder's own entries. A change in a `Subs`
+folder rescans the folder of its videos. An import from Sonarr or Radarr, or
+a subtitle from Bazarr, shows up on its own that way. Watching uses inotify,
+with one watch per folder. Two limits:
+
+- inotify only sees changes made on the same machine. On an NFS or SMB share
+  that another host writes to, nothing fires, and changes show up with the
+  timed scan or Scan now.
+- A large library can run out of watches. The server logs a warning; raise
+  `fs.inotify.max_user_watches` with sysctl and restart.
+
+`MATINEE_WATCH_LIBRARIES=false` turns watching off. The startup and timed
+scans still run.
+
+A file that was moved or renamed keeps its row, and with it everyone's watch
+progress, when one scan sees both its old and new path: same size, and the
+same file name or the same modification time. Its subtitle files keep their
+rows too when they move with it.
+
+Scans skip hidden entries and NAS system folders such as `@eaDir` and
+`#recycle`. So that storage going away doesn't empty a library, a scan:
+
+- Skips a library folder that is missing, can't be read, or is empty while it
+  still has files, which usually means a share isn't mounted. It logs a
+  warning. If the folder really is empty now, remove it from the library.
+  This only covers library folders, so point a library at a share's mount
+  point, not at a folder above it.
+- Keeps the files and subtitles below a folder it couldn't list completely.
+- Deletes nothing when the server stops partway through.
 
 ## Metadata
 
@@ -110,7 +158,9 @@ The player shows subtitle files beside a video and text subtitles inside it.
 - Files: `Movie.srt`, `Movie.en.srt`, `Movie.eng.forced.srt`,
   `Movie.de.sdh.srt`, also `.vtt`, `.ass`, and `.ssa`, in the video's folder or
   a `Subs` or `Subtitles` folder next to it. Release packs with
-  `Subs/<video name>/2_English.srt` work too. A scan picks them up.
+  `Subs/<video name>/2_English.srt` work too. A scan of the video's folder
+  picks them up, and the watcher sees them come and go like videos. A file
+  in `Subs` with no video's name goes to the folder's only video.
 - Streams: text subtitles inside the file, such as SubRip, ASS/SSA,
   mov_text, and WebVTT. The first
   time someone turns one on, ffmpeg extracts it into
