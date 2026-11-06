@@ -1,4 +1,9 @@
-import { mediaStreamPath, RPC_PATH } from "@matinee/contracts"
+import {
+  mediaStreamPath,
+  RPC_PATH,
+  type Subtitles,
+  subtitlePath,
+} from "@matinee/contracts"
 import { buttonVariants } from "@matinee/ui/components/button"
 import { toast } from "@matinee/ui/components/sonner"
 import { Spinner } from "@matinee/ui/components/spinner"
@@ -13,6 +18,8 @@ import { client, errorMessage, orpc } from "@/lib/rpc"
 export const Route = createFileRoute("/_authed/watch/$itemId")({
   component: Watch,
 })
+
+const NO_SUBTITLES: Subtitles = { tracks: [], audioLanguage: null }
 
 function formatClock(seconds: number): string {
   const s = Math.floor(seconds % 60)
@@ -54,6 +61,10 @@ function Watch() {
     // The resume point must be current, not from an earlier visit.
     staleTime: 0,
   })
+  // Playback starts without waiting for these; tracks join when they arrive.
+  const subtitles = useQuery(
+    orpc.media.subtitles.queryOptions({ input: { id: itemId } }),
+  )
   const [unsupported, setUnsupported] = useState(false)
   // Bumping this remounts the player from the start.
   const [restarts, setRestarts] = useState(0)
@@ -101,6 +112,9 @@ function Watch() {
               ? (label.year ?? "")
               : label.groupLabel.join(" · ")
         }
+        // A failed list means no tracks, not a broken player.
+        subtitles={subtitles.isError ? NO_SUBTITLES : subtitles.data}
+        subtitleSrc={(trackId) => subtitlePath(itemId, trackId)}
         startAt={startAt}
         onBack={back}
         onUnsupported={() => setUnsupported(true)}

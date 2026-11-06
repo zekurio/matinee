@@ -25,6 +25,7 @@ import {
 import { db } from "../db"
 import { isScanning, scanLibrary } from "../library/scanner"
 import { episodeOrder, publicItems, toSummary } from "../media/items"
+import { listSubtitles } from "../media/subtitles"
 import { isRefreshing, refreshLibrary } from "../metadata/refresh"
 import { sources } from "../metadata/sources"
 import { admin, authed, badRequest, notFound } from "./base"
@@ -291,6 +292,15 @@ export const media = {
     if (!row) throw notFound("This title isn't in any library.")
     const [item] = await publicItems([row], context.user.id)
     return item!
+  }),
+
+  subtitles: authed.media.subtitles.handler(async ({ input }) => {
+    const [row] = await db
+      .select()
+      .from(mediaItem)
+      .where(eq(mediaItem.id, input.id))
+    if (!row) throw notFound("This title isn't in any library.")
+    return listSubtitles(row)
   }),
 }
 

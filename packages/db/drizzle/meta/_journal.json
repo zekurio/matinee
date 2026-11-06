@@ -43,6 +43,13 @@
       "when": 1793962211092,
       "tag": "0005_user_invites",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793962722512,
+      "tag": "0006_subtitles",
+      "breakpoints": true
     }
   ]
 }

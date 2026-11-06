@@ -152,12 +152,17 @@ function readLines(
 }
 
 /** Run a command and resolve with its stdout, or reject with its stderr. */
-export async function run(command: string, args: string[]): Promise<string> {
+export async function run(
+  command: string,
+  args: string[],
+  timeoutMs?: number,
+): Promise<string> {
   const lines: string[] = []
   await runProcess({
     name: command.split("/").at(-1) ?? command,
     command,
     args,
+    timeoutMs,
     onStdoutLine: (line) => lines.push(line),
   })
   return lines.join("\n")

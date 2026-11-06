@@ -9,6 +9,14 @@ export function mediaStreamPath(id: string): string {
 export type ThumbnailSize = "small" | "large"
 
 /**
+ * One subtitle track of a media item as WebVTT. Track ids come from
+ * `media.subtitles`. 404 when the server can't read or convert the track.
+ */
+export function subtitlePath(itemId: string, trackId: string): string {
+  return `/api/media/${encodeURIComponent(itemId)}/subtitles/${encodeURIComponent(trackId)}`
+}
+
+/**
  * A frame from the video, for cards (`small`, 480px wide) and banners
  * (`large`, 1280px wide). 404 when the server can't extract one.
  */

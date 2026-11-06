@@ -336,6 +336,33 @@ export const mediaItem = pgTable(
   ],
 )
 
+/**
+ * A subtitle file next to a media item, found by the scan. The server reads
+ * it by id; clients never send a path.
+ */
+export const subtitleFile = pgTable(
+  "subtitle_file",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    mediaItemId: uuid()
+      .notNull()
+      .references(() => mediaItem.id, { onDelete: "cascade" }),
+    path: text().notNull(),
+    /** The extension: srt, vtt, ass, ssa, or sup and idx for pictures. */
+    format: text().notNull(),
+    /** BCP 47 tag from the file name, like `en` or `pt-BR`. */
+    language: text(),
+    /** Other words in the file name, like `Commentary`. */
+    title: text(),
+    forced: boolean().notNull().default(false),
+    /** SDH, CC, or HI in the file name. */
+    sdh: boolean().notNull().default(false),
+    isDefault: boolean().notNull().default(false),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex("subtitle_file_item_path").on(t.mediaItemId, t.path)],
+)
+
 /** Where each user is in each file. One row per user and file. */
 export const watchProgress = pgTable(
   "watch_progress",
@@ -363,4 +390,5 @@ export type LibraryRow = typeof library.$inferSelect
 export type TitleRow = typeof title.$inferSelect
 export type EpisodeRow = typeof episode.$inferSelect
 export type MediaItemRow = typeof mediaItem.$inferSelect
+export type SubtitleFileRow = typeof subtitleFile.$inferSelect
 export type WatchProgressRow = typeof watchProgress.$inferSelect

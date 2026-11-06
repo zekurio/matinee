@@ -22,6 +22,7 @@ import {
   MetadataProvider,
   OidcAccount,
   ShelfEntry,
+  Subtitles,
   Passkey,
   PasskeyCreation,
   PasskeyName,
@@ -191,6 +192,12 @@ export const contract = {
       )
       .output(z.object({ items: z.array(MediaItem), total: z.number().int() })),
     get: oc.input(IdInput).output(MediaItem),
+    /**
+     * A file's subtitle tracks: files beside it and text streams inside it.
+     * A file the background probe hasn't reached yet is probed first, so
+     * that call can take a moment.
+     */
+    subtitles: oc.input(IdInput).output(Subtitles),
     /**
      * The newest titles in a library, with how many files each has and
      * when it last grew.

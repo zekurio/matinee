@@ -10,6 +10,7 @@ import { videoContainer } from "../media/mime"
 import { probeLibrary } from "../media/probe"
 import { titleFromFilename } from "../media/title"
 import { refreshLibrary } from "../metadata/refresh"
+import { syncSubtitles } from "./subtitles"
 import { assignTitles } from "./titles"
 
 const BATCH_SIZE = 500
@@ -150,6 +151,7 @@ async function runScan(libraryId: string): Promise<void> {
         ),
       )
   }
+  await syncSubtitles(libraryId)
   await assignTitles(libraryId, lib.kind)
   await db
     .update(library)
