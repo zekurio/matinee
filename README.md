@@ -85,6 +85,9 @@ A scan groups files into titles: a show is a top-level folder, a movie is a
 folder holding one video (or a lone file), and `Season 2` folders or `S02E05`
 in file names give episode numbers. After the scan, titles that are new,
 unmatched for a day, gained files, or are 30 days old get fetched again.
+In the background, ffprobe reads the codecs, audio tracks, and subtitles of
+files that are new or changed, a few at a time. A file it can't read is
+left alone until it changes.
 
 Matching tries, in order, a provider id in the folder name (`{tvdb-81189}`,
 `[tmdbid-603]`, `{imdb-tt0133093}`, as Sonarr, Radarr, and Jellyfin write

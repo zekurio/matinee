@@ -70,6 +70,7 @@ export function toItem(
     sizeBytes: row.sizeBytes,
     modifiedAt: row.modifiedAt,
     durationSeconds: row.durationSeconds,
+    probe: row.probe,
     progress: progress
       ? {
           positionSeconds: progress.positionSeconds,

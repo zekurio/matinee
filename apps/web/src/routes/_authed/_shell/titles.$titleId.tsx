@@ -27,7 +27,7 @@ import {
   IdentifyDialog,
   invalidateTitleData,
 } from "@/components/identify-dialog"
-import { Picture, Thumb, tone } from "@/components/media-item"
+import { Picture, StreamLine, Thumb, tone } from "@/components/media-item"
 import { formatBytes, formatDate } from "@/lib/format"
 import {
   art,
@@ -565,6 +565,7 @@ function EpisodeRow({ item }: { item: MediaItem }) {
               {facts.join(" · ")}
             </span>
           )}
+          <StreamLine item={item} />
           {overview && (
             <span className="text-muted-foreground mt-1.5 line-clamp-2 text-sm leading-5 max-sm:hidden">
               {overview}
@@ -622,6 +623,7 @@ function Files({ title }: { title: Title }) {
                     .filter(Boolean)
                     .join(" · ")}
                 </span>
+                <StreamLine item={item} />
               </span>
             </Link>
           </li>
