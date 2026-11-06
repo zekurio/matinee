@@ -24,6 +24,7 @@ import {
 
 import { db } from "../db"
 import { isScanning, scanLibrary } from "../library/scanner"
+import { watchLibraries } from "../library/watcher"
 import { episodeOrder, publicItems, toSummary } from "../media/items"
 import { isRefreshing, refreshLibrary } from "../metadata/refresh"
 import { sources } from "../metadata/sources"
@@ -141,6 +142,7 @@ export const libraries = {
     if (!row) throw new Error("Could not create the library.")
     await writeFolders(row.id, input)
     void scanLibrary(row.id)
+    void watchLibraries()
     return loadLibrary(row.id)
   }),
 
@@ -177,6 +179,7 @@ export const libraries = {
     }
     await writeFolders(input.id, input)
     void scanLibrary(input.id)
+    void watchLibraries()
     return loadLibrary(input.id)
   }),
 
@@ -186,6 +189,7 @@ export const libraries = {
       .where(eq(library.id, input.id))
       .returning({ id: library.id })
     if (deleted.length === 0) throw notFound("Library not found.")
+    void watchLibraries()
   }),
 
   scan: admin.libraries.scan.handler(async ({ input }) => {

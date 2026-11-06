@@ -1,14 +1,20 @@
 import { opendir, realpath, stat } from "node:fs/promises"
 import { join, relative } from "node:path"
 
-import { library, libraryFolder, mediaItem } from "@matinee/db"
-import { and, eq, inArray, isNull, lt, sql } from "drizzle-orm"
+import {
+  library,
+  libraryFolder,
+  mediaItem,
+  type MediaItemRow,
+} from "@matinee/db"
+import { and, eq, inArray, isNull, sql } from "drizzle-orm"
 
 import { db } from "../db"
 import { log } from "../log"
 import { videoContainer } from "../media/mime"
 import { titleFromFilename } from "../media/title"
 import { refreshLibrary } from "../metadata/refresh"
+import { shutdownSignal } from "../shutdown"
 import { assignTitles } from "./titles"
 
 const BATCH_SIZE = 500
@@ -68,6 +74,33 @@ async function* walk(
   }
 }
 
+/** The columns a scan writes, as the last write left them. */
+type KnownFile = Pick<
+  MediaItemRow,
+  | "folderId"
+  | "relativePath"
+  | "title"
+  | "container"
+  | "sizeBytes"
+  | "modifiedAt"
+>
+
+function fileTitle(file: FoundFile): string {
+  return titleFromFilename(file.relativePath.split("/").at(-1) ?? "")
+}
+
+/** True when writing the file again would only bump `seenAt`. */
+function unchanged(known: KnownFile, folderId: string, file: FoundFile) {
+  return (
+    known.folderId === folderId &&
+    known.relativePath === file.relativePath &&
+    known.container === file.container &&
+    known.sizeBytes === file.sizeBytes &&
+    known.modifiedAt.getTime() === file.modifiedAt.getTime() &&
+    known.title === fileTitle(file)
+  )
+}
+
 async function flush(
   libraryId: string,
   folderId: string,
@@ -83,7 +116,7 @@ async function flush(
         folderId,
         path: file.path,
         relativePath: file.relativePath,
-        title: titleFromFilename(file.relativePath.split("/").at(-1) ?? ""),
+        title: fileTitle(file),
         container: file.container,
         sizeBytes: file.sizeBytes,
         modifiedAt: file.modifiedAt,
@@ -112,9 +145,28 @@ async function runScan(libraryId: string): Promise<void> {
     .select()
     .from(libraryFolder)
     .where(eq(libraryFolder.libraryId, libraryId))
+  // Files from earlier scans. Unchanged ones aren't written again, and the
+  // ones the walk doesn't find are gone.
+  const known = new Map(
+    (
+      await db
+        .select({
+          path: mediaItem.path,
+          folderId: mediaItem.folderId,
+          relativePath: mediaItem.relativePath,
+          title: mediaItem.title,
+          container: mediaItem.container,
+          sizeBytes: mediaItem.sizeBytes,
+          modifiedAt: mediaItem.modifiedAt,
+        })
+        .from(mediaItem)
+        .where(eq(mediaItem.libraryId, libraryId))
+    ).map(({ path, ...file }) => [path, file]),
+  )
 
-  const scannedFolders: string[] = []
+  const scannedFolders = new Set<string>()
   let found = 0
+  let written = 0
   const visited = new Set<string>()
   for (const folder of folders) {
     const info = await stat(folder.path).catch(() => null)
@@ -125,25 +177,38 @@ async function runScan(libraryId: string): Promise<void> {
     }
     let batch: FoundFile[] = []
     for await (const file of walk(folder.path, folder.path, visited)) {
-      batch.push(file)
+      // Stop on shutdown before anything is deleted. The next scan redoes it.
+      if (shutdownSignal.aborted) {
+        log.info(`Scan of library ${libraryId} stopped for shutdown`)
+        return
+      }
       found++
+      const before = known.get(file.path)
+      known.delete(file.path)
+      if (before && unchanged(before, folder.id, file)) continue
+      batch.push(file)
       if (batch.length >= BATCH_SIZE) {
         await flush(libraryId, folder.id, startedAt, batch)
+        written += batch.length
         batch = []
       }
     }
     await flush(libraryId, folder.id, startedAt, batch)
-    scannedFolders.push(folder.id)
+    written += batch.length
+    scannedFolders.add(folder.id)
   }
 
-  if (scannedFolders.length > 0) {
+  // Left over: files the walk didn't find again in folders it could read.
+  const gone = [...known]
+    .filter(([, file]) => scannedFolders.has(file.folderId))
+    .map(([path]) => path)
+  for (let i = 0; i < gone.length; i += BATCH_SIZE) {
     await db
       .delete(mediaItem)
       .where(
         and(
           eq(mediaItem.libraryId, libraryId),
-          inArray(mediaItem.folderId, scannedFolders),
-          lt(mediaItem.seenAt, startedAt),
+          inArray(mediaItem.path, gone.slice(i, i + BATCH_SIZE)),
         ),
       )
   }
@@ -153,7 +218,7 @@ async function runScan(libraryId: string): Promise<void> {
     .set({ lastScannedAt: new Date() })
     .where(eq(library.id, libraryId))
   log.info(
-    `Scanned library ${libraryId}: ${found} files in ${Date.now() - startedAt.getTime()} ms`,
+    `Scanned library ${libraryId}: ${found} files, ${written} new or changed, ${gone.length} gone, in ${Date.now() - startedAt.getTime()} ms`,
   )
 }
 
@@ -174,7 +239,7 @@ export function scanLibrary(libraryId: string): Promise<void> {
     try {
       await runScan(libraryId)
       // Metadata runs on its own; the scan is over once the files are in.
-      void refreshLibrary(libraryId)
+      if (!shutdownSignal.aborted) void refreshLibrary(libraryId)
     } catch (cause) {
       log.error(`Scan of library ${libraryId} failed`, cause)
     } finally {

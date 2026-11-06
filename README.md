@@ -60,6 +60,7 @@ ones that matter for a real deployment:
 
 - `PUBLIC_URL`: the https origin people use. Passkeys only work on this origin.
 - `MATINEE_WEB_DIST`: path to the built web app, served by the server.
+- `MATINEE_WATCH_LIBRARIES`: on by default. See [Scanning](#scanning).
 
 Single sign-on is set up by an admin under Settings → Authentication, and takes
 effect on the next sign-in without a restart. The redirect URI to register with
@@ -67,6 +68,25 @@ the provider is `$PUBLIC_URL/api/auth/oidc/callback`. The `MATINEE_OIDC_*`
 variables are optional defaults for that form: an empty field falls back to
 them. Set them if the admin account itself should be created through OIDC,
 since settings can't be opened before setup.
+
+## Scanning
+
+The server watches every library folder and rescans a library once its files
+have stopped changing for 10 seconds, so an import from Sonarr or Radarr shows
+up on its own. It also scans every library, one after another, a minute after
+it starts, to pick up what changed while it was down. A rescan writes only new
+or changed files to the database.
+
+Watching uses inotify, with one watch per folder. Two limits:
+
+- inotify only sees changes made on the same machine. On an NFS or SMB share
+  that another host writes to, nothing fires; use Scan now in Settings →
+  Libraries, or restart.
+- A large library can run out of watches. The server logs a warning; raise
+  `fs.inotify.max_user_watches` with sysctl and restart.
+
+`MATINEE_WATCH_LIBRARIES=false` turns watching and the startup scan off. The
+server then scans a library when it is added or edited, or on Scan now.
 
 ## Metadata
 
