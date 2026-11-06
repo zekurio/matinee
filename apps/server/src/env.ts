@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from "node:fs"
 import { dirname, join, resolve } from "node:path"
 
+import { DevicePath, HardwareAcceleration } from "@matinee/contracts"
 import { z } from "zod"
 
 // Fill unset variables from the nearest `.env` above the working directory.
@@ -46,6 +47,13 @@ const EnvSchema = z.object({
   MATINEE_DATA_DIR: z.string().default("data"),
   MATINEE_FFMPEG_PATH: z.string().default("ffmpeg"),
   MATINEE_FFPROBE_PATH: z.string().default("ffprobe"),
+  /**
+   * Defaults for the transcoding settings an admin can change in the app:
+   * the acceleration and its device nodes.
+   */
+  MATINEE_HARDWARE_ACCELERATION: HardwareAcceleration.default("none"),
+  MATINEE_VAAPI_DEVICE: DevicePath.default("/dev/dri/renderD128"),
+  MATINEE_QSV_DEVICE: DevicePath.default(""),
   /** Scan the library folders that change, as they change. */
   MATINEE_WATCH_LIBRARIES: flag.default(true),
   /**

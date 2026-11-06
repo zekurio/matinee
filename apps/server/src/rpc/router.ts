@@ -1,5 +1,6 @@
 import { account } from "./account"
 import { adminAuth } from "./admin-auth"
+import { adminTranscoding } from "./admin-transcoding"
 import { adminUsers } from "./admin-users"
 import { auth } from "./auth"
 import { pub } from "./base"
@@ -16,5 +17,10 @@ export const router = pub.router({
   media,
   playback,
   home,
-  admin: { ...adminRoutes, auth: adminAuth, users: adminUsers },
+  admin: {
+    ...adminRoutes,
+    auth: adminAuth,
+    transcoding: adminTranscoding,
+    users: adminUsers,
+  },
 })

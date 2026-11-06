@@ -28,8 +28,9 @@ in
     typescript-language-server
     nixd
     nil
-    # Probing and, later, transcoding.
-    ffmpeg-headless
+    # Probing and transcoding. Jellyfin's build adds tonemapx, the hardware
+    # tone mapping filters, and the Dolby Vision handling the encoder uses.
+    jellyfin-ffmpeg
   ];
 
   env = {
