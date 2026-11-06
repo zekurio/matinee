@@ -1,0 +1,16 @@
+{
+  "name": "@matinee/client",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@matinee/contracts": "workspace:*",
+    "@orpc/client": "catalog:",
+    "@orpc/contract": "catalog:"
+  }
+}

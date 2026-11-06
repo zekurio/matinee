@@ -1,0 +1,35 @@
+{
+  "name": "matinee",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev --filter=@matinee/server --filter=@matinee/web",
+    "dev:server": "turbo run dev --filter=@matinee/server",
+    "dev:web": "turbo run dev --filter=@matinee/web",
+    "start": "pnpm --filter @matinee/server start",
+    "db:generate": "pnpm --filter @matinee/db db:generate",
+    "db:migrate": "pnpm --filter @matinee/db db:migrate",
+    "db:studio": "pnpm --filter @matinee/db db:studio",
+    "fmt": "oxfmt",
+    "fmt:check": "oxfmt --check",
+    "lint": "oxlint",
+    "typecheck": "turbo run typecheck typecheck:oxlint",
+    "typecheck:oxlint": "tsc -p tools/oxlint",
+    "verify": "pnpm fmt:check && pnpm lint && pnpm typecheck"
+  },
+  "devDependencies": {
+    "@oxlint/plugins": "1.91.0",
+    "@types/node": "26.6.6",
+    "oxfmt": "0.76.0",
+    "oxlint": "1.91.0",
+    "oxlint-tsgolint": "7.0.2005",
+    "turbo": "2.11.10",
+    "typescript": "7.0.2"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "packageManager": "pnpm@11.27.0"
+}

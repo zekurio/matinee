@@ -1,0 +1,35 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+
+catalog:
+  "@base-ui/react": 1.9.0
+  "@orpc/client": 1.16.1
+  "@orpc/contract": 1.16.1
+  "@orpc/server": 1.16.1
+  "@orpc/tanstack-query": 1.16.1
+  "@simplewebauthn/browser": 14.0.0
+  "@simplewebauthn/server": 14.0.3
+  "@types/react": 19.3.0
+  "@types/react-dom": 19.3.0
+  drizzle-orm: 0.45.4
+  lucide-react: 1.69.0
+  pg: 8.23.1
+  react: 19.3.1
+  react-dom: 19.3.1
+  vite: 8.3.6
+  zod: 4.6.7
+
+allowBuilds:
+  esbuild: true
+
+overrides:
+  # GHSA-67mh-4wv8-2f99: drizzle-kit still loads esbuild 0.18 through the
+  # deprecated @esbuild-kit packages. Drop this once drizzle-kit stops.
+  esbuild: 0.28.2
+
+minimumReleaseAgeExclude:
+  - lucide-react@1.69.0
+  - "@tanstack/query-core@5.106.1"
+  - "@tanstack/react-query@5.106.1"
+  - vite@8.3.6

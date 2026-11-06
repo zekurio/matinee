@@ -1,0 +1,22 @@
+{
+  "name": "@matinee/server",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch --clear-screen=false src/index.ts",
+    "start": "NODE_ENV=production tsx src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "2.1.6",
+    "@matinee/contracts": "workspace:*",
+    "@matinee/db": "workspace:*",
+    "@orpc/server": "catalog:",
+    "@simplewebauthn/server": "catalog:",
+    "drizzle-orm": "catalog:",
+    "hono": "4.13.16",
+    "openid-client": "6.8.9",
+    "tsx": "4.23.15",
+    "zod": "catalog:"
+  }
+}

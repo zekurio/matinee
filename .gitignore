@@ -1,0 +1,22 @@
+node_modules
+.pnpm-store/
+.turbo
+dist
+.vite
+.tanstack
+
+.env
+.env.local
+.env.production
+
+.direnv/
+.devenv/
+.devenv.flake.nix
+devenv.local.nix
+
+# Local runtime state (dev Postgres lives under .devenv)
+data/
+
+.DS_Store
+*.pem
+*.key

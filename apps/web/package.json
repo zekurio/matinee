@@ -1,0 +1,33 @@
+{
+  "name": "@matinee/web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite dev",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@base-ui/react": "catalog:",
+    "@matinee/client": "workspace:*",
+    "@matinee/contracts": "workspace:*",
+    "@matinee/ui": "workspace:*",
+    "@orpc/tanstack-query": "catalog:",
+    "@simplewebauthn/browser": "catalog:",
+    "@tanstack/react-query": "5.106.1",
+    "@tanstack/react-router": "1.170.46",
+    "lucide-react": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "4.3.4",
+    "@tanstack/router-plugin": "1.168.48",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@vitejs/plugin-react": "6.2.1",
+    "vite": "catalog:"
+  }
+}
