@@ -10,7 +10,12 @@ import {
 } from "node:fs/promises"
 import { join } from "node:path"
 
-import type { Subtitles, SubtitleTrack } from "@matinee/contracts"
+import type {
+  MediaProbe,
+  Subtitles,
+  SubtitleStream,
+  SubtitleTrack,
+} from "@matinee/contracts"
 import {
   type MediaItemRow,
   subtitleFile,
@@ -22,9 +27,9 @@ import { db } from "../db"
 import { env } from "../env"
 import { log } from "../log"
 import { keyedWork } from "./keyed-work"
-import { trackLabel } from "./language"
+import { languageTag, trackLabel } from "./language"
+import { probeItem } from "./probe"
 import { run } from "./process"
-import { type EmbeddedSubtitle, probeStreams } from "./subtitle-probe"
 import { cleanVtt, decodeText, srtToVtt, vttText } from "./webvtt"
 
 // Sidecar formats that are pictures: PGS and VobSub.
@@ -55,19 +60,41 @@ function sidecarTrack(row: SubtitleFileRow): SubtitleTrack {
 }
 
 function embeddedTrack(
-  stream: EmbeddedSubtitle,
+  stream: SubtitleStream,
   position: number,
 ): SubtitleTrack {
+  const language = languageTag(stream.language ?? "")
+  const words = stream.title?.toLowerCase() ?? ""
   return {
     id: `stream-${stream.index}`,
-    label: trackLabel(stream.language, stream.title, `Track ${position + 1}`),
-    language: stream.language,
-    forced: stream.forced,
-    sdh: stream.sdh,
-    default: stream.isDefault,
+    label: trackLabel(language, stream.title, `Track ${position + 1}`),
+    language,
+    forced: stream.forced || /\bforced\b/.test(words),
+    sdh: stream.hearingImpaired || /\b(sdh|cc|hearing impaired)\b/.test(words),
+    default: stream.default,
     source: "embedded",
-    available: stream.text,
+    available: stream.kind === "text",
   }
+}
+
+/**
+ * What ffprobe read from the file, probing it now if the background probe
+ * hasn't reached it yet. Null when ffprobe couldn't read it, and when the
+ * file changed since the scan that stored the probe: its stream indexes
+ * may be gone, and the next scan probes it again.
+ */
+async function fileProbe(
+  item: MediaItemRow,
+  info: Stats,
+): Promise<MediaProbe | null> {
+  if (
+    info.size !== item.sizeBytes ||
+    info.mtime.getTime() !== item.modifiedAt.getTime()
+  ) {
+    return null
+  }
+  if (item.probedAt !== null) return item.probe
+  return probeItem(item).catch(() => null)
 }
 
 /**
@@ -83,16 +110,16 @@ export async function listSubtitles(item: MediaItemRow): Promise<Subtitles> {
       .orderBy(asc(subtitleFile.path)),
     stat(item.path).catch(() => null),
   ])
-  const streams = info?.isFile()
-    ? await probeStreams(item.path, info)
-    : { subtitles: [], audioLanguage: null }
+  const probe = info?.isFile() ? await fileProbe(item, info) : null
+  // The default audio plays first, else the first audio stream.
+  const audio = probe?.audio.find((stream) => stream.default) ?? probe?.audio[0]
   return {
     tracks: [
       // By language, so a file's English tracks sit together.
       ...files.map(sidecarTrack).sort((a, b) => a.label.localeCompare(b.label)),
-      ...streams.subtitles.map(embeddedTrack),
+      ...(probe?.subtitles ?? []).map(embeddedTrack),
     ],
-    audioLanguage: streams.audioLanguage,
+    audioLanguage: languageTag(audio?.language ?? ""),
   }
 }
 
@@ -204,10 +231,10 @@ export async function openSubtitle(
     const index = Number(stream[1])
     const info = await stat(item.path).catch(() => null)
     if (!info?.isFile()) return null
-    const { subtitles } = await probeStreams(item.path, info)
+    const probe = await fileProbe(item, info)
     if (
-      !subtitles.some(
-        (candidate) => candidate.index === index && candidate.text,
+      !probe?.subtitles.some(
+        (candidate) => candidate.index === index && candidate.kind === "text",
       )
     ) {
       return null

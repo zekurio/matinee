@@ -111,7 +111,8 @@ The player shows subtitle files beside a video and text subtitles inside it.
   `Movie.de.sdh.srt`, also `.vtt`, `.ass`, and `.ssa`, in the video's folder or
   a `Subs` or `Subtitles` folder next to it. Release packs with
   `Subs/<video name>/2_English.srt` work too. A scan picks them up.
-- Streams: SubRip, ASS/SSA, mov_text, and WebVTT inside the file. The first
+- Streams: text subtitles inside the file, such as SubRip, ASS/SSA,
+  mov_text, and WebVTT. The first
   time someone turns one on, ffmpeg extracts it into
   `$MATINEE_DATA_DIR/subtitles`, where it stays until the file changes.
 - Browsers get WebVTT. ASS and SSA lose their styling on the way.

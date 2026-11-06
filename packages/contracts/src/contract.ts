@@ -194,7 +194,8 @@ export const contract = {
     get: oc.input(IdInput).output(MediaItem),
     /**
      * A file's subtitle tracks: files beside it and text streams inside it.
-     * The first call for a file reads its streams, so it can take a moment.
+     * A file the background probe hasn't reached yet is probed first, so
+     * that call can take a moment.
      */
     subtitles: oc.input(IdInput).output(Subtitles),
     /**
