@@ -141,7 +141,7 @@ export const libraries = {
       .returning()
     if (!row) throw new Error("Could not create the library.")
     await writeFolders(row.id, input)
-    void scanLibrary(row.id)
+    void scanLibrary(row.id, { regroup: true })
     void watchLibraries()
     return loadLibrary(row.id)
   }),
@@ -178,7 +178,8 @@ export const libraries = {
         .where(eq(title.libraryId, input.id))
     }
     await writeFolders(input.id, input)
-    void scanLibrary(input.id)
+    // The kind or the folders may have changed, so regroup every title.
+    void scanLibrary(input.id, { regroup: true })
     void watchLibraries()
     return loadLibrary(input.id)
   }),

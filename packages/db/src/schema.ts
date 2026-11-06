@@ -282,7 +282,7 @@ export const mediaItem = pgTable(
     /** Learned from ffprobe or the player; null until then. */
     durationSeconds: doublePrecision(),
     createdAt: createdAt(),
-    /** Start of the last scan that found the file new or changed. */
+    /** Start of the last scan that found the file new, changed, or moved. */
     seenAt: createdAt(),
   },
   (t) => [

@@ -46,8 +46,17 @@ const EnvSchema = z.object({
   MATINEE_DATA_DIR: z.string().default("data"),
   MATINEE_FFMPEG_PATH: z.string().default("ffmpeg"),
   MATINEE_FFPROBE_PATH: z.string().default("ffprobe"),
-  /** Rescan a library when its folders change, and all once after start. */
+  /** Scan the library folders that change, as they change. */
   MATINEE_WATCH_LIBRARIES: flag.default(true),
+  /**
+   * Hours between full scans of every library; 0 turns them off. Node's
+   * timers can't wait longer than about 24 days.
+   */
+  MATINEE_SCAN_INTERVAL_HOURS: z.coerce
+    .number()
+    .min(0)
+    .max(24 * 24)
+    .default(12),
   MATINEE_SETUP_TOKEN: z.string().min(32).optional(),
   MATINEE_OPEN_REGISTRATION: flag.default(false),
   MATINEE_OIDC_ISSUER_URL: optional.pipe(z.url().optional()),
