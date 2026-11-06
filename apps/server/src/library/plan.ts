@@ -46,6 +46,12 @@ export function below(column: Column, dir: string) {
   return sql`starts_with(${column}, ${dir.endsWith(sep) ? dir : dir + sep})`
 }
 
+/** Rows whose path is directly in a folder, not in a folder below it. */
+export function directlyIn(column: Column, dir: string) {
+  const prefix = dir.endsWith(sep) ? dir : dir + sep
+  return sql`(starts_with(${column}, ${prefix}) and strpos(substr(${column}, length(${prefix}) + 1), '/') = 0)`
+}
+
 async function filesBelow(libraryId: string, dir: string): Promise<number> {
   const [row] = await db
     .select({ n: count() })

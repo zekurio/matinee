@@ -9,8 +9,8 @@ import { log } from "../log"
 import { languageFromName, languageTag } from "../media/language"
 import { shutdownSignal } from "../shutdown"
 import { isIgnored, isSubtitleFolder, subtitleFormat } from "./entries"
-import { below, type Listing, type WalkState } from "./plan"
-import { errorCode, isInside } from "./targets"
+import { below, directlyIn, type Listing, type WalkState } from "./plan"
+import { errorCode, isInside, type Targets } from "./targets"
 
 const BATCH_SIZE = 500
 
@@ -251,10 +251,13 @@ function isGone(row: KnownSubtitle, unreadable: Set<string>): boolean {
   return true
 }
 
-/** Videos in the folders the walk listed, and their subtitle rows. */
+/**
+ * Videos in the folders the walk listed, and their subtitle rows. A
+ * listing-only target lists just its own folder.
+ */
 async function loadVideos(
   libraryId: string,
-  roots: string[],
+  targets: Targets,
   listed: Map<string, Listing>,
 ): Promise<{
   videos: Map<string, Video[]>
@@ -262,7 +265,7 @@ async function loadVideos(
 }> {
   const videos = new Map<string, Video[]>()
   const known = new Map<string, KnownSubtitle>()
-  for (const root of roots) {
+  for (const [target, deep] of targets) {
     const rows = await db
       .select({
         id: mediaItem.id,
@@ -272,7 +275,12 @@ async function loadVideos(
       .from(mediaItem)
       .leftJoin(subtitleFile, eq(subtitleFile.mediaItemId, mediaItem.id))
       .where(
-        and(eq(mediaItem.libraryId, libraryId), below(mediaItem.path, root)),
+        and(
+          eq(mediaItem.libraryId, libraryId),
+          deep
+            ? below(mediaItem.path, target)
+            : directlyIn(mediaItem.path, target),
+        ),
       )
     const seen = new Set<string>()
     for (const row of rows) {
@@ -294,18 +302,17 @@ async function loadVideos(
 
 /**
  * Bring the subtitle rows of the videos in the folders the walk listed up
- * to date, from those listings and their Subs folders. `roots` are the
- * outermost folders the scan covered. Rows of other videos aren't touched,
- * rows below a folder that couldn't be read stay, and nothing is deleted
- * once shutdown is requested.
+ * to date, from those listings and their Subs folders. Rows of other
+ * videos aren't touched, rows below a folder that couldn't be read stay,
+ * and nothing is deleted once shutdown is requested.
  */
 export async function syncSidecars(
   libraryId: string,
-  roots: string[],
+  targets: Targets,
   state: WalkState,
 ): Promise<SidecarCounts> {
   const counts: SidecarCounts = { written: 0, moved: 0, gone: 0 }
-  const { videos, known } = await loadVideos(libraryId, roots, state.listed)
+  const { videos, known } = await loadVideos(libraryId, targets, state.listed)
   // Subs folders a listing-only walk didn't enter get listed here, once.
   const extra = new Map<string, Promise<Listing | null>>()
   const lookup = (dir: string) => {

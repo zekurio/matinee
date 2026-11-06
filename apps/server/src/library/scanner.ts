@@ -211,9 +211,11 @@ async function moveFiles(
         sizeBytes: file.sizeBytes,
         modifiedAt: file.modifiedAt,
         seenAt,
-        // A move matched on name can bring a new mtime, so probe it again.
-        // Undefined leaves the column as is.
-        probedAt: changed ? null : undefined,
+        // A move matched on name can bring a new mtime, and a failed probe
+        // may have tried the old path, so probe either again.
+        probedAt: changed
+          ? null
+          : sql`case when ${mediaItem.probeError} is null then ${mediaItem.probedAt} end`,
         // The regroup after the scan sets it. If the scan stops first, a
         // file without a title makes the next one regroup everything.
         titleId: null,
@@ -252,7 +254,11 @@ function outermost(targets: Targets): string[] {
   return roots
 }
 
-/** Files from earlier scans below the targets, by path. */
+/**
+ * Files from earlier scans below the targets, by path. A listing-only
+ * target needs the ones in its subfolders too: a subfolder that went away
+ * takes its files with it, and one renamed beside it moves them.
+ */
 async function loadKnown(
   libraryId: string,
   targets: Targets,
@@ -348,7 +354,7 @@ async function updateSidecars(
   state: WalkState,
 ): Promise<void> {
   try {
-    const counts = await syncSidecars(libraryId, outermost(targets), state)
+    const counts = await syncSidecars(libraryId, targets, state)
     if (counts.written + counts.moved + counts.gone > 0) {
       log.info(
         `Subtitle files in library ${name}: ${counts.written} new or changed, ${counts.moved} moved, ${counts.gone} gone`,
