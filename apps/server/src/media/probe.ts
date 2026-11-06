@@ -28,10 +28,14 @@ async function probeAndStore(row: MediaItemRow): Promise<MediaProbe | null> {
   try {
     probe = await runFfprobe(row.path)
   } catch (cause) {
+    const kind = processFailureKind(cause)
     // Without ffprobe there is nothing to record about the file.
-    if (processFailureKind(cause) === "start") throw cause
+    if (kind === "start") throw cause
     error = failureMessage(cause)
     log.warn(`Couldn't probe ${row.relativePath}: ${error}`)
+    // A timeout is more often a stalled mount than a broken file, so it
+    // isn't stored and the next pass tries again.
+    if (kind === "timeout") return null
   }
   // A failure is stored too, so a broken file waits until it changes.
   // Matching size and time skips the write when a scan saw the file change
