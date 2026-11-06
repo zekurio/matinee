@@ -1,6 +1,6 @@
 import type { User } from "@matinee/contracts"
 import { session, user, type UserRow } from "@matinee/db"
-import { and, eq, gt, lt } from "drizzle-orm"
+import { and, eq, gt, lt, ne } from "drizzle-orm"
 import type { Context } from "hono"
 import { deleteCookie, getCookie, setCookie } from "hono/cookie"
 
@@ -92,6 +92,23 @@ export async function signOut(c: Context): Promise<void> {
 
 export async function deleteExpiredSessions(): Promise<void> {
   await db.delete(session).where(lt(session.expiresAt, new Date()))
+}
+
+/**
+ * Sign the user out everywhere, except the session `keep` if given. Returns
+ * how many sessions ended.
+ */
+export async function deleteUserSessions(
+  userId: string,
+  keep?: string,
+): Promise<number> {
+  const ended = await db
+    .delete(session)
+    .where(
+      and(eq(session.userId, userId), keep ? ne(session.id, keep) : undefined),
+    )
+    .returning({ id: session.id })
+  return ended.length
 }
 
 declare module "hono" {

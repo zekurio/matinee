@@ -107,6 +107,28 @@ export const OidcAccount = z.object({
 })
 export type OidcAccount = z.infer<typeof OidcAccount>
 
+/**
+ * What a sign-in link an admin made is for: `invite` is the first sign-in of
+ * a new account, `recovery` adds a passkey to one that lost its own.
+ */
+export const INVITE_KINDS = ["invite", "recovery"] as const
+export const InviteKind = z.enum(INVITE_KINDS)
+export type InviteKind = z.infer<typeof InviteKind>
+
+/** The secret part of an invite or recovery link: 32 random bytes. */
+export const InviteToken = z
+  .string()
+  .regex(/^[A-Za-z0-9_-]{43}$/, "This link is incomplete. Copy the whole link.")
+
+/** What the person opening a link sees before they use it. */
+export const Invite = z.object({
+  kind: InviteKind,
+  username: z.string(),
+  displayName: z.string().nullable(),
+  expiresAt: z.date(),
+})
+export type Invite = z.infer<typeof Invite>
+
 export const LIBRARY_KINDS = ["movies", "shows", "other"] as const
 export const LibraryKind = z.enum(LIBRARY_KINDS)
 export type LibraryKind = z.infer<typeof LibraryKind>

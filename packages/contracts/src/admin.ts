@@ -1,5 +1,7 @@
 import { z } from "zod"
 
+import { InviteKind, User, UserRole, Username } from "./schemas"
+
 /**
  * The OpenID Connect provider as sign-in uses it. Text fields are "" when
  * unset.
@@ -71,3 +73,42 @@ export const OidcSettingsInput = z
     { path: ["scopes"], message: "Scopes must include openid." },
   )
 export type OidcSettingsInput = z.infer<typeof OidcSettingsInput>
+
+/** A sign-in link that hasn't been used yet. Its token is never shown again. */
+export const InviteLink = z.object({
+  id: z.uuid(),
+  kind: InviteKind,
+  createdAt: z.date(),
+  expiresAt: z.date(),
+  /** The admin who made it, or null if that account is gone. */
+  createdBy: z.string().nullable(),
+})
+export type InviteLink = z.infer<typeof InviteLink>
+
+/** A new link, with the URL to hand over. Only this answer carries it. */
+export const IssuedLink = z.object({
+  link: InviteLink,
+  url: z.string(),
+})
+export type IssuedLink = z.infer<typeof IssuedLink>
+
+/** An account as the admin's user list shows it. */
+export const AdminUser = User.extend({
+  createdAt: z.date(),
+  /** Latest activity across the user's sessions, to the hour. */
+  lastSeenAt: z.date().nullable(),
+  passkeys: z.number().int(),
+  /** Linked OIDC accounts. They only sign in while single sign-on is on. */
+  oidcAccounts: z.number().int(),
+  /** Sessions that haven't expired. */
+  sessions: z.number().int(),
+  /** Links that still work, newest first. */
+  links: z.array(InviteLink),
+})
+export type AdminUser = z.infer<typeof AdminUser>
+
+export const CreateUserInput = z.object({
+  username: Username,
+  role: UserRole,
+})
+export type CreateUserInput = z.infer<typeof CreateUserInput>

@@ -1,4 +1,5 @@
 import type {
+  InviteKind,
   LibraryKind,
   MediaProbe,
   MetadataProviderId,
@@ -119,6 +120,28 @@ export const authChallenge = pgTable(
     createdAt: createdAt(),
   },
   (t) => [index("auth_challenge_expires_idx").on(t.expiresAt)],
+)
+
+/**
+ * Invite and recovery links an admin made. Whoever opens one adds a passkey
+ * or links the OIDC provider to the account and is signed in. Only the
+ * token's SHA-256 is stored, and each link works once.
+ */
+export const invite = pgTable(
+  "invite",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    tokenHash: text().notNull().unique(),
+    userId: uuid()
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    kind: text().$type<InviteKind>().notNull(),
+    /** The admin who made it. */
+    createdBy: uuid().references(() => user.id, { onDelete: "set null" }),
+    expiresAt: timestamp({ withTimezone: true }).notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [index("invite_user_idx").on(t.userId)],
 )
 
 /**
@@ -335,6 +358,7 @@ export const watchProgress = pgTable(
 
 export type UserRow = typeof user.$inferSelect
 export type PasskeyRow = typeof passkey.$inferSelect
+export type InviteRow = typeof invite.$inferSelect
 export type LibraryRow = typeof library.$inferSelect
 export type TitleRow = typeof title.$inferSelect
 export type EpisodeRow = typeof episode.$inferSelect
