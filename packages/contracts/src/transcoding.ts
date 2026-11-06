@@ -56,7 +56,8 @@ export const HARDWARE_DECODE_SUPPORT = new Map<
     "nvenc",
     ["h264", "hevc", "mpeg2video", "mpeg4", "vc1", "vp8", "vp9", "av1"],
   ],
-  ["videotoolbox", ["h264", "hevc", "vp8", "vp9", "av1"]],
+  // AV1 needs an Apple GPU that decodes it, which detection can't tell.
+  ["videotoolbox", ["h264", "hevc", "vp8", "vp9"]],
 ])
 
 /** x264's names. Auto is veryfast for software, each encoder's own pick otherwise. */
