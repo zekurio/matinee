@@ -258,7 +258,8 @@ async function loadKnown(
 /**
  * After the walk: match the files it didn't find against the new ones it
  * held back, move the matches, add the rest of the new ones, and delete
- * the files that are gone. Notes the top-level entries it touched.
+ * the files that are gone. Notes the top-level entries it touched. False
+ * when it stopped for shutdown before deleting.
  */
 async function settle(
   libraryId: string,
@@ -268,7 +269,7 @@ async function settle(
   seenAt: Date,
   counts: ScanCounts,
   touched: Set<string>,
-): Promise<void> {
+): Promise<boolean> {
   // A moved or renamed file keeps its row, and with it its watch progress.
   const moves = matchMoves(leftover, held)
   await moveFiles(moves, seenAt)
@@ -293,6 +294,9 @@ async function settle(
   for (const file of added) touched.add(topLevelKey(file.relativePath))
 
   const gone = leftover.filter((row) => !movedRows.has(row))
+  // Stop on shutdown before deleting. Moved and new files have no title
+  // yet, so the next scan regroups everything.
+  if (gone.length > 0 && shutdownSignal.aborted) return false
   for (let i = 0; i < gone.length; i += BATCH_SIZE) {
     await db.delete(mediaItem).where(
       and(
@@ -306,6 +310,7 @@ async function settle(
   }
   counts.gone = gone.length
   for (const row of gone) touched.add(topLevelKey(row.relativePath))
+  return true
 }
 
 async function runScan(libraryId: string, request: ScanRequest): Promise<void> {
@@ -375,7 +380,19 @@ async function runScan(libraryId: string, request: ScanRequest): Promise<void> {
     if (result === "gone") leftover.push(row)
     else if (result === "kept") counts.kept++
   }
-  await settle(libraryId, folders, leftover, held, startedAt, counts, touched)
+  const settled = await settle(
+    libraryId,
+    folders,
+    leftover,
+    held,
+    startedAt,
+    counts,
+    touched,
+  )
+  if (!settled) {
+    log.info(`Scan of library ${lib.name} stopped for shutdown`)
+    return
+  }
 
   if (regroupAll) await assignTitles(libraryId, lib.kind)
   else if (touched.size > 0) await assignTitles(libraryId, lib.kind, touched)
