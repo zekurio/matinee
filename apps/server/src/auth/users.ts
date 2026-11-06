@@ -57,9 +57,10 @@ export async function lockUsers(tx: Tx): Promise<{ empty: boolean }> {
 }
 
 /**
- * Whether an admin other than `userId` can sign in: one with a passkey, or a
- * linked account while single sign-on is on. Call it under `lockUsers` before
- * demoting or deleting an admin, so Matinee always keeps one.
+ * Whether an admin other than `userId` can sign in: one with a passkey, or an
+ * account linked at the provider single sign-on uses now. Call it under
+ * `lockUsers` before demoting or deleting an admin, so Matinee always keeps
+ * one.
  */
 export async function otherAdminCanSignIn(
   tx: Tx,
@@ -73,12 +74,16 @@ export async function otherAdminCanSignIn(
     .where(others)
     .limit(1)
   if (withPasskey) return true
-  if (!(await activeOidc())) return false
+  const provider = await activeOidc()
+  if (!provider) return false
+  // Accounts store the ID token's `iss`, which can differ from the issuer
+  // URL by a trailing slash.
+  const issuer = provider.settings.issuerUrl.replace(/\/+$/, "")
   const [withAccount] = await tx
     .select({ id: user.id })
     .from(user)
     .innerJoin(oidcAccount, eq(oidcAccount.userId, user.id))
-    .where(others)
+    .where(and(others, sql`rtrim(${oidcAccount.issuer}, '/') = ${issuer}`))
     .limit(1)
   return withAccount !== undefined
 }

@@ -245,12 +245,13 @@ export const adminUsers = {
     create: admin.admin.users.links.create.handler(
       async ({ context, input }) => {
         const { target, issued } = await db.transaction(async (tx) => {
-          // Holds off a delete of the user until the link is stored.
+          // Holds off a delete of the user until the link is stored, and a
+          // second link request until this one has replaced the old links.
           const [row] = await tx
             .select()
             .from(user)
             .where(eq(user.id, input.userId))
-            .for("share")
+            .for("no key update")
           if (!row) throw notFound(USER_GONE)
           const kind = (await hasSignInMethod(tx, row.id))
             ? "recovery"
