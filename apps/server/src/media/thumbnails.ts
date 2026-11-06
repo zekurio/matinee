@@ -2,12 +2,11 @@ import { access, mkdir, rename, rm } from "node:fs/promises"
 import { join } from "node:path"
 
 import type { ThumbnailSize } from "@matinee/contracts"
-import { mediaItem, type MediaItemRow } from "@matinee/db"
-import { eq } from "drizzle-orm"
+import type { MediaItemRow } from "@matinee/db"
 
-import { db } from "../db"
 import { env } from "../env"
 import { log } from "../log"
+import { probeItem } from "./probe"
 import { limiter, run } from "./process"
 
 const WIDTHS = { small: 480, large: 1280 } satisfies Record<
@@ -23,20 +22,6 @@ const inflight = new Map<string, Promise<string | null>>()
 // Files ffmpeg couldn't read, so a broken file isn't retried on every view.
 const failed = new Set<string>()
 
-async function probeDuration(path: string): Promise<number | null> {
-  const out = await run(env.MATINEE_FFPROBE_PATH, [
-    "-v",
-    "error",
-    "-show_entries",
-    "format=duration",
-    "-of",
-    "default=noprint_wrappers=1:nokey=1",
-    path,
-  ])
-  const seconds = Number.parseFloat(out.trim())
-  return Number.isFinite(seconds) && seconds > 0 ? seconds : null
-}
-
 async function exists(path: string): Promise<boolean> {
   return access(path).then(
     () => true,
@@ -51,14 +36,10 @@ async function extract(
 ): Promise<string | null> {
   await mkdir(dir, { recursive: true })
   let duration = item.durationSeconds
-  if (duration === null) {
-    duration = await probeDuration(item.path).catch(() => null)
-    if (duration !== null) {
-      await db
-        .update(mediaItem)
-        .set({ durationSeconds: duration })
-        .where(eq(mediaItem.id, item.id))
-    }
+  if (item.probedAt === null) {
+    // The background probe hasn't reached this file yet.
+    const probe = await probeItem(item).catch(() => null)
+    duration = probe?.format.durationSeconds ?? duration
   }
   // A quarter in skips cold opens and title cards on most episodes.
   const seek = duration

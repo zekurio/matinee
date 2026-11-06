@@ -16,6 +16,7 @@ import {
   itemLabel,
   landscapeSources,
   progressRatio,
+  streamSummary,
   timeLeft,
 } from "@/lib/media"
 
@@ -169,6 +170,20 @@ export function Thumb({
 }
 
 /**
+ * The file's resolution, codec, audio, and subtitles in one quiet line,
+ * once the server has probed it.
+ */
+export function StreamLine({ item }: { item: MediaItem }) {
+  const summary = streamSummary(item)
+  if (!summary) return null
+  return (
+    <span className="text-muted-foreground/70 block truncate text-xs leading-5">
+      {summary}
+    </span>
+  )
+}
+
+/**
  * One file in a folder list, under its folder header. The whole row starts
  * playback.
  */
@@ -209,6 +224,7 @@ export function MediaRow({ item }: { item: MediaItem }) {
               .filter(Boolean)
               .join(" · ")}
           </span>
+          <StreamLine item={item} />
         </span>
       </Link>
     </li>

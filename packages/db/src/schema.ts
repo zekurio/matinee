@@ -1,5 +1,6 @@
 import type {
   LibraryKind,
+  MediaProbe,
   MetadataProviderId,
   TitleKind,
   UserRole,
@@ -281,6 +282,19 @@ export const mediaItem = pgTable(
     modifiedAt: timestamp({ withTimezone: true }).notNull(),
     /** Learned from ffprobe or the player; null until then. */
     durationSeconds: doublePrecision(),
+    /**
+     * What ffprobe read. Null until probed, or when that failed. A change
+     * to `MediaProbe` needs a migration that clears `probedAt` too, so
+     * files are read again.
+     */
+    probe: jsonb().$type<MediaProbe>(),
+    /**
+     * When ffprobe last read the file, whether or not it could. Null means
+     * it's due: the file is new, changed, or from before probing.
+     */
+    probedAt: timestamp({ withTimezone: true }),
+    /** Why the last probe failed. */
+    probeError: text(),
     createdAt: createdAt(),
     /** Start of the last scan that found the file. Older rows are gone. */
     seenAt: createdAt(),
@@ -293,6 +307,9 @@ export const mediaItem = pgTable(
       t.seasonNumber,
       t.episodeNumber,
     ),
+    index("media_item_unprobed_idx")
+      .on(t.libraryId)
+      .where(sql`${t.probedAt} is null`),
   ],
 )
 

@@ -1,6 +1,8 @@
 import {
   artworkPath,
   type ArtworkSize,
+  type AudioStream,
+  type HdrFormat,
   type MediaItem,
   mediaThumbnailPath,
 } from "@matinee/contracts"
@@ -232,4 +234,60 @@ export function timeLeft(item: MediaItem): string | null {
     Math.round((item.durationSeconds - item.progress.positionSeconds) / 60),
   )
   return `${minutes} min left`
+}
+
+const VIDEO_CODECS = new Map([
+  ["h264", "H.264"],
+  ["hevc", "HEVC"],
+  ["av1", "AV1"],
+  ["vp9", "VP9"],
+  ["vp8", "VP8"],
+  ["mpeg2video", "MPEG-2"],
+  ["mpeg4", "MPEG-4"],
+  ["vc1", "VC-1"],
+])
+
+const HDR_LABELS = {
+  hdr10: "HDR10",
+  hlg: "HLG",
+  "dolby-vision": "Dolby Vision",
+} satisfies Record<HdrFormat, string>
+
+/** "1080p" for 1920×800 too: wide films are cropped in height, not width. */
+function resolutionLabel(width: number, height: number): string {
+  if (width >= 3200 || height >= 2000) return "4K"
+  if (width >= 2400 || height >= 1400) return "1440p"
+  if (width >= 1800 || height >= 1000) return "1080p"
+  if (width >= 1200 || height >= 700) return "720p"
+  return `${height}p`
+}
+
+/** "5.1" from a layout like `5.1(side)`, else from the channel count. */
+function channelLabel(stream: AudioStream): string | null {
+  const layout = /^\d\.\d/.exec(stream.channelLayout ?? "")?.[0]
+  if (layout) return layout
+  if (stream.channels === 1) return "Mono"
+  if (stream.channels === 2) return "Stereo"
+  return stream.channels ? `${stream.channels} channels` : null
+}
+
+/**
+ * "1080p · HEVC · 5.1 · 3 subtitles", from what the server probed. Null
+ * until it has.
+ */
+export function streamSummary(item: MediaItem): string | null {
+  const probe = item.probe
+  if (!probe) return null
+  const { video, audio, subtitles } = probe
+  const main = audio.find((stream) => stream.default) ?? audio[0]
+  const parts = [
+    video && resolutionLabel(video.width, video.height),
+    video && (VIDEO_CODECS.get(video.codec) ?? video.codec.toUpperCase()),
+    video?.hdr && HDR_LABELS[video.hdr],
+    main && channelLabel(main),
+    audio.length > 1 && `${audio.length} audio tracks`,
+    subtitles.length > 0 &&
+      `${subtitles.length} subtitle${subtitles.length === 1 ? "" : "s"}`,
+  ].filter(Boolean)
+  return parts.length > 0 ? parts.join(" · ") : null
 }
