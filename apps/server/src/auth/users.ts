@@ -1,8 +1,9 @@
 import { Username, type UserRole } from "@matinee/contracts"
-import { user, type UserRow } from "@matinee/db"
-import { sql } from "drizzle-orm"
+import { oidcAccount, passkey, user, type UserRow } from "@matinee/db"
+import { and, eq, ne, sql } from "drizzle-orm"
 
 import { db } from "../db"
+import { activeOidc } from "./oidc-settings"
 
 export type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0]
 
@@ -44,11 +45,45 @@ export async function insertUser(
 }
 
 /**
- * Serialize account creation so two setup attempts can't both create an
- * admin. Returns whether the table was empty when the lock was taken.
+ * Serialize changes to who has an account and who is an admin: setup, sign-up,
+ * and the admin's user management. Two setup attempts can't both create an
+ * admin, and two admins can't demote each other at once. Returns whether the
+ * table was empty when the lock was taken.
  */
 export async function lockUsers(tx: Tx): Promise<{ empty: boolean }> {
   await tx.execute(sql`lock table ${user} in share row exclusive mode`)
   const rows = await tx.select({ id: user.id }).from(user).limit(1)
   return { empty: rows.length === 0 }
+}
+
+/**
+ * Whether an admin other than `userId` can sign in: one with a passkey, or an
+ * account linked at the provider single sign-on uses now. Call it under
+ * `lockUsers` before demoting or deleting an admin, so Matinee always keeps
+ * one.
+ */
+export async function otherAdminCanSignIn(
+  tx: Tx,
+  userId: string,
+): Promise<boolean> {
+  const others = and(eq(user.role, "admin"), ne(user.id, userId))
+  const [withPasskey] = await tx
+    .select({ id: user.id })
+    .from(user)
+    .innerJoin(passkey, eq(passkey.userId, user.id))
+    .where(others)
+    .limit(1)
+  if (withPasskey) return true
+  const provider = await activeOidc()
+  if (!provider) return false
+  // Accounts store the ID token's `iss`, which can differ from the issuer
+  // URL by a trailing slash.
+  const issuer = provider.settings.issuerUrl.replace(/\/+$/, "")
+  const [withAccount] = await tx
+    .select({ id: user.id })
+    .from(user)
+    .innerJoin(oidcAccount, eq(oidcAccount.userId, user.id))
+    .where(and(others, sql`rtrim(${oidcAccount.issuer}, '/') = ${issuer}`))
+    .limit(1)
+  return withAccount !== undefined
 }

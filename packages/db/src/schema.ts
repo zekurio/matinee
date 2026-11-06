@@ -1,5 +1,7 @@
 import type {
+  InviteKind,
   LibraryKind,
+  MediaProbe,
   MetadataProviderId,
   TitleKind,
   UserRole,
@@ -118,6 +120,28 @@ export const authChallenge = pgTable(
     createdAt: createdAt(),
   },
   (t) => [index("auth_challenge_expires_idx").on(t.expiresAt)],
+)
+
+/**
+ * Invite and recovery links an admin made. Whoever opens one adds a passkey
+ * or links the OIDC provider to the account and is signed in. Only the
+ * token's SHA-256 is stored, and each link works once.
+ */
+export const invite = pgTable(
+  "invite",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    tokenHash: text().notNull().unique(),
+    userId: uuid()
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    kind: text().$type<InviteKind>().notNull(),
+    /** The admin who made it. */
+    createdBy: uuid().references(() => user.id, { onDelete: "set null" }),
+    expiresAt: timestamp({ withTimezone: true }).notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [index("invite_user_idx").on(t.userId)],
 )
 
 /**
@@ -281,6 +305,19 @@ export const mediaItem = pgTable(
     modifiedAt: timestamp({ withTimezone: true }).notNull(),
     /** Learned from ffprobe or the player; null until then. */
     durationSeconds: doublePrecision(),
+    /**
+     * What ffprobe read. Null until probed, or when that failed. A change
+     * to `MediaProbe` needs a migration that clears `probedAt` too, so
+     * files are read again.
+     */
+    probe: jsonb().$type<MediaProbe>(),
+    /**
+     * When ffprobe last read the file, whether or not it could. Null means
+     * it's due: the file is new, changed, or from before probing.
+     */
+    probedAt: timestamp({ withTimezone: true }),
+    /** Why the last probe failed. */
+    probeError: text(),
     createdAt: createdAt(),
     /** Start of the last scan that found the file new, changed, or moved. */
     seenAt: createdAt(),
@@ -293,7 +330,37 @@ export const mediaItem = pgTable(
       t.seasonNumber,
       t.episodeNumber,
     ),
+    index("media_item_unprobed_idx")
+      .on(t.libraryId)
+      .where(sql`${t.probedAt} is null`),
   ],
+)
+
+/**
+ * A subtitle file next to a media item, found by the scan. The server reads
+ * it by id; clients never send a path.
+ */
+export const subtitleFile = pgTable(
+  "subtitle_file",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    mediaItemId: uuid()
+      .notNull()
+      .references(() => mediaItem.id, { onDelete: "cascade" }),
+    path: text().notNull(),
+    /** The extension: srt, vtt, ass, ssa, or sup and idx for pictures. */
+    format: text().notNull(),
+    /** BCP 47 tag from the file name, like `en` or `pt-BR`. */
+    language: text(),
+    /** Other words in the file name, like `Commentary`. */
+    title: text(),
+    forced: boolean().notNull().default(false),
+    /** SDH, CC, or HI in the file name. */
+    sdh: boolean().notNull().default(false),
+    isDefault: boolean().notNull().default(false),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex("subtitle_file_item_path").on(t.mediaItemId, t.path)],
 )
 
 /** Where each user is in each file. One row per user and file. */
@@ -318,8 +385,10 @@ export const watchProgress = pgTable(
 
 export type UserRow = typeof user.$inferSelect
 export type PasskeyRow = typeof passkey.$inferSelect
+export type InviteRow = typeof invite.$inferSelect
 export type LibraryRow = typeof library.$inferSelect
 export type TitleRow = typeof title.$inferSelect
 export type EpisodeRow = typeof episode.$inferSelect
 export type MediaItemRow = typeof mediaItem.$inferSelect
+export type SubtitleFileRow = typeof subtitleFile.$inferSelect
 export type WatchProgressRow = typeof watchProgress.$inferSelect

@@ -3,6 +3,7 @@ import { sql } from "drizzle-orm"
 
 import { db } from "../db"
 import { log } from "../log"
+import { probeLibrary } from "../media/probe"
 import { refreshLibrary } from "../metadata/refresh"
 import { scanLibrary } from "./scanner"
 
@@ -26,21 +27,26 @@ function scanAllLater(why: string): void {
   void scanAll().catch((cause) => log.warn(`Couldn't start the ${why}`, cause))
 }
 
-/** Refresh metadata that went stale while the server was down. */
+/**
+ * Refresh metadata that went stale and probe files that weren't probed
+ * while the server was down.
+ */
 async function refreshAll(): Promise<void> {
   for (const row of await db.select({ id: library.id }).from(library)) {
     void refreshLibrary(row.id)
+    void probeLibrary(row.id)
   }
 }
 
 /**
- * Refresh stale metadata now, scan every library a minute from now, and
- * then every `intervalHours` (0 for never). The timed scan catches what
- * the watcher can't see, like a network share written by another host.
+ * Refresh stale metadata and probe unprobed files now, scan every library
+ * a minute from now, and then every `intervalHours` (0 for never). The
+ * timed scan catches what the watcher can't see, like a network share
+ * written by another host.
  */
 export function startScheduledScans(intervalHours: number): void {
   void refreshAll().catch((cause) =>
-    log.warn("Couldn't check libraries for stale metadata", cause),
+    log.warn("Couldn't check libraries for pending work", cause),
   )
   const startup = setTimeout(() => {
     timers.delete(startup)

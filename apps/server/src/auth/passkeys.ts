@@ -82,10 +82,14 @@ export async function beginSignUp(input: { username: string; setup: boolean }) {
   return { challengeId, options }
 }
 
-/** Start adding a passkey to an existing account. */
+/**
+ * Start adding a passkey to an existing account. `inviteId` marks a ceremony
+ * an admin's link allows rather than a session, and only finishes as one.
+ */
 export async function beginRegister(input: {
   userId: string
   username: string
+  inviteId?: string
 }) {
   const exclude = await db
     .select()
@@ -93,9 +97,9 @@ export async function beginRegister(input: {
     .where(eq(passkey.userId, input.userId))
   const options = await registrationOptions({ ...input, exclude })
   const challengeId = await createChallenge({
-    purpose: "passkey-register",
+    purpose: input.inviteId ? "passkey-invite" : "passkey-register",
     challenge: options.challenge,
-    payload: { userId: input.userId },
+    payload: { userId: input.userId, inviteId: input.inviteId ?? null },
     ttlMs: REGISTRATION_TTL_MS,
   })
   return { challengeId, options }
@@ -106,7 +110,7 @@ export type VerifiedRegistration = Awaited<
 >
 
 export async function finishRegistration(
-  purpose: "passkey-sign-up" | "passkey-register",
+  purpose: "passkey-sign-up" | "passkey-register" | "passkey-invite",
   challengeId: string,
   response: RegistrationResponseJSON,
 ) {

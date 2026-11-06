@@ -169,3 +169,61 @@
     box-shadow: 0 0 0 2px var(--foreground);
   }
 }
+
+/*
+ * Drawers slide up from the bottom and follow the finger while it swipes
+ * them down. Base UI sets the swipe offsets; the starting and ending style
+ * attributes put the sheet below the screen.
+ */
+[data-slot="drawer-overlay"] {
+  transition: opacity 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+[data-slot="drawer-overlay"][data-starting-style],
+[data-slot="drawer-overlay"][data-ending-style] {
+  opacity: 0;
+}
+[data-slot="drawer-content"] {
+  transform: translate3d(0, var(--drawer-swipe-movement-y, 0px), 0);
+  transition: transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+[data-slot="drawer-content"][data-starting-style],
+[data-slot="drawer-content"][data-ending-style] {
+  transform: translate3d(0, 100%, 0);
+}
+:is([data-slot="drawer-overlay"], [data-slot="drawer-content"])[data-swiping] {
+  transition-duration: 0ms;
+}
+@media (prefers-reduced-motion: reduce) {
+  :is([data-slot="drawer-overlay"], [data-slot="drawer-content"]) {
+    transition-duration: 0ms;
+  }
+}
+
+/*
+ * Subtitles in the player: white on a dark band, readable over bright
+ * frames. The size stays the browser's, which scales with the video.
+ */
+video::cue {
+  color: #fff;
+  background-color: rgb(0 0 0 / 0.6);
+  font-family:
+    "Geist Variable", ui-sans-serif, system-ui, "Hiragino Sans",
+    "Noto Sans CJK JP", sans-serif;
+  line-height: 1.35;
+  text-shadow: 0 1px 3px rgb(0 0 0 / 0.9);
+}
+
+/*
+ * Chrome and Safari draw cues in this container. The player sets
+ * --cue-lift to keep them above its controls, and the move matches the
+ * controls' fade. Firefox moves each cue instead.
+ */
+video::-webkit-media-text-track-container {
+  transform: translateY(calc(var(--cue-lift, 0px) * -1));
+  transition: transform 300ms ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  video::-webkit-media-text-track-container {
+    transition: none;
+  }
+}

@@ -8,12 +8,18 @@ import {
   watchProgress,
 } from "@matinee/db"
 import { ORPCError } from "@orpc/server"
-import { and, asc, count, desc, eq, ilike, isNull, or, sql } from "drizzle-orm"
+import { and, asc, count, desc, eq, ilike, or, sql } from "drizzle-orm"
 
 import { db } from "../db"
 import { log } from "../log"
 import { saveArtwork } from "../media/artwork"
-import { episodeOrder, publicItems, toSummary } from "../media/items"
+import {
+  episodeOrder,
+  inSeason,
+  publicItems,
+  reverseEpisodeOrder,
+  toSummary,
+} from "../media/items"
 import { refreshTitle, sourceFor } from "../metadata/refresh"
 import { providerList } from "../metadata/sources"
 import { ProviderError } from "../metadata/types"
@@ -75,7 +81,7 @@ async function seasonsOf(row: TitleRow, userId: string): Promise<Season[]> {
 
 /**
  * What Play should start: the file the user is in the middle of, else the
- * one after the last they finished, else the first.
+ * first unwatched one after the last they finished, else the first.
  */
 async function nextItem(
   row: TitleRow,
@@ -87,7 +93,8 @@ async function nextItem(
     .where(eq(mediaItem.titleId, row.id))
     .orderBy(...episodeOrder)
   if (files.length === 0) return null
-  const [latest] = await db
+  // The user's progress in the title, latest first.
+  const progress = await db
     .select({
       id: watchProgress.mediaItemId,
       completed: watchProgress.completed,
@@ -95,14 +102,25 @@ async function nextItem(
     .from(watchProgress)
     .innerJoin(mediaItem, eq(mediaItem.id, watchProgress.mediaItemId))
     .where(and(eq(watchProgress.userId, userId), eq(mediaItem.titleId, row.id)))
-    .orderBy(desc(watchProgress.updatedAt))
-    .limit(1)
+    .orderBy(desc(watchProgress.updatedAt), ...reverseEpisodeOrder)
+  const latest = progress[0]
   let pick = files[0]
   if (latest) {
     const index = files.findIndex((file) => file.id === latest.id)
-    pick = latest.completed
-      ? (files[index + 1] ?? files[0])
-      : (files[index] ?? files[0])
+    if (latest.completed) {
+      // Files marked watched by hand can sit ahead of the latest one, and
+      // unwatched ones behind it.
+      const watched = new Set(
+        progress.filter((p) => p.completed).map((p) => p.id),
+      )
+      const unwatched = (file: { id: string }) => !watched.has(file.id)
+      pick =
+        files.slice(index + 1).find(unwatched) ??
+        files.find(unwatched) ??
+        files[0]
+    } else {
+      pick = files[index] ?? files[0]
+    }
   }
   if (!pick) return null
   const [item] = await publicItems([pick], userId)
@@ -215,16 +233,7 @@ export const titles = {
     const rows = await db
       .select()
       .from(mediaItem)
-      .where(
-        and(
-          eq(mediaItem.titleId, input.id),
-          input.season === undefined
-            ? undefined
-            : input.season === null
-              ? isNull(mediaItem.seasonNumber)
-              : eq(mediaItem.seasonNumber, input.season),
-        ),
-      )
+      .where(and(eq(mediaItem.titleId, input.id), inSeason(input.season)))
       .orderBy(...episodeOrder)
     return publicItems(rows, context.user.id)
   }),

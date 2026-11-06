@@ -13,6 +13,7 @@ import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as SetupRouteImport } from './routes/setup'
 import { Route as AuthedShellRouteImport } from './routes/_authed/_shell'
+import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as AuthedShellIndexRouteImport } from './routes/_authed/_shell/index'
 import { Route as AuthedShellSettingsRouteImport } from './routes/_authed/_shell/settings'
 import { Route as AuthedWatchItemIdRouteImport } from './routes/_authed/watch.$itemId'
@@ -37,6 +38,11 @@ const SetupRoute = SetupRouteImport.update({
 const AuthedShellRoute = AuthedShellRouteImport.update({
   id: '/_shell',
   getParentRoute: () => AuthedRoute,
+} as any)
+const InviteTokenRoute = InviteTokenRouteImport.update({
+  id: '/invite/$token',
+  path: '/invite/$token',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthedShellIndexRoute = AuthedShellIndexRouteImport.update({
   id: '/',
@@ -76,6 +82,7 @@ export interface FileRoutesByFullPath {
   '/': typeof AuthedShellIndexRoute
   '/login': typeof LoginRoute
   '/setup': typeof SetupRoute
+  '/invite/$token': typeof InviteTokenRoute
   '/settings': typeof AuthedShellSettingsRoute
   '/watch/$itemId': typeof AuthedWatchItemIdRoute
   '/admin/libraries': typeof AuthedShellAdminLibrariesRoute
@@ -86,6 +93,7 @@ export interface FileRoutesByTo {
   '/': typeof AuthedShellIndexRoute
   '/login': typeof LoginRoute
   '/setup': typeof SetupRoute
+  '/invite/$token': typeof InviteTokenRoute
   '/settings': typeof AuthedShellSettingsRoute
   '/watch/$itemId': typeof AuthedWatchItemIdRoute
   '/admin/libraries': typeof AuthedShellAdminLibrariesRoute
@@ -98,6 +106,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/setup': typeof SetupRoute
   '/_authed/_shell': typeof AuthedShellRouteWithChildren
+  '/invite/$token': typeof InviteTokenRoute
   '/_authed/_shell/settings': typeof AuthedShellSettingsRoute
   '/_authed/watch/$itemId': typeof AuthedWatchItemIdRoute
   '/_authed/_shell/': typeof AuthedShellIndexRoute
@@ -111,6 +120,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/setup'
+    | '/invite/$token'
     | '/settings'
     | '/watch/$itemId'
     | '/admin/libraries'
@@ -121,6 +131,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/setup'
+    | '/invite/$token'
     | '/settings'
     | '/watch/$itemId'
     | '/admin/libraries'
@@ -132,6 +143,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/setup'
     | '/_authed/_shell'
+    | '/invite/$token'
     | '/_authed/_shell/settings'
     | '/_authed/watch/$itemId'
     | '/_authed/_shell/'
@@ -144,6 +156,7 @@ export interface RootRouteChildren {
   AuthedRoute: typeof AuthedRouteWithChildren
   LoginRoute: typeof LoginRoute
   SetupRoute: typeof SetupRoute
+  InviteTokenRoute: typeof InviteTokenRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -175,6 +188,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof AuthedShellRouteImport
       parentRoute: typeof AuthedRoute
+    }
+    '/invite/$token': {
+      id: '/invite/$token'
+      path: '/invite/$token'
+      fullPath: '/invite/$token'
+      preLoaderRoute: typeof InviteTokenRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authed/_shell/': {
       id: '/_authed/_shell/'
@@ -258,6 +278,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthedRoute: AuthedRouteWithChildren,
   LoginRoute: LoginRoute,
   SetupRoute: SetupRoute,
+  InviteTokenRoute: InviteTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

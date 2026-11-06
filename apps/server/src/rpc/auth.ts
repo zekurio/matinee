@@ -2,8 +2,10 @@ import { user } from "@matinee/db"
 import { eq } from "drizzle-orm"
 import { z } from "zod"
 
+import { consumeInvite, findInvite, INVITE_GONE } from "../auth/invites"
 import { activeOidc } from "../auth/oidc-settings"
 import {
+  beginRegister,
   beginSignIn,
   beginSignUp,
   finishRegistration,
@@ -23,7 +25,7 @@ import {
 import { insertUser, lockUsers, usernameTaken } from "../auth/users"
 import { db } from "../db"
 import { env } from "../env"
-import { badRequest, pub } from "./base"
+import { badRequest, notFound, pub } from "./base"
 
 /** What `beginSignUp` stored with the challenge. */
 const SignUpPayload = z.object({
@@ -31,6 +33,16 @@ const SignUpPayload = z.object({
   username: z.string(),
   setup: z.boolean(),
 })
+
+/** What `beginRegister` stored for a link's passkey. */
+const InvitePayload = z.object({ userId: z.string(), inviteId: z.string() })
+
+/** The link a token belongs to, or a 404 the page shows as expired. */
+async function openInvite(token: string) {
+  const found = await findInvite(token)
+  if (!found) throw notFound(INVITE_GONE)
+  return found
+}
 
 function passkeyFailure(cause: unknown): never {
   if (cause instanceof PasskeyError) throw badRequest(cause.message)
@@ -136,6 +148,53 @@ export const auth = {
       }
       await signIn(context.hono, created.id)
       return publicUser(created)
+    }),
+  },
+
+  invite: {
+    get: pub.auth.invite.get.handler(async ({ input }) => {
+      const { invite, user: account } = await openInvite(input.token)
+      return {
+        kind: invite.kind,
+        username: account.username,
+        displayName: account.displayName,
+        expiresAt: invite.expiresAt,
+      }
+    }),
+
+    registerOptions: pub.auth.invite.registerOptions.handler(
+      async ({ input }) => {
+        const { invite, user: account } = await openInvite(input.token)
+        return beginRegister({
+          userId: account.id,
+          username: account.username,
+          inviteId: invite.id,
+        })
+      },
+    ),
+
+    register: pub.auth.invite.register.handler(async ({ context, input }) => {
+      const verified = await finishRegistration(
+        "passkey-invite",
+        input.challengeId,
+        input.response,
+      ).catch(passkeyFailure)
+      const { invite, user: account } = await openInvite(input.token)
+      // The ceremony must be the one this link started, for its account.
+      const payload = InvitePayload.safeParse(verified.payload)
+      if (
+        !payload.success ||
+        payload.data.inviteId !== invite.id ||
+        payload.data.userId !== account.id
+      ) {
+        throw badRequest("This passkey request belongs to another link.")
+      }
+      await db.transaction(async (tx) => {
+        if (!(await consumeInvite(tx, invite.id))) throw notFound(INVITE_GONE)
+        await storePasskey(tx, { userId: account.id, verified, usedNow: true })
+      })
+      await signIn(context.hono, account.id)
+      return publicUser(account)
     }),
   },
 }

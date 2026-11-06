@@ -130,6 +130,9 @@ A scan groups files into titles: a show is a top-level folder, a movie is a
 folder holding one video (or a lone file), and `Season 2` folders or `S02E05`
 in file names give episode numbers. After the scan, titles that are new,
 unmatched for a day, gained files, or are 30 days old get fetched again.
+In the background, ffprobe reads the codecs, audio tracks, and subtitles of
+files that are new or changed, a few at a time. A file it can't read is
+left alone until it changes.
 
 Matching tries, in order, a provider id in the folder name (`{tvdb-81189}`,
 `[tmdbid-603]`, `{imdb-tt0133093}`, as Sonarr, Radarr, and Jellyfin write
@@ -144,6 +147,25 @@ and resizes it with ffmpeg. Clients get artwork ids and load them through
 Providers live in `apps/server/src/metadata`. Adding one means implementing
 `MetadataSource` in `types.ts`, listing it in `sources.ts`, and adding its id
 to `METADATA_PROVIDERS` in the contract.
+
+## Subtitles
+
+The player shows subtitle files beside a video and text subtitles inside it.
+
+- Files: `Movie.srt`, `Movie.en.srt`, `Movie.eng.forced.srt`,
+  `Movie.de.sdh.srt`, also `.vtt`, `.ass`, and `.ssa`, in the video's folder or
+  a `Subs` or `Subtitles` folder next to it. Release packs with
+  `Subs/<video name>/2_English.srt` work too. A scan picks them up.
+- Streams: text subtitles inside the file, such as SubRip, ASS/SSA,
+  mov_text, and WebVTT. The first
+  time someone turns one on, ffmpeg extracts it into
+  `$MATINEE_DATA_DIR/subtitles`, where it stays until the file changes.
+- Browsers get WebVTT. ASS and SSA lose their styling on the way.
+
+A file starts with the viewer's last language if they had subtitles on, else a
+forced track in the audio's language, else a track the file marks default.
+The player remembers the last choice, a language or Off, for the next file.
+Press C to toggle subtitles.
 
 ## Running in production
 
@@ -169,6 +191,23 @@ Until the first account exists, the server logs a setup token. Enter it on
 - Nobody can remove their last passkey or linked account. A linked account
   only counts while single sign-on is on, and an admin who signs in only
   through it can't turn it off or change the issuer.
+- Admins add people under Settings → Users. Adding a user creates the account
+  and an invite link for the admin to copy and send. Whoever opens it creates
+  a passkey for that account, or links the OIDC provider while single sign-on
+  is on, and is signed in. For someone who lost their passkeys, a recovery
+  link adds a new one to the existing account the same way.
+- An invite or recovery link works once and expires after 7 days. A new link
+  replaces the user's earlier ones, and admins can revoke a pending link. The
+  database stores only the token's SHA-256, and the server builds the link
+  from `PUBLIC_URL`. Opening the page doesn't use the link up, so a chat app
+  that fetches it for a preview can't burn it. Linking the provider starts
+  with a form post from that page, which the CSRF check keeps other sites
+  from sending.
+- There is always an admin who can sign in: the server refuses to demote or
+  delete the last one, yourself included. Every request reads the role from
+  the database, so a demotion applies to the user's next request. Deleting a
+  user deletes their sessions, passkeys, linked accounts, links, and watch
+  progress.
 - An OIDC client secret saved in settings is stored in the database as is,
   like the rest of the settings. Use `MATINEE_OIDC_CLIENT_SECRET_FILE` to keep
   it out of the database.
@@ -177,8 +216,9 @@ Until the first account exists, the server logs a setup token. Enter it on
 
 - Transcoding and remuxing. MKV, AVI, and HEVC files only play where the
   browser supports them.
+- Picture subtitles (PGS, VobSub, DVB), which need burning in. The player
+  lists them as unavailable. ASS and SSA play without their styling.
 - Metadata from NFO files and local artwork, absolute episode numbering for
   anime, and provider keys set in admin settings instead of the environment.
-- User management for admins, and a sign-in flow that hands tokens to TV and
-  mobile apps.
+- A sign-in flow that hands tokens to TV and mobile apps.
 - A bundled server build and Nix package.

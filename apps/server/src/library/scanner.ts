@@ -12,6 +12,7 @@ import { and, eq, inArray, isNull, sql } from "drizzle-orm"
 import { db } from "../db"
 import { log } from "../log"
 import { videoContainer } from "../media/mime"
+import { probeLibrary } from "../media/probe"
 import { titleFromFilename } from "../media/title"
 import { refreshLibrary } from "../metadata/refresh"
 import { shutdownSignal } from "../shutdown"
@@ -27,6 +28,7 @@ import {
   planScan,
   type WalkState,
 } from "./plan"
+import { syncSubtitles } from "./subtitles"
 import { addTarget, errorCode, isInside, type Targets } from "./targets"
 import { assignTitles, topLevelKey } from "./titles"
 
@@ -175,6 +177,8 @@ async function flush(
         sizeBytes: sql`excluded.size_bytes`,
         modifiedAt: sql`excluded.modified_at`,
         seenAt: sql`excluded.seen_at`,
+        // A file that changed gets probed again.
+        probedAt: sql`case when ${mediaItem.sizeBytes} = excluded.size_bytes and ${mediaItem.modifiedAt} = excluded.modified_at then ${mediaItem.probedAt} else null end`,
       },
     })
 }
@@ -394,6 +398,7 @@ async function runScan(libraryId: string, request: ScanRequest): Promise<void> {
     return
   }
 
+  await syncSubtitles(libraryId)
   if (regroupAll) await assignTitles(libraryId, lib.kind)
   else if (touched.size > 0) await assignTitles(libraryId, lib.kind, touched)
   if (!request.targets) {
@@ -414,8 +419,12 @@ async function runScan(libraryId: string, request: ScanRequest): Promise<void> {
 async function scanOnce(libraryId: string, request: ScanRequest) {
   try {
     await runScan(libraryId, request)
-    // Metadata runs on its own; the scan is over once the files are in.
-    if (!shutdownSignal.aborted) void refreshLibrary(libraryId)
+    // Metadata and probes run on their own; the scan is over once the
+    // files are in.
+    if (!shutdownSignal.aborted) {
+      void refreshLibrary(libraryId)
+      void probeLibrary(libraryId)
+    }
   } catch (cause) {
     log.error(`Scan of library ${libraryId} failed`, cause)
   }
@@ -485,8 +494,8 @@ export type ScanOptions = {
  * library that is waiting merge into one scan, and a request during its
  * scan runs after it, since that scan may have walked past the change; a
  * plain full scan joins a full one already running. Resolves when the
- * scan that covers the request ends. The metadata refresh it starts
- * afterwards runs on its own.
+ * scan that covers the request ends. The metadata refresh and media probes
+ * it starts afterwards run on their own.
  */
 export function scanLibrary(
   libraryId: string,
