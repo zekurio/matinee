@@ -9,10 +9,13 @@ import {
   watchProgress,
   type WatchProgressRow,
 } from "@matinee/db"
-import { and, asc, eq, inArray, sql } from "drizzle-orm"
+import { and, asc, desc, eq, inArray, isNull, type SQL, sql } from "drizzle-orm"
 
 import { db } from "../db"
 import { mimeType } from "./mime"
+
+// How many folders deep a file sits in its library.
+const depth = sql`length(${mediaItem.relativePath}) - length(replace(${mediaItem.relativePath}, '/', ''))`
 
 /**
  * Files in episode order: season, episode, then files directly in the
@@ -22,9 +25,31 @@ import { mimeType } from "./mime"
 export const episodeOrder = [
   sql`${mediaItem.seasonNumber} asc nulls last`,
   sql`${mediaItem.episodeNumber} asc nulls last`,
-  sql`length(${mediaItem.relativePath}) - length(replace(${mediaItem.relativePath}, '/', '')) asc`,
+  sql`${depth} asc`,
   asc(mediaItem.relativePath),
 ]
+
+/**
+ * `episodeOrder` backwards. Files marked watched together share a time, and
+ * this makes the last of them the latest.
+ */
+export const reverseEpisodeOrder = [
+  sql`${mediaItem.seasonNumber} desc nulls first`,
+  sql`${mediaItem.episodeNumber} desc nulls first`,
+  sql`${depth} desc`,
+  desc(mediaItem.relativePath),
+]
+
+/**
+ * A title's files in one season. Undefined keeps every season; null picks
+ * the files without a season number.
+ */
+export function inSeason(season: number | null | undefined): SQL | undefined {
+  if (season === undefined) return undefined
+  return season === null
+    ? isNull(mediaItem.seasonNumber)
+    : eq(mediaItem.seasonNumber, season)
+}
 
 export function toSummary(row: TitleRow): TitleSummary {
   return {

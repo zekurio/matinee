@@ -193,6 +193,19 @@ export const contract = {
     setWatched: oc
       .input(z.object({ itemId: z.uuid(), watched: z.boolean() }))
       .output(z.void()),
+    /**
+     * Mark every file of a title watched or unwatched. `season` narrows to
+     * one season as in `titles.items`; null picks the files without one.
+     */
+    setTitleWatched: oc
+      .input(
+        z.object({
+          titleId: z.uuid(),
+          season: z.number().int().min(0).nullable().optional(),
+          watched: z.boolean(),
+        }),
+      )
+      .output(z.void()),
   },
   home: {
     /** Files the user started and didn't finish, most recent first. */
