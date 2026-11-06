@@ -266,10 +266,36 @@ export const SUBTITLE_KINDS = ["text", "bitmap"] as const
 export const SubtitleKind = z.enum(SUBTITLE_KINDS)
 export type SubtitleKind = z.infer<typeof SubtitleKind>
 
+/** What the Dolby Vision configuration record of a stream says. */
+export const DolbyVision = z.object({
+  /** 5 has no base layer other players can show; 7 and 8 do. */
+  profile: z.number().int(),
+  level: z.number().int().nullable(),
+  rpuPresent: z.boolean(),
+  /** An enhancement layer, as in profile 7 Blu-ray remuxes. */
+  elPresent: z.boolean(),
+  blPresent: z.boolean(),
+  /**
+   * What the base layer is without Dolby Vision: 1 HDR10, 2 SDR, 4 HLG,
+   * 6 for profile 7's HDR10 base, 0 none.
+   */
+  blCompatibilityId: z.number().int().nullable(),
+})
+export type DolbyVision = z.infer<typeof DolbyVision>
+
+/** Static HDR10 metadata: MaxCLL and MaxFALL in nits. */
+export const ContentLightLevel = z.object({
+  maxCll: z.number().int(),
+  maxFall: z.number().int(),
+})
+export type ContentLightLevel = z.infer<typeof ContentLightLevel>
+
 export const VideoStream = z.object({
   index: StreamIndex,
   /** ffmpeg's codec name, like `h264`, `hevc`, or `av1`. */
   codec: z.string(),
+  /** The container's tag, like `hvc1`, `dvh1`, or `avc1`. Null when unset. */
+  codecTag: z.string().nullable(),
   /** Such as `High` or `Main 10`. */
   profile: z.string().nullable(),
   /** As ffprobe reports it: 41 for H.264 level 4.1, 120 for HEVC 4. */
@@ -278,15 +304,31 @@ export const VideoStream = z.object({
   height: z.number().int(),
   /** Average frames per second. */
   frameRate: z.number().nullable(),
+  /** Bits per second of this stream, when the file says. */
+  bitRate: z.number().int().nullable(),
   /** Such as `yuv420p` or `yuv420p10le`. */
   pixelFormat: z.string().nullable(),
   bitDepth: z.number().int().nullable(),
   /** Such as `bt709`, `smpte2084` (PQ), or `arib-std-b67` (HLG). */
   colorTransfer: z.string().nullable(),
-  /** Null for SDR. HDR10+ isn't detected; it reads as `hdr10`. */
+  /** Such as `bt709` or `bt2020`. */
+  colorPrimaries: z.string().nullable(),
+  /** The matrix, such as `bt709` or `bt2020nc`. */
+  colorSpace: z.string().nullable(),
+  /** `tv` (limited) or `pc` (full). */
+  colorRange: z.string().nullable(),
+  /** Stored as fields rather than frames. */
+  interlaced: z.boolean(),
+  /** Null for SDR. Dolby Vision wins over the base layer's format. */
   hdr: HdrFormat.nullable(),
-  /** Dolby Vision profile, like 5, 7, or 8. */
+  /** Dolby Vision profile, like 5, 7, or 8. Same as `dolbyVision.profile`. */
   dolbyVisionProfile: z.number().int().nullable(),
+  dolbyVision: DolbyVision.nullable(),
+  /** The first frame carries HDR10+ dynamic metadata. */
+  hdr10Plus: z.boolean(),
+  /** HDR10 mastering display metadata is present. */
+  masteringDisplay: z.boolean(),
+  contentLightLevel: ContentLightLevel.nullable(),
 })
 export type VideoStream = z.infer<typeof VideoStream>
 

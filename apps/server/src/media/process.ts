@@ -42,8 +42,17 @@ export type RunProcessOptions = {
   signal?: AbortSignal
   /** Niceness for the child, see `os.setPriority`. Background work uses 10. */
   priority?: number
+  /**
+   * Put the child in the idle IO class with `ionice`, so its reads and
+   * writes wait for everything else. Skipped where ionice is missing.
+   */
+  idleIo?: boolean
   /** Called per stdout line. Without it, stdout is ignored. */
   onStdoutLine?: (line: string) => void
+  /** Called per stderr line, on top of the tail kept for errors. */
+  onStderrLine?: (line: string) => void
+  /** Written to stdin, which then closes. Without it, stdin is ignored. */
+  stdin?: string
 }
 
 /**
@@ -58,8 +67,17 @@ export function runProcess(options: RunProcessOptions): Promise<void> {
   const timeoutMs = options.timeoutMs ?? PROCESS_TIMEOUT_MS
 
   const child = spawn(options.command, options.args, {
-    stdio: ["ignore", options.onStdoutLine ? "pipe" : "ignore", "pipe"],
+    stdio: [
+      options.stdin === undefined ? "ignore" : "pipe",
+      options.onStdoutLine ? "pipe" : "ignore",
+      "pipe",
+    ],
   })
+  if (options.stdin !== undefined) {
+    // A process that exits before reading closes the pipe; that's fine.
+    child.stdin?.on("error", () => undefined)
+    child.stdin?.end(options.stdin)
+  }
   if (options.priority !== undefined && child.pid !== undefined) {
     try {
       setPriority(child.pid, options.priority)
@@ -67,10 +85,16 @@ export function runProcess(options: RunProcessOptions): Promise<void> {
       // Unsupported platforms and exited processes keep the default.
     }
   }
+  if (options.idleIo && child.pid !== undefined) {
+    spawn("ionice", ["-c", "3", "-p", String(child.pid)], {
+      stdio: "ignore",
+    }).on("error", () => undefined)
+  }
 
   const stderr: string[] = []
   const flushStdout = readLines(child.stdout, options.onStdoutLine)
   const flushStderr = readLines(child.stderr, (line) => {
+    options.onStderrLine?.(line)
     if (!line.trim()) return
     stderr.push(line.trim())
     if (stderr.length > STDERR_TAIL_LINES) stderr.shift()

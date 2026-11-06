@@ -14,6 +14,7 @@ export type SettingsSectionId =
   | "libraries"
   | "users"
   | "authentication"
+  | "transcoding"
 
 /**
  * "Settings, no section in particular." A phone shows the menu of sections

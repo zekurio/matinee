@@ -1,5 +1,7 @@
 import type {
   AudioStream,
+  ContentLightLevel,
+  DolbyVision,
   HdrFormat,
   MediaProbe,
   SubtitleKind,
@@ -11,8 +13,8 @@ import { z } from "zod"
 import { env } from "../env"
 import { runProcess } from "./process"
 
-// Probing reads headers only; anything slower is a wedged process or a
-// stalled network mount.
+// Probing reads headers and one frame; anything slower is a wedged process
+// or a stalled network mount.
 const PROBE_TIMEOUT_MS = 30_000
 
 // ffprobe prints most numbers as strings, such as "23.976" or "N/A".
@@ -28,23 +30,41 @@ const Numeric = z
   .catch(undefined)
 const Text = z.string().trim().min(1).optional().catch(undefined)
 
+// Side data of a stream or a frame. Each type has its own fields.
+const SideData = z.object({
+  side_data_type: Text,
+  dv_profile: Numeric,
+  dv_level: Numeric,
+  rpu_present_flag: Numeric,
+  el_present_flag: Numeric,
+  bl_present_flag: Numeric,
+  dv_bl_signal_compatibility_id: Numeric,
+  max_content: Numeric,
+  max_average: Numeric,
+})
+type SideData = z.infer<typeof SideData>
+const SideDataList = z.array(SideData).optional().catch(undefined)
+
 const FfprobeStream = z.object({
   index: z.number().int().nonnegative(),
   codec_type: Text,
   codec_name: Text,
+  codec_tag_string: Text,
   profile: Text,
   level: Numeric,
   width: Numeric,
   height: Numeric,
   avg_frame_rate: Text,
   r_frame_rate: Text,
+  bit_rate: Numeric,
   pix_fmt: Text,
   bits_per_raw_sample: Numeric,
+  color_range: Text,
+  color_space: Text,
   color_transfer: Text,
-  side_data_list: z
-    .array(z.object({ side_data_type: Text, dv_profile: Numeric }))
-    .optional()
-    .catch(undefined),
+  color_primaries: Text,
+  field_order: Text,
+  side_data_list: SideDataList,
   channels: Numeric,
   channel_layout: Text,
   disposition: z
@@ -68,6 +88,10 @@ const FfprobeOutput = z.object({
     .catch(undefined),
   // Checked one by one, so one odd stream doesn't hide the rest.
   streams: z.array(z.unknown()).catch([]),
+})
+
+const FfprobeFrames = z.object({
+  frames: z.array(z.object({ side_data_list: SideDataList })).catch([]),
 })
 
 const TEXT_SUBTITLES = new Set([
@@ -96,6 +120,11 @@ const BITMAP_SUBTITLES = new Set([
   "xsub",
 ])
 
+const DOVI_RECORD = "DOVI configuration record"
+const MASTERING_DISPLAY = "Mastering display metadata"
+const CONTENT_LIGHT = "Content light level metadata"
+const HDR10_PLUS = "HDR Dynamic Metadata SMPTE2094-40 (HDR10+)"
+
 function subtitleKind(codec: string): SubtitleKind | null {
   if (TEXT_SUBTITLES.has(codec)) return "text"
   if (BITMAP_SUBTITLES.has(codec)) return "bitmap"
@@ -117,6 +146,12 @@ function language(stream: FfprobeStream): string | null {
 
 function integer(value: number | undefined): number | null {
   return value === undefined ? null : Math.round(value)
+}
+
+/** A value ffprobe prints when it doesn't know, such as `unknown`, as null. */
+function known(value: string | undefined): string | null {
+  if (!value || value === "unknown" || value === "unspecified") return null
+  return value
 }
 
 /** "24000/1001" as 23.976. Null for "0/0" and other unknowns. */
@@ -153,25 +188,71 @@ function hdrFormat(
   return null
 }
 
+function sideData(list: SideData[] | undefined, type: string) {
+  return list?.find((data) => data.side_data_type === type)
+}
+
+function dolbyVision(data: SideData | undefined): DolbyVision | null {
+  if (data?.dv_profile === undefined) return null
+  return {
+    profile: Math.round(data.dv_profile),
+    level: integer(data.dv_level),
+    rpuPresent: data.rpu_present_flag === 1,
+    elPresent: data.el_present_flag === 1,
+    blPresent: data.bl_present_flag === 1,
+    blCompatibilityId: integer(data.dv_bl_signal_compatibility_id),
+  }
+}
+
+function contentLight(data: SideData | undefined): ContentLightLevel | null {
+  if (data?.max_content === undefined || data.max_average === undefined) {
+    return null
+  }
+  return {
+    maxCll: Math.round(data.max_content),
+    maxFall: Math.round(data.max_average),
+  }
+}
+
+/** The stream's own bit rate, or the statistics tag Matroska muxers write. */
+function streamBitRate(stream: FfprobeStream): number | null {
+  if (stream.bit_rate) return Math.round(stream.bit_rate)
+  const bps = Number(tag(stream, "bps") ?? tag(stream, "bps-eng"))
+  return Number.isInteger(bps) && bps > 0 ? bps : null
+}
+
 function toVideo(stream: FfprobeStream, codec: string): VideoStream | null {
   if (!stream.width || !stream.height) return null
-  const dovi = stream.side_data_list?.find(
-    (data) => data.side_data_type === "DOVI configuration record",
-  )
+  const side = stream.side_data_list
+  const dovi = dolbyVision(sideData(side, DOVI_RECORD))
+  const fieldOrder = known(stream.field_order)
+  const codecTag = stream.codec_tag_string
   return {
     index: stream.index,
     codec,
+    // Unset tags print as "[0][0][0][0]".
+    codecTag: codecTag && !codecTag.startsWith("[") ? codecTag : null,
     profile: stream.profile ?? null,
     level: integer(stream.level),
     width: Math.round(stream.width),
     height: Math.round(stream.height),
     frameRate:
       frameRate(stream.avg_frame_rate) ?? frameRate(stream.r_frame_rate),
+    bitRate: streamBitRate(stream),
     pixelFormat: stream.pix_fmt ?? null,
     bitDepth: bitDepth(stream),
-    colorTransfer: stream.color_transfer ?? null,
-    hdr: hdrFormat(stream, dovi !== undefined),
-    dolbyVisionProfile: integer(dovi?.dv_profile),
+    colorTransfer: known(stream.color_transfer),
+    colorPrimaries: known(stream.color_primaries),
+    colorSpace: known(stream.color_space),
+    colorRange: known(stream.color_range),
+    // As Jellyfin reads it: any field order but progressive.
+    interlaced: fieldOrder !== null && fieldOrder !== "progressive",
+    hdr: hdrFormat(stream, dovi !== null),
+    dolbyVisionProfile: dovi?.profile ?? null,
+    dolbyVision: dovi,
+    hdr10Plus: false,
+    masteringDisplay: sideData(side, MASTERING_DISPLAY) !== undefined,
+    contentLightLevel: contentLight(sideData(side, CONTENT_LIGHT)),
   }
 }
 
@@ -201,15 +282,19 @@ function toSubtitle(stream: FfprobeStream, codec: string): SubtitleStream {
   }
 }
 
-/** The summary of ffprobe's `-show_streams -show_format` JSON. */
-export function readProbe(stdout: string): MediaProbe {
-  let json: Parameters<typeof FfprobeOutput.parse>[0]
+function parseJson<T extends z.ZodType>(schema: T, stdout: string) {
+  let json: Parameters<typeof schema.parse>[0]
   try {
     json = JSON.parse(stdout)
   } catch {
     throw new Error("ffprobe printed something other than JSON")
   }
-  const output = FfprobeOutput.parse(json)
+  return schema.parse(json)
+}
+
+/** The summary of ffprobe's `-show_streams -show_format` JSON. */
+export function readProbe(stdout: string): MediaProbe {
+  const output = parseJson(FfprobeOutput, stdout)
   const probe: MediaProbe = {
     format: {
       name: output.format?.format_name ?? "unknown",
@@ -247,29 +332,71 @@ export function readProbe(stdout: string): MediaProbe {
   return probe
 }
 
-/** Run ffprobe once on a file and summarize its streams. */
-export async function runFfprobe(
-  path: string,
-  signal?: AbortSignal,
-): Promise<MediaProbe> {
+/**
+ * Adds what only frames carry, from ffprobe's `-show_frames` JSON of the
+ * video's first frame: HDR10+, and the HDR10 metadata of HEVC in MP4 and
+ * TS, which lives in the bitstream rather than the container.
+ */
+export function withFirstFrame(
+  video: VideoStream,
+  stdout: string,
+): VideoStream {
+  const [frame] = parseJson(FfprobeFrames, stdout).frames
+  const side = frame?.side_data_list
+  return {
+    ...video,
+    hdr10Plus: sideData(side, HDR10_PLUS) !== undefined,
+    masteringDisplay:
+      video.masteringDisplay || sideData(side, MASTERING_DISPLAY) !== undefined,
+    contentLightLevel:
+      video.contentLightLevel ?? contentLight(sideData(side, CONTENT_LIGHT)),
+  }
+}
+
+async function ffprobe(args: string[], signal?: AbortSignal): Promise<string> {
   const lines: string[] = []
   await runProcess({
     name: "ffprobe",
     command: env.MATINEE_FFPROBE_PATH,
-    args: [
-      "-v",
-      "error",
-      "-print_format",
-      "json",
-      "-show_streams",
-      "-show_format",
-      path,
-    ],
+    args: ["-v", "error", "-print_format", "json", ...args],
     timeoutMs: PROBE_TIMEOUT_MS,
     signal,
     // Background work; the server's own requests come first.
     priority: 10,
     onStdoutLine: (line) => lines.push(line),
   })
-  return readProbe(lines.join("\n"))
+  return lines.join("\n")
+}
+
+/** Run ffprobe on a file and summarize its streams. */
+export async function runFfprobe(
+  path: string,
+  signal?: AbortSignal,
+): Promise<MediaProbe> {
+  const probe = readProbe(
+    await ffprobe(["-show_streams", "-show_format", path], signal),
+  )
+  if (!probe.video) return probe
+  // A second run decodes one packet of the video stream alone; reading
+  // intervals count packets of every stream.
+  try {
+    const frames = await ffprobe(
+      [
+        "-select_streams",
+        String(probe.video.index),
+        "-read_intervals",
+        "%+#1",
+        "-show_frames",
+        "-show_entries",
+        "frame=side_data_list",
+        path,
+      ],
+      signal,
+    )
+    return { ...probe, video: withFirstFrame(probe.video, frames) }
+  } catch (cause) {
+    if (signal?.aborted) throw cause
+    // A frame that doesn't decode leaves the stream summary as it is.
+    return probe
+  }
 }

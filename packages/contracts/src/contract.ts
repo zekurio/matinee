@@ -34,7 +34,10 @@ import {
   Username,
   UserRole,
 } from "./schemas"
-
+import {
+  AdminTranscodingSettings,
+  TranscodingSettingsInput,
+} from "./transcoding"
 /**
  * The RPC contract between the server and every client. The server
  * implements it with `implement(contract)`; clients get typed callers from
@@ -262,6 +265,18 @@ export const contract = {
       get: oc.output(AdminAuthSettings),
       /** Save the OIDC provider. Applies to the next sign-in, no restart. */
       updateOidc: oc.input(OidcSettingsInput).output(AdminAuthSettings),
+    },
+    /**
+     * How the server transcodes video. Saving applies to the next transcode
+     * without a restart; new devices are detected before the answer.
+     */
+    transcoding: {
+      get: oc.output(AdminTranscodingSettings),
+      update: oc
+        .input(TranscodingSettingsInput)
+        .output(AdminTranscodingSettings),
+      /** Detect ffmpeg and the GPUs again, after a driver or ffmpeg update. */
+      detect: oc.output(AdminTranscodingSettings),
     },
     /**
      * Accounts. The server keeps at least one admin who can sign in, so

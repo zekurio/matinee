@@ -11,12 +11,17 @@ import { startScheduledScans, stopScheduledScans } from "./library/schedule"
 import { startWatching, stopWatching } from "./library/watcher"
 import { log } from "./log"
 import { requestShutdown } from "./shutdown"
+import { currentTranscoding } from "./transcode/capabilities"
 
 await migrateDb(db, env.MATINEE_MIGRATIONS_DIR)
 await initSetupToken()
 await deleteExpiredSessions()
 startScheduledScans(env.MATINEE_SCAN_INTERVAL_HOURS)
 if (env.MATINEE_WATCH_LIBRARIES) startWatching()
+// Detect ffmpeg and the GPUs now, so the first transcode doesn't wait.
+void currentTranscoding().catch((cause) =>
+  log.warn("Couldn't detect what ffmpeg can do", cause),
+)
 
 const server = serve(
   { fetch: createApp().fetch, hostname: env.HOST, port: env.PORT },

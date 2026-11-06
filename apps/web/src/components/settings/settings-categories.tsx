@@ -1,5 +1,6 @@
 import type { User } from "@matinee/contracts"
 import {
+  FilmIcon,
   KeyRoundIcon,
   LibraryBigIcon,
   type LucideIcon,
@@ -13,6 +14,7 @@ import type { SettingsSectionId } from "@/lib/settings"
 import { AccountPanel } from "./account-panel"
 import { AuthPanel } from "./auth-panel"
 import { LibrariesPanel } from "./libraries-panel"
+import { TranscodingPanel } from "./transcoding-panel"
 import { UsersPanel } from "./users-panel"
 
 export type SettingsGroup = "account" | "admin"
@@ -101,6 +103,34 @@ const CATEGORIES: SettingsCategory[] = [
     ],
     icon: KeyRoundIcon,
     Panel: AuthPanel,
+  },
+  {
+    id: "transcoding",
+    group: "admin",
+    label: "Transcoding",
+    description: "FFmpeg, GPUs, and HDR tone mapping",
+    keywords: [
+      "FFmpeg",
+      "jellyfin-ffmpeg",
+      "Hardware acceleration",
+      "GPU",
+      "VAAPI",
+      "Quick Sync",
+      "QSV",
+      "NVENC",
+      "VideoToolbox",
+      "HEVC",
+      "AV1",
+      "Tone mapping",
+      "HDR",
+      "Dolby Vision",
+      "Deinterlacing",
+      "Throttling",
+      "CRF",
+      "Preset",
+    ],
+    icon: FilmIcon,
+    Panel: TranscodingPanel,
   },
 ]
 

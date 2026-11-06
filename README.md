@@ -172,6 +172,54 @@ forced track in the audio's language, else a track the file marks default.
 The player remembers the last choice, a language or Off, for the next file.
 Press C to toggle subtitles.
 
+## Transcoding and ffmpeg
+
+Matinee encodes video the way Jellyfin does, with Jellyfin's filter chains
+and defaults, and is built for
+[jellyfin-ffmpeg](https://github.com/jellyfin/jellyfin-ffmpeg): FFmpeg 8.1
+with Jellyfin's patches. Get it as the Nix package `jellyfin-ffmpeg` (the
+devenv shell has it), as the Debian and Ubuntu packages from
+repo.jellyfin.org (what Jellyfin's Docker image ships, in
+`/usr/lib/jellyfin-ffmpeg`), or as a portable build from its GitHub
+releases. Point `MATINEE_FFMPEG_PATH` and `MATINEE_FFPROBE_PATH` at it if it
+isn't first on `PATH`.
+
+What needs jellyfin-ffmpeg:
+
+- tonemapx, the software tone mapper. It turns HDR10, HLG, and Dolby Vision
+  into SDR, including Dolby Vision profile 5, which has no HDR10 layer and
+  needs the RPU applied. Without it, HDR that no GPU tone maps comes out
+  washed out.
+- The GPU paths in full: BT.2390 in `tonemap_opencl`, `tonemap_cuda`,
+  `tonemap_videotoolbox`, VPP tone mapping without HDR10 metadata, and
+  `hwupload_vaapi`. Without them VAAPI and QSV fall back to scaling on the
+  CPU and uploading frames for the encoder.
+- Pausing ffmpeg with `p` and `u`, which throttling needs.
+- Dropping Dolby Vision and HDR10+ from a stream copy with `hevc_metadata`
+  and `av1_metadata`. Stock FFmpeg 7.1 and later can drop Dolby Vision with
+  `dovi_rpu`.
+
+Stock FFmpeg still decodes and encodes in software (libx264, libx265,
+libsvtav1), encodes on VAAPI, QSV, NVENC, and VideoToolbox, deinterlaces,
+and keeps HDR10 and HLG in 10-bit HEVC and AV1 encodes.
+
+Admins set it up under Settings → Transcoding: the GPU (VAAPI, Intel Quick
+Sync, NVIDIA NVENC, or Apple VideoToolbox) and its device, which codecs it
+decodes, HEVC and AV1 encoding, the x264 preset and CRF, tone mapping,
+deinterlacing, and throttling. Changes apply to the next transcode. The
+`MATINEE_HARDWARE_ACCELERATION`, `MATINEE_VAAPI_DEVICE`, and
+`MATINEE_QSV_DEVICE` variables are the defaults for that form.
+
+When the server starts, and when the devices change, it finds out what
+ffmpeg can do: its encoders, filters, and options, then a short test encode
+with each GPU encoder and each tone mapper. The settings page shows the
+result, and offers only what passed. Detect again after updating drivers
+or ffmpeg. A GPU path that can't tone map a file falls back to tonemapx.
+
+In Docker, pass the GPU through: `/dev/dri` for VAAPI and QSV, plus the
+OpenCL runtime of the driver (such as `intel-compute-runtime`) for OpenCL
+tone mapping; the NVIDIA container toolkit for NVENC.
+
 ## Running in production
 
 ```sh
