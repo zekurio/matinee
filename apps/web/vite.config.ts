@@ -8,6 +8,12 @@ import { tanstackRouter } from "@tanstack/router-plugin/vite"
 import react from "@vitejs/plugin-react"
 import { defineConfig, loadEnv, type Plugin } from "vite"
 
+const EAGER_ROUTES = new Set<string>([
+  "/_authed",
+  "/_authed/_shell",
+  "/_authed/_shell/",
+])
+
 const brotli = promisify(brotliCompress)
 const gz = promisify(gzip)
 
@@ -63,7 +69,17 @@ export default defineConfig(({ mode }) => {
       proxy: { "/api": { target: server, changeOrigin: false } },
     },
     plugins: [
-      tanstackRouter({ target: "react", autoCodeSplitting: true }),
+      tanstackRouter({
+        target: "react",
+        autoCodeSplitting: true,
+        codeSplittingOptions: {
+          // The layout every signed-in page sits in, and Home, where most
+          // visits start, come with the app instead of after the session
+          // check, which would add a round trip before the first paint.
+          splitBehavior: ({ routeId }) =>
+            EAGER_ROUTES.has(routeId) ? [] : undefined,
+        },
+      }),
       react(),
       tailwindcss(),
       precompress(),

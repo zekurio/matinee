@@ -13,6 +13,9 @@ import { applyLanguage } from "./stores/language"
 
 initTheme()
 syncUiText()
+// Every page but the login asks who is signed in first. Asking now, while
+// the language loads, saves the round trip after it.
+void queryClient.prefetchQuery(orpc.auth.session.queryOptions())
 // The first render is in the right language, so it waits for it to load.
 await applyLanguage()
 
