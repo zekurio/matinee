@@ -1,39 +1,27 @@
-import type { MediaItem, Season, Title } from "@matinee/contracts"
-import {
-  library,
-  mediaItem,
-  season,
-  title,
-  type TitleRow,
-  watchProgress,
-} from "@matinee/db"
+import type { Credit, Title } from "@matinee/contracts"
+import { credit, library, mediaItem, title, type TitleRow } from "@matinee/db"
 import { ORPCError } from "@orpc/server"
-import { and, asc, count, desc, eq, ilike, or, sql } from "drizzle-orm"
+import { and, asc, count, eq } from "drizzle-orm"
 
 import { db } from "../db"
 import { log } from "../log"
-import { saveArtwork } from "../media/artwork"
+import { placeholders, saveArtwork, toArtwork } from "../media/artwork"
 import {
   episodeOrder,
   inSeason,
+  nextItem,
   publicItems,
-  reverseEpisodeOrder,
+  titleArtwork,
+  toSummaries,
   toSummary,
+  viewerStates,
 } from "../media/items"
-import { refreshTitle, sourceFor } from "../metadata/refresh"
+import { seasonsByTitle } from "../media/seasons"
+import { refreshTitleNow, sourceFor } from "../metadata/refresh"
 import { providerList } from "../metadata/sources"
 import { ProviderError } from "../metadata/types"
 import { admin, authed, badRequest, notFound } from "./base"
-
-function escapeLike(value: string): string {
-  return value.replace(/[\\%_]/g, (char) => `\\${char}`)
-}
-
-function seasonName(number: number | null, name: string | null): string {
-  if (number === null) return "Other files"
-  // Providers often call every season "Season N"; ours reads the same.
-  return name ?? (number === 0 ? "Specials" : `Season ${number}`)
-}
+import { tagCounts, titleOrder, titleWhere } from "./browse"
 
 async function loadRow(id: string): Promise<TitleRow> {
   const [row] = await db.select().from(title).where(eq(title.id, id))
@@ -41,108 +29,43 @@ async function loadRow(id: string): Promise<TitleRow> {
   return row
 }
 
-async function seasonsOf(row: TitleRow, userId: string): Promise<Season[]> {
-  const [counts, meta] = await Promise.all([
-    db
-      .select({
-        number: mediaItem.seasonNumber,
-        n: count(),
-        watched:
-          sql<number>`count(*) filter (where ${watchProgress.completed})`.mapWith(
-            Number,
-          ),
-      })
-      .from(mediaItem)
-      .leftJoin(
-        watchProgress,
-        and(
-          eq(watchProgress.mediaItemId, mediaItem.id),
-          eq(watchProgress.userId, userId),
-        ),
-      )
-      .where(eq(mediaItem.titleId, row.id))
-      .groupBy(mediaItem.seasonNumber)
-      .orderBy(sql`${mediaItem.seasonNumber} asc nulls last`),
-    db.select().from(season).where(eq(season.titleId, row.id)),
-  ])
-  const byNumber = new Map(meta.map((s) => [s.number, s]))
-  return counts.map((c) => {
-    const info = c.number === null ? undefined : byNumber.get(c.number)
-    return {
-      number: c.number,
-      name: seasonName(c.number, info?.name ?? null),
-      overview: info?.overview ?? null,
-      poster: info?.posterId ?? null,
-      itemCount: c.n,
-      watchedCount: c.watched,
-    }
-  })
+async function creditsOf(row: TitleRow): Promise<Credit[]> {
+  const rows = await db
+    .select({
+      kind: credit.kind,
+      name: credit.name,
+      role: credit.role,
+      photo: credit.photoId,
+    })
+    .from(credit)
+    .where(eq(credit.titleId, row.id))
+    .orderBy(asc(credit.position))
+  const art = await placeholders(rows.map((c) => c.photo))
+  return rows.map((c) => ({ ...c, photo: toArtwork(c.photo, art) }))
 }
 
 /**
  * What Play should start: the file the user is in the middle of, else the
  * first unwatched one after the last they finished, else the first.
  */
-async function nextItem(
-  row: TitleRow,
-  userId: string,
-): Promise<MediaItem | null> {
-  const files = await db
-    .select()
-    .from(mediaItem)
-    .where(eq(mediaItem.titleId, row.id))
-    .orderBy(...episodeOrder)
-  if (files.length === 0) return null
-  // The user's progress in the title, latest first.
-  const progress = await db
-    .select({
-      id: watchProgress.mediaItemId,
-      completed: watchProgress.completed,
-    })
-    .from(watchProgress)
-    .innerJoin(mediaItem, eq(mediaItem.id, watchProgress.mediaItemId))
-    .where(and(eq(watchProgress.userId, userId), eq(mediaItem.titleId, row.id)))
-    .orderBy(desc(watchProgress.updatedAt), ...reverseEpisodeOrder)
-  const latest = progress[0]
-  let pick = files[0]
-  if (latest) {
-    const index = files.findIndex((file) => file.id === latest.id)
-    if (latest.completed) {
-      // Files marked watched by hand can sit ahead of the latest one, and
-      // unwatched ones behind it.
-      const watched = new Set(
-        progress.filter((p) => p.completed).map((p) => p.id),
-      )
-      const unwatched = (file: { id: string }) => !watched.has(file.id)
-      pick =
-        files.slice(index + 1).find(unwatched) ??
-        files.find(unwatched) ??
-        files[0]
-    } else {
-      pick = files[index] ?? files[0]
-    }
-  }
-  if (!pick) return null
-  const [item] = await publicItems([pick], userId)
-  return item ?? null
-}
-
 async function toTitle(row: TitleRow, userId: string): Promise<Title> {
-  const [seasons, next] = await Promise.all([
-    row.kind === "show" ? seasonsOf(row, userId) : [],
+  const [seasons, next, credits, states, art] = await Promise.all([
+    row.kind === "show"
+      ? seasonsByTitle([row.id], userId).then((all) => all.get(row.id) ?? [])
+      : [],
     nextItem(row, userId),
+    creditsOf(row),
+    viewerStates([row.id], userId),
+    placeholders(titleArtwork(row)),
   ])
   const [total] = await db
     .select({ n: count() })
     .from(mediaItem)
     .where(eq(mediaItem.titleId, row.id))
   return {
-    ...toSummary(row),
+    ...toSummary(row, art, states),
     originalName: row.originalName,
     tagline: row.tagline,
-    genres: row.genres,
-    rating: row.rating,
-    contentRating: row.contentRating,
     releaseDate: row.releaseDate,
     status: row.status,
     runtimeMinutes: row.runtimeMinutes,
@@ -151,6 +74,8 @@ async function toTitle(row: TitleRow, userId: string): Promise<Title> {
     providerId: row.providerId,
     externalIds: row.externalIds,
     refreshedAt: row.refreshedAt,
+    studios: row.studios,
+    credits,
     itemCount: total?.n ?? 0,
     seasons,
     next,
@@ -194,35 +119,58 @@ function requireSource(lib: typeof library.$inferSelect) {
 }
 
 export const titles = {
-  list: authed.titles.list.handler(async ({ input }) => {
-    const pattern = input.query ? `%${escapeLike(input.query)}%` : null
-    const where = and(
-      eq(title.libraryId, input.libraryId),
-      pattern
-        ? or(
-            ilike(title.name, pattern),
-            ilike(title.originalName, pattern),
-            ilike(title.path, pattern),
-          )
-        : undefined,
-    )
-    const order =
-      input.sort === "recent"
-        ? [desc(title.addedAt), asc(title.sortName)]
-        : input.sort === "year"
-          ? [sql`${title.year} desc nulls last`, asc(title.sortName)]
-          : [asc(title.sortName), asc(title.year)]
+  list: authed.titles.list.handler(async ({ context, input }) => {
+    const where = titleWhere(input, input.libraryId)
     const [rows, [total]] = await Promise.all([
       db
         .select()
         .from(title)
         .where(where)
-        .orderBy(...order)
+        .orderBy(...titleOrder(input.sort))
         .limit(input.limit)
         .offset(input.offset),
       db.select({ n: count() }).from(title).where(where),
     ])
-    return { items: rows.map(toSummary), total: total?.n ?? 0 }
+    return {
+      items: await toSummaries(rows, context.user.id),
+      total: total?.n ?? 0,
+    }
+  }),
+
+  browse: authed.titles.browse.handler(async ({ context, input }) => {
+    const [rows, kinds] = await Promise.all([
+      db
+        .select()
+        .from(title)
+        .where(titleWhere(input))
+        .orderBy(...titleOrder(input.sort))
+        .limit(input.limit)
+        .offset(input.offset),
+      db
+        .select({ kind: title.kind, n: count() })
+        .from(title)
+        .where(titleWhere({ ...input, kind: undefined }))
+        .groupBy(title.kind),
+    ])
+    const byKind = new Map(kinds.map((row) => [row.kind, row.n]))
+    const counts = {
+      movie: byKind.get("movie") ?? 0,
+      show: byKind.get("show") ?? 0,
+    }
+    return {
+      items: await toSummaries(rows, context.user.id),
+      total: input.kind ? counts[input.kind] : counts.movie + counts.show,
+      kinds: counts,
+    }
+  }),
+
+  facets: authed.titles.facets.handler(async ({ input }) => {
+    const where = titleWhere({ kind: input.kind }, input.libraryId)
+    const [genres, studios] = await Promise.all([
+      tagCounts(title.genres, { where }),
+      tagCounts(title.studios, { where }),
+    ])
+    return { genres, studios }
   }),
 
   get: authed.titles.get.handler(async ({ context, input }) =>
@@ -240,13 +188,10 @@ export const titles = {
 
   findMatches: admin.titles.findMatches.handler(async ({ input }) => {
     const { row, lib } = await withLibrary(input.id)
-    if (row.kind === "folder") {
-      throw badRequest("Folders in an Other videos library don't get metadata.")
-    }
     const source = requireSource(lib)
     const candidates = await source
       .search({
-        kind: row.kind === "movie" ? "movie" : "show",
+        kind: row.kind,
         language: lib.metadataLanguage,
         name: input.query,
         year: input.year ?? null,
@@ -254,20 +199,25 @@ export const titles = {
       .catch((cause: unknown) => providerFailure(source.name, cause))
     const shown = candidates.slice(0, 20)
     const posters = await saveArtwork(shown.map((c) => c.poster))
+    // Posters already in the cache have a placeholder.
+    const art = await placeholders(posters.values())
     return shown.map((candidate) => ({
       provider: source.id,
       id: candidate.id,
       name: candidate.name,
       year: candidate.year,
       overview: candidate.overview,
-      poster: candidate.poster ? (posters.get(candidate.poster) ?? null) : null,
+      poster: toArtwork(
+        candidate.poster ? (posters.get(candidate.poster) ?? null) : null,
+        art,
+      ),
     }))
   }),
 
   identify: admin.titles.identify.handler(async ({ context, input }) => {
     const { row, lib } = await withLibrary(input.id)
     const source = requireSource(lib)
-    await refreshTitle(row, lib, { providerId: input.providerId }).catch(
+    await refreshTitleNow(row, lib, { providerId: input.providerId }).catch(
       (cause: unknown) => providerFailure(source.name, cause),
     )
     return toTitle(await loadRow(input.id), context.user.id)
@@ -276,7 +226,7 @@ export const titles = {
   refresh: admin.titles.refresh.handler(async ({ context, input }) => {
     const { row, lib } = await withLibrary(input.id)
     const source = requireSource(lib)
-    await refreshTitle(row, lib).catch((cause: unknown) =>
+    await refreshTitleNow(row, lib).catch((cause: unknown) =>
       providerFailure(source.name, cause),
     )
     return toTitle(await loadRow(input.id), context.user.id)

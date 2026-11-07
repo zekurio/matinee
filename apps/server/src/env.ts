@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from "node:fs"
 import { dirname, join, resolve } from "node:path"
 
 import { DevicePath, HardwareAcceleration } from "@matinee/contracts"
-import { z } from "zod"
+import { t } from "@matinee/contracts/schema"
 
 // Fill unset variables from the nearest `.env` above the working directory.
 // Variables already in the environment win.
@@ -20,61 +20,87 @@ function loadDotenv(): void {
   }
 }
 
-const flag = z
-  .enum(["true", "false", "1", "0"])
-  .transform((value) => value === "true" || value === "1")
+// `$default` fills in the input, so it comes before the transform, as one of
+// the strings.
+const flag = (fallback: boolean) =>
+  t
+    .enum(["true", "false", "1", "0"])
+    .$default(fallback ? "true" : "false")
+    .transform((value) => value === "true" || value === "1")
 
-const optional = z
+const optional = t
   .string()
   .trim()
   .transform((value) => value || undefined)
   .optional()
 
-const EnvSchema = z.object({
-  NODE_ENV: z.enum(["development", "production", "test"]).default("production"),
-  DATABASE_URL: z.string().min(1, "DATABASE_URL is required."),
-  HOST: z.string().default("::"),
-  PORT: z.coerce.number().int().min(1).max(65535).default(8420),
+const EnvSchema = t.object({
+  NODE_ENV: t
+    .enum(["development", "production", "test"])
+    .$default("production"),
+  DATABASE_URL: t.string().min(1, "DATABASE_URL is required."),
+  HOST: t.string().$default("::"),
+  PORT: t.coerce.number().int().min(1).max(65535).$default(8420),
   /** Origin users open Matinee on. Passkeys and OIDC redirects bind to it. */
-  PUBLIC_URL: z
+  PUBLIC_URL: t
+    .string()
+    .trim()
     .url()
-    .default("http://localhost:8420")
+    .$default("http://localhost:8420")
     .transform((value) => new URL(value).origin),
   /** Built web app to serve. Unset in dev, where Vite serves it. */
   MATINEE_WEB_DIST: optional,
   MATINEE_MIGRATIONS_DIR: optional,
   /** Thumbnails and other generated files. Relative to the working dir. */
-  MATINEE_DATA_DIR: z.string().default("data"),
-  MATINEE_FFMPEG_PATH: z.string().default("ffmpeg"),
-  MATINEE_FFPROBE_PATH: z.string().default("ffprobe"),
+  MATINEE_DATA_DIR: t.string().$default("data"),
+  /**
+   * HLS encodes, shared by everyone who plays the same file the same way.
+   * Defaults to `transcodes` in the data dir. A fast disk helps.
+   */
+  MATINEE_TRANSCODE_DIR: optional,
+  /** Hours an encode nobody plays stays on disk; 0 deletes it at once. */
+  MATINEE_TRANSCODE_CACHE_HOURS: t.coerce.number().min(0).$default(24),
+  /**
+   * Gigabytes all encodes may take. The least recently played go first;
+   * ones playing now stay. 0 sets no limit.
+   */
+  MATINEE_TRANSCODE_CACHE_GB: t.coerce.number().min(0).$default(50),
+  MATINEE_FFMPEG_PATH: t.string().$default("ffmpeg"),
+  MATINEE_FFPROBE_PATH: t.string().$default("ffprobe"),
   /**
    * Defaults for the transcoding settings an admin can change in the app:
    * the acceleration and its device nodes.
    */
-  MATINEE_HARDWARE_ACCELERATION: HardwareAcceleration.default("none"),
-  MATINEE_VAAPI_DEVICE: DevicePath.default("/dev/dri/renderD128"),
-  MATINEE_QSV_DEVICE: DevicePath.default(""),
+  MATINEE_HARDWARE_ACCELERATION: HardwareAcceleration.$default("none"),
+  MATINEE_VAAPI_DEVICE: DevicePath.$default("/dev/dri/renderD128"),
+  MATINEE_QSV_DEVICE: DevicePath.$default(""),
   /** Scan the library folders that change, as they change. */
-  MATINEE_WATCH_LIBRARIES: flag.default(true),
+  MATINEE_WATCH_LIBRARIES: flag(true),
   /**
    * Hours between full scans of every library; 0 turns them off. Node's
    * timers can't wait longer than about 24 days.
    */
-  MATINEE_SCAN_INTERVAL_HOURS: z.coerce
+  MATINEE_SCAN_INTERVAL_HOURS: t.coerce
     .number()
     .min(0)
     .max(24 * 24)
-    .default(12),
-  MATINEE_SETUP_TOKEN: z.string().min(32).optional(),
-  MATINEE_OPEN_REGISTRATION: flag.default(false),
-  MATINEE_OIDC_ISSUER_URL: optional.pipe(z.url().optional()),
+    .$default(12),
+  MATINEE_SETUP_TOKEN: t.string().min(32).optional(),
+  MATINEE_OPEN_REGISTRATION: flag(false),
+  MATINEE_OIDC_ISSUER_URL: t
+    .string()
+    .trim()
+    .refine((value) => !value || URL.canParse(value), "Invalid URL")
+    // The URL parser skips tabs and newlines, so the value does too.
+    .transform((value) => value.replaceAll(/[\t\n\r]/g, "") || undefined)
+    .optional(),
   MATINEE_OIDC_CLIENT_ID: optional,
   MATINEE_OIDC_CLIENT_SECRET: optional,
   MATINEE_OIDC_CLIENT_SECRET_FILE: optional,
-  MATINEE_OIDC_DISPLAY_NAME: z.string().default("Single sign-on"),
-  MATINEE_OIDC_SCOPES: z.string().default("openid profile email"),
-  MATINEE_OIDC_USERNAME_CLAIM: z.string().default("preferred_username"),
-  MATINEE_OIDC_ALLOW_SIGN_UP: flag.default(false),
+  MATINEE_OIDC_DISPLAY_NAME: t.string().$default("Single sign-on"),
+  MATINEE_OIDC_SCOPES: t.string().$default("openid profile"),
+  MATINEE_OIDC_USERNAME_CLAIM: t.string().$default("preferred_username"),
+  MATINEE_OIDC_ALLOW_SIGN_UP: flag(false),
   /** TMDB API key (v3) or API read access token. */
   MATINEE_TMDB_API_KEY: optional,
   MATINEE_TMDB_API_KEY_FILE: optional,
@@ -91,9 +117,13 @@ function secret(value?: string, file?: string): string | undefined {
 
 function parseEnv() {
   loadDotenv()
-  const result = EnvSchema.safeParse(process.env)
+  const result = EnvSchema.safeParse({ ...process.env })
   if (!result.success) {
-    throw new Error(`Invalid environment:\n${z.prettifyError(result.error)}`)
+    const issues = result.error.issues.map(
+      (issue) =>
+        `✖ ${issue.message}${issue.path.length ? `\n  → at ${issue.path.join(".")}` : ""}`,
+    )
+    throw new Error(`Invalid environment:\n${issues.join("\n")}`)
   }
   const env = result.data
   const publicUrl = new URL(env.PUBLIC_URL)
@@ -109,6 +139,9 @@ function parseEnv() {
     tmdbApiKey: secret(env.MATINEE_TMDB_API_KEY, env.MATINEE_TMDB_API_KEY_FILE),
     tvdbApiKey: secret(env.MATINEE_TVDB_API_KEY, env.MATINEE_TVDB_API_KEY_FILE),
     dataDir,
+    transcodeDir: env.MATINEE_TRANSCODE_DIR
+      ? resolve(env.MATINEE_TRANSCODE_DIR)
+      : join(dataDir, "transcodes"),
     secureCookies: publicUrl.protocol === "https:",
     isLoopback: ["localhost", "127.0.0.1", "[::1]"].includes(
       publicUrl.hostname,
