@@ -1,7 +1,8 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "./shadcn-compat.css";
-@import "@fontsource-variable/geist";
+@import "@fontsource-variable/red-hat-text";
+@import "@fontsource-variable/red-hat-mono";
 
 /* Scan the shared components and every app that imports this file. */
 @source "../";
@@ -9,57 +10,146 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Neutral dark theme. Surfaces step up in lightness instead of using
- * shadows; white is the primary action color, and red is reserved for
- * errors and deletion.
+ * Tokens follow alloy's theme model: a neutral ramp from background (0) to
+ * text (900), a few named surfaces, an accent family, and status colors.
+ * Themes (lib/theme.ts) replace exactly these at runtime; the shadcn names
+ * below resolve through them, so a theme repaints everything. Keep the
+ * defaults in sync with the Matinee variants in lib/theme-presets-*.ts.
  */
-:root {
+:root,
+.dark {
   color-scheme: dark;
   --radius: 0.625rem;
 
-  --background: #0e0e10;
-  --foreground: #fafafa;
-  --card: #161618;
-  --card-foreground: #fafafa;
-  --popover: #1a1a1d;
-  --popover-foreground: #fafafa;
-  --primary: #fafafa;
-  --primary-foreground: #18181b;
-  --secondary: #232326;
-  --secondary-foreground: #fafafa;
-  --muted: #1c1c1f;
-  --muted-foreground: #a1a1aa;
-  --accent: #232326;
-  --accent-foreground: #fafafa;
-  --destructive: #f87171;
-  --border: #27272a;
+  --neutral-0: #0e0e10;
+  --neutral-50: #161618;
+  --neutral-100: #1a1a1d;
+  --neutral-150: #232326;
+  --neutral-200: #27272a;
+  --neutral-300: #3f3f46;
+  --neutral-400: #52525b;
+  --neutral-500: #71717a;
+  --neutral-600: #a1a1aa;
+  --neutral-700: #d4d4d8;
+  --neutral-800: #e4e4e7;
+  --neutral-900: #fafafa;
+  --surface-sunken: #09090a;
+  --foreground-faint: #8e8e96;
+
+  /* A pastel red. Destructive red stays more saturated, so the two read
+     apart. */
+  --accent: #6d8cf5;
+  --accent-hover: #7d9af7;
+  --accent-active: #5872c8;
+  --accent-foreground: #000000;
+  --accent-soft: rgba(109, 140, 245, 0.22);
+  --accent-border: rgba(109, 140, 245, 0.55);
+  --accent-glow: rgba(109, 140, 245, 0.38);
+  --accent-dim: #333f66;
+  --primary: var(--accent);
+  --primary-foreground: var(--accent-foreground);
+
+  --success: oklch(0.72 0.19 145);
+  --success-soft: color-mix(in srgb, var(--success) 12%, transparent);
+  --warning: oklch(0.82 0.18 90);
+  --warning-soft: color-mix(in srgb, var(--warning) 12%, transparent);
+  --danger: oklch(0.7 0.19 22);
+  --danger-soft: color-mix(in srgb, var(--danger) 12%, transparent);
+  --info: oklch(0.72 0.15 230);
+  --info-soft: color-mix(in srgb, var(--info) 12%, transparent);
+  --live: oklch(0.65 0.25 25);
+  --live-soft: color-mix(in srgb, var(--live) 12%, transparent);
+  --destructive: var(--danger);
+}
+
+/* Light: the inverted ramp and a deeper accent that reads on white. */
+:root.light {
+  color-scheme: light;
+
+  --neutral-0: oklch(0.99 0 0);
+  --neutral-50: oklch(0.975 0 0);
+  --neutral-100: oklch(0.96 0 0);
+  --neutral-150: oklch(0.94 0 0);
+  --neutral-200: oklch(0.9 0 0);
+  --neutral-300: oklch(0.84 0 0);
+  --neutral-400: oklch(0.7 0 0);
+  --neutral-500: oklch(0.6 0 0);
+  --neutral-600: oklch(0.5 0 0);
+  --neutral-700: oklch(0.4 0 0);
+  --neutral-800: oklch(0.3 0 0);
+  --neutral-900: oklch(0.2 0 0);
+  --surface-sunken: oklch(0.94 0 0);
+  --foreground-faint: oklch(0.5 0 0);
+
+  --accent: #3b5bdb;
+  --accent-hover: #2e49b3;
+  --accent-active: #4e6fde;
+  --accent-foreground: #ffffff;
+  --accent-soft: rgba(59, 91, 219, 0.12);
+  --accent-border: rgba(59, 91, 219, 0.4);
+  --accent-glow: rgba(59, 91, 219, 0.28);
+  --accent-dim: #a5bbf3;
+
+  --warning: oklch(0.62 0.15 75);
+  --danger: oklch(0.6 0.22 25);
+}
+
+/* Roles every component uses, resolved from the tokens above. */
+:root {
+  --background: var(--neutral-0);
+  --foreground: var(--neutral-900);
+  --card: var(--neutral-50);
+  --card-foreground: var(--neutral-900);
+  --popover: var(--neutral-100);
+  --popover-foreground: var(--neutral-900);
+  --secondary: var(--neutral-150);
+  --secondary-foreground: var(--neutral-900);
+  --muted: var(--neutral-100);
+  --muted-foreground: var(--neutral-600);
+  --border: var(--neutral-200);
   /* Field borders, one step above --border, and brighter on hover. Fields
-     also get a recessed fill (--field), so the border can stay quiet. */
-  --input: #3f3f46;
-  --input-hover: #52525b;
-  --field: rgb(0 0 0 / 0.22);
-  --ring: #a1a1aa;
+     sit on the sunken surface, so the border can stay quiet. */
+  --input: var(--neutral-300);
+  --input-hover: var(--neutral-400);
+  --field: var(--surface-sunken);
+  --ring: var(--accent);
+  /* The logo follows the accent, so a theme recolors it too. */
+  --brand: var(--accent);
 
-  --sidebar: #0e0e10;
-  --sidebar-foreground: #d4d4d8;
-  --sidebar-primary: #fafafa;
-  --sidebar-primary-foreground: #18181b;
-  --sidebar-accent: #1f1f22;
-  --sidebar-accent-foreground: #fafafa;
-  --sidebar-border: #1f1f22;
-  --sidebar-ring: #a1a1aa;
+  --sidebar: var(--neutral-0);
+  --sidebar-foreground: var(--neutral-700);
+  --sidebar-primary: var(--accent);
+  --sidebar-primary-foreground: var(--accent-foreground);
+  --sidebar-accent: var(--neutral-150);
+  --sidebar-accent-foreground: var(--neutral-900);
+  --sidebar-border: var(--neutral-150);
+  --sidebar-ring: var(--accent);
 
-  --chart-1: #e4e4e7;
-  --chart-2: #a1a1aa;
-  --chart-3: #71717a;
-  --chart-4: #52525b;
-  --chart-5: #3f3f46;
+  --chart-1: var(--neutral-800);
+  --chart-2: var(--neutral-600);
+  --chart-3: var(--neutral-500);
+  --chart-4: var(--neutral-400);
+  --chart-5: var(--neutral-300);
+}
+
+/* The theme editor's inspector swaps tokens to find which one paints an
+   element; transitions would hide the swap from getComputedStyle. */
+html[data-theme-probe] *,
+html[data-theme-probe] *::before,
+html[data-theme-probe] *::after {
+  transition: none !important;
+}
+html[data-theme-inspecting] *:not([data-theme-editor], [data-theme-editor] *) {
+  cursor: crosshair !important;
 }
 
 @theme inline {
   --font-sans:
-    "Geist Variable", ui-sans-serif, system-ui, "Hiragino Sans", "Yu Gothic UI",
-    "Noto Sans CJK JP", sans-serif;
+    "Red Hat Text Variable", ui-sans-serif, system-ui, "Hiragino Sans",
+    "Yu Gothic UI", "Noto Sans CJK JP", sans-serif;
+  --font-mono:
+    "Red Hat Mono Variable", ui-monospace, SFMono-Regular, Menlo, Monaco,
+    Consolas, "Liberation Mono", monospace;
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -76,6 +166,24 @@
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
+  --color-brand: var(--brand);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-active: var(--accent-active);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-border: var(--accent-border);
+  --color-accent-dim: var(--accent-dim);
+  --color-surface: var(--neutral-50);
+  --color-surface-raised: var(--neutral-100);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-foreground-faint: var(--foreground-faint);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-input-hover: var(--input-hover);
@@ -109,11 +217,54 @@
   html {
     @apply bg-background;
   }
+  /* With a mouse, the page's own scrollbar is hidden and the web app draws
+     one over the content instead (PageScrollbar), so it takes no room and
+     nothing shifts between pages that scroll and pages that don't. Touch
+     browsers already overlay theirs. */
+  @media (hover: hover) and (pointer: fine) {
+    html {
+      scrollbar-width: none;
+    }
+    html::-webkit-scrollbar {
+      display: none;
+    }
+  }
   body {
     @apply bg-background text-foreground font-sans antialiased;
   }
+  /* A thin, trackless scrollbar with no arrow buttons. Chrome ignores the
+     ::-webkit-scrollbar rules once the standard properties are set, so those
+     only apply where the pseudo-elements don't exist (Firefox). */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track,
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-button {
+    display: none;
+  }
+  ::-webkit-scrollbar-thumb {
+    border: 3px solid transparent;
+    border-radius: 9999px;
+    background-clip: padding-box;
+    background-color: color-mix(in oklab, var(--foreground) 20%, transparent);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: color-mix(in oklab, var(--foreground) 35%, transparent);
+  }
+  @supports not selector(::-webkit-scrollbar) {
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: color-mix(in oklab, var(--foreground) 20%, transparent)
+        transparent;
+    }
+  }
   ::selection {
-    background: color-mix(in oklab, var(--foreground) 25%, transparent);
+    background: var(--accent-soft);
+    color: var(--foreground);
   }
 }
 
@@ -200,17 +351,157 @@
 }
 
 /*
- * Subtitles in the player: white on a dark band, readable over bright
- * frames. The size stays the browser's, which scales with the video.
+ * Toasts: the status icon on the title line, the description under it, and
+ * the action at the bottom right. Closing is always the round button on the
+ * top-right corner. Adapted from alloy.
+ */
+.matinee-toast {
+  display: grid !important;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    "icon content content"
+    "icon .       action";
+  align-items: start !important;
+  column-gap: 10px !important;
+  row-gap: 0 !important;
+  padding: 12px 14px !important;
+  background: var(--popover) !important;
+  color: var(--popover-foreground) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-xl) !important;
+  box-shadow: 0 12px 32px -8px rgb(0 0 0 / 0.6) !important;
+}
+/*
+ * As wide as the text, up to the toaster's --width, where it wraps. Sonner
+ * gives every toast the full width. Phones keep Sonner's full-width toasts.
+ */
+@media (width > 600px) {
+  .matinee-toast[data-sonner-toast] {
+    width: fit-content !important;
+    max-width: 100%;
+  }
+  /* Sonner leaves centered toasts at the left edge of the toaster. */
+  .matinee-toast[data-sonner-toast][data-x-position="center"] {
+    left: 0;
+    right: 0;
+    margin-inline: auto;
+  }
+}
+/* Plain toasts have no status icon, so no icon column. */
+.matinee-toast:not(:has(> [data-icon])) {
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "content content"
+    ".       action";
+}
+/* Only a real button opens the bottom row. */
+.matinee-toast:has(> [data-button]) {
+  row-gap: 10px !important;
+}
+.matinee-toast-icon {
+  grid-area: icon;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center !important;
+  width: 16px !important;
+  /* The title's line box, so the glyph sits on its line. */
+  height: 20px !important;
+  margin: 0 !important;
+  color: var(--muted-foreground);
+}
+.matinee-toast-icon svg {
+  width: 100%;
+  height: 100%;
+  margin: 0 !important;
+}
+.matinee-toast > [data-content] {
+  grid-area: content;
+  min-width: 0;
+  gap: 2px !important;
+}
+.matinee-toast[data-type="success"] .matinee-toast-icon {
+  color: var(--success);
+}
+.matinee-toast[data-type="warning"] .matinee-toast-icon {
+  color: var(--warning);
+}
+.matinee-toast[data-type="error"] .matinee-toast-icon {
+  color: var(--destructive);
+}
+.matinee-toast-title {
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  line-height: 20px !important;
+  color: var(--foreground) !important;
+}
+.matinee-toast-description {
+  font-size: 13px !important;
+  line-height: 18px !important;
+  color: var(--muted-foreground) !important;
+}
+.matinee-toast[data-styled="true"] > [data-close-button] {
+  left: auto !important;
+  right: 0 !important;
+  transform: translate(35%, -35%) !important;
+  width: 20px !important;
+  height: 20px !important;
+  border: 1px solid var(--input) !important;
+  background: var(--popover) !important;
+  color: var(--muted-foreground) !important;
+  transition:
+    background-color 120ms ease-out,
+    color 120ms ease-out;
+}
+.matinee-toast[data-styled="true"] > [data-close-button]:hover {
+  background: var(--secondary) !important;
+  color: var(--foreground) !important;
+}
+.matinee-toast[data-styled="true"] > [data-close-button]:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--ring);
+}
+.matinee-toast[data-styled="true"] > [data-button] {
+  grid-area: action;
+  justify-self: end;
+  height: 28px !important;
+  margin: 0 !important;
+  padding-inline: 12px !important;
+  border-radius: var(--radius-md) !important;
+  background: var(--primary) !important;
+  color: var(--primary-foreground) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  cursor: pointer;
+}
+.matinee-toast[data-styled="true"] > [data-button]:hover {
+  background: color-mix(in oklab, var(--primary) 88%, transparent) !important;
+}
+.matinee-toast[data-styled="true"] > [data-button]:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--popover),
+    0 0 0 4px var(--ring);
+}
+
+/*
+ * Subtitles in the player: white with no band behind them. A thin dark
+ * outline and a soft shadow keep them readable over bright frames. `::cue`
+ * doesn't take -webkit-text-stroke, so the outline is stacked shadows.
+ * The size stays the browser's, which scales with the video.
  */
 video::cue {
   color: #fff;
-  background-color: rgb(0 0 0 / 0.6);
+  background-color: transparent;
   font-family:
-    "Geist Variable", ui-sans-serif, system-ui, "Hiragino Sans",
+    "Red Hat Text Variable", ui-sans-serif, system-ui, "Hiragino Sans",
     "Noto Sans CJK JP", sans-serif;
   line-height: 1.35;
-  text-shadow: 0 1px 3px rgb(0 0 0 / 0.9);
+  text-shadow:
+    -1px -1px 0 rgb(0 0 0 / 0.85),
+    1px -1px 0 rgb(0 0 0 / 0.85),
+    -1px 1px 0 rgb(0 0 0 / 0.85),
+    1px 1px 0 rgb(0 0 0 / 0.85),
+    0 2px 6px rgb(0 0 0 / 0.8);
 }
 
 /*

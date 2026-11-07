@@ -1,6 +1,7 @@
 "use client"
 
 import { Drawer as DrawerPrimitive } from "@base-ui/react/drawer"
+import { useReturnFocus } from "@matinee/ui/hooks/use-return-focus"
 import {
   MODAL_OVERLAY_CLASS_NAME,
   MODAL_OVERLAY_FORCE_RENDER,
@@ -44,12 +45,15 @@ function DrawerContent({
   className,
   children,
   container,
+  ref,
+  finalFocus,
   ...props
 }: DrawerPrimitive.Popup.Props & {
   /** Portal target, document.body by default. Pass a full-screen element
    *  so the sheet shows above it. */
   container?: DrawerPrimitive.Portal.Props["container"]
 }) {
+  const returnFocus = useReturnFocus(ref, finalFocus)
   return (
     <DrawerPrimitive.Portal data-slot="drawer-portal" container={container}>
       <DrawerPrimitive.Backdrop
@@ -64,9 +68,10 @@ function DrawerContent({
         <DrawerPrimitive.Popup
           data-slot="drawer-content"
           className={cn(
-            "pointer-events-auto fixed inset-x-0 bottom-0 z-50 mt-24 flex max-h-[85dvh] flex-col overflow-hidden rounded-t-xl bg-popover text-popover-foreground ring-1 ring-white/10 outline-none",
+            "pointer-events-auto fixed inset-x-0 bottom-0 z-50 mt-24 flex max-h-[85dvh] flex-col overflow-hidden rounded-t-xl bg-popover text-popover-foreground ring-1 ring-foreground/10 outline-none",
             className,
           )}
+          {...returnFocus}
           {...props}
         >
           {children}

@@ -1,0 +1,303 @@
+import { ColorSwatch } from "@matinee/ui/components/color-swatch"
+import { Input } from "@matinee/ui/components/input"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@matinee/ui/components/popover"
+import {
+  formatCssColor,
+  hsvaToRgba,
+  hueColor,
+  parseCssColor,
+  rgbaToHsva,
+  type Hsva,
+} from "@matinee/ui/lib/color"
+import { cn } from "@matinee/ui/lib/utils"
+import { useCallback, useRef, useState } from "react"
+import type { CSSProperties, PointerEvent, RefObject } from "react"
+
+const FALLBACK: Hsva = { h: 0, s: 0, v: 0, a: 1 }
+const HEX_COLOR_RE = /^#?([0-9a-f]{6})$/i
+
+/**
+ * Colour picker owned end to end: a saturation/value field, a hue rail, and a
+ * swatch trigger. Replaces `<input type="color">`, which can't represent the
+ * `oklch()` values the theme tokens actually use and renders differently in
+ * every browser. It always emits an opaque `#rrggbb`.
+ */
+export function ColorPicker({
+  value,
+  onValueChange,
+  label,
+  hexInput = false,
+  disabled,
+  className,
+}: {
+  /** Any CSS colour. Unparseable values open the picker on black. */
+  value: string
+  onValueChange: (next: string) => void
+  label: string
+  /** Adds a `#rrggbb` field, for when the swatch has no text field beside it. */
+  hexInput?: boolean
+  disabled?: boolean
+  className?: string
+}) {
+  // HSVA is component state, not derived from `value` each render: achromatic
+  // colours (white/black/gray) project to hue 0 / saturation 0, so re-deriving
+  // would snap the hue rail back and make it inert until saturation is raised.
+  const [hsva, setHsva] = useState<Hsva>(() => {
+    const rgba = parseCssColor(value)
+    return rgba ? rgbaToHsva({ ...rgba, a: 1 }) : FALLBACK
+  })
+
+  // Sync from the prop only when it changes to a colour that no longer matches
+  // our own RGB projection, so external updates land but our own emits echoing
+  // back don't wipe hue/saturation through gray.
+  const [syncedValue, setSyncedValue] = useState(value)
+  if (value !== syncedValue) {
+    setSyncedValue(value)
+    const rgba = parseCssColor(value)
+    const opaque = rgba ? { ...rgba, a: 1 } : null
+    if (opaque && formatCssColor(opaque) !== formatCssColor(hsvaToRgba(hsva))) {
+      setHsva(rgbaToHsva(opaque))
+    }
+  }
+
+  const emit = useCallback(
+    (next: Hsva) => {
+      setHsva(next)
+      onValueChange(formatCssColor(hsvaToRgba(next)))
+    },
+    [onValueChange],
+  )
+
+  return (
+    <Popover>
+      <PopoverTrigger
+        disabled={disabled}
+        aria-label={`Pick a color for ${label}`}
+        className={cn(
+          "border-border hover:border-border-strong focus-visible:ring-ring focus-visible:ring-offset-background size-9 shrink-0 rounded-md border p-0.5 transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-40 sm:size-8",
+          className,
+        )}
+      >
+        <ColorSwatch color={value} className="rounded-sm border-0" />
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-60 gap-3">
+        <SaturationField
+          label={label}
+          hsva={hsva}
+          onChange={(s, v) => emit({ ...hsva, s, v })}
+        />
+        <HueRail
+          label={label}
+          position={hsva.h / 360}
+          thumbColor={hueColor(hsva.h)}
+          onChange={(ratio) => emit({ ...hsva, h: ratio * 360 })}
+        />
+        {hexInput ? (
+          <HexField label={label} value={value} onChange={onValueChange} />
+        ) : null}
+      </PopoverContent>
+    </Popover>
+  )
+}
+
+function SaturationField({
+  label,
+  hsva,
+  onChange,
+}: {
+  label: string
+  hsva: Hsva
+  onChange: (s: number, v: number) => void
+}) {
+  const ref = useRef<HTMLDivElement | null>(null)
+  const track = useDragTrack(ref, (x, y) => onChange(x, 1 - y))
+
+  return (
+    <div
+      ref={ref}
+      role="slider"
+      aria-label={`${label} saturation and brightness`}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={Math.round(hsva.v * 100)}
+      aria-valuetext={`${Math.round(hsva.s * 100)}% saturation, ${Math.round(hsva.v * 100)}% brightness`}
+      tabIndex={0}
+      className="focus-visible:ring-ring focus-visible:ring-offset-background relative h-32 w-full cursor-crosshair touch-none rounded-md focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+      style={{ background: hueColor(hsva.h) }}
+      onPointerDown={track}
+      onKeyDown={(event) => {
+        const step = event.shiftKey ? 0.1 : 0.02
+        const next =
+          event.key === "ArrowLeft"
+            ? { s: Math.max(0, hsva.s - step), v: hsva.v }
+            : event.key === "ArrowRight"
+              ? { s: Math.min(1, hsva.s + step), v: hsva.v }
+              : event.key === "ArrowDown"
+                ? { s: hsva.s, v: Math.max(0, hsva.v - step) }
+                : event.key === "ArrowUp"
+                  ? { s: hsva.s, v: Math.min(1, hsva.v + step) }
+                  : null
+        if (!next) return
+        event.preventDefault()
+        onChange(next.s, next.v)
+      }}
+    >
+      <div className="absolute inset-0 rounded-md bg-[linear-gradient(to_right,#fff,transparent)]" />
+      <div className="absolute inset-0 rounded-md bg-[linear-gradient(to_top,#000,transparent)]" />
+      <Thumb
+        color={formatCssColor(hsvaToRgba({ ...hsva, a: 1 }))}
+        style={{
+          left: `${hsva.s * 100}%`,
+          top: `${(1 - hsva.v) * 100}%`,
+        }}
+      />
+    </div>
+  )
+}
+
+function HueRail({
+  label,
+  position,
+  thumbColor,
+  onChange,
+}: {
+  label: string
+  position: number
+  thumbColor: string
+  onChange: (ratio: number) => void
+}) {
+  const ref = useRef<HTMLDivElement | null>(null)
+  const track = useDragTrack(ref, (x) => onChange(x))
+
+  return (
+    <div
+      ref={ref}
+      role="slider"
+      aria-label={`${label} hue`}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={Math.round(position * 100)}
+      tabIndex={0}
+      className="focus-visible:ring-ring focus-visible:ring-offset-background relative h-3 w-full cursor-pointer touch-none rounded-full focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+      style={{
+        background:
+          "linear-gradient(to right, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000)",
+      }}
+      onPointerDown={track}
+      onKeyDown={(event) => {
+        const step = event.shiftKey ? 0.1 : 0.01
+        const next =
+          event.key === "ArrowLeft" || event.key === "ArrowDown"
+            ? Math.max(0, position - step)
+            : event.key === "ArrowRight" || event.key === "ArrowUp"
+              ? Math.min(1, position + step)
+              : event.key === "Home"
+                ? 0
+                : event.key === "End"
+                  ? 1
+                  : null
+        if (next === null) return
+        // Arrow keys and Home/End scroll the page otherwise.
+        event.preventDefault()
+        onChange(next)
+      }}
+    >
+      <Thumb
+        color={thumbColor}
+        style={{ left: `${position * 100}%`, top: "50%" }}
+      />
+    </div>
+  )
+}
+
+/**
+ * Typing reports only complete colors, with or without the `#`; leaving the
+ * field restores the current color.
+ */
+function HexField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string
+  value: string
+  onChange: (next: string) => void
+}) {
+  const rgba = parseCssColor(value)
+  const hex = rgba ? formatCssColor({ ...rgba, a: 1 }) : ""
+  const [draft, setDraft] = useState(hex)
+  const [syncedHex, setSyncedHex] = useState(hex)
+  if (hex !== syncedHex) {
+    setSyncedHex(hex)
+    setDraft(hex)
+  }
+
+  return (
+    <Input
+      value={draft}
+      aria-label={`${label} hex value`}
+      spellCheck={false}
+      className="font-mono text-xs"
+      onChange={(event) => {
+        setDraft(event.target.value)
+        const digits = HEX_COLOR_RE.exec(event.target.value.trim())?.[1]
+        if (digits) onChange(`#${digits.toLowerCase()}`)
+      }}
+      onBlur={() => setDraft(hex)}
+    />
+  )
+}
+
+function Thumb({ color, style }: { color: string; style: CSSProperties }) {
+  return (
+    <span
+      aria-hidden
+      className="pointer-events-none absolute size-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-[0_0_0_1px_oklch(0_0_0/0.5)]"
+      style={{ ...style, background: color }}
+    />
+  )
+}
+
+/**
+ * Pointer capture on the track element, so a drag that leaves the popup keeps
+ * updating instead of stopping at the edge. Reports 0-1 on both axes.
+ */
+function useDragTrack(
+  ref: RefObject<HTMLDivElement | null>,
+  onMove: (x: number, y: number) => void,
+) {
+  return useCallback(
+    (event: PointerEvent<HTMLDivElement>) => {
+      const element = ref.current
+      if (!element) return
+
+      const update = (clientX: number, clientY: number) => {
+        const rect = element.getBoundingClientRect()
+        const clamp = (n: number) => Math.min(1, Math.max(0, n))
+        onMove(
+          clamp((clientX - rect.left) / rect.width),
+          clamp((clientY - rect.top) / rect.height),
+        )
+      }
+
+      element.setPointerCapture(event.pointerId)
+      update(event.clientX, event.clientY)
+
+      const move = (next: globalThis.PointerEvent) =>
+        update(next.clientX, next.clientY)
+      const stop = () => {
+        element.removeEventListener("pointermove", move)
+        element.removeEventListener("pointerup", stop)
+        element.removeEventListener("pointercancel", stop)
+      }
+      element.addEventListener("pointermove", move)
+      element.addEventListener("pointerup", stop)
+      element.addEventListener("pointercancel", stop)
+    },
+    [onMove, ref],
+  )
+}

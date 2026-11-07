@@ -1,5 +1,6 @@
 import { AlertDialog as AlertDialogPrimitive } from "@base-ui/react/alert-dialog"
 import { Button } from "@matinee/ui/components/button"
+import { useReturnFocus } from "@matinee/ui/hooks/use-return-focus"
 import {
   MODAL_MOTION_CLASS_NAME,
   MODAL_OVERLAY_CLASS_NAME,
@@ -48,10 +49,13 @@ function AlertDialogOverlay({
 function AlertDialogContent({
   className,
   size = "default",
+  ref,
+  finalFocus,
   ...props
 }: AlertDialogPrimitive.Popup.Props & {
   size?: "default" | "sm"
 }) {
+  const returnFocus = useReturnFocus(ref, finalFocus)
   return (
     <AlertDialogPortal>
       <AlertDialogOverlay />
@@ -59,11 +63,12 @@ function AlertDialogContent({
         data-slot="alert-dialog-content"
         data-size={size}
         className={cn(
-          "group/alert-dialog-content fixed top-1/2 left-1/2 z-50 grid w-full -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-popover p-4 text-popover-foreground ring-1 ring-white/10 shadow-2xl outline-none data-[size=default]:max-w-xs data-[size=sm]:max-w-xs data-[size=default]:sm:max-w-sm",
+          "group/alert-dialog-content fixed top-1/2 left-1/2 z-50 grid w-full -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-popover p-4 text-popover-foreground ring-1 ring-foreground/10 shadow-2xl outline-none data-[size=default]:max-w-xs data-[size=sm]:max-w-xs data-[size=default]:sm:max-w-sm",
           MODAL_MOTION_CLASS_NAME,
           "data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
           className,
         )}
+        {...returnFocus}
         {...props}
       />
     </AlertDialogPortal>

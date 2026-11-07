@@ -7,11 +7,19 @@ function ScrollArea({
   children,
   viewportClassName,
   viewportRef,
+  hasControls = false,
   ...props
 }: ScrollAreaPrimitive.Root.Props & {
   viewportClassName?: string
   /** The element that scrolls, for scroll position and in-view tracking. */
   viewportRef?: React.Ref<HTMLDivElement>
+  /**
+   * The content has controls of its own, which Tab reaches instead, so the
+   * viewport leaves the tab order and draws no ring. A click on its text
+   * still focuses it, and a browser rings what has focus once a key is
+   * pressed, so scrolling by keyboard would outline the whole region.
+   */
+  hasControls?: boolean
 }) {
   return (
     <ScrollAreaPrimitive.Root
@@ -22,8 +30,11 @@ function ScrollArea({
       <ScrollAreaPrimitive.Viewport
         data-slot="scroll-area-viewport"
         ref={viewportRef}
+        {...(hasControls && { tabIndex: -1 })}
         className={cn(
-          "size-full rounded-[inherit] transition-[color,box-shadow] outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
+          "size-full rounded-[inherit] transition-[color,box-shadow] outline-none",
+          !hasControls &&
+            "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
           viewportClassName,
         )}
       >

@@ -1,0 +1,88 @@
+import { Popover } from "@base-ui/react/popover"
+import { useReturnFocus } from "@matinee/ui/hooks/use-return-focus"
+import { cn } from "@matinee/ui/lib/utils"
+import type { ComponentProps } from "react"
+
+function PopoverRoot(props: Popover.Root.Props) {
+  return <Popover.Root data-slot="popover" {...props} />
+}
+
+function PopoverTrigger(props: Popover.Trigger.Props) {
+  return <Popover.Trigger data-slot="popover-trigger" {...props} />
+}
+
+function PopoverContent({
+  className,
+  positionerClassName,
+  align = "center",
+  alignOffset = 0,
+  anchor,
+  portalContainer,
+  side = "bottom",
+  sideOffset = 4,
+  ref,
+  finalFocus,
+  ...props
+}: Popover.Popup.Props &
+  Pick<
+    Popover.Positioner.Props,
+    "align" | "alignOffset" | "anchor" | "side" | "sideOffset"
+  > & {
+    portalContainer?: Popover.Portal.Props["container"]
+    positionerClassName?: string
+  }) {
+  const returnFocus = useReturnFocus(ref, finalFocus)
+  return (
+    <Popover.Portal container={portalContainer}>
+      <Popover.Positioner
+        align={align}
+        alignOffset={alignOffset}
+        anchor={anchor}
+        side={side}
+        sideOffset={sideOffset}
+        className={cn("isolate z-50", positionerClassName)}
+      >
+        <Popover.Popup
+          data-slot="popover-content"
+          className={cn(
+            "z-50 flex w-72 origin-(--transform-origin) flex-col gap-2.5 rounded-xl bg-popover p-2.5 text-sm text-popover-foreground shadow-xl shadow-black/40 ring-1 ring-foreground/10 outline-hidden duration-100 data-[side=bottom]:slide-in-from-top-1 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+            className,
+          )}
+          {...returnFocus}
+          {...props}
+        />
+      </Popover.Positioner>
+    </Popover.Portal>
+  )
+}
+
+function PopoverHeader({ className, ...props }: ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="popover-header"
+      className={cn(
+        "border-border flex min-h-10 shrink-0 items-center justify-between gap-3 border-b px-3 py-1.5 text-sm",
+        className,
+      )}
+      {...props}
+    />
+  )
+}
+
+function PopoverTitle({ className, ...props }: Popover.Title.Props) {
+  return (
+    <Popover.Title
+      data-slot="popover-title"
+      className={cn("font-medium", className)}
+      {...props}
+    />
+  )
+}
+
+export {
+  PopoverRoot as Popover,
+  PopoverContent,
+  PopoverHeader,
+  PopoverTitle,
+  PopoverTrigger,
+}

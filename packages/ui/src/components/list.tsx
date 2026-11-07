@@ -16,7 +16,7 @@ function List({ className, ...props }: ComponentProps<"ul">) {
       className={cn(
         // shrink-0: in a full flex column, clipped corners would otherwise
         // let the block squash instead of scroll.
-        "flex shrink-0 flex-col divide-y overflow-hidden rounded-xl border bg-white/[0.02]",
+        "flex shrink-0 flex-col divide-y overflow-hidden rounded-xl border bg-foreground/[0.02]",
         className,
       )}
       {...props}
@@ -52,7 +52,7 @@ function ListItemButton({
   return (
     <li
       data-slot="list-item"
-      className="relative flex transition-colors has-[>button:focus-visible]:bg-white/[0.04] has-[>button:hover]:bg-white/[0.04]"
+      className="has-[>button:focus-visible]:bg-foreground/[0.06] has-[>button:hover]:bg-foreground/[0.06] relative flex transition-colors"
     >
       <button
         type="button"

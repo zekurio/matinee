@@ -2,6 +2,7 @@
 
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog"
 import { Button } from "@matinee/ui/components/button"
+import { useReturnFocus } from "@matinee/ui/hooks/use-return-focus"
 import {
   MODAL_MOTION_CLASS_NAME,
   MODAL_OVERLAY_CLASS_NAME,
@@ -54,24 +55,28 @@ function DialogContent({
   children,
   showCloseButton = true,
   disableZoom = false,
+  ref,
+  finalFocus,
   ...props
 }: DialogPrimitive.Popup.Props & {
   showCloseButton?: boolean
   /** Fade only. Large surfaces look rough when they scale. */
   disableZoom?: boolean
 }) {
+  const returnFocus = useReturnFocus(ref, finalFocus)
   return (
     <DialogPortal>
       <DialogOverlay />
       <DialogPrimitive.Popup
         data-slot="dialog-content"
         className={cn(
-          "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-popover p-4 text-sm text-popover-foreground ring-1 ring-white/10 shadow-2xl outline-none sm:max-w-sm",
+          "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 shadow-2xl outline-none sm:max-w-sm",
           MODAL_MOTION_CLASS_NAME,
           "data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
           !disableZoom && "data-open:zoom-in-95 data-closed:zoom-out-95",
           className,
         )}
+        {...returnFocus}
         {...props}
       >
         {children}
