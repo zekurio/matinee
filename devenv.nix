@@ -7,8 +7,12 @@ let
   # The exact pnpm package.json's packageManager names.
   pnpmPackage = import ./nix/pnpm.nix { inherit (pkgs) pnpm_11; };
   postgres = pkgs.postgresql_17;
-  # nix/dev-postgres.sh derives the same path from DEVENV_RUNTIME.
-  postgresSocketDir = "${config.devenv.runtime}/postgres";
+  # Not under devenv.runtime: that follows XDG_RUNTIME_DIR, which differs
+  # between a login terminal and an agent or IDE shell, and a shell that saw
+  # another path would restart Postgres onto its own socket. Hashing the root
+  # keeps the path stable per checkout and short enough for a Unix socket.
+  # nix/dev-postgres.sh reads it from PGHOST.
+  postgresSocketDir = "/tmp/matinee-postgres-${builtins.substring 0 12 (builtins.hashString "sha256" config.devenv.root)}";
 in
 {
   cachix.enable = false;

@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # Repo-local Postgres shared by every devenv shell. It listens only on a Unix
-# socket under devenv's runtime directory, so DATABASE_URL is static and
-# nothing collides with a system-wide Postgres.
+# socket in a per-checkout directory, so DATABASE_URL is static and nothing
+# collides with a system-wide Postgres.
 set -eu
 
 data="$DEVENV_ROOT/.devenv/state/matinee-postgres"
-# Must match postgresSocketDir in devenv.nix.
-run="$DEVENV_RUNTIME/postgres"
+# devenv.nix sets PGHOST to postgresSocketDir.
+run="${PGHOST:?PGHOST is unset; run this from the devenv shell}"
 db=matinee
 user=postgres
 
