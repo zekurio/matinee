@@ -8,6 +8,7 @@ import {
   MODAL_OVERLAY_CLASS_NAME,
   MODAL_OVERLAY_FORCE_RENDER,
 } from "@matinee/ui/lib/modal"
+import { uiText } from "@matinee/ui/lib/ui-text"
 import { cn } from "cn"
 import { XIcon } from "lucide-react"
 import * as React from "react"
@@ -92,7 +93,7 @@ function DialogContent({
             }
           >
             <XIcon />
-            <span className="sr-only">Close</span>
+            <span className="sr-only">{uiText().close}</span>
           </DialogPrimitive.Close>
         )}
       </DialogPrimitive.Popup>
@@ -130,7 +131,7 @@ function DialogFooter({
       {children}
       {showCloseButton && (
         <DialogPrimitive.Close render={<Button variant="outline" />}>
-          Close
+          {uiText().close}
         </DialogPrimitive.Close>
       )}
     </div>

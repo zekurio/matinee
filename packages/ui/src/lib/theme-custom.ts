@@ -29,6 +29,7 @@ import {
   type ThemeDraft,
 } from "@matinee/ui/lib/theme-draft"
 import type { ThemeFamily, ThemeVariant } from "@matinee/ui/lib/theme-presets"
+import { uiText } from "@matinee/ui/lib/ui-text"
 
 export {
   newCustomThemeId,
@@ -118,7 +119,9 @@ export function customVariantLabel(
 ): string {
   const name = variant.name?.trim()
   if (name) return name
-  const appearance = variant.appearance === "light" ? "Light" : "Dark"
+  const text = uiText()
+  const appearance =
+    variant.appearance === "light" ? text.lightVariant : text.darkVariant
   const number =
     variants
       .filter(
@@ -127,7 +130,7 @@ export function customVariantLabel(
           candidate.appearance === variant.appearance,
       )
       .findIndex((candidate) => candidate.id === variant.id) + 1
-  return number > 1 ? `${appearance} ${number}` : appearance
+  return number > 1 ? text.numberedVariant(appearance, number) : appearance
 }
 
 export function customThemeFamily(theme: CustomTheme): ThemeFamily {

@@ -1,3 +1,4 @@
+import { uiText } from "@matinee/ui/lib/ui-text"
 import {
   CircleCheckIcon,
   InfoIcon,
@@ -20,6 +21,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
       offset={24}
       gap={10}
       visibleToasts={5}
+      containerAriaLabel={uiText().notifications}
       icons={{
         success: <CircleCheckIcon className="size-4" />,
         info: <InfoIcon className="size-4" />,
@@ -40,6 +42,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
         } as CSSProperties
       }
       toastOptions={{
+        closeButtonAriaLabel: uiText().closeToast,
         classNames: {
           toast: "matinee-toast",
           title: "matinee-toast-title",

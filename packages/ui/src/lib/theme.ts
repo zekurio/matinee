@@ -46,6 +46,7 @@ import {
   writeThemePreferences,
   type ThemePreferences,
 } from "@matinee/ui/lib/theme-storage"
+import { subscribeUiText } from "@matinee/ui/lib/ui-text"
 
 /**
  * The live theme: stored preferences and custom themes, the server's accents,
@@ -77,6 +78,10 @@ let systemAppearance: ThemeAppearance = "dark"
 let preview: { appearance: ThemeAppearance; colors: ThemeColors } | null = null
 let initialized = false
 let state = buildState()
+// Unnamed custom variants are named in the app's language.
+subscribeUiText(() => {
+  if (initialized) refresh()
+})
 const listeners = new Set<() => void>()
 const editListeners = new Set<(synced: SyncedThemePreferences) => void>()
 

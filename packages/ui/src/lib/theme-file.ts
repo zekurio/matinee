@@ -23,6 +23,9 @@ import {
 } from "@matinee/ui/lib/theme-draft"
 import { stripJsonComments } from "@matinee/ui/lib/theme-jsonc"
 import { readVsCodeTheme } from "@matinee/ui/lib/theme-vscode"
+import { uiText } from "@matinee/ui/lib/ui-text"
+
+const text = () => uiText().themeFile
 
 const THEME_FILE_VERSION = 2
 const THEME_SOURCE_MAX_BYTES = 256 * 1024
@@ -80,7 +83,7 @@ export function importThemeSources(
   for (const source of sources) {
     const result = parseThemeSource(source)
     if (isStringValue(result)) {
-      errors.push(source.name ? `${source.name}: ${result}` : result)
+      errors.push(source.name ? text().inFile(source.name, result) : result)
     } else {
       themes.push(result)
     }
@@ -90,20 +93,20 @@ export function importThemeSources(
 
 function parseThemeSource(source: ThemeSource): ThemeDraft | string {
   if (new Blob([source.text]).size > THEME_SOURCE_MAX_BYTES) {
-    return "Theme files can be at most 256 KB."
+    return text().tooLarge
   }
 
   let json: JsonInput
   try {
     json = JSON.parse(stripJsonComments(source.text))
   } catch {
-    return "This isn't valid JSON."
+    return text().invalidJson
   }
-  if (!isObjectRecord(json)) return "Expected a theme object."
+  if (!isObjectRecord(json)) return text().notAnObject
 
   const fallbackName = source.name
     ? source.name.replace(/\.jsonc?$/i, "").replace(/[-_.]+/g, " ")
-    : "Imported theme"
+    : text().importedTheme
   if (json.version !== undefined) return parseMatineeThemeFile(json)
   if (isObjectRecord(json.colors) || Array.isArray(json.tokenColors)) {
     const theme = readVsCodeTheme(json)
@@ -120,25 +123,25 @@ function parseThemeSource(source: ThemeSource): ThemeDraft | string {
       ],
     }
   }
-  return "Expected a Matinee or VS Code theme."
+  return text().unknownFormat
 }
 
 function parseMatineeThemeFile(
   json: Record<string, JsonValue>,
 ): ThemeDraft | string {
   if (json.version !== THEME_FILE_VERSION) {
-    return "Unsupported theme file version."
+    return text().unsupportedVersion
   }
   const name = isStringValue(json.name) ? json.name.trim() : ""
   if (!name || name.length > THEME_NAME_MAX_LENGTH) {
-    return `A theme needs a name of 1 to ${THEME_NAME_MAX_LENGTH} characters.`
+    return text().nameLength(THEME_NAME_MAX_LENGTH)
   }
 
   const variants = parseThemeVariants(json.variants)
   if (isStringValue(variants)) return variants
-  if (variants.length === 0) return "A theme needs light or dark colors."
+  if (variants.length === 0) return text().noVariants
   if (variants.length > MAX_THEME_VARIANTS) {
-    return `A theme can have at most ${MAX_THEME_VARIANTS} variants.`
+    return text().tooManyVariants(MAX_THEME_VARIANTS)
   }
   return { name, variants }
 }
@@ -146,14 +149,14 @@ function parseMatineeThemeFile(
 function parseThemeVariants(
   value: JsonValue | undefined,
 ): CustomThemeVariant[] | string {
-  if (!Array.isArray(value)) return "Expected a list of variants."
+  if (!Array.isArray(value)) return text().notAList
   const variants: CustomThemeVariant[] = []
   for (const entry of value) {
-    if (!isObjectRecord(entry)) return "Expected a list of variants."
+    if (!isObjectRecord(entry)) return text().notAList
     const appearance = THEME_APPEARANCES.find(
       (candidate) => candidate === entry.appearance,
     )
-    if (!appearance) return 'A variant\'s appearance must be "light" or "dark".'
+    if (!appearance) return text().variantAppearance
     const colors = parseThemeColors(appearance, entry.colors ?? {})
     if (isStringValue(colors)) return colors
     variants.push({
@@ -171,7 +174,7 @@ function parseThemeColors(
   value: JsonValue,
 ): ThemeColors | string {
   if (!isObjectRecord(value)) {
-    return `Expected ${appearance} colors to be an object.`
+    return text().colorsNotAnObject(appearance)
   }
 
   const background = value.background
@@ -179,18 +182,18 @@ function parseThemeColors(
     ? opaqueThemeColor(background, defaultThemeBackground(appearance))
     : defaultThemeBackground(appearance)
   if (!backgroundColor) {
-    return `"${String(background)}" isn't a color.`
+    return text().notAColor(String(background))
   }
 
   const overrides: ThemeColorOverrides = {}
   for (const [key, color] of Object.entries(value)) {
     const role = THEME_COLOR_ROLES.find((candidate) => candidate === key)
-    if (!role) return `Unknown theme color "${key}".`
+    if (!role) return text().unknownColor(key)
     const normalized = isStringValue(color)
       ? opaqueThemeColor(color, backgroundColor)
       : null
     if (!normalized) {
-      return `"${String(color)}" isn't a color.`
+      return text().notAColor(String(color))
     }
     overrides[role] = normalized
   }

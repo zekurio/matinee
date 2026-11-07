@@ -16,6 +16,7 @@ import {
   type ThemeColorOverrides,
   type ThemeColors,
 } from "@matinee/ui/lib/theme-colors"
+import { uiText } from "@matinee/ui/lib/ui-text"
 
 /**
  * Maps a VS Code color theme onto Matinee's roles. Workbench colors cover the
@@ -60,7 +61,7 @@ export function readVsCodeTheme(
     : null
   const backgroundColor = background ? parseCssColor(background) : null
   if (!background || !backgroundColor) {
-    return "This VS Code theme doesn't set an editor background."
+    return uiText().themeFile.noEditorBackground
   }
 
   const appearance = themeAppearance(json.type, isDarkColor(backgroundColor))

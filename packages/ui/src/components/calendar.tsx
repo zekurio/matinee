@@ -1,6 +1,7 @@
 "use client"
 
 import { Button, buttonVariants } from "@matinee/ui/components/button"
+import { uiText, type UiText } from "@matinee/ui/lib/ui-text"
 import { cn } from "cn"
 import {
   ChevronDownIcon,
@@ -18,6 +19,70 @@ import {
   type WeekNumber,
 } from "react-day-picker"
 
+declare global {
+  namespace Intl {
+    interface Locale {
+      /** Chrome and Safari; the older `weekInfo` getter in some versions. */
+      getWeekInfo?(): { firstDay: number }
+      readonly weekInfo?: { firstDay: number }
+    }
+  }
+}
+
+type DayModifiers = { today?: boolean; selected?: boolean }
+
+/**
+ * Month and weekday names, day labels, and the first day of the week in
+ * the language the app set in `uiText()`, from `Intl` rather than a
+ * date-fns locale, so a new language needs nothing here.
+ */
+function calendarText(text: UiText) {
+  const { locale } = text
+  const monthYear = new Intl.DateTimeFormat(locale, {
+    month: "long",
+    year: "numeric",
+  })
+  const month = new Intl.DateTimeFormat(locale, { month: "short" })
+  const weekday = new Intl.DateTimeFormat(locale, { weekday: "short" })
+  const weekdayLong = new Intl.DateTimeFormat(locale, { weekday: "long" })
+  const full = new Intl.DateTimeFormat(locale, { dateStyle: "full" })
+  const dayLabel = (date: Date, modifiers: DayModifiers, picked: boolean) => {
+    let label = full.format(date)
+    if (modifiers.today) label = text.today(label)
+    if (picked && modifiers.selected) label = text.selected(label)
+    return label
+  }
+  let firstDay: number | undefined
+  try {
+    const info = new Intl.Locale(locale)
+    firstDay = (info.getWeekInfo?.() ?? info.weekInfo)?.firstDay
+  } catch {
+    firstDay = undefined
+  }
+  return {
+    // `Intl` counts Monday as 1 and Sunday as 7; DayPicker Sunday as 0.
+    weekStartsOn:
+      firstDay === undefined ? undefined : WEEK_STARTS[firstDay % 7],
+    formatters: {
+      formatCaption: (date: Date) => monthYear.format(date),
+      formatMonthDropdown: (date: Date) => month.format(date),
+      formatWeekdayName: (date: Date) => weekday.format(date),
+    },
+    labels: {
+      labelNext: () => text.nextMonth,
+      labelPrevious: () => text.previousMonth,
+      labelGrid: (date: Date) => monthYear.format(date),
+      labelWeekday: (date: Date) => weekdayLong.format(date),
+      labelDayButton: (date: Date, modifiers: DayModifiers) =>
+        dayLabel(date, modifiers, true),
+      labelGridcell: (date: Date, modifiers?: DayModifiers) =>
+        dayLabel(date, modifiers ?? {}, false),
+    },
+  }
+}
+
+const WEEK_STARTS = [0, 1, 2, 3, 4, 5, 6] as const
+
 function Calendar({
   className,
   classNames,
@@ -26,12 +91,14 @@ function Calendar({
   buttonVariant = "ghost",
   locale,
   formatters,
+  labels,
   components,
   ...props
 }: React.ComponentProps<typeof DayPicker> & {
   buttonVariant?: React.ComponentProps<typeof Button>["variant"]
 }) {
   const defaultClassNames = getDefaultClassNames()
+  const text = calendarText(uiText())
 
   return (
     <DayPicker
@@ -44,11 +111,9 @@ function Calendar({
       )}
       captionLayout={captionLayout}
       locale={locale}
-      formatters={{
-        formatMonthDropdown: (date) =>
-          date.toLocaleString(locale?.code, { month: "short" }),
-        ...formatters,
-      }}
+      weekStartsOn={text.weekStartsOn}
+      formatters={{ ...text.formatters, ...formatters }}
+      labels={{ ...text.labels, ...labels }}
       classNames={{
         root: cn("w-fit", defaultClassNames.root),
         months: cn(

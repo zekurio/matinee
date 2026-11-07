@@ -13,6 +13,7 @@ import {
   rgbaToHsva,
   type Hsva,
 } from "@matinee/ui/lib/color"
+import { uiText } from "@matinee/ui/lib/ui-text"
 import { cn } from "@matinee/ui/lib/utils"
 import { useCallback, useRef, useState } from "react"
 import type { CSSProperties, PointerEvent, RefObject } from "react"
@@ -76,7 +77,7 @@ export function ColorPicker({
     <Popover>
       <PopoverTrigger
         disabled={disabled}
-        aria-label={`Pick a color for ${label}`}
+        aria-label={uiText().pickColor(label)}
         className={cn(
           "border-border hover:border-border-strong focus-visible:ring-ring focus-visible:ring-offset-background size-9 shrink-0 rounded-md border p-0.5 transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-40 sm:size-8",
           className,
@@ -120,7 +121,7 @@ function SaturationField({
     <div
       ref={ref}
       role="slider"
-      aria-label={`${label} saturation and brightness`}
+      aria-label={uiText().colorArea(label)}
       aria-valuemin={0}
       aria-valuemax={100}
       aria-valuenow={Math.round(hsva.v * 100)}
@@ -177,7 +178,7 @@ function HueRail({
     <div
       ref={ref}
       role="slider"
-      aria-label={`${label} hue`}
+      aria-label={uiText().colorHue(label)}
       aria-valuemin={0}
       aria-valuemax={100}
       aria-valuenow={Math.round(position * 100)}
@@ -239,7 +240,7 @@ function HexField({
   return (
     <Input
       value={draft}
-      aria-label={`${label} hex value`}
+      aria-label={uiText().colorHex(label)}
       spellCheck={false}
       className="font-mono text-xs"
       onChange={(event) => {
