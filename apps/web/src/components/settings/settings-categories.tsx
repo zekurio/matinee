@@ -1,9 +1,14 @@
 import type { User } from "@matinee/contracts"
 import {
   FilmIcon,
+  GalleryHorizontalEndIcon,
   KeyRoundIcon,
   LibraryBigIcon,
+  ListChecksIcon,
   type LucideIcon,
+  PaintbrushIcon,
+  PaletteIcon,
+  TvMinimalPlayIcon,
   UserIcon,
   UsersIcon,
 } from "lucide-react"
@@ -12,9 +17,14 @@ import { type ComponentType, useMemo } from "react"
 import type { SettingsSectionId } from "@/lib/settings"
 
 import { AccountPanel } from "./account-panel"
+import { AppearancePanel } from "./appearance-panel"
 import { AuthPanel } from "./auth-panel"
+import { JobsPanel } from "./jobs-panel"
 import { LibrariesPanel } from "./libraries-panel"
+import { PlaybackPanel } from "./playback-panel"
+import { ServerAppearancePanel } from "./server-appearance-panel"
 import { TranscodingPanel } from "./transcoding-panel"
+import { TrickplayPanel } from "./trickplay-panel"
 import { UsersPanel } from "./users-panel"
 
 export type SettingsGroup = "account" | "admin"
@@ -41,17 +51,69 @@ const CATEGORIES: SettingsCategory[] = [
     id: "account",
     group: "account",
     label: "Account",
-    description: "Passkeys and single sign-on",
+    description: "Profile, passkeys, single sign-on, and sessions",
     keywords: [
+      "Profile",
+      "Display name",
+      "Picture",
+      "Favorites",
+      "Statistics",
+      "Share",
+      "Privacy",
       "Passkeys",
       "Security key",
       "Sign-in methods",
       "Single sign-on",
       "Linked accounts",
       "OIDC",
+      "Sessions",
+      "Devices",
+      "Sign out",
     ],
     icon: UserIcon,
     Panel: AccountPanel,
+  },
+  {
+    id: "appearance",
+    group: "account",
+    label: "Appearance",
+    description: "Color scheme and themes",
+    keywords: [
+      "Theme",
+      "Dark mode",
+      "Light mode",
+      "Color scheme",
+      "Colors",
+      "Custom theme",
+      "Import theme",
+      "VS Code",
+    ],
+    icon: PaletteIcon,
+    Panel: AppearancePanel,
+  },
+  {
+    id: "playback",
+    group: "account",
+    label: "Playback",
+    description: "Languages, quality, and codecs",
+    keywords: [
+      "Audio language",
+      "Subtitles",
+      "Captions",
+      "Forced subtitles",
+      "Language",
+      "Quality",
+      "Video codec",
+      "Audio codec",
+      "HEVC",
+      "AV1",
+      "Opus",
+      "Passthrough",
+      "Dolby",
+      "Surround",
+    ],
+    icon: TvMinimalPlayIcon,
+    Panel: PlaybackPanel,
   },
   {
     id: "libraries",
@@ -66,13 +128,8 @@ const CATEGORIES: SettingsCategory[] = [
     id: "users",
     group: "admin",
     label: "Users",
-    description: "Accounts, invite links, and roles",
+    description: "Accounts and roles",
     keywords: [
-      "Add user",
-      "Invite",
-      "Invite link",
-      "Recovery link",
-      "Lost passkey",
       "Admin",
       "Role",
       "Delete user",
@@ -131,6 +188,54 @@ const CATEGORIES: SettingsCategory[] = [
     ],
     icon: FilmIcon,
     Panel: TranscodingPanel,
+  },
+  {
+    id: "trickplay",
+    group: "admin",
+    label: "Trickplay",
+    description: "Thumbnails on the seek bar",
+    keywords: [
+      "Seek bar",
+      "Scrubbing",
+      "Preview thumbnails",
+      "Thumbnails",
+      "Keyframes",
+      "Interval",
+    ],
+    icon: GalleryHorizontalEndIcon,
+    Panel: TrickplayPanel,
+  },
+  {
+    id: "jobs",
+    group: "admin",
+    label: "Jobs",
+    description: "Background queues and scheduled tasks",
+    keywords: [
+      "Queues",
+      "Workers",
+      "Concurrency",
+      "Scheduled tasks",
+      "Scan libraries",
+      "Refresh metadata",
+      "Media info",
+      "ffprobe",
+      "Thumbnails",
+      "Trickplay",
+      "Pause",
+      "Cancel",
+      "Run now",
+    ],
+    icon: ListChecksIcon,
+    Panel: JobsPanel,
+  },
+  {
+    id: "server-appearance",
+    group: "admin",
+    label: "Appearance",
+    description: "Accent color for everyone",
+    keywords: ["Accent color", "Brand color", "Default theme"],
+    icon: PaintbrushIcon,
+    Panel: ServerAppearancePanel,
   },
 ]
 

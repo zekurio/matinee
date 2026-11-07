@@ -1,28 +1,21 @@
 import { AUTH_ERROR_QUERY_KEY, oidcStartPath } from "@matinee/contracts"
-import { Button, buttonVariants } from "@matinee/ui/components/button"
-import {
-  Field,
-  FieldDescription,
-  FieldError,
-  FieldLabel,
-} from "@matinee/ui/components/field"
-import { Input } from "@matinee/ui/components/input"
+import { t } from "@matinee/contracts/schema"
+import { buttonVariants } from "@matinee/ui/components/button"
 import { Separator } from "@matinee/ui/components/separator"
-import { Spinner } from "@matinee/ui/components/spinner"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router"
 import { LogInIcon } from "lucide-react"
 import { useState } from "react"
-import { z } from "zod"
 
 import { AuthScreen } from "@/components/auth-screen"
 import { FormAlert } from "@/components/form-alert"
 import { UsernamePasskeyForm } from "@/components/username-passkey-form"
+import { useAppForm } from "@/lib/form"
 import { signUpWithPasskey } from "@/lib/passkey"
 import { client, errorMessage, orpc } from "@/lib/rpc"
 
-const SetupSearch = z.object({
-  [AUTH_ERROR_QUERY_KEY]: z.string().optional().catch(undefined),
+const SetupSearch = t.object({
+  [AUTH_ERROR_QUERY_KEY]: t.string().optional().catch(undefined),
 })
 
 export const Route = createFileRoute("/setup")({
@@ -48,8 +41,8 @@ function SetupPage() {
       title="Set up Matinee"
       description={
         unlocked
-          ? "Create the admin account. It manages libraries and settings for this server."
-          : "Enter the setup token from the server log to claim this server."
+          ? "Create the admin account."
+          : "Enter the setup token to claim this server."
       }
     >
       <div className="flex flex-col gap-4">
@@ -67,42 +60,44 @@ function SetupPage() {
 }
 
 function SetupToken({ onUnlocked }: { onUnlocked: () => void }) {
-  const [token, setToken] = useState("")
   const unlock = useMutation({
     mutationFn: (value: string) => client.auth.unlockSetup({ token: value }),
     onSuccess: onUnlocked,
+  })
+  const form = useAppForm({
+    defaultValues: { token: "" },
+    // An empty token isn't sent, and isn't flagged either.
+    onSubmit: ({ value }) => {
+      const token = value.token.trim()
+      if (token) unlock.mutate(token)
+    },
   })
   return (
     <form
       className="flex flex-col gap-4"
       onSubmit={(event) => {
         event.preventDefault()
-        if (token.trim()) unlock.mutate(token.trim())
+        void form.handleSubmit()
       }}
     >
-      <Field data-invalid={unlock.error ? true : undefined}>
-        <FieldLabel htmlFor="setup-token">Setup token</FieldLabel>
-        <Input
-          id="setup-token"
-          autoComplete="off"
-          spellCheck={false}
-          className="font-mono"
-          value={token}
-          onChange={(event) => setToken(event.target.value)}
-        />
-        {unlock.error ? (
-          <FieldError>{errorMessage(unlock.error)}</FieldError>
-        ) : (
-          <FieldDescription>
-            The server prints it to its log on start. It proves you run this
-            server before you claim the admin account.
-          </FieldDescription>
+      <form.AppField name="token">
+        {(field) => (
+          <field.TextField
+            id="setup-token"
+            label="Setup token"
+            description="The server prints it to its log on start."
+            serverError={unlock.error ? errorMessage(unlock.error) : null}
+            autoComplete="off"
+            spellCheck={false}
+            className="font-mono"
+          />
         )}
-      </Field>
-      <Button type="submit" size="lg" disabled={unlock.isPending}>
-        {unlock.isPending && <Spinner />}
-        Continue
-      </Button>
+      </form.AppField>
+      <form.AppForm>
+        <form.SubmitButton size="lg" pending={unlock.isPending}>
+          Continue
+        </form.SubmitButton>
+      </form.AppForm>
     </form>
   )
 }

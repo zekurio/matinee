@@ -1,22 +1,27 @@
-import type { AdminAuthSettings, OidcSettingsInput } from "@matinee/contracts"
-import { Alert, AlertDescription } from "@matinee/ui/components/alert"
+import {
+  type AdminAuthSettings,
+  type OidcSettings,
+  OidcSettingsInput,
+} from "@matinee/contracts"
 import { Button } from "@matinee/ui/components/button"
 import { Input } from "@matinee/ui/components/input"
 import { Skeleton } from "@matinee/ui/components/skeleton"
-import { toast } from "@matinee/ui/components/sonner"
-import { Switch } from "@matinee/ui/components/switch"
 import { cn } from "@matinee/ui/lib/utils"
+import { useSelector } from "@tanstack/react-form"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import {
-  CheckIcon,
-  ChevronDownIcon,
-  CopyIcon,
-  TriangleAlertIcon,
-} from "lucide-react"
-import { type ChangeEvent, type ReactNode, useState } from "react"
+import { CheckIcon, ChevronDownIcon, CopyIcon } from "lucide-react"
+import { useState } from "react"
 
+import { useAppForm, withForm } from "@/lib/form"
 import { client, errorMessage, orpc } from "@/lib/rpc"
+import { useActionFeedback } from "@/lib/use-action-feedback"
 
+import {
+  InputField,
+  SettingWarning,
+  SwitchField,
+  typeOnly,
+} from "./setting-controls"
 import {
   SettingRow,
   SettingRows,
@@ -63,9 +68,10 @@ function draftFrom({ oidc, defaults }: AdminAuthSettings): Draft {
   }
 }
 
-function inputFrom(draft: Draft): OidcSettingsInput {
+/** The save, checked by the contract's schema before it's sent. */
+function inputFrom(draft: Draft) {
   const secret = draft.clientSecret.trim()
-  return {
+  return OidcSettingsInput.safeParse({
     enabled: draft.enabled,
     allowSignUp: draft.allowSignUp,
     displayName: draft.displayName.trim(),
@@ -74,7 +80,25 @@ function inputFrom(draft: Draft): OidcSettingsInput {
     scopes: draft.scopes.trim().replace(/\s+/g, " "),
     usernameClaim: draft.usernameClaim.trim(),
     clientSecret: secret ? secret : draft.dropSecret ? null : undefined,
-  }
+  })
+}
+
+const FIELD_NAMES = new Map<string, string>([
+  ["displayName", "Display name"],
+  ["issuerUrl", "Issuer URL"],
+  ["clientId", "Client ID"],
+  ["scopes", "Scopes"],
+  ["usernameClaim", "Username claim"],
+  ["clientSecret", "Client secret"],
+])
+
+/** Why `inputFrom` rejected the draft, naming the field to check. */
+function inputError(
+  issue: { path: readonly PropertyKey[]; message: string } | undefined,
+): Error {
+  const field = FIELD_NAMES.get(String(issue?.path[0] ?? ""))
+  const check = field ? `Check ${field}.` : "Check the fields."
+  return new Error(issue ? `${check} ${issue.message}` : check)
 }
 
 const sameDraft = (a: Draft, b: Draft) => {
@@ -103,145 +127,147 @@ export function AuthPanel() {
 function OidcForm({ settings }: { settings: AdminAuthSettings }) {
   const queryClient = useQueryClient()
   const initial = draftFrom(settings)
-  // Null while untouched, so a refetch shows through until the first edit.
-  const [edits, setEdits] = useState<Draft | null>(null)
-  const draft = edits ?? initial
-  const dirty = edits !== null && !sameDraft(edits, initial)
-  const [advanced, setAdvanced] = useState(false)
-  const update = (patch: Partial<Draft>) => setEdits({ ...draft, ...patch })
-
   const save = useMutation({
     mutationFn: (input: OidcSettingsInput) =>
       client.admin.auth.updateOidc(input),
-    onSuccess: async (next) => {
+  })
+  // Until the first edit, the form follows the saved settings, so a refetch
+  // shows through.
+  const form = useAppForm({
+    defaultValues: initial,
+    onSubmit: async ({ value, formApi }) => {
+      const parsed = inputFrom(value)
+      if (!parsed.success) throw inputError(parsed.error.issues[0])
+      const next = await save.mutateAsync(parsed.data)
       queryClient.setQueryData(orpc.admin.auth.get.queryKey(), next)
-      setEdits(null)
+      formApi.reset(draftFrom(next))
       // The sign-in page and the account section read the public config.
       await queryClient.invalidateQueries({ queryKey: orpc.auth.key() })
-      toast.success("Saved sign-in settings")
     },
   })
-
-  const { defaults } = settings
-  const name = draft.displayName.trim() || defaults.displayName
-  const text = (key: TextField) => ({
-    value: draft[key],
-    placeholder: defaults[key],
-    onChange: (event: ChangeEvent<HTMLInputElement>) =>
-      update({ [key]: event.target.value }),
-  })
-  const turningOff = settings.active && !draft.enabled
+  // Edits only: for a render after a refetch, an untouched form still holds
+  // the old values.
+  const dirty = useSelector(
+    form.store,
+    (state) => state.isTouched && !sameDraft(state.values, initial),
+  )
 
   return (
     <form className="contents" onSubmit={(event) => event.preventDefault()}>
+      <SingleSignOnSection form={form} settings={settings} />
+      <AdvancedSection form={form} defaults={settings.defaults} />
+      <SettingsSaveBar
+        dirty={dirty}
+        onReset={() => form.reset()}
+        onSave={() => form.handleSubmit()}
+      />
+    </form>
+  )
+}
+
+const SingleSignOnSection = withForm({
+  defaultValues: typeOnly<Draft>(),
+  props: typeOnly<{ settings: AdminAuthSettings }>(),
+  render: function Render({ form, settings }) {
+    const { defaults } = settings
+
+    return (
       <SettingsSubsection
         id="single-sign-on"
         title="Single sign-on"
-        description="Sign in through an OpenID Connect provider such as Authelia, Authentik, or Keycloak. Empty fields use the value shown in them."
+        description="OpenID Connect, such as Authelia, Authentik, or Keycloak."
       >
         <SettingRows>
-          <SettingRow
-            title="Enabled"
-            description={`Show “Continue with ${name}” on the sign-in page.`}
-            footer={
-              turningOff && settings.ssoOnlyUsers > 0 ? (
-                <Warning>
-                  {settings.ssoOnlyUsers === 1
-                    ? "1 account signs in only"
-                    : `${settings.ssoOnlyUsers} accounts sign in only`}{" "}
-                  through {settings.oidc.displayName}. It can't sign in again
-                  until this is back on.
-                </Warning>
-              ) : null
-            }
-          >
-            {(ids) => (
-              <Switch
-                id={ids.controlId}
-                aria-labelledby={ids.labelId}
-                aria-describedby={ids.descriptionId}
-                checked={draft.enabled}
-                onCheckedChange={(enabled) => update({ enabled })}
+          <form.AppField name="enabled">
+            {(field) => (
+              <SwitchField
+                title="Enabled"
+                footer={
+                  settings.active &&
+                  !field.state.value &&
+                  settings.ssoOnlyUsers > 0 ? (
+                    <SettingWarning>
+                      {settings.ssoOnlyUsers === 1
+                        ? "1 account signs in only"
+                        : `${settings.ssoOnlyUsers} accounts sign in only`}{" "}
+                      through {settings.oidc.displayName}. It can't sign in
+                      again until this is back on.
+                    </SettingWarning>
+                  ) : null
+                }
               />
             )}
-          </SettingRow>
-          <SettingRow
-            title="Create accounts"
-            description="Give people an account the first time they sign in. When off, only accounts already linked in their settings can sign in."
-          >
-            {(ids) => (
-              <Switch
-                id={ids.controlId}
-                aria-labelledby={ids.labelId}
-                aria-describedby={ids.descriptionId}
-                checked={draft.allowSignUp}
-                onCheckedChange={(allowSignUp) => update({ allowSignUp })}
+          </form.AppField>
+          <form.AppField name="allowSignUp">
+            {() => (
+              <SwitchField
+                title="Create accounts"
+                description="For first sign-ins that match no account."
               />
             )}
-          </SettingRow>
-          <SettingRow
-            title="Display name"
-            description="The provider's name on the sign-in button."
-            layout="split"
-          >
-            {(ids) => (
-              <Input
-                id={ids.controlId}
-                aria-describedby={ids.descriptionId}
+          </form.AppField>
+          <form.AppField name="displayName">
+            {() => (
+              <InputField
+                title="Display name"
+                description="Shown on the sign-in button."
                 maxLength={64}
-                {...text("displayName")}
+                placeholder={defaults.displayName}
               />
             )}
-          </SettingRow>
-          <SettingRow
-            title="Issuer URL"
-            description={
-              defaults.issuerUrl
-                ? "Set by MATINEE_OIDC_ISSUER_URL. A value here replaces it. Linked accounts belong to the issuer, so changing it breaks their links."
-                : "The provider's issuer, for example https://auth.example.com. Linked accounts belong to it, so changing it later breaks their links."
-            }
-            layout="stack"
-          >
-            {(ids) => (
-              <Input
-                id={ids.controlId}
-                aria-describedby={ids.descriptionId}
+          </form.AppField>
+          <form.AppField name="issuerUrl">
+            {() => (
+              <InputField
+                title="Issuer URL"
+                description={
+                  defaults.issuerUrl
+                    ? "Overrides MATINEE_OIDC_ISSUER_URL. Changing it unlinks every linked account."
+                    : "Changing it later unlinks every linked account."
+                }
+                layout="stack"
                 type="url"
                 inputMode="url"
                 autoComplete="off"
                 spellCheck={false}
-                {...text("issuerUrl")}
+                placeholder={defaults.issuerUrl}
               />
             )}
-          </SettingRow>
-          <SettingRow
-            title="Client ID"
-            description={
-              defaults.clientId
-                ? "Set by MATINEE_OIDC_CLIENT_ID. A value here replaces it."
-                : undefined
-            }
-            layout="stack"
-          >
-            {(ids) => (
-              <Input
-                id={ids.controlId}
-                aria-describedby={ids.descriptionId}
+          </form.AppField>
+          <form.AppField name="clientId">
+            {() => (
+              <InputField
+                title="Client ID"
+                description={
+                  defaults.clientId
+                    ? "Overrides MATINEE_OIDC_CLIENT_ID."
+                    : undefined
+                }
+                layout="stack"
                 autoComplete="off"
                 spellCheck={false}
-                {...text("clientId")}
+                placeholder={defaults.clientId}
               />
             )}
-          </SettingRow>
-          <ClientSecretRow settings={settings} draft={draft} update={update} />
+          </form.AppField>
+          <ClientSecretRow form={form} settings={settings} />
           <CallbackRow url={settings.callbackUrl} />
         </SettingRows>
       </SettingsSubsection>
+    )
+  },
+})
 
+const AdvancedSection = withForm({
+  defaultValues: typeOnly<Draft>(),
+  props: typeOnly<{ defaults: OidcSettings }>(),
+  render: function Render({ form, defaults }) {
+    const [advanced, setAdvanced] = useState(false)
+
+    return (
       <SettingsSubsection
         id="single-sign-on-advanced"
         title="Advanced"
-        description="What Matinee asks the provider for, and which claim names new accounts."
         action={
           <Button
             type="button"
@@ -262,123 +288,112 @@ function OidcForm({ settings }: { settings: AdminAuthSettings }) {
       >
         <div id="oidc-advanced" hidden={!advanced}>
           <SettingRows>
-            <SettingRow
-              title="Scopes"
-              description="Separated by spaces. Must include openid."
-              layout="split"
-            >
-              {(ids) => (
-                <Input
-                  id={ids.controlId}
-                  aria-describedby={ids.descriptionId}
+            <form.AppField name="scopes">
+              {() => (
+                <InputField
+                  title="Scopes"
+                  description="Separated by spaces. Must include openid."
                   autoComplete="off"
                   spellCheck={false}
-                  {...text("scopes")}
+                  placeholder={defaults.scopes}
                 />
               )}
-            </SettingRow>
-            <SettingRow
-              title="Username claim"
-              description="Suggests the username for new accounts. Falls back to preferred_username, then the email."
-              layout="split"
-            >
-              {(ids) => (
-                <Input
-                  id={ids.controlId}
-                  aria-describedby={ids.descriptionId}
+            </form.AppField>
+            <form.AppField name="usernameClaim">
+              {() => (
+                <InputField
+                  title="Username claim"
+                  description="Falls back to preferred_username."
                   autoComplete="off"
                   spellCheck={false}
-                  {...text("usernameClaim")}
+                  placeholder={defaults.usernameClaim}
                 />
               )}
-            </SettingRow>
+            </form.AppField>
           </SettingRows>
         </div>
       </SettingsSubsection>
+    )
+  },
+})
 
-      <SettingsSaveBar
-        dirty={dirty}
-        saving={save.isPending}
-        error={save.error ? errorMessage(save.error) : null}
-        onReset={() => {
-          setEdits(null)
-          save.reset()
-        }}
-        onSave={() => save.mutate(inputFrom(draft))}
-      />
-    </form>
-  )
-}
+const ClientSecretRow = withForm({
+  defaultValues: typeOnly<Draft>(),
+  props: typeOnly<{ settings: AdminAuthSettings }>(),
+  render: function Render({ form, settings }) {
+    const dropSecret = useSelector(
+      form.store,
+      (state) => state.values.dropSecret,
+    )
+    const { source, environment } = settings.clientSecret
+    const savedHere = source === "saved" && !dropSecret
+    const fromEnvironment =
+      source === "environment" || (dropSecret && environment)
+    const placeholder = savedHere
+      ? "Saved. Type to replace it."
+      : fromEnvironment
+        ? "Set by MATINEE_OIDC_CLIENT_SECRET"
+        : "None"
 
-function ClientSecretRow({
-  settings,
-  draft,
-  update,
-}: {
-  settings: AdminAuthSettings
-  draft: Draft
-  update: (patch: Partial<Draft>) => void
-}) {
-  const { source, environment } = settings.clientSecret
-  const savedHere = source === "saved" && !draft.dropSecret
-  const fromEnvironment =
-    source === "environment" || (draft.dropSecret && environment)
-  const placeholder = savedHere
-    ? "Saved. Type to replace it."
-    : fromEnvironment
-      ? "Set by MATINEE_OIDC_CLIENT_SECRET"
-      : "None"
-
-  return (
-    <SettingRow
-      title="Client secret"
-      description={
-        <>
-          Leave empty for a public client.{" "}
-          {savedHere && (
-            <button
-              type="button"
-              className="hover:text-foreground focus-visible:ring-ring rounded-sm underline underline-offset-2 outline-none focus-visible:ring-2"
-              onClick={() => update({ clientSecret: "", dropSecret: true })}
-            >
-              {environment
-                ? "Use the secret from the environment"
-                : "Remove the saved secret"}
-            </button>
-          )}
-          {draft.dropSecret && (
-            <span className="text-foreground">
-              {environment
-                ? "The environment's secret applies after you save."
-                : "The secret is removed when you save."}
-            </span>
-          )}
-        </>
-      }
-      layout="stack"
-    >
-      {(ids) => (
-        <Input
-          id={ids.controlId}
-          aria-describedby={ids.descriptionId}
-          type="password"
-          autoComplete="new-password"
-          spellCheck={false}
-          value={draft.clientSecret}
-          placeholder={placeholder}
-          onChange={(event) => update({ clientSecret: event.target.value })}
-        />
-      )}
-    </SettingRow>
-  )
-}
+    return (
+      <SettingRow
+        title="Client secret"
+        description={
+          <>
+            Leave empty for a public client.{" "}
+            {savedHere && (
+              <button
+                type="button"
+                className="hover:text-foreground focus-visible:ring-ring rounded-sm underline underline-offset-2 outline-none focus-visible:ring-2"
+                onClick={() => {
+                  form.setFieldValue("clientSecret", "")
+                  form.setFieldValue("dropSecret", true)
+                }}
+              >
+                {environment
+                  ? "Use the secret from the environment"
+                  : "Remove the saved secret"}
+              </button>
+            )}
+            {dropSecret && (
+              <span className="text-foreground">
+                {environment
+                  ? "The environment's secret applies after you save."
+                  : "The secret is removed when you save."}
+              </span>
+            )}
+          </>
+        }
+        layout="stack"
+      >
+        {(ids) => (
+          <form.Field name="clientSecret">
+            {(field) => (
+              <Input
+                id={ids.controlId}
+                aria-describedby={ids.descriptionId}
+                type="password"
+                autoComplete="new-password"
+                spellCheck={false}
+                value={field.state.value}
+                placeholder={placeholder}
+                onChange={(event) => field.handleChange(event.target.value)}
+              />
+            )}
+          </form.Field>
+        )}
+      </SettingRow>
+    )
+  },
+})
 
 function CallbackRow({ url }: { url: string }) {
-  const [copied, setCopied] = useState(false)
+  const { feedback, run } = useActionFeedback(1500)
+  const copied = feedback.state === "success"
   return (
     <SettingRow
       title="Redirect URI"
-      description="Register this with the provider as the allowed redirect or callback URL."
+      description="Add this to the provider's allowed redirects."
       layout="stack"
     >
       {(ids) => (
@@ -395,12 +410,7 @@ function CallbackRow({ url }: { url: string }) {
             type="button"
             variant="outline"
             className="shrink-0"
-            onClick={() => {
-              void navigator.clipboard
-                .writeText(url)
-                .then(() => setCopied(true))
-                .then(() => setTimeout(() => setCopied(false), 1500))
-            }}
+            onClick={() => void run(() => navigator.clipboard.writeText(url))}
           >
             {copied ? <CheckIcon /> : <CopyIcon />}
             {copied ? "Copied" : "Copy"}
@@ -408,16 +418,5 @@ function CallbackRow({ url }: { url: string }) {
         </>
       )}
     </SettingRow>
-  )
-}
-
-function Warning({ children }: { children: ReactNode }) {
-  return (
-    <Alert>
-      <TriangleAlertIcon />
-      <AlertDescription className="text-foreground">
-        {children}
-      </AlertDescription>
-    </Alert>
   )
 }

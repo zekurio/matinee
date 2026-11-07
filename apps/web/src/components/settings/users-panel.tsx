@@ -1,57 +1,53 @@
-import type { AdminUser, InviteLink } from "@matinee/contracts"
-import { Badge } from "@matinee/ui/components/badge"
+import type { AdminUser } from "@matinee/contracts"
 import { Button } from "@matinee/ui/components/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@matinee/ui/components/dropdown-menu"
 import { List, ListItem } from "@matinee/ui/components/list"
 import { Skeleton } from "@matinee/ui/components/skeleton"
 import { toast } from "@matinee/ui/components/sonner"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@matinee/ui/components/tooltip"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useNavigate, useRouter } from "@tanstack/react-router"
 import {
   EllipsisIcon,
-  LinkIcon,
+  KeyRoundIcon,
+  LogInIcon,
   LogOutIcon,
   RefreshCwIcon,
   ShieldIcon,
   ShieldOffIcon,
   Trash2Icon,
+  TriangleAlertIcon,
 } from "lucide-react"
-import { useState } from "react"
+import { type ComponentProps, type ReactNode, useState } from "react"
+import { useStore } from "zustand"
 
+import { UserAvatar } from "@/components/user-avatar"
 import { formatDate, formatRelative } from "@/lib/format"
 import { client, errorMessage, orpc } from "@/lib/rpc"
+import { createUsersPanelStore, type UserAction } from "@/stores/users-panel"
 
 import { SettingsSections, SettingsSubsection } from "./settings-panel"
-import {
-  AddUserDialog,
-  ConfirmDialog,
-  LinkDialog,
-  roleChangeCopy,
-  type ShownLink,
-} from "./user-dialogs"
+import { ConfirmDialog, roleChangeCopy } from "./user-dialogs"
 
 // The server moves a session's last-seen time at most hourly, so anything
 // more recent than that only says "within the last hour".
 const LAST_SEEN_PRECISION_MS = 60 * 60 * 1000
 
-type Confirming = {
-  action: "role" | "sign-out" | "delete"
-  user: AdminUser
-}
-
 const displayName = (user: AdminUser) => user.displayName ?? user.username
 
 /** A passkey or linked account, whether or not single sign-on is on. */
 const hasSignInMethod = (user: AdminUser) =>
-  user.passkeys > 0 || user.oidcAccounts > 0
+  user.passkeys > 0 || user.oidcLinked
 
 export function UsersPanel() {
   const queryClient = useQueryClient()
@@ -62,10 +58,10 @@ export function UsersPanel() {
   const config = useQuery(orpc.auth.config.queryOptions())
   const me = session.data?.user ?? null
   const oidcName = config.data?.oidc?.displayName ?? null
-  // Kept after the dialog closes, so its words stay put while it fades.
-  const [confirming, setConfirming] = useState<Confirming | null>(null)
-  const [confirmOpen, setConfirmOpen] = useState(false)
-  const [shown, setShown] = useState<ShownLink | null>(null)
+  const [store] = useState(createUsersPanelStore)
+  const confirming = useStore(store, (state) => state.confirming)
+  const confirmOpen = useStore(store, (state) => state.confirmOpen)
+  const { openConfirm, closeConfirm } = store.getState()
 
   const refresh = () =>
     queryClient.invalidateQueries({ queryKey: orpc.admin.users.key() })
@@ -77,7 +73,7 @@ export function UsersPanel() {
         role: user.role === "admin" ? "user" : "admin",
       }),
     onSuccess: async (updated) => {
-      setConfirmOpen(false)
+      closeConfirm()
       const self = updated.id === me?.id
       toast.success(
         updated.role === "admin"
@@ -101,7 +97,7 @@ export function UsersPanel() {
   const remove = useMutation({
     mutationFn: (user: AdminUser) => client.admin.users.remove({ id: user.id }),
     onSuccess: async (_result, user) => {
-      setConfirmOpen(false)
+      closeConfirm()
       if (user.id === me?.id) {
         queryClient.clear()
         await navigate({ to: "/login" })
@@ -116,7 +112,7 @@ export function UsersPanel() {
     mutationFn: (user: AdminUser) =>
       client.admin.users.signOut({ id: user.id }),
     onSuccess: async ({ ended }, user) => {
-      setConfirmOpen(false)
+      closeConfirm()
       const sessions = ended === 1 ? "1 session" : `${ended} sessions`
       toast.success(
         user.id === me?.id
@@ -127,37 +123,12 @@ export function UsersPanel() {
     },
   })
 
-  const createLink = useMutation({
-    mutationFn: (user: AdminUser) =>
-      client.admin.users.links.create({ userId: user.id }),
-    onSuccess: async (issued, user) => {
-      setShown({ username: user.username, issued })
-      await refresh()
-    },
-    onError: (error) => toast.error(errorMessage(error)),
-  })
-
-  const revokeLink = useMutation({
-    mutationFn: (link: InviteLink) =>
-      client.admin.users.links.revoke({ id: link.id }),
-    onSuccess: async () => {
-      toast.success("Revoked the link")
-      await refresh()
-    },
-    onError: async (error) => {
-      toast.error(errorMessage(error))
-      await refresh()
-    },
-  })
-
-  const ask = (action: Confirming["action"], user: AdminUser) => {
+  const ask = (action: UserAction, user: AdminUser) => {
     setRole.reset()
     remove.reset()
     signOut.reset()
-    setConfirming({ action, user })
-    setConfirmOpen(true)
+    openConfirm(action, user)
   }
-  const closeConfirm = () => setConfirmOpen(false)
 
   // The server refuses to demote or delete the last admin who can sign in,
   // so the menu says so up front.
@@ -166,7 +137,7 @@ export function UsersPanel() {
     users.data?.filter(
       (user) =>
         user.role === "admin" &&
-        (user.passkeys > 0 || (oidcOn && user.oidcAccounts > 0)),
+        (user.passkeys > 0 || (oidcOn && user.oidcLinked)),
     ) ?? []
   const isLastAdmin = (user: AdminUser) =>
     user.role === "admin" && signInAdmins.every((other) => other.id === user.id)
@@ -179,12 +150,7 @@ export function UsersPanel() {
 
   return (
     <SettingsSections>
-      <SettingsSubsection
-        id="users"
-        title="Users"
-        description="Everyone with an account on this server. New accounts sign in the first time through a link you send them."
-        action={<AddUserDialog />}
-      >
+      <SettingsSubsection id="users" title="Users">
         {users.isPending ? (
           <Skeleton className="h-32 rounded-xl" />
         ) : users.isError ? (
@@ -206,19 +172,12 @@ export function UsersPanel() {
                 self={user.id === me?.id}
                 oidcName={oidcName}
                 lastAdmin={isLastAdmin(user)}
-                linkPending={
-                  createLink.isPending && createLink.variables?.id === user.id
-                }
                 onConfirm={(action) => ask(action, user)}
-                onNewLink={() => createLink.mutate(user)}
-                onRevokeLink={(link) => revokeLink.mutate(link)}
               />
             ))}
           </List>
         )}
       </SettingsSubsection>
-
-      <LinkDialog shown={shown} onClose={() => setShown(null)} />
 
       <ConfirmDialog
         open={action === "role"}
@@ -240,8 +199,8 @@ export function UsersPanel() {
         }
         description={
           self
-            ? "Every other browser and app signed in as you has to sign in again. This one stays signed in."
-            : "Every browser and app signed in to this account has to sign in again. Passkeys and links keep working."
+            ? "Every other device has to sign in again."
+            : "Every device has to sign in again."
         }
         confirmLabel={self ? "Sign out others" : "Sign out everywhere"}
         destructive
@@ -255,8 +214,8 @@ export function UsersPanel() {
         title={self ? "Delete your account?" : `Delete ${targetName}?`}
         description={
           self
-            ? "This deletes your account with its passkeys, sessions, and watch progress, and signs you out. It can't be undone."
-            : "This deletes the account with its passkeys, sessions, and watch progress. It can't be undone."
+            ? "Your passkeys and watch progress go with it. This can't be undone."
+            : "Their passkeys and watch progress go with it. This can't be undone."
         }
         confirmLabel={self ? "Delete my account" : "Delete user"}
         destructive
@@ -274,74 +233,40 @@ function UserItem({
   self,
   oidcName,
   lastAdmin,
-  linkPending,
   onConfirm,
-  onNewLink,
-  onRevokeLink,
 }: {
   user: AdminUser
   self: boolean
   oidcName: string | null
   lastAdmin: boolean
-  linkPending: boolean
-  onConfirm: (action: Confirming["action"]) => void
-  onNewLink: () => void
-  onRevokeLink: (link: InviteLink) => void
+  onConfirm: (action: UserAction) => void
 }) {
   const name = displayName(user)
-  const details = [
-    user.displayName ? `@${user.username}` : null,
-    signInSummary(user, oidcName),
-  ].filter((part) => part !== null)
-  const invited = !hasSignInMethod(user) && user.links.length > 0
   const signOutLabel = self ? "Sign out other sessions" : "Sign out everywhere"
 
   return (
-    <ListItem className="items-start gap-3 py-3 pr-2">
-      <span
-        aria-hidden
-        className="bg-secondary mt-0.5 grid size-9 shrink-0 place-items-center rounded-full text-sm font-semibold"
-      >
-        {name.slice(0, 1).toUpperCase()}
-      </span>
+    <ListItem className="gap-3 py-2.5 pr-2">
+      <UserAvatar user={user} className="size-8 self-start text-[13px]" />
       <div className="min-w-0 flex-1">
-        <p className="flex items-center gap-2 text-sm leading-5 font-medium">
+        <p className="flex items-center gap-1.5 text-sm leading-5 font-medium">
           <span className="truncate">{name}</span>
-          {user.role === "admin" && <Badge variant="secondary">Admin</Badge>}
-          {invited && <Badge variant="outline">Invited</Badge>}
-          {self && <Badge variant="outline">You</Badge>}
+          {user.displayName && (
+            <span className="text-muted-foreground truncate font-normal">
+              @{user.username}
+            </span>
+          )}
+          {user.role === "admin" && (
+            <ShieldIcon
+              role="img"
+              aria-label="Admin"
+              className="text-muted-foreground size-3.5 shrink-0"
+            />
+          )}
+          {self && (
+            <span className="text-muted-foreground font-normal">(you)</span>
+          )}
         </p>
-        <p className="text-muted-foreground text-[13px] leading-5">
-          {details.join(" · ")}
-        </p>
-        <p className="text-muted-foreground text-[13px] leading-5">
-          Joined {formatDate(user.createdAt)} · {activity(user, self)}
-        </p>
-        {user.links.length > 0 && (
-          <ul aria-label="Pending links" className="mt-1.5 flex flex-col gap-1">
-            {user.links.map((link) => (
-              <li
-                key={link.id}
-                className="text-muted-foreground flex flex-wrap items-center gap-x-2 text-[13px] leading-5"
-              >
-                <LinkIcon className="size-3.5 shrink-0" />
-                <span>
-                  {link.kind === "invite" ? "Invite link" : "Recovery link"}{" "}
-                  expires {formatRelative(link.expiresAt)}
-                  {link.createdBy && `, made by ${link.createdBy}`}
-                </span>
-                <Button
-                  variant="link"
-                  size="xs"
-                  className="h-auto px-0"
-                  onClick={() => onRevokeLink(link)}
-                >
-                  Revoke
-                </Button>
-              </li>
-            ))}
-          </ul>
-        )}
+        <UserDetails user={user} self={self} oidcName={oidcName} />
       </div>
       <DropdownMenu>
         <DropdownMenuTrigger
@@ -357,8 +282,8 @@ function UserItem({
           <EllipsisIcon />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" sideOffset={6} className="min-w-56">
-          <DropdownMenuItem
-            disabled={user.role === "admin" && lastAdmin}
+          <BlockableItem
+            blocked={user.role === "admin" && lastAdmin ? lastAdminNote : null}
             onClick={() => onConfirm("role")}
           >
             {user.role === "admin" ? <ShieldOffIcon /> : <ShieldIcon />}
@@ -367,14 +292,7 @@ function UserItem({
                 ? "Step down as admin"
                 : "Remove admin role"
               : "Make admin"}
-          </DropdownMenuItem>
-          {/* Your own passkeys are in the account section. */}
-          {!self && (
-            <DropdownMenuItem disabled={linkPending} onClick={onNewLink}>
-              <LinkIcon />
-              {hasSignInMethod(user) ? "New recovery link" : "New invite link"}
-            </DropdownMenuItem>
-          )}
+          </BlockableItem>
           <DropdownMenuItem
             disabled={user.sessions <= (self ? 1 : 0)}
             onClick={() => onConfirm("sign-out")}
@@ -383,52 +301,133 @@ function UserItem({
             {signOutLabel}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem
+          <BlockableItem
             variant="destructive"
-            disabled={lastAdmin}
+            blocked={lastAdmin ? lastAdminNote : null}
             onClick={() => onConfirm("delete")}
           >
             <Trash2Icon />
             {self ? "Delete my account" : "Delete user"}
-          </DropdownMenuItem>
-          {lastAdmin && (
-            <DropdownMenuGroup>
-              <DropdownMenuLabel className="max-w-60 pt-2 font-normal">
-                {self ? "You're" : `${name} is`} the only admin who can sign in.
-                Make someone who can sign in an admin first.
-              </DropdownMenuLabel>
-            </DropdownMenuGroup>
-          )}
+          </BlockableItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </ListItem>
   )
 }
 
-/** How the user signs in: passkeys, then linked single sign-on. */
-function signInSummary(user: AdminUser, oidcName: string | null): string {
-  const parts: string[] = []
-  if (user.passkeys > 0) {
-    parts.push(user.passkeys === 1 ? "1 passkey" : `${user.passkeys} passkeys`)
-  }
-  if (user.oidcAccounts > 0) {
-    parts.push(
-      oidcName ? `${oidcName} linked` : "single sign-on linked, but it's off",
-    )
-  }
-  if (parts.length > 0) return parts.join(", ")
-  return user.links.length > 0
-    ? "Hasn't used the invite yet"
-    : "No way to sign in. Make a new link."
+const lastAdminNote = "Make someone else an admin first."
+
+/**
+ * A menu item that may be off for a reason. A disabled item can't be
+ * hovered, so a blocked one stays focusable, looks disabled, does nothing,
+ * and gives the reason in a tooltip.
+ */
+function BlockableItem({
+  blocked,
+  onClick,
+  ...props
+}: ComponentProps<typeof DropdownMenuItem> & { blocked: string | null }) {
+  if (!blocked) return <DropdownMenuItem onClick={onClick} {...props} />
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <DropdownMenuItem
+            {...props}
+            aria-disabled
+            closeOnClick={false}
+            className="cursor-not-allowed opacity-50"
+          />
+        }
+      />
+      <TooltipContent side="left">{blocked}</TooltipContent>
+    </Tooltip>
+  )
 }
 
-function activity(user: AdminUser, self: boolean): string {
-  if (self) return "Active now"
-  if (!user.lastSeenAt) {
-    return hasSignInMethod(user) ? "Not signed in anywhere" : "Never signed in"
+/**
+ * The line under a user's name: where they stand, then how they sign in.
+ * Each fact gets a glyph, so the line reads without separators.
+ */
+function UserDetails({
+  user,
+  self,
+  oidcName,
+}: {
+  user: AdminUser
+  self: boolean
+  oidcName: string | null
+}) {
+  let facts: ReactNode
+  if (hasSignInMethod(user)) {
+    const { label, tone } = activity(user, self)
+    facts = (
+      <>
+        <Fact icon={<StatusDot tone={tone} />}>{label}</Fact>
+        {user.passkeys > 0 && (
+          <Fact icon={<KeyRoundIcon />}>
+            {user.passkeys === 1 ? "1 passkey" : `${user.passkeys} passkeys`}
+          </Fact>
+        )}
+        {user.oidcLinked && (
+          <Fact icon={<LogInIcon />}>{oidcName ?? "Single sign-on (off)"}</Fact>
+        )}
+      </>
+    )
+  } else {
+    facts = (
+      <Fact icon={<TriangleAlertIcon className="text-warning" />}>
+        No way to sign in
+      </Fact>
+    )
   }
+
+  return (
+    <p
+      className="text-muted-foreground mt-0.5 flex flex-wrap items-center gap-x-3.5 gap-y-0.5 text-[13px] leading-5"
+      title={`Joined ${formatDate(user.createdAt)}`}
+    >
+      {facts}
+    </p>
+  )
+}
+
+function Fact({ icon, children }: { icon: ReactNode; children: ReactNode }) {
+  return (
+    <span className="inline-flex min-w-0 items-center gap-1.5 [&_svg]:size-3.5 [&_svg]:shrink-0 [&_svg]:opacity-80">
+      {icon}
+      <span className="truncate">{children}</span>
+    </span>
+  )
+}
+
+type Tone = "live" | "idle"
+
+const dotClassName = {
+  live: "bg-success ring-[3px] ring-success-soft",
+  idle: "border-[1.5px] border-muted-foreground/60",
+} satisfies Record<Tone, string>
+
+/** A presence dot, sized to sit in an icon's slot. */
+function StatusDot({ tone }: { tone: Tone }) {
+  return (
+    <span aria-hidden className="grid size-3.5 shrink-0 place-items-center">
+      <span className={`size-2 rounded-full ${dotClassName[tone]}`} />
+    </span>
+  )
+}
+
+/** What a user's presence reads as, and the dot that goes with it. */
+type Activity = { label: string; tone: Tone }
+
+function activity(user: AdminUser, self: boolean): Activity {
+  if (self) return { label: "Active now", tone: "live" }
+  if (!user.lastSeenAt) return { label: "Signed out", tone: "idle" }
   if (Date.now() - user.lastSeenAt.getTime() < LAST_SEEN_PRECISION_MS) {
-    return "Active within the last hour"
+    return { label: "Active recently", tone: "live" }
   }
-  return `Last seen ${formatRelative(user.lastSeenAt)}`
+  return {
+    label: `Last seen ${formatRelative(user.lastSeenAt)}`,
+    tone: "idle",
+  }
 }

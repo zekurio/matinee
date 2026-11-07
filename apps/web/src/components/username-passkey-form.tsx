@@ -1,17 +1,10 @@
 import { Username } from "@matinee/contracts"
-import { Button } from "@matinee/ui/components/button"
-import {
-  Field,
-  FieldDescription,
-  FieldError,
-  FieldLabel,
-} from "@matinee/ui/components/field"
-import { Input } from "@matinee/ui/components/input"
-import { Spinner } from "@matinee/ui/components/spinner"
 import { KeyRoundIcon } from "lucide-react"
-import { useId, useState } from "react"
 
+import { useAppForm } from "@/lib/form"
 import { errorMessage } from "@/lib/rpc"
+
+import { forgetEmptyBlur } from "./username-field"
 
 /** Pick a username, then create the passkey that signs in to it. */
 export function UsernamePasskeyForm({
@@ -25,51 +18,37 @@ export function UsernamePasskeyForm({
   error: Error | null
   onSubmit: (username: string) => void
 }) {
-  const id = useId()
-  const [username, setUsername] = useState("")
-  const [touched, setTouched] = useState(false)
-  const parsed = Username.safeParse(username)
-  const invalid = touched && !parsed.success
-  const message = invalid
-    ? parsed.error?.issues[0]?.message
-    : error
-      ? errorMessage(error)
-      : undefined
+  const form = useAppForm({
+    defaultValues: { username: "" },
+    onSubmit: ({ value }) => onSubmit(Username.parse(value.username)),
+  })
 
   return (
     <form
       className="flex flex-col gap-4"
       onSubmit={(event) => {
         event.preventDefault()
-        setTouched(true)
-        if (parsed.success) onSubmit(parsed.data)
+        void form.handleSubmit()
       }}
     >
-      <Field data-invalid={message ? true : undefined}>
-        <FieldLabel htmlFor={id}>Username</FieldLabel>
-        <Input
-          id={id}
-          autoComplete="username webauthn"
-          autoCapitalize="none"
-          spellCheck={false}
-          value={username}
-          aria-invalid={message ? true : undefined}
-          onChange={(event) => setUsername(event.target.value)}
-          onBlur={() => setTouched(username.length > 0)}
-        />
-        {message ? (
-          <FieldError>{message}</FieldError>
-        ) : (
-          <FieldDescription>
-            Your browser or password manager stores the passkey. No password to
-            remember.
-          </FieldDescription>
+      <form.AppField name="username" validators={{ onChange: Username }}>
+        {(field) => (
+          <field.TextField
+            label="Username"
+            description="Your browser or password manager stores the passkey."
+            serverError={error ? errorMessage(error) : null}
+            autoComplete="username webauthn"
+            autoCapitalize="none"
+            spellCheck={false}
+            onBlur={() => forgetEmptyBlur(field)}
+          />
         )}
-      </Field>
-      <Button type="submit" size="lg" disabled={pending}>
-        {pending ? <Spinner /> : <KeyRoundIcon />}
-        {submitLabel}
-      </Button>
+      </form.AppField>
+      <form.AppForm>
+        <form.SubmitButton size="lg" pending={pending} icon={<KeyRoundIcon />}>
+          {submitLabel}
+        </form.SubmitButton>
+      </form.AppForm>
     </form>
   )
 }

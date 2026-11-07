@@ -10,21 +10,17 @@ import { List, ListItemButton } from "@matinee/ui/components/list"
 import { ScrollArea } from "@matinee/ui/components/scroll-area"
 import { useIsMobile } from "@matinee/ui/hooks/use-media-query"
 import { cn } from "@matinee/ui/lib/utils"
-import { useBlocker } from "@tanstack/react-router"
 import { ArrowLeftIcon, SearchIcon, XIcon } from "lucide-react"
 import { type ReactNode, useMemo, useRef, useState } from "react"
+
+import { UserAvatar } from "@/components/user-avatar"
+import { useSettingsDialogStore } from "@/stores/settings-dialog"
 
 import {
   type SettingsCategory,
   searchSettings,
   useSettingsCategories,
 } from "./settings-categories"
-import {
-  SettingsGuardProvider,
-  SettingsSectionNav,
-  SettingsSectionsProvider,
-  useSettingsGuard,
-} from "./settings-panel"
 
 interface SettingsNavigation {
   /** Switch sections in place, as the sidebar does. */
@@ -39,59 +35,29 @@ interface SettingsNavigation {
  * Settings as a dialog over the current page. Desktop pairs a sidebar with
  * the open section; a phone gets a full-screen sheet with the menu first and
  * each section pushed in over it.
+ *
+ * A panel with unsaved edits holds every way out itself: its save bar blocks
+ * the navigation that closing or switching sections makes.
  */
-export function SettingsDialog(props: SettingsDialogProps) {
-  return (
-    <SettingsGuardProvider>
-      <SettingsDialogRoot {...props} />
-    </SettingsGuardProvider>
-  )
-}
-
-type SettingsDialogProps = SettingsNavigation & {
+export function SettingsDialog({
+  user,
+  section,
+  onClose,
+  ...navigation
+}: SettingsNavigation & {
   user: User
   /** The requested section, or null while closed. */
   section: string | null
   onClose: () => void
-}
-
-function SettingsDialogRoot({
-  user,
-  section,
-  onClose,
-  onNavigate,
-  onOpenSection,
-  onBack,
-}: SettingsDialogProps) {
+}) {
   const categories = useSettingsCategories(user)
-  const { dirty, requestAttention } = useSettingsGuard()
-  // Leaving a panel unmounts it and drops its edits, so every way out (close,
-  // another section, browser back, reload) waits for Save or Reset and
-  // points at the save bar instead.
-  const guarded =
-    <A extends unknown[]>(leave: (...args: A) => void) =>
-    (...args: A) => {
-      if (dirty) requestAttention()
-      else leave(...args)
-    }
-  useBlocker({
-    disabled: !dirty,
-    enableBeforeUnload: dirty,
-    shouldBlockFn: () => {
-      requestAttention()
-      return true
-    },
-  })
   const popupRef = useRef<HTMLDivElement>(null)
   // Keeps the last section on screen while the dialog animates closed.
   const [shown, setShown] = useState(section)
   if (section !== null && section !== shown) setShown(section)
 
   return (
-    <Dialog
-      open={section !== null}
-      onOpenChange={(open) => !open && guarded(onClose)()}
-    >
+    <Dialog open={section !== null} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
         ref={popupRef}
         // Keyboard users land in the search. A click or tap focuses the
@@ -100,7 +66,9 @@ function SettingsDialogRoot({
         showCloseButton={false}
         disableZoom
         className={cn(
-          "bg-card flex h-[90vh] max-h-[820px] w-[calc(100vw-2rem)] max-w-5xl gap-0 overflow-hidden p-0 sm:max-w-5xl",
+          // Scales with the viewport, keeping a margin on every side, up to
+          // a cap that stops rows stretching too far on a big monitor.
+          "bg-card flex h-[92dvh] max-h-[80rem] w-[94vw] max-w-[90rem] gap-0 overflow-hidden p-0 sm:max-w-[90rem]",
           "settings-sheet max-md:top-0 max-md:left-0 max-md:h-dvh max-md:max-h-none max-md:w-screen max-md:max-w-none max-md:translate-x-0 max-md:translate-y-0 max-md:rounded-none max-md:ring-0",
         )}
       >
@@ -109,9 +77,7 @@ function SettingsDialogRoot({
           user={user}
           categories={categories}
           section={section ?? shown}
-          onNavigate={guarded(onNavigate)}
-          onOpenSection={guarded(onOpenSection)}
-          onBack={guarded(onBack)}
+          {...navigation}
         />
       </DialogContent>
     </Dialog>
@@ -221,12 +187,7 @@ function SettingsOverview({
                     className="min-h-16"
                     onClick={() => onOpenSection(category.id)}
                   >
-                    <span
-                      aria-hidden
-                      className="bg-secondary grid size-10 shrink-0 place-items-center rounded-full text-sm font-semibold"
-                    >
-                      {name.slice(0, 1).toUpperCase()}
-                    </span>
+                    <UserAvatar user={user} className="size-10 text-sm" />
                     <span className="flex min-w-0 flex-1 flex-col">
                       <span className="truncate font-medium">{name}</span>
                       <span className="text-muted-foreground truncate text-[13px]">
@@ -275,7 +236,7 @@ function SettingsSectionView({
   categories: SettingsCategory[]
   active: SettingsCategory
 }) {
-  const scrollRef = useRef<HTMLDivElement | null>(null)
+  const setSaveBarSlot = useSettingsDialogStore((state) => state.setSaveBarSlot)
   const [query, setQuery] = useState("")
   const groups = useMemo(
     () => searchSettings(categories, query),
@@ -283,10 +244,11 @@ function SettingsSectionView({
   )
 
   return (
-    <SettingsSectionsProvider>
+    <>
       <ScrollArea
         render={<nav aria-label="Settings" />}
-        className="bg-background/60 hidden w-64 shrink-0 border-r md:flex"
+        hasControls
+        className="bg-background/60 hidden w-56 shrink-0 border-r md:flex lg:w-64"
         viewportClassName="flex flex-col gap-0.5 p-4"
       >
         <div className="px-2.5 pt-1 pb-3 text-lg font-semibold tracking-tight">
@@ -303,34 +265,28 @@ function SettingsSectionView({
             {group.items.map(({ category, hint }) => {
               const isActive = category.id === active.id
               return (
-                <div key={category.id} className="flex flex-col">
-                  <button
-                    type="button"
-                    aria-current={isActive ? "page" : undefined}
-                    onClick={() => !isActive && onNavigate(category.id)}
-                    className={cn(
-                      "focus-visible:ring-ring flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm outline-none transition-colors focus-visible:ring-2",
-                      isActive
-                        ? "text-foreground bg-white/[0.07] font-medium"
-                        : "text-muted-foreground hover:text-foreground hover:bg-white/[0.04]",
-                    )}
-                  >
-                    <category.icon className="size-4 shrink-0" />
-                    <span className="flex min-w-0 flex-col">
-                      <span className="truncate">{category.label}</span>
-                      {hint && (
-                        <span className="text-muted-foreground truncate text-xs font-normal">
-                          {hint}
-                        </span>
-                      )}
-                    </span>
-                  </button>
-                  {/* A search narrows the list to what matched; subsection
-                      links would only bury that. */}
-                  {isActive && !query.trim() && (
-                    <SettingsSectionNav scrollRef={scrollRef} />
+                <button
+                  key={category.id}
+                  type="button"
+                  aria-current={isActive ? "page" : undefined}
+                  onClick={() => !isActive && onNavigate(category.id)}
+                  className={cn(
+                    "focus-visible:ring-ring flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm outline-none transition-colors focus-visible:ring-2",
+                    isActive
+                      ? "text-foreground bg-foreground/[0.07]"
+                      : "text-muted-foreground hover:text-foreground hover:bg-foreground/[0.06]",
                   )}
-                </div>
+                >
+                  <category.icon className="size-4 shrink-0" />
+                  <span className="flex min-w-0 flex-col">
+                    <span className="truncate">{category.label}</span>
+                    {hint && (
+                      <span className="text-muted-foreground truncate text-xs">
+                        {hint}
+                      </span>
+                    )}
+                  </span>
+                </button>
               )
             })}
           </div>
@@ -359,7 +315,7 @@ function SettingsSectionView({
             }
           />
         ) : (
-          <header className="flex h-16 shrink-0 items-center justify-between gap-4 border-b pr-4 pl-10">
+          <header className="flex h-16 shrink-0 items-center justify-between gap-4 border-b pr-4 pl-6 lg:pl-10">
             <h2 className="truncate text-lg font-semibold tracking-tight">
               {active.label}
             </h2>
@@ -375,14 +331,17 @@ function SettingsSectionView({
             of snapping over the last. */}
         <ScrollArea
           key={active.id}
+          hasControls
           className="animate-in fade-in-0 animation-duration-200 min-h-0 flex-1 motion-reduce:animate-none"
-          viewportRef={scrollRef}
-          viewportClassName="px-4 py-6 md:px-10 md:py-8 max-md:pb-[max(1.5rem,env(safe-area-inset-bottom))]"
+          viewportClassName="px-4 py-6 md:px-6 md:py-8 lg:px-10 max-md:pb-[max(1.5rem,env(safe-area-inset-bottom))]"
         >
           <active.Panel />
         </ScrollArea>
+        {/* The save bar of a panel with unsaved edits lands here, on the
+            panel's bottom edge, outside the scrolling content. */}
+        <div ref={setSaveBarSlot} className="shrink-0 empty:hidden" />
       </div>
-    </SettingsSectionsProvider>
+    </>
   )
 }
 

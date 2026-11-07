@@ -1,0 +1,64 @@
+import { ColorPicker } from "@matinee/ui/components/color-picker"
+import { Input } from "@matinee/ui/components/input"
+import { cn } from "@matinee/ui/lib/utils"
+import { useState } from "react"
+
+const HEX_COLOR_RE = /^#[0-9a-f]{6}$/i
+
+/**
+ * A `#rrggbb` text field beside a color picker. Typing reports only complete
+ * colors. Leaving the field keeps what `commit` turns into a color and
+ * otherwise restores `value`.
+ */
+export function HexColorInput({
+  id,
+  value,
+  label,
+  className,
+  commit,
+  onChange,
+}: {
+  id: string
+  value: string
+  /** Names the color for the picker. */
+  label: string
+  className?: string
+  commit: (draft: string) => string | null
+  onChange: (color: string) => void
+}) {
+  const [draft, setDraft] = useState(value)
+  // A new value from outside (the picker, a guided change) replaces whatever
+  // is typed.
+  const [syncedValue, setSyncedValue] = useState(value)
+  if (value !== syncedValue) {
+    setSyncedValue(value)
+    setDraft(value)
+  }
+
+  function updateDraft(next: string) {
+    setDraft(next)
+    const color = next.trim()
+    if (HEX_COLOR_RE.test(color)) onChange(color)
+  }
+
+  function commitDraft() {
+    const color = commit(draft)
+    if (color) onChange(color)
+    setDraft(color ?? value)
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <Input
+        id={id}
+        value={draft}
+        spellCheck={false}
+        autoComplete="off"
+        className={cn("min-w-0 flex-1 font-mono", className)}
+        onChange={(event) => updateDraft(event.target.value)}
+        onBlur={commitDraft}
+      />
+      <ColorPicker value={value} label={label} onValueChange={updateDraft} />
+    </div>
+  )
+}

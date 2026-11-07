@@ -1,6 +1,6 @@
 import type { ReactNode } from "react"
 
-import { LogoMark } from "./brand"
+import { Logo } from "./brand"
 
 /**
  * Centered column for the sign-in and setup screens. The extra padding below
@@ -17,10 +17,12 @@ export function AuthScreen({
   children: ReactNode
 }) {
   return (
-    <main className="flex min-h-dvh flex-col items-center justify-center px-4 pt-12 pb-[calc(3rem+8vh)]">
+    <main className="relative flex min-h-dvh flex-col items-center justify-center px-4 pt-24 pb-[calc(3rem+8vh)]">
+      <header className="absolute top-8 left-6 sm:left-10">
+        <Logo className="text-xl" />
+      </header>
       <div className="w-full max-w-[360px]">
-        <LogoMark className="size-10" />
-        <h1 className="mt-6 text-2xl font-semibold tracking-tight">{title}</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
         {description && (
           <p className="text-muted-foreground mt-2 text-sm leading-5">
             {description}

@@ -1,23 +1,44 @@
-import { AUTH_ERROR_QUERY_KEY, oidcStartPath } from "@matinee/contracts"
+import {
+  AUTH_ERROR_QUERY_KEY,
+  type AuthConfig,
+  OIDC_LINK_QUERY_KEY,
+  oidcStartPath,
+} from "@matinee/contracts"
+import { t } from "@matinee/contracts/schema"
 import { Button, buttonVariants } from "@matinee/ui/components/button"
 import { Separator } from "@matinee/ui/components/separator"
 import { Spinner } from "@matinee/ui/components/spinner"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router"
 import { KeyRoundIcon, LogInIcon } from "lucide-react"
-import { z } from "zod"
 
 import { AuthScreen } from "@/components/auth-screen"
 import { FormAlert } from "@/components/form-alert"
+import { OidcLinkPage, type PendingLink } from "@/components/oidc-link-page"
 import { UsernamePasskeyForm } from "@/components/username-passkey-form"
 import { signInWithPasskey, signUpWithPasskey } from "@/lib/passkey"
 import { safeRedirect } from "@/lib/redirect"
-import { errorMessage, orpc } from "@/lib/rpc"
+import { client, errorMessage, orpc } from "@/lib/rpc"
 
-const LoginSearch = z.object({
-  redirect: z.string().optional().catch(undefined),
-  [AUTH_ERROR_QUERY_KEY]: z.string().optional().catch(undefined),
+const LoginSearch = t.object({
+  redirect: t.string().optional().catch(undefined),
+  [AUTH_ERROR_QUERY_KEY]: t.string().optional().catch(undefined),
+  [OIDC_LINK_QUERY_KEY]: t.string().optional().catch(undefined),
 })
+
+/**
+ * The OIDC sign-in this browser holds for linking, if any. The callback adds
+ * the link param when it keeps one, but only the server knows whether it
+ * exists, so a crafted link URL shows the normal login page.
+ */
+async function loadPendingLink(
+  config: AuthConfig,
+  requested: boolean,
+): Promise<PendingLink | null> {
+  if (!requested || !config.oidc) return null
+  const pending = await client.auth.oidc.pending.get().catch(() => null)
+  return pending ? { ...pending, provider: config.oidc } : null
+}
 
 export const Route = createFileRoute("/login")({
   validateSearch: LoginSearch,
@@ -26,19 +47,44 @@ export const Route = createFileRoute("/login")({
       context.queryClient.ensureQueryData(orpc.auth.session.queryOptions()),
       context.queryClient.ensureQueryData(orpc.auth.config.queryOptions()),
     ])
+    const pendingLink = await loadPendingLink(
+      config,
+      search[OIDC_LINK_QUERY_KEY] !== undefined,
+    )
+    // A signed-in user confirms the pending link on this page.
+    if (pendingLink) return { config, pendingLink }
     if (user) throw redirect({ href: safeRedirect(search.redirect) })
     if (config.setupRequired) throw redirect({ to: "/setup" })
-    return { config }
+    return { config, pendingLink: null }
   },
   component: LoginPage,
 })
 
 function LoginPage() {
-  const { config } = Route.useRouteContext()
+  const { config, pendingLink } = Route.useRouteContext()
   const search = Route.useSearch()
+  const target = safeRedirect(search.redirect)
+  if (pendingLink) return <OidcLinkPage link={pendingLink} redirect={target} />
+  return (
+    <SignInPage
+      config={config}
+      target={target}
+      authError={search[AUTH_ERROR_QUERY_KEY]}
+    />
+  )
+}
+
+function SignInPage({
+  config,
+  target,
+  authError,
+}: {
+  config: AuthConfig
+  target: string
+  authError: string | undefined
+}) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const target = safeRedirect(search.redirect)
 
   const signedIn = async (
     user: Awaited<ReturnType<typeof signInWithPasskey>>,
@@ -57,13 +103,9 @@ function LoginPage() {
   })
 
   const error = passkey.error ?? null
-  const authError = search[AUTH_ERROR_QUERY_KEY]
 
   return (
-    <AuthScreen
-      title="Sign in to Matinee"
-      description="Use the passkey saved on this device or in your password manager."
-    >
+    <AuthScreen title="Sign in to Matinee">
       <div className="flex flex-col gap-3">
         <Button
           size="lg"
@@ -86,7 +128,7 @@ function LoginPage() {
         {authError && (
           <FormAlert
             message={authError}
-            hint="Sign in with a passkey you registered on this server, or ask the server admin for access."
+            hint="Use a passkey from this server, or ask the admin for access."
           />
         )}
         {error && <FormAlert message={errorMessage(error)} />}

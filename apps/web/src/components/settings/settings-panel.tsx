@@ -1,75 +1,15 @@
 import { Button } from "@matinee/ui/components/button"
-import { Spinner } from "@matinee/ui/components/spinner"
+import { FeedbackButton } from "@matinee/ui/components/feedback-button"
 import { cn } from "@matinee/ui/lib/utils"
+import { useBlocker } from "@tanstack/react-router"
+import { type ReactNode, useId, useState } from "react"
+import { createPortal } from "react-dom"
+
 import {
-  createContext,
-  type ReactNode,
-  type RefObject,
-  useCallback,
-  useContext,
-  useEffect,
-  useId,
-  useMemo,
-  useState,
-} from "react"
-
-import { FormAlert } from "@/components/form-alert"
-
-/** A subsection of the open settings panel, as the sidebar lists it. */
-interface SettingsSection {
-  id: string
-  label: string
-  element: HTMLElement
-}
-
-type Register = (section: SettingsSection) => () => void
-
-const SectionsContext = createContext<SettingsSection[]>([])
-const RegisterContext = createContext<Register | null>(null)
-
-/**
- * Collects the subsections the open panel renders, so the sidebar can list
- * them under the active section. Panels register on mount instead of a table
- * declaring them, which would drift the moment a panel changes.
- */
-export function SettingsSectionsProvider({
-  children,
-}: {
-  children: ReactNode
-}) {
-  const [sections, setSections] = useState<SettingsSection[]>([])
-  const register = useCallback<Register>((section) => {
-    setSections((current) =>
-      sortByDocumentOrder([
-        ...current.filter((entry) => entry.id !== section.id),
-        section,
-      ]),
-    )
-    return () =>
-      setSections((current) =>
-        current.filter((entry) => entry.element !== section.element),
-      )
-  }, [])
-  return (
-    <RegisterContext.Provider value={register}>
-      <SectionsContext.Provider value={sections}>
-        {children}
-      </SectionsContext.Provider>
-    </RegisterContext.Provider>
-  )
-}
-
-/** Registers a subsection. Returns the ref callback for its element. */
-function useRegisterSettingsSection(id: string, label: string) {
-  const register = useContext(RegisterContext)
-  return useCallback(
-    (element: HTMLElement | null) => {
-      if (!register || !element) return
-      return register({ id, label, element })
-    },
-    [id, label, register],
-  )
-}
+  type ActionFeedback,
+  useActionFeedback,
+} from "@/lib/use-action-feedback"
+import { useSettingsDialogStore } from "@/stores/settings-dialog"
 
 /** Stacks the subsections of a panel, separated by whitespace alone. */
 export function SettingsSections({
@@ -82,10 +22,16 @@ export function SettingsSections({
   return <div className={cn("flex flex-col gap-10", className)}>{children}</div>
 }
 
-/**
- * A titled block in a settings panel. `id` must be unique within the panel:
- * the sidebar links to it.
- */
+/** The icon tile at the start of a settings row. */
+export function RowIcon({ children }: { children: ReactNode }) {
+  return (
+    <span className="bg-secondary text-muted-foreground grid size-9 shrink-0 place-items-center rounded-lg [&_svg]:size-4">
+      {children}
+    </span>
+  )
+}
+
+/** A titled block in a settings panel. `id` must be unique within the panel. */
 export function SettingsSubsection({
   id,
   title,
@@ -100,11 +46,9 @@ export function SettingsSubsection({
   action?: ReactNode
   children: ReactNode
 }) {
-  const register = useRegisterSettingsSection(id, title)
   return (
     <section
       id={`settings-${id}`}
-      ref={register}
       aria-labelledby={`settings-${id}-title`}
       className="flex scroll-mt-6 flex-col gap-4 md:scroll-mt-8"
     >
@@ -136,249 +80,133 @@ export function SettingsSubsection({
 }
 
 /**
- * Links to the subsections of the active section, highlighting the one in
- * view. Hidden when there is one subsection or the panel fits on screen,
- * where every link would scroll to what's already visible.
- */
-export function SettingsSectionNav({
-  scrollRef,
-}: {
-  scrollRef: RefObject<HTMLDivElement | null>
-}) {
-  const sections = useContext(SectionsContext)
-  const activeId = useSectionInView(scrollRef, sections)
-  const overflows = useOverflows(scrollRef, sections)
-
-  if (sections.length < 2 || !overflows) return null
-
-  return (
-    <div className="mt-1 ml-[1.0625rem] flex flex-col">
-      {sections.map((section) => (
-        <button
-          key={section.id}
-          type="button"
-          onClick={() =>
-            section.element.scrollIntoView({
-              behavior: window.matchMedia("(prefers-reduced-motion: reduce)")
-                .matches
-                ? "auto"
-                : "smooth",
-              block: "start",
-            })
-          }
-          className={cn(
-            "focus-visible:ring-ring truncate border-l-2 py-1.5 pl-3 text-left text-sm outline-none transition-colors focus-visible:ring-2",
-            section.id === activeId
-              ? "border-foreground text-foreground font-medium"
-              : "text-muted-foreground hover:text-foreground border-white/10 hover:border-white/25",
-          )}
-        >
-          {section.label}
-        </button>
-      ))}
-    </div>
-  )
-}
-
-/**
- * Whether the panel is tall enough that jumping beats scrolling: a quarter
- * of a viewport of overflow. Sections resize as their data loads, so they
- * feed the measurement too.
- */
-function useOverflows(
-  scrollRef: RefObject<HTMLDivElement | null>,
-  sections: SettingsSection[],
-) {
-  const [overflows, setOverflows] = useState(false)
-  useEffect(() => {
-    const scroller = scrollRef.current
-    if (!scroller) return
-    const update = () =>
-      setOverflows(scroller.scrollHeight > scroller.clientHeight * 1.25)
-    update()
-    const observer = new ResizeObserver(update)
-    observer.observe(scroller)
-    for (const section of sections) observer.observe(section.element)
-    return () => observer.disconnect()
-  }, [scrollRef, sections])
-  return overflows
-}
-
-function useSectionInView(
-  scrollRef: RefObject<HTMLDivElement | null>,
-  sections: SettingsSection[],
-) {
-  const [activeId, setActiveId] = useState<string | null>(null)
-  const first = sections[0]
-  const last = sections.at(-1)
-
-  useEffect(() => {
-    const scroller = scrollRef.current
-    if (!scroller || !first || !last) return
-
-    const pending = { frame: 0 }
-    const update = () => {
-      pending.frame = 0
-      // The last heading above the top quarter of the panel is the one being
-      // read. The final section may be too short to reach that line, so the
-      // bottom of the scroller selects it outright.
-      const line =
-        scroller.getBoundingClientRect().top + scroller.clientHeight / 4
-      const atBottom =
-        scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 2
-      const current = atBottom
-        ? last
-        : sections.reduce(
-            (found, section) =>
-              section.element.getBoundingClientRect().top <= line
-                ? section
-                : found,
-            first,
-          )
-      setActiveId(current.id)
-    }
-    const schedule = () => {
-      if (!pending.frame) pending.frame = requestAnimationFrame(update)
-    }
-
-    update()
-    scroller.addEventListener("scroll", schedule, { passive: true })
-    const observer = new ResizeObserver(schedule)
-    observer.observe(scroller)
-    for (const section of sections) observer.observe(section.element)
-    return () => {
-      scroller.removeEventListener("scroll", schedule)
-      observer.disconnect()
-      if (pending.frame) cancelAnimationFrame(pending.frame)
-    }
-  }, [scrollRef, sections, first, last])
-
-  return useMemo(
-    () =>
-      sections.some((section) => section.id === activeId) ? activeId : null,
-    [activeId, sections],
-  )
-}
-
-function sortByDocumentOrder(sections: SettingsSection[]): SettingsSection[] {
-  return [...sections].sort((a, b) =>
-    a.element.compareDocumentPosition(b.element) &
-    Node.DOCUMENT_POSITION_FOLLOWING
-      ? -1
-      : 1,
-  )
-}
-
-type Guard = {
-  /** A panel has edits it hasn't saved. */
-  dirty: boolean
-  setDirty: (dirty: boolean) => void
-  /** Bumped when someone tries to leave with unsaved edits. */
-  attention: number
-  requestAttention: () => void
-}
-
-const GuardContext = createContext<Guard | null>(null)
-
-/**
- * Tracks whether the open panel has unsaved edits, so the dialog can refuse
- * to close or switch sections and point at the save bar instead.
- */
-export function SettingsGuardProvider({ children }: { children: ReactNode }) {
-  const [dirty, setDirty] = useState(false)
-  const [attention, setAttention] = useState(0)
-  const requestAttention = useCallback(() => setAttention((n) => n + 1), [])
-  const value = useMemo(
-    () => ({ dirty, setDirty, attention, requestAttention }),
-    [dirty, attention, requestAttention],
-  )
-  return <GuardContext.Provider value={value}>{children}</GuardContext.Provider>
-}
-
-export function useSettingsGuard(): Guard {
-  const guard = useContext(GuardContext)
-  if (!guard) throw new Error("useSettingsGuard needs SettingsGuardProvider")
-  return guard
-}
-
-/** Reports a panel's unsaved edits to the dialog while it's mounted. */
-function useUnsavedChanges(dirty: boolean) {
-  const { setDirty } = useSettingsGuard()
-  useEffect(() => {
-    setDirty(dirty)
-    return () => setDirty(false)
-  }, [dirty, setDirty])
-}
-
-/**
- * Pinned to the bottom of a panel while it has unsaved edits. It shakes when
- * someone tries to leave, since leaving would drop them.
+ * Anchored to the bottom edge of the panel while it has unsaved edits. Until
+ * they're saved or reset it holds the panel open, and shakes when someone
+ * tries to leave, since leaving would drop them.
+ *
+ * The bar reports the save itself: the button turns into "Saved" for a
+ * moment before the bar goes, and a failure stays in the bar with the
+ * server's reason until the next attempt or a reset.
  */
 export function SettingsSaveBar({
   dirty,
-  saving,
-  error,
   onReset,
   onSave,
 }: {
   dirty: boolean
-  saving: boolean
-  error: string | null
   onReset: () => void
-  onSave: () => void
+  /** Saves the draft. Throw or reject to show the failure in the bar. */
+  onSave: () => void | Promise<void>
 }) {
-  useUnsavedChanges(dirty)
-  const { attention } = useSettingsGuard()
-  if (!dirty && !error) return null
+  // The dialog's slot, on the panel's bottom edge outside the scrolling
+  // content, so the bar stays anchored however short or long the panel is.
+  const slot = useSettingsDialogStore((state) => state.saveBarSlot)
+  // Bumped on each attempt to leave with unsaved edits.
+  const [attention, setAttention] = useState(0)
+  // Leaving unmounts the panel. Closing, another section, and browser back
+  // are navigations this blocks; a reload gets the browser's prompt.
+  useBlocker({
+    disabled: !dirty,
+    enableBeforeUnload: dirty,
+    shouldBlockFn: () => {
+      setAttention((n) => n + 1)
+      return true
+    },
+  })
+  const { feedback: result, reset, run } = useActionFeedback()
+  // An edit after a save starts a new round, so "Saved" shouldn't linger:
+  // the edit dismisses that save's result.
+  const [dismissed, setDismissed] = useState<ActionFeedback | null>(null)
+  if (dirty && result.state === "success" && dismissed !== result) {
+    setDismissed(result)
+  }
+  const feedback: ActionFeedback =
+    dismissed === result ? { state: "idle" } : result
+  const saving = feedback.state === "pending"
+  const save = () => {
+    if (!saving) void run(onSave)
+  }
+  if (!dirty && feedback.state === "idle") {
+    // Gone until the next edit, which starts calm: an earlier attempt to
+    // leave shouldn't shake the bar, or ring it, as it comes back.
+    if (attention !== 0) setAttention(0)
+    return null
+  }
+  const bar = (
+    <section
+      // Remounts on each attempt to leave, which replays the shake.
+      key={attention}
+      aria-label="Unsaved changes"
+      className={cn(
+        "bg-popover animate-in fade-in-0 slide-in-from-bottom-2 flex flex-wrap items-center justify-between gap-3 border-t px-4 py-3 duration-200 motion-reduce:animate-none md:px-6 lg:px-10 max-md:pb-[max(0.75rem,env(safe-area-inset-bottom))]",
+        attention > 0 && "settings-attention",
+      )}
+    >
+      {feedback.state === "error" ? (
+        <p role="alert" className="text-destructive min-w-0 flex-1 text-sm">
+          <span className="font-medium">Couldn't save.</span> {feedback.message}
+        </p>
+      ) : (
+        <p role="status" className="text-sm font-medium">
+          {feedback.state === "success" ? "Changes saved" : "Unsaved changes"}
+        </p>
+      )}
+      <div className="ml-auto flex gap-2">
+        <Button
+          type="button"
+          variant="ghost"
+          disabled={saving || !dirty}
+          onClick={() => {
+            reset()
+            onReset()
+          }}
+        >
+          Reset
+        </Button>
+        <FeedbackButton
+          type="button"
+          state={feedback.state}
+          pendingLabel="Saving…"
+          successLabel="Saved"
+          errorLabel="Try again"
+          disabled={!dirty && feedback.state !== "success"}
+          onClick={(event) => {
+            event.preventDefault()
+            save()
+          }}
+        >
+          Save changes
+        </FeedbackButton>
+      </div>
+    </section>
+  )
+  if (!slot) return bar
   return (
-    <div className="sticky bottom-0 z-10 -mx-1 mt-8 px-1 pb-1">
-      <section
-        // Remounts on each attempt to leave, which replays the shake.
-        key={attention}
-        aria-label="Unsaved changes"
-        className={cn(
-          "bg-popover/95 flex flex-col gap-3 rounded-xl border p-3 pl-4 shadow-lg shadow-black/40 backdrop-blur",
-          attention > 0 && "settings-attention",
-        )}
-      >
-        {error && <FormAlert message={error} />}
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm font-medium">
-            {dirty ? "You have unsaved changes." : "Not saved."}
-          </p>
-          <div className="ml-auto flex gap-2">
-            <Button
-              type="button"
-              variant="ghost"
-              disabled={saving}
-              onClick={onReset}
-            >
-              Reset
-            </Button>
-            {/* A submit button, so Enter in a field of the panel's form
-                saves too. The click handler takes over the submit. */}
-            <Button
-              type="submit"
-              disabled={saving || !dirty}
-              onClick={(event) => {
-                event.preventDefault()
-                onSave()
-              }}
-            >
-              {saving && <Spinner />}
-              {saving ? "Saving…" : "Save changes"}
-            </Button>
-          </div>
-        </div>
-      </section>
-    </div>
+    <>
+      {createPortal(bar, slot)}
+      {/* The visible bar is outside the panel's form, so this stand-in
+          makes Enter in one of its fields save. */}
+      <button
+        type="submit"
+        tabIndex={-1}
+        aria-hidden
+        className="sr-only"
+        disabled={saving || !dirty}
+        onClick={(event) => {
+          event.preventDefault()
+          save()
+        }}
+      />
+    </>
   )
 }
 
 /** A bordered stack of {@link SettingRow}s split by hairlines. */
 export function SettingRows({ children }: { children: ReactNode }) {
   return (
-    <div className="divide-y rounded-xl border bg-white/[0.02]">{children}</div>
+    <div className="bg-foreground/[0.02] divide-y rounded-xl border">
+      {children}
+    </div>
   )
 }
 

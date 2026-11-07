@@ -11,10 +11,15 @@ declare module "@tanstack/react-router" {
 /** Settings sections, in nav order. */
 export type SettingsSectionId =
   | "account"
+  | "appearance"
+  | "playback"
   | "libraries"
   | "users"
   | "authentication"
   | "transcoding"
+  | "trickplay"
+  | "jobs"
+  | "server-appearance"
 
 /**
  * "Settings, no section in particular." A phone shows the menu of sections
