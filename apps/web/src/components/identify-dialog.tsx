@@ -8,15 +8,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@matinee/ui/components/dialog"
-import { Field, FieldLabel } from "@matinee/ui/components/field"
-import { Input } from "@matinee/ui/components/input"
 import { toast } from "@matinee/ui/components/sonner"
 import { Spinner } from "@matinee/ui/components/spinner"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { SearchIcon } from "lucide-react"
 import { useState } from "react"
 
-import { art } from "@/lib/media"
+import { useAppForm } from "@/lib/form"
+import { art, present } from "@/lib/media"
 import { client, errorMessage, orpc } from "@/lib/rpc"
 
 import { FormAlert } from "./form-alert"
@@ -50,7 +49,7 @@ export function IdentifyDialog({
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[min(44rem,calc(100dvh-2rem))] flex-col gap-5 p-6 sm:max-w-xl [&_[data-slot=dialog-close]]:top-4 [&_[data-slot=dialog-close]]:right-4">
+      <DialogContent className="flex h-[min(36rem,calc(100dvh-2rem))] flex-col gap-5 p-6 sm:max-w-xl [&_[data-slot=dialog-close]]:top-4 [&_[data-slot=dialog-close]]:right-4">
         {open && (
           <IdentifyForm
             title={title}
@@ -73,8 +72,6 @@ function IdentifyForm({
   onDone: () => void
 }) {
   const queryClient = useQueryClient()
-  const [name, setName] = useState(title.name)
-  const [year, setYear] = useState(title.year ? String(title.year) : "")
   // The search runs on open with the current name, then on each submit.
   const [submitted, setSubmitted] = useState({
     query: title.name,
@@ -98,14 +95,20 @@ function IdentifyForm({
     },
   })
 
-  const search = () => {
-    const parsedYear = Number(year)
-    setSubmitted({
-      query: name.trim() || title.name,
-      year:
-        year.trim() && Number.isInteger(parsedYear) ? parsedYear : undefined,
-    })
-  }
+  const form = useAppForm({
+    defaultValues: {
+      name: title.name,
+      year: title.year ? String(title.year) : "",
+    },
+    onSubmit: ({ value: { name, year } }) => {
+      const parsedYear = Number(year)
+      setSubmitted({
+        query: name.trim() || title.name,
+        year:
+          year.trim() && Number.isInteger(parsedYear) ? parsedYear : undefined,
+      })
+    },
+  })
 
   const error = identify.error ?? results.error
 
@@ -128,27 +131,26 @@ function IdentifyForm({
         className="flex items-end gap-2"
         onSubmit={(event) => {
           event.preventDefault()
-          search()
+          void form.handleSubmit()
         }}
       >
-        <Field className="min-w-0 flex-1">
-          <FieldLabel htmlFor="identify-name">Name</FieldLabel>
-          <Input
-            id="identify-name"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-          />
-        </Field>
-        <Field className="w-20 shrink-0">
-          <FieldLabel htmlFor="identify-year">Year</FieldLabel>
-          <Input
-            id="identify-year"
-            inputMode="numeric"
-            value={year}
-            placeholder="Any"
-            onChange={(event) => setYear(event.target.value)}
-          />
-        </Field>
+        <div className="min-w-0 flex-1">
+          <form.AppField name="name">
+            {(field) => <field.TextField id="identify-name" label="Name" />}
+          </form.AppField>
+        </div>
+        <div className="w-20 shrink-0">
+          <form.AppField name="year">
+            {(field) => (
+              <field.TextField
+                id="identify-year"
+                label="Year"
+                inputMode="numeric"
+                placeholder="Any"
+              />
+            )}
+          </form.AppField>
+        </div>
         <Button type="submit" variant="secondary" aria-label="Search">
           <SearchIcon />
           <span className="max-sm:hidden">Search</span>
@@ -157,13 +159,15 @@ function IdentifyForm({
 
       {error && <FormAlert message={errorMessage(error)} />}
 
-      <div className="-mx-6 min-h-40 flex-1 overflow-y-auto border-t px-3 pt-2">
+      {/* The dialog has a fixed height, so this pane fills it whether it
+          shows the spinner, the empty state, or results. */}
+      <div className="-mx-6 flex min-h-0 flex-1 flex-col overflow-y-auto border-t px-3 pt-2">
         {results.isPending ? (
-          <div className="grid h-40 place-items-center">
+          <div className="grid flex-1 place-items-center pb-2">
             <Spinner className="size-5" />
           </div>
         ) : results.data?.length === 0 ? (
-          <p className="text-muted-foreground px-3 py-10 text-center text-sm">
+          <p className="text-muted-foreground grid flex-1 place-items-center px-3 pb-2 text-center text-sm">
             {providerName} found nothing for “{submitted.query}”. Try the
             original title, or leave the year empty.
           </p>
@@ -175,14 +179,12 @@ function IdentifyForm({
                   type="button"
                   disabled={identify.isPending}
                   onClick={() => identify.mutate(match)}
-                  className="hover:bg-accent/60 focus-visible:bg-accent/60 focus-visible:ring-ring flex w-full gap-3 rounded-lg p-3 text-left outline-none focus-visible:ring-2 disabled:opacity-60"
+                  className="hover:bg-foreground/[0.06] focus-visible:bg-foreground/[0.06] focus-visible:ring-ring flex w-full gap-3 rounded-lg p-3 text-left outline-none focus-visible:ring-2 disabled:opacity-60"
                 >
                   <span
                     className={`relative aspect-[2/3] w-12 shrink-0 overflow-hidden rounded border ${tone(match.id)}`}
                   >
-                    {match.poster && (
-                      <Picture sources={[art(match.poster) ?? ""]} />
-                    )}
+                    <Picture sources={present(art(match.poster))} />
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="flex flex-wrap items-baseline gap-x-2">

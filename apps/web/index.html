@@ -1,12 +1,43 @@
 <!doctype html>
-<html lang="en" class="dark">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta
       name="viewport"
       content="width=device-width, initial-scale=1.0, viewport-fit=cover"
     />
-    <meta name="theme-color" content="#0e0e10" />
+    <script>
+      // Set the theme class and colors before paint to avoid a flash.
+      // Mirrors @matinee/ui/lib/theme; keep the storage keys in sync.
+      try {
+        var themeCss = localStorage.getItem("matinee.theme-css")
+        if (themeCss) {
+          var themeStyle = document.createElement("style")
+          themeStyle.id = "matinee-theme"
+          themeStyle.textContent = themeCss
+          document.head.appendChild(themeStyle)
+        }
+      } catch {}
+      try {
+        var preferences = JSON.parse(
+          localStorage.getItem("matinee.theme") || "null",
+        )
+        var mode =
+          preferences &&
+          (preferences.mode === "dark" ||
+            preferences.mode === "light" ||
+            preferences.mode === "system")
+            ? preferences.mode
+            : "dark"
+        var dark =
+          mode === "dark" ||
+          (mode !== "light" &&
+            matchMedia("(prefers-color-scheme: dark)").matches)
+        document.documentElement.classList.add(dark ? "dark" : "light")
+      } catch {
+        document.documentElement.classList.add("dark")
+      }
+    </script>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>Matinee</title>
   </head>

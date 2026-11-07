@@ -1,10 +1,13 @@
 import {
+  type Artwork,
   artworkPath,
   type ArtworkSize,
-  type AudioStream,
+  channelLayoutName,
   type HdrFormat,
+  type ImagePlaceholder,
   type MediaItem,
   mediaThumbnailPath,
+  videoCodecName,
 } from "@matinee/contracts"
 
 export type ItemLabel = {
@@ -193,11 +196,29 @@ export function episodeCode(item: MediaItem): string | null {
     : `S${item.seasonNumber}, E${item.episodeNumber}`
 }
 
+/** An image to load, and the blurred stand-in to show until it does. */
+export type ImageSource = { src: string; placeholder: ImagePlaceholder | null }
+
 export function art(
-  id: string | null | undefined,
+  image: Artwork | null | undefined,
   size: ArtworkSize = "small",
-): string | null {
-  return id ? artworkPath(id, size) : null
+): ImageSource | null {
+  return image
+    ? { src: artworkPath(image.id, size), placeholder: image.placeholder }
+    : null
+}
+
+/** A frame from the file itself, which has no placeholder. */
+export function frame(
+  itemId: string,
+  size: ArtworkSize = "small",
+): ImageSource {
+  return { src: mediaThumbnailPath(itemId, size), placeholder: null }
+}
+
+/** The sources that exist, in order, for `Picture`. */
+export function present(...sources: (ImageSource | null)[]): ImageSource[] {
+  return sources.filter((source): source is ImageSource => source !== null)
 }
 
 /**
@@ -208,13 +229,13 @@ export function art(
 export function landscapeSources(
   item: MediaItem,
   size: ArtworkSize = "small",
-): string[] {
-  const frame = mediaThumbnailPath(item.id, size)
+): ImageSource[] {
   const still = art(item.episode?.still, size)
   const backdrop = art(item.title?.images.backdrop, size)
-  const isMovie = item.title?.kind === "movie"
-  const order = isMovie ? [backdrop, frame] : [still, frame, backdrop]
-  return order.filter((src): src is string => src !== null)
+  const file = frame(item.id, size)
+  return item.title?.kind === "movie"
+    ? present(backdrop, file)
+    : present(still, file, backdrop)
 }
 
 /** Share of the file watched, 0 to 1, or null when unknown. */
@@ -236,17 +257,6 @@ export function timeLeft(item: MediaItem): string | null {
   return `${minutes} min left`
 }
 
-const VIDEO_CODECS = new Map([
-  ["h264", "H.264"],
-  ["hevc", "HEVC"],
-  ["av1", "AV1"],
-  ["vp9", "VP9"],
-  ["vp8", "VP8"],
-  ["mpeg2video", "MPEG-2"],
-  ["mpeg4", "MPEG-4"],
-  ["vc1", "VC-1"],
-])
-
 const HDR_LABELS = {
   hdr10: "HDR10",
   hlg: "HLG",
@@ -262,13 +272,25 @@ function resolutionLabel(width: number, height: number): string {
   return `${height}p`
 }
 
-/** "5.1" from a layout like `5.1(side)`, else from the channel count. */
-function channelLabel(stream: AudioStream): string | null {
-  const layout = /^\d\.\d/.exec(stream.channelLayout ?? "")?.[0]
-  if (layout) return layout
-  if (stream.channels === 1) return "Mono"
-  if (stream.channels === 2) return "Stereo"
-  return stream.channels ? `${stream.channels} channels` : null
+/**
+ * Badges for a title page: resolution, dynamic range, and the main audio
+ * track's layout, such as ["4K", "Dolby Vision", "5.1"]. SDR gets no
+ * badge. Empty until the server has probed the file.
+ */
+export function mediaFlags(item: MediaItem): string[] {
+  const probe = item.probe
+  if (!probe) return []
+  const { video, audio } = probe
+  const main = audio.find((stream) => stream.default) ?? audio[0]
+  const hdr =
+    video?.hdr === "hdr10" && video.hdr10Plus
+      ? "HDR10+"
+      : video?.hdr && HDR_LABELS[video.hdr]
+  return [
+    video && resolutionLabel(video.width, video.height),
+    hdr,
+    main && channelLayoutName(main.channelLayout, main.channels),
+  ].filter((flag): flag is string => Boolean(flag))
 }
 
 /**
@@ -282,9 +304,9 @@ export function streamSummary(item: MediaItem): string | null {
   const main = audio.find((stream) => stream.default) ?? audio[0]
   const parts = [
     video && resolutionLabel(video.width, video.height),
-    video && (VIDEO_CODECS.get(video.codec) ?? video.codec.toUpperCase()),
+    video && videoCodecName(video.codec),
     video?.hdr && HDR_LABELS[video.hdr],
-    main && channelLabel(main),
+    main && channelLayoutName(main.channelLayout, main.channels),
     audio.length > 1 && `${audio.length} audio tracks`,
     subtitles.length > 0 &&
       `${subtitles.length} subtitle${subtitles.length === 1 ? "" : "s"}`,

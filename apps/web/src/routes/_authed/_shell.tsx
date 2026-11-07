@@ -1,4 +1,5 @@
 import { AUTH_ERROR_QUERY_KEY } from "@matinee/contracts"
+import { t } from "@matinee/contracts/schema"
 import {
   createFileRoute,
   Outlet,
@@ -6,19 +7,18 @@ import {
   useRouterState,
 } from "@tanstack/react-router"
 import { useCallback } from "react"
-import { z } from "zod"
 
 import { AppShell } from "@/components/app-shell"
 import { SettingsDialog } from "@/components/settings/settings-dialog"
 import { SETTINGS_OVERVIEW } from "@/lib/settings"
 
-const ShellSearch = z.object({
+const ShellSearch = t.object({
   /** The open settings section; settings is a dialog over any page. */
-  settings: z.string().optional().catch(undefined),
+  settings: t.string().optional().catch(undefined),
   /** An OIDC link failure, shown in the account section. */
-  [AUTH_ERROR_QUERY_KEY]: z.string().optional().catch(undefined),
+  [AUTH_ERROR_QUERY_KEY]: t.string().optional().catch(undefined),
 })
-type ShellSearch = z.infer<typeof ShellSearch>
+type ShellSearch = t.infer<typeof ShellSearch>
 
 export const Route = createFileRoute("/_authed/_shell")({
   validateSearch: ShellSearch,

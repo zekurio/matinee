@@ -1,9 +1,13 @@
-import type { MediaItem } from "@matinee/contracts"
+import type { MediaItem, TitleSummary, WatchedAt } from "@matinee/contracts"
 import { Button } from "@matinee/ui/components/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@matinee/ui/components/dropdown-menu"
 import { toast } from "@matinee/ui/components/sonner"
@@ -14,9 +18,20 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query"
-import { CheckIcon, EllipsisIcon, EyeOffIcon } from "lucide-react"
+import {
+  CalendarClockIcon,
+  CalendarIcon,
+  CheckIcon,
+  ClockIcon,
+  EllipsisIcon,
+  EyeOffIcon,
+} from "lucide-react"
+import { useState } from "react"
 
+import { FavoriteMenuItem, useItemFavorite } from "@/components/favorite-button"
+import { WatchedDateDialog } from "@/components/watched-date-dialog"
 import { client, errorMessage, orpc } from "@/lib/rpc"
+import { invalidateViewerState, type WatchedState } from "@/lib/viewer-state"
 
 type MediaPage = { items: MediaItem[]; total: number }
 
@@ -76,25 +91,31 @@ async function patchLists(
   }
 }
 
-/** Refetch what shows watch state: home's rows, file lists, and titles. */
-function invalidateWatchState(queryClient: QueryClient) {
-  return Promise.all([
-    queryClient.invalidateQueries({ queryKey: orpc.home.key() }),
-    queryClient.invalidateQueries({ queryKey: orpc.media.key() }),
-    queryClient.invalidateQueries({ queryKey: orpc.titles.key() }),
-  ])
-}
-
-/** Mark one file watched or unwatched. */
-function useSetWatched() {
+/**
+ * Mark one file watched or unwatched. The mutation stays pending until the
+ * refetch after it lands.
+ */
+export function useSetWatched() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ item, watched }: { item: MediaItem; watched: boolean }) =>
-      client.playback.setWatched({ itemId: item.id, watched }),
+    mutationFn: ({
+      item,
+      watched,
+      watchedAt,
+    }: {
+      item: MediaItem
+      watched: boolean
+      /** As in `playback.setWatched`: when, now if unset. */
+      watchedAt?: WatchedAt
+    }) => client.playback.setWatched({ itemId: item.id, watched, watchedAt }),
     onMutate: ({ item, watched }) =>
       patchLists(queryClient, (other) => other.id === item.id, watched),
-    onError: (error) => toast.error(errorMessage(error)),
-    onSettled: () => invalidateWatchState(queryClient),
+    onError: (error, { watched }) =>
+      toast.error(
+        watched ? "Couldn't mark as watched" : "Couldn't mark as unwatched",
+        { description: errorMessage(error) },
+      ),
+    onSettled: () => invalidateViewerState(queryClient),
   })
 }
 
@@ -107,6 +128,8 @@ export function useSetTitleWatched() {
       /** As in `titles.items`: null is the files without a season. */
       season?: number | null
       watched: boolean
+      /** As in `playback.setWatched`: when, now if unset. */
+      watchedAt?: WatchedAt
     }) => client.playback.setTitleWatched(input),
     onMutate: ({ titleId, season, watched }) =>
       patchLists(
@@ -116,20 +139,88 @@ export function useSetTitleWatched() {
           (season === undefined || item.seasonNumber === season),
         watched,
       ),
-    onError: (error) => toast.error(errorMessage(error)),
-    onSettled: () => invalidateWatchState(queryClient),
+    onError: (error, { watched }) =>
+      toast.error(
+        watched ? "Couldn't mark as watched" : "Couldn't mark as unwatched",
+        { description: errorMessage(error) },
+      ),
+    onSettled: () => invalidateViewerState(queryClient),
   })
 }
 
 /**
+ * Whether the user watched the file, and a way to mark it: watched at a
+ * time, or unwatched, which also clears the resume point. A change shows
+ * at once.
+ */
+export function useItemWatched(item: MediaItem): WatchedState {
+  const set = useSetWatched()
+  const on = set.isPending
+    ? set.variables.watched
+    : (item.progress?.completed ?? false)
+  return {
+    on,
+    mark: (watched, watchedAt) => set.mutate({ item, watched, watchedAt }),
+  }
+}
+
+/**
+ * As {@link useItemWatched}, for every file of a title. Unwatched clears
+ * the title's resume points too.
+ */
+export function useTitleWatched(title: TitleSummary): WatchedState {
+  const set = useSetTitleWatched()
+  const on = set.isPending ? set.variables.watched : title.watched
+  return {
+    on,
+    mark: (watched, watchedAt) =>
+      set.mutate({ titleId: title.id, watched, watchedAt }),
+  }
+}
+
+/**
+ * When the user watched it, as Trakt asks: just now, on the release date,
+ * or on a date they pick in a `WatchedDateDialog`, which the menu's owner
+ * renders.
+ */
+export function WatchedAtItems({
+  onSelect,
+  onPickDate,
+}: {
+  /** `watchedAt` as in `playback.setWatched`; unset is now. */
+  onSelect: (watchedAt?: WatchedAt) => void
+  /** "Other date…" was picked. */
+  onPickDate: () => void
+}) {
+  return (
+    <>
+      <DropdownMenuItem onClick={() => onSelect()}>
+        <ClockIcon />
+        Just now
+      </DropdownMenuItem>
+      <DropdownMenuItem onClick={() => onSelect("released")}>
+        <CalendarIcon />
+        Release date
+      </DropdownMenuItem>
+      <DropdownMenuItem onClick={onPickDate}>
+        <CalendarClockIcon />
+        Other date…
+      </DropdownMenuItem>
+    </>
+  )
+}
+
+/**
  * Mark watched and unwatched, whichever apply. Files in progress get both,
- * since unwatched also clears the resume point.
+ * since unwatched also clears the resume point. Watched asks when, with
+ * {@link WatchedAtItems}.
  */
 export function WatchedMenuItems({
   scope,
   watched,
   started,
   onSelect,
+  onPickDate,
 }: {
   /** Fills in "Mark … watched". */
   scope: "as" | "season" | "all"
@@ -137,15 +228,27 @@ export function WatchedMenuItems({
   watched: boolean
   /** Some file is watched or in progress. */
   started: boolean
-  onSelect: (watched: boolean) => void
+  /** `watchedAt` as in `playback.setWatched`; unset is now. */
+  onSelect: (watched: boolean, watchedAt?: WatchedAt) => void
+  /** "Other date…" was picked. */
+  onPickDate: () => void
 }) {
   return (
     <>
       {!watched && (
-        <DropdownMenuItem onClick={() => onSelect(true)}>
-          <CheckIcon />
-          Mark {scope} watched
-        </DropdownMenuItem>
+        <DropdownMenuSub>
+          {/* Items pad out for touch; the trigger has to be told. */}
+          <DropdownMenuSubTrigger className="[@media(pointer:coarse)]:py-2.5">
+            <CheckIcon />
+            Mark {scope} watched
+          </DropdownMenuSubTrigger>
+          <DropdownMenuSubContent className="min-w-44">
+            <WatchedAtItems
+              onSelect={(watchedAt) => onSelect(true, watchedAt)}
+              onPickDate={onPickDate}
+            />
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
       )}
       {(watched || started) && (
         <DropdownMenuItem onClick={() => onSelect(false)}>
@@ -158,51 +261,59 @@ export function WatchedMenuItems({
 }
 
 /**
- * The "⋯" button on a file's row or card. Pointers that hover see it on
- * hover and focus, inside a `group/item`; touch screens always do.
+ * The "⋯" button at the end of a file's row in a folder list, to mark it
+ * watched or a favorite. Cards and episode rows have theirs on the picture,
+ * see `CardActions`. Pointers that hover see it on hover and focus, inside
+ * a `group/item`; touch screens always do.
  */
 export function ItemMenu({
   item,
   label,
-  onMark,
   className,
 }: {
   item: MediaItem
   /** Names the file for screen readers. */
   label: string
-  /** Runs before the change is sent. */
-  onMark?: () => void
   className?: string
 }) {
-  const setWatched = useSetWatched()
+  const watched = useItemWatched(item)
+  const favorite = useItemFavorite(item)
+  const [picking, setPicking] = useState(false)
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        render={
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label={`More actions for ${label}`}
-            className={cn(
-              "text-muted-foreground opacity-0 group-focus-within/item:opacity-100 group-hover/item:opacity-100 aria-expanded:opacity-100 [@media(pointer:coarse)]:size-11 [@media(pointer:coarse)]:opacity-100",
-              className,
-            )}
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={`More actions for ${label}`}
+              className={cn(
+                "text-muted-foreground opacity-0 group-focus-within/item:opacity-100 group-hover/item:opacity-100 aria-expanded:opacity-100 [@media(pointer:coarse)]:size-11 [@media(pointer:coarse)]:opacity-100",
+                className,
+              )}
+            />
+          }
+        >
+          <EllipsisIcon />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" sideOffset={4} className="min-w-48">
+          <WatchedMenuItems
+            scope="as"
+            watched={watched.on}
+            started={watched.on || item.progress !== null}
+            onSelect={watched.mark}
+            onPickDate={() => setPicking(true)}
           />
-        }
-      >
-        <EllipsisIcon />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" sideOffset={4} className="min-w-48">
-        <WatchedMenuItems
-          scope="as"
-          watched={item.progress?.completed ?? false}
-          started={item.progress !== null}
-          onSelect={(watched) => {
-            onMark?.()
-            setWatched.mutate({ item, watched })
-          }}
-        />
-      </DropdownMenuContent>
-    </DropdownMenu>
+          <DropdownMenuSeparator />
+          <FavoriteMenuItem favorite={favorite} />
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <WatchedDateDialog
+        open={picking}
+        onOpenChange={setPicking}
+        onPick={(watchedAt) => watched.mark(true, watchedAt)}
+      />
+    </>
   )
 }

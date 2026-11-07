@@ -78,7 +78,7 @@ export function FolderBrowser({
               ) : (
                 <button
                   type="button"
-                  className="text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-ring inline-flex h-7 items-center rounded-md px-1.5 outline-none focus-visible:ring-2"
+                  className="text-muted-foreground hover:text-foreground focus-visible:ring-ring inline-flex h-7 items-center rounded-md px-1.5 outline-none focus-visible:ring-2"
                   onClick={() => setPath(crumb.path)}
                 >
                   <CrumbName path={crumb.path} name={crumb.name} />
@@ -129,7 +129,7 @@ export function FolderBrowser({
               return (
                 <li
                   key={dir.path}
-                  className="group/row hover:bg-accent relative rounded-md"
+                  className="group/row hover:bg-foreground/[0.06] relative rounded-md"
                 >
                   <button
                     type="button"

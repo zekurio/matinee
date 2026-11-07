@@ -1,26 +1,35 @@
-import {
-  mediaThumbnailPath,
-  type MediaItem,
-  type ShelfEntry,
-  type TitleSummary,
+import type {
+  MediaItem,
+  Season,
+  ShelfEntry,
+  TitleSummary,
 } from "@matinee/contracts"
+import { toast } from "@matinee/ui/components/sonner"
 import { cn } from "@matinee/ui/lib/utils"
-import { Link } from "@tanstack/react-router"
+import { useQueryClient } from "@tanstack/react-query"
+import { Link, useNavigate } from "@tanstack/react-router"
 import { CheckIcon, FilmIcon, PlayIcon } from "lucide-react"
 import { type ReactNode, useState } from "react"
 
-import { formatBytes, formatShortDate } from "@/lib/format"
+import { formatBytes, formatRuntime, plural } from "@/lib/format"
 import {
   art,
   episodeCode,
+  frame,
+  type ImageSource,
   itemLabel,
   landscapeSources,
   progressRatio,
   streamSummary,
   timeLeft,
 } from "@/lib/media"
+import { errorMessage, orpc } from "@/lib/rpc"
 
-import { ItemMenu } from "./watched-menu"
+import { Blurhash } from "./blurhash"
+import { CardActions, CardScrim } from "./card-actions"
+import { useItemFavorite, useTitleFavorite } from "./favorite-button"
+import { seasonParams } from "./title/seasons"
+import { ItemMenu, useItemWatched, useTitleWatched } from "./watched-menu"
 
 // Neutral steps far enough apart that neighbouring shows look different.
 const TONES = [
@@ -37,87 +46,102 @@ export function tone(key: string): string {
 }
 
 /**
- * The first of `sources` that loads, faded in over whatever sits beneath
- * it. Nothing while loading or when every source fails.
+ * The first of `sources` that loads, faded in over its blurred placeholder
+ * while it loads, or over whatever sits beneath it when it has none.
+ * Nothing when every source fails. The image is opaque over the
+ * placeholder, so dim a picture from a wrapper, not through `className`.
  */
 export function Picture({
   sources,
   className,
   eager = false,
 }: {
-  sources: string[]
+  sources: ImageSource[]
   className?: string
   eager?: boolean
 }) {
-  const key = sources.join("|")
+  const key = sources.map((source) => source.src).join("|")
   const [state, setState] = useState({ key, index: 0, ready: false })
   // New sources start over, without an effect and a flash of the old image.
   const current = state.key === key ? state : { key, index: 0, ready: false }
-  const src = sources[current.index]
-  if (!src) return null
+  const source = sources[current.index]
+  if (!source) return null
+  const fill = "absolute inset-0 size-full object-cover"
   return (
-    <img
-      key={src}
-      src={src}
-      alt=""
-      loading={eager ? "eager" : "lazy"}
-      decoding="async"
-      onLoad={() => setState({ ...current, ready: true })}
-      onError={() =>
-        setState({ ...current, index: current.index + 1, ready: false })
-      }
-      className={cn(
-        "absolute inset-0 size-full object-cover transition-opacity duration-300 motion-reduce:transition-none",
-        current.ready ? "opacity-100" : "opacity-0",
-        className,
+    <>
+      {source.placeholder && (
+        <Blurhash
+          placeholder={source.placeholder}
+          className={cn(fill, className)}
+        />
       )}
-    />
+      <img
+        key={source.src}
+        src={source.src}
+        alt=""
+        loading={eager ? "eager" : "lazy"}
+        decoding="async"
+        onLoad={() => setState({ ...current, ready: true })}
+        onError={() =>
+          setState({ ...current, index: current.index + 1, ready: false })
+        }
+        className={cn(
+          fill,
+          "transition-opacity duration-300 motion-reduce:transition-none",
+          current.ready ? "opacity-100" : "opacity-0",
+          className,
+        )}
+      />
+    </>
   )
 }
 
-/** The round check on a watched file. */
+/**
+ * The round check on something watched, in the accent like the count of
+ * episodes left on a season.
+ */
 export function WatchedBadge({ className }: { className?: string }) {
   return (
     <span
       role="img"
       aria-label="Watched"
       className={cn(
-        "grid size-5 shrink-0 place-items-center rounded-full bg-black/70 text-white",
+        "bg-primary text-primary-foreground grid size-5 shrink-0 place-items-center rounded-full shadow-sm",
         className,
       )}
     >
-      <CheckIcon className="size-3" />
+      <CheckIcon className="size-3" strokeWidth={3} />
     </span>
   )
 }
 
 /**
  * The 16:9 slot for a file or title: the best image that loads over a
- * neutral gradient, with an optional logo, episode pill, progress bar, and
- * a play button on hover.
+ * neutral gradient, with an optional episode pill, progress bar, and a
+ * play button on hover. Turn `play` off when a real play link sits on top.
+ * `children` go over the picture, under the pill and badges.
  */
 export function Thumb({
   sources,
   toneKey,
-  logo,
   pill,
   progress,
   watched,
-  compact = false,
   play = true,
+  compact = false,
   className,
+  children,
 }: {
-  sources: string[]
+  sources: ImageSource[]
   toneKey: string
-  /** The title's logo, laid over the bottom of the image. */
-  logo?: string | null
   pill?: ReactNode
   /** Share of the file watched, 0 to 1. */
   progress?: number | null
   watched?: boolean
-  compact?: boolean
   play?: boolean
+  compact?: boolean
   className?: string
+  children?: ReactNode
 }) {
   return (
     <span
@@ -129,21 +153,7 @@ export function Thumb({
     >
       <FilmIcon className="text-muted-foreground/40 size-5" />
       <Picture sources={sources} />
-      {logo && (
-        <>
-          <span
-            aria-hidden
-            className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/60 to-transparent"
-          />
-          <img
-            src={logo}
-            alt=""
-            loading="lazy"
-            decoding="async"
-            className="absolute bottom-[9%] left-[6%] max-h-[32%] max-w-[55%] object-contain object-left-bottom drop-shadow-[0_1px_8px_rgb(0_0_0/0.5)]"
-          />
-        </>
-      )}
+      {children}
       {pill && (
         <span className="absolute top-1.5 left-1.5 rounded bg-black/70 px-1.5 py-0.5 text-[11px] leading-4 font-medium text-zinc-100 tabular-nums">
           {pill}
@@ -206,15 +216,15 @@ export function MediaRow({ item }: { item: MediaItem }) {
       <Link
         to="/watch/$itemId"
         params={{ itemId: item.id }}
-        className="group hover:bg-accent/50 focus-visible:bg-accent/50 focus-visible:ring-ring flex items-center gap-4 rounded-lg p-2 pr-12 outline-none focus-visible:ring-2 [@media(pointer:coarse)]:pr-14"
+        className="group hover:bg-foreground/[0.06] focus-visible:bg-foreground/[0.06] focus-visible:ring-ring flex items-center gap-4 rounded-lg p-2 pr-12 outline-none focus-visible:ring-2 [@media(pointer:coarse)]:pr-14"
       >
         <Thumb
-          sources={[mediaThumbnailPath(item.id)]}
+          sources={[frame(item.id)]}
           toneKey={label.showKey}
           progress={progressRatio(item)}
           watched={watched}
           compact
-          className="w-24 sm:w-28"
+          className="w-28 sm:w-36"
         />
         <span className="min-w-0 flex-1">
           <span
@@ -247,11 +257,11 @@ export function MediaRow({ item }: { item: MediaItem }) {
   )
 }
 
-const cardClass =
+export const cardClass =
   "group focus-visible:ring-ring focus-visible:ring-offset-background block rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
 
 /** Name and detail under a card, one line each. */
-function CardText({
+export function CardText({
   primary,
   secondary,
   className,
@@ -274,50 +284,18 @@ function CardText({
   )
 }
 
-/**
- * A title's page. Folders in an `other` library open the folder view, or
- * play straight away when the "folder" is a lone file.
- */
+/** A link to a title's page. */
 export function TitleLink({
   title,
-  item,
   className,
   label,
   children,
 }: {
   title: TitleSummary
-  /** The title's first file. */
-  item: MediaItem
   className?: string
   label?: string
   children: ReactNode
 }) {
-  if (title.kind === "folder") {
-    const slash = item.relativePath.indexOf("/")
-    if (slash < 0) {
-      return (
-        <Link
-          to="/watch/$itemId"
-          params={{ itemId: item.id }}
-          title={label}
-          className={className}
-        >
-          {children}
-        </Link>
-      )
-    }
-    return (
-      <Link
-        to="/libraries/$libraryId"
-        params={{ libraryId: title.libraryId }}
-        search={{ show: item.relativePath.slice(0, slash) }}
-        title={label}
-        className={className}
-      >
-        {children}
-      </Link>
-    )
-  }
   return (
     <Link
       to="/titles/$titleId"
@@ -331,119 +309,495 @@ export function TitleLink({
 }
 
 /**
- * An episode or movie to start or resume, for "continue watching" and
- * "next up". The picture is the episode, the show leads the text, and the
- * episode follows. The "⋯" beside the text marks it watched.
+ * A link to a file's own page: the title's page for a movie, the episode
+ * page for anything else.
  */
-export function EpisodeCard({ item }: { item: MediaItem }) {
-  const label = itemLabel(item)
-  const code = episodeCode(item)
-  const resume = item.progress && !item.progress.completed
-  const name = code ? `${label.showName}, ${code}: ${label.title}` : label.title
-  return (
-    <div className="group/item relative">
+export function ItemLink({
+  item,
+  className,
+  label,
+  hidden = false,
+  children,
+}: {
+  item: MediaItem
+  className?: string
+  label?: string
+  /** For a second link to the same page, such as a picture beside its name. */
+  hidden?: boolean
+  children: ReactNode
+}) {
+  const props = {
+    title: label,
+    className,
+    tabIndex: hidden ? -1 : undefined,
+    "aria-hidden": hidden || undefined,
+  }
+  if (item.title?.kind === "movie") {
+    return (
       <Link
-        to="/watch/$itemId"
-        params={{ itemId: item.id }}
-        title={name}
-        className={cardClass}
+        to="/titles/$titleId"
+        params={{ titleId: item.title.id }}
+        {...props}
       >
-        <Thumb
-          sources={landscapeSources(item)}
-          toneKey={label.showKey}
-          progress={progressRatio(item)}
-          watched={item.progress?.completed}
-          className="group-hover:border-foreground/25 w-full"
-        />
-        <CardText
-          primary={code ? label.showName : label.title}
-          secondary={
-            code
-              ? `${code}: ${label.title}`
-              : ((resume ? timeLeft(item) : label.year) ?? undefined)
-          }
-          className="pr-9 [@media(pointer:coarse)]:pr-11"
-        />
+        {children}
       </Link>
-      {/* Beside the first line of text. A top margin in percent follows the
-          card's width, so 56.25% clears the 16:9 picture. */}
-      <ItemMenu
-        item={item}
-        label={name}
-        className="absolute top-0 right-0 mt-[calc(56.25%+2px)] [@media(pointer:coarse)]:mt-[56.25%]"
+    )
+  }
+  return (
+    <Link to="/episodes/$itemId" params={{ itemId: item.id }} {...props}>
+      {children}
+    </Link>
+  )
+}
+
+// A name in a card's text that leads somewhere. The line clips it, so focus
+// shows as an underline rather than a ring.
+export const textLink =
+  "decoration-foreground/40 underline-offset-2 outline-none hover:underline focus-visible:underline focus-visible:decoration-2"
+
+// The play control in the middle of a card's picture, as Jellyfin has it:
+// a bare icon while the card is hovered or focused, which gets a blurred
+// circle and the accent once the pointer is on it.
+const playControl =
+  "group/play focus-visible:ring-ring absolute top-1/2 left-1/2 grid size-16 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full text-white opacity-0 transition-opacity outline-none group-focus-within/card:opacity-100 group-hover/card:opacity-100 group-has-[[aria-expanded=true]]/card:opacity-100 focus-visible:ring-2 motion-reduce:transition-none"
+
+/**
+ * The inside of a {@link playControl}. Touch screens have no hover, so
+ * where the control shows there, the circle stays.
+ */
+function PlayGlyph() {
+  return (
+    <>
+      <span
+        aria-hidden
+        className="absolute inset-0 rounded-full bg-black/30 opacity-0 backdrop-blur-md transition-opacity group-hover/play:opacity-100 group-focus-visible/play:opacity-100 motion-reduce:transition-none [@media(pointer:coarse)]:opacity-100"
       />
-    </div>
+      <PlayIcon
+        aria-hidden
+        className="group-hover/play:text-primary group-focus-visible/play:text-primary relative size-6 translate-x-0.5 fill-current drop-shadow-[0_1px_3px_rgb(0_0_0/0.6)] transition-colors motion-reduce:transition-none"
+      />
+    </>
   )
 }
 
 /**
- * A movie, show, or folder for "recently added": its backdrop with the logo
- * over it, falling back to a frame from its first file.
+ * Play or Resume in the middle of a still, inside a `group/card`. Pointers
+ * that hover see it on hover; touch screens always do.
  */
-export function TitleCard({
-  entry,
-  noun,
+export function ThumbPlayButton({
+  item,
+  label,
 }: {
-  entry: ShelfEntry
-  /** What the files are: "episode", "video". */
-  noun: string
+  item: MediaItem
+  /** Names the file for screen readers. */
+  label: string
 }) {
-  const { title, item, count, addedAt } = entry
-  const label = itemLabel(item)
-  const backdrop = art(title.images.backdrop)
-  const sources = [...(backdrop ? [backdrop] : []), mediaThumbnailPath(item.id)]
-  const detail =
-    title.kind === "movie"
-      ? label.year
-      : `${count} ${noun}${count === 1 ? "" : "s"} · added ${formatShortDate(addedAt)}`
+  const resume = item.progress && !item.progress.completed
   return (
-    <TitleLink
-      title={title}
-      item={item}
-      label={label.show}
-      className={cardClass}
+    <Link
+      to="/watch/$itemId"
+      params={{ itemId: item.id }}
+      aria-label={`${resume ? "Resume" : "Play"} ${label}`}
+      className={cn(playControl, "[@media(pointer:coarse)]:opacity-100")}
     >
-      <Thumb
-        sources={sources}
-        toneKey={label.showKey}
-        logo={art(title.images.logo)}
-        play={false}
-        watched={title.kind === "movie" && item.progress?.completed}
-        className="group-hover:border-foreground/25 w-full"
+      <PlayGlyph />
+    </Link>
+  )
+}
+
+/**
+ * Play in the middle of a poster, for whatever the title's page would
+ * play. The card doesn't know which file that is, so the button asks for
+ * the title once the pointer reaches it, and the click usually finds it
+ * loaded.
+ */
+function TitlePlayButton({
+  title,
+  className,
+}: {
+  title: TitleSummary
+  className?: string
+}) {
+  const queryClient = useQueryClient()
+  const navigate = useNavigate()
+  const options = orpc.titles.get.queryOptions({ input: { id: title.id } })
+  const prefetch = () => void queryClient.prefetchQuery(options)
+  const play = async () => {
+    try {
+      const { next } = await queryClient.fetchQuery(options)
+      if (!next) {
+        toast.error(`${title.name} has no files to play`)
+        return
+      }
+      await navigate({ to: "/watch/$itemId", params: { itemId: next.id } })
+    } catch (cause) {
+      toast.error(`Couldn't play ${title.name}`, {
+        description: errorMessage(cause),
+      })
+    }
+  }
+  return (
+    <button
+      type="button"
+      aria-label={`Play ${title.name}`}
+      onPointerEnter={prefetch}
+      onFocus={prefetch}
+      onClick={() => void play()}
+      className={cn(playControl, className)}
+    >
+      <PlayGlyph />
+    </button>
+  )
+}
+
+/**
+ * An episode or movie to start or resume, for "continue watching" and
+ * "next up". The picture is the episode, the show leads the text, and the
+ * episode follows. The picture and the episode open the episode's page, the
+ * show its page, and the round button on the picture plays. The icons in
+ * the picture's corner mark it watched or a favorite.
+ *
+ * Without `showName`, as in a season's row, the episode leads the text and
+ * its number and length follow.
+ */
+export function EpisodeCard({
+  item,
+  showName = true,
+}: {
+  item: MediaItem
+  showName?: boolean
+}) {
+  const label = itemLabel(item)
+  const code = episodeCode(item)
+  const name = code ? `${label.showName}, ${code}: ${label.title}` : label.title
+  const watched = useItemWatched(item)
+  const favorite = useItemFavorite(item)
+  return (
+    <div>
+      <div className="group/thumb group/card relative">
+        <ItemLink item={item} hidden className="block rounded-md">
+          <Thumb
+            sources={landscapeSources(item)}
+            toneKey={label.showKey}
+            progress={progressRatio(item)}
+            watched={watched.on}
+            play={false}
+            className="group-hover/thumb:border-foreground/25 w-full"
+          >
+            <CardScrim />
+          </Thumb>
+        </ItemLink>
+        <ThumbPlayButton item={item} label={name} />
+        {/* Clear of the progress bar along the bottom. */}
+        <CardActions
+          name={name}
+          watched={watched}
+          favorite={favorite}
+          touch
+          className="absolute right-1 bottom-1.5"
+        />
+      </div>
+      <span className="mt-2 block min-w-0">
+        {showName ? (
+          <ShowEpisodeText item={item} />
+        ) : (
+          <EpisodeText item={item} />
+        )}
+      </span>
+    </div>
+  )
+}
+
+/** The show, then the episode, or a movie's name and year. */
+function ShowEpisodeText({ item }: { item: MediaItem }) {
+  const label = itemLabel(item)
+  const code = episodeCode(item)
+  const resume = item.progress && !item.progress.completed
+  const episode = code ? `${code}: ${label.title}` : null
+  return (
+    <>
+      <span className="block truncate text-sm leading-5 font-medium">
+        {code && item.title ? (
+          <TitleLink title={item.title} label={label.show} className={textLink}>
+            {label.showName}
+          </TitleLink>
+        ) : code ? (
+          label.showName
+        ) : (
+          <ItemLink item={item} label={label.title} className={textLink}>
+            {label.title}
+          </ItemLink>
+        )}
+      </span>
+      <span className="text-muted-foreground block truncate text-[13px] leading-5">
+        {episode ? (
+          <ItemLink
+            item={item}
+            label={episode}
+            className={cn(textLink, "hover:text-foreground")}
+          >
+            {episode}
+          </ItemLink>
+        ) : resume ? (
+          timeLeft(item)
+        ) : (
+          label.year
+        )}
+      </span>
+    </>
+  )
+}
+
+/** The episode's name, then "Episode 4 · 24m" or the time left. */
+function EpisodeText({ item }: { item: MediaItem }) {
+  const label = itemLabel(item)
+  const resume = item.progress && !item.progress.completed
+  const number =
+    item.episodeNumber === null
+      ? null
+      : item.seasonNumber === 0
+        ? `Special ${item.episodeNumber}`
+        : `Episode ${item.episodeNumber}`
+  const detail = [
+    number,
+    resume
+      ? timeLeft(item)
+      : formatRuntime(
+          item.episode?.runtimeMinutes ??
+            (item.durationSeconds
+              ? Math.round(item.durationSeconds / 60)
+              : null),
+        ),
+  ].filter(Boolean)
+  return (
+    <>
+      <span
+        className={cn(
+          "block truncate text-sm leading-5",
+          label.untitled ? "font-normal" : "font-medium",
+        )}
+      >
+        <ItemLink item={item} label={label.title} className={textLink}>
+          {label.title}
+        </ItemLink>
+      </span>
+      {detail.length > 0 && (
+        <span className="text-muted-foreground block truncate text-[13px] leading-5 tabular-nums">
+          {detail.join(" · ")}
+        </span>
+      )}
+    </>
+  )
+}
+
+/**
+ * A movie or show for "recently added", shown by its poster. A show that
+ * got some files after the rest says which: one episode opens that
+ * episode, and several in one season show the season's poster and open
+ * its page. The watched and favorite icons stay the show's.
+ */
+export function TitleCard({ entry }: { entry: ShelfEntry }) {
+  const { title, item, count, added } = entry
+  const label = itemLabel(item)
+  if (title.kind === "movie") {
+    return (
+      <PosterCard
+        title={title}
+        detail={label.year}
+        label={label.show}
+        play={item}
       />
-      <CardText primary={title.name} secondary={detail ?? undefined} />
+    )
+  }
+  if (!added) {
+    return (
+      <PosterCard
+        title={title}
+        detail={plural(count, "episode")}
+        label={label.show}
+      />
+    )
+  }
+  const { season } = added
+  const poster = art(season?.poster ?? title.images.poster)
+  if (added.count === 1) {
+    const code = episodeCode(added.item)
+    const name = itemLabel(added.item).title
+    const detail = code ? `${code}: ${name}` : name
+    return (
+      <PosterCard
+        title={title}
+        detail={detail}
+        label={`${label.show} · ${detail}`}
+        poster={poster}
+        to={{ kind: "episode", item: added.item }}
+        play={added.item}
+      />
+    )
+  }
+  const fresh = plural(added.count, "new episode")
+  const detail = season ? `${season.name} · ${fresh}` : fresh
+  return (
+    <PosterCard
+      title={title}
+      detail={detail}
+      label={`${label.show} · ${detail}`}
+      poster={poster}
+      to={season ? { kind: "season", season } : undefined}
+    />
+  )
+}
+
+/**
+ * A 2:3 poster, with the name on the title's tone until it or its
+ * placeholder shows. `children` sit on top, like a badge.
+ */
+export function PosterArt({
+  name,
+  toneKey,
+  poster,
+  children,
+}: {
+  name: string
+  toneKey: string
+  poster: ImageSource | null
+  children?: ReactNode
+}) {
+  return (
+    <span
+      className={cn(
+        "group-hover:border-foreground/25 group-hover/card:border-foreground/25 relative grid aspect-[2/3] place-items-center overflow-hidden rounded-md border p-3 text-center shadow-[inset_0_1px_0_rgb(255_255_255/0.04)]",
+        tone(toneKey),
+      )}
+    >
+      {/* The poster, or its placeholder while it loads, covers this. It
+          stays when there's no poster or it fails to load. */}
+      <span
+        aria-hidden
+        className="text-foreground/70 line-clamp-4 text-sm leading-5 font-medium text-balance"
+      >
+        {name}
+      </span>
+      {poster && <Picture sources={[poster]} />}
+      {children}
+    </span>
+  )
+}
+
+/**
+ * Columns for a grid of {@link PosterCard}s: two on phones, then as many
+ * as fit at 11rem or more each.
+ */
+export const posterGrid =
+  "grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-[repeat(auto-fill,minmax(11rem,1fr))]"
+
+/** A page a {@link PosterCard} opens in place of the title's. */
+type PosterTarget =
+  | { kind: "episode"; item: MediaItem }
+  | { kind: "season"; season: Season }
+
+/** The link around a {@link PosterCard}'s poster and text. */
+function PosterLink({
+  title,
+  to,
+  label,
+  children,
+}: {
+  title: TitleSummary
+  to?: PosterTarget
+  label?: string
+  children: ReactNode
+}) {
+  if (to?.kind === "episode") {
+    return (
+      <ItemLink item={to.item} label={label} className={cardClass}>
+        {children}
+      </ItemLink>
+    )
+  }
+  if (to?.kind === "season") {
+    return (
+      <Link
+        to="/titles/$titleId/seasons/$season"
+        params={seasonParams(title, to.season)}
+        title={label}
+        className={cardClass}
+      >
+        {children}
+      </Link>
+    )
+  }
+  return (
+    <TitleLink title={title} label={label} className={cardClass}>
+      {children}
     </TitleLink>
   )
 }
 
-/** A movie or show in a library grid: the 2:3 poster, name, and year. */
-export function PosterCard({ title }: { title: TitleSummary }) {
-  const poster = art(title.images.poster)
+/**
+ * A movie or show in a grid: the 2:3 poster, name, and year, or `detail`
+ * in its place. A check marks it watched. On the poster, Play starts
+ * `play`, or what the title's page would, and icons mark it watched or a
+ * favorite. `poster` and `to` swap in another picture and page, like a
+ * season's.
+ */
+export function PosterCard({
+  title,
+  detail,
+  label,
+  poster = art(title.images.poster),
+  to,
+  play,
+}: {
+  title: TitleSummary
+  detail?: string | null
+  /** A tooltip for the card. */
+  label?: string
+  poster?: ImageSource | null
+  to?: PosterTarget
+  /** The file Play starts, when the card knows it. */
+  play?: MediaItem
+}) {
+  const watched = useTitleWatched(title)
+  const favorite = useTitleFavorite(title)
+  // Touch screens open the card with a tap, so they get no buttons on it.
+  const playClass = "pointer-events-auto [@media(pointer:coarse)]:hidden"
   return (
-    <Link
-      to="/titles/$titleId"
-      params={{ titleId: title.id }}
-      className={cardClass}
-    >
-      <span
-        className={cn(
-          "group-hover:border-foreground/25 relative grid aspect-[2/3] place-items-center overflow-hidden rounded-md border p-3 text-center shadow-[inset_0_1px_0_rgb(255_255_255/0.04)]",
-          tone(title.id),
+    <div className="group/card relative">
+      <PosterLink title={title} to={to} label={label}>
+        <PosterArt name={title.name} toneKey={title.id} poster={poster}>
+          <CardScrim />
+          {watched.on && (
+            <WatchedBadge className="absolute top-1.5 right-1.5" />
+          )}
+        </PosterArt>
+        <CardText
+          primary={title.name}
+          secondary={detail ?? (title.year ? String(title.year) : undefined)}
+        />
+      </PosterLink>
+      {/* The buttons can't sit in the link, so this box lies over the
+          poster to put them on it. */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 aspect-[2/3]">
+        {play ? (
+          <Link
+            to="/watch/$itemId"
+            params={{ itemId: play.id }}
+            aria-label={`${play.progress && !play.progress.completed ? "Resume" : "Play"} ${label ?? title.name}`}
+            className={cn(playControl, playClass)}
+          >
+            <PlayGlyph />
+          </Link>
+        ) : (
+          <TitlePlayButton title={title} className={playClass} />
         )}
-      >
-        {/* Shows until the poster loads, and stays if there is none. */}
-        <span
-          aria-hidden
-          className="text-foreground/70 line-clamp-4 text-sm leading-5 font-medium text-balance"
-        >
-          {title.name}
-        </span>
-        {poster && <Picture sources={[poster]} />}
-      </span>
-      <CardText
-        primary={title.name}
-        secondary={title.year ? String(title.year) : undefined}
-      />
-    </Link>
+        <CardActions
+          name={title.name}
+          watched={watched}
+          favorite={favorite}
+          className="pointer-events-auto absolute right-1 bottom-1"
+        />
+      </div>
+    </div>
   )
 }

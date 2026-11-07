@@ -1,5 +1,6 @@
-import { mediaThumbnailPath, type MediaItem } from "@matinee/contracts"
+import type { FeaturedTitle, MediaItem } from "@matinee/contracts"
 import { buttonVariants } from "@matinee/ui/components/button"
+import { useMediaQuery } from "@matinee/ui/hooks/use-media-query"
 import { cn } from "@matinee/ui/lib/utils"
 import { Link } from "@tanstack/react-router"
 import {
@@ -8,138 +9,165 @@ import {
   InfoIcon,
   ListIcon,
   PlayIcon,
+  StarIcon,
 } from "lucide-react"
-import { useEffect, useRef, useState } from "react"
+import { type ReactNode, useEffect, useState } from "react"
+import { useStore } from "zustand"
+import { useShallow } from "zustand/shallow"
 
 import {
   art,
   episodeCode,
+  frame,
   itemLabel,
+  present,
   progressRatio,
   timeLeft,
 } from "@/lib/media"
+import { createHeroStore } from "@/stores/browse-hero"
 
+import { pageColumn } from "./app-shell"
+import { Blurhash } from "./blurhash"
 import { Picture, tone } from "./media-item"
 
-export type HeroSlide = {
-  item: MediaItem
-  /** Why it's featured, shown above the title. */
-  reason: "resume" | "next" | "new"
-  /** Files in the show, for new shows. */
-  count?: number
-  libraryName?: string
-}
-
 const ADVANCE_MS = 8000
+
+/**
+ * The banner's box, shared with Home's loading skeleton. A phone on its
+ * side (short and from `sm` up) gets exactly the screen. Full bleed, like
+ * `pageBleed`: it breaks out of the page column to the window edges and up
+ * under the phone header or the floating bar. Negative margins rather than
+ * a -50% translate: the translate lands on a half pixel at odd window
+ * widths, and the zooming backdrop then shows past the shading at the edge.
+ */
+export const heroFrame =
+  "relative mx-[calc(50%-50vw)] -mt-[calc(env(safe-area-inset-top)+4rem)] h-[min(86vh,880px)] min-h-[500px] w-screen sm:-mt-24 sm:max-lg:[@media(max-height:540px)]:h-svh sm:max-lg:[@media(max-height:540px)]:min-h-0"
+
+/**
+ * On phones and desktop, lets the banner take whatever height its flex
+ * column leaves, so the rows under it fit in the first screen. Phones keep
+ * room for the header and the library chips over its top, and the slide
+ * under them.
+ */
+export const heroFill =
+  "max-sm:h-auto max-sm:min-h-[calc(env(safe-area-inset-top)+20rem)] max-sm:flex-1 lg:h-auto lg:min-h-[360px] lg:flex-1"
 
 // Phones split the row between the buttons.
 const heroButton = "max-sm:h-11 max-sm:flex-1"
 const heroSecondary =
-  "border-white/10 bg-white/15 text-white backdrop-blur hover:bg-white/25"
+  "border-foreground/10 bg-foreground/15 text-foreground backdrop-blur hover:bg-foreground/25"
 
-function usePrefersReducedMotion(): boolean {
-  const [reduced, setReduced] = useState(
-    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-  )
-  useEffect(() => {
-    const query = window.matchMedia("(prefers-reduced-motion: reduce)")
-    const onChange = () => setReduced(query.matches)
-    query.addEventListener("change", onChange)
-    return () => query.removeEventListener("change", onChange)
-  }, [])
-  return reduced
-}
-
-function reasonText(slide: HeroSlide): string {
-  if (slide.reason === "resume") return "Continue watching"
-  if (slide.reason === "next") return "Next up"
-  return slide.libraryName ? `New in ${slide.libraryName}` : "Recently added"
-}
-
-function Backdrop({ slide, active }: { slide: HeroSlide; active: boolean }) {
+function Backdrop({
+  slide,
+  active,
+}: {
+  slide: FeaturedTitle
+  active: boolean
+}) {
   const { item } = slide
   const label = itemLabel(item)
   // The show's art first; a still or frame only when it has none.
-  const sources = [
+  const sources = present(
     art(item.title?.images.backdrop, "large"),
     art(item.episode?.still, "large"),
-    mediaThumbnailPath(item.id, "large"),
-  ].filter((src): src is string => src !== null)
+    frame(item.id, "large"),
+  )
+  const ambient = sources[0]?.placeholder
   return (
     <div
       aria-hidden
       className={cn(
-        "absolute inset-0 transition-opacity duration-700 motion-reduce:transition-none",
+        // Short of the bottom edge by a pixel, and clipped there through the
+        // push-in: a banner of fractional height antialiases that edge, and
+        // the art showed through the fade there as a thin line.
+        "absolute inset-x-0 top-0 bottom-px overflow-hidden transition-opacity duration-700 motion-reduce:transition-none",
         active ? "opacity-100" : "opacity-0",
         tone(label.showKey),
       )}
     >
-      <Picture sources={sources} eager={active} className="object-top" />
+      {/* Phones: the art starts under the header row, which would cover
+          the top of it, faces and all, and fades in from the art's own
+          colors blurred behind the header. */}
+      {ambient && (
+        <Blurhash
+          placeholder={ambient}
+          className="absolute inset-0 size-full object-cover opacity-70 sm:hidden"
+        />
+      )}
+      <div className="absolute inset-x-0 top-0 bottom-0 max-sm:top-[calc(env(safe-area-inset-top)+3.5rem)] max-sm:[mask-image:linear-gradient(to_bottom,transparent,black_3rem)]">
+        {/* A slow push-in while the slide shows. The reset waits until the
+            fade-out ends, so it never jumps on screen. */}
+        <div
+          className={cn(
+            "absolute inset-0 transition-transform motion-reduce:transition-none",
+            active
+              ? "motion-safe:scale-[1.06] motion-safe:duration-[10000ms] motion-safe:ease-out"
+              : "scale-100 delay-700 duration-0",
+          )}
+        >
+          <Picture sources={sources} eager={active} className="object-top" />
+        </div>
+      </div>
     </div>
   )
 }
 
 /**
- * The banner at the top of Home: a frame from the featured file behind its
- * title, with the action that fits (resume, play next, or start a new
- * show). Advances on its own unless the user hovers, focuses, or prefers
- * reduced motion.
+ * The banner at the top of Home: new and well-rated titles over their art,
+ * with Play starting where the user is in each. Advances on its own unless
+ * the user hovers, focuses, or prefers reduced motion.
  */
-export function Hero({ slides }: { slides: HeroSlide[] }) {
-  const [index, setIndex] = useState(0)
-  const [paused, setPaused] = useState(false)
-  const root = useRef<HTMLElement>(null)
-  const reducedMotion = usePrefersReducedMotion()
+export function Hero({
+  slides,
+  top,
+  className,
+}: {
+  slides: FeaturedTitle[]
+  /** Shown over the top of the banner on phones, like the library chips. */
+  top?: ReactNode
+  className?: string
+}) {
+  const [store] = useState(createHeroStore)
+  const { index: picked, held } = useStore(
+    store,
+    useShallow((state) => ({ index: state.index, held: state.held })),
+  )
+  const { show, hold, release } = store.getState()
+  const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)")
   const count = slides.length
-  const current = slides[Math.min(index, count - 1)]
+  // Fewer slides after a refetch leave the last one on screen.
+  const index = Math.min(picked, count - 1)
+  const current = slides[index]
 
   // Each slide change restarts the timer, so a manual change gets a full
   // interval too.
   useEffect(() => {
-    if (paused || reducedMotion || count < 2) return
-    const timer = window.setTimeout(
-      () => setIndex((index + 1) % count),
-      ADVANCE_MS,
-    )
+    if (held || reducedMotion || count < 2) return
+    const timer = window.setTimeout(() => show(index + 1, count), ADVANCE_MS)
     return () => window.clearTimeout(timer)
-  }, [index, paused, reducedMotion, count])
-
-  // Hovering or focusing anywhere in the banner holds the current slide.
-  useEffect(() => {
-    const el = root.current
-    if (!el) return
-    const hold = () => setPaused(true)
-    const release = () => setPaused(false)
-    const blur = (event: FocusEvent) => {
-      const next = event.relatedTarget
-      if (!(next instanceof Node && el.contains(next))) setPaused(false)
-    }
-    el.addEventListener("mouseenter", hold)
-    el.addEventListener("mouseleave", release)
-    el.addEventListener("focusin", hold)
-    el.addEventListener("focusout", blur)
-    return () => {
-      el.removeEventListener("mouseenter", hold)
-      el.removeEventListener("mouseleave", release)
-      el.removeEventListener("focusin", hold)
-      el.removeEventListener("focusout", blur)
-    }
-  }, [])
+  }, [index, held, reducedMotion, count, show])
 
   if (!current) return null
-  const go = (next: number) => setIndex((next + count) % count)
+  const go = (next: number) => show(next, count)
 
   return (
     <section
-      ref={root}
       aria-roledescription="carousel"
       aria-label="Featured"
-      // Full bleed: break out of the page container to the window edges and
-      // up under the floating bar.
-      className="relative left-1/2 -mt-[calc(env(safe-area-inset-top)+1.5rem)] h-[min(72vh,620px)] min-h-[440px] w-screen -translate-x-1/2 overflow-hidden sm:-mt-24"
+      // Hovering or focusing anywhere in the banner holds the current slide.
+      onMouseEnter={hold}
+      onMouseLeave={release}
+      onFocus={hold}
+      onBlur={(event) => {
+        const next = event.relatedTarget
+        if (!(next instanceof Node && event.currentTarget.contains(next))) {
+          release()
+        }
+      }}
+      className={cn(heroFrame, "overflow-hidden", className)}
     >
       {slides.map((slide, i) => (
-        <Backdrop key={slide.item.id} slide={slide} active={i === index} />
+        <Backdrop key={slide.title.id} slide={slide} active={i === index} />
       ))}
       {/* Darken where the text sits and fade into the page below. */}
       <div
@@ -150,10 +178,16 @@ export function Hero({ slides }: { slides: HeroSlide[] }) {
         aria-hidden
         className="from-background via-background/40 absolute inset-0 bg-gradient-to-t via-35% to-transparent"
       />
+      {top && (
+        // Under the phone header, where a page's content starts.
+        <div className="absolute inset-x-0 top-[calc(env(safe-area-inset-top)+4rem)] z-10 sm:hidden">
+          {top}
+        </div>
+      )}
 
       {slides.map((slide, i) => (
         <SlideContent
-          key={slide.item.id}
+          key={slide.title.id}
           slide={slide}
           active={i === index}
           position={`${i + 1} of ${count}`}
@@ -161,22 +195,36 @@ export function Hero({ slides }: { slides: HeroSlide[] }) {
       ))}
 
       {count > 1 && (
-        <div className="absolute inset-x-0 bottom-6 sm:bottom-10">
-          <div className="mx-auto flex w-full max-w-6xl items-center justify-end gap-3 px-4 sm:px-6 lg:px-8">
-            <nav className="flex items-center gap-1.5" aria-label="Slides">
+        // Phones center the dots under the buttons; desktop sets them level
+        // with the buttons. The full-width strip lets clicks through so it
+        // doesn't cover them; only the controls take pointer events.
+        <div className="pointer-events-none absolute inset-x-0 bottom-3 sm:bottom-12 lg:bottom-[34px] sm:max-lg:[@media(max-height:540px)]:bottom-3">
+          <div
+            className={cn(
+              pageColumn,
+              "flex items-center justify-center gap-3 *:pointer-events-auto sm:justify-end",
+            )}
+          >
+            <nav
+              className="flex items-center gap-1.5 [@media(pointer:coarse)]:gap-0"
+              aria-label="Slides"
+            >
               {slides.map((slide, i) => (
                 <button
-                  key={slide.item.id}
+                  key={slide.title.id}
                   type="button"
                   aria-label={`Show slide ${i + 1}`}
                   aria-current={i === index ? "true" : undefined}
                   onClick={() => go(i)}
-                  className="focus-visible:ring-ring grid h-6 place-items-center rounded-full px-0.5 outline-none focus-visible:ring-2"
+                  // The ring goes round the dot, not the wider tap target.
+                  className="group/dot grid h-6 place-items-center px-0.5 outline-none [@media(pointer:coarse)]:h-8 [@media(pointer:coarse)]:px-1.5"
                 >
                   <span
                     className={cn(
-                      "block h-1.5 rounded-full transition-all motion-reduce:transition-none",
-                      i === index ? "w-5 bg-white" : "w-1.5 bg-white/40",
+                      "group-focus-visible/dot:ring-ring group-focus-visible/dot:ring-offset-background block h-1.5 rounded-full transition-all group-focus-visible/dot:ring-2 group-focus-visible/dot:ring-offset-2 motion-reduce:transition-none",
+                      i === index
+                        ? "w-5 bg-foreground"
+                        : "w-1.5 bg-foreground/40",
                     )}
                   />
                 </button>
@@ -187,7 +235,7 @@ export function Hero({ slides }: { slides: HeroSlide[] }) {
                 type="button"
                 aria-label="Previous slide"
                 onClick={() => go(index - 1)}
-                className="focus-visible:ring-ring grid size-9 place-items-center rounded-full border border-white/15 bg-black/30 text-white backdrop-blur outline-none hover:bg-black/50 focus-visible:ring-2"
+                className="focus-visible:ring-ring text-foreground/75 hover:text-foreground grid size-9 place-items-center rounded-full drop-shadow-[0_1px_4px_rgb(0_0_0/0.5)] transition-colors outline-none focus-visible:ring-2 [&_svg]:size-5"
               >
                 <ChevronLeftIcon className="size-4" />
               </button>
@@ -195,7 +243,7 @@ export function Hero({ slides }: { slides: HeroSlide[] }) {
                 type="button"
                 aria-label="Next slide"
                 onClick={() => go(index + 1)}
-                className="focus-visible:ring-ring grid size-9 place-items-center rounded-full border border-white/15 bg-black/30 text-white backdrop-blur outline-none hover:bg-black/50 focus-visible:ring-2"
+                className="focus-visible:ring-ring text-foreground/75 hover:text-foreground grid size-9 place-items-center rounded-full drop-shadow-[0_1px_4px_rgb(0_0_0/0.5)] transition-colors outline-none focus-visible:ring-2 [&_svg]:size-5"
               >
                 <ChevronRightIcon className="size-4" />
               </button>
@@ -214,23 +262,27 @@ export function Hero({ slides }: { slides: HeroSlide[] }) {
 function TitleMark({ item }: { item: MediaItem }) {
   const label = itemLabel(item)
   const name = label.code ? label.showName : label.title
-  const logo = art(item.title?.images.logo, "large")
+  // Transparent, so no placeholder: it would show as a smudge.
+  const logo = art(item.title?.images.logo, "large")?.src
   const [logoFailed, setLogoFailed] = useState(false)
   if (logo && !logoFailed) {
     return (
-      <h2 className="mt-3">
+      <h2>
         <span className="sr-only">{name}</span>
         <img
           src={logo}
           alt=""
           onError={() => setLogoFailed(true)}
-          className="max-h-24 max-w-[min(80vw,26rem)] object-contain object-left-bottom drop-shadow-[0_2px_12px_rgb(0_0_0/0.5)] sm:max-h-32"
+          className="max-h-[clamp(3.5rem,9svh,6rem)] max-w-[min(80vw,32rem)] object-contain object-left-bottom drop-shadow-[0_2px_12px_rgb(0_0_0/0.5)] sm:max-h-[clamp(3.5rem,16vh,9rem)] lg:max-h-[clamp(6rem,14vh,11rem)]"
         />
       </h2>
     )
   }
   return (
-    <h2 className="mt-2 line-clamp-2 max-w-2xl text-4xl leading-[1.05] font-semibold tracking-tight text-balance text-white sm:text-5xl lg:text-6xl">
+    // Scales with the window's height from `sm` up: on desktop the banner
+    // shares the first screen with the rows below it, and a phone on its
+    // side has little height to give.
+    <h2 className="text-foreground line-clamp-2 max-w-2xl text-4xl leading-[1.05] font-bold tracking-tight text-balance [text-shadow:0_2px_24px_rgb(0_0_0/0.45)] sm:text-[clamp(2.25rem,7vh,3rem)] lg:text-[clamp(3rem,5.5vh,4.5rem)]">
       {name}
     </h2>
   )
@@ -241,24 +293,22 @@ function SlideContent({
   active,
   position,
 }: {
-  slide: HeroSlide
+  slide: FeaturedTitle
   active: boolean
   position: string
 }) {
-  const { item } = slide
+  const { item, title } = slide
   const label = itemLabel(item)
   const code = episodeCode(item)
   const ratio = progressRatio(item)
   const left = timeLeft(item)
-  const meta =
-    slide.reason === "new" && slide.count && slide.count > 1
-      ? [label.year, `${slide.count} episodes`]
-      : [label.year, code ? `${code}: ${label.title}` : null]
-  // New titles introduce themselves; episodes say what happens in them.
-  const overview =
-    slide.reason === "new"
-      ? item.title?.overview
-      : (item.episode?.overview ?? item.title?.overview)
+  // The file Play starts is part way through.
+  const resuming = left !== null && ratio !== null
+  const facts = [
+    label.year,
+    title.kind === "show" && slide.count > 1 ? `${slide.count} episodes` : null,
+  ].filter(Boolean)
+  const genres = title.genres.slice(0, 3)
   return (
     <div
       // The WAI-ARIA carousel pattern marks each slide as a group.
@@ -269,74 +319,94 @@ function SlideContent({
       aria-hidden={!active}
       inert={!active}
       className={cn(
-        "absolute inset-x-0 bottom-20 transition-opacity duration-500 motion-reduce:transition-none sm:bottom-24",
+        "absolute inset-x-0 bottom-12 transition-opacity duration-500 motion-reduce:transition-none sm:bottom-28 lg:bottom-8 sm:max-lg:[@media(max-height:540px)]:bottom-12",
         active ? "opacity-100" : "pointer-events-none opacity-0",
       )}
     >
-      <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
-        <p className="text-sm font-medium text-white/80">{reasonText(slide)}</p>
+      <div className={pageColumn}>
         <TitleMark item={item} />
-        <p className="mt-3 line-clamp-1 max-w-xl text-sm text-white/80 sm:text-base">
-          {meta.filter(Boolean).join(" · ")}
-        </p>
-        {overview && (
-          <p className="mt-2 line-clamp-2 max-w-xl text-sm leading-6 text-white/70 max-sm:hidden">
-            {overview}
+        <div className="text-foreground/80 mt-3 flex max-w-xl flex-wrap items-center gap-x-3 gap-y-1.5 text-sm sm:text-base">
+          {facts.length > 0 && (
+            <span className="line-clamp-1">{facts.join(" · ")}</span>
+          )}
+          {title.contentRating && (
+            <span className="border-foreground/30 rounded border px-1.5 text-xs leading-5 font-medium">
+              {title.contentRating}
+            </span>
+          )}
+          {title.rating !== null && (
+            <span className="inline-flex items-center gap-1 tabular-nums">
+              <StarIcon
+                aria-hidden
+                className="size-3.5 fill-current text-amber-300"
+              />
+              <span className="sr-only">Rated</span>
+              {title.rating.toFixed(1)}
+            </span>
+          )}
+        </div>
+        {genres.length > 0 && (
+          // Short phones give the banner too little room for them.
+          <ul
+            aria-label="Genres"
+            className="mt-3 flex flex-wrap gap-1.5 sm:max-lg:[@media(max-height:540px)]:hidden max-sm:[@media(max-height:860px)]:hidden"
+          >
+            {genres.map((genre) => (
+              <li key={genre}>
+                <Link
+                  to="/genres/$genre"
+                  params={{ genre }}
+                  className="border-foreground/15 bg-background/30 text-foreground/85 hover:border-foreground/35 hover:text-foreground focus-visible:ring-ring block rounded-full border px-2.5 py-0.5 text-xs backdrop-blur-sm outline-none focus-visible:ring-2"
+                >
+                  {genre}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+        {title.overview && (
+          // Short windows give the banner too little room for it.
+          <p className="text-foreground/70 mt-2 line-clamp-3 max-w-xl text-sm leading-6 max-sm:hidden sm:max-lg:[@media(max-height:700px)]:hidden lg:[@media(max-height:880px)]:hidden">
+            {title.overview}
           </p>
         )}
-        {slide.reason === "resume" && ratio !== null && (
+        {resuming && (
           <div className="mt-4 flex max-w-xs items-center gap-3">
             <span
               aria-hidden
-              className="h-1 flex-1 overflow-hidden rounded-full bg-white/25"
+              className="bg-foreground/25 h-1 flex-1 overflow-hidden rounded-full"
             >
               <span
-                className="block h-full rounded-full bg-white"
+                className="bg-foreground block h-full rounded-full"
                 style={{ width: `${Math.min(100, ratio * 100)}%` }}
               />
             </span>
-            <span className="text-xs text-white/80 tabular-nums">{left}</span>
+            <span className="text-foreground/80 text-xs tabular-nums">
+              {code ? `${code} · ${left}` : left}
+            </span>
           </div>
         )}
-        <div className="mt-6 flex gap-2">
+        <div className="mt-4 flex gap-2 sm:mt-6 sm:max-lg:[@media(max-height:540px)]:mt-4">
           <Link
             to="/watch/$itemId"
             params={{ itemId: item.id }}
             className={buttonVariants({ size: "lg", className: heroButton })}
           >
             <PlayIcon className="fill-current" />
-            {slide.reason === "resume" ? "Resume" : "Play"}
+            {resuming ? "Resume" : "Play"}
           </Link>
-          {item.title && item.title.kind !== "folder" ? (
-            <Link
-              to="/titles/$titleId"
-              params={{ titleId: item.title.id }}
-              className={buttonVariants({
-                size: "lg",
-                variant: "secondary",
-                className: cn(heroButton, heroSecondary),
-              })}
-            >
-              {item.title.kind === "show" ? <ListIcon /> : <InfoIcon />}
-              {item.title.kind === "show" ? "Episodes" : "Details"}
-            </Link>
-          ) : (
-            label.code && (
-              <Link
-                to="/libraries/$libraryId"
-                params={{ libraryId: item.libraryId }}
-                search={{ show: label.showKey }}
-                className={buttonVariants({
-                  size: "lg",
-                  variant: "secondary",
-                  className: cn(heroButton, heroSecondary),
-                })}
-              >
-                <ListIcon />
-                Episodes
-              </Link>
-            )
-          )}
+          <Link
+            to="/titles/$titleId"
+            params={{ titleId: title.id }}
+            className={buttonVariants({
+              size: "lg",
+              variant: "secondary",
+              className: cn(heroButton, heroSecondary),
+            })}
+          >
+            {title.kind === "show" ? <ListIcon /> : <InfoIcon />}
+            {title.kind === "show" ? "Episodes" : "Details"}
+          </Link>
         </div>
       </div>
     </div>

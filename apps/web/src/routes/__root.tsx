@@ -3,6 +3,10 @@ import { TooltipProvider } from "@matinee/ui/components/tooltip"
 import type { QueryClient } from "@tanstack/react-query"
 import { createRootRouteWithContext, Outlet } from "@tanstack/react-router"
 
+import { PageScrollbar } from "@/components/page-scrollbar"
+import { PlaybackAccountSync } from "@/lib/playback-sync"
+import { ServerThemeAccents, ThemeAccountSync } from "@/lib/theme-sync"
+
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   {
     component: Root,
@@ -12,11 +16,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 function Root() {
   return (
     <TooltipProvider>
+      <ServerThemeAccents />
+      <ThemeAccountSync />
+      <PlaybackAccountSync />
       <Outlet />
+      <PageScrollbar />
       <Toaster
-        position="bottom-right"
-        // On phones, clear the bottom tab bar.
-        mobileOffset={{ bottom: "calc(env(safe-area-inset-bottom) + 84px)" }}
+        // Above the home indicator.
+        mobileOffset={{ bottom: "calc(env(safe-area-inset-bottom) + 16px)" }}
       />
     </TooltipProvider>
   )

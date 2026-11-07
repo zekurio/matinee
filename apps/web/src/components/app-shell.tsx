@@ -1,4 +1,5 @@
 import type { Library, User } from "@matinee/contracts"
+import { DrawerTitle } from "@matinee/ui/components/drawer"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,112 +13,76 @@ import { cn } from "@matinee/ui/lib/utils"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router"
 import {
+  ChartColumnIcon,
   CheckIcon,
   ChevronDownIcon,
   FilmIcon,
-  FolderIcon,
   HouseIcon,
   LibraryBigIcon,
   LogOutIcon,
   SettingsIcon,
+  ShieldIcon,
   TvIcon,
+  UserRoundIcon,
 } from "lucide-react"
 import {
   type ComponentProps,
   type ComponentType,
-  createContext,
   type ReactNode,
-  useContext,
   useEffect,
-  useMemo,
-  useState,
 } from "react"
-import { createPortal } from "react-dom"
 
 import { client, orpc } from "@/lib/rpc"
 import { useOpenSettings } from "@/lib/settings"
+import { useSearchSpotlightStore } from "@/stores/search-spotlight"
 
 import { LogoMark } from "./brand"
+import { SearchButton, SearchSpotlight } from "./search/search-spotlight"
+import { SheetItem, SheetMenu, SheetSeparator, usePhone } from "./sheet-menu"
+import { UserAvatar } from "./user-avatar"
 
 export const libraryIcons = {
   movies: FilmIcon,
   shows: TvIcon,
-  other: FolderIcon,
 } satisfies Record<Library["kind"], ComponentType<{ className?: string }>>
 
 // Past this many libraries, the bar folds them into one menu.
 const INLINE_LIBRARIES = 3
 
+/**
+ * The page column: the full window with a fixed gutter, like Jellyfin, so
+ * big screens fit more cards instead of more margin. Capped only on very
+ * wide screens. Full-bleed sections use it to line up with the page.
+ */
+export const pageColumn = "mx-auto w-full max-w-[160rem] px-4 sm:px-6 lg:px-14"
+
+/**
+ * Where a page's content starts: below the phone header, or the floating
+ * bar from `sm` up. `<main>` pads its top by this much.
+ */
+const pageTop = "pt-[calc(env(safe-area-inset-top)+4rem)] sm:pt-24"
+
+/**
+ * Breaks a page's top section out of the column to the window edges and up
+ * under the header or bar, for a backdrop behind it. The negative margin
+ * cancels `<main>`'s top padding. Negative margins, not a -50% translate,
+ * which lands on a half pixel at odd window widths.
+ */
+export const pageBleed =
+  "relative mx-[calc(50%-50vw)] -mt-[calc(env(safe-area-inset-top)+4rem)] w-screen sm:-mt-24"
+
 /** Shared look for everything that sits inside the bar. */
-export const pillItem =
-  "inline-flex h-9 min-w-9 shrink-0 items-center justify-center gap-0 rounded-full px-2.5 sm:gap-1.5 [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:min-w-11 text-sm font-medium text-foreground/70 outline-none transition-colors hover:bg-white/[0.06] hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring sm:px-3 [&_svg]:size-4 [&_svg]:shrink-0"
-const pillActive = "bg-white/10 text-foreground"
+const pillItem =
+  "inline-flex h-9 min-w-9 shrink-0 items-center justify-center gap-1.5 rounded-full px-3 [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:min-w-11 text-sm font-medium text-foreground/70 outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring [&_svg]:size-4 [&_svg]:shrink-0"
+const pillActive = "bg-foreground/10 text-foreground"
 
-/** The translucent capsule the bar and its phone accessories sit in. */
-export const glass =
-  "bg-background/60 rounded-full border border-white/10 p-1 shadow-lg shadow-black/40 backdrop-blur-xl backdrop-saturate-150"
+/** The translucent capsule the bar sits in. */
+const glass =
+  "bg-background/60 rounded-full border border-foreground/10 p-1 shadow-[0_6px_20px_-8px_rgb(0_0_0/0.25)] dark:shadow-[0_8px_24px_-6px_rgb(0_0_0/0.6)] backdrop-blur-xl backdrop-saturate-150"
 
-type BarSlot = {
-  node: HTMLElement | null
-  /** Hides the tabs so an accessory can take the whole bar. */
-  setExpanded: (expanded: boolean) => void
-}
-
-const BarSlotContext = createContext<BarSlot | null>(null)
-
-/**
- * Renders page controls, like search, in the phone tab bar beside the tabs.
- * Renders nothing from `sm` up, where pages keep them in their header.
- */
-export function BarAccessory({
-  expanded = false,
-  children,
-}: {
-  /** Take the whole bar, hiding the tabs. */
-  expanded?: boolean
-  children: ReactNode
-}) {
-  const slot = useContext(BarSlotContext)
-  const setExpanded = slot?.setExpanded
-  useEffect(() => {
-    if (!setExpanded) return
-    setExpanded(expanded)
-    return () => setExpanded(false)
-  }, [expanded, setExpanded])
-  return slot?.node ? createPortal(children, slot.node) : null
-}
-
-/**
- * Tracks the on-screen keyboard in `--keyboard-inset`, so the phone bar can
- * sit on top of it instead of behind it. Browsers that shrink the layout
- * viewport for the keyboard report 0 and need no help.
- */
-function useKeyboardInset() {
-  useEffect(() => {
-    const viewport = window.visualViewport
-    if (!viewport) return
-    const root = document.documentElement
-    const update = () => {
-      // Pinch zoom shrinks the visual viewport too; that isn't a keyboard.
-      const inset =
-        Math.abs(viewport.scale - 1) > 0.01
-          ? 0
-          : window.innerHeight - viewport.height - viewport.offsetTop
-      root.style.setProperty(
-        "--keyboard-inset",
-        `${Math.max(0, Math.round(inset))}px`,
-      )
-    }
-    update()
-    viewport.addEventListener("resize", update)
-    viewport.addEventListener("scroll", update)
-    return () => {
-      viewport.removeEventListener("resize", update)
-      viewport.removeEventListener("scroll", update)
-      root.style.removeProperty("--keyboard-inset")
-    }
-  }, [])
-}
+/** A round icon button in the phone header. */
+const headerButton =
+  "focus-visible:ring-ring text-foreground/80 hover:text-foreground inline-flex size-11 shrink-0 items-center justify-center rounded-full outline-none transition-colors focus-visible:ring-2 [&_svg]:size-5.5"
 
 function useSignOut() {
   const queryClient = useQueryClient()
@@ -150,33 +115,15 @@ function CurrentItem({
   )
 }
 
-/**
- * A tab's name. On phones only the active tab shows it, expanding beside the
- * icon like an iOS tab bar; collapsed names stay readable to screen readers.
- */
+/** A tab's name, cut short with an ellipsis when the bar runs out of room. */
 function NavLabel({
-  active,
   children,
   className,
 }: {
-  active: boolean
   children: ReactNode
   className?: string
 }) {
-  return (
-    <span
-      className={cn(
-        "overflow-hidden text-ellipsis whitespace-nowrap",
-        "max-sm:transition-[max-width,opacity,margin] max-sm:duration-300 motion-reduce:transition-none",
-        active
-          ? "max-sm:ml-1.5 max-sm:max-w-36 max-sm:opacity-100"
-          : "max-sm:max-w-0 max-sm:opacity-0",
-        className,
-      )}
-    >
-      {children}
-    </span>
-  )
+  return <span className={cn("min-w-0 truncate", className)}>{children}</span>
 }
 
 /** A link in the bar. */
@@ -199,19 +146,23 @@ function PillLink({
       params={params}
       activeOptions={{ exact, includeSearch: false }}
       activeProps={{ className: pillActive }}
+      // A clicked link keeps focus, and the first key after, like Space to
+      // scroll the page, would ring it. Enter from a keyboard keeps focus.
+      onClick={(event) => {
+        if (event.detail > 0) event.currentTarget.blur()
+      }}
       className={pillItem}
     >
-      {({ isActive }) => (
-        <>
-          <Icon />
-          <NavLabel active={isActive}>{children}</NavLabel>
-        </>
-      )}
+      <Icon />
+      <NavLabel>{children}</NavLabel>
     </Link>
   )
 }
 
-/** Libraries inline while there are few, one menu once there are many. */
+/**
+ * Libraries inline while there are few, one menu once there are many.
+ * Phones move between them with the library chips instead.
+ */
 function LibraryLinks() {
   const libraries = useQuery(orpc.libraries.list.queryOptions())
   const navigate = useNavigate()
@@ -234,19 +185,23 @@ function LibraryLinks() {
   const current = list.find((library) =>
     pathname.startsWith(`/libraries/${library.id}`),
   )
+  const open = (library: Library) =>
+    void navigate({
+      to: "/libraries/$libraryId",
+      params: { libraryId: library.id },
+    })
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
         className={cn(
           pillItem,
           current && pillActive,
-          "data-popup-open:bg-white/10",
+          "data-popup-open:bg-foreground/10",
         )}
       >
         <LibraryBigIcon />
-        <NavLabel active={current !== undefined}>
-          {current?.name ?? "Libraries"}
-        </NavLabel>
+        <NavLabel>{current?.name ?? "Libraries"}</NavLabel>
         <ChevronDownIcon className="text-muted-foreground !size-3.5" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="center" sideOffset={8} className="min-w-52">
@@ -256,12 +211,7 @@ function LibraryLinks() {
             <CurrentItem
               key={library.id}
               current={library.id === current?.id}
-              onClick={() =>
-                void navigate({
-                  to: "/libraries/$libraryId",
-                  params: { libraryId: library.id },
-                })
-              }
+              onClick={() => open(library)}
             >
               <Icon />
               {library.name}
@@ -273,55 +223,130 @@ function LibraryLinks() {
   )
 }
 
+/** The account's name, with a shield for admins. */
+function AccountName({ user }: { user: User }) {
+  return (
+    <>
+      <span className="truncate">{user.displayName ?? user.username}</span>
+      {user.role === "admin" && (
+        <ShieldIcon
+          role="img"
+          aria-label="Admin"
+          className="text-muted-foreground size-3.5 shrink-0"
+        />
+      )}
+    </>
+  )
+}
+
 function AccountMenu({ user }: { user: User }) {
   const signOut = useSignOut()
   const openSettings = useOpenSettings()
+  const navigate = useNavigate()
+  const phone = usePhone()
   const name = user.displayName ?? user.username
+  const actions = [
+    {
+      label: "Profile",
+      icon: UserRoundIcon,
+      run: () =>
+        void navigate({
+          to: "/profiles/$username",
+          params: { username: user.username },
+        }),
+    },
+    {
+      label: "Statistics",
+      icon: ChartColumnIcon,
+      run: () => void navigate({ to: "/stats" }),
+    },
+    { label: "Settings", icon: SettingsIcon, run: () => openSettings() },
+  ]
+  const trigger = phone ? (
+    <button
+      type="button"
+      aria-label={`Account: ${name}`}
+      className={cn(headerButton, "data-popup-open:bg-foreground/10")}
+    >
+      <UserAvatar user={user} className="size-9 text-sm" />
+    </button>
+  ) : (
+    <button
+      type="button"
+      aria-label={`Account: ${name}`}
+      className={cn(pillItem, "gap-2 pl-1", "data-popup-open:bg-foreground/10")}
+    >
+      <UserAvatar user={user} className="size-7 text-xs" />
+      <NavLabel className="max-w-32">{name}</NavLabel>
+      <ChevronDownIcon className="text-muted-foreground !size-3.5" />
+    </button>
+  )
+
+  if (phone) {
+    return (
+      <SheetMenu
+        trigger={trigger}
+        header={
+          <div className="flex items-center gap-3 px-5 pt-3 pb-2">
+            <UserAvatar user={user} className="size-11 text-base" />
+            <div className="min-w-0">
+              <DrawerTitle className="flex items-center gap-1.5 text-base">
+                <AccountName user={user} />
+              </DrawerTitle>
+              {user.displayName && (
+                <p className="text-muted-foreground truncate text-sm">
+                  @{user.username}
+                </p>
+              )}
+            </div>
+          </div>
+        }
+      >
+        {actions.map((action) => (
+          <SheetItem key={action.label} icon={action.icon} onClick={action.run}>
+            {action.label}
+          </SheetItem>
+        ))}
+        <SheetSeparator />
+        <SheetItem
+          icon={LogOutIcon}
+          destructive
+          onClick={() => signOut.mutate()}
+        >
+          Sign out
+        </SheetItem>
+      </SheetMenu>
+    )
+  }
+
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger
-        aria-label={`Account: ${name}`}
-        className={cn(
-          pillItem,
-          "gap-2 pl-1 sm:pl-1",
-          "data-popup-open:bg-white/10",
-        )}
-      >
-        <span
-          aria-hidden
-          className="bg-secondary text-secondary-foreground grid size-7 place-items-center rounded-full text-xs font-semibold"
-        >
-          {name.slice(0, 1).toUpperCase()}
-        </span>
-        <NavLabel active={false} className="sm:max-w-32">
-          {name}
-        </NavLabel>
-        <ChevronDownIcon className="text-muted-foreground !size-3.5 max-sm:hidden" />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" sideOffset={8} className="min-w-56">
+      <DropdownMenuTrigger render={trigger} />
+      <DropdownMenuContent align="center" sideOffset={8} className="min-w-52">
         <DropdownMenuGroup>
           <DropdownMenuLabel className="font-normal">
-            <span className="text-foreground block truncate text-sm font-medium">
-              {name}
+            <span className="text-foreground flex items-center gap-1.5 text-sm font-medium">
+              <AccountName user={user} />
             </span>
-            <span className="text-muted-foreground block truncate text-xs">
-              {user.role === "admin" ? "Admin" : `@${user.username}`}
-            </span>
+            {user.displayName && (
+              <span className="text-muted-foreground block truncate text-xs">
+                @{user.username}
+              </span>
+            )}
           </DropdownMenuLabel>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        {user.role === "admin" && (
-          <DropdownMenuItem onClick={() => openSettings("libraries")}>
-            <LibraryBigIcon />
-            Manage libraries
+        {actions.map((action) => (
+          <DropdownMenuItem key={action.label} onClick={action.run}>
+            <action.icon />
+            {action.label}
           </DropdownMenuItem>
-        )}
-        <DropdownMenuItem onClick={() => openSettings()}>
-          <SettingsIcon />
-          Settings
-        </DropdownMenuItem>
+        ))}
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => signOut.mutate()}>
+        <DropdownMenuItem
+          variant="destructive"
+          onClick={() => signOut.mutate()}
+        >
           <LogOutIcon />
           Sign out
         </DropdownMenuItem>
@@ -331,55 +356,41 @@ function AccountMenu({ user }: { user: User }) {
 }
 
 /**
- * The floating bar: a translucent pill centred over the content, so pages
- * use the full width instead of sharing it with a sidebar. On phones it sits
- * at the bottom, with room beside it for a page's accessory.
+ * The floating bar, from `sm` up: a translucent pill centred at the top, so
+ * pages use the full width instead of sharing it with a sidebar.
  */
-function NavBar({
-  user,
-  expanded,
-  onSlot,
-}: {
-  user: User
-  expanded: boolean
-  onSlot: (node: HTMLElement | null) => void
-}) {
+function NavBar({ user }: { user: User }) {
   return (
     <>
       {/* Content fades out as it scrolls under the bar. */}
       <div
         aria-hidden
-        className="from-background/90 via-background/50 pointer-events-none fixed inset-x-0 top-0 z-30 h-24 bg-gradient-to-b to-transparent max-sm:hidden"
+        className="from-background/90 via-background/50 pointer-events-none fixed inset-x-0 top-0 z-30 h-24 bg-gradient-to-b to-transparent"
       />
-      <div
-        aria-hidden
-        className="from-background via-background/70 pointer-events-none fixed inset-x-0 bottom-0 z-30 h-28 bg-gradient-to-t to-transparent sm:hidden"
-      />
-      <div
-        // Phones: a floating tab bar above the home indicator, or above the
-        // keyboard while it's open. Wider screens: the same pill at the top.
-        className="pointer-events-none fixed inset-x-0 bottom-[max(calc(env(safe-area-inset-bottom)+12px),calc(var(--keyboard-inset,0px)+8px))] z-40 flex justify-center gap-2 px-3 sm:top-4 sm:bottom-auto"
-      >
+      <div className="pointer-events-none fixed inset-x-0 top-4 z-40 flex justify-center px-3">
         <nav
           aria-label="Main"
           className={cn(
             glass,
             "pointer-events-auto flex max-w-full min-w-0 items-center gap-0.5",
-            expanded && "max-sm:hidden",
           )}
         >
           <Link
             to="/"
             aria-label="Matinee home"
-            className="focus-visible:ring-ring grid size-9 shrink-0 place-items-center rounded-full outline-none focus-visible:ring-2 max-sm:hidden [@media(pointer:coarse)]:size-11"
+            // The bar's rounded end makes the left side read tighter, so the
+            // mark gets less room on the right, toward the divider.
+            className="focus-visible:ring-ring inline-flex h-9 shrink-0 items-center rounded-full pr-2 pl-3 outline-none focus-visible:ring-2 [@media(pointer:coarse)]:h-11"
           >
             <LogoMark className="size-6" />
           </Link>
           <span
             aria-hidden
-            className="mx-1 h-5 w-px shrink-0 bg-white/10 max-sm:hidden"
+            className="bg-foreground/10 mx-1 h-5 w-px shrink-0"
           />
-          <div className="flex min-w-0 [scrollbar-width:none] items-center gap-0.5 overflow-x-auto">
+          {/* A scroller clips both ways, so it pads out the width of a
+              focus ring and takes the room back with a negative margin. */}
+          <div className="-m-0.5 flex min-w-0 [scrollbar-width:none] items-center gap-0.5 overflow-x-auto p-0.5">
             <PillLink to="/" exact icon={HouseIcon}>
               Home
             </PillLink>
@@ -387,13 +398,48 @@ function NavBar({
           </div>
           <span
             aria-hidden
-            className="mx-1 h-5 w-px shrink-0 bg-white/10 max-sm:hidden"
+            className="bg-foreground/10 mx-1 h-5 w-px shrink-0"
           />
+          <SearchButton className={cn(pillItem, "px-0")} />
           <AccountMenu user={user} />
         </nav>
-        <div ref={onSlot} className="pointer-events-auto contents sm:hidden" />
       </div>
     </>
+  )
+}
+
+/**
+ * The phone header: the logo home, search, and the account. It sits at the
+ * top of the page and scrolls away with it, over Home's banner art. Pages
+ * put what else belongs up there, like the library chips, under it.
+ */
+function PhoneHeader({ user }: { user: User }) {
+  return (
+    <header className="absolute inset-x-0 top-0 z-30 pt-[env(safe-area-inset-top)]">
+      {/* Keeps the header readable over bright art. */}
+      <div
+        aria-hidden
+        className="from-background/70 pointer-events-none absolute inset-x-0 top-0 -bottom-10 bg-gradient-to-b to-transparent"
+      />
+      <div
+        className={cn(
+          pageColumn,
+          "relative flex h-14 items-center justify-between gap-2",
+        )}
+      >
+        <Link
+          to="/"
+          aria-label="Matinee home"
+          className="focus-visible:ring-ring -ml-1.5 grid size-11 place-items-center rounded-full outline-none focus-visible:ring-2"
+        >
+          <LogoMark className="size-7" />
+        </Link>
+        <div className="-mr-1.5 flex items-center">
+          <SearchButton className={headerButton} />
+          <AccountMenu user={user} />
+        </div>
+      </div>
+    </header>
   )
 }
 
@@ -404,28 +450,32 @@ export function AppShell({
   user: User
   children: ReactNode
 }) {
-  const [node, setNode] = useState<HTMLElement | null>(null)
-  const [expanded, setExpanded] = useState(false)
-  const slot = useMemo(() => ({ node, setExpanded }), [node])
-  useKeyboardInset()
+  const phone = usePhone()
+  // A shell that mounts again, after signing out and in, starts with an
+  // empty search.
+  useEffect(() => () => useSearchSpotlightStore.getState().reset(), [])
   return (
     // Clips the full-bleed hero's 100vw width so it never adds a
     // horizontal scrollbar.
-    <div className="min-h-dvh overflow-x-clip">
+    <div className="relative min-h-dvh overflow-x-clip">
       <a
         href="#main"
         className="bg-primary text-primary-foreground sr-only rounded-md px-3 py-2 text-sm font-medium focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50"
       >
         Skip to content
       </a>
-      <NavBar user={user} expanded={expanded} onSlot={setNode} />
-      {/* Padding clears the bar: bottom on phones, top from sm up. */}
+      {phone ? <PhoneHeader user={user} /> : <NavBar user={user} />}
+      <SearchSpotlight />
       <main
         id="main"
         tabIndex={-1}
-        className="mx-auto w-full max-w-6xl px-4 pt-[calc(env(safe-area-inset-top)+1.5rem)] pb-[calc(env(safe-area-inset-bottom)+7rem)] outline-none sm:px-6 sm:pt-24 sm:pb-12 lg:px-8"
+        className={cn(
+          pageColumn,
+          pageTop,
+          "pb-[calc(env(safe-area-inset-bottom)+2rem)] outline-none sm:pb-12",
+        )}
       >
-        <BarSlotContext value={slot}>{children}</BarSlotContext>
+        {children}
       </main>
     </div>
   )
