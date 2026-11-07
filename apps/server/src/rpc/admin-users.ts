@@ -1,57 +1,29 @@
-import type { AdminUser, InviteLink } from "@matinee/contracts"
-import {
-  invite,
-  type InviteRow,
-  oidcAccount,
-  passkey,
-  session,
-  user,
-  type UserRow,
-} from "@matinee/db"
-import { and, asc, count, desc, eq, gt, inArray, max, sql } from "drizzle-orm"
-import { alias } from "drizzle-orm/pg-core"
+import type { AdminUser } from "@matinee/contracts"
+import { oidcAccount, passkey, session, user, type UserRow } from "@matinee/db"
+import { asc, count, eq, inArray, max, sql } from "drizzle-orm"
 
-import { inviteUrl, issueInvite } from "../auth/invites"
+import { deleteAvatarFile } from "../auth/avatars"
 import { deleteUserSessions, publicUser, signOut } from "../auth/session"
-import {
-  insertUser,
-  lockUsers,
-  otherAdminCanSignIn,
-  type Tx,
-  usernameTaken,
-} from "../auth/users"
+import { lockUsers, otherAdminCanSignIn, type Tx } from "../auth/users"
 import { db } from "../db"
 import { log } from "../log"
 import { admin, badRequest, forbidden, notFound } from "./base"
 
 const USER_GONE = "That user no longer exists. Reload the list."
 
-const creator = alias(user, "creator")
-
-function publicLink(row: InviteRow, createdBy: string | null): InviteLink {
-  return {
-    id: row.id,
-    kind: row.kind,
-    createdAt: row.createdAt,
-    expiresAt: row.expiresAt,
-    createdBy,
-  }
-}
-
 async function toAdminUsers(rows: UserRow[]): Promise<AdminUser[]> {
   if (rows.length === 0) return []
   const ids = rows.map((row) => row.id)
-  const [passkeys, accounts, sessions, links] = await Promise.all([
+  const [passkeys, accounts, sessions] = await Promise.all([
     db
       .select({ userId: passkey.userId, n: count() })
       .from(passkey)
       .where(inArray(passkey.userId, ids))
       .groupBy(passkey.userId),
     db
-      .select({ userId: oidcAccount.userId, n: count() })
+      .select({ userId: oidcAccount.userId })
       .from(oidcAccount)
-      .where(inArray(oidcAccount.userId, ids))
-      .groupBy(oidcAccount.userId),
+      .where(inArray(oidcAccount.userId, ids)),
     db
       .select({
         userId: session.userId,
@@ -63,26 +35,17 @@ async function toAdminUsers(rows: UserRow[]): Promise<AdminUser[]> {
       .from(session)
       .where(inArray(session.userId, ids))
       .groupBy(session.userId),
-    db
-      .select({ invite, createdBy: creator.username })
-      .from(invite)
-      .leftJoin(creator, eq(creator.id, invite.createdBy))
-      .where(and(inArray(invite.userId, ids), gt(invite.expiresAt, new Date())))
-      .orderBy(desc(invite.createdAt)),
   ])
   const passkeyCount = new Map(passkeys.map((row) => [row.userId, row.n]))
-  const accountCount = new Map(accounts.map((row) => [row.userId, row.n]))
+  const linked = new Set(accounts.map((row) => row.userId))
   const activity = new Map(sessions.map((row) => [row.userId, row]))
   return rows.map((row) => ({
     ...publicUser(row),
     createdAt: row.createdAt,
     lastSeenAt: activity.get(row.id)?.lastSeenAt ?? null,
     passkeys: passkeyCount.get(row.id) ?? 0,
-    oidcAccounts: accountCount.get(row.id) ?? 0,
+    oidcLinked: linked.has(row.id),
     sessions: activity.get(row.id)?.live ?? 0,
-    links: links
-      .filter((link) => link.invite.userId === row.id)
-      .map((link) => publicLink(link.invite, link.createdBy)),
   }))
 }
 
@@ -132,53 +95,10 @@ function lastAdminMessage(
     : `You're the only admin who can sign in. ${fix} before you delete your account.`
 }
 
-/** A passkey or linked account, whether or not single sign-on is on. */
-async function hasSignInMethod(tx: Tx, userId: string): Promise<boolean> {
-  const [key] = await tx
-    .select({ id: passkey.id })
-    .from(passkey)
-    .where(eq(passkey.userId, userId))
-    .limit(1)
-  if (key) return true
-  const [account] = await tx
-    .select({ id: oidcAccount.id })
-    .from(oidcAccount)
-    .where(eq(oidcAccount.userId, userId))
-    .limit(1)
-  return account !== undefined
-}
-
 export const adminUsers = {
   list: admin.admin.users.list.handler(async () =>
     toAdminUsers(await db.select().from(user).orderBy(asc(user.createdAt))),
   ),
-
-  create: admin.admin.users.create.handler(async ({ context, input }) => {
-    const { row, issued } = await db.transaction(async (tx) => {
-      await lockAsAdmin(tx, context.user.id)
-      if (await usernameTaken(input.username, tx)) {
-        throw badRequest("That username is taken. Pick another.")
-      }
-      const created = await insertUser(tx, {
-        username: input.username,
-        role: input.role,
-      })
-      const link = await issueInvite(tx, {
-        userId: created.id,
-        kind: "invite",
-        createdBy: context.user.id,
-      })
-      return { row: created, issued: link }
-    })
-    log.info(
-      `${context.user.username} created ${row.role} ${row.username} with an invite link`,
-    )
-    return {
-      user: await toAdminUser(row),
-      link: publicLink(issued.row, context.user.username),
-      url: inviteUrl(issued.token),
-    }
-  }),
 
   setRole: admin.admin.users.setRole.handler(async ({ context, input }) => {
     const row = await db.transaction(async (tx) => {
@@ -207,8 +127,8 @@ export const adminUsers = {
   }),
 
   remove: admin.admin.users.remove.handler(async ({ context, input }) => {
-    // Sessions, passkeys, linked accounts, links, and watch progress go with
-    // the user through their foreign keys.
+    // Sessions, passkeys, linked accounts, and watch progress go with the
+    // user through their foreign keys.
     const removed = await db.transaction(async (tx) => {
       const target = await lockedUser(tx, input.id, context.user.id)
       if (
@@ -221,6 +141,7 @@ export const adminUsers = {
       return target
     })
     log.info(`${context.user.username} deleted ${removed.username}`)
+    await deleteAvatarFile(removed.avatarId)
     if (removed.id === context.user.id) await signOut(context.hono)
   }),
 
@@ -240,47 +161,4 @@ export const adminUsers = {
     )
     return { ended }
   }),
-
-  links: {
-    create: admin.admin.users.links.create.handler(
-      async ({ context, input }) => {
-        const { target, issued } = await db.transaction(async (tx) => {
-          // Holds off a delete of the user until the link is stored, and a
-          // second link request until this one has replaced the old links.
-          const [row] = await tx
-            .select()
-            .from(user)
-            .where(eq(user.id, input.userId))
-            .for("no key update")
-          if (!row) throw notFound(USER_GONE)
-          const kind = (await hasSignInMethod(tx, row.id))
-            ? "recovery"
-            : "invite"
-          const link = await issueInvite(tx, {
-            userId: row.id,
-            kind,
-            createdBy: context.user.id,
-          })
-          return { target: row, issued: link }
-        })
-        log.info(
-          `${context.user.username} made a ${issued.row.kind} link for ${target.username}`,
-        )
-        return {
-          link: publicLink(issued.row, context.user.username),
-          url: inviteUrl(issued.token),
-        }
-      },
-    ),
-
-    revoke: admin.admin.users.links.revoke.handler(async ({ input }) => {
-      const deleted = await db
-        .delete(invite)
-        .where(eq(invite.id, input.id))
-        .returning({ id: invite.id })
-      if (deleted.length === 0) {
-        throw notFound("That link was already used or revoked.")
-      }
-    }),
-  },
 }

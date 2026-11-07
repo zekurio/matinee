@@ -3,9 +3,9 @@ import {
   type OidcSettingsInput,
   type SecretSource,
 } from "@matinee/contracts"
+import { t } from "@matinee/contracts/schema"
 import { setting } from "@matinee/db"
 import { eq, inArray } from "drizzle-orm"
-import { z } from "zod"
 
 import { db } from "../db"
 import { env } from "../env"
@@ -30,7 +30,7 @@ const TEXT_FIELDS = [
 ] as const
 
 const SavedOidc = OidcSettings.partial()
-const SavedSecret = z.object({ value: z.string().min(1) })
+const SavedSecret = t.object({ value: t.string().min(1) })
 
 type Saved = { oidc: Partial<OidcSettings>; secret: string | null }
 
@@ -104,6 +104,14 @@ function resolve(current: Saved): OidcState {
 /** Whether sign-in can use these settings. */
 export function isActive(settings: OidcSettings): boolean {
   return settings.enabled && Boolean(settings.issuerUrl && settings.clientId)
+}
+
+/**
+ * Whether two issuers are the same provider. An ID token's `iss` can differ
+ * from the configured issuer URL by a trailing slash.
+ */
+export function sameIssuer(a: string, b: string): boolean {
+  return a.replace(/\/+$/, "") === b.replace(/\/+$/, "")
 }
 
 export async function oidcState(): Promise<OidcState> {

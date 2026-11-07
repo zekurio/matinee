@@ -1,22 +1,27 @@
 import {
   AUTH_ERROR_QUERY_KEY,
-  InviteToken,
-  invitePagePath,
   OIDC_CALLBACK_PATH,
   type OidcMode,
 } from "@matinee/contracts"
-import { oidcAccount, user } from "@matinee/db"
-import { and, eq } from "drizzle-orm"
+import { t } from "@matinee/contracts/schema"
 import { type Context, Hono } from "hono"
 import { deleteCookie, getCookie, setCookie } from "hono/cookie"
 import * as client from "openid-client"
-import { z } from "zod"
 
-import { db } from "../db"
 import { env } from "../env"
 import { log } from "../log"
+import { PictureUrl } from "./avatars"
 import { consumeChallenge, createChallenge } from "./challenges"
-import { consumeInvite, findInvite, INVITE_GONE } from "./invites"
+import {
+  createOidcUser,
+  linkedUserId,
+  linkOidcAccount,
+  NO_LINKED_ACCOUNT,
+  OidcError,
+  type OidcIdentity,
+  takePicture,
+} from "./oidc-accounts"
+import { linkPagePath, savePendingLink } from "./oidc-pending"
 import { activeOidc, type OidcState } from "./oidc-settings"
 import { readSession, signIn } from "./session"
 import {
@@ -25,33 +30,27 @@ import {
   markSetupDone,
   setupRequired,
 } from "./setup"
-import { availableUsername, insertUser, lockUsers } from "./users"
+import { findUserByUsernameHint } from "./users"
 
 const FLOW_COOKIE = "matinee_oidc"
 const FLOW_TTL_MS = 10 * 60 * 1000
 const REDIRECT_URI = `${env.PUBLIC_URL}${OIDC_CALLBACK_PATH}`
 
-class OidcFlowError extends Error {}
+const Mode = t.enum(["sign-in", "link"]) satisfies t.Type<OidcMode>
 
-const Mode = z.enum(["sign-in", "link", "invite"]) satisfies z.ZodType<OidcMode>
-/** The modes `/start` takes. Invites go through `/invite`. */
-const StartMode = z.enum(["sign-in", "link"])
-
-/** What `/start` and `/invite` store with the challenge. */
-const OidcFlow = z.object({
-  codeVerifier: z.string(),
-  nonce: z.string(),
+/** What `/start` stores with the challenge. */
+const OidcFlow = t.object({
+  codeVerifier: t.string(),
+  nonce: t.string(),
   mode: Mode,
-  setup: z.boolean(),
-  userId: z.string().nullable(),
-  /** The invite or recovery link being used. Never its token. */
-  inviteId: z.string().nullable().default(null),
-  redirect: z.string(),
+  setup: t.boolean(),
+  userId: t.string().nullable(),
+  redirect: t.string(),
 })
-type FlowStart = Omit<z.infer<typeof OidcFlow>, "codeVerifier" | "nonce">
+type FlowStart = Omit<t.infer<typeof OidcFlow>, "codeVerifier" | "nonce">
 
 /** A non-empty string claim, trimmed. */
-const ClaimString = z.string().trim().min(1)
+const ClaimString = t.string().trim().min(1)
 
 let discovered: {
   version: number
@@ -83,7 +82,7 @@ async function oidcConfig(): Promise<{
   config: client.Configuration
 }> {
   const state = await activeOidc()
-  if (!state) throw new OidcFlowError("Single sign-on is turned off.")
+  if (!state) throw new OidcError("Single sign-on is turned off.")
   if (discovered?.version !== state.version) {
     const entry = {
       version: state.version,
@@ -168,7 +167,7 @@ async function startFlow(
     return errorRedirect(
       c,
       errorPage,
-      cause instanceof OidcFlowError
+      cause instanceof OidcError
         ? cause.message
         : "Couldn't reach the sign-in provider.",
     )
@@ -177,7 +176,7 @@ async function startFlow(
 
 export const oidcRoutes = new Hono()
   .get("/start", async (c) => {
-    const mode = StartMode.catch("sign-in").parse(c.req.query("mode"))
+    const mode = Mode.catch("sign-in").parse(c.req.query("mode"))
     const errorPage = mode === "link" ? LINK_PAGE : "/login"
     return startFlow(c, errorPage, async () => {
       const setup = mode === "sign-in" && (await setupRequired())
@@ -192,32 +191,10 @@ export const oidcRoutes = new Hono()
         mode,
         setup,
         userId: current?.id ?? null,
-        inviteId: null,
         redirect: safeRedirect(
           c.req.query("redirect"),
           mode === "link" ? LINK_PAGE : "/",
         ),
-      }
-    })
-  })
-  // A form post from the invite page, so the CSRF check in app.ts turns away
-  // other sites. Otherwise a page could start this with its own link in a
-  // visitor's browser and tie the visitor's provider account to it.
-  .post("/invite", async (c) => {
-    const body = await c.req.parseBody()
-    const token = InviteToken.safeParse(body.token)
-    if (!token.success) return errorRedirect(c, "/login", INVITE_GONE)
-    const errorPage = invitePagePath(token.data)
-    return startFlow(c, errorPage, async () => {
-      const opened = await findInvite(token.data)
-      if (!opened) return errorRedirect(c, errorPage, INVITE_GONE)
-      // Only the link's id goes into the flow; the callback uses it up.
-      return {
-        mode: "invite",
-        setup: false,
-        userId: null,
-        inviteId: opened.invite.id,
-        redirect: opened.invite.kind === "recovery" ? LINK_PAGE : "/",
       }
     })
   })
@@ -247,118 +224,82 @@ export const oidcRoutes = new Hono()
         idTokenExpected: true,
       })
       const idClaims = tokens.claims()
-      if (!idClaims) throw new OidcFlowError("The provider sent no ID token.")
-      const issuer = idClaims.iss
-      const subject = idClaims.sub
-
-      const [linked] = await db
-        .select({ userId: oidcAccount.userId })
-        .from(oidcAccount)
-        .where(
-          and(eq(oidcAccount.issuer, issuer), eq(oidcAccount.subject, subject)),
-        )
-        .limit(1)
-
+      if (!idClaims) throw new OidcError("The provider sent no ID token.")
       const usernameClaim =
         provider.settings.usernameClaim || "preferred_username"
-      // The ID token may leave the username out; the userinfo endpoint fills
-      // in what it lacks.
-      const userInfo =
-        !claimString(idClaims, usernameClaim) && tokens.access_token
-          ? await client.fetchUserInfo(config, tokens.access_token, subject)
-          : null
+      const hasUsername = claimString(idClaims, usernameClaim) !== undefined
+      // The ID token may leave the username or picture out; the userinfo
+      // endpoint fills in what it lacks. Only a missing username fails the
+      // sign-in when userinfo can't be read.
+      let userInfo: client.UserInfoResponse | null = null
+      let userInfoFailed = false
+      if (
+        (!hasUsername || !claimString(idClaims, "picture")) &&
+        tokens.access_token
+      ) {
+        try {
+          userInfo = await client.fetchUserInfo(
+            config,
+            tokens.access_token,
+            idClaims.sub,
+          )
+        } catch (cause) {
+          if (!hasUsername) throw cause
+          log.warn("Couldn't read the OIDC userinfo", cause)
+          userInfoFailed = true
+        }
+      }
       const claims = { ...userInfo, ...idClaims }
-      const label =
-        claimString(claims, usernameClaim) ??
-        claimString(claims, "preferred_username") ??
-        claimString(claims, "email") ??
-        null
+      const picture = PictureUrl.safeParse(claims.picture).data
+      const identity: OidcIdentity = {
+        issuer: idClaims.iss,
+        subject: idClaims.sub,
+        label:
+          claimString(claims, usernameClaim) ??
+          claimString(claims, "preferred_username") ??
+          null,
+        name: claimString(claims, "name") ?? null,
+        // Without userinfo, a missing picture may just be unsent.
+        picture: picture ?? (userInfoFailed ? undefined : null),
+      }
 
       if (mode === "link") {
         const current = await readSession(c)
         if (!current || current.id !== payload.userId) {
-          throw new OidcFlowError("Sign in again before linking an account.")
+          throw new OidcError("Sign in again before linking an account.")
         }
-        if (linked && linked.userId !== current.id) {
-          throw new OidcFlowError(
-            "This sign-in is already linked to another account.",
-          )
-        }
-        if (!linked) {
-          await db
-            .insert(oidcAccount)
-            .values({ userId: current.id, issuer, subject, label })
-        }
+        await linkOidcAccount(current.id, identity)
         return c.redirect(redirect)
       }
 
-      if (mode === "invite") {
-        const userId = await db.transaction(async (tx) => {
-          const used = payload.inviteId
-            ? await consumeInvite(tx, payload.inviteId)
-            : null
-          if (!used) throw new OidcFlowError(INVITE_GONE)
-          if (linked && linked.userId !== used.userId) {
-            throw new OidcFlowError(
-              "This sign-in is already linked to another account. Open the link again and create a passkey instead.",
-            )
-          }
-          if (!linked) {
-            await tx
-              .insert(oidcAccount)
-              .values({ userId: used.userId, issuer, subject, label })
-          }
-          return used.userId
-        })
-        await signIn(c, userId)
-        return c.redirect(redirect)
-      }
-
+      const linked = await linkedUserId(identity)
       if (linked) {
-        await signIn(c, linked.userId)
+        await takePicture(linked, identity)
+        await signIn(c, linked)
         return c.redirect(redirect)
       }
 
       const isSetup = setup && (await setupRequired())
       if (isSetup && !hasSetupAccess(c)) {
-        throw new OidcFlowError("Enter the setup token first.")
+        throw new OidcError("Enter the setup token first.")
       }
-      if (!isSetup && !provider.settings.allowSignUp) {
-        throw new OidcFlowError(
-          "No account is linked to this sign-in. Sign in with a passkey, then link it in settings.",
-        )
+      if (!isSetup) {
+        // Linking on the claim alone would hand the account to whoever
+        // controls that claim at the provider, so its owner signs in first.
+        const match = await findUserByUsernameHint(identity.label)
+        if (match) {
+          log.info(
+            `OIDC sign-in matched the username of user ${match}; asking to link`,
+          )
+          await savePendingLink(c, { identity, redirect })
+          return c.redirect(linkPagePath(redirect))
+        }
+        if (!provider.settings.allowSignUp) {
+          throw new OidcError(NO_LINKED_ACCOUNT)
+        }
       }
 
-      const created = await db.transaction(async (tx) => {
-        const { empty } = await lockUsers(tx)
-        if (isSetup && !empty) {
-          throw new OidcFlowError("Setup is already done. Sign in instead.")
-        }
-        if (!isSetup && empty) {
-          throw new OidcFlowError(
-            "Create the admin account on the setup page first.",
-          )
-        }
-        const username = await availableUsername(
-          label?.split("@")[0] ?? "user",
-          tx,
-        )
-        const row = await insertUser(tx, {
-          username,
-          role: empty ? "admin" : "user",
-        })
-        const name = claimString(claims, "name")
-        if (name) {
-          await tx
-            .update(user)
-            .set({ displayName: name.slice(0, 64) })
-            .where(eq(user.id, row.id))
-        }
-        await tx
-          .insert(oidcAccount)
-          .values({ userId: row.id, issuer, subject, label })
-        return row
-      })
+      const created = await createOidcUser(identity, isSetup)
       if (created.role === "admin") {
         markSetupDone()
         endSetupAccess(c)
@@ -368,7 +309,7 @@ export const oidcRoutes = new Hono()
     } catch (cause) {
       log.error("OIDC callback failed", cause)
       const message =
-        cause instanceof OidcFlowError
+        cause instanceof OidcError
           ? cause.message
           : cause instanceof client.AuthorizationResponseError
             ? `The provider refused the sign-in: ${cause.error_description ?? cause.error}`

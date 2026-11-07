@@ -1,6 +1,13 @@
-import { oidcAccount, passkey } from "@matinee/db"
+import { MAX_USER_THEMES } from "@matinee/contracts"
+import { oidcAccount, passkey, user, type UserRow } from "@matinee/db"
 import { and, count, desc, eq } from "drizzle-orm"
 
+import {
+  AvatarError,
+  followProviderAvatar,
+  removeAvatar,
+  uploadAvatar,
+} from "../auth/avatars"
 import { activeOidc } from "../auth/oidc-settings"
 import {
   beginRegister,
@@ -9,8 +16,20 @@ import {
   publicPasskey,
   storePasskey,
 } from "../auth/passkeys"
+import {
+  deleteSession,
+  deleteUserSessions,
+  listSessions,
+  publicUser,
+} from "../auth/session"
+import {
+  deleteUserTheme,
+  listUserThemes,
+  saveUserTheme,
+  updateThemePreferences,
+} from "../auth/user-themes"
 import { db } from "../db"
-import { authed, badRequest, notFound } from "./base"
+import { authed, badRequest, conflict, notFound } from "./base"
 
 async function signInMethodCount(userId: string): Promise<number> {
   const [passkeys] = await db
@@ -29,7 +48,97 @@ async function signInMethodCount(userId: string): Promise<number> {
 const LAST_METHOD =
   "Add another passkey or link an account before removing your last way to sign in."
 
+/** The updated user, with avatar failures turned into a message to act on. */
+async function avatarChange(
+  change: () => Promise<UserRow | null>,
+): Promise<ReturnType<typeof publicUser>> {
+  const row = await change().catch((cause: unknown) => {
+    if (cause instanceof AvatarError) throw badRequest(cause.message)
+    throw cause
+  })
+  if (!row) throw notFound("Account not found.")
+  return publicUser(row)
+}
+
 export const account = {
+  profile: {
+    update: authed.account.profile.update.handler(
+      async ({ context, input }) => {
+        const [row] = await db
+          .update(user)
+          .set({
+            // Drizzle leaves out keys that are undefined.
+            displayName:
+              input.displayName === undefined
+                ? undefined
+                : input.displayName || null,
+            shareFavorites: input.sharing?.favorites,
+            shareStats: input.sharing?.stats,
+            updatedAt: new Date(),
+          })
+          .where(eq(user.id, context.user.id))
+          .returning()
+        if (!row) throw notFound("Account not found.")
+        return publicUser(row)
+      },
+    ),
+  },
+
+  avatar: {
+    upload: authed.account.avatar.upload.handler(async ({ context, input }) => {
+      const bytes = new Uint8Array(await input.file.arrayBuffer())
+      return avatarChange(() => uploadAvatar(context.user.id, bytes))
+    }),
+
+    useProvider: authed.account.avatar.useProvider.handler(({ context }) =>
+      avatarChange(() => followProviderAvatar(context.user.id)),
+    ),
+
+    remove: authed.account.avatar.remove.handler(({ context }) =>
+      avatarChange(() => removeAvatar(context.user.id)),
+    ),
+  },
+
+  playback: {
+    setPreferences: authed.account.playback.setPreferences.handler(
+      async ({ context, input }) => {
+        const [row] = await db
+          .update(user)
+          .set({ playbackPreferences: input })
+          .where(eq(user.id, context.user.id))
+          .returning()
+        if (!row) throw notFound("Account not found.")
+        return publicUser(row)
+      },
+    ),
+  },
+
+  theme: {
+    setPreferences: authed.account.theme.setPreferences.handler(
+      async ({ context, input }) => {
+        const row = await updateThemePreferences(context.user.id, input)
+        if (!row) throw notFound("Account not found.")
+        return publicUser(row)
+      },
+    ),
+
+    list: authed.account.theme.list.handler(({ context }) =>
+      listUserThemes(context.user.id),
+    ),
+
+    save: authed.account.theme.save.handler(async ({ context, input }) => {
+      const saved = await saveUserTheme(context.user.id, input)
+      if (!saved) {
+        throw conflict(`You can save up to ${MAX_USER_THEMES} themes.`)
+      }
+      return saved
+    }),
+
+    remove: authed.account.theme.remove.handler(async ({ context, input }) => {
+      await deleteUserTheme(context.user.id, input.id)
+    }),
+  },
+
   passkeys: {
     list: authed.account.passkeys.list.handler(async ({ context }) => {
       const rows = await db
@@ -101,33 +210,54 @@ export const account = {
   },
 
   oidc: {
-    list: authed.account.oidc.list.handler(async ({ context }) => {
-      const rows = await db
+    get: authed.account.oidc.get.handler(async ({ context }) => {
+      const [row] = await db
         .select()
         .from(oidcAccount)
         .where(eq(oidcAccount.userId, context.user.id))
-        .orderBy(desc(oidcAccount.createdAt))
-      return rows.map((row) => ({
-        id: row.id,
+      if (!row) return null
+      return {
         label: row.label,
+        hasPicture: row.picture !== null,
         createdAt: row.createdAt,
-      }))
+      }
     }),
 
-    unlink: authed.account.oidc.unlink.handler(async ({ context, input }) => {
+    unlink: authed.account.oidc.unlink.handler(async ({ context }) => {
       if ((await signInMethodCount(context.user.id)) <= 1) {
         throw badRequest(LAST_METHOD)
       }
       const deleted = await db
         .delete(oidcAccount)
-        .where(
-          and(
-            eq(oidcAccount.id, input.id),
-            eq(oidcAccount.userId, context.user.id),
-          ),
-        )
+        .where(eq(oidcAccount.userId, context.user.id))
         .returning({ id: oidcAccount.id })
-      if (deleted.length === 0) throw notFound("Linked account not found.")
+      if (deleted.length === 0) throw notFound("No account is linked.")
     }),
+  },
+
+  sessions: {
+    list: authed.account.sessions.list.handler(({ context }) =>
+      listSessions(context.user.id, context.user.sessionId),
+    ),
+
+    revoke: authed.account.sessions.revoke.handler(
+      async ({ context, input }) => {
+        if (input.id === context.user.sessionId) {
+          throw badRequest("Sign out to end the session you're using.")
+        }
+        if (!(await deleteSession(context.user.id, input.id))) {
+          throw notFound("That session already ended.")
+        }
+      },
+    ),
+
+    revokeOthers: authed.account.sessions.revokeOthers.handler(
+      async ({ context }) => ({
+        revoked: await deleteUserSessions(
+          context.user.id,
+          context.user.sessionId,
+        ),
+      }),
+    ),
   },
 }

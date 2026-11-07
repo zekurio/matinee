@@ -1,8 +1,8 @@
 import { type AdminAuthSettings, OIDC_CALLBACK_PATH } from "@matinee/contracts"
+import { t } from "@matinee/contracts/schema"
 import { oidcAccount, passkey } from "@matinee/db"
 import { countDistinct, eq, notExists } from "drizzle-orm"
 import * as client from "openid-client"
-import { z } from "zod"
 
 import { discover } from "../auth/oidc"
 import {
@@ -11,6 +11,7 @@ import {
   oidcDefaults,
   oidcState,
   previewOidc,
+  sameIssuer,
   saveOidc,
 } from "../auth/oidc-settings"
 import { db } from "../db"
@@ -57,13 +58,10 @@ async function describe(state: OidcState): Promise<AdminAuthSettings> {
   }
 }
 
-const sameIssuer = (a: string, b: string) =>
-  a.replace(/\/+$/, "") === b.replace(/\/+$/, "")
-
 /** What openid-client attaches when the discovered issuer doesn't match. */
-const IssuerMismatch = z.object({ body: z.object({ issuer: z.string() }) })
+const IssuerMismatch = t.object({ body: t.object({ issuer: t.string() }) })
 /** Node's network errors carry a code such as ECONNREFUSED. */
-const SystemError = z.object({ code: z.string().min(1) })
+const SystemError = t.object({ code: t.string().min(1) })
 
 /** Turns a failed discovery into something the admin can act on. */
 function discoveryError(issuerUrl: string, cause: unknown): string {

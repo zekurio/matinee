@@ -7,8 +7,9 @@ export type ChallengePurpose =
   | "passkey-sign-in"
   | "passkey-sign-up"
   | "passkey-register"
-  | "passkey-invite"
   | "oidc"
+  | "oidc-pending-link"
+  | "app-authorize"
 
 export async function createChallenge(input: {
   purpose: ChallengePurpose
@@ -29,6 +30,22 @@ export async function createChallenge(input: {
     .returning({ id: authChallenge.id })
   if (!row) throw new Error("Could not store the challenge.")
   return row.id
+}
+
+/** An unexpired challenge, left in place. */
+export async function findChallenge(id: string, purpose: ChallengePurpose) {
+  const [row] = await db
+    .select()
+    .from(authChallenge)
+    .where(
+      and(
+        eq(authChallenge.id, id),
+        eq(authChallenge.purpose, purpose),
+        gt(authChallenge.expiresAt, new Date()),
+      ),
+    )
+    .limit(1)
+  return row ?? null
 }
 
 /** Delete and return an unexpired challenge. Each one works once. */

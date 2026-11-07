@@ -1,11 +1,23 @@
+import { t } from "@matinee/contracts/schema"
 import { user } from "@matinee/db"
 import { eq } from "drizzle-orm"
-import { z } from "zod"
 
-import { consumeInvite, findInvite, INVITE_GONE } from "../auth/invites"
+import { redeemAppCode } from "../auth/apps"
+import {
+  approveDeviceRequest,
+  findDeviceRequest,
+  pollDeviceSignIn,
+  startDeviceSignIn,
+} from "../auth/devices"
+import {
+  createOidcUser,
+  linkOidcAccount,
+  NO_LINKED_ACCOUNT,
+  OidcError,
+} from "../auth/oidc-accounts"
+import { readPendingLink, takePendingLink } from "../auth/oidc-pending"
 import { activeOidc } from "../auth/oidc-settings"
 import {
-  beginRegister,
   beginSignIn,
   beginSignUp,
   finishRegistration,
@@ -13,7 +25,13 @@ import {
   PasskeyError,
   storePasskey,
 } from "../auth/passkeys"
-import { publicUser, readSession, signIn, signOut } from "../auth/session"
+import {
+  createSession,
+  publicUser,
+  readSession,
+  signIn,
+  signOut,
+} from "../auth/session"
 import {
   endSetupAccess,
   hasSetupAccess,
@@ -22,32 +40,43 @@ import {
   setupTokenRequired,
   unlockSetup,
 } from "../auth/setup"
+import { themeAccents } from "../auth/theme-accents"
 import { insertUser, lockUsers, usernameTaken } from "../auth/users"
 import { db } from "../db"
 import { env } from "../env"
-import { badRequest, notFound, pub } from "./base"
+import { log } from "../log"
+import { badRequest, authed, notFound, pub } from "./base"
 
 /** What `beginSignUp` stored with the challenge. */
-const SignUpPayload = z.object({
-  userId: z.string(),
-  username: z.string(),
-  setup: z.boolean(),
+const SignUpPayload = t.object({
+  userId: t.string(),
+  username: t.string(),
+  setup: t.boolean(),
 })
 
-/** What `beginRegister` stored for a link's passkey. */
-const InvitePayload = z.object({ userId: z.string(), inviteId: z.string() })
+const SIGN_UP_CLOSED = "Sign-up is closed on this server."
 
-/** The link a token belongs to, or a 404 the page shows as expired. */
-async function openInvite(token: string) {
-  const found = await findInvite(token)
-  if (!found) throw notFound(INVITE_GONE)
-  return found
+const PENDING_GONE = "This sign-in expired. Continue with single sign-on again."
+
+function oidcFailure(cause: unknown): never {
+  if (cause instanceof OidcError) throw badRequest(cause.message)
+  throw cause
 }
 
 function passkeyFailure(cause: unknown): never {
   if (cause instanceof PasskeyError) throw badRequest(cause.message)
   throw cause
 }
+
+/** An account that still exists, for a sign-in someone approved earlier. */
+async function approvedUser(userId: string) {
+  const [row] = await db.select().from(user).where(eq(user.id, userId))
+  if (!row) throw badRequest("This account no longer exists.")
+  return row
+}
+
+const DEVICE_GONE =
+  "That code doesn't work. It may have expired, or been used already."
 
 export const auth = {
   config: pub.auth.config.handler(async () => {
@@ -57,7 +86,13 @@ export const auth = {
       setupRequired: setup,
       setupTokenRequired: setup && setupTokenRequired(),
       passkeySignUp: env.MATINEE_OPEN_REGISTRATION,
-      oidc: provider ? { displayName: provider.settings.displayName } : null,
+      oidc: provider
+        ? {
+            displayName: provider.settings.displayName,
+            allowSignUp: provider.settings.allowSignUp,
+          }
+        : null,
+      themeAccents: await themeAccents(),
     }
   }),
 
@@ -98,7 +133,7 @@ export const auth = {
           throw badRequest("Enter the setup token first.")
         }
         if (!setup && !env.MATINEE_OPEN_REGISTRATION) {
-          throw badRequest("Ask an admin for an account.")
+          throw badRequest(SIGN_UP_CLOSED)
         }
         if (await usernameTaken(input.username)) {
           throw badRequest("That username is taken.")
@@ -128,7 +163,7 @@ export const auth = {
           throw badRequest("Setup is already done. Sign in instead.")
         }
         if (!setup && (empty || !env.MATINEE_OPEN_REGISTRATION)) {
-          throw badRequest("Ask an admin for an account.")
+          throw badRequest(SIGN_UP_CLOSED)
         }
         if (await usernameTaken(username, tx)) {
           throw badRequest("That username is taken.")
@@ -151,50 +186,88 @@ export const auth = {
     }),
   },
 
-  invite: {
-    get: pub.auth.invite.get.handler(async ({ input }) => {
-      const { invite, user: account } = await openInvite(input.token)
-      return {
-        kind: invite.kind,
-        username: account.username,
-        displayName: account.displayName,
-        expiresAt: invite.expiresAt,
-      }
-    }),
+  oidc: {
+    pending: {
+      get: pub.auth.oidc.pending.get.handler(async ({ context }) => {
+        const pending = await readPendingLink(context.hono)
+        return pending ? { accountLabel: pending.identity.label } : null
+      }),
 
-    registerOptions: pub.auth.invite.registerOptions.handler(
-      async ({ input }) => {
-        const { invite, user: account } = await openInvite(input.token)
-        return beginRegister({
-          userId: account.id,
-          username: account.username,
-          inviteId: invite.id,
-        })
-      },
+      link: authed.auth.oidc.pending.link.handler(async ({ context }) => {
+        const pending = await takePendingLink(context.hono)
+        if (!pending) throw badRequest(PENDING_GONE)
+        if (!(await activeOidc())) {
+          throw badRequest("Single sign-on is turned off.")
+        }
+        await linkOidcAccount(context.user.id, pending.identity).catch(
+          oidcFailure,
+        )
+        log.info(`Linked a pending OIDC sign-in to ${context.user.username}`)
+        return { redirect: pending.redirect }
+      }),
+
+      signUp: pub.auth.oidc.pending.signUp.handler(async ({ context }) => {
+        // A signed-in browser links the sign-in instead. A stale tab must not
+        // swap it into a new account, so refuse before using it up.
+        if (await readSession(context.hono)) {
+          throw badRequest("Sign out before creating a new account.")
+        }
+        const pending = await takePendingLink(context.hono)
+        if (!pending) throw badRequest(PENDING_GONE)
+        const provider = await activeOidc()
+        if (!provider?.settings.allowSignUp) {
+          throw badRequest(NO_LINKED_ACCOUNT)
+        }
+        const created = await createOidcUser(pending.identity, false).catch(
+          oidcFailure,
+        )
+        log.info(`OIDC sign-in created ${created.username}`)
+        await signIn(context.hono, created.id)
+        return { user: publicUser(created), redirect: pending.redirect }
+      }),
+
+      discard: pub.auth.oidc.pending.discard.handler(async ({ context }) => {
+        await takePendingLink(context.hono)
+      }),
+    },
+  },
+
+  app: {
+    token: pub.auth.app.token.handler(async ({ context, input }) => {
+      const redeemed = await redeemAppCode(input.code, input.codeVerifier)
+      if (!redeemed) {
+        throw badRequest("This sign-in expired or was used already. Try again.")
+      }
+      const row = await approvedUser(redeemed.userId)
+      const token = await createSession(context.hono, row.id, redeemed.device)
+      return { token, user: publicUser(row) }
+    }),
+  },
+
+  device: {
+    start: pub.auth.device.start.handler(({ input }) =>
+      startDeviceSignIn(input),
     ),
 
-    register: pub.auth.invite.register.handler(async ({ context, input }) => {
-      const verified = await finishRegistration(
-        "passkey-invite",
-        input.challengeId,
-        input.response,
-      ).catch(passkeyFailure)
-      const { invite, user: account } = await openInvite(input.token)
-      // The ceremony must be the one this link started, for its account.
-      const payload = InvitePayload.safeParse(verified.payload)
-      if (
-        !payload.success ||
-        payload.data.inviteId !== invite.id ||
-        payload.data.userId !== account.id
-      ) {
-        throw badRequest("This passkey request belongs to another link.")
+    poll: pub.auth.device.poll.handler(async ({ context, input }) => {
+      const result = await pollDeviceSignIn(input.deviceCode)
+      if (result === "pending") return { status: "pending" as const }
+      if (!result) throw notFound("This code expired. Get a new one.")
+      const row = await approvedUser(result.userId)
+      const token = await createSession(context.hono, row.id, result.device)
+      return { status: "approved" as const, token, user: publicUser(row) }
+    }),
+
+    get: authed.auth.device.get.handler(async ({ input }) => {
+      const request = await findDeviceRequest(input.userCode)
+      if (!request) throw notFound(DEVICE_GONE)
+      return request
+    }),
+
+    approve: authed.auth.device.approve.handler(async ({ context, input }) => {
+      if (!(await approveDeviceRequest(input.userCode, context.user.id))) {
+        throw notFound(DEVICE_GONE)
       }
-      await db.transaction(async (tx) => {
-        if (!(await consumeInvite(tx, invite.id))) throw notFound(INVITE_GONE)
-        await storePasskey(tx, { userId: account.id, verified, usedNow: true })
-      })
-      await signIn(context.hono, account.id)
-      return publicUser(account)
     }),
   },
 }
