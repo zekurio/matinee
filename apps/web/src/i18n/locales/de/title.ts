@@ -1,0 +1,70 @@
+import { plural, type TranslationOf } from "../../catalog"
+import type source from "../en/title"
+
+export default {
+  "title.backHome": "Zurück zur Startseite",
+  "title.play": "Abspielen",
+  "title.resume": "Fortsetzen",
+  "title.playName": "{name} abspielen",
+  "title.resumeName": "{name} fortsetzen",
+  "title.moreActions": "Weitere Aktionen",
+  "title.moreActionsFor": "Weitere Aktionen für {name}",
+  "title.more": "Mehr",
+  "title.less": "Weniger",
+  "title.seasonOf": "{show}: {season}",
+  "title.seasonCount": plural({
+    one: "{count} Staffel",
+    other: "{count} Staffeln",
+  }),
+  "title.episodeCount": plural({
+    one: "{count} Folge",
+    other: "{count} Folgen",
+  }),
+  "title.loadError": "Dieser Titel konnte nicht geladen werden",
+  "title.rating": "Bewertung {rating}",
+  "title.menu.fixMatch": "Zuordnung korrigieren …",
+  "title.menu.refresh": "Metadaten aktualisieren",
+  "title.refresh.done": "{name} aktualisiert",
+  "title.refresh.doneDescription": "Erneut von {provider} abgerufen.",
+  "title.refresh.error": "Metadaten konnten nicht abgerufen werden",
+  "title.match.none":
+    "{provider} hat nichts zu „{path}“ gefunden, deshalb stammt der Name vom Ordner.",
+  "title.match.waiting":
+    "Warte auf {provider}. Bis dahin stammt der Name vom Ordner.",
+  "title.identify.title": "Zuordnung korrigieren",
+  "title.identify.description":
+    "Durchsuche {provider} und wähle den Eintrag für {path}.",
+  "title.identify.name": "Name",
+  "title.identify.year": "Jahr",
+  "title.identify.anyYear": "Alle",
+  "title.identify.search": "Suchen",
+  "title.identify.empty":
+    "{provider} hat nichts zu „{query}“ gefunden. Versuch es mit dem Originaltitel oder lass das Jahr leer.",
+  "title.identify.current": "Aktuelle Zuordnung",
+  "title.identify.matched": "{name} zugeordnet",
+  "title.nextUp.continue": "Weiterschauen",
+  "title.nextUp.next": "Als Nächstes",
+  "title.episodes": "Folgen",
+  "title.episodes.error": "Die Folgen konnten nicht geladen werden. {error}",
+  "title.episodes.codedName": "{code}: {name}",
+  "title.seasons": "Staffeln",
+  "title.seasons.more": "Weitere Staffeln",
+  "title.seasons.left": plural({
+    one: "Noch {count} Folge zu schauen",
+    other: "Noch {count} Folgen zu schauen",
+  }),
+  "title.season.showError": "Diese Serie konnte nicht geladen werden",
+  "title.season.missing": "{name} hat keine solche Staffel",
+  "title.season.all": "Alle Staffeln ansehen",
+  "title.season.watched": "Gesehen",
+  "title.season.watchedCount": plural({
+    one: "{count} gesehen",
+    other: "{count} gesehen",
+  }),
+  "title.episode.loadError": "Diese Folge konnte nicht geladen werden",
+  "title.episode.moreFrom": "Mehr aus {season}",
+  "title.episode.moreFromSeason": "Mehr aus dieser Staffel",
+  "title.episode.specials": "Specials",
+  "title.episode.season": "Staffel {number}",
+  "title.episode.number": "Folge {number}",
+} satisfies TranslationOf<typeof source>

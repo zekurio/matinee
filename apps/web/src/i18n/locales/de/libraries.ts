@@ -1,0 +1,71 @@
+import { plural, type TranslationOf } from "../../catalog"
+import type source from "../en/libraries"
+
+export default {
+  "libraries.title": "Mediatheken",
+  "libraries.add": "Mediathek hinzufügen",
+  "libraries.loadFailed":
+    "Die Mediatheken konnten nicht geladen werden. {error}",
+  "libraries.retry": "Erneut versuchen",
+  "libraries.empty.title": "Noch keine Mediatheken",
+  "libraries.empty.description":
+    "Füge einen Ordner mit Filmen oder Serien hinzu.",
+  "libraries.scanFailed": "Der Scan konnte nicht gestartet werden",
+  "libraries.fetching": "Metadaten werden abgerufen",
+  "libraries.fetchFailed": "Die Metadaten konnten nicht abgerufen werden",
+  "libraries.removed": "{name} entfernt",
+  "libraries.removed.description":
+    "Deine Dateien liegen weiterhin auf der Festplatte.",
+  "libraries.removeFailed": "{name} konnte nicht entfernt werden",
+  "libraries.scanning": "Wird gescannt…",
+  "libraries.fetchingFrom": "Metadaten werden von {provider} abgerufen…",
+  "libraries.fetchingFromProvider": "Metadaten werden vom Anbieter abgerufen…",
+  "libraries.actions": "Aktionen für {name}",
+  "libraries.scanNow": "Jetzt scannen",
+  "libraries.refreshMetadata": "Metadaten aktualisieren",
+  "libraries.edit": "Bearbeiten…",
+  "libraries.remove": "Entfernen…",
+  "libraries.remove.title": "{name} entfernen?",
+  "libraries.remove.description":
+    "Matinee vergisst die Mediathek und ihre Titel. Deine Dateien bleiben, wo sie sind.",
+  "libraries.remove.cancel": "Abbrechen",
+  "libraries.remove.confirm": "Mediathek entfernen",
+
+  "libraries.dialog.addTitle": "Mediathek hinzufügen",
+  "libraries.dialog.editTitle": "Mediathek bearbeiten",
+  "libraries.dialog.checkFields": "Überprüfe die Felder.",
+  "libraries.dialog.name": "Name",
+  "libraries.dialog.namePlaceholder": "z. B. Filme",
+  "libraries.dialog.type": "Typ",
+  "libraries.dialog.kind.movies": "Filme",
+  "libraries.dialog.kind.shows": "Serien",
+  "libraries.dialog.metadata": "Metadaten",
+  "libraries.dialog.noProvider": "Keine",
+  "libraries.dialog.needsKey": "Braucht einen API-Schlüssel",
+  "libraries.dialog.language": "Sprache",
+  "libraries.dialog.noProviderHint":
+    "Titel tragen die Namen ihrer Ordner und Dateien, ohne Artwork.",
+  "libraries.dialog.folders": "Ausgewählte Ordner",
+  "libraries.dialog.selected": plural({
+    one: "{count} ausgewählt",
+    other: "{count} ausgewählt",
+  }),
+  "libraries.dialog.removeFolder": "{path} entfernen",
+  "libraries.dialog.noFolders": "Öffne unten einen Ordner und füge ihn hinzu.",
+  "libraries.dialog.browse": "Server durchsuchen",
+  "libraries.dialog.cancel": "Abbrechen",
+  "libraries.dialog.save": "Speichern",
+  "libraries.dialog.add": "Mediathek hinzufügen",
+
+  "libraries.browser.root": "Stammverzeichnis",
+  "libraries.browser.current": "Aktueller Ordner",
+  "libraries.browser.addCurrent": "„{name}“ hinzufügen",
+  "libraries.browser.added": "Hinzugefügt",
+  "libraries.browser.openRoot": "Öffne den Ordner, in dem deine Videos liegen.",
+  "libraries.browser.alreadyAdded": "{path} ist schon in dieser Mediathek.",
+  "libraries.browser.adds": "Fügt {path} und seine Unterordner hinzu.",
+  "libraries.browser.empty": "In diesem Ordner gibt es keine Unterordner.",
+  "libraries.browser.open": "{name} öffnen",
+  "libraries.browser.addNamed": "{name} hinzufügen",
+  "libraries.browser.add": "Hinzufügen",
+} satisfies TranslationOf<typeof source>

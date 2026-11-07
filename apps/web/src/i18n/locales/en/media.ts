@@ -1,0 +1,85 @@
+import { defineMessages, plural } from "../../catalog"
+
+export default defineMessages("media", {
+  // Names and details of files and episodes, in lib/media.ts and cards.
+  "media.season": "Season {number}",
+  "media.specials": "Specials",
+  "media.otherFiles": "Other files",
+  "media.episode": "Episode {number}",
+  "media.special": "Special {number}",
+  // An episode's code in running text, like "S2, E5".
+  "media.episodeCode": "S{season}, E{episode}",
+  "media.codeTitle": "{code}: {title}",
+  "media.showCodeTitle": "{show}, {code}: {title}",
+  "media.timeLeft": "{minutes} min left",
+  "media.channels": plural({
+    one: "{count} channel",
+    other: "{count} channels",
+  }),
+  "media.audioTracks": plural({
+    one: "{count} audio track",
+    other: "{count} audio tracks",
+  }),
+  "media.subtitles": plural({
+    one: "{count} subtitle",
+    other: "{count} subtitles",
+  }),
+  "media.episodeCount": plural({
+    one: "{count} episode",
+    other: "{count} episodes",
+  }),
+  "media.newEpisodes": plural({
+    one: "{count} new episode",
+    other: "{count} new episodes",
+  }),
+  // Cards and their play buttons.
+  "media.watched": "Watched",
+  "media.play": "Play {name}",
+  "media.resume": "Resume {name}",
+  "media.noFiles": "{name} has no files to play",
+  "media.playFailed": "Couldn't play {name}",
+  // The banner on Home.
+  "media.hero.label": "Featured",
+  "media.hero.position": "{index} of {count}",
+  "media.hero.slides": "Slides",
+  "media.hero.carousel": "carousel",
+  "media.hero.slide": "slide",
+  "media.hero.showSlide": "Show slide {index}",
+  "media.hero.previous": "Previous slide",
+  "media.hero.next": "Next slide",
+  "media.hero.rated": "Rated",
+  "media.hero.genres": "Genres",
+  "media.hero.play": "Play",
+  "media.hero.resume": "Resume",
+  "media.hero.episodes": "Episodes",
+  "media.hero.details": "Details",
+  // A rail's arrow buttons.
+  "media.rail.back": "Scroll {title} back",
+  "media.rail.forward": "Scroll {title} forward",
+  // Watched and favorite icons on cards, and their menus.
+  "media.markWatched": "Mark watched",
+  "media.markUnwatched": "Mark unwatched",
+  "media.markNamedWatched": "Mark {name} watched",
+  "media.markNamedUnwatched": "Mark {name} unwatched",
+  "media.addFavorite": "Add to favorites",
+  "media.removeFavorite": "Remove from favorites",
+  "media.addNamedFavorite": "Add {name} to favorites",
+  "media.removeNamedFavorite": "Remove {name} from favorites",
+  "media.favoriteFailed": "Couldn't change your favorites",
+  "media.markWatchedFailed": "Couldn't mark as watched",
+  "media.markUnwatchedFailed": "Couldn't mark as unwatched",
+  "media.watchedAt.now": "Just now",
+  "media.watchedAt.released": "Release date",
+  "media.watchedAt.other": "Other date…",
+  "media.mark.as.watched": "Mark as watched",
+  "media.mark.as.unwatched": "Mark as unwatched",
+  "media.mark.season.watched": "Mark season watched",
+  "media.mark.season.unwatched": "Mark season unwatched",
+  "media.mark.all.watched": "Mark all watched",
+  "media.mark.all.unwatched": "Mark all unwatched",
+  "media.moreActions": "More actions for {name}",
+  // The dialog that asks when the user watched.
+  "media.watchedDate.title": "When did you watch it?",
+  "media.watchedDate.date": "Date",
+  "media.watchedDate.cancel": "Cancel",
+})

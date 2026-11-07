@@ -5,10 +5,16 @@ import { createRouter, RouterProvider } from "@tanstack/react-router"
 import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
 
+import { LocaleBoundary } from "./i18n/react"
 import { orpc, queryClient, sessionLost } from "./lib/rpc"
+import { syncUiText } from "./lib/ui-text"
 import { routeTree } from "./routeTree.gen"
+import { applyLanguage } from "./stores/language"
 
 initTheme()
+syncUiText()
+// The first render is in the right language, so it waits for it to load.
+await applyLanguage()
 
 const router = createRouter({
   routeTree,
@@ -37,7 +43,9 @@ if (!root) throw new Error("Missing #root element")
 createRoot(root).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
+      <LocaleBoundary>
+        <RouterProvider router={router} />
+      </LocaleBoundary>
     </QueryClientProvider>
   </StrictMode>,
 )
