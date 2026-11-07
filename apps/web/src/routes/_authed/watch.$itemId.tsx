@@ -20,6 +20,7 @@ import { VideoPlayer } from "@/components/video-player"
 import { tr } from "@/i18n"
 import { itemLabel } from "@/lib/media"
 import { client, errorMessage, liveQuery, orpc } from "@/lib/rpc"
+import { decodesVideo } from "@/lib/video-support"
 
 export const Route = createFileRoute("/_authed/watch/$itemId")({
   component: Watch,
@@ -133,6 +134,7 @@ function Watch() {
             : null
         }
         videoCodec={probe?.video?.codec ?? null}
+        videoPlays={decodesVideo(probe?.video)}
         title={label.title}
         subtitle={
           label.code

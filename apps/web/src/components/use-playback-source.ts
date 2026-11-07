@@ -7,7 +7,7 @@ import {
   usePlayerStore,
 } from "@/stores/player"
 
-import { audioNotice, standInNotice } from "./playback-notices"
+import { audioNotice, standInNotice, transcodeNotice } from "./playback-notices"
 import {
   type AudioChoice,
   fallbackQuality,
@@ -115,13 +115,14 @@ export function sourceStarters({ video, options, store, refs }: PlaybackCore) {
   ) => {
     const id = ++generation.current
     setPending(at)
-    // Only an encode can burn a subtitle in, so the original quality gets
-    // the one a failed file falls back to.
+    // Only an encode can burn a subtitle in or turn video the browser can't
+    // decode into video it can, so the original quality gets the one a
+    // failed file falls back to.
     const { burnIn } = store.getState()
     const encode =
       next !== "original"
         ? next
-        : burnIn !== null
+        : burnIn !== null || !options.videoPlays
           ? fallbackQuality(options.videoSize)
           : null
     if (encode !== null) {
@@ -138,7 +139,9 @@ export function sourceStarters({ video, options, store, refs }: PlaybackCore) {
       return
     }
     let start = at
-    if (options.videoSize) {
+    // The file's start is a keyframe, so only a later point needs the
+    // lookup.
+    if (options.videoSize && at > 0) {
       // The lookup takes a moment. Hold the old source still meanwhile,
       // rather than play on from where the viewer left it.
       const el = video.current
@@ -218,6 +221,12 @@ export function usePickSource(
       // After a failed file, the toast says what the encode does instead.
       if (stoodIn && insteadOf) {
         if (!directFailed) standInNotice(stoodIn, insteadOf)
+      } else if (!options.videoPlays && quality === "original") {
+        transcodeNotice(
+          fallbackQuality(options.videoSize),
+          options.videoCodec,
+          full(track),
+        )
       } else {
         audioNotice(quality, full(track))
       }

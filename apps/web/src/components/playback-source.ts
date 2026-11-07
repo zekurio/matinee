@@ -92,6 +92,11 @@ export type PlaybackOptions = {
   videoSize: { width: number; height: number } | null
   /** ffmpeg's name for the video codec, for saying what gets transcoded. */
   videoCodec: string | null
+  /**
+   * Whether the browser decodes the video as it is. When it doesn't, every
+   * source is an encode.
+   */
+  videoPlays: boolean
   /** Seconds to resume from. */
   startAt?: number
   onResumed?: (seconds: number) => void
