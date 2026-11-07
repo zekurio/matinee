@@ -1,9 +1,11 @@
 {
   "name": "@matinee/contracts",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
@@ -11,6 +13,7 @@
   "dependencies": {
     "@orpc/contract": "catalog:",
     "@simplewebauthn/browser": "catalog:",
-    "zod": "catalog:"
+    "@standard-schema/spec": "1.1.0",
+    "typebox": "catalog:"
   }
 }

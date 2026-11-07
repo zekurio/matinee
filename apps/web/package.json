@@ -1,6 +1,7 @@
 {
   "name": "@matinee/web",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "build": "vite build",
@@ -15,12 +16,16 @@
     "@matinee/ui": "workspace:*",
     "@orpc/tanstack-query": "catalog:",
     "@simplewebauthn/browser": "catalog:",
+    "@tanstack/react-form": "1.33.5",
     "@tanstack/react-query": "5.106.1",
     "@tanstack/react-router": "1.170.46",
+    "blurhash": "catalog:",
+    "hls.js": "1.7.4",
+    "libpgs": "0.9.0",
     "lucide-react": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
-    "zod": "catalog:"
+    "zustand": "5.0.16"
   },
   "devDependencies": {
     "@tailwindcss/vite": "4.3.4",

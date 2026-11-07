@@ -1,6 +1,7 @@
 {
   "name": "@matinee/server",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "dev": "tsx watch --clear-screen=false src/index.ts",
@@ -11,12 +12,15 @@
     "@hono/node-server": "2.1.6",
     "@matinee/contracts": "workspace:*",
     "@matinee/db": "workspace:*",
+    "@orpc/contract": "catalog:",
+    "@orpc/json-schema": "catalog:",
+    "@orpc/openapi": "catalog:",
     "@orpc/server": "catalog:",
     "@simplewebauthn/server": "catalog:",
+    "blurhash": "catalog:",
     "drizzle-orm": "catalog:",
     "hono": "4.13.16",
     "openid-client": "6.8.9",
-    "tsx": "4.23.15",
-    "zod": "catalog:"
+    "tsx": "4.23.15"
   }
 }
