@@ -28,19 +28,10 @@ export function browserTimeZone(): string {
   return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"
 }
 
-export const METHOD_NAMES = new Map<
-  PlaybackMethod,
-  { name: string; description: string }
->([
-  ["direct", { name: "Direct play", description: "The file as it is" }],
-  [
-    "remux",
-    {
-      name: "Direct stream",
-      description: "Video copied, audio copied or converted",
-    },
-  ],
-  ["transcode", { name: "Transcode", description: "Video encoded" }],
+export const METHOD_NAMES = new Map<PlaybackMethod, string>([
+  ["direct", "Direct play"],
+  ["remux", "Direct stream"],
+  ["transcode", "Transcode"],
 ])
 
 const ACCELERATIONS = new Map([

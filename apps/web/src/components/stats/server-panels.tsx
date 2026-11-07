@@ -42,7 +42,6 @@ export function Methods({ methods }: { methods: MethodStat[] }) {
       </div>
       <ul className="flex flex-col gap-2">
         {methods.map((entry) => {
-          const names = METHOD_NAMES.get(entry.method)
           return (
             <li
               key={entry.method}
@@ -56,8 +55,7 @@ export function Methods({ methods }: { methods: MethodStat[] }) {
                 )}
               />
               <span className="min-w-0 flex-1 truncate">
-                {names?.name ?? entry.method}
-                <span className="text-muted-foreground">{` · ${names?.description ?? ""}`}</span>
+                {METHOD_NAMES.get(entry.method) ?? entry.method}
               </span>
               <span className="text-muted-foreground shrink-0 tabular-nums">
                 {`${formatWatchTime(entry.watchSeconds)} · `}
