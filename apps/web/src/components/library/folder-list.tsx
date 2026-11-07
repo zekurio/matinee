@@ -6,6 +6,7 @@ import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react"
 
 import { MediaRow } from "@/components/media-item"
 import { PageHeader } from "@/components/page-header"
+import { tr } from "@/i18n"
 import { itemLabel, splitYear } from "@/lib/media"
 import { orpc } from "@/lib/rpc"
 
@@ -45,7 +46,7 @@ function groupByFolder(items: MediaItem[]): Group[] {
       groups.push({
         key: `${group}:${groups.length}`,
         folder: group,
-        label: groupLabel.length ? groupLabel : ["Other files"],
+        label: groupLabel.length ? groupLabel : [tr("library.otherFiles")],
         items: [item],
       })
     }
@@ -159,8 +160,8 @@ export function FolderList() {
   const controls: ListControlsProps = {
     search,
     setSearch,
-    label: show ? "Search episodes" : "Search titles",
-    sorts: fileSorts,
+    label: show ? tr("library.searchEpisodes") : tr("library.searchTitles"),
+    sorts: fileSorts(),
     sort,
     setSort,
   }
@@ -195,13 +196,18 @@ export function FolderList() {
         <EmptyList
           title={
             query
-              ? `No ${show ? "episodes" : "titles"} match “${query}”`
-              : "No videos found"
+              ? show
+                ? tr("library.noEpisodesMatch", { query })
+                : tr("library.noTitlesMatch", { query })
+              : tr("library.noVideos")
           }
           scanning={scanning}
           clear={
             query
-              ? { label: "Clear search", onClick: () => setSearch("") }
+              ? {
+                  label: tr("library.clearSearch"),
+                  onClick: () => setSearch(""),
+                }
               : undefined
           }
         />

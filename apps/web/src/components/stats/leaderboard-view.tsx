@@ -11,7 +11,9 @@ import { Link } from "@tanstack/react-router"
 import { LockIcon, TrophyIcon } from "lucide-react"
 
 import { UserAvatar } from "@/components/user-avatar"
-import { formatWatchTime, plural } from "@/lib/format"
+import { tr } from "@/i18n"
+import { trRich } from "@/i18n/react"
+import { formatWatchTime } from "@/lib/format"
 import { errorMessage, orpc } from "@/lib/rpc"
 import { useOpenSettings } from "@/lib/settings"
 import { browserTimeZone, rangePhrase } from "@/lib/stats"
@@ -23,63 +25,22 @@ const TIME_ZONE = browserTimeZone()
 // Places the server sends per board before the viewer's own.
 const TOP = 10
 
-type MetricInfo = {
-  title: string
-  format: (value: number) => string
-  /** Said when nobody has a value, after "Nobody". */
-  empty: string
+/** A metric's value as its board shows it: "4h 10m", "12 plays". */
+function formatMetric(metric: LeaderboardMetric, value: number): string {
+  switch (metric) {
+    case "watchTime":
+      return formatWatchTime(value)
+    case "plays":
+      return tr("stats.plays", { count: value })
+    case "currentStreak":
+    case "longestStreak":
+      return tr("stats.days", { count: value })
+    case "movies":
+      return tr("stats.movies", { count: value })
+    case "episodes":
+      return tr("stats.episodes", { count: value })
+  }
 }
-
-const METRICS = new Map<LeaderboardMetric, MetricInfo>([
-  [
-    "watchTime",
-    {
-      title: "Watch time",
-      format: formatWatchTime,
-      empty: "has watched anything",
-    },
-  ],
-  [
-    "plays",
-    {
-      title: "Plays",
-      format: (value) => plural(value, "play"),
-      empty: "has played anything",
-    },
-  ],
-  [
-    "currentStreak",
-    {
-      title: "Current streak",
-      format: (value) => plural(value, "day"),
-      empty: "is on a streak right now",
-    },
-  ],
-  [
-    "longestStreak",
-    {
-      title: "Longest streak",
-      format: (value) => plural(value, "day"),
-      empty: "has a streak",
-    },
-  ],
-  [
-    "movies",
-    {
-      title: "Movies finished",
-      format: (value) => plural(value, "movie"),
-      empty: "has finished a movie",
-    },
-  ],
-  [
-    "episodes",
-    {
-      title: "Episodes finished",
-      format: (value) => plural(value, "episode"),
-      empty: "has finished an episode",
-    },
-  ],
-])
 
 // The podium: first in the accent, then fading.
 const PODIUM = new Map([
@@ -114,25 +75,25 @@ export function LeaderboardView({
   const { boards, sharing } = board.data
   const join = (
     <Button variant="outline" onClick={() => openSettings("account")}>
-      Share my statistics
+      {tr("stats.leaderboard.join")}
     </Button>
   )
   if (boards.every((entry) => entry.entries.length === 0)) {
     return range === "all" ? (
       <StatsEmpty
         icon={TrophyIcon}
-        title="The leaderboard fills in as people watch"
-        description="Only people who share their statistics show up."
+        title={tr("stats.leaderboard.empty")}
+        description={tr("stats.leaderboard.emptyHint")}
         action={sharing ? undefined : join}
       />
     ) : (
       <StatsEmpty
         compact
         icon={TrophyIcon}
-        title={`Nobody played anything ${rangePhrase(range)}`}
+        title={tr("stats.leaderboard.noPlays", { period: rangePhrase(range) })}
         action={
           <Button variant="outline" onClick={() => onRange("all")}>
-            Show all time
+            {tr("stats.showAllTime")}
           </Button>
         }
       />
@@ -143,15 +104,20 @@ export function LeaderboardView({
       {!sharing && (
         <p className="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px]">
           <LockIcon aria-hidden className="size-3.5 shrink-0" />
-          Only you see yourself here.
-          <button
-            type="button"
-            onClick={() => openSettings("account")}
-            className="text-foreground focus-visible:ring-ring rounded underline-offset-2 outline-none hover:underline focus-visible:ring-2"
-          >
-            Share your statistics
-          </button>
-          to take part.
+          {/* One run of text, so the message's own spaces and commas hold. */}
+          <span>
+            {trRich("stats.leaderboard.onlyYou", {
+              share: (
+                <button
+                  type="button"
+                  onClick={() => openSettings("account")}
+                  className="text-foreground focus-visible:ring-ring rounded underline-offset-2 outline-none hover:underline focus-visible:ring-2"
+                >
+                  {tr("stats.leaderboard.share")}
+                </button>
+              ),
+            })}
+          </span>
         </p>
       )}
       <div className={statsGrid}>
@@ -164,13 +130,12 @@ export function LeaderboardView({
 }
 
 function Board({ board }: { board: LeaderboardBoard }) {
-  const info = METRICS.get(board.metric)
-  if (!info) return null
+  const { metric } = board
   return (
-    <StatsSection title={info.title}>
+    <StatsSection title={tr(`stats.leaderboard.metric.${metric}`)}>
       {board.entries.length === 0 ? (
         <p className="text-muted-foreground text-[13px]">
-          {`Nobody ${info.empty} yet.`}
+          {tr(`stats.leaderboard.none.${metric}`)}
         </p>
       ) : (
         <ol className="-mx-2 flex flex-col">
@@ -178,7 +143,7 @@ function Board({ board }: { board: LeaderboardBoard }) {
             <Place
               key={entry.user.id}
               entry={entry}
-              format={info.format}
+              format={(value) => formatMetric(metric, value)}
               // The viewer's own place, sent after the top ones.
               apart={index === TOP}
             />
@@ -213,8 +178,10 @@ function Place({
           PODIUM.get(entry.rank) ?? "text-muted-foreground",
         )}
       >
-        <span className="sr-only">Place </span>
-        {entry.rank}
+        <span className="sr-only">
+          {tr("stats.leaderboard.place", { rank: entry.rank })}
+        </span>
+        <span aria-hidden>{entry.rank}</span>
       </span>
       <UserAvatar user={user} className="size-6 shrink-0 text-[11px]" />
       <Link
@@ -224,7 +191,10 @@ function Place({
       >
         {user.displayName ?? user.username}
         {entry.self && (
-          <span className="text-muted-foreground font-normal"> (you)</span>
+          <span className="text-muted-foreground font-normal">
+            {" "}
+            {tr("stats.leaderboard.you")}
+          </span>
         )}
       </Link>
       <span className="shrink-0 text-[13px] font-medium tabular-nums">

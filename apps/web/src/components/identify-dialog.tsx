@@ -14,6 +14,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { SearchIcon } from "lucide-react"
 import { useState } from "react"
 
+import { tr } from "@/i18n"
+import { trRich } from "@/i18n/react"
 import { useAppForm } from "@/lib/form"
 import { art, present } from "@/lib/media"
 import { client, errorMessage, orpc } from "@/lib/rpc"
@@ -90,7 +92,7 @@ function IdentifyForm({
       client.titles.identify({ id: title.id, providerId: match.id }),
     onSuccess: async (updated) => {
       await invalidateTitleData(queryClient)
-      toast.success(`Matched to ${updated.name}`)
+      toast.success(tr("title.identify.matched", { name: updated.name }))
       onDone()
     },
   })
@@ -116,14 +118,17 @@ function IdentifyForm({
     <>
       <DialogHeader>
         <DialogTitle className="text-lg leading-7 font-semibold">
-          Fix match
+          {tr("title.identify.title")}
         </DialogTitle>
         <DialogDescription>
-          Search {providerName} and pick the entry for{" "}
-          <span className="text-foreground font-mono text-[13px] break-all">
-            {title.path}
-          </span>
-          .
+          {trRich("title.identify.description", {
+            provider: providerName,
+            path: (
+              <span className="text-foreground font-mono text-[13px] break-all">
+                {title.path}
+              </span>
+            ),
+          })}
         </DialogDescription>
       </DialogHeader>
 
@@ -136,7 +141,12 @@ function IdentifyForm({
       >
         <div className="min-w-0 flex-1">
           <form.AppField name="name">
-            {(field) => <field.TextField id="identify-name" label="Name" />}
+            {(field) => (
+              <field.TextField
+                id="identify-name"
+                label={tr("title.identify.name")}
+              />
+            )}
           </form.AppField>
         </div>
         <div className="w-20 shrink-0">
@@ -144,16 +154,20 @@ function IdentifyForm({
             {(field) => (
               <field.TextField
                 id="identify-year"
-                label="Year"
+                label={tr("title.identify.year")}
                 inputMode="numeric"
-                placeholder="Any"
+                placeholder={tr("title.identify.anyYear")}
               />
             )}
           </form.AppField>
         </div>
-        <Button type="submit" variant="secondary" aria-label="Search">
+        <Button
+          type="submit"
+          variant="secondary"
+          aria-label={tr("title.identify.search")}
+        >
           <SearchIcon />
-          <span className="max-sm:hidden">Search</span>
+          <span className="max-sm:hidden">{tr("title.identify.search")}</span>
         </Button>
       </form>
 
@@ -168,8 +182,10 @@ function IdentifyForm({
           </div>
         ) : results.data?.length === 0 ? (
           <p className="text-muted-foreground grid flex-1 place-items-center px-3 pb-2 text-center text-sm">
-            {providerName} found nothing for “{submitted.query}”. Try the
-            original title, or leave the year empty.
+            {tr("title.identify.empty", {
+              provider: providerName,
+              query: submitted.query,
+            })}
           </p>
         ) : (
           <ul className="flex flex-col pb-2">
@@ -195,7 +211,9 @@ function IdentifyForm({
                         </span>
                       )}
                       {match.id === title.providerId && (
-                        <Badge variant="secondary">Current match</Badge>
+                        <Badge variant="secondary">
+                          {tr("title.identify.current")}
+                        </Badge>
                       )}
                     </span>
                     {match.overview && (

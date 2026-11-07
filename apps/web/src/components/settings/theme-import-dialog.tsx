@@ -22,6 +22,7 @@ import { useMutation } from "@tanstack/react-query"
 import { CircleAlertIcon, FileUpIcon } from "lucide-react"
 import { type DragEvent, useRef, useState } from "react"
 
+import { tr } from "@/i18n"
 import { useAppForm } from "@/lib/form"
 import { errorMessage } from "@/lib/rpc"
 import { saveAccountTheme } from "@/lib/theme-sync"
@@ -83,7 +84,9 @@ async function importSources(
     } catch (cause) {
       // The rest would most likely fail the same way, at the theme limit or
       // while offline.
-      errors.push(`${name}: ${errorMessage(cause)}`)
+      errors.push(
+        tr("themes.import.saveFailed", { name, reason: errorMessage(cause) }),
+      )
       break
     }
   }
@@ -99,9 +102,7 @@ function ThemeImportForm({ onDone }: { onDone: () => void }) {
       const [first] = added
       if (!first) return
       selectThemeFamily(first)
-      toast.success(
-        added.length === 1 ? "Added theme" : `Added ${added.length} themes`,
-      )
+      toast.success(tr("themes.import.added", { count: added.length }))
       if (errors.length === 0) onDone()
     },
   })
@@ -146,11 +147,9 @@ function ThemeImportForm({ onDone }: { onDone: () => void }) {
     >
       <DialogHeader>
         <DialogTitle className="text-lg leading-7 font-semibold">
-          Import theme
+          {tr("themes.import.title")}
         </DialogTitle>
-        <DialogDescription>
-          Matinee, alloy, or VS Code themes.
-        </DialogDescription>
+        <DialogDescription>{tr("themes.import.description")}</DialogDescription>
       </DialogHeader>
 
       <div
@@ -166,7 +165,7 @@ function ThemeImportForm({ onDone }: { onDone: () => void }) {
         )}
       >
         <p className="text-muted-foreground min-w-0 flex-1 text-sm">
-          Drop .json files here
+          {tr("themes.import.drop")}
         </p>
         <Button
           type="button"
@@ -176,7 +175,7 @@ function ThemeImportForm({ onDone }: { onDone: () => void }) {
           onClick={() => fileInput.current?.click()}
         >
           <FileUpIcon />
-          Choose files
+          {tr("themes.import.choose")}
         </Button>
         <input
           ref={fileInput}
@@ -193,7 +192,7 @@ function ThemeImportForm({ onDone }: { onDone: () => void }) {
 
       <div className="flex flex-col gap-2">
         <label htmlFor="theme-import-json" className="text-sm font-medium">
-          Or paste JSON
+          {tr("themes.import.paste")}
         </label>
         <form.Field name="text">
           {(field) => (
@@ -227,11 +226,11 @@ function ThemeImportForm({ onDone }: { onDone: () => void }) {
 
       <DialogFooter className="-mx-6 -mb-6 px-6 py-4">
         <Button type="button" variant="ghost" onClick={onDone}>
-          Cancel
+          {tr("themes.cancel")}
         </Button>
         <form.AppForm>
           <form.SubmitButton pending={adding} disabled={blank}>
-            Import
+            {tr("themes.import.submit")}
           </form.SubmitButton>
         </form.AppForm>
       </DialogFooter>

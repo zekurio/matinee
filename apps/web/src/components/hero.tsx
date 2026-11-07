@@ -15,6 +15,7 @@ import { type ReactNode, useEffect, useState } from "react"
 import { useStore } from "zustand"
 import { useShallow } from "zustand/shallow"
 
+import { perLocale, tr } from "@/i18n"
 import {
   art,
   episodeCode,
@@ -31,6 +32,14 @@ import { Blurhash } from "./blurhash"
 import { Picture, tone } from "./media-item"
 
 const ADVANCE_MS = 8000
+
+const ratings = perLocale(
+  (locale) =>
+    new Intl.NumberFormat(locale, {
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1,
+    }),
+)
 
 /**
  * The banner's box, shared with Home's loading skeleton. A phone on its
@@ -152,8 +161,8 @@ export function Hero({
 
   return (
     <section
-      aria-roledescription="carousel"
-      aria-label="Featured"
+      aria-roledescription={tr("media.hero.carousel")}
+      aria-label={tr("media.hero.label")}
       // Hovering or focusing anywhere in the banner holds the current slide.
       onMouseEnter={hold}
       onMouseLeave={release}
@@ -190,7 +199,7 @@ export function Hero({
           key={slide.title.id}
           slide={slide}
           active={i === index}
-          position={`${i + 1} of ${count}`}
+          position={tr("media.hero.position", { index: i + 1, count })}
         />
       ))}
 
@@ -207,13 +216,13 @@ export function Hero({
           >
             <nav
               className="flex items-center gap-1.5 [@media(pointer:coarse)]:gap-0"
-              aria-label="Slides"
+              aria-label={tr("media.hero.slides")}
             >
               {slides.map((slide, i) => (
                 <button
                   key={slide.title.id}
                   type="button"
-                  aria-label={`Show slide ${i + 1}`}
+                  aria-label={tr("media.hero.showSlide", { index: i + 1 })}
                   aria-current={i === index ? "true" : undefined}
                   onClick={() => go(i)}
                   // The ring goes round the dot, not the wider tap target.
@@ -233,7 +242,7 @@ export function Hero({
             <div className="flex gap-1 max-sm:hidden">
               <button
                 type="button"
-                aria-label="Previous slide"
+                aria-label={tr("media.hero.previous")}
                 onClick={() => go(index - 1)}
                 className="focus-visible:ring-ring text-foreground/75 hover:text-foreground grid size-9 place-items-center rounded-full drop-shadow-[0_1px_4px_rgb(0_0_0/0.5)] transition-colors outline-none focus-visible:ring-2 [&_svg]:size-5"
               >
@@ -241,7 +250,7 @@ export function Hero({
               </button>
               <button
                 type="button"
-                aria-label="Next slide"
+                aria-label={tr("media.hero.next")}
                 onClick={() => go(index + 1)}
                 className="focus-visible:ring-ring text-foreground/75 hover:text-foreground grid size-9 place-items-center rounded-full drop-shadow-[0_1px_4px_rgb(0_0_0/0.5)] transition-colors outline-none focus-visible:ring-2 [&_svg]:size-5"
               >
@@ -306,7 +315,9 @@ function SlideContent({
   const resuming = left !== null && ratio !== null
   const facts = [
     label.year,
-    title.kind === "show" && slide.count > 1 ? `${slide.count} episodes` : null,
+    title.kind === "show" && slide.count > 1
+      ? tr("media.episodeCount", { count: slide.count })
+      : null,
   ].filter(Boolean)
   const genres = title.genres.slice(0, 3)
   return (
@@ -314,7 +325,7 @@ function SlideContent({
       // The WAI-ARIA carousel pattern marks each slide as a group.
       // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
       role="group"
-      aria-roledescription="slide"
+      aria-roledescription={tr("media.hero.slide")}
       aria-label={position}
       aria-hidden={!active}
       inert={!active}
@@ -340,15 +351,15 @@ function SlideContent({
                 aria-hidden
                 className="size-3.5 fill-current text-amber-300"
               />
-              <span className="sr-only">Rated</span>
-              {title.rating.toFixed(1)}
+              <span className="sr-only">{tr("media.hero.rated")}</span>
+              {ratings().format(title.rating)}
             </span>
           )}
         </div>
         {genres.length > 0 && (
           // Short phones give the banner too little room for them.
           <ul
-            aria-label="Genres"
+            aria-label={tr("media.hero.genres")}
             className="mt-3 flex flex-wrap gap-1.5 sm:max-lg:[@media(max-height:540px)]:hidden max-sm:[@media(max-height:860px)]:hidden"
           >
             {genres.map((genre) => (
@@ -393,7 +404,7 @@ function SlideContent({
             className={buttonVariants({ size: "lg", className: heroButton })}
           >
             <PlayIcon className="fill-current" />
-            {resuming ? "Resume" : "Play"}
+            {resuming ? tr("media.hero.resume") : tr("media.hero.play")}
           </Link>
           <Link
             to="/titles/$titleId"
@@ -405,7 +416,9 @@ function SlideContent({
             })}
           >
             {title.kind === "show" ? <ListIcon /> : <InfoIcon />}
-            {title.kind === "show" ? "Episodes" : "Details"}
+            {title.kind === "show"
+              ? tr("media.hero.episodes")
+              : tr("media.hero.details")}
           </Link>
         </div>
       </div>

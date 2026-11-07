@@ -1,4 +1,4 @@
-import { THEME_MODES, type ThemeMode } from "@matinee/contracts"
+import { THEME_MODES } from "@matinee/contracts"
 import {
   setThemeMode,
   themeVariantColors,
@@ -8,11 +8,7 @@ import type { ThemeColors } from "@matinee/ui/lib/theme-colors"
 import { cn } from "@matinee/ui/lib/utils"
 import { type KeyboardEvent, useRef } from "react"
 
-const MODE_LABELS = new Map<ThemeMode, string>([
-  ["system", "System"],
-  ["light", "Light"],
-  ["dark", "Dark"],
-])
+import { tr } from "@/i18n"
 
 /**
  * System, Light, and Dark as cards, each a miniature of the app in the theme
@@ -42,7 +38,7 @@ export function ColorSchemePicker({ theme }: { theme: ThemeState }) {
   return (
     <div
       role="radiogroup"
-      aria-label="Color scheme"
+      aria-label={tr("appearance.colorScheme")}
       className="grid grid-cols-3 gap-2 sm:gap-3"
     >
       {THEME_MODES.map((mode, index) => {
@@ -84,7 +80,9 @@ export function ColorSchemePicker({ theme }: { theme: ThemeState }) {
                 <AppMiniature colors={mode === "dark" ? dark : light} />
               )}
             </span>
-            <span className="truncate">{MODE_LABELS.get(mode) ?? mode}</span>
+            <span className="truncate">
+              {tr(`appearance.colorScheme.${mode}`)}
+            </span>
           </button>
         )
       })}

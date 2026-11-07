@@ -8,12 +8,12 @@ import { buttonVariants } from "@matinee/ui/components/button"
 import { cn } from "@matinee/ui/lib/utils"
 import { Link } from "@tanstack/react-router"
 import { PlayIcon, StarIcon } from "lucide-react"
-import { Fragment } from "react"
 
 import { pageBleed, pageColumn } from "@/components/app-shell"
-import { CrewFacts } from "@/components/credits"
+import { CrewFacts, listNodes, unitList } from "@/components/credits"
 import { FavoriteButton } from "@/components/favorite-button"
 import { Picture, textLink, tone } from "@/components/media-item"
+import { perLocale, tr } from "@/i18n"
 import { formatRuntime } from "@/lib/format"
 import {
   art,
@@ -26,9 +26,14 @@ import {
 import { HeaderOverview } from "./header-overview"
 import { MatchNote, TitleMenu } from "./title-menu"
 
-function plural(n: number, word: string): string {
-  return `${n} ${word}${n === 1 ? "" : "s"}`
-}
+// A rating out of ten, with one decimal: "7.5".
+const ratings = perLocale(
+  (locale) =>
+    new Intl.NumberFormat(locale, {
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1,
+    }),
+)
 
 /**
  * The top of the page: the backdrop across the window, the poster, and the
@@ -52,8 +57,8 @@ export function TitleHeader({ title }: { title: Title }) {
     runtime,
     title.kind === "show"
       ? numbered.length > 1
-        ? plural(numbered.length, "season")
-        : plural(title.itemCount, "episode")
+        ? tr("title.seasonCount", { count: numbered.length })
+        : tr("title.episodeCount", { count: title.itemCount })
       : null,
     title.kind === "show" ? title.status : null,
   ].filter(Boolean)
@@ -93,8 +98,12 @@ export function TitleHeader({ title }: { title: Title }) {
                       aria-hidden
                       className="size-3.5 fill-current text-amber-300"
                     />
-                    <span className="sr-only">Rated</span>
-                    {title.rating.toFixed(1)}
+                    <span className="sr-only">
+                      {tr("title.rating", {
+                        rating: ratings().format(title.rating),
+                      })}
+                    </span>
+                    <span aria-hidden>{ratings().format(title.rating)}</span>
                   </span>
                 )}
                 {flags.map((flag) => (
@@ -108,18 +117,19 @@ export function TitleHeader({ title }: { title: Title }) {
               </div>
               {title.genres.length > 0 && (
                 <p className="text-muted-foreground mt-1 text-sm">
-                  {title.genres.slice(0, 4).map((genre, i) => (
-                    <Fragment key={genre}>
-                      {i > 0 && ", "}
+                  {listNodes(
+                    unitList(),
+                    title.genres.slice(0, 4).map((genre) => (
                       <Link
+                        key={genre}
                         to="/genres/$genre"
                         params={{ genre }}
                         className={cn(textLink, "hover:text-foreground")}
                       >
                         {genre}
                       </Link>
-                    </Fragment>
-                  ))}
+                    )),
+                  )}
                 </p>
               )}
             </div>
@@ -278,7 +288,7 @@ export function PlayButton({
       })}
     >
       <PlayIcon className="fill-current" />
-      {resume ? "Resume" : "Play"}
+      {resume ? tr("title.resume") : tr("title.play")}
       {detail.length > 0 && (
         <span className="truncate font-normal tabular-nums opacity-70">
           {detail.join(" · ")}

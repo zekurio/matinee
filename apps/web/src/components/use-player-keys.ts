@@ -1,6 +1,8 @@
 import { type LucideIcon, RotateCcwIcon, RotateCwIcon } from "lucide-react"
 import { useEffect, useEffectEvent } from "react"
 
+import { tr } from "@/i18n"
+
 import { SKIP_S, VOLUME_STEP } from "./player-controls"
 
 export type PlayerKeyActions = {
@@ -39,11 +41,11 @@ export function usePlayerKeys({
     if (event.metaKey || event.ctrlKey || event.altKey) return
     const back = () => {
       skip(-SKIP_S)
-      show(RotateCcwIcon, `${SKIP_S} s`)
+      show(RotateCcwIcon, tr("player.flash.skip", { seconds: SKIP_S }))
     }
     const ahead = () => {
       skip(SKIP_S)
-      show(RotateCwIcon, `${SKIP_S} s`)
+      show(RotateCwIcon, tr("player.flash.skip", { seconds: SKIP_S }))
     }
     const actions = new Map([
       [" ", toggle],

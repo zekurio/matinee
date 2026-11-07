@@ -8,8 +8,8 @@ import {
   WatchedBadge,
 } from "@/components/media-item"
 import { Rail, RailItem } from "@/components/rail"
-import { plural } from "@/lib/format"
-import { art } from "@/lib/media"
+import { tr } from "@/i18n"
+import { art, seasonName } from "@/lib/media"
 
 import { seasonKey, seasonParams } from "./seasons"
 
@@ -29,7 +29,7 @@ export function SeasonsRail({
     : title.seasons
   if (seasons.length === 0) return null
   return (
-    <Rail title={current ? "More seasons" : "Seasons"}>
+    <Rail title={current ? tr("title.seasons.more") : tr("title.seasons")}>
       {seasons.map((season) => (
         <RailItem key={seasonKey(season)} artwork="poster">
           <SeasonCard title={title} season={season} />
@@ -52,7 +52,10 @@ function SeasonCard({ title, season }: { title: Title; season: Season }) {
       className={cardClass}
     >
       <PosterArt
-        name={`${title.name}: ${season.name}`}
+        name={tr("title.seasonOf", {
+          show: title.name,
+          season: seasonName(season.number),
+        })}
         toneKey={title.id}
         poster={art(season.poster ?? title.images.poster)}
       >
@@ -61,7 +64,7 @@ function SeasonCard({ title, season }: { title: Title; season: Season }) {
         ) : (
           <span
             role="img"
-            aria-label={`${plural(left, "episode")} left to watch`}
+            aria-label={tr("title.seasons.left", { count: left })}
             className="bg-primary text-primary-foreground absolute top-1.5 right-1.5 grid h-5 min-w-5 place-items-center rounded-full px-1.5 text-[11px] leading-none font-semibold tabular-nums shadow-sm"
           >
             {left}
@@ -69,8 +72,8 @@ function SeasonCard({ title, season }: { title: Title; season: Season }) {
         )}
       </PosterArt>
       <CardText
-        primary={season.name}
-        secondary={plural(season.itemCount, "episode")}
+        primary={seasonName(season.number)}
+        secondary={tr("title.episodeCount", { count: season.itemCount })}
       />
     </Link>
   )

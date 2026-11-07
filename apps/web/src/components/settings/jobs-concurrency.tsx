@@ -12,10 +12,11 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { MinusIcon, PlusIcon } from "lucide-react"
 import { useState } from "react"
 
+import { type MessageKey, tr, translateKnown } from "@/i18n"
 import { useAppForm, useFieldContext } from "@/lib/form"
-import { plural } from "@/lib/format"
 import { client, orpc } from "@/lib/rpc"
 
+import { queueName } from "./queue-details-dialog"
 import {
   SettingRow,
   SettingRows,
@@ -38,6 +39,20 @@ function sameDraft(a: Draft, b: Draft): boolean {
 /** The queues whose concurrency an admin may change. */
 export function tunableQueues(overview: JobsOverview): JobQueueStatus[] {
   return overview.queues.filter((queue) => queue.concurrencyNote !== null)
+}
+
+/** What each tunable queue's setting counts, and when to raise it. */
+const NOTES = new Map<JobQueueId, MessageKey>([
+  ["media-probe", "jobs.queue.media-probe.note"],
+  ["trickplay", "jobs.queue.trickplay.note"],
+  ["artwork", "jobs.queue.artwork.note"],
+])
+
+/** A queue's note in the interface's language, else the server's. */
+function queueNote(queue: JobQueueStatus): string | null {
+  const key = NOTES.get(queue.id)
+  if (key) return tr(key)
+  return queue.concurrencyNote && translateKnown(queue.concurrencyNote)
 }
 
 /**
@@ -74,8 +89,8 @@ export function ConcurrencySection({
     <form className="contents" onSubmit={(event) => event.preventDefault()}>
       <SettingsSubsection
         id="concurrency"
-        title="Concurrency"
-        description="How many jobs a queue runs at once. Higher clears a backlog sooner but leaves less CPU and disk for streaming."
+        title={tr("jobs.concurrency")}
+        description={tr("jobs.concurrency.description")}
       >
         <SettingRows>
           {queues.map((queue) => (
@@ -112,13 +127,18 @@ function StepperField({ queue }: { queue: JobQueueStatus }) {
     setTyped(null)
     field.handleChange(Math.max(1, Math.min(max, n)))
   }
+  const name = queueName(queue)
 
   return (
     <SettingRow
-      title={queue.name}
+      title={name}
       description={
         <>
-          {queue.concurrencyNote} Default {queue.defaultConcurrency}, max {max}.
+          {queueNote(queue)}{" "}
+          {tr("jobs.concurrency.limits", {
+            default: queue.defaultConcurrency,
+            max,
+          })}
         </>
       }
       layout="split"
@@ -129,7 +149,7 @@ function StepperField({ queue }: { queue: JobQueueStatus }) {
             type="button"
             variant="outline"
             size="icon-sm"
-            aria-label={`Decrease ${queue.name}`}
+            aria-label={tr("jobs.concurrency.decrease", { queue: name })}
             disabled={value <= 1}
             onClick={() => set(value - 1)}
           >
@@ -163,14 +183,14 @@ function StepperField({ queue }: { queue: JobQueueStatus }) {
             type="button"
             variant="outline"
             size="icon-sm"
-            aria-label={`Increase ${queue.name}`}
+            aria-label={tr("jobs.concurrency.increase", { queue: name })}
             disabled={value >= max}
             onClick={() => set(value + 1)}
           >
             <PlusIcon />
           </Button>
           <span className="sr-only" aria-live="polite">
-            {plural(value, "job")} at once
+            {tr("jobs.concurrency.atOnce", { count: value })}
           </span>
         </div>
       )}

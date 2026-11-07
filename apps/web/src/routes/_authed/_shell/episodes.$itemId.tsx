@@ -26,6 +26,7 @@ import { Rail, RailItem } from "@/components/rail"
 import { seasonParams } from "@/components/title/seasons"
 import { WatchedDateDialog } from "@/components/watched-date-dialog"
 import { useSetWatched, WatchedMenuItems } from "@/components/watched-menu"
+import { tr } from "@/i18n"
 import { formatDate, formatRuntime } from "@/lib/format"
 import {
   art,
@@ -35,6 +36,7 @@ import {
   present,
   progressRatio,
   timeLeft,
+  seasonName,
 } from "@/lib/media"
 import { errorMessage, orpc } from "@/lib/rpc"
 import { useOverviewToggle } from "@/lib/use-overview-toggle"
@@ -56,7 +58,7 @@ function EpisodePage() {
     return (
       <div className="py-24 text-center">
         <h1 className="text-2xl font-semibold tracking-tight">
-          Couldn't load this episode
+          {tr("title.episode.loadError")}
         </h1>
         <p className="text-muted-foreground mt-2 text-sm">
           {errorMessage(item.error)}
@@ -68,7 +70,7 @@ function EpisodePage() {
             className: "mt-6",
           })}
         >
-          Back to Home
+          {tr("title.backHome")}
         </Link>
       </div>
     )
@@ -165,7 +167,11 @@ function EpisodeHeader({ item }: { item: MediaItem }) {
           <Link
             to="/watch/$itemId"
             params={{ itemId: item.id }}
-            aria-label={`${resume ? "Resume" : "Play"} ${label.title}`}
+            aria-label={
+              resume
+                ? tr("title.resumeName", { name: label.title })
+                : tr("title.playName", { name: label.title })
+            }
             ref={artRef}
             style={artStyle}
             className={cn(
@@ -220,7 +226,7 @@ function EpisodeHeader({ item }: { item: MediaItem }) {
                     onClick={toggle}
                     className="text-muted-foreground hover:text-foreground focus-visible:ring-ring mt-1 rounded text-sm font-medium outline-none focus-visible:ring-2"
                   >
-                    {expanded ? "Less" : "More"}
+                    {expanded ? tr("title.less") : tr("title.more")}
                   </button>
                 )}
               </div>
@@ -236,7 +242,7 @@ function EpisodeHeader({ item }: { item: MediaItem }) {
                 })}
               >
                 <PlayIcon className="fill-current" />
-                {resume ? "Resume" : "Play"}
+                {resume ? tr("title.resume") : tr("title.play")}
               </Link>
               <ItemFavoriteButton item={item} />
               <EpisodeMenu item={item} label={label.title} />
@@ -270,7 +276,9 @@ function SeasonRail({ item }: { item: MediaItem }) {
   if (others.length === 0) return null
   const at = items.data.findIndex((other) => other.id === item.id)
   const season = title.data.seasons.find((s) => s.number === item.seasonNumber)
-  const name = `More from ${season?.name ?? "this season"}`
+  const name = season
+    ? tr("title.episode.moreFrom", { season: seasonName(season.number) })
+    : tr("title.episode.moreFromSeason")
   const headingClass =
     "focus-visible:ring-ring group/heading inline-flex max-w-full items-center gap-1 rounded-sm outline-none focus-visible:ring-2"
   const headingText = (
@@ -368,7 +376,10 @@ function ShowLink({ item }: { item: MediaItem }) {
 function EpisodeHeading({ item }: { item: MediaItem }) {
   const { seasonNumber: season, episodeNumber: number } = item
   if (season === null || number === null) return null
-  const name = season === 0 ? "Specials" : `Season ${season}`
+  const name =
+    season === 0
+      ? tr("title.episode.specials")
+      : tr("title.episode.season", { number: String(season) })
   return (
     <p className="text-foreground/80 mt-1 text-base font-medium tabular-nums sm:text-lg">
       {item.title ? (
@@ -382,7 +393,8 @@ function EpisodeHeading({ item }: { item: MediaItem }) {
       ) : (
         name
       )}
-      {` · Episode ${number}`}
+      {" · "}
+      {tr("title.episode.number", { number: String(number) })}
     </p>
   )
 }
@@ -399,7 +411,7 @@ function EpisodeMenu({ item, label }: { item: MediaItem; label: string }) {
             <Button
               variant="secondary"
               size="icon-lg"
-              aria-label={`More actions for ${label}`}
+              aria-label={tr("title.moreActionsFor", { name: label })}
               className="border-foreground/10 bg-foreground/15 hover:bg-foreground/25 backdrop-blur max-sm:size-11"
             />
           }

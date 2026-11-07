@@ -4,6 +4,7 @@ import { skipToken, useQuery } from "@tanstack/react-query"
 import { type RefObject, useEffect } from "react"
 import { useShallow } from "zustand/shallow"
 
+import { tr } from "@/i18n"
 import {
   currentPlaybackPreferences,
   updatePlaybackPreferences,
@@ -114,8 +115,8 @@ function shiftCues(track: TextTrack, offset: number) {
 }
 
 function loadFailed() {
-  toast.error("Couldn't load subtitles", {
-    description: "Pick another track or turn them off.",
+  toast.error(tr("player.error.subtitles"), {
+    description: tr("player.error.subtitlesDetail"),
     position: "top-center",
   })
 }

@@ -12,6 +12,7 @@ import { Button } from "@matinee/ui/components/button"
 import { Spinner } from "@matinee/ui/components/spinner"
 import type { ReactNode } from "react"
 
+import { tr } from "@/i18n"
 import { errorMessage } from "@/lib/rpc"
 
 /** Asks before an action on an account, and shows why it failed. */
@@ -52,7 +53,9 @@ export function ConfirmDialog({
           </p>
         )}
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={pending}>
+            {tr("users.dialog.cancel")}
+          </AlertDialogCancel>
           <Button
             variant={destructive ? "destructive" : "default"}
             disabled={pending}
@@ -72,21 +75,21 @@ export function roleChangeCopy(user: AdminUser, self: boolean) {
   const name = user.displayName ?? user.username
   if (user.role === "user") {
     return {
-      title: `Make ${name} an admin?`,
-      description: "Admins manage libraries, settings, and every account.",
-      confirmLabel: "Make admin",
+      title: tr("users.role.makeTitle", { name }),
+      description: tr("users.role.makeDescription"),
+      confirmLabel: tr("users.role.makeConfirm"),
     }
   }
   if (self) {
     return {
-      title: "Step down as admin?",
-      description: "Only another admin can give it back.",
-      confirmLabel: "Step down",
+      title: tr("users.role.stepDownTitle"),
+      description: tr("users.role.stepDownDescription"),
+      confirmLabel: tr("users.role.stepDownConfirm"),
     }
   }
   return {
-    title: `Remove ${name}'s admin role?`,
-    description: "They keep their account and watch progress.",
-    confirmLabel: "Remove admin role",
+    title: tr("users.role.removeTitle", { name }),
+    description: tr("users.role.removeDescription"),
+    confirmLabel: tr("users.role.removeConfirm"),
   }
 }

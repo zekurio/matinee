@@ -16,6 +16,7 @@ import { AuthScreen } from "@/components/auth-screen"
 import { FormAlert } from "@/components/form-alert"
 import { OidcLinkPage, type PendingLink } from "@/components/oidc-link-page"
 import { UsernamePasskeyForm } from "@/components/username-passkey-form"
+import { tr, translateKnown } from "@/i18n"
 import { signInWithPasskey, signUpWithPasskey } from "@/lib/passkey"
 import { safeRedirect } from "@/lib/redirect"
 import { client, errorMessage, orpc } from "@/lib/rpc"
@@ -105,7 +106,7 @@ function SignInPage({
   const error = passkey.error ?? null
 
   return (
-    <AuthScreen title="Sign in to Matinee">
+    <AuthScreen title={tr("auth.signIn.title")}>
       <div className="flex flex-col gap-3">
         <Button
           size="lg"
@@ -113,7 +114,7 @@ function SignInPage({
           onClick={() => passkey.mutate()}
         >
           {passkey.isPending ? <Spinner /> : <KeyRoundIcon />}
-          Sign in with a passkey
+          {tr("auth.signIn.passkey")}
         </Button>
         {config.oidc && (
           <a
@@ -121,14 +122,14 @@ function SignInPage({
             className={buttonVariants({ variant: "outline", size: "lg" })}
           >
             <LogInIcon />
-            Continue with {config.oidc.displayName}
+            {tr("auth.signIn.oidc", { provider: config.oidc.displayName })}
           </a>
         )}
 
         {authError && (
           <FormAlert
-            message={authError}
-            hint="Use a passkey from this server, or ask the admin for access."
+            message={translateKnown(authError)}
+            hint={tr("auth.signIn.errorHint")}
           />
         )}
         {error && <FormAlert message={errorMessage(error)} />}
@@ -136,11 +137,11 @@ function SignInPage({
           <>
             <div className="text-muted-foreground my-4 flex items-center gap-3 text-xs">
               <Separator className="flex-1" />
-              New to this server?
+              {tr("auth.signIn.newHere")}
               <Separator className="flex-1" />
             </div>
             <UsernamePasskeyForm
-              submitLabel="Create account with a passkey"
+              submitLabel={tr("auth.signIn.createAccount")}
               pending={signUp.isPending}
               error={signUp.error}
               onSubmit={(username) => signUp.mutate(username)}

@@ -21,6 +21,8 @@ import { createContext, useContext } from "react"
 import { useStore } from "zustand"
 import { createStore, type StoreApi } from "zustand/vanilla"
 
+import { tr } from "@/i18n"
+
 /**
  * The theme editor's draft and view, one store per opening: the editor
  * creates it when it mounts and drops it when it closes. Its parts read it
@@ -230,7 +232,10 @@ export function createThemeEditorStore(
               ...selected,
               id: newThemeVariantId(variants),
               name: copiedName
-                ? `${copiedName} copy`.slice(0, THEME_VARIANT_NAME_MAX_LENGTH)
+                ? tr("themes.copyName", { name: copiedName }).slice(
+                    0,
+                    THEME_VARIANT_NAME_MAX_LENGTH,
+                  )
                 : null,
             },
             variants.indexOf(selected) + 1,

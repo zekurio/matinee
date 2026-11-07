@@ -2,19 +2,28 @@ import type { TitleSort } from "@matinee/contracts"
 import { getRouteApi } from "@tanstack/react-router"
 import { useDeferredValue } from "react"
 
+import { tr } from "@/i18n"
 import { useUrlText } from "@/lib/use-url-text"
 
 export type Sort = "title" | "recent" | "year"
 export type SortOption = { value: Sort; label: string }
-export const fileSorts: SortOption[] = [
-  { value: "title", label: "File name" },
-  { value: "recent", label: "Recently added" },
-]
-export const titleSorts: SortOption[] = [
-  { value: "title", label: "Name" },
-  { value: "recent", label: "Recently added" },
-  { value: "year", label: "Year" },
-]
+
+/** The sorts for a list of files. */
+export function fileSorts(): SortOption[] {
+  return [
+    { value: "title", label: tr("library.sort.fileName") },
+    { value: "recent", label: tr("library.sort.recent") },
+  ]
+}
+
+/** The sorts for a list of movies and shows. */
+export function titleSorts(): SortOption[] {
+  return [
+    { value: "title", label: tr("library.sort.name") },
+    { value: "recent", label: tr("library.sort.recent") },
+    { value: "year", label: tr("library.sort.year") },
+  ]
+}
 
 /** The sort as the API names it. */
 export function titleSort(sort: Sort): TitleSort {

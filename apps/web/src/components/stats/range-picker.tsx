@@ -2,7 +2,8 @@ import { STATS_RANGES, type StatsRange } from "@matinee/contracts"
 import { cn } from "@matinee/ui/lib/utils"
 
 import { chipClass, chipRow } from "@/components/chips"
-import { RANGE_NAMES } from "@/lib/stats"
+import { tr } from "@/i18n"
+import { rangeName } from "@/lib/stats"
 
 /** Chips for how far back statistics look. */
 export function RangePicker({
@@ -15,7 +16,11 @@ export function RangePicker({
   className?: string
 }) {
   return (
-    <div role="group" aria-label="Period" className={cn(chipRow, className)}>
+    <div
+      role="group"
+      aria-label={tr("stats.range.label")}
+      className={cn(chipRow, className)}
+    >
       {STATS_RANGES.map((range) => (
         <button
           key={range}
@@ -24,7 +29,7 @@ export function RangePicker({
           onClick={() => onChange(range)}
           className={chipClass(range === value)}
         >
-          {RANGE_NAMES.get(range)}
+          {rangeName(range)}
         </button>
       ))}
     </div>

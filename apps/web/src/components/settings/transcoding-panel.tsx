@@ -6,6 +6,7 @@ import { Skeleton } from "@matinee/ui/components/skeleton"
 import { useSelector } from "@tanstack/react-form"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
+import { tr } from "@/i18n"
 import { useAppForm } from "@/lib/form"
 import { client, errorMessage, orpc } from "@/lib/rpc"
 
@@ -39,7 +40,9 @@ export function TranscodingPanel() {
         <Skeleton className="h-96 rounded-xl" />
       ) : settings.isError ? (
         <p className="text-muted-foreground text-sm">
-          Couldn't load the transcoding settings. {errorMessage(settings.error)}
+          {tr("transcoding.loadFailed", {
+            error: errorMessage(settings.error),
+          })}
         </p>
       ) : (
         <TranscodingForm settings={settings.data} />

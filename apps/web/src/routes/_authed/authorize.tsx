@@ -6,6 +6,8 @@ import { useState } from "react"
 
 import { AuthScreen } from "@/components/auth-screen"
 import { DeviceCard } from "@/components/device-card"
+import { tr, translateKnown } from "@/i18n"
+import { trRich } from "@/i18n/react"
 
 /**
  * Where an app sends someone to sign it in, in the system browser. The
@@ -28,11 +30,11 @@ function AuthorizeApp() {
   if (!request.success) {
     return (
       <AuthScreen
-        title="This sign-in doesn't work"
-        description="The app sent an incomplete request. Try again from the app."
+        title={tr("link.app.invalid")}
+        description={tr("link.app.invalidDescription")}
       >
         <p className="text-muted-foreground text-[13px] leading-5">
-          {request.error.issues[0]?.message}
+          {translateKnown(request.error.issues[0]?.message ?? "")}
         </p>
       </AuthScreen>
     )
@@ -45,16 +47,14 @@ function AuthorizeApp() {
 
   return (
     <AuthScreen
-      title="Sign in an app"
-      description={
-        <>
-          This app wants to use Matinee as{" "}
+      title={tr("link.app.title")}
+      description={trRich("link.app.wants", {
+        name: (
           <span className="text-foreground font-medium">
             {user.displayName ?? user.username}
           </span>
-          .
-        </>
-      }
+        ),
+      })}
     >
       <div className="flex flex-col gap-4">
         <DeviceCard name={name || null} platform={platform} />
@@ -71,13 +71,11 @@ function AuthorizeApp() {
           ))}
           <Button type="submit" size="lg" className="flex-1">
             <LogInIcon />
-            Sign in
+            {tr("link.app.signIn")}
           </Button>
         </form>
         <p className="text-muted-foreground text-[13px] leading-5">
-          {sent
-            ? "Going back to the app. You can close this page once it opens."
-            : "Only continue if you just started signing in on this device."}
+          {sent ? tr("link.app.sent") : tr("link.app.caution")}
         </p>
       </div>
     </AuthScreen>

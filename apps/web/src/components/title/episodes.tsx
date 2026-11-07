@@ -16,6 +16,7 @@ import {
 } from "@/components/media-item"
 import { Rail, RailItem } from "@/components/rail"
 import { useItemWatched } from "@/components/watched-menu"
+import { tr } from "@/i18n"
 import { formatDate, formatRuntime } from "@/lib/format"
 import {
   episodeCode,
@@ -72,17 +73,17 @@ export function SeasonEpisodes({
           id="episodes-heading"
           className="mb-3 text-xl font-semibold tracking-tight"
         >
-          Episodes
+          {tr("title.episodes")}
         </h2>
         <p className="text-muted-foreground text-sm">
-          Couldn't load the episodes. {error}
+          {tr("title.episodes.error", { error })}
         </p>
       </section>
     )
   }
   if (items === undefined) {
     return (
-      <Rail title="Episodes">
+      <Rail title={tr("title.episodes")}>
         {[0, 1, 2, 3, 4, 5].map((i) => (
           <RailItem key={i}>
             <Skeleton className="aspect-video rounded-md" />
@@ -113,7 +114,7 @@ function EpisodesRail({
     ),
   )
   return (
-    <Rail title="Episodes" startIndex={startIndex}>
+    <Rail title={tr("title.episodes")} startIndex={startIndex}>
       {items.map((item) => (
         <RailItem key={item.id}>
           <EpisodeCard item={item} showName={false} />
@@ -132,7 +133,9 @@ function EpisodesRail({
 export function EpisodeRow({ item }: { item: MediaItem }) {
   const label = itemLabel(item)
   const code = episodeCode(item)
-  const name = code ? `${code}: ${label.title}` : label.title
+  const name = code
+    ? tr("title.episodes.codedName", { code, name: label.title })
+    : label.title
   const watched = useItemWatched(item)
   const favorite = useItemFavorite(item)
   const runtime = formatRuntime(

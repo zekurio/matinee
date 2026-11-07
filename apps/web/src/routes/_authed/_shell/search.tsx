@@ -24,7 +24,8 @@ import {
   searchSections,
 } from "@/components/search/search-sections"
 import { UserAvatar } from "@/components/user-avatar"
-import { formatCount, plural } from "@/lib/format"
+import { tr } from "@/i18n"
+import { formatCount } from "@/lib/format"
 import { orpc } from "@/lib/rpc"
 import { useSearchSpotlightStore } from "@/stores/search-spotlight"
 
@@ -48,7 +49,9 @@ const LIMIT = 60
  */
 function SearchPage() {
   const { q } = Route.useSearch()
-  useDocumentTitle(q ? `“${q}”` : "Search")
+  useDocumentTitle(
+    q ? tr("search.page.documentTitle", { query: q }) : tr("search.title"),
+  )
   const openSpotlight = useSearchSpotlightStore((state) => state.setOpen)
   const libraries = useQuery(orpc.libraries.list.queryOptions())
   const results = useQuery({
@@ -66,15 +69,15 @@ function SearchPage() {
           <EmptyMedia variant="icon" className="mb-4 size-9 [&_svg]:size-5">
             <SearchIcon />
           </EmptyMedia>
-          <EmptyTitle className="text-base font-semibold">Search</EmptyTitle>
-          <EmptyDescription>
-            Find movies, shows, cast and crew, genres, studios, and profiles.
-          </EmptyDescription>
+          <EmptyTitle className="text-base font-semibold">
+            {tr("search.title")}
+          </EmptyTitle>
+          <EmptyDescription>{tr("search.page.intro")}</EmptyDescription>
         </EmptyHeader>
         <EmptyContent>
           <Button onClick={() => openSpotlight(true)}>
             <SearchIcon />
-            Search
+            {tr("search.title")}
           </Button>
         </EmptyContent>
       </Empty>
@@ -97,14 +100,12 @@ function SearchPage() {
   return (
     <div>
       <h1 className="mb-6 text-[26px] leading-8 font-semibold tracking-tight text-balance break-words md:text-[32px] md:leading-10">
-        Results for “{q}”
+        {tr("search.page.heading", { query: q })}
       </h1>
       {results.isPending ? (
         <PosterGridSkeleton />
       ) : results.isError ? (
-        <p className="text-muted-foreground text-sm">
-          The search didn't go through. Try again in a moment.
-        </p>
+        <p className="text-muted-foreground text-sm">{tr("search.failed")}</p>
       ) : sections.length === 0 ? (
         <Empty className="py-16">
           <EmptyHeader>
@@ -112,11 +113,9 @@ function SearchPage() {
               <SearchXIcon />
             </EmptyMedia>
             <EmptyTitle className="text-base font-semibold">
-              Nothing matches “{q}”
+              {tr("search.page.noMatch", { query: q })}
             </EmptyTitle>
-            <EmptyDescription>
-              Check the spelling, or try part of the name.
-            </EmptyDescription>
+            <EmptyDescription>{tr("search.page.noMatchHint")}</EmptyDescription>
           </EmptyHeader>
         </Empty>
       ) : (
@@ -126,8 +125,7 @@ function SearchPage() {
           ))}
           {capped && (
             <p className="text-muted-foreground text-sm">
-              Showing the first {LIMIT} of each. Add a word or two to narrow it
-              down.
+              {tr("search.page.capped", { limit: LIMIT })}
             </p>
           )}
         </div>
@@ -136,23 +134,15 @@ function SearchPage() {
   )
 }
 
-const sectionNouns = {
-  profiles: ["profile", "profiles"],
-  movies: ["movie", "movies"],
-  shows: ["show", "shows"],
-  cast: ["person", "people"],
-  genres: ["genre", "genres"],
-  studios: ["studio", "studios"],
-} satisfies Record<SearchSection["kind"], [string, string]>
-
 /** Columns for round portraits, a little denser than posters. */
 const personGrid =
   "grid grid-cols-3 gap-x-3 gap-y-5 sm:grid-cols-5 sm:gap-x-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10"
 
 function Section({ section }: { section: SearchSection }) {
   const id = `results-${section.key}`
-  const [one, many] = sectionNouns[section.kind]
-  const count = plural(section.hits.length, one, many)
+  const count = tr(`search.count.${section.kind}`, {
+    count: section.hits.length,
+  })
   const layout =
     section.kind === "movies" || section.kind === "shows"
       ? posterGrid

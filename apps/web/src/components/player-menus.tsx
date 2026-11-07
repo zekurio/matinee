@@ -1,7 +1,6 @@
 import {
   type AudioTrack,
   PLAYBACK_QUALITIES,
-  type PlaybackQuality,
   PlaybackQuality as PlaybackQualitySchema,
   type Subtitles,
 } from "@matinee/contracts"
@@ -9,7 +8,9 @@ import { AudioLinesIcon, CaptionsIcon, SettingsIcon } from "lucide-react"
 import type { RefObject } from "react"
 import { useShallow } from "zustand/shallow"
 
-import { trackDetail } from "@/lib/subtitles"
+import { tr } from "@/i18n"
+import { trackLabel } from "@/lib/languages"
+import { subtitleLabel, trackDetail } from "@/lib/subtitles"
 import { usePlayerStore } from "@/stores/player"
 
 import { controlButtonClass } from "./player-controls"
@@ -47,34 +48,40 @@ export function PlayerMenus({
     })),
   )
   // One menu opens at a time, and the controls stay up while it does.
-  const menuProps = (label: string) => ({
+  const menuProps = (id: string, label: string) => ({
     label,
-    open: openMenu === label,
-    onOpenChange: (open: boolean) => setMenuOpen(label, open),
+    open: openMenu === id,
+    onOpenChange: (open: boolean) => setMenuOpen(id, open),
     container,
     triggerClassName: controlButtonClass,
   })
   // Audio: every track, with the codec and channels its label leaves out.
   const audioSection: MenuSection = {
-    title: "Audio",
+    title: tr("player.menu.audio"),
     value: playback.audio === null ? "" : String(playback.audio),
-    choices: playback.tracks.map((track) => ({
+    choices: playback.tracks.map((track, position) => ({
       id: String(track.index),
-      label: track.label,
+      label: trackLabel(
+        track.language,
+        track.title,
+        tr("player.track.unnamed", { number: position + 1 }),
+      ),
       detail: audioDetail(track),
     })),
     onSelect: (id) => playback.selectAudio(Number(id)),
-    empty: audioTracks ? "This file has no audio tracks" : "Loading tracks…",
+    empty: audioTracks
+      ? tr("player.audio.noTracks")
+      : tr("player.audio.loading"),
   }
 
   const subtitleSection: MenuSection = {
-    title: "Subtitles",
+    title: tr("player.menu.subtitles"),
     value: subs.selected ?? OFF,
     choices: [
-      { id: OFF, label: "Off" },
+      { id: OFF, label: tr("player.subtitles.off") },
       ...subs.tracks.map((track) => ({
         id: track.id,
-        label: track.label,
+        label: subtitleLabel(track, subs.tracks),
         detail: trackDetail(track),
         // Burning in takes an encode, and an encode takes an audio track.
         disabled:
@@ -89,7 +96,7 @@ export function PlayerMenus({
   const qualities: MenuChoice[] = [
     {
       id: "original",
-      label: "Original",
+      label: tr("player.quality.original"),
       detail: videoSize
         ? resolutionName(videoSize.width, videoSize.height)
         : undefined,
@@ -109,7 +116,7 @@ export function PlayerMenus({
   ]
   const settingsSections: MenuSection[] = [
     {
-      title: "Quality",
+      title: tr("player.quality"),
       value: playback.quality,
       choices: qualities,
       onSelect: (id) => {
@@ -118,52 +125,63 @@ export function PlayerMenus({
       },
     },
     {
-      title: "Speed",
+      title: tr("player.speed"),
       value: String(speed),
       choices: SPEEDS.map((rate) => ({
         id: String(rate),
-        label: rate === 1 ? "Normal" : `${rate}×`,
+        label:
+          rate === 1
+            ? tr("player.speed.normal")
+            : tr("player.speed.rate", { rate }),
       })),
       onSelect: (id) => onSpeedChange(Number(id)),
     },
   ]
   const source = playback.source
   // How the file reaches the browser, in Jellyfin's terms.
-  const playingAs: Map<PlaybackQuality, string> = new Map(
-    PLAYBACK_QUALITIES.map((quality) => [
-      quality.id,
-      `Transcoding to ${quality.height}p, ${formatBitrate(quality.bitrate)}`,
-    ]),
-  )
   const burnedIn = source?.kind === "hls" && source.subtitle !== null
-  const note =
+  const encode =
     source && source.kind !== "direct"
-      ? `${playingAs.get(source.quality) ?? "Direct stream"}${burnedIn ? ", subtitles burned in" : ""}`
-      : "Direct play"
+      ? PLAYBACK_QUALITIES.find((quality) => quality.id === source.quality)
+      : undefined
+  const encodeParams = encode && {
+    resolution: `${encode.height}p`,
+    bitrate: formatBitrate(encode.bitrate),
+  }
+  const note =
+    !source || source.kind === "direct"
+      ? tr("player.via.directPlay")
+      : encodeParams
+        ? burnedIn
+          ? tr("player.via.transcodeBurnIn", encodeParams)
+          : tr("player.via.transcode", encodeParams)
+        : burnedIn
+          ? tr("player.via.directStreamBurnIn")
+          : tr("player.via.directStream")
 
   return (
     <>
       <PlayerMenu
-        {...menuProps("Audio")}
+        {...menuProps("audio", tr("player.menu.audio"))}
         icon={<AudioLinesIcon />}
         sections={[audioSection]}
       />
       <PlayerMenu
-        {...menuProps("Subtitles")}
+        {...menuProps("subtitles", tr("player.menu.subtitles"))}
         shortcut="c"
         icon={<CaptionsIcon />}
         active={subs.selected !== null}
         note={
           subtitles && subs.tracks.length === 0
-            ? "This file has no subtitles"
+            ? tr("player.subtitles.noTracks")
             : subs.loading
-              ? "Loading subtitles…"
+              ? tr("player.subtitles.loading")
               : undefined
         }
         sections={[subtitleSection]}
       />
       <PlayerMenu
-        {...menuProps("Settings")}
+        {...menuProps("settings", tr("player.menu.settings"))}
         icon={<SettingsIcon />}
         note={note}
         sections={settingsSections}

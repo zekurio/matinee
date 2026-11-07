@@ -19,7 +19,18 @@ import {
   type ThemeVariant,
 } from "@matinee/ui/lib/theme-presets"
 
+import { tr } from "@/i18n"
 import type { ThemeEditorOpening } from "@/stores/theme-editor"
+
+/**
+ * A variant's name in the interface's language. Matinee's own are named by
+ * their appearance in the presets, which can't translate.
+ */
+export function variantLabel(variant: ThemeVariant): string {
+  return isMatineeThemeVariant(variant.id)
+    ? tr(`themes.editor.${variant.appearance}`)
+    : variant.label
+}
 
 /**
  * The variant's name inside its theme's card: "Catppuccin Mocha" reads as
@@ -29,7 +40,9 @@ export function variantShortName(
   family: ThemeFamily,
   variant: ThemeVariant,
 ): string {
-  if (family.custom) return variant.label
+  if (family.custom || isMatineeThemeVariant(variant.id)) {
+    return variantLabel(variant)
+  }
   return variant.label.startsWith(`${family.label} `)
     ? variant.label.slice(family.label.length + 1)
     : variant.label
@@ -103,7 +116,10 @@ export function duplicateSeed(
   return {
     themeId: null,
     name: uniqueThemeName(
-      `${family.label} copy`.slice(0, THEME_NAME_MAX_LENGTH),
+      tr("themes.copyName", { name: family.label }).slice(
+        0,
+        THEME_NAME_MAX_LENGTH,
+      ),
       theme.customThemes.map((entry) => entry.name),
     ),
     variants,

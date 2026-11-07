@@ -20,6 +20,7 @@ import { LibraryChips } from "@/components/library-chips"
 import { EpisodeCard, TitleCard } from "@/components/media-item"
 import { PageHeader } from "@/components/page-header"
 import { Rail, RailItem } from "@/components/rail"
+import { tr } from "@/i18n"
 import { orpc } from "@/lib/rpc"
 
 export const Route = createFileRoute("/_authed/_shell/")({
@@ -56,17 +57,21 @@ function Home() {
   if (libraries.data?.length === 0) {
     return (
       <>
-        <PageHeader title={`Welcome, ${user.displayName ?? user.username}`} />
+        <PageHeader
+          title={tr("browse.home.welcome", {
+            name: user.displayName ?? user.username,
+          })}
+        />
         <Empty className="border border-dashed">
           <EmptyHeader>
             <EmptyMedia variant="icon">
               <FolderPlusIcon />
             </EmptyMedia>
-            <EmptyTitle>No libraries yet</EmptyTitle>
+            <EmptyTitle>{tr("browse.home.noLibraries")}</EmptyTitle>
             <EmptyDescription>
               {user.role === "admin"
-                ? "Add a folder of videos on this server to start watching."
-                : "An admin hasn't added any libraries yet."}
+                ? tr("browse.home.noLibrariesAdmin")
+                : tr("browse.home.noLibrariesUser")}
             </EmptyDescription>
           </EmptyHeader>
           {user.role === "admin" && (
@@ -76,7 +81,7 @@ function Home() {
                 search={{ settings: "libraries" }}
                 className={buttonVariants()}
               >
-                Add a library
+                {tr("browse.home.addLibrary")}
               </Link>
             </EmptyContent>
           )}
@@ -120,7 +125,7 @@ function Home() {
         )}
 
         {hasResume && (
-          <Rail title="Continue watching">
+          <Rail title={tr("browse.home.continueWatching")}>
             {resume.data?.map((item) => (
               <RailItem key={item.id}>
                 <EpisodeCard item={item} />
@@ -130,7 +135,7 @@ function Home() {
         )}
 
         {hasNextUp && (
-          <Rail title="Next up">
+          <Rail title={tr("browse.home.nextUp")}>
             {nextUp.data?.map((item) => (
               <RailItem key={item.id}>
                 <EpisodeCard item={item} />
@@ -153,7 +158,7 @@ function LibraryShelf({ library }: { library: Library }) {
       input: { libraryId: library.id, limit: SHELF },
     }),
   )
-  const title = `Recently added in ${library.name}`
+  const title = tr("browse.home.recentlyAdded", { library: library.name })
   const heading =
     library.itemCount > 0 ? (
       <Link
@@ -172,7 +177,7 @@ function LibraryShelf({ library }: { library: Library }) {
   const action = library.scanning ? (
     <span className="text-muted-foreground inline-flex items-center gap-1.5 text-sm">
       <Spinner className="size-3.5" />
-      Scanning…
+      {tr("browse.home.scanning")}
     </span>
   ) : undefined
 
@@ -188,7 +193,7 @@ function LibraryShelf({ library }: { library: Library }) {
         ))
       ) : entries.data?.length === 0 ? (
         <li className="text-muted-foreground w-full rounded-lg border border-dashed p-6 text-sm">
-          Nothing here yet.
+          {tr("browse.home.emptyShelf")}
         </li>
       ) : (
         entries.data?.map((entry) => (

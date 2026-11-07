@@ -10,8 +10,9 @@ import { cn } from "@matinee/ui/lib/utils"
 import { Link } from "@tanstack/react-router"
 
 import { UserAvatar } from "@/components/user-avatar"
-import { formatWatchTime, plural } from "@/lib/format"
-import { encoderName, METHOD_NAMES } from "@/lib/stats"
+import { tr } from "@/i18n"
+import { formatWatchTime } from "@/lib/format"
+import { encoderName, methodName } from "@/lib/stats"
 
 import { percent, RankedBars, StatsSection } from "./stat-blocks"
 
@@ -25,7 +26,7 @@ const METHOD_TONES = new Map<PlaybackMethod, string>([
 export function Methods({ methods }: { methods: MethodStat[] }) {
   const total = methods.reduce((sum, entry) => sum + entry.watchSeconds, 0)
   return (
-    <StatsSection title="How it played">
+    <StatsSection title={tr("stats.server.methods")}>
       <div
         aria-hidden
         className="bg-foreground/[0.07] flex h-1.5 gap-0.5 overflow-hidden rounded-full"
@@ -55,7 +56,7 @@ export function Methods({ methods }: { methods: MethodStat[] }) {
                 )}
               />
               <span className="min-w-0 flex-1 truncate">
-                {METHOD_NAMES.get(entry.method) ?? entry.method}
+                {methodName(entry.method)}
               </span>
               <span className="text-muted-foreground shrink-0 tabular-nums">
                 {`${formatWatchTime(entry.watchSeconds)} · `}
@@ -93,7 +94,7 @@ function CodecSection({
           key: row.name,
           label: name(row.name),
           value: row.plays,
-          detail: plural(row.plays, "play"),
+          detail: tr("stats.plays", { count: row.plays }),
         }))}
       />
     </StatsSection>
@@ -106,19 +107,19 @@ export function TranscodingSections({ stats }: { stats: ServerStats }) {
   return (
     <>
       <CodecSection
-        title="Encoders"
+        title={tr("stats.server.encoders")}
         rows={transcoding.encoders}
         total={transcoding.videoTranscodes}
         name={encoderName}
       />
       <CodecSection
-        title="Video transcoded from"
+        title={tr("stats.server.videoFrom")}
         rows={transcoding.videoCodecs}
         total={transcoding.videoTranscodes}
         name={videoCodecName}
       />
       <CodecSection
-        title="Audio converted from"
+        title={tr("stats.server.audioFrom")}
         rows={transcoding.audioCodecs}
         total={transcoding.audioConversions}
         name={(codec) => audioFormatName(codec)}
@@ -130,7 +131,7 @@ export function TranscodingSections({ stats }: { stats: ServerStats }) {
 export function Viewers({ stats }: { stats: ServerStats }) {
   if (stats.users.length === 0) return null
   return (
-    <StatsSection title="Viewers">
+    <StatsSection title={tr("stats.server.viewers")}>
       <RankedBars
         share
         total={stats.totals.watchSeconds}
@@ -162,7 +163,7 @@ export function Viewers({ stats }: { stats: ServerStats }) {
 export function Clients({ stats }: { stats: ServerStats }) {
   if (stats.clients.length === 0) return null
   return (
-    <StatsSection title="Browsers and apps">
+    <StatsSection title={tr("stats.server.clients")}>
       <RankedBars
         share
         total={stats.totals.plays}
@@ -170,7 +171,7 @@ export function Clients({ stats }: { stats: ServerStats }) {
           key: client.name,
           label: client.name,
           value: client.plays,
-          detail: plural(client.plays, "play"),
+          detail: tr("stats.plays", { count: client.plays }),
         }))}
       />
     </StatsSection>

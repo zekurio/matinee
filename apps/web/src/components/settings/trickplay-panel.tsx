@@ -9,7 +9,8 @@ import { Skeleton } from "@matinee/ui/components/skeleton"
 import { useSelector } from "@tanstack/react-form"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
-import { useAppForm } from "@/lib/form"
+import { tr } from "@/i18n"
+import { firstError, useAppForm } from "@/lib/form"
 import { client, errorMessage, orpc } from "@/lib/rpc"
 
 import { SelectField, SwitchField } from "./setting-controls"
@@ -62,7 +63,7 @@ export function TrickplayPanel() {
         <Skeleton className="h-72 rounded-xl" />
       ) : settings.isError ? (
         <p className="text-muted-foreground text-sm">
-          Couldn't load the trickplay settings. {errorMessage(settings.error)}
+          {tr("trickplay.loadFailed", { error: errorMessage(settings.error) })}
         </p>
       ) : (
         <TrickplayForm saved={settings.data} />
@@ -88,7 +89,9 @@ function TrickplayForm({ saved }: { saved: AdminTrickplaySettings }) {
         width: Number(value.width),
       })
       if (!parsed.success) {
-        throw new Error(parsed.error.issues[0]?.message ?? "Check the fields.")
+        throw new Error(
+          firstError(parsed.error.issues) ?? tr("trickplay.checkFields"),
+        )
       }
       const next = await save.mutateAsync(parsed.data)
       queryClient.setQueryData(orpc.admin.trickplay.get.queryKey(), next)
@@ -107,64 +110,76 @@ function TrickplayForm({ saved }: { saved: AdminTrickplaySettings }) {
     <form className="contents" onSubmit={(event) => event.preventDefault()}>
       <SettingsSubsection
         id="trickplay"
-        title="Trickplay images"
+        title={tr("trickplay.title")}
         description={
           saved.videos > 0
-            ? `Thumbnails over the seek bar while scrubbing. ${saved.ready} of ${saved.videos} videos have them.`
-            : "Thumbnails over the seek bar while scrubbing."
+            ? tr("trickplay.descriptionCount", {
+                count: saved.videos,
+                ready: saved.ready,
+              })
+            : tr("trickplay.description")
         }
       >
         <SettingRows>
           <form.AppField name="enabled">
             {() => (
               <SwitchField
-                title="Make trickplay images"
-                description="Made when scanning and by a daily task."
+                title={tr("trickplay.enabled")}
+                description={tr("trickplay.enabled.description")}
               />
             )}
           </form.AppField>
           <form.AppField name="intervalSeconds">
             {() => (
               <SelectField
-                title="Interval"
-                description="Shorter takes more disk space."
+                title={tr("trickplay.interval")}
+                description={tr("trickplay.interval.description")}
                 options={INTERVALS}
-                labelOf={(value) => `Every ${value} seconds`}
+                labelOf={(value) =>
+                  tr("trickplay.interval.option", { count: Number(value) })
+                }
               />
             )}
           </form.AppField>
           <form.AppField name="width">
             {() => (
               <SelectField
-                title="Width"
-                description="Wider looks sharper on big screens."
+                title={tr("trickplay.width")}
+                description={tr("trickplay.width.description")}
                 options={WIDTHS}
-                labelOf={(value) => `${value} px`}
+                labelOf={(value) =>
+                  tr("trickplay.width.option", { width: value })
+                }
               />
             )}
           </form.AppField>
           <form.AppField name="keyframesOnly">
             {() => (
               <SwitchField
-                title="Keyframes only"
-                description="Several times faster, but thumbnails can be a second or two off."
+                title={tr("trickplay.keyframesOnly")}
+                description={tr("trickplay.keyframesOnly.description")}
               />
             )}
           </form.AppField>
           <form.AppField name="hardwareDecoding">
             {() => (
               <CapabilitySwitchField
-                title="Hardware decoding"
-                description={`Uses ${gpu} for the codecs enabled under Transcoding.`}
-                unavailable="Set up a GPU under Transcoding first."
+                title={tr("trickplay.hardwareDecoding")}
+                description={
+                  gpu
+                    ? tr("trickplay.hardwareDecoding.description", {
+                        decoder: gpu,
+                      })
+                    : undefined
+                }
+                unavailable={tr("trickplay.hardwareDecoding.unavailable")}
                 available={gpu !== null}
               />
             )}
           </form.AppField>
         </SettingRows>
         <p className="text-muted-foreground text-[13px] leading-5">
-          Changing the interval, width, or keyframe setting regenerates every
-          video's images in the background.
+          {tr("trickplay.regenerates")}
         </p>
       </SettingsSubsection>
       <SettingsSaveBar

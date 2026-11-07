@@ -10,14 +10,14 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
 import { FilmIcon, FolderPlusIcon, TvIcon } from "lucide-react"
 
-import { formatBytes, formatCount, formatWatchTime, plural } from "@/lib/format"
+import { tr } from "@/i18n"
+import { formatBytes, formatCount, formatWatchTime } from "@/lib/format"
 import { errorMessage, orpc } from "@/lib/rpc"
 import { useOpenSettings } from "@/lib/settings"
 import {
   browserTimeZone,
   dynamicRangeName,
   RESOLUTION_ORDER,
-  rangePhrase,
   resolutionName,
 } from "@/lib/stats"
 
@@ -63,7 +63,7 @@ function QualitySection({
           key: row.name,
           label: name(row.name),
           value: row.files,
-          detail: `${plural(row.files, "file")} · ${formatBytes(row.sizeBytes)}`,
+          detail: `${tr("stats.files", { count: row.files })} · ${formatBytes(row.sizeBytes)}`,
         }))}
       />
     </StatsSection>
@@ -97,16 +97,14 @@ export function LibraryView({
     return (
       <StatsEmpty
         icon={FolderPlusIcon}
-        title="The libraries are empty"
+        title={tr("stats.library.empty")}
         description={
-          admin
-            ? "Add a library to see how it grows."
-            : "An admin hasn't added any videos yet."
+          admin ? tr("stats.library.emptyAdmin") : tr("stats.library.emptyUser")
         }
         action={
           admin ? (
             <Button onClick={() => openSettings("libraries")}>
-              Add a library
+              {tr("stats.library.add")}
             </Button>
           ) : undefined
         }
@@ -118,7 +116,7 @@ export function LibraryView({
 
 /** The growth chart's heading; the range only applies to it. */
 function addedTitle(range: StatsRange): string {
-  return range === "all" ? "Added over time" : `Added ${rangePhrase(range)}`
+  return tr(`stats.library.added.${range}`)
 }
 
 function LibrarySections({ stats }: { stats: LibraryStats }) {
@@ -130,12 +128,24 @@ function LibrarySections({ stats }: { stats: LibraryStats }) {
     <div className="flex flex-col gap-10">
       <StatFigures
         figures={[
-          { label: "Movies", value: formatCount(totals.movies) },
-          { label: "Shows", value: formatCount(totals.shows) },
-          { label: "Episodes", value: formatCount(totals.episodes) },
-          { label: "Size", value: formatBytes(totals.sizeBytes) },
           {
-            label: "Running time",
+            label: tr("stats.library.movies"),
+            value: formatCount(totals.movies),
+          },
+          {
+            label: tr("stats.library.shows"),
+            value: formatCount(totals.shows),
+          },
+          {
+            label: tr("stats.library.episodes"),
+            value: formatCount(totals.episodes),
+          },
+          {
+            label: tr("stats.library.size"),
+            value: formatBytes(totals.sizeBytes),
+          },
+          {
+            label: tr("stats.library.runningTime"),
             value: formatWatchTime(totals.durationSeconds),
           },
         ]}
@@ -144,7 +154,7 @@ function LibrarySections({ stats }: { stats: LibraryStats }) {
         <GrowthChart buckets={stats.growth} unit={stats.unit} />
       </StatsSection>
       <div className={statsGrid}>
-        <StatsSection title="Libraries">
+        <StatsSection title={tr("stats.library.libraries")}>
           <RankedBars
             share
             rows={libraries.map((library) => {
@@ -165,33 +175,33 @@ function LibrarySections({ stats }: { stats: LibraryStats }) {
                   </Link>
                 ),
                 value: library.sizeBytes,
-                detail: `${formatBytes(library.sizeBytes)} · ${plural(library.titles, library.kind === "movies" ? "movie" : "show")}`,
+                detail: `${formatBytes(library.sizeBytes)} · ${tr(`stats.${library.kind}`, { count: library.titles })}`,
               }
             })}
           />
         </StatsSection>
         <QualitySection
-          title="Resolution"
+          title={tr("stats.library.resolution")}
           rows={inOrder(stats.resolutions, RESOLUTION_ORDER)}
           name={resolutionName}
         />
         <QualitySection
-          title="Dynamic range"
+          title={tr("stats.library.dynamicRange")}
           rows={inOrder(stats.dynamicRange, DYNAMIC_RANGE_ORDER)}
           name={dynamicRangeName}
         />
         <QualitySection
-          title="Video codecs"
+          title={tr("stats.library.videoCodecs")}
           rows={stats.videoCodecs}
           name={(codec) =>
-            codec === "unknown" ? "Not read yet" : videoCodecName(codec)
+            codec === "unknown" ? tr("stats.notRead") : videoCodecName(codec)
           }
         />
         <QualitySection
-          title="Audio codecs"
+          title={tr("stats.library.audioCodecs")}
           rows={stats.audioCodecs}
           name={(codec) =>
-            codec === "unknown" ? "Not read yet" : audioFormatName(codec)
+            codec === "unknown" ? tr("stats.notRead") : audioFormatName(codec)
           }
         />
       </div>

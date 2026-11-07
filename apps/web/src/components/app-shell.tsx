@@ -32,6 +32,7 @@ import {
   useEffect,
 } from "react"
 
+import { tr } from "@/i18n"
 import { client, orpc } from "@/lib/rpc"
 import { useOpenSettings } from "@/lib/settings"
 import { useSearchSpotlightStore } from "@/stores/search-spotlight"
@@ -201,7 +202,7 @@ function LibraryLinks() {
         )}
       >
         <LibraryBigIcon />
-        <NavLabel>{current?.name ?? "Libraries"}</NavLabel>
+        <NavLabel>{current?.name ?? tr("shell.libraries")}</NavLabel>
         <ChevronDownIcon className="text-muted-foreground !size-3.5" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="center" sideOffset={8} className="min-w-52">
@@ -231,7 +232,7 @@ function AccountName({ user }: { user: User }) {
       {user.role === "admin" && (
         <ShieldIcon
           role="img"
-          aria-label="Admin"
+          aria-label={tr("shell.admin")}
           className="text-muted-foreground size-3.5 shrink-0"
         />
       )}
@@ -247,7 +248,7 @@ function AccountMenu({ user }: { user: User }) {
   const name = user.displayName ?? user.username
   const actions = [
     {
-      label: "Profile",
+      label: tr("shell.profile"),
       icon: UserRoundIcon,
       run: () =>
         void navigate({
@@ -256,16 +257,21 @@ function AccountMenu({ user }: { user: User }) {
         }),
     },
     {
-      label: "Statistics",
+      label: tr("shell.statistics"),
       icon: ChartColumnIcon,
       run: () => void navigate({ to: "/stats" }),
     },
-    { label: "Settings", icon: SettingsIcon, run: () => openSettings() },
+    {
+      label: tr("shell.settings"),
+      icon: SettingsIcon,
+      run: () => openSettings(),
+    },
   ]
+  const accountLabel = tr("shell.account", { name })
   const trigger = phone ? (
     <button
       type="button"
-      aria-label={`Account: ${name}`}
+      aria-label={accountLabel}
       className={cn(headerButton, "data-popup-open:bg-foreground/10")}
     >
       <UserAvatar user={user} className="size-9 text-sm" />
@@ -273,7 +279,7 @@ function AccountMenu({ user }: { user: User }) {
   ) : (
     <button
       type="button"
-      aria-label={`Account: ${name}`}
+      aria-label={accountLabel}
       className={cn(pillItem, "gap-2 pl-1", "data-popup-open:bg-foreground/10")}
     >
       <UserAvatar user={user} className="size-7 text-xs" />
@@ -313,7 +319,7 @@ function AccountMenu({ user }: { user: User }) {
           destructive
           onClick={() => signOut.mutate()}
         >
-          Sign out
+          {tr("shell.signOut")}
         </SheetItem>
       </SheetMenu>
     )
@@ -348,7 +354,7 @@ function AccountMenu({ user }: { user: User }) {
           onClick={() => signOut.mutate()}
         >
           <LogOutIcon />
-          Sign out
+          {tr("shell.signOut")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -369,7 +375,7 @@ function NavBar({ user }: { user: User }) {
       />
       <div className="pointer-events-none fixed inset-x-0 top-4 z-40 flex justify-center px-3">
         <nav
-          aria-label="Main"
+          aria-label={tr("shell.mainNav")}
           className={cn(
             glass,
             "pointer-events-auto flex max-w-full min-w-0 items-center gap-0.5",
@@ -377,7 +383,7 @@ function NavBar({ user }: { user: User }) {
         >
           <Link
             to="/"
-            aria-label="Matinee home"
+            aria-label={tr("shell.homeLink")}
             // The bar's rounded end makes the left side read tighter, so the
             // mark gets less room on the right, toward the divider.
             className="focus-visible:ring-ring inline-flex h-9 shrink-0 items-center rounded-full pr-2 pl-3 outline-none focus-visible:ring-2 [@media(pointer:coarse)]:h-11"
@@ -392,7 +398,7 @@ function NavBar({ user }: { user: User }) {
               focus ring and takes the room back with a negative margin. */}
           <div className="-m-0.5 flex min-w-0 [scrollbar-width:none] items-center gap-0.5 overflow-x-auto p-0.5">
             <PillLink to="/" exact icon={HouseIcon}>
-              Home
+              {tr("shell.home")}
             </PillLink>
             <LibraryLinks />
           </div>
@@ -429,7 +435,7 @@ function PhoneHeader({ user }: { user: User }) {
       >
         <Link
           to="/"
-          aria-label="Matinee home"
+          aria-label={tr("shell.homeLink")}
           className="focus-visible:ring-ring -ml-1.5 grid size-11 place-items-center rounded-full outline-none focus-visible:ring-2"
         >
           <LogoMark className="size-7" />
@@ -462,7 +468,7 @@ export function AppShell({
         href="#main"
         className="bg-primary text-primary-foreground sr-only rounded-md px-3 py-2 text-sm font-medium focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50"
       >
-        Skip to content
+        {tr("shell.skipToContent")}
       </a>
       {phone ? <PhoneHeader user={user} /> : <NavBar user={user} />}
       <SearchSpotlight />

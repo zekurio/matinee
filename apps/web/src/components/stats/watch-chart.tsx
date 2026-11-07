@@ -2,20 +2,16 @@ import type { StatsBucket, StatsUnit } from "@matinee/contracts"
 import { cn } from "@matinee/ui/lib/utils"
 import { useState } from "react"
 
+import { tr } from "@/i18n"
+import { trRich } from "@/i18n/react"
 import { formatWatchTime } from "@/lib/format"
 import { bucketName } from "@/lib/stats"
 
 import { BucketBars, niceCeiling } from "./bucket-bars"
 
-const UNIT_WORDS = new Map<StatsUnit, string>([
-  ["day", "day"],
-  ["week", "week"],
-  ["month", "month"],
-])
-
 /** The chart's heading: "Watch time per day". */
 export function watchChartTitle(unit: StatsUnit): string {
-  return `Watch time per ${UNIT_WORDS.get(unit) ?? unit}`
+  return tr(`stats.chart.title.${unit}`)
 }
 
 /** The top of the scale: whole minutes up to an hour, then hours. */
@@ -60,13 +56,14 @@ export function WatchChart({
             {` · ${formatWatchTime(shown.watchSeconds)}`}
           </>
         ) : busiest ? (
-          <>
-            {"Busiest · "}
-            <span className="text-foreground font-medium">
-              {bucketName(busiest.start, unit)}
-            </span>
-            {` · ${formatWatchTime(busiest.watchSeconds)}`}
-          </>
+          trRich("stats.chart.busiest", {
+            date: (
+              <span className="text-foreground font-medium">
+                {bucketName(busiest.start, unit)}
+              </span>
+            ),
+            time: formatWatchTime(busiest.watchSeconds),
+          })
         ) : null}
       </figcaption>
       <BucketBars
@@ -77,7 +74,10 @@ export function WatchChart({
         active={active}
         onActive={setActive}
         describe={(bucket) =>
-          `${bucketName(bucket.start, unit)}: ${formatWatchTime(bucket.watchSeconds)}`
+          tr("stats.chart.point", {
+            date: bucketName(bucket.start, unit),
+            value: formatWatchTime(bucket.watchSeconds),
+          })
         }
         bars={buckets.map(
           (bucket) =>

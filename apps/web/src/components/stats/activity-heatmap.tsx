@@ -2,8 +2,9 @@ import type { ActivityCell } from "@matinee/contracts"
 import { cn } from "@matinee/ui/lib/utils"
 import { Fragment } from "react"
 
+import { tr } from "@/i18n"
 import { formatWatchTime } from "@/lib/format"
-import { hourName, WEEKDAYS } from "@/lib/stats"
+import { hourName, WEEKDAYS, weekdayName } from "@/lib/stats"
 
 const HOURS = Array.from({ length: 24 }, (_, hour) => hour)
 const AXIS_HOURS = [0, 6, 12, 18]
@@ -29,8 +30,11 @@ export function ActivityHeatmap({
     null,
   )
   const summary = peak
-    ? `Most often on ${WEEKDAYS[peak.weekday - 1]}s around ${hourName(peak.hour)}.`
-    : "No watching yet."
+    ? tr("stats.heatmap.peak", {
+        weekday: weekdayName(peak.weekday, "long"),
+        hour: hourName(peak.hour),
+      })
+    : tr("stats.heatmap.empty")
 
   return (
     <figure className={cn("flex flex-col gap-2", className)}>
@@ -39,37 +43,44 @@ export function ActivityHeatmap({
         aria-label={summary}
         className="grid max-w-md grid-cols-[1.75rem_minmax(0,1fr)] gap-y-[3px]"
       >
-        {WEEKDAYS.map((day, index) => (
-          <Fragment key={day}>
-            <span
-              aria-hidden
-              className="text-muted-foreground self-center text-[10px] leading-none"
-            >
-              {day.slice(0, 3)}
-            </span>
-            <div
-              aria-hidden
-              className="grid grid-cols-[repeat(24,minmax(0,1fr))] gap-[3px]"
-            >
-              {HOURS.map((hour) => {
-                const value = seconds.get(`${index + 1}:${hour}`) ?? 0
-                return (
-                  <span
-                    key={hour}
-                    title={`${day.slice(0, 3)}, ${hourName(hour)}: ${formatWatchTime(value)}`}
-                    style={{
-                      opacity: value > 0 ? 0.3 + 0.7 * (value / max) : 1,
-                    }}
-                    className={cn(
-                      "aspect-square rounded-[2px]",
-                      value > 0 ? "bg-primary" : "bg-foreground/[0.06]",
-                    )}
-                  />
-                )
-              })}
-            </div>
-          </Fragment>
-        ))}
+        {WEEKDAYS.map((weekday) => {
+          const day = weekdayName(weekday, "short")
+          return (
+            <Fragment key={weekday}>
+              <span
+                aria-hidden
+                className="text-muted-foreground self-center text-[10px] leading-none"
+              >
+                {day}
+              </span>
+              <div
+                aria-hidden
+                className="grid grid-cols-[repeat(24,minmax(0,1fr))] gap-[3px]"
+              >
+                {HOURS.map((hour) => {
+                  const value = seconds.get(`${weekday}:${hour}`) ?? 0
+                  return (
+                    <span
+                      key={hour}
+                      title={tr("stats.heatmap.cell", {
+                        day,
+                        hour: hourName(hour),
+                        time: formatWatchTime(value),
+                      })}
+                      style={{
+                        opacity: value > 0 ? 0.3 + 0.7 * (value / max) : 1,
+                      }}
+                      className={cn(
+                        "aspect-square rounded-[2px]",
+                        value > 0 ? "bg-primary" : "bg-foreground/[0.06]",
+                      )}
+                    />
+                  )
+                })}
+              </div>
+            </Fragment>
+          )
+        })}
         <span />
         <div
           aria-hidden

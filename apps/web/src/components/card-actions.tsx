@@ -13,6 +13,7 @@ import { useState } from "react"
 import { FavoriteHeart } from "@/components/favorite-button"
 import { WatchedDateDialog } from "@/components/watched-date-dialog"
 import { WatchedAtItems } from "@/components/watched-menu"
+import { tr } from "@/i18n"
 import type { Toggle, WatchedState } from "@/lib/viewer-state"
 
 // Bare icons over the picture, which `CardScrim` blurs and dims behind
@@ -31,15 +32,15 @@ export function CardScrim() {
   return (
     <span
       aria-hidden
-      className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/50 to-black/10 opacity-0 backdrop-blur-xs transition-opacity group-focus-within/card:opacity-100 group-hover/card:opacity-100 group-has-[[aria-expanded=true]]/card:opacity-100 motion-reduce:transition-none [@media(pointer:coarse)]:hidden"
+      className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/50 to-black/10 opacity-0 backdrop-blur-xs transition-opacity group-hover/card:opacity-100 group-has-[:focus-visible]/card:opacity-100 group-has-[[aria-expanded=true]]/card:opacity-100 motion-reduce:transition-none [@media(pointer:coarse)]:hidden"
     />
   )
 }
 
 /**
  * Watched and favorite icons for the corner of a poster or still. They
- * show while a pointer is over the `group/card` around them, focus is in
- * it, or the check's menu is open.
+ * show while a pointer is over the `group/card` around them, keyboard
+ * focus is in it, or the check's menu is open.
  *
  * Touch screens have no hover, so with `touch` they always see the icons,
  * and without it never do, since a tap on an invisible button would land
@@ -67,7 +68,7 @@ export function CardActions({
   return (
     <div
       className={cn(
-        "flex items-center opacity-0 transition-opacity group-focus-within/card:opacity-100 group-hover/card:opacity-100 has-[[aria-expanded=true]]:opacity-100 motion-reduce:transition-none",
+        "flex items-center opacity-0 transition-opacity group-has-[:focus-visible]/card:opacity-100 group-hover/card:opacity-100 has-[[aria-expanded=true]]:opacity-100 motion-reduce:transition-none",
         touch
           ? "[@media(pointer:coarse)]:opacity-100"
           : "[@media(pointer:coarse)]:hidden",
@@ -78,8 +79,8 @@ export function CardActions({
         <Button
           variant="ghost"
           size="icon"
-          aria-label={`Mark ${name} unwatched`}
-          title="Mark unwatched"
+          aria-label={tr("media.markNamedUnwatched", { name })}
+          title={tr("media.markUnwatched")}
           onClick={() => watched.mark(false)}
           className={cn(iconButton, "text-primary hover:text-primary")}
         >
@@ -92,8 +93,8 @@ export function CardActions({
               <Button
                 variant="ghost"
                 size="icon"
-                aria-label={`Mark ${name} watched`}
-                title="Mark watched"
+                aria-label={tr("media.markNamedWatched", { name })}
+                title={tr("media.markWatched")}
                 className={iconButton}
               />
             }
@@ -102,7 +103,7 @@ export function CardActions({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" sideOffset={4} className="min-w-44">
             <DropdownMenuGroup>
-              <DropdownMenuLabel>Mark watched</DropdownMenuLabel>
+              <DropdownMenuLabel>{tr("media.markWatched")}</DropdownMenuLabel>
               <WatchedAtItems
                 onSelect={(watchedAt) => watched.mark(true, watchedAt)}
                 onPickDate={() => setPicking(true)}
@@ -116,10 +117,12 @@ export function CardActions({
         size="icon"
         aria-label={
           favorite.on
-            ? `Remove ${name} from favorites`
-            : `Add ${name} to favorites`
+            ? tr("media.removeNamedFavorite", { name })
+            : tr("media.addNamedFavorite", { name })
         }
-        title={favorite.on ? "Remove from favorites" : "Add to favorites"}
+        title={
+          favorite.on ? tr("media.removeFavorite") : tr("media.addFavorite")
+        }
         onClick={favorite.toggle}
         className={iconButton}
       >

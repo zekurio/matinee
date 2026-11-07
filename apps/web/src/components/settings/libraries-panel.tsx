@@ -41,6 +41,7 @@ import { useState } from "react"
 
 import { libraryIcons } from "@/components/app-shell"
 import { LibraryDialog } from "@/components/library-dialog"
+import { tr } from "@/i18n"
 import { client, errorMessage, orpc } from "@/lib/rpc"
 
 import { RowIcon, SettingsSections, SettingsSubsection } from "./settings-panel"
@@ -58,7 +59,7 @@ export function LibrariesPanel() {
   const addButton = (
     <Button onClick={() => setDialog({})}>
       <PlusIcon />
-      Add library
+      {tr("libraries.add")}
     </Button>
   )
 
@@ -66,7 +67,7 @@ export function LibrariesPanel() {
     <SettingsSections>
       <SettingsSubsection
         id="libraries"
-        title="Libraries"
+        title={tr("libraries.title")}
         action={libraries.data?.length ? addButton : undefined}
       >
         {libraries.isPending ? (
@@ -74,19 +75,21 @@ export function LibrariesPanel() {
         ) : libraries.isError ? (
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3">
             <p className="text-muted-foreground text-sm">
-              Couldn't load libraries. {errorMessage(libraries.error)}
+              {tr("libraries.loadFailed", {
+                error: errorMessage(libraries.error),
+              })}
             </p>
             <Button variant="outline" onClick={() => void libraries.refetch()}>
               <RefreshCwIcon />
-              Try again
+              {tr("libraries.retry")}
             </Button>
           </div>
         ) : libraries.data.length === 0 ? (
           <Empty className="border border-dashed">
             <EmptyHeader>
-              <EmptyTitle>No libraries yet</EmptyTitle>
+              <EmptyTitle>{tr("libraries.empty.title")}</EmptyTitle>
               <EmptyDescription>
-                Add a folder of movies or shows.
+                {tr("libraries.empty.description")}
               </EmptyDescription>
             </EmptyHeader>
             <EmptyContent>{addButton}</EmptyContent>
@@ -134,7 +137,7 @@ function LibraryRow({
     mutationFn: () => client.libraries.scan({ id: library.id }),
     onSuccess: refresh,
     onError: (error) =>
-      toast.error("Couldn't start the scan", {
+      toast.error(tr("libraries.scanFailed"), {
         description: errorMessage(error),
       }),
   })
@@ -142,10 +145,10 @@ function LibraryRow({
     mutationFn: () => client.libraries.refreshMetadata({ id: library.id }),
     onSuccess: async () => {
       await refresh()
-      toast.success("Fetching metadata", { description: library.name })
+      toast.success(tr("libraries.fetching"), { description: library.name })
     },
     onError: (error) =>
-      toast.error("Couldn't fetch metadata", {
+      toast.error(tr("libraries.fetchFailed"), {
         description: errorMessage(error),
       }),
   })
@@ -153,12 +156,12 @@ function LibraryRow({
     mutationFn: () => client.libraries.remove({ id: library.id }),
     onSuccess: async () => {
       await refresh()
-      toast.success(`Removed ${library.name}`, {
-        description: "Your files are still on disk.",
+      toast.success(tr("libraries.removed", { name: library.name }), {
+        description: tr("libraries.removed.description"),
       })
     },
     onError: (error) =>
-      toast.error(`Couldn't remove ${library.name}`, {
+      toast.error(tr("libraries.removeFailed", { name: library.name }), {
         description: errorMessage(error),
       }),
   })
@@ -176,8 +179,10 @@ function LibraryRow({
           <p className="text-muted-foreground flex items-center gap-1.5 text-[13px] leading-5">
             <Spinner className="size-3.5" />
             {library.scanning
-              ? "Scanning…"
-              : `Fetching metadata from ${provider?.name ?? "the provider"}…`}
+              ? tr("libraries.scanning")
+              : provider
+                ? tr("libraries.fetchingFrom", { provider: provider.name })
+                : tr("libraries.fetchingFromProvider")}
           </p>
         )}
       </div>
@@ -188,7 +193,7 @@ function LibraryRow({
               variant="ghost"
               size="icon"
               className="text-muted-foreground hover:text-foreground data-popup-open:text-foreground"
-              aria-label={`${library.name} actions`}
+              aria-label={tr("libraries.actions", { name: library.name })}
             />
           }
         >
@@ -200,7 +205,7 @@ function LibraryRow({
             onClick={() => scan.mutate()}
           >
             <RefreshCwIcon />
-            Scan now
+            {tr("libraries.scanNow")}
           </DropdownMenuItem>
           {provider && (
             <DropdownMenuItem
@@ -208,12 +213,12 @@ function LibraryRow({
               onClick={() => refetchMetadata.mutate()}
             >
               <CloudDownloadIcon />
-              Refresh metadata
+              {tr("libraries.refreshMetadata")}
             </DropdownMenuItem>
           )}
           <DropdownMenuItem onClick={onEdit}>
             <PencilIcon />
-            Edit…
+            {tr("libraries.edit")}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
@@ -221,7 +226,7 @@ function LibraryRow({
             onClick={() => setConfirming(true)}
           >
             <Trash2Icon />
-            Remove…
+            {tr("libraries.remove")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -229,19 +234,22 @@ function LibraryRow({
       <AlertDialog open={confirming} onOpenChange={setConfirming}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Remove {library.name}?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {tr("libraries.remove.title", { name: library.name })}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Matinee forgets the library and its titles. Your files stay where
-              they are.
+              {tr("libraries.remove.description")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>
+              {tr("libraries.remove.cancel")}
+            </AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
               onClick={() => remove.mutate()}
             >
-              Remove library
+              {tr("libraries.remove.confirm")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

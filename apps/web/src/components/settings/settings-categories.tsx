@@ -14,6 +14,7 @@ import {
 } from "lucide-react"
 import { type ComponentType, useMemo } from "react"
 
+import { tr } from "@/i18n"
 import type { SettingsSectionId } from "@/lib/settings"
 
 import { AccountPanel } from "./account-panel"
@@ -41,210 +42,78 @@ export interface SettingsCategory {
   Panel: ComponentType
 }
 
-export const SETTINGS_GROUPS: { id: SettingsGroup; label: string }[] = [
-  { id: "account", label: "Settings" },
-  { id: "admin", label: "Administration" },
-]
+export const SETTINGS_GROUPS: readonly SettingsGroup[] = ["account", "admin"]
 
-const CATEGORIES: SettingsCategory[] = [
-  {
-    id: "account",
-    group: "account",
-    label: "Account",
-    description: "Profile, passkeys, single sign-on, and sessions",
-    keywords: [
-      "Profile",
-      "Display name",
-      "Picture",
-      "Favorites",
-      "Statistics",
-      "Share",
-      "Privacy",
-      "Passkeys",
-      "Security key",
-      "Sign-in methods",
-      "Single sign-on",
-      "Linked accounts",
-      "OIDC",
-      "Sessions",
-      "Devices",
-      "Sign out",
-    ],
-    icon: UserIcon,
-    Panel: AccountPanel,
-  },
+/** A section's place in the nav; its text comes from the catalog. */
+type SectionEntry = Pick<SettingsCategory, "id" | "group" | "icon" | "Panel">
+
+const SECTIONS: SectionEntry[] = [
+  { id: "account", group: "account", icon: UserIcon, Panel: AccountPanel },
   {
     id: "appearance",
     group: "account",
-    label: "Appearance",
-    description: "Color scheme and themes",
-    keywords: [
-      "Theme",
-      "Dark mode",
-      "Light mode",
-      "Color scheme",
-      "Colors",
-      "Custom theme",
-      "Import theme",
-      "VS Code",
-    ],
     icon: PaletteIcon,
     Panel: AppearancePanel,
   },
   {
     id: "playback",
     group: "account",
-    label: "Playback",
-    description: "Languages, quality, and codecs",
-    keywords: [
-      "Audio language",
-      "Subtitles",
-      "Captions",
-      "Forced subtitles",
-      "Language",
-      "Quality",
-      "Video codec",
-      "Audio codec",
-      "HEVC",
-      "AV1",
-      "Opus",
-      "Passthrough",
-      "Dolby",
-      "Surround",
-    ],
     icon: TvMinimalPlayIcon,
     Panel: PlaybackPanel,
   },
   {
     id: "libraries",
     group: "admin",
-    label: "Libraries",
-    description: "Folders Matinee scans for video",
-    keywords: ["Add library", "Folders", "Scan now", "Media", "Remove library"],
     icon: LibraryBigIcon,
     Panel: LibrariesPanel,
   },
-  {
-    id: "users",
-    group: "admin",
-    label: "Users",
-    description: "Accounts and roles",
-    keywords: [
-      "Admin",
-      "Role",
-      "Delete user",
-      "Sign out everywhere",
-      "Sessions",
-    ],
-    icon: UsersIcon,
-    Panel: UsersPanel,
-  },
+  { id: "users", group: "admin", icon: UsersIcon, Panel: UsersPanel },
   {
     id: "authentication",
     group: "admin",
-    label: "Authentication",
-    description: "Single sign-on through OpenID Connect",
-    keywords: [
-      "Single sign-on",
-      "SSO",
-      "OIDC",
-      "OpenID Connect",
-      "Issuer URL",
-      "Client ID",
-      "Client secret",
-      "Redirect URI",
-      "Create accounts",
-      "Authelia",
-      "Authentik",
-      "Keycloak",
-    ],
     icon: KeyRoundIcon,
     Panel: AuthPanel,
   },
   {
     id: "transcoding",
     group: "admin",
-    label: "Transcoding",
-    description: "FFmpeg, GPUs, and HDR tone mapping",
-    keywords: [
-      "FFmpeg",
-      "jellyfin-ffmpeg",
-      "Hardware acceleration",
-      "GPU",
-      "VAAPI",
-      "Quick Sync",
-      "QSV",
-      "NVENC",
-      "VideoToolbox",
-      "HEVC",
-      "AV1",
-      "Tone mapping",
-      "HDR",
-      "Dolby Vision",
-      "Deinterlacing",
-      "Throttling",
-      "CRF",
-      "Preset",
-    ],
     icon: FilmIcon,
     Panel: TranscodingPanel,
   },
   {
     id: "trickplay",
     group: "admin",
-    label: "Trickplay",
-    description: "Thumbnails on the seek bar",
-    keywords: [
-      "Seek bar",
-      "Scrubbing",
-      "Preview thumbnails",
-      "Thumbnails",
-      "Keyframes",
-      "Interval",
-    ],
     icon: GalleryHorizontalEndIcon,
     Panel: TrickplayPanel,
   },
-  {
-    id: "jobs",
-    group: "admin",
-    label: "Jobs",
-    description: "Background queues and scheduled tasks",
-    keywords: [
-      "Queues",
-      "Workers",
-      "Concurrency",
-      "Scheduled tasks",
-      "Scan libraries",
-      "Refresh metadata",
-      "Media info",
-      "ffprobe",
-      "Thumbnails",
-      "Trickplay",
-      "Pause",
-      "Cancel",
-      "Run now",
-    ],
-    icon: ListChecksIcon,
-    Panel: JobsPanel,
-  },
+  { id: "jobs", group: "admin", icon: ListChecksIcon, Panel: JobsPanel },
   {
     id: "server-appearance",
     group: "admin",
-    label: "Appearance",
-    description: "Accent color for everyone",
-    keywords: ["Accent color", "Brand color", "Default theme"],
     icon: PaintbrushIcon,
     Panel: ServerAppearancePanel,
   },
 ]
+
+/** A section in the interface's language. */
+function describe(section: SectionEntry): SettingsCategory {
+  const keywords = tr(`settings.section.${section.id}.keywords`)
+  return {
+    ...section,
+    label: tr(`settings.section.${section.id}.label`),
+    description: tr(`settings.section.${section.id}.description`),
+    keywords: keywords.split(",").map((word) => word.trim()),
+  }
+}
 
 /** Sections this user can open, in nav order. */
 export function useSettingsCategories(user: User): SettingsCategory[] {
   const isAdmin = user.role === "admin"
   return useMemo(
     () =>
-      CATEGORIES.filter((category) => category.group !== "admin" || isAdmin),
+      SECTIONS.filter((section) => section.group !== "admin" || isAdmin).map(
+        describe,
+      ),
     [isAdmin],
   )
 }
@@ -269,9 +138,9 @@ export function searchSettings(categories: SettingsCategory[], query: string) {
     if (!inLabel && !inDescription && !keyword) return []
     return [{ category, hint: inLabel ? null : keyword }]
   })
-  return SETTINGS_GROUPS.map(({ id, label }) => ({
+  return SETTINGS_GROUPS.map((id) => ({
     id,
-    label,
+    label: tr(`settings.group.${id}`),
     items: matches.filter((match) => match.category.group === id),
   })).filter((group) => group.items.length > 0)
 }

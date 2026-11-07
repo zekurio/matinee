@@ -2,21 +2,31 @@ import type { LibraryGrowthBucket, StatsUnit } from "@matinee/contracts"
 import { cn } from "@matinee/ui/lib/utils"
 import { type PointerEvent, useState } from "react"
 
-import { formatBytes, formatCount, plural } from "@/lib/format"
+import { perLocale, tr } from "@/i18n"
+import { formatBytes, formatCount } from "@/lib/format"
 import { bucketAxisLabel, bucketName } from "@/lib/stats"
 
 import { axisTicks, niceCeiling } from "./bucket-bars"
+
+const lists = perLocale(
+  (locale) => new Intl.ListFormat(locale, { type: "conjunction" }),
+)
 
 /** What arrived in a bucket: "15 movies and 31 episodes, 233 GB". */
 function arrivals(
   bucket: Pick<LibraryGrowthBucket, "movies" | "episodes" | "sizeBytes">,
 ): string {
   const parts = [
-    bucket.movies > 0 ? plural(bucket.movies, "movie") : null,
-    bucket.episodes > 0 ? plural(bucket.episodes, "episode") : null,
-  ].filter(Boolean)
-  if (parts.length === 0) return "Nothing arrived"
-  return `${parts.join(" and ")}, ${formatBytes(bucket.sizeBytes)}`
+    bucket.movies > 0 ? tr("stats.movies", { count: bucket.movies }) : null,
+    bucket.episodes > 0
+      ? tr("stats.episodes", { count: bucket.episodes })
+      : null,
+  ].filter((part) => part !== null)
+  if (parts.length === 0) return tr("stats.growth.nothing")
+  return tr("stats.growth.arrived", {
+    items: lists().format(parts),
+    size: formatBytes(bucket.sizeBytes),
+  })
 }
 
 /**
@@ -24,9 +34,12 @@ function arrivals(
  * "1,204 files, 3.1 TB · 3 episodes, 4 GB added".
  */
 function describe(bucket: LibraryGrowthBucket): string {
-  const held = `${plural(bucket.totalFiles, "file")}, ${formatBytes(bucket.totalSizeBytes)}`
+  const held = tr("stats.growth.held", {
+    count: bucket.totalFiles,
+    size: formatBytes(bucket.totalSizeBytes),
+  })
   if (bucket.movies + bucket.episodes === 0) return held
-  return `${held} · ${arrivals(bucket)} added`
+  return tr("stats.growth.heldAdded", { held, arrived: arrivals(bucket) })
 }
 
 /** How far across the plot bucket `index` of `count` sits, in percent. */
@@ -103,7 +116,7 @@ export function GrowthChart({
     <figure className={cn("flex min-w-0 flex-col gap-2", className)}>
       <figcaption className="text-muted-foreground min-h-5 truncate text-xs leading-5 tabular-nums">
         <span className="text-foreground font-medium">
-          {shown ? bucketName(shown.start, unit) : "In total"}
+          {shown ? bucketName(shown.start, unit) : tr("stats.growth.total")}
         </span>
         {` · ${shown ? describe(shown) : arrivals(added)}`}
       </figcaption>
@@ -155,10 +168,13 @@ export function GrowthChart({
               />
             </>
           )}
-          <ol aria-label="Files in the libraries" className="sr-only">
+          <ol aria-label={tr("stats.growth.label")} className="sr-only">
             {buckets.map((bucket) => (
               <li key={bucket.start}>
-                {`${bucketName(bucket.start, unit)}: ${describe(bucket)}`}
+                {tr("stats.chart.point", {
+                  date: bucketName(bucket.start, unit),
+                  value: describe(bucket),
+                })}
               </li>
             ))}
           </ol>

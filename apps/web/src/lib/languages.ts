@@ -1,12 +1,17 @@
-const names = new Intl.DisplayNames(["en"], {
-  type: "language",
-  fallback: "code",
-})
+import { perLocale, tr } from "@/i18n"
 
-/** `English` for `en`, `Brazilian Portuguese` for `pt-BR`. */
+const names = perLocale(
+  (locale) =>
+    new Intl.DisplayNames([locale], { type: "language", fallback: "code" }),
+)
+
+/**
+ * A language's name in the interface's language: `English` for `en`,
+ * `Brazilian Portuguese` for `pt-BR`.
+ */
 export function languageName(tag: string): string {
   try {
-    return names.of(tag) ?? tag
+    return names().of(tag) ?? tag
   } catch {
     return tag
   }
@@ -48,4 +53,21 @@ export function languageTag(code: string | null): string | null {
   } catch {
     return null
   }
+}
+
+/**
+ * A track's name in the interface's language: its language, plus its own
+ * title when that adds something, like "Japanese (Signs & Songs)". The
+ * server's `trackLabel` does the same in English. `unnamed` stands in for
+ * a track with neither.
+ */
+export function trackLabel(
+  language: string | null,
+  title: string | null,
+  unnamed: string,
+): string {
+  const name = language ? languageName(language) : null
+  if (!title) return name ?? unnamed
+  if (!name || title.toLowerCase().includes(name.toLowerCase())) return title
+  return tr("player.track.withTitle", { language: name, title })
 }

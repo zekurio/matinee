@@ -16,6 +16,7 @@ import {
 import { useStore } from "zustand"
 import { useShallow } from "zustand/shallow"
 
+import { tr } from "@/i18n"
 import { createRailStore } from "@/stores/browse-rail"
 
 /**
@@ -108,7 +109,7 @@ export function Rail({
             <Button
               variant="ghost"
               size="icon-sm"
-              aria-label={`Scroll ${title} back`}
+              aria-label={tr("media.rail.back", { title })}
               disabled={atStart}
               onClick={() => page(-1)}
             >
@@ -117,7 +118,7 @@ export function Rail({
             <Button
               variant="ghost"
               size="icon-sm"
-              aria-label={`Scroll ${title} forward`}
+              aria-label={tr("media.rail.forward", { title })}
               disabled={atEnd}
               onClick={() => page(1)}
             >
@@ -201,6 +202,10 @@ function useDragScroll(
       // Snapping would fight every scrollLeft write below.
       el.style.scrollSnapType = "none"
       window.getSelection()?.removeAllRanges()
+      // The press focused the card under it, which would keep its hover
+      // look up once the pointer leaves.
+      const focused = document.activeElement
+      if (focused instanceof HTMLElement && el.contains(focused)) focused.blur()
       setDragging(true)
     }
     el.scrollLeft = state.startLeft - dx

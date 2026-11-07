@@ -4,6 +4,7 @@ import { cn } from "@matinee/ui/lib/utils"
 import { Link } from "@tanstack/react-router"
 
 import { Picture, tone } from "@/components/media-item"
+import { tr } from "@/i18n"
 import { formatCount, formatWatchTime } from "@/lib/format"
 import { art } from "@/lib/media"
 
@@ -25,11 +26,23 @@ export function hasPlays(stats: WatchStats): boolean {
 export function watchFigures(stats: WatchStats): StatFigure[] {
   const { totals } = stats
   return [
-    { label: "Watch time", value: formatWatchTime(totals.watchSeconds) },
-    { label: "Plays", value: formatCount(totals.plays) },
-    { label: "Movies finished", value: formatCount(totals.movies) },
-    { label: "Episodes finished", value: formatCount(totals.episodes) },
-    { label: "Shows watched", value: formatCount(totals.shows) },
+    {
+      label: tr("stats.figure.watchTime"),
+      value: formatWatchTime(totals.watchSeconds),
+    },
+    { label: tr("stats.figure.plays"), value: formatCount(totals.plays) },
+    {
+      label: tr("stats.figure.moviesFinished"),
+      value: formatCount(totals.movies),
+    },
+    {
+      label: tr("stats.figure.episodesFinished"),
+      value: formatCount(totals.episodes),
+    },
+    {
+      label: tr("stats.figure.showsWatched"),
+      value: formatCount(totals.shows),
+    },
   ]
 }
 
@@ -60,7 +73,7 @@ export function TopTitlesSection({ stats }: { stats: WatchStats }) {
   if (titles.length === 0) return null
   const total = Math.max(1, stats.totals.watchSeconds)
   return (
-    <StatsSection title="Most watched">
+    <StatsSection title={tr("stats.watch.top")}>
       <ol className="-mx-1.5 flex flex-col">
         {titles.map((entry, index) => {
           const poster = art(entry.title.images.poster)
@@ -121,7 +134,7 @@ export function TopTitlesSection({ stats }: { stats: WatchStats }) {
 export function GenresSection({ stats }: { stats: WatchStats }) {
   if (stats.genres.length === 0) return null
   return (
-    <StatsSection title="Genres">
+    <StatsSection title={tr("stats.watch.genres")}>
       <RankedBars
         total={stats.totals.watchSeconds}
         rows={stats.genres.map((genre) => ({

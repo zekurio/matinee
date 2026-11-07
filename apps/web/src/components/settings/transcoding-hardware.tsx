@@ -14,6 +14,7 @@ import {
 } from "@matinee/ui/components/select"
 import { useSelector } from "@tanstack/react-form"
 
+import { tr } from "@/i18n"
 import { withForm } from "@/lib/form"
 
 import {
@@ -25,8 +26,8 @@ import {
 } from "./setting-controls"
 import { SettingRow, SettingRows, SettingsSubsection } from "./settings-panel"
 import {
-  ACCELERATION_LABELS,
   accelerationAvailable,
+  accelerationLabel,
   CapabilitySwitchField,
   checkNote,
   firstLine,
@@ -88,15 +89,18 @@ export const HardwareSection = withForm({
     const device = accel === "vaapi" ? "vaapiDevice" : "qsvDevice"
 
     return (
-      <SettingsSubsection id="hardware" title="Hardware acceleration">
+      <SettingsSubsection
+        id="hardware"
+        title={tr("transcoding.hardware.title")}
+      >
         <SettingRows>
           <SettingRow
-            title="Acceleration"
+            title={tr("transcoding.hardware.acceleration")}
             layout="split"
             footer={
               hardware && hardware.device.status === "failed" ? (
                 <SettingWarning>
-                  The device didn't open, so transcodes run in software.{" "}
+                  {tr("transcoding.hardware.deviceFailed")}{" "}
                   {firstLine(hardware.device)}
                 </SettingWarning>
               ) : null
@@ -108,7 +112,7 @@ export const HardwareSection = withForm({
                   <Select
                     items={accelerations.map((value) => ({
                       value,
-                      label: label(ACCELERATION_LABELS, value),
+                      label: accelerationLabel(value),
                     }))}
                     value={field.state.value}
                     onValueChange={(value) =>
@@ -125,10 +129,10 @@ export const HardwareSection = withForm({
                     <SelectContent>
                       {accelerations.map((value) => (
                         <SelectItem key={value} value={value}>
-                          {label(ACCELERATION_LABELS, value)}
+                          {accelerationLabel(value)}
                           {!accelerationAvailable(capabilities, value) && (
                             <span className="text-muted-foreground text-xs font-normal">
-                              Not in this ffmpeg build
+                              {tr("transcoding.hardware.notInBuild")}
                             </span>
                           )}
                         </SelectItem>
@@ -144,11 +148,11 @@ export const HardwareSection = withForm({
             <form.AppField key={device} name={device}>
               {() => (
                 <InputField
-                  title={accel === "vaapi" ? "VAAPI device" : "QSV device"}
+                  title={tr(`transcoding.field.${device}`)}
                   description={
                     accel === "vaapi"
-                      ? "The GPU's render node."
-                      : "The Intel GPU's render node."
+                      ? tr("transcoding.hardware.vaapiDevice")
+                      : tr("transcoding.hardware.qsvDevice")
                   }
                   autoComplete="off"
                   spellCheck={false}
@@ -168,7 +172,9 @@ export const HardwareSection = withForm({
           )}
           {hardware && (
             <form.AppField name="enableHardwareEncoding">
-              {() => <SwitchField title="Hardware encoding" />}
+              {() => (
+                <SwitchField title={tr("transcoding.hardware.encoding")} />
+              )}
             </form.AppField>
           )}
           {hardware &&
@@ -177,10 +183,12 @@ export const HardwareSection = withForm({
               <form.AppField key={name} name={name}>
                 {() => (
                   <CapabilitySwitchField
-                    title={`Intel low-power ${codecLabel} encoder`}
+                    title={tr("transcoding.hardware.lowPower", {
+                      codec: codecLabel,
+                    })}
                     description={checkNote(
                       lowPowerCheck(hardware, codec),
-                      "Skips CPU-GPU syncs, which helps 4K and tone mapping. Needs the HuC firmware.",
+                      tr("transcoding.hardware.lowPower.description"),
                     )}
                     available={lowPowerCheck(hardware, codec)?.status === "ok"}
                   />
@@ -204,7 +212,10 @@ export const HardwareDecodingSection = withForm({
     const decodable = HARDWARE_DECODE_SUPPORT.get(accel) ?? []
 
     return (
-      <SettingsSubsection id="hardware-decoding" title="Hardware decoding">
+      <SettingsSubsection
+        id="hardware-decoding"
+        title={tr("transcoding.decoding.title")}
+      >
         <SettingRows>
           <form.Field name="hardwareDecodingCodecs">
             {(field) =>
@@ -229,24 +240,28 @@ export const HardwareDecodingSection = withForm({
               <form.AppField name="enableDecodingColorDepth10Hevc">
                 {() => (
                   <SwitchField
-                    title="HEVC 10-bit"
-                    description="Most HDR. Intel 7th gen, AMD Polaris, NVIDIA Pascal, or newer."
+                    title={tr("transcoding.decoding.hevc10")}
+                    description={tr("transcoding.decoding.hevc10.description")}
                   />
                 )}
               </form.AppField>
               <form.AppField name="enableDecodingColorDepth10Vp9">
-                {() => <SwitchField title="VP9 10-bit" />}
+                {() => <SwitchField title={tr("transcoding.decoding.vp910")} />}
               </form.AppField>
               <form.AppField name="enableDecodingColorDepth10HevcRext">
                 {() => (
                   <SwitchField
-                    title="HEVC RExt 8/10-bit"
-                    description="4:2:2 and 4:4:4 camera footage. Intel 11th gen or newer."
+                    title={tr("transcoding.decoding.hevcRext")}
+                    description={tr(
+                      "transcoding.decoding.hevcRext.description",
+                    )}
                   />
                 )}
               </form.AppField>
               <form.AppField name="enableDecodingColorDepth12HevcRext">
-                {() => <SwitchField title="HEVC RExt 12-bit" />}
+                {() => (
+                  <SwitchField title={tr("transcoding.decoding.hevcRext12")} />
+                )}
               </form.AppField>
             </>
           )}

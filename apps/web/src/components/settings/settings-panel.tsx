@@ -5,6 +5,7 @@ import { useBlocker } from "@tanstack/react-router"
 import { type ReactNode, useId, useState } from "react"
 import { createPortal } from "react-dom"
 
+import { tr } from "@/i18n"
 import {
   type ActionFeedback,
   useActionFeedback,
@@ -136,7 +137,7 @@ export function SettingsSaveBar({
     <section
       // Remounts on each attempt to leave, which replays the shake.
       key={attention}
-      aria-label="Unsaved changes"
+      aria-label={tr("common.saveBar.unsaved")}
       className={cn(
         "bg-popover animate-in fade-in-0 slide-in-from-bottom-2 flex flex-wrap items-center justify-between gap-3 border-t px-4 py-3 duration-200 motion-reduce:animate-none md:px-6 lg:px-10 max-md:pb-[max(0.75rem,env(safe-area-inset-bottom))]",
         attention > 0 && "settings-attention",
@@ -144,11 +145,14 @@ export function SettingsSaveBar({
     >
       {feedback.state === "error" ? (
         <p role="alert" className="text-destructive min-w-0 flex-1 text-sm">
-          <span className="font-medium">Couldn't save.</span> {feedback.message}
+          <span className="font-medium">{tr("common.saveBar.failed")}</span>{" "}
+          {feedback.message}
         </p>
       ) : (
         <p role="status" className="text-sm font-medium">
-          {feedback.state === "success" ? "Changes saved" : "Unsaved changes"}
+          {feedback.state === "success"
+            ? tr("common.saveBar.saved")
+            : tr("common.saveBar.unsaved")}
         </p>
       )}
       <div className="ml-auto flex gap-2">
@@ -161,21 +165,21 @@ export function SettingsSaveBar({
             onReset()
           }}
         >
-          Reset
+          {tr("common.saveBar.reset")}
         </Button>
         <FeedbackButton
           type="button"
           state={feedback.state}
-          pendingLabel="Saving…"
-          successLabel="Saved"
-          errorLabel="Try again"
+          pendingLabel={tr("common.saveBar.saving")}
+          successLabel={tr("common.saveBar.done")}
+          errorLabel={tr("common.saveBar.retry")}
           disabled={!dirty && feedback.state !== "success"}
           onClick={(event) => {
             event.preventDefault()
             save()
           }}
         >
-          Save changes
+          {tr("common.saveBar.save")}
         </FeedbackButton>
       </div>
     </section>

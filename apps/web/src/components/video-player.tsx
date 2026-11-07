@@ -4,11 +4,13 @@ import { cn } from "@matinee/ui/lib/utils"
 import { ArrowLeftIcon, Volume2Icon, VolumeXIcon } from "lucide-react"
 import { type FocusEvent, useEffect, useRef, useState } from "react"
 
+import { tr } from "@/i18n"
 import {
   audioLanguageFor,
   currentPlaybackPreferences,
 } from "@/lib/playback-sync"
 import { randomId } from "@/lib/random-id"
+import { subtitleLabel } from "@/lib/subtitles"
 import {
   createPlayerStore,
   type PlayerStore,
@@ -37,6 +39,7 @@ import {
   SkipIcon,
   VolumeControl,
 } from "./player-controls"
+import { formatPercent } from "./player-format"
 import { PlayerMenus } from "./player-menus"
 import type { TrickplayTiles } from "./trickplay-thumb"
 import { useHls } from "./use-hls"
@@ -280,7 +283,7 @@ function Player({
     if (!el) return
     const next = Math.round(Math.max(0, Math.min(1, el.volume + by)) * 100)
     setVolume(next / 100)
-    show(next === 0 ? VolumeXIcon : Volume2Icon, `${next}%`)
+    show(next === 0 ? VolumeXIcon : Volume2Icon, formatPercent(next / 100))
   }
   const toggleMute = () => {
     const el = video.current
@@ -288,7 +291,7 @@ function Player({
     el.muted = !el.muted
     show(
       el.muted ? VolumeXIcon : Volume2Icon,
-      el.muted ? "Muted" : `${Math.round(el.volume * 100)}%`,
+      el.muted ? tr("player.flash.muted") : formatPercent(el.volume),
     )
   }
   const toggleFullscreen = () => {
@@ -404,7 +407,7 @@ function Player({
             kind="subtitles"
             src={subs.current.src}
             srcLang={subs.current.track.language ?? undefined}
-            label={subs.current.track.label}
+            label={subtitleLabel(subs.current.track, subs.tracks)}
           />
         )}
       </video>
@@ -421,7 +424,7 @@ function Player({
           hidden && "pointer-events-none opacity-0",
         )}
       >
-        <ControlButton label="Back" onClick={onBack}>
+        <ControlButton label={tr("player.back")} onClick={onBack}>
           <ArrowLeftIcon />
         </ControlButton>
         <div className="min-w-0">
@@ -447,13 +450,13 @@ function Player({
         <div className="flex items-center gap-0.5">
           <PlayButton onToggle={toggle} />
           <ControlButton
-            label={`Back ${SKIP_S} seconds (j)`}
+            label={tr("player.skipBack", { seconds: SKIP_S })}
             onClick={() => skip(-SKIP_S)}
           >
             <SkipIcon direction="back" />
           </ControlButton>
           <ControlButton
-            label={`Forward ${SKIP_S} seconds (l)`}
+            label={tr("player.skipForward", { seconds: SKIP_S })}
             onClick={() => skip(SKIP_S)}
           >
             <SkipIcon direction="forward" />

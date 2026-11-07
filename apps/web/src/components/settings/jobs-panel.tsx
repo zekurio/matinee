@@ -29,11 +29,16 @@ import {
 } from "lucide-react"
 import { useState } from "react"
 
-import { formatCount, formatRelative, formatSpan } from "@/lib/format"
+import { type MessageKey, tr, translateKnown } from "@/i18n"
+import { formatRelative, formatSpan } from "@/lib/format"
 import { client, errorMessage, orpc } from "@/lib/rpc"
 
 import { ConcurrencySection, tunableQueues } from "./jobs-concurrency"
-import { QueueDetailsDialog } from "./queue-details-dialog"
+import {
+  QueueDetailsDialog,
+  queueDescription,
+  queueName,
+} from "./queue-details-dialog"
 import { SettingsSections, SettingsSubsection } from "./settings-panel"
 
 // Live while something runs, slow otherwise.
@@ -48,26 +53,63 @@ function isBusy(overview: JobsOverview | undefined): boolean {
   )
 }
 
-function every(seconds: number): string {
-  if (seconds === 86_400) return "Every day"
-  if (seconds === 3600) return "Every hour"
-  return `Every ${formatSpan(seconds)}`
+/** A task's name in the interface's language. */
+function taskName(task: ScheduledTask): string {
+  return tr(`jobs.task.${task.id}.name`)
 }
+
+/**
+ * A task's description in the interface's language. Cleaning up encodes
+ * names the server's cache limits, which only the server's own text has.
+ */
+function taskDescription(task: ScheduledTask): string {
+  const id = task.id
+  if (id === "clean-transcodes") return translateKnown(task.description)
+  return tr(`jobs.task.${id}.description`)
+}
+
+/** Messages for a schedule, by its interval and how it starts. */
+type ScheduleKeys = {
+  plain: MessageKey
+  atStartup: MessageKey
+  afterStartup: MessageKey
+}
+
+const DAILY = {
+  plain: "jobs.schedule.daily",
+  atStartup: "jobs.schedule.daily.atStartup",
+  afterStartup: "jobs.schedule.daily.afterStartup",
+} satisfies ScheduleKeys
+const HOURLY = {
+  plain: "jobs.schedule.hourly",
+  atStartup: "jobs.schedule.hourly.atStartup",
+  afterStartup: "jobs.schedule.hourly.afterStartup",
+} satisfies ScheduleKeys
 
 /** When the task runs, in a sentence. */
 function scheduleOf(task: ScheduledTask): string {
-  const startup =
-    task.startupDelaySeconds === null
-      ? null
-      : task.startupDelaySeconds === 0
-        ? "at startup"
-        : `${formatSpan(task.startupDelaySeconds)} after startup`
-  if (task.intervalSeconds === null) {
-    return startup ? `Runs ${startup}` : "Runs when you start it"
+  const delay = task.startupDelaySeconds
+  const interval = task.intervalSeconds
+  if (interval === null) {
+    if (delay === null) return tr("jobs.schedule.manual")
+    if (delay === 0) return tr("jobs.schedule.atStartup")
+    return tr("jobs.schedule.afterStartup", { delay: formatSpan(delay) })
   }
-  return startup
-    ? `${every(task.intervalSeconds)} and ${startup}`
-    : every(task.intervalSeconds)
+  const fixed = interval === 86_400 ? DAILY : interval === 3600 ? HOURLY : null
+  if (fixed) {
+    if (delay === null) return tr(fixed.plain)
+    if (delay === 0) return tr(fixed.atStartup)
+    return tr(fixed.afterStartup, { delay: formatSpan(delay) })
+  }
+  const every = formatSpan(interval)
+  if (delay === null) return tr("jobs.schedule.every", { interval: every })
+  if (delay === 0) {
+    return tr("jobs.schedule.every.atStartup", { interval: every })
+  }
+  return tr("jobs.schedule.every.afterStartup", {
+    interval: every,
+    delay: formatSpan(delay),
+  })
 }
 
 export function JobsPanel() {
@@ -82,8 +124,8 @@ export function JobsPanel() {
     <SettingsSections>
       <SettingsSubsection
         id="queues"
-        title="Queues"
-        description="Pausing a queue lets its running jobs finish."
+        title={tr("jobs.queues")}
+        description={tr("jobs.queues.description")}
       >
         {jobs.isPending ? (
           <Skeleton className="h-64 rounded-xl" />
@@ -100,8 +142,8 @@ export function JobsPanel() {
 
       <SettingsSubsection
         id="tasks"
-        title="Scheduled tasks"
-        description="Run on a schedule and queue the work they find."
+        title={tr("jobs.tasks")}
+        description={tr("jobs.tasks.description")}
       >
         {jobs.isPending ? (
           <Skeleton className="h-64 rounded-xl" />
@@ -123,11 +165,11 @@ function LoadError({ error, retry }: { error: Error; retry: () => void }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3">
       <p className="text-muted-foreground text-sm">
-        Couldn't load the jobs. {errorMessage(error)}
+        {tr("jobs.loadFailed", { error: errorMessage(error) })}
       </p>
       <Button variant="outline" onClick={retry}>
         <RefreshCwIcon />
-        Try again
+        {tr("jobs.retry")}
       </Button>
     </div>
   )
@@ -157,23 +199,33 @@ function useJobsUpdate() {
 function queueSummary(queue: JobQueueStatus): string {
   const parts: string[] = []
   if (queue.active > 0) {
-    parts.push(`${formatCount(queue.active)} of ${queue.concurrency} running`)
+    parts.push(
+      tr("jobs.queue.running", {
+        active: queue.active,
+        concurrency: queue.concurrency,
+      }),
+    )
   }
-  if (queue.waiting > 0) parts.push(`${formatCount(queue.waiting)} waiting`)
-  if (parts.length === 0) parts.push("Idle")
-  if (queue.completed > 0) parts.push(`${formatCount(queue.completed)} done`)
+  if (queue.waiting > 0) {
+    parts.push(tr("jobs.queue.waiting", { count: queue.waiting }))
+  }
+  if (parts.length === 0) parts.push(tr("jobs.queue.idle"))
+  if (queue.completed > 0) {
+    parts.push(tr("jobs.queue.done", { count: queue.completed }))
+  }
   return parts.join(" · ")
 }
 
 function failedText(queue: JobQueueStatus): string {
-  return `${formatCount(queue.failed)} failed`
+  return tr("jobs.queue.failed", { count: queue.failed })
 }
 
 function QueueRow({ queue }: { queue: JobQueueStatus }) {
   const update = useJobsUpdate()
   const [details, setDetails] = useState(false)
-  const onError = (what: string) => (cause: unknown) =>
-    toast.error(`Couldn't ${what} ${queue.name}`, {
+  const name = queueName(queue)
+  const onError = (what: "pause" | "resume" | "clear") => (cause: unknown) =>
+    toast.error(tr(`jobs.queue.${what}Failed`, { queue: name }), {
       description: errorMessage(cause),
     })
   const pause = useMutation({
@@ -195,11 +247,13 @@ function QueueRow({ queue }: { queue: JobQueueStatus }) {
     <ListItem className="flex-wrap items-start gap-x-3 gap-y-2 py-3 pr-2">
       <div className="min-w-0 flex-1 basis-56">
         <h4 className="flex items-center gap-2 text-sm leading-5 font-medium">
-          {queue.name}
-          {queue.paused && <Badge variant="secondary">Paused</Badge>}
+          {name}
+          {queue.paused && (
+            <Badge variant="secondary">{tr("jobs.queue.paused")}</Badge>
+          )}
         </h4>
         <p className="text-muted-foreground text-[13px] leading-5">
-          {queue.description}
+          {queueDescription(queue)}
         </p>
         <p className="text-muted-foreground mt-1 flex items-center gap-1.5 text-[13px] leading-5 tabular-nums">
           {queue.active > 0 && !queue.paused && (
@@ -232,7 +286,7 @@ function QueueRow({ queue }: { queue: JobQueueStatus }) {
                 variant="ghost"
                 size="icon"
                 className="text-muted-foreground hover:text-foreground data-popup-open:text-foreground"
-                aria-label={`${queue.name} actions`}
+                aria-label={tr("jobs.queue.actions", { queue: name })}
               />
             }
           >
@@ -241,21 +295,21 @@ function QueueRow({ queue }: { queue: JobQueueStatus }) {
           <DropdownMenuContent align="end" sideOffset={6} className="min-w-48">
             <DropdownMenuItem onClick={() => setDetails(true)}>
               <InfoIcon />
-              Details
+              {tr("jobs.queue.details")}
             </DropdownMenuItem>
             <DropdownMenuItem
               disabled={pause.isPending}
               onClick={() => pause.mutate()}
             >
               {queue.paused ? <PlayIcon /> : <PauseIcon />}
-              {queue.paused ? "Resume" : "Pause"}
+              {queue.paused ? tr("jobs.queue.resume") : tr("jobs.queue.pause")}
             </DropdownMenuItem>
             <DropdownMenuItem
               disabled={queue.waiting === 0 || clear.isPending}
               onClick={() => clear.mutate()}
             >
               <ListXIcon />
-              Clear waiting jobs
+              {tr("jobs.queue.clear")}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -274,24 +328,30 @@ function QueueRow({ queue }: { queue: JobQueueStatus }) {
 
 function lastRunText(task: ScheduledTask): string {
   const last = task.lastRun
-  if (!last) return "Hasn't run yet"
+  if (!last) return tr("jobs.task.neverRan")
   const took = formatSpan(
     (last.endedAt.getTime() - last.startedAt.getTime()) / 1000,
   )
   const when = formatRelative(last.endedAt)
   switch (last.result) {
     case "completed":
-      return `Last ran ${when}, took ${took}`
+      return tr("jobs.task.completed", { when, took })
     case "cancelled":
-      return `Cancelled ${when}, after ${took}`
+      return tr("jobs.task.cancelled", { when, took })
     case "failed":
-      return `Failed ${when}${last.error ? `: ${last.error}` : ""}`
+      return last.error
+        ? tr("jobs.task.failedWith", {
+            when,
+            error: translateKnown(last.error),
+          })
+        : tr("jobs.task.failed", { when })
   }
 }
 
 function TaskRow({ task }: { task: ScheduledTask }) {
   const update = useJobsUpdate()
   const running = task.startedAt !== null
+  const name = taskName(task)
   const action = useMutation({
     mutationFn: () =>
       running
@@ -301,37 +361,43 @@ function TaskRow({ task }: { task: ScheduledTask }) {
     onError: (error) =>
       toast.error(
         running
-          ? `Couldn't cancel ${task.name}`
-          : `Couldn't start ${task.name}`,
+          ? tr("jobs.task.cancelFailed", { task: name })
+          : tr("jobs.task.startFailed", { task: name }),
         { description: errorMessage(error) },
       ),
   })
   const percent =
     task.progress === null ? null : Math.round(task.progress * 100)
   const last = lastRunText(task)
-  const schedule = `${scheduleOf(task)}${
-    task.nextRunAt && !running ? `, next ${formatRelative(task.nextRunAt)}` : ""
-  }`
+  const schedule =
+    task.nextRunAt && !running
+      ? tr("jobs.schedule.next", {
+          schedule: scheduleOf(task),
+          when: formatRelative(task.nextRunAt),
+        })
+      : scheduleOf(task)
 
   // Every line below the description is one line long in every state, and
   // the button keeps its width, so starting or cancelling doesn't move rows.
   return (
     <ListItem className="flex-wrap items-start gap-x-3 gap-y-2 py-3 pr-2">
       <div className="min-w-0 flex-1 basis-56">
-        <h4 className="text-sm leading-5 font-medium">{task.name}</h4>
+        <h4 className="text-sm leading-5 font-medium">{name}</h4>
         <p className="text-muted-foreground text-[13px] leading-5">
-          {task.description}
+          {taskDescription(task)}
         </p>
         {running ? (
           <div className="text-muted-foreground mt-1 flex h-5 items-center gap-1.5 text-[13px] leading-5 tabular-nums">
             <Spinner className="size-3.5 shrink-0" />
             <span className="shrink-0">
-              Running{percent === null ? "…" : `, ${percent}%`}
+              {percent === null
+                ? tr("jobs.task.running")
+                : tr("jobs.task.runningPercent", { percent })}
             </span>
             {percent !== null && (
               <div
                 role="progressbar"
-                aria-label={`${task.name} progress`}
+                aria-label={tr("jobs.task.progress", { task: name })}
                 aria-valuenow={percent}
                 aria-valuemin={0}
                 aria-valuemax={100}
@@ -372,7 +438,7 @@ function TaskRow({ task }: { task: ScheduledTask }) {
         onClick={() => action.mutate()}
       >
         {running ? <SquareIcon /> : <PlayIcon />}
-        {running ? "Cancel" : "Run now"}
+        {running ? tr("jobs.task.cancel") : tr("jobs.task.run")}
       </Button>
     </ListItem>
   )

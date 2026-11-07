@@ -14,17 +14,21 @@ import {
 } from "@tanstack/react-form"
 import { type ComponentProps, type ReactNode, useId } from "react"
 
+import { translateKnown } from "@/i18n"
+
 export const { fieldContext, formContext, useFieldContext, useFormContext } =
   createFormHookContexts()
 
 /**
- * The first message among a field's errors. Schema validators give Standard
- * Schema issues; a function validator returns `{ message }` the same way.
+ * The first message among a field's errors, in the interface's language.
+ * Schema validators give Standard Schema issues, with the contract's
+ * English text; a function validator returns `{ message }` the same way.
  */
 export function firstError(
   errors: ReadonlyArray<{ message?: string } | null | undefined>,
 ): string | undefined {
-  return errors.find((error) => error?.message)?.message
+  const message = errors.find((error) => error?.message)?.message
+  return message === undefined ? undefined : translateKnown(message)
 }
 
 /**

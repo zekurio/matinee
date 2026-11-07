@@ -24,6 +24,8 @@ import { cn } from "@matinee/ui/lib/utils"
 import { CheckIcon } from "lucide-react"
 import type { ReactNode, RefObject } from "react"
 
+import { tr } from "@/i18n"
+
 export type MenuChoice = {
   id: string
   label: string
@@ -57,7 +59,9 @@ function Detail({ children }: { children?: string }) {
 function RadioItems({ section }: { section: MenuSection }) {
   if (section.choices.length === 0) {
     return (
-      <DropdownMenuItem disabled>{section.empty ?? "None"}</DropdownMenuItem>
+      <DropdownMenuItem disabled>
+        {section.empty ?? tr("player.menu.none")}
+      </DropdownMenuItem>
     )
   }
   return (
@@ -120,7 +124,9 @@ export function PlayerMenu({
     <button
       type="button"
       aria-label={label}
-      title={shortcut ? `${label} (${shortcut})` : label}
+      title={
+        shortcut ? tr("player.menu.withKey", { label, key: shortcut }) : label
+      }
       className={cn(triggerClassName, "relative")}
     >
       {icon}
@@ -160,7 +166,7 @@ export function PlayerMenu({
                 )}
                 {section.choices.length === 0 && (
                   <p className="text-muted-foreground px-3 py-3 text-sm">
-                    {section.empty ?? "None"}
+                    {section.empty ?? tr("player.menu.none")}
                   </p>
                 )}
                 {section.choices.map((choice) => (

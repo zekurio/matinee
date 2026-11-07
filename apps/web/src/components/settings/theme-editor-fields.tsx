@@ -22,6 +22,7 @@ import { CopyIcon, MoonIcon, PlusIcon, SunIcon, Trash2Icon } from "lucide-react"
 import type { RefObject } from "react"
 import { useShallow } from "zustand/react/shallow"
 
+import { tr } from "@/i18n"
 import {
   guidedSeed,
   selectedVariant,
@@ -30,7 +31,7 @@ import {
 } from "@/stores/theme-editor"
 
 import { HexColorInput } from "./hex-color-input"
-import { ROLE_GROUPS, roleLabel } from "./theme-editor-draft"
+import { groupLabel, ROLE_GROUPS, roleLabel } from "./theme-editor-draft"
 
 /** The theme's name, its variants, and the selected variant's name. */
 export function ThemeDetailsFields({
@@ -53,7 +54,7 @@ export function ThemeDetailsFields({
   return (
     <div className="grid grid-cols-[5.5rem_minmax(0,1fr)] items-center gap-3">
       <label htmlFor="theme-editor-name" className="text-sm font-medium">
-        Name
+        {tr("themes.editor.name")}
       </label>
       <Input
         ref={nameRef}
@@ -68,7 +69,7 @@ export function ThemeDetailsFields({
         id="theme-editor-variants"
         className="self-start pt-1 text-sm font-medium"
       >
-        Variants
+        {tr("themes.editor.variants")}
       </span>
       <div
         role="group"
@@ -105,7 +106,7 @@ export function ThemeDetailsFields({
                 type="button"
                 variant="ghost"
                 size="icon-xs"
-                aria-label="Add variant"
+                aria-label={tr("themes.editor.addVariant")}
                 disabled={full}
               >
                 <PlusIcon className="size-4" />
@@ -114,10 +115,10 @@ export function ThemeDetailsFields({
           />
           <DropdownMenuContent align="start" sideOffset={6}>
             <DropdownMenuItem onClick={() => actions.addVariant("light")}>
-              <SunIcon /> Light
+              <SunIcon /> {tr("themes.editor.light")}
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => actions.addVariant("dark")}>
-              <MoonIcon /> Dark
+              <MoonIcon /> {tr("themes.editor.dark")}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -126,7 +127,7 @@ export function ThemeDetailsFields({
         htmlFor="theme-editor-variant-name"
         className="text-sm font-medium"
       >
-        Variant
+        {tr("themes.editor.variant")}
       </label>
       <Input
         id="theme-editor-variant-name"
@@ -172,7 +173,7 @@ export function ThemeColorFields({
   const guided = seed ?? guidedSeed(colors)
   const query = filter.trim().toLowerCase()
   const groups = ROLE_GROUPS.map((group) => ({
-    label: group.label,
+    id: group.id,
     roles: group.roles.filter(
       (role) => !query || roleLabel(role).toLowerCase().includes(query),
     ),
@@ -181,18 +182,20 @@ export function ThemeColorFields({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-3">
-        <span className="flex-1 text-sm font-medium">Colors</span>
+        <span className="flex-1 text-sm font-medium">
+          {tr("themes.editor.colors")}
+        </span>
         {advanced && (
           <Input
             value={filter}
-            placeholder="Filter"
-            aria-label="Filter colors"
+            placeholder={tr("themes.editor.filter")}
+            aria-label={tr("themes.editor.filterColors")}
             className="h-7 w-28 text-xs md:h-7"
             onChange={(event) => actions.setFilter(event.target.value)}
           />
         )}
         <label className="flex items-center gap-2 text-xs font-medium">
-          Advanced
+          {tr("themes.editor.advanced")}
           <Switch
             size="sm"
             checked={advanced}
@@ -203,9 +206,9 @@ export function ThemeColorFields({
 
       {advanced ? (
         groups.map((group) => (
-          <div key={group.label} className="flex flex-col gap-1">
+          <div key={group.id} className="flex flex-col gap-1">
             <h3 className="text-foreground-faint px-1.5 text-xs font-medium">
-              {group.label}
+              {groupLabel(group.id)}
             </h3>
             {group.roles.map((role) => (
               <ColorField
@@ -226,18 +229,18 @@ export function ThemeColorFields({
       ) : (
         <div className="flex flex-col gap-1">
           <p className="text-muted-foreground px-1.5 pb-1 text-xs">
-            Pick two colors. Matinee fills in the rest.
+            {tr("themes.editor.guided")}
           </p>
           <ColorField
             id="theme-guided-background"
-            label="Background"
+            label={roleLabel("background")}
             value={guided.background}
             highlighted={false}
             onChange={(value) => actions.setGuidedColor("background", value)}
           />
           <ColorField
             id="theme-guided-accent"
-            label="Accent"
+            label={roleLabel("accent")}
             value={guided.accent}
             highlighted={false}
             onChange={(value) => actions.setGuidedColor("accent", value)}
@@ -254,7 +257,7 @@ export function ThemeColorFields({
           onClick={actions.duplicateVariant}
         >
           <CopyIcon />
-          Duplicate variant
+          {tr("themes.editor.duplicateVariant")}
         </Button>
         {variantCount > 1 && (
           <Button
@@ -264,7 +267,7 @@ export function ThemeColorFields({
             onClick={actions.removeVariant}
           >
             <Trash2Icon />
-            Remove variant
+            {tr("themes.editor.removeVariant")}
           </Button>
         )}
       </div>

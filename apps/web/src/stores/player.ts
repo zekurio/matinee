@@ -50,7 +50,7 @@ export type PlayerState = PlayerStart & {
   idle: boolean
   /** Keyboard focus is in the controls. */
   focused: boolean
-  /** The label of the menu that is open. */
+  /** The id of the menu that is open. */
   openMenu: string | null
   flash: Flash | null
 
@@ -93,7 +93,7 @@ export type PlayerState = PlayerStart & {
   setIdle: (idle: boolean) => void
   setFocused: (focused: boolean) => void
   /**
-   * Opens or closes a menu by its label. Closing one that isn't open does
+   * Opens or closes a menu by its id. Closing one that isn't open does
    * nothing, so a menu opened as another closes stays open.
    */
   setMenuOpen: (menu: string, open: boolean) => void

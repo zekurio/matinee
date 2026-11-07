@@ -7,6 +7,8 @@ import {
   QueryClient,
 } from "@tanstack/react-query"
 
+import { tr, translateKnown } from "@/i18n"
+
 export const client = createMatineeClient()
 export const orpc = createTanstackQueryUtils(client)
 
@@ -65,15 +67,17 @@ export const queryClient = new QueryClient({
 export function errorMessage(cause: unknown): string {
   if (cause instanceof ORPCError) {
     return cause.status < 500 && cause.message
-      ? cause.message
-      : "The server ran into a problem. Check its log."
+      ? translateKnown(cause.message)
+      : tr("common.error.server")
   }
   if (cause instanceof Error && cause.name === "NotAllowedError") {
-    return "The passkey prompt was closed before it finished."
+    return tr("common.error.passkeyClosed")
   }
   if (cause instanceof Error && cause.name === "InvalidStateError") {
-    return "This device already has a passkey for your account."
+    return tr("common.error.passkeyExists")
   }
-  if (cause instanceof Error && cause.message) return cause.message
-  return "Something went wrong."
+  if (cause instanceof Error && cause.message) {
+    return translateKnown(cause.message)
+  }
+  return tr("common.error.unknown")
 }

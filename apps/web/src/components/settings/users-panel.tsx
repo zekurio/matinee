@@ -32,6 +32,7 @@ import { type ComponentProps, type ReactNode, useState } from "react"
 import { useStore } from "zustand"
 
 import { UserAvatar } from "@/components/user-avatar"
+import { tr } from "@/i18n"
 import { formatDate, formatRelative } from "@/lib/format"
 import { client, errorMessage, orpc } from "@/lib/rpc"
 import { createUsersPanelStore, type UserAction } from "@/stores/users-panel"
@@ -77,10 +78,10 @@ export function UsersPanel() {
       const self = updated.id === me?.id
       toast.success(
         updated.role === "admin"
-          ? `${displayName(updated)} is now an admin`
+          ? tr("users.madeAdmin", { name: displayName(updated) })
           : self
-            ? "You're no longer an admin"
-            : `${displayName(updated)} is no longer an admin`,
+            ? tr("users.steppedDown")
+            : tr("users.removedAdmin", { name: displayName(updated) }),
       )
       // Stepping down hides administration, this section included. The
       // shell reads the user from the route, so the route loads again.
@@ -103,7 +104,7 @@ export function UsersPanel() {
         await navigate({ to: "/login" })
         return
       }
-      toast.success(`Deleted ${displayName(user)}`)
+      toast.success(tr("users.deleted", { name: displayName(user) }))
       await refresh()
     },
   })
@@ -113,11 +114,13 @@ export function UsersPanel() {
       client.admin.users.signOut({ id: user.id }),
     onSuccess: async ({ ended }, user) => {
       closeConfirm()
-      const sessions = ended === 1 ? "1 session" : `${ended} sessions`
       toast.success(
         user.id === me?.id
-          ? `Ended ${sessions} on other devices`
-          : `Signed ${displayName(user)} out of ${sessions}`,
+          ? tr("users.endedOwnSessions", { count: ended })
+          : tr("users.endedSessions", {
+              count: ended,
+              name: displayName(user),
+            }),
       )
       await refresh()
     },
@@ -150,17 +153,17 @@ export function UsersPanel() {
 
   return (
     <SettingsSections>
-      <SettingsSubsection id="users" title="Users">
+      <SettingsSubsection id="users" title={tr("users.title")}>
         {users.isPending ? (
           <Skeleton className="h-32 rounded-xl" />
         ) : users.isError ? (
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3">
             <p className="text-muted-foreground text-sm">
-              Couldn't load users. {errorMessage(users.error)}
+              {tr("users.loadFailed", { error: errorMessage(users.error) })}
             </p>
             <Button variant="outline" onClick={() => void users.refetch()}>
               <RefreshCwIcon />
-              Try again
+              {tr("users.retry")}
             </Button>
           </div>
         ) : (
@@ -194,15 +197,17 @@ export function UsersPanel() {
         open={action === "sign-out"}
         title={
           self
-            ? "Sign out your other sessions?"
-            : `Sign ${targetName} out everywhere?`
+            ? tr("users.signOut.ownTitle")
+            : tr("users.signOut.title", { name: targetName })
         }
         description={
           self
-            ? "Every other device has to sign in again."
-            : "Every device has to sign in again."
+            ? tr("users.signOut.ownDescription")
+            : tr("users.signOut.description")
         }
-        confirmLabel={self ? "Sign out others" : "Sign out everywhere"}
+        confirmLabel={
+          self ? tr("users.signOut.ownConfirm") : tr("users.signOut.confirm")
+        }
         destructive
         pending={signOut.isPending}
         error={signOut.error}
@@ -211,13 +216,19 @@ export function UsersPanel() {
       />
       <ConfirmDialog
         open={action === "delete"}
-        title={self ? "Delete your account?" : `Delete ${targetName}?`}
+        title={
+          self
+            ? tr("users.delete.ownTitle")
+            : tr("users.delete.title", { name: targetName })
+        }
         description={
           self
-            ? "Your passkeys and watch progress go with it. This can't be undone."
-            : "Their passkeys and watch progress go with it. This can't be undone."
+            ? tr("users.delete.ownDescription")
+            : tr("users.delete.description")
         }
-        confirmLabel={self ? "Delete my account" : "Delete user"}
+        confirmLabel={
+          self ? tr("users.delete.ownConfirm") : tr("users.delete.confirm")
+        }
         destructive
         pending={remove.isPending}
         error={remove.error}
@@ -242,7 +253,10 @@ function UserItem({
   onConfirm: (action: UserAction) => void
 }) {
   const name = displayName(user)
-  const signOutLabel = self ? "Sign out other sessions" : "Sign out everywhere"
+  const signOutLabel = self
+    ? tr("users.menu.signOutOthers")
+    : tr("users.menu.signOut")
+  const lastAdminNote = tr("users.lastAdmin")
 
   return (
     <ListItem className="gap-3 py-2.5 pr-2">
@@ -258,12 +272,14 @@ function UserItem({
           {user.role === "admin" && (
             <ShieldIcon
               role="img"
-              aria-label="Admin"
+              aria-label={tr("users.admin")}
               className="text-muted-foreground size-3.5 shrink-0"
             />
           )}
           {self && (
-            <span className="text-muted-foreground font-normal">(you)</span>
+            <span className="text-muted-foreground font-normal">
+              {tr("users.you")}
+            </span>
           )}
         </p>
         <UserDetails user={user} self={self} oidcName={oidcName} />
@@ -275,7 +291,7 @@ function UserItem({
               variant="ghost"
               size="icon"
               className="text-muted-foreground hover:text-foreground shrink-0"
-              aria-label={`Actions for ${name}`}
+              aria-label={tr("users.actions", { name })}
             />
           }
         >
@@ -289,9 +305,9 @@ function UserItem({
             {user.role === "admin" ? <ShieldOffIcon /> : <ShieldIcon />}
             {user.role === "admin"
               ? self
-                ? "Step down as admin"
-                : "Remove admin role"
-              : "Make admin"}
+                ? tr("users.menu.stepDown")
+                : tr("users.menu.removeAdmin")
+              : tr("users.menu.makeAdmin")}
           </BlockableItem>
           <DropdownMenuItem
             disabled={user.sessions <= (self ? 1 : 0)}
@@ -307,15 +323,13 @@ function UserItem({
             onClick={() => onConfirm("delete")}
           >
             <Trash2Icon />
-            {self ? "Delete my account" : "Delete user"}
+            {self ? tr("users.menu.deleteOwn") : tr("users.menu.delete")}
           </BlockableItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </ListItem>
   )
 }
-
-const lastAdminNote = "Make someone else an admin first."
 
 /**
  * A menu item that may be off for a reason. A disabled item can't be
@@ -366,18 +380,18 @@ function UserDetails({
         <Fact icon={<StatusDot tone={tone} />}>{label}</Fact>
         {user.passkeys > 0 && (
           <Fact icon={<KeyRoundIcon />}>
-            {user.passkeys === 1 ? "1 passkey" : `${user.passkeys} passkeys`}
+            {tr("users.passkeys", { count: user.passkeys })}
           </Fact>
         )}
         {user.oidcLinked && (
-          <Fact icon={<LogInIcon />}>{oidcName ?? "Single sign-on (off)"}</Fact>
+          <Fact icon={<LogInIcon />}>{oidcName ?? tr("users.oidcOff")}</Fact>
         )}
       </>
     )
   } else {
     facts = (
       <Fact icon={<TriangleAlertIcon className="text-warning" />}>
-        No way to sign in
+        {tr("users.noSignIn")}
       </Fact>
     )
   }
@@ -385,7 +399,7 @@ function UserDetails({
   return (
     <p
       className="text-muted-foreground mt-0.5 flex flex-wrap items-center gap-x-3.5 gap-y-0.5 text-[13px] leading-5"
-      title={`Joined ${formatDate(user.createdAt)}`}
+      title={tr("users.joined", { date: formatDate(user.createdAt) })}
     >
       {facts}
     </p>
@@ -421,13 +435,13 @@ function StatusDot({ tone }: { tone: Tone }) {
 type Activity = { label: string; tone: Tone }
 
 function activity(user: AdminUser, self: boolean): Activity {
-  if (self) return { label: "Active now", tone: "live" }
-  if (!user.lastSeenAt) return { label: "Signed out", tone: "idle" }
+  if (self) return { label: tr("users.activeNow"), tone: "live" }
+  if (!user.lastSeenAt) return { label: tr("users.signedOut"), tone: "idle" }
   if (Date.now() - user.lastSeenAt.getTime() < LAST_SEEN_PRECISION_MS) {
-    return { label: "Active recently", tone: "live" }
+    return { label: tr("users.activeRecently"), tone: "live" }
   }
   return {
-    label: `Last seen ${formatRelative(user.lastSeenAt)}`,
+    label: tr("users.lastSeen", { when: formatRelative(user.lastSeenAt) }),
     tone: "idle",
   }
 }

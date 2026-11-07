@@ -5,11 +5,14 @@ import { FileUpIcon, PlusIcon } from "lucide-react"
 import { useCallback, useState } from "react"
 import { createPortal } from "react-dom"
 
+import { browserLocale, LOCALES, nativeName, tr } from "@/i18n"
+import { languageName } from "@/lib/languages"
 import { useThemeState } from "@/lib/theme-state"
+import { AUTO_LANGUAGE, useLanguageStore } from "@/stores/language"
 import type { ThemeEditorOpening } from "@/stores/theme-editor"
 
 import { ColorSchemePicker } from "./color-scheme-picker"
-import { SwitchRow } from "./setting-controls"
+import { SelectRow, SwitchRow } from "./setting-controls"
 import {
   SettingRows,
   SettingsSections,
@@ -22,27 +25,67 @@ import { ThemeImportDialog } from "./theme-import-dialog"
 import { createSeed, duplicateSeed, editSeed } from "./theme-seeds"
 
 /**
- * The color scheme, then every bundled and custom theme as a card whose
- * swatches pick light and dark separately. Ported from alloy.
+ * The interface language, the color scheme, then every bundled and custom
+ * theme as a card whose swatches pick light and dark separately. The theme
+ * parts are ported from alloy.
  */
 export function AppearancePanel() {
   const theme = useThemeState()
   return (
     <SettingsSections>
+      <LanguageSection />
       <ColorSchemeSection theme={theme} />
       <ThemesSection theme={theme} />
     </SettingsSections>
   )
 }
 
+const LANGUAGE_OPTIONS = [AUTO_LANGUAGE, ...LOCALES]
+
+/**
+ * "Deutsch (German)": a language by its own name, so its speakers find it
+ * whatever the interface speaks now, and by the current one's.
+ */
+function languageLabel(option: string): string {
+  if (option === AUTO_LANGUAGE) {
+    return tr("appearance.language.auto", {
+      language: nativeName(browserLocale()),
+    })
+  }
+  const own = nativeName(option)
+  const current = languageName(option)
+  return own.toLowerCase() === current.toLowerCase()
+    ? own
+    : `${own} (${current})`
+}
+
+function LanguageSection() {
+  const language = useLanguageStore((state) => state.language)
+  const setLanguage = useLanguageStore((state) => state.setLanguage)
+  return (
+    <SettingsSubsection id="language" title={tr("appearance.language")}>
+      <SettingRows>
+        <SelectRow
+          title={tr("appearance.language.title")}
+          description={tr("appearance.language.description")}
+          value={LOCALES.includes(language) ? language : AUTO_LANGUAGE}
+          options={LANGUAGE_OPTIONS}
+          labelOf={languageLabel}
+          onChange={setLanguage}
+        />
+      </SettingRows>
+    </SettingsSubsection>
+  )
+}
+
 function ColorSchemeSection({ theme }: { theme: ThemeState }) {
   return (
-    <SettingsSubsection id="color-scheme" title="Color scheme">
+    <SettingsSubsection id="color-scheme" title={tr("appearance.colorScheme")}>
       <ColorSchemePicker theme={theme} />
       <SettingRows>
         <SwitchRow
-          title="Sync across devices"
-          description="Use the same scheme and themes wherever you sign in."
+          title={tr("appearance.sync.title")}
+          description={tr("appearance.sync.description")}
           checked={theme.preferences.sync}
           onChange={(checked) => setThemeSync(checked)}
         />
@@ -82,8 +125,8 @@ function ThemesSection({ theme }: { theme: ThemeState }) {
   return (
     <SettingsSubsection
       id="themes"
-      title="Themes"
-      description="Pick a theme for both modes, or a swatch for one."
+      title={tr("appearance.themes")}
+      description={tr("appearance.themes.description")}
       action={
         <div
           ref={attachEditor}
@@ -95,11 +138,11 @@ function ThemesSection({ theme }: { theme: ThemeState }) {
             onClick={() => setDialog({ kind: "import" })}
           >
             <FileUpIcon />
-            Import
+            {tr("appearance.themes.import")}
           </Button>
           <Button type="button" onClick={() => openEditor(createSeed(theme))}>
             <PlusIcon />
-            New theme
+            {tr("appearance.themes.new")}
           </Button>
         </div>
       }

@@ -4,6 +4,7 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import { CalendarDaysIcon, SparklesIcon } from "lucide-react"
 import type { ReactNode } from "react"
 
+import { tr } from "@/i18n"
 import { formatCount, formatWatchTime } from "@/lib/format"
 import { errorMessage, orpc } from "@/lib/rpc"
 import { browserTimeZone, rangePhrase } from "@/lib/stats"
@@ -57,21 +58,16 @@ function WithServerStats({
 /** No plays in the range: the first-run state for all time, else a nudge. */
 export function NoPlays({ range, onRange }: RangeProps) {
   if (range === "all") {
-    return (
-      <StatsEmpty
-        icon={SparklesIcon}
-        title="Statistics fill in as people watch"
-      />
-    )
+    return <StatsEmpty icon={SparklesIcon} title={tr("stats.server.empty")} />
   }
   return (
     <StatsEmpty
       compact
       icon={CalendarDaysIcon}
-      title={`No plays ${rangePhrase(range)}`}
+      title={tr("stats.server.noPlays", { period: rangePhrase(range) })}
       action={
         <Button variant="outline" onClick={() => onRange("all")}>
-          Show all time
+          {tr("stats.showAllTime")}
         </Button>
       }
     />
@@ -90,24 +86,27 @@ export function ActivityView(props: RangeProps) {
               stats={stats}
               figures={[
                 {
-                  label: "Watch time",
+                  label: tr("stats.figure.watchTime"),
                   value: formatWatchTime(stats.totals.watchSeconds),
                 },
-                { label: "Plays", value: formatCount(stats.totals.plays) },
                 {
-                  label: stats.viewers === 1 ? "Person" : "People",
+                  label: tr("stats.figure.plays"),
+                  value: formatCount(stats.totals.plays),
+                },
+                {
+                  label: tr("stats.figure.people", { count: stats.viewers }),
                   value: formatCount(stats.viewers),
                 },
                 {
-                  label: "Movies finished",
+                  label: tr("stats.figure.moviesFinished"),
                   value: formatCount(stats.totals.movies),
                 },
                 {
-                  label: "Episodes finished",
+                  label: tr("stats.figure.episodesFinished"),
                   value: formatCount(stats.totals.episodes),
                 },
                 {
-                  label: "Shows watched",
+                  label: tr("stats.figure.showsWatched"),
                   value: formatCount(stats.totals.shows),
                 },
               ]}
@@ -140,7 +139,7 @@ export function PlaybackView(props: RangeProps) {
               <TranscodingSections stats={stats} />
             ) : (
               <p className="text-muted-foreground text-[13px]">
-                Nothing was transcoded in this period.
+                {tr("stats.server.nothingTranscoded")}
               </p>
             )}
           </div>

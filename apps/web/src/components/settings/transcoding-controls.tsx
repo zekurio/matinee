@@ -7,18 +7,16 @@ import type {
 import { useSelector } from "@tanstack/react-form"
 import type { ReactNode } from "react"
 
+import { tr } from "@/i18n"
 import { useFieldContext, withForm } from "@/lib/form"
 
 import { InputField, SwitchField, typeOnly } from "./setting-controls"
 import { draftForm, type NumberField, numberRow } from "./transcoding-draft"
 
-export const ACCELERATION_LABELS = new Map<HardwareAcceleration, string>([
-  ["none", "None (software)"],
-  ["vaapi", "VAAPI (Intel, AMD)"],
-  ["qsv", "Intel Quick Sync"],
-  ["nvenc", "NVIDIA NVENC"],
-  ["videotoolbox", "Apple VideoToolbox"],
-])
+/** "Intel Quick Sync", "None (software)". */
+export function accelerationLabel(acceleration: HardwareAcceleration): string {
+  return tr(`transcoding.acceleration.${acceleration}`)
+}
 
 export const label = (labels: Map<string, string>, value: string) =>
   labels.get(value) ?? value
@@ -57,8 +55,8 @@ export function checkNote(
   if (!check || check.status === "ok") return text
   const reason =
     check.status === "missing"
-      ? "This ffmpeg build or GPU doesn't have it."
-      : `It failed on this server: ${firstLine(check)}`
+      ? tr("transcoding.check.missing")
+      : tr("transcoding.check.failed", { error: firstLine(check) ?? "" })
   return (
     <>
       {text} <span className="text-destructive">{reason}</span>

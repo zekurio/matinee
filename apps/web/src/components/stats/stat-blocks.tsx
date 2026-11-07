@@ -10,6 +10,8 @@ import { cn } from "@matinee/ui/lib/utils"
 import { LockIcon, type LucideIcon } from "lucide-react"
 import { type ReactNode, useId } from "react"
 
+import { perLocale, tr } from "@/i18n"
+
 /** Columns for a page's blocks of statistics. */
 export const statsGrid =
   "grid items-start gap-x-10 gap-y-8 md:grid-cols-2 xl:grid-cols-3"
@@ -67,11 +69,11 @@ export function SectionHeading({
 export function PrivateNote() {
   return (
     <span
-      title="Only you can see this. Share it under Settings → Account."
+      title={tr("stats.private.hint")}
       className="text-muted-foreground bg-foreground/[0.06] inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs"
     >
       <LockIcon aria-hidden className="size-3" />
-      Only you
+      {tr("stats.private.note")}
     </span>
   )
 }
@@ -129,11 +131,19 @@ export type RankedRow = {
   detail: string
 }
 
+const percents = perLocale(
+  (locale) =>
+    new Intl.NumberFormat(locale, {
+      style: "percent",
+      maximumFractionDigits: 0,
+    }),
+)
+
 /** A whole-number percent, with "<1%" so a small share doesn't read as none. */
 export function percent(value: number, total: number): string {
-  if (total <= 0 || value <= 0) return "0%"
-  const share = (value / total) * 100
-  return share < 1 ? "<1%" : `${Math.round(share)}%`
+  if (total <= 0 || value <= 0) return percents().format(0)
+  const share = value / total
+  return share < 0.01 ? `<${percents().format(0.01)}` : percents().format(share)
 }
 
 /**

@@ -1,5 +1,6 @@
 import {
   type Library,
+  LIBRARY_KINDS,
   type LibraryKind,
   LibraryInput,
   type MetadataProvider,
@@ -30,32 +31,30 @@ import { useSelector } from "@tanstack/react-form"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { FolderIcon, XIcon } from "lucide-react"
 
+import { tr, translateKnown } from "@/i18n"
 import { firstError, useAppForm } from "@/lib/form"
+import { languageName } from "@/lib/languages"
 import { client, errorMessage, orpc } from "@/lib/rpc"
 
 import { FolderBrowser } from "./folder-browser"
 import { FormAlert } from "./form-alert"
 import { SelectField } from "./select-field"
 
-const kinds: { value: LibraryKind; label: string }[] = [
-  { value: "movies", label: "Movies" },
-  { value: "shows", label: "Shows" },
-]
-
-// Languages every provider has a fair amount of data in.
+// Languages every provider has a fair amount of data in, with the tag
+// their name comes from: the region only where it matters.
 const languages = [
-  { value: "en-US", label: "English" },
-  { value: "de-DE", label: "German" },
-  { value: "fr-FR", label: "French" },
-  { value: "es-ES", label: "Spanish" },
-  { value: "it-IT", label: "Italian" },
-  { value: "pt-BR", label: "Portuguese (Brazil)" },
-  { value: "nl-NL", label: "Dutch" },
-  { value: "pl-PL", label: "Polish" },
-  { value: "sv-SE", label: "Swedish" },
-  { value: "ja-JP", label: "Japanese" },
-  { value: "ko-KR", label: "Korean" },
-  { value: "zh-CN", label: "Chinese" },
+  { value: "en-US", tag: "en" },
+  { value: "de-DE", tag: "de" },
+  { value: "fr-FR", tag: "fr" },
+  { value: "es-ES", tag: "es" },
+  { value: "it-IT", tag: "it" },
+  { value: "pt-BR", tag: "pt-BR" },
+  { value: "nl-NL", tag: "nl" },
+  { value: "pl-PL", tag: "pl" },
+  { value: "sv-SE", tag: "sv" },
+  { value: "ja-JP", tag: "ja" },
+  { value: "ko-KR", tag: "ko" },
+  { value: "zh-CN", tag: "zh" },
 ]
 
 type ProviderChoice = MetadataProviderId | "none"
@@ -161,7 +160,9 @@ function LibraryForm({
         const parsed = LibraryInput.safeParse(toInput(value))
         if (parsed.success) return undefined
         return {
-          message: parsed.error.issues[0]?.message ?? "Check the fields.",
+          message:
+            firstError(parsed.error.issues) ??
+            tr("libraries.dialog.checkFields"),
         }
       },
     },
@@ -181,12 +182,18 @@ function LibraryForm({
   const provider = providerChoice ?? defaultProvider(kind, providers.data ?? [])
   const providerInfo = providers.data?.find((p) => p.id === provider)
   const providerItems = [
-    { value: "none", label: "None" },
+    { value: "none", label: tr("libraries.dialog.noProvider") },
     ...(providers.data ?? []).map((p) => ({ value: p.id, label: p.name })),
   ]
-  const languageItems = languages.some((l) => l.value === language)
-    ? languages
-    : [...languages, { value: language, label: language }]
+  const kinds = LIBRARY_KINDS.map((value) => ({
+    value,
+    label: tr(`libraries.dialog.kind.${value}`),
+  }))
+  const languageItems = (
+    languages.some((l) => l.value === language)
+      ? languages
+      : [...languages, { value: language, tag: language }]
+  ).map((l) => ({ value: l.value, label: languageName(l.tag) }))
   // Media usually sits beside the folders other libraries already use.
   const known = library?.paths[0] ?? libraries.data?.[0]?.paths[0]
   const startFolder = known ? parentFolder(known) : undefined
@@ -204,7 +211,9 @@ function LibraryForm({
       >
         <DialogHeader>
           <DialogTitle className="text-lg leading-7 font-semibold">
-            {library ? "Edit library" : "Add library"}
+            {library
+              ? tr("libraries.dialog.editTitle")
+              : tr("libraries.dialog.addTitle")}
           </DialogTitle>
         </DialogHeader>
 
@@ -214,14 +223,18 @@ function LibraryForm({
               {(field) => (
                 <field.TextField
                   id="library-name"
-                  label="Name"
-                  placeholder="e.g. Movies"
+                  label={tr("libraries.dialog.name")}
+                  placeholder={tr("libraries.dialog.namePlaceholder")}
                 />
               )}
             </form.AppField>
             <form.AppField name="kind">
               {() => (
-                <SelectField id="library-type" label="Type" items={kinds} />
+                <SelectField
+                  id="library-type"
+                  label={tr("libraries.dialog.type")}
+                  items={kinds}
+                />
               )}
             </form.AppField>
           </div>
@@ -230,7 +243,9 @@ function LibraryForm({
             <form.Field name="provider">
               {(field) => (
                 <Field>
-                  <FieldLabel htmlFor="library-provider">Metadata</FieldLabel>
+                  <FieldLabel htmlFor="library-provider">
+                    {tr("libraries.dialog.metadata")}
+                  </FieldLabel>
                   <Select
                     items={providerItems}
                     value={provider}
@@ -242,7 +257,9 @@ function LibraryForm({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">None</SelectItem>
+                      <SelectItem value="none">
+                        {tr("libraries.dialog.noProvider")}
+                      </SelectItem>
                       {providers.data?.map((p) => (
                         <SelectItem
                           key={p.id}
@@ -252,7 +269,7 @@ function LibraryForm({
                           {p.name}
                           {!p.configured && (
                             <span className="text-muted-foreground">
-                              Needs an API key
+                              {tr("libraries.dialog.needsKey")}
                             </span>
                           )}
                         </SelectItem>
@@ -266,7 +283,7 @@ function LibraryForm({
               {() => (
                 <SelectField
                   id="library-language"
-                  label="Language"
+                  label={tr("libraries.dialog.language")}
                   items={languageItems}
                   disabled={provider === "none"}
                 />
@@ -274,8 +291,8 @@ function LibraryForm({
             </form.AppField>
             <FieldDescription className="-mt-2 sm:col-span-2">
               {provider === "none"
-                ? "Titles use their folder and file names, with no artwork."
-                : providerInfo?.description}
+                ? tr("libraries.dialog.noProviderHint")
+                : providerInfo && translateKnown(providerInfo.description)}
             </FieldDescription>
           </div>
 
@@ -286,10 +303,12 @@ function LibraryForm({
                 <>
                   <Field>
                     <div className="flex items-baseline justify-between">
-                      <FieldLabel>Selected folders</FieldLabel>
+                      <FieldLabel>{tr("libraries.dialog.folders")}</FieldLabel>
                       {paths.length > 0 && (
                         <span className="text-muted-foreground text-xs tabular-nums">
-                          {paths.length} selected
+                          {tr("libraries.dialog.selected", {
+                            count: paths.length,
+                          })}
                         </span>
                       )}
                     </div>
@@ -311,7 +330,9 @@ function LibraryForm({
                               type="button"
                               variant="ghost"
                               size="icon-sm"
-                              aria-label={`Remove ${path}`}
+                              aria-label={tr("libraries.dialog.removeFolder", {
+                                path,
+                              })}
                               onClick={() =>
                                 field.handleChange(
                                   paths.filter((p) => p !== path),
@@ -325,13 +346,13 @@ function LibraryForm({
                       </ul>
                     ) : (
                       <p className="text-muted-foreground rounded-md border border-dashed px-3 py-2.5 text-sm">
-                        Open a folder below, then add it.
+                        {tr("libraries.dialog.noFolders")}
                       </p>
                     )}
                   </Field>
 
                   <Field>
-                    <FieldLabel>Browse server</FieldLabel>
+                    <FieldLabel>{tr("libraries.dialog.browse")}</FieldLabel>
                     <FolderBrowser
                       initialPath={startFolder}
                       picked={paths}
@@ -348,7 +369,7 @@ function LibraryForm({
 
         <DialogFooter className="-mx-6 -mb-6 px-6 py-4">
           <Button type="button" variant="ghost" onClick={onDone}>
-            Cancel
+            {tr("libraries.dialog.cancel")}
           </Button>
           <form.Subscribe
             selector={(state) =>
@@ -357,7 +378,9 @@ function LibraryForm({
           >
             {(incomplete) => (
               <form.SubmitButton disabled={incomplete} pending={save.isPending}>
-                {library ? "Save" : "Add library"}
+                {library
+                  ? tr("libraries.dialog.save")
+                  : tr("libraries.dialog.add")}
               </form.SubmitButton>
             )}
           </form.Subscribe>

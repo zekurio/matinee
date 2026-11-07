@@ -14,8 +14,8 @@ import { pageBleed } from "@/components/app-shell"
 import { useDocumentTitle } from "@/components/page-header"
 import { WatchedDateDialog } from "@/components/watched-date-dialog"
 import { useSetTitleWatched, WatchedMenuItems } from "@/components/watched-menu"
-import { plural } from "@/lib/format"
-import { art } from "@/lib/media"
+import { tr } from "@/i18n"
+import { art, seasonName } from "@/lib/media"
 import { errorMessage, orpc } from "@/lib/rpc"
 
 import { SeasonEpisodes } from "./episodes"
@@ -52,7 +52,9 @@ export function SeasonPage() {
       : title.data?.seasons.find((s) => s.number === number)
 
   useDocumentTitle(
-    title.data && season ? `${season.name} · ${title.data.name}` : null,
+    title.data && season
+      ? `${seasonName(season.number)} · ${title.data.name}`
+      : null,
   )
 
   if (title.isPending) return <TitleSkeleton />
@@ -61,8 +63,8 @@ export function SeasonPage() {
       <div className="py-24 text-center">
         <h1 className="text-2xl font-semibold tracking-tight">
           {title.data
-            ? `${title.data.name} has no such season`
-            : "Couldn't load this show"}
+            ? tr("title.season.missing", { name: title.data.name })
+            : tr("title.season.showError")}
         </h1>
         {!title.data && (
           <p className="text-muted-foreground mt-2 text-sm">
@@ -78,7 +80,7 @@ export function SeasonPage() {
               className: "mt-6",
             })}
           >
-            See all seasons
+            {tr("title.season.all")}
           </Link>
         ) : (
           <Link
@@ -88,7 +90,7 @@ export function SeasonPage() {
               className: "mt-6",
             })}
           >
-            Back to Home
+            {tr("title.backHome")}
           </Link>
         )}
       </div>
@@ -143,12 +145,12 @@ function SeasonHeader({
   const year = items?.[0]?.episode?.airDate?.slice(0, 4)
   const facts = [
     year,
-    plural(season.itemCount, "episode"),
+    tr("title.episodeCount", { count: season.itemCount }),
     season.watchedCount === 0
       ? null
       : season.watchedCount >= season.itemCount
-        ? "Watched"
-        : `${season.watchedCount} watched`,
+        ? tr("title.season.watched")
+        : tr("title.season.watchedCount", { count: season.watchedCount }),
   ].filter(Boolean)
 
   return (
@@ -158,7 +160,10 @@ function SeasonHeader({
       <div className={headerColumn}>
         <div className={headerRow}>
           <HeaderPoster
-            name={`${title.name}: ${season.name}`}
+            name={tr("title.seasonOf", {
+              show: title.name,
+              season: seasonName(season.number),
+            })}
             toneKey={title.id}
             poster={art(poster)}
           />
@@ -180,7 +185,7 @@ function SeasonHeader({
                 id="season-name"
                 className="mt-1 text-2xl leading-[1.1] font-semibold tracking-tight text-balance sm:text-4xl lg:text-5xl"
               >
-                {season.name}
+                {seasonName(season.number)}
               </h1>
 
               <div className="text-foreground/80 mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm tabular-nums">
@@ -195,7 +200,10 @@ function SeasonHeader({
 
             <div className="col-span-2 min-w-0 sm:flex sm:flex-1 sm:flex-col">
               <HeaderOverview
-                name={`${title.name}: ${season.name}`}
+                name={tr("title.seasonOf", {
+                  show: title.name,
+                  season: seasonName(season.number),
+                })}
                 overview={season.overview}
                 className="sm:mt-4"
               />
@@ -249,7 +257,9 @@ function SeasonMenu({
             <Button
               variant="secondary"
               size="icon-lg"
-              aria-label={`More actions for ${season.name}`}
+              aria-label={tr("title.moreActionsFor", {
+                name: seasonName(season.number),
+              })}
               className="border-foreground/10 bg-foreground/15 hover:bg-foreground/25 backdrop-blur max-sm:size-11"
             />
           }

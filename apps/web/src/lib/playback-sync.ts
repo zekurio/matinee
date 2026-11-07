@@ -11,6 +11,7 @@ import { toast } from "@matinee/ui/components/sonner"
 import { useQuery } from "@tanstack/react-query"
 import { useEffect } from "react"
 
+import { tr } from "@/i18n"
 import { usePendingPlaybackStore } from "@/stores/playback-preferences"
 
 import { client, errorMessage, orpc, queryClient } from "./rpc"
@@ -101,7 +102,7 @@ async function flushSave(): Promise<void> {
     .catch((cause: unknown) => {
       // Back to what the account has, so nothing pretends it was saved.
       settle()
-      toast.error("Couldn't save your playback preferences", {
+      toast.error(tr("player.error.savePreferences"), {
         description: errorMessage(cause),
       })
     })

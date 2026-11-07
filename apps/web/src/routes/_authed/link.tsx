@@ -11,6 +11,8 @@ import { CheckIcon, RefreshCwIcon } from "lucide-react"
 import { AuthScreen } from "@/components/auth-screen"
 import { DeviceCard } from "@/components/device-card"
 import { FormAlert } from "@/components/form-alert"
+import { tr } from "@/i18n"
+import { trRich } from "@/i18n/react"
 import { deviceLabel } from "@/lib/devices"
 import { useAppForm } from "@/lib/form"
 import { client, errorMessage, orpc } from "@/lib/rpc"
@@ -44,8 +46,8 @@ function EnterCode({ code }: { code: string | undefined }) {
 
   return (
     <AuthScreen
-      title="Sign in a device"
-      description="Enter the code your TV or app shows."
+      title={tr("link.device.title")}
+      description={tr("link.device.enterCode")}
     >
       <form
         className="flex flex-col gap-4"
@@ -58,7 +60,7 @@ function EnterCode({ code }: { code: string | undefined }) {
           {(field) => (
             <field.TextField
               id="device-code"
-              label="Code"
+              label={tr("link.device.code")}
               placeholder="BCDF-GHJK"
               autoComplete="off"
               autoCapitalize="characters"
@@ -68,7 +70,9 @@ function EnterCode({ code }: { code: string | undefined }) {
           )}
         </form.AppField>
         <form.AppForm>
-          <form.SubmitButton size="lg">Continue</form.SubmitButton>
+          <form.SubmitButton size="lg">
+            {tr("link.device.continue")}
+          </form.SubmitButton>
         </form.AppForm>
       </form>
     </AuthScreen>
@@ -92,8 +96,11 @@ function ApproveDevice({ userCode }: { userCode: string }) {
     const { deviceName, platform } = request.data
     return (
       <AuthScreen
-        title="Signed in"
-        description={`${deviceLabel(deviceName, platform)} is signed in as ${name}. It may take a few seconds to notice.`}
+        title={tr("link.device.signedIn")}
+        description={tr("link.device.signedInDescription", {
+          device: deviceLabel(deviceName, platform),
+          name,
+        })}
       >
         <Link
           to="/"
@@ -103,14 +110,14 @@ function ApproveDevice({ userCode }: { userCode: string }) {
             className: "w-full",
           })}
         >
-          Go to Matinee
+          {tr("link.device.home")}
         </Link>
       </AuthScreen>
     )
   }
   if (request.isPending) {
     return (
-      <AuthScreen title="Sign in a device">
+      <AuthScreen title={tr("link.device.title")}>
         <Skeleton className="h-16 rounded-xl" />
       </AuthScreen>
     )
@@ -120,10 +127,12 @@ function ApproveDevice({ userCode }: { userCode: string }) {
       request.error instanceof ORPCError && request.error.code === "NOT_FOUND"
     return (
       <AuthScreen
-        title={gone ? "That code doesn't work" : "Couldn't look up that code"}
+        title={
+          gone ? tr("link.device.codeGone") : tr("link.device.lookupFailed")
+        }
         description={
           gone
-            ? "Check the code on the device, or start again there for a new one."
+            ? tr("link.device.codeGoneDescription")
             : errorMessage(request.error)
         }
       >
@@ -136,7 +145,7 @@ function ApproveDevice({ userCode }: { userCode: string }) {
               className: "w-full",
             })}
           >
-            Enter another code
+            {tr("link.device.anotherCode")}
           </Link>
         ) : (
           <Button
@@ -146,7 +155,7 @@ function ApproveDevice({ userCode }: { userCode: string }) {
             onClick={() => void request.refetch()}
           >
             <RefreshCwIcon />
-            Try again
+            {tr("link.device.retry")}
           </Button>
         )}
       </AuthScreen>
@@ -155,13 +164,10 @@ function ApproveDevice({ userCode }: { userCode: string }) {
 
   return (
     <AuthScreen
-      title="Sign in a device"
-      description={
-        <>
-          This device wants to use Matinee as{" "}
-          <span className="text-foreground font-medium">{name}</span>.
-        </>
-      }
+      title={tr("link.device.title")}
+      description={trRich("link.device.wants", {
+        name: <span className="text-foreground font-medium">{name}</span>,
+      })}
     >
       <div className="flex flex-col gap-4">
         <DeviceCard
@@ -169,10 +175,13 @@ function ApproveDevice({ userCode }: { userCode: string }) {
           platform={request.data.platform}
         />
         <p className="text-sm">
-          Code{" "}
-          <span className="font-mono font-medium tracking-wider">
-            {request.data.userCode}
-          </span>
+          {trRich("link.device.codeShown", {
+            code: (
+              <span className="font-mono font-medium tracking-wider">
+                {request.data.userCode}
+              </span>
+            ),
+          })}
         </p>
         <Button
           size="lg"
@@ -180,12 +189,11 @@ function ApproveDevice({ userCode }: { userCode: string }) {
           onClick={() => approve.mutate()}
         >
           {approve.isPending ? <Spinner /> : <CheckIcon />}
-          Approve
+          {tr("link.device.approve")}
         </Button>
         {approve.error && <FormAlert message={errorMessage(approve.error)} />}
         <p className="text-muted-foreground text-[13px] leading-5">
-          Only approve a code from a device in front of you. Anyone who sends
-          you a code gets into your account when you approve it.
+          {tr("link.device.warning")}
         </p>
       </div>
     </AuthScreen>

@@ -2,16 +2,13 @@ import type { BrowsedTitles, TitleKind } from "@matinee/contracts"
 import { cn } from "@matinee/ui/lib/utils"
 
 import { chipClass, chipRow } from "@/components/chips"
+import { tr } from "@/i18n"
 import { formatCount } from "@/lib/format"
 
 /** How many movies and shows there are, as `titles.browse` counts them. */
 export type KindCounts = BrowsedTitles["kinds"]
 
-const options = [
-  { value: undefined, label: "All" },
-  { value: "movie", label: "Movies" },
-  { value: "show", label: "Shows" },
-] satisfies { value: TitleKind | undefined; label: string }[]
+const options: (TitleKind | undefined)[] = [undefined, "movie", "show"]
 
 /**
  * Chips for movies, shows, or both, with how many there are of each.
@@ -30,22 +27,24 @@ export function KindPicker({
 }) {
   if (counts.movie === 0 || counts.show === 0) return null
   return (
-    <div role="group" aria-label="Kind" className={cn(chipRow, className)}>
+    <div
+      role="group"
+      aria-label={tr("browse.kind")}
+      className={cn(chipRow, className)}
+    >
       {options.map((option) => {
-        const active = option.value === value
+        const active = option === value
         const count =
-          option.value === undefined
-            ? counts.movie + counts.show
-            : counts[option.value]
+          option === undefined ? counts.movie + counts.show : counts[option]
         return (
           <button
-            key={option.label}
+            key={option ?? "all"}
             type="button"
             aria-pressed={active}
-            onClick={() => onChange(option.value)}
+            onClick={() => onChange(option)}
             className={chipClass(active, "gap-1.5")}
           >
-            {option.label}
+            {tr(`browse.kind.${option ?? "all"}`)}
             <span
               className={cn(
                 "tabular-nums",

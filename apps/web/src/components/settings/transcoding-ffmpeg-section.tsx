@@ -4,9 +4,22 @@ import { Button } from "@matinee/ui/components/button"
 import { Spinner } from "@matinee/ui/components/spinner"
 import { RefreshCwIcon } from "lucide-react"
 
+import { perLocale, tr } from "@/i18n"
+
 import { SettingWarning } from "./setting-controls"
 import { SettingsSubsection } from "./settings-panel"
-import { ACCELERATION_LABELS, label } from "./transcoding-controls"
+import { accelerationLabel } from "./transcoding-controls"
+
+const detectedAt = perLocale(
+  (locale) =>
+    new Intl.DateTimeFormat(locale, {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }),
+)
+const lists = perLocale(
+  (locale) => new Intl.ListFormat(locale, { type: "conjunction" }),
+)
 
 export function FfmpegSection({
   capabilities,
@@ -22,17 +35,20 @@ export function FfmpegSection({
   const { features } = capabilities
   const missing = [
     !features.tonemapx && "tonemapx",
-    !features.pauseKeys && "pause keys",
-    !features.hevcRemoveDovi && "Dolby Vision removal",
-  ].filter(Boolean)
+    !features.pauseKeys && tr("transcoding.ffmpeg.pauseKeys"),
+    !features.hevcRemoveDovi && tr("transcoding.ffmpeg.doviRemoval"),
+  ].filter((feature) => feature !== false)
   return (
     <SettingsSubsection
       id="ffmpeg"
       title="FFmpeg"
       description={
         capabilities.error
-          ? "ffmpeg didn't run, so nothing can be transcoded."
-          : `${capabilities.ffmpegPath}, detected ${capabilities.detectedAt.toLocaleString()}.`
+          ? tr("transcoding.ffmpeg.failed")
+          : tr("transcoding.ffmpeg.detected", {
+              path: capabilities.ffmpegPath,
+              date: detectedAt().format(capabilities.detectedAt),
+            })
       }
       action={
         <Button
@@ -42,20 +58,23 @@ export function FfmpegSection({
           onClick={onDetect}
         >
           {detecting ? <Spinner /> : <RefreshCwIcon />}
-          {detecting ? "Detecting…" : "Detect again"}
+          {detecting
+            ? tr("transcoding.ffmpeg.detecting")
+            : tr("transcoding.ffmpeg.detect")}
         </Button>
       }
     >
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <Badge variant={capabilities.jellyfin ? "default" : "secondary"}>
           {capabilities.jellyfin ? "jellyfin-ffmpeg" : "FFmpeg"}{" "}
-          {capabilities.version?.replace(/-Jellyfin$/i, "") ?? "unknown"}
+          {capabilities.version?.replace(/-Jellyfin$/i, "") ??
+            tr("transcoding.ffmpeg.unknownVersion")}
         </Badge>
         {capabilities.hardware
           .filter((entry) => entry.device.status === "ok")
           .map((entry) => (
             <Badge key={entry.acceleration} variant="outline">
-              {label(ACCELERATION_LABELS, entry.acceleration)}
+              {accelerationLabel(entry.acceleration)}
             </Badge>
           ))}
       </div>
@@ -65,7 +84,9 @@ export function FfmpegSection({
       {detectError && <SettingWarning>{detectError}</SettingWarning>}
       {!capabilities.error && missing.length > 0 && (
         <SettingWarning>
-          This build lacks {missing.join(", ")}. Use jellyfin-ffmpeg.
+          {tr("transcoding.ffmpeg.lacks", {
+            features: lists().format(missing),
+          })}
         </SettingWarning>
       )}
     </SettingsSubsection>

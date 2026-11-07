@@ -8,6 +8,7 @@ import { KeyRoundIcon, LinkIcon } from "lucide-react"
 
 import { AuthScreen } from "@/components/auth-screen"
 import { FormAlert } from "@/components/form-alert"
+import { tr } from "@/i18n"
 import { signInWithPasskey } from "@/lib/passkey"
 import { safeRedirect } from "@/lib/redirect"
 import { client, errorMessage, orpc } from "@/lib/rpc"
@@ -63,7 +64,7 @@ function LinkSignIn({ link }: { link: PendingLink }) {
       await navigate({ href: safeRedirect(redirect), replace: true })
     },
     onError: async (error) => {
-      toast.error("Couldn't create the account", {
+      toast.error(tr("link.oidc.createFailed"), {
         description: errorMessage(error),
       })
       // The server refuses while signed in, from another tab say, and a
@@ -80,25 +81,25 @@ function LinkSignIn({ link }: { link: PendingLink }) {
 
   return (
     <AuthScreen
-      title="Sign in to Matinee"
-      description={`Your ${name} username matches an existing account. Sign in to that account to link ${name}.`}
+      title={tr("link.oidc.signInTitle")}
+      description={tr("link.oidc.signInDescription", { provider: name })}
     >
       <div className="flex flex-col gap-3">
         <Button size="lg" disabled={busy} onClick={() => passkey.mutate()}>
           {passkey.isPending ? <Spinner /> : <KeyRoundIcon />}
-          Sign in with a passkey
+          {tr("link.oidc.passkey")}
         </Button>
         {passkey.error && <FormAlert message={errorMessage(passkey.error)} />}
         {link.provider.allowSignUp && (
           <p className="text-muted-foreground mt-3 text-center text-sm">
-            Not your account?{" "}
+            {tr("link.oidc.notYours")}{" "}
             <Button
               variant="link"
               className="text-foreground h-auto p-0 font-medium"
               disabled={busy}
               onClick={() => createAccount.mutate()}
             >
-              Create a new account
+              {tr("link.oidc.createAccount")}
             </Button>
           </p>
         )}
@@ -125,11 +126,11 @@ function LinkConfirm({
     mutationFn: () => client.auth.oidc.pending.link(),
     onSuccess: async (result) => {
       await queryClient.invalidateQueries({ queryKey: orpc.account.oidc.key() })
-      toast.success(`Linked ${name}`)
+      toast.success(tr("link.oidc.linked", { provider: name }))
       await navigate({ href: safeRedirect(result.redirect), replace: true })
     },
     onError: async (error) => {
-      toast.error("Couldn't link the account", {
+      toast.error(tr("link.oidc.linkFailed"), {
         description: errorMessage(error),
       })
       // A failed attempt may have used the pending sign-in up.
@@ -148,17 +149,21 @@ function LinkConfirm({
 
   return (
     <AuthScreen
-      title={`Link ${name}`}
+      title={tr("link.oidc.link", { provider: name })}
       description={
         link.accountLabel
-          ? `Signed in as ${username}. Link the ${name} account ${link.accountLabel} to sign in with it next time.`
-          : `Signed in as ${username}. Link your ${name} account to sign in with it next time.`
+          ? tr("link.oidc.descriptionNamed", {
+              username,
+              provider: name,
+              account: link.accountLabel,
+            })
+          : tr("link.oidc.description", { username, provider: name })
       }
     >
       <div className="flex flex-col gap-3">
         <Button size="lg" disabled={busy} onClick={() => confirm.mutate()}>
           {confirm.isPending ? <Spinner /> : <LinkIcon />}
-          Link {name}
+          {tr("link.oidc.link", { provider: name })}
         </Button>
         <Button
           variant="ghost"
@@ -166,7 +171,7 @@ function LinkConfirm({
           disabled={busy}
           onClick={() => skip.mutate()}
         >
-          Not now
+          {tr("link.oidc.notNow")}
         </Button>
       </div>
     </AuthScreen>

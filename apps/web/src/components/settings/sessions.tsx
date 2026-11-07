@@ -19,6 +19,7 @@ import { LogOutIcon } from "lucide-react"
 import { useState } from "react"
 
 import { PlatformIcon } from "@/components/device-card"
+import { tr } from "@/i18n"
 import { platformLabel, sessionLabel } from "@/lib/devices"
 import { formatDate, formatRelative } from "@/lib/format"
 import { client, errorMessage, orpc } from "@/lib/rpc"
@@ -44,9 +45,11 @@ export function Sessions() {
     mutationFn: (session: Session) =>
       client.account.sessions.revoke({ id: session.id }),
     onSuccess: (_, session) =>
-      toast.success(`Signed out ${sessionLabel(session)}`),
+      toast.success(
+        tr("account.sessions.signedOut", { session: sessionLabel(session) }),
+      ),
     onError: (error) =>
-      toast.error("Couldn't sign out that session", {
+      toast.error(tr("account.sessions.signOutFailed"), {
         description: errorMessage(error),
       }),
     onSettled: refresh,
@@ -54,13 +57,9 @@ export function Sessions() {
   const revokeOthers = useMutation({
     mutationFn: () => client.account.sessions.revokeOthers(),
     onSuccess: ({ revoked }) =>
-      toast.success(
-        revoked === 1
-          ? "Signed out 1 session"
-          : `Signed out ${revoked} sessions`,
-      ),
+      toast.success(tr("account.sessions.signedOutCount", { count: revoked })),
     onError: (error) =>
-      toast.error("Couldn't sign out the other sessions", {
+      toast.error(tr("account.sessions.signOutOthersFailed"), {
         description: errorMessage(error),
       }),
     onSettled: refresh,
@@ -71,8 +70,8 @@ export function Sessions() {
   return (
     <SettingsSubsection
       id="sessions"
-      title="Sessions"
-      description="Browsers and apps signed in to your account."
+      title={tr("account.sessions.title")}
+      description={tr("account.sessions.description")}
       action={
         others ? (
           <Button
@@ -81,7 +80,7 @@ export function Sessions() {
             onClick={() => setRevokingOthers(true)}
           >
             <LogOutIcon />
-            Sign out other sessions
+            {tr("account.sessions.signOutOthers")}
           </Button>
         ) : null
       }
@@ -90,7 +89,9 @@ export function Sessions() {
         <Skeleton className="h-16 rounded-xl" />
       ) : sessions.isError ? (
         <p className="text-muted-foreground text-sm">
-          Couldn't load your sessions. {errorMessage(sessions.error)}
+          {tr("account.sessions.loadFailed", {
+            reason: errorMessage(sessions.error),
+          })}
         </p>
       ) : (
         <List>
@@ -111,14 +112,18 @@ export function Sessions() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              Sign out {revoking ? sessionLabel(revoking) : "this session"}?
+              {revoking
+                ? tr("account.sessions.signOutTitle", {
+                    session: sessionLabel(revoking),
+                  })
+                : tr("account.sessions.signOutTitleUnnamed")}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              It has to sign in again to use Matinee.
+              {tr("account.sessions.signOutDescription")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{tr("account.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
               onClick={() => {
@@ -126,7 +131,7 @@ export function Sessions() {
                 setRevoking(null)
               }}
             >
-              Sign out
+              {tr("account.sessions.signOut")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -135,13 +140,15 @@ export function Sessions() {
       <AlertDialog open={revokingOthers} onOpenChange={setRevokingOthers}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Sign out every other session?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {tr("account.sessions.signOutOthersTitle")}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Every browser and app but this one has to sign in again.
+              {tr("account.sessions.signOutOthersDescription")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{tr("account.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
               onClick={() => {
@@ -149,7 +156,7 @@ export function Sessions() {
                 setRevokingOthers(false)
               }}
             >
-              Sign out others
+              {tr("account.sessions.signOutOthersConfirm")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -169,10 +176,10 @@ function SessionRow({
   const details = [
     // A named device still says what it is.
     session.platform && session.deviceName
-      ? `${platformLabel(session.platform)} app`
+      ? tr("account.device.app", { platform: platformLabel(session.platform) })
       : null,
     lastActive(session),
-    `Signed in ${formatDate(session.createdAt)}`,
+    tr("account.sessions.signedIn", { date: formatDate(session.createdAt) }),
   ]
 
   return (
@@ -183,7 +190,11 @@ function SessionRow({
       <div className="min-w-0 flex-1">
         <div className="flex min-w-0 items-center gap-2">
           <p className="truncate text-sm leading-5 font-medium">{label}</p>
-          {session.current && <Badge variant="secondary">This device</Badge>}
+          {session.current && (
+            <Badge variant="secondary">
+              {tr("account.sessions.thisDevice")}
+            </Badge>
+          )}
         </div>
         <p className="text-muted-foreground truncate text-[13px] leading-5">
           {details.filter(Boolean).join(" · ")}
@@ -194,7 +205,7 @@ function SessionRow({
           variant="ghost"
           size="icon"
           className="text-muted-foreground hover:text-destructive shrink-0"
-          aria-label={`Sign out ${label}`}
+          aria-label={tr("account.sessions.signOutNamed", { session: label })}
           onClick={onSignOut}
         >
           <LogOutIcon />
@@ -205,9 +216,11 @@ function SessionRow({
 }
 
 function lastActive(session: Session): string {
-  if (session.current) return "Active now"
+  if (session.current) return tr("account.sessions.activeNow")
   if (Date.now() - session.lastSeenAt.getTime() < LAST_SEEN_STEP_MS) {
-    return "Active in the last hour"
+    return tr("account.sessions.activeLastHour")
   }
-  return `Active ${formatRelative(session.lastSeenAt)}`
+  return tr("account.sessions.active", {
+    time: formatRelative(session.lastSeenAt),
+  })
 }

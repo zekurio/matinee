@@ -1,5 +1,7 @@
 import type { AudioTrack } from "@matinee/contracts"
 
+import { perLocale, tr } from "@/i18n"
+
 export function formatTime(seconds: number): string {
   if (!Number.isFinite(seconds) || seconds < 0) return "0:00"
   const s = Math.floor(seconds % 60)
@@ -9,19 +11,35 @@ export function formatTime(seconds: number): string {
   return `${h > 0 ? `${h}:` : ""}${mm}:${String(s).padStart(2, "0")}`
 }
 
-// English like the rest of the interface, but on the viewer's own clock:
-// 21:42 where they use 24 hours, 9:42 PM where they don't.
-const clock = new Intl.DateTimeFormat("en", {
-  hour: "numeric",
-  minute: "2-digit",
-  hourCycle: new Intl.DateTimeFormat(undefined, {
-    hour: "numeric",
-  }).resolvedOptions().hourCycle,
-})
+// In the interface's language, like the rest of it, but on the viewer's
+// own clock: 21:42 where they use 24 hours, 9:42 PM where they don't.
+const clock = perLocale(
+  (locale) =>
+    new Intl.DateTimeFormat(locale, {
+      hour: "numeric",
+      minute: "2-digit",
+      hourCycle: new Intl.DateTimeFormat(undefined, {
+        hour: "numeric",
+      }).resolvedOptions().hourCycle,
+    }),
+)
 
 /** The wall-clock time of a moment, like `21:42`. */
 export function formatClock(ms: number): string {
-  return clock.format(ms)
+  return clock().format(ms)
+}
+
+const percents = perLocale(
+  (locale) =>
+    new Intl.NumberFormat(locale, {
+      style: "percent",
+      maximumFractionDigits: 0,
+    }),
+)
+
+/** A volume like `0.45` as `45%`, or `45 %` where that's the custom. */
+export function formatPercent(fraction: number): string {
+  return percents().format(fraction)
 }
 
 // Other ways a track title may say a layout.
@@ -38,7 +56,11 @@ export function audioDetail(track: AudioTrack): string | undefined {
   const label = track.label.toLowerCase()
   const says = (names: string[]) =>
     names.some((name) => label.includes(name.toLowerCase()))
-  const layout = track.layout
+  // The server writes "6 channels" for a count no layout fits.
+  const layout =
+    track.channels !== null && track.layout === `${track.channels} channels`
+      ? tr("media.channels", { count: track.channels })
+      : track.layout
   const parts = [
     !says([track.format, track.codec]) && track.format,
     layout && !says([layout, ...(LAYOUT_ALIASES.get(layout) ?? [])]) && layout,
@@ -48,8 +70,8 @@ export function audioDetail(track: AudioTrack): string | undefined {
 
 export function formatBitrate(bits: number): string {
   return bits >= 1_000_000
-    ? `${Math.round(bits / 100_000) / 10} Mbps`
-    : `${Math.round(bits / 1000)} kbps`
+    ? tr("player.bitrate.mbps", { value: Math.round(bits / 100_000) / 10 })
+    : tr("player.bitrate.kbps", { value: Math.round(bits / 1000) })
 }
 
 /** `1080p` for a 1920×800 scope picture too: what fits the frame. */

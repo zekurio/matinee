@@ -33,6 +33,7 @@ import { useEffect, useRef, useState } from "react"
 import { flushSync } from "react-dom"
 
 import { chipClass, chipRow } from "@/components/chips"
+import { tr } from "@/i18n"
 import { formatCount } from "@/lib/format"
 
 import type { Sort, SortOption } from "./list-params"
@@ -131,13 +132,17 @@ export function ActiveFilters({
   }
   if (active.length === 0) return null
   return (
-    <div role="group" aria-label="Filters" className={cn(chipRow, "mb-4")}>
+    <div
+      role="group"
+      aria-label={tr("library.filters")}
+      className={cn(chipRow, "mb-4")}
+    >
       {active.map((filter) => (
         <button
           key={filter.key}
           type="button"
           onClick={filter.remove}
-          aria-label={`Remove filter ${filter.label}`}
+          aria-label={tr("library.removeFilter", { name: filter.label })}
           className={chipClass(true, "gap-1.5 pr-2.5")}
         >
           {filter.label}
@@ -146,7 +151,7 @@ export function ActiveFilters({
       ))}
       {active.length > 1 && (
         <button type="button" onClick={clear} className={chipClass(false)}>
-          Clear all
+          {tr("library.clearAll")}
         </button>
       )}
     </div>
@@ -176,7 +181,11 @@ function FilterMenu({
             <Button
               variant="ghost"
               size="icon"
-              aria-label={active > 0 ? `Filters, ${active} on` : "Filters"}
+              aria-label={
+                active > 0
+                  ? tr("library.filtersOn", { count: active })
+                  : tr("library.filters")
+              }
               className="data-popup-open:bg-foreground/10 relative [@media(pointer:coarse)]:size-11"
             />
           ) : (
@@ -188,7 +197,7 @@ function FilterMenu({
         }
       >
         <ListFilterIcon className={compact ? "size-5" : undefined} />
-        {!compact && "Filter"}
+        {!compact && tr("library.filter")}
         {active > 0 &&
           (compact ? (
             <span
@@ -203,15 +212,15 @@ function FilterMenu({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-56">
         <FacetMenu
-          label="Genre"
-          any="Any genre"
+          label={tr("library.genre")}
+          any={tr("library.anyGenre")}
           facets={facets.genres}
           value={genre}
           onChange={setGenre}
         />
         <FacetMenu
-          label="Studio"
-          any="Any studio"
+          label={tr("library.studio")}
+          any={tr("library.anyStudio")}
           facets={facets.studios}
           value={studio}
           onChange={setStudio}
@@ -221,7 +230,7 @@ function FilterMenu({
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={clear}>
               <XIcon />
-              Clear filters
+              {tr("library.clearFilters")}
             </DropdownMenuItem>
           </>
         )}
@@ -250,7 +259,7 @@ function FacetMenu({
       <DropdownMenuSubTrigger className="[@media(pointer:coarse)]:min-h-11">
         {label}
         <span className="text-muted-foreground ml-auto max-w-32 truncate pl-4">
-          {value ?? "Any"}
+          {value ?? tr("library.any")}
         </span>
       </DropdownMenuSubTrigger>
       <DropdownMenuSubContent className="max-h-[min(24rem,var(--available-height))] min-w-56">
@@ -377,7 +386,7 @@ function PhoneFilter({
         {value && (
           <button
             type="button"
-            aria-label="Clear filter"
+            aria-label={tr("library.clearFilter")}
             onClick={() => {
               onChange("")
               input.current?.focus()
@@ -393,7 +402,7 @@ function PhoneFilter({
       <Button
         variant="ghost"
         size="icon"
-        aria-label="Close filter"
+        aria-label={tr("library.closeFilter")}
         onClick={close}
         className="[@media(pointer:coarse)]:size-11"
       >
@@ -420,7 +429,11 @@ function SortMenu({
           <Button
             variant="ghost"
             size="icon"
-            aria-label={current ? `Sort: ${current.label}` : "Sort"}
+            aria-label={
+              current
+                ? tr("library.sortCurrent", { sort: current.label })
+                : tr("library.sort")
+            }
             className="data-popup-open:bg-foreground/10 [@media(pointer:coarse)]:size-11"
           />
         }
@@ -429,7 +442,7 @@ function SortMenu({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-48">
         <DropdownMenuGroup>
-          <DropdownMenuLabel>Sort by</DropdownMenuLabel>
+          <DropdownMenuLabel>{tr("library.sortBy")}</DropdownMenuLabel>
           <DropdownMenuRadioGroup
             value={value}
             onValueChange={(next) => {
@@ -481,7 +494,7 @@ function SearchBox({
         <Button
           variant="ghost"
           size="icon-sm"
-          aria-label="Clear search"
+          aria-label={tr("library.clearSearch")}
           className="absolute top-1/2 right-1 -translate-y-1/2 [@media(pointer:coarse)]:size-11"
           onClick={() => onChange("")}
         >
@@ -508,10 +521,12 @@ function SortSelect({
       onValueChange={(next) => next && onChange(next)}
     >
       <SelectTrigger
-        aria-label="Sort"
+        aria-label={tr("library.sort")}
         className="min-w-44 shrink-0 justify-between gap-1"
       >
-        <span className="text-muted-foreground">Sort:</span>
+        <span className="text-muted-foreground">
+          {tr("library.sortPrefix")}
+        </span>
         <SelectValue />
       </SelectTrigger>
       <SelectContent>

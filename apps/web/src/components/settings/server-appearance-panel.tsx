@@ -12,6 +12,7 @@ import { useSelector } from "@tanstack/react-form"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useEffect, useEffectEvent } from "react"
 
+import { tr } from "@/i18n"
 import { useAppForm } from "@/lib/form"
 import { client, errorMessage, orpc } from "@/lib/rpc"
 
@@ -44,11 +45,6 @@ const ACCENT_PRESETS: readonly AccentPair[] = [
   { light: "#be185d", dark: "#ec4899" },
 ]
 
-const APPEARANCE_LABELS = new Map<ThemeAppearance, string>([
-  ["light", "Light mode"],
-  ["dark", "Dark mode"],
-])
-
 /** The Matinee theme's accent for everyone on the server. Ported from alloy. */
 export function ServerAppearancePanel() {
   const accents = useQuery(orpc.admin.appearance.get.queryOptions())
@@ -59,7 +55,9 @@ export function ServerAppearancePanel() {
         <Skeleton className="h-48 rounded-xl" />
       ) : accents.isError ? (
         <p className="text-muted-foreground text-sm">
-          Couldn't load the accent color. {errorMessage(accents.error)}
+          {tr("serverAppearance.loadFailed", {
+            error: errorMessage(accents.error),
+          })}
         </p>
       ) : (
         <AccentForm saved={accents.data} />
@@ -111,17 +109,19 @@ function AccentForm({ saved }: { saved: ThemeAccents }) {
     <form className="contents" onSubmit={(event) => event.preventDefault()}>
       <SettingsSubsection
         id="accent-color"
-        title="Accent color"
-        description="Used by the Matinee theme for everyone on this server."
+        title={tr("serverAppearance.title")}
+        description={tr("serverAppearance.description")}
       >
         <div
           role="group"
-          aria-label="Suggested accents"
+          aria-label={tr("serverAppearance.presets")}
           className="flex flex-wrap gap-2.5"
         >
           {ACCENT_PRESETS.map((preset, index) => {
             const name =
-              index === 0 ? "Default" : `${preset.light} / ${preset.dark}`
+              index === 0
+                ? tr("serverAppearance.default")
+                : `${preset.light} / ${preset.dark}`
             const selected = THEME_APPEARANCES.every(
               (appearance) => accent(appearance) === preset[appearance],
             )
@@ -150,7 +150,7 @@ function AccentForm({ saved }: { saved: ThemeAccents }) {
         </div>
         <SettingRows>
           {THEME_APPEARANCES.map((appearance) => {
-            const label = APPEARANCE_LABELS.get(appearance) ?? appearance
+            const label = tr(`serverAppearance.mode.${appearance}`)
             return (
               <SettingRow key={appearance} title={label} layout="split">
                 {(ids) => (
@@ -162,7 +162,7 @@ function AccentForm({ saved }: { saved: ThemeAccents }) {
                           value={
                             field.state.value ?? defaultThemeAccent(appearance)
                           }
-                          label={`${label} accent`}
+                          label={tr(`serverAppearance.accent.${appearance}`)}
                           commit={normalizeThemeColor}
                           onChange={(color) => {
                             const stored = storedAccent(appearance, color)

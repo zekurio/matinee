@@ -53,6 +53,8 @@ import { useRef, useState } from "react"
 
 import { FormAlert } from "@/components/form-alert"
 import { UserAvatar } from "@/components/user-avatar"
+import { tr } from "@/i18n"
+import { trRich } from "@/i18n/react"
 import { prepareAvatar } from "@/lib/avatar"
 import { firstError, useAppForm } from "@/lib/form"
 import { formatDate, formatRelative } from "@/lib/format"
@@ -107,21 +109,18 @@ function Profile({
   return (
     <SettingsSubsection
       id="profile"
-      title="Profile"
-      description={
-        <>
-          Everyone on this server sees your name and picture. Pick what else
-          your{" "}
+      title={tr("account.profile.title")}
+      description={trRich("account.profile.description", {
+        profile: (
           <Link
             to="/profiles/$username"
             params={{ username: user.username }}
             className="text-foreground underline-offset-2 hover:underline"
           >
-            profile
-          </Link>{" "}
-          shows.
-        </>
-      }
+            {tr("account.profile.link")}
+          </Link>
+        ),
+      })}
     >
       <div className="flex items-center gap-4">
         <AvatarPicker user={user} providerName={providerName} />
@@ -170,7 +169,7 @@ function AvatarPicker({
     },
     onSuccess: (updated) => saved(updated),
     onError: (error) =>
-      toast.error("Couldn't change your picture", {
+      toast.error(tr("account.picture.changeFailed"), {
         description: errorMessage(error),
       }),
   })
@@ -199,7 +198,7 @@ function AvatarPicker({
       {user.avatarId || canUseProvider ? (
         <DropdownMenu>
           <DropdownMenuTrigger
-            aria-label="Change picture"
+            aria-label={tr("account.picture.change")}
             disabled={change.isPending}
             className={surface}
           >
@@ -208,14 +207,16 @@ function AvatarPicker({
           <DropdownMenuContent align="start" className="min-w-48">
             <DropdownMenuItem onClick={pickFile}>
               <ImageUpIcon />
-              Upload picture
+              {tr("account.picture.upload")}
             </DropdownMenuItem>
             {canUseProvider && (
               <DropdownMenuItem
                 onClick={() => change.mutate({ kind: "provider" })}
               >
                 <UserRoundIcon />
-                Use {providerName} picture
+                {tr("account.picture.useProvider", {
+                  provider: providerName,
+                })}
               </DropdownMenuItem>
             )}
             {user.avatarId && (
@@ -224,7 +225,7 @@ function AvatarPicker({
                 onClick={() => change.mutate({ kind: "remove" })}
               >
                 <Trash2Icon />
-                Remove picture
+                {tr("account.picture.remove")}
               </DropdownMenuItem>
             )}
           </DropdownMenuContent>
@@ -232,7 +233,7 @@ function AvatarPicker({
       ) : (
         <button
           type="button"
-          aria-label="Upload picture"
+          aria-label={tr("account.picture.upload")}
           disabled={change.isPending}
           onClick={pickFile}
           className={surface}
@@ -292,11 +293,15 @@ function DisplayNameField({ user }: { user: User }) {
         const message =
           firstError(field.state.meta.errors) ??
           (save.isError
-            ? `Couldn't save your name. ${errorMessage(save.error)}`
+            ? tr("account.displayName.saveFailed", {
+                reason: errorMessage(save.error),
+              })
             : undefined)
         return (
           <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-            <Label htmlFor="profile-display-name">Display name</Label>
+            <Label htmlFor="profile-display-name">
+              {tr("account.displayName.label")}
+            </Label>
             <Input
               id="profile-display-name"
               placeholder={user.username}
@@ -353,20 +358,26 @@ function Passkeys({ oidcEnabled }: { oidcEnabled: boolean }) {
     mutationFn: (id: string) => client.account.passkeys.remove({ id }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: orpc.account.key() })
-      toast.success("Removed passkey")
+      toast.success(tr("account.passkeys.removed"))
     },
     onError: (error) =>
-      toast.error("Couldn't remove passkey", {
+      toast.error(tr("account.passkeys.removeFailed"), {
         description: errorMessage(error),
       }),
   })
 
   return (
-    <SettingsSubsection id="passkeys" title="Passkeys" action={<AddPasskey />}>
+    <SettingsSubsection
+      id="passkeys"
+      title={tr("account.passkeys.title")}
+      action={<AddPasskey />}
+    >
       {passkeys.isPending ? (
         <Skeleton className="h-16 rounded-xl" />
       ) : passkeys.data?.length === 0 ? (
-        <p className="text-muted-foreground text-sm">No passkeys yet.</p>
+        <p className="text-muted-foreground text-sm">
+          {tr("account.passkeys.empty")}
+        </p>
       ) : (
         <List>
           {passkeys.data?.map((passkey) => (
@@ -376,14 +387,18 @@ function Passkeys({ oidcEnabled }: { oidcEnabled: boolean }) {
               </RowIcon>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm leading-5 font-medium">
-                  {passkey.name ?? "Passkey"}
+                  {passkey.name ?? tr("account.passkeys.unnamed")}
                 </p>
                 <p className="text-muted-foreground truncate text-[13px] leading-5">
                   {[
-                    passkey.backedUp ? "Synced" : null,
+                    passkey.backedUp ? tr("account.passkeys.synced") : null,
                     passkey.lastUsedAt
-                      ? `Used ${formatRelative(passkey.lastUsedAt)}`
-                      : `Added ${formatDate(passkey.createdAt)}`,
+                      ? tr("account.passkeys.used", {
+                          time: formatRelative(passkey.lastUsedAt),
+                        })
+                      : tr("account.passkeys.added", {
+                          date: formatDate(passkey.createdAt),
+                        }),
                   ]
                     .filter(Boolean)
                     .join(" · ")}
@@ -395,7 +410,13 @@ function Passkeys({ oidcEnabled }: { oidcEnabled: boolean }) {
                   variant="ghost"
                   size="icon"
                   className="text-muted-foreground hover:text-destructive shrink-0"
-                  aria-label={`Remove ${passkey.name ?? "passkey"}`}
+                  aria-label={
+                    passkey.name
+                      ? tr("account.passkeys.removeNamed", {
+                          name: passkey.name,
+                        })
+                      : tr("account.passkeys.remove")
+                  }
                   onClick={() => setRemoving(passkey)}
                 >
                   <Trash2Icon />
@@ -413,19 +434,21 @@ function Passkeys({ oidcEnabled }: { oidcEnabled: boolean }) {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              Remove {removing?.name ?? "this passkey"}?
+              {removing?.name
+                ? tr("account.passkeys.removeTitle", { name: removing.name })
+                : tr("account.passkeys.removeTitleUnnamed")}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              You won't be able to sign in with it again.
+              {tr("account.passkeys.removeDescription")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{tr("account.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
               onClick={() => removing && remove.mutate(removing.id)}
             >
-              Remove passkey
+              {tr("account.passkeys.remove")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -453,17 +476,19 @@ function AddPasskey() {
       setOpen(false)
       form.reset()
       await queryClient.invalidateQueries({ queryKey: orpc.account.key() })
-      toast.success("Added passkey")
+      toast.success(tr("account.passkeys.addSucceeded"))
     },
     onError: (error) =>
-      toast.error("Couldn't add passkey", { description: errorMessage(error) }),
+      toast.error(tr("account.passkeys.addFailed"), {
+        description: errorMessage(error),
+      }),
   })
 
   return (
     <>
       <Button variant="outline" onClick={() => setOpen(true)}>
         <PlusIcon />
-        Add passkey
+        {tr("account.passkeys.add")}
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="gap-5 p-6 sm:max-w-md">
@@ -475,9 +500,9 @@ function AddPasskey() {
             }}
           >
             <DialogHeader>
-              <DialogTitle>Add a passkey</DialogTitle>
+              <DialogTitle>{tr("account.passkeys.addTitle")}</DialogTitle>
               <DialogDescription>
-                Your browser will ask you to confirm.
+                {tr("account.passkeys.addDescription")}
               </DialogDescription>
             </DialogHeader>
             <form.AppField
@@ -491,8 +516,8 @@ function AddPasskey() {
               {(field) => (
                 <field.TextField
                   id="passkey-name"
-                  label="Name (optional)"
-                  placeholder="Work laptop"
+                  label={tr("account.passkeys.name")}
+                  placeholder={tr("account.passkeys.namePlaceholder")}
                   maxLength={64}
                 />
               )}
@@ -503,11 +528,13 @@ function AddPasskey() {
                 variant="ghost"
                 onClick={() => setOpen(false)}
               >
-                Cancel
+                {tr("account.cancel")}
               </Button>
               <form.AppForm>
                 <form.SubmitButton pending={add.isPending}>
-                  {add.isPending ? "Waiting for your device…" : "Add passkey"}
+                  {add.isPending
+                    ? tr("account.passkeys.waiting")
+                    : tr("account.passkeys.add")}
                 </form.SubmitButton>
               </form.AppForm>
             </DialogFooter>
@@ -525,10 +552,10 @@ function LinkedAccount({ displayName }: { displayName: string }) {
     mutationFn: () => client.account.oidc.unlink(),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: orpc.account.key() })
-      toast.success(`Unlinked ${displayName}`)
+      toast.success(tr("account.oidc.unlinked", { provider: displayName }))
     },
     onError: (error) =>
-      toast.error(`Couldn't unlink ${displayName}`, {
+      toast.error(tr("account.oidc.unlinkFailed", { provider: displayName }), {
         description: errorMessage(error),
       }),
   })
@@ -546,7 +573,7 @@ function LinkedAccount({ displayName }: { displayName: string }) {
             className={buttonVariants({ variant: "outline" })}
           >
             <LinkIcon />
-            Link {displayName}
+            {tr("account.oidc.link", { provider: displayName })}
           </a>
         ) : null
       }
@@ -564,7 +591,9 @@ function LinkedAccount({ displayName }: { displayName: string }) {
                 {account.label ?? displayName}
               </p>
               <p className="text-muted-foreground text-[13px]">
-                Linked {formatDate(account.createdAt)}
+                {tr("account.oidc.linked", {
+                  date: formatDate(account.createdAt),
+                })}
               </p>
             </div>
             <Button
@@ -573,13 +602,13 @@ function LinkedAccount({ displayName }: { displayName: string }) {
               disabled={unlink.isPending}
               onClick={() => unlink.mutate()}
             >
-              Unlink
+              {tr("account.oidc.unlink")}
             </Button>
           </ListItem>
         </List>
       ) : (
         <p className="text-muted-foreground text-sm">
-          No {displayName} account linked.
+          {tr("account.oidc.none", { provider: displayName })}
         </p>
       )}
     </SettingsSubsection>

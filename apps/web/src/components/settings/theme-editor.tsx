@@ -19,6 +19,7 @@ import { useEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import { useShallow } from "zustand/react/shallow"
 
+import { tr } from "@/i18n"
 import { saveAccountTheme } from "@/lib/theme-sync"
 import {
   type ActionFeedback,
@@ -131,7 +132,7 @@ function EditorPanel({ onClose }: { onClose: () => void }) {
     if (saved) onClose()
   }
 
-  const title = creating ? "New theme" : "Edit theme"
+  const title = creating ? tr("themes.editor.new") : tr("themes.editor.edit")
 
   return (
     <>
@@ -192,9 +193,9 @@ function EditorHeader({
   )
   const status =
     inspect === "picking"
-      ? "Click anything to find its color. Esc cancels."
+      ? tr("themes.editor.picking")
       : inspect === "miss"
-        ? "That doesn't use a theme color."
+        ? tr("themes.editor.miss")
         : pickedRole
           ? roleLabel(pickedRole)
           : null
@@ -220,13 +221,15 @@ function EditorHeader({
         onClick={actions.toggleInspect}
       >
         <CrosshairIcon />
-        Inspect
+        {tr("themes.editor.inspect")}
       </Button>
       <Button
         type="button"
         variant="ghost"
         size="icon-sm"
-        aria-label={collapsed ? "Expand" : "Collapse"}
+        aria-label={
+          collapsed ? tr("themes.editor.expand") : tr("themes.editor.collapse")
+        }
         aria-expanded={!collapsed}
         onClick={actions.toggleCollapsed}
       >
@@ -236,7 +239,7 @@ function EditorHeader({
         type="button"
         variant="ghost"
         size="icon-sm"
-        aria-label="Close"
+        aria-label={tr("themes.editor.close")}
         onClick={onClose}
       >
         <XIcon />
@@ -267,18 +270,20 @@ function EditorFooter({
         </p>
       )}
       <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
-        Cancel
+        {tr("themes.cancel")}
       </Button>
       <FeedbackButton
         type="button"
         size="sm"
         state={feedback.state}
-        pendingLabel={creating ? "Creating…" : "Saving…"}
-        successLabel="Saved"
-        errorLabel="Try again"
+        pendingLabel={
+          creating ? tr("themes.editor.creating") : tr("themes.editor.saving")
+        }
+        successLabel={tr("themes.editor.saved")}
+        errorLabel={tr("themes.editor.retry")}
         onClick={onSave}
       >
-        {creating ? "Create" : "Save"}
+        {creating ? tr("themes.editor.create") : tr("themes.editor.save")}
       </FeedbackButton>
     </footer>
   )

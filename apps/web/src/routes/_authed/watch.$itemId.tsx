@@ -17,6 +17,7 @@ import { useDocumentTitle } from "@/components/page-header"
 import { probeAudioOf } from "@/components/playback-source"
 import type { ProgressReport } from "@/components/use-progress-report"
 import { VideoPlayer } from "@/components/video-player"
+import { tr } from "@/i18n"
 import { itemLabel } from "@/lib/media"
 import { client, errorMessage, liveQuery, orpc } from "@/lib/rpc"
 
@@ -164,13 +165,15 @@ function Watch() {
       ) : (
         <div className="max-w-md text-center">
           <h1 className="text-2xl font-semibold tracking-tight">
-            {unsupported
-              ? "This browser can't play this file"
-              : "Couldn't load this title"}
+            {unsupported ? tr("player.unsupported") : tr("player.loadFailed")}
           </h1>
           <p className="mt-2 text-sm text-white/70">
             {unsupported
-              ? `This browser doesn't support ${item.data?.container.toUpperCase() ?? "this"} files or their codecs, and the server couldn't transcode it. Check the server log.`
+              ? item.data
+                ? tr("player.unsupportedDetail", {
+                    container: item.data.container.toUpperCase(),
+                  })
+                : tr("player.unsupportedDetailUnknown")
               : errorMessage(item.error)}
           </p>
           <Link
@@ -180,7 +183,7 @@ function Watch() {
               className: "mt-6",
             })}
           >
-            Back to Home
+            {tr("player.backHome")}
           </Link>
         </div>
       )}

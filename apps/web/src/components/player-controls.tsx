@@ -23,9 +23,10 @@ import {
 } from "react"
 import { useShallow } from "zustand/shallow"
 
+import { tr } from "@/i18n"
 import { selectBusy, usePlayerStore } from "@/stores/player"
 
-import { formatClock, formatTime } from "./player-format"
+import { formatClock, formatPercent, formatTime } from "./player-format"
 import { type TrickplayTiles, TrickplayThumb } from "./trickplay-thumb"
 
 export const SKIP_S = 10
@@ -212,13 +213,13 @@ function SeekPreview({
 }) {
   if (!trickplay) {
     return (
-      <span className="block rounded-md bg-black/80 px-2 py-1 text-xs font-medium text-white tabular-nums shadow-lg ring-1 ring-white/10">
+      <span className="block rounded-md bg-black/45 px-2 py-1 text-xs font-medium text-white tabular-nums shadow-lg ring-1 ring-white/15 backdrop-blur-md">
         {formatTime(time)}
       </span>
     )
   }
   return (
-    <span className="flex flex-col items-center gap-1 rounded-lg bg-black/80 p-1 pb-1.5 text-xs font-medium text-white tabular-nums shadow-lg ring-1 ring-white/10">
+    <span className="flex flex-col items-center gap-1 rounded-lg bg-black/45 p-1 pb-1.5 text-xs font-medium text-white tabular-nums shadow-lg ring-1 ring-white/15 backdrop-blur-md">
       <TrickplayThumb
         tiles={trickplay}
         time={time}
@@ -254,7 +255,10 @@ export function SeekBar({
     )
   const [remaining, setRemaining] = useState(true)
   const timeText = (value: number) =>
-    `${formatTime(value)} of ${formatTime(duration)}`
+    tr("player.seekValue", {
+      time: formatTime(value),
+      duration: formatTime(duration),
+    })
 
   return (
     <div className="flex items-center gap-3 px-1">
@@ -263,7 +267,7 @@ export function SeekBar({
       </span>
       <MediaSlider
         ref={ref}
-        label="Seek"
+        label={tr("player.seek")}
         value={shown}
         max={duration}
         step={1}
@@ -287,7 +291,7 @@ export function SeekBar({
       />
       <button
         type="button"
-        title={remaining ? "Show length" : "Show time left"}
+        title={remaining ? tr("player.showLength") : tr("player.showTimeLeft")}
         onClick={() => setRemaining((on) => !on)}
         className={cn(
           "min-w-11 rounded text-right outline-none focus-visible:ring-2 focus-visible:ring-white",
@@ -327,7 +331,7 @@ export function EndsAt({ className }: { className?: string }) {
   const end = Date.now() + (left / speed) * 1000
   return (
     <span className={cn(overlayTextClass, className)}>
-      Ends at {formatClock(end)}
+      {tr("player.endsAt", { time: formatClock(end) })}
     </span>
   )
 }
@@ -336,7 +340,7 @@ export function PlayButton({ onToggle }: { onToggle: () => void }) {
   const playing = usePlayerStore((state) => state.playing)
   return (
     <ControlButton
-      label={playing ? "Pause (k)" : "Play (k)"}
+      label={playing ? tr("player.pauseKey") : tr("player.playKey")}
       onClick={onToggle}
     >
       {playing ? (
@@ -372,7 +376,7 @@ export function CenterControls({
       {button && (
         <button
           type="button"
-          aria-label={playing ? "Pause" : "Play"}
+          aria-label={playing ? tr("player.pause") : tr("player.play")}
           onClick={onToggle}
           className="pointer-events-auto grid size-18 place-items-center rounded-full bg-black/45 text-white ring-1 ring-white/15 backdrop-blur-md transition-transform outline-none hover:scale-105 focus-visible:ring-2 focus-visible:ring-white motion-reduce:transition-none [&_svg]:size-8"
         >
@@ -407,7 +411,7 @@ export function VolumeControl({
   return (
     <div className="group/volume flex items-center">
       <ControlButton
-        label={muted ? "Unmute (m)" : "Mute (m)"}
+        label={muted ? tr("player.unmuteKey") : tr("player.muteKey")}
         onClick={onToggleMute}
       >
         <VolumeIcon />
@@ -415,11 +419,11 @@ export function VolumeControl({
       {/* Opens on hover or focus, like most players. */}
       <div className="hidden w-0 overflow-hidden transition-[width] duration-200 group-focus-within/volume:w-24 group-hover/volume:w-24 motion-reduce:transition-none sm:block">
         <MediaSlider
-          label="Volume"
+          label={tr("player.volume")}
           value={muted ? 0 : volume}
           max={1}
           step={VOLUME_STEP}
-          valueText={(value) => `${Math.round(value * 100)}%`}
+          valueText={formatPercent}
           onChange={onChange}
           className="w-24 px-2"
         />
@@ -441,7 +445,9 @@ export function FullscreenButton({ onToggle }: { onToggle: () => void }) {
   const fullscreen = useSyncExternalStore(subscribeFullscreen, isFullscreen)
   return (
     <ControlButton
-      label={fullscreen ? "Exit full screen (f)" : "Full screen (f)"}
+      label={
+        fullscreen ? tr("player.exitFullscreenKey") : tr("player.fullscreenKey")
+      }
       onClick={onToggle}
     >
       {fullscreen ? <MinimizeIcon /> : <MaximizeIcon />}

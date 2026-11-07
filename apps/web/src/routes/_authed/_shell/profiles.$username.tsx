@@ -37,6 +37,7 @@ import {
   WatchOverview,
 } from "@/components/stats/watch-stats"
 import { UserAvatar } from "@/components/user-avatar"
+import { tr } from "@/i18n"
 import { formatMonth } from "@/lib/format"
 import { errorMessage, orpc } from "@/lib/rpc"
 import { useOpenSettings } from "@/lib/settings"
@@ -71,7 +72,7 @@ function ProfilePage() {
     return (
       <div className="py-24 text-center">
         <h1 className="text-2xl font-semibold tracking-tight">
-          Couldn't load this profile
+          {tr("profile.loadFailed")}
         </h1>
         <p className="text-muted-foreground mt-2 text-sm">
           {errorMessage(profile.error)}
@@ -83,7 +84,7 @@ function ProfilePage() {
             className: "mt-6",
           })}
         >
-          Back to Home
+          {tr("profile.backHome")}
         </Link>
       </div>
     )
@@ -96,14 +97,14 @@ function ProfilePage() {
       {!shared ? (
         <StatsEmpty
           icon={LockIcon}
-          title={`${displayName(data)} keeps their profile private`}
+          title={tr("profile.private", { name: displayName(data) })}
         />
       ) : (
         <>
           <Favorites profile={data} />
           {(data.self || data.sharing.stats) && <Statistics profile={data} />}
           {data.recent && data.recent.length > 0 && (
-            <Rail title="Recently watched">
+            <Rail title={tr("profile.recent")}>
               {data.recent.map((entry) => (
                 <RailItem key={entry.item.id}>
                   <EpisodeCard item={entry.item} />
@@ -152,17 +153,19 @@ function ProfileHeader({ profile }: { profile: Profile }) {
             {user.role === "admin" && (
               <span className="inline-flex items-center gap-1">
                 <ShieldIcon aria-hidden className="size-3.5" />
-                Admin
+                {tr("profile.admin")}
               </span>
             )}
-            <span>Joined {formatMonth(user.createdAt)}</span>
+            <span>
+              {tr("profile.joined", { date: formatMonth(user.createdAt) })}
+            </span>
           </p>
         </div>
         <div className="flex items-center gap-2">
           {profile.self && (
             <Button variant="secondary" onClick={() => openSettings("account")}>
               <PencilIcon />
-              Edit profile
+              {tr("profile.edit")}
             </Button>
           )}
           <ShareButton profile={profile} />
@@ -192,18 +195,21 @@ function ShareButton({ profile }: { profile: Profile }) {
         variant="secondary"
         onClick={() =>
           void navigator
-            .share({ title: `${displayName(profile)} on Matinee`, url })
+            .share({
+              title: tr("profile.shareTitle", { name: displayName(profile) }),
+              url,
+            })
             .catch((cause: unknown) => {
               // Closing the share sheet isn't a failure.
               if (cause instanceof Error && cause.name === "AbortError") return
-              toast.error("Couldn't share this profile", {
+              toast.error(tr("profile.shareFailed"), {
                 description: errorMessage(cause),
               })
             })
         }
       >
         <Share2Icon />
-        Share
+        {tr("profile.share")}
       </Button>
     )
   }
@@ -211,12 +217,12 @@ function ShareButton({ profile }: { profile: Profile }) {
     <FeedbackButton
       variant="secondary"
       state={feedback.state}
-      successLabel="Copied link"
-      errorLabel="Try again"
+      successLabel={tr("profile.copied")}
+      errorLabel={tr("profile.tryAgain")}
       onClick={() => void run(() => navigator.clipboard.writeText(url))}
     >
       <LinkIcon />
-      Copy link
+      {tr("profile.copyLink")}
     </FeedbackButton>
   )
 }
@@ -233,13 +239,15 @@ function Favorites({ profile }: { profile: Profile }) {
   if (favorites.length === 0 && favoriteItems.length === 0) {
     if (!profile.self) return null
     return (
-      <section aria-label="Favorites">
-        <SectionHeading title="Favorites">{privateNote}</SectionHeading>
+      <section aria-label={tr("profile.favorites")}>
+        <SectionHeading title={tr("profile.favorites")}>
+          {privateNote}
+        </SectionHeading>
         <StatsEmpty
           compact
           icon={HeartIcon}
-          title="No favorites yet"
-          description="Tap the heart on a movie, show, or episode to keep it here."
+          title={tr("profile.noFavorites")}
+          description={tr("profile.noFavoritesHint")}
         />
       </section>
     )
@@ -247,7 +255,7 @@ function Favorites({ profile }: { profile: Profile }) {
   return (
     <>
       {favorites.length > 0 && (
-        <Rail title="Favorites" action={privateNote}>
+        <Rail title={tr("profile.favorites")} action={privateNote}>
           {favorites.map((title) => (
             <RailItem key={title.id} artwork="poster">
               <PosterCard title={title} />
@@ -257,7 +265,7 @@ function Favorites({ profile }: { profile: Profile }) {
       )}
       {favoriteItems.length > 0 && (
         <Rail
-          title="Favorite episodes"
+          title={tr("profile.favoriteEpisodes")}
           action={favorites.length === 0 ? privateNote : undefined}
         >
           {favoriteItems.map((item) => (
@@ -292,9 +300,9 @@ function Statistics({ profile }: { profile: Profile }) {
     data !== undefined && data !== null && range === "all" && !hasPlays(data)
 
   return (
-    <section aria-label="Statistics">
+    <section aria-label={tr("profile.statistics")}>
       <SectionHeading
-        title="Statistics"
+        title={tr("profile.statistics")}
         action={
           neverWatched ? undefined : (
             <RangePicker value={range} onChange={setRange} />
@@ -313,35 +321,35 @@ function Statistics({ profile }: { profile: Profile }) {
         <StatsEmpty
           compact
           icon={LockIcon}
-          title={`${displayName(profile)} stopped sharing their statistics`}
+          title={tr("profile.stoppedSharing", { name: displayName(profile) })}
         />
       ) : neverWatched ? (
         profile.self ? (
           <StatsEmpty
             icon={PopcornIcon}
-            title="Your statistics fill in as you watch"
-            description="Watch time and your most watched titles show up here after your first play."
+            title={tr("profile.selfEmpty")}
+            description={tr("profile.selfEmptyHint")}
             action={
               <Link to="/" className={buttonVariants()}>
-                Find something to watch
+                {tr("profile.findSomething")}
               </Link>
             }
           />
         ) : (
           <StatsEmpty
             icon={PopcornIcon}
-            title={`${displayName(profile)} hasn't watched anything yet`}
-            description="Their statistics show up here after their first play."
+            title={tr("profile.otherEmpty", { name: displayName(profile) })}
+            description={tr("profile.otherEmptyHint")}
           />
         )
       ) : !hasPlays(data) ? (
         <StatsEmpty
           compact
           icon={CalendarDaysIcon}
-          title={`Nothing watched ${rangePhrase(range)}`}
+          title={tr("profile.nothingWatched", { period: rangePhrase(range) })}
           action={
             <Button variant="outline" onClick={() => setRange("all")}>
-              Show all time
+              {tr("profile.showAllTime")}
             </Button>
           }
         />

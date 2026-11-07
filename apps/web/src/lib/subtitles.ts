@@ -4,7 +4,9 @@ import {
   type SubtitleTrack,
 } from "@matinee/contracts"
 
-import { deviceLanguage, sameLanguage } from "./languages"
+import { tr } from "@/i18n"
+
+import { deviceLanguage, sameLanguage, trackLabel } from "./languages"
 
 /** The language subtitles show in: the preference, else the device's. */
 function subtitleLanguage(preferences: PlaybackPreferences): string {
@@ -142,9 +144,34 @@ export function rememberPick(
  */
 export function trackDetail(track: SubtitleTrack): string {
   const parts = []
-  if (track.forced) parts.push("Forced")
+  if (track.forced) parts.push(tr("player.subtitles.forced"))
   if (track.sdh) parts.push("SDH")
   parts.push(track.format)
-  if (track.delivery === "burn-in") parts.push("Burned in")
+  if (track.delivery === "burn-in") parts.push(tr("player.subtitles.burnedIn"))
   return parts.join(" · ")
+}
+
+/**
+ * A subtitle track's name: a file next to the video without a language is
+ * "Unknown language", a stream without one "Track 2" by its place among
+ * the file's streams, as the server numbers them.
+ */
+export function subtitleLabel(
+  track: SubtitleTrack,
+  tracks: readonly SubtitleTrack[],
+): string {
+  if (track.source !== "embedded") {
+    return trackLabel(
+      track.language,
+      track.title,
+      tr("player.track.unknownLanguage"),
+    )
+  }
+  const position =
+    tracks.filter((entry) => entry.source === "embedded").indexOf(track) + 1
+  return trackLabel(
+    track.language,
+    track.title,
+    tr("player.track.unnamed", { number: position }),
+  )
 }

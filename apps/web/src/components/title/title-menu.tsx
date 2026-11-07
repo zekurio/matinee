@@ -19,6 +19,7 @@ import {
 } from "@/components/identify-dialog"
 import { WatchedDateDialog } from "@/components/watched-date-dialog"
 import { useSetTitleWatched, WatchedMenuItems } from "@/components/watched-menu"
+import { tr } from "@/i18n"
 import { client, errorMessage, orpc } from "@/lib/rpc"
 
 const route = getRouteApi("/_authed/_shell/titles/$titleId")
@@ -72,12 +73,14 @@ export function TitleMenu({ title }: { title: Title }) {
     mutationFn: () => client.titles.refresh({ id: title.id }),
     onSuccess: async () => {
       await invalidateTitleData(queryClient)
-      toast.success(`Updated ${title.name}`, {
-        description: `Fetched again from ${provider?.name}.`,
+      toast.success(tr("title.refresh.done", { name: title.name }), {
+        description: tr("title.refresh.doneDescription", {
+          provider: provider?.name ?? "",
+        }),
       })
     },
     onError: (error) =>
-      toast.error("Couldn't fetch metadata", {
+      toast.error(tr("title.refresh.error"), {
         description: errorMessage(error),
       }),
   })
@@ -93,7 +96,7 @@ export function TitleMenu({ title }: { title: Title }) {
             <Button
               variant="secondary"
               size="icon-lg"
-              aria-label="More actions"
+              aria-label={tr("title.moreActions")}
               className="border-foreground/10 bg-foreground/15 hover:bg-foreground/25 backdrop-blur max-sm:size-11"
             />
           }
@@ -115,14 +118,14 @@ export function TitleMenu({ title }: { title: Title }) {
             <>
               <DropdownMenuItem onClick={() => setIdentifying(true)}>
                 <SearchIcon />
-                Fix match…
+                {tr("title.menu.fixMatch")}
               </DropdownMenuItem>
               <DropdownMenuItem
                 disabled={refresh.isPending}
                 onClick={() => refresh.mutate()}
               >
                 <RefreshCwIcon />
-                Refresh metadata
+                {tr("title.menu.refresh")}
               </DropdownMenuItem>
             </>
           )}
@@ -154,8 +157,8 @@ export function MatchNote({ title }: { title: Title }) {
   return (
     <p className="text-muted-foreground mt-4 text-sm">
       {title.provider
-        ? `${provider.name} had no match for “${title.path}”, so the name comes from the folder.`
-        : `Waiting for ${provider.name}. The name comes from the folder for now.`}
+        ? tr("title.match.none", { provider: provider.name, path: title.path })
+        : tr("title.match.waiting", { provider: provider.name })}
     </p>
   )
 }

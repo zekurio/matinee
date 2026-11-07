@@ -1,5 +1,7 @@
 import type { Title } from "@matinee/contracts"
 
+import { tr } from "@/i18n"
+
 import { EpisodeRow } from "./episodes"
 
 /**
@@ -15,7 +17,7 @@ export function NextUp({ title }: { title: Title }) {
         id="next-up-heading"
         className="mb-3 text-xl font-semibold tracking-tight"
       >
-        {next.progress ? "Continue watching" : "Next up"}
+        {next.progress ? tr("title.nextUp.continue") : tr("title.nextUp.next")}
       </h2>
       <div className="max-w-5xl">
         <EpisodeRow item={next} />

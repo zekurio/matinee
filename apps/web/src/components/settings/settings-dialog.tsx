@@ -14,6 +14,7 @@ import { ArrowLeftIcon, SearchIcon, XIcon } from "lucide-react"
 import { type ReactNode, useMemo, useRef, useState } from "react"
 
 import { UserAvatar } from "@/components/user-avatar"
+import { tr } from "@/i18n"
 import { useSettingsDialogStore } from "@/stores/settings-dialog"
 
 import {
@@ -72,7 +73,7 @@ export function SettingsDialog({
           "settings-sheet max-md:top-0 max-md:left-0 max-md:h-dvh max-md:max-h-none max-md:w-screen max-md:max-w-none max-md:translate-x-0 max-md:translate-y-0 max-md:rounded-none max-md:ring-0",
         )}
       >
-        <DialogTitle className="sr-only">Settings</DialogTitle>
+        <DialogTitle className="sr-only">{tr("settings.title")}</DialogTitle>
         <SettingsBody
           user={user}
           categories={categories}
@@ -162,9 +163,9 @@ function SettingsOverview({
   return (
     <div className="flex min-w-0 flex-1 flex-col">
       <MobileHeader
-        title="Settings"
+        title={tr("settings.title")}
         leading={
-          <DialogClose aria-label="Close settings" className={iconButton}>
+          <DialogClose aria-label={tr("settings.close")} className={iconButton}>
             <XIcon />
           </DialogClose>
         }
@@ -217,7 +218,7 @@ function SettingsOverview({
         ))}
         {groups.length === 0 && (
           <p className="text-muted-foreground px-1 text-sm">
-            No settings match “{query.trim()}”.
+            {tr("settings.noMatch", { query: query.trim() })}
           </p>
         )}
       </div>
@@ -246,13 +247,13 @@ function SettingsSectionView({
   return (
     <>
       <ScrollArea
-        render={<nav aria-label="Settings" />}
+        render={<nav aria-label={tr("settings.title")} />}
         hasControls
         className="bg-background/60 hidden w-56 shrink-0 border-r md:flex lg:w-64"
         viewportClassName="flex flex-col gap-0.5 p-4"
       >
         <div className="px-2.5 pt-1 pb-3 text-lg font-semibold tracking-tight">
-          Settings
+          {tr("settings.title")}
         </div>
         <SearchField value={query} onChange={setQuery} className="mb-2" />
         {groups.map((group) => (
@@ -293,7 +294,7 @@ function SettingsSectionView({
         ))}
         {groups.length === 0 && (
           <p className="text-muted-foreground px-2.5 pt-3 text-sm">
-            No settings match “{query.trim()}”.
+            {tr("settings.noMatch", { query: query.trim() })}
           </p>
         )}
       </ScrollArea>
@@ -306,7 +307,7 @@ function SettingsSectionView({
             leading={
               <button
                 type="button"
-                aria-label="Back to settings"
+                aria-label={tr("settings.back")}
                 className={iconButton}
                 onClick={onBack}
               >
@@ -320,7 +321,7 @@ function SettingsSectionView({
               {active.label}
             </h2>
             <DialogClose
-              aria-label="Close settings"
+              aria-label={tr("settings.close")}
               className={cn(iconButton, "size-9 [&_svg]:size-4")}
             >
               <XIcon />
@@ -368,8 +369,8 @@ function SearchField({
             onChange("")
           }
         }}
-        placeholder="Search settings"
-        aria-label="Search settings"
+        placeholder={tr("settings.search")}
+        aria-label={tr("settings.search")}
         className="pl-8 [&::-webkit-search-cancel-button]:appearance-none"
       />
     </div>

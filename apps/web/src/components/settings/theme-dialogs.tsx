@@ -24,6 +24,7 @@ import { useSelector } from "@tanstack/react-form"
 import { useMutation } from "@tanstack/react-query"
 import { type RefObject, useRef, useState } from "react"
 
+import { tr } from "@/i18n"
 import { useAppForm } from "@/lib/form"
 import { errorMessage } from "@/lib/rpc"
 import { deleteAccountTheme, saveAccountTheme } from "@/lib/theme-sync"
@@ -81,7 +82,7 @@ function RenameThemeForm({
         await rename.mutateAsync(name)
         onDone()
       } catch (cause) {
-        toast.error("Couldn't rename theme", {
+        toast.error(tr("themes.rename.failed"), {
           description: errorMessage(cause),
         })
       }
@@ -100,13 +101,13 @@ function RenameThemeForm({
     >
       <DialogHeader>
         <DialogTitle className="text-lg leading-7 font-semibold">
-          Rename theme
+          {tr("themes.rename.title")}
         </DialogTitle>
       </DialogHeader>
       <form.Field name="name">
         {(field) => (
           <Input
-            aria-label="Name"
+            aria-label={tr("themes.rename.name")}
             name={field.name}
             value={field.state.value}
             maxLength={THEME_NAME_MAX_LENGTH}
@@ -119,10 +120,12 @@ function RenameThemeForm({
       </form.Field>
       <DialogFooter className="-mx-6 -mb-6 px-6 py-4">
         <Button type="button" variant="ghost" onClick={onDone}>
-          Cancel
+          {tr("themes.cancel")}
         </Button>
         <form.AppForm>
-          <form.SubmitButton disabled={!canSubmit}>Rename</form.SubmitButton>
+          <form.SubmitButton disabled={!canSubmit}>
+            {tr("themes.rename.submit")}
+          </form.SubmitButton>
         </form.AppForm>
       </DialogFooter>
     </form>
@@ -141,7 +144,7 @@ export function DeleteThemeDialog({
     mutationFn: deleteAccountTheme,
     onSuccess: onClose,
     onError: (error) =>
-      toast.error("Couldn't delete theme", {
+      toast.error(tr("themes.delete.failed"), {
         description: errorMessage(error),
       }),
   })
@@ -153,14 +156,18 @@ export function DeleteThemeDialog({
     >
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete {shown?.name ?? "theme"}?</AlertDialogTitle>
+          <AlertDialogTitle>
+            {shown
+              ? tr("themes.delete.title", { theme: shown.name })
+              : tr("themes.delete.titleUnnamed")}
+          </AlertDialogTitle>
           <AlertDialogDescription>
-            Modes using it go back to Matinee.
+            {tr("themes.delete.description")}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel disabled={remove.isPending}>
-            Cancel
+            {tr("themes.cancel")}
           </AlertDialogCancel>
           <Button
             variant="destructive"
@@ -168,7 +175,7 @@ export function DeleteThemeDialog({
             onClick={() => theme && remove.mutate(theme.id)}
           >
             {remove.isPending && <Spinner />}
-            Delete
+            {tr("themes.delete.submit")}
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>

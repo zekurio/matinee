@@ -7,6 +7,7 @@ import { getRouteApi, Link } from "@tanstack/react-router"
 import { pageBleed, pageColumn } from "@/components/app-shell"
 import { CastRail } from "@/components/credits"
 import { useDocumentTitle } from "@/components/page-header"
+import { tr } from "@/i18n"
 import { errorMessage, orpc } from "@/lib/rpc"
 
 import { ShowEpisodes } from "./episodes"
@@ -29,7 +30,7 @@ export function TitlePage() {
     return (
       <div className="py-24 text-center">
         <h1 className="text-2xl font-semibold tracking-tight">
-          Couldn't load this title
+          {tr("title.loadError")}
         </h1>
         <p className="text-muted-foreground mt-2 text-sm">
           {errorMessage(title.error)}
@@ -41,7 +42,7 @@ export function TitlePage() {
             className: "mt-6",
           })}
         >
-          Back to Home
+          {tr("title.backHome")}
         </Link>
       </div>
     )

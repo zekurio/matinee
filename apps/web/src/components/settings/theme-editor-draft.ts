@@ -1,51 +1,32 @@
 import type { ThemeColorRole } from "@matinee/ui/lib/theme-colors"
 
+import { tr } from "@/i18n"
+
 /**
  * How the theme editor names and groups the color roles. The draft itself
  * lives in the editor's store, `@/stores/theme-editor`.
  */
 
+type RoleGroupId = "surfaces" | "borders" | "text" | "accent" | "status"
+
 interface RoleGroup {
-  label: string
+  id: RoleGroupId
   roles: readonly ThemeColorRole[]
 }
 
-const ROLE_LABELS = new Map<ThemeColorRole, string>([
-  ["background", "Background"],
-  ["surface", "Surface"],
-  ["surfaceRaised", "Raised surface"],
-  ["surfaceSunken", "Sunken surface"],
-  ["input", "Input"],
-  ["border", "Border"],
-  ["borderStrong", "Strong border"],
-  ["borderEmphasis", "Emphasis border"],
-  ["text", "Text"],
-  ["textMuted", "Muted text"],
-  ["textDim", "Dim text"],
-  ["textFaint", "Faint text"],
-  ["accent", "Accent"],
-  ["accentForeground", "Text on accent"],
-  ["accentHover", "Accent hover"],
-  ["accentActive", "Accent pressed"],
-  ["accentDim", "Dim accent"],
-  ["success", "Success"],
-  ["warning", "Warning"],
-  ["danger", "Danger"],
-  ["info", "Info"],
-  ["live", "Live"],
-])
+export const roleLabel = (role: ThemeColorRole) => tr(`themes.role.${role}`)
 
-export const roleLabel = (role: ThemeColorRole) => ROLE_LABELS.get(role) ?? role
+export const groupLabel = (group: RoleGroupId) => tr(`themes.group.${group}`)
 
 export const ROLE_GROUPS: readonly RoleGroup[] = [
   {
-    label: "Surfaces",
+    id: "surfaces",
     roles: ["background", "surface", "surfaceRaised", "surfaceSunken", "input"],
   },
-  { label: "Borders", roles: ["border", "borderStrong", "borderEmphasis"] },
-  { label: "Text", roles: ["text", "textMuted", "textDim", "textFaint"] },
+  { id: "borders", roles: ["border", "borderStrong", "borderEmphasis"] },
+  { id: "text", roles: ["text", "textMuted", "textDim", "textFaint"] },
   {
-    label: "Accent",
+    id: "accent",
     roles: [
       "accent",
       "accentForeground",
@@ -54,5 +35,5 @@ export const ROLE_GROUPS: readonly RoleGroup[] = [
       "accentDim",
     ],
   },
-  { label: "Status", roles: ["success", "warning", "danger", "info", "live"] },
+  { id: "status", roles: ["success", "warning", "danger", "info", "live"] },
 ]

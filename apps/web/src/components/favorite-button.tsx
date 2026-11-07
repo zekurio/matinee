@@ -6,6 +6,7 @@ import { cn } from "@matinee/ui/lib/utils"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { HeartIcon } from "lucide-react"
 
+import { tr } from "@/i18n"
 import { client, errorMessage, orpc } from "@/lib/rpc"
 import { invalidateViewerState, type Toggle } from "@/lib/viewer-state"
 
@@ -31,7 +32,7 @@ export function useSetFavorite() {
       if (context?.previous) {
         queryClient.setQueryData(context.queryKey, context.previous)
       }
-      toast.error("Couldn't change your favorites", {
+      toast.error(tr("media.favoriteFailed"), {
         description: errorMessage(error),
       })
     },
@@ -49,7 +50,7 @@ export function useSetItemFavorite() {
     mutationFn: (input: { itemId: string; favorite: boolean }) =>
       client.favorites.setItem(input),
     onError: (error) =>
-      toast.error("Couldn't change your favorites", {
+      toast.error(tr("media.favoriteFailed"), {
         description: errorMessage(error),
       }),
     onSettled: () => invalidateViewerState(queryClient),
@@ -117,7 +118,7 @@ export function FavoriteMenuItem({ favorite }: { favorite: Toggle }) {
   return (
     <DropdownMenuItem onClick={favorite.toggle}>
       <FavoriteHeart on={favorite.on} />
-      {favorite.on ? "Remove from favorites" : "Add to favorites"}
+      {favorite.on ? tr("media.removeFavorite") : tr("media.addFavorite")}
     </DropdownMenuItem>
   )
 }
@@ -133,8 +134,8 @@ function HeartButton({
       variant="secondary"
       size="icon-lg"
       aria-pressed={on}
-      aria-label={on ? "Remove from favorites" : "Add to favorites"}
-      title={on ? "Remove from favorites" : "Add to favorites"}
+      aria-label={on ? tr("media.removeFavorite") : tr("media.addFavorite")}
+      title={on ? tr("media.removeFavorite") : tr("media.addFavorite")}
       onClick={toggle}
       className={cn(
         "border-foreground/10 bg-foreground/15 hover:bg-foreground/25 backdrop-blur max-sm:size-11",

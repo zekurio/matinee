@@ -9,6 +9,7 @@ import {
 } from "lucide-react"
 import { Fragment, useState } from "react"
 
+import { tr } from "@/i18n"
 import { errorMessage, orpc } from "@/lib/rpc"
 
 /** The root shows as a drive; other folders by name. */
@@ -17,7 +18,7 @@ function CrumbName({ path, name }: { path: string; name: string }) {
   return (
     <>
       <HardDriveIcon className="size-4" />
-      <span className="sr-only">Root</span>
+      <span className="sr-only">{tr("libraries.browser.root")}</span>
     </>
   )
 }
@@ -60,7 +61,7 @@ export function FolderBrowser({
     <div className="overflow-hidden rounded-lg border">
       <div className="bg-muted/50 flex items-center gap-2 border-b py-1.5 pr-1.5 pl-3">
         <nav
-          aria-label="Current folder"
+          aria-label={tr("libraries.browser.current")}
           className="flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto text-sm whitespace-nowrap"
         >
           {crumbs(current).map((crumb, i, all) => (
@@ -96,16 +97,20 @@ export function FolderBrowser({
             onClick={() => onPick(current)}
           >
             <PlusIcon />
-            {alreadyPicked ? "Added" : `Add “${folderName(current)}”`}
+            {alreadyPicked
+              ? tr("libraries.browser.added")
+              : tr("libraries.browser.addCurrent", {
+                  name: folderName(current),
+                })}
           </Button>
         )}
       </div>
       <p className="text-muted-foreground border-b px-3 py-2 text-[13px]">
         {current === "/"
-          ? "Open the folder that holds your videos."
+          ? tr("libraries.browser.openRoot")
           : alreadyPicked
-            ? `${current} is already in this library.`
-            : `Adds ${current} and its subfolders.`}
+            ? tr("libraries.browser.alreadyAdded", { path: current })
+            : tr("libraries.browser.adds", { path: current })}
       </p>
       <div className="h-52 overflow-y-auto p-1">
         {listing.isPending ? (
@@ -120,7 +125,7 @@ export function FolderBrowser({
           </p>
         ) : listing.data?.directories.length === 0 ? (
           <p className="text-muted-foreground p-3 text-sm">
-            No folders inside this one.
+            {tr("libraries.browser.empty")}
           </p>
         ) : (
           <ul>
@@ -133,7 +138,9 @@ export function FolderBrowser({
                 >
                   <button
                     type="button"
-                    aria-label={`Open ${dir.name}`}
+                    aria-label={tr("libraries.browser.open", {
+                      name: dir.name,
+                    })}
                     className="focus-visible:ring-ring flex h-9 w-full min-w-0 items-center gap-2.5 rounded-md px-2.5 text-left text-sm outline-none focus-visible:ring-2 focus-visible:ring-inset"
                     onClick={() => setPath(dir.path)}
                   >
@@ -145,12 +152,16 @@ export function FolderBrowser({
                     type="button"
                     variant="ghost"
                     size="sm"
-                    aria-label={`Add ${dir.name}`}
+                    aria-label={tr("libraries.browser.addNamed", {
+                      name: dir.name,
+                    })}
                     disabled={added}
                     className="absolute top-1/2 right-8 -translate-y-1/2 opacity-0 group-hover/row:opacity-100 focus-visible:opacity-100 disabled:opacity-60 [@media(hover:none)]:opacity-100"
                     onClick={() => onPick(dir.path)}
                   >
-                    {added ? "Added" : "Add"}
+                    {added
+                      ? tr("libraries.browser.added")
+                      : tr("libraries.browser.add")}
                   </Button>
                 </li>
               )

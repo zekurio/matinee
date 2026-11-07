@@ -12,6 +12,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { CheckIcon, ChevronDownIcon, CopyIcon } from "lucide-react"
 import { useState } from "react"
 
+import { type MessageKey, tr, translateKnown } from "@/i18n"
 import { useAppForm, withForm } from "@/lib/form"
 import { client, errorMessage, orpc } from "@/lib/rpc"
 import { useActionFeedback } from "@/lib/use-action-feedback"
@@ -83,13 +84,13 @@ function inputFrom(draft: Draft) {
   })
 }
 
-const FIELD_NAMES = new Map<string, string>([
-  ["displayName", "Display name"],
-  ["issuerUrl", "Issuer URL"],
-  ["clientId", "Client ID"],
-  ["scopes", "Scopes"],
-  ["usernameClaim", "Username claim"],
-  ["clientSecret", "Client secret"],
+const FIELD_NAMES = new Map<string, MessageKey>([
+  ["displayName", "oidc.field.displayName"],
+  ["issuerUrl", "oidc.field.issuerUrl"],
+  ["clientId", "oidc.field.clientId"],
+  ["scopes", "oidc.field.scopes"],
+  ["usernameClaim", "oidc.field.usernameClaim"],
+  ["clientSecret", "oidc.field.clientSecret"],
 ])
 
 /** Why `inputFrom` rejected the draft, naming the field to check. */
@@ -97,8 +98,17 @@ function inputError(
   issue: { path: readonly PropertyKey[]; message: string } | undefined,
 ): Error {
   const field = FIELD_NAMES.get(String(issue?.path[0] ?? ""))
-  const check = field ? `Check ${field}.` : "Check the fields."
-  return new Error(issue ? `${check} ${issue.message}` : check)
+  const check = field
+    ? tr("oidc.checkField", { field: tr(field) })
+    : tr("oidc.checkFields")
+  return new Error(
+    issue
+      ? tr("oidc.checkFieldIssue", {
+          check,
+          issue: translateKnown(issue.message),
+        })
+      : check,
+  )
 }
 
 const sameDraft = (a: Draft, b: Draft) => {
@@ -115,7 +125,7 @@ export function AuthPanel() {
         <Skeleton className="h-96 rounded-xl" />
       ) : settings.isError ? (
         <p className="text-muted-foreground text-sm">
-          Couldn't load the sign-in settings. {errorMessage(settings.error)}
+          {tr("oidc.loadFailed", { error: errorMessage(settings.error) })}
         </p>
       ) : (
         <OidcForm settings={settings.data} />
@@ -174,24 +184,23 @@ const SingleSignOnSection = withForm({
     return (
       <SettingsSubsection
         id="single-sign-on"
-        title="Single sign-on"
-        description="OpenID Connect, such as Authelia, Authentik, or Keycloak."
+        title={tr("oidc.title")}
+        description={tr("oidc.description")}
       >
         <SettingRows>
           <form.AppField name="enabled">
             {(field) => (
               <SwitchField
-                title="Enabled"
+                title={tr("oidc.enabled")}
                 footer={
                   settings.active &&
                   !field.state.value &&
                   settings.ssoOnlyUsers > 0 ? (
                     <SettingWarning>
-                      {settings.ssoOnlyUsers === 1
-                        ? "1 account signs in only"
-                        : `${settings.ssoOnlyUsers} accounts sign in only`}{" "}
-                      through {settings.oidc.displayName}. It can't sign in
-                      again until this is back on.
+                      {tr("oidc.ssoOnly", {
+                        count: settings.ssoOnlyUsers,
+                        provider: settings.oidc.displayName,
+                      })}
                     </SettingWarning>
                   ) : null
                 }
@@ -201,16 +210,16 @@ const SingleSignOnSection = withForm({
           <form.AppField name="allowSignUp">
             {() => (
               <SwitchField
-                title="Create accounts"
-                description="For first sign-ins that match no account."
+                title={tr("oidc.allowSignUp")}
+                description={tr("oidc.allowSignUp.description")}
               />
             )}
           </form.AppField>
           <form.AppField name="displayName">
             {() => (
               <InputField
-                title="Display name"
-                description="Shown on the sign-in button."
+                title={tr("oidc.field.displayName")}
+                description={tr("oidc.displayName.description")}
                 maxLength={64}
                 placeholder={defaults.displayName}
               />
@@ -219,11 +228,11 @@ const SingleSignOnSection = withForm({
           <form.AppField name="issuerUrl">
             {() => (
               <InputField
-                title="Issuer URL"
+                title={tr("oidc.field.issuerUrl")}
                 description={
                   defaults.issuerUrl
-                    ? "Overrides MATINEE_OIDC_ISSUER_URL. Changing it unlinks every linked account."
-                    : "Changing it later unlinks every linked account."
+                    ? tr("oidc.issuerUrl.override")
+                    : tr("oidc.issuerUrl.description")
                 }
                 layout="stack"
                 type="url"
@@ -237,11 +246,9 @@ const SingleSignOnSection = withForm({
           <form.AppField name="clientId">
             {() => (
               <InputField
-                title="Client ID"
+                title={tr("oidc.field.clientId")}
                 description={
-                  defaults.clientId
-                    ? "Overrides MATINEE_OIDC_CLIENT_ID."
-                    : undefined
+                  defaults.clientId ? tr("oidc.clientId.override") : undefined
                 }
                 layout="stack"
                 autoComplete="off"
@@ -267,7 +274,7 @@ const AdvancedSection = withForm({
     return (
       <SettingsSubsection
         id="single-sign-on-advanced"
-        title="Advanced"
+        title={tr("oidc.advanced")}
         action={
           <Button
             type="button"
@@ -276,7 +283,7 @@ const AdvancedSection = withForm({
             aria-controls="oidc-advanced"
             onClick={() => setAdvanced(!advanced)}
           >
-            {advanced ? "Hide" : "Show"}
+            {advanced ? tr("oidc.advanced.hide") : tr("oidc.advanced.show")}
             <ChevronDownIcon
               className={cn(
                 "transition-transform motion-reduce:transition-none",
@@ -291,8 +298,8 @@ const AdvancedSection = withForm({
             <form.AppField name="scopes">
               {() => (
                 <InputField
-                  title="Scopes"
-                  description="Separated by spaces. Must include openid."
+                  title={tr("oidc.field.scopes")}
+                  description={tr("oidc.scopes.description")}
                   autoComplete="off"
                   spellCheck={false}
                   placeholder={defaults.scopes}
@@ -302,8 +309,8 @@ const AdvancedSection = withForm({
             <form.AppField name="usernameClaim">
               {() => (
                 <InputField
-                  title="Username claim"
-                  description="Falls back to preferred_username."
+                  title={tr("oidc.field.usernameClaim")}
+                  description={tr("oidc.usernameClaim.description")}
                   autoComplete="off"
                   spellCheck={false}
                   placeholder={defaults.usernameClaim}
@@ -330,17 +337,17 @@ const ClientSecretRow = withForm({
     const fromEnvironment =
       source === "environment" || (dropSecret && environment)
     const placeholder = savedHere
-      ? "Saved. Type to replace it."
+      ? tr("oidc.clientSecret.saved")
       : fromEnvironment
-        ? "Set by MATINEE_OIDC_CLIENT_SECRET"
-        : "None"
+        ? tr("oidc.clientSecret.fromEnvironment")
+        : tr("oidc.clientSecret.none")
 
     return (
       <SettingRow
-        title="Client secret"
+        title={tr("oidc.field.clientSecret")}
         description={
           <>
-            Leave empty for a public client.{" "}
+            {tr("oidc.clientSecret.description")}{" "}
             {savedHere && (
               <button
                 type="button"
@@ -351,15 +358,15 @@ const ClientSecretRow = withForm({
                 }}
               >
                 {environment
-                  ? "Use the secret from the environment"
-                  : "Remove the saved secret"}
+                  ? tr("oidc.clientSecret.useEnvironment")
+                  : tr("oidc.clientSecret.remove")}
               </button>
             )}
             {dropSecret && (
               <span className="text-foreground">
                 {environment
-                  ? "The environment's secret applies after you save."
-                  : "The secret is removed when you save."}
+                  ? tr("oidc.clientSecret.environmentApplies")
+                  : tr("oidc.clientSecret.removed")}
               </span>
             )}
           </>
@@ -392,8 +399,8 @@ function CallbackRow({ url }: { url: string }) {
   const copied = feedback.state === "success"
   return (
     <SettingRow
-      title="Redirect URI"
-      description="Add this to the provider's allowed redirects."
+      title={tr("oidc.redirectUri")}
+      description={tr("oidc.redirectUri.description")}
       layout="stack"
     >
       {(ids) => (
@@ -413,7 +420,7 @@ function CallbackRow({ url }: { url: string }) {
             onClick={() => void run(() => navigator.clipboard.writeText(url))}
           >
             {copied ? <CheckIcon /> : <CopyIcon />}
-            {copied ? "Copied" : "Copy"}
+            {copied ? tr("oidc.copied") : tr("oidc.copy")}
           </Button>
         </>
       )}

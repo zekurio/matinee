@@ -31,7 +31,7 @@ import {
 } from "@/components/library/list-params"
 import { PosterCard, posterGrid } from "@/components/media-item"
 import { PageHeader, useDocumentTitle } from "@/components/page-header"
-import { plural } from "@/lib/format"
+import { tr } from "@/i18n"
 import { errorMessage, orpc } from "@/lib/rpc"
 
 import { KindPicker } from "./kind-picker"
@@ -48,10 +48,7 @@ export type BrowseSearch = t.infer<typeof BrowseSearch>
 
 const PAGE_SIZE = 60
 
-const groups = {
-  genre: { label: "Genre", here: "in this genre", icon: TagIcon },
-  studio: { label: "Studio", here: "from this studio", icon: Building2Icon },
-}
+const icons = { genre: TagIcon, studio: Building2Icon }
 
 /**
  * Every movie and show with a genre or from a studio, across the
@@ -71,7 +68,8 @@ export function BrowsePage({
   update: (patch: BrowseSearch) => void
 }) {
   useDocumentTitle(name)
-  const group = groups[by]
+  const Icon = icons[by]
+  const groupLabel = tr(`browse.${by}`)
   const list = useListSearch(search, update)
   const kind = search.kind
   const titles = useInfiniteQuery(
@@ -99,8 +97,8 @@ export function BrowsePage({
   const controls: ListControlsProps = {
     search: list.search,
     setSearch: list.setSearch,
-    label: `Search ${name}`,
-    sorts: titleSorts,
+    label: tr("browse.search", { name }),
+    sorts: titleSorts(),
     sort: list.sort,
     setSort: list.setSort,
   }
@@ -111,8 +109,8 @@ export function BrowsePage({
         title={name}
         description={
           counts
-            ? `${group.label} · ${plural(counts.movie + counts.show, "title")}`
-            : group.label
+            ? `${groupLabel} · ${tr("browse.titleCount", { count: counts.movie + counts.show })}`
+            : groupLabel
         }
         actions={<HeaderControls {...controls} />}
         phoneActions={<PhoneControls {...controls} />}
@@ -151,16 +149,19 @@ export function BrowsePage({
         </>
       ) : list.query ? (
         <EmptyList
-          title={`Nothing matches “${list.query}”`}
+          title={tr("browse.noMatch", { query: list.query })}
           scanning={false}
-          clear={{ label: "Clear search", onClick: () => list.setSearch("") }}
+          clear={{
+            label: tr("browse.clearSearch"),
+            onClick: () => list.setSearch(""),
+          }}
         />
       ) : kind ? (
         <EmptyList
-          title={`No ${kind}s ${group.here}`}
+          title={tr(`browse.${by}.none.${kind}`)}
           scanning={false}
           clear={{
-            label: "Show movies and shows",
+            label: tr("browse.showBoth"),
             onClick: () => update({ kind: undefined }),
           }}
         />
@@ -168,18 +169,18 @@ export function BrowsePage({
         <Empty className="py-16">
           <EmptyHeader>
             <EmptyMedia variant="icon" className="mb-4 size-9 [&_svg]:size-5">
-              <group.icon />
+              <Icon />
             </EmptyMedia>
             <EmptyTitle className="text-base font-semibold">
-              Nothing {group.here}
+              {tr(`browse.${by}.empty`)}
             </EmptyTitle>
             <EmptyDescription>
-              No movie or show in the libraries lists “{name}”.
+              {tr("browse.emptyDescription", { name })}
             </EmptyDescription>
           </EmptyHeader>
           <EmptyContent>
             <Link to="/" className={buttonVariants({ variant: "outline" })}>
-              Back to Home
+              {tr("browse.backHome")}
             </Link>
           </EmptyContent>
         </Empty>

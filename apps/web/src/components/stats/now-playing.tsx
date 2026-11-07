@@ -1,6 +1,5 @@
 import {
   audioFormatName,
-  channelLayoutName,
   type NowPlaying,
   videoCodecName,
 } from "@matinee/contracts"
@@ -13,8 +12,9 @@ import { useEffect, useState } from "react"
 
 import { ItemLink, Picture, tone } from "@/components/media-item"
 import { UserAvatar } from "@/components/user-avatar"
-import { formatWatchTime, plural } from "@/lib/format"
-import { art, itemLabel } from "@/lib/media"
+import { tr } from "@/i18n"
+import { formatWatchTime } from "@/lib/format"
+import { art, channelLayout, itemLabel } from "@/lib/media"
 import { errorMessage, liveQuery, orpc } from "@/lib/rpc"
 import {
   audioEncoderName,
@@ -68,11 +68,11 @@ export function WatchingNow() {
     )
   }
   return (
-    <section aria-label="Watching now">
-      <SectionHeading title="Watching now">
+    <section aria-label={tr("stats.live.title")}>
+      <SectionHeading title={tr("stats.live.title")}>
         {count > 0 && (
           <span className="text-muted-foreground text-sm tabular-nums">
-            {plural(count, "stream")}
+            {tr("stats.live.streams", { count })}
           </span>
         )}
       </SectionHeading>
@@ -91,8 +91,8 @@ export function WatchingNow() {
         <StatsEmpty
           compact
           icon={TvMinimalPlayIcon}
-          title="Nobody's watching right now"
-          description="Streams show up here while someone plays something."
+          title={tr("stats.live.empty")}
+          description={tr("stats.live.emptyHint")}
         />
       ) : (
         <ul className={rowsGrid}>
@@ -112,14 +112,15 @@ export function WatchingNow() {
 /** What the server does with one stream of the file. */
 type Handling = "direct" | "copy" | "transcode"
 
-const HANDLING = new Map<Handling, { label: string; className: string }>([
-  ["direct", { label: "Direct", className: "text-emerald-400" }],
-  ["copy", { label: "Copy", className: "text-sky-400" }],
-  ["transcode", { label: "Transcode", className: "text-amber-400" }],
+/** Each handling's color in its row. */
+const HANDLING_TONES = new Map<Handling, string>([
+  ["direct", "text-emerald-400"],
+  ["copy", "text-sky-400"],
+  ["transcode", "text-amber-400"],
 ])
 
 type StreamLine = {
-  kind: "Video" | "Audio"
+  kind: "video" | "audio"
   handling: Handling
   /** The stream in the file, like `HEVC 4K HDR10`. */
   from: string
@@ -143,14 +144,14 @@ function videoLine(session: NowPlaying): StreamLine | null {
     .join(" ")
   if (session.method !== "transcode") {
     return {
-      kind: "Video",
+      kind: "video",
       handling: session.method === "direct" ? "direct" : "copy",
       from,
     }
   }
   const encoder = session.videoEncoder
   return {
-    kind: "Video",
+    kind: "video",
     handling: "transcode",
     from,
     to: [
@@ -162,7 +163,9 @@ function videoLine(session: NowPlaying): StreamLine | null {
     how: [
       encoder ? encoderDevice(encoder) : null,
       session.toneMapper
-        ? `tone mapped by ${toneMapperName(session.toneMapper)}`
+        ? tr("stats.live.toneMapped", {
+            mapper: toneMapperName(session.toneMapper),
+          })
         : null,
     ]
       .filter(Boolean)
@@ -181,22 +184,23 @@ function audioLine(session: NowPlaying): StreamLine | null {
     tracks.find((entry) => entry.codec === codec && entry.default) ??
     tracks.find((entry) => entry.codec === codec)
   const layout = track
-    ? channelLayoutName(track.channelLayout, track.channels)
+    ? channelLayout(track.channelLayout, track.channels)
     : null
   const from = [audioFormatName(codec, track?.profile ?? null), layout]
     .filter(Boolean)
     .join(" ")
   if (!session.audioConverted) {
     return {
-      kind: "Audio",
+      kind: "audio",
       handling: session.method === "direct" ? "direct" : "copy",
       from,
     }
   }
   // Converted audio is stereo, or mono from mono.
-  const channels = track?.channels === 1 ? "mono" : "stereo"
+  const channels =
+    track?.channels === 1 ? tr("stats.live.mono") : tr("stats.live.stereo")
   return {
-    kind: "Audio",
+    kind: "audio",
     handling: "transcode",
     from,
     to: session.audioEncoder
@@ -206,14 +210,18 @@ function audioLine(session: NowPlaying): StreamLine | null {
 }
 
 function StreamRow({ line }: { line: StreamLine }) {
-  const handling = HANDLING.get(line.handling)
   return (
     <p className="flex min-w-0 items-baseline gap-2 text-xs leading-5">
-      <span className="text-muted-foreground w-9 shrink-0">{line.kind}</span>
+      <span className="text-muted-foreground w-9 shrink-0">
+        {tr(`stats.live.stream.${line.kind}`)}
+      </span>
       <span
-        className={cn("w-[4.5rem] shrink-0 font-medium", handling?.className)}
+        className={cn(
+          "w-[4.5rem] shrink-0 font-medium",
+          HANDLING_TONES.get(line.handling),
+        )}
       >
-        {handling?.label}
+        {tr(`stats.live.handling.${line.handling}`)}
       </span>
       <span
         className="min-w-0 truncate"
@@ -224,7 +232,10 @@ function StreamRow({ line }: { line: StreamLine }) {
         </span>
         {line.to && (
           <>
-            <span aria-label="to" className="text-muted-foreground">
+            <span
+              aria-label={tr("stats.live.to")}
+              className="text-muted-foreground"
+            >
               {" → "}
             </span>
             {line.to}
@@ -285,14 +296,18 @@ function NowPlayingRow({
                 {title}
               </ItemLink>
             ) : (
-              "A file that's gone from the library"
+              tr("stats.live.gone")
             )}
           </p>
           <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
             {session.paused ? (
-              <span className="font-medium text-amber-400">Paused</span>
+              <span className="font-medium text-amber-400">
+                {tr("stats.live.paused")}
+              </span>
             ) : duration ? (
-              `${formatWatchTime(Math.max(0, duration - position))} left`
+              tr("stats.live.left", {
+                time: formatWatchTime(Math.max(0, duration - position)),
+              })
             ) : (
               formatWatchTime(position)
             )}

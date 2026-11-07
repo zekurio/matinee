@@ -2,13 +2,37 @@ import {
   type Artwork,
   artworkPath,
   type ArtworkSize,
-  channelLayoutName,
+  knownChannelLayout,
   type HdrFormat,
   type ImagePlaceholder,
   type MediaItem,
   mediaThumbnailPath,
   videoCodecName,
 } from "@matinee/contracts"
+
+import { tr } from "@/i18n"
+
+/** "5.1", "Stereo", or "8 channels" for a count no layout fits. */
+export function channelLayout(
+  layout: string | null,
+  channels: number | null,
+): string | null {
+  const known = knownChannelLayout(layout, channels)
+  if (known || !channels || channels < 1) return known
+  return tr("media.channels", { count: channels })
+}
+
+/**
+ * A season's name, as the server names it but in the interface's
+ * language: "Season 2", "Specials", or "Other files" for files without a
+ * season number.
+ */
+export function seasonName(number: number | null): string {
+  if (number === null) return tr("media.otherFiles")
+  return number === 0
+    ? tr("media.specials")
+    : tr("media.season", { number: String(number) })
+}
 
 export type ItemLabel = {
   /** The show or movie with its year. For loose files, the file's title. */
@@ -98,9 +122,11 @@ export function folderLabel(name: string): string {
   const season = SEASON_FOLDER.exec(name.trim())
   if (season) {
     const n = Number(season[1])
-    return n === 0 ? "Specials" : `Season ${n}`
+    return n === 0
+      ? tr("media.specials")
+      : tr("media.season", { number: String(n) })
   }
-  if (/^specials?$/i.test(name.trim())) return "Specials"
+  if (/^specials?$/i.test(name.trim())) return tr("media.specials")
   return name
 }
 
@@ -148,7 +174,9 @@ function labelFromPath(item: MediaItem): ItemLabel {
     show,
     ...splitYear(show),
     showKey: show,
-    title: untitled ? `Episode ${episode}` : quietCaps(name),
+    title: untitled
+      ? tr("media.episode", { number: String(episode) })
+      : quietCaps(name),
     untitled,
     code: `S${pad(match[1])}E${pad(match[2])}`,
     shortCode: `E${pad(match[2])}`,
@@ -192,8 +220,11 @@ export function itemLabel(item: MediaItem): ItemLabel {
 export function episodeCode(item: MediaItem): string | null {
   if (item.seasonNumber === null || item.episodeNumber === null) return null
   return item.seasonNumber === 0
-    ? `Special ${item.episodeNumber}`
-    : `S${item.seasonNumber}, E${item.episodeNumber}`
+    ? tr("media.special", { number: String(item.episodeNumber) })
+    : tr("media.episodeCode", {
+        season: String(item.seasonNumber),
+        episode: String(item.episodeNumber),
+      })
 }
 
 /** An image to load, and the blurred stand-in to show until it does. */
@@ -254,7 +285,7 @@ export function timeLeft(item: MediaItem): string | null {
     1,
     Math.round((item.durationSeconds - item.progress.positionSeconds) / 60),
   )
-  return `${minutes} min left`
+  return tr("media.timeLeft", { minutes })
 }
 
 const HDR_LABELS = {
@@ -289,7 +320,7 @@ export function mediaFlags(item: MediaItem): string[] {
   return [
     video && resolutionLabel(video.width, video.height),
     hdr,
-    main && channelLayoutName(main.channelLayout, main.channels),
+    main && channelLayout(main.channelLayout, main.channels),
   ].filter((flag): flag is string => Boolean(flag))
 }
 
@@ -306,10 +337,9 @@ export function streamSummary(item: MediaItem): string | null {
     video && resolutionLabel(video.width, video.height),
     video && videoCodecName(video.codec),
     video?.hdr && HDR_LABELS[video.hdr],
-    main && channelLayoutName(main.channelLayout, main.channels),
-    audio.length > 1 && `${audio.length} audio tracks`,
-    subtitles.length > 0 &&
-      `${subtitles.length} subtitle${subtitles.length === 1 ? "" : "s"}`,
+    main && channelLayout(main.channelLayout, main.channels),
+    audio.length > 1 && tr("media.audioTracks", { count: audio.length }),
+    subtitles.length > 0 && tr("media.subtitles", { count: subtitles.length }),
   ].filter(Boolean)
   return parts.length > 0 ? parts.join(" · ") : null
 }

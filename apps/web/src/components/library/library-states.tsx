@@ -16,14 +16,15 @@ import { FolderOpenIcon, SearchXIcon } from "lucide-react"
 import type { ReactNode } from "react"
 
 import { posterGrid } from "@/components/media-item"
+import { tr } from "@/i18n"
 import { client, orpc } from "@/lib/rpc"
 
 /** What the server is doing to the library, if anything. */
 export function libraryStatus(library: Library | undefined): ReactNode {
   const busy = library?.scanning
-    ? "Scanning folders…"
+    ? tr("library.scanning")
     : library?.refreshing
-      ? "Fetching metadata…"
+      ? tr("library.fetchingMetadata")
       : null
   if (!busy) return null
   return (
@@ -103,9 +104,7 @@ export function EmptyList({
         <EmptyTitle className="text-base font-semibold">{title}</EmptyTitle>
         {!clear && (
           <EmptyDescription>
-            {scanning
-              ? "The scan is still running."
-              : "Check that the library folders contain video files the server can read."}
+            {scanning ? tr("library.scanRunning") : tr("library.noVideosHint")}
           </EmptyDescription>
         )}
       </EmptyHeader>
@@ -133,7 +132,7 @@ export function ShowMore({
     <div className={cn("flex justify-center", className)}>
       <Button variant="outline" disabled={fetching} onClick={onClick}>
         {fetching && <Spinner />}
-        Show more
+        {tr("library.showMore")}
       </Button>
     </div>
   )

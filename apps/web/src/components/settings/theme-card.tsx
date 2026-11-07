@@ -39,9 +39,10 @@ import {
   Trash2Icon,
 } from "lucide-react"
 
+import { tr } from "@/i18n"
 import { downloadTextFile } from "@/lib/download"
 
-import { variantShortName } from "./theme-seeds"
+import { variantLabel, variantShortName } from "./theme-seeds"
 
 /**
  * A theme as a paint chip: one striped swatch per variant across the top,
@@ -81,7 +82,7 @@ export function ThemeCard({
       <button
         type="button"
         aria-pressed={used.length > 0}
-        aria-label={`Use ${family.label} for light and dark`}
+        aria-label={tr("themes.card.use", { theme: family.label })}
         onClick={() => selectThemeFamily(family.id)}
         className="focus-visible:ring-ring absolute inset-0 rounded-[inherit] outline-none focus-visible:ring-2 focus-visible:ring-inset"
       />
@@ -121,9 +122,9 @@ export function ThemeCard({
                     </span>
                   </span>
                 ))
-              : family.variants.length === 1
-                ? "1 variant"
-                : `${family.variants.length} variants`}
+              : tr("themes.card.variants", {
+                  count: family.variants.length,
+                })}
           </p>
         </div>
         {custom ? (
@@ -134,7 +135,9 @@ export function ThemeCard({
                   type="button"
                   variant="ghost"
                   size="icon-sm"
-                  aria-label={`${family.label} actions`}
+                  aria-label={tr("themes.card.actions", {
+                    theme: family.label,
+                  })}
                   className="pointer-events-auto"
                 >
                   <MoreHorizontalIcon />
@@ -143,23 +146,23 @@ export function ThemeCard({
             />
             <DropdownMenuContent align="end" sideOffset={6}>
               <DropdownMenuItem onClick={() => onEdit(custom)}>
-                <PencilIcon /> Edit
+                <PencilIcon /> {tr("themes.card.edit")}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => onRename(custom)}>
-                <TextCursorInputIcon /> Rename
+                <TextCursorInputIcon /> {tr("themes.card.rename")}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={onDuplicate}>
-                <CopyIcon /> Duplicate
+                <CopyIcon /> {tr("themes.card.duplicate")}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => exportTheme(custom)}>
-                <DownloadIcon /> Export
+                <DownloadIcon /> {tr("themes.card.export")}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 variant="destructive"
                 onClick={() => onDelete(custom)}
               >
-                <Trash2Icon /> Delete
+                <Trash2Icon /> {tr("themes.card.delete")}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -171,7 +174,9 @@ export function ThemeCard({
                   type="button"
                   variant="ghost"
                   size="icon-sm"
-                  aria-label={`Duplicate ${family.label}`}
+                  aria-label={tr("themes.card.duplicateNamed", {
+                    theme: family.label,
+                  })}
                   className="pointer-events-auto"
                   onClick={onDuplicate}
                 >
@@ -179,7 +184,7 @@ export function ThemeCard({
                 </Button>
               }
             />
-            <TooltipContent>Duplicate</TooltipContent>
+            <TooltipContent>{tr("themes.card.duplicate")}</TooltipContent>
           </Tooltip>
         )}
       </div>
@@ -207,9 +212,9 @@ function ThemeSwatch({
 }) {
   const description =
     slot === "light"
-      ? `${label}, used in light mode`
+      ? tr("themes.card.usedLight", { variant: label })
       : slot === "dark"
-        ? `${label}, used in dark mode`
+        ? tr("themes.card.usedDark", { variant: label })
         : label
 
   return (
@@ -292,7 +297,9 @@ function swatchStripes(colors: ThemeColors): string {
 }
 
 function swatchLabel(family: ThemeFamily, variant: ThemeVariant): string {
-  return family.custom ? `${family.label} (${variant.label})` : variant.label
+  return family.custom
+    ? `${family.label} (${variant.label})`
+    : variantLabel(variant)
 }
 
 function exportTheme(custom: CustomTheme) {

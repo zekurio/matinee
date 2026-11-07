@@ -30,6 +30,7 @@ import { useState } from "react"
 
 import { FavoriteMenuItem, useItemFavorite } from "@/components/favorite-button"
 import { WatchedDateDialog } from "@/components/watched-date-dialog"
+import { tr } from "@/i18n"
 import { client, errorMessage, orpc } from "@/lib/rpc"
 import { invalidateViewerState, type WatchedState } from "@/lib/viewer-state"
 
@@ -112,7 +113,9 @@ export function useSetWatched() {
       patchLists(queryClient, (other) => other.id === item.id, watched),
     onError: (error, { watched }) =>
       toast.error(
-        watched ? "Couldn't mark as watched" : "Couldn't mark as unwatched",
+        watched
+          ? tr("media.markWatchedFailed")
+          : tr("media.markUnwatchedFailed"),
         { description: errorMessage(error) },
       ),
     onSettled: () => invalidateViewerState(queryClient),
@@ -141,7 +144,9 @@ export function useSetTitleWatched() {
       ),
     onError: (error, { watched }) =>
       toast.error(
-        watched ? "Couldn't mark as watched" : "Couldn't mark as unwatched",
+        watched
+          ? tr("media.markWatchedFailed")
+          : tr("media.markUnwatchedFailed"),
         { description: errorMessage(error) },
       ),
     onSettled: () => invalidateViewerState(queryClient),
@@ -196,15 +201,15 @@ export function WatchedAtItems({
     <>
       <DropdownMenuItem onClick={() => onSelect()}>
         <ClockIcon />
-        Just now
+        {tr("media.watchedAt.now")}
       </DropdownMenuItem>
       <DropdownMenuItem onClick={() => onSelect("released")}>
         <CalendarIcon />
-        Release date
+        {tr("media.watchedAt.released")}
       </DropdownMenuItem>
       <DropdownMenuItem onClick={onPickDate}>
         <CalendarClockIcon />
-        Other date…
+        {tr("media.watchedAt.other")}
       </DropdownMenuItem>
     </>
   )
@@ -240,7 +245,7 @@ export function WatchedMenuItems({
           {/* Items pad out for touch; the trigger has to be told. */}
           <DropdownMenuSubTrigger className="[@media(pointer:coarse)]:py-2.5">
             <CheckIcon />
-            Mark {scope} watched
+            {tr(`media.mark.${scope}.watched`)}
           </DropdownMenuSubTrigger>
           <DropdownMenuSubContent className="min-w-44">
             <WatchedAtItems
@@ -253,7 +258,7 @@ export function WatchedMenuItems({
       {(watched || started) && (
         <DropdownMenuItem onClick={() => onSelect(false)}>
           <EyeOffIcon />
-          Mark {scope} unwatched
+          {tr(`media.mark.${scope}.unwatched`)}
         </DropdownMenuItem>
       )}
     </>
@@ -287,7 +292,7 @@ export function ItemMenu({
             <Button
               variant="ghost"
               size="icon-sm"
-              aria-label={`More actions for ${label}`}
+              aria-label={tr("media.moreActions", { name: label })}
               className={cn(
                 "text-muted-foreground opacity-0 group-focus-within/item:opacity-100 group-hover/item:opacity-100 aria-expanded:opacity-100 [@media(pointer:coarse)]:size-11 [@media(pointer:coarse)]:opacity-100",
                 className,

@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query"
 import { Link, useRouterState } from "@tanstack/react-router"
 import { useLayoutEffect, useRef } from "react"
 
+import { tr } from "@/i18n"
 import { orpc } from "@/lib/rpc"
 
 import { chipClass } from "./chips"
@@ -35,7 +36,7 @@ export function LibraryChips({ className }: { className?: string }) {
   return (
     <nav
       ref={row}
-      aria-label="Libraries"
+      aria-label={tr("library.chips")}
       className={cn(
         "relative flex [scrollbar-width:none] items-center gap-1.5 overflow-x-auto [&::-webkit-scrollbar]:hidden",
         className,

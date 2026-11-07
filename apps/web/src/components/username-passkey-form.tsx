@@ -1,6 +1,7 @@
 import { Username } from "@matinee/contracts"
 import { KeyRoundIcon } from "lucide-react"
 
+import { tr } from "@/i18n"
 import { useAppForm } from "@/lib/form"
 import { errorMessage } from "@/lib/rpc"
 
@@ -34,8 +35,8 @@ export function UsernamePasskeyForm({
       <form.AppField name="username" validators={{ onChange: Username }}>
         {(field) => (
           <field.TextField
-            label="Username"
-            description="Your browser or password manager stores the passkey."
+            label={tr("auth.username")}
+            description={tr("auth.usernameHint")}
             serverError={error ? errorMessage(error) : null}
             autoComplete="username webauthn"
             autoCapitalize="none"

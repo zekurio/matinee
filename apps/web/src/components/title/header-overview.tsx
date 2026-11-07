@@ -8,6 +8,8 @@ import {
 import { cn } from "@matinee/ui/lib/utils"
 import { useLayoutEffect, useRef, useState } from "react"
 
+import { tr } from "@/i18n"
+
 /** The lines a description shows on phones, where it sits under the poster. */
 const PHONE_LINES = 3
 
@@ -125,7 +127,7 @@ export function HeaderOverview({
             // One line of the text tall, which the fit counts on.
             className="text-muted-foreground hover:text-foreground focus-visible:ring-ring block h-6 rounded text-sm leading-6 font-medium outline-none focus-visible:ring-2"
           >
-            More
+            {tr("title.more")}
           </DialogTrigger>
           <DialogContent className="max-h-[calc(100dvh-4rem)] grid-rows-[auto_minmax(0,1fr)] gap-4 p-6 sm:max-w-xl">
             <DialogHeader className="pr-8">

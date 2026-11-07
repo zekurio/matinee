@@ -14,17 +14,14 @@ import { LeaderboardView } from "@/components/stats/leaderboard-view"
 import { LibraryView } from "@/components/stats/library-view"
 import { RangePicker } from "@/components/stats/range-picker"
 import { ActivityView, PlaybackView } from "@/components/stats/server-views"
+import { tr } from "@/i18n"
 
 const STATS_VIEWS = ["activity", "playback", "library", "leaderboard"] as const
 const StatsView = t.enum(STATS_VIEWS)
 type StatsView = t.infer<typeof StatsView>
 
-const VIEWS = new Map<StatsView, { label: string; admin: boolean }>([
-  ["activity", { label: "Activity", admin: true }],
-  ["playback", { label: "Playback", admin: true }],
-  ["library", { label: "Library", admin: false }],
-  ["leaderboard", { label: "Leaderboard", admin: false }],
-])
+/** The views only admins see. */
+const ADMIN_VIEWS = new Set<StatsView>(["activity", "playback"])
 
 /** 30 days is the default period, so the URL leaves it out. */
 const StatsSearch = t.object({
@@ -43,8 +40,8 @@ function StatsPage() {
   const navigate = Route.useNavigate()
   const admin = user.role === "admin"
   const options = STATS_VIEWS.filter(
-    (view) => admin || !VIEWS.get(view)?.admin,
-  ).map((view) => ({ value: view, label: VIEWS.get(view)?.label ?? view }))
+    (view) => admin || !ADMIN_VIEWS.has(view),
+  ).map((view) => ({ value: view, label: tr(`stats.view.${view}`) }))
   // Admins start on what's happening; everyone else on the leaderboard.
   const view: StatsView =
     wanted && options.some((option) => option.value === wanted)
@@ -53,7 +50,7 @@ function StatsPage() {
         ? "activity"
         : "leaderboard"
 
-  useDocumentTitle("Statistics")
+  useDocumentTitle(tr("stats.title"))
 
   const setRange = (next: StatsRange) =>
     void navigate({
@@ -65,7 +62,7 @@ function StatsPage() {
   return (
     <>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-x-8 gap-y-4">
-        <PageHeader title="Statistics" className="mb-0 md:mb-0" />
+        <PageHeader title={tr("stats.title")} className="mb-0 md:mb-0" />
         <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
           <Select
             items={options}
@@ -79,7 +76,7 @@ function StatsPage() {
             }
           >
             <SelectTrigger
-              aria-label="Statistics"
+              aria-label={tr("stats.title")}
               className="min-w-44 shrink-0 justify-between gap-1"
             >
               <SelectValue />

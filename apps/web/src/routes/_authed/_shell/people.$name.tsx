@@ -13,11 +13,11 @@ import { createFileRoute, Link } from "@tanstack/react-router"
 import { useId } from "react"
 
 import { kindCounts, KindPicker } from "@/components/browse/kind-picker"
-import { creditLabel, PersonPortrait } from "@/components/credits"
+import { creditLabel, PersonPortrait, unitList } from "@/components/credits"
 import { PosterGridSkeleton } from "@/components/library/library-states"
 import { PosterCard, posterGrid } from "@/components/media-item"
 import { useDocumentTitle } from "@/components/page-header"
-import { plural } from "@/lib/format"
+import { tr } from "@/i18n"
 import { errorMessage, orpc } from "@/lib/rpc"
 
 /** Both kinds is the default, so the URL leaves it out. */
@@ -29,13 +29,6 @@ export const Route = createFileRoute("/_authed/_shell/people/$name")({
   validateSearch: PersonSearch,
   component: PersonPage,
 })
-
-const SECTION_NAMES = new Map<CreditKind, string>([
-  ["actor", "Acting"],
-  ["creator", "Created"],
-  ["director", "Directing"],
-  ["writer", "Writing"],
-])
 
 /** The kinds of credit someone has, what they're known for first. */
 function creditKinds(person: Person): CreditKind[] {
@@ -60,7 +53,7 @@ function PersonPage() {
     return (
       <div className="py-24 text-center">
         <h1 className="text-2xl font-semibold tracking-tight">
-          Couldn't load {name}
+          {tr("people.loadError", { name })}
         </h1>
         <p className="text-muted-foreground mt-2 text-sm">
           {errorMessage(person.error)}
@@ -72,7 +65,7 @@ function PersonPage() {
             className: "mt-6",
           })}
         >
-          Back to Home
+          {tr("people.backHome")}
         </Link>
       </div>
     )
@@ -110,8 +103,8 @@ function PersonDetails({ person }: { person: Person }) {
             {person.name}
           </h1>
           <p className="text-muted-foreground mt-1 text-sm">
-            {kinds.map((k) => creditLabel(k)).join(", ")} ·{" "}
-            {plural(person.titleCount, "title")}
+            {unitList().format(kinds.map((k) => creditLabel(k)))} ·{" "}
+            {tr("people.titleCount", { count: person.titleCount })}
           </p>
           <KindPicker
             counts={counts}
@@ -154,9 +147,9 @@ function CreditSection({
         id={id}
         className="mb-3 flex items-baseline gap-2 text-xl font-semibold tracking-tight"
       >
-        {SECTION_NAMES.get(kind)}
+        {tr(`people.section.${kind}`)}
         <span className="text-muted-foreground text-sm font-normal">
-          {plural(credits.length, "title")}
+          {tr("people.titleCount", { count: credits.length })}
         </span>
       </h2>
       <ul className={posterGrid}>

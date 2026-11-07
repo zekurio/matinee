@@ -1,6 +1,8 @@
 import { cn } from "@matinee/ui/lib/utils"
 import { type ReactNode, useEffect } from "react"
 
+import { tr } from "@/i18n"
+
 /**
  * Names the browser tab after the page while it's open. Until there's a
  * name, and after the page closes, the tab says just Matinee.
@@ -51,7 +53,7 @@ export function PageHeader({
     >
       <div className="min-w-0 flex-1">
         {breadcrumb && (
-          <nav aria-label="Breadcrumb" className="mb-1 text-sm">
+          <nav aria-label={tr("browse.breadcrumb")} className="mb-1 text-sm">
             {breadcrumb}
           </nav>
         )}

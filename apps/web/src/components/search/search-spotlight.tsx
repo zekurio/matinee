@@ -38,7 +38,7 @@ import {
 import { type RefObject, useEffect, useRef } from "react"
 import { useShallow } from "zustand/shallow"
 
-import { plural } from "@/lib/format"
+import { tr } from "@/i18n"
 import { art, present } from "@/lib/media"
 import { orpc } from "@/lib/rpc"
 import { useSearchSpotlightStore } from "@/stores/search-spotlight"
@@ -77,9 +77,6 @@ const sectionIcons = {
   studios: Building2Icon,
 } satisfies Record<SearchSection["kind"], LucideIcon>
 
-/** What the field says and how screen readers name it. */
-const FIELD_LABEL = "Search movies, shows, people, and more"
-
 /**
  * Search as a spotlight: a field over the page that lists what matches as
  * you type, a section for each kind and library, best matches first. The
@@ -116,7 +113,7 @@ export function SearchSpotlight() {
           "max-sm:top-[calc(env(safe-area-inset-top)+0.5rem)]",
         )}
       >
-        <DialogTitle className="sr-only">Search</DialogTitle>
+        <DialogTitle className="sr-only">{tr("search.title")}</DialogTitle>
         <SpotlightSearch input={input} onClose={() => setOpen(false)} />
       </DialogContent>
     </Dialog>
@@ -136,7 +133,7 @@ export function SearchButton({ className }: { className: string }) {
         render={
           <button
             type="button"
-            aria-label="Search"
+            aria-label={tr("search.title")}
             aria-keyshortcuts={mac ? "Meta+K" : "Control+K"}
             onClick={() => setOpen(true)}
             className={className}
@@ -146,12 +143,12 @@ export function SearchButton({ className }: { className: string }) {
         <SearchIcon />
       </TooltipTrigger>
       <TooltipContent side="bottom" sideOffset={8}>
-        Search
+        {tr("search.title")}
         <kbd
           data-slot="kbd"
           className="bg-background/15 px-1 font-sans text-[11px] leading-4"
         >
-          {mac ? "⌘K" : "Ctrl K"}
+          {mac ? "⌘K" : tr("search.shortcut")}
         </kbd>
       </TooltipContent>
     </Tooltip>
@@ -234,56 +231,66 @@ function SpotlightSearch({
         entry.kind === "all" ? trimmed : hitName(entry)
       }
     >
-      <search className="group/spotlight">
+      <search>
         {/* Enter with no row picked submits, for every result. */}
         <form
           onSubmit={(event) => {
             event.preventDefault()
             showAll()
           }}
-          className="flex h-14 items-center gap-2 pr-2 pl-4"
+          className="flex h-14 items-center gap-3 pr-3 pl-4"
         >
-          <SearchIcon
-            aria-hidden
-            className="text-muted-foreground group-focus-within/spotlight:text-accent size-5 shrink-0 transition-colors"
-          />
+          {/* As wide as a row's picture, so the icon centres over them and
+              the text starts where their names do. */}
+          <span aria-hidden className="grid w-9 shrink-0 place-items-center">
+            <SearchIcon className="text-muted-foreground size-[18px]" />
+          </span>
           <AutocompleteInput
             ref={input}
-            aria-label={FIELD_LABEL}
-            placeholder={FIELD_LABEL}
+            // What the field says is also how screen readers name it.
+            aria-label={tr("search.field")}
+            placeholder={tr("search.field")}
             autoComplete="off"
             spellCheck={false}
             enterKeyHint="search"
             // Opening it again selects the last search, so typing replaces it.
             onFocus={(event) => event.currentTarget.select()}
             // 16px keeps iOS from zooming in on focus.
-            className="placeholder:text-muted-foreground h-full min-w-0 flex-1 bg-transparent pl-1 text-base outline-none"
+            className="placeholder:text-muted-foreground h-full min-w-0 flex-1 bg-transparent text-base outline-none"
           />
-          {query && (
-            <button
-              type="button"
-              aria-label="Clear search"
-              // Keeps the field focused, so typing can go on.
-              onPointerDown={(event) => event.preventDefault()}
-              onClick={() => {
-                clear()
-                input.current?.focus()
-              }}
-              className="focus-visible:ring-ring text-muted-foreground hover:text-foreground grid size-8 shrink-0 place-items-center rounded-full outline-none focus-visible:ring-2 [@media(pointer:coarse)]:size-11"
+          <div className="flex shrink-0 items-center gap-2">
+            {query && (
+              <button
+                type="button"
+                aria-label={tr("search.clear")}
+                // Keeps the field focused, so typing can go on.
+                onPointerDown={(event) => event.preventDefault()}
+                onClick={() => {
+                  clear()
+                  input.current?.focus()
+                }}
+                className="focus-visible:ring-ring text-muted-foreground hover:text-foreground hover:bg-foreground/10 grid size-6 shrink-0 place-items-center rounded-md transition-colors outline-none focus-visible:ring-2 [@media(pointer:coarse)]:size-11 [@media(pointer:coarse)]:rounded-full"
+              >
+                <XIcon className="size-3.5 [@media(pointer:coarse)]:size-4" />
+              </button>
+            )}
+            {query && (
+              <span
+                aria-hidden
+                className="bg-border h-4 w-px shrink-0 [@media(pointer:coarse)]:hidden"
+              />
+            )}
+            {/* Esc closes it from a keyboard; touch gets a word to tap. */}
+            <DialogClose
+              aria-label={tr("search.close")}
+              className="focus-visible:ring-ring text-muted-foreground hover:text-foreground bg-foreground/5 hover:bg-foreground/10 inline-flex h-6 shrink-0 items-center rounded-md px-2 font-sans text-xs font-medium transition-colors outline-none focus-visible:ring-2 [@media(pointer:coarse)]:hidden"
             >
-              <XIcon className="size-4" />
-            </button>
-          )}
-          {/* Esc closes it from a keyboard; touch gets a word to tap. */}
-          <DialogClose
-            aria-label="Close search"
-            className="focus-visible:ring-ring text-muted-foreground hover:text-foreground border-foreground/10 shrink-0 rounded border px-1.5 font-sans text-[11px] leading-5 outline-none focus-visible:ring-2 [@media(pointer:coarse)]:hidden"
-          >
-            Esc
-          </DialogClose>
-          <DialogClose className="focus-visible:ring-ring text-foreground/80 hidden h-11 shrink-0 items-center rounded-full px-2 text-[15px] outline-none focus-visible:ring-2 [@media(pointer:coarse)]:inline-flex">
-            Cancel
-          </DialogClose>
+              Esc
+            </DialogClose>
+            <DialogClose className="focus-visible:ring-ring text-foreground/80 hidden h-11 shrink-0 items-center rounded-full px-2 text-[15px] outline-none focus-visible:ring-2 [@media(pointer:coarse)]:inline-flex">
+              {tr("search.cancel")}
+            </DialogClose>
+          </div>
         </form>
       </search>
 
@@ -294,16 +301,18 @@ function SpotlightSearch({
             {!results.data && pending ? (
               <span className="text-muted-foreground flex items-center gap-2 px-4 py-4 text-sm">
                 <Spinner className="size-3.5" />
-                Searching…
+                {tr("search.searching")}
               </span>
             ) : results.isError && groups.length === 0 ? (
               <span className="text-muted-foreground block px-4 py-4 text-sm">
-                The search didn't go through. Try again in a moment.
+                {tr("search.failed")}
               </span>
             ) : null}
           </AutocompleteStatus>
           <AutocompleteEmpty className="px-4 py-4">
-            {results.data && !pending ? `Nothing matches “${settled}”.` : null}
+            {results.data && !pending
+              ? tr("search.noMatch", { query: settled })
+              : null}
           </AutocompleteEmpty>
           {groups.length > 0 && (
             <AutocompleteList className="max-h-[min(28rem,60dvh)] p-2">
@@ -359,7 +368,7 @@ function EntryRow({
         className="text-muted-foreground data-highlighted:text-foreground mt-1 border-t pt-2"
       >
         <SearchIcon aria-hidden className="mx-2.5" />
-        <span className="truncate">Every result for “{query}”</span>
+        <span className="truncate">{tr("search.everyResult", { query })}</span>
       </AutocompleteItem>
     )
   }
@@ -396,7 +405,7 @@ function EntryRow({
         />
         <RowText
           name={person.name}
-          detail={`${creditLabel(person.kind)} · ${plural(person.titleCount, "title")}`}
+          detail={`${creditLabel(person.kind)} · ${tr("search.titles", { count: person.titleCount })}`}
         />
       </AutocompleteItem>
     )
@@ -404,7 +413,7 @@ function EntryRow({
   if (entry.kind === "genre" || entry.kind === "studio") {
     const { facet } = entry
     const Icon = entry.kind === "genre" ? TagIcon : Building2Icon
-    const detail = plural(facet.titleCount, "title")
+    const detail = tr("search.titles", { count: facet.titleCount })
     const row = (
       <>
         <span
@@ -452,7 +461,7 @@ function EntryRow({
       </span>
       <RowText
         name={title.name}
-        detail={[title.year, title.kind === "show" ? "Show" : "Movie"]
+        detail={[title.year, tr(`search.kind.${title.kind}`)]
           .filter(Boolean)
           .join(" · ")}
       />

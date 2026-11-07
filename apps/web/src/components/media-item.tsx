@@ -11,7 +11,8 @@ import { Link, useNavigate } from "@tanstack/react-router"
 import { CheckIcon, FilmIcon, PlayIcon } from "lucide-react"
 import { type ReactNode, useState } from "react"
 
-import { formatBytes, formatRuntime, plural } from "@/lib/format"
+import { tr } from "@/i18n"
+import { formatBytes, formatRuntime } from "@/lib/format"
 import {
   art,
   episodeCode,
@@ -22,6 +23,7 @@ import {
   progressRatio,
   streamSummary,
   timeLeft,
+  seasonName,
 } from "@/lib/media"
 import { errorMessage, orpc } from "@/lib/rpc"
 
@@ -104,7 +106,7 @@ export function WatchedBadge({ className }: { className?: string }) {
   return (
     <span
       role="img"
-      aria-label="Watched"
+      aria-label={tr("media.watched")}
       className={cn(
         "bg-primary text-primary-foreground grid size-5 shrink-0 place-items-center rounded-full shadow-sm",
         className,
@@ -359,7 +361,7 @@ export const textLink =
 // a bare icon while the card is hovered or focused, which gets a blurred
 // circle and the accent once the pointer is on it.
 const playControl =
-  "group/play focus-visible:ring-ring absolute top-1/2 left-1/2 grid size-16 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full text-white opacity-0 transition-opacity outline-none group-focus-within/card:opacity-100 group-hover/card:opacity-100 group-has-[[aria-expanded=true]]/card:opacity-100 focus-visible:ring-2 motion-reduce:transition-none"
+  "group/play focus-visible:ring-ring absolute top-1/2 left-1/2 grid size-16 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full text-white opacity-0 transition-opacity outline-none group-has-[:focus-visible]/card:opacity-100 group-hover/card:opacity-100 group-has-[[aria-expanded=true]]/card:opacity-100 focus-visible:ring-2 motion-reduce:transition-none"
 
 /**
  * The inside of a {@link playControl}. Touch screens have no hover, so
@@ -397,7 +399,11 @@ export function ThumbPlayButton({
     <Link
       to="/watch/$itemId"
       params={{ itemId: item.id }}
-      aria-label={`${resume ? "Resume" : "Play"} ${label}`}
+      aria-label={
+        resume
+          ? tr("media.resume", { name: label })
+          : tr("media.play", { name: label })
+      }
       className={cn(playControl, "[@media(pointer:coarse)]:opacity-100")}
     >
       <PlayGlyph />
@@ -426,12 +432,12 @@ function TitlePlayButton({
     try {
       const { next } = await queryClient.fetchQuery(options)
       if (!next) {
-        toast.error(`${title.name} has no files to play`)
+        toast.error(tr("media.noFiles", { name: title.name }))
         return
       }
       await navigate({ to: "/watch/$itemId", params: { itemId: next.id } })
     } catch (cause) {
-      toast.error(`Couldn't play ${title.name}`, {
+      toast.error(tr("media.playFailed", { name: title.name }), {
         description: errorMessage(cause),
       })
     }
@@ -439,7 +445,7 @@ function TitlePlayButton({
   return (
     <button
       type="button"
-      aria-label={`Play ${title.name}`}
+      aria-label={tr("media.play", { name: title.name })}
       onPointerEnter={prefetch}
       onFocus={prefetch}
       onClick={() => void play()}
@@ -469,7 +475,13 @@ export function EpisodeCard({
 }) {
   const label = itemLabel(item)
   const code = episodeCode(item)
-  const name = code ? `${label.showName}, ${code}: ${label.title}` : label.title
+  const name = code
+    ? tr("media.showCodeTitle", {
+        show: label.showName,
+        code,
+        title: label.title,
+      })
+    : label.title
   const watched = useItemWatched(item)
   const favorite = useItemFavorite(item)
   return (
@@ -508,12 +520,18 @@ export function EpisodeCard({
   )
 }
 
-/** The show, then the episode, or a movie's name and year. */
+/**
+ * The show, then the episode, or a movie's name and year. A file in
+ * progress shows its time left in place of the year, or after the episode,
+ * where the episode's name gives way first.
+ */
 function ShowEpisodeText({ item }: { item: MediaItem }) {
   const label = itemLabel(item)
   const code = episodeCode(item)
-  const resume = item.progress && !item.progress.completed
-  const episode = code ? `${code}: ${label.title}` : null
+  const left = item.progress && !item.progress.completed ? timeLeft(item) : null
+  const episode = code
+    ? tr("media.codeTitle", { code, title: label.title })
+    : null
   return (
     <>
       <span className="block truncate text-sm leading-5 font-medium">
@@ -529,21 +547,26 @@ function ShowEpisodeText({ item }: { item: MediaItem }) {
           </ItemLink>
         )}
       </span>
-      <span className="text-muted-foreground block truncate text-[13px] leading-5">
-        {episode ? (
+      {episode ? (
+        <span className="text-muted-foreground flex min-w-0 text-[13px] leading-5">
           <ItemLink
             item={item}
             label={episode}
-            className={cn(textLink, "hover:text-foreground")}
+            className={cn(textLink, "hover:text-foreground truncate")}
           >
             {episode}
           </ItemLink>
-        ) : resume ? (
-          timeLeft(item)
-        ) : (
-          label.year
-        )}
-      </span>
+          {left && (
+            <span className="shrink-0 whitespace-pre tabular-nums">
+              {` · ${left}`}
+            </span>
+          )}
+        </span>
+      ) : (
+        <span className="text-muted-foreground block truncate text-[13px] leading-5 tabular-nums">
+          {left ?? label.year}
+        </span>
+      )}
     </>
   )
 }
@@ -556,8 +579,8 @@ function EpisodeText({ item }: { item: MediaItem }) {
     item.episodeNumber === null
       ? null
       : item.seasonNumber === 0
-        ? `Special ${item.episodeNumber}`
-        : `Episode ${item.episodeNumber}`
+        ? tr("media.special", { number: String(item.episodeNumber) })
+        : tr("media.episode", { number: String(item.episodeNumber) })
   const detail = [
     number,
     resume
@@ -613,7 +636,7 @@ export function TitleCard({ entry }: { entry: ShelfEntry }) {
     return (
       <PosterCard
         title={title}
-        detail={plural(count, "episode")}
+        detail={tr("media.episodeCount", { count })}
         label={label.show}
       />
     )
@@ -623,7 +646,7 @@ export function TitleCard({ entry }: { entry: ShelfEntry }) {
   if (added.count === 1) {
     const code = episodeCode(added.item)
     const name = itemLabel(added.item).title
-    const detail = code ? `${code}: ${name}` : name
+    const detail = code ? tr("media.codeTitle", { code, title: name }) : name
     return (
       <PosterCard
         title={title}
@@ -635,8 +658,8 @@ export function TitleCard({ entry }: { entry: ShelfEntry }) {
       />
     )
   }
-  const fresh = plural(added.count, "new episode")
-  const detail = season ? `${season.name} · ${fresh}` : fresh
+  const fresh = tr("media.newEpisodes", { count: added.count })
+  const detail = season ? `${seasonName(season.number)} · ${fresh}` : fresh
   return (
     <PosterCard
       title={title}
@@ -783,7 +806,11 @@ export function PosterCard({
           <Link
             to="/watch/$itemId"
             params={{ itemId: play.id }}
-            aria-label={`${play.progress && !play.progress.completed ? "Resume" : "Play"} ${label ?? title.name}`}
+            aria-label={
+              play.progress && !play.progress.completed
+                ? tr("media.resume", { name: label ?? title.name })
+                : tr("media.play", { name: label ?? title.name })
+            }
             className={cn(playControl, playClass)}
           >
             <PlayGlyph />

@@ -7,13 +7,13 @@ import {
   type PlaybackOptions,
   type PlaybackQuality,
   SUBTITLE_MODES,
-  type SubtitleMode,
   videoCodecName,
 } from "@matinee/contracts"
 import { useQuery } from "@tanstack/react-query"
 import { useShallow } from "zustand/shallow"
 
 import { formatBitrate } from "@/components/player-format"
+import { tr } from "@/i18n"
 import { browserAudioCodecs, OPTIONAL_PASSTHROUGH } from "@/lib/audio-support"
 import { deviceLanguage, languageName } from "@/lib/languages"
 import {
@@ -39,28 +39,20 @@ import {
 /** Stands in for null in a select, which only takes strings. */
 const UNSET = ""
 
-const MODE_LABELS = new Map<SubtitleMode, string>([
-  ["default", "As the file says"],
-  ["always", "Always"],
-  ["foreign", "With foreign audio"],
-  ["forced", "Forced only"],
-  ["off", "Off"],
+type PassthroughNote =
+  `playback.passthrough.${"ac3" | "eac3" | "flac" | "alac"}`
+
+const PASSTHROUGH_NOTES = new Map<PlaybackAudioCodec, PassthroughNote>([
+  ["ac3", "playback.passthrough.ac3"],
+  ["eac3", "playback.passthrough.eac3"],
+  ["flac", "playback.passthrough.flac"],
+  ["alac", "playback.passthrough.alac"],
 ])
 
-const MODE_DESCRIPTIONS = new Map<SubtitleMode, string>([
-  ["default", "The file's default track."],
-  ["always", "Full subtitles."],
-  ["foreign", "Full subtitles when the audio is in another language."],
-  ["forced", "Signs and foreign dialogue only."],
-  ["off", "Until you pick a track in the player."],
-])
-
-const PASSTHROUGH_NOTES = new Map<PlaybackAudioCodec, string>([
-  ["ac3", "Dolby Digital surround."],
-  ["eac3", "Dolby Digital Plus, including Atmos."],
-  ["flac", "Lossless. Uses far more bandwidth."],
-  ["alac", "Apple Lossless. Uses far more bandwidth."],
-])
+function passthroughNote(codec: PlaybackAudioCodec): string | undefined {
+  const key = PASSTHROUGH_NOTES.get(codec)
+  return key && tr(key)
+}
 
 /**
  * How videos play: the languages, which the account syncs, and the
@@ -95,8 +87,8 @@ function languageOptions(
 }
 
 function audioLabel(value: string): string {
-  if (value === UNSET) return "The file's default"
-  if (value === ORIGINAL_LANGUAGE) return "Original language"
+  if (value === UNSET) return tr("playback.audio.fileDefault")
+  if (value === ORIGINAL_LANGUAGE) return tr("playback.audio.original")
   return languageName(value)
 }
 
@@ -112,13 +104,13 @@ function LanguagesSection({
   return (
     <SettingsSubsection
       id="languages"
-      title="Languages"
-      description="Synced to your account."
+      title={tr("playback.languages.title")}
+      description={tr("playback.languages.description")}
     >
       <SettingRows>
         <SelectRow
-          title="Audio"
-          description="Falls back to the file's default."
+          title={tr("playback.audio.title")}
+          description={tr("playback.audio.description")}
           value={preferences.audioLanguage ?? UNSET}
           options={languageOptions(
             [UNSET, ORIGINAL_LANGUAGE],
@@ -133,18 +125,18 @@ function LanguagesSection({
           }
         />
         <SelectRow
-          title="Subtitles"
-          description={MODE_DESCRIPTIONS.get(mode)}
+          title={tr("playback.subtitles.title")}
+          description={tr(`playback.subtitles.mode.${mode}.description`)}
           value={mode}
           options={SUBTITLE_MODES}
-          labelOf={(value) => MODE_LABELS.get(value) ?? value}
+          labelOf={(value) => tr(`playback.subtitles.mode.${value}.label`)}
           onChange={(subtitleMode) =>
             updatePlaybackPreferences({ subtitleMode })
           }
         />
         {mode !== "off" && (
           <SelectRow
-            title="Subtitle language"
+            title={tr("playback.subtitles.language")}
             value={preferences.subtitleLanguage ?? UNSET}
             options={languageOptions(
               [UNSET],
@@ -152,7 +144,9 @@ function LanguagesSection({
               preferences.subtitleLanguage,
             )}
             labelOf={(tag) =>
-              tag === UNSET ? `This device's (${device})` : languageName(tag)
+              tag === UNSET
+                ? tr("playback.subtitles.deviceLanguage", { language: device })
+                : languageName(tag)
             }
             onChange={(tag) =>
               updatePlaybackPreferences({
@@ -162,8 +156,8 @@ function LanguagesSection({
           />
         )}
         <SwitchRow
-          title="Remember my picks"
-          description="Subtitles you pick in the player carry over to the next video."
+          title={tr("playback.subtitles.remember")}
+          description={tr("playback.subtitles.remember.description")}
           checked={preferences.rememberSubtitles}
           onChange={(rememberSubtitles) =>
             updatePlaybackPreferences({ rememberSubtitles })
@@ -177,8 +171,11 @@ function LanguagesSection({
 function qualityLabel(id: PlaybackQuality): string {
   const preset = PLAYBACK_QUALITIES.find((entry) => entry.id === id)
   return preset
-    ? `${preset.height}p, ${formatBitrate(preset.bitrate)}`
-    : "Original"
+    ? tr("playback.quality.preset", {
+        height: String(preset.height),
+        bitrate: formatBitrate(preset.bitrate),
+      })
+    : tr("playback.quality.original")
 }
 
 /** A row whose setting has a single possible value here, shown as text. */
@@ -234,13 +231,13 @@ function DeviceSection({ options }: { options: PlaybackOptions | undefined }) {
   return (
     <SettingsSubsection
       id="device"
-      title="This device"
-      description="Saved on this browser only."
+      title={tr("playback.device.title")}
+      description={tr("playback.device.description")}
     >
       <SettingRows>
         <SelectRow
-          title="Quality"
-          description="What videos start in."
+          title={tr("playback.quality.title")}
+          description={tr("playback.quality.description")}
           value={device.quality}
           options={PLAYBACK_QUALITY_IDS}
           labelOf={qualityLabel}
@@ -248,8 +245,8 @@ function DeviceSection({ options }: { options: PlaybackOptions | undefined }) {
         />
         {videoCodecs.length > 1 ? (
           <SelectRow
-            title="Video codec"
-            description="For transcodes. AV1 and HEVC look better but load the server more."
+            title={tr("playback.videoCodec.title")}
+            description={tr("playback.videoCodec.description")}
             value={
               videoChoices.includes(device.videoCodec)
                 ? device.videoCodec
@@ -258,22 +255,24 @@ function DeviceSection({ options }: { options: PlaybackOptions | undefined }) {
             options={videoChoices}
             labelOf={(codec) =>
               codec === "auto"
-                ? `Automatic (${videoCodecName(autoVideo)})`
+                ? tr("playback.codec.automatic", {
+                    codec: videoCodecName(autoVideo),
+                  })
                 : videoCodecName(codec)
             }
             onChange={(videoCodec) => device.setDevicePlayback({ videoCodec })}
           />
         ) : (
           <FixedRow
-            title="Video codec"
-            description="The only codec this browser and the server share."
+            title={tr("playback.videoCodec.title")}
+            description={tr("playback.videoCodec.only")}
             value="H.264"
           />
         )}
         {audioCodecs.length > 1 ? (
           <SelectRow
-            title="Audio codec"
-            description="Stereo, for audio this browser can't play."
+            title={tr("playback.audioCodec.title")}
+            description={tr("playback.audioCodec.description")}
             value={
               audioChoices.includes(device.audioCodec)
                 ? device.audioCodec
@@ -282,15 +281,17 @@ function DeviceSection({ options }: { options: PlaybackOptions | undefined }) {
             options={audioChoices}
             labelOf={(codec) =>
               codec === "auto"
-                ? `Automatic (${audioFormatName(autoAudio)})`
+                ? tr("playback.codec.automatic", {
+                    codec: audioFormatName(autoAudio),
+                  })
                 : audioFormatName(codec)
             }
             onChange={(audioCodec) => device.setDevicePlayback({ audioCodec })}
           />
         ) : (
           <FixedRow
-            title="Audio codec"
-            description="Stereo, for audio this browser can't play."
+            title={tr("playback.audioCodec.title")}
+            description={tr("playback.audioCodec.description")}
             value="AAC"
           />
         )}
@@ -315,15 +316,15 @@ function PassthroughSection() {
   return (
     <SettingsSubsection
       id="passthrough"
-      title="Audio passthrough"
-      description="Formats this browser plays directly. Turn one off to have the server convert it."
+      title={tr("playback.passthrough.title")}
+      description={tr("playback.passthrough.description")}
     >
       <SettingRows>
         {codecs.map((codec) => (
           <SwitchRow
             key={codec}
             title={audioFormatName(codec)}
-            description={PASSTHROUGH_NOTES.get(codec)}
+            description={passthroughNote(codec)}
             checked={!convertAudio.includes(codec)}
             onChange={(on) =>
               setDevicePlayback({

@@ -1,8 +1,9 @@
 import type { Artwork, Credit, CreditKind, Title } from "@matinee/contracts"
 import { cn } from "@matinee/ui/lib/utils"
 import { Link } from "@tanstack/react-router"
-import { Fragment } from "react"
+import { Fragment, type ReactNode } from "react"
 
+import { perLocale, tr } from "@/i18n"
 import { art } from "@/lib/media"
 
 import { Picture, textLink, tone } from "./media-item"
@@ -22,17 +23,33 @@ function initials(name: string): string {
 
 /** What someone is credited as, like `Director`, or `Directors` for more. */
 export function creditLabel(kind: CreditKind, count = 1): string {
-  const one = count === 1
-  switch (kind) {
-    case "creator":
-      return one ? "Creator" : "Creators"
-    case "director":
-      return one ? "Director" : "Directors"
-    case "writer":
-      return one ? "Writer" : "Writers"
-    case "actor":
-      return one ? "Actor" : "Cast"
-  }
+  return tr(`people.credit.${kind}`, { count })
+}
+
+/** "A, B, and C", for names in running text. */
+export const conjunctionList = perLocale(
+  (locale) => new Intl.ListFormat(locale, { type: "conjunction" }),
+)
+
+/** "A, B, C", for a list of tags or labels. */
+export const unitList = perLocale(
+  (locale) => new Intl.ListFormat(locale, { type: "unit", style: "short" }),
+)
+
+/**
+ * Elements listed the way the language lists things, with its own commas
+ * and "and": `format` comes from {@link conjunctionList} or {@link unitList}.
+ */
+export function listNodes(
+  format: Intl.ListFormat,
+  nodes: readonly ReactNode[],
+): ReactNode {
+  const parts = format.formatToParts(nodes.map((_, index) => String(index)))
+  return parts.map((part, index) => (
+    <Fragment key={index}>
+      {part.type === "element" ? nodes[Number(part.value)] : part.value}
+    </Fragment>
+  ))
 }
 
 type Fact = { kind: "person" | "studio"; name: string }
@@ -82,7 +99,7 @@ export function CrewFacts({
   const studios = title.studios.slice(0, 2)
   if (studios.length > 0) {
     groups.push({
-      label: studios.length === 1 ? "Studio" : "Studios",
+      label: tr("people.studio", { count: studios.length }),
       facts: studios.map((name): Fact => ({ kind: "studio", name })),
     })
   }
@@ -98,18 +115,20 @@ export function CrewFacts({
         <div key={group.label} className="flex min-w-0 gap-2">
           <dt className="text-muted-foreground shrink-0">{group.label}</dt>
           <dd className="text-foreground/85 min-w-0">
-            {group.facts.slice(0, MAX_NAMES).map((fact, i) => (
-              <Fragment key={fact.name}>
-                {i > 0 && ", "}
-                <FactLink fact={fact} />
-              </Fragment>
-            ))}
-            {group.facts.length > MAX_NAMES && (
-              <span className="text-muted-foreground">
-                {" "}
-                and {group.facts.length - MAX_NAMES} more
-              </span>
-            )}
+            {listNodes(conjunctionList(), [
+              ...group.facts
+                .slice(0, MAX_NAMES)
+                .map((fact) => <FactLink key={fact.name} fact={fact} />),
+              ...(group.facts.length > MAX_NAMES
+                ? [
+                    <span key="more" className="text-muted-foreground">
+                      {tr("people.more", {
+                        count: group.facts.length - MAX_NAMES,
+                      })}
+                    </span>,
+                  ]
+                : []),
+            ])}
           </dd>
         </div>
       ))}
@@ -122,7 +141,7 @@ export function CastRail({ credits }: { credits: Credit[] }) {
   const cast = credits.filter((c) => c.kind === "actor")
   if (cast.length === 0) return null
   return (
-    <Rail title="Cast">
+    <Rail title={tr("people.cast")}>
       {cast.map((person, i) => (
         // The same actor can play two parts.
         <RailItem key={`${i}:${person.name}`} artwork="person">

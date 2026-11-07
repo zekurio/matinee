@@ -7,6 +7,8 @@ import type {
   TitleSummary,
 } from "@matinee/contracts"
 
+import { tr } from "@/i18n"
+
 /**
  * One thing a search found. A new kind of result is a new member here, a
  * section in `searchSections`, and a row in each place that shows them.
@@ -54,7 +56,7 @@ export function searchSections(
   const sections: SearchSection[] = [
     {
       key: "profiles",
-      label: "Profiles",
+      label: tr("search.section.profiles"),
       kind: "profiles",
       hits: results.users.map((user) => ({ kind: "user", id: user.id, user })),
     },
@@ -68,7 +70,7 @@ export function searchSections(
     })),
     {
       key: "cast",
-      label: "Cast & crew",
+      label: tr("search.section.cast"),
       kind: "cast",
       hits: results.people.map((person) => ({
         kind: "person",
@@ -78,7 +80,7 @@ export function searchSections(
     },
     {
       key: "genres",
-      label: "Genres",
+      label: tr("search.section.genres"),
       kind: "genres",
       hits: results.genres.map((facet) => ({
         kind: "genre",
@@ -88,7 +90,7 @@ export function searchSections(
     },
     {
       key: "studios",
-      label: "Studios",
+      label: tr("search.section.studios"),
       kind: "studios",
       hits: results.studios.map((facet) => ({
         kind: "studio",

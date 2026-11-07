@@ -16,6 +16,7 @@ import {
 import { CalendarIcon, CheckIcon, ChevronDownIcon } from "lucide-react"
 import { type RefObject, useId, useRef, useState } from "react"
 
+import { tr } from "@/i18n"
 import { useAppForm } from "@/lib/form"
 import { formatDate } from "@/lib/format"
 
@@ -86,7 +87,7 @@ function WatchedDateForm({
     >
       <DialogHeader>
         <DialogTitle className="text-lg leading-7 font-semibold">
-          When did you watch it?
+          {tr("media.watchedDate.title")}
         </DialogTitle>
       </DialogHeader>
       <form.Field name="day">
@@ -101,11 +102,11 @@ function WatchedDateForm({
       </form.Field>
       <DialogFooter className="-mx-6 -mb-6 px-6 py-4">
         <Button type="button" variant="ghost" onClick={onCancel}>
-          Cancel
+          {tr("media.watchedDate.cancel")}
         </Button>
         <form.AppForm>
           <form.SubmitButton icon={<CheckIcon />}>
-            Mark watched
+            {tr("media.markWatched")}
           </form.SubmitButton>
         </form.AppForm>
       </DialogFooter>
@@ -131,7 +132,7 @@ function DayField({
   const valueId = useId()
   return (
     <Field>
-      <FieldLabel id={labelId}>Date</FieldLabel>
+      <FieldLabel id={labelId}>{tr("media.watchedDate.date")}</FieldLabel>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger
           ref={triggerRef}

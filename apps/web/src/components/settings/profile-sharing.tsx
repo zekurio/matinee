@@ -3,6 +3,7 @@ import { toast } from "@matinee/ui/components/sonner"
 import { Switch } from "@matinee/ui/components/switch"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 
+import { tr } from "@/i18n"
 import { client, errorMessage, orpc } from "@/lib/rpc"
 
 import { SettingRow, SettingRows } from "./settings-panel"
@@ -18,7 +19,7 @@ export function useUpdateSharing() {
       await queryClient.invalidateQueries({ queryKey: orpc.profiles.key() })
     },
     onError: (error) =>
-      toast.error("Couldn't change what your profile shows", {
+      toast.error(tr("account.sharing.failed"), {
         description: errorMessage(error),
       }),
   })
@@ -35,7 +36,7 @@ export function SharingRows({ sharing }: { sharing: ProfileSharing }) {
   }
   return (
     <SettingRows>
-      <SettingRow title="Show my favorites">
+      <SettingRow title={tr("account.sharing.favorites")}>
         {({ controlId, labelId, descriptionId }) => (
           <Switch
             id={controlId}
@@ -47,8 +48,8 @@ export function SharingRows({ sharing }: { sharing: ProfileSharing }) {
         )}
       </SettingRow>
       <SettingRow
-        title="Show my statistics"
-        description="Watch time, top titles, and recent plays."
+        title={tr("account.sharing.stats")}
+        description={tr("account.sharing.stats.description")}
       >
         {({ controlId, labelId, descriptionId }) => (
           <Switch

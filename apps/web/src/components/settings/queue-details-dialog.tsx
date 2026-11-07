@@ -11,7 +11,18 @@ import { Spinner } from "@matinee/ui/components/spinner"
 import { CircleAlertIcon } from "lucide-react"
 import type { ReactNode } from "react"
 
+import { tr, translateKnown } from "@/i18n"
 import { formatRelative, formatSpan } from "@/lib/format"
+
+/** A queue's name in the interface's language. */
+export function queueName(queue: JobQueueStatus): string {
+  return tr(`jobs.queue.${queue.id}.name`)
+}
+
+/** What a queue does, in the interface's language. */
+export function queueDescription(queue: JobQueueStatus): string {
+  return tr(`jobs.queue.${queue.id}.description`)
+}
 
 /**
  * What a queue works on and what failed lately, as Jellyfin shows a log
@@ -34,19 +45,19 @@ export function QueueDetailsDialog({
       <DialogContent className="max-h-[calc(100dvh-4rem)] grid-rows-[auto_minmax(0,1fr)] gap-5 p-6 sm:max-w-xl">
         <DialogHeader className="pr-8">
           <DialogTitle className="text-lg leading-7 font-semibold">
-            {queue.name}
+            {queueName(queue)}
           </DialogTitle>
           <DialogDescription className="tabular-nums">
             {summary}
           </DialogDescription>
         </DialogHeader>
         <div className="-mx-6 flex min-h-0 flex-col gap-6 overflow-y-auto px-6">
-          <Section title="Running">
+          <Section title={tr("jobs.details.running")}>
             {queue.running.length === 0 ? (
               <Empty>
                 {queue.paused
-                  ? "Paused. Nothing is running."
-                  : "Nothing is running."}
+                  ? tr("jobs.details.pausedNothingRunning")
+                  : tr("jobs.details.nothingRunning")}
               </Empty>
             ) : (
               <List>
@@ -55,7 +66,11 @@ export function QueueDetailsDialog({
                     <Spinner className="text-muted-foreground mt-0.5 size-4 shrink-0" />
                     <Job
                       label={job.label}
-                      meta={`For ${formatSpan((Date.now() - job.startedAt.getTime()) / 1000)}`}
+                      meta={tr("jobs.details.runningFor", {
+                        span: formatSpan(
+                          (Date.now() - job.startedAt.getTime()) / 1000,
+                        ),
+                      })}
                     />
                   </ListItem>
                 ))}
@@ -63,11 +78,11 @@ export function QueueDetailsDialog({
             )}
           </Section>
           <Section
-            title="Recent failures"
+            title={tr("jobs.details.failures")}
             description={failureNote(queue.retryAfterSeconds)}
           >
             {queue.failures.length === 0 ? (
-              <Empty>None since the server started.</Empty>
+              <Empty>{tr("jobs.details.noFailures")}</Empty>
             ) : (
               <List>
                 {queue.failures.map((failure, i) => (
@@ -77,9 +92,9 @@ export function QueueDetailsDialog({
                   >
                     <CircleAlertIcon className="text-destructive mt-0.5 size-4 shrink-0" />
                     <Job
-                      label={failure.label}
+                      label={translateKnown(failure.label)}
                       meta={formatRelative(failure.at)}
-                      detail={failure.message}
+                      detail={translateKnown(failure.message)}
                     />
                   </ListItem>
                 ))}
@@ -93,13 +108,10 @@ export function QueueDetailsDialog({
 }
 
 function failureNote(retryAfterSeconds: number | null): string {
-  const kept = "The last five since the server started."
-  if (retryAfterSeconds === null) {
-    return `${kept} Each is tried again after the server restarts.`
-  }
+  if (retryAfterSeconds === null) return tr("jobs.details.retryOnRestart")
   return retryAfterSeconds > 0
-    ? `${kept} Each is tried again after ${formatSpan(retryAfterSeconds)}.`
-    : kept
+    ? tr("jobs.details.retryAfter", { span: formatSpan(retryAfterSeconds) })
+    : tr("jobs.details.kept")
 }
 
 function Section({

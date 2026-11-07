@@ -8,6 +8,7 @@ import {
 import { LibraryChips } from "@/components/library-chips"
 import { PosterCard, posterGrid } from "@/components/media-item"
 import { PageHeader } from "@/components/page-header"
+import { tr } from "@/i18n"
 import { orpc } from "@/lib/rpc"
 
 import {
@@ -64,7 +65,7 @@ export function TitleGrid({ library }: { library: Library }) {
   )
 
   const rows = titles.data?.pages.flatMap((page) => page.items) ?? []
-  const noun = library.kind === "shows" ? "show" : "movie"
+  const kind = library.kind
   const filters: FilterControls | undefined = facets.data && {
     ...filterState,
     facets: facets.data,
@@ -72,8 +73,8 @@ export function TitleGrid({ library }: { library: Library }) {
   const controls: ListControlsProps = {
     search,
     setSearch,
-    label: `Search ${noun}s`,
-    sorts: titleSorts,
+    label: tr(`library.search.${kind}`),
+    sorts: titleSorts(),
     sort,
     setSort,
     filters,
@@ -97,17 +98,23 @@ export function TitleGrid({ library }: { library: Library }) {
         <EmptyList
           title={
             query
-              ? `No ${noun}s match “${query}”`
+              ? tr(`library.noMatch.${kind}`, { query })
               : filtered
-                ? `No ${noun}s match these filters`
-                : `No ${noun}s found`
+                ? tr(`library.noFilterMatch.${kind}`)
+                : tr(`library.none.${kind}`)
           }
           scanning={library.scanning}
           clear={
             query
-              ? { label: "Clear search", onClick: () => setSearch("") }
+              ? {
+                  label: tr("library.clearSearch"),
+                  onClick: () => setSearch(""),
+                }
               : filtered
-                ? { label: "Clear filters", onClick: filterState.clear }
+                ? {
+                    label: tr("library.clearFilters"),
+                    onClick: filterState.clear,
+                  }
                 : undefined
           }
         />

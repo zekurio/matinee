@@ -10,6 +10,7 @@ import { useState } from "react"
 import { AuthScreen } from "@/components/auth-screen"
 import { FormAlert } from "@/components/form-alert"
 import { UsernamePasskeyForm } from "@/components/username-passkey-form"
+import { tr, translateKnown } from "@/i18n"
 import { useAppForm } from "@/lib/form"
 import { signUpWithPasskey } from "@/lib/passkey"
 import { client, errorMessage, orpc } from "@/lib/rpc"
@@ -38,16 +39,14 @@ function SetupPage() {
 
   return (
     <AuthScreen
-      title="Set up Matinee"
+      title={tr("auth.setup.title")}
       description={
-        unlocked
-          ? "Create the admin account."
-          : "Enter the setup token to claim this server."
+        unlocked ? tr("auth.setup.createAdmin") : tr("auth.setup.enterToken")
       }
     >
       <div className="flex flex-col gap-4">
         {search[AUTH_ERROR_QUERY_KEY] && (
-          <FormAlert message={search[AUTH_ERROR_QUERY_KEY]} />
+          <FormAlert message={translateKnown(search[AUTH_ERROR_QUERY_KEY])} />
         )}
         {unlocked ? (
           <CreateAdmin oidcName={config.oidc?.displayName ?? null} />
@@ -84,8 +83,8 @@ function SetupToken({ onUnlocked }: { onUnlocked: () => void }) {
         {(field) => (
           <field.TextField
             id="setup-token"
-            label="Setup token"
-            description="The server prints it to its log on start."
+            label={tr("auth.setup.token")}
+            description={tr("auth.setup.tokenHint")}
             serverError={unlock.error ? errorMessage(unlock.error) : null}
             autoComplete="off"
             spellCheck={false}
@@ -95,7 +94,7 @@ function SetupToken({ onUnlocked }: { onUnlocked: () => void }) {
       </form.AppField>
       <form.AppForm>
         <form.SubmitButton size="lg" pending={unlock.isPending}>
-          Continue
+          {tr("auth.setup.continue")}
         </form.SubmitButton>
       </form.AppForm>
     </form>
@@ -116,7 +115,7 @@ function CreateAdmin({ oidcName }: { oidcName: string | null }) {
   return (
     <>
       <UsernamePasskeyForm
-        submitLabel="Create admin with a passkey"
+        submitLabel={tr("auth.setup.adminPasskey")}
         pending={signUp.isPending}
         error={signUp.error}
         onSubmit={(username) => signUp.mutate(username)}
@@ -125,8 +124,7 @@ function CreateAdmin({ oidcName }: { oidcName: string | null }) {
         <>
           <div className="text-muted-foreground flex items-center gap-3 text-sm">
             <Separator className="flex-1" />
-            or
-            <Separator className="flex-1" />
+            {tr("auth.setup.or")} <Separator className="flex-1" />
           </div>
           <a
             href={oidcStartPath("sign-in", "/?settings=libraries")}
@@ -136,7 +134,7 @@ function CreateAdmin({ oidcName }: { oidcName: string | null }) {
             })}
           >
             <LogInIcon />
-            Create admin with {oidcName}
+            {tr("auth.setup.adminOidc", { provider: oidcName })}
           </a>
         </>
       )}
