@@ -6,11 +6,17 @@ import {
   useNavigate,
   useRouterState,
 } from "@tanstack/react-router"
-import { useCallback } from "react"
+import { lazy, Suspense, useCallback, useState } from "react"
 
 import { AppShell } from "@/components/app-shell"
-import { SettingsDialog } from "@/components/settings/settings-dialog"
 import { SETTINGS_OVERVIEW } from "@/lib/settings"
+
+// Every settings panel is in here, and most visits never open one.
+const SettingsDialog = lazy(() =>
+  import("@/components/settings/settings-dialog").then((module) => ({
+    default: module.SettingsDialog,
+  })),
+)
 
 const ShellSearch = t.object({
   /** The open settings section; settings is a dialog over any page. */
@@ -29,6 +35,10 @@ function Shell() {
   const { user } = Route.useRouteContext()
   const { settings } = Route.useSearch()
   const navigate = useNavigate()
+  // Loaded the first time settings open, then kept, so it can animate
+  // closed.
+  const [settingsLoaded, setSettingsLoaded] = useState(settings !== undefined)
+  if (settings !== undefined && !settingsLoaded) setSettingsLoaded(true)
   const fromOverview = useRouterState({
     select: (state) => state.location.state.settingsFromOverview === true,
   })
@@ -60,26 +70,30 @@ function Shell() {
   return (
     <AppShell user={user}>
       <Outlet />
-      <SettingsDialog
-        user={user}
-        section={settings ?? null}
-        onClose={() => setSettings(undefined, { replace: true })}
-        onNavigate={(section) => setSettings(section, { replace: true })}
-        // Its own history entry, so the phone's back gesture returns to the
-        // menu.
-        onOpenSection={(section) =>
-          setSettings(section, { fromOverview: true })
-        }
-        onBack={() => {
-          if (fromOverview) {
-            window.history.back()
-            return
-          }
-          // Opened straight on a section, so there's no menu entry to pop:
-          // this entry becomes the menu.
-          setSettings(SETTINGS_OVERVIEW, { replace: true })
-        }}
-      />
+      {settingsLoaded && (
+        <Suspense>
+          <SettingsDialog
+            user={user}
+            section={settings ?? null}
+            onClose={() => setSettings(undefined, { replace: true })}
+            onNavigate={(section) => setSettings(section, { replace: true })}
+            // Its own history entry, so the phone's back gesture returns to the
+            // menu.
+            onOpenSection={(section) =>
+              setSettings(section, { fromOverview: true })
+            }
+            onBack={() => {
+              if (fromOverview) {
+                window.history.back()
+                return
+              }
+              // Opened straight on a section, so there's no menu entry to pop:
+              // this entry becomes the menu.
+              setSettings(SETTINGS_OVERVIEW, { replace: true })
+            }}
+          />
+        </Suspense>
+      )}
     </AppShell>
   )
 }

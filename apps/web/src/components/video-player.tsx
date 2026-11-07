@@ -42,7 +42,7 @@ import {
 import { formatPercent } from "./player-format"
 import { PlayerMenus } from "./player-menus"
 import type { TrickplayTiles } from "./trickplay-thumb"
-import { useHls } from "./use-hls"
+import { loadHls, useHls } from "./use-hls"
 import { usePlayback } from "./use-playback"
 import { usePlayerKeys } from "./use-player-keys"
 import {
@@ -189,6 +189,13 @@ function Player({
   // The store's actions and session never change, so one read is enough.
   const actions = store.getState()
   const { sessionId } = actions
+
+  // An encode plays through hls.js. When it's sure to be one, its code
+  // loads now, while the tracks do, rather than once the source is picked.
+  const encodes = !videoPlays || actions.quality !== "original"
+  useEffect(() => {
+    if (encodes) void loadHls()
+  }, [encodes])
 
   const playback = usePlayback({
     video,
