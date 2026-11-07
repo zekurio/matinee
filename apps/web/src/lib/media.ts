@@ -1,6 +1,7 @@
 import {
   type Artwork,
   artworkPath,
+  artworkSrcSet,
   type ArtworkSize,
   knownChannelLayout,
   type HdrFormat,
@@ -227,15 +228,26 @@ export function episodeCode(item: MediaItem): string | null {
       })
 }
 
-/** An image to load, and the blurred stand-in to show until it does. */
-export type ImageSource = { src: string; placeholder: ImagePlaceholder | null }
+/**
+ * An image to load, and the blurred stand-in to show until it does.
+ * `srcSet` offers the server's other sizes of it.
+ */
+export type ImageSource = {
+  src: string
+  srcSet?: string
+  placeholder: ImagePlaceholder | null
+}
 
 export function art(
   image: Artwork | null | undefined,
   size: ArtworkSize = "small",
 ): ImageSource | null {
   return image
-    ? { src: artworkPath(image.id, size), placeholder: image.placeholder }
+    ? {
+        src: artworkPath(image.id, size),
+        srcSet: artworkSrcSet(image.id, size),
+        placeholder: image.placeholder,
+      }
     : null
 }
 
@@ -244,7 +256,9 @@ export function frame(
   itemId: string,
   size: ArtworkSize = "small",
 ): ImageSource {
-  return { src: mediaThumbnailPath(itemId, size), placeholder: null }
+  // Frames come in two sizes: for cards, and for banners.
+  const thumbnail = size === "medium" || size === "large" ? "large" : "small"
+  return { src: mediaThumbnailPath(itemId, thumbnail), placeholder: null }
 }
 
 /** The sources that exist, in order, for `Picture`. */

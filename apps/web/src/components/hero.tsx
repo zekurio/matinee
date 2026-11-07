@@ -272,14 +272,16 @@ function TitleMark({ item }: { item: MediaItem }) {
   const label = itemLabel(item)
   const name = label.code ? label.showName : label.title
   // Transparent, so no placeholder: it would show as a smudge.
-  const logo = art(item.title?.images.logo, "large")?.src
+  const logo = art(item.title?.images.logo, "large")
   const [logoFailed, setLogoFailed] = useState(false)
   if (logo && !logoFailed) {
     return (
       <h2>
         <span className="sr-only">{name}</span>
         <img
-          src={logo}
+          src={logo.src}
+          srcSet={logo.srcSet}
+          sizes="(min-width: 640px) 32rem, 80vw"
           alt=""
           onError={() => setLogoFailed(true)}
           className="max-h-[clamp(3.5rem,9svh,6rem)] max-w-[min(80vw,32rem)] object-contain object-left-bottom drop-shadow-[0_2px_12px_rgb(0_0_0/0.5)] sm:max-h-[clamp(3.5rem,16vh,9rem)] lg:max-h-[clamp(6rem,14vh,11rem)]"

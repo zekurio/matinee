@@ -4,7 +4,13 @@ import { access, mkdir, rename, rm, stat, writeFile } from "node:fs/promises"
 import { join } from "node:path"
 import { Readable } from "node:stream"
 
-import type { Artwork, ArtworkSize, ImagePlaceholder } from "@matinee/contracts"
+import {
+  type Artwork,
+  ARTWORK_SIZES,
+  ARTWORK_WIDTHS,
+  type ArtworkSize,
+  type ImagePlaceholder,
+} from "@matinee/contracts"
 import { artwork, credit, episode, season, title } from "@matinee/db"
 import { and, eq, inArray, isNotNull, isNull } from "drizzle-orm"
 import type { PgColumn, PgTable } from "drizzle-orm/pg-core"
@@ -18,7 +24,6 @@ import { log } from "../log"
 import { readPlaceholder } from "./blurhash"
 import { run } from "./process"
 
-const WIDTHS = { small: 480, large: 1920 } satisfies Record<ArtworkSize, number>
 const MAX_BYTES = 25 * 1024 * 1024
 const DOWNLOAD_TIMEOUT_MS = 30_000
 // A URL that failed is left alone for this long before trying again.
@@ -158,16 +163,56 @@ async function download(id: string, url: string): Promise<Cached> {
   return { path, format }
 }
 
-/** A copy at most `width` wide. Transparent PNGs stay PNG. */
+/**
+ * A copy at most as wide as `size` allows, as WebP, which is about a third
+ * smaller than JPEG at the same look and keeps a logo's transparency. With
+ * an ffmpeg built without libwebp, JPEG, and PNG for transparent images.
+ */
 async function resize(
   id: string,
   original: Cached,
   size: ArtworkSize,
 ): Promise<Cached> {
+  if (webp) {
+    const made = await scale(id, original, size, "webp")
+    if (made) {
+      // Copies an older server made in another format are no longer read.
+      await Promise.all(
+        (["jpg", "png"] as const).map((format) =>
+          rm(join(dir, `${id}-${size}.${format}`), { force: true }),
+        ),
+      )
+      return made
+    }
+    webp = false
+    log.warn("ffmpeg can't write WebP; artwork stays JPEG and PNG")
+  }
   const format = original.format === "png" ? "png" : "jpg"
+  const made = await scale(id, original, size, format)
+  if (made) return made
+  // Without ffmpeg the original still works, only heavier.
+  log.warn(`Couldn't resize artwork ${id}, serving the original`)
+  return original
+}
+
+// Cleared once ffmpeg fails to write WebP.
+let webp = true
+
+async function scale(
+  id: string,
+  original: Cached,
+  size: ArtworkSize,
+  format: Format,
+): Promise<Cached | null> {
   const path = join(dir, `${id}-${size}.${format}`)
   if (await exists(path)) return { path, format }
   const tmp = `${path}.${process.pid}.tmp.${format}`
+  const quality =
+    format === "webp"
+      ? ["-c:v", "libwebp", "-quality", "80"]
+      : format === "jpg"
+        ? ["-q:v", "3"]
+        : []
   try {
     await run(env.MATINEE_FFMPEG_PATH, [
       "-hide_banner",
@@ -178,8 +223,8 @@ async function resize(
       "-frames:v",
       "1",
       "-vf",
-      `scale='min(iw,${WIDTHS[size]})':-2`,
-      ...(format === "jpg" ? ["-q:v", "3"] : []),
+      `scale='min(iw,${ARTWORK_WIDTHS[size]})':-2`,
+      ...quality,
       "-y",
       tmp,
     ])
@@ -187,9 +232,8 @@ async function resize(
     return { path, format }
   } catch (cause) {
     await rm(tmp, { force: true })
-    // Without ffmpeg the original still works, only heavier.
-    log.warn(`Couldn't resize artwork ${id}, serving the original`, cause)
-    return original
+    log.warn(`Couldn't scale artwork ${id} to ${format}`, cause)
+    return null
   }
 }
 
@@ -203,7 +247,9 @@ async function findResized(
   id: string,
   size: ArtworkSize,
 ): Promise<Cached | null> {
-  for (const format of ["jpg", "png"] as const) {
+  // While WebP works, an older JPEG or PNG copy is made again as WebP.
+  const formats = webp ? (["webp"] as const) : (["jpg", "png"] as const)
+  for (const format of formats) {
     const path = join(dir, `${id}-${size}.${format}`)
     if (await exists(path)) return { path, format }
   }
@@ -239,6 +285,11 @@ async function load({ id, size }: ArtworkJob): Promise<Cached | null> {
   if (!file) {
     const original = (await findOriginal(id)) ?? (await download(id, row.url))
     file = await resize(id, original, size)
+    // Cards ask for `thumb` on screens that show them small, and `small`
+    // on sharper ones, so both come from the one download.
+    if (size === "small" && !(await findResized(id, "thumb"))) {
+      await resize(id, original, "thumb")
+    }
   }
   if (row.blurhash === null) await savePlaceholder(id, file)
   return file
@@ -358,7 +409,8 @@ artworkRoutes.get("/:id", async (c) => {
   if (!(await readSession(c))) return c.body(null, 401)
   const id = c.req.param("id")
   if (!/^[0-9a-f]{32}$/.test(id)) return c.body(null, 404)
-  const size = c.req.query("size") === "large" ? "large" : "small"
+  const size =
+    ARTWORK_SIZES.find((name) => name === c.req.query("size")) ?? "small"
 
   const file = await artworkFile(id, size)
   if (!file) return c.body(null, 404)

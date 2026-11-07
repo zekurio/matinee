@@ -154,15 +154,41 @@ export function trickplayPlaylistPath(itemId: string): string {
   return `/api/media/${encodeURIComponent(itemId)}/trickplay/tiles.m3u8`
 }
 
-export type ArtworkSize = "small" | "large"
+/** The widths the server scales artwork to, smallest first. */
+export const ARTWORK_WIDTHS = {
+  thumb: 240,
+  small: 480,
+  medium: 960,
+  large: 1920,
+} as const
+
+export type ArtworkSize = keyof typeof ARTWORK_WIDTHS
+
+export const ARTWORK_SIZES = Object.keys(ARTWORK_WIDTHS).filter(
+  (size): size is ArtworkSize => size in ARTWORK_WIDTHS,
+)
 
 /**
- * Artwork from a metadata provider, cached by the server: `small` is at
- * most 480px wide for cards, `large` at most 1920px for banners. The URL
- * never changes its image, so browsers may cache it for good.
+ * Artwork from a metadata provider, cached by the server at most as wide
+ * as `ARTWORK_WIDTHS` says: `small` for cards, `large` for banners. The
+ * URL never changes its image, so browsers may cache it for good.
  */
 export function artworkPath(id: string, size: ArtworkSize = "small"): string {
   return `/api/artwork/${encodeURIComponent(id)}?size=${size}`
+}
+
+/**
+ * A `srcset` with every size up to `largest` and the one above it, so the
+ * browser picks the smallest that is sharp at the image's width on screen.
+ */
+export function artworkSrcSet(id: string, largest: ArtworkSize): string {
+  const last = Math.min(
+    ARTWORK_SIZES.indexOf(largest) + 1,
+    ARTWORK_SIZES.length - 1,
+  )
+  return ARTWORK_SIZES.slice(0, last + 1)
+    .map((size) => `${artworkPath(id, size)} ${ARTWORK_WIDTHS[size]}w`)
+    .join(", ")
 }
 
 /**

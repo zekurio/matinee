@@ -189,13 +189,16 @@ episodes, and the author of the source. TheTVDB only lists crew per episode,
 so its shows get the cast and studios. Like Jellyfin, Matinee leaves out the
 rest of the crew and episode guest stars.
 
-The server downloads artwork into `$MATINEE_DATA_DIR/artwork` and resizes
-it with ffmpeg. Clients get artwork ids and load them through
-`artworkPath()`; the server only fetches URLs a provider gave it. As in
+The server downloads artwork into `$MATINEE_DATA_DIR/artwork` and scales
+it with ffmpeg to WebP copies 240, 480, 960, and 1920 px wide, made as
+they're first asked for (JPEG and PNG when ffmpeg lacks libwebp). Clients
+get artwork ids and load them through `artworkPath()`, or offer every size
+with `artworkSrcSet()` and let the browser pick; the server only fetches
+URLs a provider gave it. As in
 Jellyfin, a metadata fetch downloads every image it saved: posters,
 backdrops, logos, season posters, episode stills, and cast photos.
 Posters and backdrops go first, and an image someone opens goes ahead of
-all of them. The original and its small copy take about 150 KB per image
+all of them. The original and its card copies take about 150 KB per image
 on average, so a library of 1,000 titles needs a few GB.
 
 Like Jellyfin, the server reads a [BlurHash](https://blurha.sh) from each
@@ -467,6 +470,12 @@ pnpm build
 MATINEE_WEB_DIST=apps/web/dist PUBLIC_URL=https://media.example.com \
   DATABASE_URL=postgres://... pnpm start
 ```
+
+The build bundles the server into `apps/server/dist`, with the migrations
+beside it, so it runs on plain Node without the TypeScript sources. `pnpm
+start` keeps a pnpm process around it; a service manager can run
+`node dist/server/index.mjs` with `NODE_ENV=production` from `apps/server`
+instead, which is all `pnpm start` does.
 
 Until the first account exists, the server logs a setup token. Enter it on
 `/setup` to claim the admin account.
