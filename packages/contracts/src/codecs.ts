@@ -110,6 +110,19 @@ export function channelLayoutName(
   layout: string | null,
   channels: number | null,
 ): string | null {
+  const known = knownChannelLayout(layout, channels)
+  if (known || !channels || channels < 1) return known
+  return `${channels} channels`
+}
+
+/**
+ * `channelLayoutName` without the English "8 channels" for a count no
+ * layout fits, for a client that says that in its own language.
+ */
+export function knownChannelLayout(
+  layout: string | null,
+  channels: number | null,
+): string | null {
   // The part in parentheses places the speakers, without changing the count.
   const name = layout?.split("(")[0]?.trim().toLowerCase()
   if (name) {
@@ -118,7 +131,7 @@ export function channelLayoutName(
     if (known) return known
   }
   if (!channels || channels < 1) return null
-  return GUESSED_LAYOUTS.get(channels) ?? `${channels} channels`
+  return GUESSED_LAYOUTS.get(channels) ?? null
 }
 
 /** `HEVC` for ffprobe's `hevc`. */

@@ -75,6 +75,7 @@ export async function listAudio(item: MediaItemRow): Promise<AudioTrack[]> {
       index: stream.index,
       label: trackLabel(language, stream.title, `Track ${position + 1}`),
       language,
+      title: stream.title ?? null,
       codec: stream.codec,
       format: audioFormatName(stream.codec, stream.profile),
       channels: stream.channels,

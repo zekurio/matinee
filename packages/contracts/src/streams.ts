@@ -156,6 +156,11 @@ export const SubtitleTrack = t.object({
   label: t.string(),
   /** BCP 47 tag, like `en` or `pt-BR`. Null when the file doesn't say. */
   language: t.string().nullable(),
+  /**
+   * The track's own title from the file, like `Signs & Songs`. Clients that
+   * show another language than English build their label from it.
+   */
+  title: t.string().nullable(),
   /** Translates only foreign dialogue and signs. */
   forced: t.boolean(),
   /** Also describes sounds, for deaf and hard of hearing viewers (SDH, CC). */
@@ -186,6 +191,8 @@ export const AudioTrack = t.object({
   label: t.string(),
   /** BCP 47 tag, like `en` or `ja`. Null when the file doesn't say. */
   language: t.string().nullable(),
+  /** The track's own title from the file, like `Commentary`. */
+  title: t.string().nullable(),
   /** ffmpeg's codec name, like `aac`, `eac3`, or `truehd`. */
   codec: t.string(),
   /** The codec and profile for display, like `TrueHD Atmos` or `DTS-HD MA`. */
