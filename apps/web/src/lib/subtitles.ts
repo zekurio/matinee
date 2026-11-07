@@ -1,65 +1,39 @@
-import type { SubtitleTrack } from "@matinee/contracts"
-import { z } from "zod"
+import {
+  LanguageTag,
+  type PlaybackPreferences,
+  type SubtitleTrack,
+} from "@matinee/contracts"
 
-const STORAGE_KEY = "matinee.subtitles"
+import { deviceLanguage, sameLanguage } from "./languages"
+
+/** The language subtitles show in: the preference, else the device's. */
+function subtitleLanguage(preferences: PlaybackPreferences): string {
+  return preferences.subtitleLanguage ?? deviceLanguage()
+}
 
 /**
- * The viewer's last subtitle choice, kept across files. The language stays
- * when subtitles go off, so turning them back on finds the same language.
+ * Whether the player draws the track over whatever plays. A `burn-in`
+ * track needs an encode of its own, so only the viewer's pick shows one.
  */
-const SubtitlePreference = z.object({
-  enabled: z.boolean(),
-  language: z.string().max(35).nullable(),
-})
-export type SubtitlePreference = z.infer<typeof SubtitlePreference>
-
-/** Null until the viewer picks a track or turns subtitles off. */
-export function readSubtitlePreference(): SubtitlePreference | null {
-  try {
-    const stored = window.localStorage.getItem(STORAGE_KEY)
-    if (stored === null) return null
-    const parsed = SubtitlePreference.safeParse(JSON.parse(stored))
-    return parsed.success ? parsed.data : null
-  } catch {
-    return null
-  }
-}
-
-export function writeSubtitlePreference(next: SubtitlePreference): void {
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
-  } catch {
-    // Storage is off or full. The choice still holds for this file.
-  }
-}
-
-/** `pt-BR` and `pt` are the same language here. */
-function baseLanguage(tag: string | null): string | null {
-  if (!tag) return null
-  try {
-    return new Intl.Locale(tag).language
-  } catch {
-    return tag.toLowerCase()
-  }
-}
-
-function sameLanguage(a: string | null, b: string | null): boolean {
-  const base = baseLanguage(a)
-  return base !== null && base === baseLanguage(b)
+export function drawable(track: SubtitleTrack): boolean {
+  return track.delivery === "webvtt" || track.delivery === "pgs"
 }
 
 /**
- * The full (not forced) track to show for a language: the exact tag first,
+ * The full or forced track to show for a language: the exact tag first,
  * then one the file marks default, then one without SDH.
  */
 function bestInLanguage(
   tracks: SubtitleTrack[],
-  language: string,
+  language: string | null,
+  forced = false,
 ): SubtitleTrack | null {
   let best: SubtitleTrack | null = null
   let bestScore = -1
   for (const track of tracks) {
-    if (track.forced || !sameLanguage(track.language, language)) continue
+    if (track.forced !== forced || !sameLanguage(track.language, language)) {
+      continue
+    }
     const score =
       (track.language === language ? 4 : 0) +
       (track.default ? 2 : 0) +
@@ -73,42 +47,65 @@ function bestInLanguage(
 }
 
 /**
- * The track to show when a file starts, or null for off. In order: the
- * viewer's language if they had subtitles on; a forced track in the audio's
- * language, which translates only foreign dialogue and signs; a track the
- * file marks default, but only if the viewer never chose.
+ * The forced track for the audio: one in its language, which is the one
+ * made for it, else one in the viewer's subtitle language. Files with
+ * several dubs often have a forced track for each.
+ */
+function forcedTrack(
+  tracks: SubtitleTrack[],
+  audioLanguage: string | null,
+  language: string,
+): SubtitleTrack | null {
+  return (
+    bestInLanguage(tracks, audioLanguage, true) ??
+    bestInLanguage(tracks, language, true)
+  )
+}
+
+/**
+ * The track to show when a file starts, or null for off, by the
+ * preferences' `subtitleMode`. `audioLanguage` is the language of the
+ * audio that plays.
  */
 export function defaultTrack(
   tracks: SubtitleTrack[],
   audioLanguage: string | null,
-  preference: SubtitlePreference | null,
+  preferences: PlaybackPreferences,
 ): SubtitleTrack | null {
-  const shown = tracks.filter((track) => track.available)
-  if (preference?.enabled && preference.language) {
-    const full = bestInLanguage(shown, preference.language)
-    if (full) return full
+  const shown = tracks.filter(drawable)
+  const language = subtitleLanguage(preferences)
+  const forced = () => forcedTrack(shown, audioLanguage, language)
+  switch (preferences.subtitleMode) {
+    case "off":
+      return null
+    case "forced":
+      return forced()
+    case "always":
+      return bestInLanguage(shown, language) ?? forced()
+    case "foreign":
+      // Audio in no known language could be in the viewer's.
+      return audioLanguage !== null && !sameLanguage(audioLanguage, language)
+        ? (bestInLanguage(shown, language) ?? forced())
+        : forced()
+    case "default": {
+      const translation = forced()
+      if (translation) return translation
+      // Some muxers mark every track default, which says nothing.
+      const flagged = shown.filter((track) => track.default)
+      if (shown.length > 1 && flagged.length === shown.length) return null
+      return flagged[0] ?? null
+    }
   }
-  const forced = shown.find(
-    (track) => track.forced && sameLanguage(track.language, audioLanguage),
-  )
-  if (forced) return forced
-  if (preference) return null
-  // Some muxers mark every track default, which says nothing.
-  const flagged = shown.filter((track) => track.default)
-  if (shown.length > 1 && flagged.length === shown.length) return null
-  return flagged[0] ?? null
 }
 
 /** The track C turns on when the viewer hasn't picked one in this file. */
 export function fallbackTrack(
   tracks: SubtitleTrack[],
-  preference: SubtitlePreference | null,
+  preferences: PlaybackPreferences,
 ): SubtitleTrack | null {
-  const shown = tracks.filter((track) => track.available)
+  const shown = tracks.filter(drawable)
   return (
-    (preference?.language
-      ? bestInLanguage(shown, preference.language)
-      : null) ??
+    bestInLanguage(shown, subtitleLanguage(preferences)) ??
     shown.find((track) => track.default && !track.forced) ??
     shown.find((track) => !track.forced) ??
     shown[0] ??
@@ -117,28 +114,37 @@ export function fallbackTrack(
 }
 
 /**
- * The small print beside a track in the menu: its flags, why it can't
- * play, and where it comes from when another track has the same name.
+ * What a pick in the player makes of the preferences when they remember
+ * picks: a full track turns subtitles on in its language, keeping
+ * `foreign` when the audio is foreign to it; a forced track, or off, goes
+ * to forced tracks only. Off stays off.
  */
-export function trackDetail(
-  track: SubtitleTrack,
-  tracks: SubtitleTrack[],
-): string {
+export function rememberPick(
+  track: SubtitleTrack | undefined,
+  preferences: PlaybackPreferences,
+  audioLanguage: string | null,
+): Partial<PlaybackPreferences> {
+  const mode = preferences.subtitleMode
+  if (!track) return { subtitleMode: mode === "off" ? "off" : "forced" }
+  const tag = LanguageTag.safeParse(track.language)
+  const subtitleLanguage = tag.success ? tag.data : preferences.subtitleLanguage
+  if (track.forced) return { subtitleMode: "forced", subtitleLanguage }
+  const foreign =
+    mode === "foreign" &&
+    audioLanguage !== null &&
+    !sameLanguage(audioLanguage, track.language)
+  return { subtitleMode: foreign ? "foreign" : "always", subtitleLanguage }
+}
+
+/**
+ * The small print beside a track in the menu: its flags and format, and
+ * whether picking it transcodes the video.
+ */
+export function trackDetail(track: SubtitleTrack): string {
   const parts = []
   if (track.forced) parts.push("Forced")
   if (track.sdh) parts.push("SDH")
-  if (!track.available) {
-    parts.push("Needs transcoding")
-  } else if (
-    tracks.some(
-      (other) =>
-        other.id !== track.id &&
-        other.label === track.label &&
-        other.forced === track.forced &&
-        other.sdh === track.sdh,
-    )
-  ) {
-    parts.push(track.source === "embedded" ? "Embedded" : "External")
-  }
+  parts.push(track.format)
+  if (track.delivery === "burn-in") parts.push("Burned in")
   return parts.join(" · ")
 }

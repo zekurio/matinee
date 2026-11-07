@@ -1,33 +1,30 @@
 import {
+  mediaHlsPath,
+  mediaPlaybackPath,
   mediaStreamPath,
   RPC_PATH,
   type Subtitles,
   subtitlePath,
+  trickplayTilePath,
 } from "@matinee/contracts"
 import { buttonVariants } from "@matinee/ui/components/button"
-import { toast } from "@matinee/ui/components/sonner"
 import { Spinner } from "@matinee/ui/components/spinner"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router"
 import { useEffect, useState } from "react"
 
-import { type ProgressReport, VideoPlayer } from "@/components/video-player"
+import { useDocumentTitle } from "@/components/page-header"
+import { probeAudioOf } from "@/components/playback-source"
+import type { ProgressReport } from "@/components/use-progress-report"
+import { VideoPlayer } from "@/components/video-player"
 import { itemLabel } from "@/lib/media"
-import { client, errorMessage, orpc } from "@/lib/rpc"
+import { client, errorMessage, liveQuery, orpc } from "@/lib/rpc"
 
 export const Route = createFileRoute("/_authed/watch/$itemId")({
   component: Watch,
 })
 
 const NO_SUBTITLES: Subtitles = { tracks: [], audioLanguage: null }
-
-function formatClock(seconds: number): string {
-  const s = Math.floor(seconds % 60)
-  const m = Math.floor((seconds / 60) % 60)
-  const h = Math.floor(seconds / 3600)
-  const mm = h > 0 ? String(m).padStart(2, "0") : String(m)
-  return `${h > 0 ? `${h}:` : ""}${mm}:${String(s).padStart(2, "0")}`
-}
 
 /**
  * Send a progress report. A page that is closing can't wait for the RPC
@@ -38,6 +35,10 @@ function sendProgress(itemId: string, report: ProgressReport) {
     itemId,
     positionSeconds: report.positionSeconds,
     durationSeconds: report.durationSeconds,
+    sessionId: report.sessionId,
+    playedSeconds: report.playedSeconds,
+    paused: report.paused,
+    closed: report.closed,
   }
   if (report.leaving) {
     void fetch(`${RPC_PATH}/playback/report`, {
@@ -65,31 +66,41 @@ function Watch() {
   const subtitles = useQuery(
     orpc.media.subtitles.queryOptions({ input: { id: itemId } }),
   )
+  const audio = useQuery(
+    orpc.media.audio.queryOptions({ input: { id: itemId } }),
+  )
+  // What the server encodes to, so the player's notices can say.
+  useQuery(orpc.playback.options.queryOptions({ staleTime: 5 * 60_000 }))
+  // The stream ends once the images are there or won't come. Only one that
+  // ended while they were being made opens again.
+  const trickplay = useQuery({
+    ...orpc.media.trickplay.experimental_liveOptions({ input: { id: itemId } }),
+    ...liveQuery,
+    refetchInterval: (query) =>
+      query.state.data?.status === "pending"
+        ? liveQuery.refetchInterval(query)
+        : false,
+  })
+  const trickplayImages =
+    trickplay.data?.status === "ready" ? trickplay.data.images : null
   const [unsupported, setUnsupported] = useState(false)
-  // Bumping this remounts the player from the start.
-  const [restarts, setRestarts] = useState(0)
   const label = item.data ? itemLabel(item.data) : null
   const pageTitle = label?.title
 
   const progress = item.data?.progress
   const startAt =
-    restarts === 0 && progress && !progress.completed
-      ? progress.positionSeconds
-      : undefined
+    progress && !progress.completed ? progress.positionSeconds : undefined
 
-  useEffect(() => {
-    if (pageTitle) document.title = `${pageTitle} · Matinee`
-    return () => {
-      document.title = "Matinee"
-    }
-  }, [pageTitle])
+  useDocumentTitle(pageTitle)
 
-  // Home's rows and title pages depend on what was just watched.
+  // Home's rows, title pages, and statistics depend on what was just watched.
   useEffect(
     () => () => {
       void queryClient.invalidateQueries({ queryKey: orpc.home.key() })
       void queryClient.invalidateQueries({ queryKey: orpc.media.key() })
       void queryClient.invalidateQueries({ queryKey: orpc.titles.key() })
+      void queryClient.invalidateQueries({ queryKey: orpc.profiles.key() })
+      void queryClient.invalidateQueries({ queryKey: orpc.stats.key() })
     },
     [queryClient],
   )
@@ -100,36 +111,48 @@ function Watch() {
   }
 
   if (item.data && label && !unsupported) {
+    const probe = item.data.probe
     return (
       <VideoPlayer
-        key={`${item.data.id}:${restarts}`}
+        key={item.data.id}
         src={mediaStreamPath(item.data.id)}
+        streamSrc={(request) => mediaPlaybackPath(itemId, request)}
+        hlsSrc={(request) => mediaHlsPath(itemId, request)}
+        keyframes={(seconds) => client.media.keyframes({ id: itemId, seconds })}
+        // A failed list means no tracks to switch between, not a broken player.
+        audioTracks={audio.isError ? [] : audio.data}
+        probeAudio={probe ? probeAudioOf(probe) : undefined}
+        originalLanguage={item.data.title?.originalLanguage ?? null}
+        durationSeconds={
+          item.data.durationSeconds ?? probe?.format.durationSeconds ?? null
+        }
+        videoSize={
+          probe?.video
+            ? { width: probe.video.width, height: probe.video.height }
+            : null
+        }
+        videoCodec={probe?.video?.codec ?? null}
         title={label.title}
         subtitle={
           label.code
             ? `${label.code} · ${label.showName}`
-            : item.data.title && item.data.title.kind !== "folder"
+            : item.data.title
               ? (label.year ?? "")
               : label.groupLabel.join(" · ")
         }
         // A failed list means no tracks, not a broken player.
         subtitles={subtitles.isError ? NO_SUBTITLES : subtitles.data}
         subtitleSrc={(trackId) => subtitlePath(itemId, trackId)}
+        trickplay={
+          trickplayImages && {
+            images: trickplayImages,
+            src: (tile) => trickplayTilePath(itemId, trickplayImages.key, tile),
+          }
+        }
         startAt={startAt}
         onBack={back}
         onUnsupported={() => setUnsupported(true)}
         onProgress={(report) => sendProgress(itemId, report)}
-        onResumed={(seconds) =>
-          // Say where playback resumed, with a way back to the start.
-          toast(`Resumed at ${formatClock(seconds)}`, {
-            // Clear of the control bar at the bottom.
-            position: "top-center",
-            action: {
-              label: "Start over",
-              onClick: () => setRestarts((n) => n + 1),
-            },
-          })
-        }
       />
     )
   }
@@ -147,7 +170,7 @@ function Watch() {
           </h1>
           <p className="mt-2 text-sm text-white/70">
             {unsupported
-              ? `Matinee plays files as they are for now, and this browser doesn't support ${item.data?.container.toUpperCase() ?? "this"} files or the codecs inside. Transcoding is planned.`
+              ? `This browser doesn't support ${item.data?.container.toUpperCase() ?? "this"} files or their codecs, and the server couldn't transcode it. Check the server log.`
               : errorMessage(item.error)}
           </p>
           <Link

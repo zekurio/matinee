@@ -1,48 +1,139 @@
-import { Slider } from "@base-ui/react/slider"
-import type { Subtitles } from "@matinee/contracts"
-import { Spinner } from "@matinee/ui/components/spinner"
+import type { AudioTrack, Keyframes, Subtitles } from "@matinee/contracts"
+import { useMediaQuery } from "@matinee/ui/hooks/use-media-query"
 import { cn } from "@matinee/ui/lib/utils"
-import {
-  ArrowLeftIcon,
-  MaximizeIcon,
-  MinimizeIcon,
-  PauseIcon,
-  PlayIcon,
-  RotateCcwIcon,
-  RotateCwIcon,
-  Volume1Icon,
-  Volume2Icon,
-  VolumeXIcon,
-} from "lucide-react"
-import {
-  type FocusEvent,
-  type ReactNode,
-  type Ref,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react"
+import { ArrowLeftIcon, Volume2Icon, VolumeXIcon } from "lucide-react"
+import { type FocusEvent, useEffect, useRef, useState } from "react"
 
-import { SubtitlesMenu } from "./subtitles-menu"
+import {
+  audioLanguageFor,
+  currentPlaybackPreferences,
+} from "@/lib/playback-sync"
+import { randomId } from "@/lib/random-id"
+import {
+  createPlayerStore,
+  type PlayerStore,
+  PlayerStoreContext,
+  selectHidden,
+  usePlayerStore,
+  usePlayerStoreApi,
+} from "@/stores/player"
+import { usePlayerPreferencesStore } from "@/stores/player-preferences"
+
+import {
+  type AudioCandidate,
+  audioChoice,
+  type HlsRequest,
+  type StreamRequest,
+} from "./playback-source"
+import {
+  CenterControls,
+  ControlButton,
+  EndsAt,
+  FlashNote,
+  FullscreenButton,
+  PlayButton,
+  SeekBar,
+  SKIP_S,
+  SkipIcon,
+  VolumeControl,
+} from "./player-controls"
+import { PlayerMenus } from "./player-menus"
+import type { TrickplayTiles } from "./trickplay-thumb"
+import { useHls } from "./use-hls"
+import { usePlayback } from "./use-playback"
+import { usePlayerKeys } from "./use-player-keys"
+import {
+  type ProgressReport,
+  usePlayedTime,
+  useProgressReport,
+} from "./use-progress-report"
 import { useSubtitles } from "./use-subtitles"
 
 const IDLE_MS = 2500
-const SKIP_S = 10
 
-function formatTime(seconds: number): string {
-  if (!Number.isFinite(seconds) || seconds < 0) return "0:00"
-  const s = Math.floor(seconds % 60)
-  const m = Math.floor((seconds / 60) % 60)
-  const h = Math.floor(seconds / 3600)
-  const mm = h > 0 ? String(m).padStart(2, "0") : String(m)
-  return `${h > 0 ? `${h}:` : ""}${mm}:${String(s).padStart(2, "0")}`
+type VideoPlayerProps = {
+  /** The file as it is. */
+  src: string
+  /** A stream with one audio track, copied or encoded, for the session. */
+  streamSrc: (request: StreamRequest & { session: string }) => string
+  /** An encode as HLS, shared with everyone who plays it the same way. */
+  hlsSrc: (request: HlsRequest & { session: string }) => string
+  /** Where a copied stream can start near a point. */
+  keyframes: (seconds: number) => Promise<Keyframes>
+  /** The file's audio tracks. Undefined while they load. */
+  audioTracks?: AudioTrack[]
+  /** The same tracks from the probe. Undefined when it hasn't run. */
+  probeAudio?: AudioCandidate[]
+  /** The language the title was made in, when the metadata says. */
+  originalLanguage: string | null
+  /** The file's length, when the server knows it. */
+  durationSeconds: number | null
+  /** The video's size, when the server knows it. */
+  videoSize: { width: number; height: number } | null
+  /** ffmpeg's name for the video codec, when the server knows it. */
+  videoCodec: string | null
+  title: string
+  subtitle: string
+  /** The file's subtitle tracks. Undefined while they load. */
+  subtitles?: Subtitles
+  /** Where a subtitle track's file loads from. */
+  subtitleSrc: (trackId: string) => string
+  /** The seek bar's thumbnails, once the server has them. */
+  trickplay: TrickplayTiles | null
+  /** Seconds to resume from once the video can seek. */
+  startAt?: number
+  onBack: () => void
+  onUnsupported: () => void
+  /** Called while playing, on pause and end, and when the player closes. */
+  onProgress?: (report: ProgressReport) => void
+  /** Called once playback has actually jumped to `startAt`. */
+  onResumed?: (seconds: number) => void
 }
 
-/** True once the pointer and keyboard have rested for `ms`. */
-function useIdle(ms: number): boolean {
-  const [idle, setIdle] = useState(false)
+/**
+ * Full-screen player. Space or K plays and pauses, arrows or J/L skip ten
+ * seconds, up and down change the volume, 0 to 9 jump to a tenth of the
+ * way, M mutes, F toggles full screen, C turns subtitles on and off.
+ */
+export function VideoPlayer(props: VideoPlayerProps) {
+  // One store per player, which remounts for another file. It starts from
+  // the saved preferences, and with the file itself when the browser
+  // decodes the audio that plays first and it's the file's default.
+  const [store] = useState(() => {
+    const saved = usePlayerPreferencesStore.getState()
+    const preferences = currentPlaybackPreferences()
+    const audioLanguage = audioLanguageFor(
+      preferences.audioLanguage,
+      props.originalLanguage,
+    )
+    const { playsFile } = audioChoice(
+      props.audioTracks,
+      props.probeAudio,
+      audioLanguage,
+    )
+    return createPlayerStore({
+      sessionId: randomId(),
+      quality: saved.quality,
+      source:
+        saved.quality === "original" && playsFile ? { kind: "direct" } : null,
+      duration: props.durationSeconds ?? 0,
+      volume: saved.volume,
+      muted: saved.muted,
+      audioLanguage,
+      subtitleDefaults: preferences,
+    })
+  })
+  return (
+    <PlayerStoreContext value={store}>
+      <Player {...props} />
+    </PlayerStoreContext>
+  )
+}
+
+/** Marks the player idle once the pointer and keyboard rest for `ms`. */
+function useIdle(store: PlayerStore, ms: number) {
   useEffect(() => {
+    const { setIdle } = store.getState()
     let timer = window.setTimeout(() => setIdle(true), ms)
     const wake = () => {
       setIdle(false)
@@ -55,279 +146,173 @@ function useIdle(ms: number): boolean {
       window.clearTimeout(timer)
       for (const event of events) window.removeEventListener(event, wake)
     }
-  }, [ms])
-  return idle
+  }, [store, ms])
 }
 
-const controlButtonClass =
-  "grid size-10 shrink-0 place-items-center rounded-full text-white outline-none transition-colors hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white [@media(pointer:coarse)]:size-11 [&_svg]:size-5"
-
-function ControlButton({
-  label,
-  onClick,
-  children,
-  className,
-}: {
-  label: string
-  onClick: () => void
-  children: ReactNode
-  className?: string
-}) {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      title={label}
-      onClick={onClick}
-      className={cn(controlButtonClass, className)}
-    >
-      {children}
-    </button>
-  )
-}
-
-/** A circular arrow with the skip length inside it. */
-function SkipIcon({ direction }: { direction: "back" | "forward" }) {
-  const Icon = direction === "back" ? RotateCcwIcon : RotateCwIcon
-  return (
-    <span aria-hidden className="relative grid place-items-center">
-      <Icon className="!size-6" strokeWidth={1.75} />
-      <span className="absolute pt-px text-[9px] leading-none font-semibold tabular-nums">
-        {SKIP_S}
-      </span>
-    </span>
-  )
-}
-
-/** The track used for seeking and volume: white on translucent white. */
-function MediaSlider({
-  ref,
-  label,
-  value,
-  max,
-  step,
-  buffered,
-  valueText,
-  onChange,
-  onCommit,
-  className,
-}: {
-  ref?: Ref<HTMLDivElement>
-  label: string
-  value: number
-  max: number
-  step: number
-  buffered?: number
-  valueText: (value: number) => string
-  onChange: (value: number) => void
-  onCommit?: (value: number) => void
-  className?: string
-}) {
-  const safeMax = max > 0 ? max : 1
-  return (
-    <Slider.Root
-      ref={ref}
-      value={Math.min(value, safeMax)}
-      min={0}
-      max={safeMax}
-      step={step}
-      onValueChange={(next) =>
-        onChange(Array.isArray(next) ? (next[0] ?? 0) : next)
-      }
-      onValueCommitted={(next) =>
-        onCommit?.(Array.isArray(next) ? (next[0] ?? 0) : next)
-      }
-      thumbAlignment="edge"
-      className={cn("group/slider", className)}
-    >
-      {/* The track stays thin; the hit area is 32px, or 44px for touch. */}
-      <Slider.Control className="flex h-8 w-full cursor-pointer touch-none items-center select-none [@media(pointer:coarse)]:h-11">
-        <Slider.Track className="relative h-1 w-full rounded-full bg-white/35 transition-[height] group-hover/slider:h-1.5">
-          {buffered !== undefined && (
-            <span
-              aria-hidden
-              className="absolute inset-y-0 left-0 rounded-full bg-white/35"
-              style={{ width: `${Math.min(100, (buffered / safeMax) * 100)}%` }}
-            />
-          )}
-          <Slider.Indicator className="rounded-full bg-white" />
-          <Slider.Thumb
-            aria-label={label}
-            getAriaValueText={(_formatted, current) => valueText(current)}
-            className="size-3.5 rounded-full bg-white opacity-0 shadow transition-opacity outline-none group-hover/slider:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-white/60 data-dragging:opacity-100"
-          />
-        </Slider.Track>
-      </Slider.Control>
-    </Slider.Root>
-  )
-}
-
-export type ProgressReport = {
-  positionSeconds: number
-  durationSeconds?: number
-  /** The page is going away; the request must survive it. */
-  leaving?: boolean
-}
-
-const REPORT_EVERY_MS = 10_000
-
-/**
- * Full-screen player with themed controls. Space or K plays and pauses,
- * arrows or J/L skip ten seconds, M mutes, F toggles full screen, C turns
- * subtitles on and off.
- */
-export function VideoPlayer({
+function Player({
   src,
+  streamSrc,
+  hlsSrc,
+  keyframes,
+  audioTracks,
+  probeAudio,
+  durationSeconds,
+  videoSize,
+  videoCodec,
   title,
   subtitle,
   subtitles,
   subtitleSrc,
+  trickplay,
   startAt,
   onBack,
   onUnsupported,
   onProgress,
   onResumed,
-}: {
-  src: string
-  title: string
-  subtitle: string
-  /** The file's subtitle tracks. Undefined while they load. */
-  subtitles?: Subtitles
-  /** Where a subtitle track's WebVTT loads from. */
-  subtitleSrc: (trackId: string) => string
-  /** Seconds to resume from once the video can seek. */
-  startAt?: number
-  onBack: () => void
-  onUnsupported: () => void
-  /** Called while playing, on pause and end, and when the player closes. */
-  onProgress?: (report: ProgressReport) => void
-  /** Called once playback has actually jumped to `startAt`. */
-  onResumed?: (seconds: number) => void
-}) {
+}: VideoPlayerProps) {
+  const store = usePlayerStoreApi()
   const container = useRef<HTMLDivElement>(null)
   const video = useRef<HTMLVideoElement>(null)
-  const controls = useRef<HTMLDivElement>(null)
-  // The latest callback, read by the timer and unmount report.
-  const progressRef = useRef(onProgress)
-  useEffect(() => {
-    progressRef.current = onProgress
-  }, [onProgress])
-  const resumed = useRef(false)
+  const pgsLayer = useRef<HTMLDivElement>(null)
+  const seekBar = useRef<HTMLDivElement>(null)
+  const coarse = useMediaQuery("(pointer: coarse)")
+  const playedTime = usePlayedTime()
+  // The store's actions and session never change, so one read is enough.
+  const actions = store.getState()
+  const { sessionId } = actions
 
-  const report = useCallback((leaving = false, ended = false) => {
-    const el = video.current
-    if (!el || el.currentTime <= 0) return
-    const duration = Number.isFinite(el.duration) ? el.duration : undefined
-    progressRef.current?.({
-      positionSeconds: ended && duration ? duration : el.currentTime,
-      durationSeconds: duration,
-      leaving,
-    })
-  }, [])
+  const playback = usePlayback({
+    video,
+    directSrc: src,
+    streamSrc: (request) => streamSrc({ ...request, session: sessionId }),
+    hlsSrc: (request) => hlsSrc({ ...request, session: sessionId }),
+    keyframes,
+    audioTracks,
+    probeAudio,
+    audioLanguage: actions.audioLanguage,
+    durationSeconds,
+    videoSize,
+    videoCodec,
+    startAt,
+    onResumed,
+    onUnsupported,
+  })
+  const { position, duration: lengthOf, seek } = playback
 
-  // Report while playing, and once more when the player goes away.
-  useEffect(() => {
-    const timer = window.setInterval(() => {
-      if (video.current && !video.current.paused) report()
-    }, REPORT_EVERY_MS)
-    const onPageHide = () => report(true)
-    window.addEventListener("pagehide", onPageHide)
-    return () => {
-      window.clearInterval(timer)
-      window.removeEventListener("pagehide", onPageHide)
-      report()
-    }
-  }, [report])
-  const [playing, setPlaying] = useState(false)
-  const [waiting, setWaiting] = useState(true)
-  const [time, setTime] = useState(0)
-  const [scrub, setScrub] = useState<number | null>(null)
-  const [duration, setDuration] = useState(0)
-  const [buffered, setBuffered] = useState(0)
-  const [volume, setVolume] = useState(1)
-  const [muted, setMuted] = useState(false)
-  const [fullscreen, setFullscreen] = useState(false)
-  const idle = useIdle(IDLE_MS)
-  // Controls never hide while they hold keyboard focus or a menu is open.
-  const [focused, setFocused] = useState(false)
-  const [menuOpen, setMenuOpen] = useState(false)
-  const hidden = idle && playing && scrub === null && !focused && !menuOpen
-  const subs = useSubtitles(subtitles, video, controls, !hidden)
-  const toggleSubtitles = subs.toggle
+  const report = useProgressReport(
+    video,
+    store,
+    playedTime,
+    onProgress,
+    position,
+    lengthOf,
+  )
+
+  useHls(video, playback.hls, (code) => {
+    playedTime.stop()
+    actions.setWaiting(false)
+    playback.onError(code)
+  })
+  useIdle(store, IDLE_MS)
+  const hidden = usePlayerStore(selectHidden)
+  const subs = useSubtitles(
+    subtitles,
+    subtitleSrc,
+    video,
+    seekBar,
+    pgsLayer,
+    !hidden,
+    playback.offset,
+    playback.selectBurnIn,
+    playback.audioLanguage,
+  )
   const focusHandlers = {
-    onFocus: () => setFocused(true),
+    onFocus: () => actions.setFocused(true),
     onBlur: (event: FocusEvent<HTMLElement>) => {
-      if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false)
+      if (!event.currentTarget.contains(event.relatedTarget)) {
+        actions.setFocused(false)
+      }
     },
   }
 
-  const toggle = useCallback(() => {
+  // Puts the saved volume on the video before anything plays.
+  useEffect(() => {
     const el = video.current
     if (!el) return
-    if (el.paused) void el.play()
+    const { volume, muted } = store.getState()
+    el.volume = volume
+    el.muted = muted
+  }, [])
+
+  const show = actions.showFlash
+  const toggle = () => {
+    const el = video.current
+    if (!el) return
+    const { pending, playing } = store.getState()
+    // While a new source loads, the old one holds still, and this picks
+    // whether the new one plays.
+    if (pending !== null) {
+      playback.setPlayOnLoad(!playing)
+      actions.setPlaying(!playing)
+      return
+    }
+    if (el.paused) void el.play().catch(() => {})
     else el.pause()
-  }, [])
-  const skip = useCallback((by: number) => {
+  }
+  const skip = (by: number) => {
+    const target = Math.max(0, position() + by)
+    actions.setTime(target)
+    seek(target)
+  }
+  const jump = (digit: number) => {
+    const target = (lengthOf() * digit) / 10
+    actions.setTime(target)
+    seek(target)
+  }
+  const setVolume = (value: number) => {
     const el = video.current
-    if (el)
-      el.currentTime = Math.max(0, Math.min(el.duration, el.currentTime + by))
-  }, [])
-  const toggleMute = useCallback(() => {
+    if (!el) return
+    el.volume = value
+    el.muted = value === 0
+  }
+  const changeVolume = (by: number) => {
     const el = video.current
-    if (el) el.muted = !el.muted
-  }, [])
-  const toggleFullscreen = useCallback(() => {
+    if (!el) return
+    const next = Math.round(Math.max(0, Math.min(1, el.volume + by)) * 100)
+    setVolume(next / 100)
+    show(next === 0 ? VolumeXIcon : Volume2Icon, `${next}%`)
+  }
+  const toggleMute = () => {
+    const el = video.current
+    if (!el) return
+    el.muted = !el.muted
+    show(
+      el.muted ? VolumeXIcon : Volume2Icon,
+      el.muted ? "Muted" : `${Math.round(el.volume * 100)}%`,
+    )
+  }
+  const toggleFullscreen = () => {
     if (document.fullscreenElement) void document.exitFullscreen()
     else void container.current?.requestFullscreen()
-  }, [])
+  }
+  const changeSpeed = (next: number) => {
+    const el = video.current
+    if (!el) return
+    // The default carries over when a new source loads.
+    el.defaultPlaybackRate = next
+    el.playbackRate = next
+  }
 
-  useEffect(() => {
-    const onChange = () => setFullscreen(document.fullscreenElement !== null)
-    document.addEventListener("fullscreenchange", onChange)
-    return () => document.removeEventListener("fullscreenchange", onChange)
-  }, [])
-
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      const target = event.target instanceof Element ? event.target : null
-      // Sliders, buttons, and open menus handle their own keys.
-      if (
-        target?.closest(
-          '[role="slider"], [role="menu"], [role="dialog"], input, textarea',
-        )
-      )
-        return
-      if (event.metaKey || event.ctrlKey || event.altKey) return
-      const back = () => skip(-SKIP_S)
-      const ahead = () => skip(SKIP_S)
-      const actions = new Map([
-        [" ", toggle],
-        ["k", toggle],
-        ["ArrowLeft", back],
-        ["j", back],
-        ["ArrowRight", ahead],
-        ["l", ahead],
-        ["m", toggleMute],
-        ["f", toggleFullscreen],
-        ["c", toggleSubtitles],
-      ])
-      const action = actions.get(event.key)
-      if (!action) return
-      if (event.key === " " && target?.closest("button")) return
-      event.preventDefault()
-      action()
-    }
-    window.addEventListener("keydown", onKey)
-    return () => window.removeEventListener("keydown", onKey)
-  }, [toggle, skip, toggleMute, toggleFullscreen, toggleSubtitles])
-
-  const VolumeIcon =
-    muted || volume === 0
-      ? VolumeXIcon
-      : volume < 0.5
-        ? Volume1Icon
-        : Volume2Icon
-  const shown = scrub ?? time
+  usePlayerKeys({
+    toggle,
+    skip,
+    jump,
+    show,
+    changeVolume,
+    toggleMute,
+    toggleFullscreen,
+    toggleSubtitles: subs.toggle,
+  })
 
   return (
     <div
@@ -337,177 +322,155 @@ export function VideoPlayer({
         hidden && "cursor-none",
       )}
     >
-      {/* Clicks on the picture play and pause; keyboard users have Space. */}
+      {/* Clicks on the picture play and pause; keyboard users have Space.
+          On touch screens a tap shows the controls instead. The store
+          follows the video through its events. */}
       <video
         ref={video}
-        src={src}
-        autoPlay
+        src={playback.src}
         playsInline
         className="size-full object-contain"
-        onClick={toggle}
-        onDoubleClick={toggleFullscreen}
-        onPlay={() => setPlaying(true)}
-        onPause={() => {
-          setPlaying(false)
+        onClick={coarse ? undefined : toggle}
+        onDoubleClick={coarse ? undefined : toggleFullscreen}
+        onPlay={() => {
+          actions.setPlaying(true)
+          // So "watching now" sees a resume without waiting for the timer.
           report()
         }}
-        onEnded={() => report(false, true)}
-        onLoadedMetadata={(event) => {
-          // Resume once, as soon as the file can seek.
-          if (startAt && !resumed.current) {
-            resumed.current = true
-            event.currentTarget.currentTime = startAt
-            onResumed?.(startAt)
-          }
+        onPause={() => {
+          playedTime.stop()
+          // Holding the old source still for a seek isn't a pause.
+          if (playback.heldStill()) return
+          actions.paused()
+          report()
         }}
-        onWaiting={() => setWaiting(true)}
-        onPlaying={() => setWaiting(false)}
-        onCanPlay={() => setWaiting(false)}
-        onTimeUpdate={(event) => setTime(event.currentTarget.currentTime)}
-        onDurationChange={(event) => setDuration(event.currentTarget.duration)}
+        onEnded={() => {
+          playedTime.stop()
+          report(false, true)
+        }}
+        onLoadStart={() => {
+          playedTime.stop()
+          actions.setWaiting(true)
+        }}
+        onLoadedMetadata={() => {
+          playback.onLoaded()
+          actions.setDuration(lengthOf())
+        }}
+        onWaiting={() => {
+          playedTime.stop()
+          actions.setWaiting(true)
+        }}
+        onSeeking={playedTime.stop}
+        // So "watching now" sees the new position without waiting for the
+        // timer.
+        onSeeked={() => report()}
+        onPlaying={() => {
+          playedTime.start()
+          actions.setWaiting(false)
+        }}
+        onCanPlay={() => actions.setWaiting(false)}
+        onTimeUpdate={() => {
+          playedTime.update()
+          playback.onTimeUpdate()
+          actions.setTime(position())
+        }}
+        onDurationChange={() => actions.setDuration(lengthOf())}
         onProgress={(event) => {
           const el = event.currentTarget
           for (let i = 0; i < el.buffered.length; i++) {
             if (el.buffered.start(i) <= el.currentTime) {
-              setBuffered(el.buffered.end(i))
+              actions.setBuffered(playback.offset + el.buffered.end(i))
             }
           }
         }}
         onVolumeChange={(event) => {
-          setVolume(event.currentTarget.volume)
-          setMuted(event.currentTarget.muted)
+          const { volume, muted } = event.currentTarget
+          actions.setVolume(volume, muted)
+          usePlayerPreferencesStore.getState().setVolume(volume, muted)
         }}
-        onError={(event) => {
-          if (
-            event.currentTarget.error?.code ===
-            MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED
-          ) {
-            onUnsupported()
-          }
+        onRateChange={(event) =>
+          actions.setSpeed(event.currentTarget.playbackRate)
+        }
+        onError={() => {
+          playedTime.stop()
+          actions.setWaiting(false)
+          playback.onError()
         }}
       >
         {subs.current && (
           <track
-            key={subs.current.id}
-            data-track-id={subs.current.id}
+            key={subs.current.track.id}
+            data-track-id={subs.current.track.id}
             kind="subtitles"
-            src={subtitleSrc(subs.current.id)}
-            srcLang={subs.current.language ?? undefined}
-            label={subs.current.label}
+            src={subs.current.src}
+            srcLang={subs.current.track.language ?? undefined}
+            label={subs.current.track.label}
           />
         )}
       </video>
+      {/* PGS subtitles draw here, over the picture. */}
+      <div ref={pgsLayer} className="pointer-events-none absolute inset-0" />
 
-      {waiting && (
-        <div className="pointer-events-none absolute inset-0 grid place-items-center">
-          <Spinner className="size-8 text-white/80" />
-        </div>
-      )}
+      <CenterControls coarse={coarse} hidden={hidden} onToggle={toggle} />
+      <FlashNote />
 
       <div
         {...focusHandlers}
         className={cn(
-          "absolute inset-x-0 top-0 flex items-center gap-3 bg-[linear-gradient(to_bottom,rgb(0_0_0/0.85),rgb(0_0_0/0.7)_45%,transparent)] p-4 pb-16 transition-opacity duration-300 motion-reduce:transition-none",
+          "absolute inset-x-0 top-0 flex items-center gap-3 bg-[linear-gradient(to_bottom,rgb(0_0_0/0.8),rgb(0_0_0/0.5)_50%,transparent)] px-3 pt-3 pb-20 transition-opacity duration-300 motion-reduce:transition-none sm:px-5 sm:pt-4",
           hidden && "pointer-events-none opacity-0",
         )}
       >
-        <ControlButton label="Back" onClick={onBack} className="bg-white/10">
+        <ControlButton label="Back" onClick={onBack}>
           <ArrowLeftIcon />
         </ControlButton>
         <div className="min-w-0">
-          <h1 className="truncate text-base font-medium [text-shadow:0_1px_2px_rgb(0_0_0/0.5)]">
+          <h1 className="truncate text-lg leading-tight font-semibold [text-shadow:0_1px_2px_rgb(0_0_0/0.5)]">
             {title}
           </h1>
-          <p className="truncate text-[13px] text-white/90 [text-shadow:0_1px_2px_rgb(0_0_0/0.5)]">
-            {subtitle}
-          </p>
+          {subtitle && (
+            <p className="truncate text-sm text-white/75 [text-shadow:0_1px_2px_rgb(0_0_0/0.5)]">
+              {subtitle}
+            </p>
+          )}
         </div>
       </div>
 
       <div
         {...focusHandlers}
         className={cn(
-          "absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent px-4 pt-16 pb-3 transition-opacity duration-300 motion-reduce:transition-none sm:px-6",
+          "absolute inset-x-0 bottom-0 bg-[linear-gradient(to_top,rgb(0_0_0/0.85),rgb(0_0_0/0.45)_55%,transparent)] px-3 pt-24 pb-[max(0.5rem,env(safe-area-inset-bottom))] transition-opacity duration-300 motion-reduce:transition-none sm:px-5 sm:pb-3",
           hidden && "pointer-events-none opacity-0",
         )}
       >
-        <MediaSlider
-          ref={controls}
-          label="Seek"
-          value={shown}
-          max={duration}
-          step={1}
-          buffered={buffered}
-          valueText={(value) =>
-            `${formatTime(value)} of ${formatTime(duration)}`
-          }
-          onChange={setScrub}
-          onCommit={(value) => {
-            if (video.current) video.current.currentTime = value
-            setTime(value)
-            setScrub(null)
-          }}
-        />
-        <div className="mt-1 flex items-center gap-1">
-          <ControlButton label={playing ? "Pause" : "Play"} onClick={toggle}>
-            {playing ? (
-              <PauseIcon className="fill-current" />
-            ) : (
-              <PlayIcon className="fill-current" />
-            )}
-          </ControlButton>
-          <ControlButton label="Back 10 seconds" onClick={() => skip(-SKIP_S)}>
+        <SeekBar ref={seekBar} trickplay={trickplay} onSeek={seek} />
+        <div className="flex items-center gap-0.5">
+          <PlayButton onToggle={toggle} />
+          <ControlButton
+            label={`Back ${SKIP_S} seconds (j)`}
+            onClick={() => skip(-SKIP_S)}
+          >
             <SkipIcon direction="back" />
           </ControlButton>
           <ControlButton
-            label="Forward 10 seconds"
+            label={`Forward ${SKIP_S} seconds (l)`}
             onClick={() => skip(SKIP_S)}
           >
             <SkipIcon direction="forward" />
           </ControlButton>
-          <div className="group/volume flex items-center">
-            <ControlButton
-              label={muted ? "Unmute" : "Mute"}
-              onClick={toggleMute}
-            >
-              <VolumeIcon />
-            </ControlButton>
-            <MediaSlider
-              label="Volume"
-              value={muted ? 0 : volume}
-              max={1}
-              step={0.05}
-              valueText={(value) => `${Math.round(value * 100)}%`}
-              onChange={(value) => {
-                const el = video.current
-                if (!el) return
-                el.volume = value
-                el.muted = value === 0
-              }}
-              className="hidden w-24 pr-2 sm:block"
+          <VolumeControl onToggleMute={toggleMute} onChange={setVolume} />
+          <div className="ml-auto flex items-center gap-0.5">
+            <EndsAt className="mr-2 hidden sm:block" />
+            <PlayerMenus
+              playback={playback}
+              subs={subs}
+              audioTracks={audioTracks}
+              subtitles={subtitles}
+              videoSize={videoSize}
+              onSpeedChange={changeSpeed}
+              container={container}
             />
-          </div>
-          <span className="ml-2 text-[13px] text-white/80 tabular-nums">
-            {formatTime(shown)} / {formatTime(duration)}
-          </span>
-          <div className="ml-auto flex items-center gap-1">
-            {subs.tracks.length > 0 && (
-              <SubtitlesMenu
-                tracks={subs.tracks}
-                selectedId={subs.selected}
-                loading={subs.loading}
-                onSelect={subs.select}
-                onOpenChange={setMenuOpen}
-                container={container}
-                triggerClassName={controlButtonClass}
-              />
-            )}
-            <ControlButton
-              label={fullscreen ? "Exit full screen" : "Full screen"}
-              onClick={toggleFullscreen}
-            >
-              {fullscreen ? <MinimizeIcon /> : <MaximizeIcon />}
-            </ControlButton>
+            <FullscreenButton onToggle={toggleFullscreen} />
           </div>
         </div>
       </div>

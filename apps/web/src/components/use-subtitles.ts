@@ -1,13 +1,22 @@
 import type { Subtitles, SubtitleTrack } from "@matinee/contracts"
 import { toast } from "@matinee/ui/components/sonner"
-import { type RefObject, useCallback, useEffect, useRef, useState } from "react"
+import { skipToken, useQuery } from "@tanstack/react-query"
+import { type RefObject, useEffect } from "react"
+import { useShallow } from "zustand/shallow"
 
 import {
-  defaultTrack,
-  fallbackTrack,
-  readSubtitlePreference,
-  writeSubtitlePreference,
-} from "@/lib/subtitles"
+  currentPlaybackPreferences,
+  updatePlaybackPreferences,
+} from "@/lib/playback-sync"
+import { defaultTrack, fallbackTrack, rememberPick } from "@/lib/subtitles"
+import { usePlayerStore, usePlayerStoreApi } from "@/stores/player"
+
+import { usePgs } from "./use-pgs"
+
+/** A track's file as fetched: WebVTT text, or a PGS `.sup` file. */
+type SubtitleFile =
+  | { kind: "webvtt"; text: string }
+  | { kind: "pgs"; data: ArrayBuffer }
 
 const NO_TRACKS: SubtitleTrack[] = []
 // Space between a lifted cue and the seek bar.
@@ -21,7 +30,7 @@ const MOVE_CONTAINER = CSS.supports(
 // spaced by the `::cue` line height in globals.css.
 const CUE_FONT_RATIO = 0.05
 const CUE_LINE_HEIGHT = 1.35
-const CUE_FONT = '"Geist Variable", ui-sans-serif, system-ui, sans-serif'
+const CUE_FONT = '"Red Hat Text Variable", ui-sans-serif, system-ui, sans-serif'
 
 // Cues the player moved, so it only puts back the ones it moved.
 const moved = new WeakSet<VTTCue>()
@@ -83,6 +92,34 @@ function placeCues(video: HTMLVideoElement, track: TextTrack, lift: number) {
   }
 }
 
+// Each cue's times in the file, before any shift.
+const fileTimes = new WeakMap<TextTrackCue, { start: number; end: number }>()
+
+/** Move a track's cues so the file's time `offset` lands on 0. */
+function shiftCues(track: TextTrack, offset: number) {
+  const cues = track.cues
+  if (!cues) return
+  for (let i = 0; i < cues.length; i++) {
+    const cue = cues[i]
+    if (!cue) continue
+    let times = fileTimes.get(cue)
+    if (!times) {
+      if (offset === 0) continue
+      times = { start: cue.startTime, end: cue.endTime }
+      fileTimes.set(cue, times)
+    }
+    cue.startTime = times.start - offset
+    cue.endTime = times.end - offset
+  }
+}
+
+function loadFailed() {
+  toast.error("Couldn't load subtitles", {
+    description: "Pick another track or turn them off.",
+    position: "top-center",
+  })
+}
+
 /** The `<track>` the player rendered for a track id. */
 function trackElement(
   video: HTMLVideoElement,
@@ -93,36 +130,115 @@ function trackElement(
 }
 
 /**
- * Subtitle selection for the player, which renders a `<track>` with
- * `data-track-id` for `current` only. Browsers turn on tracks by
+ * Subtitle selection for the player. A WebVTT track renders as a `<track>`
+ * with `data-track-id` for `current` only. Browsers turn on tracks by
  * themselves, such as one in the system language, and each one they turn
  * on loads; a lone track leaves them nothing to pick. While `lifted` is
- * true, cues sit above `controls`.
+ * true, cues sit above `controls`. `offset` is where in the file the
+ * video's time 0 is, for streams that start partway in. PGS draws on a
+ * canvas in `pgsLayer`. A track only an encode shows goes to `burnIn`,
+ * which gets null again when the viewer picks another. Until the viewer
+ * picks, the preferences pick by `audioLanguage`, the language of the
+ * audio that plays, falling back on the file's default audio's.
+ *
+ * A track's file is fetched before it shows; a `<track>` loads it from
+ * memory. A showing track that is still loading holds Chrome's
+ * `readyState` below HAVE_FUTURE_DATA: the video plays on, but
+ * `currentTime` stops and `canplay` and `playing` never fire. Pulling a
+ * track out of a large file can take the server minutes.
  */
 export function useSubtitles(
   subtitles: Subtitles | undefined,
+  subtitleSrc: (trackId: string) => string,
   video: RefObject<HTMLVideoElement | null>,
   controls: RefObject<HTMLElement | null>,
+  pgsLayer: RefObject<HTMLElement | null>,
   lifted: boolean,
+  offset: number,
+  burnIn: (trackId: string | null) => void,
+  audioLanguage: string | null,
 ) {
+  const store = usePlayerStoreApi()
   const tracks = subtitles?.tracks ?? NO_TRACKS
-  const [selected, setSelected] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
-  // The default applies once, and never over the viewer's own pick.
-  const decided = useRef(false)
-  // The last track picked in this file, which C brings back.
-  const picked = useRef<string | null>(null)
+  const { chosen, defaults, objectUrl } = usePlayerStore(
+    useShallow((state) => ({
+      chosen: state.chosenSubtitle,
+      defaults: state.subtitleDefaults,
+      objectUrl: state.subtitleUrl,
+    })),
+  )
+  // The default shows once the tracks are here, until the viewer picks.
+  const playingLanguage = audioLanguage ?? subtitles?.audioLanguage ?? null
+  const selected =
+    chosen !== undefined
+      ? chosen
+      : subtitles
+        ? (defaultTrack(subtitles.tracks, playingLanguage, defaults)?.id ??
+          null)
+        : null
+  const track = tracks.find((candidate) => candidate.id === selected) ?? null
+  const delivery = track?.delivery ?? null
 
+  // The selected track's file. A pick that changes cancels the fetch.
+  const url =
+    track && (delivery === "webvtt" || delivery === "pgs")
+      ? subtitleSrc(track.id)
+      : null
+  const file = useQuery({
+    queryKey: ["player", "subtitles", url, delivery],
+    queryFn:
+      url === null
+        ? skipToken
+        : async ({ signal }): Promise<SubtitleFile> => {
+            try {
+              const response = await fetch(url, { signal })
+              if (!response.ok) {
+                throw new Error(`Subtitles answered ${response.status}`)
+              }
+              return delivery === "pgs"
+                ? { kind: "pgs", data: await response.arrayBuffer() }
+                : { kind: "webvtt", text: await response.text() }
+            } catch (cause) {
+              if (!signal.aborted) {
+                store.getState().chooseSubtitle(null)
+                loadFailed()
+              }
+              throw cause
+            }
+          },
+    staleTime: Infinity,
+    // A PGS file can be tens of megabytes; don't keep one nobody shows.
+    // Picking it again revalidates it with the browser's cache.
+    gcTime: delivery === "pgs" ? 0 : undefined,
+    retry: false,
+  }).data
+  const text = file?.kind === "webvtt" ? file.text : undefined
+
+  usePgs(
+    pgsLayer,
+    video,
+    file?.kind === "pgs" ? file.data : undefined,
+    offset,
+    () => {
+      store.getState().chooseSubtitle(null)
+      loadFailed()
+    },
+  )
+
+  // The text as an object URL for the `<track>`, revoked once it's gone.
   useEffect(() => {
-    if (!subtitles || decided.current) return
-    decided.current = true
-    const track = defaultTrack(
-      subtitles.tracks,
-      subtitles.audioLanguage,
-      readSubtitlePreference(),
-    )
-    setSelected(track?.id ?? null)
-  }, [subtitles])
+    if (selected === null || text === undefined) return
+    const { setSubtitleUrl } = store.getState()
+    const created = URL.createObjectURL(new Blob([text], { type: "text/vtt" }))
+    setSubtitleUrl({ trackId: selected, url: created })
+    return () => {
+      URL.revokeObjectURL(created)
+      setSubtitleUrl(null)
+    }
+  }, [selected, text])
+
+  const src =
+    objectUrl !== null && objectUrl.trackId === selected ? objectUrl.url : null
 
   // Show the selected track, and keep any track the browser found inside
   // the file off.
@@ -139,25 +255,33 @@ export function useSubtitles(
     apply()
     el.textTracks.addEventListener("change", apply)
     if (!current) {
-      setLoading(false)
       return () => el.textTracks.removeEventListener("change", apply)
     }
-    const onLoad = () => setLoading(false)
     const onError = () => {
-      setLoading(false)
-      setSelected(null)
-      toast.error("Couldn't load these subtitles.", { position: "top-center" })
+      store.getState().chooseSubtitle(null)
+      loadFailed()
     }
-    setLoading(current.readyState !== HTMLTrackElement.LOADED)
-    current.addEventListener("load", onLoad)
     current.addEventListener("error", onError)
     return () => {
       el.textTracks.removeEventListener("change", apply)
-      current.removeEventListener("load", onLoad)
       current.removeEventListener("error", onError)
     }
-  }, [selected, tracks])
+  }, [selected, src, tracks])
 
+  // Line cues up with a stream that starts partway into the file.
+  useEffect(() => {
+    const el = video.current
+    if (!el) return
+    const track = trackElement(el, selected)
+    if (!track) return
+    const shift = () => shiftCues(track.track, offset)
+    shift()
+    track.addEventListener("load", shift)
+    return () => track.removeEventListener("load", shift)
+  }, [selected, src, offset, tracks])
+
+  // Lift the cues above the controls while they show, and again as the
+  // window or the track's cues change.
   useEffect(() => {
     const el = video.current
     if (!el) return
@@ -174,34 +298,41 @@ export function useSubtitles(
       track?.removeEventListener("load", place)
       window.removeEventListener("resize", place)
     }
-  }, [selected, lifted, tracks])
+  }, [selected, src, lifted, tracks])
 
-  /** Show a track, or none for null, and remember it for the next file. */
-  const select = useCallback(
-    (trackId: string | null) => {
-      decided.current = true
-      setSelected(trackId)
-      const track = tracks.find((candidate) => candidate.id === trackId)
-      if (track) picked.current = track.id
-      writeSubtitlePreference({
-        enabled: track !== undefined,
-        language: track?.language ?? readSubtitlePreference()?.language ?? null,
-      })
-    },
-    [tracks],
-  )
+  /**
+   * Show a track, or none for null, and when the preferences remember
+   * picks, make it the choice for the next file.
+   */
+  const select = (trackId: string | null) => {
+    const next = tracks.find((candidate) => candidate.id === trackId)
+    store.getState().chooseSubtitle(trackId)
+    burnIn(next?.delivery === "burn-in" ? next.id : null)
+    const preferences = currentPlaybackPreferences()
+    if (preferences.rememberSubtitles) {
+      updatePlaybackPreferences(
+        rememberPick(next, preferences, playingLanguage),
+      )
+    }
+  }
 
   /** Off if a track shows; otherwise the last pick or the best guess. */
-  const toggle = useCallback(() => {
+  const toggle = () => {
     if (selected !== null) {
       select(null)
       return
     }
-    const again = tracks.find((track) => track.id === picked.current)
-    const next = again ?? fallbackTrack(tracks, readSubtitlePreference())
+    const { pickedSubtitle } = store.getState()
+    const again = tracks.find((track) => track.id === pickedSubtitle)
+    const next = again ?? fallbackTrack(tracks, currentPlaybackPreferences())
     if (next) select(next.id)
-  }, [selected, tracks, select])
+  }
 
-  const current = tracks.find((track) => track.id === selected) ?? null
+  // The `<track>` to render, once its text is here.
+  const current =
+    track && delivery === "webvtt" && src !== null ? { track, src } : null
+  const loading =
+    (delivery === "webvtt" && current === null) ||
+    (delivery === "pgs" && file?.kind !== "pgs")
   return { tracks, selected, current, loading, select, toggle }
 }
