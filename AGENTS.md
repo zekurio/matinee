@@ -60,6 +60,19 @@ See README.md for setup and the auth design.
   element, hls.js, timers, storage, subscriptions. Compute derived values
   in render, reset on a prop change with `key`, and do an event's work in
   its handler.
+- Text the user reads goes through `tr("area.key", params)` from `@/i18n`,
+  with the message added to its area in `src/i18n/locales/en/` first and
+  translated in the other languages' folders (see README, Translations).
+  Use `trRich` when a placeholder holds an element, a `plural(...)`
+  message for a count, and `Intl.ListFormat` through `perLocale` for a
+  list. A component in `packages/ui` reads `uiText()` instead. Call `tr`
+  while rendering, never at module scope. A language switch remounts the
+  app so every call runs again, but a value built at import keeps its old
+  language. Format dates and numbers with `lib/format.ts`, or with
+  `perLocale` from `@/i18n` for a new `Intl` formatter, never a hardcoded
+  locale. When you change a user-facing message in the server or a
+  contract schema, change its copy in `locales/en/server.ts` or
+  `validation.ts` too, and its translations.
 
 ## Background work
 

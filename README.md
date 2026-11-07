@@ -555,6 +555,36 @@ Apps without a browser, like TV apps, follow the OAuth device grant
 Both pages warn that approving hands the device the account. They are the
 only guard against someone sending a link or code of their own to get in.
 
+## Translations
+
+The web app's text lives in catalogs under `apps/web/src/i18n/locales/`,
+one folder per language and one file per area of the app (`player.ts`,
+`stats.ts`, and so on). `en/` is the source and holds every message. Each
+other folder is a language, named by its BCP 47 tag (`de/`, `pt-BR/`), and
+loads only when picked. Settings → Appearance → Language picks one per
+device, and by default the app follows the browser's languages. Dates,
+numbers, language names, and the calendar follow the pick.
+
+To add a language, copy `de/` to `<tag>/` and translate the values.
+Nothing else needs changing: the picker lists the folder under the
+language's own name. Keys left out show the English text, so a
+translation can ship partial. The types reject unknown keys, a dropped
+`{placeholder}`, and a plain string where English has a `plural(...)`.
+A plural lists the forms its language has, as `Intl.PluralRules` names
+them: English has `one` and `other`, Polish also has `few` and `many`.
+
+The shared components in `packages/ui` can't reach the catalog. The app
+hands them their text (the `ui` area) through `setUiText` from
+`@matinee/ui/lib/ui-text`.
+
+The server's error messages and the contract schemas' validation
+messages arrive in English. The `server` and `validation` areas copy them
+word for word, and `translateKnown()` matches what arrives against those
+copies, with `{name}` standing for a value. A message changed on the
+server needs the same change in `en/server.ts` (or `en/validation.ts`),
+or it shows in English. Metadata from providers, such as overviews,
+genres, and statuses, shows as the provider sent it.
+
 ## Not built yet
 
 - HLS. Streams are progressive MP4, which Safari doesn't play.
