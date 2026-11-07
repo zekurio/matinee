@@ -42,7 +42,7 @@ const DOVI_TAGS = new Set(["dovi", "dvh1", "dvhe", "dav1"])
 export function videoColorRange(video: VideoStream): ColorRange {
   const isPq = video.colorTransfer === PQ
   const isHlg = video.colorTransfer === HLG
-  // Invalid Dolby Vision only keeps HDR when the base layer says PQ or HLG.
+  // Dolby Vision this can't classify stays HDR only on a PQ or HLG base layer.
   const baseRange: VideoRange = isPq || isHlg ? "HDR" : "SDR"
   const dovi = video.dolbyVision
   const profile = dovi?.profile ?? null

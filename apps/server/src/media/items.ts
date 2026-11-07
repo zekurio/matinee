@@ -2,6 +2,8 @@ import type { MediaItem, TitleSummary } from "@matinee/contracts"
 import {
   episode,
   type EpisodeRow,
+  favorite,
+  favoriteItem,
   mediaItem,
   type MediaItemRow,
   title,
@@ -12,6 +14,7 @@ import {
 import { and, asc, desc, eq, inArray, isNull, type SQL, sql } from "drizzle-orm"
 
 import { db } from "../db"
+import { placeholders, type Placeholders, toArtwork } from "./artwork"
 import { mimeType } from "./mime"
 
 // How many folders deep a file sits in its library.
@@ -51,7 +54,71 @@ export function inSeason(season: number | null | undefined): SQL | undefined {
     : eq(mediaItem.seasonNumber, season)
 }
 
-export function toSummary(row: TitleRow): TitleSummary {
+/** The artwork ids a title's summary shows. */
+export function titleArtwork(row: TitleRow): (string | null)[] {
+  return [row.posterId, row.backdropId, row.logoId]
+}
+
+/** What a summary shows of the signed-in user's own state. */
+type ViewerState = Pick<TitleSummary, "favorite" | "watched">
+
+/** {@link ViewerState} by title id, from {@link viewerStates}. */
+export type ViewerStates = ReadonlyMap<string, ViewerState>
+
+const NO_STATE: ViewerState = { favorite: false, watched: false }
+
+/**
+ * Whether the user marked each title as a favorite and watched every file
+ * it has, in two queries.
+ */
+export async function viewerStates(
+  titleIds: Iterable<string>,
+  userId: string,
+): Promise<ViewerStates> {
+  const ids = [...new Set(titleIds)]
+  if (ids.length === 0) return new Map()
+  const [liked, files] = await Promise.all([
+    db
+      .select({ id: favorite.titleId })
+      .from(favorite)
+      .where(and(eq(favorite.userId, userId), inArray(favorite.titleId, ids))),
+    db
+      .select({
+        id: mediaItem.titleId,
+        watched: sql<boolean>`bool_and(coalesce(${watchProgress.completed}, false))`,
+      })
+      .from(mediaItem)
+      .leftJoin(
+        watchProgress,
+        and(
+          eq(watchProgress.mediaItemId, mediaItem.id),
+          eq(watchProgress.userId, userId),
+        ),
+      )
+      .where(inArray(mediaItem.titleId, ids))
+      .groupBy(mediaItem.titleId),
+  ])
+  const favorites = new Set(liked.map((row) => row.id))
+  const watched = new Set(
+    files.flatMap((row) => (row.id && row.watched ? [row.id] : [])),
+  )
+  return new Map(
+    ids.map((id) => [
+      id,
+      { favorite: favorites.has(id), watched: watched.has(id) },
+    ]),
+  )
+}
+
+/**
+ * `art` holds the placeholders of the row's {@link titleArtwork}, and
+ * `states` the user's state in it.
+ */
+export function toSummary(
+  row: TitleRow,
+  art: Placeholders,
+  states: ViewerStates,
+): TitleSummary {
   return {
     id: row.id,
     libraryId: row.libraryId,
@@ -60,24 +127,60 @@ export function toSummary(row: TitleRow): TitleSummary {
     year: row.year,
     overview: row.overview,
     images: {
-      poster: row.posterId,
-      backdrop: row.backdropId,
-      logo: row.logoId,
+      poster: toArtwork(row.posterId, art),
+      backdrop: toArtwork(row.backdropId, art),
+      logo: toArtwork(row.logoId, art),
     },
+    genres: row.genres,
+    rating: row.rating,
+    contentRating: row.contentRating,
+    originalLanguage: row.originalLanguage,
+    ...(states.get(row.id) ?? NO_STATE),
   }
 }
 
-export function toItem(
-  row: MediaItemRow,
-  progress: WatchProgressRow | undefined,
-  owner: TitleRow | undefined,
-  info: EpisodeRow | undefined,
-): MediaItem {
+/**
+ * Summaries of the rows as the user sees them, in their order, with one
+ * placeholder lookup.
+ */
+export async function toSummaries(
+  rows: TitleRow[],
+  userId: string,
+): Promise<TitleSummary[]> {
+  const [art, states] = await Promise.all([
+    placeholders(rows.flatMap(titleArtwork)),
+    viewerStates(
+      rows.map((row) => row.id),
+      userId,
+    ),
+  ])
+  return rows.map((row) => toSummary(row, art, states))
+}
+
+/** What {@link toItem} looks a file's details up in. */
+type ItemDetails = {
+  progress: ReadonlyMap<string, WatchProgressRow>
+  favorites: ReadonlySet<string>
+  titles: ReadonlyMap<string, TitleRow>
+  episodes: ReadonlyMap<string, EpisodeRow>
+  art: Placeholders
+  states: ViewerStates
+}
+
+function toItem(row: MediaItemRow, details: ItemDetails): MediaItem {
+  const owner = row.titleId ? details.titles.get(row.titleId) : undefined
+  const info =
+    row.titleId && row.seasonNumber !== null && row.episodeNumber !== null
+      ? details.episodes.get(
+          episodeKey(row.titleId, row.seasonNumber, row.episodeNumber),
+        )
+      : undefined
+  const progress = details.progress.get(row.id)
   return {
     id: row.id,
     libraryId: row.libraryId,
     fileTitle: row.title,
-    title: owner ? toSummary(owner) : null,
+    title: owner ? toSummary(owner, details.art, details.states) : null,
     seasonNumber: row.seasonNumber,
     episodeNumber: row.episodeNumber,
     episode: info
@@ -86,7 +189,7 @@ export function toItem(
           overview: info.overview,
           airDate: info.airDate,
           runtimeMinutes: info.runtimeMinutes,
-          still: info.stillId,
+          still: toArtwork(info.stillId, details.art),
         }
       : null,
     relativePath: row.relativePath,
@@ -103,6 +206,7 @@ export function toItem(
           updatedAt: progress.updatedAt,
         }
       : null,
+    favorite: details.favorites.has(row.id),
   }
 }
 
@@ -111,14 +215,15 @@ function episodeKey(titleId: string, season: number, number: number): string {
 }
 
 /**
- * Public items with the user's progress, their titles, and episode details
- * attached, in three queries.
+ * Public items with the user's progress and favorites, their titles, and
+ * episode details attached.
  */
 export async function publicItems(
   rows: MediaItemRow[],
   userId: string,
 ): Promise<MediaItem[]> {
   if (rows.length === 0) return []
+  const itemIds = rows.map((row) => row.id)
   const titleIds = [
     ...new Set(rows.flatMap((row) => (row.titleId ? [row.titleId] : []))),
   ]
@@ -126,17 +231,23 @@ export async function publicItems(
     (row) =>
       row.titleId && row.seasonNumber !== null && row.episodeNumber !== null,
   )
-  const [progress, titles, episodes] = await Promise.all([
+  const [progress, liked, titles, episodes, states] = await Promise.all([
     db
       .select()
       .from(watchProgress)
       .where(
         and(
           eq(watchProgress.userId, userId),
-          inArray(
-            watchProgress.mediaItemId,
-            rows.map((row) => row.id),
-          ),
+          inArray(watchProgress.mediaItemId, itemIds),
+        ),
+      ),
+    db
+      .select({ id: favoriteItem.mediaItemId })
+      .from(favoriteItem)
+      .where(
+        and(
+          eq(favoriteItem.userId, userId),
+          inArray(favoriteItem.mediaItemId, itemIds),
         ),
       ),
     titleIds.length > 0
@@ -156,25 +267,72 @@ export async function publicItems(
             )})`,
           )
       : [],
+    viewerStates(titleIds, userId),
   ])
-  const byItem = new Map(progress.map((row) => [row.mediaItemId, row]))
-  const byTitle = new Map(titles.map((row) => [row.id, row]))
-  const byEpisode = new Map(
-    episodes.map((row) => [
-      episodeKey(row.titleId, row.seasonNumber, row.episodeNumber),
-      row,
-    ]),
-  )
-  return rows.map((row) =>
-    toItem(
-      row,
-      byItem.get(row.id),
-      row.titleId ? byTitle.get(row.titleId) : undefined,
-      row.titleId && row.seasonNumber !== null && row.episodeNumber !== null
-        ? byEpisode.get(
-            episodeKey(row.titleId, row.seasonNumber, row.episodeNumber),
-          )
-        : undefined,
+  const art = await placeholders([
+    ...titles.flatMap(titleArtwork),
+    ...episodes.map((row) => row.stillId),
+  ])
+  const details: ItemDetails = {
+    progress: new Map(progress.map((row) => [row.mediaItemId, row])),
+    favorites: new Set(liked.map((row) => row.id)),
+    titles: new Map(titles.map((row) => [row.id, row])),
+    episodes: new Map(
+      episodes.map((row) => [
+        episodeKey(row.titleId, row.seasonNumber, row.episodeNumber),
+        row,
+      ]),
     ),
-  )
+    art,
+    states,
+  }
+  return rows.map((row) => toItem(row, details))
+}
+
+/**
+ * What Play starts in a title: the file in progress, the one after the
+ * last watched, or the first.
+ */
+export async function nextItem(
+  row: TitleRow,
+  userId: string,
+): Promise<MediaItem | null> {
+  const files = await db
+    .select()
+    .from(mediaItem)
+    .where(eq(mediaItem.titleId, row.id))
+    .orderBy(...episodeOrder)
+  if (files.length === 0) return null
+  // The user's progress in the title, latest first.
+  const progress = await db
+    .select({
+      id: watchProgress.mediaItemId,
+      completed: watchProgress.completed,
+    })
+    .from(watchProgress)
+    .innerJoin(mediaItem, eq(mediaItem.id, watchProgress.mediaItemId))
+    .where(and(eq(watchProgress.userId, userId), eq(mediaItem.titleId, row.id)))
+    .orderBy(desc(watchProgress.updatedAt), ...reverseEpisodeOrder)
+  const latest = progress[0]
+  let pick = files[0]
+  if (latest) {
+    const index = files.findIndex((file) => file.id === latest.id)
+    if (latest.completed) {
+      // Files marked watched by hand can sit ahead of the latest one, and
+      // unwatched ones behind it.
+      const watched = new Set(
+        progress.filter((p) => p.completed).map((p) => p.id),
+      )
+      const unwatched = (file: { id: string }) => !watched.has(file.id)
+      pick =
+        files.slice(index + 1).find(unwatched) ??
+        files.find(unwatched) ??
+        files[0]
+    } else {
+      pick = files[index] ?? files[0]
+    }
+  }
+  if (!pick) return null
+  const [item] = await publicItems([pick], userId)
+  return item ?? null
 }

@@ -1,19 +1,22 @@
-import { createHash } from "node:crypto"
+import { createHash, randomUUID } from "node:crypto"
 import { createReadStream } from "node:fs"
 import { access, mkdir, rename, rm, stat, writeFile } from "node:fs/promises"
 import { join } from "node:path"
 import { Readable } from "node:stream"
 
-import type { ArtworkSize } from "@matinee/contracts"
-import { artwork } from "@matinee/db"
-import { eq } from "drizzle-orm"
+import type { Artwork, ArtworkSize, ImagePlaceholder } from "@matinee/contracts"
+import { artwork, credit, episode, season, title } from "@matinee/db"
+import { and, eq, inArray, isNotNull, isNull } from "drizzle-orm"
+import type { PgColumn, PgTable } from "drizzle-orm/pg-core"
 import { Hono } from "hono"
 
 import { readSession } from "../auth/session"
 import { db } from "../db"
 import { env } from "../env"
+import { defineQueue, type Priority } from "../jobs/queue"
 import { log } from "../log"
-import { limiter, run } from "./process"
+import { readPlaceholder } from "./blurhash"
+import { run } from "./process"
 
 const WIDTHS = { small: 480, large: 1920 } satisfies Record<ArtworkSize, number>
 const MAX_BYTES = 25 * 1024 * 1024
@@ -22,12 +25,9 @@ const DOWNLOAD_TIMEOUT_MS = 30_000
 const RETRY_AFTER_MS = 10 * 60 * 1000
 
 const dir = join(env.dataDir, "artwork")
-const withDownload = limiter(6)
-const withResize = limiter(3)
-const inflight = new Map<string, Promise<Cached | null>>()
-const failedAt = new Map<string, number>()
 
-type Format = "jpg" | "png" | "webp"
+export type ImageFormat = "jpg" | "png" | "webp"
+type Format = ImageFormat
 type Cached = { path: string; format: Format }
 
 const CONTENT_TYPES = {
@@ -63,7 +63,39 @@ export async function saveArtwork(
   return ids
 }
 
-function sniff(bytes: Uint8Array): Format | null {
+export type Placeholders = Map<string, ImagePlaceholder>
+
+/** The placeholders the server has read for `ids`, by id. */
+export async function placeholders(
+  ids: Iterable<string | null>,
+): Promise<Placeholders> {
+  const found: Placeholders = new Map()
+  const wanted = [...new Set(ids)].filter((id): id is string => id !== null)
+  if (wanted.length === 0) return found
+  const rows = await db
+    .select({
+      id: artwork.id,
+      blurhash: artwork.blurhash,
+      aspectRatio: artwork.aspectRatio,
+    })
+    .from(artwork)
+    .where(and(inArray(artwork.id, wanted), isNotNull(artwork.blurhash)))
+  for (const { id, blurhash, aspectRatio } of rows) {
+    if (blurhash && aspectRatio) found.set(id, { blurhash, aspectRatio })
+  }
+  return found
+}
+
+/** An artwork id the way clients get it, with its placeholder if read. */
+export function toArtwork(
+  id: string | null,
+  found: Placeholders,
+): Artwork | null {
+  return id ? { id, placeholder: found.get(id) ?? null } : null
+}
+
+/** What the image bytes are, or null for anything but JPEG, PNG, and WebP. */
+export function sniffImage(bytes: Uint8Array): Format | null {
   if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return "jpg"
   if (
     bytes[0] === 0x89 &&
@@ -94,7 +126,13 @@ async function findOriginal(id: string): Promise<Cached | null> {
   return null
 }
 
-async function download(id: string, url: string): Promise<Cached> {
+/**
+ * Download an image a provider named, at most 25 MB. Throws for anything but
+ * a JPEG, PNG, or WebP image.
+ */
+export async function fetchImage(
+  url: string,
+): Promise<{ bytes: Uint8Array; format: Format }> {
   const response = await fetch(url, {
     signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS),
     headers: { "user-agent": "Matinee" },
@@ -104,12 +142,17 @@ async function download(id: string, url: string): Promise<Cached> {
   if (length > MAX_BYTES) throw new Error(`${url} is too large`)
   const bytes = new Uint8Array(await response.arrayBuffer())
   if (bytes.byteLength > MAX_BYTES) throw new Error(`${url} is too large`)
-  const format = sniff(bytes)
+  const format = sniffImage(bytes)
   if (!format) throw new Error(`${url} isn't a JPEG, PNG, or WebP image`)
+  return { bytes, format }
+}
 
+async function download(id: string, url: string): Promise<Cached> {
+  const { bytes, format } = await fetchImage(url)
   await mkdir(dir, { recursive: true })
   const path = join(dir, `${id}.${format}`)
-  const tmp = `${path}.${process.pid}.tmp`
+  // Unique, since a job for the other size may download the same image.
+  const tmp = `${path}.${randomUUID()}.tmp`
   await writeFile(tmp, bytes)
   await rename(tmp, path)
   return { path, format }
@@ -150,40 +193,163 @@ async function resize(
   }
 }
 
-async function load(id: string, size: ArtworkSize): Promise<Cached | null> {
+type ArtworkJob = { id: string; size: ArtworkSize }
+
+function jobKey(job: ArtworkJob): string {
+  return `${job.id}-${job.size}`
+}
+
+async function findResized(
+  id: string,
+  size: ArtworkSize,
+): Promise<Cached | null> {
   for (const format of ["jpg", "png"] as const) {
     const path = join(dir, `${id}-${size}.${format}`)
     if (await exists(path)) return { path, format }
   }
-  let original = await findOriginal(id)
-  if (!original) {
-    const failed = failedAt.get(id)
-    if (failed && Date.now() - failed < RETRY_AFTER_MS) return null
-    const [row] = await db
-      .select({ url: artwork.url })
-      .from(artwork)
-      .where(eq(artwork.id, id))
-    if (!row) return null
-    try {
-      original = await withDownload(() => download(id, row.url))
-      failedAt.delete(id)
-    } catch (cause) {
-      failedAt.set(id, Date.now())
-      log.warn(`Couldn't download artwork ${row.url}`, cause)
-      return null
-    }
-  }
-  const cached = original
-  return withResize(() => resize(id, cached, size))
+  return null
 }
 
-function artworkFile(id: string, size: ArtworkSize): Promise<Cached | null> {
-  const key = `${id}-${size}`
-  const pending = inflight.get(key)
-  if (pending) return pending
-  const job = load(id, size).finally(() => inflight.delete(key))
-  inflight.set(key, job)
-  return job
+/**
+ * Read the image's placeholder and store it. Failing costs only the
+ * placeholder, so the image is still served.
+ */
+async function savePlaceholder(id: string, file: Cached): Promise<void> {
+  const placeholder = await readPlaceholder(file.path).catch(
+    (cause: unknown) => {
+      log.warn(`Couldn't read a placeholder for artwork ${id}`, cause)
+      return null
+    },
+  )
+  if (!placeholder) return
+  await db.update(artwork).set(placeholder).where(eq(artwork.id, id))
+}
+
+/**
+ * The copy for `size`, downloading the original first if need be, and the
+ * placeholder the first time.
+ */
+async function load({ id, size }: ArtworkJob): Promise<Cached | null> {
+  const [row] = await db
+    .select({ url: artwork.url, blurhash: artwork.blurhash })
+    .from(artwork)
+    .where(eq(artwork.id, id))
+  if (!row) return null
+  let file = await findResized(id, size)
+  if (!file) {
+    const original = (await findOriginal(id)) ?? (await download(id, row.url))
+    file = await resize(id, original, size)
+  }
+  if (row.blurhash === null) await savePlaceholder(id, file)
+  return file
+}
+
+/**
+ * Provider artwork, fetched and scaled after a metadata fetch, or on first
+ * view if that comes sooner. A URL that failed is left alone for a while
+ * before trying again.
+ */
+const artworkJobs = defineQueue<ArtworkJob, Cached | null>({
+  id: "artwork",
+  name: "Artwork",
+  description:
+    "Download images from the metadata provider, scale them, and read their blurred placeholders.",
+  concurrency: 4,
+  tuning: {
+    max: 8,
+    note: "Provider images downloaded and resized at once. A library's first metadata fetch queues thousands.",
+  },
+  key: jobKey,
+  label: (job) => `artwork ${job.id}`,
+  retryAfterMs: RETRY_AFTER_MS,
+  failure: (job) => `Couldn't download artwork ${job.id}`,
+  run: (job) => load(job),
+})
+
+async function artworkFile(
+  id: string,
+  size: ArtworkSize,
+): Promise<Cached | null> {
+  // Most views find the file, and needn't wait for a worker.
+  const resized = await findResized(id, size)
+  if (resized) return resized
+  return artworkJobs.run({ id, size }, { priority: "high" }).catch(() => null)
+}
+
+/** Where downloads ahead of a view go: behind views, and posters first. */
+export type Prefetch = Extract<Priority, "normal" | "low">
+
+/**
+ * Download images ahead of their first view and read their placeholders.
+ * Images that have one are skipped, so a fetch that changed nothing
+ * queues nothing.
+ */
+export function queueArtwork(ids: (string | null)[], priority: Prefetch): void {
+  const wanted = [...new Set(ids)].filter((id): id is string => id !== null)
+  if (wanted.length === 0) return
+  db.select({ id: artwork.id })
+    .from(artwork)
+    .where(and(inArray(artwork.id, wanted), isNull(artwork.blurhash)))
+    .then((rows) => {
+      const due = new Set(rows.map((row) => row.id))
+      // In the caller's order, which puts what people see most first.
+      for (const id of wanted) {
+        if (due.has(id)) artworkJobs.push({ id, size: "small" }, { priority })
+      }
+    })
+    .catch((cause: unknown) =>
+      log.error("Couldn't queue artwork downloads", cause),
+    )
+}
+
+/** Artwork that `column` of `table` uses and that lacks a placeholder. */
+function lackingPlaceholder(table: PgTable, column: PgColumn) {
+  return db
+    .selectDistinct({ id: artwork.id })
+    .from(table)
+    .innerJoin(artwork, eq(artwork.id, column))
+    .where(isNull(artwork.blurhash))
+}
+
+/**
+ * Download every image a title, season, episode, or credit uses that the
+ * server has no placeholder for, as when a restart dropped the queued
+ * downloads or one failed. Title posters and backdrops go first. Resolves
+ * once those jobs are done.
+ */
+export async function prefetchArtwork(
+  options: { signal?: AbortSignal; progress?: (fraction: number) => void } = {},
+): Promise<void> {
+  const [covers, rest] = await Promise.all([
+    Promise.all([
+      lackingPlaceholder(title, title.posterId),
+      lackingPlaceholder(title, title.backdropId),
+    ]),
+    Promise.all([
+      lackingPlaceholder(season, season.posterId),
+      lackingPlaceholder(episode, episode.stillId),
+      lackingPlaceholder(title, title.logoId),
+      lackingPlaceholder(credit, credit.photoId),
+    ]),
+  ])
+  const due = new Map<string, Prefetch>()
+  for (const { id } of covers.flat()) due.set(id, "normal")
+  for (const { id } of rest.flat()) if (!due.has(id)) due.set(id, "low")
+  let done = 0
+  const jobs = [...due].map(([id, priority]) =>
+    artworkJobs
+      .run({ id, size: "small" }, { priority })
+      .catch(() => {
+        // Logged by the queue.
+      })
+      .finally(() => options.progress?.(++done / due.size)),
+  )
+  options.signal?.addEventListener("abort", () => {
+    for (const id of due.keys()) {
+      artworkJobs.cancel(jobKey({ id, size: "small" }))
+    }
+  })
+  await Promise.all(jobs)
 }
 
 export const artworkRoutes = new Hono()

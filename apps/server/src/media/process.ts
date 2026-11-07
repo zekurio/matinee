@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process"
+import { type ChildProcess, spawn } from "node:child_process"
 import { setPriority } from "node:os"
 import type { Readable } from "node:stream"
 
@@ -49,6 +49,8 @@ export type RunProcessOptions = {
   idleIo?: boolean
   /** Called per stdout line. Without it, stdout is ignored. */
   onStdoutLine?: (line: string) => void
+  /** Called per chunk of stdout, for binary output. */
+  onStdoutData?: (chunk: Buffer) => void
   /** Called per stderr line, on top of the tail kept for errors. */
   onStderrLine?: (line: string) => void
   /** Written to stdin, which then closes. Without it, stdin is ignored. */
@@ -65,34 +67,12 @@ export type RunProcessOptions = {
 export function runProcess(options: RunProcessOptions): Promise<void> {
   if (options.signal?.aborted) return Promise.reject(abortError())
   const timeoutMs = options.timeoutMs ?? PROCESS_TIMEOUT_MS
-
-  const child = spawn(options.command, options.args, {
-    stdio: [
-      options.stdin === undefined ? "ignore" : "pipe",
-      options.onStdoutLine ? "pipe" : "ignore",
-      "pipe",
-    ],
-  })
-  if (options.stdin !== undefined) {
-    // A process that exits before reading closes the pipe; that's fine.
-    child.stdin?.on("error", () => undefined)
-    child.stdin?.end(options.stdin)
-  }
-  if (options.priority !== undefined && child.pid !== undefined) {
-    try {
-      setPriority(child.pid, options.priority)
-    } catch {
-      // Unsupported platforms and exited processes keep the default.
-    }
-  }
-  if (options.idleIo && child.pid !== undefined) {
-    spawn("ionice", ["-c", "3", "-p", String(child.pid)], {
-      stdio: "ignore",
-    }).on("error", () => undefined)
-  }
+  const child = spawnChild(options)
 
   const stderr: string[] = []
   const flushStdout = readLines(child.stdout, options.onStdoutLine)
+  const onData = options.onStdoutData
+  if (onData) child.stdout?.on("data", (chunk: Buffer) => onData(chunk))
   const flushStderr = readLines(child.stderr, (line) => {
     options.onStderrLine?.(line)
     if (!line.trim()) return
@@ -155,6 +135,35 @@ export function runProcess(options: RunProcessOptions): Promise<void> {
   })
 }
 
+/** Start the child with the pipes, stdin, and priority the options ask for. */
+function spawnChild(options: RunProcessOptions): ChildProcess {
+  const child = spawn(options.command, options.args, {
+    stdio: [
+      options.stdin === undefined ? "ignore" : "pipe",
+      options.onStdoutLine || options.onStdoutData ? "pipe" : "ignore",
+      "pipe",
+    ],
+  })
+  if (options.stdin !== undefined) {
+    // A process that exits before reading closes the pipe; that's fine.
+    child.stdin?.on("error", () => undefined)
+    child.stdin?.end(options.stdin)
+  }
+  if (options.priority !== undefined && child.pid !== undefined) {
+    try {
+      setPriority(child.pid, options.priority)
+    } catch {
+      // Unsupported platforms and exited processes keep the default.
+    }
+  }
+  if (options.idleIo && child.pid !== undefined) {
+    spawn("ionice", ["-c", "3", "-p", String(child.pid)], {
+      stdio: "ignore",
+    }).on("error", () => undefined)
+  }
+  return child
+}
+
 /** Split a stream into lines; the returned flush emits a last partial line. */
 function readLines(
   stream: Readable | null,
@@ -190,6 +199,23 @@ export async function run(
     onStdoutLine: (line) => lines.push(line),
   })
   return lines.join("\n")
+}
+
+/** Run a command and resolve with its stdout as bytes. */
+export async function runBytes(
+  command: string,
+  args: string[],
+  timeoutMs?: number,
+): Promise<Buffer> {
+  const chunks: Buffer[] = []
+  await runProcess({
+    name: command.split("/").at(-1) ?? command,
+    command,
+    args,
+    timeoutMs,
+    onStdoutData: (chunk) => chunks.push(chunk),
+  })
+  return Buffer.concat(chunks)
 }
 
 /**

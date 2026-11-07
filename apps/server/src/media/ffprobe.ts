@@ -8,7 +8,7 @@ import type {
   SubtitleStream,
   VideoStream,
 } from "@matinee/contracts"
-import { z } from "zod"
+import { type SchemaBoundaryInput, t } from "@matinee/contracts/schema"
 
 import { env } from "../env"
 import { runProcess } from "./process"
@@ -18,20 +18,20 @@ import { runProcess } from "./process"
 const PROBE_TIMEOUT_MS = 30_000
 
 // ffprobe prints most numbers as strings, such as "23.976" or "N/A".
-const Numeric = z
+const Numeric = t
   .union([
-    z.number(),
-    z
+    t.number(),
+    t
       .string()
       .regex(/^-?\d+(\.\d+)?$/)
       .transform(Number),
   ])
   .optional()
   .catch(undefined)
-const Text = z.string().trim().min(1).optional().catch(undefined)
+const Text = t.string().trim().min(1).optional().catch(undefined)
 
 // Side data of a stream or a frame. Each type has its own fields.
-const SideData = z.object({
+const SideData = t.object({
   side_data_type: Text,
   dv_profile: Numeric,
   dv_level: Numeric,
@@ -42,11 +42,11 @@ const SideData = z.object({
   max_content: Numeric,
   max_average: Numeric,
 })
-type SideData = z.infer<typeof SideData>
-const SideDataList = z.array(SideData).optional().catch(undefined)
+type SideData = t.infer<typeof SideData>
+const SideDataList = t.array(SideData).optional().catch(undefined)
 
-const FfprobeStream = z.object({
-  index: z.number().int().nonnegative(),
+const FfprobeStream = t.object({
+  index: t.number().int().nonnegative(),
   codec_type: Text,
   codec_name: Text,
   codec_tag_string: Text,
@@ -67,7 +67,7 @@ const FfprobeStream = z.object({
   side_data_list: SideDataList,
   channels: Numeric,
   channel_layout: Text,
-  disposition: z
+  disposition: t
     .object({
       default: Numeric,
       forced: Numeric,
@@ -77,21 +77,21 @@ const FfprobeStream = z.object({
     })
     .optional()
     .catch(undefined),
-  tags: z.record(z.string(), z.string()).optional().catch(undefined),
+  tags: t.record(t.string(), t.string()).optional().catch(undefined),
 })
-type FfprobeStream = z.infer<typeof FfprobeStream>
+type FfprobeStream = t.infer<typeof FfprobeStream>
 
-const FfprobeOutput = z.object({
-  format: z
+const FfprobeOutput = t.object({
+  format: t
     .object({ format_name: Text, duration: Numeric, bit_rate: Numeric })
     .optional()
     .catch(undefined),
   // Checked one by one, so one odd stream doesn't hide the rest.
-  streams: z.array(z.unknown()).catch([]),
+  streams: t.array(t.unknown()).catch([]),
 })
 
-const FfprobeFrames = z.object({
-  frames: z.array(z.object({ side_data_list: SideDataList })).catch([]),
+const FfprobeFrames = t.object({
+  frames: t.array(t.object({ side_data_list: SideDataList })).catch([]),
 })
 
 const TEXT_SUBTITLES = new Set([
@@ -282,19 +282,19 @@ function toSubtitle(stream: FfprobeStream, codec: string): SubtitleStream {
   }
 }
 
-function parseJson<T extends z.ZodType>(schema: T, stdout: string) {
-  let json: Parameters<typeof schema.parse>[0]
+function readJson(stdout: string) {
+  let json: SchemaBoundaryInput
   try {
     json = JSON.parse(stdout)
   } catch {
     throw new Error("ffprobe printed something other than JSON")
   }
-  return schema.parse(json)
+  return json
 }
 
 /** The summary of ffprobe's `-show_streams -show_format` JSON. */
 export function readProbe(stdout: string): MediaProbe {
-  const output = parseJson(FfprobeOutput, stdout)
+  const output = FfprobeOutput.parse(readJson(stdout))
   const probe: MediaProbe = {
     format: {
       name: output.format?.format_name ?? "unknown",
@@ -341,7 +341,7 @@ export function withFirstFrame(
   video: VideoStream,
   stdout: string,
 ): VideoStream {
-  const [frame] = parseJson(FfprobeFrames, stdout).frames
+  const [frame] = FfprobeFrames.parse(readJson(stdout)).frames
   const side = frame?.side_data_list
   return {
     ...video,

@@ -5,22 +5,15 @@ import type { ThumbnailSize } from "@matinee/contracts"
 import type { MediaItemRow } from "@matinee/db"
 
 import { env } from "../env"
-import { log } from "../log"
+import { defineQueue } from "../jobs/queue"
 import { probeItem } from "./probe"
-import { limiter, run } from "./process"
+import { run } from "./process"
 
 const WIDTHS = { small: 480, large: 1280 } satisfies Record<
   ThumbnailSize,
   number
 >
-// Each extraction seeks into a large file; a few at a time keeps a library
-// page from starting a hundred ffmpeg processes.
-const withSlot = limiter(2)
-
 const dir = join(env.dataDir, "thumbnails")
-const inflight = new Map<string, Promise<string | null>>()
-// Files ffmpeg couldn't read, so a broken file isn't retried on every view.
-const failed = new Set<string>()
 
 async function exists(path: string): Promise<boolean> {
   return access(path).then(
@@ -33,7 +26,7 @@ async function extract(
   item: MediaItemRow,
   size: ThumbnailSize,
   file: string,
-): Promise<string | null> {
+): Promise<string> {
   await mkdir(dir, { recursive: true })
   let duration = item.durationSeconds
   if (item.probedAt === null) {
@@ -72,6 +65,31 @@ async function extract(
   }
 }
 
+type ThumbnailJob = {
+  /** Names the file, and the job. */
+  key: string
+  item: MediaItemRow
+  size: ThumbnailSize
+  file: string
+}
+
+/**
+ * Frames for cards and banners. Each extraction seeks into a large file; a
+ * few at a time keeps a library page from starting a hundred ffmpeg
+ * processes. A file ffmpeg couldn't read isn't tried again on every view.
+ */
+const thumbnails = defineQueue<ThumbnailJob, string>({
+  id: "thumbnails",
+  name: "Thumbnails",
+  description: "Take a frame from videos that have no artwork.",
+  concurrency: 2,
+  key: (job) => job.key,
+  label: (job) => job.item.relativePath,
+  retryAfterMs: Number.POSITIVE_INFINITY,
+  failure: (job) => `Couldn't extract a thumbnail for ${job.item.relativePath}`,
+  run: (job) => extract(job.item, job.size, job.file),
+})
+
 /**
  * The cached frame for a file, extracting it on first request. Null when
  * ffmpeg can't read the file or isn't installed.
@@ -85,17 +103,7 @@ export async function thumbnailFor(
   const key = `${item.id}-${item.modifiedAt.getTime()}-${size}`
   const file = join(dir, `${key}.jpg`)
   if (await exists(file)) return file
-  if (failed.has(key)) return null
-
-  const pending = inflight.get(key)
-  if (pending) return pending
-  const job = withSlot(() => extract(item, size, file))
-    .catch((cause: unknown) => {
-      failed.add(key)
-      log.warn(`Couldn't extract a thumbnail for ${item.relativePath}`, cause)
-      return null
-    })
-    .finally(() => inflight.delete(key))
-  inflight.set(key, job)
-  return job
+  return thumbnails
+    .run({ key, item, size, file }, { priority: "high" })
+    .catch(() => null)
 }

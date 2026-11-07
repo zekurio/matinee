@@ -1,14 +1,40 @@
-import { mediaItem, title, watchProgress } from "@matinee/db"
-import { and, desc, eq, inArray, ne, sql } from "drizzle-orm"
+import type { FeaturedTitle } from "@matinee/contracts"
+import { mediaItem, title, type TitleRow, watchProgress } from "@matinee/db"
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gt,
+  gte,
+  inArray,
+  isNotNull,
+  isNull,
+  lt,
+  max,
+  ne,
+  or,
+  type SQL,
+  sql,
+} from "drizzle-orm"
 
 import { db } from "../db"
+import { releaseSession } from "../media/hls"
 import {
   episodeOrder,
   inSeason,
+  nextItem,
   publicItems,
   reverseEpisodeOrder,
 } from "../media/items"
+import { playbackOptions } from "../media/playback-options"
+import { markUnwatched, markWatched } from "../media/watched"
+import { recordReport } from "../stats/sessions"
 import { authed, notFound } from "./base"
+
+// Titles rated at least this, out of 10, can be featured on Home.
+const FEATURED_MIN_RATING = 7.5
 
 // Past this share of the runtime, a file counts as watched.
 const WATCHED_RATIO = 0.92
@@ -39,7 +65,7 @@ function positionOf(row: {
 export const playback = {
   report: authed.playback.report.handler(async ({ context, input }) => {
     const [item] = await db
-      .select({ id: mediaItem.id, durationSeconds: mediaItem.durationSeconds })
+      .select()
       .from(mediaItem)
       .where(eq(mediaItem.id, input.itemId))
     if (!item) throw notFound("This title isn't in any library.")
@@ -59,6 +85,25 @@ export const playback = {
     const duration = reported ?? item.durationSeconds
     const completed =
       duration !== null && input.positionSeconds / duration >= WATCHED_RATIO
+
+    if (input.sessionId && input.closed) releaseSession(input.sessionId)
+    if (input.sessionId && input.playedSeconds !== undefined) {
+      await recordReport(
+        {
+          id: input.sessionId,
+          userId: context.user.id,
+          item,
+          userAgent: context.hono.req.header("user-agent"),
+        },
+        {
+          positionSeconds: input.positionSeconds,
+          playedSeconds: input.playedSeconds,
+          completed,
+          paused: input.paused ?? false,
+          closed: input.closed ?? false,
+        },
+      )
+    }
     if (!completed && input.positionSeconds < resumeThreshold(duration)) return
 
     await db
@@ -80,35 +125,20 @@ export const playback = {
       })
   }),
 
+  options: authed.playback.options.handler(() => playbackOptions()),
+
   setWatched: authed.playback.setWatched.handler(async ({ context, input }) => {
-    if (!input.watched) {
-      await db
-        .delete(watchProgress)
-        .where(
-          and(
-            eq(watchProgress.userId, context.user.id),
-            eq(watchProgress.mediaItemId, input.itemId),
-          ),
-        )
-      return
-    }
     const [item] = await db
-      .select({ id: mediaItem.id, durationSeconds: mediaItem.durationSeconds })
+      .select({ id: mediaItem.id })
       .from(mediaItem)
       .where(eq(mediaItem.id, input.itemId))
     if (!item) throw notFound("This title isn't in any library.")
-    await db
-      .insert(watchProgress)
-      .values({
-        userId: context.user.id,
-        mediaItemId: item.id,
-        positionSeconds: item.durationSeconds ?? 0,
-        completed: true,
-      })
-      .onConflictDoUpdate({
-        target: [watchProgress.userId, watchProgress.mediaItemId],
-        set: { completed: true, updatedAt: new Date() },
-      })
+    const files = eq(mediaItem.id, item.id)
+    if (input.watched) {
+      await markWatched(context.user.id, files, input.watchedAt)
+    } else {
+      await markUnwatched(context.user.id, files)
+    }
   }),
 
   setTitleWatched: authed.playback.setTitleWatched.handler(
@@ -121,43 +151,11 @@ export const playback = {
         throw notFound("This title isn't in any library. Reload the page.")
       }
       const files = and(eq(mediaItem.titleId, row.id), inSeason(input.season))
-      if (!input.watched) {
-        await db
-          .delete(watchProgress)
-          .where(
-            and(
-              eq(watchProgress.userId, context.user.id),
-              inArray(
-                watchProgress.mediaItemId,
-                db.select({ id: mediaItem.id }).from(mediaItem).where(files),
-              ),
-            ),
-          )
-        return
+      if (input.watched) {
+        await markWatched(context.user.id, files, input.watchedAt)
+      } else {
+        await markUnwatched(context.user.id, files)
       }
-      // One statement, so every file gets the same time; reverseEpisodeOrder
-      // then counts the last one as the latest for Play and next up.
-      await db
-        .insert(watchProgress)
-        .select(
-          db
-            .select({
-              userId: sql`${context.user.id}::uuid`.as("user_id"),
-              mediaItemId: mediaItem.id,
-              positionSeconds:
-                sql`coalesce(${mediaItem.durationSeconds}, 0)`.as(
-                  "position_seconds",
-                ),
-              completed: sql`true`.as("completed"),
-              updatedAt: sql`now()`.as("updated_at"),
-            })
-            .from(mediaItem)
-            .where(files),
-        )
-        .onConflictDoUpdate({
-          target: [watchProgress.userId, watchProgress.mediaItemId],
-          set: { completed: true, updatedAt: sql`now()` },
-        })
     },
   ),
 }
@@ -256,4 +254,96 @@ export const home = {
     }
     return publicItems(next, context.user.id)
   }),
+
+  featured: authed.home.featured.handler(async ({ context, input }) => {
+    const userId = context.user.id
+    const files = count(mediaItem.id)
+    // When the user last watched each title they started.
+    const watched = db
+      .select({
+        titleId: mediaItem.titleId,
+        at: max(watchProgress.updatedAt).as("watched_at"),
+      })
+      .from(watchProgress)
+      .innerJoin(mediaItem, eq(mediaItem.id, watchProgress.mediaItemId))
+      .where(eq(watchProgress.userId, userId))
+      .groupBy(mediaItem.titleId)
+      .as("watched")
+    // Titles the user hasn't started, and shows that got a file since they
+    // last watched. What they're watching has its own rows on Home.
+    const unseen = or(
+      isNull(watched.at),
+      and(ne(title.kind, "movie"), lt(watched.at, title.addedAt)),
+    )
+    // Twice the slides, to replace shows whose new file isn't the next one.
+    const candidates = (where: SQL | undefined, order: SQL[]) =>
+      db
+        .select({ row: title, files, watchedAt: watched.at })
+        .from(title)
+        .innerJoin(mediaItem, eq(mediaItem.titleId, title.id))
+        .leftJoin(watched, eq(watched.titleId, title.id))
+        .where(and(unseen, where))
+        .groupBy(title.id, watched.at)
+        .orderBy(...order)
+        .limit(input.limit * 2)
+    const [newest, rated] = await Promise.all([
+      candidates(undefined, [desc(title.addedAt), asc(title.sortName)]),
+      // Random, so each visit features different ones. Only titles with
+      // art: a frame from the file looks poor at banner size.
+      candidates(
+        and(
+          gte(title.rating, FEATURED_MIN_RATING),
+          isNotNull(title.backdropId),
+        ),
+        [sql`random()`],
+      ),
+    ])
+    // Alternate new and well-rated, each title once.
+    const picks: { row: TitleRow; files: number; watchedAt: Date | null }[] = []
+    const seen = new Set<string>()
+    for (let i = 0; i < Math.max(newest.length, rated.length); i++) {
+      for (const pick of [newest[i], rated[i]]) {
+        if (!pick || seen.has(pick.row.id)) continue
+        seen.add(pick.row.id)
+        picks.push(pick)
+      }
+    }
+
+    const entry = async ({
+      row,
+      files,
+      watchedAt,
+    }: (typeof picks)[number]): Promise<FeaturedTitle[]> => {
+      const item = await nextItem(row, userId)
+      if (!item?.title) return []
+      // A show the user watched comes back only for its next episode, once
+      // that arrives after they last watched.
+      if (
+        watchedAt &&
+        (item.progress !== null || !(await addedSince(item.id, watchedAt)))
+      ) {
+        return []
+      }
+      // The file's title is the row's, summarized already.
+      return [{ title: item.title, item, count: files }]
+    }
+    const featured: FeaturedTitle[] = []
+    let rest = picks
+    while (featured.length < input.limit && rest.length > 0) {
+      const batch = rest.slice(0, input.limit - featured.length)
+      rest = rest.slice(batch.length)
+      const entries = await Promise.all(batch.map(entry))
+      featured.push(...entries.flat())
+    }
+    return featured
+  }),
+}
+
+/** The file arrived after `since`. */
+async function addedSince(itemId: string, since: Date): Promise<boolean> {
+  const [row] = await db
+    .select({ id: mediaItem.id })
+    .from(mediaItem)
+    .where(and(eq(mediaItem.id, itemId), gt(mediaItem.createdAt, since)))
+  return row !== undefined
 }

@@ -49,15 +49,16 @@ export function languageName(tag: string): string | null {
 
 /**
  * What a track menu shows: the language, the language and the track's own
- * title, or the title alone when it already names the language.
+ * title, or the title alone when it already names the language. A track with
+ * neither gets `unnamed`, such as "Track 2".
  */
 export function trackLabel(
   language: string | null,
   title: string | null,
-  fallback: string,
+  unnamed: string,
 ): string {
   const name = language ? languageName(language) : null
-  if (!title) return name ?? fallback
+  if (!title) return name ?? unnamed
   if (!name || title.toLowerCase().includes(name.toLowerCase())) return title
   return `${name} (${title})`
 }

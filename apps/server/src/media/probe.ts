@@ -1,22 +1,14 @@
+import type { Stats } from "node:fs"
+
 import type { MediaProbe } from "@matinee/contracts"
 import { mediaItem, type MediaItemRow } from "@matinee/db"
-import { and, asc, eq, gt, isNull } from "drizzle-orm"
+import { and, eq, isNull } from "drizzle-orm"
 
 import { db } from "../db"
+import { defineQueue } from "../jobs/queue"
 import { log } from "../log"
-import { shutdownSignal } from "../shutdown"
 import { runFfprobe } from "./ffprobe"
-import { limiter, processFailureKind } from "./process"
-
-const BATCH_SIZE = 50
-// Each probe reads a few megabytes from the start of a file. A few at a
-// time keeps a first scan of a big library from crowding out playback.
-const withSlot = limiter(3)
-
-const inflight = new Map<string, Promise<MediaProbe | null>>()
-const running = new Map<string, Promise<void>>()
-// Libraries that asked for another pass while one was running.
-const again = new Set<string>()
+import { processFailureKind } from "./process"
 
 function failureMessage(cause: unknown): string {
   const message = cause instanceof Error ? cause.message : "Unknown error"
@@ -61,92 +53,102 @@ async function probeAndStore(row: MediaItemRow): Promise<MediaProbe | null> {
   return probe
 }
 
-/**
- * Probe a file and store what ffprobe found, joining a probe of it that is
- * already running. Null when ffprobe couldn't read the file; throws when
- * ffprobe can't run at all.
- */
-export function probeItem(row: MediaItemRow): Promise<MediaProbe | null> {
-  const pending = inflight.get(row.id)
-  if (pending) return pending
-  const job = probeAndStore(row).finally(() => inflight.delete(row.id))
-  inflight.set(row.id, job)
-  return job
-}
+type ProbeJob = { id: string; relativePath: string }
 
-/** One pass over the library's files that are due, in id order. */
-async function probePass(
-  libraryId: string,
-): Promise<{ read: number; failed: number }> {
-  let read = 0
-  let failed = 0
-  let after: string | null = null
-  // The rest waits for the next start once shutdown is requested.
-  while (!shutdownSignal.aborted) {
-    const rows = await db
+/**
+ * ffprobe for each new or changed file. Each probe reads a few megabytes
+ * from the start of a file; a few at a time keeps a first scan of a big
+ * library from crowding out playback. A job reads the row again, so a file
+ * probed meanwhile isn't probed twice.
+ */
+export const probes = defineQueue<ProbeJob, MediaProbe | null>({
+  id: "media-probe",
+  name: "Media info",
+  description: "Read the streams of new and changed files with ffprobe.",
+  concurrency: 3,
+  tuning: {
+    max: 8,
+    note: "Files ffprobe reads at once. Raise it to finish the first scan of a large library sooner.",
+  },
+  key: (job) => job.id,
+  label: (job) => job.relativePath,
+  failure: (job) => `Couldn't probe ${job.relativePath}`,
+  // Without ffprobe no file can be read, so stop until the next scan.
+  fatal: (cause) =>
+    processFailureKind(cause) === "start"
+      ? {
+          message: `Skipping media probes: ${failureMessage(cause)}`,
+          drop: () => true,
+        }
+      : null,
+  summary: ({ completed, failed, ms }) =>
+    completed + failed > 1
+      ? `Probed ${completed} file${completed === 1 ? "" : "s"} in ${ms} ms${failed > 0 ? `, ${failed} failed` : ""}`
+      : null,
+  run: async (job) => {
+    const [row] = await db
       .select()
       .from(mediaItem)
-      .where(
-        and(
-          eq(mediaItem.libraryId, libraryId),
-          isNull(mediaItem.probedAt),
-          after === null ? undefined : gt(mediaItem.id, after),
-        ),
-      )
-      .orderBy(asc(mediaItem.id))
-      .limit(BATCH_SIZE)
-    const last = rows.at(-1)
-    if (!last) break
-    after = last.id
-    const results = await Promise.allSettled(
-      rows.map((row) => withSlot(() => probeItem(row))),
-    )
-    for (const result of results) {
-      if (result.status === "rejected") throw result.reason
-      if (result.value) read++
-      else failed++
-    }
-  }
-  return { read, failed }
+      .where(eq(mediaItem.id, job.id))
+    if (!row) return null
+    if (row.probedAt !== null) return row.probe
+    return probeAndStore(row)
+  },
+})
+
+/**
+ * Probe a file now, ahead of the background probes, and store what ffprobe
+ * found. Null when ffprobe couldn't read the file; throws when ffprobe
+ * can't run at all.
+ */
+export function probeItem(row: MediaItemRow): Promise<MediaProbe | null> {
+  return probes.run(
+    { id: row.id, relativePath: row.relativePath },
+    { priority: "high" },
+  )
 }
 
 /**
- * Probe the library's new, changed, and never probed files in the
- * background. A call during a run adds one more pass after it, for files a
- * scan wrote meanwhile.
+ * What ffprobe read from the file, probing it now if the background probe
+ * hasn't reached it yet. Null when ffprobe couldn't read it, and when the
+ * file changed since the scan that stored the probe: its stream indexes
+ * may be gone, and the next scan probes it again.
  */
-export function probeLibrary(libraryId: string): Promise<void> {
-  const existing = running.get(libraryId)
-  if (existing) {
-    again.add(libraryId)
-    return existing
+export async function currentProbe(
+  item: MediaItemRow,
+  info: Stats,
+): Promise<MediaProbe | null> {
+  if (
+    info.size !== item.sizeBytes ||
+    info.mtime.getTime() !== item.modifiedAt.getTime()
+  ) {
+    return null
   }
-  const job = (async () => {
-    const started = Date.now()
-    let read = 0
-    let failed = 0
-    try {
-      do {
-        again.delete(libraryId)
-        const pass = await probePass(libraryId)
-        read += pass.read
-        failed += pass.failed
-      } while (again.has(libraryId))
-      const total = read + failed
-      if (total > 0) {
-        log.info(
-          `Probed ${total} file${total === 1 ? "" : "s"} in library ${libraryId} in ${Date.now() - started} ms${failed > 0 ? `, ${failed} unreadable` : ""}`,
-        )
-      }
-    } catch (cause) {
-      if (processFailureKind(cause) === "start") {
-        log.warn(`Skipping media probes: ${failureMessage(cause)}`)
-      } else log.error(`Probing library ${libraryId} failed`, cause)
-    } finally {
-      running.delete(libraryId)
-      again.delete(libraryId)
-    }
-  })()
-  running.set(libraryId, job)
-  return job
+  if (item.probedAt !== null) return item.probe
+  return probeItem(item).catch(() => null)
+}
+
+/**
+ * Queue a probe of every file that needs one, in the library or in all of
+ * them. Resolves once those probes are done.
+ */
+export async function probeMissing(
+  options: { libraryId?: string; signal?: AbortSignal } = {},
+): Promise<void> {
+  const rows = await db
+    .select({ id: mediaItem.id, relativePath: mediaItem.relativePath })
+    .from(mediaItem)
+    .where(
+      and(
+        isNull(mediaItem.probedAt),
+        options.libraryId
+          ? eq(mediaItem.libraryId, options.libraryId)
+          : undefined,
+      ),
+    )
+  const done = rows.map((row) => probes.run(row, { priority: "low" }))
+  options.signal?.addEventListener("abort", () => {
+    for (const row of rows) probes.cancel(row.id)
+  })
+  await Promise.allSettled(done)
 }

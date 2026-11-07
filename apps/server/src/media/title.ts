@@ -43,7 +43,7 @@ export function stem(filename: string): string {
 
 // Sonarr, Radarr, and Jellyfin put ids in folder names:
 // `Show (2008) {tvdb-81189}`, `Movie [tmdbid-603]`, `[imdbid-tt0133093]`.
-const ID_TAG = /[[{](tmdb|tvdb|imdb|anilist)(?:id)?[-=]([a-z0-9]+)[\]}]/gi
+const ID_TAG = /[[{](tmdb|tvdb|imdb)(?:id)?[-=]([a-z0-9]+)[\]}]/gi
 // Release groups, quality, and edition tags in brackets.
 const BRACKETED = /\[[^\]]*\]|\{[^}]*\}/g
 const PAREN_YEAR = /^(.*\S)\s*\(((?:19|20)\d{2})\)/
