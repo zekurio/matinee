@@ -4,17 +4,17 @@ A self-hosted media server. You point it at folders of video files, sign in
 with a passkey or your OIDC provider, and watch in the browser.
 
 This is the MVP. It scans libraries, fetches names, posters, and episode
-details from a metadata provider, and plays files as they are. There is no
-transcoding yet.
+details from a metadata provider, and plays files as they are when the
+browser can, converting them on the server when it can't.
 
 ## Layout
 
 ```
 apps/
-  server/      Hono server: oRPC handler, auth, library scanner, video streams
+  server/      Hono server: oRPC and REST handlers, auth, library scanner, video streams
   web/         React web client (Vite, TanStack Router + Query)
 packages/
-  contracts/   oRPC contract and zod schemas shared by server and clients
+  contracts/   oRPC contract and TypeBox schemas shared by server and clients
   client/      Typed client factory for any app (web now, TV and mobile later)
   db/          Drizzle schema and migrations (Postgres)
   ui/          shadcn components on Base UI, plus the theme
@@ -25,6 +25,15 @@ implements it with `implement(contract)` and clients call it through
 `createMatineeClient()`, so a rename or a schema change fails typechecking on
 both ends. Video bytes and the OIDC redirects are plain HTTP routes, listed in
 `packages/contracts/src/paths.ts`.
+
+The server also serves the contract as REST under `/api/v1`, for clients that
+aren't written in TypeScript. Each procedure's method and path sit beside it
+in the contract. The OpenAPI document is at `/api/v1/openapi.json`; feed it to
+a generator such as openapi-generator or swift-openapi-generator. Browsers
+authenticate with the session cookie. Apps send `Authorization: Bearer` with
+the token they get from one of the sign-ins in
+[Signing in apps](#signing-in-apps). Errors come back as JSON with `code`,
+`status`, and `message`.
 
 ## Development
 
@@ -42,7 +51,7 @@ the admin account with a passkey (or OIDC, if configured). Loopback URLs skip
 the setup token.
 
 The server applies migrations on start. After changing
-`packages/db/src/schema.ts`, generate a migration with a descriptive name:
+`packages/db/src/schema/`, generate a migration with a descriptive name:
 
 ```sh
 pnpm db:generate --name add_watch_progress
@@ -70,6 +79,12 @@ variables are optional defaults for that form: an empty field falls back to
 them. Set them if the admin account itself should be created through OIDC,
 since settings can't be opened before setup.
 
+If the provider sends a `picture` claim, in the ID token or from userinfo,
+Matinee uses it as the account's picture and fetches it again when it
+changes. Uploading a picture or removing it under Settings → Account stops
+that until the user picks the provider's picture again. Pictures are cropped
+to 256px squares and kept in `$MATINEE_DATA_DIR/avatars`.
+
 ## Scanning
 
 A scan looks only at the folders it is given and writes only what changed:
@@ -82,6 +97,7 @@ titles they belong to. Scans run one at a time. They start from:
 - A full scan every `MATINEE_SCAN_INTERVAL_HOURS`, 12 by default, for what
   the watcher can't see. 0 turns it off.
 - Scan now in Settings → Libraries, and adding or editing a library.
+- Run now on Scan libraries in Settings → Jobs.
 
 The watcher watches every folder in a library. Once a library's files have
 stopped changing for 10 seconds, it scans a folder that appeared with
@@ -125,9 +141,6 @@ it is created or edited:
   it. Needs `MATINEE_TMDB_API_KEY`.
 - TheTVDB: shows in the season order Sonarr uses, plus movies. Needs
   `MATINEE_TVDB_API_KEY`, and `MATINEE_TVDB_PIN` for user-supported keys.
-- AniList: anime, with no key. It names and illustrates the show only, so
-  episodes keep their file names, and each AniList entry covers a single
-  season.
 
 A scan groups files into titles: a show is a top-level folder, a movie is a
 folder holding one video (or a lone file), and `Season 2` folders or `S02E05`
@@ -137,15 +150,60 @@ In the background, ffprobe reads the codecs, audio tracks, and subtitles of
 files that are new or changed, a few at a time. A file it can't read is
 left alone until it changes.
 
+## Jobs
+
+Background work runs in queues, as in Immich: library scans, media info
+(ffprobe), metadata, thumbnails, trickplay images, artwork, subtitle
+conversion, and profile pictures. Each queue runs a few jobs at a time, and asking for a job that
+is already waiting or running joins it, so a file is never probed twice at
+once. What a player waits for, like a thumbnail or the file it's about to
+play, goes ahead of background work. Under Settings → Jobs admins see what
+each queue is doing and its latest failures, pause it, or drop its waiting
+jobs. Concurrency, further down, sets how many jobs the media info,
+trickplay, and artwork queues run at once, the three that build up long
+backlogs. Higher numbers clear one sooner but take CPU, disk, and network
+from people streaming. A change applies at once and stays for the next
+start. The other queues run a fixed number.
+
+Scheduled tasks fill the queues, as in Jellyfin: scanning every library,
+refreshing stale metadata, reading media info of files that haven't been
+read, fetching artwork, making trickplay images, cleaning up old encodes,
+and deleting expired sessions. Each runs at startup, on an interval, or when an admin presses
+Run now, and can be cancelled, which also drops the jobs it queued. The
+last run of each is stored, so an interval counts across restarts. The
+queues live in memory: the tasks find unfinished work again after a
+restart, since it's all derived from the database.
+
 Matching tries, in order, a provider id in the folder name (`{tvdb-81189}`,
 `[tmdbid-603]`, `{imdb-tt0133093}`, as Sonarr, Radarr, and Jellyfin write
 them), the title's earlier match, ids another provider found, and last a
 search by the folder's name and year. Admins fix wrong matches from a title's
 page with Fix match.
 
-The server downloads artwork on first view into `$MATINEE_DATA_DIR/artwork`
-and resizes it with ffmpeg. Clients get artwork ids and load them through
-`artworkPath()`; the server only fetches URLs a provider gave it.
+A fetch also keeps the first 20 billed actors with their characters, the
+studios, and some of the crew. Movies get their directors and writers,
+including screenplay, story, and source credits such as a novel. Shows get
+their creators and whoever directed or wrote the show as a whole: anime's
+series director and series composition, anyone credited on a third of the
+episodes, and the author of the source. TheTVDB only lists crew per episode,
+so its shows get the cast and studios. Like Jellyfin, Matinee leaves out the
+rest of the crew and episode guest stars.
+
+The server downloads artwork into `$MATINEE_DATA_DIR/artwork` and resizes
+it with ffmpeg. Clients get artwork ids and load them through
+`artworkPath()`; the server only fetches URLs a provider gave it. As in
+Jellyfin, a metadata fetch downloads every image it saved: posters,
+backdrops, logos, season posters, episode stills, and cast photos.
+Posters and backdrops go first, and an image someone opens goes ahead of
+all of them. The original and its small copy take about 150 KB per image
+on average, so a library of 1,000 titles needs a few GB.
+
+Like Jellyfin, the server reads a [BlurHash](https://blurha.sh) from each
+image it downloads and sends it, with the image's aspect ratio, next to
+the artwork id. The web app draws it as a blurred stand-in until the image
+loads. An image opened before its download finished has none on that
+view. The Fetch artwork task downloads whatever a restart or a failure
+left without a BlurHash.
 
 Providers live in `apps/server/src/metadata`. Adding one means implementing
 `MetadataSource` in `types.ts`, listing it in `sources.ts`, and adding its id
@@ -153,24 +211,81 @@ to `METADATA_PROVIDERS` in the contract.
 
 ## Subtitles
 
-The player shows subtitle files beside a video and text subtitles inside it.
+The player shows subtitle files beside a video and subtitle streams inside it.
 
 - Files: `Movie.srt`, `Movie.en.srt`, `Movie.eng.forced.srt`,
-  `Movie.de.sdh.srt`, also `.vtt`, `.ass`, and `.ssa`, in the video's folder or
+  `Movie.de.sdh.srt`, also `.vtt`, `.ass`, `.ssa`, `.sup` (PGS), and `.idx`
+  (VobSub), in the video's folder or
   a `Subs` or `Subtitles` folder next to it. Release packs with
   `Subs/<video name>/2_English.srt` work too. A scan of the video's folder
   picks them up, and the watcher sees them come and go like videos. A file
   in `Subs` with no video's name goes to the folder's only video.
 - Streams: text subtitles inside the file, such as SubRip, ASS/SSA,
-  mov_text, and WebVTT. The first
-  time someone turns one on, ffmpeg extracts it into
+  mov_text, and WebVTT, and picture subtitles: PGS, VobSub, and DVB. The
+  first time someone turns a text or PGS stream on, ffmpeg copies it into
   `$MATINEE_DATA_DIR/subtitles`, where it stays until the file changes.
-- Browsers get WebVTT. ASS and SSA lose their styling on the way.
+  That reads the whole file, so on a large one it can take minutes.
+- Browsers get WebVTT for text. ASS and SSA lose their styling on the way.
+- PGS goes to the browser as it is, a `.sup` file, and the player draws it
+  over the video with [libpgs](https://github.com/Arcus92/libpgs-js). It
+  works with every source, the file as it is included.
+- VobSub and DVB only show burned into the video. Picking one switches to
+  an encode with the subtitle drawn on, at the quality picked, or the
+  fallback quality for Original. The overlay runs on the CPU; the GPU still
+  decodes and encodes if it's set up. Other clients can burn in PGS the
+  same way, with `subtitle` in `mediaHlsPath()`.
 
 A file starts with the viewer's last language if they had subtitles on, else a
 forced track in the audio's language, else a track the file marks default.
-The player remembers the last choice, a language or Off, for the next file.
-Press C to toggle subtitles.
+Tracks that need burning in never start by themselves. The player remembers
+the last choice, a language or Off, for the next file. Press C to toggle
+subtitles.
+
+## Audio tracks and quality
+
+The player's audio menu lists every audio track in the file. The track the
+file marks default plays from the file as it is, if the browser decodes
+it. Any other track, or a default track the browser can't decode, plays a
+stream that ffmpeg makes on the fly: fragmented MP4 with that one audio
+track and the video copied. A quality other than Original in the settings
+menu plays an encode, the video in H.264 at the picked size and bit rate,
+as HLS. When the browser can't play a file as it is, the player switches
+to an encode by itself. The quality you pick is remembered for the next
+file.
+
+The player tells the server which audio codecs the browser decodes in MP4,
+out of Opus, AAC, MP3, FLAC, ALAC, AC-3, and E-AC-3. A stream copies a
+track in one of them. Anything else, like DTS, TrueHD, or PCM, becomes
+Opus, or AAC in a browser without Opus. Converted audio is stereo, at
+Jellyfin's bit rates: 192 kb/s for Opus, 256 kb/s for AAC, 128 kb/s for
+mono. Surround goes through the downmix set under Settings → Transcoding.
+So a file with DTS audio plays in Chrome with its video copied and Opus
+audio, which costs the server little.
+
+A copied stream has no byte ranges, so the player seeks by starting a new
+one. The video can only start on a keyframe, so a seek lands on the
+nearest one. Safari won't play media without byte ranges, so these streams
+don't play there yet.
+
+Encodes work the way Jellyfin's transcodes do: ffmpeg writes six-second
+fMP4 segments to disk, and the player loads them from an HLS playlist with
+hls.js, or natively where the browser has no Media Source Extensions. A
+seek past what's encoded starts ffmpeg at the segment the player asked
+for. Unlike Jellyfin, an encode belongs to no one player. Everyone who
+plays the same file with the same audio track and quality, in browsers
+that decode the same audio codecs, reads the same segments, so the server
+encodes each segment once and serves it from disk after that, also on a
+second viewing. A change to the file or to the transcoding settings
+starts a new encode. ffmpeg runs while someone is watching ahead of what's
+on disk and stops when it reaches segments it already wrote, or two
+minutes after the last player asked for anything. Throttling pauses it
+once it is far enough ahead of every player, and segment deletion removes
+segments every player is past.
+
+Encodes stay in `$MATINEE_DATA_DIR/transcodes`, or `MATINEE_TRANSCODE_DIR`,
+for `MATINEE_TRANSCODE_CACHE_HOURS` (24) after anyone last played them,
+and the least recently played go first once they pass
+`MATINEE_TRANSCODE_CACHE_GB` (50) together.
 
 ## Transcoding and ffmpeg
 
@@ -206,7 +321,8 @@ and keeps HDR10 and HLG in 10-bit HEVC and AV1 encodes.
 Admins set it up under Settings → Transcoding: the GPU (VAAPI, Intel Quick
 Sync, NVIDIA NVENC, or Apple VideoToolbox) and its device, which codecs it
 decodes, HEVC and AV1 encoding, the x264 preset and CRF, tone mapping,
-deinterlacing, and throttling. Changes apply to the next transcode. The
+deinterlacing, the stereo downmix and its boost, VBR for AAC, and
+throttling. Changes apply to the next transcode. The
 `MATINEE_HARDWARE_ACCELERATION`, `MATINEE_VAAPI_DEVICE`, and
 `MATINEE_QSV_DEVICE` variables are the defaults for that form.
 
@@ -216,9 +332,132 @@ with each GPU encoder and each tone mapper. The settings page shows the
 result, and offers only what passed. Detect again after updating drivers
 or ffmpeg. A GPU path that can't tone map a file falls back to tonemapx.
 
+Intel GPUs also have a low-power encoder (VDENC) for H.264 and HEVC. It
+skips CPU-GPU syncs, which helps 4K and tone mapped encodes. As in
+Jellyfin, a switch per codec turns it on for QSV and for VAAPI on an Intel
+driver, and both are off by default. Low power needs a GPU with VDENC for
+the codec (Skylake and later for H.264, Ice Lake and later for HEVC) and
+the HuC firmware for bitrate control, so detection tries it too, and the
+switches work only where it passed. Arc GPUs encode in low power either
+way.
+
 In Docker, pass the GPU through: `/dev/dri` for VAAPI and QSV, plus the
 OpenCL runtime of the driver (such as `intel-compute-runtime`) for OpenCL
 tone mapping; the NVIDIA container toolkit for NVENC.
+
+## Trickplay
+
+While someone hovers over or drags the seek bar, the player shows the
+frame at that point, as Jellyfin does. The server makes these trickplay
+images with ffmpeg in the background: a 320 px thumbnail every 10
+seconds, in JPEG tiles of 10 by 10, kept in `$MATINEE_DATA_DIR/trickplay`.
+In a test, a 24-minute 1080p episode took 18 seconds and 1.2 MB, and a
+99-minute 4K HDR10 remux two minutes and 4.3 MB. HDR is tone mapped with
+tonemapx. ffmpeg runs at low priority.
+
+Scans queue images for their files once ffprobe has read them. The Make
+trickplay images task catches the rest once a day, and deletes the images
+of files that are gone. A file someone opens before its images exist moves
+to the front of the queue, and the seek bar picks them up when they're
+done.
+
+By default ffmpeg decodes only keyframes, so a thumbnail can be a second
+or two off its time. That makes a whole library practical: decoding every
+frame of that episode took four CPU minutes, its keyframes 20 seconds.
+Admins change this, the interval, and the width under Settings →
+Trickplay, or turn trickplay off. New settings make every file's images
+again; the old ones show until then.
+
+Hardware decoding, off by default as in Jellyfin, decodes on the GPU set
+up under Transcoding, for the codecs it decodes there, and copies each
+frame back for the CPU filters. It saves the most with keyframes only off:
+decoding every frame of three minutes of the 4K remux took 306 CPU
+seconds in software and 32 with VAAPI. A run that fails on the GPU runs
+again on the CPU, and a keyframes-only run that fails or finds nothing
+decodes every frame, as Jellyfin does.
+
+Clients read a file's images from `media.trickplay` and load the tiles
+through `trickplayTilePath()`. Players that read HLS image playlists, as
+Roku's and Apple's do, can load `trickplayPlaylistPath()` instead: an
+`#EXT-X-IMAGES-ONLY` playlist with `#EXT-X-TILES` per tile, like
+Jellyfin's `tiles.m3u8`. Its tile URLs are relative and carry no token, so
+the player has to send the `Authorization` header with them.
+
+## Statistics
+
+Each time someone opens a file in the player, it starts a playback session
+with an id it makes up, and sends that id with its progress reports and its
+stream requests. Reports carry the seconds spent playing, not counting
+pauses, buffering, or seeks. The server never counts more than the time
+since the session began plus 30 seconds, so a client can't claim more than
+it could have watched. Stream requests record what the server did: copied
+the file, copied the video into a stream ("direct stream"), or encoded it,
+with the encoder, whether a GPU did it, tone mapping, the converted audio,
+and how long ffmpeg ran.
+
+A session counts as a play once it has played a minute or reached the end.
+Movies and episodes count as watched when a session played them to the
+end, or when someone marked them watched. Marking asks when, as Trakt
+does: just now, on the release date (an episode's air date, a movie's
+release date), or on a date and time picked in a dialog. It adds a play at
+that time holding the runtime from the resume point on, since the player
+already counted what came before. A file that's already watched gets no
+second play, and marking it unwatched takes the marked plays back while
+the player's sessions stay. Marked plays count everywhere except the
+playback method breakdown, since the server played nothing.
+
+The migration that added marks gave every file that was already watched,
+but never played to the end in a session, a marked play at its last
+progress update. That covers files marked by hand earlier and files
+watched before statistics existed. Sessions outlive the files and titles
+they played, so watch time stays when a library loses them.
+
+Statistics, in the account menu, shows one of four views, picked from a
+dropdown. Days and hours count in the browser's time zone; other clients
+send `timeZone` with the request, and it defaults to UTC. Everything but
+the library totals follows the period picked beside the dropdown.
+
+- Activity, for admins: who is watching right now and how each stream
+  plays, watch time per day, week, or month, the most watched titles and
+  genres, when playback starts, and viewers.
+- Playback, for admins: how plays split between direct play, direct
+  stream, and transcode, which encoders and source codecs transcoding
+  needed, and browsers and apps.
+- Library, for everyone: what the libraries hold, the files that arrived
+  over time, and their resolution, dynamic range, and codecs. A file
+  arrived at its modification time, or when a scan found it if that came
+  first, so a new server shows when its files were downloaded rather than
+  one spike on the day of the first scan.
+- Leaderboard, for everyone: watch time, plays, the current and longest
+  streak of days in a row with a play, and movies and episodes finished.
+  Only people who share their statistics take part. You always see your
+  own place, and nobody else does until you share. The current streak
+  runs up to today or yesterday, whatever the period.
+
+The leaderboard is one statement that ranks in Postgres. Its totals and
+play days come from index-only scans of `playback_session_user_idx`, which
+carries every column they read; `playback_session_started_idx` does the
+same for the server-wide views.
+
+## Profiles and favorites
+
+Everyone on the server has a profile at `/profiles/<username>`, linked from
+the leaderboard and the admins' statistics. A profile always shows the name
+and picture. Its owner decides under Settings → Account whether others
+also see:
+
+- Favorites: the movies, shows, and episodes they marked with the heart,
+  on a title's or episode's page or on its poster or still. Home lists
+  your own favorites too.
+- Statistics: watch time, the most watched titles and genres, when they
+  watch, and the last file of each title they played.
+
+Both start off. The owner sees everything on their own profile either way,
+with a note on the parts nobody else can see.
+The Share button copies the profile's address, or opens the share sheet on
+a phone. The page needs an account on the server; nothing on it is public.
+Admins still see each person's total watch time in the server's
+statistics.
 
 ## Running in production
 
@@ -235,43 +474,96 @@ Until the first account exists, the server logs a setup token. Enter it on
 ## How auth works
 
 - Sessions are random tokens. The database stores only their SHA-256. Browsers
-  get an HttpOnly cookie; other clients can send `Authorization: Bearer`.
+  get an HttpOnly cookie; apps send `Authorization: Bearer`. A session ends
+  30 days after it was last used.
+- Settings → Account lists every session: browsers by the browser and system
+  in their User-Agent, apps by the device name and platform they sent when
+  they signed in. You can sign out any of them, or all but the current one.
 - Passkeys use discoverable credentials with user verification, via
   SimpleWebAuthn.
 - OIDC uses authorization code + PKCE with state and nonce, via openid-client.
   A short-lived cookie binds each round trip to the browser that started it.
-  Accounts are matched on issuer + subject, never on email.
+  Accounts are matched on issuer + subject, never on email. Each account
+  links at most one provider account. Linking one at a new issuer replaces
+  the link at the old one, which can't sign in anymore.
 - Nobody can remove their last passkey or linked account. A linked account
   only counts while single sign-on is on, and an admin who signs in only
   through it can't turn it off or change the issuer.
-- Admins add people under Settings → Users. Adding a user creates the account
-  and an invite link for the admin to copy and send. Whoever opens it creates
-  a passkey for that account, or links the OIDC provider while single sign-on
-  is on, and is signed in. For someone who lost their passkeys, a recovery
-  link adds a new one to the existing account the same way.
-- An invite or recovery link works once and expires after 7 days. A new link
-  replaces the user's earlier ones, and admins can revoke a pending link. The
-  database stores only the token's SHA-256, and the server builds the link
-  from `PUBLIC_URL`. Opening the page doesn't use the link up, so a chat app
-  that fetches it for a preview can't burn it. Linking the provider starts
-  with a form post from that page, which the CSRF check keeps other sites
-  from sending.
+- People create their own accounts. With `MATINEE_OPEN_REGISTRATION` on,
+  the login page lets anyone pick a username and create a passkey. With
+  sign-up allowed in the OIDC settings (or `MATINEE_OIDC_ALLOW_SIGN_UP`),
+  the first sign-in of an unlinked provider account creates a new account.
+  Both start off, so only the admin from setup can sign in until you turn
+  one on. Settings → Users lists the accounts for admins to manage.
+- An unlinked OIDC sign-in whose username claim matches an account, as sent
+  or as Matinee would turn it into a username, doesn't sign in to it or make
+  a numbered copy. Linking on the claim alone would hand the account to
+  whoever controls that claim at the provider. The server keeps the
+  verified sign-in for 10 minutes, tied to the browser by an HttpOnly
+  cookie, and the login page asks the person to sign in to that account and
+  link it, without another trip to the provider. While sign-up is allowed,
+  they can create a new account from it instead. This works whether or not
+  sign-up is on.
 - There is always an admin who can sign in: the server refuses to demote or
   delete the last one, yourself included. Every request reads the role from
   the database, so a demotion applies to the user's next request. Deleting a
-  user deletes their sessions, passkeys, linked accounts, links, and watch
-  progress.
+  user deletes their sessions, passkeys, linked accounts, watch progress,
+  favorites, and playback history.
 - An OIDC client secret saved in settings is stored in the database as is,
   like the rest of the settings. Use `MATINEE_OIDC_CLIENT_SECRET_FILE` to keep
   it out of the database.
 
+## Signing in apps
+
+Apps get a session of their own, separate from the browser's, so signing
+out of one leaves the other signed in. There are two ways, both in the
+`auth.app` and `auth.device` procedures of the contract, and both end in
+`{ token, user }`. An app sends its device name, like `Living room TV`, and
+its platform: `android`, `ios`, `linux`, `macos`, `tizen`, or `windows`.
+
+Apps that can open a browser, on phones and desktops, follow OAuth for
+native apps (RFC 8252) with PKCE:
+
+1. The app makes a random code verifier and opens `/authorize` in the system
+   browser (`ASWebAuthenticationSession` on iOS, Custom Tabs on Android) with
+   `redirect_uri`, `state`, `code_challenge` (base64url SHA-256 of the
+   verifier), `code_challenge_method=S256`, `platform`, and `device_name`.
+   `appAuthorizePagePath()` builds the URL.
+2. The page signs the person in if they aren't already, with a passkey or the
+   OIDC provider, and asks them to approve the app.
+3. The browser goes to `redirect_uri` with `code` and `state`. The redirect
+   URI is either a `matinee:` URI the app registered, or a loopback URL such
+   as `http://127.0.0.1:43123/callback` for a desktop app that listens on a
+   port.
+4. The app posts `code` and `codeVerifier` to `/api/v1/auth/app/token`.
+   A code works once, for two minutes, and only with its verifier.
+
+Apps without a browser, like TV apps, follow the OAuth device grant
+(RFC 8628):
+
+1. The app posts its device to `/api/v1/auth/device` and shows the
+   `userCode`, like `BCDF-GHJK`, with `verificationUri`, which is
+   `$PUBLIC_URL/link`. `verificationUriComplete` has the code filled in, for
+   a QR code.
+2. Someone signed in opens the page on their phone, enters the code, checks
+   the device, and approves.
+3. The app polls `/api/v1/auth/device/token` with `deviceCode` every
+   `interval` seconds. It answers `pending` until the approval, then the
+   session. After `expiresIn` seconds, 10 minutes, it answers 404 and the app
+   starts again.
+
+Both pages warn that approving hands the device the account. They are the
+only guard against someone sending a link or code of their own to get in.
+
 ## Not built yet
 
-- Transcoding and remuxing. MKV, AVI, and HEVC files only play where the
-  browser supports them.
-- Picture subtitles (PGS, VobSub, DVB), which need burning in. The player
-  lists them as unavailable. ASS and SSA play without their styling.
+- HLS. Streams are progressive MP4, which Safari doesn't play.
+- Surround in streams. Converted audio is always stereo.
+- Text subtitle burn-in, so ASS and SSA play without their styling.
 - Metadata from NFO files and local artwork, absolute episode numbering for
   anime, and provider keys set in admin settings instead of the environment.
-- A sign-in flow that hands tokens to TV and mobile apps.
 - A bundled server build and Nix package.
+
+## License
+
+MIT. See [LICENSE](LICENSE).

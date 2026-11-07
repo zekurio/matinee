@@ -5,16 +5,23 @@ See README.md for setup and the auth design.
 
 ## Repository map
 
-- `packages/contracts`: the oRPC contract and zod schemas. Every API change
-  starts here. `paths.ts` lists the plain HTTP routes (streams, artwork,
-  OIDC).
+- `packages/contracts`: the oRPC contract and its TypeBox schemas, written
+  with the zod-like `t` builder from `@matinee/contracts/schema`
+  (`src/schema.ts`, from alloy). A `t` schema is also a Standard Schema, so
+  oRPC, TanStack Router's `validateSearch`, and TanStack Form take it as is.
+  Defaults are `$default(...)`, since `default` is the JSON Schema keyword.
+  Every API change starts here, including the REST method and path each
+  procedure gets under `/api/v1`. `paths.ts` lists the plain HTTP routes
+  (streams, artwork, OIDC).
 - `packages/client`: `createMatineeClient()`, the typed client for all apps.
-- `packages/db`: Drizzle schema (`src/schema.ts`) and migrations.
+- `packages/db`: Drizzle schema (`src/schema/`, one file per domain) and migrations.
 - `packages/ui`: shadcn components (Base UI, `base-nova` style) and
   `globals.css` with the theme tokens.
 - `apps/server`: Hono app (`src/app.ts`), RPC procedures (`src/rpc`), auth
   (`src/auth`), scanner and title grouping (`src/library`), metadata
-  providers and refresh (`src/metadata`), streaming and artwork (`src/media`).
+  providers and refresh (`src/metadata`), streaming and artwork (`src/media`),
+  job queues and scheduled tasks (`src/jobs`), in-process events and live
+  streams (`src/realtime`).
 - `apps/web`: Vite React app. File routes live in `src/routes`;
   `src/routeTree.gen.ts` is generated.
 
@@ -27,7 +34,7 @@ See README.md for setup and the auth design.
 - Lint is type-aware oxlint plus the anti-slop rules in `tools/oxlint`
   (borrowed from alloy). In practice:
   - Parse untrusted values (search params, JSON columns, provider payloads,
-    error causes) with zod. `typeof` checks are rejected.
+    error causes) with a `t` schema. `typeof` checks are rejected.
   - A parameter typed `unknown` must be named `cause`, and only for errors.
   - Use `satisfies` or a `Map` rather than annotating a literal as a
     `Record`.
@@ -41,6 +48,47 @@ See README.md for setup and the auth design.
 - Add shadcn components from `packages/ui`:
   `pnpm dlx shadcn@latest add <name>`. The CLI's output is ours to edit.
 
+## Web app
+
+- Forms use TanStack Form through `useAppForm` from `src/lib/form.tsx`.
+  Fields validate with the contract's `t` schemas.
+- State that belongs together, or that several components share, lives in
+  a zustand store in `src/stores/`. A store for something that can mount
+  twice at once is per instance. Server data stays in TanStack Query, and
+  URL state in search params.
+- An effect only syncs with something outside React: the DOM, the media
+  element, hls.js, timers, storage, subscriptions. Compute derived values
+  in render, reset on a prop change with `key`, and do an event's work in
+  its handler.
+
+## Background work
+
+- Work that runs outside a request, or that requests must not repeat at
+  once, goes through a queue from `defineQueue` in `src/jobs/queue.ts`:
+  keyed jobs, per-queue concurrency, priority, and failure memory. Don't
+  write another `inflight` map or limiter for it. Add the queue's id to
+  `JOB_QUEUE_IDS` in `packages/contracts/src/jobs.ts`.
+- Periodic work is a task in `src/jobs/tasks.ts`, not a `setInterval`.
+  Tasks find work and queue it; the scheduler stores their last run.
+- A job never waits on another job of its own queue; that can deadlock.
+
+## Live updates
+
+- A procedure that pushes changes outputs `eventIterator(...)` in the
+  contract. Over REST that's server-sent events, so it can stay a GET.
+- The server side publishes a topic from `src/realtime/events.ts` where
+  the state changes. Add new topics to `Topics` there. To stream the
+  state again on each change, return `follow(...)` from
+  `src/realtime/follow.ts`. To pass the events themselves on, use
+  `events.subscribe(topic, { signal: streamSignal(signal) })`. Every
+  stream ends on `streamSignal`, which also caps its length so the
+  session gets checked again.
+- The web app reads one with
+  `useQuery({ ...orpc.x.experimental_liveOptions(), ...liveQuery })`
+  (`liveQuery` from `src/lib/rpc.ts`), which reconnects. A stream from
+  `follow` starts with the current state, so nothing is lost while it
+  reconnects. A stream of events needs its own way to catch up.
+
 ## Boundaries
 
 - Clients talk to the server only through the contract or the routes in
@@ -48,8 +96,14 @@ See README.md for setup and the auth design.
 - Validate inputs in the contract schemas. Procedures throw `ORPCError` with a
   message the user can act on; anything 500 is logged and hidden.
 - The server fetches only image URLs a metadata provider returned, stored in
-  the `artwork` table. Never fetch a URL a client sent.
+  the `artwork` table, and the `picture` claim the OIDC provider signed or
+  sent from userinfo. Never fetch a URL a client sent.
 - Passkeys and OIDC redirects bind to `PUBLIC_URL`. Never derive origins from
   request headers.
 - Auth cookies are HttpOnly and SameSite=Lax. Keep RPC on same-origin JSON
-  POSTs so the CSRF reasoning in `app.ts` holds.
+  POSTs so the CSRF reasoning in `app.ts` holds. In REST, only reads may be
+  GET, since a cross-site link sends the cookie with a GET.
+- The REST API can't send null in a query string, so a read whose input
+  takes null is a POST, like `titles.items`. A new shared model goes in
+  `commonSchemas` in `apps/server/src/rpc/openapi.ts`, so generated clients
+  get a named type for it.
