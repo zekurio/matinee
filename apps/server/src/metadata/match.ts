@@ -35,17 +35,21 @@ function yearScore(candidate: Candidate, year: number | null): number {
 /**
  * Pick the search result that fits the name and year read from the folder.
  * Ties go to the provider's own ranking. Null when nothing agrees on
- * either, which leaves the title unmatched rather than wrong.
+ * either, which leaves the title unmatched rather than wrong. With
+ * `exact`, only a candidate whose name or alias equals the wanted name
+ * counts.
  */
 export function bestMatch(
   candidates: Candidate[],
   wanted: { name: string; year: number | null },
+  { exact = false }: { exact?: boolean } = {},
 ): Candidate | null {
   const name = normalize(wanted.name)
   let best: { candidate: Candidate; score: number } | null = null
   for (const candidate of candidates) {
     const byName = nameScore(candidate, name)
     const byYear = yearScore(candidate, wanted.year)
+    if (exact && byName < 3) continue
     if (byName === 0 && byYear <= 0) continue
     const score = byName + byYear
     if (!best || score > best.score) best = { candidate, score }

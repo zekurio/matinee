@@ -1,7 +1,7 @@
 import { stat } from "node:fs/promises"
 import { dirname, sep } from "node:path"
 
-import { z } from "zod"
+import { t } from "@matinee/contracts/schema"
 
 /**
  * Folders a scan covers, by absolute path. True walks everything below the
@@ -11,7 +11,7 @@ import { z } from "zod"
 export type Targets = Map<string, boolean>
 
 /** Node's fs errors carry a code such as ENOENT. */
-const SystemError = z.object({ code: z.string().min(1) })
+const SystemError = t.object({ code: t.string().min(1) })
 
 export function errorCode(cause: unknown): string | undefined {
   return SystemError.safeParse(cause).data?.code
@@ -24,7 +24,7 @@ export function isInside(path: string, dir: string): boolean {
 
 /**
  * Add a folder to scan. A folder whose whole subtree is queued covers
- * everything below it, and a new subtree replaces the folders below it.
+ * everything below it, and a new subtree drops the queued folders below it.
  */
 export function addTarget(targets: Targets, path: string, deep: boolean) {
   for (let dir = path; ; dir = dirname(dir)) {

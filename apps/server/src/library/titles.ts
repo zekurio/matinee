@@ -19,7 +19,6 @@ const BATCH_SIZE = 500
 const KINDS = {
   movies: "movie",
   shows: "show",
-  other: "folder",
 } satisfies Record<LibraryKind, TitleKind>
 
 // Folders inside a movie's folder that hold its bonus material.

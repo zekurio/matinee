@@ -1,7 +1,10 @@
-import type { MetadataProviderId } from "@matinee/contracts"
+import type { CreditKind, MetadataProviderId } from "@matinee/contracts"
 import type { ExternalIds } from "@matinee/db"
 
 export type MatchKind = "movie" | "show"
+
+// Enough to fill a row on a wide screen; Jellyfin keeps 15.
+export const MAX_CAST = 20
 
 export type Lookup = {
   kind: MatchKind
@@ -41,15 +44,27 @@ export type EpisodeDetails = {
 
 export type SeasonDetails = {
   number: number
-  name: string | null
   overview: string | null
   poster: string | null
+}
+
+export type CreditDetails = {
+  kind: CreditKind
+  name: string
+  /** The character, or the crew member's jobs. */
+  role: string | null
+  /** The person's id at the provider. */
+  personId: string | null
+  /** Remote URL of a portrait. */
+  photo: string | null
 }
 
 export type TitleDetails = {
   id: string
   name: string
   originalName: string | null
+  /** BCP 47 tag of the language it was made in, when the provider says. */
+  originalLanguage: string | null
   year: number | null
   overview: string | null
   tagline: string | null
@@ -61,6 +76,9 @@ export type TitleDetails = {
   runtimeMinutes: number | null
   externalIds: ExternalIds
   images: ImageUrls
+  studios: string[]
+  /** Cast in billing order, then crew. */
+  credits: CreditDetails[]
   /** Shows only. Empty when the provider has no season data. */
   seasons: SeasonDetails[]
   /** Shows only. Empty when the provider has no episode data. */
@@ -116,4 +134,37 @@ export function text(value: string | null | undefined): string | null {
 export function isoDate(value: string | null | undefined): string | null {
   const match = /^\d{4}-\d{2}-\d{2}/.exec(value ?? "")
   return match ? match[0] : null
+}
+
+/** Names without blanks or repeats, in order. */
+export function uniqueNames(values: (string | null | undefined)[]): string[] {
+  const seen = new Set<string>()
+  for (const value of values) {
+    const name = text(value)
+    if (name) seen.add(name)
+  }
+  return [...seen]
+}
+
+/**
+ * One credit per person and kind, so a writer credited for both the
+ * screenplay and the story shows once, as `Screenplay, Story`.
+ */
+export function mergeCrew(crew: CreditDetails[]): CreditDetails[] {
+  const merged = new Map<string, CreditDetails>()
+  for (const member of crew) {
+    const key = `${member.kind}:${member.personId ?? member.name}`
+    const existing = merged.get(key)
+    if (!existing) {
+      merged.set(key, { ...member })
+      continue
+    }
+    const roles = uniqueNames([
+      ...(existing.role?.split(", ") ?? []),
+      ...(member.role?.split(", ") ?? []),
+    ])
+    existing.role = roles.length > 0 ? roles.join(", ") : null
+    existing.photo ??= member.photo
+  }
+  return [...merged.values()]
 }

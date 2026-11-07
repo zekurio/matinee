@@ -7,7 +7,6 @@ import { and, eq, inArray, sql } from "drizzle-orm"
 import { db } from "../db"
 import { log } from "../log"
 import { languageFromName, languageTag } from "../media/language"
-import { shutdownSignal } from "../shutdown"
 import { isIgnored, isSubtitleFolder, subtitleFormat } from "./entries"
 import { below, directlyIn, type Listing, type WalkState } from "./plan"
 import { errorCode, isInside, type Targets } from "./targets"
@@ -304,12 +303,13 @@ async function loadVideos(
  * Bring the subtitle rows of the videos in the folders the walk listed up
  * to date, from those listings and their Subs folders. Rows of other
  * videos aren't touched, rows below a folder that couldn't be read stay,
- * and nothing is deleted once shutdown is requested.
+ * and nothing is deleted once `signal` aborts.
  */
 export async function syncSidecars(
   libraryId: string,
   targets: Targets,
   state: WalkState,
+  signal: AbortSignal,
 ): Promise<SidecarCounts> {
   const counts: SidecarCounts = { written: 0, moved: 0, gone: 0 }
   const { videos, known } = await loadVideos(libraryId, targets, state.listed)
@@ -328,7 +328,7 @@ export async function syncSidecars(
   }
   const found = new Map<string, FoundSubtitle>()
   for (const [dir, inDir] of videos) {
-    if (shutdownSignal.aborted) return counts
+    if (signal.aborted) return counts
     for (const file of await findInFolder(dir, inDir, lookup)) {
       found.set(key(file), file)
     }
@@ -390,7 +390,7 @@ export async function syncSidecars(
   const gone = leftover
     .filter((row) => !movedRows.has(row))
     .map((row) => row.id)
-  if (gone.length > 0 && shutdownSignal.aborted) return counts
+  if (gone.length > 0 && signal.aborted) return counts
   for (let i = 0; i < gone.length; i += BATCH_SIZE) {
     await db
       .delete(subtitleFile)

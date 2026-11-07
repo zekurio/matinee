@@ -1,14 +1,12 @@
 import type { MetadataProvider, MetadataProviderId } from "@matinee/contracts"
 
-import { anilist } from "./anilist"
-import { tmdb } from "./tmdb"
-import { tvdb } from "./tvdb"
+import { tmdb } from "./tmdb/source"
+import { tvdb } from "./tvdb/source"
 import type { MetadataSource } from "./types"
 
 export const sources = {
   tmdb,
   tvdb,
-  anilist,
 } satisfies Record<MetadataProviderId, MetadataSource>
 
 export function providerList(): MetadataProvider[] {

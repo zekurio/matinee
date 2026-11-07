@@ -54,7 +54,7 @@ function changed(libraryId: string, path: string, deep: boolean): void {
   const timer = setTimeout(
     () => {
       pending.delete(libraryId)
-      void scanLibrary(libraryId, { targets })
+      scanLibrary(libraryId, { targets })
     },
     Math.max(0, Math.min(QUIET_MS, since + MAX_WAIT_MS - now)),
   )

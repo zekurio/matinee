@@ -1,7 +1,7 @@
 import { readdir, stat } from "node:fs/promises"
 import { dirname, join, resolve } from "node:path"
 
-import type { Library, LibraryInput } from "@matinee/contracts"
+import type { Library, LibraryInput, TrickplayStatus } from "@matinee/contracts"
 import {
   library,
   libraryFolder,
@@ -25,10 +25,14 @@ import {
 import { db } from "../db"
 import { isScanning, scanLibrary } from "../library/scanner"
 import { watchLibraries } from "../library/watcher"
-import { episodeOrder, publicItems, toSummary } from "../media/items"
+import { publicItems } from "../media/items"
+import { keyframesNear, listAudio } from "../media/playback"
+import { shelf } from "../media/shelf"
 import { listSubtitles } from "../media/subtitles"
-import { isRefreshing, refreshLibrary } from "../metadata/refresh"
+import { trickplayStatus } from "../media/trickplay"
+import { isRefreshing, queueRefresh } from "../metadata/refresh"
 import { sources } from "../metadata/sources"
+import { follow } from "../realtime/follow"
 import { admin, authed, badRequest, notFound } from "./base"
 
 async function toLibraries(rows: LibraryRow[]): Promise<Library[]> {
@@ -58,7 +62,7 @@ async function toLibraries(rows: LibraryRow[]): Promise<Library[]> {
     paths: folders.filter((f) => f.libraryId === row.id).map((f) => f.path),
     itemCount: items.find((c) => c.libraryId === row.id)?.n ?? 0,
     titleCount: titles.find((c) => c.libraryId === row.id)?.n ?? 0,
-    metadataProvider: row.kind === "other" ? null : row.metadataProvider,
+    metadataProvider: row.metadataProvider,
     metadataLanguage: row.metadataLanguage,
     lastScannedAt: row.lastScannedAt,
     scanning: isScanning(row.id),
@@ -84,9 +88,9 @@ async function checkFolders(paths: string[]): Promise<string[]> {
   return resolved
 }
 
-/** The provider to store: none for `other`, and only ones set up. */
+/** The provider to store, if set up. */
 function checkProvider(input: LibraryInput) {
-  if (input.kind === "other" || !input.metadataProvider) return null
+  if (!input.metadataProvider) return null
   const source = sources[input.metadataProvider]
   if (!source.configured()) {
     throw badRequest(`${source.name} isn't set up. ${source.setup ?? ""}`)
@@ -142,7 +146,7 @@ export const libraries = {
       .returning()
     if (!row) throw new Error("Could not create the library.")
     await writeFolders(row.id, input)
-    void scanLibrary(row.id, { regroup: true })
+    scanLibrary(row.id, { regroup: true })
     void watchLibraries()
     return loadLibrary(row.id)
   }),
@@ -180,7 +184,7 @@ export const libraries = {
     }
     await writeFolders(input.id, input)
     // The kind or the folders may have changed, so regroup every title.
-    void scanLibrary(input.id, { regroup: true })
+    scanLibrary(input.id, { regroup: true })
     void watchLibraries()
     return loadLibrary(input.id)
   }),
@@ -196,7 +200,7 @@ export const libraries = {
 
   scan: admin.libraries.scan.handler(async ({ input }) => {
     await loadLibrary(input.id)
-    void scanLibrary(input.id)
+    scanLibrary(input.id)
   }),
 
   refreshMetadata: admin.libraries.refreshMetadata.handler(
@@ -205,7 +209,7 @@ export const libraries = {
       if (!lib.metadataProvider) {
         throw badRequest("Pick a metadata provider for this library first.")
       }
-      void refreshLibrary(input.id, { force: true })
+      queueRefresh(input.id, true)
     },
   ),
 }
@@ -216,6 +220,24 @@ function escapeLike(value: string): string {
 
 // A file's folder.
 const folderOf = sql<string>`regexp_replace(${mediaItem.relativePath}, '/[^/]*$', '')`
+
+/**
+ * The file's trickplay status, again whenever a set of images is done,
+ * until it's no longer pending.
+ */
+async function* trickplayUpdates(
+  id: string,
+  signal: AbortSignal | undefined,
+): AsyncGenerator<TrickplayStatus, void, void> {
+  const load = async (): Promise<TrickplayStatus> => {
+    const [row] = await db.select().from(mediaItem).where(eq(mediaItem.id, id))
+    return row ? trickplayStatus(row) : { status: "unavailable" }
+  }
+  for await (const status of follow({ topics: ["trickplay"], load, signal })) {
+    yield status
+    if (status.status !== "pending") return
+  }
+}
 
 export const media = {
   list: authed.media.list.handler(async ({ context, input }) => {
@@ -259,35 +281,9 @@ export const media = {
     }
   }),
 
-  shelf: authed.media.shelf.handler(async ({ context, input }) => {
-    const titles = await db
-      .select({ row: title, n: count(mediaItem.id) })
-      .from(title)
-      .innerJoin(mediaItem, eq(mediaItem.titleId, title.id))
-      .where(eq(title.libraryId, input.libraryId))
-      .groupBy(title.id)
-      .orderBy(desc(title.addedAt), asc(title.sortName))
-      .limit(input.limit)
-    if (titles.length === 0) return []
-    // Each title's first file, which is what Play starts.
-    const firsts = await db
-      .selectDistinctOn([mediaItem.titleId])
-      .from(mediaItem)
-      .where(
-        inArray(
-          mediaItem.titleId,
-          titles.map(({ row }) => row.id),
-        ),
-      )
-      .orderBy(mediaItem.titleId, ...episodeOrder)
-    const items = await publicItems(firsts, context.user.id)
-    return titles.flatMap(({ row, n }) => {
-      const item = items.find((candidate) => candidate.title?.id === row.id)
-      return item
-        ? [{ title: toSummary(row), item, count: n, addedAt: row.addedAt }]
-        : []
-    })
-  }),
+  shelf: authed.media.shelf.handler(({ context, input }) =>
+    shelf(input.libraryId, input.limit, context.user.id),
+  ),
 
   get: authed.media.get.handler(async ({ context, input }) => {
     const [row] = await db
@@ -306,6 +302,37 @@ export const media = {
       .where(eq(mediaItem.id, input.id))
     if (!row) throw notFound("This title isn't in any library.")
     return listSubtitles(row)
+  }),
+
+  audio: authed.media.audio.handler(async ({ input }) => {
+    const [row] = await db
+      .select()
+      .from(mediaItem)
+      .where(eq(mediaItem.id, input.id))
+    if (!row) throw notFound("This title isn't in any library.")
+    return listAudio(row)
+  }),
+
+  keyframes: authed.media.keyframes.handler(async ({ input }) => {
+    const [row] = await db
+      .select()
+      .from(mediaItem)
+      .where(eq(mediaItem.id, input.id))
+    if (!row) throw notFound("This title isn't in any library.")
+    const keyframes = await keyframesNear(row, input.seconds)
+    if (!keyframes) {
+      throw badRequest("Can't find a point to start this file from.")
+    }
+    return keyframes
+  }),
+
+  trickplay: authed.media.trickplay.handler(async ({ input, signal }) => {
+    const [row] = await db
+      .select({ id: mediaItem.id })
+      .from(mediaItem)
+      .where(eq(mediaItem.id, input.id))
+    if (!row) throw notFound("This title isn't in any library.")
+    return trickplayUpdates(row.id, signal)
   }),
 }
 
