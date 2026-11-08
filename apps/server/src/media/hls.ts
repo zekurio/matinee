@@ -44,6 +44,8 @@ const TICK_MS = 250
 const VIEWER_IDLE_MS = 2 * 60_000
 // A run no player reads from stops after this.
 const ORPHAN_MS = 15_000
+// After its only player closed, a run stops this soon.
+const CLOSED_GRACE_MS = 2_000
 // After a run fails without writing a segment, don't start another this soon.
 const FAILURE_BACKOFF_MS = 10_000
 // Longest a request waits for its segment while a run works towards it.
@@ -634,9 +636,22 @@ export function encodingSessions(): Set<string> {
   return sessions
 }
 
-/** A player closed: its runs stop soon unless someone else reads them. */
+/**
+ * A player closed: its runs stop soon unless someone else reads them.
+ * Sooner than an orphan that may only be between requests: the player
+ * said it's gone, so only a quick reload would come back for it.
+ */
 export function releaseSession(session: string): void {
-  for (const job of jobs.values()) job.viewers.delete(session)
+  const soon = Date.now() - ORPHAN_MS + CLOSED_GRACE_MS
+  for (const job of jobs.values()) {
+    const viewer = job.viewers.get(session)
+    if (!viewer) continue
+    job.viewers.delete(session)
+    const run = viewer.run
+    if (!run) continue
+    const read = [...job.viewers.values()].some((other) => other.run === run)
+    if (!read) run.neededAt = Math.min(run.neededAt, soon)
+  }
 }
 
 /** Stop every run, for shutdown. */
