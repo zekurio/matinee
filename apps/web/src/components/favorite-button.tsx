@@ -94,7 +94,11 @@ export function useItemFavorite(item: MediaItem): Toggle {
   }
 }
 
-/** A heart, filled while `on`. */
+/**
+ * A heart, filled while `on`. The fill is always rose, clear while off:
+ * `fill-current` would fill at once with the color the stroke is still
+ * fading from, so the heart flashed white before turning red.
+ */
 export function FavoriteHeart({
   on,
   className,
@@ -105,8 +109,8 @@ export function FavoriteHeart({
   return (
     <HeartIcon
       className={cn(
-        "transition-[fill,color,scale] duration-200 motion-reduce:transition-none",
-        on && "scale-110 fill-current text-rose-400",
+        "fill-rose-400/0 transition-[fill,color,scale] duration-200 motion-reduce:transition-none",
+        on && "scale-110 fill-rose-400 text-rose-400",
         className,
       )}
     />
