@@ -8,6 +8,7 @@ import { transcodingCapabilities } from "../transcode/capabilities"
 import {
   saveTranscoding,
   transcodingDefaults,
+  transcodingFromEnvironment,
   transcodingSettings,
 } from "../transcode/settings"
 import { admin } from "./base"
@@ -19,6 +20,7 @@ async function describe(
   return {
     settings,
     defaults: transcodingDefaults(),
+    environment: transcodingFromEnvironment(),
     capabilities: await transcodingCapabilities(settings, refresh),
   }
 }

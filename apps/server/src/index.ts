@@ -2,6 +2,7 @@ import { serve } from "@hono/node-server"
 import { migrateDb } from "@matinee/db"
 
 import { createApp } from "./app"
+import { oidcState } from "./auth/oidc-settings"
 import { initSetupToken } from "./auth/setup"
 import { db, pool } from "./db"
 import { env } from "./env"
@@ -14,8 +15,12 @@ import { log } from "./log"
 import { stopEncodes } from "./media/hls"
 import { stopStreams } from "./realtime/events"
 import { currentTranscoding } from "./transcode/capabilities"
+import { transcodingSettings } from "./transcode/settings"
 
 await migrateDb(db, env.MATINEE_MIGRATIONS_DIR)
+// Read the saved settings now, so the log says at start which MATINEE_*
+// variables they override.
+await Promise.all([oidcState(), transcodingSettings()])
 await initSetupToken()
 await loadJobSettings()
 await startTasks(TASKS)

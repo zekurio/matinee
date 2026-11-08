@@ -69,11 +69,12 @@ const EnvSchema = t.object({
   MATINEE_FFPROBE_PATH: t.string().$default("ffprobe"),
   /**
    * Defaults for the transcoding settings an admin can change in the app:
-   * the acceleration and its device nodes.
+   * the acceleration and its device nodes. Unset leaves Matinee's own, so
+   * the server can tell the variable's value from its own default.
    */
-  MATINEE_HARDWARE_ACCELERATION: HardwareAcceleration.$default("none"),
-  MATINEE_VAAPI_DEVICE: DevicePath.$default("/dev/dri/renderD128"),
-  MATINEE_QSV_DEVICE: DevicePath.$default(""),
+  MATINEE_HARDWARE_ACCELERATION: HardwareAcceleration.optional(),
+  MATINEE_VAAPI_DEVICE: DevicePath.optional(),
+  MATINEE_QSV_DEVICE: DevicePath.optional(),
   /** Scan the library folders that change, as they change. */
   MATINEE_WATCH_LIBRARIES: flag(true),
   /**

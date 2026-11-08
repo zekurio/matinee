@@ -327,11 +327,29 @@ export const TranscodingCapabilities = t.object({
 })
 export type TranscodingCapabilities = t.infer<typeof TranscodingCapabilities>
 
+/** The settings a MATINEE_* variable can give a default for. */
+export const TRANSCODING_ENVIRONMENT_FIELDS = [
+  "hardwareAcceleration",
+  "vaapiDevice",
+  "qsvDevice",
+] as const
+export const TranscodingEnvironmentField = t.enum(
+  TRANSCODING_ENVIRONMENT_FIELDS,
+)
+export type TranscodingEnvironmentField = t.infer<
+  typeof TranscodingEnvironmentField
+>
+
 export const AdminTranscodingSettings = t.object({
   /** In use: saved values over the environment's. */
   settings: TranscodingSettings,
-  /** What an empty device field falls back to. */
+  /**
+   * The environment's values over Matinee's own. Only fields that differ
+   * from these are saved, and an empty device field falls back to them.
+   */
   defaults: TranscodingSettings,
+  /** The fields the server's environment sets. */
+  environment: t.array(TranscodingEnvironmentField),
   /** What ffmpeg and the GPUs can do, detected for the devices in use. */
   capabilities: TranscodingCapabilities,
 })

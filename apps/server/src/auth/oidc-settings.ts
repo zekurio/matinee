@@ -1,3 +1,5 @@
+import { isDeepStrictEqual } from "node:util"
+
 import {
   OidcSettings,
   type OidcSettingsInput,
@@ -10,12 +12,14 @@ import { eq, inArray } from "drizzle-orm"
 import { db } from "../db"
 import { env } from "../env"
 import { log } from "../log"
+import { logOverridden, overridesOf, variableSet } from "../overrides"
 
 /*
  * The OIDC provider an admin set up in the app, over the MATINEE_OIDC_*
- * variables. The environment gives the defaults; a saved field wins, and an
- * empty field in the form falls back to the environment again. Settings load
- * once and change only through `saveOidc`, so reads are cheap.
+ * variables. The environment gives the defaults. Only fields that differ
+ * from them are saved, and an empty field in the form falls back to the
+ * environment again. Settings load once and change only through `saveOidc`,
+ * so reads are cheap.
  */
 
 const OIDC_KEY = "oidc"
@@ -28,6 +32,16 @@ const TEXT_FIELDS = [
   "scopes",
   "usernameClaim",
 ] as const
+
+/** The fields a MATINEE_OIDC_* variable gives a default for. */
+const VARIABLES = new Map<keyof OidcSettings, string>([
+  ["displayName", "MATINEE_OIDC_DISPLAY_NAME"],
+  ["issuerUrl", "MATINEE_OIDC_ISSUER_URL"],
+  ["clientId", "MATINEE_OIDC_CLIENT_ID"],
+  ["scopes", "MATINEE_OIDC_SCOPES"],
+  ["usernameClaim", "MATINEE_OIDC_USERNAME_CLAIM"],
+  ["allowSignUp", "MATINEE_OIDC_ALLOW_SIGN_UP"],
+])
 
 const SavedOidc = OidcSettings.partial()
 const SavedSecret = t.object({ value: t.string().min(1) })
@@ -79,11 +93,30 @@ async function readSaved(): Promise<Saved> {
     log.warn("Ignoring saved OIDC settings that no longer validate", oidc.error)
   }
   const secret = SavedSecret.safeParse(byKey.get(SECRET_KEY))
-  saved = {
+  const stored: Saved = {
     oidc: oidc.success ? oidc.data : {},
     secret: secret.success ? secret.data.value : null,
   }
+  // Older servers saved both switches every time, and a default may have
+  // changed to a saved value since. Neither is an override.
+  const next = trimmed(stored)
+  if (!isDeepStrictEqual(next, stored)) await write(next)
+  logOverridden(next.oidc, VARIABLES)
+  if (next.secret && variableSet("MATINEE_OIDC_CLIENT_SECRET")) {
+    log.info(
+      "MATINEE_OIDC_CLIENT_SECRET is set, but a secret saved in the admin settings overrides it.",
+    )
+  }
+  saved = next
   return saved
+}
+
+/** Only what differs from the environment. */
+function trimmed(next: Saved): Saved {
+  return {
+    oidc: overridesOf(next.oidc, oidcDefaults()),
+    secret: next.secret === env.MATINEE_OIDC_CLIENT_SECRET ? null : next.secret,
+  }
 }
 
 function resolve(current: Saved): OidcState {
@@ -124,7 +157,10 @@ export async function activeOidc(): Promise<OidcState | null> {
   return isActive(state.settings) ? state : null
 }
 
-/** Switches always save; a text field saves only when filled in. */
+/**
+ * What differs from the environment saves. An empty text field drops the
+ * saved value, so the environment's applies.
+ */
 function nextSaved(current: Saved, input: OidcSettingsInput): Saved {
   const oidc: Partial<OidcSettings> = {
     enabled: input.enabled,
@@ -133,11 +169,11 @@ function nextSaved(current: Saved, input: OidcSettingsInput): Saved {
   for (const key of TEXT_FIELDS) {
     if (input[key]) oidc[key] = input[key]
   }
-  return {
+  return trimmed({
     oidc,
     secret:
       input.clientSecret === undefined ? current.secret : input.clientSecret,
-  }
+  })
 }
 
 /** The settings a save would produce, to check before writing them. */
@@ -147,16 +183,20 @@ export async function previewOidc(
   return resolve(nextSaved(await load(), input))
 }
 
-export async function saveOidc(input: OidcSettingsInput): Promise<OidcState> {
-  const next = nextSaved(await load(), input)
+/** Store the overrides; a part with none has no row. */
+async function write(next: Saved): Promise<void> {
   await db.transaction(async (tx) => {
-    await tx
-      .insert(setting)
-      .values({ key: OIDC_KEY, value: next.oidc })
-      .onConflictDoUpdate({
-        target: setting.key,
-        set: { value: next.oidc, updatedAt: new Date() },
-      })
+    if (Object.keys(next.oidc).length > 0) {
+      await tx
+        .insert(setting)
+        .values({ key: OIDC_KEY, value: next.oidc })
+        .onConflictDoUpdate({
+          target: setting.key,
+          set: { value: next.oidc, updatedAt: new Date() },
+        })
+    } else {
+      await tx.delete(setting).where(eq(setting.key, OIDC_KEY))
+    }
     if (next.secret) {
       const value = { value: next.secret }
       await tx
@@ -170,6 +210,11 @@ export async function saveOidc(input: OidcSettingsInput): Promise<OidcState> {
       await tx.delete(setting).where(eq(setting.key, SECRET_KEY))
     }
   })
+}
+
+export async function saveOidc(input: OidcSettingsInput): Promise<OidcState> {
+  const next = nextSaved(await load(), input)
+  await write(next)
   saved = next
   version += 1
   return resolve(next)
