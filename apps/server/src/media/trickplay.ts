@@ -18,7 +18,7 @@ import { and, count, desc, eq, isNull, sql } from "drizzle-orm"
 
 import { db } from "../db"
 import { env } from "../env"
-import { defineQueue, type Priority } from "../jobs/queue"
+import { defineQueue, perCpu, type Priority } from "../jobs/queue"
 import { log } from "../log"
 import { events } from "../realtime/events"
 import { currentTranscoding } from "../transcode/capabilities"
@@ -413,7 +413,9 @@ export const trickplays = defineQueue<TrickplayJob, void>({
   description: "Make the thumbnails the seek bar shows while scrubbing.",
   concurrency: 1,
   tuning: {
-    max: 4,
+    // Each job is an ffmpeg decode using several threads, so allow one per
+    // two CPUs and leave room for streaming.
+    max: perCpu(1 / 2, { min: 1, max: 8 }),
     note: "Videos getting seek bar previews at once. An episode takes about 20 seconds, a movie a few minutes.",
   },
   key: jobKey,

@@ -1,3 +1,5 @@
+import { availableParallelism } from "node:os"
+
 import {
   JOB_QUEUE_IDS,
   type JobQueueId,
@@ -22,6 +24,23 @@ const LANES: readonly Priority[] = ["high", "normal", "low"]
 const RANK = new Map<Priority, number>(LANES.map((lane, i) => [lane, i]))
 
 const RECENT_FAILURES = 5
+
+/**
+ * The CPUs this process may use. Node takes CPU affinity and, on Linux,
+ * the cgroup CPU quota into account, so a container counts its share.
+ */
+const CPUS = availableParallelism()
+
+/**
+ * `jobs` for each CPU, rounded down and kept within `min` and `max`. Queue
+ * maximums use it so a larger machine allows more work at once.
+ */
+export function perCpu(
+  jobs: number,
+  bounds: { min: number; max: number },
+): number {
+  return Math.max(bounds.min, Math.min(bounds.max, Math.floor(CPUS * jobs)))
+}
 
 export type JobContext = {
   /** Aborts when the job is cancelled or the server shuts down. */
@@ -172,9 +191,13 @@ export class Queue<P, R> implements QueueControl {
 
   constructor(private readonly definition: QueueDefinition<P, R>) {
     this.id = definition.id
-    this.defaultConcurrency = definition.concurrency
-    this.concurrency = definition.concurrency
     this.maxConcurrency = definition.tuning?.max ?? null
+    // A small machine's maximum can fall below the module's default.
+    this.defaultConcurrency = Math.min(
+      definition.concurrency,
+      this.maxConcurrency ?? definition.concurrency,
+    )
+    this.concurrency = this.defaultConcurrency
   }
 
   /** Queue a job and wait for its result. Rejects with its error. */

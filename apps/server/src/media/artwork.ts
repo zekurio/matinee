@@ -19,7 +19,7 @@ import { Hono } from "hono"
 import { readSession } from "../auth/session"
 import { anyOf, arg, db } from "../db"
 import { env } from "../env"
-import { defineQueue, type Priority } from "../jobs/queue"
+import { defineQueue, perCpu, type Priority } from "../jobs/queue"
 import { log } from "../log"
 import { readPlaceholder } from "./blurhash"
 import { run } from "./process"
@@ -313,7 +313,9 @@ const artworkJobs = defineQueue<ArtworkJob, Cached | null>({
     "Download images from the metadata provider, scale them, and read their blurred placeholders.",
   concurrency: 4,
   tuning: {
-    max: 8,
+    // A job downloads one image and has ffmpeg scale it, a short burst of
+    // CPU, so allow one per CPU.
+    max: perCpu(1, { min: 4, max: 16 }),
     note: "Provider images downloaded and resized at once. A library's first metadata fetch queues thousands.",
   },
   key: jobKey,

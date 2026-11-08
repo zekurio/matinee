@@ -5,7 +5,7 @@ import { mediaItem, type MediaItemRow } from "@matinee/db"
 import { and, eq, isNull } from "drizzle-orm"
 
 import { db } from "../db"
-import { defineQueue } from "../jobs/queue"
+import { defineQueue, perCpu } from "../jobs/queue"
 import { log } from "../log"
 import { runFfprobe } from "./ffprobe"
 import { processFailureKind } from "./process"
@@ -67,7 +67,8 @@ export const probes = defineQueue<ProbeJob, MediaProbe | null>({
   description: "Read the streams of new and changed files with ffprobe.",
   concurrency: 3,
   tuning: {
-    max: 8,
+    // ffprobe mostly waits on the disk, so allow one per CPU.
+    max: perCpu(1, { min: 4, max: 16 }),
     note: "Files ffprobe reads at once. Raise it to finish the first scan of a large library sooner.",
   },
   key: (job) => job.id,
