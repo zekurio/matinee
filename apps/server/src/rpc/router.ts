@@ -2,6 +2,7 @@ import { account } from "./account"
 import { adminAppearance } from "./admin-appearance"
 import { adminAuth } from "./admin-auth"
 import { adminJobs } from "./admin-jobs"
+import { adminSetup } from "./admin-setup"
 import { adminTranscoding } from "./admin-transcoding"
 import { adminTrickplay } from "./admin-trickplay"
 import { adminUsers } from "./admin-users"
@@ -40,6 +41,7 @@ export const procedures = {
     appearance: adminAppearance,
     auth: adminAuth,
     jobs: adminJobs,
+    setup: adminSetup,
     transcoding: adminTranscoding,
     trickplay: adminTrickplay,
     users: adminUsers,

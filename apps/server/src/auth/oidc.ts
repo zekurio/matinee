@@ -2,6 +2,7 @@ import {
   AUTH_ERROR_QUERY_KEY,
   OIDC_CALLBACK_PATH,
   type OidcMode,
+  UserRole,
 } from "@matinee/contracts"
 import { t } from "@matinee/contracts/schema"
 import { type Context, Hono } from "hono"
@@ -19,17 +20,13 @@ import {
   NO_LINKED_ACCOUNT,
   OidcError,
   type OidcIdentity,
+  syncRole,
   takePicture,
 } from "./oidc-accounts"
 import { linkPagePath, savePendingLink } from "./oidc-pending"
 import { activeOidc, type OidcState } from "./oidc-settings"
 import { readSession, signIn } from "./session"
-import {
-  endSetupAccess,
-  hasSetupAccess,
-  markSetupDone,
-  setupRequired,
-} from "./setup"
+import { endSetupAccess, markSetupDone, setupRequired } from "./setup"
 import { findUserByUsernameHint } from "./users"
 
 const FLOW_COOKIE = "matinee_oidc"
@@ -51,6 +48,10 @@ type FlowStart = Omit<t.infer<typeof OidcFlow>, "codeVerifier" | "nonce">
 
 /** A non-empty string claim, trimmed. */
 const ClaimString = t.string().trim().min(1)
+
+/** A role claim: one role, or a list of them, in any case. */
+const RoleList = t.array(t.unknown())
+const RoleName = t.string().transform((value) => value.trim().toLowerCase())
 
 let discovered: {
   version: number
@@ -122,6 +123,21 @@ function claimString(
 }
 
 /**
+ * The role a claim names, as alloy and Immich read it: `admin` or `user`,
+ * or a list holding them, where admin wins. Anything else names none.
+ */
+function claimRole(
+  claims: Readonly<Record<string, client.JsonValue | undefined>>,
+  key: string,
+): UserRole | undefined {
+  const value = claims[key]
+  const roles = (RoleList.safeParse(value).data ?? [value])
+    .map((entry) => UserRole.safeParse(RoleName.safeParse(entry).data).data)
+    .filter((role) => role !== undefined)
+  return roles.includes("admin") ? "admin" : roles[0]
+}
+
+/**
  * Store the round trip, bind it to this browser, and send the browser to the
  * provider. `check` runs first and may answer instead, with an error page.
  */
@@ -179,10 +195,9 @@ export const oidcRoutes = new Hono()
     const mode = Mode.catch("sign-in").parse(c.req.query("mode"))
     const errorPage = mode === "link" ? LINK_PAGE : "/login"
     return startFlow(c, errorPage, async () => {
+      // With single sign-on set up, setup needs no token: the provider's
+      // role claim says who may become the admin.
       const setup = mode === "sign-in" && (await setupRequired())
-      if (setup && !hasSetupAccess(c)) {
-        return errorRedirect(c, "/setup", "Enter the setup token first.")
-      }
       const current = mode === "link" ? await readSession(c) : null
       if (mode === "link" && !current) {
         return errorRedirect(c, "/login", "Sign in before linking an account.")
@@ -227,14 +242,17 @@ export const oidcRoutes = new Hono()
       if (!idClaims) throw new OidcError("The provider sent no ID token.")
       const usernameClaim =
         provider.settings.usernameClaim || "preferred_username"
+      const { roleClaim } = provider.settings
       const hasUsername = claimString(idClaims, usernameClaim) !== undefined
-      // The ID token may leave the username or picture out; the userinfo
-      // endpoint fills in what it lacks. Only a missing username fails the
-      // sign-in when userinfo can't be read.
+      // The ID token may leave the username, picture, or role out; the
+      // userinfo endpoint fills in what it lacks. Only a missing username
+      // fails the sign-in when userinfo can't be read.
       let userInfo: client.UserInfoResponse | null = null
       let userInfoFailed = false
       if (
-        (!hasUsername || !claimString(idClaims, "picture")) &&
+        (!hasUsername ||
+          !claimString(idClaims, "picture") ||
+          claimRole(idClaims, roleClaim) === undefined) &&
         tokens.access_token
       ) {
         try {
@@ -261,6 +279,7 @@ export const oidcRoutes = new Hono()
         name: claimString(claims, "name") ?? null,
         // Without userinfo, a missing picture may just be unsent.
         picture: picture ?? (userInfoFailed ? undefined : null),
+        role: claimRole(claims, roleClaim),
       }
 
       if (mode === "link") {
@@ -274,14 +293,21 @@ export const oidcRoutes = new Hono()
 
       const linked = await linkedUserId(identity)
       if (linked) {
+        await syncRole(linked, identity)
         await takePicture(linked, identity)
         await signIn(c, linked)
         return c.redirect(redirect)
       }
 
       const isSetup = setup && (await setupRequired())
-      if (isSetup && !hasSetupAccess(c)) {
-        throw new OidcError("Enter the setup token first.")
+      if (isSetup && identity.role !== "admin") {
+        const held = claims[roleClaim]
+        log.warn(
+          `OIDC setup refused ${identity.label ?? identity.subject}: the ${roleClaim} claim held ${held === undefined ? "nothing" : JSON.stringify(held)}`,
+        )
+        throw new OidcError(
+          `Only an admin at ${provider.settings.displayName} can set up Matinee. Give your account the ${roleClaim} claim with the value admin, then sign in again.`,
+        )
       }
       if (!isSetup) {
         // Linking on the claim alone would hand the account to whoever

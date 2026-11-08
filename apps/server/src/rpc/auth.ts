@@ -36,6 +36,8 @@ import {
   endSetupAccess,
   hasSetupAccess,
   markSetupDone,
+  setupComplete,
+  setupMode,
   setupRequired,
   setupTokenRequired,
   unlockSetup,
@@ -55,6 +57,19 @@ const SignUpPayload = t.object({
 })
 
 const SIGN_UP_CLOSED = "Sign-up is closed on this server."
+
+/**
+ * With single sign-on set up, the admin account comes from the provider,
+ * which says who is an admin. Nothing else may create it.
+ */
+async function refuseOidcSetup(): Promise<void> {
+  const provider = await activeOidc()
+  if (provider) {
+    throw badRequest(
+      `Sign in with ${provider.settings.displayName} to set up Matinee.`,
+    )
+  }
+}
 
 const PENDING_GONE = "This sign-in expired. Continue with single sign-on again."
 
@@ -80,11 +95,18 @@ const DEVICE_GONE =
 
 export const auth = {
   config: pub.auth.config.handler(async () => {
-    const setup = await setupRequired()
+    const accountRequired = await setupRequired()
     const provider = await activeOidc()
+    const setup =
+      accountRequired || !(await setupComplete())
+        ? {
+            accountRequired,
+            mode: await setupMode(),
+            tokenRequired: accountRequired && setupTokenRequired(),
+          }
+        : null
     return {
-      setupRequired: setup,
-      setupTokenRequired: setup && setupTokenRequired(),
+      setup,
       passkeySignUp: env.MATINEE_OPEN_REGISTRATION,
       oidc: provider
         ? {
@@ -107,6 +129,7 @@ export const auth = {
 
   unlockSetup: pub.auth.unlockSetup.handler(async ({ context, input }) => {
     if (!(await setupRequired())) throw badRequest("Setup is already done.")
+    await refuseOidcSetup()
     if (!unlockSetup(context.hono, input.token)) {
       throw badRequest("That setup token doesn't match the one in the log.")
     }
@@ -129,6 +152,7 @@ export const auth = {
     signUpOptions: pub.auth.passkey.signUpOptions.handler(
       async ({ context, input }) => {
         const setup = await setupRequired()
+        if (setup) await refuseOidcSetup()
         if (setup && !hasSetupAccess(context.hono)) {
           throw badRequest("Enter the setup token first.")
         }
@@ -153,6 +177,7 @@ export const auth = {
         throw badRequest("The sign-up request is invalid.")
       }
       const { userId, username, setup } = payload.data
+      if (setup) await refuseOidcSetup()
       if (setup && !hasSetupAccess(context.hono)) {
         throw badRequest("Enter the setup token first.")
       }

@@ -1,10 +1,17 @@
-import { oidcAccount, type UserRow } from "@matinee/db"
+import type { UserRole } from "@matinee/contracts"
+import { oidcAccount, user, type UserRow } from "@matinee/db"
 import { and, eq } from "drizzle-orm"
 
 import { db } from "../db"
+import { log } from "../log"
 import { recordProviderPicture } from "./avatars"
 import { sameIssuer } from "./oidc-settings"
-import { availableUsername, insertUser, lockUsers } from "./users"
+import {
+  availableUsername,
+  insertUser,
+  lockUsers,
+  otherAdminCanSignIn,
+} from "./users"
 
 /** A failure the person can act on. Its message is shown as is. */
 export class OidcError extends Error {}
@@ -25,6 +32,8 @@ export type OidcIdentity = {
   name: string | null
   /** The `picture` claim. Undefined when the provider may not have sent it. */
   picture: string | null | undefined
+  /** What the role claim names. Undefined leaves the account's role alone. */
+  role: UserRole | undefined
 }
 
 /** The account the identity is linked to, if any. */
@@ -93,8 +102,52 @@ export async function linkOidcAccount(
 }
 
 /**
+ * Give the account the role the provider's claim names, as on every
+ * sign-in. Demoting the last admin who can sign in is skipped, so Matinee
+ * always keeps one.
+ */
+export async function syncRole(
+  userId: string,
+  identity: OidcIdentity,
+): Promise<void> {
+  const { role } = identity
+  if (!role) return
+  const [before] = await db
+    .select({ role: user.role })
+    .from(user)
+    .where(eq(user.id, userId))
+  if (!before || before.role === role) return
+  const result = await db.transaction(async (tx) => {
+    await lockUsers(tx)
+    const [current] = await tx
+      .select({ role: user.role, username: user.username })
+      .from(user)
+      .where(eq(user.id, userId))
+    if (!current || current.role === role) return null
+    if (current.role === "admin" && !(await otherAdminCanSignIn(tx, userId))) {
+      return { username: current.username, changed: false }
+    }
+    await tx
+      .update(user)
+      .set({ role, updatedAt: new Date() })
+      .where(eq(user.id, userId))
+    return { username: current.username, changed: true }
+  })
+  if (!result) return
+  if (result.changed) {
+    log.info(`The OIDC role claim made ${result.username} ${role}`)
+  } else {
+    log.warn(
+      `The OIDC role claim would demote ${result.username}, the only admin who can sign in. Kept the admin role.`,
+    )
+  }
+}
+
+/**
  * Create an account for an identity no account is linked to. During setup
- * it becomes the admin; otherwise setup must have made the admin first.
+ * it becomes the admin, which the caller checked the role claim allows;
+ * otherwise setup must have made the admin first, and the claim gives the
+ * role.
  */
 export async function createOidcUser(
   identity: OidcIdentity,
@@ -111,7 +164,7 @@ export async function createOidcUser(
     const username = await availableUsername(identity.label ?? "user", tx)
     const row = await insertUser(tx, {
       username,
-      role: empty ? "admin" : "user",
+      role: setup ? "admin" : (identity.role ?? "user"),
       displayName: identity.name?.slice(0, 64) ?? null,
     })
     await tx.insert(oidcAccount).values({

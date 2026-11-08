@@ -16,6 +16,11 @@ export const OidcSettings = t.object({
   scopes: t.string(),
   /** Claim that suggests the username for new accounts. */
   usernameClaim: t.string(),
+  /**
+   * Claim that holds the account's role, `admin` or `user`, as a string or
+   * a list. Synced on every sign-in; setup takes only an admin.
+   */
+  roleClaim: t.string(),
   /** Create an account on first sign-in instead of only accepting links. */
   allowSignUp: t.boolean(),
 })
@@ -66,6 +71,7 @@ export const OidcSettingsInput = t
     clientId: text(512),
     scopes: text(512),
     usernameClaim: text(128),
+    roleClaim: text(128),
     /** A new secret. Null drops the saved one; omitted keeps it. */
     clientSecret: t.string().trim().min(1).max(4096).nullable().optional(),
   })

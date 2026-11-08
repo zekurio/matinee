@@ -88,7 +88,7 @@ async function load(): Promise<Saved> {
   return loading
 }
 
-/** The fields the environment sets. */
+/** The fields the environment sets, which setup doesn't ask for again. */
 export function transcodingFromEnvironment(): TranscodingEnvironmentField[] {
   return [...VARIABLES]
     .filter(([, name]) => variableSet(name))

@@ -1,4 +1,4 @@
-import { OIDC_LINK_QUERY_KEY } from "@matinee/contracts"
+import { OIDC_LINK_QUERY_KEY, UserRole } from "@matinee/contracts"
 import { t } from "@matinee/contracts/schema"
 import type { ChallengePayload } from "@matinee/db"
 import type { Context } from "hono"
@@ -28,6 +28,7 @@ const PendingPayload = t.object({
   label: t.string().nullable(),
   name: t.string().nullable(),
   picture: t.string().nullable().optional(),
+  role: UserRole.optional(),
   /** Where the sign-in started, already checked to be a local path. */
   redirect: t.string(),
 })
@@ -59,6 +60,7 @@ export async function savePendingLink(
       label: identity.label,
       name: identity.name,
       ...(identity.picture !== undefined && { picture: identity.picture }),
+      ...(identity.role && { role: identity.role }),
       redirect,
     },
     ttlMs: TTL_MS,
@@ -83,8 +85,8 @@ function cookieId(c: Context): string | null {
 function fromPayload(payload: ChallengePayload): PendingLink | null {
   const parsed = PendingPayload.safeParse(payload)
   if (!parsed.success) return null
-  const { redirect, picture, ...rest } = parsed.data
-  return { identity: { ...rest, picture }, redirect }
+  const { redirect, picture, role, ...rest } = parsed.data
+  return { identity: { ...rest, picture, role }, redirect }
 }
 
 /** The sign-in this browser holds, left in place. */

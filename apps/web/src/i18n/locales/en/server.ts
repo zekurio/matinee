@@ -22,6 +22,7 @@ export default defineMessages("server", {
   "server.auth.setupTokenMismatch":
     "That setup token doesn't match the one in the log.",
   "server.auth.setupTokenFirst": "Enter the setup token first.",
+  "server.auth.setupWithOidc": "Sign in with {provider} to set up Matinee.",
   "server.auth.usernameTaken": "That username is taken.",
   "server.auth.signUpInvalid": "The sign-up request is invalid.",
   "server.auth.setupDoneSignIn": "Setup is already done. Sign in instead.",
@@ -40,6 +41,8 @@ export default defineMessages("server", {
   "server.oidc.alreadyLinked":
     "Your account is already linked to another sign-in at this provider. Unlink it in settings first.",
   "server.oidc.setupFirst": "Create the admin account on the setup page first.",
+  "server.oidc.setupNotAdmin":
+    "Only an admin at {provider} can set up Matinee. Give your account the {claim} claim with the value admin, then sign in again.",
   "server.oidc.unreachable": "Couldn't reach the sign-in provider.",
   "server.oidc.signInToLink": "Sign in before linking an account.",
   "server.oidc.expired": "Sign-in expired. Try again.",

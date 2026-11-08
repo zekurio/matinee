@@ -37,6 +37,7 @@ const TEXT_FIELDS = [
   "clientId",
   "scopes",
   "usernameClaim",
+  "roleClaim",
 ] as const
 type TextField = (typeof TEXT_FIELDS)[number]
 
@@ -62,6 +63,7 @@ function draftFrom({ oidc, defaults }: AdminAuthSettings): Draft {
     clientId: text("clientId"),
     scopes: text("scopes"),
     usernameClaim: text("usernameClaim"),
+    roleClaim: text("roleClaim"),
     enabled: oidc.enabled,
     allowSignUp: oidc.allowSignUp,
     clientSecret: "",
@@ -80,6 +82,7 @@ function inputFrom(draft: Draft) {
     clientId: draft.clientId.trim(),
     scopes: draft.scopes.trim().replace(/\s+/g, " "),
     usernameClaim: draft.usernameClaim.trim(),
+    roleClaim: draft.roleClaim.trim(),
     clientSecret: secret ? secret : draft.dropSecret ? null : undefined,
   })
 }
@@ -90,6 +93,7 @@ const FIELD_NAMES = new Map<string, MessageKey>([
   ["clientId", "oidc.field.clientId"],
   ["scopes", "oidc.field.scopes"],
   ["usernameClaim", "oidc.field.usernameClaim"],
+  ["roleClaim", "oidc.field.roleClaim"],
   ["clientSecret", "oidc.field.clientSecret"],
 ])
 
@@ -314,6 +318,17 @@ const AdvancedSection = withForm({
                   autoComplete="off"
                   spellCheck={false}
                   placeholder={defaults.usernameClaim}
+                />
+              )}
+            </form.AppField>
+            <form.AppField name="roleClaim">
+              {() => (
+                <InputField
+                  title={tr("oidc.field.roleClaim")}
+                  description={tr("oidc.roleClaim.description")}
+                  autoComplete="off"
+                  spellCheck={false}
+                  placeholder={defaults.roleClaim}
                 />
               )}
             </form.AppField>

@@ -16,6 +16,8 @@ export default {
   "server.auth.setupTokenMismatch":
     "Dieser Einrichtungstoken stimmt nicht mit dem im Log überein.",
   "server.auth.setupTokenFirst": "Gib zuerst den Einrichtungstoken ein.",
+  "server.auth.setupWithOidc":
+    "Melde dich mit {provider} an, um Matinee einzurichten.",
   "server.auth.usernameTaken": "Dieser Benutzername ist schon vergeben.",
   "server.auth.signUpInvalid": "Die Registrierungsanfrage ist ungültig.",
   "server.auth.setupDoneSignIn":
@@ -36,6 +38,8 @@ export default {
     "Dein Konto ist bereits mit einer anderen Anmeldung bei diesem Anbieter verknüpft. Trenne sie zuerst in den Einstellungen.",
   "server.oidc.setupFirst":
     "Erstelle zuerst das Admin-Konto auf der Einrichtungsseite.",
+  "server.oidc.setupNotAdmin":
+    "Nur wer bei {provider} Admin ist, kann Matinee einrichten. Gib deinem Konto dort den Claim {claim} mit dem Wert admin und melde dich noch einmal an.",
   "server.oidc.unreachable": "Der Anmeldeanbieter war nicht erreichbar.",
   "server.oidc.signInToLink": "Melde dich an, bevor du ein Konto verknüpfst.",
   "server.oidc.expired":

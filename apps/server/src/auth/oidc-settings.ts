@@ -31,6 +31,7 @@ const TEXT_FIELDS = [
   "clientId",
   "scopes",
   "usernameClaim",
+  "roleClaim",
 ] as const
 
 /** The fields a MATINEE_OIDC_* variable gives a default for. */
@@ -40,6 +41,7 @@ const VARIABLES = new Map<keyof OidcSettings, string>([
   ["clientId", "MATINEE_OIDC_CLIENT_ID"],
   ["scopes", "MATINEE_OIDC_SCOPES"],
   ["usernameClaim", "MATINEE_OIDC_USERNAME_CLAIM"],
+  ["roleClaim", "MATINEE_OIDC_ROLE_CLAIM"],
   ["allowSignUp", "MATINEE_OIDC_ALLOW_SIGN_UP"],
 ])
 
@@ -70,6 +72,7 @@ export function oidcDefaults(): OidcSettings {
     clientId: env.MATINEE_OIDC_CLIENT_ID ?? "",
     scopes: env.MATINEE_OIDC_SCOPES,
     usernameClaim: env.MATINEE_OIDC_USERNAME_CLAIM,
+    roleClaim: env.MATINEE_OIDC_ROLE_CLAIM,
     allowSignUp: env.MATINEE_OIDC_ALLOW_SIGN_UP,
   }
 }

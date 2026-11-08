@@ -12,6 +12,7 @@ export default defineMessages("oidc", {
   "oidc.field.clientId": "Client ID",
   "oidc.field.scopes": "Scopes",
   "oidc.field.usernameClaim": "Username claim",
+  "oidc.field.roleClaim": "Role claim",
   "oidc.field.clientSecret": "Client secret",
 
   // The single sign-on section.
@@ -57,4 +58,6 @@ export default defineMessages("oidc", {
   "oidc.advanced.hide": "Hide",
   "oidc.scopes.description": "Separated by spaces. Must include openid.",
   "oidc.usernameClaim.description": "Falls back to preferred_username.",
+  "oidc.roleClaim.description":
+    "Sets the role on every sign-in: admin or user, or a list holding them. Without the claim, the role stays.",
 })

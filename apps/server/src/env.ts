@@ -70,7 +70,7 @@ const EnvSchema = t.object({
   /**
    * Defaults for the transcoding settings an admin can change in the app:
    * the acceleration and its device nodes. Unset leaves Matinee's own, so
-   * the server can tell the variable's value from its own default.
+   * setup knows to ask.
    */
   MATINEE_HARDWARE_ACCELERATION: HardwareAcceleration.optional(),
   MATINEE_VAAPI_DEVICE: DevicePath.optional(),
@@ -100,6 +100,11 @@ const EnvSchema = t.object({
   MATINEE_OIDC_DISPLAY_NAME: t.string().$default("Single sign-on"),
   MATINEE_OIDC_SCOPES: t.string().$default("openid profile"),
   MATINEE_OIDC_USERNAME_CLAIM: t.string().$default("preferred_username"),
+  /**
+   * Claim that gives the account's role, `admin` or `user`, as a string or
+   * a list, as alloy and Immich read it.
+   */
+  MATINEE_OIDC_ROLE_CLAIM: t.string().trim().min(1).$default("matinee_role"),
   MATINEE_OIDC_ALLOW_SIGN_UP: flag(false),
   /** TMDB API key (v3) or API read access token. */
   MATINEE_TMDB_API_KEY: optional,

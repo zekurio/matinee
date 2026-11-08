@@ -12,6 +12,7 @@ export default {
   "oidc.field.clientId": "Client-ID",
   "oidc.field.scopes": "Scopes",
   "oidc.field.usernameClaim": "Benutzername-Claim",
+  "oidc.field.roleClaim": "Rollen-Claim",
   "oidc.field.clientSecret": "Client-Secret",
 
   "oidc.title": "Single Sign-on",
@@ -55,4 +56,6 @@ export default {
   "oidc.scopes.description":
     "Durch Leerzeichen getrennt. Muss openid enthalten.",
   "oidc.usernameClaim.description": "Sonst gilt preferred_username.",
+  "oidc.roleClaim.description":
+    "Setzt die Rolle bei jeder Anmeldung: admin oder user, oder eine Liste davon. Ohne den Claim bleibt die Rolle, wie sie ist.",
 } satisfies TranslationOf<typeof source>

@@ -29,6 +29,11 @@ export const adminContract = oc.tag("Admin").router({
     get: get("/admin/appearance").output(ThemeAccents),
     update: put("/admin/appearance").input(ThemeAccents).output(ThemeAccents),
   },
+  /** First-run setup, after the admin account exists. */
+  setup: {
+    /** Finish setup. Admins land on Home instead of the setup steps. */
+    complete: post("/admin/setup/complete").output(t.void()),
+  },
   auth: {
     get: get("/admin/auth").output(AdminAuthSettings),
     /** Save the OIDC provider. Applies to the next sign-in, no restart. */

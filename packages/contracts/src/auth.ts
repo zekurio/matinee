@@ -9,11 +9,28 @@ import type {
 import { t } from "./schema"
 import { ThemeAccents } from "./theme"
 
+/**
+ * How setup creates the admin account. With single sign-on set up, only an
+ * admin at the provider can; otherwise a passkey, after the setup token.
+ */
+export const SETUP_MODES = ["passkey", "oidc"] as const
+export const SetupMode = t.enum(SETUP_MODES)
+export type SetupMode = t.infer<typeof SetupMode>
+
 export const AuthConfig = t.object({
-  /** No account exists yet. The first account becomes the admin. */
-  setupRequired: t.boolean(),
-  /** Setup needs the token the server printed to its log. */
-  setupTokenRequired: t.boolean(),
+  /**
+   * First-run setup, until the admin finishes it; null after. The first
+   * account becomes the admin, who then sets up transcoding and libraries.
+   */
+  setup: t
+    .object({
+      /** No account exists yet. */
+      accountRequired: t.boolean(),
+      mode: SetupMode,
+      /** A passkey admin needs the token the server printed to its log. */
+      tokenRequired: t.boolean(),
+    })
+    .nullable(),
   /** Anyone may create an account with a passkey. */
   passkeySignUp: t.boolean(),
   oidc: t

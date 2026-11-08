@@ -51,7 +51,14 @@ export function TranscodingPanel() {
   )
 }
 
-function TranscodingForm({ settings }: { settings: AdminTranscodingSettings }) {
+/**
+ * The transcoding form, also used by setup: the draft, saving it, and
+ * running detection again. `onSaved` runs after a save went through.
+ */
+export function useTranscodingForm(
+  settings: AdminTranscodingSettings,
+  onSaved?: () => void,
+) {
   const queryClient = useQueryClient()
   const initial = draftFrom(settings)
   const apply = (next: AdminTranscodingSettings) =>
@@ -74,6 +81,7 @@ function TranscodingForm({ settings }: { settings: AdminTranscodingSettings }) {
       const next = await save.mutateAsync(parsed.data)
       apply(next)
       formApi.reset(draftFrom(next))
+      onSaved?.()
     },
   })
   // Edits only: for a render after a refetch, an untouched form still holds
@@ -86,9 +94,14 @@ function TranscodingForm({ settings }: { settings: AdminTranscodingSettings }) {
     form.store,
     (state) => state.values.hardwareAcceleration,
   )
-
   const { capabilities } = settings
   const hardware = accel === "none" ? null : hardwareOf(capabilities, accel)
+  return { form, detect, dirty, hardware }
+}
+
+function TranscodingForm({ settings }: { settings: AdminTranscodingSettings }) {
+  const { form, detect, dirty, hardware } = useTranscodingForm(settings)
+  const { capabilities } = settings
 
   return (
     <form className="contents" onSubmit={(event) => event.preventDefault()}>

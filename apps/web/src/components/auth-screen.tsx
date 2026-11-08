@@ -1,3 +1,4 @@
+import { cn } from "@matinee/ui/lib/utils"
 import type { ReactNode } from "react"
 
 import { Logo } from "./brand"
@@ -9,11 +10,17 @@ import { Logo } from "./brand"
  */
 export function AuthScreen({
   title,
+  eyebrow,
   description,
+  wide = false,
   children,
 }: {
   title: string
+  /** A line above the title, such as the step of a longer flow. */
+  eyebrow?: string
   description?: ReactNode
+  /** Room for settings, as setup's steps after the admin account show. */
+  wide?: boolean
   children: ReactNode
 }) {
   return (
@@ -21,7 +28,10 @@ export function AuthScreen({
       <header className="absolute top-8 left-6 sm:left-10">
         <Logo className="text-xl" />
       </header>
-      <div className="w-full max-w-[360px]">
+      <div className={cn("w-full", wide ? "max-w-2xl" : "max-w-[360px]")}>
+        {eyebrow && (
+          <p className="text-muted-foreground mb-2 text-sm">{eyebrow}</p>
+        )}
         <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
         {description && (
           <p className="text-muted-foreground mt-2 text-sm leading-5">
