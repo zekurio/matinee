@@ -8,6 +8,7 @@ on:
       - "devenv.nix"
       - "devenv.yaml"
       - "devenv.lock"
+      - "flake.lock"
       - ".envrc"
       - "nix/dev-*.sh"
       - "nix/pnpm.nix"
@@ -33,6 +34,18 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+
+      # The shell and the package must build from the same nixpkgs revision;
+      # nothing else reminds anyone to bump the two locks together.
+      - name: check nixpkgs pins match
+        run: |
+          flake="$(jq -r .nodes.nixpkgs.locked.rev flake.lock)"
+          devenv="$(jq -r .nodes.nixpkgs.locked.rev devenv.lock)"
+          if [ "$flake" != "$devenv" ]; then
+            echo "flake.lock pins nixpkgs $flake but devenv.lock pins $devenv" >&2
+            echo "Run 'nix flake update nixpkgs' and 'devenv update nixpkgs' together." >&2
+            exit 1
+          fi
 
       # devenv's cache serves the CLI build below; cachix-action adds the
       # personal cache for the shell itself.

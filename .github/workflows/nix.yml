@@ -1,0 +1,55 @@
+name: nix
+
+# Builds the flake's package and runs its checks. Scoped to what the
+# derivation builds from, since the pnpm checks don't run it.
+on:
+  pull_request:
+    paths:
+      - "nix/**"
+      - "apps/**"
+      - "packages/**"
+      - "flake.nix"
+      - "flake.lock"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - ".github/workflows/nix.yml"
+      - "!**/*.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  nix:
+    name: nix flake check
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: install nix
+        uses: cachix/install-nix-action@448cde739abec1eaf0646249e3d25bb8d9bc7702 # v31.11.2
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+
+      # Read-only without the secret (fork PRs); pushes from same-repo runs.
+      - name: set up cachix
+        uses: cachix/cachix-action@38b082610b782e7e93e209c35fd730d399dee866 # v17
+        with:
+          name: zekurio
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+
+      # A pnpm-lock.yaml change needs a new pnpmDepsHash in nix/package.nix;
+      # this step fails with the hash to put there.
+      - name: check nix flake
+        run: nix flake check --print-build-logs
