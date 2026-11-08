@@ -41,6 +41,9 @@ export default {
   "link.oidc.notYours": "Nicht dein Konto?",
   "link.oidc.createAccount": "Neues Konto erstellen",
   "link.oidc.createFailed": "Das Konto konnte nicht erstellt werden",
+  "link.oidc.takenTitle": "Dieser Benutzername ist vergeben",
+  "link.oidc.takenDescription":
+    "Dein {provider}-Benutzername passt zu einem Konto, das nicht mit {provider} verknüpft ist. Solange Passkeys aus sind, kann es nur verknüpfen, wer bei diesem Konto angemeldet ist. Wenn es deins ist, bitte den Admin um Hilfe.",
   "link.oidc.descriptionNamed":
     "Angemeldet als {username}. Verknüpfe das {provider}-Konto {account}, um dich nächstes Mal damit anzumelden.",
   "link.oidc.description":

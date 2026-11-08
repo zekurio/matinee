@@ -11,6 +11,7 @@ import { db } from "../db"
 import { env } from "../env"
 import { log } from "../log"
 import { activeOidc } from "./oidc-settings"
+import { passkeysEnabled } from "./passkey-settings"
 import { safeEqual } from "./tokens"
 
 const SETUP_COOKIE = "matinee_setup"
@@ -40,11 +41,12 @@ export function markSetupDone(): void {
 /**
  * How the admin account gets created. With single sign-on set up, only an
  * account the provider's role claim names an admin can, so no token
- * guards it. Settings can't change before an admin exists, so neither can
- * the mode.
+ * guards it. Null while passkeys are off too, when nothing can. Settings
+ * can't change before an admin exists, so neither can the mode.
  */
-export async function setupMode(): Promise<SetupMode> {
-  return (await activeOidc()) ? "oidc" : "passkey"
+export async function setupMode(): Promise<SetupMode | null> {
+  if (await activeOidc()) return "oidc"
+  return (await passkeysEnabled()) ? "passkey" : null
 }
 
 /** Whether the admin finished setting up transcoding and libraries. */
@@ -87,6 +89,12 @@ export async function initSetupToken(): Promise<void> {
     const { displayName, roleClaim } = provider.settings
     log.info(
       `No account exists yet. Open ${env.PUBLIC_URL}/setup and sign in with ${displayName}, as an account whose ${roleClaim} claim is admin.`,
+    )
+    return
+  }
+  if (!(await passkeysEnabled())) {
+    log.warn(
+      "No account exists yet, but passkeys are off and single sign-on isn't set up, so nothing can create the admin account. Set MATINEE_PASSKEYS_ENABLED=true or the MATINEE_OIDC_* variables, and restart.",
     )
     return
   }

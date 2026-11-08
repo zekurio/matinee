@@ -26,11 +26,17 @@ export const AuthConfig = t.object({
     .object({
       /** No account exists yet. */
       accountRequired: t.boolean(),
-      mode: SetupMode,
+      /**
+       * Null when nothing can create the admin: passkeys are off and single
+       * sign-on isn't set up.
+       */
+      mode: SetupMode.nullable(),
       /** A passkey admin needs the token the server printed to its log. */
       tokenRequired: t.boolean(),
     })
     .nullable(),
+  /** Passkeys sign in. Off, single sign-on is the only way in. */
+  passkeys: t.boolean(),
   /** Anyone may create an account with a passkey. */
   passkeySignUp: t.boolean(),
   oidc: t

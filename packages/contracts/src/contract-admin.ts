@@ -1,6 +1,6 @@
 import { oc } from "@orpc/contract"
 
-import { AdminAuthSettings, AdminUser, OidcSettingsInput } from "./admin"
+import { AdminAuthSettings, AdminUser, AuthSettingsInput } from "./admin"
 import { del, get, post, put } from "./contract-routes"
 import {
   ConcurrencyInput,
@@ -36,9 +36,13 @@ export const adminContract = oc.tag("Admin").router({
   },
   auth: {
     get: get("/admin/auth").output(AdminAuthSettings),
-    /** Save the OIDC provider. Applies to the next sign-in, no restart. */
-    updateOidc: put("/admin/auth/oidc")
-      .input(OidcSettingsInput)
+    /**
+     * Save passkeys and the OIDC provider. Applies to the next sign-in, no
+     * restart. Fails when it would leave no way in, or leave you unable to
+     * sign in.
+     */
+    update: put("/admin/auth")
+      .input(AuthSettingsInput)
       .output(AdminAuthSettings),
   },
   /**
@@ -100,9 +104,9 @@ export const adminContract = oc.tag("Admin").router({
   },
   /**
    * Accounts. People make their own, with a passkey while open registration
-   * is on or through the OIDC provider while it allows sign-up. The server
-   * keeps at least one admin who can sign in, so demoting or deleting the
-   * last one fails.
+   * and passkeys are on, or through the OIDC provider while it allows
+   * sign-up. The server keeps at least one admin who can sign in, so
+   * demoting or deleting the last one fails.
    */
   users: {
     /** Everyone, oldest account first. */

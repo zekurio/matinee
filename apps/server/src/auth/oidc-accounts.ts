@@ -6,6 +6,7 @@ import { db } from "../db"
 import { log } from "../log"
 import { recordProviderPicture } from "./avatars"
 import { sameIssuer } from "./oidc-settings"
+import { passkeysEnabled } from "./passkey-settings"
 import {
   availableUsername,
   insertUser,
@@ -16,8 +17,15 @@ import {
 /** A failure the person can act on. Its message is shown as is. */
 export class OidcError extends Error {}
 
-export const NO_LINKED_ACCOUNT =
+const NO_LINKED_ACCOUNT =
   "No account is linked to this sign-in. Sign in with a passkey, then link it in settings."
+
+/** What a sign-in that matches no account hears, while sign-up is off. */
+export async function noLinkedAccount(): Promise<string> {
+  return (await passkeysEnabled())
+    ? NO_LINKED_ACCOUNT
+    : "No account is linked to this sign-in. Ask an admin for access."
+}
 
 /** Who the provider says signed in, from the ID token and userinfo. */
 export type OidcIdentity = {

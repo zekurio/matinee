@@ -1,9 +1,10 @@
 import { Username, type UserRole } from "@matinee/contracts"
 import { oidcAccount, passkey, user, type UserRow } from "@matinee/db"
-import { and, eq, inArray, ne, sql } from "drizzle-orm"
+import { and, count, eq, inArray, ne, sql } from "drizzle-orm"
 
 import { db } from "../db"
 import { activeOidc } from "./oidc-settings"
+import { passkeysEnabled } from "./passkey-settings"
 
 export type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0]
 
@@ -94,33 +95,71 @@ export async function lockUsers(tx: Tx): Promise<{ empty: boolean }> {
 }
 
 /**
- * Whether an admin other than `userId` can sign in: one with a passkey, or an
- * account linked at the provider single sign-on uses now. Call it under
- * `lockUsers` before demoting or deleting an admin, so Matinee always keeps
- * one.
+ * Whether a linked account is at the issuer. Accounts store the ID token's
+ * `iss`, which can differ from the issuer URL by a trailing slash.
+ */
+export function atIssuer(issuerUrl: string) {
+  return sql`rtrim(${oidcAccount.issuer}, '/') = ${issuerUrl.replace(/\/+$/, "")}`
+}
+
+/**
+ * The ways the user signs in now: passkeys while they're on, and the linked
+ * account while single sign-on uses its issuer.
+ */
+export async function signInMethods(
+  userId: string,
+): Promise<{ passkeys: number; linked: number }> {
+  const [passkeys, provider] = await Promise.all([
+    passkeysEnabled(),
+    activeOidc(),
+  ])
+  const [keys] = passkeys
+    ? await db
+        .select({ n: count() })
+        .from(passkey)
+        .where(eq(passkey.userId, userId))
+    : []
+  const [accounts] = provider
+    ? await db
+        .select({ n: count() })
+        .from(oidcAccount)
+        .where(
+          and(
+            eq(oidcAccount.userId, userId),
+            atIssuer(provider.settings.issuerUrl),
+          ),
+        )
+    : []
+  return { passkeys: keys?.n ?? 0, linked: accounts?.n ?? 0 }
+}
+
+/**
+ * Whether an admin other than `userId` can sign in: one with a passkey while
+ * they're on, or an account linked at the provider single sign-on uses now.
+ * Call it under `lockUsers` before demoting or deleting an admin, so
+ * Matinee always keeps one.
  */
 export async function otherAdminCanSignIn(
   tx: Tx,
   userId: string,
 ): Promise<boolean> {
   const others = and(eq(user.role, "admin"), ne(user.id, userId))
-  const [withPasskey] = await tx
-    .select({ id: user.id })
-    .from(user)
-    .innerJoin(passkey, eq(passkey.userId, user.id))
-    .where(others)
-    .limit(1)
-  if (withPasskey) return true
+  if (await passkeysEnabled()) {
+    const [withPasskey] = await tx
+      .select({ id: user.id })
+      .from(user)
+      .innerJoin(passkey, eq(passkey.userId, user.id))
+      .where(others)
+      .limit(1)
+    if (withPasskey) return true
+  }
   const provider = await activeOidc()
   if (!provider) return false
-  // Accounts store the ID token's `iss`, which can differ from the issuer
-  // URL by a trailing slash.
-  const issuer = provider.settings.issuerUrl.replace(/\/+$/, "")
   const [withAccount] = await tx
     .select({ id: user.id })
     .from(user)
     .innerJoin(oidcAccount, eq(oidcAccount.userId, user.id))
-    .where(and(others, sql`rtrim(${oidcAccount.issuer}, '/') = ${issuer}`))
+    .where(and(others, atIssuer(provider.settings.issuerUrl)))
     .limit(1)
   return withAccount !== undefined
 }

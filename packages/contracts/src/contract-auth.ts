@@ -39,6 +39,7 @@ export const authContract = oc.tag("Auth").router({
     .input(t.object({ token: t.string().min(1) }))
     .output(t.void()),
   passkey: {
+    /** Every passkey procedure fails while an admin has passkeys off. */
     signInOptions: post("/auth/passkey/sign-in/options").output(PasskeyRequest),
     signIn: post("/auth/passkey/sign-in")
       .input(
@@ -147,6 +148,7 @@ export const accountContract = oc.tag("Account").router({
   },
   passkeys: {
     list: get("/account/passkeys").output(t.array(Passkey)),
+    /** Adding a passkey fails while an admin has passkeys off. */
     registerOptions: post("/account/passkeys/options").output(PasskeyCreation),
     register: post("/account/passkeys")
       .input(

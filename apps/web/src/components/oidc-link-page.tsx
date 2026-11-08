@@ -4,7 +4,7 @@ import { toast } from "@matinee/ui/components/sonner"
 import { Spinner } from "@matinee/ui/components/spinner"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useNavigate, useRouter } from "@tanstack/react-router"
-import { KeyRoundIcon, LinkIcon } from "lucide-react"
+import { KeyRoundIcon, LinkIcon, UserPlusIcon } from "lucide-react"
 
 import { AuthScreen } from "@/components/auth-screen"
 import { FormAlert } from "@/components/form-alert"
@@ -16,13 +16,16 @@ import { client, errorMessage, orpc } from "@/lib/rpc"
 /** An OIDC sign-in the server holds for this browser until it's linked. */
 export type PendingLink = PendingOidcLink & {
   provider: NonNullable<AuthConfig["oidc"]>
+  /** Passkeys sign in. Off, signing in to the account can't link it. */
+  passkeys: boolean
 }
 
 /**
  * Where an OIDC sign-in lands when its username claim names an existing
  * account. The server keeps that sign-in for this browser, so neither
  * linking it nor creating an account from it goes back to the provider.
- * Signed out, the page asks the person to sign in to the account. Signed in,
+ * Signed out, the page asks the person to sign in to the account, or with
+ * passkeys off, which leaves no way to, offers only a new account. Signed in,
  * it links on a click and names the provider account, so someone else on a
  * shared browser can tell it isn't theirs.
  */
@@ -79,6 +82,25 @@ function LinkSignIn({ link }: { link: PendingLink }) {
   const busy =
     passkey.isPending || createAccount.isPending || createAccount.isSuccess
 
+  if (!link.passkeys) {
+    return (
+      <AuthScreen
+        title={tr("link.oidc.takenTitle")}
+        description={tr("link.oidc.takenDescription", { provider: name })}
+      >
+        {link.provider.allowSignUp && (
+          <Button
+            size="lg"
+            disabled={busy}
+            onClick={() => createAccount.mutate()}
+          >
+            {createAccount.isPending ? <Spinner /> : <UserPlusIcon />}
+            {tr("link.oidc.createAccount")}
+          </Button>
+        )}
+      </AuthScreen>
+    )
+  }
   return (
     <AuthScreen
       title={tr("link.oidc.signInTitle")}

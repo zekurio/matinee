@@ -10,6 +10,7 @@ export default defineMessages("server", {
   // rpc/base.ts: every procedure.
   "server.rpc.signInFirst": "Sign in first.",
   "server.rpc.adminsOnly": "Only admins can do this.",
+  "server.rpc.passkeysOff": "Passkeys are turned off on this server.",
 
   // rpc/auth.ts: setup, sign-up, sign-in, and devices.
   "server.auth.signUpClosed": "Sign-up is closed on this server.",
@@ -36,6 +37,9 @@ export default defineMessages("server", {
   // auth error on redirects.
   "server.oidc.noLinkedAccount":
     "No account is linked to this sign-in. Sign in with a passkey, then link it in settings.",
+  // The same, while passkeys are off.
+  "server.oidc.noLinkedAccountSso":
+    "No account is linked to this sign-in. Ask an admin for access.",
   "server.oidc.linkedElsewhere":
     "This sign-in is already linked to another account.",
   "server.oidc.alreadyLinked":
@@ -71,6 +75,8 @@ export default defineMessages("server", {
   // rpc/account.ts.
   "server.account.lastMethod":
     "Add another passkey or link an account before removing your last way to sign in.",
+  "server.account.lastLink":
+    "Passkeys are off, so single sign-on is your only way to sign in. Keep it linked.",
   "server.account.notFound": "Account not found.",
   "server.account.themeLimit": "You can save up to {count} themes.",
   "server.account.passkeyOtherAccount":
@@ -89,16 +95,26 @@ export default defineMessages("server", {
   "server.adminUsers.lastAdminDelete":
     "You're the only admin who can sign in. Make someone who can sign in an admin before you delete your account.",
 
-  // rpc/admin-auth.ts: saving the single sign-on settings. {url} is the
-  // issuer's discovery document URL.
+  // rpc/admin-auth.ts: saving passkeys and the single sign-on settings.
+  // {url} is the issuer's discovery document URL.
   "server.adminAuth.issuerRequired":
     "Enter an issuer URL to turn on single sign-on.",
   "server.adminAuth.clientIdRequired":
     "Enter a client ID to turn on single sign-on.",
+  "server.adminAuth.noMethod":
+    "Keep passkeys or single sign-on on. Without either, nobody can sign in.",
+  "server.adminAuth.passkeysOffLink":
+    "Link your account to single sign-on under Settings → Account before turning passkeys off.",
+  "server.adminAuth.passkeysOffSaveFirst":
+    "Save single sign-on first and link your account to it under Settings → Account. Then turn passkeys off.",
   "server.adminAuth.ssoOnlyIssuer":
     "You sign in only through single sign-on. Add a passkey before changing the issuer.",
   "server.adminAuth.ssoOnlyOff":
     "You sign in only through single sign-on. Add a passkey before turning it off.",
+  "server.adminAuth.ssoOnlyIssuerPasskeysOff":
+    "You sign in only through single sign-on. Turn passkeys on and add one before changing the issuer.",
+  "server.adminAuth.ssoOnlyOffPasskeysOff":
+    "You sign in only through single sign-on. Turn passkeys on and add one before turning it off.",
   "server.adminAuth.discoveryTimeout": "{url} didn't answer within 10 seconds.",
   "server.adminAuth.issuerMismatch":
     "The provider calls itself {issuer}. Use exactly that as the issuer URL.",

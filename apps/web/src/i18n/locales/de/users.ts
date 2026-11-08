@@ -49,6 +49,10 @@ export default {
     one: "{count} Passkey",
     other: "{count} Passkeys",
   }),
+  "users.passkeysOff": plural({
+    one: "{count} Passkey (aus)",
+    other: "{count} Passkeys (aus)",
+  }),
   "users.oidcOff": "Single Sign-on (aus)",
   "users.noSignIn": "Keine Möglichkeit zur Anmeldung",
   "users.joined": "Dabei seit {date}",

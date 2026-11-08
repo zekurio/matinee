@@ -87,6 +87,12 @@ const EnvSchema = t.object({
     .max(24 * 24)
     .$default(12),
   MATINEE_SETUP_TOKEN: t.string().min(32).optional(),
+  /**
+   * Default for the passkeys switch an admin can change in the app. Off
+   * leaves single sign-on as the only way to sign in, as alloy's
+   * ALLOY_PASSKEY_ENABLED does.
+   */
+  MATINEE_PASSKEYS_ENABLED: flag(true),
   MATINEE_OPEN_REGISTRATION: flag(false),
   MATINEE_OIDC_ISSUER_URL: t
     .string()

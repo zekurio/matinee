@@ -1,5 +1,6 @@
 import {
   type AdminAuthSettings,
+  type AuthSettingsInput,
   type OidcSettings,
   OidcSettingsInput,
 } from "@matinee/contracts"
@@ -46,6 +47,7 @@ type TextField = (typeof TEXT_FIELDS)[number]
  * the environment's, which shows as its placeholder.
  */
 type Draft = Record<TextField, string> & {
+  passkeys: boolean
   enabled: boolean
   allowSignUp: boolean
   /** A new secret to save; empty keeps the current one. */
@@ -54,10 +56,11 @@ type Draft = Record<TextField, string> & {
   dropSecret: boolean
 }
 
-function draftFrom({ oidc, defaults }: AdminAuthSettings): Draft {
+function draftFrom({ passkeys, oidc, defaults }: AdminAuthSettings): Draft {
   const text = (key: TextField) =>
     oidc[key] === defaults[key] ? "" : oidc[key]
   return {
+    passkeys: passkeys.enabled,
     displayName: text("displayName"),
     issuerUrl: text("issuerUrl"),
     clientId: text("clientId"),
@@ -142,8 +145,7 @@ function OidcForm({ settings }: { settings: AdminAuthSettings }) {
   const queryClient = useQueryClient()
   const initial = draftFrom(settings)
   const save = useMutation({
-    mutationFn: (input: OidcSettingsInput) =>
-      client.admin.auth.updateOidc(input),
+    mutationFn: (input: AuthSettingsInput) => client.admin.auth.update(input),
   })
   // Until the first edit, the form follows the saved settings, so a refetch
   // shows through.
@@ -152,7 +154,10 @@ function OidcForm({ settings }: { settings: AdminAuthSettings }) {
     onSubmit: async ({ value, formApi }) => {
       const parsed = inputFrom(value)
       if (!parsed.success) throw inputError(parsed.error.issues[0])
-      const next = await save.mutateAsync(parsed.data)
+      const next = await save.mutateAsync({
+        passkeys: { enabled: value.passkeys },
+        oidc: parsed.data,
+      })
       queryClient.setQueryData(orpc.admin.auth.get.queryKey(), next)
       formApi.reset(draftFrom(next))
       // The sign-in page and the account section read the public config.
@@ -168,6 +173,7 @@ function OidcForm({ settings }: { settings: AdminAuthSettings }) {
 
   return (
     <form className="contents" onSubmit={(event) => event.preventDefault()}>
+      <PasskeysSection form={form} settings={settings} />
       <SingleSignOnSection form={form} settings={settings} />
       <AdvancedSection form={form} defaults={settings.defaults} />
       <SettingsSaveBar
@@ -178,6 +184,42 @@ function OidcForm({ settings }: { settings: AdminAuthSettings }) {
     </form>
   )
 }
+
+const PasskeysSection = withForm({
+  defaultValues: typeOnly<Draft>(),
+  props: typeOnly<{ settings: AdminAuthSettings }>(),
+  render: function Render({ form, settings }) {
+    return (
+      <SettingsSubsection
+        id="passkeys"
+        title={tr("oidc.passkeys.title")}
+        description={tr("oidc.passkeys.description")}
+      >
+        <SettingRows>
+          <form.AppField name="passkeys">
+            {(field) => (
+              <SwitchField
+                title={tr("oidc.enabled")}
+                footer={
+                  settings.passkeys.enabled &&
+                  !field.state.value &&
+                  settings.unlinkedUsers > 0 ? (
+                    <SettingWarning>
+                      {tr("oidc.passkeys.unlinked", {
+                        count: settings.unlinkedUsers,
+                        provider: settings.oidc.displayName,
+                      })}
+                    </SettingWarning>
+                  ) : null
+                }
+              />
+            )}
+          </form.AppField>
+        </SettingRows>
+      </SettingsSubsection>
+    )
+  },
+})
 
 const SingleSignOnSection = withForm({
   defaultValues: typeOnly<Draft>(),

@@ -38,7 +38,9 @@ async function loadPendingLink(
 ): Promise<PendingLink | null> {
   if (!requested || !config.oidc) return null
   const pending = await client.auth.oidc.pending.get().catch(() => null)
-  return pending ? { ...pending, provider: config.oidc } : null
+  return pending
+    ? { ...pending, provider: config.oidc, passkeys: config.passkeys }
+    : null
 }
 
 export const Route = createFileRoute("/login")({
@@ -108,28 +110,40 @@ function SignInPage({
   return (
     <AuthScreen title={tr("auth.signIn.title")}>
       <div className="flex flex-col gap-3">
-        <Button
-          size="lg"
-          disabled={passkey.isPending}
-          onClick={() => passkey.mutate()}
-        >
-          {passkey.isPending ? <Spinner /> : <KeyRoundIcon />}
-          {tr("auth.signIn.passkey")}
-        </Button>
+        {config.passkeys && (
+          <Button
+            size="lg"
+            disabled={passkey.isPending}
+            onClick={() => passkey.mutate()}
+          >
+            {passkey.isPending ? <Spinner /> : <KeyRoundIcon />}
+            {tr("auth.signIn.passkey")}
+          </Button>
+        )}
         {config.oidc && (
           <a
             href={oidcStartPath("sign-in", target)}
-            className={buttonVariants({ variant: "outline", size: "lg" })}
+            className={buttonVariants({
+              variant: config.passkeys ? "outline" : "default",
+              size: "lg",
+            })}
           >
             <LogInIcon />
             {tr("auth.signIn.oidc", { provider: config.oidc.displayName })}
           </a>
         )}
+        {!config.passkeys && !config.oidc && (
+          <FormAlert message={tr("auth.signIn.noMethod")} />
+        )}
 
         {authError && (
           <FormAlert
             message={translateKnown(authError)}
-            hint={tr("auth.signIn.errorHint")}
+            hint={
+              config.passkeys
+                ? tr("auth.signIn.errorHint")
+                : tr("auth.signIn.errorHintSso")
+            }
           />
         )}
         {error && <FormAlert message={errorMessage(error)} />}

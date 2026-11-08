@@ -3,7 +3,8 @@ import { migrateDb } from "@matinee/db"
 
 import { createApp } from "./app"
 import { oidcState } from "./auth/oidc-settings"
-import { initSetupToken } from "./auth/setup"
+import { passkeySettings, warnWithoutSignIn } from "./auth/passkey-settings"
+import { initSetupToken, setupRequired } from "./auth/setup"
 import { db, pool } from "./db"
 import { env } from "./env"
 import { stopQueues } from "./jobs/queue"
@@ -20,8 +21,10 @@ import { transcodingSettings } from "./transcode/settings"
 await migrateDb(db, env.MATINEE_MIGRATIONS_DIR)
 // Read the saved settings now, so the log says at start which MATINEE_*
 // variables they override.
-await Promise.all([oidcState(), transcodingSettings()])
+await Promise.all([oidcState(), passkeySettings(), transcodingSettings()])
 await initSetupToken()
+// Before setup, initSetupToken says what can create the admin.
+if (!(await setupRequired())) await warnWithoutSignIn()
 await loadJobSettings()
 await startTasks(TASKS)
 if (env.MATINEE_WATCH_LIBRARIES) startWatching()

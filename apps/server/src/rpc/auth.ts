@@ -12,11 +12,12 @@ import {
 import {
   createOidcUser,
   linkOidcAccount,
-  NO_LINKED_ACCOUNT,
+  noLinkedAccount,
   OidcError,
 } from "../auth/oidc-accounts"
 import { readPendingLink, takePendingLink } from "../auth/oidc-pending"
 import { activeOidc } from "../auth/oidc-settings"
+import { passkeysEnabled } from "../auth/passkey-settings"
 import {
   beginSignIn,
   beginSignUp,
@@ -47,7 +48,7 @@ import { insertUser, lockUsers, usernameTaken } from "../auth/users"
 import { db } from "../db"
 import { env } from "../env"
 import { log } from "../log"
-import { badRequest, authed, notFound, pub } from "./base"
+import { badRequest, authed, notFound, pub, requirePasskeys } from "./base"
 
 /** What `beginSignUp` stored with the challenge. */
 const SignUpPayload = t.object({
@@ -97,6 +98,7 @@ export const auth = {
   config: pub.auth.config.handler(async () => {
     const accountRequired = await setupRequired()
     const provider = await activeOidc()
+    const passkeys = await passkeysEnabled()
     const setup =
       accountRequired || !(await setupComplete())
         ? {
@@ -107,7 +109,8 @@ export const auth = {
         : null
     return {
       setup,
-      passkeySignUp: env.MATINEE_OPEN_REGISTRATION,
+      passkeys,
+      passkeySignUp: passkeys && env.MATINEE_OPEN_REGISTRATION,
       oidc: provider
         ? {
             displayName: provider.settings.displayName,
@@ -130,15 +133,20 @@ export const auth = {
   unlockSetup: pub.auth.unlockSetup.handler(async ({ context, input }) => {
     if (!(await setupRequired())) throw badRequest("Setup is already done.")
     await refuseOidcSetup()
+    await requirePasskeys()
     if (!unlockSetup(context.hono, input.token)) {
       throw badRequest("That setup token doesn't match the one in the log.")
     }
   }),
 
   passkey: {
-    signInOptions: pub.auth.passkey.signInOptions.handler(() => beginSignIn()),
+    signInOptions: pub.auth.passkey.signInOptions.handler(async () => {
+      await requirePasskeys()
+      return beginSignIn()
+    }),
 
     signIn: pub.auth.passkey.signIn.handler(async ({ context, input }) => {
+      await requirePasskeys()
       const userId = await finishSignIn(
         input.challengeId,
         input.response,
@@ -153,6 +161,7 @@ export const auth = {
       async ({ context, input }) => {
         const setup = await setupRequired()
         if (setup) await refuseOidcSetup()
+        await requirePasskeys()
         if (setup && !hasSetupAccess(context.hono)) {
           throw badRequest("Enter the setup token first.")
         }
@@ -167,6 +176,7 @@ export const auth = {
     ),
 
     signUp: pub.auth.passkey.signUp.handler(async ({ context, input }) => {
+      await requirePasskeys()
       const verified = await finishRegistration(
         "passkey-sign-up",
         input.challengeId,
@@ -241,7 +251,7 @@ export const auth = {
         if (!pending) throw badRequest(PENDING_GONE)
         const provider = await activeOidc()
         if (!provider?.settings.allowSignUp) {
-          throw badRequest(NO_LINKED_ACCOUNT)
+          throw badRequest(await noLinkedAccount())
         }
         const created = await createOidcUser(pending.identity, false).catch(
           oidcFailure,

@@ -17,7 +17,7 @@ import {
   createOidcUser,
   linkedUserId,
   linkOidcAccount,
-  NO_LINKED_ACCOUNT,
+  noLinkedAccount,
   OidcError,
   type OidcIdentity,
   syncRole,
@@ -25,6 +25,7 @@ import {
 } from "./oidc-accounts"
 import { linkPagePath, savePendingLink } from "./oidc-pending"
 import { activeOidc, type OidcState } from "./oidc-settings"
+import { passkeysEnabled } from "./passkey-settings"
 import { readSession, signIn } from "./session"
 import { endSetupAccess, markSetupDone, setupRequired } from "./setup"
 import { findUserByUsernameHint } from "./users"
@@ -313,7 +314,11 @@ export const oidcRoutes = new Hono()
         // Linking on the claim alone would hand the account to whoever
         // controls that claim at the provider, so its owner signs in first.
         const match = await findUserByUsernameHint(identity.label)
-        if (match) {
+        // Signed out, linking needs a passkey, so with passkeys off the
+        // page could only offer a new account.
+        const canLink =
+          (await passkeysEnabled()) || (await readSession(c)) !== null
+        if (match && (canLink || provider.settings.allowSignUp)) {
           log.info(
             `OIDC sign-in matched the username of user ${match}; asking to link`,
           )
@@ -321,7 +326,7 @@ export const oidcRoutes = new Hono()
           return c.redirect(linkPagePath(redirect))
         }
         if (!provider.settings.allowSignUp) {
-          throw new OidcError(NO_LINKED_ACCOUNT)
+          throw new OidcError(await noLinkedAccount())
         }
       }
 

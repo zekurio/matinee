@@ -26,11 +26,23 @@ export const OidcSettings = t.object({
 })
 export type OidcSettings = t.infer<typeof OidcSettings>
 
+/**
+ * Passkeys as sign-in uses them. Off, single sign-on is the only way in:
+ * nobody signs in, signs up, sets up, or adds a passkey with one. Passkeys
+ * stay stored for when they're back on.
+ */
+export const PasskeySettings = t.object({
+  enabled: t.boolean(),
+})
+export type PasskeySettings = t.infer<typeof PasskeySettings>
+
 /** Where the client secret in use comes from, or null when there is none. */
 export const SecretSource = t.enum(["saved", "environment"]).nullable()
 export type SecretSource = t.infer<typeof SecretSource>
 
 export const AdminAuthSettings = t.object({
+  /** Saved values over MATINEE_PASSKEYS_ENABLED. */
+  passkeys: PasskeySettings,
   /** The provider in use: saved values over the environment's. */
   oidc: OidcSettings,
   /** The environment's values, which an empty field falls back to. */
@@ -46,6 +58,11 @@ export const AdminAuthSettings = t.object({
   active: t.boolean(),
   /** Accounts with a linked sign-in and no passkey. */
   ssoOnlyUsers: t.number().int(),
+  /**
+   * Accounts not linked at the provider single sign-on uses now, so they
+   * can't sign in while passkeys are off. 0 while single sign-on is off.
+   */
+  unlinkedUsers: t.number().int(),
 })
 export type AdminAuthSettings = t.infer<typeof AdminAuthSettings>
 
@@ -80,6 +97,16 @@ export const OidcSettingsInput = t
     { path: ["scopes"], message: "Scopes must include openid." },
   )
 export type OidcSettingsInput = t.infer<typeof OidcSettingsInput>
+
+/**
+ * Every sign-in method, saved together, so a save can turn one on and the
+ * other off at once.
+ */
+export const AuthSettingsInput = t.object({
+  passkeys: PasskeySettings,
+  oidc: OidcSettingsInput,
+})
+export type AuthSettingsInput = t.infer<typeof AuthSettingsInput>
 
 /** An account as the admin's user list shows it. */
 export const AdminUser = User.extend({

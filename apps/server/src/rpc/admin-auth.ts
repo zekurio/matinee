@@ -1,7 +1,11 @@
-import { type AdminAuthSettings, OIDC_CALLBACK_PATH } from "@matinee/contracts"
+import {
+  type AdminAuthSettings,
+  OIDC_CALLBACK_PATH,
+  type PasskeySettings,
+} from "@matinee/contracts"
 import { t } from "@matinee/contracts/schema"
-import { oidcAccount, passkey } from "@matinee/db"
-import { countDistinct, eq, notExists } from "drizzle-orm"
+import { oidcAccount, passkey, user } from "@matinee/db"
+import { and, count, countDistinct, eq, notExists } from "drizzle-orm"
 import * as client from "openid-client"
 
 import { discover } from "../auth/oidc"
@@ -14,6 +18,8 @@ import {
   sameIssuer,
   saveOidc,
 } from "../auth/oidc-settings"
+import { passkeySettings, savePasskeys } from "../auth/passkey-settings"
+import { atIssuer } from "../auth/users"
 import { db } from "../db"
 import { env } from "../env"
 import { log } from "../log"
@@ -44,8 +50,43 @@ async function hasPasskey(userId: string): Promise<boolean> {
   return row !== undefined
 }
 
-async function describe(state: OidcState): Promise<AdminAuthSettings> {
+async function linkedAt(userId: string, issuerUrl: string): Promise<boolean> {
+  const [row] = await db
+    .select({ id: oidcAccount.id })
+    .from(oidcAccount)
+    .where(and(eq(oidcAccount.userId, userId), atIssuer(issuerUrl)))
+    .limit(1)
+  return row !== undefined
+}
+
+/** Accounts that can't sign in while passkeys are off. */
+async function unlinkedUsers(state: OidcState): Promise<number> {
+  if (!isActive(state.settings)) return 0
+  const [row] = await db
+    .select({ n: count() })
+    .from(user)
+    .where(
+      notExists(
+        db
+          .select({ id: oidcAccount.id })
+          .from(oidcAccount)
+          .where(
+            and(
+              eq(oidcAccount.userId, user.id),
+              atIssuer(state.settings.issuerUrl),
+            ),
+          ),
+      ),
+    )
+  return row?.n ?? 0
+}
+
+async function describe(
+  state: OidcState,
+  passkeys: PasskeySettings,
+): Promise<AdminAuthSettings> {
   return {
+    passkeys,
     oidc: state.settings,
     defaults: oidcDefaults(),
     clientSecret: {
@@ -55,6 +96,7 @@ async function describe(state: OidcState): Promise<AdminAuthSettings> {
     callbackUrl: `${env.PUBLIC_URL}${OIDC_CALLBACK_PATH}`,
     active: isActive(state.settings),
     ssoOnlyUsers: await ssoOnlyUsers(),
+    unlinkedUsers: await unlinkedUsers(state),
   }
 }
 
@@ -95,59 +137,103 @@ function discoveryError(issuerUrl: string, cause: unknown): string {
   return `Couldn't load ${where}: ${reason}`
 }
 
+/**
+ * Why a save would lock the admin making it out: it switches off, or moves
+ * to another issuer, the only way they sign in.
+ */
+function lockoutMessage(change: {
+  passkeysBefore: boolean
+  passkeysLost: boolean
+  /** Single sign-on stays on at the issuer it uses now. */
+  oidcKept: boolean
+  oidcOn: boolean
+}): string {
+  if (change.passkeysLost) {
+    return change.oidcKept
+      ? "Link your account to single sign-on under Settings → Account before turning passkeys off."
+      : "Save single sign-on first and link your account to it under Settings → Account. Then turn passkeys off."
+  }
+  if (change.passkeysBefore) {
+    return change.oidcOn
+      ? "You sign in only through single sign-on. Add a passkey before changing the issuer."
+      : "You sign in only through single sign-on. Add a passkey before turning it off."
+  }
+  return change.oidcOn
+    ? "You sign in only through single sign-on. Turn passkeys on and add one before changing the issuer."
+    : "You sign in only through single sign-on. Turn passkeys on and add one before turning it off."
+}
+
 export const adminAuth = {
-  get: admin.admin.auth.get.handler(async () => describe(await oidcState())),
+  get: admin.admin.auth.get.handler(async () =>
+    describe(await oidcState(), await passkeySettings()),
+  ),
 
-  updateOidc: admin.admin.auth.updateOidc.handler(
-    async ({ context, input }) => {
-      const before = await oidcState()
-      const next = await previewOidc(input)
-      const { settings } = next
+  update: admin.admin.auth.update.handler(async ({ context, input }) => {
+    const before = await oidcState()
+    const passkeysBefore = (await passkeySettings()).enabled
+    const next = await previewOidc(input.oidc)
+    const { settings } = next
+    const passkeysAfter = input.passkeys.enabled
 
-      if (settings.enabled && !settings.issuerUrl) {
-        throw badRequest("Enter an issuer URL to turn on single sign-on.")
-      }
-      if (settings.enabled && !settings.clientId) {
-        throw badRequest("Enter a client ID to turn on single sign-on.")
-      }
+    if (settings.enabled && !settings.issuerUrl) {
+      throw badRequest("Enter an issuer URL to turn on single sign-on.")
+    }
+    if (settings.enabled && !settings.clientId) {
+      throw badRequest("Enter a client ID to turn on single sign-on.")
+    }
 
-      // Linked accounts match on the issuer, so switching sign-in off or to
-      // another issuer locks out anyone who has no passkey. Never yourself.
-      const wasActive = isActive(before.settings)
-      const willBeActive = isActive(settings)
-      const issuerChanged = !sameIssuer(
-        before.settings.issuerUrl,
-        settings.issuerUrl,
+    const wasActive = isActive(before.settings)
+    const willBeActive = isActive(settings)
+    if (!passkeysAfter && !willBeActive) {
+      throw badRequest(
+        "Keep passkeys or single sign-on on. Without either, nobody can sign in.",
       )
-      if (
-        wasActive &&
-        (!willBeActive || issuerChanged) &&
-        !(await hasPasskey(context.user.id))
-      ) {
+    }
+
+    // Linked accounts match on the issuer, so switching sign-in off or to
+    // another issuer locks out anyone who has no passkey, and switching
+    // passkeys off anyone who isn't linked. Never yourself.
+    const issuerChanged = !sameIssuer(
+      before.settings.issuerUrl,
+      settings.issuerUrl,
+    )
+    const oidcLost = wasActive && (!willBeActive || issuerChanged)
+    const passkeysLost = passkeysBefore && !passkeysAfter
+    if (oidcLost || passkeysLost) {
+      const keepsWayIn =
+        (passkeysAfter && (await hasPasskey(context.user.id))) ||
+        (willBeActive && (await linkedAt(context.user.id, settings.issuerUrl)))
+      if (!keepsWayIn) {
         throw badRequest(
-          willBeActive
-            ? "You sign in only through single sign-on. Add a passkey before changing the issuer."
-            : "You sign in only through single sign-on. Add a passkey before turning it off.",
+          lockoutMessage({
+            passkeysBefore,
+            passkeysLost,
+            oidcKept: wasActive && willBeActive && !issuerChanged,
+            oidcOn: willBeActive,
+          }),
         )
       }
+    }
 
-      // Catch a mistyped issuer now rather than at someone's next sign-in.
-      const connectionChanged =
-        !wasActive ||
-        issuerChanged ||
-        before.settings.clientId !== settings.clientId ||
-        before.secret !== next.secret
-      if (willBeActive && connectionChanged) {
-        try {
-          await discover(next)
-        } catch (cause) {
-          throw badRequest(discoveryError(settings.issuerUrl, cause))
-        }
+    // Catch a mistyped issuer now rather than at someone's next sign-in.
+    const connectionChanged =
+      !wasActive ||
+      issuerChanged ||
+      before.settings.clientId !== settings.clientId ||
+      before.secret !== next.secret
+    if (willBeActive && connectionChanged) {
+      try {
+        await discover(next)
+      } catch (cause) {
+        throw badRequest(discoveryError(settings.issuerUrl, cause))
       }
+    }
 
-      const saved = await saveOidc(input)
-      log.info(`OIDC settings saved by ${context.user.username}`)
-      return describe(saved)
-    },
-  ),
+    const saved = await saveOidc(input.oidc)
+    const passkeys = await savePasskeys(input.passkeys)
+    log.info(
+      `Sign-in settings saved by ${context.user.username}${passkeysLost ? ", with passkeys turned off" : ""}`,
+    )
+    return describe(saved, passkeys)
+  }),
 }

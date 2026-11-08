@@ -82,7 +82,7 @@ export function AccountPanel() {
       {user ? (
         <Profile user={user} providerName={oidc?.displayName ?? null} />
       ) : null}
-      <Passkeys oidcEnabled={oidc !== null} />
+      {config.data?.passkeys ? <Passkeys oidcEnabled={oidc !== null} /> : null}
       {oidc ? <LinkedAccount displayName={oidc.displayName} /> : null}
       <Sessions />
     </SettingsSections>

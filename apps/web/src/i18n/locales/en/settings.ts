@@ -33,10 +33,9 @@ export default defineMessages("settings", {
   "settings.section.users.keywords":
     "Admin, Role, Delete user, Sign out everywhere, Sessions",
   "settings.section.authentication.label": "Authentication",
-  "settings.section.authentication.description":
-    "Single sign-on through OpenID Connect",
+  "settings.section.authentication.description": "Passkeys and single sign-on",
   "settings.section.authentication.keywords":
-    "Single sign-on, SSO, OIDC, OpenID Connect, Issuer URL, Client ID, Client secret, Redirect URI, Create accounts, Authelia, Authentik, Keycloak",
+    "Passkeys, Sign-in methods, Single sign-on, SSO, OIDC, OpenID Connect, Issuer URL, Client ID, Client secret, Redirect URI, Create accounts, Authelia, Authentik, Keycloak",
   "settings.section.transcoding.label": "Transcoding",
   "settings.section.transcoding.description":
     "FFmpeg, GPUs, and HDR tone mapping",

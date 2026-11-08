@@ -50,6 +50,11 @@ export default defineMessages("users", {
     one: "{count} passkey",
     other: "{count} passkeys",
   }),
+  // While an admin has passkeys off.
+  "users.passkeysOff": plural({
+    one: "{count} passkey (off)",
+    other: "{count} passkeys (off)",
+  }),
   "users.oidcOff": "Single sign-on (off)",
   "users.noSignIn": "No way to sign in",
   "users.joined": "Joined {date}",

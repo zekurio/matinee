@@ -1,6 +1,6 @@
 import { MAX_USER_THEMES } from "@matinee/contracts"
 import { oidcAccount, passkey, user, type UserRow } from "@matinee/db"
-import { and, count, desc, eq } from "drizzle-orm"
+import { and, desc, eq } from "drizzle-orm"
 
 import {
   AvatarError,
@@ -8,7 +8,7 @@ import {
   removeAvatar,
   uploadAvatar,
 } from "../auth/avatars"
-import { activeOidc } from "../auth/oidc-settings"
+import { passkeysEnabled } from "../auth/passkey-settings"
 import {
   beginRegister,
   finishRegistration,
@@ -28,25 +28,14 @@ import {
   saveUserTheme,
   updateThemePreferences,
 } from "../auth/user-themes"
+import { signInMethods } from "../auth/users"
 import { db } from "../db"
-import { authed, badRequest, conflict, notFound } from "./base"
-
-async function signInMethodCount(userId: string): Promise<number> {
-  const [passkeys] = await db
-    .select({ n: count() })
-    .from(passkey)
-    .where(eq(passkey.userId, userId))
-  // A linked account only signs you in while single sign-on is on.
-  if (!(await activeOidc())) return passkeys?.n ?? 0
-  const [accounts] = await db
-    .select({ n: count() })
-    .from(oidcAccount)
-    .where(eq(oidcAccount.userId, userId))
-  return (passkeys?.n ?? 0) + (accounts?.n ?? 0)
-}
+import { authed, badRequest, conflict, notFound, requirePasskeys } from "./base"
 
 const LAST_METHOD =
   "Add another passkey or link an account before removing your last way to sign in."
+const LAST_LINK =
+  "Passkeys are off, so single sign-on is your only way to sign in. Keep it linked."
 
 /** The updated user, with avatar failures turned into a message to act on. */
 async function avatarChange(
@@ -150,15 +139,18 @@ export const account = {
     }),
 
     registerOptions: authed.account.passkeys.registerOptions.handler(
-      ({ context }) =>
-        beginRegister({
+      async ({ context }) => {
+        await requirePasskeys()
+        return beginRegister({
           userId: context.user.id,
           username: context.user.username,
-        }),
+        })
+      },
     ),
 
     register: authed.account.passkeys.register.handler(
       async ({ context, input }) => {
+        await requirePasskeys()
         const verified = await finishRegistration(
           "passkey-register",
           input.challengeId,
@@ -195,7 +187,9 @@ export const account = {
 
     remove: authed.account.passkeys.remove.handler(
       async ({ context, input }) => {
-        if ((await signInMethodCount(context.user.id)) <= 1) {
+        // While passkeys are off, they aren't a way to sign in to keep.
+        const methods = await signInMethods(context.user.id)
+        if (methods.passkeys > 0 && methods.passkeys + methods.linked <= 1) {
           throw badRequest(LAST_METHOD)
         }
         const deleted = await db
@@ -224,8 +218,10 @@ export const account = {
     }),
 
     unlink: authed.account.oidc.unlink.handler(async ({ context }) => {
-      if ((await signInMethodCount(context.user.id)) <= 1) {
-        throw badRequest(LAST_METHOD)
+      // A link single sign-on doesn't use signs nobody in.
+      const methods = await signInMethods(context.user.id)
+      if (methods.linked > 0 && methods.passkeys + methods.linked <= 1) {
+        throw badRequest((await passkeysEnabled()) ? LAST_METHOD : LAST_LINK)
       }
       const deleted = await db
         .delete(oidcAccount)

@@ -9,6 +9,10 @@ export default defineMessages("auth", {
   "auth.signIn.oidc": "Continue with {provider}",
   "auth.signIn.errorHint":
     "Use a passkey from this server, or ask the admin for access.",
+  "auth.signIn.errorHintSso": "Ask the admin for access.",
+  // Passkeys are off and single sign-on isn't set up.
+  "auth.signIn.noMethod":
+    "There's no way to sign in to this server right now. Ask the admin.",
   "auth.signIn.newHere": "New to this server?",
   "auth.signIn.createAccount": "Create account with a passkey",
   "auth.setup.title": "Set up Matinee",
@@ -21,6 +25,10 @@ export default defineMessages("auth", {
   "auth.setup.continue": "Continue",
   "auth.setup.adminPasskey": "Create admin with a passkey",
   "auth.setup.adminOidc": "Create admin with {provider}",
+  "auth.setup.noMethod":
+    "Passkeys are off and single sign-on isn't set up, so nothing can create the admin account.",
+  "auth.setup.noMethodHint":
+    "Set MATINEE_PASSKEYS_ENABLED=true or the MATINEE_OIDC_* variables, then restart the server.",
 
   // The steps after the admin account exists.
   "auth.setup.step": "Step {current} of {total}",

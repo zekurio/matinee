@@ -46,7 +46,7 @@ const LAST_SEEN_PRECISION_MS = 60 * 60 * 1000
 
 const displayName = (user: AdminUser) => user.displayName ?? user.username
 
-/** A passkey or linked account, whether or not single sign-on is on. */
+/** A passkey or linked account, whether or not it signs in now. */
 const hasSignInMethod = (user: AdminUser) =>
   user.passkeys > 0 || user.oidcLinked
 
@@ -136,11 +136,12 @@ export function UsersPanel() {
   // The server refuses to demote or delete the last admin who can sign in,
   // so the menu says so up front.
   const oidcOn = oidcName !== null
+  const passkeysOn = config.data?.passkeys ?? true
   const signInAdmins =
     users.data?.filter(
       (user) =>
         user.role === "admin" &&
-        (user.passkeys > 0 || (oidcOn && user.oidcLinked)),
+        ((passkeysOn && user.passkeys > 0) || (oidcOn && user.oidcLinked)),
     ) ?? []
   const isLastAdmin = (user: AdminUser) =>
     user.role === "admin" && signInAdmins.every((other) => other.id === user.id)
@@ -174,6 +175,7 @@ export function UsersPanel() {
                 user={user}
                 self={user.id === me?.id}
                 oidcName={oidcName}
+                passkeysOn={passkeysOn}
                 lastAdmin={isLastAdmin(user)}
                 onConfirm={(action) => ask(action, user)}
               />
@@ -243,12 +245,14 @@ function UserItem({
   user,
   self,
   oidcName,
+  passkeysOn,
   lastAdmin,
   onConfirm,
 }: {
   user: AdminUser
   self: boolean
   oidcName: string | null
+  passkeysOn: boolean
   lastAdmin: boolean
   onConfirm: (action: UserAction) => void
 }) {
@@ -282,7 +286,12 @@ function UserItem({
             </span>
           )}
         </p>
-        <UserDetails user={user} self={self} oidcName={oidcName} />
+        <UserDetails
+          user={user}
+          self={self}
+          oidcName={oidcName}
+          passkeysOn={passkeysOn}
+        />
       </div>
       <DropdownMenu>
         <DropdownMenuTrigger
@@ -367,10 +376,12 @@ function UserDetails({
   user,
   self,
   oidcName,
+  passkeysOn,
 }: {
   user: AdminUser
   self: boolean
   oidcName: string | null
+  passkeysOn: boolean
 }) {
   let facts: ReactNode
   if (hasSignInMethod(user)) {
@@ -380,7 +391,9 @@ function UserDetails({
         <Fact icon={<StatusDot tone={tone} />}>{label}</Fact>
         {user.passkeys > 0 && (
           <Fact icon={<KeyRoundIcon />}>
-            {tr("users.passkeys", { count: user.passkeys })}
+            {passkeysOn
+              ? tr("users.passkeys", { count: user.passkeys })
+              : tr("users.passkeysOff", { count: user.passkeys })}
           </Fact>
         )}
         {user.oidcLinked && (

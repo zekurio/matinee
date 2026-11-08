@@ -15,6 +15,16 @@ export default defineMessages("oidc", {
   "oidc.field.roleClaim": "Role claim",
   "oidc.field.clientSecret": "Client secret",
 
+  // The passkeys section, above single sign-on.
+  "oidc.passkeys.title": "Passkeys",
+  "oidc.passkeys.description":
+    "Sign in with a fingerprint, face, or security key. When off, everyone signs in through single sign-on.",
+  "oidc.passkeys.unlinked": plural({
+    one: "{count} account isn't linked to {provider}, so it can't sign in while passkeys are off. While still signed in, it can link {provider} under Settings → Account.",
+    other:
+      "{count} accounts aren't linked to {provider}, so they can't sign in while passkeys are off. While still signed in, they can link {provider} under Settings → Account.",
+  }),
+
   // The single sign-on section.
   "oidc.title": "Single sign-on",
   "oidc.description":

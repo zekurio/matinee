@@ -280,6 +280,18 @@ in
       };
     };
 
+    passkeys = mkOption {
+      type = nullOr types.bool;
+      default = null;
+      example = false;
+      description = ''
+        Passkey sign-in, sign-up, and setup. False leaves single sign-on as
+        the only way to sign in, so set up {option}`services.matinee.oidc`
+        too. Null leaves Matinee's default, on. An admin can still change it
+        in Settings → Authentication.
+      '';
+    };
+
     oidc = {
       issuerUrl = mkOption {
         type = nullOr types.str;
@@ -446,7 +458,10 @@ in
       ) (lib.filter (name: settings ? ${name}) secretNames)
       ++
         lib.optional (accel == "nvenc" && devices != null && devices != [ ])
-          "services.matinee.accelerationDevices limits the service to ${lib.concatStringsSep ", " devices}. NVENC needs /dev/nvidia0, /dev/nvidiactl, /dev/nvidia-uvm, and /dev/nvidia-uvm-tools.";
+          "services.matinee.accelerationDevices limits the service to ${lib.concatStringsSep ", " devices}. NVENC needs /dev/nvidia0, /dev/nvidiactl, /dev/nvidia-uvm, and /dev/nvidia-uvm-tools."
+      ++
+        lib.optional (cfg.passkeys == false && cfg.oidc.issuerUrl == null)
+          "services.matinee.passkeys is false without services.matinee.oidc. Unless an admin set up single sign-on in the app, nobody can sign in, and setup can't create the admin account.";
 
     services.matinee.settings = mapAttrs (_: mkDefault) (
       {
@@ -459,6 +474,7 @@ in
         MATINEE_FFPROBE_PATH = lib.getExe' cfg.ffmpegPackage "ffprobe";
       }
       // optionalAttrs (cfg.publicUrl != null) { PUBLIC_URL = cfg.publicUrl; }
+      // optionalAttrs (cfg.passkeys != null) { MATINEE_PASSKEYS_ENABLED = cfg.passkeys; }
       // optionalAttrs (cfg.oidc.issuerUrl != null) { MATINEE_OIDC_ISSUER_URL = cfg.oidc.issuerUrl; }
       // optionalAttrs (cfg.oidc.clientId != null) { MATINEE_OIDC_CLIENT_ID = cfg.oidc.clientId; }
       // optionalAttrs (cfg.oidc.displayName != null) {

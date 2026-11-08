@@ -15,6 +15,15 @@ export default {
   "oidc.field.roleClaim": "Rollen-Claim",
   "oidc.field.clientSecret": "Client-Secret",
 
+  "oidc.passkeys.title": "Passkeys",
+  "oidc.passkeys.description":
+    "Anmelden per Fingerabdruck, Gesicht oder Sicherheitsschlüssel. Wenn aus, melden sich alle über Single Sign-on an.",
+  "oidc.passkeys.unlinked": plural({
+    one: "{count} Konto ist nicht mit {provider} verknüpft und kann sich nicht anmelden, solange Passkeys aus sind. Solange es noch angemeldet ist, kann es {provider} unter Einstellungen → Konto verknüpfen.",
+    other:
+      "{count} Konten sind nicht mit {provider} verknüpft und können sich nicht anmelden, solange Passkeys aus sind. Solange sie noch angemeldet sind, können sie {provider} unter Einstellungen → Konto verknüpfen.",
+  }),
+
   "oidc.title": "Single Sign-on",
   "oidc.description": "OpenID Connect, etwa Authelia, Authentik oder Keycloak.",
   "oidc.enabled": "Aktiviert",

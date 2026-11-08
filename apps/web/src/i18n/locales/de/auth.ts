@@ -10,6 +10,9 @@ export default {
   "auth.signIn.oidc": "Weiter mit {provider}",
   "auth.signIn.errorHint":
     "Nutze einen Passkey dieses Servers oder bitte den Admin um Zugang.",
+  "auth.signIn.errorHintSso": "Bitte den Admin um Zugang.",
+  "auth.signIn.noMethod":
+    "Bei diesem Server kann man sich gerade nicht anmelden. Frag den Admin.",
   "auth.signIn.newHere": "Neu auf diesem Server?",
   "auth.signIn.createAccount": "Konto mit Passkey erstellen",
   "auth.setup.title": "Matinee einrichten",
@@ -23,6 +26,10 @@ export default {
   "auth.setup.continue": "Weiter",
   "auth.setup.adminPasskey": "Admin mit Passkey erstellen",
   "auth.setup.adminOidc": "Admin mit {provider} erstellen",
+  "auth.setup.noMethod":
+    "Passkeys sind aus und Single Sign-on ist nicht eingerichtet, also lässt sich das Admin-Konto nicht erstellen.",
+  "auth.setup.noMethodHint":
+    "Setze MATINEE_PASSKEYS_ENABLED=true oder die MATINEE_OIDC_*-Variablen und starte den Server neu.",
   "auth.setup.step": "Schritt {current} von {total}",
   "auth.setup.back": "Zurück",
   "auth.setup.skip": "Überspringen",

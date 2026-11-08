@@ -81,7 +81,8 @@ that matter for a real deployment:
   get scanned. See [Scanning](#scanning).
 
 Settings → Authentication and Settings → Transcoding start from the
-`MATINEE_OIDC_*` and transcoding variables, as alloy's admin settings do. The
+`MATINEE_PASSKEYS_ENABLED`, `MATINEE_OIDC_*`, and transcoding variables, as
+alloy's admin settings do. The
 server saves only the fields an admin changed: a field saved with the
 variable's value is no override, so a later change to the variable still
 applies, and an empty text field hands the field back to it. At start the
@@ -569,7 +570,8 @@ admin account depends on whether `MATINEE_OIDC_ISSUER_URL` and
 
 - Without them, the server logs a setup token at start, or takes
   `MATINEE_SETUP_TOKEN`. Enter it, then create the admin with a username and
-  a passkey.
+  a passkey. With `MATINEE_PASSKEYS_ENABLED=false` as well, nothing can
+  create the admin, and the setup page and the log say so.
 - With them, setup only offers the provider, and there is no token. The
   first sign-in becomes the admin only if its role claim says `admin`; the
   server turns anyone else away and logs what the claim held. The claim is
@@ -598,15 +600,31 @@ Until the admin finishes, signing in as an admin goes back to setup.
   Accounts are matched on issuer + subject, never on email. Each account
   links at most one provider account. Linking one at a new issuer replaces
   the link at the old one, which can't sign in anymore.
-- Nobody can remove their last passkey or linked account. A linked account
-  only counts while single sign-on is on, and an admin who signs in only
-  through it can't turn it off or change the issuer.
-- People create their own accounts. With `MATINEE_OPEN_REGISTRATION` on,
-  the login page lets anyone pick a username and create a passkey. With
-  sign-up allowed in the OIDC settings (or `MATINEE_OIDC_ALLOW_SIGN_UP`),
-  the first sign-in of an unlinked provider account creates a new account.
-  Both start off, so only the admin from setup can sign in until you turn
-  one on. Settings → Users lists the accounts for admins to manage.
+- Nobody can remove their last passkey or linked account. A passkey only
+  counts while passkeys are on, and a linked account while single sign-on
+  is on. An admin who signs in only through single sign-on can't turn it
+  off or change the issuer.
+- Admins turn passkeys off under Settings → Authentication, as in alloy, and
+  `MATINEE_PASSKEYS_ENABLED=false` makes off the default. Single sign-on is
+  then the only way in. The login page shows only the provider, and the
+  server refuses passkey sign-in, sign-up, setup, and adding a passkey.
+  Stored passkeys stay for when they're back on, and nobody gets signed out.
+  The server turns passkeys off only once your own account is linked at the
+  current issuer. The form counts the accounts that aren't, since those
+  can't sign in afterwards. So link yours, ask everyone else to link theirs
+  under Settings → Account, then turn passkeys off. Someone still signed in
+  can link later.
+- With passkeys off, a provider that is down keeps everyone out until it's
+  back. If you can't wait, delete the saved switch with
+  `delete from setting where key = 'passkeys'` and restart. Passkeys then
+  follow `MATINEE_PASSKEYS_ENABLED` again.
+- People create their own accounts. With `MATINEE_OPEN_REGISTRATION` and
+  passkeys on, the login page lets anyone pick a username and create a
+  passkey. With sign-up allowed in the OIDC settings (or
+  `MATINEE_OIDC_ALLOW_SIGN_UP`), the first sign-in of an unlinked provider
+  account creates a new account. Both start off, so only the admin from
+  setup can sign in until you turn one on. Settings → Users lists the
+  accounts for admins to manage.
 - An unlinked OIDC sign-in whose username claim matches an account, as sent
   or as Matinee would turn it into a username, doesn't sign in to it or make
   a numbered copy. Linking on the claim alone would hand the account to
@@ -615,7 +633,9 @@ Until the admin finishes, signing in as an admin goes back to setup.
   cookie, and the login page asks the person to sign in to that account and
   link it, without another trip to the provider. While sign-up is allowed,
   they can create a new account from it instead. This works whether or not
-  sign-up is on.
+  sign-up is on. With passkeys off, a signed-out person can't sign in to
+  the account to link it, so the page offers only a new account, and with
+  sign-up off the sign-in fails.
 - There is always an admin who can sign in: the server refuses to demote or
   delete the last one, yourself included. Every request reads the role from
   the database, so a demotion applies to the user's next request. Deleting a

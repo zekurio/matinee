@@ -3,6 +3,7 @@ import { oo } from "@orpc/openapi"
 import { implement, ORPCError, os } from "@orpc/server"
 import type { Context } from "hono"
 
+import { passkeysEnabled } from "../auth/passkey-settings"
 import { readSession } from "../auth/session"
 
 export type RpcContext = {
@@ -48,4 +49,11 @@ export function notFound(message: string): ORPCError<"NOT_FOUND", unknown> {
 
 export function conflict(message: string): ORPCError<"CONFLICT", unknown> {
   return new ORPCError("CONFLICT", { message })
+}
+
+export const PASSKEYS_OFF = "Passkeys are turned off on this server."
+
+/** Refuse a passkey procedure while an admin has passkeys off. */
+export async function requirePasskeys(): Promise<void> {
+  if (!(await passkeysEnabled())) throw badRequest(PASSKEYS_OFF)
 }

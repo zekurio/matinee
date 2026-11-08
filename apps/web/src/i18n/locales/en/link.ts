@@ -48,6 +48,10 @@ export default defineMessages("link", {
   "link.oidc.notYours": "Not your account?",
   "link.oidc.createAccount": "Create a new account",
   "link.oidc.createFailed": "Couldn't create the account",
+  // Signed out with passkeys off, when nothing can sign in to the account.
+  "link.oidc.takenTitle": "That username is taken",
+  "link.oidc.takenDescription":
+    "Your {provider} username matches an account that isn't linked to {provider}. With passkeys off, only someone signed in to that account can link it. If it's yours, ask the admin for help.",
   // {account} is the account's name at the provider.
   "link.oidc.descriptionNamed":
     "Signed in as {username}. Link the {provider} account {account} to sign in with it next time.",

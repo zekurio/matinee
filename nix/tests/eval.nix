@@ -139,6 +139,21 @@ let
     "a secret in settings warns" = lib.any (lib.hasInfix "world-readable") (
       (server { settings.MATINEE_TMDB_API_KEY = "key"; }).warnings
     );
+    "passkeys off becomes its variable, and warns without single sign-on" =
+      let
+        ssoOnly = server {
+          passkeys = false;
+          oidc = {
+            issuerUrl = "https://id.example.com";
+            clientId = "matinee";
+          };
+        };
+        noWayIn = server { passkeys = false; };
+      in
+      (env ssoOnly).MATINEE_PASSKEYS_ENABLED == "false"
+      && !lib.any (lib.hasInfix "services.matinee.passkeys") ssoOnly.warnings
+      && lib.any (lib.hasInfix "services.matinee.passkeys") noWayIn.warnings
+      && !((env plain) ? MATINEE_PASSKEYS_ENABLED);
     "directories elsewhere come from tmpfiles" =
       let
         elsewhere = server {

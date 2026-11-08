@@ -73,6 +73,16 @@ function SetupPage() {
   if (!setup.accountRequired) return <SetupSteps steps={steps} />
 
   const provider = config.oidc?.displayName ?? null
+  if (setup.mode === null) {
+    return (
+      <AuthScreen title={tr("auth.setup.title")}>
+        <FormAlert
+          message={tr("auth.setup.noMethod")}
+          hint={tr("auth.setup.noMethodHint")}
+        />
+      </AuthScreen>
+    )
+  }
   if (setup.mode === "oidc" && provider) {
     return (
       <AuthScreen

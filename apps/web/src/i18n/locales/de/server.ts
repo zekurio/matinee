@@ -4,6 +4,7 @@ import type source from "../en/server"
 export default {
   "server.rpc.signInFirst": "Melde dich zuerst an.",
   "server.rpc.adminsOnly": "Das können nur Admins.",
+  "server.rpc.passkeysOff": "Passkeys sind auf diesem Server ausgeschaltet.",
 
   "server.auth.signUpClosed":
     "Auf diesem Server ist die Registrierung geschlossen.",
@@ -32,6 +33,8 @@ export default {
 
   "server.oidc.noLinkedAccount":
     "Mit dieser Anmeldung ist kein Konto verknüpft. Melde dich mit einem Passkey an und verknüpfe sie dann in den Einstellungen.",
+  "server.oidc.noLinkedAccountSso":
+    "Mit dieser Anmeldung ist kein Konto verknüpft. Bitte einen Admin um Zugang.",
   "server.oidc.linkedElsewhere":
     "Diese Anmeldung ist bereits mit einem anderen Konto verknüpft.",
   "server.oidc.alreadyLinked":
@@ -70,6 +73,8 @@ export default {
 
   "server.account.lastMethod":
     "Füge einen weiteren Passkey hinzu oder verknüpfe ein Konto, bevor du deine letzte Anmeldemöglichkeit entfernst.",
+  "server.account.lastLink":
+    "Passkeys sind aus, also kannst du dich nur über Single Sign-on anmelden. Lass es verknüpft.",
   "server.account.notFound": "Konto nicht gefunden.",
   "server.account.themeLimit": "Du kannst bis zu {count} Designs speichern.",
   "server.account.passkeyOtherAccount":
@@ -93,10 +98,20 @@ export default {
     "Gib eine Issuer-URL ein, um Single Sign-on einzuschalten.",
   "server.adminAuth.clientIdRequired":
     "Gib eine Client-ID ein, um Single Sign-on einzuschalten.",
+  "server.adminAuth.noMethod":
+    "Lass Passkeys oder Single Sign-on an. Ohne beides kann sich niemand anmelden.",
+  "server.adminAuth.passkeysOffLink":
+    "Verknüpfe dein Konto unter Einstellungen → Konto mit Single Sign-on, bevor du Passkeys ausschaltest.",
+  "server.adminAuth.passkeysOffSaveFirst":
+    "Speichere zuerst Single Sign-on und verknüpfe dein Konto unter Einstellungen → Konto damit. Schalte dann Passkeys aus.",
   "server.adminAuth.ssoOnlyIssuer":
     "Du meldest dich nur über Single Sign-on an. Füge einen Passkey hinzu, bevor du den Issuer änderst.",
   "server.adminAuth.ssoOnlyOff":
     "Du meldest dich nur über Single Sign-on an. Füge einen Passkey hinzu, bevor du es ausschaltest.",
+  "server.adminAuth.ssoOnlyIssuerPasskeysOff":
+    "Du meldest dich nur über Single Sign-on an. Schalte Passkeys ein und füge einen hinzu, bevor du den Issuer änderst.",
+  "server.adminAuth.ssoOnlyOffPasskeysOff":
+    "Du meldest dich nur über Single Sign-on an. Schalte Passkeys ein und füge einen hinzu, bevor du es ausschaltest.",
   "server.adminAuth.discoveryTimeout":
     "{url} hat nicht innerhalb von 10 Sekunden geantwortet.",
   "server.adminAuth.issuerMismatch":
