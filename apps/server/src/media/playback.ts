@@ -297,9 +297,11 @@ export async function openPlayback(
   )
   // A copy starts on the keyframe at or before `-ss`. ffmpeg seeks 3/23 s
   // early for video with B-frames, so aim past the keyframe by more than
-  // that; `make_zero` then puts the keyframe at 0.
+  // that, then move every time forward by as much, so `start` is at 0
+  // where the player expects it.
   const copy = !preset && probe.video !== null
   const seek = request.start > 0 ? request.start + (copy ? 0.2 : 0) : 0
+  const shift = seek - request.start
   const plan = streamPlan(probe, audio, request.quality, video.encode, sound)
 
   const args = [
@@ -308,7 +310,7 @@ export async function openPlayback(
     "error",
     "-nostdin",
     ...video.input,
-    ...(seek > 0 ? ["-ss", seek.toFixed(3)] : []),
+    ...(seek > 0 ? ["-ss", seek.toFixed(6)] : []),
     "-i",
     item.path,
     ...video.output,
@@ -319,8 +321,13 @@ export async function openPlayback(
     "-1",
     "-map_chapters",
     "-1",
+    // Times stay as they are: `make_zero` would start the video's first
+    // decode time at 0, which shows its first frame late by the B-frame
+    // delay. A frame before `start`, as when the keyframe lookup failed,
+    // gets a negative time, and the edit lists hide it.
     "-avoid_negative_ts",
-    "make_zero",
+    "disabled",
+    ...(shift > 0 ? ["-output_ts_offset", shift.toFixed(6)] : []),
     "-max_muxing_queue_size",
     "2048",
     "-f",

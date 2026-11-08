@@ -152,8 +152,8 @@ export function sourceStarters({ video, options, store, refs }: PlaybackCore) {
       try {
         start = pickStart(await options.keyframes(at), at, snap)
       } catch {
-        // ffmpeg still starts on the keyframe before `at`; subtitles may
-        // run a little early.
+        // ffmpeg still starts decoding on the keyframe before `at`, and
+        // the stream hides what comes before it.
       }
     }
     if (id !== generation.current) return
