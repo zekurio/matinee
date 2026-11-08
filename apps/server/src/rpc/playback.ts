@@ -8,7 +8,6 @@ import {
   eq,
   gt,
   gte,
-  inArray,
   isNotNull,
   isNull,
   lt,
@@ -19,7 +18,7 @@ import {
   sql,
 } from "drizzle-orm"
 
-import { db } from "../db"
+import { anyOf, arg, db } from "../db"
 import { releaseSession } from "../media/hls"
 import {
   episodeOrder,
@@ -53,14 +52,6 @@ const LAST = 2147483647
 
 /** A file's place in its title: season, episode, then path. */
 const position = sql`(coalesce(${mediaItem.seasonNumber}, ${LAST}), coalesce(${mediaItem.episodeNumber}, ${LAST}), ${mediaItem.relativePath})`
-
-function positionOf(row: {
-  seasonNumber: number | null
-  episodeNumber: number | null
-  relativePath: string
-}) {
-  return sql`(${row.seasonNumber ?? LAST}::int, ${row.episodeNumber ?? LAST}::int, ${row.relativePath}::text)`
-}
 
 export const playback = {
   report: authed.playback.report.handler(async ({ context, input }) => {
@@ -160,21 +151,84 @@ export const playback = {
   ),
 }
 
+// Prepared once; Home asks them on every visit.
+const inProgress = db
+  .select({ item: mediaItem })
+  .from(watchProgress)
+  .innerJoin(mediaItem, eq(mediaItem.id, watchProgress.mediaItemId))
+  .where(
+    and(
+      eq(watchProgress.userId, arg("userId")),
+      eq(watchProgress.completed, false),
+    ),
+  )
+  .orderBy(desc(watchProgress.updatedAt))
+  .limit(arg("limit"))
+  .prepare("continue_watching")
+
+// The most recently finished file of each show or folder. Movies have
+// nothing after them.
+const lastFinished = db
+  .selectDistinctOn([mediaItem.titleId], {
+    titleId: mediaItem.titleId,
+    seasonNumber: mediaItem.seasonNumber,
+    episodeNumber: mediaItem.episodeNumber,
+    relativePath: mediaItem.relativePath,
+    updatedAt: watchProgress.updatedAt,
+  })
+  .from(watchProgress)
+  .innerJoin(mediaItem, eq(mediaItem.id, watchProgress.mediaItemId))
+  .innerJoin(title, eq(title.id, mediaItem.titleId))
+  .where(
+    and(
+      eq(watchProgress.userId, arg("userId")),
+      eq(watchProgress.completed, true),
+      ne(title.kind, "movie"),
+    ),
+  )
+  .orderBy(
+    mediaItem.titleId,
+    desc(watchProgress.updatedAt),
+    ...reverseEpisodeOrder,
+  )
+  .prepare("last_finished")
+
+// The files after a position in a title. A few extra skip over any the
+// user already watched or started.
+const filesAfter = db
+  .select()
+  .from(mediaItem)
+  .where(
+    and(
+      eq(mediaItem.titleId, arg("titleId")),
+      sql`${position} > (${arg("season")}::int, ${arg("episode")}::int, ${arg("path")}::text)`,
+    ),
+  )
+  .orderBy(...episodeOrder)
+  .limit(10)
+  .prepare("files_after")
+
+const startedOf = db
+  .select({
+    id: watchProgress.mediaItemId,
+    completed: watchProgress.completed,
+  })
+  .from(watchProgress)
+  .where(
+    and(
+      eq(watchProgress.userId, arg("userId")),
+      anyOf(watchProgress.mediaItemId, arg("ids"), "uuid"),
+    ),
+  )
+  .prepare("started_of")
+
 export const home = {
   continueWatching: authed.home.continueWatching.handler(
     async ({ context, input }) => {
-      const rows = await db
-        .select({ item: mediaItem })
-        .from(watchProgress)
-        .innerJoin(mediaItem, eq(mediaItem.id, watchProgress.mediaItemId))
-        .where(
-          and(
-            eq(watchProgress.userId, context.user.id),
-            eq(watchProgress.completed, false),
-          ),
-        )
-        .orderBy(desc(watchProgress.updatedAt))
-        .limit(input.limit)
+      const rows = await inProgress.execute({
+        userId: context.user.id,
+        limit: input.limit,
+      })
       return publicItems(
         rows.map((row) => row.item),
         context.user.id,
@@ -183,66 +237,24 @@ export const home = {
   ),
 
   nextUp: authed.home.nextUp.handler(async ({ context, input }) => {
-    // The most recently finished file of each show or folder. Movies have
-    // nothing after them.
-    const finished = await db
-      .selectDistinctOn([mediaItem.titleId], {
-        titleId: mediaItem.titleId,
-        seasonNumber: mediaItem.seasonNumber,
-        episodeNumber: mediaItem.episodeNumber,
-        relativePath: mediaItem.relativePath,
-        updatedAt: watchProgress.updatedAt,
-      })
-      .from(watchProgress)
-      .innerJoin(mediaItem, eq(mediaItem.id, watchProgress.mediaItemId))
-      .innerJoin(title, eq(title.id, mediaItem.titleId))
-      .where(
-        and(
-          eq(watchProgress.userId, context.user.id),
-          eq(watchProgress.completed, true),
-          ne(title.kind, "movie"),
-        ),
-      )
-      .orderBy(
-        mediaItem.titleId,
-        desc(watchProgress.updatedAt),
-        ...reverseEpisodeOrder,
-      )
+    const finished = await lastFinished.execute({ userId: context.user.id })
     finished.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
 
     const next = []
     for (const row of finished) {
       if (next.length >= input.limit) break
       if (!row.titleId) continue
-      // The files after it. A few extra skip over any the user already
-      // watched or started.
-      const candidates = await db
-        .select()
-        .from(mediaItem)
-        .where(
-          and(
-            eq(mediaItem.titleId, row.titleId),
-            sql`${position} > ${positionOf(row)}`,
-          ),
-        )
-        .orderBy(...episodeOrder)
-        .limit(10)
+      const candidates = await filesAfter.execute({
+        titleId: row.titleId,
+        season: row.seasonNumber ?? LAST,
+        episode: row.episodeNumber ?? LAST,
+        path: row.relativePath,
+      })
       if (candidates.length === 0) continue
-      const started = await db
-        .select({
-          id: watchProgress.mediaItemId,
-          completed: watchProgress.completed,
-        })
-        .from(watchProgress)
-        .where(
-          and(
-            eq(watchProgress.userId, context.user.id),
-            inArray(
-              watchProgress.mediaItemId,
-              candidates.map((candidate) => candidate.id),
-            ),
-          ),
-        )
+      const started = await startedOf.execute({
+        userId: context.user.id,
+        ids: candidates.map((candidate) => candidate.id),
+      })
       const state = new Map(started.map((s) => [s.id, s.completed]))
       for (const candidate of candidates) {
         const completed = state.get(candidate.id)

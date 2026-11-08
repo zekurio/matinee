@@ -12,12 +12,12 @@ import {
   type ImagePlaceholder,
 } from "@matinee/contracts"
 import { artwork, credit, episode, season, title } from "@matinee/db"
-import { and, eq, inArray, isNotNull, isNull } from "drizzle-orm"
+import { and, eq, isNotNull, isNull } from "drizzle-orm"
 import type { PgColumn, PgTable } from "drizzle-orm/pg-core"
 import { Hono } from "hono"
 
 import { readSession } from "../auth/session"
-import { db } from "../db"
+import { anyOf, arg, db } from "../db"
 import { env } from "../env"
 import { defineQueue, type Priority } from "../jobs/queue"
 import { log } from "../log"
@@ -70,6 +70,19 @@ export async function saveArtwork(
 
 export type Placeholders = Map<string, ImagePlaceholder>
 
+// Prepared once; nearly every list of titles or files asks it.
+const placeholderRows = db
+  .select({
+    id: artwork.id,
+    blurhash: artwork.blurhash,
+    aspectRatio: artwork.aspectRatio,
+  })
+  .from(artwork)
+  .where(
+    and(anyOf(artwork.id, arg("ids"), "text"), isNotNull(artwork.blurhash)),
+  )
+  .prepare("artwork_placeholders")
+
 /** The placeholders the server has read for `ids`, by id. */
 export async function placeholders(
   ids: Iterable<string | null>,
@@ -77,14 +90,7 @@ export async function placeholders(
   const found: Placeholders = new Map()
   const wanted = [...new Set(ids)].filter((id): id is string => id !== null)
   if (wanted.length === 0) return found
-  const rows = await db
-    .select({
-      id: artwork.id,
-      blurhash: artwork.blurhash,
-      aspectRatio: artwork.aspectRatio,
-    })
-    .from(artwork)
-    .where(and(inArray(artwork.id, wanted), isNotNull(artwork.blurhash)))
+  const rows = await placeholderRows.execute({ ids: wanted })
   for (const { id, blurhash, aspectRatio } of rows) {
     if (blurhash && aspectRatio) found.set(id, { blurhash, aspectRatio })
   }
@@ -340,7 +346,7 @@ export function queueArtwork(ids: (string | null)[], priority: Prefetch): void {
   if (wanted.length === 0) return
   db.select({ id: artwork.id })
     .from(artwork)
-    .where(and(inArray(artwork.id, wanted), isNull(artwork.blurhash)))
+    .where(and(anyOf(artwork.id, wanted, "text"), isNull(artwork.blurhash)))
     .then((rows) => {
       const due = new Set(rows.map((row) => row.id))
       // In the caller's order, which puts what people see most first.

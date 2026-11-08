@@ -11,7 +11,7 @@ import { and, desc, eq, gt, lt, ne } from "drizzle-orm"
 import type { Context } from "hono"
 import { deleteCookie, getCookie, setCookie } from "hono/cookie"
 
-import { db } from "../db"
+import { arg, db } from "../db"
 import { env } from "../env"
 import { clientName } from "../stats/sessions"
 import { randomToken, sha256 } from "./tokens"
@@ -56,6 +56,17 @@ function requestToken(c: Context): string | undefined {
   return getCookie(c, SESSION_COOKIE)
 }
 
+// Every request asks it, so it's prepared once.
+const sessionByToken = db
+  .select({ session, user })
+  .from(session)
+  .innerJoin(user, eq(user.id, session.userId))
+  .where(
+    and(eq(session.tokenHash, arg("hash")), gt(session.expiresAt, arg("now"))),
+  )
+  .limit(1)
+  .prepare("session_by_token")
+
 /** The signed-in user, or null. Cached on the request. */
 export async function readSession(c: Context): Promise<SessionUser | null> {
   const cached = c.get("sessionUser")
@@ -64,14 +75,10 @@ export async function readSession(c: Context): Promise<SessionUser | null> {
   let result: SessionUser | null = null
   if (token) {
     const now = new Date()
-    const [row] = await db
-      .select({ session, user })
-      .from(session)
-      .innerJoin(user, eq(user.id, session.userId))
-      .where(
-        and(eq(session.tokenHash, sha256(token)), gt(session.expiresAt, now)),
-      )
-      .limit(1)
+    const [row] = await sessionByToken.execute({
+      hash: sha256(token),
+      now,
+    })
     if (row) {
       result = { ...row.user, sessionId: row.session.id }
       if (now.getTime() - row.session.lastSeenAt.getTime() > SESSION_TOUCH_MS) {

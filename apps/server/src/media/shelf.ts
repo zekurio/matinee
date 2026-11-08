@@ -1,8 +1,8 @@
 import type { ShelfAdditions, ShelfEntry } from "@matinee/contracts"
 import { mediaItem, type MediaItemRow, title } from "@matinee/db"
-import { asc, count, desc, eq, inArray, max, sql } from "drizzle-orm"
+import { asc, count, desc, eq, max, sql } from "drizzle-orm"
 
-import { db } from "../db"
+import { anyOf, arg, db } from "../db"
 import { episodeOrder, publicItems } from "./items"
 import { seasonsByTitle } from "./seasons"
 
@@ -15,35 +15,57 @@ type Batch = {
   oneSeason: boolean
 }
 
+// Prepared once each; Home asks for a shelf per library.
+const newestTitles = db
+  .select({ row: title, n: count(mediaItem.id) })
+  .from(title)
+  .innerJoin(mediaItem, eq(mediaItem.titleId, title.id))
+  .where(eq(title.libraryId, arg("libraryId")))
+  .groupBy(title.id)
+  .orderBy(desc(title.addedAt), asc(title.sortName))
+  .limit(arg("limit"))
+  .prepare("shelf_titles")
+
+// Each title's first file, which is what Play starts.
+const firstFiles = db
+  .selectDistinctOn([mediaItem.titleId])
+  .from(mediaItem)
+  .where(anyOf(mediaItem.titleId, arg("ids"), "uuid"))
+  .orderBy(mediaItem.titleId, ...episodeOrder)
+  .prepare("shelf_first_files")
+
+const newestByTitle = db
+  .select({
+    titleId: mediaItem.titleId,
+    at: max(mediaItem.createdAt).as("newest_at"),
+  })
+  .from(mediaItem)
+  .where(anyOf(mediaItem.titleId, arg("ids"), "uuid"))
+  .groupBy(mediaItem.titleId)
+  .as("newest")
+// The window runs before DISTINCT ON, so it sees every file in the batch.
+const batchWindow = sql`over (partition by ${mediaItem.titleId})`
+// No season sorts as -1, below the specials' 0.
+const seasonOrNone = sql`coalesce(${mediaItem.seasonNumber}, -1)`
+const latestBatches = db
+  .selectDistinctOn([mediaItem.titleId], {
+    item: mediaItem,
+    count: sql<number>`count(*) ${batchWindow}`.mapWith(Number),
+    oneSeason: sql<boolean>`min(${seasonOrNone}) ${batchWindow} = max(${seasonOrNone}) ${batchWindow}`,
+  })
+  .from(mediaItem)
+  .innerJoin(newestByTitle, eq(newestByTitle.titleId, mediaItem.titleId))
+  .where(sql`${mediaItem.createdAt} > ${newestByTitle.at} - interval '1 day'`)
+  .orderBy(mediaItem.titleId, ...episodeOrder)
+  .prepare("shelf_latest_batches")
+
 /**
  * Each show's files added within a day of its newest. A day takes in a
  * season downloaded over an evening, and a library's first scan.
  */
 async function latestAdditions(titleIds: string[]): Promise<Batch[]> {
   if (titleIds.length === 0) return []
-  const newest = db
-    .select({
-      titleId: mediaItem.titleId,
-      at: max(mediaItem.createdAt).as("newest_at"),
-    })
-    .from(mediaItem)
-    .where(inArray(mediaItem.titleId, titleIds))
-    .groupBy(mediaItem.titleId)
-    .as("newest")
-  // The window runs before DISTINCT ON, so it sees every file in the batch.
-  const batch = sql`over (partition by ${mediaItem.titleId})`
-  // No season sorts as -1, below the specials' 0.
-  const season = sql`coalesce(${mediaItem.seasonNumber}, -1)`
-  return db
-    .selectDistinctOn([mediaItem.titleId], {
-      item: mediaItem,
-      count: sql<number>`count(*) ${batch}`.mapWith(Number),
-      oneSeason: sql<boolean>`min(${season}) ${batch} = max(${season}) ${batch}`,
-    })
-    .from(mediaItem)
-    .innerJoin(newest, eq(newest.titleId, mediaItem.titleId))
-    .where(sql`${mediaItem.createdAt} > ${newest.at} - interval '1 day'`)
-    .orderBy(mediaItem.titleId, ...episodeOrder)
+  return latestBatches.execute({ ids: titleIds })
 }
 
 /**
@@ -55,23 +77,11 @@ export async function shelf(
   limit: number,
   userId: string,
 ): Promise<ShelfEntry[]> {
-  const titles = await db
-    .select({ row: title, n: count(mediaItem.id) })
-    .from(title)
-    .innerJoin(mediaItem, eq(mediaItem.titleId, title.id))
-    .where(eq(title.libraryId, libraryId))
-    .groupBy(title.id)
-    .orderBy(desc(title.addedAt), asc(title.sortName))
-    .limit(limit)
+  const titles = await newestTitles.execute({ libraryId, limit })
   if (titles.length === 0) return []
   const totals = new Map(titles.map(({ row, n }) => [row.id, n]))
   const [firsts, latest] = await Promise.all([
-    // Each title's first file, which is what Play starts.
-    db
-      .selectDistinctOn([mediaItem.titleId])
-      .from(mediaItem)
-      .where(inArray(mediaItem.titleId, [...totals.keys()]))
-      .orderBy(mediaItem.titleId, ...episodeOrder),
+    firstFiles.execute({ ids: [...totals.keys()] }),
     latestAdditions(
       titles.flatMap(({ row }) => (row.kind === "show" ? [row.id] : [])),
     ),
