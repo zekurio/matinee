@@ -83,6 +83,9 @@ export function createApp() {
         },
       }),
     )
+    // A missing asset is a 404, not the app shell: a browser holding an
+    // older build's page should fail to load it, not parse HTML as code.
+    app.get("/assets/*", (c) => c.body(null, 404))
     app.use("*", serveStatic({ root, precompressed: true }))
     // Client-side routes all load the app shell.
     app.get("*", async (c) => {
