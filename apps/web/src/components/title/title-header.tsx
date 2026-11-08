@@ -234,7 +234,13 @@ export function HeaderPoster({
       >
         {name}
       </span>
-      {poster && <Picture sources={[poster]} eager />}
+      {poster && (
+        <Picture
+          sources={[poster]}
+          eager
+          sizes="(min-width: 1536px) 256px, (min-width: 1024px) 224px, (min-width: 640px) 192px, 96px"
+        />
+      )}
     </div>
   )
 }

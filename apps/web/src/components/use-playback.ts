@@ -164,16 +164,19 @@ function seeker(
 
 /**
  * Whether `audioIndex` at `quality` is the file as it is: the track the
- * browser plays by itself, which it decodes, and nothing to burn in.
+ * browser plays by itself, which it decodes, video it decodes, and nothing
+ * to burn in.
  */
 function playsAsIs(
   state: PlayerState,
   choice: AudioChoice,
+  options: PlaybackOptions,
   audioIndex: number | null,
   quality: PlaybackQuality,
 ): boolean {
   return (
     quality === "original" &&
+    options.videoPlays &&
     state.burnIn === null &&
     (audioIndex === null || audioIndex === choice.primary?.index) &&
     choice.directAudio &&
@@ -192,7 +195,7 @@ function sourceSwitch(
     const at = position()
     holdPlayState()
     const state = store.getState()
-    if (playsAsIs(state, choice, audioIndex, next)) {
+    if (playsAsIs(state, choice, options, audioIndex, next)) {
       if (state.source?.kind !== "direct") startDirect(at)
     } else if (audioIndex !== null) {
       audioNotice(
@@ -332,7 +335,7 @@ function errorFallback(
       burnInFailedNotice()
       state.dropBurnIn()
       const audio = audioOf(state, choice)
-      if (playsAsIs(store.getState(), choice, audio, state.quality)) {
+      if (playsAsIs(store.getState(), choice, options, audio, state.quality)) {
         startDirect(at)
       } else if (audio !== null) {
         void startStream(at, audio, state.quality, "before")
@@ -362,7 +365,13 @@ function errorFallback(
       state.failDirect(next)
       return
     }
-    if (!source || source.kind === "direct" || state.directFailed) {
+    if (
+      !source ||
+      source.kind === "direct" ||
+      state.directFailed ||
+      // Only encodes play this video, and one just failed.
+      !options.videoPlays
+    ) {
       options.onUnsupported()
       return
     }

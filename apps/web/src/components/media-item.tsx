@@ -57,10 +57,17 @@ export function Picture({
   sources,
   className,
   eager = false,
+  sizes,
 }: {
   sources: ImageSource[]
   className?: string
   eager?: boolean
+  /**
+   * How wide the image shows, for picking from the sources' sizes. Lazy
+   * images measure themselves where browsers can; eager ones fill the
+   * window unless told otherwise.
+   */
+  sizes?: string
 }) {
   const key = sources.map((source) => source.src).join("|")
   const [state, setState] = useState({ key, index: 0, ready: false })
@@ -80,6 +87,14 @@ export function Picture({
       <img
         key={source.src}
         src={source.src}
+        srcSet={source.srcSet}
+        // A browser without `auto` reads the next entry, which picks the
+        // size cards had before there was a choice.
+        sizes={
+          source.srcSet
+            ? (sizes ?? (eager ? "100vw" : "auto, 300px"))
+            : undefined
+        }
         alt=""
         loading={eager ? "eager" : "lazy"}
         decoding="async"

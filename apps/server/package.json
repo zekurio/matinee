@@ -4,8 +4,9 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
+    "build": "node build.mjs",
     "dev": "tsx watch --clear-screen=false src/index.ts",
-    "start": "NODE_ENV=production tsx src/index.ts",
+    "start": "NODE_ENV=production node dist/server/index.mjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -20,7 +21,10 @@
     "blurhash": "catalog:",
     "drizzle-orm": "catalog:",
     "hono": "4.13.16",
-    "openid-client": "6.8.9",
+    "openid-client": "6.8.9"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2",
     "tsx": "4.23.15"
   }
 }

@@ -11,9 +11,9 @@ import {
   watchProgress,
   type WatchProgressRow,
 } from "@matinee/db"
-import { and, asc, desc, eq, inArray, isNull, type SQL, sql } from "drizzle-orm"
+import { and, asc, desc, eq, isNull, type SQL, sql } from "drizzle-orm"
 
-import { db } from "../db"
+import { anyOf, arg, db } from "../db"
 import { placeholders, type Placeholders, toArtwork } from "./artwork"
 import { mimeType } from "./mime"
 
@@ -67,6 +67,73 @@ export type ViewerStates = ReadonlyMap<string, ViewerState>
 
 const NO_STATE: ViewerState = { favorite: false, watched: false }
 
+// Prepared once: building these from drizzle's pieces on every call cost
+// more than running them.
+const likedTitles = db
+  .select({ id: favorite.titleId })
+  .from(favorite)
+  .where(
+    and(
+      eq(favorite.userId, arg("userId")),
+      anyOf(favorite.titleId, arg("ids"), "uuid"),
+    ),
+  )
+  .prepare("liked_titles")
+
+const watchedTitles = db
+  .select({
+    id: mediaItem.titleId,
+    watched: sql<boolean>`bool_and(coalesce(${watchProgress.completed}, false))`,
+  })
+  .from(mediaItem)
+  .leftJoin(
+    watchProgress,
+    and(
+      eq(watchProgress.mediaItemId, mediaItem.id),
+      eq(watchProgress.userId, arg("userId")),
+    ),
+  )
+  .where(anyOf(mediaItem.titleId, arg("ids"), "uuid"))
+  .groupBy(mediaItem.titleId)
+  .prepare("watched_titles")
+
+const itemProgress = db
+  .select()
+  .from(watchProgress)
+  .where(
+    and(
+      eq(watchProgress.userId, arg("userId")),
+      anyOf(watchProgress.mediaItemId, arg("ids"), "uuid"),
+    ),
+  )
+  .prepare("item_progress")
+
+const likedItems = db
+  .select({ id: favoriteItem.mediaItemId })
+  .from(favoriteItem)
+  .where(
+    and(
+      eq(favoriteItem.userId, arg("userId")),
+      anyOf(favoriteItem.mediaItemId, arg("ids"), "uuid"),
+    ),
+  )
+  .prepare("liked_items")
+
+const titleRows = db
+  .select()
+  .from(title)
+  .where(anyOf(title.id, arg("ids"), "uuid"))
+  .prepare("title_rows")
+
+// Three array parameters, however many episodes.
+const episodeRows = db
+  .select()
+  .from(episode)
+  .where(
+    sql`(${episode.titleId}, ${episode.seasonNumber}, ${episode.episodeNumber}) in (select * from unnest(${arg("titles")}::uuid[], ${arg("seasons")}::int[], ${arg("numbers")}::int[]))`,
+  )
+  .prepare("episode_rows")
+
 /**
  * Whether the user marked each title as a favorite and watched every file
  * it has, in two queries.
@@ -78,25 +145,8 @@ export async function viewerStates(
   const ids = [...new Set(titleIds)]
   if (ids.length === 0) return new Map()
   const [liked, files] = await Promise.all([
-    db
-      .select({ id: favorite.titleId })
-      .from(favorite)
-      .where(and(eq(favorite.userId, userId), inArray(favorite.titleId, ids))),
-    db
-      .select({
-        id: mediaItem.titleId,
-        watched: sql<boolean>`bool_and(coalesce(${watchProgress.completed}, false))`,
-      })
-      .from(mediaItem)
-      .leftJoin(
-        watchProgress,
-        and(
-          eq(watchProgress.mediaItemId, mediaItem.id),
-          eq(watchProgress.userId, userId),
-        ),
-      )
-      .where(inArray(mediaItem.titleId, ids))
-      .groupBy(mediaItem.titleId),
+    likedTitles.execute({ userId, ids }),
+    watchedTitles.execute({ userId, ids }),
   ])
   const favorites = new Set(liked.map((row) => row.id))
   const watched = new Set(
@@ -232,40 +282,15 @@ export async function publicItems(
       row.titleId && row.seasonNumber !== null && row.episodeNumber !== null,
   )
   const [progress, liked, titles, episodes, states] = await Promise.all([
-    db
-      .select()
-      .from(watchProgress)
-      .where(
-        and(
-          eq(watchProgress.userId, userId),
-          inArray(watchProgress.mediaItemId, itemIds),
-        ),
-      ),
-    db
-      .select({ id: favoriteItem.mediaItemId })
-      .from(favoriteItem)
-      .where(
-        and(
-          eq(favoriteItem.userId, userId),
-          inArray(favoriteItem.mediaItemId, itemIds),
-        ),
-      ),
-    titleIds.length > 0
-      ? db.select().from(title).where(inArray(title.id, titleIds))
-      : [],
+    itemProgress.execute({ userId, ids: itemIds }),
+    likedItems.execute({ userId, ids: itemIds }),
+    titleIds.length > 0 ? titleRows.execute({ ids: titleIds }) : [],
     numbered.length > 0
-      ? db
-          .select()
-          .from(episode)
-          .where(
-            sql`(${episode.titleId}, ${episode.seasonNumber}, ${episode.episodeNumber}) in (${sql.join(
-              numbered.map(
-                (row) =>
-                  sql`(${row.titleId}::uuid, ${row.seasonNumber}::int, ${row.episodeNumber}::int)`,
-              ),
-              sql`, `,
-            )})`,
-          )
+      ? episodeRows.execute({
+          titles: numbered.map((row) => row.titleId),
+          seasons: numbered.map((row) => row.seasonNumber),
+          numbers: numbered.map((row) => row.episodeNumber),
+        })
       : [],
     viewerStates(titleIds, userId),
   ])
@@ -289,6 +314,30 @@ export async function publicItems(
   return rows.map((row) => toItem(row, details))
 }
 
+const titleFiles = db
+  .select()
+  .from(mediaItem)
+  .where(eq(mediaItem.titleId, arg("titleId")))
+  .orderBy(...episodeOrder)
+  .prepare("title_files")
+
+// The user's progress in the title, latest first.
+const titleProgress = db
+  .select({
+    id: watchProgress.mediaItemId,
+    completed: watchProgress.completed,
+  })
+  .from(watchProgress)
+  .innerJoin(mediaItem, eq(mediaItem.id, watchProgress.mediaItemId))
+  .where(
+    and(
+      eq(watchProgress.userId, arg("userId")),
+      eq(mediaItem.titleId, arg("titleId")),
+    ),
+  )
+  .orderBy(desc(watchProgress.updatedAt), ...reverseEpisodeOrder)
+  .prepare("title_progress")
+
 /**
  * What Play starts in a title: the file in progress, the one after the
  * last watched, or the first.
@@ -297,22 +346,9 @@ export async function nextItem(
   row: TitleRow,
   userId: string,
 ): Promise<MediaItem | null> {
-  const files = await db
-    .select()
-    .from(mediaItem)
-    .where(eq(mediaItem.titleId, row.id))
-    .orderBy(...episodeOrder)
+  const files = await titleFiles.execute({ titleId: row.id })
   if (files.length === 0) return null
-  // The user's progress in the title, latest first.
-  const progress = await db
-    .select({
-      id: watchProgress.mediaItemId,
-      completed: watchProgress.completed,
-    })
-    .from(watchProgress)
-    .innerJoin(mediaItem, eq(mediaItem.id, watchProgress.mediaItemId))
-    .where(and(eq(watchProgress.userId, userId), eq(mediaItem.titleId, row.id)))
-    .orderBy(desc(watchProgress.updatedAt), ...reverseEpisodeOrder)
+  const progress = await titleProgress.execute({ userId, titleId: row.id })
   const latest = progress[0]
   let pick = files[0]
   if (latest) {

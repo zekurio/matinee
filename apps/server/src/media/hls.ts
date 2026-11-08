@@ -40,10 +40,15 @@ import type { EncodeSpec } from "./hls-encode"
 
 const KEY = /^[0-9a-f]{32}$/
 const TICK_MS = 250
+// A request waiting on a segment checks for it this often itself, rather
+// than waiting up to a tick to hear that ffmpeg finished it.
+const WAIT_POLL_MS = 25
 // A player that asked for nothing in this long has left or paused.
 const VIEWER_IDLE_MS = 2 * 60_000
 // A run no player reads from stops after this.
 const ORPHAN_MS = 15_000
+// After its only player closed, a run stops this soon.
+const CLOSED_GRACE_MS = 2_000
 // After a run fails without writing a segment, don't start another this soon.
 const FAILURE_BACKOFF_MS = 10_000
 // Longest a request waits for its segment while a run works towards it.
@@ -133,6 +138,15 @@ function notify(job: Job): void {
   const waiters = [...job.waiters]
   job.waiters.clear()
   for (const wake of waiters) wake()
+}
+
+/**
+ * Resolves on the job's next change, or after a short wait and a look at
+ * the runs' playlists for segments they finished meanwhile.
+ */
+async function nextSegments(job: Job): Promise<void> {
+  await changed(job, WAIT_POLL_MS)
+  await Promise.all([...job.runs].map((run) => updateHead(job, run)))
 }
 
 /** Resolves on the job's next change, or after `ms`. */
@@ -251,7 +265,13 @@ function want(job: Job, viewer: Viewer, segment: number): void {
   const run =
     producer(job, missing) ??
     (near ? startRun(job, missing, viewer.owner) : null)
+  const left = viewer.run
   viewer.run = run
+  // A player that jumped elsewhere, as a seek does, is done with the run it
+  // read. Unless someone else reads it, it stops now, as Jellyfin's does,
+  // rather than encode on beside the new one: two 4K encodes take twice
+  // the memory.
+  if (left && left !== run) releaseRun(job, left, now, 0)
   if (run) {
     run.neededAt = now
     // What it writes next is close to the player now.
@@ -512,7 +532,7 @@ async function waitFor(
   while (!job.done.has(segment)) {
     if (signal.aborted || Date.now() > deadline) return false
     if (!producer(job, segment)) return false
-    await changed(job, 1000)
+    await nextSegments(job)
   }
   return true
 }
@@ -587,7 +607,7 @@ export async function initPath(
         viewer.run = run
       }
     }
-    await changed(job, 1000)
+    await nextSegments(job)
   }
 }
 
@@ -634,9 +654,28 @@ export function encodingSessions(): Set<string> {
   return sessions
 }
 
-/** A player closed: its runs stop soon unless someone else reads them. */
+/**
+ * `run` stops after `graceMs` once no player reads from it any more, at
+ * the next tick.
+ */
+function releaseRun(job: Job, run: Run, now: number, graceMs: number): void {
+  const read = [...job.viewers.values()].some((viewer) => viewer.run === run)
+  if (!read) run.neededAt = Math.min(run.neededAt, now - ORPHAN_MS + graceMs)
+}
+
+/**
+ * A player closed: its runs stop soon unless someone else reads them.
+ * Sooner than an orphan that may only be between requests: the player
+ * said it's gone, so only a quick reload would come back for it.
+ */
 export function releaseSession(session: string): void {
-  for (const job of jobs.values()) job.viewers.delete(session)
+  const now = Date.now()
+  for (const job of jobs.values()) {
+    const viewer = job.viewers.get(session)
+    if (!viewer) continue
+    job.viewers.delete(session)
+    if (viewer.run) releaseRun(job, viewer.run, now, CLOSED_GRACE_MS)
+  }
 }
 
 /** Stop every run, for shutdown. */

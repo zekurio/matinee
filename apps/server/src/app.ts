@@ -13,6 +13,7 @@ import { secureHeaders } from "hono/secure-headers"
 import { appRoutes } from "./auth/apps"
 import { avatarRoutes } from "./auth/avatars"
 import { oidcRoutes } from "./auth/oidc"
+import { compressBytes, compressJson, pickEncoding } from "./compress"
 import { env } from "./env"
 import { artworkRoutes } from "./media/artwork"
 import { streamRoutes } from "./media/stream"
@@ -55,6 +56,7 @@ export function createApp() {
       : checkOrigin(c, next),
   )
 
+  app.use("/api/*", compressJson)
   app.get("/api/health", (c) => c.json({ ok: true }))
   app.route("/api/auth/oidc", oidcRoutes)
   app.route("/api/auth/app", appRoutes)
@@ -70,24 +72,49 @@ export function createApp() {
 
   if (env.MATINEE_WEB_DIST) {
     const root = resolve(env.MATINEE_WEB_DIST)
-    let indexHtml: Promise<string> | null = null
+    let indexHtml: Promise<IndexHtml> | null = null
     app.use(
       "/assets/*",
       serveStatic({
         root,
+        precompressed: true,
         onFound: (_path, c) => {
           c.header("Cache-Control", "public, max-age=31536000, immutable")
         },
       }),
     )
-    app.use("*", serveStatic({ root }))
+    // A missing asset is a 404, not the app shell: a browser holding an
+    // older build's page should fail to load it, not parse HTML as code.
+    app.get("/assets/*", (c) => c.body(null, 404))
+    app.use("*", serveStatic({ root, precompressed: true }))
     // Client-side routes all load the app shell.
     app.get("*", async (c) => {
-      indexHtml ??= readFile(join(root, "index.html"), "utf8")
+      indexHtml ??= loadIndexHtml(join(root, "index.html"))
+      const html = await indexHtml
+      const encoding = pickEncoding(c.req.header("Accept-Encoding"))
       c.header("Cache-Control", "no-cache")
-      return c.html(await indexHtml)
+      c.header("Content-Type", "text/html; charset=UTF-8")
+      c.header("Vary", "Accept-Encoding")
+      if (!encoding) return c.body(html.raw)
+      c.header("Content-Encoding", encoding)
+      return c.body(html[encoding])
     })
   }
 
   return app
+}
+
+type IndexHtml = {
+  raw: Uint8Array<ArrayBuffer>
+  br: Uint8Array<ArrayBuffer>
+  gzip: Uint8Array<ArrayBuffer>
+}
+
+async function loadIndexHtml(path: string): Promise<IndexHtml> {
+  const raw = new Uint8Array(await readFile(path))
+  const [br, gzip] = await Promise.all([
+    compressBytes(raw, "br"),
+    compressBytes(raw, "gzip"),
+  ])
+  return { raw, br, gzip }
 }

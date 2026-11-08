@@ -42,7 +42,7 @@ import {
 import { formatPercent } from "./player-format"
 import { PlayerMenus } from "./player-menus"
 import type { TrickplayTiles } from "./trickplay-thumb"
-import { useHls } from "./use-hls"
+import { loadHls, useHls } from "./use-hls"
 import { usePlayback } from "./use-playback"
 import { usePlayerKeys } from "./use-player-keys"
 import {
@@ -75,6 +75,8 @@ type VideoPlayerProps = {
   videoSize: { width: number; height: number } | null
   /** ffmpeg's name for the video codec, when the server knows it. */
   videoCodec: string | null
+  /** Whether this browser decodes the video as it is. */
+  videoPlays: boolean
   title: string
   subtitle: string
   /** The file's subtitle tracks. Undefined while they load. */
@@ -101,7 +103,8 @@ type VideoPlayerProps = {
 export function VideoPlayer(props: VideoPlayerProps) {
   // One store per player, which remounts for another file. It starts from
   // the saved preferences, and with the file itself when the browser
-  // decodes the audio that plays first and it's the file's default.
+  // decodes its video and the audio that plays first, and that audio is
+  // the file's default.
   const [store] = useState(() => {
     const saved = usePlayerPreferencesStore.getState()
     const preferences = currentPlaybackPreferences()
@@ -118,7 +121,9 @@ export function VideoPlayer(props: VideoPlayerProps) {
       sessionId: randomId(),
       quality: saved.quality,
       source:
-        saved.quality === "original" && playsFile ? { kind: "direct" } : null,
+        saved.quality === "original" && playsFile && props.videoPlays
+          ? { kind: "direct" }
+          : null,
       duration: props.durationSeconds ?? 0,
       volume: saved.volume,
       muted: saved.muted,
@@ -162,6 +167,7 @@ function Player({
   durationSeconds,
   videoSize,
   videoCodec,
+  videoPlays,
   title,
   subtitle,
   subtitles,
@@ -184,6 +190,13 @@ function Player({
   const actions = store.getState()
   const { sessionId } = actions
 
+  // An encode plays through hls.js. When it's sure to be one, its code
+  // loads now, while the tracks do, rather than once the source is picked.
+  const encodes = !videoPlays || actions.quality !== "original"
+  useEffect(() => {
+    if (encodes) void loadHls()
+  }, [encodes])
+
   const playback = usePlayback({
     video,
     directSrc: src,
@@ -196,6 +209,7 @@ function Player({
     durationSeconds,
     videoSize,
     videoCodec,
+    videoPlays,
     startAt,
     onResumed,
     onUnsupported,

@@ -42,6 +42,12 @@ import { errorMessage, orpc } from "@/lib/rpc"
 import { useOverviewToggle } from "@/lib/use-overview-toggle"
 
 export const Route = createFileRoute("/_authed/_shell/episodes/$itemId")({
+  // Starts the episode's fetch while the page's code loads, and on hover.
+  loader: ({ context, params }) => {
+    void context.queryClient.prefetchQuery(
+      orpc.media.get.queryOptions({ input: { id: params.itemId } }),
+    )
+  },
   component: EpisodePage,
 })
 

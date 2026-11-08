@@ -68,9 +68,10 @@ export function Rail({
     const el = scroller.current
     if (!el) return
     const update = () => measure(el)
-    update()
-    // The list keeps its size when cards arrive, say when skeletons give
-    // way to data, so watch the cards as well as the box.
+    // The observer reports the box once it's laid out, which measures it
+    // the first time without forcing a layout of the page from here. The
+    // list keeps its size when cards arrive, say when skeletons give way
+    // to data, so watch the cards as well as the box.
     const resize = new ResizeObserver(update)
     resize.observe(el)
     const mutation = new MutationObserver(update)

@@ -16,6 +16,8 @@ export type MatineeClientOptions = {
    * use the HttpOnly session cookie instead.
    */
   token?: () => string | null | undefined
+  /** Sends the requests. The global `fetch` unless given. */
+  fetch?: (request: Request) => Promise<Response>
 }
 
 export function createMatineeClient(
@@ -29,8 +31,10 @@ export function createMatineeClient(
       const token = options.token?.()
       return token ? { authorization: `Bearer ${token}` } : {}
     },
-    fetch: (request, init) =>
-      globalThis.fetch(request, { ...init, credentials: "same-origin" }),
+    fetch: (request, init) => {
+      const sent = new Request(request, { ...init, credentials: "same-origin" })
+      return options.fetch ? options.fetch(sent) : globalThis.fetch(sent)
+    },
   })
   return createORPCClient(link)
 }

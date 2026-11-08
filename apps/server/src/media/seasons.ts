@@ -1,8 +1,8 @@
 import type { Season } from "@matinee/contracts"
 import { mediaItem, season, watchProgress } from "@matinee/db"
-import { and, count, eq, inArray, sql } from "drizzle-orm"
+import { and, count, eq, sql } from "drizzle-orm"
 
-import { db } from "../db"
+import { anyOf, arg, db } from "../db"
 import { placeholders, toArtwork } from "./artwork"
 
 /**
@@ -15,6 +15,36 @@ function seasonName(number: number | null): string {
   return number === 0 ? "Specials" : `Season ${number}`
 }
 
+// Prepared once, for every show on Home and every title page.
+const seasonCounts = db
+  .select({
+    titleId: mediaItem.titleId,
+    number: mediaItem.seasonNumber,
+    n: count(),
+    watched:
+      sql<number>`count(*) filter (where ${watchProgress.completed})`.mapWith(
+        Number,
+      ),
+  })
+  .from(mediaItem)
+  .leftJoin(
+    watchProgress,
+    and(
+      eq(watchProgress.mediaItemId, mediaItem.id),
+      eq(watchProgress.userId, arg("userId")),
+    ),
+  )
+  .where(anyOf(mediaItem.titleId, arg("ids"), "uuid"))
+  .groupBy(mediaItem.titleId, mediaItem.seasonNumber)
+  .orderBy(sql`${mediaItem.seasonNumber} asc nulls last`)
+  .prepare("season_counts")
+
+const seasonRows = db
+  .select()
+  .from(season)
+  .where(anyOf(season.titleId, arg("ids"), "uuid"))
+  .prepare("season_rows")
+
 /**
  * The seasons each title has files in, in order, with how many of them the
  * user finished. Files without a season number come last, as one season.
@@ -26,28 +56,8 @@ export async function seasonsByTitle(
   const bySeason = new Map<string, Season[]>()
   if (titleIds.length === 0) return bySeason
   const [counts, meta] = await Promise.all([
-    db
-      .select({
-        titleId: mediaItem.titleId,
-        number: mediaItem.seasonNumber,
-        n: count(),
-        watched:
-          sql<number>`count(*) filter (where ${watchProgress.completed})`.mapWith(
-            Number,
-          ),
-      })
-      .from(mediaItem)
-      .leftJoin(
-        watchProgress,
-        and(
-          eq(watchProgress.mediaItemId, mediaItem.id),
-          eq(watchProgress.userId, userId),
-        ),
-      )
-      .where(inArray(mediaItem.titleId, titleIds))
-      .groupBy(mediaItem.titleId, mediaItem.seasonNumber)
-      .orderBy(sql`${mediaItem.seasonNumber} asc nulls last`),
-    db.select().from(season).where(inArray(season.titleId, titleIds)),
+    seasonCounts.execute({ userId, ids: titleIds }),
+    seasonRows.execute({ ids: titleIds }),
   ])
   const info = new Map(meta.map((s) => [`${s.titleId}/${s.number}`, s]))
   const art = await placeholders(meta.map((s) => s.posterId))
