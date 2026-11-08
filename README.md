@@ -13,6 +13,7 @@ browser can, converting them on the server when it can't.
 apps/
   server/      Hono server: oRPC and REST handlers, auth, library scanner, video streams
   web/         React web client (Vite, TanStack Router + Query)
+  android/     Native Android app (Kotlin, Compose, Media3), see its README
 packages/
   contracts/   oRPC contract and TypeBox schemas shared by server and clients
   client/      Typed client factory for any app (web now, TV and mobile later)
