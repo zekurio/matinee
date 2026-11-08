@@ -46,9 +46,9 @@ pnpm install
 pnpm dev          # server on :8420, web on :5173
 ```
 
-Open http://localhost:5173. The first visit goes to `/setup`, where you create
-the admin account with a passkey (or OIDC, if configured). Loopback URLs skip
-the setup token.
+Open http://localhost:5173. The first visit goes to `/setup`, which creates
+the admin account and then asks about transcoding and libraries. See
+[Setup](#setup). Loopback URLs skip the setup token.
 
 The server applies migrations on start. After changing
 `packages/db/src/schema/`, generate a migration with a descriptive name:
@@ -62,22 +62,36 @@ Run `pnpm verify` (format check, lint, typecheck) before committing.
 Without devenv, copy `.env.example` to `.env` and point `DATABASE_URL` at your
 own Postgres.
 
+`nix build` builds the package from `flake.nix`, and `nix flake check` runs
+the NixOS module's tests too. After `pnpm-lock.yaml` changes, the build fails
+with the new dependency hash; put it in `pnpmDepsHash` in `nix/package.nix`.
+Bump nixpkgs with `nix flake update nixpkgs` and `devenv update nixpkgs`
+together; CI fails when the two locks pin different revisions.
+
 ## Configuration
 
-Server settings are environment variables, documented in `.env.example`. The
-ones that matter for a real deployment:
+Server settings are environment variables, documented in `.env.example`. Any
+of them can come from a file: `NAME_FILE` names a file to read `NAME` from,
+such as a systemd credential, without its surrounding whitespace. The ones
+that matter for a real deployment:
 
 - `PUBLIC_URL`: the https origin people use. Passkeys only work on this origin.
 - `MATINEE_WEB_DIST`: path to the built web app, served by the server.
 - `MATINEE_WATCH_LIBRARIES` and `MATINEE_SCAN_INTERVAL_HOURS`: when libraries
   get scanned. See [Scanning](#scanning).
 
+Settings → Authentication and Settings → Transcoding start from the
+`MATINEE_OIDC_*` and transcoding variables, as alloy's admin settings do. The
+server saves only the fields an admin changed: a field saved with the
+variable's value is no override, so a later change to the variable still
+applies, and an empty text field hands the field back to it. At start the
+server logs each variable that a saved value overrides.
+
 Single sign-on is set up by an admin under Settings → Authentication, and takes
 effect on the next sign-in without a restart. The redirect URI to register with
-the provider is `$PUBLIC_URL/api/auth/oidc/callback`. The `MATINEE_OIDC_*`
-variables are optional defaults for that form: an empty field falls back to
-them. Set them if the admin account itself should be created through OIDC,
-since settings can't be opened before setup.
+the provider is `$PUBLIC_URL/api/auth/oidc/callback`. Set the `MATINEE_OIDC_*`
+variables to create the admin account itself through the provider, since
+settings can't be opened before setup.
 
 If the provider sends a `picture` claim, in the ID token or from userinfo,
 Matinee uses it as the account's picture and fetches it again when it
@@ -477,8 +491,91 @@ start` keeps a pnpm process around it; a service manager can run
 `node dist/server/index.mjs` with `NODE_ENV=production` from `apps/server`
 instead, which is all `pnpm start` does.
 
-Until the first account exists, the server logs a setup token. Enter it on
-`/setup` to claim the admin account.
+## Running on NixOS
+
+The flake packages the server for `x86_64-linux` and has a NixOS module:
+
+```nix
+{
+  inputs.matinee.url = "github:zekurio/matinee";
+
+  outputs = { nixpkgs, matinee, ... }: {
+    nixosConfigurations.host = nixpkgs.lib.nixosSystem {
+      modules = [ matinee.nixosModules.default ./host.nix ];
+    };
+  };
+}
+```
+
+```nix
+services.matinee = {
+  enable = true;
+  publicUrl = "https://watch.example.com";
+  extraGroups = [ "media" ];         # one that can read the libraries
+  oidc = {
+    issuerUrl = "https://id.example.com";
+    clientId = "matinee";
+    displayName = "Pocket ID";
+  };
+  transcoding.hardwareAcceleration = "qsv";
+  secrets = {
+    MATINEE_OIDC_CLIENT_SECRET = config.sops.secrets.matinee-oidc.path;
+    MATINEE_TMDB_API_KEY = config.sops.secrets.tmdb.path;
+  };
+};
+```
+
+This runs PostgreSQL on the host, with a database and role that sign in over
+the socket. Matinee keeps its data in `/var/lib/matinee` and its encodes in
+`/var/cache/matinee/transcodes`, and runs jellyfin-ffmpeg. The typed options
+cover the usual settings. `settings` takes any variable from `.env.example`,
+and `secrets` takes files, which systemd hands the server as credentials, so
+they can stay readable by root only. A remote database with a password goes
+in `secrets.DATABASE_URL` with `database.createLocally = false`.
+
+The server listens on `127.0.0.1:8420` and the module requires an https
+`publicUrl`, so something in front terminates TLS. With Caddy on the same
+host:
+
+```nix
+services.caddy = {
+  enable = true;
+  virtualHosts."watch.example.com".extraConfig = "reverse_proxy 127.0.0.1:8420";
+};
+```
+
+On a tailnet, `tailscale serve --bg 8420` serves it on the machine's
+`https://<host>.<tailnet>.ts.net` address, which is then the `publicUrl`.
+
+The service sees no `/home`, so keep the libraries under a path such as
+`/srv` or `/mnt`. With `transcoding.hardwareAcceleration` unset, the admin
+picks the GPU during setup, so the service may open every device. `"vaapi"`,
+or `"qsv"` with `transcoding.qsvDevice`, limits it to that render node, and
+`"none"` closes them all; `accelerationDevices` sets the list outright.
+The host needs the GPU's drivers in `hardware.graphics.extraPackages`, such
+as `intel-media-driver` and `vpl-gpu-rt` for Intel.
+
+## Setup
+
+Until setup is done, the first visit goes to `/setup`. How it creates the
+admin account depends on whether `MATINEE_OIDC_ISSUER_URL` and
+`MATINEE_OIDC_CLIENT_ID` are set:
+
+- Without them, the server logs a setup token at start, or takes
+  `MATINEE_SETUP_TOKEN`. Enter it, then create the admin with a username and
+  a passkey.
+- With them, setup only offers the provider, and there is no token. The
+  first sign-in becomes the admin only if its role claim says `admin`; the
+  server turns anyone else away and logs what the claim held. The claim is
+  `matinee_role` unless `MATINEE_OIDC_ROLE_CLAIM` names another, and only
+  the provider's admins should be able to set it. In Pocket ID, give a group
+  such as `matinee-admins` the custom claim `matinee_role` with the value
+  `admin`. Custom claims come with the `profile` scope.
+
+Setup then asks which GPU to transcode on, unless
+`MATINEE_HARDWARE_ACCELERATION` sets it, and for the libraries, unless some
+exist. Each step can be skipped, and everything in it is in Settings later.
+Until the admin finishes, signing in as an admin goes back to setup.
 
 ## How auth works
 
@@ -518,6 +615,10 @@ Until the first account exists, the server logs a setup token. Enter it on
   the database, so a demotion applies to the user's next request. Deleting a
   user deletes their sessions, passkeys, linked accounts, watch progress,
   favorites, and playback history.
+- With single sign-on, the role claim sets the account's role on every
+  sign-in, as alloy and Immich read it: `admin` or `user`, or a list holding
+  them, where admin wins. Without the claim the role stays. A claim that
+  would demote the last admin who can sign in is ignored, and logged.
 - An OIDC client secret saved in settings is stored in the database as is,
   like the rest of the settings. Use `MATINEE_OIDC_CLIENT_SECRET_FILE` to keep
   it out of the database.
@@ -601,7 +702,6 @@ genres, and statuses, shows as the provider sent it.
 - Text subtitle burn-in, so ASS and SSA play without their styling.
 - Metadata from NFO files and local artwork, absolute episode numbering for
   anime, and provider keys set in admin settings instead of the environment.
-- A bundled server build and Nix package.
 
 ## License
 

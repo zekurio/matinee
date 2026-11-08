@@ -24,6 +24,10 @@ See README.md for setup and the auth design.
   streams (`src/realtime`).
 - `apps/web`: Vite React app. File routes live in `src/routes`;
   `src/routeTree.gen.ts` is generated.
+- `nix/`: the flake's package (`package.nix`) and NixOS module
+  (`module.nix`), with tests in `nix/tests`. A server variable the module
+  should set for people gets a typed option there; any other goes through
+  the module's `settings`, and a secret through `secrets`.
 
 ## Development
 
