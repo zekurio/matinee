@@ -21,31 +21,25 @@ import { EpisodeCard, TitleCard } from "@/components/media-item"
 import { PageHeader } from "@/components/page-header"
 import { Rail, RailItem } from "@/components/rail"
 import { tr } from "@/i18n"
+import { homeQueries, SHELF } from "@/lib/home-queries"
 import { orpc } from "@/lib/rpc"
 
 export const Route = createFileRoute("/_authed/_shell/")({
+  // On hover over a link home, and on the way there.
+  loader: ({ context: { queryClient } }) => {
+    void queryClient.prefetchQuery(homeQueries.resume())
+    void queryClient.prefetchQuery(homeQueries.nextUp())
+    void queryClient.prefetchQuery(homeQueries.featured())
+  },
   component: Home,
 })
-
-// The contract's cap. Twelve posters fit side by side on a wide monitor,
-// which left nothing to scroll.
-const SHELF = 24
-const HERO_SLIDES = 6
 
 function Home() {
   const { user } = Route.useRouteContext()
   const libraries = useQuery(orpc.libraries.list.queryOptions())
-  const resume = useQuery(
-    orpc.home.continueWatching.queryOptions({ input: { limit: 12 } }),
-  )
-  const nextUp = useQuery(
-    orpc.home.nextUp.queryOptions({ input: { limit: 12 } }),
-  )
-  // New and well-rated titles the user hasn't started, plus shows with a
-  // new next episode. What the user is watching has its own rows.
-  const featured = useQuery(
-    orpc.home.featured.queryOptions({ input: { limit: HERO_SLIDES } }),
-  )
+  const resume = useQuery(homeQueries.resume())
+  const nextUp = useQuery(homeQueries.nextUp())
+  const featured = useQuery(homeQueries.featured())
   const slides = featured.data ?? []
 
   const loading =
