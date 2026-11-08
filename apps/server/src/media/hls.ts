@@ -265,7 +265,13 @@ function want(job: Job, viewer: Viewer, segment: number): void {
   const run =
     producer(job, missing) ??
     (near ? startRun(job, missing, viewer.owner) : null)
+  const left = viewer.run
   viewer.run = run
+  // A player that jumped elsewhere, as a seek does, is done with the run it
+  // read. Unless someone else reads it, it stops now, as Jellyfin's does,
+  // rather than encode on beside the new one: two 4K encodes take twice
+  // the memory.
+  if (left && left !== run) releaseRun(job, left, now, 0)
   if (run) {
     run.neededAt = now
     // What it writes next is close to the player now.
@@ -649,20 +655,26 @@ export function encodingSessions(): Set<string> {
 }
 
 /**
+ * `run` stops after `graceMs` once no player reads from it any more, at
+ * the next tick.
+ */
+function releaseRun(job: Job, run: Run, now: number, graceMs: number): void {
+  const read = [...job.viewers.values()].some((viewer) => viewer.run === run)
+  if (!read) run.neededAt = Math.min(run.neededAt, now - ORPHAN_MS + graceMs)
+}
+
+/**
  * A player closed: its runs stop soon unless someone else reads them.
  * Sooner than an orphan that may only be between requests: the player
  * said it's gone, so only a quick reload would come back for it.
  */
 export function releaseSession(session: string): void {
-  const soon = Date.now() - ORPHAN_MS + CLOSED_GRACE_MS
+  const now = Date.now()
   for (const job of jobs.values()) {
     const viewer = job.viewers.get(session)
     if (!viewer) continue
     job.viewers.delete(session)
-    const run = viewer.run
-    if (!run) continue
-    const read = [...job.viewers.values()].some((other) => other.run === run)
-    if (!read) run.neededAt = Math.min(run.neededAt, soon)
+    if (viewer.run) releaseRun(job, viewer.run, now, CLOSED_GRACE_MS)
   }
 }
 
