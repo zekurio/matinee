@@ -69,9 +69,12 @@ const heroSecondary =
 function Backdrop({
   slide,
   active,
+  primed,
 }: {
   slide: FeaturedTitle
   active: boolean
+  /** Load the art: the slide showed, or comes next. */
+  primed: boolean
 }) {
   const { item } = slide
   const label = itemLabel(item)
@@ -114,7 +117,9 @@ function Backdrop({
               : "scale-100 delay-700 duration-0",
           )}
         >
-          <Picture sources={sources} eager={active} className="object-top" />
+          {primed && (
+            <Picture sources={sources} eager={active} className="object-top" />
+          )}
         </div>
       </div>
     </div>
@@ -148,6 +153,22 @@ export function Hero({
   const index = Math.min(picked, count - 1)
   const current = slides[index]
 
+  // Slides load their art once they show, and the next one halfway through
+  // the current one, so the first screen loads one backdrop, not all.
+  const [primed, setPrimed] = useState<ReadonlySet<number>>(
+    () => new Set([index]),
+  )
+  if (!primed.has(index)) setPrimed(new Set(primed).add(index))
+  useEffect(() => {
+    if (count < 2) return
+    const next = (index + 1) % count
+    const timer = window.setTimeout(
+      () => setPrimed((loaded) => new Set(loaded).add(next)),
+      ADVANCE_MS / 2,
+    )
+    return () => window.clearTimeout(timer)
+  }, [index, count])
+
   // Each slide change restarts the timer, so a manual change gets a full
   // interval too.
   useEffect(() => {
@@ -176,7 +197,12 @@ export function Hero({
       className={cn(heroFrame, "overflow-hidden", className)}
     >
       {slides.map((slide, i) => (
-        <Backdrop key={slide.title.id} slide={slide} active={i === index} />
+        <Backdrop
+          key={slide.title.id}
+          slide={slide}
+          active={i === index}
+          primed={primed.has(i)}
+        />
       ))}
       {/* Darken where the text sits and fade into the page below. */}
       <div
@@ -199,6 +225,7 @@ export function Hero({
           key={slide.title.id}
           slide={slide}
           active={i === index}
+          primed={primed.has(i)}
           position={tr("media.hero.position", { index: i + 1, count })}
         />
       ))}
@@ -268,11 +295,12 @@ export function Hero({
  * The title as its logo when the provider has one, else as text. The text
  * stays for screen readers either way.
  */
-function TitleMark({ item }: { item: MediaItem }) {
+function TitleMark({ item, primed }: { item: MediaItem; primed: boolean }) {
   const label = itemLabel(item)
   const name = label.code ? label.showName : label.title
   // Transparent, so no placeholder: it would show as a smudge.
-  const logo = art(item.title?.images.logo, "large")
+  // Unprimed, the slide is hidden, so the name stands in without loading.
+  const logo = primed ? art(item.title?.images.logo, "large") : null
   const [logoFailed, setLogoFailed] = useState(false)
   if (logo && !logoFailed) {
     return (
@@ -302,10 +330,13 @@ function TitleMark({ item }: { item: MediaItem }) {
 function SlideContent({
   slide,
   active,
+  primed,
   position,
 }: {
   slide: FeaturedTitle
   active: boolean
+  /** Load the logo, like the backdrop. */
+  primed: boolean
   position: string
 }) {
   const { item, title } = slide
@@ -337,7 +368,7 @@ function SlideContent({
       )}
     >
       <div className={pageColumn}>
-        <TitleMark item={item} />
+        <TitleMark item={item} primed={primed} />
         <div className="text-foreground/80 mt-3 flex max-w-xl flex-wrap items-center gap-x-3 gap-y-1.5 text-sm sm:text-base">
           {facts.length > 0 && (
             <span className="line-clamp-1">{facts.join(" · ")}</span>
