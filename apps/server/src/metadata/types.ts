@@ -1,4 +1,8 @@
-import type { CreditKind, MetadataProviderId } from "@matinee/contracts"
+import type {
+  CreditKind,
+  ImageSlot,
+  MetadataProviderId,
+} from "@matinee/contracts"
 import type { ExternalIds } from "@matinee/db"
 
 export type MatchKind = "movie" | "show"
@@ -85,6 +89,29 @@ export type TitleDetails = {
   episodes: EpisodeDetails[]
 }
 
+/** Whose images to list: the title's, a season's, or an episode's. */
+export type ImageScope =
+  | { kind: "title" }
+  | { kind: "season"; season: number }
+  | { kind: "episode"; season: number; episode: number }
+
+/** An image a provider has, as `RemoteImage` gives it before it's saved. */
+export type ImageCandidate = {
+  slot: ImageSlot
+  /** Remote URL, in the size a refresh would store. */
+  url: string
+  /** Remote URL of a smaller copy, if the provider has one. */
+  preview: string | null
+  width: number | null
+  height: number | null
+  /** BCP 47. Null when it has no text. */
+  language: string | null
+  /** The provider's rating of it, for ordering. Higher is better. */
+  score: number
+  /** How many rated it, to break ties in `score`. */
+  votes: number
+}
+
 /**
  * One metadata source. Each library picks one; adding a provider means
  * implementing this and listing it in `sources.ts`.
@@ -105,6 +132,15 @@ export interface MetadataSource {
    */
   lookup(ids: ExternalIds, lookup: Lookup): Promise<string | null>
   details(id: string, lookup: Lookup): Promise<TitleDetails>
+  /**
+   * Every image the provider has for the title `id`, one of its seasons,
+   * or one of its episodes, in any language and order.
+   */
+  images(
+    id: string,
+    lookup: Lookup,
+    scope: ImageScope,
+  ): Promise<ImageCandidate[]>
 }
 
 /** A failed provider request, with the HTTP status if there was one. */

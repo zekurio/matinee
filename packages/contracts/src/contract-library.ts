@@ -7,6 +7,10 @@ import {
   AudioTrack,
   BrowsedTitles,
   IdInput,
+  ImageSlot,
+  ImageTarget,
+  ImageUpload,
+  ItemImage,
   Keyframes,
   Library,
   LibraryInput,
@@ -14,6 +18,7 @@ import {
   MetadataMatch,
   MetadataProvider,
   Person,
+  RemoteImage,
   SearchInput,
   SearchResults,
   ShelfEntry,
@@ -107,6 +112,50 @@ export const titlesContract = oc.tag("Titles").router({
     .output(Title),
   /** Fetch the title's metadata again now. */
   refresh: post("/titles/{id}/refresh").input(IdInput).output(Title),
+  /**
+   * The images of the title, of one of its seasons, or of one of its
+   * episodes, and which of them an admin chose. A movie or show has a
+   * poster, backdrop, and logo, a season a poster, an episode a still.
+   */
+  images: get("/titles/{id}/images")
+    .input(ImageTarget)
+    .output(t.array(ItemImage)),
+  /**
+   * What the library's provider has for one image, best first: in the
+   * library's language, then English, then without text. `allLanguages`
+   * adds the rest. Empty while the title has no match.
+   */
+  remoteImages: get("/titles/{id}/images/{slot}/remote")
+    .input(
+      ImageTarget.extend({
+        slot: ImageSlot,
+        allLanguages: t.boolean().$default(false),
+      }),
+    )
+    .output(t.array(RemoteImage)),
+  /**
+   * Use one of `remoteImages`, or no image with null. Fetching the
+   * metadata again keeps it, until a fix match picks another entry.
+   */
+  setImage: put("/titles/{id}/images/{slot}")
+    .input(
+      ImageTarget.extend({
+        slot: ImageSlot,
+        imageId: t.string().max(64).nullable(),
+      }),
+    )
+    .output(t.array(ItemImage)),
+  /** Use an image file instead, kept like a `setImage` choice, and on a fix match too. */
+  uploadImage: post("/titles/{id}/images/{slot}")
+    .input(ImageTarget.extend({ slot: ImageSlot, file: ImageUpload }))
+    .output(t.array(ItemImage)),
+  /**
+   * Go back to the provider's image, fetching the metadata again for it.
+   * A POST in REST, since a DELETE would carry the season in its body.
+   */
+  resetImage: post("/titles/{id}/images/{slot}/reset")
+    .input(ImageTarget.extend({ slot: ImageSlot }))
+    .output(t.array(ItemImage)),
 })
 
 export const mediaContract = oc.tag("Media").router({

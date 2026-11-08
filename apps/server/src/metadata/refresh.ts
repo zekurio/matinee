@@ -1,4 +1,4 @@
-import type { MetadataProviderId } from "@matinee/contracts"
+import type { MetadataProviderId, TitleImageSlot } from "@matinee/contracts"
 import {
   credit,
   episode,
@@ -17,6 +17,7 @@ import { localName } from "../library/titles"
 import { log } from "../log"
 import { queueArtwork, saveArtwork } from "../media/artwork"
 import { sortName } from "../media/title"
+import { type Choices, episodeKey, readChoices } from "./choices"
 import { bestMatch } from "./match"
 import { sources } from "./sources"
 import {
@@ -65,13 +66,50 @@ export function needsRefresh(
   return row.addedAt > row.refreshedAt || age > STALE_AFTER_MS
 }
 
-/** Back to what the scanner read from the path, with no provider data. */
+/**
+ * Rows for the seasons and episodes that hold only an admin's image: those
+ * the provider doesn't list, or all of them without a provider.
+ */
+function chosenOnly(
+  titleId: string,
+  choices: Choices,
+  listed: { seasons: Set<number>; episodes: Set<string> } = {
+    seasons: new Set(),
+    episodes: new Set(),
+  },
+) {
+  const seasons = [...choices.seasons]
+    .filter(([number]) => !listed.seasons.has(number))
+    .map(([number, posterId]) => ({
+      titleId,
+      number,
+      overview: null,
+      posterId,
+      posterChosen: true,
+    }))
+  const episodes = [...choices.episodes]
+    .filter(([key]) => !listed.episodes.has(key))
+    .map(([, e]) => ({
+      titleId,
+      seasonNumber: e.season,
+      episodeNumber: e.episode,
+      stillId: e.id,
+      stillChosen: true,
+    }))
+  return { seasons, episodes }
+}
+
+/**
+ * Back to what the scanner read from the path, with no provider data.
+ * Uploaded images stay, as they belong to no match.
+ */
 async function reset(
   row: TitleRow,
   provider: MetadataProviderId | null,
 ): Promise<void> {
   const local = localName(row.path, row.kind)
   await db.transaction(async (tx) => {
+    const kept = await readChoices(tx, row.id, { onlyUploads: true })
     await tx
       .update(title)
       .set({
@@ -89,9 +127,10 @@ async function reset(
         status: null,
         runtimeMinutes: null,
         studios: [],
-        posterId: null,
-        backdropId: null,
-        logoId: null,
+        posterId: kept.title.get("poster") ?? null,
+        backdropId: kept.title.get("backdrop") ?? null,
+        logoId: kept.title.get("logo") ?? null,
+        chosenImages: [...kept.title.keys()],
         provider,
         providerId: null,
         externalIds: local.ids,
@@ -101,6 +140,9 @@ async function reset(
     await tx.delete(season).where(eq(season.titleId, row.id))
     await tx.delete(episode).where(eq(episode.titleId, row.id))
     await tx.delete(credit).where(eq(credit.titleId, row.id))
+    const { seasons, episodes } = chosenOnly(row.id, kept)
+    if (seasons.length > 0) await tx.insert(season).values(seasons)
+    if (episodes.length > 0) await tx.insert(episode).values(episodes)
   })
 }
 
@@ -112,7 +154,10 @@ async function save(
 ): Promise<void> {
   const local = localName(row.path, row.kind)
   const name = details.name.trim() || local.name
+  // Images picked from the provider show the old match after a new one.
+  const rematched = row.provider !== provider || row.providerId !== details.id
   const downloads = await db.transaction(async (tx) => {
+    const kept = await readChoices(tx, row.id, { onlyUploads: rematched })
     const art = await saveArtwork(
       [
         details.images.poster,
@@ -125,6 +170,16 @@ async function save(
       tx,
     )
     const id = (url: string | null) => (url ? (art.get(url) ?? null) : null)
+    // The admin's choice where there is one, else the provider's.
+    const titleImage = (slot: TitleImageSlot) =>
+      kept.title.has(slot)
+        ? (kept.title.get(slot) ?? null)
+        : id(details.images[slot])
+    const images = {
+      posterId: titleImage("poster"),
+      backdropId: titleImage("backdrop"),
+      logoId: titleImage("logo"),
+    }
     await tx
       .update(title)
       .set({
@@ -145,9 +200,8 @@ async function save(
         status: details.status,
         runtimeMinutes: details.runtimeMinutes,
         studios: details.studios,
-        posterId: id(details.images.poster),
-        backdropId: id(details.images.backdrop),
-        logoId: id(details.images.logo),
+        ...images,
+        chosenImages: [...kept.title.keys()],
         provider,
         providerId: details.id,
         externalIds: { ...folderIds, ...details.externalIds },
@@ -156,12 +210,27 @@ async function save(
       .where(eq(title.id, row.id))
 
     await tx.delete(season).where(eq(season.titleId, row.id))
-    const seasons = details.seasons.map((s) => ({
-      titleId: row.id,
-      number: s.number,
-      overview: s.overview,
-      posterId: id(s.poster),
-    }))
+    const extra = chosenOnly(row.id, kept, {
+      seasons: new Set(details.seasons.map((s) => s.number)),
+      episodes: new Set(
+        details.episodes.map((e) => episodeKey(e.season, e.episode)),
+      ),
+    })
+    const seasons = [
+      ...details.seasons.map((s) => {
+        const chosen = kept.seasons.has(s.number)
+        return {
+          titleId: row.id,
+          number: s.number,
+          overview: s.overview,
+          posterId: chosen
+            ? (kept.seasons.get(s.number) ?? null)
+            : id(s.poster),
+          posterChosen: chosen,
+        }
+      }),
+      ...extra.seasons,
+    ]
     for (let i = 0; i < seasons.length; i += BATCH_SIZE) {
       await tx
         .insert(season)
@@ -170,16 +239,23 @@ async function save(
     }
 
     await tx.delete(episode).where(eq(episode.titleId, row.id))
-    const episodes = details.episodes.map((e) => ({
-      titleId: row.id,
-      seasonNumber: e.season,
-      episodeNumber: e.episode,
-      name: e.name,
-      overview: e.overview,
-      airDate: e.airDate,
-      runtimeMinutes: e.runtimeMinutes,
-      stillId: id(e.still),
-    }))
+    const episodes = [
+      ...details.episodes.map((e) => {
+        const choice = kept.episodes.get(episodeKey(e.season, e.episode))
+        return {
+          titleId: row.id,
+          seasonNumber: e.season,
+          episodeNumber: e.episode,
+          name: e.name,
+          overview: e.overview,
+          airDate: e.airDate,
+          runtimeMinutes: e.runtimeMinutes,
+          stillId: choice ? choice.id : id(e.still),
+          stillChosen: choice !== undefined,
+        }
+      }),
+      ...extra.episodes,
+    ]
     for (let i = 0; i < episodes.length; i += BATCH_SIZE) {
       await tx
         .insert(episode)
@@ -199,10 +275,14 @@ async function save(
       photoId: id(c.photo),
     }))
     if (credits.length > 0) await tx.insert(credit).values(credits)
-    const covers = [id(details.images.poster), id(details.images.backdrop)]
     return {
-      covers,
-      rest: [...art.values()].filter((v) => !covers.includes(v)),
+      covers: [images.posterId, images.backdropId],
+      rest: [
+        images.logoId,
+        ...seasons.map((s) => s.posterId),
+        ...episodes.map((e) => e.stillId),
+        ...credits.map((c) => c.photoId),
+      ],
     }
   })
   // Every image downloads now, as in Jellyfin, so the placeholders are

@@ -176,6 +176,12 @@ export default {
   "server.people.noCredits":
     "Kein Film und keine Serie in den Mediatheken führt diese Person auf.",
 
+  "server.images.needsSeason": "Gib auch die Staffel der Folge an.",
+  "server.images.noSeasons": "Nur Serien haben Staffeln und Folgen.",
+  "server.images.wrongSlot":
+    "Filme und Serien haben ein Poster, einen Hintergrund oder ein Logo, Staffeln ein Poster und Folgen ein Standbild.",
+  "server.images.gone": "Dieses Bild ist nicht mehr verfügbar. Suche erneut.",
+
   "server.metadata.tmdbDescription":
     "The Movie Database. Filme und Serien, mit Standbildern von Folgen und Logos. Radarr nutzt sie.",
   "server.metadata.tmdbSetup":

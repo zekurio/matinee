@@ -9,6 +9,7 @@ import { adminUsers } from "./admin-users"
 import { auth } from "./auth"
 import { pub } from "./base"
 import { downloads } from "./downloads"
+import { titleImages } from "./images"
 import { adminRoutes, libraries, media } from "./libraries"
 import { people } from "./people"
 import { home, playback } from "./playback"
@@ -28,7 +29,7 @@ export const procedures = {
   account,
   libraries,
   metadata,
-  titles,
+  titles: { ...titles, ...titleImages },
   people,
   search,
   media,

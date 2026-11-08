@@ -1,6 +1,15 @@
 type Named = { name: string }
-export type Image = { file_path: string; iso_639_1: string | null }
+export type Image = {
+  file_path: string
+  iso_639_1: string | null
+  width?: number
+  height?: number
+  vote_average?: number
+  vote_count?: number
+}
 type Images = { logos?: Image[]; posters?: Image[]; backdrops?: Image[] }
+/** What the `/images` endpoints answer. */
+export type ImageList = Images & { stills?: Image[] }
 export type Person = { id: number; name?: string; profile_path?: string | null }
 type CastMember = Person & { character?: string; order?: number }
 export type CrewMember = Person & { job?: string; department?: string }

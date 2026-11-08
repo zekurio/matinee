@@ -6,7 +6,7 @@ let artworkTypes: Promise<ArtworkType[]> | null = null
 
 /** Artwork type ids by record and name, such as series/poster → 2. */
 export async function artworkType(
-  record: "series" | "movie",
+  record: "series" | "season" | "movie",
   name: "poster" | "background" | "clearlogo",
 ): Promise<number | null> {
   artworkTypes ??= request<ArtworkType[]>("/artwork/types")

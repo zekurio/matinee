@@ -10,6 +10,7 @@ import {
 } from "../types"
 import { request } from "./client"
 import { movieDetails, seriesDetails } from "./details"
+import { tvdbImages } from "./images"
 import { tvdbLanguage } from "./language"
 import { absolute } from "./mapping"
 import type { SearchResult } from "./payloads"
@@ -70,4 +71,5 @@ export const tvdb: MetadataSource = {
   lookup,
   details: (id, { kind, language }) =>
     kind === "movie" ? movieDetails(id, language) : seriesDetails(id, language),
+  images: tvdbImages,
 }

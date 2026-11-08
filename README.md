@@ -223,6 +223,15 @@ loads. An image opened before its download finished has none on that
 view. The Fetch artwork task downloads whatever a restart or a failure
 left without a BlurHash.
 
+Admins pick a title's poster, backdrop, and logo, a season's poster, and an
+episode's still with Edit images in its menu, as in Jellyfin's image editor.
+It lists what the library's provider has for that image, those in the
+library's language, English, or without text first, and every language on
+request. It also takes JPEG, PNG, and WebP uploads of up to 25 MB, stored
+under an id from their bytes. A refresh keeps what an admin picked, uploaded,
+or removed. Fix match to another entry drops the picks from the old one and
+keeps the uploads, and the server deletes an upload once nothing shows it.
+
 Providers live in `apps/server/src/metadata`. Adding one means implementing
 `MetadataSource` in `types.ts`, listing it in `sources.ts`, and adding its id
 to `METADATA_PROVIDERS` in the contract.

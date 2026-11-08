@@ -7,6 +7,8 @@ export default {
 
   "validation.searchQuery": "Gib einen Namen für die Suche ein.",
 
+  "validation.imageSize": "Wähle ein Bild unter 25 MB.",
+
   "validation.metadataLanguage": "Verwende einen Sprachcode wie en oder de-DE.",
   "validation.absolutePath": "Verwende einen absoluten Pfad.",
   "validation.libraryName": "Gib der Mediathek einen Namen.",

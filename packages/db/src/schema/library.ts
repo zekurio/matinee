@@ -2,10 +2,12 @@ import type {
   CreditKind,
   LibraryKind,
   MetadataProviderId,
+  TitleImageSlot,
   TitleKind,
 } from "@matinee/contracts"
 import { sql } from "drizzle-orm"
 import {
+  boolean,
   date,
   doublePrecision,
   index,
@@ -47,14 +49,18 @@ export const libraryFolder = pgTable(
 )
 
 /**
- * A remote image a provider pointed at. The id is derived from the URL, so
- * the same image is stored once, and clients can only make the server fetch
- * URLs a provider gave it.
+ * A remote image a provider pointed at, or one an admin uploaded. The id
+ * is derived from the URL, so the same image is stored once, and clients
+ * can only make the server fetch URLs a provider gave it.
  */
 export const artwork = pgTable("artwork", {
-  /** First 32 hex characters of the URL's SHA-256. */
+  /**
+   * First 32 hex characters of the URL's SHA-256, or of the bytes' for an
+   * upload.
+   */
   id: text().primaryKey(),
-  url: text().notNull(),
+  /** Null for an upload, whose only copy is on disk. */
+  url: text(),
   /**
    * A BlurHash of the image, for clients to show while it loads. Null
    * until the server has downloaded and read it.
@@ -110,6 +116,15 @@ export const title = pgTable(
     posterId: artworkRef(),
     backdropId: artworkRef(),
     logoId: artworkRef(),
+    /**
+     * The images an admin picked or uploaded, which a refresh leaves
+     * alone. A slot here with a null id was removed on purpose.
+     */
+    chosenImages: text()
+      .array()
+      .$type<TitleImageSlot[]>()
+      .notNull()
+      .default(sql`'{}'::text[]`),
     /** Provider of the last refresh. Null if the library has none. */
     provider: text().$type<MetadataProviderId>(),
     /** The match at that provider. Null when nothing matched. */
@@ -140,6 +155,8 @@ export const season = pgTable(
     number: integer().notNull(),
     overview: text(),
     posterId: artworkRef(),
+    /** An admin picked the poster, so a refresh keeps it. */
+    posterChosen: boolean().notNull().default(false),
   },
   (t) => [primaryKey({ columns: [t.titleId, t.number] })],
 )
@@ -158,6 +175,8 @@ export const episode = pgTable(
     airDate: date({ mode: "string" }),
     runtimeMinutes: integer(),
     stillId: artworkRef(),
+    /** An admin picked the still, so a refresh keeps it. */
+    stillChosen: boolean().notNull().default(false),
   },
   (t) => [
     primaryKey({ columns: [t.titleId, t.seasonNumber, t.episodeNumber] }),
@@ -193,5 +212,6 @@ export const credit = pgTable(
 
 export type LibraryRow = typeof library.$inferSelect
 export type TitleRow = typeof title.$inferSelect
+export type SeasonRow = typeof season.$inferSelect
 export type EpisodeRow = typeof episode.$inferSelect
 export type CreditRow = typeof credit.$inferSelect

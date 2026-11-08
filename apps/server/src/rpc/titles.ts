@@ -23,7 +23,7 @@ import { ProviderError } from "../metadata/types"
 import { admin, authed, badRequest, notFound } from "./base"
 import { tagCounts, titleOrder, titleWhere } from "./browse"
 
-async function loadRow(id: string): Promise<TitleRow> {
+export async function loadRow(id: string): Promise<TitleRow> {
   const [row] = await db.select().from(title).where(eq(title.id, id))
   if (!row) throw notFound("This title isn't in any library.")
   return row
@@ -83,7 +83,7 @@ async function toTitle(row: TitleRow, userId: string): Promise<Title> {
 }
 
 /** Turn a provider failure into a message an admin can act on. */
-function providerFailure(name: string, cause: unknown): never {
+export function providerFailure(name: string, cause: unknown): never {
   if (cause instanceof ProviderError) {
     log.warn(`${name} request failed`, cause)
     const message =
@@ -97,7 +97,7 @@ function providerFailure(name: string, cause: unknown): never {
   throw cause
 }
 
-async function withLibrary(id: string) {
+export async function withLibrary(id: string) {
   const row = await loadRow(id)
   const [lib] = await db
     .select()

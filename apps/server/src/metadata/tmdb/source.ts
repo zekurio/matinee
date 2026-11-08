@@ -11,6 +11,7 @@ import {
 } from "../types"
 import { image, request } from "./client"
 import { movieDetails, showDetails } from "./details"
+import { tmdbImages } from "./images"
 import type { Found, MovieResult, SearchResults, ShowResult } from "./payloads"
 
 function toMovieCandidate(result: MovieResult): Candidate {
@@ -88,4 +89,5 @@ export const tmdb: MetadataSource = {
   lookup,
   details: (id, { kind, language }) =>
     kind === "movie" ? movieDetails(id, language) : showDetails(id, language),
+  images: tmdbImages,
 }

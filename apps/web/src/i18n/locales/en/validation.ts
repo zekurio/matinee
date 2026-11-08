@@ -12,6 +12,10 @@ export default defineMessages("validation", {
   // contract-library.ts: searching a provider for a match.
   "validation.searchQuery": "Enter a name to search for.",
 
+  // titles.ts: uploading a title's, season's, or episode's image. The
+  // empty file and image type messages are the avatar ones below.
+  "validation.imageSize": "Pick an image under 25 MB.",
+
   // library.ts: libraries.
   "validation.metadataLanguage": "Use a language code like en or de-DE.",
   "validation.absolutePath": "Use an absolute path.",
@@ -43,7 +47,7 @@ export default defineMessages("validation", {
   "validation.codecsUnique": "Each codec can be listed once.",
 
   // users.ts and sessions.ts: usernames, display and device names, avatars.
-  // The server's avatar check sends the image type message too.
+  // The server's avatar and artwork checks send the image type message too.
   "validation.usernameMin": "Use at least 2 characters.",
   "validation.usernameMax": "Use at most 32 characters.",
   "validation.usernameChars":

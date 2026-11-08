@@ -155,6 +155,13 @@ export default defineMessages("server", {
   "server.people.noCredits":
     "No movie or show in the libraries credits this person.",
 
+  // rpc/images.ts: editing the images of a title, season, or episode.
+  "server.images.needsSeason": "Give the episode's season too.",
+  "server.images.noSeasons": "Only shows have seasons and episodes.",
+  "server.images.wrongSlot":
+    "Movies and shows take a poster, backdrop, or logo, seasons a poster, and episodes a still.",
+  "server.images.gone": "That image isn't available any more. Search again.",
+
   // media/download-encode.ts: what a download spec asks of a file. The
   // longer "audio" text comes before the shorter one it would also match.
   "server.downloads.unreadable":

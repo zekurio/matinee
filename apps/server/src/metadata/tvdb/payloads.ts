@@ -11,9 +11,13 @@ export type Translations = {
 }
 export type Artwork = {
   image: string
+  /** A smaller copy, as a full URL. */
+  thumbnail?: string | null
   type: number
   language: string | null
   score?: number
+  width?: number | null
+  height?: number | null
   includesText?: boolean
 }
 export type RemoteId = { id: string; sourceName?: string }

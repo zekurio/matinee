@@ -12,7 +12,7 @@ import {
   type ImagePlaceholder,
 } from "@matinee/contracts"
 import { artwork, credit, episode, season, title } from "@matinee/db"
-import { and, eq, isNotNull, isNull } from "drizzle-orm"
+import { and, eq, isNotNull, isNull, or } from "drizzle-orm"
 import type { PgColumn, PgTable } from "drizzle-orm/pg-core"
 import { Hono } from "hono"
 
@@ -289,7 +289,10 @@ async function load({ id, size }: ArtworkJob): Promise<Cached | null> {
   if (!row) return null
   let file = await findResized(id, size)
   if (!file) {
-    const original = (await findOriginal(id)) ?? (await download(id, row.url))
+    // An upload has no URL to fetch again, so without its file it's gone.
+    const original =
+      (await findOriginal(id)) ?? (row.url ? await download(id, row.url) : null)
+    if (!original) return null
     file = await resize(id, original, size)
     // Cards ask for `thumb` on screens that show them small, and `small`
     // on sharper ones, so both come from the one download.
@@ -337,6 +340,101 @@ async function artworkFile(
 
 /** Where downloads ahead of a view go: behind views, and posters first. */
 export type Prefetch = Extract<Priority, "normal" | "low">
+
+/**
+ * Download and scale an image now, ahead of anything queued, and read its
+ * placeholder. Resolves once done, also when it failed, which the queue
+ * logs.
+ */
+export async function prepareArtwork(id: string): Promise<void> {
+  await artworkJobs
+    .run({ id, size: "small" }, { priority: "high" })
+    .catch(() => null)
+}
+
+/**
+ * Store an image an admin uploaded and return its artwork id, named by its
+ * bytes, so the same file is stored once. Null for anything but a JPEG,
+ * PNG, or WebP image.
+ */
+export async function saveUpload(bytes: Uint8Array): Promise<string | null> {
+  const format = sniffImage(bytes)
+  if (!format) return null
+  const id = createHash("sha256").update(bytes).digest("hex").slice(0, 32)
+  await mkdir(dir, { recursive: true })
+  const path = join(dir, `${id}.${format}`)
+  const tmp = `${path}.${randomUUID()}.tmp`
+  await writeFile(tmp, bytes)
+  await rename(tmp, path)
+  await db.insert(artwork).values({ id, url: null }).onConflictDoNothing()
+  await prepareArtwork(id)
+  return id
+}
+
+/** Which of `ids` are uploads rather than provider images. */
+export async function uploadedArtwork(
+  ids: Iterable<string | null>,
+): Promise<Set<string>> {
+  const wanted = [...new Set(ids)].filter((id): id is string => id !== null)
+  if (wanted.length === 0) return new Set()
+  const rows = await db
+    .select({ id: artwork.id })
+    .from(artwork)
+    .where(and(anyOf(artwork.id, wanted, "text"), isNull(artwork.url)))
+  return new Set(rows.map((row) => row.id))
+}
+
+/** Whether a title, season, or episode still shows the image. */
+async function inUse(id: string): Promise<boolean> {
+  const [titles, seasons, episodes] = await Promise.all([
+    db
+      .select({ id: title.id })
+      .from(title)
+      .where(
+        or(
+          eq(title.posterId, id),
+          eq(title.backdropId, id),
+          eq(title.logoId, id),
+        ),
+      )
+      .limit(1),
+    db
+      .select({ id: season.titleId })
+      .from(season)
+      .where(eq(season.posterId, id))
+      .limit(1),
+    db
+      .select({ id: episode.titleId })
+      .from(episode)
+      .where(eq(episode.stillId, id))
+      .limit(1),
+  ])
+  return titles.length + seasons.length + episodes.length > 0
+}
+
+/**
+ * Delete the uploads among `ids` that nothing shows any more, rows and
+ * files. Provider images stay, since they cost only a download to get
+ * back.
+ */
+export async function dropUnusedUploads(
+  ids: Iterable<string | null>,
+): Promise<void> {
+  for (const id of await uploadedArtwork(ids)) {
+    if (await inUse(id)) continue
+    await db.delete(artwork).where(eq(artwork.id, id))
+    const formats = ["jpg", "png", "webp"] as const
+    const names = formats.flatMap((format) => [
+      `${id}.${format}`,
+      ...ARTWORK_SIZES.map((size) => `${id}-${size}.${format}`),
+    ])
+    await Promise.all(
+      names.map((name) => rm(join(dir, name), { force: true })),
+    ).catch((cause: unknown) =>
+      log.warn(`Couldn't delete the files of artwork ${id}`, cause),
+    )
+  }
+}
 
 /**
  * Download images ahead of their first view and read their placeholders.

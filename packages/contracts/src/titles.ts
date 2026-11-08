@@ -319,3 +319,69 @@ export const MetadataMatch = t.object({
   poster: Artwork.nullable(),
 })
 export type MetadataMatch = t.infer<typeof MetadataMatch>
+
+/** The images of a movie or show itself, as in `Images`. */
+export const TITLE_IMAGE_SLOTS = ["poster", "backdrop", "logo"] as const
+export const TitleImageSlot = t.enum(TITLE_IMAGE_SLOTS)
+export type TitleImageSlot = t.infer<typeof TitleImageSlot>
+
+/**
+ * Every kind of image there is to edit: a title's, a season's poster, and
+ * an episode's still.
+ */
+export const IMAGE_SLOTS = [...TITLE_IMAGE_SLOTS, "still"] as const
+export const ImageSlot = t.enum(IMAGE_SLOTS)
+export type ImageSlot = t.infer<typeof ImageSlot>
+
+/**
+ * Whose images: the title's own, a season's with `season`, or an
+ * episode's with `season` and `episode`.
+ */
+export const ImageTarget = t.object({
+  id: t.uuid(),
+  season: t.number().int().min(0).optional(),
+  episode: t.number().int().min(0).optional(),
+})
+export type ImageTarget = t.infer<typeof ImageTarget>
+
+/** One image of a title, season, or episode, for editing it. */
+export const ItemImage = t.object({
+  slot: ImageSlot,
+  /** Null when it has none. */
+  image: Artwork.nullable(),
+  /**
+   * An admin picked, uploaded, or removed it, so fetching the metadata
+   * again leaves it alone. False while it's the provider's.
+   */
+  chosen: t.boolean(),
+  /** It was uploaded, not taken from a provider. */
+  uploaded: t.boolean(),
+})
+export type ItemImage = t.infer<typeof ItemImage>
+
+/** An image the library's provider has for a title, season, or episode. */
+export const RemoteImage = t.object({
+  /** Pass it to `titles.setImage` to use the image. */
+  id: t.string(),
+  /** A smaller copy, for showing the choices. */
+  preview: Artwork,
+  /** In pixels. Null when the provider doesn't say. */
+  width: t.number().int().nullable(),
+  height: t.number().int().nullable(),
+  /**
+   * BCP 47 tag of the language of any text on it. Null for an image
+   * without text, or when the provider doesn't say.
+   */
+  language: t.string().nullable(),
+})
+export type RemoteImage = t.infer<typeof RemoteImage>
+
+export const MAX_IMAGE_BYTES = 25 * 1024 * 1024
+export const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"] as const
+
+/** An image to use as it is. The server scales it as it does a provider's. */
+export const ImageUpload = t
+  .file()
+  .min(1, "That file is empty.")
+  .max(MAX_IMAGE_BYTES, "Pick an image under 25 MB.")
+  .mime([...IMAGE_TYPES], "Pick a JPEG, PNG, or WebP image.")
