@@ -1,7 +1,12 @@
 import type { AudioTrack, Keyframes, Subtitles } from "@matinee/contracts"
 import { useMediaQuery } from "@matinee/ui/hooks/use-media-query"
 import { cn } from "@matinee/ui/lib/utils"
-import { ArrowLeftIcon, Volume2Icon, VolumeXIcon } from "lucide-react"
+import {
+  ArrowLeftIcon,
+  CaptionsIcon,
+  Volume2Icon,
+  VolumeXIcon,
+} from "lucide-react"
 import { type FocusEvent, useEffect, useRef, useState } from "react"
 
 import { tr } from "@/i18n"
@@ -39,7 +44,7 @@ import {
   SkipIcon,
   VolumeControl,
 } from "./player-controls"
-import { formatPercent } from "./player-format"
+import { formatDelay, formatPercent } from "./player-format"
 import { PlayerMenus } from "./player-menus"
 import type { TrickplayTiles } from "./trickplay-thumb"
 import { loadHls, useHls } from "./use-hls"
@@ -98,7 +103,8 @@ type VideoPlayerProps = {
 /**
  * Full-screen player. Space or K plays and pauses, arrows or J/L skip ten
  * seconds, up and down change the volume, 0 to 9 jump to a tenth of the
- * way, M mutes, F toggles full screen, C turns subtitles on and off.
+ * way, M mutes, F toggles full screen, C turns subtitles on and off, G and
+ * H show them earlier and later.
  */
 export function VideoPlayer(props: VideoPlayerProps) {
   // One store per player, which remounts for another file. It starts from
@@ -319,6 +325,19 @@ function Player({
     el.defaultPlaybackRate = next
     el.playbackRate = next
   }
+  const moveSubtitles = (by: number) => {
+    const { burnIn, subtitleDelay, setSubtitleDelay } = store.getState()
+    if (burnIn !== null) {
+      show(CaptionsIcon, tr("player.flash.subtitlesBurnedIn"))
+      return
+    }
+    const next = subtitleDelay + by
+    setSubtitleDelay(next)
+    show(
+      CaptionsIcon,
+      tr("player.flash.subtitleDelay", { delay: formatDelay(next) }),
+    )
+  }
 
   usePlayerKeys({
     toggle,
@@ -329,6 +348,7 @@ function Player({
     toggleMute,
     toggleFullscreen,
     toggleSubtitles: subs.toggle,
+    moveSubtitles,
   })
 
   return (

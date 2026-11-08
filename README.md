@@ -259,9 +259,10 @@ the last choice, a language or Off, for the next file. Press C to toggle
 subtitles.
 
 When subtitles run early or late, the Offset buttons at the bottom of the
-subtitles menu move them by a tenth of a second. The offset holds for the
-rest of the file, across tracks and qualities, and starts at zero for the
-next one. Burned-in subtitles are part of the picture and can't move.
+subtitles menu move them by a tenth of a second, as do G (earlier) and H
+(later). The offset holds for the rest of the file, across tracks and
+qualities, and starts at zero for the next one. Burned-in subtitles are
+part of the picture and can't move.
 
 ## Audio tracks and quality
 

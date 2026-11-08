@@ -34,6 +34,9 @@ export default defineMessages("player", {
   // Notes over the picture after a key press.
   "player.flash.muted": "Muted",
   "player.flash.skip": "{seconds} s",
+  // After G or H, like "Subtitles +0.3 s".
+  "player.flash.subtitleDelay": "Subtitles {delay}",
+  "player.flash.subtitlesBurnedIn": "Burned-in subtitles can't move",
 
   // The audio, subtitle, and settings menus.
   "player.menu.audio": "Audio",
@@ -57,8 +60,8 @@ export default defineMessages("player", {
   // like +0.3.
   "player.subtitles.delay": "Offset",
   "player.subtitles.delayValue": "{seconds} s",
-  "player.subtitles.earlier": "Show subtitles earlier",
-  "player.subtitles.later": "Show subtitles later",
+  "player.subtitles.earlier": "Show subtitles earlier (g)",
+  "player.subtitles.later": "Show subtitles later (h)",
   "player.subtitles.delayReset": "Reset",
   "player.subtitles.delayResetDetail": "Back to the file's timing",
   "player.quality": "Quality",

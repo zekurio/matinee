@@ -3,7 +3,7 @@ import { useEffect, useEffectEvent } from "react"
 
 import { tr } from "@/i18n"
 
-import { SKIP_S, VOLUME_STEP } from "./player-controls"
+import { SKIP_S, SUBTITLE_STEP_MS, VOLUME_STEP } from "./player-controls"
 
 export type PlayerKeyActions = {
   toggle: () => void
@@ -15,6 +15,8 @@ export type PlayerKeyActions = {
   toggleMute: () => void
   toggleFullscreen: () => void
   toggleSubtitles: () => void
+  /** Moves the subtitles later by `ms`, earlier when negative. */
+  moveSubtitles: (ms: number) => void
 }
 
 /** The player's keyboard shortcuts, on the whole window. */
@@ -27,6 +29,7 @@ export function usePlayerKeys({
   toggleMute,
   toggleFullscreen,
   toggleSubtitles,
+  moveSubtitles,
 }: PlayerKeyActions) {
   // Each key runs the actions from the latest render.
   const onKey = useEffectEvent((event: KeyboardEvent) => {
@@ -59,6 +62,9 @@ export function usePlayerKeys({
       ["m", toggleMute],
       ["f", toggleFullscreen],
       ["c", toggleSubtitles],
+      // VLC's keys for the subtitle delay.
+      ["g", () => moveSubtitles(-SUBTITLE_STEP_MS)],
+      ["h", () => moveSubtitles(SUBTITLE_STEP_MS)],
     ])
     const digit = /^\d$/.test(event.key) ? Number(event.key) : null
     const action = digit !== null ? () => jump(digit) : actions.get(event.key)

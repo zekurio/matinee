@@ -31,7 +31,7 @@ import { type TrickplayTiles, TrickplayThumb } from "./trickplay-thumb"
 
 export const SKIP_S = 10
 export const VOLUME_STEP = 0.05
-// How far the menu's buttons move the subtitles, as in mpv.
+// How far the menu's buttons and G and H move the subtitles, as in mpv.
 export const SUBTITLE_STEP_MS = 100
 const FLASH_MS = 700
 

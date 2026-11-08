@@ -30,6 +30,9 @@ export default {
 
   "player.flash.muted": "Stumm",
   "player.flash.skip": "{seconds} s",
+  "player.flash.subtitleDelay": "Untertitel {delay}",
+  "player.flash.subtitlesBurnedIn":
+    "Eingebrannte Untertitel lassen sich nicht verschieben",
 
   "player.menu.audio": "Audio",
   "player.menu.subtitles": "Untertitel",
@@ -48,8 +51,8 @@ export default {
   "player.subtitles.burnedIn": "Eingebrannt",
   "player.subtitles.delay": "Versatz",
   "player.subtitles.delayValue": "{seconds} s",
-  "player.subtitles.earlier": "Untertitel früher zeigen",
-  "player.subtitles.later": "Untertitel später zeigen",
+  "player.subtitles.earlier": "Untertitel früher zeigen (g)",
+  "player.subtitles.later": "Untertitel später zeigen (h)",
   "player.subtitles.delayReset": "Zurücksetzen",
   "player.subtitles.delayResetDetail": "Zurück zum Timing der Datei",
   "player.quality": "Qualität",
