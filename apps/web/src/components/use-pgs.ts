@@ -1,12 +1,12 @@
 import workerUrl from "libpgs/dist/libpgs.worker.js?url"
-import { type RefObject, useEffect, useEffectEvent } from "react"
+import { type RefObject, useEffect, useEffectEvent, useRef } from "react"
 
 /**
  * Draws PGS subtitles from a `.sup` file over `video`, on a canvas in
  * `layer` that fits the frame the way the video does. libpgs, loaded only
  * for this, parses and draws in a worker that takes the canvas over, and a
  * canvas can be handed over once, so each file gets a new one. `offset` is
- * where in the file the video's time 0 is.
+ * the file's time that shows at the video's time 0.
  */
 export function usePgs(
   layer: RefObject<HTMLElement | null>,
@@ -19,6 +19,8 @@ export function usePgs(
     () => (video.current?.currentTime ?? 0) + offset,
   )
   const failed = useEffectEvent(onError)
+  // Draws the current picture again, once a file is loaded.
+  const redraw = useRef<(() => void) | null>(null)
 
   useEffect(() => {
     const host = layer.current
@@ -45,6 +47,7 @@ export function usePgs(
       }
       const events = ["timeupdate", "seeked", "loadeddata"] as const
       stop = () => {
+        redraw.current = null
         if (frames) el.cancelVideoFrameCallback(frame)
         for (const event of events) el.removeEventListener(event, render)
         renderer.dispose()
@@ -56,6 +59,7 @@ export function usePgs(
       await renderer.loadFromBuffer(file)
       if (stopped) return
       render()
+      redraw.current = render
       if (frames) frame = el.requestVideoFrameCallback(onFrame)
       for (const event of events) el.addEventListener(event, render)
     }
@@ -67,4 +71,9 @@ export function usePgs(
       stop()
     }
   }, [file])
+
+  // A paused video sends no events, so a new offset draws by itself.
+  useEffect(() => {
+    redraw.current?.()
+  }, [offset])
 }

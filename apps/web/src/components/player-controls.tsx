@@ -31,6 +31,8 @@ import { type TrickplayTiles, TrickplayThumb } from "./trickplay-thumb"
 
 export const SKIP_S = 10
 export const VOLUME_STEP = 0.05
+// How far the menu's buttons move the subtitles, as in mpv.
+export const SUBTITLE_STEP_MS = 100
 const FLASH_MS = 700
 
 /** Text over the picture: 12px Red Hat reads thin there, so 14px, full white, and a shadow. */

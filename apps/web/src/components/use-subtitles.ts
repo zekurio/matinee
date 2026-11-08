@@ -136,8 +136,10 @@ function trackElement(
  * themselves, such as one in the system language, and each one they turn
  * on loads; a lone track leaves them nothing to pick. While `lifted` is
  * true, cues sit above `controls`. `offset` is where in the file the
- * video's time 0 is, for streams that start partway in. PGS draws on a
- * canvas in `pgsLayer`. A track only an encode shows goes to `burnIn`,
+ * video's time 0 is, for streams that start partway in. The viewer's
+ * `subtitleDelay` in the store moves every cue on top of that. PGS draws
+ * on a canvas in `pgsLayer`. A track only an encode shows goes to
+ * `burnIn`,
  * which gets null again when the viewer picks another. Until the viewer
  * picks, the preferences pick by `audioLanguage`, the language of the
  * audio that plays, falling back on the file's default audio's.
@@ -161,13 +163,17 @@ export function useSubtitles(
 ) {
   const store = usePlayerStoreApi()
   const tracks = subtitles?.tracks ?? NO_TRACKS
-  const { chosen, defaults, objectUrl } = usePlayerStore(
+  const { chosen, defaults, objectUrl, delay } = usePlayerStore(
     useShallow((state) => ({
       chosen: state.chosenSubtitle,
       defaults: state.subtitleDefaults,
       objectUrl: state.subtitleUrl,
+      delay: state.subtitleDelay,
     })),
   )
+  // The file's time that shows at the video's 0: the stream's start, less
+  // the viewer's delay, so a later cue shows later.
+  const cueOffset = offset - delay / 1000
   // The default shows once the tracks are here, until the viewer picks.
   const playingLanguage = audioLanguage ?? subtitles?.audioLanguage ?? null
   const selected =
@@ -219,7 +225,7 @@ export function useSubtitles(
     pgsLayer,
     video,
     file?.kind === "pgs" ? file.data : undefined,
-    offset,
+    cueOffset,
     () => {
       store.getState().chooseSubtitle(null)
       loadFailed()
@@ -269,17 +275,18 @@ export function useSubtitles(
     }
   }, [selected, src, tracks])
 
-  // Line cues up with a stream that starts partway into the file.
+  // Line cues up with a stream that starts partway into the file, and
+  // with the viewer's delay.
   useEffect(() => {
     const el = video.current
     if (!el) return
     const track = trackElement(el, selected)
     if (!track) return
-    const shift = () => shiftCues(track.track, offset)
+    const shift = () => shiftCues(track.track, cueOffset)
     shift()
     track.addEventListener("load", shift)
     return () => track.removeEventListener("load", shift)
-  }, [selected, src, offset, tracks])
+  }, [selected, src, cueOffset, tracks])
 
   // Lift the cues above the controls while they show, and again as the
   // window or the track's cues change.

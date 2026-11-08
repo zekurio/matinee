@@ -44,6 +44,27 @@ export type MenuSection = {
   empty?: string
 }
 
+/** A button that changes a value and leaves the menu open. */
+export type MenuStep = {
+  id: string
+  /** Short, like `+0.1 s`. */
+  label: string
+  /** What it does, for the tooltip and screen readers. */
+  description: string
+  disabled?: boolean
+  onSelect: () => void
+}
+
+/** A value with buttons in a row that step it, below the sections. */
+export type MenuAdjust = {
+  title: string
+  /** The current value, as shown. */
+  value: string
+  steps: MenuStep[]
+  /** Why the steps are off, in place of the value. */
+  disabledNote?: string
+}
+
 const sheetRowClass =
   "flex min-h-12 w-full items-center rounded-lg px-3 text-left text-sm outline-none hover:bg-foreground/[0.06] focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
 
@@ -88,7 +109,8 @@ function RadioItems({ section }: { section: MenuSection }) {
  * A button in the player's control bar that opens lists of choices: a
  * dropdown with a mouse, a bottom sheet on touch screens. One section lists
  * its choices directly; several get a submenu each, showing the current
- * pick, the way Jellyfin's settings menu does. The player keeps which menu
+ * pick, the way Jellyfin's settings menu does. An `adjust` comes last, with
+ * buttons that leave the menu open. The player keeps which menu
  * is open, so its controls stay up meanwhile.
  */
 export function PlayerMenu({
@@ -98,6 +120,7 @@ export function PlayerMenu({
   active = false,
   note,
   sections,
+  adjust,
   open,
   onOpenChange,
   container,
@@ -112,6 +135,7 @@ export function PlayerMenu({
   /** A line above the sections, like how the file is playing. */
   note?: string
   sections: MenuSection[]
+  adjust?: MenuAdjust
   open: boolean
   onOpenChange: (open: boolean) => void
   /** The player, which may be the full-screen element. */
@@ -196,6 +220,35 @@ export function PlayerMenu({
                 ))}
               </div>
             ))}
+            {adjust && (
+              <div role="group" aria-label={adjust.title} className="pt-2">
+                <h3 className="text-muted-foreground flex px-3 pb-1 text-xs font-medium">
+                  {adjust.title}
+                  <span className="ml-auto pl-4 tabular-nums">
+                    {adjust.disabledNote ?? adjust.value}
+                  </span>
+                </h3>
+                <div className="flex gap-1">
+                  {adjust.steps.map((step) => (
+                    <button
+                      key={step.id}
+                      type="button"
+                      aria-label={step.description}
+                      disabled={
+                        adjust.disabledNote !== undefined || step.disabled
+                      }
+                      className={cn(
+                        sheetRowClass,
+                        "flex-1 justify-center tabular-nums",
+                      )}
+                      onClick={step.onSelect}
+                    >
+                      {step.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </DrawerContent>
       </Drawer>
@@ -254,6 +307,36 @@ export function PlayerMenu({
               </DropdownMenuSubContent>
             </DropdownMenuSub>
           ))
+        )}
+        {adjust && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuGroup>
+              <DropdownMenuLabel className="flex">
+                {adjust.title}
+                <span className="ml-auto pl-6 tabular-nums">
+                  {adjust.disabledNote ?? adjust.value}
+                </span>
+              </DropdownMenuLabel>
+              <div className="flex gap-1">
+                {adjust.steps.map((step) => (
+                  <DropdownMenuItem
+                    key={step.id}
+                    aria-label={step.description}
+                    title={step.description}
+                    disabled={
+                      adjust.disabledNote !== undefined || step.disabled
+                    }
+                    closeOnClick={false}
+                    onClick={step.onSelect}
+                    className="flex-1 justify-center tabular-nums"
+                  >
+                    {step.label}
+                  </DropdownMenuItem>
+                ))}
+              </div>
+            </DropdownMenuGroup>
+          </>
         )}
       </DropdownMenuContent>
     </DropdownMenu>

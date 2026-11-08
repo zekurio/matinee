@@ -77,6 +77,11 @@ export type PlayerState = PlayerStart & {
   burnIn: string | null
   /** The shown track's WebVTT as an object URL, once it has arrived. */
   subtitleUrl: { trackId: string; url: string } | null
+  /**
+   * Milliseconds the viewer moved the subtitles by in this file, later
+   * when positive. Burned-in subtitles can't move.
+   */
+  subtitleDelay: number
 
   setPlaying: (playing: boolean) => void
   /** For the video's `pause`, when the player wasn't holding it still. */
@@ -119,6 +124,7 @@ export type PlayerState = PlayerStart & {
   /** Turns off a track that was burned in, which failed to encode. */
   dropBurnIn: () => void
   setSubtitleUrl: (url: { trackId: string; url: string } | null) => void
+  setSubtitleDelay: (ms: number) => void
 }
 
 export type PlayerStore = StoreApi<PlayerState>
@@ -148,6 +154,7 @@ export function createPlayerStore(start: PlayerStart): PlayerStore {
     pickedSubtitle: null,
     burnIn: null,
     subtitleUrl: null,
+    subtitleDelay: 0,
 
     setPlaying: (playing) => set({ playing }),
     paused: () => set({ playing: false, waiting: false }),
@@ -206,6 +213,7 @@ export function createPlayerStore(start: PlayerStart): PlayerStore {
             },
       ),
     setSubtitleUrl: (subtitleUrl) => set({ subtitleUrl }),
+    setSubtitleDelay: (subtitleDelay) => set({ subtitleDelay }),
   }))
 }
 

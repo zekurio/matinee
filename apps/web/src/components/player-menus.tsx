@@ -13,9 +13,19 @@ import { trackLabel } from "@/lib/languages"
 import { subtitleLabel, trackDetail } from "@/lib/subtitles"
 import { usePlayerStore } from "@/stores/player"
 
-import { controlButtonClass } from "./player-controls"
-import { audioDetail, formatBitrate, resolutionName } from "./player-format"
-import { type MenuChoice, type MenuSection, PlayerMenu } from "./player-menu"
+import { controlButtonClass, SUBTITLE_STEP_MS } from "./player-controls"
+import {
+  audioDetail,
+  formatBitrate,
+  formatDelay,
+  resolutionName,
+} from "./player-format"
+import {
+  type MenuAdjust,
+  type MenuChoice,
+  type MenuSection,
+  PlayerMenu,
+} from "./player-menu"
 import type { usePlayback } from "./use-playback"
 import type { useSubtitles } from "./use-subtitles"
 
@@ -40,13 +50,17 @@ export function PlayerMenus({
   onSpeedChange: (speed: number) => void
   container: RefObject<HTMLDivElement | null>
 }) {
-  const { speed, openMenu, setMenuOpen } = usePlayerStore(
-    useShallow((state) => ({
-      speed: state.speed,
-      openMenu: state.openMenu,
-      setMenuOpen: state.setMenuOpen,
-    })),
-  )
+  const { speed, openMenu, setMenuOpen, delay, burnIn, setSubtitleDelay } =
+    usePlayerStore(
+      useShallow((state) => ({
+        speed: state.speed,
+        openMenu: state.openMenu,
+        setMenuOpen: state.setMenuOpen,
+        delay: state.subtitleDelay,
+        burnIn: state.burnIn,
+        setSubtitleDelay: state.setSubtitleDelay,
+      })),
+    )
   // One menu opens at a time, and the controls stay up while it does.
   const menuProps = (id: string, label: string) => ({
     label,
@@ -91,6 +105,38 @@ export function PlayerMenus({
     ],
     onSelect: (id) => subs.select(id === OFF ? null : id),
   }
+  // The shown track's timing. An encode draws a burned-in track where the
+  // file says.
+  const subtitleTiming: MenuAdjust | undefined =
+    subs.selected === null
+      ? undefined
+      : {
+          title: tr("player.subtitles.delay"),
+          value: formatDelay(delay),
+          disabledNote:
+            burnIn === null ? undefined : tr("player.subtitles.burnedIn"),
+          steps: [
+            {
+              id: "earlier",
+              label: formatDelay(-SUBTITLE_STEP_MS),
+              description: tr("player.subtitles.earlier"),
+              onSelect: () => setSubtitleDelay(delay - SUBTITLE_STEP_MS),
+            },
+            {
+              id: "reset",
+              label: tr("player.subtitles.delayReset"),
+              description: tr("player.subtitles.delayResetDetail"),
+              disabled: delay === 0,
+              onSelect: () => setSubtitleDelay(0),
+            },
+            {
+              id: "later",
+              label: formatDelay(SUBTITLE_STEP_MS),
+              description: tr("player.subtitles.later"),
+              onSelect: () => setSubtitleDelay(delay + SUBTITLE_STEP_MS),
+            },
+          ],
+        }
 
   // Quality: the file as it is, then the encodes no larger than it.
   const qualities: MenuChoice[] = [
@@ -179,6 +225,7 @@ export function PlayerMenus({
               : undefined
         }
         sections={[subtitleSection]}
+        adjust={subtitleTiming}
       />
       <PlayerMenu
         {...menuProps("settings", tr("player.menu.settings"))}

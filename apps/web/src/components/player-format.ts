@@ -42,6 +42,22 @@ export function formatPercent(fraction: number): string {
   return percents().format(fraction)
 }
 
+const delays = perLocale(
+  (locale) =>
+    new Intl.NumberFormat(locale, {
+      signDisplay: "exceptZero",
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1,
+    }),
+)
+
+/** A subtitle delay in milliseconds, like `+0.3 s`, `-1.5 s`, or `0.0 s`. */
+export function formatDelay(ms: number): string {
+  return tr("player.subtitles.delayValue", {
+    seconds: delays().format(ms / 1000),
+  })
+}
+
 // Other ways a track title may say a layout.
 const LAYOUT_ALIASES = new Map([
   ["Mono", ["1.0"]],
