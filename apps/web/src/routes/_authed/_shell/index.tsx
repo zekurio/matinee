@@ -92,8 +92,12 @@ function Home() {
   // banner's negative margin). Its own bottom padding keeps the rows off the
   // edge and pushes the shelves below the fold. Phones measure the small
   // viewport, so the banner doesn't resize as the browser's toolbar hides
-  // on scroll.
-  const fold = !loading && slides.length > 0 && (hasResume || hasNextUp)
+  // on scroll. While the queries load, the page assumes the banner and the
+  // rows will come and holds their places with skeletons, so the banner
+  // doesn't shrink once they arrive.
+  const fold =
+    (featured.isPending || slides.length > 0) &&
+    (resume.isPending || nextUp.isPending || hasResume || hasNextUp)
 
   return (
     <div className="flex flex-col gap-10">
@@ -107,7 +111,9 @@ function Home() {
         )}
       >
         {loading ? (
-          <Skeleton className={cn(heroFrame, "rounded-none")} />
+          <Skeleton
+            className={cn(heroFrame, "rounded-none", fold && heroFill)}
+          />
         ) : slides.length > 0 ? (
           <Hero
             slides={slides}
@@ -118,24 +124,32 @@ function Home() {
           <LibraryChips className="-mx-4 px-4 sm:hidden" />
         )}
 
-        {hasResume && (
-          <Rail title={tr("browse.home.continueWatching")}>
-            {resume.data?.map((item) => (
-              <RailItem key={item.id}>
-                <EpisodeCard item={item} />
-              </RailItem>
-            ))}
-          </Rail>
+        {resume.isPending ? (
+          <EpisodeRailSkeleton title={tr("browse.home.continueWatching")} />
+        ) : (
+          hasResume && (
+            <Rail title={tr("browse.home.continueWatching")}>
+              {resume.data?.map((item) => (
+                <RailItem key={item.id}>
+                  <EpisodeCard item={item} />
+                </RailItem>
+              ))}
+            </Rail>
+          )
         )}
 
-        {hasNextUp && (
-          <Rail title={tr("browse.home.nextUp")}>
-            {nextUp.data?.map((item) => (
-              <RailItem key={item.id}>
-                <EpisodeCard item={item} />
-              </RailItem>
-            ))}
-          </Rail>
+        {nextUp.isPending ? (
+          <EpisodeRailSkeleton title={tr("browse.home.nextUp")} />
+        ) : (
+          hasNextUp && (
+            <Rail title={tr("browse.home.nextUp")}>
+              {nextUp.data?.map((item) => (
+                <RailItem key={item.id}>
+                  <EpisodeCard item={item} />
+                </RailItem>
+              ))}
+            </Rail>
+          )
         )}
       </div>
 
@@ -143,6 +157,24 @@ function Home() {
         <LibraryShelf key={library.id} library={library} />
       ))}
     </div>
+  )
+}
+
+/** A row of episode cards on its way, as tall as the row it stands in for. */
+function EpisodeRailSkeleton({ title }: { title: string }) {
+  return (
+    <Rail title={title}>
+      {Array.from({ length: 6 }, (_, i) => (
+        <RailItem key={i}>
+          <Skeleton className="aspect-video rounded-md" />
+          {/* The card's two 20px lines of text. */}
+          <span className="mt-2 flex h-10 flex-col justify-center gap-2">
+            <Skeleton className="h-3.5 w-2/3" />
+            <Skeleton className="h-3 w-1/2" />
+          </span>
+        </RailItem>
+      ))}
+    </Rail>
   )
 }
 
