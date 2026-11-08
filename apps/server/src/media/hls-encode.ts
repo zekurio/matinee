@@ -36,8 +36,12 @@ import type { BurnInSource } from "./subtitles"
  * a new one.
  */
 
-/** Jellyfin's HLS segment length. */
-export const HLS_SEGMENT_S = 6
+/**
+ * The HLS segment length, as Jellyfin uses now. A player waits for a whole
+ * segment before the first frame, and after a seek decodes from the
+ * segment's start up to the point, so shorter segments start sooner.
+ */
+export const HLS_SEGMENT_S = 3
 // A last segment shorter than this share of one is left out, since ffmpeg
 // may not write it.
 const SHORT_TAIL = 0.05
