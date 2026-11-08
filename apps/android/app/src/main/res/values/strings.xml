@@ -1,0 +1,276 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Copied from the web app's English catalog (apps/web/src/i18n/locales/en)
+     where the same words appear there, so both read alike. -->
+<resources>
+    <string name="app_name" translatable="false">Matinee</string>
+
+    <string name="common_back">Back</string>
+    <string name="common_retry">Try again</string>
+    <string name="common_and">and</string>
+
+    <!-- Picking a server -->
+    <string name="connect_title">Connect to your server</string>
+    <string name="connect_description">Enter the address you open Matinee at in a browser.</string>
+    <string name="connect_placeholder">media.example.com</string>
+    <string name="connect_button">Connect</string>
+    <string name="connect_connecting">Connecting to %1$s…</string>
+    <string name="connect_unreachable">Couldn\'t reach %1$s</string>
+    <string name="connect_change_server">Use another server</string>
+    <string name="connect_not_matinee">%1$s doesn\'t look like a Matinee server.</string>
+    <string name="connect_failed">Couldn\'t reach %1$s.</string>
+    <string name="connect_empty">Enter the address of your Matinee server.</string>
+
+    <!-- Signing in -->
+    <string name="signin_title">Sign in to Matinee</string>
+    <string name="signin_server">On %1$s</string>
+    <string name="signin_setup">This server isn\'t set up yet. Finish setup in a browser, then sign in here.</string>
+    <string name="signin_browser">Sign in with your browser</string>
+    <string name="signin_oidc">Continue with %1$s</string>
+    <string name="signin_with_code">Sign in with a code</string>
+    <string name="signin_code_title">Enter this code</string>
+    <string name="signin_code_description">On a phone or computer that\'s signed in, go to %1$s and enter the code.</string>
+    <string name="signin_code_loading">Getting a code…</string>
+    <string name="signin_code_waiting">Waiting for approval…</string>
+    <string name="signin_code_open">Open the link page</string>
+    <string name="signin_code_back">Sign in with the browser instead</string>
+    <string name="signin_wrong_state">That sign-in didn\'t come from this app. Try again.</string>
+    <string name="signin_failed">Couldn\'t sign in.</string>
+
+    <!-- The header and the account menu -->
+    <string name="shell_home_link">Matinee home</string>
+    <string name="shell_account">Account: %1$s</string>
+    <string name="shell_settings">Settings</string>
+    <string name="shell_sign_out">Sign out</string>
+
+    <!-- Home -->
+    <string name="home_load_failed">Couldn\'t load your libraries</string>
+    <string name="browse_continue_watching">Continue watching</string>
+    <string name="browse_next_up">Next up</string>
+    <string name="browse_recently_added">Recently added in %1$s</string>
+    <string name="browse_empty_shelf">Nothing here yet.</string>
+    <string name="browse_home_no_libraries">No libraries yet</string>
+    <string name="browse_home_no_libraries_admin">Add a folder of videos on this server to start watching.</string>
+    <string name="browse_home_no_libraries_user">An admin hasn\'t added any libraries yet.</string>
+
+    <!-- Genres and studios -->
+    <string name="browse_genre">Genre</string>
+    <string name="browse_studio">Studio</string>
+    <string name="browse_genre_empty">Nothing in this genre</string>
+    <string name="browse_studio_empty">Nothing from this studio</string>
+    <string name="browse_kind_all">All</string>
+    <string name="browse_kind_movie">Movies</string>
+    <string name="browse_kind_show">Shows</string>
+    <plurals name="browse_title_count">
+        <item quantity="one">%1$d title</item>
+        <item quantity="other">%1$d titles</item>
+    </plurals>
+
+    <!-- A library -->
+    <string name="library_search_titles">Search titles</string>
+    <string name="library_search_movies">Search movies</string>
+    <string name="library_search_shows">Search shows</string>
+    <string name="library_clear_search">Clear search</string>
+    <string name="library_no_match_movies">No movies match “%1$s”</string>
+    <string name="library_no_match_shows">No shows match “%1$s”</string>
+    <string name="library_no_filter_match_movies">No movies match these filters</string>
+    <string name="library_no_filter_match_shows">No shows match these filters</string>
+    <string name="library_none_movies">No movies found</string>
+    <string name="library_none_shows">No shows found</string>
+    <string name="library_sort">Sort</string>
+    <string name="library_sort_name">Name</string>
+    <string name="library_sort_recent">Recently added</string>
+    <string name="library_sort_year">Year</string>
+    <string name="library_filter">Filter</string>
+    <string name="library_genre">Genre</string>
+    <string name="library_any_genre">Any genre</string>
+
+    <!-- Names and details of files -->
+    <string name="media_season">Season %1$d</string>
+    <string name="media_specials">Specials</string>
+    <string name="media_other_files">Other files</string>
+    <string name="media_episode">Episode %1$d</string>
+    <string name="media_special">Special %1$d</string>
+    <string name="media_episode_code">S%1$d, E%2$d</string>
+    <string name="media_code_title">%1$s: %2$s</string>
+    <string name="media_show_code_title">%1$s, %2$s: %3$s</string>
+    <string name="media_time_left">%1$d min left</string>
+    <string name="media_watched">Watched</string>
+    <string name="media_play_named">Play %1$s</string>
+    <string name="media_resume_named">Resume %1$s</string>
+    <string name="media_no_files">%1$s has no files to play</string>
+    <string name="media_play_failed">Couldn\'t play %1$s</string>
+    <string name="media_mark_watched">Mark watched</string>
+    <string name="media_mark_unwatched">Mark unwatched</string>
+    <string name="media_mark_all_watched">Mark all watched</string>
+    <string name="media_mark_all_unwatched">Mark all unwatched</string>
+    <string name="media_add_favorite">Add to favorites</string>
+    <string name="media_remove_favorite">Remove from favorites</string>
+    <string name="media_favorite_failed">Couldn\'t change your favorites</string>
+    <string name="media_mark_watched_failed">Couldn\'t mark as watched</string>
+    <string name="media_mark_unwatched_failed">Couldn\'t mark as unwatched</string>
+    <string name="media_hero_show_slide">Show slide %1$d</string>
+    <string name="media_hero_rated">Rated</string>
+    <string name="media_hero_play">Play</string>
+    <string name="media_hero_resume">Resume</string>
+    <string name="media_hero_episodes">Episodes</string>
+    <string name="media_hero_details">Details</string>
+    <plurals name="media_episode_count">
+        <item quantity="one">%1$d episode</item>
+        <item quantity="other">%1$d episodes</item>
+    </plurals>
+    <plurals name="media_new_episodes">
+        <item quantity="one">%1$d new episode</item>
+        <item quantity="other">%1$d new episodes</item>
+    </plurals>
+    <plurals name="media_audio_tracks">
+        <item quantity="one">%1$d audio track</item>
+        <item quantity="other">%1$d audio tracks</item>
+    </plurals>
+    <plurals name="media_subtitles">
+        <item quantity="one">%1$d subtitle</item>
+        <item quantity="other">%1$d subtitles</item>
+    </plurals>
+
+    <string name="format_minutes">%1$dm</string>
+    <string name="format_hours">%1$dh</string>
+    <string name="format_hours_minutes">%1$dh %2$dm</string>
+
+    <!-- A card\'s long-press menu -->
+    <string name="actions_play_from_start">Play from the start</string>
+    <string name="actions_episode_details">Episode details</string>
+    <string name="actions_go_to_show">Go to %1$s</string>
+
+    <!-- Titles, seasons, and episodes -->
+    <string name="title_play">Play</string>
+    <string name="title_resume">Resume</string>
+    <string name="title_more_actions">More actions</string>
+    <string name="title_more">More</string>
+    <string name="title_less">Less</string>
+    <string name="title_load_error">Couldn\'t load this title</string>
+    <string name="title_cast">Cast</string>
+    <string name="title_episodes">Episodes</string>
+    <string name="title_episodes_error">Couldn\'t load the episodes. %1$s</string>
+    <string name="title_episodes_coded_name">%1$s: %2$s</string>
+    <string name="title_next_up_continue">Continue watching</string>
+    <string name="title_next_up_next">Next up</string>
+    <string name="title_seasons">Seasons</string>
+    <string name="title_seasons_more">More seasons</string>
+    <string name="title_season_of">%1$s: %2$s</string>
+    <string name="title_season_show_error">Couldn\'t load this show</string>
+    <string name="title_season_missing">%1$s has no such season</string>
+    <plurals name="title_season_watched_count">
+        <item quantity="one">%1$d watched</item>
+        <item quantity="other">%1$d watched</item>
+    </plurals>
+    <string name="title_episode_load_error">Couldn\'t load this episode</string>
+    <string name="title_episode_more_from">More from %1$s</string>
+    <string name="title_episode_specials">Specials</string>
+    <string name="title_episode_season">Season %1$d</string>
+    <string name="title_episode_number">Episode %1$d</string>
+
+    <!-- People -->
+    <string name="person_load_failed">Couldn\'t load this person</string>
+    <plurals name="people_credit_creator">
+        <item quantity="one">Creator</item>
+        <item quantity="other">Creators</item>
+    </plurals>
+    <plurals name="people_credit_director">
+        <item quantity="one">Director</item>
+        <item quantity="other">Directors</item>
+    </plurals>
+    <plurals name="people_credit_writer">
+        <item quantity="one">Writer</item>
+        <item quantity="other">Writers</item>
+    </plurals>
+    <plurals name="people_credit_actor">
+        <item quantity="one">Actor</item>
+        <item quantity="other">Cast</item>
+    </plurals>
+    <plurals name="people_studio">
+        <item quantity="one">Studio</item>
+        <item quantity="other">Studios</item>
+    </plurals>
+
+    <!-- Search -->
+    <string name="search_title">Search</string>
+    <string name="search_field">Search movies, shows, people, and more</string>
+    <string name="search_clear">Clear search</string>
+    <string name="search_intro">Find movies, shows, cast and crew, genres, and studios.</string>
+    <string name="search_failed">The search didn\'t go through. Try again in a moment.</string>
+    <string name="search_no_match">Nothing matches “%1$s”</string>
+    <string name="search_no_match_hint">Check the spelling, or try part of the name.</string>
+    <string name="search_searching">Searching…</string>
+    <string name="search_titles_heading">Titles</string>
+    <string name="search_section_cast">Cast &amp; crew</string>
+    <string name="search_section_genres">Genres</string>
+    <string name="search_section_studios">Studios</string>
+
+    <!-- Settings -->
+    <string name="playback_languages_title">Languages</string>
+    <string name="playback_languages_description">Synced to your account.</string>
+    <string name="playback_audio_title">Audio</string>
+    <string name="playback_audio_description">Falls back to the file\'s default.</string>
+    <string name="playback_audio_file_default">The file\'s default</string>
+    <string name="playback_audio_original">Original language</string>
+    <string name="playback_subtitles_title">Subtitles</string>
+    <string name="playback_subtitles_mode_default">As the file says</string>
+    <string name="playback_subtitles_mode_always">Always</string>
+    <string name="playback_subtitles_mode_foreign">With foreign audio</string>
+    <string name="playback_subtitles_mode_forced">Forced only</string>
+    <string name="playback_subtitles_mode_off">Off</string>
+    <string name="playback_subtitles_language">Subtitle language</string>
+    <string name="playback_subtitles_device_language">This device\'s (%1$s)</string>
+    <string name="playback_subtitles_remember">Remember my picks</string>
+    <string name="playback_subtitles_remember_description">Subtitles you pick in the player carry over to the next video.</string>
+    <string name="playback_device_title">This device</string>
+    <string name="playback_device_description">Saved on this device only.</string>
+    <string name="playback_quality_title">Quality</string>
+    <string name="playback_quality_description">What videos start in.</string>
+    <string name="playback_quality_preset">%1$dp, %2$s</string>
+    <string name="account_sessions_title">Sessions</string>
+    <string name="account_sessions_description">Browsers and apps signed in to your account.</string>
+    <string name="account_sessions_load_failed">Couldn\'t load your sessions. %1$s</string>
+    <string name="account_sessions_sign_out_failed">Couldn\'t sign out that session</string>
+    <string name="account_sessions_sign_out_named">Sign out %1$s</string>
+    <string name="account_sessions_this_device">This device</string>
+    <string name="account_sessions_signed_in">Signed in %1$s</string>
+    <string name="account_device_app">%1$s app</string>
+    <string name="account_device_browser">Browser</string>
+    <string name="settings_server">Server</string>
+    <string name="settings_version">Matinee for Android %1$s</string>
+
+    <!-- The player -->
+    <string name="player_load_failed">Couldn\'t load this title</string>
+    <string name="player_back">Back</string>
+    <string name="player_play">Play</string>
+    <string name="player_pause">Pause</string>
+    <string name="player_skip_back">Back %1$d seconds</string>
+    <string name="player_skip_forward">Forward %1$d seconds</string>
+    <string name="player_ends_at">Ends at %1$s</string>
+    <string name="player_menu_audio">Audio</string>
+    <string name="player_menu_subtitles">Subtitles</string>
+    <string name="player_menu_settings">Settings</string>
+    <string name="player_track_unnamed">Track %1$d</string>
+    <string name="player_track_unknown_language">Unknown language</string>
+    <string name="player_track_with_title">%1$s (%2$s)</string>
+    <string name="player_audio_no_tracks">This file has no audio tracks</string>
+    <string name="player_subtitles_off">Off</string>
+    <string name="player_subtitles_forced">Forced</string>
+    <string name="player_subtitles_burned_in">Burned in</string>
+    <string name="player_quality">Quality</string>
+    <string name="player_quality_original">Original</string>
+    <string name="player_speed">Speed</string>
+    <string name="player_speed_normal">Normal</string>
+    <string name="player_speed_rate">%1$s×</string>
+    <string name="player_bitrate_mbps">%1$d Mbps</string>
+    <string name="player_via_direct_play">Direct play</string>
+    <string name="player_via_direct_stream">Direct stream</string>
+    <string name="player_via_transcode">Transcoding to %1$s, %2$s</string>
+    <string name="player_via_burn_in">%1$s, subtitles burned in</string>
+    <string name="player_error_lost">Couldn\'t play this video</string>
+    <string name="player_error_subtitles">Couldn\'t load subtitles. Pick another track or turn them off.</string>
+    <string name="player_error_save_preferences">Couldn\'t save your playback preferences</string>
+    <string name="player_up_next">Up next</string>
+    <string name="player_up_next_in">Playing in %1$d</string>
+    <string name="player_up_next_cancel">Cancel</string>
+</resources>

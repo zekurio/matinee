@@ -1,0 +1,240 @@
+package io.github.zekurio.matinee.ui.browse
+
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.unit.dp
+import io.github.zekurio.matinee.R
+import io.github.zekurio.matinee.api.Library
+import io.github.zekurio.matinee.api.TitleSort
+import io.github.zekurio.matinee.ui.AppHeader
+import io.github.zekurio.matinee.ui.Load
+import io.github.zekurio.matinee.ui.LibraryRoute
+import io.github.zekurio.matinee.ui.components.Chip
+import io.github.zekurio.matinee.ui.components.Gap
+import io.github.zekurio.matinee.ui.components.Gutter
+import io.github.zekurio.matinee.ui.components.Lucide
+import io.github.zekurio.matinee.ui.components.LucideIcon
+import io.github.zekurio.matinee.ui.components.MatineeTextField
+import io.github.zekurio.matinee.ui.components.RoundIconButton
+import io.github.zekurio.matinee.ui.home.LibraryChips
+import io.github.zekurio.matinee.ui.rememberLoader
+import io.github.zekurio.matinee.ui.theme.Palette
+import kotlinx.coroutines.delay
+
+@Composable
+fun LibraryScreen(route: LibraryRoute) {
+    val libraries = rememberLoader("libraries") { libraries() }
+    val all = (libraries.state as? Load.Ready)?.value.orEmpty()
+    val library = all.firstOrNull { it.id == route.id }
+    var sort by rememberSaveable { mutableStateOf(route.sort ?: TitleSort.NAME) }
+    var genre by rememberSaveable { mutableStateOf<String?>(null) }
+    var query by rememberSaveable { mutableStateOf("") }
+    var searching by rememberSaveable { mutableStateOf(false) }
+    // Waits for a pause in typing before asking the server.
+    var settled by rememberSaveable { mutableStateOf("") }
+    LaunchedEffect(query) {
+        delay(250)
+        settled = query.trim()
+    }
+    val pages = rememberTitlePages("titles-${route.id}-$sort-$genre-$settled") { offset, limit ->
+        titles(route.id, sort = sort, query = settled.ifEmpty { null }, genre = genre, limit = limit, offset = offset)
+    }
+    val shows = library?.kind == "shows"
+
+    Column(Modifier.fillMaxSize()) {
+        AppHeader()
+        PosterGrid(
+            pages,
+            detail = { title ->
+                if (sort == TitleSort.RECENT && title.isShow) null else title.year?.toString()
+            },
+            empty = {
+                Text(
+                    when {
+                        settled.isNotEmpty() -> stringResource(if (shows) R.string.library_no_match_shows else R.string.library_no_match_movies, settled)
+                        genre != null -> stringResource(if (shows) R.string.library_no_filter_match_shows else R.string.library_no_filter_match_movies)
+                        else -> stringResource(if (shows) R.string.library_none_shows else R.string.library_none_movies)
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Palette.Muted,
+                    modifier = Modifier.padding(vertical = 48.dp),
+                )
+            },
+        ) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                Column(Modifier.padding(bottom = 4.dp)) {
+                    if (searching) {
+                        SearchRow(
+                            query = query,
+                            placeholder = stringResource(if (shows) R.string.library_search_shows else R.string.library_search_movies),
+                            onQuery = { query = it },
+                            onClose = {
+                                query = ""
+                                searching = false
+                            },
+                        )
+                    } else {
+                        Toolbar(
+                            libraries = all,
+                            library = library,
+                            sort = sort,
+                            genre = genre,
+                            onSearch = { searching = true },
+                            onSort = { sort = it },
+                            onGenre = { genre = it },
+                        )
+                    }
+                    if (genre != null) {
+                        Gap(10.dp)
+                        Chip(genre.orEmpty(), selected = true, trailingIcon = Lucide.X, onClick = { genre = null })
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SearchRow(query: String, placeholder: String, onQuery: (String) -> Unit, onClose: () -> Unit) {
+    val focus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { focus.requestFocus() }
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        MatineeTextField(
+            value = query,
+            onValueChange = onQuery,
+            placeholder = placeholder,
+            leadingIcon = Lucide.Search,
+            modifier = Modifier.weight(1f).focusRequester(focus),
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            keyboardActions = KeyboardActions(onSearch = {}),
+        )
+        RoundIconButton(Lucide.X, stringResource(R.string.library_clear_search), onClose, background = Color.Transparent)
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun Toolbar(
+    libraries: List<Library>,
+    library: Library?,
+    sort: String,
+    genre: String?,
+    onSearch: () -> Unit,
+    onSort: (String) -> Unit,
+    onGenre: (String?) -> Unit,
+) {
+    var sorting by remember { mutableStateOf(false) }
+    var filtering by remember { mutableStateOf(false) }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        // The chips run to the page edges on the left; the grid's gutter pads the rest.
+        Box(Modifier.weight(1f).padding(end = 4.dp)) {
+            LibraryChips(libraries, current = library?.id, contentPadding = PaddingValues(0.dp))
+        }
+        RoundIconButton(Lucide.Search, stringResource(R.string.library_search_titles), onSearch, background = Color.Transparent)
+        RoundIconButton(
+            Lucide.ListFilter,
+            stringResource(R.string.library_filter),
+            { filtering = true },
+            background = Color.Transparent,
+            tint = if (genre != null) Palette.Accent else Palette.Foreground,
+        )
+        Box {
+            RoundIconButton(Lucide.ArrowUpDown, stringResource(R.string.library_sort), { sorting = true }, background = Color.Transparent)
+            DropdownMenu(expanded = sorting, onDismissRequest = { sorting = false }, containerColor = Palette.Raised) {
+                listOf(
+                    TitleSort.NAME to R.string.library_sort_name,
+                    TitleSort.RECENT to R.string.library_sort_recent,
+                    TitleSort.YEAR to R.string.library_sort_year,
+                ).forEach { (value, label) ->
+                    DropdownMenuItem(
+                        text = { Text(stringResource(label)) },
+                        trailingIcon = if (value == sort) ({ LucideIcon(Lucide.Check, null, size = 16.dp) }) else null,
+                        onClick = {
+                            sorting = false
+                            onSort(value)
+                        },
+                    )
+                }
+            }
+        }
+    }
+    if (filtering && library != null) {
+        GenreSheet(library.id, genre, onPick = {
+            filtering = false
+            onGenre(it)
+        }, onDismiss = { filtering = false })
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun GenreSheet(libraryId: String, current: String?, onPick: (String?) -> Unit, onDismiss: () -> Unit) {
+    val genres = rememberLoader("genres-$libraryId") { genres(libraryId) }
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Palette.Raised) {
+        Text(
+            stringResource(R.string.library_genre),
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(horizontal = Gutter, vertical = 8.dp),
+        )
+        HorizontalDivider(color = Palette.Border)
+        val list = (genres.state as? Load.Ready)?.value.orEmpty()
+        LazyColumn(Modifier.fillMaxWidth().heightIn(max = 480.dp).navigationBarsPadding()) {
+            item {
+                GenreRow(stringResource(R.string.library_any_genre), null, current == null) { onPick(null) }
+            }
+            items(list, key = { it.name }) { facet ->
+                GenreRow(facet.name, facet.titleCount, current == facet.name) { onPick(facet.name) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun GenreRow(name: String, count: Int?, selected: Boolean, onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = Gutter, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        if (count != null) Text(count.toString(), style = MaterialTheme.typography.bodyMedium, color = Palette.Muted)
+        if (selected) {
+            Gap(12.dp)
+            LucideIcon(Lucide.Check, null, size = 18.dp, tint = Palette.Accent)
+        }
+    }
+}

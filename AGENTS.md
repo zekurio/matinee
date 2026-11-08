@@ -26,6 +26,10 @@ See README.md for setup and the auth design.
   `src/routeTree.gen.ts` is generated.
 - `brand/`: the logo and the native app icons, with the script that
   renders their PNGs and the web app's favicon. See `brand/README.md`.
+- `apps/android`: the native Android app (Kotlin, Compose, Media3), a
+  Gradle project outside the pnpm workspace. It reads the REST API, so a
+  contract change it uses also goes in `api/Models.kt`. Build it with
+  `nix develop .#android`; see its README.
 - `nix/`: the flake's package (`package.nix`) and NixOS module
   (`module.nix`), with tests in `nix/tests`. A server variable the module
   should set for people gets a typed option there; any other goes through
