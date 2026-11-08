@@ -40,6 +40,9 @@ import type { EncodeSpec } from "./hls-encode"
 
 const KEY = /^[0-9a-f]{32}$/
 const TICK_MS = 250
+// A request waiting on a segment checks for it this often itself, rather
+// than waiting up to a tick to hear that ffmpeg finished it.
+const WAIT_POLL_MS = 25
 // A player that asked for nothing in this long has left or paused.
 const VIEWER_IDLE_MS = 2 * 60_000
 // A run no player reads from stops after this.
@@ -135,6 +138,15 @@ function notify(job: Job): void {
   const waiters = [...job.waiters]
   job.waiters.clear()
   for (const wake of waiters) wake()
+}
+
+/**
+ * Resolves on the job's next change, or after a short wait and a look at
+ * the runs' playlists for segments they finished meanwhile.
+ */
+async function nextSegments(job: Job): Promise<void> {
+  await changed(job, WAIT_POLL_MS)
+  await Promise.all([...job.runs].map((run) => updateHead(job, run)))
 }
 
 /** Resolves on the job's next change, or after `ms`. */
@@ -514,7 +526,7 @@ async function waitFor(
   while (!job.done.has(segment)) {
     if (signal.aborted || Date.now() > deadline) return false
     if (!producer(job, segment)) return false
-    await changed(job, 1000)
+    await nextSegments(job)
   }
   return true
 }
@@ -589,7 +601,7 @@ export async function initPath(
         viewer.run = run
       }
     }
-    await changed(job, 1000)
+    await nextSegments(job)
   }
 }
 
