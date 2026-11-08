@@ -16,6 +16,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
@@ -34,6 +35,7 @@ import io.github.zekurio.matinee.api.TitleKind
 import io.github.zekurio.matinee.api.TitleSummary
 import io.github.zekurio.matinee.app
 import io.github.zekurio.matinee.ui.LocalNavigator
+import io.github.zekurio.matinee.ui.downloads.DownloadSheet
 import io.github.zekurio.matinee.ui.episodeCode
 import io.github.zekurio.matinee.ui.itemLabel
 import io.github.zekurio.matinee.ui.theme.Palette
@@ -48,10 +50,16 @@ sealed interface ActionTarget {
     data class Title(val title: TitleSummary) : ActionTarget
 }
 
-/** Opens the actions sheet; the sheet itself lives once at the app's root. */
-class Actions {
+/**
+ * Opens the actions sheet; the sheet itself lives once at the app's root.
+ * What its items start runs in [scope], which outlives the sheet.
+ */
+class Actions(val scope: CoroutineScope) {
     var target by mutableStateOf<ActionTarget?>(null)
         internal set
+
+    /** The file whose download sheet is open. */
+    var download by mutableStateOf<MediaItem?>(null)
 
     fun item(item: MediaItem) {
         target = ActionTarget.Item(item)
@@ -62,7 +70,7 @@ class Actions {
     }
 }
 
-val LocalActions = staticCompositionLocalOf { Actions() }
+val LocalActions = staticCompositionLocalOf<Actions> { error("no actions") }
 
 /** Messages that pop up at the bottom, like a failed mark. */
 val LocalSnackbar = staticCompositionLocalOf { SnackbarHostState() }
@@ -81,6 +89,7 @@ fun CoroutineScope.launchShowing(snackbar: SnackbarHostState, failure: String, b
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ActionsSheet(actions: Actions) {
+    actions.download?.let { item -> DownloadSheet(item) { actions.download = null } }
     val target = actions.target ?: return
     val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
@@ -133,7 +142,8 @@ private fun ItemActions(item: MediaItem, dismiss: () -> Unit) {
     val snackbar = LocalSnackbar.current
     val res = LocalResources.current
     val viewer = LocalContext.current.app.viewer
-    val scope = rememberCoroutineScope()
+    // The sheet goes before the request ends, so it runs in the app's scope.
+    val scope = LocalActions.current.scope
     val label = itemLabel(item, res)
     val code = episodeCode(item, res)
     val watched = viewer.isWatched(item)
@@ -166,6 +176,7 @@ private fun ItemActions(item: MediaItem, dismiss: () -> Unit) {
         dismiss()
         scope.launchShowing(snackbar, favoriteFailure) { viewer.setFavorite(api, item, !favorite) }
     }
+    DownloadItem(item, dismiss)
     val title = item.title
     if (title != null && title.kind == TitleKind.SHOW) {
         SheetItem(Lucide.Info, stringResource(R.string.actions_episode_details)) {
@@ -190,7 +201,8 @@ private fun TitleActions(title: TitleSummary, dismiss: () -> Unit) {
     val nav = LocalNavigator.current
     val snackbar = LocalSnackbar.current
     val viewer = LocalContext.current.app.viewer
-    val scope = rememberCoroutineScope()
+    // The sheet goes before the request ends, so it runs in the app's scope.
+    val scope = LocalActions.current.scope
     val watched = viewer.isWatched(title)
     val favorite = viewer.isFavorite(title)
     SheetHeader(title.name, title.year?.toString())
@@ -226,8 +238,38 @@ private fun TitleActions(title: TitleSummary, dismiss: () -> Unit) {
         dismiss()
         scope.launchShowing(snackbar, favoriteFailure) { viewer.setFavorite(api, title, !favorite) }
     }
+    if (title.kind == TitleKind.MOVIE) {
+        val actions = LocalActions.current
+        SheetItem(Lucide.Download, stringResource(R.string.downloads_action)) {
+            dismiss()
+            scope.launchShowing(snackbar, playFailure) {
+                val next = api.title(title.id).next
+                if (next == null) snackbar.showSnackbar(noFiles) else actions.download = next
+            }
+        }
+    }
     SheetItem(Lucide.Info, stringResource(if (title.kind == TitleKind.SHOW) R.string.media_hero_episodes else R.string.media_hero_details)) {
         dismiss()
         nav.title(title)
+    }
+}
+
+/** Download a file, or take back its download. */
+@Composable
+private fun DownloadItem(item: MediaItem, dismiss: () -> Unit) {
+    val actions = LocalActions.current
+    val context = LocalContext.current
+    val downloads = context.app.downloads
+    val stored by downloads.store.items.collectAsState()
+    if (stored[item.id] == null) {
+        SheetItem(Lucide.Download, stringResource(R.string.downloads_action)) {
+            dismiss()
+            actions.download = item
+        }
+    } else {
+        SheetItem(Lucide.Trash, stringResource(R.string.downloads_remove), destructive = true) {
+            dismiss()
+            downloads.remove(item.id, context.app.session.api)
+        }
     }
 }

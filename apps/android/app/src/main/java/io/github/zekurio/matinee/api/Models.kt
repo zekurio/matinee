@@ -482,3 +482,68 @@ internal data class AppDeviceBody(val name: String?, val platform: String)
 
 @Serializable
 internal data class DeviceCodeBody(val deviceCode: String)
+
+// Downloads, from packages/contracts/src/downloads.ts.
+
+/** The video of a download: `copy` keeps it, `encode` makes it fit [maxHeight] at about [bitrate]. */
+@Serializable
+data class DownloadVideoSpec(
+    val mode: String,
+    val codec: String? = null,
+    val maxHeight: Int? = null,
+    val bitrate: Int? = null,
+)
+
+/** One audio track of a download, by its index from `media.audio`, kept or converted. */
+@Serializable
+data class DownloadAudioSpec(
+    val index: Int,
+    val mode: String,
+    val codec: String? = null,
+    val channels: Int? = null,
+)
+
+/** What a download holds. Audio goes in the order listed; the first is the default. */
+@Serializable
+data class DownloadSpec(val video: DownloadVideoSpec, val audio: List<DownloadAudioSpec>)
+
+@Serializable
+data class DownloadPlanVideo(
+    val mode: String,
+    val codec: String,
+    val width: Int,
+    val height: Int,
+    val bitrate: Long? = null,
+)
+
+@Serializable
+data class DownloadPlanAudio(
+    val index: Int,
+    val label: String,
+    val language: String? = null,
+    val mode: String,
+    val codec: String,
+    val channels: Int? = null,
+)
+
+/** What a download will hold, as the server worked it out. */
+@Serializable
+data class DownloadPlan(
+    val durationSeconds: Double,
+    val estimatedBytes: Long,
+    val segmentSeconds: Double = 6.0,
+    val video: DownloadPlanVideo,
+    val audio: List<DownloadPlanAudio> = emptyList(),
+)
+
+/** A download `downloads.start` set up, which the app then fetches in segments. */
+@Serializable
+data class ServerDownload(
+    val id: String,
+    val itemId: String,
+    val fileName: String,
+    val plan: DownloadPlan,
+)
+
+@Serializable
+internal data class DownloadSpecBody(val spec: DownloadSpec)

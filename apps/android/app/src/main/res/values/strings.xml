@@ -273,4 +273,39 @@
     <string name="player_up_next">Up next</string>
     <string name="player_up_next_in">Playing in %1$d</string>
     <string name="player_up_next_cancel">Cancel</string>
+
+    <!-- Downloads -->
+    <string name="downloads_title">Downloads</string>
+    <string name="downloads_action">Download…</string>
+    <string name="downloads_sheet_title">Download</string>
+    <string name="downloads_choice_device">Made for this device</string>
+    <string name="downloads_choice_preset">%1$dp, %2$s Mbps</string>
+    <string name="downloads_choice_original">Original file</string>
+    <string name="downloads_choice_unavailable">The server can\'t make this version</string>
+    <string name="downloads_original_may_not_play">May not play on this device</string>
+    <string name="downloads_note_unmetered">Downloads wait for Wi-Fi. Change that in Settings.</string>
+    <string name="downloads_note_any">Downloads use any connection, mobile data too.</string>
+    <string name="downloads_start">Download</string>
+    <string name="downloads_failed">Couldn\'t get this file\'s tracks</string>
+    <string name="downloads_total">%1$s on this device</string>
+    <string name="downloads_empty">Nothing downloaded yet</string>
+    <string name="downloads_empty_hint">Download a movie or episode from its menu to watch it offline.</string>
+    <string name="downloads_pause">Pause</string>
+    <string name="downloads_resume">Resume</string>
+    <string name="downloads_remove">Remove download</string>
+    <string name="downloads_state_done">Downloaded</string>
+    <string name="downloads_state_running">Downloading</string>
+    <string name="downloads_of">%1$s of %2$s</string>
+    <string name="downloads_state_paused">Paused</string>
+    <string name="downloads_state_failed">Failed: %1$s</string>
+    <string name="downloads_state_retrying">Trying again soon: %1$s</string>
+    <string name="downloads_state_waiting">Waiting</string>
+    <string name="downloads_state_waiting_unmetered">Waiting for Wi-Fi</string>
+    <string name="downloads_channel">Downloads</string>
+    <string name="downloads_watch_offline">Watch downloads</string>
+    <string name="downloads_offline">Offline</string>
+    <string name="downloads_reconnect">Connect to the server again</string>
+    <string name="downloads_unmetered">Download on Wi-Fi only</string>
+    <string name="downloads_unmetered_description">Wait for Wi-Fi or another connection without a data limit.</string>
+    <string name="player_via_download">Playing the download</string>
 </resources>

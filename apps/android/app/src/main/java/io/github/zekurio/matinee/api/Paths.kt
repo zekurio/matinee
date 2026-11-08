@@ -71,6 +71,13 @@ class Paths(private val base: HttpUrl) {
     fun subtitle(itemId: String, trackId: String): String =
         url("api", "media", itemId, "subtitles", trackId).build().toString()
 
+    /** A download's init segment, the MP4 header its segments follow. */
+    fun downloadInit(downloadId: String): String = url("api", "downloads", downloadId, "init.mp4").build().toString()
+
+    /** One segment of a download, from 0 on. 204 past the end. */
+    fun downloadSegment(downloadId: String, segment: Int): String =
+        url("api", "downloads", downloadId, "$segment.m4s").build().toString()
+
     fun trickplayTile(itemId: String, key: String, tile: Int): String =
         url("api", "media", itemId, "trickplay", key, "$tile.jpg").build().toString()
 

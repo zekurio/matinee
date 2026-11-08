@@ -42,6 +42,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.BuildConfig
 import io.github.zekurio.matinee.R
+import io.github.zekurio.matinee.app
 import io.github.zekurio.matinee.api.AccountSession
 import io.github.zekurio.matinee.api.ORIGINAL_LANGUAGE
 import io.github.zekurio.matinee.api.PlaybackPreferences
@@ -174,6 +175,22 @@ fun SettingsScreen(session: Session) {
                             val picked = it
                             prefs.quality = picked
                             quality = picked
+                        }
+                    }
+                }
+            }
+            item {
+                val downloads = context.app.downloads
+                var unmetered by remember { mutableStateOf(downloads.unmeteredOnly) }
+                Section(stringResource(R.string.downloads_title), null) {
+                    Panel {
+                        SwitchRow(
+                            stringResource(R.string.downloads_unmetered),
+                            stringResource(R.string.downloads_unmetered_description),
+                            unmetered,
+                        ) {
+                            unmetered = it
+                            downloads.unmeteredOnly = it
                         }
                     }
                 }

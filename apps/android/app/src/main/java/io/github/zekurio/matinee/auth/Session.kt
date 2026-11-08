@@ -10,6 +10,7 @@ import io.github.zekurio.matinee.api.ApiException
 import io.github.zekurio.matinee.api.AppSession
 import io.github.zekurio.matinee.api.AuthConfig
 import io.github.zekurio.matinee.api.MatineeApi
+import io.github.zekurio.matinee.api.MatineeJson
 import io.github.zekurio.matinee.api.User
 import java.io.IOException
 import java.util.concurrent.TimeUnit
@@ -36,6 +37,9 @@ sealed interface AuthState {
     data class SignedOut(val server: String, val config: AuthConfig) : AuthState
 
     data class SignedIn(val server: String, val user: User) : AuthState
+
+    /** The server is away, and the app shows what's downloaded. */
+    data class Offline(val server: String, val user: User) : AuthState
 }
 
 /**
@@ -99,6 +103,7 @@ class Session(context: Context) {
             _state.value = try {
                 val user = if (token != null) client.session() else null
                 if (user != null) {
+                    cacheUser(user)
                     AuthState.SignedIn(server.display, user)
                 } else {
                     clearToken()
@@ -180,13 +185,32 @@ class Session(context: Context) {
         val server = origin ?: return
         token = session.token
         store.token = session.token
+        cacheUser(session.user)
         _state.value = AuthState.SignedIn(server.display, session.user)
     }
 
     /** The server changed the account, such as its playback preferences. */
     fun updateUser(user: User) {
         val current = _state.value as? AuthState.SignedIn ?: return
+        cacheUser(user)
         _state.value = current.copy(user = user)
+    }
+
+    private fun cacheUser(user: User) {
+        store.lastUser = MatineeJson.encodeToString(User.serializer(), user)
+    }
+
+    /** The account last signed in here, while its session still stands. */
+    val lastUser: User?
+        get() = if (token == null) null else store.lastUser?.let {
+            runCatching { MatineeJson.decodeFromString(User.serializer(), it) }.getOrNull()
+        }
+
+    /** Watch downloads while the server doesn't answer. [start] tries the server again. */
+    fun goOffline() {
+        val server = origin ?: return
+        val user = lastUser ?: return
+        _state.value = AuthState.Offline(server.display, user)
     }
 
     fun signOut() {
@@ -201,6 +225,7 @@ class Session(context: Context) {
     private fun clearToken() {
         token = null
         store.token = null
+        store.lastUser = null
     }
 
     companion object {

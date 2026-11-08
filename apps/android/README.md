@@ -36,11 +36,32 @@ web app's catalogs where the words are the same.
   into an encode. It shows trickplay frames while scrubbing, counts down to
   the next episode, reports progress, and keeps playing in picture in
   picture.
+- Downloads for watching offline, from a file's menu: a version the
+  server makes for this device (the video kept when the phone decodes it,
+  else encoded to H.264 at a picked size, and the preferred audio track kept
+  or converted to stereo), or the file as it is. WorkManager fetches them,
+  on Wi-Fi only unless Settings says otherwise, and picks up after a break:
+  the original with a byte range, a version from the first segment it
+  doesn't have, as the README's Downloads section describes. Subtitles in
+  the languages you read or hear save beside the video. A downloaded file
+  plays from the phone. When the server doesn't answer, the app offers the
+  downloads, and where you got to in them goes to the server once it's back.
 - Settings: the account's language preferences, this device's quality,
-  sessions, and the server.
+  downloads, sessions, and the server.
 
-Not built yet: downloads, Chromecast, a media session for the lock screen,
-and a TV layout of its own.
+Not built yet: Chromecast, a media session for the lock screen, downloads
+of a whole season, and a TV layout of its own. On a TV, the remote plays
+and pauses, and left and right skip while the controls are away.
+
+## Status
+
+Written against the server on `main` as of the downloads and image
+editor commits, and checked on an emulator up to the player: connecting,
+signing in with a code, Home, title, season, and episode pages, playback
+as a stream with converted audio, seeking, and subtitles. Downloads, the
+offline mode, the remote's keys, and the last player fixes (the thin seek
+bar, the banner's swipe hold, light status bar icons) are written but not
+built or tried yet.
 
 ## Building
 
@@ -75,6 +96,8 @@ key without one.
 app/src/main/java/io/github/zekurio/matinee/
   api/        The REST API under /api/v1 and the plain routes from paths.ts
   auth/       The server, the session and its token, browser sign-in
+  downloads/  The download list, the WorkManager job that fetches them, and
+              progress made offline
   ui/         Compose screens: home, browse, title, search, settings, player
   ui/player/  Source choice, track picks, the WebVTT renderer, and the player
 scripts/

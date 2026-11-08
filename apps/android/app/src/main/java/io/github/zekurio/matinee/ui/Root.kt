@@ -13,16 +13,20 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
+import io.github.zekurio.matinee.app
 import io.github.zekurio.matinee.auth.AuthState
 import io.github.zekurio.matinee.auth.Session
 import io.github.zekurio.matinee.ui.components.ButtonLook
 import io.github.zekurio.matinee.ui.components.ErrorBox
 import io.github.zekurio.matinee.ui.components.Gap
 import io.github.zekurio.matinee.ui.components.LoadingBox
+import io.github.zekurio.matinee.ui.components.Lucide
+import io.github.zekurio.matinee.ui.components.LucideIcon
 import io.github.zekurio.matinee.ui.components.MatineeButton
 import io.github.zekurio.matinee.ui.signin.ConnectScreen
 import io.github.zekurio.matinee.ui.signin.SignInScreen
@@ -55,6 +59,18 @@ fun MatineeRoot(session: Session, signInError: MutableStateFlow<String?>) {
                     onRetry = session::start,
                     modifier = Modifier.weight(1f),
                 )
+                val downloads by LocalContext.current.app.downloads.store.items.collectAsState()
+                if (downloads.isNotEmpty() && session.lastUser != null) {
+                    MatineeButton(
+                        onClick = session::goOffline,
+                        look = ButtonLook.Outline,
+                        modifier = Modifier.align(Alignment.CenterHorizontally),
+                    ) {
+                        LucideIcon(Lucide.Download, null, size = 18.dp)
+                        Text(stringResource(R.string.downloads_watch_offline))
+                    }
+                    Gap(8.dp)
+                }
                 MatineeButton(
                     onClick = session::forgetServer,
                     look = ButtonLook.Ghost,
@@ -67,6 +83,9 @@ fun MatineeRoot(session: Session, signInError: MutableStateFlow<String?>) {
             is AuthState.SignedOut -> SignInScreen(session, current, signInError)
             // A new account starts the screens, and what they keep, afresh.
             is AuthState.SignedIn -> key(current.user.id, current.server) { SignedInApp(session, current.user) }
+            is AuthState.Offline -> key(current.user.id, current.server, "offline") {
+                SignedInApp(session, current.user, offline = true)
+            }
         }
     }
 }

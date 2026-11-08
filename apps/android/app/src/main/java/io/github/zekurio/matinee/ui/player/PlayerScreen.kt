@@ -15,6 +15,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -54,6 +55,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -61,6 +64,11 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.ContentScale
@@ -101,8 +109,10 @@ import io.github.zekurio.matinee.api.PlaybackPreferences
 import io.github.zekurio.matinee.api.SubtitleTrack
 import io.github.zekurio.matinee.api.TitleKind
 import io.github.zekurio.matinee.app
+import io.github.zekurio.matinee.downloads.OfflineItem
 import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.LocalNavigator
+import io.github.zekurio.matinee.ui.LocalOffline
 import io.github.zekurio.matinee.ui.LocalUser
 import io.github.zekurio.matinee.ui.components.ButtonLook
 import io.github.zekurio.matinee.ui.components.ErrorBox
@@ -119,6 +129,7 @@ import io.github.zekurio.matinee.ui.rememberLoader
 import io.github.zekurio.matinee.ui.settings.languageName
 import io.github.zekurio.matinee.ui.settings.qualityLabel
 import io.github.zekurio.matinee.ui.theme.Palette
+import java.io.File
 import java.io.IOException
 import java.text.DateFormat
 import java.util.Date
@@ -130,6 +141,8 @@ private class PlayerData(
     val audio: List<AudioTrack>,
     val subtitles: List<SubtitleTrack>,
     val options: PlaybackOptions,
+    /** The download, which plays instead of the server's file. */
+    val local: OfflineItem? = null,
 )
 
 private const val SKIP_SECONDS = 10.0
@@ -147,7 +160,15 @@ private fun Context.activity(): ComponentActivity? {
 
 @Composable
 fun PlayerScreen(itemId: String, start: Double?) {
+    val downloads = LocalContext.current.app.downloads
+    val offline = LocalOffline.current
     val data = rememberLoader("player-$itemId") {
+        // A download plays from the phone. Online, the server says where the
+        // person got to, which may be past what the download remembers.
+        downloads.store.done(itemId)?.let { local ->
+            val fresh = if (offline) null else try { media(itemId) } catch (_: IOException) { null }
+            return@rememberLoader PlayerData(fresh ?: local.item, local.audio, local.subtitles.map { it.track }, PlaybackOptions(), local)
+        }
         val item = media(itemId)
         // Tracks that won't load still leave the video to play.
         val audio = try { audio(itemId) } catch (_: IOException) { emptyList() }
@@ -252,6 +273,9 @@ private fun Playback(data: PlayerData, start: Double?) {
             initialAudio = choice.preferred,
             initialSubtitle = defaultSubtitle(data.subtitles, audioLanguage, preferences),
             initialQuality = PlayerPrefs(context).quality,
+            local = data.local?.let(app.downloads.store::file),
+            localSubtitles = data.local?.subtitles.orEmpty().associate { it.track.id to File(app.downloads.store.root, it.file) },
+            pending = app.downloads.pending,
         )
     }
     DisposableEffect(controller) {
@@ -283,7 +307,36 @@ private fun Playback(data: PlayerData, start: Double?) {
         }
     }
 
-    Box(Modifier.fillMaxSize().background(Color.Black)) {
+    // Remotes, keyboards, and headsets: play and pause, and skip with left
+    // and right while the controls are away. With them showing, the D-pad
+    // moves between them.
+    val keys = remember { FocusRequester() }
+    LaunchedEffect(Unit) { runCatching { keys.requestFocus() } }
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+            .focusRequester(keys)
+            .onPreviewKeyEvent { event ->
+                if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                touched++
+                val action: (() -> Unit)? = when (event.key) {
+                    Key.MediaPlayPause, Key.Spacebar -> controller::togglePlay
+                    Key.MediaPlay -> controller.player::play
+                    Key.MediaPause -> controller.player::pause
+                    Key.MediaFastForward -> ({ controller.skip(SKIP_SECONDS) })
+                    Key.MediaRewind -> ({ controller.skip(-SKIP_SECONDS) })
+                    Key.DirectionLeft -> if (controls) null else ({ controller.skip(-SKIP_SECONDS) })
+                    Key.DirectionRight -> if (controls) null else ({ controller.skip(SKIP_SECONDS) })
+                    Key.DirectionCenter, Key.Enter, Key.DirectionUp, Key.DirectionDown ->
+                        if (controls) null else ({ controls = true })
+                    else -> null
+                }
+                action?.invoke()
+                action != null
+            }
+            .focusable(),
+    ) {
         Video(controller)
         Subtitles(controller, lifted = controls && !inPip, Modifier.align(Alignment.BottomCenter))
         // Taps show and hide the controls; a double tap on either side skips.
@@ -332,6 +385,13 @@ private fun Playback(data: PlayerData, start: Double?) {
 
     menu?.let { open ->
         PlayerMenu(open, controller, onDismiss = { menu = null })
+    }
+    // A menu's sheet is a window of its own, which brings the system bars
+    // back; they go again once it closes.
+    LaunchedEffect(menu) {
+        if (menu != null) return@LaunchedEffect
+        val window = context.activity()?.window ?: return@LaunchedEffect
+        WindowCompat.getInsetsController(window, window.decorView).hide(WindowInsetsCompat.Type.systemBars())
     }
 }
 
@@ -691,16 +751,18 @@ private fun PlayerMenu(menu: Menu, controller: PlayerController, onDismiss: () -
                 Menu.Settings -> {
                     item { MenuHeading(stringResource(R.string.player_quality)) }
                     item { MenuNote(sourceLabel(controller)) }
-                    item {
-                        MenuRow(stringResource(R.string.player_quality_original), null, selected = controller.quality == ORIGINAL_QUALITY) {
-                            controller.pickQuality(ORIGINAL_QUALITY)
-                            onDismiss()
+                    if (!controller.isLocal) {
+                        item {
+                            MenuRow(stringResource(R.string.player_quality_original), null, selected = controller.quality == ORIGINAL_QUALITY) {
+                                controller.pickQuality(ORIGINAL_QUALITY)
+                                onDismiss()
+                            }
                         }
-                    }
-                    items(QUALITIES, key = { it.id }) { quality ->
-                        MenuRow(qualityLabel(quality.id), null, selected = controller.quality == quality.id) {
-                            controller.pickQuality(quality.id)
-                            onDismiss()
+                        items(QUALITIES, key = { it.id }) { quality ->
+                            MenuRow(qualityLabel(quality.id), null, selected = controller.quality == quality.id) {
+                                controller.pickQuality(quality.id)
+                                onDismiss()
+                            }
                         }
                     }
                     item { HorizontalDivider(Modifier.padding(vertical = 8.dp), color = Palette.Border) }
@@ -777,6 +839,7 @@ private fun subtitleDetail(track: SubtitleTrack): String = listOfNotNull(
 @Composable
 private fun sourceLabel(controller: PlayerController): String = when (val source = controller.source) {
     Source.Direct -> stringResource(R.string.player_via_direct_play)
+    Source.Local -> stringResource(R.string.player_via_download)
     is Source.Stream -> stringResource(R.string.player_via_direct_stream)
     is Source.Hls -> {
         val quality = QUALITIES.firstOrNull { it.id == source.quality }

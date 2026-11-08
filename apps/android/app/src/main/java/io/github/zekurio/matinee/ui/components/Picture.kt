@@ -119,6 +119,8 @@ object Lucide {
     val ChevronRight = R.drawable.lucide_chevron_right
     val CircleAlert = R.drawable.lucide_circle_alert
     val Clock = R.drawable.lucide_clock
+    val CloudOff = R.drawable.lucide_cloud_off
+    val Download = R.drawable.lucide_download
     val Ellipsis = R.drawable.lucide_ellipsis
     val Film = R.drawable.lucide_film
     val FolderPlus = R.drawable.lucide_folder_plus
@@ -156,6 +158,7 @@ object Lucide {
     val Tv = R.drawable.lucide_tv
     val TvPlay = R.drawable.lucide_tv_minimal_play
     val UserRound = R.drawable.lucide_user_round
+    val WifiOff = R.drawable.lucide_wifi_off
     val X = R.drawable.lucide_x
 }
 

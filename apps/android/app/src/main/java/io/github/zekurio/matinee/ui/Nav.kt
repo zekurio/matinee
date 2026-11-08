@@ -37,6 +37,9 @@ data object SearchRoute
 @Serializable
 data object SettingsRoute
 
+@Serializable
+data object DownloadsRoute
+
 /** [start] is -1 to resume where the person left off. */
 @Serializable
 data class PlayerRoute(val itemId: String, val start: Double = -1.0)
@@ -81,6 +84,8 @@ class Navigator(private val controller: NavHostController) {
 
     fun settings() = controller.navigate(SettingsRoute) { launchSingleTop = true }
 
+    fun downloads() = controller.navigate(DownloadsRoute) { launchSingleTop = true }
+
     /** Play a file from where the person left off, or from [start] seconds. */
     fun play(itemId: String, start: Double? = null) = controller.navigate(PlayerRoute(itemId, start ?: -1.0)) {
         launchSingleTop = true
@@ -93,3 +98,6 @@ class Navigator(private val controller: NavHostController) {
 }
 
 val LocalNavigator = staticCompositionLocalOf<Navigator> { error("no navigator") }
+
+/** The server is away and the app shows only what's downloaded. */
+val LocalOffline = staticCompositionLocalOf { false }

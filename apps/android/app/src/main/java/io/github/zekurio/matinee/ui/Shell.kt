@@ -31,6 +31,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -55,6 +56,7 @@ import io.github.zekurio.matinee.auth.Session
 import io.github.zekurio.matinee.ui.browse.BrowseScreen
 import io.github.zekurio.matinee.ui.browse.LibraryScreen
 import io.github.zekurio.matinee.ui.browse.PersonScreen
+import io.github.zekurio.matinee.ui.downloads.DownloadsScreen
 import io.github.zekurio.matinee.ui.components.Actions
 import io.github.zekurio.matinee.ui.components.ActionsSheet
 import io.github.zekurio.matinee.ui.components.Avatar
@@ -62,6 +64,7 @@ import io.github.zekurio.matinee.ui.components.LocalActions
 import io.github.zekurio.matinee.ui.components.LocalApi
 import io.github.zekurio.matinee.ui.components.LocalSnackbar
 import io.github.zekurio.matinee.ui.components.LogoMark
+import io.github.zekurio.matinee.ui.components.LucideIcon
 import io.github.zekurio.matinee.ui.components.Lucide
 import io.github.zekurio.matinee.ui.components.RoundIconButton
 import io.github.zekurio.matinee.ui.components.SheetItem
@@ -78,10 +81,11 @@ import io.github.zekurio.matinee.ui.title.TitleScreen
 val LocalUser = staticCompositionLocalOf<User> { error("not signed in") }
 
 @Composable
-fun SignedInApp(session: Session, user: User) {
+fun SignedInApp(session: Session, user: User, offline: Boolean = false) {
     val controller = rememberNavController()
     val navigator = remember(controller) { Navigator(controller) }
-    val actions = remember { Actions() }
+    val actionScope = rememberCoroutineScope()
+    val actions = remember { Actions(actionScope) }
     val snackbar = remember { SnackbarHostState() }
     CompositionLocalProvider(
         LocalApi provides session.requireApi(),
@@ -89,11 +93,12 @@ fun SignedInApp(session: Session, user: User) {
         LocalActions provides actions,
         LocalSnackbar provides snackbar,
         LocalUser provides user,
+        LocalOffline provides offline,
     ) {
         Box(Modifier.fillMaxSize()) {
             NavHost(
                 controller,
-                startDestination = HomeRoute,
+                startDestination = if (offline) DownloadsRoute else HomeRoute,
                 enterTransition = { fadeIn() },
                 exitTransition = { fadeOut() },
             ) {
@@ -112,6 +117,7 @@ fun SignedInApp(session: Session, user: User) {
                 }
                 composable<SearchRoute> { SearchScreen() }
                 composable<SettingsRoute> { SettingsScreen(session) }
+                composable<DownloadsRoute> { DownloadsScreen() }
                 composable<PlayerRoute> {
                     val route = it.toRoute<PlayerRoute>()
                     PlayerScreen(route.itemId, route.start.takeIf { start -> start >= 0 })
@@ -141,6 +147,7 @@ fun SignedInApp(session: Session, user: User) {
 @Composable
 fun AppHeader(modifier: Modifier = Modifier, back: Boolean = true, search: Boolean = true) {
     val nav = LocalNavigator.current
+    val offline = LocalOffline.current
     val user = LocalUser.current
     val api = LocalApi.current
     var account by rememberSaveable { mutableStateOf(false) }
@@ -166,7 +173,10 @@ fun AppHeader(modifier: Modifier = Modifier, back: Boolean = true, search: Boole
                 LogoMark(Modifier.size(28.dp))
             }
             Box(Modifier.weight(1f))
-            if (search) {
+            if (offline) {
+                LucideIcon(Lucide.CloudOff, stringResource(R.string.downloads_offline), size = 20.dp, tint = Palette.Muted)
+                Box(Modifier.size(12.dp))
+            } else if (search) {
                 RoundIconButton(Lucide.Search, stringResource(R.string.search_title), nav::search, background = Color.Transparent, iconSize = 22.dp)
             }
             Box(
@@ -201,9 +211,20 @@ private fun AccountSheet(onDismiss: () -> Unit) {
                 }
             }
             HorizontalDivider(Modifier.padding(vertical = 6.dp), color = Palette.Border)
-            SheetItem(Lucide.Settings, stringResource(R.string.shell_settings)) {
-                onDismiss()
-                nav.settings()
+            if (LocalOffline.current) {
+                SheetItem(Lucide.RefreshCw, stringResource(R.string.downloads_reconnect)) {
+                    onDismiss()
+                    session.start()
+                }
+            } else {
+                SheetItem(Lucide.Download, stringResource(R.string.downloads_title)) {
+                    onDismiss()
+                    nav.downloads()
+                }
+                SheetItem(Lucide.Settings, stringResource(R.string.shell_settings)) {
+                    onDismiss()
+                    nav.settings()
+                }
             }
             HorizontalDivider(Modifier.padding(vertical = 6.dp), color = Palette.Border)
             SheetItem(Lucide.LogOut, stringResource(R.string.shell_sign_out), destructive = true) {

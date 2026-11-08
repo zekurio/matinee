@@ -10,8 +10,12 @@ import coil3.disk.directory
 import coil3.memory.MemoryCache
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.request.crossfade
+import io.github.zekurio.matinee.auth.AuthState
 import io.github.zekurio.matinee.auth.Session
+import io.github.zekurio.matinee.downloads.Downloads
 import io.github.zekurio.matinee.ui.ViewerState
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.launch
 
 class MatineeApp : Application(), SingletonImageLoader.Factory {
     lateinit var session: Session
@@ -20,9 +24,21 @@ class MatineeApp : Application(), SingletonImageLoader.Factory {
     /** Watched and favorite marks changed here, so every screen shows them at once. */
     val viewer = ViewerState()
 
+    val downloads by lazy { Downloads(this) }
+
+    private val scope = MainScope()
+
     override fun onCreate() {
         super.onCreate()
         session = Session(this)
+        downloads.restore()
+        // Once signed in with the server answering, send where the person got
+        // to in downloads they watched offline.
+        scope.launch {
+            session.state.collect { state ->
+                if (state is AuthState.SignedIn) session.api?.let { downloads.pending.flush(it) }
+            }
+        }
     }
 
     // Artwork comes through the session's client, which sends the token.

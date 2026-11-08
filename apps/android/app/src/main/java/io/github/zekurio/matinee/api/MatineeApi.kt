@@ -212,6 +212,18 @@ class MatineeApi(val base: HttpUrl, private val client: OkHttpClient) {
         }
     }.flowOn(Dispatchers.IO)
 
+    // Downloads
+
+    /** What a download with [spec] would hold, and about how big it is. Starts nothing. */
+    suspend fun downloadPlan(itemId: String, spec: DownloadSpec): DownloadPlan =
+        post("media/$itemId/download-plan", body(DownloadSpecBody(spec)))
+
+    suspend fun startDownload(itemId: String, spec: DownloadSpec): ServerDownload =
+        post("media/$itemId/downloads", body(DownloadSpecBody(spec)))
+
+    /** Stop a download and delete what the server still has of it. */
+    suspend fun removeDownload(downloadId: String) = call("DELETE", "downloads/$downloadId", null)
+
     // Home
 
     suspend fun continueWatching(limit: Int = 20): List<MediaItem> =
@@ -246,6 +258,19 @@ class MatineeApi(val base: HttpUrl, private val client: OkHttpClient) {
                 playedSeconds = playedSeconds.coerceAtLeast(0.0),
                 paused = paused,
                 closed = closed.takeIf { it },
+            ),
+        ),
+    )
+
+    /** Where the person got to while offline, without a playback session. */
+    suspend fun syncProgress(itemId: String, positionSeconds: Double, durationSeconds: Double?) = call(
+        "POST",
+        "media/$itemId/progress",
+        body(
+            ProgressBody(
+                positionSeconds = positionSeconds.coerceAtLeast(0.0),
+                durationSeconds = durationSeconds?.takeIf { it > 0 },
+                closed = true,
             ),
         ),
     )

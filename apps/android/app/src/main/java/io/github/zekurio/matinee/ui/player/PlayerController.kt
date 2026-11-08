@@ -1,6 +1,7 @@
 package io.github.zekurio.matinee.ui.player
 
 import android.content.Context
+import android.net.Uri
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableFloatStateOf
@@ -13,6 +14,7 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.Tracks
+import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
@@ -23,6 +25,9 @@ import io.github.zekurio.matinee.api.PlaybackOptions
 import io.github.zekurio.matinee.api.SubtitleTrack
 import io.github.zekurio.matinee.api.Trickplay
 import io.github.zekurio.matinee.api.await
+import io.github.zekurio.matinee.downloads.PendingProgress
+import io.github.zekurio.matinee.downloads.PendingReport
+import java.io.File
 import java.io.IOException
 import java.util.UUID
 import kotlinx.coroutines.CoroutineScope
@@ -50,6 +55,9 @@ sealed interface Source {
     data class Stream(val audio: Int, val offset: Double) : Source
 
     data class Hls(val audio: Int, val quality: String, val subtitle: String?) : Source
+
+    /** A download on the phone, which plays without the server. */
+    data object Local : Source
 }
 
 /**
@@ -68,12 +76,19 @@ class PlayerController(
     initialAudio: AudioTrack?,
     initialSubtitle: SubtitleTrack?,
     initialQuality: String,
+    /** The downloaded file, which plays instead of anything from the server. */
+    private val local: File? = null,
+    /** Subtitles saved beside the download, by track id. */
+    private val localSubtitles: Map<String, File> = emptyMap(),
+    /** Where reports that don't reach the server wait. */
+    private val pending: PendingProgress? = null,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val sessionId = UUID.randomUUID().toString()
 
     val player: ExoPlayer = ExoPlayer.Builder(context)
-        .setMediaSourceFactory(DefaultMediaSourceFactory(OkHttpDataSource.Factory(http)))
+        // Files on the phone, and the server through the session's client.
+        .setMediaSourceFactory(DefaultMediaSourceFactory(DefaultDataSource.Factory(context, OkHttpDataSource.Factory(http))))
         .build()
         .apply {
             // Subtitles are drawn by the player screen from the server's WebVTT.
@@ -164,7 +179,11 @@ class PlayerController(
         player.playWhenReady = true
     }
 
+    /** Plays a download, which offers no other qualities. */
+    val isLocal get() = local != null
+
     private fun plan(): Source {
+        if (local != null) return Source.Local
         val track = audio
         val burnIn = subtitle?.takeIf { !drawable(it) }
         if (burnIn != null || quality != ORIGINAL_QUALITY || !videoPlays || (noDirect && noStream)) {
@@ -206,12 +225,13 @@ class PlayerController(
                     .setUri(paths.hls(item.id, resolved.audio, resolved.quality, at, audioCodecs, videoCodecs, sessionId, resolved.subtitle))
                     .setMimeType(MimeTypes.APPLICATION_M3U8)
                     .build()
+                Source.Local -> ExoItem.Builder().setUri(Uri.fromFile(checkNotNull(local))).build()
             }
             val startMs = when (resolved) {
                 is Source.Stream -> 0L
                 else -> (at * 1000).toLong()
             }
-            pendingAudioOverride = resolved == Source.Direct
+            pendingAudioOverride = resolved == Source.Direct || resolved == Source.Local
             player.setMediaItem(exo, startMs)
             player.prepare()
         }
@@ -246,6 +266,7 @@ class PlayerController(
                 noStream = true
                 load(plan(), at)
             }
+            // A download or an encode has nothing further to fall back to.
             else -> error = e.errorCodeName.takeIf { e.cause == null } ?: (e.cause?.message ?: e.errorCodeName)
         }
     }
@@ -286,7 +307,8 @@ class PlayerController(
         if (track == audio) return
         audio = track
         val current = source
-        if (current == Source.Direct && Capabilities.decodesAudio(track.codec)) {
+        // A download holds only its own tracks, so it picks among them whatever plays.
+        if (current == Source.Local || (current == Source.Direct && Capabilities.decodesAudio(track.codec))) {
             pendingAudioOverride = true
             applyAudioOverride(player.currentTracks)
         } else {
@@ -308,7 +330,7 @@ class PlayerController(
     }
 
     fun pickQuality(id: String) {
-        if (id == quality) return
+        if (id == quality || isLocal) return
         quality = id
         noDirect = false
         noStream = false
@@ -323,7 +345,8 @@ class PlayerController(
     private fun loadCues(track: SubtitleTrack) {
         scope.launch {
             try {
-                val text = withContext(Dispatchers.IO) {
+                val saved = localSubtitles[track.id]
+                val text = if (saved != null) withContext(Dispatchers.IO) { saved.readText() } else withContext(Dispatchers.IO) {
                     http.newCall(Request.Builder().url(api.paths.subtitle(item.id, track.id)).build()).await().use {
                         if (!it.isSuccessful) throw IOException("HTTP ${it.code}")
                         it.body.string()
@@ -371,7 +394,13 @@ class PlayerController(
         val played = playedSeconds
         val paused = !player.isPlaying
         val send: suspend () -> Unit = {
-            runCatching { api.report(item.id, at, length, sessionId, played, paused, closed) }
+            try {
+                api.report(item.id, at, length, sessionId, played, paused, closed)
+                pending?.drop(item.id)
+            } catch (_: IOException) {
+                // Offline, as when watching a download: send it once the server answers.
+                pending?.put(item.id, PendingReport(at, length))
+            }
         }
         if (closed) CoroutineScope(Dispatchers.IO + NonCancellable).launch { send() } else scope.launch { send() }
     }
