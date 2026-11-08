@@ -21,7 +21,7 @@ import { art, present } from "@/lib/media"
 import { client, errorMessage, orpc } from "@/lib/rpc"
 
 import { FormAlert } from "./form-alert"
-import { Picture, tone } from "./media-item"
+import { Picture, tone } from "./picture"
 
 /** Refetch everything that shows a title's name or art. */
 export function invalidateTitleData(
