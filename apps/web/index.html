@@ -38,6 +38,26 @@
         document.documentElement.classList.add("dark")
       }
     </script>
+    <script>
+      // Ask who is signed in while the app's code loads; every page but the
+      // login waits for that before it renders. lib/rpc.ts hands the answer
+      // to the client's first matching request. Home's rows aren't asked
+      // for here: with them the first render waits for the whole page, and
+      // over HTTP/1.1 they hold up the app's own code.
+      try {
+        var path = location.pathname
+        if (path !== "/login" && path !== "/setup") {
+          var url = "/api/rpc/auth/session"
+          window.__matineePreload = {}
+          window.__matineePreload[url + " {}"] = fetch(url, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: "{}",
+            credentials: "same-origin",
+          })
+        }
+      } catch {}
+    </script>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>Matinee</title>
   </head>

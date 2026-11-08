@@ -9,7 +9,33 @@ import {
 
 import { tr, translateKnown } from "@/i18n"
 
-export const client = createMatineeClient()
+declare global {
+  interface Window {
+    /**
+     * Answers `index.html` asked for while the app's code loaded, by path
+     * and body. Each goes to the first request that matches.
+     */
+    __matineePreload?: Record<string, Promise<Response> | undefined>
+  }
+}
+
+async function preloadedFetch(request: Request): Promise<Response> {
+  const preload = window.__matineePreload
+  if (preload && request.method === "POST") {
+    const key = `${new URL(request.url).pathname} ${await request.clone().text()}`
+    const answer = preload[key]
+    if (answer) {
+      delete preload[key]
+      // Once they're all taken, requests no longer read their bodies here.
+      if (Object.keys(preload).length === 0) delete window.__matineePreload
+      const response = await answer.catch(() => null)
+      if (response) return response
+    }
+  }
+  return fetch(request)
+}
+
+export const client = createMatineeClient({ fetch: preloadedFetch })
 export const orpc = createTanstackQueryUtils(client)
 
 /** Called when the server says the session is gone. Set by the router. */
