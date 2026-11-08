@@ -11,11 +11,15 @@ const MIN_BYTES = 1024
 // Fast enough per response, and still well ahead of gzip on JSON.
 const BROTLI_QUALITY = 4
 
-/** The encoding to send, from the client's Accept-Encoding. */
+/**
+ * The encoding to send, from the client's Accept-Encoding. One it lists
+ * with `q=0` is refused, not offered.
+ */
 export function pickEncoding(accept: string | undefined): "br" | "gzip" | null {
   const offered = new Set(
     (accept ?? "")
       .split(",")
+      .filter((part) => !/;\s*q=0(?:\.0*)?\s*$/i.test(part))
       .map((part) => part.split(";")[0]?.trim().toLowerCase())
       .filter(Boolean),
   )
