@@ -83,7 +83,7 @@ export const tmdb: MetadataSource = {
     "The Movie Database. Movies and shows, with episode stills and logos. Radarr uses it.",
   episodes: true,
   setup: "Set MATINEE_TMDB_API_KEY to an API key or read access token.",
-  configured: () => Boolean(env.tmdbApiKey),
+  configured: () => Boolean(env.MATINEE_TMDB_API_KEY),
   search,
   lookup,
   details: (id, { kind, language }) =>

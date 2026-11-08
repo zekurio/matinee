@@ -65,7 +65,7 @@ export const tvdb: MetadataSource = {
   episodes: true,
   setup:
     "Set MATINEE_TVDB_API_KEY, and MATINEE_TVDB_PIN if your key needs a subscriber PIN.",
-  configured: () => Boolean(env.tvdbApiKey),
+  configured: () => Boolean(env.MATINEE_TVDB_API_KEY),
   search,
   lookup,
   details: (id, { kind, language }) =>

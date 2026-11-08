@@ -96,28 +96,42 @@ const EnvSchema = t.object({
     .optional(),
   MATINEE_OIDC_CLIENT_ID: optional,
   MATINEE_OIDC_CLIENT_SECRET: optional,
-  MATINEE_OIDC_CLIENT_SECRET_FILE: optional,
   MATINEE_OIDC_DISPLAY_NAME: t.string().$default("Single sign-on"),
   MATINEE_OIDC_SCOPES: t.string().$default("openid profile"),
   MATINEE_OIDC_USERNAME_CLAIM: t.string().$default("preferred_username"),
   MATINEE_OIDC_ALLOW_SIGN_UP: flag(false),
   /** TMDB API key (v3) or API read access token. */
   MATINEE_TMDB_API_KEY: optional,
-  MATINEE_TMDB_API_KEY_FILE: optional,
   /** TheTVDB v4 project API key, plus a subscriber PIN for user keys. */
   MATINEE_TVDB_API_KEY: optional,
-  MATINEE_TVDB_API_KEY_FILE: optional,
   MATINEE_TVDB_PIN: optional,
 })
 
-function secret(value?: string, file?: string): string | undefined {
-  if (value) return value
-  return file ? readFileSync(file, "utf8").trim() || undefined : undefined
+/**
+ * Fill `NAME` from the file `NAME_FILE` names, for any variable, so secrets
+ * can come from files such as systemd credentials. Surrounding whitespace,
+ * like the newline most files end with, is dropped.
+ */
+function readFiles(source: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  const filled = { ...source }
+  for (const name of Object.keys(EnvSchema.properties)) {
+    const file = source[`${name}_FILE`]
+    if (!file) continue
+    if (source[name]) {
+      throw new Error(`Set ${name} or ${name}_FILE, not both.`)
+    }
+    try {
+      filled[name] = readFileSync(file, "utf8").trim()
+    } catch (cause) {
+      throw new Error(`Couldn't read ${name}_FILE (${file}).`, { cause })
+    }
+  }
+  return filled
 }
 
 function parseEnv() {
   loadDotenv()
-  const result = EnvSchema.safeParse({ ...process.env })
+  const result = EnvSchema.safeParse(readFiles(process.env))
   if (!result.success) {
     const issues = result.error.issues.map(
       (issue) =>
@@ -130,14 +144,6 @@ function parseEnv() {
   const dataDir = resolve(env.MATINEE_DATA_DIR)
   return {
     ...env,
-    // The rest of the OIDC variables are defaults for the admin settings,
-    // see auth/oidc-settings.ts.
-    oidcClientSecret: secret(
-      env.MATINEE_OIDC_CLIENT_SECRET,
-      env.MATINEE_OIDC_CLIENT_SECRET_FILE,
-    ),
-    tmdbApiKey: secret(env.MATINEE_TMDB_API_KEY, env.MATINEE_TMDB_API_KEY_FILE),
-    tvdbApiKey: secret(env.MATINEE_TVDB_API_KEY, env.MATINEE_TVDB_API_KEY_FILE),
     dataDir,
     transcodeDir: env.MATINEE_TRANSCODE_DIR
       ? resolve(env.MATINEE_TRANSCODE_DIR)

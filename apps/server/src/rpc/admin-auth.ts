@@ -50,7 +50,7 @@ async function describe(state: OidcState): Promise<AdminAuthSettings> {
     defaults: oidcDefaults(),
     clientSecret: {
       source: state.secretSource,
-      environment: Boolean(env.oidcClientSecret),
+      environment: Boolean(env.MATINEE_OIDC_CLIENT_SECRET),
     },
     callbackUrl: `${env.PUBLIC_URL}${OIDC_CALLBACK_PATH}`,
     active: isActive(state.settings),

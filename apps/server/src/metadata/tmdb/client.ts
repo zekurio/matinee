@@ -11,8 +11,9 @@ const IMAGES = "https://image.tmdb.org/t/p/"
 const limit = limiter(6)
 
 function apiKey(): string {
-  if (!env.tmdbApiKey) throw new Error("MATINEE_TMDB_API_KEY isn't set")
-  return env.tmdbApiKey
+  if (!env.MATINEE_TMDB_API_KEY)
+    throw new Error("MATINEE_TMDB_API_KEY isn't set")
+  return env.MATINEE_TMDB_API_KEY
 }
 
 export function request<T>(

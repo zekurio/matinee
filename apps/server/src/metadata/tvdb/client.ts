@@ -17,9 +17,10 @@ let token: { value: string; expires: number } | null = null
 let loggingIn: Promise<string> | null = null
 
 async function login(): Promise<string> {
-  if (!env.tvdbApiKey) throw new Error("MATINEE_TVDB_API_KEY isn't set")
+  if (!env.MATINEE_TVDB_API_KEY)
+    throw new Error("MATINEE_TVDB_API_KEY isn't set")
   const body = {
-    apikey: env.tvdbApiKey,
+    apikey: env.MATINEE_TVDB_API_KEY,
     pin: env.MATINEE_TVDB_PIN || undefined,
   }
   const data = await fetchJson<Envelope<{ token: string }>>(

@@ -88,13 +88,13 @@ async function readSaved(): Promise<Saved> {
 
 function resolve(current: Saved): OidcState {
   const settings = { ...oidcDefaults(), ...current.oidc }
-  const secret = current.secret ?? env.oidcClientSecret
+  const secret = current.secret ?? env.MATINEE_OIDC_CLIENT_SECRET
   return {
     settings,
     secret,
     secretSource: current.secret
       ? "saved"
-      : env.oidcClientSecret
+      : env.MATINEE_OIDC_CLIENT_SECRET
         ? "environment"
         : null,
     version,
