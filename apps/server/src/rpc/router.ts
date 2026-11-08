@@ -8,6 +8,7 @@ import { adminTrickplay } from "./admin-trickplay"
 import { adminUsers } from "./admin-users"
 import { auth } from "./auth"
 import { pub } from "./base"
+import { downloads } from "./downloads"
 import { adminRoutes, libraries, media } from "./libraries"
 import { people } from "./people"
 import { home, playback } from "./playback"
@@ -31,6 +32,7 @@ export const procedures = {
   people,
   search,
   media,
+  downloads,
   playback,
   home,
   favorites,

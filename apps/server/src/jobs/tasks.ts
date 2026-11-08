@@ -6,6 +6,7 @@ import { db } from "../db"
 import { env } from "../env"
 import { scans } from "../library/scanner"
 import { prefetchArtwork } from "../media/artwork"
+import { sweepDownloads } from "../media/downloads"
 import { sweepTranscodes } from "../media/hls"
 import { probeMissing } from "../media/probe"
 import { makeMissingTrickplay, sweepTrickplay } from "../media/trickplay"
@@ -97,10 +98,13 @@ const makeTrickplay: TaskDefinition = {
 const cleanTranscodes: TaskDefinition = {
   id: "clean-transcodes",
   name: "Clean up encodes",
-  description: `Delete encodes nobody played for ${env.MATINEE_TRANSCODE_CACHE_HOURS} hours, then the least recently played past ${env.MATINEE_TRANSCODE_CACHE_GB} GB.`,
+  description: `Delete encodes nobody played for ${env.MATINEE_TRANSCODE_CACHE_HOURS} hours, then the least recently played past ${env.MATINEE_TRANSCODE_CACHE_GB} GB, and downloads nobody fetched from for ${env.MATINEE_TRANSCODE_CACHE_HOURS} hours.`,
   startupDelayMs: 0,
   intervalMs: 10 * MINUTE_MS,
-  run: () => sweepTranscodes(),
+  run: async () => {
+    await sweepTranscodes()
+    await sweepDownloads()
+  },
 }
 
 const cleanSessions: TaskDefinition = {

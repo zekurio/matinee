@@ -107,7 +107,7 @@ function pipelineArgs(video: VideoStream, pipeline: VideoPipeline): string[] {
  * is its first picture; moving it forward again keeps the pictures on the
  * video's timeline.
  */
-function subtitleInputArgs(source: BurnInSource | null): string[] {
+export function subtitleInputArgs(source: BurnInSource | null): string[] {
   if (source?.kind !== "file") return []
   const offset =
     source.startSeconds > 0
@@ -120,12 +120,16 @@ function subtitleInputArgs(source: BurnInSource | null): string[] {
  * The subtitle for the filter graph: a stream of the file, or the first
  * subtitle stream of the second input.
  */
-function subtitleStream(source: BurnInSource | null): string | undefined {
+export function subtitleStream(
+  source: BurnInSource | null,
+): string | undefined {
   if (!source) return undefined
   return source.kind === "stream" ? `0:${source.index}` : "1:s:0"
 }
 
-function segmentOptionsFlag(capabilities: TranscodingCapabilities): string {
+export function segmentOptionsFlag(
+  capabilities: TranscodingCapabilities,
+): string {
   const major = capabilities.versionNumbers?.[0]
   return major !== undefined && major < SEGMENT_OPTIONS_MAJOR
     ? "-hls_ts_options"

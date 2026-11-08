@@ -108,6 +108,60 @@ export function mediaHlsPath(
 
 export type ThumbnailSize = "small" | "large"
 
+function downloadBase(downloadId: string): string {
+  return `/api/downloads/${encodeURIComponent(downloadId)}`
+}
+
+/**
+ * A download from `downloads.start` as one fragmented MP4 stream: the
+ * init segment, then every segment in order, written as the server makes
+ * them. A browser saves it as a file. There's no length and no byte
+ * ranges, since the size is only known at the end; clients that resume
+ * fetch the segments themselves instead. While the server works on a
+ * segment, empty `free` boxes keep the line busy; players skip them.
+ *
+ * `from` starts at that segment and leaves out the init segment, for a
+ * client that has the ones before it. 404 once the download is gone; 409
+ * when the file or the server's settings changed since it started, so it
+ * has to start over. The stream breaks off, rather than ends, when the
+ * server can't make the rest.
+ */
+export function downloadFilePath(downloadId: string, from = 0): string {
+  const path = `${downloadBase(downloadId)}/file.mp4`
+  return from > 0 ? `${path}?from=${from}` : path
+}
+
+/**
+ * A download's init segment: the MP4 header the segments follow. A file
+ * of it and the segments in order, appended, plays as one MP4.
+ */
+export function downloadInitPath(downloadId: string): string {
+  return `${downloadBase(downloadId)}/init.mp4`
+}
+
+/**
+ * One segment of a download, from 0 on. The request waits while the
+ * server makes it. Fetch them in order: segments behind the newest one
+ * asked for are deleted. Headers say where it is in the video:
+ * `X-Matinee-Segment-Start` and `X-Matinee-Segment-End` in seconds, and
+ * `X-Matinee-Last-Segment: 1` on the last one when the server knows it is.
+ * A segment past the end answers 204, so a client fetches until then.
+ *
+ * 503 with Retry-After while the server is busy with other downloads or
+ * couldn't make the segment yet; 404 once the download is gone; 409 when
+ * the file or the server's settings changed since it started. A download
+ * that keeps the video as it is cuts at the source's keyframes, so it
+ * only goes forward: 416 for a segment past the next one it can make. To
+ * resume after a break, ask for the first segment the client doesn't
+ * have.
+ */
+export function downloadSegmentPath(
+  downloadId: string,
+  segment: number,
+): string {
+  return `${downloadBase(downloadId)}/${segment}.m4s`
+}
+
 /**
  * One subtitle track of a media item: WebVTT for `webvtt` tracks, a PGS
  * `.sup` file for `pgs` ones. Track ids come from `media.subtitles`. 404

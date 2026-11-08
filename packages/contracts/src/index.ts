@@ -1,6 +1,7 @@
 export * from "./admin"
 export * from "./codecs"
 export * from "./contract"
+export * from "./downloads"
 export * from "./jobs"
 export * from "./paths"
 export * from "./preferences"

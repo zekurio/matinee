@@ -311,6 +311,47 @@ for `MATINEE_TRANSCODE_CACHE_HOURS` (24) after anyone last played them,
 and the least recently played go first once they pass
 `MATINEE_TRANSCODE_CACHE_GB` (50) together.
 
+## Downloads
+
+A file's menu has Download…, for watching offline. The original is the
+file as it is, from the stream route, which any downloader resumes with
+byte ranges. The other choice is a version made for the device. It keeps
+the video, or encodes it to a size, bit rate, and codec. It holds the audio
+tracks you pick, each kept or converted to AAC or Opus in mono, stereo,
+5.1, or 7.1. It can also burn in a picture subtitle. The dialog offers only
+the codecs the server encodes and the browser plays, and shows the size
+the server estimates. Text subtitles stay out of the file and save next to
+it as WebVTT.
+
+The server doesn't keep a finished copy. `downloads.start` sets up a
+download, and ffmpeg makes it as the client fetches it: six-second
+fragmented MP4 segments, which make one MP4 file when appended to the init
+segment. The client fetches them in order, and segments behind it are
+deleted. A run that gets ten segments ahead pauses, so a slow connection
+doesn't fill the disk. When the client goes away, ffmpeg stops after 30
+seconds. When it asks for the next segment, a new run starts there: on the
+segment grid for an encode, and on the keyframe the segment starts with
+for kept video. So a download picks up where it broke off, after a
+restart of the server too, and nothing made before is made again. The
+audio joins sample for sample. Each segment's `moof` boxes say where
+every track ended and how many packets it has had, so the new run drops
+the kept tracks' packets the file already has, and starts each converted
+track's encoder a few seconds early on the old run's frame grid, keeping
+only what follows. Matroska's millisecond timestamps leave the decode
+after a seek up to half of one off; frames lie on a fixed grid from the
+start, so the server snaps to it, and for TrueHD, whose frames are
+shorter than that, it encodes each candidate and compares it with the
+last segment. Runs go
+through the Downloads queue under Settings → Jobs, two at a time by
+default. A download nobody fetched from for
+`MATINEE_TRANSCODE_CACHE_HOURS` is deleted.
+
+Browsers save it as one stream from `downloadFilePath()`, which can't
+resume. Apps fetch `downloadInitPath()` and then `downloadSegmentPath()`
+from 0 until it answers 204, and after a break ask for the first segment
+they don't have. If the file or the transcoding settings changed in
+between, the server answers 409, and the download starts over.
+
 ## Transcoding and ffmpeg
 
 Matinee encodes video the way Jellyfin does, with Jellyfin's filter chains

@@ -150,6 +150,27 @@ export default {
     "Dieser Titel ist in keiner Mediathek. Lade die Seite neu.",
   "server.titles.fileGone":
     "Diese Datei ist in keiner Mediathek. Lade die Seite neu.",
+  "server.downloads.unreadable":
+    "Diese Datei lässt sich nicht lesen. Versuche es erneut, sobald der Server sie gescannt hat.",
+  "server.downloads.notVideo": "Nur Videos lassen sich so herunterladen.",
+  "server.downloads.noDuration":
+    "Der Server kennt die Länge dieses Videos nicht und kann deshalb keinen Download davon erstellen.",
+  "server.downloads.noAudioTrack": "Diese Datei hat keine Tonspur {index}.",
+  "server.downloads.audioTwice": "Wähle jede Tonspur nur einmal.",
+  "server.downloads.audioNotMp4":
+    "{format}-Ton passt nicht unverändert in eine MP4-Datei. Wandle diese Spur stattdessen um.",
+  "server.downloads.cantEncodeAudio":
+    "Dieser Server kann keinen {codec}-Ton kodieren.",
+  "server.downloads.cantEncodeVideo":
+    "Dieser Server kann nicht in {codec} kodieren.",
+  "server.downloads.burnInNeedsEncode":
+    "Zum Einbrennen von Untertiteln muss das Video umgewandelt werden.",
+  "server.downloads.noPictureSubtitle":
+    "Diese Datei hat keine Bilduntertitel mit dieser ID.",
+  "server.downloads.videoNotMp4":
+    "{codec}-Video passt nicht unverändert in eine MP4-Datei. Wandle stattdessen das Video um.",
+  "server.downloads.encodeFailed":
+    "Der Server kann dieses Video mit seinen Transkodierungseinstellungen nicht kodieren.",
   "server.profiles.notFound":
     "Niemand auf diesem Server hat diesen Benutzernamen.",
   "server.people.noCredits":

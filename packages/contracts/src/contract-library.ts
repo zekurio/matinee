@@ -1,6 +1,7 @@
 import { eventIterator, oc } from "@orpc/contract"
 
 import { del, get, post, put } from "./contract-routes"
+import { Download, DownloadPlan, DownloadSpecInput } from "./downloads"
 import { t } from "./schema"
 import {
   AudioTrack,
@@ -165,4 +166,32 @@ export const mediaContract = oc.tag("Media").router({
       }),
     )
     .output(t.array(ShelfEntry)),
+})
+
+/**
+ * Versions of a file made for watching offline; see `downloads.ts`. The
+ * file as it is needs none of these: `mediaStreamPath()` serves it.
+ */
+export const downloadsContract = oc.tag("Downloads").router({
+  /**
+   * What a download with `spec` would hold, and about how big it is, for
+   * a dialog to show before it starts. Fails with a message to show when
+   * the file can't be downloaded that way. Starts nothing.
+   */
+  plan: post("/media/{id}/download-plan")
+    .input(DownloadSpecInput)
+    .output(DownloadPlan),
+  /**
+   * Set up a download, which `downloadFilePath()` or `downloadInitPath()`
+   * and `downloadSegmentPath()` then fetch. The server makes it only while
+   * a client fetches it. It stays resumable while the client keeps coming
+   * back, and goes after a day without a request, or with `remove`.
+   */
+  start: post("/media/{id}/downloads")
+    .input(DownloadSpecInput)
+    .output(Download),
+  /** Stop a download and delete what the server still has of it. */
+  remove: del("/downloads/{downloadId}")
+    .input(t.object({ downloadId: t.uuid() }))
+    .output(t.void()),
 })

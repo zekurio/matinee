@@ -16,6 +16,7 @@ import { oidcRoutes } from "./auth/oidc"
 import { compressBytes, compressJson, pickEncoding } from "./compress"
 import { env } from "./env"
 import { artworkRoutes } from "./media/artwork"
+import { downloadRoutes } from "./media/download-routes"
 import { streamRoutes } from "./media/stream"
 import type { RpcContext } from "./rpc/base"
 import { logError } from "./rpc/errors"
@@ -61,6 +62,7 @@ export function createApp() {
   app.route("/api/auth/oidc", oidcRoutes)
   app.route("/api/auth/app", appRoutes)
   app.route("/api/media", streamRoutes)
+  app.route("/api/downloads", downloadRoutes)
   app.route("/api/artwork", artworkRoutes)
   app.route("/api/avatars", avatarRoutes)
 

@@ -1,6 +1,7 @@
 import { adminContract } from "./contract-admin"
 import { accountContract, authContract } from "./contract-auth"
 import {
+  downloadsContract,
   librariesContract,
   mediaContract,
   metadataContract,
@@ -32,6 +33,7 @@ export const contract = {
   people: peopleContract,
   search: searchContract,
   media: mediaContract,
+  downloads: downloadsContract,
   playback: playbackContract,
   home: homeContract,
   favorites: favoritesContract,

@@ -40,6 +40,11 @@ export default defineMessages("jobs", {
   "jobs.queue.avatars.name": "Profile pictures",
   "jobs.queue.avatars.description":
     "Crop and scale uploads and the pictures sign-in providers send.",
+  "jobs.queue.downloads.name": "Downloads",
+  "jobs.queue.downloads.description":
+    "Make the versions of files that apps download to watch offline, while they fetch them.",
+  "jobs.queue.downloads.note":
+    "Downloads converted at once. Each one uses an encoder as a stream would; raise it if the server keeps up.",
 
   // A queue's row, joined with " · ".
   "jobs.queue.running": "{active} of {concurrency} running",

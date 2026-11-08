@@ -1,10 +1,12 @@
-import type {
-  AudioStream,
-  DownmixAlgorithm,
-  PlaybackAudioCodec,
-  TranscodeAudioCodec,
-  TranscodingCapabilities,
-  TranscodingSettings,
+import {
+  type AudioStream,
+  type DownloadAudio,
+  type DownmixAlgorithm,
+  downloadAudioBitrate,
+  type PlaybackAudioCodec,
+  type TranscodeAudioCodec,
+  type TranscodingCapabilities,
+  type TranscodingSettings,
 } from "@matinee/contracts"
 
 /*
@@ -201,6 +203,109 @@ export function buildAudioPipeline(
       ...rate,
       ...(filters.length > 0 ? ["-af", filters.join(",")] : []),
     ],
+    encoder,
+  }
+}
+
+/** One audio track of a download, as `buildDownloadAudio` makes it. */
+export type DownloadAudioPipeline = {
+  /** The output's arguments, after the track's `-map`, without filters. */
+  args: string[]
+  /** The track's filters, for `-filter:a:<output>`. Empty for none. */
+  filters: string[]
+  /** The filters end in a resampler to the encoder's rate. */
+  resamples: boolean
+  /** Global arguments the output needs, like `-strict`. */
+  global: string[]
+  /** ffmpeg's codec name in the download. */
+  codec: string
+  channels: number | null
+  /** Bits per second of a conversion; null for a copy. */
+  bitrate: number | null
+  /** The ffmpeg encoder; null for a copy. */
+  encoder: string | null
+}
+
+// libopus takes 48 kHz. The resampler is in the filters rather than left
+// to ffmpeg, so every run of a download resamples the same way.
+const OPUS_RATE = 48_000
+
+/**
+ * The arguments for audio stream `output` of a download, which keeps
+ * `stream` or converts it as `choice` says. A download isn't for a
+ * browser, so a conversion keeps up to the channels it asks for: to
+ * stereo through the same downmix as playback, and from 7.1 to 5.1
+ * through Jellyfin's step for it. The caller checks that the codec can be
+ * kept or encoded here.
+ */
+export function buildDownloadAudio(
+  stream: AudioStream,
+  choice: DownloadAudio,
+  output: number,
+  settings: TranscodingSettings,
+  capabilities: TranscodingCapabilities,
+): DownloadAudioPipeline {
+  const spec = `a:${output}`
+  if (choice.mode === "copy") {
+    const oldFfmpeg =
+      capabilities.versionNumbers !== null &&
+      (capabilities.versionNumbers[0] ?? 0) < FLAC_IN_MP4_MAJOR
+    return {
+      args: [`-c:${spec}`, "copy"],
+      filters: [],
+      resamples: false,
+      global: stream.codec === "flac" && oldFfmpeg ? ["-strict", "-2"] : [],
+      codec: stream.codec,
+      channels: stream.channels,
+      bitrate: null,
+      encoder: null,
+    }
+  }
+
+  const encoder = choice.codec === "opus" ? "libopus" : aacEncoder(capabilities)
+  const source =
+    stream.channels !== null && stream.channels > 0 ? stream.channels : null
+  const channels = Math.min(choice.channels, source ?? choice.channels)
+  const bitrate = choice.bitrate ?? downloadAudioBitrate(choice.codec, channels)
+
+  const filters: string[] = []
+  let pan: string | undefined
+  if (source !== null && source > channels) {
+    const layout = layoutOf(stream)
+    if (channels === MAX_CHANNELS && layout) {
+      pan = DOWNMIX_FILTERS.get(settings.downMixStereoAlgorithm)?.get(layout)
+    } else if (channels === 6 && layout === "7.1") {
+      pan = SEVEN_TO_FIVE
+    }
+    if (pan) filters.push(pan)
+    if (channels === MAX_CHANNELS && settings.downMixAudioBoost !== 1) {
+      filters.push(`volume=${settings.downMixAudioBoost}`)
+    }
+  }
+  const resamples = encoder === "libopus"
+  if (resamples) filters.push(`aresample=${OPUS_RATE}`)
+
+  const rate =
+    settings.enableAudioVbr && encoder === "libfdk_aac"
+      ? [`-vbr:${spec}`, "5"]
+      : settings.enableAudioVbr && encoder === "aac_at"
+        ? [`-aac_at_mode:${spec}`, "2", `-b:${spec}`, String(bitrate)]
+        : [`-b:${spec}`, String(bitrate)]
+
+  return {
+    args: [
+      `-c:${spec}`,
+      encoder,
+      // A pan filter sets the channels itself.
+      ...(pan ? [] : [`-ac:${spec}`, String(channels)]),
+      ...rate,
+    ],
+    filters,
+    resamples,
+    global: [],
+    codec: choice.codec,
+    channels,
+    bitrate,
     encoder,
   }
 }

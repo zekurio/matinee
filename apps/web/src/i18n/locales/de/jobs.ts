@@ -41,6 +41,11 @@ export default {
   "jobs.queue.avatars.name": "Profilbilder",
   "jobs.queue.avatars.description":
     "Schneidet und skaliert Uploads und die Bilder, die Anmeldeanbieter schicken.",
+  "jobs.queue.downloads.name": "Downloads",
+  "jobs.queue.downloads.description":
+    "Erstellt die Versionen von Dateien, die Apps zum Offline-Ansehen herunterladen, während sie sie abrufen.",
+  "jobs.queue.downloads.note":
+    "Downloads, die gleichzeitig umgewandelt werden. Jeder belegt einen Encoder wie ein Stream; erhöhe den Wert, wenn der Server mithält.",
 
   "jobs.queue.running": "{active} von {concurrency} aktiv",
   "jobs.queue.waiting": plural({

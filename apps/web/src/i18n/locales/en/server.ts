@@ -155,6 +155,28 @@ export default defineMessages("server", {
   "server.people.noCredits":
     "No movie or show in the libraries credits this person.",
 
+  // media/download-encode.ts: what a download spec asks of a file. The
+  // longer "audio" text comes before the shorter one it would also match.
+  "server.downloads.unreadable":
+    "This file can't be read. Try again once the server has scanned it.",
+  "server.downloads.notVideo": "Only videos can be downloaded this way.",
+  "server.downloads.noDuration":
+    "The server doesn't know how long this video is, so it can't make a download of it.",
+  "server.downloads.noAudioTrack": "This file has no audio track {index}.",
+  "server.downloads.audioTwice": "Pick each audio track once.",
+  "server.downloads.audioNotMp4":
+    "{format} audio can't go in an MP4 file as it is. Convert that track instead.",
+  "server.downloads.cantEncodeAudio": "This server can't encode {codec} audio.",
+  "server.downloads.cantEncodeVideo": "This server can't encode {codec}.",
+  "server.downloads.burnInNeedsEncode":
+    "Burning in subtitles needs the video converted.",
+  "server.downloads.noPictureSubtitle":
+    "This file has no picture subtitle with that id.",
+  "server.downloads.videoNotMp4":
+    "{codec} video can't go in an MP4 file as it is. Convert the video instead.",
+  "server.downloads.encodeFailed":
+    "The server can't encode this video with its transcoding settings.",
+
   // The metadata providers, as the library dialog lists them, and their
   // failures in rpc/titles.ts, rpc/libraries.ts, and metadata/refresh.ts.
   "server.metadata.tmdbDescription":
