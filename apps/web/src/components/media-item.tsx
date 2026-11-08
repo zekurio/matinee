@@ -26,12 +26,14 @@ import {
   seasonName,
 } from "@/lib/media"
 import { errorMessage, orpc } from "@/lib/rpc"
+import type { WatchedState } from "@/lib/viewer-state"
 
+import { ActionsMenu, ItemMenu } from "./actions-menu"
 import { CardActions, CardScrim } from "./card-actions"
 import { useItemFavorite, useTitleFavorite } from "./favorite-button"
 import { Picture, tone } from "./picture"
 import { seasonParams } from "./title/seasons"
-import { ItemMenu, useItemWatched, useTitleWatched } from "./watched-menu"
+import { useItemWatched, useTitleWatched } from "./watched-menu"
 
 // Many components take these from here.
 export { Picture, tone }
@@ -56,6 +58,42 @@ export function WatchedBadge({ className }: { className?: string }) {
 }
 
 /**
+ * The watched badge as a button that marks it unwatched again, for a card
+ * whose picture is a link, so it sits beside the link rather than in it.
+ * Without `touch`, touch screens, where a tap opens the card, get the
+ * badge alone and the tap goes through to the card.
+ */
+export function UnwatchBadge({
+  name,
+  watched,
+  touch = false,
+  className,
+}: {
+  /** Names the movie, show, or episode for screen readers. */
+  name: string
+  watched: WatchedState
+  touch?: boolean
+  className?: string
+}) {
+  if (!watched.on) return null
+  return (
+    <button
+      type="button"
+      aria-label={tr("media.markNamedUnwatched", { name })}
+      title={tr("media.markUnwatched")}
+      onClick={() => watched.mark(false)}
+      className={cn(
+        "focus-visible:ring-ring rounded-full outline-none focus-visible:ring-2",
+        !touch && "[@media(pointer:coarse)]:pointer-events-none",
+        className,
+      )}
+    >
+      <WatchedBadge />
+    </button>
+  )
+}
+
+/**
  * The 16:9 slot for a file or title: the best image that loads over a
  * neutral gradient, with an optional episode pill, progress bar, and a
  * play button on hover. Turn `play` off when a real play link sits on top.
@@ -67,6 +105,7 @@ export function Thumb({
   pill,
   progress,
   watched,
+  badge = true,
   play = true,
   compact = false,
   className,
@@ -78,6 +117,8 @@ export function Thumb({
   /** Share of the file watched, 0 to 1. */
   progress?: number | null
   watched?: boolean
+  /** Draw the watched badge. Off when an `UnwatchBadge` goes over it. */
+  badge?: boolean
   play?: boolean
   compact?: boolean
   className?: string
@@ -99,7 +140,9 @@ export function Thumb({
           {pill}
         </span>
       )}
-      {watched && <WatchedBadge className="absolute top-1.5 right-1.5" />}
+      {watched && badge && (
+        <WatchedBadge className="absolute top-1.5 right-1.5" />
+      )}
       {progress != null && progress > 0 && !watched && (
         <span
           aria-hidden
@@ -431,18 +474,28 @@ export function EpisodeCard({
             toneKey={label.showKey}
             progress={progressRatio(item)}
             watched={watched.on}
+            badge={false}
             play={false}
             className="group-hover/thumb:border-foreground/25 w-full"
           >
             <CardScrim />
           </Thumb>
         </ItemLink>
+        <UnwatchBadge
+          name={name}
+          watched={watched}
+          touch
+          className="absolute top-1.5 right-1.5"
+        />
         <ThumbPlayButton item={item} label={name} />
         {/* Clear of the progress bar along the bottom. */}
         <CardActions
           name={name}
           watched={watched}
           favorite={favorite}
+          menu={
+            <ActionsMenu target={{ kind: "item", item, name }} look="card" />
+          }
           touch
           className="absolute right-1 bottom-1.5"
         />
@@ -728,9 +781,6 @@ export function PosterCard({
       <PosterLink title={title} to={to} label={label}>
         <PosterArt name={title.name} toneKey={title.id} poster={poster}>
           <CardScrim />
-          {watched.on && (
-            <WatchedBadge className="absolute top-1.5 right-1.5" />
-          )}
         </PosterArt>
         <CardText
           primary={title.name}
@@ -756,10 +806,21 @@ export function PosterCard({
         ) : (
           <TitlePlayButton title={title} className={playClass} />
         )}
+        <UnwatchBadge
+          name={title.name}
+          watched={watched}
+          className="pointer-events-auto absolute top-1.5 right-1.5"
+        />
         <CardActions
           name={title.name}
           watched={watched}
           favorite={favorite}
+          menu={
+            <ActionsMenu
+              target={{ kind: "title", title, file: play }}
+              look="card"
+            />
+          }
           className="pointer-events-auto absolute right-1 bottom-1"
         />
       </div>

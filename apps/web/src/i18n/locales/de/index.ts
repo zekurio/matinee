@@ -4,6 +4,7 @@ import appearance from "./appearance"
 import auth from "./auth"
 import browse from "./browse"
 import common from "./common"
+import downloads from "./downloads"
 import format from "./format"
 import jobs from "./jobs"
 import libraries from "./libraries"
@@ -40,6 +41,7 @@ export default {
   ...browse,
   ...library,
   ...media,
+  ...downloads,
   ...title,
   ...people,
   ...search,

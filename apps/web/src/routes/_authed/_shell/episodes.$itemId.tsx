@@ -1,17 +1,12 @@
 import type { MediaItem } from "@matinee/contracts"
-import { Button, buttonVariants } from "@matinee/ui/components/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@matinee/ui/components/dropdown-menu"
+import { buttonVariants } from "@matinee/ui/components/button"
 import { Skeleton } from "@matinee/ui/components/skeleton"
 import { cn } from "@matinee/ui/lib/utils"
 import { skipToken, useQuery } from "@tanstack/react-query"
 import { createFileRoute, Link, Navigate } from "@tanstack/react-router"
-import { ChevronRightIcon, EllipsisIcon, PlayIcon } from "lucide-react"
-import { useState } from "react"
+import { ChevronRightIcon, PlayIcon } from "lucide-react"
 
+import { ActionsMenu } from "@/components/actions-menu"
 import { pageBleed, pageColumn } from "@/components/app-shell"
 import { ItemFavoriteButton } from "@/components/favorite-button"
 import {
@@ -24,8 +19,7 @@ import {
 import { useDocumentTitle } from "@/components/page-header"
 import { Rail, RailItem } from "@/components/rail"
 import { seasonParams } from "@/components/title/seasons"
-import { WatchedDateDialog } from "@/components/watched-date-dialog"
-import { useSetWatched, WatchedMenuItems } from "@/components/watched-menu"
+import { useItemWatched, WatchedButton } from "@/components/watched-menu"
 import { tr } from "@/i18n"
 import { formatDate, formatRuntime } from "@/lib/format"
 import {
@@ -124,7 +118,8 @@ function EpisodeHeader({ item }: { item: MediaItem }) {
   const label = itemLabel(item)
   const { expanded, toggle, artRef, artClass, artStyle } =
     useOverviewToggle<HTMLAnchorElement>()
-  const watched = item.progress?.completed ?? false
+  const marked = useItemWatched(item)
+  const watched = marked.on
   const resume = item.progress !== null && !watched
   const overview = item.episode?.overview
   const runtime = formatRuntime(
@@ -250,8 +245,12 @@ function EpisodeHeader({ item }: { item: MediaItem }) {
                 <PlayIcon className="fill-current" />
                 {resume ? tr("title.resume") : tr("title.play")}
               </Link>
+              <WatchedButton watched={marked} />
               <ItemFavoriteButton item={item} />
-              <EpisodeMenu item={item} label={label.title} />
+              <ActionsMenu
+                target={{ kind: "item", item, name: label.title }}
+                look="page"
+              />
             </div>
           </div>
         </div>
@@ -402,47 +401,5 @@ function EpisodeHeading({ item }: { item: MediaItem }) {
       {" · "}
       {tr("title.episode.number", { number: String(number) })}
     </p>
-  )
-}
-
-/** Mark the episode watched or unwatched. */
-function EpisodeMenu({ item, label }: { item: MediaItem; label: string }) {
-  const setWatched = useSetWatched()
-  const [picking, setPicking] = useState(false)
-  return (
-    <>
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            <Button
-              variant="secondary"
-              size="icon-lg"
-              aria-label={tr("title.moreActionsFor", { name: label })}
-              className="border-foreground/10 bg-foreground/15 hover:bg-foreground/25 backdrop-blur max-sm:size-11"
-            />
-          }
-        >
-          <EllipsisIcon />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" sideOffset={6} className="min-w-48">
-          <WatchedMenuItems
-            scope="as"
-            watched={item.progress?.completed ?? false}
-            started={item.progress !== null}
-            onSelect={(watched, watchedAt) =>
-              setWatched.mutate({ item, watched, watchedAt })
-            }
-            onPickDate={() => setPicking(true)}
-          />
-        </DropdownMenuContent>
-      </DropdownMenu>
-      <WatchedDateDialog
-        open={picking}
-        onOpenChange={setPicking}
-        onPick={(watchedAt) =>
-          setWatched.mutate({ item, watched: true, watchedAt })
-        }
-      />
-    </>
   )
 }

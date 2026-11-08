@@ -8,7 +8,6 @@ export default defineMessages("title", {
   "title.playName": "Play {name}",
   "title.resumeName": "Resume {name}",
   "title.moreActions": "More actions",
-  "title.moreActionsFor": "More actions for {name}",
   "title.more": "More",
   "title.less": "Less",
   // A season's name after its show's, like "Severance: Season 2".
@@ -31,6 +30,8 @@ export default defineMessages("title", {
   // title-menu.tsx
   "title.menu.fixMatch": "Fix match…",
   "title.menu.refresh": "Refresh metadata",
+  // Also in the season's and the episode's menus.
+  "title.menu.editImages": "Edit images…",
   "title.refresh.done": "Updated {name}",
   "title.refresh.doneDescription": "Fetched again from {provider}.",
   "title.refresh.error": "Couldn't fetch metadata",
@@ -51,6 +52,44 @@ export default defineMessages("title", {
     "{provider} found nothing for “{query}”. Try the original title, or leave the year empty.",
   "title.identify.current": "Current match",
   "title.identify.matched": "Matched to {name}",
+
+  // image-editor.tsx
+  "title.images.title": "Edit images",
+  "title.images.description":
+    "Pick images for {name} from {provider}, or upload your own. What you pick stays when the metadata is fetched again.",
+  "title.images.descriptionLocal": "Upload images for {name}.",
+  // Names the row of image kinds for screen readers.
+  "title.images.slots": "Image",
+  "title.images.slot.poster": "Poster",
+  "title.images.slot.backdrop": "Backdrop",
+  "title.images.slot.logo": "Logo",
+  // An episode's picture, a frame the provider picked.
+  "title.images.slot.still": "Still",
+  "title.images.state.none": "None",
+  "title.images.state.noneFrame": "None, so a frame from the file shows",
+  "title.images.state.removed": "Removed",
+  "title.images.state.uploaded": "Uploaded",
+  "title.images.state.picked": "Picked by hand",
+  "title.images.state.pickedFrom": "Picked from {provider}",
+  "title.images.state.from": "From {provider}",
+  "title.images.upload": "Upload",
+  "title.images.remove": "Remove",
+  "title.images.reset": "Use {provider}'s",
+  "title.images.allLanguages": "All languages",
+  // An image's size in pixels.
+  "title.images.size": "{width} × {height}",
+  "title.images.noText": "No text",
+  "title.images.use": "Use this image",
+  "title.images.inUse": "In use",
+  "title.images.empty": "{provider} has none to pick from.",
+  "title.images.emptyLanguage":
+    "{provider} has none in the library's language, in English, or without text. Turn on All languages for the rest.",
+  "title.images.unmatched":
+    "{provider} has no match for this title, so there's nothing to pick from. Fix the match, or upload an image.",
+  "title.images.noProvider":
+    "This library has no metadata provider, so there's nothing to pick from. Upload an image instead.",
+  "title.images.error": "Couldn't change the image",
+  "title.images.loadError": "Couldn't load the images. {error}",
 
   // next-up.tsx
   "title.nextUp.continue": "Continue watching",

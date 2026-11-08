@@ -33,6 +33,7 @@ export default {
   "media.resume": "{name} fortsetzen",
   "media.noFiles": "Für {name} gibt es keine abspielbaren Dateien",
   "media.playFailed": "{name} konnte nicht abgespielt werden",
+  "media.loadFailed": "{name} konnte nicht geladen werden",
   "media.hero.label": "Empfohlen",
   "media.hero.position": "{index} von {count}",
   "media.hero.slides": "Folien",

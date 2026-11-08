@@ -8,7 +8,7 @@ import {
 } from "@matinee/ui/components/dropdown-menu"
 import { cn } from "@matinee/ui/lib/utils"
 import { CheckIcon } from "lucide-react"
-import { useState } from "react"
+import { type ReactNode, useState } from "react"
 
 import { FavoriteHeart } from "@/components/favorite-button"
 import { WatchedDateDialog } from "@/components/watched-date-dialog"
@@ -20,7 +20,9 @@ import type { Toggle, WatchedState } from "@/lib/viewer-state"
 // them, with a shadow for touch screens, where it doesn't. No scale on
 // hover: an open menu follows its trigger's box, so it would shift each
 // time the pointer crossed the icon. Touch screens get a bigger target.
-const iconButton =
+// The tick draws a step larger than the heart beside it: its glyph fills
+// less of its box, so at the same size it looked smaller.
+export const cardIconButton =
   "text-white/85 drop-shadow-[0_1px_3px_rgb(0_0_0/0.9)] hover:text-white aria-expanded:text-white [@media(pointer:coarse)]:size-10"
 
 /**
@@ -38,9 +40,10 @@ export function CardScrim() {
 }
 
 /**
- * Watched and favorite icons for the corner of a poster or still. They
- * show while a pointer is over the `group/card` around them, keyboard
- * focus is in it, or the check's menu is open.
+ * Watched and favorite icons for the corner of a poster or still, and the
+ * card's "⋯" `menu` after them, for what has no icon of its own (see
+ * `actions-menu.tsx`). They show while a pointer is over the `group/card`
+ * around them, keyboard focus is in it, or one of their menus is open.
  *
  * Touch screens have no hover, so with `touch` they always see the icons,
  * and without it never do, since a tap on an invisible button would land
@@ -53,6 +56,7 @@ export function CardActions({
   name,
   watched,
   favorite,
+  menu,
   touch = false,
   className,
 }: {
@@ -60,6 +64,8 @@ export function CardActions({
   name: string
   watched: WatchedState
   favorite: Toggle
+  /** The card's "⋯" menu, in the card look. */
+  menu?: ReactNode
   /** Show the icons on touch screens, always. */
   touch?: boolean
   className?: string
@@ -82,9 +88,9 @@ export function CardActions({
           aria-label={tr("media.markNamedUnwatched", { name })}
           title={tr("media.markUnwatched")}
           onClick={() => watched.mark(false)}
-          className={cn(iconButton, "text-primary hover:text-primary")}
+          className={cn(cardIconButton, "text-primary hover:text-primary")}
         >
-          <CheckIcon className="size-6" strokeWidth={3} />
+          <CheckIcon className="size-7" strokeWidth={3} />
         </Button>
       ) : (
         <DropdownMenu>
@@ -95,11 +101,11 @@ export function CardActions({
                 size="icon"
                 aria-label={tr("media.markNamedWatched", { name })}
                 title={tr("media.markWatched")}
-                className={iconButton}
+                className={cardIconButton}
               />
             }
           >
-            <CheckIcon className="size-6" />
+            <CheckIcon className="size-7" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" sideOffset={4} className="min-w-44">
             <DropdownMenuGroup>
@@ -124,10 +130,11 @@ export function CardActions({
           favorite.on ? tr("media.removeFavorite") : tr("media.addFavorite")
         }
         onClick={favorite.toggle}
-        className={iconButton}
+        className={cardIconButton}
       >
         <FavoriteHeart on={favorite.on} className="size-6" />
       </Button>
+      {menu}
       <WatchedDateDialog
         open={picking}
         onOpenChange={setPicking}

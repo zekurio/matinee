@@ -1,19 +1,12 @@
-import type { MediaItem, Season, Title, WatchedAt } from "@matinee/contracts"
-import { Button, buttonVariants } from "@matinee/ui/components/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@matinee/ui/components/dropdown-menu"
+import type { MediaItem, Season, Title } from "@matinee/contracts"
+import { buttonVariants } from "@matinee/ui/components/button"
 import { skipToken, useQuery } from "@tanstack/react-query"
 import { getRouteApi, Link, Navigate } from "@tanstack/react-router"
-import { EllipsisIcon } from "lucide-react"
-import { useState } from "react"
 
+import { ActionsMenu } from "@/components/actions-menu"
 import { pageBleed } from "@/components/app-shell"
 import { useDocumentTitle } from "@/components/page-header"
-import { WatchedDateDialog } from "@/components/watched-date-dialog"
-import { useSetTitleWatched, WatchedMenuItems } from "@/components/watched-menu"
+import { useSeasonWatched, WatchedButton } from "@/components/watched-menu"
 import { tr } from "@/i18n"
 import { art, seasonName } from "@/lib/media"
 import { errorMessage, orpc } from "@/lib/rpc"
@@ -213,7 +206,15 @@ function SeasonHeader({
                   item={items ? seasonNext(title, items) : null}
                   code={season.number !== null}
                 />
-                <SeasonMenu title={title} season={season} items={items} />
+                <SeasonWatchedButton
+                  title={title}
+                  season={season}
+                  items={items}
+                />
+                <ActionsMenu
+                  target={{ kind: "season", title, season }}
+                  look="page"
+                />
               </div>
             </div>
           </div>
@@ -223,64 +224,16 @@ function SeasonHeader({
   )
 }
 
-/** Mark the season watched or unwatched. */
-function SeasonMenu({
+/** The tick beside Play, for every file of the season. */
+function SeasonWatchedButton({
   title,
   season,
   items,
 }: {
   title: Title
   season: Season
-  /** The season's files, once loaded. They change before the counts do. */
+  /** The season's files, once loaded. */
   items: MediaItem[] | undefined
 }) {
-  const setWatched = useSetTitleWatched()
-  const [picking, setPicking] = useState(false)
-  const watched = items
-    ? items.every((item) => item.progress?.completed)
-    : season.watchedCount >= season.itemCount
-  const started = items
-    ? items.some((item) => item.progress !== null)
-    : season.watchedCount > 0
-  const mark = (next: boolean, watchedAt?: WatchedAt) =>
-    setWatched.mutate({
-      titleId: title.id,
-      season: season.number,
-      watched: next,
-      watchedAt,
-    })
-  return (
-    <>
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            <Button
-              variant="secondary"
-              size="icon-lg"
-              aria-label={tr("title.moreActionsFor", {
-                name: seasonName(season.number),
-              })}
-              className="border-foreground/10 bg-foreground/15 hover:bg-foreground/25 backdrop-blur max-sm:size-11"
-            />
-          }
-        >
-          <EllipsisIcon />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" sideOffset={6} className="min-w-52">
-          <WatchedMenuItems
-            scope="season"
-            watched={watched}
-            started={started}
-            onSelect={mark}
-            onPickDate={() => setPicking(true)}
-          />
-        </DropdownMenuContent>
-      </DropdownMenu>
-      <WatchedDateDialog
-        open={picking}
-        onOpenChange={setPicking}
-        onPick={(watchedAt) => mark(true, watchedAt)}
-      />
-    </>
-  )
+  return <WatchedButton watched={useSeasonWatched(title, season, items)} />
 }

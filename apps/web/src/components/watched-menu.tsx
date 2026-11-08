@@ -1,10 +1,16 @@
-import type { MediaItem, TitleSummary, WatchedAt } from "@matinee/contracts"
+import type {
+  MediaItem,
+  Season,
+  TitleSummary,
+  WatchedAt,
+} from "@matinee/contracts"
 import { Button } from "@matinee/ui/components/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
-  DropdownMenuSeparator,
+  DropdownMenuLabel,
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
@@ -23,12 +29,10 @@ import {
   CalendarIcon,
   CheckIcon,
   ClockIcon,
-  EllipsisIcon,
   EyeOffIcon,
 } from "lucide-react"
 import { useState } from "react"
 
-import { FavoriteMenuItem, useItemFavorite } from "@/components/favorite-button"
 import { WatchedDateDialog } from "@/components/watched-date-dialog"
 import { tr } from "@/i18n"
 import { client, errorMessage, orpc } from "@/lib/rpc"
@@ -184,6 +188,31 @@ export function useTitleWatched(title: TitleSummary): WatchedState {
 }
 
 /**
+ * As {@link useTitleWatched}, for one season of a show. Its files, once
+ * loaded, change before the counts do.
+ */
+export function useSeasonWatched(
+  title: TitleSummary,
+  season: Season,
+  items: MediaItem[] | undefined,
+): WatchedState {
+  const set = useSetTitleWatched()
+  const counted = items
+    ? items.every((item) => item.progress?.completed === true)
+    : season.watchedCount >= season.itemCount
+  return {
+    on: set.isPending ? set.variables.watched : counted,
+    mark: (watched, watchedAt) =>
+      set.mutate({
+        titleId: title.id,
+        season: season.number,
+        watched,
+        watchedAt,
+      }),
+  }
+}
+
+/**
  * When the user watched it, as Trakt asks: just now, on the release date,
  * or on a date they pick in a `WatchedDateDialog`, which the menu's owner
  * renders.
@@ -211,6 +240,69 @@ export function WatchedAtItems({
         <CalendarClockIcon />
         {tr("media.watchedAt.other")}
       </DropdownMenuItem>
+    </>
+  )
+}
+
+// Round, beside Play, like the heart.
+const pageButton =
+  "border-foreground/10 bg-foreground/15 hover:bg-foreground/25 backdrop-blur max-sm:size-11"
+
+/**
+ * The tick beside Play on a movie's, show's, or episode's page, as on its
+ * card: unwatched, it asks when the user watched; watched, it marks
+ * unwatched at once. The tick draws a step larger than the heart beside
+ * it, whose glyph fills more of its box.
+ */
+export function WatchedButton({ watched }: { watched: WatchedState }) {
+  const [picking, setPicking] = useState(false)
+  if (watched.on) {
+    return (
+      <Button
+        variant="secondary"
+        size="icon-lg"
+        aria-pressed
+        aria-label={tr("media.markUnwatched")}
+        title={tr("media.markUnwatched")}
+        onClick={() => watched.mark(false)}
+        className={cn(pageButton, "text-primary hover:text-primary")}
+      >
+        <CheckIcon className="size-5" strokeWidth={3} />
+      </Button>
+    )
+  }
+  return (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <Button
+              variant="secondary"
+              size="icon-lg"
+              aria-pressed={false}
+              aria-label={tr("media.markWatched")}
+              title={tr("media.markWatched")}
+              className={pageButton}
+            />
+          }
+        >
+          <CheckIcon className="size-5" />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" sideOffset={6} className="min-w-44">
+          <DropdownMenuGroup>
+            <DropdownMenuLabel>{tr("media.markWatched")}</DropdownMenuLabel>
+            <WatchedAtItems
+              onSelect={(watchedAt) => watched.mark(true, watchedAt)}
+              onPickDate={() => setPicking(true)}
+            />
+          </DropdownMenuGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <WatchedDateDialog
+        open={picking}
+        onOpenChange={setPicking}
+        onPick={(watchedAt) => watched.mark(true, watchedAt)}
+      />
     </>
   )
 }
@@ -261,64 +353,6 @@ export function WatchedMenuItems({
           {tr(`media.mark.${scope}.unwatched`)}
         </DropdownMenuItem>
       )}
-    </>
-  )
-}
-
-/**
- * The "⋯" button at the end of a file's row in a folder list, to mark it
- * watched or a favorite. Cards and episode rows have theirs on the picture,
- * see `CardActions`. Pointers that hover see it on hover and focus, inside
- * a `group/item`; touch screens always do.
- */
-export function ItemMenu({
-  item,
-  label,
-  className,
-}: {
-  item: MediaItem
-  /** Names the file for screen readers. */
-  label: string
-  className?: string
-}) {
-  const watched = useItemWatched(item)
-  const favorite = useItemFavorite(item)
-  const [picking, setPicking] = useState(false)
-  return (
-    <>
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label={tr("media.moreActions", { name: label })}
-              className={cn(
-                "text-muted-foreground opacity-0 group-focus-within/item:opacity-100 group-hover/item:opacity-100 aria-expanded:opacity-100 [@media(pointer:coarse)]:size-11 [@media(pointer:coarse)]:opacity-100",
-                className,
-              )}
-            />
-          }
-        >
-          <EllipsisIcon />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" sideOffset={4} className="min-w-48">
-          <WatchedMenuItems
-            scope="as"
-            watched={watched.on}
-            started={watched.on || item.progress !== null}
-            onSelect={watched.mark}
-            onPickDate={() => setPicking(true)}
-          />
-          <DropdownMenuSeparator />
-          <FavoriteMenuItem favorite={favorite} />
-        </DropdownMenuContent>
-      </DropdownMenu>
-      <WatchedDateDialog
-        open={picking}
-        onOpenChange={setPicking}
-        onPick={(watchedAt) => watched.mark(true, watchedAt)}
-      />
     </>
   )
 }

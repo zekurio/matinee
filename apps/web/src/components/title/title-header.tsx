@@ -9,10 +9,12 @@ import { cn } from "@matinee/ui/lib/utils"
 import { Link } from "@tanstack/react-router"
 import { PlayIcon, StarIcon } from "lucide-react"
 
+import { ActionsMenu } from "@/components/actions-menu"
 import { pageBleed, pageColumn } from "@/components/app-shell"
 import { CrewFacts, listNodes, unitList } from "@/components/credits"
 import { FavoriteButton } from "@/components/favorite-button"
 import { Picture, textLink, tone } from "@/components/media-item"
+import { useTitleWatched, WatchedButton } from "@/components/watched-menu"
 import { perLocale, tr } from "@/i18n"
 import { formatRuntime } from "@/lib/format"
 import {
@@ -24,7 +26,7 @@ import {
 } from "@/lib/media"
 
 import { HeaderOverview } from "./header-overview"
-import { MatchNote, TitleMenu } from "./title-menu"
+import { MatchNote } from "./title-menu"
 
 // A rating out of ten, with one decimal: "7.5".
 const ratings = perLocale(
@@ -39,6 +41,11 @@ const ratings = perLocale(
  * The top of the page: the backdrop across the window, the poster, and the
  * title's name, facts, description, and Play.
  */
+/** The tick beside Play, for every file of the title. */
+function TitleWatchedButton({ title }: { title: Title }) {
+  return <WatchedButton watched={useTitleWatched(title)} />
+}
+
 export function TitleHeader({ title }: { title: Title }) {
   const runtime =
     title.kind === "movie"
@@ -146,8 +153,12 @@ export function TitleHeader({ title }: { title: Title }) {
               <div className="pt-6 sm:mt-auto">
                 <div className="flex items-center gap-2">
                   <PlayButton item={title.next} code={title.kind === "show"} />
+                  {title.itemCount > 0 && <TitleWatchedButton title={title} />}
                   <FavoriteButton title={title} />
-                  <TitleMenu title={title} />
+                  <ActionsMenu
+                    target={{ kind: "title", title, file: title.next }}
+                    look="page"
+                  />
                 </div>
                 <MatchNote title={title} />
               </div>

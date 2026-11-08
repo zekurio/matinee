@@ -38,6 +38,7 @@ export default defineMessages("media", {
   "media.resume": "Resume {name}",
   "media.noFiles": "{name} has no files to play",
   "media.playFailed": "Couldn't play {name}",
+  "media.loadFailed": "Couldn't load {name}",
   // The banner on Home.
   "media.hero.label": "Featured",
   "media.hero.position": "{index} of {count}",

@@ -4,6 +4,7 @@ import { cn } from "@matinee/ui/lib/utils"
 import { useQuery } from "@tanstack/react-query"
 import { useState } from "react"
 
+import { ActionsMenu } from "@/components/actions-menu"
 import { CardActions, CardScrim } from "@/components/card-actions"
 import { useItemFavorite } from "@/components/favorite-button"
 import {
@@ -13,6 +14,7 @@ import {
   textLink,
   Thumb,
   ThumbPlayButton,
+  UnwatchBadge,
 } from "@/components/media-item"
 import { Rail, RailItem } from "@/components/rail"
 import { useItemWatched } from "@/components/watched-menu"
@@ -158,18 +160,28 @@ export function EpisodeRow({ item }: { item: MediaItem }) {
             toneKey={label.showKey}
             progress={progressRatio(item)}
             watched={watched.on}
+            badge={false}
             play={false}
             className="group-hover/thumb:border-foreground/25 w-full"
           >
             <CardScrim />
           </Thumb>
         </ItemLink>
+        <UnwatchBadge
+          name={name}
+          watched={watched}
+          touch
+          className="absolute top-1.5 right-1.5"
+        />
         <ThumbPlayButton item={item} label={name} />
         {/* Clear of the progress bar along the bottom. */}
         <CardActions
           name={name}
           watched={watched}
           favorite={favorite}
+          menu={
+            <ActionsMenu target={{ kind: "item", item, name }} look="card" />
+          }
           touch
           className="absolute right-1 bottom-1.5"
         />
