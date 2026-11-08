@@ -325,13 +325,14 @@ export async function openPlayback(
     "2048",
     "-f",
     "mp4",
+    // delay_moov writes the moov after the first fragment, with edit lists
+    // that say where each track starts. Without them, the muxer moves
+    // every track's first sample to 0 and stretches it: audio that starts
+    // after the keyframe, as it does after `-ss`, then plays that much
+    // early in Chrome, which ignores gaps in audio timestamps. It also
+    // lets ffmpeg read AC-3 and E-AC-3 parameters from the first packets.
     "-movflags",
-    [
-      "frag_keyframe",
-      "empty_moov",
-      ...(sound.delayMoov ? ["delay_moov"] : []),
-      "default_base_moof",
-    ].join("+"),
+    "frag_keyframe+empty_moov+delay_moov+default_base_moof",
     "pipe:1",
   ]
 

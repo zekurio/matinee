@@ -119,8 +119,6 @@ function aacEncoder(capabilities: TranscodingCapabilities): string {
 export type AudioPipeline = {
   /** `-c:a` and the rest, after the track's `-map`. */
   args: string[]
-  /** The MP4 muxer has to see packets before it writes the header. */
-  delayMoov: boolean
   /** The ffmpeg encoder, like `libopus`. Null when the track is copied. */
   encoder: string | null
 }
@@ -156,8 +154,6 @@ export function buildAudioPipeline(
         "copy",
         ...(stream.codec === "flac" && oldFfmpeg ? ["-strict", "-2"] : []),
       ],
-      // ffmpeg reads AC-3 and E-AC-3 parameters from the first packets.
-      delayMoov: stream.codec === "ac3" || stream.codec === "eac3",
       encoder: null,
     }
   }
@@ -205,7 +201,6 @@ export function buildAudioPipeline(
       ...rate,
       ...(filters.length > 0 ? ["-af", filters.join(",")] : []),
     ],
-    delayMoov: false,
     encoder,
   }
 }
