@@ -23,6 +23,14 @@ import { client, errorMessage, liveQuery, orpc } from "@/lib/rpc"
 import { decodesVideo } from "@/lib/video-support"
 
 export const Route = createFileRoute("/_authed/watch/$itemId")({
+  // What the player needs before it can pick a source, asked for while its
+  // code loads, and on hover over a play button.
+  loader: ({ context: { queryClient }, params: { itemId } }) => {
+    const input = { input: { id: itemId } }
+    void queryClient.prefetchQuery(orpc.media.get.queryOptions(input))
+    void queryClient.prefetchQuery(orpc.media.audio.queryOptions(input))
+    void queryClient.prefetchQuery(orpc.media.subtitles.queryOptions(input))
+  },
   component: Watch,
 })
 
