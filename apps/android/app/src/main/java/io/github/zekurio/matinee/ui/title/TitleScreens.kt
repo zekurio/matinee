@@ -60,7 +60,6 @@ import io.github.zekurio.matinee.ui.mediaFlags
 import io.github.zekurio.matinee.ui.rememberLoader
 import io.github.zekurio.matinee.ui.runtimeMinutes
 import io.github.zekurio.matinee.ui.seasonName
-import io.github.zekurio.matinee.ui.streamSummary
 import io.github.zekurio.matinee.ui.theme.Palette
 import io.github.zekurio.matinee.ui.timeLeft
 
@@ -125,14 +124,19 @@ private fun TitlePage(title: Title) {
                 }
             }
             item(key = "crew") { CrewLines(title.credits, title.studios) }
+            // A movie's file: its picture, audio, and subtitles. A show's differ by episode.
+            if (!title.isShow && next != null) {
+                item(key = "media") { MediaInfo(next, Modifier.padding(horizontal = Gutter)) }
+            }
             item(key = "actions") {
                 ActionRow(
                     play = next,
                     resume = next?.progress?.let { !it.completed && it.positionSeconds > 0 } == true,
                     playDetail = if (title.isShow) next?.let { episodeCode(it, res) } else null,
+                    name = title.name,
                     watched = viewer.isWatched(summary),
                     favorite = viewer.isFavorite(summary),
-                    onWatched = { viewer.setWatched(api, summary, !viewer.isWatched(summary)) },
+                    onWatched = { watched, at -> viewer.setWatched(api, summary, watched, watchedAt = at) },
                     onFavorite = { viewer.setFavorite(api, summary, !viewer.isFavorite(summary)) },
                     onMore = { actions.title(summary, file = if (title.isShow) null else next, here = true) },
                 )
@@ -260,9 +264,10 @@ private fun SeasonPage(title: Title, season: Season) {
                     play = next,
                     resume = next?.progress?.let { !it.completed && it.positionSeconds > 0 } == true,
                     playDetail = next?.let { episodeCode(it, res) },
+                    name = "${title.name} · ${seasonName(season.number, res)}",
                     watched = allWatched,
                     favorite = viewer.isFavorite(title.summary),
-                    onWatched = { viewer.setWatched(api, title.summary, !allWatched, season.number) },
+                    onWatched = { watched, at -> viewer.setWatched(api, title.summary, watched, season.number, at) },
                     onFavorite = { viewer.setFavorite(api, title.summary, !viewer.isFavorite(title.summary)) },
                     onMore = { actions.season(title.summary, season, here = true) },
                 )
@@ -367,7 +372,7 @@ private fun EpisodePage(item: MediaItem) {
                             rating?.let { Badge(it, outlined = true) }
                         }
                     }
-                    streamSummary(item, res)?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Palette.Faint) }
+                    MediaInfo(item, Modifier.padding(top = 12.dp))
                 }
             }
             item.episode?.overview?.let { overview ->
@@ -378,9 +383,10 @@ private fun EpisodePage(item: MediaItem) {
                     play = item,
                     resume = item.progress?.let { !it.completed && it.positionSeconds > 0 } == true,
                     playDetail = null,
+                    name = label.title,
                     watched = viewer.isWatched(item),
                     favorite = viewer.isFavorite(item),
-                    onWatched = { viewer.setWatched(api, item, !viewer.isWatched(item)) },
+                    onWatched = { watched, at -> viewer.setWatched(api, item, watched, at) },
                     onFavorite = { viewer.setFavorite(api, item, !viewer.isFavorite(item)) },
                     onMore = { actions.item(item, here = true) },
                 )

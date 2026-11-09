@@ -35,6 +35,11 @@ class SessionStore(context: Context) {
         get() = prefs.getString(KEY_USER, null)
         set(value) = prefs.edit { if (value == null) remove(KEY_USER) else putString(KEY_USER, value) }
 
+    /** Offline mode, as Findroid's: start with the downloads and leave the server alone until it's off. */
+    var offlineMode: Boolean
+        get() = prefs.getBoolean(KEY_OFFLINE, false)
+        set(value) = prefs.edit { putBoolean(KEY_OFFLINE, value) }
+
     /** A browser sign-in under way: survives the app's process going while the browser shows. */
     var pendingSignIn: Pair<String, String>?
         get() {
@@ -88,6 +93,7 @@ class SessionStore(context: Context) {
         const val KEY_SERVER = "server"
         const val KEY_TOKEN = "token"
         const val KEY_USER = "user"
+        const val KEY_OFFLINE = "offline_mode"
         const val KEY_STATE = "signin_state"
         const val KEY_VERIFIER = "signin_verifier"
     }

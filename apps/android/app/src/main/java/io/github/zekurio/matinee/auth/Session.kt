@@ -1,6 +1,9 @@
 package io.github.zekurio.matinee.auth
 
 import android.content.Context
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
@@ -13,6 +16,10 @@ import io.github.zekurio.matinee.api.MatineeApi
 import io.github.zekurio.matinee.api.MatineeJson
 import io.github.zekurio.matinee.api.User
 import java.io.IOException
+import java.net.ConnectException
+import java.net.SocketTimeoutException
+import java.net.UnknownHostException
+import javax.net.ssl.SSLException
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -31,8 +38,11 @@ sealed interface AuthState {
 
     data class Connecting(val server: String) : AuthState
 
-    /** A saved server that didn't answer; the app offers to try again. */
-    data class Unreachable(val server: String, val message: String) : AuthState
+    /**
+     * A saved server that didn't answer; the app offers to try again, and
+     * does on its own when the network comes back. [retrying] while it does.
+     */
+    data class Unreachable(val server: String, val reason: Unreachability, val retrying: Boolean = false) : AuthState
 
     data class SignedOut(val server: String, val config: AuthConfig) : AuthState
 
@@ -40,6 +50,17 @@ sealed interface AuthState {
 
     /** The server is away, and the app shows what's downloaded. */
     data class Offline(val server: String, val user: User) : AuthState
+}
+
+/** Why the server didn't answer, as far as the app can tell. */
+enum class Unreachability {
+    /** The phone has no network at all. */
+    NoNetwork,
+    Refused,
+    NotFound,
+    Timeout,
+    Certificate,
+    Other,
 }
 
 /**
@@ -86,8 +107,19 @@ class Session(context: Context) {
     /** The API while signed in. Screens only show then. */
     fun requireApi(): MatineeApi = checkNotNull(api) { "not connected" }
 
+    private val connectivity = context.getSystemService(ConnectivityManager::class.java)
+
     init {
         start()
+        // Try again once a network comes up, rather than wait for a tap.
+        connectivity.registerDefaultNetworkCallback(object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) {
+                scope.launch {
+                    val current = _state.value
+                    if (current is AuthState.Unreachable && !current.retrying) start()
+                }
+            }
+        })
     }
 
     /** Check the saved server and session again. */
@@ -98,7 +130,11 @@ class Session(context: Context) {
         }
         val client = MatineeApi(server, http)
         api = client
-        _state.value = AuthState.Connecting(server.display)
+        // Trying again stays on the unreachable screen, with the button busy.
+        _state.value = when (val current = _state.value) {
+            is AuthState.Unreachable -> current.copy(retrying = true)
+            else -> AuthState.Connecting(server.display)
+        }
         scope.launch {
             _state.value = try {
                 val user = if (token != null) client.session() else null
@@ -110,7 +146,7 @@ class Session(context: Context) {
                     AuthState.SignedOut(server.display, client.authConfig())
                 }
             } catch (e: IOException) {
-                AuthState.Unreachable(server.display, e.message ?: e.javaClass.simpleName)
+                AuthState.Unreachable(server.display, unreachability(e))
             }
         }
     }
@@ -219,6 +255,18 @@ class Session(context: Context) {
             runCatching { client?.signOut() }
             clearToken()
             start()
+        }
+    }
+
+    private fun unreachability(e: IOException): Unreachability {
+        val network = connectivity.getNetworkCapabilities(connectivity.activeNetwork)
+        return when {
+            network?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) != true -> Unreachability.NoNetwork
+            e is UnknownHostException -> Unreachability.NotFound
+            e is ConnectException -> Unreachability.Refused
+            e is SocketTimeoutException -> Unreachability.Timeout
+            e is SSLException -> Unreachability.Certificate
+            else -> Unreachability.Other
         }
     }
 

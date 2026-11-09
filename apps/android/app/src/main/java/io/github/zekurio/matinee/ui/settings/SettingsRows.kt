@@ -40,13 +40,9 @@ import io.github.zekurio.matinee.ui.theme.Palette
 val PanelShape = RoundedCornerShape(12.dp)
 
 @Composable
-fun Section(title: String, description: String?, content: @Composable ColumnScope.() -> Unit) {
+fun Section(title: String, content: @Composable ColumnScope.() -> Unit) {
     Column {
         Text(title, style = MaterialTheme.typography.titleLarge)
-        if (description != null) {
-            Gap(4.dp)
-            Text(description, style = MaterialTheme.typography.bodyMedium, color = Palette.Muted)
-        }
         Gap(14.dp)
         content()
     }
@@ -64,25 +60,22 @@ fun Panel(content: @Composable ColumnScope.() -> Unit) {
 @Composable
 fun RowDivider() = HorizontalDivider(color = Palette.Border)
 
-/** A row's title and description, taking the room its control leaves. */
+/** A row's title, taking the room its control leaves. */
 @Composable
-private fun androidx.compose.foundation.layout.RowScope.RowText(title: String, description: String?, color: Color = Palette.Foreground) {
-    Column(Modifier.weight(1f)) {
-        Text(title, style = MaterialTheme.typography.bodyLarge, color = color)
-        if (description != null) Text(description, style = MaterialTheme.typography.bodySmall, color = Palette.Muted)
-    }
+private fun androidx.compose.foundation.layout.RowScope.RowText(title: String, color: Color = Palette.Foreground) {
+    Text(title, style = MaterialTheme.typography.bodyLarge, color = color, modifier = Modifier.weight(1f))
 }
 
 /** A choice among [options], shown at the row's end and picked from a menu that opens there. */
 @Composable
-fun <T> PickerRow(title: String, description: String?, options: List<Pair<T, String>>, current: T, onPick: (T) -> Unit) {
+fun <T> PickerRow(title: String, options: List<Pair<T, String>>, current: T, onPick: (T) -> Unit) {
     var open by remember { mutableStateOf(false) }
     Box {
         Row(
             Modifier.fillMaxWidth().clickable { open = true }.padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            RowText(title, description)
+            RowText(title)
             Gap(12.dp)
             Text(
                 options.firstOrNull { it.first == current }?.second ?: current.toString(),
@@ -114,12 +107,12 @@ fun <T> PickerRow(title: String, description: String?, options: List<Pair<T, Str
 }
 
 @Composable
-fun SwitchRow(title: String, description: String?, checked: Boolean, onChange: (Boolean) -> Unit) {
+fun SwitchRow(title: String, checked: Boolean, onChange: (Boolean) -> Unit) {
     Row(
         Modifier.fillMaxWidth().clickable { onChange(!checked) }.padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        RowText(title, description)
+        RowText(title)
         Gap(12.dp)
         Switch(
             checked = checked,
@@ -131,12 +124,12 @@ fun SwitchRow(title: String, description: String?, checked: Boolean, onChange: (
 
 /** A row that goes somewhere else, like the system's settings, with what's set there at its end. */
 @Composable
-fun LinkRow(title: String, description: String?, value: String? = null, destructive: Boolean = false, onClick: () -> Unit) {
+fun LinkRow(title: String, value: String? = null, destructive: Boolean = false, onClick: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        RowText(title, description, if (destructive) Palette.Danger else Palette.Foreground)
+        RowText(title, if (destructive) Palette.Danger else Palette.Foreground)
         if (value != null) {
             Gap(12.dp)
             Text(

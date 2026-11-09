@@ -524,6 +524,9 @@ data class ApiErrorBody(
 @Serializable
 internal data class SeasonBody(val season: Int?)
 
+/** `watchedAt` for the day a file came out: an episode's air date, a movie's release date. */
+const val WATCHED_RELEASED = "released"
+
 @Serializable
 internal data class WatchedBody(val watched: Boolean, val watchedAt: String? = null)
 

@@ -82,6 +82,14 @@ class Actions(val scope: CoroutineScope) {
     /** The show or season whose download sheet is open. */
     var files by mutableStateOf<FileSet?>(null)
 
+    /** Something being marked watched, while the person says when. */
+    var watched by mutableStateOf<WatchedAsk?>(null)
+
+    /** Ask when the person watched [name], then [mark] it with the answer. */
+    fun askWatched(name: String, mark: suspend (watchedAt: String?) -> Unit) {
+        watched = WatchedAsk(name, mark)
+    }
+
     fun item(item: MediaItem, here: Boolean = false) {
         target = ActionTarget.Item(item, here)
     }
@@ -116,6 +124,7 @@ fun CoroutineScope.launchShowing(snackbar: SnackbarHostState, failure: String, b
 fun ActionsSheet(actions: Actions) {
     actions.download?.let { item -> DownloadSheet(item) { actions.download = null } }
     actions.files?.let { files -> DownloadFilesSheet(files) { actions.files = null } }
+    actions.watched?.let { ask -> WatchedAtSheet(ask) { actions.watched = null } }
     val target = actions.target ?: return
     val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
@@ -140,7 +149,7 @@ fun ActionsSheet(actions: Actions) {
 }
 
 @Composable
-private fun SheetHeader(title: String, subtitle: String?) {
+internal fun SheetHeader(title: String, subtitle: String?) {
     Column(Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
         Text(title, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
         if (subtitle != null) Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = Palette.Muted, maxLines = 1)
@@ -194,9 +203,15 @@ private fun ItemActions(item: MediaItem, here: Boolean, dismiss: () -> Unit) {
     }
     if (!here) {
         val watchedFailure = stringResource(if (watched) R.string.media_mark_unwatched_failed else R.string.media_mark_watched_failed)
+        val actions = LocalActions.current
         SheetItem(Lucide.Check, stringResource(if (watched) R.string.media_mark_unwatched else R.string.media_mark_watched)) {
             dismiss()
-            scope.launchShowing(snackbar, watchedFailure) { viewer.setWatched(api, item, !watched) }
+            // Unwatched at once; watched asks when first.
+            if (watched) {
+                scope.launchShowing(snackbar, watchedFailure) { viewer.setWatched(api, item, false) }
+            } else {
+                actions.askWatched(if (code != null) label.title else label.showName) { at -> viewer.setWatched(api, item, true, at) }
+            }
         }
         val favoriteFailure = stringResource(R.string.media_favorite_failed)
         SheetItem(
@@ -284,7 +299,12 @@ private fun TitleActions(title: TitleSummary, file: MediaItem?, here: Boolean, d
             ),
         ) {
             dismiss()
-            scope.launchShowing(snackbar, watchedFailure) { viewer.setWatched(api, title, !watched) }
+            // Unwatched at once; watched asks when first.
+            if (watched) {
+                scope.launchShowing(snackbar, watchedFailure) { viewer.setWatched(api, title, false) }
+            } else {
+                actions.askWatched(title.name) { at -> viewer.setWatched(api, title, true, watchedAt = at) }
+            }
         }
         val favoriteFailure = stringResource(R.string.media_favorite_failed)
         SheetItem(

@@ -278,11 +278,12 @@ class MatineeApi(val base: HttpUrl, private val client: OkHttpClient) {
         ),
     )
 
-    suspend fun setWatched(itemId: String, watched: Boolean) =
-        call("PUT", "media/$itemId/watched", body(WatchedBody(watched)))
+    /** [watchedAt] as in the contract's `WatchedAt`: [WATCHED_RELEASED] or an ISO time; null is now. */
+    suspend fun setWatched(itemId: String, watched: Boolean, watchedAt: String? = null) =
+        call("PUT", "media/$itemId/watched", body(WatchedBody(watched, watchedAt)))
 
-    suspend fun setTitleWatched(titleId: String, watched: Boolean, season: Int? = null) =
-        call("PUT", "titles/$titleId/watched", body(TitleWatchedBody(watched, season)))
+    suspend fun setTitleWatched(titleId: String, watched: Boolean, season: Int? = null, watchedAt: String? = null) =
+        call("PUT", "titles/$titleId/watched", body(TitleWatchedBody(watched, season, watchedAt)))
 
     suspend fun setFavorite(titleId: String, favorite: Boolean) =
         call("PUT", "titles/$titleId/favorite", body(FavoriteBody(favorite)))

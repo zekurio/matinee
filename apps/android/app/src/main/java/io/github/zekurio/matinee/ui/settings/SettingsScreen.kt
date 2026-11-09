@@ -86,6 +86,7 @@ import io.github.zekurio.matinee.ui.player.AUTOMATIC
 import io.github.zekurio.matinee.ui.player.Capabilities
 import io.github.zekurio.matinee.ui.player.Decoders
 import io.github.zekurio.matinee.ui.player.ORIGINAL_QUALITY
+import io.github.zekurio.matinee.ui.player.OWN_SUBTITLE_EDGES
 import io.github.zekurio.matinee.ui.player.PlayerPrefs
 import io.github.zekurio.matinee.ui.player.QUALITIES
 import io.github.zekurio.matinee.ui.player.SKIP_STEPS
@@ -96,6 +97,7 @@ import io.github.zekurio.matinee.ui.player.SubtitleEdge
 import io.github.zekurio.matinee.ui.player.SubtitleLine
 import io.github.zekurio.matinee.ui.player.SubtitleLook
 import io.github.zekurio.matinee.ui.player.rememberSubtitleLook
+import io.github.zekurio.matinee.ui.player.rememberSystemStyleIsAppDefined
 import io.github.zekurio.matinee.ui.rememberLoader
 import io.github.zekurio.matinee.ui.theme.Palette
 import io.github.zekurio.matinee.ui.videoCodecName
@@ -149,7 +151,7 @@ fun SettingsScreen(session: Session) {
             item(key = "downloads") { DownloadsSection() }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) item(key = "app") { AppSection() }
             item(key = "sessions") {
-                Section(stringResource(R.string.account_sessions_title), stringResource(R.string.account_sessions_description)) {}
+                Section(stringResource(R.string.account_sessions_title)) {}
             }
             when (val state = sessions.state) {
                 Load.Loading -> item { Text("…", color = Palette.Muted) }
@@ -166,7 +168,7 @@ fun SettingsScreen(session: Session) {
                 }
             }
             item(key = "server") {
-                Section(stringResource(R.string.settings_server), null) {
+                Section(stringResource(R.string.settings_server)) {
                     Panel {
                         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                             LucideIcon(Lucide.Server, null, tint = Palette.Muted)
@@ -195,7 +197,7 @@ fun SettingsScreen(session: Session) {
 /** The account's languages, which every device of the account plays by. */
 @Composable
 private fun LanguagesSection(playback: PlaybackPreferences, options: PlaybackOptions?, save: (PlaybackPreferences) -> Unit) {
-    Section(stringResource(R.string.playback_languages_title), stringResource(R.string.playback_languages_description)) {
+    Section(stringResource(R.string.playback_languages_title)) {
         Panel {
             val audioOptions = buildList {
                 add(null to stringResource(R.string.playback_audio_file_default))
@@ -204,14 +206,12 @@ private fun LanguagesSection(playback: PlaybackPreferences, options: PlaybackOpt
             }
             PickerRow(
                 stringResource(R.string.playback_audio_title),
-                stringResource(R.string.playback_audio_description),
                 audioOptions,
                 playback.audioLanguage,
             ) { save(playback.copy(audioLanguage = it)) }
             RowDivider()
             PickerRow(
                 stringResource(R.string.playback_subtitles_title),
-                null,
                 SubtitleMode.all.map { it to subtitleModeLabel(it) },
                 playback.subtitleMode,
             ) { save(playback.copy(subtitleMode = it)) }
@@ -220,7 +220,6 @@ private fun LanguagesSection(playback: PlaybackPreferences, options: PlaybackOpt
                 RowDivider()
                 PickerRow(
                     stringResource(R.string.playback_subtitles_language),
-                    null,
                     buildList {
                         add(null to stringResource(R.string.playback_subtitles_device_language, languageName(Locale.getDefault().language)))
                         options?.subtitleLanguages?.forEach { add(it to languageName(it)) }
@@ -231,7 +230,6 @@ private fun LanguagesSection(playback: PlaybackPreferences, options: PlaybackOpt
             RowDivider()
             SwitchRow(
                 stringResource(R.string.playback_subtitles_remember),
-                stringResource(R.string.playback_subtitles_remember_description),
                 playback.rememberSubtitles,
             ) { save(playback.copy(rememberSubtitles = it)) }
         }
@@ -242,52 +240,60 @@ private fun LanguagesSection(playback: PlaybackPreferences, options: PlaybackOpt
 @Composable
 private fun SubtitlesSection(prefs: PlayerPrefs) {
     val context = LocalContext.current
-    Section(stringResource(R.string.settings_subtitles_title), stringResource(R.string.settings_subtitles_description)) {
+    val appDefined = rememberSystemStyleIsAppDefined()
+    Section(stringResource(R.string.settings_subtitles_title)) {
         SubtitlePreview(rememberSubtitleLook(prefs))
         Gap(12.dp)
         Panel {
             SwitchRow(
                 stringResource(R.string.settings_subtitles_system),
-                stringResource(R.string.settings_subtitles_system_description),
                 prefs.subtitleSystemStyle,
             ) { prefs.subtitleSystemStyle = it }
             RowDivider()
             if (prefs.subtitleSystemStyle) {
-                LinkRow(stringResource(R.string.settings_subtitles_system_open), null) {
+                LinkRow(stringResource(R.string.settings_subtitles_system_open)) {
                     context.openSettings(Intent(Settings.ACTION_CAPTIONING_SETTINGS))
                 }
+                if (appDefined) {
+                    RowDivider()
+                    OwnSubtitleLook(prefs, size = false)
+                }
             } else {
-                val percent = remember { NumberFormat.getPercentInstance() }
-                PickerRow(
-                    stringResource(R.string.settings_subtitles_size),
-                    null,
-                    SUBTITLE_SCALES.map { it to percent.format(it.toDouble()) },
-                    prefs.subtitleScale,
-                ) { prefs.subtitleScale = it }
-                RowDivider()
-                PickerRow(
-                    stringResource(R.string.settings_subtitles_color),
-                    null,
-                    SubtitleColor.entries.map { it to subtitleColorLabel(it) },
-                    prefs.subtitleColor,
-                ) { prefs.subtitleColor = it }
-                RowDivider()
-                PickerRow(
-                    stringResource(R.string.settings_subtitles_background),
-                    null,
-                    SubtitleBackground.entries.map { it to subtitleBackgroundLabel(it) },
-                    prefs.subtitleBackground,
-                ) { prefs.subtitleBackground = it }
-                RowDivider()
-                PickerRow(
-                    stringResource(R.string.settings_subtitles_edge),
-                    null,
-                    SubtitleEdge.entries.map { it to subtitleEdgeLabel(it) },
-                    prefs.subtitleEdge,
-                ) { prefs.subtitleEdge = it }
+                OwnSubtitleLook(prefs, size = true)
             }
         }
     }
+}
+
+/** The app's own subtitle look; [size] is left out while the system's caption size applies. */
+@Composable
+private fun OwnSubtitleLook(prefs: PlayerPrefs, size: Boolean) {
+    if (size) {
+        val percent = remember { NumberFormat.getPercentInstance() }
+        PickerRow(
+            stringResource(R.string.settings_subtitles_size),
+            SUBTITLE_SCALES.map { it to percent.format(it.toDouble()) },
+            prefs.subtitleScale,
+        ) { prefs.subtitleScale = it }
+        RowDivider()
+    }
+    PickerRow(
+        stringResource(R.string.settings_subtitles_color),
+        SubtitleColor.entries.map { it to subtitleColorLabel(it) },
+        prefs.subtitleColor,
+    ) { prefs.subtitleColor = it }
+    RowDivider()
+    PickerRow(
+        stringResource(R.string.settings_subtitles_background),
+        SubtitleBackground.entries.map { it to subtitleBackgroundLabel(it) },
+        prefs.subtitleBackground,
+    ) { prefs.subtitleBackground = it }
+    RowDivider()
+    PickerRow(
+        stringResource(R.string.settings_subtitles_edge),
+        OWN_SUBTITLE_EDGES.map { it to subtitleEdgeLabel(it) },
+        prefs.subtitleEdge,
+    ) { prefs.subtitleEdge = it }
 }
 
 /** A line of subtitles over a stand-in for a bright frame, as the player would draw it. */
@@ -311,11 +317,10 @@ private fun SubtitlePreview(look: SubtitleLook) {
 @Composable
 private fun DeviceSection(prefs: PlayerPrefs, options: PlaybackOptions?) {
     val context = LocalContext.current
-    Section(stringResource(R.string.playback_device_title), stringResource(R.string.playback_device_description)) {
+    Section(stringResource(R.string.playback_device_title)) {
         Panel {
             PickerRow(
                 stringResource(R.string.playback_quality_title),
-                stringResource(R.string.playback_quality_description),
                 buildList {
                     add(ORIGINAL_QUALITY to stringResource(R.string.player_quality_original))
                     QUALITIES.forEach { add(it.id to qualityLabel(it.id)) }
@@ -328,7 +333,6 @@ private fun DeviceSection(prefs: PlayerPrefs, options: PlaybackOptions?) {
                 RowDivider()
                 PickerRow(
                     stringResource(R.string.playback_video_codec_title),
-                    stringResource(R.string.playback_video_codec_description),
                     listOf(AUTOMATIC to stringResource(R.string.playback_codec_automatic, videoCodecName("h264"))) +
                         video.map { it to videoCodecName(it) },
                     prefs.videoCodec.takeIf { it in video } ?: AUTOMATIC,
@@ -339,7 +343,6 @@ private fun DeviceSection(prefs: PlayerPrefs, options: PlaybackOptions?) {
                 RowDivider()
                 PickerRow(
                     stringResource(R.string.playback_audio_codec_title),
-                    stringResource(R.string.playback_audio_codec_description),
                     listOf(AUTOMATIC to stringResource(R.string.playback_codec_automatic, audioFormatName(audio.first()))) +
                         audio.map { it to audioFormatName(it) },
                     prefs.audioCodec.takeIf { it in audio } ?: AUTOMATIC,
@@ -348,7 +351,6 @@ private fun DeviceSection(prefs: PlayerPrefs, options: PlaybackOptions?) {
             RowDivider()
             PickerRow(
                 stringResource(R.string.playback_decoders_title),
-                stringResource(R.string.playback_decoders_description),
                 listOf(
                     Decoders.HARDWARE to stringResource(R.string.playback_decoders_hardware),
                     Decoders.SOFTWARE to stringResource(R.string.playback_decoders_software),
@@ -358,21 +360,18 @@ private fun DeviceSection(prefs: PlayerPrefs, options: PlaybackOptions?) {
             RowDivider()
             PickerRow(
                 stringResource(R.string.playback_skip_title),
-                stringResource(R.string.playback_skip_description),
                 SKIP_STEPS.map { it to pluralStringResource(R.plurals.playback_skip_seconds, it, it) },
                 prefs.skipSeconds,
             ) { prefs.skipSeconds = it }
             RowDivider()
             SwitchRow(
                 stringResource(R.string.playback_autoplay_title),
-                stringResource(R.string.playback_autoplay_description),
                 prefs.autoplayNext,
             ) { prefs.autoplayNext = it }
             if (remember { context.packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE) }) {
                 RowDivider()
                 SwitchRow(
                     stringResource(R.string.playback_pip_title),
-                    stringResource(R.string.playback_pip_description),
                     prefs.pictureInPicture,
                 ) { prefs.pictureInPicture = it }
             }
@@ -383,11 +382,11 @@ private fun DeviceSection(prefs: PlayerPrefs, options: PlaybackOptions?) {
 /** A switch per format this device plays that the server could convert, as the web's passthrough. */
 @Composable
 private fun PassthroughSection(prefs: PlayerPrefs, codecs: List<String>) {
-    Section(stringResource(R.string.playback_passthrough_title), stringResource(R.string.playback_passthrough_description)) {
+    Section(stringResource(R.string.playback_passthrough_title)) {
         Panel {
             codecs.forEachIndexed { index, codec ->
                 if (index > 0) RowDivider()
-                SwitchRow(audioFormatName(codec), passthroughNote(codec), codec !in prefs.convertAudio) { on ->
+                SwitchRow(audioFormatName(codec), codec !in prefs.convertAudio) { on ->
                     prefs.convertAudio = if (on) prefs.convertAudio - codec else prefs.convertAudio + codec
                 }
             }
@@ -406,11 +405,10 @@ private fun DownloadsSection() {
     var subtitles by remember { mutableStateOf(downloads.subtitles) }
     var confirm by remember { mutableStateOf(false) }
     val total = formatBytes(items.values.sumOf { it.bytes })
-    Section(stringResource(R.string.downloads_title), null) {
+    Section(stringResource(R.string.downloads_title)) {
         Panel {
             SwitchRow(
                 stringResource(R.string.downloads_unmetered),
-                stringResource(R.string.downloads_unmetered_description),
                 unmetered,
             ) {
                 unmetered = it
@@ -419,7 +417,6 @@ private fun DownloadsSection() {
             RowDivider()
             PickerRow(
                 stringResource(R.string.downloads_default_title),
-                stringResource(R.string.downloads_default_description),
                 buildList {
                     add(DEFAULT_DEVICE to stringResource(R.string.downloads_choice_device))
                     VIDEO_PRESETS.forEach { add(it.height.toString() to stringResource(R.string.downloads_choice_preset, it.height, mbps(it.bitrate))) }
@@ -433,7 +430,6 @@ private fun DownloadsSection() {
             RowDivider()
             PickerRow(
                 stringResource(R.string.downloads_subtitles_title),
-                stringResource(R.string.downloads_subtitles_description),
                 listOf(
                     DownloadSubtitles.USED to stringResource(R.string.downloads_subtitles_used),
                     DownloadSubtitles.ALL to stringResource(R.string.downloads_subtitles_all),
@@ -448,7 +444,7 @@ private fun DownloadsSection() {
                 RowDivider()
                 LinkRow(
                     stringResource(R.string.downloads_remove_all),
-                    stringResource(R.string.downloads_total, total),
+                    value = total,
                     destructive = true,
                 ) { confirm = true }
             }
@@ -485,11 +481,10 @@ private fun AppSection() {
         val locales = context.getSystemService(LocaleManager::class.java)?.applicationLocales
         locales?.takeIf { !it.isEmpty }?.get(0)?.let { it.getDisplayName(it).replaceFirstChar { c -> c.titlecase(it) } } ?: system
     }
-    Section(stringResource(R.string.settings_app_title), null) {
+    Section(stringResource(R.string.settings_app_title)) {
         Panel {
             LinkRow(
                 stringResource(R.string.settings_app_language),
-                stringResource(R.string.settings_app_language_description),
                 value = language,
             ) {
                 context.openSettings(Intent(Settings.ACTION_APP_LOCALE_SETTINGS, Uri.fromParts("package", context.packageName, null)))
@@ -581,17 +576,10 @@ private fun subtitleEdgeLabel(edge: SubtitleEdge): String = stringResource(
         SubtitleEdge.SHADOW -> R.string.settings_subtitles_edge_shadow
         SubtitleEdge.OUTLINE -> R.string.settings_subtitles_edge_outline
         SubtitleEdge.NONE -> R.string.settings_subtitles_edge_none
+        // Only the system's style asks for these, and it isn't picked here.
+        SubtitleEdge.RAISED, SubtitleEdge.DEPRESSED -> R.string.settings_subtitles_edge_shadow
     },
 )
-
-@Composable
-private fun passthroughNote(codec: String): String? = when (codec) {
-    "ac3" -> stringResource(R.string.playback_passthrough_ac3)
-    "eac3" -> stringResource(R.string.playback_passthrough_eac3)
-    "flac" -> stringResource(R.string.playback_passthrough_flac)
-    "alac" -> stringResource(R.string.playback_passthrough_alac)
-    else -> null
-}
 
 /** "German" for `de`, in the device's language. */
 fun languageName(tag: String): String {

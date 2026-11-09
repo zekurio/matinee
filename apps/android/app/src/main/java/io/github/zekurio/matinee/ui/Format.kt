@@ -211,6 +211,30 @@ fun channelLayout(stream: AudioStream): String? {
     return stream.channels?.let { GUESSED_LAYOUTS[it] }
 }
 
+/** "1080p · HEVC · HDR10", the picture's part of a file's details. */
+fun videoSummary(item: MediaItem): String? {
+    val video = item.probe?.video ?: return null
+    val hdr = if (video.hdr == "hdr10" && video.hdr10Plus) "HDR10+" else video.hdr?.let { HDR_LABELS[it] }
+    return listOfNotNull(resolutionLabel(video.width, video.height), videoCodecName(video.codec), hdr).joinToString(" · ")
+}
+
+/**
+ * "German, English" for tracks' BCP 47 tags, each language once in the
+ * order given, in the device's language. Tracks that don't say are left
+ * out; null when none say.
+ */
+fun languageList(tags: List<String?>): String? {
+    val names = tags.filterNotNull()
+        .map { java.util.Locale.forLanguageTag(it) }
+        .distinctBy { it.language }
+        .mapNotNull { locale ->
+            locale.getDisplayLanguage(java.util.Locale.getDefault())
+                .takeIf { it.isNotBlank() && it != locale.language }
+                ?.replaceFirstChar { it.titlecase(java.util.Locale.getDefault()) }
+        }
+    return names.takeIf { it.isNotEmpty() }?.joinToString(", ")
+}
+
 /** Badges for a title page: resolution, dynamic range, and the main audio's layout. */
 fun mediaFlags(item: MediaItem): List<String> {
     val probe = item.probe ?: return emptyList()
@@ -222,20 +246,4 @@ fun mediaFlags(item: MediaItem): List<String> {
         hdr,
         main?.let(::channelLayout),
     )
-}
-
-/** "1080p · HEVC · 5.1 · 3 subtitles", once the server has probed the file. */
-fun streamSummary(item: MediaItem, res: Resources): String? {
-    val probe = item.probe ?: return null
-    val video = probe.video
-    val main = probe.audio.firstOrNull { it.default } ?: probe.audio.firstOrNull()
-    val parts = listOfNotNull(
-        video?.let { resolutionLabel(it.width, it.height) },
-        video?.let { videoCodecName(it.codec) },
-        video?.hdr?.let { HDR_LABELS[it] },
-        main?.let(::channelLayout),
-        probe.audio.size.takeIf { it > 1 }?.let { res.getQuantityString(R.plurals.media_audio_tracks, it, it) },
-        probe.subtitles.size.takeIf { it > 0 }?.let { res.getQuantityString(R.plurals.media_subtitles, it, it) },
-    )
-    return parts.takeIf { it.isNotEmpty() }?.joinToString(" · ")
 }

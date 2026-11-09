@@ -66,7 +66,7 @@ import kotlinx.coroutines.launch
 
 /** The web's auth screen: the mark and name at the top, the form below the middle. */
 @Composable
-private fun AuthLayout(content: @Composable ColumnScope.() -> Unit) {
+internal fun AuthLayout(content: @Composable ColumnScope.() -> Unit) {
     Box(Modifier.fillMaxSize().safeDrawingPadding().imePadding()) {
         Row(
             Modifier.padding(horizontal = 26.dp, vertical = 24.dp),

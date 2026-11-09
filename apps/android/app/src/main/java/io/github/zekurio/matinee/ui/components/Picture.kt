@@ -111,6 +111,8 @@ object Lucide {
     val ArrowLeft = R.drawable.lucide_arrow_left
     val ArrowUpDown = R.drawable.lucide_arrow_up_down
     val AudioLines = R.drawable.lucide_audio_lines
+    val Calendar = R.drawable.lucide_calendar
+    val CalendarClock = R.drawable.lucide_calendar_clock
     val Captions = R.drawable.lucide_captions
     val ChartColumn = R.drawable.lucide_chart_column
     val Check = R.drawable.lucide_check

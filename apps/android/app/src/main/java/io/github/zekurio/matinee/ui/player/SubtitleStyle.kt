@@ -32,13 +32,15 @@ import androidx.lifecycle.compose.currentStateAsState
 /** How the player draws a line of subtitles. */
 data class SubtitleLook(
     val color: Color,
-    /** Behind each line, transparent for none. */
+    /** Behind the text, transparent for none. */
     val background: Color,
     val edge: SubtitleEdge,
     val edgeColor: Color,
     /** On top of the size the player picks for the screen. */
     val scale: Float,
     val font: FontFamily? = null,
+    /** Behind the whole cue, around the text's background, as Android's caption window. */
+    val window: Color = Color.Transparent,
 )
 
 private val COLORS = mapOf(
@@ -53,7 +55,8 @@ fun SubtitleColor.color(): Color = COLORS.getValue(this)
 /**
  * The look [prefs] asks for: the system's caption style when it says to,
  * which Settings > Accessibility > Caption preferences sets, else the app's
- * own choices.
+ * own choices. What the system's style leaves to the app, as its "set by
+ * app" style leaves everything, comes from the app's choices too.
  */
 @Composable
 fun rememberSubtitleLook(prefs: PlayerPrefs): SubtitleLook {
@@ -75,30 +78,49 @@ fun rememberSubtitleLook(prefs: PlayerPrefs): SubtitleLook {
     return remember(system, own, lifecycle) {
         if (!system) return@remember own
         val captions = context.getSystemService(CaptioningManager::class.java) ?: return@remember own
-        systemLook(captions.userStyle, captions.fontScale)
+        systemLook(captions.userStyle, captions.fontScale, own)
     }
 }
 
-private fun systemLook(style: CaptionStyle, scale: Float): SubtitleLook {
+/**
+ * Whether the system's caption style leaves everything to the app, as its
+ * "set by app" style does. Read again on coming back from its page.
+ */
+@Composable
+fun rememberSystemStyleIsAppDefined(): Boolean {
+    val context = LocalContext.current
+    val lifecycle by LocalLifecycleOwner.current.lifecycle.currentStateAsState()
+    return remember(lifecycle) {
+        val style = context.getSystemService(CaptioningManager::class.java)?.userStyle ?: return@remember true
+        !style.hasForegroundColor() && !style.hasBackgroundColor() && !style.hasEdgeType() &&
+            !style.hasEdgeColor() && !style.hasWindowColor() && style.typeface == null
+    }
+}
+
+private fun systemLook(style: CaptionStyle, scale: Float, own: SubtitleLook): SubtitleLook {
     fun color(argb: Int) = Color(argb)
     return SubtitleLook(
-        color = if (style.hasForegroundColor()) color(style.foregroundColor) else Color.White,
-        background = if (style.hasBackgroundColor()) color(style.backgroundColor) else Color.Black.copy(alpha = 0.45f),
-        edge = when {
-            !style.hasEdgeType() -> SubtitleEdge.SHADOW
-            style.edgeType == CaptionStyle.EDGE_TYPE_NONE -> SubtitleEdge.NONE
-            style.edgeType == CaptionStyle.EDGE_TYPE_OUTLINE -> SubtitleEdge.OUTLINE
+        color = if (style.hasForegroundColor()) color(style.foregroundColor) else own.color,
+        background = if (style.hasBackgroundColor()) color(style.backgroundColor) else own.background,
+        edge = if (!style.hasEdgeType()) own.edge else when (style.edgeType) {
+            CaptionStyle.EDGE_TYPE_NONE -> SubtitleEdge.NONE
+            CaptionStyle.EDGE_TYPE_OUTLINE -> SubtitleEdge.OUTLINE
+            CaptionStyle.EDGE_TYPE_RAISED -> SubtitleEdge.RAISED
+            CaptionStyle.EDGE_TYPE_DEPRESSED -> SubtitleEdge.DEPRESSED
             else -> SubtitleEdge.SHADOW
         },
-        edgeColor = if (style.hasEdgeColor()) color(style.edgeColor) else Color.Black,
+        edgeColor = if (style.hasEdgeColor()) color(style.edgeColor) else own.edgeColor,
+        // The size stays the system's: "set by app" still picks one.
         scale = scale,
-        font = style.typeface?.let(::FontFamily),
+        font = style.typeface?.let(::FontFamily) ?: own.font,
+        window = if (style.hasWindowColor()) color(style.windowColor) else own.window,
     )
 }
 
 /**
  * One cue, centered, at [size] times the look's scale: the text over its
- * background, with a shadow or an outline drawn under the fill.
+ * background, inside the window, with a shadow or an outline drawn under
+ * the fill.
  */
 @Composable
 fun SubtitleLine(text: AnnotatedString, look: SubtitleLook, modifier: Modifier = Modifier, size: Float = 20f) {
@@ -110,18 +132,27 @@ fun SubtitleLine(text: AnnotatedString, look: SubtitleLook, modifier: Modifier =
         fontWeight = FontWeight.Medium,
         fontFamily = look.font,
         textAlign = TextAlign.Center,
-        shadow = if (look.edge == SubtitleEdge.SHADOW) Shadow(look.edgeColor, Offset(0f, 2f), blurRadius = 6f) else null,
+        shadow = when (look.edge) {
+            SubtitleEdge.SHADOW -> Shadow(look.edgeColor, Offset(0f, 2f), blurRadius = 6f)
+            // A hard edge below and to the right, or above and to the left, as Android draws them.
+            SubtitleEdge.RAISED -> Shadow(look.edgeColor, Offset(-2f, -2f), blurRadius = 0f)
+            SubtitleEdge.DEPRESSED -> Shadow(look.edgeColor, Offset(2f, 2f), blurRadius = 0f)
+            else -> null
+        },
     )
     val padding: Dp = if (look.background.alpha > 0f) 8.dp else 0.dp
-    Box(
-        modifier
-            .background(look.background, RoundedCornerShape(4.dp))
-            .padding(horizontal = padding, vertical = 2.dp),
-    ) {
-        if (look.edge == SubtitleEdge.OUTLINE) {
-            val stroke = with(LocalDensity.current) { fontSize.toPx() } * 0.14f
-            Text(text, style = base.copy(color = look.edgeColor, drawStyle = Stroke(width = stroke, join = StrokeJoin.Round)))
+    val windowPadding: Dp = if (look.window.alpha > 0f) 6.dp else 0.dp
+    Box(modifier.background(look.window, RoundedCornerShape(6.dp)).padding(windowPadding)) {
+        Box(
+            Modifier
+                .background(look.background, RoundedCornerShape(4.dp))
+                .padding(horizontal = padding, vertical = 2.dp),
+        ) {
+            if (look.edge == SubtitleEdge.OUTLINE) {
+                val stroke = with(LocalDensity.current) { fontSize.toPx() } * 0.14f
+                Text(text, style = base.copy(color = look.edgeColor, drawStyle = Stroke(width = stroke, join = StrokeJoin.Round)))
+            }
+            Text(text, style = base)
         }
-        Text(text, style = base)
     }
 }

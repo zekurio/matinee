@@ -53,15 +53,18 @@ import io.github.zekurio.matinee.api.MediaItem
 import io.github.zekurio.matinee.api.Season
 import io.github.zekurio.matinee.api.Title
 import io.github.zekurio.matinee.app
+import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.LocalNavigator
 import io.github.zekurio.matinee.ui.browse.creditKind
+import io.github.zekurio.matinee.ui.channelLayout
 import io.github.zekurio.matinee.ui.components.ArtFrame
 import io.github.zekurio.matinee.ui.components.Badge
 import io.github.zekurio.matinee.ui.components.CardShape
-import io.github.zekurio.matinee.ui.components.ControlShape
 import io.github.zekurio.matinee.ui.components.CardText
+import io.github.zekurio.matinee.ui.components.ControlShape
 import io.github.zekurio.matinee.ui.components.Gap
 import io.github.zekurio.matinee.ui.components.Gutter
+import io.github.zekurio.matinee.ui.components.HoverPlay
 import io.github.zekurio.matinee.ui.components.ImageSource
 import io.github.zekurio.matinee.ui.components.LocalActions
 import io.github.zekurio.matinee.ui.components.LocalApi
@@ -71,7 +74,6 @@ import io.github.zekurio.matinee.ui.components.LucideIcon
 import io.github.zekurio.matinee.ui.components.MatineeButton
 import io.github.zekurio.matinee.ui.components.PersonCard
 import io.github.zekurio.matinee.ui.components.Picture
-import io.github.zekurio.matinee.ui.components.HoverPlay
 import io.github.zekurio.matinee.ui.components.PosterArt
 import io.github.zekurio.matinee.ui.components.ProgressBar
 import io.github.zekurio.matinee.ui.components.Rail
@@ -90,11 +92,14 @@ import io.github.zekurio.matinee.ui.formatDay
 import io.github.zekurio.matinee.ui.formatRating
 import io.github.zekurio.matinee.ui.formatRuntime
 import io.github.zekurio.matinee.ui.itemLabel
+import io.github.zekurio.matinee.ui.languageList
 import io.github.zekurio.matinee.ui.progressRatio
+import io.github.zekurio.matinee.ui.rememberLoader
 import io.github.zekurio.matinee.ui.runtimeMinutes
 import io.github.zekurio.matinee.ui.seasonName
 import io.github.zekurio.matinee.ui.theme.Palette
 import io.github.zekurio.matinee.ui.timeLeft
+import io.github.zekurio.matinee.ui.videoSummary
 
 /** The art across the top of a title's pages, faded into the page under the header. */
 @Composable
@@ -189,20 +194,23 @@ fun Overview(text: String, tagline: String? = null, lines: Int = 3) {
 /**
  * Play, then the round watched, favorite, and more buttons, as under a
  * title's or episode's heading. [playDetail] says what Play starts, like
- * "S1, E3".
+ * "S1, E3". The tick, as the web's, marks unwatched at once and asks when
+ * the person watched [name] before marking it watched.
  */
 @Composable
 fun ActionRow(
     play: MediaItem?,
     resume: Boolean,
     playDetail: String?,
+    name: String,
     watched: Boolean,
     favorite: Boolean,
-    onWatched: suspend () -> Unit,
+    onWatched: suspend (watched: Boolean, watchedAt: String?) -> Unit,
     onFavorite: suspend () -> Unit,
     onMore: () -> Unit,
 ) {
     val nav = LocalNavigator.current
+    val actions = LocalActions.current
     val snackbar = LocalSnackbar.current
     val scope = rememberCoroutineScope()
     val watchedFailure = stringResource(if (watched) R.string.media_mark_unwatched_failed else R.string.media_mark_watched_failed)
@@ -224,7 +232,10 @@ fun ActionRow(
         RoundIconButton(
             Lucide.Check,
             stringResource(if (watched) R.string.media_mark_unwatched else R.string.media_mark_watched),
-            { scope.launchShowing(snackbar, watchedFailure) { onWatched() } },
+            {
+                if (watched) scope.launchShowing(snackbar, watchedFailure) { onWatched(false, null) }
+                else actions.askWatched(name) { at -> onWatched(true, at) }
+            },
             tint = if (watched) Palette.Accent else Palette.Foreground,
         )
         RoundIconButton(
@@ -443,5 +454,56 @@ fun StillFrame(item: MediaItem, watched: Boolean) {
         if (watched) WatchedBadge(Modifier.align(Alignment.TopEnd).padding(10.dp), size = 24.dp)
         else if (ratio != null && ratio > 0f) ProgressBar(ratio, Modifier.align(Alignment.BottomCenter))
         HoverPlay(interaction, { nav.play(item.id) }, play, size = 64.dp)
+    }
+}
+
+/** The tracks a file holds, as the server lists them for the player. */
+private data class FileTracks(val audio: List<String?>, val subtitles: List<String?>)
+
+/**
+ * What a file holds, a line each with its icon: the picture, the audio's
+ * languages with the main track's layout, and the subtitles' languages.
+ * The languages come from the server's track lists, which include
+ * subtitle files beside the video; until they load, or if they fail, from
+ * what the probe found in the file.
+ */
+@Composable
+fun MediaInfo(item: MediaItem, modifier: Modifier = Modifier) {
+    val probe = item.probe ?: return
+    val res = LocalResources.current
+    val tracks = rememberLoader("tracks-${item.id}") {
+        FileTracks(
+            audio = audio(item.id).sortedByDescending { it.primary }.map { it.language },
+            subtitles = subtitles(item.id).tracks.map { it.language },
+        )
+    }
+    val loaded = (tracks.state as? Load.Ready)?.value
+    val audio = loaded?.audio ?: probe.audio.sortedByDescending { it.default }.map { it.language }
+    val subtitles = loaded?.subtitles ?: probe.subtitles.map { it.language }
+    val main = probe.audio.firstOrNull { it.default } ?: probe.audio.firstOrNull()
+
+    val video = videoSummary(item)
+    // Each language once; a file whose tracks don't say gets their count instead.
+    val audioLine = listOfNotNull(
+        languageList(audio) ?: audio.size.takeIf { it > 0 }?.let { res.getQuantityString(R.plurals.media_audio_tracks, it, it) },
+        main?.let(::channelLayout),
+    ).joinToString(" · ").ifEmpty { null }
+    val subtitleLine = languageList(subtitles)
+        ?: subtitles.size.takeIf { it > 0 }?.let { res.getQuantityString(R.plurals.media_subtitles, it, it) }
+    if (video == null && audioLine == null && subtitleLine == null) return
+
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        video?.let { InfoLine(Lucide.Film, stringResource(R.string.media_info_video), it) }
+        audioLine?.let { InfoLine(Lucide.AudioLines, stringResource(R.string.media_info_audio), it) }
+        subtitleLine?.let { InfoLine(Lucide.Captions, stringResource(R.string.media_info_subtitles), it) }
+    }
+}
+
+@Composable
+private fun InfoLine(icon: Int, label: String, text: String) {
+    Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        // Level with the first line of text, which may wrap.
+        LucideIcon(icon, label, size = 16.dp, tint = Palette.Muted, modifier = Modifier.padding(top = 2.dp))
+        Text(text, style = MaterialTheme.typography.bodyMedium, color = Palette.Foreground.copy(alpha = 0.8f), maxLines = 3, overflow = TextOverflow.Ellipsis)
     }
 }

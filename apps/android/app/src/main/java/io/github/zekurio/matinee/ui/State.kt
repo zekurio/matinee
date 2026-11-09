@@ -63,17 +63,18 @@ class ViewerState {
         mark(itemFavorites, item.id, favorite) { api.setItemFavorite(item.id, favorite) }
     }
 
-    suspend fun setWatched(api: MatineeApi, item: MediaItem, watched: Boolean) {
-        mark(itemWatched, item.id, watched) { api.setWatched(item.id, watched) }
+    /** [watchedAt] is when, for watched: see [MatineeApi.setWatched]. */
+    suspend fun setWatched(api: MatineeApi, item: MediaItem, watched: Boolean, watchedAt: String? = null) {
+        mark(itemWatched, item.id, watched) { api.setWatched(item.id, watched, watchedAt.takeIf { watched }) }
         val title = item.title
         if (title?.kind == TitleKind.MOVIE) titleWatched[title.id] = watched
         changed()
     }
 
     /** Every file of a title, or of one of its seasons. */
-    suspend fun setWatched(api: MatineeApi, title: TitleSummary, watched: Boolean, season: Int? = null) {
+    suspend fun setWatched(api: MatineeApi, title: TitleSummary, watched: Boolean, season: Int? = null, watchedAt: String? = null) {
         if (season == null) titleWatched[title.id] = watched
-        api.setTitleWatched(title.id, watched, season)
+        api.setTitleWatched(title.id, watched, season, watchedAt.takeIf { watched })
         changed()
     }
 

@@ -38,7 +38,11 @@ enum class SubtitleColor { WHITE, YELLOW, CYAN, GREEN }
 /** What sits behind each line of a subtitle. */
 enum class SubtitleBackground { NONE, SHADED, BLACK }
 
-enum class SubtitleEdge { SHADOW, OUTLINE, NONE }
+/** The app offers the first three; the system's caption style can also ask for the raised and depressed edges. */
+enum class SubtitleEdge { SHADOW, OUTLINE, NONE, RAISED, DEPRESSED }
+
+/** The edges Settings offers for the app's own look. */
+val OWN_SUBTITLE_EDGES = listOf(SubtitleEdge.SHADOW, SubtitleEdge.OUTLINE, SubtitleEdge.NONE)
 
 /** How much bigger than normal subtitles draw. */
 val SUBTITLE_SCALES = listOf(0.75f, 1f, 1.25f, 1.5f, 2f)

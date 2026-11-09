@@ -16,11 +16,21 @@
     <string name="connect_placeholder">media.example.com</string>
     <string name="connect_button">Connect</string>
     <string name="connect_connecting">Connecting to %1$s…</string>
-    <string name="connect_unreachable">Couldn\'t reach %1$s</string>
     <string name="connect_change_server">Use another server</string>
     <string name="connect_not_matinee">%1$s doesn\'t look like a Matinee server.</string>
     <string name="connect_failed">Couldn\'t reach %1$s.</string>
     <string name="connect_empty">Enter the address of your Matinee server.</string>
+
+    <!-- The saved server didn't answer -->
+    <string name="unreachable_title">Can\'t reach your server</string>
+    <string name="unreachable_offline_title">You\'re offline</string>
+    <string name="unreachable_offline">Connect to a network to use Matinee.</string>
+    <string name="unreachable_offline_downloads">Your downloads still play.</string>
+    <string name="unreachable_refused">%1$s isn\'t answering.</string>
+    <string name="unreachable_not_found">Couldn\'t find %1$s.</string>
+    <string name="unreachable_timeout">%1$s took too long to answer.</string>
+    <string name="unreachable_certificate">The certificate of %1$s isn\'t valid.</string>
+    <string name="unreachable_other">Couldn\'t connect to %1$s.</string>
 
     <!-- Signing in -->
     <string name="signin_title">Sign in to Matinee</string>
@@ -121,6 +131,10 @@
     <string name="media_remove_favorite">Remove from favorites</string>
     <string name="media_favorite_failed">Couldn\'t change your favorites</string>
     <string name="media_mark_watched_failed">Couldn\'t mark as watched</string>
+    <string name="media_watched_at_now">Just now</string>
+    <string name="media_watched_at_released">Release date</string>
+    <string name="media_watched_at_other">Other date</string>
+    <string name="media_watched_date_title">When did you watch it?</string>
     <string name="media_mark_unwatched_failed">Couldn\'t mark as unwatched</string>
     <string name="media_hero_show_slide">Show slide %1$d</string>
     <string name="media_hero_rated">Rated</string>
@@ -136,6 +150,9 @@
         <item quantity="one">%1$d new episode</item>
         <item quantity="other">%1$d new episodes</item>
     </plurals>
+    <string name="media_info_video">Video</string>
+    <string name="media_info_audio">Audio</string>
+    <string name="media_info_subtitles">Subtitles</string>
     <plurals name="media_audio_tracks">
         <item quantity="one">%1$d audio track</item>
         <item quantity="other">%1$d audio tracks</item>
