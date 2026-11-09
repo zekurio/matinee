@@ -87,12 +87,13 @@ class Paths(private val base: HttpUrl) {
         state: String,
         codeChallenge: String,
         deviceName: String?,
+        platform: String,
     ): String = url("authorize").apply {
         addQueryParameter("redirect_uri", redirectUri)
         addQueryParameter("state", state)
         addQueryParameter("code_challenge", codeChallenge)
         addQueryParameter("code_challenge_method", "S256")
-        addQueryParameter("platform", "android")
+        addQueryParameter("platform", platform)
         if (!deviceName.isNullOrBlank()) addQueryParameter("device_name", deviceName)
     }.build().toString()
 }

@@ -113,11 +113,17 @@ class MatineeApi(val base: HttpUrl, internal val client: OkHttpClient) {
     suspend fun appToken(code: String, verifier: String): AppSession =
         post("auth/app/token", body(AppTokenBody(code, verifier)))
 
-    suspend fun deviceStart(name: String?): DeviceCode =
-        post("auth/device", body(AppDeviceBody(name, "android")))
+    suspend fun deviceStart(name: String?, platform: String): DeviceCode =
+        post("auth/device", body(AppDeviceBody(name, platform)))
 
     suspend fun devicePoll(deviceCode: String): DeviceSignIn =
         post("auth/device/token", body(DeviceCodeBody(deviceCode)))
+
+    /** The device waiting on [userCode], `BCDF-GHJK`, for the person to check before approving. 404 once it's gone. */
+    suspend fun deviceRequest(userCode: String): DeviceRequest = get("auth/device/${seg(userCode)}")
+
+    /** Sign the device waiting on [userCode] in as this account. */
+    suspend fun approveDevice(userCode: String) = call("POST", "auth/device/${seg(userCode)}/approve")
 
     // Account
 

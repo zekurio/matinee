@@ -1,6 +1,7 @@
 package io.github.zekurio.matinee.auth
 
 import android.content.Context
+import android.content.pm.PackageManager
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
@@ -15,6 +16,8 @@ import io.github.zekurio.matinee.api.AuthConfig
 import io.github.zekurio.matinee.api.MatineeApi
 import io.github.zekurio.matinee.api.MatineeJson
 import io.github.zekurio.matinee.api.User
+import io.github.zekurio.matinee.downloads.AccountScope
+import io.github.zekurio.matinee.downloads.canonicalServer
 import java.io.IOException
 import java.net.ConnectException
 import java.net.SocketTimeoutException
@@ -52,6 +55,25 @@ sealed interface AuthState {
     data class Offline(val server: String, val user: User) : AuthState
 }
 
+/**
+ * Who the app acts for: the server's origin ([canonicalServer]), the account
+ * on it, and which sign-in. A new token, even for the same account, is a new
+ * [generation].
+ */
+data class SessionIdentity(val server: String, val userId: String, val generation: Long) {
+    val scope: AccountScope get() = AccountScope(server, userId)
+}
+
+/**
+ * An identity with the API and HTTP client that act for it. They send its
+ * token and no other, and fail with [IdentityChanged] once it's replaced, so
+ * work started for one account can't go on as the next.
+ */
+class SessionBinding(val identity: SessionIdentity, val api: MatineeApi, val http: OkHttpClient)
+
+/** A request made for a sign-in that has since ended. */
+class IdentityChanged : IOException("The account signed in changed.")
+
 /** Why the server didn't answer, as far as the app can tell. */
 enum class Unreachability {
     /** The phone has no network at all. */
@@ -76,6 +98,9 @@ class Session(context: Context) {
     @Volatile private var origin: HttpUrl? = store.server?.toHttpUrlOrNull()
     @Volatile private var token: String? = store.token
 
+    /** Moves whenever [origin] or [token] does; clients made before it stop sending their token. */
+    @Volatile private var generation = 0L
+
     private val _state = MutableStateFlow<AuthState>(AuthState.NoServer)
     val state: StateFlow<AuthState> = _state.asStateFlow()
 
@@ -84,22 +109,58 @@ class Session(context: Context) {
         ?.takeIf { it.isNotBlank() }
         ?: Build.MODEL
 
+    /** Android TV, which signs in with a code and has no browser to sign in with. */
+    val isTv: Boolean = context.packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)
+
+    /** The contract's `DevicePlatform`, so the person approving a TV sees a TV. */
+    val platform: String = if (isTv) "androidtv" else "android"
+
     /** How the app names itself to the server. */
     val userAgent = "Matinee/${BuildConfig.VERSION_NAME} (Android ${Build.VERSION.RELEASE}; ${Build.MODEL})"
 
     /** The session's token as a header, for a player that doesn't go through [http], like mpv. */
     fun playerHeaders(): Map<String, String> = token?.let { mapOf("Authorization" to "Bearer $it") }.orEmpty()
 
-    val http: OkHttpClient = OkHttpClient.Builder()
+    private val base: OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)
         // Streams and encodes wait while the server makes the next part.
         .readTimeout(60, TimeUnit.SECONDS)
+        .addInterceptor { chain -> chain.proceed(chain.request().newBuilder().header("User-Agent", userAgent).build()) }
+        .build()
+
+    /**
+     * A client that sends [bearer] to [server] while [generation] still is
+     * [made], and refuses once it moved on, rather than send the new token.
+     */
+    private fun bound(server: HttpUrl?, bearer: String?, made: Long): OkHttpClient = base.newBuilder()
+        .addInterceptor { chain ->
+            if (bearer != null && generation != made) throw IdentityChanged()
+            val request = chain.request()
+            val builder = request.newBuilder()
+            if (server != null && bearer != null && sameOrigin(request.url, server)) {
+                builder.header("Authorization", "Bearer $bearer")
+            }
+            chain.proceed(builder.build())
+        }
+        .build()
+
+    /**
+     * The client for the session as it is now. Take it again after a sign-in
+     * changes: one kept from before stops working.
+     */
+    @Volatile var http: OkHttpClient = bound(origin, token, generation)
+        private set
+
+    /**
+     * Sends whichever token is the session's at the time, for a client made
+     * once for the whole run, like the image loader's. Only for artwork.
+     */
+    val artworkHttp: OkHttpClient = base.newBuilder()
         .addInterceptor { chain ->
             val request = chain.request()
             val server = origin
             val bearer = token
             val builder = request.newBuilder()
-                .header("User-Agent", userAgent)
             if (server != null && bearer != null && sameOrigin(request.url, server)) {
                 builder.header("Authorization", "Bearer $bearer")
             }
@@ -110,12 +171,38 @@ class Session(context: Context) {
     @Volatile var api: MatineeApi? = origin?.let { MatineeApi(it, http) }
         private set
 
+    private val _binding = MutableStateFlow<SessionBinding?>(null)
+
+    /** Who the app acts for, while a token and its account are known, as when offline. */
+    val binding: StateFlow<SessionBinding?> = _binding.asStateFlow()
+
+    /** A new server or token: new clients, and the old ones stop. */
+    private fun rebind() {
+        generation++
+        http = bound(origin, token, generation)
+        api = origin?.let { MatineeApi(it, http) }
+        publish(null)
+    }
+
+    /** Say who the app acts for now that [user] is known for the token, or no one. */
+    private fun publish(user: User?) {
+        val server = origin
+        val client = api
+        val next = if (server != null && client != null && token != null && user != null) {
+            SessionBinding(SessionIdentity(canonicalServer(server), user.id, generation), client, http)
+        } else {
+            null
+        }
+        if (_binding.value?.identity != next?.identity) _binding.value = next
+    }
+
     /** The API while signed in. Screens only show then. */
     fun requireApi(): MatineeApi = checkNotNull(api) { "not connected" }
 
     private val connectivity = context.getSystemService(ConnectivityManager::class.java)
 
     init {
+        publish(lastUser)
         start()
         // Try again once a network comes up, rather than wait for a tap.
         connectivity.registerDefaultNetworkCallback(object : ConnectivityManager.NetworkCallback() {
@@ -146,8 +233,8 @@ class Session(context: Context) {
             _state.value = AuthState.NoServer
             return
         }
-        val client = MatineeApi(server, http)
-        api = client
+        val client = api ?: MatineeApi(server, http).also { api = it }
+        val made = generation
         val user = lastUser
         if (store.offlineMode && user != null) {
             _state.value = AuthState.Offline(server.display, user)
@@ -159,14 +246,21 @@ class Session(context: Context) {
             else -> AuthState.Connecting(server.display)
         }
         scope.launch {
+            val user = try {
+                if (token != null) client.session() else null
+            } catch (e: IOException) {
+                if (generation == made) _state.value = AuthState.Unreachable(server.display, unreachability(e))
+                return@launch
+            }
+            // Signed in, out, or to another server meanwhile: that stands.
+            if (generation != made) return@launch
             _state.value = try {
-                val user = if (token != null) client.session() else null
                 if (user != null) {
                     cacheUser(user)
                     AuthState.SignedIn(server.display, user)
                 } else {
                     clearToken()
-                    AuthState.SignedOut(server.display, client.authConfig())
+                    AuthState.SignedOut(server.display, requireApi().authConfig())
                 }
             } catch (e: IOException) {
                 AuthState.Unreachable(server.display, unreachability(e))
@@ -187,7 +281,6 @@ class Session(context: Context) {
             try {
                 val config = MatineeApi(candidate, http).authConfig()
                 origin = candidate
-                api = MatineeApi(candidate, http)
                 store.server = candidate.toString()
                 clearToken()
                 _state.value = AuthState.SignedOut(candidate.display, config)
@@ -206,10 +299,9 @@ class Session(context: Context) {
     /** Back to picking a server. */
     fun forgetServer() {
         store.offlineMode = false
-        clearToken()
         origin = null
-        api = null
         store.server = null
+        clearToken()
         _state.value = AuthState.NoServer
     }
 
@@ -222,6 +314,7 @@ class Session(context: Context) {
             state = request.state,
             codeChallenge = request.challenge,
             deviceName = deviceName,
+            platform = platform,
         )
     }
 
@@ -245,6 +338,7 @@ class Session(context: Context) {
         val server = origin ?: return
         token = session.token
         store.token = session.token
+        rebind()
         cacheUser(session.user)
         _state.value = AuthState.SignedIn(server.display, session.user)
     }
@@ -258,6 +352,7 @@ class Session(context: Context) {
 
     private fun cacheUser(user: User) {
         store.lastUser = MatineeJson.encodeToString(User.serializer(), user)
+        publish(user)
     }
 
     /** The account last signed in here, while its session still stands. */
@@ -275,8 +370,11 @@ class Session(context: Context) {
 
     fun signOut() {
         val client = api
+        val made = generation
         scope.launch {
             runCatching { client?.signOut() }
+            // Unless another sign-in came while the server answered.
+            if (generation != made) return@launch
             clearToken()
             start()
         }
@@ -300,14 +398,12 @@ class Session(context: Context) {
         token = null
         store.token = null
         store.lastUser = null
+        rebind()
     }
 
     companion object {
         private fun sameOrigin(url: HttpUrl, origin: HttpUrl) =
             url.scheme == origin.scheme && url.host == origin.host && url.port == origin.port
-
-        private val HttpUrl.display: String
-            get() = if (port == HttpUrl.defaultPort(scheme)) "$scheme://$host" else "$scheme://$host:$port"
 
         /** The origins to try for what the person typed. Matinee lives at an origin's root. */
         fun serverCandidates(input: String): List<HttpUrl> {

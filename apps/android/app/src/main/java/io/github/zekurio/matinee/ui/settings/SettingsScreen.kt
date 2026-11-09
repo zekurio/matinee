@@ -34,6 +34,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -51,6 +52,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.currentStateAsState
 import io.github.zekurio.matinee.BuildConfig
@@ -113,6 +115,7 @@ import io.github.zekurio.matinee.ui.theme.Palette
 import io.github.zekurio.matinee.ui.videoCodecName
 import java.text.NumberFormat
 import java.util.Locale
+import kotlinx.coroutines.delay
 
 /**
  * A category of Settings, as Findroid and the web's phone menu list them:
@@ -267,15 +270,40 @@ fun SettingsPageScreen(session: Session, key: String) {
     }
 }
 
-/** The places the account is signed in, each but this one with a way to sign it out. */
+/**
+ * Signing in another device, then the places the account is signed in,
+ * each but this one with a way to sign it out.
+ */
 @Composable
 private fun AccountPage() {
     val api = LocalApi.current
+    val nav = LocalNavigator.current
     val snackbar = LocalSnackbar.current
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val sessions = rememberLoader("sessions") { sessions() }
+    // Back from signing in a device: show it. The page was disposed
+    // meanwhile, but its loader wasn't, so a ready list means a return. The
+    // device gets its session on its next poll, up to five seconds after
+    // the approval, so ask once more after that.
+    val lifecycle by LocalLifecycleOwner.current.lifecycle.currentStateAsState()
+    LaunchedEffect(lifecycle) {
+        if (lifecycle != Lifecycle.State.RESUMED || sessions.state !is Load.Ready) return@LaunchedEffect
+        sessions.reload()
+        delay(DEVICE_POLL_MS)
+        sessions.reload()
+    }
     SettingsScaffold(stringResource(R.string.settings_page_account)) {
+        item(key = "link") {
+            Panel {
+                LinkRow(
+                    stringResource(R.string.link_title),
+                    icon = Lucide.ScanQrCode,
+                    description = stringResource(R.string.link_row_description),
+                    onClick = nav::linkDevice,
+                )
+            }
+        }
         item(key = "sessionsTitle") {
             Text(stringResource(R.string.account_sessions_title), style = MaterialTheme.typography.titleLarge)
         }
@@ -295,6 +323,9 @@ private fun AccountPage() {
         }
     }
 }
+
+/** A little more than the server's poll interval for devices signing in with a code. */
+private const val DEVICE_POLL_MS = 6_000L
 
 /** The account's languages, then what this device plays and how. */
 @Composable
@@ -633,7 +664,10 @@ private fun Context.openSettings(intent: Intent) {
 
 @Composable
 private fun SessionRow(session: AccountSession, onSignOut: () -> Unit) {
-    val name = session.deviceName ?: session.browser ?: session.platform ?: stringResource(R.string.account_device_browser)
+    val name = session.deviceName
+        ?: session.browser
+        ?: session.platform?.let { stringResource(R.string.account_device_app, platformLabel(it)) }
+        ?: stringResource(R.string.account_device_browser)
     Row(
         Modifier.fillMaxWidth().clip(PanelShape).background(Palette.Card).border(1.dp, Palette.Border, PanelShape).padding(14.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -643,7 +677,7 @@ private fun SessionRow(session: AccountSession, onSignOut: () -> Unit) {
             Modifier.size(40.dp).clip(RoundedCornerShape(10.dp)).background(Palette.Secondary),
             contentAlignment = Alignment.Center,
         ) {
-            LucideIcon(if (session.client == "app") Lucide.Smartphone else Lucide.Monitor, null, tint = Palette.Muted)
+            LucideIcon(platformIcon(session.platform), null, tint = Palette.Muted)
         }
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -658,7 +692,7 @@ private fun SessionRow(session: AccountSession, onSignOut: () -> Unit) {
             }
             Text(
                 listOfNotNull(
-                    session.platform?.let { stringResource(R.string.account_device_app, it.replaceFirstChar(Char::titlecase)) },
+                    session.platform?.let { stringResource(R.string.account_device_app, platformLabel(it)) },
                     stringResource(R.string.account_sessions_signed_in, formatInstant(session.createdAt)),
                 ).joinToString(" · "),
                 style = MaterialTheme.typography.bodySmall,

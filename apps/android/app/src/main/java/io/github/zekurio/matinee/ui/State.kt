@@ -38,10 +38,13 @@ import kotlinx.serialization.SerializationException
  * screens fetch again then.
  */
 class ViewerState {
-    private val titleFavorites = mutableStateMapOf<String, Boolean>()
-    private val itemFavorites = mutableStateMapOf<String, Boolean>()
-    private val itemWatched = mutableStateMapOf<String, Boolean>()
-    private val titleWatched = mutableStateMapOf<String, Boolean>()
+    private val titleFavorites = Marks(mutableStateMapOf(), ::changed)
+    private val itemFavorites = Marks(mutableStateMapOf(), ::changed)
+    private val itemWatched = Marks(mutableStateMapOf(), ::changed)
+    private val titleWatched = Marks(mutableStateMapOf(), ::changed)
+
+    /** The title and season of each file marked here, for a mark over a whole title or season. */
+    private val itemPlaces = HashMap<String, Pair<String, Int?>>()
 
     var version by mutableIntStateOf(0)
         private set
@@ -63,43 +66,97 @@ class ViewerState {
     fun isWatched(item: MediaItem) = itemWatched[item.id] ?: item.progress?.completed ?: false
 
     suspend fun setFavorite(api: MatineeApi, title: TitleSummary, favorite: Boolean) =
-        mark(titleFavorites, title.id, favorite) { api.setFavorite(title.id, favorite) }
+        titleFavorites.send(title.id, favorite) { api.setFavorite(title.id, favorite) }
 
     suspend fun setFavorite(api: MatineeApi, item: MediaItem, favorite: Boolean) {
         val title = item.title
         if (title?.kind == TitleKind.MOVIE) return setFavorite(api, title, favorite)
-        mark(itemFavorites, item.id, favorite) { api.setItemFavorite(item.id, favorite) }
+        itemFavorites.send(item.id, favorite) { api.setItemFavorite(item.id, favorite) }
     }
 
     /** [watchedAt] is when, for watched: see [MatineeApi.setWatched]. */
     suspend fun setWatched(api: MatineeApi, item: MediaItem, watched: Boolean, watchedAt: String? = null) {
-        mark(itemWatched, item.id, watched) { api.setWatched(item.id, watched, watchedAt.takeIf { watched }) }
         val title = item.title
-        if (title?.kind == TitleKind.MOVIE) titleWatched[title.id] = watched
+        if (title != null) itemPlaces[item.id] = title.id to item.seasonNumber
+        itemWatched.send(item.id, watched) { api.setWatched(item.id, watched, watchedAt.takeIf { watched }) }
+        when {
+            title == null -> Unit
+            // A movie is watched with its one file.
+            title.kind == TitleKind.MOVIE -> titleWatched.confirm(title.id, watched)
+            // Whether the whole show is watched now is the server's to say.
+            else -> titleWatched.forget(title.id)
+        }
         changed()
     }
 
-    /** Every file of a title, or of one of its seasons. */
+    /**
+     * Every file of a title, or of one of its seasons. Only the whole title
+     * shows as marked before the server answers; a season's files show once
+     * it did.
+     */
     suspend fun setWatched(api: MatineeApi, title: TitleSummary, watched: Boolean, season: Int? = null, watchedAt: String? = null) {
-        if (season == null) titleWatched[title.id] = watched
-        api.setTitleWatched(title.id, watched, season, watchedAt.takeIf { watched })
+        val send: suspend () -> Unit = { api.setTitleWatched(title.id, watched, season, watchedAt.takeIf { watched }) }
+        if (season == null) titleWatched.send(title.id, watched, send) else send()
+        if (season != null) titleWatched.forget(title.id)
+        // The files marked one by one before now are this answer too.
+        for ((itemId, place) in itemPlaces) {
+            if (place.first == title.id && (season == null || place.second == season)) itemWatched.confirm(itemId, watched)
+        }
         changed()
     }
+}
 
-    private suspend fun mark(
-        marks: MutableMap<String, Boolean>,
-        id: String,
-        value: Boolean,
-        send: suspend () -> Unit,
-    ) {
-        val before = marks[id]
-        marks[id] = value
+/**
+ * Values shown ahead of the server's answer, by id. A request that fails or
+ * is cancelled puts back what the server last answered here, or the
+ * screen's own value, but only while it's still the newest request for
+ * that id, so answers that come back out of order don't undo a later tap.
+ * [reconcile] runs when the outcome is unsure: cancelled, or overtaken by a
+ * newer request, so screens fetch the truth again.
+ */
+internal class Marks(
+    private val values: MutableMap<String, Boolean>,
+    private val reconcile: () -> Unit,
+) {
+    private val confirmed = HashMap<String, Boolean>()
+    private val newest = HashMap<String, Long>()
+    private var tickets = 0L
+
+    operator fun get(id: String): Boolean? = values[id]
+
+    suspend fun send(id: String, value: Boolean, request: suspend () -> Unit) {
+        val ticket = take(id)
+        values[id] = value
         try {
-            send()
-        } catch (e: IOException) {
-            if (before == null) marks.remove(id) else marks[id] = before
+            request()
+        } catch (e: Throwable) {
+            val current = newest[id] == ticket
+            if (current) restore(id)
+            if (!current || e is CancellationException) reconcile()
             throw e
         }
+        if (newest[id] == ticket) confirmed[id] = value else reconcile()
+    }
+
+    /** The server holds [value] for [id] now, by an answer to another request. */
+    fun confirm(id: String, value: Boolean) {
+        take(id)
+        values[id] = value
+        confirmed[id] = value
+    }
+
+    /** Show the screen's own value for [id] again; requests still out for it no longer change it. */
+    fun forget(id: String) {
+        take(id)
+        values.remove(id)
+        confirmed.remove(id)
+    }
+
+    private fun take(id: String): Long = (++tickets).also { newest[id] = it }
+
+    private fun restore(id: String) {
+        val known = confirmed[id]
+        if (known == null) values.remove(id) else values[id] = known
     }
 }
 

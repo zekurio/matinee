@@ -114,12 +114,14 @@ object Lucide {
     val Calendar = R.drawable.lucide_calendar
     val CalendarClock = R.drawable.lucide_calendar_clock
     val CalendarOff = R.drawable.lucide_calendar_off
+    val CameraOff = R.drawable.lucide_camera_off
     val Captions = R.drawable.lucide_captions
     val Check = R.drawable.lucide_check
     val ChevronDown = R.drawable.lucide_chevron_down
     val ChevronLeft = R.drawable.lucide_chevron_left
     val ChevronRight = R.drawable.lucide_chevron_right
     val CircleAlert = R.drawable.lucide_circle_alert
+    val CircleCheck = R.drawable.lucide_circle_check
     val Clock = R.drawable.lucide_clock
     val CloudOff = R.drawable.lucide_cloud_off
     val Download = R.drawable.lucide_download
@@ -150,6 +152,7 @@ object Lucide {
     val RefreshCw = R.drawable.lucide_refresh_cw
     val RotateCcw = R.drawable.lucide_rotate_ccw
     val RotateCw = R.drawable.lucide_rotate_cw
+    val ScanQrCode = R.drawable.lucide_scan_qr_code
     val Search = R.drawable.lucide_search
     val SearchX = R.drawable.lucide_search_x
     val Server = R.drawable.lucide_server

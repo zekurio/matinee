@@ -63,6 +63,7 @@ import io.github.zekurio.matinee.ui.media.MediaScreen
 import io.github.zekurio.matinee.ui.metadata.IdentifyScreen
 import io.github.zekurio.matinee.ui.metadata.ImagesScreen
 import io.github.zekurio.matinee.ui.search.SearchScreen
+import io.github.zekurio.matinee.ui.settings.LinkDeviceScreen
 import io.github.zekurio.matinee.ui.settings.SettingsPageScreen
 import io.github.zekurio.matinee.ui.settings.SettingsScreen
 import io.github.zekurio.matinee.ui.profile.ProfileScreen
@@ -150,6 +151,7 @@ private fun Pages(controller: NavHostController, session: Session, offline: Bool
         screen<ProfileRoute>(tab = ProfileRoute) { ProfileScreen(session) }
         screen<SettingsRoute> { SettingsScreen(session) }
         screen<SettingsPageRoute> { SettingsPageScreen(session, it.toRoute<SettingsPageRoute>().page) }
+        screen<LinkDeviceRoute> { LinkDeviceScreen() }
         screen<IdentifyRoute> { IdentifyScreen(it.toRoute<IdentifyRoute>().titleId) }
         screen<ImagesRoute> {
             val route = it.toRoute<ImagesRoute>()

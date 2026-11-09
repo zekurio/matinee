@@ -39,8 +39,10 @@
     <string name="signin_browser">Sign in with your browser</string>
     <string name="signin_oidc">Continue with %1$s</string>
     <string name="signin_with_code">Sign in with a code</string>
-    <string name="signin_code_title">Enter this code</string>
-    <string name="signin_code_description">On a phone or computer that\'s signed in, go to %1$s and enter the code.</string>
+    <string name="signin_code_title">Scan to sign in</string>
+    <string name="signin_code_scan">Scan the code with your phone\'s camera, or in the Matinee app under Settings › Account.</string>
+    <string name="signin_code_enter">Or enter this code at %1$s</string>
+    <string name="signin_code_qr">QR code for the code %1$s</string>
     <string name="signin_code_loading">Getting a code…</string>
     <string name="signin_code_waiting">Waiting for approval…</string>
     <string name="signin_code_open">Open the link page</string>
@@ -355,6 +357,35 @@
     <string name="account_sessions_signed_in">Signed in %1$s</string>
     <string name="account_device_app">%1$s app</string>
     <string name="account_device_browser">Browser</string>
+
+    <!-- Signing in a TV or app by its code, under Settings, Account. The
+         words follow the web's link.device messages. -->
+    <string name="link_title">Sign in a device</string>
+    <string name="link_row_description">Scan the QR code on a TV</string>
+    <string name="link_scan_hint">Point the camera at the QR code on the TV.</string>
+    <string name="link_scan_foreign">That QR code isn\'t a Matinee sign-in.</string>
+    <string name="link_camera_needed">Allow the camera to scan the code the TV shows.</string>
+    <string name="link_camera_allow">Allow camera</string>
+    <string name="link_camera_failed">Couldn\'t start the camera.</string>
+    <string name="link_or_enter">Or enter the code</string>
+    <string name="link_enter_code">Enter the code your TV or app shows.</string>
+    <string name="link_code_placeholder" translatable="false">BCDF-GHJK</string>
+    <string name="link_code_invalid">Enter the 8 letters the device shows.</string>
+    <string name="link_continue">Continue</string>
+    <string name="link_wants">This device wants to use Matinee as %1$s.</string>
+    <string name="link_code_shown">Code %1$s</string>
+    <string name="link_approve">Approve</string>
+    <string name="link_warning">Only approve a code from a device in front of you. Anyone who sends you a code gets into your account when you approve it.</string>
+    <string name="link_signed_in">Signed in</string>
+    <string name="link_signed_in_description">%1$s is signed in as %2$s. It may take a few seconds to notice.</string>
+    <string name="link_done">Done</string>
+    <string name="link_code_gone">That code doesn\'t work</string>
+    <string name="link_code_gone_description">Check the code on the device, or start again there for a new one.</string>
+    <string name="link_other_server">The code came from %1$s, and this app is signed in to %2$s.</string>
+    <string name="link_lookup_failed">Couldn\'t look up that code</string>
+    <string name="link_again">Scan again</string>
+    <string name="link_again_typed">Enter another code</string>
+    <string name="link_approve_failed">Couldn\'t approve the device. %1$s</string>
     <string name="settings_server">Server</string>
     <string name="settings_version">Matinee for Android %1$s</string>
     <string name="playback_video_codec_title">Video codec</string>

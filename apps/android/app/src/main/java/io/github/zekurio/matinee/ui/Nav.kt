@@ -60,6 +60,10 @@ data object SettingsRoute
 @Serializable
 data class SettingsPageRoute(val page: String)
 
+/** Signing in a TV or another app by its QR code or code, from Settings' Account page. */
+@Serializable
+data object LinkDeviceRoute
+
 @Serializable
 data object DownloadsRoute
 
@@ -157,6 +161,8 @@ class Navigator(private val controller: NavHostController) {
     fun settings() = controller.navigate(SettingsRoute) { launchSingleTop = true }
 
     fun settingsPage(page: String) = controller.navigate(SettingsPageRoute(page)) { launchSingleTop = true }
+
+    fun linkDevice() = controller.navigate(LinkDeviceRoute) { launchSingleTop = true }
 
     fun identify(titleId: String) = controller.navigate(IdentifyRoute(titleId)) { launchSingleTop = true }
 

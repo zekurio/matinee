@@ -36,6 +36,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
@@ -43,10 +44,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.ApiException
+import io.github.zekurio.matinee.api.AppSession
 import io.github.zekurio.matinee.api.DeviceCode
 import io.github.zekurio.matinee.auth.AuthState
 import io.github.zekurio.matinee.auth.Session
@@ -57,25 +60,33 @@ import io.github.zekurio.matinee.ui.components.Lucide
 import io.github.zekurio.matinee.ui.components.LucideIcon
 import io.github.zekurio.matinee.ui.components.MatineeButton
 import io.github.zekurio.matinee.ui.components.MatineeTextField
+import io.github.zekurio.matinee.ui.components.QrCode
 import io.github.zekurio.matinee.ui.components.isWide
+import io.github.zekurio.matinee.ui.describeFailure
 import io.github.zekurio.matinee.ui.theme.Palette
 import java.io.IOException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 
+/** The mark and name, in the top corner of the sign-in screens. */
+@Composable
+private fun Brand(modifier: Modifier = Modifier) {
+    Row(
+        modifier.padding(horizontal = 26.dp, vertical = 24.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        LogoMark(Modifier.size(30.dp))
+        Text(stringResource(R.string.app_name), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+    }
+}
+
 /** The web's auth screen: the mark and name at the top, the form below the middle. */
 @Composable
 internal fun AuthLayout(content: @Composable ColumnScope.() -> Unit) {
     Box(Modifier.fillMaxSize().safeDrawingPadding().imePadding()) {
-        Row(
-            Modifier.padding(horizontal = 26.dp, vertical = 24.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            LogoMark(Modifier.size(30.dp))
-            Text(stringResource(R.string.app_name), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-        }
+        Brand()
         Column(
             Modifier
                 .align(Alignment.Center)
@@ -136,10 +147,9 @@ fun SignInScreen(session: Session, state: AuthState.SignedOut, browserError: Mut
     val context = LocalContext.current
     var withCode by rememberSaveable { mutableStateOf(false) }
     val error by browserError.collectAsState()
-    // A TV has no browser to sign in with, so it starts with the code.
-    val tv = remember { context.packageManager.hasSystemFeature("android.software.leanback") }
-    if (withCode || tv) {
-        DeviceCodeSignIn(session, onBack = if (tv) null else ({ withCode = false }))
+    // A TV has no browser to sign in with, so it only has the code.
+    if (withCode || session.isTv) {
+        DeviceCodeSignIn(session, onBack = if (session.isTv) null else ({ withCode = false }))
         return
     }
     AuthLayout {
@@ -188,103 +198,171 @@ fun SignInScreen(session: Session, state: AuthState.SignedOut, browserError: Mut
 }
 
 /**
- * The OAuth device grant: show a code, and wait while someone signed in
- * enters it on the server's /link page and approves this device.
+ * The OAuth device grant: show a QR code and the code it holds, and wait
+ * while someone signed in approves this device. A phone's camera opens the
+ * QR code on the server's /link page; the app reads it under Settings,
+ * Account. Typing the code at /link works too.
  */
 @Composable
 private fun DeviceCodeSignIn(session: Session, onBack: (() -> Unit)?) {
-    val context = LocalContext.current
     var code by remember { mutableStateOf<DeviceCode?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var attempt by remember { mutableStateOf(0) }
+    val resources = LocalContext.current.resources
     LaunchedEffect(attempt) {
         val api = session.requireApi()
         error = null
-        try {
-            val started = api.deviceStart(session.deviceName)
-            code = started
-            while (true) {
-                delay(started.interval * 1000L)
-                val answer = try {
-                    api.devicePoll(started.deviceCode)
-                } catch (e: ApiException) {
-                    // The code expired: get a new one.
-                    if (e.status == 404) {
-                        attempt++
-                        return@LaunchedEffect
-                    }
-                    throw e
-                }
-                if (answer.status == "approved" && answer.token != null && answer.user != null) {
-                    session.signedIn(io.github.zekurio.matinee.api.AppSession(answer.token, answer.user))
+        val started = try {
+            api.deviceStart(session.deviceName, session.platform)
+        } catch (e: IOException) {
+            error = describeFailure(resources, e)
+            return@LaunchedEffect
+        }
+        code = started
+        while (true) {
+            delay(started.interval * 1000L)
+            val answer = try {
+                api.devicePoll(started.deviceCode)
+            } catch (e: ApiException) {
+                // The code expired: get a new one, and with it a new QR code.
+                if (e.status == 404) {
+                    attempt++
                     return@LaunchedEffect
                 }
+                error = describeFailure(resources, e)
+                continue
+            } catch (e: IOException) {
+                // Wi-Fi dropping, or Android cutting off the network while
+                // the browser has the screen: keep asking about the same
+                // code, which someone may have approved meanwhile.
+                error = describeFailure(resources, e)
+                continue
             }
-        } catch (e: IOException) {
-            error = e.message ?: e.javaClass.simpleName
+            error = null
+            if (answer.status == "approved" && answer.token != null && answer.user != null) {
+                session.signedIn(AppSession(answer.token, answer.user))
+                return@LaunchedEffect
+            }
         }
     }
-    AuthLayout {
-        Text(stringResource(R.string.signin_code_title), style = MaterialTheme.typography.headlineMedium)
-        Gap(8.dp)
-        val current = code
+    val current = code
+    val details: @Composable ColumnScope.() -> Unit = {
+        // Only a code that never came needs a new start; a poll that failed tries again on its own.
+        CodeDetails(current, error, onRetry = if (current == null) ({ attempt++ }) else null)
+        Gap(24.dp)
+        if (session.isTv) {
+            // Nothing else gets a TV out of here, and it may have the wrong server.
+            MatineeButton(onClick = session::forgetServer, look = ButtonLook.Ghost) {
+                Text(stringResource(R.string.connect_change_server), color = Palette.Muted)
+            }
+        } else {
+            if (current != null) {
+                val context = LocalContext.current
+                MatineeButton(
+                    onClick = { openInBrowser(context, current.verificationUriComplete) },
+                    look = ButtonLook.Outline,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    LucideIcon(Lucide.Link, null, size = 18.dp)
+                    Text(stringResource(R.string.signin_code_open))
+                }
+            }
+            if (onBack != null) {
+                Gap(12.dp)
+                MatineeButton(onClick = onBack, look = ButtonLook.Ghost, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.signin_code_back))
+                }
+            }
+        }
+    }
+    val configuration = LocalConfiguration.current
+    // A TV, or a tablet on its side: the steps on the left, the QR code beside them.
+    val sideBySide = configuration.screenWidthDp >= 720 &&
+        configuration.screenHeightDp >= 480 &&
+        configuration.screenWidthDp > configuration.screenHeightDp
+    if (sideBySide) {
+        Box(Modifier.fillMaxSize().safeDrawingPadding()) {
+            Brand()
+            Row(
+                Modifier
+                    .align(Alignment.Center)
+                    .widthIn(max = 920.dp)
+                    .fillMaxWidth()
+                    .padding(horizontal = 56.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(64.dp),
+            ) {
+                Column(Modifier.weight(1f)) {
+                    CodeHeading()
+                    Gap(36.dp)
+                    details()
+                }
+                CodeQr(current, 288.dp)
+            }
+        }
+    } else {
+        AuthLayout {
+            CodeHeading()
+            Gap(28.dp)
+            CodeQr(current, 224.dp, Modifier.align(Alignment.CenterHorizontally))
+            Gap(28.dp)
+            details()
+        }
+    }
+}
+
+@Composable
+private fun CodeHeading() {
+    Text(stringResource(R.string.signin_code_title), style = MaterialTheme.typography.headlineMedium)
+    Gap(8.dp)
+    Text(stringResource(R.string.signin_code_scan), style = MaterialTheme.typography.bodyMedium, color = Palette.Muted)
+}
+
+/** The QR code of the link page with the code in it, or a spinner while there's no code yet. */
+@Composable
+private fun CodeQr(code: DeviceCode?, size: Dp, modifier: Modifier = Modifier) {
+    if (code == null) {
+        Box(modifier.size(size), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(color = Palette.Accent)
+        }
+        return
+    }
+    QrCode(code.verificationUriComplete, stringResource(R.string.signin_code_qr, code.userCode), size, modifier)
+}
+
+/** The code to type, where to type it, and whether it's still waiting. */
+@Composable
+private fun CodeDetails(code: DeviceCode?, error: String?, onRetry: (() -> Unit)?) {
+    if (code != null) {
+        // The page without its scheme: shorter, and what people type anyway.
         Text(
-            if (current != null) stringResource(R.string.signin_code_description, current.verificationUri)
-            else stringResource(R.string.signin_code_loading),
+            stringResource(R.string.signin_code_enter, code.verificationUri.substringAfter("://")),
             style = MaterialTheme.typography.bodyMedium,
             color = Palette.Muted,
         )
-        Gap(28.dp)
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            if (current != null) {
-                Text(
-                    current.userCode,
-                    fontFamily = FontFamily.Monospace,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = if (isWide()) 56.sp else 40.sp,
-                    letterSpacing = 4.sp,
-                )
-            } else {
-                CircularProgressIndicator(color = Palette.Accent)
-            }
-        }
+        Gap(4.dp)
+        Text(
+            code.userCode,
+            fontFamily = FontFamily.Monospace,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = if (isWide()) 44.sp else 36.sp,
+            letterSpacing = 4.sp,
+        )
         Gap(20.dp)
-        if (current != null) {
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                CircularProgressIndicator(Modifier.size(14.dp), color = Palette.Muted, strokeWidth = 2.dp)
-                Text(stringResource(R.string.signin_code_waiting), style = MaterialTheme.typography.bodySmall, color = Palette.Muted)
-            }
-            Gap(24.dp)
-            MatineeButton(
-                onClick = { openInBrowser(context, current.verificationUriComplete) },
-                look = ButtonLook.Outline,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                LucideIcon(Lucide.Link, null, size = 18.dp)
-                Text(stringResource(R.string.signin_code_open))
-            }
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            CircularProgressIndicator(Modifier.size(14.dp), color = Palette.Muted, strokeWidth = 2.dp)
+            Text(stringResource(R.string.signin_code_waiting), style = MaterialTheme.typography.bodySmall, color = Palette.Muted)
         }
-        error?.let {
-            Gap(12.dp)
-            Text(it, color = Palette.Danger, style = MaterialTheme.typography.bodySmall)
+    } else if (error == null) {
+        Text(stringResource(R.string.signin_code_loading), style = MaterialTheme.typography.bodyMedium, color = Palette.Muted)
+    }
+    if (error != null) {
+        Gap(12.dp)
+        Text(error, color = Palette.Danger, style = MaterialTheme.typography.bodySmall)
+        if (onRetry != null) {
             Gap(8.dp)
-            MatineeButton(onClick = { attempt++ }, look = ButtonLook.Outline, modifier = Modifier.fillMaxWidth()) {
+            MatineeButton(onClick = onRetry, look = ButtonLook.Outline, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.common_retry))
-            }
-        }
-        if (onBack != null) {
-            Gap(12.dp)
-            MatineeButton(onClick = onBack, look = ButtonLook.Ghost, modifier = Modifier.fillMaxWidth()) {
-                Text(stringResource(R.string.signin_code_back))
             }
         }
     }

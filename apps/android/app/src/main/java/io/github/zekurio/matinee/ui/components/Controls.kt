@@ -20,11 +20,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -99,7 +101,12 @@ fun MatineeButton(
     }
 }
 
-/** A round button with one icon, like the watched and favorite buttons on a title. */
+/**
+ * A round button with one icon, like the watched and favorite buttons on a
+ * title. A circle smaller than 48dp still takes 48dp of layout, as
+ * Material's icon buttons do, so its touch target never overlaps a
+ * neighbour's.
+ */
 @Composable
 fun RoundIconButton(
     @DrawableRes icon: Int,
@@ -115,6 +122,7 @@ fun RoundIconButton(
     val interaction = remember { MutableInteractionSource() }
     Box(
         modifier
+            .minimumInteractiveComponentSize()
             .size(size)
             .clip(CircleShape)
             .background(background)
@@ -126,7 +134,11 @@ fun RoundIconButton(
     }
 }
 
-/** A filter or library chip: filled when it's the current one. */
+/**
+ * A filter or library chip: filled when it's the current one, which screen
+ * readers hear as selected. One with a [trailingIcon] acts, as removing a
+ * filter does, so it's a plain button.
+ */
 @Composable
 fun Chip(
     label: String,
@@ -151,7 +163,13 @@ fun Chip(
             )
             .then(if (selected) Modifier else Modifier.border(BorderStroke(1.dp, Palette.Foreground.copy(alpha = 0.1f)), shape))
             .focusRing(interaction, shape)
-            .clickable(interaction, indication = androidx.compose.material3.ripple(), role = Role.Tab, onClick = onClick)
+            .then(
+                if (trailingIcon == null) {
+                    Modifier.selectable(selected, interaction, androidx.compose.material3.ripple(), role = Role.Tab, onClick = onClick)
+                } else {
+                    Modifier.clickable(interaction, indication = androidx.compose.material3.ripple(), role = Role.Button, onClick = onClick)
+                },
+            )
             .padding(horizontal = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp),

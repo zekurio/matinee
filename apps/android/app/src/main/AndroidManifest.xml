@@ -10,10 +10,15 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- To scan the QR code a TV shows and sign it in, from Settings, Account. -->
+    <uses-permission android:name="android.permission.CAMERA" />
 
     <!-- One app for phones, tablets, and TVs: no touch screen or camera
-         required, and a launcher entry on Android TV. -->
+         required, and a launcher entry on Android TV. Without a camera, a
+         TV is signed in by typing its code. -->
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
     <uses-feature android:name="android.software.leanback" android:required="false" />
 
     <application

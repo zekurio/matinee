@@ -526,6 +526,15 @@ data class DeviceCode(
 @Serializable
 data class DeviceSignIn(val status: String, val token: String? = null, val user: User? = null)
 
+/** A device waiting for someone to approve its code. */
+@Serializable
+data class DeviceRequest(
+    val userCode: String,
+    val deviceName: String? = null,
+    val platform: String,
+    val expiresAt: String,
+)
+
 /** A place the account is signed in. */
 @Serializable
 data class AccountSession(

@@ -137,9 +137,16 @@ fun ValueRow(title: String, value: String) {
     }
 }
 
-/** A row that goes somewhere else, like the system's settings, with what's set there at its end. */
+/** A row that goes somewhere else, like the system's settings, with what's set there at its end, or what it's for under its title. */
 @Composable
-fun LinkRow(title: String, value: String? = null, destructive: Boolean = false, @DrawableRes icon: Int? = null, onClick: () -> Unit) {
+fun LinkRow(
+    title: String,
+    value: String? = null,
+    destructive: Boolean = false,
+    @DrawableRes icon: Int? = null,
+    description: String? = null,
+    onClick: () -> Unit,
+) {
     Row(
         Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -148,7 +155,14 @@ fun LinkRow(title: String, value: String? = null, destructive: Boolean = false, 
             LucideIcon(icon, null, size = 20.dp, tint = if (destructive) Palette.Danger else Palette.Muted)
             Gap(14.dp)
         }
-        RowText(title, if (destructive) Palette.Danger else Palette.Foreground)
+        if (description != null) {
+            Column(Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.bodyLarge, color = if (destructive) Palette.Danger else Palette.Foreground)
+                Text(description, style = MaterialTheme.typography.bodySmall, color = Palette.Muted)
+            }
+        } else {
+            RowText(title, if (destructive) Palette.Danger else Palette.Foreground)
+        }
         if (value != null) {
             Gap(12.dp)
             Text(
