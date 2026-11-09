@@ -30,8 +30,11 @@ fun fallbackQuality(width: Int?): String =
     QUALITIES.firstOrNull { it.bitrate <= 20_000_000 && (width == null || it.width <= maxOf(width, 640)) }?.id
         ?: "720p-4"
 
-/** Which of the device's decoders ExoPlayer tries first. */
+/** Which of the device's decoders the player tries first. */
 enum class Decoders { HARDWARE, SOFTWARE }
+
+/** What plays the video: Media3's ExoPlayer, or mpv with its own FFmpeg and libass. */
+enum class PlayerEngine { EXOPLAYER, MPV }
 
 enum class SubtitleColor { WHITE, YELLOW, CYAN, GREEN }
 
@@ -69,6 +72,8 @@ class PlayerPrefs(context: Context) {
 
     /** Formats the device plays that streams convert anyway, as the web's passthrough switches. */
     var convertAudio by strings("convert_audio")
+
+    var engine by enum("engine", PlayerEngine.EXOPLAYER)
 
     var decoders by enum("decoders", Decoders.HARDWARE)
 

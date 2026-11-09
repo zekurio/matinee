@@ -84,6 +84,12 @@ class Session(context: Context) {
         ?.takeIf { it.isNotBlank() }
         ?: Build.MODEL
 
+    /** How the app names itself to the server. */
+    val userAgent = "Matinee/${BuildConfig.VERSION_NAME} (Android ${Build.VERSION.RELEASE}; ${Build.MODEL})"
+
+    /** The session's token as a header, for a player that doesn't go through [http], like mpv. */
+    fun playerHeaders(): Map<String, String> = token?.let { mapOf("Authorization" to "Bearer $it") }.orEmpty()
+
     val http: OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)
         // Streams and encodes wait while the server makes the next part.
@@ -93,7 +99,7 @@ class Session(context: Context) {
             val server = origin
             val bearer = token
             val builder = request.newBuilder()
-                .header("User-Agent", "Matinee/${BuildConfig.VERSION_NAME} (Android ${Build.VERSION.RELEASE}; ${Build.MODEL})")
+                .header("User-Agent", userAgent)
             if (server != null && bearer != null && sameOrigin(request.url, server)) {
                 builder.header("Authorization", "Bearer $bearer")
             }

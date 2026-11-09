@@ -809,4 +809,4 @@ genres, and statuses, shows as the provider sent it.
 
 MIT, see [LICENSE](LICENSE), except the Android app in `apps/android`,
 which is GPL-3.0 (see [its LICENSE](apps/android/LICENSE)): it plays DTS
-and TrueHD with a GPL build of FFmpeg.
+and TrueHD with a GPL build of FFmpeg, and can play with mpv.

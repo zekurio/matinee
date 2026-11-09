@@ -370,6 +370,7 @@
     <string name="playback_audio_codec_title">Audio codec</string>
     <string name="playback_audio_codec_description">Stereo, for audio this device can\'t play.</string>
     <string name="playback_codec_automatic">Automatic (%1$s)</string>
+    <string name="playback_engine_title">Player</string>
     <string name="playback_decoders_title">Decoders</string>
     <string name="playback_decoders_description">Software can help when a video shows glitches. It uses more battery.</string>
     <string name="playback_decoders_hardware">Hardware first</string>

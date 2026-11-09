@@ -351,6 +351,7 @@
     <string name="playback_audio_codec_title">Audiocodec</string>
     <string name="playback_audio_codec_description">Stereo, für Audio, das dieses Gerät nicht abspielen kann.</string>
     <string name="playback_codec_automatic">Automatisch (%1$s)</string>
+    <string name="playback_engine_title">Player</string>
     <string name="playback_decoders_title">Decoder</string>
     <string name="playback_decoders_description">Software kann helfen, wenn ein Video Bildfehler zeigt. Sie braucht mehr Akku.</string>
     <string name="playback_decoders_hardware">Hardware zuerst</string>

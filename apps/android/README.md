@@ -124,5 +124,7 @@ Icons are lucide's, as on the web. Add one with
 ## License
 
 GPL-3.0, see [LICENSE](LICENSE). The rest of the repository is MIT; the
-app is GPL because it includes Jellyfin's build of Media3's FFmpeg decoder
-(`org.jellyfin.media3:media3-ffmpeg-decoder`), which is.
+app is GPL because it includes GPL builds of FFmpeg: Jellyfin's build of
+Media3's FFmpeg decoder (`org.jellyfin.media3:media3-ffmpeg-decoder`), and
+mpv with its own FFmpeg (`dev.jdtech.mpv:libmpv`), the player settings can
+pick instead of ExoPlayer. `MpvPlayer` follows Findroid's (GPL-3.0).

@@ -4,12 +4,14 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.view.accessibility.CaptioningManager
 import androidx.annotation.OptIn
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem as ExoItem
 import androidx.media3.common.MediaMetadata
@@ -37,6 +39,7 @@ import io.github.zekurio.matinee.api.MatineeApi
 import io.github.zekurio.matinee.api.MediaItem
 import io.github.zekurio.matinee.api.OfflinePlay
 import io.github.zekurio.matinee.api.PlaybackOptions
+import io.github.zekurio.matinee.api.SubtitleDelivery
 import io.github.zekurio.matinee.api.SubtitleTrack
 import io.github.zekurio.matinee.api.TitleKind
 import io.github.zekurio.matinee.api.Trickplay
@@ -77,6 +80,9 @@ sealed interface Source {
     /** A download on the phone, which plays without the server. */
     data object Local : Source
 }
+
+/** What the video's sound is, for audio focus and the system's routing. */
+private val MOVIE_AUDIO = AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).build()
 
 /**
  * ExoPlayer's renderers, trying the hardware decoders first as Android lists
@@ -122,6 +128,9 @@ class PlayerController(
     private val localSubtitles: Map<String, File> = emptyMap(),
     /** Where reports that don't reach the server wait. */
     private val pending: PendingProgress? = null,
+    /** What mpv sends the server, which doesn't go through [http]: the session's token. */
+    serverHeaders: Map<String, String> = emptyMap(),
+    userAgent: String = "Matinee",
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val sessionId = UUID.randomUUID().toString()
@@ -132,17 +141,29 @@ class PlayerController(
     private val appContext = context.applicationContext
     private val resources = context.resources
 
-    val player: ExoPlayer = ExoPlayer.Builder(context, renderers(context, prefs.decoders))
-        // Files on the phone, and the server through the session's client.
-        .setMediaSourceFactory(DefaultMediaSourceFactory(DefaultDataSource.Factory(context, OkHttpDataSource.Factory(http))))
-        .build()
-        .apply {
-            // Subtitles are drawn by the player screen from the server's WebVTT,
-            // but for picture tracks in the file itself; see applyTextOverride.
-            trackSelectionParameters = trackSelectionParameters.buildUpon()
-                .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
-                .build()
-        }
+    /** ExoPlayer, or mpv when settings pick it. */
+    val player: Player = if (prefs.engine == PlayerEngine.MPV) {
+        MpvPlayer(context, serverHeaders, userAgent, hardware = prefs.decoders == Decoders.HARDWARE)
+    } else {
+        ExoPlayer.Builder(context, renderers(context, prefs.decoders))
+            // Files on the phone, and the server through the session's client.
+            .setMediaSourceFactory(DefaultMediaSourceFactory(DefaultDataSource.Factory(context, OkHttpDataSource.Factory(http))))
+            // Pauses for a call or another app's sound, and when headphones come out.
+            .setAudioAttributes(MOVIE_AUDIO, true)
+            .setHandleAudioBecomingNoisy(true)
+            .build()
+            .apply {
+                // Subtitles are drawn by the player screen from the server's WebVTT,
+                // but for picture tracks in the file itself; see applyTextOverride.
+                trackSelectionParameters = trackSelectionParameters.buildUpon()
+                    .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
+                    .build()
+            }
+    }
+    private val mpv = player as? MpvPlayer
+
+    /** mpv plays the video, which draws it to fill the screen itself. */
+    val usesMpv get() = mpv != null
 
     /**
      * The system's handle on this player: its controls in the notification
@@ -172,6 +193,9 @@ class PlayerController(
         private set
     var cues by mutableStateOf<CueTrack?>(null)
         private set
+
+    /** The track [cues] are for, or loading for. */
+    private var cuesFor: SubtitleTrack? = null
 
     /** What a picture track in the file shows now, as ExoPlayer draws it from the file itself. */
     var pictureCues by mutableStateOf<List<androidx.media3.common.text.Cue>>(emptyList())
@@ -207,8 +231,12 @@ class PlayerController(
             ?: 0.0
 
     private val offset get() = (source as? Source.Stream)?.offset ?: 0.0
-    private val videoPlays = item.probe?.video?.let(Capabilities::decodesVideo) ?: true
-    private val containerPlays = Capabilities.playsContainer(item.container)
+
+    // mpv plays every codec and container with FFmpeg, so the file goes as it is.
+    private val videoPlays = mpv != null || item.probe?.video?.let(Capabilities::decodesVideo) ?: true
+    private val containerPlays = mpv != null || Capabilities.playsContainer(item.container)
+
+    private fun takesAudio(track: AudioTrack?) = track == null || mpv != null || Capabilities.takesAudio(track.codec, prefs)
     private val audioCodecs = Capabilities.streamAudioCodecs(prefs)
     private val videoCodecs = Capabilities.encodeVideoCodecs(options.videoCodecs, prefs)
 
@@ -256,7 +284,10 @@ class PlayerController(
         })
         scope.launch { tick() }
         scope.launch { loadTrickplay() }
-        subtitle?.let { loadCues(it) }
+        mpv?.setSubtitleScale(
+            if (prefs.subtitleSystemStyle) context.getSystemService(CaptioningManager::class.java)?.fontScale ?: 1f else prefs.subtitleScale,
+        )
+        showSubtitle()
     }
 
     /** Start at [at] seconds into the file. */
@@ -273,19 +304,26 @@ class PlayerController(
      * server: a lower quality, video or audio this device doesn't decode, a
      * container ExoPlayer doesn't read, or a try that failed.
      */
-    private fun directPlays(): Boolean {
-        val track = audio
-        return quality == ORIGINAL_QUALITY && videoPlays && containerPlays && !noDirect &&
-            (track == null || Capabilities.takesAudio(track.codec, prefs))
-    }
+    private fun directPlays(): Boolean =
+        quality == ORIGINAL_QUALITY && videoPlays && containerPlays && !noDirect && takesAudio(audio)
 
     /**
-     * Whether ExoPlayer draws [track] from the file it plays: a picture track,
-     * like PGS, inside the file, while the file itself plays. Then nothing
-     * needs burning in. A download that's the file as it is holds them too.
+     * Whether the player draws [track] itself rather than the screen or the
+     * server: a picture track, like PGS, inside the file, while the file
+     * itself plays, which then needs no burning in; a download that's the
+     * file as it is holds them too. mpv also draws ASS inside the file, with
+     * its styling and fonts, and PGS files beside it.
      */
-    fun playerDraws(track: SubtitleTrack?): Boolean =
-        track != null && pictureInFile(track) && (local != null || directPlays())
+    fun playerDraws(track: SubtitleTrack?): Boolean {
+        if (track == null) return false
+        val filePlays = local != null || directPlays()
+        return when {
+            pictureInFile(track) -> filePlays
+            mpv == null -> false
+            styledInFile(track) -> filePlays
+            else -> track.source == "sidecar" && track.delivery == SubtitleDelivery.PGS && local == null
+        }
+    }
 
     /** What [track] needs to show: drawn by the screen, by ExoPlayer, or burned in by the server. */
     private fun burns(track: SubtitleTrack?): Boolean = track != null && !drawable(track) && !playerDraws(track)
@@ -298,8 +336,7 @@ class PlayerController(
             val encode = if (quality == ORIGINAL_QUALITY) fallbackQuality(item.probe?.video?.width) else quality
             return Source.Hls(track?.index ?: 0, encode, burnIn?.id)
         }
-        val audioPlays = track == null || Capabilities.takesAudio(track.codec, prefs)
-        if (containerPlays && audioPlays && !noDirect) return Source.Direct
+        if (containerPlays && takesAudio(track) && !noDirect) return Source.Direct
         return Source.Stream(track?.index ?: 0, 0.0)
     }
 
@@ -339,10 +376,43 @@ class PlayerController(
                 is Source.Stream -> 0L
                 else -> (at * 1000).toLong()
             }
-            pendingAudioOverride = resolved == Source.Direct || resolved == Source.Local
+            val fileTracks = resolved == Source.Direct || resolved == Source.Local
+            pendingAudioOverride = mpv == null && fileTracks
+            mpv?.selectAudio(audio?.index?.takeIf { fileTracks })
+            mpv?.setSubtitleDelay(-((resolved as? Source.Stream)?.offset ?: 0.0))
             player.setMediaItem(exo.buildUpon().setMediaMetadata(metadata()).build(), startMs)
             player.prepare()
+            showSubtitle()
         }
+    }
+
+    /**
+     * Shows the subtitle picked the way the source needs: the screen draws
+     * text from the server's WebVTT, the player what [playerDraws], and an
+     * encode brings a burned-in one along.
+     */
+    private fun showSubtitle() {
+        val track = subtitle
+        if (track != null && drawable(track) && !playerDraws(track)) {
+            if (cuesFor != track) loadCues(track)
+        } else {
+            cues = null
+            cuesFor = null
+        }
+        val mpv = mpv
+        if (mpv != null) mpv.selectSubtitle(mpvSubtitle()) else applyTextOverride(player.currentTracks)
+    }
+
+    /** What mpv draws of the subtitle picked: a stream in the file, or a PGS file from the server. */
+    private fun mpvSubtitle(): MpvSubtitle? {
+        val track = subtitle?.takeIf(::playerDraws) ?: return null
+        if (track.source == "embedded") return track.id.removePrefix("stream-").toIntOrNull()?.let(MpvSubtitle::Stream)
+        return MpvSubtitle.External(api.paths.subtitle(item.id, track.id))
+    }
+
+    /** Fills the screen with the video, cut at its edges, or shows it whole; mpv does it itself. */
+    fun showFilled(fill: Boolean) {
+        mpv?.setFill(fill)
     }
 
     /** Pick the audio track inside the file, for the file as it is. */
@@ -440,9 +510,14 @@ class PlayerController(
         audio = track
         val current = source
         // A download holds only its own tracks, so it picks among them whatever plays.
-        if (current == Source.Local || (current == Source.Direct && Capabilities.takesAudio(track.codec, prefs))) {
-            pendingAudioOverride = true
-            applyAudioOverride(player.currentTracks)
+        if (current == Source.Local || (current == Source.Direct && takesAudio(track))) {
+            val mpv = mpv
+            if (mpv != null) {
+                mpv.selectAudio(track.index)
+            } else {
+                pendingAudioOverride = true
+                applyAudioOverride(player.currentTracks)
+            }
         } else {
             noStream = false
             load(plan(), position)
@@ -453,13 +528,13 @@ class PlayerController(
         val before = subtitle
         subtitle = track
         cues = null
+        cuesFor = null
         pictureCues = emptyList()
         subtitleError = false
-        if (track != null && drawable(track)) loadCues(track)
         // A burned-in track comes with its own encode, and leaving one goes back.
         val burnedBefore = before != null && burns(before)
         val burnNow = track != null && burns(track)
-        if (burnedBefore || burnNow) load(plan(), position) else applyTextOverride(player.currentTracks)
+        if (burnedBefore || burnNow) load(plan(), position) else showSubtitle()
     }
 
     fun pickQuality(id: String) {
@@ -476,6 +551,7 @@ class PlayerController(
     }
 
     private fun loadCues(track: SubtitleTrack) {
+        cuesFor = track
         scope.launch {
             try {
                 val saved = localSubtitles[track.id]

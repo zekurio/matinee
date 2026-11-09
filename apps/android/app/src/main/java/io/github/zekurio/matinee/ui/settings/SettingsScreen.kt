@@ -90,6 +90,7 @@ import io.github.zekurio.matinee.ui.player.Capabilities
 import io.github.zekurio.matinee.ui.player.Decoders
 import io.github.zekurio.matinee.ui.player.ORIGINAL_QUALITY
 import io.github.zekurio.matinee.ui.player.OWN_SUBTITLE_EDGES
+import io.github.zekurio.matinee.ui.player.PlayerEngine
 import io.github.zekurio.matinee.ui.player.PlayerPrefs
 import io.github.zekurio.matinee.ui.player.QUALITIES
 import io.github.zekurio.matinee.ui.player.SKIP_STEPS
@@ -468,6 +469,12 @@ private fun DeviceSection(prefs: PlayerPrefs, options: PlaybackOptions?) {
                     prefs.audioCodec.takeIf { it in audio } ?: AUTOMATIC,
                 ) { prefs.audioCodec = it }
             }
+            RowDivider()
+            PickerRow(
+                stringResource(R.string.playback_engine_title),
+                listOf(PlayerEngine.EXOPLAYER to "ExoPlayer", PlayerEngine.MPV to "mpv"),
+                prefs.engine,
+            ) { prefs.engine = it }
             RowDivider()
             PickerRow(
                 stringResource(R.string.playback_decoders_title),

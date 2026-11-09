@@ -96,6 +96,7 @@ dependencies {
     implementation(libs.media3.ui.compose)
     implementation(libs.media3.session)
     implementation(libs.media3.ffmpeg.decoder)
+    implementation(libs.libmpv)
 
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)

@@ -309,6 +309,8 @@ private fun Playback(data: PlayerData, start: Double?) {
             local = data.local?.let(app.downloads.store::file),
             localSubtitles = data.local?.subtitles.orEmpty().associate { it.track.id to File(app.downloads.store.root, it.file) },
             pending = app.downloads.pending,
+            serverHeaders = app.session.playerHeaders(),
+            userAgent = app.session.userAgent,
         )
     }
     DisposableEffect(controller) {
@@ -479,6 +481,12 @@ private fun ZoomNote(count: Int, fill: Boolean, modifier: Modifier) {
 /** The video, whole or filling the screen and cut at its edges. */
 @Composable
 private fun Video(controller: PlayerController, fill: Boolean) {
+    if (controller.usesMpv) {
+        // mpv fits or fills the video in a surface the size of the screen, its subtitles with it.
+        LaunchedEffect(fill) { controller.showFilled(fill) }
+        PlayerSurface(player = controller.player, modifier = Modifier.fillMaxSize(), surfaceType = SURFACE_TYPE_SURFACE_VIEW)
+        return
+    }
     val presentation = rememberPresentationState(controller.player)
     Box(Modifier.fillMaxSize().clipToBounds(), contentAlignment = Alignment.Center) {
         PlayerSurface(

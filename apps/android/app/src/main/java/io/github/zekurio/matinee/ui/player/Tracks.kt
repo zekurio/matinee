@@ -63,6 +63,9 @@ fun drawable(track: SubtitleTrack) = track.delivery == SubtitleDelivery.WEBVTT
 fun pictureInFile(track: SubtitleTrack) =
     track.source == "embedded" && (track.delivery == SubtitleDelivery.PGS || track.delivery == SubtitleDelivery.BURN_IN)
 
+/** An ASS or SSA track inside the file, whose styling and fonts only mpv keeps. */
+fun styledInFile(track: SubtitleTrack) = track.source == "embedded" && (track.format == "ASS" || track.format == "SSA")
+
 private fun subtitleLanguage(preferences: PlaybackPreferences) = preferences.subtitleLanguage ?: deviceLanguage
 
 /** The full or forced track for a language: the exact tag first, then the file's default, then one without SDH. */
