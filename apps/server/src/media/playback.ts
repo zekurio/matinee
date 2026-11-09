@@ -310,6 +310,11 @@ export async function openPlayback(
     "error",
     "-nostdin",
     ...video.input,
+    // With the video copied, converted audio starts on the keyframe too,
+    // rather than at the seek point after it: a gap there takes the
+    // edit lists to place, which ExoPlayer doesn't apply in fragmented
+    // MP4, so the audio played early by up to a keyframe interval.
+    ...(copy && seek > 0 ? ["-noaccurate_seek"] : []),
     ...(seek > 0 ? ["-ss", seek.toFixed(6)] : []),
     "-i",
     item.path,
