@@ -41,15 +41,17 @@ const ratings = perLocale(
 )
 
 /**
- * The banner's box, shared with Home's loading skeleton. A phone on its
- * side (short and from `sm` up) gets exactly the screen. Full bleed, like
+ * The banner's box, shared with Home's loading skeleton. Without rows of
+ * what to watch next to share the first screen with, it stays short enough
+ * for the first shelf to start under it. A phone on its side (short and
+ * from `sm` up) gets exactly the screen. Full bleed, like
  * `pageBleed`: it breaks out of the page column to the window edges and up
  * under the phone header or the floating bar. Negative margins rather than
  * a -50% translate: the translate lands on a half pixel at odd window
  * widths, and the zooming backdrop then shows past the shading at the edge.
  */
 export const heroFrame =
-  "relative mx-[calc(50%-50vw)] -mt-[calc(env(safe-area-inset-top)+4rem)] h-[min(86vh,880px)] min-h-[500px] w-screen sm:-mt-24 sm:max-lg:[@media(max-height:540px)]:h-svh sm:max-lg:[@media(max-height:540px)]:min-h-0"
+  "relative mx-[calc(50%-50vw)] -mt-[calc(env(safe-area-inset-top)+4rem)] h-[min(68vh,720px)] min-h-[480px] w-screen sm:-mt-24 sm:max-lg:[@media(max-height:540px)]:h-svh sm:max-lg:[@media(max-height:540px)]:min-h-0"
 
 /**
  * On phones and desktop, lets the banner take whatever height its flex
