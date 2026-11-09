@@ -159,9 +159,9 @@ private fun scaleTop(seconds: Double): Double {
 }
 
 /**
- * The range's watch time as a card: the total, big, over watch time per
- * day, week, or month as bars. Touching a bar reads it out under the
- * chart; otherwise the line there names the busiest one.
+ * The range's watch time as a card, as the web shows it: the total, big,
+ * over watch time per day, week, or month as bars. Touching a bar reads
+ * that day, week, or month out in the total's place.
  */
 @Composable
 fun WatchTimeCard(stats: WatchStats, modifier: Modifier = Modifier) {
@@ -169,7 +169,6 @@ fun WatchTimeCard(stats: WatchStats, modifier: Modifier = Modifier) {
     val buckets = stats.buckets
     var active by remember(stats) { mutableStateOf<Int?>(null) }
     val top = scaleTop(buckets.maxOfOrNull { it.watchSeconds } ?: 0.0)
-    val busiest = buckets.filter { it.watchSeconds > 0 }.maxByOrNull { it.watchSeconds }
     val shown = active?.let(buckets::getOrNull)
     val accent = Palette.Accent
     val baseline = Palette.Border
@@ -177,11 +176,11 @@ fun WatchTimeCard(stats: WatchStats, modifier: Modifier = Modifier) {
         modifier.fillMaxWidth().clip(CardShape).background(Palette.Card).border(1.dp, Palette.Border, CardShape).padding(16.dp),
     ) {
         Text(
-            "${stringResource(R.string.stats_watch_time)} · ${rangeName(stats.range)}",
+            shown?.let { bucketName(it.start, stats.unit, res) } ?: "${stringResource(R.string.stats_watch_time)} · ${rangeName(stats.range)}",
             style = MaterialTheme.typography.bodyMedium,
             color = Palette.Muted,
         )
-        Text(formatWatchTime(stats.totals.watchSeconds, res), style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold)
+        Text(formatWatchTime(shown?.watchSeconds ?: stats.totals.watchSeconds, res), style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold)
         if (buckets.isEmpty()) return@Column
         Gap(16.dp)
         Canvas(
@@ -215,26 +214,6 @@ fun WatchTimeCard(stats: WatchStats, modifier: Modifier = Modifier) {
                 }
             }
         }
-        Gap(10.dp)
-        Text(
-            when {
-                shown != null -> "${bucketName(shown.start, stats.unit, res)} · ${formatWatchTime(shown.watchSeconds, res)}"
-                busiest != null -> stringResource(R.string.stats_chart_busiest, bucketName(busiest.start, stats.unit, res), formatWatchTime(busiest.watchSeconds, res))
-                else -> ""
-            },
-            style = MaterialTheme.typography.bodySmall,
-            color = Palette.Muted,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-    }
-}
-
-/** A thin bar for [fraction] of the whole. */
-@Composable
-private fun ShareBar(fraction: Float) {
-    Box(Modifier.fillMaxWidth().height(3.dp).clip(RoundedCornerShape(50)).background(Palette.Foreground.copy(alpha = 0.07f))) {
-        Box(Modifier.fillMaxWidth(fraction.coerceIn(0.01f, 1f)).height(3.dp).clip(RoundedCornerShape(50)).background(Palette.Accent))
     }
 }
 
@@ -258,8 +237,8 @@ private fun StatsCard(label: String?, modifier: Modifier = Modifier, content: @C
 }
 
 /**
- * The most watched titles in a card, ranked: the poster, the name, its
- * watch time and part of the whole, and a bar for that part.
+ * The most watched titles in a card, ranked: the poster, the name, how
+ * often it was played, and its watch time at the end.
  */
 @Composable
 fun TopTitles(stats: WatchStats, modifier: Modifier = Modifier) {
@@ -267,8 +246,6 @@ fun TopTitles(stats: WatchStats, modifier: Modifier = Modifier) {
     val api = LocalApi.current
     val nav = LocalNavigator.current
     val res = LocalResources.current
-    val percent = remember { NumberFormat.getPercentInstance() }
-    val total = maxOf(1.0, stats.totals.watchSeconds)
     StatsCard(stringResource(R.string.stats_top), modifier) {
         stats.titles.forEachIndexed { index, entry ->
             if (index > 0) HorizontalDivider(Modifier.padding(start = 16.dp), color = Palette.Border)
@@ -287,40 +264,37 @@ fun TopTitles(stats: WatchStats, modifier: Modifier = Modifier) {
                 Gap(14.dp)
                 Column(Modifier.weight(1f)) {
                     Text(entry.title.name, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(formatWatchTime(entry.watchSeconds, res), style = MaterialTheme.typography.bodySmall, color = Palette.Muted)
-                    Gap(8.dp)
-                    ShareBar((entry.watchSeconds / total).toFloat())
+                    Text(
+                        res.getQuantityString(R.plurals.stats_play_count, entry.plays, entry.plays),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Palette.Muted,
+                    )
                 }
                 Gap(14.dp)
-                Text(percent.format(entry.watchSeconds / total), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+                Text(formatWatchTime(entry.watchSeconds, res), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
             }
         }
     }
 }
 
 /**
- * Watch time per genre in a card, each bar against all the watch time. A
- * title can have several genres, so the bars add up to more than the whole
- * and carry no percent.
+ * Watch time per genre in a card. A title can have several genres, so
+ * their times add up to more than the whole.
  */
 @Composable
 fun Genres(stats: WatchStats, modifier: Modifier = Modifier) {
     if (stats.genres.isEmpty()) return
     val nav = LocalNavigator.current
     val res = LocalResources.current
-    val total = maxOf(1.0, stats.totals.watchSeconds)
     StatsCard(stringResource(R.string.stats_genres), modifier) {
         stats.genres.forEachIndexed { index, genre ->
             if (index > 0) HorizontalDivider(Modifier.padding(start = 16.dp), color = Palette.Border)
-            Column(
-                Modifier.fillMaxWidth().clickable { nav.genre(genre.name) }.padding(horizontal = 16.dp, vertical = 12.dp),
+            Row(
+                Modifier.fillMaxWidth().clickable { nav.genre(genre.name) }.padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(genre.name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                    Text(formatWatchTime(genre.watchSeconds, res), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
-                }
-                Gap(8.dp)
-                ShareBar((genre.watchSeconds / total).toFloat())
+                Text(genre.name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                Text(formatWatchTime(genre.watchSeconds, res), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
             }
         }
     }

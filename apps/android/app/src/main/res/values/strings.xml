@@ -86,8 +86,11 @@
     <string name="stats_movies_finished">Movies finished</string>
     <string name="stats_episodes_finished">Episodes finished</string>
     <string name="stats_shows_watched">Shows watched</string>
-    <string name="stats_chart_busiest">Busiest · %1$s · %2$s</string>
     <string name="stats_bucket_week">Week of %1$s</string>
+    <plurals name="stats_play_count">
+        <item quantity="one">%1$d play</item>
+        <item quantity="other">%1$d plays</item>
+    </plurals>
     <string name="stats_top">Most watched</string>
     <string name="stats_genres">Genres</string>
     <string name="format_minutes_short">%1$dm</string>
