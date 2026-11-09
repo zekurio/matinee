@@ -1,4 +1,4 @@
-import { defineMessages } from "../../catalog"
+import { defineMessages, plural } from "../../catalog"
 
 export default defineMessages("playback", {
   // Languages, which the account syncs.
@@ -48,6 +48,13 @@ export default defineMessages("playback", {
     "Stereo, for audio this browser can't play.",
   // {codec} is the codec automatic picks, like HEVC or Opus.
   "playback.codec.automatic": "Automatic ({codec})",
+  // How far the player's skip buttons and keys go.
+  "playback.skip.title": "Skip by",
+  "playback.skip.description": "The skip buttons, the arrow keys, and J and L.",
+  "playback.skip.seconds": plural({
+    one: "{count} second",
+    other: "{count} seconds",
+  }),
 
   // Audio passthrough.
   "playback.passthrough.title": "Audio passthrough",

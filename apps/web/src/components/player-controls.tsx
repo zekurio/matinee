@@ -29,7 +29,6 @@ import { selectBusy, usePlayerStore } from "@/stores/player"
 import { formatClock, formatPercent, formatTime } from "./player-format"
 import { type TrickplayTiles, TrickplayThumb } from "./trickplay-thumb"
 
-export const SKIP_S = 10
 export const VOLUME_STEP = 0.05
 // How far the menu's buttons and G and H move the subtitles, as in mpv.
 export const SUBTITLE_STEP_MS = 100
@@ -69,9 +68,12 @@ export function ControlButton({
 /** A circular arrow with the skip length inside it. */
 export function SkipIcon({
   direction,
+  seconds,
   className,
 }: {
   direction: "back" | "forward"
+  /** How far it skips, written inside the arrow. */
+  seconds: number
   className?: string
 }) {
   const Icon = direction === "back" ? RotateCcwIcon : RotateCwIcon
@@ -79,7 +81,7 @@ export function SkipIcon({
     <span aria-hidden className="relative grid place-items-center">
       <Icon className={cn("!size-6", className)} strokeWidth={1.75} />
       <span className="absolute pt-px text-[9px] leading-none font-bold tabular-nums">
-        {SKIP_S}
+        {seconds}
       </span>
     </span>
   )

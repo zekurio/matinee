@@ -24,6 +24,7 @@ import { orpc } from "@/lib/rpc"
 import { browserVideoCodecs } from "@/lib/video-support"
 import {
   type AudioCodecChoice,
+  SKIP_STEPS,
   usePlayerPreferencesStore,
   type VideoCodecChoice,
 } from "@/stores/player-preferences"
@@ -56,8 +57,8 @@ function passthroughNote(codec: PlaybackAudioCodec): string | undefined {
 
 /**
  * How videos play: the languages, which the account syncs, and the
- * quality and codecs, which stay with this browser. Only what this browser
- * and the server both support is offered.
+ * quality, codecs, and skips, which stay with this browser. Only what
+ * this browser and the server both support is offered.
  */
 export function PlaybackPanel() {
   const options = useQuery(orpc.playback.options.queryOptions()).data
@@ -209,6 +210,7 @@ function DeviceSection({ options }: { options: PlaybackOptions | undefined }) {
       quality: state.quality,
       videoCodec: state.videoCodec,
       audioCodec: state.audioCodec,
+      skipSeconds: state.skipSeconds,
       setDevicePlayback: state.setDevicePlayback,
     })),
   )
@@ -295,6 +297,18 @@ function DeviceSection({ options }: { options: PlaybackOptions | undefined }) {
             value="AAC"
           />
         )}
+        <SelectRow
+          title={tr("playback.skip.title")}
+          description={tr("playback.skip.description")}
+          value={String(device.skipSeconds)}
+          options={SKIP_STEPS.map(String)}
+          labelOf={(value) =>
+            tr("playback.skip.seconds", { count: Number(value) })
+          }
+          onChange={(value) =>
+            device.setDevicePlayback({ skipSeconds: Number(value) })
+          }
+        />
       </SettingRows>
     </SettingsSubsection>
   )

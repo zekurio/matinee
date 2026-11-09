@@ -40,7 +40,6 @@ import {
   FullscreenButton,
   PlayButton,
   SeekBar,
-  SKIP_S,
   SkipIcon,
   VolumeControl,
 } from "./player-controls"
@@ -101,10 +100,10 @@ type VideoPlayerProps = {
 }
 
 /**
- * Full-screen player. Space or K plays and pauses, arrows or J/L skip ten
- * seconds, up and down change the volume, 0 to 9 jump to a tenth of the
- * way, M mutes, F toggles full screen, C turns subtitles on and off, G and
- * H show them earlier and later.
+ * Full-screen player. Space or K plays and pauses, arrows or J/L skip by
+ * the length in the settings, up and down change the volume, 0 to 9 jump
+ * to a tenth of the way, M mutes, F toggles full screen, C turns subtitles
+ * on and off, G and H show them earlier and later.
  */
 export function VideoPlayer(props: VideoPlayerProps) {
   // One store per player, which remounts for another file. It starts from
@@ -191,6 +190,7 @@ function Player({
   const pgsLayer = useRef<HTMLDivElement>(null)
   const seekBar = useRef<HTMLDivElement>(null)
   const coarse = useMediaQuery("(pointer: coarse)")
+  const skipSeconds = usePlayerPreferencesStore((state) => state.skipSeconds)
   const playedTime = usePlayedTime()
   // The store's actions and session never change, so one read is enough.
   const actions = store.getState()
@@ -342,6 +342,7 @@ function Player({
   usePlayerKeys({
     toggle,
     skip,
+    skipSeconds,
     jump,
     show,
     changeVolume,
@@ -484,16 +485,16 @@ function Player({
         <div className="flex items-center gap-0.5">
           <PlayButton onToggle={toggle} />
           <ControlButton
-            label={tr("player.skipBack", { seconds: SKIP_S })}
-            onClick={() => skip(-SKIP_S)}
+            label={tr("player.skipBack", { seconds: skipSeconds })}
+            onClick={() => skip(-skipSeconds)}
           >
-            <SkipIcon direction="back" />
+            <SkipIcon direction="back" seconds={skipSeconds} />
           </ControlButton>
           <ControlButton
-            label={tr("player.skipForward", { seconds: SKIP_S })}
-            onClick={() => skip(SKIP_S)}
+            label={tr("player.skipForward", { seconds: skipSeconds })}
+            onClick={() => skip(skipSeconds)}
           >
-            <SkipIcon direction="forward" />
+            <SkipIcon direction="forward" seconds={skipSeconds} />
           </ControlButton>
           <VolumeControl onToggleMute={toggleMute} onChange={setVolume} />
           <div className="ml-auto flex items-center gap-0.5">

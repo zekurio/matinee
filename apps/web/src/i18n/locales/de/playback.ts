@@ -1,4 +1,4 @@
-import type { TranslationOf } from "../../catalog"
+import { plural, type TranslationOf } from "../../catalog"
 import type source from "../en/playback"
 
 export default {
@@ -43,6 +43,13 @@ export default {
   "playback.audioCodec.description":
     "Stereo, für Audio, das dieser Browser nicht abspielen kann.",
   "playback.codec.automatic": "Automatisch ({codec})",
+  "playback.skip.title": "Springen um",
+  "playback.skip.description":
+    "Die Sprungtasten, die Pfeiltasten sowie J und L.",
+  "playback.skip.seconds": plural({
+    one: "{count} Sekunde",
+    other: "{count} Sekunden",
+  }),
 
   "playback.passthrough.title": "Audio-Passthrough",
   "playback.passthrough.description":

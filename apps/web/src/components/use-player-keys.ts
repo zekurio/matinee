@@ -3,11 +3,13 @@ import { useEffect, useEffectEvent } from "react"
 
 import { tr } from "@/i18n"
 
-import { SKIP_S, SUBTITLE_STEP_MS, VOLUME_STEP } from "./player-controls"
+import { SUBTITLE_STEP_MS, VOLUME_STEP } from "./player-controls"
 
 export type PlayerKeyActions = {
   toggle: () => void
   skip: (by: number) => void
+  /** How far the arrows and J and L skip, from the settings. */
+  skipSeconds: number
   /** Jumps to `digit` tenths of the way. */
   jump: (digit: number) => void
   show: (Icon: LucideIcon | null, text: string) => void
@@ -23,6 +25,7 @@ export type PlayerKeyActions = {
 export function usePlayerKeys({
   toggle,
   skip,
+  skipSeconds,
   jump,
   show,
   changeVolume,
@@ -43,12 +46,12 @@ export function usePlayerKeys({
       return
     if (event.metaKey || event.ctrlKey || event.altKey) return
     const back = () => {
-      skip(-SKIP_S)
-      show(RotateCcwIcon, tr("player.flash.skip", { seconds: SKIP_S }))
+      skip(-skipSeconds)
+      show(RotateCcwIcon, tr("player.flash.skip", { seconds: skipSeconds }))
     }
     const ahead = () => {
-      skip(SKIP_S)
-      show(RotateCwIcon, tr("player.flash.skip", { seconds: SKIP_S }))
+      skip(skipSeconds)
+      show(RotateCwIcon, tr("player.flash.skip", { seconds: skipSeconds }))
     }
     const actions = new Map([
       [" ", toggle],
