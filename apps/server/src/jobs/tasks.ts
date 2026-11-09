@@ -22,6 +22,7 @@ const scanLibraries: TaskDefinition = {
   name: "Scan libraries",
   description:
     "Look for new, changed, and removed files in every library, for changes the folder watcher can't see, like a network share written by another host.",
+  queue: "library-scan",
   // Files may have arrived while the server was down. Scan once dev
   // restarts and a busy startup have passed.
   startupDelayMs: MINUTE_MS,
@@ -55,6 +56,7 @@ const refreshStale: TaskDefinition = {
   name: "Refresh metadata",
   description:
     "Fetch metadata for titles without a match and for ones that went stale, for new episodes and artwork.",
+  queue: "metadata",
   startupDelayMs: 0,
   intervalMs: 24 * HOUR_MS,
   run: ({ signal }) => refreshMetadata({ signal }),
@@ -65,6 +67,7 @@ const probeMedia: TaskDefinition = {
   name: "Read media info",
   description:
     "Run ffprobe on files that weren't read yet. Scans queue their new files on their own.",
+  queue: "media-probe",
   startupDelayMs: 0,
   intervalMs: 24 * HOUR_MS,
   run: ({ signal }) => probeMissing({ signal }),
@@ -75,6 +78,7 @@ const fetchArtwork: TaskDefinition = {
   name: "Fetch artwork",
   description:
     "Download images the server has no blurred placeholder for yet, posters and backdrops first. Metadata fetches queue their images on their own; this catches up after a restart or a failed download.",
+  queue: "artwork",
   // After the startup metadata fetch has had a head start.
   startupDelayMs: MINUTE_MS,
   intervalMs: 24 * HOUR_MS,
@@ -86,6 +90,7 @@ const makeTrickplay: TaskDefinition = {
   name: "Make trickplay images",
   description:
     "Make the seek bar's thumbnails for videos without them, or whose file or settings changed, newest first. Scans queue their new files on their own. Also deletes the images of files that are gone.",
+  queue: "trickplay",
   // Only on its interval, not after every restart: a run can take hours.
   startupDelayMs: null,
   intervalMs: 24 * HOUR_MS,
@@ -99,6 +104,7 @@ const cleanTranscodes: TaskDefinition = {
   id: "clean-transcodes",
   name: "Clean up encodes",
   description: `Delete encodes nobody played for ${env.MATINEE_TRANSCODE_CACHE_HOURS} hours, then the least recently played past ${env.MATINEE_TRANSCODE_CACHE_GB} GB, and downloads nobody fetched from for ${env.MATINEE_TRANSCODE_CACHE_HOURS} hours.`,
+  queue: null,
   startupDelayMs: 0,
   intervalMs: 10 * MINUTE_MS,
   run: async () => {
@@ -111,6 +117,7 @@ const cleanSessions: TaskDefinition = {
   id: "clean-sessions",
   name: "Delete expired sessions",
   description: "Remove sign-ins that expired from the database.",
+  queue: null,
   startupDelayMs: 0,
   intervalMs: 6 * HOUR_MS,
   run: () => deleteExpiredSessions(),

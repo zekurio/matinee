@@ -122,34 +122,40 @@ export function JobsPanel() {
 
   return (
     <SettingsSections>
-      <SettingsSubsection id="queues" title={tr("jobs.queues")}>
+      <SettingsSubsection id="jobs" title={tr("jobs.queues")}>
         {jobs.isPending ? (
-          <Skeleton className="h-64 rounded-xl" />
+          <Skeleton className="h-96 rounded-xl" />
         ) : jobs.isError ? (
           <LoadError error={jobs.error} retry={() => void jobs.refetch()} />
         ) : (
-          <List>
-            {jobs.data.queues.map((queue) => (
-              <QueueRow key={queue.id} queue={queue} />
-            ))}
-          </List>
-        )}
-      </SettingsSubsection>
-
-      <SettingsSubsection id="tasks" title={tr("jobs.tasks")}>
-        {jobs.isPending ? (
-          <Skeleton className="h-64 rounded-xl" />
-        ) : jobs.isError ? null : (
-          <List>
-            {jobs.data.tasks.map((task) => (
-              <TaskRow key={task.id} task={task} />
-            ))}
-          </List>
+          <JobsList overview={jobs.data} />
         )}
       </SettingsSubsection>
 
       {jobs.data && <ConcurrencySection queues={tunableQueues(jobs.data)} />}
     </SettingsSections>
+  )
+}
+
+/**
+ * Every queue, each with the task that fills it on a schedule, then the
+ * tasks that fill none and do their upkeep themselves.
+ */
+function JobsList({ overview }: { overview: JobsOverview }) {
+  const upkeep = overview.tasks.filter((task) => task.queue === null)
+  return (
+    <List>
+      {overview.queues.map((queue) => (
+        <QueueRow
+          key={queue.id}
+          queue={queue}
+          task={overview.tasks.find((task) => task.queue === queue.id) ?? null}
+        />
+      ))}
+      {upkeep.map((task) => (
+        <TaskRow key={task.id} task={task} />
+      ))}
+    </List>
   )
 }
 
@@ -212,7 +218,14 @@ function failedText(queue: JobQueueStatus): string {
   return tr("jobs.queue.failed", { count: queue.failed })
 }
 
-function QueueRow({ queue }: { queue: JobQueueStatus }) {
+function QueueRow({
+  queue,
+  task,
+}: {
+  queue: JobQueueStatus
+  /** The scheduled task that fills it, if one does. */
+  task: ScheduledTask | null
+}) {
   const update = useJobsUpdate()
   const [details, setDetails] = useState(false)
   const name = queueName(queue)
@@ -269,8 +282,10 @@ function QueueRow({ queue }: { queue: JobQueueStatus }) {
             )}
           </span>
         </p>
+        {task && <TaskLines task={task} />}
       </div>
-      <div className="flex shrink-0 items-center">
+      <div className="flex shrink-0 items-center gap-1">
+        {task && <TaskButton task={task} />}
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
@@ -340,7 +355,8 @@ function lastRunText(task: ScheduledTask): string {
   }
 }
 
-function TaskRow({ task }: { task: ScheduledTask }) {
+/** Starts the task, or cancels the run going on. */
+function useTaskAction(task: ScheduledTask) {
   const update = useJobsUpdate()
   const running = task.startedAt !== null
   const name = taskName(task)
@@ -358,6 +374,34 @@ function TaskRow({ task }: { task: ScheduledTask }) {
         { description: errorMessage(error) },
       ),
   })
+  return { running, action }
+}
+
+/** Run now, or cancel; the same width either way, so rows don't move. */
+function TaskButton({ task }: { task: ScheduledTask }) {
+  const { running, action } = useTaskAction(task)
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      className="min-w-24 shrink-0"
+      disabled={action.isPending}
+      onClick={() => action.mutate()}
+    >
+      {running ? <SquareIcon /> : <PlayIcon />}
+      {running ? tr("jobs.task.cancel") : tr("jobs.task.run")}
+    </Button>
+  )
+}
+
+/**
+ * A task's run going on, with its progress, or how the last one went;
+ * then its schedule. One line each in every state, so rows keep their
+ * height.
+ */
+function TaskLines({ task }: { task: ScheduledTask }) {
+  const running = task.startedAt !== null
+  const name = taskName(task)
   const percent =
     task.progress === null ? null : Math.round(task.progress * 100)
   const last = lastRunText(task)
@@ -369,69 +413,67 @@ function TaskRow({ task }: { task: ScheduledTask }) {
         })
       : scheduleOf(task)
 
-  // Every line below the description is one line long in every state, and
-  // the button keeps its width, so starting or cancelling doesn't move rows.
+  return (
+    <>
+      {running ? (
+        <div className="text-muted-foreground mt-0.5 flex h-5 items-center gap-1.5 text-[13px] leading-5 tabular-nums">
+          <Spinner className="size-3.5 shrink-0" />
+          <span className="shrink-0">
+            {percent === null
+              ? tr("jobs.task.running")
+              : tr("jobs.task.runningPercent", { percent })}
+          </span>
+          {percent !== null && (
+            <div
+              role="progressbar"
+              aria-label={tr("jobs.task.progress", { task: name })}
+              aria-valuenow={percent}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              className="bg-secondary ml-1 h-1 w-full max-w-40 min-w-8 overflow-hidden rounded-full"
+            >
+              <div
+                className="bg-primary h-full rounded-full transition-[width]"
+                style={{ width: `${percent}%` }}
+              />
+            </div>
+          )}
+        </div>
+      ) : (
+        <p
+          title={last}
+          className={cn(
+            "mt-0.5 truncate text-[13px] leading-5",
+            task.lastRun?.result === "failed"
+              ? "text-destructive"
+              : "text-muted-foreground",
+          )}
+        >
+          {last}
+        </p>
+      )}
+      <p className="text-muted-foreground mt-0.5 flex items-center gap-1.5 text-[13px] leading-5">
+        <CalendarClockIcon className="size-3.5 shrink-0" />
+        <span className="min-w-0 truncate" title={schedule}>
+          {schedule}
+        </span>
+      </p>
+    </>
+  )
+}
+
+/** A task that fills no queue: its name, what it does, and its runs. */
+function TaskRow({ task }: { task: ScheduledTask }) {
   return (
     <ListItem className="flex-wrap items-start gap-x-3 gap-y-2 py-3 pr-2">
       <div className="min-w-0 flex-1 basis-56">
-        <h4 className="text-sm leading-5 font-medium">{name}</h4>
+        <h4 className="text-sm leading-5 font-medium">{taskName(task)}</h4>
         <p className="text-muted-foreground text-[13px] leading-5">
           {taskDescription(task)}
         </p>
-        {running ? (
-          <div className="text-muted-foreground mt-1 flex h-5 items-center gap-1.5 text-[13px] leading-5 tabular-nums">
-            <Spinner className="size-3.5 shrink-0" />
-            <span className="shrink-0">
-              {percent === null
-                ? tr("jobs.task.running")
-                : tr("jobs.task.runningPercent", { percent })}
-            </span>
-            {percent !== null && (
-              <div
-                role="progressbar"
-                aria-label={tr("jobs.task.progress", { task: name })}
-                aria-valuenow={percent}
-                aria-valuemin={0}
-                aria-valuemax={100}
-                className="bg-secondary ml-1 h-1 w-full max-w-40 min-w-8 overflow-hidden rounded-full"
-              >
-                <div
-                  className="bg-primary h-full rounded-full transition-[width]"
-                  style={{ width: `${percent}%` }}
-                />
-              </div>
-            )}
-          </div>
-        ) : (
-          <p
-            title={last}
-            className={cn(
-              "mt-1 truncate text-[13px] leading-5",
-              task.lastRun?.result === "failed"
-                ? "text-destructive"
-                : "text-muted-foreground",
-            )}
-          >
-            {last}
-          </p>
-        )}
-        <p className="text-muted-foreground mt-0.5 flex items-center gap-1.5 text-[13px] leading-5">
-          <CalendarClockIcon className="size-3.5 shrink-0" />
-          <span className="min-w-0 truncate" title={schedule}>
-            {schedule}
-          </span>
-        </p>
+        <TaskLines task={task} />
       </div>
-      <Button
-        variant="outline"
-        size="sm"
-        className="min-w-24 shrink-0"
-        disabled={action.isPending}
-        onClick={() => action.mutate()}
-      >
-        {running ? <SquareIcon /> : <PlayIcon />}
-        {running ? tr("jobs.task.cancel") : tr("jobs.task.run")}
-      </Button>
+      <TaskButton task={task} />
     </ListItem>
   )
 }

@@ -2,8 +2,7 @@ import { plural, type TranslationOf } from "../../catalog"
 import type source from "../en/jobs"
 
 export default {
-  "jobs.queues": "Warteschlangen",
-  "jobs.tasks": "Geplante Aufgaben",
+  "jobs.queues": "Hintergrundaufgaben",
   "jobs.loadFailed": "Die Aufträge konnten nicht geladen werden. {error}",
   "jobs.retry": "Erneut versuchen",
 

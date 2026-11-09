@@ -1,4 +1,9 @@
-import type { ScheduledTask, TaskId, TaskResult } from "@matinee/contracts"
+import type {
+  JobQueueId,
+  ScheduledTask,
+  TaskId,
+  TaskResult,
+} from "@matinee/contracts"
 import { scheduledTask } from "@matinee/db"
 
 import { db } from "../db"
@@ -28,6 +33,8 @@ export type TaskDefinition = {
   id: TaskId
   name: string
   description: string
+  /** The queue its runs fill. Null for upkeep the task does itself. */
+  queue: JobQueueId | null
   /** Run this long after the server starts. Null for not at startup. */
   startupDelayMs: number | null
   /** Run again this long after a run ends. Null for only by hand. */
@@ -203,6 +210,7 @@ function toStatus(task: Task): ScheduledTask {
     id: definition.id,
     name: definition.name,
     description: definition.description,
+    queue: definition.queue,
     startupDelaySeconds:
       definition.startupDelayMs === null
         ? null

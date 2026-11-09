@@ -2,8 +2,7 @@ import { defineMessages, plural } from "../../catalog"
 
 export default defineMessages("jobs", {
   // The jobs panel under Settings → Jobs.
-  "jobs.queues": "Queues",
-  "jobs.tasks": "Scheduled tasks",
+  "jobs.queues": "Background work",
   "jobs.loadFailed": "Couldn't load the jobs. {error}",
   "jobs.retry": "Try again",
 

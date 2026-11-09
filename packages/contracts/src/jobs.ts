@@ -3,7 +3,8 @@ import { t } from "./schema"
 /*
  * Background work, as admins see it under Settings → Jobs: queues that
  * run a few jobs at a time each, as in Immich, and scheduled tasks that
- * fill them, as in Jellyfin.
+ * fill them, as in Jellyfin. Clients show a task with the queue it
+ * fills, and the tasks that fill none on their own.
  */
 
 export const JOB_QUEUE_IDS = [
@@ -97,6 +98,8 @@ export const ScheduledTask = t.object({
   id: TaskId,
   name: t.string(),
   description: t.string(),
+  /** The queue its runs fill. Null for upkeep the task does itself. */
+  queue: JobQueueId.nullable(),
   /** Runs this long after the server starts. Null when it doesn't. */
   startupDelaySeconds: t.number().min(0).nullable(),
   /** Runs again this long after a run ends. Null when only by hand. */
