@@ -4,6 +4,7 @@ import android.app.PictureInPictureParams
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.pm.ActivityInfo
+import android.content.res.Configuration
 import android.os.Build
 import android.util.Rational
 import android.view.WindowManager
@@ -52,6 +53,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -59,7 +61,10 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -77,11 +82,11 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -101,6 +106,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.media3.ui.compose.PlayerSurface
 import androidx.media3.ui.compose.SURFACE_TYPE_SURFACE_VIEW
 import androidx.media3.ui.compose.modifiers.resizeWithContentScale
@@ -143,6 +149,8 @@ import java.io.IOException
 import java.text.DateFormat
 import java.util.Date
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeoutOrNull
 
 /** Everything the player needs before it starts. */
 private class PlayerData(
@@ -184,25 +192,62 @@ fun PlayerScreen(itemId: String, start: Double?) {
         val options = try { playbackOptions() } catch (_: IOException) { PlaybackOptions() }
         PlayerData(item, audio, subtitles, options)
     }
-    FullScreen()
-    Box(Modifier.fillMaxSize().background(Color.Black)) {
-        when (val state = data.state) {
-            Load.Loading -> CircularProgressIndicator(Modifier.align(Alignment.Center), color = Palette.Accent)
-            is Load.Failed -> PlayerFailure(stringResource(R.string.player_load_failed), state.message, data::reload)
-            is Load.Ready -> Playback(state.value, start)
+    val nav = LocalNavigator.current
+    var leaving by remember { mutableStateOf(false) }
+    FullScreen(leaving) { nav.back() }
+    // Leaving turns the screen back first, behind black; see FullScreen.
+    BackHandler(enabled = !leaving) { leaving = true }
+    CompositionLocalProvider(LocalLeave provides { leaving = true }) {
+        Box(Modifier.fillMaxSize().background(Color.Black)) {
+            // Playback stops at once; the black stays until the page goes.
+            if (!leaving) {
+                when (val state = data.state) {
+                    Load.Loading -> CircularProgressIndicator(Modifier.align(Alignment.Center), color = Palette.Accent)
+                    is Load.Failed -> PlayerFailure(stringResource(R.string.player_load_failed), state.message, data::reload)
+                    is Load.Ready -> Playback(state.value, start)
+                }
+            }
         }
     }
 }
 
-/** Landscape, without the system bars, and the screen kept on, while the player shows. */
+/** Leaves the player: turns the screen back upright first, then goes back. */
+private val LocalLeave = staticCompositionLocalOf<() -> Unit> { {} }
+
+/** How long leaving waits for the screen to turn upright, which it doesn't while the phone is held sideways. */
+private const val TURN_BACK_MILLIS = 700L
+
+/**
+ * Landscape, without the system bars, and the screen kept on, while the
+ * player shows. Once [leaving], it asks for the app's own orientation
+ * again and calls [onLeft] when the screen has turned, or soon if it
+ * stays sideways: going back at once would show the page underneath
+ * sideways for a moment, as the rotation lags the page.
+ */
 @Composable
-private fun FullScreen() {
+private fun FullScreen(leaving: Boolean, onLeft: () -> Unit) {
     val context = LocalContext.current
+    val original = remember { context.activity()?.requestedOrientation ?: ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED }
+    val orientation by rememberUpdatedState(LocalConfiguration.current.orientation)
+    LaunchedEffect(leaving) {
+        if (!leaving) return@LaunchedEffect
+        val activity = context.activity()
+        // The page underneath comes back whole: its bars and its own colors.
+        activity?.window?.let { window ->
+            WindowCompat.getInsetsController(window, window.decorView).show(WindowInsetsCompat.Type.systemBars())
+        }
+        Theming.forceDark = false
+        activity?.requestedOrientation = original
+        withTimeoutOrNull(TURN_BACK_MILLIS) {
+            snapshotFlow { orientation }.first { it != Configuration.ORIENTATION_LANDSCAPE }
+        }
+        onLeft()
+    }
     DisposableEffect(Unit) {
         val activity = context.activity() ?: return@DisposableEffect onDispose {}
         val window = activity.window
         val insets = WindowCompat.getInsetsController(window, window.decorView)
-        val orientation = activity.requestedOrientation
+        val orientation = original
         activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
         insets.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         insets.hide(WindowInsetsCompat.Type.systemBars())
@@ -220,9 +265,8 @@ private fun FullScreen() {
 
 @Composable
 private fun PlayerFailure(title: String, message: String?, retry: (() -> Unit)?) {
-    val nav = LocalNavigator.current
     Column(Modifier.fillMaxSize().safeDrawingPadding()) {
-        RoundIconButton(Lucide.ArrowLeft, stringResource(R.string.player_back), nav::back, Modifier.padding(8.dp), background = Color.Transparent)
+        RoundIconButton(Lucide.ArrowLeft, stringResource(R.string.player_back), LocalLeave.current, Modifier.padding(8.dp), background = Color.Transparent)
         ErrorBox(title, message, retry, Modifier.weight(1f))
     }
 }
@@ -464,7 +508,7 @@ private fun Controls(
             Modifier.align(Alignment.TopStart).safeDrawingPadding().padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            RoundIconButton(Lucide.ArrowLeft, stringResource(R.string.player_back), nav::back, size = 52.dp, iconSize = 26.dp, background = Color.Transparent)
+            RoundIconButton(Lucide.ArrowLeft, stringResource(R.string.player_back), LocalLeave.current, size = 52.dp, iconSize = 26.dp, background = Color.Transparent)
             Gap(8.dp)
             Column {
                 Text(label.title, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
