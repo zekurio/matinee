@@ -193,7 +193,6 @@
     <string name="media_hero_show_slide">Show slide %1$d</string>
     <string name="media_hero_rated">Rated</string>
     <string name="media_hero_play">Play</string>
-    <string name="media_hero_resume">Resume</string>
     <string name="media_hero_episodes">Episodes</string>
     <string name="media_hero_details">Details</string>
     <plurals name="media_episode_count">

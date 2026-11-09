@@ -318,16 +318,16 @@ private val HERO_BUTTONS = 44.dp + 14.dp
 
 /**
  * Play and the title's page, for the slide showing. One row that stays in
- * place while the slides swipe under it, its labels following along, as
- * the web's banner keeps its buttons.
+ * place while the slides swipe under it, and reads the same for every
+ * slide so nothing in it changes mid-swipe, as on the web: Play picks up
+ * where the person is, which the slide's progress bar shows, and a show's
+ * page holds its episodes.
  */
 @Composable
 private fun HeroButtons(slide: FeaturedTitle, modifier: Modifier = Modifier) {
     val nav = LocalNavigator.current
-    val res = LocalResources.current
     val (title, item) = slide
     val wide = isWide()
-    val resuming = timeLeft(item, res) != null && progressRatio(item) != null
     Row(
         modifier.padding(start = Gutter, end = Gutter, bottom = heroBottom()).then(if (wide) Modifier else Modifier.fillMaxWidth()),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -335,11 +335,11 @@ private fun HeroButtons(slide: FeaturedTitle, modifier: Modifier = Modifier) {
         val buttonModifier = if (wide) Modifier else Modifier.weight(1f)
         MatineeButton(onClick = { nav.play(item.id) }, modifier = buttonModifier) {
             LucideIcon(Lucide.Play, null, size = 16.dp)
-            Text(stringResource(if (resuming) R.string.media_hero_resume else R.string.media_hero_play))
+            Text(stringResource(R.string.media_hero_play))
         }
         MatineeButton(onClick = { nav.title(title) }, look = ButtonLook.Frosted, modifier = buttonModifier) {
-            LucideIcon(if (title.isShow) Lucide.List else Lucide.Info, null, size = 16.dp)
-            Text(stringResource(if (title.isShow) R.string.media_hero_episodes else R.string.media_hero_details))
+            LucideIcon(Lucide.Info, null, size = 16.dp)
+            Text(stringResource(R.string.media_hero_details))
         }
     }
 }

@@ -179,7 +179,6 @@
     <string name="media_hero_show_slide">Folie %1$d zeigen</string>
     <string name="media_hero_rated">Bewertung</string>
     <string name="media_hero_play">Abspielen</string>
-    <string name="media_hero_resume">Fortsetzen</string>
     <string name="media_hero_episodes">Folgen</string>
     <string name="media_hero_details">Details</string>
     <plurals name="media_episode_count">
