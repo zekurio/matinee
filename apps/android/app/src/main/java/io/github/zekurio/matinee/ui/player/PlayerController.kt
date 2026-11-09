@@ -32,7 +32,9 @@ import io.github.zekurio.matinee.api.await
 import io.github.zekurio.matinee.downloads.PendingProgress
 import io.github.zekurio.matinee.downloads.PendingReport
 import java.io.File
+import io.github.zekurio.matinee.api.OfflinePlay
 import java.io.IOException
+import java.time.Instant
 import java.util.UUID
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -107,6 +109,9 @@ class PlayerController(
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val sessionId = UUID.randomUUID().toString()
+
+    /** When this sitting with the file began, for a play kept offline. */
+    private val startedAt = Instant.now()
 
     val player: ExoPlayer = ExoPlayer.Builder(context, renderers(context, prefs.decoders))
         // Files on the phone, and the server through the session's client.
@@ -419,9 +424,16 @@ class PlayerController(
             try {
                 api.report(item.id, at, length, sessionId, played, paused, closed)
                 pending?.drop(item.id)
+                pending?.dropPlay(sessionId)
             } catch (_: IOException) {
                 // Offline, as when watching a download: send it once the server answers.
                 pending?.put(item.id, PendingReport(at, length))
+                // The sitting so far, for watch time, under this session's id.
+                if (played > 0) {
+                    pending?.putPlay(
+                        OfflinePlay(sessionId, item.id, startedAt.toString(), Instant.now().toString(), played, at, length),
+                    )
+                }
             }
         }
         if (closed) CoroutineScope(Dispatchers.IO + NonCancellable).launch { send() } else scope.launch { send() }

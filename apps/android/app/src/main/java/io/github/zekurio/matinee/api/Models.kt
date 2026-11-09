@@ -513,6 +513,21 @@ data class UserThemeVariant(
 @Serializable
 data class UserTheme(val id: String, val name: String, val variants: List<UserThemeVariant>, val guided: Boolean = false)
 
+/** A sitting with a file while the server was out of reach; times are ISO instants. */
+@Serializable
+data class OfflinePlay(
+    val sessionId: String,
+    val itemId: String,
+    val startedAt: String,
+    val endedAt: String,
+    val playedSeconds: Double,
+    val positionSeconds: Double,
+    val durationSeconds: Double? = null,
+)
+
+@Serializable
+internal data class OfflinePlays(val plays: List<OfflinePlay>)
+
 @Serializable
 data class AppSession(val token: String, val user: User)
 

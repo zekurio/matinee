@@ -77,6 +77,9 @@ class PlayerPrefs(context: Context) {
     /** Count down to the next episode and start it. */
     var autoplayNext by boolean("autoplay_next", true)
 
+    /** The video fills the screen, cut at its edges, rather than showing whole; a pinch switches. */
+    var fillScreen by boolean("fill_screen", false)
+
     /** Keep playing in a small window on leaving the app. */
     var pictureInPicture by boolean("picture_in_picture", true)
 

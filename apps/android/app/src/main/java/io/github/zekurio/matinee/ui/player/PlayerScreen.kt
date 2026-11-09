@@ -21,6 +21,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -68,6 +71,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
@@ -335,6 +339,9 @@ private fun Playback(data: PlayerData, start: Double?) {
         }
     }
     val skip = prefs.skipSeconds.toDouble()
+    var fill by remember { mutableStateOf(prefs.fillScreen) }
+    // Counts pinches that switched, so the note shows again for each.
+    var zoomNote by remember { mutableIntStateOf(0) }
 
     // Remotes, keyboards, and headsets: play and pause, and skip with left
     // and right while the controls are away. With them showing, the D-pad
@@ -366,11 +373,36 @@ private fun Playback(data: PlayerData, start: Double?) {
             }
             .focusable(),
     ) {
-        Video(controller)
+        Video(controller, fill = fill && !inPip)
         Subtitles(controller, rememberSubtitleLook(prefs), lifted = controls && !inPip, Modifier.align(Alignment.BottomCenter))
-        // Taps show and hide the controls; a double tap on either side skips.
+        // Taps show and hide the controls; a double tap on either side skips;
+        // spreading two fingers fills the screen, and pinching shows it whole.
         Box(
-            Modifier.fillMaxSize().pointerInput(controller, skip) {
+            Modifier.fillMaxSize().pointerInput(Unit) {
+                awaitEachGesture {
+                    awaitFirstDown(requireUnconsumed = false)
+                    var zoom = 1f
+                    var switched = false
+                    do {
+                        val event = awaitPointerEvent()
+                        if (event.changes.count { it.pressed } >= 2) {
+                            zoom *= event.calculateZoom()
+                            val want = when {
+                                zoom > PINCH_FILL -> true
+                                zoom < 1 / PINCH_FILL -> false
+                                else -> null
+                            }
+                            if (!switched && want != null && want != fill) {
+                                switched = true
+                                fill = want
+                                prefs.fillScreen = want
+                                zoomNote++
+                            }
+                            event.changes.forEach { it.consume() }
+                        }
+                    } while (event.changes.any { it.pressed })
+                }
+            }.pointerInput(controller, skip) {
                 detectTapGestures(
                     onTap = {
                         controls = !controls
@@ -383,6 +415,8 @@ private fun Playback(data: PlayerData, start: Double?) {
                 )
             },
         )
+        // Up top, clear of the play button in the middle.
+        ZoomNote(zoomNote, fill, Modifier.align(Alignment.TopCenter).safeDrawingPadding().padding(top = 16.dp))
         if (controller.loading && controller.error == null) {
             CircularProgressIndicator(Modifier.align(Alignment.Center).size(48.dp), color = Palette.Foreground)
         }
@@ -417,13 +451,37 @@ private fun Playback(data: PlayerData, start: Double?) {
 
 private enum class Menu { Audio, Subtitles, Settings }
 
+/** How far two fingers spread, or pinch by its inverse, before the video switches. */
+private const val PINCH_FILL = 1.15f
+
+/** Says how the video now shows, for a moment after a pinch switched it. */
 @Composable
-private fun Video(controller: PlayerController) {
+private fun ZoomNote(count: Int, fill: Boolean, modifier: Modifier) {
+    var shown by remember { mutableStateOf(false) }
+    LaunchedEffect(count) {
+        if (count == 0) return@LaunchedEffect
+        shown = true
+        delay(1_200)
+        shown = false
+    }
+    AnimatedVisibility(shown, modifier, enter = fadeIn(), exit = fadeOut()) {
+        Text(
+            stringResource(if (fill) R.string.player_fill else R.string.player_fit),
+            style = MaterialTheme.typography.titleMedium,
+            color = Color.White,
+            modifier = Modifier.clip(RoundedCornerShape(12.dp)).background(Color.Black.copy(alpha = 0.6f)).padding(horizontal = 18.dp, vertical = 10.dp),
+        )
+    }
+}
+
+/** The video, whole or filling the screen and cut at its edges. */
+@Composable
+private fun Video(controller: PlayerController, fill: Boolean) {
     val presentation = rememberPresentationState(controller.player)
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+    Box(Modifier.fillMaxSize().clipToBounds(), contentAlignment = Alignment.Center) {
         PlayerSurface(
             player = controller.player,
-            modifier = Modifier.resizeWithContentScale(ContentScale.Fit, presentation.videoSizeDp),
+            modifier = Modifier.resizeWithContentScale(if (fill) ContentScale.Crop else ContentScale.Fit, presentation.videoSizeDp),
             surfaceType = SURFACE_TYPE_SURFACE_VIEW,
         )
         if (presentation.coverSurface) Box(Modifier.fillMaxSize().background(Color.Black))

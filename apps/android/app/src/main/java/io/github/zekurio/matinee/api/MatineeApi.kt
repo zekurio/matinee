@@ -294,6 +294,9 @@ class MatineeApi(val base: HttpUrl, internal val client: OkHttpClient) {
         ),
     )
 
+    /** Sittings the player had while the server was out of reach, for statistics. */
+    suspend fun sendOfflinePlays(plays: List<OfflinePlay>) = call("POST", "playback/offline", body(OfflinePlays(plays)))
+
     /** Where the person got to while offline, without a playback session. */
     suspend fun syncProgress(itemId: String, positionSeconds: Double, durationSeconds: Double?) = call(
         "POST",

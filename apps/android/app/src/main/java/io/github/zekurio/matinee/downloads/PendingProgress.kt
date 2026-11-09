@@ -5,6 +5,7 @@ import androidx.core.content.edit
 import io.github.zekurio.matinee.api.ApiException
 import io.github.zekurio.matinee.api.MatineeApi
 import io.github.zekurio.matinee.api.MatineeJson
+import io.github.zekurio.matinee.api.OfflinePlay
 import java.io.IOException
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.MapSerializer
@@ -14,13 +15,33 @@ import kotlinx.serialization.builtins.serializer
 data class PendingReport(val positionSeconds: Double, val durationSeconds: Double?)
 
 /**
- * Where the person got to in files they watched while the server was out of
- * reach, the last place per file, sent once it answers again so Continue
- * watching and watched marks catch up.
+ * What happened while the server was out of reach, sent once it answers
+ * again: where the person got to in each file, the last place per file, so
+ * Continue watching and watched marks catch up; and each sitting, for the
+ * statistics' watch time.
  */
 class PendingProgress(context: Context) {
     private val prefs = context.getSharedPreferences("pending_progress", Context.MODE_PRIVATE)
     private val serializer = MapSerializer(String.serializer(), PendingReport.serializer())
+    private val playsSerializer = MapSerializer(String.serializer(), OfflinePlay.serializer())
+
+    private fun readPlays(): Map<String, OfflinePlay> = runCatching {
+        MatineeJson.decodeFromString(playsSerializer, prefs.getString("plays", null) ?: "{}")
+    }.getOrDefault(emptyMap())
+
+    private fun writePlays(plays: Map<String, OfflinePlay>) =
+        prefs.edit { putString("plays", MatineeJson.encodeToString(playsSerializer, plays)) }
+
+    /** A sitting that didn't reach the server, kept as far as it got, by its session. */
+    @Synchronized
+    fun putPlay(play: OfflinePlay) = writePlays(readPlays() + (play.sessionId to play))
+
+    /** The server heard the session itself, so its sitting needn't wait. */
+    @Synchronized
+    fun dropPlay(sessionId: String) {
+        val plays = readPlays()
+        if (sessionId in plays) writePlays(plays - sessionId)
+    }
 
     private fun read(): Map<String, PendingReport> = runCatching {
         MatineeJson.decodeFromString(serializer, prefs.getString("reports", null) ?: "{}")
@@ -39,8 +60,19 @@ class PendingProgress(context: Context) {
         prefs.edit { putString("reports", MatineeJson.encodeToString(serializer, next)) }
     }
 
-    /** Send what's waiting. What still fails waits for the next time. */
+    /** Send what's waiting, the sittings first. What still fails waits for the next time. */
     suspend fun flush(api: MatineeApi) {
+        for (batch in readPlays().values.chunked(PLAYS_PER_REQUEST)) {
+            try {
+                api.sendOfflinePlays(batch)
+                synchronized(this) { writePlays(readPlays() - batch.map { it.sessionId }.toSet()) }
+            } catch (e: ApiException) {
+                // Not plays this server takes; they'd fail again.
+                if (e.status in 400..499) synchronized(this) { writePlays(readPlays() - batch.map { it.sessionId }.toSet()) } else return
+            } catch (_: IOException) {
+                return
+            }
+        }
         for ((itemId, report) in read()) {
             try {
                 api.syncProgress(itemId, report.positionSeconds, report.durationSeconds)
@@ -52,5 +84,10 @@ class PendingProgress(context: Context) {
                 return
             }
         }
+    }
+
+    private companion object {
+        /** The most `playback.offline` takes at once. */
+        const val PLAYS_PER_REQUEST = 200
     }
 }
