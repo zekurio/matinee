@@ -102,9 +102,9 @@ fun LibraryScreen(route: LibraryRoute) {
         }
         PosterGrid(
             pages,
-            detail = { title ->
-                if (sort == TitleSort.RECENT && title.isShow) null else title.year?.toString()
-            },
+            // The year whatever the order, as the web's cards, so the cards
+            // don't change as the person sorts.
+            detail = { title -> title.year?.toString() },
             empty = {
                 Text(
                     when {

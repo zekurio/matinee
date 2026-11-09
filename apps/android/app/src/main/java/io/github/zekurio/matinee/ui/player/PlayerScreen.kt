@@ -485,9 +485,11 @@ private fun Controls(
                     controller.togglePlay()
                     onTouch()
                 },
+                // Bare, like the skip buttons beside it, and a little bigger
+                // than them to lead without a circle.
                 size = 96.dp,
-                iconSize = 42.dp,
-                background = Color.Black.copy(alpha = 0.35f),
+                iconSize = 48.dp,
+                background = Color.Transparent,
             )
             SkipButton(Lucide.RotateCw, skip, stringResource(R.string.player_skip_forward, skip.toInt())) {
                 controller.skip(skip)
@@ -677,7 +679,9 @@ private fun UpNext(controller: PlayerController, autoplay: Boolean, modifier: Mo
     val next by produceState<MediaItem?>(null, item.id) {
         value = try {
             val all = api.titleItems(title.id)
-            all.getOrNull(all.indexOfFirst { it.id == item.id } + 1)
+            // Not in the list, as a file just removed, has no next.
+            val index = all.indexOfFirst { it.id == item.id }
+            if (index < 0) null else all.getOrNull(index + 1)
         } catch (_: IOException) {
             null
         }
