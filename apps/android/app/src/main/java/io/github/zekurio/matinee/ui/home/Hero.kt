@@ -40,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
@@ -107,7 +108,8 @@ fun Hero(slides: List<FeaturedTitle>, modifier: Modifier = Modifier, top: @Compo
     LaunchedEffect(dragged) { if (dragged) held = true }
     Box(modifier.fillMaxWidth()) {
         HorizontalPager(pager, Modifier.fillMaxSize(), beyondViewportPageCount = 1) { page ->
-            Slide(slides[page % count])
+            // How far the page sits from the middle, in pages: 1 one page off to the right.
+            Slide(slides[page % count]) { (page - pager.currentPage) - pager.currentPageOffsetFraction }
         }
         HeroButtons(slides[pager.currentPage % count], Modifier.align(Alignment.BottomStart))
         Column(Modifier.fillMaxWidth().align(Alignment.TopStart)) { top() }
@@ -145,9 +147,15 @@ fun Hero(slides: List<FeaturedTitle>, modifier: Modifier = Modifier, top: @Compo
 /** How many times over the banner's pages repeat, so it can keep going forward. */
 private const val LOOPS = 1000
 
+/**
+ * One slide. Its art holds still and crossfades with the next one's as the
+ * pages move, as the web's banner does, rather than the pictures sliding
+ * edge to edge; its text slides with the page. [offset] is how far the page
+ * is from the middle, in pages, read only while drawing.
+ */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun Slide(slide: FeaturedTitle) {
+private fun Slide(slide: FeaturedTitle, offset: () -> Float) {
     val api = LocalApi.current
     val nav = LocalNavigator.current
     val res = LocalResources.current
@@ -161,42 +169,57 @@ private fun Slide(slide: FeaturedTitle) {
     val ratio = progressRatio(item)
     val left = timeLeft(item, res)
     val resuming = left != null && ratio != null
-    Box(Modifier.fillMaxSize().tone(title.name)) {
-        Picture(sources, Modifier.fillMaxSize(), alignment = Alignment.TopCenter)
-        if (wide) {
-            // Darken where the text sits and fade into the page below.
-            Box(
-                Modifier.fillMaxSize().background(
-                    Brush.horizontalGradient(
-                        0f to Palette.Background.copy(alpha = 0.95f),
-                        0.5f to Palette.Background.copy(alpha = 0.6f),
-                        1f to Color.Transparent,
+    Box(Modifier.fillMaxSize()) {
+        // The picture and its shade hold still where the middle page is and
+        // fade. Pages draw left to right, so the one on the right fades over
+        // the one under it, which stays whole: a crossfade without a seam
+        // or a dip to dark.
+        Box(
+            Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    val away = offset()
+                    translationX = -away * size.width
+                    alpha = if (away > 0f) (1f - away).coerceIn(0f, 1f) else 1f
+                }
+                .tone(title.name),
+        ) {
+            Picture(sources, Modifier.fillMaxSize(), alignment = Alignment.TopCenter)
+            if (wide) {
+                // Darken where the text sits and fade into the page below.
+                Box(
+                    Modifier.fillMaxSize().background(
+                        Brush.horizontalGradient(
+                            0f to Palette.Background.copy(alpha = 0.95f),
+                            0.5f to Palette.Background.copy(alpha = 0.6f),
+                            1f to Color.Transparent,
+                        ),
                     ),
-                ),
-            )
-            Box(
-                Modifier.fillMaxSize().background(
-                    Brush.verticalGradient(
-                        0f to Palette.Background.copy(alpha = 0.55f),
-                        0.25f to Color.Transparent,
-                        0.55f to Palette.Background.copy(alpha = 0.4f),
-                        1f to Palette.Background,
+                )
+                Box(
+                    Modifier.fillMaxSize().background(
+                        Brush.verticalGradient(
+                            0f to Palette.Background.copy(alpha = 0.55f),
+                            0.25f to Color.Transparent,
+                            0.55f to Palette.Background.copy(alpha = 0.4f),
+                            1f to Palette.Background,
+                        ),
                     ),
-                ),
-            )
-        } else {
-            // A phone's text spans the width at the bottom, so it gets a
-            // shadow there, and none down the side, which hid half the
-            // picture. The header has its own shadow at the top.
-            Box(
-                Modifier.align(Alignment.BottomCenter).fillMaxWidth().fillMaxHeight(0.62f).background(
-                    Brush.verticalGradient(
-                        0f to Color.Transparent,
-                        0.45f to Palette.Background.copy(alpha = 0.7f),
-                        1f to Palette.Background,
+                )
+            } else {
+                // A phone's text spans the width at the bottom, so it gets a
+                // shadow there, and none down the side, which hid half the
+                // picture. The header has its own shadow at the top.
+                Box(
+                    Modifier.align(Alignment.BottomCenter).fillMaxWidth().fillMaxHeight(0.62f).background(
+                        Brush.verticalGradient(
+                            0f to Color.Transparent,
+                            0.45f to Palette.Background.copy(alpha = 0.7f),
+                            1f to Palette.Background,
+                        ),
                     ),
-                ),
-            )
+                )
+            }
         }
         Column(
             Modifier
