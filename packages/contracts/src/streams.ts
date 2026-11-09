@@ -58,7 +58,7 @@ export const VideoStream = t.object({
   /** Average frames per second. */
   frameRate: t.number().nullable(),
   /** Bits per second of this stream, when the file says. */
-  bitRate: t.number().int().nullable(),
+  bitRate: t.number().int().int64().nullable(),
   /** Such as `yuv420p` or `yuv420p10le`. */
   pixelFormat: t.string().nullable(),
   bitDepth: t.number().int().nullable(),
@@ -122,7 +122,7 @@ export const MediaProbe = t.object({
     name: t.string(),
     durationSeconds: t.number().nullable(),
     /** Overall bits per second. */
-    bitRate: t.number().int().nullable(),
+    bitRate: t.number().int().int64().nullable(),
   }),
   /** The main video stream, without cover art. Null in audio-only files. */
   video: VideoStream.nullable(),

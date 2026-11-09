@@ -165,7 +165,7 @@ export const DownloadPlan = t.object({
   container: DownloadContainer.$default("mp4"),
   durationSeconds: t.number(),
   /** A guess from the bit rates, for showing before it starts. */
-  estimatedBytes: t.number().int(),
+  estimatedBytes: t.number().int().int64(),
   /**
    * About how long each segment is. Copied video cuts at the source's
    * keyframes, so its segments vary around this.
@@ -178,7 +178,7 @@ export const DownloadPlan = t.object({
     width: t.number().int(),
     height: t.number().int(),
     /** Bits per second: the encode's aim, or the source's when it says. */
-    bitrate: t.number().int().nullable(),
+    bitrate: t.number().int().int64().nullable(),
     /** What the download has. Null for SDR. */
     hdr: HdrFormat.nullable(),
     /** The source is HDR and the encode tone maps it to SDR. */

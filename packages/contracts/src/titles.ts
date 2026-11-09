@@ -95,7 +95,7 @@ export const MediaItem = t.object({
   relativePath: t.string(),
   container: t.string(),
   mimeType: t.string(),
-  sizeBytes: t.number().int(),
+  sizeBytes: t.number().int().int64(),
   modifiedAt: t.date(),
   /** Null until the server or a player has measured it. */
   durationSeconds: t.number().nullable(),

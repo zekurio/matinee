@@ -248,6 +248,11 @@ function schema<SchemaType extends TSchema>(
       if (property === "positive") {
         return () => schema(copySchema(target, { exclusiveMinimum: 0 }))
       }
+      if (property === "int64") {
+        // TypeBox checks `format` on strings only, so this one is for the
+        // document alone.
+        return () => schema(copySchema(target, { format: "int64" }))
+      }
       if (property === "nonnegative") {
         return () => schema(copySchema(target, { minimum: 0 }))
       }

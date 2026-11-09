@@ -148,6 +148,12 @@ type SchemaMethods<SchemaType extends TSchema> = {
   /** For `t.file()`: the media types it may have. */
   mime(types: readonly string[], message?: string): Schema<SchemaType>
   int(message?: string): Schema<SchemaType>
+  /**
+   * After `int()`: a number that may pass 2^31, like a size in bytes. The
+   * OpenAPI document marks it `format: int64`, so generated clients give
+   * it a 64-bit type instead of an Int.
+   */
+  int64(): Schema<SchemaType>
   positive(): Schema<SchemaType>
   nonnegative(): Schema<SchemaType>
   multipleOf(value: number): Schema<SchemaType>

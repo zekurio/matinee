@@ -379,6 +379,8 @@ function numberJson(node: TSchema): JsonSchema {
     json.exclusiveMaximum = stored.exclusiveMaximum
   }
   if (stored.multipleOf !== undefined) json.multipleOf = stored.multipleOf
+  // `int64()`, for clients that pick an integer's size.
+  if (integer && stored.format === "int64") json.format = "int64"
   return json
 }
 
