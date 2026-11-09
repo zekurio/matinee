@@ -50,6 +50,9 @@ export default defineMessages("account", {
   // The single sign-on account linked to this one.
   "account.oidc.link": "Link {provider}",
   "account.oidc.linked": "Linked {date}",
+  // A link from before single sign-on changed issuer.
+  "account.oidc.stale":
+    "Linked to an earlier {provider} setup, so it can't sign you in. Link it again.",
   "account.oidc.unlink": "Unlink",
   "account.oidc.unlinked": "Unlinked {provider}",
   "account.oidc.unlinkFailed": "Couldn't unlink {provider}",

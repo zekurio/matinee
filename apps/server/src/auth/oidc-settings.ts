@@ -142,12 +142,21 @@ export function isActive(settings: OidcSettings): boolean {
   return settings.enabled && Boolean(settings.issuerUrl && settings.clientId)
 }
 
+const DISCOVERY_PATH = /\/\.well-known\/openid-configuration\/?$/
+
 /**
- * Whether two issuers are the same provider. An ID token's `iss` can differ
- * from the configured issuer URL by a trailing slash.
+ * The issuer a configured URL names, in the form linked accounts compare
+ * by. Providers often show the discovery document's address instead of the
+ * issuer, and an ID token's `iss` can differ from the configured URL by a
+ * trailing slash, so both come off.
  */
+export function issuerKey(url: string): string {
+  return url.trim().replace(DISCOVERY_PATH, "").replace(/\/+$/, "")
+}
+
+/** Whether two issuers, or issuer URLs, are the same provider. */
 export function sameIssuer(a: string, b: string): boolean {
-  return a.replace(/\/+$/, "") === b.replace(/\/+$/, "")
+  return issuerKey(a) === issuerKey(b)
 }
 
 export async function oidcState(): Promise<OidcState> {

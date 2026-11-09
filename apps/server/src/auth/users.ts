@@ -3,7 +3,7 @@ import { oidcAccount, passkey, user, type UserRow } from "@matinee/db"
 import { and, count, eq, inArray, ne, sql } from "drizzle-orm"
 
 import { db } from "../db"
-import { activeOidc } from "./oidc-settings"
+import { activeOidc, issuerKey } from "./oidc-settings"
 import { passkeysEnabled } from "./passkey-settings"
 
 export type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0]
@@ -96,10 +96,11 @@ export async function lockUsers(tx: Tx): Promise<{ empty: boolean }> {
 
 /**
  * Whether a linked account is at the issuer. Accounts store the ID token's
- * `iss`, which can differ from the issuer URL by a trailing slash.
+ * `iss`, and `discover` makes sure the provider names the issuer URL as its
+ * issuer, so they compare as `sameIssuer` does.
  */
 export function atIssuer(issuerUrl: string) {
-  return sql`rtrim(${oidcAccount.issuer}, '/') = ${issuerUrl.replace(/\/+$/, "")}`
+  return sql`rtrim(${oidcAccount.issuer}, '/') = ${issuerKey(issuerUrl)}`
 }
 
 /**

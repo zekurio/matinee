@@ -8,9 +8,10 @@ import { oidcAccount, passkey, user } from "@matinee/db"
 import { and, count, countDistinct, eq, notExists } from "drizzle-orm"
 import * as client from "openid-client"
 
-import { discover } from "../auth/oidc"
+import { discover, WrongIssuerError } from "../auth/oidc"
 import {
   isActive,
+  issuerKey,
   type OidcState,
   oidcDefaults,
   oidcState,
@@ -107,7 +108,10 @@ const SystemError = t.object({ code: t.string().min(1) })
 
 /** Turns a failed discovery into something the admin can act on. */
 function discoveryError(issuerUrl: string, cause: unknown): string {
-  const where = `${issuerUrl.replace(/\/+$/, "")}/.well-known/openid-configuration`
+  if (cause instanceof WrongIssuerError) {
+    return `The provider calls itself ${cause.issuer}. Use exactly that as the issuer URL.`
+  }
+  const where = `${issuerKey(issuerUrl)}/.well-known/openid-configuration`
   const code = cause instanceof client.ClientError ? cause.code : undefined
   switch (code) {
     case "OAUTH_TIMEOUT":

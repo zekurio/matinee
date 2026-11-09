@@ -47,6 +47,8 @@ export default {
 
   "account.oidc.link": "{provider} verknüpfen",
   "account.oidc.linked": "Verknüpft am {date}",
+  "account.oidc.stale":
+    "Mit einer früheren {provider}-Einrichtung verknüpft, darüber kannst du dich nicht anmelden. Verknüpfe es neu.",
   "account.oidc.unlink": "Trennen",
   "account.oidc.unlinked": "Verknüpfung mit {provider} getrennt",
   "account.oidc.unlinkFailed":

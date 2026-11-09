@@ -44,6 +44,8 @@ export default {
   "server.oidc.setupNotAdmin":
     "Nur wer bei {provider} Admin ist, kann Matinee einrichten. Gib deinem Konto dort den Claim {claim} mit dem Wert admin und melde dich noch einmal an.",
   "server.oidc.unreachable": "Der Anmeldeanbieter war nicht erreichbar.",
+  "server.oidc.wrongIssuer":
+    "Single Sign-on ist mit der falschen Issuer-URL eingerichtet. Ein Admin muss sie auf {issuer} ändern.",
   "server.oidc.signInToLink": "Melde dich an, bevor du ein Konto verknüpfst.",
   "server.oidc.expired":
     "Die Anmeldung ist abgelaufen. Versuch es noch einmal.",

@@ -24,7 +24,7 @@ import {
   takePicture,
 } from "./oidc-accounts"
 import { linkPagePath, savePendingLink } from "./oidc-pending"
-import { activeOidc, type OidcState } from "./oidc-settings"
+import { activeOidc, type OidcState, sameIssuer } from "./oidc-settings"
 import { passkeysEnabled } from "./passkey-settings"
 import { readSession, signIn } from "./session"
 import { endSetupAccess, markSetupDone, setupRequired } from "./setup"
@@ -60,12 +60,26 @@ let discovered: {
 } | null = null
 
 /**
+ * The provider names another issuer than the configured URL. Its ID tokens
+ * carry that one, so linked accounts wouldn't match the settings.
+ */
+export class WrongIssuerError extends OidcError {
+  constructor(readonly issuer: string) {
+    super(
+      `Single sign-on is set up with the wrong issuer URL. An admin needs to change it to ${issuer}.`,
+    )
+  }
+}
+
+/**
  * Fetch the provider's discovery document and build a client from it. Also
  * used to check settings before they're saved.
  */
-export function discover(state: OidcState): Promise<client.Configuration> {
+export async function discover(
+  state: OidcState,
+): Promise<client.Configuration> {
   const issuer = new URL(state.settings.issuerUrl)
-  return client.discovery(
+  const config = await client.discovery(
     issuer,
     state.settings.clientId,
     state.secret,
@@ -76,6 +90,13 @@ export function discover(state: OidcState): Promise<client.Configuration> {
         issuer.protocol === "http:" ? [client.allowInsecureRequests] : [],
     },
   )
+  // openid-client checks the issuer only when it finds the document itself,
+  // not for a URL that already points at it.
+  const named = config.serverMetadata().issuer
+  if (!sameIssuer(named, state.settings.issuerUrl)) {
+    throw new WrongIssuerError(named)
+  }
+  return config
 }
 
 /** The provider and its client, rediscovered after the settings change. */

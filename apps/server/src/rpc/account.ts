@@ -7,6 +7,7 @@ import {
   removeAvatar,
   uploadAvatar,
 } from "../auth/avatars"
+import { activeOidc, sameIssuer } from "../auth/oidc-settings"
 import { passkeysEnabled } from "../auth/passkey-settings"
 import {
   beginRegister,
@@ -177,9 +178,14 @@ export const account = {
         .from(oidcAccount)
         .where(eq(oidcAccount.userId, context.user.id))
       if (!row) return null
+      const provider = await activeOidc()
       return {
         label: row.label,
         hasPicture: row.picture !== null,
+        // As `signInMethods` counts it.
+        signsIn:
+          provider !== null &&
+          sameIssuer(row.issuer, provider.settings.issuerUrl),
         createdAt: row.createdAt,
       }
     }),

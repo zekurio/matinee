@@ -649,7 +649,12 @@ Until the admin finishes, signing in as an admin goes back to setup.
   A short-lived cookie binds each round trip to the browser that started it.
   Accounts are matched on issuer + subject, never on email. Each account
   links at most one provider account. Linking one at a new issuer replaces
-  the link at the old one, which can't sign in anymore.
+  the link at the old one, which can't sign in anymore. Settings → Account
+  says when a link is at an old issuer.
+- The issuer URL is the `issuer` the provider's discovery document names,
+  or the document's own address. Linked accounts match on it, so the
+  server refuses a provider that names another issuer, both when an admin
+  saves the settings and at sign-in.
 - Nobody can remove their last passkey or linked account. A passkey only
   counts while passkeys are on, and a linked account while single sign-on
   is on. An admin who signs in only through single sign-on can't turn it

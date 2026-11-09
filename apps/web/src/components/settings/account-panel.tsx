@@ -335,7 +335,7 @@ function Passkeys({ oidcEnabled }: { oidcEnabled: boolean }) {
   })
   // The server refuses to remove the last way to sign in, so say so here.
   const methods =
-    (passkeys.data?.length ?? 0) + (oidcEnabled && linked.data ? 1 : 0)
+    (passkeys.data?.length ?? 0) + (oidcEnabled && linked.data?.signsIn ? 1 : 0)
   const isLast = passkeys.isSuccess && methods <= 1
   const [removing, setRemoving] = useState<Passkey | null>(null)
 
@@ -551,8 +551,9 @@ function LinkedAccount({ displayName }: { displayName: string }) {
       id="single-sign-on"
       title={displayName}
       action={
-        // One account per user: linking another means unlinking this one.
-        linked.isSuccess && !account ? (
+        // One account per user: linking another means unlinking this one,
+        // unless it can't sign in anyway, and then linking replaces it.
+        linked.isSuccess && !account?.signsIn ? (
           <a
             href={oidcStartPath("link", LINK_RETURN)}
             className={buttonVariants({ variant: "outline" })}
@@ -576,9 +577,11 @@ function LinkedAccount({ displayName }: { displayName: string }) {
                 {account.label ?? displayName}
               </p>
               <p className="text-muted-foreground text-[13px]">
-                {tr("account.oidc.linked", {
-                  date: formatDate(account.createdAt),
-                })}
+                {account.signsIn
+                  ? tr("account.oidc.linked", {
+                      date: formatDate(account.createdAt),
+                    })
+                  : tr("account.oidc.stale", { provider: displayName })}
               </p>
             </div>
             <Button

@@ -116,6 +116,12 @@ export const OidcAccount = t.object({
   label: t.string().nullable(),
   /** The provider sent a picture at the last sign-in. */
   hasPicture: t.boolean(),
+  /**
+   * Single sign-on is on and uses the issuer the account was linked at. A
+   * link from before the issuer changed can't sign in, and linking again
+   * replaces it.
+   */
+  signsIn: t.boolean(),
   createdAt: t.date(),
 })
 export type OidcAccount = t.infer<typeof OidcAccount>

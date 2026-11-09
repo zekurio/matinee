@@ -48,6 +48,8 @@ export default defineMessages("server", {
   "server.oidc.setupNotAdmin":
     "Only an admin at {provider} can set up Matinee. Give your account the {claim} claim with the value admin, then sign in again.",
   "server.oidc.unreachable": "Couldn't reach the sign-in provider.",
+  "server.oidc.wrongIssuer":
+    "Single sign-on is set up with the wrong issuer URL. An admin needs to change it to {issuer}.",
   "server.oidc.signInToLink": "Sign in before linking an account.",
   "server.oidc.expired": "Sign-in expired. Try again.",
   "server.oidc.noIdToken": "The provider sent no ID token.",
