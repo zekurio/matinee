@@ -11,7 +11,7 @@ import { playbackSession, user } from "@matinee/db"
 import { type SQL, sql } from "drizzle-orm"
 
 import { db } from "../db"
-import { knownZone, rangeFirstDay, sinceStart } from "./range"
+import { dated, knownZone, rangeFirstDay, sinceStart } from "./range"
 import { isPlay } from "./sql"
 
 // Places shown per board. The viewer comes after when they rank lower,
@@ -82,6 +82,7 @@ export function leaderboardQuery(
   viewerId: string,
 ): SQL {
   const s = playbackSession
+  // A play without a day belongs to no range but all time, and to no streak.
   const since = sinceStart(s.startedAt, range, zone)
   const firstDay = rangeFirstDay(range, zone)
   return sql`
@@ -97,7 +98,7 @@ export function leaderboardQuery(
         count(distinct ${s.mediaItemId}) filter (where ${s.completed} and ${s.titleKind} = 'show') as episodes
       from ${s}
       where ${s.userId} in (select id from participants)
-        ${since ? sql`and ${since}` : sql.empty()}
+        ${since ? sql`and ${since} and ${dated}` : sql.empty()}
       group by ${s.userId}
     ),
     days as (
@@ -105,6 +106,7 @@ export function leaderboardQuery(
         (${s.startedAt} at time zone ${zone})::date as day
       from ${s}
       where ${s.userId} in (select id from participants) and ${isPlay}
+        and ${dated}
     ),
     -- Consecutive days share day - row_number, which names their run.
     runs as (

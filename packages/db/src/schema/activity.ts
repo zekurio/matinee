@@ -16,6 +16,9 @@ import {
 } from "drizzle-orm/pg-core"
 
 import { createdAt } from "./columns"
+
+/** How much of a play's time is known; see `playbackSession.precision`. */
+export type PlayPrecision = "time" | "day" | "none"
 import { title } from "./library"
 import { mediaItem } from "./media"
 import { user } from "./users"
@@ -110,11 +113,15 @@ export const playbackSession = pgTable(
      */
     marked: boolean().notNull().default(false),
     /**
-     * Marked on the file's release or air date, a stand-in for a time the
-     * user didn't know. Charts over time start after these, which could
-     * reach back decades; they still count everywhere else.
+     * How much of `startedAt` is known: `time` for a play, or a file marked
+     * watched just now; `day` for one marked on a day the user picked or
+     * its release date, whose hour means nothing; `none` for one whose
+     * time the user doesn't remember, stored at the time it was marked.
+     * Statistics over time leave out what they can't place: the hourly
+     * heatmap needs `time`, charts, streaks, ranges, and recently watched
+     * need a day. Totals over all time count every play.
      */
-    releaseDated: boolean().notNull().default(false),
+    precision: text().$type<PlayPrecision>().notNull().default("time"),
     paused: boolean().notNull().default(false),
     /** The most the server did to play it. */
     method: text().$type<PlaybackMethod>().notNull().default("direct"),

@@ -5,6 +5,7 @@ import {
   episode,
   mediaItem,
   playbackSession,
+  type PlayPrecision,
   title,
   watchProgress,
 } from "@matinee/db"
@@ -36,23 +37,26 @@ function noonOf(day: string): Date {
 }
 
 /**
- * When the user watched a file, as `watchedAt` asks, and whether that's
- * its release date. `released` is the episode's air date or the movie's
- * release date.
+ * When the user watched a file, as `watchedAt` asks, and how much of that
+ * is known. `released` is the episode's air date or the movie's release
+ * date. A day the user gave or the release date is only a day; one they
+ * don't remember is stored now and charted nowhere.
  */
 function watchedTime(
   watchedAt: WatchedAt | undefined,
   released: string | null,
   now: Date,
 ) {
+  const at = (time: Date, precision: PlayPrecision) => ({ at: time, precision })
   if (watchedAt instanceof Date) {
-    return { at: watchedAt > now ? now : watchedAt, releaseDated: false }
+    return watchedAt > now ? at(now, "time") : at(watchedAt, "day")
   }
+  if (watchedAt === "unknown") return at(now, "none")
   if (watchedAt === "released" && released) {
-    const at = noonOf(released)
-    if (at <= now) return { at, releaseDated: true }
+    const day = noonOf(released)
+    if (day <= now) return at(day, "day")
   }
-  return { at: now, releaseDated: false }
+  return at(now, "time")
 }
 
 /**
@@ -97,7 +101,7 @@ async function addMarkedPlays(
   const now = new Date()
   const plays = rows.map((row) => {
     const released = row.kind === "show" ? row.airDate : row.releaseDate
-    const { at, releaseDated } = watchedTime(watchedAt, released, now)
+    const { at, precision } = watchedTime(watchedAt, released, now)
     const seconds = Math.max(0, row.runtime - (row.position ?? 0))
     return {
       id: randomUUID(),
@@ -109,7 +113,7 @@ async function addMarkedPlays(
       watchedSeconds: seconds,
       completed: true,
       marked: true,
-      releaseDated,
+      precision,
       startedAt: new Date(at.getTime() - seconds * 1000),
       updatedAt: at,
       endedAt: at,

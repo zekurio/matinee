@@ -1,5 +1,5 @@
 {
-  "id": "9c7f13e9-9087-4cb6-981f-44f24c1745e6",
+  "id": "957b939f-2a5b-4a43-8140-592f5cfc8289",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -243,6 +243,13 @@
           "primaryKey": false,
           "notNull": true,
           "default": false
+        },
+        "precision": {
+          "name": "precision",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'time'"
         },
         "paused": {
           "name": "paused",
@@ -1209,7 +1216,7 @@
           "name": "url",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "blurhash": {
           "name": "blurhash",
@@ -1396,6 +1403,13 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
+        },
+        "still_chosen": {
+          "name": "still_chosen",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
         }
       },
       "indexes": {},
@@ -1609,6 +1623,13 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
+        },
+        "poster_chosen": {
+          "name": "poster_chosen",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
         }
       },
       "indexes": {},
@@ -1786,6 +1807,13 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
+        },
+        "chosen_images": {
+          "name": "chosen_images",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::text[]"
         },
         "provider": {
           "name": "provider",

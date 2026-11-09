@@ -22,6 +22,7 @@ CREATE TABLE "playback_session" (
 	"watched_seconds" double precision DEFAULT 0 NOT NULL,
 	"completed" boolean DEFAULT false NOT NULL,
 	"marked" boolean DEFAULT false NOT NULL,
+	"precision" text DEFAULT 'time' NOT NULL,
 	"paused" boolean DEFAULT false NOT NULL,
 	"method" text DEFAULT 'direct' NOT NULL,
 	"audio_converted" boolean DEFAULT false NOT NULL,
@@ -120,7 +121,7 @@ CREATE TABLE "scheduled_task" (
 --> statement-breakpoint
 CREATE TABLE "artwork" (
 	"id" text PRIMARY KEY NOT NULL,
-	"url" text NOT NULL,
+	"url" text,
 	"blurhash" text,
 	"aspect_ratio" double precision,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
@@ -146,6 +147,7 @@ CREATE TABLE "episode" (
 	"air_date" date,
 	"runtime_minutes" integer,
 	"still_id" text,
+	"still_chosen" boolean DEFAULT false NOT NULL,
 	CONSTRAINT "episode_title_id_season_number_episode_number_pk" PRIMARY KEY("title_id","season_number","episode_number")
 );
 --> statement-breakpoint
@@ -172,6 +174,7 @@ CREATE TABLE "season" (
 	"number" integer NOT NULL,
 	"overview" text,
 	"poster_id" text,
+	"poster_chosen" boolean DEFAULT false NOT NULL,
 	CONSTRAINT "season_title_id_number_pk" PRIMARY KEY("title_id","number")
 );
 --> statement-breakpoint
@@ -197,6 +200,7 @@ CREATE TABLE "title" (
 	"poster_id" text,
 	"backdrop_id" text,
 	"logo_id" text,
+	"chosen_images" text[] DEFAULT '{}'::text[] NOT NULL,
 	"provider" text,
 	"provider_id" text,
 	"external_ids" jsonb DEFAULT '{}'::jsonb NOT NULL,

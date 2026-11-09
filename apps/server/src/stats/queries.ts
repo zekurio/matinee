@@ -30,7 +30,7 @@ import {
   toSummary,
   viewerStates,
 } from "../media/items"
-import { activityOf, bucketsOf, knownZone, scopeOf } from "./range"
+import { activityOf, bucketsOf, dated, knownZone, scopeOf } from "./range"
 import { methodsOf, namedCounts, transcodingOf, usersOf } from "./server"
 import { runningStreams } from "./sessions"
 import { isPlay, playCount, watchedSum } from "./sql"
@@ -271,7 +271,8 @@ export async function recentlyWatched(
     .select({ session: playbackSession, item: mediaItem })
     .from(playbackSession)
     .innerJoin(mediaItem, eq(mediaItem.id, playbackSession.mediaItemId))
-    .where(and(eq(playbackSession.userId, userId), isPlay))
+    // A play without a day has no place in what was watched last.
+    .where(and(eq(playbackSession.userId, userId), isPlay, dated))
     .orderBy(desc(playbackSession.updatedAt))
     .limit(Math.max(200, limit * 20))
   const seen = new Set<string>()

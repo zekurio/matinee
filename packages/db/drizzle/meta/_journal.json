@@ -5,29 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1794081220241,
+      "when": 1794229867519,
       "tag": "0000_initial_schema",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1794136777398,
-      "tag": "0001_setup_complete",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1794152489151,
-      "tag": "0002_image_choices",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1794228257007,
-      "tag": "0003_release_dated_marks",
       "breakpoints": true
     }
   ]

@@ -53,12 +53,18 @@ export const WatchState = t.object({
 export type WatchState = t.infer<typeof WatchState>
 
 /**
- * When the user watched a file they mark watched, as Trakt asks: a time,
- * or `released` for the day it came out. Episodes came out on their air
- * date, movies on the title's release date; a file without one counts as
- * watched now, as does a time past the server's clock.
+ * When the user watched a file they mark watched, as Trakt asks: a day
+ * they pick, `released` for the day it came out, or `unknown` when they
+ * don't remember. Episodes came out on their air date, movies on the
+ * title's release date; a file without one counts as watched now, as does
+ * a time past the server's clock. An `unknown` play counts in totals but
+ * in nothing over time.
  */
-export const WatchedAt = t.union([t.literal("released"), t.date()])
+export const WatchedAt = t.union([
+  t.literal("released"),
+  t.literal("unknown"),
+  t.date(),
+])
 export type WatchedAt = t.infer<typeof WatchedAt>
 
 /** What the library's provider knows about an episode. */

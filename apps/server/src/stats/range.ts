@@ -44,14 +44,24 @@ function localStart(zone: string): SQL {
   return sql`(${playbackSession.startedAt} at time zone ${zone})`
 }
 
-/** Sessions in the range, and of one user if given. */
+/** Plays that have a day, which anything over time needs. */
+export const dated = sql`${playbackSession.precision} <> 'none'`
+
+/** Plays with their hour too, for when in the day watching happens. */
+const timed = sql`${playbackSession.precision} = 'time'`
+
+/**
+ * Sessions in the range, and of one user if given. A play without a day
+ * belongs to no range but all time.
+ */
 export function scopeOf(
   range: StatsRange,
   zone: string,
   userId: string | undefined,
 ): SQL | undefined {
+  const since = sinceStart(playbackSession.startedAt, range, zone)
   return and(
-    sinceStart(playbackSession.startedAt, range, zone),
+    since ? and(since, dated) : undefined,
     userId === undefined ? undefined : eq(playbackSession.userId, userId),
   )
 }
@@ -156,11 +166,9 @@ export function todayIn(zone: string): SQL<string> {
 }
 
 /**
- * Watch time per bucket, from the range's first day through today. All
- * time starts at the first play that isn't a file marked watched on its
- * release date, which stands in for a time the user didn't know and could
- * stretch the chart back decades, a long empty run of thin bars. Those
- * still count in the totals; a mark at a time the user gave charts there.
+ * Watch time per bucket, from the range's first day through today, all
+ * time from the first play with a day. Plays without one count in the
+ * totals but have no bucket.
  */
 export async function bucketsOf(
   range: StatsRange,
@@ -170,11 +178,11 @@ export async function bucketsOf(
   const local = localStart(zone)
   const [span] = await db
     .select({
-      first: sql<string>`to_char(coalesce(min(${local}) filter (where not ${playbackSession.releaseDated}), min(${local}), now() at time zone ${zone}), 'YYYY-MM-DD')`,
+      first: sql<string>`to_char(coalesce(min(${local}), now() at time zone ${zone}), 'YYYY-MM-DD')`,
       today: todayIn(zone),
     })
     .from(playbackSession)
-    .where(where)
+    .where(and(where, dated))
   const today = span?.today ?? dayString(new Date())
   const { unit, starts } = planBuckets(range, today, span?.first ?? today)
 
@@ -185,7 +193,7 @@ export async function bucketsOf(
       plays: playCount(),
     })
     .from(playbackSession)
-    .where(where)
+    .where(and(where, dated))
     .groupBy(sql`1`)
   const byStart = new Map(rows.map((row) => [row.start, row]))
   return {
@@ -196,6 +204,7 @@ export async function bucketsOf(
   }
 }
 
+/** Watch time by weekday and hour, of plays whose hour is known. */
 export async function activityOf(
   zone: string,
   where: SQL | undefined,
@@ -208,7 +217,7 @@ export async function activityOf(
       watchSeconds: watchedSum(),
     })
     .from(playbackSession)
-    .where(where)
+    .where(and(where, timed))
     .groupBy(sql`1, 2`)
   return rows.filter((row) => row.watchSeconds > 0)
 }
