@@ -77,17 +77,19 @@ export function TitleHeader({ title }: { title: Title }) {
     <section className={pageBleed} aria-labelledby="title-name">
       <HeaderBackdrop title={title} />
 
-      <div className={headerColumn}>
-        <div className={headerRow}>
+      {/* Phones leave the poster out, for the name to have the width, and
+          start lower, for more of the backdrop. Seasons keep theirs. */}
+      <div className={cn(headerColumn, "max-sm:pt-[max(10rem,30vh)]")}>
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-stretch sm:gap-8">
           <HeaderPoster
             name={title.name}
             toneKey={title.id}
             poster={art(title.images.poster)}
+            className="max-sm:hidden"
           />
 
           {/* As tall as the poster, so the name lines up with its top and
-              the buttons with its bottom. Phones lay its two parts out in
-              the grid instead. */}
+              the buttons with its bottom. Phones stack its two parts. */}
           <div className="contents sm:flex sm:min-w-0 sm:flex-1 sm:flex-col">
             <div className="min-w-0">
               <TitleName title={title} />
@@ -213,8 +215,8 @@ export const headerColumn = cn(
   "relative pt-[max(7rem,20vh)] sm:pt-[max(8rem,14vh)]",
 )
 
-// Phones: a small poster beside the name and facts, and the rest under
-// both, full width. From `sm` up: the poster beside it all.
+// A season's: on phones, a small poster beside the name and facts, and the
+// rest under both, full width. From `sm` up: the poster beside it all.
 export const headerRow =
   "grid grid-cols-[6rem_minmax(0,1fr)] items-end gap-x-4 gap-y-5 sm:flex sm:items-stretch sm:gap-8"
 
@@ -227,16 +229,19 @@ export function HeaderPoster({
   name,
   toneKey,
   poster,
+  className,
 }: {
   name: string
   toneKey: string
   poster: ImageSource | null
+  className?: string
 }) {
   return (
     <div
       className={cn(
         "relative grid aspect-[2/3] w-24 shrink-0 place-items-center overflow-hidden rounded-lg border p-2 text-center shadow-2xl shadow-black/60 sm:w-48 sm:self-start sm:p-3 lg:w-56 2xl:w-64",
         tone(toneKey),
+        className,
       )}
     >
       <span
