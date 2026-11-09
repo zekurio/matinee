@@ -5,12 +5,15 @@ export default {
   "link.device.title": "Gerät anmelden",
   "link.device.enterCode":
     "Gib den Code ein, den dein Fernseher oder deine App anzeigt.",
+  "link.device.enterCodeOrScan":
+    "Gib den Code ein, den dein Fernseher oder deine App anzeigt. Auf dem Handy kannst du stattdessen den QR-Code mit der Kamera scannen.",
   "link.device.code": "Code",
   "link.device.continue": "Weiter",
   "link.device.signedIn": "Angemeldet",
   "link.device.signedInDescription":
     "{device} ist als {name} angemeldet. Es kann ein paar Sekunden dauern, bis es das bemerkt.",
   "link.device.home": "Zu Matinee",
+  "link.device.done": "Fertig",
   "link.device.codeGone": "Dieser Code funktioniert nicht",
   "link.device.codeGoneDescription":
     "Prüfe den Code auf dem Gerät oder fang dort neu an, um einen neuen zu bekommen.",

@@ -1,9 +1,13 @@
 import { defineMessages } from "../../catalog"
 
 export default defineMessages("link", {
-  // Signing in a device by its code, in routes/_authed/link.tsx.
+  // Signing in a device by its code, in routes/_authed/link.tsx and the
+  // dialog under Settings → Account → Sessions.
   "link.device.title": "Sign in a device",
   "link.device.enterCode": "Enter the code your TV or app shows.",
+  // The dialog in Settings, where a phone's camera is the other way in.
+  "link.device.enterCodeOrScan":
+    "Enter the code your TV or app shows. On a phone, you can scan its QR code with the camera instead.",
   "link.device.code": "Code",
   "link.device.continue": "Continue",
   "link.device.signedIn": "Signed in",
@@ -11,6 +15,7 @@ export default defineMessages("link", {
   "link.device.signedInDescription":
     "{device} is signed in as {name}. It may take a few seconds to notice.",
   "link.device.home": "Go to Matinee",
+  "link.device.done": "Done",
   "link.device.codeGone": "That code doesn't work",
   "link.device.codeGoneDescription":
     "Check the code on the device, or start again there for a new one.",

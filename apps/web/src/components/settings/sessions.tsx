@@ -24,13 +24,21 @@ import { platformLabel, sessionLabel } from "@/lib/devices"
 import { formatDate, formatRelative } from "@/lib/format"
 import { client, errorMessage, orpc } from "@/lib/rpc"
 
+import { LinkDeviceButton } from "./link-device"
 import { RowIcon, SettingsSubsection } from "./settings-panel"
 
 // The server moves a session's last use at most hourly, so anything more
 // recent only says "within the last hour".
 const LAST_SEEN_STEP_MS = 60 * 60 * 1000
 
-/** Browsers and apps signed in to the account, and signing them out. */
+// A device signed in by its code gets its session on its next poll, up to
+// the server's five seconds after the approval.
+const DEVICE_POLL_MS = 6000
+
+/**
+ * Browsers and apps signed in to the account, signing them out, and
+ * signing in a new one by its code.
+ */
 export function Sessions() {
   const queryClient = useQueryClient()
   const sessions = useQuery(orpc.account.sessions.list.queryOptions())
@@ -72,16 +80,24 @@ export function Sessions() {
       id="sessions"
       title={tr("account.sessions.title")}
       action={
-        others ? (
-          <Button
-            variant="outline"
-            disabled={revokeOthers.isPending}
-            onClick={() => setRevokingOthers(true)}
-          >
-            <LogOutIcon />
-            {tr("account.sessions.signOutOthers")}
-          </Button>
-        ) : null
+        <div className="flex flex-col gap-2 @lg:flex-row">
+          <LinkDeviceButton
+            onClosed={() => {
+              void refresh()
+              setTimeout(() => void refresh(), DEVICE_POLL_MS)
+            }}
+          />
+          {others ? (
+            <Button
+              variant="outline"
+              disabled={revokeOthers.isPending}
+              onClick={() => setRevokingOthers(true)}
+            >
+              <LogOutIcon />
+              {tr("account.sessions.signOutOthers")}
+            </Button>
+          ) : null}
+        </div>
       }
     >
       {sessions.isPending ? (

@@ -13,6 +13,7 @@ export function PlatformIcon({
   switch (platform) {
     case null:
       return <GlobeIcon />
+    case "androidtv":
     case "tizen":
       return <TvIcon />
     case "android":

@@ -5,6 +5,7 @@ import { tr } from "@/i18n"
 // Names of the platforms themselves, the same in every language.
 const PLATFORM_LABELS = {
   android: "Android",
+  androidtv: "Android TV",
   ios: "iOS",
   linux: "Linux",
   macos: "macOS",

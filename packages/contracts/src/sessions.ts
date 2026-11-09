@@ -9,9 +9,13 @@ export const SESSION_CLIENTS = ["web", "app"] as const
 export const SessionClient = t.enum(SESSION_CLIENTS)
 export type SessionClient = t.infer<typeof SessionClient>
 
-/** What an app runs on. The app says so when it signs in. */
+/**
+ * What an app runs on. The app says so when it signs in. TVs get their own
+ * value, so the person approving one sees a TV.
+ */
 export const DEVICE_PLATFORMS = [
   "android",
+  "androidtv",
   "ios",
   "linux",
   "macos",
@@ -147,7 +151,10 @@ export const DeviceCode = t.object({
   userCode: t.string(),
   /** The page to enter it on. */
   verificationUri: t.string(),
-  /** The page with the code filled in, for a QR code. */
+  /**
+   * The page with the code filled in, for the QR code the app shows. A
+   * phone's camera opens it in the browser; the apps read the code from it.
+   */
   verificationUriComplete: t.string(),
   /** Seconds until the codes stop working. */
   expiresIn: t.number().int(),
