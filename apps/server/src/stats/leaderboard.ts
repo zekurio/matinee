@@ -14,7 +14,8 @@ import { db } from "../db"
 import { knownZone, rangeFirstDay, sinceStart } from "./range"
 import { isPlay } from "./sql"
 
-// Places shown per board. The viewer comes after when they rank lower.
+// Places shown per board. The viewer comes after when they rank lower,
+// with the places just above and below them.
 const TOP = 10
 
 // The rows of the raw query. Bigints such as `rank` arrive as strings,
@@ -73,7 +74,7 @@ export async function leaderboard(
 
 /**
  * The leaderboard's statement: the top places per metric, and the viewer's
- * place wherever it is.
+ * place wherever it is, between its neighbors.
  */
 export function leaderboardQuery(
   range: StatsRange,
@@ -153,12 +154,16 @@ export function leaderboardQuery(
         ) as position
       from scores sc
       join ${user} u on u.id = sc.user_id
+    ),
+    viewer as (
+      select metric, position from ranked where user_id = ${viewerId}
     )
     select r.metric, r.value, r.rank, u.id, u.username, u.display_name,
       u.role, u.avatar_id, u.created_at
     from ranked r
     join ${user} u on u.id = r.user_id
-    where r.position <= ${TOP} or r.user_id = ${viewerId}
+    left join viewer v on v.metric = r.metric
+    where r.position <= ${TOP} or abs(r.position - v.position) <= 1
     order by r.metric, r.position
   `
 }

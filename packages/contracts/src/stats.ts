@@ -366,8 +366,8 @@ export type LeaderboardEntry = t.infer<typeof LeaderboardEntry>
 export const LeaderboardBoard = t.object({
   metric: LeaderboardMetric,
   /**
-   * The top 10 with a value above zero, then the signed-in user when
-   * they rank lower.
+   * The top 10 with a value above zero, then, when the signed-in user
+   * ranks lower, them with the places just above and below, in order.
    */
   entries: t.array(LeaderboardEntry),
 })

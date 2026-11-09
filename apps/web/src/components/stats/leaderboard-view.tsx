@@ -26,7 +26,7 @@ const TIME_ZONE = browserTimeZone()
 const TOP = 10
 
 /** A metric's value as its board shows it: "4h 10m", "12 plays". */
-function formatMetric(metric: LeaderboardMetric, value: number): string {
+export function formatMetric(metric: LeaderboardMetric, value: number): string {
   switch (metric) {
     case "watchTime":
       return formatWatchTime(value)
@@ -144,8 +144,12 @@ function Board({ board }: { board: LeaderboardBoard }) {
               key={entry.user.id}
               entry={entry}
               format={(value) => formatMetric(metric, value)}
-              // The viewer's own place, sent after the top ones.
-              apart={index === TOP}
+              // The viewer's neighborhood, sent after the top ones, set off
+              // unless it carries straight on from them.
+              apart={
+                index === TOP &&
+                entry.rank > (board.entries[TOP - 1]?.rank ?? 0) + 1
+              }
             />
           ))}
         </ol>
@@ -154,7 +158,7 @@ function Board({ board }: { board: LeaderboardBoard }) {
   )
 }
 
-function Place({
+export function Place({
   entry,
   format,
   apart,

@@ -54,6 +54,7 @@ export default {
   "stats.chart.title.week": "Sehzeit pro Woche",
   "stats.chart.title.month": "Sehzeit pro Monat",
 
+  "stats.heatmap.title": "Sehzeiten",
   "stats.heatmap.peak": "Am häufigsten am {weekday} gegen {hour}.",
   "stats.heatmap.empty": "Noch nichts geschaut.",
   "stats.heatmap.cell": "{day}, {hour}: {time}",
@@ -124,6 +125,7 @@ export default {
   "stats.watch.top": "Am meisten geschaut",
   "stats.watch.genres": "Genres",
 
+  "stats.standing.title": "Rangliste",
   "stats.leaderboard.metric.watchTime": "Sehzeit",
   "stats.leaderboard.metric.plays": "Wiedergaben",
   "stats.leaderboard.metric.currentStreak": "Aktuelle Tagesserie",

@@ -61,6 +61,7 @@ export default defineMessages("stats", {
   "stats.chart.title.month": "Watch time per month",
 
   // The activity heatmap.
+  "stats.heatmap.title": "Viewing times",
   "stats.heatmap.peak": "Most often on {weekday}s around {hour}.",
   "stats.heatmap.empty": "No watching yet.",
   "stats.heatmap.cell": "{day}, {hour}: {time}",
@@ -137,6 +138,7 @@ export default defineMessages("stats", {
   "stats.watch.genres": "Genres",
 
   // The leaderboard.
+  "stats.standing.title": "Leaderboard",
   "stats.leaderboard.metric.watchTime": "Watch time",
   "stats.leaderboard.metric.plays": "Plays",
   "stats.leaderboard.metric.currentStreak": "Current streak",

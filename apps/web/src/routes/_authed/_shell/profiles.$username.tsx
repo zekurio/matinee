@@ -22,6 +22,7 @@ import { EpisodeCard, PosterCard } from "@/components/media-item"
 import { useDocumentTitle } from "@/components/page-header"
 import { Rail, RailItem } from "@/components/rail"
 import { RangePicker } from "@/components/stats/range-picker"
+import { ActivitySection, StandingSection } from "@/components/stats/standing"
 import {
   PrivateNote,
   SectionHeading,
@@ -359,6 +360,13 @@ function Statistics({ profile }: { profile: Profile }) {
           <div className={statsGrid}>
             <TopTitlesSection stats={data} />
             <GenresSection stats={data} />
+            {/* The third column: where you stand among the people sharing
+                their statistics, only on your own profile since the board
+                is the viewer's, and when in the week the watching happens. */}
+            <div className="flex flex-col gap-4">
+              {profile.self && <StandingSection range={range} />}
+              <ActivitySection stats={data} />
+            </div>
           </div>
         </div>
       )}
