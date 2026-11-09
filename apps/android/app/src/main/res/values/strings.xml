@@ -187,6 +187,7 @@
     <string name="media_watched_at_now">Just now</string>
     <string name="media_watched_at_released">Release date</string>
     <string name="media_watched_at_other">Other date</string>
+    <string name="media_watched_at_unknown">Don\'t remember</string>
     <string name="media_watched_date_title">When did you watch it?</string>
     <string name="media_mark_unwatched_failed">Couldn\'t mark as unwatched</string>
     <string name="media_hero_show_slide">Show slide %1$d</string>

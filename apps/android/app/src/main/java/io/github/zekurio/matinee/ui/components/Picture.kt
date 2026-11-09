@@ -113,6 +113,7 @@ object Lucide {
     val AudioLines = R.drawable.lucide_audio_lines
     val Calendar = R.drawable.lucide_calendar
     val CalendarClock = R.drawable.lucide_calendar_clock
+    val CalendarOff = R.drawable.lucide_calendar_off
     val Captions = R.drawable.lucide_captions
     val ChartColumn = R.drawable.lucide_chart_column
     val Check = R.drawable.lucide_check

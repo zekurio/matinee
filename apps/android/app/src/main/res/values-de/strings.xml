@@ -173,6 +173,7 @@
     <string name="media_watched_at_now">Gerade eben</string>
     <string name="media_watched_at_released">Erscheinungsdatum</string>
     <string name="media_watched_at_other">Anderes Datum</string>
+    <string name="media_watched_at_unknown">Weiß nicht mehr</string>
     <string name="media_watched_date_title">Wann hast du es gesehen?</string>
     <string name="media_mark_unwatched_failed">Konnte nicht als ungesehen markiert werden</string>
     <string name="media_hero_show_slide">Folie %1$d zeigen</string>
