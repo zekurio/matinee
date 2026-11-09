@@ -8,10 +8,14 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import android.content.res.Resources
+import android.os.SystemClock
+import android.util.Log
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.ApiException
 import io.github.zekurio.matinee.api.MatineeApi
@@ -171,21 +175,52 @@ sealed interface Load<out T> {
 /**
  * What went wrong reaching the server, in words for the person: the
  * server's own message when it sent one, else whether it couldn't be
- * reached or the connection broke off. The exception's own text is the
- * HTTP client's, in English, and names sockets and addresses.
+ * reached, the connection broke off, or the answer made no sense to this
+ * app. The exception's own text is the HTTP client's or the JSON
+ * parser's, in English, and names sockets, addresses, and offsets.
  */
-fun describeFailure(resources: Resources, e: IOException): String = when (e) {
+fun describeFailure(resources: Resources, e: Exception): String = when (e) {
     is ApiException -> e.message
     is UnknownHostException, is ConnectException, is SocketTimeoutException, is NoRouteToHostException, is SSLException ->
         resources.getString(R.string.error_unreachable)
+    is SerializationException -> resources.getString(R.string.error_unreadable)
     else -> resources.getString(R.string.error_connection_lost)
 }
 
-/** What a screen loads from the server, kept while the screen is on the back stack. */
-class Loader<T>(private val describe: (IOException) -> String, private val fetch: suspend () -> T) : ViewModel() {
+/** Fetch again on return after this long, when nothing asked for it sooner. */
+const val REFRESH_AFTER_MS = 30_000L
+
+/** Where a load stands after an answer or a failure. */
+internal data class Settled<out T>(val state: Load<T>, val refreshError: String?)
+
+/**
+ * A fetch that failed with [message], over what showed before it: an
+ * earlier answer stays on screen, marked stale, so a refresh that fails
+ * doesn't blank what the person saw.
+ */
+internal fun <T> Load<T>.failedWith(message: String): Settled<T> =
+    if (this is Load.Ready) Settled(this, message) else Settled(Load.Failed(message), null)
+
+/**
+ * What a screen loads from the server, kept while the screen is on the
+ * back stack. [state] is Ready from the first answer on; a fetch after
+ * that which fails leaves it and sets [refreshError] instead.
+ */
+class Loader<T>(private val describe: (Exception) -> String, private val fetch: suspend () -> T) : ViewModel() {
     var state by mutableStateOf<Load<T>>(Load.Loading)
         private set
+
+    /** Why the newest fetch failed while [state] still shows an earlier answer; null once one comes. */
+    var refreshError by mutableStateOf<String?>(null)
+        private set
+
+    /** A fetch is out. */
+    var refreshing by mutableStateOf(false)
+        private set
+
     private var job: Job? = null
+    private var generation = 0
+    private var settledAt = 0L
     internal var seenVersion = -1
 
     init {
@@ -195,24 +230,47 @@ class Loader<T>(private val describe: (IOException) -> String, private val fetch
     /** Show what a save answered with, without fetching it again. */
     fun show(value: T) {
         job?.cancel()
-        state = Load.Ready(value)
+        generation++
+        settle(Settled(Load.Ready(value), null))
     }
 
     /** Fetch again. What showed stays until the answer comes, unless it failed. */
     fun reload() {
         job?.cancel()
+        val mine = ++generation
         if (state is Load.Failed) state = Load.Loading
+        refreshing = true
         job = viewModelScope.launch {
-            state = try {
-                Load.Ready(fetch())
+            // A newer fetch or a save took over while this one was out.
+            fun current() = mine == generation
+            try {
+                val value = fetch()
+                if (current()) settle(Settled(Load.Ready(value), null))
             } catch (e: CancellationException) {
                 throw e
             } catch (e: IOException) {
-                if (state is Load.Ready) state else Load.Failed(describe(e))
+                if (current()) settle(state.failedWith(describe(e)))
             } catch (e: SerializationException) {
-                Load.Failed(e.message ?: "The server sent something this app can't read.")
+                Log.w(TAG, "The server's answer didn't parse", e)
+                if (current()) settle(state.failedWith(describe(e)))
             }
         }
+    }
+
+    private fun settle(next: Settled<T>) {
+        state = next.state
+        refreshError = next.refreshError
+        refreshing = false
+        settledAt = SystemClock.elapsedRealtime()
+    }
+
+    /** Fetch again if none is out and the last ended at least [maxAgeMs] ago. */
+    fun refreshIfStale(maxAgeMs: Long = REFRESH_AFTER_MS) {
+        if (!refreshing && SystemClock.elapsedRealtime() - settledAt >= maxAgeMs) reload()
+    }
+
+    private companion object {
+        const val TAG = "Loader"
     }
 }
 
@@ -234,4 +292,18 @@ fun <T> rememberLoader(key: String, fetch: suspend MatineeApi.() -> T): Loader<T
         loader.seenVersion = version
     }
     return loader
+}
+
+/**
+ * Refresh [loaders] each time the screen resumes: back from a screen on
+ * top of it, from the player, or from another app. Its first showing
+ * counts too, so a loader kept on the back stack catches up when its
+ * screen comes back. One fetching already, or that answered under
+ * [maxAgeMs] ago, is left alone; what shows stays while it fetches.
+ */
+@Composable
+fun RefreshOnResume(vararg loaders: Loader<*>, maxAgeMs: Long = REFRESH_AFTER_MS) {
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        loaders.forEach { it.refreshIfStale(maxAgeMs) }
+    }
 }

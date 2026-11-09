@@ -1,5 +1,6 @@
 package io.github.zekurio.matinee.ui.home
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,11 +11,15 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,6 +33,8 @@ import io.github.zekurio.matinee.api.MediaItem
 import io.github.zekurio.matinee.api.TitleSort
 import io.github.zekurio.matinee.ui.AppHeader
 import io.github.zekurio.matinee.ui.Load
+import io.github.zekurio.matinee.ui.Loader
+import io.github.zekurio.matinee.ui.RefreshOnResume
 import io.github.zekurio.matinee.ui.LocalNavigator
 import io.github.zekurio.matinee.ui.LocalUser
 import io.github.zekurio.matinee.ui.StatusBarScrim
@@ -52,6 +59,12 @@ fun HomeScreen() {
     val resume = rememberLoader("continue") { continueWatching() }
     val nextUp = rememberLoader("nextUp") { nextUp() }
     val featured = rememberLoader("featured") { featured() }
+    // Back on Home, what's in progress may have moved on, here or on
+    // another device. Featured stays: it's picked at random, so fetching it
+    // again would swap the banner under the person.
+    RefreshOnResume(libraries, resume, nextUp)
+    // Shelves on screen whose refresh failed, for the one notice that says so.
+    val staleShelves = remember { mutableStateMapOf<String, Loader<*>>() }
     val config = LocalConfiguration.current
     // On a phone, short enough that two rows of stills, captions and all,
     // fit under it above the bottom bar: 328dp of a 20:9 phone's 952. Under
@@ -60,16 +73,22 @@ fun HomeScreen() {
     val heroHeight = if (isWide()) maxOf(config.screenHeightDp * 0.68f, 460f).dp
     else (config.screenHeightDp * 0.345f).coerceIn(320f, 400f).dp
 
-    val libs = (libraries.state as? Load.Ready)?.value
-    val failed = libraries.state as? Load.Failed
-    if (failed != null) {
+    val sections = listOf(libraries, resume, nextUp, featured)
+    if (failedOutright(libraries.state, listOf(resume.state, nextUp.state, featured.state))) {
         Column(Modifier.fillMaxSize()) {
             AppHeader()
-            ErrorBox(stringResource(R.string.home_load_failed), failed.message, libraries::reload)
+            ErrorBox(
+                stringResource(R.string.home_failed),
+                (libraries.state as? Load.Failed)?.message,
+                { sections.forEach { it.reload() } },
+            )
         }
         return
     }
 
+    val stale = sections + staleShelves.values
+    val staleError = stale.firstNotNullOfOrNull { it.refreshError }
+    val libs = (libraries.state as? Load.Ready)?.value
     val listState = rememberLazyListState()
     Box(Modifier.fillMaxSize()) {
         LazyColumn(
@@ -79,12 +98,31 @@ fun HomeScreen() {
             verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
             item(key = "hero") {
-                val slides = (featured.state as? Load.Ready)?.value
                 val top: @Composable () -> Unit = { AppHeader() }
-                when {
-                    slides == null && featured.state is Load.Loading -> HeroSkeleton(Modifier.height(heroHeight), top)
-                    !slides.isNullOrEmpty() -> Hero(slides, Modifier.height(heroHeight), top)
-                    else -> Column { top() }
+                when (val state = featured.state) {
+                    Load.Loading -> HeroSkeleton(Modifier.height(heroHeight), top)
+                    is Load.Failed -> Column {
+                        top()
+                        Notice(
+                            stringResource(R.string.home_featured_failed),
+                            state.message,
+                            featured::reload,
+                            Modifier.padding(top = 8.dp),
+                        )
+                    }
+                    is Load.Ready -> if (state.value.isNotEmpty()) Hero(state.value, Modifier.height(heroHeight), top)
+                    else Column { top() }
+                }
+            }
+
+            if (staleError != null) {
+                item(key = "stale") {
+                    Notice(
+                        stringResource(R.string.loading_stale),
+                        staleError,
+                        { stale.filter { it.refreshError != null }.forEach { it.reload() } },
+                        retrying = stale.any { it.refreshError != null && it.refreshing },
+                    )
                 }
             }
 
@@ -93,17 +131,34 @@ fun HomeScreen() {
                 return@LazyColumn
             }
 
-            (resume.state as? Load.Ready)?.value?.takeIf { it.isNotEmpty() }?.let { items ->
-                item(key = "continue") { EpisodeRail(stringResource(R.string.browse_continue_watching), items) }
-            }
-            (nextUp.state as? Load.Ready)?.value?.takeIf { it.isNotEmpty() }?.let { items ->
-                item(key = "nextUp") { EpisodeRail(stringResource(R.string.browse_next_up), items) }
-            }
-            libs?.forEach { library ->
-                item(key = "shelf-${library.id}") { LibraryShelf(library) }
+            episodeRail("continue", R.string.browse_continue_watching, R.string.home_continue_failed, resume)
+            episodeRail("nextUp", R.string.browse_next_up, R.string.home_next_up_failed, nextUp)
+            when (val state = libraries.state) {
+                Load.Loading -> item(key = "shelves-loading") { RailSkeleton(null, RailArt.Poster) }
+                is Load.Failed -> item(key = "shelves-failed") {
+                    Notice(stringResource(R.string.home_load_failed), state.message, libraries::reload, retrying = libraries.refreshing)
+                }
+                is Load.Ready -> state.value.forEach { library ->
+                    item(key = "shelf-${library.id}") { LibraryShelf(library, staleShelves) }
+                }
             }
         }
         StatusBarScrim(listState)
+    }
+}
+
+/**
+ * Continue watching or Next up. Loading and empty show nothing: an empty
+ * one is the usual case for someone not in the middle of anything, and a
+ * placeholder there would only fold away. A failed one says so.
+ */
+private fun LazyListScope.episodeRail(key: String, @StringRes title: Int, @StringRes failed: Int, loader: Loader<List<MediaItem>>) {
+    when (val rail = railState(loader.state)) {
+        RailState.Loading, RailState.Empty -> Unit
+        is RailState.Failed -> item(key = key) {
+            RailFailure(stringResource(title), stringResource(failed), rail.message, loader::reload, retrying = loader.refreshing)
+        }
+        is RailState.Shown -> item(key = key) { EpisodeRail(stringResource(title), rail.items) }
     }
 }
 
@@ -119,16 +174,30 @@ private fun EpisodeRail(title: String, items: List<MediaItem>) {
     }
 }
 
+/** A library's newest titles. One whose refresh failed puts itself in [stale] while it's on screen. */
 @Composable
-private fun LibraryShelf(library: Library) {
+private fun LibraryShelf(library: Library, stale: MutableMap<String, Loader<*>>) {
     val nav = LocalNavigator.current
     val entries = rememberLoader("shelf-${library.id}") { shelf(library.id, 12) }
-    val list = (entries.state as? Load.Ready)?.value ?: return
-    Rail(
-        stringResource(R.string.browse_recently_added, library.name),
-        onTitleClick = if (library.itemCount > 0) ({ nav.library(library.id, TitleSort.RECENT) }) else null,
-    ) {
-        if (list.isEmpty()) {
+    // Also when it scrolls back into view, once the last answer is old enough.
+    RefreshOnResume(entries)
+    val refreshFailed = entries.refreshError != null
+    DisposableEffect(entries, refreshFailed) {
+        if (refreshFailed) stale[library.id] = entries else stale.remove(library.id)
+        onDispose { stale.remove(library.id) }
+    }
+    val title = stringResource(R.string.browse_recently_added, library.name)
+    val onTitleClick = if (library.itemCount > 0) ({ nav.library(library.id, TitleSort.RECENT) }) else null
+    when (val state = railState(entries.state)) {
+        RailState.Loading -> RailSkeleton(title, RailArt.Poster, onTitleClick)
+        is RailState.Failed -> RailFailure(
+            title,
+            stringResource(R.string.home_shelf_failed),
+            state.message,
+            entries::reload,
+            retrying = entries.refreshing,
+        )
+        RailState.Empty -> Rail(title, onTitleClick = onTitleClick) {
             item {
                 Text(
                     stringResource(R.string.browse_empty_shelf),
@@ -138,8 +207,10 @@ private fun LibraryShelf(library: Library) {
                 )
             }
         }
-        items(list, key = { it.title.id }) { entry ->
-            ShelfCard(entry, Modifier.width(railItemWidth(RailArt.Poster)))
+        is RailState.Shown -> Rail(title, onTitleClick = onTitleClick) {
+            items(state.items, key = { it.title.id }) { entry ->
+                ShelfCard(entry, Modifier.width(railItemWidth(RailArt.Poster)))
+            }
         }
     }
 }

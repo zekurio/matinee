@@ -50,6 +50,7 @@ import io.github.zekurio.matinee.ui.theme.Palette
 import java.io.IOException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.serialization.SerializationException
 
 /**
  * What a menu is for: a file, a whole title, or one season of a show. A
@@ -115,6 +116,9 @@ fun CoroutineScope.launchShowing(snackbar: SnackbarHostState, failure: String, b
             block()
         } catch (e: IOException) {
             snackbar.showSnackbar(e.message?.let { "$failure: $it" } ?: failure)
+        } catch (_: SerializationException) {
+            // Parsing details can contain server data; the action's own message is enough here.
+            snackbar.showSnackbar(failure)
         }
     }
 }
