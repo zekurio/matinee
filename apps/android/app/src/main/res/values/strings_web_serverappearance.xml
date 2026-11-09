@@ -3,7 +3,6 @@
 <resources>
     <string name="web_serverAppearance_loadFailed">Couldn\'t load the accent color. %1$s</string>
     <string name="web_serverAppearance_title">Accent color</string>
-    <string name="web_serverAppearance_description">Used by the Matinee theme for everyone on this server.</string>
     <string name="web_serverAppearance_presets">Suggested accents</string>
     <string name="web_serverAppearance_default">Default</string>
     <string name="web_serverAppearance_mode_light">Light mode</string>

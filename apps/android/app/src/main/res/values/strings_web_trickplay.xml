@@ -4,26 +4,20 @@
     <string name="web_trickplay_loadFailed">Couldn\'t load the trickplay settings. %1$s</string>
     <string name="web_trickplay_checkFields">Check the fields.</string>
     <string name="web_trickplay_title">Trickplay images</string>
-    <string name="web_trickplay_description">Thumbnails over the seek bar while scrubbing.</string>
     <plurals name="web_trickplay_descriptionCount">
         <item quantity="one">Thumbnails over the seek bar while scrubbing. %2$s of %1$d video has them.</item>
         <item quantity="other">Thumbnails over the seek bar while scrubbing. %2$s of %1$d videos have them.</item>
     </plurals>
     <string name="web_trickplay_enabled">Make trickplay images</string>
-    <string name="web_trickplay_enabled_description">Made when scanning and by a daily task.</string>
     <string name="web_trickplay_interval">Interval</string>
-    <string name="web_trickplay_interval_description">Shorter takes more disk space.</string>
     <plurals name="web_trickplay_interval_option">
         <item quantity="one">Every %1$d second</item>
         <item quantity="other">Every %1$d seconds</item>
     </plurals>
     <string name="web_trickplay_width">Width</string>
-    <string name="web_trickplay_width_description">Wider looks sharper on big screens.</string>
     <string name="web_trickplay_width_option">%1$s px</string>
     <string name="web_trickplay_keyframesOnly">Keyframes only</string>
-    <string name="web_trickplay_keyframesOnly_description">Several times faster, but thumbnails can be a second or two off.</string>
     <string name="web_trickplay_hardwareDecoding">Hardware decoding</string>
-    <string name="web_trickplay_hardwareDecoding_description">Uses %1$s for the codecs enabled under Transcoding.</string>
     <string name="web_trickplay_hardwareDecoding_unavailable">Set up a GPU under Transcoding first.</string>
     <string name="web_trickplay_regenerates">Changing the interval, width, or keyframe setting regenerates every video\'s images in the background.</string>
 </resources>

@@ -2,26 +2,21 @@
 <!-- Made by scripts/web_strings.py from apps/web/src/i18n/locales/de/jobs.ts. Don't edit. -->
 <resources>
     <string name="web_jobs_queues">Warteschlangen</string>
-    <string name="web_jobs_queues_description">Pausierst du eine Warteschlange, laufen ihre aktiven Aufträge noch zu Ende.</string>
     <string name="web_jobs_tasks">Geplante Aufgaben</string>
-    <string name="web_jobs_tasks_description">Laufen nach Zeitplan und reihen die Arbeit ein, die sie finden.</string>
     <string name="web_jobs_loadFailed">Die Aufträge konnten nicht geladen werden. %1$s</string>
     <string name="web_jobs_retry">Erneut versuchen</string>
     <string name="web_jobs_queue_library_scan_name">Mediathek-Scans</string>
     <string name="web_jobs_queue_library_scan_description">Durchsucht Mediatheksordner nach neuen, geänderten und entfernten Dateien.</string>
     <string name="web_jobs_queue_media_probe_name">Medieninfo</string>
     <string name="web_jobs_queue_media_probe_description">Liest die Streams neuer und geänderter Dateien mit ffprobe.</string>
-    <string name="web_jobs_queue_media_probe_note">Dateien, die ffprobe gleichzeitig liest. Erhöhe den Wert, damit der erste Scan einer großen Mediathek schneller fertig ist.</string>
     <string name="web_jobs_queue_metadata_name">Metadaten</string>
     <string name="web_jobs_queue_metadata_description">Ruft Details, Artwork und Folgen von TMDB oder TheTVDB ab.</string>
     <string name="web_jobs_queue_thumbnails_name">Miniaturbilder</string>
     <string name="web_jobs_queue_thumbnails_description">Nimmt ein Einzelbild aus Videos, die kein Artwork haben.</string>
     <string name="web_jobs_queue_trickplay_name">Trickplay-Bilder</string>
     <string name="web_jobs_queue_trickplay_description">Erstellt die Vorschaubilder, die die Zeitleiste beim Spulen zeigt.</string>
-    <string name="web_jobs_queue_trickplay_note">Videos, die gleichzeitig Vorschaubilder für die Zeitleiste bekommen. Eine Folge dauert etwa 20 Sekunden, ein Film einige Minuten.</string>
     <string name="web_jobs_queue_artwork_name">Artwork</string>
     <string name="web_jobs_queue_artwork_description">Lädt Bilder vom Metadatenanbieter herunter, skaliert sie und liest ihre unscharfen Platzhalter aus.</string>
-    <string name="web_jobs_queue_artwork_note">Anbieterbilder, die gleichzeitig heruntergeladen und skaliert werden. Der erste Metadatenabruf einer Mediathek reiht Tausende ein.</string>
     <string name="web_jobs_queue_subtitles_name">Untertitel</string>
     <string name="web_jobs_queue_subtitles_description">Wandelt Untertitel in WebVTT um und kopiert PGS-Untertitel aus Videos.</string>
     <string name="web_jobs_queue_avatars_name">Profilbilder</string>
@@ -91,7 +86,6 @@
     <string name="web_jobs_schedule_every_afterStartup">Alle %1$s und %2$s nach dem Start</string>
     <string name="web_jobs_schedule_next">%1$s, nächster Lauf %2$s</string>
     <string name="web_jobs_concurrency">Parallelität</string>
-    <string name="web_jobs_concurrency_description">Wie viele Aufträge eine Warteschlange gleichzeitig ausführt. Mehr baut einen Rückstau schneller ab, lässt aber weniger CPU und Festplatte fürs Streaming übrig.</string>
     <string name="web_jobs_concurrency_limits">Standard %1$s, höchstens %2$s.</string>
     <string name="web_jobs_concurrency_decrease">%1$s verringern</string>
     <string name="web_jobs_concurrency_increase">%1$s erhöhen</string>

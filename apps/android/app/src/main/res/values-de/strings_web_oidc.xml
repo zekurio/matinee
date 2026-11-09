@@ -13,40 +13,31 @@
     <string name="web_oidc_field_roleClaim">Rollen-Claim</string>
     <string name="web_oidc_field_clientSecret">Client-Secret</string>
     <string name="web_oidc_passkeys_title">Passkeys</string>
-    <string name="web_oidc_passkeys_description">Anmelden per Fingerabdruck, Gesicht oder Sicherheitsschlüssel. Wenn aus, melden sich alle über Single Sign-on an.</string>
     <plurals name="web_oidc_passkeys_unlinked">
         <item quantity="one">%1$d Konto ist nicht mit %2$s verknüpft und kann sich nicht anmelden, solange Passkeys aus sind. Solange es noch angemeldet ist, kann es %2$s unter Einstellungen → Konto verknüpfen.</item>
         <item quantity="other">%1$d Konten sind nicht mit %2$s verknüpft und können sich nicht anmelden, solange Passkeys aus sind. Solange sie noch angemeldet sind, können sie %2$s unter Einstellungen → Konto verknüpfen.</item>
     </plurals>
     <string name="web_oidc_title">Single Sign-on</string>
-    <string name="web_oidc_description">OpenID Connect, etwa Authelia, Authentik oder Keycloak.</string>
     <string name="web_oidc_enabled">Aktiviert</string>
     <plurals name="web_oidc_ssoOnly">
         <item quantity="one">%1$d Konto meldet sich nur über %2$s an. Es kann sich erst wieder anmelden, wenn das wieder an ist.</item>
         <item quantity="other">%1$d Konten melden sich nur über %2$s an. Sie können sich erst wieder anmelden, wenn das wieder an ist.</item>
     </plurals>
     <string name="web_oidc_allowSignUp">Konten erstellen</string>
-    <string name="web_oidc_allowSignUp_description">Bei ersten Anmeldungen, die zu keinem Konto passen.</string>
-    <string name="web_oidc_displayName_description">Steht auf dem Anmeldeknopf.</string>
     <string name="web_oidc_issuerUrl_override">Überschreibt MATINEE_OIDC_ISSUER_URL. Eine Änderung trennt alle verknüpften Konten.</string>
     <string name="web_oidc_issuerUrl_description">Eine spätere Änderung trennt alle verknüpften Konten.</string>
-    <string name="web_oidc_clientId_override">Überschreibt MATINEE_OIDC_CLIENT_ID.</string>
     <string name="web_oidc_clientSecret_saved">Gespeichert. Tippe, um es zu ersetzen.</string>
     <string name="web_oidc_clientSecret_fromEnvironment">Gesetzt durch MATINEE_OIDC_CLIENT_SECRET</string>
     <string name="web_oidc_clientSecret_none">Keins</string>
-    <string name="web_oidc_clientSecret_description">Leer lassen für einen öffentlichen Client.</string>
     <string name="web_oidc_clientSecret_useEnvironment">Das Secret aus der Umgebung verwenden</string>
     <string name="web_oidc_clientSecret_remove">Das gespeicherte Secret entfernen</string>
     <string name="web_oidc_clientSecret_environmentApplies">Nach dem Speichern gilt das Secret aus der Umgebung.</string>
     <string name="web_oidc_clientSecret_removed">Das Secret wird beim Speichern entfernt.</string>
     <string name="web_oidc_redirectUri">Weiterleitungs-URI</string>
-    <string name="web_oidc_redirectUri_description">Trage sie bei den erlaubten Weiterleitungen des Anbieters ein.</string>
     <string name="web_oidc_copy">Kopieren</string>
     <string name="web_oidc_copied">Kopiert</string>
     <string name="web_oidc_advanced">Erweitert</string>
     <string name="web_oidc_advanced_show">Anzeigen</string>
     <string name="web_oidc_advanced_hide">Ausblenden</string>
     <string name="web_oidc_scopes_description">Durch Leerzeichen getrennt. Muss openid enthalten.</string>
-    <string name="web_oidc_usernameClaim_description">Sonst gilt preferred_username.</string>
-    <string name="web_oidc_roleClaim_description">Setzt die Rolle bei jeder Anmeldung: admin oder user, oder eine Liste davon. Ohne den Claim bleibt die Rolle, wie sie ist.</string>
 </resources>

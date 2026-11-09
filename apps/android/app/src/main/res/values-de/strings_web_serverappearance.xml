@@ -3,7 +3,6 @@
 <resources>
     <string name="web_serverAppearance_loadFailed">Die Akzentfarbe konnte nicht geladen werden. %1$s</string>
     <string name="web_serverAppearance_title">Akzentfarbe</string>
-    <string name="web_serverAppearance_description">Wird vom Matinee-Design für alle auf diesem Server verwendet.</string>
     <string name="web_serverAppearance_presets">Vorgeschlagene Akzentfarben</string>
     <string name="web_serverAppearance_default">Standard</string>
     <string name="web_serverAppearance_mode_light">Heller Modus</string>

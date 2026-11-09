@@ -2,26 +2,21 @@
 <!-- Made by scripts/web_strings.py from apps/web/src/i18n/locales/en/jobs.ts. Don't edit. -->
 <resources>
     <string name="web_jobs_queues">Queues</string>
-    <string name="web_jobs_queues_description">Pausing a queue lets its running jobs finish.</string>
     <string name="web_jobs_tasks">Scheduled tasks</string>
-    <string name="web_jobs_tasks_description">Run on a schedule and queue the work they find.</string>
     <string name="web_jobs_loadFailed">Couldn\'t load the jobs. %1$s</string>
     <string name="web_jobs_retry">Try again</string>
     <string name="web_jobs_queue_library_scan_name">Library scans</string>
     <string name="web_jobs_queue_library_scan_description">Walk library folders for new, changed, and removed files.</string>
     <string name="web_jobs_queue_media_probe_name">Media info</string>
     <string name="web_jobs_queue_media_probe_description">Read the streams of new and changed files with ffprobe.</string>
-    <string name="web_jobs_queue_media_probe_note">Files ffprobe reads at once. Raise it to finish the first scan of a large library sooner.</string>
     <string name="web_jobs_queue_metadata_name">Metadata</string>
     <string name="web_jobs_queue_metadata_description">Fetch details, artwork, and episodes from TMDB or TheTVDB.</string>
     <string name="web_jobs_queue_thumbnails_name">Thumbnails</string>
     <string name="web_jobs_queue_thumbnails_description">Take a frame from videos that have no artwork.</string>
     <string name="web_jobs_queue_trickplay_name">Trickplay images</string>
     <string name="web_jobs_queue_trickplay_description">Make the thumbnails the seek bar shows while scrubbing.</string>
-    <string name="web_jobs_queue_trickplay_note">Videos getting seek bar previews at once. An episode takes about 20 seconds, a movie a few minutes.</string>
     <string name="web_jobs_queue_artwork_name">Artwork</string>
     <string name="web_jobs_queue_artwork_description">Download images from the metadata provider, scale them, and read their blurred placeholders.</string>
-    <string name="web_jobs_queue_artwork_note">Provider images downloaded and resized at once. A library\'s first metadata fetch queues thousands.</string>
     <string name="web_jobs_queue_subtitles_name">Subtitles</string>
     <string name="web_jobs_queue_subtitles_description">Convert subtitles to WebVTT, and copy PGS subtitles out of videos.</string>
     <string name="web_jobs_queue_avatars_name">Profile pictures</string>
@@ -91,7 +86,6 @@
     <string name="web_jobs_schedule_every_afterStartup">Every %1$s and %2$s after startup</string>
     <string name="web_jobs_schedule_next">%1$s, next %2$s</string>
     <string name="web_jobs_concurrency">Concurrency</string>
-    <string name="web_jobs_concurrency_description">How many jobs a queue runs at once. Higher clears a backlog sooner but leaves less CPU and disk for streaming.</string>
     <string name="web_jobs_concurrency_limits">Default %1$s, max %2$s.</string>
     <string name="web_jobs_concurrency_decrease">Decrease %1$s</string>
     <string name="web_jobs_concurrency_increase">Increase %1$s</string>
