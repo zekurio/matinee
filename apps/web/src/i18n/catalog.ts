@@ -98,7 +98,7 @@ export type MessageValues = { readonly [name: string]: string | number }
 type FormText<Forms> = Forms[keyof Forms] & string
 
 /** The params a message takes: one per placeholder, and `count` for plurals. */
-export type ParamsOf<Source extends Message> =
+type ParamsOf<Source extends Message> =
   Source extends Plural<infer Forms>
     ? { readonly count: number } & {
         readonly [Name in Exclude<Placeholders<FormText<Forms>>, "count">]:

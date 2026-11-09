@@ -42,7 +42,7 @@ const PlayerPreferences = t.object({
 type PlayerPreferences = t.infer<typeof PlayerPreferences>
 
 /** The settings for how this device plays, which the settings panel edits. */
-export type DevicePlayback = Pick<
+type DevicePlayback = Pick<
   PlayerPreferences,
   | "quality"
   | "videoCodec"

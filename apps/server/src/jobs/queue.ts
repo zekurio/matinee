@@ -42,13 +42,13 @@ export function perCpu(
   return Math.max(bounds.min, Math.min(bounds.max, Math.floor(CPUS * jobs)))
 }
 
-export type JobContext = {
+type JobContext = {
   /** Aborts when the job is cancelled or the server shuts down. */
   signal: AbortSignal
 }
 
 /** A failure that stops more of the same: the waiting jobs `drop` matches. */
-export type Fatal<P> = { message: string; drop: (payload: P) => boolean }
+type Fatal<P> = { message: string; drop: (payload: P) => boolean }
 
 export type QueueDefinition<P, R> = {
   id: JobQueueId

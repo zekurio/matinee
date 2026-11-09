@@ -104,63 +104,70 @@ export function Sessions() {
         </List>
       )}
 
-      <AlertDialog
+      <SignOutDialog
         open={revoking !== null}
         onOpenChange={(open) => !open && setRevoking(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {revoking
-                ? tr("account.sessions.signOutTitle", {
-                    session: sessionLabel(revoking),
-                  })
-                : tr("account.sessions.signOutTitleUnnamed")}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {tr("account.sessions.signOutDescription")}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{tr("account.cancel")}</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              onClick={() => {
-                if (revoking) revoke.mutate(revoking)
-                setRevoking(null)
-              }}
-            >
-              {tr("account.sessions.signOut")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        title={
+          revoking
+            ? tr("account.sessions.signOutTitle", {
+                session: sessionLabel(revoking),
+              })
+            : tr("account.sessions.signOutTitleUnnamed")
+        }
+        description={tr("account.sessions.signOutDescription")}
+        confirmLabel={tr("account.sessions.signOut")}
+        onConfirm={() => {
+          if (revoking) revoke.mutate(revoking)
+          setRevoking(null)
+        }}
+      />
 
-      <AlertDialog open={revokingOthers} onOpenChange={setRevokingOthers}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {tr("account.sessions.signOutOthersTitle")}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {tr("account.sessions.signOutOthersDescription")}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{tr("account.cancel")}</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              onClick={() => {
-                revokeOthers.mutate()
-                setRevokingOthers(false)
-              }}
-            >
-              {tr("account.sessions.signOutOthersConfirm")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <SignOutDialog
+        open={revokingOthers}
+        onOpenChange={setRevokingOthers}
+        title={tr("account.sessions.signOutOthersTitle")}
+        description={tr("account.sessions.signOutOthersDescription")}
+        confirmLabel={tr("account.sessions.signOutOthersConfirm")}
+        onConfirm={() => {
+          revokeOthers.mutate()
+          setRevokingOthers(false)
+        }}
+      />
     </SettingsSubsection>
+  )
+}
+
+/** Asks before signing a session, or the others, out. */
+function SignOutDialog({
+  open,
+  onOpenChange,
+  title,
+  description,
+  confirmLabel,
+  onConfirm,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  title: string
+  description: string
+  confirmLabel: string
+  onConfirm: () => void
+}) {
+  return (
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{title}</AlertDialogTitle>
+          <AlertDialogDescription>{description}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>{tr("account.cancel")}</AlertDialogCancel>
+          <AlertDialogAction variant="destructive" onClick={onConfirm}>
+            {confirmLabel}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   )
 }
 

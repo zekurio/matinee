@@ -115,7 +115,7 @@ export function qualityName(quality: PlaybackQuality): string {
 }
 
 /** A bucket's first day, at noon so no time zone moves it. */
-export function bucketDate(start: string): Date {
+function bucketDate(start: string): Date {
   return new Date(`${start}T12:00:00`)
 }
 

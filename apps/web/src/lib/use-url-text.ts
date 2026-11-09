@@ -20,9 +20,8 @@ export function useUrlText(
     typing: false,
   })
   if (draft.value !== value) {
-    // The URL changed. Our own write brings back what the field shows, and
-    // the field wins while the user types; anything else, like a link to
-    // the bare page, replaces the text.
+    // Keep the text through our own writes and while typing; any other
+    // change to the URL, like a link to the bare page, replaces it.
     const ours = draft.typing || (draft.text.trim() || undefined) === value
     setDraft({ ...draft, text: ours ? draft.text : (value ?? ""), value })
   }

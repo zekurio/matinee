@@ -19,10 +19,9 @@ import type { MessageKey, SourceMessages, Translation } from "./translation"
  * computed in.
  */
 
-export type { MessageKey, Translation } from "./translation"
-export { plural } from "./catalog"
+export type { MessageKey } from "./translation"
 
-export const SOURCE_LOCALE = "en"
+const SOURCE_LOCALE = "en"
 
 const files = import.meta.glob<Translation>(
   ["./locales/*/index.ts", "!./locales/en/index.ts"],
@@ -59,7 +58,7 @@ function baseLanguage(tag: string): string {
  * `navigator.languages`: the tag itself, else the same language for
  * another region (`pt` for `pt-BR`, `pt-BR` for `pt-PT`), else English.
  */
-export function matchLocale(requested: readonly string[]): string {
+function matchLocale(requested: readonly string[]): string {
   for (const wanted of requested) {
     const exact = LOCALES.find(
       (locale) => locale.toLowerCase() === wanted.toLowerCase(),
@@ -154,7 +153,7 @@ function isNumber(value: string | number): value is number {
 }
 
 /** A placeholder's value as text: numbers in the language's digits. */
-export function formatValue(value: string | number): string {
+function formatValue(value: string | number): string {
   return isNumber(value) ? numbers().format(value) : String(value)
 }
 

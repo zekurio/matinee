@@ -34,9 +34,9 @@ export type VideoTarget = {
    */
   startSeconds: number
   /**
-   * Encode 10-bit HDR10 or HLG instead of tone mapping to SDR, see
-   * `toneMapDecision`. Applies only to HEVC and AV1 and to sources with an
-   * HDR10 or HLG base layer; otherwise the encode is SDR.
+   * Encode 10-bit HDR10 or HLG instead of tone mapping to SDR. Applies
+   * only to HEVC and AV1 and to sources with an HDR10 or HLG base layer;
+   * otherwise the encode is SDR.
    */
   keepHdr: boolean
   /**
@@ -48,7 +48,7 @@ export type VideoTarget = {
 }
 
 /** Where tone mapping runs. */
-export type ToneMapper =
+type ToneMapper =
   /** jellyfin-ffmpeg's software filter, with Dolby Vision reshaping. */
   | "tonemapx"
   /** tonemap_opencl, over VAAPI or QSV surfaces. */

@@ -76,7 +76,7 @@ export async function leaderboard(
  * The leaderboard's statement: the top places per metric, and the viewer's
  * place wherever it is, between its neighbors.
  */
-export function leaderboardQuery(
+function leaderboardQuery(
   range: StatsRange,
   zone: string,
   viewerId: string,

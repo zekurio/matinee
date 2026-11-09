@@ -28,7 +28,7 @@ import { TranscodingPanel } from "./transcoding-panel"
 import { TrickplayPanel } from "./trickplay-panel"
 import { UsersPanel } from "./users-panel"
 
-export type SettingsGroup = "account" | "admin"
+type SettingsGroup = "account" | "admin"
 
 export interface SettingsCategory {
   id: SettingsSectionId
@@ -42,7 +42,7 @@ export interface SettingsCategory {
   Panel: ComponentType
 }
 
-export const SETTINGS_GROUPS: readonly SettingsGroup[] = ["account", "admin"]
+const SETTINGS_GROUPS: readonly SettingsGroup[] = ["account", "admin"]
 
 /** A section's place in the nav; its text comes from the catalog. */
 type SectionEntry = Pick<SettingsCategory, "id" | "group" | "icon" | "Panel">

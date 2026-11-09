@@ -15,7 +15,7 @@ import { invalidateViewerState, type Toggle } from "@/lib/viewer-state"
  * the server answers, and goes back if the call fails. The mutation stays
  * pending until the refetch after it lands.
  */
-export function useSetFavorite() {
+function useSetFavorite() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (input: { titleId: string; favorite: boolean }) =>
@@ -44,7 +44,7 @@ export function useSetFavorite() {
  * Mark a file, such as an episode, as a favorite or not. The mutation stays
  * pending until the refetch after it lands.
  */
-export function useSetItemFavorite() {
+function useSetItemFavorite() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (input: { itemId: string; favorite: boolean }) =>

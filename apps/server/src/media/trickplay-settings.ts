@@ -25,7 +25,7 @@ let loading: Promise<Saved> | null = null
  * a test; its keyframes took 20 seconds, which makes a library feasible.
  * Hardware decoding is off, as in Jellyfin.
  */
-export const TRICKPLAY_DEFAULTS: TrickplaySettings = {
+const TRICKPLAY_DEFAULTS: TrickplaySettings = {
   enabled: true,
   intervalSeconds: 10,
   width: 320,

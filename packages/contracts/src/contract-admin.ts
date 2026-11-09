@@ -13,10 +13,7 @@ import {
 import { t } from "./schema"
 import { DirectoryListing, IdInput, UserRole } from "./schemas"
 import { ThemeAccents } from "./theme"
-import {
-  AdminTranscodingSettings,
-  TranscodingSettingsInput,
-} from "./transcoding"
+import { AdminTranscodingSettings, TranscodingSettings } from "./transcoding"
 import { AdminTrickplaySettings, TrickplaySettings } from "./trickplay"
 
 export const adminContract = oc.tag("Admin").router({
@@ -86,7 +83,7 @@ export const adminContract = oc.tag("Admin").router({
   transcoding: {
     get: get("/admin/transcoding").output(AdminTranscodingSettings),
     update: put("/admin/transcoding")
-      .input(TranscodingSettingsInput)
+      .input(TranscodingSettings)
       .output(AdminTranscodingSettings),
     /** Detect ffmpeg and the GPUs again, after a driver or ffmpeg update. */
     detect: post("/admin/transcoding/detect").output(AdminTranscodingSettings),

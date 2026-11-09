@@ -139,6 +139,7 @@ const Crf = t
   .min(0, "Use 0 to 51.")
   .max(51, "Use 0 to 51.")
 
+/** The saved settings. An empty device field falls back to the environment's. */
 export const TranscodingSettings = t.object({
   hardwareAcceleration: HardwareAcceleration,
   /** The VAAPI render node. */
@@ -220,10 +221,6 @@ export const TranscodingSettings = t.object({
     .max(24 * 3600),
 })
 export type TranscodingSettings = t.infer<typeof TranscodingSettings>
-
-/** A save. Empty device fields fall back to the environment's. */
-export const TranscodingSettingsInput = TranscodingSettings
-export type TranscodingSettingsInput = t.infer<typeof TranscodingSettingsInput>
 
 /**
  * A feature tried on this server: `ok` it ran, `failed` ffmpeg has it but

@@ -45,7 +45,7 @@ export type MenuSection = {
 }
 
 /** A button that changes a value and leaves the menu open. */
-export type MenuStep = {
+type MenuStep = {
   id: string
   /** Short, like `+0.1 s`. */
   label: string

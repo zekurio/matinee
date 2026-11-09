@@ -39,7 +39,7 @@ export function languageFromName(name: string): string | null {
 }
 
 /** `English`, `Brazilian Portuguese`. Null for an unknown tag. */
-export function languageName(tag: string): string | null {
+function languageName(tag: string): string | null {
   try {
     return names.of(tag) ?? null
   } catch {

@@ -91,7 +91,7 @@ export function SkipIcon({
 const THUMB_PX = 14
 
 /** The track for seeking and volume: the accent on translucent white. */
-export function MediaSlider({
+function MediaSlider({
   ref,
   label,
   value,

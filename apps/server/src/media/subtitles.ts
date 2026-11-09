@@ -248,7 +248,7 @@ async function converted(
 }
 
 /** A track's bytes, as the subtitle route sends them. */
-export type SubtitleContent =
+type SubtitleContent =
   | { kind: "webvtt"; text: string }
   | { kind: "pgs"; path: string }
 

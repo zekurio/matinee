@@ -1,7 +1,6 @@
 import {
   type AdminTranscodingSettings,
-  type TranscodingSettings,
-  TranscodingSettingsInput,
+  TranscodingSettings,
 } from "@matinee/contracts"
 
 import { type MessageKey, tr, translateKnown } from "@/i18n"
@@ -59,7 +58,7 @@ export function draftFrom({
 export function inputFrom(draft: Draft) {
   const number = (value: string) =>
     value.trim() === "" ? Number.NaN : Number(value)
-  return TranscodingSettingsInput.safeParse({
+  return TranscodingSettings.safeParse({
     ...draft,
     vaapiDevice: draft.vaapiDevice.trim(),
     qsvDevice: draft.qsvDevice.trim(),

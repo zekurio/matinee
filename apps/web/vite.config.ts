@@ -78,28 +78,32 @@ function preloadLocale(): Plugin {
         }
         if (files.size === 0) return html
         const script = `(function () {
+  var files = ${JSON.stringify(Object.fromEntries(files))}
+  var picked = null
   try {
-    var files = ${JSON.stringify(Object.fromEntries(files))}
     var stored = JSON.parse(localStorage.getItem("matinee.language") || "null")
-    var picked = stored && stored.state && stored.state.language
-    var wanted = picked && picked !== "auto" ? [picked] : navigator.languages
-    var tags = Object.keys(files)
-    for (var i = 0; i < wanted.length; i++) {
-      var tag = wanted[i].toLowerCase()
-      if (tag === "en" || tag.indexOf("en-") === 0) return
-      var match = tags.filter(function (t) {
-        return t.toLowerCase() === tag || t.split("-")[0] === tag.split("-")[0]
-      })[0]
-      if (match) {
-        var link = document.createElement("link")
-        link.rel = "modulepreload"
-        link.crossOrigin = ""
-        link.href = files[match]
-        document.head.appendChild(link)
-        return
-      }
+    picked = stored && stored.state && stored.state.language
+  } catch (e) {
+    // Storage that's blocked or holds something else: follow the browser.
+    picked = null
+  }
+  var wanted = picked && picked !== "auto" ? [picked] : navigator.languages
+  var tags = Object.keys(files)
+  for (var i = 0; i < wanted.length; i++) {
+    var tag = wanted[i].toLowerCase()
+    if (tag === "en" || tag.indexOf("en-") === 0) return
+    var match = tags.filter(function (t) {
+      return t.toLowerCase() === tag || t.split("-")[0] === tag.split("-")[0]
+    })[0]
+    if (match) {
+      var link = document.createElement("link")
+      link.rel = "modulepreload"
+      link.crossOrigin = ""
+      link.href = files[match]
+      document.head.appendChild(link)
+      return
     }
-  } catch (e) {}
+  }
 })()`
         return {
           html,

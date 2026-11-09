@@ -14,6 +14,7 @@ import type { ReactNode } from "react"
 
 import { tr } from "@/i18n"
 import { errorMessage } from "@/lib/rpc"
+import type { UserAction } from "@/stores/users-panel"
 
 /** Asks before an action on an account, and shows why it failed. */
 export function ConfirmDialog({
@@ -70,9 +71,48 @@ export function ConfirmDialog({
   )
 }
 
-/** The words for confirming a role change, by direction and whose it is. */
-export function roleChangeCopy(user: AdminUser, self: boolean) {
+type ConfirmCopy = { title: string; description: string; confirmLabel: string }
+
+/** The words for confirming `action` on `user`, by whose account it is. */
+export function confirmCopy(
+  action: UserAction,
+  user: AdminUser,
+  self: boolean,
+): ConfirmCopy {
   const name = user.displayName ?? user.username
+  if (action === "role") return roleChangeCopy(user, name, self)
+  if (action === "sign-out") {
+    return {
+      title: self
+        ? tr("users.signOut.ownTitle")
+        : tr("users.signOut.title", { name }),
+      description: self
+        ? tr("users.signOut.ownDescription")
+        : tr("users.signOut.description"),
+      confirmLabel: self
+        ? tr("users.signOut.ownConfirm")
+        : tr("users.signOut.confirm"),
+    }
+  }
+  return {
+    title: self
+      ? tr("users.delete.ownTitle")
+      : tr("users.delete.title", { name }),
+    description: self
+      ? tr("users.delete.ownDescription")
+      : tr("users.delete.description"),
+    confirmLabel: self
+      ? tr("users.delete.ownConfirm")
+      : tr("users.delete.confirm"),
+  }
+}
+
+/** The words for confirming a role change, by direction and whose it is. */
+function roleChangeCopy(
+  user: AdminUser,
+  name: string,
+  self: boolean,
+): ConfirmCopy {
   if (user.role === "user") {
     return {
       title: tr("users.role.makeTitle", { name }),

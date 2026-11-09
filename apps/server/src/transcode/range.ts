@@ -1,8 +1,4 @@
-import type {
-  TranscodeVideoCodec,
-  TranscodingCapabilities,
-  VideoStream,
-} from "@matinee/contracts"
+import type { VideoStream } from "@matinee/contracts"
 
 /*
  * Jellyfin's dynamic range rules (MediaStream.GetVideoColorRange and the
@@ -28,7 +24,7 @@ export type VideoRangeType =
   | "DOVIInvalid"
   | "HDR10Plus"
 
-export type VideoRange = "SDR" | "HDR" | "Unknown"
+type VideoRange = "SDR" | "HDR" | "Unknown"
 
 /** A stream's range and its type. */
 export type ColorRange = { range: VideoRange; type: VideoRangeType }
@@ -136,18 +132,6 @@ export function isDoviWithHdr10Bl(video: VideoStream): boolean {
   )
 }
 
-/** Any Dolby Vision (IsDovi). */
-export function isDovi(video: VideoStream): boolean {
-  const { type } = videoColorRange(video)
-  return (
-    isDoviWithHdr10Bl(video) ||
-    type === "DOVI" ||
-    type === "DOVIWithHLG" ||
-    type === "DOVIWithSDR" ||
-    type === "DOVIInvalid"
-  )
-}
-
 /** HDR10+ dynamic metadata, alone or beside Dolby Vision (IsHdr10Plus). */
 export function isHdr10Plus(video: VideoStream): boolean {
   const { type } = videoColorRange(video)
@@ -158,93 +142,8 @@ export function isHdr10Plus(video: VideoStream): boolean {
   )
 }
 
-/** Dynamic metadata a stream copy should drop for the client. */
-export type DynamicHdrRemoval = "dovi" | "hdr10plus" | null
-
-/**
- * Jellyfin's ShouldRemoveDynamicHdrMetadata: which dynamic metadata to strip
- * when the stream is copied to a client that shows `supported`. It assumes
- * the copy is allowed already.
- */
-export function dynamicHdrRemoval(
-  video: VideoStream,
-  supported: readonly VideoRangeType[],
-): DynamicHdrRemoval {
-  const { range, type } = videoColorRange(video)
-  if (range !== "HDR" && type !== "DOVIInvalid") return null
-  if (supported.length === 0) return null
-
-  const hasHdr10 = supported.includes("HDR10")
-  const hasDovi = supported.includes("DOVI")
-  const hasDoviWithEl = supported.includes("DOVIWithEL")
-  const hasDoviWithElHdr10Plus = supported.includes("DOVIWithELHDR10Plus")
-
-  // A client that shows HDR10 but not the enhancement layer.
-  let removeDovi = !hasDoviWithEl && hasHdr10 && type === "DOVIWithEL"
-  // A Dolby Vision player, which a broken record could crash. Players
-  // without Dolby Vision ignore it.
-  removeDovi ||= hasDovi && type === "DOVIInvalid"
-  let removeHdr10Plus = false
-  // Both an enhancement layer and HDR10+: keep the layer if the client
-  // takes it without HDR10+, else drop Dolby Vision.
-  if (type === "DOVIWithELHDR10Plus") {
-    removeHdr10Plus = hasDoviWithEl && !hasDoviWithElHdr10Plus
-    removeDovi ||= !removeHdr10Plus
-  }
-  if (removeDovi) return "dovi"
-  // Dolby Vision players can trip over HDR10+ next to it.
-  removeHdr10Plus ||= hasDovi && type === "DOVIWithHDR10Plus"
-  return removeHdr10Plus ? "hdr10plus" : null
-}
-
-/**
- * The bitstream filter that does a removal in a stream copy, by Jellyfin's
- * GetBitStreamArgs, or null when this ffmpeg can't, which Jellyfin takes as
- * a reason not to copy.
- */
-export function dynamicHdrRemovalFilter(
-  video: VideoStream,
-  removal: DynamicHdrRemoval,
-  capabilities: TranscodingCapabilities,
-): string | null {
-  const { features } = capabilities
-  const hevc = video.codec === "hevc"
-  const av1 = video.codec === "av1"
-  if (removal === "dovi") {
-    if (hevc && features.hevcRemoveDovi) return "hevc_metadata=remove_dovi=1"
-    if (av1 && features.av1RemoveDovi) return "av1_metadata=remove_dovi=1"
-    if ((hevc || av1) && features.doviRpuStrip) return "dovi_rpu=strip=1"
-    return null
-  }
-  if (removal === "hdr10plus") {
-    if (hevc && features.hevcRemoveHdr10Plus) {
-      return "hevc_metadata=remove_hdr10plus=1"
-    }
-    if (av1 && features.av1RemoveHdr10Plus) {
-      return "av1_metadata=remove_hdr10plus=1"
-    }
-  }
-  return null
-}
-
 /** The range an encode keeps when it keeps HDR. */
 export type OutputRange = "SDR" | "HDR10" | "HLG"
-
-export type ToneMapDecision = {
-  /** The source's range type by Jellyfin's rules. */
-  rangeType: VideoRangeType
-  /** Pass as the pipeline's `keepHdr`: the encode stays 10-bit HDR. */
-  keepHdr: boolean
-  /** The source is HDR and the encode won't be: it needs tone mapping. */
-  toneMap: boolean
-  /** What the encode will be. */
-  outputRange: OutputRange
-  /**
-   * For a stream copy instead of an encode: the dynamic metadata to strip,
-   * see `dynamicHdrRemovalFilter`.
-   */
-  copyRemoval: DynamicHdrRemoval
-}
 
 /** The static HDR format a source's base layer can be shown as, if any. */
 export function baseLayerRange(
@@ -268,53 +167,5 @@ export function baseLayerRange(
       return null
     default:
       return null
-  }
-}
-
-/**
- * Whether an encode of `video` to `targetCodec` can stay HDR for a client
- * that shows `supportsRangeTypes` in that codec, by Jellyfin's range rules.
- * An encode never carries Dolby Vision or HDR10+: it keeps the base layer's
- * HDR10 or HLG, so the client needs that. Profile 5 has no such layer and
- * always tone maps. H.264 never keeps HDR.
- */
-export function toneMapDecision(
-  video: VideoStream,
-  options: {
-    supportsRangeTypes: readonly VideoRangeType[]
-    targetCodec: TranscodeVideoCodec
-  },
-): ToneMapDecision {
-  const { range, type } = videoColorRange(video)
-  const supported = options.supportsRangeTypes
-  const copyRemoval = dynamicHdrRemoval(video, supported)
-  if (range !== "HDR") {
-    return {
-      rangeType: type,
-      keepHdr: false,
-      toneMap: false,
-      outputRange: "SDR",
-      copyRemoval,
-    }
-  }
-  const base = baseLayerRange(video, type)
-  // HDR10+ players show HDR10 too, as Jellyfin treats them.
-  const clientShows =
-    base === "HDR10"
-      ? supported.includes("HDR10") || supported.includes("HDR10Plus")
-      : base === "HLG"
-        ? supported.includes("HLG")
-        : false
-  const keepHdr =
-    base !== null &&
-    clientShows &&
-    options.targetCodec !== "h264" &&
-    (video.bitDepth ?? 8) >= 10
-  return {
-    rangeType: type,
-    keepHdr,
-    toneMap: !keepHdr,
-    outputRange: keepHdr && base ? base : "SDR",
-    copyRemoval,
   }
 }

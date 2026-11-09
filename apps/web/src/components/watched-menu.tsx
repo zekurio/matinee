@@ -97,11 +97,19 @@ async function patchLists(
   }
 }
 
+/** Says a mark didn't go through. */
+function markFailed(error: Error, { watched }: { watched: boolean }) {
+  toast.error(
+    watched ? tr("media.markWatchedFailed") : tr("media.markUnwatchedFailed"),
+    { description: errorMessage(error) },
+  )
+}
+
 /**
  * Mark one file watched or unwatched. The mutation stays pending until the
  * refetch after it lands.
  */
-export function useSetWatched() {
+function useSetWatched() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: ({
@@ -116,19 +124,13 @@ export function useSetWatched() {
     }) => client.playback.setWatched({ itemId: item.id, watched, watchedAt }),
     onMutate: ({ item, watched }) =>
       patchLists(queryClient, (other) => other.id === item.id, watched),
-    onError: (error, { watched }) =>
-      toast.error(
-        watched
-          ? tr("media.markWatchedFailed")
-          : tr("media.markUnwatchedFailed"),
-        { description: errorMessage(error) },
-      ),
+    onError: markFailed,
     onSettled: () => invalidateViewerState(queryClient),
   })
 }
 
 /** Mark a title's files watched or unwatched, or one season's. */
-export function useSetTitleWatched() {
+function useSetTitleWatched() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (input: {
@@ -147,13 +149,7 @@ export function useSetTitleWatched() {
           (season === undefined || item.seasonNumber === season),
         watched,
       ),
-    onError: (error, { watched }) =>
-      toast.error(
-        watched
-          ? tr("media.markWatchedFailed")
-          : tr("media.markUnwatchedFailed"),
-        { description: errorMessage(error) },
-      ),
+    onError: markFailed,
     onSettled: () => invalidateViewerState(queryClient),
   })
 }

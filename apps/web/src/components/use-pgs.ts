@@ -27,7 +27,7 @@ export function usePgs(
     const el = video.current
     if (!host || !el || !file) return
     let stopped = false
-    let stop = () => {}
+    let stop: (() => void) | null = null
     const start = async () => {
       const { PgsRenderer } = await import("libpgs")
       if (stopped) return
@@ -68,7 +68,7 @@ export function usePgs(
     })
     return () => {
       stopped = true
-      stop()
+      stop?.()
     }
   }, [file])
 

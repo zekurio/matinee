@@ -293,7 +293,7 @@ function readJson(stdout: string) {
 }
 
 /** The summary of ffprobe's `-show_streams -show_format` JSON. */
-export function readProbe(stdout: string): MediaProbe {
+function readProbe(stdout: string): MediaProbe {
   const output = FfprobeOutput.parse(readJson(stdout))
   const probe: MediaProbe = {
     format: {
@@ -337,10 +337,7 @@ export function readProbe(stdout: string): MediaProbe {
  * video's first frame: HDR10+, and the HDR10 metadata of HEVC in MP4 and
  * TS, which lives in the bitstream rather than the container.
  */
-export function withFirstFrame(
-  video: VideoStream,
-  stdout: string,
-): VideoStream {
+function withFirstFrame(video: VideoStream, stdout: string): VideoStream {
   const [frame] = FfprobeFrames.parse(readJson(stdout)).frames
   const side = frame?.side_data_list
   return {

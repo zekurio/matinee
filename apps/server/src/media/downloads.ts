@@ -201,7 +201,7 @@ type RunJob = {
  * The ffmpeg runs of downloads. A run holds its slot until it ends: at
  * the end of the file, or once its client went away.
  */
-export const downloadRuns = defineQueue<RunJob, void>({
+const downloadRuns = defineQueue<RunJob, void>({
   id: "downloads",
   name: "Downloads",
   description:
@@ -1123,6 +1123,30 @@ export function downloadInit(
   })
 }
 
+/** A download in use, and the file being sent from it. */
+type Held = { handle: FileHandle | null; release: () => void }
+
+/**
+ * Counts the download as in use until `release`, which also closes the
+ * file in `handle`. Release runs once.
+ */
+function holdActive(active: Active): Held {
+  let released = false
+  const held: Held = {
+    handle: null,
+    release: () => {
+      if (released) return
+      released = true
+      active.users--
+      active.seenAt = Date.now()
+      void held.handle?.close().catch(() => {})
+      held.handle = null
+    },
+  }
+  active.users++
+  return held
+}
+
 /**
  * A file's bytes as a response body. The download counts as in use until
  * the body is sent, so its run doesn't stop under a slow client.
@@ -1133,17 +1157,8 @@ export function fileBody(
   before: Buffer | null = null,
 ): ReadableStream<Uint8Array> {
   let pending = before
-  let handle: FileHandle | null = null
-  let released = false
-  const release = () => {
-    if (released) return
-    released = true
-    active.users--
-    active.seenAt = Date.now()
-    void handle?.close().catch(() => {})
-    handle = null
-  }
-  active.users++
+  const held = holdActive(active)
+  const { release } = held
   return new ReadableStream<Uint8Array>({
     async pull(controller) {
       try {
@@ -1152,9 +1167,14 @@ export function fileBody(
           pending = null
           return
         }
-        handle ??= await open(path, "r")
+        held.handle ??= await open(path, "r")
         const buffer = Buffer.allocUnsafe(READ_CHUNK)
-        const { bytesRead } = await handle.read(buffer, 0, READ_CHUNK, null)
+        const { bytesRead } = await held.handle.read(
+          buffer,
+          0,
+          READ_CHUNK,
+          null,
+        )
         if (bytesRead === 0) {
           release()
           controller.close()
@@ -1188,17 +1208,8 @@ export function downloadStream(
   let wantTail = true
   let failures = 0
   let countedFailure = active.failedAt
-  let handle: FileHandle | null = null
-  let released = false
-  const release = () => {
-    if (released) return
-    released = true
-    active.users--
-    active.seenAt = Date.now()
-    void handle?.close().catch(() => {})
-    handle = null
-  }
-  active.users++
+  const held = holdActive(active)
+  const { release } = held
 
   /** Nothing to send yet: give up on a download that keeps failing. */
   const stalled = async (): Promise<"wait"> => {
@@ -1262,7 +1273,7 @@ export function downloadStream(
     async pull(controller) {
       try {
         while (true) {
-          if (!handle) {
+          if (!held.handle) {
             const part = await nextPart()
             if (part === null) {
               release()
@@ -1285,20 +1296,25 @@ export function downloadStream(
               }
               continue
             }
-            handle = await open(part.path, "r")
+            held.handle = await open(part.path, "r")
             if (part.before) {
               controller.enqueue(part.before)
               return
             }
           }
           const buffer = Buffer.allocUnsafe(READ_CHUNK)
-          const { bytesRead } = await handle.read(buffer, 0, READ_CHUNK, null)
+          const { bytesRead } = await held.handle.read(
+            buffer,
+            0,
+            READ_CHUNK,
+            null,
+          )
           if (bytesRead > 0) {
             controller.enqueue(buffer.subarray(0, bytesRead))
             return
           }
-          await handle.close()
-          handle = null
+          await held.handle.close()
+          held.handle = null
         }
       } catch (cause) {
         release()

@@ -49,7 +49,7 @@ function lookupFor(row: TitleRow, lib: LibraryRow): Lookup {
   }
 }
 
-export function needsRefresh(
+function needsRefresh(
   row: TitleRow,
   lib: LibraryRow,
   now = Date.now(),
@@ -435,7 +435,7 @@ async function runRefresh(job: RefreshJob): Promise<void> {
  * mostly wait on those limits. Staying under TMDB's leaves room for
  * searches from the identify dialog, which share it.
  */
-export const metadataJobs = defineQueue<RefreshJob, void>({
+const metadataJobs = defineQueue<RefreshJob, void>({
   id: "metadata",
   name: "Metadata",
   description: "Fetch details, artwork, and episodes from TMDB or TheTVDB.",

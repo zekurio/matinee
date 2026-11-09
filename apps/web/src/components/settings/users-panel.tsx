@@ -38,7 +38,7 @@ import { client, errorMessage, orpc } from "@/lib/rpc"
 import { createUsersPanelStore, type UserAction } from "@/stores/users-panel"
 
 import { SettingsSections, SettingsSubsection } from "./settings-panel"
-import { ConfirmDialog, roleChangeCopy } from "./user-dialogs"
+import { confirmCopy, ConfirmDialog } from "./user-dialogs"
 
 // The server moves a session's last-seen time at most hourly, so anything
 // more recent than that only says "within the last hour".
@@ -146,11 +146,17 @@ export function UsersPanel() {
   const isLastAdmin = (user: AdminUser) =>
     user.role === "admin" && signInAdmins.every((other) => other.id === user.id)
 
-  const action = confirmOpen ? confirming?.action : null
-  const target = confirming?.user
-  const self = target !== undefined && target.id === me?.id
-  const targetName = target ? displayName(target) : ""
-  const roleCopy = target ? roleChangeCopy(target, self) : null
+  // Kept while the dialog closes, so its words stay put as it fades.
+  const mutation = confirming
+    ? { role: setRole, "sign-out": signOut, delete: remove }[confirming.action]
+    : null
+  const copy = confirming
+    ? confirmCopy(
+        confirming.action,
+        confirming.user,
+        confirming.user.id === me?.id,
+      )
+    : null
 
   return (
     <SettingsSections>
@@ -185,56 +191,16 @@ export function UsersPanel() {
       </SettingsSubsection>
 
       <ConfirmDialog
-        open={action === "role"}
-        title={roleCopy?.title ?? ""}
-        description={roleCopy?.description}
-        confirmLabel={roleCopy?.confirmLabel ?? ""}
-        destructive={target?.role === "admin"}
-        pending={setRole.isPending}
-        error={setRole.error}
-        onConfirm={() => target && setRole.mutate(target)}
-        onClose={closeConfirm}
-      />
-      <ConfirmDialog
-        open={action === "sign-out"}
-        title={
-          self
-            ? tr("users.signOut.ownTitle")
-            : tr("users.signOut.title", { name: targetName })
+        open={confirmOpen}
+        title={copy?.title ?? ""}
+        description={copy?.description}
+        confirmLabel={copy?.confirmLabel ?? ""}
+        destructive={
+          confirming?.action !== "role" || confirming.user.role === "admin"
         }
-        description={
-          self
-            ? tr("users.signOut.ownDescription")
-            : tr("users.signOut.description")
-        }
-        confirmLabel={
-          self ? tr("users.signOut.ownConfirm") : tr("users.signOut.confirm")
-        }
-        destructive
-        pending={signOut.isPending}
-        error={signOut.error}
-        onConfirm={() => target && signOut.mutate(target)}
-        onClose={closeConfirm}
-      />
-      <ConfirmDialog
-        open={action === "delete"}
-        title={
-          self
-            ? tr("users.delete.ownTitle")
-            : tr("users.delete.title", { name: targetName })
-        }
-        description={
-          self
-            ? tr("users.delete.ownDescription")
-            : tr("users.delete.description")
-        }
-        confirmLabel={
-          self ? tr("users.delete.ownConfirm") : tr("users.delete.confirm")
-        }
-        destructive
-        pending={remove.isPending}
-        error={remove.error}
-        onConfirm={() => target && remove.mutate(target)}
+        pending={mutation?.isPending ?? false}
+        error={mutation?.error ?? null}
+        onConfirm={() => confirming && mutation?.mutate(confirming.user)}
         onClose={closeConfirm}
       />
     </SettingsSections>

@@ -22,6 +22,13 @@ const LinkSearch = t.object({
   code: t.string().optional().catch(undefined),
 })
 
+// The links that stand in for a full-width button.
+const WIDE_OUTLINE = buttonVariants({
+  variant: "outline",
+  size: "lg",
+  className: "w-full",
+})
+
 /** Where someone signs in an app that has no browser, with its code. */
 export const Route = createFileRoute("/_authed/link")({
   validateSearch: LinkSearch,
@@ -102,14 +109,7 @@ function ApproveDevice({ userCode }: { userCode: string }) {
           name,
         })}
       >
-        <Link
-          to="/"
-          className={buttonVariants({
-            variant: "outline",
-            size: "lg",
-            className: "w-full",
-          })}
-        >
+        <Link to="/" className={WIDE_OUTLINE}>
           {tr("link.device.home")}
         </Link>
       </AuthScreen>
@@ -137,14 +137,7 @@ function ApproveDevice({ userCode }: { userCode: string }) {
         }
       >
         {gone ? (
-          <Link
-            to="/link"
-            className={buttonVariants({
-              variant: "outline",
-              size: "lg",
-              className: "w-full",
-            })}
-          >
+          <Link to="/link" className={WIDE_OUTLINE}>
             {tr("link.device.anotherCode")}
           </Link>
         ) : (

@@ -2,7 +2,7 @@ import type { MediaItem, Season, Title } from "@matinee/contracts"
 import { t } from "@matinee/contracts/schema"
 
 // Files without a season number, in the URL.
-export const NO_SEASON = -1
+const NO_SEASON = -1
 
 /** A season in the URL: its number, or `NO_SEASON`. */
 const SeasonParam = t.coerce.number().int().min(NO_SEASON)

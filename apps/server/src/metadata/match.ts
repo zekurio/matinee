@@ -1,7 +1,7 @@
 import type { Candidate } from "./types"
 
 /** Lowercase letters and digits only, so punctuation and case don't matter. */
-export function normalize(name: string): string {
+function normalize(name: string): string {
   return (
     name
       .toLowerCase()

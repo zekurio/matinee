@@ -11,7 +11,7 @@ import {
 import type { RichKey, SourceMessages } from "./translation"
 
 /** The interface's language, re-rendering when it changes. */
-export function useLocale(): string {
+function useLocale(): string {
   return useSyncExternalStore(subscribeLocale, getLocale, getLocale)
 }
 

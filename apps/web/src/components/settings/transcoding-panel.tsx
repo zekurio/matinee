@@ -1,6 +1,6 @@
 import type {
   AdminTranscodingSettings,
-  TranscodingSettingsInput,
+  TranscodingSettings,
 } from "@matinee/contracts"
 import { Skeleton } from "@matinee/ui/components/skeleton"
 import { useSelector } from "@tanstack/react-form"
@@ -64,7 +64,7 @@ export function useTranscodingForm(
   const apply = (next: AdminTranscodingSettings) =>
     queryClient.setQueryData(orpc.admin.transcoding.get.queryKey(), next)
   const save = useMutation({
-    mutationFn: (input: TranscodingSettingsInput) =>
+    mutationFn: (input: TranscodingSettings) =>
       client.admin.transcoding.update(input),
   })
   const detect = useMutation({

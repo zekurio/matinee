@@ -124,7 +124,7 @@ type InputRowProps = Omit<ComponentProps<typeof Input>, "id" | "title"> & {
 }
 
 /** A row whose control is an input; the rest of the props go to it. */
-export function InputRow({
+function InputRow({
   title,
   layout = "split",
   footer,

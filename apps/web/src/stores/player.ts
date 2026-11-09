@@ -7,7 +7,7 @@ import { createStore, type StoreApi } from "zustand/vanilla"
 import type { PlaybackSource } from "@/components/playback-source"
 
 /** A note over the picture, like the volume after a key press. */
-export type Flash = { id: number; Icon: LucideIcon | null; text: string }
+type Flash = { id: number; Icon: LucideIcon | null; text: string }
 
 /** What a player starts with, from its props and the saved preferences. */
 export type PlayerStart = {

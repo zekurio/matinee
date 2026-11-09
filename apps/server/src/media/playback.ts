@@ -54,7 +54,7 @@ const ENCODE_GOP_S = 2
 const STDERR_LINES = 20
 
 /** What ffprobe read from the file, or null when it changed or can't be read. */
-export async function probeOf(item: MediaItemRow): Promise<MediaProbe | null> {
+async function probeOf(item: MediaItemRow): Promise<MediaProbe | null> {
   const info = await stat(item.path).catch(() => null)
   if (!info?.isFile()) return null
   return currentProbe(item, info)

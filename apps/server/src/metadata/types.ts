@@ -5,7 +5,7 @@ import type {
 } from "@matinee/contracts"
 import type { ExternalIds } from "@matinee/db"
 
-export type MatchKind = "movie" | "show"
+type MatchKind = "movie" | "show"
 
 // Enough to fill a row on a wide screen; Jellyfin keeps 15.
 export const MAX_CAST = 20
@@ -30,7 +30,7 @@ export type Candidate = {
 }
 
 /** Remote image URLs. */
-export type ImageUrls = {
+type ImageUrls = {
   poster: string | null
   backdrop: string | null
   logo: string | null

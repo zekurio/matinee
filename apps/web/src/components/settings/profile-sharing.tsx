@@ -9,7 +9,7 @@ import { client, errorMessage, orpc } from "@/lib/rpc"
 import { SettingRow, SettingRows } from "./settings-panel"
 
 /** Change what the signed-in user's profile shows to others. */
-export function useUpdateSharing() {
+function useUpdateSharing() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (sharing: Partial<ProfileSharing>) =>

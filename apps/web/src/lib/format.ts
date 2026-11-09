@@ -54,10 +54,6 @@ export function formatRelative(date: Date): string {
   return tr("format.justNow")
 }
 
-const shortDates = perLocale(
-  (locale) =>
-    new Intl.DateTimeFormat(locale, { month: "short", day: "numeric" }),
-)
 const dates = perLocale(
   (locale) =>
     new Intl.DateTimeFormat(locale, {
@@ -66,12 +62,6 @@ const dates = perLocale(
       day: "numeric",
     }),
 )
-
-/** "Nov 5", or "Nov 5, 2025" outside the current year. */
-export function formatShortDate(date: Date): string {
-  const thisYear = date.getFullYear() === new Date().getFullYear()
-  return (thisYear ? shortDates() : dates()).format(date)
-}
 
 /** "1h 52m", or "24m" under an hour. */
 export function formatRuntime(minutes: number | null): string | null {

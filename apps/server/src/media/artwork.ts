@@ -31,7 +31,7 @@ const RETRY_AFTER_MS = 10 * 60 * 1000
 
 const dir = join(env.dataDir, "artwork")
 
-export type ImageFormat = "jpg" | "png" | "webp"
+type ImageFormat = "jpg" | "png" | "webp"
 type Format = ImageFormat
 type Cached = { path: string; format: Format }
 

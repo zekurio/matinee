@@ -119,7 +119,7 @@ export function splitYear(name: string): {
 }
 
 /** "Season 02" reads as "Season 2", and season 0 as "Specials". */
-export function folderLabel(name: string): string {
+function folderLabel(name: string): string {
   const season = SEASON_FOLDER.exec(name.trim())
   if (season) {
     const n = Number(season[1])

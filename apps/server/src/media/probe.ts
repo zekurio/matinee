@@ -61,7 +61,7 @@ type ProbeJob = { id: string; relativePath: string }
  * library from crowding out playback. A job reads the row again, so a file
  * probed meanwhile isn't probed twice.
  */
-export const probes = defineQueue<ProbeJob, MediaProbe | null>({
+const probes = defineQueue<ProbeJob, MediaProbe | null>({
   id: "media-probe",
   name: "Media info",
   description: "Read the streams of new and changed files with ffprobe.",

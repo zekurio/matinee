@@ -22,7 +22,7 @@ const OVERDUE_DELAY_MS = 60_000
 // Node's timers can't wait longer than about 24.8 days.
 const MAX_TIMER_MS = 2 ** 31 - 1
 
-export type TaskContext = {
+type TaskContext = {
   /** Aborts when an admin cancels the run or the server shuts down. */
   signal: AbortSignal
   /** How far the run is, from 0 to 1. */

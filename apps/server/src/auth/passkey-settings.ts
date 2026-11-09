@@ -30,7 +30,7 @@ type Saved = Partial<PasskeySettings>
 let saved: Saved | null = null
 let loading: Promise<Saved> | null = null
 
-export function passkeyDefaults(): PasskeySettings {
+function passkeyDefaults(): PasskeySettings {
   return { enabled: env.MATINEE_PASSKEYS_ENABLED }
 }
 

@@ -3,7 +3,6 @@ import { isDeepStrictEqual } from "node:util"
 import {
   type TranscodingEnvironmentField,
   TranscodingSettings,
-  type TranscodingSettingsInput,
 } from "@matinee/contracts"
 import { setting } from "@matinee/db"
 import { eq } from "drizzle-orm"
@@ -123,7 +122,7 @@ export async function transcodingSettings(): Promise<TranscodingSettings> {
  * What differs from the defaults saves. An empty device field drops the
  * saved one, so the environment's applies.
  */
-function nextSaved(input: TranscodingSettingsInput): Saved {
+function nextSaved(input: TranscodingSettings): Saved {
   const next: Saved = { ...input }
   for (const key of DEVICE_FIELDS) {
     if (!input[key]) delete next[key]
@@ -147,7 +146,7 @@ async function write(next: Saved): Promise<void> {
 }
 
 export async function saveTranscoding(
-  input: TranscodingSettingsInput,
+  input: TranscodingSettings,
 ): Promise<TranscodingSettings> {
   const next = nextSaved(input)
   await write(next)

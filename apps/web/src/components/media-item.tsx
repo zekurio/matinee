@@ -268,7 +268,7 @@ export function CardText({
 }
 
 /** A link to a title's page. */
-export function TitleLink({
+function TitleLink({
   title,
   className,
   label,

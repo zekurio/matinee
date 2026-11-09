@@ -58,7 +58,7 @@ function WithServerStats({
 }
 
 /** No plays in the range: the first-run state for all time, else a nudge. */
-export function NoPlays({ range, onRange }: RangeProps) {
+function NoPlays({ range, onRange }: RangeProps) {
   if (range === "all") {
     return <StatsEmpty icon={SparklesIcon} title={tr("stats.server.empty")} />
   }

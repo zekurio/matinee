@@ -3,7 +3,7 @@ import { orpc } from "./rpc"
 // The contract's cap. Twelve posters fit side by side on a wide monitor,
 // which left nothing to scroll.
 export const SHELF = 24
-export const HERO_SLIDES = 6
+const HERO_SLIDES = 6
 
 /** Home's queries for what to watch, shared by the page and its prefetch. */
 export const homeQueries = {

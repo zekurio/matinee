@@ -59,7 +59,7 @@ export function useSourceRefs(store: PlayerStore, startAt: number | undefined) {
   }
 }
 
-export type SourceRefs = ReturnType<typeof useSourceRefs>
+type SourceRefs = ReturnType<typeof useSourceRefs>
 
 /** What the playback functions share. */
 export type PlaybackCore = {
@@ -102,10 +102,51 @@ export function playbackClock({ video, options, store }: PlaybackCore) {
   return { position, duration }
 }
 
+/**
+ * The quality to encode at, or null to stream the file as it is. Only an
+ * encode can burn a subtitle in or turn video the browser can't decode
+ * into video it can, so the original quality gets the one a failed file
+ * falls back to.
+ */
+function encodeQuality(
+  next: PlaybackQuality,
+  burnsIn: boolean,
+  options: PlaybackOptions,
+): PlaybackQuality | null {
+  if (next !== "original") return next
+  return burnsIn || !options.videoPlays
+    ? fallbackQuality(options.videoSize)
+    : null
+}
+
+/** Where a stream from `at` starts: the keyframe `snap` picks. */
+async function keyframeStart(
+  { video, options, refs }: Pick<PlaybackCore, "video" | "options" | "refs">,
+  at: number,
+  snap: "before" | "nearest",
+): Promise<number> {
+  // The file's start is a keyframe, so only a later point needs the lookup.
+  if (!options.videoSize || at <= 0) return at
+  // The lookup takes a moment. Hold the old source still meanwhile, rather
+  // than play on from where the viewer left it.
+  const el = video.current
+  if (el && !el.paused) {
+    refs.holding.current = true
+    el.pause()
+  }
+  try {
+    return pickStart(await options.keyframes(at), at, snap)
+  } catch {
+    // ffmpeg still starts decoding on the keyframe before `at`, and the
+    // stream hides what comes before it.
+    return at
+  }
+}
+
 /** Starting a stream or the file, from a point in it. */
 export function sourceStarters({ video, options, store, refs }: PlaybackCore) {
   const { setPending, setSource } = store.getState()
-  const { generation, seekOnLoad, playOnLoad, holding } = refs
+  const { generation, seekOnLoad, playOnLoad } = refs
 
   const startStream = async (
     at: number,
@@ -115,16 +156,8 @@ export function sourceStarters({ video, options, store, refs }: PlaybackCore) {
   ) => {
     const id = ++generation.current
     setPending(at)
-    // Only an encode can burn a subtitle in or turn video the browser can't
-    // decode into video it can, so the original quality gets the one a
-    // failed file falls back to.
     const { burnIn } = store.getState()
-    const encode =
-      next !== "original"
-        ? next
-        : burnIn !== null || !options.videoPlays
-          ? fallbackQuality(options.videoSize)
-          : null
+    const encode = encodeQuality(next, burnIn !== null, options)
     if (encode !== null) {
       // HLS seeks by itself, from where it loads.
       seekOnLoad.current = at
@@ -138,24 +171,7 @@ export function sourceStarters({ video, options, store, refs }: PlaybackCore) {
       })
       return
     }
-    let start = at
-    // The file's start is a keyframe, so only a later point needs the
-    // lookup.
-    if (options.videoSize && at > 0) {
-      // The lookup takes a moment. Hold the old source still meanwhile,
-      // rather than play on from where the viewer left it.
-      const el = video.current
-      if (el && !el.paused) {
-        holding.current = true
-        el.pause()
-      }
-      try {
-        start = pickStart(await options.keyframes(at), at, snap)
-      } catch {
-        // ffmpeg still starts decoding on the keyframe before `at`, and
-        // the stream hides what comes before it.
-      }
-    }
+    const start = await keyframeStart({ video, options, refs }, at, snap)
     if (id !== generation.current) return
     const current = store.getState().source
     setSource({

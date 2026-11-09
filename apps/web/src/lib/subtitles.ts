@@ -17,7 +17,7 @@ function subtitleLanguage(preferences: PlaybackPreferences): string {
  * Whether the player draws the track over whatever plays. A `burn-in`
  * track needs an encode of its own, so only the viewer's pick shows one.
  */
-export function drawable(track: SubtitleTrack): boolean {
+function drawable(track: SubtitleTrack): boolean {
   return track.delivery === "webvtt" || track.delivery === "pgs"
 }
 

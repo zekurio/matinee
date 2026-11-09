@@ -58,7 +58,7 @@ const audioCodec = sql<string>`coalesce((
   limit 1
 ), 'unknown')`
 
-export async function libraryTotals(): Promise<LibraryTotals> {
+async function libraryTotals(): Promise<LibraryTotals> {
   const [kinds, [files]] = await Promise.all([
     db.select({ kind: title.kind, n: count() }).from(title).groupBy(title.kind),
     db

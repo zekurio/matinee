@@ -19,7 +19,11 @@ import type { MediaItemRow } from "@matinee/db"
 
 import { env } from "../env"
 import { log } from "../log"
-import { buildDownloadAudio, encodableAudioCodecs } from "../transcode/audio"
+import {
+  buildDownloadAudio,
+  type DownloadAudioPipeline,
+  encodableAudioCodecs,
+} from "../transcode/audio"
 import { currentTranscoding } from "../transcode/capabilities"
 import {
   buildVideoPipeline,
@@ -41,6 +45,7 @@ import {
   type BurnInSource,
   burnInSource,
   listSubtitles,
+  type MuxSource,
   muxSource,
 } from "./subtitles"
 
@@ -57,7 +62,7 @@ import {
  * Seconds per segment. Longer than playback's, since nobody waits for the
  * first frame: fewer requests, and less lost when one breaks off.
  */
-export const DOWNLOAD_SEGMENT_S = 6
+const DOWNLOAD_SEGMENT_S = 6
 // Bump when the command changes in a way the arguments don't show.
 const FORMAT_VERSION = 1
 // MP4 headers and fragment boxes, on top of the streams.
@@ -76,7 +81,7 @@ export class DownloadSpecError extends Error {
  * reading the encoded video from `video`'s stdout when the video is
  * encoded.
  */
-export type MatroskaCommand = { video: string[] | null; mux: string[] }
+type MatroskaCommand = { video: string[] | null; mux: string[] }
 
 export type DownloadBuild = {
   /** Names the output: same key, same bytes. */
@@ -548,81 +553,13 @@ export async function buildDownload(
     // An encode comes from its own run as fragmented MP4: some encoders,
     // like AV1 on Intel GPUs, only describe the stream in its first frame,
     // which MP4 waits for and Matroska written as a stream can't.
-    let videoRun: string[] | null = null
-    if (part.mode === "encode") {
-      const pipeline = part.build(0)
-      videoRun = [
-        "-hide_banner",
-        "-loglevel",
-        "error",
-        "-nostdin",
-        ...pipeline.inputArgs,
-        "-i",
-        item.path,
-        ...subtitleInputArgs(burnIn),
-        ...videoMapArgs(video.index, pipeline),
-        ...pipeline.outputArgs,
-        "-map_metadata",
-        "-1",
-        "-copyts",
-        "-start_at_zero",
-        "-avoid_negative_ts",
-        "disabled",
-        "-max_muxing_queue_size",
-        "2048",
-        "-f",
-        "mp4",
-        // Not `delay_moov`: the reader then can't take it from a pipe, and
-        // MP4 waits for the first frame to describe AV1 anyway.
-        "-movflags",
-        "+empty_moov+frag_keyframe+default_base_moof",
-        "pipe:1",
-      ]
-    }
+    const videoRun =
+      part.mode === "encode"
+        ? encodedVideoRun(item.path, video.index, part.build(0), burnIn)
+        : null
     // The file is the second input after the encoded video, else the first.
     const file = videoRun ? 1 : 0
-    let nextInput = file + 1
-    const subtitleInputs = sources.flatMap(({ source }) =>
-      source.kind === "file"
-        ? [
-            ...(source.charset ? ["-sub_charenc", source.charset] : []),
-            // `-start_at_zero` moves every input to 0; this undoes it.
-            ...(source.startSeconds > 0
-              ? ["-itsoffset", source.startSeconds.toFixed(6)]
-              : []),
-            "-i",
-            source.path,
-          ]
-        : [],
-    )
-    const subtitleOutput = sources.flatMap(({ track, source }, i) => {
-      const from =
-        source.kind === "stream"
-          ? `${file}:${source.index}`
-          : `${nextInput++}:s:0`
-      const language = track.language ? iso639_2(track.language) : null
-      return [
-        "-map",
-        from,
-        `-c:s:${i}`,
-        // Matroska has no place for MP4's timed text.
-        source.kind === "stream" && source.codec === "mov_text"
-          ? "srt"
-          : "copy",
-        `-metadata:s:s:${i}`,
-        `title=${titleOf(track)}`,
-        ...(language ? [`-metadata:s:s:${i}`, `language=${language}`] : []),
-        // None shows until someone picks it, but players find forced ones.
-        `-disposition:s:${i}`,
-        track.forced ? "forced" : "0",
-      ]
-    })
-    // ASS draws with the fonts the file carries.
-    const fonts = sources.some(
-      ({ source }) =>
-        source.kind === "stream" &&
-        (source.codec === "ass" || source.codec === "ssa"),
-    )
+    const subtitleArgs = matroskaSubtitleArgs(sources, file)
     const mux = [
       "-hide_banner",
       "-loglevel",
@@ -631,29 +568,13 @@ export async function buildDownload(
       ...(videoRun ? ["-i", "pipe:0"] : []),
       "-i",
       item.path,
-      ...subtitleInputs,
+      ...subtitleArgs.inputs,
       ...(videoRun
         ? ["-map", "0:v:0", "-c:v", "copy", "-metadata:s:v:0", "title="]
         : // Matroska names codecs its own way; MP4's tags don't apply.
           ["-map", `0:${video.index}`, "-c:v", "copy"]),
-      ...audio.flatMap((track, i) => [
-        "-map",
-        `${file}:${track.stream.index}`,
-        ...track.pipeline.args,
-        ...(track.pipeline.filters.length > 0
-          ? [`-filter:a:${i}`, track.pipeline.filters.join(",")]
-          : []),
-        `-disposition:a:${i}`,
-        i === 0 ? "default" : "0",
-        ...(track.stream.language
-          ? [`-metadata:s:a:${i}`, `language=${track.stream.language}`]
-          : []),
-        ...(track.stream.title
-          ? [`-metadata:s:a:${i}`, `title=${track.stream.title}`]
-          : []),
-      ]),
-      ...subtitleOutput,
-      ...(fonts ? ["-map", `${file}:t?`, "-c:t", "copy"] : []),
+      ...matroskaAudioArgs(audio, file),
+      ...subtitleArgs.outputs,
       // The file's own tags go, but streams keep theirs: the fonts need
       // their names, and the tracks their titles.
       "-map_metadata:g",
@@ -790,4 +711,116 @@ function durationTag(seconds: number): string {
   const pad = (value: number) => String(value).padStart(2, "0")
   const fraction = (seconds - whole).toFixed(9).slice(2)
   return `${pad(Math.floor(whole / 3600))}:${pad(Math.floor(whole / 60) % 60)}:${pad(whole % 60)}.${fraction}`
+}
+
+/**
+ * The run that encodes a Matroska download's video, as fragmented MP4 on
+ * stdout.
+ */
+function encodedVideoRun(
+  path: string,
+  videoIndex: number,
+  pipeline: VideoPipeline,
+  burnIn: BurnInSource | null,
+): string[] {
+  return [
+    "-hide_banner",
+    "-loglevel",
+    "error",
+    "-nostdin",
+    ...pipeline.inputArgs,
+    "-i",
+    path,
+    ...subtitleInputArgs(burnIn),
+    ...videoMapArgs(videoIndex, pipeline),
+    ...pipeline.outputArgs,
+    "-map_metadata",
+    "-1",
+    "-copyts",
+    "-start_at_zero",
+    "-avoid_negative_ts",
+    "disabled",
+    "-max_muxing_queue_size",
+    "2048",
+    "-f",
+    "mp4",
+    // Not `delay_moov`: the reader then can't take it from a pipe, and
+    // MP4 waits for the first frame to describe AV1 anyway.
+    "-movflags",
+    "+empty_moov+frag_keyframe+default_base_moof",
+    "pipe:1",
+  ]
+}
+
+/** The audio tracks of a Matroska mux, read from input `file`. */
+function matroskaAudioArgs(
+  audio: readonly { stream: AudioStream; pipeline: DownloadAudioPipeline }[],
+  file: number,
+): string[] {
+  return audio.flatMap(({ stream, pipeline }, i) => [
+    "-map",
+    `${file}:${stream.index}`,
+    ...pipeline.args,
+    ...(pipeline.filters.length > 0
+      ? [`-filter:a:${i}`, pipeline.filters.join(",")]
+      : []),
+    `-disposition:a:${i}`,
+    i === 0 ? "default" : "0",
+    ...(stream.language
+      ? [`-metadata:s:a:${i}`, `language=${stream.language}`]
+      : []),
+    ...(stream.title ? [`-metadata:s:a:${i}`, `title=${stream.title}`] : []),
+  ])
+}
+
+/**
+ * The subtitles of a Matroska mux: the subtitle files to read after input
+ * `file`, and the maps for every track, the fonts after them.
+ */
+function matroskaSubtitleArgs(
+  sources: readonly { track: SubtitleTrack; source: MuxSource }[],
+  file: number,
+) {
+  let nextInput = file + 1
+  const inputs = sources.flatMap(({ source }) =>
+    source.kind === "file"
+      ? [
+          ...(source.charset ? ["-sub_charenc", source.charset] : []),
+          // `-start_at_zero` moves every input to 0; this undoes it.
+          ...(source.startSeconds > 0
+            ? ["-itsoffset", source.startSeconds.toFixed(6)]
+            : []),
+          "-i",
+          source.path,
+        ]
+      : [],
+  )
+  const outputs = sources.flatMap(({ track, source }, i) => {
+    const from =
+      source.kind === "stream"
+        ? `${file}:${source.index}`
+        : `${nextInput++}:s:0`
+    const language = track.language ? iso639_2(track.language) : null
+    return [
+      "-map",
+      from,
+      `-c:s:${i}`,
+      // Matroska has no place for MP4's timed text.
+      source.kind === "stream" && source.codec === "mov_text" ? "srt" : "copy",
+      `-metadata:s:s:${i}`,
+      `title=${titleOf(track)}`,
+      ...(language ? [`-metadata:s:s:${i}`, `language=${language}`] : []),
+      // None shows until someone picks it, but players find forced ones.
+      `-disposition:s:${i}`,
+      track.forced ? "forced" : "0",
+    ]
+  })
+  // ASS draws with the fonts the file carries.
+  const fonts = sources.some(
+    ({ source }) =>
+      source.kind === "stream" &&
+      (source.codec === "ass" || source.codec === "ssa"),
+  )
+  if (fonts) outputs.push("-map", `${file}:t?`, "-c:t", "copy")
+  return { inputs, outputs }
 }

@@ -46,7 +46,7 @@ export const useLanguageStore = create<LanguageState>()(
 )
 
 /** The language the interface shows for this device's choice. */
-export function chosenLocale(): string {
+function chosenLocale(): string {
   const { language } = useLanguageStore.getState()
   // A language that has since gone away falls back to the browser's.
   return LOCALES.includes(language) ? language : browserLocale()

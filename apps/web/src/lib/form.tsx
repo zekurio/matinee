@@ -16,8 +16,9 @@ import { type ComponentProps, type ReactNode, useId } from "react"
 
 import { translateKnown } from "@/i18n"
 
-export const { fieldContext, formContext, useFieldContext, useFormContext } =
+const { fieldContext, formContext, useFieldContext, useFormContext } =
   createFormHookContexts()
+export { useFieldContext }
 
 /**
  * The first message among a field's errors, in the interface's language.
@@ -35,7 +36,7 @@ export function firstError(
  * The message a field shows: its own validation once someone has left the
  * field or tried to submit, else a server error passed in.
  */
-export function useFieldMessage(serverError?: string | null) {
+function useFieldMessage(serverError?: string | null) {
   const field = useFieldContext<unknown>()
   const errors = useSelector(field.store, (state) => state.meta.errors)
   const blurred = useSelector(field.store, (state) => state.meta.isBlurred)
@@ -47,10 +48,7 @@ export function useFieldMessage(serverError?: string | null) {
   return own ?? serverError ?? undefined
 }
 
-/**
- * A labelled text input bound to its form field. The error replaces the
- * description while there is one.
- */
+// The error, while there is one, shows in place of the description.
 function TextField({
   label,
   description,

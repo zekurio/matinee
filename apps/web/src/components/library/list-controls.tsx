@@ -63,20 +63,20 @@ export type ListControlsProps = {
 }
 
 /** Filter, sort, and search beside the title, from `sm` up. */
-export function HeaderControls({
-  search,
-  setSearch,
-  label,
-  sorts,
-  sort,
-  setSort,
-  filters,
-}: ListControlsProps) {
+export function HeaderControls(props: ListControlsProps) {
   return (
     <>
-      {filters && <FilterMenu {...filters} />}
-      <SortSelect options={sorts} value={sort} onChange={setSort} />
-      <SearchBox value={search} onChange={setSearch} label={label} />
+      {props.filters && <FilterMenu {...props.filters} />}
+      <SortSelect
+        options={props.sorts}
+        value={props.sort}
+        onChange={props.setSort}
+      />
+      <SearchBox
+        value={props.search}
+        onChange={props.setSearch}
+        label={props.label}
+      />
     </>
   )
 }
@@ -86,20 +86,20 @@ export function HeaderControls({
  * The open search takes over the row; the search spotlight looks in every
  * library.
  */
-export function PhoneControls({
-  search,
-  setSearch,
-  label,
-  sorts,
-  sort,
-  setSort,
-  filters,
-}: ListControlsProps) {
+export function PhoneControls(props: ListControlsProps) {
   return (
     <>
-      <PhoneFilter value={search} onChange={setSearch} label={label} />
-      {filters && <FilterMenu {...filters} compact />}
-      <SortMenu options={sorts} value={sort} onChange={setSort} />
+      <PhoneFilter
+        value={props.search}
+        onChange={props.setSearch}
+        label={props.label}
+      />
+      {props.filters && <FilterMenu {...props.filters} compact />}
+      <SortMenu
+        options={props.sorts}
+        value={props.sort}
+        onChange={props.setSort}
+      />
     </>
   )
 }

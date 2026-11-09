@@ -47,11 +47,7 @@ export function notFound(message: string): ORPCError<"NOT_FOUND", unknown> {
   return new ORPCError("NOT_FOUND", { message })
 }
 
-export function conflict(message: string): ORPCError<"CONFLICT", unknown> {
-  return new ORPCError("CONFLICT", { message })
-}
-
-export const PASSKEYS_OFF = "Passkeys are turned off on this server."
+const PASSKEYS_OFF = "Passkeys are turned off on this server."
 
 /** Refuse a passkey procedure while an admin has passkeys off. */
 export async function requirePasskeys(): Promise<void> {

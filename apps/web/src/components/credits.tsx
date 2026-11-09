@@ -27,7 +27,7 @@ export function creditLabel(kind: CreditKind, count = 1): string {
 }
 
 /** "A, B, and C", for names in running text. */
-export const conjunctionList = perLocale(
+const conjunctionList = perLocale(
   (locale) => new Intl.ListFormat(locale, { type: "conjunction" }),
 )
 

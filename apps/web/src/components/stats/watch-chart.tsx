@@ -7,7 +7,7 @@ import { bucketName } from "@/lib/stats"
 import { BucketBars, niceCeiling } from "./bucket-bars"
 
 /** The chart's heading: "Watch time per day". */
-export function watchChartTitle(unit: StatsUnit): string {
+function watchChartTitle(unit: StatsUnit): string {
   return tr(`stats.chart.title.${unit}`)
 }
 
