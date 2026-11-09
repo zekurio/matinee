@@ -96,8 +96,12 @@ fun DownloadFilesSheet(files: FileSet, onDismiss: () -> Unit) {
             val name = files.season?.let { stringResource(R.string.title_season_of, files.title.name, seasonName(it.number, res)) }
                 ?: files.title.name
             Column(Modifier.padding(horizontal = 20.dp)) {
-                Text(stringResource(R.string.downloads_sheet_title), style = MaterialTheme.typography.titleLarge)
-                Text(name, style = MaterialTheme.typography.bodyMedium, color = Palette.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    stringResource(R.string.downloads_sheet_title_named, name),
+                    style = MaterialTheme.typography.titleLarge,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
             Gap(12.dp)
             val list = items
@@ -118,7 +122,7 @@ fun DownloadFilesSheet(files: FileSet, onDismiss: () -> Unit) {
                         if (missing.isNotEmpty()) res.getQuantityString(R.plurals.downloads_all_files, missing.size, missing.size) else null,
                         if (have > 0) res.getQuantityString(R.plurals.downloads_all_have, have, have) else null,
                     ).joinToString(" · ").ifEmpty { stringResource(R.string.downloads_all_empty) }
-                    Text(summary, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(horizontal = 20.dp))
+                    Text(summary, style = MaterialTheme.typography.bodyMedium, color = Palette.Muted, modifier = Modifier.padding(horizontal = 20.dp))
                     if (missing.isNotEmpty()) {
                         Gap(4.dp)
                         CHOICES.forEach { choice ->
@@ -166,9 +170,10 @@ fun DownloadFilesSheet(files: FileSet, onDismiss: () -> Unit) {
 }
 
 /** About how much [choice] puts on the device for [items], or nothing when it can't tell. */
+@Composable
 private fun batchSize(downloads: Downloads, choice: Choice, items: List<MediaItem>): String? = when (choice) {
     Choice.Original -> formatBytes(items.sumOf { it.sizeBytes })
     is Choice.Device -> items.mapNotNull { downloads.estimateBytes(it, choice.preset) }
         .takeIf { it.isNotEmpty() }
-        ?.let { "~" + formatBytes(it.sum()) }
+        ?.let { stringResource(R.string.downloads_about, formatBytes(it.sum())) }
 }

@@ -138,14 +138,15 @@ fun DownloadSheet(item: MediaItem, onDismiss: () -> Unit) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(vertical = 16.dp)) {
             val (primary, secondary) = names(item)
             Column(Modifier.padding(horizontal = 20.dp)) {
-                Text(stringResource(R.string.downloads_sheet_title), style = MaterialTheme.typography.titleLarge)
                 Text(
-                    listOfNotNull(primary, secondary).joinToString(" · "),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Palette.Muted,
-                    maxLines = 1,
+                    stringResource(R.string.downloads_sheet_title_named, primary),
+                    style = MaterialTheme.typography.titleLarge,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
+                if (secondary != null) {
+                    Text(secondary, style = MaterialTheme.typography.bodyMedium, color = Palette.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
             }
             Gap(12.dp)
             when {
@@ -240,7 +241,7 @@ private fun ChoiceRow(choice: Choice, plan: DownloadPlan?, source: DownloadSourc
         ).joinToString(" · ")
         is Choice.Device -> plan?.let {
             listOfNotNull(
-                "~" + formatBytes(it.estimatedBytes),
+                stringResource(R.string.downloads_about, formatBytes(it.estimatedBytes)),
                 "${it.video.height}p ${videoCodecName(it.video.codec)}",
             ).joinToString(" · ")
         } ?: stringResource(R.string.downloads_choice_unavailable)
