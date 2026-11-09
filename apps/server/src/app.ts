@@ -2,7 +2,12 @@ import { readFile } from "node:fs/promises"
 import { join, resolve } from "node:path"
 
 import { serveStatic } from "@hono/node-server/serve-static"
-import { OPENAPI_PATH, OPENAPI_SPEC_PATH, RPC_PATH } from "@matinee/contracts"
+import {
+  HEALTH_PATH,
+  OPENAPI_PATH,
+  OPENAPI_SPEC_PATH,
+  RPC_PATH,
+} from "@matinee/contracts"
 import type { OpenAPIHandler } from "@orpc/openapi/fetch"
 import { type HTTPPath, onError } from "@orpc/server"
 import { RPCHandler } from "@orpc/server/fetch"
@@ -20,7 +25,7 @@ import { downloadRoutes } from "./media/download-routes"
 import { streamRoutes } from "./media/stream"
 import type { RpcContext } from "./rpc/base"
 import { logError } from "./rpc/errors"
-import { openapi, openapiSpec } from "./rpc/openapi"
+import { contractFingerprint, openapi, openapiSpec } from "./rpc/openapi"
 import { router } from "./rpc/router"
 
 const rpc = new RPCHandler(router, { interceptors: [onError(logError)] })
@@ -58,7 +63,9 @@ export function createApp() {
   )
 
   app.use("/api/*", compressJson)
-  app.get("/api/health", (c) => c.json({ ok: true }))
+  app.get(HEALTH_PATH, async (c) =>
+    c.json({ ok: true, contract: await contractFingerprint() }),
+  )
   app.route("/api/auth/oidc", oidcRoutes)
   app.route("/api/auth/app", appRoutes)
   app.route("/api/media", streamRoutes)

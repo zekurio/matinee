@@ -35,6 +35,12 @@ the token they get from one of the sign-ins in
 [Signing in apps](#signing-in-apps). Errors come back as JSON with `code`,
 `status`, and `message`.
 
+`/api/health` answers `{ "ok": true, "contract": "…" }` without a session.
+`contract` is a hash of the REST API's paths and schemas, and the OpenAPI
+document carries the same one as its `info.version`. A generated client
+keeps the one it was generated from, so it can tell a server of another
+version from one that answers nonsense.
+
 ## Development
 
 Needs Node 24 and pnpm 11. With [devenv](https://devenv.sh) and direnv, `cd`
@@ -350,9 +356,12 @@ only what follows. Matroska's millisecond timestamps leave the decode
 after a seek up to half of one off; frames lie on a fixed grid from the
 start, so the server snaps to it, and for TrueHD, whose frames are
 shorter than that, it encodes each candidate and compares it with the
-last segment. Runs go
-through the Downloads queue under Settings → Jobs, two at a time by
-default. A download nobody fetched from for
+last segment. Runs go through two queues under Settings → Jobs. Download
+encodes runs two at a time by default, for downloads whose video is
+encoded, each of which takes an encoder as a stream does. Download copies
+runs four, for downloads that keep their video, which read the file,
+convert at most the audio, and mostly wait for their client. So a copy
+never waits behind an encode. A download nobody fetched from for
 `MATINEE_TRANSCODE_CACHE_HOURS` is deleted.
 
 Browsers save it as one stream from `downloadFilePath()`, which can't
@@ -360,6 +369,16 @@ resume. Apps fetch `downloadInitPath()` and then `downloadSegmentPath()`
 from 0 until it answers 204, and after a break ask for the first segment
 they don't have. If the file or the transcoding settings changed in
 between, the server answers 409, and the download starts over.
+
+No request waits in silence for long, since proxies and HTTP clients cut
+a quiet connection after a minute or so. A request for a segment that
+isn't made within 25 seconds answers 503 with Retry-After, whether the
+run is still at it or waits for its turn in the queue, and the client
+asks again; a download keeps its place in the queue while its client asks
+at least every half minute. The whole file as one stream answers 503 the
+same way when its run got no turn in that time, before anything is sent,
+so a browser shows a download that failed and can be tried again rather
+than one that hangs.
 
 ## Transcoding and ffmpeg
 

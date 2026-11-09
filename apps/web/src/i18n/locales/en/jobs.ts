@@ -31,11 +31,14 @@ export default defineMessages("jobs", {
   "jobs.queue.avatars.name": "Profile pictures",
   "jobs.queue.avatars.description":
     "Crop and scale uploads and the pictures sign-in providers send.",
-  "jobs.queue.downloads.name": "Downloads",
+  "jobs.queue.downloads.name": "Download encodes",
   "jobs.queue.downloads.description":
-    "Make the versions of files that apps download to watch offline, while they fetch them.",
+    "Encode the video of downloads in another size or codec, while the app or browser fetches them.",
   "jobs.queue.downloads.note":
-    "Downloads converted at once. Each one uses an encoder as a stream would; raise it if the server keeps up.",
+    "Downloads encoded at once. Each one uses an encoder as a stream would; raise it if the server keeps up.",
+  "jobs.queue.download-copies.name": "Download copies",
+  "jobs.queue.download-copies.description":
+    "Put together downloads that keep their video as it is, while the app or browser fetches them.",
 
   // A queue's row, joined with " · ".
   "jobs.queue.running": "{active} of {concurrency} running",

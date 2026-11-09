@@ -6,9 +6,9 @@ import {
   accessDownload,
   downloadInit,
   downloadSegment,
-  downloadStream,
   fileBody,
   matroskaStream,
+  openDownloadStream,
 } from "./downloads"
 
 /*
@@ -18,8 +18,12 @@ import {
  */
 export const downloadRoutes = new Hono()
 
-// When a request that waited on the encode gave up, or the queue is full.
-const RETRY_AFTER_S = "5"
+// With 503. The request waited as long as one may, for a segment or for
+// its run's turn, and the next one waits again, so ask again right away.
+const RETRY_BUSY_S = "1"
+// A run just failed, or the cause isn't known: the server pauses before
+// it tries again, and a client that asked at once would only hear this.
+const RETRY_LATER_S = "5"
 
 const FileQuery = t.object({
   from: t.coerce.number().int().nonnegative().$default(0),
@@ -44,18 +48,18 @@ downloadRoutes.get("/:id/file.mp4", async (c) => {
   const matroska = active.record.spec.container === "mkv"
   // A Matroska file is one run, from the start.
   if (matroska && query.data.from > 0) return c.body(null, 416)
-  return c.body(
-    matroska
-      ? matroskaStream(active, c.req.raw.signal)
-      : downloadStream(active, query.data.from, c.req.raw.signal),
-    200,
-    {
-      "Content-Type": matroska ? "video/x-matroska" : "video/mp4",
-      "Content-Disposition": attachment(active.record.fileName),
-      "Cache-Control": "no-store",
-      "X-Matinee-Duration": String(active.record.plan.durationSeconds),
-    },
-  )
+  const body = matroska
+    ? await matroskaStream(active, c.req.raw.signal)
+    : await openDownloadStream(active, query.data.from, c.req.raw.signal)
+  // No turn in the queue yet, or the last run just failed. Said now,
+  // rather than held open with nothing to send.
+  if (!body) return c.body(null, 503, { "Retry-After": RETRY_LATER_S })
+  return c.body(body, 200, {
+    "Content-Type": matroska ? "video/x-matroska" : "video/mp4",
+    "Content-Disposition": attachment(active.record.fileName),
+    "Cache-Control": "no-store",
+    "X-Matinee-Duration": String(active.record.plan.durationSeconds),
+  })
 })
 
 /** A download's init segment; see `downloadInitPath`. */
@@ -69,7 +73,7 @@ downloadRoutes.get("/:id/init.mp4", async (c) => {
   if (access.active.record.spec.container === "mkv") return c.body(null, 404)
   const path = await downloadInit(access.active, c.req.raw.signal)
   if (!path) {
-    return c.body(null, 503, { "Retry-After": RETRY_AFTER_S })
+    return c.body(null, 503, { "Retry-After": RETRY_LATER_S })
   }
   return c.body(fileBody(access.active, path), 200, {
     "Content-Type": "video/mp4",
@@ -98,8 +102,9 @@ downloadRoutes.get("/:id/:name", async (c) => {
     case "end":
       return c.body(null, 204, { "Cache-Control": "no-store" })
     case "busy":
+      return c.body(null, 503, { "Retry-After": RETRY_BUSY_S })
     case "failed":
-      return c.body(null, 503, { "Retry-After": RETRY_AFTER_S })
+      return c.body(null, 503, { "Retry-After": RETRY_LATER_S })
     case "skipped":
       return c.body(null, 416)
     case "changed":

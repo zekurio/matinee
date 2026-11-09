@@ -17,6 +17,7 @@ export const JOB_QUEUE_IDS = [
   "subtitles",
   "avatars",
   "downloads",
+  "download-copies",
 ] as const
 export const JobQueueId = t.enum(JOB_QUEUE_IDS)
 export type JobQueueId = t.infer<typeof JobQueueId>

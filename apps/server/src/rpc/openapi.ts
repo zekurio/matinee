@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto"
+
 import {
   ActivityCell,
   AdminAuthSettings,
@@ -337,29 +339,58 @@ const commonSchemas = {
 
 let spec: ReturnType<OpenAPIGenerator["generate"]> | null = null
 
-/** The OpenAPI document, built on first request. */
+/**
+ * The OpenAPI document, built on first request. Its `info.version` is the
+ * contract's fingerprint: a hash of the paths and schemas, which leaves
+ * out where the server runs, so every server of one build has the same.
+ */
 export function openapiSpec(): ReturnType<OpenAPIGenerator["generate"]> {
-  spec ??= new OpenAPIGenerator({ schemaConverters }).generate(procedures, {
-    info: {
-      title: "Matinee",
-      version: "1",
-      description:
-        "Errors answer with a JSON body of `code`, `status`, and `message`. " +
-        "The message is meant for the user.",
-    },
-    commonSchemas,
-    servers: [{ url: `${env.PUBLIC_URL}${OPENAPI_PATH}` }],
-    components: {
-      // `authed` in base.ts refers to these by name.
-      securitySchemes: {
-        bearer: {
-          type: "http",
-          scheme: "bearer",
-          description: "A session token, for clients without cookies.",
-        },
-        cookie: { type: "apiKey", in: "cookie", name: SESSION_COOKIE },
+  spec ??= new OpenAPIGenerator({ schemaConverters })
+    .generate(procedures, {
+      info: {
+        title: "Matinee",
+        version: "",
+        description:
+          "Errors answer with a JSON body of `code`, `status`, and `message`. " +
+          "The message is meant for the user. `info.version` names the " +
+          "contract: a hash of the paths and schemas, which the server's " +
+          "health route answers with too.",
       },
-    },
-  })
+      commonSchemas,
+      servers: [{ url: `${env.PUBLIC_URL}${OPENAPI_PATH}` }],
+      components: {
+        // `authed` in base.ts refers to these by name.
+        securitySchemes: {
+          bearer: {
+            type: "http",
+            scheme: "bearer",
+            description: "A session token, for clients without cookies.",
+          },
+          cookie: { type: "apiKey", in: "cookie", name: SESSION_COOKIE },
+        },
+      },
+    })
+    .then((document) => {
+      const version = createHash("sha256")
+        .update(
+          JSON.stringify({
+            paths: document.paths,
+            schemas: document.components?.schemas,
+          }),
+        )
+        .digest("hex")
+        .slice(0, 16)
+      return { ...document, info: { ...document.info, version } }
+    })
   return spec
+}
+
+/**
+ * A short name for the contract this server speaks, see `HEALTH_PATH`. A
+ * client generated from a document that names another one talks to
+ * another version of the server, older or newer.
+ */
+export async function contractFingerprint(): Promise<string> {
+  const document = await openapiSpec()
+  return document.info.version
 }

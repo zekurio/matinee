@@ -12,6 +12,19 @@ export const OPENAPI_PATH = "/api/v1"
 /** The OpenAPI 3.1 document that describes the REST API. */
 export const OPENAPI_SPEC_PATH = `${OPENAPI_PATH}/openapi.json`
 
+/**
+ * Whether a server is there and which contract it speaks, without a
+ * session: `{ "ok": true, "contract": "…" }`. `contract` is a hash of the
+ * REST API's paths and schemas, the same as the `info.version` of the
+ * OpenAPI document. A client generated from a document keeps the one it
+ * was generated from. Against a server that names another, an answer the
+ * client can't read means the two are different versions, older or newer,
+ * rather than that the server is broken. A server from before this has no
+ * `contract`. This answer keeps its shape, so any version of a client
+ * reads any version of it.
+ */
+export const HEALTH_PATH = "/api/health"
+
 /** Byte-range video stream of one media item. */
 export function mediaStreamPath(id: string): string {
   return `/api/media/${encodeURIComponent(id)}/stream`
@@ -113,18 +126,22 @@ function downloadBase(downloadId: string): string {
 }
 
 /**
- * A download from `downloads.start` as one fragmented MP4 stream: the
- * init segment, then every segment in order, written as the server makes
- * them. A browser saves it as a file. There's no length and no byte
- * ranges, since the size is only known at the end; clients that resume
- * fetch the segments themselves instead. While the server works on a
- * segment, empty `free` boxes keep the line busy; players skip them.
+ * A download from `downloads.start` as one stream, which a browser saves
+ * as a file: Matroska, or fragmented MP4 with the init segment first and
+ * then every segment in order, as the server makes them. There's no
+ * length and no byte ranges, since the size is only known at the end;
+ * clients that resume fetch an MP4's segments themselves instead. While
+ * the server works on an MP4's segment, empty `free` boxes keep the line
+ * busy; players skip them.
  *
- * `from` starts at that segment and leaves out the init segment, for a
- * client that has the ones before it. 404 once the download is gone; 409
- * when the file or the server's settings changed since it started, so it
- * has to start over. The stream breaks off, rather than ends, when the
- * server can't make the rest.
+ * `from` starts an MP4 at that segment and leaves out the init segment,
+ * for a client that has the ones before it. 404 once the download is
+ * gone; 409 when the file or the server's settings changed since it
+ * started, so it has to start over. 503 with Retry-After when the server
+ * is making as many downloads as it does at once and had no turn for
+ * this one within half a minute: nothing was sent, so ask again. Once it
+ * started, the stream breaks off, rather than ends, when the server can't
+ * make the rest.
  */
 export function downloadFilePath(downloadId: string, from = 0): string {
   const path = `${downloadBase(downloadId)}/file.mp4`
@@ -133,7 +150,8 @@ export function downloadFilePath(downloadId: string, from = 0): string {
 
 /**
  * A download's init segment: the MP4 header the segments follow. A file
- * of it and the segments in order, appended, plays as one MP4.
+ * of it and the segments in order, appended, plays as one MP4. It answers
+ * as a segment does, 503 with Retry-After included.
  */
 export function downloadInitPath(downloadId: string): string {
   return `${downloadBase(downloadId)}/init.mp4`
@@ -141,19 +159,23 @@ export function downloadInitPath(downloadId: string): string {
 
 /**
  * One segment of a download, from 0 on. The request waits while the
- * server makes it. Fetch them in order: segments behind the newest one
- * asked for are deleted. Headers say where it is in the video:
- * `X-Matinee-Segment-Start` and `X-Matinee-Segment-End` in seconds, and
- * `X-Matinee-Last-Segment: 1` on the last one when the server knows it is.
- * A segment past the end answers 204, so a client fetches until then.
+ * server makes it, for half a minute at most. Fetch them in order:
+ * segments behind the newest one asked for are deleted. Headers say
+ * where it is in the video: `X-Matinee-Segment-Start` and
+ * `X-Matinee-Segment-End` in seconds, and `X-Matinee-Last-Segment: 1` on
+ * the last one when the server knows it is. A segment past the end
+ * answers 204, so a client fetches until then.
  *
- * 503 with Retry-After while the server is busy with other downloads or
- * couldn't make the segment yet; 404 once the download is gone; 409 when
- * the file or the server's settings changed since it started. A download
- * that keeps the video as it is cuts at the source's keyframes, so it
- * only goes forward: 416 for a segment past the next one it can make. To
- * resume after a break, ask for the first segment the client doesn't
- * have.
+ * 503 with Retry-After when the segment isn't made yet: the server is
+ * still at it, the download waits for its turn among the others, or a run
+ * just failed. It isn't a failure of the download. Ask again after
+ * Retry-After, as often as it takes; a download that waits for its turn
+ * keeps its place while its client asks at least every half minute. 404
+ * once the download is gone; 409 when the file or the server's settings
+ * changed since it started. A download that keeps the video as it is cuts
+ * at the source's keyframes, so it only goes forward: 416 for a segment
+ * past the next one it can make. To resume after a break, ask for the
+ * first segment the client doesn't have.
  */
 export function downloadSegmentPath(
   downloadId: string,

@@ -23,7 +23,7 @@ import { and, eq } from "drizzle-orm"
 
 import { db } from "../db"
 import { env } from "../env"
-import { defineQueue } from "../jobs/queue"
+import { defineQueue, type Queue } from "../jobs/queue"
 import { log } from "../log"
 import { trackStream } from "../stats/sessions"
 import { fragmentTracks, type InitTrack, initTracks, readMoofs } from "./bmff"
@@ -58,8 +58,14 @@ import { keyframesNear } from "./playback"
  * When the client goes away, the run stops. When it comes back for the
  * next segment, a new run starts there: an encode starts on its segment
  * grid, a copy on the keyframe the segment starts with, which the times
- * say. Runs go through a queue, so only a few encode at once. A run that
- * gets far ahead of the client pauses until it catches up.
+ * say. Runs go through two queues, so only a few encode at once, and a
+ * download that keeps its video never waits behind one that encodes. A
+ * run that gets far ahead of the client pauses until it catches up.
+ *
+ * No request waits in silence for long. One for a segment answers that
+ * the server is busy after `REQUEST_WAIT_MS`, and the client asks again.
+ * One for the whole file gets its first bytes or the same answer by
+ * then, unless its run is under way and only slow.
  */
 
 const ID = /^[0-9a-f-]{36}$/i
@@ -71,8 +77,12 @@ const ORPHAN_MS = 30_000
 // A download nobody fetched from in this long leaves memory; its
 // directory stays for the sweep.
 const FORGET_MS = 5 * 60_000
-// Longest a request waits for its segment.
-const SEGMENT_WAIT_MS = 2 * 60_000
+// Longest a request waits before it answers that the server is busy: for
+// a segment a run hasn't made yet, or for a run's turn in its queue.
+// Shorter than the timeouts of proxies and HTTP clients, a minute by
+// default in most, so the client hears it from the server and asks again
+// rather than have its connection cut. Asking again keeps its place.
+const REQUEST_WAIT_MS = 25_000
 // After a run fails without writing a segment, don't start another this soon.
 const FAILURE_BACKOFF_MS = 10_000
 // A request this many segments past what an encode wrote starts a run there.
@@ -132,6 +142,8 @@ type Times = {
 }
 
 type Run = {
+  /** The queue it waits or runs in. */
+  queue: RunQueue
   /** The first segment it writes. */
   first: number
   /** Where in the file it starts. */
@@ -192,32 +204,67 @@ function root(): string {
 }
 
 type RunJob = {
-  downloadId: string
+  /**
+   * What the queue tells jobs apart by: the download for a run that
+   * writes its segments, of which it has one at a time, and the request
+   * for a stream of the whole file.
+   */
+  key: string
   label: string
   launch: (signal: AbortSignal) => Promise<void>
 }
 
+type RunQueue = Queue<RunJob, void>
+
+/** What the two queues of runs share. A run holds its slot until it ends. */
+const runQueue = {
+  key: (job: RunJob) => job.key,
+  label: (job: RunJob) => job.label,
+  failure: (job: RunJob) => `Couldn't make a download of ${job.label}`,
+  // A new run waits for the one it replaces to exit.
+  joinsRunning: () => false,
+  run: (job: RunJob, { signal }: { signal: AbortSignal }) => job.launch(signal),
+}
+
 /**
- * The ffmpeg runs of downloads. A run holds its slot until it ends: at
- * the end of the file, or once its client went away.
+ * The runs that encode a download's video. An encode holds its slot until
+ * it ends: at the end of the file, or once its client went away.
  */
-const downloadRuns = defineQueue<RunJob, void>({
+const encodeRuns: RunQueue = defineQueue<RunJob, void>({
   id: "downloads",
-  name: "Downloads",
+  name: "Download encodes",
   description:
-    "Make the versions of files that apps download to watch offline, while they fetch them.",
+    "Encode the video of downloads in another size or codec, while the app or browser fetches them.",
   concurrency: 2,
   tuning: {
     max: 8,
-    note: "Downloads converted at once. Each one uses an encoder as a stream would; raise it if the server keeps up.",
+    note: "Downloads encoded at once. Each one uses an encoder as a stream would; raise it if the server keeps up.",
   },
-  key: (job) => job.downloadId,
-  label: (job) => job.label,
-  failure: (job) => `Couldn't make a download of ${job.label}`,
-  // A new run waits for the one it replaces to exit.
-  joinsRunning: () => false,
-  run: (job, { signal }) => job.launch(signal),
+  ...runQueue,
 })
+
+/**
+ * The runs that keep the video as it is. They read the file, convert at
+ * most its audio, and spend most of their time waiting for their client,
+ * so more of them run at once, and none waits behind an encode.
+ */
+const copyRuns: RunQueue = defineQueue<RunJob, void>({
+  id: "download-copies",
+  name: "Download copies",
+  description:
+    "Put together downloads that keep their video as it is, while the app or browser fetches them.",
+  concurrency: 4,
+  tuning: {
+    max: 16,
+    note: "Downloads copied at once. A copy reads the file and converts at most its audio; raise it if the disks keep up.",
+  },
+  ...runQueue,
+})
+
+/** The queue a download's runs go through. */
+function runsOf(build: DownloadBuild): RunQueue {
+  return build.copyVideo ? copyRuns : encodeRuns
+}
 
 function live(run: Run | null): run is Run {
   return run !== null && !run.exited && !run.stopping
@@ -477,7 +524,7 @@ function stopRun(active: Active): void {
   if (!run || run.stopping) return
   run.stopping = true
   if (run.child) run.child.kill("SIGKILL")
-  else downloadRuns.cancel(active.record.id)
+  else run.queue.cancel(active.record.id)
   active.run = null
   notify(active)
 }
@@ -759,8 +806,14 @@ async function launch(
   })
 }
 
-function startRun(active: Active, first: number, startSeconds: number): void {
+function startRun(
+  active: Active,
+  build: DownloadBuild,
+  first: number,
+  startSeconds: number,
+): void {
   const run: Run = {
+    queue: runsOf(build),
     first,
     startSeconds,
     head: first - 1,
@@ -774,9 +827,9 @@ function startRun(active: Active, first: number, startSeconds: number): void {
   }
   active.run = run
   ensureTimer(active)
-  downloadRuns
+  run.queue
     .run({
-      downloadId: active.record.id,
+      key: active.record.id,
       label: active.label,
       launch: (signal) => launch(active, run, signal),
     })
@@ -871,7 +924,7 @@ async function produce(
   // Someone else may have started one while the keyframes were looked up.
   // Nothing may wait between this and starting the run.
   if (active.run || active.changed) return "ok"
-  startRun(active, first, seconds)
+  startRun(active, build, first, seconds)
   return "ok"
 }
 
@@ -1012,7 +1065,7 @@ export type SegmentResult =
     }
   /** Past the last segment. */
   | { kind: "end" }
-  /** Not made in time, or the queue is full: try again soon. */
+  /** Not made in time, or waiting for its turn: ask again right away. */
   | { kind: "busy" }
   /** The last run failed; the next try waits a few seconds. */
   | { kind: "failed" }
@@ -1025,7 +1078,7 @@ export function downloadSegment(
   active: Active,
   segment: number,
   signal: AbortSignal,
-  waitMs = SEGMENT_WAIT_MS,
+  waitMs = REQUEST_WAIT_MS,
 ): Promise<SegmentResult> {
   return using(active, async () => {
     moveTo(active, segment)
@@ -1079,7 +1132,7 @@ export function downloadSegment(
 export function downloadInit(
   active: Active,
   signal: AbortSignal,
-  waitMs = SEGMENT_WAIT_MS,
+  waitMs = REQUEST_WAIT_MS,
 ): Promise<string | null> {
   return using(active, async () => {
     const deadline = Date.now() + waitMs
@@ -1197,7 +1250,7 @@ export function fileBody(
  * download can't be made, so a client never takes a cut-off file for a
  * whole one.
  */
-export function downloadStream(
+function downloadStream(
   active: Active,
   from: number,
   signal: AbortSignal,
@@ -1325,6 +1378,33 @@ export function downloadStream(
   })
 }
 
+/** Whether a run of the download has its turn and is at work. */
+function working(active: Active): boolean {
+  const run = active.run
+  return live(run) && run.child !== null
+}
+
+/**
+ * `downloadStream`, once its first bytes are on their way. Null when the
+ * server can't start it now: its run waits for a turn, or the last one
+ * just failed. Nothing may go out before the init segment, so a download
+ * that waited there would be a connection with nothing on it, which a
+ * proxy cuts and nobody can tell from a broken one.
+ */
+export async function openDownloadStream(
+  active: Active,
+  from: number,
+  signal: AbortSignal,
+): Promise<ReadableStream<Uint8Array> | null> {
+  // From a later segment on, keepalives go out while it waits.
+  if (from === 0) {
+    const init = await downloadInit(active, signal)
+    // A run that has its turn gets there; a slow encode only takes longer.
+    if (!init && !working(active)) return null
+  }
+  return downloadStream(active, from, signal)
+}
+
 /** Exits with its code once `child` ends, or rejects when it can't start. */
 function exited(child: ChildProcess): Promise<number | null> {
   return new Promise((resolve, reject) => {
@@ -1349,12 +1429,23 @@ function keepStderr(child: ChildProcess, lines: string[]): void {
  * It errors, rather than ends, when a run fails, so a client never takes
  * a cut-off file for a whole one. Nothing of it stays on disk, so it
  * can't resume.
+ *
+ * Null when the queue gave it no slot within `waitMs`: Matroska has
+ * nothing to send while it waits, so the request answers that the server
+ * is busy instead. Each request is a job of its own, so a second one for
+ * the same download neither waits for the first nor stops it.
  */
-export function matroskaStream(
+export async function matroskaStream(
   active: Active,
   signal: AbortSignal,
-): ReadableStream<Uint8Array> {
+  waitMs = REQUEST_WAIT_MS,
+): Promise<ReadableStream<Uint8Array> | null> {
+  if (!active.build) return null
+  const queue = runsOf(active.build)
+  const key = `${active.record.id}:${randomUUID()}`
   const children: ChildProcess[] = []
+  // True once the queue gives the run its turn, false once it never will.
+  const turn = Promise.withResolvers<boolean>()
   let released = false
   const kill = () => {
     for (const child of children) child.kill("SIGKILL")
@@ -1366,14 +1457,22 @@ export function matroskaStream(
     active.seenAt = Date.now()
     kill()
   }
+  /** The client left, or stopped waiting: out of the queue too. */
+  const leave = () => {
+    release()
+    queue.cancel(key)
+    turn.resolve(false)
+  }
   active.users++
-  signal.addEventListener("abort", release, { once: true })
+  signal.addEventListener("abort", leave, { once: true })
 
   /** The runs, writing into `controller` until they end. */
   const launch = async (
     controller: ReadableStreamDefaultController<Uint8Array>,
     queueSignal: AbortSignal,
   ): Promise<void> => {
+    if (released || queueSignal.aborted) return
+    turn.resolve(true)
     const build = await check(active)
     const command = build?.matroska ? await build.matroska() : null
     if (!command) throw new Error("The download changed.")
@@ -1426,16 +1525,17 @@ export function matroskaStream(
     }
   }
 
-  return new ReadableStream<Uint8Array>(
+  const stream = new ReadableStream<Uint8Array>(
     {
       start(controller) {
-        downloadRuns
+        queue
           .run({
-            downloadId: active.record.id,
+            key,
             label: active.label,
             launch: (queueSignal) => launch(controller, queueSignal),
           })
           .catch((cause: unknown) => {
+            turn.resolve(false)
             if (released) return
             release()
             controller.error(cause)
@@ -1444,11 +1544,17 @@ export function matroskaStream(
       pull() {
         for (const child of children) child.stdout?.resume()
       },
-      cancel: release,
+      cancel: leave,
     },
     // About a megabyte of ffmpeg's 64 KiB reads.
     new CountQueuingStrategy({ highWaterMark: 16 }),
   )
+  const timer = setTimeout(() => turn.resolve(false), waitMs)
+  const started = await turn.promise
+  clearTimeout(timer)
+  if (started) return stream
+  leave()
+  return null
 }
 
 /** The library's names for `item`, for its download's file name. */

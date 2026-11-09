@@ -30,11 +30,14 @@ export default {
   "jobs.queue.avatars.name": "Profilbilder",
   "jobs.queue.avatars.description":
     "Schneidet und skaliert Uploads und die Bilder, die Anmeldeanbieter schicken.",
-  "jobs.queue.downloads.name": "Downloads",
+  "jobs.queue.downloads.name": "Download-Kodierungen",
   "jobs.queue.downloads.description":
-    "Erstellt die Versionen von Dateien, die Apps zum Offline-Ansehen herunterladen, während sie sie abrufen.",
+    "Kodiert das Video von Downloads in einer anderen Größe oder einem anderen Codec, während die App oder der Browser sie abruft.",
   "jobs.queue.downloads.note":
-    "Downloads, die gleichzeitig umgewandelt werden. Jeder belegt einen Encoder wie ein Stream; erhöhe den Wert, wenn der Server mithält.",
+    "Downloads, die gleichzeitig kodiert werden. Jeder belegt einen Encoder wie ein Stream; erhöhe den Wert, wenn der Server mithält.",
+  "jobs.queue.download-copies.name": "Download-Kopien",
+  "jobs.queue.download-copies.description":
+    "Stellt Downloads zusammen, die ihr Video unverändert behalten, während die App oder der Browser sie abruft.",
 
   "jobs.queue.running": "{active} von {concurrency} aktiv",
   "jobs.queue.waiting": plural({

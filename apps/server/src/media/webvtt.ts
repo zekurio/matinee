@@ -142,13 +142,21 @@ export function flatCues(cues: readonly Cue[]): Cue[] {
   const times = [...new Set(sorted.flatMap((cue) => [cue.start, cue.end]))]
   times.sort((a, b) => a - b)
   const flat: Cue[] = []
+  // The cues that show from `from` on, in the order they started. Walking
+  // the times with them costs what the result does; looking through every
+  // cue at every time took seconds for a track full of signs.
+  let showing: Cue[] = []
+  let next = 0
   for (let i = 0; i + 1 < times.length; i++) {
     const from = times[i] ?? 0
     const to = times[i + 1] ?? from
-    const text = sorted
-      .filter((cue) => cue.start <= from && cue.end >= to)
-      .map((cue) => cue.text)
-      .join("\n")
+    showing = showing.filter((cue) => cue.end > from)
+    for (; next < sorted.length; next++) {
+      const cue = sorted[next]
+      if (!cue || cue.start > from) break
+      if (cue.end > from) showing.push(cue)
+    }
+    const text = showing.map((cue) => cue.text).join("\n")
     if (!text) continue
     const last = flat.at(-1)
     if (last && last.end === from && last.text === text) last.end = to
