@@ -469,6 +469,8 @@
     <string name="downloads_original_may_not_play">May not play on this device</string>
     <string name="downloads_note_unmetered">Downloads wait for Wi-Fi. Change that in Settings.</string>
     <string name="downloads_note_any">Downloads use any connection, mobile data too.</string>
+    <string name="downloads_audio_title">Audio tracks</string>
+    <string name="downloads_audio_none">Pick at least one audio track.</string>
     <string name="downloads_start">Download</string>
     <string name="downloads_failed">Couldn\'t get this file\'s tracks</string>
     <string name="downloads_total">%1$s on this device</string>

@@ -872,18 +872,18 @@ private fun trackLabel(language: String?, title: String?, unnamed: String): Stri
 }
 
 @Composable
-private fun audioLabel(track: AudioTrack): String =
+internal fun audioLabel(track: AudioTrack): String =
     trackLabel(track.language, track.title, stringResource(R.string.player_track_unnamed, track.index))
 
 @Composable
-private fun subtitleLabel(track: SubtitleTrack, tracks: List<SubtitleTrack>): String {
+internal fun subtitleLabel(track: SubtitleTrack, tracks: List<SubtitleTrack>): String {
     if (track.source != "embedded") return trackLabel(track.language, track.title, stringResource(R.string.player_track_unknown_language))
     val position = tracks.filter { it.source == "embedded" }.indexOf(track) + 1
     return trackLabel(track.language, track.title, stringResource(R.string.player_track_unnamed, position))
 }
 
 @Composable
-private fun subtitleDetail(track: SubtitleTrack): String = listOfNotNull(
+internal fun subtitleDetail(track: SubtitleTrack): String = listOfNotNull(
     if (track.forced) stringResource(R.string.player_subtitles_forced) else null,
     if (track.sdh) "SDH" else null,
     track.format,

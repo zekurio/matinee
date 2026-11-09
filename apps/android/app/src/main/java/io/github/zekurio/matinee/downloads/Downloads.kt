@@ -19,6 +19,7 @@ import io.github.zekurio.matinee.api.MediaItem
 import io.github.zekurio.matinee.api.PlaybackOptions
 import io.github.zekurio.matinee.api.PlaybackPreferences
 import io.github.zekurio.matinee.api.SubtitleTrack
+import io.github.zekurio.matinee.app
 import io.github.zekurio.matinee.ui.player.Capabilities
 import io.github.zekurio.matinee.ui.player.audioChoice
 import io.github.zekurio.matinee.ui.player.baseLanguage
@@ -104,9 +105,15 @@ class Downloads(private val context: Context) {
             ?: DownloadSubtitles.USED
         set(value) = prefs.edit { putString("subtitles", value.name) }
 
-    /** The audio track a download holds: the one the preferences would play. */
+    /** The audio track the preferences would play. */
     private fun audioFor(source: DownloadSource): AudioTrack? =
         audioChoice(source.audio, source.preferences.audioLanguage, source.item.title?.originalLanguage).wanted
+
+    /** The audio tracks a download starts with: the one the preferences would play. */
+    fun defaultAudio(source: DownloadSource): List<AudioTrack> = listOfNotNull(audioFor(source))
+
+    /** The subtitles a download can save: text, which the player draws. */
+    fun textSubtitles(source: DownloadSource): List<SubtitleTrack> = source.subtitles.filter(::drawable)
 
     /** Whether a version for this device keeps the file's video: only at no set size, when it plays here and MP4 holds it. */
     private fun keepsVideo(item: MediaItem, preset: VideoPreset?): Boolean {
@@ -116,17 +123,19 @@ class Downloads(private val context: Context) {
 
     /**
      * The version for this device: the video kept when the device decodes it
-     * and MP4 holds it, else encoded to H.264 at [preset]; the preferred audio
-     * track kept when it plays here, else converted to stereo.
+     * and MP4 holds it, else encoded at [preset] in the codec the playback
+     * settings ask encodes for; each of [audio] kept when it plays here, else
+     * converted to stereo.
      */
-    fun deviceSpec(source: DownloadSource, preset: VideoPreset?): DownloadSpec {
+    fun deviceSpec(source: DownloadSource, preset: VideoPreset?, audio: List<AudioTrack> = defaultAudio(source)): DownloadSpec {
         val videoSpec = if (keepsVideo(source.item, preset)) {
             DownloadVideoSpec(mode = "copy")
         } else {
             val target = preset ?: VIDEO_PRESETS.first()
-            DownloadVideoSpec(mode = "encode", codec = "h264", maxHeight = target.height, bitrate = target.bitrate)
+            val codec = Capabilities.encodeVideoCodecs(source.options.videoCodecs, context.app.player).first()
+            DownloadVideoSpec(mode = "encode", codec = codec, maxHeight = target.height, bitrate = target.bitrate)
         }
-        val audio = audioFor(source)?.let { track ->
+        val tracks = audio.map { track ->
             if (track.codec in COPY_AUDIO && Capabilities.decodesAudio(track.codec)) {
                 DownloadAudioSpec(index = track.index, mode = "copy")
             } else {
@@ -139,7 +148,7 @@ class Downloads(private val context: Context) {
                 )
             }
         }
-        return DownloadSpec(videoSpec, listOfNotNull(audio))
+        return DownloadSpec(videoSpec, tracks)
     }
 
     /** Whether the file as it is plays here: its container, video, and preferred audio. */
@@ -152,9 +161,12 @@ class Downloads(private val context: Context) {
             (audio == null || Capabilities.decodesAudio(audio.codec))
     }
 
-    /** Text subtitles to save beside the video: in the languages the person reads or hears, all, or none. */
-    private fun subtitlesFor(source: DownloadSource): List<SubtitleTrack> {
-        val text = source.subtitles.filter(::drawable)
+    /**
+     * The subtitles a download starts with, as Settings say: in the languages
+     * the person reads or hears, all, or none.
+     */
+    fun defaultSubtitles(source: DownloadSource): List<SubtitleTrack> {
+        val text = textSubtitles(source)
         return when (subtitles) {
             DownloadSubtitles.NONE -> emptyList()
             DownloadSubtitles.ALL -> text.take(32)
@@ -172,7 +184,8 @@ class Downloads(private val context: Context) {
     private fun subtitleEntries(id: String, tracks: List<SubtitleTrack>) =
         tracks.mapIndexed { i, track -> OfflineSubtitle(track, "$id/subtitles/$i.vtt") }
 
-    fun downloadOriginal(source: DownloadSource) {
+    /** The file as it is, with [subtitles] saved beside it. */
+    fun downloadOriginal(source: DownloadSource, subtitles: List<SubtitleTrack> = defaultSubtitles(source)) {
         val item = source.item
         val extension = item.relativePath.substringAfterLast('.', "mkv").lowercase().take(5)
         store.put(
@@ -182,14 +195,19 @@ class Downloads(private val context: Context) {
                 file = "${item.id}/video.$extension",
                 totalBytes = item.sizeBytes,
                 audio = source.audio,
-                subtitles = subtitleEntries(item.id, subtitlesFor(source)),
+                subtitles = subtitleEntries(item.id, subtitles),
             ),
         )
         schedule(item.id)
     }
 
-    /** A version for this device, with the tracks [plan] says it holds. */
-    fun downloadForDevice(source: DownloadSource, spec: DownloadSpec, plan: DownloadPlan) {
+    /** A version for this device, with the tracks [plan] says it holds and [subtitles] saved beside it. */
+    fun downloadForDevice(
+        source: DownloadSource,
+        spec: DownloadSpec,
+        plan: DownloadPlan,
+        subtitles: List<SubtitleTrack> = defaultSubtitles(source),
+    ) {
         val item = source.item
         val audio = plan.audio.map { planned ->
             val original = source.audio.firstOrNull { it.index == planned.index }
@@ -213,7 +231,7 @@ class Downloads(private val context: Context) {
                 spec = spec,
                 totalBytes = plan.estimatedBytes,
                 audio = audio,
-                subtitles = subtitleEntries(item.id, subtitlesFor(source)),
+                subtitles = subtitleEntries(item.id, subtitles),
             ),
         )
         schedule(item.id)

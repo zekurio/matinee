@@ -276,7 +276,7 @@ private val NESTED = 12.dp
 
 /** The show and episode, or the movie, of a file. */
 @Composable
-private fun names(item: MediaItem): Pair<String, String?> {
+internal fun names(item: MediaItem): Pair<String, String?> {
     val res = LocalResources.current
     val label = itemLabel(item, res)
     val code = episodeCode(item, res)
@@ -566,137 +566,10 @@ internal fun choiceName(choice: Choice): String = when (choice) {
         ?: stringResource(R.string.downloads_choice_device)
 }
 
-/**
- * What to download: a version the server makes for this device, at the
- * size the person picks, or the file as it is. Shows how big each is
- * before anything starts.
- */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun DownloadSheet(item: MediaItem, onDismiss: () -> Unit) {
-    val api = LocalApi.current
-    val user = LocalUser.current
-    val context = LocalContext.current
-    val downloads = context.app.downloads
-    val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    var source by remember { mutableStateOf<DownloadSource?>(null) }
-    var error by remember { mutableStateOf<String?>(null) }
-    val plans = remember { mutableStateMapOf<Choice, DownloadPlan>() }
-    val specs = remember { mutableStateMapOf<Choice, DownloadSpec>() }
-    val choices = CHOICES
-    var picked by remember { mutableStateOf(startingChoice(downloads)) }
-    val askNotifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
-    val failure = stringResource(R.string.downloads_failed)
-
-    LaunchedEffect(item.id) {
-        try {
-            val loaded = DownloadSource(
-                item = item,
-                audio = api.audio(item.id),
-                subtitles = api.subtitles(item.id).tracks,
-                options = runCatching { api.playbackOptions() }.getOrDefault(PlaybackOptions()),
-                preferences = user.playback ?: PlaybackPreferences(),
-            )
-            source = loaded
-            for (choice in choices) {
-                if (choice !is Choice.Device) continue
-                val spec = downloads.deviceSpec(loaded, choice.preset)
-                specs[choice] = spec
-                // A size this device can't have the server make just doesn't show one.
-                runCatching { api.downloadPlan(item.id, spec) }.getOrNull()?.let { plans[choice] = it }
-            }
-            // A preset the server can't make for this file falls back to the version for this device.
-            if ((picked as? Choice.Device)?.preset != null && plans[picked] == null) picked = Choice.Device(null)
-        } catch (e: IOException) {
-            error = e.message ?: failure
-        }
-    }
-
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheet, containerColor = Palette.Raised, dragHandle = null) {
-        Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(vertical = 16.dp)) {
-            val (primary, secondary) = names(item)
-            Column(Modifier.padding(horizontal = 20.dp)) {
-                Text(stringResource(R.string.downloads_sheet_title), style = MaterialTheme.typography.titleLarge)
-                Text(
-                    listOfNotNull(primary, secondary).joinToString(" · "),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Palette.Muted,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            Gap(12.dp)
-            val loaded = source
-            when {
-                error != null -> Text(error.orEmpty(), color = Palette.Danger, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(horizontal = 20.dp))
-                loaded == null -> Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = Palette.Accent)
-                }
-                else -> {
-                    // A size the server can't make for this file doesn't show.
-                    val shown = choices.filter { it !is Choice.Device || it.preset == null || plans[it] != null }
-                    shown.forEach { choice ->
-                        ChoiceRow(choice, plans[choice], loaded, selected = picked == choice) { picked = choice }
-                    }
-                    Gap(8.dp)
-                    Text(
-                        stringResource(if (downloads.unmeteredOnly) R.string.downloads_note_unmetered else R.string.downloads_note_any),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Palette.Muted,
-                        modifier = Modifier.padding(horizontal = 20.dp),
-                    )
-                    Gap(16.dp)
-                    MatineeButton(
-                        onClick = {
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                askNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
-                            }
-                            when (val choice = picked) {
-                                Choice.Original -> downloads.downloadOriginal(loaded)
-                                is Choice.Device -> {
-                                    val spec = specs[choice]
-                                    val plan = plans[choice]
-                                    if (spec != null && plan != null) downloads.downloadForDevice(loaded, spec, plan)
-                                }
-                            }
-                            onDismiss()
-                        },
-                        enabled = picked == Choice.Original || plans[picked] != null,
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
-                    ) {
-                        LucideIcon(Lucide.Download, null, size = 18.dp)
-                        Text(stringResource(R.string.downloads_start))
-                    }
-                }
-            }
-        }
-    }
-}
-
 /** "6" or "2.5", for a bit rate in Mbps. */
 fun mbps(bitrate: Int): String {
     val value = bitrate / 1_000_000.0
     return if (value % 1.0 == 0.0) value.toInt().toString() else "%.1f".format(Locale.getDefault(), value)
-}
-
-@Composable
-private fun ChoiceRow(choice: Choice, plan: DownloadPlan?, source: DownloadSource, selected: Boolean, onClick: () -> Unit) {
-    val downloads = LocalContext.current.app.downloads
-    val detail = when (choice) {
-        Choice.Original -> listOfNotNull(
-            formatBytes(source.item.sizeBytes),
-            source.item.container.uppercase(),
-            if (!downloads.originalPlays(source)) stringResource(R.string.downloads_original_may_not_play) else null,
-        ).joinToString(" · ")
-        is Choice.Device -> plan?.let {
-            listOfNotNull(
-                "~" + formatBytes(it.estimatedBytes),
-                "${it.video.height}p ${videoCodecName(it.video.codec)}",
-                it.audio.firstOrNull()?.codec?.uppercase(),
-            ).joinToString(" · ")
-        } ?: stringResource(R.string.downloads_choice_unavailable)
-    }
-    RadioRow(choiceName(choice), detail, selected, onClick)
 }
 
 /** A choice in a sheet: a round mark, its name, and what it comes to. */
