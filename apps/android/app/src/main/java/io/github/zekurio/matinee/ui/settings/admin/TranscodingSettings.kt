@@ -18,10 +18,18 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
-import io.github.zekurio.matinee.api.admin.AdminTranscoding
-import io.github.zekurio.matinee.api.admin.detectTranscoding
-import io.github.zekurio.matinee.api.admin.setTranscodingSettings
-import io.github.zekurio.matinee.api.admin.transcodingSettings
+import io.github.zekurio.matinee.api.AdminTranscodingSettings
+import io.github.zekurio.matinee.api.CheckStatus
+import io.github.zekurio.matinee.api.DeinterlaceMethod
+import io.github.zekurio.matinee.api.DownmixAlgorithm
+import io.github.zekurio.matinee.api.EncoderPreset
+import io.github.zekurio.matinee.api.HardwareAcceleration
+import io.github.zekurio.matinee.api.MatineeJson
+import io.github.zekurio.matinee.api.TonemapAlgorithm
+import io.github.zekurio.matinee.api.TonemapMode
+import io.github.zekurio.matinee.api.TonemapRange
+import io.github.zekurio.matinee.api.TranscodingCapabilities
+import io.github.zekurio.matinee.api.TranscodingSettings
 import io.github.zekurio.matinee.ui.components.Gap
 import io.github.zekurio.matinee.ui.components.LocalApi
 import io.github.zekurio.matinee.ui.components.Lucide
@@ -37,6 +45,7 @@ import io.github.zekurio.matinee.ui.settings.SwitchRow
 import io.github.zekurio.matinee.ui.theme.Palette
 import io.github.zekurio.matinee.ui.videoCodecName
 import java.time.Instant
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -49,19 +58,19 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /* The contract's choices for transcoding, in its order. */
-private val ACCELERATIONS = listOf("none", "vaapi", "qsv", "nvenc", "videotoolbox")
+private val ACCELERATIONS = HardwareAcceleration.all
 private val DECODE_SUPPORT = mapOf(
     "vaapi" to listOf("h264", "hevc", "mpeg2video", "vc1", "vp8", "vp9", "av1"),
     "qsv" to listOf("h264", "hevc", "mpeg2video", "vc1", "vp8", "vp9", "av1"),
     "nvenc" to listOf("h264", "hevc", "mpeg2video", "mpeg4", "vc1", "vp8", "vp9", "av1"),
     "videotoolbox" to listOf("h264", "hevc", "vp8", "vp9"),
 )
-private val PRESETS = listOf("auto", "veryslow", "slower", "slow", "medium", "fast", "faster", "veryfast", "superfast", "ultrafast")
-private val ALGORITHMS = listOf("none", "clip", "linear", "gamma", "reinhard", "hable", "mobius", "bt2390")
-private val MODES = listOf("auto", "max", "rgb", "lum", "itp")
-private val RANGES = listOf("auto", "tv", "pc")
-private val DEINTERLACERS = listOf("yadif", "bwdif")
-private val DOWNMIXES = listOf("none", "dave750", "nightmode-dialogue", "rfc7845", "ac4")
+private val PRESETS = EncoderPreset.all
+private val ALGORITHMS = TonemapAlgorithm.all
+private val MODES = TonemapMode.all
+private val RANGES = TonemapRange.all
+private val DEINTERLACERS = DeinterlaceMethod.all
+private val DOWNMIXES = DownmixAlgorithm.all
 
 /** A number field's limits, as the contract has them, and whether it takes only whole numbers. */
 private data class Limits(val min: Double, val max: Double, val whole: Boolean)
@@ -86,6 +95,17 @@ private fun JsonObject.with(key: String, value: JsonElement) = JsonObject(this +
 private fun JsonObject.with(key: String, value: Boolean) = with(key, JsonPrimitive(value))
 private fun JsonObject.with(key: String, value: String) = with(key, JsonPrimitive(value))
 
+/**
+ * The settings as JSON, every field written, for the form's fields to
+ * edit by name; [settings] reads them back for saving.
+ */
+private val SettingsJson = Json(MatineeJson) { explicitNulls = true }
+
+private fun json(settings: TranscodingSettings) =
+    SettingsJson.encodeToJsonElement(TranscodingSettings.serializer(), settings).jsonObject
+
+private fun settings(json: JsonObject) = SettingsJson.decodeFromJsonElement(TranscodingSettings.serializer(), json)
+
 /** "12" for 12.0, "0.5" for 0.5, as a field shows a number. */
 private fun show(number: Double): String = if (number % 1.0 == 0.0) number.toLong().toString() else number.toString()
 
@@ -98,7 +118,7 @@ private fun show(number: Double): String = if (number % 1.0 == 0.0) number.toLon
 @Composable
 fun TranscodingSettings() {
     val api = LocalApi.current
-    val loader = rememberLoader("admin-transcoding") { transcodingSettings() }
+    val loader = rememberLoader("admin-transcoding") { admin.transcoding.get() }
     val saver = rememberSaver()
     SettingsScaffold(stringResource(R.string.settings_admin_transcoding)) {
         loaded(loader, { stringResource(R.string.web_transcoding_loadFailed, it) }) { saved ->
@@ -106,16 +126,17 @@ fun TranscodingSettings() {
                 TranscodingForm(
                     saved,
                     saver,
-                    onDetect = { saver { loader.show(api.detectTranscoding()) } },
-                ) { settings -> saver { loader.show(api.setTranscodingSettings(settings)) } }
+                    onDetect = { saver { loader.show(api.admin.transcoding.detect()) } },
+                ) { settings -> saver { loader.show(api.admin.transcoding.update(settings)) } }
             }
         }
     }
 }
 
 @Composable
-private fun TranscodingForm(saved: AdminTranscoding, saver: Saver, onDetect: () -> Unit, save: (JsonObject) -> Unit) {
-    var draft by remember(saved) { mutableStateOf(saved.settings) }
+private fun TranscodingForm(saved: AdminTranscodingSettings, saver: Saver, onDetect: () -> Unit, save: (TranscodingSettings) -> Unit) {
+    val original = remember(saved) { json(saved.settings) }
+    var draft by remember(saved) { mutableStateOf(original) }
     // What each number field holds while it's typed, kept apart until it's a number in range.
     var typed by remember(saved) { mutableStateOf(mapOf<String, String>()) }
     val invalid = typed.filter { (key, text) ->
@@ -169,12 +190,12 @@ private fun TranscodingForm(saved: AdminTranscoding, saver: Saver, onDetect: () 
                     "vaapi" -> {
                         RowDivider()
                         TextRow(stringResource(R.string.web_transcoding_field_vaapiDevice), draft.text("vaapiDevice"), { draft = draft.with("vaapiDevice", it) },
-                            placeholder = saved.defaults.text("vaapiDevice").ifBlank { "/dev/dri/renderD128" })
+                            placeholder = saved.defaults.vaapiDevice.ifBlank { "/dev/dri/renderD128" })
                     }
                     "qsv" -> {
                         RowDivider()
                         TextRow(stringResource(R.string.web_transcoding_field_qsvDevice), draft.text("qsvDevice"), { draft = draft.with("qsvDevice", it) },
-                            placeholder = saved.defaults.text("qsvDevice").ifBlank { null })
+                            placeholder = saved.defaults.qsvDevice.ifBlank { null })
                     }
                 }
                 if (hardware) {
@@ -305,25 +326,25 @@ private fun TranscodingForm(saved: AdminTranscoding, saver: Saver, onDetect: () 
         }
 
         SaveButtons(
-            dirty = (draft != saved.settings || typed.isNotEmpty()) && invalid.isEmpty(),
+            dirty = (draft != original || typed.isNotEmpty()) && invalid.isEmpty(),
             saver = saver,
             onReset = {
-                draft = saved.settings
+                draft = original
                 typed = emptyMap()
             },
-        ) { save(draft) }
+        ) { save(settings(draft)) }
     }
 }
 
 /** What the server's ffmpeg is, when it was looked at, and looking again. */
 @Composable
-private fun FfmpegSection(capabilities: JsonObject, saver: Saver, onDetect: () -> Unit) {
-    val version = capabilities.text("version").ifBlank { stringResource(R.string.web_transcoding_ffmpeg_unknownVersion) }
-    val detectedAt = capabilities.text("detectedAt")
+private fun FfmpegSection(capabilities: TranscodingCapabilities, saver: Saver, onDetect: () -> Unit) {
+    val version = capabilities.version?.ifBlank { null } ?: stringResource(R.string.web_transcoding_ffmpeg_unknownVersion)
+    val detectedAt = capabilities.detectedAt
     val when_ = runCatching {
         DateUtils.getRelativeTimeSpanString(Instant.parse(detectedAt).toEpochMilli(), System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS).toString()
     }.getOrDefault(detectedAt)
-    val error = capabilities.text("error").ifBlank { null }
+    val error = capabilities.error?.ifBlank { null }
     Column {
         Panel {
             // What runs, and when the server last looked; not a link.
@@ -354,13 +375,11 @@ private fun FfmpegSection(capabilities: JsonObject, saver: Saver, onDetect: () -
 
 /** Why the chosen GPU won't be used, when detection says its device didn't open. */
 @Composable
-private fun deviceFailure(capabilities: JsonObject, acceleration: String): String? {
-    if (acceleration == "none") return null
-    val hardware = capabilities["hardware"] as? JsonArray ?: return null
-    val entry = hardware.firstOrNull { it.jsonObject.text("acceleration") == acceleration }?.jsonObject
+private fun deviceFailure(capabilities: TranscodingCapabilities, acceleration: String): String? {
+    if (acceleration == HardwareAcceleration.NONE) return null
+    val entry = capabilities.hardware.firstOrNull { it.acceleration == acceleration }
         ?: return stringResource(R.string.web_transcoding_hardware_notInBuild)
-    val device = entry["device"]?.jsonObject ?: return null
-    return if (device.text("status") == "ok") null else stringResource(R.string.web_transcoding_hardware_deviceFailed)
+    return if (entry.device.status == CheckStatus.OK) null else stringResource(R.string.web_transcoding_hardware_deviceFailed)
 }
 
 @Composable

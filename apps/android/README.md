@@ -102,7 +102,8 @@ key without one.
 
 ```
 app/src/main/java/io/github/zekurio/matinee/
-  api/        The REST API under /api/v1 and the plain routes from paths.ts
+  api/        The REST API under /api/v1, generated from the contract, and
+              the plain routes from paths.ts
   auth/       The server, the session and its token, browser sign-in
   downloads/  The download list, the WorkManager job that fetches them, and
               progress made offline
@@ -115,8 +116,26 @@ scripts/
                   res/values*/strings_web_*.xml
 ```
 
-The models in `api/Models.kt` follow `packages/contracts`. An API change
-starts in the contract, as always; the app then reads the new fields.
+The API client is generated from the server's OpenAPI document, as the
+contract describes it: `api/ContractModels.kt` has a class for each
+schema, and `api/ContractApi.kt` a function for each procedure, named as
+on the web (`api.titles.get(id)` is `orpc.titles.get`). An API change
+starts in the contract, as always; then, from the repository root:
+
+```sh
+pnpm api:android
+```
+
+`pnpm verify` and CI fail while the two files are out of date. Don't edit
+them; what the app adds goes beside them in `api/`: `ApiTransport.kt`
+sends the requests, `Extensions.kt` has names and constants the document
+doesn't carry, and `Saved.kt` reads what an older app saved. In the
+generated Kotlin, enums stay strings with an object of their values, a
+union with a tag is a sealed interface, and a field that can be left out,
+null, or set takes an `Explicit`. A schema the generator can't map fails
+the run, so a new kind of shape in the contract gets a deliberate form in
+`apps/server/scripts/kotlin-client.ts`.
+
 Strings go in `res/values/strings.xml` and `res/values-de/strings.xml`.
 
 Icons are lucide's, as on the web. Add one with

@@ -1,15 +1,15 @@
 package io.github.zekurio.matinee.ui.settings
 
 import android.app.LocaleManager
-import androidx.annotation.DrawableRes
-import androidx.annotation.StringRes
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import androidx.annotation.DrawableRes
 import androidx.annotation.RequiresApi
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -57,12 +57,14 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.currentStateAsState
 import io.github.zekurio.matinee.BuildConfig
 import io.github.zekurio.matinee.R
-import io.github.zekurio.matinee.app
-import io.github.zekurio.matinee.api.AccountSession
+import io.github.zekurio.matinee.api.DEFAULT_PLAYBACK_PREFERENCES
 import io.github.zekurio.matinee.api.ORIGINAL_LANGUAGE
 import io.github.zekurio.matinee.api.PlaybackOptions
 import io.github.zekurio.matinee.api.PlaybackPreferences
+import io.github.zekurio.matinee.api.Session as AccountSession
 import io.github.zekurio.matinee.api.SubtitleMode
+import io.github.zekurio.matinee.api.isAdmin
+import io.github.zekurio.matinee.app
 import io.github.zekurio.matinee.auth.AuthState
 import io.github.zekurio.matinee.auth.Session
 import io.github.zekurio.matinee.downloads.DEFAULT_DEVICE
@@ -281,7 +283,7 @@ private fun AccountPage() {
     val snackbar = LocalSnackbar.current
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
-    val sessions = rememberLoader("sessions") { sessions() }
+    val sessions = rememberLoader("sessions") { account.sessions.list() }
     // Back from signing in a device: show it. The page was disposed
     // meanwhile, but its loader wasn't, so a ready list means a return. The
     // device gets its session on its next poll, up to five seconds after
@@ -315,7 +317,7 @@ private fun AccountPage() {
             is Load.Ready -> items(state.value, key = { it.id }) { item ->
                 SessionRow(item) {
                     scope.launchShowing(snackbar, context.getString(R.string.account_sessions_sign_out_failed)) {
-                        api.revokeSession(item.id)
+                        api.account.sessions.revoke(item.id)
                         sessions.reload()
                     }
                 }
@@ -335,11 +337,11 @@ private fun PlaybackPage(session: Session) {
     val snackbar = LocalSnackbar.current
     val scope = rememberCoroutineScope()
     val prefs = LocalContext.current.app.player
-    val options = rememberLoader("playbackOptions") { playbackOptions() }
-    val playback = user.playback ?: PlaybackPreferences()
+    val options = rememberLoader("playbackOptions") { playback.options() }
+    val playback = user.playback ?: DEFAULT_PLAYBACK_PREFERENCES
     val saveFailure = stringResource(R.string.player_error_save_preferences)
     val save = { changed: PlaybackPreferences ->
-        scope.launchShowing(snackbar, saveFailure) { session.updateUser(api.setPlaybackPreferences(changed)) }
+        scope.launchShowing(snackbar, saveFailure) { session.updateUser(api.account.playback.setPreferences(changed)) }
     }
     val loaded = (options.state as? Load.Ready)?.value
     val passthrough = remember { Capabilities.OPTIONAL_PASSTHROUGH.filter(Capabilities::decodesAudio) }

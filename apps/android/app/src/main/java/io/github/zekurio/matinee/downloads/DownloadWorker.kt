@@ -225,7 +225,7 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
         val file = store.file(entry).apply { parentFile?.mkdirs() }
         val serverId = entry.serverId ?: run {
             val spec = entry.spec ?: throw IOException("This download has no version to ask for.")
-            val started = api.startDownload(id, spec)
+            val started = api.downloads.start(id, spec)
             file.delete()
             entry = store.update(id) {
                 it.copy(serverId = started.id, segment = 0, bytes = 0, totalBytes = started.plan.estimatedBytes)
@@ -269,7 +269,7 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
             }
             if (last) break
         }
-        runCatching { api.removeDownload(serverId) }
+        runCatching { api.downloads.remove(serverId) }
     }
 
     private fun startOver(id: String) {

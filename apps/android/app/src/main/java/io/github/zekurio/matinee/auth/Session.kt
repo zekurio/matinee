@@ -16,12 +16,13 @@ import io.github.zekurio.matinee.api.AuthConfig
 import io.github.zekurio.matinee.api.MatineeApi
 import io.github.zekurio.matinee.api.MatineeJson
 import io.github.zekurio.matinee.api.User
+import io.github.zekurio.matinee.api.decodeSaved
 import java.io.IOException
 import java.net.ConnectException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
-import javax.net.ssl.SSLException
 import java.util.concurrent.TimeUnit
+import javax.net.ssl.SSLException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -213,7 +214,7 @@ class Session(context: Context) {
         }
         scope.launch {
             val verified = try {
-                if (token != null) client.session() else null
+                if (token != null) client.auth.session().user else null
             } catch (e: IOException) {
                 if (generation == made) _state.value = AuthState.Unreachable(server.display, unreachability(e))
                 return@launch
@@ -226,7 +227,7 @@ class Session(context: Context) {
                     AuthState.SignedIn(server.display, verified)
                 } else {
                     clearToken()
-                    AuthState.SignedOut(server.display, requireApi().authConfig())
+                    AuthState.SignedOut(server.display, requireApi().auth.config())
                 }
             } catch (e: IOException) {
                 AuthState.Unreachable(server.display, unreachability(e))
@@ -245,7 +246,7 @@ class Session(context: Context) {
         var failure: String? = null
         for (candidate in candidates) {
             try {
-                val config = MatineeApi(candidate, http).authConfig()
+                val config = MatineeApi(candidate, http).auth.config()
                 origin = candidate
                 store.server = candidate.toString()
                 clearToken()
@@ -293,7 +294,7 @@ class Session(context: Context) {
         }
         store.pendingSignIn = null
         return try {
-            signedIn(requireApi().appToken(code, pending.second))
+            signedIn(requireApi().auth.app.token(code, pending.second))
             null
         } catch (e: IOException) {
             e.message ?: res.getString(R.string.signin_failed)
@@ -323,7 +324,7 @@ class Session(context: Context) {
     /** The account last signed in here, while its session still stands. */
     val lastUser: User?
         get() = if (token == null) null else store.lastUser?.let {
-            runCatching { MatineeJson.decodeFromString(User.serializer(), it) }.getOrNull()
+            runCatching { decodeSaved(User.serializer(), it) }.getOrNull()
         }
 
     /** Show the downloads, without the server. [setOfflineMode] keeps it so. */
@@ -337,7 +338,7 @@ class Session(context: Context) {
         val client = api
         val made = generation
         scope.launch {
-            runCatching { client?.signOut() }
+            runCatching { client?.auth?.signOut() }
             // Unless another sign-in came while the server answered.
             if (generation != made) return@launch
             clearToken()

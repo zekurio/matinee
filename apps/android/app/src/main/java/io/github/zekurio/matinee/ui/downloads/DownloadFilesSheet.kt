@@ -30,10 +30,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
+import io.github.zekurio.matinee.api.DEFAULT_PLAYBACK_PREFERENCES
+import io.github.zekurio.matinee.api.FALLBACK_PLAYBACK_OPTIONS
 import io.github.zekurio.matinee.api.MatineeApi
 import io.github.zekurio.matinee.api.MediaItem
 import io.github.zekurio.matinee.api.PlaybackOptions
-import io.github.zekurio.matinee.api.PlaybackPreferences
 import io.github.zekurio.matinee.api.Season
 import io.github.zekurio.matinee.api.TitleSummary
 import io.github.zekurio.matinee.app
@@ -87,7 +88,7 @@ fun DownloadFilesSheet(files: FileSet, onDismiss: () -> Unit) {
     val askNotifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
 
     LaunchedEffect(files) {
-        options = runCatching { api.playbackOptions() }.getOrDefault(PlaybackOptions()).also { codec = downloads.defaultCodec(it) }
+        options = runCatching { api.playback.options() }.getOrDefault(FALLBACK_PLAYBACK_OPTIONS).also { codec = downloads.defaultCodec(it) }
         try {
             items = files.load(api)
         } catch (e: IOException) {
@@ -162,7 +163,7 @@ fun DownloadFilesSheet(files: FileSet, onDismiss: () -> Unit) {
                                         missing,
                                         original = choice == Choice.Original,
                                         preset = (choice as? Choice.Device)?.preset,
-                                        preferences = user.playback ?: PlaybackPreferences(),
+                                        preferences = user.playback ?: DEFAULT_PLAYBACK_PREFERENCES,
                                         codec = codec,
                                     )
                                     if (failed > 0) snackbar.showSnackbar(res.getQuantityString(R.plurals.downloads_all_failed, failed, failed))

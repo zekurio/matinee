@@ -10,10 +10,11 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
 import io.github.zekurio.matinee.api.AudioTrack
-import io.github.zekurio.matinee.api.DownloadAudioSpec
+import io.github.zekurio.matinee.api.DownloadAudio
 import io.github.zekurio.matinee.api.DownloadPlan
 import io.github.zekurio.matinee.api.DownloadSpec
-import io.github.zekurio.matinee.api.DownloadVideoSpec
+import io.github.zekurio.matinee.api.DownloadVideo
+import io.github.zekurio.matinee.api.FALLBACK_PLAYBACK_OPTIONS
 import io.github.zekurio.matinee.api.MatineeApi
 import io.github.zekurio.matinee.api.MediaItem
 import io.github.zekurio.matinee.api.PlaybackOptions
@@ -140,25 +141,24 @@ class Downloads(private val context: Context) {
         codec: String? = null,
     ): DownloadSpec {
         val videoSpec = if (keepsVideo(source.item, preset)) {
-            DownloadVideoSpec(mode = "copy")
+            DownloadVideo.Copy
         } else {
             val target = preset ?: VIDEO_PRESETS.first()
-            DownloadVideoSpec(mode = "encode", codec = codec ?: defaultCodec(source.options), maxHeight = target.height, bitrate = target.bitrate)
+            DownloadVideo.Encode(codec = codec ?: defaultCodec(source.options), maxHeight = target.height, bitrate = target.bitrate)
         }
         val tracks = audio.map { track ->
             if (track.codec in COPY_AUDIO && Capabilities.decodesAudio(track.codec)) {
-                DownloadAudioSpec(index = track.index, mode = "copy")
+                DownloadAudio.Copy(index = track.index)
             } else {
                 val opus = "opus" in source.options.audioCodecs && Capabilities.decodesAudio("opus")
-                DownloadAudioSpec(
+                DownloadAudio.Encode(
                     index = track.index,
-                    mode = "encode",
                     codec = if (opus) "opus" else "aac",
                     channels = minOf(track.channels ?: 2, 2),
                 )
             }
         }
-        return DownloadSpec(videoSpec, tracks)
+        return DownloadSpec(video = videoSpec, audio = tracks)
     }
 
     /** Whether the file as it is plays here: its container, video, and preferred audio. */
@@ -278,9 +278,9 @@ class Downloads(private val context: Context) {
         codec: String? = null,
     ): Int = scope.async {
         val options = try {
-            api.playbackOptions()
+            api.playback.options()
         } catch (e: IOException) {
-            PlaybackOptions()
+            FALLBACK_PLAYBACK_OPTIONS
         }
         val gate = Semaphore(BATCH_REQUESTS)
         val failed = AtomicInteger()
@@ -289,13 +289,13 @@ class Downloads(private val context: Context) {
                 launch {
                     gate.withPermit {
                         try {
-                            val source = DownloadSource(item, api.audio(item.id), api.subtitles(item.id).tracks, options, preferences)
+                            val source = DownloadSource(item, api.media.audio(item.id), api.media.subtitles(item.id).tracks, options, preferences)
                             if (original) {
                                 downloadOriginal(source)
                             } else {
                                 val spec = deviceSpec(source, preset, codec = codec)
                                 val plan = try {
-                                    api.downloadPlan(item.id, spec)
+                                    api.downloads.plan(item.id, spec)
                                 } catch (e: IOException) {
                                     if (preset == null) throw e
                                     null
@@ -304,7 +304,7 @@ class Downloads(private val context: Context) {
                                     downloadForDevice(source, spec, plan)
                                 } else {
                                     val fallback = deviceSpec(source, null, codec = codec)
-                                    downloadForDevice(source, fallback, api.downloadPlan(item.id, fallback))
+                                    downloadForDevice(source, fallback, api.downloads.plan(item.id, fallback))
                                 }
                             }
                         } catch (e: IOException) {
@@ -346,7 +346,7 @@ class Downloads(private val context: Context) {
         val serverId = store[id]?.serverId
         work.cancelUniqueWork(workName(id))
         store.remove(id)
-        if (serverId != null && api != null) scope.launch { runCatching { api.removeDownload(serverId) } }
+        if (serverId != null && api != null) scope.launch { runCatching { api.downloads.remove(serverId) } }
     }
 
     /** Every download, finished or not. */

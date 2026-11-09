@@ -24,12 +24,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
-import io.github.zekurio.matinee.api.admin.AdminAuth
-import io.github.zekurio.matinee.api.admin.OidcSettings
-import io.github.zekurio.matinee.api.admin.PasskeySettings
-import io.github.zekurio.matinee.api.admin.SecretChange
-import io.github.zekurio.matinee.api.admin.authSettings
-import io.github.zekurio.matinee.api.admin.setAuthSettings
+import io.github.zekurio.matinee.api.AdminAuthSettings
+import io.github.zekurio.matinee.api.AuthSettingsInput
+import io.github.zekurio.matinee.api.Explicit
+import io.github.zekurio.matinee.api.OidcSettingsInput
+import io.github.zekurio.matinee.api.PasskeySettings
 import io.github.zekurio.matinee.ui.components.Gap
 import io.github.zekurio.matinee.ui.components.LocalApi
 import io.github.zekurio.matinee.ui.components.LocalSnackbar
@@ -54,31 +53,32 @@ import kotlinx.coroutines.launch
 @Composable
 fun AuthenticationSettings() {
     val api = LocalApi.current
-    val loader = rememberLoader("admin-auth") { authSettings() }
+    val loader = rememberLoader("admin-auth") { admin.auth.get() }
     val saver = rememberSaver()
     SettingsScaffold(stringResource(R.string.settings_admin_authentication)) {
         loaded(loader, { stringResource(R.string.web_oidc_loadFailed, it) }) { saved ->
             item(key = "form") {
-                AuthForm(saved, saver) { passkeys, oidc, secret -> saver { loader.show(api.setAuthSettings(passkeys, oidc, secret)) } }
+                AuthForm(saved, saver) { settings -> saver { loader.show(api.admin.auth.update(settings)) } }
             }
         }
     }
 }
 
 @Composable
-private fun AuthForm(saved: AdminAuth, saver: Saver, save: (PasskeySettings, OidcSettings, SecretChange) -> Unit) {
+private fun AuthForm(saved: AdminAuthSettings, saver: Saver, save: (AuthSettingsInput) -> Unit) {
     val res = LocalResources.current
     var passkeys by remember(saved) { mutableStateOf(saved.passkeys) }
     var oidc by remember(saved) { mutableStateOf(saved.oidc) }
     var secret by remember(saved) { mutableStateOf("") }
     var dropSecret by remember(saved) { mutableStateOf(false) }
     var advanced by rememberSaveable { mutableStateOf(false) }
-    val change = when {
-        secret.isNotBlank() -> SecretChange.Set(secret.trim())
-        dropSecret -> SecretChange.Drop
-        else -> SecretChange.Keep
+    // A new secret to save, the saved one dropped, or the saved one kept.
+    val change: Explicit<String>? = when {
+        secret.isNotBlank() -> Explicit(secret.trim())
+        dropSecret -> Explicit(null)
+        else -> null
     }
-    val dirty = passkeys != saved.passkeys || oidc != saved.oidc || change != SecretChange.Keep
+    val dirty = passkeys != saved.passkeys || oidc != saved.oidc || change != null
     val defaults = saved.defaults
     val provider = oidc.displayName.ifBlank { defaults.displayName }.ifBlank { stringResource(R.string.web_oidc_title) }
     val issuerError = oidc.issuerUrl.takeIf { it.isNotBlank() && !Regex("^https?://", RegexOption.IGNORE_CASE).containsMatchIn(it) }
@@ -181,7 +181,24 @@ private fun AuthForm(saved: AdminAuth, saver: Saver, save: (PasskeySettings, Oid
                 secret = ""
                 dropSecret = false
             },
-        ) { save(passkeys, oidc, change) }
+        ) {
+            save(
+                AuthSettingsInput(
+                    passkeys = passkeys,
+                    oidc = OidcSettingsInput(
+                        enabled = oidc.enabled,
+                        allowSignUp = oidc.allowSignUp,
+                        displayName = oidc.displayName,
+                        issuerUrl = oidc.issuerUrl,
+                        clientId = oidc.clientId,
+                        scopes = oidc.scopes,
+                        usernameClaim = oidc.usernameClaim,
+                        roleClaim = oidc.roleClaim,
+                        clientSecret = change,
+                    ),
+                ),
+            )
+        }
     }
 }
 

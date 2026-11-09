@@ -4,6 +4,7 @@ import io.github.zekurio.matinee.api.AudioTrack
 import io.github.zekurio.matinee.api.MatineeJson
 import io.github.zekurio.matinee.api.MediaItem
 import io.github.zekurio.matinee.api.SubtitleTrack
+import io.github.zekurio.matinee.api.decodeSaved
 import java.io.File
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -11,6 +12,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 
 object DownloadState {
     /** Waiting for its turn or for a connection that fits the settings. */
@@ -80,9 +82,13 @@ class DownloadStore(filesDir: File) {
     private val _items = MutableStateFlow(read())
     val items: StateFlow<Map<String, OfflineItem>> = _items.asStateFlow()
 
-    private fun read(): Map<String, OfflineItem> = runCatching {
-        json.decodeFromString(serializer, index.readText()).associateBy { it.id }
-    }.getOrDefault(emptyMap())
+    /** Each entry on its own, so one this app can't read any more doesn't lose the others. */
+    private fun read(): Map<String, OfflineItem> {
+        val entries = runCatching { MatineeJson.parseToJsonElement(index.readText()) as? JsonArray }.getOrNull()
+        return entries.orEmpty()
+            .mapNotNull { runCatching { decodeSaved(OfflineItem.serializer(), it) }.getOrNull() }
+            .associateBy { it.id }
+    }
 
     private fun write(items: Map<String, OfflineItem>) {
         val tmp = File(root, "index.json.tmp")

@@ -3,17 +3,16 @@ package io.github.zekurio.matinee.ui.profile
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -27,10 +26,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.Profile
 import io.github.zekurio.matinee.api.WatchStats
+import io.github.zekurio.matinee.api.isAdmin
+import io.github.zekurio.matinee.api.name
 import io.github.zekurio.matinee.auth.Session
 import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.LocalNavigator
@@ -39,13 +41,13 @@ import io.github.zekurio.matinee.ui.LocalUser
 import io.github.zekurio.matinee.ui.StatusBarScrim
 import io.github.zekurio.matinee.ui.components.Avatar
 import io.github.zekurio.matinee.ui.components.Badge
+import io.github.zekurio.matinee.ui.components.ButtonLook
 import io.github.zekurio.matinee.ui.components.EpisodeCard
 import io.github.zekurio.matinee.ui.components.Gap
 import io.github.zekurio.matinee.ui.components.Gutter
 import io.github.zekurio.matinee.ui.components.LocalApi
 import io.github.zekurio.matinee.ui.components.Lucide
 import io.github.zekurio.matinee.ui.components.MatineeButton
-import io.github.zekurio.matinee.ui.components.ButtonLook
 import io.github.zekurio.matinee.ui.components.PosterCard
 import io.github.zekurio.matinee.ui.components.Rail
 import io.github.zekurio.matinee.ui.components.RailArt
@@ -73,7 +75,7 @@ import java.util.Locale
 fun ProfileScreen(session: Session) {
     val offline = LocalOffline.current
     val user = LocalUser.current
-    val profile = if (offline) null else rememberLoader("profile-${user.username}") { profile(user.username) }
+    val profile = if (offline) null else rememberLoader("profile-${user.username}") { profiles.get(user.username) }
     val loaded = (profile?.state as? Load.Ready)?.value
     val listState = rememberLazyListState()
     Box(Modifier.fillMaxSize()) {
@@ -217,7 +219,7 @@ private fun Favorites(profile: Profile) {
 private fun Statistics(profile: Profile) {
     var range by rememberSaveable { mutableStateOf("all") }
     val zone = remember { ZoneId.systemDefault().id }
-    val loader = rememberLoader("profile-stats-${profile.user.username}-$range") { profileStats(profile.user.username, range, zone) }
+    val loader = rememberLoader("profile-stats-${profile.user.username}-$range") { profiles.stats(profile.user.username, range, zone) }
     var last by remember { mutableStateOf<WatchStats?>(null) }
     val state = loader.state
     LaunchedEffect(state) { if (state is Load.Ready) last = state.value }

@@ -1,13 +1,9 @@
 package io.github.zekurio.matinee.ui.player
 
-import io.github.zekurio.matinee.api.AudioStream
 import io.github.zekurio.matinee.api.AudioTrack
 import io.github.zekurio.matinee.api.MediaItem
-import io.github.zekurio.matinee.api.MediaProbe
-import io.github.zekurio.matinee.api.ProbeFormat
-import io.github.zekurio.matinee.api.SubtitleStream
 import io.github.zekurio.matinee.api.SubtitleTrack
-import io.github.zekurio.matinee.api.VideoStream
+import io.github.zekurio.matinee.api.decodeSaved
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -15,45 +11,36 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class PlaybackDiagnosticsTest {
-    private val item = MediaItem(
-        id = "item-8f3a2c",
-        libraryId = "library-77d1",
-        fileTitle = "Secret Heist",
-        relativePath = "Movies/Secret Heist (2024)/secret.heist.mkv",
-        container = "mkv",
-        mimeType = "video/x-matroska",
-        sizeBytes = 4_000_000_000,
-        modifiedAt = "2024-05-01T10:00:00Z",
-        durationSeconds = 6000.0,
-        probe = MediaProbe(
-            format = ProbeFormat("matroska,webm"),
-            video = VideoStream(index = 0, codec = "hevc", profile = "Main 10", width = 3840, height = 2160, bitDepth = 10, hdr = "hdr10"),
-            audio = listOf(
-                AudioStream(index = 1, codec = "truehd", channels = 8, language = "en", title = "Jane Doe commentary"),
-                AudioStream(index = 2, codec = "ac3", channels = 6),
-            ),
-            subtitles = listOf(SubtitleStream(index = 3, codec = "hdmv_pgs_subtitle", title = "Signs and Songs")),
-        ),
+    // Only the fields these tests read; decodeSaved fills in the rest as empty.
+    private val item = decodeSaved(
+        MediaItem.serializer(),
+        """
+        {"id":"item-8f3a2c","libraryId":"library-77d1","fileTitle":"Secret Heist",
+         "relativePath":"Movies/Secret Heist (2024)/secret.heist.mkv","container":"mkv",
+         "mimeType":"video/x-matroska","sizeBytes":4000000000,"modifiedAt":"2024-05-01T10:00:00Z",
+         "durationSeconds":6000.0,
+         "probe":{"format":{"name":"matroska,webm"},
+           "video":{"index":0,"codec":"hevc","profile":"Main 10","width":3840,"height":2160,"bitDepth":10,"hdr":"hdr10"},
+           "audio":[{"index":1,"codec":"truehd","channels":8,"language":"en","title":"Jane Doe commentary"},
+                    {"index":2,"codec":"ac3","channels":6}],
+           "subtitles":[{"index":3,"codec":"hdmv_pgs_subtitle","title":"Signs and Songs"}]}}
+        """,
     )
 
-    private val audio = AudioTrack(
-        index = 1,
-        label = "English, Jane Doe commentary",
-        language = "en",
-        title = "Jane Doe commentary",
-        codec = "truehd",
-        format = "TrueHD Atmos",
-        channels = 8,
+    private val audio = decodeSaved(
+        AudioTrack.serializer(),
+        """
+        {"index":1,"label":"English, Jane Doe commentary","language":"en","title":"Jane Doe commentary",
+         "codec":"truehd","format":"TrueHD Atmos","channels":8}
+        """,
     )
 
-    private val subtitle = SubtitleTrack(
-        id = "stream-3",
-        label = "English, Signs and Songs",
-        language = "en",
-        title = "Signs and Songs",
-        source = "embedded",
-        format = "PGS",
-        delivery = "pgs",
+    private val subtitle = decodeSaved(
+        SubtitleTrack.serializer(),
+        """
+        {"id":"stream-3","label":"English, Signs and Songs","language":"en","title":"Signs and Songs",
+         "source":"embedded","format":"PGS","delivery":"pgs"}
+        """,
     )
 
     private val device = DeviceDiagnostics.of(

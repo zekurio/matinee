@@ -43,8 +43,8 @@ private const val LIMIT = 200
 @Composable
 fun FavoritesScreen() {
     val viewer = LocalContext.current.app.viewer
-    val titles = rememberLoader("favorites") { favorites(LIMIT) }
-    val items = rememberLoader("favoriteItems") { favoriteItems(LIMIT) }
+    val titles = rememberLoader("favorites") { favorites.list(LIMIT) }
+    val items = rememberLoader("favoriteItems") { favorites.items(LIMIT) }
     Column(Modifier.fillMaxSize()) {
         TopBar(stringResource(R.string.favorites_title))
         // One taken off here or elsewhere goes at once, before the list is fetched again.

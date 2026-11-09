@@ -82,7 +82,7 @@ fun SearchScreen() {
     var searching by remember { mutableStateOf(false) }
     var failed by remember { mutableStateOf(false) }
     val focus = remember { FocusRequester() }
-    val libraries = rememberLoader("libraries") { libraries() }
+    val libraries = rememberLoader("libraries") { libraries.list() }
     val names = (libraries.state as? Load.Ready)?.value.orEmpty().associate { it.id to it.name }
 
     LaunchedEffect(Unit) { if (query.isEmpty()) focus.requestFocus() }
@@ -96,7 +96,7 @@ fun SearchScreen() {
         searching = true
         failed = false
         try {
-            results = api.search(text, LIMIT)
+            results = api.search.query(text, LIMIT)
         } catch (_: IOException) {
             failed = true
         } finally {

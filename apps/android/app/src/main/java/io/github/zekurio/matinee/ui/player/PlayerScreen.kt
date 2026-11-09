@@ -143,9 +143,10 @@ import coil3.request.allowHardware
 import coil3.toBitmap
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.AudioTrack
+import io.github.zekurio.matinee.api.DEFAULT_PLAYBACK_PREFERENCES
+import io.github.zekurio.matinee.api.FALLBACK_PLAYBACK_OPTIONS
 import io.github.zekurio.matinee.api.MediaItem
 import io.github.zekurio.matinee.api.PlaybackOptions
-import io.github.zekurio.matinee.api.PlaybackPreferences
 import io.github.zekurio.matinee.api.SubtitleTrack
 import io.github.zekurio.matinee.api.TitleKind
 import io.github.zekurio.matinee.app
@@ -208,14 +209,14 @@ fun PlayerScreen(itemId: String, start: Double?) {
         // A download plays from the phone. Online, the server says where the
         // person got to, which may be past what the download remembers.
         downloads.store.done(itemId)?.let { local ->
-            val fresh = if (offline) null else try { media(itemId) } catch (_: IOException) { null }
-            return@rememberLoader PlayerData(fresh ?: local.item, local.audio, local.subtitles.map { it.track }, PlaybackOptions(), local)
+            val fresh = if (offline) null else try { media.get(itemId) } catch (_: IOException) { null }
+            return@rememberLoader PlayerData(fresh ?: local.item, local.audio, local.subtitles.map { it.track }, FALLBACK_PLAYBACK_OPTIONS, local)
         }
-        val item = media(itemId)
+        val item = media.get(itemId)
         // Tracks that won't load still leave the video to play.
-        val audio = try { audio(itemId) } catch (_: IOException) { emptyList() }
-        val subtitles = try { subtitles(itemId).tracks } catch (_: IOException) { emptyList() }
-        val options = try { playbackOptions() } catch (_: IOException) { PlaybackOptions() }
+        val audio = try { media.audio(itemId) } catch (_: IOException) { emptyList() }
+        val subtitles = try { media.subtitles(itemId).tracks } catch (_: IOException) { emptyList() }
+        val options = try { playback.options() } catch (_: IOException) { FALLBACK_PLAYBACK_OPTIONS }
         PlayerData(item, audio, subtitles, options)
     }
     FullScreen()
@@ -312,7 +313,7 @@ private fun Playback(data: PlayerData, start: Double?) {
     val api = LocalApi.current
     val user = LocalUser.current
     val prefs = app.player
-    val preferences = user.playback ?: PlaybackPreferences()
+    val preferences = user.playback ?: DEFAULT_PLAYBACK_PREFERENCES
     val controller = remember(data.item.id) {
         val choice = audioChoice(data.audio, preferences.audioLanguage, data.item.title?.originalLanguage)
         val audioLanguage = choice.preferred?.language

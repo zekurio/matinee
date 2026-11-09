@@ -45,8 +45,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.ThemeAccents
-import io.github.zekurio.matinee.api.admin.setThemeAccents
-import io.github.zekurio.matinee.api.admin.themeAccents
 import io.github.zekurio.matinee.app
 import io.github.zekurio.matinee.ui.components.Gap
 import io.github.zekurio.matinee.ui.components.LocalApi
@@ -94,7 +92,7 @@ private fun color(hex: String): Color = Color(android.graphics.Color.parseColor(
 @Composable
 fun ServerAppearanceSettings() {
     val api = LocalApi.current
-    val loader = rememberLoader("admin-appearance") { themeAccents() }
+    val loader = rememberLoader("admin-appearance") { admin.appearance.get() }
     val theme = LocalContext.current.app.theme
     val saver = rememberSaver()
     SettingsScaffold(stringResource(R.string.settings_admin_appearance)) {
@@ -102,7 +100,7 @@ fun ServerAppearanceSettings() {
             item(key = "accents") {
                 AccentForm(saved, saver) { next ->
                     saver {
-                        val accents = api.setThemeAccents(next)
+                        val accents = api.admin.appearance.update(next)
                         loader.show(accents)
                         // The app shows the new accent at once, as the web does.
                         theme.setAccents(accents)

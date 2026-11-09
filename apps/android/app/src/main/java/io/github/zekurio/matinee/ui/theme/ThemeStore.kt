@@ -91,7 +91,7 @@ class ThemeStore(private val context: Context) {
 
     /** The server's accents, read again. */
     suspend fun pull(api: MatineeApi) {
-        runCatching { api.authConfig() }.getOrNull()?.let { setAccents(it.themeAccents) }
+        runCatching { api.auth.config() }.getOrNull()?.let { setAccents(it.themeAccents) }
     }
 
     /**
@@ -109,7 +109,7 @@ class ThemeStore(private val context: Context) {
 
     private fun readAccents(): ThemeAccents = prefs.getString("accents", null)
         ?.let { runCatching { json.decodeFromString(ThemeAccents.serializer(), it) }.getOrNull() }
-        ?: ThemeAccents()
+        ?: ThemeAccents(light = null, dark = null)
 
     private fun refresh() {
         state = build()

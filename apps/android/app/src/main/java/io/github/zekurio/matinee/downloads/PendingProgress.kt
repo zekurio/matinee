@@ -6,6 +6,7 @@ import io.github.zekurio.matinee.api.ApiException
 import io.github.zekurio.matinee.api.MatineeApi
 import io.github.zekurio.matinee.api.MatineeJson
 import io.github.zekurio.matinee.api.OfflinePlay
+import io.github.zekurio.matinee.api.decodeSaved
 import java.io.IOException
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.MapSerializer
@@ -26,7 +27,7 @@ class PendingProgress(context: Context) {
     private val playsSerializer = MapSerializer(String.serializer(), OfflinePlay.serializer())
 
     private fun readPlays(): Map<String, OfflinePlay> = runCatching {
-        MatineeJson.decodeFromString(playsSerializer, prefs.getString("plays", null) ?: "{}")
+        decodeSaved(playsSerializer, prefs.getString("plays", null) ?: "{}")
     }.getOrDefault(emptyMap())
 
     private fun writePlays(plays: Map<String, OfflinePlay>) =
@@ -64,7 +65,7 @@ class PendingProgress(context: Context) {
     suspend fun flush(api: MatineeApi) {
         for (batch in readPlays().values.chunked(PLAYS_PER_REQUEST)) {
             try {
-                api.sendOfflinePlays(batch)
+                api.playback.offline(batch)
                 synchronized(this) { writePlays(readPlays() - batch.map { it.sessionId }.toSet()) }
             } catch (e: ApiException) {
                 // Not plays this server takes; they'd fail again.
@@ -75,7 +76,13 @@ class PendingProgress(context: Context) {
         }
         for ((itemId, report) in read()) {
             try {
-                api.syncProgress(itemId, report.positionSeconds, report.durationSeconds)
+                // Where the person got to, without a playback session.
+                api.playback.report(
+                    itemId,
+                    positionSeconds = report.positionSeconds.coerceAtLeast(0.0),
+                    durationSeconds = report.durationSeconds?.takeIf { it > 0 },
+                    closed = true,
+                )
                 drop(itemId)
             } catch (e: ApiException) {
                 // The file is gone from the server, or the report doesn't fit it any more.

@@ -44,7 +44,7 @@ private const val LIMIT = 100
 @Composable
 fun RecentScreen() {
     val user = LocalUser.current
-    val recent = rememberLoader("recent-${user.username}") { recentlyWatched(user.username, LIMIT) }
+    val recent = rememberLoader("recent-${user.username}") { profiles.recent(user.username, LIMIT) }
     Column(Modifier.fillMaxSize()) {
         TopBar(stringResource(R.string.profile_recent))
         when (val state = recent.state) {

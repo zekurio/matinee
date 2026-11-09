@@ -18,9 +18,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
@@ -31,14 +31,14 @@ import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.Library
 import io.github.zekurio.matinee.api.MediaItem
 import io.github.zekurio.matinee.api.TitleSort
+import io.github.zekurio.matinee.api.isAdmin
 import io.github.zekurio.matinee.ui.AppHeader
 import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.Loader
-import io.github.zekurio.matinee.ui.RefreshOnResume
 import io.github.zekurio.matinee.ui.LocalNavigator
 import io.github.zekurio.matinee.ui.LocalUser
+import io.github.zekurio.matinee.ui.RefreshOnResume
 import io.github.zekurio.matinee.ui.StatusBarScrim
-import io.github.zekurio.matinee.ui.tabBarPadding
 import io.github.zekurio.matinee.ui.components.EpisodeCard
 import io.github.zekurio.matinee.ui.components.ErrorBox
 import io.github.zekurio.matinee.ui.components.Gap
@@ -51,14 +51,15 @@ import io.github.zekurio.matinee.ui.components.ShelfCard
 import io.github.zekurio.matinee.ui.components.isWide
 import io.github.zekurio.matinee.ui.components.railItemWidth
 import io.github.zekurio.matinee.ui.rememberLoader
+import io.github.zekurio.matinee.ui.tabBarPadding
 import io.github.zekurio.matinee.ui.theme.Palette
 
 @Composable
 fun HomeScreen() {
-    val libraries = rememberLoader("libraries") { libraries() }
-    val resume = rememberLoader("continue") { continueWatching() }
-    val nextUp = rememberLoader("nextUp") { nextUp() }
-    val featured = rememberLoader("featured") { featured() }
+    val libraries = rememberLoader("libraries") { libraries.list() }
+    val resume = rememberLoader("continue") { home.continueWatching(limit = 20) }
+    val nextUp = rememberLoader("nextUp") { home.nextUp(limit = 20) }
+    val featured = rememberLoader("featured") { home.featured() }
     // Back on Home, what's in progress may have moved on, here or on
     // another device. Featured stays: it's picked at random, so fetching it
     // again would swap the banner under the person.
@@ -178,7 +179,7 @@ private fun EpisodeRail(title: String, items: List<MediaItem>) {
 @Composable
 private fun LibraryShelf(library: Library, stale: MutableMap<String, Loader<*>>) {
     val nav = LocalNavigator.current
-    val entries = rememberLoader("shelf-${library.id}") { shelf(library.id, 12) }
+    val entries = rememberLoader("shelf-${library.id}") { media.shelf(library.id, 12) }
     // Also when it scrolls back into view, once the last answer is old enough.
     RefreshOnResume(entries)
     val refreshFailed = entries.refreshError != null

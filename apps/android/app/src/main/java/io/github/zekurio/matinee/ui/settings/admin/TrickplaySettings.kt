@@ -4,14 +4,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import io.github.zekurio.matinee.R
-import io.github.zekurio.matinee.api.admin.AdminTrickplay
-import io.github.zekurio.matinee.api.admin.TRICKPLAY_INTERVALS
-import io.github.zekurio.matinee.api.admin.TRICKPLAY_WIDTHS
-import io.github.zekurio.matinee.api.admin.TrickplaySettings
-import io.github.zekurio.matinee.api.admin.setTrickplaySettings
-import io.github.zekurio.matinee.api.admin.trickplaySettings
 import androidx.compose.ui.unit.dp
+import io.github.zekurio.matinee.R
+import io.github.zekurio.matinee.api.AdminTrickplaySettings
+import io.github.zekurio.matinee.api.TrickplayInterval
+import io.github.zekurio.matinee.api.TrickplaySettings
+import io.github.zekurio.matinee.api.TrickplayWidth
 import io.github.zekurio.matinee.ui.components.Gap
 import io.github.zekurio.matinee.ui.components.LocalApi
 import io.github.zekurio.matinee.ui.rememberLoader
@@ -31,9 +29,9 @@ import java.text.NumberFormat
 @Composable
 fun TrickplaySettings() {
     val api = LocalApi.current
-    val loader = rememberLoader("admin-trickplay") { trickplaySettings() }
+    val loader = rememberLoader("admin-trickplay") { admin.trickplay.get() }
     val saver = rememberSaver()
-    val save = { settings: TrickplaySettings -> saver { loader.show(api.setTrickplaySettings(settings)) } }
+    val save = { settings: TrickplaySettings -> saver { loader.show(api.admin.trickplay.update(settings)) } }
     SettingsScaffold(stringResource(R.string.settings_admin_trickplay)) {
         loaded(loader, { stringResource(R.string.web_trickplay_loadFailed, it) }) { data ->
             item(key = "settings") { TrickplayForm(data, save) }
@@ -42,7 +40,7 @@ fun TrickplaySettings() {
 }
 
 @Composable
-private fun TrickplayForm(data: AdminTrickplay, save: (TrickplaySettings) -> Unit) {
+private fun TrickplayForm(data: AdminTrickplaySettings, save: (TrickplaySettings) -> Unit) {
     val res = LocalResources.current
     val settings = data.settings
     val count = NumberFormat.getIntegerInstance()
@@ -54,13 +52,13 @@ private fun TrickplayForm(data: AdminTrickplay, save: (TrickplaySettings) -> Uni
             RowDivider()
             PickerRow(
                 stringResource(R.string.web_trickplay_interval),
-                TRICKPLAY_INTERVALS.map { it to pluralStringResource(R.plurals.web_trickplay_interval_option, it, it) },
+                TrickplayInterval.all.map { it to pluralStringResource(R.plurals.web_trickplay_interval_option, it, it) },
                 settings.intervalSeconds,
             ) { save(settings.copy(intervalSeconds = it)) }
             RowDivider()
             PickerRow(
                 stringResource(R.string.web_trickplay_width),
-                TRICKPLAY_WIDTHS.map { it to stringResource(R.string.web_trickplay_width_option, it.toString()) },
+                TrickplayWidth.all.map { it to stringResource(R.string.web_trickplay_width_option, it.toString()) },
                 settings.width,
             ) { save(settings.copy(width = it)) }
             RowDivider()

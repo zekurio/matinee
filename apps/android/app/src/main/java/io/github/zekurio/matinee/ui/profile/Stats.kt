@@ -5,10 +5,6 @@ import android.text.format.DateFormat
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.material3.HorizontalDivider
-import io.github.zekurio.matinee.ui.components.CardShape
-import io.github.zekurio.matinee.ui.components.Lucide
-import io.github.zekurio.matinee.ui.components.LucideIcon
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -17,13 +13,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -44,13 +41,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
-import io.github.zekurio.matinee.api.STATS_RANGES
+import io.github.zekurio.matinee.api.StatsRange
 import io.github.zekurio.matinee.api.WatchStats
+import io.github.zekurio.matinee.api.name
 import io.github.zekurio.matinee.ui.LocalNavigator
+import io.github.zekurio.matinee.ui.components.CardShape
 import io.github.zekurio.matinee.ui.components.Chip
 import io.github.zekurio.matinee.ui.components.Gap
 import io.github.zekurio.matinee.ui.components.Gutter
 import io.github.zekurio.matinee.ui.components.LocalApi
+import io.github.zekurio.matinee.ui.components.Lucide
+import io.github.zekurio.matinee.ui.components.LucideIcon
 import io.github.zekurio.matinee.ui.components.PosterArt
 import io.github.zekurio.matinee.ui.components.art
 import io.github.zekurio.matinee.ui.theme.Palette
@@ -104,7 +105,7 @@ fun RangeChips(current: String, onPick: (String) -> Unit) {
         Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = Gutter),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        STATS_RANGES.forEach { range -> Chip(rangeName(range), range == current, { onPick(range) }) }
+        StatsRange.all.forEach { range -> Chip(rangeName(range), range == current, { onPick(range) }) }
     }
 }
 
@@ -337,7 +338,7 @@ private fun metricName(metric: String): String = stringResource(
 @Composable
 fun Standing(range: String, zone: String, modifier: Modifier = Modifier) {
     var open by remember { mutableStateOf<io.github.zekurio.matinee.api.LeaderboardBoard?>(null) }
-    val loader = io.github.zekurio.matinee.ui.rememberLoader("leaderboard-$range") { leaderboard(range, zone) }
+    val loader = io.github.zekurio.matinee.ui.rememberLoader("leaderboard-$range") { stats.leaderboard(range, zone) }
     val boards = (loader.state as? io.github.zekurio.matinee.ui.Load.Ready)?.value?.boards.orEmpty()
     val standings = boards.mapNotNull { board ->
         val at = board.entries.indexOfFirst { it.self }

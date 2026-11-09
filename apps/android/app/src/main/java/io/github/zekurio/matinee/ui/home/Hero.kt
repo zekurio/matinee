@@ -52,6 +52,7 @@ import coil3.compose.AsyncImage
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.ArtworkSize
 import io.github.zekurio.matinee.api.FeaturedTitle
+import io.github.zekurio.matinee.api.isShow
 import io.github.zekurio.matinee.ui.LocalNavigator
 import io.github.zekurio.matinee.ui.components.ButtonLook
 import io.github.zekurio.matinee.ui.components.Gap

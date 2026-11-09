@@ -53,7 +53,7 @@ fun BrowseScreen(genre: String?, studio: String?) {
     val name = genre ?: studio.orEmpty()
     var kind by rememberSaveable { mutableStateOf<String?>(null) }
     val pages = rememberTitlePages("browse-$genre-$studio-$kind") { offset, limit ->
-        browse(genre = genre, studio = studio, kind = kind, limit = limit, offset = offset).let {
+        titles.browse(genre = genre, studio = studio, kind = kind, limit = limit, offset = offset).let {
             io.github.zekurio.matinee.api.TitleList(it.items, it.total)
         }
     }
@@ -99,7 +99,7 @@ fun BrowseScreen(genre: String?, studio: String?) {
 fun PersonScreen(name: String) {
     val api = LocalApi.current
     val res = LocalResources.current
-    val person = rememberLoader("person-$name") { person(name) }
+    val person = rememberLoader("person-$name") { people.get(name) }
     Column(Modifier.fillMaxSize()) {
         TopBar(null, home = true)
         when (val state = person.state) {

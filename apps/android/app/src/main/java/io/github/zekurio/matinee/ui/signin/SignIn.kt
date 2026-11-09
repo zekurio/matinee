@@ -49,8 +49,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.ApiException
+import io.github.zekurio.matinee.api.AppDevice
 import io.github.zekurio.matinee.api.AppSession
 import io.github.zekurio.matinee.api.DeviceCode
+import io.github.zekurio.matinee.api.DeviceSignIn
 import io.github.zekurio.matinee.auth.AuthState
 import io.github.zekurio.matinee.auth.Session
 import io.github.zekurio.matinee.ui.components.ButtonLook
@@ -213,7 +215,7 @@ private fun DeviceCodeSignIn(session: Session, onBack: (() -> Unit)?) {
         val api = session.requireApi()
         error = null
         val started = try {
-            api.deviceStart(session.deviceName, session.platform)
+            api.auth.device.start(AppDevice(session.deviceName, session.platform))
         } catch (e: IOException) {
             error = describeFailure(resources, e)
             return@LaunchedEffect
@@ -222,7 +224,7 @@ private fun DeviceCodeSignIn(session: Session, onBack: (() -> Unit)?) {
         while (true) {
             delay(started.interval * 1000L)
             val answer = try {
-                api.devicePoll(started.deviceCode)
+                api.auth.device.poll(started.deviceCode)
             } catch (e: ApiException) {
                 // The code expired: get a new one, and with it a new QR code.
                 if (e.status == 404) {
@@ -239,7 +241,7 @@ private fun DeviceCodeSignIn(session: Session, onBack: (() -> Unit)?) {
                 continue
             }
             error = null
-            if (answer.status == "approved" && answer.token != null && answer.user != null) {
+            if (answer is DeviceSignIn.Approved) {
                 session.signedIn(AppSession(answer.token, answer.user))
                 return@LaunchedEffect
             }

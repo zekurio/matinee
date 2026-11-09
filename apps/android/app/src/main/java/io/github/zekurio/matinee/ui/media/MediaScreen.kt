@@ -34,10 +34,11 @@ import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.ArtworkSize
 import io.github.zekurio.matinee.api.Library
-import io.github.zekurio.matinee.ui.TopBar
+import io.github.zekurio.matinee.api.isAdmin
 import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.LocalNavigator
 import io.github.zekurio.matinee.ui.LocalUser
+import io.github.zekurio.matinee.ui.TopBar
 import io.github.zekurio.matinee.ui.components.ArtFrame
 import io.github.zekurio.matinee.ui.components.CardShape
 import io.github.zekurio.matinee.ui.components.ErrorBox
@@ -59,7 +60,7 @@ import io.github.zekurio.matinee.ui.theme.Palette
  */
 @Composable
 fun MediaScreen() {
-    val libraries = rememberLoader("libraries") { libraries() }
+    val libraries = rememberLoader("libraries") { libraries.list() }
     Column(Modifier.fillMaxSize()) {
         TopBar(stringResource(R.string.tab_media), back = false)
         when (val state = libraries.state) {

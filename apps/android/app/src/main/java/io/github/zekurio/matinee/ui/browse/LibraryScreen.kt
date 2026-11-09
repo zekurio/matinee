@@ -59,7 +59,7 @@ import kotlinx.coroutines.delay
 
 @Composable
 fun LibraryScreen(route: LibraryRoute) {
-    val libraries = rememberLoader("libraries") { libraries() }
+    val libraries = rememberLoader("libraries") { libraries.list() }
     val all = (libraries.state as? Load.Ready)?.value.orEmpty()
     val library = all.firstOrNull { it.id == route.id }
     var sort by rememberSaveable { mutableStateOf(route.sort ?: TitleSort.NAME) }
@@ -73,7 +73,7 @@ fun LibraryScreen(route: LibraryRoute) {
         settled = query.trim()
     }
     val pages = rememberTitlePages("titles-${route.id}-$sort-$genre-$settled") { offset, limit ->
-        titles(route.id, sort = sort, query = settled.ifEmpty { null }, genre = genre, limit = limit, offset = offset)
+        titles.list(route.id, sort = sort, query = settled.ifEmpty { null }, genre = genre, limit = limit, offset = offset)
     }
     val shows = library?.kind == "shows"
 
@@ -205,7 +205,7 @@ private fun LibraryActions(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun GenreSheet(libraryId: String, current: String?, onPick: (String?) -> Unit, onDismiss: () -> Unit) {
-    val genres = rememberLoader("genres-$libraryId") { genres(libraryId) }
+    val genres = rememberLoader("genres-$libraryId") { titles.facets(libraryId).genres }
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Palette.Raised) {
         Text(
             stringResource(R.string.library_genre),

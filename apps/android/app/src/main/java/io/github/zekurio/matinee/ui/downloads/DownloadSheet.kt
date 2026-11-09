@@ -41,11 +41,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
+import io.github.zekurio.matinee.api.DEFAULT_PLAYBACK_PREFERENCES
 import io.github.zekurio.matinee.api.DownloadPlan
 import io.github.zekurio.matinee.api.DownloadSpec
+import io.github.zekurio.matinee.api.FALLBACK_PLAYBACK_OPTIONS
 import io.github.zekurio.matinee.api.MediaItem
-import io.github.zekurio.matinee.api.PlaybackOptions
-import io.github.zekurio.matinee.api.PlaybackPreferences
 import io.github.zekurio.matinee.app
 import io.github.zekurio.matinee.downloads.DownloadSource
 import io.github.zekurio.matinee.ui.LocalUser
@@ -95,10 +95,10 @@ fun DownloadSheet(item: MediaItem, onDismiss: () -> Unit) {
         try {
             val loaded = DownloadSource(
                 item = item,
-                audio = api.audio(item.id),
-                subtitles = api.subtitles(item.id).tracks,
-                options = runCatching { api.playbackOptions() }.getOrDefault(PlaybackOptions()),
-                preferences = user.playback ?: PlaybackPreferences(),
+                audio = api.media.audio(item.id),
+                subtitles = api.media.subtitles(item.id).tracks,
+                options = runCatching { api.playback.options() }.getOrDefault(FALLBACK_PLAYBACK_OPTIONS),
+                preferences = user.playback ?: DEFAULT_PLAYBACK_PREFERENCES,
             )
             audio = downloads.defaultAudio(loaded).map { it.index }
             codec = downloads.defaultCodec(loaded.options)
@@ -123,7 +123,7 @@ fun DownloadSheet(item: MediaItem, onDismiss: () -> Unit) {
             if (choice !is Choice.Device) continue
             val spec = downloads.deviceSpec(loaded, choice.preset, chosenAudio, codec)
             // A size this device can't have the server make just doesn't show one.
-            val plan = runCatching { api.downloadPlan(item.id, spec) }.getOrNull()
+            val plan = runCatching { api.downloads.plan(item.id, spec) }.getOrNull()
             if (plan != null) {
                 specs[choice] = spec
                 plans[choice] = plan

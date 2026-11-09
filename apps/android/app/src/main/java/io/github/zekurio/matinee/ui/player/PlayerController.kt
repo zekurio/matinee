@@ -44,6 +44,7 @@ import io.github.zekurio.matinee.api.SubtitleDelivery
 import io.github.zekurio.matinee.api.SubtitleTrack
 import io.github.zekurio.matinee.api.TitleKind
 import io.github.zekurio.matinee.api.Trickplay
+import io.github.zekurio.matinee.api.TrickplayStatus
 import io.github.zekurio.matinee.api.await
 import io.github.zekurio.matinee.downloads.PendingProgress
 import io.github.zekurio.matinee.downloads.PendingReport
@@ -367,7 +368,7 @@ class PlayerController(
                 is Source.Stream -> {
                     // A copied video starts on a keyframe; begin at the one before.
                     val start = if (at <= 0.5) 0.0 else try {
-                        api.keyframes(item.id, at).before
+                        api.media.keyframes(item.id, at).before
                     } catch (_: IOException) {
                         diagnostics.note(DiagnosticsNote.KEYFRAMES_FAILED)
                         at
@@ -593,7 +594,7 @@ class PlayerController(
 
     private suspend fun loadTrickplay() {
         try {
-            api.trickplay(item.id).collect { status -> if (status.images != null) trickplay = status.images }
+            api.trickplayUntilSettled(item.id).collect { status -> if (status is TrickplayStatus.Ready) trickplay = status.images }
         } catch (_: IOException) {
             // The seek bar does without previews.
         }
@@ -626,7 +627,15 @@ class PlayerController(
         val paused = !player.isPlaying
         val send: suspend () -> Unit = {
             try {
-                api.report(item.id, at, length, sessionId, played, paused, closed)
+                api.playback.report(
+                    item.id,
+                    positionSeconds = at.coerceAtLeast(0.0),
+                    durationSeconds = length?.takeIf { it > 0 },
+                    sessionId = sessionId,
+                    playedSeconds = played.coerceAtLeast(0.0),
+                    paused = paused,
+                    closed = closed.takeIf { it },
+                )
                 pending?.drop(item.id)
                 pending?.dropPlay(sessionId)
             } catch (_: IOException) {

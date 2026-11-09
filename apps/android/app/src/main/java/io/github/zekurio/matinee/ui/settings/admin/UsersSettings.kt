@@ -25,11 +25,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
-import io.github.zekurio.matinee.api.admin.AdminUser
-import io.github.zekurio.matinee.api.admin.adminUsers
-import io.github.zekurio.matinee.api.admin.removeUser
-import io.github.zekurio.matinee.api.admin.setUserRole
-import io.github.zekurio.matinee.api.admin.signOutUser
+import io.github.zekurio.matinee.api.AdminUser
+import io.github.zekurio.matinee.api.isAdmin
+import io.github.zekurio.matinee.api.name
 import io.github.zekurio.matinee.app
 import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.LocalUser
@@ -67,7 +65,7 @@ private sealed interface UserAction {
  */
 @Composable
 fun UsersSettings() {
-    val loader = rememberLoader("admin-users") { adminUsers() }
+    val loader = rememberLoader("admin-users") { admin.users.list() }
     var acting by remember { mutableStateOf<AdminUser?>(null) }
     var confirming by remember { mutableStateOf<UserAction?>(null) }
     // The page's, so a save goes on after its dialog or sheet closes.
@@ -203,7 +201,7 @@ private fun Confirm(action: UserAction, saver: Saver, reload: () -> Unit, onDism
                 ),
                 onConfirm = {
                     saver {
-                        api.setUserRole(user.id, if (action.admin) "admin" else "user")
+                        api.admin.users.setRole(user.id, if (action.admin) "admin" else "user")
                         snackbar.showSnackbar(
                             when {
                                 action.admin -> res.getString(R.string.web_users_madeAdmin, user.name)
@@ -224,7 +222,7 @@ private fun Confirm(action: UserAction, saver: Saver, reload: () -> Unit, onDism
             confirm = stringResource(if (self) R.string.web_users_signOut_ownConfirm else R.string.web_users_signOut_confirm),
             onConfirm = {
                 saver {
-                    val ended = api.signOutUser(user.id)
+                    val ended = api.admin.users.signOut(user.id).ended
                     snackbar.showSnackbar(
                         if (self) res.getQuantityString(R.plurals.web_users_endedOwnSessions, ended, ended)
                         else res.getQuantityString(R.plurals.web_users_endedSessions, ended, ended, user.name),
@@ -240,7 +238,7 @@ private fun Confirm(action: UserAction, saver: Saver, reload: () -> Unit, onDism
             confirm = stringResource(if (self) R.string.web_users_delete_ownConfirm else R.string.web_users_delete_confirm),
             onConfirm = {
                 saver {
-                    api.removeUser(user.id)
+                    api.admin.users.remove(user.id)
                     // An account gone, its session with it.
                     if (self) {
                         session.signOut()

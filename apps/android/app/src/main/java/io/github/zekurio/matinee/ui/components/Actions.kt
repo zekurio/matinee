@@ -35,6 +35,7 @@ import io.github.zekurio.matinee.api.MediaItem
 import io.github.zekurio.matinee.api.Season as ShowSeason
 import io.github.zekurio.matinee.api.TitleKind
 import io.github.zekurio.matinee.api.TitleSummary
+import io.github.zekurio.matinee.api.isAdmin
 import io.github.zekurio.matinee.app
 import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.LocalNavigator
@@ -278,7 +279,7 @@ private fun TitleActions(title: TitleSummary, file: MediaItem?, here: Boolean, d
         SheetItem(Lucide.PlayOutline, stringResource(R.string.title_play)) {
             dismiss()
             scope.launchShowing(snackbar, playFailure) {
-                val next = api.title(title.id).next
+                val next = api.titles.get(title.id).next
                 if (next == null) snackbar.showSnackbar(noFiles) else nav.play(next.id)
             }
         }
@@ -328,7 +329,7 @@ private fun TitleActions(title: TitleSummary, file: MediaItem?, here: Boolean, d
         else -> SheetItem(Lucide.Download, stringResource(R.string.downloads_action)) {
             dismiss()
             scope.launchShowing(snackbar, playFailure) {
-                val next = api.title(title.id).next
+                val next = api.titles.get(title.id).next
                 if (next == null) snackbar.showSnackbar(noFiles) else actions.download = next
             }
         }
@@ -393,7 +394,7 @@ private fun MetadataItems(title: TitleSummary, images: ImageTarget?, matchable: 
         SheetItem(Lucide.RefreshCw, stringResource(R.string.title_menu_refresh)) {
             dismiss()
             scope.launchShowing(snackbar, failed) {
-                api.refreshTitle(title.id)
+                api.titles.refresh(title.id)
                 viewer.changed()
                 snackbar.showSnackbar(done)
             }

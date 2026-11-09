@@ -15,8 +15,8 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -65,6 +65,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.ArtworkSize
+import io.github.zekurio.matinee.api.FilePart
 import io.github.zekurio.matinee.api.IMAGE_TYPES
 import io.github.zekurio.matinee.api.ImageSlot
 import io.github.zekurio.matinee.api.ImageTarget
@@ -76,7 +77,6 @@ import io.github.zekurio.matinee.api.RemoteImage
 import io.github.zekurio.matinee.api.Title
 import io.github.zekurio.matinee.app
 import io.github.zekurio.matinee.ui.Load
-import io.github.zekurio.matinee.ui.describeFailure
 import io.github.zekurio.matinee.ui.LocalNavigator
 import io.github.zekurio.matinee.ui.TopBar
 import io.github.zekurio.matinee.ui.components.Badge
@@ -97,6 +97,7 @@ import io.github.zekurio.matinee.ui.components.Picture
 import io.github.zekurio.matinee.ui.components.art
 import io.github.zekurio.matinee.ui.components.isWide
 import io.github.zekurio.matinee.ui.components.tone
+import io.github.zekurio.matinee.ui.describeFailure
 import io.github.zekurio.matinee.ui.rememberLoader
 import io.github.zekurio.matinee.ui.seasonName
 import io.github.zekurio.matinee.ui.theme.Palette
@@ -123,14 +124,14 @@ import kotlinx.coroutines.withContext
 @Composable
 fun rememberLibraryProvider(libraryId: String): Load<MetadataProvider?> =
     rememberLoader("provider-$libraryId") {
-        val id = libraries().firstOrNull { it.id == libraryId }?.metadataProvider
-        if (id == null) null else metadataProviders().firstOrNull { it.id == id }
+        val id = libraries.list().firstOrNull { it.id == libraryId }?.metadataProvider
+        if (id == null) null else metadata.providers().firstOrNull { it.id == id }
     }.state
 
 /** The page's title loaded, or its loading and failure under the top bar. */
 @Composable
 private fun TitlePage(titleId: String, heading: String, content: @Composable (Title) -> Unit) {
-    val loader = rememberLoader("title-$titleId") { title(titleId) }
+    val loader = rememberLoader("title-$titleId") { titles.get(titleId) }
     Column(Modifier.fillMaxSize()) {
         TopBar(heading)
         when (val state = loader.state) {
@@ -176,7 +177,7 @@ private fun IdentifyForm(title: Title) {
     LaunchedEffect(submitted) {
         results = Load.Loading
         results = try {
-            Load.Ready(api.findMatches(title.id, submitted.first, submitted.second))
+            Load.Ready(api.titles.findMatches(title.id, submitted.first, submitted.second))
         } catch (e: IOException) {
             Load.Failed(describeFailure(context.resources, e))
         }
@@ -193,7 +194,7 @@ private fun IdentifyForm(title: Title) {
         // than taking the person back from wherever they went.
         scope.launch {
             try {
-                val updated = api.identify(title.id, match.id)
+                val updated = api.titles.identify(title.id, match.id)
                 viewer.changed()
                 appScope.launch { snackbar.showSnackbar(res.getString(R.string.title_identify_matched, updated.name)) }
                 nav.back()
@@ -352,7 +353,7 @@ private fun ImageEditor(title: Title, target: ImageTarget) {
     val scope = rememberCoroutineScope()
     val slots = target.slots
     var slot by rememberSaveable { mutableStateOf(slots.first()) }
-    val images = rememberLoader("images-${target.titleId}-${target.season}-${target.episode}") { images(target) }
+    val images = rememberLoader("images-${target.titleId}-${target.season}-${target.episode}") { titles.images(target.titleId, target.season, target.episode) }
     // What the last change answered, over the load, which catches up after.
     var changed by remember { mutableStateOf<List<ItemImage>?>(null) }
     val current = changed ?: (images.state as? Load.Ready)?.value
@@ -369,7 +370,7 @@ private fun ImageEditor(title: Title, target: ImageTarget) {
         if (!lists) return@LaunchedEffect
         remote = Load.Loading
         remote = try {
-            Load.Ready(api.remoteImages(target, slot, allLanguages))
+            Load.Ready(api.titles.remoteImages(target.titleId, slot, target.season, target.episode, allLanguages))
         } catch (e: IOException) {
             Load.Failed(describeFailure(context.resources, e))
         }
@@ -384,9 +385,15 @@ private fun ImageEditor(title: Title, target: ImageTarget) {
         scope.launch {
             try {
                 changed = when (action) {
-                    is Change.Pick -> api.setImage(target, slot, action.imageId)
-                    is Change.Upload -> api.uploadImage(target, slot, action.bytes, action.type)
-                    Change.Reset -> api.resetImage(target, slot)
+                    is Change.Pick -> api.titles.setImage(target.titleId, slot, action.imageId, target.season, target.episode)
+                    is Change.Upload -> api.titles.uploadImage(
+                        target.titleId,
+                        slot,
+                        FilePart(action.bytes, action.type, "image." + action.type.substringAfter('/')),
+                        target.season,
+                        target.episode,
+                    )
+                    Change.Reset -> api.titles.resetImage(target.titleId, slot, target.season, target.episode)
                 }
                 // Pages that show the images fetch them again.
                 viewer.changed()

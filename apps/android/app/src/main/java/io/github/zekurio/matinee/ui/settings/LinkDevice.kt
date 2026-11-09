@@ -94,6 +94,7 @@ import com.google.zxing.common.HybridBinarizer
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.ApiException
 import io.github.zekurio.matinee.api.DeviceRequest
+import io.github.zekurio.matinee.api.name
 import io.github.zekurio.matinee.app
 import io.github.zekurio.matinee.auth.AuthState
 import io.github.zekurio.matinee.auth.ScannedCode
@@ -492,7 +493,7 @@ private fun ApproveStep(userCode: String, from: String?, typed: Boolean, onAgain
     LaunchedEffect(attempt) {
         state = Approval.Checking
         state = try {
-            Approval.Waiting(api.deviceRequest(userCode))
+            Approval.Waiting(api.auth.device.get(userCode))
         } catch (e: IOException) {
             if (e is ApiException && e.status == 404) Approval.Gone else Approval.Failed(describeFailure(context.resources, e))
         }
@@ -529,7 +530,7 @@ private fun ApproveStep(userCode: String, from: String?, typed: Boolean, onAgain
                     approveError = null
                     scope.launch {
                         try {
-                            api.approveDevice(userCode)
+                            api.auth.device.approve(userCode)
                             state = Approval.Approved(request)
                         } catch (e: IOException) {
                             if (e is ApiException && e.status == 404) {

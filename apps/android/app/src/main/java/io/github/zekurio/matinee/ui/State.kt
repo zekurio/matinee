@@ -1,5 +1,8 @@
 package io.github.zekurio.matinee.ui
 
+import android.content.res.Resources
+import android.os.SystemClock
+import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -13,11 +16,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import android.content.res.Resources
-import android.os.SystemClock
-import android.util.Log
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.ApiException
+import io.github.zekurio.matinee.api.Explicit
 import io.github.zekurio.matinee.api.MatineeApi
 import io.github.zekurio.matinee.api.MediaItem
 import io.github.zekurio.matinee.api.TitleKind
@@ -70,19 +71,19 @@ class ViewerState {
     fun isWatched(item: MediaItem) = itemWatched[item.id] ?: item.progress?.completed ?: false
 
     suspend fun setFavorite(api: MatineeApi, title: TitleSummary, favorite: Boolean) =
-        titleFavorites.send(title.id, favorite) { api.setFavorite(title.id, favorite) }
+        titleFavorites.send(title.id, favorite) { api.favorites.set(title.id, favorite) }
 
     suspend fun setFavorite(api: MatineeApi, item: MediaItem, favorite: Boolean) {
         val title = item.title
         if (title?.kind == TitleKind.MOVIE) return setFavorite(api, title, favorite)
-        itemFavorites.send(item.id, favorite) { api.setItemFavorite(item.id, favorite) }
+        itemFavorites.send(item.id, favorite) { api.favorites.setItem(item.id, favorite) }
     }
 
-    /** [watchedAt] is when, for watched: see [MatineeApi.setWatched]. */
+    /** [watchedAt] is when, for watched, as the contract's `WatchedAt`: [WatchedAt.RELEASED], [WatchedAt.UNKNOWN], or an ISO time; null is now. */
     suspend fun setWatched(api: MatineeApi, item: MediaItem, watched: Boolean, watchedAt: String? = null) {
         val title = item.title
         if (title != null) itemPlaces[item.id] = title.id to item.seasonNumber
-        itemWatched.send(item.id, watched) { api.setWatched(item.id, watched, watchedAt.takeIf { watched }) }
+        itemWatched.send(item.id, watched) { api.playback.setWatched(item.id, watched, watchedAt.takeIf { watched }) }
         when {
             title == null -> Unit
             // A movie is watched with its one file.
@@ -99,7 +100,7 @@ class ViewerState {
      * it did.
      */
     suspend fun setWatched(api: MatineeApi, title: TitleSummary, watched: Boolean, season: Int? = null, watchedAt: String? = null) {
-        val send: suspend () -> Unit = { api.setTitleWatched(title.id, watched, season, watchedAt.takeIf { watched }) }
+        val send: suspend () -> Unit = { api.playback.setTitleWatched(title.id, watched, season = season?.let { Explicit(it) }, watchedAt = watchedAt.takeIf { watched }) }
         if (season == null) titleWatched.send(title.id, watched, send) else send()
         if (season != null) titleWatched.forget(title.id)
         // The files marked one by one before now are this answer too.

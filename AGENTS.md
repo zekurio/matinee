@@ -27,8 +27,11 @@ See README.md for setup and the auth design.
 - `brand/`: the logo and the native app icons, with the script that
   renders their PNGs and the web app's favicon. See `brand/README.md`.
 - `apps/android`: the native Android app (Kotlin, Compose, Media3), a
-  Gradle project outside the pnpm workspace. It reads the REST API, so a
-  contract change it uses also goes in `api/Models.kt`. Build it with
+  Gradle project outside the pnpm workspace. Its API client,
+  `api/ContractModels.kt` and `api/ContractApi.kt`, is generated from the
+  OpenAPI document by `pnpm api:android`
+  (`apps/server/scripts/kotlin-client.ts`). Run it after a contract change;
+  `pnpm verify` fails while they're out of date. Build the app with
   `nix develop .#android`; see its README.
 - `nix/`: the flake's package (`package.nix`) and NixOS module
   (`module.nix`), with tests in `nix/tests`. A server variable the module

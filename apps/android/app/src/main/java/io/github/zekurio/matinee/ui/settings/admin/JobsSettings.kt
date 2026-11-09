@@ -32,12 +32,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
-import io.github.zekurio.matinee.api.admin.JobQueue
-import io.github.zekurio.matinee.api.admin.ScheduledTask
-import io.github.zekurio.matinee.api.admin.jobs
-import io.github.zekurio.matinee.api.admin.queueAction
-import io.github.zekurio.matinee.api.admin.setConcurrency
-import io.github.zekurio.matinee.api.admin.taskAction
+import io.github.zekurio.matinee.api.JobQueueStatus
+import io.github.zekurio.matinee.api.ScheduledTask
+import io.github.zekurio.matinee.api.name
 import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.components.Gap
 import io.github.zekurio.matinee.ui.components.LocalApi
@@ -68,7 +65,7 @@ private const val POLL_MILLIS = 2_000L
 @Composable
 fun JobsSettings() {
     val api = LocalApi.current
-    val loader = rememberLoader("admin-jobs") { jobs() }
+    val loader = rememberLoader("admin-jobs") { admin.jobs.get() }
     val saver = rememberSaver()
     var open by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(loader) {
@@ -81,7 +78,10 @@ fun JobsSettings() {
         loaded(loader, { stringResource(R.string.web_jobs_loadFailed, it) }) { overview ->
             item(key = "jobs") {
                 val runTask = { task: ScheduledTask, action: String ->
-                    saver { api.taskAction(task.id, action); loader.reload() }
+                    saver {
+                        if (action == "cancel") api.admin.jobs.cancelTask(task.id) else api.admin.jobs.runTask(task.id)
+                        loader.reload()
+                    }
                 }
                 Section(stringResource(R.string.web_jobs_queues)) {
                     Panel {
@@ -103,8 +103,17 @@ fun JobsSettings() {
     if (queue != null) {
         QueueSheet(
             queue,
-            onAction = { action -> saver { api.queueAction(queue.id, action); loader.reload() } },
-            onConcurrency = { n -> saver { loader.show(api.setConcurrency(queue.id, n)) } },
+            onAction = { action ->
+                saver {
+                    when (action) {
+                        "pause" -> api.admin.jobs.pause(queue.id)
+                        "resume" -> api.admin.jobs.resume(queue.id)
+                        else -> api.admin.jobs.clear(queue.id)
+                    }
+                    loader.reload()
+                }
+            },
+            onConcurrency = { n -> saver { loader.show(api.admin.jobs.updateConcurrency(mapOf(queue.id to n))) } },
         ) { open = null }
     }
 }
@@ -118,7 +127,7 @@ private fun localized(res: Resources, packageName: String, kind: String, id: Str
 }
 
 @Composable
-private fun queueName(queue: JobQueue): String =
+private fun queueName(queue: JobQueueStatus): String =
     localized(LocalResources.current, LocalContext.current.packageName, "queue", queue.id, "name", queue.name)
 
 @Composable
@@ -127,7 +136,7 @@ private fun taskName(task: ScheduledTask): String =
 
 /** "3 of 4 running · 12 waiting", "Paused", or "Idle", with failures. */
 @Composable
-private fun queueStatus(queue: JobQueue): String {
+private fun queueStatus(queue: JobQueueStatus): String {
     val parts = buildList {
         when {
             queue.paused -> add(stringResource(R.string.web_jobs_queue_paused))
@@ -142,7 +151,7 @@ private fun queueStatus(queue: JobQueue): String {
 
 /** A queue, how busy it is, and the task that fills it, with its run button; the row opens the queue's sheet. */
 @Composable
-private fun QueueRow(queue: JobQueue, task: ScheduledTask?, onTask: (String) -> Unit, onClick: () -> Unit) {
+private fun QueueRow(queue: JobQueueStatus, task: ScheduledTask?, onTask: (String) -> Unit, onClick: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().clickable(onClickLabel = stringResource(R.string.web_jobs_queue_details), onClick = onClick)
             .padding(start = 16.dp, end = 12.dp, top = 12.dp, bottom = 12.dp),
@@ -249,7 +258,7 @@ private fun TaskRow(task: ScheduledTask, onAction: (String) -> Unit) {
 /** A queue's details and what can be done to it. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun QueueSheet(queue: JobQueue, onAction: (String) -> Unit, onConcurrency: (Int) -> Unit, onDismiss: () -> Unit) {
+private fun QueueSheet(queue: JobQueueStatus, onAction: (String) -> Unit, onConcurrency: (Int) -> Unit, onDismiss: () -> Unit) {
     val name = queueName(queue)
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Palette.Raised, dragHandle = null) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(vertical = 12.dp)) {

@@ -25,8 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
-import io.github.zekurio.matinee.api.WATCHED_RELEASED
-import io.github.zekurio.matinee.api.WATCHED_UNKNOWN
+import io.github.zekurio.matinee.api.WatchedAt
 import io.github.zekurio.matinee.ui.theme.Palette
 import java.time.Instant
 import java.time.LocalDate
@@ -77,14 +76,14 @@ internal fun WatchedAtSheet(ask: WatchedAsk, onDone: () -> Unit) {
                 hide(onDone)
             }
             SheetItem(Lucide.Calendar, stringResource(R.string.media_watched_at_released)) {
-                mark(WATCHED_RELEASED)
+                mark(WatchedAt.RELEASED)
                 hide(onDone)
             }
             SheetItem(Lucide.CalendarClock, stringResource(R.string.media_watched_at_other)) {
                 hide { picking = true }
             }
             SheetItem(Lucide.CalendarOff, stringResource(R.string.media_watched_at_unknown)) {
-                mark(WATCHED_UNKNOWN)
+                mark(WatchedAt.UNKNOWN)
                 hide(onDone)
             }
         }

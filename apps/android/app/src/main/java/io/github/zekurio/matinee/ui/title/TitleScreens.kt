@@ -30,6 +30,8 @@ import io.github.zekurio.matinee.api.ArtworkSize
 import io.github.zekurio.matinee.api.MediaItem
 import io.github.zekurio.matinee.api.Season
 import io.github.zekurio.matinee.api.Title
+import io.github.zekurio.matinee.api.isShow
+import io.github.zekurio.matinee.api.summary
 import io.github.zekurio.matinee.app
 import io.github.zekurio.matinee.ui.ItemTopBar
 import io.github.zekurio.matinee.ui.Load
@@ -92,7 +94,7 @@ private fun <T> PageState(state: Load<T>, error: String, retry: () -> Unit, cont
 
 @Composable
 fun TitleScreen(id: String) {
-    val loader = rememberLoader("title-$id") { title(id) }
+    val loader = rememberLoader("title-$id") { titles.get(id) }
     PageState(loader.state, stringResource(R.string.title_load_error), loader::reload) { title -> TitlePage(title) }
 }
 
@@ -195,7 +197,7 @@ private fun SeasonEpisodesRail(title: Title, season: Season, next: MediaItem?) {
 
 @Composable
 fun SeasonScreen(titleId: String, season: Int?) {
-    val loader = rememberLoader("title-$titleId") { title(titleId) }
+    val loader = rememberLoader("title-$titleId") { titles.get(titleId) }
     PageState(loader.state, stringResource(R.string.title_season_show_error), loader::reload) { title ->
         val current = title.seasons.firstOrNull { it.number == season }
         if (current == null) {
@@ -316,7 +318,7 @@ private fun SeasonPage(title: Title, season: Season) {
 
 @Composable
 fun EpisodeScreen(itemId: String) {
-    val loader = rememberLoader("media-$itemId") { media(itemId) }
+    val loader = rememberLoader("media-$itemId") { media.get(itemId) }
     PageState(loader.state, stringResource(R.string.title_episode_load_error), loader::reload) { item -> EpisodePage(item) }
 }
 

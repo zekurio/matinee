@@ -1,8 +1,8 @@
 package io.github.zekurio.matinee.ui.title
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -20,8 +20,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ripple
 import androidx.compose.material3.Text
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -52,6 +52,8 @@ import io.github.zekurio.matinee.api.CreditKind
 import io.github.zekurio.matinee.api.MediaItem
 import io.github.zekurio.matinee.api.Season
 import io.github.zekurio.matinee.api.Title
+import io.github.zekurio.matinee.api.isShow
+import io.github.zekurio.matinee.api.summary
 import io.github.zekurio.matinee.app
 import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.LocalNavigator
@@ -475,8 +477,8 @@ fun MediaInfo(item: MediaItem, modifier: Modifier = Modifier) {
     val res = LocalResources.current
     val tracks = rememberLoader("tracks-${item.id}") {
         FileTracks(
-            audio = audio(item.id).sortedByDescending { it.primary }.map { it.language },
-            subtitles = subtitles(item.id).tracks.map { it.language },
+            audio = media.audio(item.id).sortedByDescending { it.primary }.map { it.language },
+            subtitles = media.subtitles(item.id).tracks.map { it.language },
         )
     }
     val loaded = (tracks.state as? Load.Ready)?.value

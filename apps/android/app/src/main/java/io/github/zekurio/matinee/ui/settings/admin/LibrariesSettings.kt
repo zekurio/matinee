@@ -37,18 +37,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import io.github.zekurio.matinee.R
-import io.github.zekurio.matinee.api.admin.AdminLibrary
-import io.github.zekurio.matinee.api.admin.DirectoryListing
-import io.github.zekurio.matinee.api.admin.LibraryInput
-import io.github.zekurio.matinee.api.admin.ProviderInfo
-import io.github.zekurio.matinee.api.admin.adminLibraries
-import io.github.zekurio.matinee.api.admin.browseFolders
-import io.github.zekurio.matinee.api.admin.createLibrary
-import io.github.zekurio.matinee.api.admin.providerInfo
-import io.github.zekurio.matinee.api.admin.refreshLibrary
-import io.github.zekurio.matinee.api.admin.removeLibrary
-import io.github.zekurio.matinee.api.admin.scanLibrary
-import io.github.zekurio.matinee.api.admin.updateLibrary
+import io.github.zekurio.matinee.api.DirectoryListing
+import io.github.zekurio.matinee.api.Library
+import io.github.zekurio.matinee.api.LibraryInput
+import io.github.zekurio.matinee.api.MetadataProvider
+import io.github.zekurio.matinee.api.name
 import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.components.Gap
 import io.github.zekurio.matinee.ui.components.Gutter
@@ -74,7 +67,7 @@ import kotlinx.coroutines.delay
 private sealed interface Editing {
     data object New : Editing
 
-    data class Existing(val library: AdminLibrary) : Editing
+    data class Existing(val library: Library) : Editing
 }
 
 /**
@@ -88,12 +81,12 @@ fun LibrariesSettings() {
     val api = LocalApi.current
     val snackbar = LocalSnackbar.current
     val res = LocalResources.current
-    val loader = rememberLoader("admin-libraries") { adminLibraries() }
-    val providers = rememberLoader("admin-providers") { providerInfo() }
+    val loader = rememberLoader("admin-libraries") { libraries.list() }
+    val providers = rememberLoader("admin-providers") { metadata.providers() }
     val saver = rememberSaver()
-    var acting by remember { mutableStateOf<AdminLibrary?>(null) }
+    var acting by remember { mutableStateOf<Library?>(null) }
     var editing by remember { mutableStateOf<Editing?>(null) }
-    var removing by remember { mutableStateOf<AdminLibrary?>(null) }
+    var removing by remember { mutableStateOf<Library?>(null) }
     val libraries = (loader.state as? Load.Ready)?.value.orEmpty()
     val busy = libraries.any { it.scanning || it.refreshing }
     LaunchedEffect(busy) {
@@ -130,10 +123,10 @@ fun LibrariesSettings() {
     acting?.let { library ->
         LibrarySheet(
             library,
-            onScan = { saver { api.scanLibrary(library.id); loader.reload() } },
+            onScan = { saver { api.libraries.scan(library.id); loader.reload() } },
             onRefresh = {
                 saver {
-                    api.refreshLibrary(library.id)
+                    api.libraries.refreshMetadata(library.id)
                     snackbar.showSnackbar(res.getString(R.string.web_libraries_fetching))
                     loader.reload()
                 }
@@ -149,7 +142,7 @@ fun LibrariesSettings() {
             confirm = stringResource(R.string.web_libraries_remove_confirm),
             onConfirm = {
                 saver {
-                    api.removeLibrary(library.id)
+                    api.libraries.remove(library.id)
                     snackbar.showSnackbar(res.getString(R.string.web_libraries_removed, library.name))
                     loader.reload()
                 }
@@ -164,8 +157,15 @@ fun LibrariesSettings() {
             onSave = { input ->
                 saver {
                     when (target) {
-                        Editing.New -> api.createLibrary(input)
-                        is Editing.Existing -> api.updateLibrary(target.library.id, input)
+                        Editing.New -> api.libraries.create(input)
+                        is Editing.Existing -> api.libraries.update(
+                            target.library.id,
+                            name = input.name,
+                            kind = input.kind,
+                            paths = input.paths,
+                            metadataProvider = input.metadataProvider,
+                            metadataLanguage = input.metadataLanguage,
+                        )
                     }
                     editing = null
                     loader.reload()
@@ -176,7 +176,7 @@ fun LibrariesSettings() {
 }
 
 @Composable
-private fun LibraryRow(library: AdminLibrary, providers: Load<List<ProviderInfo>>, onClick: () -> Unit) {
+private fun LibraryRow(library: Library, providers: Load<List<MetadataProvider>>, onClick: () -> Unit) {
     val provider = (providers as? Load.Ready)?.value?.firstOrNull { it.id == library.metadataProvider }?.name
     val status = when {
         library.scanning -> stringResource(R.string.web_libraries_scanning)
@@ -207,7 +207,7 @@ private fun LibraryRow(library: AdminLibrary, providers: Load<List<ProviderInfo>
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun LibrarySheet(
-    library: AdminLibrary,
+    library: Library,
     onScan: () -> Unit,
     onRefresh: () -> Unit,
     onEdit: () -> Unit,
@@ -236,7 +236,7 @@ private fun LibrarySheet(
  * the folders are picked by walking the server's, below the ones picked.
  */
 @Composable
-private fun LibraryEditor(target: Editing, providers: List<ProviderInfo>, saver: Saver, onSave: (LibraryInput) -> Unit, onDismiss: () -> Unit) {
+private fun LibraryEditor(target: Editing, providers: List<MetadataProvider>, saver: Saver, onSave: (LibraryInput) -> Unit, onDismiss: () -> Unit) {
     val existing = (target as? Editing.Existing)?.library
     var name by remember { mutableStateOf(existing?.name.orEmpty()) }
     var kind by remember { mutableStateOf(existing?.kind ?: "movies") }
@@ -331,7 +331,7 @@ private fun FolderBrowser(added: List<String>, onAdd: (String) -> Unit) {
     LaunchedEffect(path) {
         error = null
         listing = try {
-            api.browseFolders(path)
+            api.admin.browse(path)
         } catch (e: java.io.IOException) {
             error = e.message
             null
