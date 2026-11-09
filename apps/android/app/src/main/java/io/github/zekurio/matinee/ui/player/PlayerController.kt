@@ -28,6 +28,7 @@ import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.session.MediaSession
@@ -248,6 +249,17 @@ class PlayerController(
     private var lastReport = 0L
     private var loadJob: Job? = null
 
+    /** The report Settings shows of this sitting: codes and formats, never names or addresses. */
+    private val diagnostics = DiagnosticsRecorder(
+        PlaybackReport(
+            device = deviceDiagnostics(context),
+            settings = SettingsDiagnostics.of(prefs.engine, prefs.decoders, initialQuality, prefs.videoCodec, prefs.audioCodec, prefs.convertAudio),
+            file = FileDiagnostics.of(item),
+            selection = selectionDiagnostics(),
+            capabilities = capabilityDiagnostics(),
+        ),
+    )
+
     init {
         player.addListener(object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -257,6 +269,7 @@ class PlayerController(
 
             override fun onPlaybackStateChanged(state: Int) {
                 loading = state == Player.STATE_BUFFERING || state == Player.STATE_IDLE
+                if (state == Player.STATE_READY) diagnostics.playing()
                 if (state == Player.STATE_ENDED) {
                     ended = true
                     report()
@@ -266,6 +279,7 @@ class PlayerController(
             override fun onTracksChanged(tracks: Tracks) {
                 if (pendingAudioOverride) applyAudioOverride(tracks)
                 applyTextOverride(tracks)
+                if (mpv == null) diagnostics.tracks(trackDiagnostics(tracks))
             }
 
             override fun onCues(cueGroup: CueGroup) {
@@ -279,9 +293,11 @@ class PlayerController(
             }
 
             override fun onPlayerError(e: PlaybackException) {
+                diagnostics.failed(errorDiagnostics(e))
                 fallBack(e)
             }
         })
+        listenForDecoders()
         scope.launch { tick() }
         scope.launch { loadTrickplay() }
         mpv?.setSubtitleScale(
@@ -292,7 +308,7 @@ class PlayerController(
 
     /** Start at [at] seconds into the file. */
     fun start(at: Double) {
-        load(plan(), at)
+        load(plan(), at, AttemptReason.START)
         player.playWhenReady = true
     }
 
@@ -340,7 +356,9 @@ class PlayerController(
         return Source.Stream(track?.index ?: 0, 0.0)
     }
 
-    private fun load(next: Source, at: Double) {
+    /** Loads [next]; a [reason] records it as an attempt, which a seek within a stream isn't. */
+    private fun load(next: Source, at: Double, reason: AttemptReason? = null) {
+        if (reason != null) recordAttempt(next, at, reason)
         loadJob?.cancel()
         error = null
         ended = false
@@ -351,6 +369,7 @@ class PlayerController(
                     val start = if (at <= 0.5) 0.0 else try {
                         api.keyframes(item.id, at).before
                     } catch (_: IOException) {
+                        diagnostics.note(DiagnosticsNote.KEYFRAMES_FAILED)
                         at
                     }
                     next.copy(offset = start)
@@ -461,12 +480,12 @@ class PlayerController(
         when (source) {
             Source.Direct -> {
                 noDirect = true
-                load(plan(), at)
+                load(plan(), at, AttemptReason.FALLBACK)
             }
             is Source.Stream -> {
                 noDirect = true
                 noStream = true
-                load(plan(), at)
+                load(plan(), at, AttemptReason.FALLBACK)
             }
             // A download or an encode has nothing further to fall back to.
             else -> error = e.errorCodeName.takeIf { e.cause == null } ?: (e.cause?.message ?: e.errorCodeName)
@@ -476,7 +495,7 @@ class PlayerController(
     fun retry() {
         noDirect = false
         noStream = false
-        load(plan(), position)
+        load(plan(), position, AttemptReason.RETRY)
         player.playWhenReady = true
     }
 
@@ -520,8 +539,9 @@ class PlayerController(
             }
         } else {
             noStream = false
-            load(plan(), position)
+            load(plan(), position, AttemptReason.AUDIO_CHANGE)
         }
+        recordSelection()
     }
 
     fun pickSubtitle(track: SubtitleTrack?) {
@@ -534,7 +554,8 @@ class PlayerController(
         // A burned-in track comes with its own encode, and leaving one goes back.
         val burnedBefore = before != null && burns(before)
         val burnNow = track != null && burns(track)
-        if (burnedBefore || burnNow) load(plan(), position) else showSubtitle()
+        if (burnedBefore || burnNow) load(plan(), position, AttemptReason.SUBTITLE_CHANGE) else showSubtitle()
+        recordSelection()
     }
 
     fun pickQuality(id: String) {
@@ -542,7 +563,7 @@ class PlayerController(
         quality = id
         noDirect = false
         noStream = false
-        load(plan(), position)
+        load(plan(), position, AttemptReason.QUALITY_CHANGE)
     }
 
     fun pickSpeed(rate: Float) {
@@ -564,6 +585,7 @@ class PlayerController(
                 val parsed = withContext(Dispatchers.Default) { CueTrack.parse(text) }
                 if (subtitle == track) cues = parsed
             } catch (_: IOException) {
+                diagnostics.note(DiagnosticsNote.SUBTITLE_LOAD_FAILED)
                 if (subtitle == track) subtitleError = true
             }
         }
@@ -632,7 +654,74 @@ class PlayerController(
             .build()
     }
 
+    /** Who draws [track]: the server in an encode, the player from the file, or the screen from WebVTT. */
+    private fun rendering(track: SubtitleTrack?): SubtitleRendering? = when {
+        track == null -> null
+        burns(track) -> SubtitleRendering.BURN_IN
+        playerDraws(track) -> SubtitleRendering.PLAYER
+        else -> SubtitleRendering.SCREEN
+    }
+
+    private fun selectionDiagnostics() = SelectionDiagnostics.of(audio, subtitle, rendering(subtitle))
+
+    private fun capabilityDiagnostics() = CapabilityDiagnostics(
+        decodesVideo = videoPlays,
+        readsContainer = containerPlays,
+        takesAudio = takesAudio(audio),
+        streamAudioCodecs = safeCodecs(audioCodecs),
+        encodeVideoCodecs = safeCodecs(videoCodecs),
+        serverVideoCodecs = safeCodecs(options.videoCodecs),
+        serverAudioCodecs = safeCodecs(options.audioCodecs),
+    )
+
+    private fun recordSelection() {
+        diagnostics.select(selectionDiagnostics())
+        diagnostics.capabilities(capabilityDiagnostics())
+    }
+
+    private fun recordAttempt(next: Source, at: Double, reason: AttemptReason) {
+        val mode = when (next) {
+            Source.Direct -> SourceMode.DIRECT
+            is Source.Stream -> SourceMode.STREAM
+            is Source.Hls -> SourceMode.HLS
+            Source.Local -> SourceMode.LOCAL
+        }
+        val audioIndex = when (next) {
+            is Source.Stream -> next.audio
+            is Source.Hls -> next.audio
+            else -> audio?.index
+        }
+        diagnostics.attempt(mode, reason, at, audioIndex, (next as? Source.Hls)?.quality, burnIn = (next as? Source.Hls)?.subtitle != null)
+        recordSelection()
+    }
+
+    /** Names the decoders ExoPlayer starts, as the device calls them; mpv picks its own. */
+    @OptIn(UnstableApi::class)
+    private fun listenForDecoders() {
+        val exo = player as? ExoPlayer ?: return
+        exo.addAnalyticsListener(object : AnalyticsListener {
+            override fun onVideoDecoderInitialized(
+                eventTime: AnalyticsListener.EventTime,
+                decoderName: String,
+                initializedTimestampMs: Long,
+                initializationDurationMs: Long,
+            ) {
+                diagnostics.decoder(DecoderDiagnostics(TrackKind.VIDEO, Safe.token(decoderName, 64)))
+            }
+
+            override fun onAudioDecoderInitialized(
+                eventTime: AnalyticsListener.EventTime,
+                decoderName: String,
+                initializedTimestampMs: Long,
+                initializationDurationMs: Long,
+            ) {
+                diagnostics.decoder(DecoderDiagnostics(TrackKind.AUDIO, Safe.token(decoderName, 64)))
+            }
+        })
+    }
+
     fun release() {
+        diagnostics.closed()
         report(closed = true)
         PlaybackService.stop(appContext, controls)
         session.release()

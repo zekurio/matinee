@@ -347,6 +347,7 @@ private fun PlaybackPage(session: Session) {
         item(key = "languages") { LanguagesSection(playback, loaded, save) }
         item(key = "device") { DeviceSection(prefs, loaded) }
         if (passthrough.isNotEmpty()) item(key = "passthrough") { PassthroughSection(prefs, passthrough) }
+        item(key = "diagnostics") { PlaybackDiagnosticsSection() }
     }
 }
 

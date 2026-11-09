@@ -129,6 +129,9 @@ enum class AttemptOutcome { LOADING, PLAYING, FAILED, REPLACED, CLOSED }
 /** Who draws the subtitle picked. */
 enum class SubtitleRendering { SCREEN, PLAYER, BURN_IN }
 
+/** What a track or decoder is for. */
+enum class TrackKind { VIDEO, AUDIO, TEXT, OTHER }
+
 /** Things that went wrong beside the video, counted. */
 enum class DiagnosticsNote { SUBTITLE_LOAD_FAILED, KEYFRAMES_FAILED }
 
@@ -255,7 +258,7 @@ data class CapabilityDiagnostics(
 
 /** A track the player has, by its format and whether the device can play it. */
 data class TrackDiagnostics(
-    val type: Safe,
+    val type: TrackKind,
     val selected: Boolean,
     val mime: Safe?,
     val codecs: Safe?,
@@ -268,7 +271,7 @@ data class TrackDiagnostics(
 )
 
 /** A decoder the player started, by its name on the device. */
-data class DecoderDiagnostics(val type: Safe, val name: Safe?)
+data class DecoderDiagnostics(val type: TrackKind, val name: Safe?)
 
 /**
  * A playback error by its codes: Media3's error code and its name, the
@@ -379,7 +382,7 @@ class DiagnosticsRecorder(
 
     fun tracks(tracks: List<TrackDiagnostics>) = update { it.copy(tracks = tracks.take(MAX_TRACKS)) }
 
-    /** A decoder started: the latest of each type is kept, up to [MAX_DECODERS]. */
+    /** A decoder started: each one once, the latest [MAX_DECODERS]. */
     fun decoder(decoder: DecoderDiagnostics) = update { r ->
         val others = r.decoders.filter { it != decoder }
         r.copy(decoders = (others + decoder).takeLast(MAX_DECODERS))
@@ -471,7 +474,7 @@ fun formatReport(report: PlaybackReport): String = buildString {
     for (t in report.tracks) line("  ${formatTrack(t)}")
 
     if (report.decoders.isNotEmpty()) {
-        line("decoders: " + report.decoders.joinToString(", ") { "${it.type}=${opt(it.name)}" })
+        line("decoders: " + report.decoders.joinToString(", ") { "${it.type.name.lowercase()}=${opt(it.name)}" })
     }
     if (report.notes.isNotEmpty()) {
         line("notes: " + report.notes.entries.joinToString(", ") { "${it.key.name.lowercase()} x${it.value}" })
@@ -479,7 +482,7 @@ fun formatReport(report: PlaybackReport): String = buildString {
 }
 
 private fun formatTrack(t: TrackDiagnostics, selection: Boolean = true): String = buildList {
-    add(t.type.text)
+    add(t.type.name.lowercase())
     if (selection) add(if (t.selected) "selected" else "not_selected")
     t.mime?.let { add(it.text) }
     t.codecs?.let { add("codecs=$it") }
