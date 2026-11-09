@@ -537,39 +537,42 @@ private fun DownloadsSection() {
                 unmetered = it
                 downloads.unmeteredOnly = it
             }
-            RowDivider()
-            PickerRow(
-                stringResource(R.string.downloads_default_title),
-                buildList {
-                    add(DEFAULT_DEVICE to stringResource(R.string.downloads_choice_device))
-                    VIDEO_PRESETS.forEach { add(it.height.toString() to stringResource(R.string.downloads_choice_preset, it.height, mbps(it.bitrate))) }
-                    add(DEFAULT_ORIGINAL to stringResource(R.string.downloads_choice_original))
-                },
-                version,
-            ) {
-                version = it
-                downloads.defaultVersion = it
-            }
-            RowDivider()
-            PickerRow(
-                stringResource(R.string.downloads_default_subtitles),
-                listOf(
-                    DownloadSubtitles.USED to stringResource(R.string.downloads_subtitles_used),
-                    DownloadSubtitles.ALL to stringResource(R.string.downloads_subtitles_all),
-                    DownloadSubtitles.NONE to stringResource(R.string.downloads_subtitles_none),
-                ),
-                subtitles,
-            ) {
-                subtitles = it
-                downloads.subtitles = it
-            }
-            if (items.isNotEmpty()) {
+        }
+        Gap(28.dp)
+        // What the download sheet starts on.
+        Section(stringResource(R.string.downloads_defaults)) {
+            Panel {
+                PickerRow(
+                    stringResource(R.string.downloads_default_title),
+                    buildList {
+                        add(DEFAULT_DEVICE to stringResource(R.string.downloads_choice_device))
+                        VIDEO_PRESETS.forEach { add(it.height.toString() to stringResource(R.string.downloads_choice_preset, it.height, mbps(it.bitrate))) }
+                        add(DEFAULT_ORIGINAL to stringResource(R.string.downloads_choice_original))
+                    },
+                    version,
+                ) {
+                    version = it
+                    downloads.defaultVersion = it
+                }
                 RowDivider()
-                LinkRow(
-                    stringResource(R.string.downloads_remove_all),
-                    value = total,
-                    destructive = true,
-                ) { confirm = true }
+                PickerRow(
+                    stringResource(R.string.downloads_default_subtitles),
+                    listOf(
+                        DownloadSubtitles.USED to stringResource(R.string.downloads_subtitles_used),
+                        DownloadSubtitles.ALL to stringResource(R.string.downloads_subtitles_all),
+                        DownloadSubtitles.NONE to stringResource(R.string.downloads_subtitles_none),
+                    ),
+                    subtitles,
+                ) {
+                    subtitles = it
+                    downloads.subtitles = it
+                }
+            }
+        }
+        if (items.isNotEmpty()) {
+            Gap(28.dp)
+            Panel {
+                LinkRow(stringResource(R.string.downloads_remove_all), destructive = true) { confirm = true }
             }
         }
     }

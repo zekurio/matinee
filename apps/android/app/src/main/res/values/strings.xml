@@ -470,7 +470,7 @@
     <string name="downloads_sheet_title">Download</string>
     <string name="downloads_sheet_title_named">Download %1$s</string>
     <string name="downloads_about">About %1$s</string>
-    <string name="downloads_choice_device">Automatic</string>
+    <string name="downloads_choice_device">Full quality</string>
     <string name="downloads_choice_preset">%1$dp, %2$s Mbps</string>
     <string name="downloads_choice_original">Original</string>
     <string name="downloads_choice_unavailable">The server can\'t make this version</string>
@@ -503,10 +503,11 @@
     <string name="downloads_offline">Offline</string>
     <string name="downloads_unmetered">Download on Wi-Fi only</string>
     <string name="downloads_unmetered_description">Wait for Wi-Fi or another connection without a data limit.</string>
-    <string name="downloads_default_subtitles">Default subtitles</string>
+    <string name="downloads_default_subtitles">Subtitles</string>
     <string name="downloads_storage">Storage</string>
     <string name="downloads_storage_value">%1$s used · %2$s free</string>
-    <string name="downloads_default_title">Default quality</string>
+    <string name="downloads_defaults">Defaults</string>
+    <string name="downloads_default_title">Quality</string>
     <string name="downloads_default_description">What the download sheet picks first.</string>
     <string name="downloads_subtitles_title">Subtitles</string>
     <string name="downloads_subtitles_description">Saved beside each download.</string>

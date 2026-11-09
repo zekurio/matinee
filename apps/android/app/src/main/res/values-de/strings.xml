@@ -449,7 +449,7 @@
     <string name="downloads_sheet_title">Herunterladen</string>
     <string name="downloads_sheet_title_named">%1$s herunterladen</string>
     <string name="downloads_about">ca. %1$s</string>
-    <string name="downloads_choice_device">Automatisch</string>
+    <string name="downloads_choice_device">Volle Qualität</string>
     <string name="downloads_choice_preset">%1$dp, %2$s Mbit/s</string>
     <string name="downloads_choice_original">Original</string>
     <string name="downloads_choice_unavailable">Der Server kann diese Version nicht erstellen</string>
@@ -482,10 +482,11 @@
     <string name="downloads_offline">Offline</string>
     <string name="downloads_unmetered">Nur über WLAN herunterladen</string>
     <string name="downloads_unmetered_description">Auf WLAN oder eine andere Verbindung ohne Datenlimit warten.</string>
-    <string name="downloads_default_subtitles">Standarduntertitel</string>
+    <string name="downloads_default_subtitles">Untertitel</string>
     <string name="downloads_storage">Speicher</string>
     <string name="downloads_storage_value">%1$s belegt · %2$s frei</string>
-    <string name="downloads_default_title">Standardqualität</string>
+    <string name="downloads_defaults">Vorauswahl</string>
+    <string name="downloads_default_title">Qualität</string>
     <string name="downloads_default_description">Was beim Herunterladen vorausgewählt ist.</string>
     <string name="downloads_subtitles_title">Untertitel</string>
     <string name="downloads_subtitles_description">Werden neben jedem Download gespeichert.</string>
