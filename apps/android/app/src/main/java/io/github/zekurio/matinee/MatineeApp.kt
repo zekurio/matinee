@@ -23,8 +23,17 @@ class MatineeApp : Application(), SingletonImageLoader.Factory {
     lateinit var session: Session
         private set
 
-    /** Watched and favorite marks changed here, so every screen shows them at once. */
-    val viewer = ViewerState()
+    /** Watched and favorite overrides last only for the active sign-in. */
+    val viewer: ViewerState
+        get() {
+            if (viewerVersion != session.version) {
+                viewerVersion = session.version
+                currentViewer = ViewerState()
+            }
+            return currentViewer
+        }
+    private var viewerVersion = -1L
+    private var currentViewer = ViewerState()
 
     val downloads by lazy { Downloads(this) }
 
@@ -62,7 +71,7 @@ class MatineeApp : Application(), SingletonImageLoader.Factory {
 
     // Artwork comes through the session's client, which sends the token.
     override fun newImageLoader(context: PlatformContext): ImageLoader = ImageLoader.Builder(context)
-        .components { add(OkHttpNetworkFetcherFactory(callFactory = { session.http })) }
+        .components { add(OkHttpNetworkFetcherFactory(callFactory = { session.artworkHttp })) }
         .memoryCache { MemoryCache.Builder().maxSizePercent(context, 0.25).build() }
         .diskCache {
             DiskCache.Builder()

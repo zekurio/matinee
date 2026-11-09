@@ -16,8 +16,6 @@ import io.github.zekurio.matinee.api.AuthConfig
 import io.github.zekurio.matinee.api.MatineeApi
 import io.github.zekurio.matinee.api.MatineeJson
 import io.github.zekurio.matinee.api.User
-import io.github.zekurio.matinee.downloads.AccountScope
-import io.github.zekurio.matinee.downloads.canonicalServer
 import java.io.IOException
 import java.net.ConnectException
 import java.net.SocketTimeoutException
@@ -55,24 +53,8 @@ sealed interface AuthState {
     data class Offline(val server: String, val user: User) : AuthState
 }
 
-/**
- * Who the app acts for: the server's origin ([canonicalServer]), the account
- * on it, and which sign-in. A new token, even for the same account, is a new
- * [generation].
- */
-data class SessionIdentity(val server: String, val userId: String, val generation: Long) {
-    val scope: AccountScope get() = AccountScope(server, userId)
-}
-
-/**
- * An identity with the API and HTTP client that act for it. They send its
- * token and no other, and fail with [IdentityChanged] once it's replaced, so
- * work started for one account can't go on as the next.
- */
-class SessionBinding(val identity: SessionIdentity, val api: MatineeApi, val http: OkHttpClient)
-
-/** A request made for a sign-in that has since ended. */
-class IdentityChanged : IOException("The account signed in changed.")
+/** A request kept after its sign-in ended must not use a later sign-in's credentials. */
+class SessionChanged : IOException("The session ended.")
 
 /** Why the server didn't answer, as far as the app can tell. */
 enum class Unreachability {
@@ -100,6 +82,9 @@ class Session(context: Context) {
 
     /** Moves whenever [origin] or [token] does; clients made before it stop sending their token. */
     @Volatile private var generation = 0L
+
+    /** Changes when the active sign-in or server changes. */
+    val version: Long get() = generation
 
     private val _state = MutableStateFlow<AuthState>(AuthState.NoServer)
     val state: StateFlow<AuthState> = _state.asStateFlow()
@@ -134,7 +119,7 @@ class Session(context: Context) {
      */
     private fun bound(server: HttpUrl?, bearer: String?, made: Long): OkHttpClient = base.newBuilder()
         .addInterceptor { chain ->
-            if (bearer != null && generation != made) throw IdentityChanged()
+            if (bearer != null && generation != made) throw SessionChanged()
             val request = chain.request()
             val builder = request.newBuilder()
             if (server != null && bearer != null && sameOrigin(request.url, server)) {
@@ -171,29 +156,11 @@ class Session(context: Context) {
     @Volatile var api: MatineeApi? = origin?.let { MatineeApi(it, http) }
         private set
 
-    private val _binding = MutableStateFlow<SessionBinding?>(null)
-
-    /** Who the app acts for, while a token and its account are known, as when offline. */
-    val binding: StateFlow<SessionBinding?> = _binding.asStateFlow()
-
     /** A new server or token: new clients, and the old ones stop. */
     private fun rebind() {
         generation++
         http = bound(origin, token, generation)
         api = origin?.let { MatineeApi(it, http) }
-        publish(null)
-    }
-
-    /** Say who the app acts for now that [user] is known for the token, or no one. */
-    private fun publish(user: User?) {
-        val server = origin
-        val client = api
-        val next = if (server != null && client != null && token != null && user != null) {
-            SessionBinding(SessionIdentity(canonicalServer(server), user.id, generation), client, http)
-        } else {
-            null
-        }
-        if (_binding.value?.identity != next?.identity) _binding.value = next
     }
 
     /** The API while signed in. Screens only show then. */
@@ -202,7 +169,6 @@ class Session(context: Context) {
     private val connectivity = context.getSystemService(ConnectivityManager::class.java)
 
     init {
-        publish(lastUser)
         start()
         // Try again once a network comes up, rather than wait for a tap.
         connectivity.registerDefaultNetworkCallback(object : ConnectivityManager.NetworkCallback() {
@@ -246,7 +212,7 @@ class Session(context: Context) {
             else -> AuthState.Connecting(server.display)
         }
         scope.launch {
-            val user = try {
+            val verified = try {
                 if (token != null) client.session() else null
             } catch (e: IOException) {
                 if (generation == made) _state.value = AuthState.Unreachable(server.display, unreachability(e))
@@ -255,9 +221,9 @@ class Session(context: Context) {
             // Signed in, out, or to another server meanwhile: that stands.
             if (generation != made) return@launch
             _state.value = try {
-                if (user != null) {
-                    cacheUser(user)
-                    AuthState.SignedIn(server.display, user)
+                if (verified != null) {
+                    cacheUser(verified)
+                    AuthState.SignedIn(server.display, verified)
                 } else {
                     clearToken()
                     AuthState.SignedOut(server.display, requireApi().authConfig())
@@ -352,7 +318,6 @@ class Session(context: Context) {
 
     private fun cacheUser(user: User) {
         store.lastUser = MatineeJson.encodeToString(User.serializer(), user)
-        publish(user)
     }
 
     /** The account last signed in here, while its session still stands. */
