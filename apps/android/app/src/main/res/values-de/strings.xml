@@ -84,6 +84,20 @@
         <item quantity="one">%1$d Wiedergabe</item>
         <item quantity="other">%1$d Wiedergaben</item>
     </plurals>
+    <string name="stats_standing_title">Rangliste</string>
+    <string name="stats_heatmap_title">Sehzeiten</string>
+    <string name="stats_heatmap_peak">Am häufigsten am %1$s gegen %2$s.</string>
+    <string name="stats_metric_watchTime">Sehzeit</string>
+    <string name="stats_metric_plays">Wiedergaben</string>
+    <string name="stats_metric_currentStreak">Aktuelle Tagesserie</string>
+    <string name="stats_metric_longestStreak">Längste Tagesserie</string>
+    <string name="stats_metric_movies">Filme beendet</string>
+    <string name="stats_metric_episodes">Folgen beendet</string>
+    <string name="stats_place">Platz %1$d</string>
+    <string name="stats_you">(du)</string>
+    <plurals name="stats_day_count"><item quantity="one">%1$d Tag</item><item quantity="other">%1$d Tage</item></plurals>
+    <plurals name="stats_movie_count"><item quantity="one">%1$d Film</item><item quantity="other">%1$d Filme</item></plurals>
+    <plurals name="stats_episode_count"><item quantity="one">%1$d Folge</item><item quantity="other">%1$d Folgen</item></plurals>
     <string name="stats_top">Am meisten geschaut</string>
     <string name="stats_genres">Genres</string>
     <string name="format_minutes_short">%1$d Min.</string>

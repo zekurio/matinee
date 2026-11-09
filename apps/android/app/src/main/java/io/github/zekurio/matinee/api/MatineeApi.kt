@@ -122,6 +122,10 @@ class MatineeApi(val base: HttpUrl, internal val client: OkHttpClient) {
     suspend fun recentlyWatched(username: String, limit: Int = 100): List<WatchedEntry>? =
         get("profiles/${seg(username)}/recent", mapOf("limit" to limit))
 
+    /** Everyone sharing statistics, and the signed-in user, ranked on each metric. */
+    suspend fun leaderboard(range: String, timeZone: String): Leaderboard =
+        get("stats/leaderboard", mapOf("range" to range, "timeZone" to timeZone))
+
     /** Null when the owner doesn't share statistics. Days count in [timeZone], an IANA name. */
     suspend fun profileStats(username: String, range: String, timeZone: String): WatchStats? =
         get("profiles/${seg(username)}/stats", mapOf("range" to range, "timeZone" to timeZone))

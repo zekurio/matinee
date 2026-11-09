@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -296,6 +297,159 @@ fun Genres(stats: WatchStats, modifier: Modifier = Modifier) {
                 Text(genre.name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                 Text(formatWatchTime(genre.watchSeconds, res), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
             }
+        }
+    }
+}
+
+/** A board's value as the leaderboard shows it: "4 Std.", "12 Wiedergaben", "3 Tage". */
+private fun metricValue(metric: String, value: Double, res: Resources): String {
+    val count = value.toInt()
+    return when (metric) {
+        "watchTime" -> formatWatchTime(value, res)
+        "plays" -> res.getQuantityString(R.plurals.stats_play_count, count, count)
+        "currentStreak", "longestStreak" -> res.getQuantityString(R.plurals.stats_day_count, count, count)
+        "movies" -> res.getQuantityString(R.plurals.stats_movie_count, count, count)
+        "episodes" -> res.getQuantityString(R.plurals.stats_episode_count, count, count)
+        else -> count.toString()
+    }
+}
+
+@Composable
+private fun metricName(metric: String): String = stringResource(
+    when (metric) {
+        "plays" -> R.string.stats_metric_plays
+        "currentStreak" -> R.string.stats_metric_currentStreak
+        "longestStreak" -> R.string.stats_metric_longestStreak
+        "movies" -> R.string.stats_metric_movies
+        "episodes" -> R.string.stats_metric_episodes
+        else -> R.string.stats_metric_watchTime
+    },
+)
+
+/**
+ * Where the signed-in user stands on each board of the leaderboard for the
+ * range, as the web's profile shows it: their place between the people
+ * just above and below them. Boards they aren't on are left out.
+ */
+@Composable
+fun Standing(range: String, zone: String, modifier: Modifier = Modifier) {
+    val loader = io.github.zekurio.matinee.ui.rememberLoader("leaderboard-$range") { leaderboard(range, zone) }
+    val boards = (loader.state as? io.github.zekurio.matinee.ui.Load.Ready)?.value?.boards.orEmpty()
+    val standings = boards.mapNotNull { board ->
+        val at = board.entries.indexOfFirst { it.self }
+        if (at < 0) null else board.metric to board.entries.subList(maxOf(0, at - 1), minOf(board.entries.size, at + 2))
+    }
+    if (standings.isEmpty()) return
+    val res = LocalResources.current
+    StatsCard(stringResource(R.string.stats_standing_title), modifier) {
+        standings.forEachIndexed { index, (metric, places) ->
+            if (index > 0) HorizontalDivider(Modifier.padding(start = 16.dp), color = Palette.Border)
+            Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(metricName(metric), style = MaterialTheme.typography.bodySmall, color = Palette.Muted)
+                places.forEach { place -> PlaceRow(place, metricValue(metric, place.value, res)) }
+            }
+        }
+    }
+}
+
+/** A place: the rank, the podium's in the accent, the person, and the value; the user's own lit. */
+@Composable
+private fun PlaceRow(place: io.github.zekurio.matinee.api.LeaderboardEntry, value: String) {
+    val api = LocalApi.current
+    val user = place.user
+    val podium = when (place.rank) {
+        1 -> Palette.Accent
+        2 -> Palette.Accent.copy(alpha = 0.6f)
+        3 -> Palette.Accent.copy(alpha = 0.3f)
+        else -> androidx.compose.ui.graphics.Color.Transparent
+    }
+    Row(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp))
+            .background(if (place.self) Palette.Accent.copy(alpha = 0.12f) else androidx.compose.ui.graphics.Color.Transparent)
+            .padding(horizontal = 8.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Box(Modifier.size(24.dp).clip(androidx.compose.foundation.shape.CircleShape).background(podium), contentAlignment = Alignment.Center) {
+            Text(
+                place.rank.toString(),
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = if (place.rank == 1) androidx.compose.ui.graphics.Color.Black else if (place.rank <= 3) Palette.Foreground else Palette.Muted,
+            )
+        }
+        io.github.zekurio.matinee.ui.components.Avatar(user.name, user.avatarId?.let(api.paths::avatar), size = 28.dp)
+        Text(
+            if (place.self) "${user.name} ${stringResource(R.string.stats_you)}" else user.name,
+            style = MaterialTheme.typography.bodyLarge,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
+        )
+        Text(value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+    }
+}
+
+/** "18:00" or "6:00 PM", an hour in the device's way. */
+private fun hourName(hour: Int): String =
+    java.time.format.DateTimeFormatter.ofLocalizedTime(java.time.format.FormatStyle.SHORT).withLocale(Locale.getDefault()).format(java.time.LocalTime.of(hour, 0))
+
+private fun weekdayName(weekday: Int, style: java.time.format.TextStyle): String =
+    java.time.DayOfWeek.of(weekday).getDisplayName(style, Locale.getDefault())
+
+/**
+ * When in the week watching starts, as the web's heatmap draws it: a
+ * square per hour of each weekday, deeper for more, and the busiest time
+ * under it.
+ */
+@Composable
+fun Activity(stats: WatchStats, modifier: Modifier = Modifier) {
+    if (stats.activity.isEmpty()) return
+    val seconds = stats.activity.associate { (it.weekday to it.hour) to it.watchSeconds }
+    val max = maxOf(1.0, stats.activity.maxOf { it.watchSeconds })
+    val peak = stats.activity.maxBy { it.watchSeconds }
+    val accent = Palette.Accent
+    val empty = Palette.Foreground.copy(alpha = 0.06f)
+    StatsCard(stringResource(R.string.stats_heatmap_title), modifier) {
+        Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 14.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            (1..7).forEach { weekday ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        weekdayName(weekday, java.time.format.TextStyle.SHORT),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Palette.Muted,
+                        modifier = Modifier.width(30.dp),
+                    )
+                    Canvas(Modifier.weight(1f).height(12.dp)) {
+                        val gap = 2.dp.toPx()
+                        val cell = (size.width - gap * 23) / 24
+                        for (hour in 0 until 24) {
+                            val value = seconds[weekday to hour] ?: 0.0
+                            drawRoundRect(
+                                if (value > 0) accent.copy(alpha = (0.3 + 0.7 * value / max).toFloat()) else empty,
+                                Offset(hour * (cell + gap), 0f),
+                                Size(cell, size.height),
+                                CornerRadius(2.dp.toPx()),
+                            )
+                        }
+                    }
+                }
+            }
+            // The hours under the squares, every six.
+            Row {
+                Box(Modifier.width(30.dp))
+                Row(Modifier.weight(1f)) {
+                    listOf(0, 6, 12, 18).forEach { hour ->
+                        Text(hourName(hour), style = MaterialTheme.typography.labelSmall, color = Palette.Muted, modifier = Modifier.weight(1f))
+                    }
+                }
+            }
+            Gap(6.dp)
+            Text(
+                stringResource(R.string.stats_heatmap_peak, weekdayName(peak.weekday, java.time.format.TextStyle.FULL), hourName(peak.hour)),
+                style = MaterialTheme.typography.bodySmall,
+                color = Palette.Muted,
+            )
         }
     }
 }

@@ -91,6 +91,20 @@
         <item quantity="one">%1$d play</item>
         <item quantity="other">%1$d plays</item>
     </plurals>
+    <string name="stats_standing_title">Leaderboard</string>
+    <string name="stats_heatmap_title">Viewing times</string>
+    <string name="stats_heatmap_peak">Most often on %1$ss around %2$s.</string>
+    <string name="stats_metric_watchTime">Watch time</string>
+    <string name="stats_metric_plays">Plays</string>
+    <string name="stats_metric_currentStreak">Current streak</string>
+    <string name="stats_metric_longestStreak">Longest streak</string>
+    <string name="stats_metric_movies">Movies finished</string>
+    <string name="stats_metric_episodes">Episodes finished</string>
+    <string name="stats_place">Place %1$d</string>
+    <string name="stats_you">(you)</string>
+    <plurals name="stats_day_count"><item quantity="one">%1$d day</item><item quantity="other">%1$d days</item></plurals>
+    <plurals name="stats_movie_count"><item quantity="one">%1$d movie</item><item quantity="other">%1$d movies</item></plurals>
+    <plurals name="stats_episode_count"><item quantity="one">%1$d episode</item><item quantity="other">%1$d episodes</item></plurals>
     <string name="stats_top">Most watched</string>
     <string name="stats_genres">Genres</string>
     <string name="format_minutes_short">%1$dm</string>

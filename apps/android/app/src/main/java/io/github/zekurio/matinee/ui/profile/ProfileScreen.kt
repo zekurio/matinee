@@ -252,6 +252,8 @@ private fun Statistics(profile: Profile) {
                     StatList(stats)
                     TopTitles(stats)
                     Genres(stats)
+                    Standing(range, zone)
+                    Activity(stats)
                 }
             }
         }

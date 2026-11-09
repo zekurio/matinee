@@ -417,7 +417,7 @@ data class WatchedEntry(val item: MediaItem, val watchedAt: String, val complete
 /** How far back statistics look, ending now, as the contract's `StatsRange`. */
 val STATS_RANGES = listOf("7d", "30d", "90d", "365d", "all")
 
-/** What someone watched in a range: `profiles.stats`. The activity grid is left out; the app doesn't draw it. */
+/** What someone watched in a range: `profiles.stats`. */
 @Serializable
 data class WatchStats(
     val range: String,
@@ -425,9 +425,26 @@ data class WatchStats(
     val unit: String,
     val totals: WatchTotals,
     val buckets: List<StatsBucket> = emptyList(),
+    /** Only the hours with watch time. */
+    val activity: List<ActivityCell> = emptyList(),
     val genres: List<GenreStat> = emptyList(),
     val titles: List<TitleStat> = emptyList(),
 )
+
+/** Watch time of sessions that started in one hour of one weekday; [weekday] 1 is Monday. */
+@Serializable
+data class ActivityCell(val weekday: Int, val hour: Int, val watchSeconds: Double = 0.0)
+
+/** A place on a board of `stats.leaderboard`; [value] is seconds for watch time, days for streaks, a count for the rest. */
+@Serializable
+data class LeaderboardEntry(val rank: Int, val user: ProfileUser, val value: Double, val self: Boolean = false)
+
+/** One metric's places: the top ten, then the viewer between their neighbors when they rank lower. */
+@Serializable
+data class LeaderboardBoard(val metric: String, val entries: List<LeaderboardEntry> = emptyList())
+
+@Serializable
+data class Leaderboard(val range: String, val boards: List<LeaderboardBoard> = emptyList(), val sharing: Boolean = false)
 
 @Serializable
 data class WatchTotals(
