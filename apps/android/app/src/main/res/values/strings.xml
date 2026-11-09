@@ -420,6 +420,20 @@
     <string name="downloads_remove_all">Remove all downloads</string>
     <string name="downloads_remove_all_confirm">Remove all downloads?</string>
     <string name="downloads_remove_all_body">This deletes %1$s from this device.</string>
+    <string name="downloads_remove_named">Remove downloads of %1$s</string>
+    <string name="downloads_remove_named_confirm">Remove the downloads of %1$s?</string>
+    <string name="downloads_pause_all">Pause all</string>
+    <string name="downloads_resume_all">Resume all</string>
+    <string name="downloads_expand">Show episodes</string>
+    <string name="downloads_collapse">Hide episodes</string>
+    <plurals name="downloads_episodes_of">
+        <item quantity="one">%1$d / %2$d episode</item>
+        <item quantity="other">%1$d / %2$d episodes</item>
+    </plurals>
+    <plurals name="downloads_failed_count">
+        <item quantity="one">%1$d failed</item>
+        <item quantity="other">%1$d failed</item>
+    </plurals>
     <plurals name="downloads_all_files">
         <item quantity="one">%1$d file</item>
         <item quantity="other">%1$d files</item>

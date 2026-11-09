@@ -400,6 +400,20 @@
     <string name="downloads_remove_all">Alle Downloads entfernen</string>
     <string name="downloads_remove_all_confirm">Alle Downloads entfernen?</string>
     <string name="downloads_remove_all_body">Das löscht %1$s von diesem Gerät.</string>
+    <string name="downloads_remove_named">Downloads von %1$s entfernen</string>
+    <string name="downloads_remove_named_confirm">Downloads von %1$s entfernen?</string>
+    <string name="downloads_pause_all">Alle pausieren</string>
+    <string name="downloads_resume_all">Alle fortsetzen</string>
+    <string name="downloads_expand">Folgen zeigen</string>
+    <string name="downloads_collapse">Folgen ausblenden</string>
+    <plurals name="downloads_episodes_of">
+        <item quantity="one">%1$d / %2$d Folge</item>
+        <item quantity="other">%1$d / %2$d Folgen</item>
+    </plurals>
+    <plurals name="downloads_failed_count">
+        <item quantity="one">%1$d fehlgeschlagen</item>
+        <item quantity="other">%1$d fehlgeschlagen</item>
+    </plurals>
     <plurals name="downloads_all_files">
         <item quantity="one">%1$d Datei</item>
         <item quantity="other">%1$d Dateien</item>
