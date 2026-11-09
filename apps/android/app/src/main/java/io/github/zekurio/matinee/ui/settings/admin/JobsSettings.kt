@@ -176,9 +176,15 @@ private fun duration(seconds: Long): String = when {
 
 private fun millis(at: String): Long? = runCatching { Instant.parse(at).toEpochMilli() }.getOrNull()
 
-/** "5 minutes ago", "in 2 hours", in the device's language. */
+/**
+ * "5 minutes ago", "in 2 hours", in the device's language, lowercase, as it
+ * stands inside a sentence: Android starts German ones with a capital.
+ */
 private fun relative(at: String): String =
-    millis(at)?.let { DateUtils.getRelativeTimeSpanString(it, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS).toString() } ?: at
+    millis(at)?.let {
+        DateUtils.getRelativeTimeSpanString(it, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS).toString()
+            .replaceFirstChar { char -> char.lowercaseChar() }
+    } ?: at
 
 /** The task's last run and its schedule, or how far it is now. */
 @Composable
