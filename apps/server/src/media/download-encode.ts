@@ -572,8 +572,10 @@ export async function buildDownload(
         "2048",
         "-f",
         "mp4",
+        // Not `delay_moov`: the reader then can't take it from a pipe, and
+        // MP4 waits for the first frame to describe AV1 anyway.
         "-movflags",
-        "+empty_moov+delay_moov+frag_keyframe+default_base_moof",
+        "+empty_moov+frag_keyframe+default_base_moof",
         "pipe:1",
       ]
     }
