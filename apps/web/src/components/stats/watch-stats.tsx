@@ -12,7 +12,6 @@ import { art } from "@/lib/media"
 import { bucketName, rangeName } from "@/lib/stats"
 
 import {
-  percent,
   RankedBars,
   ShareBar,
   type StatFigure,
@@ -71,8 +70,15 @@ export function WatchOverview({
   const [active, setActive] = useState<number | null>(null)
   const shown = active === null ? null : stats.buckets[active]
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-      <section className={cn(statsCard, "flex min-w-0 flex-col gap-4 p-4")}>
+    // The page's grid of cards: the card two columns wide, the figures in
+    // the third, so both line up with the cards below.
+    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <section
+        className={cn(
+          statsCard,
+          "flex min-w-0 flex-col gap-4 p-4 md:col-span-2",
+        )}
+      >
         <div>
           <p className="text-muted-foreground text-sm leading-6">
             {shown
@@ -88,10 +94,10 @@ export function WatchOverview({
           unit={stats.unit}
           active={active}
           onActive={setActive}
-          className="min-h-36 flex-1 lg:min-h-20"
+          className="min-h-36 flex-1 xl:min-h-20"
         />
       </section>
-      <StatFigures figures={figures} />
+      <StatFigures figures={figures} className="md:col-span-2 xl:col-span-1" />
     </div>
   )
 }
@@ -103,7 +109,7 @@ export function WatchOverview({
 export function TopTitlesSection({ stats }: { stats: WatchStats }) {
   const { titles } = stats
   if (titles.length === 0) return null
-  const total = Math.max(1, stats.totals.watchSeconds)
+  const most = titles[0]?.watchSeconds ?? 1
   return (
     <StatsSection title={tr("stats.watch.top")}>
       <ol className={statsRows}>
@@ -138,14 +144,14 @@ export function TopTitlesSection({ stats }: { stats: WatchStats }) {
                     {entry.title.name}
                   </span>
                   <span className="text-muted-foreground text-sm tabular-nums">
-                    {formatWatchTime(entry.watchSeconds)}
+                    {tr("stats.plays", { count: entry.plays })}
                   </span>
                   <span className="mt-2">
-                    <ShareBar value={entry.watchSeconds} scale={total} />
+                    <ShareBar value={entry.watchSeconds} scale={most} />
                   </span>
                 </span>
                 <span className="shrink-0 text-[15px] font-semibold tabular-nums">
-                  {percent(entry.watchSeconds, total)}
+                  {formatWatchTime(entry.watchSeconds)}
                 </span>
               </Link>
             </li>
@@ -166,7 +172,6 @@ export function GenresSection({ stats }: { stats: WatchStats }) {
   return (
     <StatsSection title={tr("stats.watch.genres")}>
       <RankedBars
-        total={stats.totals.watchSeconds}
         rows={stats.genres.map((genre) => ({
           key: genre.name,
           label: genre.name,

@@ -13,15 +13,17 @@ import { type ReactNode, useId } from "react"
 import { perLocale, tr } from "@/i18n"
 
 /** Columns for a page's blocks of statistics. */
-// One gap between all of a page's cards, the same both ways.
+// One grid for every row of a page's cards, so their edges line up, and
+// one gap between them, the same both ways. A card that should be wider
+// spans columns rather than bringing a grid of its own.
 export const statsGrid = "grid items-start gap-4 md:grid-cols-2 xl:grid-cols-3"
 
 /** The surface statistics sit on: the card color, a rim, rounded. */
 export const statsCard = "bg-card rounded-xl border"
 
 /**
- * A titled block of statistics: a card, its name in small type at the
- * top, as the apps show them.
+ * A titled block of statistics: a card, its name at the top over a line
+ * across it, so the first row reads as a row and not part of the heading.
  */
 export function StatsSection({
   title,
@@ -38,10 +40,10 @@ export function StatsSection({
   return (
     <section
       aria-labelledby={id}
-      className={cn(statsCard, "flex min-w-0 flex-col gap-3 p-4", className)}
+      className={cn(statsCard, "flex min-w-0 flex-col gap-4 p-4", className)}
     >
-      <div className="flex min-h-6 flex-wrap items-baseline gap-x-2 gap-y-1">
-        <h2 id={id} className="text-muted-foreground text-sm leading-6">
+      <div className="-mx-4 flex min-h-6 flex-wrap items-baseline gap-x-2 gap-y-1 border-b px-4 pb-3">
+        <h2 id={id} className="text-[15px] leading-6 font-semibold">
           {title}
         </h2>
         {action && <div className="ml-auto">{action}</div>}
@@ -130,8 +132,10 @@ export type RankedRow = {
   key: string
   label: ReactNode
   value: number
-  /** What the row's number says, like "4h 10m" or "12 plays". */
+  /** The row's figure, at its end: "4h 10m", "12 plays", "1.2 TB". */
   detail: string
+  /** A second fact under the name, like how many titles a library holds. */
+  note?: string
 }
 
 const percents = perLocale(
@@ -150,9 +154,9 @@ export function percent(value: number, total: number): string {
 }
 
 /** A section's rows run to its card's edges, as the apps draw them, with a line between each. */
-// Pulled up under the section's name, so the first row sits as close to it
-// as the rows sit to each other.
-export const statsRows = "-mx-4 -mt-2 -mb-4 flex flex-col divide-y"
+// Pulled up to the line under the section's name, so the first row starts
+// there, as the rest start at the line above them.
+export const statsRows = "-mx-4 -mt-4 -mb-4 flex flex-col divide-y"
 
 /** A thin bar for `value`'s part of `scale`, under a row. */
 export function ShareBar({ value, scale }: { value: number; scale: number }) {
@@ -171,23 +175,21 @@ export function ShareBar({ value, scale }: { value: number; scale: number }) {
 
 /**
  * Rows with a bar under each, as long as the row's part of `total`, or of
- * all the rows together without it, as the apps list them. A row ends
- * with its detail, or with `share` its percent, the detail going under
- * its name; leave `share` off when rows overlap, like genres, since their
- * percents would add up to more than 100.
+ * the biggest row without it, as the apps list them: the name, maybe a
+ * note under it, and the figure at the end. No percents: a list cut to
+ * its top rows, or of things that overlap like genres, has none that add
+ * up.
  */
 export function RankedBars({
   rows,
-  total: given,
-  share = false,
+  total,
   className,
 }: {
   rows: RankedRow[]
   total?: number
-  share?: boolean
   className?: string
 }) {
-  const total = given ?? rows.reduce((sum, row) => sum + row.value, 0)
+  const scale = total ?? Math.max(0, ...rows.map((row) => row.value))
   return (
     <ul className={cn(statsRows, className)}>
       {rows.map((row) => (
@@ -197,17 +199,17 @@ export function RankedBars({
               <span className="truncate text-[15px] leading-6">
                 {row.label}
               </span>
-              {share && (
+              {row.note && (
                 <span className="text-muted-foreground truncate text-sm tabular-nums">
-                  {row.detail}
+                  {row.note}
                 </span>
               )}
             </span>
             <span className="shrink-0 text-[15px] leading-6 font-semibold tabular-nums">
-              {share ? percent(row.value, total) : row.detail}
+              {row.detail}
             </span>
           </div>
-          <ShareBar value={row.value} scale={total} />
+          <ShareBar value={row.value} scale={scale} />
         </li>
       ))}
     </ul>

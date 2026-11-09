@@ -51,7 +51,7 @@ function inOrder(rows: QualityStat[], order: string[]): QualityStat[] {
   return [...rows].sort((a, b) => place(a.name) - place(b.name))
 }
 
-/** A trait's share of the files, as bars: "231 files · 853 GB · 35%". */
+/** A trait's files, as bars: its size at the end, how many files under its name. */
 function QualitySection({
   title,
   rows,
@@ -65,12 +65,12 @@ function QualitySection({
   return (
     <StatsSection title={title}>
       <RankedBars
-        share
         rows={rows.map((row) => ({
           key: row.name,
           label: name(row.name),
           value: row.files,
-          detail: `${tr("stats.files", { count: row.files })} · ${formatBytes(row.sizeBytes)}`,
+          detail: formatBytes(row.sizeBytes),
+          note: tr("stats.files", { count: row.files }),
         }))}
       />
     </StatsSection>
@@ -168,7 +168,6 @@ function LibrarySections({ stats }: { stats: LibraryStats }) {
       <div className={statsGrid}>
         <StatsSection title={tr("stats.library.libraries")}>
           <RankedBars
-            share
             rows={libraries.map((library) => {
               const Icon = library.kind === "movies" ? FilmIcon : TvIcon
               return {
@@ -187,7 +186,8 @@ function LibrarySections({ stats }: { stats: LibraryStats }) {
                   </Link>
                 ),
                 value: library.sizeBytes,
-                detail: `${formatBytes(library.sizeBytes)} · ${tr(`stats.${library.kind}`, { count: library.titles })}`,
+                detail: formatBytes(library.sizeBytes),
+                note: tr(`stats.${library.kind}`, { count: library.titles }),
               }
             })}
           />

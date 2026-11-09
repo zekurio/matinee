@@ -88,7 +88,6 @@ function CodecSection({
   return (
     <StatsSection title={title}>
       <RankedBars
-        share
         total={total}
         rows={rows.map((row) => ({
           key: row.name,
@@ -133,7 +132,6 @@ export function Viewers({ stats }: { stats: ServerStats }) {
   return (
     <StatsSection title={tr("stats.server.viewers")}>
       <RankedBars
-        share
         total={stats.totals.watchSeconds}
         rows={stats.users.map((entry) => ({
           key: entry.user.id,
@@ -165,7 +163,6 @@ export function Clients({ stats }: { stats: ServerStats }) {
   return (
     <StatsSection title={tr("stats.server.clients")}>
       <RankedBars
-        share
         total={stats.totals.plays}
         rows={stats.clients.map((client) => ({
           key: client.name,
