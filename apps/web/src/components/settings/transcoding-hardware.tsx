@@ -119,11 +119,7 @@ export const HardwareSection = withForm({
                       value && field.handleChange(value)
                     }
                   >
-                    <SelectTrigger
-                      id={ids.controlId}
-                      aria-describedby={ids.descriptionId}
-                      className="w-full"
-                    >
+                    <SelectTrigger id={ids.controlId} className="w-full">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -149,11 +145,6 @@ export const HardwareSection = withForm({
               {() => (
                 <InputField
                   title={tr(`transcoding.field.${device}`)}
-                  description={
-                    accel === "vaapi"
-                      ? tr("transcoding.hardware.vaapiDevice")
-                      : tr("transcoding.hardware.qsvDevice")
-                  }
                   autoComplete="off"
                   spellCheck={false}
                   className="font-mono text-[13px]"
@@ -186,10 +177,7 @@ export const HardwareSection = withForm({
                     title={tr("transcoding.hardware.lowPower", {
                       codec: codecLabel,
                     })}
-                    description={checkNote(
-                      lowPowerCheck(hardware, codec),
-                      tr("transcoding.hardware.lowPower.description"),
-                    )}
+                    unavailable={checkNote(lowPowerCheck(hardware, codec))}
                     available={lowPowerCheck(hardware, codec)?.status === "ok"}
                   />
                 )}
@@ -239,10 +227,7 @@ export const HardwareDecodingSection = withForm({
             <>
               <form.AppField name="enableDecodingColorDepth10Hevc">
                 {() => (
-                  <SwitchField
-                    title={tr("transcoding.decoding.hevc10")}
-                    description={tr("transcoding.decoding.hevc10.description")}
-                  />
+                  <SwitchField title={tr("transcoding.decoding.hevc10")} />
                 )}
               </form.AppField>
               <form.AppField name="enableDecodingColorDepth10Vp9">
@@ -250,12 +235,7 @@ export const HardwareDecodingSection = withForm({
               </form.AppField>
               <form.AppField name="enableDecodingColorDepth10HevcRext">
                 {() => (
-                  <SwitchField
-                    title={tr("transcoding.decoding.hevcRext")}
-                    description={tr(
-                      "transcoding.decoding.hevcRext.description",
-                    )}
-                  />
+                  <SwitchField title={tr("transcoding.decoding.hevcRext")} />
                 )}
               </form.AppField>
               <form.AppField name="enableDecodingColorDepth12HevcRext">

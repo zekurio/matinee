@@ -67,7 +67,6 @@ function LanguageSection() {
       <SettingRows>
         <SelectRow
           title={tr("appearance.language.title")}
-          description={tr("appearance.language.description")}
           value={LOCALES.includes(language) ? language : AUTO_LANGUAGE}
           options={LANGUAGE_OPTIONS}
           labelOf={languageLabel}
@@ -85,7 +84,6 @@ function ColorSchemeSection({ theme }: { theme: ThemeState }) {
       <SettingRows>
         <SwitchRow
           title={tr("appearance.sync.title")}
-          description={tr("appearance.sync.description")}
           checked={theme.preferences.sync}
           onChange={(checked) => setThemeSync(checked)}
         />
@@ -126,7 +124,6 @@ function ThemesSection({ theme }: { theme: ThemeState }) {
     <SettingsSubsection
       id="themes"
       title={tr("appearance.themes")}
-      description={tr("appearance.themes.description")}
       action={
         <div
           ref={attachEditor}

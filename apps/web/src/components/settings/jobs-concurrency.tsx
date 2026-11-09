@@ -12,7 +12,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { MinusIcon, PlusIcon } from "lucide-react"
 import { useState } from "react"
 
-import { type MessageKey, tr, translateKnown } from "@/i18n"
+import { tr } from "@/i18n"
 import { useAppForm, useFieldContext } from "@/lib/form"
 import { client, orpc } from "@/lib/rpc"
 
@@ -39,20 +39,6 @@ function sameDraft(a: Draft, b: Draft): boolean {
 /** The queues whose concurrency an admin may change. */
 export function tunableQueues(overview: JobsOverview): JobQueueStatus[] {
   return overview.queues.filter((queue) => queue.concurrencyNote !== null)
-}
-
-/** What each tunable queue's setting counts, and when to raise it. */
-const NOTES = new Map<JobQueueId, MessageKey>([
-  ["media-probe", "jobs.queue.media-probe.note"],
-  ["trickplay", "jobs.queue.trickplay.note"],
-  ["artwork", "jobs.queue.artwork.note"],
-])
-
-/** A queue's note in the interface's language, else the server's. */
-function queueNote(queue: JobQueueStatus): string | null {
-  const key = NOTES.get(queue.id)
-  if (key) return tr(key)
-  return queue.concurrencyNote && translateKnown(queue.concurrencyNote)
 }
 
 /**
@@ -87,11 +73,7 @@ export function ConcurrencySection({
 
   return (
     <form className="contents" onSubmit={(event) => event.preventDefault()}>
-      <SettingsSubsection
-        id="concurrency"
-        title={tr("jobs.concurrency")}
-        description={tr("jobs.concurrency.description")}
-      >
+      <SettingsSubsection id="concurrency" title={tr("jobs.concurrency")}>
         <SettingRows>
           {queues.map((queue) => (
             <form.AppField key={queue.id} name={queue.id}>
@@ -130,19 +112,7 @@ function StepperField({ queue }: { queue: JobQueueStatus }) {
   const name = queueName(queue)
 
   return (
-    <SettingRow
-      title={name}
-      description={
-        <>
-          {queueNote(queue)}{" "}
-          {tr("jobs.concurrency.limits", {
-            default: queue.defaultConcurrency,
-            max,
-          })}
-        </>
-      }
-      layout="split"
-    >
+    <SettingRow title={name} layout="split">
       {(ids) => (
         <div className="flex shrink-0 items-center gap-1.5">
           <Button
@@ -157,7 +127,6 @@ function StepperField({ queue }: { queue: JobQueueStatus }) {
           </Button>
           <Input
             id={ids.controlId}
-            aria-describedby={ids.descriptionId}
             aria-invalid={typedValid ? undefined : true}
             inputMode="numeric"
             className="w-14 text-center tabular-nums"

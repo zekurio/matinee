@@ -25,6 +25,7 @@ import {
   typeOnly,
 } from "./setting-controls"
 import {
+  SettingNote,
   SettingRow,
   SettingRows,
   SettingsSaveBar,
@@ -190,11 +191,7 @@ const PasskeysSection = withForm({
   props: typeOnly<{ settings: AdminAuthSettings }>(),
   render: function Render({ form, settings }) {
     return (
-      <SettingsSubsection
-        id="passkeys"
-        title={tr("oidc.passkeys.title")}
-        description={tr("oidc.passkeys.description")}
-      >
+      <SettingsSubsection id="passkeys" title={tr("oidc.passkeys.title")}>
         <SettingRows>
           <form.AppField name="passkeys">
             {(field) => (
@@ -228,11 +225,7 @@ const SingleSignOnSection = withForm({
     const { defaults } = settings
 
     return (
-      <SettingsSubsection
-        id="single-sign-on"
-        title={tr("oidc.title")}
-        description={tr("oidc.description")}
-      >
+      <SettingsSubsection id="single-sign-on" title={tr("oidc.title")}>
         <SettingRows>
           <form.AppField name="enabled">
             {(field) => (
@@ -254,18 +247,12 @@ const SingleSignOnSection = withForm({
             )}
           </form.AppField>
           <form.AppField name="allowSignUp">
-            {() => (
-              <SwitchField
-                title={tr("oidc.allowSignUp")}
-                description={tr("oidc.allowSignUp.description")}
-              />
-            )}
+            {() => <SwitchField title={tr("oidc.allowSignUp")} />}
           </form.AppField>
           <form.AppField name="displayName">
             {() => (
               <InputField
                 title={tr("oidc.field.displayName")}
-                description={tr("oidc.displayName.description")}
                 maxLength={64}
                 placeholder={defaults.displayName}
               />
@@ -275,10 +262,12 @@ const SingleSignOnSection = withForm({
             {() => (
               <InputField
                 title={tr("oidc.field.issuerUrl")}
-                description={
-                  defaults.issuerUrl
-                    ? tr("oidc.issuerUrl.override")
-                    : tr("oidc.issuerUrl.description")
+                footer={
+                  <SettingNote>
+                    {defaults.issuerUrl
+                      ? tr("oidc.issuerUrl.override")
+                      : tr("oidc.issuerUrl.description")}
+                  </SettingNote>
                 }
                 layout="stack"
                 type="url"
@@ -293,9 +282,6 @@ const SingleSignOnSection = withForm({
             {() => (
               <InputField
                 title={tr("oidc.field.clientId")}
-                description={
-                  defaults.clientId ? tr("oidc.clientId.override") : undefined
-                }
                 layout="stack"
                 autoComplete="off"
                 spellCheck={false}
@@ -345,7 +331,6 @@ const AdvancedSection = withForm({
               {() => (
                 <InputField
                   title={tr("oidc.field.scopes")}
-                  description={tr("oidc.scopes.description")}
                   autoComplete="off"
                   spellCheck={false}
                   placeholder={defaults.scopes}
@@ -356,7 +341,6 @@ const AdvancedSection = withForm({
               {() => (
                 <InputField
                   title={tr("oidc.field.usernameClaim")}
-                  description={tr("oidc.usernameClaim.description")}
                   autoComplete="off"
                   spellCheck={false}
                   placeholder={defaults.usernameClaim}
@@ -367,7 +351,6 @@ const AdvancedSection = withForm({
               {() => (
                 <InputField
                   title={tr("oidc.field.roleClaim")}
-                  description={tr("oidc.roleClaim.description")}
                   autoComplete="off"
                   spellCheck={false}
                   placeholder={defaults.roleClaim}
@@ -402,40 +385,37 @@ const ClientSecretRow = withForm({
     return (
       <SettingRow
         title={tr("oidc.field.clientSecret")}
-        description={
-          <>
-            {tr("oidc.clientSecret.description")}{" "}
-            {savedHere && (
-              <button
-                type="button"
-                className="hover:text-foreground focus-visible:ring-ring rounded-sm underline underline-offset-2 outline-none focus-visible:ring-2"
-                onClick={() => {
-                  form.setFieldValue("clientSecret", "")
-                  form.setFieldValue("dropSecret", true)
-                }}
-              >
-                {environment
-                  ? tr("oidc.clientSecret.useEnvironment")
-                  : tr("oidc.clientSecret.remove")}
-              </button>
-            )}
-            {dropSecret && (
-              <span className="text-foreground">
-                {environment
-                  ? tr("oidc.clientSecret.environmentApplies")
-                  : tr("oidc.clientSecret.removed")}
-              </span>
-            )}
-          </>
-        }
         layout="stack"
+        footer={
+          savedHere || dropSecret ? (
+            <SettingNote>
+              {savedHere && (
+                <button
+                  type="button"
+                  className="hover:text-foreground focus-visible:ring-ring rounded-sm underline underline-offset-2 outline-none focus-visible:ring-2"
+                  onClick={() => {
+                    form.setFieldValue("clientSecret", "")
+                    form.setFieldValue("dropSecret", true)
+                  }}
+                >
+                  {environment
+                    ? tr("oidc.clientSecret.useEnvironment")
+                    : tr("oidc.clientSecret.remove")}
+                </button>
+              )}
+              {dropSecret &&
+                (environment
+                  ? tr("oidc.clientSecret.environmentApplies")
+                  : tr("oidc.clientSecret.removed"))}
+            </SettingNote>
+          ) : undefined
+        }
       >
         {(ids) => (
           <form.Field name="clientSecret">
             {(field) => (
               <Input
                 id={ids.controlId}
-                aria-describedby={ids.descriptionId}
                 type="password"
                 autoComplete="new-password"
                 spellCheck={false}
@@ -455,16 +435,11 @@ function CallbackRow({ url }: { url: string }) {
   const { feedback, run } = useActionFeedback(1500)
   const copied = feedback.state === "success"
   return (
-    <SettingRow
-      title={tr("oidc.redirectUri")}
-      description={tr("oidc.redirectUri.description")}
-      layout="stack"
-    >
+    <SettingRow title={tr("oidc.redirectUri")} layout="stack">
       {(ids) => (
         <>
           <Input
             id={ids.controlId}
-            aria-describedby={ids.descriptionId}
             readOnly
             value={url}
             className="font-mono text-[13px]"

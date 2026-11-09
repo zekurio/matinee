@@ -4,8 +4,6 @@ export default defineMessages("serverAppearance", {
   // The server's accent color under Settings → Appearance (administration).
   "serverAppearance.loadFailed": "Couldn't load the accent color. {error}",
   "serverAppearance.title": "Accent color",
-  "serverAppearance.description":
-    "Used by the Matinee theme for everyone on this server.",
   "serverAppearance.presets": "Suggested accents",
   "serverAppearance.default": "Default",
   "serverAppearance.mode.light": "Light mode",

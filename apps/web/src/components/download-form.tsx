@@ -502,7 +502,6 @@ function DownloadFields({
                   {(field) => (
                     <SwitchField
                       label={tr("downloads.keepHdr")}
-                      description={tr("downloads.keepHdr.description")}
                       checked={field.state.value}
                       onChange={field.handleChange}
                     />
@@ -690,22 +689,17 @@ function ChoiceField({
 
 function SwitchField({
   label,
-  description,
   checked,
   onChange,
 }: {
   label: string
-  description: string
   checked: boolean
   onChange: (checked: boolean) => void
 }) {
   const id = useId()
   return (
     <Field orientation="horizontal">
-      <div className="flex flex-col gap-0.5">
-        <FieldLabel htmlFor={id}>{label}</FieldLabel>
-        <FieldDescription>{description}</FieldDescription>
-      </div>
+      <FieldLabel htmlFor={id}>{label}</FieldLabel>
       <Switch id={id} checked={checked} onCheckedChange={onChange} />
     </Field>
   )

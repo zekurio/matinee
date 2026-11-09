@@ -20,7 +20,7 @@ export function SettingsSections({
   children: ReactNode
   className?: string
 }) {
-  return <div className={cn("flex flex-col gap-10", className)}>{children}</div>
+  return <div className={cn("flex flex-col gap-8", className)}>{children}</div>
 }
 
 /** The icon tile at the start of a settings row. */
@@ -32,17 +32,18 @@ export function RowIcon({ children }: { children: ReactNode }) {
   )
 }
 
-/** A titled block in a settings panel. `id` must be unique within the panel. */
+/**
+ * A titled block in a settings panel: its name, and no more, as the apps'
+ * settings read. `id` must be unique within the panel.
+ */
 export function SettingsSubsection({
   id,
   title,
-  description,
   action,
   children,
 }: {
   id: string
   title: string
-  description?: ReactNode
   /** A button for the section, such as the one that adds to its list. */
   action?: ReactNode
   children: ReactNode
@@ -51,23 +52,18 @@ export function SettingsSubsection({
     <section
       id={`settings-${id}`}
       aria-labelledby={`settings-${id}-title`}
-      className="flex scroll-mt-6 flex-col gap-4 md:scroll-mt-8"
+      className="flex scroll-mt-6 flex-col gap-3 md:scroll-mt-8"
     >
       {/* Narrow panels put the action under the copy at full width, so its
           label never fights the text for room. */}
       <div className="@container">
         <div className="flex flex-col gap-3 @lg:flex-row @lg:items-center @lg:justify-between @lg:gap-6">
-          <div className="flex min-w-0 flex-col gap-1">
-            <h3
-              id={`settings-${id}-title`}
-              className="text-base font-semibold tracking-tight"
-            >
-              {title}
-            </h3>
-            {description ? (
-              <p className="text-muted-foreground text-sm">{description}</p>
-            ) : null}
-          </div>
+          <h3
+            id={`settings-${id}-title`}
+            className="min-w-0 text-base font-semibold tracking-tight"
+          >
+            {title}
+          </h3>
           {action ? (
             <div className="shrink-0 [&>*]:w-full @lg:[&>*]:w-auto">
               {action}
@@ -205,6 +201,17 @@ export function SettingsSaveBar({
   )
 }
 
+/**
+ * A short line of what the server found or will do, such as the ffmpeg
+ * it detected or what a save changes: status, not an explanation of how a
+ * setting works, which the settings leave out.
+ */
+export function SettingNote({ children }: { children: ReactNode }) {
+  return (
+    <p className="text-muted-foreground text-[13px] leading-5">{children}</p>
+  )
+}
+
 /** A bordered stack of {@link SettingRow}s split by hairlines. */
 export function SettingRows({ children }: { children: ReactNode }) {
   return (
@@ -215,7 +222,8 @@ export function SettingRows({ children }: { children: ReactNode }) {
 }
 
 /**
- * A setting: its name and description, then the control.
+ * A setting: its name, then the control, without a line explaining it, as
+ * the apps' settings read.
  * - `inline`: control on the right, for switches.
  * - `split`: control on the right once there's room, below it on phones.
  * - `stack`: control below at full width, for long values like URLs.
@@ -225,30 +233,23 @@ export function SettingRows({ children }: { children: ReactNode }) {
  */
 export function SettingRow({
   title,
-  description,
   layout = "inline",
   footer,
   children,
 }: {
   title: string
-  description?: ReactNode
   layout?: "inline" | "split" | "stack"
   /** Content under the row that belongs to it, such as a warning. */
   footer?: ReactNode
-  children: (ids: {
-    controlId: string
-    labelId: string
-    descriptionId: string | undefined
-  }) => ReactNode
+  children: (ids: { controlId: string; labelId: string }) => ReactNode
 }) {
   const id = useId()
   const ids = {
     controlId: `${id}-control`,
     labelId: `${id}-label`,
-    descriptionId: description ? `${id}-description` : undefined,
   }
   return (
-    <div className="@container flex flex-col gap-3 px-4 py-3.5">
+    <div className="@container flex flex-col gap-2.5 px-4 py-2.5">
       <div
         className={cn(
           "flex gap-x-6 gap-y-2.5",
@@ -266,14 +267,6 @@ export function SettingRow({
           >
             {title}
           </label>
-          {description && (
-            <p
-              id={ids.descriptionId}
-              className="text-muted-foreground mt-0.5 text-[13px] leading-5"
-            >
-              {description}
-            </p>
-          )}
         </div>
         <div
           className={cn(

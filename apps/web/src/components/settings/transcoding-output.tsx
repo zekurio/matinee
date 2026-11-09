@@ -14,7 +14,12 @@ import { useSelector } from "@tanstack/react-form"
 import { tr } from "@/i18n"
 import { withForm } from "@/lib/form"
 
-import { SelectField, SwitchField, typeOnly } from "./setting-controls"
+import {
+  SelectField,
+  SettingWarning,
+  SwitchField,
+  typeOnly,
+} from "./setting-controls"
 import { SettingRows, SettingsSubsection } from "./settings-panel"
 import {
   CapabilitySwitchField,
@@ -56,7 +61,6 @@ export const EncodingSection = withForm({
       <SettingsSubsection
         id="encoding"
         title={tr("transcoding.encoding.title")}
-        description={tr("transcoding.encoding.description")}
       >
         <SettingRows>
           <form.AppField name="allowHevcEncoding">
@@ -81,7 +85,6 @@ export const EncodingSection = withForm({
             {() => (
               <SelectField
                 title={tr("transcoding.encoding.preset")}
-                description={tr("transcoding.encoding.preset.description")}
                 options={ENCODER_PRESETS}
                 labelOf={(value) =>
                   value === "auto" ? tr("transcoding.auto") : value
@@ -109,12 +112,12 @@ export const ToneMappingSection = withForm({
       <SettingsSubsection
         id="tone-mapping"
         title={tr("transcoding.toneMapping.title")}
-        description={
-          capabilities.features.tonemapx
-            ? tr("transcoding.toneMapping.description")
-            : tr("transcoding.toneMapping.noTonemapx")
-        }
       >
+        {!capabilities.features.tonemapx && (
+          <SettingWarning>
+            {tr("transcoding.toneMapping.noTonemapx")}
+          </SettingWarning>
+        )}
         <SettingRows>
           {(accel === "vaapi" || accel === "qsv") && (
             <>
@@ -122,10 +125,7 @@ export const ToneMappingSection = withForm({
                 {() => (
                   <CapabilitySwitchField
                     title={tr("transcoding.toneMapping.vpp")}
-                    description={checkNote(
-                      hardware?.vppTonemap,
-                      tr("transcoding.toneMapping.vpp.description"),
-                    )}
+                    unavailable={checkNote(hardware?.vppTonemap)}
                     available={hardware?.vppTonemap.status === "ok"}
                   />
                 )}
@@ -141,10 +141,7 @@ export const ToneMappingSection = withForm({
               {() => (
                 <CapabilitySwitchField
                   title={tr("transcoding.toneMapping.videoToolbox")}
-                  description={checkNote(
-                    hardware?.videoToolboxTonemap,
-                    tr("transcoding.toneMapping.videoToolbox.description"),
-                  )}
+                  unavailable={checkNote(hardware?.videoToolboxTonemap)}
                   available={hardware?.videoToolboxTonemap.status === "ok"}
                 />
               )}
@@ -155,14 +152,7 @@ export const ToneMappingSection = withForm({
               {() => (
                 <CapabilitySwitchField
                   title={tr("transcoding.toneMapping.hardware")}
-                  description={checkNote(
-                    hardware?.tonemap,
-                    accel === "nvenc"
-                      ? tr("transcoding.toneMapping.cuda")
-                      : accel === "videotoolbox"
-                        ? tr("transcoding.toneMapping.metal")
-                        : tr("transcoding.toneMapping.openCl"),
-                  )}
+                  unavailable={checkNote(hardware?.tonemap)}
                   available={hardware?.tonemap.status === "ok"}
                 />
               )}
@@ -172,9 +162,6 @@ export const ToneMappingSection = withForm({
             {() => (
               <SelectField
                 title={tr("transcoding.toneMapping.algorithm")}
-                description={tr(
-                  "transcoding.toneMapping.algorithm.description",
-                )}
                 options={TONEMAP_ALGORITHMS}
                 labelOf={(value) => tr(`transcoding.algorithm.${value}`)}
               />
@@ -185,7 +172,6 @@ export const ToneMappingSection = withForm({
               {() => (
                 <SelectField
                   title={tr("transcoding.toneMapping.mode")}
-                  description={tr("transcoding.toneMapping.mode.description")}
                   options={TONEMAP_MODES}
                   labelOf={upperOrAuto}
                 />
@@ -196,7 +182,6 @@ export const ToneMappingSection = withForm({
             {() => (
               <SelectField
                 title={tr("transcoding.toneMapping.range")}
-                description={tr("transcoding.toneMapping.range.description")}
                 options={TONEMAP_RANGES}
                 labelOf={upperOrAuto}
               />
@@ -232,12 +217,7 @@ export const DeinterlacingSection = withForm({
           </form.AppField>
           <form.AppField name="deinterlaceDoubleRate">
             {() => (
-              <SwitchField
-                title={tr("transcoding.deinterlacing.doubleRate")}
-                description={tr(
-                  "transcoding.deinterlacing.doubleRate.description",
-                )}
-              />
+              <SwitchField title={tr("transcoding.deinterlacing.doubleRate")} />
             )}
           </form.AppField>
         </SettingRows>
@@ -256,21 +236,15 @@ export const AudioSection = withForm({
     )
 
     return (
-      <SettingsSubsection
-        id="audio"
-        title={tr("transcoding.audio.title")}
-        description={
-          opus
-            ? tr("transcoding.audio.description")
-            : tr("transcoding.audio.noOpus")
-        }
-      >
+      <SettingsSubsection id="audio" title={tr("transcoding.audio.title")}>
+        {!opus && (
+          <SettingWarning>{tr("transcoding.audio.noOpus")}</SettingWarning>
+        )}
         <SettingRows>
           <form.AppField name="downMixStereoAlgorithm">
             {() => (
               <SelectField
                 title={tr("transcoding.audio.downmix")}
-                description={tr("transcoding.audio.downmix.description")}
                 options={DOWNMIX_ALGORITHMS}
                 labelOf={(value) => tr(`transcoding.downmix.${value}`)}
               />
@@ -281,13 +255,6 @@ export const AudioSection = withForm({
             {() => (
               <CapabilitySwitchField
                 title={tr("transcoding.audio.vbr")}
-                description={
-                  vbrEncoder
-                    ? tr("transcoding.audio.vbr.description", {
-                        encoder: vbrEncoder,
-                      })
-                    : undefined
-                }
                 unavailable={tr("transcoding.audio.vbr.unavailable")}
                 available={vbrEncoder !== undefined}
               />
@@ -307,14 +274,12 @@ export const SegmentsSection = withForm({
       <SettingsSubsection
         id="segments"
         title={tr("transcoding.segments.title")}
-        description={tr("transcoding.segments.description")}
       >
         <SettingRows>
           <form.AppField name="enableThrottling">
             {() => (
               <CapabilitySwitchField
                 title={tr("transcoding.segments.throttle")}
-                description={tr("transcoding.segments.throttle.description")}
                 unavailable={tr("transcoding.segments.throttle.unavailable")}
                 available={capabilities.features.pauseKeys}
               />
@@ -322,12 +287,7 @@ export const SegmentsSection = withForm({
           </form.AppField>
           <NumberRows form={form} fields={["throttleDelaySeconds"]} />
           <form.AppField name="enableSegmentDeletion">
-            {() => (
-              <SwitchField
-                title={tr("transcoding.segments.delete")}
-                description={tr("transcoding.segments.delete.description")}
-              />
-            )}
+            {() => <SwitchField title={tr("transcoding.segments.delete")} />}
           </form.AppField>
           <NumberRows form={form} fields={["segmentKeepSeconds"]} />
         </SettingRows>

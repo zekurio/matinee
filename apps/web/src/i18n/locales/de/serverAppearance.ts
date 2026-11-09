@@ -5,8 +5,6 @@ export default {
   "serverAppearance.loadFailed":
     "Die Akzentfarbe konnte nicht geladen werden. {error}",
   "serverAppearance.title": "Akzentfarbe",
-  "serverAppearance.description":
-    "Wird vom Matinee-Design für alle auf diesem Server verwendet.",
   "serverAppearance.presets": "Vorgeschlagene Akzentfarben",
   "serverAppearance.default": "Standard",
   "serverAppearance.mode.light": "Heller Modus",

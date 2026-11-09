@@ -39,7 +39,7 @@ import { toast } from "@matinee/ui/components/sonner"
 import { Spinner } from "@matinee/ui/components/spinner"
 import { cn } from "@matinee/ui/lib/utils"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Link, useSearch } from "@tanstack/react-router"
+import { useSearch } from "@tanstack/react-router"
 import {
   ImageUpIcon,
   KeyRoundIcon,
@@ -54,7 +54,6 @@ import { useRef, useState } from "react"
 import { FormAlert } from "@/components/form-alert"
 import { UserAvatar } from "@/components/user-avatar"
 import { tr } from "@/i18n"
-import { trRich } from "@/i18n/react"
 import { prepareAvatar } from "@/lib/avatar"
 import { firstError, useAppForm } from "@/lib/form"
 import { formatDate, formatRelative } from "@/lib/format"
@@ -107,21 +106,7 @@ function Profile({
   providerName: string | null
 }) {
   return (
-    <SettingsSubsection
-      id="profile"
-      title={tr("account.profile.title")}
-      description={trRich("account.profile.description", {
-        profile: (
-          <Link
-            to="/profiles/$username"
-            params={{ username: user.username }}
-            className="text-foreground underline-offset-2 hover:underline"
-          >
-            {tr("account.profile.link")}
-          </Link>
-        ),
-      })}
-    >
+    <SettingsSubsection id="profile" title={tr("account.profile.title")}>
       <div className="flex items-center gap-4">
         <AvatarPicker user={user} providerName={providerName} />
         <DisplayNameField user={user} />

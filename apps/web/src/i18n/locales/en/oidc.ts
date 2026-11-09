@@ -17,8 +17,6 @@ export default defineMessages("oidc", {
 
   // The passkeys section, above single sign-on.
   "oidc.passkeys.title": "Passkeys",
-  "oidc.passkeys.description":
-    "Sign in with a fingerprint, face, or security key. When off, everyone signs in through single sign-on.",
   "oidc.passkeys.unlinked": plural({
     one: "{count} account isn't linked to {provider}, so it can't sign in while passkeys are off. While still signed in, it can link {provider} under Settings → Account.",
     other:
@@ -27,8 +25,6 @@ export default defineMessages("oidc", {
 
   // The single sign-on section.
   "oidc.title": "Single sign-on",
-  "oidc.description":
-    "OpenID Connect, such as Authelia, Authentik, or Keycloak.",
   "oidc.enabled": "Enabled",
   "oidc.ssoOnly": plural({
     one: "{count} account signs in only through {provider}. It can't sign in again until this is back on.",
@@ -36,19 +32,15 @@ export default defineMessages("oidc", {
       "{count} accounts sign in only through {provider}. They can't sign in again until this is back on.",
   }),
   "oidc.allowSignUp": "Create accounts",
-  "oidc.allowSignUp.description": "For first sign-ins that match no account.",
-  "oidc.displayName.description": "Shown on the sign-in button.",
   "oidc.issuerUrl.override":
     "Overrides MATINEE_OIDC_ISSUER_URL. Changing it unlinks every linked account.",
   "oidc.issuerUrl.description":
     "Changing it later unlinks every linked account.",
-  "oidc.clientId.override": "Overrides MATINEE_OIDC_CLIENT_ID.",
 
   // The client secret's row.
   "oidc.clientSecret.saved": "Saved. Type to replace it.",
   "oidc.clientSecret.fromEnvironment": "Set by MATINEE_OIDC_CLIENT_SECRET",
   "oidc.clientSecret.none": "None",
-  "oidc.clientSecret.description": "Leave empty for a public client.",
   "oidc.clientSecret.useEnvironment": "Use the secret from the environment",
   "oidc.clientSecret.remove": "Remove the saved secret",
   "oidc.clientSecret.environmentApplies":
@@ -57,8 +49,6 @@ export default defineMessages("oidc", {
 
   // The redirect URI's row.
   "oidc.redirectUri": "Redirect URI",
-  "oidc.redirectUri.description":
-    "Add this to the provider's allowed redirects.",
   "oidc.copy": "Copy",
   "oidc.copied": "Copied",
 
@@ -67,7 +57,4 @@ export default defineMessages("oidc", {
   "oidc.advanced.show": "Show",
   "oidc.advanced.hide": "Hide",
   "oidc.scopes.description": "Separated by spaces. Must include openid.",
-  "oidc.usernameClaim.description": "Falls back to preferred_username.",
-  "oidc.roleClaim.description":
-    "Sets the role on every sign-in: admin or user, or a list holding them. Without the claim, the role stays.",
 })

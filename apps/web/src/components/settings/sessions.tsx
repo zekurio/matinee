@@ -71,7 +71,6 @@ export function Sessions() {
     <SettingsSubsection
       id="sessions"
       title={tr("account.sessions.title")}
-      description={tr("account.sessions.description")}
       action={
         others ? (
           <Button

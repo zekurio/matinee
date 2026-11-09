@@ -67,28 +67,18 @@ export default defineMessages("transcoding", {
   "transcoding.hardware.deviceFailed":
     "The device didn't open, so transcodes run in software.",
   "transcoding.hardware.notInBuild": "Not in this ffmpeg build",
-  "transcoding.hardware.vaapiDevice": "The GPU's render node.",
-  "transcoding.hardware.qsvDevice": "The Intel GPU's render node.",
   "transcoding.hardware.encoding": "Hardware encoding",
   "transcoding.hardware.lowPower": "Intel low-power {codec} encoder",
-  "transcoding.hardware.lowPower.description":
-    "Skips CPU-GPU syncs, which helps 4K and tone mapping. Needs the HuC firmware.",
 
   // Hardware decoding.
   "transcoding.decoding.title": "Hardware decoding",
   "transcoding.decoding.hevc10": "HEVC 10-bit",
-  "transcoding.decoding.hevc10.description":
-    "Most HDR. Intel 7th gen, AMD Polaris, NVIDIA Pascal, or newer.",
   "transcoding.decoding.vp910": "VP9 10-bit",
   "transcoding.decoding.hevcRext": "HEVC RExt 8/10-bit",
-  "transcoding.decoding.hevcRext.description":
-    "4:2:2 and 4:4:4 camera footage. Intel 11th gen or newer.",
   "transcoding.decoding.hevcRext12": "HEVC RExt 12-bit",
 
   // Encoding.
   "transcoding.encoding.title": "Encoding",
-  "transcoding.encoding.description":
-    "H.264 is always on. HEVC and AV1 go only to players that support them.",
   "transcoding.encoding.hevc": "Allow HEVC encoding",
   "transcoding.encoding.hevc.unavailable":
     "No HEVC encoder works on this server.",
@@ -96,33 +86,17 @@ export default defineMessages("transcoding", {
   "transcoding.encoding.av1.unavailable":
     "No AV1 encoder works on this server.",
   "transcoding.encoding.preset": "Encoder preset",
-  "transcoding.encoding.preset.description":
-    "Slower looks better. Auto is veryfast.",
 
   // Tone mapping.
   "transcoding.toneMapping.title": "Tone mapping",
-  "transcoding.toneMapping.description":
-    "Converts HDR to SDR for players without HDR.",
   "transcoding.toneMapping.noTonemapx":
     "This ffmpeg lacks tonemapx, so HDR looks washed out without GPU tone mapping. Install jellyfin-ffmpeg.",
   "transcoding.toneMapping.vpp": "VPP tone mapping",
-  "transcoding.toneMapping.vpp.description":
-    "Intel's tone mapping, used before OpenCL. Needs hardware decoding.",
   "transcoding.toneMapping.videoToolbox": "VideoToolbox tone mapping",
-  "transcoding.toneMapping.videoToolbox.description":
-    "Apple's tone mapping, used before Metal.",
   "transcoding.toneMapping.hardware": "Hardware tone mapping",
-  "transcoding.toneMapping.cuda": "Runs on CUDA.",
-  "transcoding.toneMapping.metal": "Runs on Metal.",
-  "transcoding.toneMapping.openCl":
-    "Runs on OpenCL. Needs the driver's OpenCL runtime.",
   "transcoding.toneMapping.algorithm": "Algorithm",
-  "transcoding.toneMapping.algorithm.description": "BT.2390 is recommended.",
   "transcoding.toneMapping.mode": "Mode",
-  "transcoding.toneMapping.mode.description":
-    "GPU only. Try RGB if highlights blow out.",
   "transcoding.toneMapping.range": "Range",
-  "transcoding.toneMapping.range.description": "Auto keeps the source's range.",
 
   // Tone mapping algorithms, by their value.
   "transcoding.algorithm.none": "None",
@@ -138,21 +112,13 @@ export default defineMessages("transcoding", {
   "transcoding.deinterlacing.title": "Deinterlacing",
   "transcoding.deinterlacing.method": "Method",
   "transcoding.deinterlacing.doubleRate": "Double the frame rate",
-  "transcoding.deinterlacing.doubleRate.description":
-    "25 and 30 fps play at 50 and 60.",
 
   // Audio.
   "transcoding.audio.title": "Audio",
-  "transcoding.audio.description":
-    "Players get a track as it is when they decode it. The rest becomes Opus, or AAC for players without Opus.",
   "transcoding.audio.noOpus":
     "Players get a track as it is when they decode it. The rest becomes AAC, since this ffmpeg lacks libopus.",
   "transcoding.audio.downmix": "Stereo downmix",
-  "transcoding.audio.downmix.description":
-    "How surround becomes stereo. None drops the LFE channel; Nightmode dialogue favors speech.",
   "transcoding.audio.vbr": "Variable bit rate AAC",
-  "transcoding.audio.vbr.description":
-    "Uses {encoder}'s VBR mode. Opus is always variable.",
   "transcoding.audio.vbr.unavailable":
     "Needs aac_at or libfdk_aac, which this ffmpeg lacks.",
 
@@ -165,12 +131,7 @@ export default defineMessages("transcoding", {
 
   // Throttling and segments.
   "transcoding.segments.title": "Throttling and segments",
-  "transcoding.segments.description": "Turn these off if playback stalls.",
   "transcoding.segments.throttle": "Throttle transcodes",
-  "transcoding.segments.throttle.description":
-    "Pause ffmpeg when it's far ahead of the player.",
   "transcoding.segments.throttle.unavailable": "Needs jellyfin-ffmpeg.",
   "transcoding.segments.delete": "Delete segments",
-  "transcoding.segments.delete.description":
-    "Free disk space once the player has fetched them.",
 })

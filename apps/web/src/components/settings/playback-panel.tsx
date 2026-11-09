@@ -3,7 +3,6 @@ import {
   ORIGINAL_LANGUAGE,
   PLAYBACK_QUALITIES,
   PLAYBACK_QUALITY_IDS,
-  type PlaybackAudioCodec,
   type PlaybackOptions,
   type PlaybackQuality,
   SUBTITLE_MODES,
@@ -39,21 +38,6 @@ import {
 
 /** Stands in for null in a select, which only takes strings. */
 const UNSET = ""
-
-type PassthroughNote =
-  `playback.passthrough.${"ac3" | "eac3" | "flac" | "alac"}`
-
-const PASSTHROUGH_NOTES = new Map<PlaybackAudioCodec, PassthroughNote>([
-  ["ac3", "playback.passthrough.ac3"],
-  ["eac3", "playback.passthrough.eac3"],
-  ["flac", "playback.passthrough.flac"],
-  ["alac", "playback.passthrough.alac"],
-])
-
-function passthroughNote(codec: PlaybackAudioCodec): string | undefined {
-  const key = PASSTHROUGH_NOTES.get(codec)
-  return key && tr(key)
-}
 
 /**
  * How videos play: the languages, which the account syncs, and the
@@ -103,15 +87,10 @@ function LanguagesSection({
   const device = languageName(deviceLanguage())
 
   return (
-    <SettingsSubsection
-      id="languages"
-      title={tr("playback.languages.title")}
-      description={tr("playback.languages.description")}
-    >
+    <SettingsSubsection id="languages" title={tr("playback.languages.title")}>
       <SettingRows>
         <SelectRow
           title={tr("playback.audio.title")}
-          description={tr("playback.audio.description")}
           value={preferences.audioLanguage ?? UNSET}
           options={languageOptions(
             [UNSET, ORIGINAL_LANGUAGE],
@@ -127,7 +106,6 @@ function LanguagesSection({
         />
         <SelectRow
           title={tr("playback.subtitles.title")}
-          description={tr(`playback.subtitles.mode.${mode}.description`)}
           value={mode}
           options={SUBTITLE_MODES}
           labelOf={(value) => tr(`playback.subtitles.mode.${value}.label`)}
@@ -158,7 +136,6 @@ function LanguagesSection({
         )}
         <SwitchRow
           title={tr("playback.subtitles.remember")}
-          description={tr("playback.subtitles.remember.description")}
           checked={preferences.rememberSubtitles}
           onChange={(rememberSubtitles) =>
             updatePlaybackPreferences({ rememberSubtitles })
@@ -180,21 +157,12 @@ function qualityLabel(id: PlaybackQuality): string {
 }
 
 /** A row whose setting has a single possible value here, shown as text. */
-function FixedRow({
-  title,
-  description,
-  value,
-}: {
-  title: string
-  description: string
-  value: string
-}) {
+function FixedRow({ title, value }: { title: string; value: string }) {
   return (
-    <SettingRow title={title} description={description} layout="split">
+    <SettingRow title={title} layout="split">
       {(ids) => (
         <span
           id={ids.controlId}
-          aria-describedby={ids.descriptionId}
           className="text-muted-foreground text-sm @lg:ml-auto"
         >
           {value}
@@ -232,15 +200,10 @@ function DeviceSection({ options }: { options: PlaybackOptions | undefined }) {
   const audioChoices: AudioCodecChoice[] = ["auto", ...audioCodecs]
 
   return (
-    <SettingsSubsection
-      id="device"
-      title={tr("playback.device.title")}
-      description={tr("playback.device.description")}
-    >
+    <SettingsSubsection id="device" title={tr("playback.device.title")}>
       <SettingRows>
         <SelectRow
           title={tr("playback.quality.title")}
-          description={tr("playback.quality.description")}
           value={device.quality}
           options={PLAYBACK_QUALITY_IDS}
           labelOf={qualityLabel}
@@ -249,7 +212,6 @@ function DeviceSection({ options }: { options: PlaybackOptions | undefined }) {
         {videoCodecs.length > 1 ? (
           <SelectRow
             title={tr("playback.videoCodec.title")}
-            description={tr("playback.videoCodec.description")}
             value={
               videoChoices.includes(device.videoCodec)
                 ? device.videoCodec
@@ -266,16 +228,11 @@ function DeviceSection({ options }: { options: PlaybackOptions | undefined }) {
             onChange={(videoCodec) => device.setDevicePlayback({ videoCodec })}
           />
         ) : (
-          <FixedRow
-            title={tr("playback.videoCodec.title")}
-            description={tr("playback.videoCodec.only")}
-            value="H.264"
-          />
+          <FixedRow title={tr("playback.videoCodec.title")} value="H.264" />
         )}
         {audioCodecs.length > 1 ? (
           <SelectRow
             title={tr("playback.audioCodec.title")}
-            description={tr("playback.audioCodec.description")}
             value={
               audioChoices.includes(device.audioCodec)
                 ? device.audioCodec
@@ -292,15 +249,10 @@ function DeviceSection({ options }: { options: PlaybackOptions | undefined }) {
             onChange={(audioCodec) => device.setDevicePlayback({ audioCodec })}
           />
         ) : (
-          <FixedRow
-            title={tr("playback.audioCodec.title")}
-            description={tr("playback.audioCodec.description")}
-            value="AAC"
-          />
+          <FixedRow title={tr("playback.audioCodec.title")} value="AAC" />
         )}
         <SelectRow
           title={tr("playback.skip.title")}
-          description={tr("playback.skip.description")}
           value={String(device.skipSeconds)}
           options={SKIP_STEPS.map(String)}
           labelOf={(value) =>
@@ -312,7 +264,6 @@ function DeviceSection({ options }: { options: PlaybackOptions | undefined }) {
         />
         <SwitchRow
           title={tr("playback.autoplay.title")}
-          description={tr("playback.autoplay.description")}
           checked={device.autoplayNext}
           onChange={(autoplayNext) =>
             device.setDevicePlayback({ autoplayNext })
@@ -340,14 +291,12 @@ function PassthroughSection() {
     <SettingsSubsection
       id="passthrough"
       title={tr("playback.passthrough.title")}
-      description={tr("playback.passthrough.description")}
     >
       <SettingRows>
         {codecs.map((codec) => (
           <SwitchRow
             key={codec}
             title={audioFormatName(codec)}
-            description={passthroughNote(codec)}
             checked={!convertAudio.includes(codec)}
             onChange={(on) =>
               setDevicePlayback({

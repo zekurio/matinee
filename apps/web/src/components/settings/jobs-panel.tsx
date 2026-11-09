@@ -122,11 +122,7 @@ export function JobsPanel() {
 
   return (
     <SettingsSections>
-      <SettingsSubsection
-        id="queues"
-        title={tr("jobs.queues")}
-        description={tr("jobs.queues.description")}
-      >
+      <SettingsSubsection id="queues" title={tr("jobs.queues")}>
         {jobs.isPending ? (
           <Skeleton className="h-64 rounded-xl" />
         ) : jobs.isError ? (
@@ -140,11 +136,7 @@ export function JobsPanel() {
         )}
       </SettingsSubsection>
 
-      <SettingsSubsection
-        id="tasks"
-        title={tr("jobs.tasks")}
-        description={tr("jobs.tasks.description")}
-      >
+      <SettingsSubsection id="tasks" title={tr("jobs.tasks")}>
         {jobs.isPending ? (
           <Skeleton className="h-64 rounded-xl" />
         ) : jobs.isError ? null : (

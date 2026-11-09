@@ -24,8 +24,6 @@ export default defineMessages("downloads", {
   "downloads.video.preset": "{resolution}, {bitrate}",
   "downloads.codec": "Video codec",
   "downloads.keepHdr": "Keep HDR",
-  "downloads.keepHdr.description":
-    "For screens that show HDR. Off converts it to SDR.",
 
   "downloads.audio": "Audio tracks",
   "downloads.audio.description": "The first one you keep plays by default.",

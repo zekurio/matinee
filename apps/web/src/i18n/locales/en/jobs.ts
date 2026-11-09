@@ -3,9 +3,7 @@ import { defineMessages, plural } from "../../catalog"
 export default defineMessages("jobs", {
   // The jobs panel under Settings → Jobs.
   "jobs.queues": "Queues",
-  "jobs.queues.description": "Pausing a queue lets its running jobs finish.",
   "jobs.tasks": "Scheduled tasks",
-  "jobs.tasks.description": "Run on a schedule and queue the work they find.",
   "jobs.loadFailed": "Couldn't load the jobs. {error}",
   "jobs.retry": "Try again",
 
@@ -16,8 +14,6 @@ export default defineMessages("jobs", {
   "jobs.queue.media-probe.name": "Media info",
   "jobs.queue.media-probe.description":
     "Read the streams of new and changed files with ffprobe.",
-  "jobs.queue.media-probe.note":
-    "Files ffprobe reads at once. Raise it to finish the first scan of a large library sooner.",
   "jobs.queue.metadata.name": "Metadata",
   "jobs.queue.metadata.description":
     "Fetch details, artwork, and episodes from TMDB or TheTVDB.",
@@ -27,13 +23,9 @@ export default defineMessages("jobs", {
   "jobs.queue.trickplay.name": "Trickplay images",
   "jobs.queue.trickplay.description":
     "Make the thumbnails the seek bar shows while scrubbing.",
-  "jobs.queue.trickplay.note":
-    "Videos getting seek bar previews at once. An episode takes about 20 seconds, a movie a few minutes.",
   "jobs.queue.artwork.name": "Artwork",
   "jobs.queue.artwork.description":
     "Download images from the metadata provider, scale them, and read their blurred placeholders.",
-  "jobs.queue.artwork.note":
-    "Provider images downloaded and resized at once. A library's first metadata fetch queues thousands.",
   "jobs.queue.subtitles.name": "Subtitles",
   "jobs.queue.subtitles.description":
     "Convert subtitles to WebVTT, and copy PGS subtitles out of videos.",
@@ -122,8 +114,6 @@ export default defineMessages("jobs", {
 
   // How many jobs each queue runs at once.
   "jobs.concurrency": "Concurrency",
-  "jobs.concurrency.description":
-    "How many jobs a queue runs at once. Higher clears a backlog sooner but leaves less CPU and disk for streaming.",
   "jobs.concurrency.limits": "Default {default}, max {max}.",
   "jobs.concurrency.decrease": "Decrease {queue}",
   "jobs.concurrency.increase": "Increase {queue}",

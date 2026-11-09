@@ -20,8 +20,6 @@ export default {
   "downloads.video.preset": "{resolution}, {bitrate}",
   "downloads.codec": "Videocodec",
   "downloads.keepHdr": "HDR behalten",
-  "downloads.keepHdr.description":
-    "Für Bildschirme, die HDR zeigen. Aus wandelt es in SDR um.",
 
   "downloads.audio": "Tonspuren",
   "downloads.audio.description":

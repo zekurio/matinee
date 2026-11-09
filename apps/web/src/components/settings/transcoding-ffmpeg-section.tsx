@@ -7,7 +7,7 @@ import { RefreshCwIcon } from "lucide-react"
 import { perLocale, tr } from "@/i18n"
 
 import { SettingWarning } from "./setting-controls"
-import { SettingsSubsection } from "./settings-panel"
+import { SettingNote, SettingsSubsection } from "./settings-panel"
 import { accelerationLabel } from "./transcoding-controls"
 
 const detectedAt = perLocale(
@@ -42,14 +42,6 @@ export function FfmpegSection({
     <SettingsSubsection
       id="ffmpeg"
       title="FFmpeg"
-      description={
-        capabilities.error
-          ? tr("transcoding.ffmpeg.failed")
-          : tr("transcoding.ffmpeg.detected", {
-              path: capabilities.ffmpegPath,
-              date: detectedAt().format(capabilities.detectedAt),
-            })
-      }
       action={
         <Button
           type="button"
@@ -64,6 +56,14 @@ export function FfmpegSection({
         </Button>
       }
     >
+      <SettingNote>
+        {capabilities.error
+          ? tr("transcoding.ffmpeg.failed")
+          : tr("transcoding.ffmpeg.detected", {
+              path: capabilities.ffmpegPath,
+              date: detectedAt().format(capabilities.detectedAt),
+            })}
+      </SettingNote>
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <Badge variant={capabilities.jellyfin ? "default" : "secondary"}>
           {capabilities.jellyfin ? "jellyfin-ffmpeg" : "FFmpeg"}{" "}

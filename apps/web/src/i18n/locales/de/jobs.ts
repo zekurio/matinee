@@ -3,11 +3,7 @@ import type source from "../en/jobs"
 
 export default {
   "jobs.queues": "Warteschlangen",
-  "jobs.queues.description":
-    "Pausierst du eine Warteschlange, laufen ihre aktiven Aufträge noch zu Ende.",
   "jobs.tasks": "Geplante Aufgaben",
-  "jobs.tasks.description":
-    "Laufen nach Zeitplan und reihen die Arbeit ein, die sie finden.",
   "jobs.loadFailed": "Die Aufträge konnten nicht geladen werden. {error}",
   "jobs.retry": "Erneut versuchen",
 
@@ -17,8 +13,6 @@ export default {
   "jobs.queue.media-probe.name": "Medieninfo",
   "jobs.queue.media-probe.description":
     "Liest die Streams neuer und geänderter Dateien mit ffprobe.",
-  "jobs.queue.media-probe.note":
-    "Dateien, die ffprobe gleichzeitig liest. Erhöhe den Wert, damit der erste Scan einer großen Mediathek schneller fertig ist.",
   "jobs.queue.metadata.name": "Metadaten",
   "jobs.queue.metadata.description":
     "Ruft Details, Artwork und Folgen von TMDB oder TheTVDB ab.",
@@ -28,13 +22,9 @@ export default {
   "jobs.queue.trickplay.name": "Trickplay-Bilder",
   "jobs.queue.trickplay.description":
     "Erstellt die Vorschaubilder, die die Zeitleiste beim Spulen zeigt.",
-  "jobs.queue.trickplay.note":
-    "Videos, die gleichzeitig Vorschaubilder für die Zeitleiste bekommen. Eine Folge dauert etwa 20 Sekunden, ein Film einige Minuten.",
   "jobs.queue.artwork.name": "Artwork",
   "jobs.queue.artwork.description":
     "Lädt Bilder vom Metadatenanbieter herunter, skaliert sie und liest ihre unscharfen Platzhalter aus.",
-  "jobs.queue.artwork.note":
-    "Anbieterbilder, die gleichzeitig heruntergeladen und skaliert werden. Der erste Metadatenabruf einer Mediathek reiht Tausende ein.",
   "jobs.queue.subtitles.name": "Untertitel",
   "jobs.queue.subtitles.description":
     "Wandelt Untertitel in WebVTT um und kopiert PGS-Untertitel aus Videos.",
@@ -120,8 +110,6 @@ export default {
   "jobs.schedule.next": "{schedule}, nächster Lauf {when}",
 
   "jobs.concurrency": "Parallelität",
-  "jobs.concurrency.description":
-    "Wie viele Aufträge eine Warteschlange gleichzeitig ausführt. Mehr baut einen Rückstau schneller ab, lässt aber weniger CPU und Festplatte fürs Streaming übrig.",
   "jobs.concurrency.limits": "Standard {default}, höchstens {max}.",
   "jobs.concurrency.decrease": "{queue} verringern",
   "jobs.concurrency.increase": "{queue} erhöhen",

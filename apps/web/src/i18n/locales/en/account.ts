@@ -3,10 +3,7 @@ import { defineMessages, plural } from "../../catalog"
 export default defineMessages("account", {
   // The profile: picture, display name, and what it shares.
   "account.profile.title": "Profile",
-  "account.profile.description":
-    "Everyone on this server sees your name and picture. Pick what else your {profile} shows.",
   // The link text in account.profile.description.
-  "account.profile.link": "profile",
   "account.picture.changeFailed": "Couldn't change your picture",
   "account.picture.change": "Change picture",
   "account.picture.upload": "Upload picture",
@@ -23,8 +20,6 @@ export default defineMessages("account", {
   "account.sharing.failed": "Couldn't change what your profile shows",
   "account.sharing.favorites": "Show my favorites",
   "account.sharing.stats": "Show my statistics",
-  "account.sharing.stats.description":
-    "Watch time, top titles, and recent plays.",
 
   // Passkeys.
   "account.passkeys.title": "Passkeys",
@@ -62,8 +57,6 @@ export default defineMessages("account", {
 
   // Sessions.
   "account.sessions.title": "Sessions",
-  "account.sessions.description":
-    "Browsers and apps signed in to your account.",
   "account.sessions.signOutOthers": "Sign out other sessions",
   "account.sessions.loadFailed": "Couldn't load your sessions. {reason}",
   "account.sessions.signedOut": "Signed out {session}",

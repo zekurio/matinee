@@ -110,7 +110,6 @@ function AccentForm({ saved }: { saved: ThemeAccents }) {
       <SettingsSubsection
         id="accent-color"
         title={tr("serverAppearance.title")}
-        description={tr("serverAppearance.description")}
       >
         <div
           role="group"

@@ -37,25 +37,20 @@ export function SharingRows({ sharing }: { sharing: ProfileSharing }) {
   return (
     <SettingRows>
       <SettingRow title={tr("account.sharing.favorites")}>
-        {({ controlId, labelId, descriptionId }) => (
+        {({ controlId, labelId }) => (
           <Switch
             id={controlId}
             aria-labelledby={labelId}
-            aria-describedby={descriptionId}
             checked={shown.favorites}
             onCheckedChange={(favorites) => update.mutate({ favorites })}
           />
         )}
       </SettingRow>
-      <SettingRow
-        title={tr("account.sharing.stats")}
-        description={tr("account.sharing.stats.description")}
-      >
-        {({ controlId, labelId, descriptionId }) => (
+      <SettingRow title={tr("account.sharing.stats")}>
+        {({ controlId, labelId }) => (
           <Switch
             id={controlId}
             aria-labelledby={labelId}
-            aria-describedby={descriptionId}
             checked={shown.stats}
             onCheckedChange={(stats) => update.mutate({ stats })}
           />

@@ -64,26 +64,16 @@ export default {
   "transcoding.hardware.deviceFailed":
     "Das Gerät ließ sich nicht öffnen, daher laufen Transkodierungen in Software.",
   "transcoding.hardware.notInBuild": "Nicht in diesem ffmpeg-Build",
-  "transcoding.hardware.vaapiDevice": "Der Render-Node der GPU.",
-  "transcoding.hardware.qsvDevice": "Der Render-Node der Intel-GPU.",
   "transcoding.hardware.encoding": "Hardware-Kodierung",
   "transcoding.hardware.lowPower": "Intel-Low-Power-Encoder für {codec}",
-  "transcoding.hardware.lowPower.description":
-    "Spart CPU-GPU-Synchronisierungen, was bei 4K und Tone-Mapping hilft. Braucht die HuC-Firmware.",
 
   "transcoding.decoding.title": "Hardware-Dekodierung",
   "transcoding.decoding.hevc10": "HEVC 10 Bit",
-  "transcoding.decoding.hevc10.description":
-    "Das meiste HDR. Intel ab 7. Generation, AMD Polaris, NVIDIA Pascal oder neuer.",
   "transcoding.decoding.vp910": "VP9 10 Bit",
   "transcoding.decoding.hevcRext": "HEVC RExt 8/10 Bit",
-  "transcoding.decoding.hevcRext.description":
-    "Kameraaufnahmen in 4:2:2 und 4:4:4. Intel ab 11. Generation.",
   "transcoding.decoding.hevcRext12": "HEVC RExt 12 Bit",
 
   "transcoding.encoding.title": "Kodierung",
-  "transcoding.encoding.description":
-    "H.264 ist immer an. HEVC und AV1 gehen nur an Player, die sie unterstützen.",
   "transcoding.encoding.hevc": "HEVC-Kodierung erlauben",
   "transcoding.encoding.hevc.unavailable":
     "Auf diesem Server funktioniert kein HEVC-Encoder.",
@@ -91,33 +81,16 @@ export default {
   "transcoding.encoding.av1.unavailable":
     "Auf diesem Server funktioniert kein AV1-Encoder.",
   "transcoding.encoding.preset": "Encoder-Preset",
-  "transcoding.encoding.preset.description":
-    "Langsamer sieht besser aus. Automatisch ist veryfast.",
 
   "transcoding.toneMapping.title": "Tone-Mapping",
-  "transcoding.toneMapping.description":
-    "Wandelt HDR in SDR um, für Player ohne HDR.",
   "transcoding.toneMapping.noTonemapx":
     "Diesem ffmpeg fehlt tonemapx, daher sieht HDR ohne GPU-Tone-Mapping blass aus. Installiere jellyfin-ffmpeg.",
   "transcoding.toneMapping.vpp": "VPP-Tone-Mapping",
-  "transcoding.toneMapping.vpp.description":
-    "Intels Tone-Mapping, vor OpenCL verwendet. Braucht Hardware-Dekodierung.",
   "transcoding.toneMapping.videoToolbox": "VideoToolbox-Tone-Mapping",
-  "transcoding.toneMapping.videoToolbox.description":
-    "Apples Tone-Mapping, vor Metal verwendet.",
   "transcoding.toneMapping.hardware": "Hardware-Tone-Mapping",
-  "transcoding.toneMapping.cuda": "Läuft über CUDA.",
-  "transcoding.toneMapping.metal": "Läuft über Metal.",
-  "transcoding.toneMapping.openCl":
-    "Läuft über OpenCL. Braucht die OpenCL-Laufzeit des Treibers.",
   "transcoding.toneMapping.algorithm": "Algorithmus",
-  "transcoding.toneMapping.algorithm.description": "Empfohlen ist BT.2390.",
   "transcoding.toneMapping.mode": "Modus",
-  "transcoding.toneMapping.mode.description":
-    "Nur GPU. Versuch RGB, wenn Lichter ausbrennen.",
   "transcoding.toneMapping.range": "Bereich",
-  "transcoding.toneMapping.range.description":
-    "Automatisch behält den Bereich der Quelle.",
 
   "transcoding.algorithm.none": "Keiner",
   "transcoding.algorithm.clip": "Abschneiden",
@@ -131,20 +104,12 @@ export default {
   "transcoding.deinterlacing.title": "Deinterlacing",
   "transcoding.deinterlacing.method": "Methode",
   "transcoding.deinterlacing.doubleRate": "Bildrate verdoppeln",
-  "transcoding.deinterlacing.doubleRate.description":
-    "25 und 30 fps laufen mit 50 und 60.",
 
   "transcoding.audio.title": "Audio",
-  "transcoding.audio.description":
-    "Player bekommen eine Spur unverändert, wenn sie sie dekodieren können. Der Rest wird zu Opus, oder zu AAC für Player ohne Opus.",
   "transcoding.audio.noOpus":
     "Player bekommen eine Spur unverändert, wenn sie sie dekodieren können. Der Rest wird zu AAC, da diesem ffmpeg libopus fehlt.",
   "transcoding.audio.downmix": "Stereo-Downmix",
-  "transcoding.audio.downmix.description":
-    "Wie Surround zu Stereo wird. Keiner verwirft den LFE-Kanal; Nachtmodus-Dialog bevorzugt Sprache.",
   "transcoding.audio.vbr": "AAC mit variabler Bitrate",
-  "transcoding.audio.vbr.description":
-    "Nutzt den VBR-Modus von {encoder}. Opus ist immer variabel.",
   "transcoding.audio.vbr.unavailable":
     "Braucht aac_at oder libfdk_aac, die diesem ffmpeg fehlen.",
 
@@ -155,13 +120,7 @@ export default {
   "transcoding.downmix.ac4": "AC-4",
 
   "transcoding.segments.title": "Drosselung und Segmente",
-  "transcoding.segments.description":
-    "Schalte das aus, wenn die Wiedergabe hängt.",
   "transcoding.segments.throttle": "Transkodierungen drosseln",
-  "transcoding.segments.throttle.description":
-    "Pausiert ffmpeg, wenn es dem Player weit voraus ist.",
   "transcoding.segments.throttle.unavailable": "Braucht jellyfin-ffmpeg.",
   "transcoding.segments.delete": "Segmente löschen",
-  "transcoding.segments.delete.description":
-    "Gibt Speicherplatz frei, sobald der Player sie abgerufen hat.",
 } satisfies TranslationOf<typeof source>

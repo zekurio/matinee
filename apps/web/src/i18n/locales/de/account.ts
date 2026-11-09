@@ -3,9 +3,6 @@ import type source from "../en/account"
 
 export default {
   "account.profile.title": "Profil",
-  "account.profile.description":
-    "Alle auf diesem Server sehen deinen Namen und dein Bild. Wähle aus, was dein {profile} sonst noch zeigt.",
-  "account.profile.link": "Profil",
   "account.picture.changeFailed": "Dein Bild konnte nicht geändert werden",
   "account.picture.change": "Bild ändern",
   "account.picture.upload": "Bild hochladen",
@@ -23,8 +20,6 @@ export default {
     "Es konnte nicht geändert werden, was dein Profil zeigt",
   "account.sharing.favorites": "Meine Favoriten zeigen",
   "account.sharing.stats": "Meine Statistiken zeigen",
-  "account.sharing.stats.description":
-    "Wiedergabezeit, meistgesehene Titel und zuletzt Gesehenes.",
 
   "account.passkeys.title": "Passkeys",
   "account.passkeys.empty": "Noch keine Passkeys.",
@@ -59,8 +54,6 @@ export default {
   "account.oidc.none": "Kein {provider}-Konto verknüpft.",
 
   "account.sessions.title": "Sitzungen",
-  "account.sessions.description":
-    "Browser und Apps, die bei deinem Konto angemeldet sind.",
   "account.sessions.signOutOthers": "Andere Sitzungen abmelden",
   "account.sessions.loadFailed":
     "Deine Sitzungen konnten nicht geladen werden. {reason}",

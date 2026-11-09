@@ -11,6 +11,7 @@ import { tr } from "@/i18n"
 import { useFieldContext, withForm } from "@/lib/form"
 
 import { InputField, SwitchField, typeOnly } from "./setting-controls"
+import { SettingNote } from "./settings-panel"
 import { draftForm, type NumberField, numberRow } from "./transcoding-draft"
 
 /** "Intel Quick Sync", "None (software)". */
@@ -47,37 +48,30 @@ export function hardwareOf(
   )
 }
 
-/** A check's reason under its switch when it didn't run here. */
-export function checkNote(
-  check: CapabilityCheck | undefined,
-  text: string,
-): ReactNode {
-  if (!check || check.status === "ok") return text
-  const reason =
-    check.status === "missing"
-      ? tr("transcoding.check.missing")
-      : tr("transcoding.check.failed", { error: firstLine(check) ?? "" })
+/** Why a check didn't run here, for under its switch; nothing when it did. */
+export function checkNote(check: CapabilityCheck | undefined): ReactNode {
+  if (!check || check.status === "ok") return undefined
   return (
-    <>
-      {text} <span className="text-destructive">{reason}</span>
-    </>
+    <span className="text-destructive">
+      {check.status === "missing"
+        ? tr("transcoding.check.missing")
+        : tr("transcoding.check.failed", { error: firstLine(check) ?? "" })}
+    </span>
   )
 }
 
 /**
  * A switch for something this server may lack, bound to its form field.
- * Without it the switch can only be turned off, and `unavailable` replaces
- * the description.
+ * Without it the switch can only be turned off, and `unavailable` says why
+ * under it.
  */
 export function CapabilitySwitchField({
-  description,
   unavailable,
   available,
   ...row
 }: {
   title: string
-  description?: ReactNode
-  unavailable?: string
+  unavailable?: ReactNode
   available: boolean
 }) {
   const field = useFieldContext<boolean>()
@@ -85,8 +79,12 @@ export function CapabilitySwitchField({
   return (
     <SwitchField
       {...row}
-      description={available ? description : (unavailable ?? description)}
       disabled={!available && !checked}
+      footer={
+        !available && unavailable ? (
+          <SettingNote>{unavailable}</SettingNote>
+        ) : undefined
+      }
     />
   )
 }

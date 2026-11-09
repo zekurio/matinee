@@ -15,6 +15,7 @@ import { client, errorMessage, orpc } from "@/lib/rpc"
 
 import { SelectField, SwitchField } from "./setting-controls"
 import {
+  SettingNote,
   SettingRows,
   SettingsSaveBar,
   SettingsSections,
@@ -108,32 +109,23 @@ function TrickplayForm({ saved }: { saved: AdminTrickplaySettings }) {
 
   return (
     <form className="contents" onSubmit={(event) => event.preventDefault()}>
-      <SettingsSubsection
-        id="trickplay"
-        title={tr("trickplay.title")}
-        description={
-          saved.videos > 0
-            ? tr("trickplay.descriptionCount", {
-                count: saved.videos,
-                ready: saved.ready,
-              })
-            : tr("trickplay.description")
-        }
-      >
+      <SettingsSubsection id="trickplay" title={tr("trickplay.title")}>
+        {saved.videos > 0 && (
+          <SettingNote>
+            {tr("trickplay.descriptionCount", {
+              count: saved.videos,
+              ready: saved.ready,
+            })}
+          </SettingNote>
+        )}
         <SettingRows>
           <form.AppField name="enabled">
-            {() => (
-              <SwitchField
-                title={tr("trickplay.enabled")}
-                description={tr("trickplay.enabled.description")}
-              />
-            )}
+            {() => <SwitchField title={tr("trickplay.enabled")} />}
           </form.AppField>
           <form.AppField name="intervalSeconds">
             {() => (
               <SelectField
                 title={tr("trickplay.interval")}
-                description={tr("trickplay.interval.description")}
                 options={INTERVALS}
                 labelOf={(value) =>
                   tr("trickplay.interval.option", { count: Number(value) })
@@ -145,7 +137,6 @@ function TrickplayForm({ saved }: { saved: AdminTrickplaySettings }) {
             {() => (
               <SelectField
                 title={tr("trickplay.width")}
-                description={tr("trickplay.width.description")}
                 options={WIDTHS}
                 labelOf={(value) =>
                   tr("trickplay.width.option", { width: value })
@@ -154,24 +145,12 @@ function TrickplayForm({ saved }: { saved: AdminTrickplaySettings }) {
             )}
           </form.AppField>
           <form.AppField name="keyframesOnly">
-            {() => (
-              <SwitchField
-                title={tr("trickplay.keyframesOnly")}
-                description={tr("trickplay.keyframesOnly.description")}
-              />
-            )}
+            {() => <SwitchField title={tr("trickplay.keyframesOnly")} />}
           </form.AppField>
           <form.AppField name="hardwareDecoding">
             {() => (
               <CapabilitySwitchField
                 title={tr("trickplay.hardwareDecoding")}
-                description={
-                  gpu
-                    ? tr("trickplay.hardwareDecoding.description", {
-                        decoder: gpu,
-                      })
-                    : undefined
-                }
                 unavailable={tr("trickplay.hardwareDecoding.unavailable")}
                 available={gpu !== null}
               />

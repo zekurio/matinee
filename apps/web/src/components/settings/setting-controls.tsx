@@ -32,7 +32,6 @@ export function typeOnly<T>(value?: T): T | undefined {
 
 type SwitchRowProps = {
   title: string
-  description?: ReactNode
   footer?: ReactNode
   checked: boolean
   disabled?: boolean
@@ -41,19 +40,17 @@ type SwitchRowProps = {
 
 export function SwitchRow({
   title,
-  description,
   footer,
   checked,
   disabled,
   onChange,
 }: SwitchRowProps) {
   return (
-    <SettingRow title={title} description={description} footer={footer}>
+    <SettingRow title={title} footer={footer}>
       {(ids) => (
         <Switch
           id={ids.controlId}
           aria-labelledby={ids.labelId}
-          aria-describedby={ids.descriptionId}
           checked={checked}
           disabled={disabled}
           onCheckedChange={onChange}
@@ -71,7 +68,6 @@ export function SwitchField(row: Omit<SwitchRowProps, "checked" | "onChange">) {
 
 type SelectRowProps<T extends string> = {
   title: string
-  description?: ReactNode
   value: T
   options: readonly T[]
   labelOf: (value: T) => string
@@ -80,14 +76,13 @@ type SelectRowProps<T extends string> = {
 
 export function SelectRow<T extends string>({
   title,
-  description,
   value,
   options,
   labelOf,
   onChange,
 }: SelectRowProps<T>) {
   return (
-    <SettingRow title={title} description={description} layout="split">
+    <SettingRow title={title} layout="split">
       {(ids) => (
         <Select
           items={options.map((option) => ({
@@ -97,11 +92,7 @@ export function SelectRow<T extends string>({
           value={value}
           onValueChange={(next) => next && onChange(next)}
         >
-          <SelectTrigger
-            id={ids.controlId}
-            aria-describedby={ids.descriptionId}
-            className="w-full"
-          >
+          <SelectTrigger id={ids.controlId} className="w-full">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -127,26 +118,21 @@ export function SelectField<T extends string>(
 
 type InputRowProps = Omit<ComponentProps<typeof Input>, "id" | "title"> & {
   title: string
-  description?: ReactNode
   layout?: "split" | "stack"
+  /** Under the row, such as a note on what changing it does. */
+  footer?: ReactNode
 }
 
 /** A row whose control is an input; the rest of the props go to it. */
 export function InputRow({
   title,
-  description,
   layout = "split",
+  footer,
   ...input
 }: InputRowProps) {
   return (
-    <SettingRow title={title} description={description} layout={layout}>
-      {(ids) => (
-        <Input
-          id={ids.controlId}
-          aria-describedby={ids.descriptionId}
-          {...input}
-        />
-      )}
+    <SettingRow title={title} layout={layout} footer={footer}>
+      {(ids) => <Input id={ids.controlId} {...input} />}
     </SettingRow>
   )
 }
