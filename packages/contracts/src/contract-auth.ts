@@ -28,7 +28,6 @@ import {
   UserCode,
   Username,
 } from "./schemas"
-import { SyncedThemePreferences, UserTheme, UserThemeId } from "./theme"
 
 export const authContract = oc.tag("Auth").router({
   config: get("/auth/config").output(AuthConfig),
@@ -186,23 +185,5 @@ export const accountContract = oc.tag("Account").router({
     setPreferences: put("/account/playback")
       .input(PlaybackPreferences)
       .output(User),
-  },
-  /** The theme choice this account syncs, and its own color themes. */
-  theme: {
-    /** Save the synced choice. Returns the user with it. */
-    setPreferences: put("/account/theme")
-      .input(SyncedThemePreferences)
-      .output(User),
-    /** The account's custom themes, oldest first. */
-    list: get("/account/themes").output(t.array(UserTheme)),
-    /**
-     * Create or replace a theme by its client-made id. Fails with
-     * CONFLICT past `MAX_USER_THEMES`.
-     */
-    save: put("/account/themes/{id}").input(UserTheme).output(UserTheme),
-    /** Deleting a theme that's already gone succeeds. */
-    remove: del("/account/themes/{id}")
-      .input(t.object({ id: UserThemeId }))
-      .output(t.void()),
   },
 })

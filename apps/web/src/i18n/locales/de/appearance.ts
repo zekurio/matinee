@@ -9,8 +9,4 @@ export default {
   "appearance.colorScheme.system": "System",
   "appearance.colorScheme.light": "Hell",
   "appearance.colorScheme.dark": "Dunkel",
-  "appearance.sync.title": "Geräteübergreifend synchronisieren",
-  "appearance.themes": "Designs",
-  "appearance.themes.import": "Importieren",
-  "appearance.themes.new": "Neues Design",
 } satisfies TranslationOf<typeof source>

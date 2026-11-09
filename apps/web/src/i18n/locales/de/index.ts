@@ -22,7 +22,6 @@ import serverAppearance from "./serverAppearance"
 import settings from "./settings"
 import shell from "./shell"
 import stats from "./stats"
-import themes from "./themes"
 import title from "./title"
 import transcoding from "./transcoding"
 import trickplay from "./trickplay"
@@ -58,7 +57,6 @@ export default {
   ...serverAppearance,
   ...account,
   ...playback,
-  ...themes,
   ...common,
   ...link,
 } satisfies Translation

@@ -1,4 +1,3 @@
-import { MAX_USER_THEMES } from "@matinee/contracts"
 import { oidcAccount, passkey, user, type UserRow } from "@matinee/db"
 import { and, desc, eq } from "drizzle-orm"
 
@@ -22,15 +21,9 @@ import {
   listSessions,
   publicUser,
 } from "../auth/session"
-import {
-  deleteUserTheme,
-  listUserThemes,
-  saveUserTheme,
-  updateThemePreferences,
-} from "../auth/user-themes"
 import { signInMethods } from "../auth/users"
 import { db } from "../db"
-import { authed, badRequest, conflict, notFound, requirePasskeys } from "./base"
+import { authed, badRequest, notFound, requirePasskeys } from "./base"
 
 const LAST_METHOD =
   "Add another passkey or link an account before removing your last way to sign in."
@@ -100,32 +93,6 @@ export const account = {
         return publicUser(row)
       },
     ),
-  },
-
-  theme: {
-    setPreferences: authed.account.theme.setPreferences.handler(
-      async ({ context, input }) => {
-        const row = await updateThemePreferences(context.user.id, input)
-        if (!row) throw notFound("Account not found.")
-        return publicUser(row)
-      },
-    ),
-
-    list: authed.account.theme.list.handler(({ context }) =>
-      listUserThemes(context.user.id),
-    ),
-
-    save: authed.account.theme.save.handler(async ({ context, input }) => {
-      const saved = await saveUserTheme(context.user.id, input)
-      if (!saved) {
-        throw conflict(`You can save up to ${MAX_USER_THEMES} themes.`)
-      }
-      return saved
-    }),
-
-    remove: authed.account.theme.remove.handler(async ({ context, input }) => {
-      await deleteUserTheme(context.user.id, input.id)
-    }),
   },
 
   passkeys: {

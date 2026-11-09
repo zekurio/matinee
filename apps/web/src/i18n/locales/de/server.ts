@@ -76,7 +76,6 @@ export default {
   "server.account.lastLink":
     "Passkeys sind aus, also kannst du dich nur über Single Sign-on anmelden. Lass es verknüpft.",
   "server.account.notFound": "Konto nicht gefunden.",
-  "server.account.themeLimit": "Du kannst bis zu {count} Designs speichern.",
   "server.account.passkeyOtherAccount":
     "Diese Passkey-Anfrage gehört zu einem anderen Konto.",
   "server.account.passkeyNotFound": "Passkey nicht gefunden.",

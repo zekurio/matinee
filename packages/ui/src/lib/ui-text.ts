@@ -5,28 +5,6 @@
  * Components read `uiText()` while rendering.
  */
 
-/** Why a theme file didn't import. */
-export type ThemeFileText = {
-  /** A file's reason, with the file's name in front. */
-  readonly inFile: (file: string, reason: string) => string
-  /** The name of a theme whose file had none. */
-  readonly importedTheme: string
-  readonly tooLarge: string
-  readonly invalidJson: string
-  readonly notAnObject: string
-  readonly unknownFormat: string
-  readonly unsupportedVersion: string
-  readonly nameLength: (max: number) => string
-  readonly noVariants: string
-  readonly tooManyVariants: (max: number) => string
-  readonly notAList: string
-  readonly variantAppearance: string
-  readonly colorsNotAnObject: (appearance: "light" | "dark") => string
-  readonly notAColor: (value: string) => string
-  readonly unknownColor: (key: string) => string
-  readonly noEditorBackground: string
-}
-
 export type UiText = {
   /** The BCP 47 tag for dates and numbers, like `en` or `de`. */
   readonly locale: string
@@ -45,11 +23,6 @@ export type UiText = {
   /** A calendar day, given its date written out. */
   readonly today: (date: string) => string
   readonly selected: (date: string) => string
-  /** Custom theme variants without a name: "Light", "Dark", "Light 2". */
-  readonly lightVariant: string
-  readonly darkVariant: string
-  readonly numberedVariant: (name: string, number: number) => string
-  readonly themeFile: ThemeFileText
 }
 
 let current: UiText = {
@@ -66,28 +39,6 @@ let current: UiText = {
   nextMonth: "Go to the next month",
   today: (date) => `Today, ${date}`,
   selected: (date) => `${date}, selected`,
-  lightVariant: "Light",
-  darkVariant: "Dark",
-  numberedVariant: (name, number) => `${name} ${number}`,
-  themeFile: {
-    inFile: (file, reason) => `${file}: ${reason}`,
-    importedTheme: "Imported theme",
-    tooLarge: "Theme files can be at most 256 KB.",
-    invalidJson: "This isn't valid JSON.",
-    notAnObject: "Expected a theme object.",
-    unknownFormat: "Expected a Matinee or VS Code theme.",
-    unsupportedVersion: "Unsupported theme file version.",
-    nameLength: (max) => `A theme needs a name of 1 to ${max} characters.`,
-    noVariants: "A theme needs light or dark colors.",
-    tooManyVariants: (max) => `A theme can have at most ${max} variants.`,
-    notAList: "Expected a list of variants.",
-    variantAppearance: 'A variant\'s appearance must be "light" or "dark".',
-    colorsNotAnObject: (appearance) =>
-      `Expected ${appearance} colors to be an object.`,
-    notAColor: (value) => `"${value}" isn't a color.`,
-    unknownColor: (key) => `Unknown theme color "${key}".`,
-    noEditorBackground: "This VS Code theme doesn't set an editor background.",
-  },
 }
 
 const listeners = new Set<() => void>()

@@ -1,6 +1,5 @@
 import { PlaybackPreferences } from "./preferences"
 import { t } from "./schema"
-import { SyncedThemePreferences } from "./theme"
 
 export const USER_ROLES = ["admin", "user"] as const
 export const UserRole = t.enum(USER_ROLES)
@@ -35,8 +34,6 @@ export const User = t.object({
   /** Load it through `avatarPath()`. Null shows the initial instead. */
   avatarId: t.string().nullable(),
   avatarSource: AvatarSource,
-  /** The theme this account syncs to its devices; null before the first pick. */
-  theme: SyncedThemePreferences.nullable(),
   /**
    * The audio and subtitle choices this account syncs to its devices; null
    * before the first change, which plays as `DEFAULT_PLAYBACK_PREFERENCES`.

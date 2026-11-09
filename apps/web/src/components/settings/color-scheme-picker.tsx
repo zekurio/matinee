@@ -1,9 +1,5 @@
 import { THEME_MODES } from "@matinee/contracts"
-import {
-  setThemeMode,
-  themeVariantColors,
-  type ThemeState,
-} from "@matinee/ui/lib/theme"
+import { setThemeMode, type ThemeState } from "@matinee/ui/lib/theme"
 import type { ThemeColors } from "@matinee/ui/lib/theme-colors"
 import { cn } from "@matinee/ui/lib/utils"
 import { type KeyboardEvent, useRef } from "react"
@@ -16,8 +12,7 @@ import { tr } from "@/i18n"
  */
 export function ColorSchemePicker({ theme }: { theme: ThemeState }) {
   const buttons = useRef<(HTMLButtonElement | null)[]>([])
-  const light = themeVariantColors(theme, theme.light)
-  const dark = themeVariantColors(theme, theme.dark)
+  const { light, dark } = theme
 
   const moveFocus = (event: KeyboardEvent, index: number) => {
     const step =

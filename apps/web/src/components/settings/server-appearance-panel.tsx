@@ -1,6 +1,10 @@
 import type { ThemeAccents } from "@matinee/contracts"
 import { Skeleton } from "@matinee/ui/components/skeleton"
-import { setServerThemeAccents } from "@matinee/ui/lib/theme"
+import {
+  endAccentPreview,
+  previewServerAccents,
+  setServerThemeAccents,
+} from "@matinee/ui/lib/theme"
 import {
   defaultThemeAccent,
   normalizeThemeColor,
@@ -10,7 +14,7 @@ import {
 import { cn } from "@matinee/ui/lib/utils"
 import { useSelector } from "@tanstack/react-form"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { useEffect, useEffectEvent } from "react"
+import { useEffect } from "react"
 
 import { tr } from "@/i18n"
 import { useAppForm } from "@/lib/form"
@@ -71,6 +75,9 @@ function AccentForm({ saved }: { saved: ThemeAccents }) {
   const save = useMutation({
     mutationFn: (input: ThemeAccents) => client.admin.appearance.update(input),
     onSuccess: async (next) => {
+      // The saved accents show at once, without waiting for the config.
+      setServerThemeAccents(next)
+      endAccentPreview()
       queryClient.setQueryData(orpc.admin.appearance.get.queryKey(), next)
       await queryClient.invalidateQueries({ queryKey: orpc.auth.config.key() })
     },
@@ -88,7 +95,7 @@ function AccentForm({ saved }: { saved: ThemeAccents }) {
   // The page previews each edit, and goes back to the saved accents on a
   // reset or when the panel closes.
   const preview = (change: Partial<ThemeAccents>) =>
-    setServerThemeAccents({ ...form.state.values, ...change })
+    previewServerAccents({ ...form.state.values, ...change })
   const pickPreset = (preset: AccentPair) => {
     const next = {
       light: storedAccent("light", preset.light),
@@ -98,9 +105,8 @@ function AccentForm({ saved }: { saved: ThemeAccents }) {
     form.setFieldValue("light", next.light)
     form.setFieldValue("dark", next.dark)
   }
-  const restoreSaved = useEffectEvent(() => setServerThemeAccents(saved))
   // Takes the preview off the page when the panel closes.
-  useEffect(() => () => restoreSaved(), [])
+  useEffect(() => endAccentPreview, [])
 
   const accent = (appearance: ThemeAppearance) =>
     draft[appearance] ?? defaultThemeAccent(appearance)
@@ -183,7 +189,7 @@ function AccentForm({ saved }: { saved: ThemeAccents }) {
         dirty={dirty}
         onReset={() => {
           form.reset()
-          setServerThemeAccents(saved)
+          endAccentPreview()
         }}
         onSave={() => form.handleSubmit()}
       />

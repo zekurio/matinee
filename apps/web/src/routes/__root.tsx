@@ -5,7 +5,7 @@ import { createRootRouteWithContext, Outlet } from "@tanstack/react-router"
 
 import { PageScrollbar } from "@/components/page-scrollbar"
 import { PlaybackAccountSync } from "@/lib/playback-sync"
-import { ServerThemeAccents, ThemeAccountSync } from "@/lib/theme-sync"
+import { ServerThemeAccents } from "@/lib/theme-sync"
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   {
@@ -17,7 +17,6 @@ function Root() {
   return (
     <TooltipProvider>
       <ServerThemeAccents />
-      <ThemeAccountSync />
       <PlaybackAccountSync />
       <Outlet />
       <PageScrollbar />

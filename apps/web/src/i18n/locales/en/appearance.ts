@@ -9,8 +9,4 @@ export default defineMessages("appearance", {
   "appearance.colorScheme.system": "System",
   "appearance.colorScheme.light": "Light",
   "appearance.colorScheme.dark": "Dark",
-  "appearance.sync.title": "Sync across devices",
-  "appearance.themes": "Themes",
-  "appearance.themes.import": "Import",
-  "appearance.themes.new": "New theme",
 })

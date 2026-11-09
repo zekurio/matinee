@@ -3,7 +3,6 @@ import {
   PlaybackPreferences,
   type ProfileUser,
   type Session,
-  SyncedThemePreferences,
   type User,
 } from "@matinee/contracts"
 import { session, user, type UserRow } from "@matinee/db"
@@ -31,7 +30,6 @@ export function publicUser(row: UserRow): User {
     role: row.role,
     avatarId: row.avatarId,
     avatarSource: row.avatarSource,
-    theme: SyncedThemePreferences.safeParse(row.themePreferences).data ?? null,
     playback:
       PlaybackPreferences.safeParse(row.playbackPreferences).data ?? null,
     sharing: { favorites: row.shareFavorites, stats: row.shareStats },

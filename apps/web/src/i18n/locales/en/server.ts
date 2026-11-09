@@ -78,7 +78,6 @@ export default defineMessages("server", {
   "server.account.lastLink":
     "Passkeys are off, so single sign-on is your only way to sign in. Keep it linked.",
   "server.account.notFound": "Account not found.",
-  "server.account.themeLimit": "You can save up to {count} themes.",
   "server.account.passkeyOtherAccount":
     "This passkey request belongs to another account.",
   "server.account.passkeyNotFound": "Passkey not found.",
