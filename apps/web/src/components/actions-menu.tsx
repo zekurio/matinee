@@ -10,11 +10,12 @@ import {
 import { toast } from "@matinee/ui/components/sonner"
 import { cn } from "@matinee/ui/lib/utils"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { getRouteApi } from "@tanstack/react-router"
+import { getRouteApi, useNavigate } from "@tanstack/react-router"
 import {
   EllipsisIcon,
   ImageIcon,
   RefreshCwIcon,
+  RotateCcwIcon,
   SearchIcon,
 } from "lucide-react"
 import { type ReactElement, type ReactNode, useState } from "react"
@@ -45,6 +46,7 @@ import { client, errorMessage, orpc } from "@/lib/rpc"
  * The "⋯" menu of a movie, show, season, or episode, the same on its card,
  * its page, and its row in a folder: what has no button of its own.
  * Marking watched and favorites have the tick and the heart beside it.
+ * A file the viewer stopped partway into can play from the start.
  * Everyone gets Download…; admins also get fix match and refresh, which
  * act on the movie or show, and the image editor for what the menu is of.
  * Those need the whole title, which loads when they open.
@@ -112,6 +114,25 @@ function itemImages(item: MediaItem): ImageOwner | null {
     season: item.seasonNumber,
     episode: item.episodeNumber,
   }
+}
+
+/**
+ * The file Play from the start plays: an episode or movie the viewer
+ * stopped partway into. A show's next episode isn't the show, so a show's
+ * menu has none.
+ */
+function restartable(target: ActionsTarget): MediaItem | null {
+  const file =
+    target.kind === "item"
+      ? target.item
+      : target.kind === "title" && target.title.kind === "movie"
+        ? (target.file ?? null)
+        : null
+  const progress = file?.progress
+  if (!progress || progress.completed || progress.positionSeconds <= 0) {
+    return null
+  }
+  return file
 }
 
 function titleDownload(
@@ -225,8 +246,10 @@ export function ActionsMenu({
   children?: ReactNode
 }) {
   const { user } = authed.useRouteContext()
+  const navigate = useNavigate()
   const admin = user.role === "admin"
   const scope = scopeOf(target)
+  const restart = restartable(target)
   const owner = scope.title
   const provider = useLibraryProvider(scope.libraryId, admin && owner !== null)
   const queryClient = useQueryClient()
@@ -309,8 +332,22 @@ export function ActionsMenu({
           // As wide as its items, rather than its small trigger, so none wraps.
           className="w-max min-w-48 whitespace-nowrap"
         >
+          {restart && (
+            <DropdownMenuItem
+              onClick={() =>
+                void navigate({
+                  to: "/watch/$itemId",
+                  params: { itemId: restart.id },
+                  search: { start: 0 },
+                })
+              }
+            >
+              <RotateCcwIcon />
+              {tr("media.playFromStart")}
+            </DropdownMenuItem>
+          )}
           {children}
-          {children && <DropdownMenuSeparator />}
+          {(restart || children) && <DropdownMenuSeparator />}
           <DownloadMenuItem onSelect={() => void startDownload()} />
           {adminItems && <DropdownMenuSeparator />}
           {owner && adminProvider && (

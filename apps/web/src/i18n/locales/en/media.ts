@@ -79,6 +79,7 @@ export default defineMessages("media", {
   "media.mark.all.watched": "Mark all watched",
   "media.mark.all.unwatched": "Mark all unwatched",
   "media.moreActions": "More actions for {name}",
+  "media.playFromStart": "Play from the start",
   // The dialog that asks when the user watched.
   "media.watchedDate.title": "When did you watch it?",
   "media.watchedDate.date": "Date",

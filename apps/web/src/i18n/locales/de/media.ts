@@ -71,6 +71,7 @@ export default {
   "media.mark.all.watched": "Alle als gesehen markieren",
   "media.mark.all.unwatched": "Alle als ungesehen markieren",
   "media.moreActions": "Weitere Aktionen für {name}",
+  "media.playFromStart": "Von vorne abspielen",
   "media.watchedDate.title": "Wann hast du es gesehen?",
   "media.watchedDate.date": "Datum",
   "media.watchedDate.cancel": "Abbrechen",

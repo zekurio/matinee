@@ -7,6 +7,7 @@ import {
   subtitlePath,
   trickplayTilePath,
 } from "@matinee/contracts"
+import { t } from "@matinee/contracts/schema"
 import { buttonVariants } from "@matinee/ui/components/button"
 import { Spinner } from "@matinee/ui/components/spinner"
 import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query"
@@ -23,7 +24,16 @@ import { itemLabel } from "@/lib/media"
 import { client, errorMessage, liveQuery, orpc } from "@/lib/rpc"
 import { decodesVideo } from "@/lib/video-support"
 
+const WatchSearch = t.object({
+  /**
+   * Seconds to start at instead of where the viewer left off, as 0 for
+   * Play from the start.
+   */
+  start: t.number().min(0).optional().catch(undefined),
+})
+
 export const Route = createFileRoute("/_authed/watch/$itemId")({
+  validateSearch: WatchSearch,
   // What the player needs before it can pick a source, asked for while its
   // code loads, and on hover over a play button.
   loader: ({ context: { queryClient }, params: { itemId } }) => {
@@ -66,6 +76,7 @@ function sendProgress(itemId: string, report: ProgressReport) {
 
 function Watch() {
   const { itemId } = Route.useParams()
+  const { start } = Route.useSearch()
   const router = useRouter()
   const queryClient = useQueryClient()
   const item = useQuery({
@@ -100,7 +111,8 @@ function Watch() {
 
   const progress = item.data?.progress
   const startAt =
-    progress && !progress.completed ? progress.positionSeconds : undefined
+    start ??
+    (progress && !progress.completed ? progress.positionSeconds : undefined)
 
   // The show's next episode, which the player offers once this one ends.
   const show = item.data?.title?.kind === "show" ? item.data.title : null
