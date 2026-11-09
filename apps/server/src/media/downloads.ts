@@ -38,6 +38,12 @@ import {
   planAudioResume,
   type TrackEnd,
 } from "./download-resume"
+import {
+  type DownloadText,
+  initWithText,
+  makeDownloadText,
+  textFragment,
+} from "./download-text"
 import { keyframesNear } from "./playback"
 
 /*
@@ -158,6 +164,10 @@ type Active = {
   hasInit: boolean
   /** The init segment's tracks, once read. */
   tracks: InitTrack[] | null
+  /** The text subtitles that go in the file, once asked for. */
+  text: Promise<DownloadText> | null
+  /** The init segment with them, and the id of their first track. */
+  textInit: Promise<{ path: string; firstId: number }> | null
   /** The last segment, once a run reached the end; -1 for none. */
   end: number | null
   run: Run | null
@@ -271,6 +281,8 @@ function newActive(record: StoredDownload, dir: string, label: string): Active {
     done: new Set(),
     hasInit: false,
     tracks: null,
+    text: null,
+    textInit: null,
     end: null,
     run: null,
     users: 0,
@@ -336,7 +348,9 @@ async function load(id: string): Promise<Active | null> {
       } else if (
         match ||
         name.endsWith(".tmp") ||
-        /^(?:run-\d+\.m3u8|init-\d+\.mp4|probe-.*\.nut)$/.test(name)
+        /^(?:run-\d+\.m3u8|init-\d+\.mp4|probe-.*\.nut|init-text\.mp4|text-\d+\.vtt)$/.test(
+          name,
+        )
       ) {
         // From a run the last process didn't see finish.
         await unlink(join(dir, name)).catch(() => {})
@@ -873,6 +887,91 @@ async function using<T>(active: Active, work: () => Promise<T>): Promise<T> {
   }
 }
 
+/** The download's text subtitles, made once they're first wanted. */
+function textOf(active: Active, build: DownloadBuild): Promise<DownloadText> {
+  active.text ??= itemOf(active).then((item) =>
+    item && build.text.length > 0
+      ? makeDownloadText(item, build.text, active.dir)
+      : { tracks: [] },
+  )
+  return active.text
+}
+
+/**
+ * The init segment as the client gets it: with the text tracks when the
+ * download has any. Null when the runs haven't written one yet.
+ */
+function servedInit(
+  active: Active,
+  build: DownloadBuild,
+): Promise<{ path: string; firstId: number }> {
+  active.textInit ??= (async () => {
+    const path = join(active.dir, "init.mp4")
+    if (build.text.length === 0) return { path, firstId: 0 }
+    const [init, text] = await Promise.all([
+      readFile(path),
+      textOf(active, build),
+    ])
+    const patched = initWithText(init, text)
+    if (patched.init === init) return { path, firstId: patched.firstId }
+    const served = join(active.dir, "init-text.mp4")
+    await writeFile(served, patched.init)
+    return { path: served, firstId: patched.firstId }
+  })().catch((cause: unknown) => {
+    active.textInit = null
+    throw cause
+  })
+  return active.textInit
+}
+
+/**
+ * Where segment `segment` ends in seconds, for cutting the text samples:
+ * on the grid for an encode, as its times say for a copy. Null when they
+ * aren't known.
+ */
+function segmentEnd(
+  active: Active,
+  build: DownloadBuild,
+  segment: number,
+): number | null {
+  if (!build.copyVideo) return (segment + 1) * build.segmentSeconds
+  const times = active.times.get(segment)
+  return times ? times.start + times.duration : null
+}
+
+/** Where the text samples that go before segment `segment` start. */
+function textStart(
+  active: Active,
+  build: DownloadBuild,
+  segment: number,
+): number {
+  if (segment === 0) return Number.NEGATIVE_INFINITY
+  return (
+    segmentEnd(active, build, segment - 1) ??
+    active.times.get(segment)?.start ??
+    0
+  )
+}
+
+/**
+ * The fragment of text samples from `from` up to `to` seconds, to send
+ * before segment `segment`. Null when there are none, or no text tracks.
+ */
+async function textBefore(
+  active: Active,
+  build: DownloadBuild,
+  segment: number,
+  from: number,
+  to: number,
+): Promise<Buffer | null> {
+  if (build.text.length === 0 || from >= to) return null
+  const [text, init] = await Promise.all([
+    textOf(active, build),
+    servedInit(active, build),
+  ])
+  return textFragment(text, init.firstId, from, to, segment + 1)
+}
+
 /** The client moved on to `segment`: what's behind the one before goes. */
 function moveTo(active: Active, segment: number): void {
   active.wanted = segment
@@ -901,7 +1000,15 @@ export async function accessDownload(
 }
 
 export type SegmentResult =
-  | { kind: "segment"; path: string; size: number; times: Times; last: boolean }
+  | {
+      kind: "segment"
+      path: string
+      size: number
+      times: Times
+      last: boolean
+      /** The text samples to send before it. */
+      before: Buffer | null
+    }
   /** Past the last segment. */
   | { kind: "end" }
   /** Not made in time, or the queue is full: try again soon. */
@@ -931,12 +1038,23 @@ export function downloadSegment(
         const info = await stat(path).catch(() => null)
         const times = active.times.get(segment)
         if (info && times) {
+          const last = active.end === segment
+          const to = last
+            ? Number.POSITIVE_INFINITY
+            : (segmentEnd(active, build, segment) ?? Number.POSITIVE_INFINITY)
           return {
             kind: "segment",
             path,
             size: info.size,
             times,
-            last: active.end === segment,
+            last,
+            before: await textBefore(
+              active,
+              build,
+              segment,
+              textStart(active, build, segment),
+              to,
+            ),
           }
         }
         // Deleted behind the server's back.
@@ -953,7 +1071,10 @@ export function downloadSegment(
   })
 }
 
-/** The init segment's path once a run wrote it, or null. */
+/**
+ * The path of the init segment as the client gets it, once a run wrote
+ * it, or null. With text subtitles it waits for them too.
+ */
 export function downloadInit(
   active: Active,
   signal: AbortSignal,
@@ -966,7 +1087,19 @@ export function downloadInit(
       const build = active.build
       if (active.changed || !build) return null
       if (active.hasInit) {
-        if (await exists(path)) return path
+        if (await exists(path)) {
+          const served = servedInit(active, build).then((init) => init.path)
+          const remaining = deadline - Date.now()
+          // Subtitles taken out of a large file take as long as reading it.
+          const ready = await Promise.race([
+            served,
+            new Promise<null>((resolve) =>
+              setTimeout(() => resolve(null), Math.max(0, remaining)).unref(),
+            ),
+          ])
+          if (ready !== null || signal.aborted) return ready
+          return null
+        }
         active.hasInit = false
       }
       if (signal.aborted || Date.now() > deadline) return null
@@ -996,7 +1129,9 @@ export function downloadInit(
 export function fileBody(
   active: Active,
   path: string,
+  before: Buffer | null = null,
 ): ReadableStream<Uint8Array> {
+  let pending = before
   let handle: FileHandle | null = null
   let released = false
   const release = () => {
@@ -1011,6 +1146,11 @@ export function fileBody(
   return new ReadableStream<Uint8Array>({
     async pull(controller) {
       try {
+        if (pending) {
+          controller.enqueue(pending)
+          pending = null
+          return
+        }
         handle ??= await open(path, "r")
         const buffer = Buffer.allocUnsafe(READ_CHUNK)
         const { bytesRead } = await handle.read(buffer, 0, READ_CHUNK, null)
@@ -1043,6 +1183,8 @@ export function downloadStream(
 ): ReadableStream<Uint8Array> {
   let next = from
   let wantInit = from === 0
+  // The text samples after the last segment go out once, at the end.
+  let wantTail = true
   let failures = 0
   let countedFailure = active.failedAt
   let handle: FileHandle | null = null
@@ -1073,21 +1215,39 @@ export function downloadStream(
     return "wait"
   }
 
-  /** The next file to send, null at the end, or "wait" to ask again. */
-  const nextFile = async (): Promise<string | null | "wait"> => {
+  /**
+   * What to send next: bytes, then a file, either of which may be
+   * missing. Null at the end, or "wait" to ask again.
+   */
+  const nextPart = async (): Promise<
+    { before: Buffer | null; path: string | null } | null | "wait"
+  > => {
     if (wantInit) {
       const path = await downloadInit(active, signal, STREAM_WAIT_MS)
       if (!path) return stalled()
       wantInit = false
-      return path
+      return { before: null, path }
     }
     const result = await downloadSegment(active, next, signal, STREAM_WAIT_MS)
     switch (result.kind) {
-      case "end":
-        return null
+      case "end": {
+        const build = active.build
+        if (!wantTail || !build || next === 0) return null
+        wantTail = false
+        const before = await textBefore(
+          active,
+          build,
+          next,
+          segmentEnd(active, build, next - 1) ?? Number.POSITIVE_INFINITY,
+          Number.POSITIVE_INFINITY,
+        )
+        return { before, path: null }
+      }
       case "segment":
         next++
-        return result.path
+        // The last segment's text runs to the end already.
+        if (result.last) wantTail = false
+        return { before: result.before, path: result.path }
       case "busy":
       case "failed":
         return stalled()
@@ -1102,13 +1262,13 @@ export function downloadStream(
       try {
         while (true) {
           if (!handle) {
-            const path = await nextFile()
-            if (path === null) {
+            const part = await nextPart()
+            if (part === null) {
               release()
               controller.close()
               return
             }
-            if (path === "wait") {
+            if (part === "wait") {
               // Only between boxes: before the init segment, players want
               // the file type box first.
               if (!wantInit) {
@@ -1117,7 +1277,18 @@ export function downloadStream(
               }
               continue
             }
-            handle = await open(path, "r")
+            if (part.path === null) {
+              if (part.before) {
+                controller.enqueue(part.before)
+                return
+              }
+              continue
+            }
+            handle = await open(part.path, "r")
+            if (part.before) {
+              controller.enqueue(part.before)
+              return
+            }
           }
           const buffer = Buffer.allocUnsafe(READ_CHUNK)
           const { bytesRead } = await handle.read(buffer, 0, READ_CHUNK, null)
@@ -1163,6 +1334,8 @@ export async function startDownload(
   active.build = build
   downloads.set(id, active)
   ensureTimer(active)
+  // Ready, usually, by the time the client asks for the init segment.
+  if (build.text.length > 0) void textOf(active, build)
   return {
     id,
     itemId: item.id,

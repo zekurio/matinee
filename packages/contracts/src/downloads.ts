@@ -7,7 +7,8 @@ import { TranscodeVideoCodec } from "./transcoding"
  * Downloads, for watching offline. The file as it is comes from
  * `mediaStreamPath()`, with byte ranges. Anything else is a version of the
  * file made for the device: some of its audio tracks, each kept or
- * converted, and the video kept or encoded. `downloads.start` sets one up,
+ * converted, the video kept or encoded, and text subtitles inside it.
+ * `downloads.start` sets one up,
  * and the server makes it while the client fetches it, as fragmented MP4
  * in segments (see `downloadSegmentPath()`). It keeps no finished copy:
  * segments go once the client has moved past them.
@@ -119,17 +120,23 @@ export const DownloadAudio = t.union([
 ])
 export type DownloadAudio = t.infer<typeof DownloadAudio>
 
+/** A subtitle track's id, as `media.subtitles` lists it. */
+const SubtitleId = t.string().min(1).max(64)
+
 /**
  * What a download holds. Audio tracks go in the order listed, and the
- * first is the default. `burnIn` draws a picture subtitle into the video,
- * by its id from `media.subtitles`, for a track whose `delivery` is `pgs`
- * or `burn-in`; it needs the video encoded. Text subtitles stay out of
- * the file: fetch them as WebVTT with `subtitlePath()`.
+ * first is the default. `subtitles` puts text subtitles, by their ids
+ * from `media.subtitles`, in the file as MP4 timed text (`tx3g`), in the
+ * order listed, none of them on by default: a track whose `delivery` is
+ * `webvtt`. `burnIn` draws a picture subtitle into the video instead, for
+ * a track whose `delivery` is `pgs` or `burn-in`; it needs the video
+ * encoded.
  */
 export const DownloadSpec = t.object({
   video: DownloadVideo,
   audio: t.array(DownloadAudio).max(16),
-  burnIn: t.string().min(1).max(64).nullable().$default(null),
+  subtitles: t.array(SubtitleId).max(32).$default([]),
+  burnIn: SubtitleId.nullable().$default(null),
 })
 export type DownloadSpec = t.infer<typeof DownloadSpec>
 
@@ -184,6 +191,17 @@ export const DownloadPlan = t.object({
       bitrate: t.number().int().nullable(),
     }),
   ),
+  /** The text subtitles in the file, in order. Older plans lack them. */
+  subtitles: t
+    .array(
+      t.object({
+        id: t.string(),
+        label: t.string(),
+        /** BCP 47 tag, like `en`. Null when the track doesn't say. */
+        language: t.string().nullable(),
+      }),
+    )
+    .$default([]),
   /** The subtitle drawn into the video. */
   burnIn: t.object({ id: t.string(), label: t.string() }).nullable(),
 })

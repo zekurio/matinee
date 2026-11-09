@@ -62,3 +62,42 @@ export function trackLabel(
   if (!name || title.toLowerCase().includes(name.toLowerCase())) return title
   return `${name} (${title})`
 }
+
+/*
+ * ISO 639-1 codes with their ISO 639-2 code, the terminology one where a
+ * language has two: `aaaar` is `aa` and `aar`. From the Library of
+ * Congress's list. MP4 tracks name their language with these.
+ */
+const ISO_639_2 = new Map(
+  (
+    "aaaar ababk aeave afafr akaka amamh anarg arara asasm avava ayaym " +
+    "azaze babak bebel bgbul bibis bmbam bnben bobod brbre bsbos cacat " +
+    "ceche chcha cocos crcre csces cuchu cvchv cycym dadan dedeu dvdiv " +
+    "dzdzo eeewe elell eneng eoepo esspa etest eueus fafas ffful fifin " +
+    "fjfij fofao frfra fyfry gagle gdgla glglg gngrn guguj gvglv hahau " +
+    "heheb hihin hohmo hrhrv hthat huhun hyhye hzher iaina idind ieile " +
+    "igibo iiiii ikipk ioido isisl itita iuiku jajpn jvjav kakat kgkon " +
+    "kikik kjkua kkkaz klkal kmkhm knkan kokor krkau kskas kukur kvkom " +
+    "kwcor kykir lalat lbltz lglug lilim lnlin lolao ltlit lulub lvlav " +
+    "mgmlg mhmah mimri mkmkd mlmal mnmon mrmar msmsa mtmlt mymya nanau " +
+    "nbnob ndnde nenep ngndo nlnld nnnno nonor nrnbl nvnav nynya ococi " +
+    "ojoji omorm orori ososs papan pipli plpol pspus ptpor quque rmroh " +
+    "rnrun roron rurus rwkin sasan scsrd sdsnd sesme sgsag sisin skslk " +
+    "slslv smsmo snsna sosom sqsqi srsrp ssssw stsot susun svswe swswa " +
+    "tatam tetel tgtgk ththa titir tktuk tltgl tntsn toton trtur tstso " +
+    "tttat twtwi tytah uguig ukukr ururd uzuzb veven vivie vovol wawln " +
+    "wowol xhxho yiyid yoyor zazha zhzho zuzul"
+  )
+    .split(" ")
+    .map((pair) => [pair.slice(0, 2), pair.slice(2)]),
+)
+
+/**
+ * The three-letter ISO 639-2 code for a BCP 47 tag, as MP4 tracks name
+ * their language: `en` and `en-GB` give `eng`. Null when it has none.
+ */
+export function iso639_2(tag: string): string | null {
+  const base = tag.split("-")[0]?.toLowerCase() ?? ""
+  if (base.length === 3) return base
+  return ISO_639_2.get(base) ?? null
+}

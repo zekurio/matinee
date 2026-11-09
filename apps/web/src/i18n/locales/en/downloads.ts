@@ -13,7 +13,7 @@ export default defineMessages("downloads", {
   "downloads.original.description": "{format}, {size}, with every track.",
   "downloads.custom": "Made for this device",
   "downloads.custom.description":
-    "Pick the size and the audio tracks. The server converts it as it downloads.",
+    "Pick the size, audio, and subtitles. The server converts it as it downloads.",
   "downloads.custom.unavailable":
     "The server hasn't read this file's tracks yet, so only the original can be downloaded for now.",
 
@@ -41,9 +41,13 @@ export default defineMessages("downloads", {
   "downloads.burnIn.none": "None",
   "downloads.burnIn.description":
     "Picture subtitles can't go in the file on their own, so they're drawn into the video.",
+  // A version for this device: text subtitles that go in the file.
+  "downloads.subtitles.inFile": "Subtitles",
+  // {track} is the track's name, for screen readers.
+  "downloads.subtitles.include": "Include {track}",
   "downloads.subtitles": "Subtitle files",
   "downloads.subtitles.description":
-    "Subtitles stay out of the video file. Save the ones you want next to it.",
+    "Files next to the video, not in it. Save the ones you want.",
   // {track} is the track's name, for screen readers.
   "downloads.subtitles.save": "Save {track}",
 

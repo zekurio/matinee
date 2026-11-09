@@ -11,6 +11,7 @@ import {
   type DownloadSpec,
   type HdrFormat,
   type MediaProbe,
+  type SubtitleTrack,
   type VideoStream,
   videoCodecName,
 } from "@matinee/contracts"
@@ -76,6 +77,8 @@ export type DownloadBuild = {
   pauseKeys: boolean
   /** The audio tracks, for picking them up again after a break. */
   audio: ResumeTrack[]
+  /** The text subtitles that go in the file, in order; see `download-text.ts`. */
+  text: SubtitleTrack[]
   /**
    * The ffmpeg arguments for a run that writes segment `segment` on into
    * `dir`, starting `seconds` into the file. For an encode, `seconds` is
@@ -278,6 +281,21 @@ export async function buildDownload(
         keptAudioBitrate(stream, probe.audio, fileBitrate, video),
     }
   })
+
+  const listed =
+    spec.subtitles.length > 0 ? (await listSubtitles(item)).tracks : []
+  const text = spec.subtitles.map((id) => {
+    const track = listed.find((entry) => entry.id === id)
+    if (!track || track.delivery !== "webvtt") {
+      throw new DownloadSpecError(
+        "This file has no text subtitle with that id.",
+      )
+    }
+    return track
+  })
+  if (new Set(spec.subtitles).size < spec.subtitles.length) {
+    throw new DownloadSpecError("Pick each subtitle track once.")
+  }
 
   let burnIn: BurnInSource | null = null
   let burnInLabel: string | null = null
@@ -506,6 +524,8 @@ export async function buildDownload(
         size: info.size,
         modified: info.mtimeMs,
         burnIn,
+        // Left out when undefined, so downloads without keep their key.
+        text: spec.subtitles.length > 0 ? spec.subtitles : undefined,
         command: args(0, 0, "dir", null),
       }),
     )
@@ -521,6 +541,7 @@ export async function buildDownload(
     segmentSeconds,
     pauseKeys,
     audio: audio.map((track) => track.resume),
+    text,
     args,
     plan: {
       durationSeconds: duration,
@@ -535,6 +556,11 @@ export async function buildDownload(
         codec: track.pipeline.codec,
         channels: track.pipeline.channels,
         bitrate: track.pipeline.bitrate,
+      })),
+      subtitles: text.map((track) => ({
+        id: track.id,
+        label: track.label,
+        language: track.language,
       })),
       burnIn:
         spec.burnIn && burnInLabel

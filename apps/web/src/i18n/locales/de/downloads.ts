@@ -11,7 +11,7 @@ export default {
   "downloads.original.description": "{format}, {size}, mit allen Spuren.",
   "downloads.custom": "Für dieses Gerät",
   "downloads.custom.description":
-    "Wähle Größe und Tonspuren. Der Server wandelt sie beim Herunterladen um.",
+    "Wähle Größe, Tonspuren und Untertitel. Der Server wandelt sie beim Herunterladen um.",
   "downloads.custom.unavailable":
     "Der Server hat die Spuren dieser Datei noch nicht gelesen, deshalb lässt sich vorerst nur das Original herunterladen.",
 
@@ -35,9 +35,11 @@ export default {
   "downloads.burnIn.none": "Keine",
   "downloads.burnIn.description":
     "Bilduntertitel passen nicht für sich in die Datei, deshalb werden sie ins Video gezeichnet.",
+  "downloads.subtitles.inFile": "Untertitel",
+  "downloads.subtitles.include": "{track} einschließen",
   "downloads.subtitles": "Untertiteldateien",
   "downloads.subtitles.description":
-    "Untertitel kommen nicht in die Videodatei. Speichere die gewünschten daneben.",
+    "Dateien neben dem Video, nicht darin. Speichere die gewünschten.",
   "downloads.subtitles.save": "{track} speichern",
 
   "downloads.estimate": "Etwa {size}",

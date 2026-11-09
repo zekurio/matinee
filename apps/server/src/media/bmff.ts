@@ -8,10 +8,14 @@ import { open } from "node:fs/promises"
  * where a track stopped.
  */
 
-type Box = { type: string; start: number; end: number }
+export type Box = { type: string; start: number; end: number }
 
 /** The boxes in `buffer` between `from` and `to`; `start` is the payload. */
-function* boxes(buffer: Buffer, from = 0, to = buffer.length): Generator<Box> {
+export function* boxes(
+  buffer: Buffer,
+  from = 0,
+  to = buffer.length,
+): Generator<Box> {
   let offset = from
   while (offset + 8 <= to) {
     let size = buffer.readUInt32BE(offset)
@@ -30,14 +34,18 @@ function* boxes(buffer: Buffer, from = 0, to = buffer.length): Generator<Box> {
   }
 }
 
-function child(buffer: Buffer, parent: Box, type: string): Box | undefined {
+export function child(
+  buffer: Buffer,
+  parent: Box,
+  type: string,
+): Box | undefined {
   for (const box of boxes(buffer, parent.start, parent.end)) {
     if (box.type === type) return box
   }
   return undefined
 }
 
-function children(buffer: Buffer, parent: Box, type: string): Box[] {
+export function children(buffer: Buffer, parent: Box, type: string): Box[] {
   return [...boxes(buffer, parent.start, parent.end)].filter(
     (box) => box.type === type,
   )

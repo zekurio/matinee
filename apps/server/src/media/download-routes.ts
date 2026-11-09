@@ -97,9 +97,9 @@ downloadRoutes.get("/:id/:name", async (c) => {
       return c.body(null, 409)
     case "segment":
       if (result.last) c.header("X-Matinee-Last-Segment", "1")
-      return c.body(fileBody(access.active, result.path), 200, {
+      return c.body(fileBody(access.active, result.path, result.before), 200, {
         "Content-Type": "video/mp4",
-        "Content-Length": String(result.size),
+        "Content-Length": String(result.size + (result.before?.length ?? 0)),
         "Cache-Control": "no-store",
         "X-Matinee-Segment-Start": result.times.start.toFixed(6),
         "X-Matinee-Segment-End": (

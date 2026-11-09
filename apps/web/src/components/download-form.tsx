@@ -63,8 +63,9 @@ import { browserAudioCodecs } from "@/lib/audio-support"
 import { downloadOriginal, downloadUrl } from "@/lib/download"
 import { firstError, useAppForm } from "@/lib/form"
 import { formatBytes } from "@/lib/format"
-import { trackLabel } from "@/lib/languages"
+import { baseLanguage, deviceLanguage, trackLabel } from "@/lib/languages"
 import { channelLayout } from "@/lib/media"
+import { usePlaybackPreferences } from "@/lib/playback-sync"
 import { client, errorMessage, orpc } from "@/lib/rpc"
 import { subtitleLabel, trackDetail } from "@/lib/subtitles"
 import { browserVideoCodecs, decodesVideo } from "@/lib/video-support"
@@ -96,6 +97,8 @@ type DownloadValues = {
   keepHdr: boolean
   /** In the order they go into the download. */
   audio: TrackValue[]
+  /** Text subtitles that go in the file, by id. */
+  subtitles: string[]
   /** A picture subtitle's id, or empty for none. */
   burnIn: string
 }
@@ -241,8 +244,38 @@ function specOf(values: DownloadValues): DownloadSpec | null {
         }
       : { mode: "copy" },
     audio: values.audio.filter((track) => track.on).map(audioSpec),
+    subtitles: values.subtitles,
     burnIn: encode && values.burnIn !== NONE ? values.burnIn : null,
   }
+}
+
+/** Text subtitles, which go in the file of a version for this device. */
+function textTracks(subtitles: readonly SubtitleTrack[]): SubtitleTrack[] {
+  return subtitles.filter((track) => track.delivery === "webvtt")
+}
+
+/**
+ * The subtitles a download starts with, as the apps pick them: the text
+ * tracks in the language subtitles show in and in the audio's.
+ */
+function startingSubtitles(
+  subtitles: readonly SubtitleTrack[],
+  subtitleLanguage: string | null,
+  audio: AudioTrack | undefined,
+): string[] {
+  const languages = new Set(
+    [
+      baseLanguage(subtitleLanguage ?? deviceLanguage()),
+      baseLanguage(audio?.language ?? null),
+    ].filter((language) => language !== null),
+  )
+  return textTracks(subtitles)
+    .filter((track) => {
+      const language = baseLanguage(track.language)
+      return language !== null && languages.has(language)
+    })
+    .slice(0, 8)
+    .map((track) => track.id)
 }
 
 /** Where the form starts: the original, with the video and audio this browser plays kept. */
@@ -252,12 +285,14 @@ function initialValues({
   codecs,
   conversions,
   tracks,
+  subtitles,
 }: {
   video: VideoStream | null
   presets: readonly DownloadVideoPreset[]
   codecs: readonly TranscodeVideoCodec[]
   conversions: readonly TranscodeAudioCodec[]
   tracks: readonly AudioTrack[]
+  subtitles: string[]
 }): DownloadValues {
   const keep =
     video !== null && canCopyVideo(video.codec) && decodesVideo(video)
@@ -272,6 +307,7 @@ function initialValues({
       on: track.primary,
       choice: defaultChoice(track, conversions),
     })),
+    subtitles,
     burnIn: NONE,
   }
 }
@@ -344,6 +380,8 @@ function DownloadFields({
     ...tracks.filter((track) => track.primary),
     ...tracks.filter((track) => !track.primary),
   ]
+  const preferences = usePlaybackPreferences()
+  const texts = textTracks(subtitles)
 
   const start = useMutation({
     mutationFn: (spec: DownloadSpec) =>
@@ -364,6 +402,11 @@ function DownloadFields({
       codecs,
       conversions,
       tracks: ordered,
+      subtitles: startingSubtitles(
+        subtitles,
+        preferences.subtitleLanguage,
+        ordered[0],
+      ),
     }),
     validators: {
       onSubmit: ({ value }) =>
@@ -405,11 +448,14 @@ function DownloadFields({
     (track) => track.delivery === "pgs" || track.delivery === "burn-in",
   )
   // The original holds its own streams; only files beside it are missing.
-  const files = subtitles.filter(
-    (track) =>
-      (track.delivery === "webvtt" || track.delivery === "pgs") &&
-      (custom || track.source === "sidecar"),
-  )
+  // A version for this device holds the text ones it's given.
+  const files = custom
+    ? []
+    : subtitles.filter(
+        (track) =>
+          (track.delivery === "webvtt" || track.delivery === "pgs") &&
+          track.source === "sidecar",
+      )
   const error =
     validation ??
     (start.error ? errorMessage(start.error) : null) ??
@@ -516,6 +562,19 @@ function DownloadFields({
                       values={field.state.value}
                       tracks={tracks}
                       conversions={conversions}
+                      onChange={field.handleChange}
+                    />
+                  )}
+                </form.Field>
+              )}
+
+              {texts.length > 0 && (
+                <form.Field name="subtitles">
+                  {(field) => (
+                    <SubtitleTracks
+                      values={field.state.value}
+                      tracks={texts}
+                      all={subtitles}
                       onChange={field.handleChange}
                     />
                   )}
@@ -773,6 +832,61 @@ function AudioTracks({
                   ))}
                 </SelectContent>
               </Select>
+            </li>
+          )
+        })}
+      </ul>
+    </FieldSet>
+  )
+}
+
+/** A switch per text subtitle, for whether it goes in the file. */
+function SubtitleTracks({
+  values,
+  tracks,
+  all,
+  onChange,
+}: {
+  values: string[]
+  tracks: SubtitleTrack[]
+  all: SubtitleTrack[]
+  onChange: (values: string[]) => void
+}) {
+  return (
+    <FieldSet>
+      <FieldLegend variant="label">
+        {tr("downloads.subtitles.inFile")}
+      </FieldLegend>
+      <ul className="flex flex-col gap-3">
+        {tracks.map((track) => {
+          const label = subtitleLabel(track, all)
+          const on = values.includes(track.id)
+          return (
+            <li key={track.id} className="flex items-center gap-3">
+              <Switch
+                checked={on}
+                onCheckedChange={(checked) =>
+                  // In the file's order, whichever is switched on first.
+                  onChange(
+                    tracks
+                      .filter((entry) =>
+                        entry.id === track.id
+                          ? checked
+                          : values.includes(entry.id),
+                      )
+                      .map((entry) => entry.id),
+                  )
+                }
+                aria-label={tr("downloads.subtitles.include", {
+                  track: label,
+                })}
+              />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm">{label}</p>
+                <p className="text-muted-foreground text-xs">
+                  {trackDetail(track)}
+                </p>
+              </div>
             </li>
           )
         })}
