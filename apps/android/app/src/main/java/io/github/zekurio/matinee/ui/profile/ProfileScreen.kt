@@ -3,6 +3,8 @@ package io.github.zekurio.matinee.ui.profile
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -24,9 +26,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.Profile
@@ -142,35 +142,35 @@ private fun Header(profile: Profile?) {
                 .format(Instant.parse(at).atZone(ZoneId.systemDefault()))
         }.getOrNull()
     }
-    Box(Modifier.fillMaxWidth().statusBarsPadding()) {
-        Column(
-            Modifier.fillMaxWidth().padding(top = 40.dp, start = Gutter, end = Gutter),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Avatar(user.name, user.avatarId?.let(api.paths::avatar), size = 104.dp)
-            Gap(16.dp)
-            Text(user.name, style = MaterialTheme.typography.headlineMedium, textAlign = TextAlign.Center)
+    // One row, as a profile's header on a phone: the picture, who it is,
+    // and Settings at its end, a button of the same weight as the avatar.
+    Row(
+        Modifier.fillMaxWidth().statusBarsPadding().padding(start = Gutter, end = Gutter, top = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Avatar(user.name, user.avatarId?.let(api.paths::avatar), size = 64.dp)
+        Gap(16.dp)
+        Column(Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    user.name,
+                    style = MaterialTheme.typography.titleLarge,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                if (user.isAdmin) Badge(stringResource(R.string.profile_admin), outlined = true)
+            }
             val facts = listOfNotNull(
                 user.displayName?.let { "@${user.username}" },
                 joined?.let { stringResource(R.string.profile_joined, it) },
             ).joinToString(" · ")
             if (facts.isNotEmpty()) {
-                Gap(4.dp)
-                Text(facts, style = MaterialTheme.typography.bodyMedium, color = Palette.Muted, textAlign = TextAlign.Center)
-            }
-            if (user.isAdmin) {
-                Gap(10.dp)
-                Badge(stringResource(R.string.profile_admin), outlined = true)
+                Text(facts, style = MaterialTheme.typography.bodyMedium, color = Palette.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
-        RoundIconButton(
-            Lucide.Settings,
-            stringResource(R.string.shell_settings),
-            nav::settings,
-            modifier = Modifier.align(Alignment.TopEnd).padding(top = 8.dp, end = Gutter - 8.dp),
-            background = Color.Transparent,
-            iconSize = 22.dp,
-        )
+        Gap(12.dp)
+        RoundIconButton(Lucide.Settings, stringResource(R.string.shell_settings), nav::settings, iconSize = 20.dp)
     }
 }
 
