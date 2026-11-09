@@ -11,6 +11,7 @@ import { browserTimeZone, rangePhrase } from "@/lib/stats"
 
 import { WatchingNow } from "./now-playing"
 import { Clients, Methods, TranscodingSections, Viewers } from "./server-panels"
+import { ActivitySection } from "./standing"
 import { StatsEmpty, statsGrid } from "./stat-blocks"
 import {
   GenresSection,
@@ -97,7 +98,10 @@ export function ActivityView(props: RangeProps) {
             <div className={statsGrid}>
               <TopTitlesSection stats={stats} />
               <GenresSection stats={stats} />
-              <Viewers stats={stats} />
+              <div className="flex flex-col gap-4">
+                <Viewers stats={stats} />
+                <ActivitySection stats={stats} />
+              </div>
             </div>
           </div>
         )}

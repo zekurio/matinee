@@ -138,23 +138,31 @@ function Board({ board }: { board: LeaderboardBoard }) {
           {tr(`stats.leaderboard.none.${metric}`)}
         </p>
       ) : (
-        <ol className="-mx-2 flex flex-col">
-          {board.entries.map((entry, index) => (
-            <Place
-              key={entry.user.id}
-              entry={entry}
-              format={(value) => formatMetric(metric, value)}
-              // The viewer's neighborhood, sent after the top ones, set off
-              // unless it carries straight on from them.
-              apart={
-                index === TOP &&
-                entry.rank > (board.entries[TOP - 1]?.rank ?? 0) + 1
-              }
-            />
-          ))}
-        </ol>
+        <BoardPlaces board={board} />
       )}
     </StatsSection>
+  )
+}
+
+/**
+ * A board's places: the top ones, then the viewer's neighborhood, set off
+ * unless it carries straight on from them.
+ */
+export function BoardPlaces({ board }: { board: LeaderboardBoard }) {
+  return (
+    <ol className="-mx-2 flex flex-col">
+      {board.entries.map((entry, index) => (
+        <Place
+          key={entry.user.id}
+          entry={entry}
+          format={(value) => formatMetric(board.metric, value)}
+          apart={
+            index === TOP &&
+            entry.rank > (board.entries[TOP - 1]?.rank ?? 0) + 1
+          }
+        />
+      ))}
+    </ol>
   )
 }
 
