@@ -118,6 +118,10 @@ class MatineeApi(val base: HttpUrl, internal val client: OkHttpClient) {
 
     suspend fun profile(username: String): Profile = get("profiles/${seg(username)}")
 
+    /** The latest file of each title the owner played, newest first; null when they don't share statistics. */
+    suspend fun recentlyWatched(username: String, limit: Int = 100): List<WatchedEntry>? =
+        get("profiles/${seg(username)}/recent", mapOf("limit" to limit))
+
     /** Null when the owner doesn't share statistics. Days count in [timeZone], an IANA name. */
     suspend fun profileStats(username: String, range: String, timeZone: String): WatchStats? =
         get("profiles/${seg(username)}/stats", mapOf("range" to range, "timeZone" to timeZone))

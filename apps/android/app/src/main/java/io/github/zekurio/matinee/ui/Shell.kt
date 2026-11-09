@@ -66,6 +66,7 @@ import io.github.zekurio.matinee.ui.search.SearchScreen
 import io.github.zekurio.matinee.ui.settings.SettingsPageScreen
 import io.github.zekurio.matinee.ui.settings.SettingsScreen
 import io.github.zekurio.matinee.ui.profile.ProfileScreen
+import io.github.zekurio.matinee.ui.profile.RecentScreen
 import io.github.zekurio.matinee.ui.theme.Palette
 import io.github.zekurio.matinee.ui.title.EpisodeScreen
 import io.github.zekurio.matinee.ui.title.SeasonScreen
@@ -132,6 +133,7 @@ private fun Pages(controller: NavHostController, session: Session, offline: Bool
         screen<HomeRoute>(tab = HomeRoute) { HomeScreen() }
         screen<MediaRoute>(tab = MediaRoute) { MediaScreen() }
         screen<FavoritesRoute> { FavoritesScreen() }
+        screen<RecentRoute> { RecentScreen() }
         screen<LibraryRoute> { LibraryScreen(it.toRoute<LibraryRoute>()) }
         screen<TitleRoute> { TitleScreen(it.toRoute<TitleRoute>().id) }
         screen<SeasonRoute> {

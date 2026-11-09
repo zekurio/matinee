@@ -68,6 +68,8 @@
     <string name="profile_nothing_watched">Nothing watched %1$s</string>
     <string name="profile_show_all_time">Show all time</string>
     <string name="profile_recent">Recently watched</string>
+    <string name="profile_recent_empty">Nothing watched yet</string>
+    <string name="profile_recent_load_failed">Couldn\'t load what you watched</string>
     <string name="profile_load_failed">Couldn\'t load your profile</string>
     <string name="stats_range_7d">7 days</string>
     <string name="stats_range_30d">30 days</string>

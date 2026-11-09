@@ -107,7 +107,7 @@ fun ProfileScreen(session: Session) {
                         item(key = "stats") { Statistics(state.value) }
                         state.value.recent?.takeIf { it.isNotEmpty() }?.let { recent ->
                             item(key = "recent") {
-                                Rail(stringResource(R.string.profile_recent)) {
+                                Rail(stringResource(R.string.profile_recent), onTitleClick = LocalNavigator.current::recent) {
                                     items(recent, key = { it.item.id }) { entry ->
                                         EpisodeCard(entry.item, Modifier.width(railItemWidth(RailArt.Landscape)))
                                     }

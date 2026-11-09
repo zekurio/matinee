@@ -44,6 +44,10 @@ data class BrowseRoute(val genre: String? = null, val studio: String? = null)
 @Serializable
 data object SearchRoute
 
+/** Everything the signed-in person watched last, a file per title, from the profile. */
+@Serializable
+data object RecentRoute
+
 /** The signed-in person, behind their picture in the tab bar, with the way to Settings. */
 @Serializable
 data object ProfileRoute
@@ -108,6 +112,8 @@ class Navigator(private val controller: NavHostController) {
     fun downloads() = tab(DownloadsRoute)
 
     fun favorites() = controller.navigate(FavoritesRoute) { launchSingleTop = true }
+
+    fun recent() = controller.navigate(RecentRoute) { launchSingleTop = true }
 
     fun library(id: String, sort: String? = null) = controller.navigate(LibraryRoute(id, sort))
 
