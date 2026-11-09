@@ -109,6 +109,7 @@ fun Hero(slides: List<FeaturedTitle>, modifier: Modifier = Modifier, top: @Compo
         HorizontalPager(pager, Modifier.fillMaxSize(), beyondViewportPageCount = 1) { page ->
             Slide(slides[page % count])
         }
+        HeroButtons(slides[pager.currentPage % count], Modifier.align(Alignment.BottomStart))
         Column(Modifier.fillMaxWidth().align(Alignment.TopStart)) { top() }
         // A phone's banner is kept short so two rows fit under it, and has
         // no room for dots; it's swiped, and advances on its own.
@@ -201,7 +202,8 @@ private fun Slide(slide: FeaturedTitle) {
             Modifier
                 .align(Alignment.BottomStart)
                 .fillMaxWidth()
-                .padding(start = Gutter, end = Gutter, bottom = heroBottom()),
+                // Above the buttons, which stay while the slides swipe.
+                .padding(start = Gutter, end = Gutter, bottom = heroBottom() + HERO_BUTTONS),
         ) {
             TitleMark(slide, Modifier.widthIn(max = 512.dp))
             Gap(10.dp)
@@ -284,21 +286,37 @@ private fun Slide(slide: FeaturedTitle) {
                     )
                 }
             }
-            Gap(14.dp)
-            Row(
-                Modifier.then(if (wide) Modifier else Modifier.fillMaxWidth()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                val buttonModifier = if (wide) Modifier else Modifier.weight(1f)
-                MatineeButton(onClick = { nav.play(item.id) }, modifier = buttonModifier) {
-                    LucideIcon(Lucide.Play, null, size = 16.dp)
-                    Text(stringResource(if (resuming) R.string.media_hero_resume else R.string.media_hero_play))
-                }
-                MatineeButton(onClick = { nav.title(title) }, look = ButtonLook.Frosted, modifier = buttonModifier) {
-                    LucideIcon(if (title.isShow) Lucide.List else Lucide.Info, null, size = 16.dp)
-                    Text(stringResource(if (title.isShow) R.string.media_hero_episodes else R.string.media_hero_details))
-                }
-            }
+        }
+    }
+}
+
+/** The buttons' height and the gap above them, which a slide's text leaves free. */
+private val HERO_BUTTONS = 44.dp + 14.dp
+
+/**
+ * Play and the title's page, for the slide showing. One row that stays in
+ * place while the slides swipe under it, its labels following along, as
+ * the web's banner keeps its buttons.
+ */
+@Composable
+private fun HeroButtons(slide: FeaturedTitle, modifier: Modifier = Modifier) {
+    val nav = LocalNavigator.current
+    val res = LocalResources.current
+    val (title, item) = slide
+    val wide = isWide()
+    val resuming = timeLeft(item, res) != null && progressRatio(item) != null
+    Row(
+        modifier.padding(start = Gutter, end = Gutter, bottom = heroBottom()).then(if (wide) Modifier else Modifier.fillMaxWidth()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        val buttonModifier = if (wide) Modifier else Modifier.weight(1f)
+        MatineeButton(onClick = { nav.play(item.id) }, modifier = buttonModifier) {
+            LucideIcon(Lucide.Play, null, size = 16.dp)
+            Text(stringResource(if (resuming) R.string.media_hero_resume else R.string.media_hero_play))
+        }
+        MatineeButton(onClick = { nav.title(title) }, look = ButtonLook.Frosted, modifier = buttonModifier) {
+            LucideIcon(if (title.isShow) Lucide.List else Lucide.Info, null, size = 16.dp)
+            Text(stringResource(if (title.isShow) R.string.media_hero_episodes else R.string.media_hero_details))
         }
     }
 }
