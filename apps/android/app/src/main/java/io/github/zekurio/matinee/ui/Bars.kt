@@ -63,7 +63,6 @@ import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.ui.components.Avatar
 import io.github.zekurio.matinee.ui.components.Gutter
 import io.github.zekurio.matinee.ui.components.LocalApi
-import io.github.zekurio.matinee.ui.components.LogoMark
 import io.github.zekurio.matinee.ui.components.Lucide
 import io.github.zekurio.matinee.ui.components.LucideIcon
 import io.github.zekurio.matinee.ui.components.RoundIconButton
@@ -233,9 +232,10 @@ private fun TabButton(
 }
 
 /**
- * Home's header: the logo, and whether the app is offline. It sits at the
- * top of the page and scrolls away with it, over the art of the banner.
- * Search and the account are in the tab bar.
+ * Home's header: room for the status bar over the banner's art, faded for
+ * it to read, and whether the app is offline. It scrolls away with the
+ * page. The banner's own title logo carries the top, so there's no app
+ * logo competing with it; search and the account are in the tab bar.
  */
 @Composable
 fun AppHeader(modifier: Modifier = Modifier) {
@@ -253,13 +253,11 @@ fun AppHeader(modifier: Modifier = Modifier) {
                 )
             },
     ) {
-        // The logo sits on the page's gutter, like everything below it.
         Row(
-            Modifier.statusBarsPadding().height(56.dp).fillMaxWidth().padding(start = Gutter - 8.dp, end = Gutter),
+            Modifier.statusBarsPadding().height(56.dp).fillMaxWidth().padding(horizontal = Gutter),
+            horizontalArrangement = Arrangement.End,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(Modifier.size(44.dp), contentAlignment = Alignment.Center) { LogoMark(Modifier.size(28.dp)) }
-            Box(Modifier.weight(1f))
             if (offline) LucideIcon(Lucide.CloudOff, stringResource(R.string.downloads_offline), size = 20.dp, tint = Palette.Muted)
         }
     }
