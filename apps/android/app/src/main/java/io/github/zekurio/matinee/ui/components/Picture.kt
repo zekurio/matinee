@@ -126,6 +126,7 @@ object Lucide {
     val Ellipsis = R.drawable.lucide_ellipsis
     val Film = R.drawable.lucide_film
     val FolderPlus = R.drawable.lucide_folder_plus
+    val GalleryHorizontalEnd = R.drawable.lucide_gallery_horizontal_end
     val Gauge = R.drawable.lucide_gauge
     val Heart = R.drawable.lucide_heart
     val HeartFilled = R.drawable.lucide_heart_filled
@@ -136,6 +137,7 @@ object Lucide {
     val KeyRound = R.drawable.lucide_key_round
     val Link = R.drawable.lucide_link
     val List = R.drawable.lucide_list
+    val ListChecks = R.drawable.lucide_list_checks
     val ListFilter = R.drawable.lucide_list_filter
     val LibraryBig = R.drawable.lucide_library_big
     val LockKeyhole = R.drawable.lucide_lock_keyhole
@@ -144,6 +146,7 @@ object Lucide {
     val Maximize = R.drawable.lucide_maximize
     val Monitor = R.drawable.lucide_monitor
     val Pause = R.drawable.lucide_pause_filled
+    val Paintbrush = R.drawable.lucide_paintbrush
     val PictureInPicture = R.drawable.lucide_picture_in_picture_2
     val Play = R.drawable.lucide_play_filled
     val PlayOutline = R.drawable.lucide_play
@@ -163,6 +166,7 @@ object Lucide {
     val Tv = R.drawable.lucide_tv
     val TvPlay = R.drawable.lucide_tv_minimal_play
     val UserRound = R.drawable.lucide_user_round
+    val Users = R.drawable.lucide_users
     val WifiOff = R.drawable.lucide_wifi_off
     val X = R.drawable.lucide_x
 }

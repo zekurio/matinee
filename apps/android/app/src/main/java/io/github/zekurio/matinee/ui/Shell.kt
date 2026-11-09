@@ -63,7 +63,9 @@ import io.github.zekurio.matinee.ui.metadata.IdentifyScreen
 import io.github.zekurio.matinee.ui.metadata.ImagesScreen
 import io.github.zekurio.matinee.ui.player.PlayerScreen
 import io.github.zekurio.matinee.ui.search.SearchScreen
+import io.github.zekurio.matinee.ui.settings.SettingsPageScreen
 import io.github.zekurio.matinee.ui.settings.SettingsScreen
+import io.github.zekurio.matinee.ui.profile.ProfileScreen
 import io.github.zekurio.matinee.ui.theme.Palette
 import io.github.zekurio.matinee.ui.title.EpisodeScreen
 import io.github.zekurio.matinee.ui.title.SeasonScreen
@@ -98,7 +100,7 @@ fun SignedInApp(session: Session, user: User, offline: Boolean = false) {
                 }
             }
             val entry by controller.currentBackStackEntryAsState()
-            val bar = !offline && entry?.destination?.let(::tabOf) != null
+            val bar = entry?.destination?.let(::tabOf) != null
             SnackbarHost(
                 snackbar,
                 Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = if (bar) BOTTOM_BAR_HEIGHT else 0.dp),
@@ -142,8 +144,10 @@ private fun Pages(controller: NavHostController, session: Session, offline: Bool
             val route = it.toRoute<BrowseRoute>()
             BrowseScreen(route.genre, route.studio)
         }
-        screen<SearchRoute> { SearchScreen() }
+        screen<SearchRoute>(tab = SearchRoute) { SearchScreen() }
+        screen<ProfileRoute>(tab = ProfileRoute) { ProfileScreen(session) }
         screen<SettingsRoute> { SettingsScreen(session) }
+        screen<SettingsPageRoute> { SettingsPageScreen(session, it.toRoute<SettingsPageRoute>().page) }
         screen<IdentifyRoute> { IdentifyScreen(it.toRoute<IdentifyRoute>().titleId) }
         screen<ImagesRoute> {
             val route = it.toRoute<ImagesRoute>()
@@ -283,7 +287,7 @@ private inline fun <reified T : Any> NavGraphBuilder.screen(
         }
         Box(Modifier.fillMaxSize().background(Palette.Background)) {
             content(entry)
-            if (tab != null && !LocalOffline.current) TabBar(tab, this@composable, Modifier.align(Alignment.BottomCenter))
+            if (tab != null) TabBar(tab, this@composable, Modifier.align(Alignment.BottomCenter))
         }
     }
 }

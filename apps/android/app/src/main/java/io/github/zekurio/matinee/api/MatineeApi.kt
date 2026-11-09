@@ -43,23 +43,27 @@ val MatineeJson = Json {
 /**
  * The REST API under /api/v1, the contract's procedures with the methods and
  * paths from packages/contracts. [client] adds the session token.
+ *
+ * The request helpers are internal, so a part of the app with calls of its
+ * own, like each admin page in api/admin, adds them as extensions in its
+ * own file.
  */
-class MatineeApi(val base: HttpUrl, private val client: OkHttpClient) {
+class MatineeApi(val base: HttpUrl, internal val client: OkHttpClient) {
     val paths = Paths(base)
-    private val json = MatineeJson
-    private val jsonType = "application/json".toMediaType()
+    internal val json = MatineeJson
+    internal val jsonType = "application/json".toMediaType()
 
     /** [path] is made of `/`-separated segments; put values that may hold a `/` through [seg]. */
-    private fun url(path: String, query: Map<String, Any?> = emptyMap()): HttpUrl =
+    internal fun url(path: String, query: Map<String, Any?> = emptyMap()): HttpUrl =
         base.newBuilder().apply {
             addPathSegments("api/v1")
             path.trim('/').split('/').forEach { addEncodedPathSegment(it) }
             for ((key, value) in query) if (value != null) addQueryParameter(key, value.toString())
         }.build()
 
-    private fun seg(value: String): String = URLEncoder.encode(value, "UTF-8").replace("+", "%20")
+    internal fun seg(value: String): String = URLEncoder.encode(value, "UTF-8").replace("+", "%20")
 
-    private suspend fun <T> send(request: Request, serializer: KSerializer<T>?): T? =
+    internal suspend fun <T> send(request: Request, serializer: KSerializer<T>?): T? =
         withContext(Dispatchers.IO) {
             client.newCall(request).await().use {
                 val body = it.body.string()
@@ -68,7 +72,7 @@ class MatineeApi(val base: HttpUrl, private val client: OkHttpClient) {
             }
         }
 
-    private fun errorOf(response: Response, body: String): ApiException {
+    internal fun errorOf(response: Response, body: String): ApiException {
         val parsed = runCatching { json.decodeFromString(ApiErrorBody.serializer(), body) }.getOrNull()
         return ApiException(
             status = response.code,
@@ -77,17 +81,17 @@ class MatineeApi(val base: HttpUrl, private val client: OkHttpClient) {
         )
     }
 
-    private suspend inline fun <reified T> get(path: String, query: Map<String, Any?> = emptyMap()): T =
+    internal suspend inline fun <reified T> get(path: String, query: Map<String, Any?> = emptyMap()): T =
         send(Request.Builder().url(url(path, query)).get().build(), serializer<T>()) as T
 
-    private suspend inline fun <reified T> post(path: String, body: RequestBody = EMPTY): T =
+    internal suspend inline fun <reified T> post(path: String, body: RequestBody = EMPTY): T =
         send(Request.Builder().url(url(path)).post(body).build(), serializer<T>()) as T
 
-    private suspend fun call(method: String, path: String, body: RequestBody? = EMPTY) {
+    internal suspend fun call(method: String, path: String, body: RequestBody? = EMPTY) {
         send<Unit>(Request.Builder().url(url(path)).method(method, body).build(), null)
     }
 
-    private inline fun <reified T> body(value: T): RequestBody =
+    internal inline fun <reified T> body(value: T): RequestBody =
         json.encodeToString(serializer<T>(), value).toRequestBody(jsonType)
 
     // Auth
@@ -109,6 +113,14 @@ class MatineeApi(val base: HttpUrl, private val client: OkHttpClient) {
 
     suspend fun sessions(): List<AccountSession> = get("account/sessions")
     suspend fun revokeSession(id: String) = call("DELETE", "account/sessions/$id", null)
+
+    // Profiles
+
+    suspend fun profile(username: String): Profile = get("profiles/${seg(username)}")
+
+    /** Null when the owner doesn't share statistics. Days count in [timeZone], an IANA name. */
+    suspend fun profileStats(username: String, range: String, timeZone: String): WatchStats? =
+        get("profiles/${seg(username)}/stats", mapOf("range" to range, "timeZone" to timeZone))
 
     suspend fun setPlaybackPreferences(preferences: PlaybackPreferences): User = send(
         Request.Builder().url(url("account/playback")).put(body(preferences)).build(),
@@ -350,7 +362,7 @@ class MatineeApi(val base: HttpUrl, private val client: OkHttpClient) {
     }
 
     companion object {
-        private val EMPTY = ByteArray(0).toRequestBody(null)
+        internal val EMPTY = ByteArray(0).toRequestBody(null)
     }
 }
 

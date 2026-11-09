@@ -393,9 +393,60 @@ data class ProfileUser(
     val displayName: String? = null,
     val role: String,
     val avatarId: String? = null,
+    /** When the account was made, an ISO time. */
+    val createdAt: String? = null,
 ) {
     val name get() = displayName?.takeIf { it.isNotBlank() } ?: username
 }
+
+/** A profile as the contract's `profiles.get` has it; a list is null when its owner doesn't share it. */
+@Serializable
+data class Profile(
+    val user: ProfileUser,
+    val self: Boolean,
+    val sharing: ProfileSharing = ProfileSharing(),
+    val favorites: List<TitleSummary>? = null,
+    val favoriteItems: List<MediaItem>? = null,
+    val recent: List<WatchedEntry>? = null,
+)
+
+/** A file someone played, for "recently watched". */
+@Serializable
+data class WatchedEntry(val item: MediaItem, val watchedAt: String, val completed: Boolean = false)
+
+/** How far back statistics look, ending now, as the contract's `StatsRange`. */
+val STATS_RANGES = listOf("7d", "30d", "90d", "365d", "all")
+
+/** What someone watched in a range: `profiles.stats`. The activity grid is left out; the app doesn't draw it. */
+@Serializable
+data class WatchStats(
+    val range: String,
+    /** How long each bucket is: `day`, `week`, or `month`. */
+    val unit: String,
+    val totals: WatchTotals,
+    val buckets: List<StatsBucket> = emptyList(),
+    val genres: List<GenreStat> = emptyList(),
+    val titles: List<TitleStat> = emptyList(),
+)
+
+@Serializable
+data class WatchTotals(
+    val watchSeconds: Double = 0.0,
+    val plays: Int = 0,
+    val movies: Int = 0,
+    val episodes: Int = 0,
+    val shows: Int = 0,
+)
+
+/** Watch time in one day, week, or month; [start] is its first day, YYYY-MM-DD. */
+@Serializable
+data class StatsBucket(val start: String, val watchSeconds: Double = 0.0, val plays: Int = 0)
+
+@Serializable
+data class GenreStat(val name: String, val watchSeconds: Double = 0.0)
+
+@Serializable
+data class TitleStat(val title: TitleSummary, val watchSeconds: Double = 0.0, val plays: Int = 0)
 
 @Serializable
 data class SearchResults(

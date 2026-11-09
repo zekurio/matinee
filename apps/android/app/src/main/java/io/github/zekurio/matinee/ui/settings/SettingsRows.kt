@@ -1,5 +1,6 @@
 package io.github.zekurio.matinee.ui.settings
 
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -124,11 +125,15 @@ fun SwitchRow(title: String, checked: Boolean, onChange: (Boolean) -> Unit) {
 
 /** A row that goes somewhere else, like the system's settings, with what's set there at its end. */
 @Composable
-fun LinkRow(title: String, value: String? = null, destructive: Boolean = false, onClick: () -> Unit) {
+fun LinkRow(title: String, value: String? = null, destructive: Boolean = false, @DrawableRes icon: Int? = null, onClick: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        if (icon != null) {
+            LucideIcon(icon, null, size = 20.dp, tint = if (destructive) Palette.Danger else Palette.Muted)
+            Gap(14.dp)
+        }
         RowText(title, if (destructive) Palette.Danger else Palette.Foreground)
         if (value != null) {
             Gap(12.dp)

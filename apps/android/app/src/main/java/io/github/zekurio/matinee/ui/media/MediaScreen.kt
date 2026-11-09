@@ -34,7 +34,7 @@ import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.ArtworkSize
 import io.github.zekurio.matinee.api.Library
-import io.github.zekurio.matinee.ui.SearchHeader
+import io.github.zekurio.matinee.ui.TopBar
 import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.LocalNavigator
 import io.github.zekurio.matinee.ui.LocalUser
@@ -54,15 +54,14 @@ import io.github.zekurio.matinee.ui.tabBarPadding
 import io.github.zekurio.matinee.ui.theme.Palette
 
 /**
- * The Media tab, as Findroid's: search across the server, favorites, and
- * every library as a card, which opens the library.
+ * The Media tab: every library as a card, which opens the library. Search
+ * has a tab of its own, and favorites are on the profile.
  */
 @Composable
 fun MediaScreen() {
-    val nav = LocalNavigator.current
     val libraries = rememberLoader("libraries") { libraries() }
     Column(Modifier.fillMaxSize()) {
-        SearchHeader()
+        TopBar(stringResource(R.string.tab_media), back = false)
         when (val state = libraries.state) {
             Load.Loading -> LoadingBox()
             is Load.Failed -> ErrorBox(stringResource(R.string.home_load_failed), state.message, libraries::reload)
@@ -73,34 +72,12 @@ fun MediaScreen() {
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalArrangement = Arrangement.spacedBy(20.dp),
             ) {
-                item(span = { GridItemSpan(maxLineSpan) }, key = "favorites") { FavoritesCard(nav::favorites) }
                 if (state.value.isEmpty()) {
                     item(span = { GridItemSpan(maxLineSpan) }, key = "empty") { NoLibraries() }
                 }
                 items(state.value, key = { it.id }) { library -> LibraryCard(library) }
             }
         }
-    }
-}
-
-private val FavoritesShape = RoundedCornerShape(12.dp)
-
-@Composable
-private fun FavoritesCard(onClick: () -> Unit) {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .clip(FavoritesShape)
-            .background(Palette.Card)
-            .border(1.dp, Palette.Border, FavoritesShape)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        LucideIcon(Lucide.Heart, null, size = 20.dp)
-        Text(stringResource(R.string.favorites_title), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-        LucideIcon(Lucide.ChevronRight, null, size = 18.dp, tint = Palette.Muted)
     }
 }
 
@@ -130,10 +107,11 @@ private fun LibraryCard(library: Library) {
             }
             Text(
                 library.name,
-                style = MaterialTheme.typography.titleMedium.copy(
+                // Big enough to read across the room, over the backdrop.
+                style = MaterialTheme.typography.headlineSmall.copy(
                     shadow = Shadow(Color.Black.copy(alpha = 0.6f), blurRadius = 12f),
                 ),
-                fontWeight = FontWeight.SemiBold,
+                fontWeight = FontWeight.Bold,
                 color = Color.White,
                 textAlign = TextAlign.Center,
                 maxLines = 2,

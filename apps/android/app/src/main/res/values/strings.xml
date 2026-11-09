@@ -57,6 +57,40 @@
     <!-- The bottom bar -->
     <string name="tab_home">Home</string>
     <string name="tab_media">Media</string>
+    <string name="tab_profile">Profile</string>
+    <string name="profile_admin">Admin</string>
+    <string name="profile_joined">Joined %1$s</string>
+    <string name="profile_favorite_episodes">Favorite episodes</string>
+    <string name="profile_no_favorites_hint">Tap the heart on a movie, show, or episode to keep it here.</string>
+    <string name="profile_statistics">Statistics</string>
+    <string name="profile_self_empty">Your statistics fill in as you watch</string>
+    <string name="profile_self_empty_hint">Watch time and your most watched titles show up here after your first play.</string>
+    <string name="profile_nothing_watched">Nothing watched %1$s</string>
+    <string name="profile_show_all_time">Show all time</string>
+    <string name="profile_recent">Recently watched</string>
+    <string name="profile_load_failed">Couldn\'t load your profile</string>
+    <string name="stats_range_7d">7 days</string>
+    <string name="stats_range_30d">30 days</string>
+    <string name="stats_range_90d">90 days</string>
+    <string name="stats_range_365d">Year</string>
+    <string name="stats_range_all">All time</string>
+    <string name="stats_period_7d">in the last 7 days</string>
+    <string name="stats_period_30d">in the last 30 days</string>
+    <string name="stats_period_90d">in the last 90 days</string>
+    <string name="stats_period_365d">in the last year</string>
+    <string name="stats_period_all">so far</string>
+    <string name="stats_watch_time">Watch time</string>
+    <string name="stats_plays">Plays</string>
+    <string name="stats_movies_finished">Movies finished</string>
+    <string name="stats_episodes_finished">Episodes finished</string>
+    <string name="stats_shows_watched">Shows watched</string>
+    <string name="stats_chart_busiest">Busiest · %1$s · %2$s</string>
+    <string name="stats_bucket_week">Week of %1$s</string>
+    <string name="stats_top">Most watched</string>
+    <string name="stats_genres">Genres</string>
+    <string name="format_minutes_short">%1$dm</string>
+    <string name="format_hours_short">%1$dh</string>
+    <string name="format_hours_minutes_short">%1$dh %2$dm</string>
 
     <!-- Favorites -->
     <string name="favorites_title">Favorites</string>
@@ -270,7 +304,6 @@
     <string name="search_title">Search</string>
     <string name="search_field">Search movies, shows, people, and more</string>
     <string name="search_clear">Clear search</string>
-    <string name="search_intro">Find movies, shows, cast and crew, genres, and studios.</string>
     <string name="search_failed">The search didn\'t go through. Try again in a moment.</string>
     <string name="search_no_match">Nothing matches “%1$s”</string>
     <string name="search_no_match_hint">Check the spelling, or try part of the name.</string>
@@ -358,6 +391,16 @@
     <string name="settings_subtitles_edge_shadow">Drop shadow</string>
     <string name="settings_subtitles_edge_outline">Outline</string>
     <string name="settings_subtitles_edge_none">None</string>
+    <string name="settings_page_account">Account</string>
+    <string name="settings_page_playback">Playback</string>
+    <string name="settings_admin">Administration</string>
+    <string name="settings_admin_libraries">Libraries</string>
+    <string name="settings_admin_users">Users</string>
+    <string name="settings_admin_authentication">Authentication</string>
+    <string name="settings_admin_transcoding">Transcoding</string>
+    <string name="settings_admin_trickplay">Trickplay</string>
+    <string name="settings_admin_jobs">Jobs</string>
+    <string name="settings_admin_appearance">Appearance</string>
     <string name="settings_app_title">App</string>
     <string name="settings_app_language">Language</string>
     <string name="settings_app_language_description">Set in Android\'s settings, for this app only.</string>

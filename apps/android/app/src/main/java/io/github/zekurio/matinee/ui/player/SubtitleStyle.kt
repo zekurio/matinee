@@ -55,8 +55,7 @@ fun SubtitleColor.color(): Color = COLORS.getValue(this)
 /**
  * The look [prefs] asks for: the system's caption style when it says to,
  * which Settings > Accessibility > Caption preferences sets, else the app's
- * own choices. What the system's style leaves to the app, as its "set by
- * app" style leaves everything, comes from the app's choices too.
+ * own choices.
  */
 @Composable
 fun rememberSubtitleLook(prefs: PlayerPrefs): SubtitleLook {
@@ -78,44 +77,31 @@ fun rememberSubtitleLook(prefs: PlayerPrefs): SubtitleLook {
     return remember(system, own, lifecycle) {
         if (!system) return@remember own
         val captions = context.getSystemService(CaptioningManager::class.java) ?: return@remember own
-        systemLook(captions.userStyle, captions.fontScale, own)
+        systemLook(captions.userStyle, captions.fontScale)
     }
 }
 
 /**
- * Whether the system's caption style leaves everything to the app, as its
- * "set by app" style does. Read again on coming back from its page.
+ * The system's caption style as Android draws it. Its getters stand in
+ * Android's own defaults for what the style leaves open, white on black
+ * with no edge, as its "set by app" style leaves everything, so captions
+ * look as they do in every other app that follows the setting.
  */
-@Composable
-fun rememberSystemStyleIsAppDefined(): Boolean {
-    val context = LocalContext.current
-    val lifecycle by LocalLifecycleOwner.current.lifecycle.currentStateAsState()
-    return remember(lifecycle) {
-        val style = context.getSystemService(CaptioningManager::class.java)?.userStyle ?: return@remember true
-        !style.hasForegroundColor() && !style.hasBackgroundColor() && !style.hasEdgeType() &&
-            !style.hasEdgeColor() && !style.hasWindowColor() && style.typeface == null
-    }
-}
-
-private fun systemLook(style: CaptionStyle, scale: Float, own: SubtitleLook): SubtitleLook {
-    fun color(argb: Int) = Color(argb)
-    return SubtitleLook(
-        color = if (style.hasForegroundColor()) color(style.foregroundColor) else own.color,
-        background = if (style.hasBackgroundColor()) color(style.backgroundColor) else own.background,
-        edge = if (!style.hasEdgeType()) own.edge else when (style.edgeType) {
-            CaptionStyle.EDGE_TYPE_NONE -> SubtitleEdge.NONE
-            CaptionStyle.EDGE_TYPE_OUTLINE -> SubtitleEdge.OUTLINE
-            CaptionStyle.EDGE_TYPE_RAISED -> SubtitleEdge.RAISED
-            CaptionStyle.EDGE_TYPE_DEPRESSED -> SubtitleEdge.DEPRESSED
-            else -> SubtitleEdge.SHADOW
-        },
-        edgeColor = if (style.hasEdgeColor()) color(style.edgeColor) else own.edgeColor,
-        // The size stays the system's: "set by app" still picks one.
-        scale = scale,
-        font = style.typeface?.let(::FontFamily) ?: own.font,
-        window = if (style.hasWindowColor()) color(style.windowColor) else own.window,
-    )
-}
+private fun systemLook(style: CaptionStyle, scale: Float): SubtitleLook = SubtitleLook(
+    color = Color(style.foregroundColor),
+    background = Color(style.backgroundColor),
+    edge = when (style.edgeType) {
+        CaptionStyle.EDGE_TYPE_OUTLINE -> SubtitleEdge.OUTLINE
+        CaptionStyle.EDGE_TYPE_DROP_SHADOW -> SubtitleEdge.SHADOW
+        CaptionStyle.EDGE_TYPE_RAISED -> SubtitleEdge.RAISED
+        CaptionStyle.EDGE_TYPE_DEPRESSED -> SubtitleEdge.DEPRESSED
+        else -> SubtitleEdge.NONE
+    },
+    edgeColor = Color(style.edgeColor),
+    scale = scale,
+    font = style.typeface?.let(::FontFamily),
+    window = Color(style.windowColor),
+)
 
 /**
  * One cue, centered, at [size] times the look's scale: the text over its

@@ -1,6 +1,8 @@
 package io.github.zekurio.matinee.ui
 
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.navigation.NavDestination.Companion.hasRoute
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import io.github.zekurio.matinee.api.MediaItem
 import io.github.zekurio.matinee.api.TitleKind
@@ -38,11 +40,20 @@ data class PersonRoute(val name: String)
 @Serializable
 data class BrowseRoute(val genre: String? = null, val studio: String? = null)
 
+/** Search across the server: a tab, the circle beside the tab bar. */
 @Serializable
 data object SearchRoute
 
+/** The signed-in person, behind their picture in the tab bar, with the way to Settings. */
+@Serializable
+data object ProfileRoute
+
 @Serializable
 data object SettingsRoute
+
+/** One of Settings' categories, by `SettingsPage.key`. */
+@Serializable
+data class SettingsPageRoute(val page: String)
 
 @Serializable
 data object DownloadsRoute
@@ -59,8 +70,8 @@ data class IdentifyRoute(val titleId: String)
 @Serializable
 data class ImagesRoute(val titleId: String, val season: Int = -1, val episode: Int = -1)
 
-/** The bottom bar's tabs, by the route of each one's first page, as Findroid has them. */
-val TAB_ROUTES: List<Any> = listOf(HomeRoute, MediaRoute, DownloadsRoute)
+/** The tab bar's tabs, by the route of each one's first page, in its order: the capsule, then search. */
+val TAB_ROUTES: List<Any> = listOf(HomeRoute, MediaRoute, DownloadsRoute, ProfileRoute, SearchRoute)
 
 /** Moves between screens; one per signed-in app. */
 class Navigator(private val controller: NavHostController) {
@@ -74,13 +85,20 @@ class Navigator(private val controller: NavHostController) {
     }
 
     /**
-     * A tab's first page. Home is under every other tab, so back from one
-     * goes Home, and a tab picked again starts over at its first page.
+     * A tab's first page. The first tab's page is under every other tab's,
+     * so back from one goes there, and a tab picked again starts over at its
+     * first page. That's Home, or Downloads offline, where the app starts.
      */
     fun tab(route: Any) {
-        if (route == HomeRoute) return home()
+        // The bar shows only on a tab's first page, so picking the open tab has nowhere to go.
+        if (controller.currentBackStackEntry?.destination?.hasRoute(route::class) == true) return
+        val start = controller.graph.findStartDestination()
+        if (start.hasRoute(route::class)) {
+            controller.popBackStack(start.id, inclusive = false)
+            return
+        }
         controller.navigate(route) {
-            popUpTo(HomeRoute)
+            popUpTo(start.id)
             launchSingleTop = true
         }
     }
@@ -123,9 +141,13 @@ class Navigator(private val controller: NavHostController) {
 
     fun studio(name: String) = controller.navigate(BrowseRoute(studio = name))
 
-    fun search() = controller.navigate(SearchRoute) { launchSingleTop = true }
+    fun search() = tab(SearchRoute)
+
+    fun profile() = tab(ProfileRoute)
 
     fun settings() = controller.navigate(SettingsRoute) { launchSingleTop = true }
+
+    fun settingsPage(page: String) = controller.navigate(SettingsPageRoute(page)) { launchSingleTop = true }
 
     fun identify(titleId: String) = controller.navigate(IdentifyRoute(titleId)) { launchSingleTop = true }
 

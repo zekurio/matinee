@@ -71,7 +71,6 @@ import io.github.zekurio.matinee.downloads.Downloads
 import io.github.zekurio.matinee.downloads.OfflineItem
 import io.github.zekurio.matinee.downloads.VIDEO_PRESETS
 import io.github.zekurio.matinee.downloads.VideoPreset
-import io.github.zekurio.matinee.ui.AccountButton
 import io.github.zekurio.matinee.ui.LocalNavigator
 import io.github.zekurio.matinee.ui.LocalOffline
 import io.github.zekurio.matinee.ui.LocalUser
@@ -171,9 +170,8 @@ fun DownloadsScreen() {
         TopBar(stringResource(R.string.downloads_title), back = false) {
             if (LocalOffline.current) {
                 LucideIcon(Lucide.CloudOff, stringResource(R.string.downloads_offline), size = 20.dp, tint = Palette.Muted)
-                Gap(8.dp)
+                Gap(Gutter - 4.dp)
             }
-            AccountButton(Modifier.padding(end = Gutter - 8.dp))
         }
         LazyColumn(
             Modifier.fillMaxSize(),

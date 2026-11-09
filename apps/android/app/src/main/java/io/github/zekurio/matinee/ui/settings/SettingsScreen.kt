@@ -1,6 +1,8 @@
 package io.github.zekurio.matinee.ui.settings
 
 import android.app.LocaleManager
+import androidx.annotation.DrawableRes
+import androidx.annotation.StringRes
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -23,6 +25,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
@@ -65,18 +68,18 @@ import io.github.zekurio.matinee.downloads.DEFAULT_ORIGINAL
 import io.github.zekurio.matinee.downloads.DownloadSubtitles
 import io.github.zekurio.matinee.downloads.VIDEO_PRESETS
 import io.github.zekurio.matinee.ui.Load
+import io.github.zekurio.matinee.ui.LocalNavigator
+import io.github.zekurio.matinee.ui.LocalOffline
 import io.github.zekurio.matinee.ui.LocalUser
 import io.github.zekurio.matinee.ui.TopBar
 import io.github.zekurio.matinee.ui.audioFormatName
 import io.github.zekurio.matinee.ui.components.Avatar
-import io.github.zekurio.matinee.ui.components.ButtonLook
 import io.github.zekurio.matinee.ui.components.Gap
 import io.github.zekurio.matinee.ui.components.Gutter
 import io.github.zekurio.matinee.ui.components.LocalApi
 import io.github.zekurio.matinee.ui.components.LocalSnackbar
 import io.github.zekurio.matinee.ui.components.Lucide
 import io.github.zekurio.matinee.ui.components.LucideIcon
-import io.github.zekurio.matinee.ui.components.MatineeButton
 import io.github.zekurio.matinee.ui.components.RoundIconButton
 import io.github.zekurio.matinee.ui.components.launchShowing
 import io.github.zekurio.matinee.ui.downloads.mbps
@@ -97,100 +100,205 @@ import io.github.zekurio.matinee.ui.player.SubtitleEdge
 import io.github.zekurio.matinee.ui.player.SubtitleLine
 import io.github.zekurio.matinee.ui.player.SubtitleLook
 import io.github.zekurio.matinee.ui.player.rememberSubtitleLook
-import io.github.zekurio.matinee.ui.player.rememberSystemStyleIsAppDefined
 import io.github.zekurio.matinee.ui.rememberLoader
+import io.github.zekurio.matinee.ui.settings.admin.AuthenticationSettings
+import io.github.zekurio.matinee.ui.settings.admin.JobsSettings
+import io.github.zekurio.matinee.ui.settings.admin.LibrariesSettings
+import io.github.zekurio.matinee.ui.settings.admin.ServerAppearanceSettings
+import io.github.zekurio.matinee.ui.settings.admin.TranscodingSettings
+import io.github.zekurio.matinee.ui.settings.admin.TrickplaySettings
+import io.github.zekurio.matinee.ui.settings.admin.UsersSettings
 import io.github.zekurio.matinee.ui.theme.Palette
 import io.github.zekurio.matinee.ui.videoCodecName
 import java.text.NumberFormat
 import java.util.Locale
 
 /**
- * Settings, as the web's account and playback panels, and what only an app
- * on the device can change: how subtitles look, the decoders, downloads,
- * and the app's language.
+ * A category of Settings, as Findroid and the web's phone menu list them:
+ * each is a row on the first page, and opens a page of its own.
+ */
+enum class SettingsPage(val key: String, @param:DrawableRes val icon: Int, @param:StringRes val title: Int, val admin: Boolean = false) {
+    Account("account", Lucide.UserRound, R.string.settings_page_account),
+    Playback("playback", Lucide.TvPlay, R.string.settings_page_playback),
+    Subtitles("subtitles", Lucide.Captions, R.string.settings_subtitles_title),
+    Downloads("downloads", Lucide.Download, R.string.downloads_title),
+    App("app", Lucide.Smartphone, R.string.settings_app_title),
+
+    // The server's settings, for admins, as the web's admin sections. Each page lives in ui/settings/admin.
+    Libraries("libraries", Lucide.LibraryBig, R.string.settings_admin_libraries, admin = true),
+    Users("users", Lucide.Users, R.string.settings_admin_users, admin = true),
+    Authentication("authentication", Lucide.KeyRound, R.string.settings_admin_authentication, admin = true),
+    Transcoding("transcoding", Lucide.Film, R.string.settings_admin_transcoding, admin = true),
+    Trickplay("trickplay", Lucide.GalleryHorizontalEnd, R.string.settings_admin_trickplay, admin = true),
+    Jobs("jobs", Lucide.ListChecks, R.string.settings_admin_jobs, admin = true),
+    ServerAppearance("server-appearance", Lucide.Paintbrush, R.string.settings_admin_appearance, admin = true),
+    ;
+
+    companion object {
+        fun of(key: String) = entries.firstOrNull { it.key == key }
+    }
+}
+
+/** A Settings page: its top bar, then its sections down a list. The admin pages build on it too. */
+@Composable
+internal fun SettingsScaffold(title: String, content: LazyListScope.() -> Unit) {
+    Column(Modifier.fillMaxSize()) {
+        TopBar(title)
+        LazyColumn(
+            Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(start = Gutter, end = Gutter, top = 8.dp, bottom = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(28.dp),
+        ) {
+            content()
+            item(key = "bottom") { Box(Modifier.navigationBarsPadding()) }
+        }
+    }
+}
+
+/** A category's row on the first page. */
+@Composable
+private fun PageRow(page: SettingsPage) {
+    val nav = LocalNavigator.current
+    LinkRow(stringResource(page.title), icon = page.icon) { nav.settingsPage(page.key) }
+}
+
+/**
+ * Settings' first page: the categories, in two groups, what follows the
+ * account and what stays on this device, then the server, with the ways
+ * out at the bottom.
  */
 @Composable
 fun SettingsScreen(session: Session) {
+    val server = (session.state.value as? AuthState.SignedIn)?.server.orEmpty()
+    val admin = LocalUser.current.isAdmin && !LocalOffline.current
+    SettingsScaffold(stringResource(R.string.shell_settings)) {
+        item(key = "account") {
+            Panel {
+                PageRow(SettingsPage.Account)
+                RowDivider()
+                PageRow(SettingsPage.Playback)
+                RowDivider()
+                PageRow(SettingsPage.Subtitles)
+            }
+        }
+        item(key = "device") {
+            Panel {
+                PageRow(SettingsPage.Downloads)
+                // Android keeps a language per app from version 13.
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    RowDivider()
+                    PageRow(SettingsPage.App)
+                }
+            }
+        }
+        if (admin) {
+            item(key = "admin") {
+                Section(stringResource(R.string.settings_admin)) {
+                    Panel {
+                        SettingsPage.entries.filter { it.admin }.forEachIndexed { index, page ->
+                            if (index > 0) RowDivider()
+                            PageRow(page)
+                        }
+                    }
+                }
+            }
+        }
+        item(key = "server") {
+            Section(stringResource(R.string.settings_server)) {
+                Panel {
+                    Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                        LucideIcon(Lucide.Server, null, tint = Palette.Muted)
+                        Column(Modifier.weight(1f)) {
+                            Text(server, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(stringResource(R.string.settings_version, BuildConfig.VERSION_NAME), style = MaterialTheme.typography.bodySmall, color = Palette.Muted)
+                        }
+                    }
+                    RowDivider()
+                    // Full rows, so the two ways out are easy to hit; signing out in red, as it ends the session.
+                    LinkRow(stringResource(R.string.connect_change_server), icon = Lucide.RefreshCw, onClick = session::forgetServer)
+                    RowDivider()
+                    LinkRow(stringResource(R.string.shell_sign_out), destructive = true, icon = Lucide.LogOut, onClick = session::signOut)
+                }
+            }
+        }
+    }
+}
+
+/** A category's page, by its key in the route. */
+@Composable
+fun SettingsPageScreen(session: Session, key: String) {
+    val page = SettingsPage.of(key) ?: return SettingsScreen(session)
+    when (page) {
+        SettingsPage.Account -> AccountPage()
+        SettingsPage.Playback -> PlaybackPage(session)
+        SettingsPage.Subtitles -> SettingsScaffold(stringResource(page.title)) {
+            item(key = "subtitles") { SubtitlesSection(LocalContext.current.app.player) }
+        }
+        SettingsPage.Downloads -> SettingsScaffold(stringResource(page.title)) {
+            item(key = "downloads") { DownloadsSection() }
+        }
+        SettingsPage.App -> SettingsScaffold(stringResource(page.title)) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) item(key = "app") { AppSection() }
+        }
+        SettingsPage.Libraries -> LibrariesSettings()
+        SettingsPage.Users -> UsersSettings()
+        SettingsPage.Authentication -> AuthenticationSettings()
+        SettingsPage.Transcoding -> TranscodingSettings()
+        SettingsPage.Trickplay -> TrickplaySettings()
+        SettingsPage.Jobs -> JobsSettings()
+        SettingsPage.ServerAppearance -> ServerAppearanceSettings()
+    }
+}
+
+/** The places the account is signed in, each but this one with a way to sign it out. */
+@Composable
+private fun AccountPage() {
+    val api = LocalApi.current
+    val snackbar = LocalSnackbar.current
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val sessions = rememberLoader("sessions") { sessions() }
+    SettingsScaffold(stringResource(R.string.settings_page_account)) {
+        item(key = "sessionsTitle") {
+            Text(stringResource(R.string.account_sessions_title), style = MaterialTheme.typography.titleLarge)
+        }
+        when (val state = sessions.state) {
+            Load.Loading -> item(key = "loading") { Text("…", color = Palette.Muted) }
+            is Load.Failed -> item(key = "failed") {
+                Text(stringResource(R.string.account_sessions_load_failed, state.message), color = Palette.Muted, style = MaterialTheme.typography.bodyMedium)
+            }
+            is Load.Ready -> items(state.value, key = { it.id }) { item ->
+                SessionRow(item) {
+                    scope.launchShowing(snackbar, context.getString(R.string.account_sessions_sign_out_failed)) {
+                        api.revokeSession(item.id)
+                        sessions.reload()
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** The account's languages, then what this device plays and how. */
+@Composable
+private fun PlaybackPage(session: Session) {
     val api = LocalApi.current
     val user = LocalUser.current
     val snackbar = LocalSnackbar.current
     val scope = rememberCoroutineScope()
-    val context = LocalContext.current
-    val prefs = context.app.player
+    val prefs = LocalContext.current.app.player
     val options = rememberLoader("playbackOptions") { playbackOptions() }
-    val sessions = rememberLoader("sessions") { sessions() }
     val playback = user.playback ?: PlaybackPreferences()
-    val server = (session.state.value as? AuthState.SignedIn)?.server.orEmpty()
     val saveFailure = stringResource(R.string.player_error_save_preferences)
     val save = { changed: PlaybackPreferences ->
         scope.launchShowing(snackbar, saveFailure) { session.updateUser(api.setPlaybackPreferences(changed)) }
     }
     val loaded = (options.state as? Load.Ready)?.value
     val passthrough = remember { Capabilities.OPTIONAL_PASSTHROUGH.filter(Capabilities::decodesAudio) }
-
-    Column(Modifier.fillMaxSize()) {
-        TopBar(stringResource(R.string.shell_settings))
-        LazyColumn(
-            Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(start = Gutter, end = Gutter, top = 8.dp, bottom = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(28.dp),
-        ) {
-            item(key = "profile") {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Avatar(user.name, user.avatarId?.let(api.paths::avatar), size = 64.dp)
-                    Column(Modifier.weight(1f)) {
-                        Text(user.name, style = MaterialTheme.typography.titleLarge)
-                        Text("@${user.username}", style = MaterialTheme.typography.bodyMedium, color = Palette.Muted)
-                    }
-                }
-            }
-            item(key = "languages") { LanguagesSection(playback, loaded, save) }
-            item(key = "subtitles") { SubtitlesSection(prefs) }
-            item(key = "device") { DeviceSection(prefs, loaded) }
-            if (passthrough.isNotEmpty()) item(key = "passthrough") { PassthroughSection(prefs, passthrough) }
-            item(key = "downloads") { DownloadsSection() }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) item(key = "app") { AppSection() }
-            item(key = "sessions") {
-                Section(stringResource(R.string.account_sessions_title)) {}
-            }
-            when (val state = sessions.state) {
-                Load.Loading -> item { Text("…", color = Palette.Muted) }
-                is Load.Failed -> item {
-                    Text(stringResource(R.string.account_sessions_load_failed, state.message), color = Palette.Muted, style = MaterialTheme.typography.bodyMedium)
-                }
-                is Load.Ready -> items(state.value, key = { it.id }) { item ->
-                    SessionRow(item) {
-                        scope.launchShowing(snackbar, context.getString(R.string.account_sessions_sign_out_failed)) {
-                            api.revokeSession(item.id)
-                            sessions.reload()
-                        }
-                    }
-                }
-            }
-            item(key = "server") {
-                Section(stringResource(R.string.settings_server)) {
-                    Panel {
-                        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                            LucideIcon(Lucide.Server, null, tint = Palette.Muted)
-                            Column(Modifier.weight(1f)) {
-                                Text(server, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                Text(stringResource(R.string.settings_version, BuildConfig.VERSION_NAME), style = MaterialTheme.typography.bodySmall, color = Palette.Muted)
-                            }
-                        }
-                    }
-                    Gap(12.dp)
-                    MatineeButton(onClick = session::signOut, look = ButtonLook.Outline, modifier = Modifier.fillMaxWidth()) {
-                        LucideIcon(Lucide.LogOut, null, size = 18.dp)
-                        Text(stringResource(R.string.shell_sign_out))
-                    }
-                    Gap(8.dp)
-                    MatineeButton(onClick = session::forgetServer, look = ButtonLook.Ghost, modifier = Modifier.fillMaxWidth()) {
-                        Text(stringResource(R.string.connect_change_server), color = Palette.Muted)
-                    }
-                }
-            }
-            item(key = "bottom") { Box(Modifier.navigationBarsPadding()) }
-        }
+    SettingsScaffold(stringResource(R.string.settings_page_playback)) {
+        item(key = "languages") { LanguagesSection(playback, loaded, save) }
+        item(key = "device") { DeviceSection(prefs, loaded) }
+        if (passthrough.isNotEmpty()) item(key = "passthrough") { PassthroughSection(prefs, passthrough) }
     }
 }
 
@@ -236,12 +344,14 @@ private fun LanguagesSection(playback: PlaybackPreferences, options: PlaybackOpt
     }
 }
 
-/** How subtitles look here: the system's caption style, or the app's own, with a sample. */
+/**
+ * How subtitles look here, with a sample: the system's caption style, which
+ * leaves only the way to its settings, or the app's own choices.
+ */
 @Composable
 private fun SubtitlesSection(prefs: PlayerPrefs) {
     val context = LocalContext.current
-    val appDefined = rememberSystemStyleIsAppDefined()
-    Section(stringResource(R.string.settings_subtitles_title)) {
+    Column {
         SubtitlePreview(rememberSubtitleLook(prefs))
         Gap(12.dp)
         Panel {
@@ -254,29 +364,23 @@ private fun SubtitlesSection(prefs: PlayerPrefs) {
                 LinkRow(stringResource(R.string.settings_subtitles_system_open)) {
                     context.openSettings(Intent(Settings.ACTION_CAPTIONING_SETTINGS))
                 }
-                if (appDefined) {
-                    RowDivider()
-                    OwnSubtitleLook(prefs, size = false)
-                }
             } else {
-                OwnSubtitleLook(prefs, size = true)
+                OwnSubtitleLook(prefs)
             }
         }
     }
 }
 
-/** The app's own subtitle look; [size] is left out while the system's caption size applies. */
+/** The app's own subtitle look. */
 @Composable
-private fun OwnSubtitleLook(prefs: PlayerPrefs, size: Boolean) {
-    if (size) {
-        val percent = remember { NumberFormat.getPercentInstance() }
-        PickerRow(
-            stringResource(R.string.settings_subtitles_size),
-            SUBTITLE_SCALES.map { it to percent.format(it.toDouble()) },
-            prefs.subtitleScale,
-        ) { prefs.subtitleScale = it }
-        RowDivider()
-    }
+private fun OwnSubtitleLook(prefs: PlayerPrefs) {
+    val percent = remember { NumberFormat.getPercentInstance() }
+    PickerRow(
+        stringResource(R.string.settings_subtitles_size),
+        SUBTITLE_SCALES.map { it to percent.format(it.toDouble()) },
+        prefs.subtitleScale,
+    ) { prefs.subtitleScale = it }
+    RowDivider()
     PickerRow(
         stringResource(R.string.settings_subtitles_color),
         SubtitleColor.entries.map { it to subtitleColorLabel(it) },
@@ -405,7 +509,7 @@ private fun DownloadsSection() {
     var subtitles by remember { mutableStateOf(downloads.subtitles) }
     var confirm by remember { mutableStateOf(false) }
     val total = formatBytes(items.values.sumOf { it.bytes })
-    Section(stringResource(R.string.downloads_title)) {
+    Column {
         Panel {
             SwitchRow(
                 stringResource(R.string.downloads_unmetered),
@@ -481,7 +585,7 @@ private fun AppSection() {
         val locales = context.getSystemService(LocaleManager::class.java)?.applicationLocales
         locales?.takeIf { !it.isEmpty }?.get(0)?.let { it.getDisplayName(it).replaceFirstChar { c -> c.titlecase(it) } } ?: system
     }
-    Section(stringResource(R.string.settings_app_title)) {
+    Column {
         Panel {
             LinkRow(
                 stringResource(R.string.settings_app_language),

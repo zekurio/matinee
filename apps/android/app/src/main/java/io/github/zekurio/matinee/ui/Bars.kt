@@ -2,11 +2,32 @@ package io.github.zekurio.matinee.ui
 
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
+import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.isImeVisible
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.border
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.remember
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.semantics.Role
+import io.github.zekurio.matinee.ui.components.focusRing
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.WindowInsets
@@ -22,35 +43,23 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
-import io.github.zekurio.matinee.app
 import io.github.zekurio.matinee.ui.components.Avatar
 import io.github.zekurio.matinee.ui.components.Gutter
 import io.github.zekurio.matinee.ui.components.LocalApi
@@ -58,70 +67,178 @@ import io.github.zekurio.matinee.ui.components.LogoMark
 import io.github.zekurio.matinee.ui.components.Lucide
 import io.github.zekurio.matinee.ui.components.LucideIcon
 import io.github.zekurio.matinee.ui.components.RoundIconButton
-import io.github.zekurio.matinee.ui.components.SearchBarFrame
-import io.github.zekurio.matinee.ui.components.SearchBarSlot
-import io.github.zekurio.matinee.ui.components.SheetItem
 import io.github.zekurio.matinee.ui.theme.Palette
 
 /* The bars around pages: Home's header, the top bars of pages opened from a
  * tab, the floating buttons over a title's art, and the tabs at the bottom. */
 
-/** The bottom bar's height, above the system's navigation bar. */
-val BOTTOM_BAR_HEIGHT = 80.dp
+/** The floating tab bar's own height. */
+private val TAB_BAR_HEIGHT = 60.dp
 
-/** What a tab's first page leaves free at its bottom, so its end clears the bottom bar. */
+/** How far the tab bar floats above the system's navigation bar. */
+private val TAB_BAR_LIFT = 12.dp
+
+/**
+ * What the tab bar takes from the bottom of a page, above the system's
+ * navigation bar: itself, the gap under it, and a gap above so a page's
+ * last row and the snackbar clear it.
+ */
+val BOTTOM_BAR_HEIGHT = TAB_BAR_HEIGHT + TAB_BAR_LIFT + 8.dp
+
+/** What a tab's first page leaves free at its bottom, so its end clears the tab bar. */
 @Composable
-fun tabBarPadding(): Dp {
-    val system = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-    return if (LocalOffline.current) system else system + BOTTOM_BAR_HEIGHT
-}
+fun tabBarPadding(): Dp = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + BOTTOM_BAR_HEIGHT
 
-private class Tab(val route: Any, @param:DrawableRes val icon: Int, @param:StringRes val label: Int)
+/** A tab in the capsule; [icon] null draws the signed-in person's picture instead. */
+private class Tab(val route: Any, @param:DrawableRes val icon: Int?, @param:StringRes val label: Int)
 
 private val TABS = listOf(
     Tab(HomeRoute, Lucide.House, R.string.tab_home),
     Tab(MediaRoute, Lucide.LibraryBig, R.string.tab_media),
     Tab(DownloadsRoute, Lucide.Download, R.string.downloads_title),
+    Tab(ProfileRoute, null, R.string.tab_profile),
 )
 
+/** Offline, only what works without the server: the downloads, and the profile with settings. */
+private val OFFLINE_TABS = TABS.filter { it.route == DownloadsRoute || it.route == ProfileRoute }
+
+private val TabBarShape = RoundedCornerShape(percent = 50)
+private val ITEM_HEIGHT = TAB_BAR_HEIGHT - 8.dp
+
 /**
- * The tabs, on the bottom of each tab's first page. They belong to the
- * page, so they move with it: aside under a page opened from it, and back
- * as that page slides off again.
+ * The tabs, on the bottom of each tab's first page, floating over the page,
+ * which scrolls on under them: a capsule of the tabs, and search in a
+ * circle of its own beside it, as iOS lays them out. The open tab shows
+ * its name beside its icon in a pill; the rest show only their icons.
+ * It's ours rather than Material's navigation bar, made of the app's own
+ * colors and shapes, so it looks the same on every Android version and
+ * carries over to iOS as it is.
+ *
+ * The tabs belong to the page, so they move with it: aside under a page
+ * opened from it, and back as that page slides off again. With the
+ * keyboard up, as on the search page, they step aside for it.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun BottomBar(current: Any?, onPick: (Any) -> Unit, modifier: Modifier = Modifier) {
-    NavigationBar(
-        modifier.drawBehind { drawLine(Palette.Border, Offset.Zero, Offset(size.width, 0f), 1.dp.toPx()) },
-        containerColor = Palette.Background.copy(alpha = 0.96f),
-        tonalElevation = 0.dp,
+    if (WindowInsets.isImeVisible) return
+    val offline = LocalOffline.current
+    val tabs = if (offline) OFFLINE_TABS else TABS
+    Row(
+        modifier
+            .fillMaxWidth()
+            // The page fades out under the bar, which Android can't blur
+            // behind it as iOS does, so rows passing beneath don't fight its labels.
+            .drawBehind {
+                drawRect(Brush.verticalGradient(0f to Color.Transparent, 0.55f to Palette.Background.copy(alpha = 0.85f), 1f to Palette.Background))
+            }
+            .padding(top = 28.dp)
+            .navigationBarsPadding()
+            .padding(bottom = TAB_BAR_LIFT),
+        horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        TABS.forEach { tab ->
-            val label = stringResource(tab.label)
-            NavigationBarItem(
-                selected = current == tab.route,
-                onClick = { onPick(tab.route) },
-                icon = { LucideIcon(tab.icon, null, size = 22.dp) },
-                label = { Text(label, style = MaterialTheme.typography.labelMedium) },
-                colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = Palette.Foreground,
-                    selectedTextColor = Palette.Foreground,
-                    indicatorColor = Palette.Secondary,
-                    unselectedIconColor = Palette.Muted,
-                    unselectedTextColor = Palette.Muted,
-                ),
-            )
+        Row(
+            Modifier
+                .floating(TabBarShape)
+                .padding(4.dp)
+                .selectableGroup()
+                // The open tab's pill grows and shrinks rather than jumping.
+                .animateContentSize(spring(dampingRatio = 0.8f, stiffness = 500f)),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            tabs.forEach { tab -> TabItem(tab, current == tab.route) { onPick(tab.route) } }
+        }
+        if (!offline) {
+            Box(Modifier.floating(CircleShape).padding(4.dp)) {
+                TabButton(current == SearchRoute, Modifier.size(ITEM_HEIGHT), Role.Tab, { onPick(SearchRoute) }) { color ->
+                    LucideIcon(Lucide.Search, stringResource(R.string.search_title), size = 22.dp, tint = color)
+                }
+            }
         }
     }
 }
 
+/** The bar's surfaces: the app's raised color with a faint rim, lifted off the page by a shadow. */
+private fun Modifier.floating(shape: Shape): Modifier = this
+    .shadow(24.dp, shape, ambientColor = Color.Black, spotColor = Color.Black)
+    .clip(shape)
+    .background(Palette.Raised)
+    .border(1.dp, Palette.Foreground.copy(alpha = 0.08f), shape)
+
+@Composable
+private fun TabItem(tab: Tab, selected: Boolean, onClick: () -> Unit) {
+    val label = stringResource(tab.label)
+    TabButton(
+        selected,
+        Modifier
+            .height(ITEM_HEIGHT)
+            .widthIn(min = ITEM_HEIGHT + 4.dp)
+            .semantics { contentDescription = label },
+        Role.Tab,
+        onClick,
+    ) { color ->
+        Row(
+            Modifier.padding(horizontal = if (selected) 18.dp else 0.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (tab.icon != null) {
+                LucideIcon(tab.icon, null, size = 22.dp, tint = color)
+            } else {
+                val user = LocalUser.current
+                val api = LocalApi.current
+                Box(
+                    Modifier
+                        .size(28.dp)
+                        .then(if (selected) Modifier.border(1.5.dp, Palette.Foreground, CircleShape) else Modifier)
+                        .padding(if (selected) 2.dp else 0.dp),
+                ) {
+                    Avatar(user.name, user.avatarId?.let(api.paths::avatar), size = if (selected) 24.dp else 28.dp)
+                }
+            }
+            if (selected) {
+                Text(label, style = MaterialTheme.typography.labelLarge, color = color, maxLines = 1)
+            }
+        }
+    }
+}
+
+/** A tab's touch target: a pill behind it while it's open, and a little give when pressed. */
+@Composable
+private fun TabButton(
+    selected: Boolean,
+    modifier: Modifier,
+    role: Role,
+    onClick: () -> Unit,
+    content: @Composable (color: Color) -> Unit,
+) {
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val color by animateColorAsState(if (selected) Palette.Foreground else Palette.Muted, label = "tabColor")
+    val fill by animateColorAsState(if (selected) Palette.Foreground.copy(alpha = 0.1f) else Color.Transparent, label = "tabFill")
+    val scale by animateFloatAsState(if (pressed) 0.92f else 1f, label = "tabPress")
+    Box(
+        modifier
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+            .clip(TabBarShape)
+            .background(fill)
+            .focusRing(interaction, TabBarShape)
+            .selectable(selected, interaction, indication = null, role = role, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) { content(color) }
+}
+
 /**
- * Home's header: the logo, search, and the account. It sits at the top of
- * the page and scrolls away with it, over the art of the banner.
+ * Home's header: the logo, and whether the app is offline. It sits at the
+ * top of the page and scrolls away with it, over the art of the banner.
+ * Search and the account are in the tab bar.
  */
 @Composable
 fun AppHeader(modifier: Modifier = Modifier) {
-    val nav = LocalNavigator.current
     val offline = LocalOffline.current
     Box(
         modifier
@@ -136,46 +253,14 @@ fun AppHeader(modifier: Modifier = Modifier) {
                 )
             },
     ) {
-        // The logo and the avatar sit on the page's gutter, like everything below them.
+        // The logo sits on the page's gutter, like everything below it.
         Row(
-            Modifier.statusBarsPadding().height(56.dp).fillMaxWidth().padding(start = Gutter - 8.dp, end = Gutter - 4.dp),
+            Modifier.statusBarsPadding().height(56.dp).fillMaxWidth().padding(start = Gutter - 8.dp, end = Gutter),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(Modifier.size(44.dp), contentAlignment = Alignment.Center) { LogoMark(Modifier.size(28.dp)) }
             Box(Modifier.weight(1f))
-            if (offline) {
-                LucideIcon(Lucide.CloudOff, stringResource(R.string.downloads_offline), size = 20.dp, tint = Palette.Muted)
-                Box(Modifier.size(12.dp))
-            } else {
-                RoundIconButton(Lucide.Search, stringResource(R.string.search_title), nav::search, background = Color.Transparent, iconSize = 22.dp)
-            }
-            AccountButton()
-        }
-    }
-}
-
-/**
- * The search bar at the top of Media, as Findroid's: it opens search, and
- * holds the account at its end. The search page puts its own field in the
- * same place, so opening it looks like the bar opening.
- */
-@Composable
-fun SearchHeader(modifier: Modifier = Modifier) {
-    val nav = LocalNavigator.current
-    SearchBarSlot(modifier) {
-        SearchBarFrame(onClick = nav::search) {
-            Box(Modifier.size(44.dp), contentAlignment = Alignment.Center) {
-                LucideIcon(Lucide.Search, null, size = 20.dp, tint = Palette.Foreground.copy(alpha = 0.8f))
-            }
-            Text(
-                stringResource(R.string.search_field),
-                style = MaterialTheme.typography.bodyLarge,
-                color = Palette.Foreground.copy(alpha = 0.7f),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f).padding(end = 12.dp),
-            )
-            AccountButton(size = 30.dp)
+            if (offline) LucideIcon(Lucide.CloudOff, stringResource(R.string.downloads_offline), size = 20.dp, tint = Palette.Muted)
         }
     }
 }
@@ -259,62 +344,6 @@ fun ItemTopBar(modifier: Modifier = Modifier, parent: String? = null, onParent: 
 
 /** Dark enough to read over any art, as Findroid's black at 70 %. */
 private val FLOATING = Color.Black.copy(alpha = 0.55f)
-
-/** The signed-in person's picture, which opens their menu. */
-@Composable
-fun AccountButton(modifier: Modifier = Modifier, size: Dp = 36.dp) {
-    val user = LocalUser.current
-    val api = LocalApi.current
-    var open by rememberSaveable { mutableStateOf(false) }
-    Box(
-        modifier.size(44.dp).clip(CircleShape).clickable(onClickLabel = stringResource(R.string.shell_account, user.name)) { open = true },
-        contentAlignment = Alignment.Center,
-    ) {
-        Avatar(user.name, user.avatarId?.let(api.paths::avatar), size = size)
-    }
-    if (open) AccountSheet(onDismiss = { open = false })
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun AccountSheet(onDismiss: () -> Unit) {
-    val nav = LocalNavigator.current
-    val user = LocalUser.current
-    val api = LocalApi.current
-    val session = LocalContext.current.app.session
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Palette.Raised, dragHandle = null) {
-        Column(Modifier.navigationBarsPadding().padding(vertical = 12.dp)) {
-            Row(
-                Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Avatar(user.name, user.avatarId?.let(api.paths::avatar), size = 44.dp)
-                Column {
-                    Text(user.name, style = MaterialTheme.typography.titleMedium)
-                    if (user.displayName != null) Text("@${user.username}", style = MaterialTheme.typography.bodyMedium, color = Palette.Muted)
-                }
-            }
-            HorizontalDivider(Modifier.padding(vertical = 6.dp), color = Palette.Border)
-            if (LocalOffline.current) {
-                SheetItem(Lucide.RefreshCw, stringResource(R.string.downloads_reconnect)) {
-                    onDismiss()
-                    session.start()
-                }
-            } else {
-                SheetItem(Lucide.Settings, stringResource(R.string.shell_settings)) {
-                    onDismiss()
-                    nav.settings()
-                }
-            }
-            HorizontalDivider(Modifier.padding(vertical = 6.dp), color = Palette.Border)
-            SheetItem(Lucide.LogOut, stringResource(R.string.shell_sign_out), destructive = true) {
-                onDismiss()
-                session.signOut()
-            }
-        }
-    }
-}
 
 /**
  * Keeps the status bar's icons readable once a page scrolls under it. It

@@ -59,11 +59,12 @@ import io.github.zekurio.matinee.ui.components.PosterCard
 import io.github.zekurio.matinee.ui.components.RailArt
 import io.github.zekurio.matinee.ui.components.RoundIconButton
 import io.github.zekurio.matinee.ui.components.SearchBarFrame
-import io.github.zekurio.matinee.ui.components.SearchBarSlot
 import io.github.zekurio.matinee.ui.components.SectionTitle
 import io.github.zekurio.matinee.ui.components.art
 import io.github.zekurio.matinee.ui.components.railItemWidth
+import io.github.zekurio.matinee.ui.TopBar
 import io.github.zekurio.matinee.ui.rememberLoader
+import io.github.zekurio.matinee.ui.tabBarPadding
 import io.github.zekurio.matinee.ui.theme.Palette
 import java.io.IOException
 import kotlinx.coroutines.delay
@@ -103,11 +104,14 @@ fun SearchScreen() {
         }
     }
 
+    // A tab's first page: its name, then the field, which takes the keyboard when the tab opens.
     Column(Modifier.fillMaxSize()) {
-        // Where Media's bar was, so opening search looks like the bar opening.
-        SearchBarSlot(Modifier.padding(bottom = 4.dp)) {
+        TopBar(stringResource(R.string.search_title), back = false)
+        Box(Modifier.padding(start = Gutter, end = Gutter, bottom = 12.dp)) {
             SearchBarFrame {
-                RoundIconButton(Lucide.ArrowLeft, stringResource(R.string.common_back), nav::back, size = 44.dp, iconSize = 22.dp, background = Color.Transparent)
+                Box(Modifier.size(44.dp), contentAlignment = Alignment.Center) {
+                    LucideIcon(Lucide.Search, null, size = 20.dp, tint = Palette.Muted)
+                }
                 BasicTextField(
                     value = query,
                     onValueChange = { query = it },
@@ -141,7 +145,8 @@ fun SearchScreen() {
         val found = results
         val text = query.trim()
         when {
-            text.isEmpty() -> Hint(stringResource(R.string.search_intro))
+            // The field's placeholder already says what search finds.
+            text.isEmpty() -> Unit
             failed -> Hint(stringResource(R.string.search_failed))
             found == null -> Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = Palette.Accent)
@@ -151,7 +156,7 @@ fun SearchScreen() {
             else -> LazyVerticalGrid(
                 columns = GridCells.Adaptive(150.dp),
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = Gutter, end = Gutter, bottom = 32.dp),
+                contentPadding = PaddingValues(start = Gutter, end = Gutter, bottom = tabBarPadding() + 24.dp),
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalArrangement = Arrangement.spacedBy(20.dp),
             ) {
@@ -210,7 +215,6 @@ fun SearchScreen() {
                         Text(stringResource(R.string.search_searching), style = MaterialTheme.typography.bodySmall, color = Palette.Muted)
                     }
                 }
-                item(span = { GridItemSpan(maxLineSpan) }, key = "bottom") { Box(Modifier.navigationBarsPadding()) }
             }
         }
     }
