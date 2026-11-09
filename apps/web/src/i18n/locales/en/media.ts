@@ -72,6 +72,7 @@ export default defineMessages("media", {
   "media.watchedAt.now": "Just now",
   "media.watchedAt.released": "Release date",
   "media.watchedAt.other": "Other date",
+  "media.watchedAt.unknown": "Don't remember",
   "media.mark.as.watched": "Mark as watched",
   "media.mark.as.unwatched": "Mark as unwatched",
   "media.mark.season.watched": "Mark season watched",

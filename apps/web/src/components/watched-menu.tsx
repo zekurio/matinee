@@ -27,6 +27,7 @@ import {
 import {
   CalendarClockIcon,
   CalendarIcon,
+  CalendarOffIcon,
   CheckIcon,
   ClockIcon,
   EyeOffIcon,
@@ -214,8 +215,8 @@ export function useSeasonWatched(
 
 /**
  * When the user watched it, as Trakt asks: just now, on the release date,
- * or on a date they pick in a `WatchedDateDialog`, which the menu's owner
- * renders.
+ * on a date they pick in a `WatchedDateDialog`, which the menu's owner
+ * renders, or some time they don't remember, which counts in no chart.
  */
 export function WatchedAtItems({
   onSelect,
@@ -239,6 +240,10 @@ export function WatchedAtItems({
       <DropdownMenuItem onClick={onPickDate}>
         <CalendarClockIcon />
         {tr("media.watchedAt.other")}
+      </DropdownMenuItem>
+      <DropdownMenuItem onClick={() => onSelect("unknown")}>
+        <CalendarOffIcon />
+        {tr("media.watchedAt.unknown")}
       </DropdownMenuItem>
     </>
   )

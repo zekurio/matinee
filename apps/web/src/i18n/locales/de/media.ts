@@ -64,6 +64,7 @@ export default {
   "media.watchedAt.now": "Gerade eben",
   "media.watchedAt.released": "Erscheinungsdatum",
   "media.watchedAt.other": "Anderes Datum",
+  "media.watchedAt.unknown": "Weiß nicht mehr",
   "media.mark.as.watched": "Als gesehen markieren",
   "media.mark.as.unwatched": "Als ungesehen markieren",
   "media.mark.season.watched": "Staffel als gesehen markieren",
