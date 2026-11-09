@@ -31,23 +31,37 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.MediaItem
+import io.github.zekurio.matinee.api.Season as ShowSeason
 import io.github.zekurio.matinee.api.TitleKind
 import io.github.zekurio.matinee.api.TitleSummary
 import io.github.zekurio.matinee.app
 import io.github.zekurio.matinee.ui.LocalNavigator
+import io.github.zekurio.matinee.ui.downloads.DownloadFilesSheet
 import io.github.zekurio.matinee.ui.downloads.DownloadSheet
+import io.github.zekurio.matinee.ui.downloads.FileSet
 import io.github.zekurio.matinee.ui.episodeCode
 import io.github.zekurio.matinee.ui.itemLabel
+import io.github.zekurio.matinee.ui.seasonName
 import io.github.zekurio.matinee.ui.theme.Palette
 import java.io.IOException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
-/** What a long press on a card offers, for a file or a whole title. */
+/**
+ * What a menu is for: a file, a whole title, or one season of a show. A
+ * menu opened on the page of what it's for is [here]: that page already
+ * shows Play, the tick, and the heart, and opening the page again would
+ * only stack another copy of it, so the menu leaves those out.
+ */
 sealed interface ActionTarget {
-    data class Item(val item: MediaItem) : ActionTarget
+    val here: Boolean
 
-    data class Title(val title: TitleSummary) : ActionTarget
+    data class Item(val item: MediaItem, override val here: Boolean) : ActionTarget
+
+    /** [file] is what Play starts, when known: a movie's file, which the menu downloads. */
+    data class Title(val title: TitleSummary, val file: MediaItem?, override val here: Boolean) : ActionTarget
+
+    data class Season(val title: TitleSummary, val season: ShowSeason, override val here: Boolean) : ActionTarget
 }
 
 /**
@@ -61,12 +75,19 @@ class Actions(val scope: CoroutineScope) {
     /** The file whose download sheet is open. */
     var download by mutableStateOf<MediaItem?>(null)
 
-    fun item(item: MediaItem) {
-        target = ActionTarget.Item(item)
+    /** The show or season whose download sheet is open. */
+    var files by mutableStateOf<FileSet?>(null)
+
+    fun item(item: MediaItem, here: Boolean = false) {
+        target = ActionTarget.Item(item, here)
     }
 
-    fun title(title: TitleSummary) {
-        target = ActionTarget.Title(title)
+    fun title(title: TitleSummary, file: MediaItem? = null, here: Boolean = false) {
+        target = ActionTarget.Title(title, file, here)
+    }
+
+    fun season(title: TitleSummary, season: ShowSeason, here: Boolean = false) {
+        target = ActionTarget.Season(title, season, here)
     }
 }
 
@@ -90,6 +111,7 @@ fun CoroutineScope.launchShowing(snackbar: SnackbarHostState, failure: String, b
 @Composable
 fun ActionsSheet(actions: Actions) {
     actions.download?.let { item -> DownloadSheet(item) { actions.download = null } }
+    actions.files?.let { files -> DownloadFilesSheet(files) { actions.files = null } }
     val target = actions.target ?: return
     val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
@@ -105,8 +127,9 @@ fun ActionsSheet(actions: Actions) {
     ) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(vertical = 12.dp)) {
             when (target) {
-                is ActionTarget.Item -> ItemActions(target.item, dismiss)
-                is ActionTarget.Title -> TitleActions(target.title, dismiss)
+                is ActionTarget.Item -> ItemActions(target.item, target.here, dismiss)
+                is ActionTarget.Title -> TitleActions(target.title, target.file, target.here, dismiss)
+                is ActionTarget.Season -> SeasonActions(target.title, target.season, target.here, dismiss)
             }
         }
     }
@@ -136,7 +159,7 @@ fun SheetItem(@DrawableRes icon: Int, label: String, destructive: Boolean = fals
 }
 
 @Composable
-private fun ItemActions(item: MediaItem, dismiss: () -> Unit) {
+private fun ItemActions(item: MediaItem, here: Boolean, dismiss: () -> Unit) {
     val api = LocalApi.current
     val nav = LocalNavigator.current
     val snackbar = LocalSnackbar.current
@@ -153,9 +176,11 @@ private fun ItemActions(item: MediaItem, dismiss: () -> Unit) {
         if (code != null) label.title else label.showName,
         if (code != null) "${label.showName} · $code" else label.year,
     )
-    SheetItem(Lucide.PlayOutline, stringResource(if (resume) R.string.title_resume else R.string.title_play)) {
-        dismiss()
-        nav.play(item.id)
+    if (!here) {
+        SheetItem(Lucide.PlayOutline, stringResource(if (resume) R.string.title_resume else R.string.title_play)) {
+            dismiss()
+            nav.play(item.id)
+        }
     }
     if (resume) {
         SheetItem(Lucide.RotateCcw, stringResource(R.string.actions_play_from_start)) {
@@ -163,84 +188,103 @@ private fun ItemActions(item: MediaItem, dismiss: () -> Unit) {
             nav.play(item.id, 0.0)
         }
     }
-    val watchedFailure = stringResource(if (watched) R.string.media_mark_unwatched_failed else R.string.media_mark_watched_failed)
-    SheetItem(Lucide.Check, stringResource(if (watched) R.string.media_mark_unwatched else R.string.media_mark_watched)) {
-        dismiss()
-        scope.launchShowing(snackbar, watchedFailure) { viewer.setWatched(api, item, !watched) }
-    }
-    val favoriteFailure = stringResource(R.string.media_favorite_failed)
-    SheetItem(
-        if (favorite) Lucide.HeartFilled else Lucide.Heart,
-        stringResource(if (favorite) R.string.media_remove_favorite else R.string.media_add_favorite),
-    ) {
-        dismiss()
-        scope.launchShowing(snackbar, favoriteFailure) { viewer.setFavorite(api, item, !favorite) }
+    if (!here) {
+        val watchedFailure = stringResource(if (watched) R.string.media_mark_unwatched_failed else R.string.media_mark_watched_failed)
+        SheetItem(Lucide.Check, stringResource(if (watched) R.string.media_mark_unwatched else R.string.media_mark_watched)) {
+            dismiss()
+            scope.launchShowing(snackbar, watchedFailure) { viewer.setWatched(api, item, !watched) }
+        }
+        val favoriteFailure = stringResource(R.string.media_favorite_failed)
+        SheetItem(
+            if (favorite) Lucide.HeartFilled else Lucide.Heart,
+            stringResource(if (favorite) R.string.media_remove_favorite else R.string.media_add_favorite),
+        ) {
+            dismiss()
+            scope.launchShowing(snackbar, favoriteFailure) { viewer.setFavorite(api, item, !favorite) }
+        }
     }
     DownloadItem(item, dismiss)
     val title = item.title
-    if (title != null && title.kind == TitleKind.SHOW) {
+    if (here || title == null) return
+    if (title.kind == TitleKind.SHOW) {
         SheetItem(Lucide.Info, stringResource(R.string.actions_episode_details)) {
             dismiss()
             nav.episode(item.id)
         }
         SheetItem(Lucide.Tv, stringResource(R.string.actions_go_to_show, title.name)) {
             dismiss()
-            nav.title(title)
+            nav.titleUp(title.id)
         }
-    } else if (title != null) {
+    } else {
         SheetItem(Lucide.Info, stringResource(R.string.media_hero_details)) {
             dismiss()
-            nav.title(title)
+            nav.titleUp(title.id)
         }
     }
 }
 
 @Composable
-private fun TitleActions(title: TitleSummary, dismiss: () -> Unit) {
+private fun TitleActions(title: TitleSummary, file: MediaItem?, here: Boolean, dismiss: () -> Unit) {
     val api = LocalApi.current
     val nav = LocalNavigator.current
+    val actions = LocalActions.current
     val snackbar = LocalSnackbar.current
     val viewer = LocalContext.current.app.viewer
     // The sheet goes before the request ends, so it runs in the app's scope.
-    val scope = LocalActions.current.scope
+    val scope = actions.scope
     val watched = viewer.isWatched(title)
     val favorite = viewer.isFavorite(title)
+    val show = title.kind == TitleKind.SHOW
     SheetHeader(title.name, title.year?.toString())
     val playFailure = stringResource(R.string.media_play_failed, title.name)
     val noFiles = stringResource(R.string.media_no_files, title.name)
-    SheetItem(Lucide.PlayOutline, stringResource(R.string.title_play)) {
-        dismiss()
-        scope.launchShowing(snackbar, playFailure) {
-            val next = api.title(title.id).next
-            if (next == null) snackbar.showSnackbar(noFiles) else nav.play(next.id)
+    if (!here) {
+        SheetItem(Lucide.PlayOutline, stringResource(R.string.title_play)) {
+            dismiss()
+            scope.launchShowing(snackbar, playFailure) {
+                val next = api.title(title.id).next
+                if (next == null) snackbar.showSnackbar(noFiles) else nav.play(next.id)
+            }
         }
     }
-    val watchedFailure = stringResource(if (watched) R.string.media_mark_unwatched_failed else R.string.media_mark_watched_failed)
-    SheetItem(
-        Lucide.Check,
-        stringResource(
-            when {
-                title.kind == TitleKind.SHOW && watched -> R.string.media_mark_all_unwatched
-                title.kind == TitleKind.SHOW -> R.string.media_mark_all_watched
-                watched -> R.string.media_mark_unwatched
-                else -> R.string.media_mark_watched
-            },
-        ),
-    ) {
-        dismiss()
-        scope.launchShowing(snackbar, watchedFailure) { viewer.setWatched(api, title, !watched) }
+    if (file != null && file.progress?.let { !it.completed && it.positionSeconds > 0 } == true) {
+        SheetItem(Lucide.RotateCcw, stringResource(R.string.actions_play_from_start)) {
+            dismiss()
+            nav.play(file.id, 0.0)
+        }
     }
-    val favoriteFailure = stringResource(R.string.media_favorite_failed)
-    SheetItem(
-        if (favorite) Lucide.HeartFilled else Lucide.Heart,
-        stringResource(if (favorite) R.string.media_remove_favorite else R.string.media_add_favorite),
-    ) {
-        dismiss()
-        scope.launchShowing(snackbar, favoriteFailure) { viewer.setFavorite(api, title, !favorite) }
+    if (!here) {
+        val watchedFailure = stringResource(if (watched) R.string.media_mark_unwatched_failed else R.string.media_mark_watched_failed)
+        SheetItem(
+            Lucide.Check,
+            stringResource(
+                when {
+                    show && watched -> R.string.media_mark_all_unwatched
+                    show -> R.string.media_mark_all_watched
+                    watched -> R.string.media_mark_unwatched
+                    else -> R.string.media_mark_watched
+                },
+            ),
+        ) {
+            dismiss()
+            scope.launchShowing(snackbar, watchedFailure) { viewer.setWatched(api, title, !watched) }
+        }
+        val favoriteFailure = stringResource(R.string.media_favorite_failed)
+        SheetItem(
+            if (favorite) Lucide.HeartFilled else Lucide.Heart,
+            stringResource(if (favorite) R.string.media_remove_favorite else R.string.media_add_favorite),
+        ) {
+            dismiss()
+            scope.launchShowing(snackbar, favoriteFailure) { viewer.setFavorite(api, title, !favorite) }
+        }
     }
-    if (title.kind == TitleKind.MOVIE) {
-        val actions = LocalActions.current
-        SheetItem(Lucide.Download, stringResource(R.string.downloads_action)) {
+    when {
+        show -> SheetItem(Lucide.Download, stringResource(R.string.downloads_action)) {
+            dismiss()
+            actions.files = FileSet(title)
+        }
+        file != null -> DownloadItem(file, dismiss)
+        else -> SheetItem(Lucide.Download, stringResource(R.string.downloads_action)) {
             dismiss()
             scope.launchShowing(snackbar, playFailure) {
                 val next = api.title(title.id).next
@@ -248,9 +292,33 @@ private fun TitleActions(title: TitleSummary, dismiss: () -> Unit) {
             }
         }
     }
-    SheetItem(Lucide.Info, stringResource(if (title.kind == TitleKind.SHOW) R.string.media_hero_episodes else R.string.media_hero_details)) {
+    if (!here) {
+        SheetItem(Lucide.Info, stringResource(if (show) R.string.media_hero_episodes else R.string.media_hero_details)) {
+            dismiss()
+            nav.titleUp(title.id)
+        }
+    }
+}
+
+/**
+ * A season's menu: its download, and its page from its card. Its tick is
+ * on its page, where the season's own episodes say whether it's watched.
+ */
+@Composable
+private fun SeasonActions(title: TitleSummary, season: ShowSeason, here: Boolean, dismiss: () -> Unit) {
+    val nav = LocalNavigator.current
+    val actions = LocalActions.current
+    val res = LocalResources.current
+    SheetHeader(seasonName(season.number, res), title.name)
+    SheetItem(Lucide.Download, stringResource(R.string.downloads_action)) {
         dismiss()
-        nav.title(title)
+        actions.files = FileSet(title, season)
+    }
+    if (!here) {
+        SheetItem(Lucide.List, stringResource(R.string.media_hero_episodes)) {
+            dismiss()
+            nav.season(title.id, season.number)
+        }
     }
 }
 

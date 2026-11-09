@@ -24,11 +24,17 @@ import io.github.zekurio.matinee.ui.player.audioChoice
 import io.github.zekurio.matinee.ui.player.baseLanguage
 import io.github.zekurio.matinee.ui.player.deviceLanguage
 import io.github.zekurio.matinee.ui.player.drawable
+import java.io.IOException
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 
 /** A size and rate a version for this device can be encoded at, from DOWNLOAD_VIDEO_PRESETS. */
 data class VideoPreset(val height: Int, val bitrate: Int)
@@ -102,15 +108,19 @@ class Downloads(private val context: Context) {
     private fun audioFor(source: DownloadSource): AudioTrack? =
         audioChoice(source.audio, source.preferences.audioLanguage, source.item.title?.originalLanguage).wanted
 
+    /** Whether a version for this device keeps the file's video: only at no set size, when it plays here and MP4 holds it. */
+    private fun keepsVideo(item: MediaItem, preset: VideoPreset?): Boolean {
+        val video = item.probe?.video
+        return preset == null && video != null && video.codec in COPY_VIDEO && Capabilities.decodesVideo(video)
+    }
+
     /**
      * The version for this device: the video kept when the device decodes it
      * and MP4 holds it, else encoded to H.264 at [preset]; the preferred audio
      * track kept when it plays here, else converted to stereo.
      */
     fun deviceSpec(source: DownloadSource, preset: VideoPreset?): DownloadSpec {
-        val video = source.item.probe?.video
-        val keep = preset == null && video != null && video.codec in COPY_VIDEO && Capabilities.decodesVideo(video)
-        val videoSpec = if (keep) {
+        val videoSpec = if (keepsVideo(source.item, preset)) {
             DownloadVideoSpec(mode = "copy")
         } else {
             val target = preset ?: VIDEO_PRESETS.first()
@@ -209,6 +219,75 @@ class Downloads(private val context: Context) {
         schedule(item.id)
     }
 
+    /**
+     * About how big a version for this device at [preset]'s size comes out,
+     * before the server plans it: the file's size when its video is kept,
+     * else its length at the preset's rate. For many files at once, where a
+     * plan for each would be a request for each.
+     */
+    fun estimateBytes(item: MediaItem, preset: VideoPreset?): Long? {
+        if (keepsVideo(item, preset)) return item.sizeBytes
+        val seconds = item.durationSeconds ?: return null
+        val target = preset ?: VIDEO_PRESETS.first()
+        return ((target.bitrate + ESTIMATED_AUDIO_BITRATE) * seconds / 8).toLong()
+    }
+
+    /**
+     * Queue each of [items] not downloaded yet, all the same way: the file
+     * as it is when [original], else made for this device at [preset]'s
+     * size. A file the server can't make at that size, as one smaller than
+     * it, gets the version for this device instead. Each file needs its own
+     * tracks, and a version its own plan, so a few are asked for at a time.
+     * Runs in this class's scope, so it carries on when the page that
+     * started it closes. Returns how many couldn't be queued.
+     */
+    suspend fun downloadAll(
+        api: MatineeApi,
+        items: List<MediaItem>,
+        original: Boolean,
+        preset: VideoPreset?,
+        preferences: PlaybackPreferences,
+    ): Int = scope.async {
+        val options = try {
+            api.playbackOptions()
+        } catch (e: IOException) {
+            PlaybackOptions()
+        }
+        val gate = Semaphore(BATCH_REQUESTS)
+        val failed = AtomicInteger()
+        coroutineScope {
+            for (item in items.filter { store[it.id] == null }) {
+                launch {
+                    gate.withPermit {
+                        try {
+                            val source = DownloadSource(item, api.audio(item.id), api.subtitles(item.id).tracks, options, preferences)
+                            if (original) {
+                                downloadOriginal(source)
+                            } else {
+                                val spec = deviceSpec(source, preset)
+                                val plan = try {
+                                    api.downloadPlan(item.id, spec)
+                                } catch (e: IOException) {
+                                    if (preset == null) throw e
+                                    null
+                                }
+                                if (plan != null) {
+                                    downloadForDevice(source, spec, plan)
+                                } else {
+                                    val fallback = deviceSpec(source, null)
+                                    downloadForDevice(source, fallback, api.downloadPlan(item.id, fallback))
+                                }
+                            }
+                        } catch (e: IOException) {
+                            failed.incrementAndGet()
+                        }
+                    }
+                }
+            }
+        }
+        failed.get()
+    }.await()
+
     private fun schedule(id: String, replace: Boolean = false) {
         val constraints = Constraints.Builder()
             .setRequiredNetworkType(if (unmeteredOnly) NetworkType.UNMETERED else NetworkType.CONNECTED)
@@ -255,6 +334,12 @@ class Downloads(private val context: Context) {
 
     companion object {
         const val TAG = "download"
+
+        /** How many files of a batch ask the server for their tracks and plans at once. */
+        private const val BATCH_REQUESTS = 3
+
+        /** What an estimate counts for audio: stereo, as a version for this device converts it. */
+        private const val ESTIMATED_AUDIO_BITRATE = 160_000
 
         fun workName(id: String) = "download-$id"
     }

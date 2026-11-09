@@ -356,4 +356,22 @@
     <string name="downloads_remove_all">Alle Downloads entfernen</string>
     <string name="downloads_remove_all_confirm">Alle Downloads entfernen?</string>
     <string name="downloads_remove_all_body">Das löscht %1$s von diesem Gerät.</string>
+    <plurals name="downloads_all_files">
+        <item quantity="one">%1$d Datei</item>
+        <item quantity="other">%1$d Dateien</item>
+    </plurals>
+    <plurals name="downloads_all_have">
+        <item quantity="one">%1$d schon heruntergeladen</item>
+        <item quantity="other">%1$d schon heruntergeladen</item>
+    </plurals>
+    <string name="downloads_all_load_failed">Die Dateien konnten nicht geladen werden. %1$s</string>
+    <string name="downloads_all_empty">Es gibt keine Dateien zum Herunterladen.</string>
+    <plurals name="downloads_all_started">
+        <item quantity="one">%1$d Datei wird heruntergeladen</item>
+        <item quantity="other">%1$d Dateien werden heruntergeladen</item>
+    </plurals>
+    <plurals name="downloads_all_failed">
+        <item quantity="one">%1$d Datei konnte nicht heruntergeladen werden</item>
+        <item quantity="other">%1$d Dateien konnten nicht heruntergeladen werden</item>
+    </plurals>
 </resources>

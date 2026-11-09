@@ -58,6 +58,7 @@ import io.github.zekurio.matinee.app
 import io.github.zekurio.matinee.downloads.DEFAULT_ORIGINAL
 import io.github.zekurio.matinee.downloads.DownloadSource
 import io.github.zekurio.matinee.downloads.DownloadState
+import io.github.zekurio.matinee.downloads.Downloads
 import io.github.zekurio.matinee.downloads.OfflineItem
 import io.github.zekurio.matinee.downloads.VIDEO_PRESETS
 import io.github.zekurio.matinee.downloads.VideoPreset
@@ -249,10 +250,26 @@ private fun DownloadActions(entry: OfflineItem, onDismiss: () -> Unit) {
 }
 
 /** One choice in the download sheet: a version for this device, or the file as it is. */
-private sealed interface Choice {
+internal sealed interface Choice {
     data class Device(val preset: VideoPreset?) : Choice
 
     data object Original : Choice
+}
+
+/** What a download sheet offers, in order: for this device, at each preset's size, and as it is. */
+internal val CHOICES: List<Choice> = listOf<Choice>(Choice.Device(null)) + VIDEO_PRESETS.map { Choice.Device(it) } + Choice.Original
+
+/** The version Settings names, which a download sheet starts on. */
+internal fun startingChoice(downloads: Downloads): Choice = when (val wanted = downloads.defaultVersion) {
+    DEFAULT_ORIGINAL -> Choice.Original
+    else -> VIDEO_PRESETS.firstOrNull { it.height.toString() == wanted }?.let { Choice.Device(it) } ?: Choice.Device(null)
+}
+
+@Composable
+internal fun choiceName(choice: Choice): String = when (choice) {
+    Choice.Original -> stringResource(R.string.downloads_choice_original)
+    is Choice.Device -> choice.preset?.let { stringResource(R.string.downloads_choice_preset, it.height, mbps(it.bitrate)) }
+        ?: stringResource(R.string.downloads_choice_device)
 }
 
 /**
@@ -272,16 +289,8 @@ fun DownloadSheet(item: MediaItem, onDismiss: () -> Unit) {
     var error by remember { mutableStateOf<String?>(null) }
     val plans = remember { mutableStateMapOf<Choice, DownloadPlan>() }
     val specs = remember { mutableStateMapOf<Choice, DownloadSpec>() }
-    val choices = listOf<Choice>(Choice.Device(null)) + VIDEO_PRESETS.map { Choice.Device(it) } + Choice.Original
-    // Starts on the version Settings names.
-    var picked by remember {
-        mutableStateOf<Choice>(
-            when (val wanted = downloads.defaultVersion) {
-                DEFAULT_ORIGINAL -> Choice.Original
-                else -> VIDEO_PRESETS.firstOrNull { it.height.toString() == wanted }?.let { Choice.Device(it) } ?: Choice.Device(null)
-            },
-        )
-    }
+    val choices = CHOICES
+    var picked by remember { mutableStateOf(startingChoice(downloads)) }
     val askNotifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
     val failure = stringResource(R.string.downloads_failed)
 
@@ -379,11 +388,6 @@ fun mbps(bitrate: Int): String {
 @Composable
 private fun ChoiceRow(choice: Choice, plan: DownloadPlan?, source: DownloadSource, selected: Boolean, onClick: () -> Unit) {
     val downloads = LocalContext.current.app.downloads
-    val title = when (choice) {
-        Choice.Original -> stringResource(R.string.downloads_choice_original)
-        is Choice.Device -> choice.preset?.let { stringResource(R.string.downloads_choice_preset, it.height, mbps(it.bitrate)) }
-            ?: stringResource(R.string.downloads_choice_device)
-    }
     val detail = when (choice) {
         Choice.Original -> listOfNotNull(
             formatBytes(source.item.sizeBytes),
@@ -398,6 +402,12 @@ private fun ChoiceRow(choice: Choice, plan: DownloadPlan?, source: DownloadSourc
             ).joinToString(" · ")
         } ?: stringResource(R.string.downloads_choice_unavailable)
     }
+    RadioRow(choiceName(choice), detail, selected, onClick)
+}
+
+/** A choice in a sheet: a round mark, its name, and what it comes to. */
+@Composable
+internal fun RadioRow(title: String, detail: String?, selected: Boolean, onClick: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 20.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -412,7 +422,7 @@ private fun ChoiceRow(choice: Choice, plan: DownloadPlan?, source: DownloadSourc
         }
         Column(Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.bodyLarge)
-            Text(detail, style = MaterialTheme.typography.bodySmall, color = Palette.Muted)
+            if (detail != null) Text(detail, style = MaterialTheme.typography.bodySmall, color = Palette.Muted)
         }
     }
 }

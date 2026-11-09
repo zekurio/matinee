@@ -376,4 +376,22 @@
     <string name="downloads_remove_all">Remove all downloads</string>
     <string name="downloads_remove_all_confirm">Remove all downloads?</string>
     <string name="downloads_remove_all_body">This deletes %1$s from this device.</string>
+    <plurals name="downloads_all_files">
+        <item quantity="one">%1$d file</item>
+        <item quantity="other">%1$d files</item>
+    </plurals>
+    <plurals name="downloads_all_have">
+        <item quantity="one">%1$d already downloaded</item>
+        <item quantity="other">%1$d already downloaded</item>
+    </plurals>
+    <string name="downloads_all_load_failed">Couldn\'t list the files. %1$s</string>
+    <string name="downloads_all_empty">There are no files to download.</string>
+    <plurals name="downloads_all_started">
+        <item quantity="one">Downloading %1$d file</item>
+        <item quantity="other">Downloading %1$d files</item>
+    </plurals>
+    <plurals name="downloads_all_failed">
+        <item quantity="one">Couldn\'t download %1$d file</item>
+        <item quantity="other">Couldn\'t download %1$d files</item>
+    </plurals>
 </resources>
