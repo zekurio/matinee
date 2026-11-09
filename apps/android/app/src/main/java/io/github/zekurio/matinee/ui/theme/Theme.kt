@@ -34,10 +34,8 @@ object Palette {
     val Muted get() = colors.textDim // --neutral-600, muted text
     val Faint get() = colors.textFaint // --foreground-faint
     val Foreground get() = colors.text // --neutral-900
-    val Sunken get() = colors.surfaceSunken // --surface-sunken, text fields
     val Accent get() = colors.accent
     val AccentForeground get() = colors.accentForeground
-    val AccentDim get() = colors.accentDim
 
     /** The accent's tint behind it, as faint as it must be for the accent to read on it (--accent-soft). */
     val AccentSoft: Color

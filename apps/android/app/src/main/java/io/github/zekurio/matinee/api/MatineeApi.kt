@@ -41,6 +41,16 @@ val MatineeJson = Json {
 }
 
 /**
+ * Writes every field, nulls and defaults too, for bodies the contract
+ * wants whole: [MatineeJson] leaves out both, and the server then finds a
+ * required field missing.
+ */
+val CompleteJson = Json(MatineeJson) {
+    explicitNulls = true
+    encodeDefaults = true
+}
+
+/**
  * The REST API under /api/v1, the contract's procedures with the methods and
  * paths from packages/contracts. [client] adds the session token.
  *
@@ -131,7 +141,8 @@ class MatineeApi(val base: HttpUrl, internal val client: OkHttpClient) {
         get("profiles/${seg(username)}/stats", mapOf("range" to range, "timeZone" to timeZone))
 
     suspend fun setPlaybackPreferences(preferences: PlaybackPreferences): User = send(
-        Request.Builder().url(url("account/playback")).put(body(preferences)).build(),
+        Request.Builder().url(url("account/playback"))
+            .put(CompleteJson.encodeToString(PlaybackPreferences.serializer(), preferences).toRequestBody(jsonType)).build(),
         User.serializer(),
     )!!
 

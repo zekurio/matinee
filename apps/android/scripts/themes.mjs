@@ -22,11 +22,17 @@ const out = join(
 
 const { MATINEE_THEME } = await import(join(lib, "theme-presets.ts"))
 // Read as text: the contract's modules import each other without extensions.
-const contract = readFileSync(join(root, "../../packages/contracts/src/theme.ts"), "utf8")
+const contract = readFileSync(
+  join(root, "../../packages/contracts/src/theme.ts"),
+  "utf8",
+)
 const THEME_COLOR_ROLES = [
-  ...(/THEME_COLOR_ROLES = \[([^\]]*)\]/.exec(contract)?.[1] ?? "").matchAll(/"(\w+)"/g),
+  ...(/THEME_COLOR_ROLES = \[([^\]]*)\]/.exec(contract)?.[1] ?? "").matchAll(
+    /"(\w+)"/g,
+  ),
 ].map(([, role]) => role)
-if (THEME_COLOR_ROLES.length === 0) throw new Error("No color roles in the contract")
+if (THEME_COLOR_ROLES.length === 0)
+  throw new Error("No color roles in the contract")
 
 /** sRGB bytes from `#rrggbb` or `oklch(l c h)`, the forms the presets use. */
 function parseColor(value) {
@@ -35,7 +41,9 @@ function parseColor(value) {
     const n = Number.parseInt(hexMatch[1], 16)
     return { r: n >> 16, g: (n >> 8) & 255, b: n & 255 }
   }
-  const lch = /^oklch\(\s*([\d.]+)\s+([\d.]+)\s+([\d.]+)\s*\)$/i.exec(value.trim())
+  const lch = /^oklch\(\s*([\d.]+)\s+([\d.]+)\s+([\d.]+)\s*\)$/i.exec(
+    value.trim(),
+  )
   if (!lch) return null
   const [l, c, h] = lch.slice(1).map(Number)
   const a = c * Math.cos((h * Math.PI) / 180)
@@ -58,7 +66,8 @@ function parseColor(value) {
 function hex(value, where) {
   const color = parseColor(value)
   if (!color) throw new Error(`Can't read ${value} in ${where}`)
-  const channel = (n) => Math.round(n).toString(16).padStart(2, "0").toUpperCase()
+  const channel = (n) =>
+    Math.round(n).toString(16).padStart(2, "0").toUpperCase()
   return `0xFF${channel(color.r)}${channel(color.g)}${channel(color.b)}`
 }
 
@@ -67,7 +76,8 @@ function colorsCode(appearance) {
   return [
     `ThemeColors(`,
     ...THEME_COLOR_ROLES.map(
-      (role) => `    ${role} = Color(${hex(colors[role], `${appearance}.${role}`)}),`,
+      (role) =>
+        `    ${role} = Color(${hex(colors[role], `${appearance}.${role}`)}),`,
     ),
     `)`,
   ].join("\n")
@@ -87,4 +97,4 @@ val MATINEE_LIGHT = ${colorsCode("light")}
 val MATINEE_DARK = ${colorsCode("dark")}
 `,
 )
-console.log("Matinee light and dark")
+process.stdout.write("Matinee light and dark\n")

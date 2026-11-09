@@ -2,10 +2,9 @@ package io.github.zekurio.matinee.api.admin
 
 import io.github.zekurio.matinee.api.MatineeApi
 import io.github.zekurio.matinee.api.ThemeAccents
-import io.github.zekurio.matinee.api.MatineeJson
+import io.github.zekurio.matinee.api.CompleteJson
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
@@ -18,16 +17,13 @@ import okhttp3.RequestBody.Companion.toRequestBody
  * procedures, for the admin pages under ui/settings/admin.
  */
 
-/** Writes nulls out, for bodies where null means something, like "the theme's own accent". */
-private val ExplicitJson = Json(MatineeJson) { explicitNulls = true }
-
 private suspend fun <T> MatineeApi.write(method: String, path: String, payload: JsonElement, answer: KSerializer<T>): T =
     send(
         Request.Builder().url(url(path)).method(method, payload.toString().toRequestBody(jsonType)).build(),
         answer,
     )!!
 
-private inline fun <reified T> encode(value: T): JsonElement = ExplicitJson.encodeToJsonElement(kotlinx.serialization.serializer<T>(), value)
+private inline fun <reified T> encode(value: T): JsonElement = CompleteJson.encodeToJsonElement(kotlinx.serialization.serializer<T>(), value)
 
 // Server appearance
 

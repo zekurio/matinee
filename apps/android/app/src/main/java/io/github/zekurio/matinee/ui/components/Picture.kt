@@ -115,7 +115,6 @@ object Lucide {
     val CalendarClock = R.drawable.lucide_calendar_clock
     val CalendarOff = R.drawable.lucide_calendar_off
     val Captions = R.drawable.lucide_captions
-    val ChartColumn = R.drawable.lucide_chart_column
     val Check = R.drawable.lucide_check
     val ChevronDown = R.drawable.lucide_chevron_down
     val ChevronLeft = R.drawable.lucide_chevron_left
@@ -128,7 +127,6 @@ object Lucide {
     val Film = R.drawable.lucide_film
     val FolderPlus = R.drawable.lucide_folder_plus
     val GalleryHorizontalEnd = R.drawable.lucide_gallery_horizontal_end
-    val Gauge = R.drawable.lucide_gauge
     val Heart = R.drawable.lucide_heart
     val HeartFilled = R.drawable.lucide_heart_filled
     val House = R.drawable.lucide_house
@@ -141,18 +139,14 @@ object Lucide {
     val ListChecks = R.drawable.lucide_list_checks
     val ListFilter = R.drawable.lucide_list_filter
     val LibraryBig = R.drawable.lucide_library_big
-    val LockKeyhole = R.drawable.lucide_lock_keyhole
     val LogIn = R.drawable.lucide_log_in
     val LogOut = R.drawable.lucide_log_out
-    val Maximize = R.drawable.lucide_maximize
     val Monitor = R.drawable.lucide_monitor
     val Pause = R.drawable.lucide_pause_filled
     val Paintbrush = R.drawable.lucide_paintbrush
     val Palette = R.drawable.lucide_palette
-    val PictureInPicture = R.drawable.lucide_picture_in_picture_2
     val Play = R.drawable.lucide_play_filled
     val PlayOutline = R.drawable.lucide_play
-    val Popcorn = R.drawable.lucide_popcorn
     val RefreshCw = R.drawable.lucide_refresh_cw
     val RotateCcw = R.drawable.lucide_rotate_ccw
     val RotateCw = R.drawable.lucide_rotate_cw
@@ -161,17 +155,13 @@ object Lucide {
     val Server = R.drawable.lucide_server
     val Settings = R.drawable.lucide_settings
     val Shield = R.drawable.lucide_shield
-    val SkipForward = R.drawable.lucide_skip_forward
     val Smartphone = R.drawable.lucide_smartphone
-    val Sun = R.drawable.lucide_sun
-    val Moon = R.drawable.lucide_moon
     val Star = R.drawable.lucide_star_filled
     val Trash = R.drawable.lucide_trash_2
     val Tv = R.drawable.lucide_tv
     val TvPlay = R.drawable.lucide_tv_minimal_play
     val UserRound = R.drawable.lucide_user_round
     val Users = R.drawable.lucide_users
-    val WifiOff = R.drawable.lucide_wifi_off
     val X = R.drawable.lucide_x
 }
 

@@ -44,7 +44,6 @@
     <string name="signin_failed">Anmeldung fehlgeschlagen.</string>
 
     <string name="shell_home_link">Matinee-Startseite</string>
-    <string name="shell_account">Konto: %1$s</string>
     <string name="shell_settings">Einstellungen</string>
     <string name="shell_sign_out">Abmelden</string>
 
@@ -93,7 +92,6 @@
     <string name="stats_metric_longestStreak">Längste Tagesserie</string>
     <string name="stats_metric_movies">Filme beendet</string>
     <string name="stats_metric_episodes">Folgen beendet</string>
-    <string name="stats_place">Platz %1$d</string>
     <string name="stats_you">(du)</string>
     <plurals name="stats_day_count"><item quantity="one">%1$d Tag</item><item quantity="other">%1$d Tage</item></plurals>
     <plurals name="stats_movie_count"><item quantity="one">%1$d Film</item><item quantity="other">%1$d Filme</item></plurals>
@@ -315,9 +313,7 @@
     <string name="search_section_studios">Studios</string>
 
     <string name="playback_languages_title">Sprachen</string>
-    <string name="playback_languages_description">Wird mit deinem Konto synchronisiert.</string>
     <string name="playback_audio_title">Audio</string>
-    <string name="playback_audio_description">Sonst die Standardspur der Datei.</string>
     <string name="playback_audio_file_default">Standard der Datei</string>
     <string name="playback_audio_original">Originalsprache</string>
     <string name="playback_subtitles_title">Untertitel</string>
@@ -329,14 +325,10 @@
     <string name="playback_subtitles_language">Untertitelsprache</string>
     <string name="playback_subtitles_device_language">Sprache dieses Geräts (%1$s)</string>
     <string name="playback_subtitles_remember">Meine Auswahl merken</string>
-    <string name="playback_subtitles_remember_description">Untertitel, die du im Player auswählst, gelten auch für das nächste Video.</string>
     <string name="playback_device_title">Dieses Gerät</string>
-    <string name="playback_device_description">Nur auf diesem Gerät gespeichert.</string>
     <string name="playback_quality_title">Qualität</string>
-    <string name="playback_quality_description">In welcher Qualität Videos starten.</string>
     <string name="playback_quality_preset">%1$dp, %2$s</string>
     <string name="account_sessions_title">Sitzungen</string>
-    <string name="account_sessions_description">Browser und Apps, die bei deinem Konto angemeldet sind.</string>
     <string name="account_sessions_load_failed">Deine Sitzungen konnten nicht geladen werden. %1$s</string>
     <string name="account_sessions_sign_out_failed">Diese Sitzung konnte nicht abgemeldet werden</string>
     <string name="account_sessions_sign_out_named">%1$s abmelden</string>
@@ -347,36 +339,23 @@
     <string name="settings_server">Server</string>
     <string name="settings_version">Matinee für Android %1$s</string>
     <string name="playback_video_codec_title">Videocodec</string>
-    <string name="playback_video_codec_description">Für Transkodierungen. AV1 und HEVC sehen besser aus, belasten den Server aber stärker.</string>
     <string name="playback_audio_codec_title">Audiocodec</string>
-    <string name="playback_audio_codec_description">Stereo, für Audio, das dieses Gerät nicht abspielen kann.</string>
     <string name="playback_codec_automatic">Automatisch (%1$s)</string>
     <string name="playback_engine_title">Player</string>
     <string name="playback_decoders_title">Decoder</string>
-    <string name="playback_decoders_description">Software kann helfen, wenn ein Video Bildfehler zeigt. Sie braucht mehr Akku.</string>
     <string name="playback_decoders_hardware">Hardware zuerst</string>
     <string name="playback_decoders_software">Software zuerst</string>
     <string name="playback_skip_title">Springen um</string>
-    <string name="playback_skip_description">Die Sprungtasten und doppeltes Tippen links oder rechts.</string>
     <plurals name="playback_skip_seconds">
         <item quantity="one">%1$d Sekunde</item>
         <item quantity="other">%1$d Sekunden</item>
     </plurals>
     <string name="playback_autoplay_title">Nächste Folge abspielen</string>
-    <string name="playback_autoplay_description">Startet nach einem kurzen Countdown.</string>
     <string name="playback_pip_title">Bild im Bild</string>
-    <string name="playback_pip_description">Ein laufendes Video bleibt sichtbar, wenn du die App verlässt.</string>
     <string name="playback_passthrough_title">Audio-Passthrough</string>
-    <string name="playback_passthrough_description">Formate, die dieses Gerät direkt abspielt. Schalte eines aus, damit der Server es umwandelt.</string>
-    <string name="playback_passthrough_ac3">Dolby Digital Surround.</string>
-    <string name="playback_passthrough_eac3">Dolby Digital Plus, einschließlich Atmos.</string>
-    <string name="playback_passthrough_flac">Verlustfrei. Braucht deutlich mehr Bandbreite.</string>
-    <string name="playback_passthrough_alac">Apple Lossless. Braucht deutlich mehr Bandbreite.</string>
     <string name="settings_subtitles_title">Untertitel</string>
-    <string name="settings_subtitles_description">Wie Untertitel auf diesem Gerät aussehen.</string>
     <string name="settings_subtitles_preview">So sehen Untertitel aus.</string>
     <string name="settings_subtitles_system">Untertitelstil des Systems</string>
-    <string name="settings_subtitles_system_description">Wie in den Bedienungshilfen von Android eingestellt.</string>
     <string name="settings_subtitles_system_open">Untertitel-Einstellungen</string>
     <string name="settings_subtitles_size">Größe</string>
     <string name="settings_subtitles_color">Textfarbe</string>
@@ -408,7 +387,6 @@
     <string name="settings_go_online">Online gehen</string>
     <string name="settings_app_title">App</string>
     <string name="settings_app_language">Sprache</string>
-    <string name="settings_app_language_description">Wird in den Android-Einstellungen nur für diese App festgelegt.</string>
     <string name="settings_app_language_system">Systemstandard</string>
 
     <string name="player_load_failed">Der Titel konnte nicht geladen werden</string>
@@ -464,13 +442,11 @@
     <string name="downloads_coming">Wird heruntergeladen</string>
     <string name="downloads_done">Auf diesem Gerät</string>
     <string name="downloads_codec">Codec</string>
-    <string name="downloads_total">%1$s auf diesem Gerät</string>
     <string name="downloads_empty">Noch nichts heruntergeladen</string>
     <string name="downloads_empty_hint">Lade einen Film oder eine Folge über ihr Menü herunter, um sie offline anzusehen.</string>
     <string name="downloads_pause">Pausieren</string>
     <string name="downloads_resume">Fortsetzen</string>
     <string name="downloads_remove">Download entfernen</string>
-    <string name="downloads_state_done">Heruntergeladen</string>
     <string name="downloads_state_running">Wird heruntergeladen</string>
     <string name="downloads_of">%1$s von %2$s</string>
     <string name="downloads_state_paused">Pausiert</string>
@@ -482,15 +458,12 @@
     <string name="downloads_watch_offline">Downloads ansehen</string>
     <string name="downloads_offline">Offline</string>
     <string name="downloads_unmetered">Nur über WLAN herunterladen</string>
-    <string name="downloads_unmetered_description">Auf WLAN oder eine andere Verbindung ohne Datenlimit warten.</string>
     <string name="downloads_default_subtitles">Untertitel</string>
     <string name="downloads_storage">Speicher</string>
     <string name="downloads_storage_value">%1$s belegt · %2$s frei</string>
     <string name="downloads_defaults">Vorauswahl</string>
     <string name="downloads_default_title">Qualität</string>
-    <string name="downloads_default_description">Was beim Herunterladen vorausgewählt ist.</string>
     <string name="downloads_subtitles_title">Untertitel</string>
-    <string name="downloads_subtitles_description">Werden neben jedem Download gespeichert.</string>
     <string name="downloads_subtitles_used">Deine Sprachen</string>
     <string name="downloads_subtitles_all">Alle</string>
     <string name="downloads_subtitles_none">Keine</string>
@@ -501,16 +474,6 @@
     <string name="downloads_remove_named_confirm">Downloads von %1$s entfernen?</string>
     <string name="downloads_pause_all">Alle pausieren</string>
     <string name="downloads_resume_all">Alle fortsetzen</string>
-    <string name="downloads_expand">Folgen zeigen</string>
-    <string name="downloads_collapse">Folgen ausblenden</string>
-    <plurals name="downloads_episodes_of">
-        <item quantity="one">%1$d / %2$d Folge</item>
-        <item quantity="other">%1$d / %2$d Folgen</item>
-    </plurals>
-    <plurals name="downloads_failed_count">
-        <item quantity="one">%1$d fehlgeschlagen</item>
-        <item quantity="other">%1$d fehlgeschlagen</item>
-    </plurals>
     <plurals name="downloads_all_files">
         <item quantity="one">%1$d Datei</item>
         <item quantity="other">%1$d Dateien</item>

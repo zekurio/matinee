@@ -2,9 +2,7 @@ package io.github.zekurio.matinee.ui.browse
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -16,8 +14,6 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -157,18 +153,5 @@ fun PosterGrid(
             pages.done && pages.items.isEmpty() -> item(span = { GridItemSpan(maxLineSpan) }) { empty() }
         }
         item(span = { GridItemSpan(maxLineSpan) }) { Box(Modifier.navigationBarsPadding()) }
-    }
-}
-
-/** A page's heading with a quiet count beside it. */
-@Composable
-fun PageTitle(title: String, detail: String?, modifier: Modifier = Modifier) {
-    Column(modifier.padding(top = 8.dp, bottom = 8.dp)) {
-        Text(title, style = MaterialTheme.typography.headlineLarge)
-        if (detail != null) {
-            Row(Modifier.padding(top = 4.dp)) {
-                Text(detail, style = MaterialTheme.typography.bodyMedium, color = Palette.Muted)
-            }
-        }
     }
 }

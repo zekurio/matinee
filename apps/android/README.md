@@ -109,7 +109,10 @@ app/src/main/java/io/github/zekurio/matinee/
   ui/         Compose screens: home, browse, title, search, settings, player
   ui/player/  Source choice, track picks, the WebVTT renderer, and the player
 scripts/
-  lucide.py   Turns lucide icons into vector drawables
+  lucide.py       Turns lucide icons into vector drawables
+  themes.mjs      Writes ui/theme/ThemePresets.kt from the web's palettes
+  web_strings.py  Copies the web's messages for the admin pages into
+                  res/values*/strings_web_*.xml
 ```
 
 The models in `api/Models.kt` follow `packages/contracts`. An API change

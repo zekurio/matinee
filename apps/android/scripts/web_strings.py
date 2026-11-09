@@ -137,6 +137,20 @@ def order(english, others) -> dict:
     return {p: i + 1 for i, p in enumerate(seen)}
 
 
+def resource(key: str, base, value, positions: dict) -> list[str]:
+    """The XML lines of one message, in a language that may lack it."""
+    if not isinstance(base, dict):
+        text = value if isinstance(value, str) else base
+        return [f'    <string name="{name(key)}">{escape(text, positions, False)}</string>']
+    forms = value if isinstance(value, dict) else base
+    items = [
+        f'        <item quantity="{quantity}">{escape(forms[quantity], positions, True)}</item>'
+        for quantity in ("zero", "one", "two", "few", "many", "other")
+        if quantity in forms
+    ]
+    return [f'    <plurals name="{name(key)}">', *items, "    </plurals>"]
+
+
 def main() -> None:
     for area in AREAS:
         catalogs = {lang: messages(LOCALES / lang / f"{area}.ts") for lang in LANGUAGES}
@@ -148,18 +162,8 @@ def main() -> None:
                 "<resources>",
             ]
             for key, base in english.items():
-                value = catalogs[lang].get(key, base)
-                positions = order(base, [catalogs[o].get(key) for o in LANGUAGES if o != "en" and catalogs[o].get(key) is not None])
-                if isinstance(base, dict):
-                    forms = value if isinstance(value, dict) else base
-                    lines.append(f'    <plurals name="{name(key)}">')
-                    for quantity in ("zero", "one", "two", "few", "many", "other"):
-                        if quantity in forms:
-                            lines.append(f'        <item quantity="{quantity}">{escape(forms[quantity], positions, True)}</item>')
-                    lines.append("    </plurals>")
-                else:
-                    text = value if isinstance(value, str) else base
-                    lines.append(f'    <string name="{name(key)}">{escape(text, positions, False)}</string>')
+                others = [catalogs[o].get(key) for o in LANGUAGES if o != "en" and catalogs[o].get(key) is not None]
+                lines += resource(key, base, catalogs[lang].get(key, base), order(base, others))
             lines.append("</resources>")
             out = RES / folder / f"strings_web_{area.lower()}.xml"
             out.write_text("\n".join(lines) + "\n")

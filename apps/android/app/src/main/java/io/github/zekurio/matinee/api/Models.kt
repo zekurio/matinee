@@ -610,9 +610,6 @@ data class ApiErrorBody(
 
 // Request bodies.
 
-@Serializable
-internal data class SeasonBody(val season: Int?)
-
 /** `watchedAt` for the day a file came out: an episode's air date, a movie's release date. */
 const val WATCHED_RELEASED = "released"
 

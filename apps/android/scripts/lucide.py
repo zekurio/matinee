@@ -99,22 +99,27 @@ def points(value: str, close: bool) -> str:
     return "M" + "L".join(pairs) + ("Z" if close else "")
 
 
+def line(attrs: dict) -> str:
+    return f"M{num(attrs['x1'])},{num(attrs['y1'])}L{num(attrs['x2'])},{num(attrs['y2'])}"
+
+
+# Each SVG element lucide uses, as path data.
+SHAPES = {
+    "path": lambda a: a["d"],
+    "circle": lambda a: circle(float(a["cx"]), float(a["cy"]), float(a["r"])),
+    "ellipse": lambda a: ellipse(float(a["cx"]), float(a["cy"]), float(a["rx"]), float(a["ry"])),
+    "rect": rect,
+    "line": line,
+    "polyline": lambda a: points(a["points"], False),
+    "polygon": lambda a: points(a["points"], True),
+}
+
+
 def path_data(tag: str, attrs: dict) -> str:
-    if tag == "path":
-        return attrs["d"]
-    if tag == "circle":
-        return circle(float(attrs["cx"]), float(attrs["cy"]), float(attrs["r"]))
-    if tag == "ellipse":
-        return ellipse(
-            float(attrs["cx"]), float(attrs["cy"]), float(attrs["rx"]), float(attrs["ry"])
-        )
-    if tag == "rect":
-        return rect(attrs)
-    if tag == "line":
-        return f"M{num(attrs['x1'])},{num(attrs['y1'])}L{num(attrs['x2'])},{num(attrs['y2'])}"
-    if tag in ("polyline", "polygon"):
-        return points(attrs["points"], tag == "polygon")
-    sys.exit(f"unknown SVG element {tag}")
+    shape = SHAPES.get(tag)
+    if shape is None:
+        sys.exit(f"unknown SVG element {tag}")
+    return shape(attrs)
 
 
 def drawable(name: str, filled: bool) -> str:
