@@ -44,44 +44,34 @@ import io.github.zekurio.matinee.ui.components.LocalApi
 import io.github.zekurio.matinee.ui.components.Lucide
 import io.github.zekurio.matinee.ui.components.LucideIcon
 import io.github.zekurio.matinee.ui.theme.Appearance
-import io.github.zekurio.matinee.ui.theme.DefaultThemes
 import io.github.zekurio.matinee.ui.theme.Palette
 import io.github.zekurio.matinee.ui.theme.ThemeColors
-import io.github.zekurio.matinee.ui.theme.ThemeFamily
 import io.github.zekurio.matinee.ui.theme.ThemeMode
 import io.github.zekurio.matinee.ui.theme.ThemeState
-import io.github.zekurio.matinee.ui.theme.ThemeStore
-import io.github.zekurio.matinee.ui.theme.ThemeVariant
 
 /*
  * Appearance, as the web's: the color scheme as three miniatures of the
- * app, whether the theme follows the account, and the themes as cards with
- * a swatch per variant. Themes are made and edited on the web; the
- * account's show up here to pick, with Material You besides on Android 12
- * and later.
+ * app, in Matinee's colors with the server's accent. Android 12 and later
+ * can take the wallpaper's colors instead.
  */
 
 @Composable
 internal fun AppearancePage() {
     val store = LocalContext.current.app.theme
     val api = LocalApi.current
-    val user = LocalUser.current
-    val state = store.state
     val offline = LocalOffline.current
-    // Themes made on the web since the app started come in when the page opens.
-    LaunchedEffect(offline) { if (!offline) store.pull(api, user) }
+    val state = store.state
+    // An accent an admin changed since the app started comes in when the page opens.
+    LaunchedEffect(offline) { if (!offline) store.pull(api) }
     SettingsScaffold(stringResource(R.string.settings_page_appearance)) {
         item(key = "scheme") {
             Section(stringResource(R.string.web_appearance_colorScheme)) {
                 SchemePicker(state, store::setMode)
-                Gap(14.dp)
-                Panel { SwitchRow(stringResource(R.string.web_appearance_sync_title), state.sync, onChange = store::setSync) }
-            }
-        }
-        item(key = "themes") {
-            Section(stringResource(R.string.web_appearance_themes)) {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    state.families.forEach { family -> ThemeCard(family, state, store) }
+                if (store.materialYouAvailable) {
+                    Gap(14.dp)
+                    Panel {
+                        SwitchRow(stringResource(R.string.appearance_material_you), state.materialYou, onChange = store::setMaterialYou)
+                    }
                 }
             }
         }
@@ -91,8 +81,8 @@ internal fun AppearancePage() {
 /** System, Light, and Dark, each a miniature of the app in the theme that mode shows. */
 @Composable
 private fun SchemePicker(state: ThemeState, onPick: (ThemeMode) -> Unit) {
-    val light = state.colorsOf(state.light)
-    val dark = state.colorsOf(state.dark)
+    val light = state.light
+    val dark = state.dark
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         ThemeMode.entries.forEach { mode ->
             val selected = state.mode == mode
@@ -173,144 +163,4 @@ private fun Miniature(colors: ThemeColors, modifier: Modifier = Modifier) {
             repeat(5) { Box(Modifier.size(9.dp, 13.dp).clip(RoundedCornerShape(2.dp)).background(colors.surfaceRaised)) }
         }
     }
-}
-
-/**
- * A theme as a paint chip: a striped swatch per variant across the top,
- * then its name and the variants it lends to light and dark mode now.
- * The card picks the whole theme; a swatch, just its variant.
- */
-@Composable
-private fun ThemeCard(family: ThemeFamily, state: ThemeState, store: ThemeStore) {
-    val shape = RoundedCornerShape(12.dp)
-    val used = Appearance.entries.mapNotNull { appearance ->
-        state.variant(appearance).takeIf { it in family.variants }?.let { appearance to it }
-    }
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .clip(shape)
-            .background(Palette.Foreground.copy(alpha = 0.02f))
-            .border(1.dp, if (used.isNotEmpty()) Palette.Accent.copy(alpha = 0.55f) else Palette.Border, shape)
-            .clickable { store.selectFamily(family) },
-    ) {
-        Row(
-            Modifier.fillMaxWidth().height(64.dp).background(Palette.Border),
-            horizontalArrangement = Arrangement.spacedBy(1.dp),
-        ) {
-            family.variants.forEach { variant ->
-                Swatch(
-                    family = family,
-                    variant = variant,
-                    colors = state.colorsOf(variant),
-                    slot = variant.appearance.takeIf { state.variant(it).id == variant.id },
-                    shown = state.variant(state.appearance).id == variant.id,
-                    modifier = Modifier.weight(1f),
-                ) { store.selectVariant(variant) }
-            }
-        }
-        Row(Modifier.padding(horizontal = 12.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text(family.label, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                if (used.isEmpty()) {
-                    Text(
-                        pluralStringResource(R.plurals.web_themes_card_variants, family.variants.size, family.variants.size),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Palette.Muted,
-                    )
-                } else {
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                        used.forEach { (appearance, variant) ->
-                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
-                                LucideIcon(if (appearance == Appearance.Light) Lucide.Sun else Lucide.Moon, null, size = 12.dp, tint = Palette.Muted)
-                                Text(
-                                    variantName(family, variant),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = Palette.Muted,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-/**
- * One variant as diagonal bands of its background, accent, and text, with
- * its status colors as dots in the corner. The chip marks the mode it's
- * used for, filled with the accent while it's the one on screen.
- */
-@Composable
-private fun Swatch(
-    family: ThemeFamily,
-    variant: ThemeVariant,
-    colors: ThemeColors,
-    slot: Appearance?,
-    shown: Boolean,
-    modifier: Modifier,
-    onClick: () -> Unit,
-) {
-    val name = variantName(family, variant)
-    val description = when (slot) {
-        Appearance.Light -> stringResource(R.string.web_themes_card_usedLight, name)
-        Appearance.Dark -> stringResource(R.string.web_themes_card_usedDark, name)
-        null -> name
-    }
-    Box(
-        modifier
-            .fillMaxHeight()
-            .background(
-                Brush.linearGradient(
-                    0f to colors.background, 0.5f to colors.background,
-                    0.5f to colors.accent, 0.75f to colors.accent,
-                    0.75f to colors.text, 1f to colors.text,
-                ),
-            )
-            .clickable(role = Role.RadioButton, onClick = onClick)
-            .semantics { contentDescription = description },
-    ) {
-        Row(Modifier.align(Alignment.TopEnd).padding(6.dp), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-            listOf(colors.success, colors.warning, colors.danger).forEach { dot ->
-                Box(Modifier.size(7.dp).clip(CircleShape).background(colors.background).padding(1.dp).clip(CircleShape).background(dot))
-            }
-        }
-        if (slot != null) {
-            Box(
-                Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(6.dp)
-                    .size(20.dp)
-                    .clip(CircleShape)
-                    .background(if (shown) Palette.Accent else Palette.Background.copy(alpha = 0.85f)),
-                contentAlignment = Alignment.Center,
-            ) {
-                LucideIcon(
-                    if (slot == Appearance.Light) Lucide.Sun else Lucide.Moon,
-                    null,
-                    size = 12.dp,
-                    tint = if (shown) Palette.AccentForeground else Palette.Foreground,
-                )
-            }
-        }
-    }
-}
-
-/**
- * A variant's name in its theme: Matinee's, Material You's, and unnamed
- * ones go by their appearance, numbered when a theme has several; the
- * rest drop the theme's name, as "Frappé" for Catppuccin Frappé.
- */
-@Composable
-private fun variantName(family: ThemeFamily, variant: ThemeVariant): String {
-    val res = LocalResources.current
-    val byAppearance = variant.label.isBlank() || DefaultThemes.isMatinee(variant.id) ||
-        family.id == ThemeStore.MATERIAL_YOU
-    if (!byAppearance) return variant.label.removePrefix(family.label).trim().ifEmpty { variant.label }
-    val name = res.getString(if (variant.appearance == Appearance.Light) R.string.web_themes_editor_light else R.string.web_themes_editor_dark)
-    val siblings = family.variants.filter { it.appearance == variant.appearance && (it.label.isBlank() || !family.custom) }
-    return if (siblings.size > 1) "$name ${siblings.indexOf(variant) + 1}" else name
 }

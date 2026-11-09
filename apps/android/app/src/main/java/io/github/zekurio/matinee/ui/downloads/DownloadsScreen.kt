@@ -142,8 +142,6 @@ fun DownloadsScreen() {
     // Movies and shows together, what came last first.
     val finished: List<Pair<Long, Any>> = (done.filterNot(::isShow).map { it.addedAt to it } + shows.map { it.newest to it })
         .sortedByDescending { it.first }
-    val total = done.sumOf { it.bytes }
-    val free = remember(total) { context.filesDir.usableSpace }
     Column(Modifier.fillMaxSize()) {
         TopBar(stringResource(R.string.downloads_title), back = false) {
             if (LocalOffline.current) {
@@ -156,16 +154,6 @@ fun DownloadsScreen() {
             contentPadding = PaddingValues(start = Gutter, end = Gutter, bottom = tabBarPadding() + 24.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            if (items.isNotEmpty()) {
-                item(key = "space") {
-                    Text(
-                        stringResource(R.string.downloads_space, formatBytes(total), formatBytes(free)),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Palette.Muted,
-                        modifier = Modifier.padding(bottom = 8.dp),
-                    )
-                }
-            }
             if (items.isEmpty()) {
                 item(key = "empty") {
                     Column(

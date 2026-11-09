@@ -44,9 +44,11 @@ fun MatineeTextField(
         visualTransformation = visualTransformation,
         shape = ControlShape,
         colors = OutlinedTextFieldDefaults.colors(
-            focusedContainerColor = Palette.Sunken,
-            unfocusedContainerColor = Palette.Sunken,
-            disabledContainerColor = Palette.Sunken,
+            // Lighter than the card it sits on, not sunk into it: the web's sunken
+            // fill reads as a black hole on a phone's card.
+            focusedContainerColor = Palette.Secondary,
+            unfocusedContainerColor = Palette.Secondary,
+            disabledContainerColor = Palette.Secondary,
             focusedBorderColor = Palette.Accent,
             unfocusedBorderColor = Palette.Input,
             errorBorderColor = Palette.Danger,

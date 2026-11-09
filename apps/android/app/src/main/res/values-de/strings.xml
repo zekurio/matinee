@@ -393,6 +393,7 @@
     <string name="settings_subtitles_edge_none">Keiner</string>
     <string name="settings_page_account">Konto</string>
     <string name="settings_page_appearance">Darstellung</string>
+    <string name="appearance_material_you">Farben des Hintergrundbilds</string>
     <string name="settings_page_playback">Wiedergabe</string>
     <string name="settings_admin">Verwaltung</string>
     <string name="settings_admin_libraries">Mediatheken</string>
@@ -459,7 +460,6 @@
     <string name="downloads_audio_none">Wähle mindestens eine Tonspur.</string>
     <string name="downloads_start">Herunterladen</string>
     <string name="downloads_failed">Die Spuren dieser Datei konnten nicht geladen werden</string>
-    <string name="downloads_space">%1$s auf diesem Gerät · %2$s frei</string>
     <string name="downloads_coming">Wird heruntergeladen</string>
     <string name="downloads_done">Auf diesem Gerät</string>
     <string name="downloads_codec">Codec</string>
@@ -482,7 +482,10 @@
     <string name="downloads_offline">Offline</string>
     <string name="downloads_unmetered">Nur über WLAN herunterladen</string>
     <string name="downloads_unmetered_description">Auf WLAN oder eine andere Verbindung ohne Datenlimit warten.</string>
-    <string name="downloads_default_title">Version</string>
+    <string name="downloads_default_subtitles">Standarduntertitel</string>
+    <string name="downloads_storage">Speicher</string>
+    <string name="downloads_storage_value">%1$s belegt · %2$s frei</string>
+    <string name="downloads_default_title">Standardqualität</string>
     <string name="downloads_default_description">Was beim Herunterladen vorausgewählt ist.</string>
     <string name="downloads_subtitles_title">Untertitel</string>
     <string name="downloads_subtitles_description">Werden neben jedem Download gespeichert.</string>

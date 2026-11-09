@@ -525,8 +525,11 @@ private fun DownloadsSection() {
     var subtitles by remember { mutableStateOf(downloads.subtitles) }
     var confirm by remember { mutableStateOf(false) }
     val total = formatBytes(items.values.sumOf { it.bytes })
+    val free = remember(items.size) { formatBytes(context.filesDir.usableSpace) }
     Column {
         Panel {
+            ValueRow(stringResource(R.string.downloads_storage), stringResource(R.string.downloads_storage_value, total, free))
+            RowDivider()
             SwitchRow(
                 stringResource(R.string.downloads_unmetered),
                 unmetered,
@@ -549,7 +552,7 @@ private fun DownloadsSection() {
             }
             RowDivider()
             PickerRow(
-                stringResource(R.string.downloads_subtitles_title),
+                stringResource(R.string.downloads_default_subtitles),
                 listOf(
                     DownloadSubtitles.USED to stringResource(R.string.downloads_subtitles_used),
                     DownloadSubtitles.ALL to stringResource(R.string.downloads_subtitles_all),

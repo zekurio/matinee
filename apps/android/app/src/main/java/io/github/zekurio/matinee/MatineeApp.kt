@@ -39,7 +39,6 @@ class MatineeApp : Application(), SingletonImageLoader.Factory {
     override fun onCreate() {
         super.onCreate()
         session = Session(this)
-        theme.api = { session.api }
         downloads.restore()
         // Once signed in with the server answering, send where the person got
         // to in downloads they watched offline.
@@ -53,7 +52,7 @@ class MatineeApp : Application(), SingletonImageLoader.Factory {
         scope.launch {
             session.state.collect { state ->
                 when (state) {
-                    is AuthState.SignedIn -> session.api?.let { theme.pull(it, state.user) }
+                    is AuthState.SignedIn -> session.api?.let { theme.pull(it) }
                     is AuthState.SignedOut -> theme.setAccents(state.config.themeAccents)
                     else -> Unit
                 }

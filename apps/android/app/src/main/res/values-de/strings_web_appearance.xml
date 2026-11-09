@@ -8,8 +8,4 @@
     <string name="web_appearance_colorScheme_system">System</string>
     <string name="web_appearance_colorScheme_light">Hell</string>
     <string name="web_appearance_colorScheme_dark">Dunkel</string>
-    <string name="web_appearance_sync_title">Geräteübergreifend synchronisieren</string>
-    <string name="web_appearance_themes">Designs</string>
-    <string name="web_appearance_themes_import">Importieren</string>
-    <string name="web_appearance_themes_new">Neues Design</string>
 </resources>

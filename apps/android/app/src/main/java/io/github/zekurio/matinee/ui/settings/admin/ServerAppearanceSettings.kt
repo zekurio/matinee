@@ -197,7 +197,7 @@ private fun ColorRow(label: String, value: String, onChange: (String) -> Unit) {
                 .width(144.dp)
                 .height(40.dp)
                 .clip(shape)
-                .background(Palette.Sunken)
+                .background(Palette.Secondary)
                 .border(1.dp, if (parsed == null) Palette.Danger else Palette.Border, shape)
                 .padding(horizontal = 10.dp),
             verticalAlignment = Alignment.CenterVertically,

@@ -130,15 +130,6 @@ class MatineeApi(val base: HttpUrl, internal val client: OkHttpClient) {
     suspend fun profileStats(username: String, range: String, timeZone: String): WatchStats? =
         get("profiles/${seg(username)}/stats", mapOf("range" to range, "timeZone" to timeZone))
 
-    /** Save the theme choice the account syncs. */
-    suspend fun setThemePreferences(theme: SyncedTheme): User = send(
-        Request.Builder().url(url("account/theme")).put(body(theme)).build(),
-        User.serializer(),
-    )!!
-
-    /** The account's own themes, oldest first. */
-    suspend fun accountThemes(): List<UserTheme> = get("account/themes")
-
     suspend fun setPlaybackPreferences(preferences: PlaybackPreferences): User = send(
         Request.Builder().url(url("account/playback")).put(body(preferences)).build(),
         User.serializer(),

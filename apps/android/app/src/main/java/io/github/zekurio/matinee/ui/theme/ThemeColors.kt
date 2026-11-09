@@ -8,10 +8,10 @@ import kotlin.math.pow
 import kotlin.math.roundToInt
 
 /*
- * Color themes as the web has them (packages/ui/src/lib/theme-colors.ts and
- * theme-color-math.ts): a color per role, the bundled palettes, the
- * account's own themes with the roles they leave out filled in, and the
- * server's accent on the Matinee theme. Contrast follows WCAG relative
+ * Colors as the web has them (packages/ui/src/lib/theme-colors.ts and
+ * theme-color-math.ts): a color per role, Matinee's light and dark
+ * palettes, the server's accent on them, and Material You's colors with
+ * the roles it leaves out filled in. Contrast follows WCAG relative
  * luminance; mixing happens in OKLab, so tinted ramps never pass through
  * gray.
  */
@@ -55,26 +55,8 @@ data class ThemeColors(
     val isDark get() = luminance(background) < 0.179
 }
 
-data class ThemeVariant(val id: String, val label: String, val appearance: Appearance, val colors: ThemeColors)
-
-/** The variants that belong together: a light and one or more dark palettes. */
-data class ThemeFamily(val id: String, val label: String, val variants: List<ThemeVariant>, val custom: Boolean)
-
-/** Matinee's own light and dark, which each appearance falls back to. */
-object DefaultThemes {
-    const val LIGHT = "matinee-light"
-    const val DARK = "matinee-dark"
-
-    fun idFor(appearance: Appearance) = if (appearance == Appearance.Light) LIGHT else DARK
-
-    val light get() = BUILTIN_THEMES.first().variants.first { it.id == LIGHT }
-    val dark get() = BUILTIN_THEMES.first().variants.first { it.id == DARK }
-
-    fun variant(appearance: Appearance) = if (appearance == Appearance.Light) light else dark
-
-    /** The variants the server's accent tints, and no others. */
-    fun isMatinee(id: String) = id == LIGHT || id == DARK
-}
+/** Matinee's own palette for an appearance. */
+fun matinee(appearance: Appearance) = if (appearance == Appearance.Light) MATINEE_LIGHT else MATINEE_DARK
 
 private val BLACK = Color(0xFF000000)
 private val WHITE = Color(0xFFFFFFFF)
@@ -245,11 +227,6 @@ private val RAMP_POSITIONS = mapOf(
     ),
 )
 
-/** Matinee's own anchors for what a theme leaves out. */
-private fun anchors(appearance: Appearance) = when (appearance) {
-    Appearance.Dark -> DefaultThemes.dark.colors
-    Appearance.Light -> DefaultThemes.light.colors
-}
 
 /**
  * Fills in every role [overrides] leaves out, as the web's
@@ -257,7 +234,7 @@ private fun anchors(appearance: Appearance) = when (appearance) {
  * two, and the accent family from the accent.
  */
 fun completeThemeColors(appearance: Appearance, overrides: Map<String, Color>): ThemeColors {
-    val base = anchors(appearance)
+    val base = matinee(appearance)
     val background = overrides["background"] ?: base.background
     val dark = luminance(background) < 0.179
     val text = overrides["text"] ?: ensureContrast(

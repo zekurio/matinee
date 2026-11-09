@@ -127,6 +127,16 @@ fun SwitchRow(title: String, checked: Boolean, @DrawableRes icon: Int? = null, o
     }
 }
 
+/** A row that only tells something, its value at its end. */
+@Composable
+fun ValueRow(title: String, value: String) {
+    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+        RowText(title)
+        Gap(12.dp)
+        Text(value, style = MaterialTheme.typography.bodyMedium, color = Palette.Muted)
+    }
+}
+
 /** A row that goes somewhere else, like the system's settings, with what's set there at its end. */
 @Composable
 fun LinkRow(title: String, value: String? = null, destructive: Boolean = false, @DrawableRes icon: Int? = null, onClick: () -> Unit) {
