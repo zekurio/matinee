@@ -417,9 +417,14 @@ function NavBar({ user }: { user: User }) {
 /**
  * The phone header: the logo home, search, and the account. It sits at the
  * top of the page and scrolls away with it, over Home's banner art. Pages
- * put what else belongs up there, like the library chips, under it.
+ * put what else belongs up there, like the library chips, under it. Home
+ * leaves the logo out: it would lead nowhere, and the banner's title logo
+ * sits right under it.
  */
 function PhoneHeader({ user }: { user: User }) {
+  const home = useRouterState({
+    select: (state) => state.location.pathname === "/",
+  })
   return (
     <header className="absolute inset-x-0 top-0 z-30 pt-[env(safe-area-inset-top)]">
       {/* Keeps the header readable over bright art. */}
@@ -433,13 +438,17 @@ function PhoneHeader({ user }: { user: User }) {
           "relative flex h-14 items-center justify-between gap-2",
         )}
       >
-        <Link
-          to="/"
-          aria-label={tr("shell.homeLink")}
-          className="focus-visible:ring-ring -ml-1.5 grid size-11 place-items-center rounded-full outline-none focus-visible:ring-2"
-        >
-          <LogoMark className="size-7" />
-        </Link>
+        {home ? (
+          <span />
+        ) : (
+          <Link
+            to="/"
+            aria-label={tr("shell.homeLink")}
+            className="focus-visible:ring-ring -ml-1.5 grid size-11 place-items-center rounded-full outline-none focus-visible:ring-2"
+          >
+            <LogoMark className="size-7" />
+          </Link>
+        )}
         <div className="-mr-1.5 flex items-center">
           <SearchButton className={headerButton} />
           <AccountMenu user={user} />

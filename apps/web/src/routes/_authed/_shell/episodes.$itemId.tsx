@@ -1,6 +1,7 @@
 import type { MediaItem } from "@matinee/contracts"
 import { buttonVariants } from "@matinee/ui/components/button"
 import { Skeleton } from "@matinee/ui/components/skeleton"
+import { useMediaQuery } from "@matinee/ui/hooks/use-media-query"
 import { cn } from "@matinee/ui/lib/utils"
 import { skipToken, useQuery } from "@tanstack/react-query"
 import { createFileRoute, Link, Navigate } from "@tanstack/react-router"
@@ -132,12 +133,12 @@ function EpisodeHeader({ item }: { item: MediaItem }) {
       : null,
     resume ? timeLeft(item) : runtime,
   ].filter(Boolean)
-  // The show's art first; the still and a frame when it has none.
-  const backdrop = present(
-    art(item.title?.images.backdrop, "large"),
-    art(item.episode?.still, "large"),
-    frame(item.id, "large"),
-  )
+  // On a phone the still is the backdrop and isn't shown again under it;
+  // wider, the show's art is, with the still beside the details.
+  const phone = useMediaQuery("(width < 40rem)")
+  const still = [art(item.episode?.still, "large"), frame(item.id, "large")]
+  const show = art(item.title?.images.backdrop, "large")
+  const backdrop = phone ? present(...still, show) : present(show, ...still)
 
   return (
     <section className={pageBleed} aria-labelledby="episode-name">
@@ -158,7 +159,7 @@ function EpisodeHeader({ item }: { item: MediaItem }) {
           pageColumn,
           // As on a title's page. Phones start higher, so the season's other
           // episodes make the first screen too.
-          "relative pt-[max(7rem,20vh)] sm:pt-[max(12rem,32vh)]",
+          "relative pt-[max(10rem,30vh)] sm:pt-[max(12rem,32vh)]",
         )}
       >
         <div className="flex flex-col gap-6 sm:flex-row sm:items-stretch sm:gap-8">
@@ -176,7 +177,7 @@ function EpisodeHeader({ item }: { item: MediaItem }) {
             ref={artRef}
             style={artStyle}
             className={cn(
-              "group focus-visible:ring-ring focus-visible:ring-offset-background w-full max-w-md shrink-0 rounded-lg shadow-2xl shadow-black/60 outline-none focus-visible:ring-2 focus-visible:ring-offset-2 sm:max-h-60 sm:w-80 sm:max-w-none lg:max-h-84 lg:w-[28rem] xl:max-h-96 xl:w-[32rem] 2xl:max-h-108 2xl:w-[36rem]",
+              "group focus-visible:ring-ring focus-visible:ring-offset-background w-full max-w-md shrink-0 max-sm:hidden rounded-lg shadow-2xl shadow-black/60 outline-none focus-visible:ring-2 focus-visible:ring-offset-2 sm:max-h-60 sm:w-80 sm:max-w-none lg:max-h-84 lg:w-[28rem] xl:max-h-96 xl:w-[32rem] 2xl:max-h-108 2xl:w-[36rem]",
               artClass,
             )}
           >

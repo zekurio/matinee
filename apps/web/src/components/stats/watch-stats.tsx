@@ -64,7 +64,8 @@ export function WatchOverview({
   figures: StatFigure[]
 }) {
   return (
-    <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+    // Side by side, the figures stretch to the card's height, a row each.
+    <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
       <section className={cn(statsCard, "flex min-w-0 flex-col gap-4 p-4")}>
         <div>
           <p className="text-muted-foreground text-sm leading-6">
@@ -76,7 +77,7 @@ export function WatchOverview({
         </div>
         <WatchChart buckets={stats.buckets} unit={stats.unit} />
       </section>
-      <StatFigures figures={figures} />
+      <StatFigures figures={figures} className="self-stretch" />
     </div>
   )
 }

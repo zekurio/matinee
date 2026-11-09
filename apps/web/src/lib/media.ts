@@ -285,8 +285,12 @@ export function landscapeSources(
 
 /** Share of the file watched, 0 to 1, or null when unknown. */
 export function progressRatio(item: MediaItem): number | null {
-  if (!item.progress || !item.durationSeconds) return null
-  if (item.progress.completed) return 1
+  // A finished file shows the watched mark, never a bar. Cards hide the bar
+  // while the user's mark says watched, but unmarking one flips that mark
+  // before the file's progress refetches, which would flash a full bar.
+  if (!item.progress || !item.durationSeconds || item.progress.completed) {
+    return null
+  }
   return item.progress.positionSeconds / item.durationSeconds
 }
 

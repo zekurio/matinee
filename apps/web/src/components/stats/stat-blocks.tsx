@@ -105,9 +105,15 @@ export function StatFigures({
   className?: string
 }) {
   return (
-    <ul className={cn(statsCard, "divide-y self-start", className)}>
+    // Stretched beside a taller card, the rows share its height.
+    <ul
+      className={cn(statsCard, "flex flex-col divide-y self-start", className)}
+    >
       {figures.map(({ label, value, icon: Icon, detail }) => (
-        <li key={label} className="flex min-w-0 items-center gap-3.5 px-4 py-3">
+        <li
+          key={label}
+          className="flex min-w-0 flex-1 items-center gap-3.5 px-4 py-3"
+        >
           <Icon
             aria-hidden
             className="text-muted-foreground size-[18px] shrink-0"
