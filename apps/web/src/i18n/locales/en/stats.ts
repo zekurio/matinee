@@ -59,7 +59,6 @@ export default defineMessages("stats", {
   "stats.chart.title.day": "Watch time per day",
   "stats.chart.title.week": "Watch time per week",
   "stats.chart.title.month": "Watch time per month",
-  "stats.chart.busiest": "Busiest · {date} · {time}",
 
   // The activity heatmap.
   "stats.heatmap.peak": "Most often on {weekday}s around {hour}.",

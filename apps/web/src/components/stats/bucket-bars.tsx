@@ -67,6 +67,8 @@ export function BucketBars<Bucket extends { start: string }>({
   onActive,
   describe,
   bars,
+  axis = true,
+  className,
 }: {
   label: string
   buckets: Bucket[]
@@ -79,11 +81,56 @@ export function BucketBars<Bucket extends { start: string }>({
   describe: (bucket: Bucket) => string
   /** Each bucket's bar, in the order of `buckets`; nothing for an empty one. */
   bars: ReactNode[]
+  /**
+   * The scale's value and dashed line, and the dates under the bars. Off,
+   * only the bars on their baseline, filling the plot's box, as the apps
+   * draw a chart.
+   */
+  axis?: boolean
+  className?: string
 }) {
   const ticks = axisTicks(buckets.length)
 
+  const plot = (
+    <ol
+      aria-label={label}
+      onPointerLeave={() => onActive(null)}
+      className={cn(
+        "border-foreground/15 relative flex border-b",
+        axis ? "h-36" : "h-full",
+      )}
+    >
+      {buckets.map((bucket, index) => (
+        <li
+          key={bucket.start}
+          onPointerEnter={() => onActive(index)}
+          onPointerDown={() => onActive(index)}
+          className="flex h-full min-w-0 flex-1 justify-center"
+        >
+          <span className="sr-only">{describe(bucket)}</span>
+          <span
+            aria-hidden
+            className={cn(
+              "flex h-full flex-col justify-end transition-opacity duration-150 motion-reduce:transition-none",
+              BAR_WIDTH,
+              active !== null && active !== index && "opacity-40",
+            )}
+          >
+            {bars[index]}
+          </span>
+        </li>
+      ))}
+    </ol>
+  )
+  if (!axis) return <div className={className}>{plot}</div>
+
   return (
-    <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-2 gap-y-2">
+    <div
+      className={cn(
+        "grid grid-cols-[auto_minmax(0,1fr)] gap-x-2 gap-y-2",
+        className,
+      )}
+    >
       <span
         aria-hidden
         className="text-muted-foreground -translate-y-1/2 self-start text-[11px] leading-none tabular-nums"
@@ -95,32 +142,7 @@ export function BucketBars<Bucket extends { start: string }>({
           aria-hidden
           className="border-foreground/10 absolute inset-x-0 top-0 border-t border-dashed"
         />
-        <ol
-          aria-label={label}
-          onPointerLeave={() => onActive(null)}
-          className="border-foreground/15 relative flex h-36 border-b"
-        >
-          {buckets.map((bucket, index) => (
-            <li
-              key={bucket.start}
-              onPointerEnter={() => onActive(index)}
-              onPointerDown={() => onActive(index)}
-              className="flex h-full min-w-0 flex-1 justify-center"
-            >
-              <span className="sr-only">{describe(bucket)}</span>
-              <span
-                aria-hidden
-                className={cn(
-                  "flex h-full flex-col justify-end transition-opacity duration-150 motion-reduce:transition-none",
-                  BAR_WIDTH,
-                  active !== null && active !== index && "opacity-40",
-                )}
-              >
-                {bars[index]}
-              </span>
-            </li>
-          ))}
-        </ol>
+        {plot}
       </div>
       <div
         aria-hidden

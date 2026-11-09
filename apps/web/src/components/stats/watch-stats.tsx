@@ -3,12 +3,13 @@ import { Skeleton } from "@matinee/ui/components/skeleton"
 import { cn } from "@matinee/ui/lib/utils"
 import { Link } from "@tanstack/react-router"
 import { FilmIcon, PlayIcon, TvIcon, TvMinimalPlayIcon } from "lucide-react"
+import { useState } from "react"
 
 import { Picture, tone } from "@/components/media-item"
 import { tr } from "@/i18n"
 import { formatCount, formatWatchTime } from "@/lib/format"
 import { art } from "@/lib/media"
-import { rangeName } from "@/lib/stats"
+import { bucketName, rangeName } from "@/lib/stats"
 
 import {
   percent,
@@ -53,8 +54,10 @@ export function watchFigures(stats: WatchStats): StatFigure[] {
 }
 
 /**
- * The range's watch time as a card, the total big over the chart, with the
- * other figures as rows beside it on wide screens and under it on narrow.
+ * The range's watch time as a card, as the apps show it: the total, big,
+ * over the bars. Pointing at a bar reads that day, week, or month out in
+ * the total's place. Beside the figures on wide screens, the card takes
+ * their height and the bars fill what's left of it.
  */
 export function WatchOverview({
   stats,
@@ -63,21 +66,30 @@ export function WatchOverview({
   stats: WatchStats
   figures: StatFigure[]
 }) {
+  const [active, setActive] = useState<number | null>(null)
+  const shown = active === null ? null : stats.buckets[active]
   return (
-    // Side by side, the figures stretch to the card's height, a row each.
     <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
       <section className={cn(statsCard, "flex min-w-0 flex-col gap-4 p-4")}>
         <div>
           <p className="text-muted-foreground text-sm leading-6">
-            {`${tr("stats.figure.watchTime")} · ${rangeName(stats.range)}`}
+            {shown
+              ? bucketName(shown.start, stats.unit)
+              : `${tr("stats.figure.watchTime")} · ${rangeName(stats.range)}`}
           </p>
           <p className="text-4xl leading-tight font-bold tracking-tight tabular-nums">
-            {formatWatchTime(stats.totals.watchSeconds)}
+            {formatWatchTime(shown?.watchSeconds ?? stats.totals.watchSeconds)}
           </p>
         </div>
-        <WatchChart buckets={stats.buckets} unit={stats.unit} />
+        <WatchChart
+          buckets={stats.buckets}
+          unit={stats.unit}
+          active={active}
+          onActive={setActive}
+          className="min-h-36 flex-1 lg:min-h-20"
+        />
       </section>
-      <StatFigures figures={figures} className="self-stretch" />
+      <StatFigures figures={figures} />
     </div>
   )
 }

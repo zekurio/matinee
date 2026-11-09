@@ -53,7 +53,6 @@ export default {
   "stats.chart.title.day": "Sehzeit pro Tag",
   "stats.chart.title.week": "Sehzeit pro Woche",
   "stats.chart.title.month": "Sehzeit pro Monat",
-  "stats.chart.busiest": "Spitzenwert · {date} · {time}",
 
   "stats.heatmap.peak": "Am häufigsten am {weekday} gegen {hour}.",
   "stats.heatmap.empty": "Noch nichts geschaut.",
