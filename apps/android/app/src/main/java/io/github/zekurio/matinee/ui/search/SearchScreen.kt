@@ -163,9 +163,19 @@ fun SearchScreen() {
                 val groups = found.titles.groupBy { it.libraryId }
                 groups.forEach { (libraryId, titles) ->
                     item(span = { GridItemSpan(maxLineSpan) }, key = "lib-$libraryId") {
-                        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Text(names[libraryId] ?: stringResource(R.string.search_titles_heading), style = MaterialTheme.typography.titleLarge)
-                            Text(res.getQuantityString(R.plurals.browse_title_count, titles.size, titles.size), style = MaterialTheme.typography.bodyMedium, color = Palette.Muted)
+                        // On one baseline: the count's smaller line would sit low at the boxes' bottom.
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Text(
+                                names[libraryId] ?: stringResource(R.string.search_titles_heading),
+                                style = MaterialTheme.typography.titleLarge,
+                                modifier = Modifier.alignByBaseline(),
+                            )
+                            Text(
+                                res.getQuantityString(R.plurals.browse_title_count, titles.size, titles.size),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Palette.Muted,
+                                modifier = Modifier.alignByBaseline(),
+                            )
                         }
                     }
                     items(titles, key = { it.id }) { title -> PosterCard(title, title.year?.toString()) }
