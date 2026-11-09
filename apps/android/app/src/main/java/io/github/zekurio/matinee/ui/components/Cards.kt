@@ -4,7 +4,13 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.interaction.InteractionSource
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -23,6 +29,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -124,7 +131,7 @@ fun ArtFrame(
     )
 }
 
-/** Play in the middle of a still: a frosted circle, always there on touch screens. */
+/** Play in the middle of a still: a frosted circle. */
 @Composable
 fun PlayGlyph(onClick: () -> Unit, contentDescription: String, modifier: Modifier = Modifier, size: Dp = 56.dp) {
     RoundIconButton(
@@ -136,6 +143,21 @@ fun PlayGlyph(onClick: () -> Unit, contentDescription: String, modifier: Modifie
         iconSize = size * 0.38f,
         background = Color.Black.copy(alpha = 0.35f),
     )
+}
+
+/**
+ * Play over a card's still, as the web shows it on a desktop: while a
+ * mouse hovers the card, or the D-pad focuses it on a TV. A touch screen
+ * has neither, so a phone's cards stay clean; a tap opens the item, and
+ * its page has Play.
+ */
+@Composable
+fun BoxScope.HoverPlay(interaction: InteractionSource, onClick: () -> Unit, contentDescription: String, size: Dp = 56.dp) {
+    val hovered by interaction.collectIsHoveredAsState()
+    val focused by interaction.collectIsFocusedAsState()
+    AnimatedVisibility(hovered || focused, Modifier.align(Alignment.Center), enter = fadeIn(), exit = fadeOut()) {
+        PlayGlyph(onClick, contentDescription, size = size)
+    }
 }
 
 /** Name and detail under a card, one line each. */
@@ -163,8 +185,11 @@ fun CardText(primary: String, secondary: String?, modifier: Modifier = Modifier,
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun Modifier.cardClick(onClick: () -> Unit, onLongClick: (() -> Unit)?): Modifier {
-    val interaction = remember { MutableInteractionSource() }
+private fun Modifier.cardClick(
+    onClick: () -> Unit,
+    onLongClick: (() -> Unit)?,
+    interaction: MutableInteractionSource = remember { MutableInteractionSource() },
+): Modifier {
     return clip(CardShape)
         .focusRing(interaction, CardShape)
         .combinedClickable(
@@ -179,9 +204,10 @@ private fun Modifier.cardClick(onClick: () -> Unit, onLongClick: (() -> Unit)?):
 /**
  * An episode or movie to start or resume, for Continue watching and Next
  * up. The picture is the episode, the show leads the text, and the episode
- * follows. The card opens the episode's page, the round button plays it,
- * and a long press offers the rest. Without [showName], as in a season's
- * row, the episode leads and its number and length follow.
+ * follows. The card opens the episode's page, a long press offers the
+ * rest, and Play shows on the still where there's hover or focus. Without
+ * [showName], as in a season's row, the episode leads and its number and
+ * length follow.
  */
 @Composable
 fun EpisodeCard(item: MediaItem, modifier: Modifier = Modifier, showName: Boolean = true) {
@@ -197,13 +223,15 @@ fun EpisodeCard(item: MediaItem, modifier: Modifier = Modifier, showName: Boolea
     val left = if (item.progress?.completed == false) timeLeft(item, res) else null
     val name = if (code != null) stringResource(R.string.media_show_code_title, label.showName, code, label.title) else label.title
     Column(modifier) {
-        Box(Modifier.cardClick({ nav.item(item) }, { actions.item(item) })) {
+        val interaction = remember { MutableInteractionSource() }
+        Box(Modifier.cardClick({ nav.item(item) }, { actions.item(item) }, interaction)) {
             ArtFrame(label.showName, 16f / 9f) {
                 LucideIcon(Lucide.Film, null, size = 20.dp, tint = Palette.Muted.copy(alpha = 0.4f))
                 Picture(api.landscape(item), Modifier.fillMaxSize())
                 if (watched) WatchedBadge(Modifier.align(Alignment.TopEnd).padding(6.dp))
                 else if (ratio != null && ratio > 0f) ProgressBar(ratio, Modifier.align(Alignment.BottomCenter))
-                PlayGlyph(
+                HoverPlay(
+                    interaction,
                     onClick = { nav.play(item.id) },
                     contentDescription = if (left != null) stringResource(R.string.media_resume_named, name)
                     else stringResource(R.string.media_play_named, name),

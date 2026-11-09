@@ -7,15 +7,16 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -30,9 +31,11 @@ import io.github.zekurio.matinee.api.MediaItem
 import io.github.zekurio.matinee.api.Season
 import io.github.zekurio.matinee.api.Title
 import io.github.zekurio.matinee.app
-import io.github.zekurio.matinee.ui.AppHeader
+import io.github.zekurio.matinee.ui.ItemTopBar
 import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.LocalNavigator
+import io.github.zekurio.matinee.ui.StatusBarScrim
+import io.github.zekurio.matinee.ui.components.Badge
 import io.github.zekurio.matinee.ui.components.EpisodeCard
 import io.github.zekurio.matinee.ui.components.EpisodeRow
 import io.github.zekurio.matinee.ui.components.ErrorBox
@@ -59,6 +62,7 @@ import io.github.zekurio.matinee.ui.runtimeMinutes
 import io.github.zekurio.matinee.ui.seasonName
 import io.github.zekurio.matinee.ui.streamSummary
 import io.github.zekurio.matinee.ui.theme.Palette
+import io.github.zekurio.matinee.ui.timeLeft
 
 /** How far down the backdrop a page's heading starts, so it overlaps the art's faded end. */
 @Composable
@@ -69,11 +73,11 @@ private fun headingTop(): Dp = (minOf(LocalConfiguration.current.screenHeightDp 
 private fun <T> PageState(state: Load<T>, error: String, retry: () -> Unit, content: @Composable (T) -> Unit) {
     when (state) {
         Load.Loading -> Column(Modifier.fillMaxSize()) {
-            AppHeader()
+            ItemTopBar()
             LoadingBox()
         }
         is Load.Failed -> Column(Modifier.fillMaxSize()) {
-            AppHeader()
+            ItemTopBar()
             ErrorBox(error, state.message, retry)
         }
         is Load.Ready -> content(state.value)
@@ -96,53 +100,58 @@ private fun TitlePage(title: Title) {
     val next = title.next
     // One season, so no specials either: its episodes go right on the show's page.
     val only = title.seasons.singleOrNull()
-    LazyColumn(
-        Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = 32.dp),
-        verticalArrangement = Arrangement.spacedBy(24.dp),
-    ) {
-        item(key = "header") {
-            Box {
-                Backdrop(
-                    listOfNotNull(api.art(title.images.backdrop, ArtworkSize.Large), next?.let { api.frame(it.id, large = true) }),
-                    title.name,
-                )
-                Column(Modifier.padding(top = headingTop())) {
-                    TitleHeading(title, if (title.isShow || next == null) emptyList() else mediaFlags(next))
+    val listState = rememberLazyListState()
+    Box(Modifier.fillMaxSize()) {
+        LazyColumn(
+            Modifier.fillMaxSize(),
+            state = listState,
+            contentPadding = PaddingValues(bottom = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp),
+        ) {
+            item(key = "header") {
+                Box {
+                    Backdrop(
+                        listOfNotNull(api.art(title.images.backdrop, ArtworkSize.Large), next?.let { api.frame(it.id, large = true) }),
+                        title.name,
+                    )
+                    Column(Modifier.padding(top = headingTop())) {
+                        TitleHeading(title, if (title.isShow || next == null) emptyList() else mediaFlags(next))
+                    }
                 }
-                AppHeader()
             }
-        }
-        if (title.overview != null) {
-            item(key = "overview") {
-                Box(Modifier.padding(horizontal = Gutter)) { Overview(title.overview, title.tagline) }
+            if (title.overview != null) {
+                item(key = "overview") {
+                    Box(Modifier.padding(horizontal = Gutter)) { Overview(title.overview, title.tagline) }
+                }
             }
-        }
-        item(key = "crew") { CrewLines(title.credits, title.studios) }
-        item(key = "actions") {
-            ActionRow(
-                play = next,
-                resume = next?.progress?.let { !it.completed && it.positionSeconds > 0 } == true,
-                playDetail = if (title.isShow) next?.let { episodeCode(it, res) } else null,
-                watched = viewer.isWatched(summary),
-                favorite = viewer.isFavorite(summary),
-                onWatched = { viewer.setWatched(api, summary, !viewer.isWatched(summary)) },
-                onFavorite = { viewer.setFavorite(api, summary, !viewer.isFavorite(summary)) },
-                onMore = { actions.title(summary) },
-            )
-        }
-        if (title.isShow) {
-            if (next != null && next.progress?.completed != true && title.seasons.size > 1) {
-                item(key = "nextUp") { NextUpEpisode(next) }
+            item(key = "crew") { CrewLines(title.credits, title.studios) }
+            item(key = "actions") {
+                ActionRow(
+                    play = next,
+                    resume = next?.progress?.let { !it.completed && it.positionSeconds > 0 } == true,
+                    playDetail = if (title.isShow) next?.let { episodeCode(it, res) } else null,
+                    watched = viewer.isWatched(summary),
+                    favorite = viewer.isFavorite(summary),
+                    onWatched = { viewer.setWatched(api, summary, !viewer.isWatched(summary)) },
+                    onFavorite = { viewer.setFavorite(api, summary, !viewer.isFavorite(summary)) },
+                    onMore = { actions.title(summary, file = if (title.isShow) null else next, here = true) },
+                )
             }
-            if (only != null) {
-                item(key = "episodes") { SeasonEpisodesRail(title, only, next) }
-            } else {
-                item(key = "seasons") { SeasonsRail(title) }
+            if (title.isShow) {
+                if (next != null && next.progress?.completed != true && title.seasons.size > 1) {
+                    item(key = "nextUp") { NextUpEpisode(next) }
+                }
+                if (only != null) {
+                    item(key = "episodes") { SeasonEpisodesRail(title, only, next) }
+                } else {
+                    item(key = "seasons") { SeasonsRail(title) }
+                }
             }
+            item(key = "cast") { CastRail(title.credits) }
+            item(key = "bottom") { Box(Modifier.navigationBarsPadding()) }
         }
-        item(key = "cast") { CastRail(title.credits) }
-        item(key = "bottom") { Box(Modifier.navigationBarsPadding()) }
+        StatusBarScrim(listState)
+        ItemTopBar()
     }
 }
 
@@ -178,7 +187,7 @@ fun SeasonScreen(titleId: String, season: Int?) {
         val current = title.seasons.firstOrNull { it.number == season }
         if (current == null) {
             Column(Modifier.fillMaxSize()) {
-                AppHeader()
+                ItemTopBar()
                 ErrorBox(stringResource(R.string.title_season_missing, title.name), null, null)
             }
         } else {
@@ -191,6 +200,7 @@ fun SeasonScreen(titleId: String, season: Int?) {
 private fun SeasonPage(title: Title, season: Season) {
     val api = LocalApi.current
     val nav = LocalNavigator.current
+    val actions = LocalActions.current
     val res = LocalResources.current
     val viewer = LocalContext.current.app.viewer
     val items = rememberLoader("items-${title.id}-${season.number}") {
@@ -202,78 +212,83 @@ private fun SeasonPage(title: Title, season: Season) {
         ?: list?.firstOrNull { !viewer.isWatched(it) }
         ?: list?.firstOrNull()
     val allWatched = list?.isNotEmpty() == true && list.all { viewer.isWatched(it) }
-    LazyColumn(
-        Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = 32.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp),
-    ) {
-        item(key = "header") {
-            Box {
-                Backdrop(listOfNotNull(api.art(title.images.backdrop, ArtworkSize.Large)), title.name)
-                Row(
-                    Modifier.padding(top = headingTop()).padding(horizontal = Gutter),
-                    verticalAlignment = androidx.compose.ui.Alignment.Bottom,
-                ) {
-                    Box(Modifier.width(if (isWide()) 180.dp else 112.dp)) {
-                        PosterArt(seasonName(season.number, res), api.art(season.poster ?: title.images.poster))
-                    }
-                    Gap(16.dp)
-                    Column(Modifier.weight(1f).padding(bottom = 4.dp)) {
-                        Text(
-                            title.name,
-                            style = MaterialTheme.typography.titleMedium,
-                            color = Palette.Muted,
-                            modifier = Modifier.clickable { nav.title(title.id) },
-                        )
-                        Text(seasonName(season.number, res), style = MaterialTheme.typography.headlineLarge)
-                        Gap(6.dp)
-                        Text(
-                            listOf(
-                                res.getQuantityString(R.plurals.media_episode_count, season.itemCount, season.itemCount),
-                                res.getQuantityString(R.plurals.title_season_watched_count, season.watchedCount, season.watchedCount),
-                            ).joinToString(" · "),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Palette.Foreground.copy(alpha = 0.8f),
-                        )
+    val listState = rememberLazyListState()
+    Box(Modifier.fillMaxSize()) {
+        LazyColumn(
+            Modifier.fillMaxSize(),
+            state = listState,
+            contentPadding = PaddingValues(bottom = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp),
+        ) {
+            item(key = "header") {
+                Box {
+                    Backdrop(listOfNotNull(api.art(title.images.backdrop, ArtworkSize.Large)), title.name)
+                    Row(
+                        Modifier.padding(top = headingTop()).padding(horizontal = Gutter),
+                        verticalAlignment = Alignment.Bottom,
+                    ) {
+                        Box(Modifier.width(if (isWide()) 180.dp else 112.dp)) {
+                            PosterArt(seasonName(season.number, res), api.art(season.poster ?: title.images.poster))
+                        }
+                        Gap(16.dp)
+                        Column(Modifier.weight(1f).padding(bottom = 4.dp)) {
+                            Text(
+                                title.name,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = Palette.Muted,
+                                modifier = Modifier.clickable { nav.titleUp(title.id) },
+                            )
+                            Text(seasonName(season.number, res), style = MaterialTheme.typography.headlineLarge)
+                            Gap(6.dp)
+                            Text(
+                                listOf(
+                                    res.getQuantityString(R.plurals.media_episode_count, season.itemCount, season.itemCount),
+                                    res.getQuantityString(R.plurals.title_season_watched_count, season.watchedCount, season.watchedCount),
+                                ).joinToString(" · "),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Palette.Foreground.copy(alpha = 0.8f),
+                            )
+                        }
                     }
                 }
-                AppHeader()
             }
-        }
-        season.overview?.let { overview ->
-            item(key = "overview") { Box(Modifier.padding(horizontal = Gutter)) { Overview(overview) } }
-        }
-        item(key = "actions") {
-            ActionRow(
-                play = next,
-                resume = next?.progress?.let { !it.completed && it.positionSeconds > 0 } == true,
-                playDetail = next?.let { episodeCode(it, res) },
-                watched = allWatched,
-                favorite = viewer.isFavorite(title.summary),
-                onWatched = { viewer.setWatched(api, title.summary, !allWatched, season.number) },
-                onFavorite = { viewer.setFavorite(api, title.summary, !viewer.isFavorite(title.summary)) },
-                onMore = { nav.title(title.id) },
-            )
-        }
-        item(key = "episodesTitle") {
-            SectionTitle(stringResource(R.string.title_episodes), Modifier.padding(horizontal = Gutter))
-        }
-        when (val state = items.state) {
-            Load.Loading -> item(key = "loading") { LoadingBox(Modifier.padding(32.dp)) }
-            is Load.Failed -> item(key = "error") {
-                Text(
-                    stringResource(R.string.title_episodes_error, state.message),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Palette.Muted,
-                    modifier = Modifier.padding(horizontal = Gutter),
+            season.overview?.let { overview ->
+                item(key = "overview") { Box(Modifier.padding(horizontal = Gutter)) { Overview(overview) } }
+            }
+            item(key = "actions") {
+                ActionRow(
+                    play = next,
+                    resume = next?.progress?.let { !it.completed && it.positionSeconds > 0 } == true,
+                    playDetail = next?.let { episodeCode(it, res) },
+                    watched = allWatched,
+                    favorite = viewer.isFavorite(title.summary),
+                    onWatched = { viewer.setWatched(api, title.summary, !allWatched, season.number) },
+                    onFavorite = { viewer.setFavorite(api, title.summary, !viewer.isFavorite(title.summary)) },
+                    onMore = { actions.season(title.summary, season, here = true) },
                 )
             }
-            is Load.Ready -> items(state.value, key = { it.id }) { item ->
-                Box(Modifier.padding(horizontal = Gutter)) { EpisodeRow(item) }
+            item(key = "episodesTitle") {
+                SectionTitle(stringResource(R.string.title_episodes), Modifier.padding(horizontal = Gutter))
             }
+            when (val state = items.state) {
+                Load.Loading -> item(key = "loading") { LoadingBox(Modifier.padding(32.dp)) }
+                is Load.Failed -> item(key = "error") {
+                    Text(
+                        stringResource(R.string.title_episodes_error, state.message),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Palette.Muted,
+                        modifier = Modifier.padding(horizontal = Gutter),
+                    )
+                }
+                is Load.Ready -> items(state.value, key = { it.id }) { item ->
+                    Box(Modifier.padding(horizontal = Gutter)) { EpisodeRow(item) }
+                }
+            }
+            item(key = "seasons") { SeasonsRail(title, season) }
+            item(key = "bottom") { Box(Modifier.navigationBarsPadding()) }
         }
-        item(key = "seasons") { SeasonsRail(title, season) }
-        item(key = "bottom") { Box(Modifier.navigationBarsPadding()) }
+        StatusBarScrim(listState)
+        ItemTopBar(parent = title.name, onParent = { nav.titleUp(title.id) })
     }
 }
 
@@ -293,66 +308,93 @@ private fun EpisodePage(item: MediaItem) {
     val label = itemLabel(item, res)
     val title = item.title
     val season = item.seasonNumber
-    LazyColumn(
-        Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = 32.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp),
-    ) {
-        item(key = "header") {
-            Box {
-                Backdrop(listOfNotNull(api.art(title?.images?.backdrop, ArtworkSize.Large)), label.showName)
-                Column(Modifier.padding(top = (minOf(LocalConfiguration.current.screenHeightDp * 0.46f, 420f) * 0.55f).dp)) {
-                    StillFrame(item, viewer.isWatched(item))
-                }
-                AppHeader()
-            }
-        }
-        item(key = "heading") {
-            Column(Modifier.padding(horizontal = Gutter)) {
-                Text(
-                    label.showName,
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = if (title != null) Modifier.clickable { nav.title(title.id) } else Modifier,
-                )
-                val where = listOfNotNull(
-                    season?.let { if (it == 0) stringResource(R.string.title_episode_specials) else stringResource(R.string.title_episode_season, it) },
-                    item.episodeNumber?.let { stringResource(R.string.title_episode_number, it) },
-                ).joinToString(" · ")
-                if (where.isNotEmpty()) {
-                    Text(
-                        where,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = Palette.Muted,
-                        modifier = if (title != null) Modifier.clickable { nav.season(title.id, season) } else Modifier,
+    val listState = rememberLazyListState()
+    Box(Modifier.fillMaxSize()) {
+        LazyColumn(
+            Modifier.fillMaxSize(),
+            state = listState,
+            contentPadding = PaddingValues(bottom = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp),
+        ) {
+            item(key = "header") {
+                Box {
+                    // The show's art first; the still and a frame when it has none.
+                    Backdrop(
+                        listOfNotNull(
+                            api.art(title?.images?.backdrop, ArtworkSize.Large),
+                            api.art(item.episode?.still, ArtworkSize.Large),
+                            api.frame(item.id, large = true),
+                        ),
+                        label.showName,
                     )
+                    // As high as the web starts it, so the season's other episodes make the first screen too.
+                    Column(Modifier.padding(top = maxOf(112f, LocalConfiguration.current.screenHeightDp * 0.2f).dp)) {
+                        StillFrame(item, viewer.isWatched(item))
+                    }
                 }
-                Gap(6.dp)
-                Text(label.title, style = MaterialTheme.typography.headlineLarge, maxLines = 3, overflow = TextOverflow.Ellipsis)
-                Gap(10.dp)
-                val facts = listOfNotNull(formatDay(item.episode?.airDate), formatRuntime(runtimeMinutes(item), res)).joinToString(" · ")
-                if (facts.isNotEmpty()) Text(facts, style = MaterialTheme.typography.bodyMedium, color = Palette.Foreground.copy(alpha = 0.8f))
-                streamSummary(item, res)?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Palette.Faint) }
             }
+            item(key = "heading") {
+                Column(Modifier.padding(horizontal = Gutter)) {
+                    Text(
+                        label.showName,
+                        style = MaterialTheme.typography.titleLarge,
+                        modifier = if (title != null) Modifier.clickable { nav.titleUp(title.id) } else Modifier,
+                    )
+                    val where = listOfNotNull(
+                        season?.let { if (it == 0) stringResource(R.string.title_episode_specials) else stringResource(R.string.title_episode_season, it) },
+                        item.episodeNumber?.let { stringResource(R.string.title_episode_number, it) },
+                    ).joinToString(" · ")
+                    if (where.isNotEmpty()) {
+                        Text(
+                            where,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = Palette.Muted,
+                            modifier = if (title != null) Modifier.clickable { nav.seasonUp(title.id, season) } else Modifier,
+                        )
+                    }
+                    Gap(6.dp)
+                    Text(label.title, style = MaterialTheme.typography.headlineLarge, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                    Gap(10.dp)
+                    val resuming = item.progress?.let { !it.completed && it.positionSeconds > 0 } == true && !viewer.isWatched(item)
+                    val facts = listOfNotNull(
+                        formatDay(item.episode?.airDate),
+                        if (resuming) timeLeft(item, res) else formatRuntime(runtimeMinutes(item), res),
+                    ).joinToString(" · ")
+                    val rating = title?.contentRating
+                    if (facts.isNotEmpty() || rating != null) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            if (facts.isNotEmpty()) Text(facts, style = MaterialTheme.typography.bodyMedium, color = Palette.Foreground.copy(alpha = 0.8f))
+                            rating?.let { Badge(it, outlined = true) }
+                        }
+                    }
+                    streamSummary(item, res)?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Palette.Faint) }
+                }
+            }
+            item.episode?.overview?.let { overview ->
+                item(key = "overview") { Box(Modifier.padding(horizontal = Gutter)) { Overview(overview, lines = 6) } }
+            }
+            item(key = "actions") {
+                ActionRow(
+                    play = item,
+                    resume = item.progress?.let { !it.completed && it.positionSeconds > 0 } == true,
+                    playDetail = null,
+                    watched = viewer.isWatched(item),
+                    favorite = viewer.isFavorite(item),
+                    onWatched = { viewer.setWatched(api, item, !viewer.isWatched(item)) },
+                    onFavorite = { viewer.setFavorite(api, item, !viewer.isFavorite(item)) },
+                    onMore = { actions.item(item, here = true) },
+                )
+            }
+            if (title != null) {
+                item(key = "more") { MoreFromSeason(item, title.id) }
+            }
+            item(key = "bottom") { Box(Modifier.navigationBarsPadding()) }
         }
-        item.episode?.overview?.let { overview ->
-            item(key = "overview") { Box(Modifier.padding(horizontal = Gutter)) { Overview(overview, lines = 6) } }
-        }
-        item(key = "actions") {
-            ActionRow(
-                play = item,
-                resume = item.progress?.let { !it.completed && it.positionSeconds > 0 } == true,
-                playDetail = null,
-                watched = viewer.isWatched(item),
-                favorite = viewer.isFavorite(item),
-                onWatched = { viewer.setWatched(api, item, !viewer.isWatched(item)) },
-                onFavorite = { viewer.setFavorite(api, item, !viewer.isFavorite(item)) },
-                onMore = { actions.item(item) },
-            )
-        }
-        if (title != null) {
-            item(key = "more") { MoreFromSeason(item, title.id) }
-        }
-        item(key = "bottom") { Box(Modifier.navigationBarsPadding()) }
+        StatusBarScrim(listState)
+        ItemTopBar(
+            parent = if (title == null) null else if (season != null) seasonName(season, res) else label.showName,
+            onParent = title?.let { { if (season != null) nav.seasonUp(it.id, season) else nav.titleUp(it.id) } },
+        )
     }
 }
 
@@ -368,7 +410,7 @@ private fun MoreFromSeason(item: MediaItem, titleId: String) {
     if (others.isEmpty()) return
     Rail(
         stringResource(R.string.title_episode_more_from, seasonName(season, res)),
-        onTitleClick = { nav.season(titleId, season) },
+        onTitleClick = { nav.seasonUp(titleId, season) },
     ) {
         items(others, key = { it.id }) { other ->
             EpisodeCard(other, Modifier.width(railItemWidth(RailArt.Landscape)), showName = false)

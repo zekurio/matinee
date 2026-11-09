@@ -2,7 +2,10 @@ package io.github.zekurio.matinee.ui.title
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,16 +20,19 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ripple
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
@@ -52,6 +58,7 @@ import io.github.zekurio.matinee.ui.browse.creditKind
 import io.github.zekurio.matinee.ui.components.ArtFrame
 import io.github.zekurio.matinee.ui.components.Badge
 import io.github.zekurio.matinee.ui.components.CardShape
+import io.github.zekurio.matinee.ui.components.ControlShape
 import io.github.zekurio.matinee.ui.components.CardText
 import io.github.zekurio.matinee.ui.components.Gap
 import io.github.zekurio.matinee.ui.components.Gutter
@@ -64,7 +71,7 @@ import io.github.zekurio.matinee.ui.components.LucideIcon
 import io.github.zekurio.matinee.ui.components.MatineeButton
 import io.github.zekurio.matinee.ui.components.PersonCard
 import io.github.zekurio.matinee.ui.components.Picture
-import io.github.zekurio.matinee.ui.components.PlayGlyph
+import io.github.zekurio.matinee.ui.components.HoverPlay
 import io.github.zekurio.matinee.ui.components.PosterArt
 import io.github.zekurio.matinee.ui.components.ProgressBar
 import io.github.zekurio.matinee.ui.components.Rail
@@ -95,12 +102,23 @@ fun Backdrop(sources: List<ImageSource>, toneKey: String, modifier: Modifier = M
     val height = minOf(LocalConfiguration.current.screenHeightDp * 0.46f, 420f).dp
     Box(modifier.fillMaxWidth().height(height).tone(toneKey)) {
         Picture(sources, Modifier.fillMaxSize(), alignment = Alignment.TopCenter)
+        // The web's two shades: from the start, where the text sits, and up
+        // from the bottom into the page. The art stays a backdrop, so what
+        // sits on it, a poster or an episode's still, stands out.
+        Box(
+            Modifier.fillMaxSize().background(
+                Brush.horizontalGradient(
+                    0f to Palette.Background.copy(alpha = 0.95f),
+                    0.5f to Palette.Background.copy(alpha = 0.5f),
+                    1f to Color.Transparent,
+                ),
+            ),
+        )
         Box(
             Modifier.fillMaxSize().background(
                 Brush.verticalGradient(
-                    0f to Palette.Background.copy(alpha = 0.5f),
-                    0.3f to Color.Transparent,
-                    0.6f to Palette.Background.copy(alpha = 0.35f),
+                    0f to Color.Transparent,
+                    0.6f to Palette.Background.copy(alpha = 0.7f),
                     1f to Palette.Background,
                 ),
             ),
@@ -237,28 +255,33 @@ fun TitleHeading(title: Title, flags: List<String>) {
                 Text(title.originalName, style = MaterialTheme.typography.bodyLarge, color = Palette.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             Gap(8.dp)
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-                itemVerticalAlignment = Alignment.CenterVertically,
-            ) {
-                val facts = listOfNotNull(
-                    title.year?.toString(),
-                    if (title.isShow) res.getQuantityString(R.plurals.media_episode_count, title.itemCount, title.itemCount)
-                    else formatRuntime(title.runtimeMinutes, res),
-                    if (title.isShow) title.status else null,
-                )
-                if (facts.isNotEmpty()) {
-                    Text(facts.joinToString(" · "), style = MaterialTheme.typography.bodyMedium, color = Palette.Foreground.copy(alpha = 0.8f))
-                }
-                title.contentRating?.let { Badge(it, outlined = true) }
-                title.rating?.let { rating ->
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        LucideIcon(Lucide.Star, stringResource(R.string.media_hero_rated), size = 14.dp, tint = Palette.Star)
-                        Text(formatRating(rating), style = MaterialTheme.typography.bodyMedium)
+            val facts = listOfNotNull(
+                title.year?.toString(),
+                if (title.isShow) res.getQuantityString(R.plurals.media_episode_count, title.itemCount, title.itemCount)
+                else formatRuntime(title.runtimeMinutes, res),
+                if (title.isShow) title.status else null,
+            )
+            if (facts.isNotEmpty()) {
+                Text(facts.joinToString(" · "), style = MaterialTheme.typography.bodyMedium, color = Palette.Foreground.copy(alpha = 0.8f))
+            }
+            // The rating and the file's badges on a line of their own, so a
+            // narrow screen doesn't strand the last one under the facts.
+            if (title.contentRating != null || title.rating != null || flags.isNotEmpty()) {
+                Gap(6.dp)
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                    itemVerticalAlignment = Alignment.CenterVertically,
+                ) {
+                    title.contentRating?.let { Badge(it, outlined = true) }
+                    title.rating?.let { rating ->
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            LucideIcon(Lucide.Star, stringResource(R.string.media_hero_rated), size = 14.dp, tint = Palette.Star)
+                            Text(formatRating(rating), style = MaterialTheme.typography.bodyMedium)
+                        }
                     }
+                    flags.forEach { Badge(it) }
                 }
-                flags.forEach { Badge(it) }
             }
             if (title.genres.isNotEmpty()) {
                 Gap(6.dp)
@@ -312,12 +335,14 @@ fun SeasonsRail(title: Title, current: Season? = null) {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun SeasonCard(title: Title, season: Season, modifier: Modifier, onClick: () -> Unit) {
     val api = LocalApi.current
+    val actions = LocalActions.current
     val res = LocalResources.current
     val left = season.itemCount - season.watchedCount
-    Column(modifier.clip(CardShape).clickable(onClick = onClick)) {
+    Column(modifier.clip(CardShape).combinedClickable(onLongClick = { actions.season(title.summary, season) }, onClick = onClick)) {
         Box {
             PosterArt(
                 stringResource(R.string.title_season_of, title.name, seasonName(season.number, res)),
@@ -345,8 +370,8 @@ private fun SeasonCard(title: Title, season: Season, modifier: Modifier, onClick
 
 /**
  * The episode up next on a show's page, as the web's EpisodeRow: a big
- * still with Play on it, its number and name, air date and runtime, and
- * what happens in it.
+ * still that opens it, with Play on hover or focus, its number and name,
+ * air date and runtime, and what happens in it.
  */
 @Composable
 fun NextUpEpisode(item: MediaItem) {
@@ -361,12 +386,13 @@ fun NextUpEpisode(item: MediaItem) {
     Column(Modifier.padding(horizontal = Gutter)) {
         SectionTitle(stringResource(if (item.progress != null) R.string.title_next_up_continue else R.string.title_next_up_next))
         Gap(12.dp)
-        Box(Modifier.clip(CardShape).clickable { nav.episode(item.id) }) {
+        val interaction = remember { MutableInteractionSource() }
+        Box(Modifier.clip(CardShape).clickable(interaction, ripple()) { nav.episode(item.id) }) {
             ArtFrame(label.showName, 16f / 9f) {
                 Picture(api.landscape(item, ArtworkSize.Medium), Modifier.fillMaxSize())
                 if (watched) WatchedBadge(Modifier.align(Alignment.TopEnd).padding(8.dp))
                 else if (ratio != null && ratio > 0f) ProgressBar(ratio, Modifier.align(Alignment.BottomCenter))
-                PlayGlyph({ nav.play(item.id) }, stringResource(R.string.media_play_named, label.title), size = 64.dp)
+                HoverPlay(interaction, { nav.play(item.id) }, stringResource(R.string.media_play_named, label.title), size = 64.dp)
             }
         }
         Gap(10.dp)
@@ -388,6 +414,10 @@ fun NextUpEpisode(item: MediaItem) {
 }
 
 /** An episode's still on its own page, full width, with Play on it. */
+/**
+ * An episode's still, which plays it, lifted off the backdrop by a shadow
+ * as on the web. The whole still plays; Play shows on it on hover or focus.
+ */
 @Composable
 fun StillFrame(item: MediaItem, watched: Boolean) {
     val api = LocalApi.current
@@ -395,19 +425,23 @@ fun StillFrame(item: MediaItem, watched: Boolean) {
     val res = LocalResources.current
     val label = itemLabel(item, res)
     val ratio = progressRatio(item)
+    val interaction = remember { MutableInteractionSource() }
+    val play = stringResource(R.string.media_play_named, label.title)
     Box(
         Modifier
             .padding(horizontal = Gutter)
             .fillMaxWidth()
             .aspectRatio(16f / 9f)
-            .clip(CardShape)
+            .shadow(24.dp, ControlShape, ambientColor = Color.Black, spotColor = Color.Black)
+            .clip(ControlShape)
             .tone(label.showName)
-            .border(1.dp, Palette.Border, CardShape),
+            .border(1.dp, Palette.Border, ControlShape)
+            .clickable(interaction, ripple(), onClickLabel = play) { nav.play(item.id) },
         contentAlignment = Alignment.Center,
     ) {
         Picture(api.landscape(item, ArtworkSize.Medium), Modifier.fillMaxSize())
         if (watched) WatchedBadge(Modifier.align(Alignment.TopEnd).padding(10.dp), size = 24.dp)
         else if (ratio != null && ratio > 0f) ProgressBar(ratio, Modifier.align(Alignment.BottomCenter))
-        PlayGlyph({ nav.play(item.id) }, stringResource(R.string.media_play_named, label.title), size = 64.dp)
+        HoverPlay(interaction, { nav.play(item.id) }, play, size = 64.dp)
     }
 }
