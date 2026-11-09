@@ -72,23 +72,20 @@ export function Methods({ methods }: { methods: MethodStat[] }) {
   )
 }
 
-/** Transcoded plays per name, each a part of `total`. */
+/** Transcoded plays per name. */
 function CodecSection({
   title,
   rows,
-  total,
   name,
 }: {
   title: string
   rows: NamedCount[]
-  total: number
   name: (value: string) => string
 }) {
   if (rows.length === 0) return null
   return (
     <StatsSection title={title}>
       <RankedBars
-        total={total}
         rows={rows.map((row) => ({
           key: row.name,
           label: name(row.name),
@@ -108,19 +105,16 @@ export function TranscodingSections({ stats }: { stats: ServerStats }) {
       <CodecSection
         title={tr("stats.server.encoders")}
         rows={transcoding.encoders}
-        total={transcoding.videoTranscodes}
         name={encoderName}
       />
       <CodecSection
         title={tr("stats.server.videoFrom")}
         rows={transcoding.videoCodecs}
-        total={transcoding.videoTranscodes}
         name={videoCodecName}
       />
       <CodecSection
         title={tr("stats.server.audioFrom")}
         rows={transcoding.audioCodecs}
-        total={transcoding.audioConversions}
         name={(codec) => audioFormatName(codec)}
       />
     </>
@@ -132,7 +126,6 @@ export function Viewers({ stats }: { stats: ServerStats }) {
   return (
     <StatsSection title={tr("stats.server.viewers")}>
       <RankedBars
-        total={stats.totals.watchSeconds}
         rows={stats.users.map((entry) => ({
           key: entry.user.id,
           label: (
@@ -163,7 +156,6 @@ export function Clients({ stats }: { stats: ServerStats }) {
   return (
     <StatsSection title={tr("stats.server.clients")}>
       <RankedBars
-        total={stats.totals.plays}
         rows={stats.clients.map((client) => ({
           key: client.name,
           label: client.name,

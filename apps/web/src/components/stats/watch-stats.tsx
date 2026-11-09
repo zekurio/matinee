@@ -13,7 +13,6 @@ import { bucketName, rangeName } from "@/lib/stats"
 
 import {
   RankedBars,
-  ShareBar,
   type StatFigure,
   StatFigures,
   StatsSection,
@@ -103,13 +102,12 @@ export function WatchOverview({
 }
 
 /**
- * The most watched titles, ranked, with a small poster each. A bar is the
- * title's part of all the watch time in the range.
+ * The most watched titles, ranked, with a small poster each, how often
+ * they were played, and their watch time at the end.
  */
 export function TopTitlesSection({ stats }: { stats: WatchStats }) {
   const { titles } = stats
   if (titles.length === 0) return null
-  const most = titles[0]?.watchSeconds ?? 1
   return (
     <StatsSection title={tr("stats.watch.top")}>
       <ol className={statsRows}>
@@ -146,9 +144,6 @@ export function TopTitlesSection({ stats }: { stats: WatchStats }) {
                   <span className="text-muted-foreground text-sm tabular-nums">
                     {tr("stats.plays", { count: entry.plays })}
                   </span>
-                  <span className="mt-2">
-                    <ShareBar value={entry.watchSeconds} scale={most} />
-                  </span>
                 </span>
                 <span className="shrink-0 text-[15px] font-semibold tabular-nums">
                   {formatWatchTime(entry.watchSeconds)}
@@ -163,9 +158,8 @@ export function TopTitlesSection({ stats }: { stats: WatchStats }) {
 }
 
 /**
- * Watch time per genre, each bar against all the watch time. A title can
- * have several genres, so the bars add up to more than the whole and carry
- * no percent.
+ * Watch time per genre. A title can have several genres, so their times
+ * add up to more than the whole.
  */
 export function GenresSection({ stats }: { stats: WatchStats }) {
   if (stats.genres.length === 0) return null

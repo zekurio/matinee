@@ -158,58 +158,36 @@ export function percent(value: number, total: number): string {
 // there, as the rest start at the line above them.
 export const statsRows = "-mx-4 -mt-4 -mb-4 flex flex-col divide-y"
 
-/** A thin bar for `value`'s part of `scale`, under a row. */
-export function ShareBar({ value, scale }: { value: number; scale: number }) {
-  return (
-    <span
-      aria-hidden
-      className="bg-foreground/[0.07] block h-[3px] rounded-full"
-    >
-      <span
-        className="bg-primary block h-full rounded-full"
-        style={{ width: `${Math.max((value / Math.max(1, scale)) * 100, 1)}%` }}
-      />
-    </span>
-  )
-}
-
 /**
- * Rows with a bar under each, as long as the row's part of `total`, or of
- * the biggest row without it, as the apps list them: the name, maybe a
- * note under it, and the figure at the end. No percents: a list cut to
- * its top rows, or of things that overlap like genres, has none that add
- * up.
+ * Rows as the apps list them: the name, maybe a note under it, and the
+ * figure at the end. No bars or percents: a list cut to its top rows, or
+ * of things that overlap like genres, has no whole to measure them by.
  */
 export function RankedBars({
   rows,
-  total,
   className,
 }: {
   rows: RankedRow[]
-  total?: number
   className?: string
 }) {
-  const scale = total ?? Math.max(0, ...rows.map((row) => row.value))
   return (
     <ul className={cn(statsRows, className)}>
       {rows.map((row) => (
-        <li key={row.key} className="flex flex-col gap-2 px-4 py-3">
-          <div className="flex items-center justify-between gap-4">
-            <span className="flex min-w-0 flex-col">
-              <span className="truncate text-[15px] leading-6">
-                {row.label}
+        <li
+          key={row.key}
+          className="flex items-center justify-between gap-4 px-4 py-3"
+        >
+          <span className="flex min-w-0 flex-col">
+            <span className="truncate text-[15px] leading-6">{row.label}</span>
+            {row.note && (
+              <span className="text-muted-foreground truncate text-sm tabular-nums">
+                {row.note}
               </span>
-              {row.note && (
-                <span className="text-muted-foreground truncate text-sm tabular-nums">
-                  {row.note}
-                </span>
-              )}
-            </span>
-            <span className="shrink-0 text-[15px] leading-6 font-semibold tabular-nums">
-              {row.detail}
-            </span>
-          </div>
-          <ShareBar value={row.value} scale={scale} />
+            )}
+          </span>
+          <span className="shrink-0 text-[15px] leading-6 font-semibold tabular-nums">
+            {row.detail}
+          </span>
         </li>
       ))}
     </ul>
