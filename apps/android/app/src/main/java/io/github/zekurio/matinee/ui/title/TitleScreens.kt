@@ -67,6 +67,13 @@ import io.github.zekurio.matinee.ui.timeLeft
 @Composable
 private fun headingTop(): Dp = (minOf(LocalConfiguration.current.screenHeightDp * 0.46f, 420f) - 150f).dp
 
+/**
+ * Where a phone starts a heading without its poster or still, lower, for
+ * more of the backdrop, as the web's `max(10rem, 30vh)`.
+ */
+@Composable
+private fun phoneHeadingTop(): Dp = maxOf(160f, LocalConfiguration.current.screenHeightDp * 0.3f).dp
+
 /** Loading and failure for a page that shows nothing else until it has its data. */
 @Composable
 private fun <T> PageState(state: Load<T>, error: String, retry: () -> Unit, content: @Composable (T) -> Unit) {
@@ -113,8 +120,10 @@ private fun TitlePage(title: Title) {
                         listOfNotNull(api.art(title.images.backdrop, ArtworkSize.Large), next?.let { api.frame(it.id, large = true) }),
                         title.name,
                     )
-                    Column(Modifier.padding(top = headingTop())) {
-                        TitleHeading(title, if (title.isShow || next == null) emptyList() else mediaFlags(next))
+                    // Phones leave the poster out, for the name to have the width; seasons keep theirs.
+                    val wide = isWide()
+                    Column(Modifier.padding(top = if (wide) headingTop() else phoneHeadingTop())) {
+                        TitleHeading(title, if (title.isShow || next == null) emptyList() else mediaFlags(next), poster = wide)
                     }
                 }
             }
@@ -314,6 +323,11 @@ private fun EpisodePage(item: MediaItem) {
     val title = item.title
     val season = item.seasonNumber
     val listState = rememberLazyListState()
+    // On a phone the still is the backdrop, with the heading on it, and
+    // isn't shown again; wider, the show's art is, with the still on it.
+    val wide = isWide()
+    val show = listOfNotNull(api.art(title?.images?.backdrop, ArtworkSize.Large))
+    val still = listOfNotNull(api.art(item.episode?.still, ArtworkSize.Large), api.frame(item.id, large = true))
     Box(Modifier.fillMaxSize()) {
         LazyColumn(
             Modifier.fillMaxSize(),
@@ -323,57 +337,19 @@ private fun EpisodePage(item: MediaItem) {
         ) {
             item(key = "header") {
                 Box {
-                    // The show's art first; the still and a frame when it has none.
-                    Backdrop(
-                        listOfNotNull(
-                            api.art(title?.images?.backdrop, ArtworkSize.Large),
-                            api.art(item.episode?.still, ArtworkSize.Large),
-                            api.frame(item.id, large = true),
-                        ),
-                        label.showName,
-                    )
-                    // As high as the web starts it, so the season's other episodes make the first screen too.
-                    Column(Modifier.padding(top = maxOf(112f, LocalConfiguration.current.screenHeightDp * 0.2f).dp)) {
-                        StillFrame(item, viewer.isWatched(item))
+                    Backdrop(if (wide) show + still else still + show, label.showName)
+                    if (wide) {
+                        // As high as the web starts it, so the season's other episodes make the first screen too.
+                        Column(Modifier.padding(top = maxOf(112f, LocalConfiguration.current.screenHeightDp * 0.2f).dp)) {
+                            StillFrame(item, viewer.isWatched(item))
+                        }
+                    } else {
+                        Box(Modifier.padding(top = phoneHeadingTop())) { EpisodeHeading(item) }
                     }
                 }
             }
-            item(key = "heading") {
-                Column(Modifier.padding(horizontal = Gutter)) {
-                    Text(
-                        label.showName,
-                        style = MaterialTheme.typography.titleLarge,
-                        modifier = if (title != null) Modifier.clickable { nav.titleUp(title.id) } else Modifier,
-                    )
-                    val where = listOfNotNull(
-                        season?.let { if (it == 0) stringResource(R.string.title_episode_specials) else stringResource(R.string.title_episode_season, it) },
-                        item.episodeNumber?.let { stringResource(R.string.title_episode_number, it) },
-                    ).joinToString(" · ")
-                    if (where.isNotEmpty()) {
-                        Text(
-                            where,
-                            style = MaterialTheme.typography.titleMedium,
-                            color = Palette.Muted,
-                            modifier = if (title != null) Modifier.clickable { nav.seasonUp(title.id, season) } else Modifier,
-                        )
-                    }
-                    Gap(6.dp)
-                    Text(label.title, style = MaterialTheme.typography.headlineLarge, maxLines = 3, overflow = TextOverflow.Ellipsis)
-                    Gap(10.dp)
-                    val resuming = item.progress?.let { !it.completed && it.positionSeconds > 0 } == true && !viewer.isWatched(item)
-                    val facts = listOfNotNull(
-                        formatDay(item.episode?.airDate),
-                        if (resuming) timeLeft(item, res) else formatRuntime(runtimeMinutes(item), res),
-                    ).joinToString(" · ")
-                    val rating = title?.contentRating
-                    if (facts.isNotEmpty() || rating != null) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            if (facts.isNotEmpty()) Text(facts, style = MaterialTheme.typography.bodyMedium, color = Palette.Foreground.copy(alpha = 0.8f))
-                            rating?.let { Badge(it, outlined = true) }
-                        }
-                    }
-                    MediaInfo(item, Modifier.padding(top = 12.dp))
-                }
+            if (wide) {
+                item(key = "heading") { EpisodeHeading(item) }
             }
             item.episode?.overview?.let { overview ->
                 item(key = "overview") { Box(Modifier.padding(horizontal = Gutter)) { Overview(overview, lines = 6) } }
@@ -401,6 +377,52 @@ private fun EpisodePage(item: MediaItem) {
             parent = if (title == null) null else if (season != null) seasonName(season, res) else label.showName,
             onParent = title?.let { { if (season != null) nav.seasonUp(it.id, season) else nav.titleUp(it.id) } },
         )
+    }
+}
+
+/** An episode's show, season and number, name, facts, and file, as the web's episode header has them. */
+@Composable
+private fun EpisodeHeading(item: MediaItem) {
+    val nav = LocalNavigator.current
+    val res = LocalResources.current
+    val viewer = LocalContext.current.app.viewer
+    val label = itemLabel(item, res)
+    val title = item.title
+    val season = item.seasonNumber
+    Column(Modifier.padding(horizontal = Gutter)) {
+        Text(
+            label.showName,
+            style = MaterialTheme.typography.titleLarge,
+            modifier = if (title != null) Modifier.clickable { nav.titleUp(title.id) } else Modifier,
+        )
+        val where = listOfNotNull(
+            season?.let { if (it == 0) stringResource(R.string.title_episode_specials) else stringResource(R.string.title_episode_season, it) },
+            item.episodeNumber?.let { stringResource(R.string.title_episode_number, it) },
+        ).joinToString(" · ")
+        if (where.isNotEmpty()) {
+            Text(
+                where,
+                style = MaterialTheme.typography.titleMedium,
+                color = Palette.Muted,
+                modifier = if (title != null) Modifier.clickable { nav.seasonUp(title.id, season) } else Modifier,
+            )
+        }
+        Gap(6.dp)
+        Text(label.title, style = MaterialTheme.typography.headlineLarge, maxLines = 3, overflow = TextOverflow.Ellipsis)
+        Gap(10.dp)
+        val resuming = item.progress?.let { !it.completed && it.positionSeconds > 0 } == true && !viewer.isWatched(item)
+        val facts = listOfNotNull(
+            formatDay(item.episode?.airDate),
+            if (resuming) timeLeft(item, res) else formatRuntime(runtimeMinutes(item), res),
+        ).joinToString(" · ")
+        val rating = title?.contentRating
+        if (facts.isNotEmpty() || rating != null) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                if (facts.isNotEmpty()) Text(facts, style = MaterialTheme.typography.bodyMedium, color = Palette.Foreground.copy(alpha = 0.8f))
+                rating?.let { Badge(it, outlined = true) }
+            }
+        }
+        MediaInfo(item, Modifier.padding(top = 12.dp))
     }
 }
 

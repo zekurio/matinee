@@ -248,18 +248,20 @@ fun ActionRow(
     }
 }
 
-/** The title's poster beside its name and facts, as the web's title header lays them out on phones. */
+/** The title's name and facts, with its poster beside them when [poster] says, as the web's title header. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun TitleHeading(title: Title, flags: List<String>) {
+fun TitleHeading(title: Title, flags: List<String>, poster: Boolean = true) {
     val api = LocalApi.current
     val nav = LocalNavigator.current
     val res = LocalResources.current
     Row(Modifier.padding(horizontal = Gutter), verticalAlignment = Alignment.Bottom) {
-        Box(Modifier.width(if (isWide()) 180.dp else 112.dp)) {
-            PosterArt(title.name, api.art(title.images.poster, ArtworkSize.Small))
+        if (poster) {
+            Box(Modifier.width(if (isWide()) 180.dp else 112.dp)) {
+                PosterArt(title.name, api.art(title.images.poster, ArtworkSize.Small))
+            }
+            Gap(16.dp)
         }
-        Gap(16.dp)
         Column(Modifier.weight(1f).padding(bottom = 4.dp)) {
             Text(title.name, style = MaterialTheme.typography.headlineLarge, maxLines = 3, overflow = TextOverflow.Ellipsis)
             if (title.originalName != null && title.originalName != title.name) {
