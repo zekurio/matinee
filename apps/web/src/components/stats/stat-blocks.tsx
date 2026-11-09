@@ -16,7 +16,13 @@ import { perLocale, tr } from "@/i18n"
 export const statsGrid =
   "grid items-start gap-x-10 gap-y-8 md:grid-cols-2 xl:grid-cols-3"
 
-/** A titled block of statistics with a small heading. */
+/** The surface statistics sit on: the card color, a rim, rounded. */
+export const statsCard = "bg-card rounded-xl border"
+
+/**
+ * A titled block of statistics: a card, its name in small type at the
+ * top, as the apps show them.
+ */
 export function StatsSection({
   title,
   action,
@@ -32,10 +38,10 @@ export function StatsSection({
   return (
     <section
       aria-labelledby={id}
-      className={cn("flex min-w-0 flex-col gap-3", className)}
+      className={cn(statsCard, "flex min-w-0 flex-col gap-3 p-4", className)}
     >
       <div className="flex min-h-6 flex-wrap items-baseline gap-x-2 gap-y-1">
-        <h2 id={id} className="text-[15px] leading-6 font-semibold">
+        <h2 id={id} className="text-muted-foreground text-sm leading-6">
           {title}
         </h2>
         {action && <div className="ml-auto">{action}</div>}
@@ -81,13 +87,15 @@ export function PrivateNote() {
 export type StatFigure = {
   label: string
   value: string
+  icon: LucideIcon
   /** A line under the label, like "8 on the GPU". */
   detail?: string
 }
 
 /**
- * The headline figures: two or three to a row on small screens, all in one
- * row from `lg` up.
+ * The headline figures as a card of rows, as Settings lists its rows: an
+ * icon, what the figure counts, and the figure at the end, so it reads as
+ * a sentence rather than a wall of numbers.
  */
 export function StatFigures({
   figures,
@@ -97,26 +105,24 @@ export function StatFigures({
   className?: string
 }) {
   return (
-    <ul
-      className={cn(
-        "grid grid-cols-2 content-start gap-x-6 gap-y-4 sm:grid-cols-3 lg:auto-cols-fr lg:grid-flow-col lg:grid-cols-none",
-        className,
-      )}
-    >
-      {figures.map(({ label, value, detail }) => (
-        <li key={label} className="flex min-w-0 flex-col">
-          {/* The label comes first for screen readers; the figure shows on top. */}
-          <span className="text-muted-foreground order-2 truncate text-xs leading-5">
-            {label}
+    <ul className={cn(statsCard, "divide-y self-start", className)}>
+      {figures.map(({ label, value, icon: Icon, detail }) => (
+        <li key={label} className="flex min-w-0 items-center gap-3.5 px-4 py-3">
+          <Icon
+            aria-hidden
+            className="text-muted-foreground size-[18px] shrink-0"
+          />
+          <span className="flex min-w-0 flex-1 flex-col">
+            <span className="truncate text-sm leading-5">{label}</span>
+            {detail && (
+              <span className="text-muted-foreground truncate text-xs">
+                {detail}
+              </span>
+            )}
           </span>
-          <span className="order-1 truncate text-xl leading-7 font-semibold tracking-tight tabular-nums">
+          <span className="shrink-0 text-sm leading-5 font-semibold tabular-nums">
             {value}
           </span>
-          {detail && (
-            <span className="text-muted-foreground/70 order-3 truncate text-xs">
-              {detail}
-            </span>
-          )}
         </li>
       ))}
     </ul>

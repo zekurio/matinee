@@ -155,7 +155,13 @@ export function todayIn(zone: string): SQL<string> {
   return sql<string>`to_char(now() at time zone ${zone}, 'YYYY-MM-DD')`
 }
 
-/** Watch time per bucket, from the range's first day through today. */
+/**
+ * Watch time per bucket, from the range's first day through today. All
+ * time starts at the first session that played, not at a file marked
+ * watched: marking one on its release date would otherwise stretch the
+ * chart back to that year, a long empty run of thin bars. The marked plays
+ * still count in the totals.
+ */
 export async function bucketsOf(
   range: StatsRange,
   zone: string,
@@ -164,7 +170,7 @@ export async function bucketsOf(
   const local = localStart(zone)
   const [span] = await db
     .select({
-      first: sql<string>`to_char(coalesce(min(${local}), now() at time zone ${zone}), 'YYYY-MM-DD')`,
+      first: sql<string>`to_char(coalesce(min(${local}) filter (where not ${playbackSession.marked}), min(${local}), now() at time zone ${zone}), 'YYYY-MM-DD')`,
       today: todayIn(zone),
     })
     .from(playbackSession)

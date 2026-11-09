@@ -154,4 +154,10 @@ export const profiles = {
     if (row.id !== context.user.id && !row.shareStats) return null
     return watchStats(input, row.id, context.user.id)
   }),
+
+  recent: authed.profiles.recent.handler(async ({ context, input }) => {
+    const row = await findUser(input.username)
+    if (row.id !== context.user.id && !row.shareStats) return null
+    return recentlyWatched(row.id, context.user.id, input.limit)
+  }),
 }

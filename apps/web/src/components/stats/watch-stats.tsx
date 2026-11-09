@@ -2,11 +2,13 @@ import type { WatchStats } from "@matinee/contracts"
 import { Skeleton } from "@matinee/ui/components/skeleton"
 import { cn } from "@matinee/ui/lib/utils"
 import { Link } from "@tanstack/react-router"
+import { FilmIcon, PlayIcon, TvIcon, TvMinimalPlayIcon } from "lucide-react"
 
 import { Picture, tone } from "@/components/media-item"
 import { tr } from "@/i18n"
 import { formatCount, formatWatchTime } from "@/lib/format"
 import { art } from "@/lib/media"
+import { rangeName } from "@/lib/stats"
 
 import {
   percent,
@@ -14,39 +16,46 @@ import {
   type StatFigure,
   StatFigures,
   StatsSection,
+  statsCard,
 } from "./stat-blocks"
-import { WatchChart, watchChartTitle } from "./watch-chart"
+import { WatchChart } from "./watch-chart"
 
 /** Whether the range has anything worth a chart. */
 export function hasPlays(stats: WatchStats): boolean {
   return stats.totals.plays > 0
 }
 
-/** Figures for the range's watch time and what was finished. */
+/** Figures for the range's plays and what was finished; the watch time has its card. */
 export function watchFigures(stats: WatchStats): StatFigure[] {
   const { totals } = stats
   return [
     {
-      label: tr("stats.figure.watchTime"),
-      value: formatWatchTime(totals.watchSeconds),
+      label: tr("stats.figure.plays"),
+      value: formatCount(totals.plays),
+      icon: PlayIcon,
     },
-    { label: tr("stats.figure.plays"), value: formatCount(totals.plays) },
     {
       label: tr("stats.figure.moviesFinished"),
       value: formatCount(totals.movies),
+      icon: FilmIcon,
     },
     {
       label: tr("stats.figure.episodesFinished"),
       value: formatCount(totals.episodes),
+      icon: TvIcon,
     },
     {
       label: tr("stats.figure.showsWatched"),
       value: formatCount(totals.shows),
+      icon: TvMinimalPlayIcon,
     },
   ]
 }
 
-/** The headline figures, then the watch time chart under them. */
+/**
+ * The range's watch time as a card, the total big over the chart, with the
+ * other figures as rows beside it on wide screens and under it on narrow.
+ */
 export function WatchOverview({
   stats,
   figures,
@@ -55,11 +64,19 @@ export function WatchOverview({
   figures: StatFigure[]
 }) {
   return (
-    <div className="flex flex-col gap-10">
-      <StatFigures figures={figures} />
-      <StatsSection title={watchChartTitle(stats.unit)}>
+    <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+      <section className={cn(statsCard, "flex min-w-0 flex-col gap-4 p-4")}>
+        <div>
+          <p className="text-muted-foreground text-sm leading-6">
+            {`${tr("stats.figure.watchTime")} · ${rangeName(stats.range)}`}
+          </p>
+          <p className="text-4xl leading-tight font-bold tracking-tight tabular-nums">
+            {formatWatchTime(stats.totals.watchSeconds)}
+          </p>
+        </div>
         <WatchChart buckets={stats.buckets} unit={stats.unit} />
-      </StatsSection>
+      </section>
+      <StatFigures figures={figures} />
     </div>
   )
 }
@@ -151,15 +168,10 @@ export function GenresSection({ stats }: { stats: WatchStats }) {
 export function WatchStatsSkeleton() {
   return (
     <div className="flex flex-col gap-10">
-      <div className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3 lg:grid-cols-6">
-        {[0, 1, 2, 3, 4, 5].map((i) => (
-          <div key={i}>
-            <Skeleton className="h-6 w-14" />
-            <Skeleton className="mt-1.5 h-3 w-20" />
-          </div>
-        ))}
+      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+        <Skeleton className="h-64 rounded-xl" />
+        <Skeleton className="h-48 rounded-xl" />
       </div>
-      <Skeleton className="h-44 rounded-md" />
     </div>
   )
 }

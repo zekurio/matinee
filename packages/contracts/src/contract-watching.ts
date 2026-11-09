@@ -12,6 +12,7 @@ import {
   ProfileName,
   ServerStats,
   StatsInput,
+  WatchedEntry,
   WatchStats,
 } from "./stats"
 
@@ -136,6 +137,19 @@ export const profilesContract = oc.tag("Profiles").router({
   stats: get("/profiles/{username}/stats")
     .input(StatsInput.extend({ username: ProfileName }))
     .output(WatchStats.nullable()),
+  /**
+   * The latest file of each title the owner played, newest first, as the
+   * profile's `recent` lists a dozen of. Null when the owner doesn't share
+   * statistics.
+   */
+  recent: get("/profiles/{username}/recent")
+    .input(
+      t.object({
+        username: ProfileName,
+        limit: t.number().int().min(1).max(200).$default(60),
+      }),
+    )
+    .output(t.array(WatchedEntry).nullable()),
 })
 
 /** What everyone watched, how the server played it, and the libraries. */

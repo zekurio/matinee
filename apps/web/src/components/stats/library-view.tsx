@@ -8,7 +8,14 @@ import {
 import { Button } from "@matinee/ui/components/button"
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
-import { FilmIcon, FolderPlusIcon, TvIcon } from "lucide-react"
+import {
+  ClockIcon,
+  FilmIcon,
+  FolderPlusIcon,
+  HardDriveIcon,
+  TvIcon,
+  TvMinimalPlayIcon,
+} from "lucide-react"
 
 import { tr } from "@/i18n"
 import { formatBytes, formatCount, formatWatchTime } from "@/lib/format"
@@ -131,22 +138,27 @@ function LibrarySections({ stats }: { stats: LibraryStats }) {
           {
             label: tr("stats.library.movies"),
             value: formatCount(totals.movies),
+            icon: FilmIcon,
           },
           {
             label: tr("stats.library.shows"),
             value: formatCount(totals.shows),
+            icon: TvIcon,
           },
           {
             label: tr("stats.library.episodes"),
             value: formatCount(totals.episodes),
+            icon: TvMinimalPlayIcon,
           },
           {
             label: tr("stats.library.size"),
             value: formatBytes(totals.sizeBytes),
+            icon: HardDriveIcon,
           },
           {
             label: tr("stats.library.runningTime"),
             value: formatWatchTime(totals.durationSeconds),
+            icon: ClockIcon,
           },
         ]}
       />

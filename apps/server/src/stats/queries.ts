@@ -257,23 +257,27 @@ export async function liveActivity(viewerId: string): Promise<LiveActivity> {
   }
 }
 
-/** The latest file of each title a user played, newest first. */
+/**
+ * The latest file of each title a user played, newest first, `limit`
+ * titles at most: a dozen for a profile, more for the whole list.
+ */
 export async function recentlyWatched(
   userId: string,
   viewerId: string,
+  limit = RECENT_TITLES,
 ): Promise<WatchedEntry[]> {
-  // Enough sessions to find a dozen titles through a binge of one show.
+  // Enough sessions to find the titles through a binge of one show.
   const rows = await db
     .select({ session: playbackSession, item: mediaItem })
     .from(playbackSession)
     .innerJoin(mediaItem, eq(mediaItem.id, playbackSession.mediaItemId))
     .where(and(eq(playbackSession.userId, userId), isPlay))
     .orderBy(desc(playbackSession.updatedAt))
-    .limit(200)
+    .limit(Math.max(200, limit * 20))
   const seen = new Set<string>()
   const picks = rows.filter((row) => {
     const key = row.item.titleId ?? row.item.id
-    if (seen.has(key) || seen.size >= RECENT_TITLES) return false
+    if (seen.has(key) || seen.size >= limit) return false
     seen.add(key)
     return true
   })

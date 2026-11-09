@@ -1,11 +1,11 @@
 import type { ServerStats, StatsRange } from "@matinee/contracts"
 import { Button } from "@matinee/ui/components/button"
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
-import { CalendarDaysIcon, SparklesIcon } from "lucide-react"
+import { CalendarDaysIcon, SparklesIcon, UsersIcon } from "lucide-react"
 import type { ReactNode } from "react"
 
 import { tr } from "@/i18n"
-import { formatCount, formatWatchTime } from "@/lib/format"
+import { formatCount } from "@/lib/format"
 import { errorMessage, orpc } from "@/lib/rpc"
 import { browserTimeZone, rangePhrase } from "@/lib/stats"
 
@@ -16,6 +16,7 @@ import {
   GenresSection,
   hasPlays,
   TopTitlesSection,
+  watchFigures,
   WatchOverview,
   WatchStatsSkeleton,
 } from "./watch-stats"
@@ -86,29 +87,11 @@ export function ActivityView(props: RangeProps) {
               stats={stats}
               figures={[
                 {
-                  label: tr("stats.figure.watchTime"),
-                  value: formatWatchTime(stats.totals.watchSeconds),
-                },
-                {
-                  label: tr("stats.figure.plays"),
-                  value: formatCount(stats.totals.plays),
-                },
-                {
                   label: tr("stats.figure.people", { count: stats.viewers }),
                   value: formatCount(stats.viewers),
+                  icon: UsersIcon,
                 },
-                {
-                  label: tr("stats.figure.moviesFinished"),
-                  value: formatCount(stats.totals.movies),
-                },
-                {
-                  label: tr("stats.figure.episodesFinished"),
-                  value: formatCount(stats.totals.episodes),
-                },
-                {
-                  label: tr("stats.figure.showsWatched"),
-                  value: formatCount(stats.totals.shows),
-                },
+                ...watchFigures(stats),
               ]}
             />
             <div className={statsGrid}>
