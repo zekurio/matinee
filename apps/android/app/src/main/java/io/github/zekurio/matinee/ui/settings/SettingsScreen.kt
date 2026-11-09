@@ -171,11 +171,23 @@ private fun PageRow(page: SettingsPage) {
 fun SettingsScreen(session: Session) {
     val server = (session.state.value as? AuthState.SignedIn)?.server.orEmpty()
     val admin = LocalUser.current.isAdmin && !LocalOffline.current
+    val offline = LocalOffline.current
     SettingsScaffold(stringResource(R.string.shell_settings)) {
+        // On top, as Findroid has it: the app starts with the downloads and leaves the server alone.
+        item(key = "offline") {
+            Panel {
+                SwitchRow(stringResource(R.string.settings_offline_mode), session.offlineMode, icon = Lucide.CloudOff) {
+                    session.setOfflineMode(it)
+                }
+            }
+        }
         item(key = "account") {
             Panel {
-                PageRow(SettingsPage.Account)
-                RowDivider()
+                // The sessions live on the server.
+                if (!offline) {
+                    PageRow(SettingsPage.Account)
+                    RowDivider()
+                }
                 PageRow(SettingsPage.Playback)
                 RowDivider()
                 PageRow(SettingsPage.Subtitles)

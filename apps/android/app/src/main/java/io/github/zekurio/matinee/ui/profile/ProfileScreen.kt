@@ -88,7 +88,7 @@ fun ProfileScreen(session: Session) {
             if (offline) {
                 item(key = "reconnect") {
                     Box(Modifier.padding(horizontal = Gutter)) {
-                        Panel { LinkRow(stringResource(R.string.downloads_reconnect), icon = Lucide.RefreshCw) { session.start() } }
+                        Panel { LinkRow(stringResource(R.string.settings_go_online), icon = Lucide.RefreshCw) { session.setOfflineMode(false) } }
                     }
                 }
             }

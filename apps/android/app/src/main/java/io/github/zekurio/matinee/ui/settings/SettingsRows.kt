@@ -108,11 +108,15 @@ fun <T> PickerRow(title: String, options: List<Pair<T, String>>, current: T, onP
 }
 
 @Composable
-fun SwitchRow(title: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+fun SwitchRow(title: String, checked: Boolean, @DrawableRes icon: Int? = null, onChange: (Boolean) -> Unit) {
     Row(
         Modifier.fillMaxWidth().clickable { onChange(!checked) }.padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        if (icon != null) {
+            LucideIcon(icon, null, size = 20.dp, tint = Palette.Muted)
+            Gap(14.dp)
+        }
         RowText(title)
         Gap(12.dp)
         Switch(

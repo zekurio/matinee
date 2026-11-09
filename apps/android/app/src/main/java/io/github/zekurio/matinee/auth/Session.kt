@@ -122,7 +122,19 @@ class Session(context: Context) {
         })
     }
 
-    /** Check the saved server and session again. */
+    /** Offline mode, as Findroid's: the app shows the downloads and leaves the server alone. */
+    val offlineMode: Boolean get() = store.offlineMode
+
+    /**
+     * Turn offline mode on, straight to the downloads, or off, which checks
+     * the server again. It holds across restarts until it's turned off.
+     */
+    fun setOfflineMode(on: Boolean) {
+        store.offlineMode = on
+        if (on) goOffline() else start()
+    }
+
+    /** Check the saved server and session again, unless offline mode keeps the app away from it. */
     fun start() {
         val server = origin ?: run {
             _state.value = AuthState.NoServer
@@ -130,6 +142,11 @@ class Session(context: Context) {
         }
         val client = MatineeApi(server, http)
         api = client
+        val user = lastUser
+        if (store.offlineMode && user != null) {
+            _state.value = AuthState.Offline(server.display, user)
+            return
+        }
         // Trying again stays on the unreachable screen, with the button busy.
         _state.value = when (val current = _state.value) {
             is AuthState.Unreachable -> current.copy(retrying = true)
@@ -182,6 +199,7 @@ class Session(context: Context) {
 
     /** Back to picking a server. */
     fun forgetServer() {
+        store.offlineMode = false
         clearToken()
         origin = null
         api = null
@@ -242,8 +260,8 @@ class Session(context: Context) {
             runCatching { MatineeJson.decodeFromString(User.serializer(), it) }.getOrNull()
         }
 
-    /** Watch downloads while the server doesn't answer. [start] tries the server again. */
-    fun goOffline() {
+    /** Show the downloads, without the server. [setOfflineMode] keeps it so. */
+    private fun goOffline() {
         val server = origin ?: return
         val user = lastUser ?: return
         _state.value = AuthState.Offline(server.display, user)
@@ -271,6 +289,8 @@ class Session(context: Context) {
     }
 
     private fun clearToken() {
+        // Offline mode needs the account it shows the downloads of.
+        store.offlineMode = false
         token = null
         store.token = null
         store.lastUser = null

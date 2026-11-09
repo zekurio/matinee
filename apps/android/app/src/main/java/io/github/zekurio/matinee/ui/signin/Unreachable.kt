@@ -77,7 +77,7 @@ fun UnreachableScreen(session: Session, state: AuthState.Unreachable) {
             }
         }
         val watchOffline = @Composable { look: ButtonLook ->
-            MatineeButton(onClick = session::goOffline, look = look, modifier = Modifier.fillMaxWidth()) {
+            MatineeButton(onClick = { session.setOfflineMode(true) }, look = look, modifier = Modifier.fillMaxWidth()) {
                 LucideIcon(Lucide.Download, null, size = 18.dp)
                 Text(stringResource(R.string.downloads_watch_offline))
             }

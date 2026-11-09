@@ -401,6 +401,8 @@
     <string name="settings_admin_trickplay">Trickplay</string>
     <string name="settings_admin_jobs">Jobs</string>
     <string name="settings_admin_appearance">Appearance</string>
+    <string name="settings_offline_mode">Offline mode</string>
+    <string name="settings_go_online">Go online</string>
     <string name="settings_app_title">App</string>
     <string name="settings_app_language">Language</string>
     <string name="settings_app_language_description">Set in Android\'s settings, for this app only.</string>
@@ -467,7 +469,6 @@
     <string name="downloads_channel">Downloads</string>
     <string name="downloads_watch_offline">Watch downloads</string>
     <string name="downloads_offline">Offline</string>
-    <string name="downloads_reconnect">Connect to the server again</string>
     <string name="downloads_unmetered">Download on Wi-Fi only</string>
     <string name="downloads_unmetered_description">Wait for Wi-Fi or another connection without a data limit.</string>
     <string name="downloads_default_title">Version</string>
