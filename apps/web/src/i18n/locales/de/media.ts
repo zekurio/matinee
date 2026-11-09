@@ -45,8 +45,6 @@ export default {
   "media.hero.rated": "Bewertung",
   "media.hero.genres": "Genres",
   "media.hero.play": "Abspielen",
-  "media.hero.resume": "Fortsetzen",
-  "media.hero.episodes": "Folgen",
   "media.hero.details": "Details",
   "media.rail.back": "{title} zurückblättern",
   "media.rail.forward": "{title} weiterblättern",

@@ -51,8 +51,6 @@ export default defineMessages("media", {
   "media.hero.rated": "Rated",
   "media.hero.genres": "Genres",
   "media.hero.play": "Play",
-  "media.hero.resume": "Resume",
-  "media.hero.episodes": "Episodes",
   "media.hero.details": "Details",
   // A rail's arrow buttons.
   "media.rail.back": "Scroll {title} back",

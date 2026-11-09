@@ -7,7 +7,6 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   InfoIcon,
-  ListIcon,
   PlayIcon,
   StarIcon,
 } from "lucide-react"
@@ -440,12 +439,13 @@ function SlideContent({
 
 /**
  * Play and the title's page, for the slide showing. One row that stays in
- * place while the slides fade under and over it, its labels following
- * along, rather than a row per slide fading out and in again.
+ * place while the slides fade under and over it, and reads the same for
+ * every slide so nothing in it changes: Play picks up where the person is,
+ * which the slide's progress bar shows, and a show's page holds its
+ * episodes.
  */
 function HeroButtons({ slide }: { slide: FeaturedTitle }) {
   const { item, title } = slide
-  const resuming = timeLeft(item) !== null && progressRatio(item) !== null
   return (
     <div className="absolute inset-x-0 bottom-12 sm:bottom-28 lg:bottom-8 sm:max-lg:[@media(max-height:540px)]:bottom-12">
       <div className={cn(pageColumn, "flex gap-2")}>
@@ -455,7 +455,7 @@ function HeroButtons({ slide }: { slide: FeaturedTitle }) {
           className={buttonVariants({ size: "lg", className: heroButton })}
         >
           <PlayIcon className="fill-current" />
-          {resuming ? tr("media.hero.resume") : tr("media.hero.play")}
+          {tr("media.hero.play")}
         </Link>
         <Link
           to="/titles/$titleId"
@@ -466,10 +466,8 @@ function HeroButtons({ slide }: { slide: FeaturedTitle }) {
             className: cn(heroButton, heroSecondary),
           })}
         >
-          {title.kind === "show" ? <ListIcon /> : <InfoIcon />}
-          {title.kind === "show"
-            ? tr("media.hero.episodes")
-            : tr("media.hero.details")}
+          <InfoIcon />
+          {tr("media.hero.details")}
         </Link>
       </div>
     </div>
