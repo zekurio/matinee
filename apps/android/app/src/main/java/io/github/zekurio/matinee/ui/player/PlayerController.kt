@@ -1,6 +1,8 @@
 package io.github.zekurio.matinee.ui.player
 
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import androidx.annotation.OptIn
 import androidx.compose.runtime.getValue
@@ -10,6 +12,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem as ExoItem
+import androidx.media3.common.MediaMetadata
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
@@ -18,22 +21,29 @@ import androidx.media3.common.Tracks
 import androidx.media3.common.VideoSize
 import androidx.media3.common.text.CueGroup
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.DataSourceBitmapLoader
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.session.MediaSession
+import io.github.zekurio.matinee.PlaybackService
+import io.github.zekurio.matinee.PlayerActivity
+import io.github.zekurio.matinee.api.ArtworkSize
 import io.github.zekurio.matinee.api.AudioTrack
 import io.github.zekurio.matinee.api.MatineeApi
 import io.github.zekurio.matinee.api.MediaItem
 import io.github.zekurio.matinee.api.OfflinePlay
 import io.github.zekurio.matinee.api.PlaybackOptions
 import io.github.zekurio.matinee.api.SubtitleTrack
+import io.github.zekurio.matinee.api.TitleKind
 import io.github.zekurio.matinee.api.Trickplay
 import io.github.zekurio.matinee.api.await
 import io.github.zekurio.matinee.downloads.PendingProgress
 import io.github.zekurio.matinee.downloads.PendingReport
+import io.github.zekurio.matinee.ui.itemLabel
 import java.io.File
 import java.io.IOException
 import java.time.Instant
@@ -119,6 +129,9 @@ class PlayerController(
     /** When this sitting with the file began, for a play kept offline. */
     private val startedAt = Instant.now()
 
+    private val appContext = context.applicationContext
+    private val resources = context.resources
+
     val player: ExoPlayer = ExoPlayer.Builder(context, renderers(context, prefs.decoders))
         // Files on the phone, and the server through the session's client.
         .setMediaSourceFactory(DefaultMediaSourceFactory(DefaultDataSource.Factory(context, OkHttpDataSource.Factory(http))))
@@ -130,6 +143,26 @@ class PlayerController(
                 .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
                 .build()
         }
+
+    /**
+     * The system's handle on this player: its controls in the notification
+     * shade, on the lock screen, and on headsets. Artwork comes through the
+     * session's client, which sends the token. Tapping the notification
+     * brings the player back.
+     */
+    private val session = MediaSession.Builder(context, player)
+        .setId(sessionId)
+        .setSessionActivity(
+            PendingIntent.getActivity(
+                context,
+                0,
+                Intent(context, PlayerActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            ),
+        )
+        .setBitmapLoader(DataSourceBitmapLoader.Builder(context).setDataSourceFactory(OkHttpDataSource.Factory(http)).build())
+        .build()
+    private val controls = PlaybackService.start(appContext, session)
 
     var source by mutableStateOf<Source?>(null)
         private set
@@ -307,7 +340,7 @@ class PlayerController(
                 else -> (at * 1000).toLong()
             }
             pendingAudioOverride = resolved == Source.Direct || resolved == Source.Local
-            player.setMediaItem(exo, startMs)
+            player.setMediaItem(exo.buildUpon().setMediaMetadata(metadata()).build(), startMs)
             player.prepare()
         }
     }
@@ -512,8 +545,21 @@ class PlayerController(
         if (closed) CoroutineScope(Dispatchers.IO + NonCancellable).launch { send() } else scope.launch { send() }
     }
 
+    /** What the system's controls show: the episode and its show, or the movie, and its picture. */
+    private fun metadata(): MediaMetadata {
+        val label = itemLabel(item, resources)
+        val artwork = item.episode?.still ?: item.title?.images?.backdrop ?: item.title?.images?.poster
+        return MediaMetadata.Builder()
+            .setTitle(label.title)
+            .setArtist(if (item.title?.kind == TitleKind.SHOW) listOfNotNull(label.showName, label.code).joinToString(" · ") else label.year)
+            .setArtworkUri(artwork?.let { Uri.parse(api.paths.artwork(it.id, ArtworkSize.Small)) })
+            .build()
+    }
+
     fun release() {
         report(closed = true)
+        PlaybackService.stop(appContext, controls)
+        session.release()
         scope.cancel()
         player.release()
     }
