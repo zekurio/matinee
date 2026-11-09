@@ -14,10 +14,12 @@ import { bucketName, rangeName } from "@/lib/stats"
 import {
   percent,
   RankedBars,
+  ShareBar,
   type StatFigure,
   StatFigures,
   StatsSection,
   statsCard,
+  statsRows,
 } from "./stat-blocks"
 import { WatchChart } from "./watch-chart"
 
@@ -104,7 +106,7 @@ export function TopTitlesSection({ stats }: { stats: WatchStats }) {
   const total = Math.max(1, stats.totals.watchSeconds)
   return (
     <StatsSection title={tr("stats.watch.top")}>
-      <ol className="-mx-1.5 flex flex-col">
+      <ol className={statsRows}>
         {titles.map((entry, index) => {
           const poster = art(entry.title.images.poster)
           return (
@@ -112,40 +114,38 @@ export function TopTitlesSection({ stats }: { stats: WatchStats }) {
               <Link
                 to="/titles/$titleId"
                 params={{ titleId: entry.title.id }}
-                className="hover:bg-foreground/[0.05] focus-visible:ring-ring flex items-center gap-2.5 rounded-md px-1.5 py-1 outline-none focus-visible:ring-2"
+                className="hover:bg-foreground/[0.04] focus-visible:ring-ring flex items-center gap-3.5 px-4 py-3 outline-none focus-visible:ring-2 focus-visible:ring-inset"
               >
-                <span className="text-muted-foreground w-4 shrink-0 text-right text-xs tabular-nums">
+                {/* The first three stand out, as on the apps. */}
+                <span
+                  className={cn(
+                    "w-6 shrink-0 text-base font-semibold tabular-nums",
+                    index < 3 ? "text-foreground" : "text-muted-foreground",
+                  )}
+                >
                   {index + 1}
                 </span>
                 <span
                   className={cn(
-                    "relative aspect-[2/3] w-7 shrink-0 overflow-hidden rounded-[3px] border",
+                    "relative aspect-[2/3] w-10 shrink-0 overflow-hidden rounded-[4px] border",
                     tone(entry.title.id),
                   )}
                 >
                   {poster && <Picture sources={[poster]} />}
                 </span>
-                <span className="flex min-w-0 flex-1 flex-col gap-1">
-                  <span className="flex items-baseline justify-between gap-3 text-[13px] leading-5">
-                    <span className="truncate">{entry.title.name}</span>
-                    <span className="text-muted-foreground shrink-0 tabular-nums">
-                      {`${formatWatchTime(entry.watchSeconds)} · `}
-                      <span className="text-foreground font-medium">
-                        {percent(entry.watchSeconds, total)}
-                      </span>
-                    </span>
+                <span className="flex min-w-0 flex-1 flex-col">
+                  <span className="truncate text-[15px] leading-6">
+                    {entry.title.name}
                   </span>
-                  <span
-                    aria-hidden
-                    className="bg-foreground/[0.07] h-[3px] rounded-full"
-                  >
-                    <span
-                      className="bg-primary block h-full rounded-full"
-                      style={{
-                        width: `${Math.max((entry.watchSeconds / total) * 100, 1)}%`,
-                      }}
-                    />
+                  <span className="text-muted-foreground text-sm tabular-nums">
+                    {formatWatchTime(entry.watchSeconds)}
                   </span>
+                  <span className="mt-2">
+                    <ShareBar value={entry.watchSeconds} scale={total} />
+                  </span>
+                </span>
+                <span className="shrink-0 text-[15px] font-semibold tabular-nums">
+                  {percent(entry.watchSeconds, total)}
                 </span>
               </Link>
             </li>

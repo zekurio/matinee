@@ -108,19 +108,16 @@ export function StatFigures({
     <ul className={cn(statsCard, "divide-y self-start", className)}>
       {figures.map(({ label, value, icon: Icon, detail }) => (
         <li key={label} className="flex min-w-0 items-center gap-3.5 px-4 py-3">
-          <Icon
-            aria-hidden
-            className="text-muted-foreground size-[18px] shrink-0"
-          />
+          <Icon aria-hidden className="text-muted-foreground size-5 shrink-0" />
           <span className="flex min-w-0 flex-1 flex-col">
-            <span className="truncate text-sm leading-5">{label}</span>
+            <span className="truncate text-[15px] leading-6">{label}</span>
             {detail && (
               <span className="text-muted-foreground truncate text-xs">
                 {detail}
               </span>
             )}
           </span>
-          <span className="shrink-0 text-sm leading-5 font-semibold tabular-nums">
+          <span className="shrink-0 text-[15px] leading-6 font-semibold tabular-nums">
             {value}
           </span>
         </li>
@@ -152,11 +149,29 @@ export function percent(value: number, total: number): string {
   return share < 0.01 ? `<${percents().format(0.01)}` : percents().format(share)
 }
 
+/** A section's rows run to its card's edges, as the apps draw them, with a line between each. */
+export const statsRows = "-mx-4 -mb-4 flex flex-col divide-y"
+
+/** A thin bar for `value`'s part of `scale`, under a row. */
+export function ShareBar({ value, scale }: { value: number; scale: number }) {
+  return (
+    <span
+      aria-hidden
+      className="bg-foreground/[0.07] block h-[3px] rounded-full"
+    >
+      <span
+        className="bg-primary block h-full rounded-full"
+        style={{ width: `${Math.max((value / Math.max(1, scale)) * 100, 1)}%` }}
+      />
+    </span>
+  )
+}
+
 /**
- * Rows with a hairline bar under each, as long as the row's part of
- * `total`, or of all the rows together without it. With `share` the row
- * ends with that percent, so its detail should lead with what `value`
- * counts. Leave `share` off when rows overlap, like genres, since their
+ * Rows with a bar under each, as long as the row's part of `total`, or of
+ * all the rows together without it, as the apps list them. A row ends
+ * with its detail, or with `share` its percent, the detail going under
+ * its name; leave `share` off when rows overlap, like genres, since their
  * percents would add up to more than 100.
  */
 export function RankedBars({
@@ -171,34 +186,26 @@ export function RankedBars({
   className?: string
 }) {
   const total = given ?? rows.reduce((sum, row) => sum + row.value, 0)
-  const scale = Math.max(1, total)
   return (
-    <ul className={cn("flex flex-col gap-2.5", className)}>
+    <ul className={cn(statsRows, className)}>
       {rows.map((row) => (
-        <li key={row.key} className="flex flex-col gap-1">
-          <div className="flex items-baseline justify-between gap-4 text-[13px] leading-5">
-            <span className="min-w-0 truncate">{row.label}</span>
-            <span className="text-muted-foreground shrink-0 tabular-nums">
-              {row.detail}
+        <li key={row.key} className="flex flex-col gap-2 px-4 py-3">
+          <div className="flex items-center justify-between gap-4">
+            <span className="flex min-w-0 flex-col">
+              <span className="truncate text-[15px] leading-6">
+                {row.label}
+              </span>
               {share && (
-                <>
-                  {" · "}
-                  <span className="text-foreground font-medium">
-                    {percent(row.value, total)}
-                  </span>
-                </>
+                <span className="text-muted-foreground truncate text-sm tabular-nums">
+                  {row.detail}
+                </span>
               )}
             </span>
+            <span className="shrink-0 text-[15px] leading-6 font-semibold tabular-nums">
+              {share ? percent(row.value, total) : row.detail}
+            </span>
           </div>
-          <span
-            aria-hidden
-            className="bg-foreground/[0.07] h-[3px] rounded-full"
-          >
-            <span
-              className="bg-primary block h-full rounded-full"
-              style={{ width: `${Math.max((row.value / scale) * 100, 1)}%` }}
-            />
-          </span>
+          <ShareBar value={row.value} scale={total} />
         </li>
       ))}
     </ul>
