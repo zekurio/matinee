@@ -276,7 +276,15 @@ private fun SeasonPage(title: Title, season: Season) {
                     name = "${title.name} · ${seasonName(season.number, res)}",
                     watched = allWatched,
                     favorite = viewer.isFavorite(title.summary),
-                    onWatched = { watched, at -> viewer.setWatched(api, title.summary, watched, season.number, at) },
+                    onWatched = { watched, at ->
+                        val number = season.number
+                        if (number == null) {
+                            // Null in the title-wide operation means every season, not the unnumbered files.
+                            api.looseItems(title.id).forEach { viewer.setWatched(api, it, watched, at) }
+                        } else {
+                            viewer.setWatched(api, title.summary, watched, number, at)
+                        }
+                    },
                     onFavorite = { viewer.setFavorite(api, title.summary, !viewer.isFavorite(title.summary)) },
                     onMore = { actions.season(title.summary, season, here = true) },
                 )
