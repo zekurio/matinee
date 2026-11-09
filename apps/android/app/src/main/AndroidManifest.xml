@@ -33,7 +33,6 @@
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation|uiMode"
             android:exported="true"
             android:launchMode="singleTask"
-            android:supportsPictureInPicture="true"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -49,6 +48,17 @@
                 <data android:scheme="matinee" android:host="auth" android:path="/callback" />
             </intent-filter>
         </activity>
+
+        <!-- The player, in landscape on its own as Findroid has it: leaving
+             closes it, and the system turns the screen back as it goes. -->
+        <activity
+            android:name=".PlayerActivity"
+            android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation|uiMode|keyboard|keyboardHidden|navigation"
+            android:screenOrientation="sensorLandscape"
+            android:launchMode="singleTask"
+            android:supportsPictureInPicture="true"
+            android:autoRemoveFromRecents="true"
+            android:theme="@style/Theme.Matinee.Player" />
 
         <!-- WorkManager's service for jobs in the foreground: downloads move data. -->
         <service

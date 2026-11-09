@@ -8,4 +8,9 @@
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
     </style>
+
+    <!-- The player's activity: black behind the video while it opens and closes. -->
+    <style name="Theme.Matinee.Player" parent="Theme.Matinee">
+        <item name="android:windowBackground">@android:color/black</item>
+    </style>
 </resources>

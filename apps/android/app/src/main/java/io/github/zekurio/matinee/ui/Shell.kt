@@ -62,7 +62,6 @@ import io.github.zekurio.matinee.ui.media.FavoritesScreen
 import io.github.zekurio.matinee.ui.media.MediaScreen
 import io.github.zekurio.matinee.ui.metadata.IdentifyScreen
 import io.github.zekurio.matinee.ui.metadata.ImagesScreen
-import io.github.zekurio.matinee.ui.player.PlayerScreen
 import io.github.zekurio.matinee.ui.search.SearchScreen
 import io.github.zekurio.matinee.ui.settings.SettingsPageScreen
 import io.github.zekurio.matinee.ui.settings.SettingsScreen
@@ -158,10 +157,6 @@ private fun Pages(controller: NavHostController, session: Session, offline: Bool
         }
         screen<DownloadsRoute>(tab = DownloadsRoute) { DownloadsScreen() }
         screen<DownloadsShowRoute> { DownloadsShowScreen(it.toRoute<DownloadsShowRoute>().titleId) }
-        composable<PlayerRoute> {
-            val route = it.toRoute<PlayerRoute>()
-            PlayerScreen(route.itemId, route.start.takeIf { start -> start >= 0 })
-        }
     }
 }
 
@@ -196,7 +191,7 @@ private enum class Move {
     /** One tab's first page for another's, in the order of the bottom bar. */
     Tab,
 
-    /** Into or out of search or the player, which aren't opened from a page. */
+    /** Into or out of search, which isn't opened from a page. */
     FadeThrough,
 }
 
@@ -204,7 +199,6 @@ private fun AnimatedContentTransitionScope<NavBackStackEntry>.move(): Move {
     val from = initialState.destination
     val to = targetState.destination
     return when {
-        from.hasRoute<PlayerRoute>() || to.hasRoute<PlayerRoute>() -> Move.FadeThrough
         from.hasRoute<SearchRoute>() || to.hasRoute<SearchRoute>() -> Move.FadeThrough
         tabOf(from) != null && tabOf(to) != null -> Move.Tab
         else -> Move.Page

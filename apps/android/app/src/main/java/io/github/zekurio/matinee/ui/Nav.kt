@@ -7,6 +7,7 @@ import androidx.navigation.NavHostController
 import io.github.zekurio.matinee.api.MediaItem
 import io.github.zekurio.matinee.api.TitleKind
 import io.github.zekurio.matinee.api.TitleSummary
+import io.github.zekurio.matinee.PlayerActivity
 import kotlinx.serialization.Serializable
 
 /* The app's screens, as the web app's routes in apps/web/src/routes. */
@@ -65,10 +66,6 @@ data object DownloadsRoute
 /** A downloaded show's episodes. */
 @Serializable
 data class DownloadsShowRoute(val titleId: String)
-
-/** [start] is -1 to resume where the person left off. */
-@Serializable
-data class PlayerRoute(val itemId: String, val start: Double = -1.0)
 
 /** An admin picking the provider entry a title is, when its match is wrong or missing. */
 @Serializable
@@ -166,15 +163,8 @@ class Navigator(private val controller: NavHostController) {
     fun images(titleId: String, season: Int? = null, episode: Int? = null) =
         controller.navigate(ImagesRoute(titleId, season ?: -1, episode ?: -1)) { launchSingleTop = true }
 
-    /** Play a file from where the person left off, or from [start] seconds. */
-    fun play(itemId: String, start: Double? = null) = controller.navigate(PlayerRoute(itemId, start ?: -1.0)) {
-        launchSingleTop = true
-    }
-
-    /** The next episode from the player, in place of the one that ended. */
-    fun playInstead(itemId: String) = controller.navigate(PlayerRoute(itemId, 0.0)) {
-        popUpTo<PlayerRoute> { inclusive = true }
-    }
+    /** Play a file from where the person left off, or from [start] seconds, in the player's own activity. */
+    fun play(itemId: String, start: Double? = null) = PlayerActivity.start(controller.context, itemId, start)
 }
 
 val LocalNavigator = staticCompositionLocalOf<Navigator> { error("no navigator") }
