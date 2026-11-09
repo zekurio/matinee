@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Made by scripts/web_strings.py from apps/web/src/i18n/locales/de/jobs.ts. Don't edit. -->
 <resources>
-    <string name="web_jobs_queues">Warteschlangen</string>
-    <string name="web_jobs_tasks">Geplante Aufgaben</string>
+    <string name="web_jobs_queues">Hintergrundaufgaben</string>
     <string name="web_jobs_loadFailed">Die Aufträge konnten nicht geladen werden. %1$s</string>
     <string name="web_jobs_retry">Erneut versuchen</string>
     <string name="web_jobs_queue_library_scan_name">Mediathek-Scans</string>

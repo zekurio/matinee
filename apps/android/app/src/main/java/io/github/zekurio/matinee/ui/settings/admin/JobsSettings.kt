@@ -59,10 +59,11 @@ import kotlinx.coroutines.delay
 private const val POLL_MILLIS = 2_000L
 
 /**
- * Background work, as the web's jobs panel: the queues, how busy each is,
- * and the scheduled tasks that fill them. A queue's sheet pauses it, clears
- * what waits, and sets how many jobs it runs at once; a task runs now or
- * stops. The page keeps itself current while it shows.
+ * Background work, as the web's jobs panel: one list of the queues, how
+ * busy each is, and the scheduled task that fills it, then the tasks that
+ * fill none and do their upkeep themselves. A queue's sheet pauses it,
+ * clears what waits, and sets how many jobs it runs at once; a task runs
+ * now or stops from its row. The page keeps itself current while it shows.
  */
 @Composable
 fun JobsSettings() {
@@ -78,22 +79,20 @@ fun JobsSettings() {
     }
     SettingsScaffold(stringResource(R.string.settings_admin_jobs)) {
         loaded(loader, { stringResource(R.string.web_jobs_loadFailed, it) }) { overview ->
-            item(key = "queues") {
+            item(key = "jobs") {
+                val runTask = { task: ScheduledTask, action: String ->
+                    saver { api.taskAction(task.id, action); loader.reload() }
+                }
                 Section(stringResource(R.string.web_jobs_queues)) {
                     Panel {
                         overview.queues.forEachIndexed { index, queue ->
                             if (index > 0) RowDivider()
-                            QueueRow(queue) { open = queue.id }
+                            val task = overview.tasks.firstOrNull { it.queue == queue.id }
+                            QueueRow(queue, task, { action -> task?.let { runTask(it, action) } }) { open = queue.id }
                         }
-                    }
-                }
-            }
-            item(key = "tasks") {
-                Section(stringResource(R.string.web_jobs_tasks)) {
-                    Panel {
-                        overview.tasks.forEachIndexed { index, task ->
-                            if (index > 0) RowDivider()
-                            TaskRow(task) { action -> saver { api.taskAction(task.id, action); loader.reload() } }
+                        overview.tasks.filter { it.queue == null }.forEach { task ->
+                            RowDivider()
+                            TaskRow(task) { action -> runTask(task, action) }
                         }
                     }
                 }
@@ -141,11 +140,12 @@ private fun queueStatus(queue: JobQueue): String {
     return parts.joinToString(" · ")
 }
 
+/** A queue, how busy it is, and the task that fills it, with its run button; the row opens the queue's sheet. */
 @Composable
-private fun QueueRow(queue: JobQueue, onClick: () -> Unit) {
+private fun QueueRow(queue: JobQueue, task: ScheduledTask?, onTask: (String) -> Unit, onClick: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().clickable(onClickLabel = stringResource(R.string.web_jobs_queue_details), onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(start = 16.dp, end = 12.dp, top = 12.dp, bottom = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
@@ -157,6 +157,11 @@ private fun QueueRow(queue: JobQueue, onClick: () -> Unit) {
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
+            if (task != null) TaskStatus(task)
+        }
+        if (task != null) {
+            Gap(4.dp)
+            TaskButton(task, onTask)
         }
         LucideIcon(Lucide.ChevronRight, null, size = 16.dp, tint = Palette.Muted)
     }
@@ -203,22 +208,35 @@ private fun taskStatus(task: ScheduledTask): String {
     return "$last\n$next"
 }
 
+/** A task's last run, or how far it is now, and its schedule, under the row's other lines. */
+@Composable
+private fun TaskStatus(task: ScheduledTask) {
+    val failed = task.lastRun?.result == "failed" && task.startedAt == null
+    Text(taskStatus(task), style = MaterialTheme.typography.bodySmall, color = if (failed) Palette.Danger else Palette.Muted)
+}
+
+/** Runs the task now, or stops the run going on. */
+@Composable
+private fun TaskButton(task: ScheduledTask, onAction: (String) -> Unit) {
+    val running = task.startedAt != null
+    RoundIconButton(
+        if (running) Lucide.X else Lucide.PlayOutline,
+        stringResource(if (running) R.string.web_jobs_task_cancel else R.string.web_jobs_task_run),
+        { onAction(if (running) "cancel" else "run") },
+        background = Color.Transparent,
+    )
+}
+
+/** A task that fills no queue: its name, its runs, and its button. */
 @Composable
 private fun TaskRow(task: ScheduledTask, onAction: (String) -> Unit) {
-    val running = task.startedAt != null
-    val failed = task.lastRun?.result == "failed" && !running
     Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             Text(taskName(task), style = MaterialTheme.typography.bodyLarge)
-            Text(taskStatus(task), style = MaterialTheme.typography.bodySmall, color = if (failed) Palette.Danger else Palette.Muted)
+            TaskStatus(task)
         }
         Gap(8.dp)
-        RoundIconButton(
-            if (running) Lucide.X else Lucide.PlayOutline,
-            stringResource(if (running) R.string.web_jobs_task_cancel else R.string.web_jobs_task_run),
-            { onAction(if (running) "cancel" else "run") },
-            background = Color.Transparent,
-        )
+        TaskButton(task, onAction)
     }
 }
 

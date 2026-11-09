@@ -195,6 +195,8 @@ data class ScheduledTask(
     val id: String,
     val name: String,
     val description: String = "",
+    /** The queue its runs fill; null for upkeep the task does itself. */
+    val queue: String? = null,
     val intervalSeconds: Double? = null,
     /** When the run going on now started; null when it isn't running. */
     val startedAt: String? = null,

@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Made by scripts/web_strings.py from apps/web/src/i18n/locales/en/jobs.ts. Don't edit. -->
 <resources>
-    <string name="web_jobs_queues">Queues</string>
-    <string name="web_jobs_tasks">Scheduled tasks</string>
+    <string name="web_jobs_queues">Background work</string>
     <string name="web_jobs_loadFailed">Couldn\'t load the jobs. %1$s</string>
     <string name="web_jobs_retry">Try again</string>
     <string name="web_jobs_queue_library_scan_name">Library scans</string>
