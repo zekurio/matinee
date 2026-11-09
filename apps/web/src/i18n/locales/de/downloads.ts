@@ -5,25 +5,23 @@ export default {
   "downloads.menuItem": "Herunterladen",
   "downloads.title": "{name} herunterladen",
   "downloads.description":
-    "Speichere die Datei, wie sie ist, oder eine Version für dieses Gerät.",
+    "Lade das Original oder eine angepasste Version herunter.",
   "downloads.version": "Version",
-  "downloads.original": "Originaldatei",
-  "downloads.original.description": "{format}, {size}, mit allen Spuren.",
-  "downloads.custom": "Für dieses Gerät",
-  "downloads.custom.description":
-    "Wähle Größe, Tonspuren und Untertitel. Der Server wandelt sie beim Herunterladen um.",
+  "downloads.original": "Original",
+  "downloads.original.description": "{format} · {size}",
+  "downloads.custom": "Angepasst",
+  "downloads.custom.description": "Größe, Spuren und Untertitel wählen.",
   "downloads.custom.unavailable":
-    "Der Server hat die Spuren dieser Datei noch nicht gelesen, deshalb lässt sich vorerst nur das Original herunterladen.",
+    "Der Server hat die Spuren dieser Datei noch nicht gelesen.",
 
   "downloads.video": "Video",
   "downloads.video.keep": "Original, {codec} {resolution}",
   "downloads.video.preset": "{resolution}, {bitrate}",
-  "downloads.codec": "Videocodec",
+  "downloads.container": "Format",
+  "downloads.codec": "Codec",
   "downloads.keepHdr": "HDR behalten",
 
   "downloads.audio": "Tonspuren",
-  "downloads.audio.description":
-    "Die erste, die du behältst, wird standardmäßig abgespielt.",
   "downloads.audio.loading": "Tonspuren werden geladen…",
   "downloads.audio.keep": "{format} behalten",
   "downloads.audio.convert": "{codec} {layout}",
@@ -33,8 +31,6 @@ export default {
 
   "downloads.burnIn": "Untertitel einbrennen",
   "downloads.burnIn.none": "Keine",
-  "downloads.burnIn.description":
-    "Bilduntertitel passen nicht für sich in die Datei, deshalb werden sie ins Video gezeichnet.",
   "downloads.subtitles.inFile": "Untertitel",
   "downloads.subtitles.include": "{track} einschließen",
   "downloads.subtitles": "Untertiteldateien",
@@ -49,7 +45,7 @@ export default {
   "downloads.submit": "Herunterladen",
   "downloads.started": "Download gestartet",
   "downloads.started.description":
-    "Der Server wandelt die Datei um, während dein Browser sie speichert, das kann also eine Weile dauern.",
+    "Sie wird beim Herunterladen umgewandelt, das kann etwas dauern.",
   "downloads.startFailed": "Der Download konnte nicht gestartet werden",
 
   "downloads.all.description":

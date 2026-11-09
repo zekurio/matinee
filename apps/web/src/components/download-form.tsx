@@ -4,8 +4,10 @@ import {
   canCopyAudio,
   canCopyVideo,
   DOWNLOAD_AUDIO_CHANNELS,
+  DOWNLOAD_CONTAINERS,
   DOWNLOAD_VIDEO_PRESETS,
   type DownloadAudio,
+  type DownloadContainer,
   type DownloadSpec,
   type DownloadVideoPreset,
   downloadFilePath,
@@ -75,9 +77,10 @@ import { FormAlert } from "./form-alert"
 /*
  * The form of `DownloadDialog`, apart so it loads when the dialog first
  * opens. The file as it is comes straight from the stream route; a
- * version for this device is a spec the server plans, then makes while
- * the browser saves it. Only what this browser plays and the server
- * makes is offered, the way the playback settings do it.
+ * custom version is a spec the server plans, then makes while the
+ * browser saves it. A Matroska file, the default, keeps anything as it
+ * is, for players that take everything. An MP4 offers only what this
+ * browser plays, the way the playback settings do it.
  */
 
 type Version = "original" | "custom"
@@ -91,13 +94,14 @@ type TrackValue = {
 
 type DownloadValues = {
   version: Version
+  container: DownloadContainer
   /** `copy`, or a preset as `height:bitrate`. */
   video: string
   codec: TranscodeVideoCodec
   keepHdr: boolean
   /** In the order they go into the download. */
   audio: TrackValue[]
-  /** Text subtitles that go in the file, by id. */
+  /** Subtitles that go in the file, by id. */
   subtitles: string[]
   /** A picture subtitle's id, or empty for none. */
   burnIn: string
@@ -126,39 +130,75 @@ function presetsFor(video: VideoStream): DownloadVideoPreset[] {
   return fits.length > 0 || !smallest ? fits : [smallest]
 }
 
-/** Codecs the server encodes and this browser plays, best first. */
-function videoCodecs(options: PlaybackOptions): TranscodeVideoCodec[] {
-  const codecs = browserVideoCodecs().filter((codec) =>
-    options.videoCodecs.includes(codec),
-  )
-  return codecs.includes("h264") ? codecs : [...codecs, "h264"]
-}
-
 /** Codecs audio converts to: AAC first, since everything plays it. */
 const CONVERSION_ORDER: readonly TranscodeAudioCodec[] = ["aac", "opus"]
 
-function audioCodecs(options: PlaybackOptions): TranscodeAudioCodec[] {
-  const plays = browserAudioCodecs()
-  const codecs = CONVERSION_ORDER.filter(
-    (codec) => options.audioCodecs.includes(codec) && plays.includes(codec),
-  )
-  return codecs.length > 0 ? codecs : ["aac"]
+/** What a custom version in a container can hold, for the form's choices. */
+type Rules = {
+  container: DownloadContainer
+  /** The video can stay as it is. */
+  keepsVideo: boolean
+  keepsAudio: (track: AudioTrack) => boolean
+  /** Codecs the video can be encoded to, best first. */
+  codecs: TranscodeVideoCodec[]
+  /** Codecs audio converts to. */
+  conversions: TranscodeAudioCodec[]
+  /** The subtitle tracks that can go in the file. */
+  subtitles: SubtitleTrack[]
 }
 
-/** Whether a track can stay as it is: MP4 holds it and this browser plays it. */
-function keepsAudio(track: AudioTrack): boolean {
-  return (
-    canCopyAudio(track.codec) &&
-    browserAudioCodecs().some((codec) => codec === track.codec)
+/**
+ * Matroska keeps anything, and takes every codec the server encodes. MP4
+ * keeps what it holds and this browser plays, and encodes to what this
+ * browser plays.
+ */
+function rulesFor(
+  container: DownloadContainer,
+  video: VideoStream | null,
+  subtitles: readonly SubtitleTrack[],
+  options: PlaybackOptions | null,
+): Rules {
+  const server: Pick<PlaybackOptions, "videoCodecs" | "audioCodecs"> =
+    options ?? { videoCodecs: ["h264"], audioCodecs: ["aac"] }
+  if (container === "mkv") {
+    const codecs = server.videoCodecs
+    const conversions = CONVERSION_ORDER.filter((codec) =>
+      server.audioCodecs.includes(codec),
+    )
+    return {
+      container,
+      keepsVideo: video !== null,
+      keepsAudio: () => true,
+      codecs: codecs.length > 0 ? codecs : ["h264"],
+      conversions: conversions.length > 0 ? conversions : ["aac"],
+      subtitles: subtitles.filter((track) => track.delivery !== null),
+    }
+  }
+  const plays = browserAudioCodecs()
+  const codecs = browserVideoCodecs().filter((codec) =>
+    server.videoCodecs.includes(codec),
   )
+  const conversions = CONVERSION_ORDER.filter(
+    (codec) => server.audioCodecs.includes(codec) && plays.includes(codec),
+  )
+  return {
+    container,
+    keepsVideo:
+      video !== null && canCopyVideo(video.codec) && decodesVideo(video),
+    keepsAudio: (track) =>
+      canCopyAudio(track.codec) && plays.some((codec) => codec === track.codec),
+    codecs: codecs.includes("h264") ? codecs : [...codecs, "h264"],
+    conversions: conversions.length > 0 ? conversions : ["aac"],
+    subtitles: subtitles.filter((track) => track.delivery === "webvtt"),
+  }
 }
 
 function audioChoices(
   track: AudioTrack,
-  codecs: readonly TranscodeAudioCodec[],
+  rules: Rules,
 ): { value: string; label: string }[] {
   const choices = []
-  if (keepsAudio(track)) {
+  if (rules.keepsAudio(track)) {
     choices.push({
       value: COPY,
       label: tr("downloads.audio.keep", { format: track.format }),
@@ -169,7 +209,7 @@ function audioChoices(
   const counts = DOWNLOAD_AUDIO_CHANNELS.filter(
     (count) => count <= Math.max(most, 1) && (count > 1 || most === 1),
   )
-  for (const codec of codecs) {
+  for (const codec of rules.conversions) {
     for (const count of counts) {
       choices.push({
         value: `${codec}:${count}`,
@@ -183,14 +223,11 @@ function audioChoices(
   return choices
 }
 
-/** Kept when this browser plays it, else the first conversion, in stereo. */
-function defaultChoice(
-  track: AudioTrack,
-  codecs: readonly TranscodeAudioCodec[],
-): string {
-  if (keepsAudio(track)) return COPY
+/** Kept when the container allows it, else the first conversion, in stereo. */
+function defaultChoice(track: AudioTrack, rules: Rules): string {
+  if (rules.keepsAudio(track)) return COPY
   const channels = (track.channels ?? 2) === 1 ? 1 : 2
-  return `${codecs[0] ?? "aac"}:${channels}`
+  return `${rules.conversions[0] ?? "aac"}:${channels}`
 }
 
 function audioName(track: AudioTrack, tracks: readonly AudioTrack[]): string {
@@ -234,6 +271,7 @@ function specOf(values: DownloadValues): DownloadSpec | null {
   const [height = 0, bitrate = 0] = values.video.split(":").map(Number)
   const encode = values.video !== COPY
   return {
+    container: values.container,
     video: encode
       ? {
           mode: "encode",
@@ -245,18 +283,17 @@ function specOf(values: DownloadValues): DownloadSpec | null {
       : { mode: "copy" },
     audio: values.audio.filter((track) => track.on).map(audioSpec),
     subtitles: values.subtitles,
-    burnIn: encode && values.burnIn !== NONE ? values.burnIn : null,
+    // Matroska holds picture subtitles as they are.
+    burnIn:
+      encode && values.container === "mp4" && values.burnIn !== NONE
+        ? values.burnIn
+        : null,
   }
 }
 
-/** Text subtitles, which go in the file of a version for this device. */
-function textTracks(subtitles: readonly SubtitleTrack[]): SubtitleTrack[] {
-  return subtitles.filter((track) => track.delivery === "webvtt")
-}
-
 /**
- * The subtitles a download starts with, as the apps pick them: the text
- * tracks in the language subtitles show in and in the audio's.
+ * The subtitles a download starts with, as the apps pick them: the tracks
+ * in the language subtitles show in and in the audio's.
  */
 function startingSubtitles(
   subtitles: readonly SubtitleTrack[],
@@ -269,7 +306,7 @@ function startingSubtitles(
       baseLanguage(audio?.language ?? null),
     ].filter((language) => language !== null),
   )
-  return textTracks(subtitles)
+  return subtitles
     .filter((track) => {
       const language = baseLanguage(track.language)
       return language !== null && languages.has(language)
@@ -278,37 +315,74 @@ function startingSubtitles(
     .map((track) => track.id)
 }
 
-/** Where the form starts: the original, with the video and audio this browser plays kept. */
+/** The size an encode starts at: 1080p, or the largest below it. */
+function startingPreset(
+  presets: readonly DownloadVideoPreset[],
+): DownloadVideoPreset | undefined {
+  return presets.find((entry) => entry.height <= 1080) ?? presets[0]
+}
+
+/**
+ * Where the form starts: the original, with a Matroska file that keeps
+ * the video and the audio.
+ */
 function initialValues({
-  video,
+  rules,
   presets,
-  codecs,
-  conversions,
   tracks,
   subtitles,
 }: {
-  video: VideoStream | null
+  rules: Rules
   presets: readonly DownloadVideoPreset[]
-  codecs: readonly TranscodeVideoCodec[]
-  conversions: readonly TranscodeAudioCodec[]
   tracks: readonly AudioTrack[]
   subtitles: string[]
 }): DownloadValues {
-  const keep =
-    video !== null && canCopyVideo(video.codec) && decodesVideo(video)
-  const preset = presets.find((entry) => entry.height <= 1080) ?? presets[0]
+  const preset = startingPreset(presets)
   return {
     version: "original",
-    video: keep || !preset ? COPY : presetValue(preset),
-    codec: codecs[0] ?? "h264",
+    container: rules.container,
+    video: rules.keepsVideo || !preset ? COPY : presetValue(preset),
+    codec: rules.codecs[0] ?? "h264",
     keepHdr: window.matchMedia("(dynamic-range: high)").matches,
     audio: tracks.map((track) => ({
       index: track.index,
       on: track.primary,
-      choice: defaultChoice(track, conversions),
+      choice: defaultChoice(track, rules),
     })),
     subtitles,
     burnIn: NONE,
+  }
+}
+
+/** `values` with what the container in `rules` can't hold picked again. */
+function adapted(
+  values: DownloadValues,
+  rules: Rules,
+  tracks: readonly AudioTrack[],
+  presets: readonly DownloadVideoPreset[],
+): DownloadValues {
+  const preset = startingPreset(presets)
+  return {
+    ...values,
+    container: rules.container,
+    video:
+      values.video === COPY && !rules.keepsVideo && preset
+        ? presetValue(preset)
+        : values.video,
+    codec: rules.codecs.includes(values.codec)
+      ? values.codec
+      : (rules.codecs[0] ?? "h264"),
+    audio: values.audio.map((value) => {
+      const track = tracks.find((entry) => entry.index === value.index)
+      if (!track) return value
+      const valid = audioChoices(track, rules).some(
+        (choice) => choice.value === value.choice,
+      )
+      return valid ? value : { ...value, choice: defaultChoice(track, rules) }
+    }),
+    subtitles: values.subtitles.filter((id) =>
+      rules.subtitles.some((track) => track.id === id),
+    ),
   }
 }
 
@@ -366,22 +440,14 @@ function DownloadFields({
   onDone: () => void
 }) {
   const presets = video ? presetsFor(video) : []
-  const codecs: readonly TranscodeVideoCodec[] = options
-    ? videoCodecs(options)
-    : ["h264"]
-  const conversions: readonly TranscodeAudioCodec[] = options
-    ? audioCodecs(options)
-    : ["aac"]
-  // Only what this browser plays: the original file keeps everything else.
-  const keepVideo =
-    video !== null && canCopyVideo(video.codec) && decodesVideo(video)
   // The primary track first: it's the one that plays by default.
   const ordered = [
     ...tracks.filter((track) => track.primary),
     ...tracks.filter((track) => !track.primary),
   ]
   const preferences = usePlaybackPreferences()
-  const texts = textTracks(subtitles)
+  const rulesOf = (container: DownloadContainer) =>
+    rulesFor(container, video, subtitles, options)
 
   const start = useMutation({
     mutationFn: (spec: DownloadSpec) =>
@@ -397,13 +463,11 @@ function DownloadFields({
 
   const form = useAppForm({
     defaultValues: initialValues({
-      video,
+      rules: rulesOf("mkv"),
       presets,
-      codecs,
-      conversions,
       tracks: ordered,
       subtitles: startingSubtitles(
-        subtitles,
+        rulesOf("mkv").subtitles,
         preferences.subtitleLanguage,
         ordered[0],
       ),
@@ -444,11 +508,16 @@ function DownloadFields({
 
   const custom = values.version === "custom"
   const encode = values.video !== COPY
-  const pictures = subtitles.filter(
-    (track) => track.delivery === "pgs" || track.delivery === "burn-in",
-  )
+  const rules = rulesOf(values.container)
+  // Only an MP4 needs picture subtitles drawn in.
+  const pictures =
+    values.container === "mp4"
+      ? subtitles.filter(
+          (track) => track.delivery === "pgs" || track.delivery === "burn-in",
+        )
+      : []
   // The original holds its own streams; only files beside it are missing.
-  // A version for this device holds the text ones it's given.
+  // A custom version holds the ones it's given.
   const files = custom
     ? []
     : subtitles.filter(
@@ -474,7 +543,9 @@ function DownloadFields({
           <DialogTitle className="text-lg leading-7 font-semibold">
             {tr("downloads.title", { name })}
           </DialogTitle>
-          <DialogDescription>{tr("downloads.description")}</DialogDescription>
+          <DialogDescription className="sr-only">
+            {tr("downloads.description")}
+          </DialogDescription>
         </DialogHeader>
 
         <FieldGroup>
@@ -491,7 +562,36 @@ function DownloadFields({
 
           {custom && video && (
             <>
-              <div className="grid gap-4 sm:grid-cols-[1fr_10rem]">
+              <div className="grid gap-4 sm:grid-cols-[6rem_1fr_8rem]">
+                <form.Field name="container">
+                  {(field) => (
+                    <ChoiceField
+                      label={tr("downloads.container")}
+                      value={field.state.value}
+                      onChange={(value) => {
+                        const container = DOWNLOAD_CONTAINERS.find(
+                          (entry) => entry === value,
+                        )
+                        if (!container) return
+                        const next = adapted(
+                          form.state.values,
+                          rulesOf(container),
+                          tracks,
+                          presets,
+                        )
+                        form.setFieldValue("video", next.video)
+                        form.setFieldValue("codec", next.codec)
+                        form.setFieldValue("audio", next.audio)
+                        form.setFieldValue("subtitles", next.subtitles)
+                        field.handleChange(container)
+                      }}
+                      items={DOWNLOAD_CONTAINERS.map((container) => ({
+                        value: container,
+                        label: container.toUpperCase(),
+                      }))}
+                    />
+                  )}
+                </form.Field>
                 <form.Field name="video">
                   {(field) => (
                     <ChoiceField
@@ -499,7 +599,7 @@ function DownloadFields({
                       value={field.state.value}
                       onChange={field.handleChange}
                       items={[
-                        ...(keepVideo
+                        ...(rules.keepsVideo
                           ? [
                               {
                                 value: COPY,
@@ -530,11 +630,13 @@ function DownloadFields({
                       label={tr("downloads.codec")}
                       value={field.state.value}
                       onChange={(value) => {
-                        const codec = codecs.find((entry) => entry === value)
+                        const codec = rules.codecs.find(
+                          (entry) => entry === value,
+                        )
                         if (codec) field.handleChange(codec)
                       }}
                       disabled={!encode}
-                      items={codecs.map((codec) => ({
+                      items={rules.codecs.map((codec) => ({
                         value: codec,
                         label: videoCodecName(codec),
                       }))}
@@ -561,19 +663,19 @@ function DownloadFields({
                     <AudioTracks
                       values={field.state.value}
                       tracks={tracks}
-                      conversions={conversions}
+                      rules={rules}
                       onChange={field.handleChange}
                     />
                   )}
                 </form.Field>
               )}
 
-              {texts.length > 0 && (
+              {rules.subtitles.length > 0 && (
                 <form.Field name="subtitles">
                   {(field) => (
                     <SubtitleTracks
                       values={field.state.value}
-                      tracks={texts}
+                      tracks={rules.subtitles}
                       all={subtitles}
                       onChange={field.handleChange}
                     />
@@ -586,7 +688,6 @@ function DownloadFields({
                   {(field) => (
                     <ChoiceField
                       label={tr("downloads.burnIn")}
-                      description={tr("downloads.burnIn.description")}
                       value={field.state.value}
                       onChange={field.handleChange}
                       items={[
@@ -641,7 +742,7 @@ function DownloadFields({
   )
 }
 
-/** The file as it is, or a version for this device, as two cards. */
+/** The file as it is, or a custom version, as two cards. */
 function VersionChoice({
   value,
   onChange,
@@ -768,12 +869,12 @@ function SwitchField({
 function AudioTracks({
   values,
   tracks,
-  conversions,
+  rules,
   onChange,
 }: {
   values: TrackValue[]
   tracks: AudioTrack[]
-  conversions: readonly TranscodeAudioCodec[]
+  rules: Rules
   onChange: (values: TrackValue[]) => void
 }) {
   const update = (index: number, change: Partial<TrackValue>) =>
@@ -785,13 +886,12 @@ function AudioTracks({
   return (
     <FieldSet>
       <FieldLegend variant="label">{tr("downloads.audio")}</FieldLegend>
-      <FieldDescription>{tr("downloads.audio.description")}</FieldDescription>
       <ul className="flex flex-col gap-3">
         {values.map((value) => {
           const track = tracks.find((entry) => entry.index === value.index)
           if (!track) return null
           const label = audioName(track, tracks)
-          const choices = audioChoices(track, conversions)
+          const choices = audioChoices(track, rules)
           return (
             <li
               key={value.index}
@@ -840,7 +940,7 @@ function AudioTracks({
   )
 }
 
-/** A switch per text subtitle, for whether it goes in the file. */
+/** A switch per subtitle, for whether it goes in the file. */
 function SubtitleTracks({
   values,
   tracks,

@@ -5,28 +5,26 @@ export default defineMessages("downloads", {
   // offline. {name} is the movie or episode.
   "downloads.menuItem": "Download",
   "downloads.title": "Download {name}",
-  "downloads.description":
-    "Save the file as it is, or a version made for this device.",
+  "downloads.description": "Download the original or a custom version.",
   "downloads.version": "Version",
-  "downloads.original": "Original file",
+  "downloads.original": "Original",
   // {format} is the container, like MKV, and {size} the file's size.
-  "downloads.original.description": "{format}, {size}, with every track.",
-  "downloads.custom": "Made for this device",
-  "downloads.custom.description":
-    "Pick the size, audio, and subtitles. The server converts it as it downloads.",
+  "downloads.original.description": "{format} · {size}",
+  "downloads.custom": "Custom",
+  "downloads.custom.description": "Choose size, tracks, and subtitles.",
   "downloads.custom.unavailable":
-    "The server hasn't read this file's tracks yet, so only the original can be downloaded for now.",
+    "The server hasn't read this file's tracks yet.",
 
   "downloads.video": "Video",
   // {codec} like HEVC, {resolution} like 1080p.
   "downloads.video.keep": "Original, {codec} {resolution}",
   // {bitrate} like 6 Mbps.
   "downloads.video.preset": "{resolution}, {bitrate}",
-  "downloads.codec": "Video codec",
+  "downloads.container": "Format",
+  "downloads.codec": "Codec",
   "downloads.keepHdr": "Keep HDR",
 
   "downloads.audio": "Audio tracks",
-  "downloads.audio.description": "The first one you keep plays by default.",
   "downloads.audio.loading": "Loading audio tracks…",
   // {format} like TrueHD Atmos.
   "downloads.audio.keep": "Keep {format}",
@@ -39,9 +37,7 @@ export default defineMessages("downloads", {
 
   "downloads.burnIn": "Burn in subtitles",
   "downloads.burnIn.none": "None",
-  "downloads.burnIn.description":
-    "Picture subtitles can't go in the file on their own, so they're drawn into the video.",
-  // A version for this device: text subtitles that go in the file.
+  // A custom version: subtitles that go in the file.
   "downloads.subtitles.inFile": "Subtitles",
   // {track} is the track's name, for screen readers.
   "downloads.subtitles.include": "Include {track}",
@@ -58,7 +54,7 @@ export default defineMessages("downloads", {
   "downloads.submit": "Download",
   "downloads.started": "Download started",
   "downloads.started.description":
-    "The server converts it while your browser saves it, so it can take a while.",
+    "It's converted as it downloads, so this can take a while.",
   "downloads.startFailed": "Couldn't start the download",
 
   // The same dialog for every file of a show or season. {name} is the
