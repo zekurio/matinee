@@ -17,6 +17,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -329,24 +331,58 @@ private fun metricName(metric: String): String = stringResource(
 /**
  * Where the signed-in user stands on each board of the leaderboard for the
  * range, as the web's profile shows it: their place between the people
- * just above and below them. Boards they aren't on are left out.
+ * just above and below them. A board's name opens it whole. Boards they
+ * aren't on are left out.
  */
 @Composable
 fun Standing(range: String, zone: String, modifier: Modifier = Modifier) {
+    var open by remember { mutableStateOf<io.github.zekurio.matinee.api.LeaderboardBoard?>(null) }
     val loader = io.github.zekurio.matinee.ui.rememberLoader("leaderboard-$range") { leaderboard(range, zone) }
     val boards = (loader.state as? io.github.zekurio.matinee.ui.Load.Ready)?.value?.boards.orEmpty()
     val standings = boards.mapNotNull { board ->
         val at = board.entries.indexOfFirst { it.self }
-        if (at < 0) null else board.metric to board.entries.subList(maxOf(0, at - 1), minOf(board.entries.size, at + 2))
+        if (at < 0) null else board to board.entries.subList(maxOf(0, at - 1), minOf(board.entries.size, at + 2))
     }
     if (standings.isEmpty()) return
     val res = LocalResources.current
     StatsCard(stringResource(R.string.stats_standing_title), modifier) {
-        standings.forEachIndexed { index, (metric, places) ->
+        standings.forEachIndexed { index, (board, places) ->
             if (index > 0) HorizontalDivider(Modifier.padding(start = 16.dp), color = Palette.Border)
             Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(metricName(metric), style = MaterialTheme.typography.bodySmall, color = Palette.Muted)
-                places.forEach { place -> PlaceRow(place, metricValue(metric, place.value, res)) }
+                Row(
+                    Modifier.clip(RoundedCornerShape(4.dp)).clickable { open = board },
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(metricName(board.metric), style = MaterialTheme.typography.bodySmall, color = Palette.Muted)
+                    LucideIcon(Lucide.ChevronRight, null, size = 14.dp, tint = Palette.Muted)
+                }
+                places.forEach { place -> PlaceRow(place, metricValue(board.metric, place.value, res)) }
+            }
+        }
+    }
+    open?.let { board -> BoardSheet(board, range) { open = null } }
+}
+
+/** Places shown at the top of a board; the viewer's neighborhood comes after. */
+private const val TOP_PLACES = 10
+
+/** A whole board, as the leaderboard has it: the top places, then the viewer's neighborhood, set off. */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun BoardSheet(board: io.github.zekurio.matinee.api.LeaderboardBoard, range: String, onDismiss: () -> Unit) {
+    val res = LocalResources.current
+    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Palette.Raised, dragHandle = null) {
+        Column(
+            Modifier.fillMaxWidth().navigationBarsPadding().padding(vertical = 12.dp)
+                .verticalScroll(androidx.compose.foundation.rememberScrollState()),
+        ) {
+            io.github.zekurio.matinee.ui.components.SheetHeader(metricName(board.metric), rangeName(range))
+            Column(Modifier.padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                board.entries.forEachIndexed { index, place ->
+                    // Set off when it doesn't carry straight on from the top places.
+                    if (index == TOP_PLACES && place.rank > (board.entries.getOrNull(TOP_PLACES - 1)?.rank ?: 0) + 1) Gap(10.dp)
+                    PlaceRow(place, metricValue(board.metric, place.value, res))
+                }
             }
         }
     }
