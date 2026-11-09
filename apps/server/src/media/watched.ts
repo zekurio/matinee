@@ -36,18 +36,23 @@ function noonOf(day: string): Date {
 }
 
 /**
- * When the user watched a file, as `watchedAt` asks. `released` is the
- * episode's air date or the movie's release date.
+ * When the user watched a file, as `watchedAt` asks, and whether that's
+ * its release date. `released` is the episode's air date or the movie's
+ * release date.
  */
 function watchedTime(
   watchedAt: WatchedAt | undefined,
   released: string | null,
   now: Date,
-): Date {
-  let at = now
-  if (watchedAt instanceof Date) at = watchedAt
-  else if (watchedAt === "released" && released) at = noonOf(released)
-  return at > now ? now : at
+) {
+  if (watchedAt instanceof Date) {
+    return { at: watchedAt > now ? now : watchedAt, releaseDated: false }
+  }
+  if (watchedAt === "released" && released) {
+    const at = noonOf(released)
+    if (at <= now) return { at, releaseDated: true }
+  }
+  return { at: now, releaseDated: false }
 }
 
 /**
@@ -92,7 +97,7 @@ async function addMarkedPlays(
   const now = new Date()
   const plays = rows.map((row) => {
     const released = row.kind === "show" ? row.airDate : row.releaseDate
-    const at = watchedTime(watchedAt, released, now)
+    const { at, releaseDated } = watchedTime(watchedAt, released, now)
     const seconds = Math.max(0, row.runtime - (row.position ?? 0))
     return {
       id: randomUUID(),
@@ -104,6 +109,7 @@ async function addMarkedPlays(
       watchedSeconds: seconds,
       completed: true,
       marked: true,
+      releaseDated,
       startedAt: new Date(at.getTime() - seconds * 1000),
       updatedAt: at,
       endedAt: at,

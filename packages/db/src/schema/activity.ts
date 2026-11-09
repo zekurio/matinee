@@ -109,6 +109,12 @@ export const playbackSession = pgTable(
      * the runtime the player hadn't covered, and it counts as a play.
      */
     marked: boolean().notNull().default(false),
+    /**
+     * Marked on the file's release or air date, a stand-in for a time the
+     * user didn't know. Charts over time start after these, which could
+     * reach back decades; they still count everywhere else.
+     */
+    releaseDated: boolean().notNull().default(false),
     paused: boolean().notNull().default(false),
     /** The most the server did to play it. */
     method: text().$type<PlaybackMethod>().notNull().default("direct"),
