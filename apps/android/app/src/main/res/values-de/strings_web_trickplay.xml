@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Made by scripts/web_strings.py from apps/web/src/i18n/locales/de/trickplay.ts. Don't edit. -->
+<resources>
+    <string name="web_trickplay_loadFailed">Die Trickplay-Einstellungen konnten nicht geladen werden. %1$s</string>
+    <string name="web_trickplay_checkFields">Überprüfe die Felder.</string>
+    <string name="web_trickplay_title">Trickplay-Bilder</string>
+    <string name="web_trickplay_description">Vorschaubilder über der Zeitleiste beim Spulen.</string>
+    <plurals name="web_trickplay_descriptionCount">
+        <item quantity="one">Vorschaubilder über der Zeitleiste beim Spulen. %2$s von %1$d Video hat sie.</item>
+        <item quantity="other">Vorschaubilder über der Zeitleiste beim Spulen. %2$s von %1$d Videos haben sie.</item>
+    </plurals>
+    <string name="web_trickplay_enabled">Trickplay-Bilder erstellen</string>
+    <string name="web_trickplay_enabled_description">Beim Scannen und durch eine tägliche Aufgabe erstellt.</string>
+    <string name="web_trickplay_interval">Intervall</string>
+    <string name="web_trickplay_interval_description">Kürzer braucht mehr Speicherplatz.</string>
+    <plurals name="web_trickplay_interval_option">
+        <item quantity="one">Jede %1$d Sekunde</item>
+        <item quantity="other">Alle %1$d Sekunden</item>
+    </plurals>
+    <string name="web_trickplay_width">Breite</string>
+    <string name="web_trickplay_width_description">Breiter sieht auf großen Bildschirmen schärfer aus.</string>
+    <string name="web_trickplay_width_option">%1$s px</string>
+    <string name="web_trickplay_keyframesOnly">Nur Keyframes</string>
+    <string name="web_trickplay_keyframesOnly_description">Um ein Vielfaches schneller, aber Vorschaubilder können ein, zwei Sekunden danebenliegen.</string>
+    <string name="web_trickplay_hardwareDecoding">Hardware-Dekodierung</string>
+    <string name="web_trickplay_hardwareDecoding_description">Nutzt %1$s für die unter Transkodierung aktivierten Codecs.</string>
+    <string name="web_trickplay_hardwareDecoding_unavailable">Richte zuerst unter Transkodierung eine GPU ein.</string>
+    <string name="web_trickplay_regenerates">Wenn du Intervall, Breite oder die Keyframe-Einstellung änderst, werden die Bilder aller Videos im Hintergrund neu erstellt.</string>
+</resources>

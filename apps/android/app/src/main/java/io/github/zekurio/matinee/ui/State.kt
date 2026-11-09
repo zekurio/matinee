@@ -114,6 +114,12 @@ class Loader<T>(private val fetch: suspend () -> T) : ViewModel() {
         reload()
     }
 
+    /** Show what a save answered with, without fetching it again. */
+    fun show(value: T) {
+        job?.cancel()
+        state = Load.Ready(value)
+    }
+
     /** Fetch again. What showed stays until the answer comes, unless it failed. */
     fun reload() {
         job?.cancel()

@@ -26,6 +26,7 @@ fun MatineeTextField(
     keyboardActions: KeyboardActions = KeyboardActions.Default,
     isError: Boolean = false,
     enabled: Boolean = true,
+    visualTransformation: androidx.compose.ui.text.input.VisualTransformation = androidx.compose.ui.text.input.VisualTransformation.None,
 ) {
     OutlinedTextField(
         value = value,
@@ -40,6 +41,7 @@ fun MatineeTextField(
         trailingIcon = trailing,
         keyboardOptions = keyboardOptions,
         keyboardActions = keyboardActions,
+        visualTransformation = visualTransformation,
         shape = ControlShape,
         colors = OutlinedTextFieldDefaults.colors(
             focusedContainerColor = Palette.Sunken,

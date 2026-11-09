@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Made by scripts/web_strings.py from apps/web/src/i18n/locales/en/libraries.ts. Don't edit. -->
+<resources>
+    <string name="web_libraries_title">Libraries</string>
+    <string name="web_libraries_add">Add library</string>
+    <string name="web_libraries_loadFailed">Couldn\'t load libraries. %1$s</string>
+    <string name="web_libraries_retry">Try again</string>
+    <string name="web_libraries_empty_title">No libraries yet</string>
+    <string name="web_libraries_empty_description">Add a folder of movies or shows.</string>
+    <string name="web_libraries_scanFailed">Couldn\'t start the scan</string>
+    <string name="web_libraries_fetching">Fetching metadata</string>
+    <string name="web_libraries_fetchFailed">Couldn\'t fetch metadata</string>
+    <string name="web_libraries_removed">Removed %1$s</string>
+    <string name="web_libraries_removed_description">Your files are still on disk.</string>
+    <string name="web_libraries_removeFailed">Couldn\'t remove %1$s</string>
+    <string name="web_libraries_scanning">Scanning…</string>
+    <string name="web_libraries_fetchingFrom">Fetching metadata from %1$s…</string>
+    <string name="web_libraries_fetchingFromProvider">Fetching metadata from the provider…</string>
+    <string name="web_libraries_actions">%1$s actions</string>
+    <string name="web_libraries_scanNow">Scan now</string>
+    <string name="web_libraries_refreshMetadata">Refresh metadata</string>
+    <string name="web_libraries_edit">Edit</string>
+    <string name="web_libraries_remove">Remove</string>
+    <string name="web_libraries_remove_title">Remove %1$s?</string>
+    <string name="web_libraries_remove_description">Matinee forgets the library and its titles. Your files stay where they are.</string>
+    <string name="web_libraries_remove_cancel">Cancel</string>
+    <string name="web_libraries_remove_confirm">Remove library</string>
+    <string name="web_libraries_dialog_addTitle">Add library</string>
+    <string name="web_libraries_dialog_editTitle">Edit library</string>
+    <string name="web_libraries_dialog_checkFields">Check the fields.</string>
+    <string name="web_libraries_dialog_name">Name</string>
+    <string name="web_libraries_dialog_namePlaceholder">e.g. Movies</string>
+    <string name="web_libraries_dialog_type">Type</string>
+    <string name="web_libraries_dialog_kind_movies">Movies</string>
+    <string name="web_libraries_dialog_kind_shows">Shows</string>
+    <string name="web_libraries_dialog_metadata">Metadata</string>
+    <string name="web_libraries_dialog_noProvider">None</string>
+    <string name="web_libraries_dialog_needsKey">Needs an API key</string>
+    <string name="web_libraries_dialog_language">Language</string>
+    <string name="web_libraries_dialog_noProviderHint">Titles use their folder and file names, with no artwork.</string>
+    <string name="web_libraries_dialog_folders">Selected folders</string>
+    <plurals name="web_libraries_dialog_selected">
+        <item quantity="one">%1$d selected</item>
+        <item quantity="other">%1$d selected</item>
+    </plurals>
+    <string name="web_libraries_dialog_removeFolder">Remove %1$s</string>
+    <string name="web_libraries_dialog_noFolders">Open a folder below, then add it.</string>
+    <string name="web_libraries_dialog_browse">Browse server</string>
+    <string name="web_libraries_dialog_cancel">Cancel</string>
+    <string name="web_libraries_dialog_save">Save</string>
+    <string name="web_libraries_dialog_add">Add library</string>
+    <string name="web_libraries_browser_root">Root</string>
+    <string name="web_libraries_browser_current">Current folder</string>
+    <string name="web_libraries_browser_addCurrent">Add “%1$s”</string>
+    <string name="web_libraries_browser_added">Added</string>
+    <string name="web_libraries_browser_openRoot">Open the folder that holds your videos.</string>
+    <string name="web_libraries_browser_alreadyAdded">%1$s is already in this library.</string>
+    <string name="web_libraries_browser_adds">Adds %1$s and its subfolders.</string>
+    <string name="web_libraries_browser_empty">No folders inside this one.</string>
+    <string name="web_libraries_browser_open">Open %1$s</string>
+    <string name="web_libraries_browser_addNamed">Add %1$s</string>
+    <string name="web_libraries_browser_add">Add</string>
+</resources>

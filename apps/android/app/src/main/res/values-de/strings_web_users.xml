@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Made by scripts/web_strings.py from apps/web/src/i18n/locales/de/users.ts. Don't edit. -->
+<resources>
+    <string name="web_users_title">Benutzer</string>
+    <string name="web_users_loadFailed">Die Benutzer konnten nicht geladen werden. %1$s</string>
+    <string name="web_users_retry">Erneut versuchen</string>
+    <string name="web_users_madeAdmin">%1$s ist jetzt Admin</string>
+    <string name="web_users_steppedDown">Du bist kein Admin mehr</string>
+    <string name="web_users_removedAdmin">%1$s ist kein Admin mehr</string>
+    <string name="web_users_deleted">%1$s gelöscht</string>
+    <plurals name="web_users_endedOwnSessions">
+        <item quantity="one">%1$d Sitzung auf anderen Geräten beendet</item>
+        <item quantity="other">%1$d Sitzungen auf anderen Geräten beendet</item>
+    </plurals>
+    <plurals name="web_users_endedSessions">
+        <item quantity="one">%2$s wurde aus %1$d Sitzung abgemeldet</item>
+        <item quantity="other">%2$s wurde aus %1$d Sitzungen abgemeldet</item>
+    </plurals>
+    <string name="web_users_signOut_ownTitle">Deine anderen Sitzungen abmelden?</string>
+    <string name="web_users_signOut_title">%1$s überall abmelden?</string>
+    <string name="web_users_signOut_ownDescription">Alle anderen Geräte müssen sich neu anmelden.</string>
+    <string name="web_users_signOut_description">Alle Geräte müssen sich neu anmelden.</string>
+    <string name="web_users_signOut_ownConfirm">Andere abmelden</string>
+    <string name="web_users_signOut_confirm">Überall abmelden</string>
+    <string name="web_users_delete_ownTitle">Dein Konto löschen?</string>
+    <string name="web_users_delete_title">%1$s löschen?</string>
+    <string name="web_users_delete_ownDescription">Deine Passkeys und dein Wiedergabefortschritt werden mitgelöscht. Das lässt sich nicht rückgängig machen.</string>
+    <string name="web_users_delete_description">Die Passkeys und der Wiedergabefortschritt des Kontos werden mitgelöscht. Das lässt sich nicht rückgängig machen.</string>
+    <string name="web_users_delete_ownConfirm">Mein Konto löschen</string>
+    <string name="web_users_delete_confirm">Benutzer löschen</string>
+    <string name="web_users_admin">Admin</string>
+    <string name="web_users_you">(du)</string>
+    <string name="web_users_actions">Aktionen für %1$s</string>
+    <string name="web_users_menu_stepDown">Als Admin zurücktreten</string>
+    <string name="web_users_menu_removeAdmin">Admin-Rolle entziehen</string>
+    <string name="web_users_menu_makeAdmin">Zum Admin machen</string>
+    <string name="web_users_menu_signOutOthers">Andere Sitzungen abmelden</string>
+    <string name="web_users_menu_signOut">Überall abmelden</string>
+    <string name="web_users_menu_deleteOwn">Mein Konto löschen</string>
+    <string name="web_users_menu_delete">Benutzer löschen</string>
+    <string name="web_users_lastAdmin">Mach zuerst jemand anderen zum Admin.</string>
+    <plurals name="web_users_passkeys">
+        <item quantity="one">%1$d Passkey</item>
+        <item quantity="other">%1$d Passkeys</item>
+    </plurals>
+    <plurals name="web_users_passkeysOff">
+        <item quantity="one">%1$d Passkey (aus)</item>
+        <item quantity="other">%1$d Passkeys (aus)</item>
+    </plurals>
+    <string name="web_users_oidcOff">Single Sign-on (aus)</string>
+    <string name="web_users_noSignIn">Keine Möglichkeit zur Anmeldung</string>
+    <string name="web_users_joined">Dabei seit %1$s</string>
+    <string name="web_users_activeNow">Gerade aktiv</string>
+    <string name="web_users_signedOut">Abgemeldet</string>
+    <string name="web_users_activeRecently">Kürzlich aktiv</string>
+    <string name="web_users_lastSeen">Zuletzt gesehen %1$s</string>
+    <string name="web_users_dialog_cancel">Abbrechen</string>
+    <string name="web_users_role_makeTitle">%1$s zum Admin machen?</string>
+    <string name="web_users_role_makeDescription">Admins verwalten Mediatheken, Einstellungen und alle Konten.</string>
+    <string name="web_users_role_makeConfirm">Zum Admin machen</string>
+    <string name="web_users_role_stepDownTitle">Als Admin zurücktreten?</string>
+    <string name="web_users_role_stepDownDescription">Nur ein anderer Admin kann dir die Rolle zurückgeben.</string>
+    <string name="web_users_role_stepDownConfirm">Zurücktreten</string>
+    <string name="web_users_role_removeTitle">%1$s die Admin-Rolle entziehen?</string>
+    <string name="web_users_role_removeDescription">Das Konto und sein Wiedergabefortschritt bleiben erhalten.</string>
+    <string name="web_users_role_removeConfirm">Admin-Rolle entziehen</string>
+</resources>

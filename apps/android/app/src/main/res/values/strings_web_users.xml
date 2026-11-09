@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Made by scripts/web_strings.py from apps/web/src/i18n/locales/en/users.ts. Don't edit. -->
+<resources>
+    <string name="web_users_title">Users</string>
+    <string name="web_users_loadFailed">Couldn\'t load users. %1$s</string>
+    <string name="web_users_retry">Try again</string>
+    <string name="web_users_madeAdmin">%1$s is now an admin</string>
+    <string name="web_users_steppedDown">You\'re no longer an admin</string>
+    <string name="web_users_removedAdmin">%1$s is no longer an admin</string>
+    <string name="web_users_deleted">Deleted %1$s</string>
+    <plurals name="web_users_endedOwnSessions">
+        <item quantity="one">Ended %1$d session on other devices</item>
+        <item quantity="other">Ended %1$d sessions on other devices</item>
+    </plurals>
+    <plurals name="web_users_endedSessions">
+        <item quantity="one">Signed %2$s out of %1$d session</item>
+        <item quantity="other">Signed %2$s out of %1$d sessions</item>
+    </plurals>
+    <string name="web_users_signOut_ownTitle">Sign out your other sessions?</string>
+    <string name="web_users_signOut_title">Sign %1$s out everywhere?</string>
+    <string name="web_users_signOut_ownDescription">Every other device has to sign in again.</string>
+    <string name="web_users_signOut_description">Every device has to sign in again.</string>
+    <string name="web_users_signOut_ownConfirm">Sign out others</string>
+    <string name="web_users_signOut_confirm">Sign out everywhere</string>
+    <string name="web_users_delete_ownTitle">Delete your account?</string>
+    <string name="web_users_delete_title">Delete %1$s?</string>
+    <string name="web_users_delete_ownDescription">Your passkeys and watch progress go with it. This can\'t be undone.</string>
+    <string name="web_users_delete_description">Their passkeys and watch progress go with it. This can\'t be undone.</string>
+    <string name="web_users_delete_ownConfirm">Delete my account</string>
+    <string name="web_users_delete_confirm">Delete user</string>
+    <string name="web_users_admin">Admin</string>
+    <string name="web_users_you">(you)</string>
+    <string name="web_users_actions">Actions for %1$s</string>
+    <string name="web_users_menu_stepDown">Step down as admin</string>
+    <string name="web_users_menu_removeAdmin">Remove admin role</string>
+    <string name="web_users_menu_makeAdmin">Make admin</string>
+    <string name="web_users_menu_signOutOthers">Sign out other sessions</string>
+    <string name="web_users_menu_signOut">Sign out everywhere</string>
+    <string name="web_users_menu_deleteOwn">Delete my account</string>
+    <string name="web_users_menu_delete">Delete user</string>
+    <string name="web_users_lastAdmin">Make someone else an admin first.</string>
+    <plurals name="web_users_passkeys">
+        <item quantity="one">%1$d passkey</item>
+        <item quantity="other">%1$d passkeys</item>
+    </plurals>
+    <plurals name="web_users_passkeysOff">
+        <item quantity="one">%1$d passkey (off)</item>
+        <item quantity="other">%1$d passkeys (off)</item>
+    </plurals>
+    <string name="web_users_oidcOff">Single sign-on (off)</string>
+    <string name="web_users_noSignIn">No way to sign in</string>
+    <string name="web_users_joined">Joined %1$s</string>
+    <string name="web_users_activeNow">Active now</string>
+    <string name="web_users_signedOut">Signed out</string>
+    <string name="web_users_activeRecently">Active recently</string>
+    <string name="web_users_lastSeen">Last seen %1$s</string>
+    <string name="web_users_dialog_cancel">Cancel</string>
+    <string name="web_users_role_makeTitle">Make %1$s an admin?</string>
+    <string name="web_users_role_makeDescription">Admins manage libraries, settings, and every account.</string>
+    <string name="web_users_role_makeConfirm">Make admin</string>
+    <string name="web_users_role_stepDownTitle">Step down as admin?</string>
+    <string name="web_users_role_stepDownDescription">Only another admin can give it back.</string>
+    <string name="web_users_role_stepDownConfirm">Step down</string>
+    <string name="web_users_role_removeTitle">Remove %1$s\'s admin role?</string>
+    <string name="web_users_role_removeDescription">They keep their account and watch progress.</string>
+    <string name="web_users_role_removeConfirm">Remove admin role</string>
+</resources>
