@@ -14,6 +14,8 @@ import kotlinx.serialization.KSerializer
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObjectBuilder
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.serializer
@@ -21,6 +23,7 @@ import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.HttpUrl
 import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody
@@ -286,6 +289,64 @@ class MatineeApi(val base: HttpUrl, private val client: OkHttpClient) {
 
     suspend fun setItemFavorite(itemId: String, favorite: Boolean) =
         call("PUT", "media/$itemId/favorite", body(FavoriteBody(favorite)))
+
+    // Metadata, for admins
+
+    suspend fun metadataProviders(): List<MetadataProvider> = get("metadata/providers")
+
+    /** Search the title's library's provider, to fix a wrong or missing match. */
+    suspend fun findMatches(titleId: String, query: String, year: Int?): List<MetadataMatch> =
+        get("titles/$titleId/matches", mapOf("query" to query, "year" to year))
+
+    /** Match the title to a provider result and fetch its metadata. */
+    suspend fun identify(titleId: String, providerId: String): Title =
+        post("titles/$titleId/identify", body(IdentifyBody(providerId)))
+
+    suspend fun refreshTitle(titleId: String): Title = post("titles/$titleId/refresh")
+
+    suspend fun images(target: ImageTarget): List<ItemImage> =
+        get("titles/${target.titleId}/images", mapOf("season" to target.season, "episode" to target.episode))
+
+    /** What the provider has for [slot], best first; [allLanguages] adds the rest. */
+    suspend fun remoteImages(target: ImageTarget, slot: String, allLanguages: Boolean): List<RemoteImage> = get(
+        "titles/${target.titleId}/images/$slot/remote",
+        mapOf("season" to target.season, "episode" to target.episode, "allLanguages" to allLanguages),
+    )
+
+    /** Use one of [remoteImages], or no image with a null [imageId], which the body has to say outright. */
+    suspend fun setImage(target: ImageTarget, slot: String, imageId: String?): List<ItemImage> {
+        val payload = targetJson(target) { put("imageId", imageId?.let(::JsonPrimitive) ?: JsonNull) }
+        return send(
+            Request.Builder().url(url("titles/${target.titleId}/images/$slot")).put(payload.toString().toRequestBody(jsonType)).build(),
+            ListSerializer(ItemImage.serializer()),
+        )!!
+    }
+
+    /** Use an image file instead, as a form with the file and whose image it is. */
+    suspend fun uploadImage(target: ImageTarget, slot: String, bytes: ByteArray, type: String): List<ItemImage> {
+        val form = MultipartBody.Builder().setType(MultipartBody.FORM).apply {
+            target.season?.let { addFormDataPart("season", it.toString()) }
+            target.episode?.let { addFormDataPart("episode", it.toString()) }
+            addFormDataPart("file", "image." + type.substringAfter('/'), bytes.toRequestBody(type.toMediaType()))
+        }.build()
+        return send(
+            Request.Builder().url(url("titles/${target.titleId}/images/$slot")).post(form).build(),
+            ListSerializer(ItemImage.serializer()),
+        )!!
+    }
+
+    /** Go back to the provider's image, which fetches the metadata again for it. */
+    suspend fun resetImage(target: ImageTarget, slot: String): List<ItemImage> = send(
+        Request.Builder().url(url("titles/${target.titleId}/images/$slot/reset"))
+            .post(targetJson(target) {}.toString().toRequestBody(jsonType)).build(),
+        ListSerializer(ItemImage.serializer()),
+    )!!
+
+    private fun targetJson(target: ImageTarget, extra: JsonObjectBuilder.() -> Unit) = buildJsonObject {
+        target.season?.let { put("season", it) }
+        target.episode?.let { put("episode", it) }
+        extra()
+    }
 
     companion object {
         private val EMPTY = ByteArray(0).toRequestBody(null)

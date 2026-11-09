@@ -51,6 +51,14 @@ data object DownloadsRoute
 @Serializable
 data class PlayerRoute(val itemId: String, val start: Double = -1.0)
 
+/** An admin picking the provider entry a title is, when its match is wrong or missing. */
+@Serializable
+data class IdentifyRoute(val titleId: String)
+
+/** An admin's image editor for a title, or with [season], a season, and with [episode] too, an episode; -1 for neither. */
+@Serializable
+data class ImagesRoute(val titleId: String, val season: Int = -1, val episode: Int = -1)
+
 /** The bottom bar's tabs, by the route of each one's first page, as Findroid has them. */
 val TAB_ROUTES: List<Any> = listOf(HomeRoute, MediaRoute, DownloadsRoute)
 
@@ -118,6 +126,11 @@ class Navigator(private val controller: NavHostController) {
     fun search() = controller.navigate(SearchRoute) { launchSingleTop = true }
 
     fun settings() = controller.navigate(SettingsRoute) { launchSingleTop = true }
+
+    fun identify(titleId: String) = controller.navigate(IdentifyRoute(titleId)) { launchSingleTop = true }
+
+    fun images(titleId: String, season: Int? = null, episode: Int? = null) =
+        controller.navigate(ImagesRoute(titleId, season ?: -1, episode ?: -1)) { launchSingleTop = true }
 
     /** Play a file from where the person left off, or from [start] seconds. */
     fun play(itemId: String, start: Double? = null) = controller.navigate(PlayerRoute(itemId, start ?: -1.0)) {

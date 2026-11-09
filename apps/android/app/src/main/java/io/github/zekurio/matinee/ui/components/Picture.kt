@@ -128,6 +128,8 @@ object Lucide {
     val Heart = R.drawable.lucide_heart
     val HeartFilled = R.drawable.lucide_heart_filled
     val House = R.drawable.lucide_house
+    val Image = R.drawable.lucide_image
+    val ImageUp = R.drawable.lucide_image_up
     val Info = R.drawable.lucide_info
     val KeyRound = R.drawable.lucide_key_round
     val Link = R.drawable.lucide_link

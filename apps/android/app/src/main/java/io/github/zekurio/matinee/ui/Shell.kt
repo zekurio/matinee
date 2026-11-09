@@ -44,6 +44,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
+import io.github.zekurio.matinee.api.ImageTarget
 import io.github.zekurio.matinee.api.User
 import io.github.zekurio.matinee.auth.Session
 import io.github.zekurio.matinee.ui.browse.BrowseScreen
@@ -58,6 +59,8 @@ import io.github.zekurio.matinee.ui.downloads.DownloadsScreen
 import io.github.zekurio.matinee.ui.home.HomeScreen
 import io.github.zekurio.matinee.ui.media.FavoritesScreen
 import io.github.zekurio.matinee.ui.media.MediaScreen
+import io.github.zekurio.matinee.ui.metadata.IdentifyScreen
+import io.github.zekurio.matinee.ui.metadata.ImagesScreen
 import io.github.zekurio.matinee.ui.player.PlayerScreen
 import io.github.zekurio.matinee.ui.search.SearchScreen
 import io.github.zekurio.matinee.ui.settings.SettingsScreen
@@ -141,6 +144,11 @@ private fun Pages(controller: NavHostController, session: Session, offline: Bool
         }
         screen<SearchRoute> { SearchScreen() }
         screen<SettingsRoute> { SettingsScreen(session) }
+        screen<IdentifyRoute> { IdentifyScreen(it.toRoute<IdentifyRoute>().titleId) }
+        screen<ImagesRoute> {
+            val route = it.toRoute<ImagesRoute>()
+            ImagesScreen(ImageTarget(route.titleId, route.season.takeIf { s -> s >= 0 }, route.episode.takeIf { e -> e >= 0 }))
+        }
         screen<DownloadsRoute>(tab = DownloadsRoute) { DownloadsScreen() }
         composable<PlayerRoute> {
             val route = it.toRoute<PlayerRoute>()

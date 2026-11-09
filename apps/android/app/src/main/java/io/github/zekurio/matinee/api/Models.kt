@@ -246,6 +246,8 @@ data class Title(
     val status: String? = null,
     val runtimeMinutes: Int? = null,
     val path: String = "",
+    /** The provider entry it's matched to; null while it has none. */
+    val providerId: String? = null,
     val studios: List<String> = emptyList(),
     val credits: List<Credit> = emptyList(),
     val itemCount: Int = 0,
@@ -271,7 +273,76 @@ data class Library(
     val itemCount: Int = 0,
     val titleCount: Int = 0,
     val scanning: Boolean = false,
+    /** The provider its metadata comes from, by id; null when it has none. */
+    val metadataProvider: String? = null,
 )
+
+/** A source of metadata the server knows, as in `metadata.providers`. */
+@Serializable
+data class MetadataProvider(
+    val id: String,
+    val name: String,
+    /** The server has the API key it needs. */
+    val configured: Boolean = false,
+)
+
+/** A candidate from a provider search, for fixing a wrong match. */
+@Serializable
+data class MetadataMatch(
+    val provider: String,
+    val id: String,
+    val name: String,
+    val year: Int? = null,
+    val overview: String? = null,
+    val poster: Artwork? = null,
+)
+
+/** One image of a title, season, or episode, for editing it. */
+@Serializable
+data class ItemImage(
+    val slot: String,
+    /** Null when it has none. */
+    val image: Artwork? = null,
+    /** An admin picked, uploaded, or removed it, so fetching the metadata again leaves it alone. */
+    val chosen: Boolean = false,
+    val uploaded: Boolean = false,
+)
+
+/** An image the library's provider has for a title, season, or episode. */
+@Serializable
+data class RemoteImage(
+    val id: String,
+    val preview: Artwork,
+    val width: Int? = null,
+    val height: Int? = null,
+    /** BCP 47 tag of the text on it; null for none, or when the provider doesn't say. */
+    val language: String? = null,
+)
+
+/**
+ * Whose images: a title's own, one of its seasons' with [season], or an
+ * episode's with [season] and [episode], as the contract's `ImageTarget`.
+ */
+data class ImageTarget(val titleId: String, val season: Int? = null, val episode: Int? = null) {
+    /** The images there are to edit: a title's poster, backdrop, and logo, a season's poster, an episode's still. */
+    val slots: List<String>
+        get() = when {
+            season == null -> listOf(ImageSlot.POSTER, ImageSlot.BACKDROP, ImageSlot.LOGO)
+            episode == null -> listOf(ImageSlot.POSTER)
+            else -> listOf(ImageSlot.STILL)
+        }
+}
+
+object ImageSlot {
+    const val POSTER = "poster"
+    const val BACKDROP = "backdrop"
+    const val LOGO = "logo"
+    const val STILL = "still"
+}
+
+/** What an image upload may be, as the contract's `ImageUpload`. */
+const val MAX_IMAGE_BYTES = 25L * 1024 * 1024
+val IMAGE_TYPES = setOf("image/jpeg", "image/png", "image/webp")
 
 @Serializable
 data class PlaybackPreferences(
@@ -463,6 +534,9 @@ internal data class TitleWatchedBody(
 
 @Serializable
 internal data class FavoriteBody(val favorite: Boolean)
+
+@Serializable
+internal data class IdentifyBody(val providerId: String)
 
 @Serializable
 internal data class ProgressBody(

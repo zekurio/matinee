@@ -30,17 +30,21 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
+import io.github.zekurio.matinee.api.ImageTarget
 import io.github.zekurio.matinee.api.MediaItem
 import io.github.zekurio.matinee.api.Season as ShowSeason
 import io.github.zekurio.matinee.api.TitleKind
 import io.github.zekurio.matinee.api.TitleSummary
 import io.github.zekurio.matinee.app
+import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.LocalNavigator
+import io.github.zekurio.matinee.ui.LocalUser
 import io.github.zekurio.matinee.ui.downloads.DownloadFilesSheet
 import io.github.zekurio.matinee.ui.downloads.DownloadSheet
 import io.github.zekurio.matinee.ui.downloads.FileSet
 import io.github.zekurio.matinee.ui.episodeCode
 import io.github.zekurio.matinee.ui.itemLabel
+import io.github.zekurio.matinee.ui.metadata.rememberLibraryProvider
 import io.github.zekurio.matinee.ui.seasonName
 import io.github.zekurio.matinee.ui.theme.Palette
 import java.io.IOException
@@ -204,9 +208,9 @@ private fun ItemActions(item: MediaItem, here: Boolean, dismiss: () -> Unit) {
         }
     }
     DownloadItem(item, dismiss)
-    val title = item.title
-    if (here || title == null) return
-    if (title.kind == TitleKind.SHOW) {
+    val title = item.title ?: return
+    val show = title.kind == TitleKind.SHOW
+    if (!here && show) {
         SheetItem(Lucide.Info, stringResource(R.string.actions_episode_details)) {
             dismiss()
             nav.episode(item.id)
@@ -215,12 +219,25 @@ private fun ItemActions(item: MediaItem, here: Boolean, dismiss: () -> Unit) {
             dismiss()
             nav.titleUp(title.id)
         }
-    } else {
+    } else if (!here) {
         SheetItem(Lucide.Info, stringResource(R.string.media_hero_details)) {
             dismiss()
             nav.titleUp(title.id)
         }
     }
+    // A movie's file is the movie, so it has the movie's; an episode has its still.
+    val season = item.seasonNumber
+    val episode = item.episodeNumber
+    MetadataItems(
+        title,
+        images = when {
+            !show -> ImageTarget(title.id)
+            season != null && episode != null -> ImageTarget(title.id, season, episode)
+            else -> null
+        },
+        matchable = !show,
+        dismiss = dismiss,
+    )
 }
 
 @Composable
@@ -298,6 +315,7 @@ private fun TitleActions(title: TitleSummary, file: MediaItem?, here: Boolean, d
             nav.titleUp(title.id)
         }
     }
+    MetadataItems(title, ImageTarget(title.id), matchable = true, dismiss = dismiss)
 }
 
 /**
@@ -318,6 +336,49 @@ private fun SeasonActions(title: TitleSummary, season: ShowSeason, here: Boolean
         SheetItem(Lucide.List, stringResource(R.string.media_hero_episodes)) {
             dismiss()
             nav.season(title.id, season.number)
+        }
+    }
+    // Files without a season number aren't a season to give a poster.
+    MetadataItems(title, season.number?.let { ImageTarget(title.id, it) }, matchable = false, dismiss = dismiss)
+}
+
+/**
+ * An admin's metadata items, after the rest: fix match and refresh for a
+ * movie or show that's [matchable] and whose library has a provider with
+ * its API key, and the image editor for [images]. Fix match and refresh
+ * show once the provider is known, which the first menu asks for.
+ */
+@Composable
+private fun MetadataItems(title: TitleSummary, images: ImageTarget?, matchable: Boolean, dismiss: () -> Unit) {
+    if (!LocalUser.current.isAdmin) return
+    val api = LocalApi.current
+    val nav = LocalNavigator.current
+    val snackbar = LocalSnackbar.current
+    val viewer = LocalContext.current.app.viewer
+    val scope = LocalActions.current.scope
+    val provider = if (matchable) (rememberLibraryProvider(title.libraryId) as? Load.Ready)?.value?.takeIf { it.configured } else null
+    if (provider == null && images == null) return
+    HorizontalDivider(Modifier.padding(vertical = 6.dp), color = Palette.Border)
+    if (provider != null) {
+        SheetItem(Lucide.Search, stringResource(R.string.title_menu_fix_match)) {
+            dismiss()
+            nav.identify(title.id)
+        }
+        val done = stringResource(R.string.title_refresh_done, title.name)
+        val failed = stringResource(R.string.title_refresh_error)
+        SheetItem(Lucide.RefreshCw, stringResource(R.string.title_menu_refresh)) {
+            dismiss()
+            scope.launchShowing(snackbar, failed) {
+                api.refreshTitle(title.id)
+                viewer.changed()
+                snackbar.showSnackbar(done)
+            }
+        }
+    }
+    if (images != null) {
+        SheetItem(Lucide.Image, stringResource(R.string.title_menu_edit_images)) {
+            dismiss()
+            nav.images(images.titleId, images.season, images.episode)
         }
     }
 }
