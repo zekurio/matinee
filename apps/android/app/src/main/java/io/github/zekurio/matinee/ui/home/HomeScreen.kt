@@ -41,6 +41,7 @@ import io.github.zekurio.matinee.ui.components.LucideIcon
 import io.github.zekurio.matinee.ui.components.Rail
 import io.github.zekurio.matinee.ui.components.RailArt
 import io.github.zekurio.matinee.ui.components.ShelfCard
+import io.github.zekurio.matinee.ui.components.isWide
 import io.github.zekurio.matinee.ui.components.railItemWidth
 import io.github.zekurio.matinee.ui.rememberLoader
 import io.github.zekurio.matinee.ui.theme.Palette
@@ -52,7 +53,12 @@ fun HomeScreen() {
     val nextUp = rememberLoader("nextUp") { nextUp() }
     val featured = rememberLoader("featured") { featured() }
     val config = LocalConfiguration.current
-    val heroHeight = maxOf(config.screenHeightDp * 0.68f, 460f).dp
+    // On a phone, short enough that two rows of stills, captions and all,
+    // fit under it above the bottom bar: 328dp of a 20:9 phone's 952. Under
+    // 320dp its title and buttons would reach the header. Tablets and
+    // TVs keep a tall banner.
+    val heroHeight = if (isWide()) maxOf(config.screenHeightDp * 0.68f, 460f).dp
+    else (config.screenHeightDp * 0.345f).coerceIn(320f, 400f).dp
 
     val libs = (libraries.state as? Load.Ready)?.value
     val failed = libraries.state as? Load.Failed
@@ -70,7 +76,7 @@ fun HomeScreen() {
             Modifier.fillMaxSize(),
             state = listState,
             contentPadding = PaddingValues(bottom = tabBarPadding() + 24.dp),
-            verticalArrangement = Arrangement.spacedBy(32.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
             item(key = "hero") {
                 val slides = (featured.state as? Load.Ready)?.value

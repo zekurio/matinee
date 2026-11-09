@@ -1,5 +1,8 @@
 package io.github.zekurio.matinee.ui.home
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -10,8 +13,8 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -19,8 +22,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
@@ -33,6 +34,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -49,10 +51,8 @@ import coil3.compose.AsyncImage
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.ArtworkSize
 import io.github.zekurio.matinee.api.FeaturedTitle
-import io.github.zekurio.matinee.api.Library
 import io.github.zekurio.matinee.ui.LocalNavigator
 import io.github.zekurio.matinee.ui.components.ButtonLook
-import io.github.zekurio.matinee.ui.components.Chip
 import io.github.zekurio.matinee.ui.components.Gap
 import io.github.zekurio.matinee.ui.components.Gutter
 import io.github.zekurio.matinee.ui.components.LocalApi
@@ -70,77 +70,69 @@ import io.github.zekurio.matinee.ui.progressRatio
 import io.github.zekurio.matinee.ui.theme.Palette
 import io.github.zekurio.matinee.ui.timeLeft
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 private const val ADVANCE_MS = 8000L
 
 /**
- * The library chips, the way phones move between libraries, as in the web
- * app. Sits over art on Home, so the chips are frosted there.
- */
-@Composable
-fun LibraryChips(
-    libraries: List<Library>,
-    current: String?,
-    modifier: Modifier = Modifier,
-    frosted: Boolean = false,
-    contentPadding: PaddingValues = PaddingValues(horizontal = Gutter),
-) {
-    val nav = LocalNavigator.current
-    if (libraries.isEmpty()) return
-    LazyRow(
-        modifier,
-        contentPadding = contentPadding,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        items(libraries, key = { it.id }) { library ->
-            Chip(library.name, selected = library.id == current, frosted = frosted, onClick = { nav.library(library.id) })
-        }
-    }
-}
-
-/**
  * The banner at the top of Home: new and well-rated titles over their art,
  * with Play starting where the person is in each. Advances on its own until
- * the person swipes it.
+ * the person swipes it, always forward: the pages repeat, so after the last
+ * comes the first again rather than a rewind through them all.
  */
 @Composable
 fun Hero(slides: List<FeaturedTitle>, modifier: Modifier = Modifier, top: @Composable () -> Unit) {
-    val pager = rememberPagerState { slides.size }
+    val count = slides.size
+    val loops = count > 1
+    val pager = rememberPagerState(initialPage = if (loops) count * (LOOPS / 2) else 0) { if (loops) count * LOOPS else count }
     var held by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    LaunchedEffect(pager.currentPage, held, slides.size) {
-        if (held || slides.size < 2) return@LaunchedEffect
-        delay(ADVANCE_MS)
-        pager.animateScrollToPage((pager.currentPage + 1) % slides.size)
+    // A page left halfway, as when Home went away mid-advance, settles first.
+    LaunchedEffect(pager) {
+        if (pager.currentPageOffsetFraction != 0f && !pager.isScrollInProgress) pager.scrollToPage(pager.currentPage)
+    }
+    // Waits on the page it settled on, so the advance's own scroll, which
+    // moves the current page halfway through, doesn't cancel it.
+    LaunchedEffect(held, count) {
+        if (held || !loops) return@LaunchedEffect
+        snapshotFlow { pager.settledPage }.collectLatest { page ->
+            delay(ADVANCE_MS)
+            pager.animateScrollToPage(page + 1, animationSpec = tween(700, easing = FastOutSlowInEasing))
+        }
     }
     // A swipe holds the banner on what the person picked. Only a drag
     // counts: the banner's own advance scrolls too.
     val dragged by pager.interactionSource.collectIsDraggedAsState()
     LaunchedEffect(dragged) { if (dragged) held = true }
     Box(modifier.fillMaxWidth()) {
-        HorizontalPager(pager, Modifier.fillMaxSize(), key = { slides[it].title.id }) { page ->
-            Slide(slides[page])
+        HorizontalPager(pager, Modifier.fillMaxSize(), beyondViewportPageCount = 1) { page ->
+            Slide(slides[page % count])
         }
         Column(Modifier.fillMaxWidth().align(Alignment.TopStart)) { top() }
-        if (slides.size > 1) {
+        // A phone's banner is kept short so two rows fit under it, and has
+        // no room for dots; it's swiped, and advances on its own.
+        if (loops && isWide()) {
+            val current = pager.currentPage % count
             Row(
-                Modifier.align(Alignment.BottomCenter).padding(bottom = 10.dp),
+                Modifier.align(Alignment.BottomCenter).padding(bottom = 6.dp),
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 slides.indices.forEach { index ->
-                    val active = index == pager.currentPage
+                    val active = index == current
+                    val width by animateDpAsState(if (active) 20.dp else 6.dp, label = "hero dot")
                     Box(
                         Modifier
                             .padding(vertical = 8.dp)
                             .height(6.dp)
-                            .width(if (active) 20.dp else 6.dp)
+                            .width(width)
                             .clip(CircleShape)
                             .background(if (active) Palette.Foreground else Palette.Foreground.copy(alpha = 0.4f))
                             .clickable(onClickLabel = stringResource(R.string.media_hero_show_slide, index + 1)) {
                                 held = true
-                                scope.launch { pager.animateScrollToPage(index) }
+                                // The nearest page showing that slide.
+                                scope.launch { pager.animateScrollToPage(pager.currentPage - current + index) }
                             },
                     )
                 }
@@ -148,6 +140,9 @@ fun Hero(slides: List<FeaturedTitle>, modifier: Modifier = Modifier, top: @Compo
         }
     }
 }
+
+/** How many times over the banner's pages repeat, so it can keep going forward. */
+private const val LOOPS = 1000
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -167,34 +162,49 @@ private fun Slide(slide: FeaturedTitle) {
     val resuming = left != null && ratio != null
     Box(Modifier.fillMaxSize().tone(title.name)) {
         Picture(sources, Modifier.fillMaxSize(), alignment = Alignment.TopCenter)
-        // Darken where the text sits and fade into the page below.
-        Box(
-            Modifier.fillMaxSize().background(
-                Brush.horizontalGradient(
-                    0f to Palette.Background.copy(alpha = 0.95f),
-                    0.5f to Palette.Background.copy(alpha = 0.6f),
-                    1f to Color.Transparent,
+        if (wide) {
+            // Darken where the text sits and fade into the page below.
+            Box(
+                Modifier.fillMaxSize().background(
+                    Brush.horizontalGradient(
+                        0f to Palette.Background.copy(alpha = 0.95f),
+                        0.5f to Palette.Background.copy(alpha = 0.6f),
+                        1f to Color.Transparent,
+                    ),
                 ),
-            ),
-        )
-        Box(
-            Modifier.fillMaxSize().background(
-                Brush.verticalGradient(
-                    0f to Palette.Background.copy(alpha = 0.55f),
-                    0.25f to Color.Transparent,
-                    0.55f to Palette.Background.copy(alpha = 0.4f),
-                    1f to Palette.Background,
+            )
+            Box(
+                Modifier.fillMaxSize().background(
+                    Brush.verticalGradient(
+                        0f to Palette.Background.copy(alpha = 0.55f),
+                        0.25f to Color.Transparent,
+                        0.55f to Palette.Background.copy(alpha = 0.4f),
+                        1f to Palette.Background,
+                    ),
                 ),
-            ),
-        )
+            )
+        } else {
+            // A phone's text spans the width at the bottom, so it gets a
+            // shadow there, and none down the side, which hid half the
+            // picture. The header has its own shadow at the top.
+            Box(
+                Modifier.align(Alignment.BottomCenter).fillMaxWidth().fillMaxHeight(0.62f).background(
+                    Brush.verticalGradient(
+                        0f to Color.Transparent,
+                        0.45f to Palette.Background.copy(alpha = 0.7f),
+                        1f to Palette.Background,
+                    ),
+                ),
+            )
+        }
         Column(
             Modifier
                 .align(Alignment.BottomStart)
                 .fillMaxWidth()
-                .padding(start = Gutter, end = Gutter, bottom = 40.dp),
+                .padding(start = Gutter, end = Gutter, bottom = heroBottom()),
         ) {
             TitleMark(slide, Modifier.widthIn(max = 512.dp))
-            Gap(12.dp)
+            Gap(10.dp)
             val facts = listOfNotNull(
                 title.year?.toString(),
                 if (title.isShow && count > 1) res.getQuantityString(R.plurals.media_episode_count, count, count) else null,
@@ -224,8 +234,10 @@ private fun Slide(slide: FeaturedTitle) {
                     }
                 }
             }
-            if (title.genres.isNotEmpty()) {
-                Gap(12.dp)
+            // A phone's short banner has room for the genres or how far the
+            // person is, not both; where they are matters more.
+            if (title.genres.isNotEmpty() && (wide || !resuming)) {
+                Gap(8.dp)
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     title.genres.take(3).forEach { genre ->
                         Text(
@@ -255,7 +267,7 @@ private fun Slide(slide: FeaturedTitle) {
                 )
             }
             if (resuming) {
-                Gap(16.dp)
+                Gap(12.dp)
                 Row(
                     Modifier.widthIn(max = 320.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -272,7 +284,7 @@ private fun Slide(slide: FeaturedTitle) {
                     )
                 }
             }
-            Gap(16.dp)
+            Gap(14.dp)
             Row(
                 Modifier.then(if (wide) Modifier else Modifier.fillMaxWidth()),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -305,13 +317,14 @@ private fun TitleMark(slide: FeaturedTitle, modifier: Modifier = Modifier) {
                 contentScale = ContentScale.Fit,
                 alignment = Alignment.BottomStart,
                 onError = { failed = true },
-                modifier = Modifier.fillMaxWidth().height(if (isWide()) 120.dp else 76.dp),
+                modifier = Modifier.fillMaxWidth().height(if (isWide()) 120.dp else 52.dp),
             )
         }
     } else {
+        // A phone's banner is short; a title that big would reach the header.
         Text(
             slide.title.name,
-            style = MaterialTheme.typography.displaySmall.copy(
+            style = (if (isWide()) MaterialTheme.typography.displaySmall else MaterialTheme.typography.headlineMedium).copy(
                 shadow = androidx.compose.ui.graphics.Shadow(Color.Black.copy(alpha = 0.45f), blurRadius = 24f),
             ),
             maxLines = 2,
@@ -321,12 +334,16 @@ private fun TitleMark(slide: FeaturedTitle, modifier: Modifier = Modifier) {
     }
 }
 
+/** Space under the banner's buttons: room for the dots on a wide screen, little on a phone. */
+@Composable
+private fun heroBottom() = if (isWide()) 32.dp else 12.dp
+
 /** The banner's place while it loads. */
 @Composable
 fun HeroSkeleton(modifier: Modifier = Modifier, top: @Composable () -> Unit) {
     Box(modifier.fillMaxWidth().background(Palette.Card)) {
         Column(Modifier.fillMaxWidth()) { top() }
-        Box(Modifier.align(Alignment.BottomStart).padding(Gutter).padding(bottom = 32.dp)) {
+        Box(Modifier.align(Alignment.BottomStart).padding(Gutter).padding(bottom = heroBottom())) {
             Column {
                 Box(Modifier.size(220.dp, 48.dp).clip(MaterialTheme.shapes.small).background(Palette.Secondary))
                 Gap(16.dp)

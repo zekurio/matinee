@@ -62,8 +62,9 @@ enum class RailArt { Landscape, Poster, Person }
 fun isWide(): Boolean = LocalConfiguration.current.screenWidthDp >= 600
 
 /**
- * How wide a card is in a rail, as on the web: a share of a phone's width,
- * so the next card peeks in, and fixed sizes on bigger screens.
+ * How wide a card is in a rail: a share of a phone's width, so the next
+ * card peeks in, and the web's fixed sizes on bigger screens. Stills are
+ * narrower than the web's on phones, so two rails fit under Home's banner.
  */
 @Composable
 fun railItemWidth(art: RailArt): Dp {
@@ -78,7 +79,7 @@ fun railItemWidth(art: RailArt): Dp {
     }
     val inner = width - 2 * Gutter.value
     return when (art) {
-        RailArt.Landscape -> minOf(inner * 0.8f, config.screenHeightDp * 0.34f * 16f / 9f).dp
+        RailArt.Landscape -> minOf(inner * 0.66f, config.screenHeightDp * 0.34f * 16f / 9f).dp
         RailArt.Poster -> (inner * 0.44f).dp
         RailArt.Person -> (inner * 0.28f).dp
     }
