@@ -1370,7 +1370,9 @@ export function matroskaStream(
           controller.close()
           resolve()
         } else {
-          reject(new Error(`ffmpeg stopped (exit ${code}): ${stderr.join("\n")}`))
+          reject(
+            new Error(`ffmpeg stopped (exit ${code}): ${stderr.join("\n")}`),
+          )
         }
       })
     })
