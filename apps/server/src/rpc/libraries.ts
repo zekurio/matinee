@@ -17,6 +17,7 @@ import {
   eq,
   ilike,
   inArray,
+  isNotNull,
   like,
   or,
   sql,
@@ -25,6 +26,7 @@ import {
 import { db } from "../db"
 import { isScanning, scanLibrary } from "../library/scanner"
 import { watchLibraries } from "../library/watcher"
+import { placeholders, toArtwork } from "../media/artwork"
 import { publicItems } from "../media/items"
 import { keyframesNear, listAudio } from "../media/playback"
 import { shelf } from "../media/shelf"
@@ -35,10 +37,32 @@ import { sources } from "../metadata/sources"
 import { follow } from "../realtime/follow"
 import { admin, authed, badRequest, notFound } from "./base"
 
+/**
+ * A backdrop for each of the libraries, from one of their titles. Ordering
+ * by a hash of the title and the UTC date picks the same title all day,
+ * for everyone, and a different one the next, without storing anything.
+ */
+async function libraryBackdrops(ids: string[]): Promise<Map<string, string>> {
+  const day = new Date().toISOString().slice(0, 10)
+  const rows = await db
+    .selectDistinctOn([title.libraryId], {
+      libraryId: title.libraryId,
+      backdropId: title.backdropId,
+    })
+    .from(title)
+    .where(and(inArray(title.libraryId, ids), isNotNull(title.backdropId)))
+    .orderBy(title.libraryId, sql`md5(${title.id}::text || ${day})`)
+  const found = new Map<string, string>()
+  for (const row of rows) {
+    if (row.backdropId) found.set(row.libraryId, row.backdropId)
+  }
+  return found
+}
+
 async function toLibraries(rows: LibraryRow[]): Promise<Library[]> {
   if (rows.length === 0) return []
   const ids = rows.map((row) => row.id)
-  const [folders, items, titles] = await Promise.all([
+  const [folders, items, titles, backdrops] = await Promise.all([
     db
       .select()
       .from(libraryFolder)
@@ -54,7 +78,9 @@ async function toLibraries(rows: LibraryRow[]): Promise<Library[]> {
       .from(title)
       .where(inArray(title.libraryId, ids))
       .groupBy(title.libraryId),
+    libraryBackdrops(ids),
   ])
+  const art = await placeholders(backdrops.values())
   return rows.map((row) => ({
     id: row.id,
     name: row.name,
@@ -67,6 +93,7 @@ async function toLibraries(rows: LibraryRow[]): Promise<Library[]> {
     lastScannedAt: row.lastScannedAt,
     scanning: isScanning(row.id),
     refreshing: isRefreshing(row.id),
+    backdrop: toArtwork(backdrops.get(row.id) ?? null, art),
   }))
 }
 

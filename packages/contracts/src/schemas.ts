@@ -1,5 +1,6 @@
 import { t } from "./schema"
 
+export * from "./artwork"
 export * from "./auth"
 export * from "./library"
 export * from "./search"

@@ -1,3 +1,4 @@
+import { Artwork } from "./artwork"
 import { t } from "./schema"
 
 export const LIBRARY_KINDS = ["movies", "shows"] as const
@@ -42,6 +43,11 @@ export const Library = t.object({
   scanning: t.boolean(),
   /** Metadata is being fetched for new or changed titles. */
   refreshing: t.boolean(),
+  /**
+   * The backdrop of one of its titles, to show the library by. A different
+   * title gets picked each day. Null when no title has a backdrop.
+   */
+  backdrop: Artwork.nullable(),
 })
 export type Library = t.infer<typeof Library>
 
