@@ -14,6 +14,7 @@ import io.github.zekurio.matinee.auth.AuthState
 import io.github.zekurio.matinee.auth.Session
 import io.github.zekurio.matinee.downloads.Downloads
 import io.github.zekurio.matinee.ui.ViewerState
+import io.github.zekurio.matinee.ui.player.PlayerPrefs
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 
@@ -25,6 +26,9 @@ class MatineeApp : Application(), SingletonImageLoader.Factory {
     val viewer = ViewerState()
 
     val downloads by lazy { Downloads(this) }
+
+    /** How this device plays: quality, codecs, decoders, subtitles. */
+    val player by lazy { PlayerPrefs(this) }
 
     private val scope = MainScope()
 

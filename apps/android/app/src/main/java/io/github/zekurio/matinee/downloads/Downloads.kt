@@ -43,6 +43,18 @@ val VIDEO_PRESETS = listOf(
 private val COPY_VIDEO = setOf("h264", "hevc", "av1", "vp9")
 private val COPY_AUDIO = setOf("aac", "mp3", "ac3", "eac3", "opus", "flac", "alac")
 
+/** Which subtitles a download saves beside the video. */
+enum class DownloadSubtitles {
+    /** The languages the person reads and hears. */
+    USED,
+    ALL,
+    NONE,
+}
+
+/** The version the download sheet starts on: for this device, at a preset's height, or the file as it is. */
+const val DEFAULT_DEVICE = "device"
+const val DEFAULT_ORIGINAL = "original"
+
 /** What a download is made of, before it starts: the tracks it holds and the subtitles saved beside it. */
 data class DownloadSource(
     val item: MediaItem,
@@ -72,6 +84,19 @@ class Downloads(private val context: Context) {
             // Waiting downloads follow the new setting.
             store.items.value.values.filter { it.state == DownloadState.QUEUED }.forEach { schedule(it.id, replace = true) }
         }
+
+    /**
+     * The version the download sheet starts on: [DEFAULT_DEVICE], a preset's
+     * height like "720", or [DEFAULT_ORIGINAL].
+     */
+    var defaultVersion: String
+        get() = prefs.getString("default_version", null) ?: DEFAULT_DEVICE
+        set(value) = prefs.edit { putString("default_version", value) }
+
+    var subtitles: DownloadSubtitles
+        get() = prefs.getString("subtitles", null)?.let { saved -> DownloadSubtitles.entries.firstOrNull { it.name == saved } }
+            ?: DownloadSubtitles.USED
+        set(value) = prefs.edit { putString("subtitles", value.name) }
 
     /** The audio track a download holds: the one the preferences would play. */
     private fun audioFor(source: DownloadSource): AudioTrack? =
@@ -117,14 +142,21 @@ class Downloads(private val context: Context) {
             (audio == null || Capabilities.decodesAudio(audio.codec))
     }
 
-    /** Text subtitles in the languages the person reads or hears, saved beside the video. */
+    /** Text subtitles to save beside the video: in the languages the person reads or hears, all, or none. */
     private fun subtitlesFor(source: DownloadSource): List<SubtitleTrack> {
-        val audio = audioFor(source)
-        val languages = setOfNotNull(
-            baseLanguage(source.preferences.subtitleLanguage ?: deviceLanguage),
-            baseLanguage(audio?.language),
-        )
-        return source.subtitles.filter { drawable(it) && baseLanguage(it.language) in languages }.take(8)
+        val text = source.subtitles.filter(::drawable)
+        return when (subtitles) {
+            DownloadSubtitles.NONE -> emptyList()
+            DownloadSubtitles.ALL -> text.take(32)
+            DownloadSubtitles.USED -> {
+                val audio = audioFor(source)
+                val languages = setOfNotNull(
+                    baseLanguage(source.preferences.subtitleLanguage ?: deviceLanguage),
+                    baseLanguage(audio?.language),
+                )
+                text.filter { baseLanguage(it.language) in languages }.take(8)
+            }
+        }
     }
 
     private fun subtitleEntries(id: String, tracks: List<SubtitleTrack>) =
@@ -207,6 +239,11 @@ class Downloads(private val context: Context) {
         work.cancelUniqueWork(workName(id))
         store.remove(id)
         if (serverId != null && api != null) scope.launch { runCatching { api.removeDownload(serverId) } }
+    }
+
+    /** Every download, finished or not. */
+    fun removeAll(api: MatineeApi?) {
+        store.items.value.keys.toList().forEach { remove(it, api) }
     }
 
     /** Queue again what was waiting when the app last ran, in case its jobs went. */

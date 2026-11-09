@@ -20,8 +20,8 @@ web app's catalogs where the words are the same.
     browser back to `matinee://auth/callback`.
   - With a code: the app shows a user code, someone signed in enters it at
     `/link`, and the app polls until it's approved. TVs only offer this.
-  The token lives in the app's preferences, encrypted with a key in the
-  Android Keystore, and stays out of backups.
+    The token lives in the app's preferences, encrypted with a key in the
+    Android Keystore, and stays out of backups.
 - Home: the featured banner, Continue watching, Next up, and what each
   library got last. Libraries with sorting, a genre filter, and search;
   genres, studios, people, search across the server.
@@ -46,8 +46,12 @@ web app's catalogs where the words are the same.
   the languages you read or hear save beside the video. A downloaded file
   plays from the phone. When the server doesn't answer, the app offers the
   downloads, and where you got to in them goes to the server once it's back.
-- Settings: the account's language preferences, this device's quality,
-  downloads, sessions, and the server.
+- Settings: the account's language preferences; how subtitles look, in the
+  system's caption style or the app's own size, color, background, and edge;
+  this device's quality, codecs for encodes, decoders, skip length, autoplay
+  of the next episode, picture in picture, and audio passthrough; downloads'
+  network, version, and subtitles; the app's language through Android's
+  per-app setting; sessions; and the server.
 
 Not built yet: Chromecast, a media session for the lock screen, downloads
 of a whole season, and a TV layout of its own. On a TV, the remote plays

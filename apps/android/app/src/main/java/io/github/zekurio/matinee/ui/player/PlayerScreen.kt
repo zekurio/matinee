@@ -8,9 +8,13 @@ import android.os.Build
 import android.util.Rational
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -23,26 +27,30 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -61,7 +69,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.key.Key
@@ -76,14 +83,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.platform.LocalResources
-import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.coerceAtMost
+import androidx.compose.ui.unit.coerceIn
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.app.PictureInPictureModeChangedInfo
@@ -145,7 +153,6 @@ private class PlayerData(
     val local: OfflineItem? = null,
 )
 
-private const val SKIP_SECONDS = 10.0
 private const val HIDE_AFTER_MS = 3500L
 private const val UP_NEXT_SECONDS = 10
 
@@ -216,17 +223,20 @@ private fun PlayerFailure(title: String, message: String?, retry: (() -> Unit)?)
     }
 }
 
-/** Picture in picture follows the video: on while it plays, so leaving the app keeps it on screen. */
+/**
+ * Picture in picture follows the video: on while it plays, so leaving the
+ * app keeps it on screen, unless settings turned it off.
+ */
 @Composable
-private fun rememberPictureInPicture(controller: PlayerController): Boolean {
+private fun rememberPictureInPicture(controller: PlayerController, allowed: Boolean): Boolean {
     val context = LocalContext.current
     val activity = remember { context.activity() }
     var inPip by remember { mutableStateOf(activity?.isInPictureInPictureMode == true) }
-    DisposableEffect(activity) {
+    DisposableEffect(activity, allowed) {
         val listener = Consumer<PictureInPictureModeChangedInfo> { inPip = it.isInPictureInPictureMode }
         activity?.addOnPictureInPictureModeChangedListener(listener)
         val leave = Runnable {
-            if (controller.playing && Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+            if (allowed && controller.playing && Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
                 runCatching { activity?.enterPictureInPictureMode(PictureInPictureParams.Builder().setAspectRatio(Rational(16, 9)).build()) }
             }
         }
@@ -239,7 +249,7 @@ private fun rememberPictureInPicture(controller: PlayerController): Boolean {
             }
         }
     }
-    val playing = controller.playing
+    val playing = controller.playing && allowed
     LaunchedEffect(playing) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             runCatching {
@@ -258,6 +268,7 @@ private fun Playback(data: PlayerData, start: Double?) {
     val app = context.app
     val api = LocalApi.current
     val user = LocalUser.current
+    val prefs = app.player
     val preferences = user.playback ?: PlaybackPreferences()
     val controller = remember(data.item.id) {
         val choice = audioChoice(data.audio, preferences.audioLanguage, data.item.title?.originalLanguage)
@@ -272,7 +283,8 @@ private fun Playback(data: PlayerData, start: Double?) {
             options = data.options,
             initialAudio = choice.preferred,
             initialSubtitle = defaultSubtitle(data.subtitles, audioLanguage, preferences),
-            initialQuality = PlayerPrefs(context).quality,
+            initialQuality = prefs.quality,
+            prefs = prefs,
             local = data.local?.let(app.downloads.store::file),
             localSubtitles = data.local?.subtitles.orEmpty().associate { it.track.id to File(app.downloads.store.root, it.file) },
             pending = app.downloads.pending,
@@ -287,7 +299,7 @@ private fun Playback(data: PlayerData, start: Double?) {
         }
     }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
-    val inPip = rememberPictureInPicture(controller)
+    val inPip = rememberPictureInPicture(controller, allowed = prefs.pictureInPicture)
     DisposableEffect(lifecycle, inPip) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_STOP && !inPip) controller.player.pause()
@@ -306,6 +318,7 @@ private fun Playback(data: PlayerData, start: Double?) {
             controls = false
         }
     }
+    val skip = prefs.skipSeconds.toDouble()
 
     // Remotes, keyboards, and headsets: play and pause, and skip with left
     // and right while the controls are away. With them showing, the D-pad
@@ -324,10 +337,10 @@ private fun Playback(data: PlayerData, start: Double?) {
                     Key.MediaPlayPause, Key.Spacebar -> controller::togglePlay
                     Key.MediaPlay -> controller.player::play
                     Key.MediaPause -> controller.player::pause
-                    Key.MediaFastForward -> ({ controller.skip(SKIP_SECONDS) })
-                    Key.MediaRewind -> ({ controller.skip(-SKIP_SECONDS) })
-                    Key.DirectionLeft -> if (controls) null else ({ controller.skip(-SKIP_SECONDS) })
-                    Key.DirectionRight -> if (controls) null else ({ controller.skip(SKIP_SECONDS) })
+                    Key.MediaFastForward -> ({ controller.skip(skip) })
+                    Key.MediaRewind -> ({ controller.skip(-skip) })
+                    Key.DirectionLeft -> if (controls) null else ({ controller.skip(-skip) })
+                    Key.DirectionRight -> if (controls) null else ({ controller.skip(skip) })
                     Key.DirectionCenter, Key.Enter, Key.DirectionUp, Key.DirectionDown ->
                         if (controls) null else ({ controls = true })
                     else -> null
@@ -338,17 +351,17 @@ private fun Playback(data: PlayerData, start: Double?) {
             .focusable(),
     ) {
         Video(controller)
-        Subtitles(controller, lifted = controls && !inPip, Modifier.align(Alignment.BottomCenter))
+        Subtitles(controller, rememberSubtitleLook(prefs), lifted = controls && !inPip, Modifier.align(Alignment.BottomCenter))
         // Taps show and hide the controls; a double tap on either side skips.
         Box(
-            Modifier.fillMaxSize().pointerInput(controller) {
+            Modifier.fillMaxSize().pointerInput(controller, skip) {
                 detectTapGestures(
                     onTap = {
                         controls = !controls
                         touched++
                     },
                     onDoubleTap = { offset ->
-                        controller.skip(if (offset.x < size.width / 2) -SKIP_SECONDS else SKIP_SECONDS)
+                        controller.skip(if (offset.x < size.width / 2) -skip else skip)
                         touched++
                     },
                 )
@@ -361,6 +374,7 @@ private fun Playback(data: PlayerData, start: Double?) {
             AnimatedVisibility(controls || controller.ended, enter = fadeIn(), exit = fadeOut()) {
                 Controls(
                     controller,
+                    skip = skip,
                     scrub = scrub,
                     onScrub = {
                         scrub = it
@@ -379,19 +393,9 @@ private fun Playback(data: PlayerData, start: Double?) {
                     PlayerFailure(stringResource(R.string.player_error_lost), message, controller::retry)
                 }
             }
-            if (controller.ended) UpNext(controller, Modifier.align(Alignment.BottomEnd))
+            if (controller.ended) UpNext(controller, autoplay = prefs.autoplayNext, Modifier.align(Alignment.BottomEnd))
         }
-    }
-
-    menu?.let { open ->
-        PlayerMenu(open, controller, onDismiss = { menu = null })
-    }
-    // A menu's sheet is a window of its own, which brings the system bars
-    // back; they go again once it closes.
-    LaunchedEffect(menu) {
-        if (menu != null) return@LaunchedEffect
-        val window = context.activity()?.window ?: return@LaunchedEffect
-        WindowCompat.getInsetsController(window, window.decorView).hide(WindowInsetsCompat.Type.systemBars())
+        PlayerPanel(menu, controller, onDismiss = { menu = null })
     }
 }
 
@@ -412,35 +416,25 @@ private fun Video(controller: PlayerController) {
 
 /** The cues showing now, drawn over the video, above the controls while they show. */
 @Composable
-private fun Subtitles(controller: PlayerController, lifted: Boolean, modifier: Modifier) {
+private fun Subtitles(controller: PlayerController, look: SubtitleLook, lifted: Boolean, modifier: Modifier) {
+    // Moves with the controls rather than jumping when they come and go.
+    val bottom by animateDpAsState(if (lifted) 150.dp else 28.dp, label = "subtitle lift")
     val cues = controller.cues ?: return
     val shown = cues.at(controller.position)
     if (shown.isEmpty()) return
     Column(
-        modifier.fillMaxWidth().padding(horizontal = 48.dp).padding(bottom = if (lifted) 120.dp else 28.dp),
+        modifier.fillMaxWidth().padding(horizontal = 48.dp).padding(bottom = bottom),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-        shown.forEach { cue ->
-            Text(
-                cue.text,
-                style = TextStyle(
-                    color = Color.White,
-                    fontSize = 20.sp,
-                    lineHeight = 26.sp,
-                    fontWeight = FontWeight.Medium,
-                    textAlign = TextAlign.Center,
-                    shadow = Shadow(Color.Black, Offset(0f, 1f), blurRadius = 6f),
-                ),
-                modifier = Modifier.background(Color.Black.copy(alpha = 0.45f), RoundedCornerShape(4.dp)).padding(horizontal = 8.dp, vertical = 2.dp),
-            )
-        }
+        shown.forEach { cue -> SubtitleLine(cue.text, look) }
     }
 }
 
 @Composable
 private fun Controls(
     controller: PlayerController,
+    skip: Double,
     scrub: Double?,
     onScrub: (Double) -> Unit,
     onScrubEnd: () -> Unit,
@@ -455,35 +449,35 @@ private fun Controls(
     Box(Modifier.fillMaxSize()) {
         // Shade the top and bottom so the controls read over bright video.
         Box(
-            Modifier.fillMaxWidth().height(120.dp).align(Alignment.TopCenter)
-                .background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.7f), Color.Transparent))),
+            Modifier.fillMaxWidth().height(160.dp).align(Alignment.TopCenter)
+                .background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.75f), Color.Transparent))),
         )
         Box(
-            Modifier.fillMaxWidth().height(170.dp).align(Alignment.BottomCenter)
-                .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.8f)))),
+            Modifier.fillMaxWidth().height(220.dp).align(Alignment.BottomCenter)
+                .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.85f)))),
         )
         Row(
-            Modifier.align(Alignment.TopStart).safeDrawingPadding().padding(horizontal = 8.dp, vertical = 4.dp),
+            Modifier.align(Alignment.TopStart).safeDrawingPadding().padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            RoundIconButton(Lucide.ArrowLeft, stringResource(R.string.player_back), nav::back, background = Color.Transparent)
+            RoundIconButton(Lucide.ArrowLeft, stringResource(R.string.player_back), nav::back, size = 52.dp, iconSize = 26.dp, background = Color.Transparent)
             Gap(8.dp)
             Column {
-                Text(label.title, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(label.title, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 if (code != null) {
-                    Text("$code · ${label.showName}", style = MaterialTheme.typography.bodySmall, color = Palette.Foreground.copy(alpha = 0.75f))
+                    Text("$code · ${label.showName}", style = MaterialTheme.typography.bodyMedium, color = Palette.Foreground.copy(alpha = 0.75f))
                 }
             }
         }
         Row(
             Modifier.align(Alignment.Center),
-            horizontalArrangement = Arrangement.spacedBy(40.dp),
+            horizontalArrangement = Arrangement.spacedBy(56.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            RoundIconButton(Lucide.RotateCcw, stringResource(R.string.player_skip_back, 10), {
-                controller.skip(-SKIP_SECONDS)
+            SkipButton(Lucide.RotateCcw, skip, stringResource(R.string.player_skip_back, skip.toInt())) {
+                controller.skip(-skip)
                 onTouch()
-            }, size = 56.dp, iconSize = 28.dp, background = Color.Transparent)
+            }
             RoundIconButton(
                 if (controller.playing) Lucide.Pause else Lucide.Play,
                 stringResource(if (controller.playing) R.string.player_pause else R.string.player_play),
@@ -491,16 +485,16 @@ private fun Controls(
                     controller.togglePlay()
                     onTouch()
                 },
-                size = 76.dp,
-                iconSize = 32.dp,
+                size = 96.dp,
+                iconSize = 42.dp,
                 background = Color.Black.copy(alpha = 0.35f),
             )
-            RoundIconButton(Lucide.RotateCw, stringResource(R.string.player_skip_forward, 10), {
-                controller.skip(SKIP_SECONDS)
+            SkipButton(Lucide.RotateCw, skip, stringResource(R.string.player_skip_forward, skip.toInt())) {
+                controller.skip(skip)
                 onTouch()
-            }, size = 56.dp, iconSize = 28.dp, background = Color.Transparent)
+            }
         }
-        Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().safeDrawingPadding().padding(horizontal = 16.dp, vertical = 8.dp)) {
+        Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().safeDrawingPadding().padding(horizontal = 20.dp, vertical = 10.dp)) {
             SeekBar(controller, scrub, onScrub, onScrubEnd)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 val duration = controller.duration
@@ -509,19 +503,35 @@ private fun Controls(
                         val left = (duration - controller.position) / controller.speed
                         DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(System.currentTimeMillis() + (left * 1000).toLong()))
                     }
-                    Text(stringResource(R.string.player_ends_at, ends), style = MaterialTheme.typography.bodySmall, color = Palette.Foreground.copy(alpha = 0.8f))
+                    Text(stringResource(R.string.player_ends_at, ends), style = MaterialTheme.typography.bodyMedium, color = Palette.Foreground.copy(alpha = 0.8f))
                 }
                 Box(Modifier.weight(1f))
-                RoundIconButton(Lucide.AudioLines, stringResource(R.string.player_menu_audio), { onMenu(Menu.Audio) }, background = Color.Transparent)
+                RoundIconButton(Lucide.AudioLines, stringResource(R.string.player_menu_audio), { onMenu(Menu.Audio) }, size = 52.dp, iconSize = 26.dp, background = Color.Transparent)
                 Box {
-                    RoundIconButton(Lucide.Captions, stringResource(R.string.player_menu_subtitles), { onMenu(Menu.Subtitles) }, background = Color.Transparent)
+                    RoundIconButton(Lucide.Captions, stringResource(R.string.player_menu_subtitles), { onMenu(Menu.Subtitles) }, size = 52.dp, iconSize = 26.dp, background = Color.Transparent)
                     if (controller.subtitle != null) {
-                        Box(Modifier.align(Alignment.BottomCenter).offset(y = (-6).dp).width(18.dp).height(2.dp).background(Palette.Accent))
+                        Box(Modifier.align(Alignment.BottomCenter).offset(y = (-8).dp).width(20.dp).height(2.dp).clip(CircleShape).background(Palette.Accent))
                     }
                 }
-                RoundIconButton(Lucide.Settings, stringResource(R.string.player_menu_settings), { onMenu(Menu.Settings) }, background = Color.Transparent)
+                RoundIconButton(Lucide.Settings, stringResource(R.string.player_menu_settings), { onMenu(Menu.Settings) }, size = 52.dp, iconSize = 26.dp, background = Color.Transparent)
             }
         }
+    }
+}
+
+/** Skips back or forward, with how far in the middle of its arrow. */
+@Composable
+private fun SkipButton(icon: Int, seconds: Double, label: String, onClick: () -> Unit) {
+    Box(
+        Modifier.size(72.dp).clip(CircleShape).clickable(role = Role.Button, onClickLabel = label, onClick = onClick, indication = ripple(), interactionSource = null),
+        contentAlignment = Alignment.Center,
+    ) {
+        LucideIcon(icon, label, size = 40.dp)
+        Text(
+            seconds.toInt().toString(),
+            style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp, fontWeight = FontWeight.SemiBold),
+            modifier = Modifier.padding(top = 2.dp),
+        )
     }
 }
 
@@ -540,20 +550,21 @@ private fun SeekBar(controller: PlayerController, scrub: Double?, onScrub: (Doub
             }
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(formatClock(shown), style = MaterialTheme.typography.bodySmall, modifier = Modifier.widthIn(min = 48.dp))
+            Text(formatClock(shown), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.widthIn(min = 56.dp))
             SeekTrack(
                 fraction = if (duration > 0) (shown / duration).toFloat() else 0f,
                 buffered = if (duration > 0) (controller.buffered / duration).toFloat() else 0f,
                 enabled = duration > 0,
+                scrubbing = scrub != null,
                 onScrub = { onScrub(it * duration) },
                 onScrubEnd = onScrubEnd,
                 modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
             )
             Text(
                 "-" + formatClock((duration - shown).coerceAtLeast(0.0)),
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.End,
-                modifier = Modifier.widthIn(min = 56.dp),
+                modifier = Modifier.widthIn(min = 64.dp),
             )
         }
     }
@@ -568,15 +579,18 @@ private fun SeekTrack(
     fraction: Float,
     buffered: Float,
     enabled: Boolean,
+    scrubbing: Boolean,
     onScrub: (Float) -> Unit,
     onScrubEnd: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var width by remember { mutableIntStateOf(1) }
     val at = { x: Float -> (x / width).coerceIn(0f, 1f) }
+    // The dot grows under the finger.
+    val thumb by animateDpAsState(if (scrubbing) 11.dp else 8.dp, label = "seek thumb")
     Box(
         modifier
-            .height(32.dp)
+            .height(44.dp)
             .onSizeChanged { width = it.width.coerceAtLeast(1) }
             .pointerInput(enabled) {
                 if (!enabled) return@pointerInput
@@ -595,15 +609,15 @@ private fun SeekTrack(
             },
         contentAlignment = Alignment.CenterStart,
     ) {
-        Canvas(Modifier.fillMaxWidth().height(14.dp)) {
+        Canvas(Modifier.fillMaxWidth().height(24.dp)) {
             val y = size.height / 2
-            val stroke = 4.dp.toPx()
+            val stroke = 5.dp.toPx()
             val played = size.width * fraction.coerceIn(0f, 1f)
             fun line(to: Float, color: Color) = drawLine(color, Offset(0f, y), Offset(to, y), stroke, StrokeCap.Round)
             line(size.width, Palette.Foreground.copy(alpha = 0.2f))
             line(size.width * buffered.coerceIn(0f, 1f), Palette.Foreground.copy(alpha = 0.35f))
             line(played, Palette.Accent)
-            drawCircle(Palette.Accent, radius = 7.dp.toPx(), center = Offset(played, y))
+            drawCircle(Palette.Accent, radius = thumb.toPx(), center = Offset(played, y))
         }
     }
 }
@@ -648,9 +662,12 @@ private fun TrickplayPreview(controller: PlayerController, seconds: Double, modi
     }
 }
 
-/** The next episode when one ended, starting by itself after a countdown. */
+/**
+ * The next episode when one ended, starting by itself after a countdown,
+ * or waiting for Play when settings turned [autoplay] off.
+ */
 @Composable
-private fun UpNext(controller: PlayerController, modifier: Modifier) {
+private fun UpNext(controller: PlayerController, autoplay: Boolean, modifier: Modifier) {
     val api = LocalApi.current
     val nav = LocalNavigator.current
     val res = LocalResources.current
@@ -667,7 +684,7 @@ private fun UpNext(controller: PlayerController, modifier: Modifier) {
     }
     val upcoming = next ?: return
     var left by remember(upcoming.id) { mutableIntStateOf(UP_NEXT_SECONDS) }
-    var cancelled by remember(upcoming.id) { mutableStateOf(false) }
+    var cancelled by remember(upcoming.id) { mutableStateOf(!autoplay) }
     LaunchedEffect(upcoming.id, cancelled) {
         while (!cancelled && left > 0) {
             delay(1000)
@@ -704,79 +721,113 @@ private fun UpNext(controller: PlayerController, modifier: Modifier) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * A menu's panel at the side, drawn in the player's own window. A sheet
+ * would be a window of its own, which brings the system bars back and moves
+ * everything laid out around them.
+ */
 @Composable
-private fun PlayerMenu(menu: Menu, controller: PlayerController, onDismiss: () -> Unit) {
-    val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheet, containerColor = Palette.Raised, dragHandle = null) {
-        LazyColumn(Modifier.fillMaxWidth().navigationBarsPadding().padding(vertical = 8.dp)) {
-            when (menu) {
-                Menu.Audio -> {
-                    item { MenuHeading(stringResource(R.string.player_menu_audio)) }
-                    if (controller.audioTracks.isEmpty()) {
-                        item { MenuNote(stringResource(R.string.player_audio_no_tracks)) }
-                    }
-                    items(controller.audioTracks, key = { it.index }) { track ->
-                        MenuRow(
-                            audioLabel(track),
-                            listOfNotNull(track.format, track.layout).joinToString(" · "),
-                            selected = track == controller.audio,
-                        ) {
-                            controller.pickAudio(track)
-                            onDismiss()
-                        }
+private fun PlayerPanel(open: Menu?, controller: PlayerController, onDismiss: () -> Unit) {
+    // The menu that was open stays drawn while the panel slides away.
+    var last by remember { mutableStateOf(open) }
+    if (open != null) last = open
+    BackHandler(enabled = open != null, onBack = onDismiss)
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        AnimatedVisibility(open != null, enter = fadeIn(), exit = fadeOut()) {
+            Box(
+                Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.45f)).pointerInput(Unit) {
+                    detectTapGestures { onDismiss() }
+                },
+            )
+        }
+        val width = (maxWidth * 0.42f).coerceIn(300.dp, 420.dp).coerceAtMost(maxWidth)
+        AnimatedVisibility(
+            open != null,
+            modifier = Modifier.align(Alignment.CenterEnd),
+            enter = slideInHorizontally { it } + fadeIn(),
+            exit = slideOutHorizontally { it } + fadeOut(),
+        ) {
+            val menu = last ?: return@AnimatedVisibility
+            LazyColumn(
+                Modifier
+                    .fillMaxHeight()
+                    .width(width)
+                    .clip(RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp))
+                    .background(Palette.Raised)
+                    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.End + WindowInsetsSides.Vertical))
+                    .padding(vertical = 12.dp),
+            ) {
+                menuItems(menu, controller, onDismiss)
+            }
+        }
+    }
+}
+
+private fun androidx.compose.foundation.lazy.LazyListScope.menuItems(menu: Menu, controller: PlayerController, onDismiss: () -> Unit) {
+    when (menu) {
+        Menu.Audio -> {
+            item { MenuHeading(stringResource(R.string.player_menu_audio)) }
+            if (controller.audioTracks.isEmpty()) {
+                item { MenuNote(stringResource(R.string.player_audio_no_tracks)) }
+            }
+            items(controller.audioTracks, key = { it.index }) { track ->
+                MenuRow(
+                    audioLabel(track),
+                    listOfNotNull(track.format, track.layout).joinToString(" · "),
+                    selected = track == controller.audio,
+                ) {
+                    controller.pickAudio(track)
+                    onDismiss()
+                }
+            }
+        }
+        Menu.Subtitles -> {
+            item { MenuHeading(stringResource(R.string.player_menu_subtitles)) }
+            item {
+                MenuRow(stringResource(R.string.player_subtitles_off), null, selected = controller.subtitle == null) {
+                    controller.pickSubtitle(null)
+                    onDismiss()
+                }
+            }
+            items(controller.subtitles, key = { it.id }) { track ->
+                MenuRow(
+                    subtitleLabel(track, controller.subtitles),
+                    subtitleDetail(track),
+                    selected = track == controller.subtitle,
+                    enabled = track.delivery != null,
+                ) {
+                    controller.pickSubtitle(track)
+                    onDismiss()
+                }
+            }
+            if (controller.subtitleError) item { MenuNote(stringResource(R.string.player_error_subtitles)) }
+        }
+        Menu.Settings -> {
+            if (!controller.isLocal) {
+                item { MenuHeading(stringResource(R.string.player_quality)) }
+                item {
+                    MenuRow(stringResource(R.string.player_quality_original), null, selected = controller.quality == ORIGINAL_QUALITY) {
+                        controller.pickQuality(ORIGINAL_QUALITY)
+                        onDismiss()
                     }
                 }
-                Menu.Subtitles -> {
-                    item { MenuHeading(stringResource(R.string.player_menu_subtitles)) }
-                    item {
-                        MenuRow(stringResource(R.string.player_subtitles_off), null, selected = controller.subtitle == null) {
-                            controller.pickSubtitle(null)
-                            onDismiss()
-                        }
+                items(QUALITIES, key = { it.id }) { quality ->
+                    MenuRow(qualityLabel(quality.id), null, selected = controller.quality == quality.id) {
+                        controller.pickQuality(quality.id)
+                        onDismiss()
                     }
-                    items(controller.subtitles, key = { it.id }) { track ->
-                        MenuRow(
-                            subtitleLabel(track, controller.subtitles),
-                            subtitleDetail(track),
-                            selected = track == controller.subtitle,
-                            enabled = track.delivery != null,
-                        ) {
-                            controller.pickSubtitle(track)
-                            onDismiss()
-                        }
-                    }
-                    if (controller.subtitleError) item { MenuNote(stringResource(R.string.player_error_subtitles)) }
                 }
-                Menu.Settings -> {
-                    item { MenuHeading(stringResource(R.string.player_quality)) }
-                    item { MenuNote(sourceLabel(controller)) }
-                    if (!controller.isLocal) {
-                        item {
-                            MenuRow(stringResource(R.string.player_quality_original), null, selected = controller.quality == ORIGINAL_QUALITY) {
-                                controller.pickQuality(ORIGINAL_QUALITY)
-                                onDismiss()
-                            }
-                        }
-                        items(QUALITIES, key = { it.id }) { quality ->
-                            MenuRow(qualityLabel(quality.id), null, selected = controller.quality == quality.id) {
-                                controller.pickQuality(quality.id)
-                                onDismiss()
-                            }
-                        }
-                    }
-                    item { HorizontalDivider(Modifier.padding(vertical = 8.dp), color = Palette.Border) }
-                    item { MenuHeading(stringResource(R.string.player_speed)) }
-                    items(listOf(0.5f, 0.75f, 1f, 1.25f, 1.5f, 2f)) { rate ->
-                        MenuRow(
-                            if (rate == 1f) stringResource(R.string.player_speed_normal) else stringResource(R.string.player_speed_rate, rate.toString().removeSuffix(".0")),
-                            null,
-                            selected = controller.speed == rate,
-                        ) {
-                            controller.pickSpeed(rate)
-                            onDismiss()
-                        }
-                    }
+                item { HorizontalDivider(Modifier.padding(vertical = 8.dp), color = Palette.Border) }
+            }
+            item { MenuHeading(stringResource(R.string.player_speed)) }
+            items(listOf(0.5f, 0.75f, 1f, 1.25f, 1.5f, 2f)) { rate ->
+                MenuRow(
+                    if (rate == 1f) stringResource(R.string.player_speed_normal) else stringResource(R.string.player_speed_rate, rate.toString().removeSuffix(".0")),
+                    null,
+                    selected = controller.speed == rate,
+                ) {
+                    controller.pickSpeed(rate)
+                    onDismiss()
                 }
             }
         }
@@ -785,7 +836,7 @@ private fun PlayerMenu(menu: Menu, controller: PlayerController, onDismiss: () -
 
 @Composable
 private fun MenuHeading(text: String) {
-    Text(text, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp))
+    Text(text, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp))
 }
 
 @Composable
@@ -796,7 +847,7 @@ private fun MenuNote(text: String) {
 @Composable
 private fun MenuRow(title: String, detail: String?, selected: Boolean, enabled: Boolean = true, onClick: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().clickable(enabled = enabled, onClick = onClick).padding(horizontal = 20.dp, vertical = 12.dp),
+        Modifier.fillMaxWidth().clickable(enabled = enabled, onClick = onClick).padding(horizontal = 20.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
@@ -834,21 +885,3 @@ private fun subtitleDetail(track: SubtitleTrack): String = listOfNotNull(
     track.format,
     if (track.delivery != null && !drawable(track)) stringResource(R.string.player_subtitles_burned_in) else null,
 ).joinToString(" · ")
-
-/** How the video reaches the device: the file, a stream, or an encode. */
-@Composable
-private fun sourceLabel(controller: PlayerController): String = when (val source = controller.source) {
-    Source.Direct -> stringResource(R.string.player_via_direct_play)
-    Source.Local -> stringResource(R.string.player_via_download)
-    is Source.Stream -> stringResource(R.string.player_via_direct_stream)
-    is Source.Hls -> {
-        val quality = QUALITIES.firstOrNull { it.id == source.quality }
-        val text = stringResource(
-            R.string.player_via_transcode,
-            "${quality?.height ?: 0}p",
-            stringResource(R.string.player_bitrate_mbps, (quality?.bitrate ?: 0) / 1_000_000),
-        )
-        if (source.subtitle != null) stringResource(R.string.player_via_burn_in, text) else text
-    }
-    null -> ""
-}

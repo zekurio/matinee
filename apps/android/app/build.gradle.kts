@@ -59,6 +59,12 @@ android {
         buildConfig = true
     }
 
+    // Lists the app's languages for Android's per-app language setting, from
+    // the values-* folders and res/resources.properties.
+    androidResources {
+        generateLocaleConfig = true
+    }
+
     packaging {
         resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
     }

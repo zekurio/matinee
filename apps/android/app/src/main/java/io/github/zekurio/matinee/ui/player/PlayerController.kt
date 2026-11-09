@@ -2,6 +2,7 @@ package io.github.zekurio.matinee.ui.player
 
 import android.content.Context
 import android.net.Uri
+import androidx.annotation.OptIn
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableFloatStateOf
@@ -14,9 +15,12 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.Tracks
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.okhttp.OkHttpDataSource
+import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import io.github.zekurio.matinee.api.AudioTrack
 import io.github.zekurio.matinee.api.MatineeApi
@@ -61,6 +65,22 @@ sealed interface Source {
 }
 
 /**
+ * ExoPlayer's renderers, trying the hardware decoders first as Android lists
+ * them, or the software ones when settings say so. Either way a decoder that
+ * fails to start hands over to the next.
+ */
+@OptIn(UnstableApi::class)
+private fun renderers(context: Context, decoders: Decoders): DefaultRenderersFactory {
+    val factory = DefaultRenderersFactory(context).setEnableDecoderFallback(true)
+    if (decoders == Decoders.SOFTWARE) {
+        factory.setMediaCodecSelector { mime, secure, tunneling ->
+            MediaCodecSelector.DEFAULT.getDecoderInfos(mime, secure, tunneling).sortedByDescending { it.softwareOnly }
+        }
+    }
+    return factory
+}
+
+/**
  * Plays one file: picks the source, follows the viewer's audio, subtitle,
  * and quality picks, falls back when the device can't play what came, and
  * reports progress for Continue watching and the statistics.
@@ -76,6 +96,8 @@ class PlayerController(
     initialAudio: AudioTrack?,
     initialSubtitle: SubtitleTrack?,
     initialQuality: String,
+    /** This device's settings: codecs, converted formats, and decoders. */
+    private val prefs: PlayerPrefs,
     /** The downloaded file, which plays instead of anything from the server. */
     private val local: File? = null,
     /** Subtitles saved beside the download, by track id. */
@@ -86,7 +108,7 @@ class PlayerController(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val sessionId = UUID.randomUUID().toString()
 
-    val player: ExoPlayer = ExoPlayer.Builder(context)
+    val player: ExoPlayer = ExoPlayer.Builder(context, renderers(context, prefs.decoders))
         // Files on the phone, and the server through the session's client.
         .setMediaSourceFactory(DefaultMediaSourceFactory(DefaultDataSource.Factory(context, OkHttpDataSource.Factory(http))))
         .build()
@@ -134,8 +156,8 @@ class PlayerController(
     private val offset get() = (source as? Source.Stream)?.offset ?: 0.0
     private val videoPlays = item.probe?.video?.let(Capabilities::decodesVideo) ?: true
     private val containerPlays = Capabilities.playsContainer(item.container)
-    private val audioCodecs = Capabilities.streamAudioCodecs
-    private val videoCodecs = Capabilities.encodeVideoCodecs(options.videoCodecs)
+    private val audioCodecs = Capabilities.streamAudioCodecs(prefs)
+    private val videoCodecs = Capabilities.encodeVideoCodecs(options.videoCodecs, prefs)
 
     /** Set once a source failed, so the next try asks the server for more. */
     private var noDirect = false
@@ -190,7 +212,7 @@ class PlayerController(
             val encode = if (quality == ORIGINAL_QUALITY) fallbackQuality(item.probe?.video?.width) else quality
             return Source.Hls(track?.index ?: 0, encode, burnIn?.id)
         }
-        val audioPlays = track == null || Capabilities.decodesAudio(track.codec)
+        val audioPlays = track == null || Capabilities.takesAudio(track.codec, prefs)
         if (containerPlays && audioPlays && !noDirect) return Source.Direct
         return Source.Stream(track?.index ?: 0, 0.0)
     }
@@ -308,7 +330,7 @@ class PlayerController(
         audio = track
         val current = source
         // A download holds only its own tracks, so it picks among them whatever plays.
-        if (current == Source.Local || (current == Source.Direct && Capabilities.decodesAudio(track.codec))) {
+        if (current == Source.Local || (current == Source.Direct && Capabilities.takesAudio(track.codec, prefs))) {
             pendingAudioOverride = true
             applyAudioOverride(player.currentTracks)
         } else {

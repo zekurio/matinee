@@ -6,6 +6,8 @@
 
     <string name="common_back">Back</string>
     <string name="common_retry">Try again</string>
+    <string name="common_cancel">Cancel</string>
+    <string name="common_remove">Remove</string>
     <string name="common_and">and</string>
 
     <!-- Picking a server -->
@@ -238,6 +240,55 @@
     <string name="account_device_browser">Browser</string>
     <string name="settings_server">Server</string>
     <string name="settings_version">Matinee for Android %1$s</string>
+    <string name="playback_video_codec_title">Video codec</string>
+    <string name="playback_video_codec_description">For transcodes. AV1 and HEVC look better but load the server more.</string>
+    <string name="playback_audio_codec_title">Audio codec</string>
+    <string name="playback_audio_codec_description">Stereo, for audio this device can\'t play.</string>
+    <string name="playback_codec_automatic">Automatic (%1$s)</string>
+    <string name="playback_decoders_title">Decoders</string>
+    <string name="playback_decoders_description">Software can help when a video shows glitches. It uses more battery.</string>
+    <string name="playback_decoders_hardware">Hardware first</string>
+    <string name="playback_decoders_software">Software first</string>
+    <string name="playback_skip_title">Skip by</string>
+    <string name="playback_skip_description">The skip buttons, and a double tap on either side.</string>
+    <plurals name="playback_skip_seconds">
+        <item quantity="one">%1$d second</item>
+        <item quantity="other">%1$d seconds</item>
+    </plurals>
+    <string name="playback_autoplay_title">Play the next episode</string>
+    <string name="playback_autoplay_description">Starts after a short countdown.</string>
+    <string name="playback_pip_title">Picture in picture</string>
+    <string name="playback_pip_description">Keep a playing video on screen when you leave the app.</string>
+    <string name="playback_passthrough_title">Audio passthrough</string>
+    <string name="playback_passthrough_description">Formats this device plays directly. Turn one off to have the server convert it.</string>
+    <string name="playback_passthrough_ac3">Dolby Digital surround.</string>
+    <string name="playback_passthrough_eac3">Dolby Digital Plus, including Atmos.</string>
+    <string name="playback_passthrough_flac">Lossless. Uses far more bandwidth.</string>
+    <string name="playback_passthrough_alac">Apple Lossless. Uses far more bandwidth.</string>
+    <string name="settings_subtitles_title">Subtitles</string>
+    <string name="settings_subtitles_description">How subtitles look on this device.</string>
+    <string name="settings_subtitles_preview">This is how subtitles look.</string>
+    <string name="settings_subtitles_system">Use the system\'s caption style</string>
+    <string name="settings_subtitles_system_description">As Android\'s accessibility settings set it.</string>
+    <string name="settings_subtitles_system_open">Caption preferences</string>
+    <string name="settings_subtitles_size">Size</string>
+    <string name="settings_subtitles_color">Text color</string>
+    <string name="settings_subtitles_color_white">White</string>
+    <string name="settings_subtitles_color_yellow">Yellow</string>
+    <string name="settings_subtitles_color_cyan">Cyan</string>
+    <string name="settings_subtitles_color_green">Green</string>
+    <string name="settings_subtitles_background">Background</string>
+    <string name="settings_subtitles_background_none">None</string>
+    <string name="settings_subtitles_background_shaded">Translucent</string>
+    <string name="settings_subtitles_background_black">Black</string>
+    <string name="settings_subtitles_edge">Edge</string>
+    <string name="settings_subtitles_edge_shadow">Drop shadow</string>
+    <string name="settings_subtitles_edge_outline">Outline</string>
+    <string name="settings_subtitles_edge_none">None</string>
+    <string name="settings_app_title">App</string>
+    <string name="settings_app_language">Language</string>
+    <string name="settings_app_language_description">Set in Android\'s settings, for this app only.</string>
+    <string name="settings_app_language_system">System default</string>
 
     <!-- The player -->
     <string name="player_load_failed">Couldn\'t load this title</string>
@@ -263,10 +314,6 @@
     <string name="player_speed_normal">Normal</string>
     <string name="player_speed_rate">%1$s×</string>
     <string name="player_bitrate_mbps">%1$d Mbps</string>
-    <string name="player_via_direct_play">Direct play</string>
-    <string name="player_via_direct_stream">Direct stream</string>
-    <string name="player_via_transcode">Transcoding to %1$s, %2$s</string>
-    <string name="player_via_burn_in">%1$s, subtitles burned in</string>
     <string name="player_error_lost">Couldn\'t play this video</string>
     <string name="player_error_subtitles">Couldn\'t load subtitles. Pick another track or turn them off.</string>
     <string name="player_error_save_preferences">Couldn\'t save your playback preferences</string>
@@ -307,5 +354,14 @@
     <string name="downloads_reconnect">Connect to the server again</string>
     <string name="downloads_unmetered">Download on Wi-Fi only</string>
     <string name="downloads_unmetered_description">Wait for Wi-Fi or another connection without a data limit.</string>
-    <string name="player_via_download">Playing the download</string>
+    <string name="downloads_default_title">Version</string>
+    <string name="downloads_default_description">What the download sheet picks first.</string>
+    <string name="downloads_subtitles_title">Subtitles</string>
+    <string name="downloads_subtitles_description">Saved beside each download.</string>
+    <string name="downloads_subtitles_used">Languages you use</string>
+    <string name="downloads_subtitles_all">All</string>
+    <string name="downloads_subtitles_none">None</string>
+    <string name="downloads_remove_all">Remove all downloads</string>
+    <string name="downloads_remove_all_confirm">Remove all downloads?</string>
+    <string name="downloads_remove_all_body">This deletes %1$s from this device.</string>
 </resources>

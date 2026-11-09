@@ -78,11 +78,41 @@ object Capabilities {
     /**
      * The codecs from the contract's PLAYBACK_AUDIO_CODECS this device takes
      * in MP4, the one it wants converted audio in first. AAC always plays.
+     * Formats [prefs] has converted are left out, and its codec goes first.
      */
-    val streamAudioCodecs: List<String> by lazy {
-        listOf("opus", "aac", "mp3", "flac", "ac3", "eac3").filter { it == "aac" || decodesAudio(it) }
+    fun streamAudioCodecs(prefs: PlayerPrefs): List<String> {
+        val kept = listOf("opus", "aac", "mp3", "flac", "alac", "ac3", "eac3").filter { it == "aac" || takesAudio(it, prefs) }
+        val first = prefs.audioCodec.takeIf { it in kept } ?: return kept
+        return listOf(first) + (kept - first)
     }
 
-    /** The codecs an encode may come in, H.264 first: every device plays it. */
-    fun encodeVideoCodecs(server: List<String>): List<String> = listOf("h264").filter { it in server }.ifEmpty { listOf("h264") }
+    /**
+     * Formats the device plays that settings may still have converted, as the
+     * web's OPTIONAL_PASSTHROUGH.
+     */
+    val OPTIONAL_PASSTHROUGH = listOf("ac3", "eac3", "flac", "alac")
+
+    /** Whether the player takes [codec] as it is: the device decodes it and settings don't convert it. */
+    fun takesAudio(codec: String, prefs: PlayerPrefs): Boolean =
+        decodesAudio(codec) && !(codec in OPTIONAL_PASSTHROUGH && codec in prefs.convertAudio)
+
+    /** The codecs streams may convert audio to, of the server's: Opus where it plays, and AAC. */
+    fun convertAudioCodecs(server: List<String>): List<String> =
+        listOf("opus", "aac").filter { it in server && (it == "aac" || decodesAudio(it)) }
+
+    /** The codecs of the server's an encode could come in that this device decodes, best last. */
+    fun encodeVideoChoices(server: List<String>): List<String> =
+        listOf("h264", "hevc", "av1").filter { codec ->
+            codec in server && VIDEO_MIMES[codec]?.let { decodersFor(it).isNotEmpty() } == true
+        }
+
+    /**
+     * The codecs an encode may come in, the one wanted first. Automatic is
+     * H.264, which every device plays; settings can ask for HEVC or AV1.
+     */
+    fun encodeVideoCodecs(server: List<String>, prefs: PlayerPrefs): List<String> {
+        val choices = encodeVideoChoices(server)
+        val wanted = prefs.videoCodec.takeIf { it != AUTOMATIC && it in choices }
+        return listOfNotNull(wanted, "h264".takeIf { it in server }).distinct().ifEmpty { listOf("h264") }
+    }
 }

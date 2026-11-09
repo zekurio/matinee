@@ -187,6 +187,14 @@ private val VIDEO_CODECS = mapOf(
 
 fun videoCodecName(codec: String) = VIDEO_CODECS[codec] ?: codec.uppercase()
 
+/** The contract's audioFormatName for the codecs a stream may hold. */
+private val AUDIO_FORMATS = mapOf(
+    "aac" to "AAC", "ac3" to "AC-3", "eac3" to "E-AC-3", "flac" to "FLAC",
+    "alac" to "ALAC", "opus" to "Opus", "mp3" to "MP3",
+)
+
+fun audioFormatName(codec: String) = AUDIO_FORMATS[codec] ?: codec.uppercase()
+
 private val LAYOUT_NAMES = mapOf(
     "mono" to "Mono", "stereo" to "Stereo", "downmix" to "Stereo", "quad" to "4.0",
 )

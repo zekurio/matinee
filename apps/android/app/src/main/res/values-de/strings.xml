@@ -4,6 +4,8 @@
 <resources>
     <string name="common_back">Zurück</string>
     <string name="common_retry">Erneut versuchen</string>
+    <string name="common_cancel">Abbrechen</string>
+    <string name="common_remove">Entfernen</string>
     <string name="common_and">und</string>
 
     <string name="connect_title">Mit deinem Server verbinden</string>
@@ -224,6 +226,55 @@
     <string name="account_device_browser">Browser</string>
     <string name="settings_server">Server</string>
     <string name="settings_version">Matinee für Android %1$s</string>
+    <string name="playback_video_codec_title">Videocodec</string>
+    <string name="playback_video_codec_description">Für Transkodierungen. AV1 und HEVC sehen besser aus, belasten den Server aber stärker.</string>
+    <string name="playback_audio_codec_title">Audiocodec</string>
+    <string name="playback_audio_codec_description">Stereo, für Audio, das dieses Gerät nicht abspielen kann.</string>
+    <string name="playback_codec_automatic">Automatisch (%1$s)</string>
+    <string name="playback_decoders_title">Decoder</string>
+    <string name="playback_decoders_description">Software kann helfen, wenn ein Video Bildfehler zeigt. Sie braucht mehr Akku.</string>
+    <string name="playback_decoders_hardware">Hardware zuerst</string>
+    <string name="playback_decoders_software">Software zuerst</string>
+    <string name="playback_skip_title">Springen um</string>
+    <string name="playback_skip_description">Die Sprungtasten und doppeltes Tippen links oder rechts.</string>
+    <plurals name="playback_skip_seconds">
+        <item quantity="one">%1$d Sekunde</item>
+        <item quantity="other">%1$d Sekunden</item>
+    </plurals>
+    <string name="playback_autoplay_title">Nächste Folge abspielen</string>
+    <string name="playback_autoplay_description">Startet nach einem kurzen Countdown.</string>
+    <string name="playback_pip_title">Bild im Bild</string>
+    <string name="playback_pip_description">Ein laufendes Video bleibt sichtbar, wenn du die App verlässt.</string>
+    <string name="playback_passthrough_title">Audio-Passthrough</string>
+    <string name="playback_passthrough_description">Formate, die dieses Gerät direkt abspielt. Schalte eines aus, damit der Server es umwandelt.</string>
+    <string name="playback_passthrough_ac3">Dolby Digital Surround.</string>
+    <string name="playback_passthrough_eac3">Dolby Digital Plus, einschließlich Atmos.</string>
+    <string name="playback_passthrough_flac">Verlustfrei. Braucht deutlich mehr Bandbreite.</string>
+    <string name="playback_passthrough_alac">Apple Lossless. Braucht deutlich mehr Bandbreite.</string>
+    <string name="settings_subtitles_title">Untertitel</string>
+    <string name="settings_subtitles_description">Wie Untertitel auf diesem Gerät aussehen.</string>
+    <string name="settings_subtitles_preview">So sehen Untertitel aus.</string>
+    <string name="settings_subtitles_system">Untertitelstil des Systems</string>
+    <string name="settings_subtitles_system_description">Wie in den Bedienungshilfen von Android eingestellt.</string>
+    <string name="settings_subtitles_system_open">Untertitel-Einstellungen</string>
+    <string name="settings_subtitles_size">Größe</string>
+    <string name="settings_subtitles_color">Textfarbe</string>
+    <string name="settings_subtitles_color_white">Weiß</string>
+    <string name="settings_subtitles_color_yellow">Gelb</string>
+    <string name="settings_subtitles_color_cyan">Cyan</string>
+    <string name="settings_subtitles_color_green">Grün</string>
+    <string name="settings_subtitles_background">Hintergrund</string>
+    <string name="settings_subtitles_background_none">Keiner</string>
+    <string name="settings_subtitles_background_shaded">Durchscheinend</string>
+    <string name="settings_subtitles_background_black">Schwarz</string>
+    <string name="settings_subtitles_edge">Rand</string>
+    <string name="settings_subtitles_edge_shadow">Schatten</string>
+    <string name="settings_subtitles_edge_outline">Kontur</string>
+    <string name="settings_subtitles_edge_none">Keiner</string>
+    <string name="settings_app_title">App</string>
+    <string name="settings_app_language">Sprache</string>
+    <string name="settings_app_language_description">Wird in den Android-Einstellungen nur für diese App festgelegt.</string>
+    <string name="settings_app_language_system">Systemstandard</string>
 
     <string name="player_load_failed">Der Titel konnte nicht geladen werden</string>
     <string name="player_back">Zurück</string>
@@ -248,10 +299,6 @@
     <string name="player_speed_normal">Normal</string>
     <string name="player_speed_rate">%1$s×</string>
     <string name="player_bitrate_mbps">%1$d Mbit/s</string>
-    <string name="player_via_direct_play">Direkte Wiedergabe</string>
-    <string name="player_via_direct_stream">Direktes Streaming</string>
-    <string name="player_via_transcode">Transkodierung zu %1$s, %2$s</string>
-    <string name="player_via_burn_in">%1$s, Untertitel eingebrannt</string>
     <string name="player_error_lost">Dieses Video kann nicht abgespielt werden</string>
     <string name="player_error_subtitles">Die Untertitel konnten nicht geladen werden. Wähle eine andere Spur oder schalte sie aus.</string>
     <string name="player_error_save_preferences">Deine Wiedergabeeinstellungen konnten nicht gespeichert werden</string>
@@ -291,5 +338,14 @@
     <string name="downloads_reconnect">Erneut mit dem Server verbinden</string>
     <string name="downloads_unmetered">Nur über WLAN herunterladen</string>
     <string name="downloads_unmetered_description">Auf WLAN oder eine andere Verbindung ohne Datenlimit warten.</string>
-    <string name="player_via_download">Spielt den Download</string>
+    <string name="downloads_default_title">Version</string>
+    <string name="downloads_default_description">Was beim Herunterladen vorausgewählt ist.</string>
+    <string name="downloads_subtitles_title">Untertitel</string>
+    <string name="downloads_subtitles_description">Werden neben jedem Download gespeichert.</string>
+    <string name="downloads_subtitles_used">Deine Sprachen</string>
+    <string name="downloads_subtitles_all">Alle</string>
+    <string name="downloads_subtitles_none">Keine</string>
+    <string name="downloads_remove_all">Alle Downloads entfernen</string>
+    <string name="downloads_remove_all_confirm">Alle Downloads entfernen?</string>
+    <string name="downloads_remove_all_body">Das löscht %1$s von diesem Gerät.</string>
 </resources>

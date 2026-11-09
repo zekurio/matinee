@@ -1,5 +1,6 @@
 package io.github.zekurio.matinee.ui.downloads
 
+import io.github.zekurio.matinee.downloads.DEFAULT_ORIGINAL
 import android.Manifest
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -266,7 +267,15 @@ fun DownloadSheet(item: MediaItem, onDismiss: () -> Unit) {
     var error by remember { mutableStateOf<String?>(null) }
     val plans = remember { mutableStateMapOf<Choice, DownloadPlan>() }
     val specs = remember { mutableStateMapOf<Choice, DownloadSpec>() }
-    var picked by remember { mutableStateOf<Choice>(Choice.Device(null)) }
+    // Starts on the version Settings names.
+    var picked by remember {
+        mutableStateOf<Choice>(
+            when (val wanted = downloads.defaultVersion) {
+                DEFAULT_ORIGINAL -> Choice.Original
+                else -> VIDEO_PRESETS.firstOrNull { it.height.toString() == wanted }?.let { Choice.Device(it) } ?: Choice.Device(null)
+            },
+        )
+    }
     val choices = listOf<Choice>(Choice.Device(null)) + VIDEO_PRESETS.map { Choice.Device(it) } + Choice.Original
     val askNotifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
     val failure = stringResource(R.string.downloads_failed)
@@ -288,6 +297,8 @@ fun DownloadSheet(item: MediaItem, onDismiss: () -> Unit) {
                 // A size this device can't have the server make just doesn't show one.
                 runCatching { api.downloadPlan(item.id, spec) }.getOrNull()?.let { plans[choice] = it }
             }
+            // A preset the server can't make for this file falls back to the version for this device.
+            if ((picked as? Choice.Device)?.preset != null && plans[picked] == null) picked = Choice.Device(null)
         } catch (e: IOException) {
             error = e.message ?: failure
         }
@@ -355,7 +366,7 @@ fun DownloadSheet(item: MediaItem, onDismiss: () -> Unit) {
 }
 
 /** "6" or "2.5", for a bit rate in Mbps. */
-private fun mbps(bitrate: Int): String {
+fun mbps(bitrate: Int): String {
     val value = bitrate / 1_000_000.0
     return if (value % 1.0 == 0.0) value.toInt().toString() else "%.1f".format(Locale.getDefault(), value)
 }
