@@ -40,6 +40,10 @@ android {
     buildTypes {
         debug {
             applicationIdSuffix = ".debug"
+            // Compose runs several times slower in a debuggable app, enough
+            // to stall every page transition. Pass -Pmatinee.debuggable to
+            // attach a debugger or the Layout Inspector.
+            isDebuggable = providers.gradleProperty("matinee.debuggable").isPresent
         }
         release {
             isMinifyEnabled = true

@@ -78,6 +78,10 @@ nix develop ../..#android -c ./gradlew assembleDebug
 adb install app/build/outputs/apk/debug/app-debug.apk
 ```
 
+The debug build isn't debuggable, since Compose runs several times slower
+in a debuggable app and its animations stutter. Build with
+`-Pmatinee.debuggable` to attach a debugger or the Layout Inspector.
+
 Without Nix, install JDK 17 or later and the Android SDK with platform
 `android-37.0` and build tools 36.0.0, point `ANDROID_HOME` at it, and run
 `./gradlew assembleDebug`. Android Studio opens the folder as it is.
