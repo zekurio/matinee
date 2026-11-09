@@ -159,9 +159,9 @@ private fun scaleTop(seconds: Double): Double {
 }
 
 /**
- * The range's watch time as a card, as the web shows it: the total, big,
- * over watch time per day, week, or month as bars. Touching a bar reads
- * that day, week, or month out in the total's place.
+ * The range's watch time as a card: the total, big, over watch time per
+ * day, week, or month as bars. Touching a bar reads it out under the
+ * chart; otherwise the line there names the busiest one.
  */
 @Composable
 fun WatchTimeCard(stats: WatchStats, modifier: Modifier = Modifier) {
@@ -169,6 +169,7 @@ fun WatchTimeCard(stats: WatchStats, modifier: Modifier = Modifier) {
     val buckets = stats.buckets
     var active by remember(stats) { mutableStateOf<Int?>(null) }
     val top = scaleTop(buckets.maxOfOrNull { it.watchSeconds } ?: 0.0)
+    val busiest = buckets.filter { it.watchSeconds > 0 }.maxByOrNull { it.watchSeconds }
     val shown = active?.let(buckets::getOrNull)
     val accent = Palette.Accent
     val baseline = Palette.Border
@@ -176,11 +177,11 @@ fun WatchTimeCard(stats: WatchStats, modifier: Modifier = Modifier) {
         modifier.fillMaxWidth().clip(CardShape).background(Palette.Card).border(1.dp, Palette.Border, CardShape).padding(16.dp),
     ) {
         Text(
-            shown?.let { bucketName(it.start, stats.unit, res) } ?: "${stringResource(R.string.stats_watch_time)} · ${rangeName(stats.range)}",
+            "${stringResource(R.string.stats_watch_time)} · ${rangeName(stats.range)}",
             style = MaterialTheme.typography.bodyMedium,
             color = Palette.Muted,
         )
-        Text(formatWatchTime(shown?.watchSeconds ?: stats.totals.watchSeconds, res), style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold)
+        Text(formatWatchTime(stats.totals.watchSeconds, res), style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold)
         if (buckets.isEmpty()) return@Column
         Gap(16.dp)
         Canvas(
@@ -214,6 +215,18 @@ fun WatchTimeCard(stats: WatchStats, modifier: Modifier = Modifier) {
                 }
             }
         }
+        Gap(10.dp)
+        Text(
+            when {
+                shown != null -> "${bucketName(shown.start, stats.unit, res)} · ${formatWatchTime(shown.watchSeconds, res)}"
+                busiest != null -> stringResource(R.string.stats_chart_busiest, bucketName(busiest.start, stats.unit, res), formatWatchTime(busiest.watchSeconds, res))
+                else -> ""
+            },
+            style = MaterialTheme.typography.bodySmall,
+            color = Palette.Muted,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 
