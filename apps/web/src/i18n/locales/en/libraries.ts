@@ -20,8 +20,8 @@ export default defineMessages("libraries", {
   "libraries.actions": "{name} actions",
   "libraries.scanNow": "Scan now",
   "libraries.refreshMetadata": "Refresh metadata",
-  "libraries.edit": "Edit…",
-  "libraries.remove": "Remove…",
+  "libraries.edit": "Edit",
+  "libraries.remove": "Remove",
   "libraries.remove.title": "Remove {name}?",
   "libraries.remove.description":
     "Matinee forgets the library and its titles. Your files stay where they are.",

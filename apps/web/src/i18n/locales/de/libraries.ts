@@ -23,8 +23,8 @@ export default {
   "libraries.actions": "Aktionen für {name}",
   "libraries.scanNow": "Jetzt scannen",
   "libraries.refreshMetadata": "Metadaten aktualisieren",
-  "libraries.edit": "Bearbeiten…",
-  "libraries.remove": "Entfernen…",
+  "libraries.edit": "Bearbeiten",
+  "libraries.remove": "Entfernen",
   "libraries.remove.title": "{name} entfernen?",
   "libraries.remove.description":
     "Matinee vergisst die Mediathek und ihre Titel. Deine Dateien bleiben, wo sie sind.",

@@ -3,7 +3,7 @@ import { defineMessages, plural } from "../../catalog"
 export default defineMessages("downloads", {
   // download-dialog.tsx and download-form.tsx: saving a file to watch
   // offline. {name} is the movie or episode.
-  "downloads.menuItem": "Download…",
+  "downloads.menuItem": "Download",
   "downloads.title": "Download {name}",
   "downloads.description":
     "Save the file as it is, or a version made for this device.",

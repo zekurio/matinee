@@ -173,7 +173,7 @@ function DownloadFiles({
   )
 }
 
-/** "Download…" in a menu. Its owner renders the dialog. */
+/** "Download" in a menu. Its owner renders the dialog. */
 export function DownloadMenuItem({ onSelect }: { onSelect: () => void }) {
   return (
     <DropdownMenuItem onClick={onSelect}>

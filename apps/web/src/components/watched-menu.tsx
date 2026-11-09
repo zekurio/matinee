@@ -223,7 +223,7 @@ export function WatchedAtItems({
 }: {
   /** `watchedAt` as in `playback.setWatched`; unset is now. */
   onSelect: (watchedAt?: WatchedAt) => void
-  /** "Other date…" was picked. */
+  /** "Other date" was picked. */
   onPickDate: () => void
 }) {
   return (
@@ -327,7 +327,7 @@ export function WatchedMenuItems({
   started: boolean
   /** `watchedAt` as in `playback.setWatched`; unset is now. */
   onSelect: (watched: boolean, watchedAt?: WatchedAt) => void
-  /** "Other date…" was picked. */
+  /** "Other date" was picked. */
   onPickDate: () => void
 }) {
   return (

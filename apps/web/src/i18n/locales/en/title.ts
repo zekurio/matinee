@@ -28,10 +28,10 @@ export default defineMessages("title", {
   "title.rating": "Rated {rating}",
 
   // title-menu.tsx
-  "title.menu.fixMatch": "Fix match…",
+  "title.menu.fixMatch": "Fix match",
   "title.menu.refresh": "Refresh metadata",
   // Also in the season's and the episode's menus.
-  "title.menu.editImages": "Edit images…",
+  "title.menu.editImages": "Edit images",
   "title.refresh.done": "Updated {name}",
   "title.refresh.doneDescription": "Fetched again from {provider}.",
   "title.refresh.error": "Couldn't fetch metadata",

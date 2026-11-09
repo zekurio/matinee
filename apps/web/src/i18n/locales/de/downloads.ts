@@ -2,7 +2,7 @@ import { plural, type TranslationOf } from "../../catalog"
 import type source from "../en/downloads"
 
 export default {
-  "downloads.menuItem": "Herunterladen…",
+  "downloads.menuItem": "Herunterladen",
   "downloads.title": "{name} herunterladen",
   "downloads.description":
     "Speichere die Datei, wie sie ist, oder eine Version für dieses Gerät.",
