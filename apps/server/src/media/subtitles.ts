@@ -55,7 +55,7 @@ const STREAM_ID = /^stream-(\d{1,4})$/
 const EXTRACT_TIMEOUT_MS = 10 * 60_000
 const START_TIMEOUT_MS = 15_000
 // Bump when the conversion changes, so browsers drop what they cached.
-const VERSION = 1
+const VERSION = 2
 
 const dir = join(env.dataDir, "subtitles")
 
@@ -255,7 +255,8 @@ export type SubtitleContent =
 async function webvtt(file: string | null): Promise<SubtitleContent | null> {
   if (file === null) return null
   const text = await readFile(file, "utf8").catch(() => null)
-  return text === null ? null : { kind: "webvtt", text }
+  // Cleaned again: files cached before a fix to it keep their faults.
+  return text === null ? null : { kind: "webvtt", text: cleanVtt(text) }
 }
 
 async function sidecarText(
@@ -271,7 +272,7 @@ async function sidecarText(
     const text = decodeText(bytes)
     return {
       kind: "webvtt",
-      text: row.format === "srt" ? srtToVtt(text) : vttText(text),
+      text: cleanVtt(row.format === "srt" ? srtToVtt(text) : vttText(text)),
     }
   }
   // ASS and SSA lose their styling on the way.

@@ -10,6 +10,7 @@ import { type Box, boxes, child, children, initTracks } from "./bmff"
 import { iso639_2 } from "./language"
 import { runBytes } from "./process"
 import { openSubtitle } from "./subtitles"
+import { cuesToVtt, flatCues, vttCues } from "./webvtt"
 
 /*
  * Text subtitles inside a download. The HLS muxer that writes a
@@ -196,7 +197,10 @@ export async function makeDownloadText(
   const files = found.map((_, i) => join(dir, `text-${i}.vtt`))
   try {
     await Promise.all(
-      found.map((entry, i) => writeFile(files[i] ?? "", entry.text)),
+      // Timed text shows one cue at a time, so cues that overlap merge.
+      found.map((entry, i) =>
+        writeFile(files[i] ?? "", cuesToVtt(flatCues(vttCues(entry.text)))),
+      ),
     )
     const bytes = await runBytes(
       env.MATINEE_FFMPEG_PATH,
