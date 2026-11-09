@@ -18,8 +18,8 @@ import { join } from "node:path"
 
 import { type Download, DownloadPlan, DownloadSpec } from "@matinee/contracts"
 import { t } from "@matinee/contracts/schema"
-import { mediaItem, type MediaItemRow } from "@matinee/db"
-import { eq } from "drizzle-orm"
+import { episode, mediaItem, type MediaItemRow, title } from "@matinee/db"
+import { and, eq } from "drizzle-orm"
 
 import { db } from "../db"
 import { env } from "../env"
@@ -32,6 +32,7 @@ import {
   type DownloadBuild,
   DownloadSpecError,
   downloadFileName,
+  type DownloadNaming,
 } from "./download-encode"
 import {
   type AudioResume,
@@ -1308,74 +1309,105 @@ export function downloadStream(
   })
 }
 
+/** Exits with its code once `child` ends, or rejects when it can't start. */
+function exited(child: ChildProcess): Promise<number | null> {
+  return new Promise((resolve, reject) => {
+    child.once("error", reject)
+    child.once("close", resolve)
+  })
+}
+
+/** Keeps the last lines `child` wrote to stderr in `lines`. */
+function keepStderr(child: ChildProcess, lines: string[]): void {
+  child.stderr?.setEncoding("utf8")
+  child.stderr?.on("data", (chunk: string) => {
+    lines.push(...chunk.split("\n").filter((line) => line.trim()))
+    lines.splice(0, Math.max(0, lines.length - STDERR_LINES))
+  })
+}
+
 /**
- * A Matroska download as one stream: a single ffmpeg run from the file to
- * the client, once the queue gives it a slot. ffmpeg waits while the
- * client is behind, and stops when it goes. It errors, rather than ends,
- * when the run fails, so a client never takes a cut-off file for a whole
- * one. Nothing of it stays on disk, so it can't resume.
+ * A Matroska download as one stream: ffmpeg from the file to the client,
+ * once the queue gives it a slot, with a run of its own for an encoded
+ * video. ffmpeg waits while the client is behind, and stops when it goes.
+ * It errors, rather than ends, when a run fails, so a client never takes
+ * a cut-off file for a whole one. Nothing of it stays on disk, so it
+ * can't resume.
  */
 export function matroskaStream(
   active: Active,
   signal: AbortSignal,
 ): ReadableStream<Uint8Array> {
-  let child: ChildProcess | null = null
+  const children: ChildProcess[] = []
   let released = false
+  const kill = () => {
+    for (const child of children) child.kill("SIGKILL")
+  }
   const release = () => {
     if (released) return
     released = true
     active.users--
     active.seenAt = Date.now()
-    child?.kill("SIGKILL")
+    kill()
   }
   active.users++
   signal.addEventListener("abort", release, { once: true })
 
-  /** One ffmpeg run, writing into `controller` until it ends. */
+  /** The runs, writing into `controller` until they end. */
   const launch = async (
     controller: ReadableStreamDefaultController<Uint8Array>,
     queueSignal: AbortSignal,
   ): Promise<void> => {
     const build = await check(active)
-    const args = build?.matroska ? await build.matroska() : null
-    if (!args) throw new Error("The download changed.")
+    const command = build?.matroska ? await build.matroska() : null
+    if (!command) throw new Error("The download changed.")
     if (released || queueSignal.aborted) return
-    const run = spawn(env.MATINEE_FFMPEG_PATH, args, {
-      stdio: ["ignore", "pipe", "pipe"],
-    })
-    child = run
-    const untrack = trackStream(null)
-    const stop = () => run.kill("SIGKILL")
-    queueSignal.addEventListener("abort", stop, { once: true })
     const stderr: string[] = []
-    run.stderr.setEncoding("utf8")
-    run.stderr.on("data", (chunk: string) => {
-      stderr.push(...chunk.split("\n").filter((line) => line.trim()))
-      stderr.splice(0, Math.max(0, stderr.length - STDERR_LINES))
+    const video = command.video
+      ? spawn(env.MATINEE_FFMPEG_PATH, command.video, {
+          stdio: ["ignore", "pipe", "pipe"],
+        })
+      : null
+    const mux = spawn(env.MATINEE_FFMPEG_PATH, command.mux, {
+      stdio: ["pipe", "pipe", "pipe"],
     })
-    run.stdout.on("data", (chunk: Buffer) => {
+    if (video) children.push(video)
+    children.push(mux)
+    const untrack = trackStream(null)
+    queueSignal.addEventListener("abort", kill, { once: true })
+    // The mux run going away ends the pipe; the exit codes tell.
+    mux.stdin.on("error", () => {})
+    if (video) {
+      keepStderr(video, stderr)
+      video.stdout.pipe(mux.stdin)
+    } else mux.stdin.end()
+    keepStderr(mux, stderr)
+    mux.stdout.on("data", (chunk: Buffer) => {
       if (released) return
       controller.enqueue(new Uint8Array(chunk))
       // Until the client reads; `pull` carries on.
-      if ((controller.desiredSize ?? 1) <= 0) run.stdout.pause()
+      if ((controller.desiredSize ?? 1) <= 0) mux.stdout.pause()
     })
-    await new Promise<void>((resolve, reject) => {
-      run.once("error", reject)
-      run.once("close", (code) => {
-        untrack()
-        queueSignal.removeEventListener("abort", stop)
-        if (released) resolve()
-        else if (code === 0) {
-          release()
-          controller.close()
-          resolve()
-        } else {
-          reject(
-            new Error(`ffmpeg stopped (exit ${code}): ${stderr.join("\n")}`),
-          )
-        }
-      })
-    })
+    try {
+      const [videoCode, muxCode] = await Promise.all([
+        video ? exited(video) : Promise.resolve(0),
+        exited(mux),
+      ])
+      if (released) return
+      // A video run that broke off leaves the mux run a short input,
+      // which it takes for the end.
+      if (videoCode !== 0 || muxCode !== 0) {
+        throw new Error(
+          `ffmpeg stopped (exit ${videoCode !== 0 ? videoCode : muxCode}): ${stderr.join("\n")}`,
+        )
+      }
+      release()
+      controller.close()
+    } finally {
+      untrack()
+      queueSignal.removeEventListener("abort", kill)
+      kill()
+    }
   }
 
   return new ReadableStream<Uint8Array>(
@@ -1394,13 +1426,41 @@ export function matroskaStream(
           })
       },
       pull() {
-        child?.stdout?.resume()
+        for (const child of children) child.stdout?.resume()
       },
       cancel: release,
     },
     // About a megabyte of ffmpeg's 64 KiB reads.
     new CountQueuingStrategy({ highWaterMark: 16 }),
   )
+}
+
+/** The library's names for `item`, for its download's file name. */
+async function namingOf(item: MediaItemRow): Promise<DownloadNaming> {
+  if (!item.titleId) return { title: null, year: null, episode: null }
+  const [found] = await db
+    .select({ name: title.name, year: title.year })
+    .from(title)
+    .where(eq(title.id, item.titleId))
+  let name: string | null = null
+  if (item.seasonNumber !== null && item.episodeNumber !== null) {
+    const [row] = await db
+      .select({ name: episode.name })
+      .from(episode)
+      .where(
+        and(
+          eq(episode.titleId, item.titleId),
+          eq(episode.seasonNumber, item.seasonNumber),
+          eq(episode.episodeNumber, item.episodeNumber),
+        ),
+      )
+    name = row?.name ?? null
+  }
+  return {
+    title: found?.name ?? null,
+    year: found?.year ?? null,
+    episode: name,
+  }
 }
 
 /** Set up a download of `item` for `userId`; see `downloads.start`. */
@@ -1419,7 +1479,7 @@ export async function startDownload(
     itemId: item.id,
     key: build.key,
     spec,
-    fileName: downloadFileName(item, spec.container),
+    fileName: downloadFileName(item, build.plan, await namingOf(item)),
     plan: build.plan,
     createdAt: new Date(),
   }

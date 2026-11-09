@@ -7,7 +7,6 @@ import {
   audioFormatName,
   canCopyAudio,
   canCopyVideo,
-  type DownloadContainer,
   type DownloadPlan,
   type DownloadSpec,
   type HdrFormat,
@@ -72,6 +71,13 @@ export class DownloadSpecError extends Error {
   override name = "DownloadSpecError"
 }
 
+/**
+ * The ffmpeg runs of a Matroska download: `mux` writes the file to stdout,
+ * reading the encoded video from `video`'s stdout when the video is
+ * encoded.
+ */
+export type MatroskaCommand = { video: string[] | null; mux: string[] }
+
 export type DownloadBuild = {
   /** Names the output: same key, same bytes. */
   key: string
@@ -86,11 +92,8 @@ export type DownloadBuild = {
   audio: ResumeTrack[]
   /** The text subtitles that go in an MP4, in order; see `download-text.ts`. */
   text: SubtitleTrack[]
-  /**
-   * For Matroska, the ffmpeg arguments of its one run, which writes the
-   * whole file to stdout. Null for MP4.
-   */
-  matroska: (() => Promise<string[]>) | null
+  /** For Matroska, the runs that write the whole file to stdout. Null for MP4. */
+  matroska: (() => Promise<MatroskaCommand>) | null
   /**
    * The ffmpeg arguments for a run that writes segment `segment` on into
    * `dir`, starting `seconds` into the file. For an encode, `seconds` is
@@ -532,7 +535,7 @@ export async function buildDownload(
     ]
   }
 
-  const matroskaArgs = async (): Promise<string[]> => {
+  const matroskaCommand = async (): Promise<MatroskaCommand> => {
     const sources = await Promise.all(
       subtitles.map(async (track) => {
         const source = await muxSource(item, track.id)
@@ -542,22 +545,41 @@ export async function buildDownload(
         return { track, source }
       }),
     )
-    const input: string[] = []
-    let videoOutput: string[]
-    if (part.mode === "copy") {
-      // Matroska names codecs its own way; MP4's tags don't apply.
-      videoOutput = ["-map", `0:${video.index}`, "-c:v", "copy"]
-    } else {
+    // An encode comes from its own run as fragmented MP4: some encoders,
+    // like AV1 on Intel GPUs, only describe the stream in its first frame,
+    // which MP4 waits for and Matroska written as a stream can't.
+    let videoRun: string[] | null = null
+    if (part.mode === "encode") {
       const pipeline = part.build(0)
-      input.push(...pipeline.inputArgs)
-      videoOutput = [
+      videoRun = [
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-nostdin",
+        ...pipeline.inputArgs,
+        "-i",
+        item.path,
+        ...subtitleInputArgs(burnIn),
         ...videoMapArgs(video.index, pipeline),
         ...pipeline.outputArgs,
+        "-map_metadata",
+        "-1",
+        "-copyts",
+        "-start_at_zero",
+        "-avoid_negative_ts",
+        "disabled",
+        "-max_muxing_queue_size",
+        "2048",
+        "-f",
+        "mp4",
+        "-movflags",
+        "+empty_moov+delay_moov+frag_keyframe+default_base_moof",
+        "pipe:1",
       ]
     }
-    const burnInput = part.mode === "encode" ? subtitleInputArgs(burnIn) : []
-    // After the file and a subtitle file to burn in, if there is one.
-    let nextInput = burnInput.length > 0 ? 2 : 1
+    // The file is the second input after the encoded video, else the first.
+    const file = videoRun ? 1 : 0
+    let nextInput = file + 1
     const subtitleInputs = sources.flatMap(({ source }) =>
       source.kind === "file"
         ? [
@@ -573,7 +595,9 @@ export async function buildDownload(
     )
     const subtitleOutput = sources.flatMap(({ track, source }, i) => {
       const from =
-        source.kind === "stream" ? `0:${source.index}` : `${nextInput++}:s:0`
+        source.kind === "stream"
+          ? `${file}:${source.index}`
+          : `${nextInput++}:s:0`
       const language = track.language ? iso639_2(track.language) : null
       return [
         "-map",
@@ -597,20 +621,22 @@ export async function buildDownload(
         source.kind === "stream" &&
         (source.codec === "ass" || source.codec === "ssa"),
     )
-    return [
+    const mux = [
       "-hide_banner",
       "-loglevel",
       "error",
       "-nostdin",
-      ...input,
+      ...(videoRun ? ["-i", "pipe:0"] : []),
       "-i",
       item.path,
-      ...burnInput,
       ...subtitleInputs,
-      ...videoOutput,
+      ...(videoRun
+        ? ["-map", "0:v:0", "-c:v", "copy", "-metadata:s:v:0", "title="]
+        : // Matroska names codecs its own way; MP4's tags don't apply.
+          ["-map", `0:${video.index}`, "-c:v", "copy"]),
       ...audio.flatMap((track, i) => [
         "-map",
-        `0:${track.stream.index}`,
+        `${file}:${track.stream.index}`,
         ...track.pipeline.args,
         ...(track.pipeline.filters.length > 0
           ? [`-filter:a:${i}`, track.pipeline.filters.join(",")]
@@ -625,14 +651,13 @@ export async function buildDownload(
           : []),
       ]),
       ...subtitleOutput,
-      ...(fonts ? ["-map", "0:t?", "-c:t", "copy"] : []),
+      ...(fonts ? ["-map", `${file}:t?`, "-c:t", "copy"] : []),
       // The file's own tags go, but streams keep theirs: the fonts need
       // their names, and the tracks their titles.
       "-map_metadata:g",
       "-1",
-      ...(part.mode === "encode" ? ["-metadata:s:v:0", "title="] : []),
       "-map_chapters",
-      "0",
+      String(file),
       // The header says how long the file is: written as a stream, it
       // can't be filled in at the end.
       "-metadata:s:v:0",
@@ -646,6 +671,7 @@ export async function buildDownload(
       "matroska",
       "pipe:1",
     ]
+    return { video: videoRun, mux }
   }
 
   const key = createHash("sha256")
@@ -677,7 +703,7 @@ export async function buildDownload(
     pauseKeys,
     audio: audio.map((track) => track.resume),
     text,
-    matroska: matroska ? matroskaArgs : null,
+    matroska: matroska ? matroskaCommand : null,
     args,
     plan: {
       container: spec.container,
@@ -707,13 +733,53 @@ export async function buildDownload(
   }
 }
 
-/** The name a download saves under: the file's own, in its container. */
+/** What a name can't hold on any system people save to. */
+const UNSAFE_NAME = /[\\/:*?"<>|]/g
+
+export type DownloadNaming = {
+  /** The show or movie, as the library names it. */
+  title: string | null
+  year: number | null
+  /** The episode's name, for an episode. */
+  episode: string | null
+}
+
+/**
+ * The name a custom download saves under: the show and episode, or the
+ * movie, from the library, then what the version is, like
+ * `Blue Box (2024) - S02E05 - TBA [720p AV1].mkv`. Without them, the
+ * file's own name less its release tags in brackets, which no longer
+ * hold for the version.
+ */
 export function downloadFileName(
   item: MediaItemRow,
-  container: DownloadContainer,
+  plan: DownloadPlan,
+  naming: DownloadNaming,
 ): string {
-  const name = basename(item.relativePath, extname(item.relativePath))
-  return `${name || "video"}.${container}`
+  let name: string
+  if (naming.title) {
+    const parts = [
+      naming.year ? `${naming.title} (${naming.year})` : naming.title,
+    ]
+    if (item.seasonNumber !== null && item.episodeNumber !== null) {
+      const pad = (value: number) => String(value).padStart(2, "0")
+      parts.push(`S${pad(item.seasonNumber)}E${pad(item.episodeNumber)}`)
+      if (naming.episode) parts.push(naming.episode)
+    }
+    name = parts.join(" - ")
+  } else {
+    const own = basename(item.relativePath, extname(item.relativePath))
+    name = own.replace(/\s*\[[^\]]*\].*$/, "").trim() || own
+  }
+  const version = `${plan.video.height}p ${videoCodecName(plan.video.codec)}`
+  // Control characters go too.
+  const printable = Array.from(name, (char) => (char < " " ? "" : char))
+  const safe = printable
+    .join("")
+    .replace(UNSAFE_NAME, "")
+    .replace(/\s+/g, " ")
+    .trim()
+  return `${safe || "video"} [${version}].${plan.container}`
 }
 
 /** Seconds as Matroska's `DURATION` tags write them, like `00:23:59.980000000`. */
