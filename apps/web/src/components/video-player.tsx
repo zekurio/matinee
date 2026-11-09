@@ -46,6 +46,7 @@ import {
 import { formatDelay, formatPercent } from "./player-format"
 import { PlayerMenus } from "./player-menus"
 import type { TrickplayTiles } from "./trickplay-thumb"
+import { type UpNext, UpNextCard } from "./up-next"
 import { loadHls, useHls } from "./use-hls"
 import { usePlayback } from "./use-playback"
 import { usePlayerKeys } from "./use-player-keys"
@@ -91,6 +92,8 @@ type VideoPlayerProps = {
   trickplay: TrickplayTiles | null
   /** Seconds to resume from once the video can seek. */
   startAt?: number
+  /** The episode after this one, offered once this one ends. */
+  upNext?: UpNext | null
   onBack: () => void
   onUnsupported: () => void
   /** Called while playing, on pause and end, and when the player closes. */
@@ -179,6 +182,7 @@ function Player({
   subtitleSrc,
   trickplay,
   startAt,
+  upNext,
   onBack,
   onUnsupported,
   onProgress,
@@ -372,6 +376,7 @@ function Player({
         onDoubleClick={coarse ? undefined : toggleFullscreen}
         onPlay={() => {
           actions.setPlaying(true)
+          actions.setEnded(false)
           // So "watching now" sees a resume without waiting for the timer.
           report()
         }}
@@ -384,6 +389,7 @@ function Player({
         }}
         onEnded={() => {
           playedTime.stop()
+          actions.setEnded(true)
           report(false, true)
         }}
         onLoadStart={() => {
@@ -398,7 +404,10 @@ function Player({
           playedTime.stop()
           actions.setWaiting(true)
         }}
-        onSeeking={playedTime.stop}
+        onSeeking={() => {
+          playedTime.stop()
+          actions.setEnded(false)
+        }}
         // So "watching now" sees the new position without waiting for the
         // timer.
         onSeeked={() => report()}
@@ -512,6 +521,9 @@ function Player({
           </div>
         </div>
       </div>
+
+      {/* Last, so it's over the controls' gradient and takes the clicks. */}
+      {upNext && <UpNextCard upNext={upNext} />}
     </div>
   )
 }

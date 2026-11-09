@@ -57,8 +57,8 @@ function passthroughNote(codec: PlaybackAudioCodec): string | undefined {
 
 /**
  * How videos play: the languages, which the account syncs, and the
- * quality, codecs, and skips, which stay with this browser. Only what
- * this browser and the server both support is offered.
+ * quality, codecs, skips, and the next episode, which stay with this
+ * browser. Only what this browser and the server both support is offered.
  */
 export function PlaybackPanel() {
   const options = useQuery(orpc.playback.options.queryOptions()).data
@@ -211,6 +211,7 @@ function DeviceSection({ options }: { options: PlaybackOptions | undefined }) {
       videoCodec: state.videoCodec,
       audioCodec: state.audioCodec,
       skipSeconds: state.skipSeconds,
+      autoplayNext: state.autoplayNext,
       setDevicePlayback: state.setDevicePlayback,
     })),
   )
@@ -307,6 +308,14 @@ function DeviceSection({ options }: { options: PlaybackOptions | undefined }) {
           }
           onChange={(value) =>
             device.setDevicePlayback({ skipSeconds: Number(value) })
+          }
+        />
+        <SwitchRow
+          title={tr("playback.autoplay.title")}
+          description={tr("playback.autoplay.description")}
+          checked={device.autoplayNext}
+          onChange={(autoplayNext) =>
+            device.setDevicePlayback({ autoplayNext })
           }
         />
       </SettingRows>

@@ -9,12 +9,13 @@ import {
 } from "@matinee/contracts"
 import { buttonVariants } from "@matinee/ui/components/button"
 import { Spinner } from "@matinee/ui/components/spinner"
-import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router"
 import { useEffect, useState } from "react"
 
 import { useDocumentTitle } from "@/components/page-header"
 import { probeAudioOf } from "@/components/playback-source"
+import type { UpNext } from "@/components/up-next"
 import type { ProgressReport } from "@/components/use-progress-report"
 import { VideoPlayer } from "@/components/video-player"
 import { tr } from "@/i18n"
@@ -101,6 +102,32 @@ function Watch() {
   const startAt =
     progress && !progress.completed ? progress.positionSeconds : undefined
 
+  // The show's next episode, which the player offers once this one ends.
+  const show = item.data?.title?.kind === "show" ? item.data.title : null
+  const episodes = useQuery(
+    orpc.titles.items.queryOptions({
+      input: show ? { id: show.id } : skipToken,
+    }),
+  )
+  const index = episodes.data?.findIndex((each) => each.id === itemId) ?? -1
+  const next = index >= 0 ? episodes.data?.[index + 1] : undefined
+  const nextLabel = next ? itemLabel(next) : null
+  const upNext: UpNext | null =
+    next && nextLabel
+      ? {
+          name: nextLabel.code
+            ? `${nextLabel.code} · ${nextLabel.title}`
+            : nextLabel.title,
+          // In place of this one, so back still leaves the player.
+          play: () =>
+            void router.navigate({
+              to: "/watch/$itemId",
+              params: { itemId: next.id },
+              replace: true,
+            }),
+        }
+      : null
+
   useDocumentTitle(pageTitle)
 
   // Home's rows, title pages, and statistics depend on what was just watched.
@@ -161,6 +188,7 @@ function Watch() {
           }
         }
         startAt={startAt}
+        upNext={upNext}
         onBack={back}
         onUnsupported={() => setUnsupported(true)}
         onProgress={(report) => sendProgress(itemId, report)}

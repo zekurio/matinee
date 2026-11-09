@@ -28,6 +28,10 @@ export default {
   "player.showTimeLeft": "Restzeit anzeigen",
   "player.endsAt": "Endet um {time}",
 
+  "player.upNext": "Als Nächstes",
+  "player.upNext.in": "Startet in {seconds}",
+  "player.upNext.cancel": "Abbrechen",
+
   "player.flash.muted": "Stumm",
   "player.flash.skip": "{seconds} s",
   "player.flash.subtitleDelay": "Untertitel {delay}",

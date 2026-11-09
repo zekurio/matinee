@@ -31,6 +31,12 @@ export default defineMessages("player", {
   "player.showTimeLeft": "Show time left",
   "player.endsAt": "Ends at {time}",
 
+  // The card at the end of an episode that offers the next one.
+  "player.upNext": "Up next",
+  // On its Play button while it counts down, like "Playing in 7".
+  "player.upNext.in": "Playing in {seconds}",
+  "player.upNext.cancel": "Cancel",
+
   // Notes over the picture after a key press.
   "player.flash.muted": "Muted",
   "player.flash.skip": "{seconds} s",

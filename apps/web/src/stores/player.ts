@@ -35,6 +35,8 @@ export type PlayerState = PlayerStart & {
   // The video's own state, mirrored through its events.
   /** Playing, or set to play once the source on its way loads. */
   playing: boolean
+  /** Played to the end, and not started or moved since. */
+  ended: boolean
   /** Loading or buffering. */
   waiting: boolean
   /** Seconds into the file at the last time update or seek. */
@@ -84,6 +86,7 @@ export type PlayerState = PlayerStart & {
   subtitleDelay: number
 
   setPlaying: (playing: boolean) => void
+  setEnded: (ended: boolean) => void
   /** For the video's `pause`, when the player wasn't holding it still. */
   paused: () => void
   setWaiting: (waiting: boolean) => void
@@ -138,6 +141,7 @@ export function createPlayerStore(start: PlayerStart): PlayerStore {
   return createStore<PlayerState>()((set, get) => ({
     ...start,
     playing: false,
+    ended: false,
     waiting: true,
     time: 0,
     buffered: 0,
@@ -157,6 +161,7 @@ export function createPlayerStore(start: PlayerStart): PlayerStore {
     subtitleDelay: 0,
 
     setPlaying: (playing) => set({ playing }),
+    setEnded: (ended) => set({ ended }),
     paused: () => set({ playing: false, waiting: false }),
     setWaiting: (waiting) => set({ waiting }),
     setTime: (time) => set({ time }),

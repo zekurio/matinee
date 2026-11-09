@@ -36,13 +36,20 @@ const PlayerPreferences = t.object({
   convertAudio: t.array(PlaybackAudioCodec).$default([]).catch([]),
   /** Seconds the skip buttons and keys move, one of `SKIP_STEPS`. */
   skipSeconds: t.number().int().min(1).max(60).$default(10).catch(10),
+  /** At an episode's end, the next one starts after a countdown. */
+  autoplayNext: t.boolean().$default(true).catch(true),
 })
 type PlayerPreferences = t.infer<typeof PlayerPreferences>
 
 /** The settings for how this device plays, which the settings panel edits. */
 export type DevicePlayback = Pick<
   PlayerPreferences,
-  "quality" | "videoCodec" | "audioCodec" | "convertAudio" | "skipSeconds"
+  | "quality"
+  | "videoCodec"
+  | "audioCodec"
+  | "convertAudio"
+  | "skipSeconds"
+  | "autoplayNext"
 >
 
 const DEFAULTS: PlayerPreferences = {
@@ -53,6 +60,7 @@ const DEFAULTS: PlayerPreferences = {
   audioCodec: "auto",
   convertAudio: [],
   skipSeconds: 10,
+  autoplayNext: true,
 }
 
 /**
@@ -95,9 +103,9 @@ type PlayerPreferencesState = PlayerPreferences & {
 
 /**
  * The quality, volume, and mute the next file starts with, the codecs this
- * device asks for, and how far skips go. The player reads them as it
- * mounts and writes the first three as they change; the settings panel
- * edits the rest.
+ * device asks for, how far skips go, and whether the next episode starts
+ * on its own. The player reads them as it mounts and writes the first
+ * three as they change; the settings panel edits the rest.
  */
 export const usePlayerPreferencesStore = create<PlayerPreferencesState>()(
   persist(
@@ -118,6 +126,7 @@ export const usePlayerPreferencesStore = create<PlayerPreferencesState>()(
         audioCodec,
         convertAudio,
         skipSeconds,
+        autoplayNext,
       }) => ({
         quality,
         volume,
@@ -126,6 +135,7 @@ export const usePlayerPreferencesStore = create<PlayerPreferencesState>()(
         audioCodec,
         convertAudio,
         skipSeconds,
+        autoplayNext,
       }),
       merge: (stored, current) => {
         const parsed = PlayerPreferences.safeParse(stored)

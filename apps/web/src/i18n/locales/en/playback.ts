@@ -55,6 +55,8 @@ export default defineMessages("playback", {
     one: "{count} second",
     other: "{count} seconds",
   }),
+  "playback.autoplay.title": "Play the next episode",
+  "playback.autoplay.description": "Starts after a short countdown.",
 
   // Audio passthrough.
   "playback.passthrough.title": "Audio passthrough",

@@ -50,6 +50,8 @@ export default {
     one: "{count} Sekunde",
     other: "{count} Sekunden",
   }),
+  "playback.autoplay.title": "Nächste Folge abspielen",
+  "playback.autoplay.description": "Startet nach einem kurzen Countdown.",
 
   "playback.passthrough.title": "Audio-Passthrough",
   "playback.passthrough.description":
