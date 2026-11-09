@@ -24,6 +24,9 @@ import { cuesToVtt, flatCues, vttCues } from "./webvtt"
 // Text from a large file was extracted once already; this is a remux.
 const MUX_TIMEOUT_MS = 60_000
 
+// A timed text sample without text: its length, 0.
+const EMPTY_SAMPLE = Buffer.from([0, 0])
+
 /** One sample, in its track's timescale. Gaps between cues are empty samples. */
 type TextSample = { time: number; duration: number; data: Buffer }
 
@@ -157,6 +160,10 @@ function readTextMp4(buffer: Buffer): TextTrack[] {
     )
     const trex = trexes.get(id)
     if (!trex) return []
+    // ffmpeg ends a track with an empty sample, which would make the
+    // file longer than its video.
+    const own = [...(samples.get(id) ?? [])]
+    while (own.at(-1)?.data.equals(EMPTY_SAMPLE)) own.pop()
     return [
       {
         // Copies: the tracks get new ids in the download.
@@ -165,7 +172,7 @@ function readTextMp4(buffer: Buffer): TextTrack[] {
         timescale: buffer.readUInt32BE(
           mdhd.start + (versioned(buffer, mdhd) ? 20 : 12),
         ),
-        samples: (samples.get(id) ?? []).map((sample) => ({
+        samples: own.map((sample) => ({
           ...sample,
           data: Buffer.from(sample.data),
         })),
