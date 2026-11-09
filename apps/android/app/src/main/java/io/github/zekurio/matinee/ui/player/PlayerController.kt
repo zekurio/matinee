@@ -15,6 +15,8 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.Tracks
+import androidx.media3.common.VideoSize
+import androidx.media3.common.text.CueGroup
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.okhttp.OkHttpDataSource
@@ -25,6 +27,7 @@ import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import io.github.zekurio.matinee.api.AudioTrack
 import io.github.zekurio.matinee.api.MatineeApi
 import io.github.zekurio.matinee.api.MediaItem
+import io.github.zekurio.matinee.api.OfflinePlay
 import io.github.zekurio.matinee.api.PlaybackOptions
 import io.github.zekurio.matinee.api.SubtitleTrack
 import io.github.zekurio.matinee.api.Trickplay
@@ -32,7 +35,6 @@ import io.github.zekurio.matinee.api.await
 import io.github.zekurio.matinee.downloads.PendingProgress
 import io.github.zekurio.matinee.downloads.PendingReport
 import java.io.File
-import io.github.zekurio.matinee.api.OfflinePlay
 import java.io.IOException
 import java.time.Instant
 import java.util.UUID
@@ -73,7 +75,11 @@ sealed interface Source {
  */
 @OptIn(UnstableApi::class)
 private fun renderers(context: Context, decoders: Decoders): DefaultRenderersFactory {
-    val factory = DefaultRenderersFactory(context).setEnableDecoderFallback(true)
+    val factory = DefaultRenderersFactory(context)
+        .setEnableDecoderFallback(true)
+        // FFmpeg's audio decoders after the device's own: DTS and TrueHD,
+        // which Android has none for, play without the server converting them.
+        .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
     if (decoders == Decoders.SOFTWARE) {
         factory.setMediaCodecSelector { mime, secure, tunneling ->
             MediaCodecSelector.DEFAULT.getDecoderInfos(mime, secure, tunneling).sortedByDescending { it.softwareOnly }
@@ -118,7 +124,8 @@ class PlayerController(
         .setMediaSourceFactory(DefaultMediaSourceFactory(DefaultDataSource.Factory(context, OkHttpDataSource.Factory(http))))
         .build()
         .apply {
-            // Subtitles are drawn by the player screen from the server's WebVTT.
+            // Subtitles are drawn by the player screen from the server's WebVTT,
+            // but for picture tracks in the file itself; see applyTextOverride.
             trackSelectionParameters = trackSelectionParameters.buildUpon()
                 .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
                 .build()
@@ -131,6 +138,14 @@ class PlayerController(
     var subtitle by mutableStateOf(initialSubtitle)
         private set
     var cues by mutableStateOf<CueTrack?>(null)
+        private set
+
+    /** What a picture track in the file shows now, as ExoPlayer draws it from the file itself. */
+    var pictureCues by mutableStateOf<List<androidx.media3.common.text.Cue>>(emptyList())
+        private set
+
+    /** The video's shape, width over height, for placing picture subtitles on it. */
+    var videoAspect by mutableFloatStateOf(16f / 9f)
         private set
     var subtitleError by mutableStateOf(false)
         private set
@@ -189,6 +204,17 @@ class PlayerController(
 
             override fun onTracksChanged(tracks: Tracks) {
                 if (pendingAudioOverride) applyAudioOverride(tracks)
+                applyTextOverride(tracks)
+            }
+
+            override fun onCues(cueGroup: CueGroup) {
+                pictureCues = cueGroup.cues.filter { it.bitmap != null }
+            }
+
+            override fun onVideoSizeChanged(videoSize: VideoSize) {
+                if (videoSize.width > 0 && videoSize.height > 0) {
+                    videoAspect = videoSize.width * videoSize.pixelWidthHeightRatio / videoSize.height
+                }
             }
 
             override fun onPlayerError(e: PlaybackException) {
@@ -209,10 +235,32 @@ class PlayerController(
     /** Plays a download, which offers no other qualities. */
     val isLocal get() = local != null
 
+    /**
+     * Whether the file itself plays, as it does unless something needs the
+     * server: a lower quality, video or audio this device doesn't decode, a
+     * container ExoPlayer doesn't read, or a try that failed.
+     */
+    private fun directPlays(): Boolean {
+        val track = audio
+        return quality == ORIGINAL_QUALITY && videoPlays && containerPlays && !noDirect &&
+            (track == null || Capabilities.takesAudio(track.codec, prefs))
+    }
+
+    /**
+     * Whether ExoPlayer draws [track] from the file it plays: a picture track,
+     * like PGS, inside the file, while the file itself plays. Then nothing
+     * needs burning in. A download that's the file as it is holds them too.
+     */
+    fun playerDraws(track: SubtitleTrack?): Boolean =
+        track != null && pictureInFile(track) && (local != null || directPlays())
+
+    /** What [track] needs to show: drawn by the screen, by ExoPlayer, or burned in by the server. */
+    private fun burns(track: SubtitleTrack?): Boolean = track != null && !drawable(track) && !playerDraws(track)
+
     private fun plan(): Source {
         if (local != null) return Source.Local
         val track = audio
-        val burnIn = subtitle?.takeIf { !drawable(it) }
+        val burnIn = subtitle?.takeIf(::burns)
         if (burnIn != null || quality != ORIGINAL_QUALITY || !videoPlays || (noDirect && noStream)) {
             val encode = if (quality == ORIGINAL_QUALITY) fallbackQuality(item.probe?.video?.width) else quality
             return Source.Hls(track?.index ?: 0, encode, burnIn?.id)
@@ -278,6 +326,30 @@ class PlayerController(
         player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
             .setOverrideForType(TrackSelectionOverride(group.mediaTrackGroup, 0))
             .build()
+    }
+
+    /**
+     * Lets ExoPlayer draw the picture track picked, from the file it plays,
+     * and keeps its text output off otherwise: the screen draws text tracks
+     * from the server's WebVTT, styled the viewer's way.
+     */
+    private fun applyTextOverride(tracks: Tracks) {
+        val wanted = subtitle?.takeIf(::playerDraws)
+        val index = wanted?.id?.removePrefix("stream-")?.toIntOrNull()
+        val builder = player.trackSelectionParameters.buildUpon().clearOverridesOfType(C.TRACK_TYPE_TEXT)
+        val group = index?.let { i ->
+            // Matroska numbers its tracks from 1 in file order, as ffprobe's indexes from 0.
+            tracks.groups.firstOrNull {
+                it.type == C.TRACK_TYPE_TEXT && it.mediaTrackGroup.length > 0 && it.mediaTrackGroup.getFormat(0).id == "${i + 1}"
+            }
+        }
+        val next = if (group != null) {
+            builder.setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false).setOverrideForType(TrackSelectionOverride(group.mediaTrackGroup, 0))
+        } else {
+            builder.setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
+        }.build()
+        if (next != player.trackSelectionParameters) player.trackSelectionParameters = next
+        if (group == null) pictureCues = emptyList()
     }
 
     /** What didn't play falls back to what asks more of the server: the file, a stream, an encode. */
@@ -348,12 +420,13 @@ class PlayerController(
         val before = subtitle
         subtitle = track
         cues = null
+        pictureCues = emptyList()
         subtitleError = false
         if (track != null && drawable(track)) loadCues(track)
         // A burned-in track comes with its own encode, and leaving one goes back.
-        val burnedBefore = before != null && !drawable(before)
-        val burnNow = track != null && !drawable(track)
-        if (burnedBefore || burnNow) load(plan(), position)
+        val burnedBefore = before != null && burns(before)
+        val burnNow = track != null && burns(track)
+        if (burnedBefore || burnNow) load(plan(), position) else applyTextOverride(player.currentTracks)
     }
 
     fun pickQuality(id: String) {

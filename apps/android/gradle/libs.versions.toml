@@ -9,6 +9,10 @@ core = "1.19.1"
 coroutines = "1.11.0"
 lifecycle = "2.11.0"
 media3 = "1.11.1"
+# Jellyfin's build of Media3's FFmpeg audio decoder: DTS and TrueHD, which
+# Android has no decoder for. GPL-3.0, which makes the app GPL; Findroid runs
+# this build with Media3 1.11.
+media3-ffmpeg-decoder = "1.9.0+1"
 navigation = "2.10.2"
 okhttp = "5.5.1"
 serialization = "1.12.0"
@@ -38,6 +42,7 @@ media3-exoplayer-hls = { module = "androidx.media3:media3-exoplayer-hls", versio
 media3-datasource-okhttp = { module = "androidx.media3:media3-datasource-okhttp", version.ref = "media3" }
 media3-ui-compose = { module = "androidx.media3:media3-ui-compose", version.ref = "media3" }
 media3-session = { module = "androidx.media3:media3-session", version.ref = "media3" }
+media3-ffmpeg-decoder = { module = "org.jellyfin.media3:media3-ffmpeg-decoder", version.ref = "media3-ffmpeg-decoder" }
 
 coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
 coil-network-okhttp = { module = "io.coil-kt.coil3:coil-network-okhttp", version.ref = "coil" }

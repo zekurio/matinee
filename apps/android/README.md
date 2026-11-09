@@ -120,3 +120,9 @@ Icons are lucide's, as on the web. Add one with
 `scripts/lucide.py <name>` (or `<name>:filled`) from a checkout where
 `pnpm install` has run, and reference it in `Lucide` in
 `ui/components/Picture.kt`.
+
+## License
+
+GPL-3.0, see [LICENSE](LICENSE). The rest of the repository is MIT; the
+app is GPL because it includes Jellyfin's build of Media3's FFmpeg decoder
+(`org.jellyfin.media3:media3-ffmpeg-decoder`), which is.

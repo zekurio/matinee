@@ -3,6 +3,7 @@ package io.github.zekurio.matinee.ui.player
 import android.media.MediaCodecInfo
 import android.media.MediaCodecInfo.CodecProfileLevel
 import android.media.MediaCodecList
+import androidx.media3.decoder.ffmpeg.FfmpegLibrary
 import io.github.zekurio.matinee.api.VideoStream
 
 /**
@@ -68,11 +69,11 @@ object Capabilities {
         else -> emptySet()
     }
 
-    /** PCM plays without a decoder; the rest need one. */
+    /** PCM plays without a decoder; the rest need the device's or FFmpeg's. */
     fun decodesAudio(codec: String): Boolean {
         if (codec.startsWith("pcm_")) return true
         val mime = AUDIO_MIMES[codec] ?: return false
-        return decodersFor(mime).isNotEmpty()
+        return decodersFor(mime).isNotEmpty() || (FfmpegLibrary.isAvailable() && FfmpegLibrary.supportsFormat(mime))
     }
 
     /**

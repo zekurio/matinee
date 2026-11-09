@@ -17,6 +17,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -374,6 +375,7 @@ private fun Playback(data: PlayerData, start: Double?) {
             .focusable(),
     ) {
         Video(controller, fill = fill && !inPip)
+        PictureSubtitles(controller, fill = fill && !inPip)
         Subtitles(controller, rememberSubtitleLook(prefs), lifted = controls && !inPip, Modifier.align(Alignment.BottomCenter))
         // Taps show and hide the controls; a double tap on either side skips;
         // spreading two fingers fills the screen, and pinching shows it whole.
@@ -486,6 +488,48 @@ private fun Video(controller: PlayerController, fill: Boolean) {
         )
         if (presentation.coverSurface) Box(Modifier.fillMaxSize().background(Color.Black))
     }
+}
+
+/**
+ * A picture track's subtitles, as ExoPlayer decodes them from the file:
+ * images placed on the video where the track puts them, whole or zoomed
+ * as the video shows.
+ */
+@Composable
+private fun PictureSubtitles(controller: PlayerController, fill: Boolean) {
+    val cues = controller.pictureCues
+    if (cues.isEmpty()) return
+    val aspect = controller.videoAspect
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val box = maxWidth / maxHeight
+        // The video's rectangle on screen: fitted, or covering when it fills.
+        val wide = if (fill) aspect < box else aspect > box
+        val width = if (wide) maxWidth else maxHeight * aspect
+        val height = if (wide) maxWidth / aspect else maxHeight
+        val left = (maxWidth - width) / 2
+        val top = (maxHeight - height) / 2
+        cues.forEach { cue ->
+            val bitmap = cue.bitmap ?: return@forEach
+            val w = if (cue.size != androidx.media3.common.text.Cue.DIMEN_UNSET) width * cue.size else width * (bitmap.width.toFloat() / bitmap.height)
+            val h = if (cue.bitmapHeight != androidx.media3.common.text.Cue.DIMEN_UNSET) height * cue.bitmapHeight else w * (bitmap.height.toFloat() / bitmap.width)
+            val x = left + width * cue.position.takeIf { it != androidx.media3.common.text.Cue.DIMEN_UNSET }.orZero() - w * anchor(cue.positionAnchor)
+            val y = top + height * cue.line.takeIf { it != androidx.media3.common.text.Cue.DIMEN_UNSET }.orZero() - h * anchor(cue.lineAnchor)
+            Image(
+                bitmap.asImageBitmap(),
+                contentDescription = null,
+                modifier = Modifier.offset(x, y).size(w, h),
+            )
+        }
+    }
+}
+
+private fun Float?.orZero() = this ?: 0f
+
+/** How far along an image its anchor sits: its start, middle, or end. */
+private fun anchor(type: Int): Float = when (type) {
+    androidx.media3.common.text.Cue.ANCHOR_TYPE_MIDDLE -> 0.5f
+    androidx.media3.common.text.Cue.ANCHOR_TYPE_END -> 1f
+    else -> 0f
 }
 
 /** The cues showing now, drawn over the video, above the controls while they show. */
@@ -869,7 +913,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.menuItems(menu: Menu,
             items(controller.subtitles, key = { it.id }) { track ->
                 MenuRow(
                     subtitleLabel(track, controller.subtitles),
-                    subtitleDetail(track),
+                    subtitleDetail(track, burns = !drawable(track) && !controller.playerDraws(track)),
                     selected = track == controller.subtitle,
                     enabled = track.delivery != null,
                 ) {
@@ -955,10 +999,11 @@ internal fun subtitleLabel(track: SubtitleTrack, tracks: List<SubtitleTrack>): S
     return trackLabel(track.language, track.title, stringResource(R.string.player_track_unnamed, position))
 }
 
+/** A track's flags and format, and whether showing it burns it in; [burns] null asks the track alone. */
 @Composable
-internal fun subtitleDetail(track: SubtitleTrack): String = listOfNotNull(
+internal fun subtitleDetail(track: SubtitleTrack, burns: Boolean? = null): String = listOfNotNull(
     if (track.forced) stringResource(R.string.player_subtitles_forced) else null,
     if (track.sdh) "SDH" else null,
     track.format,
-    if (track.delivery != null && !drawable(track)) stringResource(R.string.player_subtitles_burned_in) else null,
+    if (track.delivery != null && (burns ?: !drawable(track))) stringResource(R.string.player_subtitles_burned_in) else null,
 ).joinToString(" · ")

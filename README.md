@@ -807,4 +807,6 @@ genres, and statuses, shows as the provider sent it.
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+MIT, see [LICENSE](LICENSE), except the Android app in `apps/android`,
+which is GPL-3.0 (see [its LICENSE](apps/android/LICENSE)): it plays DTS
+and TrueHD with a GPL build of FFmpeg.

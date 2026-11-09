@@ -59,6 +59,10 @@ fun audioChoice(tracks: List<AudioTrack>, language: String?, originalLanguage: S
 /** Whether the player draws the track itself; the rest need an encode with it burned in. */
 fun drawable(track: SubtitleTrack) = track.delivery == SubtitleDelivery.WEBVTT
 
+/** A picture track, like PGS, inside the file, which ExoPlayer draws itself when the file plays. */
+fun pictureInFile(track: SubtitleTrack) =
+    track.source == "embedded" && (track.delivery == SubtitleDelivery.PGS || track.delivery == SubtitleDelivery.BURN_IN)
+
 private fun subtitleLanguage(preferences: PlaybackPreferences) = preferences.subtitleLanguage ?: deviceLanguage
 
 /** The full or forced track for a language: the exact tag first, then the file's default, then one without SDH. */
