@@ -275,6 +275,8 @@ data class Library(
     val scanning: Boolean = false,
     /** The provider its metadata comes from, by id; null when it has none. */
     val metadataProvider: String? = null,
+    /** One of its titles' backdrops, a different one each day. */
+    val backdrop: Artwork? = null,
 )
 
 /** A source of metadata the server knows, as in `metadata.providers`. */

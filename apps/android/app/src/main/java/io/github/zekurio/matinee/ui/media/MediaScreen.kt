@@ -23,11 +23,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.ArtworkSize
@@ -38,7 +40,6 @@ import io.github.zekurio.matinee.ui.LocalNavigator
 import io.github.zekurio.matinee.ui.LocalUser
 import io.github.zekurio.matinee.ui.components.ArtFrame
 import io.github.zekurio.matinee.ui.components.CardShape
-import io.github.zekurio.matinee.ui.components.CardText
 import io.github.zekurio.matinee.ui.components.ErrorBox
 import io.github.zekurio.matinee.ui.components.Gap
 import io.github.zekurio.matinee.ui.components.Gutter
@@ -103,24 +104,50 @@ private fun FavoritesCard(onClick: () -> Unit) {
     }
 }
 
-/** A library as its newest title's art, with its name and how many titles it holds. */
+/**
+ * A library as the backdrop the server picked for it today, with its name
+ * across it, as Jellyfin shows one, and how many titles it holds below.
+ */
 @Composable
 private fun LibraryCard(library: Library) {
     val api = LocalApi.current
     val nav = LocalNavigator.current
     val res = LocalResources.current
-    val recent = rememberLoader("library-art-${library.id}") { shelf(library.id, 4) }
-    val art = (recent.state as? Load.Ready)?.value?.firstNotNullOfOrNull { api.art(it.title.images.backdrop, ArtworkSize.Medium) }
+    val art = api.art(library.backdrop, ArtworkSize.Medium)
     Column(Modifier.clip(CardShape).clickable { nav.library(library.id) }) {
         ArtFrame(library.name, 16f / 9f) {
             if (art != null) {
                 Picture(listOf(art), Modifier.fillMaxSize())
-                Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.5f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.35f))))
+                Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.35f)))
             } else {
-                LucideIcon(if (library.kind == "shows") Lucide.Tv else Lucide.Film, null, size = 28.dp, tint = Palette.Muted)
+                LucideIcon(
+                    if (library.kind == "shows") Lucide.Tv else Lucide.Film,
+                    null,
+                    size = 28.dp,
+                    tint = Palette.Muted,
+                    modifier = Modifier.align(Alignment.TopStart).padding(12.dp),
+                )
             }
+            Text(
+                library.name,
+                style = MaterialTheme.typography.titleMedium.copy(
+                    shadow = Shadow(Color.Black.copy(alpha = 0.6f), blurRadius = 12f),
+                ),
+                fontWeight = FontWeight.SemiBold,
+                color = Color.White,
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(horizontal = 12.dp),
+            )
         }
-        CardText(library.name, res.getQuantityString(R.plurals.browse_title_count, library.titleCount, library.titleCount))
+        Text(
+            res.getQuantityString(R.plurals.browse_title_count, library.titleCount, library.titleCount),
+            style = MaterialTheme.typography.bodySmall,
+            color = Palette.Muted,
+            maxLines = 1,
+            modifier = Modifier.padding(top = 8.dp),
+        )
     }
 }
 
