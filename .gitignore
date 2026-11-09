@@ -21,9 +21,6 @@ data/
 *.pem
 *.key
 
-# aislop run log
-.aislop/history.jsonl
-
 # nix build
 result
 result-*

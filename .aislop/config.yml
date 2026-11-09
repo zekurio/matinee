@@ -1,6 +1,0 @@
-overrides:
-  # shadcn output. Each part repeats the same data-slot wrapper by design.
-  - files:
-      - "packages/ui/src/components/**"
-    rules:
-      code-quality/duplicate-block: "off"

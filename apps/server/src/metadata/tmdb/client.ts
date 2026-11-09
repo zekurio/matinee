@@ -4,7 +4,6 @@ import { fetchJson } from "../http"
 import { apiUrl } from "../url"
 
 // TMDB's public endpoints, the same for every install.
-// aislop-ignore-next-line ai-slop/hardcoded-url -- vendor API, not deployment config
 const API = "https://api.themoviedb.org/3"
 const IMAGES = "https://image.tmdb.org/t/p/"
 // TMDB allows about 50 requests a second; stay well below.

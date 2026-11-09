@@ -5,7 +5,6 @@ import { ProviderError } from "../types"
 import { apiUrl } from "../url"
 
 // TVDB's public endpoints, the same for every install.
-// aislop-ignore-next-line ai-slop/hardcoded-url -- vendor API, not deployment config
 const API = "https://api4.thetvdb.com/v4"
 // Tokens last a month. Renew well before that.
 const TOKEN_TTL_MS = 25 * 24 * 60 * 60 * 1000
