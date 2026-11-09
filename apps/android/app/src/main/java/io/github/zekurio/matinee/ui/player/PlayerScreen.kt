@@ -8,6 +8,7 @@ import android.content.res.Configuration
 import android.os.Build
 import android.util.Rational
 import android.view.WindowManager
+import android.view.accessibility.AccessibilityManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
@@ -27,6 +28,8 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -38,6 +41,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
@@ -49,6 +53,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
@@ -69,32 +74,48 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalAccessibilityManager
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.progressBarRangeInfo
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.setProgress
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -140,6 +161,7 @@ import io.github.zekurio.matinee.ui.components.Lucide
 import io.github.zekurio.matinee.ui.components.LucideIcon
 import io.github.zekurio.matinee.ui.components.MatineeButton
 import io.github.zekurio.matinee.ui.components.RoundIconButton
+import io.github.zekurio.matinee.ui.components.focusRing
 import io.github.zekurio.matinee.ui.episodeCode
 import io.github.zekurio.matinee.ui.formatClock
 import io.github.zekurio.matinee.ui.itemLabel
@@ -335,9 +357,18 @@ private fun Playback(data: PlayerData, start: Double?) {
     var menu by remember { mutableStateOf<Menu?>(null) }
     var scrub by remember { mutableStateOf<Double?>(null) }
     var touched by remember { mutableIntStateOf(0) }
-    LaunchedEffect(controls, controller.playing, menu, scrub, touched) {
-        if (controls && controller.playing && menu == null && scrub == null) {
-            delay(HIDE_AFTER_MS)
+    // A screen reader exploring by touch reads the controls one by one, so
+    // they stay until asked away; otherwise they wait as long as the
+    // person's accessibility settings ask.
+    val exploring = rememberTouchExploration()
+    val a11y = LocalAccessibilityManager.current
+    val hideAfter = remember(a11y) {
+        a11y?.calculateRecommendedTimeoutMillis(HIDE_AFTER_MS, containsIcons = true, containsText = true, containsControls = true)
+            ?: HIDE_AFTER_MS
+    }
+    LaunchedEffect(controls, controller.playing, menu, scrub, touched, exploring, hideAfter) {
+        if (controls && controller.playing && menu == null && scrub == null && !exploring) {
+            delay(hideAfter)
             controls = false
         }
     }
@@ -381,8 +412,18 @@ private fun Playback(data: PlayerData, start: Double?) {
         Subtitles(controller, rememberSubtitleLook(prefs), lifted = controls && !inPip, Modifier.align(Alignment.BottomCenter))
         // Taps show and hide the controls; a double tap on either side skips;
         // spreading two fingers fills the screen, and pinching shows it whole.
+        // A screen reader gets the tap as this area's one action.
+        val videoLabel = stringResource(R.string.a11y_player_video)
+        val toggleLabel = stringResource(if (controls) R.string.a11y_player_hide_controls else R.string.a11y_player_show_controls)
         Box(
-            Modifier.fillMaxSize().pointerInput(Unit) {
+            Modifier.fillMaxSize().semantics {
+                contentDescription = videoLabel
+                onClick(toggleLabel) {
+                    controls = !controls
+                    touched++
+                    true
+                }
+            }.pointerInput(Unit) {
                 awaitEachGesture {
                     awaitFirstDown(requireUnconsumed = false)
                     var zoom = 1f
@@ -438,6 +479,10 @@ private fun Playback(data: PlayerData, start: Double?) {
                         scrub?.let(controller::seekTo)
                         scrub = null
                     },
+                    onSeek = {
+                        controller.seekTo(it)
+                        touched++
+                    },
                     onMenu = { menu = it },
                     onTouch = { touched++ },
                 )
@@ -454,6 +499,20 @@ private fun Playback(data: PlayerData, start: Double?) {
 }
 
 private enum class Menu { Audio, Subtitles, Settings }
+
+/** Whether a screen reader explores the screen by touch, as TalkBack does. */
+@Composable
+private fun rememberTouchExploration(): Boolean {
+    val context = LocalContext.current
+    val manager = remember(context) { context.getSystemService(AccessibilityManager::class.java) }
+    var exploring by remember(manager) { mutableStateOf(manager?.isTouchExplorationEnabled == true) }
+    DisposableEffect(manager) {
+        val listener = AccessibilityManager.TouchExplorationStateChangeListener { exploring = it }
+        manager?.addTouchExplorationStateChangeListener(listener)
+        onDispose { manager?.removeTouchExplorationStateChangeListener(listener) }
+    }
+    return exploring
+}
 
 /** How far two fingers spread, or pinch by its inverse, before the video switches. */
 private const val PINCH_FILL = 1.15f
@@ -564,6 +623,7 @@ private fun Controls(
     scrub: Double?,
     onScrub: (Double) -> Unit,
     onScrubEnd: () -> Unit,
+    onSeek: (Double) -> Unit,
     onMenu: (Menu) -> Unit,
     onTouch: () -> Unit,
 ) {
@@ -622,7 +682,7 @@ private fun Controls(
             }
         }
         Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().safeDrawingPadding().padding(horizontal = 20.dp, vertical = 10.dp)) {
-            SeekBar(controller, scrub, onScrub, onScrubEnd)
+            SeekBar(controller, scrub, skip, onScrub, onScrubEnd, onSeek)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 val duration = controller.duration
                 if (duration > 0) {
@@ -635,7 +695,18 @@ private fun Controls(
                 Box(Modifier.weight(1f))
                 RoundIconButton(Lucide.AudioLines, stringResource(R.string.player_menu_audio), { onMenu(Menu.Audio) }, size = 52.dp, iconSize = 26.dp, background = Color.Transparent)
                 Box {
-                    RoundIconButton(Lucide.Captions, stringResource(R.string.player_menu_subtitles), { onMenu(Menu.Subtitles) }, size = 52.dp, iconSize = 26.dp, background = Color.Transparent)
+                    // The line under the icon shows subtitles are on; a screen reader hears which.
+                    val subtitleState = controller.subtitle?.let { subtitleLabel(it, controller.subtitles) }
+                        ?: stringResource(R.string.player_subtitles_off)
+                    RoundIconButton(
+                        Lucide.Captions,
+                        stringResource(R.string.player_menu_subtitles),
+                        { onMenu(Menu.Subtitles) },
+                        Modifier.semantics { stateDescription = subtitleState },
+                        size = 52.dp,
+                        iconSize = 26.dp,
+                        background = Color.Transparent,
+                    )
                     if (controller.subtitle != null) {
                         Box(Modifier.align(Alignment.BottomCenter).offset(y = (-8).dp).width(20.dp).height(2.dp).clip(CircleShape).background(Palette.Accent))
                     }
@@ -649,21 +720,31 @@ private fun Controls(
 /** Skips back or forward, with how far in the middle of its arrow. */
 @Composable
 private fun SkipButton(icon: Int, seconds: Double, label: String, onClick: () -> Unit) {
+    val interaction = remember { MutableInteractionSource() }
     Box(
-        Modifier.size(72.dp).clip(CircleShape).clickable(role = Role.Button, onClickLabel = label, onClick = onClick, indication = ripple(), interactionSource = null),
+        Modifier.size(72.dp).clip(CircleShape).focusRing(interaction, CircleShape)
+            .clickable(interaction, indication = ripple(), role = Role.Button, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         LucideIcon(icon, label, size = 40.dp)
+        // The label says how far already.
         Text(
             seconds.toInt().toString(),
             style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp, fontWeight = FontWeight.SemiBold),
-            modifier = Modifier.padding(top = 2.dp),
+            modifier = Modifier.padding(top = 2.dp).clearAndSetSemantics {},
         )
     }
 }
 
 @Composable
-private fun SeekBar(controller: PlayerController, scrub: Double?, onScrub: (Double) -> Unit, onScrubEnd: () -> Unit) {
+private fun SeekBar(
+    controller: PlayerController,
+    scrub: Double?,
+    step: Double,
+    onScrub: (Double) -> Unit,
+    onScrubEnd: () -> Unit,
+    onSeek: (Double) -> Unit,
+) {
     val duration = controller.duration.coerceAtLeast(0.0)
     val shown = scrub ?: controller.position
     Column {
@@ -679,19 +760,23 @@ private fun SeekBar(controller: PlayerController, scrub: Double?, onScrub: (Doub
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(formatClock(shown), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.widthIn(min = 56.dp))
             SeekTrack(
-                fraction = if (duration > 0) (shown / duration).toFloat() else 0f,
-                buffered = if (duration > 0) (controller.buffered / duration).toFloat() else 0f,
-                enabled = duration > 0,
+                position = shown,
+                duration = duration,
+                buffered = controller.buffered,
+                step = step,
                 scrubbing = scrub != null,
-                onScrub = { onScrub(it * duration) },
+                onScrub = onScrub,
                 onScrubEnd = onScrubEnd,
+                onSeek = onSeek,
                 modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
             )
+            val remaining = formatClock((duration - shown).coerceAtLeast(0.0))
+            val remainingLabel = stringResource(R.string.a11y_player_remaining, remaining)
             Text(
-                "-" + formatClock((duration - shown).coerceAtLeast(0.0)),
+                "-$remaining",
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.End,
-                modifier = Modifier.widthIn(min = 64.dp),
+                modifier = Modifier.widthIn(min = 64.dp).semantics { contentDescription = remainingLabel },
             )
         }
     }
@@ -700,49 +785,117 @@ private fun SeekBar(controller: PlayerController, scrub: Double?, onScrub: (Doub
 /**
  * The seek bar as the web player draws it: a thin line, what's buffered in
  * a lighter shade, what's played in the accent, and a dot to drag.
+ *
+ * A finger taps or drags it, scrubbing until it lifts. A remote or keyboard
+ * focuses it and scrubs by [step] with left and right, seeking when the key
+ * comes up. A screen reader hears it as a seek bar it can set, and its
+ * swipes move it by about [step], seeking at once through [onSeek].
  */
 @Composable
 private fun SeekTrack(
-    fraction: Float,
-    buffered: Float,
-    enabled: Boolean,
+    position: Double,
+    duration: Double,
+    buffered: Double,
+    step: Double,
     scrubbing: Boolean,
-    onScrub: (Float) -> Unit,
+    onScrub: (Double) -> Unit,
     onScrubEnd: () -> Unit,
+    onSeek: (Double) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var width by remember { mutableIntStateOf(1) }
-    val at = { x: Float -> (x / width).coerceIn(0f, 1f) }
-    // The dot grows under the finger.
-    val thumb by animateDpAsState(if (scrubbing) 11.dp else 8.dp, label = "seek thumb")
+    val enabled = seekable(duration)
+    // Gestures and keys outlive a composition, so they read these as they are now.
+    val length by rememberUpdatedState(duration)
+    val now by rememberUpdatedState(position)
+    val scrubTo by rememberUpdatedState(onScrub)
+    val scrubEnd by rememberUpdatedState(onScrubEnd)
+    // Where held arrow keys got to, so each repeat steps on from there
+    // before a recomposition catches up.
+    var keyed by remember { mutableStateOf<Double?>(null) }
+    fun endKeys() {
+        if (keyed == null) return
+        keyed = null
+        scrubEnd()
+    }
+    val interaction = remember { MutableInteractionSource() }
+    val focused by interaction.collectIsFocusedAsState()
+    // The dot grows under the finger, and while focused.
+    val thumb by animateDpAsState(if (scrubbing || focused) 11.dp else 8.dp, label = "seek thumb")
+    val label = stringResource(R.string.a11y_player_seek)
+    val action = stringResource(R.string.a11y_player_seek_action)
+    val state = if (enabled) {
+        stringResource(R.string.a11y_player_position, formatClock(position), formatClock(duration))
+    } else {
+        formatClock(position)
+    }
     Box(
         modifier
-            .height(44.dp)
-            .onSizeChanged { width = it.width.coerceAtLeast(1) }
+            .height(48.dp)
+            .semantics {
+                contentDescription = label
+                stateDescription = state
+                progressBarRangeInfo = if (enabled) {
+                    ProgressBarRangeInfo(seekClamp(position, duration).toFloat(), 0f..duration.toFloat(), seekSteps(duration, step))
+                } else {
+                    ProgressBarRangeInfo(0f, 0f..1f)
+                }
+                setProgress(action) { target ->
+                    if (!seekable(length)) return@setProgress false
+                    onSeek(seekClamp(target.toDouble(), length))
+                    true
+                }
+                if (!enabled) disabled()
+            }
+            .onFocusChanged { if (!it.isFocused) endKeys() }
+            .onKeyEvent { event ->
+                val direction = when (event.key) {
+                    Key.DirectionLeft -> -1
+                    Key.DirectionRight -> 1
+                    else -> return@onKeyEvent false
+                }
+                if (!seekable(length)) return@onKeyEvent false
+                when (event.type) {
+                    KeyEventType.KeyDown -> {
+                        val to = seekStepped(keyed ?: now, direction, step, length)
+                        keyed = to
+                        scrubTo(to)
+                        true
+                    }
+                    KeyEventType.KeyUp -> {
+                        endKeys()
+                        true
+                    }
+                    else -> false
+                }
+            }
+            .focusRing(interaction, RoundedCornerShape(8.dp))
+            .focusable(enabled, interaction)
             .pointerInput(enabled) {
                 if (!enabled) return@pointerInput
                 detectTapGestures { offset ->
-                    onScrub(at(offset.x))
-                    onScrubEnd()
+                    scrubTo(seekAt(offset.x, size.width.toFloat(), length))
+                    scrubEnd()
                 }
             }
             .pointerInput(enabled) {
                 if (!enabled) return@pointerInput
                 detectHorizontalDragGestures(
-                    onDragStart = { offset -> onScrub(at(offset.x)) },
-                    onDragEnd = onScrubEnd,
-                    onDragCancel = onScrubEnd,
-                ) { change, _ -> onScrub(at(change.position.x)) }
+                    onDragStart = { offset -> scrubTo(seekAt(offset.x, size.width.toFloat(), length)) },
+                    onDragEnd = { scrubEnd() },
+                    onDragCancel = { scrubEnd() },
+                ) { change, _ -> scrubTo(seekAt(change.position.x, size.width.toFloat(), length)) }
             },
         contentAlignment = Alignment.CenterStart,
     ) {
+        val fraction = seekFraction(position, duration)
+        val loaded = seekFraction(buffered, duration)
         Canvas(Modifier.fillMaxWidth().height(24.dp)) {
             val y = size.height / 2
             val stroke = 5.dp.toPx()
-            val played = size.width * fraction.coerceIn(0f, 1f)
+            val played = size.width * fraction
             fun line(to: Float, color: Color) = drawLine(color, Offset(0f, y), Offset(to, y), stroke, StrokeCap.Round)
             line(size.width, Palette.Foreground.copy(alpha = 0.2f))
-            line(size.width * buffered.coerceIn(0f, 1f), Palette.Foreground.copy(alpha = 0.35f))
+            line(size.width * loaded, Palette.Foreground.copy(alpha = 0.35f))
             line(played, Palette.Accent)
             drawCircle(Palette.Accent, radius = thumb.toPx(), center = Offset(played, y))
         }
@@ -861,10 +1014,27 @@ private fun PlayerPanel(open: Menu?, controller: PlayerController, onDismiss: ()
     var last by remember { mutableStateOf(open) }
     if (open != null) last = open
     BackHandler(enabled = open != null, onBack = onDismiss)
+    // A remote or keyboard has nothing to point with, so focus goes into the
+    // panel, to what's picked, once its rows are laid out.
+    val inputs = LocalInputModeManager.current
+    val picked = remember { FocusRequester() }
+    LaunchedEffect(open) {
+        if (open == null || inputs.inputMode != InputMode.Keyboard) return@LaunchedEffect
+        withFrameNanos {}
+        runCatching { picked.requestFocus() }
+    }
+    val closeLabel = stringResource(R.string.a11y_player_close_menu)
     BoxWithConstraints(Modifier.fillMaxSize()) {
         AnimatedVisibility(open != null, enter = fadeIn(), exit = fadeOut()) {
             Box(
-                Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.45f)).pointerInput(Unit) {
+                Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.45f)).semantics {
+                    contentDescription = closeLabel
+                    role = Role.Button
+                    onClick {
+                        onDismiss()
+                        true
+                    }
+                }.pointerInput(Unit) {
                     detectTapGestures { onDismiss() }
                 },
             )
@@ -886,13 +1056,13 @@ private fun PlayerPanel(open: Menu?, controller: PlayerController, onDismiss: ()
                     .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.End + WindowInsetsSides.Vertical))
                     .padding(vertical = 12.dp),
             ) {
-                menuItems(menu, controller, onDismiss)
+                menuItems(menu, controller, picked, onDismiss)
             }
         }
     }
 }
 
-private fun androidx.compose.foundation.lazy.LazyListScope.menuItems(menu: Menu, controller: PlayerController, onDismiss: () -> Unit) {
+private fun androidx.compose.foundation.lazy.LazyListScope.menuItems(menu: Menu, controller: PlayerController, picked: FocusRequester, onDismiss: () -> Unit) {
     when (menu) {
         Menu.Audio -> {
             item { MenuHeading(stringResource(R.string.player_menu_audio)) }
@@ -904,6 +1074,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.menuItems(menu: Menu,
                     audioLabel(track),
                     listOfNotNull(track.format, track.layout).joinToString(" · "),
                     selected = track == controller.audio,
+                    picked = picked,
                 ) {
                     controller.pickAudio(track)
                     onDismiss()
@@ -913,7 +1084,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.menuItems(menu: Menu,
         Menu.Subtitles -> {
             item { MenuHeading(stringResource(R.string.player_menu_subtitles)) }
             item {
-                MenuRow(stringResource(R.string.player_subtitles_off), null, selected = controller.subtitle == null) {
+                MenuRow(stringResource(R.string.player_subtitles_off), null, selected = controller.subtitle == null, picked = picked) {
                     controller.pickSubtitle(null)
                     onDismiss()
                 }
@@ -924,6 +1095,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.menuItems(menu: Menu,
                     subtitleDetail(track, burns = !drawable(track) && !controller.playerDraws(track)),
                     selected = track == controller.subtitle,
                     enabled = track.delivery != null,
+                    picked = picked,
                 ) {
                     controller.pickSubtitle(track)
                     onDismiss()
@@ -935,13 +1107,13 @@ private fun androidx.compose.foundation.lazy.LazyListScope.menuItems(menu: Menu,
             if (!controller.isLocal) {
                 item { MenuHeading(stringResource(R.string.player_quality)) }
                 item {
-                    MenuRow(stringResource(R.string.player_quality_original), null, selected = controller.quality == ORIGINAL_QUALITY) {
+                    MenuRow(stringResource(R.string.player_quality_original), null, selected = controller.quality == ORIGINAL_QUALITY, picked = picked) {
                         controller.pickQuality(ORIGINAL_QUALITY)
                         onDismiss()
                     }
                 }
                 items(QUALITIES, key = { it.id }) { quality ->
-                    MenuRow(qualityLabel(quality.id), null, selected = controller.quality == quality.id) {
+                    MenuRow(qualityLabel(quality.id), null, selected = controller.quality == quality.id, picked = picked) {
                         controller.pickQuality(quality.id)
                         onDismiss()
                     }
@@ -954,6 +1126,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.menuItems(menu: Menu,
                     if (rate == 1f) stringResource(R.string.player_speed_normal) else stringResource(R.string.player_speed_rate, rate.toString().removeSuffix(".0")),
                     null,
                     selected = controller.speed == rate,
+                    picked = picked,
                 ) {
                     controller.pickSpeed(rate)
                     onDismiss()
@@ -965,7 +1138,11 @@ private fun androidx.compose.foundation.lazy.LazyListScope.menuItems(menu: Menu,
 
 @Composable
 private fun MenuHeading(text: String) {
-    Text(text, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp))
+    Text(
+        text,
+        style = MaterialTheme.typography.titleMedium,
+        modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp).semantics { heading() },
+    )
 }
 
 @Composable
@@ -973,10 +1150,25 @@ private fun MenuNote(text: String) {
     Text(text, style = MaterialTheme.typography.bodySmall, color = Palette.Muted, modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp))
 }
 
+/**
+ * One choice in a menu, heard as a radio button that's checked when
+ * [selected]. A picked row takes [picked], so focus can start on it.
+ */
 @Composable
-private fun MenuRow(title: String, detail: String?, selected: Boolean, enabled: Boolean = true, onClick: () -> Unit) {
+private fun MenuRow(
+    title: String,
+    detail: String?,
+    selected: Boolean,
+    enabled: Boolean = true,
+    picked: FocusRequester? = null,
+    onClick: () -> Unit,
+) {
     Row(
-        Modifier.fillMaxWidth().clickable(enabled = enabled, onClick = onClick).padding(horizontal = 20.dp, vertical = 14.dp),
+        Modifier.fillMaxWidth()
+            .then(if (selected && enabled && picked != null) Modifier.focusRequester(picked) else Modifier)
+            .selectable(selected, enabled = enabled, role = Role.RadioButton, onClick = onClick)
+            .heightIn(min = 48.dp)
+            .padding(horizontal = 20.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
