@@ -79,7 +79,6 @@
     <string name="stats_movies_finished">Filme beendet</string>
     <string name="stats_episodes_finished">Folgen beendet</string>
     <string name="stats_shows_watched">Serien geschaut</string>
-    <string name="stats_chart_busiest">Spitzenwert · %1$s · %2$s</string>
     <string name="stats_bucket_week">Woche vom %1$s</string>
     <string name="stats_top">Am meisten geschaut</string>
     <string name="stats_genres">Genres</string>
