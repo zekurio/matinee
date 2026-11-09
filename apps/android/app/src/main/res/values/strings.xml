@@ -476,6 +476,10 @@
     <string name="downloads_audio_none">Pick at least one audio track.</string>
     <string name="downloads_start">Download</string>
     <string name="downloads_failed">Couldn\'t get this file\'s tracks</string>
+    <string name="downloads_space">%1$s on this device · %2$s free</string>
+    <string name="downloads_coming">Downloading</string>
+    <string name="downloads_done">On this device</string>
+    <string name="downloads_codec">Codec</string>
     <string name="downloads_total">%1$s on this device</string>
     <string name="downloads_empty">Nothing downloaded yet</string>
     <string name="downloads_empty_hint">Download a movie or episode from its menu to watch it offline.</string>

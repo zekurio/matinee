@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.MatineeApi
 import io.github.zekurio.matinee.api.MediaItem
+import io.github.zekurio.matinee.api.PlaybackOptions
 import io.github.zekurio.matinee.api.PlaybackPreferences
 import io.github.zekurio.matinee.api.Season
 import io.github.zekurio.matinee.api.TitleSummary
@@ -81,9 +82,12 @@ fun DownloadFilesSheet(files: FileSet, onDismiss: () -> Unit) {
     var items by remember { mutableStateOf<List<MediaItem>?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var picked by remember { mutableStateOf(startingChoice(downloads)) }
+    var options by remember { mutableStateOf<PlaybackOptions?>(null) }
+    var codec by remember { mutableStateOf<String?>(null) }
     val askNotifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
 
     LaunchedEffect(files) {
+        options = runCatching { api.playbackOptions() }.getOrDefault(PlaybackOptions()).also { codec = downloads.defaultCodec(it) }
         try {
             items = files.load(api)
         } catch (e: IOException) {
@@ -128,6 +132,13 @@ fun DownloadFilesSheet(files: FileSet, onDismiss: () -> Unit) {
                         CHOICES.forEach { choice ->
                             RadioRow(choiceName(choice), batchSize(downloads, choice, missing), selected = picked == choice) { picked = choice }
                         }
+                        // Files that get encoded come in the codec picked.
+                        val codecs = options?.let(downloads::codecChoices).orEmpty()
+                        val current = codec
+                        if (picked is Choice.Device && codecs.size > 1 && current != null) {
+                            SheetHeading(stringResource(R.string.downloads_codec))
+                            CodecPicker(codecs, current) { codec = it }
+                        }
                         Gap(8.dp)
                         Text(
                             stringResource(if (downloads.unmeteredOnly) R.string.downloads_note_unmetered else R.string.downloads_note_any),
@@ -152,6 +163,7 @@ fun DownloadFilesSheet(files: FileSet, onDismiss: () -> Unit) {
                                         original = choice == Choice.Original,
                                         preset = (choice as? Choice.Device)?.preset,
                                         preferences = user.playback ?: PlaybackPreferences(),
+                                        codec = codec,
                                     )
                                     if (failed > 0) snackbar.showSnackbar(res.getQuantityString(R.plurals.downloads_all_failed, failed, failed))
                                 }

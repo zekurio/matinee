@@ -62,6 +62,10 @@ data class SettingsPageRoute(val page: String)
 @Serializable
 data object DownloadsRoute
 
+/** A downloaded show's episodes. */
+@Serializable
+data class DownloadsShowRoute(val titleId: String)
+
 /** [start] is -1 to resume where the person left off. */
 @Serializable
 data class PlayerRoute(val itemId: String, val start: Double = -1.0)
@@ -110,6 +114,8 @@ class Navigator(private val controller: NavHostController) {
     fun media() = tab(MediaRoute)
 
     fun downloads() = tab(DownloadsRoute)
+
+    fun downloadsShow(titleId: String) = controller.navigate(DownloadsShowRoute(titleId)) { launchSingleTop = true }
 
     fun favorites() = controller.navigate(FavoritesRoute) { launchSingleTop = true }
 

@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
@@ -86,6 +87,7 @@ fun DownloadSheet(item: MediaItem, onDismiss: () -> Unit) {
     // Audio by stream index, in the file's order; subtitles by id.
     var audio by remember { mutableStateOf<List<Int>>(emptyList()) }
     var subtitles by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var codec by remember { mutableStateOf("h264") }
     val askNotifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
     val failure = stringResource(R.string.downloads_failed)
 
@@ -99,6 +101,7 @@ fun DownloadSheet(item: MediaItem, onDismiss: () -> Unit) {
                 preferences = user.playback ?: PlaybackPreferences(),
             )
             audio = downloads.defaultAudio(loaded).map { it.index }
+            codec = downloads.defaultCodec(loaded.options)
             subtitles = downloads.defaultSubtitles(loaded).map { it.id }.toSet()
             source = loaded
         } catch (e: IOException) {
@@ -109,7 +112,7 @@ fun DownloadSheet(item: MediaItem, onDismiss: () -> Unit) {
     val loaded = source
     // The primary track first, as the file plays it; the rest as the file has them.
     val chosenAudio = loaded?.audio?.filter { it.index in audio }?.sortedByDescending { it.primary }.orEmpty()
-    LaunchedEffect(loaded, audio) {
+    LaunchedEffect(loaded, audio, codec) {
         loaded ?: return@LaunchedEffect
         if (loaded.audio.isNotEmpty() && chosenAudio.isEmpty()) {
             planning = false
@@ -118,7 +121,7 @@ fun DownloadSheet(item: MediaItem, onDismiss: () -> Unit) {
         planning = true
         for (choice in CHOICES) {
             if (choice !is Choice.Device) continue
-            val spec = downloads.deviceSpec(loaded, choice.preset, chosenAudio)
+            val spec = downloads.deviceSpec(loaded, choice.preset, chosenAudio, codec)
             // A size this device can't have the server make just doesn't show one.
             val plan = runCatching { api.downloadPlan(item.id, spec) }.getOrNull()
             if (plan != null) {
@@ -163,6 +166,13 @@ fun DownloadSheet(item: MediaItem, onDismiss: () -> Unit) {
                         val shown = CHOICES.filter { it !is Choice.Device || it.preset == null || plans[it] != null }
                         shown.forEach { choice ->
                             ChoiceRow(choice, plans[choice], loaded, selected = picked == choice) { picked = choice }
+                        }
+                        // Only an encode has a codec to pick; Automatic may keep the video as it is.
+                        val encodes = (picked as? Choice.Device)?.let { it.preset != null || plans[it]?.video?.mode == "encode" } == true
+                        val codecs = downloads.codecChoices(loaded.options)
+                        if (encodes && codecs.size > 1) {
+                            SheetHeading(stringResource(R.string.downloads_codec))
+                            CodecPicker(codecs, codec) { codec = it }
                         }
                         // The file as it is keeps every track.
                         if (device && loaded.audio.isNotEmpty()) {
@@ -249,9 +259,29 @@ private fun ChoiceRow(choice: Choice, plan: DownloadPlan?, source: DownloadSourc
     RadioRow(choiceName(choice), detail, selected, onClick)
 }
 
+/** The codecs a download can be encoded in, as pills, the picked one filled. */
+@Composable
+internal fun CodecPicker(codecs: List<String>, selected: String, onPick: (String) -> Unit) {
+    Row(Modifier.padding(horizontal = 20.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        codecs.forEach { codec ->
+            val on = codec == selected
+            Text(
+                videoCodecName(codec),
+                style = MaterialTheme.typography.labelLarge,
+                color = if (on) Palette.AccentForeground else Palette.Foreground,
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .background(if (on) Palette.Accent else Palette.Secondary)
+                    .clickable { onPick(codec) }
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+            )
+        }
+    }
+}
+
 /** A group's name in a sheet, like the audio tracks'. */
 @Composable
-private fun SheetHeading(text: String) {
+internal fun SheetHeading(text: String) {
     Text(
         text,
         style = MaterialTheme.typography.titleSmall,

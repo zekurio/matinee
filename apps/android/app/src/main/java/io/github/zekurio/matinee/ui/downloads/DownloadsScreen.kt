@@ -4,7 +4,6 @@ import android.Manifest
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -16,6 +15,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -39,13 +40,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
@@ -83,7 +82,6 @@ import io.github.zekurio.matinee.ui.components.LocalApi
 import io.github.zekurio.matinee.ui.components.Lucide
 import io.github.zekurio.matinee.ui.components.LucideIcon
 import io.github.zekurio.matinee.ui.components.MatineeButton
-import io.github.zekurio.matinee.ui.components.ProgressBar
 import io.github.zekurio.matinee.ui.components.RoundIconButton
 import io.github.zekurio.matinee.ui.components.SheetItem
 import io.github.zekurio.matinee.ui.components.tone
@@ -98,28 +96,13 @@ import java.io.File
 import java.io.IOException
 import java.util.Locale
 
-/**
- * What the Downloads page lists: a movie, or a show with its downloaded
- * episodes by season. [newest] is when its latest file was added, which
- * puts what was downloaded last at the top.
- */
-private sealed interface DownloadGroup {
-    val key: String
-    val newest: Long
-
-    data class Single(val entry: OfflineItem) : DownloadGroup {
-        override val key get() = entry.id
-        override val newest get() = entry.addedAt
-    }
-
-    data class Show(val title: TitleSummary, val seasons: List<SeasonDownloads>) : DownloadGroup {
-        val entries get() = seasons.flatMap { it.entries }
-        override val key get() = "show-${title.id}"
-        override val newest get() = entries.maxOf { it.addedAt }
-    }
+/** A downloaded show: its finished episodes by season. [newest] puts what came last at the top. */
+private data class ShowDownloads(val title: TitleSummary, val seasons: List<SeasonDownloads>) {
+    val entries get() = seasons.flatMap { it.entries }
+    val newest get() = entries.maxOf { it.addedAt }
 }
 
-/** A season's downloaded episodes in order; [number] null for files without a season. */
+/** A season's episodes in order; [number] null for files without a season. */
 private data class SeasonDownloads(val number: Int?, val entries: List<OfflineItem>)
 
 /** Seasons in order, then the specials, then the files without a season, as on a show's page. */
@@ -129,43 +112,38 @@ private fun seasonOrder(number: Int?) = when (number) {
     else -> number
 }
 
-private fun groupDownloads(entries: Collection<OfflineItem>): List<DownloadGroup> {
-    val groups = mutableListOf<DownloadGroup>()
-    val shows = LinkedHashMap<String, Pair<TitleSummary, MutableList<OfflineItem>>>()
-    for (entry in entries) {
-        val title = entry.item.title
-        if (title != null && title.kind == TitleKind.SHOW) shows.getOrPut(title.id) { title to mutableListOf() }.second += entry
-        else groups += DownloadGroup.Single(entry)
-    }
-    for ((title, episodes) in shows.values) {
-        val seasons = episodes.groupBy { it.item.seasonNumber }
-            .map { (number, files) -> SeasonDownloads(number, files.sortedBy { it.item.episodeNumber ?: Int.MAX_VALUE }) }
-            .sortedBy { seasonOrder(it.number) }
-        groups += DownloadGroup.Show(title, seasons)
-    }
-    return groups.sortedByDescending { it.newest }
-}
+private fun seasonsOf(entries: List<OfflineItem>): List<SeasonDownloads> =
+    entries.groupBy { it.item.seasonNumber }
+        .map { (number, files) -> SeasonDownloads(number, files.sortedBy { it.item.episodeNumber ?: Int.MAX_VALUE }) }
+        .sortedBy { seasonOrder(it.number) }
+
+private fun isShow(entry: OfflineItem) = entry.item.title?.kind == TitleKind.SHOW
 
 /** Files to remove at once, with what to call them in the question. */
 private data class Removal(val name: String, val entries: List<OfflineItem>)
 
 /**
- * The downloads, playing from the phone without the server: movies, and
- * shows that open into their seasons and episodes. A whole show or season
- * goes at once, after a question that says how much space it frees.
+ * The downloads, in two lists: what's still coming, file by file, with
+ * how far each is and a button to pause or go on; then what's on the
+ * phone, movies and shows, newest first. A movie plays with a tap; a show
+ * opens its own page of episodes.
  */
 @Composable
 fun DownloadsScreen() {
     val context = LocalContext.current
-    val res = LocalResources.current
+    val nav = LocalNavigator.current
     val downloads = context.app.downloads
     val items by downloads.store.items.collectAsState()
     var acting by remember { mutableStateOf<OfflineItem?>(null) }
-    var actingShow by remember { mutableStateOf<DownloadGroup.Show?>(null) }
-    var removing by remember { mutableStateOf<Removal?>(null) }
-    var expanded by rememberSaveable { mutableStateOf(listOf<String>()) }
-    val groups = groupDownloads(items.values)
-    val total = items.values.filter { it.state == DownloadState.DONE }.sumOf { it.bytes }
+    val coming = items.values.filter { it.state != DownloadState.DONE }.sortedBy { it.addedAt }
+    val done = items.values.filter { it.state == DownloadState.DONE }
+    val shows = done.filter(::isShow).groupBy { it.item.title!!.id }
+        .map { (_, episodes) -> ShowDownloads(episodes.first().item.title!!, seasonsOf(episodes)) }
+    // Movies and shows together, what came last first.
+    val finished: List<Pair<Long, Any>> = (done.filterNot(::isShow).map { it.addedAt to it } + shows.map { it.newest to it })
+        .sortedByDescending { it.first }
+    val total = done.sumOf { it.bytes }
+    val free = remember(total) { context.filesDir.usableSpace }
     Column(Modifier.fillMaxSize()) {
         TopBar(stringResource(R.string.downloads_title), back = false) {
             if (LocalOffline.current) {
@@ -178,17 +156,17 @@ fun DownloadsScreen() {
             contentPadding = PaddingValues(start = Gutter, end = Gutter, bottom = tabBarPadding() + 24.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            if (total > 0) {
-                item(key = "total") {
+            if (items.isNotEmpty()) {
+                item(key = "space") {
                     Text(
-                        stringResource(R.string.downloads_total, formatBytes(total)),
+                        stringResource(R.string.downloads_space, formatBytes(total), formatBytes(free)),
                         style = MaterialTheme.typography.bodyMedium,
                         color = Palette.Muted,
-                        modifier = Modifier.padding(bottom = 12.dp),
+                        modifier = Modifier.padding(bottom = 8.dp),
                     )
                 }
             }
-            if (groups.isEmpty()) {
+            if (items.isEmpty()) {
                 item(key = "empty") {
                     Column(
                         Modifier.fillMaxWidth().padding(vertical = 48.dp),
@@ -202,43 +180,34 @@ fun DownloadsScreen() {
                     }
                 }
             }
-            for (group in groups) {
-                when (group) {
-                    is DownloadGroup.Single -> item(key = group.key) {
-                        val (primary, secondary) = names(group.entry.item)
-                        DownloadRow(group.entry, primary, secondary, Modifier.animateItem()) { acting = group.entry }
-                    }
-                    is DownloadGroup.Show -> {
-                        val open = group.key in expanded
-                        item(key = group.key) {
-                            ShowRow(
-                                group,
-                                open,
-                                Modifier.animateItem(),
-                                onToggle = { expanded = if (open) expanded - group.key else expanded + group.key },
-                                onMore = { actingShow = group },
-                            )
-                        }
-                        if (open) {
-                            for (season in group.seasons) {
-                                item(key = "${group.key}-season-${season.number}") {
-                                    val name = seasonName(season.number, res)
-                                    SeasonRow(season, name, Modifier.animateItem()) {
-                                        removing = Removal(res.getString(R.string.title_season_of, group.title.name, name), season.entries)
-                                    }
-                                }
-                                items(season.entries, key = { it.id }) { entry ->
-                                    val label = itemLabel(entry.item, res)
-                                    val number = episodeNumber(entry.item, res)
-                                    DownloadRow(
-                                        entry,
-                                        if (number != null) stringResource(R.string.title_episodes_coded_name, number, label.title) else label.title,
-                                        null,
-                                        Modifier.animateItem().padding(start = NESTED),
-                                        thumbWidth = 112.dp,
-                                    ) { acting = entry }
-                                }
+            if (coming.isNotEmpty()) {
+                item(key = "coming") {
+                    val moving = coming.filter { it.state == DownloadState.RUNNING || it.state == DownloadState.QUEUED }
+                    ListHeading(stringResource(R.string.downloads_coming)) {
+                        if (moving.isNotEmpty()) {
+                            TextButton(onClick = { moving.forEach { downloads.pause(it.id) } }) {
+                                Text(stringResource(R.string.downloads_pause_all), color = Palette.Accent)
                             }
+                        } else {
+                            TextButton(onClick = { coming.forEach { downloads.resume(it.id) } }) {
+                                Text(stringResource(R.string.downloads_resume_all), color = Palette.Accent)
+                            }
+                        }
+                    }
+                }
+                items(coming, key = { "coming-${it.id}" }) { entry ->
+                    val (primary, secondary) = names(entry.item)
+                    ComingRow(entry, primary, secondary, Modifier.animateItem()) { acting = entry }
+                }
+            }
+            if (finished.isNotEmpty()) {
+                if (coming.isNotEmpty()) item(key = "done") { ListHeading(stringResource(R.string.downloads_done)) }
+                items(finished, key = { (_, group) -> if (group is ShowDownloads) "show-${group.title.id}" else (group as OfflineItem).id }) { (_, group) ->
+                    when (group) {
+                        is ShowDownloads -> ShowRow(group, Modifier.animateItem()) { nav.downloadsShow(group.title.id) }
+                        is OfflineItem -> {
+                            val (primary, secondary) = names(group.item)
+                            DoneRow(group, primary, secondary, Modifier.animateItem()) { acting = group }
                         }
                     }
                 }
@@ -246,33 +215,116 @@ fun DownloadsScreen() {
         }
     }
     acting?.let { entry -> DownloadActions(entry) { acting = null } }
-    actingShow?.let { group ->
-        ShowActions(group, onRemove = { removing = Removal(group.title.name, group.entries) }) { actingShow = null }
-    }
-    removing?.let { removal ->
-        val api = context.app.session.api
-        AlertDialog(
-            onDismissRequest = { removing = null },
-            containerColor = Palette.Raised,
-            title = { Text(stringResource(R.string.downloads_remove_named_confirm, removal.name)) },
-            text = {
-                Text(stringResource(R.string.downloads_remove_all_body, formatBytes(removal.entries.sumOf { it.bytes })), color = Palette.Muted)
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    removing = null
-                    removal.entries.forEach { downloads.remove(it.id, api) }
-                }) { Text(stringResource(R.string.common_remove), color = Palette.Danger) }
-            },
-            dismissButton = {
-                TextButton(onClick = { removing = null }) { Text(stringResource(R.string.common_cancel), color = Palette.Foreground) }
-            },
-        )
-    }
 }
 
-/** How far a show's seasons and episodes sit in from it. */
-private val NESTED = 12.dp
+/**
+ * A downloaded show's episodes by season, each playing with a tap, and
+ * the ones still coming with how far they are. Its menu, and each
+ * season's, removes them.
+ */
+@Composable
+fun DownloadsShowScreen(titleId: String) {
+    val context = LocalContext.current
+    val nav = LocalNavigator.current
+    val res = LocalResources.current
+    val downloads = context.app.downloads
+    val items by downloads.store.items.collectAsState()
+    val entries = items.values.filter { it.item.title?.id == titleId }
+    val title = entries.firstOrNull()?.item?.title
+    var acting by remember { mutableStateOf<OfflineItem?>(null) }
+    var showMenu by remember { mutableStateOf(false) }
+    var removing by remember { mutableStateOf<Removal?>(null) }
+    // Everything removed: back to the list.
+    LaunchedEffect(entries.isEmpty()) { if (entries.isEmpty()) nav.back() }
+    if (title == null) return
+    Column(Modifier.fillMaxSize()) {
+        TopBar(title.name) {
+            RoundIconButton(Lucide.Ellipsis, stringResource(R.string.title_more_actions), { showMenu = true }, size = 40.dp, iconSize = 18.dp, background = Color.Transparent)
+            Gap(Gutter - 8.dp)
+        }
+        LazyColumn(
+            Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(start = Gutter, end = Gutter, bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            item(key = "space") {
+                Text(
+                    listOf(
+                        res.getQuantityString(R.plurals.media_episode_count, entries.size, entries.size),
+                        formatBytes(entries.sumOf { it.bytes }),
+                    ).joinToString(" · "),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Palette.Muted,
+                )
+            }
+            for (season in seasonsOf(entries)) {
+                val name = seasonName(season.number, res)
+                item(key = "season-${season.number}") {
+                    ListHeading(name) {
+                        RoundIconButton(
+                            Lucide.Trash,
+                            stringResource(R.string.downloads_remove_named, name),
+                            { removing = Removal(res.getString(R.string.title_season_of, title.name, name), season.entries) },
+                            size = 40.dp,
+                            iconSize = 18.dp,
+                            tint = Palette.Muted,
+                            background = Color.Transparent,
+                        )
+                    }
+                }
+                items(season.entries, key = { it.id }) { entry ->
+                    val label = itemLabel(entry.item, res)
+                    val number = episodeNumber(entry.item, res)
+                    val name = if (number != null) stringResource(R.string.title_episodes_coded_name, number, label.title) else label.title
+                    if (entry.state == DownloadState.DONE) {
+                        DoneRow(entry, name, null, Modifier.animateItem()) { acting = entry }
+                    } else {
+                        ComingRow(entry, name, null, Modifier.animateItem()) { acting = entry }
+                    }
+                }
+            }
+        }
+    }
+    acting?.let { entry -> DownloadActions(entry) { acting = null } }
+    if (showMenu) {
+        ShowActions(title, entries, onRemove = { removing = Removal(title.name, entries) }) { showMenu = false }
+    }
+    removing?.let { removal -> RemoveDialog(removal) { removing = null } }
+}
+
+/** Asks before removing several files at once, saying how much space it frees. */
+@Composable
+private fun RemoveDialog(removal: Removal, onDone: () -> Unit) {
+    val context = LocalContext.current
+    val downloads = context.app.downloads
+    val api = context.app.session.api
+    AlertDialog(
+        onDismissRequest = onDone,
+        containerColor = Palette.Raised,
+        title = { Text(stringResource(R.string.downloads_remove_named_confirm, removal.name)) },
+        text = {
+            Text(stringResource(R.string.downloads_remove_all_body, formatBytes(removal.entries.sumOf { it.bytes })), color = Palette.Muted)
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                onDone()
+                removal.entries.forEach { downloads.remove(it.id, api) }
+            }) { Text(stringResource(R.string.common_remove), color = Palette.Danger) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDone) { Text(stringResource(R.string.common_cancel), color = Palette.Foreground) }
+        },
+    )
+}
+
+/** A list's name, with room for an action at its end. */
+@Composable
+private fun ListHeading(text: String, action: @Composable () -> Unit = {}) {
+    Row(Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(text, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+        action()
+    }
+}
 
 /** The show and episode, or the movie, of a file. */
 @Composable
@@ -284,9 +336,9 @@ internal fun names(item: MediaItem): Pair<String, String?> {
     else label.title to label.year
 }
 
-/** A file's saved picture, or the title's tone without one, and how far it is while it downloads. */
+/** A file's saved picture, or the title's tone without one. */
 @Composable
-private fun DownloadThumb(entry: OfflineItem?, toneKey: String, progress: Float?, width: Dp) {
+private fun DownloadThumb(entry: OfflineItem?, toneKey: String, width: Dp) {
     val downloads = LocalContext.current.app.downloads
     Box(
         Modifier.width(width).aspectRatio(16f / 9f).clip(CardShape).tone(toneKey).border(1.dp, Palette.Border, CardShape),
@@ -298,141 +350,95 @@ private fun DownloadThumb(entry: OfflineItem?, toneKey: String, progress: Float?
         } else {
             LucideIcon(Lucide.Film, null, size = 18.dp, tint = Palette.Muted.copy(alpha = 0.5f))
         }
-        if (progress != null) ProgressBar(progress, Modifier.align(Alignment.BottomCenter), 3.dp)
     }
 }
 
-/**
- * A show: its name, how many episodes are here and how much space, and
- * whether it's paused or something failed. A tap opens its seasons; the
- * menu removes or pauses them all.
- */
+/** A downloaded show: its name, how many episodes and how much space; a tap opens its episodes. */
 @Composable
-private fun ShowRow(group: DownloadGroup.Show, expanded: Boolean, modifier: Modifier, onToggle: () -> Unit, onMore: () -> Unit) {
+private fun ShowRow(show: ShowDownloads, modifier: Modifier, onClick: () -> Unit) {
     val res = LocalResources.current
-    val entries = group.entries
-    val done = entries.count { it.state == DownloadState.DONE }
-    val coming = entries.filter { it.state != DownloadState.DONE }
-    val failed = entries.count { it.state == DownloadState.FAILED }
-    val moving = coming.any { it.state == DownloadState.RUNNING || it.state == DownloadState.QUEUED }
-    // How far the files still coming are, together.
-    val progress = coming.takeIf { it.isNotEmpty() }?.let { list ->
-        val total = list.sumOf { it.totalBytes ?: 0L }
-        if (total > 0) (list.sumOf { it.bytes }.toFloat() / total).coerceIn(0f, 1f) else null
-    }
-    val turn by animateFloatAsState(if (expanded) 180f else 0f, label = "chevron")
+    val entries = show.entries
     Row(
-        modifier
-            .fillMaxWidth()
-            .clip(CardShape)
-            .clickable(onClickLabel = stringResource(if (expanded) R.string.downloads_collapse else R.string.downloads_expand), onClick = onToggle)
-            .padding(vertical = 8.dp),
+        modifier.fillMaxWidth().clip(CardShape).clickable(onClick = onClick).padding(vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        DownloadThumb(entries.firstOrNull(), group.title.name, progress, 128.dp)
+        DownloadThumb(entries.maxByOrNull { it.addedAt }, show.title.name, 128.dp)
         Column(Modifier.weight(1f)) {
-            Text(group.title.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(show.title.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(
-                listOf(
-                    // How many of them are here while some are still coming.
-                    if (coming.isEmpty()) res.getQuantityString(R.plurals.media_episode_count, entries.size, entries.size)
-                    else res.getQuantityString(R.plurals.downloads_episodes_of, entries.size, done, entries.size),
-                    formatBytes(entries.sumOf { it.bytes }),
-                ).joinToString(" · "),
+                listOf(res.getQuantityString(R.plurals.media_episode_count, entries.size, entries.size), formatBytes(entries.sumOf { it.bytes }))
+                    .joinToString(" · "),
                 style = MaterialTheme.typography.bodySmall,
                 color = Palette.Muted,
                 maxLines = 1,
             )
-            when {
-                failed > 0 -> Text(
-                    res.getQuantityString(R.plurals.downloads_failed_count, failed, failed),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Palette.Danger,
-                    maxLines = 1,
-                )
-                coming.isNotEmpty() && !moving -> Text(
-                    stringResource(R.string.downloads_state_paused),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Palette.Faint,
-                    maxLines = 1,
-                )
-            }
         }
-        LucideIcon(Lucide.ChevronDown, null, size = 18.dp, tint = Palette.Muted, modifier = Modifier.graphicsLayer { rotationZ = turn })
+        LucideIcon(Lucide.ChevronRight, null, size = 18.dp, tint = Palette.Muted)
+    }
+}
+
+/** A file on the phone: a tap plays it, the menu removes it. */
+@Composable
+private fun DoneRow(entry: OfflineItem, primary: String, secondary: String?, modifier: Modifier, onMore: () -> Unit) {
+    val nav = LocalNavigator.current
+    Row(
+        modifier.fillMaxWidth().clip(CardShape).clickable { nav.play(entry.id) }.padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        DownloadThumb(entry, entry.item.title?.name ?: primary, 128.dp)
+        Column(Modifier.weight(1f)) {
+            Text(primary, style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            if (secondary != null) {
+                Text(secondary, style = MaterialTheme.typography.bodySmall, color = Palette.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            Text(formatBytes(entry.bytes), style = MaterialTheme.typography.bodySmall, color = Palette.Faint, maxLines = 1)
+        }
         RoundIconButton(Lucide.Ellipsis, stringResource(R.string.title_more_actions), onMore, size = 40.dp, iconSize = 18.dp, background = Color.Transparent)
     }
 }
 
-/** A season of an open show: its name, its episodes and their space, and removing them all. */
+/**
+ * A file still coming: how far it is, as a bar and in words, and a button
+ * to pause it or go on. A tap opens its menu.
+ */
 @Composable
-private fun SeasonRow(season: SeasonDownloads, name: String, modifier: Modifier, onRemove: () -> Unit) {
-    val res = LocalResources.current
-    Row(
-        modifier.fillMaxWidth().padding(start = NESTED, top = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(Modifier.weight(1f)) {
-            Text(name, style = MaterialTheme.typography.titleSmall)
-            val total = season.entries.size
-            val done = season.entries.count { it.state == DownloadState.DONE }
-            Text(
-                listOf(
-                    if (done == total) res.getQuantityString(R.plurals.media_episode_count, total, total)
-                    else res.getQuantityString(R.plurals.downloads_episodes_of, total, done, total),
-                    formatBytes(season.entries.sumOf { it.bytes }),
-                ).joinToString(" · "),
-                style = MaterialTheme.typography.bodySmall,
-                color = Palette.Muted,
-            )
-        }
-        RoundIconButton(
-            Lucide.Trash,
-            stringResource(R.string.downloads_remove_named, name),
-            onRemove,
-            size = 40.dp,
-            iconSize = 18.dp,
-            tint = Palette.Muted,
-            background = Color.Transparent,
-        )
-    }
-}
-
-@Composable
-private fun DownloadRow(
-    entry: OfflineItem,
-    primary: String,
-    secondary: String?,
-    modifier: Modifier = Modifier,
-    thumbWidth: Dp = 128.dp,
-    onMore: () -> Unit,
-) {
-    val nav = LocalNavigator.current
+private fun ComingRow(entry: OfflineItem, primary: String, secondary: String?, modifier: Modifier, onMore: () -> Unit) {
     val downloads = LocalContext.current.app.downloads
-    val done = entry.state == DownloadState.DONE
+    val moving = entry.state == DownloadState.RUNNING || entry.state == DownloadState.QUEUED
     Row(
-        modifier
-            .fillMaxWidth()
-            .clip(CardShape)
-            .clickable { if (done) nav.play(entry.id) else onMore() }
-            .padding(vertical = 8.dp),
+        modifier.fillMaxWidth().clip(CardShape).clickable(onClick = onMore).padding(vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        DownloadThumb(entry, entry.item.title?.name ?: primary, entry.progress.takeIf { !done }, thumbWidth)
-        Column(Modifier.weight(1f)) {
+        DownloadThumb(entry, entry.item.title?.name ?: primary, 96.dp)
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(primary, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (secondary != null) {
                 Text(secondary, style = MaterialTheme.typography.bodySmall, color = Palette.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            Text(status(entry), style = MaterialTheme.typography.bodySmall, color = if (entry.state == DownloadState.FAILED) Palette.Danger else Palette.Faint, maxLines = 2)
+            val progress = entry.progress
+            if (progress != null) {
+                Box(Modifier.padding(vertical = 3.dp).fillMaxWidth().height(3.dp).clip(CircleShape).background(Palette.Secondary)) {
+                    Box(
+                        Modifier.fillMaxWidth(progress).fillMaxHeight().clip(CircleShape)
+                            .background(if (moving) Palette.Accent else Palette.Muted),
+                    )
+                }
+            }
+            Text(
+                status(entry),
+                style = MaterialTheme.typography.bodySmall,
+                color = if (entry.state == DownloadState.FAILED) Palette.Danger else Palette.Faint,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
-        when (entry.state) {
-            DownloadState.RUNNING, DownloadState.QUEUED ->
-                RoundIconButton(Lucide.Pause, stringResource(R.string.downloads_pause), { downloads.pause(entry.id) }, size = 40.dp, iconSize = 16.dp, background = Color.Transparent)
-            DownloadState.PAUSED, DownloadState.FAILED ->
-                RoundIconButton(Lucide.RefreshCw, stringResource(R.string.downloads_resume), { downloads.resume(entry.id) }, size = 40.dp, iconSize = 16.dp, background = Color.Transparent)
-            else -> RoundIconButton(Lucide.Ellipsis, stringResource(R.string.title_more_actions), onMore, size = 40.dp, iconSize = 18.dp, background = Color.Transparent)
+        if (moving) {
+            RoundIconButton(Lucide.Pause, stringResource(R.string.downloads_pause), { downloads.pause(entry.id) }, size = 40.dp, iconSize = 16.dp, background = Color.Transparent)
+        } else {
+            RoundIconButton(Lucide.RefreshCw, stringResource(R.string.downloads_resume), { downloads.resume(entry.id) }, size = 40.dp, iconSize = 16.dp, background = Color.Transparent)
         }
     }
 }
@@ -440,18 +446,17 @@ private fun DownloadRow(
 /** A show's menu: pause or resume what's still coming, its page, and removing every episode. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ShowActions(group: DownloadGroup.Show, onRemove: () -> Unit, onDismiss: () -> Unit) {
+private fun ShowActions(title: TitleSummary, entries: List<OfflineItem>, onRemove: () -> Unit, onDismiss: () -> Unit) {
     val nav = LocalNavigator.current
     val res = LocalResources.current
     val offline = LocalOffline.current
     val downloads = LocalContext.current.app.downloads
-    val entries = group.entries
     val active = entries.filter { it.state == DownloadState.RUNNING || it.state == DownloadState.QUEUED }
     val stopped = entries.filter { it.state == DownloadState.PAUSED || it.state == DownloadState.FAILED }
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Palette.Raised, dragHandle = null) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(vertical = 12.dp)) {
             Column(Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
-                Text(group.title.name, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(title.name, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Text(
                     listOf(
                         res.getQuantityString(R.plurals.media_episode_count, entries.size, entries.size),
@@ -477,10 +482,10 @@ private fun ShowActions(group: DownloadGroup.Show, onRemove: () -> Unit, onDismi
             if (!offline) {
                 SheetItem(Lucide.Info, stringResource(R.string.media_hero_episodes)) {
                     onDismiss()
-                    nav.title(group.title)
+                    nav.title(title)
                 }
             }
-            SheetItem(Lucide.Trash, stringResource(R.string.downloads_remove_named, group.title.name), destructive = true) {
+            SheetItem(Lucide.Trash, stringResource(R.string.downloads_remove_named, title.name), destructive = true) {
                 onDismiss()
                 onRemove()
             }
@@ -492,11 +497,8 @@ private fun ShowActions(group: DownloadGroup.Show, onRemove: () -> Unit, onDismi
 private fun status(entry: OfflineItem): String {
     val size = entry.totalBytes?.let(::formatBytes)
     return when (entry.state) {
-        DownloadState.DONE -> listOfNotNull(stringResource(R.string.downloads_state_done), formatBytes(entry.bytes)).joinToString(" · ")
-        DownloadState.RUNNING -> listOfNotNull(
-            stringResource(R.string.downloads_state_running),
-            if (size != null) stringResource(R.string.downloads_of, formatBytes(entry.bytes), size) else formatBytes(entry.bytes),
-        ).joinToString(" · ")
+        DownloadState.DONE -> formatBytes(entry.bytes)
+        DownloadState.RUNNING -> if (size != null) stringResource(R.string.downloads_of, formatBytes(entry.bytes), size) else formatBytes(entry.bytes)
         DownloadState.PAUSED -> stringResource(R.string.downloads_state_paused)
         DownloadState.FAILED -> stringResource(R.string.downloads_state_failed, entry.error.orEmpty())
         else -> {

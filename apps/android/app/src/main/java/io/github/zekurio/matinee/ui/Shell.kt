@@ -56,6 +56,7 @@ import io.github.zekurio.matinee.ui.components.LocalActions
 import io.github.zekurio.matinee.ui.components.LocalApi
 import io.github.zekurio.matinee.ui.components.LocalSnackbar
 import io.github.zekurio.matinee.ui.downloads.DownloadsScreen
+import io.github.zekurio.matinee.ui.downloads.DownloadsShowScreen
 import io.github.zekurio.matinee.ui.home.HomeScreen
 import io.github.zekurio.matinee.ui.media.FavoritesScreen
 import io.github.zekurio.matinee.ui.media.MediaScreen
@@ -156,6 +157,7 @@ private fun Pages(controller: NavHostController, session: Session, offline: Bool
             ImagesScreen(ImageTarget(route.titleId, route.season.takeIf { s -> s >= 0 }, route.episode.takeIf { e -> e >= 0 }))
         }
         screen<DownloadsRoute>(tab = DownloadsRoute) { DownloadsScreen() }
+        screen<DownloadsShowRoute> { DownloadsShowScreen(it.toRoute<DownloadsShowRoute>().titleId) }
         composable<PlayerRoute> {
             val route = it.toRoute<PlayerRoute>()
             PlayerScreen(route.itemId, route.start.takeIf { start -> start >= 0 })

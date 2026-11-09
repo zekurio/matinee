@@ -121,19 +121,29 @@ class Downloads(private val context: Context) {
         return preset == null && video != null && video.codec in COPY_VIDEO && Capabilities.decodesVideo(video)
     }
 
+    /** The codecs a download can be encoded in: the server makes them and this device plays them. */
+    fun codecChoices(options: PlaybackOptions): List<String> = Capabilities.encodeVideoChoices(options.videoCodecs).ifEmpty { listOf("h264") }
+
+    /** The codec a download starts on: the one the playback settings ask encodes for. */
+    fun defaultCodec(options: PlaybackOptions): String = Capabilities.encodeVideoCodecs(options.videoCodecs, context.app.player).first()
+
     /**
      * The version for this device: the video kept when the device decodes it
-     * and MP4 holds it, else encoded at [preset] in the codec the playback
-     * settings ask encodes for; each of [audio] kept when it plays here, else
+     * and MP4 holds it, else encoded at [preset] in [codec], the playback
+     * settings' by default; each of [audio] kept when it plays here, else
      * converted to stereo.
      */
-    fun deviceSpec(source: DownloadSource, preset: VideoPreset?, audio: List<AudioTrack> = defaultAudio(source)): DownloadSpec {
+    fun deviceSpec(
+        source: DownloadSource,
+        preset: VideoPreset?,
+        audio: List<AudioTrack> = defaultAudio(source),
+        codec: String? = null,
+    ): DownloadSpec {
         val videoSpec = if (keepsVideo(source.item, preset)) {
             DownloadVideoSpec(mode = "copy")
         } else {
             val target = preset ?: VIDEO_PRESETS.first()
-            val codec = Capabilities.encodeVideoCodecs(source.options.videoCodecs, context.app.player).first()
-            DownloadVideoSpec(mode = "encode", codec = codec, maxHeight = target.height, bitrate = target.bitrate)
+            DownloadVideoSpec(mode = "encode", codec = codec ?: defaultCodec(source.options), maxHeight = target.height, bitrate = target.bitrate)
         }
         val tracks = audio.map { track ->
             if (track.codec in COPY_AUDIO && Capabilities.decodesAudio(track.codec)) {
@@ -265,6 +275,7 @@ class Downloads(private val context: Context) {
         original: Boolean,
         preset: VideoPreset?,
         preferences: PlaybackPreferences,
+        codec: String? = null,
     ): Int = scope.async {
         val options = try {
             api.playbackOptions()
@@ -282,7 +293,7 @@ class Downloads(private val context: Context) {
                             if (original) {
                                 downloadOriginal(source)
                             } else {
-                                val spec = deviceSpec(source, preset)
+                                val spec = deviceSpec(source, preset, codec = codec)
                                 val plan = try {
                                     api.downloadPlan(item.id, spec)
                                 } catch (e: IOException) {
@@ -292,7 +303,7 @@ class Downloads(private val context: Context) {
                                 if (plan != null) {
                                     downloadForDevice(source, spec, plan)
                                 } else {
-                                    val fallback = deviceSpec(source, null)
+                                    val fallback = deviceSpec(source, null, codec = codec)
                                     downloadForDevice(source, fallback, api.downloadPlan(item.id, fallback))
                                 }
                             }
