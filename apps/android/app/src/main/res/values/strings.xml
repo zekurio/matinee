@@ -379,7 +379,7 @@
 
     <!-- Downloads -->
     <string name="downloads_title">Downloads</string>
-    <string name="downloads_action">Download…</string>
+    <string name="downloads_action">Download</string>
     <string name="downloads_sheet_title">Download</string>
     <string name="downloads_choice_device">Made for this device</string>
     <string name="downloads_choice_preset">%1$dp, %2$s Mbps</string>

@@ -359,7 +359,7 @@
     <string name="player_up_next_cancel">Abbrechen</string>
 
     <string name="downloads_title">Downloads</string>
-    <string name="downloads_action">Herunterladen…</string>
+    <string name="downloads_action">Herunterladen</string>
     <string name="downloads_sheet_title">Herunterladen</string>
     <string name="downloads_choice_device">Für dieses Gerät</string>
     <string name="downloads_choice_preset">%1$dp, %2$s Mbit/s</string>
