@@ -522,7 +522,7 @@ private fun ImageEditor(title: Title, target: ImageTarget) {
                         Switch(
                             checked = allLanguages,
                             onCheckedChange = { allLanguages = it },
-                            colors = SwitchDefaults.colors(checkedTrackColor = Palette.Accent, checkedThumbColor = Color.Black),
+                            colors = SwitchDefaults.colors(checkedTrackColor = Palette.Accent, checkedThumbColor = Palette.AccentForeground),
                         )
                     }
                 }
@@ -696,7 +696,7 @@ private fun Choice(
                     Modifier.align(Alignment.TopEnd).padding(6.dp).size(20.dp).clip(CircleShape).background(Palette.Accent),
                     contentAlignment = Alignment.Center,
                 ) {
-                    LucideIcon(Lucide.Check, null, size = 14.dp, tint = Color.Black)
+                    LucideIcon(Lucide.Check, null, size = 14.dp, tint = Palette.AccentForeground)
                 }
             }
             if (pending) {

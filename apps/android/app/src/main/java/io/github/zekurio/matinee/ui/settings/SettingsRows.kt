@@ -122,7 +122,7 @@ fun SwitchRow(title: String, checked: Boolean, @DrawableRes icon: Int? = null, o
         Switch(
             checked = checked,
             onCheckedChange = onChange,
-            colors = SwitchDefaults.colors(checkedTrackColor = Palette.Accent, checkedThumbColor = Color.Black),
+            colors = SwitchDefaults.colors(checkedTrackColor = Palette.Accent, checkedThumbColor = Palette.AccentForeground),
         )
     }
 }

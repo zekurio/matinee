@@ -2,7 +2,9 @@ package io.github.zekurio.matinee.ui.theme
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
@@ -15,34 +17,44 @@ import androidx.compose.ui.unit.sp
 import io.github.zekurio.matinee.R
 
 /*
- * The web app's Matinee dark theme, from the tokens in
- * packages/ui/src/styles/globals.css: a neutral ramp from the background to
- * the text, and the blue accent.
+ * The colors on screen, by the names the app's screens use, from the theme
+ * the person picked (see ThemeStore): the web's roles, as its globals.css
+ * turns them into tokens. Each read goes through snapshot state, so a
+ * screen follows a change of theme without being told.
  */
 object Palette {
-    val Background = Color(0xFF0E0E10) // --neutral-0
-    val Card = Color(0xFF161618) // --neutral-50
-    val Raised = Color(0xFF1A1A1D) // --neutral-100, popovers and sheets
-    val Secondary = Color(0xFF232326) // --neutral-150
-    val Border = Color(0xFF27272A) // --neutral-200
-    val Input = Color(0xFF3F3F46) // --neutral-300
-    val Muted = Color(0xFFA1A1AA) // --neutral-600, muted text
-    val Faint = Color(0xFF8E8E96) // --foreground-faint
-    val Foreground = Color(0xFFFAFAFA) // --neutral-900
-    val Sunken = Color(0xFF09090A) // --surface-sunken, text fields
-    val Accent = Color(0xFF6D8CF5)
-    val AccentDim = Color(0xFF333F66)
-    val AccentSoft = Color(0x386D8CF5)
-    val Danger = Color(0xFFFF6367)
+    private val colors get() = Theming.colors
+
+    val Background get() = colors.background // --neutral-0
+    val Card get() = colors.surface // --neutral-50
+    val Raised get() = colors.surfaceRaised // --neutral-100, popovers and sheets
+    val Secondary get() = colors.input // --neutral-150
+    val Border get() = colors.border // --neutral-200
+    val Input get() = colors.borderStrong // --neutral-300
+    val Muted get() = colors.textDim // --neutral-600, muted text
+    val Faint get() = colors.textFaint // --foreground-faint
+    val Foreground get() = colors.text // --neutral-900
+    val Sunken get() = colors.surfaceSunken // --surface-sunken, text fields
+    val Accent get() = colors.accent
+    val AccentForeground get() = colors.accentForeground
+    val AccentDim get() = colors.accentDim
+
+    /** The accent's tint behind it, as faint as it must be for the accent to read on it (--accent-soft). */
+    val AccentSoft: Color
+        get() = colors.accent.copy(
+            alpha = contrastSafeTintAlpha(colors.accent, colors.background, softAlpha(colors.isDark)).toFloat(),
+        )
+    val Danger get() = colors.danger
     val Star = Color(0xFFFCD34D) // amber-300, the rating star
 
-    /** The neutral gradients that stand in for missing art, as `tone()` picks them. */
-    val Tones = listOf(
-        Color(0xFF26262A) to Color(0xFF1A1A1D),
-        Color(0xFF2B2B2F) to Color(0xFF1E1E21),
-        Color(0xFF303035) to Color(0xFF1C1C1F),
-        Color(0xFF2D2D32) to Color(0xFF202023),
-    )
+    /** Whether the theme on screen is dark, for what sits on it, like the system bars. */
+    val isDark get() = colors.isDark
+
+    /** The gradients that stand in for missing art, as `tone()` picks them: the surfaces, a step apart. */
+    val Tones: List<Pair<Color, Color>>
+        get() = listOf(0.07, 0.09, 0.11, 0.10).map { lift ->
+            mix(colors.surfaceRaised, colors.text, lift) to mix(colors.surfaceRaised, colors.text, lift / 3)
+        }
 }
 
 private fun redHat(weight: Int) = Font(
@@ -53,35 +65,44 @@ private fun redHat(weight: Int) = Font(
 
 val RedHatText = FontFamily(redHat(300), redHat(400), redHat(500), redHat(600), redHat(700))
 
-private val colors = darkColorScheme(
-    primary = Palette.Accent,
-    onPrimary = Color.Black,
-    primaryContainer = Palette.AccentDim,
-    onPrimaryContainer = Palette.Foreground,
-    secondary = Palette.Secondary,
-    onSecondary = Palette.Foreground,
-    secondaryContainer = Palette.Secondary,
-    onSecondaryContainer = Palette.Foreground,
-    tertiary = Palette.Accent,
-    background = Palette.Background,
-    onBackground = Palette.Foreground,
-    surface = Palette.Background,
-    onSurface = Palette.Foreground,
-    surfaceVariant = Palette.Secondary,
-    onSurfaceVariant = Palette.Muted,
-    surfaceContainerLowest = Palette.Sunken,
-    surfaceContainerLow = Palette.Card,
-    surfaceContainer = Palette.Raised,
-    surfaceContainerHigh = Palette.Raised,
-    surfaceContainerHighest = Palette.Secondary,
-    inverseSurface = Palette.Foreground,
-    inverseOnSurface = Palette.Background,
-    outline = Palette.Input,
-    outlineVariant = Palette.Border,
-    error = Palette.Danger,
-    onError = Color.Black,
-    scrim = Color.Black,
-)
+/** Material's roles from the theme, for the components that still read them. */
+private fun colorScheme(): ColorScheme {
+    val colors = Theming.colors
+    val base = if (colors.isDark) darkColorScheme() else lightColorScheme()
+    return base.copy(
+        primary = colors.accent,
+        onPrimary = colors.accentForeground,
+        primaryContainer = colors.accentDim,
+        onPrimaryContainer = colors.text,
+        secondary = colors.input,
+        onSecondary = colors.text,
+        secondaryContainer = colors.input,
+        onSecondaryContainer = colors.text,
+        tertiary = colors.accent,
+        onTertiary = colors.accentForeground,
+        background = colors.background,
+        onBackground = colors.text,
+        surface = colors.background,
+        onSurface = colors.text,
+        surfaceVariant = colors.input,
+        onSurfaceVariant = colors.textDim,
+        surfaceContainerLowest = colors.surfaceSunken,
+        surfaceContainerLow = colors.surface,
+        surfaceContainer = colors.surfaceRaised,
+        surfaceContainerHigh = colors.surfaceRaised,
+        surfaceContainerHighest = colors.input,
+        surfaceBright = colors.surfaceRaised,
+        surfaceDim = colors.background,
+        inverseSurface = colors.text,
+        inverseOnSurface = colors.background,
+        inversePrimary = colors.accentDim,
+        outline = colors.borderStrong,
+        outlineVariant = colors.border,
+        error = colors.danger,
+        onError = if (colors.isDark) Color.Black else Color.White,
+        scrim = Color.Black,
+    )
+}
 
 private fun style(size: Int, weight: Int, line: Int, tracking: Double = 0.0) = TextStyle(
     fontFamily = RedHatText,
@@ -111,5 +132,5 @@ private val typography = Typography(
 
 @Composable
 fun MatineeTheme(content: @Composable () -> Unit) {
-    MaterialTheme(colorScheme = colors, typography = typography, content = content)
+    MaterialTheme(colorScheme = colorScheme(), typography = typography, content = content)
 }

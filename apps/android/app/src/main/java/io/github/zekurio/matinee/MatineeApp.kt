@@ -15,6 +15,7 @@ import io.github.zekurio.matinee.auth.Session
 import io.github.zekurio.matinee.downloads.Downloads
 import io.github.zekurio.matinee.ui.ViewerState
 import io.github.zekurio.matinee.ui.player.PlayerPrefs
+import io.github.zekurio.matinee.ui.theme.ThemeStore
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 
@@ -30,17 +31,32 @@ class MatineeApp : Application(), SingletonImageLoader.Factory {
     /** How this device plays: quality, codecs, decoders, subtitles. */
     val player by lazy { PlayerPrefs(this) }
 
+    /** The color theme, which follows the account and the server's accent. */
+    val theme by lazy { ThemeStore(this) }
+
     private val scope = MainScope()
 
     override fun onCreate() {
         super.onCreate()
         session = Session(this)
+        theme.api = { session.api }
         downloads.restore()
         // Once signed in with the server answering, send where the person got
         // to in downloads they watched offline.
         scope.launch {
             session.state.collect { state ->
                 if (state is AuthState.SignedIn) session.api?.let { downloads.pending.flush(it) }
+            }
+        }
+        // The account's theme and the server's accent, whenever a session or
+        // the sign-in screen loads them.
+        scope.launch {
+            session.state.collect { state ->
+                when (state) {
+                    is AuthState.SignedIn -> session.api?.let { theme.pull(it, state.user) }
+                    is AuthState.SignedOut -> theme.setAccents(state.config.themeAccents)
+                    else -> Unit
+                }
             }
         }
     }

@@ -119,6 +119,7 @@ import java.util.Locale
  */
 enum class SettingsPage(val key: String, @param:DrawableRes val icon: Int, @param:StringRes val title: Int, val admin: Boolean = false) {
     Account("account", Lucide.UserRound, R.string.settings_page_account),
+    Appearance("appearance", Lucide.Palette, R.string.settings_page_appearance),
     Playback("playback", Lucide.TvPlay, R.string.settings_page_playback),
     Subtitles("subtitles", Lucide.Captions, R.string.settings_subtitles_title),
     Downloads("downloads", Lucide.Download, R.string.downloads_title),
@@ -188,6 +189,8 @@ fun SettingsScreen(session: Session) {
                     PageRow(SettingsPage.Account)
                     RowDivider()
                 }
+                PageRow(SettingsPage.Appearance)
+                RowDivider()
                 PageRow(SettingsPage.Playback)
                 RowDivider()
                 PageRow(SettingsPage.Subtitles)
@@ -242,6 +245,7 @@ fun SettingsPageScreen(session: Session, key: String) {
     val page = SettingsPage.of(key) ?: return SettingsScreen(session)
     when (page) {
         SettingsPage.Account -> AccountPage()
+        SettingsPage.Appearance -> AppearancePage()
         SettingsPage.Playback -> PlaybackPage(session)
         SettingsPage.Subtitles -> SettingsScaffold(stringResource(page.title)) {
             item(key = "subtitles") { SubtitlesSection(LocalContext.current.app.player) }

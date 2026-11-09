@@ -1,6 +1,7 @@
 package io.github.zekurio.matinee.api.admin
 
 import io.github.zekurio.matinee.api.MatineeApi
+import io.github.zekurio.matinee.api.ThemeAccents
 import io.github.zekurio.matinee.api.MatineeJson
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
@@ -29,10 +30,6 @@ private suspend fun <T> MatineeApi.write(method: String, path: String, payload: 
 private inline fun <reified T> encode(value: T): JsonElement = ExplicitJson.encodeToJsonElement(kotlinx.serialization.serializer<T>(), value)
 
 // Server appearance
-
-/** The Matinee theme's accent per appearance, `#rrggbb`; null keeps the theme's own. */
-@Serializable
-data class ThemeAccents(val light: String? = null, val dark: String? = null)
 
 suspend fun MatineeApi.themeAccents(): ThemeAccents = get("admin/appearance")
 

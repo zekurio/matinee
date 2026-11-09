@@ -75,7 +75,7 @@ fun MatineeButton(
 ) {
     val interaction = remember { MutableInteractionSource() }
     val (background, foreground) = when (look) {
-        ButtonLook.Primary -> Palette.Accent to Color.Black
+        ButtonLook.Primary -> Palette.Accent to Palette.AccentForeground
         ButtonLook.Secondary -> Palette.Secondary to Palette.Foreground
         ButtonLook.Frosted -> Palette.Foreground.copy(alpha = 0.15f) to Palette.Foreground
         ButtonLook.Outline -> Color.Transparent to Palette.Foreground
@@ -170,7 +170,7 @@ fun WatchedBadge(modifier: Modifier = Modifier, size: Dp = 20.dp) {
         modifier.size(size).clip(CircleShape).background(Palette.Accent),
         contentAlignment = Alignment.Center,
     ) {
-        LucideIcon(Lucide.Check, stringResource(R.string.media_watched), size = size * 0.6f, tint = Color.Black)
+        LucideIcon(Lucide.Check, stringResource(R.string.media_watched), size = size * 0.6f, tint = Palette.AccentForeground)
     }
 }
 

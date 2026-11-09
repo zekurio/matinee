@@ -13,7 +13,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.ui.theme.Palette
 
@@ -25,7 +24,7 @@ fun SearchBarFrame(modifier: Modifier = Modifier, onClick: (() -> Unit)? = null,
             .fillMaxWidth()
             .height(48.dp)
             .clip(CircleShape)
-            .background(Color.Black.copy(alpha = 0.3f))
+            .background(Palette.Foreground.copy(alpha = 0.06f))
             .border(1.dp, Palette.Foreground.copy(alpha = 0.12f), CircleShape)
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
             .padding(horizontal = 4.dp),

@@ -137,6 +137,7 @@ import io.github.zekurio.matinee.ui.rememberLoader
 import io.github.zekurio.matinee.ui.settings.languageName
 import io.github.zekurio.matinee.ui.settings.qualityLabel
 import io.github.zekurio.matinee.ui.theme.Palette
+import io.github.zekurio.matinee.ui.theme.Theming
 import java.io.File
 import java.io.IOException
 import java.text.DateFormat
@@ -206,7 +207,10 @@ private fun FullScreen() {
         insets.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         insets.hide(WindowInsetsCompat.Type.systemBars())
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        // Video plays on black, whichever theme the app shows.
+        Theming.forceDark = true
         onDispose {
+            Theming.forceDark = false
             activity.requestedOrientation = orientation
             insets.show(WindowInsetsCompat.Type.systemBars())
             window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)

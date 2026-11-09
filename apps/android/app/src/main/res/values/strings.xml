@@ -411,6 +411,7 @@
     <string name="settings_subtitles_edge_outline">Outline</string>
     <string name="settings_subtitles_edge_none">None</string>
     <string name="settings_page_account">Account</string>
+    <string name="settings_page_appearance">Appearance</string>
     <string name="settings_page_playback">Playback</string>
     <string name="settings_admin">Administration</string>
     <string name="settings_admin_libraries">Libraries</string>

@@ -148,6 +148,7 @@ object Lucide {
     val Monitor = R.drawable.lucide_monitor
     val Pause = R.drawable.lucide_pause_filled
     val Paintbrush = R.drawable.lucide_paintbrush
+    val Palette = R.drawable.lucide_palette
     val PictureInPicture = R.drawable.lucide_picture_in_picture_2
     val Play = R.drawable.lucide_play_filled
     val PlayOutline = R.drawable.lucide_play
@@ -162,6 +163,8 @@ object Lucide {
     val Shield = R.drawable.lucide_shield
     val SkipForward = R.drawable.lucide_skip_forward
     val Smartphone = R.drawable.lucide_smartphone
+    val Sun = R.drawable.lucide_sun
+    val Moon = R.drawable.lucide_moon
     val Star = R.drawable.lucide_star_filled
     val Trash = R.drawable.lucide_trash_2
     val Tv = R.drawable.lucide_tv

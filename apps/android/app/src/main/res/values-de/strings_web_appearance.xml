@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Made by scripts/web_strings.py from apps/web/src/i18n/locales/de/appearance.ts. Don't edit. -->
+<resources>
+    <string name="web_appearance_language">Sprache</string>
+    <string name="web_appearance_language_title">Sprache der Oberfläche</string>
+    <string name="web_appearance_language_auto">Wie dieser Browser (%1$s)</string>
+    <string name="web_appearance_colorScheme">Farbschema</string>
+    <string name="web_appearance_colorScheme_system">System</string>
+    <string name="web_appearance_colorScheme_light">Hell</string>
+    <string name="web_appearance_colorScheme_dark">Dunkel</string>
+    <string name="web_appearance_sync_title">Geräteübergreifend synchronisieren</string>
+    <string name="web_appearance_themes">Designs</string>
+    <string name="web_appearance_themes_import">Importieren</string>
+    <string name="web_appearance_themes_new">Neues Design</string>
+</resources>

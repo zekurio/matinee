@@ -378,6 +378,8 @@ data class User(
     val avatarId: String? = null,
     val playback: PlaybackPreferences? = null,
     val sharing: ProfileSharing = ProfileSharing(),
+    /** The theme choice the account syncs; null until a device saved one. */
+    val theme: SyncedTheme? = null,
 ) {
     val name get() = displayName?.takeIf { it.isNotBlank() } ?: username
     val isAdmin get() = role == "admin"
@@ -486,7 +488,30 @@ data class AuthConfig(
     val passkeys: Boolean = true,
     val passkeySignUp: Boolean = false,
     val oidc: OidcConfig? = null,
+    /** Accents an admin picked for the Matinee theme on this server. */
+    val themeAccents: ThemeAccents = ThemeAccents(),
 )
+
+/** An accent per appearance for the Matinee theme, as `#rrggbb`; null keeps its own. */
+@Serializable
+data class ThemeAccents(val light: String? = null, val dark: String? = null)
+
+/** The theme choice that follows a user across devices: the mode, and the theme each appearance shows. */
+@Serializable
+data class SyncedTheme(val mode: String = "system", val light: String = "matinee-light", val dark: String = "matinee-dark")
+
+/** One palette of an account's theme: `#rrggbb` per role, the ones it leaves out derived. */
+@Serializable
+data class UserThemeVariant(
+    val id: String,
+    val name: String? = null,
+    val appearance: String,
+    val colors: Map<String, String> = emptyMap(),
+)
+
+/** A theme the account made, on the web. */
+@Serializable
+data class UserTheme(val id: String, val name: String, val variants: List<UserThemeVariant>, val guided: Boolean = false)
 
 @Serializable
 data class AppSession(val token: String, val user: User)

@@ -227,7 +227,7 @@ fun ActionRow(
         ) {
             LucideIcon(Lucide.Play, null, size = 16.dp)
             Text(stringResource(if (resume) R.string.title_resume else R.string.title_play))
-            if (playDetail != null) Text(playDetail, color = Color.Black.copy(alpha = 0.6f))
+            if (playDetail != null) Text(playDetail, color = Palette.AccentForeground.copy(alpha = 0.6f))
         }
         RoundIconButton(
             Lucide.Check,
@@ -365,7 +365,7 @@ private fun SeasonCard(title: Title, season: Season, modifier: Modifier, onClick
                 Text(
                     left.toString(),
                     style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-                    color = Color.Black,
+                    color = Palette.AccentForeground,
                     modifier = Modifier
                         .align(Alignment.TopEnd)
                         .padding(6.dp)

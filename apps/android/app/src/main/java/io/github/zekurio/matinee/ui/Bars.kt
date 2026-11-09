@@ -340,8 +340,8 @@ fun ItemTopBar(modifier: Modifier = Modifier, parent: String? = null, onParent: 
     }
 }
 
-/** Dark enough to read over any art, as Findroid's black at 70 %. */
-private val FLOATING = Color.Black.copy(alpha = 0.55f)
+/** The page's color veiling the art behind a floating button, as the web's bars have it. */
+private val FLOATING get() = Palette.Background.copy(alpha = 0.6f)
 
 /**
  * Keeps the status bar's icons readable once a page scrolls under it. It
