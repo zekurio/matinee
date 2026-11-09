@@ -392,7 +392,7 @@ const StartTime = t.object({
     .catch(undefined),
 })
 
-/** Where ffmpeg says a subtitle file starts: its first picture. */
+/** Where ffmpeg says a subtitle file starts: its first cue or picture. */
 async function startSeconds(path: string): Promise<number> {
   const stdout = await run(
     env.MATINEE_FFPROBE_PATH,
@@ -449,5 +449,72 @@ export async function burnInSource(
     size: info.size,
     modified: info.mtimeMs,
     startSeconds: start,
+  }
+}
+
+/**
+ * A subtitle track to put in a Matroska file as it is: a stream of the
+ * file, or a subtitle file read as an input of its own.
+ */
+export type MuxSource =
+  | { kind: "stream"; index: number; codec: string }
+  | {
+      kind: "file"
+      path: string
+      /** The time of its first cue or picture, which ffmpeg reads as its start. */
+      startSeconds: number
+      /** For ffmpeg's `-sub_charenc`, when a text file isn't UTF-8. */
+      charset: string | null
+    }
+
+/** Whether text bytes need a character set other than UTF-8 to read. */
+function legacyText(bytes: Uint8Array): boolean {
+  const bom =
+    (bytes[0] === 0xff && bytes[1] === 0xfe) ||
+    (bytes[0] === 0xfe && bytes[1] === 0xff)
+  if (bom) return false
+  try {
+    new TextDecoder("utf-8", { fatal: true }).decode(bytes)
+    return false
+  } catch {
+    return true
+  }
+}
+
+/**
+ * A track for a Matroska download. Null when the item has no such track,
+ * nothing can show it, or its file can't be read.
+ */
+export async function muxSource(
+  item: MediaItemRow,
+  trackId: string,
+): Promise<MuxSource | null> {
+  const match = STREAM_ID.exec(trackId)
+  if (match) {
+    const found = await embeddedStream(item, Number(match[1]))
+    if (!found || streamDelivery(found.stream) === null) return null
+    return {
+      kind: "stream",
+      index: found.stream.index,
+      codec: found.stream.codec,
+    }
+  }
+  if (!UUID.test(trackId)) return null
+  const row = await sidecarRow(item, trackId)
+  if (!row) return null
+  const info = await stat(row.path).catch(() => null)
+  if (!info?.isFile()) return null
+  const text = sidecarDelivery(row.format) === "webvtt"
+  try {
+    const bytes = text ? await readFile(row.path) : null
+    return {
+      kind: "file",
+      path: row.path,
+      startSeconds: await startSeconds(row.path),
+      charset: bytes && legacyText(bytes) ? "WINDOWS-1252" : null,
+    }
+  } catch (cause) {
+    log.warn(`Couldn't read ${row.path}`, cause)
+    return null
   }
 }

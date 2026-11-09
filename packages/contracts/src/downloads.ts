@@ -5,16 +5,24 @@ import { TranscodeVideoCodec } from "./transcoding"
 
 /*
  * Downloads, for watching offline. The file as it is comes from
- * `mediaStreamPath()`, with byte ranges. Anything else is a version of the
- * file made for the device: some of its audio tracks, each kept or
- * converted, the video kept or encoded, and text subtitles inside it.
- * `downloads.start` sets one up,
- * and the server makes it while the client fetches it, as fragmented MP4
- * in segments (see `downloadSegmentPath()`). It keeps no finished copy:
- * segments go once the client has moved past them.
+ * `mediaStreamPath()`, with byte ranges. Anything else is a custom
+ * version of the file: some of its audio tracks, each kept or converted,
+ * the video kept or encoded, and subtitles inside it. `downloads.start`
+ * sets one up, and the server makes it while the client fetches it. It
+ * keeps no finished copy.
+ *
+ * An MP4 download comes as fragmented MP4 in segments, which a client can
+ * resume (see `downloadSegmentPath()`), or as one stream. A Matroska one
+ * only comes as one stream from `downloadFilePath()`, which can't resume,
+ * but it holds anything the file does as it is: any codec, picture
+ * subtitles, ASS with its fonts, and chapters.
  */
 
-/** Video codecs a download can keep as they are: MP4 holds them. */
+export const DOWNLOAD_CONTAINERS = ["mkv", "mp4"] as const
+export const DownloadContainer = t.enum(DOWNLOAD_CONTAINERS)
+export type DownloadContainer = t.infer<typeof DownloadContainer>
+
+/** Video codecs an MP4 download can keep as they are. Matroska keeps any. */
 export const DOWNLOAD_COPY_VIDEO_CODECS = [
   "h264",
   "hevc",
@@ -22,7 +30,7 @@ export const DOWNLOAD_COPY_VIDEO_CODECS = [
   "vp9",
 ] as const
 
-/** Audio codecs a download can keep as they are: MP4 holds them. */
+/** Audio codecs an MP4 download can keep as they are. Matroska keeps any. */
 export const DOWNLOAD_COPY_AUDIO_CODECS = [
   "aac",
   "mp3",
@@ -33,12 +41,12 @@ export const DOWNLOAD_COPY_AUDIO_CODECS = [
   "alac",
 ] as const
 
-/** Whether a download can keep a video stream in `codec` as it is. */
+/** Whether an MP4 download can keep a video stream in `codec` as it is. */
 export function canCopyVideo(codec: string): boolean {
   return DOWNLOAD_COPY_VIDEO_CODECS.some((entry) => entry === codec)
 }
 
-/** Whether a download can keep an audio track in `codec` as it is. */
+/** Whether an MP4 download can keep an audio track in `codec` as it is. */
 export function canCopyAudio(codec: string): boolean {
   return DOWNLOAD_COPY_AUDIO_CODECS.some((entry) => entry === codec)
 }
@@ -81,7 +89,7 @@ export const DOWNLOAD_VIDEO_PRESETS: readonly DownloadVideoPreset[] = [
 const StreamIndex = t.number().int().nonnegative()
 
 /**
- * The video of a download: kept as it is, which needs a codec from
+ * The video of a download: kept as it is, which in MP4 needs a codec from
  * `DOWNLOAD_COPY_VIDEO_CODECS`, or encoded to fit `maxHeight` (never
  * scaled up) at about `bitrate`, which a lower source rate caps.
  * `playback.options` lists the codecs this server encodes. `keepHdr`
@@ -102,7 +110,7 @@ export type DownloadVideo = t.infer<typeof DownloadVideo>
 
 /**
  * One audio track of a download, by its index from `media.audio`: kept
- * as it is, which needs a codec from `DOWNLOAD_COPY_AUDIO_CODECS`, or
+ * as it is, which in MP4 needs a codec from `DOWNLOAD_COPY_AUDIO_CODECS`, or
  * converted. A conversion never adds channels: a stereo track asked for
  * as 5.1 stays stereo, and more channels than `channels` are downmixed
  * the way the server's transcoding settings say. Without `bitrate`, the
@@ -125,14 +133,16 @@ const SubtitleId = t.string().min(1).max(64)
 
 /**
  * What a download holds. Audio tracks go in the order listed, and the
- * first is the default. `subtitles` puts text subtitles, by their ids
- * from `media.subtitles`, in the file as MP4 timed text (`tx3g`), in the
- * order listed, none of them on by default: a track whose `delivery` is
- * `webvtt`. `burnIn` draws a picture subtitle into the video instead, for
+ * first is the default. `subtitles` puts subtitles in the file by their
+ * ids from `media.subtitles`, in the order listed, none of them on by
+ * default but forced ones marked so. Matroska takes any track with a
+ * `delivery`, as it is; MP4 only text, a `webvtt` track, as timed text
+ * (`tx3g`). `burnIn` draws a picture subtitle into the video instead, for
  * a track whose `delivery` is `pgs` or `burn-in`; it needs the video
  * encoded.
  */
 export const DownloadSpec = t.object({
+  container: DownloadContainer.$default("mp4"),
   video: DownloadVideo,
   audio: t.array(DownloadAudio).max(16),
   subtitles: t.array(SubtitleId).max(32).$default([]),
@@ -152,6 +162,7 @@ export type DownloadTrackMode = t.infer<typeof DownloadTrackMode>
 
 /** What a download will hold, as the server worked it out. */
 export const DownloadPlan = t.object({
+  container: DownloadContainer.$default("mp4"),
   durationSeconds: t.number(),
   /** A guess from the bit rates, for showing before it starts. */
   estimatedBytes: t.number().int(),
@@ -212,7 +223,7 @@ export const Download = t.object({
   id: t.uuid(),
   /** The media item. */
   itemId: t.uuid(),
-  /** Suggested name for the saved file, ending in `.mp4`. */
+  /** Suggested name for the saved file, ending in `.mkv` or `.mp4`. */
   fileName: t.string(),
   plan: DownloadPlan,
   createdAt: t.date(),

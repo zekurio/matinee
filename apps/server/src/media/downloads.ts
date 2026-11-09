@@ -1308,6 +1308,99 @@ export function downloadStream(
   })
 }
 
+/**
+ * A Matroska download as one stream: a single ffmpeg run from the file to
+ * the client, once the queue gives it a slot. ffmpeg waits while the
+ * client is behind, and stops when it goes. It errors, rather than ends,
+ * when the run fails, so a client never takes a cut-off file for a whole
+ * one. Nothing of it stays on disk, so it can't resume.
+ */
+export function matroskaStream(
+  active: Active,
+  signal: AbortSignal,
+): ReadableStream<Uint8Array> {
+  let child: ChildProcess | null = null
+  let released = false
+  const release = () => {
+    if (released) return
+    released = true
+    active.users--
+    active.seenAt = Date.now()
+    child?.kill("SIGKILL")
+  }
+  active.users++
+  signal.addEventListener("abort", release, { once: true })
+
+  /** One ffmpeg run, writing into `controller` until it ends. */
+  const launch = async (
+    controller: ReadableStreamDefaultController<Uint8Array>,
+    queueSignal: AbortSignal,
+  ): Promise<void> => {
+    const build = await check(active)
+    const args = build?.matroska ? await build.matroska() : null
+    if (!args) throw new Error("The download changed.")
+    if (released || queueSignal.aborted) return
+    const run = spawn(env.MATINEE_FFMPEG_PATH, args, {
+      stdio: ["ignore", "pipe", "pipe"],
+    })
+    child = run
+    const untrack = trackStream(null)
+    const stop = () => run.kill("SIGKILL")
+    queueSignal.addEventListener("abort", stop, { once: true })
+    const stderr: string[] = []
+    run.stderr.setEncoding("utf8")
+    run.stderr.on("data", (chunk: string) => {
+      stderr.push(...chunk.split("\n").filter((line) => line.trim()))
+      stderr.splice(0, Math.max(0, stderr.length - STDERR_LINES))
+    })
+    run.stdout.on("data", (chunk: Buffer) => {
+      if (released) return
+      controller.enqueue(new Uint8Array(chunk))
+      // Until the client reads; `pull` carries on.
+      if ((controller.desiredSize ?? 1) <= 0) run.stdout.pause()
+    })
+    await new Promise<void>((resolve, reject) => {
+      run.once("error", reject)
+      run.once("close", (code) => {
+        untrack()
+        queueSignal.removeEventListener("abort", stop)
+        if (released) resolve()
+        else if (code === 0) {
+          release()
+          controller.close()
+          resolve()
+        } else {
+          reject(new Error(`ffmpeg stopped (exit ${code}): ${stderr.join("\n")}`))
+        }
+      })
+    })
+  }
+
+  return new ReadableStream<Uint8Array>(
+    {
+      start(controller) {
+        downloadRuns
+          .run({
+            downloadId: active.record.id,
+            label: active.label,
+            launch: (queueSignal) => launch(controller, queueSignal),
+          })
+          .catch((cause: unknown) => {
+            if (released) return
+            release()
+            controller.error(cause)
+          })
+      },
+      pull() {
+        child?.stdout?.resume()
+      },
+      cancel: release,
+    },
+    // About a megabyte of ffmpeg's 64 KiB reads.
+    new CountQueuingStrategy({ highWaterMark: 16 }),
+  )
+}
+
 /** Set up a download of `item` for `userId`; see `downloads.start`. */
 export async function startDownload(
   item: MediaItemRow,
@@ -1324,7 +1417,7 @@ export async function startDownload(
     itemId: item.id,
     key: build.key,
     spec,
-    fileName: downloadFileName(item),
+    fileName: downloadFileName(item, spec.container),
     plan: build.plan,
     createdAt: new Date(),
   }

@@ -7,6 +7,7 @@ import {
   audioFormatName,
   canCopyAudio,
   canCopyVideo,
+  type DownloadContainer,
   type DownloadPlan,
   type DownloadSpec,
   type HdrFormat,
@@ -29,14 +30,20 @@ import {
 import { softwareEncoderName } from "../transcode/video/encoders"
 import type { VideoPipeline } from "../transcode/video/types"
 import type { AudioResume, ResumeTrack } from "./download-resume"
+import { titleOf } from "./download-text"
 import {
   segmentOptionsFlag,
   subtitleInputArgs,
   subtitleStream,
 } from "./hls-encode"
-import { languageTag, trackLabel } from "./language"
+import { iso639_2, languageTag, trackLabel } from "./language"
 import { currentProbe } from "./probe"
-import { type BurnInSource, burnInSource, listSubtitles } from "./subtitles"
+import {
+  type BurnInSource,
+  burnInSource,
+  listSubtitles,
+  muxSource,
+} from "./subtitles"
 
 /*
  * What a download of a file is: the plan a dialog shows, and the ffmpeg
@@ -77,8 +84,13 @@ export type DownloadBuild = {
   pauseKeys: boolean
   /** The audio tracks, for picking them up again after a break. */
   audio: ResumeTrack[]
-  /** The text subtitles that go in the file, in order; see `download-text.ts`. */
+  /** The text subtitles that go in an MP4, in order; see `download-text.ts`. */
   text: SubtitleTrack[]
+  /**
+   * For Matroska, the ffmpeg arguments of its one run, which writes the
+   * whole file to stdout. Null for MP4.
+   */
+  matroska: (() => Promise<string[]>) | null
   /**
    * The ffmpeg arguments for a run that writes segment `segment` on into
    * `dir`, starting `seconds` into the file. For an encode, `seconds` is
@@ -219,6 +231,7 @@ export async function buildDownload(
     )
   }
   const { settings, capabilities } = await currentTranscoding()
+  const matroska = spec.container === "mkv"
   const fileBitrate =
     probe.format.bitRate ?? Math.round((info.size * 8) / duration)
 
@@ -236,7 +249,7 @@ export async function buildDownload(
       throw new DownloadSpecError("Pick each audio track once.")
     }
     seen.add(choice.index)
-    if (choice.mode === "copy" && !canCopyAudio(stream.codec)) {
+    if (choice.mode === "copy" && !matroska && !canCopyAudio(stream.codec)) {
       throw new DownloadSpecError(
         `${audioFormatName(stream.codec, stream.profile)} audio can't go in an MP4 file as it is. Convert that track instead.`,
       )
@@ -284,15 +297,20 @@ export async function buildDownload(
 
   const listed =
     spec.subtitles.length > 0 ? (await listSubtitles(item)).tracks : []
-  const text = spec.subtitles.map((id) => {
+  // Matroska takes any track something can show; MP4 only text.
+  const subtitles = spec.subtitles.map((id) => {
     const track = listed.find((entry) => entry.id === id)
-    if (!track || track.delivery !== "webvtt") {
+    if (!track || track.delivery === null) {
+      throw new DownloadSpecError("This file has no subtitle with that id.")
+    }
+    if (!matroska && track.delivery !== "webvtt") {
       throw new DownloadSpecError(
-        "This file has no text subtitle with that id.",
+        "Only text subtitles go in an MP4 file. Burn this one in, or download a Matroska file.",
       )
     }
     return track
   })
+  const text = matroska ? [] : subtitles
   if (new Set(spec.subtitles).size < spec.subtitles.length) {
     throw new DownloadSpecError("Pick each subtitle track once.")
   }
@@ -324,7 +342,7 @@ export async function buildDownload(
   let videoPlan: DownloadPlan["video"]
   const sourceRate = videoBitrate(video, fileBitrate, probe.audio)
   if (spec.video.mode === "copy") {
-    if (!canCopyVideo(video.codec)) {
+    if (!matroska && !canCopyVideo(video.codec)) {
       throw new DownloadSpecError(
         `${videoCodecName(video.codec)} video can't go in an MP4 file as it is. Convert the video instead.`,
       )
@@ -514,6 +532,122 @@ export async function buildDownload(
     ]
   }
 
+  const matroskaArgs = async (): Promise<string[]> => {
+    const sources = await Promise.all(
+      subtitles.map(async (track) => {
+        const source = await muxSource(item, track.id)
+        if (!source) {
+          throw new DownloadSpecError(`Subtitles ${track.label} can't be read.`)
+        }
+        return { track, source }
+      }),
+    )
+    const input: string[] = []
+    let videoOutput: string[]
+    if (part.mode === "copy") {
+      // Matroska names codecs its own way; MP4's tags don't apply.
+      videoOutput = ["-map", `0:${video.index}`, "-c:v", "copy"]
+    } else {
+      const pipeline = part.build(0)
+      input.push(...pipeline.inputArgs)
+      videoOutput = [
+        ...videoMapArgs(video.index, pipeline),
+        ...pipeline.outputArgs,
+      ]
+    }
+    const burnInput = part.mode === "encode" ? subtitleInputArgs(burnIn) : []
+    // After the file and a subtitle file to burn in, if there is one.
+    let nextInput = burnInput.length > 0 ? 2 : 1
+    const subtitleInputs = sources.flatMap(({ source }) =>
+      source.kind === "file"
+        ? [
+            ...(source.charset ? ["-sub_charenc", source.charset] : []),
+            // `-start_at_zero` moves every input to 0; this undoes it.
+            ...(source.startSeconds > 0
+              ? ["-itsoffset", source.startSeconds.toFixed(6)]
+              : []),
+            "-i",
+            source.path,
+          ]
+        : [],
+    )
+    const subtitleOutput = sources.flatMap(({ track, source }, i) => {
+      const from =
+        source.kind === "stream" ? `0:${source.index}` : `${nextInput++}:s:0`
+      const language = track.language ? iso639_2(track.language) : null
+      return [
+        "-map",
+        from,
+        `-c:s:${i}`,
+        // Matroska has no place for MP4's timed text.
+        source.kind === "stream" && source.codec === "mov_text"
+          ? "srt"
+          : "copy",
+        `-metadata:s:s:${i}`,
+        `title=${titleOf(track)}`,
+        ...(language ? [`-metadata:s:s:${i}`, `language=${language}`] : []),
+        // None shows until someone picks it, but players find forced ones.
+        `-disposition:s:${i}`,
+        track.forced ? "forced" : "0",
+      ]
+    })
+    // ASS draws with the fonts the file carries.
+    const fonts = sources.some(
+      ({ source }) =>
+        source.kind === "stream" &&
+        (source.codec === "ass" || source.codec === "ssa"),
+    )
+    return [
+      "-hide_banner",
+      "-loglevel",
+      "error",
+      "-nostdin",
+      ...input,
+      "-i",
+      item.path,
+      ...burnInput,
+      ...subtitleInputs,
+      ...videoOutput,
+      ...audio.flatMap((track, i) => [
+        "-map",
+        `0:${track.stream.index}`,
+        ...track.pipeline.args,
+        ...(track.pipeline.filters.length > 0
+          ? [`-filter:a:${i}`, track.pipeline.filters.join(",")]
+          : []),
+        `-disposition:a:${i}`,
+        i === 0 ? "default" : "0",
+        ...(track.stream.language
+          ? [`-metadata:s:a:${i}`, `language=${track.stream.language}`]
+          : []),
+        ...(track.stream.title
+          ? [`-metadata:s:a:${i}`, `title=${track.stream.title}`]
+          : []),
+      ]),
+      ...subtitleOutput,
+      ...(fonts ? ["-map", "0:t?", "-c:t", "copy"] : []),
+      // The file's own tags go, but streams keep theirs: the fonts need
+      // their names, and the tracks their titles.
+      "-map_metadata:g",
+      "-1",
+      ...(part.mode === "encode" ? ["-metadata:s:v:0", "title="] : []),
+      "-map_chapters",
+      "0",
+      // The header says how long the file is: written as a stream, it
+      // can't be filled in at the end.
+      "-metadata:s:v:0",
+      `DURATION=${durationTag(duration)}`,
+      ...strictArgs(audio.map((track) => track.pipeline.global)),
+      "-copyts",
+      "-start_at_zero",
+      "-max_muxing_queue_size",
+      "2048",
+      "-f",
+      "matroska",
+      "pipe:1",
+    ]
+  }
+
   const key = createHash("sha256")
     .update(
       JSON.stringify({
@@ -524,8 +658,9 @@ export async function buildDownload(
         size: info.size,
         modified: info.mtimeMs,
         burnIn,
-        // Left out when undefined, so downloads without keep their key.
+        // Left out when undefined, so downloads from before keep their key.
         text: spec.subtitles.length > 0 ? spec.subtitles : undefined,
+        container: matroska ? "mkv" : undefined,
         command: args(0, 0, "dir", null),
       }),
     )
@@ -542,8 +677,10 @@ export async function buildDownload(
     pauseKeys,
     audio: audio.map((track) => track.resume),
     text,
+    matroska: matroska ? matroskaArgs : null,
     args,
     plan: {
+      container: spec.container,
       durationSeconds: duration,
       estimatedBytes: Math.round(((rates * duration) / 8) * CONTAINER_OVERHEAD),
       segmentSeconds,
@@ -570,8 +707,19 @@ export async function buildDownload(
   }
 }
 
-/** The name a download saves under: the file's own, as MP4. */
-export function downloadFileName(item: MediaItemRow): string {
+/** The name a download saves under: the file's own, in its container. */
+export function downloadFileName(
+  item: MediaItemRow,
+  container: DownloadContainer,
+): string {
   const name = basename(item.relativePath, extname(item.relativePath))
-  return `${name || "video"}.mp4`
+  return `${name || "video"}.${container}`
+}
+
+/** Seconds as Matroska's `DURATION` tags write them, like `00:23:59.980000000`. */
+function durationTag(seconds: number): string {
+  const whole = Math.floor(seconds)
+  const pad = (value: number) => String(value).padStart(2, "0")
+  const fraction = (seconds - whole).toFixed(9).slice(2)
+  return `${pad(Math.floor(whole / 3600))}:${pad(Math.floor(whole / 60) % 60)}:${pad(whole % 60)}.${fraction}`
 }

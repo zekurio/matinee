@@ -60,7 +60,7 @@ function versioned(buffer: Buffer, found: Box): boolean {
 }
 
 /** A track's name as players show it: its label, and whether it's forced or SDH. */
-function titleOf(track: SubtitleTrack): string {
+export function titleOf(track: SubtitleTrack): string {
   const words = track.label.toLowerCase()
   const marks = [
     track.forced && !words.includes("forced") ? "Forced" : null,

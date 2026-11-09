@@ -8,6 +8,7 @@ import {
   downloadSegment,
   downloadStream,
   fileBody,
+  matroskaStream,
 } from "./downloads"
 
 /*
@@ -30,7 +31,7 @@ function attachment(fileName: string): string {
   return `attachment; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(fileName)}`
 }
 
-/** The download as one fragmented MP4; see `downloadFilePath`. */
+/** The download as one file: Matroska, or fragmented MP4; see `downloadFilePath`. */
 downloadRoutes.get("/:id/file.mp4", async (c) => {
   const viewer = await readSession(c)
   if (!viewer) return c.body(null, 401)
@@ -40,11 +41,16 @@ downloadRoutes.get("/:id/file.mp4", async (c) => {
   if (access.kind === "gone") return c.body(null, 404)
   if (access.kind === "changed") return c.body(null, 409)
   const { active } = access
+  const matroska = active.record.spec.container === "mkv"
+  // A Matroska file is one run, from the start.
+  if (matroska && query.data.from > 0) return c.body(null, 416)
   return c.body(
-    downloadStream(active, query.data.from, c.req.raw.signal),
+    matroska
+      ? matroskaStream(active, c.req.raw.signal)
+      : downloadStream(active, query.data.from, c.req.raw.signal),
     200,
     {
-      "Content-Type": "video/mp4",
+      "Content-Type": matroska ? "video/x-matroska" : "video/mp4",
       "Content-Disposition": attachment(active.record.fileName),
       "Cache-Control": "no-store",
       "X-Matinee-Duration": String(active.record.plan.durationSeconds),
@@ -59,6 +65,8 @@ downloadRoutes.get("/:id/init.mp4", async (c) => {
   const access = await accessDownload(c.req.param("id"), viewer.id)
   if (access.kind === "gone") return c.body(null, 404)
   if (access.kind === "changed") return c.body(null, 409)
+  // Matroska downloads only come whole.
+  if (access.active.record.spec.container === "mkv") return c.body(null, 404)
   const path = await downloadInit(access.active, c.req.raw.signal)
   if (!path) {
     return c.body(null, 503, { "Retry-After": RETRY_AFTER_S })
@@ -80,6 +88,7 @@ downloadRoutes.get("/:id/:name", async (c) => {
   const access = await accessDownload(c.req.param("id"), viewer.id)
   if (access.kind === "gone") return c.body(null, 404)
   if (access.kind === "changed") return c.body(null, 409)
+  if (access.active.record.spec.container === "mkv") return c.body(null, 404)
   const result = await downloadSegment(
     access.active,
     Number(name[1]),
