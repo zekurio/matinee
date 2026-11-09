@@ -82,7 +82,7 @@ export function ActivityView(props: RangeProps) {
       <WatchingNow />
       <WithServerStats {...props}>
         {(stats) => (
-          <div className="flex flex-col gap-10">
+          <div className="flex flex-col gap-4">
             <WatchOverview
               stats={stats}
               figures={[

@@ -132,7 +132,7 @@ function LibrarySections({ stats }: { stats: LibraryStats }) {
     (a, b) => b.sizeBytes - a.sizeBytes,
   )
   return (
-    <div className="flex flex-col gap-10">
+    <div className="flex flex-col gap-4">
       <StatFigures
         figures={[
           {

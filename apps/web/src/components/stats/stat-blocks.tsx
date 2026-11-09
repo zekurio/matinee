@@ -13,8 +13,8 @@ import { type ReactNode, useId } from "react"
 import { perLocale, tr } from "@/i18n"
 
 /** Columns for a page's blocks of statistics. */
-export const statsGrid =
-  "grid items-start gap-x-10 gap-y-8 md:grid-cols-2 xl:grid-cols-3"
+// One gap between all of a page's cards, the same both ways.
+export const statsGrid = "grid items-start gap-4 md:grid-cols-2 xl:grid-cols-3"
 
 /** The surface statistics sit on: the card color, a rim, rounded. */
 export const statsCard = "bg-card rounded-xl border"
@@ -150,7 +150,9 @@ export function percent(value: number, total: number): string {
 }
 
 /** A section's rows run to its card's edges, as the apps draw them, with a line between each. */
-export const statsRows = "-mx-4 -mb-4 flex flex-col divide-y"
+// Pulled up under the section's name, so the first row sits as close to it
+// as the rows sit to each other.
+export const statsRows = "-mx-4 -mt-2 -mb-4 flex flex-col divide-y"
 
 /** A thin bar for `value`'s part of `scale`, under a row. */
 export function ShareBar({ value, scale }: { value: number; scale: number }) {

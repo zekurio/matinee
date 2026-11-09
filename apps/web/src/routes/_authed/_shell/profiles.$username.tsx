@@ -354,7 +354,7 @@ function Statistics({ profile }: { profile: Profile }) {
           }
         />
       ) : (
-        <div className="flex flex-col gap-10 pt-1">
+        <div className="flex flex-col gap-4 pt-1">
           <WatchOverview stats={data} figures={watchFigures(data)} />
           <div className={statsGrid}>
             <TopTitlesSection stats={data} />
