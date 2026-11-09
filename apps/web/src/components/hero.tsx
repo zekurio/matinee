@@ -229,6 +229,7 @@ export function Hero({
           position={tr("media.hero.position", { index: i + 1, count })}
         />
       ))}
+      <HeroButtons slide={current} />
 
       {count > 1 && (
         // Phones center the dots under the buttons; desktop sets them level
@@ -363,7 +364,9 @@ function SlideContent({
       aria-hidden={!active}
       inert={!active}
       className={cn(
-        "absolute inset-x-0 bottom-12 transition-opacity duration-500 motion-reduce:transition-none sm:bottom-28 lg:bottom-8 sm:max-lg:[@media(max-height:540px)]:bottom-12",
+        // Above the buttons, which stay while the slides change: their
+        // place, plus their height and the gap over them.
+        "absolute inset-x-0 bottom-[108px] transition-opacity duration-500 motion-reduce:transition-none sm:bottom-[176px] lg:bottom-24 sm:max-lg:[@media(max-height:540px)]:bottom-[104px]",
         active ? "opacity-100" : "pointer-events-none opacity-0",
       )}
     >
@@ -430,30 +433,44 @@ function SlideContent({
             </span>
           </div>
         )}
-        <div className="mt-4 flex gap-2 sm:mt-6 sm:max-lg:[@media(max-height:540px)]:mt-4">
-          <Link
-            to="/watch/$itemId"
-            params={{ itemId: item.id }}
-            className={buttonVariants({ size: "lg", className: heroButton })}
-          >
-            <PlayIcon className="fill-current" />
-            {resuming ? tr("media.hero.resume") : tr("media.hero.play")}
-          </Link>
-          <Link
-            to="/titles/$titleId"
-            params={{ titleId: title.id }}
-            className={buttonVariants({
-              size: "lg",
-              variant: "secondary",
-              className: cn(heroButton, heroSecondary),
-            })}
-          >
-            {title.kind === "show" ? <ListIcon /> : <InfoIcon />}
-            {title.kind === "show"
-              ? tr("media.hero.episodes")
-              : tr("media.hero.details")}
-          </Link>
-        </div>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Play and the title's page, for the slide showing. One row that stays in
+ * place while the slides fade under and over it, its labels following
+ * along, rather than a row per slide fading out and in again.
+ */
+function HeroButtons({ slide }: { slide: FeaturedTitle }) {
+  const { item, title } = slide
+  const resuming = timeLeft(item) !== null && progressRatio(item) !== null
+  return (
+    <div className="absolute inset-x-0 bottom-12 sm:bottom-28 lg:bottom-8 sm:max-lg:[@media(max-height:540px)]:bottom-12">
+      <div className={cn(pageColumn, "flex gap-2")}>
+        <Link
+          to="/watch/$itemId"
+          params={{ itemId: item.id }}
+          className={buttonVariants({ size: "lg", className: heroButton })}
+        >
+          <PlayIcon className="fill-current" />
+          {resuming ? tr("media.hero.resume") : tr("media.hero.play")}
+        </Link>
+        <Link
+          to="/titles/$titleId"
+          params={{ titleId: title.id }}
+          className={buttonVariants({
+            size: "lg",
+            variant: "secondary",
+            className: cn(heroButton, heroSecondary),
+          })}
+        >
+          {title.kind === "show" ? <ListIcon /> : <InfoIcon />}
+          {title.kind === "show"
+            ? tr("media.hero.episodes")
+            : tr("media.hero.details")}
+        </Link>
       </div>
     </div>
   )
