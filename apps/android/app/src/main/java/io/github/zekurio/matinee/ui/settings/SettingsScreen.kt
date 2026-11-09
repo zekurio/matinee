@@ -1,6 +1,5 @@
 package io.github.zekurio.matinee.ui.settings
 
-import io.github.zekurio.matinee.ui.LocalNavigator
 import android.app.LocaleManager
 import android.content.Context
 import android.content.Intent
@@ -67,6 +66,7 @@ import io.github.zekurio.matinee.downloads.DownloadSubtitles
 import io.github.zekurio.matinee.downloads.VIDEO_PRESETS
 import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.LocalUser
+import io.github.zekurio.matinee.ui.TopBar
 import io.github.zekurio.matinee.ui.audioFormatName
 import io.github.zekurio.matinee.ui.components.Avatar
 import io.github.zekurio.matinee.ui.components.ButtonLook
@@ -127,18 +127,7 @@ fun SettingsScreen(session: Session) {
     val passthrough = remember { Capabilities.OPTIONAL_PASSTHROUGH.filter(Capabilities::decodesAudio) }
 
     Column(Modifier.fillMaxSize()) {
-        val nav = LocalNavigator.current
-        Box(Modifier.statusBarsPadding().fillMaxWidth().height(56.dp)) {
-            RoundIconButton(
-                Lucide.ArrowLeft,
-                stringResource(R.string.common_back),
-                nav::back,
-                Modifier.align(Alignment.CenterStart).padding(start = 6.dp),
-                background = Color.Transparent,
-            )
-            Text(stringResource(R.string.shell_settings), style = MaterialTheme.typography.titleMedium, modifier = Modifier.align(Alignment.Center))
-        }
-        HorizontalDivider(color = Palette.Border)
+        TopBar(stringResource(R.string.shell_settings))
         LazyColumn(
             Modifier.fillMaxSize(),
             contentPadding = PaddingValues(start = Gutter, end = Gutter, top = 8.dp, bottom = 20.dp),

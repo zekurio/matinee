@@ -133,6 +133,7 @@ object Lucide {
     val Link = R.drawable.lucide_link
     val List = R.drawable.lucide_list
     val ListFilter = R.drawable.lucide_list_filter
+    val LibraryBig = R.drawable.lucide_library_big
     val LockKeyhole = R.drawable.lucide_lock_keyhole
     val LogIn = R.drawable.lucide_log_in
     val LogOut = R.drawable.lucide_log_out

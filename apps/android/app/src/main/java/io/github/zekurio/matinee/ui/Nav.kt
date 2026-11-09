@@ -12,6 +12,13 @@ import kotlinx.serialization.Serializable
 @Serializable
 data object HomeRoute
 
+/** The libraries, favorites, and search: the second tab. */
+@Serializable
+data object MediaRoute
+
+@Serializable
+data object FavoritesRoute
+
 @Serializable
 data class LibraryRoute(val id: String, val sort: String? = null)
 
@@ -44,27 +51,55 @@ data object DownloadsRoute
 @Serializable
 data class PlayerRoute(val itemId: String, val start: Double = -1.0)
 
+/** The bottom bar's tabs, by the route of each one's first page, as Findroid has them. */
+val TAB_ROUTES: List<Any> = listOf(HomeRoute, MediaRoute, DownloadsRoute)
+
 /** Moves between screens; one per signed-in app. */
 class Navigator(private val controller: NavHostController) {
     fun back() {
         controller.popBackStack()
     }
 
+    /** Home's first page, from anywhere. */
     fun home() {
         controller.popBackStack(HomeRoute, inclusive = false)
     }
 
-    fun library(id: String, sort: String? = null) = controller.navigate(LibraryRoute(id, sort)) {
-        // Moving between libraries with the chips replaces the one showing.
-        popUpTo(HomeRoute)
-        launchSingleTop = true
+    /**
+     * A tab's first page. Home is under every other tab, so back from one
+     * goes Home, and a tab picked again starts over at its first page.
+     */
+    fun tab(route: Any) {
+        if (route == HomeRoute) return home()
+        controller.navigate(route) {
+            popUpTo(HomeRoute)
+            launchSingleTop = true
+        }
     }
+
+    fun media() = tab(MediaRoute)
+
+    fun downloads() = tab(DownloadsRoute)
+
+    fun favorites() = controller.navigate(FavoritesRoute) { launchSingleTop = true }
+
+    fun library(id: String, sort: String? = null) = controller.navigate(LibraryRoute(id, sort))
 
     fun title(id: String) = controller.navigate(TitleRoute(id))
 
     fun title(title: TitleSummary) = title(title.id)
 
+    /** A title's page from one of its seasons or episodes: back to it when it's what came before. */
+    fun titleUp(id: String) {
+        if (!controller.popBackStack(TitleRoute(id), inclusive = false)) title(id)
+    }
+
     fun season(titleId: String, season: Int?) = controller.navigate(SeasonRoute(titleId, season ?: -1))
+
+    /** A season's page from one of its episodes: back to it when it's what came before. */
+    fun seasonUp(titleId: String, season: Int?) {
+        if (!controller.popBackStack(SeasonRoute(titleId, season ?: -1), inclusive = false)) season(titleId, season)
+    }
 
     fun episode(itemId: String) = controller.navigate(EpisodeRoute(itemId))
 
@@ -83,8 +118,6 @@ class Navigator(private val controller: NavHostController) {
     fun search() = controller.navigate(SearchRoute) { launchSingleTop = true }
 
     fun settings() = controller.navigate(SettingsRoute) { launchSingleTop = true }
-
-    fun downloads() = controller.navigate(DownloadsRoute) { launchSingleTop = true }
 
     /** Play a file from where the person left off, or from [start] seconds. */
     fun play(itemId: String, start: Double? = null) = controller.navigate(PlayerRoute(itemId, start ?: -1.0)) {

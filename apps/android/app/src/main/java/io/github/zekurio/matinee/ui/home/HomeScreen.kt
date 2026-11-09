@@ -7,11 +7,11 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -30,6 +30,8 @@ import io.github.zekurio.matinee.ui.AppHeader
 import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.LocalNavigator
 import io.github.zekurio.matinee.ui.LocalUser
+import io.github.zekurio.matinee.ui.StatusBarScrim
+import io.github.zekurio.matinee.ui.tabBarPadding
 import io.github.zekurio.matinee.ui.components.EpisodeCard
 import io.github.zekurio.matinee.ui.components.ErrorBox
 import io.github.zekurio.matinee.ui.components.Gap
@@ -56,45 +58,46 @@ fun HomeScreen() {
     val failed = libraries.state as? Load.Failed
     if (failed != null) {
         Column(Modifier.fillMaxSize()) {
-            AppHeader(back = false)
+            AppHeader()
             ErrorBox(stringResource(R.string.home_load_failed), failed.message, libraries::reload)
         }
         return
     }
 
-    LazyColumn(
-        Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = 32.dp),
-        verticalArrangement = Arrangement.spacedBy(32.dp),
-    ) {
-        item(key = "hero") {
-            val slides = (featured.state as? Load.Ready)?.value
-            val top: @Composable () -> Unit = {
-                AppHeader(back = false)
-                LibraryChips(libs.orEmpty(), current = null, frosted = true, modifier = Modifier.padding(top = 4.dp))
+    val listState = rememberLazyListState()
+    Box(Modifier.fillMaxSize()) {
+        LazyColumn(
+            Modifier.fillMaxSize(),
+            state = listState,
+            contentPadding = PaddingValues(bottom = tabBarPadding() + 24.dp),
+            verticalArrangement = Arrangement.spacedBy(32.dp),
+        ) {
+            item(key = "hero") {
+                val slides = (featured.state as? Load.Ready)?.value
+                val top: @Composable () -> Unit = { AppHeader() }
+                when {
+                    slides == null && featured.state is Load.Loading -> HeroSkeleton(Modifier.height(heroHeight), top)
+                    !slides.isNullOrEmpty() -> Hero(slides, Modifier.height(heroHeight), top)
+                    else -> Column { top() }
+                }
             }
-            when {
-                slides == null && featured.state is Load.Loading -> HeroSkeleton(Modifier.height(heroHeight), top)
-                !slides.isNullOrEmpty() -> Hero(slides, Modifier.height(heroHeight), top)
-                else -> Column { top() }
+
+            if (libs?.isEmpty() == true) {
+                item(key = "empty") { NoLibraries() }
+                return@LazyColumn
+            }
+
+            (resume.state as? Load.Ready)?.value?.takeIf { it.isNotEmpty() }?.let { items ->
+                item(key = "continue") { EpisodeRail(stringResource(R.string.browse_continue_watching), items) }
+            }
+            (nextUp.state as? Load.Ready)?.value?.takeIf { it.isNotEmpty() }?.let { items ->
+                item(key = "nextUp") { EpisodeRail(stringResource(R.string.browse_next_up), items) }
+            }
+            libs?.forEach { library ->
+                item(key = "shelf-${library.id}") { LibraryShelf(library) }
             }
         }
-
-        if (libs?.isEmpty() == true) {
-            item(key = "empty") { NoLibraries() }
-            return@LazyColumn
-        }
-
-        (resume.state as? Load.Ready)?.value?.takeIf { it.isNotEmpty() }?.let { items ->
-            item(key = "continue") { EpisodeRail(stringResource(R.string.browse_continue_watching), items) }
-        }
-        (nextUp.state as? Load.Ready)?.value?.takeIf { it.isNotEmpty() }?.let { items ->
-            item(key = "nextUp") { EpisodeRail(stringResource(R.string.browse_next_up), items) }
-        }
-        libs?.forEach { library ->
-            item(key = "shelf-${library.id}") { LibraryShelf(library) }
-        }
-        item(key = "bottom") { Box(Modifier.navigationBarsPadding()) }
+        StatusBarScrim(listState)
     }
 }
 

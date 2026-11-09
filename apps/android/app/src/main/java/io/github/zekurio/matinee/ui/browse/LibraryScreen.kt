@@ -1,16 +1,18 @@
 package io.github.zekurio.matinee.ui.browse
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.items
@@ -41,7 +43,7 @@ import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.Library
 import io.github.zekurio.matinee.api.TitleSort
-import io.github.zekurio.matinee.ui.AppHeader
+import io.github.zekurio.matinee.ui.TopBar
 import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.LibraryRoute
 import io.github.zekurio.matinee.ui.components.Chip
@@ -51,7 +53,6 @@ import io.github.zekurio.matinee.ui.components.Lucide
 import io.github.zekurio.matinee.ui.components.LucideIcon
 import io.github.zekurio.matinee.ui.components.MatineeTextField
 import io.github.zekurio.matinee.ui.components.RoundIconButton
-import io.github.zekurio.matinee.ui.home.LibraryChips
 import io.github.zekurio.matinee.ui.rememberLoader
 import io.github.zekurio.matinee.ui.theme.Palette
 import kotlinx.coroutines.delay
@@ -77,7 +78,28 @@ fun LibraryScreen(route: LibraryRoute) {
     val shows = library?.kind == "shows"
 
     Column(Modifier.fillMaxSize()) {
-        AppHeader()
+        if (searching) {
+            SearchTopBar(
+                query = query,
+                placeholder = stringResource(if (shows) R.string.library_search_shows else R.string.library_search_movies),
+                onQuery = { query = it },
+                onClose = {
+                    query = ""
+                    searching = false
+                },
+            )
+        } else {
+            TopBar(library?.name) {
+                LibraryActions(
+                    library = library,
+                    sort = sort,
+                    genre = genre,
+                    onSearch = { searching = true },
+                    onSort = { sort = it },
+                    onGenre = { genre = it },
+                )
+            }
+        }
         PosterGrid(
             pages,
             detail = { title ->
@@ -96,31 +118,9 @@ fun LibraryScreen(route: LibraryRoute) {
                 )
             },
         ) {
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                Column(Modifier.padding(bottom = 4.dp)) {
-                    if (searching) {
-                        SearchRow(
-                            query = query,
-                            placeholder = stringResource(if (shows) R.string.library_search_shows else R.string.library_search_movies),
-                            onQuery = { query = it },
-                            onClose = {
-                                query = ""
-                                searching = false
-                            },
-                        )
-                    } else {
-                        Toolbar(
-                            libraries = all,
-                            library = library,
-                            sort = sort,
-                            genre = genre,
-                            onSearch = { searching = true },
-                            onSort = { sort = it },
-                            onGenre = { genre = it },
-                        )
-                    }
-                    if (genre != null) {
-                        Gap(10.dp)
+            if (genre != null) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    Box(Modifier.padding(top = 4.dp, bottom = 4.dp)) {
                         Chip(genre.orEmpty(), selected = true, trailingIcon = Lucide.X, onClick = { genre = null })
                     }
                 }
@@ -129,28 +129,33 @@ fun LibraryScreen(route: LibraryRoute) {
     }
 }
 
+/** The top bar while searching a library: back out of the search, and the field. */
 @Composable
-private fun SearchRow(query: String, placeholder: String, onQuery: (String) -> Unit, onClose: () -> Unit) {
+private fun SearchTopBar(query: String, placeholder: String, onQuery: (String) -> Unit, onClose: () -> Unit) {
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { focus.requestFocus() }
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    // Back closes the search before it leaves the library.
+    BackHandler(onBack = onClose)
+    Row(
+        Modifier.fillMaxWidth().background(Palette.Background).statusBarsPadding().height(64.dp).padding(horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        RoundIconButton(Lucide.ArrowLeft, stringResource(R.string.library_clear_search), onClose, size = 48.dp, iconSize = 24.dp, background = Color.Transparent)
         MatineeTextField(
             value = query,
             onValueChange = onQuery,
             placeholder = placeholder,
             leadingIcon = Lucide.Search,
-            modifier = Modifier.weight(1f).focusRequester(focus),
+            modifier = Modifier.weight(1f).padding(end = 12.dp).focusRequester(focus),
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             keyboardActions = KeyboardActions(onSearch = {}),
         )
-        RoundIconButton(Lucide.X, stringResource(R.string.library_clear_search), onClose, background = Color.Transparent)
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+/** Search, a genre filter, and the sort, at the end of the library's top bar. */
 @Composable
-private fun Toolbar(
-    libraries: List<Library>,
+private fun LibraryActions(
     library: Library?,
     sort: String,
     genre: String?,
@@ -160,36 +165,32 @@ private fun Toolbar(
 ) {
     var sorting by remember { mutableStateOf(false) }
     var filtering by remember { mutableStateOf(false) }
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        // The chips run to the page edges on the left; the grid's gutter pads the rest.
-        Box(Modifier.weight(1f).padding(end = 4.dp)) {
-            LibraryChips(libraries, current = library?.id, contentPadding = PaddingValues(0.dp))
-        }
-        RoundIconButton(Lucide.Search, stringResource(R.string.library_search_titles), onSearch, background = Color.Transparent)
-        RoundIconButton(
-            Lucide.ListFilter,
-            stringResource(R.string.library_filter),
-            { filtering = true },
-            background = Color.Transparent,
-            tint = if (genre != null) Palette.Accent else Palette.Foreground,
-        )
-        Box {
-            RoundIconButton(Lucide.ArrowUpDown, stringResource(R.string.library_sort), { sorting = true }, background = Color.Transparent)
-            DropdownMenu(expanded = sorting, onDismissRequest = { sorting = false }, containerColor = Palette.Raised) {
-                listOf(
-                    TitleSort.NAME to R.string.library_sort_name,
-                    TitleSort.RECENT to R.string.library_sort_recent,
-                    TitleSort.YEAR to R.string.library_sort_year,
-                ).forEach { (value, label) ->
-                    DropdownMenuItem(
-                        text = { Text(stringResource(label)) },
-                        trailingIcon = if (value == sort) ({ LucideIcon(Lucide.Check, null, size = 16.dp) }) else null,
-                        onClick = {
-                            sorting = false
-                            onSort(value)
-                        },
-                    )
-                }
+    RoundIconButton(Lucide.Search, stringResource(R.string.library_search_titles), onSearch, size = 48.dp, iconSize = 22.dp, background = Color.Transparent)
+    RoundIconButton(
+        Lucide.ListFilter,
+        stringResource(R.string.library_filter),
+        { filtering = true },
+        size = 48.dp,
+        iconSize = 22.dp,
+        background = Color.Transparent,
+        tint = if (genre != null) Palette.Accent else Palette.Foreground,
+    )
+    Box {
+        RoundIconButton(Lucide.ArrowUpDown, stringResource(R.string.library_sort), { sorting = true }, size = 48.dp, iconSize = 22.dp, background = Color.Transparent)
+        DropdownMenu(expanded = sorting, onDismissRequest = { sorting = false }, containerColor = Palette.Raised) {
+            listOf(
+                TitleSort.NAME to R.string.library_sort_name,
+                TitleSort.RECENT to R.string.library_sort_recent,
+                TitleSort.YEAR to R.string.library_sort_year,
+            ).forEach { (value, label) ->
+                DropdownMenuItem(
+                    text = { Text(stringResource(label)) },
+                    trailingIcon = if (value == sort) ({ LucideIcon(Lucide.Check, null, size = 16.dp) }) else null,
+                    onClick = {
+                        sorting = false
+                        onSort(value)
+                    },
+                )
             }
         }
     }

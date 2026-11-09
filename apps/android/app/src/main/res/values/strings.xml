@@ -44,6 +44,18 @@
     <string name="shell_settings">Settings</string>
     <string name="shell_sign_out">Sign out</string>
 
+    <!-- The bottom bar -->
+    <string name="tab_home">Home</string>
+    <string name="tab_media">Media</string>
+
+    <!-- Favorites -->
+    <string name="favorites_title">Favorites</string>
+    <string name="favorites_titles">Titles</string>
+    <string name="favorites_episodes">Favorite episodes</string>
+    <string name="favorites_empty">No favorites yet</string>
+    <string name="favorites_empty_hint">Tap the heart on a movie, show, or episode to keep it here.</string>
+    <string name="favorites_load_failed">Couldn\'t load your favorites</string>
+
     <!-- Home -->
     <string name="home_load_failed">Couldn\'t load your libraries</string>
     <string name="browse_continue_watching">Continue watching</string>

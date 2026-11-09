@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -18,6 +19,7 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -34,14 +36,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.ArtworkSize
 import io.github.zekurio.matinee.api.SearchResults
-import io.github.zekurio.matinee.ui.AppHeader
 import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.LocalNavigator
 import io.github.zekurio.matinee.ui.browse.creditKind
@@ -51,11 +54,12 @@ import io.github.zekurio.matinee.ui.components.Gutter
 import io.github.zekurio.matinee.ui.components.LocalApi
 import io.github.zekurio.matinee.ui.components.Lucide
 import io.github.zekurio.matinee.ui.components.LucideIcon
-import io.github.zekurio.matinee.ui.components.MatineeTextField
 import io.github.zekurio.matinee.ui.components.PersonCard
 import io.github.zekurio.matinee.ui.components.PosterCard
 import io.github.zekurio.matinee.ui.components.RailArt
 import io.github.zekurio.matinee.ui.components.RoundIconButton
+import io.github.zekurio.matinee.ui.components.SearchBarFrame
+import io.github.zekurio.matinee.ui.components.SearchBarSlot
 import io.github.zekurio.matinee.ui.components.SectionTitle
 import io.github.zekurio.matinee.ui.components.art
 import io.github.zekurio.matinee.ui.components.railItemWidth
@@ -100,19 +104,39 @@ fun SearchScreen() {
     }
 
     Column(Modifier.fillMaxSize()) {
-        AppHeader(search = false)
-        Row(Modifier.padding(horizontal = Gutter).padding(bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            MatineeTextField(
-                value = query,
-                onValueChange = { query = it },
-                placeholder = stringResource(R.string.search_field),
-                leadingIcon = Lucide.Search,
-                modifier = Modifier.focusRequester(focus),
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                trailing = if (query.isNotEmpty()) ({
-                    RoundIconButton(Lucide.X, stringResource(R.string.search_clear), { query = "" }, background = Color.Transparent, size = 40.dp, iconSize = 18.dp)
-                }) else null,
-            )
+        // Where Media's bar was, so opening search looks like the bar opening.
+        SearchBarSlot(Modifier.padding(bottom = 4.dp)) {
+            SearchBarFrame {
+                RoundIconButton(Lucide.ArrowLeft, stringResource(R.string.common_back), nav::back, size = 44.dp, iconSize = 22.dp, background = Color.Transparent)
+                BasicTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    singleLine = true,
+                    textStyle = MaterialTheme.typography.bodyLarge.copy(color = Palette.Foreground),
+                    cursorBrush = SolidColor(Palette.Accent),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                    modifier = Modifier.weight(1f).focusRequester(focus),
+                    decorationBox = { field ->
+                        Box(contentAlignment = Alignment.CenterStart) {
+                            if (query.isEmpty()) {
+                                Text(
+                                    stringResource(R.string.search_field),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = Palette.Faint,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                            field()
+                        }
+                    },
+                )
+                if (query.isNotEmpty()) {
+                    RoundIconButton(Lucide.X, stringResource(R.string.search_clear), { query = "" }, size = 44.dp, iconSize = 18.dp, background = Color.Transparent)
+                } else {
+                    Box(Modifier.size(12.dp))
+                }
+            }
         }
         val found = results
         val text = query.trim()

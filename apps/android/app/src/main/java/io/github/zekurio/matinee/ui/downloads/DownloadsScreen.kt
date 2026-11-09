@@ -1,6 +1,5 @@
 package io.github.zekurio.matinee.ui.downloads
 
-import io.github.zekurio.matinee.downloads.DEFAULT_ORIGINAL
 import android.Manifest
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -56,15 +55,18 @@ import io.github.zekurio.matinee.api.MediaItem
 import io.github.zekurio.matinee.api.PlaybackOptions
 import io.github.zekurio.matinee.api.PlaybackPreferences
 import io.github.zekurio.matinee.app
+import io.github.zekurio.matinee.downloads.DEFAULT_ORIGINAL
 import io.github.zekurio.matinee.downloads.DownloadSource
 import io.github.zekurio.matinee.downloads.DownloadState
 import io.github.zekurio.matinee.downloads.OfflineItem
 import io.github.zekurio.matinee.downloads.VIDEO_PRESETS
 import io.github.zekurio.matinee.downloads.VideoPreset
-import io.github.zekurio.matinee.ui.AppHeader
+import io.github.zekurio.matinee.ui.AccountButton
 import io.github.zekurio.matinee.ui.LocalNavigator
 import io.github.zekurio.matinee.ui.LocalOffline
 import io.github.zekurio.matinee.ui.LocalUser
+import io.github.zekurio.matinee.ui.TopBar
+import io.github.zekurio.matinee.ui.tabBarPadding
 import io.github.zekurio.matinee.ui.components.CardShape
 import io.github.zekurio.matinee.ui.components.Gap
 import io.github.zekurio.matinee.ui.components.Gutter
@@ -94,22 +96,26 @@ fun DownloadsScreen() {
     val list = items.values.sortedByDescending { it.addedAt }
     val total = list.filter { it.state == DownloadState.DONE }.sumOf { it.bytes }
     Column(Modifier.fillMaxSize()) {
-        AppHeader(back = !LocalOffline.current)
+        TopBar(stringResource(R.string.downloads_title), back = false) {
+            if (LocalOffline.current) {
+                LucideIcon(Lucide.CloudOff, stringResource(R.string.downloads_offline), size = 20.dp, tint = Palette.Muted)
+                Gap(8.dp)
+            }
+            AccountButton(Modifier.padding(end = Gutter - 8.dp))
+        }
         LazyColumn(
             Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(start = Gutter, end = Gutter, bottom = 32.dp),
+            contentPadding = PaddingValues(start = Gutter, end = Gutter, bottom = tabBarPadding() + 24.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            item(key = "title") {
-                Column(Modifier.padding(top = 8.dp, bottom = 12.dp)) {
-                    Text(stringResource(R.string.downloads_title), style = MaterialTheme.typography.headlineLarge)
-                    if (total > 0) {
-                        Text(
-                            stringResource(R.string.downloads_total, formatBytes(total)),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Palette.Muted,
-                        )
-                    }
+            if (total > 0) {
+                item(key = "total") {
+                    Text(
+                        stringResource(R.string.downloads_total, formatBytes(total)),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Palette.Muted,
+                        modifier = Modifier.padding(bottom = 12.dp),
+                    )
                 }
             }
             if (list.isEmpty()) {
@@ -127,7 +133,6 @@ fun DownloadsScreen() {
                 }
             }
             items(list, key = { it.id }) { entry -> DownloadRow(entry) { acting = entry } }
-            item(key = "bottom") { Box(Modifier.navigationBarsPadding()) }
         }
     }
     acting?.let { entry -> DownloadActions(entry) { acting = null } }
@@ -267,6 +272,7 @@ fun DownloadSheet(item: MediaItem, onDismiss: () -> Unit) {
     var error by remember { mutableStateOf<String?>(null) }
     val plans = remember { mutableStateMapOf<Choice, DownloadPlan>() }
     val specs = remember { mutableStateMapOf<Choice, DownloadSpec>() }
+    val choices = listOf<Choice>(Choice.Device(null)) + VIDEO_PRESETS.map { Choice.Device(it) } + Choice.Original
     // Starts on the version Settings names.
     var picked by remember {
         mutableStateOf<Choice>(
@@ -276,7 +282,6 @@ fun DownloadSheet(item: MediaItem, onDismiss: () -> Unit) {
             },
         )
     }
-    val choices = listOf<Choice>(Choice.Device(null)) + VIDEO_PRESETS.map { Choice.Device(it) } + Choice.Original
     val askNotifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
     val failure = stringResource(R.string.downloads_failed)
 

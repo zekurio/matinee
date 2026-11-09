@@ -32,8 +32,8 @@ import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.CreditKind
 import io.github.zekurio.matinee.api.TitleKind
-import io.github.zekurio.matinee.ui.AppHeader
 import io.github.zekurio.matinee.ui.Load
+import io.github.zekurio.matinee.ui.TopBar
 import io.github.zekurio.matinee.ui.components.Chip
 import io.github.zekurio.matinee.ui.components.ErrorBox
 import io.github.zekurio.matinee.ui.components.Gap
@@ -59,7 +59,7 @@ fun BrowseScreen(genre: String?, studio: String?) {
     }
     val res = LocalResources.current
     Column(Modifier.fillMaxSize()) {
-        AppHeader()
+        TopBar(name)
         PosterGrid(
             pages,
             detail = { it.year?.toString() },
@@ -73,13 +73,16 @@ fun BrowseScreen(genre: String?, studio: String?) {
             },
         ) {
             item(span = { GridItemSpan(maxLineSpan) }) {
-                Column {
+                Column(Modifier.padding(top = 4.dp)) {
                     Text(
-                        stringResource(if (genre != null) R.string.browse_genre else R.string.browse_studio),
-                        style = MaterialTheme.typography.labelLarge,
+                        listOfNotNull(
+                            stringResource(if (genre != null) R.string.browse_genre else R.string.browse_studio),
+                            pages.total?.let { res.getQuantityString(R.plurals.browse_title_count, it, it) },
+                        ).joinToString(" · "),
+                        style = MaterialTheme.typography.bodyMedium,
                         color = Palette.Muted,
                     )
-                    PageTitle(name, pages.total?.let { res.getQuantityString(R.plurals.browse_title_count, it, it) })
+                    Gap(12.dp)
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(bottom = 8.dp)) {
                         Chip(stringResource(R.string.browse_kind_all), kind == null, { kind = null })
                         Chip(stringResource(R.string.browse_kind_movie), kind == TitleKind.MOVIE, { kind = TitleKind.MOVIE })
@@ -98,7 +101,7 @@ fun PersonScreen(name: String) {
     val res = LocalResources.current
     val person = rememberLoader("person-$name") { person(name) }
     Column(Modifier.fillMaxSize()) {
-        AppHeader()
+        TopBar(null, home = true)
         when (val state = person.state) {
             Load.Loading -> LoadingBox()
             is Load.Failed -> ErrorBox(stringResource(R.string.person_load_failed), state.message, person::reload)
