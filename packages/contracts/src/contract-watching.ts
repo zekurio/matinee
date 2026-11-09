@@ -16,6 +16,22 @@ import {
   WatchStats,
 } from "./stats"
 
+/**
+ * A sitting with a file that a player had while the server was out of
+ * reach, as when watching a download: the id the player made for it, when
+ * it began and ended, the time spent playing, and where it stopped.
+ */
+export const OfflinePlay = t.object({
+  sessionId: t.uuid(),
+  itemId: t.uuid(),
+  startedAt: t.date(),
+  endedAt: t.date(),
+  playedSeconds: t.number().min(0),
+  positionSeconds: t.number().min(0),
+  durationSeconds: t.number().positive().optional(),
+})
+export type OfflinePlay = t.infer<typeof OfflinePlay>
+
 export const playbackContract = oc.tag("Playback").router({
   /**
    * Players call this every ten seconds while playing, every thirty while
@@ -43,6 +59,18 @@ export const playbackContract = oc.tag("Playback").router({
         closed: t.boolean().optional(),
       }),
     )
+    .output(t.void()),
+  /**
+   * Plays a player had offline, sent once the server answers again, for
+   * statistics. Each counts as a session at the time it happened, of no
+   * more than the time between its start and end. Sending one again
+   * changes nothing, and one that goes on a session the server already
+   * has, which lost its connection, extends it. Plays of files that are
+   * gone, and ones that end in the future, are left out. Where the person
+   * got to still goes through `report`.
+   */
+  offline: post("/playback/offline")
+    .input(t.object({ plays: t.array(OfflinePlay).min(1).max(200) }))
     .output(t.void()),
   /**
    * What a player's playback settings can offer here: the codecs this

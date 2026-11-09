@@ -171,6 +171,54 @@ export async function recordReport(
   events.publish("playback", undefined)
 }
 
+/** A play a player had offline, as `playback.offline` takes it. */
+export type OfflineReport = {
+  startedAt: Date
+  endedAt: Date
+  positionSeconds: number
+  playedSeconds: number
+  completed: boolean
+}
+
+/**
+ * Record a play the player had while the server was out of reach, at the
+ * time it happened. It counts no more than the time between its start
+ * and end; one that goes on a session already here, which lost its
+ * connection, extends that session, and one sent again changes nothing.
+ */
+export async function recordOfflinePlay(
+  owner: SessionOwner,
+  report: OfflineReport,
+): Promise<void> {
+  const span = (report.endedAt.getTime() - report.startedAt.getTime()) / 1000
+  const watched = Math.min(report.playedSeconds, span + PLAYED_SLACK_S)
+  await db
+    .insert(playbackSession)
+    .values({
+      ...(await startValues(owner)),
+      startedAt: report.startedAt,
+      updatedAt: report.endedAt,
+      endedAt: report.endedAt,
+      positionSeconds: report.positionSeconds,
+      watchedSeconds: watched,
+      completed: report.completed,
+      paused: false,
+    })
+    .onConflictDoUpdate({
+      target: playbackSession.id,
+      set: {
+        positionSeconds: report.positionSeconds,
+        // From the session's own start, which came with its first report.
+        watchedSeconds: sql`greatest(${playbackSession.watchedSeconds}, least(${report.playedSeconds}::double precision, extract(epoch from ${report.endedAt}::timestamptz - ${playbackSession.startedAt})::double precision + ${PLAYED_SLACK_S}))`,
+        completed: sql`${playbackSession.completed} or ${report.completed}`,
+        paused: false,
+        endedAt: sql`greatest(${playbackSession.endedAt}, ${report.endedAt}::timestamptz)`,
+        updatedAt: sql`greatest(${playbackSession.updatedAt}, ${report.endedAt}::timestamptz)`,
+      },
+      setWhere: sameOwner(owner),
+    })
+}
+
 /** Rank of a method, so a session keeps the most the server did. */
 function methodRank(method: SQL): SQL {
   return sql`case ${method} when 'transcode' then 2 when 'remux' then 1 else 0 end`

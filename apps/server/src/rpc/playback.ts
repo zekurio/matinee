@@ -8,6 +8,7 @@ import {
   eq,
   gt,
   gte,
+  inArray,
   isNotNull,
   isNull,
   lt,
@@ -29,7 +30,8 @@ import {
 } from "../media/items"
 import { playbackOptions } from "../media/playback-options"
 import { markUnwatched, markWatched } from "../media/watched"
-import { recordReport } from "../stats/sessions"
+import { events } from "../realtime/events"
+import { recordOfflinePlay, recordReport } from "../stats/sessions"
 import { authed, notFound } from "./base"
 
 // Titles rated at least this, out of 10, can be featured on Home.
@@ -37,6 +39,10 @@ const FEATURED_MIN_RATING = 7.5
 
 // Past this share of the runtime, a file counts as watched.
 const WATCHED_RATIO = 0.92
+// How far ahead of the server a phone's clock may be, and how old a play
+// may be, for `playback.offline`.
+const CLOCK_SKEW_MS = 5 * 60_000
+const OFFLINE_MAX_AGE_MS = 365 * 24 * 3_600_000
 // Below this, a start doesn't count, so stray clicks stay out of
 // "continue watching". Short clips use a share of their length instead.
 const RESUME_MIN_SECONDS = 30
@@ -116,6 +122,46 @@ export const playback = {
       })
   }),
 
+  offline: authed.playback.offline.handler(async ({ context, input }) => {
+    const now = Date.now()
+    const plays = input.plays.filter(
+      (play) =>
+        play.endedAt.getTime() > play.startedAt.getTime() &&
+        // A phone's clock may run a little ahead.
+        play.endedAt.getTime() <= now + CLOCK_SKEW_MS &&
+        now - play.startedAt.getTime() <= OFFLINE_MAX_AGE_MS,
+    )
+    if (plays.length === 0) return
+    const items = await db
+      .select()
+      .from(mediaItem)
+      .where(
+        inArray(
+          mediaItem.id,
+          plays.map((play) => play.itemId),
+        ),
+      )
+    const userAgent = context.hono.req.header("user-agent")
+    for (const play of plays) {
+      const item = items.find((entry) => entry.id === play.itemId)
+      if (!item) continue
+      const duration = play.durationSeconds ?? item.durationSeconds
+      await recordOfflinePlay(
+        { id: play.sessionId, userId: context.user.id, item, userAgent },
+        {
+          startedAt: play.startedAt,
+          endedAt: play.endedAt,
+          positionSeconds: play.positionSeconds,
+          playedSeconds: play.playedSeconds,
+          completed:
+            duration !== null &&
+            duration > 0 &&
+            play.positionSeconds / duration >= WATCHED_RATIO,
+        },
+      )
+    }
+    events.publish("playback", undefined)
+  }),
   options: authed.playback.options.handler(() => playbackOptions()),
 
   setWatched: authed.playback.setWatched.handler(async ({ context, input }) => {
