@@ -439,6 +439,8 @@
     <string name="player_up_next_in">Startet in %1$d</string>
     <string name="player_up_next_cancel">Abbrechen</string>
 
+    <string name="error_unreachable">Der Server ist gerade nicht erreichbar.</string>
+    <string name="error_connection_lost">Die Verbindung zum Server ist abgebrochen.</string>
     <string name="downloads_title">Downloads</string>
     <string name="downloads_action">Herunterladen</string>
     <string name="downloads_sheet_title">Herunterladen</string>

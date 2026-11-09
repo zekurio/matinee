@@ -460,6 +460,8 @@
     <string name="player_up_next_cancel">Cancel</string>
 
     <!-- Downloads -->
+    <string name="error_unreachable">The server can\'t be reached right now.</string>
+    <string name="error_connection_lost">The connection to the server broke off.</string>
     <string name="downloads_title">Downloads</string>
     <string name="downloads_action">Download</string>
     <string name="downloads_sheet_title">Download</string>

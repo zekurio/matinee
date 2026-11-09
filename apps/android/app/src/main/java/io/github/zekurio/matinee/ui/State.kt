@@ -11,12 +11,20 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import android.content.res.Resources
+import io.github.zekurio.matinee.R
+import io.github.zekurio.matinee.api.ApiException
 import io.github.zekurio.matinee.api.MatineeApi
 import io.github.zekurio.matinee.api.MediaItem
 import io.github.zekurio.matinee.api.TitleKind
 import io.github.zekurio.matinee.api.TitleSummary
 import io.github.zekurio.matinee.app
 import java.io.IOException
+import java.net.ConnectException
+import java.net.NoRouteToHostException
+import java.net.SocketTimeoutException
+import java.net.UnknownHostException
+import javax.net.ssl.SSLException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -103,8 +111,21 @@ sealed interface Load<out T> {
     data class Failed(val message: String) : Load<Nothing>
 }
 
+/**
+ * What went wrong reaching the server, in words for the person: the
+ * server's own message when it sent one, else whether it couldn't be
+ * reached or the connection broke off. The exception's own text is the
+ * HTTP client's, in English, and names sockets and addresses.
+ */
+fun describeFailure(resources: Resources, e: IOException): String = when (e) {
+    is ApiException -> e.message
+    is UnknownHostException, is ConnectException, is SocketTimeoutException, is NoRouteToHostException, is SSLException ->
+        resources.getString(R.string.error_unreachable)
+    else -> resources.getString(R.string.error_connection_lost)
+}
+
 /** What a screen loads from the server, kept while the screen is on the back stack. */
-class Loader<T>(private val fetch: suspend () -> T) : ViewModel() {
+class Loader<T>(private val describe: (IOException) -> String, private val fetch: suspend () -> T) : ViewModel() {
     var state by mutableStateOf<Load<T>>(Load.Loading)
         private set
     private var job: Job? = null
@@ -130,7 +151,7 @@ class Loader<T>(private val fetch: suspend () -> T) : ViewModel() {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: IOException) {
-                if (state is Load.Ready) state else Load.Failed(e.message ?: e.javaClass.simpleName)
+                if (state is Load.Ready) state else Load.Failed(describe(e))
             } catch (e: SerializationException) {
                 Load.Failed(e.message ?: "The server sent something this app can't read.")
             }
@@ -148,7 +169,7 @@ fun <T> rememberLoader(key: String, fetch: suspend MatineeApi.() -> T): Loader<T
     val app = context.app
     val loader: Loader<T> = viewModel(key = key) {
         val api = app.session.requireApi()
-        Loader { api.fetch() }
+        Loader({ describeFailure(app.resources, it) }) { api.fetch() }
     }
     val version = app.viewer.version
     LaunchedEffect(loader, version) {

@@ -76,6 +76,7 @@ import io.github.zekurio.matinee.api.RemoteImage
 import io.github.zekurio.matinee.api.Title
 import io.github.zekurio.matinee.app
 import io.github.zekurio.matinee.ui.Load
+import io.github.zekurio.matinee.ui.describeFailure
 import io.github.zekurio.matinee.ui.LocalNavigator
 import io.github.zekurio.matinee.ui.TopBar
 import io.github.zekurio.matinee.ui.components.Badge
@@ -155,6 +156,7 @@ fun IdentifyScreen(titleId: String) {
 
 @Composable
 private fun IdentifyForm(title: Title) {
+    val context = LocalContext.current
     val api = LocalApi.current
     val nav = LocalNavigator.current
     val res = LocalResources.current
@@ -176,7 +178,7 @@ private fun IdentifyForm(title: Title) {
         results = try {
             Load.Ready(api.findMatches(title.id, submitted.first, submitted.second))
         } catch (e: IOException) {
-            Load.Failed(e.message.orEmpty())
+            Load.Failed(describeFailure(context.resources, e))
         }
     }
     val search = {
@@ -369,7 +371,7 @@ private fun ImageEditor(title: Title, target: ImageTarget) {
         remote = try {
             Load.Ready(api.remoteImages(target, slot, allLanguages))
         } catch (e: IOException) {
-            Load.Failed(e.message.orEmpty())
+            Load.Failed(describeFailure(context.resources, e))
         }
     }
 
