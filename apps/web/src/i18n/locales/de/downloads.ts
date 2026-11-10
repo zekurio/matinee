@@ -45,7 +45,7 @@ export default {
   "downloads.submit": "Herunterladen",
   "downloads.started": "Download gestartet",
   "downloads.started.description":
-    "Sie wird beim Herunterladen umgewandelt, das kann etwas dauern.",
+    "Die Datei wird während des Downloads umgewandelt. Das kann etwas dauern.",
   "downloads.startFailed": "Der Download konnte nicht gestartet werden",
 
   "downloads.all.description":
