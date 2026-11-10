@@ -1,10 +1,4 @@
-import type {
-  AudioTrack,
-  Keyframes,
-  SubtitlePick,
-  Subtitles,
-  TrackPicks,
-} from "@matinee/contracts"
+import type { SubtitlePick } from "@matinee/contracts"
 import { useMediaQuery } from "@matinee/ui/hooks/use-media-query"
 import { cn } from "@matinee/ui/lib/utils"
 import {
@@ -16,29 +10,22 @@ import {
 import { type FocusEvent, useEffect, useRef, useState } from "react"
 
 import { tr } from "@/i18n"
-import {
-  audioLanguageFor,
-  currentPlaybackPreferences,
-  usePlaybackPreferences,
-} from "@/lib/playback-sync"
-import { randomId } from "@/lib/random-id"
+import type { FirstStart } from "@/lib/playback-start"
+import { usePlaybackPreferences } from "@/lib/playback-sync"
 import { subtitleLabel } from "@/lib/subtitles"
 import {
   createPlayerStore,
   type PlayerStore,
   PlayerStoreContext,
+  selectBurnedIn,
   selectHidden,
   usePlayerStore,
   usePlayerStoreApi,
 } from "@/stores/player"
 import { usePlayerPreferencesStore } from "@/stores/player-preferences"
 
-import {
-  type AudioCandidate,
-  audioChoice,
-  type HlsRequest,
-  type StreamRequest,
-} from "./playback-source"
+import { playbackNotice } from "./playback-notices"
+import { sourceOf } from "./playback-source"
 import {
   CenterControls,
   ControlButton,
@@ -52,10 +39,10 @@ import {
 } from "./player-controls"
 import { formatDelay, formatPercent } from "./player-format"
 import { PlayerMenus } from "./player-menus"
-import { type FileInfo, PlayerStats } from "./player-stats"
+import { PlayerStats } from "./player-stats"
 import type { TrickplayTiles } from "./trickplay-thumb"
 import { type UpNext, UpNextCard } from "./up-next"
-import { loadHls, useHls } from "./use-hls"
+import { useHls } from "./use-hls"
 import { usePlayback } from "./use-playback"
 import { usePlayerKeys } from "./use-player-keys"
 import {
@@ -68,50 +55,21 @@ import { useSubtitles } from "./use-subtitles"
 const IDLE_MS = 2500
 
 type VideoPlayerProps = {
-  /** The file as it is. */
-  src: string
-  /** A stream with one audio track, copied or encoded, for the session. */
-  streamSrc: (request: StreamRequest & { session: string }) => string
-  /** An encode as HLS, shared with everyone who plays it the same way. */
-  hlsSrc: (request: HlsRequest & { session: string }) => string
-  /** Where a copied stream can start near a point. */
-  keyframes: (seconds: number) => Promise<Keyframes>
-  /** The file's audio tracks. Undefined while they load. */
-  audioTracks?: AudioTrack[]
-  /** The same tracks from the probe. Undefined when it hasn't run. */
-  probeAudio?: AudioCandidate[]
-  /** The language the title was made in, when the metadata says. */
-  originalLanguage: string | null
-  /** The file's length, when the server knows it. */
-  durationSeconds: number | null
-  /** The video's size, when the server knows it. */
-  videoSize: { width: number; height: number } | null
-  /** ffmpeg's name for the video codec, when the server knows it. */
-  videoCodec: string | null
-  /** Whether this browser decodes the video as it is. */
-  videoPlays: boolean
-  /** The file's container, size, and streams, for the playback stats. */
-  file: FileInfo
+  /** The server's first answer for this sitting with the file. */
+  start: FirstStart
   title: string
   subtitle: string
-  /** The file's subtitle tracks. Undefined while they load. */
-  subtitles?: Subtitles
-  /** Where a subtitle track's file loads from. */
-  subtitleSrc: (trackId: string) => string
   /** The seek bar's thumbnails, once the server has them. */
   trickplay: TrickplayTiles | null
-  /** Seconds to resume from once the video can seek. */
-  startAt?: number
   /** The episode after this one, offered once this one ends. */
   upNext?: UpNext | null
   onBack: () => void
-  onUnsupported: () => void
+  /** Nothing this browser can play is left. */
+  onUnplayable: () => void
+  /** A source failed and the server couldn't say what plays instead. */
+  onFailed: (cause: unknown) => void
   /** Called while playing, on pause and end, and when the player closes. */
   onProgress?: (report: ProgressReport) => void
-  /** Called once playback has actually jumped to `startAt`. */
-  onResumed?: (seconds: number) => void
-  /** The tracks the viewer picked before, which play ahead of the defaults. */
-  rememberedTracks: TrackPicks
   /** Called when the viewer picks an audio or subtitle track. */
   onPickTracks: (pick: { audio?: number; subtitle?: SubtitlePick }) => void
 }
@@ -125,36 +83,27 @@ type VideoPlayerProps = {
  */
 export function VideoPlayer(props: VideoPlayerProps) {
   // One store per player, which remounts for another file. It starts from
-  // the saved preferences, and with the file itself when the browser
-  // decodes its video and the audio that plays first, and that audio, the
-  // one picked before or the preferences', is the file's default.
+  // the server's first answer and the saved preferences.
   const [store] = useState(() => {
     const saved = usePlayerPreferencesStore.getState()
-    const preferences = currentPlaybackPreferences()
-    const audioLanguage = audioLanguageFor(
-      preferences.audioLanguage,
-      props.originalLanguage,
-    )
-    const { playsFile } = audioChoice(
-      props.audioTracks,
-      props.probeAudio,
-      audioLanguage,
-      props.rememberedTracks.audio,
-    )
+    const { plan, sessionId, device, quality } = props.start
     return createPlayerStore({
-      sessionId: randomId(),
-      quality: saved.quality,
-      source:
-        saved.quality === "original" && playsFile && props.videoPlays
-          ? { kind: "direct" }
-          : null,
-      duration: props.durationSeconds ?? 0,
+      itemId: plan.item.id,
+      sessionId,
+      device,
+      plan,
+      source: sourceOf(plan, 0),
+      picks: { quality },
+      duration:
+        plan.item.durationSeconds ??
+        plan.item.probe?.format.durationSeconds ??
+        0,
       volume: saved.volume,
       muted: saved.muted,
-      audioLanguage,
-      subtitleDefaults: preferences,
     })
   })
+  // What the server does for the first answer, said once it plays.
+  useEffect(() => playbackNotice(props.start.plan, null), [])
   return (
     <PlayerStoreContext value={store}>
       <Player {...props} />
@@ -182,29 +131,14 @@ function useIdle(store: PlayerStore, ms: number) {
 }
 
 function Player({
-  src,
-  streamSrc,
-  hlsSrc,
-  keyframes,
-  audioTracks,
-  probeAudio,
-  durationSeconds,
-  videoSize,
-  videoCodec,
-  videoPlays,
-  file,
   title,
   subtitle,
-  subtitles,
-  subtitleSrc,
   trickplay,
-  startAt,
   upNext,
   onBack,
-  onUnsupported,
+  onUnplayable,
+  onFailed,
   onProgress,
-  onResumed,
-  rememberedTracks,
   onPickTracks,
 }: VideoPlayerProps) {
   const store = usePlayerStoreApi()
@@ -219,32 +153,7 @@ function Player({
   const actions = store.getState()
   const { sessionId } = actions
 
-  // An encode plays through hls.js. When it's sure to be one, its code
-  // loads now, while the tracks do, rather than once the source is picked.
-  const encodes = !videoPlays || actions.quality !== "original"
-  useEffect(() => {
-    if (encodes) void loadHls()
-  }, [encodes])
-
-  const playback = usePlayback({
-    video,
-    directSrc: src,
-    streamSrc: (request) => streamSrc({ ...request, session: sessionId }),
-    hlsSrc: (request) => hlsSrc({ ...request, session: sessionId }),
-    keyframes,
-    audioTracks,
-    probeAudio,
-    audioLanguage: actions.audioLanguage,
-    rememberedAudio: rememberedTracks.audio,
-    onPickAudio: (audio) => onPickTracks({ audio }),
-    durationSeconds,
-    videoSize,
-    videoCodec,
-    videoPlays,
-    startAt,
-    onResumed,
-    onUnsupported,
-  })
+  const playback = usePlayback({ video, onUnplayable, onFailed })
   const { position, duration: lengthOf, seek } = playback
 
   const report = useProgressReport(
@@ -265,16 +174,12 @@ function Player({
   const hidden = usePlayerStore(selectHidden)
   const statsOpen = usePlayerStore((state) => state.statsOpen)
   const subs = useSubtitles(
-    subtitles,
-    subtitleSrc,
     video,
     seekBar,
     pgsLayer,
     !hidden,
     playback.offset,
-    playback.selectBurnIn,
-    playback.audioLanguage,
-    rememberedTracks.subtitle,
+    playback.selectSubtitle,
     (trackId) => onPickTracks({ subtitle: { trackId } }),
   )
   // Keyboard focus holds the controls up. A click focuses a button too,
@@ -357,8 +262,9 @@ function Player({
     el.playbackRate = next
   }
   const moveSubtitles = (by: number) => {
-    const { burnIn, subtitleDelay, setSubtitleDelay } = store.getState()
-    if (burnIn !== null) {
+    const state = store.getState()
+    const { subtitleDelay, setSubtitleDelay } = state
+    if (selectBurnedIn(state)) {
       show(CaptionsIcon, tr("player.flash.subtitlesBurnedIn"))
       return
     }
@@ -487,17 +393,7 @@ function Player({
       {/* PGS subtitles draw here, over the picture. */}
       <div ref={pgsLayer} className="pointer-events-none absolute inset-0" />
 
-      {statsOpen && (
-        <PlayerStats
-          video={video}
-          source={playback.source}
-          audio={playback.audio}
-          tracks={playback.tracks}
-          file={file}
-          videoPlays={videoPlays}
-          sessionId={sessionId}
-        />
-      )}
+      {statsOpen && <PlayerStats video={video} sessionId={sessionId} />}
 
       <CenterControls coarse={coarse} hidden={hidden} onToggle={toggle} />
       <FlashNote />
@@ -552,10 +448,8 @@ function Player({
             <PlayerMenus
               playback={playback}
               subs={subs}
-              audioTracks={audioTracks}
-              subtitles={subtitles}
-              videoSize={videoSize}
               onSpeedChange={changeSpeed}
+              onPickAudio={(audio) => onPickTracks({ audio })}
               container={container}
             />
             <FullscreenButton onToggle={toggleFullscreen} />

@@ -5,8 +5,6 @@ import {
 
 import { usePlayerPreferencesStore } from "@/stores/player-preferences"
 
-import { orpc, queryClient } from "./rpc"
-
 /** How an MP4 MIME type names each codec, in the spellings browsers accept. */
 const MP4_NAMES = {
   opus: ["opus"],
@@ -57,29 +55,4 @@ export function decodableAudioCodecs(): readonly PlaybackAudioCodec[] {
   )
   if (audioCodec === "auto" || !kept.includes(audioCodec)) return kept
   return [audioCodec, ...kept.filter((codec) => codec !== audioCodec)]
-}
-
-/** Whether the player takes `codec`, ffmpeg's name for it, as it is. */
-export function decodesAudio(codec: string): boolean {
-  return decodableAudioCodecs().some((entry) => entry === codec)
-}
-
-/**
- * What the server turns a track the player doesn't take into, as
- * `buildAudioPipeline` picks it: the first of Opus and AAC on the list
- * that the server encodes, once `playback.options` has said which.
- */
-export function convertedAudioCodec(): "opus" | "aac" {
-  const server = queryClient.getQueryData(
-    orpc.playback.options.queryKey(),
-  )?.audioCodecs
-  for (const codec of decodableAudioCodecs()) {
-    if (
-      (codec === "opus" || codec === "aac") &&
-      server?.includes(codec) !== false
-    ) {
-      return codec
-    }
-  }
-  return "aac"
 }

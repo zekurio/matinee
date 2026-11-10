@@ -1,8 +1,6 @@
 import {
-  type AudioTrack,
   PLAYBACK_QUALITIES,
   PlaybackQuality as PlaybackQualitySchema,
-  type Subtitles,
 } from "@matinee/contracts"
 import { AudioLinesIcon, CaptionsIcon, SettingsIcon } from "lucide-react"
 import type { RefObject } from "react"
@@ -11,7 +9,7 @@ import { useShallow } from "zustand/shallow"
 import { tr } from "@/i18n"
 import { trackLabel } from "@/lib/languages"
 import { subtitleLabel, trackDetail } from "@/lib/subtitles"
-import { usePlayerStore } from "@/stores/player"
+import { selectAudio, selectBurnedIn, usePlayerStore } from "@/stores/player"
 
 import { controlButtonClass, SUBTITLE_STEP_MS } from "./player-controls"
 import {
@@ -36,18 +34,15 @@ const OFF = "off"
 export function PlayerMenus({
   playback,
   subs,
-  audioTracks,
-  subtitles,
-  videoSize,
   onSpeedChange,
+  onPickAudio,
   container,
 }: {
   playback: ReturnType<typeof usePlayback>
   subs: ReturnType<typeof useSubtitles>
-  audioTracks?: AudioTrack[]
-  subtitles?: Subtitles
-  videoSize: { width: number; height: number } | null
   onSpeedChange: (speed: number) => void
+  /** The viewer picked an audio track, for the server to remember. */
+  onPickAudio: (index: number) => void
   container: RefObject<HTMLDivElement | null>
 }) {
   const {
@@ -55,7 +50,8 @@ export function PlayerMenus({
     openMenu,
     setMenuOpen,
     delay,
-    burnIn,
+    burnedIn,
+    audio,
     setSubtitleDelay,
     statsOpen,
     setStatsOpen,
@@ -65,7 +61,8 @@ export function PlayerMenus({
       openMenu: state.openMenu,
       setMenuOpen: state.setMenuOpen,
       delay: state.subtitleDelay,
-      burnIn: state.burnIn,
+      burnedIn: selectBurnedIn(state),
+      audio: selectAudio(state),
       setSubtitleDelay: state.setSubtitleDelay,
       statsOpen: state.statsOpen,
       setStatsOpen: state.setStatsOpen,
@@ -82,7 +79,7 @@ export function PlayerMenus({
   // Audio: every track, with the codec and channels its label leaves out.
   const audioSection: MenuSection = {
     title: tr("player.menu.audio"),
-    value: playback.audio === null ? "" : String(playback.audio),
+    value: audio === null ? "" : String(audio),
     choices: playback.tracks.map((track, position) => ({
       id: String(track.index),
       label: trackLabel(
@@ -92,10 +89,10 @@ export function PlayerMenus({
       ),
       detail: audioDetail(track),
     })),
-    onSelect: (id) => playback.selectAudio(Number(id)),
-    empty: audioTracks
-      ? tr("player.audio.noTracks")
-      : tr("player.audio.loading"),
+    onSelect: (id) => {
+      if (playback.selectAudio(Number(id))) onPickAudio(Number(id))
+    },
+    empty: tr("player.audio.noTracks"),
   }
 
   const subtitleChoices: MenuChoice[] = subs.tracks.map((track) => ({
@@ -112,7 +109,7 @@ export function PlayerMenus({
     value: subs.selected ?? OFF,
     // A file without any lists none rather than Off alone.
     choices:
-      subtitles && subtitleChoices.length === 0
+      subtitleChoices.length === 0
         ? []
         : [{ id: OFF, label: tr("player.subtitles.off") }, ...subtitleChoices],
     onSelect: (id) => subs.select(id === OFF ? null : id),
@@ -126,8 +123,7 @@ export function PlayerMenus({
       : {
           title: tr("player.subtitles.delay"),
           value: formatDelay(delay),
-          disabledNote:
-            burnIn === null ? undefined : tr("player.subtitles.burnedIn"),
+          disabledNote: burnedIn ? tr("player.subtitles.burnedIn") : undefined,
           atStart: delay === 0,
           decrease: {
             label: tr("player.subtitles.earlier"),
@@ -145,6 +141,8 @@ export function PlayerMenus({
         }
 
   // Quality: the file as it is, then the encodes no larger than it.
+  const video = playback.plan.item.probe?.video
+  const videoSize = video ? { width: video.width, height: video.height } : null
   const qualities: MenuChoice[] = [
     {
       id: "original",

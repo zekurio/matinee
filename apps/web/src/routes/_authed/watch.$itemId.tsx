@@ -1,29 +1,24 @@
-import {
-  mediaHlsPath,
-  mediaPlaybackPath,
-  mediaStreamPath,
-  RPC_PATH,
-  type Subtitles,
-  subtitlePath,
-  type TrackPicks,
-  trickplayTilePath,
-} from "@matinee/contracts"
+import { RPC_PATH, trickplayTilePath } from "@matinee/contracts"
 import { t } from "@matinee/contracts/schema"
 import { buttonVariants } from "@matinee/ui/components/button"
 import { Spinner } from "@matinee/ui/components/spinner"
-import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router"
 import { useEffect, useState } from "react"
 
 import { useDocumentTitle } from "@/components/page-header"
-import { probeAudioOf } from "@/components/playback-source"
 import type { UpNext } from "@/components/up-next"
 import type { ProgressReport } from "@/components/use-progress-report"
 import { VideoPlayer } from "@/components/video-player"
 import { tr } from "@/i18n"
 import { itemLabel } from "@/lib/media"
+import {
+  type FirstStart,
+  isUnplayable,
+  startQuery,
+  startQueryKey,
+} from "@/lib/playback-start"
 import { client, errorMessage, liveQuery, orpc } from "@/lib/rpc"
-import { decodesVideo } from "@/lib/video-support"
 
 const WatchSearch = t.object({
   /**
@@ -35,31 +30,14 @@ const WatchSearch = t.object({
 
 export const Route = createFileRoute("/_authed/watch/$itemId")({
   validateSearch: WatchSearch,
-  // What the player needs before it can pick a source, asked for while its
-  // code loads, and on hover over a play button.
-  loader: ({ context: { queryClient }, params: { itemId } }) => {
-    const input = { input: { id: itemId } }
-    void queryClient.prefetchQuery(orpc.media.get.queryOptions(input))
-    void queryClient.prefetchQuery(orpc.media.audio.queryOptions(input))
-    void queryClient.prefetchQuery(orpc.media.subtitles.queryOptions(input))
-    void queryClient.prefetchQuery(tracksQuery(itemId))
+  loaderDeps: ({ search }) => ({ start: search.start }),
+  // How the file plays, asked for while the player's code loads, and on
+  // hover over a play button. The answer has all the player needs.
+  loader: ({ context: { queryClient }, params: { itemId }, deps }) => {
+    void queryClient.prefetchQuery(startQuery(itemId, deps.start))
   },
   component: Watch,
 })
-
-const NO_SUBTITLES: Subtitles = { tracks: [], audioLanguage: null }
-const NO_PICKS: TrackPicks = { audio: null, subtitle: null }
-
-/**
- * The tracks picked before in a file. Picks change while the player is
- * open, and another file's may match, so they're read anew every time.
- */
-function tracksQuery(itemId: string) {
-  return orpc.playback.tracks.queryOptions({
-    input: { itemId },
-    staleTime: 0,
-  })
-}
 
 /**
  * Send a progress report. A page that is closing can't wait for the RPC
@@ -91,25 +69,34 @@ function sendProgress(itemId: string, report: ProgressReport) {
 function Watch() {
   const { itemId } = Route.useParams()
   const { start } = Route.useSearch()
+  // Another file, as the next episode, starts over.
+  return <WatchItem key={itemId} itemId={itemId} start={start} />
+}
+
+function WatchItem({
+  itemId,
+  start,
+}: {
+  itemId: string
+  start: number | undefined
+}) {
   const router = useRouter()
   const queryClient = useQueryClient()
+  // The first answer, which the player starts from and keeps. The ones
+  // after it are the player's own.
+  const started = useQuery(startQuery(itemId, start))
+  const [first, setFirst] = useState<FirstStart | null>(null)
+  if (first === null && started.data) setFirst(started.data)
+  const [stopped, setStopped] = useState<
+    { unplayable: true } | { unplayable: false; cause: unknown } | null
+  >(null)
+  const unplayable = stopped ? stopped.unplayable : isUnplayable(started.error)
+  // The file's container, for saying why nothing plays, when the first
+  // answer didn't come with it.
   const item = useQuery({
     ...orpc.media.get.queryOptions({ input: { id: itemId } }),
-    // The resume point must be current, not from an earlier visit.
-    staleTime: 0,
+    enabled: unplayable && first === null,
   })
-  // Playback starts without waiting for these; tracks join when they arrive.
-  const subtitles = useQuery(
-    orpc.media.subtitles.queryOptions({ input: { id: itemId } }),
-  )
-  const audio = useQuery(
-    orpc.media.audio.queryOptions({ input: { id: itemId } }),
-  )
-  // The player picks its first tracks once, so it waits for these.
-  const picks = useQuery(tracksQuery(itemId))
-  const picksReady = picks.isFetchedAfterMount || picks.isError
-  // What the server encodes to, so the player's notices can say.
-  useQuery(orpc.playback.options.queryOptions({ staleTime: 5 * 60_000 }))
   // The stream ends once the images are there or won't come. Only one that
   // ended while they were being made opens again.
   const trickplay = useQuery({
@@ -122,24 +109,12 @@ function Watch() {
   })
   const trickplayImages =
     trickplay.data?.status === "ready" ? trickplay.data.images : null
-  const [unsupported, setUnsupported] = useState(false)
-  const label = item.data ? itemLabel(item.data) : null
+  const playing = first?.plan.item
+  const label = playing ? itemLabel(playing) : null
   const pageTitle = label?.title
 
-  const progress = item.data?.progress
-  const startAt =
-    start ??
-    (progress && !progress.completed ? progress.positionSeconds : undefined)
-
   // The show's next episode, which the player offers once this one ends.
-  const show = item.data?.title?.kind === "show" ? item.data.title : null
-  const episodes = useQuery(
-    orpc.titles.items.queryOptions({
-      input: show ? { id: show.id } : skipToken,
-    }),
-  )
-  const index = episodes.data?.findIndex((each) => each.id === itemId) ?? -1
-  const next = index >= 0 ? episodes.data?.[index + 1] : undefined
+  const next = first?.plan.next
   const nextLabel = next ? itemLabel(next) : null
   const upNext: UpNext | null =
     next && nextLabel
@@ -160,15 +135,18 @@ function Watch() {
   useDocumentTitle(pageTitle)
 
   // Home's rows, title pages, and statistics depend on what was just watched.
+  // The next visit asks anew, for a new sitting from where this one ends.
+  // A remount under StrictMode asks again too, and keeps the first answer.
   useEffect(
     () => () => {
+      queryClient.removeQueries({ queryKey: startQueryKey(itemId) })
       void queryClient.invalidateQueries({ queryKey: orpc.home.key() })
       void queryClient.invalidateQueries({ queryKey: orpc.media.key() })
       void queryClient.invalidateQueries({ queryKey: orpc.titles.key() })
       void queryClient.invalidateQueries({ queryKey: orpc.profiles.key() })
       void queryClient.invalidateQueries({ queryKey: orpc.stats.key() })
     },
-    [queryClient],
+    [queryClient, itemId],
   )
 
   const back = () => {
@@ -176,58 +154,29 @@ function Watch() {
     else void router.navigate({ to: "/" })
   }
 
-  if (item.data && label && !unsupported && picksReady) {
-    const probe = item.data.probe
+  if (first && playing && label && !stopped) {
     return (
       <VideoPlayer
-        key={item.data.id}
-        src={mediaStreamPath(item.data.id)}
-        streamSrc={(request) => mediaPlaybackPath(itemId, request)}
-        hlsSrc={(request) => mediaHlsPath(itemId, request)}
-        keyframes={(seconds) => client.media.keyframes({ id: itemId, seconds })}
-        // A failed list means no tracks to switch between, not a broken player.
-        audioTracks={audio.isError ? [] : audio.data}
-        probeAudio={probe ? probeAudioOf(probe) : undefined}
-        originalLanguage={item.data.title?.originalLanguage ?? null}
-        durationSeconds={
-          item.data.durationSeconds ?? probe?.format.durationSeconds ?? null
-        }
-        videoSize={
-          probe?.video
-            ? { width: probe.video.width, height: probe.video.height }
-            : null
-        }
-        videoCodec={probe?.video?.codec ?? null}
-        videoPlays={decodesVideo(probe?.video)}
-        file={{
-          container: item.data.container,
-          sizeBytes: item.data.sizeBytes,
-          probe,
-        }}
+        start={first}
         title={label.title}
         subtitle={
           label.code
             ? `${label.code} · ${label.showName}`
-            : item.data.title
+            : playing.title
               ? (label.year ?? "")
               : label.groupLabel.join(" · ")
         }
-        // A failed list means no tracks, not a broken player.
-        subtitles={subtitles.isError ? NO_SUBTITLES : subtitles.data}
-        subtitleSrc={(trackId) => subtitlePath(itemId, trackId)}
         trickplay={
           trickplayImages && {
             images: trickplayImages,
             src: (tile) => trickplayTilePath(itemId, trickplayImages.key, tile),
           }
         }
-        startAt={startAt}
         upNext={upNext}
         onBack={back}
-        onUnsupported={() => setUnsupported(true)}
+        onUnplayable={() => setStopped({ unplayable: true })}
+        onFailed={(cause) => setStopped({ unplayable: false, cause })}
         onProgress={(report) => sendProgress(itemId, report)}
-        // A failed read plays by the preferences.
-        rememberedTracks={picks.data ?? NO_PICKS}
         onPickTracks={(pick) =>
           void client.playback.pickTracks({ itemId, ...pick }).catch(() => {})
         }
@@ -235,23 +184,25 @@ function Watch() {
     )
   }
 
+  const container = item.data?.container ?? playing?.container
+  const failure = stopped && !stopped.unplayable ? stopped.cause : started.error
   return (
     <div className="fixed inset-0 grid place-items-center bg-black p-6 text-white">
-      {item.isPending || (item.data && !picksReady) ? (
+      {!first && started.isPending ? (
         <Spinner className="size-8" />
       ) : (
         <div className="max-w-md text-center">
           <h1 className="text-2xl font-semibold tracking-tight">
-            {unsupported ? tr("player.unsupported") : tr("player.loadFailed")}
+            {unplayable ? tr("player.unsupported") : tr("player.loadFailed")}
           </h1>
           <p className="mt-2 text-sm text-white/70">
-            {unsupported
-              ? item.data
+            {unplayable
+              ? container
                 ? tr("player.unsupportedDetail", {
-                    container: item.data.container.toUpperCase(),
+                    container: container.toUpperCase(),
                   })
                 : tr("player.unsupportedDetailUnknown")
-              : errorMessage(item.error)}
+              : errorMessage(failure)}
           </p>
           <Link
             to="/"

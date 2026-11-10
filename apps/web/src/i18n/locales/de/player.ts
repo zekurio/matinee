@@ -47,7 +47,6 @@ export default {
   "player.track.unknownLanguage": "Unbekannte Sprache",
   "player.track.withTitle": "{language} ({title})",
   "player.audio.noTracks": "Diese Datei hat keine Tonspuren",
-  "player.audio.loading": "Spuren werden geladen …",
   "player.subtitles.off": "Aus",
   "player.subtitles.noTracks": "Diese Datei hat keine Untertitel",
   "player.subtitles.forced": "Erzwungen",
@@ -73,8 +72,11 @@ export default {
   "player.stats.method.remux": "Direktes Streaming",
   "player.stats.method.encode": "Transkodierung",
   "player.stats.reason": "Grund",
+  "player.stats.reason.container":
+    "Dieser Browser kann keine {container}-Dateien abspielen",
   "player.stats.reason.video": "Dieser Browser kann kein {codec} abspielen",
   "player.stats.reason.directFailed": "Direkte Wiedergabe fehlgeschlagen",
+  "player.stats.reason.remuxFailed": "Direktes Streaming fehlgeschlagen",
   "player.stats.reason.audioCodec":
     "Dieser Browser kann kein {format}-Audio abspielen",
   "player.stats.reason.audioTrack": "Nicht die Standard-Audiospur der Datei",
@@ -116,22 +118,21 @@ export default {
 
   "player.notice.standIn": "Zu {format}-Audio gewechselt",
   "player.notice.standInDetail":
-    "Dieser Browser kann die {format}-Spur nicht abspielen. Wähle sie im Audiomenü, um sie zu transkodieren.",
-  "player.notice.video": "Transkodierung von {from} zu {to} {quality}",
-  "player.notice.videoTo": "Transkodierung zu {to} {quality}",
+    "Dieser Browser kann die Spur nicht abspielen, die sonst liefe. Wähle sie im Audiomenü, um sie zu transkodieren.",
+  "player.notice.video": "Transkodierung von {from}-Video zu {quality}",
+  "player.notice.videoTo": "Transkodierung des Videos zu {quality}",
   "player.notice.audio": "{from}-Audio zu {to}",
   "player.notice.audioTitle": "Transkodierung von {from}-Audio zu {to}",
   "player.notice.stereo": "{codec} Stereo",
   "player.notice.burnIn": "Untertitel werden eingebrannt",
   "player.notice.subtitles": "Untertitel werden vorbereitet",
   "player.notice.burnInVideo":
-    "Das Video wird von {from} zu {to} {quality} transkodiert.",
-  "player.notice.burnInVideoTo":
-    "Das Video wird zu {to} {quality} transkodiert.",
+    "Das {from}-Video wird zu {quality} transkodiert.",
+  "player.notice.burnInVideoTo": "Das Video wird zu {quality} transkodiert.",
   "player.notice.burnInVideoAudio":
-    "Das Video wird von {from} zu {to} {quality} transkodiert, das Audio von {audioFrom} zu {audioTo}.",
+    "Das {from}-Video wird zu {quality} transkodiert, das Audio von {audioFrom} zu {audioTo}.",
   "player.notice.burnInVideoToAudio":
-    "Das Video wird zu {to} {quality} transkodiert, das Audio von {audioFrom} zu {audioTo}.",
+    "Das Video wird zu {quality} transkodiert, das Audio von {audioFrom} zu {audioTo}.",
 
   "player.error.burnIn": "Die Untertitel konnten nicht eingebrannt werden",
   "player.error.burnInDetail":
@@ -140,10 +141,7 @@ export default {
   "player.error.lostDetail": "Der Server sendet es nicht mehr.",
   "player.error.retry": "Erneut versuchen",
   "player.error.revert": "Das ließ sich nicht abspielen",
-  "player.error.revertToFile":
-    "Zurück zur Originaldatei und zur ursprünglichen Tonspur.",
-  "player.error.revertToQuality":
-    "Zurück zur Originalqualität und zur ursprünglichen Tonspur.",
+  "player.error.revertToQuality": "Zurück zur Originalqualität.",
   "player.error.subtitles": "Die Untertitel konnten nicht geladen werden",
   "player.error.subtitlesDetail":
     "Wähle eine andere Spur oder schalte sie aus.",

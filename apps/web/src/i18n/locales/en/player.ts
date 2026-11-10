@@ -56,7 +56,6 @@ export default defineMessages("player", {
   "player.track.unknownLanguage": "Unknown language",
   "player.track.withTitle": "{language} ({title})",
   "player.audio.noTracks": "This file has no audio tracks",
-  "player.audio.loading": "Loading tracks…",
   "player.subtitles.off": "Off",
   "player.subtitles.noTracks": "This file has no subtitles",
   "player.subtitles.forced": "Forced",
@@ -85,9 +84,12 @@ export default defineMessages("player", {
   "player.stats.method.remux": "Direct stream",
   "player.stats.method.encode": "Transcode",
   "player.stats.reason": "Reason",
+  // {container} is a file format, like MKV.
+  "player.stats.reason.container": "This browser can't play {container} files",
   // {codec} is a video codec, like HEVC.
   "player.stats.reason.video": "This browser can't play {codec}",
   "player.stats.reason.directFailed": "Direct play failed",
+  "player.stats.reason.remuxFailed": "Direct stream failed",
   // {format} is an audio format, like TrueHD Atmos.
   "player.stats.reason.audioCodec": "This browser can't play {format} audio",
   "player.stats.reason.audioTrack": "Not the file's default audio track",
@@ -133,13 +135,13 @@ export default defineMessages("player", {
   "player.stats.size": "Size",
   "player.stats.overallBitrate": "Overall bitrate",
 
-  // Toasts about what the server converts. {from} and {to} are codecs,
-  // like HEVC and H.264, and {quality} a resolution, like 1080p.
+  // Toasts about what the server converts. {from} is a codec, like HEVC,
+  // and {quality} a resolution, like 1080p.
   "player.notice.standIn": "Switched to {format} audio",
   "player.notice.standInDetail":
-    "This browser can't play the {format} track. Pick it in the audio menu to transcode it.",
-  "player.notice.video": "Transcoding {from} to {to} {quality}",
-  "player.notice.videoTo": "Transcoding to {to} {quality}",
+    "This browser can't play the track that would play. Pick it in the audio menu to transcode it.",
+  "player.notice.video": "Transcoding {from} video to {quality}",
+  "player.notice.videoTo": "Transcoding the video to {quality}",
   "player.notice.audio": "{from} audio to {to}",
   "player.notice.audioTitle": "Transcoding {from} audio to {to}",
   // The codec audio converts to, when it goes down to two channels.
@@ -147,12 +149,12 @@ export default defineMessages("player", {
   "player.notice.burnIn": "Burning in subtitles",
   // While a subtitle track is still on its way.
   "player.notice.subtitles": "Preparing subtitles",
-  "player.notice.burnInVideo": "Transcoding {from} to {to} {quality}.",
-  "player.notice.burnInVideoTo": "Transcoding to {to} {quality}.",
+  "player.notice.burnInVideo": "Transcoding {from} video to {quality}.",
+  "player.notice.burnInVideoTo": "Transcoding the video to {quality}.",
   "player.notice.burnInVideoAudio":
-    "Transcoding {from} to {to} {quality} and {audioFrom} audio to {audioTo}.",
+    "Transcoding {from} video to {quality} and {audioFrom} audio to {audioTo}.",
   "player.notice.burnInVideoToAudio":
-    "Transcoding to {to} {quality} and {audioFrom} audio to {audioTo}.",
+    "Transcoding the video to {quality} and {audioFrom} audio to {audioTo}.",
 
   // Toasts when something fails.
   "player.error.burnIn": "Couldn't burn in those subtitles",
@@ -162,8 +164,7 @@ export default defineMessages("player", {
   "player.error.lostDetail": "The server stopped sending it.",
   "player.error.retry": "Retry",
   "player.error.revert": "Couldn't play that",
-  "player.error.revertToFile": "Back to the original file and audio.",
-  "player.error.revertToQuality": "Back to the original quality and audio.",
+  "player.error.revertToQuality": "Back to the original quality.",
   "player.error.subtitles": "Couldn't load subtitles",
   "player.error.subtitlesDetail": "Pick another track or turn them off.",
   "player.error.savePreferences": "Couldn't save your playback preferences",
