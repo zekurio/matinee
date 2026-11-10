@@ -1,6 +1,12 @@
 import { eventIterator, oc } from "@orpc/contract"
 
 import { get, post, put } from "./contract-routes"
+import {
+  PlaybackSeek,
+  PlaybackSeekInput,
+  PlaybackStart,
+  PlaybackStartInput,
+} from "./playback-start"
 import { PlaybackOptions } from "./preferences"
 import { t } from "./schema"
 import { FeaturedTitle, MediaItem, TitleSummary, WatchedAt } from "./schemas"
@@ -35,6 +41,12 @@ export const OfflinePlay = t.object({
 export type OfflinePlay = t.infer<typeof OfflinePlay>
 
 export const playbackContract = oc.tag("Playback").router({
+  /** Seek in a copied stream without loading tracks, preferences, or the next episode. */
+  seek: post("/playback/seek").input(PlaybackSeekInput).output(PlaybackSeek),
+  /** Decide how this device starts a file, including tracks and the resume point. */
+  start: post("/playback/start")
+    .input(PlaybackStartInput)
+    .output(PlaybackStart),
   /**
    * Players call this every ten seconds while playing, every thirty while
    * paused, and at once on play, pause, seek, and close. A session drops

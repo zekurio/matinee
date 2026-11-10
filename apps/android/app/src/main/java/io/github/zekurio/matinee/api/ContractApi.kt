@@ -707,6 +707,26 @@ class DownloadsApi internal constructor(private val transport: ApiTransport) {
 }
 
 class PlaybackApi internal constructor(private val transport: ApiTransport) {
+    /** `POST /playback/start` */
+    suspend fun start(playbackStartInput: PlaybackStartInput): PlaybackStart =
+        transport.call(
+            "POST",
+            listOf("playback", "start"),
+            emptyList(),
+            transport.json(PlaybackStartInput.serializer(), playbackStartInput),
+            PlaybackStart.serializer(),
+        )
+
+    /** `POST /playback/seek` */
+    suspend fun seek(playbackSeekInput: PlaybackSeekInput): PlaybackSeek =
+        transport.call(
+            "POST",
+            listOf("playback", "seek"),
+            emptyList(),
+            transport.json(PlaybackSeekInput.serializer(), playbackSeekInput),
+            PlaybackSeek.serializer(),
+        )
+
     /** `POST /media/{itemId}/progress` */
     suspend fun report(
         itemId: String,
@@ -724,6 +744,36 @@ class PlaybackApi internal constructor(private val transport: ApiTransport) {
             transport.json(PlaybackReportInput.serializer(), PlaybackReportInput(positionSeconds = positionSeconds, durationSeconds = durationSeconds, sessionId = sessionId, playedSeconds = playedSeconds, paused = paused, closed = closed)),
         )
     }
+
+    /** `GET /media/{itemId}/tracks` */
+    suspend fun tracks(itemId: String): TrackPicks =
+        transport.call(
+            "GET",
+            listOf("media", itemId, "tracks"),
+            emptyList(),
+            null,
+            TrackPicks.serializer(),
+        )
+
+    /** `PUT /media/{itemId}/tracks` */
+    suspend fun pickTracks(itemId: String, audio: Int? = null, subtitle: SubtitlePick? = null) {
+        transport.send(
+            "PUT",
+            listOf("media", itemId, "tracks"),
+            emptyList(),
+            transport.json(PlaybackPickTracksInput.serializer(), PlaybackPickTracksInput(audio = audio, subtitle = subtitle)),
+        )
+    }
+
+    /** `GET /playback/sessions/{sessionId}/stream` */
+    fun stream(sessionId: String): Flow<SessionStream?> =
+        transport.events(
+            "GET",
+            listOf("playback", "sessions", sessionId, "stream"),
+            emptyList(),
+            null,
+            SessionStream.serializer().nullable,
+        )
 
     /** `POST /playback/offline` */
     suspend fun offline(plays: List<PlaybackOfflineInput.Play>) {
