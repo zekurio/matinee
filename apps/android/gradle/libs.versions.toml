@@ -9,6 +9,7 @@ coil = "3.6.3"
 core = "1.19.1"
 coroutines = "1.11.0"
 lifecycle = "2.11.0"
+profileinstaller = "1.4.1"
 media3 = "1.11.1"
 # Jellyfin's build of Media3's FFmpeg audio decoder: DTS and TrueHD, which
 # Android has no decoder for. GPL-3.0, which makes the app GPL; Findroid runs
@@ -28,6 +29,7 @@ junit = "4.13.2"
 kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
 
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activity" }
+androidx-profileinstaller = { module = "androidx.profileinstaller:profileinstaller", version.ref = "profileinstaller" }
 androidx-browser = { module = "androidx.browser:browser", version.ref = "browser" }
 androidx-camera-camera2 = { module = "androidx.camera:camera-camera2", version.ref = "camerax" }
 androidx-camera-compose = { module = "androidx.camera:camera-compose", version.ref = "camerax" }

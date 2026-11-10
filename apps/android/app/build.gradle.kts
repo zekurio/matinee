@@ -83,6 +83,10 @@ dependencies {
     debugImplementation(libs.compose.ui.tooling)
 
     implementation(libs.androidx.activity.compose)
+    // Installs the baseline profiles Compose and the other libraries ship, so
+    // ART compiles their hot code ahead of time on a sideloaded APK too.
+    // Without it every screen starts out interpreted, and transitions drop frames.
+    implementation(libs.androidx.profileinstaller)
     implementation(libs.androidx.browser)
     implementation(libs.androidx.camera.camera2)
     implementation(libs.androidx.camera.compose)

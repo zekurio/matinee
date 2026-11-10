@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.CircularProgressIndicator
@@ -77,19 +78,20 @@ fun ProfileScreen(session: Session) {
     val user = LocalUser.current
     val profile = if (offline) null else rememberLoader("profile-${user.username}") { profiles.get(user.username) }
     val loaded = (profile?.state as? Load.Ready)?.value
+    // Offline there's no server to ask.
+    val stats = if (offline) null else rememberProfileStats(user.username)
     val listState = rememberLazyListState()
     Box(Modifier.fillMaxSize()) {
         LazyColumn(
             Modifier.fillMaxSize(),
             state = listState,
             contentPadding = PaddingValues(bottom = tabBarPadding() + 24.dp),
-            verticalArrangement = Arrangement.spacedBy(32.dp),
         ) {
             item(key = "who") { Header(loaded) }
             // Offline, trying the server again is what the page is for.
             if (offline) {
                 item(key = "reconnect") {
-                    Box(Modifier.padding(horizontal = Gutter)) {
+                    Box(Modifier.padding(start = Gutter, end = Gutter, top = SectionGap)) {
                         Panel { LinkRow(stringResource(R.string.settings_go_online), icon = Lucide.RefreshCw) { session.setOfflineMode(false) } }
                     }
                 }
@@ -101,15 +103,18 @@ fun ProfileScreen(session: Session) {
                             stringResource(R.string.profile_load_failed),
                             style = MaterialTheme.typography.bodyMedium,
                             color = Palette.Muted,
-                            modifier = Modifier.padding(horizontal = Gutter),
+                            modifier = Modifier.padding(start = Gutter, end = Gutter, top = SectionGap),
                         )
                     }
                     is Load.Ready -> {
-                        item(key = "favorites") { Favorites(state.value) }
-                        item(key = "stats") { Statistics(state.value) }
+                        item(key = "favorites") { Box(Modifier.padding(top = SectionGap)) { Favorites(state.value) } }
+                        // Each card its own item, so a tab switch builds only the ones on screen.
+                        stats?.let { statistics(it) }
                         state.value.recent?.takeIf { it.isNotEmpty() }?.let { recent ->
                             item(key = "recent") {
-                                Rail(stringResource(R.string.profile_recent), onTitleClick = LocalNavigator.current::recent) {
+                                Rail(
+                                    modifier = Modifier.padding(top = SectionGap),
+                                    title = stringResource(R.string.profile_recent), onTitleClick = LocalNavigator.current::recent) {
                                     items(recent, key = { it.item.id }) { entry ->
                                         EpisodeCard(entry.item, Modifier.width(railItemWidth(RailArt.Landscape)))
                                     }
@@ -211,53 +216,86 @@ private fun Favorites(profile: Profile) {
     }
 }
 
+/** The gap between the page's sections. */
+private val SectionGap = 32.dp
+
+/** The gap between the statistics' cards. */
+private val CardGap = 28.dp
+
 /**
  * The statistics for a range, all time to start. The last range's figures
  * stay up while the next one loads, so the page doesn't jump.
  */
+private class ProfileStats(
+    val range: String,
+    val onRange: (String) -> Unit,
+    val state: Load<WatchStats?>,
+    /** The figures shown: the range's, or the last range's while it loads. */
+    val stats: WatchStats?,
+) {
+    /** With nothing ever watched, picking a period changes nothing. */
+    val neverWatched get() = stats != null && range == "all" && stats.totals.plays == 0
+}
+
 @Composable
-private fun Statistics(profile: Profile) {
+private fun rememberProfileStats(username: String): ProfileStats {
     var range by rememberSaveable { mutableStateOf("all") }
     val zone = remember { ZoneId.systemDefault().id }
-    val loader = rememberLoader("profile-stats-${profile.user.username}-$range") { profiles.stats(profile.user.username, range, zone) }
+    val loader = rememberLoader("profile-stats-$username-$range") { profiles.stats(username, range, zone) }
     var last by remember { mutableStateOf<WatchStats?>(null) }
     val state = loader.state
     LaunchedEffect(state) { if (state is Load.Ready) last = state.value }
-    val stats = (state as? Load.Ready)?.value ?: last
-    // With nothing ever watched, picking a period changes nothing.
-    val neverWatched = stats != null && range == "all" && stats.totals.plays == 0
+    return ProfileStats(range, { range = it }, state, (state as? Load.Ready)?.value ?: last)
+}
 
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        SectionTitle(stringResource(R.string.profile_statistics), Modifier.padding(horizontal = Gutter))
-        if (!neverWatched) RangeChips(range) { range = it }
-        Column(Modifier.padding(horizontal = Gutter), verticalArrangement = Arrangement.spacedBy(28.dp)) {
-            when {
-                state is Load.Failed && stats == null ->
-                    Text(state.message, style = MaterialTheme.typography.bodyMedium, color = Palette.Muted)
-                stats == null -> Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = Palette.Accent)
-                }
-                neverWatched -> Column {
-                    Text(stringResource(R.string.profile_self_empty), style = MaterialTheme.typography.bodyLarge)
-                    Gap(4.dp)
-                    Text(stringResource(R.string.profile_self_empty_hint), style = MaterialTheme.typography.bodyMedium, color = Palette.Muted)
-                }
-                stats.totals.plays == 0 -> Column {
-                    Text(stringResource(R.string.profile_nothing_watched, rangePhrase(range)), style = MaterialTheme.typography.bodyLarge)
-                    Gap(12.dp)
-                    MatineeButton(onClick = { range = "all" }, look = ButtonLook.Outline) {
-                        Text(stringResource(R.string.profile_show_all_time))
-                    }
-                }
-                else -> {
-                    WatchTimeCard(stats)
-                    StatList(stats)
-                    TopTitles(stats)
-                    Genres(stats)
-                    Standing(range, zone)
-                    Activity(stats)
+/**
+ * The statistics' heading and range, then a list item per card. Kept apart,
+ * the cards below the screen wait until they scroll in, instead of all
+ * being built in the frame the tab opens.
+ */
+private fun LazyListScope.statistics(model: ProfileStats) {
+    item(key = "stats-head") {
+        Column(Modifier.padding(top = SectionGap), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            SectionTitle(stringResource(R.string.profile_statistics), Modifier.padding(horizontal = Gutter))
+            if (!model.neverWatched) RangeChips(model.range, model.onRange)
+        }
+    }
+    val stats = model.stats
+    val state = model.state
+    val card = Modifier.padding(start = Gutter, end = Gutter, top = 16.dp)
+    when {
+        state is Load.Failed && stats == null -> item(key = "stats-failed") {
+            Text(state.message, style = MaterialTheme.typography.bodyMedium, color = Palette.Muted, modifier = card)
+        }
+        stats == null -> item(key = "stats-loading") {
+            Box(card.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = Palette.Accent)
+            }
+        }
+        model.neverWatched -> item(key = "stats-never") {
+            Column(card) {
+                Text(stringResource(R.string.profile_self_empty), style = MaterialTheme.typography.bodyLarge)
+                Gap(4.dp)
+                Text(stringResource(R.string.profile_self_empty_hint), style = MaterialTheme.typography.bodyMedium, color = Palette.Muted)
+            }
+        }
+        stats.totals.plays == 0 -> item(key = "stats-nothing") {
+            Column(card) {
+                Text(stringResource(R.string.profile_nothing_watched, rangePhrase(model.range)), style = MaterialTheme.typography.bodyLarge)
+                Gap(12.dp)
+                MatineeButton(onClick = { model.onRange("all") }, look = ButtonLook.Outline) {
+                    Text(stringResource(R.string.profile_show_all_time))
                 }
             }
+        }
+        else -> {
+            val next = Modifier.padding(start = Gutter, end = Gutter, top = CardGap)
+            item(key = "stats-time") { WatchTimeCard(stats, card) }
+            item(key = "stats-list") { StatList(stats, next) }
+            item(key = "stats-titles") { TopTitles(stats, next) }
+            item(key = "stats-genres") { Genres(stats, next) }
+            item(key = "stats-standing") { Standing(model.range, remember { ZoneId.systemDefault().id }, next) }
+            item(key = "stats-activity") { Activity(stats, next) }
         }
     }
 }
