@@ -43,6 +43,7 @@ export default defineMessages("oidc", {
   "oidc.clientSecret.none": "None",
   "oidc.clientSecret.useEnvironment": "Use the secret from the environment",
   "oidc.clientSecret.remove": "Remove the saved secret",
+  "oidc.clientSecret.keep": "Keep the saved secret",
   "oidc.clientSecret.environmentApplies":
     "The environment's secret applies after you save.",
   "oidc.clientSecret.removed": "The secret is removed when you save.",

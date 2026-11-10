@@ -10,7 +10,13 @@ import { Skeleton } from "@matinee/ui/components/skeleton"
 import { cn } from "@matinee/ui/lib/utils"
 import { useSelector } from "@tanstack/react-form"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { CheckIcon, ChevronDownIcon, CopyIcon } from "lucide-react"
+import {
+  CheckIcon,
+  ChevronDownIcon,
+  CopyIcon,
+  Trash2Icon,
+  Undo2Icon,
+} from "lucide-react"
 import { useState } from "react"
 
 import { type MessageKey, tr, translateKnown } from "@/i18n"
@@ -372,6 +378,10 @@ const ClientSecretRow = withForm({
       form.store,
       (state) => state.values.dropSecret,
     )
+    const typed = useSelector(
+      form.store,
+      (state) => state.values.clientSecret !== "",
+    )
     const { source, environment } = settings.clientSecret
     const savedHere = source === "saved" && !dropSecret
     const fromEnvironment =
@@ -381,32 +391,25 @@ const ClientSecretRow = withForm({
       : fromEnvironment
         ? tr("oidc.clientSecret.fromEnvironment")
         : tr("oidc.clientSecret.none")
+    // Remove the saved secret, or take the removal back. Typing a new one
+    // replaces it anyway, so the button waits for an empty field.
+    const removable = source === "saved" && !typed
+    const removeLabel = dropSecret
+      ? tr("oidc.clientSecret.keep")
+      : environment
+        ? tr("oidc.clientSecret.useEnvironment")
+        : tr("oidc.clientSecret.remove")
 
     return (
       <SettingRow
         title={tr("oidc.field.clientSecret")}
         layout="stack"
         footer={
-          savedHere || dropSecret ? (
+          dropSecret ? (
             <SettingNote>
-              {savedHere && (
-                <button
-                  type="button"
-                  className="hover:text-foreground focus-visible:ring-ring rounded-sm underline underline-offset-2 outline-none focus-visible:ring-2"
-                  onClick={() => {
-                    form.setFieldValue("clientSecret", "")
-                    form.setFieldValue("dropSecret", true)
-                  }}
-                >
-                  {environment
-                    ? tr("oidc.clientSecret.useEnvironment")
-                    : tr("oidc.clientSecret.remove")}
-                </button>
-              )}
-              {dropSecret &&
-                (environment
-                  ? tr("oidc.clientSecret.environmentApplies")
-                  : tr("oidc.clientSecret.removed"))}
+              {environment
+                ? tr("oidc.clientSecret.environmentApplies")
+                : tr("oidc.clientSecret.removed")}
             </SettingNote>
           ) : undefined
         }
@@ -414,15 +417,41 @@ const ClientSecretRow = withForm({
         {(ids) => (
           <form.Field name="clientSecret">
             {(field) => (
-              <Input
-                id={ids.controlId}
-                type="password"
-                autoComplete="new-password"
-                spellCheck={false}
-                value={field.state.value}
-                placeholder={placeholder}
-                onChange={(event) => field.handleChange(event.target.value)}
-              />
+              <div className="relative w-full">
+                <Input
+                  id={ids.controlId}
+                  type="password"
+                  autoComplete="new-password"
+                  spellCheck={false}
+                  value={field.state.value}
+                  placeholder={placeholder}
+                  className={cn(removable && "pr-11")}
+                  onChange={(event) => {
+                    field.handleChange(event.target.value)
+                    if (event.target.value) {
+                      form.setFieldValue("dropSecret", false)
+                    }
+                  }}
+                />
+                {removable && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={removeLabel}
+                    title={removeLabel}
+                    className={cn(
+                      "absolute top-1/2 right-1 -translate-y-1/2",
+                      !dropSecret && "text-destructive hover:text-destructive",
+                    )}
+                    onClick={() =>
+                      form.setFieldValue("dropSecret", !dropSecret)
+                    }
+                  >
+                    {dropSecret ? <Undo2Icon /> : <Trash2Icon />}
+                  </Button>
+                )}
+              </div>
             )}
           </form.Field>
         )}

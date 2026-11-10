@@ -41,6 +41,7 @@ export default {
   "oidc.clientSecret.none": "Keins",
   "oidc.clientSecret.useEnvironment": "Das Secret aus der Umgebung verwenden",
   "oidc.clientSecret.remove": "Das gespeicherte Secret entfernen",
+  "oidc.clientSecret.keep": "Das gespeicherte Secret behalten",
   "oidc.clientSecret.environmentApplies":
     "Nach dem Speichern gilt das Secret aus der Umgebung.",
   "oidc.clientSecret.removed": "Das Secret wird beim Speichern entfernt.",
