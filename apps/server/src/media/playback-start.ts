@@ -137,6 +137,10 @@ export function decidePlayback(
   const primary = facts.audio.find((track) => track.primary) ?? facts.audio[0]
   const video = probe.video
   const videoPlays = !video || decodesVideo(device, video)
+  // Only an encode makes another quality or burns a subtitle in, so once
+  // one failed the original plays, without such a subtitle.
+  const encodeFailed = input.failed.includes("transcode")
+  const asked = encodeFailed ? "original" : (input.quality ?? "original")
   const fileAudio =
     !audio ||
     (decodes(audio.codec) &&
@@ -147,7 +151,7 @@ export function decidePlayback(
     fileAudio &&
     !input.failed.includes("direct") &&
     !input.failed.includes("remux") &&
-    (input.quality ?? "original") === "original"
+    asked === "original"
   const embedded = (track: SubtitleTrack) =>
     track.source === "embedded" &&
     accepts(device.embeddedSubtitles, track.format)
@@ -206,14 +210,15 @@ export function decidePlayback(
     picks.subtitle?.trackId === null
       ? null
       : shown.find((track) => track.id === picks.subtitle?.trackId)
-  const subtitle = input.subtitle
+  const picked = input.subtitle
     ? (facts.subtitles.find((track) => track.id === input.subtitle?.trackId) ??
       null)
     : remembered === undefined
       ? defaults()
       : remembered
+  const subtitle = picked && encodeFailed && !drawable(picked) ? null : picked
   const burn = subtitle !== null && !drawable(subtitle)
-  let quality = input.quality ?? "original"
+  let quality = asked
   const reasons: PlaybackStart["reasons"] = []
   if (!accepts(device.containers, facts.container)) reasons.push("container")
   if (!videoPlays) reasons.push("video")

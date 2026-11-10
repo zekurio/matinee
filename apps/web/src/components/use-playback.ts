@@ -1,138 +1,92 @@
-import type { PlaybackQuality } from "@matinee/contracts"
-import { useEffect } from "react"
+import type { PlaybackQuality, PlaybackSnap } from "@matinee/contracts"
+import { type RefObject, useEffect } from "react"
 import { useShallow } from "zustand/shallow"
 
-import { decodableAudioCodecs } from "@/lib/audio-support"
-import { encodeVideoCodecs } from "@/lib/video-support"
 import {
-  type PlayerState,
+  selectAudio as selectAudioOf,
   usePlayerStore,
   usePlayerStoreApi,
 } from "@/stores/player"
 import { usePlayerPreferencesStore } from "@/stores/player-preferences"
 
+import { dismissPlaybackNotices, lostNotice } from "./playback-notices"
+import { canSeekTo, hasPlayed } from "./playback-source"
 import {
-  audioNotice,
-  burnInFailedNotice,
-  burnInNotice,
-  dismissPlaybackNotices,
-  lostNotice,
-  revertNotice,
-  transcodeNotice,
-} from "./playback-notices"
-import {
-  type AudioChoice,
-  audioChoice,
-  canSeekTo,
-  fallbackQuality,
-  hasPlayed,
-  kindOf,
-  offsetOf,
-  type PlaybackOptions,
-} from "./playback-source"
-import {
-  audioOf,
   type PlaybackCore,
   playbackClock,
   type SourceStarters,
   sourceStarters,
-  usePickSource,
   useSourceRefs,
 } from "./use-playback-source"
 
+export type PlaybackOptions = {
+  video: RefObject<HTMLVideoElement | null>
+  /** Nothing this browser can play is left. */
+  onUnplayable: () => void
+  /** A source failed and the server couldn't say what plays instead. */
+  onFailed: (cause: unknown) => void
+}
+
 /**
- * Picks the source for the player and seeks within it. The original
- * quality with the track browsers play by default plays the file as it is,
- * when the browser decodes that track; another track or quality, or a
- * default track it can't decode, plays a stream from the server, which the
- * player seeks by starting a new one. The track that plays first is the
- * one the viewer picked before, else one in their audio language, else
- * the default. In place of one the
- * browser can't decode, the stream carries one in the same language that
- * it can, and converts the audio only when there is none. A subtitle track
- * that only an encode shows makes every source an encode with it burned
- * in.
+ * Plays what the server says and seeks within it. The player tells
+ * `playback.start` what the viewer picks, and loads the source it answers
+ * with: the file as it is, a stream that copies the video, or an encode.
+ * A copied stream can't seek by itself, so a seek outside what it has
+ * buffered starts a new one from `playback.seek`. A source that fails asks
+ * again with its method among the failed ones, and the server falls back.
  *
- * The source and the viewer's picks live in the player's store, so the
- * functions here read it when they run and work from any render.
+ * The answer, the source, and the viewer's picks live in the player's
+ * store, so the functions here read it when they run and work from any
+ * render.
  */
 export function usePlayback(options: PlaybackOptions) {
-  const { video, audioTracks, startAt } = options
+  const { video } = options
   const store = usePlayerStoreApi()
   // The player's toasts are about this playback, so they go when it does.
   useEffect(() => () => dismissPlaybackNotices(), [])
-  const choice = audioChoice(
-    audioTracks,
-    options.probeAudio,
-    options.audioLanguage,
-    options.rememberedAudio,
-  )
-  const refs = useSourceRefs(store, startAt)
-  const core: PlaybackCore = { video, options, store, refs, choice }
-  const { source, quality, audio } = usePlayerStore(
+  const refs = useSourceRefs(store)
+  const core: PlaybackCore = {
+    video,
+    store,
+    refs,
+    onUnplayable: options.onUnplayable,
+    onFailed: options.onFailed,
+  }
+  const { source, plan, quality } = usePlayerStore(
     useShallow((state) => ({
       source: state.source,
+      plan: state.plan,
       quality: state.quality,
-      audio: audioOf(state, choice),
     })),
   )
-  const { position, duration } = playbackClock(core)
+  const clock = playbackClock(core)
   const starters = sourceStarters(core)
-  usePickSource(core, starters)
-  const seek = seeker(core, duration, starters)
-  const { selectAudio, selectQuality, selectBurnIn } = sourceSwitch(
+  const seek = seeker(core, clock, starters)
+  const { selectAudio, selectQuality, selectSubtitle } = sourceSwitch(
     core,
-    position,
+    clock.now,
     starters,
   )
   const { onLoaded, onTimeUpdate, heldStill, setPlayOnLoad } = loadEvents(core)
-  const onError = errorFallback(core, position, starters)
-
-  const src =
-    source?.kind === "direct"
-      ? options.directSrc
-      : source?.kind === "stream"
-        ? options.streamSrc({
-            audio: source.audio,
-            start: source.offset,
-            quality: source.quality,
-            audioCodecs: decodableAudioCodecs(),
-            videoCodecs: encodeVideoCodecs(),
-          })
-        : undefined
-  // The playlist, for hls.js or the browser to load; the video gets no src.
-  const hls =
-    source?.kind === "hls"
-      ? {
-          url: options.hlsSrc({
-            audio: source.audio,
-            start: source.start,
-            quality: source.quality,
-            audioCodecs: decodableAudioCodecs(),
-            videoCodecs: encodeVideoCodecs(),
-            subtitle: source.subtitle,
-          }),
-          start: source.start,
-          attempt: source.attempt,
-        }
-      : null
+  const onError = errorFallback(core, clock.position, starters)
 
   return {
-    src,
-    hls,
+    // The playlist goes to hls.js or the browser; the video gets no src.
+    src: source.hls ? undefined : source.url,
+    hls: source.hls
+      ? { url: source.url, start: source.start, attempt: source.attempt }
+      : null,
     source,
-    offset: offsetOf(source),
-    audio,
-    /** The language of the audio that plays, once anything knows it. */
-    audioLanguage: audioLanguageOf(choice, audio),
-    tracks: choice.tracks,
+    plan,
+    offset: source.offset,
+    tracks: plan.audioTracks,
     quality,
-    position,
-    duration,
+    position: clock.position,
+    duration: clock.duration,
     seek,
     selectAudio,
     selectQuality,
-    selectBurnIn,
+    selectSubtitle,
     onLoaded,
     onTimeUpdate,
     heldStill,
@@ -142,113 +96,68 @@ export function usePlayback(options: PlaybackOptions) {
 }
 
 function seeker(
-  { video, store }: PlaybackCore,
-  duration: () => number,
-  { startStream, holdPlayState }: SourceStarters,
+  { video, store, refs }: PlaybackCore,
+  { duration }: ReturnType<typeof playbackClock>,
+  { ask, seekStream }: SourceStarters,
 ) {
-  return (to: number, snap: "before" | "nearest" = "nearest") => {
+  return (to: number, snap: PlaybackSnap = "nearest") => {
     const el = video.current
-    const { source } = store.getState()
-    if (!el || !source) return
+    if (!el) return
     const target = Math.max(0, Math.min(duration() || to, to))
-    if (source.kind !== "stream") {
-      el.currentTime = target
+    // An answer on its way would start where the viewer was, so ask again.
+    if (refs.asking.current) {
+      void ask({ at: target, snap, still: true })
       return
     }
-    if (canSeekTo(el, target - source.offset)) {
-      el.currentTime = target - source.offset
+    const { source } = store.getState()
+    const inSource = target - source.offset
+    // The file and HLS seek by themselves, and so does any stream within
+    // what it buffered.
+    if (source.method === "direct" || source.hls) {
+      el.currentTime = inSource
       return
     }
-    holdPlayState()
-    void startStream(target, source.audio, source.quality, snap)
+    if (inSource >= 0 && canSeekTo(el, inSource)) {
+      el.currentTime = inSource
+      return
+    }
+    if (source.method === "remux") void seekStream(target, snap)
+    // An encode that isn't HLS starts anywhere, from a new answer.
+    else void ask({ at: target, snap, still: true })
   }
-}
-
-/**
- * Whether `audioIndex` at `quality` is the file as it is: the track the
- * browser plays by itself, which it decodes, video it decodes, and nothing
- * to burn in.
- */
-function playsAsIs(
-  state: PlayerState,
-  choice: AudioChoice,
-  options: PlaybackOptions,
-  audioIndex: number | null,
-  quality: PlaybackQuality,
-): boolean {
-  return (
-    quality === "original" &&
-    options.videoPlays &&
-    state.burnIn === null &&
-    (audioIndex === null || audioIndex === choice.primary?.index) &&
-    choice.directAudio &&
-    !state.directFailed
-  )
 }
 
 function sourceSwitch(
-  { store, choice, options }: PlaybackCore,
-  position: () => number,
-  { startStream, startDirect, holdPlayState }: SourceStarters,
+  { store }: PlaybackCore,
+  now: () => number,
+  { ask }: SourceStarters,
 ) {
-  const { tracks } = choice
-
-  const switchTo = (audioIndex: number | null, next: PlaybackQuality) => {
-    const at = position()
-    holdPlayState()
-    const state = store.getState()
-    if (playsAsIs(state, choice, options, audioIndex, next)) {
-      if (state.source?.kind !== "direct") startDirect(at)
-    } else if (audioIndex !== null) {
-      audioNotice(
-        next,
-        tracks.find((track) => track.index === audioIndex),
-      )
-      void startStream(at, audioIndex, next, "before")
-    }
-  }
-
-  const selectAudio = (index: number) => {
-    const state = store.getState()
-    if (index === audioOf(state, choice)) return
-    state.setChosenAudio(index)
-    options.onPickAudio(index)
-    switchTo(index, state.quality)
+  /** Plays another audio track. False when it's the one that plays. */
+  const selectAudio = (index: number): boolean => {
+    if (index === selectAudioOf(store.getState())) return false
+    void ask({ picks: { audio: index }, at: now(), still: true })
+    return true
   }
 
   const selectQuality = (next: PlaybackQuality) => {
     const state = store.getState()
     if (next === state.quality) return
-    state.setQuality(next)
     usePlayerPreferencesStore.getState().setQuality(next)
-    switchTo(audioOf(state, choice), next)
+    void ask({ picks: { quality: next }, at: now(), still: true })
   }
 
-  /**
-   * Burns a subtitle track into the video, or for null goes back to what
-   * plays without one.
-   */
-  const selectBurnIn = (trackId: string | null) => {
+  /** Shows a subtitle track, or none for null. */
+  const selectSubtitle = (trackId: string | null) => {
     const state = store.getState()
-    if (trackId === state.burnIn) return
-    state.setBurnIn(trackId)
-    const audio = audioOf(state, choice)
-    switchTo(audio, state.quality)
-    if (trackId === null || audio === null) return
-    burnInNotice(
-      state.quality === "original"
-        ? fallbackQuality(options.videoSize)
-        : state.quality,
-      options.videoCodec,
-      tracks.find((track) => track.index === audio),
-    )
+    if (trackId !== null) state.setPickedSubtitle(trackId)
+    void ask({ picks: { subtitle: { trackId } }, at: now(), still: false })
   }
 
-  return { selectAudio, selectQuality, selectBurnIn }
+  return { selectAudio, selectQuality, selectSubtitle }
 }
 
-function loadEvents({ video, options, store, refs }: PlaybackCore) {
-  const { seekOnLoad, resumeAt, playOnLoad, holding, played } = refs
+function loadEvents({ video, store, refs }: PlaybackCore) {
+  const { seekOnLoad, startsAt, playOnLoad, holding, played } = refs
 
   /** For the video's `loadedmetadata`. */
   const onLoaded = () => {
@@ -260,11 +169,8 @@ function loadEvents({ video, options, store, refs }: PlaybackCore) {
       el.currentTime = seekOnLoad.current
       seekOnLoad.current = null
     }
+    startsAt.current = null
     store.getState().setPending(null)
-    if (resumeAt.current !== null) {
-      options.onResumed?.(resumeAt.current)
-      resumeAt.current = null
-    }
     if (playOnLoad.current) {
       el.play().catch(() => {
         // Autoplay is blocked until the viewer interacts; they press play.
@@ -272,13 +178,13 @@ function loadEvents({ video, options, store, refs }: PlaybackCore) {
     }
   }
 
-  /** For the video's `timeupdate`: notes the kinds of source that play. */
+  /** For the video's `timeupdate`: notes the methods that play. */
   const onTimeUpdate = () => {
     const el = video.current
-    const current = store.getState().source
-    if (!el || !current) return
-    const kind = kindOf(current)
-    if (!played.current.has(kind) && hasPlayed(el)) played.current.add(kind)
+    const { method } = store.getState().source
+    if (el && !played.current.has(method) && hasPlayed(el)) {
+      played.current.add(method)
+    }
   }
 
   /**
@@ -299,99 +205,39 @@ function loadEvents({ video, options, store, refs }: PlaybackCore) {
   return { onLoaded, onTimeUpdate, heldStill, setPlayOnLoad }
 }
 
-/** For the video's `error`: fall back to something else, or give up. */
+/**
+ * For the video's `error`: ask the server what plays without the method
+ * that failed, or offer the same source again when it played before.
+ */
 function errorFallback(
-  { video, options, store, refs, choice }: PlaybackCore,
+  { video, store, refs }: PlaybackCore,
   position: () => number,
-  { startStream, startDirect }: SourceStarters,
+  { ask }: SourceStarters,
 ) {
-  const { played, playOnLoad, resumeAt, startLater, handled } = refs
-  const { tracks, primary, preferred, playsFile } = choice
+  const { played, playOnLoad, startsAt, handled } = refs
 
   return (reported?: number) => {
     const code = reported ?? video.current?.error?.code
     if (code === undefined || code === MediaError.MEDIA_ERR_ABORTED) return
     const state = store.getState()
-    const { source } = state
-    if (source && handled.current === source) return
+    const { source, plan } = state
+    if (handled.current === source) return
     handled.current = source
     state.setPending(null)
-    // A file that failed before it loaded still owes its resume.
-    const at = resumeAt.current ?? position()
-    // The browser played this kind of source already, so falling back to
-    // another or giving up would be wrong. Offer the same one again.
+    // A source that failed before it loaded still owes its start.
+    const at = startsAt.current ?? position()
+    // The browser played this method already, so falling back to another
+    // or giving up would be wrong. Offer the same one again.
     if (
-      source &&
-      played.current.has(kindOf(source)) &&
+      played.current.has(source.method) &&
       code !== MediaError.MEDIA_ERR_DECODE
     ) {
-      const failed = source
       lostNotice(() => {
         playOnLoad.current = true
-        if (failed.kind === "direct") startDirect(at)
-        else void startStream(at, failed.audio, failed.quality, "before")
+        void ask({ at, still: true, reload: true })
       })
       return
     }
-    // A subtitle that won't burn in goes, and the rest plays without it.
-    if (source?.kind === "hls" && source.subtitle !== null) {
-      burnInFailedNotice()
-      state.dropBurnIn()
-      const audio = audioOf(state, choice)
-      if (playsAsIs(store.getState(), choice, options, audio, state.quality)) {
-        startDirect(at)
-      } else if (audio !== null) {
-        void startStream(at, audio, state.quality, "before")
-      } else options.onUnsupported()
-      return
-    }
-    // A stream that only converts the audio that plays first, or swaps the
-    // default track for another, plays in place of the file, so its failure
-    // counts as the file's.
-    const asFile =
-      source?.kind === "direct" ||
-      (source?.kind === "stream" &&
-        source.quality === "original" &&
-        (source.audio === primary?.index ||
-          source.audio === preferred?.index) &&
-        !playsFile)
-    if (asFile && code !== MediaError.MEDIA_ERR_NETWORK) {
-      const next = fallbackQuality(options.videoSize)
-      const audio = audioOf(state, choice)
-      transcodeNotice(
-        next,
-        options.videoCodec,
-        tracks.find((track) => track.index === audio),
-      )
-      // The cleared source is picked again from here.
-      startLater.current = at
-      state.failDirect(next)
-      return
-    }
-    if (
-      !source ||
-      source.kind === "direct" ||
-      state.directFailed ||
-      // Only encodes play this video, and one just failed.
-      !options.videoPlays
-    ) {
-      options.onUnsupported()
-      return
-    }
-    revertNotice(playsFile)
-    state.revert()
-    if (playsFile || !preferred) startDirect(at)
-    else void startStream(at, preferred.index, "original", "before")
+    void ask({ failed: { source, plan }, at, still: false })
   }
-}
-
-/** The language of the track at `index`, from the tracks or the probe. */
-function audioLanguageOf(
-  choice: AudioChoice,
-  index: number | null,
-): string | null {
-  const track =
-    choice.tracks.find((entry) => entry.index === index) ??
-    (index === choice.preferred?.index ? choice.preferred : undefined)
-  return track?.language ?? null
 }

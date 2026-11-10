@@ -1,34 +1,41 @@
-import type { PlaybackPreferences, PlaybackQuality } from "@matinee/contracts"
+import type {
+  PlaybackDevice,
+  PlaybackMethod,
+  PlaybackQuality,
+  PlaybackStart,
+} from "@matinee/contracts"
 import type { LucideIcon } from "lucide-react"
 import { createContext, useContext } from "react"
 import { useStore } from "zustand"
 import { createStore, type StoreApi } from "zustand/vanilla"
 
-import type { PlaybackSource } from "@/components/playback-source"
+import type {
+  PlaybackPicks,
+  PlaybackSource,
+} from "@/components/playback-source"
 
 /** A note over the picture, like the volume after a key press. */
 type Flash = { id: number; Icon: LucideIcon | null; text: string }
 
-/** What a player starts with, from its props and the saved preferences. */
+/** What a player starts with: the first answer and the saved preferences. */
 export type PlayerStart = {
-  /** Names this sitting with the file, for statistics. */
+  itemId: string
+  /** Names this sitting with the file, for statistics and streams. */
   sessionId: string
-  quality: PlaybackQuality
+  /** What this browser plays, the same for the whole sitting. */
+  device: PlaybackDevice
   /**
-   * Null until there is something to play. A stream waits for the audio
-   * tracks, since it carries one of them.
+   * The server's latest answer for how the file plays: the tracks, the
+   * subtitle, and the source it last loaded.
    */
-  source: PlaybackSource | null
+  plan: PlaybackStart
+  /** What the video loads now. */
+  source: PlaybackSource
+  /** What the viewer picked, which every start carries again. */
+  picks: PlaybackPicks
   duration: number
   volume: number
   muted: boolean
-  /**
-   * The language the audio plays in when the file has it, from the
-   * preferences as the file started. Null plays the file's default.
-   */
-  audioLanguage: string | null
-  /** The preferences as the file started; they pick the subtitles. */
-  subtitleDefaults: PlaybackPreferences
 }
 
 export type PlayerState = PlayerStart & {
@@ -57,26 +64,16 @@ export type PlayerState = PlayerStart & {
   flash: Flash | null
 
   // The source.
-  /** The audio track the viewer picked. Null plays the preferred one. */
-  chosenAudio: number | null
+  /** The quality in the menu: the one that plays, or the one on its way. */
+  quality: PlaybackQuality
+  /** The methods that failed in this sitting, which the server skips. */
+  failed: PlaybackMethod[]
   /** Where a switch is headed, shown until the new source loads. */
   pending: number | null
-  /** The file failed to play as it is, so only streams are left. */
-  directFailed: boolean
 
   // Subtitles.
-  /**
-   * The viewer's pick in this file, null for off. Undefined until they
-   * pick, which shows the default track.
-   */
-  chosenSubtitle: string | null | undefined
   /** The last track picked in this file, which C brings back. */
   pickedSubtitle: string | null
-  /**
-   * The picked track when only an encode shows it, so every source is an
-   * encode with it burned in. Null draws subtitles over the video.
-   */
-  burnIn: string | null
   /** The shown track's WebVTT as an object URL, once it has arrived. */
   subtitleUrl: { trackId: string; url: string } | null
   /**
@@ -109,25 +106,18 @@ export type PlayerState = PlayerStart & {
   setMenuOpen: (menu: string, open: boolean) => void
   showFlash: (Icon: LucideIcon | null, text: string) => void
   hideFlash: () => void
+  /** Takes an answer, with the source to load when it needs a new one. */
+  setPlan: (plan: PlaybackStart, source?: PlaybackSource) => void
+  setSource: (source: PlaybackSource) => void
+  /** Changes some of the viewer's picks. */
+  pick: (change: PlaybackPicks) => void
+  /** Puts the picks and failures back as they were, for a switch that failed. */
+  restore: (picks: PlaybackPicks, failed: PlaybackMethod[]) => void
+  addFailed: (method: PlaybackMethod) => void
   setQuality: (quality: PlaybackQuality) => void
-  setChosenAudio: (index: number | null) => void
-  setSource: (source: PlaybackSource | null) => void
   setPending: (at: number | null) => void
-  /**
-   * The file doesn't play as it is: drop it for an encode at `quality`.
-   * The cleared source is picked again once the tracks are here.
-   */
-  failDirect: (quality: PlaybackQuality) => void
-  /**
-   * Back to the original quality and the default audio, and subtitles that
-   * don't need an encode.
-   */
-  revert: () => void
-  /** Shows a subtitle track, or none for null. */
-  chooseSubtitle: (trackId: string | null) => void
-  setBurnIn: (trackId: string | null) => void
-  /** Turns off a track that was burned in, which failed to encode. */
-  dropBurnIn: () => void
+  /** The last track the viewer turned on, for C. */
+  setPickedSubtitle: (trackId: string) => void
   setSubtitleUrl: (url: { trackId: string; url: string } | null) => void
   setSubtitleDelay: (ms: number) => void
   setStatsOpen: (open: boolean) => void
@@ -154,12 +144,10 @@ export function createPlayerStore(start: PlayerStart): PlayerStore {
     focused: false,
     openMenu: null,
     flash: null,
-    chosenAudio: null,
+    quality: start.plan.quality,
+    failed: [],
     pending: null,
-    directFailed: false,
-    chosenSubtitle: undefined,
     pickedSubtitle: null,
-    burnIn: null,
     subtitleUrl: null,
     subtitleDelay: 0,
     statsOpen: false,
@@ -189,38 +177,25 @@ export function createPlayerStore(start: PlayerStart): PlayerStore {
         flash: { id: (state.flash?.id ?? 0) + 1, Icon, text },
       })),
     hideFlash: () => set({ flash: null }),
-    setQuality: (quality) => set({ quality }),
-    setChosenAudio: (chosenAudio) => set({ chosenAudio }),
-    setSource: (source) => set({ source }),
-    setPending: (pending) => set({ pending }),
-    failDirect: (quality) => set({ directFailed: true, quality, source: null }),
-    revert: () => {
-      get().dropBurnIn()
-      set({ chosenAudio: null, quality: "original" })
-    },
-    chooseSubtitle: (trackId) =>
-      set((state) => ({
-        chosenSubtitle: trackId,
-        pickedSubtitle: trackId ?? state.pickedSubtitle,
-      })),
-    setBurnIn: (burnIn) => set({ burnIn }),
-    dropBurnIn: () =>
-      set((state) =>
-        state.burnIn === null
-          ? {}
-          : {
-              burnIn: null,
-              chosenSubtitle:
-                state.chosenSubtitle === state.burnIn
-                  ? null
-                  : state.chosenSubtitle,
-              // So C doesn't bring it back.
-              pickedSubtitle:
-                state.pickedSubtitle === state.burnIn
-                  ? null
-                  : state.pickedSubtitle,
-            },
+    setPlan: (plan, source) =>
+      set(
+        source
+          ? { plan, source, quality: plan.quality }
+          : { plan, quality: plan.quality },
       ),
+    setSource: (source) => set({ source }),
+    pick: (change) =>
+      set((state) => ({ picks: { ...state.picks, ...change } })),
+    restore: (picks, failed) => set({ picks, failed }),
+    addFailed: (method) =>
+      set((state) =>
+        state.failed.includes(method)
+          ? {}
+          : { failed: [...state.failed, method] },
+      ),
+    setQuality: (quality) => set({ quality }),
+    setPending: (pending) => set({ pending }),
+    setPickedSubtitle: (pickedSubtitle) => set({ pickedSubtitle }),
     setSubtitleUrl: (subtitleUrl) => set({ subtitleUrl }),
     setSubtitleDelay: (subtitleDelay) => set({ subtitleDelay }),
     setStatsOpen: (statsOpen) => set({ statsOpen }),
@@ -239,6 +214,23 @@ export function selectHidden(state: PlayerState): boolean {
     !state.focused &&
     state.openMenu === null
   )
+}
+
+/** The audio track in the menu: the viewer's pick, else the one that plays. */
+export function selectAudio(state: PlayerState): number | null {
+  return state.picks.audio ?? state.plan.audio?.index ?? null
+}
+
+/** The subtitle in the menu: the viewer's pick, else the one that shows. */
+export function selectSubtitle(state: PlayerState): string | null {
+  return state.picks.subtitle
+    ? state.picks.subtitle.trackId
+    : (state.plan.subtitle?.id ?? null)
+}
+
+/** The subtitle is part of the picture, so it can't move. */
+export function selectBurnedIn(state: PlayerState): boolean {
+  return state.plan.subtitleMode === "burn-in"
 }
 
 /** A source on its way, or the video waiting for data. */

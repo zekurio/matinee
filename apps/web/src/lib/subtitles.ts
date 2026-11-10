@@ -1,8 +1,4 @@
-import type {
-  PlaybackPreferences,
-  SubtitlePick,
-  SubtitleTrack,
-} from "@matinee/contracts"
+import type { PlaybackPreferences, SubtitleTrack } from "@matinee/contracts"
 
 import { tr } from "@/i18n"
 
@@ -15,25 +11,24 @@ function subtitleLanguage(preferences: PlaybackPreferences): string {
 
 /**
  * Whether the player draws the track over whatever plays. A `burn-in`
- * track needs an encode of its own, so only the viewer's pick shows one.
+ * track needs an encode of its own, so C never picks one.
  */
 function drawable(track: SubtitleTrack): boolean {
   return track.delivery === "webvtt" || track.delivery === "pgs"
 }
 
 /**
- * The full or forced track to show for a language: the exact tag first,
- * then one the file marks default, then one without SDH.
+ * The full track to show for a language: the exact tag first, then one
+ * the file marks default, then one without SDH.
  */
 function bestInLanguage(
   tracks: SubtitleTrack[],
   language: string | null,
-  forced = false,
 ): SubtitleTrack | null {
   let best: SubtitleTrack | null = null
   let bestScore = -1
   for (const track of tracks) {
-    if (track.forced !== forced || !sameLanguage(track.language, language)) {
+    if (track.forced || !sameLanguage(track.language, language)) {
       continue
     }
     const score =
@@ -49,58 +44,10 @@ function bestInLanguage(
 }
 
 /**
- * The forced track for the audio: one in its language, which is the one
- * made for it, else one in the viewer's subtitle language. Files with
- * several dubs often have a forced track for each.
+ * The track C turns on when the viewer hasn't picked one in this file.
+ * The server picks the tracks a file starts with; this only stands in for
+ * a pick the viewer didn't make.
  */
-function forcedTrack(
-  tracks: SubtitleTrack[],
-  audioLanguage: string | null,
-  language: string,
-): SubtitleTrack | null {
-  return (
-    bestInLanguage(tracks, audioLanguage, true) ??
-    bestInLanguage(tracks, language, true)
-  )
-}
-
-/**
- * The track to show when a file starts, or null for off, by the
- * preferences' `subtitleMode`. `audioLanguage` is the language of the
- * audio that plays.
- */
-export function defaultTrack(
-  tracks: SubtitleTrack[],
-  audioLanguage: string | null,
-  preferences: PlaybackPreferences,
-): SubtitleTrack | null {
-  const shown = tracks.filter(drawable)
-  const language = subtitleLanguage(preferences)
-  const forced = () => forcedTrack(shown, audioLanguage, language)
-  switch (preferences.subtitleMode) {
-    case "off":
-      return null
-    case "forced":
-      return forced()
-    case "always":
-      return bestInLanguage(shown, language) ?? forced()
-    case "foreign":
-      // Audio in no known language could be in the viewer's.
-      return audioLanguage !== null && !sameLanguage(audioLanguage, language)
-        ? (bestInLanguage(shown, language) ?? forced())
-        : forced()
-    case "default": {
-      const translation = forced()
-      if (translation) return translation
-      // Some muxers mark every track default, which says nothing.
-      const flagged = shown.filter((track) => track.default)
-      if (shown.length > 1 && flagged.length === shown.length) return null
-      return flagged[0] ?? null
-    }
-  }
-}
-
-/** The track C turns on when the viewer hasn't picked one in this file. */
 export function fallbackTrack(
   tracks: SubtitleTrack[],
   preferences: PlaybackPreferences,
@@ -113,21 +60,6 @@ export function fallbackTrack(
     shown[0] ??
     null
   )
-}
-
-/**
- * The track a remembered pick shows in this file: its track, or null for
- * off. Undefined when there's no pick, or its track is gone or needs an
- * encode, so the preferences pick instead.
- */
-export function rememberedTrack(
-  tracks: SubtitleTrack[],
-  pick: SubtitlePick | null,
-): string | null | undefined {
-  if (!pick) return undefined
-  if (pick.trackId === null) return null
-  const track = tracks.find((candidate) => candidate.id === pick.trackId)
-  return track && drawable(track) ? track.id : undefined
 }
 
 /**
