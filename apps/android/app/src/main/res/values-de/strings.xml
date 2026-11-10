@@ -470,8 +470,8 @@
     <string name="downloads_choice_original">Original</string>
     <string name="downloads_choice_unavailable">Der Server kann diese Version nicht erstellen</string>
     <string name="downloads_original_may_not_play">Spielt auf diesem Gerät vielleicht nicht</string>
-    <string name="downloads_note_unmetered">Lädt nur über WLAN.</string>
-    <string name="downloads_note_any">Lädt auch über mobile Daten.</string>
+    <string name="downloads_use_mobile">Auch über mobile Daten laden</string>
+    <string name="downloads_wait_wifi">Auf WLAN warten</string>
     <string name="downloads_audio_title">Tonspuren</string>
     <string name="downloads_audio_none">Wähle mindestens eine Tonspur.</string>
     <string name="downloads_start">Herunterladen</string>

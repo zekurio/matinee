@@ -486,7 +486,7 @@ private fun status(entry: OfflineItem): String {
         DownloadState.PAUSED -> stringResource(R.string.downloads_state_paused)
         DownloadState.FAILED -> stringResource(R.string.downloads_state_failed, entry.error.orEmpty())
         else -> {
-            val unmetered = LocalContext.current.app.downloads.unmeteredOnly
+            val unmetered = LocalContext.current.app.downloads.waitsForWifi(entry)
             entry.error?.let { stringResource(R.string.downloads_state_retrying, it) }
                 ?: stringResource(if (unmetered) R.string.downloads_state_waiting_unmetered else R.string.downloads_state_waiting)
         }
@@ -519,6 +519,17 @@ private fun DownloadActions(entry: OfflineItem, onDismiss: () -> Unit) {
                 SheetItem(Lucide.Info, stringResource(R.string.media_hero_details)) {
                     onDismiss()
                     nav.item(entry.item)
+                }
+            }
+            // A download still waiting can switch to mobile data, or back to Wi-Fi.
+            if (entry.state == DownloadState.QUEUED) {
+                val wifi = downloads.waitsForWifi(entry)
+                SheetItem(
+                    if (wifi) Lucide.Download else Lucide.Clock,
+                    stringResource(if (wifi) R.string.downloads_use_mobile else R.string.downloads_wait_wifi),
+                ) {
+                    onDismiss()
+                    downloads.setUnmetered(entry.id, !wifi)
                 }
             }
             SheetItem(Lucide.Trash, stringResource(R.string.downloads_remove), destructive = true) {

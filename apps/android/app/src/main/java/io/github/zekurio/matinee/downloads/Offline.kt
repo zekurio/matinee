@@ -60,6 +60,8 @@ data class OfflineItem(
     val subtitles: List<OfflineSubtitle> = emptyList(),
     /** A still or backdrop saved for the list, relative to the download folder. */
     val image: String? = null,
+    /** Whether it waits for Wi-Fi, picked when it was queued. Null follows the setting. */
+    val unmeteredOnly: Boolean? = null,
     val error: String? = null,
     val addedAt: Long = System.currentTimeMillis(),
 ) {

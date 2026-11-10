@@ -58,6 +58,7 @@ import io.github.zekurio.matinee.ui.player.subtitleLabel
 import io.github.zekurio.matinee.ui.settings.Panel
 import io.github.zekurio.matinee.ui.settings.PickerRow
 import io.github.zekurio.matinee.ui.settings.RowDivider
+import io.github.zekurio.matinee.ui.settings.SwitchRow
 import io.github.zekurio.matinee.ui.theme.Palette
 import io.github.zekurio.matinee.ui.videoCodecName
 import java.io.IOException
@@ -87,6 +88,7 @@ fun DownloadSheet(item: MediaItem, onDismiss: () -> Unit) {
     var audio by remember { mutableStateOf<List<Int>>(emptyList()) }
     var subtitles by remember { mutableStateOf<Set<String>>(emptySet()) }
     var codec by remember { mutableStateOf("h264") }
+    var unmetered by remember { mutableStateOf(downloads.unmeteredOnly) }
     val askNotifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
     val failure = stringResource(R.string.downloads_failed)
 
@@ -209,12 +211,12 @@ fun DownloadSheet(item: MediaItem, onDismiss: () -> Unit) {
                             }
                         }
                         Gap(8.dp)
-                        Text(
-                            stringResource(if (downloads.unmeteredOnly) R.string.downloads_note_unmetered else R.string.downloads_note_any),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Palette.Muted,
-                            modifier = Modifier.padding(horizontal = 20.dp),
-                        )
+                        // This download's own pick; the setting is where it starts.
+                        Column(Modifier.padding(horizontal = 20.dp)) {
+                            Panel {
+                                SwitchRow(stringResource(R.string.downloads_unmetered), unmetered) { unmetered = it }
+                            }
+                        }
                     }
                     Gap(16.dp)
                     MatineeButton(
@@ -224,11 +226,11 @@ fun DownloadSheet(item: MediaItem, onDismiss: () -> Unit) {
                             }
                             val saved = texts.filter { it.id in subtitles }
                             when (val choice = picked) {
-                                Choice.Original -> downloads.downloadOriginal(loaded, saved)
+                                Choice.Original -> downloads.downloadOriginal(loaded, saved, unmetered)
                                 is Choice.Device -> {
                                     val spec = specs[choice]
                                     val plan = plans[choice]
-                                    if (spec != null && plan != null) downloads.downloadForDevice(loaded, spec, plan, saved)
+                                    if (spec != null && plan != null) downloads.downloadForDevice(loaded, spec, plan, saved, unmetered)
                                 }
                             }
                             onDismiss()
