@@ -758,19 +758,25 @@ private fun Controls(
                 controller.skip(-back)
                 onTouch()
             }
-            RoundIconButton(
-                if (controller.playing) Lucide.Pause else Lucide.Play,
-                stringResource(if (controller.playing) R.string.player_pause else R.string.player_play),
-                {
-                    controller.togglePlay()
-                    onTouch()
-                },
-                // Bare, like the skip buttons beside it, and a little bigger
-                // than them to lead without a circle.
-                size = 96.dp,
-                iconSize = 48.dp,
-                background = Color.Transparent,
-            )
+            // The loading spinner is drawn at the screen's center, even when
+            // controls are hidden. Keep its slot without an overlapping button.
+            Box(Modifier.size(96.dp), contentAlignment = Alignment.Center) {
+                if (!controller.loading) {
+                    RoundIconButton(
+                        if (controller.playing) Lucide.Pause else Lucide.Play,
+                        stringResource(if (controller.playing) R.string.player_pause else R.string.player_play),
+                        {
+                            controller.togglePlay()
+                            onTouch()
+                        },
+                        // Bare, like the skip buttons beside it, and a little bigger
+                        // than them to lead without a circle.
+                        size = 96.dp,
+                        iconSize = 48.dp,
+                        background = Color.Transparent,
+                    )
+                }
+            }
             SkipButton(Lucide.RotateCw, ahead, stringResource(R.string.player_skip_forward, ahead.toInt())) {
                 controller.skip(ahead)
                 onTouch()
