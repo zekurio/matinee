@@ -935,6 +935,7 @@ data class DownloadChoices(
     val keepsVideo: Boolean,
     val presets: List<DownloadVideoPreset>,
     val codecs: List<String>,
+    val hdrCodecs: List<String>,
     val audio: List<DownloadChoices.Audio>,
     val subtitles: List<SubtitleTrack>,
     val burnIn: List<SubtitleTrack>,

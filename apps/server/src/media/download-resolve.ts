@@ -35,6 +35,11 @@ export function downloadChoices(
       )
     : []
   const smallest = DOWNLOAD_VIDEO_PRESETS.at(-1)
+  const codecs = mkv
+    ? (["h264", "hevc", "av1"] satisfies TranscodeVideoCodec[]).filter(
+        (codec) => facts.videoCodecs.includes(codec),
+      )
+    : device.encodeVideo.filter((codec) => facts.videoCodecs.includes(codec))
   const conversions = (["aac", "opus"] satisfies TranscodeAudioCodec[]).filter(
     (codec) =>
       facts.audioCodecs.includes(codec) && (mkv || decodesAudio(device, codec)),
@@ -43,12 +48,17 @@ export function downloadChoices(
     keepsVideo:
       video !== null &&
       (mkv || (canCopyVideo(video.codec) && decodesVideo(device, video))),
-    presets: presets.length || !smallest ? presets : [smallest],
-    codecs: mkv
-      ? (["h264", "hevc", "av1"] satisfies TranscodeVideoCodec[]).filter(
-          (codec) => facts.videoCodecs.includes(codec),
-        )
-      : device.encodeVideo.filter((codec) => facts.videoCodecs.includes(codec)),
+    // A size is no use without a codec to encode it in.
+    presets:
+      !video || codecs.length === 0
+        ? []
+        : presets.length || !smallest
+          ? presets
+          : [smallest],
+    codecs,
+    hdrCodecs: video?.hdr
+      ? codecs.filter((codec) => codec === "hevc" || codec === "av1")
+      : [],
     audio: facts.audio.map((track) => {
       const most = track.channels ?? 2
       const counts = DOWNLOAD_AUDIO_CHANNELS.filter(
@@ -90,6 +100,8 @@ export function resolveDownload(
   wishes: DownloadWishes,
   facts: StartFacts,
 ) {
+  if (!facts.probe.video)
+    throw new DownloadSpecError("Only videos can be downloaded this way.")
   const choices = downloadChoices(device, wishes, facts)
   const { audio: preferred } = playbackAudio({ device }, facts)
   const primary = facts.audio.find((track) => track.primary) ?? facts.audio[0]
@@ -157,7 +169,7 @@ export function resolveDownload(
             codec,
             maxHeight: preset.height,
             bitrate: preset.bitrate,
-            keepHdr: wishes.keepHdr && (codec === "hevc" || codec === "av1"),
+            keepHdr: wishes.keepHdr && choices.hdrCodecs.includes(codec),
           }
         : { mode: "copy" },
     audio: selected.map((track) => {
@@ -165,9 +177,8 @@ export function resolveDownload(
         (entry) => entry.track.index === track.index,
       )
       if (choice?.keep) return { index: track.index, mode: "copy" }
-      const conversion = choice?.conversions.find(
-        (entry) => entry.channels === (track.channels === 1 ? 1 : 2),
-      )
+      // The first conversion is stereo, or mono from mono.
+      const conversion = choice?.conversions[0]
       if (!conversion)
         throw new DownloadSpecError(
           "No audio conversion is available for this device.",

@@ -34,10 +34,12 @@ export type DownloadWishes = t.infer<typeof DownloadWishes>
 export const DownloadChoices = t.object({
   /** Whether this container can keep the source video for this device. */
   keepsVideo: t.boolean(),
-  /** Fitting presets, largest first. The smallest is offered even for tiny video. */
+  /** Fitting presets, largest first. The smallest is offered even for tiny video. Empty when `codecs` is. */
   presets: t.array(DownloadVideoPreset),
   /** Available encode codecs, in device preference order for MP4 and server order for MKV. */
   codecs: t.array(TranscodeVideoCodec),
+  /** The codecs in `codecs` an encode can keep HDR in. Empty for SDR video. */
+  hdrCodecs: t.array(TranscodeVideoCodec),
   /** Each source audio track and its available output choices. */
   audio: t.array(
     t.object({
@@ -45,7 +47,7 @@ export const DownloadChoices = t.object({
       track: AudioTrack,
       /** Whether this track can stay unchanged. */
       keep: t.boolean(),
-      /** Available conversions, AAC first. An empty list means no conversion is possible. */
+      /** Available conversions, AAC first. The first is the default, in stereo or mono from mono. An empty list means no conversion is possible. */
       conversions: t.array(
         t.object({
           /** Output codec. */

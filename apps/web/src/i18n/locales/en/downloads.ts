@@ -34,6 +34,8 @@ export default defineMessages("downloads", {
   "downloads.audio.include": "Include {track}",
   "downloads.audio.format": "Format of {track}",
   "downloads.audio.none": "Pick at least one audio track.",
+  // In place of a track's format, when the format can't take it at all.
+  "downloads.audio.unavailable": "Not available",
 
   "downloads.burnIn": "Burn in subtitles",
   "downloads.burnIn.none": "None",
