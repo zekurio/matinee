@@ -12,12 +12,7 @@ import { subtitleLabel, trackDetail } from "@/lib/subtitles"
 import { selectAudio, selectBurnedIn, usePlayerStore } from "@/stores/player"
 
 import { controlButtonClass, SUBTITLE_STEP_MS } from "./player-controls"
-import {
-  audioDetail,
-  formatBitrate,
-  formatDelay,
-  resolutionName,
-} from "./player-format"
+import { audioDetail, formatBitrate, formatDelay } from "./player-format"
 import {
   type MenuAdjust,
   type MenuChoice,
@@ -147,9 +142,7 @@ export function PlayerMenus({
     {
       id: "original",
       label: tr("player.quality.original"),
-      detail: videoSize
-        ? resolutionName(videoSize.width, videoSize.height)
-        : undefined,
+      detail: video?.resolution ?? undefined,
     },
     ...PLAYBACK_QUALITIES.filter(
       (quality) =>

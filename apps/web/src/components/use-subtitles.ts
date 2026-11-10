@@ -4,8 +4,6 @@ import { type RefObject, useEffect } from "react"
 import { useShallow } from "zustand/shallow"
 
 import { tr } from "@/i18n"
-import { currentPlaybackPreferences } from "@/lib/playback-sync"
-import { fallbackTrack } from "@/lib/subtitles"
 import {
   selectSubtitle,
   usePlayerStore,
@@ -155,7 +153,7 @@ export function useSubtitles(
   pgsLayer: RefObject<HTMLElement | null>,
   lifted: boolean,
   offset: number,
-  onSelect: (trackId: string | null) => void,
+  onSelect: (trackId: string | null | undefined) => void,
   onPick: (trackId: string | null) => void,
 ) {
   const store = usePlayerStoreApi()
@@ -310,8 +308,8 @@ export function useSubtitles(
     }
     const { pickedSubtitle } = store.getState()
     const again = tracks.find((track) => track.id === pickedSubtitle)
-    const next = again ?? fallbackTrack(tracks, currentPlaybackPreferences())
-    if (next) select(next.id)
+    if (again) select(again.id)
+    else onSelect(undefined)
   }
 
   // The `<track>` to render, once its text is here.

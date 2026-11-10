@@ -111,6 +111,7 @@ export function playbackClock({ video, store, refs }: PlaybackCore) {
 /** A `playback.start` with what changed since the last one. */
 export type Ask = {
   /** The viewer's picks that change. */
+  subtitlesOn?: boolean
   picks?: PlaybackPicks
   /** The source that just failed, whose method the server skips from now. */
   failed?: { source: PlaybackSource; plan: PlaybackStart }
@@ -173,6 +174,10 @@ export function sourceStarters(core: PlaybackCore) {
   /** Take an answer: a new source to load, or the tracks around this one. */
   const apply = (plan: PlaybackStart, ask: Ask, id: number) => {
     const state = store.getState()
+    if (ask.subtitlesOn) {
+      state.pick({ subtitle: { trackId: plan.subtitle?.id ?? null } })
+      if (plan.subtitle) state.setPickedSubtitle(plan.subtitle.id)
+    }
     const previous = state.plan
     if (!ask.reload && sameSource(previous, plan)) {
       state.setPlan(plan)
@@ -202,6 +207,19 @@ export function sourceStarters(core: PlaybackCore) {
     const id = ++generation.current
     const before = store.getState()
     const undo = { picks: before.picks, failed: before.failed }
+    const pickedSubtitle = before.plan.subtitleTracks.find(
+      (track) => track.id === change.picks?.subtitle?.trackId,
+    )
+    if (
+      (change.picks?.quality !== undefined &&
+        change.picks.quality !== "original") ||
+      pickedSubtitle?.delivery === "burn-in"
+    ) {
+      before.restore(
+        before.picks,
+        before.failed.filter((method) => method !== "transcode"),
+      )
+    }
     if (change.picks) before.pick(change.picks)
     if (change.picks?.quality) before.setQuality(change.picks.quality)
     if (change.failed) before.addFailed(change.failed.source.method)
@@ -220,6 +238,7 @@ export function sourceStarters(core: PlaybackCore) {
         sessionId: state.sessionId,
         device: state.device,
         ...state.picks,
+        subtitlesOn: change.subtitlesOn,
         failed: state.failed,
         position: change.at,
         snap: change.snap ?? "before",

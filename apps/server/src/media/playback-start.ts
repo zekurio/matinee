@@ -16,6 +16,8 @@ import {
   subtitlePath,
 } from "@matinee/contracts"
 
+import { playbackVideoCodec } from "./playback-codec"
+
 function baseLanguage(tag: string | null): string | null {
   if (!tag) return null
   try {
@@ -122,7 +124,10 @@ export function playbackAudio(
           )
           .toSorted((a, b) => (b.channels ?? 0) - (a.channels ?? 0))[0]
       : undefined
-  return { audio: standIn ?? wanted ?? null, standIn: !!standIn }
+  return {
+    audio: standIn ?? wanted ?? null,
+    standIn: standIn ? (wanted ?? null) : null,
+  }
 }
 
 /** Decide without reading files, the database, or a device API. Null means exhausted. */
@@ -130,9 +135,27 @@ export function decidePlayback(
   input: PlaybackStartInput,
   facts: StartFacts,
 ): PlaybackDecision | null {
+  const audio = playbackAudio(input, facts)
+  const file = playbackFile(input, facts, audio.audio)
+  const subtitle = playbackSubtitle(input, facts, audio.audio, file)
+  const method = playbackMethod(input, facts, audio.audio, file, subtitle)
+  return method
+    ? playbackAnswer(input, facts, audio, file, subtitle, method)
+    : null
+}
+
+type FilePlayback = ReturnType<typeof playbackFile>
+type SubtitlePlayback = ReturnType<typeof playbackSubtitle>
+type MethodPlayback = NonNullable<ReturnType<typeof playbackMethod>>
+
+/** What plays from the file, including subtitles the device draws. */
+function playbackFile(
+  input: PlaybackStartInput,
+  facts: StartFacts,
+  audio: AudioTrack | null,
+) {
   const { device } = input
-  const { probe, preferences, picks } = facts
-  const { audio, standIn } = playbackAudio(input, facts)
+  const { probe } = facts
   const decodes = (codec: string) => decodesAudio(device, codec)
   const primary = facts.audio.find((track) => track.primary) ?? facts.audio[0]
   const video = probe.video
@@ -163,6 +186,30 @@ export function decidePlayback(
         device.sidecarSubtitles.includes(track.delivery)))
   const drawable = (track: SubtitleTrack) =>
     external(track) || (filePlays && embedded(track))
+  return {
+    video,
+    videoPlays,
+    encodeFailed,
+    asked,
+    fileAudio,
+    filePlays,
+    embedded,
+    external,
+    drawable,
+    decodes,
+  }
+}
+
+/** The subtitle picked or remembered, or chosen by the viewer's preferences. */
+function playbackSubtitle(
+  input: PlaybackStartInput,
+  facts: StartFacts,
+  audio: AudioTrack | null,
+  file: FilePlayback,
+) {
+  const { device } = input
+  const { preferences, picks } = facts
+  const { drawable, encodeFailed } = file
   const shown = facts.subtitles.filter(drawable)
   const subtitleLanguage = preferences.subtitleLanguage ?? device.language
   const best = (lang: string | null, forced = false) =>
@@ -210,14 +257,35 @@ export function decidePlayback(
     picks.subtitle?.trackId === null
       ? null
       : shown.find((track) => track.id === picks.subtitle?.trackId)
-  const picked = input.subtitle
-    ? (facts.subtitles.find((track) => track.id === input.subtitle?.trackId) ??
+  const picked = input.subtitlesOn
+    ? (best(subtitleLanguage) ??
+      shown.find((track) => track.default && !track.forced) ??
+      shown.find((track) => !track.forced) ??
+      shown[0] ??
       null)
-    : remembered === undefined
-      ? defaults()
-      : remembered
+    : input.subtitle
+      ? (facts.subtitles.find(
+          (track) => track.id === input.subtitle?.trackId,
+        ) ?? null)
+      : remembered === undefined
+        ? defaults()
+        : remembered
   const subtitle = picked && encodeFailed && !drawable(picked) ? null : picked
   const burn = subtitle !== null && !drawable(subtitle)
+  return { subtitle, burn }
+}
+
+/** The method and quality that play, or null when none is left. */
+function playbackMethod(
+  input: PlaybackStartInput,
+  facts: StartFacts,
+  audio: AudioTrack | null,
+  file: FilePlayback,
+  picked: SubtitlePlayback,
+) {
+  const { device } = input
+  const { asked, video, videoPlays, fileAudio, filePlays, decodes } = file
+  const { burn } = picked
   let quality = asked
   const reasons: PlaybackStart["reasons"] = []
   if (!accepts(device.containers, facts.container)) reasons.push("container")
@@ -252,6 +320,23 @@ export function decidePlayback(
   if (method === "transcode" && (!encodeVideo.length || (burn && !device.hls)))
     return null
   const hls = method === "transcode" && device.hls
+  return { method, quality, reasons, encodeVideo, hls }
+}
+
+/** The source and tracks the player loads. */
+function playbackAnswer(
+  input: PlaybackStartInput,
+  facts: StartFacts,
+  pickedAudio: ReturnType<typeof playbackAudio>,
+  file: FilePlayback,
+  pickedSubtitle: SubtitlePlayback,
+  chosen: MethodPlayback,
+): PlaybackDecision | null {
+  const { device } = input
+  const { audio, standIn } = pickedAudio
+  const { subtitle, burn } = pickedSubtitle
+  const { filePlays, embedded, external } = file
+  const { method, quality, reasons, encodeVideo, hls } = chosen
   let subtitleMode: PlaybackStart["subtitleMode"] = subtitle
     ? burn
       ? "burn-in"
@@ -303,6 +388,10 @@ export function decidePlayback(
     start: method === "direct" || hls ? position : 0,
     position,
     audio,
+    convertedVideo:
+      method === "transcode"
+        ? playbackVideoCodec(encodeVideo, facts.videoCodecs)
+        : null,
     convertedAudio,
     standIn,
     subtitle,

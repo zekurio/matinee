@@ -116,6 +116,8 @@ export const PlaybackStartInput = t.object({
    * preferred language, else the file's default.
    */
   audio: t.number().int().nonnegative().optional(),
+  /** Turn subtitles on without a pick. Finds a drawable track even if defaults are off. */
+  subtitlesOn: t.boolean().optional(),
   /**
    * The subtitle the viewer picked in the player, or off. Left out, the
    * server picks by what was remembered and the preferences.
@@ -193,11 +195,10 @@ export const PlaybackStart = t.object({
   audio: AudioTrack.nullable(),
   /** The codec the audio is converted to. Null when it's sent as it is. */
   convertedAudio: t.string().nullable(),
-  /**
-   * `audio` plays in place of the track the viewer would get, which the
-   * device can't decode, and is in the same language.
-   */
-  standIn: t.boolean(),
+  /** The codec the video is encoded in. Null when it is copied. */
+  convertedVideo: TranscodeVideoCodec.nullable(),
+  /** The track `audio` replaces in the same language. Null when none is replaced. */
+  standIn: AudioTrack.nullable(),
   /** The subtitle that shows. Null for none. */
   subtitle: SubtitleTrack.nullable(),
   /** Null without a subtitle. */

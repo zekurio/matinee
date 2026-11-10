@@ -42,13 +42,18 @@ function audioConversion(
 }
 
 /**
- * What an encode does to the video: `HEVC` to `1080p`. `from` is null when
+ * What an encode does to the video: `HEVC` to `H.264 1080p`. `from` is null when
  * the file's video isn't known.
  */
 function videoTranscode(plan: PlaybackStart) {
+  const codec =
+    plan.convertedVideo &&
+    { h264: "H.264", hevc: "HEVC", av1: "AV1" }[plan.convertedVideo]
   return {
     from: plan.item.probe?.video?.format ?? null,
-    quality: plan.quality.replace(/-\d+$/, ""),
+    quality: [codec, plan.quality.replace(/-\d+$/, "")]
+      .filter(Boolean)
+      .join(" "),
   }
 }
 
@@ -87,7 +92,9 @@ function noticeFor(
   if (plan.standIn && plan.audio && !previous?.standIn) {
     return {
       title: tr("player.notice.standIn", { format: plan.audio.format }),
-      description: tr("player.notice.standInDetail"),
+      description: tr("player.notice.standInDetail", {
+        track: plan.standIn.label,
+      }),
     }
   }
   if (plan.method === "transcode" && !plan.reasons.includes("quality")) {
