@@ -60,6 +60,13 @@
   --live: oklch(0.65 0.25 25);
   --live-soft: color-mix(in srgb, var(--live) 12%, transparent);
   --destructive: var(--danger);
+
+  /* The logo's sunset, top to horizon (components/brand.tsx). Its own
+     colors, not the accent's, so they stay put when a theme or the
+     server's accent changes. Keep in sync with brand/mark.svg. */
+  --logo-sun: #ffc56b;
+  --logo-dusk: #f27a8f;
+  --logo-horizon: #6d8cf5;
 }
 
 /* Light: the inverted ramp and a deeper accent that reads on white. */
@@ -92,6 +99,11 @@
 
   --warning: oklch(0.62 0.15 75);
   --danger: oklch(0.6 0.22 25);
+
+  /* Deeper, so the top of the sun still shows on white. */
+  --logo-sun: #f59f00;
+  --logo-dusk: #e64980;
+  --logo-horizon: #3b5bdb;
 }
 
 /* Roles every component uses, resolved from the tokens above. */
@@ -113,8 +125,6 @@
   --input-hover: var(--neutral-400);
   --field: var(--surface-sunken);
   --ring: var(--accent);
-  /* The logo follows the accent, so a theme recolors it too. */
-  --brand: var(--accent);
 
   --sidebar: var(--neutral-0);
   --sidebar-foreground: var(--neutral-700);
@@ -166,7 +176,6 @@ html[data-theme-inspecting] *:not([data-theme-editor], [data-theme-editor] *) {
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
-  --color-brand: var(--brand);
   --color-success: var(--success);
   --color-success-soft: var(--success-soft);
   --color-warning: var(--warning);

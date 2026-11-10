@@ -18,6 +18,7 @@ packages/
   client/      Typed client factory for any app (web now, TV and mobile later)
   db/          Drizzle schema and migrations (Postgres)
   ui/          shadcn components on Base UI, plus the theme
+brand/         The logo, the app icons for iOS and Android, and the script that renders them
 ```
 
 The contract in `packages/contracts/src/contract.ts` is the API. The server

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- The app icon: the mark in its bright colors on a dusk sky, full bleed.
+       Each platform rounds the corners itself. The mark is 30 units to the
+       pixel, its bounding box centered on the canvas. -->
+  <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1024" gradientUnits="userSpaceOnUse">
+    <stop offset="0" stop-color="#1d1a33"/>
+    <stop offset="1" stop-color="#0e0e10"/>
+  </linearGradient>
+  <linearGradient id="sunset" x1="0" y1="3" x2="0" y2="20.7" gradientUnits="userSpaceOnUse">
+    <stop offset="0" stop-color="#ffc56b"/>
+    <stop offset="0.5" stop-color="#f27a8f"/>
+    <stop offset="1" stop-color="#6d8cf5"/>
+  </linearGradient>
+  <rect width="1024" height="1024" fill="url(#sky)"/>
+  <g transform="translate(152 156.5) scale(30)">
+    <path fill="url(#sunset)" d="M2.22 15.1A10 10 0 1 1 21.78 15.1ZM2.53 16.2H21.47A10 10 0 0 1 20.77 17.8H3.23A10 10 0 0 1 2.53 16.2ZM4.15 19.2H19.85A10 10 0 0 1 18.38 20.7H5.62A10 10 0 0 1 4.15 19.2Z"/>
+  </g>
+</svg>

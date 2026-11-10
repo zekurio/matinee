@@ -1,26 +1,45 @@
 import { cn } from "@matinee/ui/lib/utils"
+import { useId } from "react"
 
 /**
- * The ticket's outline with its side notches, and the play triangle cut out
- * of it. One even-odd path, so the cuts show whatever sits behind the mark.
- * Keep in sync with public/favicon.svg.
+ * A sun going down behind three horizon bands: the cap, then two slices
+ * that the gaps cut out of the disc (radius 10, centered at 12,13). Each
+ * piece is its own subpath, so the gaps show whatever sits behind the mark.
+ * Keep in sync with brand/mark.svg.
  */
-const TICKET =
-  "M3.5 5h17a2 2 0 0 1 2 2v2.5a2.5 2.5 0 0 0 0 5V17a2 2 0 0 1-2 2h-17a2 2 0 0 1-2-2v-2.5a2.5 2.5 0 0 0 0-5V7a2 2 0 0 1 2-2Z" +
-  "M10 8.5v7l5.75-3.5Z"
+const SUNSET =
+  "M2.22 15.1A10 10 0 1 1 21.78 15.1Z" +
+  "M2.53 16.2H21.47A10 10 0 0 1 20.77 17.8H3.23A10 10 0 0 1 2.53 16.2Z" +
+  "M4.15 19.2H19.85A10 10 0 0 1 18.38 20.7H5.62A10 10 0 0 1 4.15 19.2Z"
 
 /**
- * The Matinee mark: a matinee ticket with a play button punched through,
- * in the theme's accent.
+ * The Matinee mark: an afternoon sun, amber at the top and blue at the
+ * horizon. The colors are the logo's own (`--logo-*` in globals.css), a
+ * deeper set in light mode, and don't follow the server's accent.
  */
 export function LogoMark({ className }: { className?: string }) {
+  const gradient = useId()
   return (
     <svg
       viewBox="0 0 24 24"
       aria-hidden
-      className={cn("text-brand size-6 shrink-0", className)}
+      className={cn("size-6 shrink-0", className)}
     >
-      <path d={TICKET} fillRule="evenodd" fill="currentColor" />
+      <defs>
+        <linearGradient
+          id={gradient}
+          x1="0"
+          y1="3"
+          x2="0"
+          y2="20.7"
+          gradientUnits="userSpaceOnUse"
+        >
+          <stop offset="0" style={{ stopColor: "var(--logo-sun)" }} />
+          <stop offset="0.5" style={{ stopColor: "var(--logo-dusk)" }} />
+          <stop offset="1" style={{ stopColor: "var(--logo-horizon)" }} />
+        </linearGradient>
+      </defs>
+      <path d={SUNSET} fill={`url(#${gradient})`} />
     </svg>
   )
 }

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- The Matinee mark: a sun going down behind its horizon bands. The
+       deeper colors are for light backgrounds, the brighter ones for dark,
+       picked by the viewer's color scheme. The source for the favicon
+       (brand/render.sh) and apps/web/src/components/brand.tsx. -->
+  <style>
+    .sun { stop-color: #f59f00 } .dusk { stop-color: #e64980 } .horizon { stop-color: #3b5bdb }
+    @media (prefers-color-scheme: dark) {
+      .sun { stop-color: #ffc56b } .dusk { stop-color: #f27a8f } .horizon { stop-color: #6d8cf5 }
+    }
+  </style>
+  <linearGradient id="sunset" x1="0" y1="3" x2="0" y2="20.7" gradientUnits="userSpaceOnUse">
+    <stop class="sun" offset="0"/>
+    <stop class="dusk" offset="0.5"/>
+    <stop class="horizon" offset="1"/>
+  </linearGradient>
+  <path fill="url(#sunset)" d="M2.22 15.1A10 10 0 1 1 21.78 15.1ZM2.53 16.2H21.47A10 10 0 0 1 20.77 17.8H3.23A10 10 0 0 1 2.53 16.2ZM4.15 19.2H19.85A10 10 0 0 1 18.38 20.7H5.62A10 10 0 0 1 4.15 19.2Z"/>
+</svg>

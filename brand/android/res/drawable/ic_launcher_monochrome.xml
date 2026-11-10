@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Themed icon (Android 13+): the foreground's shape in one color. The
+     launcher recolors it from the wallpaper, so only the alpha counts. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:translateX="27.6"
+        android:translateY="27.93"
+        android:scaleX="2.2"
+        android:scaleY="2.2">
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M2.22 15.1A10 10 0 1 1 21.78 15.1ZM2.53 16.2H21.47A10 10 0 0 1 20.77 17.8H3.23A10 10 0 0 1 2.53 16.2ZM4.15 19.2H19.85A10 10 0 0 1 18.38 20.7H5.62A10 10 0 0 1 4.15 19.2Z" />
+    </group>
+</vector>

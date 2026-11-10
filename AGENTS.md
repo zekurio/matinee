@@ -24,6 +24,8 @@ See README.md for setup and the auth design.
   streams (`src/realtime`).
 - `apps/web`: Vite React app. File routes live in `src/routes`;
   `src/routeTree.gen.ts` is generated.
+- `brand/`: the logo and the native app icons, with the script that
+  renders their PNGs and the web app's favicon. See `brand/README.md`.
 - `nix/`: the flake's package (`package.nix`) and NixOS module
   (`module.nix`), with tests in `nix/tests`. A server variable the module
   should set for people gets a typed option there; any other goes through
