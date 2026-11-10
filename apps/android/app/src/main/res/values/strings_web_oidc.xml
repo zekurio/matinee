@@ -31,6 +31,7 @@
     <string name="web_oidc_clientSecret_none">None</string>
     <string name="web_oidc_clientSecret_useEnvironment">Use the secret from the environment</string>
     <string name="web_oidc_clientSecret_remove">Remove the saved secret</string>
+    <string name="web_oidc_clientSecret_keep">Keep the saved secret</string>
     <string name="web_oidc_clientSecret_environmentApplies">The environment\'s secret applies after you save.</string>
     <string name="web_oidc_clientSecret_removed">The secret is removed when you save.</string>
     <string name="web_oidc_redirectUri">Redirect URI</string>

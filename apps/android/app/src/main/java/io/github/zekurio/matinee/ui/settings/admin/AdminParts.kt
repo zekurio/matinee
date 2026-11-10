@@ -123,6 +123,7 @@ internal fun TextRow(
     keyboard: KeyboardType = KeyboardType.Text,
     error: String? = null,
     secret: Boolean = false,
+    trailing: (@Composable () -> Unit)? = null,
 ) {
     Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
         Text(label, style = MaterialTheme.typography.bodyMedium, color = Palette.Muted)
@@ -134,6 +135,7 @@ internal fun TextRow(
             isError = error != null,
             keyboardOptions = KeyboardOptions(keyboardType = if (secret) KeyboardType.Password else keyboard, autoCorrectEnabled = false),
             visualTransformation = if (secret) PasswordVisualTransformation() else VisualTransformation.None,
+            trailing = trailing,
         )
         if (error != null) {
             Gap(4.dp)

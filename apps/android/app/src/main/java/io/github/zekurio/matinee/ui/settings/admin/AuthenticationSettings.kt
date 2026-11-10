@@ -35,7 +35,6 @@ import io.github.zekurio.matinee.ui.components.LocalSnackbar
 import io.github.zekurio.matinee.ui.components.Lucide
 import io.github.zekurio.matinee.ui.components.RoundIconButton
 import io.github.zekurio.matinee.ui.rememberLoader
-import io.github.zekurio.matinee.ui.settings.LinkRow
 import io.github.zekurio.matinee.ui.settings.Panel
 import io.github.zekurio.matinee.ui.settings.RowDivider
 import io.github.zekurio.matinee.ui.settings.Section
@@ -136,25 +135,39 @@ private fun AuthForm(saved: AdminAuthSettings, saver: Saver, save: (AuthSettings
                     secret,
                     {
                         secret = it
+                        // A new secret replaces the saved one, so a removal no longer applies.
                         if (it.isNotEmpty()) dropSecret = false
                     },
                     // What's in use now, while the field is empty.
                     placeholder = when {
+                        dropSecret && saved.clientSecret.environment -> stringResource(R.string.web_oidc_clientSecret_environmentApplies)
                         dropSecret -> stringResource(R.string.web_oidc_clientSecret_removed)
                         saved.clientSecret.source == "saved" -> stringResource(R.string.web_oidc_clientSecret_saved)
                         saved.clientSecret.source == "environment" -> stringResource(R.string.web_oidc_clientSecret_fromEnvironment)
                         else -> stringResource(R.string.web_oidc_clientSecret_none)
                     },
                     secret = true,
+                    // Remove the saved secret, or take the removal back until the save.
+                    trailing = if (saved.clientSecret.source == "saved" && secret.isEmpty()) {
+                        {
+                            RoundIconButton(
+                                if (dropSecret) Lucide.RotateCcw else Lucide.Trash,
+                                stringResource(
+                                    when {
+                                        dropSecret -> R.string.web_oidc_clientSecret_keep
+                                        saved.clientSecret.environment -> R.string.web_oidc_clientSecret_useEnvironment
+                                        else -> R.string.web_oidc_clientSecret_remove
+                                    },
+                                ),
+                                { dropSecret = !dropSecret },
+                                background = Color.Transparent,
+                                tint = if (dropSecret) Palette.Muted else Palette.Danger,
+                            )
+                        }
+                    } else {
+                        null
+                    },
                 )
-                if (saved.clientSecret.source == "saved" && secret.isEmpty() && !dropSecret) {
-                    RowDivider()
-                    LinkRow(
-                        stringResource(if (saved.clientSecret.environment) R.string.web_oidc_clientSecret_useEnvironment else R.string.web_oidc_clientSecret_remove),
-                        destructive = true,
-                        icon = Lucide.Trash,
-                    ) { dropSecret = true }
-                }
                 RowDivider()
                 RedirectRow(saved.callbackUrl)
             }

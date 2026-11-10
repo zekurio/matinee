@@ -31,6 +31,7 @@
     <string name="web_oidc_clientSecret_none">Keins</string>
     <string name="web_oidc_clientSecret_useEnvironment">Das Secret aus der Umgebung verwenden</string>
     <string name="web_oidc_clientSecret_remove">Das gespeicherte Secret entfernen</string>
+    <string name="web_oidc_clientSecret_keep">Das gespeicherte Secret behalten</string>
     <string name="web_oidc_clientSecret_environmentApplies">Nach dem Speichern gilt das Secret aus der Umgebung.</string>
     <string name="web_oidc_clientSecret_removed">Das Secret wird beim Speichern entfernt.</string>
     <string name="web_oidc_redirectUri">Weiterleitungs-URI</string>
