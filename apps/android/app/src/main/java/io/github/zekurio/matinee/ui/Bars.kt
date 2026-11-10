@@ -240,15 +240,25 @@ private fun TabButton(
 @Composable
 fun AppHeader(modifier: Modifier = Modifier) {
     val offline = LocalOffline.current
+    val statusBar = WindowInsets.statusBars.getTop(LocalDensity.current).toFloat()
     Box(
         modifier
             .fillMaxWidth()
             // Keeps the header readable over bright art, fading out a little
-            // below it as on the web.
+            // below it as on the web. Behind the status bar it's denser:
+            // Android picks each part of the bar's icons light or dark by
+            // what's behind it, so over bright art the clock went dark while
+            // the rest stayed light, a different mix for every slide.
             .drawBehind {
                 val height = size.height + 40.dp.toPx()
+                val bar = (statusBar / height).coerceIn(0f, 1f)
                 drawRect(
-                    Brush.verticalGradient(listOf(Palette.Background.copy(alpha = 0.7f), Color.Transparent), endY = height),
+                    Brush.verticalGradient(
+                        0f to Palette.Background.copy(alpha = 0.85f),
+                        bar to Palette.Background.copy(alpha = 0.75f),
+                        1f to Color.Transparent,
+                        endY = height,
+                    ),
                     size = Size(size.width, height),
                 )
             },
@@ -358,8 +368,11 @@ fun StatusBarScrim(state: LazyListState, modifier: Modifier = Modifier) {
             .windowInsetsTopHeight(WindowInsets.statusBars)
             .drawBehind {
                 // Read while drawing, so scrolling only redraws this.
-                val shown = if (state.firstVisibleItemIndex > 0) 1f else (state.firstVisibleItemScrollOffset / distance).coerceIn(0f, 1f)
-                if (shown == 0f) return@drawBehind
+                val scrolled = if (state.firstVisibleItemIndex > 0) 1f else (state.firstVisibleItemScrollOffset / distance).coerceIn(0f, 1f)
+                // Never quite clear: Android picks the status bar's icons light
+                // or dark by what's behind each of them, so over bright art
+                // they'd come out mixed. A light shade keeps them the theme's.
+                val shown = 0.75f + 0.25f * scrolled
                 // Past the bar by half its height, so the fade has room.
                 val height = size.height * 1.5f
                 val shade = Palette.Background
