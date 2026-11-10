@@ -29,14 +29,15 @@ import {
 } from "@matinee/ui/components/select"
 import { useSelector } from "@tanstack/react-form"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { FolderIcon, XIcon } from "lucide-react"
+import { FolderIcon, FolderPlusIcon, XIcon } from "lucide-react"
+import { useState } from "react"
 
 import { tr, translateKnown } from "@/i18n"
 import { firstError, useAppForm } from "@/lib/form"
 import { languageName } from "@/lib/languages"
 import { client, errorMessage, orpc } from "@/lib/rpc"
 
-import { FolderBrowser } from "./folder-browser"
+import { FolderPicker } from "./folder-browser"
 import { FormAlert } from "./form-alert"
 import { SelectField } from "./select-field"
 
@@ -199,6 +200,7 @@ function LibraryForm({
   const startFolder = known ? parentFolder(known) : undefined
 
   const error = validation ?? (save.error ? errorMessage(save.error) : null)
+  const [picking, setPicking] = useState(false)
 
   return (
     <form.AppForm>
@@ -299,6 +301,7 @@ function LibraryForm({
           <form.Field name="paths">
             {(field) => {
               const paths = field.state.value
+              const last = paths.at(-1)
               return (
                 <>
                   <Field>
@@ -345,20 +348,29 @@ function LibraryForm({
                         ))}
                       </ul>
                     ) : (
-                      <p className="text-muted-foreground rounded-md border border-dashed px-3 py-2.5 text-sm">
+                      <p className="text-muted-foreground text-sm">
                         {tr("libraries.dialog.noFolders")}
                       </p>
                     )}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="self-start"
+                      onClick={() => setPicking(true)}
+                    >
+                      <FolderPlusIcon />
+                      {tr("libraries.dialog.addFolder")}
+                    </Button>
                   </Field>
 
-                  <Field>
-                    <FieldLabel>{tr("libraries.dialog.browse")}</FieldLabel>
-                    <FolderBrowser
-                      initialPath={startFolder}
-                      picked={paths}
-                      onPick={(path) => field.handleChange([...paths, path])}
-                    />
-                  </Field>
+                  <FolderPicker
+                    open={picking}
+                    onOpenChange={setPicking}
+                    // Beside the folder added last, when there is one.
+                    initialPath={last ? parentFolder(last) : startFolder}
+                    picked={paths}
+                    onPick={(path) => field.handleChange([...paths, path])}
+                  />
                 </>
               )
             }}
