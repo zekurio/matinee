@@ -44,13 +44,15 @@
         <item quantity="other">%1$d selected</item>
     </plurals>
     <string name="web_libraries_dialog_removeFolder">Remove %1$s</string>
-    <string name="web_libraries_dialog_noFolders">Open a folder below, then add it.</string>
+    <string name="web_libraries_dialog_noFolders">No folders yet.</string>
+    <string name="web_libraries_dialog_addFolder">Add folder</string>
     <string name="web_libraries_dialog_browse">Browse server</string>
     <string name="web_libraries_dialog_cancel">Cancel</string>
     <string name="web_libraries_dialog_save">Save</string>
     <string name="web_libraries_dialog_add">Add library</string>
-    <string name="web_libraries_browser_root">Root</string>
-    <string name="web_libraries_browser_current">Current folder</string>
+    <string name="web_libraries_browser_path">Path</string>
+    <string name="web_libraries_browser_go">Open</string>
+    <string name="web_libraries_browser_parent">Parent folder</string>
     <string name="web_libraries_browser_addCurrent">Add “%1$s”</string>
     <string name="web_libraries_browser_added">Added</string>
     <string name="web_libraries_browser_openRoot">Open the folder that holds your videos.</string>
