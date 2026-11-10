@@ -89,18 +89,3 @@ export function formatBitrate(bits: number): string {
     ? tr("player.bitrate.mbps", { value: Math.round(bits / 100_000) / 10 })
     : tr("player.bitrate.kbps", { value: Math.round(bits / 1000) })
 }
-
-/** `1080p` for a 1920×800 scope picture too: what fits the frame. */
-export function resolutionName(width: number, height: number): string {
-  const frames = [
-    [3840, 2160],
-    [2560, 1440],
-    [1920, 1080],
-    [1280, 720],
-    [854, 480],
-  ]
-  for (const [w = 0, h = 0] of frames) {
-    if (width >= w * 0.9 || height >= h * 0.9) return `${h}p`
-  }
-  return `${height}p`
-}

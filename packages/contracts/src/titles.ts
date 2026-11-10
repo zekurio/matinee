@@ -1,7 +1,7 @@
 import { Artwork } from "./artwork"
 import { MetadataProviderId } from "./library"
 import { t } from "./schema"
-import { MediaProbe } from "./streams"
+import { DisplayMediaProbe } from "./streams"
 
 export const Images = t.object({
   /** Portrait cover, 2:3. */
@@ -79,11 +79,49 @@ export const EpisodeInfo = t.object({
 })
 export type EpisodeInfo = t.infer<typeof EpisodeInfo>
 
+/** One folder's name, or a season number for the client to word. */
+export const ItemLabelFolder = t.object({
+  /** The folder name. Null for a season folder. */
+  name: t.string().nullable(),
+  /** Zero means specials. Null for an ordinary folder. */
+  seasonNumber: t.number().int().nullable(),
+})
+export type ItemLabelFolder = t.infer<typeof ItemLabelFolder>
+
+/** Names from metadata, falling back to the file and folder names. */
+export const ItemLabel = t.object({
+  /** The show or movie with its year. For loose files, the file's title. */
+  show: t.string(),
+  /** The show or movie name without the year. */
+  showName: t.string(),
+  /** The show's or movie's year, if known. */
+  year: t.string().nullable(),
+  /** The top-level folder, for grouping, tones, and folder links. */
+  showKey: t.string(),
+  /** The episode or movie name. Null for an untitled episode. */
+  title: t.string().nullable(),
+  /** Neither metadata nor the file name supplies an episode title. */
+  untitled: t.boolean(),
+  /** The number to word when title is null, from the file name. */
+  episodeNumber: t.number().int().nullable(),
+  /** S02E01, for episodes. */
+  code: t.string().nullable(),
+  /** E01, for lists already headed by show and season. */
+  shortCode: t.string().nullable(),
+  /** Folder path the file sits in, joined with ` / ` for grouping lists. */
+  group: t.string(),
+  /** Readable folders in path order. Clients word season numbers. */
+  groupLabel: t.array(ItemLabelFolder),
+})
+export type ItemLabel = t.infer<typeof ItemLabel>
+
 export const MediaItem = t.object({
   id: t.uuid(),
   libraryId: t.uuid(),
   /** A readable name from the file name alone, like `Show S01E02`. */
   fileTitle: t.string(),
+  /** What to call the file, worked out by the server. */
+  label: ItemLabel,
   /** The movie or show the file belongs to. Null until scanned. */
   title: TitleSummary.nullable(),
   /** From the file name or its season folder. */
@@ -100,7 +138,7 @@ export const MediaItem = t.object({
   /** Null until the server or a player has measured it. */
   durationSeconds: t.number().nullable(),
   /** Streams and container. Null until probed, or when ffprobe couldn't read the file. */
-  probe: MediaProbe.nullable(),
+  probe: DisplayMediaProbe.nullable(),
   /** Null when the signed-in user hasn't started it. */
   progress: WatchState.nullable(),
   /**

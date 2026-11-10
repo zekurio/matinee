@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The background and accent from packages/ui/src/styles/globals.css. -->
+    <color name="background">#FF0E0E10</color>
+    <color name="accent">#FF6D8CF5</color>
+</resources>

@@ -4,11 +4,9 @@ import {
   artworkSrcSet,
   type ArtworkSize,
   knownChannelLayout,
-  type HdrFormat,
   type ImagePlaceholder,
   type MediaItem,
   mediaThumbnailPath,
-  videoCodecName,
 } from "@matinee/contracts"
 
 import { tr } from "@/i18n"
@@ -18,9 +16,13 @@ export function channelLayout(
   layout: string | null,
   channels: number | null,
 ): string | null {
-  const known = knownChannelLayout(layout, channels)
-  if (known || !channels || channels < 1) return known
+  if (layout || !channels || channels < 1) return layout
   return tr("media.channels", { count: channels })
+}
+
+/** Layout for an output channel count, rather than a probed stream. */
+export function outputChannelLayout(channels: number): string | null {
+  return channelLayout(knownChannelLayout(null, channels), channels)
 }
 
 /**
@@ -58,53 +60,6 @@ export type ItemLabel = {
   groupLabel: string[]
 }
 
-const EPISODE = /\bS(\d{1,2})E(\d{1,3})\b/i
-// Release tags and the extension trail the episode name.
-const TRAILER = /\s*(\[.*|\.[a-z0-9]{2,4})$/i
-// Names that say nothing about the episode.
-const PLACEHOLDER = /^(tba|tbd|tbc|untitled|episode \d+)$/i
-const SEASON_FOLDER = /^season\s*0*(\d+)$/i
-
-/** "KILL THE SHADOW" reads as "Kill the Shadow"; mixed case is kept. */
-function quietCaps(name: string): string {
-  if (name.length <= 3 || name !== name.toUpperCase() || !/[A-Z]/.test(name)) {
-    return name
-  }
-  const small = new Set([
-    "a",
-    "an",
-    "and",
-    "at",
-    "by",
-    "for",
-    "in",
-    "of",
-    "on",
-    "or",
-    "the",
-    "to",
-    "vs",
-  ])
-  return name
-    .toLowerCase()
-    .split(" ")
-    .map((word, i) =>
-      i > 0 && small.has(word)
-        ? word
-        : // The first letter, not the first character: "〔zero" → "(Zero".
-          // Leading punctuation is skipped, but not digits ("9days").
-          word.replace(
-            /^([^\p{L}\p{N}]*)(\p{L})/u,
-            (_, lead: string, letter: string) => lead + letter.toUpperCase(),
-          ),
-    )
-    .join(" ")
-}
-
-function pad(n: string | undefined): string {
-  return n?.padStart(2, "0") ?? "00"
-}
-
 const TRAILING_YEAR = /^(.*\S)\s*\(((?:19|20)\d{2})\)$/
 
 /** Split a trailing "(2024)" off a show name. */
@@ -118,102 +73,18 @@ export function splitYear(name: string): {
     : { showName: name, year: null }
 }
 
-/** "Season 02" reads as "Season 2", and season 0 as "Specials". */
-function folderLabel(name: string): string {
-  const season = SEASON_FOLDER.exec(name.trim())
-  if (season) {
-    const n = Number(season[1])
-    return n === 0
-      ? tr("media.specials")
-      : tr("media.season", { number: String(n) })
-  }
-  if (/^specials?$/i.test(name.trim())) return tr("media.specials")
-  return name
-}
-
-/**
- * Split a file into readable parts from its path alone. Episode files named
- * `Show - S02E01 - Into the Shadow [tags].mkv` read as "Into the Shadow".
- */
-function labelFromPath(item: MediaItem): ItemLabel {
-  const parts = item.relativePath.split("/")
-  const file = parts.at(-1) ?? item.relativePath
-  const folders = parts.slice(0, -1)
-  const group = folders.join(" / ")
-  const groupLabel = folders.map(folderLabel)
-  const match = EPISODE.exec(file)
-
-  if (!match) {
-    const show = folders[0] ?? item.fileTitle
-    return {
-      show,
-      ...splitYear(show),
-      showKey: folders[0] ?? item.fileTitle,
-      title: item.fileTitle,
-      untitled: false,
-      code: null,
-      shortCode: null,
-      group,
-      groupLabel,
-    }
-  }
-
-  const episode = Number(match[2])
-  const name = file
-    .slice((match.index ?? 0) + match[0].length)
-    .replace(/^[\s._-]+/, "")
-    .replace(TRAILER, "")
-    .replace(/[._]+/g, " ")
-    // Full-width and CJK brackets become parentheses; many UI fonts lack
-    // them. Not "[", which TRAILER treats as the start of release tags.
-    .replace(/[〔【［（]/g, "(")
-    .replace(/[〕】］）]/g, ")")
-    .trim()
-  const untitled = !name || PLACEHOLDER.test(name)
-  const show = folders[0] ?? item.fileTitle.replace(EPISODE, "").trim()
-  return {
-    show,
-    ...splitYear(show),
-    showKey: show,
-    title: untitled
-      ? tr("media.episode", { number: String(episode) })
-      : quietCaps(name),
-    untitled,
-    code: `S${pad(match[1])}E${pad(match[2])}`,
-    shortCode: `E${pad(match[2])}`,
-    group,
-    groupLabel,
-  }
-}
-
-/**
- * Readable parts of a file: names from the library's metadata provider
- * where it has them, and from the file and folder names otherwise.
- */
+/** Add interface words to the server's label. */
 export function itemLabel(item: MediaItem): ItemLabel {
-  const parsed = labelFromPath(item)
-  const owner = item.title
-  if (!owner) return parsed
-  const year = owner.year ? String(owner.year) : parsed.year
-  const base = {
-    ...parsed,
-    show: year ? `${owner.name} (${year})` : owner.name,
-    showName: owner.name,
-    year,
-  }
-  if (owner.kind === "movie") {
-    return { ...base, title: owner.name, untitled: false, code: null }
-  }
-  const { seasonNumber: season, episodeNumber: number } = item
-  if (season === null || number === null) return base
-  const name = item.episode?.name?.trim()
-  const named = name && !PLACEHOLDER.test(name) ? name : null
+  const { episodeNumber, ...label } = item.label
   return {
-    ...base,
-    title: named ?? parsed.title,
-    untitled: !named && parsed.untitled,
-    code: `S${pad(String(season))}E${pad(String(number))}`,
-    shortCode: `E${pad(String(number))}`,
+    ...label,
+    title:
+      label.title ?? tr("media.episode", { number: String(episodeNumber) }),
+    groupLabel: label.groupLabel.map((folder) =>
+      folder.seasonNumber === null
+        ? (folder.name ?? "")
+        : seasonName(folder.seasonNumber),
+    ),
   }
 }
 
@@ -306,21 +177,6 @@ export function timeLeft(item: MediaItem): string | null {
   return tr("media.timeLeft", { minutes })
 }
 
-const HDR_LABELS = {
-  hdr10: "HDR10",
-  hlg: "HLG",
-  "dolby-vision": "Dolby Vision",
-} satisfies Record<HdrFormat, string>
-
-/** "1080p" for 1920×800 too: wide films are cropped in height, not width. */
-function resolutionLabel(width: number, height: number): string {
-  if (width >= 3200 || height >= 2000) return "4K"
-  if (width >= 2400 || height >= 1400) return "1440p"
-  if (width >= 1800 || height >= 1000) return "1080p"
-  if (width >= 1200 || height >= 700) return "720p"
-  return `${height}p`
-}
-
 /**
  * Badges for a title page: resolution, dynamic range, and the main audio
  * track's layout, such as ["4K", "Dolby Vision", "5.1"]. SDR gets no
@@ -331,14 +187,10 @@ export function mediaFlags(item: MediaItem): string[] {
   if (!probe) return []
   const { video, audio } = probe
   const main = audio.find((stream) => stream.default) ?? audio[0]
-  const hdr =
-    video?.hdr === "hdr10" && video.hdr10Plus
-      ? "HDR10+"
-      : video?.hdr && HDR_LABELS[video.hdr]
   return [
-    video && resolutionLabel(video.width, video.height),
-    hdr,
-    main && channelLayout(main.channelLayout, main.channels),
+    video?.resolution,
+    video?.dynamicRange,
+    main && channelLayout(main.layout, main.channels),
   ].filter((flag): flag is string => Boolean(flag))
 }
 
@@ -352,10 +204,10 @@ export function streamSummary(item: MediaItem): string | null {
   const { video, audio, subtitles } = probe
   const main = audio.find((stream) => stream.default) ?? audio[0]
   const parts = [
-    video && resolutionLabel(video.width, video.height),
-    video && videoCodecName(video.codec),
-    video?.hdr && HDR_LABELS[video.hdr],
-    main && channelLayout(main.channelLayout, main.channels),
+    video?.resolution,
+    video?.format,
+    video?.dynamicRange,
+    main && channelLayout(main.layout, main.channels),
     audio.length > 1 && tr("media.audioTracks", { count: audio.length }),
     subtitles.length > 0 && tr("media.subtitles", { count: subtitles.length }),
   ].filter(Boolean)

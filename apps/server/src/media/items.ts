@@ -15,7 +15,9 @@ import { and, asc, desc, eq, isNull, type SQL, sql } from "drizzle-orm"
 
 import { anyOf, arg, db } from "../db"
 import { placeholders, type Placeholders, toArtwork } from "./artwork"
+import { displayProbe } from "./display-probe"
 import { mimeType } from "./mime"
+import { itemLabel } from "./title"
 
 // How many folders deep a file sits in its library.
 const depth = sql`length(${mediaItem.relativePath}) - length(replace(${mediaItem.relativePath}, '/', ''))`
@@ -226,7 +228,7 @@ function toItem(row: MediaItemRow, details: ItemDetails): MediaItem {
         )
       : undefined
   const progress = details.progress.get(row.id)
-  return {
+  const item = {
     id: row.id,
     libraryId: row.libraryId,
     fileTitle: row.title,
@@ -248,7 +250,7 @@ function toItem(row: MediaItemRow, details: ItemDetails): MediaItem {
     sizeBytes: row.sizeBytes,
     modifiedAt: row.modifiedAt,
     durationSeconds: row.durationSeconds,
-    probe: row.probe,
+    probe: row.probe ? displayProbe(row.probe) : null,
     progress: progress
       ? {
           positionSeconds: progress.positionSeconds,
@@ -258,6 +260,7 @@ function toItem(row: MediaItemRow, details: ItemDetails): MediaItem {
       : null,
     favorite: details.favorites.has(row.id),
   }
+  return { ...item, label: itemLabel(item) }
 }
 
 function episodeKey(titleId: string, season: number, number: number): string {

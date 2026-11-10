@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="error_unreadable">Der Server hat etwas geschickt, das diese App nicht lesen kann. Ein Update der App oder des Servers kann helfen.</string>
+    <string name="loading_in_progress">Wird geladen</string>
+    <string name="loading_stale">Nicht aktualisiert</string>
+    <string name="home_failed">Die Startseite konnte nicht geladen werden</string>
+    <string name="home_featured_failed">Die vorgestellten Titel konnten nicht geladen werden</string>
+    <string name="home_continue_failed">Was du gerade schaust, konnte nicht geladen werden</string>
+    <string name="home_next_up_failed">Die nächsten Folgen konnten nicht geladen werden</string>
+    <string name="home_shelf_failed">Die Neuheiten konnten nicht geladen werden</string>
+</resources>

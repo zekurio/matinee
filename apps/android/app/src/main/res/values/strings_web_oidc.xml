@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Made by scripts/web_strings.py from apps/web/src/i18n/locales/en/oidc.ts. Don't edit. -->
+<resources>
+    <string name="web_oidc_loadFailed">Couldn\'t load the sign-in settings. %1$s</string>
+    <string name="web_oidc_checkField">Check %1$s.</string>
+    <string name="web_oidc_checkFields">Check the fields.</string>
+    <string name="web_oidc_checkFieldIssue">%1$s %2$s</string>
+    <string name="web_oidc_field_displayName">Display name</string>
+    <string name="web_oidc_field_issuerUrl">Issuer URL</string>
+    <string name="web_oidc_field_clientId">Client ID</string>
+    <string name="web_oidc_field_scopes">Scopes</string>
+    <string name="web_oidc_field_usernameClaim">Username claim</string>
+    <string name="web_oidc_field_roleClaim">Role claim</string>
+    <string name="web_oidc_field_clientSecret">Client secret</string>
+    <string name="web_oidc_passkeys_title">Passkeys</string>
+    <plurals name="web_oidc_passkeys_unlinked">
+        <item quantity="one">%1$d account isn\'t linked to %2$s, so it can\'t sign in while passkeys are off. While still signed in, it can link %2$s under Settings → Account.</item>
+        <item quantity="other">%1$d accounts aren\'t linked to %2$s, so they can\'t sign in while passkeys are off. While still signed in, they can link %2$s under Settings → Account.</item>
+    </plurals>
+    <string name="web_oidc_title">Single sign-on</string>
+    <string name="web_oidc_enabled">Enabled</string>
+    <plurals name="web_oidc_ssoOnly">
+        <item quantity="one">%1$d account signs in only through %2$s. It can\'t sign in again until this is back on.</item>
+        <item quantity="other">%1$d accounts sign in only through %2$s. They can\'t sign in again until this is back on.</item>
+    </plurals>
+    <string name="web_oidc_allowSignUp">Create accounts</string>
+    <string name="web_oidc_issuerUrl_override">Overrides MATINEE_OIDC_ISSUER_URL. Changing it unlinks every linked account.</string>
+    <string name="web_oidc_issuerUrl_description">Changing it later unlinks every linked account.</string>
+    <string name="web_oidc_clientSecret_saved">Saved. Type to replace it.</string>
+    <string name="web_oidc_clientSecret_fromEnvironment">Set by MATINEE_OIDC_CLIENT_SECRET</string>
+    <string name="web_oidc_clientSecret_none">None</string>
+    <string name="web_oidc_clientSecret_useEnvironment">Use the secret from the environment</string>
+    <string name="web_oidc_clientSecret_remove">Remove the saved secret</string>
+    <string name="web_oidc_clientSecret_keep">Keep the saved secret</string>
+    <string name="web_oidc_clientSecret_environmentApplies">The environment\'s secret applies after you save.</string>
+    <string name="web_oidc_clientSecret_removed">The secret is removed when you save.</string>
+    <string name="web_oidc_redirectUri">Redirect URI</string>
+    <string name="web_oidc_copy">Copy</string>
+    <string name="web_oidc_copied">Copied</string>
+    <string name="web_oidc_advanced">Advanced</string>
+    <string name="web_oidc_advanced_show">Show</string>
+    <string name="web_oidc_advanced_hide">Hide</string>
+    <string name="web_oidc_scopes_description">Separated by spaces. Must include openid.</string>
+</resources>

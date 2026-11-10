@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Made by scripts/web_strings.py from apps/web/src/i18n/locales/de/libraries.ts. Don't edit. -->
+<resources>
+    <string name="web_libraries_title">Mediatheken</string>
+    <string name="web_libraries_add">Mediathek hinzufügen</string>
+    <string name="web_libraries_loadFailed">Die Mediatheken konnten nicht geladen werden. %1$s</string>
+    <string name="web_libraries_retry">Erneut versuchen</string>
+    <string name="web_libraries_empty_title">Noch keine Mediatheken</string>
+    <string name="web_libraries_empty_description">Füge einen Ordner mit Filmen oder Serien hinzu.</string>
+    <string name="web_libraries_scanFailed">Der Scan konnte nicht gestartet werden</string>
+    <string name="web_libraries_fetching">Metadaten werden abgerufen</string>
+    <string name="web_libraries_fetchFailed">Die Metadaten konnten nicht abgerufen werden</string>
+    <string name="web_libraries_removed">%1$s entfernt</string>
+    <string name="web_libraries_removed_description">Deine Dateien liegen weiterhin auf der Festplatte.</string>
+    <string name="web_libraries_removeFailed">%1$s konnte nicht entfernt werden</string>
+    <string name="web_libraries_scanning">Wird gescannt…</string>
+    <string name="web_libraries_fetchingFrom">Metadaten werden von %1$s abgerufen…</string>
+    <string name="web_libraries_fetchingFromProvider">Metadaten werden vom Anbieter abgerufen…</string>
+    <string name="web_libraries_actions">Aktionen für %1$s</string>
+    <string name="web_libraries_scanNow">Jetzt scannen</string>
+    <string name="web_libraries_refreshMetadata">Metadaten aktualisieren</string>
+    <string name="web_libraries_edit">Bearbeiten</string>
+    <string name="web_libraries_remove">Entfernen</string>
+    <string name="web_libraries_remove_title">%1$s entfernen?</string>
+    <string name="web_libraries_remove_description">Matinee vergisst die Mediathek und ihre Titel. Deine Dateien bleiben, wo sie sind.</string>
+    <string name="web_libraries_remove_cancel">Abbrechen</string>
+    <string name="web_libraries_remove_confirm">Mediathek entfernen</string>
+    <string name="web_libraries_dialog_addTitle">Mediathek hinzufügen</string>
+    <string name="web_libraries_dialog_editTitle">Mediathek bearbeiten</string>
+    <string name="web_libraries_dialog_checkFields">Überprüfe die Felder.</string>
+    <string name="web_libraries_dialog_name">Name</string>
+    <string name="web_libraries_dialog_namePlaceholder">z. B. Filme</string>
+    <string name="web_libraries_dialog_type">Typ</string>
+    <string name="web_libraries_dialog_kind_movies">Filme</string>
+    <string name="web_libraries_dialog_kind_shows">Serien</string>
+    <string name="web_libraries_dialog_metadata">Metadaten</string>
+    <string name="web_libraries_dialog_noProvider">Keine</string>
+    <string name="web_libraries_dialog_needsKey">Braucht einen API-Schlüssel</string>
+    <string name="web_libraries_dialog_language">Sprache</string>
+    <string name="web_libraries_dialog_noProviderHint">Titel tragen die Namen ihrer Ordner und Dateien, ohne Artwork.</string>
+    <string name="web_libraries_dialog_folders">Ausgewählte Ordner</string>
+    <plurals name="web_libraries_dialog_selected">
+        <item quantity="one">%1$d ausgewählt</item>
+        <item quantity="other">%1$d ausgewählt</item>
+    </plurals>
+    <string name="web_libraries_dialog_removeFolder">%1$s entfernen</string>
+    <string name="web_libraries_dialog_noFolders">Noch keine Ordner.</string>
+    <string name="web_libraries_dialog_addFolder">Ordner hinzufügen</string>
+    <string name="web_libraries_dialog_browse">Server durchsuchen</string>
+    <string name="web_libraries_dialog_cancel">Abbrechen</string>
+    <string name="web_libraries_dialog_save">Speichern</string>
+    <string name="web_libraries_dialog_add">Mediathek hinzufügen</string>
+    <string name="web_libraries_browser_path">Pfad</string>
+    <string name="web_libraries_browser_go">Öffnen</string>
+    <string name="web_libraries_browser_parent">Übergeordneter Ordner</string>
+    <string name="web_libraries_browser_addCurrent">„%1$s“ hinzufügen</string>
+    <string name="web_libraries_browser_added">Hinzugefügt</string>
+    <string name="web_libraries_browser_openRoot">Öffne den Ordner, in dem deine Videos liegen.</string>
+    <string name="web_libraries_browser_alreadyAdded">%1$s ist schon in dieser Mediathek.</string>
+    <string name="web_libraries_browser_adds">Fügt %1$s und seine Unterordner hinzu.</string>
+    <string name="web_libraries_browser_empty">In diesem Ordner gibt es keine Unterordner.</string>
+    <string name="web_libraries_browser_open">%1$s öffnen</string>
+    <string name="web_libraries_browser_addNamed">%1$s hinzufügen</string>
+    <string name="web_libraries_browser_add">Hinzufügen</string>
+</resources>

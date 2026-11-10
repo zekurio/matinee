@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- How screens say a load failed, went stale, or is still on its way. -->
+<resources>
+    <string name="error_unreadable">The server sent something this app can\'t read. Updating the app or the server may help.</string>
+    <string name="loading_in_progress">Loading</string>
+    <string name="loading_stale">Couldn\'t refresh</string>
+    <string name="home_failed">Couldn\'t load Home</string>
+    <string name="home_featured_failed">Couldn\'t load the featured titles</string>
+    <string name="home_continue_failed">Couldn\'t load what you\'re watching</string>
+    <string name="home_next_up_failed">Couldn\'t load what\'s next</string>
+    <string name="home_shelf_failed">Couldn\'t load what\'s new here</string>
+</resources>

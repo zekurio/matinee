@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The playback report in Settings, Playback. The report's own text stays
+     in English so anyone can read a pasted one; only these words around it
+     are translated. -->
+<resources>
+    <string name="diagnostics_title">Playback report</string>
+    <string name="diagnostics_privacy">If a video won\'t play, this report helps whoever runs the server or the app work out why. It lists the app and Android versions, the device model, the player settings, the file\'s formats, what the player tried, and error codes. It never holds titles, file names, the server\'s address, your account, or sign-in tokens. It stays in this app\'s memory until the app closes, and leaves the device only if you copy it.</string>
+    <string name="diagnostics_empty">Nothing played since the app started. Play the video that has trouble, then come back here.</string>
+    <string name="diagnostics_latest">Latest playback</string>
+    <string name="diagnostics_status_loading">Loading (%1$s)</string>
+    <string name="diagnostics_status_playing">Played (%1$s)</string>
+    <string name="diagnostics_status_failed">Failed (%1$s)</string>
+    <string name="diagnostics_status_replaced">Switched (%1$s)</string>
+    <string name="diagnostics_status_closed">Closed before playing (%1$s)</string>
+    <string name="diagnostics_mode_direct">file as it is</string>
+    <string name="diagnostics_mode_stream">stream</string>
+    <string name="diagnostics_mode_hls">encode</string>
+    <string name="diagnostics_mode_local">download</string>
+    <string name="diagnostics_show">Show report</string>
+    <string name="diagnostics_copy">Copy report</string>
+    <string name="diagnostics_copied">Report copied</string>
+    <string name="diagnostics_clear">Clear report</string>
+    <string name="diagnostics_close">Close</string>
+</resources>

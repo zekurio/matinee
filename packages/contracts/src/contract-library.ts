@@ -1,6 +1,7 @@
 import { eventIterator, oc } from "@orpc/contract"
 
 import { del, get, post, put } from "./contract-routes"
+import { DownloadResolveInput, DownloadResolution } from "./download-resolve"
 import { Download, DownloadPlan, DownloadSpecInput } from "./downloads"
 import { t } from "./schema"
 import {
@@ -222,6 +223,10 @@ export const mediaContract = oc.tag("Media").router({
  * file as it is needs none of these: `mediaStreamPath()` serves it.
  */
 export const downloadsContract = oc.tag("Downloads").router({
+  /** Resolve defaults, sizes and form choices for a device. POST carries nested wishes and nullable values. */
+  resolve: post("/downloads/resolve")
+    .input(DownloadResolveInput)
+    .output(t.array(DownloadResolution)),
   /**
    * What a download with `spec` would hold, and about how big it is, for
    * a dialog to show before it starts. Fails with a message to show when

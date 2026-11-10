@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Compose draws everything; the window only needs the dark background
+         so nothing flashes white while it starts. -->
+    <style name="Theme.Matinee" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/background</item>
+        <item name="android:colorAccent">@color/accent</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+
+    <!-- The player's activity: black behind the video while it opens and closes. -->
+    <style name="Theme.Matinee.Player" parent="Theme.Matinee">
+        <item name="android:windowBackground">@android:color/black</item>
+    </style>
+</resources>

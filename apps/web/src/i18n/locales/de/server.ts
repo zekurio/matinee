@@ -2,6 +2,14 @@ import type { TranslationOf } from "../../catalog"
 import type source from "../en/server"
 
 export default {
+  "server.downloads.tooManyAudioTracks":
+    "Ein Download kann höchstens 16 Audiospuren enthalten.",
+  "server.downloads.selectedAudioUnavailable":
+    "Die ausgewählten Audiospuren sind in dieser Datei nicht verfügbar.",
+  "server.downloads.noDownloadVideo":
+    "Der Server kann das Video in keinem Codec kodieren, den dieses Gerät abspielt.",
+  "server.downloads.noDownloadAudio":
+    "Für dieses Gerät ist keine Audiokonvertierung verfügbar.",
   "server.rpc.signInFirst": "Melde dich zuerst an.",
   "server.rpc.adminsOnly": "Das können nur Admins.",
   "server.rpc.passkeysOff": "Passkeys sind auf diesem Server ausgeschaltet.",
@@ -151,6 +159,8 @@ export default {
     "Dieser Titel ist in keiner Mediathek. Lade die Seite neu.",
   "server.titles.fileGone":
     "Diese Datei ist in keiner Mediathek. Lade die Seite neu.",
+  "server.playback.unplayable":
+    "Dieses Gerät kann diese Datei nicht abspielen.",
   "server.downloads.unreadable":
     "Diese Datei lässt sich nicht lesen. Versuche es erneut, sobald der Server sie gescannt hat.",
   "server.downloads.notVideo": "Nur Videos lassen sich so herunterladen.",

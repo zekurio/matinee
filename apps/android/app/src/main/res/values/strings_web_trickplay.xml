@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Made by scripts/web_strings.py from apps/web/src/i18n/locales/en/trickplay.ts. Don't edit. -->
+<resources>
+    <string name="web_trickplay_loadFailed">Couldn\'t load the trickplay settings. %1$s</string>
+    <string name="web_trickplay_checkFields">Check the fields.</string>
+    <string name="web_trickplay_title">Trickplay images</string>
+    <plurals name="web_trickplay_descriptionCount">
+        <item quantity="one">Thumbnails over the seek bar while scrubbing. %2$s of %1$d video has them.</item>
+        <item quantity="other">Thumbnails over the seek bar while scrubbing. %2$s of %1$d videos have them.</item>
+    </plurals>
+    <string name="web_trickplay_enabled">Make trickplay images</string>
+    <string name="web_trickplay_interval">Interval</string>
+    <plurals name="web_trickplay_interval_option">
+        <item quantity="one">Every %1$d second</item>
+        <item quantity="other">Every %1$d seconds</item>
+    </plurals>
+    <string name="web_trickplay_width">Width</string>
+    <string name="web_trickplay_width_option">%1$s px</string>
+    <string name="web_trickplay_keyframesOnly">Keyframes only</string>
+    <string name="web_trickplay_hardwareDecoding">Hardware decoding</string>
+    <string name="web_trickplay_hardwareDecoding_unavailable">Set up a GPU under Transcoding first.</string>
+    <string name="web_trickplay_regenerates">Changing the interval, width, or keyframe setting regenerates every video\'s images in the background.</string>
+</resources>

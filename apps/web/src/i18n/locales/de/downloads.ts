@@ -28,6 +28,7 @@ export default {
   "downloads.audio.include": "{track} einschließen",
   "downloads.audio.format": "Format von {track}",
   "downloads.audio.none": "Wähle mindestens eine Tonspur.",
+  "downloads.audio.unavailable": "Nicht verfügbar",
 
   "downloads.burnIn": "Untertitel einbrennen",
   "downloads.burnIn.none": "Keine",

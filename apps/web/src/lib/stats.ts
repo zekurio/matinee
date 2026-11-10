@@ -82,15 +82,6 @@ export function audioEncoderName(encoder: string): string {
   return AUDIO_ENCODERS.get(encoder) ?? encoder
 }
 
-/** Named for what the frame fits, as the player names it: 1920x800 is 1080p. */
-export function resolutionOf(width: number, height: number): string {
-  if (width >= 3456 || height >= 1944) return "4K"
-  if (width >= 2304 || height >= 1296) return "1440p"
-  if (width >= 1728 || height >= 972) return "1080p"
-  if (width >= 1152 || height >= 648) return "720p"
-  return width >= 768 || height >= 432 ? "480p" : "SD"
-}
-
 const TONE_MAPPERS = new Map([
   ["tonemapx", "tonemapx (CPU)"],
   ["opencl", "OpenCL"],

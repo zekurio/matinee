@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The player fading in over the page, as quick as an overlay opening (ui/Motion.kt: ENTER_MS). -->
+<alpha xmlns:android="http://schemas.android.com/apk/res/android"
+    android:duration="200"
+    android:fromAlpha="0"
+    android:interpolator="@android:interpolator/decelerate_cubic"
+    android:toAlpha="1" />

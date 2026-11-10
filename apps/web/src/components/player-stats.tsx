@@ -1,18 +1,18 @@
 import {
   type AudioTrack,
   audioFormatName,
-  type MediaProbe,
+  type DisplayMediaProbe,
   PLAYBACK_QUALITIES,
+  type PlaybackMethod,
+  type PlaybackStart,
   type SessionStream,
-  type VideoStream,
-  videoCodecName,
+  type DisplayVideoStream,
 } from "@matinee/contracts"
 import { useQuery } from "@tanstack/react-query"
 import { XIcon } from "lucide-react"
 import { type RefObject, useEffect, useState } from "react"
 
 import { perLocale, tr } from "@/i18n"
-import { convertedAudioCodec, decodesAudio } from "@/lib/audio-support"
 import { formatBytes } from "@/lib/format"
 import { trackLabel } from "@/lib/languages"
 import { liveQuery, orpc } from "@/lib/rpc"
@@ -23,10 +23,9 @@ import {
   encoderOutput,
   toneMapperName,
 } from "@/lib/stats"
-import { expectedEncodeCodec } from "@/lib/video-support"
 import { usePlayerStore } from "@/stores/player"
 
-import { kindOf, type PlaybackSource } from "./playback-source"
+import type { PlaybackSource } from "./playback-source"
 import { formatBitrate } from "./player-format"
 
 /** The file as the server knows it, for the stats. */
@@ -34,7 +33,7 @@ export type FileInfo = {
   /** Such as `mkv`. */
   container: string
   sizeBytes: number
-  probe: MediaProbe | null
+  probe: DisplayMediaProbe | null
 }
 
 /** What the browser says about the picture, read once a second. */
@@ -148,7 +147,7 @@ function colorName(name: string): string {
 }
 
 /** `Dolby Vision profile 8.1`, `HDR10+`, or `SDR`. */
-function dynamicRange(video: VideoStream): string {
+function dynamicRange(video: DisplayVideoStream): string {
   if (video.hdr === "dolby-vision") {
     const record = video.dolbyVision
     const compatible = record?.blCompatibilityId
@@ -161,82 +160,81 @@ function dynamicRange(video: VideoStream): string {
       ? "Dolby Vision"
       : tr("player.stats.dolbyVision", { profile: String(profile) })
   }
-  if (video.hdr === "hdr10") return video.hdr10Plus ? "HDR10+" : "HDR10"
-  if (video.hdr === "hlg") return "HLG"
-  return "SDR"
+  return video.dynamicRange ?? "SDR"
 }
 
-/** Why the file doesn't play as it is. */
+/** Why the file doesn't play as it is, as the server says. */
 function reasons(
-  source: PlaybackSource,
-  track: AudioTrack | undefined,
-  video: VideoStream | null,
-  videoPlays: boolean,
-  directFailed: boolean,
+  plan: PlaybackStart,
+  file: FileInfo,
+  failed: readonly PlaybackMethod[],
 ): string[] {
-  const found: string[] = []
-  if (!videoPlays && video) {
-    found.push(
-      tr("player.stats.reason.video", { codec: videoCodecName(video.codec) }),
-    )
-  }
-  if (directFailed) found.push(tr("player.stats.reason.directFailed"))
-  if (track && !decodesAudio(track.codec)) {
-    found.push(tr("player.stats.reason.audioCodec", { format: track.format }))
-  } else if (track && !track.primary) {
-    found.push(tr("player.stats.reason.audioTrack"))
-  }
-  // A quality only counts as the viewer's pick when the file would play.
-  const quality = PLAYBACK_QUALITIES.find(
-    (entry) => source.kind !== "direct" && entry.id === source.quality,
-  )
-  if (quality && videoPlays && !directFailed) {
-    found.push(
-      tr("player.stats.reason.quality", { quality: `${quality.height}p` }),
-    )
-  }
-  if (source.kind === "hls" && source.subtitle !== null) {
-    found.push(tr("player.stats.reason.burnIn"))
-  }
-  return found
+  const video = file.probe?.video
+  const quality = PLAYBACK_QUALITIES.find((entry) => entry.id === plan.quality)
+  return plan.reasons.flatMap((reason) => {
+    switch (reason) {
+      case "container":
+        return tr("player.stats.reason.container", {
+          container: file.container.toUpperCase(),
+        })
+      case "video":
+        return video
+          ? tr("player.stats.reason.video", { codec: video.format })
+          : []
+      case "audio":
+        return plan.audio
+          ? tr("player.stats.reason.audioCodec", { format: plan.audio.format })
+          : []
+      case "audio-selection":
+        return tr("player.stats.reason.audioTrack")
+      case "subtitle":
+        return tr("player.stats.reason.burnIn")
+      case "quality":
+        return quality
+          ? tr("player.stats.reason.quality", { quality: `${quality.height}p` })
+          : []
+      case "failed":
+        return failed.flatMap((method) =>
+          method === "transcode"
+            ? []
+            : tr(`player.stats.reason.${method}Failed`),
+        )
+    }
+  })
 }
+
+/** What a method asks of the browser, as the stats name it. */
+const KINDS = {
+  direct: "direct",
+  remux: "remux",
+  transcode: "encode",
+} as const
 
 type Row = { label: string; value: string }
 
 function playbackRows(
+  plan: PlaybackStart,
   source: PlaybackSource,
-  track: AudioTrack | undefined,
+  failed: readonly PlaybackMethod[],
   file: FileInfo,
-  videoPlays: boolean,
-  directFailed: boolean,
   sample: Sample | null,
 ): Row[] {
-  const kind = kindOf(source)
-  const preset = PLAYBACK_QUALITIES.find(
-    (entry) => source.kind !== "direct" && entry.id === source.quality,
-  )
-  const why =
-    kind === "direct"
-      ? []
-      : reasons(
-          source,
-          track,
-          file.probe?.video ?? null,
-          videoPlays,
-          directFailed,
-        )
+  const preset = PLAYBACK_QUALITIES.find((entry) => entry.id === plan.quality)
+  const why = source.method === "direct" ? [] : reasons(plan, file, failed)
   const bitrate = preset?.bitrate ?? file.probe?.format.bitRate ?? null
+  const delivery =
+    source.method === "direct" ? "direct" : source.hls ? "hls" : "stream"
   return [
     {
       label: tr("player.stats.method"),
-      value: tr(`player.stats.method.${kind}`),
+      value: tr(`player.stats.method.${KINDS[source.method]}`),
     },
     ...(why.length > 0
       ? [{ label: tr("player.stats.reason"), value: why.join(" · ") }]
       : []),
     {
       label: tr("player.stats.delivery"),
-      value: tr(`player.stats.delivery.${source.kind}`),
+      value: tr(`player.stats.delivery.${delivery}`),
     },
     ...(bitrate
       ? [{ label: tr("player.stats.bitrate"), value: formatBitrate(bitrate) }]
@@ -255,18 +253,18 @@ function playbackRows(
 }
 
 function videoRows(
-  source: PlaybackSource,
-  video: VideoStream | null,
+  plan: PlaybackStart,
+  video: DisplayVideoStream | null,
   server: SessionStream | null,
   sample: Sample | null,
 ): Row[] {
   const rows: Row[] = []
-  const encode = kindOf(source) === "encode"
+  const encode = plan.method === "transcode"
   if (video) {
     rows.push({
       label: tr("player.stats.video"),
       value: [
-        [videoCodecName(video.codec), video.profile].filter(Boolean).join(" "),
+        [video.format, video.profile].filter(Boolean).join(" "),
         size(video.width, video.height),
         video.frameRate &&
           tr("player.stats.fps", { fps: decimals().format(video.frameRate) }),
@@ -308,16 +306,13 @@ function videoRows(
     }
   }
   if (encode) {
-    const preset = PLAYBACK_QUALITIES.find(
-      (entry) => source.kind !== "direct" && entry.id === source.quality,
-    )
+    const preset = PLAYBACK_QUALITIES.find((entry) => entry.id === plan.quality)
+    // The codec shows once the server says what it encodes with.
     const encoder = server?.videoEncoder ?? null
     rows.push({
       label: tr("player.stats.output"),
       value: [
-        encoder
-          ? encoderOutput(encoder)
-          : videoCodecName(expectedEncodeCodec()),
+        encoder && encoderOutput(encoder),
         preset && `${preset.height}p`,
         preset && formatBitrate(preset.bitrate),
       ]
@@ -373,23 +368,21 @@ function videoRows(
   return rows
 }
 
-function audioRows(
-  source: PlaybackSource,
-  tracks: AudioTrack[],
-  track: AudioTrack | undefined,
-  server: SessionStream | null,
-): Row[] {
+function audioRows(plan: PlaybackStart, server: SessionStream | null): Row[] {
+  const tracks = plan.audioTracks
+  const track: AudioTrack | null = plan.audio
   if (!track) return []
   // As the audio menu names it.
+  const position = tracks.findIndex((entry) => entry.index === track.index)
   const name = trackLabel(
     track.language,
     track.title,
-    tr("player.track.unnamed", { number: tracks.indexOf(track) + 1 }),
+    tr("player.track.unnamed", { number: position + 1 }),
   )
-  const converted = source.kind !== "direct" && !decodesAudio(track.codec)
+  const converted = plan.convertedAudio
   const codec = server?.audioEncoder
     ? audioEncoderName(server.audioEncoder)
-    : audioFormatName(convertedAudioCodec())
+    : audioFormatName(converted ?? track.codec)
   return [
     {
       label: tr("player.stats.audio"),
@@ -451,38 +444,27 @@ function Rows({ rows }: { rows: Row[] }) {
  */
 export function PlayerStats({
   video,
-  source,
-  audio,
-  tracks,
-  file,
-  videoPlays,
   sessionId,
 }: {
   video: RefObject<HTMLVideoElement | null>
-  source: PlaybackSource | null
-  /** The audio stream that plays. */
-  audio: number | null
-  tracks: AudioTrack[]
-  file: FileInfo
-  videoPlays: boolean
   sessionId: string
 }) {
-  const directFailed = usePlayerStore((state) => state.directFailed)
+  const plan = usePlayerStore((state) => state.plan)
+  const source = usePlayerStore((state) => state.source)
+  const failed = usePlayerStore((state) => state.failed)
+  const file: FileInfo = plan.item
   const setStatsOpen = usePlayerStore((state) => state.setStatsOpen)
   const sample = useSample(video)
   const server = useQuery({
     ...orpc.playback.stream.experimental_liveOptions({ input: { sessionId } }),
     ...liveQuery,
   }).data
-  const track = tracks.find((candidate) => candidate.index === audio)
-  const groups = source
-    ? [
-        playbackRows(source, track, file, videoPlays, directFailed, sample),
-        videoRows(source, file.probe?.video ?? null, server ?? null, sample),
-        audioRows(source, tracks, track, server ?? null),
-        fileRows(file),
-      ]
-    : [fileRows(file)]
+  const groups = [
+    playbackRows(plan, source, failed, file, sample),
+    videoRows(plan, file.probe?.video ?? null, server ?? null, sample),
+    audioRows(plan, server ?? null),
+    fileRows(file),
+  ]
 
   return (
     <section

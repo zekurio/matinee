@@ -5,6 +5,7 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
+    "api:android": "pnpm --filter @matinee/server api:android",
     "build": "turbo run build",
     "dev": "turbo run dev --filter=@matinee/server --filter=@matinee/web",
     "dev:server": "turbo run dev --filter=@matinee/server",
@@ -18,7 +19,7 @@
     "lint": "oxlint",
     "typecheck": "turbo run typecheck typecheck:oxlint",
     "typecheck:oxlint": "tsc -p tools/oxlint",
-    "verify": "pnpm fmt:check && pnpm lint && pnpm typecheck"
+    "verify": "pnpm fmt:check && pnpm lint && pnpm typecheck && pnpm api:android --check"
   },
   "devDependencies": {
     "@oxlint/plugins": "1.91.0",

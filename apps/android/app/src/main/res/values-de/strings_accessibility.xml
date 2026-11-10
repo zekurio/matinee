@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- What screen readers say for controls that show no text of their own. -->
+<resources>
+    <string name="a11y_player_seek">Wiedergabeposition</string>
+    <string name="a11y_player_seek_action">Spulen</string>
+    <string name="a11y_player_position">%1$s von %2$s</string>
+    <string name="a11y_player_remaining">Noch %1$s</string>
+    <string name="a11y_player_video">Video</string>
+    <string name="a11y_player_show_controls">Steuerung einblenden</string>
+    <string name="a11y_player_hide_controls">Steuerung ausblenden</string>
+    <string name="a11y_player_close_menu">Menü schließen</string>
+</resources>

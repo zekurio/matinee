@@ -1,14 +1,8 @@
-import {
-  type AudioTrack,
-  audioFormatName,
-  type PlaybackQuality,
-  videoCodecName,
-} from "@matinee/contracts"
+import { audioFormatName, type PlaybackStart } from "@matinee/contracts"
 import { toast } from "@matinee/ui/components/sonner"
 
 import { tr } from "@/i18n"
-import { convertedAudioCodec, decodesAudio } from "@/lib/audio-support"
-import { expectedEncodeCodec } from "@/lib/video-support"
+import { errorMessage } from "@/lib/rpc"
 
 const NOTICE_ID = "playback-notice"
 const ERROR_ID = "playback-error"
@@ -17,102 +11,59 @@ const SUBTITLES_ID = "subtitles-loading"
 // gets a toast.
 const SUBTITLES_DELAY_MS = 800
 
+// The notice shown for the latest answer, so the same one doesn't repeat
+// for each answer that says it again.
+let shown: string | null = null
+
 export function dismissPlaybackNotices() {
+  shown = null
   toast.dismiss(NOTICE_ID)
   toast.dismiss(ERROR_ID)
   toast.dismiss(SUBTITLES_ID)
 }
 
-/** A conversion of audio from one format to another, for the toasts. */
-type AudioConversion = { from: string; to: string }
+type Notice = { title: string; description?: string }
 
 /**
- * What a stream does to `track`: `TrueHD` to `Opus stereo`, or undefined
- * when it copies the track.
+ * What the server does to the audio: `TrueHD` to `Opus stereo`, or
+ * undefined when it sends the track as it is. It converts to two channels
+ * at most.
  */
 function audioConversion(
-  track: AudioTrack | undefined,
-): AudioConversion | undefined {
-  if (!track || decodesAudio(track.codec)) return undefined
-  const codec = audioFormatName(convertedAudioCodec())
+  plan: PlaybackStart,
+): { from: string; to: string } | undefined {
+  if (!plan.audio || plan.convertedAudio === null) return undefined
+  const codec = audioFormatName(plan.convertedAudio)
   return {
-    from: track.format,
-    to: track.channels === 1 ? codec : tr("player.notice.stereo", { codec }),
-  }
-}
-
-/** A toast about what the server converts, in place of the last one. */
-function playbackNotice(title: string, description?: string) {
-  toast.message(title, {
-    id: NOTICE_ID,
-    description,
-    position: "top-center",
-  })
-}
-
-/**
- * The toast for playing a stand-in track: `Switched to E-AC-3 audio`, and
- * how to get the default one back.
- */
-export function standInNotice(track: AudioTrack, primary: AudioTrack) {
-  playbackNotice(
-    tr("player.notice.standIn", { format: track.format }),
-    tr("player.notice.standInDetail", { format: primary.format }),
-  )
-}
-
-/**
- * What an encode does to the video: HEVC to H.264 at 1080p. `from` is
- * null when the codec stays the same or isn't known.
- */
-type VideoTranscode = { from: string | null; to: string; quality: string }
-
-function videoTranscode(
-  quality: PlaybackQuality,
-  videoCodec: string | null,
-): VideoTranscode {
-  const to = expectedEncodeCodec()
-  return {
-    from: videoCodec && videoCodec !== to ? videoCodecName(videoCodec) : null,
-    to: videoCodecName(to),
-    quality: quality.replace(/-\d+$/, ""),
+    from: plan.audio.format,
+    to:
+      plan.audio.channels === 1 ? codec : tr("player.notice.stereo", { codec }),
   }
 }
 
 /**
- * The toast for falling back to an encode: `Transcoding HEVC to H.264
- * 1080p`, plus the audio when the stream doesn't copy it.
+ * What an encode does to the video: `HEVC` to `H.264 1080p`. `from` is null when
+ * the file's video isn't known.
  */
-export function transcodeNotice(
-  quality: PlaybackQuality,
-  videoCodec: string | null,
-  track: AudioTrack | undefined,
-) {
-  const { from, to, quality: name } = videoTranscode(quality, videoCodec)
-  const audio = audioConversion(track)
-  playbackNotice(
-    from === null
-      ? tr("player.notice.videoTo", { to, quality: name })
-      : tr("player.notice.video", { from, to, quality: name }),
-    audio && tr("player.notice.audio", audio),
-  )
+function videoTranscode(plan: PlaybackStart) {
+  const codec =
+    plan.convertedVideo &&
+    { h264: "H.264", hevc: "HEVC", av1: "AV1" }[plan.convertedVideo]
+  return {
+    from: plan.item.probe?.video?.format ?? null,
+    quality: [codec, plan.quality.replace(/-\d+$/, "")]
+      .filter(Boolean)
+      .join(" "),
+  }
 }
 
-/**
- * The toast for burning in a subtitle track, which only an encode does:
- * `Transcoding HEVC to H.264 1080p`, and the audio when that converts.
- */
-export function burnInNotice(
-  quality: PlaybackQuality,
-  videoCodec: string | null,
-  track: AudioTrack | undefined,
-) {
-  const audio = audioConversion(track)
-  const { from, to, quality: name } = videoTranscode(quality, videoCodec)
-  const video = { to, quality: name }
+/** The toast for an encode that burns in a subtitle, which the viewer picked. */
+function burnInNotice(plan: PlaybackStart): Notice {
+  const audio = audioConversion(plan)
+  const { from, quality } = videoTranscode(plan)
   let description: string
   if (audio) {
-    const both = { ...video, audioFrom: audio.from, audioTo: audio.to }
+    const both = { quality, audioFrom: audio.from, audioTo: audio.to }
     description =
       from === null
         ? tr("player.notice.burnInVideoToAudio", both)
@@ -120,10 +71,67 @@ export function burnInNotice(
   } else {
     description =
       from === null
-        ? tr("player.notice.burnInVideoTo", video)
-        : tr("player.notice.burnInVideo", { ...video, from })
+        ? tr("player.notice.burnInVideoTo", { quality })
+        : tr("player.notice.burnInVideo", { quality, from })
   }
-  playbackNotice(tr("player.notice.burnIn"), description)
+  return { title: tr("player.notice.burnIn"), description }
+}
+
+/**
+ * What to tell the viewer about an answer, from what the server reports:
+ * a subtitle burned in, a stand-in audio track, an encode the browser
+ * needs, or audio converted. An encode at a quality the viewer picked says
+ * so in the menu, so it gets none.
+ */
+function noticeFor(
+  plan: PlaybackStart,
+  previous: PlaybackStart | null,
+): Notice | null {
+  if (plan.subtitleMode === "burn-in") return burnInNotice(plan)
+  const audio = audioConversion(plan)
+  if (plan.standIn && plan.audio && !previous?.standIn) {
+    return {
+      title: tr("player.notice.standIn", { format: plan.audio.format }),
+      description: tr("player.notice.standInDetail", {
+        track: plan.standIn.label,
+      }),
+    }
+  }
+  if (plan.method === "transcode" && !plan.reasons.includes("quality")) {
+    const { from, quality } = videoTranscode(plan)
+    return {
+      title:
+        from === null
+          ? tr("player.notice.videoTo", { quality })
+          : tr("player.notice.video", { from, quality }),
+      description: audio && tr("player.notice.audio", audio),
+    }
+  }
+  if (plan.method === "remux" && audio) {
+    return { title: tr("player.notice.audioTitle", audio) }
+  }
+  return null
+}
+
+/**
+ * A toast about what the server does for `plan`, in place of the last
+ * one, unless it says what the last one did. `previous` is the answer
+ * before it, null at first.
+ */
+export function playbackNotice(
+  plan: PlaybackStart,
+  previous: PlaybackStart | null,
+) {
+  const notice = noticeFor(plan, previous)
+  const key = notice && `${notice.title}\n${notice.description ?? ""}`
+  if (key === shown) return
+  shown = key
+  if (!notice) return
+  toast.message(notice.title, {
+    id: NOTICE_ID,
+    description: notice.description,
+    position: "top-center",
+  })
 }
 
 /**
@@ -154,17 +162,22 @@ export function burnInFailedNotice() {
   })
 }
 
-/**
- * The toast for a stream that copies the video and converts the audio:
- * `Transcoding TrueHD audio to Opus stereo`. Encodes say so in the menu.
- */
-export function audioNotice(
-  quality: PlaybackQuality,
-  track: AudioTrack | undefined,
-) {
-  const conversion = audioConversion(track)
-  if (quality !== "original" || !conversion) return
-  playbackNotice(tr("player.notice.audioTitle", conversion))
+/** The toast for a quality that didn't play, so the original does. */
+export function qualityFailedNotice() {
+  toast.error(tr("player.error.revert"), {
+    id: ERROR_ID,
+    description: tr("player.error.revertToQuality"),
+    position: "top-center",
+  })
+}
+
+/** The toast for a switch or seek the server turned down. */
+export function switchFailedNotice(cause: unknown) {
+  toast.error(tr("player.error.revert"), {
+    id: ERROR_ID,
+    description: errorMessage(cause),
+    position: "top-center",
+  })
 }
 
 /** The toast for a source that stopped after it played, with a retry. */
@@ -174,16 +187,5 @@ export function lostNotice(retry: () => void) {
     description: tr("player.error.lostDetail"),
     position: "top-center",
     action: { label: tr("player.error.retry"), onClick: retry },
-  })
-}
-
-/** The toast for a stream that failed, going back to what plays. */
-export function revertNotice(toFile: boolean) {
-  toast.error(tr("player.error.revert"), {
-    id: ERROR_ID,
-    description: toFile
-      ? tr("player.error.revertToFile")
-      : tr("player.error.revertToQuality"),
-    position: "top-center",
   })
 }

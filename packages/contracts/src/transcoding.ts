@@ -370,13 +370,14 @@ export const PLAYBACK_QUALITY_IDS = [
 export const PlaybackQuality = t.enum(PLAYBACK_QUALITY_IDS)
 export type PlaybackQuality = t.infer<typeof PlaybackQuality>
 
-export type PlaybackQualityPreset = {
-  id: Exclude<PlaybackQuality, "original">
-  width: number
-  height: number
+export const PlaybackQualityPreset = t.object({
+  id: t.enum(PLAYBACK_QUALITY_IDS.filter((id) => id !== "original")),
+  width: t.number().int(),
+  height: t.number().int(),
   /** Bits per second of the video. */
-  bitrate: number
-}
+  bitrate: t.number().int(),
+})
+export type PlaybackQualityPreset = t.infer<typeof PlaybackQualityPreset>
 
 /**
  * Audio codecs a player can say it decodes in MP4, as ffprobe names them.

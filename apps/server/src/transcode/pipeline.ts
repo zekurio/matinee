@@ -5,6 +5,7 @@ import type {
   VideoStream,
 } from "@matinee/contracts"
 
+import { playbackVideoCodec } from "../media/playback-codec"
 import { baseLayerRange, videoColorRange } from "./range"
 import { appleChain } from "./video/chains/apple"
 import { nvidiaChain } from "./video/chains/nvidia"
@@ -83,8 +84,10 @@ export function encodeCodecFor(
   settings: TranscodingSettings,
   capabilities: TranscodingCapabilities,
 ): TranscodeVideoCodec {
-  const encodable = encodableVideoCodecs(settings, capabilities)
-  return wanted.find((codec) => encodable.includes(codec)) ?? "h264"
+  return playbackVideoCodec(
+    wanted,
+    encodableVideoCodecs(settings, capabilities),
+  )
 }
 
 /**

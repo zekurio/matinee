@@ -1,13 +1,14 @@
-import type { SubtitlePick, Subtitles, SubtitleTrack } from "@matinee/contracts"
 import { toast } from "@matinee/ui/components/sonner"
 import { skipToken, useQuery } from "@tanstack/react-query"
 import { type RefObject, useEffect } from "react"
 import { useShallow } from "zustand/shallow"
 
 import { tr } from "@/i18n"
-import { currentPlaybackPreferences } from "@/lib/playback-sync"
-import { defaultTrack, fallbackTrack, rememberedTrack } from "@/lib/subtitles"
-import { usePlayerStore, usePlayerStoreApi } from "@/stores/player"
+import {
+  selectSubtitle,
+  usePlayerStore,
+  usePlayerStoreApi,
+} from "@/stores/player"
 
 import { subtitlesLoadingNotice } from "./playback-notices"
 import { usePgs } from "./use-pgs"
@@ -17,7 +18,6 @@ type SubtitleFile =
   | { kind: "webvtt"; text: string }
   | { kind: "pgs"; data: ArrayBuffer }
 
-const NO_TRACKS: SubtitleTrack[] = []
 // Space between a lifted cue and the seek bar.
 const CUE_GAP_PX = 12
 // Chrome and Safari draw cues in a container that CSS can move (see
@@ -129,20 +129,17 @@ function trackElement(
 }
 
 /**
- * Subtitle selection for the player. A WebVTT track renders as a `<track>`
- * with `data-track-id` for `current` only. Browsers turn on tracks by
- * themselves, such as one in the system language, and each one they turn
- * on loads; a lone track leaves them nothing to pick. While `lifted` is
- * true, cues sit above `controls`. `offset` is where in the file the
- * video's time 0 is, for streams that start partway in. The viewer's
- * `subtitleDelay` in the store moves every cue on top of that. PGS draws
- * on a canvas in `pgsLayer`. A track only an encode shows goes to
- * `burnIn`,
- * which gets null again when the viewer picks another. Until the viewer
- * picks, the pick they `remembered` from before shows, else the
- * preferences pick by `audioLanguage`, the language of the audio that
- * plays, falling back on the file's default audio's. Each pick goes to
- * `onPick`.
+ * Subtitles for the player, as the server answered: the track that shows
+ * and how. A track the player draws (`client`) is fetched from its
+ * `subtitleUrl`: WebVTT renders as a `<track>` with `data-track-id` for
+ * `current` only, and PGS draws on a canvas in `pgsLayer`. A burned-in
+ * track is part of the picture. Browsers turn on tracks by themselves,
+ * such as one in the system language, and each one they turn on loads; a
+ * lone track leaves them nothing to pick. While `lifted` is true, cues sit
+ * above `controls`. `offset` is where in the file the video's time 0 is,
+ * for streams that start partway in. The viewer's `subtitleDelay` in the
+ * store moves every cue on top of that. A pick goes to `onSelect`, which
+ * asks the server again.
  *
  * A track's file is fetched before it shows; a `<track>` loads it from
  * memory. A showing track that is still loading holds Chrome's
@@ -151,51 +148,44 @@ function trackElement(
  * track out of a large file can take the server minutes.
  */
 export function useSubtitles(
-  subtitles: Subtitles | undefined,
-  subtitleSrc: (trackId: string) => string,
   video: RefObject<HTMLVideoElement | null>,
   controls: RefObject<HTMLElement | null>,
   pgsLayer: RefObject<HTMLElement | null>,
   lifted: boolean,
   offset: number,
-  burnIn: (trackId: string | null) => void,
-  audioLanguage: string | null,
-  remembered: SubtitlePick | null,
+  onSelect: (trackId: string | null | undefined) => void,
   onPick: (trackId: string | null) => void,
 ) {
   const store = usePlayerStoreApi()
-  const tracks = subtitles?.tracks ?? NO_TRACKS
-  const { chosen, defaults, objectUrl, delay } = usePlayerStore(
+  const { plan, selected, objectUrl, delay } = usePlayerStore(
     useShallow((state) => ({
-      chosen: state.chosenSubtitle,
-      defaults: state.subtitleDefaults,
+      plan: state.plan,
+      selected: selectSubtitle(state),
       objectUrl: state.subtitleUrl,
       delay: state.subtitleDelay,
     })),
   )
+  const tracks = plan.subtitleTracks
   // The file's time that shows at the video's 0: the stream's start, less
   // the viewer's delay, so a later cue shows later.
   const cueOffset = offset - delay / 1000
-  // Once the tracks are here, the remembered pick or the default shows
-  // until the viewer picks.
-  const playingLanguage = audioLanguage ?? subtitles?.audioLanguage ?? null
-  const again = rememberedTrack(tracks, remembered)
-  const selected =
-    chosen !== undefined
-      ? chosen
-      : !subtitles
-        ? null
-        : again !== undefined
-          ? again
-          : (defaultTrack(subtitles.tracks, playingLanguage, defaults)?.id ??
-            null)
-  const track = tracks.find((candidate) => candidate.id === selected) ?? null
+  // The track the player draws, once the answer for the pick is here.
+  const track =
+    plan.subtitleMode === "client" && plan.subtitle?.id === selected
+      ? plan.subtitle
+      : null
+  const shownId = track?.id ?? null
   const delivery = track?.delivery ?? null
+  // Off, for a track whose file didn't load. The next answer agrees.
+  const turnOff = () => {
+    store.getState().pick({ subtitle: { trackId: null } })
+    loadFailed()
+  }
 
-  // The selected track's file. A pick that changes cancels the fetch.
+  // The shown track's file. A pick that changes cancels the fetch.
   const url =
     track && (delivery === "webvtt" || delivery === "pgs")
-      ? subtitleSrc(track.id)
+      ? plan.subtitleUrl
       : null
   const file = useQuery({
     queryKey: ["player", "subtitles", url, delivery],
@@ -212,10 +202,7 @@ export function useSubtitles(
                 ? { kind: "pgs", data: await response.arrayBuffer() }
                 : { kind: "webvtt", text: await response.text() }
             } catch (cause) {
-              if (!signal.aborted) {
-                store.getState().chooseSubtitle(null)
-                loadFailed()
-              }
+              if (!signal.aborted) turnOff()
               throw cause
             }
           },
@@ -232,33 +219,30 @@ export function useSubtitles(
     video,
     file?.kind === "pgs" ? file.data : undefined,
     cueOffset,
-    () => {
-      store.getState().chooseSubtitle(null)
-      loadFailed()
-    },
+    turnOff,
   )
 
   // The text as an object URL for the `<track>`, revoked once it's gone.
   useEffect(() => {
-    if (selected === null || text === undefined) return
+    if (shownId === null || text === undefined) return
     const { setSubtitleUrl } = store.getState()
     const created = URL.createObjectURL(new Blob([text], { type: "text/vtt" }))
-    setSubtitleUrl({ trackId: selected, url: created })
+    setSubtitleUrl({ trackId: shownId, url: created })
     return () => {
       URL.revokeObjectURL(created)
       setSubtitleUrl(null)
     }
-  }, [selected, text])
+  }, [shownId, text])
 
   const src =
-    objectUrl !== null && objectUrl.trackId === selected ? objectUrl.url : null
+    objectUrl !== null && objectUrl.trackId === shownId ? objectUrl.url : null
 
-  // Show the selected track, and keep any track the browser found inside
+  // Show the track, and keep any track the browser found inside
   // the file off.
   useEffect(() => {
     const el = video.current
     if (!el) return
-    const current = trackElement(el, selected)
+    const current = trackElement(el, shownId)
     const apply = () => {
       for (const track of el.textTracks) {
         const mode = track === current?.track ? "showing" : "disabled"
@@ -270,36 +254,32 @@ export function useSubtitles(
     if (!current) {
       return () => el.textTracks.removeEventListener("change", apply)
     }
-    const onError = () => {
-      store.getState().chooseSubtitle(null)
-      loadFailed()
-    }
-    current.addEventListener("error", onError)
+    current.addEventListener("error", turnOff)
     return () => {
       el.textTracks.removeEventListener("change", apply)
-      current.removeEventListener("error", onError)
+      current.removeEventListener("error", turnOff)
     }
-  }, [selected, src, tracks])
+  }, [shownId, src, tracks])
 
   // Line cues up with a stream that starts partway into the file, and
   // with the viewer's delay.
   useEffect(() => {
     const el = video.current
     if (!el) return
-    const track = trackElement(el, selected)
+    const track = trackElement(el, shownId)
     if (!track) return
     const shift = () => shiftCues(track.track, cueOffset)
     shift()
     track.addEventListener("load", shift)
     return () => track.removeEventListener("load", shift)
-  }, [selected, src, cueOffset, tracks])
+  }, [shownId, src, cueOffset, tracks])
 
   // Lift the cues above the controls while they show, and again as the
   // window or the track's cues change.
   useEffect(() => {
     const el = video.current
     if (!el) return
-    const track = trackElement(el, selected)
+    const track = trackElement(el, shownId)
     const place = () => {
       const lift = lifted ? liftPixels(el, controls.current) : 0
       if (MOVE_CONTAINER) el.style.setProperty("--cue-lift", `${lift}px`)
@@ -312,13 +292,11 @@ export function useSubtitles(
       track?.removeEventListener("load", place)
       window.removeEventListener("resize", place)
     }
-  }, [selected, src, lifted, tracks])
+  }, [shownId, src, lifted, tracks])
 
   /** Show a track, or none for null, as the viewer's pick. */
   const select = (trackId: string | null) => {
-    const next = tracks.find((candidate) => candidate.id === trackId)
-    store.getState().chooseSubtitle(trackId)
-    burnIn(next?.delivery === "burn-in" ? next.id : null)
+    onSelect(trackId)
     onPick(trackId)
   }
 
@@ -330,8 +308,8 @@ export function useSubtitles(
     }
     const { pickedSubtitle } = store.getState()
     const again = tracks.find((track) => track.id === pickedSubtitle)
-    const next = again ?? fallbackTrack(tracks, currentPlaybackPreferences())
-    if (next) select(next.id)
+    if (again) select(again.id)
+    else onSelect(undefined)
   }
 
   // The `<track>` to render, once its text is here.
@@ -345,7 +323,7 @@ export function useSubtitles(
   useEffect(() => {
     if (!loading) return
     return subtitlesLoadingNotice()
-  }, [loading, selected])
+  }, [loading, shownId])
 
   return { tracks, selected, current, select, toggle }
 }

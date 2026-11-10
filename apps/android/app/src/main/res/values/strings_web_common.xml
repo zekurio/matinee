@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Made by scripts/web_strings.py from apps/web/src/i18n/locales/en/common.ts. Don't edit. -->
+<resources>
+    <string name="web_common_saveBar_unsaved">Unsaved changes</string>
+    <string name="web_common_saveBar_saved">Changes saved</string>
+    <string name="web_common_saveBar_failed">Couldn\'t save.</string>
+    <string name="web_common_saveBar_reset">Reset</string>
+    <string name="web_common_saveBar_save">Save changes</string>
+    <string name="web_common_saveBar_saving">Saving…</string>
+    <string name="web_common_saveBar_done">Saved</string>
+    <string name="web_common_saveBar_retry">Try again</string>
+    <string name="web_common_error_server">The server ran into a problem. Check its log.</string>
+    <string name="web_common_error_passkeyClosed">The passkey prompt was closed before it finished.</string>
+    <string name="web_common_error_passkeyExists">This device already has a passkey for your account.</string>
+    <string name="web_common_error_unknown">Something went wrong.</string>
+</resources>

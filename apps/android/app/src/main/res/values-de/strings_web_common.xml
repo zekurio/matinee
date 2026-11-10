@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Made by scripts/web_strings.py from apps/web/src/i18n/locales/de/common.ts. Don't edit. -->
+<resources>
+    <string name="web_common_saveBar_unsaved">Ungespeicherte Änderungen</string>
+    <string name="web_common_saveBar_saved">Änderungen gespeichert</string>
+    <string name="web_common_saveBar_failed">Speichern fehlgeschlagen.</string>
+    <string name="web_common_saveBar_reset">Zurücksetzen</string>
+    <string name="web_common_saveBar_save">Änderungen speichern</string>
+    <string name="web_common_saveBar_saving">Wird gespeichert …</string>
+    <string name="web_common_saveBar_done">Gespeichert</string>
+    <string name="web_common_saveBar_retry">Erneut versuchen</string>
+    <string name="web_common_error_server">Auf dem Server ist ein Problem aufgetreten. Sieh in seinem Log nach.</string>
+    <string name="web_common_error_passkeyClosed">Die Passkey-Abfrage wurde geschlossen, bevor sie fertig war.</string>
+    <string name="web_common_error_passkeyExists">Dieses Gerät hat schon einen Passkey für dein Konto.</string>
+    <string name="web_common_error_unknown">Etwas ist schiefgelaufen.</string>
+</resources>

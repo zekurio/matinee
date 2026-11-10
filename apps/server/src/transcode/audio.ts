@@ -155,6 +155,10 @@ export function buildAudioPipeline(
         "-c:a",
         "copy",
         ...(stream.codec === "flac" && oldFfmpeg ? ["-strict", "-2"] : []),
+        // AAC from MPEG-TS has a header on every packet, which MP4 can't
+        // hold. ffmpeg stops on it when it writes to a pipe. AAC from other
+        // containers passes through the filter as it is.
+        ...(stream.codec === "aac" ? ["-bsf:a", "aac_adtstoasc"] : []),
       ],
       encoder: null,
     }

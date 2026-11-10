@@ -1,6 +1,12 @@
 import { eventIterator, oc } from "@orpc/contract"
 
 import { get, post, put } from "./contract-routes"
+import {
+  PlaybackSeek,
+  PlaybackSeekInput,
+  PlaybackStart,
+  PlaybackStartInput,
+} from "./playback-start"
 import { PlaybackOptions } from "./preferences"
 import { t } from "./schema"
 import { FeaturedTitle, MediaItem, TitleSummary, WatchedAt } from "./schemas"
@@ -35,6 +41,23 @@ export const OfflinePlay = t.object({
 export type OfflinePlay = t.infer<typeof OfflinePlay>
 
 export const playbackContract = oc.tag("Playback").router({
+  /**
+   * How a file plays on a device: the source to load, the audio and
+   * subtitle that start, the file's tracks, and the next episode. A
+   * player calls it to begin, and again with what changed when the viewer
+   * picks a track or a quality, or when a source fails. Nothing is kept
+   * between calls, so each one carries every pick made so far. Fails with
+   * `PLAYBACK_UNPLAYABLE` when nothing the device plays is left.
+   */
+  start: post("/playback/start")
+    .input(PlaybackStartInput)
+    .output(PlaybackStart),
+  /**
+   * A seek in a `remux` source, which can't seek by itself: a new stream
+   * from the keyframe near the point. Cheaper than `start`, since the
+   * tracks and the method stay as they are.
+   */
+  seek: post("/playback/seek").input(PlaybackSeekInput).output(PlaybackSeek),
   /**
    * Players call this every ten seconds while playing, every thirty while
    * paused, and at once on play, pause, seek, and close. A session drops

@@ -1,3 +1,6 @@
+import type { DownloadVideoPreset } from "./download-presets"
+export { DownloadVideoPreset } from "./download-presets"
+
 import { TranscodeAudioCodec } from "./preferences"
 import { t } from "./schema"
 import { HdrFormat } from "./streams"
@@ -65,13 +68,6 @@ export function downloadAudioBitrate(
   const perChannel = codec === "opus" ? 64_000 : 80_000
   const floor = codec === "opus" ? 64_000 : 96_000
   return Math.min(Math.max(floor, perChannel * channels), 640_000)
-}
-
-export type DownloadVideoPreset = {
-  /** The tallest the frame gets, keeping its shape. */
-  height: number
-  /** Bits per second the video aims for. */
-  bitrate: number
 }
 
 /** The video sizes and rates download dialogs offer, largest first. */

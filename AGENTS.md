@@ -26,6 +26,13 @@ See README.md for setup and the auth design.
   `src/routeTree.gen.ts` is generated.
 - `brand/`: the logo and the native app icons, with the script that
   renders their PNGs and the web app's favicon. See `brand/README.md`.
+- `apps/android`: the native Android app (Kotlin, Compose, Media3), a
+  Gradle project outside the pnpm workspace. Its API client,
+  `api/ContractModels.kt` and `api/ContractApi.kt`, is generated from the
+  OpenAPI document by `pnpm api:android`
+  (`apps/server/scripts/kotlin-client.ts`). Run it after a contract change;
+  `pnpm verify` fails while they're out of date. Build the app with
+  `nix develop .#android`; see its README.
 - `nix/`: the flake's package (`package.nix`) and NixOS module
   (`module.nix`), with tests in `nix/tests`. A server variable the module
   should set for people gets a typed option there; any other goes through
@@ -112,6 +119,22 @@ See README.md for setup and the auth design.
 
 - Clients talk to the server only through the contract or the routes in
   `paths.ts`. Don't import server code into clients.
+- The server decides and a client shows the result, so every client
+  behaves the same. The server works out what a file is called
+  (`MediaItem.label`), how its streams read (`format`, `resolution`,
+  `dynamicRange`, and `layout` on the item's `probe`), how it plays
+  (`playback.start` and `playback.seek`), and what a download holds
+  (`downloads.resolve`). A client's part is what only it can know: what
+  its device plays, sent as a `PlaybackDevice`, the words in its own
+  language, and noticing that a source failed. It doesn't parse
+  `relativePath`, pick tracks, choose between the file, a stream, and an
+  encode, or build a `DownloadSpec` from rules of its own. When a client
+  needs something the server doesn't send, add it to the contract rather
+  than work it out in the client. A client that can't import
+  `@matinee/contracts` reads the lists it offers, like the qualities and
+  the skip steps, from `playback.options` and doesn't retype them. The one
+  exception is a download playing offline on Android, which picks its
+  tracks in `DownloadTracks.kt` because there's no server to ask.
 - Validate inputs in the contract schemas. Procedures throw `ORPCError` with a
   message the user can act on; anything 500 is logged and hidden.
 - The server fetches only image URLs a metadata provider returned, stored in

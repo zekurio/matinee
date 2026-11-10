@@ -55,6 +55,11 @@
         }
       );
 
+      # The Android app's JDK and SDK. See nix/android.nix.
+      devShells = lib.genAttrs systems (
+        system: import ./nix/android.nix { inherit nixpkgs system; }
+      );
+
       formatter = forAllSystems (pkgs: pkgs.nixfmt-tree);
     };
 }
