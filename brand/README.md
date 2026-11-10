@@ -6,16 +6,16 @@ looks the same on every server.
 
 ## Files
 
-| File                     | What it is                                                                  |
-| ------------------------ | --------------------------------------------------------------------------- |
-| `mark.svg`               | The mark alone. Picks its colors from the viewer's light or dark scheme.    |
-| `app-icon.svg`           | The app icon, 1024 square and full bleed. Each platform rounds the corners. |
-| `app-icon-dark.svg`      | iOS dark appearance. The mark on transparency.                              |
-| `app-icon-tinted.svg`    | iOS tinted appearance. The mark in grays on transparency.                   |
-| `ios/AppIcon.appiconset` | Drop into an Xcode asset catalog. One 1024 image per appearance.            |
-| `android/res`            | Merge into `app/src/main/res`. An adaptive icon with a themed layer.        |
-| `android/play-store.png` | The 512 icon for the Play Console listing.                                  |
-| `render.sh`              | Renders every PNG here and the web app's icons from the SVGs.               |
+| File                     | What it is                                                                                     |
+| ------------------------ | ---------------------------------------------------------------------------------------------- |
+| `mark.svg`               | The mark alone. Picks its colors from the viewer's light or dark scheme.                       |
+| `app-icon.svg`           | The app icon, 1024 square and full bleed. Each platform rounds the corners.                    |
+| `app-icon-dark.svg`      | iOS dark appearance. The mark on transparency.                                                 |
+| `app-icon-tinted.svg`    | iOS tinted appearance. The mark in grays on transparency.                                      |
+| `ios/AppIcon.appiconset` | Drop into an Xcode asset catalog. One 1024 image per appearance.                               |
+| `android/res`            | Android adaptive icon and themed layer, used directly by the app's Gradle resource source set. |
+| `android/play-store.png` | The 512 icon for the Play Console listing.                                                     |
+| `render.sh`              | Renders every PNG here and the web app's icons from the SVGs.                                  |
 
 The web app serves copies, `apps/web/public/favicon.svg` and
 `apple-touch-icon.png`. `apps/web/src/components/brand.tsx` draws the mark
@@ -45,7 +45,8 @@ slices, and it ends at 20.7. That leaves a bounding box from 2.22,3 to
 ## Changing it
 
 Edit the SVGs, keep the path and stops in step across them, the Android
-drawables and `brand.tsx`, then run `brand/render.sh` and commit what it
+drawables, the app's `logo_mark.xml` and `logo_mark_dark.xml`, and `brand.tsx`,
+then run `brand/render.sh` and commit what it
 writes. It needs `resvg` and `oxipng` and fetches both through Nix when
 they aren't on the PATH.
 

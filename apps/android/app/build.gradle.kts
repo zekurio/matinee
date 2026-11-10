@@ -37,6 +37,9 @@ android {
         }
     }
 
+    // Use the canonical adaptive icon and its themed layer from brand/.
+    sourceSets.getByName("main").res.directories.add(rootProject.file("../../brand/android/res").path)
+
     buildTypes {
         debug {
             applicationIdSuffix = ".debug"

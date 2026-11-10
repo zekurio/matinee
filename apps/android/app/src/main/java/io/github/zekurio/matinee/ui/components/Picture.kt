@@ -179,10 +179,11 @@ fun LucideIcon(
     Icon(painterResource(icon), contentDescription, modifier.size(size), tint = tint)
 }
 
-/** The Matinee ticket, in the accent. */
+/** The sunset mark uses its own colors, independent of the server's accent. */
 @Composable
 fun LogoMark(modifier: Modifier = Modifier) {
-    Image(painterResource(R.drawable.logo_mark), contentDescription = null, modifier = modifier)
+    val mark = if (Palette.isDark) R.drawable.logo_mark_dark else R.drawable.logo_mark
+    Image(painterResource(mark), contentDescription = null, modifier = modifier)
 }
 
 /** Content color for what sits on [background]. */
