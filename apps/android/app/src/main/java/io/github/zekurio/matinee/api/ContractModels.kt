@@ -382,6 +382,7 @@ data class PlaybackStartInput(
     val sessionId: String,
     val device: PlaybackDevice,
     val audio: Int? = null,
+    val subtitlesOn: Boolean? = null,
     val subtitle: SubtitlePick? = null,
     val quality: String? = null,
     val position: Double? = null,

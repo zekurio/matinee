@@ -1,66 +1,8 @@
-import type { PlaybackPreferences, SubtitleTrack } from "@matinee/contracts"
+import type { SubtitleTrack } from "@matinee/contracts"
 
 import { tr } from "@/i18n"
 
-import { deviceLanguage, sameLanguage, trackLabel } from "./languages"
-
-/** The language subtitles show in: the preference, else the device's. */
-function subtitleLanguage(preferences: PlaybackPreferences): string {
-  return preferences.subtitleLanguage ?? deviceLanguage()
-}
-
-/**
- * Whether the player draws the track over whatever plays. A `burn-in`
- * track needs an encode of its own, so C never picks one.
- */
-function drawable(track: SubtitleTrack): boolean {
-  return track.delivery === "webvtt" || track.delivery === "pgs"
-}
-
-/**
- * The full track to show for a language: the exact tag first, then one
- * the file marks default, then one without SDH.
- */
-function bestInLanguage(
-  tracks: SubtitleTrack[],
-  language: string | null,
-): SubtitleTrack | null {
-  let best: SubtitleTrack | null = null
-  let bestScore = -1
-  for (const track of tracks) {
-    if (track.forced || !sameLanguage(track.language, language)) {
-      continue
-    }
-    const score =
-      (track.language === language ? 4 : 0) +
-      (track.default ? 2 : 0) +
-      (track.sdh ? 0 : 1)
-    if (score > bestScore) {
-      best = track
-      bestScore = score
-    }
-  }
-  return best
-}
-
-/**
- * The track C turns on when the viewer hasn't picked one in this file.
- * The server picks the tracks a file starts with; this only stands in for
- * a pick the viewer didn't make.
- */
-export function fallbackTrack(
-  tracks: SubtitleTrack[],
-  preferences: PlaybackPreferences,
-): SubtitleTrack | null {
-  const shown = tracks.filter(drawable)
-  return (
-    bestInLanguage(shown, subtitleLanguage(preferences)) ??
-    shown.find((track) => track.default && !track.forced) ??
-    shown.find((track) => !track.forced) ??
-    shown[0] ??
-    null
-  )
-}
+import { trackLabel } from "./languages"
 
 /**
  * The small print beside a track in the menu: its flags and format, and

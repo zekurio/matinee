@@ -120,6 +120,8 @@ export const PlaybackStartInput = t.object({
    * The subtitle the viewer picked in the player, or off. Left out, the
    * server picks by what was remembered and the preferences.
    */
+  /** Turn subtitles on without a pick. Finds a drawable track even if defaults are off. */
+  subtitlesOn: t.boolean().optional(),
   subtitle: SubtitlePick.optional(),
   /** Left out, `original`. */
   quality: PlaybackQuality.optional(),

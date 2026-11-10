@@ -215,12 +215,19 @@ export function decidePlayback(
     picks.subtitle?.trackId === null
       ? null
       : shown.find((track) => track.id === picks.subtitle?.trackId)
-  const picked = input.subtitle
-    ? (facts.subtitles.find((track) => track.id === input.subtitle?.trackId) ??
+  const picked = input.subtitlesOn
+    ? (best(subtitleLanguage) ??
+      shown.find((track) => track.default && !track.forced) ??
+      shown.find((track) => !track.forced) ??
+      shown[0] ??
       null)
-    : remembered === undefined
-      ? defaults()
-      : remembered
+    : input.subtitle
+      ? (facts.subtitles.find(
+          (track) => track.id === input.subtitle?.trackId,
+        ) ?? null)
+      : remembered === undefined
+        ? defaults()
+        : remembered
   const subtitle = picked && encodeFailed && !drawable(picked) ? null : picked
   const burn = subtitle !== null && !drawable(subtitle)
   let quality = asked

@@ -147,10 +147,15 @@ function sourceSwitch(
   }
 
   /** Shows a subtitle track, or none for null. */
-  const selectSubtitle = (trackId: string | null) => {
+  const selectSubtitle = (trackId: string | null | undefined) => {
     const state = store.getState()
-    if (trackId !== null) state.setPickedSubtitle(trackId)
-    void ask({ picks: { subtitle: { trackId } }, at: now(), still: false })
+    if (trackId != null) state.setPickedSubtitle(trackId)
+    void ask({
+      picks: trackId === undefined ? undefined : { subtitle: { trackId } },
+      subtitlesOn: trackId === undefined,
+      at: now(),
+      still: false,
+    })
   }
 
   return { selectAudio, selectQuality, selectSubtitle }
