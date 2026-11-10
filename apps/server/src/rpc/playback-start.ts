@@ -36,7 +36,12 @@ export const seekPlayback = authed.playback.seek.handler(async ({ input }) => {
     .from(mediaItem)
     .where(eq(mediaItem.id, input.itemId))
   if (!item) throw notFound("This title isn't in any library.")
-  const keyframes = await keyframesNear(item, input.position)
+  // Only video starts on a keyframe. A file without any starts anywhere,
+  // as `start` has it.
+  const keyframes =
+    item.probe && !item.probe.video
+      ? { before: input.position, after: null }
+      : await keyframesNear(item, input.position)
   if (!keyframes)
     throw badRequest("Can't find a point to start this file from.")
   const offset =
