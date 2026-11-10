@@ -4,6 +4,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.SystemClock
 import android.view.accessibility.CaptioningManager
 import androidx.annotation.OptIn
 import androidx.compose.runtime.getValue
@@ -204,6 +205,15 @@ class PlayerController(
     }
     private val mpv = player as? MpvPlayer
 
+    /** Notices ExoPlayer's picture freezing while playback runs on; mpv draws its own. */
+    private val freeze = FreezeWatch()
+
+    /** A surface shows the video: not while the app is away and only the sound plays. */
+    private var surfaceShown = false
+
+    /** A freeze of a download already got one seek in place to shake it loose. */
+    private var nudged = false
+
     /** mpv plays the video, which draws it to fill the screen itself. */
     val usesMpv get() = mpv != null
 
@@ -366,7 +376,12 @@ class PlayerController(
                 diagnostics.failed(errorDiagnostics(e))
                 fallBack(e)
             }
+
+            override fun onSurfaceSizeChanged(width: Int, height: Int) {
+                surfaceShown = width > 0 && height > 0
+            }
         })
+        (player as? ExoPlayer)?.setVideoFrameMetadataListener { _, _, _, _ -> freeze.frame(SystemClock.elapsedRealtime()) }
         listenForDecoders()
         scope.launch { tick() }
         scope.launch { loadTrickplay() }
@@ -445,6 +460,8 @@ class PlayerController(
         error = null
         ended = false
         sourceFailed = false
+        // A new source gets its own wait for frames.
+        freeze.reset()
         pendingAt = null
         source = next
         position = next.position
@@ -567,6 +584,25 @@ class PlayerController(
             return
         }
         ask(Ask(at = now(), reason = AttemptReason.FALLBACK, failed = method, lost = plan))
+    }
+
+    /**
+     * The picture froze while playback ran on. From the server, that source
+     * failed, and the server falls back as for an error. A download has
+     * nothing to fall back to, so it gets one seek in place first, which
+     * restarts the decoder; frozen again, it fails.
+     */
+    private fun frozen() {
+        freeze.reset()
+        val current = source ?: return
+        if (current.method == null && !nudged) {
+            nudged = true
+            player.seekTo(player.currentPosition)
+            return
+        }
+        val e = PlaybackException("The video stopped moving while playback went on.", null, PlaybackException.ERROR_CODE_DECODING_FAILED)
+        diagnostics.failed(errorDiagnostics(e))
+        fallBack(e)
     }
 
     /** Asks the server how the file plays with [change], and takes its answer. */
@@ -786,6 +822,9 @@ class PlayerController(
             if (current != null && player.playbackState != Player.STATE_IDLE) {
                 position = pendingAt ?: current.fileSeconds(player.currentPosition)
                 buffered = current.fileSeconds(player.bufferedPosition)
+            }
+            if (mpv == null && !sourceFailed && freeze.check(SystemClock.elapsedRealtime(), player.isPlaying, surfaceShown && player.videoSize.width > 0)) {
+                frozen()
             }
             val every = if (player.isPlaying) 10_000 else 30_000
             if (System.currentTimeMillis() - lastReport >= every) report()
