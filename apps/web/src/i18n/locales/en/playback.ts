@@ -18,6 +18,15 @@ export default defineMessages("playback", {
   "playback.subtitles.deviceLanguage": "This device's ({language})",
   "playback.subtitles.remember": "Remember my picks",
 
+  // How far the player's skip buttons and keys go, which the account syncs.
+  "playback.skip.title": "Skipping",
+  "playback.skip.back": "Skip back",
+  "playback.skip.forward": "Skip forward",
+  "playback.skip.seconds": plural({
+    one: "{count} second",
+    other: "{count} seconds",
+  }),
+
   // Quality and codecs, which stay with this browser.
   "playback.device.title": "This device",
   "playback.quality.title": "Quality",
@@ -28,12 +37,6 @@ export default defineMessages("playback", {
   "playback.audioCodec.title": "Audio codec",
   // {codec} is the codec automatic picks, like HEVC or Opus.
   "playback.codec.automatic": "Automatic ({codec})",
-  // How far the player's skip buttons and keys go.
-  "playback.skip.title": "Skip by",
-  "playback.skip.seconds": plural({
-    one: "{count} second",
-    other: "{count} seconds",
-  }),
   "playback.autoplay.title": "Play the next episode",
 
   // Audio passthrough.

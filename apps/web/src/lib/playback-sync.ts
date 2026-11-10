@@ -1,9 +1,11 @@
 import {
   type AudioLanguage,
   DEFAULT_PLAYBACK_PREFERENCES,
+  DEFAULT_SKIP_SECONDS,
   LanguageTag,
   ORIGINAL_LANGUAGE,
   type PlaybackPreferences,
+  SkipSeconds,
   type User,
 } from "@matinee/contracts"
 import { t } from "@matinee/contracts/schema"
@@ -13,12 +15,13 @@ import { useEffect } from "react"
 
 import { tr } from "@/i18n"
 import { usePendingPlaybackStore } from "@/stores/playback-preferences"
+import { usePlayerPreferencesStore } from "@/stores/player-preferences"
 
 import { client, errorMessage, orpc, queryClient } from "./rpc"
 
 /*
- * The audio and subtitle preferences follow the account, so every device
- * signed in to it plays the same languages. A change shows at once and is
+ * The audio, subtitle, and skip preferences follow the account, so every
+ * device signed in to it plays the same languages and skips as far. A change shows at once and is
  * saved a moment later; another device picks it up with its next session
  * read. The codecs and quality stay with each device, in
  * `usePlayerPreferencesStore`.
@@ -71,7 +74,9 @@ export function updatePlaybackPreferences(
     next.audioLanguage === current.audioLanguage &&
     next.subtitleMode === current.subtitleMode &&
     next.subtitleLanguage === current.subtitleLanguage &&
-    next.rememberSubtitles === current.rememberSubtitles
+    next.rememberSubtitles === current.rememberSubtitles &&
+    next.skipBackSeconds === current.skipBackSeconds &&
+    next.skipForwardSeconds === current.skipForwardSeconds
   ) {
     return
   }
@@ -146,10 +151,52 @@ function takeLegacySubtitles(): Partial<PlaybackPreferences> | null {
   }
 }
 
+/** Where the player kept how far it skipped before the account did. */
+const LEGACY_PLAYER_KEY = "matinee.player"
+
+const LegacySkip = t.object({ skipSeconds: SkipSeconds })
+
 /**
- * Brings the subtitle pick this browser remembered into an account that
- * has no preferences yet, as the theme's first sync does. An account that
- * has them already wins, and the browser forgets its pick either way.
+ * How far this browser skipped, and then it forgets it: the player's
+ * preferences no longer keep it, so writing them back drops it.
+ */
+function takeLegacySkip(): number | null {
+  let stored: string | null = null
+  try {
+    stored = window.localStorage.getItem(LEGACY_PLAYER_KEY)
+  } catch {
+    return null
+  }
+  if (stored === null) return null
+  let json: unknown
+  try {
+    json = JSON.parse(stored)
+  } catch {
+    return null
+  }
+  const parsed = LegacySkip.safeParse(json)
+  if (!parsed.success) return null
+  // Any set writes the store back without the old key.
+  usePlayerPreferencesStore.setState({})
+  return parsed.data.skipSeconds
+}
+
+/** This browser's old skip, while the account's skips are the defaults. */
+function legacySkip(): number | null {
+  const skip = takeLegacySkip()
+  const current = currentPlaybackPreferences()
+  const untouched =
+    current.skipBackSeconds === DEFAULT_SKIP_SECONDS &&
+    current.skipForwardSeconds === DEFAULT_SKIP_SECONDS
+  return untouched ? skip : null
+}
+
+/**
+ * Brings what this browser remembered before the account kept it into the
+ * account, as the theme's first sync does: the subtitle pick when the
+ * account has no preferences yet, and the skip length when its skips are
+ * still the defaults. What the account has already wins, and the browser
+ * forgets its own either way.
  */
 export function PlaybackAccountSync() {
   const session = useQuery(orpc.auth.session.queryOptions())
@@ -157,11 +204,19 @@ export function PlaybackAccountSync() {
   const userId = user?.id ?? null
   const unset = user ? user.playback === null : false
 
-  // Moves the pick from local storage into the account.
+  // Moves the pick and the skip from local storage into the account.
   useEffect(() => {
     if (!userId) return
     const legacy = takeLegacySubtitles()
     if (legacy && unset) updatePlaybackPreferences(legacy)
+    // Both changes go out in the same save.
+    const skip = legacySkip()
+    if (skip !== null) {
+      updatePlaybackPreferences({
+        skipBackSeconds: skip,
+        skipForwardSeconds: skip,
+      })
+    }
   }, [userId, unset])
 
   return null

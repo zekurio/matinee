@@ -16,6 +16,14 @@ export default {
   "playback.subtitles.deviceLanguage": "Sprache dieses Geräts ({language})",
   "playback.subtitles.remember": "Meine Auswahl merken",
 
+  "playback.skip.title": "Springen",
+  "playback.skip.back": "Zurückspringen um",
+  "playback.skip.forward": "Vorspringen um",
+  "playback.skip.seconds": plural({
+    one: "{count} Sekunde",
+    other: "{count} Sekunden",
+  }),
+
   "playback.device.title": "Dieses Gerät",
   "playback.quality.title": "Qualität",
   "playback.quality.preset": "{height}p, {bitrate}",
@@ -23,11 +31,6 @@ export default {
   "playback.videoCodec.title": "Videocodec",
   "playback.audioCodec.title": "Audiocodec",
   "playback.codec.automatic": "Automatisch ({codec})",
-  "playback.skip.title": "Springen um",
-  "playback.skip.seconds": plural({
-    one: "{count} Sekunde",
-    other: "{count} Sekunden",
-  }),
   "playback.autoplay.title": "Nächste Folge abspielen",
 
   "playback.passthrough.title": "Audio-Passthrough",

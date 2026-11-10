@@ -179,7 +179,7 @@ export const accountContract = oc.tag("Account").router({
       t.object({ revoked: t.number().int() }),
     ),
   },
-  /** The audio and subtitle choices this account syncs. */
+  /** The audio, subtitle, and skip choices this account syncs. */
   playback: {
     /** Save them. Returns the user with them. */
     setPreferences: put("/account/playback")

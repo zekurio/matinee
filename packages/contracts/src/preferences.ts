@@ -2,9 +2,9 @@ import { t } from "./schema"
 import { TranscodeVideoCodec } from "./transcoding"
 
 /*
- * Playback preferences. The languages follow the user to every device, so
- * the account keeps them. Codecs and quality depend on what a device can
- * play, so each player keeps those itself.
+ * Playback preferences. The languages and skips follow the user to every
+ * device, so the account keeps them. Codecs and quality depend on what a
+ * device can play, so each player keeps those itself.
  */
 
 /** A BCP 47 tag as tracks carry them, like `en`, `ja`, or `pt-BR`. */
@@ -46,7 +46,16 @@ export const AudioLanguage = t.union([
 ])
 export type AudioLanguage = t.infer<typeof AudioLanguage>
 
-/** The audio and subtitle choices an account syncs to its devices. */
+/** How far the players' settings offer to skip, in seconds. */
+export const SKIP_STEPS = [5, 10, 15, 20, 30, 45, 60] as const
+
+/** Seconds a skip button or key moves. */
+export const SkipSeconds = t.number().int().min(1).max(120)
+
+/** A skip length when the account hasn't chosen one. */
+export const DEFAULT_SKIP_SECONDS = 10
+
+/** The audio, subtitle, and skip choices an account syncs to its devices. */
 export const PlaybackPreferences = t.object({
   /**
    * Play the best track in this language when the file has one; `original`
@@ -66,6 +75,12 @@ export const PlaybackPreferences = t.object({
    * to forced tracks only.
    */
   rememberSubtitles: t.boolean(),
+  /**
+   * How far back and ahead the skip buttons, keys, and taps move. Saved
+   * preferences from before these existed read with the defaults.
+   */
+  skipBackSeconds: SkipSeconds.$default(DEFAULT_SKIP_SECONDS),
+  skipForwardSeconds: SkipSeconds.$default(DEFAULT_SKIP_SECONDS),
 })
 export type PlaybackPreferences = t.infer<typeof PlaybackPreferences>
 
@@ -76,6 +91,8 @@ export const DEFAULT_PLAYBACK_PREFERENCES: Readonly<PlaybackPreferences> =
     subtitleMode: "default",
     subtitleLanguage: null,
     rememberSubtitles: true,
+    skipBackSeconds: DEFAULT_SKIP_SECONDS,
+    skipForwardSeconds: DEFAULT_SKIP_SECONDS,
   })
 
 /** Codecs a stream can convert an audio track to. */

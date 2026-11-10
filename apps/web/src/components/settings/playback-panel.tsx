@@ -5,6 +5,7 @@ import {
   PLAYBACK_QUALITY_IDS,
   type PlaybackOptions,
   type PlaybackQuality,
+  SKIP_STEPS,
   SUBTITLE_MODES,
   videoCodecName,
 } from "@matinee/contracts"
@@ -23,7 +24,6 @@ import { orpc } from "@/lib/rpc"
 import { browserVideoCodecs } from "@/lib/video-support"
 import {
   type AudioCodecChoice,
-  SKIP_STEPS,
   usePlayerPreferencesStore,
   type VideoCodecChoice,
 } from "@/stores/player-preferences"
@@ -40,15 +40,16 @@ import {
 const UNSET = ""
 
 /**
- * How videos play: the languages, which the account syncs, and the
- * quality, codecs, skips, and the next episode, which stay with this
- * browser. Only what this browser and the server both support is offered.
+ * How videos play: the languages and skips, which the account syncs, and
+ * the quality, codecs, and the next episode, which stay with this browser.
+ * Only what this browser and the server both support is offered.
  */
 export function PlaybackPanel() {
   const options = useQuery(orpc.playback.options.queryOptions()).data
   return (
     <SettingsSections>
       <LanguagesSection options={options} />
+      <SkipsSection />
       <DeviceSection options={options} />
       <PassthroughSection />
     </SettingsSections>
@@ -146,6 +147,44 @@ function LanguagesSection({
   )
 }
 
+/** The skip lengths to offer, with `current` too when it isn't a step. */
+function skipOptions(current: number): string[] {
+  const steps: number[] = [...SKIP_STEPS]
+  if (!steps.includes(current)) steps.push(current)
+  return steps.toSorted((a, b) => a - b).map(String)
+}
+
+/** How far the skip buttons and keys go each way, which the account syncs. */
+function SkipsSection() {
+  const { skipBackSeconds, skipForwardSeconds } = usePlaybackPreferences()
+  const labelOf = (value: string) =>
+    tr("playback.skip.seconds", { count: Number(value) })
+  return (
+    <SettingsSubsection id="skips" title={tr("playback.skip.title")}>
+      <SettingRows>
+        <SelectRow
+          title={tr("playback.skip.back")}
+          value={String(skipBackSeconds)}
+          options={skipOptions(skipBackSeconds)}
+          labelOf={labelOf}
+          onChange={(value) =>
+            updatePlaybackPreferences({ skipBackSeconds: Number(value) })
+          }
+        />
+        <SelectRow
+          title={tr("playback.skip.forward")}
+          value={String(skipForwardSeconds)}
+          options={skipOptions(skipForwardSeconds)}
+          labelOf={labelOf}
+          onChange={(value) =>
+            updatePlaybackPreferences({ skipForwardSeconds: Number(value) })
+          }
+        />
+      </SettingRows>
+    </SettingsSubsection>
+  )
+}
+
 function qualityLabel(id: PlaybackQuality): string {
   const preset = PLAYBACK_QUALITIES.find((entry) => entry.id === id)
   return preset
@@ -178,7 +217,6 @@ function DeviceSection({ options }: { options: PlaybackOptions | undefined }) {
       quality: state.quality,
       videoCodec: state.videoCodec,
       audioCodec: state.audioCodec,
-      skipSeconds: state.skipSeconds,
       autoplayNext: state.autoplayNext,
       setDevicePlayback: state.setDevicePlayback,
     })),
@@ -251,17 +289,6 @@ function DeviceSection({ options }: { options: PlaybackOptions | undefined }) {
         ) : (
           <FixedRow title={tr("playback.audioCodec.title")} value="AAC" />
         )}
-        <SelectRow
-          title={tr("playback.skip.title")}
-          value={String(device.skipSeconds)}
-          options={SKIP_STEPS.map(String)}
-          labelOf={(value) =>
-            tr("playback.skip.seconds", { count: Number(value) })
-          }
-          onChange={(value) =>
-            device.setDevicePlayback({ skipSeconds: Number(value) })
-          }
-        />
         <SwitchRow
           title={tr("playback.autoplay.title")}
           checked={device.autoplayNext}

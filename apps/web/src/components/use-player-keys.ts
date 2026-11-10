@@ -8,8 +8,10 @@ import { SUBTITLE_STEP_MS, VOLUME_STEP } from "./player-controls"
 export type PlayerKeyActions = {
   toggle: () => void
   skip: (by: number) => void
-  /** How far the arrows and J and L skip, from the settings. */
-  skipSeconds: number
+  /** How far left and J skip back, from the account's preferences. */
+  skipBackSeconds: number
+  /** How far right and L skip ahead. */
+  skipForwardSeconds: number
   /** Jumps to `digit` tenths of the way. */
   jump: (digit: number) => void
   show: (Icon: LucideIcon | null, text: string) => void
@@ -25,7 +27,8 @@ export type PlayerKeyActions = {
 export function usePlayerKeys({
   toggle,
   skip,
-  skipSeconds,
+  skipBackSeconds,
+  skipForwardSeconds,
   jump,
   show,
   changeVolume,
@@ -46,12 +49,15 @@ export function usePlayerKeys({
       return
     if (event.metaKey || event.ctrlKey || event.altKey) return
     const back = () => {
-      skip(-skipSeconds)
-      show(RotateCcwIcon, tr("player.flash.skip", { seconds: skipSeconds }))
+      skip(-skipBackSeconds)
+      show(RotateCcwIcon, tr("player.flash.skip", { seconds: skipBackSeconds }))
     }
     const ahead = () => {
-      skip(skipSeconds)
-      show(RotateCwIcon, tr("player.flash.skip", { seconds: skipSeconds }))
+      skip(skipForwardSeconds)
+      show(
+        RotateCwIcon,
+        tr("player.flash.skip", { seconds: skipForwardSeconds }),
+      )
     }
     const actions = new Map([
       [" ", toggle],
