@@ -266,8 +266,10 @@ function labelFromPath(item: LabelSource): ItemLabel {
   const episode = Number(match[2])
   const name = file
     .slice((match.index ?? 0) + match[0].length)
-    .replace(/^[\s._-]+/, "")
+    // The extension goes first: after `S01E02.mkv` only `.mkv` is left,
+    // which the next line would turn into a name.
     .replace(TRAILER, "")
+    .replace(/^[\s._-]+/, "")
     .replace(/[._]+/g, " ")
     // Full-width and CJK brackets become parentheses; many UI fonts lack
     // them. Not "[", which TRAILER treats as the start of release tags.
