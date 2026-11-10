@@ -2,9 +2,13 @@ import type { PlaybackDevice } from "@matinee/contracts"
 
 import { usePlayerPreferencesStore } from "@/stores/player-preferences"
 
-import { decodableAudioCodecs } from "./audio-support"
+import { browserAudioCodecs, decodableAudioCodecs } from "./audio-support"
 import { deviceLanguage } from "./languages"
-import { browserDecoders, encodeVideoCodecs } from "./video-support"
+import {
+  browserDecoders,
+  browserVideoCodecs,
+  encodeVideoCodecs,
+} from "./video-support"
 
 /**
  * The MIME types a browser may know each container by, as the server
@@ -56,6 +60,21 @@ function browserPlayback(): Browser {
     language: deviceLanguage(),
   }
   return browser
+}
+
+/** What this browser plays for a download, without player conversion settings. */
+export function downloadDevice(): PlaybackDevice {
+  const encodes = browserVideoCodecs()
+  const audio = [...browserAudioCodecs()]
+  return {
+    ...browserPlayback(),
+    audio,
+    streamAudio: audio,
+    encodeVideo: encodes.includes("h264") ? [...encodes] : [...encodes, "h264"],
+    selectAudio: false,
+    sidecarSubtitles: [],
+    embeddedSubtitles: [],
+  }
 }
 
 let cached: { key: string; device: PlaybackDevice } | null = null
