@@ -6,10 +6,10 @@
   "type": "module",
   "scripts": {
     "api:android": "pnpm --filter @matinee/server api:android",
-    "build": "turbo run build",
-    "dev": "turbo run dev --filter=@matinee/server --filter=@matinee/web",
-    "dev:server": "turbo run dev --filter=@matinee/server",
-    "dev:web": "turbo run dev --filter=@matinee/web",
+    "build": "pnpm -r build",
+    "dev": "pnpm --parallel --filter @matinee/server --filter @matinee/web dev",
+    "dev:server": "pnpm --filter @matinee/server dev",
+    "dev:web": "pnpm --filter @matinee/web dev",
     "start": "pnpm --filter @matinee/server start",
     "db:generate": "pnpm --filter @matinee/db db:generate",
     "db:migrate": "pnpm --filter @matinee/db db:migrate",
@@ -17,7 +17,7 @@
     "fmt": "oxfmt",
     "fmt:check": "oxfmt --check",
     "lint": "oxlint",
-    "typecheck": "turbo run typecheck typecheck:oxlint",
+    "typecheck": "pnpm -r --parallel typecheck && pnpm typecheck:oxlint",
     "typecheck:oxlint": "tsc -p tools/oxlint",
     "verify": "pnpm fmt:check && pnpm lint && pnpm typecheck && pnpm api:android --check"
   },
@@ -27,7 +27,6 @@
     "oxfmt": "0.76.0",
     "oxlint": "1.91.0",
     "oxlint-tsgolint": "7.0.2005",
-    "turbo": "2.11.10",
     "typescript": "7.0.2"
   },
   "engines": {

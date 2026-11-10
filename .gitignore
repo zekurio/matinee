@@ -1,6 +1,5 @@
 node_modules
 .pnpm-store/
-.turbo
 dist
 .vite
 .tanstack
@@ -14,7 +13,7 @@ dist
 .devenv.flake.nix
 devenv.local.nix
 
-# Local runtime state (dev Postgres lives under .devenv)
+# Local runtime state, including the dev Postgres cluster
 data/
 
 .DS_Store

@@ -40,7 +40,7 @@ See README.md for setup and the auth design.
 
 ## Development
 
-- Use Node 24 and pnpm 11, not npm, Yarn, or Bun. The devenv shell provides
+- Use Node 24 and pnpm 11, not npm, Yarn, or Bun. `nix develop` provides
   both plus a repo-local Postgres.
 - Run `pnpm verify` before finishing a change. CI runs the same checks plus
   `pnpm audit` and the web build.

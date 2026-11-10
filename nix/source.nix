@@ -21,7 +21,6 @@ lib.cleanSourceWith {
       ".direnv"
       ".env"
       ".git"
-      ".turbo"
       "data"
       "devenv.local.nix"
       "dist"

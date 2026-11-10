@@ -45,9 +45,10 @@ version from one that answers nonsense.
 
 ## Development
 
-Needs Node 24 and pnpm 11. With [devenv](https://devenv.sh) and direnv, `cd`
-into the repo and the shell starts a repo-local Postgres on a Unix socket and
-exports `DATABASE_URL`, `PORT`, and `PUBLIC_URL`.
+Needs Node 24 and pnpm 11. `nix develop` provides both, Jellyfin's FFmpeg,
+and a repo-local Postgres on a Unix socket. It creates `.env` from
+`.env.example` and exports `DATABASE_URL`, `PORT`, and `PUBLIC_URL`.
+With direnv, run `direnv allow` to enter the same shell automatically.
 
 ```sh
 pnpm install
@@ -67,14 +68,27 @@ pnpm db:generate --name add_watch_progress
 
 Run `pnpm verify` (format check, lint, typecheck) before committing.
 
-Without devenv, copy `.env.example` to `.env` and point `DATABASE_URL` at your
+Without Nix, copy `.env.example` to `.env` and point `DATABASE_URL` at your
 own Postgres.
+
+The dev database lives in `data/postgres`. Stop it with `matinee-postgres stop`
+inside the dev shell. When switching from the old devenv shell, stop its
+Postgres before entering the new shell, then move the existing database:
+
+```sh
+pg_ctl -D .devenv/state/matinee-postgres -w stop  # from the old shell, if running
+mkdir -p data
+mv .devenv/state/matinee-postgres data/postgres
+direnv allow
+```
+
+Do not delete `.devenv` until the database has been moved. The new shell
+refuses to create an empty database if it finds the old one.
 
 `nix build` builds the package from `flake.nix`, and `nix flake check` runs
 the NixOS module's tests too. After `pnpm-lock.yaml` changes, the build fails
 with the new dependency hash; put it in `pnpmDepsHash` in `nix/package.nix`.
-Bump nixpkgs with `nix flake update nixpkgs` and `devenv update nixpkgs`
-together; CI fails when the two locks pin different revisions.
+Bump the shared package and dev-shell toolchain with `nix flake update nixpkgs`.
 
 ## Configuration
 
@@ -388,7 +402,7 @@ Matinee encodes video the way Jellyfin does, with Jellyfin's filter chains
 and defaults, and is built for
 [jellyfin-ffmpeg](https://github.com/jellyfin/jellyfin-ffmpeg): FFmpeg 8.1
 with Jellyfin's patches. Get it as the Nix package `jellyfin-ffmpeg` (the
-devenv shell has it), as the Debian and Ubuntu packages from
+dev shell has it), as the Debian and Ubuntu packages from
 repo.jellyfin.org (what Jellyfin's Docker image ships, in
 `/usr/lib/jellyfin-ffmpeg`), or as a portable build from its GitHub
 releases. Point `MATINEE_FFMPEG_PATH` and `MATINEE_FFPROBE_PATH` at it if it

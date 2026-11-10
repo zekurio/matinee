@@ -13,6 +13,8 @@ on:
       - "package.json"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
+      - ".envrc"
+      - ".env.example"
       - ".github/workflows/nix.yml"
       - "!**/*.md"
   workflow_dispatch:
@@ -53,3 +55,12 @@ jobs:
       # this step fails with the hash to put there.
       - name: check nix flake
         run: nix flake check --print-build-logs
+
+      - name: check dev shell
+        run: |
+          nix develop --command bash -euc '
+            trap "matinee-postgres stop" EXIT
+            test -s .env
+            pg_isready
+            psql -Atc "SELECT 1" | grep -qx 1
+          '

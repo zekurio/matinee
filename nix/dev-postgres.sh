@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Repo-local Postgres shared by every devenv shell. It listens only on a Unix
+# Repo-local Postgres shared by every dev shell. It listens only on a Unix
 # socket in a per-checkout directory, so DATABASE_URL is static and nothing
 # collides with a system-wide Postgres.
 set -eu
 
-data="$DEVENV_ROOT/.devenv/state/matinee-postgres"
-# devenv.nix sets PGHOST to postgresSocketDir.
-run="${PGHOST:?PGHOST is unset; run this from the devenv shell}"
+data="$DEVSHELL_ROOT/data/postgres"
+# nix/dev-shell.nix sets PGHOST to a stable per-checkout socket directory.
+run="${PGHOST:?PGHOST is unset; run this from nix develop}"
 db=matinee
 user=postgres
 
@@ -22,6 +22,10 @@ running() {
 }
 
 start() {
+  if [ -d "$DEVSHELL_ROOT/.devenv/state/matinee-postgres" ] && [ ! -d "$data" ]; then
+    echo "Move the old dev database first. See README.md, Development." >&2
+    exit 1
+  fi
   mkdir -p "$data" "$run"
   chmod 700 "$run"
 

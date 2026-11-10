@@ -15,7 +15,7 @@
     root = ../.;
   },
   # Update with the hash nix prints after pnpm-lock.yaml changes.
-  pnpmDepsHash ? "sha256-d/rro70xi4d95ikpwVZNria/JUiUmU8BZDCOKKfDPFY=",
+  pnpmDepsHash ? "sha256-+N9+TBn/ji+Y81jiy2JCoaGM1UlK+eQ4dKzrGY5+Ozg=",
 }:
 
 let
@@ -48,7 +48,6 @@ stdenvNoCC.mkDerivation (finalAttrs: {
     runHook preBuild
 
     export HOME="$TMPDIR/home"
-    export TURBO_TELEMETRY_DISABLED=1
     export DO_NOT_TRACK=1
     mkdir -p "$HOME"
 

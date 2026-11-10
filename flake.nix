@@ -16,11 +16,19 @@
       inherit (nixpkgs) lib;
       systems = [ "x86_64-linux" ];
       forAllSystems = f: lib.genAttrs systems (system: f nixpkgs.legacyPackages.${system});
-      packagesFor = pkgs: import ./nix/packages.nix { inherit pkgs; };
+      packagesFor = pkgs: {
+        matinee = pkgs.callPackage ./nix/package.nix { };
+      };
     in
     {
-      # The dev shell is devenv.nix (https://devenv.sh). This flake packages
-      # the server and runs it on NixOS.
+      devShells = lib.genAttrs systems (
+        system:
+        {
+          default = nixpkgs.legacyPackages.${system}.callPackage ./nix/dev-shell.nix { };
+        }
+        // import ./nix/android.nix { inherit nixpkgs system; }
+      );
+
       overlays.default = final: _prev: packagesFor final;
 
       packages = forAllSystems (
@@ -53,11 +61,6 @@
           };
           instance = import ./nix/tests/instance.nix { inherit pkgs module; };
         }
-      );
-
-      # The Android app's JDK and SDK. See nix/android.nix.
-      devShells = lib.genAttrs systems (
-        system: import ./nix/android.nix { inherit nixpkgs system; }
       );
 
       formatter = forAllSystems (pkgs: pkgs.nixfmt-tree);

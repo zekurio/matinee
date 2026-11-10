@@ -1,7 +1,0 @@
-# Pin devenv's nixpkgs to the channel flake.nix tracks, so the dev shell and
-# the package build from the same Node and pnpm. Bump both together with
-# `nix flake update nixpkgs` and `devenv update nixpkgs`; CI fails when the
-# two locks disagree.
-inputs:
-  nixpkgs:
-    url: github:NixOS/nixpkgs/nixos-unstable
