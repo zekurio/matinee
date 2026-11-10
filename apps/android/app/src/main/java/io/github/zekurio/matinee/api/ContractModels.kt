@@ -312,6 +312,7 @@ data class PlaybackPreferences(
     val subtitleMode: String,
     val subtitleLanguage: String?,
     val rememberSubtitles: Boolean,
+    val rememberAudio: Boolean? = null,
     val skipBackSeconds: Int? = null,
     val skipForwardSeconds: Int? = null,
 )
@@ -640,7 +641,28 @@ data class Facet(
 )
 
 @Serializable
-data class VideoStream(
+data class ItemLabelFolder(
+    val name: String?,
+    val seasonNumber: Int?,
+)
+
+@Serializable
+data class ItemLabel(
+    val show: String,
+    val showName: String,
+    val year: String?,
+    val showKey: String,
+    val title: String?,
+    val untitled: Boolean,
+    val episodeNumber: Int?,
+    val code: String?,
+    val shortCode: String?,
+    val group: String,
+    val groupLabel: List<ItemLabelFolder>,
+)
+
+@Serializable
+data class DisplayVideoStream(
     val index: Int,
     val codec: String,
     val codecTag: String?,
@@ -663,6 +685,23 @@ data class VideoStream(
     val hdr10Plus: Boolean,
     val masteringDisplay: Boolean,
     val contentLightLevel: ContentLightLevel?,
+    val format: String? = null,
+    val resolution: String? = null,
+    val dynamicRange: Explicit<String>? = null,
+)
+
+@Serializable
+data class DisplayAudioStream(
+    val index: Int,
+    val codec: String,
+    val profile: String?,
+    val channels: Int?,
+    val channelLayout: String?,
+    val language: String?,
+    val title: String?,
+    val default: Boolean,
+    val format: String? = null,
+    val layout: Explicit<String>? = null,
 )
 
 object SubtitleKind {
@@ -684,10 +723,10 @@ data class SubtitleStream(
 )
 
 @Serializable
-data class MediaProbe(
-    val format: MediaProbe.Format,
-    val video: VideoStream?,
-    val audio: List<AudioStream>,
+data class DisplayMediaProbe(
+    val format: DisplayMediaProbe.Format,
+    val video: DisplayVideoStream?,
+    val audio: List<DisplayAudioStream>,
     val subtitles: List<SubtitleStream>,
 ) {
     @Serializable
@@ -710,6 +749,7 @@ data class MediaItem(
     val id: String,
     val libraryId: String,
     val fileTitle: String,
+    val label: ItemLabel? = null,
     val title: TitleSummary?,
     val seasonNumber: Int?,
     val episodeNumber: Int?,
@@ -720,7 +760,7 @@ data class MediaItem(
     val sizeBytes: Long,
     val modifiedAt: String,
     val durationSeconds: Double?,
-    val probe: MediaProbe?,
+    val probe: DisplayMediaProbe?,
     val progress: WatchState?,
     val favorite: Boolean,
 )
@@ -1036,6 +1076,61 @@ data class LiveActivity(
 )
 
 @Serializable
+data class PlaybackQualityPreset(
+    val id: String,
+    val width: Int,
+    val height: Int,
+    val bitrate: Int,
+)
+
+@Serializable
+data class DownloadVideoPreset(
+    val height: Int,
+    val bitrate: Int,
+)
+
+@Serializable
+data class VideoStream(
+    val index: Int,
+    val codec: String,
+    val codecTag: String?,
+    val profile: String?,
+    val level: Int?,
+    val width: Int,
+    val height: Int,
+    val frameRate: Double?,
+    val bitRate: Long?,
+    val pixelFormat: String?,
+    val bitDepth: Int?,
+    val colorTransfer: String?,
+    val colorPrimaries: String?,
+    val colorSpace: String?,
+    val colorRange: String?,
+    val interlaced: Boolean,
+    val hdr: String?,
+    val dolbyVisionProfile: Int?,
+    val dolbyVision: DolbyVision?,
+    val hdr10Plus: Boolean,
+    val masteringDisplay: Boolean,
+    val contentLightLevel: ContentLightLevel?,
+)
+
+@Serializable
+data class MediaProbe(
+    val format: MediaProbe.Format,
+    val video: VideoStream?,
+    val audio: List<AudioStream>,
+    val subtitles: List<SubtitleStream>,
+) {
+    @Serializable
+    data class Format(
+        val name: String,
+        val durationSeconds: Double?,
+        val bitRate: Long?,
+    )
+}
+
+@Serializable
 data class MetadataMatch(
     val provider: String,
     val id: String,
@@ -1134,6 +1229,9 @@ object TranscodeAudioCodec {
 
 @Serializable
 data class PlaybackOptions(
+    val qualities: List<PlaybackQualityPreset>,
+    val downloadVideoPresets: List<DownloadVideoPreset>,
+    val skipSteps: List<Int>,
     val videoCodecs: List<String>,
     val audioCodecs: List<String>,
     val audioLanguages: List<String>,
@@ -1263,6 +1361,17 @@ data class Session(
 )
 
 @Serializable
+data class SessionStream(
+    val method: String,
+    val videoEncoder: String?,
+    val hardwareEncoding: Boolean,
+    val hardwareDecoding: Boolean,
+    val toneMapper: String?,
+    val audioEncoder: String?,
+    val streaming: Boolean,
+)
+
+@Serializable
 data class ShelfAdditions(
     val count: Int,
     val item: MediaItem,
@@ -1284,6 +1393,11 @@ object SubtitleDelivery {
     const val BURN_IN = "burn-in"
     val all = listOf(WEBVTT, PGS, BURN_IN)
 }
+
+@Serializable
+data class SubtitlePick(
+    val trackId: String?,
+)
 
 object SubtitleSource {
     const val SIDECAR = "sidecar"
@@ -1375,6 +1489,12 @@ object TitleSort {
     const val YEAR = "year"
     val all = listOf(NAME, RECENT, YEAR)
 }
+
+@Serializable
+data class TrackPicks(
+    val audio: Int?,
+    val subtitle: SubtitlePick?,
+)
 
 @Serializable
 data class Trickplay(
@@ -1673,6 +1793,12 @@ data class PlaybackReportInput(
     val playedSeconds: Double? = null,
     val paused: Boolean? = null,
     val closed: Boolean? = null,
+)
+
+@Serializable
+data class PlaybackPickTracksInput(
+    val audio: Int? = null,
+    val subtitle: SubtitlePick? = null,
 )
 
 @Serializable

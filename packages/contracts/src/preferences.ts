@@ -1,5 +1,6 @@
+import { DownloadVideoPreset } from "./download-presets"
 import { t } from "./schema"
-import { TranscodeVideoCodec } from "./transcoding"
+import { PlaybackQualityPreset, TranscodeVideoCodec } from "./transcoding"
 
 /*
  * Playback preferences. The languages and skips follow the user to every
@@ -108,6 +109,12 @@ export type TranscodeAudioCodec = t.infer<typeof TranscodeAudioCodec>
 
 /** What a player's playback settings can offer on this server. */
 export const PlaybackOptions = t.object({
+  /** The quality ladder, largest first. Original playback is separate. */
+  qualities: t.array(PlaybackQualityPreset),
+  /** Download video sizes and bit rates, largest first. */
+  downloadVideoPresets: t.array(DownloadVideoPreset),
+  /** Allowed skip lengths in seconds, smallest first. */
+  skipSteps: t.array(t.number().int()),
   /**
    * The codecs an encode can produce here, H.264 first. A player lists the
    * ones it wants in `mediaHlsPath()`.

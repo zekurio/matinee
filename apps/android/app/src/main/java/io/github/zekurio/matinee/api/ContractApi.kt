@@ -725,6 +725,36 @@ class PlaybackApi internal constructor(private val transport: ApiTransport) {
         )
     }
 
+    /** `GET /media/{itemId}/tracks` */
+    suspend fun tracks(itemId: String): TrackPicks =
+        transport.call(
+            "GET",
+            listOf("media", itemId, "tracks"),
+            emptyList(),
+            null,
+            TrackPicks.serializer(),
+        )
+
+    /** `PUT /media/{itemId}/tracks` */
+    suspend fun pickTracks(itemId: String, audio: Int? = null, subtitle: SubtitlePick? = null) {
+        transport.send(
+            "PUT",
+            listOf("media", itemId, "tracks"),
+            emptyList(),
+            transport.json(PlaybackPickTracksInput.serializer(), PlaybackPickTracksInput(audio = audio, subtitle = subtitle)),
+        )
+    }
+
+    /** `GET /playback/sessions/{sessionId}/stream` */
+    fun stream(sessionId: String): Flow<SessionStream?> =
+        transport.events(
+            "GET",
+            listOf("playback", "sessions", sessionId, "stream"),
+            emptyList(),
+            null,
+            SessionStream.serializer().nullable,
+        )
+
     /** `POST /playback/offline` */
     suspend fun offline(plays: List<PlaybackOfflineInput.Play>) {
         transport.send(

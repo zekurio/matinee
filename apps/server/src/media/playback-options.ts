@@ -1,4 +1,9 @@
-import type { PlaybackOptions } from "@matinee/contracts"
+import {
+  DOWNLOAD_VIDEO_PRESETS,
+  PLAYBACK_QUALITIES,
+  SKIP_STEPS,
+  type PlaybackOptions,
+} from "@matinee/contracts"
 import { t } from "@matinee/contracts/schema"
 import { mediaItem, subtitleFile } from "@matinee/db"
 import { type SQL, sql } from "drizzle-orm"
@@ -63,6 +68,9 @@ export async function playbackOptions(): Promise<PlaybackOptions> {
       db.execute(sidecarLanguages),
     ])
   return {
+    qualities: [...PLAYBACK_QUALITIES],
+    downloadVideoPresets: [...DOWNLOAD_VIDEO_PRESETS],
+    skipSteps: [...SKIP_STEPS],
     videoCodecs: encodableVideoCodecs(settings, capabilities),
     audioCodecs: encodableAudioCodecs(capabilities),
     audioLanguages: rankLanguages(Counts.parse(audio.rows)),
