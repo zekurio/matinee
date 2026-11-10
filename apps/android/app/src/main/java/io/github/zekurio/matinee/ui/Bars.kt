@@ -238,7 +238,7 @@ private fun TabButton(
  * logo competing with it; search and the account are in the tab bar.
  */
 @Composable
-fun AppHeader(modifier: Modifier = Modifier) {
+fun AppHeader(modifier: Modifier = Modifier, action: @Composable () -> Unit = {}) {
     val offline = LocalOffline.current
     val statusBar = WindowInsets.statusBars.getTop(LocalDensity.current).toFloat()
     Box(
@@ -269,6 +269,7 @@ fun AppHeader(modifier: Modifier = Modifier) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (offline) LucideIcon(Lucide.CloudOff, stringResource(R.string.downloads_offline), size = 20.dp, tint = Palette.Muted)
+            else action()
         }
     }
 }

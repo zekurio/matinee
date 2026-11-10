@@ -136,7 +136,7 @@ private fun TitlePage(titleId: String, heading: String, content: @Composable (Ti
         TopBar(heading)
         when (val state = loader.state) {
             Load.Loading -> LoadingBox()
-            is Load.Failed -> ErrorBox(stringResource(R.string.title_load_error), state.message, loader::reload)
+            is Load.Failed -> ErrorBox(stringResource(R.string.title_load_error), state.message, loader::reload, disconnected = state.disconnected)
             is Load.Ready -> content(state.value)
         }
     }

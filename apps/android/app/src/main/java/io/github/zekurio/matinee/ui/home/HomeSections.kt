@@ -19,6 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
@@ -36,6 +37,7 @@ import io.github.zekurio.matinee.ui.components.Lucide
 import io.github.zekurio.matinee.ui.components.LucideIcon
 import io.github.zekurio.matinee.ui.components.MatineeButton
 import io.github.zekurio.matinee.ui.components.RailArt
+import io.github.zekurio.matinee.ui.components.RoundIconButton
 import io.github.zekurio.matinee.ui.components.SectionTitle
 import io.github.zekurio.matinee.ui.components.railItemWidth
 import io.github.zekurio.matinee.ui.theme.Palette
@@ -46,14 +48,14 @@ internal sealed interface RailState<out T> {
 
     data object Empty : RailState<Nothing>
 
-    data class Failed(val message: String) : RailState<Nothing>
+    data class Failed(val message: String, val disconnected: Boolean = false) : RailState<Nothing>
 
     data class Shown<T>(val items: List<T>) : RailState<T>
 }
 
 internal fun <T> railState(load: Load<List<T>>): RailState<T> = when (load) {
     Load.Loading -> RailState.Loading
-    is Load.Failed -> RailState.Failed(load.message)
+    is Load.Failed -> RailState.Failed(load.message, load.disconnected)
     is Load.Ready -> if (load.value.isEmpty()) RailState.Empty else RailState.Shown(load.value)
 }
 
@@ -76,7 +78,25 @@ internal fun Notice(
     onRetry: (() -> Unit)?,
     modifier: Modifier = Modifier,
     retrying: Boolean = false,
+    disconnected: Boolean = false,
 ) {
+    // Without the server, the same icon and button as everywhere else; the words are for other failures.
+    if (disconnected) {
+        Row(
+            modifier.fillMaxWidth().padding(horizontal = Gutter),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            LucideIcon(Lucide.CloudOff, stringResource(R.string.server_unreachable), size = 24.dp, tint = Palette.Muted)
+            if (onRetry != null) {
+                MatineeButton(onClick = onRetry, look = ButtonLook.Outline, enabled = !retrying, height = 36.dp) {
+                    LucideIcon(Lucide.RefreshCw, null, size = 16.dp)
+                    Text(stringResource(R.string.common_retry))
+                }
+            }
+        }
+        return
+    }
     Row(
         modifier
             .fillMaxWidth()
@@ -99,28 +119,29 @@ internal fun Notice(
                 Text(message, style = MaterialTheme.typography.bodySmall, color = Palette.Muted)
             }
         }
+        // An icon, so the words keep the row's width and stay a line or two.
         if (onRetry != null) {
-            MatineeButton(
-                onClick = onRetry,
-                look = ButtonLook.Outline,
+            RoundIconButton(
+                Lucide.RefreshCw,
+                stringResource(R.string.common_retry),
+                onRetry,
+                size = 40.dp,
+                iconSize = 18.dp,
+                tint = Palette.Muted,
+                background = Color.Transparent,
                 enabled = !retrying,
-                height = 36.dp,
-                contentPadding = PaddingValues(horizontal = 12.dp),
-            ) {
-                LucideIcon(Lucide.RefreshCw, null, size = 16.dp)
-                Text(stringResource(R.string.common_retry))
-            }
+            )
         }
     }
 }
 
 /** A rail's section that failed to load: its heading, so the reader knows which, and a [Notice]. */
 @Composable
-internal fun RailFailure(title: String, headline: String, message: String, onRetry: () -> Unit, retrying: Boolean = false) {
+internal fun RailFailure(title: String, headline: String, message: String, onRetry: () -> Unit, retrying: Boolean = false, disconnected: Boolean = false) {
     Column(Modifier.fillMaxWidth()) {
         SectionTitle(title, Modifier.padding(horizontal = Gutter))
         Gap(12.dp)
-        Notice(headline, message, onRetry, retrying = retrying)
+        Notice(headline, message, onRetry, retrying = retrying, disconnected = disconnected)
     }
 }
 

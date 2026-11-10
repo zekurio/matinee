@@ -48,7 +48,7 @@ fun RecentScreen() {
     Column(Modifier.fillMaxSize()) {
         TopBar(stringResource(R.string.profile_recent))
         when (val state = recent.state) {
-            is Load.Failed -> ErrorBox(stringResource(R.string.profile_recent_load_failed), state.message, recent::reload)
+            is Load.Failed -> ErrorBox(stringResource(R.string.profile_recent_load_failed), state.message, recent::reload, disconnected = state.disconnected)
             Load.Loading -> LoadingBox()
             is Load.Ready -> {
                 val entries = state.value.orEmpty()

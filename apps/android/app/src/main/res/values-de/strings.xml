@@ -457,6 +457,7 @@
     <string name="player_up_next_cancel">Abbrechen</string>
 
     <string name="error_unreachable">Der Server ist gerade nicht erreichbar.</string>
+    <string name="server_unreachable">Server nicht erreichbar</string>
     <string name="error_connection_lost">Die Verbindung zum Server ist abgebrochen.</string>
     <string name="player_fill">Bildschirm füllen</string>
     <string name="player_fit">Ganzes Bild</string>

@@ -41,6 +41,7 @@ import io.github.zekurio.matinee.ui.LocalUser
 import io.github.zekurio.matinee.ui.TopBar
 import io.github.zekurio.matinee.ui.components.ArtFrame
 import io.github.zekurio.matinee.ui.components.CardShape
+import io.github.zekurio.matinee.ui.components.DisconnectedAction
 import io.github.zekurio.matinee.ui.components.ErrorBox
 import io.github.zekurio.matinee.ui.components.Gap
 import io.github.zekurio.matinee.ui.components.Gutter
@@ -62,10 +63,14 @@ import io.github.zekurio.matinee.ui.theme.Palette
 fun MediaScreen() {
     val libraries = rememberLoader("libraries") { libraries.list() }
     Column(Modifier.fillMaxSize()) {
-        TopBar(stringResource(R.string.tab_media), back = false)
+        TopBar(stringResource(R.string.tab_media), back = false) {
+            // Still showing the libraries from before, while the server can't be reached.
+            DisconnectedAction(libraries)
+            Gap(Gutter - 8.dp)
+        }
         when (val state = libraries.state) {
-            Load.Loading -> LoadingBox()
-            is Load.Failed -> ErrorBox(stringResource(R.string.home_load_failed), state.message, libraries::reload)
+            Load.Loading -> LoadingBox(aboveTabBar = true)
+            is Load.Failed -> ErrorBox(stringResource(R.string.home_load_failed), state.message, libraries::reload, aboveTabBar = true, disconnected = state.disconnected)
             is Load.Ready -> LazyVerticalGrid(
                 columns = GridCells.Adaptive(160.dp),
                 modifier = Modifier.fillMaxSize(),

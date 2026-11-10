@@ -14,10 +14,14 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.selectable
@@ -43,6 +47,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
+import io.github.zekurio.matinee.ui.tabBarPadding
 import io.github.zekurio.matinee.ui.theme.Palette
 
 /** The web's 0.625rem radius. */
@@ -192,25 +197,98 @@ fun WatchedBadge(modifier: Modifier = Modifier, size: Dp = 20.dp) {
 }
 
 /** A thin bar of how much of a file was watched, along the bottom of its picture. */
+/**
+ * How far into a file the person is, over its picture, as the web's cards
+ * draw it: clear of the edges by [inset], the accent on a dark track.
+ * Flush white along the edge ran into light pictures.
+ */
 @Composable
-fun ProgressBar(progress: Float, modifier: Modifier = Modifier, height: Dp = 4.dp) {
-    Box(modifier.fillMaxWidth().height(height).background(Color.White.copy(alpha = 0.25f))) {
-        Box(Modifier.fillMaxWidth(progress.coerceIn(0f, 1f)).fillMaxSize().background(Color.White))
+fun ProgressBar(progress: Float, modifier: Modifier = Modifier, inset: Dp = 8.dp) {
+    Box(
+        modifier
+            .padding(start = inset, end = inset, bottom = inset)
+            .fillMaxWidth()
+            .height(4.dp)
+            .clip(CircleShape)
+            .background(Color.Black.copy(alpha = 0.45f)),
+    ) {
+        Box(Modifier.fillMaxWidth(progress.coerceIn(0f, 1f)).fillMaxHeight().background(Palette.Accent))
     }
 }
 
+/**
+ * The room a page's spinner or error centers in: down to the navigation
+ * bar, or on a tab's page to the floating tab bar, so it sits in the
+ * middle of what's visible rather than low behind the bar.
+ */
 @Composable
-fun LoadingBox(modifier: Modifier = Modifier) {
-    Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+private fun visibleBottom(aboveTabBar: Boolean): Dp =
+    if (aboveTabBar) tabBarPadding() else WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+
+@Composable
+fun LoadingBox(modifier: Modifier = Modifier, aboveTabBar: Boolean = false) {
+    Box(modifier.fillMaxSize().padding(bottom = visibleBottom(aboveTabBar)), contentAlignment = Alignment.Center) {
         CircularProgressIndicator(color = Palette.Accent, strokeWidth = 3.dp, modifier = Modifier.size(32.dp))
     }
 }
 
-/** What failed, with a way to try again. */
+/**
+ * What can't show without the server, while it can't be reached: the
+ * disconnect icon and a way to try again, nothing more. Every page and
+ * section shows the same, so being offline reads the same everywhere.
+ */
 @Composable
-fun ErrorBox(title: String, message: String?, onRetry: (() -> Unit)?, modifier: Modifier = Modifier) {
+fun Disconnected(onRetry: (() -> Unit)?, modifier: Modifier = Modifier) {
+    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        LucideIcon(Lucide.CloudOff, stringResource(R.string.server_unreachable), size = 32.dp, tint = Palette.Muted)
+        if (onRetry != null) {
+            Spacer(Modifier.size(16.dp))
+            MatineeButton(onClick = onRetry, look = ButtonLook.Outline) {
+                LucideIcon(Lucide.RefreshCw, null, size = 16.dp)
+                Text(stringResource(R.string.common_retry))
+            }
+        }
+    }
+}
+
+/**
+ * For a page still showing what loaded before: the disconnect icon in its
+ * top bar while [loaders] can't reach the server, tapped to try again.
+ */
+@Composable
+fun DisconnectedAction(vararg loaders: io.github.zekurio.matinee.ui.Loader<*>) {
+    val cut = loaders.filter { it.refreshError != null && it.refreshDisconnected }
+    if (cut.isEmpty()) return
+    RoundIconButton(
+        Lucide.CloudOff,
+        stringResource(R.string.server_unreachable),
+        { cut.forEach { it.reload() } },
+        size = 40.dp,
+        iconSize = 20.dp,
+        tint = Palette.Muted,
+        background = Color.Transparent,
+        enabled = cut.none { it.refreshing },
+    )
+}
+
+/** What failed, with a way to try again; while the server can't be reached, just [Disconnected]. */
+@Composable
+fun ErrorBox(
+    title: String,
+    message: String?,
+    onRetry: (() -> Unit)?,
+    modifier: Modifier = Modifier,
+    aboveTabBar: Boolean = false,
+    disconnected: Boolean = false,
+) {
+    if (disconnected) {
+        Box(modifier.fillMaxSize().padding(bottom = visibleBottom(aboveTabBar)).padding(32.dp), contentAlignment = Alignment.Center) {
+            Disconnected(onRetry)
+        }
+        return
+    }
     Column(
-        modifier.fillMaxSize().padding(32.dp),
+        modifier.fillMaxSize().padding(bottom = visibleBottom(aboveTabBar)).padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {

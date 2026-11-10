@@ -104,7 +104,7 @@ fun PersonScreen(name: String) {
         TopBar(null, home = true)
         when (val state = person.state) {
             Load.Loading -> LoadingBox()
-            is Load.Failed -> ErrorBox(stringResource(R.string.person_load_failed), state.message, person::reload)
+            is Load.Failed -> ErrorBox(stringResource(R.string.person_load_failed), state.message, person::reload, disconnected = state.disconnected)
             is Load.Ready -> {
                 val value = state.value
                 LazyVerticalGrid(

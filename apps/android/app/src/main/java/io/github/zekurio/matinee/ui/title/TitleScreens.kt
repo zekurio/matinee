@@ -86,7 +86,7 @@ private fun <T> PageState(state: Load<T>, error: String, retry: () -> Unit, cont
         }
         is Load.Failed -> Column(Modifier.fillMaxSize()) {
             ItemTopBar()
-            ErrorBox(error, state.message, retry)
+            ErrorBox(error, state.message, retry, disconnected = state.disconnected)
         }
         is Load.Ready -> content(state.value)
     }

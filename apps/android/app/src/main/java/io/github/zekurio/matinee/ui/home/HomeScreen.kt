@@ -39,6 +39,7 @@ import io.github.zekurio.matinee.ui.LocalNavigator
 import io.github.zekurio.matinee.ui.LocalUser
 import io.github.zekurio.matinee.ui.RefreshOnResume
 import io.github.zekurio.matinee.ui.StatusBarScrim
+import io.github.zekurio.matinee.ui.components.DisconnectedAction
 import io.github.zekurio.matinee.ui.components.EpisodeCard
 import io.github.zekurio.matinee.ui.components.ErrorBox
 import io.github.zekurio.matinee.ui.components.Gap
@@ -82,6 +83,8 @@ fun HomeScreen() {
                 stringResource(R.string.home_failed),
                 (libraries.state as? Load.Failed)?.message,
                 { sections.forEach { it.reload() } },
+                aboveTabBar = true,
+                disconnected = (libraries.state as? Load.Failed)?.disconnected == true,
             )
         }
         return
@@ -99,7 +102,8 @@ fun HomeScreen() {
             verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
             item(key = "hero") {
-                val top: @Composable () -> Unit = { AppHeader() }
+                // Showing what loaded before while the server can't be reached: the icon, up top.
+                val top: @Composable () -> Unit = { AppHeader { DisconnectedAction(*stale.toTypedArray()) } }
                 when (val state = featured.state) {
                     Load.Loading -> HeroSkeleton(Modifier.height(heroHeight), top)
                     is Load.Failed -> Column {
@@ -109,6 +113,7 @@ fun HomeScreen() {
                             state.message,
                             featured::reload,
                             Modifier.padding(top = 8.dp),
+                            disconnected = state.disconnected,
                         )
                     }
                     is Load.Ready -> if (state.value.isNotEmpty()) Hero(state.value, Modifier.height(heroHeight), top)
@@ -116,7 +121,8 @@ fun HomeScreen() {
                 }
             }
 
-            if (staleError != null) {
+            // Other failures to refresh still say what happened; not reaching the server is the header's icon.
+            if (staleError != null && stale.any { it.refreshError != null && !it.refreshDisconnected }) {
                 item(key = "stale") {
                     Notice(
                         stringResource(R.string.loading_stale),
@@ -137,7 +143,7 @@ fun HomeScreen() {
             when (val state = libraries.state) {
                 Load.Loading -> item(key = "shelves-loading") { RailSkeleton(null, RailArt.Poster) }
                 is Load.Failed -> item(key = "shelves-failed") {
-                    Notice(stringResource(R.string.home_load_failed), state.message, libraries::reload, retrying = libraries.refreshing)
+                    Notice(stringResource(R.string.home_load_failed), state.message, libraries::reload, retrying = libraries.refreshing, disconnected = state.disconnected)
                 }
                 is Load.Ready -> state.value.forEach { library ->
                     item(key = "shelf-${library.id}") { LibraryShelf(library, staleShelves) }
@@ -157,7 +163,7 @@ private fun LazyListScope.episodeRail(key: String, @StringRes title: Int, @Strin
     when (val rail = railState(loader.state)) {
         RailState.Loading, RailState.Empty -> Unit
         is RailState.Failed -> item(key = key) {
-            RailFailure(stringResource(title), stringResource(failed), rail.message, loader::reload, retrying = loader.refreshing)
+            RailFailure(stringResource(title), stringResource(failed), rail.message, loader::reload, retrying = loader.refreshing, disconnected = rail.disconnected)
         }
         is RailState.Shown -> item(key = key) { EpisodeRail(stringResource(title), rail.items) }
     }
@@ -197,6 +203,7 @@ private fun LibraryShelf(library: Library, stale: MutableMap<String, Loader<*>>)
             state.message,
             entries::reload,
             retrying = entries.refreshing,
+            disconnected = state.disconnected,
         )
         RailState.Empty -> Rail(title, onTitleClick = onTitleClick) {
             item {

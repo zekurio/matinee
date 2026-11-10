@@ -16,6 +16,12 @@ class HomeSectionsTest {
     }
 
     @Test
+    fun aRailKnowsItFailedForWantOfTheServer() {
+        assertEquals(RailState.Failed("unreachable", disconnected = true), railState<Int>(Load.Failed("unreachable", disconnected = true)))
+        assertEquals(RailState.Failed("broke", disconnected = false), railState<Int>(Load.Failed("broke")))
+    }
+
+    @Test
     fun homeIsOneErrorOnlyWhenNothingCouldShow() {
         val failed = Load.Failed("offline")
         val empty = Load.Ready(emptyList<Int>())

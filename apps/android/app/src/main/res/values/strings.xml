@@ -481,6 +481,7 @@
 
     <!-- Downloads -->
     <string name="error_unreachable">The server can\'t be reached right now.</string>
+    <string name="server_unreachable">Server not reachable</string>
     <string name="error_connection_lost">The connection to the server broke off.</string>
     <string name="player_fill">Fill screen</string>
     <string name="player_fit">Whole picture</string>

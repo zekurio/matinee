@@ -392,7 +392,7 @@ fun EpisodeRow(item: MediaItem, modifier: Modifier = Modifier) {
             ArtFrame(label.showName, 16f / 9f) {
                 Picture(api.landscape(item, ArtworkSize.Thumb), Modifier.fillMaxSize())
                 if (watched) WatchedBadge(Modifier.align(Alignment.TopEnd).padding(5.dp), size = 18.dp)
-                else if (ratio != null && ratio > 0f) ProgressBar(ratio, Modifier.align(Alignment.BottomCenter), 3.dp)
+                else if (ratio != null && ratio > 0f) ProgressBar(ratio, Modifier.align(Alignment.BottomCenter), inset = 6.dp)
             }
         }
         Column(Modifier.weight(1f)) {

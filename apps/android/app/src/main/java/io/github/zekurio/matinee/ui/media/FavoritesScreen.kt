@@ -52,7 +52,7 @@ fun FavoritesScreen() {
         val episodes = (items.state as? Load.Ready)?.value?.filter(viewer::isFavorite).orEmpty()
         val failed = titles.state as? Load.Failed
         when {
-            failed != null -> ErrorBox(stringResource(R.string.favorites_load_failed), failed.message, titles::reload)
+            failed != null -> ErrorBox(stringResource(R.string.favorites_load_failed), failed.message, titles::reload, disconnected = failed.disconnected)
             shows == null -> LoadingBox()
             shows.isEmpty() && episodes.isEmpty() -> Empty()
             else -> LazyVerticalGrid(

@@ -170,7 +170,8 @@ sealed interface Load<out T> {
 
     data class Ready<T>(val value: T) : Load<T>
 
-    data class Failed(val message: String) : Load<Nothing>
+    /** [disconnected]: the server couldn't be reached, or the connection broke off, rather than it answering with an error. */
+    data class Failed(val message: String, val disconnected: Boolean = false) : Load<Nothing>
 }
 
 /**
@@ -188,19 +189,22 @@ fun describeFailure(resources: Resources, e: Exception): String = when (e) {
     else -> resources.getString(R.string.error_connection_lost)
 }
 
+/** Whether [e] means the server couldn't be reached or the connection broke off, not that it answered with an error. */
+fun isDisconnect(e: Exception): Boolean = e is IOException && e !is ApiException
+
 /** Fetch again on return after this long, when nothing asked for it sooner. */
 const val REFRESH_AFTER_MS = 30_000L
 
 /** Where a load stands after an answer or a failure. */
-internal data class Settled<out T>(val state: Load<T>, val refreshError: String?)
+internal data class Settled<out T>(val state: Load<T>, val refreshError: String?, val refreshDisconnected: Boolean = false)
 
 /**
  * A fetch that failed with [message], over what showed before it: an
  * earlier answer stays on screen, marked stale, so a refresh that fails
  * doesn't blank what the person saw.
  */
-internal fun <T> Load<T>.failedWith(message: String): Settled<T> =
-    if (this is Load.Ready) Settled(this, message) else Settled(Load.Failed(message), null)
+internal fun <T> Load<T>.failedWith(message: String, disconnected: Boolean = false): Settled<T> =
+    if (this is Load.Ready) Settled(this, message, disconnected) else Settled(Load.Failed(message, disconnected), null)
 
 /**
  * What a screen loads from the server, kept while the screen is on the
@@ -213,6 +217,10 @@ class Loader<T>(private val describe: (Exception) -> String, private val fetch: 
 
     /** Why the newest fetch failed while [state] still shows an earlier answer; null once one comes. */
     var refreshError by mutableStateOf<String?>(null)
+        private set
+
+    /** [refreshError] came from not reaching the server, rather than from its answer. */
+    var refreshDisconnected by mutableStateOf(false)
         private set
 
     /** A fetch is out. */
@@ -250,7 +258,7 @@ class Loader<T>(private val describe: (Exception) -> String, private val fetch: 
             } catch (e: CancellationException) {
                 throw e
             } catch (e: IOException) {
-                if (current()) settle(state.failedWith(describe(e)))
+                if (current()) settle(state.failedWith(describe(e), isDisconnect(e)))
             } catch (e: SerializationException) {
                 Log.w(TAG, "The server's answer didn't parse", e)
                 if (current()) settle(state.failedWith(describe(e)))
@@ -261,6 +269,7 @@ class Loader<T>(private val describe: (Exception) -> String, private val fetch: 
     private fun settle(next: Settled<T>) {
         state = next.state
         refreshError = next.refreshError
+        refreshDisconnected = next.refreshDisconnected
         refreshing = false
         settledAt = SystemClock.elapsedRealtime()
     }

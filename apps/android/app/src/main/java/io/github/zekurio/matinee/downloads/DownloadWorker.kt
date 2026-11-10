@@ -39,6 +39,25 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
 
+/** Why a download stopped, before it's put in words. */
+internal sealed interface DownloadFailure {
+    /** The server answered, and said why. */
+    data class Server(val message: String) : DownloadFailure
+
+    /** The server couldn't be reached at all. */
+    data object Unreachable : DownloadFailure
+
+    /** It was reached, then the connection broke off. */
+    data object BrokeOff : DownloadFailure
+}
+
+internal fun downloadFailure(e: IOException): DownloadFailure = when (e) {
+    is ApiException -> DownloadFailure.Server(e.message)
+    is UnknownHostException, is ConnectException, is SocketTimeoutException, is NoRouteToHostException, is SSLException ->
+        DownloadFailure.Unreachable
+    else -> DownloadFailure.BrokeOff
+}
+
 /** The server wants the download started over: the file or its settings changed. */
 private class StartOver : IOException("start over")
 
@@ -104,11 +123,10 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
      */
     private fun failureLabel(e: IOException): String {
         val res = applicationContext.resources
-        return when (e) {
-            is ApiException -> e.message
-            is UnknownHostException, is ConnectException, is SocketTimeoutException, is NoRouteToHostException, is SSLException ->
-                res.getString(R.string.downloads_error_unreachable)
-            else -> res.getString(R.string.downloads_error_broke_off)
+        return when (val failure = downloadFailure(e)) {
+            is DownloadFailure.Server -> failure.message
+            DownloadFailure.Unreachable -> res.getString(R.string.downloads_error_unreachable)
+            DownloadFailure.BrokeOff -> res.getString(R.string.downloads_error_broke_off)
         }
     }
 
