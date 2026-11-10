@@ -16,6 +16,8 @@ import {
   subtitlePath,
 } from "@matinee/contracts"
 
+import { playbackVideoCodec } from "./playback-codec"
+
 function baseLanguage(tag: string | null): string | null {
   if (!tag) return null
   try {
@@ -306,6 +308,10 @@ export function decidePlayback(
     start: method === "direct" || hls ? position : 0,
     position,
     audio,
+    convertedVideo:
+      method === "transcode"
+        ? playbackVideoCodec(encodeVideo, facts.videoCodecs)
+        : null,
     convertedAudio,
     standIn,
     subtitle,
