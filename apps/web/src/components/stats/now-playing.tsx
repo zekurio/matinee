@@ -18,11 +18,9 @@ import { art, channelLayout, itemLabel } from "@/lib/media"
 import { errorMessage, liveQuery, orpc } from "@/lib/rpc"
 import {
   audioEncoderName,
-  dynamicRangeName,
   encoderDevice,
   encoderOutput,
   qualityName,
-  resolutionOf,
   toneMapperName,
 } from "@/lib/stats"
 
@@ -136,9 +134,9 @@ function videoLine(session: NowPlaying): StreamLine | null {
   const codec = video?.codec ?? session.videoCodec
   if (!codec) return null
   const from = [
-    videoCodecName(codec),
-    video ? resolutionOf(video.width, video.height) : null,
-    video?.hdr ? dynamicRangeName(video.hdr) : null,
+    video?.format ?? videoCodecName(codec),
+    video?.resolution,
+    video?.dynamicRange,
   ]
     .filter(Boolean)
     .join(" ")
@@ -183,10 +181,8 @@ function audioLine(session: NowPlaying): StreamLine | null {
   const track =
     tracks.find((entry) => entry.codec === codec && entry.default) ??
     tracks.find((entry) => entry.codec === codec)
-  const layout = track
-    ? channelLayout(track.channelLayout, track.channels)
-    : null
-  const from = [audioFormatName(codec, track?.profile ?? null), layout]
+  const layout = track ? channelLayout(track.layout, track.channels) : null
+  const from = [track?.format ?? audioFormatName(codec), layout]
     .filter(Boolean)
     .join(" ")
   if (!session.audioConverted) {

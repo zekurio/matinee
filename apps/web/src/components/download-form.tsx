@@ -17,7 +17,7 @@ import {
   type SubtitleTrack,
   type TranscodeAudioCodec,
   type TranscodeVideoCodec,
-  type VideoStream,
+  type DisplayVideoStream,
   videoCodecName,
 } from "@matinee/contracts"
 import { Button } from "@matinee/ui/components/button"
@@ -55,18 +55,14 @@ import {
 import { DownloadIcon } from "lucide-react"
 import { useId } from "react"
 
-import {
-  audioDetail,
-  formatBitrate,
-  resolutionName,
-} from "@/components/player-format"
+import { audioDetail, formatBitrate } from "@/components/player-format"
 import { tr } from "@/i18n"
 import { browserAudioCodecs } from "@/lib/audio-support"
 import { downloadOriginal, downloadUrl } from "@/lib/download"
 import { firstError, useAppForm } from "@/lib/form"
 import { formatBytes } from "@/lib/format"
 import { baseLanguage, deviceLanguage, trackLabel } from "@/lib/languages"
-import { channelLayout } from "@/lib/media"
+import { outputChannelLayout } from "@/lib/media"
 import { usePlaybackPreferences } from "@/lib/playback-sync"
 import { client, errorMessage, orpc } from "@/lib/rpc"
 import { subtitleLabel, trackDetail } from "@/lib/subtitles"
@@ -120,7 +116,7 @@ function presetValue(preset: DownloadVideoPreset): string {
  * source's width or height, so a 1920×800 movie still gets 1080p. The
  * smallest is always there.
  */
-function presetsFor(video: VideoStream): DownloadVideoPreset[] {
+function presetsFor(video: DisplayVideoStream): DownloadVideoPreset[] {
   const fits = DOWNLOAD_VIDEO_PRESETS.filter(
     (preset) =>
       preset.height <= video.height ||
@@ -154,7 +150,7 @@ type Rules = {
  */
 function rulesFor(
   container: DownloadContainer,
-  video: VideoStream | null,
+  video: DisplayVideoStream | null,
   subtitles: readonly SubtitleTrack[],
   options: PlaybackOptions | null,
 ): Rules {
@@ -215,7 +211,7 @@ function audioChoices(
         value: `${codec}:${count}`,
         label: tr("downloads.audio.convert", {
           codec: audioFormatName(codec),
-          layout: channelLayout(null, count) ?? String(count),
+          layout: outputChannelLayout(count) ?? String(count),
         }),
       })
     }
@@ -433,7 +429,7 @@ function DownloadFields({
   item: MediaItem
   name: string
   /** Null when only the original can be downloaded. */
-  video: VideoStream | null
+  video: DisplayVideoStream | null
   tracks: AudioTrack[]
   subtitles: SubtitleTrack[]
   options: PlaybackOptions | null
@@ -604,11 +600,8 @@ function DownloadFields({
                               {
                                 value: COPY,
                                 label: tr("downloads.video.keep", {
-                                  codec: videoCodecName(video.codec),
-                                  resolution: resolutionName(
-                                    video.width,
-                                    video.height,
-                                  ),
+                                  codec: video.format,
+                                  resolution: video.resolution,
                                 }),
                               },
                             ]

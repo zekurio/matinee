@@ -1,10 +1,10 @@
 import {
   type AudioTrack,
   audioFormatName,
-  type MediaProbe,
+  type DisplayMediaProbe,
   PLAYBACK_QUALITIES,
   type SessionStream,
-  type VideoStream,
+  type DisplayVideoStream,
   videoCodecName,
 } from "@matinee/contracts"
 import { useQuery } from "@tanstack/react-query"
@@ -34,7 +34,7 @@ export type FileInfo = {
   /** Such as `mkv`. */
   container: string
   sizeBytes: number
-  probe: MediaProbe | null
+  probe: DisplayMediaProbe | null
 }
 
 /** What the browser says about the picture, read once a second. */
@@ -148,7 +148,7 @@ function colorName(name: string): string {
 }
 
 /** `Dolby Vision profile 8.1`, `HDR10+`, or `SDR`. */
-function dynamicRange(video: VideoStream): string {
+function dynamicRange(video: DisplayVideoStream): string {
   if (video.hdr === "dolby-vision") {
     const record = video.dolbyVision
     const compatible = record?.blCompatibilityId
@@ -161,24 +161,20 @@ function dynamicRange(video: VideoStream): string {
       ? "Dolby Vision"
       : tr("player.stats.dolbyVision", { profile: String(profile) })
   }
-  if (video.hdr === "hdr10") return video.hdr10Plus ? "HDR10+" : "HDR10"
-  if (video.hdr === "hlg") return "HLG"
-  return "SDR"
+  return video.dynamicRange ?? "SDR"
 }
 
 /** Why the file doesn't play as it is. */
 function reasons(
   source: PlaybackSource,
   track: AudioTrack | undefined,
-  video: VideoStream | null,
+  video: DisplayVideoStream | null,
   videoPlays: boolean,
   directFailed: boolean,
 ): string[] {
   const found: string[] = []
   if (!videoPlays && video) {
-    found.push(
-      tr("player.stats.reason.video", { codec: videoCodecName(video.codec) }),
-    )
+    found.push(tr("player.stats.reason.video", { codec: video.format }))
   }
   if (directFailed) found.push(tr("player.stats.reason.directFailed"))
   if (track && !decodesAudio(track.codec)) {
@@ -256,7 +252,7 @@ function playbackRows(
 
 function videoRows(
   source: PlaybackSource,
-  video: VideoStream | null,
+  video: DisplayVideoStream | null,
   server: SessionStream | null,
   sample: Sample | null,
 ): Row[] {
@@ -266,7 +262,7 @@ function videoRows(
     rows.push({
       label: tr("player.stats.video"),
       value: [
-        [videoCodecName(video.codec), video.profile].filter(Boolean).join(" "),
+        [video.format, video.profile].filter(Boolean).join(" "),
         size(video.width, video.height),
         video.frameRate &&
           tr("player.stats.fps", { fps: decimals().format(video.frameRate) }),
