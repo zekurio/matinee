@@ -133,23 +133,23 @@ export const MediaProbe = t.object({
 })
 export type MediaProbe = t.infer<typeof MediaProbe>
 
-/** A probed video with display facts. Absent fields mark older saved items. */
+/** A probed video with display facts. */
 export const DisplayVideoStream = VideoStream.extend({
   /** The codec's short name, like `HEVC` or `WMV`. */
-  format: t.string().optional(),
+  format: t.string(),
   /** The frame size for display, like `4K` or `1080p`. */
-  resolution: t.string().optional(),
+  resolution: t.string(),
   /** `Dolby Vision`, `HDR10+`, `HDR10`, or `HLG`. Null for SDR. */
-  dynamicRange: t.string().nullable().optional(),
+  dynamicRange: t.string().nullable(),
 })
 export type DisplayVideoStream = t.infer<typeof DisplayVideoStream>
 
 /** A probed audio stream with display facts. */
 export const DisplayAudioStream = AudioStream.extend({
   /** The codec and profile, like `TrueHD Atmos` or `DTS-HD MA`. */
-  format: t.string().optional(),
+  format: t.string(),
   /** Speakers, like `5.1` or `Stereo`. Null when no known layout fits. */
-  layout: t.string().nullable().optional(),
+  layout: t.string().nullable(),
 })
 export type DisplayAudioStream = t.infer<typeof DisplayAudioStream>
 

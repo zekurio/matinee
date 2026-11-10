@@ -685,9 +685,9 @@ data class DisplayVideoStream(
     val hdr10Plus: Boolean,
     val masteringDisplay: Boolean,
     val contentLightLevel: ContentLightLevel?,
-    val format: String? = null,
-    val resolution: String? = null,
-    val dynamicRange: Explicit<String>? = null,
+    val format: String,
+    val resolution: String,
+    val dynamicRange: String?,
 )
 
 @Serializable
@@ -700,8 +700,8 @@ data class DisplayAudioStream(
     val language: String?,
     val title: String?,
     val default: Boolean,
-    val format: String? = null,
-    val layout: Explicit<String>? = null,
+    val format: String,
+    val layout: String?,
 )
 
 object SubtitleKind {
@@ -749,7 +749,7 @@ data class MediaItem(
     val id: String,
     val libraryId: String,
     val fileTitle: String,
-    val label: ItemLabel? = null,
+    val label: ItemLabel,
     val title: TitleSummary?,
     val seasonNumber: Int?,
     val episodeNumber: Int?,

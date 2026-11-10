@@ -120,8 +120,8 @@ export const MediaItem = t.object({
   libraryId: t.uuid(),
   /** A readable name from the file name alone, like `Show S01E02`. */
   fileTitle: t.string(),
-  /** Server-computed display names. Absent in older saved items. */
-  label: ItemLabel.optional(),
+  /** What to call the file, worked out by the server. */
+  label: ItemLabel,
   /** The movie or show the file belongs to. Null until scanned. */
   title: TitleSummary.nullable(),
   /** From the file name or its season folder. */
