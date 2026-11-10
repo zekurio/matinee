@@ -317,7 +317,7 @@ internal fun names(item: MediaItem): Pair<String, String?> {
     val label = itemLabel(item, res)
     val code = episodeCode(item, res)
     return if (code != null) label.showName to stringResource(R.string.media_code_title, code, label.title)
-    else label.title to label.year
+    else label.title to null
 }
 
 /** A file's saved picture, or the title's tone without one. */

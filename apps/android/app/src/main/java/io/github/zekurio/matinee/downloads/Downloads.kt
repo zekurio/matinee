@@ -20,8 +20,9 @@ import io.github.zekurio.matinee.api.DownloadWishes
 import io.github.zekurio.matinee.api.MatineeApi
 import io.github.zekurio.matinee.api.MediaItem
 import io.github.zekurio.matinee.api.SubtitleTrack
-import io.github.zekurio.matinee.api.playbackDevice
+import io.github.zekurio.matinee.api.downloadDevice
 import io.github.zekurio.matinee.app
+import io.github.zekurio.matinee.ui.player.AUTOMATIC
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -56,19 +57,24 @@ class Downloads(private val context: Context) {
     var defaultVersion: String
         get() = prefs.getString("default_version", null) ?: DEFAULT_DEVICE
         set(value) = prefs.edit { putString("default_version", value) }
+    /** The codec a download comes in when its video is encoded, or [AUTOMATIC] for the server's first. */
+    var videoCodec: String
+        get() = prefs.getString("video_codec", null) ?: AUTOMATIC
+        set(value) = prefs.edit { putString("video_codec", value) }
     var subtitles: DownloadSubtitles
         get() = prefs.getString("subtitles", null)?.let { saved -> DownloadSubtitles.entries.firstOrNull { it.name == saved } } ?: DownloadSubtitles.USED
         set(value) = prefs.edit { putString("subtitles", value.name) }
 
     fun wishes(preset: DownloadVideoPreset? = null, codec: String? = null, audio: List<Int>? = null) = DownloadWishes(
-        preset = preset?.let { DownloadWishes.Preset(it.height, it.bitrate) }, codec = codec,
+        preset = preset?.let { DownloadWishes.Preset(it.height, it.bitrate) },
+        codec = codec ?: videoCodec.takeIf { it != AUTOMATIC },
         audio = if (audio == null) "preferred" else "selected", audioIndices = audio,
         subtitles = subtitles.name.lowercase(),
     )
 
     suspend fun resolve(api: MatineeApi, items: List<MediaItem>, wishes: DownloadWishes): List<DownloadResolution> =
         items.chunked(100).flatMap { batch ->
-            api.downloads.resolve(DownloadResolveInput(batch.map { it.id }, playbackDevice(context.app.player), wishes))
+            api.downloads.resolve(DownloadResolveInput(batch.map { it.id }, downloadDevice(context.app.player), wishes))
         }
 
     fun defaultAudio(source: DownloadSource) = source.audio.filter { track ->

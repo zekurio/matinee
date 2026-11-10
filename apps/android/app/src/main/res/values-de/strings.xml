@@ -369,6 +369,8 @@
     <string name="playback_video_codec_title">Videocodec</string>
     <string name="playback_audio_codec_title">Audiocodec</string>
     <string name="playback_codec_automatic">Automatisch (%1$s)</string>
+    <string name="playback_transcoding_title">Transkodierung</string>
+    <string name="playback_transcoding_note">Gilt nur, wenn der Server eine Datei zum Abspielen umwandelt. Downloads haben unter Downloads einen eigenen Codec.</string>
     <string name="playback_engine_title">Player</string>
     <string name="playback_decoders_title">Decoder</string>
     <string name="playback_decoders_hardware">Hardware zuerst</string>
@@ -477,6 +479,8 @@
     <string name="downloads_coming">Wird heruntergeladen</string>
     <string name="downloads_done">Auf diesem Gerät</string>
     <string name="downloads_codec">Codec</string>
+    <string name="downloads_codec_kept">%1$s, unverändert</string>
+    <string name="downloads_codec_note">Gilt, wenn das Video eines Downloads umgewandelt wird. Die Wiedergabe hat einen eigenen Codec fürs Transkodieren.</string>
     <string name="downloads_empty">Noch nichts heruntergeladen</string>
     <string name="downloads_empty_hint">Lade einen Film oder eine Folge über ihr Menü herunter, um sie offline anzusehen.</string>
     <string name="downloads_pause">Pausieren</string>

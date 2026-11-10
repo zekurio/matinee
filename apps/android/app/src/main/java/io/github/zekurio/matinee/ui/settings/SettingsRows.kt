@@ -67,13 +67,16 @@ private fun androidx.compose.foundation.layout.RowScope.RowText(title: String, c
     Text(title, style = MaterialTheme.typography.bodyLarge, color = color, modifier = Modifier.weight(1f))
 }
 
-/** A choice among [options], shown at the row's end and picked from a menu that opens there. */
+/**
+ * A choice among [options], shown at the row's end and picked from a menu
+ * that opens there. A row that isn't [enabled] only shows its value.
+ */
 @Composable
-fun <T> PickerRow(title: String, options: List<Pair<T, String>>, current: T, onPick: (T) -> Unit) {
+fun <T> PickerRow(title: String, options: List<Pair<T, String>>, current: T, enabled: Boolean = true, onPick: (T) -> Unit) {
     var open by remember { mutableStateOf(false) }
     Box {
         Row(
-            Modifier.fillMaxWidth().clickable { open = true }.padding(horizontal = 16.dp, vertical = 14.dp),
+            Modifier.fillMaxWidth().clickable(enabled = enabled) { open = true }.padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             RowText(title)
@@ -86,7 +89,7 @@ fun <T> PickerRow(title: String, options: List<Pair<T, String>>, current: T, onP
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.widthIn(max = 160.dp),
             )
-            LucideIcon(Lucide.ChevronDown, null, size = 16.dp, tint = Palette.Muted, modifier = Modifier.padding(start = 4.dp))
+            if (enabled) LucideIcon(Lucide.ChevronDown, null, size = 16.dp, tint = Palette.Muted, modifier = Modifier.padding(start = 4.dp))
         }
         // Anchored to a point under the chevron: the menu never fits to the right of it, so it
         // lines its right edge up with the chevron's instead of opening at the row's left.

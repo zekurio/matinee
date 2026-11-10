@@ -349,6 +349,7 @@ private fun PlaybackPage(session: Session) {
         item(key = "languages") { LanguagesSection(playback, loaded, save) }
         item(key = "skips") { SkipsSection(playback, loaded, save) }
         item(key = "device") { DeviceSection(prefs, loaded) }
+        item(key = "transcoding") { TranscodingSection(prefs, loaded) }
         if (passthrough.isNotEmpty()) item(key = "passthrough") { PassthroughSection(prefs, passthrough) }
         item(key = "diagnostics") { PlaybackDiagnosticsSection() }
     }
@@ -509,27 +510,6 @@ private fun DeviceSection(prefs: PlayerPrefs, options: PlaybackOptions?) {
                 },
                 prefs.quality,
             ) { prefs.quality = it }
-            // A codec shows only when there's a choice: what the server encodes and this device decodes.
-            val video = Capabilities.encodeVideoChoices(options?.videoCodecs ?: listOf("h264"))
-            if (video.size > 1) {
-                RowDivider()
-                PickerRow(
-                    stringResource(R.string.playback_video_codec_title),
-                    listOf(AUTOMATIC to stringResource(R.string.playback_codec_automatic, videoCodecName("h264"))) +
-                        video.map { it to videoCodecName(it) },
-                    prefs.videoCodec.takeIf { it in video } ?: AUTOMATIC,
-                ) { prefs.videoCodec = it }
-            }
-            val audio = Capabilities.convertAudioCodecs(options?.audioCodecs ?: listOf("aac"))
-            if (audio.size > 1) {
-                RowDivider()
-                PickerRow(
-                    stringResource(R.string.playback_audio_codec_title),
-                    listOf(AUTOMATIC to stringResource(R.string.playback_codec_automatic, audioFormatName(audio.first()))) +
-                        audio.map { it to audioFormatName(it) },
-                    prefs.audioCodec.takeIf { it in audio } ?: AUTOMATIC,
-                ) { prefs.audioCodec = it }
-            }
             RowDivider()
             PickerRow(
                 stringResource(R.string.playback_engine_title),
@@ -561,6 +541,41 @@ private fun DeviceSection(prefs: PlayerPrefs, options: PlaybackOptions?) {
     }
 }
 
+/**
+ * The codecs the server converts to when this device can't play a file as
+ * it is. Downloads don't use them; they have a codec of their own.
+ */
+@Composable
+private fun TranscodingSection(prefs: PlayerPrefs, options: PlaybackOptions?) {
+    // A codec shows only when there's a choice: what the server encodes and this device decodes.
+    val video = Capabilities.encodeVideoChoices(options?.videoCodecs ?: listOf("h264"))
+    val audio = Capabilities.convertAudioCodecs(options?.audioCodecs ?: listOf("aac"))
+    if (video.size <= 1 && audio.size <= 1) return
+    Section(stringResource(R.string.playback_transcoding_title)) {
+        Panel {
+            if (video.size > 1) {
+                PickerRow(
+                    stringResource(R.string.playback_video_codec_title),
+                    listOf(AUTOMATIC to stringResource(R.string.playback_codec_automatic, videoCodecName("h264"))) +
+                        video.map { it to videoCodecName(it) },
+                    prefs.videoCodec.takeIf { it in video } ?: AUTOMATIC,
+                ) { prefs.videoCodec = it }
+            }
+            if (audio.size > 1) {
+                if (video.size > 1) RowDivider()
+                PickerRow(
+                    stringResource(R.string.playback_audio_codec_title),
+                    listOf(AUTOMATIC to stringResource(R.string.playback_codec_automatic, audioFormatName(audio.first()))) +
+                        audio.map { it to audioFormatName(it) },
+                    prefs.audioCodec.takeIf { it in audio } ?: AUTOMATIC,
+                ) { prefs.audioCodec = it }
+            }
+        }
+        Gap(8.dp)
+        Text(stringResource(R.string.playback_transcoding_note), style = MaterialTheme.typography.bodySmall, color = Palette.Muted)
+    }
+}
+
 /** A switch per format this device plays that the server could convert, as the web's passthrough. */
 @Composable
 private fun PassthroughSection(prefs: PlayerPrefs, codecs: List<String>) {
@@ -586,6 +601,7 @@ private fun DownloadsSection() {
     val items by downloads.store.items.collectAsState()
     var unmetered by remember { mutableStateOf(downloads.unmeteredOnly) }
     var version by remember { mutableStateOf(downloads.defaultVersion) }
+    var codec by remember { mutableStateOf(downloads.videoCodec) }
     var subtitles by remember { mutableStateOf(downloads.subtitles) }
     var confirm by remember { mutableStateOf(false) }
     val total = formatBytes(items.values.sumOf { it.bytes })
@@ -631,7 +647,23 @@ private fun DownloadsSection() {
                     subtitles = it
                     downloads.subtitles = it
                 }
+                // What an encoded download comes in: of the server's codecs, those this device decodes.
+                val codecs = Capabilities.encodeVideoChoices(loaded?.videoCodecs ?: listOf("h264"))
+                if (codecs.size > 1) {
+                    RowDivider()
+                    PickerRow(
+                        stringResource(R.string.downloads_codec),
+                        listOf(AUTOMATIC to stringResource(R.string.playback_codec_automatic, videoCodecName("h264"))) +
+                            codecs.map { it to videoCodecName(it) },
+                        codec.takeIf { it in codecs } ?: AUTOMATIC,
+                    ) {
+                        codec = it
+                        downloads.videoCodec = it
+                    }
+                }
             }
+            Gap(8.dp)
+            Text(stringResource(R.string.downloads_codec_note), style = MaterialTheme.typography.bodySmall, color = Palette.Muted)
         }
         if (items.isNotEmpty()) {
             Gap(28.dp)

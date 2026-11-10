@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
@@ -56,6 +55,9 @@ import io.github.zekurio.matinee.ui.formatBytes
 import io.github.zekurio.matinee.ui.player.audioLabel
 import io.github.zekurio.matinee.ui.player.subtitleDetail
 import io.github.zekurio.matinee.ui.player.subtitleLabel
+import io.github.zekurio.matinee.ui.settings.Panel
+import io.github.zekurio.matinee.ui.settings.PickerRow
+import io.github.zekurio.matinee.ui.settings.RowDivider
 import io.github.zekurio.matinee.ui.theme.Palette
 import io.github.zekurio.matinee.ui.videoCodecName
 import java.io.IOException
@@ -98,7 +100,7 @@ fun DownloadSheet(item: MediaItem, onDismiss: () -> Unit) {
             val ready = result as DownloadResolution.Ready
             val loaded = DownloadSource(item, ready)
             audio = downloads.defaultAudio(loaded).map { it.index }
-            codec = ready.choices.codecs.firstOrNull() ?: "h264"
+            codec = downloads.videoCodec.takeIf { it in ready.choices.codecs } ?: ready.choices.codecs.firstOrNull() ?: "h264"
             subtitles = downloads.defaultSubtitles(loaded).map { it.id }.toSet()
             picked = startingChoice(downloads, ready.choices.presets)
             source = loaded
@@ -167,16 +169,16 @@ fun DownloadSheet(item: MediaItem, onDismiss: () -> Unit) {
                     Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState())) {
                         // A size the server can't make for this file doesn't show.
                         val shown = downloadChoices(loaded.resolved.choices.presets).filter { it !is Choice.Device || it.preset == null || plans[it] != null }
-                        shown.forEach { choice ->
-                            ChoiceRow(choice, plans[choice], loaded, selected = picked == choice) { picked = choice }
-                        }
-                        // Only an encode has a codec to pick; Automatic may keep the video as it is.
-                        val encodes = (picked as? Choice.Device)?.let { it.preset != null || plans[it]?.video?.mode == "encode" } == true
-                        val codecs = loaded.resolved.choices.codecs
-                        if (encodes && codecs.size > 1) {
-                            SheetHeading(stringResource(R.string.downloads_codec))
-                            CodecPicker(codecs, codec) { codec = it }
-                        }
+                        VersionPanel(
+                            choices = shown,
+                            picked = picked,
+                            onPick = { picked = it },
+                            codecs = loaded.resolved.choices.codecs,
+                            codec = codec,
+                            onCodec = { codec = it },
+                            plan = (picked as? Choice.Device)?.let { plans[it] },
+                            detail = choiceDetail(picked, plans[picked], loaded),
+                        )
                         // The file as it is keeps every track.
                         if (device && loaded.audio.isNotEmpty()) {
                             SheetHeading(stringResource(R.string.downloads_audio_title))
@@ -243,10 +245,11 @@ fun DownloadSheet(item: MediaItem, onDismiss: () -> Unit) {
     }
 }
 
+/** What the picked version comes to: its size, and how the video is saved. */
 @Composable
-private fun ChoiceRow(choice: Choice, plan: DownloadPlan?, source: DownloadSource, selected: Boolean, onClick: () -> Unit) {
+private fun choiceDetail(choice: Choice, plan: DownloadPlan?, source: DownloadSource): String {
     val downloads = LocalContext.current.app.downloads
-    val detail = when (choice) {
+    return when (choice) {
         Choice.Original -> listOfNotNull(
             formatBytes(source.item.sizeBytes),
             source.item.container.uppercase(),
@@ -259,25 +262,47 @@ private fun ChoiceRow(choice: Choice, plan: DownloadPlan?, source: DownloadSourc
             ).joinToString(" · ")
         } ?: stringResource(R.string.downloads_choice_unavailable)
     }
-    RadioRow(choiceName(choice), detail, selected, onClick)
 }
 
-/** The codecs a download can be encoded in, as pills, the picked one filled. */
+/**
+ * The version to save and its codec, as two menus, with what the version
+ * comes to under them. The codec applies only to video that gets encoded:
+ * the original keeps its file, and a version that keeps the video says
+ * which codec it stays in.
+ */
 @Composable
-internal fun CodecPicker(codecs: List<String>, selected: String, onPick: (String) -> Unit) {
-    Row(Modifier.padding(horizontal = 20.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        codecs.forEach { codec ->
-            val on = codec == selected
-            Text(
-                videoCodecName(codec),
-                style = MaterialTheme.typography.labelLarge,
-                color = if (on) Palette.AccentForeground else Palette.Foreground,
-                modifier = Modifier
-                    .clip(CircleShape)
-                    .background(if (on) Palette.Accent else Palette.Secondary)
-                    .clickable { onPick(codec) }
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-            )
+internal fun VersionPanel(
+    choices: List<Choice>,
+    picked: Choice,
+    onPick: (Choice) -> Unit,
+    codecs: List<String>,
+    codec: String?,
+    onCodec: (String) -> Unit,
+    plan: DownloadPlan?,
+    detail: String?,
+) {
+    Column(Modifier.padding(horizontal = 20.dp)) {
+        Panel {
+            PickerRow(stringResource(R.string.downloads_default_title), choices.map { it to choiceName(it) }, picked, onPick = onPick)
+            if (picked is Choice.Device && codec != null && codecs.isNotEmpty()) {
+                RowDivider()
+                // Without a preset the server may keep the video, and then there's nothing to encode.
+                val kept = picked.preset == null && plan != null && plan.video.mode != "encode"
+                if (kept) {
+                    PickerRow(
+                        stringResource(R.string.downloads_codec),
+                        listOf(Unit to stringResource(R.string.downloads_codec_kept, videoCodecName(plan.video.codec))),
+                        Unit,
+                        enabled = false,
+                    ) {}
+                } else {
+                    PickerRow(stringResource(R.string.downloads_codec), codecs.map { it to videoCodecName(it) }, codec, enabled = codecs.size > 1, onPick = onCodec)
+                }
+            }
+        }
+        if (!detail.isNullOrEmpty()) {
+            Gap(6.dp)
+            Text(detail, style = MaterialTheme.typography.bodySmall, color = Palette.Muted)
         }
     }
 }

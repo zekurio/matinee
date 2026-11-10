@@ -391,6 +391,8 @@
     <string name="playback_video_codec_title">Video codec</string>
     <string name="playback_audio_codec_title">Audio codec</string>
     <string name="playback_codec_automatic">Automatic (%1$s)</string>
+    <string name="playback_transcoding_title">Transcoding</string>
+    <string name="playback_transcoding_note">Only used when the server converts a file to play it. Downloads have their own codec under Downloads.</string>
     <string name="playback_engine_title">Player</string>
     <string name="playback_decoders_title">Decoders</string>
     <string name="playback_decoders_hardware">Hardware first</string>
@@ -501,6 +503,8 @@
     <string name="downloads_coming">Downloading</string>
     <string name="downloads_done">On this device</string>
     <string name="downloads_codec">Codec</string>
+    <string name="downloads_codec_kept">%1$s, unchanged</string>
+    <string name="downloads_codec_note">Used when a download\'s video is converted. Playback has its own codec for transcoding.</string>
     <string name="downloads_empty">Nothing downloaded yet</string>
     <string name="downloads_empty_hint">Download a movie or episode from its menu to watch it offline.</string>
     <string name="downloads_pause">Pause</string>

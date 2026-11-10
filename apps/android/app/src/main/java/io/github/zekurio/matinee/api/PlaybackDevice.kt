@@ -21,6 +21,17 @@ fun playbackDevice(prefs: PlayerPrefs): PlaybackDevice = playbackProfile(
     Locale.getDefault(),
 )
 
+/**
+ * This device's profile for a download: what it plays, without the codecs
+ * the playback settings pick for transcoding. A download's codec is its own
+ * setting, sent with the download's wishes.
+ */
+fun downloadDevice(prefs: PlayerPrefs): PlaybackDevice = playbackProfile(
+    ProfileSettings(prefs.engine, prefs.convertAudio),
+    Capabilities.codecs,
+    Locale.getDefault(),
+)
+
 /** The player settings that change what a device plays. */
 data class ProfileSettings(
     val engine: PlayerEngine,

@@ -89,6 +89,7 @@ fun DownloadFilesSheet(files: FileSet, onDismiss: () -> Unit) {
             val ready = initial.filterIsInstance<DownloadResolution.Ready>()
             presets = ready.flatMap { it.choices.presets }.distinct().sortedByDescending { it.height }
             codecs = ready.flatMap { it.choices.codecs }.distinct()
+            codec = downloads.videoCodec.takeIf { it in codecs }
             picked = startingChoice(downloads, presets)
             resolvedWishes = wishes
             results = initial
@@ -145,20 +146,22 @@ fun DownloadFilesSheet(files: FileSet, onDismiss: () -> Unit) {
                     ).joinToString(" · ").ifEmpty { stringResource(R.string.downloads_all_empty) }
                     Text(summary, style = MaterialTheme.typography.bodyMedium, color = Palette.Muted, modifier = Modifier.padding(horizontal = 20.dp))
                     if (missing.isNotEmpty()) {
-                        Gap(4.dp)
-                        downloadChoices(presets).forEach { choice ->
-                            val size = if (choice != picked) null else if (choice == Choice.Original) formatBytes(missing.sumOf { it.sizeBytes })
-                                else formatBytes(resolved.filterIsInstance<DownloadResolution.Ready>().sumOf { it.plan.estimatedBytes })
-                            RadioRow(choiceName(choice), size, selected = picked == choice) { picked = choice }
-                        }
+                        Gap(12.dp)
+                        val ready = resolved.filterIsInstance<DownloadResolution.Ready>()
+                        val size = if (picked == Choice.Original) missing.sumOf { it.sizeBytes } else ready.sumOf { it.plan.estimatedBytes }
+                        // Files that get encoded come in the codec picked; a preset encodes every file.
+                        VersionPanel(
+                            choices = downloadChoices(presets),
+                            picked = picked,
+                            onPick = { picked = it },
+                            codecs = codecs,
+                            codec = codec ?: codecs.firstOrNull(),
+                            onCodec = { codec = it },
+                            plan = null,
+                            detail = stringResource(R.string.downloads_about, formatBytes(size)),
+                        )
                         resolved.filterIsInstance<DownloadResolution.Unavailable>().forEach {
                             Text(it.message, color = Palette.Danger, modifier = Modifier.padding(horizontal = 20.dp))
-                        }
-                        // Files that get encoded come in the codec picked.
-                        val current = codec ?: codecs.firstOrNull()
-                        if (picked is Choice.Device && codecs.size > 1 && current != null) {
-                            SheetHeading(stringResource(R.string.downloads_codec))
-                            CodecPicker(codecs, current) { codec = it }
                         }
                         Gap(8.dp)
                         Text(
