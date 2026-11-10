@@ -168,8 +168,14 @@ fun DownloadsScreen() {
             if (coming.isNotEmpty()) {
                 item(key = "coming") {
                     val moving = coming.filter { it.state == DownloadState.RUNNING || it.state == DownloadState.QUEUED }
+                    val broken = coming.filter { it.error != null || it.state == DownloadState.FAILED }
                     ListHeading(stringResource(R.string.downloads_coming)) {
-                        if (moving.isNotEmpty()) {
+                        // What broke off is what wants doing first.
+                        if (broken.isNotEmpty()) {
+                            TextButton(onClick = { broken.forEach { downloads.resume(it.id) } }) {
+                                Text(stringResource(R.string.downloads_retry_all), color = Palette.Accent)
+                            }
+                        } else if (moving.isNotEmpty()) {
                             TextButton(onClick = { moving.forEach { downloads.pause(it.id) } }) {
                                 Text(stringResource(R.string.downloads_pause_all), color = Palette.Accent)
                             }
@@ -424,7 +430,10 @@ private fun ComingRow(entry: OfflineItem, primary: String, secondary: String?, m
             )
         }
         // The same weight as a finished row's menu button, so the column of buttons matches.
-        if (moving) {
+        // One that broke off, or waits to try again, can be tried again at once.
+        if (entry.error != null || entry.state == DownloadState.FAILED) {
+            RoundIconButton(Lucide.RotateCw, stringResource(R.string.downloads_retry), { downloads.resume(entry.id) }, size = 40.dp, iconSize = 18.dp, tint = Palette.Muted, background = Color.Transparent)
+        } else if (moving) {
             RoundIconButton(Lucide.Pause, stringResource(R.string.downloads_pause), { downloads.pause(entry.id) }, size = 40.dp, iconSize = 14.dp, tint = Palette.Muted, background = Color.Transparent)
         } else {
             RoundIconButton(Lucide.RefreshCw, stringResource(R.string.downloads_resume), { downloads.resume(entry.id) }, size = 40.dp, iconSize = 18.dp, tint = Palette.Muted, background = Color.Transparent)
