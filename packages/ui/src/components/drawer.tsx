@@ -68,7 +68,7 @@ function DrawerContent({
         <DrawerPrimitive.Popup
           data-slot="drawer-content"
           className={cn(
-            "pointer-events-auto fixed inset-x-0 bottom-0 z-50 mt-24 flex max-h-[85dvh] flex-col overflow-hidden rounded-t-xl bg-popover text-popover-foreground ring-1 ring-foreground/10 outline-none",
+            "pointer-events-auto fixed inset-x-0 bottom-0 z-50 mt-24 flex max-h-[85dvh] flex-col overflow-hidden rounded-t-xl glass text-popover-foreground ring-1 ring-foreground/10 outline-none",
             className,
           )}
           {...returnFocus}

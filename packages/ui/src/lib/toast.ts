@@ -20,5 +20,7 @@ export const toast = {
   info: withDefaults(sonnerToast.info),
   warning: withDefaults(sonnerToast.warning),
   error: withDefaults(sonnerToast.error),
+  /** A spinner, and no timeout: dismiss it once the work ends. */
+  loading: withDefaults(sonnerToast.loading),
   dismiss: sonnerToast.dismiss,
 }
