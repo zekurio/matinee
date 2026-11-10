@@ -47,8 +47,6 @@ import io.github.zekurio.matinee.ui.components.LucideIcon
 import io.github.zekurio.matinee.ui.components.MatineeButton
 import io.github.zekurio.matinee.ui.formatBytes
 import io.github.zekurio.matinee.ui.seasonName
-import io.github.zekurio.matinee.ui.settings.Panel
-import io.github.zekurio.matinee.ui.settings.SwitchRow
 import io.github.zekurio.matinee.ui.theme.Palette
 import java.io.IOException
 import kotlinx.coroutines.launch
@@ -81,7 +79,6 @@ fun DownloadFilesSheet(files: FileSet, onDismiss: () -> Unit) {
     var results by remember { mutableStateOf<List<DownloadResolution>?>(null) }
     var resolvedWishes by remember { mutableStateOf<DownloadWishes?>(null) }
     var codec by remember { mutableStateOf<String?>(null) }
-    var unmetered by remember { mutableStateOf(downloads.unmeteredOnly) }
     val askNotifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
 
     LaunchedEffect(files) {
@@ -166,13 +163,6 @@ fun DownloadFilesSheet(files: FileSet, onDismiss: () -> Unit) {
                         resolved.filterIsInstance<DownloadResolution.Unavailable>().forEach {
                             Text(it.message, color = Palette.Danger, modifier = Modifier.padding(horizontal = 20.dp))
                         }
-                        Gap(8.dp)
-                        // This download's own pick; the setting is where it starts.
-                        Column(Modifier.padding(horizontal = 20.dp)) {
-                            Panel {
-                                SwitchRow(stringResource(R.string.downloads_unmetered), unmetered) { unmetered = it }
-                            }
-                        }
                         Gap(16.dp)
                         MatineeButton(
                             onClick = {
@@ -180,12 +170,11 @@ fun DownloadFilesSheet(files: FileSet, onDismiss: () -> Unit) {
                                     askNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
                                 }
                                 val choice = picked
-                                val wifi = unmetered
                                 val started = res.getQuantityString(R.plurals.downloads_all_started, missing.size, missing.size)
                                 // The app's scope, so the files keep queueing after the sheet goes.
                                 actions.scope.launch {
                                     launch { snackbar.showSnackbar(started) }
-                                    val failed = downloads.downloadAll(missing, resolved, original = choice == Choice.Original, unmetered = wifi)
+                                    val failed = downloads.downloadAll(missing, resolved, original = choice == Choice.Original)
                                     if (failed > 0) snackbar.showSnackbar(res.getQuantityString(R.plurals.downloads_all_failed, failed, failed))
                                 }
                                 onDismiss()

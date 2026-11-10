@@ -52,8 +52,7 @@ class Downloads(private val context: Context) {
         get() = prefs.getBoolean("unmetered_only", true)
         set(value) {
             prefs.edit { putBoolean("unmetered_only", value) }
-            // Only the downloads that follow the setting; the others had their own picked.
-            store.items.value.values.filter { it.state == DownloadState.QUEUED && it.unmeteredOnly == null }.forEach { schedule(it.id, true) }
+            store.items.value.values.filter { it.state == DownloadState.QUEUED }.forEach { schedule(it.id, true) }
         }
     var defaultVersion: String
         get() = prefs.getString("default_version", null) ?: DEFAULT_DEVICE
@@ -93,24 +92,15 @@ class Downloads(private val context: Context) {
     private fun subtitleEntries(id: String, tracks: List<SubtitleTrack>) =
         tracks.mapIndexed { i, track -> OfflineSubtitle(track, "$id/subtitles/$i.vtt") }
 
-    /** Whether [entry] waits for Wi-Fi: its own pick, else the setting. */
-    fun waitsForWifi(entry: OfflineItem) = entry.unmeteredOnly ?: unmeteredOnly
-
-    /** Let a queued download use mobile data, or make it wait for Wi-Fi again. */
-    fun setUnmetered(id: String, value: Boolean) {
-        store.update(id) { it.copy(unmeteredOnly = value) }
-        if (store[id]?.state == DownloadState.QUEUED) schedule(id, true)
-    }
-
-    fun downloadOriginal(source: DownloadSource, subtitles: List<SubtitleTrack> = defaultSubtitles(source), unmetered: Boolean = unmeteredOnly) {
+    fun downloadOriginal(source: DownloadSource, subtitles: List<SubtitleTrack> = defaultSubtitles(source)) {
         val item = source.item
         val extension = item.relativePath.substringAfterLast('.', "mkv").lowercase().take(5)
         store.put(OfflineItem(item = item, kind = DownloadKind.ORIGINAL, file = "${item.id}/video.$extension",
-            totalBytes = item.sizeBytes, audio = source.audio, subtitles = subtitleEntries(item.id, subtitles), unmeteredOnly = unmetered))
+            totalBytes = item.sizeBytes, audio = source.audio, subtitles = subtitleEntries(item.id, subtitles)))
         schedule(item.id)
     }
 
-    fun downloadForDevice(source: DownloadSource, spec: DownloadSpec, plan: DownloadPlan, subtitles: List<SubtitleTrack> = defaultSubtitles(source), unmetered: Boolean = unmeteredOnly) {
+    fun downloadForDevice(source: DownloadSource, spec: DownloadSpec, plan: DownloadPlan, subtitles: List<SubtitleTrack> = defaultSubtitles(source)) {
         val item = source.item
         val audio = plan.audio.map { planned ->
             val original = source.audio.firstOrNull { it.index == planned.index }
@@ -121,25 +111,24 @@ class Downloads(private val context: Context) {
         // The player loads saved WebVTT files, not embedded subtitle streams.
         store.put(OfflineItem(item = item, kind = DownloadKind.DEVICE, file = "${item.id}/video.mp4",
             spec = spec.copy(subtitles = emptyList()), totalBytes = plan.estimatedBytes,
-            audio = audio, subtitles = subtitleEntries(item.id, subtitles), unmeteredOnly = unmetered))
+            audio = audio, subtitles = subtitleEntries(item.id, subtitles)))
         schedule(item.id)
     }
 
-    suspend fun downloadAll(items: List<MediaItem>, results: List<DownloadResolution>, original: Boolean, unmetered: Boolean = unmeteredOnly): Int = scope.async {
+    suspend fun downloadAll(items: List<MediaItem>, results: List<DownloadResolution>, original: Boolean): Int = scope.async {
         var failed = 0
         items.filter { store[it.id] == null }.forEach { item ->
             val ready = results.filterIsInstance<DownloadResolution.Ready>().firstOrNull { it.id == item.id }
             if (ready == null) failed++ else {
                 val source = DownloadSource(item, ready)
-                if (original) downloadOriginal(source, unmetered = unmetered) else downloadForDevice(source, ready.spec, ready.plan, unmetered = unmetered)
+                if (original) downloadOriginal(source) else downloadForDevice(source, ready.spec, ready.plan)
             }
         }
         failed
     }.await()
 
     private fun schedule(id: String, replace: Boolean = false) {
-        val wifi = store[id]?.let(::waitsForWifi) ?: unmeteredOnly
-        val constraints = Constraints.Builder().setRequiredNetworkType(if (wifi) NetworkType.UNMETERED else NetworkType.CONNECTED)
+        val constraints = Constraints.Builder().setRequiredNetworkType(if (unmeteredOnly) NetworkType.UNMETERED else NetworkType.CONNECTED)
             .setRequiresStorageNotLow(true).build()
         val request = OneTimeWorkRequestBuilder<DownloadWorker>().setInputData(workDataOf(DownloadWorker.KEY_ITEM to id))
             .setConstraints(constraints).setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS).addTag(TAG).build()

@@ -494,8 +494,6 @@
     <string name="downloads_choice_original">Original</string>
     <string name="downloads_choice_unavailable">The server can\'t make this version</string>
     <string name="downloads_original_may_not_play">May not play on this device</string>
-    <string name="downloads_use_mobile">Download on mobile data too</string>
-    <string name="downloads_wait_wifi">Wait for Wi-Fi</string>
     <string name="downloads_audio_title">Audio tracks</string>
     <string name="downloads_audio_none">Pick at least one audio track.</string>
     <string name="downloads_start">Download</string>
