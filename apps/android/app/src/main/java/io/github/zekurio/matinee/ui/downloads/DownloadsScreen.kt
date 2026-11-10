@@ -321,6 +321,9 @@ internal fun names(item: MediaItem): Pair<String, String?> {
     else label.title to null
 }
 
+/** Every row's picture is this wide, so the text beside them lines up down the list. */
+private val THUMB_WIDTH = 112.dp
+
 /** A file's saved picture, or the title's tone without one. */
 @Composable
 private fun DownloadThumb(entry: OfflineItem?, toneKey: String, width: Dp) {
@@ -348,7 +351,7 @@ private fun ShowRow(show: ShowDownloads, modifier: Modifier, onClick: () -> Unit
         horizontalArrangement = Arrangement.spacedBy(14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        DownloadThumb(entries.maxByOrNull { it.addedAt }, show.title.name, 128.dp)
+        DownloadThumb(entries.maxByOrNull { it.addedAt }, show.title.name, THUMB_WIDTH)
         Column(Modifier.weight(1f)) {
             Text(show.title.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(
@@ -372,7 +375,7 @@ private fun DoneRow(entry: OfflineItem, primary: String, secondary: String?, mod
         horizontalArrangement = Arrangement.spacedBy(14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        DownloadThumb(entry, entry.item.title?.name ?: primary, 128.dp)
+        DownloadThumb(entry, entry.item.title?.name ?: primary, THUMB_WIDTH)
         Column(Modifier.weight(1f)) {
             Text(primary, style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
             if (secondary != null) {
@@ -380,7 +383,7 @@ private fun DoneRow(entry: OfflineItem, primary: String, secondary: String?, mod
             }
             Text(formatBytes(entry.bytes), style = MaterialTheme.typography.bodySmall, color = Palette.Faint, maxLines = 1)
         }
-        RoundIconButton(Lucide.Ellipsis, stringResource(R.string.title_more_actions), onMore, size = 40.dp, iconSize = 18.dp, background = Color.Transparent)
+        RoundIconButton(Lucide.Ellipsis, stringResource(R.string.title_more_actions), onMore, size = 40.dp, iconSize = 18.dp, tint = Palette.Muted, background = Color.Transparent)
     }
 }
 
@@ -397,9 +400,9 @@ private fun ComingRow(entry: OfflineItem, primary: String, secondary: String?, m
         horizontalArrangement = Arrangement.spacedBy(14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        DownloadThumb(entry, entry.item.title?.name ?: primary, 96.dp)
+        DownloadThumb(entry, entry.item.title?.name ?: primary, THUMB_WIDTH)
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(primary, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(primary, style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
             if (secondary != null) {
                 Text(secondary, style = MaterialTheme.typography.bodySmall, color = Palette.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
@@ -420,10 +423,11 @@ private fun ComingRow(entry: OfflineItem, primary: String, secondary: String?, m
                 overflow = TextOverflow.Ellipsis,
             )
         }
+        // The same weight as a finished row's menu button, so the column of buttons matches.
         if (moving) {
-            RoundIconButton(Lucide.Pause, stringResource(R.string.downloads_pause), { downloads.pause(entry.id) }, size = 40.dp, iconSize = 16.dp, background = Color.Transparent)
+            RoundIconButton(Lucide.Pause, stringResource(R.string.downloads_pause), { downloads.pause(entry.id) }, size = 40.dp, iconSize = 14.dp, tint = Palette.Muted, background = Color.Transparent)
         } else {
-            RoundIconButton(Lucide.RefreshCw, stringResource(R.string.downloads_resume), { downloads.resume(entry.id) }, size = 40.dp, iconSize = 16.dp, background = Color.Transparent)
+            RoundIconButton(Lucide.RefreshCw, stringResource(R.string.downloads_resume), { downloads.resume(entry.id) }, size = 40.dp, iconSize = 18.dp, tint = Palette.Muted, background = Color.Transparent)
         }
     }
 }

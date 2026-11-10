@@ -16,6 +16,7 @@ import io.github.zekurio.matinee.api.MatineeApi
 import io.github.zekurio.matinee.api.TitleKind
 import io.github.zekurio.matinee.api.await
 import io.github.zekurio.matinee.app
+import io.github.zekurio.matinee.ui.describeFailure
 import io.github.zekurio.matinee.ui.itemLabel
 import java.io.File
 import java.io.FileOutputStream
@@ -82,7 +83,8 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
             store.update(id) { if (it.state == DownloadState.RUNNING) it.copy(state = DownloadState.QUEUED) else it }
             throw e
         } catch (e: IOException) {
-            val message = e.message ?: e.javaClass.simpleName
+            // In words, like "The server can't be reached", not the exception's "timeout".
+            val message = describeFailure(applicationContext.resources, e)
             if (runAttemptCount >= MAX_ATTEMPTS) {
                 store.update(id) { it.copy(state = DownloadState.FAILED, error = message) }
                 Result.failure()
