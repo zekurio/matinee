@@ -439,9 +439,6 @@
     <string name="settings_admin_appearance">Appearance</string>
     <string name="settings_offline_mode">Offline mode</string>
     <string name="settings_go_online">Go online</string>
-    <string name="settings_app_title">App</string>
-    <string name="settings_app_language">Language</string>
-    <string name="settings_app_language_system">System default</string>
 
     <!-- The player -->
     <string name="player_load_failed">Couldn\'t load this title</string>

@@ -1,14 +1,11 @@
 package io.github.zekurio.matinee.ui.settings
 
-import android.app.LocaleManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import androidx.annotation.DrawableRes
-import androidx.annotation.RequiresApi
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -130,7 +127,6 @@ enum class SettingsPage(val key: String, @param:DrawableRes val icon: Int, @para
     Playback("playback", Lucide.TvPlay, R.string.settings_page_playback),
     Subtitles("subtitles", Lucide.Captions, R.string.settings_subtitles_title),
     Downloads("downloads", Lucide.Download, R.string.downloads_title),
-    App("app", Lucide.Smartphone, R.string.settings_app_title),
 
     // The server's settings, for admins, as the web's admin sections. Each page lives in ui/settings/admin.
     Libraries("libraries", Lucide.LibraryBig, R.string.settings_admin_libraries, admin = true),
@@ -206,11 +202,6 @@ fun SettingsScreen(session: Session) {
         item(key = "device") {
             Panel {
                 PageRow(SettingsPage.Downloads)
-                // Android keeps a language per app from version 13.
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    RowDivider()
-                    PageRow(SettingsPage.App)
-                }
             }
         }
         if (admin) {
@@ -259,9 +250,6 @@ fun SettingsPageScreen(session: Session, key: String) {
         }
         SettingsPage.Downloads -> SettingsScaffold(stringResource(page.title)) {
             item(key = "downloads") { DownloadsSection() }
-        }
-        SettingsPage.App -> SettingsScaffold(stringResource(page.title)) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) item(key = "app") { AppSection() }
         }
         SettingsPage.Libraries -> LibrariesSettings()
         SettingsPage.Users -> UsersSettings()
@@ -693,30 +681,6 @@ private fun DownloadsSection() {
                 TextButton(onClick = { confirm = false }) { Text(stringResource(R.string.common_cancel), color = Palette.Foreground) }
             },
         )
-    }
-}
-
-/** The app's own language, which Android keeps per app from version 13. */
-@RequiresApi(Build.VERSION_CODES.TIRAMISU)
-@Composable
-private fun AppSection() {
-    val context = LocalContext.current
-    // Read again on coming back from the system's page.
-    val lifecycle by LocalLifecycleOwner.current.lifecycle.currentStateAsState()
-    val system = stringResource(R.string.settings_app_language_system)
-    val language = remember(lifecycle) {
-        val locales = context.getSystemService(LocaleManager::class.java)?.applicationLocales
-        locales?.takeIf { !it.isEmpty }?.get(0)?.let { it.getDisplayName(it).replaceFirstChar { c -> c.titlecase(it) } } ?: system
-    }
-    Column {
-        Panel {
-            LinkRow(
-                stringResource(R.string.settings_app_language),
-                value = language,
-            ) {
-                context.openSettings(Intent(Settings.ACTION_APP_LOCALE_SETTINGS, Uri.fromParts("package", context.packageName, null)))
-            }
-        }
     }
 }
 

@@ -417,9 +417,6 @@
     <string name="settings_admin_appearance">Darstellung</string>
     <string name="settings_offline_mode">Offline-Modus</string>
     <string name="settings_go_online">Online gehen</string>
-    <string name="settings_app_title">App</string>
-    <string name="settings_app_language">Sprache</string>
-    <string name="settings_app_language_system">Systemstandard</string>
 
     <string name="player_load_failed">Der Titel konnte nicht geladen werden</string>
     <string name="player_back">Zurück</string>
