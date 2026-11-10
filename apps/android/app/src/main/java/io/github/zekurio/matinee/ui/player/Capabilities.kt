@@ -4,7 +4,7 @@ import android.media.MediaCodecInfo
 import android.media.MediaCodecInfo.CodecProfileLevel
 import android.media.MediaCodecList
 import androidx.media3.decoder.ffmpeg.FfmpegLibrary
-import io.github.zekurio.matinee.api.VideoStream
+import io.github.zekurio.matinee.api.DisplayVideoStream
 
 /**
  * What this device decodes, asked of its media codecs, so the player sends
@@ -50,7 +50,7 @@ object Capabilities {
 
     fun playsContainer(container: String) = container.lowercase() in CONTAINERS
 
-    fun decodesVideo(video: VideoStream): Boolean {
+    fun decodesVideo(video: DisplayVideoStream): Boolean {
         // Profile 5 has no layer other decoders can show.
         if (video.dolbyVisionProfile == 5) return decodersFor("video/dolby-vision").isNotEmpty()
         val mime = VIDEO_MIMES[video.codec] ?: return false

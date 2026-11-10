@@ -31,7 +31,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.DEFAULT_PLAYBACK_PREFERENCES
-import io.github.zekurio.matinee.api.FALLBACK_PLAYBACK_OPTIONS
 import io.github.zekurio.matinee.api.MatineeApi
 import io.github.zekurio.matinee.api.MediaItem
 import io.github.zekurio.matinee.api.PlaybackOptions
@@ -82,14 +81,17 @@ fun DownloadFilesSheet(files: FileSet, onDismiss: () -> Unit) {
     val stored by downloads.store.items.collectAsState()
     var items by remember { mutableStateOf<List<MediaItem>?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
-    var picked by remember { mutableStateOf(startingChoice(downloads)) }
+    var picked by remember { mutableStateOf<Choice>(Choice.Device(null)) }
     var options by remember { mutableStateOf<PlaybackOptions?>(null) }
     var codec by remember { mutableStateOf<String?>(null) }
     val askNotifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
 
     LaunchedEffect(files) {
-        options = runCatching { api.playback.options() }.getOrDefault(FALLBACK_PLAYBACK_OPTIONS).also { codec = downloads.defaultCodec(it) }
         try {
+            options = api.playback.options().also {
+                codec = downloads.defaultCodec(it)
+                picked = startingChoice(downloads, it)
+            }
             items = files.load(api)
         } catch (e: IOException) {
             error = res.getString(R.string.downloads_all_load_failed, e.message.orEmpty())
@@ -98,6 +100,7 @@ fun DownloadFilesSheet(files: FileSet, onDismiss: () -> Unit) {
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheet, containerColor = Palette.Raised, dragHandle = null) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(vertical = 16.dp)) {
+            val loadedOptions = options
             val name = files.season?.let { stringResource(R.string.title_season_of, files.title.name, seasonName(it.number, res)) }
                 ?: files.title.name
             Column(Modifier.padding(horizontal = 20.dp)) {
@@ -117,7 +120,7 @@ fun DownloadFilesSheet(files: FileSet, onDismiss: () -> Unit) {
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.padding(horizontal = 20.dp),
                 )
-                list == null -> Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
+                list == null || loadedOptions == null -> Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = Palette.Accent)
                 }
                 else -> {
@@ -130,8 +133,8 @@ fun DownloadFilesSheet(files: FileSet, onDismiss: () -> Unit) {
                     Text(summary, style = MaterialTheme.typography.bodyMedium, color = Palette.Muted, modifier = Modifier.padding(horizontal = 20.dp))
                     if (missing.isNotEmpty()) {
                         Gap(4.dp)
-                        CHOICES.forEach { choice ->
-                            RadioRow(choiceName(choice), batchSize(downloads, choice, missing), selected = picked == choice) { picked = choice }
+                        downloadChoices(loadedOptions).forEach { choice ->
+                            RadioRow(choiceName(choice), batchSize(downloads, choice, missing, loadedOptions), selected = picked == choice) { picked = choice }
                         }
                         // Files that get encoded come in the codec picked.
                         val codecs = options?.let(downloads::codecChoices).orEmpty()
@@ -184,9 +187,9 @@ fun DownloadFilesSheet(files: FileSet, onDismiss: () -> Unit) {
 
 /** About how much [choice] puts on the device for [items], or nothing when it can't tell. */
 @Composable
-private fun batchSize(downloads: Downloads, choice: Choice, items: List<MediaItem>): String? = when (choice) {
+private fun batchSize(downloads: Downloads, choice: Choice, items: List<MediaItem>, options: PlaybackOptions): String? = when (choice) {
     Choice.Original -> formatBytes(items.sumOf { it.sizeBytes })
-    is Choice.Device -> items.mapNotNull { downloads.estimateBytes(it, choice.preset) }
+    is Choice.Device -> items.mapNotNull { downloads.estimateBytes(it, choice.preset, options) }
         .takeIf { it.isNotEmpty() }
         ?.let { stringResource(R.string.downloads_about, formatBytes(it.sum())) }
 }

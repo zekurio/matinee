@@ -74,8 +74,28 @@ class ContractJsonTest {
         val video = entry.item.probe?.video
         assertFalse(video!!.interlaced)
         assertFalse(video.masteringDisplay)
+        assertEquals("", entry.item.label.showName)
+        assertEquals(null, entry.item.label.title)
+        assertEquals("", video.format)
+        assertEquals("", video.resolution)
         assertEquals(DownloadVideo.Copy, entry.spec?.video)
         assertEquals(DownloadAudio.Encode(index = 1, codec = "aac", channels = 2), entry.spec?.audio?.single())
+    }
+
+    @Test
+    fun displayFactsComeFromTheServer() {
+        val item = decodeSaved(MediaItem.serializer(), item(sizeBytes = 1_000))
+        val video = item.probe!!.video!!.copy(format = "WMV", resolution = "720p", dynamicRange = "HDR10+")
+        val displayed = item.copy(probe = item.probe.copy(video = video))
+        assertEquals("720p · WMV · HDR10+", io.github.zekurio.matinee.ui.videoSummary(displayed))
+        assertEquals(listOf("720p", "HDR10+"), io.github.zekurio.matinee.ui.mediaFlags(displayed))
+    }
+
+    @Test
+    fun fallbackOptionsDoNotInventServerLists() {
+        assertTrue(FALLBACK_PLAYBACK_OPTIONS.qualities.isEmpty())
+        assertTrue(FALLBACK_PLAYBACK_OPTIONS.downloadVideoPresets.isEmpty())
+        assertTrue(FALLBACK_PLAYBACK_OPTIONS.skipSteps.isEmpty())
     }
 
     @Test

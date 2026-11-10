@@ -61,7 +61,6 @@ import io.github.zekurio.matinee.api.DEFAULT_PLAYBACK_PREFERENCES
 import io.github.zekurio.matinee.api.ORIGINAL_LANGUAGE
 import io.github.zekurio.matinee.api.PlaybackOptions
 import io.github.zekurio.matinee.api.PlaybackPreferences
-import io.github.zekurio.matinee.api.SKIP_STEPS
 import io.github.zekurio.matinee.api.Session as AccountSession
 import io.github.zekurio.matinee.api.SubtitleMode
 import io.github.zekurio.matinee.api.isAdmin
@@ -73,7 +72,6 @@ import io.github.zekurio.matinee.auth.Session
 import io.github.zekurio.matinee.downloads.DEFAULT_DEVICE
 import io.github.zekurio.matinee.downloads.DEFAULT_ORIGINAL
 import io.github.zekurio.matinee.downloads.DownloadSubtitles
-import io.github.zekurio.matinee.downloads.VIDEO_PRESETS
 import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.LocalNavigator
 import io.github.zekurio.matinee.ui.LocalOffline
@@ -349,7 +347,7 @@ private fun PlaybackPage(session: Session) {
     val passthrough = remember { Capabilities.OPTIONAL_PASSTHROUGH.filter(Capabilities::decodesAudio) }
     SettingsScaffold(stringResource(R.string.settings_page_playback)) {
         item(key = "languages") { LanguagesSection(playback, loaded, save) }
-        item(key = "skips") { SkipsSection(playback, save) }
+        item(key = "skips") { SkipsSection(playback, loaded, save) }
         item(key = "device") { DeviceSection(prefs, loaded) }
         if (passthrough.isNotEmpty()) item(key = "passthrough") { PassthroughSection(prefs, passthrough) }
         item(key = "diagnostics") { PlaybackDiagnosticsSection() }
@@ -400,18 +398,18 @@ private fun LanguagesSection(playback: PlaybackPreferences, options: PlaybackOpt
 
 /** How far the player skips each way, which every device of the account uses. */
 @Composable
-private fun SkipsSection(playback: PlaybackPreferences, save: (PlaybackPreferences) -> Unit) {
+private fun SkipsSection(playback: PlaybackPreferences, options: PlaybackOptions?, save: (PlaybackPreferences) -> Unit) {
     Section(stringResource(R.string.playback_skip_title)) {
         Panel {
             PickerRow(
                 stringResource(R.string.playback_skip_back),
-                skipChoices(playback.skipBack),
+                skipChoices(playback.skipBack, options),
                 playback.skipBack,
             ) { save(playback.copy(skipBackSeconds = it)) }
             RowDivider()
             PickerRow(
                 stringResource(R.string.playback_skip_forward),
-                skipChoices(playback.skipForward),
+                skipChoices(playback.skipForward, options),
                 playback.skipForward,
             ) { save(playback.copy(skipForwardSeconds = it)) }
         }
@@ -420,7 +418,7 @@ private fun SkipsSection(playback: PlaybackPreferences, save: (PlaybackPreferenc
 
 /** The skip lengths to pick from, with [current] too when another app set one the steps don't have. */
 @Composable
-private fun skipChoices(current: Int) = (SKIP_STEPS + current).distinct().sorted()
+private fun skipChoices(current: Int, options: PlaybackOptions?) = (options?.skipSteps.orEmpty() + current).distinct().sorted()
     .map { it to pluralStringResource(R.plurals.playback_skip_seconds, it, it) }
 
 /**
@@ -581,6 +579,8 @@ private fun PassthroughSection(prefs: PlayerPrefs, codecs: List<String>) {
 private fun DownloadsSection() {
     val context = LocalContext.current
     val api = LocalApi.current
+    val options = rememberLoader("downloadOptions") { playback.options() }
+    val loaded = (options.state as? Load.Ready)?.value
     val downloads = context.app.downloads
     val items by downloads.store.items.collectAsState()
     var unmetered by remember { mutableStateOf(downloads.unmeteredOnly) }
@@ -609,7 +609,7 @@ private fun DownloadsSection() {
                     stringResource(R.string.downloads_default_title),
                     buildList {
                         add(DEFAULT_DEVICE to stringResource(R.string.downloads_choice_device))
-                        VIDEO_PRESETS.forEach { add(it.height.toString() to stringResource(R.string.downloads_choice_preset, it.height, mbps(it.bitrate))) }
+                        loaded?.downloadVideoPresets?.forEach { add(it.height.toString() to stringResource(R.string.downloads_choice_preset, it.height, mbps(it.bitrate))) }
                         add(DEFAULT_ORIGINAL to stringResource(R.string.downloads_choice_original))
                     },
                     version,

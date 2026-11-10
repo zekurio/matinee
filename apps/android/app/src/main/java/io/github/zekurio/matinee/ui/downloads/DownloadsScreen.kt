@@ -68,8 +68,7 @@ import io.github.zekurio.matinee.downloads.DownloadSource
 import io.github.zekurio.matinee.downloads.DownloadState
 import io.github.zekurio.matinee.downloads.Downloads
 import io.github.zekurio.matinee.downloads.OfflineItem
-import io.github.zekurio.matinee.downloads.VIDEO_PRESETS
-import io.github.zekurio.matinee.downloads.VideoPreset
+import io.github.zekurio.matinee.api.DownloadVideoPreset
 import io.github.zekurio.matinee.ui.LocalNavigator
 import io.github.zekurio.matinee.ui.LocalOffline
 import io.github.zekurio.matinee.ui.LocalUser
@@ -535,18 +534,19 @@ private fun DownloadActions(entry: OfflineItem, onDismiss: () -> Unit) {
 
 /** One choice in the download sheet: a version for this device, or the file as it is. */
 internal sealed interface Choice {
-    data class Device(val preset: VideoPreset?) : Choice
+    data class Device(val preset: DownloadVideoPreset?) : Choice
 
     data object Original : Choice
 }
 
 /** What a download sheet offers, in order: for this device, at each preset's size, and as it is. */
-internal val CHOICES: List<Choice> = listOf<Choice>(Choice.Device(null)) + VIDEO_PRESETS.map { Choice.Device(it) } + Choice.Original
+internal fun downloadChoices(options: PlaybackOptions): List<Choice> =
+    listOf<Choice>(Choice.Device(null)) + options.downloadVideoPresets.map { Choice.Device(it) } + Choice.Original
 
 /** The version Settings names, which a download sheet starts on. */
-internal fun startingChoice(downloads: Downloads): Choice = when (val wanted = downloads.defaultVersion) {
+internal fun startingChoice(downloads: Downloads, options: PlaybackOptions): Choice = when (val wanted = downloads.defaultVersion) {
     DEFAULT_ORIGINAL -> Choice.Original
-    else -> VIDEO_PRESETS.firstOrNull { it.height.toString() == wanted }?.let { Choice.Device(it) } ?: Choice.Device(null)
+    else -> options.downloadVideoPresets.firstOrNull { it.height.toString() == wanted }?.let { Choice.Device(it) } ?: Choice.Device(null)
 }
 
 @Composable

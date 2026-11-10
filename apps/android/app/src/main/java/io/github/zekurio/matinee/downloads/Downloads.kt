@@ -14,7 +14,7 @@ import io.github.zekurio.matinee.api.DownloadAudio
 import io.github.zekurio.matinee.api.DownloadPlan
 import io.github.zekurio.matinee.api.DownloadSpec
 import io.github.zekurio.matinee.api.DownloadVideo
-import io.github.zekurio.matinee.api.FALLBACK_PLAYBACK_OPTIONS
+import io.github.zekurio.matinee.api.DownloadVideoPreset
 import io.github.zekurio.matinee.api.MatineeApi
 import io.github.zekurio.matinee.api.MediaItem
 import io.github.zekurio.matinee.api.PlaybackOptions
@@ -37,15 +37,6 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
-
-/** A size and rate a version for this device can be encoded at, from DOWNLOAD_VIDEO_PRESETS. */
-data class VideoPreset(val height: Int, val bitrate: Int)
-
-val VIDEO_PRESETS = listOf(
-    VideoPreset(1080, 6_000_000),
-    VideoPreset(720, 2_500_000),
-    VideoPreset(480, 1_500_000),
-)
 
 /** Codecs MP4 holds, so a download can keep them as they are (DOWNLOAD_COPY_*_CODECS). */
 private val COPY_VIDEO = setOf("h264", "hevc", "av1", "vp9")
@@ -117,7 +108,7 @@ class Downloads(private val context: Context) {
     fun textSubtitles(source: DownloadSource): List<SubtitleTrack> = source.subtitles.filter(::drawable)
 
     /** Whether a version for this device keeps the file's video: only at no set size, when it plays here and MP4 holds it. */
-    private fun keepsVideo(item: MediaItem, preset: VideoPreset?): Boolean {
+    private fun keepsVideo(item: MediaItem, preset: DownloadVideoPreset?): Boolean {
         val video = item.probe?.video
         return preset == null && video != null && video.codec in COPY_VIDEO && Capabilities.decodesVideo(video)
     }
@@ -136,14 +127,14 @@ class Downloads(private val context: Context) {
      */
     fun deviceSpec(
         source: DownloadSource,
-        preset: VideoPreset?,
+        preset: DownloadVideoPreset?,
         audio: List<AudioTrack> = defaultAudio(source),
         codec: String? = null,
     ): DownloadSpec {
         val videoSpec = if (keepsVideo(source.item, preset)) {
             DownloadVideo.Copy
         } else {
-            val target = preset ?: VIDEO_PRESETS.first()
+            val target = preset ?: source.options.downloadVideoPresets.first()
             DownloadVideo.Encode(codec = codec ?: defaultCodec(source.options), maxHeight = target.height, bitrate = target.bitrate)
         }
         val tracks = audio.map { track ->
@@ -253,10 +244,10 @@ class Downloads(private val context: Context) {
      * else its length at the preset's rate. For many files at once, where a
      * plan for each would be a request for each.
      */
-    fun estimateBytes(item: MediaItem, preset: VideoPreset?): Long? {
+    fun estimateBytes(item: MediaItem, preset: DownloadVideoPreset?, options: PlaybackOptions): Long? {
         if (keepsVideo(item, preset)) return item.sizeBytes
         val seconds = item.durationSeconds ?: return null
-        val target = preset ?: VIDEO_PRESETS.first()
+        val target = preset ?: options.downloadVideoPresets.firstOrNull() ?: return null
         return ((target.bitrate + ESTIMATED_AUDIO_BITRATE) * seconds / 8).toLong()
     }
 
@@ -273,14 +264,14 @@ class Downloads(private val context: Context) {
         api: MatineeApi,
         items: List<MediaItem>,
         original: Boolean,
-        preset: VideoPreset?,
+        preset: DownloadVideoPreset?,
         preferences: PlaybackPreferences,
         codec: String? = null,
     ): Int = scope.async {
         val options = try {
             api.playback.options()
         } catch (e: IOException) {
-            FALLBACK_PLAYBACK_OPTIONS
+            return@async items.count { store[it.id] == null }
         }
         val gate = Semaphore(BATCH_REQUESTS)
         val failed = AtomicInteger()

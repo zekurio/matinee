@@ -61,9 +61,6 @@ val DEFAULT_PLAYBACK_PREFERENCES = PlaybackPreferences(
 /** How far a skip goes when the account hasn't said, as the contract's `DEFAULT_SKIP_SECONDS`. */
 const val DEFAULT_SKIP_SECONDS = 10
 
-/** How far Settings offers to skip, in seconds, as the contract's `SKIP_STEPS`. */
-val SKIP_STEPS = listOf(5, 10, 15, 20, 30, 45, 60)
-
 /** Seconds a skip back moves. The server always fills it in; the model only reads it as optional. */
 val PlaybackPreferences.skipBack: Int get() = skipBackSeconds ?: DEFAULT_SKIP_SECONDS
 
@@ -72,6 +69,9 @@ val PlaybackPreferences.skipForward: Int get() = skipForwardSeconds ?: DEFAULT_S
 
 /** What to assume when `playback.options` doesn't load: H.264 and AAC, which every server encodes to. */
 val FALLBACK_PLAYBACK_OPTIONS = PlaybackOptions(
+    qualities = emptyList(),
+    downloadVideoPresets = emptyList(),
+    skipSteps = emptyList(),
     videoCodecs = listOf(TranscodeVideoCodec.H264),
     audioCodecs = listOf(TranscodeAudioCodec.AAC),
     audioLanguages = emptyList(),

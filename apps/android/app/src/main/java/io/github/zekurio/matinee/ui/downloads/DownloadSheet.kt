@@ -44,7 +44,6 @@ import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.DEFAULT_PLAYBACK_PREFERENCES
 import io.github.zekurio.matinee.api.DownloadPlan
 import io.github.zekurio.matinee.api.DownloadSpec
-import io.github.zekurio.matinee.api.FALLBACK_PLAYBACK_OPTIONS
 import io.github.zekurio.matinee.api.MediaItem
 import io.github.zekurio.matinee.app
 import io.github.zekurio.matinee.downloads.DownloadSource
@@ -83,7 +82,7 @@ fun DownloadSheet(item: MediaItem, onDismiss: () -> Unit) {
     val specs = remember { mutableStateMapOf<Choice, DownloadSpec>() }
     // The plans are for the audio picked; while new ones come, the old sizes stay.
     var planning by remember { mutableStateOf(true) }
-    var picked by remember { mutableStateOf(startingChoice(downloads)) }
+    var picked by remember { mutableStateOf<Choice>(Choice.Device(null)) }
     // Audio by stream index, in the file's order; subtitles by id.
     var audio by remember { mutableStateOf<List<Int>>(emptyList()) }
     var subtitles by remember { mutableStateOf<Set<String>>(emptySet()) }
@@ -97,12 +96,13 @@ fun DownloadSheet(item: MediaItem, onDismiss: () -> Unit) {
                 item = item,
                 audio = api.media.audio(item.id),
                 subtitles = api.media.subtitles(item.id).tracks,
-                options = runCatching { api.playback.options() }.getOrDefault(FALLBACK_PLAYBACK_OPTIONS),
+                options = api.playback.options(),
                 preferences = user.playback ?: DEFAULT_PLAYBACK_PREFERENCES,
             )
             audio = downloads.defaultAudio(loaded).map { it.index }
             codec = downloads.defaultCodec(loaded.options)
             subtitles = downloads.defaultSubtitles(loaded).map { it.id }.toSet()
+            picked = startingChoice(downloads, loaded.options)
             source = loaded
         } catch (e: IOException) {
             error = e.message ?: failure
@@ -119,7 +119,7 @@ fun DownloadSheet(item: MediaItem, onDismiss: () -> Unit) {
             return@LaunchedEffect
         }
         planning = true
-        for (choice in CHOICES) {
+        for (choice in downloadChoices(loaded.options)) {
             if (choice !is Choice.Device) continue
             val spec = downloads.deviceSpec(loaded, choice.preset, chosenAudio, codec)
             // A size this device can't have the server make just doesn't show one.
@@ -163,7 +163,7 @@ fun DownloadSheet(item: MediaItem, onDismiss: () -> Unit) {
                     val texts = downloads.textSubtitles(loaded)
                     Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState())) {
                         // A size the server can't make for this file doesn't show.
-                        val shown = CHOICES.filter { it !is Choice.Device || it.preset == null || plans[it] != null }
+                        val shown = downloadChoices(loaded.options).filter { it !is Choice.Device || it.preset == null || plans[it] != null }
                         shown.forEach { choice ->
                             ChoiceRow(choice, plans[choice], loaded, selected = picked == choice) { picked = choice }
                         }
