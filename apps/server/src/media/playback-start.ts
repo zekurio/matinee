@@ -83,13 +83,16 @@ export type StartFacts = {
 
 export type PlaybackDecision = Omit<PlaybackStart, "item">
 
-/** Decide without reading files, the database, or a device API. Null means exhausted. */
-export function decidePlayback(
-  input: PlaybackStartInput,
-  facts: StartFacts,
-): PlaybackDecision | null {
+/** The audio playback starts with, including a decodable same-language stand-in. */
+export function playbackAudio(
+  input: Pick<PlaybackStartInput, "device" | "audio">,
+  facts: Pick<
+    StartFacts,
+    "audio" | "preferences" | "picks" | "originalLanguage"
+  >,
+) {
   const { device } = input
-  const { probe, preferences, picks } = facts
+  const { preferences, picks } = facts
   const decodes = (codec: string) => decodesAudio(device, codec)
   const primary = facts.audio.find((track) => track.primary) ?? facts.audio[0]
   const language =
@@ -119,7 +122,19 @@ export function decidePlayback(
           )
           .toSorted((a, b) => (b.channels ?? 0) - (a.channels ?? 0))[0]
       : undefined
-  const audio = standIn ?? wanted ?? null
+  return { audio: standIn ?? wanted ?? null, standIn: !!standIn }
+}
+
+/** Decide without reading files, the database, or a device API. Null means exhausted. */
+export function decidePlayback(
+  input: PlaybackStartInput,
+  facts: StartFacts,
+): PlaybackDecision | null {
+  const { device } = input
+  const { probe, preferences, picks } = facts
+  const { audio, standIn } = playbackAudio(input, facts)
+  const decodes = (codec: string) => decodesAudio(device, codec)
+  const primary = facts.audio.find((track) => track.primary) ?? facts.audio[0]
   const video = probe.video
   const videoPlays = !video || decodesVideo(device, video)
   const fileAudio =
@@ -284,7 +299,7 @@ export function decidePlayback(
     position,
     audio,
     convertedAudio,
-    standIn: !!standIn,
+    standIn,
     subtitle,
     subtitleMode,
     subtitleUrl:

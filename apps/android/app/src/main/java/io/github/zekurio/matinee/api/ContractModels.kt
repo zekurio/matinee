@@ -919,6 +919,131 @@ data class Download(
 )
 
 @Serializable
+data class DownloadVideoPreset(
+    val height: Int,
+    val bitrate: Int,
+)
+
+object TranscodeAudioCodec {
+    const val OPUS = "opus"
+    const val AAC = "aac"
+    val all = listOf(OPUS, AAC)
+}
+
+@Serializable
+data class DownloadChoices(
+    val keepsVideo: Boolean,
+    val presets: List<DownloadVideoPreset>,
+    val codecs: List<String>,
+    val audio: List<DownloadChoices.Audio>,
+    val subtitles: List<SubtitleTrack>,
+    val burnIn: List<SubtitleTrack>,
+) {
+    @Serializable
+    data class Audio(
+        val track: AudioTrack,
+        val keep: Boolean,
+        val conversions: List<DownloadChoices.Audio.Conversion>,
+    ) {
+        @Serializable
+        data class Conversion(
+            val codec: String,
+            val channels: Int,
+        )
+    }
+}
+
+@Serializable
+data class DownloadWishes(
+    val container: String? = null,
+    val preset: DownloadWishes.Preset? = null,
+    val codec: String? = null,
+    val keepHdr: Boolean? = null,
+    val audio: String? = null,
+    val audioIndices: List<Int>? = null,
+    val subtitles: String? = null,
+) {
+    @Serializable
+    data class Preset(
+        val height: Int,
+        val bitrate: Int,
+    )
+}
+
+@Serializable
+data class DownloadResolveInput(
+    val ids: List<String>,
+    val device: PlaybackDevice,
+    val wishes: DownloadWishes,
+)
+
+@Serializable
+@JsonClassDiscriminator("mode")
+sealed interface DownloadVideo {
+    @Serializable
+    @SerialName("copy")
+    data object Copy : DownloadVideo
+
+    @Serializable
+    @SerialName("encode")
+    data class Encode(
+        val codec: String,
+        val maxHeight: Int,
+        val bitrate: Int,
+        val keepHdr: Boolean? = null,
+    ) : DownloadVideo
+}
+
+@Serializable
+@JsonClassDiscriminator("mode")
+sealed interface DownloadAudio {
+    @Serializable
+    @SerialName("copy")
+    data class Copy(
+        val index: Int,
+    ) : DownloadAudio
+
+    @Serializable
+    @SerialName("encode")
+    data class Encode(
+        val index: Int,
+        val codec: String,
+        val channels: Int,
+        val bitrate: Int? = null,
+    ) : DownloadAudio
+}
+
+@Serializable
+data class DownloadSpec(
+    val container: String? = null,
+    val video: DownloadVideo,
+    val audio: List<DownloadAudio>,
+    val subtitles: List<String>? = null,
+    val burnIn: String? = null,
+)
+
+@Serializable
+@JsonClassDiscriminator("status")
+sealed interface DownloadResolution {
+    @Serializable
+    @SerialName("ready")
+    data class Ready(
+        val id: String,
+        val originalPlays: Boolean,
+        val spec: DownloadSpec,
+        val plan: DownloadPlan,
+        val choices: DownloadChoices,
+    ) : DownloadResolution
+
+    @Serializable
+    @SerialName("unavailable")
+    data class Unavailable(
+        val id: String,
+        val message: String,
+    ) : DownloadResolution
+}
+
+@Serializable
 data class Facet(
     val name: String,
     val titleCount: Int,
@@ -1224,12 +1349,6 @@ data class PlaybackQualityPreset(
 )
 
 @Serializable
-data class DownloadVideoPreset(
-    val height: Int,
-    val bitrate: Int,
-)
-
-@Serializable
 data class VideoStream(
     val index: Int,
     val codec: String,
@@ -1360,12 +1479,6 @@ data class PersonSummary(
     val kind: String,
     val titleCount: Int,
 )
-
-object TranscodeAudioCodec {
-    const val OPUS = "opus"
-    const val AAC = "aac"
-    val all = listOf(OPUS, AAC)
-}
 
 @Serializable
 data class PlaybackOptions(
@@ -1685,51 +1798,6 @@ data class AuthSettingsInput(
 data class AppDevice(
     val name: String? = null,
     val platform: String,
-)
-
-@Serializable
-@JsonClassDiscriminator("mode")
-sealed interface DownloadAudio {
-    @Serializable
-    @SerialName("copy")
-    data class Copy(
-        val index: Int,
-    ) : DownloadAudio
-
-    @Serializable
-    @SerialName("encode")
-    data class Encode(
-        val index: Int,
-        val codec: String,
-        val channels: Int,
-        val bitrate: Int? = null,
-    ) : DownloadAudio
-}
-
-@Serializable
-@JsonClassDiscriminator("mode")
-sealed interface DownloadVideo {
-    @Serializable
-    @SerialName("copy")
-    data object Copy : DownloadVideo
-
-    @Serializable
-    @SerialName("encode")
-    data class Encode(
-        val codec: String,
-        val maxHeight: Int,
-        val bitrate: Int,
-        val keepHdr: Boolean? = null,
-    ) : DownloadVideo
-}
-
-@Serializable
-data class DownloadSpec(
-    val container: String? = null,
-    val video: DownloadVideo,
-    val audio: List<DownloadAudio>,
-    val subtitles: List<String>? = null,
-    val burnIn: String? = null,
 )
 
 @Serializable

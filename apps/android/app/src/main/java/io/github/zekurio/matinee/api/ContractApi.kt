@@ -680,6 +680,16 @@ class MediaApi internal constructor(private val transport: ApiTransport) {
 }
 
 class DownloadsApi internal constructor(private val transport: ApiTransport) {
+    /** `POST /downloads/resolve` */
+    suspend fun resolve(downloadResolveInput: DownloadResolveInput): List<DownloadResolution> =
+        transport.call(
+            "POST",
+            listOf("downloads", "resolve"),
+            emptyList(),
+            transport.json(DownloadResolveInput.serializer(), downloadResolveInput),
+            ListSerializer(DownloadResolution.serializer()),
+        )
+
     /** `POST /media/{id}/download-plan` */
     suspend fun plan(id: String, spec: DownloadSpec): DownloadPlan =
         transport.call(

@@ -7,6 +7,14 @@ import { defineMessages } from "../../catalog"
  * pattern would also match a longer text, the longer one comes first.
  */
 export default defineMessages("server", {
+  "server.downloads.tooManyAudioTracks":
+    "A download can hold at most 16 audio tracks.",
+  "server.downloads.selectedAudioUnavailable":
+    "The selected audio tracks aren't available in this file.",
+  "server.downloads.noDownloadVideo":
+    "No video encode is available for this device and these wishes.",
+  "server.downloads.noDownloadAudio":
+    "No audio conversion is available for this device.",
   // rpc/base.ts: every procedure.
   "server.rpc.signInFirst": "Sign in first.",
   "server.rpc.adminsOnly": "Only admins can do this.",

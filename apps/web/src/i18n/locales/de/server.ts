@@ -2,6 +2,14 @@ import type { TranslationOf } from "../../catalog"
 import type source from "../en/server"
 
 export default {
+  "server.downloads.tooManyAudioTracks":
+    "Ein Download kann höchstens 16 Audiospuren enthalten.",
+  "server.downloads.selectedAudioUnavailable":
+    "Die ausgewählten Audiospuren sind in dieser Datei nicht verfügbar.",
+  "server.downloads.noDownloadVideo":
+    "Für dieses Gerät und diese Einstellungen ist keine Videokonvertierung verfügbar.",
+  "server.downloads.noDownloadAudio":
+    "Für dieses Gerät ist keine Audiokonvertierung verfügbar.",
   "server.rpc.signInFirst": "Melde dich zuerst an.",
   "server.rpc.adminsOnly": "Das können nur Admins.",
   "server.rpc.passkeysOff": "Passkeys sind auf diesem Server ausgeschaltet.",

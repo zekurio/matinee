@@ -11,3 +11,5 @@ export * from "./stats"
 export * from "./theme"
 export * from "./transcoding"
 export * from "./trickplay"
+
+export * from "./download-resolve"
