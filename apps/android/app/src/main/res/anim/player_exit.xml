@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The player fading out again, quicker (ui/Motion.kt: EXIT_MS). -->
+<alpha xmlns:android="http://schemas.android.com/apk/res/android"
+    android:duration="150"
+    android:fromAlpha="1"
+    android:interpolator="@android:interpolator/accelerate_cubic"
+    android:toAlpha="0" />

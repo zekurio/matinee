@@ -1,6 +1,5 @@
 package io.github.zekurio.matinee.ui.home
 
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -54,6 +53,7 @@ import io.github.zekurio.matinee.api.ArtworkSize
 import io.github.zekurio.matinee.api.FeaturedTitle
 import io.github.zekurio.matinee.api.isShow
 import io.github.zekurio.matinee.ui.LocalNavigator
+import io.github.zekurio.matinee.ui.Motion
 import io.github.zekurio.matinee.ui.components.ButtonLook
 import io.github.zekurio.matinee.ui.components.Gap
 import io.github.zekurio.matinee.ui.components.Gutter
@@ -100,7 +100,7 @@ fun Hero(slides: List<FeaturedTitle>, modifier: Modifier = Modifier, top: @Compo
         if (held || !loops) return@LaunchedEffect
         snapshotFlow { pager.settledPage }.collectLatest { page ->
             delay(ADVANCE_MS)
-            pager.animateScrollToPage(page + 1, animationSpec = tween(700, easing = FastOutSlowInEasing))
+            pager.animateScrollToPage(page + 1, animationSpec = tween(500, easing = Motion.Easing))
         }
     }
     // A swipe holds the banner on what the person picked. Only a drag
@@ -125,7 +125,7 @@ fun Hero(slides: List<FeaturedTitle>, modifier: Modifier = Modifier, top: @Compo
             ) {
                 slides.indices.forEach { index ->
                     val active = index == current
-                    val width by animateDpAsState(if (active) 20.dp else 6.dp, label = "hero dot")
+                    val width by animateDpAsState(if (active) 20.dp else 6.dp, Motion.move(), label = "hero dot")
                     Box(
                         Modifier
                             .padding(vertical = 8.dp)

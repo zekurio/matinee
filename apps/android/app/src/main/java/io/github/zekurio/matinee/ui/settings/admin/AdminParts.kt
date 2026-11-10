@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.Loader
+import io.github.zekurio.matinee.ui.Reveal
 import io.github.zekurio.matinee.ui.components.ButtonLook
 import io.github.zekurio.matinee.ui.components.Gap
 import io.github.zekurio.matinee.ui.components.LocalSnackbar
@@ -101,7 +102,8 @@ internal fun rememberSaver(): Saver {
 /** Save and reset, for a page whose fields wait to be saved together, while any changed. */
 @Composable
 internal fun SaveButtons(dirty: Boolean, saver: Saver, onReset: () -> Unit, onSave: () -> Unit) {
-    if (!dirty && !saver.saving) return
+    // It opens once something changed, rather than pushing in at once.
+    Reveal(dirty || saver.saving) {
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
         MatineeButton(onClick = onSave, enabled = !saver.saving, modifier = Modifier.weight(1f)) {
             if (saver.saving) CircularProgressIndicator(Modifier.size(18.dp), color = Palette.Background, strokeWidth = 2.dp)
@@ -110,6 +112,7 @@ internal fun SaveButtons(dirty: Boolean, saver: Saver, onReset: () -> Unit, onSa
         MatineeButton(onClick = onReset, look = ButtonLook.Ghost, enabled = !saver.saving) {
             Text(stringResource(R.string.web_common_saveBar_reset))
         }
+    }
     }
 }
 
@@ -137,9 +140,14 @@ internal fun TextRow(
             visualTransformation = if (secret) PasswordVisualTransformation() else VisualTransformation.None,
             trailing = trailing,
         )
-        if (error != null) {
-            Gap(4.dp)
-            Text(error, style = MaterialTheme.typography.bodySmall, color = Palette.Danger)
+        // The last error stays while it closes, so the text doesn't vanish first.
+        var shown by remember { mutableStateOf(error) }
+        if (error != null) shown = error
+        Reveal(error != null) {
+            Column {
+                Gap(4.dp)
+                Text(shown.orEmpty(), style = MaterialTheme.typography.bodySmall, color = Palette.Danger)
+            }
         }
     }
 }

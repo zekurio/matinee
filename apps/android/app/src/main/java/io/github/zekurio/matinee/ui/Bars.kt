@@ -5,7 +5,6 @@ import androidx.annotation.StringRes
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -144,7 +143,7 @@ fun BottomBar(current: Any?, onPick: (Any) -> Unit, modifier: Modifier = Modifie
                 .padding(4.dp)
                 .selectableGroup()
                 // The open tab's pill grows and shrinks rather than jumping.
-                .animateContentSize(spring(dampingRatio = 0.8f, stiffness = 500f)),
+                .animateContentSize(Motion.move()),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             tabs.forEach { tab -> TabItem(tab, current == tab.route) { onPick(tab.route) } }
@@ -215,9 +214,9 @@ private fun TabButton(
 ) {
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
-    val color by animateColorAsState(if (selected) Palette.Foreground else Palette.Muted, label = "tabColor")
-    val fill by animateColorAsState(if (selected) Palette.Foreground.copy(alpha = 0.1f) else Color.Transparent, label = "tabFill")
-    val scale by animateFloatAsState(if (pressed) 0.92f else 1f, label = "tabPress")
+    val color by animateColorAsState(if (selected) Palette.Foreground else Palette.Muted, Motion.color(), label = "tabColor")
+    val fill by animateColorAsState(if (selected) Palette.Foreground.copy(alpha = 0.1f) else Color.Transparent, Motion.color(), label = "tabFill")
+    val scale by animateFloatAsState(if (pressed) 0.92f else 1f, Motion.color(), label = "tabPress")
     Box(
         modifier
             .graphicsLayer {

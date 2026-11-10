@@ -30,6 +30,7 @@ import io.github.zekurio.matinee.api.TonemapMode
 import io.github.zekurio.matinee.api.TonemapRange
 import io.github.zekurio.matinee.api.TranscodingCapabilities
 import io.github.zekurio.matinee.api.TranscodingSettings
+import io.github.zekurio.matinee.ui.Reveal
 import io.github.zekurio.matinee.ui.components.Gap
 import io.github.zekurio.matinee.ui.components.LocalApi
 import io.github.zekurio.matinee.ui.components.Lucide
@@ -198,9 +199,11 @@ private fun TranscodingForm(saved: AdminTranscodingSettings, saver: Saver, onDet
                             placeholder = saved.defaults.qsvDevice.ifBlank { null })
                     }
                 }
-                if (hardware) {
-                    RowDivider()
-                    Switch("enableHardwareEncoding", R.string.web_transcoding_hardware_encoding)
+                Reveal(hardware) {
+                    Column {
+                        RowDivider()
+                        Switch("enableHardwareEncoding", R.string.web_transcoding_hardware_encoding)
+                    }
                 }
                 // Intel's low-power encoders, on QSV and on VAAPI.
                 if (acceleration == "qsv" || acceleration == "vaapi") {
@@ -282,11 +285,13 @@ private fun TranscodingForm(saved: AdminTranscodingSettings, saver: Saver, onDet
                 Number("tonemappingPeak", R.string.web_transcoding_field_tonemappingPeak)
                 RowDivider()
                 Number("tonemappingParam", R.string.web_transcoding_field_tonemappingParam)
-                if (draft.bool("enableVppTonemapping") && (acceleration == "qsv" || acceleration == "vaapi")) {
-                    RowDivider()
-                    Number("vppTonemappingBrightness", R.string.web_transcoding_field_vppTonemappingBrightness)
-                    RowDivider()
-                    Number("vppTonemappingContrast", R.string.web_transcoding_field_vppTonemappingContrast)
+                Reveal(draft.bool("enableVppTonemapping") && (acceleration == "qsv" || acceleration == "vaapi")) {
+                    Column {
+                        RowDivider()
+                        Number("vppTonemappingBrightness", R.string.web_transcoding_field_vppTonemappingBrightness)
+                        RowDivider()
+                        Number("vppTonemappingContrast", R.string.web_transcoding_field_vppTonemappingContrast)
+                    }
                 }
             }
         }
@@ -312,15 +317,19 @@ private fun TranscodingForm(saved: AdminTranscodingSettings, saver: Saver, onDet
         Section(stringResource(R.string.web_transcoding_segments_title)) {
             Panel {
                 Switch("enableThrottling", R.string.web_transcoding_segments_throttle)
-                if (draft.bool("enableThrottling")) {
-                    RowDivider()
-                    Number("throttleDelaySeconds", R.string.web_transcoding_field_throttleDelaySeconds)
+                Reveal(draft.bool("enableThrottling")) {
+                    Column {
+                        RowDivider()
+                        Number("throttleDelaySeconds", R.string.web_transcoding_field_throttleDelaySeconds)
+                    }
                 }
                 RowDivider()
                 Switch("enableSegmentDeletion", R.string.web_transcoding_segments_delete)
-                if (draft.bool("enableSegmentDeletion")) {
-                    RowDivider()
-                    Number("segmentKeepSeconds", R.string.web_transcoding_field_segmentKeepSeconds)
+                Reveal(draft.bool("enableSegmentDeletion")) {
+                    Column {
+                        RowDivider()
+                        Number("segmentKeepSeconds", R.string.web_transcoding_field_segmentKeepSeconds)
+                    }
                 }
             }
         }

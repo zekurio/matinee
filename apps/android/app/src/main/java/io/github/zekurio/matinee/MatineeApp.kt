@@ -79,7 +79,7 @@ class MatineeApp : Application(), SingletonImageLoader.Factory {
                 .maxSizeBytes(256L * 1024 * 1024)
                 .build()
         }
-        .crossfade(true)
+        .crossfade(io.github.zekurio.matinee.ui.Motion.IMAGE_MS)
         .build()
 }
 

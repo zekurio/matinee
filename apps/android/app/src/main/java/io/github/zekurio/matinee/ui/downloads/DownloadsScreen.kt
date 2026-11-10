@@ -13,9 +13,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -57,6 +57,7 @@ import coil3.compose.AsyncImage
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.DownloadPlan
 import io.github.zekurio.matinee.api.DownloadSpec
+import io.github.zekurio.matinee.api.DownloadVideoPreset
 import io.github.zekurio.matinee.api.MediaItem
 import io.github.zekurio.matinee.api.PlaybackPreferences
 import io.github.zekurio.matinee.api.TitleKind
@@ -66,11 +67,9 @@ import io.github.zekurio.matinee.downloads.DEFAULT_ORIGINAL
 import io.github.zekurio.matinee.downloads.DownloadState
 import io.github.zekurio.matinee.downloads.Downloads
 import io.github.zekurio.matinee.downloads.OfflineItem
-import io.github.zekurio.matinee.api.DownloadVideoPreset
 import io.github.zekurio.matinee.ui.LocalNavigator
 import io.github.zekurio.matinee.ui.LocalOffline
 import io.github.zekurio.matinee.ui.TopBar
-import io.github.zekurio.matinee.ui.tabBarPadding
 import io.github.zekurio.matinee.ui.components.CardShape
 import io.github.zekurio.matinee.ui.components.Gap
 import io.github.zekurio.matinee.ui.components.Gutter
@@ -80,12 +79,14 @@ import io.github.zekurio.matinee.ui.components.LucideIcon
 import io.github.zekurio.matinee.ui.components.MatineeButton
 import io.github.zekurio.matinee.ui.components.RoundIconButton
 import io.github.zekurio.matinee.ui.components.SheetItem
+import io.github.zekurio.matinee.ui.components.rememberSheetCloser
 import io.github.zekurio.matinee.ui.components.tone
 import io.github.zekurio.matinee.ui.episodeCode
 import io.github.zekurio.matinee.ui.episodeNumber
 import io.github.zekurio.matinee.ui.formatBytes
 import io.github.zekurio.matinee.ui.itemLabel
 import io.github.zekurio.matinee.ui.seasonName
+import io.github.zekurio.matinee.ui.tabBarPadding
 import io.github.zekurio.matinee.ui.theme.Palette
 import io.github.zekurio.matinee.ui.videoCodecName
 import java.io.File
@@ -437,7 +438,9 @@ private fun ShowActions(title: TitleSummary, entries: List<OfflineItem>, onRemov
     val downloads = LocalContext.current.app.downloads
     val active = entries.filter { it.state == DownloadState.RUNNING || it.state == DownloadState.QUEUED }
     val stopped = entries.filter { it.state == DownloadState.PAUSED || it.state == DownloadState.FAILED }
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Palette.Raised, dragHandle = null) {
+    val sheet = rememberModalBottomSheetState()
+    val close = rememberSheetCloser(sheet, onDismiss)
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheet, containerColor = Palette.Raised, dragHandle = null) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(vertical = 12.dp)) {
             Column(Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
                 Text(title.name, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -453,25 +456,21 @@ private fun ShowActions(title: TitleSummary, entries: List<OfflineItem>, onRemov
             HorizontalDivider(Modifier.padding(vertical = 6.dp), color = Palette.Border)
             if (active.isNotEmpty()) {
                 SheetItem(Lucide.Pause, stringResource(R.string.downloads_pause_all)) {
-                    onDismiss()
-                    active.forEach { downloads.pause(it.id) }
+                    close { active.forEach { downloads.pause(it.id) } }
                 }
             }
             if (stopped.isNotEmpty()) {
                 SheetItem(Lucide.RefreshCw, stringResource(R.string.downloads_resume_all)) {
-                    onDismiss()
-                    stopped.forEach { downloads.resume(it.id) }
+                    close { stopped.forEach { downloads.resume(it.id) } }
                 }
             }
             if (!offline) {
                 SheetItem(Lucide.Info, stringResource(R.string.media_hero_episodes)) {
-                    onDismiss()
-                    nav.title(title)
+                    close { nav.title(title) }
                 }
             }
             SheetItem(Lucide.Trash, stringResource(R.string.downloads_remove_named, title.name), destructive = true) {
-                onDismiss()
-                onRemove()
+                close { onRemove() }
             }
         }
     }
@@ -502,7 +501,9 @@ private fun DownloadActions(entry: OfflineItem, onDismiss: () -> Unit) {
     val downloads = context.app.downloads
     val api = context.app.session.api
     val (primary, secondary) = names(entry.item)
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Palette.Raised, dragHandle = null) {
+    val sheet = rememberModalBottomSheetState()
+    val close = rememberSheetCloser(sheet, onDismiss)
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheet, containerColor = Palette.Raised, dragHandle = null) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(vertical = 12.dp)) {
             Column(Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
                 Text(primary, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -511,19 +512,16 @@ private fun DownloadActions(entry: OfflineItem, onDismiss: () -> Unit) {
             HorizontalDivider(Modifier.padding(vertical = 6.dp), color = Palette.Border)
             if (entry.state == DownloadState.DONE) {
                 SheetItem(Lucide.PlayOutline, stringResource(R.string.title_play)) {
-                    onDismiss()
-                    nav.play(entry.id)
+                    close { nav.play(entry.id) }
                 }
             }
             if (!offline) {
                 SheetItem(Lucide.Info, stringResource(R.string.media_hero_details)) {
-                    onDismiss()
-                    nav.item(entry.item)
+                    close { nav.item(entry.item) }
                 }
             }
             SheetItem(Lucide.Trash, stringResource(R.string.downloads_remove), destructive = true) {
-                onDismiss()
-                downloads.remove(entry.id, api)
+                close { downloads.remove(entry.id, api) }
             }
         }
     }

@@ -77,6 +77,7 @@ import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.LocalNavigator
 import io.github.zekurio.matinee.ui.LocalOffline
 import io.github.zekurio.matinee.ui.LocalUser
+import io.github.zekurio.matinee.ui.Reveal
 import io.github.zekurio.matinee.ui.TopBar
 import io.github.zekurio.matinee.ui.audioFormatName
 import io.github.zekurio.matinee.ui.components.Avatar
@@ -377,16 +378,18 @@ private fun LanguagesSection(playback: PlaybackPreferences, options: PlaybackOpt
                 playback.subtitleMode,
             ) { save(playback.copy(subtitleMode = it)) }
             // With subtitles off, which language they'd be in doesn't matter.
-            if (playback.subtitleMode != SubtitleMode.OFF) {
-                RowDivider()
-                PickerRow(
-                    stringResource(R.string.playback_subtitles_language),
-                    buildList {
-                        add(null to stringResource(R.string.playback_subtitles_device_language, languageName(Locale.getDefault().language)))
-                        options?.subtitleLanguages?.forEach { add(it to languageName(it)) }
-                    },
-                    playback.subtitleLanguage,
-                ) { save(playback.copy(subtitleLanguage = it)) }
+            Reveal(playback.subtitleMode != SubtitleMode.OFF) {
+                Column {
+                    RowDivider()
+                    PickerRow(
+                        stringResource(R.string.playback_subtitles_language),
+                        buildList {
+                            add(null to stringResource(R.string.playback_subtitles_device_language, languageName(Locale.getDefault().language)))
+                            options?.subtitleLanguages?.forEach { add(it to languageName(it)) }
+                        },
+                        playback.subtitleLanguage,
+                    ) { save(playback.copy(subtitleLanguage = it)) }
+                }
             }
             RowDivider()
             SwitchRow(
@@ -438,12 +441,14 @@ private fun SubtitlesSection(prefs: PlayerPrefs) {
                 prefs.subtitleSystemStyle,
             ) { prefs.subtitleSystemStyle = it }
             RowDivider()
-            if (prefs.subtitleSystemStyle) {
+            // One set of rows closes as the other opens, rather than the panel jumping.
+            Reveal(prefs.subtitleSystemStyle) {
                 LinkRow(stringResource(R.string.settings_subtitles_system_open)) {
                     context.openSettings(Intent(Settings.ACTION_CAPTIONING_SETTINGS))
                 }
-            } else {
-                OwnSubtitleLook(prefs)
+            }
+            Reveal(!prefs.subtitleSystemStyle) {
+                Column { OwnSubtitleLook(prefs) }
             }
         }
     }

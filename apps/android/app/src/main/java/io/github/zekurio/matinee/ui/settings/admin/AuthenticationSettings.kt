@@ -29,6 +29,7 @@ import io.github.zekurio.matinee.api.AuthSettingsInput
 import io.github.zekurio.matinee.api.Explicit
 import io.github.zekurio.matinee.api.OidcSettingsInput
 import io.github.zekurio.matinee.api.PasskeySettings
+import io.github.zekurio.matinee.ui.Reveal
 import io.github.zekurio.matinee.ui.components.Gap
 import io.github.zekurio.matinee.ui.components.LocalApi
 import io.github.zekurio.matinee.ui.components.LocalSnackbar
@@ -174,13 +175,15 @@ private fun AuthForm(saved: AdminAuthSettings, saver: Saver, save: (AuthSettings
             Gap(12.dp)
             Panel {
                 SwitchRow(stringResource(R.string.web_oidc_advanced), advanced, icon = Lucide.Settings) { advanced = it }
-                if (advanced) {
+                Reveal(advanced) {
+                    Column {
                     RowDivider()
                     TextRow(stringResource(R.string.web_oidc_field_scopes), oidc.scopes, { oidc = oidc.copy(scopes = it) }, placeholder = defaults.scopes.ifBlank { "openid profile email" }, error = scopesError)
                     RowDivider()
                     TextRow(stringResource(R.string.web_oidc_field_usernameClaim), oidc.usernameClaim, { oidc = oidc.copy(usernameClaim = it) }, placeholder = defaults.usernameClaim.ifBlank { "preferred_username" })
                     RowDivider()
                     TextRow(stringResource(R.string.web_oidc_field_roleClaim), oidc.roleClaim, { oidc = oidc.copy(roleClaim = it) }, placeholder = defaults.roleClaim.ifBlank { null })
+                    }
                 }
             }
         }

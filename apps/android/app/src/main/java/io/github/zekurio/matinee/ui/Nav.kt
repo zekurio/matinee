@@ -79,6 +79,14 @@ data class IdentifyRoute(val titleId: String)
 @Serializable
 data class ImagesRoute(val titleId: String, val season: Int = -1, val episode: Int = -1)
 
+/** An admin adding a library, or with [id], changing one. */
+@Serializable
+data class LibraryEditorRoute(val id: String? = null)
+
+/** The server's folders, for the library being edited: opening at [start], with the folders in [added] marked. */
+@Serializable
+data class FolderPickerRoute(val start: String? = null, val added: List<String> = emptyList())
+
 /** The tab bar's tabs, by the route of each one's first page, in its order: the capsule, then search. */
 val TAB_ROUTES: List<Any> = listOf(HomeRoute, MediaRoute, DownloadsRoute, ProfileRoute, SearchRoute)
 
@@ -161,6 +169,16 @@ class Navigator(private val controller: NavHostController) {
     fun settings() = controller.navigate(SettingsRoute) { launchSingleTop = true }
 
     fun settingsPage(page: String) = controller.navigate(SettingsPageRoute(page)) { launchSingleTop = true }
+
+    fun libraryEditor(id: String? = null) = controller.navigate(LibraryEditorRoute(id)) { launchSingleTop = true }
+
+    fun folderPicker(start: String?, added: List<String>) = controller.navigate(FolderPickerRoute(start, added)) { launchSingleTop = true }
+
+    /** Back to the page under this one, leaving it [value] under [key], as a picker hands back what it picked. */
+    fun backWith(key: String, value: String) {
+        controller.previousBackStackEntry?.savedStateHandle?.set(key, value)
+        controller.popBackStack()
+    }
 
     fun linkDevice() = controller.navigate(LinkDeviceRoute) { launchSingleTop = true }
 

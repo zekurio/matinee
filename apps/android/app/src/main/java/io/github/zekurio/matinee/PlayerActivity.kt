@@ -1,8 +1,10 @@
 package io.github.zekurio.matinee
 
+import android.app.ActivityOptions
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
@@ -46,6 +48,12 @@ class PlayerActivity : ComponentActivity() {
             navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
         )
         super.onCreate(savedInstanceState)
+        // The player fades over the page and away again, at the app's overlay
+        // timing, instead of the system's slower activity animation.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            overrideActivityTransition(OVERRIDE_TRANSITION_OPEN, R.anim.player_enter, R.anim.hold)
+            overrideActivityTransition(OVERRIDE_TRANSITION_CLOSE, R.anim.hold, R.anim.player_exit)
+        }
         target = targetOf(intent)
         val host = PlayerHost(close = ::finish, playInstead = { id -> target = PlayTarget(id, 0.0) })
         setContent {
@@ -99,6 +107,14 @@ class PlayerActivity : ComponentActivity() {
         return PlayTarget(itemId, intent.getDoubleExtra(EXTRA_START, -1.0).takeIf { it >= 0 })
     }
 
+    override fun finish() {
+        super.finish()
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            @Suppress("DEPRECATION")
+            overridePendingTransition(R.anim.hold, R.anim.player_exit)
+        }
+    }
+
     companion object {
         private const val EXTRA_ITEM = "item"
         private const val EXTRA_START = "start"
@@ -108,6 +124,8 @@ class PlayerActivity : ComponentActivity() {
                 Intent(context, PlayerActivity::class.java)
                     .putExtra(EXTRA_ITEM, itemId)
                     .putExtra(EXTRA_START, start ?: -1.0),
+                // Before Android 14 the opening animation comes with the start.
+                ActivityOptions.makeCustomAnimation(context, R.anim.player_enter, R.anim.hold).toBundle(),
             )
         }
     }

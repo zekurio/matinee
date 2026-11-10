@@ -6,7 +6,6 @@ import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.SharedTransitionScope
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -62,12 +61,14 @@ import io.github.zekurio.matinee.ui.media.FavoritesScreen
 import io.github.zekurio.matinee.ui.media.MediaScreen
 import io.github.zekurio.matinee.ui.metadata.IdentifyScreen
 import io.github.zekurio.matinee.ui.metadata.ImagesScreen
+import io.github.zekurio.matinee.ui.profile.ProfileScreen
+import io.github.zekurio.matinee.ui.profile.RecentScreen
 import io.github.zekurio.matinee.ui.search.SearchScreen
 import io.github.zekurio.matinee.ui.settings.LinkDeviceScreen
 import io.github.zekurio.matinee.ui.settings.SettingsPageScreen
 import io.github.zekurio.matinee.ui.settings.SettingsScreen
-import io.github.zekurio.matinee.ui.profile.ProfileScreen
-import io.github.zekurio.matinee.ui.profile.RecentScreen
+import io.github.zekurio.matinee.ui.settings.admin.FolderPickerScreen
+import io.github.zekurio.matinee.ui.settings.admin.LibraryEditorScreen
 import io.github.zekurio.matinee.ui.theme.Palette
 import io.github.zekurio.matinee.ui.title.EpisodeScreen
 import io.github.zekurio.matinee.ui.title.SeasonScreen
@@ -121,9 +122,10 @@ private fun Pages(controller: NavHostController, session: Session, offline: Bool
         // back slides it off again to uncover the page below: the same motion
         // played backwards, by the back button or following the back gesture.
         // Navigation's own gesture motion shrinks the page instead, and fades
-        // the one below in, which isn't how either page came. Nothing fades
-        // between two pages, so they never show through each other. Tabs
-        // slide side by side; search and the player fade through.
+        // the one below in, which isn't how either page came. The covered
+        // page dims as it moves aside, but each page has its own background,
+        // so they never show through each other. Tabs slide side by side;
+        // search fades through. Timings are Motion's.
         enterTransition = { enter(pop = false) },
         exitTransition = { exit(pop = false) },
         popEnterTransition = { enter(pop = true) },
@@ -152,6 +154,11 @@ private fun Pages(controller: NavHostController, session: Session, offline: Bool
         screen<SettingsRoute> { SettingsScreen(session) }
         screen<SettingsPageRoute> { SettingsPageScreen(session, it.toRoute<SettingsPageRoute>().page) }
         screen<LinkDeviceRoute> { LinkDeviceScreen() }
+        screen<LibraryEditorRoute> { LibraryEditorScreen(it.toRoute<LibraryEditorRoute>().id, it.savedStateHandle) }
+        screen<FolderPickerRoute> {
+            val route = it.toRoute<FolderPickerRoute>()
+            FolderPickerScreen(route.start, route.added)
+        }
         screen<IdentifyRoute> { IdentifyScreen(it.toRoute<IdentifyRoute>().titleId) }
         screen<ImagesRoute> {
             val route = it.toRoute<ImagesRoute>()
@@ -230,21 +237,14 @@ private fun AnimatedContentTransitionScope<NavBackStackEntry>.tabStep(): Int {
     return if (to > from) 1 else -1
 }
 
-private const val SLIDE_MS = 350
-
-/**
- * Eases in and out, so a page neither jumps away on the first frame nor
- * lingers at the edge on the last.
- */
-private val SlideEasing = FastOutSlowInEasing
-
 /** How far the covered page moves aside: a quarter of the width, for depth. */
 private fun aside(width: Int) = width / 4
 
 /** How dark the covered page gets, as alpha over the background. */
 private const val COVERED_ALPHA = 0.5f
 
-private fun <T> slide() = tween<T>(SLIDE_MS, easing = SlideEasing)
+/** Pages move as everything else that moves: the web's 280 ms, off at once and settling softly. */
+private fun <T> slide() = Motion.move<T>()
 
 private fun coverIn(): EnterTransition = slideInHorizontally(slide()) { it }
 
@@ -258,9 +258,9 @@ private fun uncoverOut(): ExitTransition = slideOutHorizontally(slide()) { it }
 
 /** Material's fade through: the old page goes quickly, then the new one grows in. */
 private fun fadeThroughIn(): EnterTransition =
-    fadeIn(tween(210, delayMillis = 90)) + scaleIn(tween(210, delayMillis = 90), initialScale = 0.96f)
+    fadeIn(Motion.enter(delay = 60)) + scaleIn(Motion.enter(delay = 60), initialScale = 0.96f)
 
-private fun fadeThroughOut(): ExitTransition = fadeOut(tween(90))
+private fun fadeThroughOut(): ExitTransition = fadeOut(tween(60, easing = Motion.ExitEasing))
 
 /**
  * A page on the background of its own, so pages coming and going never show

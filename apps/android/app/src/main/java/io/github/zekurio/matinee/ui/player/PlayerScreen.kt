@@ -13,8 +13,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.Canvas
@@ -70,8 +68,8 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -163,6 +161,7 @@ import io.github.zekurio.matinee.downloads.OfflineItem
 import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.LocalOffline
 import io.github.zekurio.matinee.ui.LocalUser
+import io.github.zekurio.matinee.ui.Motion
 import io.github.zekurio.matinee.ui.components.ButtonLook
 import io.github.zekurio.matinee.ui.components.ErrorBox
 import io.github.zekurio.matinee.ui.components.Gap
@@ -516,7 +515,7 @@ private fun Playback(itemId: String, data: PlayerData, start: Double?) {
             CircularProgressIndicator(Modifier.align(Alignment.Center).size(48.dp), color = Palette.Foreground)
         }
         if (!inPip) {
-            AnimatedVisibility(controls || controller.ended, enter = fadeIn(), exit = fadeOut()) {
+            AnimatedVisibility(controls || controller.ended, enter = Motion.fadeIn, exit = Motion.fadeOut) {
                 Controls(
                     controller,
                     back = back,
@@ -578,7 +577,7 @@ private fun ZoomNote(count: Int, fill: Boolean, modifier: Modifier) {
         delay(1_200)
         shown = false
     }
-    AnimatedVisibility(shown, modifier, enter = fadeIn(), exit = fadeOut()) {
+    AnimatedVisibility(shown, modifier, enter = Motion.fadeIn, exit = Motion.fadeOut) {
         Text(
             stringResource(if (fill) R.string.player_fill else R.string.player_fit),
             style = MaterialTheme.typography.titleMedium,
@@ -602,7 +601,7 @@ private fun PlayerNoticeNote(notice: Notice?, modifier: Modifier) {
         shown = null
     }
     val current = shown
-    AnimatedVisibility(current != null, modifier, enter = fadeIn(), exit = fadeOut()) {
+    AnimatedVisibility(current != null, modifier, enter = Motion.fadeIn, exit = Motion.fadeOut) {
         // The last one stays drawn while it fades.
         var last by remember { mutableStateOf(current) }
         if (current != null) last = current
@@ -698,7 +697,7 @@ private fun anchor(type: Int): Float = when (type) {
 @Composable
 private fun Subtitles(controller: PlayerController, look: SubtitleLook, lifted: Boolean, modifier: Modifier) {
     // Moves with the controls rather than jumping when they come and go.
-    val bottom by animateDpAsState(if (lifted) 150.dp else 28.dp, label = "subtitle lift")
+    val bottom by animateDpAsState(if (lifted) 150.dp else 28.dp, Motion.move(), label = "subtitle lift")
     val cues = controller.cues ?: return
     val shown = cues.at(controller.position)
     if (shown.isEmpty()) return
@@ -919,7 +918,7 @@ private fun SeekTrack(
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
     // The dot grows under the finger, and while focused.
-    val thumb by animateDpAsState(if (scrubbing || focused) 11.dp else 8.dp, label = "seek thumb")
+    val thumb by animateDpAsState(if (scrubbing || focused) 11.dp else 8.dp, Motion.color(), label = "seek thumb")
     val label = stringResource(R.string.a11y_player_seek)
     val action = stringResource(R.string.a11y_player_seek_action)
     val state = if (enabled) {
@@ -1132,7 +1131,7 @@ private fun PlayerPanel(open: Menu?, controller: PlayerController, onDismiss: ()
     }
     val closeLabel = stringResource(R.string.a11y_player_close_menu)
     BoxWithConstraints(Modifier.fillMaxSize()) {
-        AnimatedVisibility(open != null, enter = fadeIn(), exit = fadeOut()) {
+        AnimatedVisibility(open != null, enter = Motion.fadeIn, exit = Motion.fadeOut) {
             Box(
                 Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.45f)).semantics {
                     contentDescription = closeLabel
@@ -1150,8 +1149,8 @@ private fun PlayerPanel(open: Menu?, controller: PlayerController, onDismiss: ()
         AnimatedVisibility(
             open != null,
             modifier = Modifier.align(Alignment.CenterEnd),
-            enter = slideInHorizontally { it } + fadeIn(),
-            exit = slideOutHorizontally { it } + fadeOut(),
+            enter = slideInHorizontally(Motion.slide()) { it } + Motion.fadeIn,
+            exit = slideOutHorizontally(Motion.slide()) { it } + Motion.fadeOut,
         ) {
             val menu = last ?: return@AnimatedVisibility
             LazyColumn(

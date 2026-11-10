@@ -1,12 +1,10 @@
 package io.github.zekurio.matinee.ui.components
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.interaction.InteractionSource
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
@@ -52,6 +50,7 @@ import io.github.zekurio.matinee.api.TitleKind
 import io.github.zekurio.matinee.api.TitleSummary
 import io.github.zekurio.matinee.app
 import io.github.zekurio.matinee.ui.LocalNavigator
+import io.github.zekurio.matinee.ui.Motion
 import io.github.zekurio.matinee.ui.episodeCode
 import io.github.zekurio.matinee.ui.episodeNumber
 import io.github.zekurio.matinee.ui.formatRuntime
@@ -155,7 +154,7 @@ fun PlayGlyph(onClick: () -> Unit, contentDescription: String, modifier: Modifie
 fun BoxScope.HoverPlay(interaction: InteractionSource, onClick: () -> Unit, contentDescription: String, size: Dp = 56.dp) {
     val hovered by interaction.collectIsHoveredAsState()
     val focused by interaction.collectIsFocusedAsState()
-    AnimatedVisibility(hovered || focused, Modifier.align(Alignment.Center), enter = fadeIn(), exit = fadeOut()) {
+    AnimatedVisibility(hovered || focused, Modifier.align(Alignment.Center), enter = Motion.fadeIn, exit = Motion.fadeOut) {
         PlayGlyph(onClick, contentDescription, size = size)
     }
 }

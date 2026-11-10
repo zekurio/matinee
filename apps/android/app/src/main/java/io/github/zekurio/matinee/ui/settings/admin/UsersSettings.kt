@@ -11,6 +11,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -135,16 +136,20 @@ private fun UserSheet(user: AdminUser, lastAdmin: Boolean, scope: CoroutineScope
     val self = LocalUser.current.id == user.id
     val snackbar = LocalSnackbar.current
     val lastAdminNote = stringResource(R.string.web_users_lastAdmin)
+    val sheet = rememberModalBottomSheetState()
+    // The sheet slides away first, then the question opens.
     val pick = { action: UserAction ->
-        onDismiss()
-        // The server keeps one admin who can sign in; say so before asking.
-        if (lastAdmin && (action is UserAction.Delete || (action is UserAction.Role && !action.admin))) {
-            scope.launch { snackbar.showSnackbar(lastAdminNote) }
-        } else {
-            onPick(action)
+        scope.launch { sheet.hide() }.invokeOnCompletion {
+            onDismiss()
+            // The server keeps one admin who can sign in; say so before asking.
+            if (lastAdmin && (action is UserAction.Delete || (action is UserAction.Role && !action.admin))) {
+                scope.launch { snackbar.showSnackbar(lastAdminNote) }
+            } else {
+                onPick(action)
+            }
         }
     }
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Palette.Raised, dragHandle = null) {
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheet, containerColor = Palette.Raised, dragHandle = null) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(vertical = 12.dp)) {
             SheetHeader(user.name, "@${user.username}")
             SheetItem(

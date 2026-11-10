@@ -12,6 +12,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.SheetState
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -149,6 +150,22 @@ fun ActionsSheet(actions: Actions) {
                 is ActionTarget.Title -> TitleActions(target.title, target.file, target.here, dismiss)
                 is ActionTarget.Season -> SeasonActions(target.title, target.season, target.here, dismiss)
             }
+        }
+    }
+}
+
+/**
+ * For a sheet's items: the sheet slides away, then it's gone and the
+ * item's action runs, so a page or dialog it opens doesn't cut it off.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun rememberSheetCloser(sheet: SheetState, onDismiss: () -> Unit): (() -> Unit) -> Unit {
+    val scope = rememberCoroutineScope()
+    return { action ->
+        scope.launch { sheet.hide() }.invokeOnCompletion {
+            onDismiss()
+            action()
         }
     }
 }
