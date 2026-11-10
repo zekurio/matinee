@@ -98,8 +98,8 @@ private val TABS = listOf(
     Tab(ProfileRoute, null, R.string.tab_profile),
 )
 
-/** Offline, only what works without the server: the downloads, and the profile with settings. */
-private val OFFLINE_TABS = TABS.filter { it.route == DownloadsRoute || it.route == ProfileRoute }
+/** Offline, only what works without the server: Home from the downloads, the downloads, and the profile with settings. */
+private val OFFLINE_TABS = TABS.filter { it.route == HomeRoute || it.route == DownloadsRoute || it.route == ProfileRoute }
 
 private val TabBarShape = RoundedCornerShape(percent = 50)
 private val ITEM_HEIGHT = TAB_BAR_HEIGHT - 8.dp

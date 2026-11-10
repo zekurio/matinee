@@ -54,6 +54,10 @@ class PendingProgress(context: Context) {
         prefs.edit { putString("reports", MatineeJson.encodeToString(serializer, next)) }
     }
 
+    /** Where the person got to in [itemId] while offline, if that hasn't reached the server yet. */
+    @Synchronized
+    fun report(itemId: String): PendingReport? = read()[itemId]
+
     /** A report went through, so what waited for this file is out of date. */
     @Synchronized
     fun drop(itemId: String) {

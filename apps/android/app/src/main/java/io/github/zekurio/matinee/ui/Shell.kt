@@ -117,7 +117,7 @@ fun SignedInApp(session: Session, user: User, offline: Boolean = false) {
 private fun Pages(controller: NavHostController, session: Session, offline: Boolean) {
     NavHost(
         controller,
-        startDestination = if (offline) DownloadsRoute else HomeRoute,
+        startDestination = HomeRoute,
         // A new page slides in from the end over the one it covers, and going
         // back slides it off again to uncover the page below: the same motion
         // played backwards, by the back button or following the back gesture.

@@ -69,8 +69,8 @@ import java.util.Locale
  * The profile tab, behind the person's picture in the tab bar, as the web's
  * profile page: who's signed in, their favorites, their statistics, and
  * what they watched last, with the way on to Settings, where signing out
- * is. Offline, only who it is and Settings, with a way to try the server
- * again.
+ * is. Offline, only who it is and Settings, where offline mode is turned
+ * off again.
  */
 @Composable
 fun ProfileScreen(session: Session) {
@@ -88,14 +88,6 @@ fun ProfileScreen(session: Session) {
             contentPadding = PaddingValues(bottom = tabBarPadding() + 24.dp),
         ) {
             item(key = "who") { Header(loaded) }
-            // Offline, trying the server again is what the page is for.
-            if (offline) {
-                item(key = "reconnect") {
-                    Box(Modifier.padding(start = Gutter, end = Gutter, top = SectionGap)) {
-                        Panel { LinkRow(stringResource(R.string.settings_go_online), icon = Lucide.RefreshCw) { session.setOfflineMode(false) } }
-                    }
-                }
-            }
             if (!offline) {
                 when (val state = profile?.state) {
                     is Load.Failed -> item(key = "failed") {

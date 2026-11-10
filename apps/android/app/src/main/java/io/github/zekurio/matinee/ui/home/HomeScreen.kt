@@ -36,6 +36,7 @@ import io.github.zekurio.matinee.ui.AppHeader
 import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.Loader
 import io.github.zekurio.matinee.ui.LocalNavigator
+import io.github.zekurio.matinee.ui.LocalOffline
 import io.github.zekurio.matinee.ui.LocalUser
 import io.github.zekurio.matinee.ui.RefreshOnResume
 import io.github.zekurio.matinee.ui.StatusBarScrim
@@ -57,6 +58,16 @@ import io.github.zekurio.matinee.ui.theme.Palette
 
 @Composable
 fun HomeScreen() {
+    // Offline mode leaves the server alone: Home is the downloads.
+    if (LocalOffline.current) {
+        OfflineHomeScreen()
+        return
+    }
+    OnlineHomeScreen()
+}
+
+@Composable
+private fun OnlineHomeScreen() {
     val libraries = rememberLoader("libraries") { libraries.list() }
     val resume = rememberLoader("continue") { home.continueWatching(limit = 20) }
     val nextUp = rememberLoader("nextUp") { home.nextUp(limit = 20) }
