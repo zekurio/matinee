@@ -30,15 +30,14 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
-import io.github.zekurio.matinee.api.DEFAULT_PLAYBACK_PREFERENCES
+import io.github.zekurio.matinee.api.DownloadResolution
+import io.github.zekurio.matinee.api.DownloadVideoPreset
+import io.github.zekurio.matinee.api.DownloadWishes
 import io.github.zekurio.matinee.api.MatineeApi
 import io.github.zekurio.matinee.api.MediaItem
-import io.github.zekurio.matinee.api.PlaybackOptions
 import io.github.zekurio.matinee.api.Season
 import io.github.zekurio.matinee.api.TitleSummary
 import io.github.zekurio.matinee.app
-import io.github.zekurio.matinee.downloads.Downloads
-import io.github.zekurio.matinee.ui.LocalUser
 import io.github.zekurio.matinee.ui.components.Gap
 import io.github.zekurio.matinee.ui.components.LocalActions
 import io.github.zekurio.matinee.ui.components.LocalApi
@@ -61,18 +60,11 @@ data class FileSet(val title: TitleSummary, val season: Season? = null) {
     }
 }
 
-/**
- * Download every file of a show or season at once, all the same way: made
- * for this device at the size picked, or as they are. Files already on
- * the device stay as they are. The sizes are estimates: a plan for each
- * file would be a request for each before anything starts, so each file
- * is planned as it's queued instead.
- */
+/** Resolve a season in batches, then queue the returned plans without more requests. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DownloadFilesSheet(files: FileSet, onDismiss: () -> Unit) {
     val api = LocalApi.current
-    val user = LocalUser.current
     val res = LocalResources.current
     val actions = LocalActions.current
     val snackbar = LocalSnackbar.current
@@ -82,25 +74,46 @@ fun DownloadFilesSheet(files: FileSet, onDismiss: () -> Unit) {
     var items by remember { mutableStateOf<List<MediaItem>?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var picked by remember { mutableStateOf<Choice>(Choice.Device(null)) }
-    var options by remember { mutableStateOf<PlaybackOptions?>(null) }
+    var presets by remember { mutableStateOf<List<DownloadVideoPreset>>(emptyList()) }
+    var codecs by remember { mutableStateOf<List<String>>(emptyList()) }
+    var results by remember { mutableStateOf<List<DownloadResolution>?>(null) }
+    var resolvedWishes by remember { mutableStateOf<DownloadWishes?>(null) }
     var codec by remember { mutableStateOf<String?>(null) }
     val askNotifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
 
     LaunchedEffect(files) {
         try {
-            options = api.playback.options().also {
-                codec = downloads.defaultCodec(it)
-                picked = startingChoice(downloads, it)
-            }
-            items = files.load(api)
+            val loaded = files.load(api)
+            val wishes = downloads.wishes()
+            val initial = downloads.resolve(api, loaded.filter { stored[it.id] == null }, wishes)
+            val ready = initial.filterIsInstance<DownloadResolution.Ready>()
+            presets = ready.flatMap { it.choices.presets }.distinct().sortedByDescending { it.height }
+            codecs = ready.flatMap { it.choices.codecs }.distinct()
+            picked = startingChoice(downloads, presets)
+            resolvedWishes = wishes
+            results = initial
+            items = loaded
         } catch (e: IOException) {
             error = res.getString(R.string.downloads_all_load_failed, e.message.orEmpty())
         }
     }
 
+    LaunchedEffect(items, picked, codec) {
+        val loaded = items ?: return@LaunchedEffect
+        val wishes = downloads.wishes((picked as? Choice.Device)?.preset, codec)
+        if (wishes == resolvedWishes) return@LaunchedEffect
+        results = null
+        try {
+            results = downloads.resolve(api, loaded.filter { stored[it.id] == null }, wishes)
+            resolvedWishes = wishes
+        } catch (e: IOException) {
+            error = e.message
+        }
+    }
+
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheet, containerColor = Palette.Raised, dragHandle = null) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(vertical = 16.dp)) {
-            val loadedOptions = options
+            val resolved = results
             val name = files.season?.let { stringResource(R.string.title_season_of, files.title.name, seasonName(it.number, res)) }
                 ?: files.title.name
             Column(Modifier.padding(horizontal = 20.dp)) {
@@ -120,7 +133,7 @@ fun DownloadFilesSheet(files: FileSet, onDismiss: () -> Unit) {
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.padding(horizontal = 20.dp),
                 )
-                list == null || loadedOptions == null -> Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
+                list == null || resolved == null -> Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = Palette.Accent)
                 }
                 else -> {
@@ -133,12 +146,16 @@ fun DownloadFilesSheet(files: FileSet, onDismiss: () -> Unit) {
                     Text(summary, style = MaterialTheme.typography.bodyMedium, color = Palette.Muted, modifier = Modifier.padding(horizontal = 20.dp))
                     if (missing.isNotEmpty()) {
                         Gap(4.dp)
-                        downloadChoices(loadedOptions).forEach { choice ->
-                            RadioRow(choiceName(choice), batchSize(downloads, choice, missing, loadedOptions), selected = picked == choice) { picked = choice }
+                        downloadChoices(presets).forEach { choice ->
+                            val size = if (choice != picked) null else if (choice == Choice.Original) formatBytes(missing.sumOf { it.sizeBytes })
+                                else formatBytes(resolved.filterIsInstance<DownloadResolution.Ready>().sumOf { it.plan.estimatedBytes })
+                            RadioRow(choiceName(choice), size, selected = picked == choice) { picked = choice }
+                        }
+                        resolved.filterIsInstance<DownloadResolution.Unavailable>().forEach {
+                            Text(it.message, color = Palette.Danger, modifier = Modifier.padding(horizontal = 20.dp))
                         }
                         // Files that get encoded come in the codec picked.
-                        val codecs = options?.let(downloads::codecChoices).orEmpty()
-                        val current = codec
+                        val current = codec ?: codecs.firstOrNull()
                         if (picked is Choice.Device && codecs.size > 1 && current != null) {
                             SheetHeading(stringResource(R.string.downloads_codec))
                             CodecPicker(codecs, current) { codec = it }
@@ -161,14 +178,7 @@ fun DownloadFilesSheet(files: FileSet, onDismiss: () -> Unit) {
                                 // The app's scope, so the files keep queueing after the sheet goes.
                                 actions.scope.launch {
                                     launch { snackbar.showSnackbar(started) }
-                                    val failed = downloads.downloadAll(
-                                        api,
-                                        missing,
-                                        original = choice == Choice.Original,
-                                        preset = (choice as? Choice.Device)?.preset,
-                                        preferences = user.playback ?: DEFAULT_PLAYBACK_PREFERENCES,
-                                        codec = codec,
-                                    )
+                                    val failed = downloads.downloadAll(missing, resolved, original = choice == Choice.Original)
                                     if (failed > 0) snackbar.showSnackbar(res.getQuantityString(R.plurals.downloads_all_failed, failed, failed))
                                 }
                                 onDismiss()
@@ -183,13 +193,4 @@ fun DownloadFilesSheet(files: FileSet, onDismiss: () -> Unit) {
             }
         }
     }
-}
-
-/** About how much [choice] puts on the device for [items], or nothing when it can't tell. */
-@Composable
-private fun batchSize(downloads: Downloads, choice: Choice, items: List<MediaItem>, options: PlaybackOptions): String? = when (choice) {
-    Choice.Original -> formatBytes(items.sumOf { it.sizeBytes })
-    is Choice.Device -> items.mapNotNull { downloads.estimateBytes(it, choice.preset, options) }
-        .takeIf { it.isNotEmpty() }
-        ?.let { stringResource(R.string.downloads_about, formatBytes(it.sum())) }
 }

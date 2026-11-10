@@ -58,20 +58,17 @@ import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.DownloadPlan
 import io.github.zekurio.matinee.api.DownloadSpec
 import io.github.zekurio.matinee.api.MediaItem
-import io.github.zekurio.matinee.api.PlaybackOptions
 import io.github.zekurio.matinee.api.PlaybackPreferences
 import io.github.zekurio.matinee.api.TitleKind
 import io.github.zekurio.matinee.api.TitleSummary
 import io.github.zekurio.matinee.app
 import io.github.zekurio.matinee.downloads.DEFAULT_ORIGINAL
-import io.github.zekurio.matinee.downloads.DownloadSource
 import io.github.zekurio.matinee.downloads.DownloadState
 import io.github.zekurio.matinee.downloads.Downloads
 import io.github.zekurio.matinee.downloads.OfflineItem
 import io.github.zekurio.matinee.api.DownloadVideoPreset
 import io.github.zekurio.matinee.ui.LocalNavigator
 import io.github.zekurio.matinee.ui.LocalOffline
-import io.github.zekurio.matinee.ui.LocalUser
 import io.github.zekurio.matinee.ui.TopBar
 import io.github.zekurio.matinee.ui.tabBarPadding
 import io.github.zekurio.matinee.ui.components.CardShape
@@ -540,13 +537,13 @@ internal sealed interface Choice {
 }
 
 /** What a download sheet offers, in order: for this device, at each preset's size, and as it is. */
-internal fun downloadChoices(options: PlaybackOptions): List<Choice> =
-    listOf<Choice>(Choice.Device(null)) + options.downloadVideoPresets.map { Choice.Device(it) } + Choice.Original
+internal fun downloadChoices(presets: List<DownloadVideoPreset>): List<Choice> =
+    listOf<Choice>(Choice.Device(null)) + presets.map { Choice.Device(it) } + Choice.Original
 
 /** The version Settings names, which a download sheet starts on. */
-internal fun startingChoice(downloads: Downloads, options: PlaybackOptions): Choice = when (val wanted = downloads.defaultVersion) {
+internal fun startingChoice(downloads: Downloads, presets: List<DownloadVideoPreset>): Choice = when (val wanted = downloads.defaultVersion) {
     DEFAULT_ORIGINAL -> Choice.Original
-    else -> options.downloadVideoPresets.firstOrNull { it.height.toString() == wanted }?.let { Choice.Device(it) } ?: Choice.Device(null)
+    else -> presets.firstOrNull { it.height.toString() == wanted }?.let { Choice.Device(it) } ?: Choice.Device(null)
 }
 
 @Composable

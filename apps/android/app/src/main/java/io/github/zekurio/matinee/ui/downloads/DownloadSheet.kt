@@ -41,13 +41,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
-import io.github.zekurio.matinee.api.DEFAULT_PLAYBACK_PREFERENCES
+import io.github.zekurio.matinee.api.DownloadResolution
 import io.github.zekurio.matinee.api.DownloadPlan
 import io.github.zekurio.matinee.api.DownloadSpec
 import io.github.zekurio.matinee.api.MediaItem
 import io.github.zekurio.matinee.app
 import io.github.zekurio.matinee.downloads.DownloadSource
-import io.github.zekurio.matinee.ui.LocalUser
 import io.github.zekurio.matinee.ui.components.Gap
 import io.github.zekurio.matinee.ui.components.LocalApi
 import io.github.zekurio.matinee.ui.components.Lucide
@@ -72,7 +71,6 @@ import java.io.IOException
 @Composable
 fun DownloadSheet(item: MediaItem, onDismiss: () -> Unit) {
     val api = LocalApi.current
-    val user = LocalUser.current
     val context = LocalContext.current
     val downloads = context.app.downloads
     val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -92,17 +90,17 @@ fun DownloadSheet(item: MediaItem, onDismiss: () -> Unit) {
 
     LaunchedEffect(item.id) {
         try {
-            val loaded = DownloadSource(
-                item = item,
-                audio = api.media.audio(item.id),
-                subtitles = api.media.subtitles(item.id).tracks,
-                options = api.playback.options(),
-                preferences = user.playback ?: DEFAULT_PLAYBACK_PREFERENCES,
-            )
+            val result = downloads.resolve(api, listOf(item), downloads.wishes()).single()
+            if (result is DownloadResolution.Unavailable) {
+                error = result.message
+                return@LaunchedEffect
+            }
+            val ready = result as DownloadResolution.Ready
+            val loaded = DownloadSource(item, ready)
             audio = downloads.defaultAudio(loaded).map { it.index }
-            codec = downloads.defaultCodec(loaded.options)
+            codec = ready.choices.codecs.firstOrNull() ?: "h264"
             subtitles = downloads.defaultSubtitles(loaded).map { it.id }.toSet()
-            picked = startingChoice(downloads, loaded.options)
+            picked = startingChoice(downloads, ready.choices.presets)
             source = loaded
         } catch (e: IOException) {
             error = e.message ?: failure
@@ -119,17 +117,22 @@ fun DownloadSheet(item: MediaItem, onDismiss: () -> Unit) {
             return@LaunchedEffect
         }
         planning = true
-        for (choice in downloadChoices(loaded.options)) {
+        for (choice in downloadChoices(loaded.resolved.choices.presets)) {
             if (choice !is Choice.Device) continue
-            val spec = downloads.deviceSpec(loaded, choice.preset, chosenAudio, codec)
-            // A size this device can't have the server make just doesn't show one.
-            val plan = runCatching { api.downloads.plan(item.id, spec) }.getOrNull()
-            if (plan != null) {
-                specs[choice] = spec
-                plans[choice] = plan
-            } else {
-                specs.remove(choice)
-                plans.remove(choice)
+            try {
+                when (val result = downloads.resolve(api, listOf(item), downloads.wishes(choice.preset, codec, chosenAudio.map { it.index })).single()) {
+                    is DownloadResolution.Ready -> {
+                        specs[choice] = result.spec
+                        plans[choice] = result.plan
+                    }
+                    is DownloadResolution.Unavailable -> {
+                        specs.remove(choice)
+                        plans.remove(choice)
+                        if (choice == picked) error = result.message
+                    }
+                }
+            } catch (e: IOException) {
+                error = e.message ?: failure
             }
         }
         planning = false
@@ -163,13 +166,13 @@ fun DownloadSheet(item: MediaItem, onDismiss: () -> Unit) {
                     val texts = downloads.textSubtitles(loaded)
                     Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState())) {
                         // A size the server can't make for this file doesn't show.
-                        val shown = downloadChoices(loaded.options).filter { it !is Choice.Device || it.preset == null || plans[it] != null }
+                        val shown = downloadChoices(loaded.resolved.choices.presets).filter { it !is Choice.Device || it.preset == null || plans[it] != null }
                         shown.forEach { choice ->
                             ChoiceRow(choice, plans[choice], loaded, selected = picked == choice) { picked = choice }
                         }
                         // Only an encode has a codec to pick; Automatic may keep the video as it is.
                         val encodes = (picked as? Choice.Device)?.let { it.preset != null || plans[it]?.video?.mode == "encode" } == true
-                        val codecs = downloads.codecChoices(loaded.options)
+                        val codecs = loaded.resolved.choices.codecs
                         if (encodes && codecs.size > 1) {
                             SheetHeading(stringResource(R.string.downloads_codec))
                             CodecPicker(codecs, codec) { codec = it }
