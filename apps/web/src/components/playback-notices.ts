@@ -87,7 +87,9 @@ function noticeFor(
   if (plan.standIn && plan.audio && !previous?.standIn) {
     return {
       title: tr("player.notice.standIn", { format: plan.audio.format }),
-      description: tr("player.notice.standInDetail"),
+      description: tr("player.notice.standInDetail", {
+        track: plan.standIn.label,
+      }),
     }
   }
   if (plan.method === "transcode" && !plan.reasons.includes("quality")) {

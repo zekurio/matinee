@@ -359,7 +359,7 @@ data class PlaybackStart(
     val position: Double,
     val audio: AudioTrack?,
     val convertedAudio: String?,
-    val standIn: Boolean,
+    val standIn: AudioTrack?,
     val subtitle: SubtitleTrack?,
     val subtitleMode: String?,
     val subtitleUrl: String?,

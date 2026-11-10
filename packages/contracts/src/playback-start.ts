@@ -193,11 +193,8 @@ export const PlaybackStart = t.object({
   audio: AudioTrack.nullable(),
   /** The codec the audio is converted to. Null when it's sent as it is. */
   convertedAudio: t.string().nullable(),
-  /**
-   * `audio` plays in place of the track the viewer would get, which the
-   * device can't decode, and is in the same language.
-   */
-  standIn: t.boolean(),
+  /** The track `audio` replaces in the same language. Null when none is replaced. */
+  standIn: AudioTrack.nullable(),
   /** The subtitle that shows. Null for none. */
   subtitle: SubtitleTrack.nullable(),
   /** Null without a subtitle. */

@@ -122,7 +122,10 @@ export function playbackAudio(
           )
           .toSorted((a, b) => (b.channels ?? 0) - (a.channels ?? 0))[0]
       : undefined
-  return { audio: standIn ?? wanted ?? null, standIn: !!standIn }
+  return {
+    audio: standIn ?? wanted ?? null,
+    standIn: standIn ? (wanted ?? null) : null,
+  }
 }
 
 /** Decide without reading files, the database, or a device API. Null means exhausted. */

@@ -118,7 +118,7 @@ export default {
 
   "player.notice.standIn": "Zu {format}-Audio gewechselt",
   "player.notice.standInDetail":
-    "Dieser Browser kann die Spur nicht abspielen, die sonst liefe. Wähle sie im Audiomenü, um sie zu transkodieren.",
+    "Dieser Browser kann {track} nicht abspielen. Wähle die Spur im Audiomenü, um sie zu transkodieren.",
   "player.notice.video": "Transkodierung von {from}-Video zu {quality}",
   "player.notice.videoTo": "Transkodierung des Videos zu {quality}",
   "player.notice.audio": "{from}-Audio zu {to}",

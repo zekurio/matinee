@@ -139,7 +139,7 @@ export default defineMessages("player", {
   // and {quality} a resolution, like 1080p.
   "player.notice.standIn": "Switched to {format} audio",
   "player.notice.standInDetail":
-    "This browser can't play the track that would play. Pick it in the audio menu to transcode it.",
+    "This browser can't play {track}. Pick it in the audio menu to transcode it.",
   "player.notice.video": "Transcoding {from} video to {quality}",
   "player.notice.videoTo": "Transcoding the video to {quality}",
   "player.notice.audio": "{from} audio to {to}",
