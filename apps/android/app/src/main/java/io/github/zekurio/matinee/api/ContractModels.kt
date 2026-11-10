@@ -312,6 +312,8 @@ data class PlaybackPreferences(
     val subtitleMode: String,
     val subtitleLanguage: String?,
     val rememberSubtitles: Boolean,
+    val skipBackSeconds: Int? = null,
+    val skipForwardSeconds: Int? = null,
 )
 
 @Serializable
@@ -769,7 +771,8 @@ object JobQueueId {
     const val SUBTITLES = "subtitles"
     const val AVATARS = "avatars"
     const val DOWNLOADS = "downloads"
-    val all = listOf(LIBRARY_SCAN, MEDIA_PROBE, METADATA, THUMBNAILS, TRICKPLAY, ARTWORK, SUBTITLES, AVATARS, DOWNLOADS)
+    const val DOWNLOAD_COPIES = "download-copies"
+    val all = listOf(LIBRARY_SCAN, MEDIA_PROBE, METADATA, THUMBNAILS, TRICKPLAY, ARTWORK, SUBTITLES, AVATARS, DOWNLOADS, DOWNLOAD_COPIES)
 }
 
 @Serializable

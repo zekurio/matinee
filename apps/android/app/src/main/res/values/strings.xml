@@ -395,7 +395,9 @@
     <string name="playback_decoders_title">Decoders</string>
     <string name="playback_decoders_hardware">Hardware first</string>
     <string name="playback_decoders_software">Software first</string>
-    <string name="playback_skip_title">Skip by</string>
+    <string name="playback_skip_title">Skipping</string>
+    <string name="playback_skip_back">Skip back</string>
+    <string name="playback_skip_forward">Skip forward</string>
     <plurals name="playback_skip_seconds">
         <item quantity="one">%1$d second</item>
         <item quantity="other">%1$d seconds</item>

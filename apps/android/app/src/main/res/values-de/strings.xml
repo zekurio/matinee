@@ -373,7 +373,9 @@
     <string name="playback_decoders_title">Decoder</string>
     <string name="playback_decoders_hardware">Hardware zuerst</string>
     <string name="playback_decoders_software">Software zuerst</string>
-    <string name="playback_skip_title">Springen um</string>
+    <string name="playback_skip_title">Springen</string>
+    <string name="playback_skip_back">Zurückspringen um</string>
+    <string name="playback_skip_forward">Vorspringen um</string>
     <plurals name="playback_skip_seconds">
         <item quantity="one">%1$d Sekunde</item>
         <item quantity="other">%1$d Sekunden</item>

@@ -61,9 +61,12 @@ import io.github.zekurio.matinee.api.DEFAULT_PLAYBACK_PREFERENCES
 import io.github.zekurio.matinee.api.ORIGINAL_LANGUAGE
 import io.github.zekurio.matinee.api.PlaybackOptions
 import io.github.zekurio.matinee.api.PlaybackPreferences
+import io.github.zekurio.matinee.api.SKIP_STEPS
 import io.github.zekurio.matinee.api.Session as AccountSession
 import io.github.zekurio.matinee.api.SubtitleMode
 import io.github.zekurio.matinee.api.isAdmin
+import io.github.zekurio.matinee.api.skipBack
+import io.github.zekurio.matinee.api.skipForward
 import io.github.zekurio.matinee.app
 import io.github.zekurio.matinee.auth.AuthState
 import io.github.zekurio.matinee.auth.Session
@@ -97,7 +100,6 @@ import io.github.zekurio.matinee.ui.player.OWN_SUBTITLE_EDGES
 import io.github.zekurio.matinee.ui.player.PlayerEngine
 import io.github.zekurio.matinee.ui.player.PlayerPrefs
 import io.github.zekurio.matinee.ui.player.QUALITIES
-import io.github.zekurio.matinee.ui.player.SKIP_STEPS
 import io.github.zekurio.matinee.ui.player.SUBTITLE_SCALES
 import io.github.zekurio.matinee.ui.player.SubtitleBackground
 import io.github.zekurio.matinee.ui.player.SubtitleColor
@@ -347,6 +349,7 @@ private fun PlaybackPage(session: Session) {
     val passthrough = remember { Capabilities.OPTIONAL_PASSTHROUGH.filter(Capabilities::decodesAudio) }
     SettingsScaffold(stringResource(R.string.settings_page_playback)) {
         item(key = "languages") { LanguagesSection(playback, loaded, save) }
+        item(key = "skips") { SkipsSection(playback, save) }
         item(key = "device") { DeviceSection(prefs, loaded) }
         if (passthrough.isNotEmpty()) item(key = "passthrough") { PassthroughSection(prefs, passthrough) }
         item(key = "diagnostics") { PlaybackDiagnosticsSection() }
@@ -394,6 +397,31 @@ private fun LanguagesSection(playback: PlaybackPreferences, options: PlaybackOpt
         }
     }
 }
+
+/** How far the player skips each way, which every device of the account uses. */
+@Composable
+private fun SkipsSection(playback: PlaybackPreferences, save: (PlaybackPreferences) -> Unit) {
+    Section(stringResource(R.string.playback_skip_title)) {
+        Panel {
+            PickerRow(
+                stringResource(R.string.playback_skip_back),
+                skipChoices(playback.skipBack),
+                playback.skipBack,
+            ) { save(playback.copy(skipBackSeconds = it)) }
+            RowDivider()
+            PickerRow(
+                stringResource(R.string.playback_skip_forward),
+                skipChoices(playback.skipForward),
+                playback.skipForward,
+            ) { save(playback.copy(skipForwardSeconds = it)) }
+        }
+    }
+}
+
+/** The skip lengths to pick from, with [current] too when another app set one the steps don't have. */
+@Composable
+private fun skipChoices(current: Int) = (SKIP_STEPS + current).distinct().sorted()
+    .map { it to pluralStringResource(R.plurals.playback_skip_seconds, it, it) }
 
 /**
  * How subtitles look here, with a sample: the system's caption style, which
@@ -518,12 +546,6 @@ private fun DeviceSection(prefs: PlayerPrefs, options: PlaybackOptions?) {
                 ),
                 prefs.decoders,
             ) { prefs.decoders = it }
-            RowDivider()
-            PickerRow(
-                stringResource(R.string.playback_skip_title),
-                SKIP_STEPS.map { it to pluralStringResource(R.plurals.playback_skip_seconds, it, it) },
-                prefs.skipSeconds,
-            ) { prefs.skipSeconds = it }
             RowDivider()
             SwitchRow(
                 stringResource(R.string.playback_autoplay_title),

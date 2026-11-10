@@ -149,6 +149,8 @@ import io.github.zekurio.matinee.api.MediaItem
 import io.github.zekurio.matinee.api.PlaybackOptions
 import io.github.zekurio.matinee.api.SubtitleTrack
 import io.github.zekurio.matinee.api.TitleKind
+import io.github.zekurio.matinee.api.skipBack
+import io.github.zekurio.matinee.api.skipForward
 import io.github.zekurio.matinee.app
 import io.github.zekurio.matinee.downloads.OfflineItem
 import io.github.zekurio.matinee.ui.Load
@@ -373,7 +375,8 @@ private fun Playback(data: PlayerData, start: Double?) {
             controls = false
         }
     }
-    val skip = prefs.skipSeconds.toDouble()
+    val back = preferences.skipBack.toDouble()
+    val ahead = preferences.skipForward.toDouble()
     var fill by remember { mutableStateOf(prefs.fillScreen) }
     // Counts pinches that switched, so the note shows again for each.
     var zoomNote by remember { mutableIntStateOf(0) }
@@ -395,10 +398,10 @@ private fun Playback(data: PlayerData, start: Double?) {
                     Key.MediaPlayPause, Key.Spacebar -> controller::togglePlay
                     Key.MediaPlay -> controller.player::play
                     Key.MediaPause -> controller.player::pause
-                    Key.MediaFastForward -> ({ controller.skip(skip) })
-                    Key.MediaRewind -> ({ controller.skip(-skip) })
-                    Key.DirectionLeft -> if (controls) null else ({ controller.skip(-skip) })
-                    Key.DirectionRight -> if (controls) null else ({ controller.skip(skip) })
+                    Key.MediaFastForward -> ({ controller.skip(ahead) })
+                    Key.MediaRewind -> ({ controller.skip(-back) })
+                    Key.DirectionLeft -> if (controls) null else ({ controller.skip(-back) })
+                    Key.DirectionRight -> if (controls) null else ({ controller.skip(ahead) })
                     Key.DirectionCenter, Key.Enter, Key.DirectionUp, Key.DirectionDown ->
                         if (controls) null else ({ controls = true })
                     else -> null
@@ -448,14 +451,14 @@ private fun Playback(data: PlayerData, start: Double?) {
                         }
                     } while (event.changes.any { it.pressed })
                 }
-            }.pointerInput(controller, skip) {
+            }.pointerInput(controller, back, ahead) {
                 detectTapGestures(
                     onTap = {
                         controls = !controls
                         touched++
                     },
                     onDoubleTap = { offset ->
-                        controller.skip(if (offset.x < size.width / 2) -skip else skip)
+                        controller.skip(if (offset.x < size.width / 2) -back else ahead)
                         touched++
                     },
                 )
@@ -470,7 +473,8 @@ private fun Playback(data: PlayerData, start: Double?) {
             AnimatedVisibility(controls || controller.ended, enter = fadeIn(), exit = fadeOut()) {
                 Controls(
                     controller,
-                    skip = skip,
+                    back = back,
+                    ahead = ahead,
                     scrub = scrub,
                     onScrub = {
                         scrub = it
@@ -620,7 +624,8 @@ private fun Subtitles(controller: PlayerController, look: SubtitleLook, lifted: 
 @Composable
 private fun Controls(
     controller: PlayerController,
-    skip: Double,
+    back: Double,
+    ahead: Double,
     scrub: Double?,
     onScrub: (Double) -> Unit,
     onScrubEnd: () -> Unit,
@@ -660,8 +665,8 @@ private fun Controls(
             horizontalArrangement = Arrangement.spacedBy(56.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            SkipButton(Lucide.RotateCcw, skip, stringResource(R.string.player_skip_back, skip.toInt())) {
-                controller.skip(-skip)
+            SkipButton(Lucide.RotateCcw, back, stringResource(R.string.player_skip_back, back.toInt())) {
+                controller.skip(-back)
                 onTouch()
             }
             RoundIconButton(
@@ -677,13 +682,13 @@ private fun Controls(
                 iconSize = 48.dp,
                 background = Color.Transparent,
             )
-            SkipButton(Lucide.RotateCw, skip, stringResource(R.string.player_skip_forward, skip.toInt())) {
-                controller.skip(skip)
+            SkipButton(Lucide.RotateCw, ahead, stringResource(R.string.player_skip_forward, ahead.toInt())) {
+                controller.skip(ahead)
                 onTouch()
             }
         }
         Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().safeDrawingPadding().padding(horizontal = 20.dp, vertical = 10.dp)) {
-            SeekBar(controller, scrub, skip, onScrub, onScrubEnd, onSeek)
+            SeekBar(controller, scrub, back, ahead, onScrub, onScrubEnd, onSeek)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 val duration = controller.duration
                 if (duration > 0) {
@@ -741,7 +746,8 @@ private fun SkipButton(icon: Int, seconds: Double, label: String, onClick: () ->
 private fun SeekBar(
     controller: PlayerController,
     scrub: Double?,
-    step: Double,
+    back: Double,
+    ahead: Double,
     onScrub: (Double) -> Unit,
     onScrubEnd: () -> Unit,
     onSeek: (Double) -> Unit,
@@ -764,7 +770,8 @@ private fun SeekBar(
                 position = shown,
                 duration = duration,
                 buffered = controller.buffered,
-                step = step,
+                back = back,
+                ahead = ahead,
                 scrubbing = scrub != null,
                 onScrub = onScrub,
                 onScrubEnd = onScrubEnd,
@@ -788,16 +795,17 @@ private fun SeekBar(
  * a lighter shade, what's played in the accent, and a dot to drag.
  *
  * A finger taps or drags it, scrubbing until it lifts. A remote or keyboard
- * focuses it and scrubs by [step] with left and right, seeking when the key
- * comes up. A screen reader hears it as a seek bar it can set, and its
- * swipes move it by about [step], seeking at once through [onSeek].
+ * focuses it and scrubs by [back] with left and [ahead] with right, seeking
+ * when the key comes up. A screen reader hears it as a seek bar it can set,
+ * and its swipes move it by about [ahead], seeking at once through [onSeek].
  */
 @Composable
 private fun SeekTrack(
     position: Double,
     duration: Double,
     buffered: Double,
-    step: Double,
+    back: Double,
+    ahead: Double,
     scrubbing: Boolean,
     onScrub: (Double) -> Unit,
     onScrubEnd: () -> Unit,
@@ -836,7 +844,7 @@ private fun SeekTrack(
                 contentDescription = label
                 stateDescription = state
                 progressBarRangeInfo = if (enabled) {
-                    ProgressBarRangeInfo(seekClamp(position, duration).toFloat(), 0f..duration.toFloat(), seekSteps(duration, step))
+                    ProgressBarRangeInfo(seekClamp(position, duration).toFloat(), 0f..duration.toFloat(), seekSteps(duration, ahead))
                 } else {
                     ProgressBarRangeInfo(0f, 0f..1f)
                 }
@@ -857,7 +865,7 @@ private fun SeekTrack(
                 if (!seekable(length)) return@onKeyEvent false
                 when (event.type) {
                     KeyEventType.KeyDown -> {
-                        val to = seekStepped(keyed ?: now, direction, step, length)
+                        val to = seekStepped(keyed ?: now, direction, if (direction < 0) back else ahead, length)
                         keyed = to
                         scrubTo(to)
                         true

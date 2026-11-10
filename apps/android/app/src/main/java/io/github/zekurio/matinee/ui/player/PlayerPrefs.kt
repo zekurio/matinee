@@ -50,13 +50,10 @@ val OWN_SUBTITLE_EDGES = listOf(SubtitleEdge.SHADOW, SubtitleEdge.OUTLINE, Subti
 /** How much bigger than normal subtitles draw. */
 val SUBTITLE_SCALES = listOf(0.75f, 1f, 1.25f, 1.5f, 2f)
 
-/** How far a skip goes, in seconds. */
-val SKIP_STEPS = listOf(5, 10, 15, 30)
-
 /**
  * What the player keeps on this device, as the web keeps it per browser:
  * the quality videos start in, the codecs encodes come in, the decoders,
- * and how subtitles look. Languages follow the account instead. Reads are
+ * and how subtitles look. Languages and skips follow the account instead. Reads are
  * Compose state, so settings and the player show a change at once.
  */
 class PlayerPrefs(context: Context) {
@@ -76,8 +73,6 @@ class PlayerPrefs(context: Context) {
     var engine by enum("engine", PlayerEngine.EXOPLAYER)
 
     var decoders by enum("decoders", Decoders.HARDWARE)
-
-    var skipSeconds by int("skip_seconds", 10)
 
     /** Count down to the next episode and start it. */
     var autoplayNext by boolean("autoplay_next", true)
@@ -118,9 +113,6 @@ class PlayerPrefs(context: Context) {
 
     private fun boolean(key: String, default: Boolean) =
         Stored(key, prefs.getBoolean(key, default)) { k, v -> putBoolean(k, v) }
-
-    private fun int(key: String, default: Int) =
-        Stored(key, prefs.getInt(key, default)) { k, v -> putInt(k, v) }
 
     private fun float(key: String, default: Float) =
         Stored(key, prefs.getFloat(key, default)) { k, v -> putFloat(k, v) }
