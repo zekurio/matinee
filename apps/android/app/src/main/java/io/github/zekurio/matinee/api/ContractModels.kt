@@ -11,6 +11,384 @@ import kotlinx.serialization.json.JsonClassDiscriminator
 import kotlinx.serialization.json.JsonElement
 
 @Serializable
+data class PlaybackSeek(
+    val url: String,
+    val offset: Double,
+)
+
+object PlaybackSnap {
+    const val BEFORE = "before"
+    const val NEAREST = "nearest"
+    val all = listOf(BEFORE, NEAREST)
+}
+
+@Serializable
+data class PlaybackSeekInput(
+    val itemId: String,
+    val sessionId: String,
+    val audio: Int,
+    val position: Double,
+    val snap: String? = null,
+    val audioCodecs: List<String>,
+)
+
+object PlaybackSubtitleDelivery {
+    const val WEBVTT = "webvtt"
+    const val PGS = "pgs"
+    val all = listOf(WEBVTT, PGS)
+}
+
+object HdrFormat {
+    const val HDR10 = "hdr10"
+    const val HLG = "hlg"
+    const val DOLBY_VISION = "dolby-vision"
+    val all = listOf(HDR10, HLG, DOLBY_VISION)
+}
+
+@Serializable
+data class PlaybackDecoder(
+    val codec: String,
+    val maxWidth: Double?,
+    val maxHeight: Double?,
+    val maxBitDepth: Double?,
+    val profiles: List<String>?,
+    val maxLevel: Double?,
+    val hdr: List<String>?,
+    val dolbyVisionProfiles: List<Int>?,
+)
+
+object TranscodeVideoCodec {
+    const val H264 = "h264"
+    const val HEVC = "hevc"
+    const val AV1 = "av1"
+    val all = listOf(H264, HEVC, AV1)
+}
+
+@Serializable
+data class PlaybackDevice(
+    val containers: List<String>,
+    val video: List<PlaybackDecoder>,
+    val audio: List<String>,
+    val streamAudio: List<String>,
+    val encodeVideo: List<String>,
+    val hls: Boolean,
+    val selectAudio: Boolean,
+    val subtitles: List<String>,
+    val sidecarSubtitles: List<String>,
+    val embeddedSubtitles: List<String>,
+    val language: String,
+)
+
+@Serializable
+data class ItemLabelFolder(
+    val name: String?,
+    val seasonNumber: Int?,
+)
+
+@Serializable
+data class ItemLabel(
+    val show: String,
+    val showName: String,
+    val year: String?,
+    val showKey: String,
+    val title: String?,
+    val untitled: Boolean,
+    val episodeNumber: Int?,
+    val code: String?,
+    val shortCode: String?,
+    val group: String,
+    val groupLabel: List<ItemLabelFolder>,
+)
+
+object TitleKind {
+    const val MOVIE = "movie"
+    const val SHOW = "show"
+    val all = listOf(MOVIE, SHOW)
+}
+
+@Serializable
+data class ImagePlaceholder(
+    val blurhash: String,
+    val aspectRatio: Double,
+)
+
+@Serializable
+data class Artwork(
+    val id: String,
+    val placeholder: ImagePlaceholder?,
+)
+
+@Serializable
+data class Images(
+    val poster: Artwork?,
+    val backdrop: Artwork?,
+    val logo: Artwork?,
+)
+
+@Serializable
+data class TitleSummary(
+    val id: String,
+    val libraryId: String,
+    val kind: String,
+    val name: String,
+    val year: Int?,
+    val overview: String?,
+    val images: Images,
+    val genres: List<String>,
+    val rating: Double?,
+    val contentRating: String?,
+    val originalLanguage: String?,
+    val favorite: Boolean,
+    val watched: Boolean,
+)
+
+@Serializable
+data class EpisodeInfo(
+    val name: String?,
+    val overview: String?,
+    val airDate: String?,
+    val runtimeMinutes: Int?,
+    val still: Artwork?,
+)
+
+@Serializable
+data class DolbyVision(
+    val profile: Int,
+    val level: Int?,
+    val rpuPresent: Boolean,
+    val elPresent: Boolean,
+    val blPresent: Boolean,
+    val blCompatibilityId: Int?,
+)
+
+@Serializable
+data class ContentLightLevel(
+    val maxCll: Int,
+    val maxFall: Int,
+)
+
+@Serializable
+data class DisplayVideoStream(
+    val index: Int,
+    val codec: String,
+    val codecTag: String?,
+    val profile: String?,
+    val level: Int?,
+    val width: Int,
+    val height: Int,
+    val frameRate: Double?,
+    val bitRate: Long?,
+    val pixelFormat: String?,
+    val bitDepth: Int?,
+    val colorTransfer: String?,
+    val colorPrimaries: String?,
+    val colorSpace: String?,
+    val colorRange: String?,
+    val interlaced: Boolean,
+    val hdr: String?,
+    val dolbyVisionProfile: Int?,
+    val dolbyVision: DolbyVision?,
+    val hdr10Plus: Boolean,
+    val masteringDisplay: Boolean,
+    val contentLightLevel: ContentLightLevel?,
+    val format: String,
+    val resolution: String,
+    val dynamicRange: String?,
+)
+
+@Serializable
+data class DisplayAudioStream(
+    val index: Int,
+    val codec: String,
+    val profile: String?,
+    val channels: Int?,
+    val channelLayout: String?,
+    val language: String?,
+    val title: String?,
+    val default: Boolean,
+    val format: String,
+    val layout: String?,
+)
+
+object SubtitleKind {
+    const val TEXT = "text"
+    const val BITMAP = "bitmap"
+    val all = listOf(TEXT, BITMAP)
+}
+
+@Serializable
+data class SubtitleStream(
+    val index: Int,
+    val codec: String,
+    val kind: String?,
+    val language: String?,
+    val title: String?,
+    val default: Boolean,
+    val forced: Boolean,
+    val hearingImpaired: Boolean,
+)
+
+@Serializable
+data class DisplayMediaProbe(
+    val format: DisplayMediaProbe.Format,
+    val video: DisplayVideoStream?,
+    val audio: List<DisplayAudioStream>,
+    val subtitles: List<SubtitleStream>,
+) {
+    @Serializable
+    data class Format(
+        val name: String,
+        val durationSeconds: Double?,
+        val bitRate: Long?,
+    )
+}
+
+@Serializable
+data class WatchState(
+    val positionSeconds: Double,
+    val completed: Boolean,
+    val updatedAt: String,
+)
+
+@Serializable
+data class MediaItem(
+    val id: String,
+    val libraryId: String,
+    val fileTitle: String,
+    val label: ItemLabel,
+    val title: TitleSummary?,
+    val seasonNumber: Int?,
+    val episodeNumber: Int?,
+    val episode: EpisodeInfo?,
+    val relativePath: String,
+    val container: String,
+    val mimeType: String,
+    val sizeBytes: Long,
+    val modifiedAt: String,
+    val durationSeconds: Double?,
+    val probe: DisplayMediaProbe?,
+    val progress: WatchState?,
+    val favorite: Boolean,
+)
+
+object PlaybackMethod {
+    const val DIRECT = "direct"
+    const val REMUX = "remux"
+    const val TRANSCODE = "transcode"
+    val all = listOf(DIRECT, REMUX, TRANSCODE)
+}
+
+@Serializable
+data class AudioTrack(
+    val index: Int,
+    val label: String,
+    val language: String?,
+    val title: String?,
+    val codec: String,
+    val format: String,
+    val channels: Int?,
+    val layout: String?,
+    val primary: Boolean,
+)
+
+object SubtitleSource {
+    const val SIDECAR = "sidecar"
+    const val EMBEDDED = "embedded"
+    val all = listOf(SIDECAR, EMBEDDED)
+}
+
+object SubtitleDelivery {
+    const val WEBVTT = "webvtt"
+    const val PGS = "pgs"
+    const val BURN_IN = "burn-in"
+    val all = listOf(WEBVTT, PGS, BURN_IN)
+}
+
+@Serializable
+data class SubtitleTrack(
+    val id: String,
+    val label: String,
+    val language: String?,
+    val title: String?,
+    val forced: Boolean,
+    val sdh: Boolean,
+    val default: Boolean,
+    val source: String,
+    val format: String,
+    val delivery: String?,
+)
+
+object PlaybackSubtitleMode {
+    const val CLIENT = "client"
+    const val PLAYER = "player"
+    const val BURN_IN = "burn-in"
+    val all = listOf(CLIENT, PLAYER, BURN_IN)
+}
+
+object PlaybackQuality {
+    const val ORIGINAL = "original"
+    const val _2160P_40 = "2160p-40"
+    const val _1080P_20 = "1080p-20"
+    const val _1080P_10 = "1080p-10"
+    const val _720P_6 = "720p-6"
+    const val _720P_4 = "720p-4"
+    const val _480P_2 = "480p-2"
+    const val _360P_1 = "360p-1"
+    val all = listOf(ORIGINAL, _2160P_40, _1080P_20, _1080P_10, _720P_6, _720P_4, _480P_2, _360P_1)
+}
+
+object PlaybackReason {
+    const val CONTAINER = "container"
+    const val VIDEO = "video"
+    const val AUDIO = "audio"
+    const val AUDIO_SELECTION = "audio-selection"
+    const val SUBTITLE = "subtitle"
+    const val QUALITY = "quality"
+    const val FAILED = "failed"
+    val all = listOf(CONTAINER, VIDEO, AUDIO, AUDIO_SELECTION, SUBTITLE, QUALITY, FAILED)
+}
+
+@Serializable
+data class PlaybackStart(
+    val item: MediaItem,
+    val method: String,
+    val url: String,
+    val hls: Boolean,
+    val offset: Double,
+    val start: Double,
+    val position: Double,
+    val audio: AudioTrack?,
+    val convertedAudio: String?,
+    val standIn: Boolean,
+    val subtitle: SubtitleTrack?,
+    val subtitleMode: String?,
+    val subtitleUrl: String?,
+    val audioTracks: List<AudioTrack>,
+    val subtitleTracks: List<SubtitleTrack>,
+    val quality: String,
+    val reasons: List<String>,
+    val next: MediaItem?,
+)
+
+@Serializable
+data class SubtitlePick(
+    val trackId: String?,
+)
+
+@Serializable
+data class PlaybackStartInput(
+    val itemId: String,
+    val sessionId: String,
+    val device: PlaybackDevice,
+    val audio: Int? = null,
+    val subtitle: SubtitlePick? = null,
+    val quality: String? = null,
+    val position: Double? = null,
+    val snap: String? = null,
+    val failed: List<String>? = null,
+)
+
+@Serializable
 data class ActivityCell(
     val weekday: Int,
     val hour: Int,
@@ -189,13 +567,6 @@ object GpuVendor {
     val all = listOf(INTEL_IHD, INTEL_I965, AMD, NVIDIA, APPLE, OTHER)
 }
 
-object TranscodeVideoCodec {
-    const val H264 = "h264"
-    const val HEVC = "hevc"
-    const val AV1 = "av1"
-    val all = listOf(H264, HEVC, AV1)
-}
-
 @Serializable
 data class EncoderCheck(
     val status: String,
@@ -359,18 +730,6 @@ data class AppSession(
 )
 
 @Serializable
-data class ImagePlaceholder(
-    val blurhash: String,
-    val aspectRatio: Double,
-)
-
-@Serializable
-data class Artwork(
-    val id: String,
-    val placeholder: ImagePlaceholder?,
-)
-
-@Serializable
 data class AudioStream(
     val index: Int,
     val codec: String,
@@ -380,19 +739,6 @@ data class AudioStream(
     val language: String?,
     val title: String?,
     val default: Boolean,
-)
-
-@Serializable
-data class AudioTrack(
-    val index: Int,
-    val label: String,
-    val language: String?,
-    val title: String?,
-    val codec: String,
-    val format: String,
-    val channels: Int?,
-    val layout: String?,
-    val primary: Boolean,
 )
 
 @Serializable
@@ -423,36 +769,6 @@ data class AuthConfig(
     )
 }
 
-object TitleKind {
-    const val MOVIE = "movie"
-    const val SHOW = "show"
-    val all = listOf(MOVIE, SHOW)
-}
-
-@Serializable
-data class Images(
-    val poster: Artwork?,
-    val backdrop: Artwork?,
-    val logo: Artwork?,
-)
-
-@Serializable
-data class TitleSummary(
-    val id: String,
-    val libraryId: String,
-    val kind: String,
-    val name: String,
-    val year: Int?,
-    val overview: String?,
-    val images: Images,
-    val genres: List<String>,
-    val rating: Double?,
-    val contentRating: String?,
-    val originalLanguage: String?,
-    val favorite: Boolean,
-    val watched: Boolean,
-)
-
 @Serializable
 data class BrowsedTitles(
     val items: List<TitleSummary>,
@@ -465,12 +781,6 @@ data class BrowsedTitles(
         val show: Int,
     )
 }
-
-@Serializable
-data class ContentLightLevel(
-    val maxCll: Int,
-    val maxFall: Int,
-)
 
 object CreditKind {
     const val ACTOR = "actor"
@@ -551,13 +861,6 @@ object DownloadTrackMode {
     val all = listOf(COPY, ENCODE)
 }
 
-object HdrFormat {
-    const val HDR10 = "hdr10"
-    const val HLG = "hlg"
-    const val DOLBY_VISION = "dolby-vision"
-    val all = listOf(HDR10, HLG, DOLBY_VISION)
-}
-
 @Serializable
 data class DownloadPlan(
     val container: String? = null,
@@ -616,153 +919,9 @@ data class Download(
 )
 
 @Serializable
-data class DolbyVision(
-    val profile: Int,
-    val level: Int?,
-    val rpuPresent: Boolean,
-    val elPresent: Boolean,
-    val blPresent: Boolean,
-    val blCompatibilityId: Int?,
-)
-
-@Serializable
-data class EpisodeInfo(
-    val name: String?,
-    val overview: String?,
-    val airDate: String?,
-    val runtimeMinutes: Int?,
-    val still: Artwork?,
-)
-
-@Serializable
 data class Facet(
     val name: String,
     val titleCount: Int,
-)
-
-@Serializable
-data class ItemLabelFolder(
-    val name: String?,
-    val seasonNumber: Int?,
-)
-
-@Serializable
-data class ItemLabel(
-    val show: String,
-    val showName: String,
-    val year: String?,
-    val showKey: String,
-    val title: String?,
-    val untitled: Boolean,
-    val episodeNumber: Int?,
-    val code: String?,
-    val shortCode: String?,
-    val group: String,
-    val groupLabel: List<ItemLabelFolder>,
-)
-
-@Serializable
-data class DisplayVideoStream(
-    val index: Int,
-    val codec: String,
-    val codecTag: String?,
-    val profile: String?,
-    val level: Int?,
-    val width: Int,
-    val height: Int,
-    val frameRate: Double?,
-    val bitRate: Long?,
-    val pixelFormat: String?,
-    val bitDepth: Int?,
-    val colorTransfer: String?,
-    val colorPrimaries: String?,
-    val colorSpace: String?,
-    val colorRange: String?,
-    val interlaced: Boolean,
-    val hdr: String?,
-    val dolbyVisionProfile: Int?,
-    val dolbyVision: DolbyVision?,
-    val hdr10Plus: Boolean,
-    val masteringDisplay: Boolean,
-    val contentLightLevel: ContentLightLevel?,
-    val format: String,
-    val resolution: String,
-    val dynamicRange: String?,
-)
-
-@Serializable
-data class DisplayAudioStream(
-    val index: Int,
-    val codec: String,
-    val profile: String?,
-    val channels: Int?,
-    val channelLayout: String?,
-    val language: String?,
-    val title: String?,
-    val default: Boolean,
-    val format: String,
-    val layout: String?,
-)
-
-object SubtitleKind {
-    const val TEXT = "text"
-    const val BITMAP = "bitmap"
-    val all = listOf(TEXT, BITMAP)
-}
-
-@Serializable
-data class SubtitleStream(
-    val index: Int,
-    val codec: String,
-    val kind: String?,
-    val language: String?,
-    val title: String?,
-    val default: Boolean,
-    val forced: Boolean,
-    val hearingImpaired: Boolean,
-)
-
-@Serializable
-data class DisplayMediaProbe(
-    val format: DisplayMediaProbe.Format,
-    val video: DisplayVideoStream?,
-    val audio: List<DisplayAudioStream>,
-    val subtitles: List<SubtitleStream>,
-) {
-    @Serializable
-    data class Format(
-        val name: String,
-        val durationSeconds: Double?,
-        val bitRate: Long?,
-    )
-}
-
-@Serializable
-data class WatchState(
-    val positionSeconds: Double,
-    val completed: Boolean,
-    val updatedAt: String,
-)
-
-@Serializable
-data class MediaItem(
-    val id: String,
-    val libraryId: String,
-    val fileTitle: String,
-    val label: ItemLabel,
-    val title: TitleSummary?,
-    val seasonNumber: Int?,
-    val episodeNumber: Int?,
-    val episode: EpisodeInfo?,
-    val relativePath: String,
-    val container: String,
-    val mimeType: String,
-    val sizeBytes: Long,
-    val modifiedAt: String,
-    val durationSeconds: Double?,
-    val probe: DisplayMediaProbe?,
-    val progress: WatchState?,
-    val favorite: Boolean,
 )
 
 @Serializable
@@ -1027,25 +1186,6 @@ data class Leaderboard(
     val boards: List<LeaderboardBoard>,
     val sharing: Boolean,
 )
-
-object PlaybackMethod {
-    const val DIRECT = "direct"
-    const val REMUX = "remux"
-    const val TRANSCODE = "transcode"
-    val all = listOf(DIRECT, REMUX, TRANSCODE)
-}
-
-object PlaybackQuality {
-    const val ORIGINAL = "original"
-    const val _2160P_40 = "2160p-40"
-    const val _1080P_20 = "1080p-20"
-    const val _1080P_10 = "1080p-10"
-    const val _720P_6 = "720p-6"
-    const val _720P_4 = "720p-4"
-    const val _480P_2 = "480p-2"
-    const val _360P_1 = "360p-1"
-    val all = listOf(ORIGINAL, _2160P_40, _1080P_20, _1080P_10, _720P_6, _720P_4, _480P_2, _360P_1)
-}
 
 @Serializable
 data class NowPlaying(
@@ -1385,38 +1525,6 @@ data class ShelfEntry(
     val count: Int,
     val addedAt: String,
     val added: ShelfAdditions?,
-)
-
-object SubtitleDelivery {
-    const val WEBVTT = "webvtt"
-    const val PGS = "pgs"
-    const val BURN_IN = "burn-in"
-    val all = listOf(WEBVTT, PGS, BURN_IN)
-}
-
-@Serializable
-data class SubtitlePick(
-    val trackId: String?,
-)
-
-object SubtitleSource {
-    const val SIDECAR = "sidecar"
-    const val EMBEDDED = "embedded"
-    val all = listOf(SIDECAR, EMBEDDED)
-}
-
-@Serializable
-data class SubtitleTrack(
-    val id: String,
-    val label: String,
-    val language: String?,
-    val title: String?,
-    val forced: Boolean,
-    val sdh: Boolean,
-    val default: Boolean,
-    val source: String,
-    val format: String,
-    val delivery: String?,
 )
 
 @Serializable

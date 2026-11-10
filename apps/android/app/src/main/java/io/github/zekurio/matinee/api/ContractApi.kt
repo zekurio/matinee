@@ -707,6 +707,26 @@ class DownloadsApi internal constructor(private val transport: ApiTransport) {
 }
 
 class PlaybackApi internal constructor(private val transport: ApiTransport) {
+    /** `POST /playback/start` */
+    suspend fun start(playbackStartInput: PlaybackStartInput): PlaybackStart =
+        transport.call(
+            "POST",
+            listOf("playback", "start"),
+            emptyList(),
+            transport.json(PlaybackStartInput.serializer(), playbackStartInput),
+            PlaybackStart.serializer(),
+        )
+
+    /** `POST /playback/seek` */
+    suspend fun seek(playbackSeekInput: PlaybackSeekInput): PlaybackSeek =
+        transport.call(
+            "POST",
+            listOf("playback", "seek"),
+            emptyList(),
+            transport.json(PlaybackSeekInput.serializer(), playbackSeekInput),
+            PlaybackSeek.serializer(),
+        )
+
     /** `POST /media/{itemId}/progress` */
     suspend fun report(
         itemId: String,

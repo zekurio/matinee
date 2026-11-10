@@ -1,6 +1,16 @@
 import { createHash } from "node:crypto"
 
 import {
+  PlaybackSeek,
+  PlaybackSeekInput,
+  PlaybackSubtitleDelivery,
+  PlaybackDecoder,
+  PlaybackDevice,
+  PlaybackStart,
+  PlaybackStartInput,
+  PlaybackReason,
+  PlaybackSnap,
+  PlaybackSubtitleMode,
   ActivityCell,
   AdminAuthSettings,
   AdminTranscodingSettings,
@@ -196,6 +206,16 @@ const input = (schema: AnySchema) => ({ schema, strategy: "input" as const })
  * shared with inputs where the two read the same.
  */
 const commonSchemas = {
+  PlaybackSeek: output(PlaybackSeek),
+  PlaybackSeekInput: output(PlaybackSeekInput),
+  PlaybackSubtitleDelivery: output(PlaybackSubtitleDelivery),
+  PlaybackDecoder: output(PlaybackDecoder),
+  PlaybackDevice: output(PlaybackDevice),
+  PlaybackStart: output(PlaybackStart),
+  PlaybackStartInput: output(PlaybackStartInput),
+  PlaybackReason: output(PlaybackReason),
+  PlaybackSnap: output(PlaybackSnap),
+  PlaybackSubtitleMode: output(PlaybackSubtitleMode),
   ActivityCell: output(ActivityCell),
   AdminAuthSettings: output(AdminAuthSettings),
   AdminTranscodingSettings: output(AdminTranscodingSettings),

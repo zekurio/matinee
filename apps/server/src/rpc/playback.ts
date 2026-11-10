@@ -36,6 +36,7 @@ import { follow } from "../realtime/follow"
 import { sessionStream } from "../stats/queries"
 import { recordOfflinePlay, recordReport } from "../stats/sessions"
 import { authed, notFound } from "./base"
+import { seekPlayback, startPlayback } from "./playback-start"
 
 // Titles rated at least this, out of 10, can be featured on Home.
 const FEATURED_MIN_RATING = 7.5
@@ -63,6 +64,8 @@ const LAST = 2147483647
 const position = sql`(coalesce(${mediaItem.seasonNumber}, ${LAST}), coalesce(${mediaItem.episodeNumber}, ${LAST}), ${mediaItem.relativePath})`
 
 export const playback = {
+  start: startPlayback,
+  seek: seekPlayback,
   report: authed.playback.report.handler(async ({ context, input }) => {
     const [item] = await db
       .select()

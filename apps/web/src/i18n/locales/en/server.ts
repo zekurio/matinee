@@ -152,6 +152,7 @@ export default defineMessages("server", {
   "server.titles.notFound": "This title isn't in any library.",
   "server.titles.gone": "This title isn't in any library. Reload the page.",
   "server.titles.fileGone": "This file isn't in any library. Reload the page.",
+  "server.playback.unplayable": "This device can't play this file.",
   "server.profiles.notFound": "Nobody on this server has that username.",
   "server.people.noCredits":
     "No movie or show in the libraries credits this person.",

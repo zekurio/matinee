@@ -151,6 +151,8 @@ export default {
     "Dieser Titel ist in keiner Mediathek. Lade die Seite neu.",
   "server.titles.fileGone":
     "Diese Datei ist in keiner Mediathek. Lade die Seite neu.",
+  "server.playback.unplayable":
+    "Dieses Gerät kann diese Datei nicht abspielen.",
   "server.downloads.unreadable":
     "Diese Datei lässt sich nicht lesen. Versuche es erneut, sobald der Server sie gescannt hat.",
   "server.downloads.notVideo": "Nur Videos lassen sich so herunterladen.",
