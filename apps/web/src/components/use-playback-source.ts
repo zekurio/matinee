@@ -207,6 +207,19 @@ export function sourceStarters(core: PlaybackCore) {
     const id = ++generation.current
     const before = store.getState()
     const undo = { picks: before.picks, failed: before.failed }
+    const pickedSubtitle = before.plan.subtitleTracks.find(
+      (track) => track.id === change.picks?.subtitle?.trackId,
+    )
+    if (
+      (change.picks?.quality !== undefined &&
+        change.picks.quality !== "original") ||
+      pickedSubtitle?.delivery === "burn-in"
+    ) {
+      before.restore(
+        before.picks,
+        before.failed.filter((method) => method !== "transcode"),
+      )
+    }
     if (change.picks) before.pick(change.picks)
     if (change.picks?.quality) before.setQuality(change.picks.quality)
     if (change.failed) before.addFailed(change.failed.source.method)
