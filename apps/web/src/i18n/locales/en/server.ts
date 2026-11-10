@@ -12,7 +12,7 @@ export default defineMessages("server", {
   "server.downloads.selectedAudioUnavailable":
     "The selected audio tracks aren't available in this file.",
   "server.downloads.noDownloadVideo":
-    "No video encode is available for this device and these wishes.",
+    "The server can't encode video in a codec this device plays.",
   "server.downloads.noDownloadAudio":
     "No audio conversion is available for this device.",
   // rpc/base.ts: every procedure.

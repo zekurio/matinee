@@ -129,7 +129,7 @@ export function resolveDownload(
   const copy = wishes.preset === null && choices.keepsVideo
   if (!copy && (!preset || !codec || !choices.codecs.includes(codec)))
     throw new DownloadSpecError(
-      "No video encode is available for this device and these wishes.",
+      "The server can't encode video in a codec this device plays.",
     )
   const languages = new Set(
     [

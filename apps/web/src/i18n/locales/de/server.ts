@@ -7,7 +7,7 @@ export default {
   "server.downloads.selectedAudioUnavailable":
     "Die ausgewählten Audiospuren sind in dieser Datei nicht verfügbar.",
   "server.downloads.noDownloadVideo":
-    "Für dieses Gerät und diese Einstellungen ist keine Videokonvertierung verfügbar.",
+    "Der Server kann das Video in keinem Codec kodieren, den dieses Gerät abspielt.",
   "server.downloads.noDownloadAudio":
     "Für dieses Gerät ist keine Audiokonvertierung verfügbar.",
   "server.rpc.signInFirst": "Melde dich zuerst an.",
