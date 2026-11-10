@@ -5,41 +5,35 @@ import io.github.zekurio.matinee.api.ORIGINAL_LANGUAGE
 import io.github.zekurio.matinee.api.PlaybackPreferences
 import io.github.zekurio.matinee.api.SubtitleDelivery
 import io.github.zekurio.matinee.api.SubtitleMode
+import io.github.zekurio.matinee.api.SubtitleSource
 import io.github.zekurio.matinee.api.SubtitleTrack
 import java.util.Locale
 
 /*
- * Which audio and subtitles a file starts with, as the web player picks
- * them (apps/web/src/components/playback-source.ts and lib/subtitles.ts).
+ * Which audio and subtitles a download starts with, and who draws them.
+ * A file from the server gets all of that from `playback.start`. A
+ * download plays without the server, so it can't ask, and picks here the
+ * way the player did before the server decided.
  */
 
 /** `pt-BR` and `pt` are the same language here. */
-fun baseLanguage(tag: String?): String? = tag?.let { Locale.forLanguageTag(it).language.ifEmpty { it.lowercase() } }
+private fun baseLanguage(tag: String?): String? = tag?.let { Locale.forLanguageTag(it).language.ifEmpty { it.lowercase() } }
 
-fun sameLanguage(a: String?, b: String?): Boolean {
+private fun sameLanguage(a: String?, b: String?): Boolean {
     val base = baseLanguage(a)
     return base != null && base == baseLanguage(b)
 }
 
-val deviceLanguage: String get() = Locale.getDefault().language.ifEmpty { "en" }
+private val deviceLanguage: String get() = Locale.getDefault().language.ifEmpty { "en" }
 
 private fun isCommentary(track: AudioTrack) = Regex("commentary", RegexOption.IGNORE_CASE).containsMatchIn(track.label)
-
-data class AudioChoice(
-    /** The track a player plays from the file by itself. */
-    val primary: AudioTrack?,
-    /** The track the preferences ask for, decodable or not. */
-    val wanted: AudioTrack?,
-    /** What plays until the viewer picks: [wanted], or a decodable track in its language in place of it. */
-    val preferred: AudioTrack?,
-)
 
 /**
  * The track for [language] (`original` for the title's own), else the
  * file's primary one; in place of one this device can't decode, a track in
- * the same language that it can, so the server needn't convert it.
+ * the same language that it can.
  */
-fun audioChoice(tracks: List<AudioTrack>, language: String?, originalLanguage: String?): AudioChoice {
+fun downloadAudio(tracks: List<AudioTrack>, language: String?, originalLanguage: String?): AudioTrack? {
     val primary = tracks.firstOrNull { it.primary } ?: tracks.firstOrNull()
     val target = if (language == ORIGINAL_LANGUAGE) originalLanguage else language
     val inLanguage = target?.let { lang ->
@@ -53,20 +47,11 @@ fun audioChoice(tracks: List<AudioTrack>, language: String?, originalLanguage: S
     } else {
         null
     }
-    return AudioChoice(primary, wanted, standIn ?: wanted)
+    return standIn ?: wanted
 }
 
-/** Whether the player draws the track itself; the rest need an encode with it burned in. */
-fun drawable(track: SubtitleTrack) = track.delivery == SubtitleDelivery.WEBVTT
-
-/** A picture track, like PGS, inside the file, which ExoPlayer draws itself when the file plays. */
-fun pictureInFile(track: SubtitleTrack) =
-    track.source == "embedded" && (track.delivery == SubtitleDelivery.PGS || track.delivery == SubtitleDelivery.BURN_IN)
-
-/** An ASS or SSA track inside the file, whose styling and fonts only mpv keeps. */
-fun styledInFile(track: SubtitleTrack) = track.source == "embedded" && (track.format == "ASS" || track.format == "SSA")
-
-private fun subtitleLanguage(preferences: PlaybackPreferences) = preferences.subtitleLanguage ?: deviceLanguage
+/** Text the screen draws, from the WebVTT saved beside the download. */
+private fun drawable(track: SubtitleTrack) = track.delivery == SubtitleDelivery.WEBVTT
 
 /** The full or forced track for a language: the exact tag first, then the file's default, then one without SDH. */
 private fun bestInLanguage(tracks: List<SubtitleTrack>, language: String?, forced: Boolean = false): SubtitleTrack? =
@@ -76,10 +61,10 @@ private fun bestInLanguage(tracks: List<SubtitleTrack>, language: String?, force
 private fun forcedTrack(tracks: List<SubtitleTrack>, audioLanguage: String?, language: String) =
     bestInLanguage(tracks, audioLanguage, true) ?: bestInLanguage(tracks, language, true)
 
-/** The track a file starts with, or null for off, by the preferences' subtitle mode. */
-fun defaultSubtitle(tracks: List<SubtitleTrack>, audioLanguage: String?, preferences: PlaybackPreferences): SubtitleTrack? {
+/** The subtitle a download starts with, or null for off, by the preferences' subtitle mode. */
+fun downloadSubtitle(tracks: List<SubtitleTrack>, audioLanguage: String?, preferences: PlaybackPreferences): SubtitleTrack? {
     val shown = tracks.filter(::drawable)
-    val language = subtitleLanguage(preferences)
+    val language = preferences.subtitleLanguage ?: deviceLanguage
     val forced = { forcedTrack(shown, audioLanguage, language) }
     return when (preferences.subtitleMode) {
         SubtitleMode.OFF -> null
@@ -99,15 +84,19 @@ fun defaultSubtitle(tracks: List<SubtitleTrack>, audioLanguage: String?, prefere
 }
 
 /**
- * What a pick in the player makes of the preferences when they remember
- * picks: a full track turns subtitles on in its language, a forced track or
- * off goes to forced tracks only. Off stays off.
+ * Who draws [track] of a download: the engine draws a picture track, like
+ * PGS, from a download that's the file as it is, and mpv an ASS or SSA
+ * track there with its styling and fonts. The screen draws text from the
+ * WebVTT saved beside it, or from [url] when it wasn't saved.
  */
-fun rememberPick(track: SubtitleTrack?, preferences: PlaybackPreferences, audioLanguage: String?): PlaybackPreferences {
-    val mode = preferences.subtitleMode
-    if (track == null) return preferences.copy(subtitleMode = if (mode == SubtitleMode.OFF) SubtitleMode.OFF else SubtitleMode.FORCED)
-    val language = track.language ?: preferences.subtitleLanguage
-    if (track.forced) return preferences.copy(subtitleMode = SubtitleMode.FORCED, subtitleLanguage = language)
-    val foreign = mode == SubtitleMode.FOREIGN && audioLanguage != null && !sameLanguage(audioLanguage, track.language)
-    return preferences.copy(subtitleMode = if (foreign) SubtitleMode.FOREIGN else SubtitleMode.ALWAYS, subtitleLanguage = language)
+fun downloadSubtitleShow(track: SubtitleTrack?, mpv: Boolean, url: String): SubtitleShow {
+    if (track == null) return SubtitleShow.Off
+    val stream = streamIndex(track)
+    val picture = track.delivery == SubtitleDelivery.PGS || track.delivery == SubtitleDelivery.BURN_IN
+    val styled = track.format == "ASS" || track.format == "SSA"
+    return when {
+        stream != null && track.source == SubtitleSource.EMBEDDED && (picture || (mpv && styled)) -> SubtitleShow.InFile(track, stream)
+        drawable(track) -> SubtitleShow.Screen(track, url)
+        else -> SubtitleShow.Off
+    }
 }

@@ -113,7 +113,7 @@ private fun statusLabel(attempt: AttemptDiagnostics): String {
         when (attempt.mode) {
             SourceMode.DIRECT -> R.string.diagnostics_mode_direct
             SourceMode.STREAM -> R.string.diagnostics_mode_stream
-            SourceMode.HLS -> R.string.diagnostics_mode_hls
+            SourceMode.HLS, SourceMode.ENCODE -> R.string.diagnostics_mode_hls
             SourceMode.LOCAL -> R.string.diagnostics_mode_local
         },
     )

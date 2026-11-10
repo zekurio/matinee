@@ -61,6 +61,7 @@ import io.github.zekurio.matinee.api.DEFAULT_PLAYBACK_PREFERENCES
 import io.github.zekurio.matinee.api.ORIGINAL_LANGUAGE
 import io.github.zekurio.matinee.api.PlaybackOptions
 import io.github.zekurio.matinee.api.PlaybackPreferences
+import io.github.zekurio.matinee.api.PlaybackQualityPreset
 import io.github.zekurio.matinee.api.Session as AccountSession
 import io.github.zekurio.matinee.api.SubtitleMode
 import io.github.zekurio.matinee.api.isAdmin
@@ -97,7 +98,6 @@ import io.github.zekurio.matinee.ui.player.ORIGINAL_QUALITY
 import io.github.zekurio.matinee.ui.player.OWN_SUBTITLE_EDGES
 import io.github.zekurio.matinee.ui.player.PlayerEngine
 import io.github.zekurio.matinee.ui.player.PlayerPrefs
-import io.github.zekurio.matinee.ui.player.QUALITIES
 import io.github.zekurio.matinee.ui.player.SUBTITLE_SCALES
 import io.github.zekurio.matinee.ui.player.SubtitleBackground
 import io.github.zekurio.matinee.ui.player.SubtitleColor
@@ -344,7 +344,7 @@ private fun PlaybackPage(session: Session) {
         scope.launchShowing(snackbar, saveFailure) { session.updateUser(api.account.playback.setPreferences(changed)) }
     }
     val loaded = (options.state as? Load.Ready)?.value
-    val passthrough = remember { Capabilities.OPTIONAL_PASSTHROUGH.filter(Capabilities::decodesAudio) }
+    val passthrough = remember { Capabilities.passthrough }
     SettingsScaffold(stringResource(R.string.settings_page_playback)) {
         item(key = "languages") { LanguagesSection(playback, loaded, save) }
         item(key = "skips") { SkipsSection(playback, loaded, save) }
@@ -504,7 +504,8 @@ private fun DeviceSection(prefs: PlayerPrefs, options: PlaybackOptions?) {
                 stringResource(R.string.playback_quality_title),
                 buildList {
                     add(ORIGINAL_QUALITY to stringResource(R.string.player_quality_original))
-                    QUALITIES.forEach { add(it.id to qualityLabel(it.id)) }
+                    // The server's ladder, once `playback.options` answers.
+                    options?.qualities?.forEach { add(it.id to qualityLabel(it)) }
                 },
                 prefs.quality,
             ) { prefs.quality = it }
@@ -781,8 +782,7 @@ fun languageName(tag: String): String {
 
 /** "1080p, 20 Mbps" for an encode. */
 @Composable
-fun qualityLabel(id: String): String {
-    val quality = QUALITIES.firstOrNull { it.id == id } ?: return stringResource(R.string.player_quality_original)
+fun qualityLabel(quality: PlaybackQualityPreset): String {
     val mbps = quality.bitrate / 1_000_000
     return stringResource(R.string.playback_quality_preset, quality.height, stringResource(R.string.player_bitrate_mbps, mbps))
 }

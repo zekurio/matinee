@@ -80,3 +80,6 @@ val FALLBACK_PLAYBACK_OPTIONS = PlaybackOptions(
 
 /** A sitting with a file while the server was out of reach, for `playback.offline`; times are ISO instants. */
 typealias OfflinePlay = PlaybackOfflineInput.Play
+
+/** The code `playback.start` fails with when nothing this device plays is left, as the contract's `PLAYBACK_UNPLAYABLE`. */
+const val PLAYBACK_UNPLAYABLE = "UNPLAYABLE"

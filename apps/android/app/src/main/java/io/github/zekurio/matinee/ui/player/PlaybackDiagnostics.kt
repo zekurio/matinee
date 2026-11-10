@@ -2,6 +2,12 @@ package io.github.zekurio.matinee.ui.player
 
 import io.github.zekurio.matinee.api.AudioTrack
 import io.github.zekurio.matinee.api.MediaItem
+import io.github.zekurio.matinee.api.PlaybackDevice
+import io.github.zekurio.matinee.api.PlaybackOptions
+import io.github.zekurio.matinee.api.PlaybackQuality
+import io.github.zekurio.matinee.api.PlaybackReason
+import io.github.zekurio.matinee.api.PlaybackStart
+import io.github.zekurio.matinee.api.PlaybackSubtitleMode
 import io.github.zekurio.matinee.api.SubtitleTrack
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -102,9 +108,14 @@ val KNOWN_SUBTITLE_FORMATS = setOf(
 
 private val KNOWN_SUBTITLE_SOURCES = setOf("sidecar", "embedded")
 private val KNOWN_DELIVERIES = setOf("webvtt", "pgs", "burn-in")
-private val KNOWN_QUALITIES = QUALITIES.map { it.id }.toSet() + ORIGINAL_QUALITY
+// The contract's quality ids, as the generated client lists them.
+private val KNOWN_QUALITIES = PlaybackQuality.all.toSet()
+private val KNOWN_REASONS = PlaybackReason.all.toSet()
 private val KNOWN_HDR = setOf("hdr10", "hdr10+", "hlg", "dolby-vision", "dolby vision", "sdr")
 private val KNOWN_SETTING_CODECS = KNOWN_VIDEO_CODECS + KNOWN_AUDIO_CODECS + AUTOMATIC
+
+// What a device profile may say besides codec names: every codec, and every PCM format.
+private val KNOWN_PROFILE_CODECS = KNOWN_SETTING_CODECS + "*" + "pcm_*"
 
 fun safeVideoCodec(codec: String?) = Safe.known(codec, KNOWN_VIDEO_CODECS)
 
@@ -112,13 +123,13 @@ fun safeVideoCodec(codec: String?) = Safe.known(codec, KNOWN_VIDEO_CODECS)
 fun safeAudioCodec(codec: String?): Safe? =
     if (codec != null && codec.lowercase().startsWith("pcm_")) Safe.token(codec.lowercase(), 16) else Safe.known(codec, KNOWN_AUDIO_CODECS)
 
-fun safeCodecs(codecs: Collection<String>): List<Safe> =
-    codecs.take(8).mapNotNull { Safe.known(it, KNOWN_SETTING_CODECS) }
+fun safeCodecs(codecs: Collection<String>, max: Int = 8): List<Safe> =
+    codecs.take(max).mapNotNull { Safe.known(it, KNOWN_PROFILE_CODECS) }
 
 fun safeQuality(id: String?) = Safe.known(id, KNOWN_QUALITIES)
 
-/** Where the video came from, as [Source] has it. */
-enum class SourceMode { DIRECT, STREAM, HLS, LOCAL }
+/** Where the video came from, as [Source] has it: the file, a copied stream, an encode as HLS or as one stream, or a download. */
+enum class SourceMode { DIRECT, STREAM, HLS, ENCODE, LOCAL }
 
 /** Why the player loaded a source. */
 enum class AttemptReason { START, FALLBACK, RETRY, AUDIO_CHANGE, SUBTITLE_CHANGE, QUALITY_CHANGE }
@@ -132,8 +143,12 @@ enum class SubtitleRendering { SCREEN, PLAYER, BURN_IN }
 /** What a track or decoder is for. */
 enum class TrackKind { VIDEO, AUDIO, TEXT, OTHER }
 
-/** Things that went wrong beside the video, counted. */
-enum class DiagnosticsNote { SUBTITLE_LOAD_FAILED, KEYFRAMES_FAILED }
+/**
+ * Things that went wrong beside the video, counted: a subtitle that didn't
+ * load, a `playback.start` or `playback.seek` that failed, and the server
+ * saying nothing it knows plays here.
+ */
+enum class DiagnosticsNote { SUBTITLE_LOAD_FAILED, START_FAILED, SEEK_FAILED, UNPLAYABLE }
 
 /** The app and the device, without anything that tells them apart from others of the same model. */
 data class DeviceDiagnostics(
@@ -245,16 +260,28 @@ data class SelectionDiagnostics(
     }
 }
 
-/** What the device takes of this file, as the player worked it out. */
+/** What the player told the server this device plays, and what the server encodes to. */
 data class CapabilityDiagnostics(
-    val decodesVideo: Boolean,
-    val readsContainer: Boolean,
-    val takesAudio: Boolean,
+    val videoCodecs: List<Safe>,
+    val audioCodecs: List<Safe>,
+    val embeddedSubtitles: List<Safe>,
     val streamAudioCodecs: List<Safe>,
     val encodeVideoCodecs: List<Safe>,
     val serverVideoCodecs: List<Safe>,
     val serverAudioCodecs: List<Safe>,
-)
+) {
+    companion object {
+        fun of(device: PlaybackDevice, options: PlaybackOptions) = CapabilityDiagnostics(
+            videoCodecs = safeCodecs(device.video.map { it.codec }.distinct()),
+            audioCodecs = safeCodecs(device.audio, max = 16),
+            embeddedSubtitles = device.embeddedSubtitles.take(8).mapNotNull { Safe.known(it, KNOWN_SUBTITLE_FORMATS + "*") },
+            streamAudioCodecs = safeCodecs(device.streamAudio),
+            encodeVideoCodecs = safeCodecs(device.encodeVideo),
+            serverVideoCodecs = safeCodecs(options.videoCodecs),
+            serverAudioCodecs = safeCodecs(options.audioCodecs),
+        )
+    }
+}
 
 /** A track the player has, by its format and whether the device can play it. */
 data class TrackDiagnostics(
@@ -299,6 +326,11 @@ data class AttemptDiagnostics(
     val audioIndex: Int?,
     val quality: Safe?,
     val burnIn: Boolean,
+    /** Why the server didn't play the file as it is, as its answer says. */
+    val why: List<Safe> = emptyList(),
+    /** What the server encodes the video and converts the audio to. */
+    val videoTo: Safe? = null,
+    val audioTo: Safe? = null,
     val outcome: AttemptOutcome = AttemptOutcome.LOADING,
     val error: ErrorDiagnostics? = null,
 )
@@ -351,7 +383,17 @@ class DiagnosticsRecorder(
     }
 
     /** A source the player loads now; one still loading before it was left for this one. */
-    fun attempt(mode: SourceMode, reason: AttemptReason, at: Double, audioIndex: Int?, quality: String?, burnIn: Boolean) = update { r ->
+    fun attempt(
+        mode: SourceMode,
+        reason: AttemptReason,
+        at: Double,
+        audioIndex: Int?,
+        quality: String?,
+        burnIn: Boolean,
+        why: List<String> = emptyList(),
+        videoTo: String? = null,
+        audioTo: String? = null,
+    ) = update { r ->
         val previous = r.attempts.map { if (it.outcome == AttemptOutcome.LOADING) it.copy(outcome = AttemptOutcome.REPLACED) else it }
         val next = AttemptDiagnostics(
             number = nextNumber++,
@@ -361,6 +403,9 @@ class DiagnosticsRecorder(
             audioIndex = audioIndex,
             quality = quality?.let(::safeQuality),
             burnIn = burnIn,
+            why = why.take(PlaybackReason.all.size).mapNotNull { Safe.known(it, KNOWN_REASONS) },
+            videoTo = safeVideoCodec(videoTo),
+            audioTo = safeAudioCodec(audioTo),
         )
         val all = previous + next
         val dropped = (all.size - MAX_ATTEMPTS).coerceAtLeast(0)
@@ -387,6 +432,19 @@ class DiagnosticsRecorder(
         val others = r.decoders.filter { it != decoder }
         r.copy(decoders = (others + decoder).takeLast(MAX_DECODERS))
     }
+
+    /** [source] loads, as the server's [plan] answered, or a download without one. */
+    fun attempt(source: Source, plan: PlaybackStart?, reason: AttemptReason, audioIndex: Int?) = attempt(
+        mode = source.mode,
+        reason = reason,
+        at = source.position,
+        audioIndex = plan?.audio?.index ?: audioIndex,
+        quality = plan?.quality,
+        burnIn = plan?.subtitleMode == PlaybackSubtitleMode.BURN_IN,
+        why = plan?.reasons.orEmpty(),
+        videoTo = plan?.convertedVideo,
+        audioTo = plan?.convertedAudio,
+    )
 
     fun note(note: DiagnosticsNote) = update { r -> r.copy(notes = r.notes + (note to (r.notes[note] ?: 0) + 1)) }
 
@@ -449,7 +507,7 @@ fun formatReport(report: PlaybackReport): String = buildString {
     )
 
     val c = report.capabilities
-    line("device plays: video=${yesNo(c.decodesVideo)} container=${yesNo(c.readsContainer)} audio=${yesNo(c.takesAudio)}")
+    line("device plays: video=${list(c.videoCodecs)} audio=${list(c.audioCodecs)} embedded_subtitles=${list(c.embeddedSubtitles)}")
     line("asks for: stream_audio=${list(c.streamAudioCodecs)} encode_video=${list(c.encodeVideoCodecs)}")
     line("server offers: video=${list(c.serverVideoCodecs)} audio=${list(c.serverAudioCodecs)}")
 
@@ -461,8 +519,11 @@ fun formatReport(report: PlaybackReport): String = buildString {
             add("reason=${a.reason.name.lowercase()}")
             add("at=${a.startAt}s")
             a.audioIndex?.let { add("audio=#$it") }
-            if (a.mode == SourceMode.HLS) add("quality=${opt(a.quality)}")
+            if (a.mode == SourceMode.HLS || a.mode == SourceMode.ENCODE) add("quality=${opt(a.quality)}")
             if (a.burnIn) add("burn_in=yes")
+            if (a.why.isNotEmpty()) add("why=${list(a.why)}")
+            a.videoTo?.let { add("video_to=$it") }
+            a.audioTo?.let { add("audio_to=$it") }
             add("-> ${a.outcome.name.lowercase()}")
         }
         line("  " + parts.joinToString(" "))

@@ -70,6 +70,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
@@ -142,13 +143,19 @@ import coil3.request.ImageRequest
 import coil3.request.allowHardware
 import coil3.toBitmap
 import io.github.zekurio.matinee.R
+import io.github.zekurio.matinee.api.ApiException
 import io.github.zekurio.matinee.api.AudioTrack
 import io.github.zekurio.matinee.api.DEFAULT_PLAYBACK_PREFERENCES
 import io.github.zekurio.matinee.api.FALLBACK_PLAYBACK_OPTIONS
 import io.github.zekurio.matinee.api.MediaItem
+import io.github.zekurio.matinee.api.PLAYBACK_UNPLAYABLE
+import io.github.zekurio.matinee.api.PlaybackDevice
 import io.github.zekurio.matinee.api.PlaybackOptions
+import io.github.zekurio.matinee.api.PlaybackStartInput
+import io.github.zekurio.matinee.api.SubtitleDelivery
 import io.github.zekurio.matinee.api.SubtitleTrack
 import io.github.zekurio.matinee.api.TitleKind
+import io.github.zekurio.matinee.api.playbackDevice
 import io.github.zekurio.matinee.api.skipBack
 import io.github.zekurio.matinee.api.skipForward
 import io.github.zekurio.matinee.app
@@ -177,19 +184,26 @@ import java.io.File
 import java.io.IOException
 import java.text.DateFormat
 import java.util.Date
+import java.util.UUID
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 
 /** Everything the player needs before it starts. */
-private class PlayerData(
-    val item: MediaItem,
-    val audio: List<AudioTrack>,
-    val subtitles: List<SubtitleTrack>,
-    val options: PlaybackOptions,
-    /** The download, which plays instead of the server's file. */
-    val local: OfflineItem? = null,
-)
+private sealed interface PlayerData {
+    /** A file from the server, with its first `playback.start` answer. */
+    class Server(val opening: Opening.Server, val device: PlaybackDevice, val options: PlaybackOptions) : PlayerData
+
+    /** A download, which plays instead of the server's file. */
+    class Local(val item: MediaItem, val local: OfflineItem, val device: PlaybackDevice) : PlayerData
+
+    /** The server found nothing this device plays. */
+    data object Unplayable : PlayerData
+}
 
 private const val HIDE_AFTER_MS = 3500L
 private const val UP_NEXT_SECONDS = 10
@@ -205,28 +219,47 @@ private fun Context.activity(): ComponentActivity? {
 
 @Composable
 fun PlayerScreen(itemId: String, start: Double?) {
-    val downloads = LocalContext.current.app.downloads
+    val app = LocalContext.current.app
+    val downloads = app.downloads
+    val prefs = app.player
     val offline = LocalOffline.current
-    val data = rememberLoader("player-$itemId") {
+    // Each time the player opens is a sitting of its own, which asks anew.
+    val sitting = rememberSaveable { UUID.randomUUID().toString() }
+    val data = rememberLoader<PlayerData>("player-$itemId-$sitting") {
+        val device = withContext(Dispatchers.Default) { playbackDevice(prefs) }
         // A download plays from the phone. Online, the server says where the
         // person got to, which may be past what the download remembers.
         downloads.store.done(itemId)?.let { local ->
             val fresh = if (offline) null else try { media.get(itemId) } catch (_: IOException) { null }
-            return@rememberLoader PlayerData(fresh ?: local.item, local.audio, local.subtitles.map { it.track }, FALLBACK_PLAYBACK_OPTIONS, local)
+            return@rememberLoader PlayerData.Local(fresh ?: local.item, local, device)
         }
-        val item = media.get(itemId)
-        // Tracks that won't load still leave the video to play.
-        val audio = try { media.audio(itemId) } catch (_: IOException) { emptyList() }
-        val subtitles = try { media.subtitles(itemId).tracks } catch (_: IOException) { emptyList() }
-        val options = try { playback.options() } catch (_: IOException) { FALLBACK_PLAYBACK_OPTIONS }
-        PlayerData(item, audio, subtitles, options)
+        // The server says how the file plays: the source, the tracks, and
+        // the next episode. The quality menu's ladder comes beside it.
+        val sessionId = UUID.randomUUID().toString()
+        val quality = prefs.quality
+        coroutineScope {
+            val options = async { try { playback.options() } catch (_: IOException) { FALLBACK_PLAYBACK_OPTIONS } }
+            val input = PlaybackStartInput(itemId = itemId, sessionId = sessionId, device = device, quality = quality, position = start)
+            val plan = try {
+                playback.start(input)
+            } catch (e: ApiException) {
+                if (e.code != PLAYBACK_UNPLAYABLE) throw e
+                options.cancel()
+                return@coroutineScope PlayerData.Unplayable
+            }
+            PlayerData.Server(Opening.Server(plan, sessionId, quality), device, options.await())
+        }
     }
     FullScreen()
     Box(Modifier.fillMaxSize().background(Color.Black)) {
         when (val state = data.state) {
             Load.Loading -> CircularProgressIndicator(Modifier.align(Alignment.Center), color = Palette.Accent)
             is Load.Failed -> PlayerFailure(stringResource(R.string.player_load_failed), state.message, data::reload)
-            is Load.Ready -> Playback(state.value, start)
+            is Load.Ready -> when (val value = state.value) {
+                // What shows when nothing plays, as after the last source failed.
+                PlayerData.Unplayable -> PlayerFailure(stringResource(R.string.player_error_lost), stringResource(R.string.player_unplayable), data::reload)
+                else -> Playback(itemId, value, start)
+            }
         }
     }
 }
@@ -309,38 +342,50 @@ private fun rememberPictureInPicture(controller: PlayerController, allowed: Bool
 }
 
 @Composable
-private fun Playback(data: PlayerData, start: Double?) {
+private fun Playback(itemId: String, data: PlayerData, start: Double?) {
     val context = LocalContext.current
     val app = context.app
     val api = LocalApi.current
     val user = LocalUser.current
     val prefs = app.player
     val preferences = user.playback ?: DEFAULT_PLAYBACK_PREFERENCES
-    val controller = remember(data.item.id) {
-        val choice = audioChoice(data.audio, preferences.audioLanguage, data.item.title?.originalLanguage)
-        val audioLanguage = choice.preferred?.language
+    // A load again, as when the viewer's marks change, keeps the player that plays.
+    val controller = remember(itemId) {
+        val (opening, device, options) = when (data) {
+            is PlayerData.Server -> Triple(data.opening, data.device, data.options)
+            is PlayerData.Local -> {
+                val download = data.local
+                val tracks = download.subtitles.map { it.track }
+                val audio = downloadAudio(download.audio, preferences.audioLanguage, data.item.title?.originalLanguage)
+                val opening = Opening.Local(
+                    item = data.item,
+                    file = app.downloads.store.file(download),
+                    audio = download.audio,
+                    subtitles = tracks,
+                    saved = download.subtitles.associate { it.track.id to File(app.downloads.store.root, it.file) },
+                    startAudio = audio,
+                    startSubtitle = downloadSubtitle(tracks, audio?.language, preferences),
+                    at = start ?: data.item.progress?.takeIf { !it.completed }?.positionSeconds ?: 0.0,
+                )
+                Triple(opening, data.device, FALLBACK_PLAYBACK_OPTIONS)
+            }
+            PlayerData.Unplayable -> error("nothing to play")
+        }
         PlayerController(
             context = context,
             api = api,
             http = app.session.http,
-            item = data.item,
-            audioTracks = data.audio,
-            subtitles = data.subtitles,
-            options = data.options,
-            initialAudio = choice.preferred,
-            initialSubtitle = defaultSubtitle(data.subtitles, audioLanguage, preferences),
-            initialQuality = prefs.quality,
+            opening = opening,
+            options = options,
+            device = device,
             prefs = prefs,
-            local = data.local?.let(app.downloads.store::file),
-            localSubtitles = data.local?.subtitles.orEmpty().associate { it.track.id to File(app.downloads.store.root, it.file) },
             pending = app.downloads.pending,
             serverHeaders = app.session.playerHeaders(),
             userAgent = app.session.userAgent,
         )
     }
     DisposableEffect(controller) {
-        val resumeAt = start ?: data.item.progress?.takeIf { !it.completed }?.positionSeconds ?: 0.0
-        controller.start(resumeAt)
+        controller.start()
         onDispose {
             controller.release()
             app.viewer.changed()
@@ -466,6 +511,7 @@ private fun Playback(data: PlayerData, start: Double?) {
         )
         // Up top, clear of the play button in the middle.
         ZoomNote(zoomNote, fill, Modifier.align(Alignment.TopCenter).safeDrawingPadding().padding(top = 16.dp))
+        PlayerNoticeNote(controller.notice, Modifier.align(Alignment.TopCenter).safeDrawingPadding().padding(top = 16.dp, start = 24.dp, end = 24.dp))
         if (controller.loading && controller.error == null) {
             CircularProgressIndicator(Modifier.align(Alignment.Center).size(48.dp), color = Palette.Foreground)
         }
@@ -539,6 +585,50 @@ private fun ZoomNote(count: Int, fill: Boolean, modifier: Modifier) {
             color = Color.White,
             modifier = Modifier.clip(RoundedCornerShape(12.dp)).background(Color.Black.copy(alpha = 0.6f)).padding(horizontal = 18.dp, vertical = 10.dp),
         )
+    }
+}
+
+/** How long a note about the last answer stays. */
+private const val NOTICE_MS = 5_000L
+
+/** Says what the server did instead of what the viewer asked for, for a few seconds. */
+@Composable
+private fun PlayerNoticeNote(notice: Notice?, modifier: Modifier) {
+    var shown by remember { mutableStateOf<Notice?>(null) }
+    LaunchedEffect(notice) {
+        if (notice == null) return@LaunchedEffect
+        shown = notice
+        delay(NOTICE_MS)
+        shown = null
+    }
+    val current = shown
+    AnimatedVisibility(current != null, modifier, enter = fadeIn(), exit = fadeOut()) {
+        // The last one stays drawn while it fades.
+        var last by remember { mutableStateOf(current) }
+        if (current != null) last = current
+        val note = last ?: return@AnimatedVisibility
+        val title = stringResource(
+            when (note.kind) {
+                NoticeKind.BURN_IN_FAILED -> R.string.player_notice_burn_in_failed
+                NoticeKind.QUALITY_FAILED, NoticeKind.SWITCH_FAILED -> R.string.player_notice_switch_failed
+            },
+        )
+        val detail = when (note.kind) {
+            NoticeKind.BURN_IN_FAILED -> stringResource(R.string.player_notice_burn_in_failed_detail)
+            NoticeKind.QUALITY_FAILED -> stringResource(R.string.player_notice_quality_failed_detail)
+            NoticeKind.SWITCH_FAILED -> note.detail
+        }
+        Column(
+            Modifier.widthIn(max = 420.dp).clip(RoundedCornerShape(12.dp)).background(Color.Black.copy(alpha = 0.75f))
+                .padding(horizontal = 18.dp, vertical = 10.dp)
+                .semantics(mergeDescendants = true) {},
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(title, style = MaterialTheme.typography.titleMedium, color = Color.White, textAlign = TextAlign.Center)
+            if (!detail.isNullOrEmpty()) {
+                Text(detail, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.8f), textAlign = TextAlign.Center)
+            }
+        }
     }
 }
 
@@ -957,23 +1047,9 @@ private fun TrickplayPreview(controller: PlayerController, seconds: Double, modi
  */
 @Composable
 private fun UpNext(controller: PlayerController, autoplay: Boolean, modifier: Modifier) {
-    val api = LocalApi.current
     val host = LocalPlayerHost.current
     val res = LocalResources.current
-    val item = controller.item
-    val title = item.title
-    if (title?.kind != TitleKind.SHOW) return
-    val next by produceState<MediaItem?>(null, item.id) {
-        value = try {
-            val all = api.titleItems(title.id)
-            // Not in the list, as a file just removed, has no next.
-            val index = all.indexOfFirst { it.id == item.id }
-            if (index < 0) null else all.getOrNull(index + 1)
-        } catch (_: IOException) {
-            null
-        }
-    }
-    val upcoming = next ?: return
+    val upcoming = (if (controller.isLocal) downloadNext(controller.item) else controller.next) ?: return
     var left by remember(upcoming.id) { mutableIntStateOf(UP_NEXT_SECONDS) }
     var cancelled by remember(upcoming.id) { mutableStateOf(!autoplay) }
     LaunchedEffect(upcoming.id, cancelled) {
@@ -1010,6 +1086,28 @@ private fun UpNext(controller: PlayerController, autoplay: Boolean, modifier: Mo
             }
         }
     }
+}
+
+/**
+ * The episode after a download's, from the server when it answers. A file
+ * the server plays has it in the answer from `playback.start`.
+ */
+@Composable
+private fun downloadNext(item: MediaItem): MediaItem? {
+    val api = LocalApi.current
+    val title = item.title
+    val next by produceState<MediaItem?>(null, item.id) {
+        if (title?.kind != TitleKind.SHOW) return@produceState
+        value = try {
+            val all = api.titleItems(title.id)
+            // Not in the list, as a file just removed, has no next.
+            val index = all.indexOfFirst { it.id == item.id }
+            if (index < 0) null else all.getOrNull(index + 1)
+        } catch (_: IOException) {
+            null
+        }
+    }
+    return next
 }
 
 /**
@@ -1101,7 +1199,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.menuItems(menu: Menu,
             items(controller.subtitles, key = { it.id }) { track ->
                 MenuRow(
                     subtitleLabel(track, controller.subtitles),
-                    subtitleDetail(track, burns = !drawable(track) && !controller.playerDraws(track)),
+                    subtitleDetail(track, burns = controller.burnsIn(track)),
                     selected = track == controller.subtitle,
                     enabled = track.delivery != null,
                     picked = picked,
@@ -1121,8 +1219,8 @@ private fun androidx.compose.foundation.lazy.LazyListScope.menuItems(menu: Menu,
                         onDismiss()
                     }
                 }
-                items(QUALITIES, key = { it.id }) { quality ->
-                    MenuRow(qualityLabel(quality.id), null, selected = controller.quality == quality.id, picked = picked) {
+                items(controller.qualities, key = { it.id }) { quality ->
+                    MenuRow(qualityLabel(quality), null, selected = controller.quality == quality.id, picked = picked) {
                         controller.pickQuality(quality.id)
                         onDismiss()
                     }
@@ -1208,11 +1306,15 @@ internal fun subtitleLabel(track: SubtitleTrack, tracks: List<SubtitleTrack>): S
     return trackLabel(track.language, track.title, stringResource(R.string.player_track_unnamed, position))
 }
 
-/** A track's flags and format, and whether showing it burns it in; [burns] null asks the track alone. */
+/**
+ * A track's flags and format, and whether it is burned into the picture.
+ * Left out, [burns] says so for every track the screen can't draw, as the
+ * download sheet has it.
+ */
 @Composable
-internal fun subtitleDetail(track: SubtitleTrack, burns: Boolean? = null): String = listOfNotNull(
+internal fun subtitleDetail(track: SubtitleTrack, burns: Boolean = track.delivery != SubtitleDelivery.WEBVTT): String = listOfNotNull(
     if (track.forced) stringResource(R.string.player_subtitles_forced) else null,
     if (track.sdh) "SDH" else null,
     track.format,
-    if (track.delivery != null && (burns ?: !drawable(track))) stringResource(R.string.player_subtitles_burned_in) else null,
+    if (track.delivery != null && burns) stringResource(R.string.player_subtitles_burned_in) else null,
 ).joinToString(" · ")

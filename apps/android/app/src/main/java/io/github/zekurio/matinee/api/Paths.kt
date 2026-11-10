@@ -3,9 +3,11 @@ package io.github.zekurio.matinee.api
 import okhttp3.HttpUrl
 
 /**
- * The plain HTTP routes from packages/contracts/src/paths.ts: video, subtitles,
- * artwork, and the sign-in page. Every one of them wants the session token,
- * which the shared OkHttp client adds for the server's origin.
+ * The plain HTTP routes from packages/contracts/src/paths.ts: the file,
+ * subtitles, artwork, and the sign-in page. The player's streams come as
+ * paths from `playback.start`, which [server] turns into addresses. Every
+ * one of them wants the session token, which the shared OkHttp client adds
+ * for the server's origin.
  */
 class Paths(private val base: HttpUrl) {
     private fun url(vararg segments: String) = base.newBuilder().apply {
@@ -27,45 +29,10 @@ class Paths(private val base: HttpUrl) {
     fun stream(itemId: String): String = url("api", "media", itemId, "stream").build().toString()
 
     /**
-     * The video with one audio track as fragmented MP4 from [start] seconds,
-     * which becomes the stream's time 0. No byte ranges: seek by asking again.
+     * A path the server answered with, like the source `playback.start`
+     * gives, as an address on it.
      */
-    fun play(
-        itemId: String,
-        audio: Int,
-        start: Double,
-        quality: String,
-        audioCodecs: List<String>,
-        videoCodecs: List<String>,
-        session: String,
-    ): String = url("api", "media", itemId, "play")
-        .addQueryParameter("audio", audio.toString())
-        .addQueryParameter("start", "%.3f".format(java.util.Locale.ROOT, start))
-        .addQueryParameter("quality", quality)
-        .addQueryParameter("audioCodecs", audioCodecs.joinToString(","))
-        .addQueryParameter("videoCodecs", videoCodecs.joinToString(","))
-        .addQueryParameter("session", session)
-        .build().toString()
-
-    /** An encode as HLS on the file's own timeline. Every quality but `original`. */
-    fun hls(
-        itemId: String,
-        audio: Int,
-        quality: String,
-        start: Double,
-        audioCodecs: List<String>,
-        videoCodecs: List<String>,
-        session: String,
-        subtitle: String?,
-    ): String = url("api", "media", itemId, "hls", "main.m3u8").apply {
-        addQueryParameter("audio", audio.toString())
-        addQueryParameter("quality", quality)
-        if (subtitle != null) addQueryParameter("subtitle", subtitle)
-        if (start > 0) addQueryParameter("start", "%.3f".format(java.util.Locale.ROOT, start))
-        addQueryParameter("audioCodecs", audioCodecs.joinToString(","))
-        addQueryParameter("videoCodecs", videoCodecs.joinToString(","))
-        addQueryParameter("session", session)
-    }.build().toString()
+    fun server(path: String): String = base.resolve(path)?.toString() ?: path
 
     /** A subtitle track: WebVTT for `webvtt` tracks, a PGS `.sup` file for `pgs` ones. */
     fun subtitle(itemId: String, trackId: String): String =

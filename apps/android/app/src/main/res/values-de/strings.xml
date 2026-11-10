@@ -444,6 +444,11 @@
     <string name="player_bitrate_mbps">%1$d Mbit/s</string>
     <string name="player_error_lost">Dieses Video kann nicht abgespielt werden</string>
     <string name="player_error_subtitles">Die Untertitel konnten nicht geladen werden. Wähle eine andere Spur oder schalte sie aus.</string>
+    <string name="player_unplayable">Dieses Gerät kann die Datei nicht abspielen.</string>
+    <string name="player_notice_burn_in_failed">Die Untertitel konnten nicht eingebrannt werden</string>
+    <string name="player_notice_burn_in_failed_detail">Die Untertitel sind aus. Wähle eine andere Spur oder versuch es noch einmal.</string>
+    <string name="player_notice_switch_failed">Das ließ sich nicht abspielen</string>
+    <string name="player_notice_quality_failed_detail">Zurück zur Originalqualität.</string>
     <string name="player_error_save_preferences">Deine Wiedergabeeinstellungen konnten nicht gespeichert werden</string>
     <string name="player_up_next">Als Nächstes</string>
     <string name="player_up_next_in">Startet in %1$d</string>

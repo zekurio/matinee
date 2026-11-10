@@ -63,9 +63,9 @@ class PlaybackDiagnosticsTest {
         file = FileDiagnostics.of(item),
         selection = SelectionDiagnostics.of(audio, subtitle, SubtitleRendering.BURN_IN),
         capabilities = CapabilityDiagnostics(
-            decodesVideo = true,
-            readsContainer = true,
-            takesAudio = false,
+            videoCodecs = safeCodecs(listOf("h264", "hevc")),
+            audioCodecs = safeCodecs(listOf("aac", "ac3", "pcm_*")),
+            embeddedSubtitles = listOfNotNull(Safe.known("PGS", KNOWN_SUBTITLE_FORMATS)),
             streamAudioCodecs = safeCodecs(listOf("opus", "aac")),
             encodeVideoCodecs = safeCodecs(listOf("hevc", "h264")),
             serverVideoCodecs = safeCodecs(listOf("h264", "hevc")),
@@ -88,7 +88,7 @@ class PlaybackDiagnosticsTest {
         val r = recorder()
         r.attempt(SourceMode.DIRECT, AttemptReason.START, 12.7, 1, null, burnIn = false)
         r.failed(httpError(401))
-        r.attempt(SourceMode.HLS, AttemptReason.FALLBACK, 12.7, 1, "1080p-20", burnIn = true)
+        r.attempt(SourceMode.HLS, AttemptReason.FALLBACK, 12.7, 1, "1080p-20", burnIn = true, why = listOf("subtitle", "failed"), videoTo = "h264", audioTo = "opus")
         r.tracks(
             listOf(
                 TrackDiagnostics(TrackKind.VIDEO, true, Safe.mime("video/avc"), Safe.token("avc1.640028"), 1920, 1080, null, null, 8_000_000, Safe.constant("YES")),
@@ -108,10 +108,10 @@ class PlaybackDiagnosticsTest {
         assertTrue(text.contains("file tracks: audio=truehd,ac3 subtitles=1"))
         assertTrue(text.contains("audio picked: #1 truehd 8ch"))
         assertTrue(text.contains("subtitle picked: pgs embedded delivery=pgs drawn_by=burn_in"))
-        assertTrue(text.contains("device plays: video=yes container=yes audio=no"))
+        assertTrue(text.contains("device plays: video=h264,hevc audio=aac,ac3,pcm_* embedded_subtitles=pgs"))
         assertTrue(text.contains("  1. direct reason=start at=12s audio=#1 -> failed"))
         assertTrue(text.contains("error: ERROR_CODE_IO_BAD_HTTP_STATUS (2004) type=source http=401 causes=InvalidResponseCodeException"))
-        assertTrue(text.contains("  2. hls reason=fallback at=12s audio=#1 quality=1080p-20 burn_in=yes -> playing"))
+        assertTrue(text.contains("  2. hls reason=fallback at=12s audio=#1 quality=1080p-20 burn_in=yes why=subtitle,failed video_to=h264 audio_to=opus -> playing"))
         assertTrue(text.contains("video selected video/avc codecs=avc1.640028 1920x1080 8000kbps support=YES"))
         assertTrue(text.contains("audio selected audio/opus 2ch 48000Hz support=YES"))
         assertTrue(text.contains("decoders: video=c2.android.avc.decoder"))
@@ -199,6 +199,26 @@ class PlaybackDiagnosticsTest {
     }
 
     @Test
+    fun recordsWhatTheServerAnswered() {
+        val r = recorder()
+        val plan = Answers.plan(
+            method = "transcode",
+            url = "/api/media/item-1/hls/main.m3u8",
+            hls = true,
+            start = 120.4,
+            quality = "720p-4",
+            convertedAudio = "opus",
+            subtitle = Answers.vobsub,
+            subtitleMode = "burn-in",
+            reasons = listOf("subtitle", "secret words"),
+        )
+        r.attempt(Source.of(plan) { "https://media.example.com$it" }, plan, AttemptReason.SUBTITLE_CHANGE, null)
+        val text = formatReport(r.report)
+        assertTrue(text, text.contains("  1. hls reason=subtitle_change at=120s audio=#1 quality=720p-4 burn_in=yes why=subtitle,other audio_to=opus -> loading"))
+        assertFalse(text.contains("media.example.com"))
+    }
+
+    @Test
     fun emptyReportSaysSo() {
         val text = formatReport(report())
         assertTrue(text.contains("attempts:\n  none"))
@@ -235,5 +255,7 @@ class PlaybackDiagnosticsTest {
         assertEquals("pcm_s24le", safeAudioCodec("pcm_s24le")?.text)
         assertEquals(Safe.OTHER, safeAudioCodec("pcm_/etc/passwd"))
         assertEquals(Safe.OTHER, safeQuality("4k-secret"))
+        assertEquals("720p-4", safeQuality("720p-4")?.text)
+        assertEquals("original", safeQuality("original")?.text)
     }
 }

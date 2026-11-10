@@ -27,15 +27,18 @@ web app's catalogs where the words are the same.
   genres, studios, people, search across the server.
 - Title, season, and episode pages, with watched marks and favorites. A
   long press on any card offers the rest.
-- The player plays the file as it is when the device decodes it, a stream of
-  the copied video with converted audio when only the audio doesn't play, and
-  an HLS encode otherwise or at a picked quality, falling back in that order
-  when something fails. Audio and subtitle tracks start as the account's
-  preferences say. The player draws WebVTT subtitles itself, on the file's
-  timeline, so they stay in step with every source; picture subtitles burn
-  into an encode. It shows trickplay frames while scrubbing, counts down to
-  the next episode, reports progress, and keeps playing in picture in
-  picture.
+- The player tells the server what this device plays, for the engine and
+  settings it has, and plays what `playback.start` answers: the file as it
+  is, a stream of the copied video with converted audio, or an HLS encode,
+  with the audio and subtitle that start and the next episode. A source that
+  fails asks again with its method among the failed ones, and the server
+  falls back. Tracks the viewer picks go to `playback.pickTracks`, so the
+  server remembers them, as on the web. The player draws WebVTT subtitles
+  itself, on the file's timeline, so they stay in step with every source;
+  the engine draws picture tracks inside a file that plays as it is, and the
+  server burns the rest into an encode. It shows trickplay frames while
+  scrubbing, counts down to the next episode, reports progress, and keeps
+  playing in picture in picture.
 - Downloads for watching offline, from a file's menu: a version the
   server makes for this device (the video kept when the phone decodes it,
   else encoded to H.264 at a picked size, and the preferred audio track kept
@@ -108,7 +111,9 @@ app/src/main/java/io/github/zekurio/matinee/
   downloads/  The download list, the WorkManager job that fetches them, and
               progress made offline
   ui/         Compose screens: home, browse, title, search, settings, player
-  ui/player/  Source choice, track picks, the WebVTT renderer, and the player
+  ui/player/  The device's decoders, what the player loads of the server's
+              answers, a download's tracks, the WebVTT renderer, and the
+              player
 scripts/
   lucide.py       Turns lucide icons into vector drawables
   themes.mjs      Writes ui/theme/ThemePresets.kt from the web's palettes

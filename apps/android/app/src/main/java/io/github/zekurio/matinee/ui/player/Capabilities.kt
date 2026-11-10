@@ -2,13 +2,18 @@ package io.github.zekurio.matinee.ui.player
 
 import android.media.MediaCodecInfo
 import android.media.MediaCodecInfo.CodecProfileLevel
+import android.media.MediaCodecInfo.VideoCapabilities
 import android.media.MediaCodecList
 import androidx.media3.decoder.ffmpeg.FfmpegLibrary
-import io.github.zekurio.matinee.api.DisplayVideoStream
+import io.github.zekurio.matinee.api.DeviceCodecs
+import io.github.zekurio.matinee.api.FrameSize
+import io.github.zekurio.matinee.api.OPTIONAL_PASSTHROUGH
+import io.github.zekurio.matinee.api.VideoDecoder
 
 /**
- * What this device decodes, asked of its media codecs, so the player sends
- * the file as it is when it can and has the server convert only the rest.
+ * What this device decodes, asked of its media codecs. The device profile
+ * tells the server, which decides from it what plays as it is and what it
+ * converts. Settings ask it too, for the choices they offer.
  */
 object Capabilities {
     private val decoders: List<MediaCodecInfo> by lazy {
@@ -40,26 +45,37 @@ object Capabilities {
         "truehd" to "audio/true-hd",
     )
 
-    /**
-     * Containers ExoPlayer reads itself. Others, like AVI from old rips or
-     * WMV, go through the server.
-     */
-    private val CONTAINERS = setOf("mkv", "webm", "mp4", "m4v", "mov", "ts", "mpegts", "flv", "ogv", "ogg", "avi")
-
     private fun decodersFor(mime: String) = decoders.filter { info -> info.supportedTypes.any { it.equals(mime, true) } }
 
-    fun playsContainer(container: String) = container.lowercase() in CONTAINERS
-
-    fun decodesVideo(video: DisplayVideoStream): Boolean {
-        // Profile 5 has no layer other decoders can show.
-        if (video.dolbyVisionProfile == 5) return decodersFor("video/dolby-vision").isNotEmpty()
-        val mime = VIDEO_MIMES[video.codec] ?: return false
-        val deep = (video.bitDepth ?: 8) > 8
-        return decodersFor(mime).any { info ->
-            val caps = runCatching { info.getCapabilitiesForType(mime) }.getOrNull() ?: return@any false
-            val size = caps.videoCapabilities?.let { video.width <= 0 || it.isSizeSupported(video.width, video.height) } ?: true
-            size && (!deep || caps.profileLevels.any { it.profile in tenBitProfiles(video.codec) })
+    /** Every video decoder by its limits, and the audio the device and FFmpeg decode, read once. */
+    val codecs: DeviceCodecs by lazy {
+        val video = VIDEO_MIMES.flatMap { (codec, mime) ->
+            decodersFor(mime).mapNotNull { info ->
+                val caps = runCatching { info.getCapabilitiesForType(mime) }.getOrNull() ?: return@mapNotNull null
+                val sizes = caps.videoCapabilities
+                VideoDecoder(
+                    codec = codec,
+                    widest = sizes?.let(::widest),
+                    tallest = sizes?.let(::tallest),
+                    tenBit = caps.profileLevels.any { it.profile in tenBitProfiles(codec) },
+                )
+            }
         }
+        DeviceCodecs(video, AUDIO_MIMES.keys.filter(::decodesAudio).toSet(), decodersFor("video/dolby-vision").isNotEmpty())
+    }
+
+    /** The widest frame, and the tallest it takes at that width, or at any when it won't say. */
+    private fun widest(sizes: VideoCapabilities): FrameSize {
+        val width = sizes.supportedWidths.upper
+        val height = runCatching { sizes.getSupportedHeightsFor(width).upper }.getOrDefault(sizes.supportedHeights.upper)
+        return FrameSize(width, height)
+    }
+
+    /** The tallest frame, and the widest it takes at that height. */
+    private fun tallest(sizes: VideoCapabilities): FrameSize {
+        val height = sizes.supportedHeights.upper
+        val width = runCatching { sizes.getSupportedWidthsFor(height).upper }.getOrDefault(sizes.supportedWidths.upper)
+        return FrameSize(width, height)
     }
 
     private fun tenBitProfiles(codec: String): Set<Int> = when (codec) {
@@ -76,26 +92,8 @@ object Capabilities {
         return decodersFor(mime).isNotEmpty() || (FfmpegLibrary.isAvailable() && FfmpegLibrary.supportsFormat(mime))
     }
 
-    /**
-     * The codecs from the contract's PLAYBACK_AUDIO_CODECS this device takes
-     * in MP4, the one it wants converted audio in first. AAC always plays.
-     * Formats [prefs] has converted are left out, and its codec goes first.
-     */
-    fun streamAudioCodecs(prefs: PlayerPrefs): List<String> {
-        val kept = listOf("opus", "aac", "mp3", "flac", "alac", "ac3", "eac3").filter { it == "aac" || takesAudio(it, prefs) }
-        val first = prefs.audioCodec.takeIf { it in kept } ?: return kept
-        return listOf(first) + (kept - first)
-    }
-
-    /**
-     * Formats the device plays that settings may still have converted, as the
-     * web's OPTIONAL_PASSTHROUGH.
-     */
-    val OPTIONAL_PASSTHROUGH = listOf("ac3", "eac3", "flac", "alac")
-
-    /** Whether the player takes [codec] as it is: the device decodes it and settings don't convert it. */
-    fun takesAudio(codec: String, prefs: PlayerPrefs): Boolean =
-        decodesAudio(codec) && !(codec in OPTIONAL_PASSTHROUGH && codec in prefs.convertAudio)
+    /** The passthrough formats this device plays, which settings may have converted. */
+    val passthrough: List<String> get() = OPTIONAL_PASSTHROUGH.filter(::decodesAudio)
 
     /** The codecs streams may convert audio to, of the server's: Opus where it plays, and AAC. */
     fun convertAudioCodecs(server: List<String>): List<String> =
@@ -106,14 +104,4 @@ object Capabilities {
         listOf("h264", "hevc", "av1").filter { codec ->
             codec in server && VIDEO_MIMES[codec]?.let { decodersFor(it).isNotEmpty() } == true
         }
-
-    /**
-     * The codecs an encode may come in, the one wanted first. Automatic is
-     * H.264, which every device plays; settings can ask for HEVC or AV1.
-     */
-    fun encodeVideoCodecs(server: List<String>, prefs: PlayerPrefs): List<String> {
-        val choices = encodeVideoChoices(server)
-        val wanted = prefs.videoCodec.takeIf { it != AUTOMATIC && it in choices }
-        return listOfNotNull(wanted, "h264".takeIf { it in server }).distinct().ifEmpty { listOf("h264") }
-    }
 }

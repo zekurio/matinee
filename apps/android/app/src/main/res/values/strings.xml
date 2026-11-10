@@ -467,6 +467,11 @@
     <string name="player_bitrate_mbps">%1$d Mbps</string>
     <string name="player_error_lost">Couldn\'t play this video</string>
     <string name="player_error_subtitles">Couldn\'t load subtitles. Pick another track or turn them off.</string>
+    <string name="player_unplayable">This device can\'t play this file.</string>
+    <string name="player_notice_burn_in_failed">Couldn\'t burn in those subtitles</string>
+    <string name="player_notice_burn_in_failed_detail">Subtitles are off. Pick another track or try again.</string>
+    <string name="player_notice_switch_failed">Couldn\'t play that</string>
+    <string name="player_notice_quality_failed_detail">Back to the original quality.</string>
     <string name="player_error_save_preferences">Couldn\'t save your playback preferences</string>
     <string name="player_up_next">Up next</string>
     <string name="player_up_next_in">Playing in %1$d</string>
