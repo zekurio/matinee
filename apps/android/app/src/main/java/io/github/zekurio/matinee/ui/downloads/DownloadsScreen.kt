@@ -401,6 +401,8 @@ private fun DoneRow(entry: OfflineItem, primary: String, secondary: String?, mod
 private fun ComingRow(entry: OfflineItem, primary: String, secondary: String?, modifier: Modifier, onMore: () -> Unit) {
     val downloads = LocalContext.current.app.downloads
     val moving = entry.state == DownloadState.RUNNING || entry.state == DownloadState.QUEUED
+    // Broke off: given up, or waiting to try again after an error.
+    val broken = entry.error != null || entry.state == DownloadState.FAILED
     Row(
         modifier.fillMaxWidth().clip(CardShape).clickable(onClick = onMore).padding(vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(14.dp),
@@ -408,7 +410,8 @@ private fun ComingRow(entry: OfflineItem, primary: String, secondary: String?, m
     ) {
         DownloadThumb(entry, entry.item.title?.name ?: primary, THUMB_WIDTH)
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(primary, style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            // One line each, so the name, the bar, and how it stands fit beside the picture.
+            Text(primary, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (secondary != null) {
                 Text(secondary, style = MaterialTheme.typography.bodySmall, color = Palette.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
@@ -417,21 +420,27 @@ private fun ComingRow(entry: OfflineItem, primary: String, secondary: String?, m
                 Box(Modifier.padding(vertical = 3.dp).fillMaxWidth().height(3.dp).clip(CircleShape).background(Palette.Secondary)) {
                     Box(
                         Modifier.fillMaxWidth(progress).fillMaxHeight().clip(CircleShape)
-                            .background(if (moving) Palette.Accent else Palette.Muted),
+                            .background(
+                                when {
+                                    broken -> Palette.Danger
+                                    moving -> Palette.Accent
+                                    else -> Palette.Muted
+                                },
+                            ),
                     )
                 }
             }
             Text(
                 status(entry),
                 style = MaterialTheme.typography.bodySmall,
-                color = if (entry.state == DownloadState.FAILED) Palette.Danger else Palette.Faint,
-                maxLines = 2,
+                color = if (broken) Palette.Danger else Palette.Faint,
+                maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
         }
         // The same weight as a finished row's menu button, so the column of buttons matches.
         // One that broke off, or waits to try again, can be tried again at once.
-        if (entry.error != null || entry.state == DownloadState.FAILED) {
+        if (broken) {
             RoundIconButton(Lucide.RotateCw, stringResource(R.string.downloads_retry), { downloads.resume(entry.id) }, size = 40.dp, iconSize = 18.dp, tint = Palette.Muted, background = Color.Transparent)
         } else if (moving) {
             RoundIconButton(Lucide.Pause, stringResource(R.string.downloads_pause), { downloads.pause(entry.id) }, size = 40.dp, iconSize = 14.dp, tint = Palette.Muted, background = Color.Transparent)
@@ -499,8 +508,8 @@ private fun status(entry: OfflineItem): String {
         DownloadState.FAILED -> stringResource(R.string.downloads_state_failed, entry.error.orEmpty())
         else -> {
             val unmetered = LocalContext.current.app.downloads.unmeteredOnly
-            entry.error?.let { stringResource(R.string.downloads_state_retrying, it) }
-                ?: stringResource(if (unmetered) R.string.downloads_state_waiting_unmetered else R.string.downloads_state_waiting)
+            // What went wrong, alone: the red and the retry button say the rest.
+            entry.error ?: stringResource(if (unmetered) R.string.downloads_state_waiting_unmetered else R.string.downloads_state_waiting)
         }
     }
 }

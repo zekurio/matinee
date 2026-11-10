@@ -487,8 +487,9 @@
     <string name="downloads_state_running">Wird heruntergeladen</string>
     <string name="downloads_of">%1$s von %2$s</string>
     <string name="downloads_state_paused">Pausiert</string>
-    <string name="downloads_state_failed">Abgebrochen. %1$s</string>
-    <string name="downloads_state_retrying">%1$s Wird automatisch erneut versucht.</string>
+    <string name="downloads_state_failed">Abgebrochen · %1$s</string>
+    <string name="downloads_error_unreachable">Server nicht erreichbar</string>
+    <string name="downloads_error_broke_off">Verbindung abgebrochen</string>
     <string name="downloads_retry">Jetzt erneut versuchen</string>
     <string name="downloads_retry_all">Alle erneut versuchen</string>
     <string name="downloads_state_waiting">Wartet</string>

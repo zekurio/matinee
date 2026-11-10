@@ -16,7 +16,6 @@ import io.github.zekurio.matinee.api.MatineeApi
 import io.github.zekurio.matinee.api.TitleKind
 import io.github.zekurio.matinee.api.await
 import io.github.zekurio.matinee.app
-import io.github.zekurio.matinee.ui.describeFailure
 import io.github.zekurio.matinee.ui.itemLabel
 import java.io.File
 import java.io.FileOutputStream
@@ -24,7 +23,12 @@ import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import java.io.RandomAccessFile
+import java.net.ConnectException
+import java.net.NoRouteToHostException
+import java.net.SocketTimeoutException
+import java.net.UnknownHostException
 import java.util.concurrent.TimeUnit
+import javax.net.ssl.SSLException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
@@ -83,8 +87,7 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
             store.update(id) { if (it.state == DownloadState.RUNNING) it.copy(state = DownloadState.QUEUED) else it }
             throw e
         } catch (e: IOException) {
-            // In words, like "The server can't be reached", not the exception's "timeout".
-            val message = describeFailure(applicationContext.resources, e)
+            val message = failureLabel(e)
             if (runAttemptCount >= MAX_ATTEMPTS) {
                 store.update(id) { it.copy(state = DownloadState.FAILED, error = message) }
                 Result.failure()
@@ -92,6 +95,20 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
                 store.update(id) { if (it.state == DownloadState.RUNNING) it.copy(state = DownloadState.QUEUED, error = message) else it }
                 Result.retry()
             }
+        }
+    }
+
+    /**
+     * What went wrong, short enough for a download's status line, like
+     * "Server not reachable", rather than the exception's "timeout".
+     */
+    private fun failureLabel(e: IOException): String {
+        val res = applicationContext.resources
+        return when (e) {
+            is ApiException -> e.message
+            is UnknownHostException, is ConnectException, is SocketTimeoutException, is NoRouteToHostException, is SSLException ->
+                res.getString(R.string.downloads_error_unreachable)
+            else -> res.getString(R.string.downloads_error_broke_off)
         }
     }
 
