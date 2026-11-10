@@ -8,6 +8,7 @@ import {
   boolean,
   doublePrecision,
   index,
+  integer,
   pgTable,
   primaryKey,
   text,
@@ -41,6 +42,31 @@ export const watchProgress = pgTable(
     primaryKey({ columns: [t.userId, t.mediaItemId] }),
     index("watch_progress_recent_idx").on(t.userId, t.updatedAt),
   ],
+)
+
+/**
+ * The tracks each user picked in each file's player, for the next time it
+ * plays and for the closest match in the other files of its title. A kind
+ * of track counts as picked once its time is set: an audio stream, or a
+ * subtitle track, where no track means subtitles off.
+ */
+export const trackPick = pgTable(
+  "track_pick",
+  {
+    userId: uuid()
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    mediaItemId: uuid()
+      .notNull()
+      .references(() => mediaItem.id, { onDelete: "cascade" }),
+    /** The audio stream's index in the file. */
+    audioStreamIndex: integer(),
+    audioPickedAt: timestamp({ withTimezone: true }),
+    /** A subtitle track's id, as `media.subtitles` lists them. */
+    subtitleTrackId: text(),
+    subtitlePickedAt: timestamp({ withTimezone: true }),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.mediaItemId] })],
 )
 
 /** A title a user marked as a favorite. */

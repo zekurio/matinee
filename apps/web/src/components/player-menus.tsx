@@ -50,17 +50,27 @@ export function PlayerMenus({
   onSpeedChange: (speed: number) => void
   container: RefObject<HTMLDivElement | null>
 }) {
-  const { speed, openMenu, setMenuOpen, delay, burnIn, setSubtitleDelay } =
-    usePlayerStore(
-      useShallow((state) => ({
-        speed: state.speed,
-        openMenu: state.openMenu,
-        setMenuOpen: state.setMenuOpen,
-        delay: state.subtitleDelay,
-        burnIn: state.burnIn,
-        setSubtitleDelay: state.setSubtitleDelay,
-      })),
-    )
+  const {
+    speed,
+    openMenu,
+    setMenuOpen,
+    delay,
+    burnIn,
+    setSubtitleDelay,
+    statsOpen,
+    setStatsOpen,
+  } = usePlayerStore(
+    useShallow((state) => ({
+      speed: state.speed,
+      openMenu: state.openMenu,
+      setMenuOpen: state.setMenuOpen,
+      delay: state.subtitleDelay,
+      burnIn: state.burnIn,
+      setSubtitleDelay: state.setSubtitleDelay,
+      statsOpen: state.statsOpen,
+      setStatsOpen: state.setStatsOpen,
+    })),
+  )
   // One menu opens at a time, and the controls stay up while it does.
   const menuProps = (id: string, label: string) => ({
     label,
@@ -88,22 +98,25 @@ export function PlayerMenus({
       : tr("player.audio.loading"),
   }
 
+  const subtitleChoices: MenuChoice[] = subs.tracks.map((track) => ({
+    id: track.id,
+    label: subtitleLabel(track, subs.tracks),
+    detail: trackDetail(track),
+    // Burning in takes an encode, and an encode takes an audio track.
+    disabled:
+      track.delivery === null ||
+      (track.delivery === "burn-in" && playback.tracks.length === 0),
+  }))
   const subtitleSection: MenuSection = {
     title: tr("player.menu.subtitles"),
     value: subs.selected ?? OFF,
-    choices: [
-      { id: OFF, label: tr("player.subtitles.off") },
-      ...subs.tracks.map((track) => ({
-        id: track.id,
-        label: subtitleLabel(track, subs.tracks),
-        detail: trackDetail(track),
-        // Burning in takes an encode, and an encode takes an audio track.
-        disabled:
-          track.delivery === null ||
-          (track.delivery === "burn-in" && playback.tracks.length === 0),
-      })),
-    ],
+    // A file without any lists none rather than Off alone.
+    choices:
+      subtitles && subtitleChoices.length === 0
+        ? []
+        : [{ id: OFF, label: tr("player.subtitles.off") }, ...subtitleChoices],
     onSelect: (id) => subs.select(id === OFF ? null : id),
+    empty: tr("player.subtitles.noTracks"),
   }
   // The shown track's timing. An encode draws a burned-in track where the
   // file says.
@@ -115,27 +128,20 @@ export function PlayerMenus({
           value: formatDelay(delay),
           disabledNote:
             burnIn === null ? undefined : tr("player.subtitles.burnedIn"),
-          steps: [
-            {
-              id: "earlier",
-              label: formatDelay(-SUBTITLE_STEP_MS),
-              description: tr("player.subtitles.earlier"),
-              onSelect: () => setSubtitleDelay(delay - SUBTITLE_STEP_MS),
-            },
-            {
-              id: "reset",
-              label: tr("player.subtitles.delayReset"),
-              description: tr("player.subtitles.delayResetDetail"),
-              disabled: delay === 0,
-              onSelect: () => setSubtitleDelay(0),
-            },
-            {
-              id: "later",
-              label: formatDelay(SUBTITLE_STEP_MS),
-              description: tr("player.subtitles.later"),
-              onSelect: () => setSubtitleDelay(delay + SUBTITLE_STEP_MS),
-            },
-          ],
+          atStart: delay === 0,
+          decrease: {
+            label: tr("player.subtitles.earlier"),
+            onSelect: () => setSubtitleDelay(delay - SUBTITLE_STEP_MS),
+          },
+          increase: {
+            label: tr("player.subtitles.later"),
+            onSelect: () => setSubtitleDelay(delay + SUBTITLE_STEP_MS),
+          },
+          reset: {
+            label: tr("player.subtitles.delayReset"),
+            title: tr("player.subtitles.delayResetDetail"),
+            onSelect: () => setSubtitleDelay(0),
+          },
         }
 
   // Quality: the file as it is, then the encodes no larger than it.
@@ -183,28 +189,6 @@ export function PlayerMenus({
       onSelect: (id) => onSpeedChange(Number(id)),
     },
   ]
-  const source = playback.source
-  // How the file reaches the browser, in Jellyfin's terms.
-  const burnedIn = source?.kind === "hls" && source.subtitle !== null
-  const encode =
-    source && source.kind !== "direct"
-      ? PLAYBACK_QUALITIES.find((quality) => quality.id === source.quality)
-      : undefined
-  const encodeParams = encode && {
-    resolution: `${encode.height}p`,
-    bitrate: formatBitrate(encode.bitrate),
-  }
-  const note =
-    !source || source.kind === "direct"
-      ? tr("player.via.directPlay")
-      : encodeParams
-        ? burnedIn
-          ? tr("player.via.transcodeBurnIn", encodeParams)
-          : tr("player.via.transcode", encodeParams)
-        : burnedIn
-          ? tr("player.via.directStreamBurnIn")
-          : tr("player.via.directStream")
-
   return (
     <>
       <PlayerMenu
@@ -217,21 +201,20 @@ export function PlayerMenus({
         shortcut="c"
         icon={<CaptionsIcon />}
         active={subs.selected !== null}
-        note={
-          subtitles && subs.tracks.length === 0
-            ? tr("player.subtitles.noTracks")
-            : subs.loading
-              ? tr("player.subtitles.loading")
-              : undefined
-        }
         sections={[subtitleSection]}
         adjust={subtitleTiming}
       />
       <PlayerMenu
         {...menuProps("settings", tr("player.menu.settings"))}
         icon={<SettingsIcon />}
-        note={note}
         sections={settingsSections}
+        toggles={[
+          {
+            label: tr("player.stats.toggle"),
+            checked: statsOpen,
+            onChange: setStatsOpen,
+          },
+        ]}
       />
     </>
   )

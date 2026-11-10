@@ -136,7 +136,15 @@ function LanguagesSection({
           />
         )}
         <SwitchRow
+          title={tr("playback.audio.remember")}
+          checked={preferences.rememberAudio}
+          onChange={(rememberAudio) =>
+            updatePlaybackPreferences({ rememberAudio })
+          }
+        />
+        <SwitchRow
           title={tr("playback.subtitles.remember")}
+          footer={tr("playback.remember.footer")}
           checked={preferences.rememberSubtitles}
           onChange={(rememberSubtitles) =>
             updatePlaybackPreferences({ rememberSubtitles })

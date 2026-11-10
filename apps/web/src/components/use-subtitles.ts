@@ -1,17 +1,15 @@
-import type { Subtitles, SubtitleTrack } from "@matinee/contracts"
+import type { SubtitlePick, Subtitles, SubtitleTrack } from "@matinee/contracts"
 import { toast } from "@matinee/ui/components/sonner"
 import { skipToken, useQuery } from "@tanstack/react-query"
 import { type RefObject, useEffect } from "react"
 import { useShallow } from "zustand/shallow"
 
 import { tr } from "@/i18n"
-import {
-  currentPlaybackPreferences,
-  updatePlaybackPreferences,
-} from "@/lib/playback-sync"
-import { defaultTrack, fallbackTrack, rememberPick } from "@/lib/subtitles"
+import { currentPlaybackPreferences } from "@/lib/playback-sync"
+import { defaultTrack, fallbackTrack, rememberedTrack } from "@/lib/subtitles"
 import { usePlayerStore, usePlayerStoreApi } from "@/stores/player"
 
+import { subtitlesLoadingNotice } from "./playback-notices"
 import { usePgs } from "./use-pgs"
 
 /** A track's file as fetched: WebVTT text, or a PGS `.sup` file. */
@@ -141,8 +139,10 @@ function trackElement(
  * on a canvas in `pgsLayer`. A track only an encode shows goes to
  * `burnIn`,
  * which gets null again when the viewer picks another. Until the viewer
- * picks, the preferences pick by `audioLanguage`, the language of the
- * audio that plays, falling back on the file's default audio's.
+ * picks, the pick they `remembered` from before shows, else the
+ * preferences pick by `audioLanguage`, the language of the audio that
+ * plays, falling back on the file's default audio's. Each pick goes to
+ * `onPick`.
  *
  * A track's file is fetched before it shows; a `<track>` loads it from
  * memory. A showing track that is still loading holds Chrome's
@@ -160,6 +160,8 @@ export function useSubtitles(
   offset: number,
   burnIn: (trackId: string | null) => void,
   audioLanguage: string | null,
+  remembered: SubtitlePick | null,
+  onPick: (trackId: string | null) => void,
 ) {
   const store = usePlayerStoreApi()
   const tracks = subtitles?.tracks ?? NO_TRACKS
@@ -174,15 +176,19 @@ export function useSubtitles(
   // The file's time that shows at the video's 0: the stream's start, less
   // the viewer's delay, so a later cue shows later.
   const cueOffset = offset - delay / 1000
-  // The default shows once the tracks are here, until the viewer picks.
+  // Once the tracks are here, the remembered pick or the default shows
+  // until the viewer picks.
   const playingLanguage = audioLanguage ?? subtitles?.audioLanguage ?? null
+  const again = rememberedTrack(tracks, remembered)
   const selected =
     chosen !== undefined
       ? chosen
-      : subtitles
-        ? (defaultTrack(subtitles.tracks, playingLanguage, defaults)?.id ??
-          null)
-        : null
+      : !subtitles
+        ? null
+        : again !== undefined
+          ? again
+          : (defaultTrack(subtitles.tracks, playingLanguage, defaults)?.id ??
+            null)
   const track = tracks.find((candidate) => candidate.id === selected) ?? null
   const delivery = track?.delivery ?? null
 
@@ -308,20 +314,12 @@ export function useSubtitles(
     }
   }, [selected, src, lifted, tracks])
 
-  /**
-   * Show a track, or none for null, and when the preferences remember
-   * picks, make it the choice for the next file.
-   */
+  /** Show a track, or none for null, as the viewer's pick. */
   const select = (trackId: string | null) => {
     const next = tracks.find((candidate) => candidate.id === trackId)
     store.getState().chooseSubtitle(trackId)
     burnIn(next?.delivery === "burn-in" ? next.id : null)
-    const preferences = currentPlaybackPreferences()
-    if (preferences.rememberSubtitles) {
-      updatePlaybackPreferences(
-        rememberPick(next, preferences, playingLanguage),
-      )
-    }
+    onPick(trackId)
   }
 
   /** Off if a track shows; otherwise the last pick or the best guess. */
@@ -342,5 +340,12 @@ export function useSubtitles(
   const loading =
     (delivery === "webvtt" && current === null) ||
     (delivery === "pgs" && file?.kind !== "pgs")
-  return { tracks, selected, current, loading, select, toggle }
+
+  // A toast while the track is on its way.
+  useEffect(() => {
+    if (!loading) return
+    return subtitlesLoadingNotice()
+  }, [loading, selected])
+
+  return { tracks, selected, current, select, toggle }
 }

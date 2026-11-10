@@ -70,11 +70,16 @@ export const PlaybackPreferences = t.object({
    */
   subtitleLanguage: LanguageTag.nullable(),
   /**
-   * A subtitle pick in the player sets the mode and language for the files
-   * after it: a track turns subtitles on in its language, and off goes back
-   * to forced tracks only.
+   * A subtitle pick in the player, a track or off, comes back when the file
+   * plays again, and the closest match to it in the title's other files,
+   * ahead of `subtitleMode` and `subtitleLanguage`. See `playback.tracks`.
    */
   rememberSubtitles: t.boolean(),
+  /**
+   * The same for audio picks, ahead of `audioLanguage`. Saved preferences
+   * from before it existed read as on.
+   */
+  rememberAudio: t.boolean().$default(true),
   /**
    * How far back and ahead the skip buttons, keys, and taps move. Saved
    * preferences from before these existed read with the defaults.
@@ -91,6 +96,7 @@ export const DEFAULT_PLAYBACK_PREFERENCES: Readonly<PlaybackPreferences> =
     subtitleMode: "default",
     subtitleLanguage: null,
     rememberSubtitles: true,
+    rememberAudio: true,
     skipBackSeconds: DEFAULT_SKIP_SECONDS,
     skipForwardSeconds: DEFAULT_SKIP_SECONDS,
   })

@@ -1,7 +1,7 @@
-import {
-  LanguageTag,
-  type PlaybackPreferences,
-  type SubtitleTrack,
+import type {
+  PlaybackPreferences,
+  SubtitlePick,
+  SubtitleTrack,
 } from "@matinee/contracts"
 
 import { tr } from "@/i18n"
@@ -116,26 +116,18 @@ export function fallbackTrack(
 }
 
 /**
- * What a pick in the player makes of the preferences when they remember
- * picks: a full track turns subtitles on in its language, keeping
- * `foreign` when the audio is foreign to it; a forced track, or off, goes
- * to forced tracks only. Off stays off.
+ * The track a remembered pick shows in this file: its track, or null for
+ * off. Undefined when there's no pick, or its track is gone or needs an
+ * encode, so the preferences pick instead.
  */
-export function rememberPick(
-  track: SubtitleTrack | undefined,
-  preferences: PlaybackPreferences,
-  audioLanguage: string | null,
-): Partial<PlaybackPreferences> {
-  const mode = preferences.subtitleMode
-  if (!track) return { subtitleMode: mode === "off" ? "off" : "forced" }
-  const tag = LanguageTag.safeParse(track.language)
-  const subtitleLanguage = tag.success ? tag.data : preferences.subtitleLanguage
-  if (track.forced) return { subtitleMode: "forced", subtitleLanguage }
-  const foreign =
-    mode === "foreign" &&
-    audioLanguage !== null &&
-    !sameLanguage(audioLanguage, track.language)
-  return { subtitleMode: foreign ? "foreign" : "always", subtitleLanguage }
+export function rememberedTrack(
+  tracks: SubtitleTrack[],
+  pick: SubtitlePick | null,
+): string | null | undefined {
+  if (!pick) return undefined
+  if (pick.trackId === null) return null
+  const track = tracks.find((candidate) => candidate.id === pick.trackId)
+  return track && drawable(track) ? track.id : undefined
 }
 
 /**

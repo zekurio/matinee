@@ -208,6 +208,27 @@ export const AudioTrack = t.object({
 })
 export type AudioTrack = t.infer<typeof AudioTrack>
 
+/** A subtitle pick in the player. */
+export const SubtitlePick = t.object({
+  /** A `SubtitleTrack.id`, or null for subtitles off. */
+  trackId: t.string().min(1).max(64).nullable(),
+})
+export type SubtitlePick = t.infer<typeof SubtitlePick>
+
+/**
+ * The tracks a file starts with from the viewer's picks, ahead of the
+ * languages in the playback preferences. Each is the pick made in this
+ * file, else the closest match to the latest pick in another file of the
+ * same title, as the next episode of a show. Null where there's neither,
+ * or the preferences don't remember that kind of pick.
+ */
+export const TrackPicks = t.object({
+  /** An `AudioTrack.index`. */
+  audio: StreamIndex.nullable(),
+  subtitle: SubtitlePick.nullable(),
+})
+export type TrackPicks = t.infer<typeof TrackPicks>
+
 /**
  * The video keyframes around a point, in seconds from the start. Playing
  * the `original` quality copies the video, so it can only start on one.

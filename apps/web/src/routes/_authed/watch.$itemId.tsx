@@ -5,6 +5,7 @@ import {
   RPC_PATH,
   type Subtitles,
   subtitlePath,
+  type TrackPicks,
   trickplayTilePath,
 } from "@matinee/contracts"
 import { t } from "@matinee/contracts/schema"
@@ -41,11 +42,24 @@ export const Route = createFileRoute("/_authed/watch/$itemId")({
     void queryClient.prefetchQuery(orpc.media.get.queryOptions(input))
     void queryClient.prefetchQuery(orpc.media.audio.queryOptions(input))
     void queryClient.prefetchQuery(orpc.media.subtitles.queryOptions(input))
+    void queryClient.prefetchQuery(tracksQuery(itemId))
   },
   component: Watch,
 })
 
 const NO_SUBTITLES: Subtitles = { tracks: [], audioLanguage: null }
+const NO_PICKS: TrackPicks = { audio: null, subtitle: null }
+
+/**
+ * The tracks picked before in a file. Picks change while the player is
+ * open, and another file's may match, so they're read anew every time.
+ */
+function tracksQuery(itemId: string) {
+  return orpc.playback.tracks.queryOptions({
+    input: { itemId },
+    staleTime: 0,
+  })
+}
 
 /**
  * Send a progress report. A page that is closing can't wait for the RPC
@@ -91,6 +105,9 @@ function Watch() {
   const audio = useQuery(
     orpc.media.audio.queryOptions({ input: { id: itemId } }),
   )
+  // The player picks its first tracks once, so it waits for these.
+  const picks = useQuery(tracksQuery(itemId))
+  const picksReady = picks.isFetchedAfterMount || picks.isError
   // What the server encodes to, so the player's notices can say.
   useQuery(orpc.playback.options.queryOptions({ staleTime: 5 * 60_000 }))
   // The stream ends once the images are there or won't come. Only one that
@@ -159,7 +176,7 @@ function Watch() {
     else void router.navigate({ to: "/" })
   }
 
-  if (item.data && label && !unsupported) {
+  if (item.data && label && !unsupported && picksReady) {
     const probe = item.data.probe
     return (
       <VideoPlayer
@@ -182,6 +199,11 @@ function Watch() {
         }
         videoCodec={probe?.video?.codec ?? null}
         videoPlays={decodesVideo(probe?.video)}
+        file={{
+          container: item.data.container,
+          sizeBytes: item.data.sizeBytes,
+          probe,
+        }}
         title={label.title}
         subtitle={
           label.code
@@ -204,13 +226,18 @@ function Watch() {
         onBack={back}
         onUnsupported={() => setUnsupported(true)}
         onProgress={(report) => sendProgress(itemId, report)}
+        // A failed read plays by the preferences.
+        rememberedTracks={picks.data ?? NO_PICKS}
+        onPickTracks={(pick) =>
+          void client.playback.pickTracks({ itemId, ...pick }).catch(() => {})
+        }
       />
     )
   }
 
   return (
     <div className="fixed inset-0 grid place-items-center bg-black p-6 text-white">
-      {item.isPending ? (
+      {item.isPending || (item.data && !picksReady) ? (
         <Spinner className="size-8" />
       ) : (
         <div className="max-w-md text-center">

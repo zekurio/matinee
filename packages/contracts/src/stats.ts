@@ -295,6 +295,22 @@ export const NowPlaying = t.object({
 })
 export type NowPlaying = t.infer<typeof NowPlaying>
 
+/**
+ * What the server does for one of the viewer's own player sessions, for
+ * the player's playback stats. The fields are `NowPlaying`'s.
+ */
+export const SessionStream = t.object({
+  method: PlaybackMethod,
+  videoEncoder: t.string().nullable(),
+  hardwareEncoding: t.boolean(),
+  hardwareDecoding: t.boolean(),
+  toneMapper: t.string().nullable(),
+  /** Null unless the audio is converted. */
+  audioEncoder: t.string().nullable(),
+  streaming: t.boolean(),
+})
+export type SessionStream = t.infer<typeof SessionStream>
+
 export const LiveActivity = t.object({
   sessions: t.array(NowPlaying),
   /** ffmpeg processes playing right now, for any session. */

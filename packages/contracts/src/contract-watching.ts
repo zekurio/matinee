@@ -11,10 +11,12 @@ import {
   Profile,
   ProfileName,
   ServerStats,
+  SessionStream,
   StatsInput,
   WatchedEntry,
   WatchStats,
 } from "./stats"
+import { SubtitlePick, TrackPicks } from "./streams"
 
 /**
  * A sitting with a file that a player had while the server was out of
@@ -77,6 +79,40 @@ export const playbackContract = oc.tag("Playback").router({
    * server encodes to, and the languages the libraries' tracks are in.
    */
   options: get("/playback/options").output(PlaybackOptions),
+  /**
+   * The tracks a file starts with from the viewer's earlier picks, which a
+   * player reads before it picks by the preferences' languages. See
+   * `TrackPicks`. A file the background probe hasn't reached yet, or the
+   * file a match comes from, is probed first, like `media.subtitles`.
+   */
+  tracks: get("/media/{itemId}/tracks")
+    .input(t.object({ itemId: t.uuid() }))
+    .output(TrackPicks),
+  /**
+   * Keep a track the viewer picked in the player, for the next time the
+   * file plays and for the other files of its title. Leave out what the
+   * viewer didn't pick. A kind of pick the preferences don't remember
+   * (`rememberAudio`, `rememberSubtitles`) isn't kept.
+   */
+  /**
+   * What the server does for one of the viewer's player sessions, the id
+   * in `mediaPlaybackPath()`: how it plays, and for a transcode, the
+   * encoders and whether a GPU helps. Again on each change. Null until the
+   * session reports or starts a stream, and for another user's session.
+   */
+  stream: get("/playback/sessions/{sessionId}/stream")
+    .input(t.object({ sessionId: t.uuid() }))
+    .output(eventIterator(SessionStream.nullable())),
+  pickTracks: put("/media/{itemId}/tracks")
+    .input(
+      t.object({
+        itemId: t.uuid(),
+        /** An `AudioTrack.index`. */
+        audio: t.number().int().nonnegative().optional(),
+        subtitle: SubtitlePick.optional(),
+      }),
+    )
+    .output(t.void()),
   /**
    * Mark a file watched or unwatched by hand. Marking it watched counts in
    * statistics as a play at `watchedAt`, now if left out, of the runtime

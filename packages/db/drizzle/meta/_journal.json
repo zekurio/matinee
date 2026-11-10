@@ -15,6 +15,13 @@
       "when": 1794242253167,
       "tag": "0001_drop_user_themes",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794271987513,
+      "tag": "0002_track_picks",
+      "breakpoints": true
     }
   ]
 }

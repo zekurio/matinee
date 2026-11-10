@@ -3,7 +3,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuGroup,
-  DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@matinee/ui/components/dropdown-menu"
 import { cn } from "@matinee/ui/lib/utils"
@@ -23,7 +22,7 @@ import type { Toggle, WatchedState } from "@/lib/viewer-state"
 // The tick draws a step larger than the heart beside it: its glyph fills
 // less of its box, so at the same size it looked smaller.
 export const cardIconButton =
-  "text-white/85 drop-shadow-[0_1px_3px_rgb(0_0_0/0.9)] hover:text-white aria-expanded:text-white [@media(pointer:coarse)]:size-10"
+  "size-8 text-white/85 drop-shadow-[0_1px_3px_rgb(0_0_0/0.9)] hover:text-white aria-expanded:text-white [@media(pointer:coarse)]:size-10"
 
 /**
  * Blurs and dims a poster or still while its {@link CardActions} show, so
@@ -90,7 +89,7 @@ export function CardActions({
           onClick={() => watched.mark(false)}
           className={cn(cardIconButton, "text-primary hover:text-primary")}
         >
-          <CheckIcon className="size-7" strokeWidth={3} />
+          <CheckIcon className="size-6" strokeWidth={3} />
         </Button>
       ) : (
         <DropdownMenu>
@@ -105,11 +104,10 @@ export function CardActions({
               />
             }
           >
-            <CheckIcon className="size-7" />
+            <CheckIcon className="size-6" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" sideOffset={4} className="min-w-44">
-            <DropdownMenuGroup>
-              <DropdownMenuLabel>{tr("media.markWatched")}</DropdownMenuLabel>
+            <DropdownMenuGroup aria-label={tr("media.markWatched")}>
               <WatchedAtItems
                 onSelect={(watchedAt) => watched.mark(true, watchedAt)}
                 onPickDate={() => setPicking(true)}
@@ -132,7 +130,7 @@ export function CardActions({
         onClick={favorite.toggle}
         className={cardIconButton}
       >
-        <FavoriteHeart on={favorite.on} className="size-6" />
+        <FavoriteHeart on={favorite.on} className="size-5" />
       </Button>
       {menu}
       <WatchedDateDialog

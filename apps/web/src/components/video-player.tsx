@@ -1,4 +1,10 @@
-import type { AudioTrack, Keyframes, Subtitles } from "@matinee/contracts"
+import type {
+  AudioTrack,
+  Keyframes,
+  SubtitlePick,
+  Subtitles,
+  TrackPicks,
+} from "@matinee/contracts"
 import { useMediaQuery } from "@matinee/ui/hooks/use-media-query"
 import { cn } from "@matinee/ui/lib/utils"
 import {
@@ -46,6 +52,7 @@ import {
 } from "./player-controls"
 import { formatDelay, formatPercent } from "./player-format"
 import { PlayerMenus } from "./player-menus"
+import { type FileInfo, PlayerStats } from "./player-stats"
 import type { TrickplayTiles } from "./trickplay-thumb"
 import { type UpNext, UpNextCard } from "./up-next"
 import { loadHls, useHls } from "./use-hls"
@@ -83,6 +90,8 @@ type VideoPlayerProps = {
   videoCodec: string | null
   /** Whether this browser decodes the video as it is. */
   videoPlays: boolean
+  /** The file's container, size, and streams, for the playback stats. */
+  file: FileInfo
   title: string
   subtitle: string
   /** The file's subtitle tracks. Undefined while they load. */
@@ -101,19 +110,24 @@ type VideoPlayerProps = {
   onProgress?: (report: ProgressReport) => void
   /** Called once playback has actually jumped to `startAt`. */
   onResumed?: (seconds: number) => void
+  /** The tracks the viewer picked before, which play ahead of the defaults. */
+  rememberedTracks: TrackPicks
+  /** Called when the viewer picks an audio or subtitle track. */
+  onPickTracks: (pick: { audio?: number; subtitle?: SubtitlePick }) => void
 }
 
 /**
  * Full-screen player. Space or K plays and pauses, arrows or J/L skip back
  * and ahead by the lengths in the settings, up and down change the volume, 0 to 9 jump
  * to a tenth of the way, M mutes, F toggles full screen, C turns subtitles
- * on and off, G and H show them earlier and later.
+ * on and off, G and H show them earlier and later, I shows the playback
+ * stats.
  */
 export function VideoPlayer(props: VideoPlayerProps) {
   // One store per player, which remounts for another file. It starts from
   // the saved preferences, and with the file itself when the browser
-  // decodes its video and the audio that plays first, and that audio is
-  // the file's default.
+  // decodes its video and the audio that plays first, and that audio, the
+  // one picked before or the preferences', is the file's default.
   const [store] = useState(() => {
     const saved = usePlayerPreferencesStore.getState()
     const preferences = currentPlaybackPreferences()
@@ -125,6 +139,7 @@ export function VideoPlayer(props: VideoPlayerProps) {
       props.audioTracks,
       props.probeAudio,
       audioLanguage,
+      props.rememberedTracks.audio,
     )
     return createPlayerStore({
       sessionId: randomId(),
@@ -177,6 +192,7 @@ function Player({
   videoSize,
   videoCodec,
   videoPlays,
+  file,
   title,
   subtitle,
   subtitles,
@@ -188,6 +204,8 @@ function Player({
   onUnsupported,
   onProgress,
   onResumed,
+  rememberedTracks,
+  onPickTracks,
 }: VideoPlayerProps) {
   const store = usePlayerStoreApi()
   const container = useRef<HTMLDivElement>(null)
@@ -217,6 +235,8 @@ function Player({
     audioTracks,
     probeAudio,
     audioLanguage: actions.audioLanguage,
+    rememberedAudio: rememberedTracks.audio,
+    onPickAudio: (audio) => onPickTracks({ audio }),
     durationSeconds,
     videoSize,
     videoCodec,
@@ -243,6 +263,7 @@ function Player({
   })
   useIdle(store, IDLE_MS)
   const hidden = usePlayerStore(selectHidden)
+  const statsOpen = usePlayerStore((state) => state.statsOpen)
   const subs = useSubtitles(
     subtitles,
     subtitleSrc,
@@ -253,9 +274,14 @@ function Player({
     playback.offset,
     playback.selectBurnIn,
     playback.audioLanguage,
+    rememberedTracks.subtitle,
+    (trackId) => onPickTracks({ subtitle: { trackId } }),
   )
+  // Keyboard focus holds the controls up. A click focuses a button too,
+  // and a menu hands focus back to its button, but that shouldn't.
   const focusHandlers = {
-    onFocus: () => actions.setFocused(true),
+    onFocus: (event: FocusEvent<HTMLElement>) =>
+      actions.setFocused(event.target.matches(":focus-visible")),
     onBlur: (event: FocusEvent<HTMLElement>) => {
       if (!event.currentTarget.contains(event.relatedTarget)) {
         actions.setFocused(false)
@@ -356,6 +382,7 @@ function Player({
     toggleFullscreen,
     toggleSubtitles: subs.toggle,
     moveSubtitles,
+    toggleStats: () => actions.setStatsOpen(!store.getState().statsOpen),
   })
 
   return (
@@ -459,6 +486,18 @@ function Player({
       </video>
       {/* PGS subtitles draw here, over the picture. */}
       <div ref={pgsLayer} className="pointer-events-none absolute inset-0" />
+
+      {statsOpen && (
+        <PlayerStats
+          video={video}
+          source={playback.source}
+          audio={playback.audio}
+          tracks={playback.tracks}
+          file={file}
+          videoPlays={videoPlays}
+          sessionId={sessionId}
+        />
+      )}
 
       <CenterControls coarse={coarse} hidden={hidden} onToggle={toggle} />
       <FlashNote />

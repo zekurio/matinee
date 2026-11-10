@@ -174,7 +174,7 @@ export function EpisodeRow({ item }: { item: MediaItem }) {
           className="absolute top-1.5 right-1.5"
         />
         <ThumbPlayButton item={item} label={name} />
-        {/* Clear of the progress bar along the bottom. */}
+        {/* The progress bar fades while these show. Touch screens show both. */}
         <CardActions
           name={name}
           watched={watched}
@@ -183,7 +183,7 @@ export function EpisodeRow({ item }: { item: MediaItem }) {
             <ActionsMenu target={{ kind: "item", item, name }} look="card" />
           }
           touch
-          className="absolute right-1 bottom-1.5"
+          className="absolute right-1 bottom-1.5 [@media(pointer:coarse)]:bottom-3"
         />
       </div>
       <div className="min-w-0 py-0.5">

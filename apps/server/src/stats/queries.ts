@@ -2,6 +2,7 @@ import type {
   GenreStat,
   LiveActivity,
   ServerStats,
+  SessionStream,
   StatsInput,
   TitleStat,
   WatchedEntry,
@@ -254,6 +255,34 @@ export async function liveActivity(viewerId: string): Promise<LiveActivity> {
       streaming: running.sessions.has(session.id) || encoding.has(session.id),
     })),
     streams: running.total,
+  }
+}
+
+/** What the server does for `userId`'s session `sessionId`. */
+export async function sessionStream(
+  userId: string,
+  sessionId: string,
+): Promise<SessionStream | null> {
+  const [session] = await db
+    .select()
+    .from(playbackSession)
+    .where(
+      and(
+        eq(playbackSession.id, sessionId),
+        eq(playbackSession.userId, userId),
+      ),
+    )
+  if (!session) return null
+  return {
+    method: session.method,
+    videoEncoder: session.videoEncoder,
+    hardwareEncoding: session.hardwareEncoding,
+    hardwareDecoding: session.hardwareDecoding,
+    toneMapper: session.toneMapper,
+    audioEncoder: session.audioConverted ? session.audioEncoder : null,
+    streaming:
+      runningStreams().sessions.has(session.id) ||
+      encodingSessions().has(session.id),
   }
 }
 

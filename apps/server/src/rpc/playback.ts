@@ -29,8 +29,11 @@ import {
   reverseEpisodeOrder,
 } from "../media/items"
 import { playbackOptions } from "../media/playback-options"
+import { rememberedTracks, savePick } from "../media/track-picks"
 import { markUnwatched, markWatched } from "../media/watched"
 import { events } from "../realtime/events"
+import { follow } from "../realtime/follow"
+import { sessionStream } from "../stats/queries"
 import { recordOfflinePlay, recordReport } from "../stats/sessions"
 import { authed, notFound } from "./base"
 
@@ -120,6 +123,32 @@ export const playback = {
           updatedAt: new Date(),
         },
       })
+  }),
+
+  tracks: authed.playback.tracks.handler(async ({ context, input }) => {
+    const [item] = await db
+      .select()
+      .from(mediaItem)
+      .where(eq(mediaItem.id, input.itemId))
+    if (!item) throw notFound("This title isn't in any library.")
+    return rememberedTracks(context.user, item)
+  }),
+
+  stream: authed.playback.stream.handler(({ context, input, signal }) =>
+    follow({
+      topics: ["playback"],
+      load: () => sessionStream(context.user.id, input.sessionId),
+      signal,
+    }),
+  ),
+
+  pickTracks: authed.playback.pickTracks.handler(async ({ context, input }) => {
+    const [item] = await db
+      .select()
+      .from(mediaItem)
+      .where(eq(mediaItem.id, input.itemId))
+    if (!item) throw notFound("This title isn't in any library.")
+    await savePick(context.user, item, input)
   }),
 
   offline: authed.playback.offline.handler(async ({ context, input }) => {

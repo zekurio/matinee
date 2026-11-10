@@ -7,10 +7,10 @@ import {
 } from "@matinee/ui/components/drawer"
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
@@ -21,7 +21,7 @@ import {
 } from "@matinee/ui/components/dropdown-menu"
 import { useMediaQuery } from "@matinee/ui/hooks/use-media-query"
 import { cn } from "@matinee/ui/lib/utils"
-import { CheckIcon } from "lucide-react"
+import { CheckIcon, MinusIcon, PlusIcon } from "lucide-react"
 import type { ReactNode, RefObject } from "react"
 
 import { tr } from "@/i18n"
@@ -44,36 +44,171 @@ export type MenuSection = {
   empty?: string
 }
 
+/** Something to turn on and off, like the playback stats. */
+export type MenuToggle = {
+  label: string
+  checked: boolean
+  onChange: (checked: boolean) => void
+}
+
 /** A button that changes a value and leaves the menu open. */
 type MenuStep = {
-  id: string
-  /** Short, like `+0.1 s`. */
+  /** What it does, for screen readers. */
   label: string
-  /** What it does, for the tooltip and screen readers. */
-  description: string
-  disabled?: boolean
+  /** The tooltip, when it says more than the label. */
+  title?: string
   onSelect: () => void
 }
 
-/** A value with buttons in a row that step it, below the sections. */
+/**
+ * A row below the sections: its title, then the value between a minus and
+ * a plus button. Pressing the value puts it back where it started.
+ */
 export type MenuAdjust = {
   title: string
   /** The current value, as shown. */
   value: string
-  steps: MenuStep[]
-  /** Why the steps are off, in place of the value. */
+  /** Still where it started, so there's nothing to reset. */
+  atStart: boolean
+  decrease: MenuStep
+  increase: MenuStep
+  reset: MenuStep
+  /** Why it can't change, in place of the buttons. */
   disabledNote?: string
 }
 
 const sheetRowClass =
   "flex min-h-12 w-full items-center rounded-lg px-3 text-left text-sm outline-none hover:bg-foreground/[0.06] focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
 
+const sheetIconClass =
+  "grid size-11 shrink-0 place-items-center rounded-full outline-none hover:bg-foreground/10 focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
+
+const menuIconClass = "size-8 shrink-0 justify-center rounded-full p-0"
+
+// Wide enough for -10,0 s, so the plus doesn't move as the value does.
+const valueClass =
+  "h-8 min-w-16 justify-center rounded-full px-2 font-medium tabular-nums"
+
 function Detail({ children }: { children?: string }) {
   if (!children) return null
   return (
-    <span className="text-muted-foreground ml-auto pl-4 text-xs tabular-nums">
+    <span className="text-foreground/70 ml-auto pl-4 text-xs font-medium tabular-nums">
       {children}
     </span>
+  )
+}
+
+/** The menu's {@link MenuAdjust} row. */
+function AdjustRow({ adjust }: { adjust: MenuAdjust }) {
+  const { decrease, increase, reset } = adjust
+  return (
+    <DropdownMenuGroup
+      aria-label={adjust.title}
+      className="flex items-center gap-1 py-0.5 pr-1 pl-2"
+    >
+      <span className="min-w-0 flex-1 truncate pr-3 text-sm">
+        {adjust.title}
+      </span>
+      {adjust.disabledNote ? (
+        <span className="text-muted-foreground py-1.5 pr-1 text-sm">
+          {adjust.disabledNote}
+        </span>
+      ) : (
+        <>
+          <DropdownMenuItem
+            aria-label={decrease.label}
+            title={decrease.title ?? decrease.label}
+            closeOnClick={false}
+            onClick={decrease.onSelect}
+            className={menuIconClass}
+          >
+            <MinusIcon />
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            aria-label={reset.label}
+            title={reset.title ?? reset.label}
+            disabled={adjust.atStart}
+            closeOnClick={false}
+            onClick={reset.onSelect}
+            className={cn(
+              valueClass,
+              adjust.atStart &&
+                "text-muted-foreground data-disabled:opacity-100",
+            )}
+          >
+            {adjust.value}
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            aria-label={increase.label}
+            title={increase.title ?? increase.label}
+            closeOnClick={false}
+            onClick={increase.onSelect}
+            className={menuIconClass}
+          >
+            <PlusIcon />
+          </DropdownMenuItem>
+          <span aria-live="polite" className="sr-only">
+            {adjust.value}
+          </span>
+        </>
+      )}
+    </DropdownMenuGroup>
+  )
+}
+
+/** The bottom sheet's {@link AdjustRow}, a size up for fingers. */
+function SheetAdjustRow({ adjust }: { adjust: MenuAdjust }) {
+  const { decrease, increase, reset } = adjust
+  return (
+    <div
+      role="group"
+      aria-label={adjust.title}
+      className="mt-2 flex min-h-12 items-center gap-1 border-t pt-2 pl-3"
+    >
+      <span className="min-w-0 flex-1 truncate pr-3 text-sm">
+        {adjust.title}
+      </span>
+      {adjust.disabledNote ? (
+        <span className="text-muted-foreground pr-3 text-sm">
+          {adjust.disabledNote}
+        </span>
+      ) : (
+        <>
+          <button
+            type="button"
+            aria-label={decrease.label}
+            className={sheetIconClass}
+            onClick={decrease.onSelect}
+          >
+            <MinusIcon className="size-5" />
+          </button>
+          <button
+            type="button"
+            aria-label={reset.label}
+            disabled={adjust.atStart}
+            className={cn(
+              sheetIconClass,
+              "w-auto min-w-18 px-2 text-sm font-medium tabular-nums disabled:opacity-100",
+              adjust.atStart && "text-muted-foreground",
+            )}
+            onClick={reset.onSelect}
+          >
+            {adjust.value}
+          </button>
+          <button
+            type="button"
+            aria-label={increase.label}
+            className={sheetIconClass}
+            onClick={increase.onSelect}
+          >
+            <PlusIcon className="size-5" />
+          </button>
+          <span aria-live="polite" className="sr-only">
+            {adjust.value}
+          </span>
+        </>
+      )}
+    </div>
   )
 }
 
@@ -86,7 +221,9 @@ function RadioItems({ section }: { section: MenuSection }) {
     )
   }
   return (
+    // The button or submenu that opened it names it, so it has no heading.
     <DropdownMenuRadioGroup
+      aria-label={section.title}
       value={section.value}
       onValueChange={section.onSelect}
     >
@@ -109,8 +246,9 @@ function RadioItems({ section }: { section: MenuSection }) {
  * A button in the player's control bar that opens lists of choices: a
  * dropdown with a mouse, a bottom sheet on touch screens. One section lists
  * its choices directly; several get a submenu each, showing the current
- * pick, the way Jellyfin's settings menu does. An `adjust` comes last, with
- * buttons that leave the menu open. The player keeps which menu
+ * pick, the way Jellyfin's settings menu does. Nothing heads a list: the
+ * button, or the submenu's row, says what it holds. An `adjust` comes
+ * last, with buttons that leave the menu open. The player keeps which menu
  * is open, so its controls stay up meanwhile.
  */
 export function PlayerMenu({
@@ -118,9 +256,9 @@ export function PlayerMenu({
   shortcut,
   icon,
   active = false,
-  note,
   sections,
   adjust,
+  toggles = [],
   open,
   onOpenChange,
   container,
@@ -132,10 +270,10 @@ export function PlayerMenu({
   icon: ReactNode
   /** Underlines the icon, as for subtitles that are on. */
   active?: boolean
-  /** A line above the sections, like how the file is playing. */
-  note?: string
   sections: MenuSection[]
   adjust?: MenuAdjust
+  /** Below the sections, each a row with a check while it's on. */
+  toggles?: MenuToggle[]
   open: boolean
   onOpenChange: (open: boolean) => void
   /** The player, which may be the full-screen element. */
@@ -169,25 +307,17 @@ export function PlayerMenu({
         <DrawerTrigger render={trigger} />
         <DrawerContent container={container}>
           <DrawerHandle />
-          <DrawerTitle className="px-4 pt-3 pb-1 text-base">
-            {label}
-          </DrawerTitle>
-          {note && (
-            <p className="text-muted-foreground px-4 pb-1 text-xs">{note}</p>
-          )}
-          <div className="min-h-0 overflow-y-auto px-2 pb-[max(1rem,env(safe-area-inset-bottom))]">
-            {sections.map((section) => (
+          {/* Names the sheet for screen readers; the button showed it. */}
+          <DrawerTitle className="sr-only">{label}</DrawerTitle>
+          <div className="min-h-0 overflow-y-auto px-2 pt-2 pb-[max(1rem,env(safe-area-inset-bottom))]">
+            {sections.map((section, at) => (
               <div
                 key={section.title}
                 role="radiogroup"
                 aria-label={section.title}
-                className="pt-2"
+                // A rule between lists in place of headings.
+                className={cn(at > 0 && "mt-2 border-t pt-2")}
               >
-                {sections.length > 1 && (
-                  <h3 className="text-muted-foreground px-3 pb-1 text-xs font-medium">
-                    {section.title}
-                  </h3>
-                )}
                 {section.choices.length === 0 && (
                   <p className="text-muted-foreground px-3 py-3 text-sm">
                     {section.empty ?? tr("player.menu.none")}
@@ -220,33 +350,27 @@ export function PlayerMenu({
                 ))}
               </div>
             ))}
-            {adjust && (
-              <div role="group" aria-label={adjust.title} className="pt-2">
-                <h3 className="text-muted-foreground flex px-3 pb-1 text-xs font-medium">
-                  {adjust.title}
-                  <span className="ml-auto pl-4 tabular-nums">
-                    {adjust.disabledNote ?? adjust.value}
-                  </span>
-                </h3>
-                <div className="flex gap-1">
-                  {adjust.steps.map((step) => (
-                    <button
-                      key={step.id}
-                      type="button"
-                      aria-label={step.description}
-                      disabled={
-                        adjust.disabledNote !== undefined || step.disabled
-                      }
-                      className={cn(
-                        sheetRowClass,
-                        "flex-1 justify-center tabular-nums",
-                      )}
-                      onClick={step.onSelect}
-                    >
-                      {step.label}
-                    </button>
-                  ))}
-                </div>
+            {adjust && <SheetAdjustRow adjust={adjust} />}
+            {toggles.length > 0 && (
+              <div className="mt-2 border-t pt-2">
+                {toggles.map((toggle) => (
+                  <button
+                    key={toggle.label}
+                    type="button"
+                    role="switch"
+                    aria-checked={toggle.checked}
+                    className={sheetRowClass}
+                    onClick={() => {
+                      toggle.onChange(!toggle.checked)
+                      onOpenChange(false)
+                    }}
+                  >
+                    <span className="min-w-0 truncate">{toggle.label}</span>
+                    {toggle.checked && (
+                      <CheckIcon className="ml-auto size-4 shrink-0" />
+                    )}
+                  </button>
+                ))}
               </div>
             )}
           </div>
@@ -267,22 +391,8 @@ export function PlayerMenu({
         // Wide enough for the longest label and its detail.
         className="w-max max-w-(--available-width) min-w-60"
       >
-        {note && (
-          <>
-            {/* Base UI throws for a label outside a group. */}
-            <DropdownMenuGroup>
-              <DropdownMenuLabel className="font-normal">
-                {note}
-              </DropdownMenuLabel>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-          </>
-        )}
         {single ? (
-          <DropdownMenuGroup>
-            <DropdownMenuLabel>{single.title}</DropdownMenuLabel>
-            <RadioItems section={single} />
-          </DropdownMenuGroup>
+          <RadioItems section={single} />
         ) : (
           sections.map((section) => (
             <DropdownMenuSub key={section.title}>
@@ -290,7 +400,7 @@ export function PlayerMenu({
                 {/* Takes the free space, so the current pick sits next to
                     the chevron rather than splitting the gap with it. */}
                 <span className="min-w-0 flex-1 truncate">{section.title}</span>
-                <span className="text-muted-foreground pl-6 text-xs">
+                <span className="text-foreground/70 pl-6 text-xs font-medium">
                   {section.choices.find((choice) => choice.id === section.value)
                     ?.label ?? ""}
                 </span>
@@ -300,10 +410,7 @@ export function PlayerMenu({
                 portalContainer={container}
                 className="w-max max-w-(--available-width) min-w-52"
               >
-                <DropdownMenuGroup>
-                  <DropdownMenuLabel>{section.title}</DropdownMenuLabel>
-                  <RadioItems section={section} />
-                </DropdownMenuGroup>
+                <RadioItems section={section} />
               </DropdownMenuSubContent>
             </DropdownMenuSub>
           ))
@@ -311,31 +418,22 @@ export function PlayerMenu({
         {adjust && (
           <>
             <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <DropdownMenuLabel className="flex">
-                {adjust.title}
-                <span className="ml-auto pl-6 tabular-nums">
-                  {adjust.disabledNote ?? adjust.value}
-                </span>
-              </DropdownMenuLabel>
-              <div className="flex gap-1">
-                {adjust.steps.map((step) => (
-                  <DropdownMenuItem
-                    key={step.id}
-                    aria-label={step.description}
-                    title={step.description}
-                    disabled={
-                      adjust.disabledNote !== undefined || step.disabled
-                    }
-                    closeOnClick={false}
-                    onClick={step.onSelect}
-                    className="flex-1 justify-center tabular-nums"
-                  >
-                    {step.label}
-                  </DropdownMenuItem>
-                ))}
-              </div>
-            </DropdownMenuGroup>
+            <AdjustRow adjust={adjust} />
+          </>
+        )}
+        {toggles.length > 0 && (
+          <>
+            <DropdownMenuSeparator />
+            {toggles.map((toggle) => (
+              <DropdownMenuCheckboxItem
+                key={toggle.label}
+                checked={toggle.checked}
+                onCheckedChange={toggle.onChange}
+                closeOnClick
+              >
+                {toggle.label}
+              </DropdownMenuCheckboxItem>
+            ))}
           </>
         )}
       </DropdownMenuContent>

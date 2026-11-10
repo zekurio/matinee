@@ -86,6 +86,10 @@ export type PlaybackOptions = {
   probeAudio?: AudioCandidate[]
   /** The language to play the audio in when the file has it. */
   audioLanguage: string | null
+  /** The audio stream the viewer picked before, which wins over the language. */
+  rememberedAudio: number | null
+  /** The viewer picked an audio track. */
+  onPickAudio: (index: number) => void
   /** The file's length from the server, for streams that don't know it. */
   durationSeconds: number | null
   /** The video's size, for picking a quality to fall back to. */
@@ -194,7 +198,7 @@ export type AudioChoice = {
   primary: AudioCandidate | undefined
   /** The browser decodes the primary track. */
   directAudio: boolean
-  /** The track the preferences ask for, decodable or not. */
+  /** The track remembered or the preferences ask for, decodable or not. */
   wanted: AudioCandidate | undefined
   /** A decodable track that plays in place of `wanted`. */
   standIn: AudioCandidate | undefined
@@ -205,15 +209,16 @@ export type AudioChoice = {
 }
 
 /**
- * Which audio plays: a track in `language` when the file has one, else the
- * file's default, and in place of one the browser can't decode, a
- * stand-in in the same language that it can. Until the tracks load, the
- * probe's say the same.
+ * Which audio plays: the `remembered` stream when the file has it, else a
+ * track in `language` when it has one, else the file's default, and in
+ * place of one the browser can't decode, a stand-in in the same language
+ * that it can. Until the tracks load, the probe's say the same.
  */
 export function audioChoice(
   audioTracks: AudioTrack[] | undefined,
   probeAudio: readonly AudioCandidate[] | undefined,
   language: string | null,
+  remembered: number | null,
 ): AudioChoice {
   const tracks = audioTracks ?? EMPTY
   const candidates = audioTracks ?? probeAudio ?? EMPTY
@@ -221,7 +226,9 @@ export function audioChoice(
   // Without tracks or a probe, the file plays and the browser finds out.
   const directAudio = !primary || decodesAudio(primary.codec)
   const wanted =
-    (language ? trackIn(language, candidates, primary) : undefined) ?? primary
+    candidates.find((track) => track.index === remembered) ??
+    (language ? trackIn(language, candidates, primary) : undefined) ??
+    primary
   const standIn =
     wanted && !decodesAudio(wanted.codec)
       ? standInFor(wanted, candidates)

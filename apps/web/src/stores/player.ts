@@ -84,6 +84,8 @@ export type PlayerState = PlayerStart & {
    * when positive. Burned-in subtitles can't move.
    */
   subtitleDelay: number
+  /** The playback stats show over the picture. */
+  statsOpen: boolean
 
   setPlaying: (playing: boolean) => void
   setEnded: (ended: boolean) => void
@@ -128,6 +130,7 @@ export type PlayerState = PlayerStart & {
   dropBurnIn: () => void
   setSubtitleUrl: (url: { trackId: string; url: string } | null) => void
   setSubtitleDelay: (ms: number) => void
+  setStatsOpen: (open: boolean) => void
 }
 
 export type PlayerStore = StoreApi<PlayerState>
@@ -159,6 +162,7 @@ export function createPlayerStore(start: PlayerStart): PlayerStore {
     burnIn: null,
     subtitleUrl: null,
     subtitleDelay: 0,
+    statsOpen: false,
 
     setPlaying: (playing) => set({ playing }),
     setEnded: (ended) => set({ ended }),
@@ -219,12 +223,13 @@ export function createPlayerStore(start: PlayerStart): PlayerStore {
       ),
     setSubtitleUrl: (subtitleUrl) => set({ subtitleUrl }),
     setSubtitleDelay: (subtitleDelay) => set({ subtitleDelay }),
+    setStatsOpen: (statsOpen) => set({ statsOpen }),
   }))
 }
 
 /**
  * The controls hide once the viewer rests while the video plays, unless
- * they're seeking, focused in the controls, or in a menu.
+ * they're seeking, in the controls by keyboard, or in a menu.
  */
 export function selectHidden(state: PlayerState): boolean {
   return (

@@ -59,7 +59,6 @@ export default defineMessages("player", {
   "player.audio.loading": "Loading tracks…",
   "player.subtitles.off": "Off",
   "player.subtitles.noTracks": "This file has no subtitles",
-  "player.subtitles.loading": "Loading subtitles…",
   "player.subtitles.forced": "Forced",
   "player.subtitles.burnedIn": "Burned in",
   // The subtitles menu's timing control. {seconds} is a signed number,
@@ -77,13 +76,62 @@ export default defineMessages("player", {
   "player.speed.rate": "{rate}×",
   "player.bitrate.mbps": "{value} Mbps",
   "player.bitrate.kbps": "{value} kbps",
-  // How the file reaches the browser, in Jellyfin's terms.
-  "player.via.directPlay": "Direct play",
-  "player.via.directStream": "Direct stream",
-  "player.via.directStreamBurnIn": "Direct stream, subtitles burned in",
-  "player.via.transcode": "Transcoding to {resolution}, {bitrate}",
-  "player.via.transcodeBurnIn":
-    "Transcoding to {resolution}, {bitrate}, subtitles burned in",
+
+  // The playback stats over the picture, like Jellyfin's playback info.
+  "player.stats.toggle": "Playback stats",
+  "player.stats.close": "Close playback stats",
+  "player.stats.method": "Method",
+  "player.stats.method.direct": "Direct play",
+  "player.stats.method.remux": "Direct stream",
+  "player.stats.method.encode": "Transcode",
+  "player.stats.reason": "Reason",
+  // {codec} is a video codec, like HEVC.
+  "player.stats.reason.video": "This browser can't play {codec}",
+  "player.stats.reason.directFailed": "Direct play failed",
+  // {format} is an audio format, like TrueHD Atmos.
+  "player.stats.reason.audioCodec": "This browser can't play {format} audio",
+  "player.stats.reason.audioTrack": "Not the file's default audio track",
+  // {quality} is a resolution, like 720p.
+  "player.stats.reason.quality": "{quality} picked",
+  "player.stats.reason.burnIn": "Subtitles burned in",
+  "player.stats.delivery": "Delivery",
+  "player.stats.delivery.direct": "Original file",
+  "player.stats.delivery.stream": "MP4 stream",
+  "player.stats.delivery.hls": "HLS",
+  "player.stats.bitrate": "Stream bitrate",
+  "player.stats.buffer": "Buffered",
+  "player.stats.seconds": "{seconds} s",
+  "player.stats.video": "Video",
+  "player.stats.videoBitrate": "Video bitrate",
+  "player.stats.range": "Dynamic range",
+  // {profile} is like 8.1.
+  "player.stats.dolbyVision": "Dolby Vision profile {profile}",
+  // {from} is the file's dynamic range, like HDR10.
+  "player.stats.toneMapped": "{from} → SDR",
+  "player.stats.toneMappedBy": "{from} → SDR, tone mapped by {mapper}",
+  "player.stats.color": "Color",
+  "player.stats.bitDepth": "{depth}-bit",
+  "player.stats.output": "Video output",
+  // How the server decodes the file for a transcode. {device} is like
+  // Quick Sync.
+  "player.stats.decoder": "Decoder",
+  "player.stats.decoder.hardware": "Hardware",
+  "player.stats.decoder.hardwareOn": "Hardware ({device})",
+  "player.stats.decoder.software": "Software (CPU)",
+  "player.stats.encoder": "Encoder",
+  // The browser's decoded picture, and its size drawn, in device pixels.
+  "player.stats.decoded": "Stream resolution",
+  "player.stats.display": "Display size",
+  "player.stats.frameRate": "Measured frame rate",
+  "player.stats.fps": "{fps} fps",
+  "player.stats.dropped": "Dropped frames",
+  "player.stats.droppedValue": "{dropped} of {total} ({share})",
+  "player.stats.audio": "Audio",
+  "player.stats.audioOutput": "Audio output",
+  "player.stats.unchanged": "Unchanged",
+  "player.stats.container": "Container",
+  "player.stats.size": "Size",
+  "player.stats.overallBitrate": "Overall bitrate",
 
   // Toasts about what the server converts. {from} and {to} are codecs,
   // like HEVC and H.264, and {quality} a resolution, like 1080p.
@@ -97,6 +145,8 @@ export default defineMessages("player", {
   // The codec audio converts to, when it goes down to two channels.
   "player.notice.stereo": "{codec} stereo",
   "player.notice.burnIn": "Burning in subtitles",
+  // While a subtitle track is still on its way.
+  "player.notice.subtitles": "Preparing subtitles",
   "player.notice.burnInVideo": "Transcoding {from} to {to} {quality}.",
   "player.notice.burnInVideoTo": "Transcoding to {to} {quality}.",
   "player.notice.burnInVideoAudio":

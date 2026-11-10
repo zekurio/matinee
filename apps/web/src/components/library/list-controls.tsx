@@ -3,9 +3,7 @@ import { Button } from "@matinee/ui/components/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
@@ -441,27 +439,25 @@ function SortMenu({
         <ArrowUpDownIcon className="size-5" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-48">
-        <DropdownMenuGroup>
-          <DropdownMenuLabel>{tr("library.sortBy")}</DropdownMenuLabel>
-          <DropdownMenuRadioGroup
-            value={value}
-            onValueChange={(next) => {
-              const option = options.find((o) => o.value === next)
-              if (option) onChange(option.value)
-            }}
-          >
-            {options.map((option) => (
-              <DropdownMenuRadioItem
-                key={option.value}
-                value={option.value}
-                closeOnClick
-                className="[@media(pointer:coarse)]:min-h-11"
-              >
-                {option.label}
-              </DropdownMenuRadioItem>
-            ))}
-          </DropdownMenuRadioGroup>
-        </DropdownMenuGroup>
+        <DropdownMenuRadioGroup
+          aria-label={tr("library.sortBy")}
+          value={value}
+          onValueChange={(next) => {
+            const option = options.find((o) => o.value === next)
+            if (option) onChange(option.value)
+          }}
+        >
+          {options.map((option) => (
+            <DropdownMenuRadioItem
+              key={option.value}
+              value={option.value}
+              closeOnClick
+              className="[@media(pointer:coarse)]:min-h-11"
+            >
+              {option.label}
+            </DropdownMenuRadioItem>
+          ))}
+        </DropdownMenuRadioGroup>
       </DropdownMenuContent>
     </DropdownMenu>
   )

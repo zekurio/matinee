@@ -10,7 +10,6 @@ import {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
@@ -290,8 +289,7 @@ export function WatchedButton({ watched }: { watched: WatchedState }) {
           <CheckIcon className="size-5" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" sideOffset={6} className="min-w-44">
-          <DropdownMenuGroup>
-            <DropdownMenuLabel>{tr("media.markWatched")}</DropdownMenuLabel>
+          <DropdownMenuGroup aria-label={tr("media.markWatched")}>
             <WatchedAtItems
               onSelect={(watchedAt) => watched.mark(true, watchedAt)}
               onPickDate={() => setPicking(true)}

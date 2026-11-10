@@ -324,7 +324,7 @@ export function ActionsMenu({
     <>
       <DropdownMenu>
         <DropdownMenuTrigger render={triggerButton(look, label, className)}>
-          <EllipsisIcon className={look === "card" ? "size-6" : undefined} />
+          <EllipsisIcon className={look === "card" ? "size-5" : undefined} />
         </DropdownMenuTrigger>
         <DropdownMenuContent
           align={look === "page" ? "start" : "end"}

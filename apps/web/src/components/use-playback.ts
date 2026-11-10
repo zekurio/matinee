@@ -45,8 +45,9 @@ import {
  * quality with the track browsers play by default plays the file as it is,
  * when the browser decodes that track; another track or quality, or a
  * default track it can't decode, plays a stream from the server, which the
- * player seeks by starting a new one. The track that plays first is one in
- * the viewer's audio language, else the default. In place of one the
+ * player seeks by starting a new one. The track that plays first is the
+ * one the viewer picked before, else one in their audio language, else
+ * the default. In place of one the
  * browser can't decode, the stream carries one in the same language that
  * it can, and converts the audio only when there is none. A subtitle track
  * that only an encode shows makes every source an encode with it burned
@@ -64,6 +65,7 @@ export function usePlayback(options: PlaybackOptions) {
     audioTracks,
     options.probeAudio,
     options.audioLanguage,
+    options.rememberedAudio,
   )
   const refs = useSourceRefs(store, startAt)
   const core: PlaybackCore = { video, options, store, refs, choice }
@@ -210,6 +212,7 @@ function sourceSwitch(
     const state = store.getState()
     if (index === audioOf(state, choice)) return
     state.setChosenAudio(index)
+    options.onPickAudio(index)
     switchTo(index, state.quality)
   }
 

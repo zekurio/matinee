@@ -14,7 +14,10 @@ export default {
   "playback.subtitles.mode.off.label": "Aus",
   "playback.subtitles.language": "Untertitelsprache",
   "playback.subtitles.deviceLanguage": "Sprache dieses Geräts ({language})",
-  "playback.subtitles.remember": "Meine Auswahl merken",
+  "playback.audio.remember": "Audioauswahl merken",
+  "playback.subtitles.remember": "Untertitelauswahl merken",
+  "playback.remember.footer":
+    "Eine Spur, die du im Player auswählst, läuft in dieser Datei wieder, und die ähnlichste in den anderen Dateien des Titels, etwa der nächsten Folge. Dateien, in denen du nichts ausgewählt hast, folgen den Sprachen oben.",
 
   "playback.skip.title": "Springen",
   "playback.skip.back": "Zurückspringen um",

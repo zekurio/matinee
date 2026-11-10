@@ -146,10 +146,16 @@ export function Thumb({
       {progress != null && progress > 0 && !watched && (
         <span
           aria-hidden
-          className="absolute inset-x-0 bottom-0 h-1 bg-white/25"
+          // Floats clear of the edges, the accent on a dark track: flush
+          // white ran into a light page. In a `group/card` it gives way to
+          // the `CardActions` whenever they show.
+          className={cn(
+            "absolute h-1 overflow-hidden rounded-full bg-black/45 transition-opacity group-hover/card:opacity-0 group-has-[:focus-visible]/card:opacity-0 group-has-[[aria-expanded=true]]/card:opacity-0 motion-reduce:transition-none",
+            compact ? "inset-x-1.5 bottom-1.5" : "inset-x-2 bottom-2",
+          )}
         >
           <span
-            className="block h-full bg-white"
+            className="bg-primary block h-full"
             style={{ width: `${Math.min(100, progress * 100)}%` }}
           />
         </span>
@@ -488,7 +494,7 @@ export function EpisodeCard({
           className="absolute top-1.5 right-1.5"
         />
         <ThumbPlayButton item={item} label={name} />
-        {/* Clear of the progress bar along the bottom. */}
+        {/* The progress bar fades while these show. Touch screens show both. */}
         <CardActions
           name={name}
           watched={watched}
@@ -497,7 +503,7 @@ export function EpisodeCard({
             <ActionsMenu target={{ kind: "item", item, name }} look="card" />
           }
           touch
-          className="absolute right-1 bottom-1.5"
+          className="absolute right-1 bottom-1.5 [@media(pointer:coarse)]:bottom-3"
         />
       </div>
       <span className="mt-2 block min-w-0">

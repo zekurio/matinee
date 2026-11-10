@@ -21,6 +21,7 @@ export type PlayerKeyActions = {
   toggleSubtitles: () => void
   /** Moves the subtitles later by `ms`, earlier when negative. */
   moveSubtitles: (ms: number) => void
+  toggleStats: () => void
 }
 
 /** The player's keyboard shortcuts, on the whole window. */
@@ -36,6 +37,7 @@ export function usePlayerKeys({
   toggleFullscreen,
   toggleSubtitles,
   moveSubtitles,
+  toggleStats,
 }: PlayerKeyActions) {
   // Each key runs the actions from the latest render.
   const onKey = useEffectEvent((event: KeyboardEvent) => {
@@ -74,11 +76,14 @@ export function usePlayerKeys({
       // VLC's keys for the subtitle delay.
       ["g", () => moveSubtitles(-SUBTITLE_STEP_MS)],
       ["h", () => moveSubtitles(SUBTITLE_STEP_MS)],
+      ["i", toggleStats],
     ])
     const digit = /^\d$/.test(event.key) ? Number(event.key) : null
     const action = digit !== null ? () => jump(digit) : actions.get(event.key)
     if (!action) return
-    if (event.key === " " && target?.closest("button")) return
+    // Space presses a button the keyboard reached. One a click left
+    // focused may be out of sight with the controls, so the video gets it.
+    if (event.key === " " && target?.closest("button:focus-visible")) return
     event.preventDefault()
     action()
   })

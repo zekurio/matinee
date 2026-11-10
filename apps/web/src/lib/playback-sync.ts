@@ -75,6 +75,7 @@ export function updatePlaybackPreferences(
     next.subtitleMode === current.subtitleMode &&
     next.subtitleLanguage === current.subtitleLanguage &&
     next.rememberSubtitles === current.rememberSubtitles &&
+    next.rememberAudio === current.rememberAudio &&
     next.skipBackSeconds === current.skipBackSeconds &&
     next.skipForwardSeconds === current.skipForwardSeconds
   ) {

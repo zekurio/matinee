@@ -12,10 +12,15 @@ import { expectedEncodeCodec } from "@/lib/video-support"
 
 const NOTICE_ID = "playback-notice"
 const ERROR_ID = "playback-error"
+const SUBTITLES_ID = "subtitles-loading"
+// Most tracks are there at once. Only one that keeps the viewer waiting
+// gets a toast.
+const SUBTITLES_DELAY_MS = 800
 
 export function dismissPlaybackNotices() {
   toast.dismiss(NOTICE_ID)
   toast.dismiss(ERROR_ID)
+  toast.dismiss(SUBTITLES_ID)
 }
 
 /** A conversion of audio from one format to another, for the toasts. */
@@ -119,6 +124,25 @@ export function burnInNotice(
         : tr("player.notice.burnInVideo", { ...video, from })
   }
   playbackNotice(tr("player.notice.burnIn"), description)
+}
+
+/**
+ * The toast for a subtitle track that is still on its way, such as one the
+ * server pulls out of a large file for the first time, which reads all of
+ * it. It shows once the track keeps the viewer waiting, and goes when the
+ * returned function is called.
+ */
+export function subtitlesLoadingNotice(): () => void {
+  const timer = setTimeout(() => {
+    toast.loading(tr("player.notice.subtitles"), {
+      id: SUBTITLES_ID,
+      position: "top-center",
+    })
+  }, SUBTITLES_DELAY_MS)
+  return () => {
+    clearTimeout(timer)
+    toast.dismiss(SUBTITLES_ID)
+  }
 }
 
 /** The toast for a subtitle track the server couldn't burn in. */
