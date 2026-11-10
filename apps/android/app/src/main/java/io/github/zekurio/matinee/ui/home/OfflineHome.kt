@@ -1,5 +1,6 @@
 package io.github.zekurio.matinee.ui.home
 
+import android.content.Context
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -27,6 +28,7 @@ import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.core.content.edit
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import coil3.compose.AsyncImage
@@ -74,6 +76,33 @@ internal data class OfflineHomeRows(
     val isEmpty get() = movies.isEmpty() && shows.isEmpty()
 }
 
+/** The files in Home's Continue watching and Next up as the server last sent them, by id, in order. */
+internal data class ServedRows(val resume: List<String> = emptyList(), val nextUp: List<String> = emptyList())
+
+/**
+ * Keeps [ServedRows] across restarts: online Home saves what the server
+ * sent, offline Home reads it, so the two rows don't change just because
+ * the server is out of reach.
+ */
+class HomeSnapshot(context: Context) {
+    private val prefs = context.getSharedPreferences("home_snapshot", Context.MODE_PRIVATE)
+
+    internal fun read() = ServedRows(
+        resume = prefs.getString(RESUME, null)?.split(SEPARATOR)?.filter { it.isNotEmpty() }.orEmpty(),
+        nextUp = prefs.getString(NEXT_UP, null)?.split(SEPARATOR)?.filter { it.isNotEmpty() }.orEmpty(),
+    )
+
+    fun saveResume(ids: List<String>) = prefs.edit { putString(RESUME, ids.joinToString(SEPARATOR)) }
+
+    fun saveNextUp(ids: List<String>) = prefs.edit { putString(NEXT_UP, ids.joinToString(SEPARATOR)) }
+
+    private companion object {
+        const val RESUME = "resume"
+        const val NEXT_UP = "next_up"
+        const val SEPARATOR = ","
+    }
+}
+
 /** Seasons in order, then the specials, then the files without a season, as on a show's page. */
 private fun seasonOrder(number: Int?) = when (number) {
     null -> Int.MAX_VALUE
@@ -84,19 +113,26 @@ private fun seasonOrder(number: Int?) = when (number) {
 /**
  * Sorts the finished downloads into Home's rows. [place] is where the
  * person got to in a file, offline or as the server last said; [watched]
- * whether it's done. Started and not done is Continue watching, newest
- * first; a show with an episode watched or started offers the first
- * downloaded one after it that isn't, as Next up; then every movie, and
- * every show, newest first.
+ * whether it's done.
+ *
+ * Continue watching and Next up start as the server last had them online,
+ * [served], in its order, so they read as they did; of those, what's on
+ * the phone and still fits. Then what was started offline since, newest
+ * first, and for a show with an episode watched or started, the first
+ * downloaded one after it that isn't. Then every movie, and every show,
+ * newest first.
  */
 internal fun offlineHomeRows(
     entries: Collection<OfflineItem>,
     place: (OfflineItem) -> Place?,
     watched: (OfflineItem) -> Boolean,
+    served: ServedRows = ServedRows(),
 ): OfflineHomeRows {
     val done = entries.filter { it.state == DownloadState.DONE }.sortedByDescending { it.addedAt }
     val started = { entry: OfflineItem -> !watched(entry) && (place(entry)?.positionSeconds ?: 0.0) > 0.0 }
-    val resume = done.filter(started)
+    val byId = done.associateBy { it.id }
+    // What the server had, still unfinished, then what was started offline since.
+    val resume = (served.resume.mapNotNull(byId::get).filterNot(watched) + done.filter(started)).distinctBy { it.id }
     val isShow = { entry: OfflineItem -> entry.item.title?.kind == TitleKind.SHOW && entry.item.title != null }
     val shows = done.filter(isShow).groupBy { it.item.title!!.id }.map { (_, files) ->
         OfflineShow(
@@ -104,11 +140,18 @@ internal fun offlineHomeRows(
             files.sortedWith(compareBy({ seasonOrder(it.item.seasonNumber) }, { it.item.episodeNumber ?: Int.MAX_VALUE })),
         )
     }.sortedByDescending { it.newest.addedAt }
-    val nextUp = shows.mapNotNull { show ->
+    val worked = shows.mapNotNull { show ->
         val last = show.episodes.indexOfLast { watched(it) || started(it) }
         if (last < 0) return@mapNotNull null
         show.episodes.drop(last + 1).firstOrNull { !watched(it) && !started(it) }
     }
+    // The server's picks not begun since, then the ones worked out here, each once and not twice with Continue watching.
+    val resumed = resume.map { it.id }.toSet()
+    val nextUp = (served.nextUp.mapNotNull(byId::get).filter { !watched(it) && !started(it) } + worked)
+        .distinctBy { it.id }
+        .filterNot { it.id in resumed }
+        // One per show, the first in line, as the server's own list has it.
+        .distinctBy { it.item.title?.id ?: it.id }
     return OfflineHomeRows(
         resume = resume,
         nextUp = nextUp,
@@ -139,7 +182,8 @@ fun OfflineHomeScreen() {
     val watchedOf = { entry: OfflineItem ->
         viewer.isWatched(entry.item) || (downloads.pending.report(entry.id) != null && (placeOf(entry)?.ratio ?: 0f) >= 0.9f)
     }
-    val rows = remember(items, seen) { offlineHomeRows(items.values, placeOf, watchedOf) }
+    val snapshot = remember { HomeSnapshot(context) }
+    val rows = remember(items, seen) { offlineHomeRows(items.values, placeOf, watchedOf, snapshot.read()) }
     LazyColumn(
         Modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = tabBarPadding() + 24.dp),

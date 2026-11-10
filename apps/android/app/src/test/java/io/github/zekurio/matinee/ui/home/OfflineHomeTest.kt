@@ -81,4 +81,55 @@ class OfflineHomeTest {
         val rows = offlineHomeRows(listOf(loose, special, s2, s1), { null }, { false })
         assertEquals(listOf("s1e2", "s2e1", "s0e1", "extra"), rows.shows.single().episodes.map { it.id })
     }
+
+    @Test
+    fun theServersRowsStayAsTheyWereOfWhatIsDownloaded() {
+        val boss = file("boss-s2e3", show = "boss", season = 2, episode = 3, addedAt = 1)
+        val film = file("film", addedAt = 2)
+        val served = ServedRows(resume = listOf("not-downloaded", "film"), nextUp = listOf("boss-s2e3", "also-not-here"))
+        val rows = offlineHomeRows(listOf(boss, film), { null }, { false }, served)
+        assertEquals(listOf("film"), rows.resume.map { it.id })
+        assertEquals(listOf("boss-s2e3"), rows.nextUp.map { it.id })
+    }
+
+    @Test
+    fun theServersOrderComesFirstThenWhatWasStartedOffline() {
+        val a = file("a", addedAt = 1)
+        val b = file("b", addedAt = 2)
+        val c = file("c", addedAt = 3)
+        val served = ServedRows(resume = listOf("a", "b"))
+        // c, the newest, was started offline since.
+        val rows = offlineHomeRows(listOf(a, b, c), { if (it.id == "c") Place(10.0, 100.0) else null }, { false }, served)
+        assertEquals(listOf("a", "b", "c"), rows.resume.map { it.id })
+    }
+
+    @Test
+    fun whatWasFinishedOfflineLeavesContinueWatching() {
+        val a = file("a")
+        val rows = offlineHomeRows(listOf(a), { Place(99.0, 100.0) }, { true }, ServedRows(resume = listOf("a")))
+        assertTrue(rows.resume.isEmpty())
+    }
+
+    @Test
+    fun aNextUpStartedOfflineMovesToContinueWatching() {
+        val e2 = file("s1e2", show = "show", season = 1, episode = 2)
+        val e3 = file("s1e3", show = "show", season = 1, episode = 3)
+        val rows = offlineHomeRows(
+            listOf(e2, e3),
+            { if (it.id == "s1e2") Place(30.0, 100.0) else null },
+            { false },
+            ServedRows(nextUp = listOf("s1e2")),
+        )
+        assertEquals(listOf("s1e2"), rows.resume.map { it.id })
+        assertEquals(listOf("s1e3"), rows.nextUp.map { it.id })
+    }
+
+    @Test
+    fun nextUpHasOneEpisodePerShow() {
+        val e1 = file("s1e1", show = "show", season = 1, episode = 1)
+        val e2 = file("s1e2", show = "show", season = 1, episode = 2)
+        val e3 = file("s1e3", show = "show", season = 1, episode = 3)
+        val rows = offlineHomeRows(listOf(e1, e2, e3), { null }, { it.id == "s1e1" }, ServedRows(nextUp = listOf("s1e3")))
+        assertEquals(listOf("s1e3"), rows.nextUp.map { it.id })
+    }
 }
