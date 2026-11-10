@@ -2,11 +2,13 @@ import {
   type AudioTrack,
   type Keyframes,
   type MediaProbe,
+  type PlaybackDevice,
   type PlaybackPreferences,
   type PlaybackStart,
   type PlaybackStartInput,
   type SubtitleTrack,
   type TrackPicks,
+  type VideoStream,
   PLAYBACK_QUALITIES,
   mediaHlsPath,
   mediaPlaybackPath,
@@ -27,6 +29,44 @@ const sameLanguage = (a: string | null, b: string | null) =>
 const commentary = (track: AudioTrack) => /commentary/i.test(track.label)
 const accepts = (list: readonly string[], value: string) =>
   list.includes("*") || list.includes(value)
+
+/** Whether the device decodes audio in `codec`, ffmpeg's name for it. */
+export function decodesAudio(device: PlaybackDevice, codec: string): boolean {
+  return (
+    accepts(device.audio, codec) ||
+    (codec.startsWith("pcm_") && device.audio.includes("pcm_*"))
+  )
+}
+
+/**
+ * Whether one of the device's decoders fits the video. What the probe
+ * doesn't say about a stream, like its level, rules nothing out.
+ */
+export function decodesVideo(
+  device: PlaybackDevice,
+  video: VideoStream,
+): boolean {
+  return device.video.some(
+    (decoder) =>
+      (decoder.codec === "*" || decoder.codec === video.codec) &&
+      (decoder.maxWidth === null || video.width <= decoder.maxWidth) &&
+      (decoder.maxHeight === null || video.height <= decoder.maxHeight) &&
+      (decoder.maxBitDepth === null ||
+        (video.bitDepth ?? 8) <= decoder.maxBitDepth) &&
+      (decoder.profiles === null ||
+        video.profile === null ||
+        decoder.profiles.includes(video.profile)) &&
+      (decoder.maxLevel === null ||
+        video.level === null ||
+        video.level <= decoder.maxLevel) &&
+      (decoder.hdr === null ||
+        video.hdr === null ||
+        decoder.hdr.includes(video.hdr)) &&
+      (decoder.dolbyVisionProfiles === null ||
+        video.dolbyVisionProfile === null ||
+        decoder.dolbyVisionProfiles.includes(video.dolbyVisionProfile)),
+  )
+}
 
 export type StartFacts = {
   probe: MediaProbe
@@ -50,9 +90,7 @@ export function decidePlayback(
 ): PlaybackDecision | null {
   const { device } = input
   const { probe, preferences, picks } = facts
-  const decodes = (codec: string) =>
-    accepts(device.audio, codec) ||
-    (codec.startsWith("pcm_") && device.audio.includes("pcm_*"))
+  const decodes = (codec: string) => decodesAudio(device, codec)
   const primary = facts.audio.find((track) => track.primary) ?? facts.audio[0]
   const language =
     preferences.audioLanguage === "original"
@@ -83,28 +121,7 @@ export function decidePlayback(
       : undefined
   const audio = standIn ?? wanted ?? null
   const video = probe.video
-  const videoPlays =
-    !video ||
-    device.video.some(
-      (decoder) =>
-        (decoder.codec === "*" || decoder.codec === video.codec) &&
-        (decoder.maxWidth === null || video.width <= decoder.maxWidth) &&
-        (decoder.maxHeight === null || video.height <= decoder.maxHeight) &&
-        (decoder.maxBitDepth === null ||
-          (video.bitDepth ?? 8) <= decoder.maxBitDepth) &&
-        (decoder.profiles === null ||
-          video.profile === null ||
-          decoder.profiles.includes(video.profile)) &&
-        (decoder.maxLevel === null ||
-          video.level === null ||
-          video.level <= decoder.maxLevel) &&
-        (decoder.hdr === null ||
-          video.hdr === null ||
-          decoder.hdr.includes(video.hdr)) &&
-        (decoder.dolbyVisionProfiles === null ||
-          video.dolbyVisionProfile === null ||
-          decoder.dolbyVisionProfiles.includes(video.dolbyVisionProfile)),
-    )
+  const videoPlays = !video || decodesVideo(device, video)
   const fileAudio =
     !audio ||
     (decodes(audio.codec) &&
