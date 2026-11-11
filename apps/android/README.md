@@ -1,8 +1,8 @@
 # Matinee for Android
 
 A native app for Android phones and tablets, written in Kotlin with Jetpack
-Compose and Media3. The same APK installs on Android TV, where it signs in
-with a code and moves with the D-pad, but phones come first for now.
+Compose and Media3. The same APK installs on Android TV, where every
+screen is one of its own, drawn for the remote (see Android TV below).
 
 It looks like the web app on a phone: the same dark theme, Red Hat Text,
 lucide icons, the banner on Home, library chips, rails of cards, and title
@@ -64,27 +64,64 @@ web app's catalogs where the words are the same.
   network, version, and subtitles; the app's language through Android's
   per-app setting; sessions; and the server.
 
-Not built yet: Chromecast, a media session for the lock screen, downloads
-of a whole season, and a TV layout of its own outside the player. On a TV
-the player has its own controls for the remote, in `ui/player/tv/`: a
-scrim at the bottom with the title, one seek bar, and a row of large
-buttons, menus in a panel on the right, and Back closing the menu, then
-the controls, then the player. With the controls away, left and right
-skip and glide while held, Select brings the controls, and the media keys
-work at any time. It has no picture in picture, and asks the display for
-the video's frame rate while it plays.
+Not built yet: Chromecast, a media session for the lock screen, and
+downloads of a whole season.
 
-Before and around the account, a TV has screens of its own in `ui/tv/auth/`,
-`ui/tv/settings/`, and `ui/tv/profile/`, picked once in `MatineeRoot`. It
-opens on the servers found on the local network, searched for while it
-shows, with the server used before and typing an address after them. It
-signs in with the code and QR code only; a code that runs out waits for
-"Get a new code". A server that doesn't answer shows Retry, never the
-downloads: a TV has no offline mode. Settings has categories on the left
-and their rows on the right, with choices in a panel at the right edge:
-playback, subtitles, languages, signed-in devices, and the account. It
-leaves out offline mode, appearance, downloads, linking a device, the
-admin pages, picture in picture, and the playback report.
+## Android TV
+
+On a TV, nothing of the phone's layout shows. `MatineeRoot` picks once, on
+`LocalTv` (true on a leanback device): the phone's screens, or the TV's
+own. Those live in `ui/tv/`, and the player's in `ui/player/tv/`.
+
+- `ui/tv/auth/` is what a TV shows before and around the account: the
+  servers found on the local network, searched for while it shows, the
+  server used before, typing an address, signing in with the code and QR
+  code, and a server that doesn't answer.
+- `TvApp.kt` is the signed-in app: a drawer at the left edge, a rail of
+  icons that opens into labels when focus comes in from the page, the
+  clock at the top right, and its own `NavHost` that maps the phone's
+  routes to TV pages. Home, the libraries, browse, search, favorites,
+  title, season, episode, person, profile, recently watched, and settings
+  each have one, in `home/`, `browse/`, `detail/`, `profile/`, and
+  `settings/`.
+- The player keeps the phone's video, subtitles, and controller, and
+  draws its own controls: the title, one seek bar, and a row of large
+  buttons inside the TV margins. With the controls away, Left and Right
+  skip and glide while held, Select brings the controls, and the media
+  keys work at any time. Back closes a menu, then the controls, then the
+  player. It asks the display for the video's frame rate while it plays.
+
+Every TV screen is built from the same few pieces, so they look and behave
+alike:
+
+- `TvType.kt` has the text styles and `Overscan`, the margins: 32dp at
+  the sides, 27dp at the top and bottom. `TvPage` starts a page's content
+  clear of the drawer's rail.
+- `Focus.kt` has the focus look, by one rule. A picture (a poster, a still,
+  a person's photo) grows and gets a ring, with `tvPicture`. A control (a
+  button, a chip, a tab, a list row, a drawer entry, a field) fills with
+  the text color and its content turns dark, with `tvControl` and
+  `tvContent`. It also has `TvFocusMemory`, which keeps the card each row
+  and page had focused.
+- `Buttons.kt` has `TvButton`, `TvIconButton` (an icon that opens to its
+  label), `TvRoundButton` (an icon alone, like the player's), and `TvChip`.
+  `TvListItem.kt` has the list row that settings, the connect screen, and
+  every panel use.
+- `TvSidePanel.kt` has the one right-edge panel: a card's actions on Menu
+  or a held Select, the sort and genre, a setting's choices, and the
+  player's menus. It dims the screen, keeps focus until Back or a choice
+  closes it, and puts focus back on what opened it.
+- `Cards.kt`, `PosterGrid.kt`, and `People.kt` have the cards, rows, and
+  grids, and `Backdrop.kt` the picture behind a page.
+
+What a TV and a phone share is everything under the layout: the API and
+the state each page loads (`HomeData`, `TitleData`, `LibraryData`, and the
+rest, beside the phone's screens), `Navigator` and its routes, `Actions`,
+the player's controller, formatters, `Palette`, and image loading. A TV
+leaves out downloads and offline mode, the admin pages, the image editor
+and identify, linking a device by camera, appearance, picture in picture,
+and the playback report. Nothing on a TV leads to them. The launcher's
+Watch Next row is TV-only, in `launcher/`.
 
 ## Status
 
@@ -145,9 +182,10 @@ app/src/main/java/io/github/zekurio/matinee/
   launcher/   TV-only Watch Next publishing, authenticated artwork copies,
               launcher playback links, and the periodic WorkManager sync
   ui/         Compose screens: home, browse, title, search, settings, player
+  ui/tv/      The TV's own screens and the pieces they share
   ui/player/  The device's decoders, what the player loads of the server's
               answers, a download's tracks, the WebVTT renderer, and the
-              player
+              player; its TV controls in ui/player/tv/
 scripts/
   lucide.py       Turns lucide icons into vector drawables
   themes.mjs      Writes ui/theme/ThemePresets.kt from the web's palettes
