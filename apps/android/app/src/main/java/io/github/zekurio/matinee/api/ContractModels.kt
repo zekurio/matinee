@@ -734,6 +734,7 @@ data class AdminUser(
         val groups: List<AdminUser.Access.Group>,
         val override: AdminUser.Access.Override,
         val overrideSource: String,
+        val fromGroups: AdminUser.Access.FromGroups,
         val effective: AdminUser.Access.Effective,
     ) {
         @Serializable
@@ -750,6 +751,21 @@ data class AdminUser(
             val transcode: Boolean? = null,
             val downloads: Boolean? = null,
             val maxStreams: Explicit<Int>? = null,
+        ) {
+            @Serializable
+            data class Libraries(
+                val all: Boolean,
+                val ids: List<String>,
+            )
+        }
+
+        @Serializable
+        data class FromGroups(
+            val libraries: AdminUser.Access.FromGroups.Libraries,
+            val maxBitrate: Int?,
+            val transcode: Boolean,
+            val downloads: Boolean,
+            val maxStreams: Int?,
         ) {
             @Serializable
             data class Libraries(

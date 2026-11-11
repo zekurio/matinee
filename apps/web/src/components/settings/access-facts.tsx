@@ -72,6 +72,14 @@ function librariesFact(
   }
 }
 
+/** A policy's libraries in a few words, like "All libraries" or "2 libraries". */
+export function librariesLabel(
+  access: AccessPolicy["libraries"],
+  libraries: readonly Library[] | undefined,
+): string {
+  return librariesFact(access, libraries).label
+}
+
 /** A fact with its glyph, sized to read in a line of them. */
 export function Fact({
   icon,

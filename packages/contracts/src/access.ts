@@ -142,9 +142,11 @@ export const UserAccess = t.object({
    */
   overrideSource: AccessSource,
   /**
-   * What applies: the most generous of the groups, then the override. An
-   * admin's is everything.
+   * The most generous of what the account's groups allow, which a field
+   * the override leaves out follows. An admin's is everything.
    */
+  fromGroups: AccessPolicy,
+  /** What applies: `fromGroups`, then the override. */
   effective: AccessPolicy,
 })
 export type UserAccess = t.infer<typeof UserAccess>

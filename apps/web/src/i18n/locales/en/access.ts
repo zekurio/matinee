@@ -119,6 +119,8 @@ export default defineMessages("access", {
   "access.user.overrideFromProvider":
     "The policy claim from {provider} sets these at each sign-in. A change here lasts only until {name} signs in again.",
   "access.user.fromGroups": "From groups",
+  // {value} is what the groups give, like "Up to 8 Mbps" or "Allowed".
+  "access.user.fromGroupsValue": "From groups ({value})",
   "access.user.allowed": "Allowed",
   "access.user.notAllowed": "Not allowed",
   "access.user.checkFields": "Check the fields.",

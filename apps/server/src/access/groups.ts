@@ -119,16 +119,19 @@ function overrideOf(account: Account): AccessOverride {
   return AccessOverride.safeParse(account.accessOverride).data ?? {}
 }
 
-function policyOf(account: Account, state: Snapshot): AccessPolicy {
+/** What the account's groups give it, before its override. */
+function groupPolicy(account: Account, state: Snapshot): AccessPolicy {
   if (account.role === "admin") return EVERYTHING
   const own = (state.members.get(account.id) ?? []).flatMap(
     (membership) => state.groups.get(membership.groupId) ?? [],
   )
   const groups = state.everyone ? [state.everyone, ...own] : own
-  return withOverride(
-    mostGenerous(groups.map((group) => group.policy)),
-    overrideOf(account),
-  )
+  return mostGenerous(groups.map((group) => group.policy))
+}
+
+function policyOf(account: Account, state: Snapshot): AccessPolicy {
+  if (account.role === "admin") return EVERYTHING
+  return withOverride(groupPolicy(account, state), overrideOf(account))
 }
 
 /** What the account may open and how the server streams to it. */
@@ -161,6 +164,7 @@ export async function describeAccess(
       groups,
       override: overrideOf(account),
       overrideSource: account.accessOverrideSource,
+      fromGroups: groupPolicy(account, state),
       effective: policyOf(account, state),
     })
   }

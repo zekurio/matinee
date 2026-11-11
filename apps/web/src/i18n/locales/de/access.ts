@@ -113,6 +113,7 @@ export default {
   "access.user.overrideFromProvider":
     "Der Richtlinien-Claim von {provider} setzt diese Werte bei jeder Anmeldung. Eine Änderung hier hält nur, bis {name} sich wieder anmeldet.",
   "access.user.fromGroups": "Aus Gruppen",
+  "access.user.fromGroupsValue": "Aus Gruppen ({value})",
   "access.user.allowed": "Erlaubt",
   "access.user.notAllowed": "Nicht erlaubt",
   "access.user.checkFields": "Prüfe die Felder.",

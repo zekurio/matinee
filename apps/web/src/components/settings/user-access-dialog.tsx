@@ -38,7 +38,13 @@ import {
   streamLabel,
   streamOptions,
 } from "./access-controls"
-import { Fact, PolicyFacts } from "./access-facts"
+import {
+  bitrateLimitLabel,
+  Fact,
+  librariesLabel,
+  PolicyFacts,
+  streamLimitLabel,
+} from "./access-facts"
 import { SelectField, SettingWarning, SwitchRow } from "./setting-controls"
 import { SettingNote, SettingRows } from "./settings-panel"
 
@@ -253,14 +259,25 @@ function AccessEditor({
       .filter((group) => group.source === "provider")
       .map((group) => group.id),
   )
-  const switchLabel = (choice: SwitchChoice) =>
+  // What "From groups" gives, as of the last save. A change to the groups
+  // above that isn't saved yet could give something else, so then it's
+  // left unsaid.
+  const { fromGroups } = user.access
+  const groupsSaved =
+    values.groupIds.toSorted().join() === initial.groupIds.toSorted().join()
+  const inherited = (value: string) =>
+    groupsSaved
+      ? tr("access.user.fromGroupsValue", { value })
+      : tr("access.user.fromGroups")
+  const allowedLabel = (allowed: boolean) =>
+    allowed ? tr("access.user.allowed") : tr("access.user.notAllowed")
+  const switchLabel = (given: boolean) => (choice: SwitchChoice) =>
     choice === FROM_GROUPS
-      ? tr("access.user.fromGroups")
-      : choice === "on"
-        ? tr("access.user.allowed")
-        : tr("access.user.notAllowed")
-  const limitLabel = (format: (value: string) => string) => (value: string) =>
-    value === FROM_GROUPS ? tr("access.user.fromGroups") : format(value)
+      ? inherited(allowedLabel(given))
+      : allowedLabel(choice === "on")
+  const limitLabel =
+    (format: (value: string) => string, given: string) => (value: string) =>
+      value === FROM_GROUPS ? inherited(given) : format(value)
 
   return (
     <form
@@ -347,7 +364,9 @@ function AccessEditor({
                 options={LIBRARY_CHOICES}
                 labelOf={(choice) =>
                   choice === FROM_GROUPS
-                    ? tr("access.user.fromGroups")
+                    ? inherited(
+                        librariesLabel(fromGroups.libraries, libraries.data),
+                      )
                     : choice === "all"
                       ? tr("access.libraries.all")
                       : tr("access.libraries.picked")
@@ -375,7 +394,10 @@ function AccessEditor({
               <SelectField
                 title={tr("access.bitrate")}
                 options={withGroups(bitrateOptions, values.maxBitrate)}
-                labelOf={limitLabel(bitrateLabel)}
+                labelOf={limitLabel(
+                  bitrateLabel,
+                  bitrateLimitLabel(fromGroups.maxBitrate),
+                )}
                 footer={<SettingNote>{tr("access.bitrate.hint")}</SettingNote>}
               />
             )}
@@ -385,7 +407,7 @@ function AccessEditor({
               <SelectField
                 title={tr("access.transcode")}
                 options={SWITCH_CHOICES}
-                labelOf={switchLabel}
+                labelOf={switchLabel(fromGroups.transcode)}
               />
             )}
           </form.AppField>
@@ -394,7 +416,7 @@ function AccessEditor({
               <SelectField
                 title={tr("access.downloads")}
                 options={SWITCH_CHOICES}
-                labelOf={switchLabel}
+                labelOf={switchLabel(fromGroups.downloads)}
               />
             )}
           </form.AppField>
@@ -403,7 +425,10 @@ function AccessEditor({
               <SelectField
                 title={tr("access.streams")}
                 options={withGroups(streamOptions, values.maxStreams)}
-                labelOf={limitLabel(streamLabel)}
+                labelOf={limitLabel(
+                  streamLabel,
+                  streamLimitLabel(fromGroups.maxStreams),
+                )}
               />
             )}
           </form.AppField>
