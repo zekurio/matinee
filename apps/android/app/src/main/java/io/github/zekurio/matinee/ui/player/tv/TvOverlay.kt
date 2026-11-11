@@ -28,7 +28,9 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -105,9 +107,16 @@ internal fun TvOverlay(
     ahead: Double,
     scrub: Double?,
     keys: TvSeekKeys,
+    playRests: Boolean,
     onMenu: (Menu) -> Unit,
 ) {
-    Box(Modifier.fillMaxSize()) {
+    // Play is where focus rests, so it looks focused unless another control here has focus.
+    // Focus reaches it a frame after the controls start to show and leaves as they go, and
+    // following it to the letter turned the button from dark to white and back in the fade.
+    var inside by remember { mutableStateOf(false) }
+    var onPlay by remember { mutableStateOf(false) }
+    val playLit = playRests && !(inside && !onPlay)
+    Box(Modifier.fillMaxSize().onFocusChanged { inside = it.hasFocus }) {
         // About half black behind the title, two thirds behind the bar, and four fifths at the
         // bottom edge, close to Wholphin's, so the picture stays watchable with the controls up.
         Box(
@@ -137,7 +146,7 @@ internal fun TvOverlay(
                     TvRoundButton(null, { controller.skip(-back) }, up, size = SMALL) {
                         SkipIcon(Lucide.RotateCcw, back, stringResource(R.string.player_skip_back, back.toInt()))
                     }
-                    TvRoundButton(null, controller::togglePlay, up.focusRequester(targets.play), size = 68.dp) {
+                    TvRoundButton(null, controller::togglePlay, up.focusRequester(targets.play).onFocusChanged { onPlay = it.isFocused }, size = 68.dp, lit = playLit) {
                         val playing = controller.playing
                         LucideIcon(
                             if (playing) Lucide.Pause else Lucide.Play,

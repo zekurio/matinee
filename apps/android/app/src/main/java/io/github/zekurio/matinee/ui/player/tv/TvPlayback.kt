@@ -299,7 +299,7 @@ private fun TvPlayback(itemId: String, data: PlayerData, start: Double?) {
         // Back hides the controls before it leaves; a menu's Back, composed later, comes first.
         BackHandler(enabled = controls && menu == null) { controls = false }
         AnimatedVisibility(visible, enter = Motion.fadeIn, exit = Motion.fadeOut) {
-            TvOverlay(controller, targets, back = back, ahead = ahead, scrub = scrub, keys = seekKeys, onMenu = ::openMenu)
+            TvOverlay(controller, targets, back = back, ahead = ahead, scrub = scrub, keys = seekKeys, playRests = menu == null && !upNextShown && !focusSeek, onMenu = ::openMenu)
         }
         // Over the scrim, so it doesn't dim them; they rise clear of the controls.
         Subtitles(

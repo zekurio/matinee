@@ -119,7 +119,8 @@ fun TvIconButton(
  * A round button that stays an icon, like the search field's clear or the
  * player's play and pause, [size] across. [label] names it for a screen
  * reader; [content] draws in [LocalContentColor]. Pass [interaction] to
- * know when it has focus.
+ * know when it has focus. [lit] gives it the focused look ahead of focus,
+ * for one that is about to take it as it appears.
  */
 @Composable
 fun TvRoundButton(
@@ -128,9 +129,10 @@ fun TvRoundButton(
     modifier: Modifier = Modifier,
     size: Dp = TvButtons.Height,
     interaction: MutableInteractionSource = remember { MutableInteractionSource() },
+    lit: Boolean = false,
     content: @Composable () -> Unit,
 ) {
-    val focused by interaction.collectIsFocusedAsState()
+    val focused = interaction.collectIsFocusedAsState().value || lit
     Box(
         modifier
             .size(size)
