@@ -31,7 +31,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.CreditKind
-import io.github.zekurio.matinee.api.TitleKind
 import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.TopBar
 import io.github.zekurio.matinee.ui.components.Chip
@@ -52,11 +51,7 @@ import io.github.zekurio.matinee.ui.theme.Palette
 fun BrowseScreen(genre: String?, studio: String?) {
     val name = genre ?: studio.orEmpty()
     var kind by rememberSaveable { mutableStateOf<String?>(null) }
-    val pages = rememberTitlePages("browse-$genre-$studio-$kind") { offset, limit ->
-        titles.browse(genre = genre, studio = studio, kind = kind, limit = limit, offset = offset).let {
-            io.github.zekurio.matinee.api.TitleList(it.items, it.total)
-        }
-    }
+    val pages = rememberBrowsePages(genre, studio, kind)
     val res = LocalResources.current
     Column(Modifier.fillMaxSize()) {
         TopBar(name)
@@ -84,9 +79,7 @@ fun BrowseScreen(genre: String?, studio: String?) {
                     )
                     Gap(12.dp)
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(bottom = 8.dp)) {
-                        Chip(stringResource(R.string.browse_kind_all), kind == null, { kind = null })
-                        Chip(stringResource(R.string.browse_kind_movie), kind == TitleKind.MOVIE, { kind = TitleKind.MOVIE })
-                        Chip(stringResource(R.string.browse_kind_show), kind == TitleKind.SHOW, { kind = TitleKind.SHOW })
+                        BROWSE_KINDS.forEach { (value, label) -> Chip(stringResource(label), kind == value, { kind = value }) }
                     }
                 }
             }

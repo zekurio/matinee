@@ -34,22 +34,18 @@ import io.github.zekurio.matinee.ui.components.Lucide
 import io.github.zekurio.matinee.ui.components.LucideIcon
 import io.github.zekurio.matinee.ui.components.PosterCard
 import io.github.zekurio.matinee.ui.components.SectionTitle
-import io.github.zekurio.matinee.ui.rememberLoader
 import io.github.zekurio.matinee.ui.theme.Palette
-
-private const val LIMIT = 200
 
 /** The titles and episodes the person marked as favorites, newest first. */
 @Composable
 fun FavoritesScreen() {
     val viewer = LocalContext.current.app.viewer
-    val titles = rememberLoader("favorites") { favorites.list(LIMIT) }
-    val items = rememberLoader("favoriteItems") { favorites.items(LIMIT) }
+    val favorites = rememberFavorites()
+    val titles = favorites.titles
     Column(Modifier.fillMaxSize()) {
         TopBar(stringResource(R.string.favorites_title))
-        // One taken off here or elsewhere goes at once, before the list is fetched again.
-        val shows = (titles.state as? Load.Ready)?.value?.filter(viewer::isFavorite)
-        val episodes = (items.state as? Load.Ready)?.value?.filter(viewer::isFavorite).orEmpty()
+        val shows = favorites.titles(viewer)
+        val episodes = favorites.episodes(viewer)
         val failed = titles.state as? Load.Failed
         when {
             failed != null -> ErrorBox(stringResource(R.string.favorites_load_failed), failed.message, titles::reload, disconnected = failed.disconnected)

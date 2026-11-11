@@ -37,12 +37,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.Library
-import io.github.zekurio.matinee.api.TitleSort
 import io.github.zekurio.matinee.ui.TopBar
 import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.LibraryRoute
@@ -53,38 +53,28 @@ import io.github.zekurio.matinee.ui.components.Lucide
 import io.github.zekurio.matinee.ui.components.LucideIcon
 import io.github.zekurio.matinee.ui.components.MatineeTextField
 import io.github.zekurio.matinee.ui.components.RoundIconButton
-import io.github.zekurio.matinee.ui.rememberLoader
 import io.github.zekurio.matinee.ui.theme.Palette
-import kotlinx.coroutines.delay
 
 @Composable
 fun LibraryScreen(route: LibraryRoute) {
-    val libraries = rememberLoader("libraries") { libraries.list() }
-    val all = (libraries.state as? Load.Ready)?.value.orEmpty()
-    val library = all.firstOrNull { it.id == route.id }
-    var sort by rememberSaveable { mutableStateOf(route.sort ?: TitleSort.NAME) }
-    var genre by rememberSaveable { mutableStateOf<String?>(null) }
-    var query by rememberSaveable { mutableStateOf("") }
+    val library = rememberLibrary(route.id)
+    val filters = rememberLibraryFilters(route)
+    val sort = filters.sort
+    val genre = filters.genre
+    val query = filters.query
     var searching by rememberSaveable { mutableStateOf(false) }
-    // Waits for a pause in typing before asking the server.
-    var settled by rememberSaveable { mutableStateOf("") }
-    LaunchedEffect(query) {
-        delay(250)
-        settled = query.trim()
-    }
-    val pages = rememberTitlePages("titles-${route.id}-$sort-$genre-$settled") { offset, limit ->
-        titles.list(route.id, sort = sort, query = settled.ifEmpty { null }, genre = genre, limit = limit, offset = offset)
-    }
+    val pages = rememberLibraryPages(route, filters)
     val shows = library?.kind == "shows"
+    val res = LocalResources.current
 
     Column(Modifier.fillMaxSize()) {
         if (searching) {
             SearchTopBar(
                 query = query,
                 placeholder = stringResource(if (shows) R.string.library_search_shows else R.string.library_search_movies),
-                onQuery = { query = it },
+                onQuery = { filters.query = it },
                 onClose = {
-                    query = ""
+                    filters.query = ""
                     searching = false
                 },
             )
@@ -95,8 +85,8 @@ fun LibraryScreen(route: LibraryRoute) {
                     sort = sort,
                     genre = genre,
                     onSearch = { searching = true },
-                    onSort = { sort = it },
-                    onGenre = { genre = it },
+                    onSort = { filters.sort = it },
+                    onGenre = { filters.genre = it },
                 )
             }
         }
@@ -107,11 +97,7 @@ fun LibraryScreen(route: LibraryRoute) {
             detail = { title -> title.year?.toString() },
             empty = {
                 Text(
-                    when {
-                        settled.isNotEmpty() -> stringResource(if (shows) R.string.library_no_match_shows else R.string.library_no_match_movies, settled)
-                        genre != null -> stringResource(if (shows) R.string.library_no_filter_match_shows else R.string.library_no_filter_match_movies)
-                        else -> stringResource(if (shows) R.string.library_none_shows else R.string.library_none_movies)
-                    },
+                    libraryEmptyMessage(res, library, filters),
                     style = MaterialTheme.typography.bodyMedium,
                     color = Palette.Muted,
                     modifier = Modifier.padding(vertical = 48.dp),
@@ -121,7 +107,7 @@ fun LibraryScreen(route: LibraryRoute) {
             if (genre != null) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     Box(Modifier.padding(top = 4.dp, bottom = 4.dp)) {
-                        Chip(genre.orEmpty(), selected = true, trailingIcon = Lucide.X, onClick = { genre = null })
+                        Chip(genre.orEmpty(), selected = true, trailingIcon = Lucide.X, onClick = { filters.genre = null })
                     }
                 }
             }
@@ -178,11 +164,7 @@ private fun LibraryActions(
     Box {
         RoundIconButton(Lucide.ArrowUpDown, stringResource(R.string.library_sort), { sorting = true }, size = 48.dp, iconSize = 22.dp, background = Color.Transparent)
         DropdownMenu(expanded = sorting, onDismissRequest = { sorting = false }, containerColor = Palette.Raised) {
-            listOf(
-                TitleSort.NAME to R.string.library_sort_name,
-                TitleSort.RECENT to R.string.library_sort_recent,
-                TitleSort.YEAR to R.string.library_sort_year,
-            ).forEach { (value, label) ->
+            LIBRARY_SORTS.forEach { (value, label) ->
                 DropdownMenuItem(
                     text = { Text(stringResource(label)) },
                     trailingIcon = if (value == sort) ({ LucideIcon(Lucide.Check, null, size = 16.dp) }) else null,
@@ -205,7 +187,7 @@ private fun LibraryActions(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun GenreSheet(libraryId: String, current: String?, onPick: (String?) -> Unit, onDismiss: () -> Unit) {
-    val genres = rememberLoader("genres-$libraryId") { titles.facets(libraryId).genres }
+    val genres = rememberLibraryGenres(libraryId)
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Palette.Raised) {
         Text(
             stringResource(R.string.library_genre),

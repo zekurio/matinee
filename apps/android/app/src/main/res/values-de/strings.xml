@@ -553,4 +553,9 @@
     <string name="tv_page_browse">Durchsuchen</string>
     <string name="tv_detail_people">Besetzung und Stab</string>
     <string name="tv_detail_links">Genres und Studios</string>
+    <string name="tv_grid_failed">Die Titel konnten nicht geladen werden</string>
+    <string name="tv_grid_more_failed">Weitere Titel konnten nicht geladen werden</string>
+    <string name="tv_kind_movie">Film</string>
+    <string name="tv_kind_show">Serie</string>
+    <string name="tv_favorites_empty_hint">Markiere einen Film, eine Serie oder eine Folge auf ihrer Seite als Favorit, um sie hier zu sammeln.</string>
 </resources>

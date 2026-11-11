@@ -582,4 +582,9 @@
     <string name="tv_page_browse">Browse</string>
     <string name="tv_detail_people">Cast and crew</string>
     <string name="tv_detail_links">Genres and studios</string>
+    <string name="tv_grid_failed">Couldn\'t load these titles</string>
+    <string name="tv_grid_more_failed">Couldn\'t load more titles</string>
+    <string name="tv_kind_movie">Movie</string>
+    <string name="tv_kind_show">Show</string>
+    <string name="tv_favorites_empty_hint">Mark a movie, show, or episode as a favorite on its page to keep it here.</string>
 </resources>

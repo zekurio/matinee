@@ -44,7 +44,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.ArtworkSize
-import io.github.zekurio.matinee.api.SearchResults
 import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.LocalNavigator
 import io.github.zekurio.matinee.ui.browse.creditKind
@@ -66,10 +65,6 @@ import io.github.zekurio.matinee.ui.TopBar
 import io.github.zekurio.matinee.ui.rememberLoader
 import io.github.zekurio.matinee.ui.tabBarPadding
 import io.github.zekurio.matinee.ui.theme.Palette
-import java.io.IOException
-import kotlinx.coroutines.delay
-
-private const val LIMIT = 40
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -78,31 +73,15 @@ fun SearchScreen() {
     val nav = LocalNavigator.current
     val res = LocalResources.current
     var query by rememberSaveable { mutableStateOf("") }
-    var results by remember { mutableStateOf<SearchResults?>(null) }
-    var searching by remember { mutableStateOf(false) }
-    var failed by remember { mutableStateOf(false) }
+    val search = remember { SearchState() }
     val focus = remember { FocusRequester() }
     val libraries = rememberLoader("libraries") { libraries.list() }
     val names = (libraries.state as? Load.Ready)?.value.orEmpty().associate { it.id to it.name }
 
     LaunchedEffect(Unit) { if (query.isEmpty()) focus.requestFocus() }
-    LaunchedEffect(query) {
-        val text = query.trim()
-        if (text.isEmpty()) {
-            results = null
-            return@LaunchedEffect
-        }
-        delay(250)
-        searching = true
-        failed = false
-        try {
-            results = api.search.query(text, LIMIT)
-        } catch (_: IOException) {
-            failed = true
-        } finally {
-            searching = false
-        }
-    }
+    SearchEffect(search, query)
+    val searching = search.searching
+    val failed = search.failed
 
     // A tab's first page: its name, then the field, which takes the keyboard when the tab opens.
     Column(Modifier.fillMaxSize()) {
@@ -142,7 +121,7 @@ fun SearchScreen() {
                 }
             }
         }
-        val found = results
+        val found = search.results
         val text = query.trim()
         when {
             // The field's placeholder already says what search finds.
@@ -151,7 +130,7 @@ fun SearchScreen() {
             found == null -> Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = Palette.Accent)
             }
-            found.titles.isEmpty() && found.people.isEmpty() && found.genres.isEmpty() && found.studios.isEmpty() && found.users.isEmpty() ->
+            found.isEmpty ->
                 Hint(stringResource(R.string.search_no_match, text), stringResource(R.string.search_no_match_hint), Lucide.SearchX)
             else -> LazyVerticalGrid(
                 columns = GridCells.Adaptive(150.dp),
@@ -160,7 +139,7 @@ fun SearchScreen() {
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalArrangement = Arrangement.spacedBy(20.dp),
             ) {
-                val groups = found.titles.groupBy { it.libraryId }
+                val groups = found.titlesByLibrary()
                 groups.forEach { (libraryId, titles) ->
                     item(span = { GridItemSpan(maxLineSpan) }, key = "lib-$libraryId") {
                         // On one baseline: the count's smaller line would sit low at the boxes' bottom.

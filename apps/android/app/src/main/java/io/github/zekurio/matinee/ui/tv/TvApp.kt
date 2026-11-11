@@ -72,6 +72,10 @@ import io.github.zekurio.matinee.ui.tv.detail.TvEpisodeScreen
 import io.github.zekurio.matinee.ui.tv.detail.TvPersonScreen
 import io.github.zekurio.matinee.ui.tv.detail.TvSeasonScreen
 import io.github.zekurio.matinee.ui.tv.detail.TvTitleScreen
+import io.github.zekurio.matinee.ui.tv.browse.TvBrowseScreen
+import io.github.zekurio.matinee.ui.tv.browse.TvFavoritesScreen
+import io.github.zekurio.matinee.ui.tv.browse.TvLibraryScreen
+import io.github.zekurio.matinee.ui.tv.browse.TvSearchScreen
 import io.github.zekurio.matinee.ui.tv.home.TvHomeScreen
 
 /**
@@ -216,9 +220,9 @@ private fun Pages(controller: androidx.navigation.NavHostController) {
         popExitTransition = { pageOut() },
     ) {
         composable<HomeRoute> { TvHomeScreen() }
-        stub<SearchRoute>(R.string.search_title)
-        stub<FavoritesRoute>(R.string.favorites_title)
-        stub<LibraryRoute>(R.string.tv_page_library)
+        composable<SearchRoute> { TvSearchScreen() }
+        composable<FavoritesRoute> { TvFavoritesScreen() }
+        composable<LibraryRoute> { TvLibraryScreen(it.toRoute()) }
         composable<TitleRoute> { TvTitleScreen(it.toRoute<TitleRoute>().id) }
         composable<SeasonRoute> { entry ->
             val route = entry.toRoute<SeasonRoute>()
@@ -226,7 +230,7 @@ private fun Pages(controller: androidx.navigation.NavHostController) {
         }
         composable<EpisodeRoute> { TvEpisodeScreen(it.toRoute<EpisodeRoute>().itemId) }
         composable<PersonRoute> { TvPersonScreen(it.toRoute<PersonRoute>().name) }
-        stub<BrowseRoute>(R.string.tv_page_browse)
+        composable<BrowseRoute> { it.toRoute<BrowseRoute>().let { route -> TvBrowseScreen(route.genre, route.studio) } }
         stub<ProfileRoute>(R.string.tab_profile)
         stub<RecentRoute>(R.string.tab_profile)
         stub<SettingsRoute>(R.string.shell_settings)
