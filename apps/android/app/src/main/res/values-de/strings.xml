@@ -577,4 +577,5 @@
     <string name="tv_settings_sign_out_device">%1$s abmelden?</string>
     <string name="tv_settings_sign_out_device_description">Das Gerät muss sich erneut anmelden, um Matinee zu nutzen.</string>
     <string name="tv_profile_see_all">Alle ansehen</string>
+    <string name="tv_stats_heatmap_cell">%1$s, %2$s bis %3$s</string>
 </resources>
