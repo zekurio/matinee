@@ -3,6 +3,8 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- LAN discovery. Runtime permission when targeting API 37 or above. -->
+    <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK" />
     <!-- To tell no network from a server that's down, and retry when it's back. -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <!-- Downloads run as WorkManager jobs that show their progress. -->
