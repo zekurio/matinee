@@ -337,6 +337,14 @@ object PlaybackQuality {
     val all = listOf(ORIGINAL, _2160P_40, _1080P_20, _1080P_10, _720P_6, _720P_4, _480P_2, _360P_1)
 }
 
+@Serializable
+data class PlaybackQualityPreset(
+    val id: String,
+    val width: Int,
+    val height: Int,
+    val bitrate: Int,
+)
+
 object PlaybackReason {
     const val CONTAINER = "container"
     const val VIDEO = "video"
@@ -367,6 +375,7 @@ data class PlaybackStart(
     val audioTracks: List<AudioTrack>,
     val subtitleTracks: List<SubtitleTrack>,
     val quality: String,
+    val qualities: List<PlaybackQualityPreset>,
     val reasons: List<String>,
     val next: MediaItem?,
 )
@@ -1341,14 +1350,6 @@ data class NowPlaying(
 data class LiveActivity(
     val sessions: List<NowPlaying>,
     val streams: Int,
-)
-
-@Serializable
-data class PlaybackQualityPreset(
-    val id: String,
-    val width: Int,
-    val height: Int,
-    val bitrate: Int,
 )
 
 @Serializable

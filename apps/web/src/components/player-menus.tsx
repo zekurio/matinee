@@ -1,7 +1,4 @@
-import {
-  PLAYBACK_QUALITIES,
-  PlaybackQuality as PlaybackQualitySchema,
-} from "@matinee/contracts"
+import { PlaybackQuality as PlaybackQualitySchema } from "@matinee/contracts"
 import { AudioLinesIcon, CaptionsIcon, SettingsIcon } from "lucide-react"
 import type { RefObject } from "react"
 import { useShallow } from "zustand/shallow"
@@ -135,21 +132,15 @@ export function PlayerMenus({
           },
         }
 
-  // Quality: the file as it is, then the encodes no larger than it.
+  // Quality: the file as it is, then the encodes the server offers for it.
   const video = playback.plan.item.probe?.video
-  const videoSize = video ? { width: video.width, height: video.height } : null
   const qualities: MenuChoice[] = [
     {
       id: "original",
       label: tr("player.quality.original"),
       detail: video?.resolution ?? undefined,
     },
-    ...PLAYBACK_QUALITIES.filter(
-      (quality) =>
-        !videoSize ||
-        quality.width <= videoSize.width ||
-        quality.height <= videoSize.height,
-    ).map((quality) => ({
+    ...playback.plan.qualities.map((quality) => ({
       id: quality.id,
       label: `${quality.height}p`,
       detail: formatBitrate(quality.bitrate),

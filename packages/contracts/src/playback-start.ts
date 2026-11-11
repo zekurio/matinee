@@ -5,6 +5,7 @@ import { MediaItem } from "./titles"
 import {
   PlaybackAudioCodec,
   PlaybackQuality,
+  PlaybackQualityPreset,
   TranscodeVideoCodec,
 } from "./transcoding"
 
@@ -214,6 +215,12 @@ export const PlaybackStart = t.object({
    * play the original and the server picked an encode.
    */
   quality: PlaybackQuality,
+  /**
+   * The encodes the quality menu offers for this file, largest first,
+   * beside `original`: none larger than the file's video. Empty for a
+   * file without video.
+   */
+  qualities: t.array(PlaybackQualityPreset),
   /** Empty when the file plays as it is. */
   reasons: t.array(PlaybackReason),
   /** The file after this one in its show, to offer when this one ends. */

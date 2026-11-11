@@ -4,6 +4,8 @@ import {
   type MediaProbe,
   type PlaybackDevice,
   type PlaybackPreferences,
+  type PlaybackQuality,
+  type PlaybackQualityPreset,
   type PlaybackStart,
   type PlaybackStartInput,
   type SubtitleTrack,
@@ -85,6 +87,42 @@ export type StartFacts = {
 
 export type PlaybackDecision = Omit<PlaybackStart, "item">
 
+/**
+ * The encodes worth offering for a video: those whose frame the video
+ * fills in width or height, give or take a crop, since an encode never
+ * scales up. The smallest is always there, so an encode has one to use.
+ */
+export function offeredQualities(
+  video: VideoStream | null,
+): PlaybackQualityPreset[] {
+  if (!video) return []
+  const offered = PLAYBACK_QUALITIES.filter(
+    (preset) =>
+      video.width >= preset.width * 0.9 || video.height >= preset.height * 0.9,
+  )
+  const smallest = PLAYBACK_QUALITIES.at(-1)
+  return offered.length || !smallest ? offered : [smallest]
+}
+
+/**
+ * The offered quality closest to the one asked for: the largest of them
+ * with no more bit rate than it.
+ */
+function offeredQuality(
+  asked: PlaybackQuality,
+  offered: readonly PlaybackQualityPreset[],
+): PlaybackQuality {
+  if (asked === "original") return asked
+  if (offered.some((preset) => preset.id === asked)) return asked
+  const bitrate =
+    PLAYBACK_QUALITIES.find((preset) => preset.id === asked)?.bitrate ?? 0
+  return (
+    offered.find((preset) => preset.bitrate <= bitrate)?.id ??
+    offered.at(-1)?.id ??
+    "original"
+  )
+}
+
 /** The audio playback starts with, including a decodable same-language stand-in. */
 export function playbackAudio(
   input: Pick<PlaybackStartInput, "device" | "audio">,
@@ -163,7 +201,10 @@ function playbackFile(
   // Only an encode makes another quality or burns a subtitle in, so once
   // one failed the original plays, without such a subtitle.
   const encodeFailed = input.failed.includes("transcode")
-  const asked = encodeFailed ? "original" : (input.quality ?? "original")
+  const qualities = offeredQualities(video)
+  const asked = encodeFailed
+    ? "original"
+    : offeredQuality(input.quality ?? "original", qualities)
   const fileAudio =
     !audio ||
     (decodes(audio.codec) &&
@@ -188,6 +229,7 @@ function playbackFile(
     external(track) || (filePlays && embedded(track))
   return {
     video,
+    qualities,
     videoPlays,
     encodeFailed,
     asked,
@@ -284,7 +326,7 @@ function playbackMethod(
   picked: SubtitlePlayback,
 ) {
   const { device } = input
-  const { asked, video, videoPlays, fileAudio, filePlays, decodes } = file
+  const { asked, qualities, videoPlays, fileAudio, filePlays, decodes } = file
   const { burn } = picked
   let quality = asked
   const reasons: PlaybackStart["reasons"] = []
@@ -308,11 +350,9 @@ function playbackMethod(
   if (input.failed.includes(method)) return null
   if (method === "transcode" && quality === "original")
     quality =
-      PLAYBACK_QUALITIES.find(
-        (preset) =>
-          preset.bitrate <= 20_000_000 &&
-          (!video || preset.width <= Math.max(video.width, 640)),
-      )?.id ?? "720p-4"
+      qualities.find((preset) => preset.bitrate <= 20_000_000)?.id ??
+      qualities.at(-1)?.id ??
+      "720p-4"
   const encodeVideo = device.encodeVideo.filter((codec) =>
     facts.videoCodecs.includes(codec),
   )
@@ -403,6 +443,7 @@ function playbackAnswer(
     audioTracks: facts.audio,
     subtitleTracks: facts.subtitles,
     quality,
+    qualities: file.qualities,
     reasons,
     next: null,
   }

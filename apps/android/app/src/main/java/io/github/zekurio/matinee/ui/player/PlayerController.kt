@@ -181,8 +181,9 @@ class PlayerController(
 
     val item: MediaItem = opening.item
 
-    /** The encodes the quality menu offers, from `playback.options`. */
-    val qualities: List<PlaybackQualityPreset> = options.qualities
+    /** The encodes the quality menu offers for this file, from the server's answer. */
+    val qualities: List<PlaybackQualityPreset>
+        get() = plan?.qualities.orEmpty()
 
     /** ExoPlayer, or mpv when settings pick it. */
     val player: Player = if (prefs.engine == PlayerEngine.MPV) {
