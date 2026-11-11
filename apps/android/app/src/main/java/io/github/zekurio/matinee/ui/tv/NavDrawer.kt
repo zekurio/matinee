@@ -84,9 +84,11 @@ class DrawerState {
     }
 }
 
-private val RAIL_ICON = 44.dp
-private val EXPANDED_WIDTH = 236.dp
 private val ROW_HEIGHT = 48.dp
+
+/** As wide as a row is tall, so the mark behind the current page's icon is a circle. */
+private val RAIL_ICON = ROW_HEIGHT
+private val EXPANDED_WIDTH = 236.dp
 
 /**
  * The TV's navigation, as Wholphin's: a rail of icons at the left edge
