@@ -44,7 +44,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.components.Lucide
@@ -58,9 +57,6 @@ import io.github.zekurio.matinee.ui.tv.TvPage
 import io.github.zekurio.matinee.ui.tv.TvType
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-
-/** A detail page's name: larger than Home's, since it's the one thing the page is about. */
-internal val HeroType = TvType.Display.copy(fontSize = 44.sp, lineHeight = 50.sp)
 
 /** How far below the list's top a row's focused card sits once the header has scrolled away. */
 private val ROW_PIVOT = 88.dp
@@ -203,18 +199,6 @@ private fun InfoLine(icon: Int, label: String, text: String) {
     }
 }
 
-/** A row's heading at the page's start, for rows that aren't a [io.github.zekurio.matinee.ui.tv.TvRow]. */
-@Composable
-internal fun RowHeading(text: String, modifier: Modifier = Modifier) {
-    Text(
-        text,
-        style = TvType.Title,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-        modifier = modifier.padding(start = TvPage.Start, end = TvPage.End),
-    )
-}
-
 /**
  * A page that has nothing to show but its load: a spinner while it loads,
  * why it failed with Try again, or [content] once it's there.
@@ -241,10 +225,7 @@ internal fun DetailMessage(title: String, message: String?, retry: (() -> Unit)?
         Text(title, style = TvType.Headline)
         if (message != null) Text(message, style = TvType.Body, color = Palette.Muted, modifier = Modifier.padding(top = 8.dp))
         if (retry != null) {
-            TvButton(retry, Modifier.padding(top = 28.dp).focusRequester(requester)) {
-                LucideIcon(Lucide.RefreshCw, null, size = 18.dp)
-                Text(stringResource(R.string.common_retry))
-            }
+            TvButton(stringResource(R.string.common_retry), retry, Modifier.padding(top = 28.dp).focusRequester(requester), icon = Lucide.RefreshCw)
         }
     }
     if (retry != null) FocusOnce(requester)

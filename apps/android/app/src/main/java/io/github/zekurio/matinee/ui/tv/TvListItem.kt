@@ -1,7 +1,6 @@
 package io.github.zekurio.matinee.ui.tv
 
 import androidx.annotation.DrawableRes
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -30,7 +29,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
@@ -41,11 +39,13 @@ import io.github.zekurio.matinee.ui.components.Lucide
 import io.github.zekurio.matinee.ui.components.LucideIcon
 import io.github.zekurio.matinee.ui.theme.Palette
 
-/** How list rows on TV pages look: rounded, a quiet fill or none, and the text color filling them on focus. */
+/** How list rows on TV pages and panels look: rounded, a quiet fill or none, and the text color filling them on focus. */
 object TvListItems {
     val Shape = RoundedCornerShape(14.dp)
     val Height: Dp = 60.dp
-    const val SCALE = 1.02f
+
+    /** Between a row's edge and its content; text beside a list lines up with its rows' text by it. */
+    val Inset: Dp = 20.dp
 }
 
 /**
@@ -56,8 +56,9 @@ object TvListItems {
  * have no fill until focused, for long lists like Settings; the rest have
  * a faint one, so a few large targets read as such. A [selected] row,
  * like the category whose rows show beside it, keeps a fill and the accent
- * while focus is elsewhere. Content inside it
- * reads [LocalContentColor] to follow the inversion.
+ * while focus is elsewhere. A [checked] row, the choice in force in a
+ * panel, has a check at its end. Content inside it reads
+ * [LocalContentColor] to follow the inversion.
  */
 @Composable
 fun TvListItem(
@@ -70,6 +71,7 @@ fun TvListItem(
     selected: Boolean = false,
     destructive: Boolean = false,
     enabled: Boolean = true,
+    checked: Boolean = false,
     minHeight: Dp = TvListItems.Height,
     subtitleStyle: TextStyle = TvType.Caption,
     leading: (@Composable () -> Unit)? = null,
@@ -77,36 +79,27 @@ fun TvListItem(
 ) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
-    val grow by animateFloatAsState(if (focused) TvListItems.SCALE else 1f, if (focused) Motion.enter() else Motion.exit(), label = "listItemScale")
-    val fill by animateColorAsState(
-        when {
-            focused -> Palette.Foreground
-            selected -> Palette.Foreground.copy(alpha = 0.1f)
-            quiet -> Color.Transparent
-            else -> Palette.Foreground.copy(alpha = 0.07f)
-        },
-        Motion.color(),
-        label = "listItemFill",
-    )
-    val content = when {
-        focused -> Palette.Background
-        !enabled -> Palette.Muted
-        destructive -> Palette.Danger
-        selected -> Palette.Accent
-        else -> Palette.Foreground
+    val rest = when {
+        selected -> Palette.Foreground.copy(alpha = 0.1f)
+        quiet -> Color.Transparent
+        else -> Palette.Foreground.copy(alpha = 0.07f)
     }
+    val content = tvContent(
+        focused,
+        when {
+            !enabled -> Palette.Muted
+            destructive -> Palette.Danger
+            selected -> Palette.Accent
+            else -> Palette.Foreground
+        },
+    )
     Row(
         modifier
             .fillMaxWidth()
             .heightIn(min = minHeight)
-            .graphicsLayer {
-                scaleX = grow
-                scaleY = grow
-            }
-            .clip(TvListItems.Shape)
-            .background(fill)
+            .tvControl(focused, TvListItems.Shape, rest = rest, scale = TvFocus.ROW_SCALE)
             .clickable(interaction, indication = null, enabled = enabled, role = Role.Button, onClick = onClick)
-            .padding(horizontal = 20.dp, vertical = 10.dp),
+            .padding(horizontal = TvListItems.Inset, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(16.dp),
     ) {
@@ -129,6 +122,7 @@ fun TvListItem(
                 }
             }
             if (trailing != null) trailing()
+            if (checked) LucideIcon(Lucide.Check, null, size = 22.dp, tint = if (focused) content else Palette.Accent)
         }
     }
 }
@@ -180,6 +174,6 @@ fun TvListHeading(text: String, modifier: Modifier = Modifier) {
         color = Palette.Muted,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
-        modifier = modifier.padding(start = 20.dp, top = 12.dp, bottom = 4.dp),
+        modifier = modifier.padding(start = TvListItems.Inset, top = 12.dp, bottom = 4.dp),
     )
 }

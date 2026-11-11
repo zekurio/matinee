@@ -207,9 +207,6 @@ private fun Notice(headline: String, detail: String?, icon: Int, action: String,
         if (detail != null) {
             Text(detail, style = TvType.Body, color = Palette.Muted, modifier = Modifier.padding(top = 6.dp).widthIn(max = 560.dp))
         }
-        TvButton(onAction, focus.padding(top = 28.dp)) {
-            LucideIcon(icon, null, size = 18.dp)
-            Text(action)
-        }
+        TvButton(action, onAction, focus.padding(top = 28.dp), icon = icon)
     }
 }

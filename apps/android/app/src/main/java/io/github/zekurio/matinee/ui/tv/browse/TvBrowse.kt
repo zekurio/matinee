@@ -22,6 +22,7 @@ import io.github.zekurio.matinee.ui.components.LocalApi
 import io.github.zekurio.matinee.ui.components.Lucide
 import io.github.zekurio.matinee.ui.tv.ShowBackdrop
 import io.github.zekurio.matinee.ui.tv.TvGrid
+import io.github.zekurio.matinee.ui.tv.TvButton
 import io.github.zekurio.matinee.ui.tv.TvTitleGrid
 import io.github.zekurio.matinee.ui.tv.home.FocusedItem
 import io.github.zekurio.matinee.ui.tv.rememberTvFocusMemory
@@ -63,17 +64,16 @@ fun TvBrowseScreen(genre: String?, studio: String?) {
             focused = focused,
         ) {
             BROWSE_KINDS.forEach { (value, label) ->
-                ControlButton(
-                    when (value) {
+                TvButton(
+                    stringResource(label),
+                    { kind = value },
+                    with(memory) { Modifier.item(CONTROLS, kindKey(value)) },
+                    icon = when (value) {
                         TitleKind.MOVIE -> Lucide.Film
                         TitleKind.SHOW -> Lucide.Tv
                         else -> Lucide.LibraryBig
                     },
-                    stringResource(label),
-                    { kind = value },
-                    with(memory) { Modifier.item(CONTROLS, kindKey(value)) },
                     active = kind == value,
-                    chevron = false,
                 )
             }
         }

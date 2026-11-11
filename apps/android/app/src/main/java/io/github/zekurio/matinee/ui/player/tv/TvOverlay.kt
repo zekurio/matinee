@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -24,7 +23,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -52,12 +51,10 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.ui.Motion
 import io.github.zekurio.matinee.ui.components.Lucide
@@ -70,11 +67,12 @@ import io.github.zekurio.matinee.ui.player.TrickplayFrame
 import io.github.zekurio.matinee.ui.player.seekFraction
 import io.github.zekurio.matinee.ui.player.seekable
 import io.github.zekurio.matinee.ui.theme.Palette
+import io.github.zekurio.matinee.ui.tv.Overscan
+import io.github.zekurio.matinee.ui.tv.TvCards
+import io.github.zekurio.matinee.ui.tv.TvRoundButton
+import io.github.zekurio.matinee.ui.tv.TvType
 import java.text.DateFormat
 import java.util.Date
-
-/** The overscan margins a TV may cut, which nothing that matters goes into. */
-internal val TvOverscan = PaddingValues(horizontal = 48.dp, vertical = 27.dp)
 
 /** How high the overlay's block reaches from the bottom, for the subtitles to clear it. */
 internal val TV_OVERLAY_HEIGHT = 250.dp
@@ -116,7 +114,7 @@ internal fun TvOverlay(
                 ),
             ),
         )
-        Column(Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(TvOverscan)) {
+        Column(Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(Overscan.Padding)) {
             Heading(controller)
             Box(Modifier.height(20.dp))
             TvSeekBar(controller, scrub, targets, keys)
@@ -129,20 +127,19 @@ internal fun TvOverlay(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     val up = Modifier.focusProperties { this.up = targets.seek }
-                    TvButton({ controller.skip(-back) }, up, size = 56.dp) { tint ->
-                        SkipIcon(Lucide.RotateCcw, back, stringResource(R.string.player_skip_back, back.toInt()), tint)
+                    TvRoundButton(null, { controller.skip(-back) }, up, size = SMALL) {
+                        SkipIcon(Lucide.RotateCcw, back, stringResource(R.string.player_skip_back, back.toInt()))
                     }
-                    TvButton(controller::togglePlay, up.focusRequester(targets.play), size = 68.dp) { tint ->
+                    TvRoundButton(null, controller::togglePlay, up.focusRequester(targets.play), size = 68.dp) {
                         val playing = controller.playing
                         LucideIcon(
                             if (playing) Lucide.Pause else Lucide.Play,
                             stringResource(if (playing) R.string.player_pause else R.string.player_play),
                             size = 32.dp,
-                            tint = tint,
                         )
                     }
-                    TvButton({ controller.skip(ahead) }, up, size = 56.dp) { tint ->
-                        SkipIcon(Lucide.RotateCw, ahead, stringResource(R.string.player_skip_forward, ahead.toInt()), tint)
+                    TvRoundButton(null, { controller.skip(ahead) }, up, size = SMALL) {
+                        SkipIcon(Lucide.RotateCw, ahead, stringResource(R.string.player_skip_forward, ahead.toInt()))
                     }
                 }
                 Row(
@@ -159,15 +156,18 @@ internal fun TvOverlay(
     }
 }
 
+/** How wide the player's buttons are, but play's. */
+private val SMALL = 56.dp
+
 /** A skip arrow with how far it skips in its middle, as the phone draws it. */
 @Composable
-private fun SkipIcon(icon: Int, seconds: Double, label: String, tint: Color) {
+private fun SkipIcon(icon: Int, seconds: Double, label: String) {
     Box(contentAlignment = Alignment.Center) {
-        LucideIcon(icon, label, size = 34.dp, tint = tint)
+        LucideIcon(icon, label, size = 34.dp)
         Text(
             seconds.toInt().toString(),
-            style = MaterialTheme.typography.labelMedium.copy(fontSize = 11.sp, fontWeight = FontWeight.SemiBold),
-            color = tint,
+            style = TvType.IconNumber,
+            color = LocalContentColor.current,
             modifier = Modifier.padding(top = 2.dp).clearAndSetSemantics {},
         )
     }
@@ -184,7 +184,7 @@ private fun Heading(controller: PlayerController) {
             if (code != null) {
                 Text(
                     "$code · ${label.showName}",
-                    style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp, lineHeight = 24.sp),
+                    style = TvType.Title,
                     color = Palette.Foreground.copy(alpha = 0.75f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -192,7 +192,7 @@ private fun Heading(controller: PlayerController) {
             }
             Text(
                 label.title,
-                style = MaterialTheme.typography.headlineMedium.copy(fontSize = 30.sp, lineHeight = 38.sp, fontWeight = FontWeight.SemiBold),
+                style = TvType.Display,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -205,7 +205,7 @@ private fun Heading(controller: PlayerController) {
             }
             Text(
                 stringResource(R.string.player_ends_at, ends),
-                style = MaterialTheme.typography.bodyLarge.copy(fontSize = 18.sp),
+                style = TvType.Facts,
                 color = Palette.Foreground.copy(alpha = 0.75f),
                 modifier = Modifier.padding(start = 24.dp, bottom = 4.dp),
             )
@@ -223,14 +223,15 @@ private fun MenuButton(menu: Menu, icon: Int, name: Int, targets: TvTargets, onM
     val focused by interaction.collectIsFocusedAsState()
     val text = stringResource(name)
     Box(contentAlignment = Alignment.TopCenter) {
-        TvButton(
+        TvRoundButton(
+            null,
             { onMenu(menu) },
             Modifier.focusRequester(targets.menus.getValue(menu)).focusProperties { up = targets.seek },
-            size = 56.dp,
+            size = SMALL,
             interaction = interaction,
-        ) { tint ->
+        ) {
             Box(contentAlignment = Alignment.BottomCenter) {
-                LucideIcon(icon, text, size = 26.dp, tint = tint)
+                LucideIcon(icon, text, size = 26.dp)
                 // A line under the icon while subtitles are on, as on the phone.
                 if (on) Box(Modifier.offset(y = 7.dp).width(18.dp).height(3.dp).clip(RoundedCornerShape(2.dp)).background(Palette.Accent))
             }
@@ -239,7 +240,7 @@ private fun MenuButton(menu: Menu, icon: Int, name: Int, targets: TvTargets, onM
             // Floats above the button without taking room in the row.
             Text(
                 text,
-                style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp, fontWeight = FontWeight.SemiBold),
+                style = TvType.Facts,
                 maxLines = 1,
                 modifier = Modifier.layout { measurable, _ ->
                     val placeable = measurable.measure(Constraints())
@@ -266,7 +267,7 @@ private fun TvSeekBar(controller: PlayerController, scrub: Double?, targets: TvT
     val thumb by animateDpAsState(if (focused) 11.dp else 0.dp, tween(Motion.COLOR_MS), label = "seek thumb")
     val label = stringResource(R.string.a11y_player_seek)
     val state = stringResource(R.string.a11y_player_position, formatClock(shown), formatClock(duration))
-    val timeStyle = MaterialTheme.typography.bodyLarge.copy(fontSize = 18.sp)
+    val timeStyle = TvType.Facts
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(formatClock(shown), style = timeStyle, modifier = Modifier.widthIn(min = 56.dp))
         BoxWithConstraints(
@@ -353,14 +354,14 @@ private fun Bubble(controller: PlayerController, seconds: Double, preview: Boole
                 controller,
                 seconds,
                 Modifier.width(240.dp).aspectRatio(images.width.toFloat() / images.height)
-                    .clip(RoundedCornerShape(10.dp)).background(Color.Black)
-                    .border(2.dp, Palette.Foreground, RoundedCornerShape(10.dp)),
+                    .clip(TvCards.Shape).background(Color.Black)
+                    .border(2.dp, Palette.Foreground, TvCards.Shape),
             )
             Box(Modifier.height(8.dp))
         }
         Text(
             formatClock(seconds),
-            style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp, fontWeight = FontWeight.SemiBold),
+            style = TvType.Title,
             color = Palette.Background,
             modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(Palette.Foreground).padding(horizontal = 12.dp, vertical = 4.dp),
         )

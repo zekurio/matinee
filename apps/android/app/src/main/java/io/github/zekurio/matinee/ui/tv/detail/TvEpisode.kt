@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
@@ -37,8 +38,8 @@ import io.github.zekurio.matinee.ui.title.isResuming
 import io.github.zekurio.matinee.ui.title.rememberFileInfo
 import io.github.zekurio.matinee.ui.tv.ShowBackdrop
 import io.github.zekurio.matinee.ui.tv.TvFocusMemory
+import io.github.zekurio.matinee.ui.tv.TvButton
 import io.github.zekurio.matinee.ui.tv.TvIconButton
-import io.github.zekurio.matinee.ui.tv.TvMainButton
 import io.github.zekurio.matinee.ui.tv.TvType
 import io.github.zekurio.matinee.ui.tv.rememberTvFocusMemory
 
@@ -98,7 +99,7 @@ private fun EpisodeHeader(item: MediaItem, memory: TvFocusMemory) {
             item.episodeNumber?.let { stringResource(R.string.title_episode_number, it) },
         ).joinToString("  ·  ")
         if (where.isNotEmpty()) Text(where, style = TvType.Facts, color = Palette.Muted, modifier = Modifier.padding(top = 2.dp))
-        Text(label.title, style = HeroType, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp).width(720.dp))
+        Text(label.title, style = TvType.Hero, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp).width(720.dp))
         DetailFacts(episodeFacts(item, viewer, res), item.title?.contentRating, null, Modifier.padding(top = 12.dp))
         Row(Modifier.fillMaxWidth().padding(top = 16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
             item.episode?.overview?.let { DetailOverview(it, lines = 4) }
@@ -130,11 +131,11 @@ private fun EpisodeButtons(item: MediaItem, memory: TvFocusMemory, modifier: Mod
     val watchedFailure = stringResource(if (watched) R.string.media_mark_unwatched_failed else R.string.media_mark_watched_failed)
     val favoriteFailure = stringResource(R.string.media_favorite_failed)
     Row(with(memory) { modifier.row(ACTIONS) }, horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
-        TvMainButton(
-            Lucide.Play,
+        TvButton(
             stringResource(if (resume) R.string.title_resume else R.string.title_play),
+            icon = Lucide.Play,
             onClick = { nav.play(item.id) },
-            modifier = with(memory) { Modifier.item(ACTIONS, PLAY) },
+            modifier = with(memory) { Modifier.item(ACTIONS, PLAY) }.widthIn(min = 180.dp),
             detail = if (resume) timeLeft(item, res) else null,
         )
         if (resume) {

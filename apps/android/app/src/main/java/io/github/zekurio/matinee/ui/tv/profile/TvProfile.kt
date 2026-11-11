@@ -26,6 +26,7 @@ import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.MediaItem
@@ -59,6 +60,7 @@ import io.github.zekurio.matinee.ui.theme.Palette
 import io.github.zekurio.matinee.ui.tv.Overscan
 import io.github.zekurio.matinee.ui.tv.TvArtCard
 import io.github.zekurio.matinee.ui.tv.TvButton
+import io.github.zekurio.matinee.ui.tv.TvChip
 import io.github.zekurio.matinee.ui.tv.TvCards
 import io.github.zekurio.matinee.ui.tv.TvFocusMemory
 import io.github.zekurio.matinee.ui.tv.TvLandscapeCard
@@ -149,14 +151,8 @@ private fun Actions(session: Session, memory: TvFocusMemory) {
         with(memory) { Modifier.row(ACTIONS) }.padding(start = TvPage.Start),
         horizontalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        TvButton(nav::settings, with(memory) { Modifier.item(ACTIONS, "settings") }) {
-            LucideIcon(Lucide.Settings, null, size = 20.dp)
-            Text(stringResource(R.string.shell_settings))
-        }
-        TvButton(session::signOut, with(memory) { Modifier.item(ACTIONS, "signOut") }) {
-            LucideIcon(Lucide.LogOut, null, size = 20.dp)
-            Text(stringResource(R.string.shell_sign_out))
-        }
+        TvButton(stringResource(R.string.shell_settings), nav::settings, with(memory) { Modifier.item(ACTIONS, "settings") }, icon = Lucide.Settings)
+        TvButton(stringResource(R.string.shell_sign_out), session::signOut, with(memory) { Modifier.item(ACTIONS, "signOut") }, icon = Lucide.LogOut)
     }
 }
 
@@ -244,10 +240,13 @@ private fun Ranges(model: ProfileStats, memory: TvFocusMemory) {
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         StatsRange.all.forEach { range ->
-            TvButton({ model.onRange(range) }, with(memory) { Modifier.item(RANGES, range) }) {
-                if (range == model.range) LucideIcon(Lucide.Check, null, size = 18.dp)
-                Text(rangeName(range))
-            }
+            TvChip(
+                rangeName(range),
+                { model.onRange(range) },
+                with(memory) { Modifier.item(RANGES, range) },
+                selected = range == model.range,
+                role = Role.RadioButton,
+            )
         }
     }
 }
@@ -315,10 +314,12 @@ private fun Genres(stats: WatchStats, memory: TvFocusMemory) {
     val res = LocalResources.current
     TvRow(stringResource(R.string.stats_genres), GENRES, memory) {
         items(stats.genres, key = { it.name }) { genre ->
-            TvButton({ nav.genre(genre.name) }, with(memory) { Modifier.item(GENRES, genre.name) }) {
-                Text(genre.name)
-                Text(formatWatchTime(genre.watchSeconds, res), color = androidx.compose.material3.LocalContentColor.current.copy(alpha = 0.6f))
-            }
+            TvButton(
+                genre.name,
+                { nav.genre(genre.name) },
+                with(memory) { Modifier.item(GENRES, genre.name) },
+                detail = formatWatchTime(genre.watchSeconds, res),
+            )
         }
     }
 }

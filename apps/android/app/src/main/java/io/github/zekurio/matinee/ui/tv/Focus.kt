@@ -1,6 +1,8 @@
 package io.github.zekurio.matinee.ui.tv
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.interaction.InteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
@@ -16,12 +18,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -33,23 +37,44 @@ import io.github.zekurio.matinee.ui.theme.Palette
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 
-/** How a focused thing on a TV stands out: it grows, lifts, and gets a ring clear of its edge. */
+/**
+ * How a focused thing on a TV stands out. There are two looks, and every
+ * focusable thing takes one of them:
+ *
+ * - A picture (a poster, a still, a person's photo) keeps its picture
+ *   visible, so it grows, lifts, and gets a ring clear of its edge:
+ *   [tvPicture].
+ * - A control (a button, a chip, a tab, a list row, a drawer entry, a
+ *   field) fills with the text color and its content turns dark, with no
+ *   ring: [tvControl] and [tvContent].
+ */
 object TvFocus {
+    /** How much a focused picture grows. */
     const val SCALE = 1.06f
+
+    /** How much a focused button, chip, or tab grows. */
+    const val CONTROL_SCALE = 1.05f
+
+    /** How much a focused list row grows, less since rows sit close together. */
+    const val ROW_SCALE = 1.02f
+
     val Ring = 3.dp
     val Gap = 3.dp
     val Lift = 16.dp
+
+    /** A control's fill while it doesn't have focus, so its shape shows on any backdrop or picture. */
+    val Rest: Color get() = Palette.Foreground.copy(alpha = 0.12f)
 }
 
 /**
- * The focus look for cards and buttons on a TV, from across a room. Put it
- * before the thing's `clip`, so the ring draws outside its [shape], and
- * give it the same [interaction] as the `clickable`.
+ * The focus look for a picture: it grows by [scale], lifts, and gets a
+ * ring. Put it before the picture's `clip`, so the ring draws outside its
+ * [shape], and give it the same [interaction] as the `clickable`.
  */
 @Composable
-fun Modifier.tvFocus(interaction: InteractionSource, shape: Shape, scale: Float = TvFocus.SCALE): Modifier {
+fun Modifier.tvPicture(interaction: InteractionSource, shape: Shape, scale: Float = TvFocus.SCALE): Modifier {
     val focused by interaction.collectIsFocusedAsState()
-    val shown by animateFloatAsState(if (focused) 1f else 0f, if (focused) Motion.enter() else Motion.exit(), label = "tvFocus")
+    val shown by animateFloatAsState(if (focused) 1f else 0f, if (focused) Motion.enter() else Motion.exit(), label = "tvPicture")
     val ring = Palette.Foreground
     return this
         .graphicsLayer {
@@ -71,6 +96,31 @@ fun Modifier.tvFocus(interaction: InteractionSource, shape: Shape, scale: Float 
                 }
             }
         }
+}
+
+/**
+ * The focus look for a control: [focused], it grows by [scale] and fills
+ * with the text color; otherwise it shows [rest]. It clips to [shape], so
+ * put it before the `clickable` and draw the content in [tvContent].
+ */
+@Composable
+fun Modifier.tvControl(focused: Boolean, shape: Shape, rest: Color = TvFocus.Rest, scale: Float = TvFocus.CONTROL_SCALE): Modifier {
+    val grow by animateFloatAsState(if (focused) scale else 1f, if (focused) Motion.enter() else Motion.exit(), label = "tvControlScale")
+    val fill by animateColorAsState(if (focused) Palette.Foreground else rest, Motion.color(), label = "tvControlFill")
+    return this
+        .graphicsLayer {
+            scaleX = grow
+            scaleY = grow
+        }
+        .clip(shape)
+        .background(fill)
+}
+
+/** The color of a control's content: dark on the fill while [focused], else [rest]. */
+@Composable
+fun tvContent(focused: Boolean, rest: Color = Palette.Foreground): Color {
+    val color by animateColorAsState(if (focused) Palette.Background else rest, Motion.color(), label = "tvContent")
+    return color
 }
 
 /**

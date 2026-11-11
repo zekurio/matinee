@@ -13,6 +13,8 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -285,11 +287,14 @@ internal fun ColumnScope.DeviceRows(panels: SettingsPanels, first: Modifier) {
         is Load.Ready -> state.value.forEachIndexed { index, item ->
             val name = sessionName(item)
             val signOutFailed = stringResource(R.string.account_sessions_sign_out_failed)
-            SessionRow(item, name, if (index == 0) first else Modifier) {
-                panels.show {
+            val row = remember { FocusRequester() }
+            SessionRow(item, name, (if (index == 0) first else Modifier).focusRequester(row)) {
+                panels.show(row) { open ->
                     TvSidePanel(
+                        open,
                         stringResource(R.string.tv_settings_sign_out_device, name),
-                        onDismiss = panels::close,
+                        onBack = panels::close,
+                        returnFocus = panels::restore,
                         description = stringResource(R.string.tv_settings_sign_out_device_description),
                     ) {
                         item(key = "signOut") {

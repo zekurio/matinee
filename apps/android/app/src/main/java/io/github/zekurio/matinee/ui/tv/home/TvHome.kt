@@ -372,10 +372,7 @@ private fun RowNotice(title: String?, headline: String?, message: String?, onRet
                     if (message != null) Text(message, style = TvType.Caption, color = Palette.Muted)
                 }
                 if (onRetry != null) {
-                    TvButton(onRetry) {
-                        LucideIcon(Lucide.RefreshCw, null, size = 18.dp)
-                        Text(stringResource(R.string.common_retry))
-                    }
+                    TvButton(stringResource(R.string.common_retry), onRetry, icon = Lucide.RefreshCw)
                 }
             }
         }
@@ -415,9 +412,6 @@ private fun Message(title: String, message: String?, onRetry: () -> Unit) {
     ) {
         Text(title, style = TvType.Headline)
         if (message != null) Text(message, style = TvType.Body, color = Palette.Muted, modifier = Modifier.padding(top = 8.dp))
-        TvButton(onRetry, Modifier.padding(top = 28.dp)) {
-            LucideIcon(Lucide.RefreshCw, null, size = 18.dp)
-            Text(stringResource(R.string.common_retry))
-        }
+        TvButton(stringResource(R.string.common_retry), onRetry, Modifier.padding(top = 28.dp), icon = Lucide.RefreshCw)
     }
 }

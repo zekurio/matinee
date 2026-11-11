@@ -1,12 +1,8 @@
 package io.github.zekurio.matinee.ui.tv.detail
 
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.BringIntoViewSpec
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,10 +14,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -35,7 +31,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -76,12 +71,12 @@ import io.github.zekurio.matinee.ui.tv.Overscan
 import io.github.zekurio.matinee.ui.tv.ShowBackdrop
 import io.github.zekurio.matinee.ui.tv.TvCards
 import io.github.zekurio.matinee.ui.tv.TvFocusMemory
+import io.github.zekurio.matinee.ui.tv.TvButton
+import io.github.zekurio.matinee.ui.tv.TvChip
 import io.github.zekurio.matinee.ui.tv.TvIconButton
-import io.github.zekurio.matinee.ui.tv.TvMainButton
 import io.github.zekurio.matinee.ui.tv.TvPage
 import io.github.zekurio.matinee.ui.tv.TvType
 import io.github.zekurio.matinee.ui.tv.rememberTvFocusMemory
-import io.github.zekurio.matinee.ui.tv.tvFocus
 
 /** A season's page on a TV. [season] null is the files without a season number. */
 @Composable
@@ -130,7 +125,7 @@ private fun SeasonPage(title: Title, season: Season, onSeason: (Season) -> Unit)
             if (title.seasons.size > 1) {
                 SeasonTabs(title, season, memory, onSeason, Modifier.padding(top = 10.dp))
             } else {
-                Text(seasonName(season.number, res), style = TvType.Display, maxLines = 1, modifier = Modifier.padding(top = 2.dp))
+                Text(seasonName(season.number, res), style = TvType.Hero, maxLines = 1, modifier = Modifier.padding(top = 2.dp))
             }
             Text(
                 listOf(
@@ -251,11 +246,11 @@ private fun SeasonButtons(title: Title, season: Season, list: List<MediaItem>?, 
     val favoriteFailure = stringResource(R.string.media_favorite_failed)
     val name = "${title.name} · ${seasonName(season.number, res)}"
     Row(with(memory) { modifier.row(ACTIONS) }, horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
-        TvMainButton(
-            Lucide.Play,
+        TvButton(
             stringResource(if (resume) R.string.title_resume else R.string.title_play),
+            icon = Lucide.Play,
             onClick = { next?.let { nav.play(it.id) } },
-            modifier = with(memory) { Modifier.item(ACTIONS, PLAY) },
+            modifier = with(memory) { Modifier.item(ACTIONS, PLAY) }.widthIn(min = 180.dp),
             detail = listOfNotNull(next?.let { episodeCode(it, res) }, if (resume) next?.let { timeLeft(it, res) } else null)
                 .joinToString(" · ").ifEmpty { null },
             enabled = next != null,
@@ -293,32 +288,15 @@ private fun SeasonTabs(title: Title, current: Season, memory: TvFocusMemory, onS
     Row(with(memory) { modifier.row(TABS) }, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         title.seasons.forEach { season ->
             val key = (season.number ?: NO_SEASON).toString()
-            SeasonTab(seasonName(season.number, res), season.number == current.number, with(memory) { Modifier.item(TABS, key) }) { onSeason(season) }
+            TvChip(
+                seasonName(season.number, res),
+                { onSeason(season) },
+                with(memory) { Modifier.item(TABS, key) },
+                selected = season.number == current.number,
+                role = Role.Tab,
+            )
         }
     }
-}
-
-@Composable
-private fun SeasonTab(label: String, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
-    val interaction = remember { MutableInteractionSource() }
-    val focused by interaction.collectIsFocusedAsState()
-    val background = when {
-        focused -> Palette.Foreground
-        selected -> Palette.Foreground.copy(alpha = 0.22f)
-        else -> Palette.Foreground.copy(alpha = 0.06f)
-    }
-    Text(
-        label,
-        style = TvType.Facts,
-        color = if (focused) Palette.Background else if (selected) Palette.Foreground else Palette.Muted,
-        maxLines = 1,
-        modifier = modifier
-            .tvFocus(interaction, CircleShape, scale = 1.05f)
-            .clip(CircleShape)
-            .background(background)
-            .clickable(interaction, indication = null, role = Role.Tab, onClick = onClick)
-            .padding(horizontal = 20.dp, vertical = 10.dp),
-    )
 }
 
 private const val TABS = "tabs"

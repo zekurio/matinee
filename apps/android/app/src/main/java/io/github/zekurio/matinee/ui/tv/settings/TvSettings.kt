@@ -44,6 +44,7 @@ import io.github.zekurio.matinee.ui.theme.Palette
 import io.github.zekurio.matinee.ui.tv.LocalTvPageFocus
 import io.github.zekurio.matinee.ui.tv.Overscan
 import io.github.zekurio.matinee.ui.tv.TvListItem
+import io.github.zekurio.matinee.ui.tv.TvListItems
 import io.github.zekurio.matinee.ui.tv.TvListSwitch
 import io.github.zekurio.matinee.ui.tv.TvListValue
 import io.github.zekurio.matinee.ui.tv.TvPage
@@ -72,19 +73,31 @@ enum class TvSettingsCategory(val key: String, @param:DrawableRes val icon: Int,
 
 /**
  * The right-edge panel a row opened, if any. One at a time, shown over
- * the page until a choice or Back closes it.
+ * the page until a choice or Back closes it, when focus goes back to the
+ * row. It stays composed while it slides away.
  */
 @Stable
 internal class SettingsPanels {
-    var shown by mutableStateOf<(@Composable () -> Unit)?>(null)
+    var shown by mutableStateOf<(@Composable (open: Boolean) -> Unit)?>(null)
         private set
+    var isOpen by mutableStateOf(false)
+        private set
+    private var from: FocusRequester? = null
 
-    fun show(panel: @Composable () -> Unit) {
+    /** Show [panel], which gets whether it's open, from the row [from]. */
+    fun show(from: FocusRequester, panel: @Composable (open: Boolean) -> Unit) {
+        this.from = from
         shown = panel
+        isOpen = true
     }
 
     fun close() {
-        shown = null
+        isOpen = false
+    }
+
+    /** Focus the row that opened the panel. */
+    fun restore() {
+        from?.let { runCatching { it.requestFocus() } }
     }
 }
 
@@ -120,53 +133,55 @@ fun TvSettingsScreen(initial: String? = null) {
     }
     BackHandler(enabled = inRows) { toCategory() }
 
-    Row(Modifier.fillMaxSize().padding(start = TvPage.Start - 20.dp, end = TvPage.End)) {
-        Column(Modifier.width(CATEGORY_WIDTH).fillMaxHeight().padding(top = Overscan.Vertical + 8.dp)) {
-            Text(stringResource(R.string.shell_settings), style = TvType.Headline, modifier = Modifier.padding(start = 20.dp, bottom = 28.dp))
-            Column(Modifier.focusGroup(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                TvSettingsCategory.entries.forEach { category ->
-                    TvListItem(
-                        stringResource(category.title),
-                        onClick = { runCatching { firstRow.requestFocus() } },
-                        icon = category.icon,
-                        quiet = true,
-                        selected = category == selected,
-                        modifier = Modifier
-                            .focusRequester(categories.getValue(category))
-                            .focusProperties { right = firstRow }
-                            .onFocusChanged { if (it.isFocused) selected = category },
-                    )
+    Box(Modifier.fillMaxSize()) {
+        Row(Modifier.fillMaxSize().padding(start = TvPage.Start - TvListItems.Inset, end = TvPage.End)) {
+            Column(Modifier.width(CATEGORY_WIDTH).fillMaxHeight().padding(top = Overscan.Vertical + 8.dp)) {
+                Text(stringResource(R.string.shell_settings), style = TvType.Headline, modifier = Modifier.padding(start = TvListItems.Inset, bottom = 28.dp))
+                Column(Modifier.focusGroup(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    TvSettingsCategory.entries.forEach { category ->
+                        TvListItem(
+                            stringResource(category.title),
+                            onClick = { runCatching { firstRow.requestFocus() } },
+                            icon = category.icon,
+                            quiet = true,
+                            selected = category == selected,
+                            modifier = Modifier
+                                .focusRequester(categories.getValue(category))
+                                .focusProperties { right = firstRow }
+                                .onFocusChanged { if (it.isFocused) selected = category },
+                        )
+                    }
+                }
+            }
+            Box(Modifier.width(48.dp))
+            Column(
+                Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    // Rows scroll under a fixed top, so they never pass behind the clock.
+                    .padding(top = TOP)
+                    .onFocusChanged { inRows = it.hasFocus }
+                    .focusProperties { left = categories.getValue(selected) }
+                    .focusGroup()
+                    .verticalScroll(rememberScrollState())
+                    .padding(top = 4.dp, bottom = Overscan.Vertical + 24.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                // A new category starts its rows afresh, at the top.
+                key(selected) {
+                    val first = Modifier.focusRequester(firstRow)
+                    when (selected) {
+                        TvSettingsCategory.Playback -> PlaybackRows(session, panels, first)
+                        TvSettingsCategory.Subtitles -> SubtitleRows(panels, first)
+                        TvSettingsCategory.Languages -> LanguageRows(session, panels, first)
+                        TvSettingsCategory.Devices -> DeviceRows(panels, first)
+                        TvSettingsCategory.Account -> AccountRows(session, first)
+                    }
                 }
             }
         }
-        Box(Modifier.width(48.dp))
-        Column(
-            Modifier
-                .weight(1f)
-                .fillMaxHeight()
-                // Rows scroll under a fixed top, so they never pass behind the clock.
-                .padding(top = TOP)
-                .onFocusChanged { inRows = it.hasFocus }
-                .focusProperties { left = categories.getValue(selected) }
-                .focusGroup()
-                .verticalScroll(rememberScrollState())
-                .padding(top = 4.dp, bottom = Overscan.Vertical + 24.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            // A new category starts its rows afresh, at the top.
-            key(selected) {
-                val first = Modifier.focusRequester(firstRow)
-                when (selected) {
-                    TvSettingsCategory.Playback -> PlaybackRows(session, panels, first)
-                    TvSettingsCategory.Subtitles -> SubtitleRows(panels, first)
-                    TvSettingsCategory.Languages -> LanguageRows(session, panels, first)
-                    TvSettingsCategory.Devices -> DeviceRows(panels, first)
-                    TvSettingsCategory.Account -> AccountRows(session, first)
-                }
-            }
-        }
+        panels.shown?.invoke(panels.isOpen)
     }
-    panels.shown?.invoke()
 }
 
 /** A choice among [options], its value at the row's end, picked in a panel at the right edge. */
@@ -181,10 +196,15 @@ internal fun <T> PickRow(
     onPick: (T) -> Unit,
 ) {
     val value = options.firstOrNull { it.first == current }?.second ?: current.toString()
+    val row = remember { FocusRequester() }
     TvListItem(
         title,
-        onClick = { panels.show { TvPickerPanel(title, options, current, onPick, panels::close, description) } },
-        modifier = modifier,
+        onClick = {
+            panels.show(row) { open ->
+                TvPickerPanel(open, title, options, current, onPick, panels::close, panels::restore, description)
+            }
+        },
+        modifier = modifier.focusRequester(row),
         subtitle = description,
         quiet = true,
         trailing = { TvListValue(value) },

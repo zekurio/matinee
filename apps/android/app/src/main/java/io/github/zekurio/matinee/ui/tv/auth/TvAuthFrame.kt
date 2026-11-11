@@ -48,11 +48,11 @@ import io.github.zekurio.matinee.ui.components.LogoMark
 import io.github.zekurio.matinee.ui.theme.Palette
 import io.github.zekurio.matinee.ui.tv.Overscan
 import io.github.zekurio.matinee.ui.tv.TvListItems
+import io.github.zekurio.matinee.ui.tv.TvFocus
 import io.github.zekurio.matinee.ui.tv.TvType
+import io.github.zekurio.matinee.ui.tv.tvContent
+import io.github.zekurio.matinee.ui.tv.tvControl
 import kotlinx.coroutines.flow.first
-
-/** Where the frame's text starts: with no drawer before signing in, nearer the edge than a page's content. */
-internal val AUTH_START = 64.dp
 
 /**
  * A TV screen before signing in, laid out as Google TV's setup: the mark
@@ -71,11 +71,11 @@ internal fun TvAuthFrame(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Box(modifier.fillMaxSize().background(Palette.Background)) {
-        Brand(Modifier.padding(start = AUTH_START, top = Overscan.Vertical + 16.dp))
+        Brand(Modifier.padding(start = Overscan.Horizontal, top = Overscan.Vertical + 16.dp))
         Row(
             Modifier
                 .fillMaxSize()
-                .padding(start = AUTH_START, end = AUTH_START, top = Overscan.Vertical, bottom = Overscan.Vertical),
+                .padding(start = Overscan.Horizontal, end = Overscan.Horizontal, top = Overscan.Vertical, bottom = Overscan.Vertical),
             horizontalArrangement = Arrangement.spacedBy(64.dp),
         ) {
             // Clear of the mark and name above it; the right side has the whole height.
@@ -102,7 +102,8 @@ internal fun Brand(modifier: Modifier = Modifier) {
 
 /**
  * A field for an address, typed with the TV's keyboard: Select opens it,
- * Go on the keyboard runs [onGo]. Focused, it gets a ring in the text color.
+ * Go on the keyboard runs [onGo]. Focused, it fills with the text color
+ * as a list row does; [isError] rings it in red.
  */
 @Composable
 internal fun TvTextField(
@@ -116,11 +117,7 @@ internal fun TvTextField(
 ) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
-    val ring = when {
-        focused -> Palette.Foreground
-        isError -> Palette.Danger
-        else -> Palette.Foreground.copy(alpha = 0.15f)
-    }
+    val content = tvContent(focused)
     val focus = LocalFocusManager.current
     BasicTextField(
         value = value,
@@ -137,7 +134,7 @@ internal fun TvTextField(
         },
         enabled = enabled,
         singleLine = true,
-        textStyle = TvType.Title.copy(color = Palette.Foreground),
+        textStyle = TvType.Title.copy(color = content),
         cursorBrush = SolidColor(Palette.Accent),
         interactionSource = interaction,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Go, autoCorrectEnabled = false),
@@ -147,12 +144,12 @@ internal fun TvTextField(
                 Modifier
                     .fillMaxWidth()
                     .heightIn(min = TvListItems.Height + 4.dp)
-                    .border(BorderStroke(if (focused) 3.dp else 2.dp, ring), TvListItems.Shape)
-                    .background(Palette.Foreground.copy(alpha = 0.07f), TvListItems.Shape)
-                    .padding(horizontal = 20.dp),
+                    .then(if (isError) Modifier.border(BorderStroke(2.dp, Palette.Danger), TvListItems.Shape) else Modifier)
+                    .tvControl(focused, TvListItems.Shape, rest = Palette.Foreground.copy(alpha = 0.07f), scale = TvFocus.ROW_SCALE)
+                    .padding(horizontal = TvListItems.Inset),
                 contentAlignment = Alignment.CenterStart,
             ) {
-                if (value.isEmpty()) Text(placeholder, style = TvType.Title, color = Palette.Muted)
+                if (value.isEmpty()) Text(placeholder, style = TvType.Title, color = if (focused) content.copy(alpha = 0.55f) else Palette.Muted)
                 inner()
             }
         },
@@ -181,7 +178,7 @@ internal fun AuthNote(text: String, modifier: Modifier = Modifier, danger: Boole
         text,
         style = TvType.Body,
         color = if (danger) Palette.Danger else Palette.Muted,
-        modifier = modifier.widthIn(max = 560.dp).padding(start = 20.dp, top = 12.dp),
+        modifier = modifier.widthIn(max = 560.dp).padding(start = TvListItems.Inset, top = 12.dp),
     )
 }
 

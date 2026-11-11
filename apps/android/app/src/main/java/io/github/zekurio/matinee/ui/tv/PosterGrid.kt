@@ -49,7 +49,6 @@ import io.github.zekurio.matinee.ui.LocalNavigator
 import io.github.zekurio.matinee.ui.browse.TitlePages
 import io.github.zekurio.matinee.ui.components.LocalApi
 import io.github.zekurio.matinee.ui.components.Lucide
-import io.github.zekurio.matinee.ui.components.LucideIcon
 import io.github.zekurio.matinee.ui.components.art
 import io.github.zekurio.matinee.ui.theme.Palette
 
@@ -221,10 +220,7 @@ private fun GridNotice(headline: String, message: String?, onRetry: (() -> Unit)
         Text(headline, style = TvType.Title, color = Palette.Foreground.copy(alpha = 0.9f))
         if (message != null) Text(message, style = TvType.Body, color = Palette.Muted, modifier = Modifier.padding(top = 6.dp))
         if (onRetry != null) {
-            TvButton(onRetry, Modifier.padding(top = 20.dp)) {
-                LucideIcon(Lucide.RefreshCw, null, size = 18.dp)
-                Text(stringResource(R.string.common_retry))
-            }
+            TvButton(stringResource(R.string.common_retry), onRetry, Modifier.padding(top = 20.dp), icon = Lucide.RefreshCw)
         }
     }
 }

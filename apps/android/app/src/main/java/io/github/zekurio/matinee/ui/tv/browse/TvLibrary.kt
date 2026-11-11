@@ -31,6 +31,7 @@ import io.github.zekurio.matinee.ui.browse.rememberLibraryPages
 import io.github.zekurio.matinee.ui.components.LocalApi
 import io.github.zekurio.matinee.ui.components.Lucide
 import io.github.zekurio.matinee.ui.tv.ShowBackdrop
+import io.github.zekurio.matinee.ui.tv.TvButton
 import io.github.zekurio.matinee.ui.tv.TvGrid
 import io.github.zekurio.matinee.ui.tv.TvOption
 import io.github.zekurio.matinee.ui.tv.TvOptionsPanel
@@ -89,17 +90,19 @@ fun TvLibraryScreen(route: LibraryRoute) {
                 detail = pages.total?.let { res.getQuantityString(R.plurals.browse_title_count, it, it) },
                 focused = focused,
             ) {
-                ControlButton(
-                    Lucide.ArrowUpDown,
+                TvButton(
                     stringResource(sortLabel),
                     { panel = SORT },
                     with(memory) { Modifier.item(CONTROLS, SORT) }.focusRequester(sortButton),
+                    icon = Lucide.ArrowUpDown,
+                    trailingIcon = Lucide.ChevronDown,
                 )
-                ControlButton(
-                    Lucide.ListFilter,
+                TvButton(
                     filters.genre ?: stringResource(R.string.library_any_genre),
                     { panel = GENRE },
                     with(memory) { Modifier.item(CONTROLS, GENRE) }.focusRequester(genreButton),
+                    icon = Lucide.ListFilter,
+                    trailingIcon = Lucide.ChevronDown,
                     active = filters.genre != null,
                 )
                 TvSearchField(
@@ -109,8 +112,6 @@ fun TvLibraryScreen(route: LibraryRoute) {
                     clearLabel = stringResource(R.string.library_clear_search),
                     modifier = Modifier.width(SEARCH_WIDTH),
                     field = with(memory) { Modifier.item(CONTROLS, SEARCH) },
-                    height = 44.dp,
-                    textStyle = io.github.zekurio.matinee.ui.tv.TvType.Label,
                 )
             }
             TvTitleGrid(
@@ -133,12 +134,9 @@ fun TvLibraryScreen(route: LibraryRoute) {
             onPick = {
                 filters.sort = it.key
                 panel = null
-                runCatching { sortButton.requestFocus() }
             },
-            onClose = {
-                panel = null
-                runCatching { sortButton.requestFocus() }
-            },
+            onClose = { panel = null },
+            returnFocus = { runCatching { sortButton.requestFocus() } },
         )
         val genreList = (genres.state as? Load.Ready)?.value.orEmpty()
         TvOptionsPanel(
@@ -149,12 +147,9 @@ fun TvLibraryScreen(route: LibraryRoute) {
             onPick = {
                 filters.genre = it.key.takeIf { key -> key != ANY_GENRE }
                 panel = null
-                runCatching { genreButton.requestFocus() }
             },
-            onClose = {
-                panel = null
-                runCatching { genreButton.requestFocus() }
-            },
+            onClose = { panel = null },
+            returnFocus = { runCatching { genreButton.requestFocus() } },
             loading = genres.state is Load.Loading,
         )
     }

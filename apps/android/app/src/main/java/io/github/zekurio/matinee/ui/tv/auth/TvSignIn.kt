@@ -21,11 +21,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.auth.AuthState
 import io.github.zekurio.matinee.auth.Session
@@ -83,11 +80,7 @@ private fun CodeSide(flow: DeviceCodeState, server: String, again: FocusRequeste
                 )
                 Text(
                     code.userCode,
-                    fontFamily = FontFamily.Monospace,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 44.sp,
-                    lineHeight = 54.sp,
-                    letterSpacing = 4.sp,
+                    style = TvType.Code,
                     maxLines = 1,
                     color = Palette.Foreground,
                     modifier = Modifier.padding(top = 8.dp),

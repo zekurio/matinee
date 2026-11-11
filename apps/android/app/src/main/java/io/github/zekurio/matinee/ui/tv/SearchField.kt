@@ -1,9 +1,7 @@
 package io.github.zekurio.matinee.ui.tv
 
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.FocusInteraction
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -23,10 +21,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
@@ -67,7 +63,7 @@ fun TvSearchField(
     clearLabel: String,
     modifier: Modifier = Modifier,
     field: Modifier = Modifier,
-    height: Dp = 48.dp,
+    height: Dp = TvButtons.Height,
     textStyle: androidx.compose.ui.text.TextStyle = TvType.Facts,
 ) {
     var editing by remember { mutableStateOf(false) }
@@ -93,37 +89,25 @@ fun TvSearchField(
     // page and reports no insets, so the app can't tell it went: the text keeps focus, drawn as
     // the field's, and the next Back leaves the page.
     val lit = focused || innerFocused
-    val ring = remember { MutableInteractionSource() }
-    LaunchedEffect(Unit) {
-        var shown: FocusInteraction.Focus? = null
-        snapshotFlow { focused || innerFocused }.collect { on ->
-            if (on && shown == null) shown = FocusInteraction.Focus().also { ring.emit(it) }
-            if (!on) {
-                shown?.let { ring.emit(FocusInteraction.Unfocus(it)) }
-                shown = null
-            }
-        }
-    }
+    val content = tvContent(lit)
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
         Row(
             field
                 .weight(1f)
                 .height(height)
                 .focusRequester(outer)
-                .tvFocus(ring, CircleShape, scale = 1.02f)
-                .clip(CircleShape)
-                .background(Palette.Foreground.copy(alpha = if (lit) 0.2f else 0.1f))
+                .tvControl(lit, CircleShape, scale = TvFocus.ROW_SCALE)
                 .clickable(interaction, indication = null, role = Role.Button, onClickLabel = placeholder) { editing = true }
                 .padding(start = 18.dp, end = 22.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            LucideIcon(Lucide.Search, null, size = 22.dp, tint = if (lit) Palette.Foreground else Palette.Muted)
+            LucideIcon(Lucide.Search, null, size = 22.dp, tint = if (lit) content else Palette.Muted)
             BasicTextField(
                 value = value,
                 onValueChange = onValueChange,
                 singleLine = true,
-                textStyle = textStyle.copy(color = Palette.Foreground),
+                textStyle = textStyle.copy(color = content),
                 cursorBrush = SolidColor(Palette.Accent),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(onSearch = { stop() }, onDone = { stop() }),
@@ -152,7 +136,7 @@ fun TvSearchField(
                 decorationBox = { text ->
                     Box(contentAlignment = Alignment.CenterStart) {
                         if (value.isEmpty()) {
-                            Text(placeholder, style = textStyle, color = Palette.Faint, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(placeholder, style = textStyle, color = if (lit) content.copy(alpha = 0.55f) else Palette.Faint, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                         text()
                     }
@@ -166,23 +150,5 @@ fun TvSearchField(
                 runCatching { outer.requestFocus() }
             }, size = height)
         }
-    }
-}
-
-/** A round button with only an icon, the field's height. [TvIconButton] is the one that opens to its label. */
-@Composable
-private fun TvRoundButton(icon: Int, label: String, onClick: () -> Unit, modifier: Modifier = Modifier, size: Dp = 48.dp) {
-    val interaction = remember { MutableInteractionSource() }
-    val focused by interaction.collectIsFocusedAsState()
-    Box(
-        modifier
-            .size(size)
-            .tvFocus(interaction, CircleShape, scale = 1.08f)
-            .clip(CircleShape)
-            .background(if (focused) Palette.Foreground else Palette.Foreground.copy(alpha = 0.12f))
-            .clickable(interaction, indication = null, role = Role.Button, onClickLabel = label, onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        LucideIcon(icon, label, size = size * 0.42f, tint = if (focused) Palette.Background else Palette.Foreground)
     }
 }

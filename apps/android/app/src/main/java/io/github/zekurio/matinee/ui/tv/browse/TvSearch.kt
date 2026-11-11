@@ -1,24 +1,18 @@
 package io.github.zekurio.matinee.ui.tv.browse
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -31,7 +25,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -39,9 +32,6 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -55,9 +45,7 @@ import io.github.zekurio.matinee.ui.LocalNavigator
 import io.github.zekurio.matinee.ui.browse.creditKind
 import io.github.zekurio.matinee.ui.components.ImageSource
 import io.github.zekurio.matinee.ui.components.LocalApi
-import io.github.zekurio.matinee.ui.components.Picture
 import io.github.zekurio.matinee.ui.components.art
-import io.github.zekurio.matinee.ui.components.initials
 import io.github.zekurio.matinee.ui.rememberLoader
 import io.github.zekurio.matinee.ui.search.SearchEffect
 import io.github.zekurio.matinee.ui.search.SearchState
@@ -68,6 +56,8 @@ import io.github.zekurio.matinee.ui.tv.Overscan
 import io.github.zekurio.matinee.ui.tv.PinnedRows
 import io.github.zekurio.matinee.ui.tv.ShowBackdrop
 import io.github.zekurio.matinee.ui.tv.TvButton
+import io.github.zekurio.matinee.ui.tv.TvPerson
+import io.github.zekurio.matinee.ui.tv.TvPersonCard
 import io.github.zekurio.matinee.ui.tv.TvCards
 import io.github.zekurio.matinee.ui.tv.TvFocusLine
 import io.github.zekurio.matinee.ui.tv.TvFocusMemory
@@ -79,7 +69,6 @@ import io.github.zekurio.matinee.ui.tv.TvType
 import io.github.zekurio.matinee.ui.tv.home.FocusedItem
 import io.github.zekurio.matinee.ui.tv.rememberTvFocusMemory
 import io.github.zekurio.matinee.ui.tv.titleInfo
-import io.github.zekurio.matinee.ui.tv.tvFocus
 
 private const val FIELD = "field"
 private const val PEOPLE = "people"
@@ -249,48 +238,25 @@ private fun androidx.compose.foundation.lazy.LazyListScope.facetRow(
         TvRow(stringResource(title), key, memory) {
             items(facets, key = { it.name }) { facet ->
                 TvButton(
+                    facet.name,
                     { onOpen(facet) },
                     with(memory) { Modifier.item(key, facet.name) }.onFocusChanged { if (it.isFocused) onFocus(facet) },
-                ) {
-                    Text(facet.name, maxLines = 1)
-                }
+                )
             }
         }
     }
 }
 
-private val PERSON_WIDTH = 112.dp
-
-/** Someone in the cast or crew: a round portrait with the name under it, opening their page. */
+/** Someone in the cast or crew, opening their page. */
 @Composable
 private fun PersonCard(person: PersonSummary, memory: TvFocusMemory, onFocus: () -> Unit) {
     val api = LocalApi.current
     val nav = LocalNavigator.current
-    val interaction = remember { MutableInteractionSource() }
-    Column(Modifier.width(PERSON_WIDTH), horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(
-            with(memory) { Modifier.item(PEOPLE, person.name) }
-                .onFocusChanged { if (it.isFocused) onFocus() }
-                .fillMaxWidth()
-                .aspectRatio(1f)
-                .tvFocus(interaction, CircleShape)
-                .clip(CircleShape)
-                .background(Palette.Secondary)
-                .clickable(interaction, indication = null, role = Role.Button, onClickLabel = person.name) { nav.person(person.name) },
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(initials(person.name), style = TvType.Headline, color = Palette.Muted)
-            api.art(person.photo, ArtworkSize.Thumb)?.let { Picture(listOf(it), Modifier.fillMaxSize()) }
-        }
-        Text(
-            person.name,
-            style = TvType.Label,
-            textAlign = TextAlign.Center,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(top = 12.dp),
-        )
-    }
+    TvPersonCard(
+        TvPerson(person.name, null, api.art(person.photo, ArtworkSize.Thumb)),
+        onClick = { nav.person(person.name) },
+        focus = with(memory) { Modifier.item(PEOPLE, person.name) }.onFocusChanged { if (it.isFocused) onFocus() },
+    )
 }
 
 /** In place of the results: why there are none. */

@@ -3,6 +3,7 @@ package io.github.zekurio.matinee.ui.tv
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -27,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavBackStackEntry
@@ -100,6 +102,7 @@ fun TvSignedInApp(session: Session, user: User) {
     val drawer = remember { DrawerState() }
     val page = remember { FocusRequester() }
     val pageFocus = remember { TvPageFocus() }
+    val panels = remember { TvOpenPanels() }
     val toPage = { if (pageFocus.restore?.invoke() != true) runCatching { page.requestFocus() } }
     CompositionLocalProvider(
         LocalApi provides session.requireApi(),
@@ -110,6 +113,7 @@ fun TvSignedInApp(session: Session, user: User) {
         LocalTvBackdrop provides backdrop,
         LocalTvPageFocus provides pageFocus,
         LocalTvMenu provides menu,
+        LocalTvOpenPanels provides panels,
     ) {
         val stack by controller.currentBackStack.collectAsState()
         val current = drawerKey(stack)
@@ -124,8 +128,14 @@ fun TvSignedInApp(session: Session, user: User) {
             ) {
                 Pages(controller)
             }
-            // Lowered so it lines up with the profile picture at the top of the rail.
-            TvClock(Modifier.align(Alignment.TopEnd).padding(top = Overscan.Vertical + 11.dp, end = Overscan.Horizontal))
+            // Lowered so it lines up with the profile picture at the top of the rail; gone under a panel.
+            val clock by animateFloatAsState(if (panels.count > 0) 0f else 1f, Motion.color(), label = "clock")
+            TvClock(
+                Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = Overscan.Vertical + 11.dp, end = Overscan.Horizontal)
+                    .graphicsLayer { alpha = clock },
+            )
             Drawer(user, current, drawer, navigator, onLeave = { toPage() })
             TvActionsPanel(menu, fallback = { toPage() })
             SnackbarHost(

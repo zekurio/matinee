@@ -1,6 +1,8 @@
 package io.github.zekurio.matinee.ui.tv
 
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -13,6 +15,9 @@ import io.github.zekurio.matinee.ui.theme.RedHatText
  * phone's `typography` stays as it is; TV pages take their styles from here.
  */
 object TvType {
+    /** The name a detail page is about: a title, an episode, a season, a person. */
+    val Hero = style(44, 700, 50, -0.02)
+
     /** The focused item's name in a page's header. */
     val Display = style(34, 700, 40, -0.02)
 
@@ -36,6 +41,18 @@ object TvType {
 
     /** The clock at the top right. */
     val Clock = style(20, 500, 26)
+
+    /** A number inside an icon, like the seconds in the player's skip arrows. */
+    val IconNumber = style(11, 600, 12)
+
+    /** A code to type on another device, like the sign-in code. */
+    val Code = TextStyle(
+        fontFamily = FontFamily.Monospace,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 44.sp,
+        lineHeight = 54.sp,
+        letterSpacing = 4.sp,
+    )
 }
 
 private fun style(size: Int, weight: Int, line: Int, tracking: Double = 0.0) = TextStyle(
@@ -55,6 +72,9 @@ private fun style(size: Int, weight: Int, line: Int, tracking: Double = 0.0) = T
 object Overscan {
     val Horizontal: Dp = 32.dp
     val Vertical: Dp = 27.dp
+
+    /** [Horizontal] and [Vertical] as padding, for a screen with no drawer, like the player. */
+    val Padding = PaddingValues(horizontal = Horizontal, vertical = Vertical)
 
     /** Where the collapsed drawer's icons are centred, from the left edge. */
     val RailCenter: Dp = 32.dp

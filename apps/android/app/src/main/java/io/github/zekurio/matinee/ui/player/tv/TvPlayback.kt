@@ -7,16 +7,13 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -40,10 +37,8 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalAccessibilityManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -66,6 +61,10 @@ import io.github.zekurio.matinee.ui.player.Video
 import io.github.zekurio.matinee.ui.player.rememberPlayerController
 import io.github.zekurio.matinee.ui.player.rememberSubtitleLook
 import io.github.zekurio.matinee.ui.theme.Palette
+import io.github.zekurio.matinee.ui.components.Lucide
+import io.github.zekurio.matinee.ui.tv.Overscan
+import io.github.zekurio.matinee.ui.tv.TvButton
+import io.github.zekurio.matinee.ui.tv.TvType
 import kotlinx.coroutines.delay
 
 /**
@@ -97,16 +96,16 @@ private fun TvPlayerFailure(title: String, message: String?, retry: () -> Unit) 
         runCatching { again.requestFocus() }
     }
     Column(
-        Modifier.fillMaxSize().padding(TvOverscan),
+        Modifier.fillMaxSize().padding(Overscan.Padding),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(title, style = MaterialTheme.typography.headlineMedium.copy(fontSize = 30.sp, fontWeight = FontWeight.SemiBold), textAlign = TextAlign.Center)
+        Text(title, style = TvType.Headline, textAlign = TextAlign.Center)
         if (!message.isNullOrEmpty()) {
             Box(Modifier.height(8.dp))
             Text(
                 message,
-                style = MaterialTheme.typography.bodyLarge.copy(fontSize = 18.sp),
+                style = TvType.Body,
                 color = Palette.Muted,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.widthIn(max = 560.dp),
@@ -114,13 +113,8 @@ private fun TvPlayerFailure(title: String, message: String?, retry: () -> Unit) 
         }
         Box(Modifier.height(28.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            val pill = RoundedCornerShape(28.dp)
-            TvButton(retry, Modifier.focusRequester(again), shape = pill, padding = PaddingValues(horizontal = 24.dp)) { tint ->
-                Text(stringResource(R.string.common_retry), style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp), color = tint)
-            }
-            TvButton(host.close, shape = pill, padding = PaddingValues(horizontal = 24.dp)) { tint ->
-                Text(stringResource(R.string.player_back), style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp), color = tint)
-            }
+            TvButton(stringResource(R.string.common_retry), retry, Modifier.focusRequester(again), icon = Lucide.RefreshCw)
+            TvButton(stringResource(R.string.player_back), host.close)
         }
     }
 }
@@ -161,7 +155,6 @@ private fun TvPlayback(itemId: String, data: PlayerData, start: Double?) {
 
     var controls by remember { mutableStateOf(true) }
     var menu by remember { mutableStateOf<Menu?>(null) }
-    var openedFrom by remember { mutableStateOf<Menu?>(null) }
     var scrub by remember { mutableStateOf<Double?>(null) }
     var touched by remember { mutableIntStateOf(0) }
     // The controls came up for a held arrow, so focus goes to the seek bar.
@@ -213,19 +206,6 @@ private fun TvPlayback(itemId: String, data: PlayerData, start: Double?) {
         focusSeek = false
         runCatching { target.requestFocus() }
     }
-    // A menu that closes gives focus back to its button.
-    LaunchedEffect(menu) {
-        val open = menu
-        if (open != null) {
-            openedFrom = open
-            return@LaunchedEffect
-        }
-        val from = openedFrom ?: return@LaunchedEffect
-        openedFrom = null
-        withFrameNanos {}
-        runCatching { targets.menus.getValue(from).requestFocus() }
-    }
-
     fun openMenu(which: Menu) {
         controls = true
         menu = which
@@ -299,7 +279,7 @@ private fun TvPlayback(itemId: String, data: PlayerData, start: Double?) {
         val fill = prefs.fillScreen
         Video(controller, fill = fill)
         PictureSubtitles(controller, fill = fill)
-        PlayerNoticeNote(controller.notice, Modifier.align(Alignment.TopCenter).padding(TvOverscan))
+        PlayerNoticeNote(controller.notice, Modifier.align(Alignment.TopCenter).padding(Overscan.Padding))
         if (controller.loading && controller.error == null) {
             CircularProgressIndicator(Modifier.align(Alignment.Center).size(56.dp), color = Palette.Foreground)
         }
@@ -328,9 +308,9 @@ private fun TvPlayback(itemId: String, data: PlayerData, start: Double?) {
                 autoplay = prefs.autoplayNext,
                 menuOpen = menu != null,
                 onShown = { upNextShown = it },
-                modifier = Modifier.align(Alignment.BottomEnd).padding(end = 48.dp, bottom = TV_OVERLAY_HEIGHT + 8.dp),
+                modifier = Modifier.align(Alignment.BottomEnd).padding(end = Overscan.Horizontal, bottom = TV_OVERLAY_HEIGHT + 8.dp),
             )
         }
-        TvMenuPanel(menu, controller, prefs, onDismiss = { menu = null })
+        TvMenuPanel(menu, controller, prefs, button = targets.menus::getValue, onDismiss = { menu = null })
     }
 }

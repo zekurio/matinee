@@ -2,25 +2,20 @@ package io.github.zekurio.matinee.ui.tv
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.BringIntoViewSpec
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListScope
@@ -28,11 +23,9 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -108,7 +101,7 @@ fun TvArtCard(
                 if (event.type == KeyEventType.KeyUp) open()
                 true
             }
-            .tvFocus(interaction, TvCards.Shape)
+            .tvPicture(interaction, TvCards.Shape)
             .clip(TvCards.Shape)
             .tone(toneKey)
             .combinedClickable(
@@ -198,33 +191,6 @@ fun TvProgress(progress: Float, modifier: Modifier = Modifier) {
 @Composable
 fun TvWatchedMark(modifier: Modifier = Modifier) {
     Box(modifier.width(12.dp).height(12.dp).clip(CircleShape).background(Palette.Accent))
-}
-
-/**
- * A pill button for TV pages. Unfocused it's a quiet frosted pill; focused
- * it fills with the text color, inverts its content, and grows, so it's
- * the one obvious thing on screen.
- */
-@Composable
-fun TvButton(onClick: () -> Unit, modifier: Modifier = Modifier, content: @Composable RowScope.() -> Unit) {
-    val interaction = remember { MutableInteractionSource() }
-    val focused by interaction.collectIsFocusedAsState()
-    val shape = CircleShape
-    Row(
-        modifier
-            .heightIn(min = 48.dp)
-            .tvFocus(interaction, shape, scale = 1.04f)
-            .clip(shape)
-            .background(if (focused) Palette.Foreground else Palette.Foreground.copy(alpha = 0.12f))
-            .clickable(interaction, indication = null, role = Role.Button, onClick = onClick)
-            .padding(horizontal = 24.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        CompositionLocalProvider(LocalContentColor provides if (focused) Palette.Background else Palette.Foreground) {
-            androidx.compose.material3.ProvideTextStyle(TvType.Label) { content() }
-        }
-    }
 }
 
 /**

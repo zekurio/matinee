@@ -26,7 +26,6 @@ import io.github.zekurio.matinee.api.ArtworkSize
 import io.github.zekurio.matinee.api.Credit
 import io.github.zekurio.matinee.api.CreditKind
 import io.github.zekurio.matinee.api.MatineeApi
-import io.github.zekurio.matinee.ui.components.ActionTarget
 import io.github.zekurio.matinee.ui.components.ImageSource
 import io.github.zekurio.matinee.ui.components.Picture
 import io.github.zekurio.matinee.ui.components.art
@@ -64,7 +63,7 @@ fun TvPersonCard(person: TvPerson, onClick: () -> Unit, modifier: Modifier = Mod
             focus
                 .fillMaxWidth()
                 .aspectRatio(1f)
-                .tvFocus(interaction, CircleShape)
+                .tvPicture(interaction, CircleShape)
                 .clip(CircleShape)
                 .background(Palette.Secondary)
                 .clickable(interaction, indication = null, role = Role.Button, onClickLabel = person.name, onClick = onClick),

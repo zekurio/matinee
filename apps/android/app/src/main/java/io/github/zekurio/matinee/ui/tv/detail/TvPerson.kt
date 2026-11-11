@@ -124,7 +124,7 @@ private fun PersonHeader(person: Person) {
             api.art(person.photo, ArtworkSize.Small)?.let { Picture(listOf(it), Modifier.fillMaxSize()) }
         }
         Column {
-            Text(person.name, style = HeroType, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(person.name, style = TvType.Hero, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(
                 listOf(
                     creditKind(person.kind, res, 1),

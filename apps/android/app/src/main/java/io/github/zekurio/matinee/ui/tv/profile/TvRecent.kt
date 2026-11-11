@@ -23,7 +23,6 @@ import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.LocalUser
 import io.github.zekurio.matinee.ui.RefreshOnResume
 import io.github.zekurio.matinee.ui.components.Lucide
-import io.github.zekurio.matinee.ui.components.LucideIcon
 import io.github.zekurio.matinee.ui.rememberLoader
 import io.github.zekurio.matinee.ui.theme.Palette
 import io.github.zekurio.matinee.ui.tv.Overscan
@@ -57,10 +56,12 @@ fun TvRecentScreen() {
             is Load.Failed -> Column(Modifier.padding(start = TvPage.Start, top = 24.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(stringResource(R.string.profile_recent_load_failed), style = TvType.Title)
                 Text(state.message, style = TvType.Body, color = Palette.Muted)
-                TvButton(recent::reload, with(memory) { Modifier.item(GRID, "retry") }.padding(top = 16.dp)) {
-                    LucideIcon(Lucide.RefreshCw, null, size = 18.dp)
-                    Text(stringResource(R.string.common_retry))
-                }
+                TvButton(
+                    stringResource(R.string.common_retry),
+                    recent::reload,
+                    with(memory) { Modifier.item(GRID, "retry") }.padding(top = 16.dp),
+                    icon = Lucide.RefreshCw,
+                )
             }
             is Load.Ready -> if (entries.isEmpty()) {
                 Text(stringResource(R.string.profile_recent_empty), style = TvType.Title, color = Palette.Muted, modifier = Modifier.padding(start = TvPage.Start, top = 24.dp))
