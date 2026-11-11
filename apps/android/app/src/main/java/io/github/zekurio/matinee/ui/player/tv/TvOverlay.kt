@@ -39,6 +39,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -53,6 +54,7 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
@@ -106,13 +108,15 @@ internal fun TvOverlay(
     onMenu: (Menu) -> Unit,
 ) {
     Box(Modifier.fillMaxSize()) {
+        // About half black behind the title, two thirds behind the bar, and four fifths at the
+        // bottom edge, close to Wholphin's, so the picture stays watchable with the controls up.
         Box(
-            Modifier.fillMaxWidth().fillMaxHeight(0.72f).align(Alignment.BottomCenter).background(
+            Modifier.fillMaxWidth().fillMaxHeight(0.62f).align(Alignment.BottomCenter).background(
                 Brush.verticalGradient(
                     0f to Color.Transparent,
-                    0.3f to Color.Black.copy(alpha = 0.6f),
-                    0.55f to Color.Black.copy(alpha = 0.85f),
-                    1f to Color.Black.copy(alpha = 0.95f),
+                    0.3f to Color.Black.copy(alpha = 0.5f),
+                    0.55f to Color.Black.copy(alpha = 0.65f),
+                    1f to Color.Black.copy(alpha = 0.8f),
                 ),
             ),
         )
@@ -159,6 +163,9 @@ internal fun TvOverlay(
     }
 }
 
+/** A soft shadow under text on the picture, so it still reads where the scrim is light and the scene bright. */
+private fun TextStyle.onPicture() = copy(shadow = Shadow(Color.Black.copy(alpha = 0.6f), Offset(0f, 2f), blurRadius = 10f))
+
 /** How wide the player's buttons are, but play's. */
 private val SMALL = 56.dp
 
@@ -187,7 +194,7 @@ private fun Heading(controller: PlayerController) {
             if (code != null) {
                 Text(
                     "$code · ${label.showName}",
-                    style = TvType.Title,
+                    style = TvType.Title.onPicture(),
                     color = Palette.Foreground.copy(alpha = 0.75f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -195,7 +202,7 @@ private fun Heading(controller: PlayerController) {
             }
             Text(
                 label.title,
-                style = TvType.Display,
+                style = TvType.Display.onPicture(),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -208,7 +215,7 @@ private fun Heading(controller: PlayerController) {
             }
             Text(
                 stringResource(R.string.player_ends_at, ends),
-                style = TvType.Facts,
+                style = TvType.Facts.onPicture(),
                 color = Palette.Foreground.copy(alpha = 0.75f),
                 modifier = Modifier.padding(start = 24.dp, bottom = 4.dp),
             )
@@ -243,7 +250,7 @@ private fun MenuButton(menu: Menu, icon: Int, name: Int, targets: TvTargets, onM
             // Floats above the button without taking room in the row.
             Text(
                 text,
-                style = TvType.Facts,
+                style = TvType.Facts.onPicture(),
                 maxLines = 1,
                 modifier = Modifier.layout { measurable, _ ->
                     val placeable = measurable.measure(Constraints())
@@ -270,7 +277,7 @@ private fun TvSeekBar(controller: PlayerController, scrub: Double?, targets: TvT
     val thumb by animateDpAsState(if (focused) 11.dp else 0.dp, tween(Motion.COLOR_MS), label = "seek thumb")
     val label = stringResource(R.string.a11y_player_seek)
     val state = stringResource(R.string.a11y_player_position, formatClock(shown), formatClock(duration))
-    val timeStyle = TvType.Facts
+    val timeStyle = TvType.Facts.onPicture()
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(formatClock(shown), style = timeStyle, modifier = Modifier.widthIn(min = 56.dp))
         BoxWithConstraints(
