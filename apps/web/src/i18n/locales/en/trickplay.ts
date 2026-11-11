@@ -22,6 +22,4 @@ export default defineMessages("trickplay", {
   "trickplay.hardwareDecoding": "Hardware decoding",
   "trickplay.hardwareDecoding.unavailable":
     "Set up a GPU under Transcoding first.",
-  "trickplay.regenerates":
-    "Changing the interval, width, or keyframe setting regenerates every video's images in the background.",
 })

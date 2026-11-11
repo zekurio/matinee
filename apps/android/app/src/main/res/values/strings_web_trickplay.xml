@@ -19,5 +19,4 @@
     <string name="web_trickplay_keyframesOnly">Keyframes only</string>
     <string name="web_trickplay_hardwareDecoding">Hardware decoding</string>
     <string name="web_trickplay_hardwareDecoding_unavailable">Set up a GPU under Transcoding first.</string>
-    <string name="web_trickplay_regenerates">Changing the interval, width, or keyframe setting regenerates every video\'s images in the background.</string>
 </resources>

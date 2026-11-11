@@ -157,9 +157,6 @@ function TrickplayForm({ saved }: { saved: AdminTrickplaySettings }) {
             )}
           </form.AppField>
         </SettingRows>
-        <p className="text-muted-foreground text-[13px] leading-5">
-          {tr("trickplay.regenerates")}
-        </p>
       </SettingsSubsection>
       <SettingsSaveBar
         dirty={dirty}

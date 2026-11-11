@@ -23,6 +23,4 @@ export default {
   "trickplay.hardwareDecoding": "Hardware-Dekodierung",
   "trickplay.hardwareDecoding.unavailable":
     "Richte zuerst unter Transkodierung eine GPU ein.",
-  "trickplay.regenerates":
-    "Wenn du Intervall, Breite oder die Keyframe-Einstellung änderst, werden die Bilder aller Videos im Hintergrund neu erstellt.",
 } satisfies TranslationOf<typeof source>
