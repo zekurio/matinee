@@ -1,6 +1,7 @@
 package io.github.zekurio.matinee.launcher
 
 import io.github.zekurio.matinee.api.MediaItem
+import io.github.zekurio.matinee.api.NextUpEntry
 import io.github.zekurio.matinee.api.TitleKind
 import io.github.zekurio.matinee.ui.ItemLabel
 import java.time.Instant
@@ -8,10 +9,10 @@ import java.time.Instant
 /** The server's two lists, in their order, without local eligibility rules. */
 internal fun watchNextPrograms(
     continuing: List<MediaItem>,
-    next: List<MediaItem>,
+    next: List<NextUpEntry>,
     label: (MediaItem) -> ItemLabel,
 ): List<WatchNextProgram> = continuing.map { program(it, WatchNextKind.Continue, label(it)) } +
-    next.map { program(it, WatchNextKind.Next, label(it)) }
+    next.map { program(it.item, WatchNextKind.Next, label(it.item), it.lastWatchedAt) }
 
 internal enum class WatchNextKind { Continue, Next }
 
@@ -35,7 +36,12 @@ internal data class WatchNextProgram(
         (positionMillis ?: 0) > 0 && engagementMillis != null && engagementMillis > dismissedAt
 }
 
-private fun program(item: MediaItem, kind: WatchNextKind, label: ItemLabel): WatchNextProgram {
+private fun program(
+    item: MediaItem,
+    kind: WatchNextKind,
+    label: ItemLabel,
+    engagementAt: String? = item.progress?.updatedAt,
+): WatchNextProgram {
     val episode = item.title?.kind == TitleKind.SHOW || item.episodeNumber != null
     val images = item.title?.images
     val landscape = item.episode?.still ?: images?.backdrop
@@ -43,7 +49,7 @@ private fun program(item: MediaItem, kind: WatchNextKind, label: ItemLabel): Wat
     return WatchNextProgram(
         itemId = item.id,
         kind = kind,
-        title = if (episode) listOfNotNull(label.showName, label.code, label.title).joinToString(" · ") else label.showName,
+        title = label.showName,
         episodeTitle = label.title.takeIf { episode },
         description = item.episode?.overview ?: item.title?.overview,
         episode = episode,
@@ -53,6 +59,6 @@ private fun program(item: MediaItem, kind: WatchNextKind, label: ItemLabel): Wat
         poster = landscape == null,
         durationMillis = item.durationSeconds?.let { (it * 1000).toLong() },
         positionMillis = item.progress?.positionSeconds?.let { (it * 1000).toLong() },
-        engagementMillis = item.progress?.updatedAt?.let { runCatching { Instant.parse(it).toEpochMilli() }.getOrNull() },
+        engagementMillis = engagementAt?.let { runCatching { Instant.parse(it).toEpochMilli() }.getOrNull() },
     )
 }

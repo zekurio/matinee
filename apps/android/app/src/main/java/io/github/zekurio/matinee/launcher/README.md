@@ -31,10 +31,20 @@ the hidden row after that item has playback position and a later server
 timestamp. Missing rows are remembered too, for launchers that delete them.
 It never writes the system-owned browsable flag.
 
-Continue watching supplies `progress.updatedAt`. Next up usually has no
-progress or engagement time. We leave these columns null rather than use
-the sync time or the file modification time. A server-supplied show
-engagement time would let launchers sort and display Next up reliably.
+Continue watching supplies `progress.updatedAt`. Next up supplies
+`NextUpEntry.lastWatchedAt`, the server timestamp of the last finished
+episode of that show, and uses `WATCH_NEXT_TYPE_NEXT`. The next episode
+stays unplayed, with no invented position or engagement time. Episode
+cards use the show name as title, with episode title and season/episode
+numbers in their own columns.
+
+The [Watch Next attributes](https://developer.android.com/training/tv/discovery/watch-next-programs)
+require last engagement time for both kinds. Position and duration are
+required only for Continue watching. We also publish the content id,
+playback intent, authenticated artwork and its aspect ratio, and episode
+metadata described in the
+[video program attributes](https://developer.android.com/training/tv/discovery/video-programs).
+Membership still comes from the server, not a second set of client rules.
 
 ## Checking the provider
 
