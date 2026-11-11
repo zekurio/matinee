@@ -117,6 +117,7 @@ fun TvSignedInApp(session: Session, user: User) {
     ) {
         val stack by controller.currentBackStack.collectAsState()
         val current = drawerKey(stack)
+        val shown = stack.lastOrNull()?.takeUnless { it.destination.hasRoute<RecentRoute>() }?.let(::entryKey)
         val onHome = stack.lastOrNull()?.destination?.hasRoute<HomeRoute>() == true
         Box(Modifier.fillMaxSize().background(Palette.Background)) {
             BackdropLayer(backdrop)
@@ -136,7 +137,7 @@ fun TvSignedInApp(session: Session, user: User) {
                     .padding(top = Overscan.Vertical + 11.dp, end = Overscan.Horizontal)
                     .graphicsLayer { alpha = clock },
             )
-            Drawer(user, current, drawer, navigator, onLeave = { toPage() })
+            Drawer(user, current, shown, drawer, navigator, onLeave = { toPage() })
             TvActionsPanel(menu, fallback = { toPage() })
             SnackbarHost(
                 snackbar,
@@ -163,7 +164,7 @@ fun TvSignedInApp(session: Session, user: User) {
 }
 
 @Composable
-private fun Drawer(user: User, current: String, state: DrawerState, nav: Navigator, onLeave: () -> Unit) {
+private fun Drawer(user: User, current: String, shown: String?, state: DrawerState, nav: Navigator, onLeave: () -> Unit) {
     val api = LocalApi.current
     val libraries = rememberLoader("libraries") { libraries.list() }
     RefreshOnResume(libraries)
@@ -184,7 +185,8 @@ private fun Drawer(user: User, current: String, state: DrawerState, nav: Navigat
         state = state,
         onPick = { entry ->
             // The page on screen already: back to it rather than open it again.
-            if (entry.key == current) onLeave() else nav.drawer(entry.route)
+            // A page opened from it, like a title from Home, goes back to the entry's own page.
+            if (entry.key == shown) onLeave() else nav.drawer(entry.route)
         },
         onLeave = onLeave,
     )
@@ -200,20 +202,21 @@ private const val SETTINGS = "settings"
 
 private fun libraryKey(id: String) = "library-$id"
 
-/** The drawer's entry for the page on screen: the nearest page under it that has one. */
-private fun drawerKey(stack: List<NavBackStackEntry>): String {
-    for (entry in stack.asReversed()) {
-        val destination = entry.destination
-        when {
-            destination.hasRoute<HomeRoute>() -> return HOME
-            destination.hasRoute<SearchRoute>() -> return SEARCH
-            destination.hasRoute<FavoritesRoute>() -> return FAVORITES
-            destination.hasRoute<SettingsRoute>() || destination.hasRoute<SettingsPageRoute>() -> return SETTINGS
-            destination.hasRoute<ProfileRoute>() || destination.hasRoute<RecentRoute>() -> return PROFILE
-            destination.hasRoute<LibraryRoute>() -> return libraryKey(entry.toRoute<LibraryRoute>().id)
-        }
+/** The drawer's entry to mark for the page on screen: its own, or that of the nearest page under it that has one. */
+private fun drawerKey(stack: List<NavBackStackEntry>): String = stack.asReversed().firstNotNullOfOrNull(::entryKey) ?: HOME
+
+/** The drawer entry a page belongs to, if any. */
+private fun entryKey(entry: NavBackStackEntry): String? {
+    val destination = entry.destination
+    return when {
+        destination.hasRoute<HomeRoute>() -> HOME
+        destination.hasRoute<SearchRoute>() -> SEARCH
+        destination.hasRoute<FavoritesRoute>() -> FAVORITES
+        destination.hasRoute<SettingsRoute>() || destination.hasRoute<SettingsPageRoute>() -> SETTINGS
+        destination.hasRoute<ProfileRoute>() || destination.hasRoute<RecentRoute>() -> PROFILE
+        destination.hasRoute<LibraryRoute>() -> libraryKey(entry.toRoute<LibraryRoute>().id)
+        else -> null
     }
-    return HOME
 }
 
 /**
