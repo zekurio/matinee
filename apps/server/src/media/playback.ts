@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process"
+import type { Stats } from "node:fs"
 import { stat } from "node:fs/promises"
 
 import {
@@ -19,6 +20,7 @@ import {
 import { t } from "@matinee/contracts/schema"
 import type { MediaItemRow } from "@matinee/db"
 
+import { originalAllowed, type StreamingAccess } from "../access/media"
 import { env } from "../env"
 import { log } from "../log"
 import type { StreamPlan } from "../stats/sessions"
@@ -58,6 +60,30 @@ async function probeOf(item: MediaItemRow): Promise<MediaProbe | null> {
   const info = await stat(item.path).catch(() => null)
   if (!info?.isFile()) return null
   return currentProbe(item, info)
+}
+
+/** Check the current file before copying it, even if it changed since its last scan. */
+export async function mayStreamOriginal(
+  access: StreamingAccess,
+  item: MediaItemRow,
+  info?: Stats,
+): Promise<boolean> {
+  if (access.maxBitrate === null) return true
+  const current = info ?? (await stat(item.path).catch(() => null))
+  // A scan must learn the changed file's duration before a size fallback
+  // can establish that it fits the limit.
+  if (
+    !current?.isFile() ||
+    current.size !== item.sizeBytes ||
+    current.mtime.getTime() !== item.modifiedAt.getTime()
+  )
+    return false
+  const probe = await currentProbe(item, current)
+  return originalAllowed(access, {
+    probe,
+    sizeBytes: current.size,
+    durationSeconds: item.durationSeconds,
+  })
 }
 
 /** The track browsers play by themselves: the default one, else the first. */

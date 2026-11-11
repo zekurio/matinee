@@ -391,6 +391,15 @@ as HLS. When the browser can't play a file as it is, the player switches
 to an encode by itself. The quality you pick is remembered for the next
 file.
 
+An account's bit rate limit applies to streaming, not downloads. A file
+over it plays as an encode at a quality under the limit, and Original
+isn't offered. A file whose bit rate isn't known counts as over it too.
+When video conversion is turned off for the account, the player offers
+no encode qualities. Files still play as they are or with their video
+copied and their audio converted, but one that needs its video converted
+can't play. An account with a stream limit must stop on another device
+before starting on one more.
+
 The player tells the server which audio codecs the browser decodes in MP4,
 out of Opus, AAC, MP3, FLAC, ALAC, AC-3, and E-AC-3. A stream copies a
 track in one of them. Anything else, like DTS, TrueHD, or PCM, becomes
@@ -435,7 +444,8 @@ tracks you pick, each kept or converted to AAC or Opus in mono, stereo,
 5.1, or 7.1. It can also burn in a picture subtitle. The dialog offers only
 the codecs the server encodes and the browser plays, and shows the size
 the server estimates. Text subtitles stay out of the file and save next to
-it as WebVTT.
+it as WebVTT. Downloads can be turned off for an account; when video
+conversion is off, download the file as it is or keep its video.
 
 The server doesn't keep a finished copy. `downloads.start` sets up a
 download, and ffmpeg makes it as the client fetches it: six-second

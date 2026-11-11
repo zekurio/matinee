@@ -13,6 +13,7 @@ import { t } from "@matinee/contracts/schema"
 import { type MediaItemRow } from "@matinee/db"
 import { Hono } from "hono"
 
+import { encodeAllowed } from "../access/media"
 import { readViewer } from "../access/viewer"
 import { itemFor } from "../access/visible"
 import { log } from "../log"
@@ -35,7 +36,7 @@ import {
 import { encodeSpec, type HlsRequest } from "./hls-encode"
 import { ifNoneMatchSatisfied } from "./http-conditional"
 import { mimeType } from "./mime"
-import { openPlayback } from "./playback"
+import { mayStreamOriginal, openPlayback } from "./playback"
 import { burnInSource, openSubtitle } from "./subtitles"
 import { thumbnailFor } from "./thumbnails"
 import {
@@ -188,6 +189,12 @@ streamRoutes.get("/:id/play", async (c) => {
 
   const item = await itemFor(viewer, id)
   if (!item) return c.body(null, 404)
+  if (
+    query.data.quality === "original"
+      ? !(await mayStreamOriginal(viewer.access, item))
+      : !encodeAllowed(viewer.access, query.data.quality)
+  )
+    return c.body(null, 403)
   const opened = await openPlayback(item, query.data, c.req.raw.signal)
   if (!opened) return c.body(null, 500)
 
@@ -286,6 +293,8 @@ streamRoutes.get("/:id/hls/main.m3u8", async (c) => {
 
   const item = await itemFor(viewer, id)
   if (!item) return c.body(null, 404)
+  if (!encodeAllowed(viewer.access, query.data.quality))
+    return c.body(null, 403)
   const request = await hlsRequest(item, query.data)
   if (request === "missing") return c.body(null, 404)
   const spec = await encodeSpec(item, request)
@@ -326,6 +335,8 @@ streamRoutes.get("/:id/hls/:key/:name", async (c) => {
 
   const item = await itemFor(viewer, id)
   if (!item) return c.body(null, 404)
+  if (!encodeAllowed(viewer.access, query.data.quality))
+    return c.body(null, 403)
   let job = knownJob(key)
   if (!job) {
     // After a restart: the same request makes the same encode, unless the
@@ -337,6 +348,9 @@ streamRoutes.get("/:id/hls/:key/:name", async (c) => {
     job = await openJob(spec)
   }
   if (job.spec.itemId !== item.id) return c.body(null, 404)
+  // A cached key names the actual encode, not the quality in a hand-written query.
+  if (!encodeAllowed(viewer.access, job.spec.plan.quality))
+    return c.body(null, 403)
 
   const watcher = watcherFor(
     viewer,
@@ -412,6 +426,12 @@ streamRoutes.on(["GET", "HEAD"], "/:id/stream", async (c) => {
 
   const info = await stat(item.path).catch(() => null)
   if (!info?.isFile()) return c.body(null, 404)
+  // This route also serves original downloads, which have no bit rate limit.
+  if (
+    !viewer.access.downloads &&
+    !(await mayStreamOriginal(viewer.access, item, info))
+  )
+    return c.body(null, 403)
 
   const size = info.size
   const lastModified = info.mtime.toUTCString()

@@ -1,6 +1,6 @@
 import type { PlaybackMethod, PlaybackQuality } from "@matinee/contracts"
 import { type MediaItemRow, playbackSession, title } from "@matinee/db"
-import { and, eq, isNull, ne, type SQL, sql } from "drizzle-orm"
+import { and, count, eq, gt, isNull, ne, or, type SQL, sql } from "drizzle-orm"
 
 import { db } from "../db"
 import { events } from "../realtime/events"
@@ -11,6 +11,49 @@ import { events } from "../realtime/events"
  * whichever arrives first creates the row. Ids are only trusted for the
  * user and file that created them.
  */
+
+// Playing reports arrive every ten seconds, paused ones every thirty.
+// Hidden tabs may slow their timers to once a minute.
+const LIVE_SECONDS = 45
+const PAUSED_LIVE_SECONDS = 120
+
+/** Shared by watching now and the account's stream limit. Ended offline plays stay out. */
+export function liveSessions(): SQL | undefined {
+  return and(
+    isNull(playbackSession.endedAt),
+    or(
+      gt(
+        playbackSession.updatedAt,
+        sql`now() - make_interval(secs => ${LIVE_SECONDS})`,
+      ),
+      and(
+        eq(playbackSession.paused, true),
+        gt(
+          playbackSession.updatedAt,
+          sql`now() - make_interval(secs => ${PAUSED_LIVE_SECONDS})`,
+        ),
+      ),
+    ),
+  )
+}
+
+/** Other sittings playing now, so changing this sitting's tracks never takes a place. */
+export async function otherLiveSessions(
+  userId: string,
+  sessionId: string,
+): Promise<number> {
+  const [row] = await db
+    .select({ total: count() })
+    .from(playbackSession)
+    .where(
+      and(
+        liveSessions(),
+        eq(playbackSession.userId, userId),
+        ne(playbackSession.id, sessionId),
+      ),
+    )
+  return row?.total ?? 0
+}
 
 // A report adds at most the time since the session began, plus this. The
 // first report comes after about ten seconds of play.

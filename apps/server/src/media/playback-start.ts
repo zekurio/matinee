@@ -18,6 +18,11 @@ import {
   subtitlePath,
 } from "@matinee/contracts"
 
+import {
+  allowedQualities,
+  originalAllowed,
+  type StreamingAccess,
+} from "../access/media"
 import { playbackVideoCodec } from "./playback-codec"
 
 function baseLanguage(tag: string | null): string | null {
@@ -74,6 +79,9 @@ export function decodesVideo(
 
 export type StartFacts = {
   probe: MediaProbe
+  sizeBytes: number
+  durationSeconds: number | null
+  access: StreamingAccess
   container: string
   audio: AudioTrack[]
   subtitles: SubtitleTrack[]
@@ -168,8 +176,37 @@ export function playbackAudio(
   }
 }
 
-/** Decide without reading files, the database, or a device API. Null means exhausted. */
+/** Why access, rather than the device, left no way to play. */
+export type PlaybackRestriction = {
+  restricted: "bitrate-transcode" | "bitrate-failed" | "bitrate" | "transcode"
+}
+
+/** Decide without reading files, the database, or a device API. Null means unplayable. */
 export function decidePlayback(
+  input: PlaybackStartInput,
+  facts: StartFacts,
+): PlaybackDecision | PlaybackRestriction | null {
+  const plan = playbackDecision(input, facts)
+  if (plan) return plan
+  // A device that could not play even without access limits keeps its
+  // usual error, rather than asking the viewer to change their account.
+  if (
+    !playbackDecision(input, {
+      ...facts,
+      access: { maxBitrate: null, transcode: true },
+    })
+  )
+    return null
+  if (!originalAllowed(facts.access, facts)) {
+    if (!facts.access.transcode) return { restricted: "bitrate-transcode" }
+    if (input.failed.includes("transcode"))
+      return { restricted: "bitrate-failed" }
+    return { restricted: "bitrate" }
+  }
+  return !facts.access.transcode ? { restricted: "transcode" } : null
+}
+
+function playbackDecision(
   input: PlaybackStartInput,
   facts: StartFacts,
 ): PlaybackDecision | null {
@@ -201,7 +238,8 @@ function playbackFile(
   // Only an encode makes another quality or burns a subtitle in, so once
   // one failed the original plays, without such a subtitle.
   const encodeFailed = input.failed.includes("transcode")
-  const qualities = offeredQualities(video)
+  const original = originalAllowed(facts.access, facts)
+  const qualities = allowedQualities(facts.access, offeredQualities(video))
   const asked = encodeFailed
     ? "original"
     : offeredQuality(input.quality ?? "original", qualities)
@@ -210,6 +248,7 @@ function playbackFile(
     (decodes(audio.codec) &&
       (device.selectAudio || audio.index === primary?.index))
   const filePlays =
+    original &&
     accepts(device.containers, facts.container) &&
     videoPlays &&
     fileAudio &&
@@ -229,6 +268,7 @@ function playbackFile(
     external(track) || (filePlays && embedded(track))
   return {
     video,
+    original,
     qualities,
     videoPlays,
     encodeFailed,
@@ -330,6 +370,7 @@ function playbackMethod(
   const { burn } = picked
   let quality = asked
   const reasons: PlaybackStart["reasons"] = []
+  if (!file.original) reasons.push("limit")
   if (!accepts(device.containers, facts.container)) reasons.push("container")
   if (!videoPlays) reasons.push("video")
   if (audio && !decodes(audio.codec)) reasons.push("audio")
@@ -340,6 +381,7 @@ function playbackMethod(
   if (input.failed.length) reasons.push("failed")
   let method: PlaybackStart["method"] = "direct"
   if (
+    !file.original ||
     burn ||
     !videoPlays ||
     quality !== "original" ||
@@ -348,9 +390,16 @@ function playbackMethod(
     method = "transcode"
   else if (!filePlays) method = "remux"
   if (input.failed.includes(method)) return null
+  if (
+    method === "transcode" &&
+    (!facts.access.transcode || (!file.original && !qualities.length))
+  )
+    return null
   if (method === "transcode" && quality === "original")
     quality =
-      qualities.find((preset) => preset.bitrate <= 20_000_000)?.id ??
+      (file.original
+        ? qualities.find((preset) => preset.bitrate <= 20_000_000)?.id
+        : qualities[0]?.id) ??
       qualities.at(-1)?.id ??
       "720p-4"
   const encodeVideo = device.encodeVideo.filter((codec) =>
@@ -444,7 +493,7 @@ function playbackAnswer(
     subtitleTracks: facts.subtitles,
     quality,
     qualities: file.qualities,
-    original: true,
+    original: file.original,
     reasons,
     next: null,
   }

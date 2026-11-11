@@ -21,6 +21,7 @@ import { t } from "@matinee/contracts/schema"
 import { episode, mediaItem, type MediaItemRow, title } from "@matinee/db"
 import { and, eq } from "drizzle-orm"
 
+import { downloadVideoAllowed } from "../access/media"
 import type { Viewer } from "../access/viewer"
 import { itemFor } from "../access/visible"
 import { db } from "../db"
@@ -1043,16 +1044,20 @@ export type DownloadAccess =
   | { kind: "found"; active: Active }
   | { kind: "gone" }
   | { kind: "changed" }
+  | { kind: "forbidden" }
 
 /** The user's download with `id`, ready to make. */
 export async function accessDownload(
   id: string,
   viewer: Viewer,
 ): Promise<DownloadAccess> {
+  if (!viewer.access.downloads) return { kind: "forbidden" }
   if (!ID.test(id)) return { kind: "gone" }
   const active = await openDownload(id)
   if (!active || active.record.userId !== viewer.id) return { kind: "gone" }
   if (!(await itemFor(viewer, active.record.itemId))) return { kind: "gone" }
+  if (!downloadVideoAllowed(viewer.access, active.record.spec))
+    return { kind: "forbidden" }
   const build = await prepare(active)
   return build ? { kind: "found", active } : { kind: "changed" }
 }

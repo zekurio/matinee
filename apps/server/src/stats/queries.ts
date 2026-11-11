@@ -9,17 +9,7 @@ import type {
   WatchStats,
 } from "@matinee/contracts"
 import { mediaItem, playbackSession, title, user } from "@matinee/db"
-import {
-  and,
-  desc,
-  eq,
-  gt,
-  inArray,
-  isNull,
-  or,
-  type SQL,
-  sql,
-} from "drizzle-orm"
+import { and, desc, eq, inArray, type SQL, sql } from "drizzle-orm"
 
 import type { Viewer } from "../access/viewer"
 import { visibleItems, visibleTitles, type Seer } from "../access/visible"
@@ -35,17 +25,11 @@ import {
 } from "../media/items"
 import { activityOf, bucketsOf, dated, knownZone, scopeOf } from "./range"
 import { methodsOf, namedCounts, transcodingOf, usersOf } from "./server"
-import { runningStreams } from "./sessions"
+import { liveSessions, runningStreams } from "./sessions"
 import { isPlay, playCount, watchedSum } from "./sql"
 
 const TOP_TITLES = 10
 const TOP_GENRES = 8
-// A session that reported this recently is playing. Players report every
-// ten seconds while playing and every thirty while paused, but a hidden
-// tab's timers can slow to once a minute, so paused ones get longer. A
-// player that closed without saying so drops out after these.
-const LIVE_SECONDS = 45
-const PAUSED_LIVE_SECONDS = 120
 const RECENT_TITLES = 12
 
 /** Every title played in the scope, most watched first. */
@@ -198,24 +182,7 @@ export async function liveActivity(viewer: Viewer): Promise<LiveActivity> {
     .select({ session: playbackSession, owner: user })
     .from(playbackSession)
     .innerJoin(user, eq(user.id, playbackSession.userId))
-    .where(
-      and(
-        isNull(playbackSession.endedAt),
-        or(
-          gt(
-            playbackSession.updatedAt,
-            sql`now() - make_interval(secs => ${LIVE_SECONDS})`,
-          ),
-          and(
-            eq(playbackSession.paused, true),
-            gt(
-              playbackSession.updatedAt,
-              sql`now() - make_interval(secs => ${PAUSED_LIVE_SECONDS})`,
-            ),
-          ),
-        ),
-      ),
-    )
+    .where(liveSessions())
     .orderBy(desc(playbackSession.startedAt))
   const ids = rows.flatMap((row) =>
     row.session.mediaItemId ? [row.session.mediaItemId] : [],

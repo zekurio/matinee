@@ -4,6 +4,8 @@ import {
   mediaPlaybackPath,
   DEFAULT_PLAYBACK_PREFERENCES,
   PLAYBACK_UNPLAYABLE,
+  PLAYBACK_RESTRICTED,
+  PLAYBACK_BUSY,
   PlaybackPreferences,
 } from "@matinee/contracts"
 import { mediaItem, title, watchProgress } from "@matinee/db"
@@ -13,11 +15,12 @@ import { and, eq } from "drizzle-orm"
 import { itemFor } from "../access/visible"
 import { db } from "../db"
 import { episodeOrder, publicItems } from "../media/items"
-import { keyframesNear, listAudio } from "../media/playback"
+import { keyframesNear, listAudio, mayStreamOriginal } from "../media/playback"
 import { decidePlayback, snapPlayback } from "../media/playback-start"
 import { currentProbe } from "../media/probe"
 import { listSubtitles } from "../media/subtitles"
 import { rememberedTracks } from "../media/track-picks"
+import { otherLiveSessions } from "../stats/sessions"
 import { encodableAudioCodecs } from "../transcode/audio"
 import { currentTranscoding } from "../transcode/capabilities"
 import { encodableVideoCodecs } from "../transcode/pipeline"
@@ -35,6 +38,12 @@ export const seekPlayback = authed.playback.seek.handler(
   async ({ context, input }) => {
     const item = await itemFor(context.user, input.itemId)
     if (!item) throw notFound("This title isn't in any library.")
+    if (!(await mayStreamOriginal(context.user.access, item)))
+      throw new ORPCError(PLAYBACK_RESTRICTED, {
+        status: 403,
+        message:
+          "This file is over the bit rate your account may stream. Pick a lower quality to watch it.",
+      })
     // Only video starts on a keyframe. A file without any starts anywhere,
     // as `start` has it.
     const keyframes =
@@ -66,6 +75,15 @@ export const startPlayback = authed.playback.start.handler(
   async ({ context, input }) => {
     const item = await itemFor(context.user, input.itemId)
     if (!item) throw notFound("This title isn't in any library.")
+    const limit = context.user.access.maxStreams
+    if (limit !== null) {
+      const playing = await otherLiveSessions(context.user.id, input.sessionId)
+      if (playing >= limit)
+        throw new ORPCError(PLAYBACK_BUSY, {
+          status: 429,
+          message: `Your account is playing on ${playing} ${playing === 1 ? "device" : "devices"}, the most it may. Stop one to watch here.`,
+        })
+    }
     const info = await stat(item.path).catch(() => null)
     const probe = info?.isFile() ? await currentProbe(item, info) : null
     if (!probe)
@@ -94,6 +112,9 @@ export const startPlayback = authed.playback.start.handler(
       ])
     let plan = decidePlayback(input, {
       probe,
+      sizeBytes: info?.size ?? item.sizeBytes,
+      durationSeconds: item.durationSeconds,
+      access: context.user.access,
       container: item.container,
       audio,
       subtitles: subtitles.tracks,
@@ -110,6 +131,20 @@ export const startPlayback = authed.playback.start.handler(
       ),
     })
     if (!plan) throw unplayable()
+    if ("restricted" in plan)
+      throw new ORPCError(PLAYBACK_RESTRICTED, {
+        status: 403,
+        message: {
+          "bitrate-transcode":
+            "This file is over the bit rate your account may stream, and the server may not convert video for your account. Ask whoever runs the server.",
+          "bitrate-failed":
+            "This file is over the bit rate your account may stream, and converting its video failed. Try again or ask whoever runs the server.",
+          bitrate:
+            "This file is over the bit rate your account may stream, and the server can't make a version this device plays under that limit. Try another device or ask whoever runs the server.",
+          transcode:
+            "This device needs the video converted, but the server may not convert video for your account. Try another device or ask whoever runs the server.",
+        }[plan.restricted],
+      })
     if (plan.method === "remux" && probe.video && plan.position > 0) {
       const keyframes = await keyframesNear(item, plan.position)
       if (!keyframes)

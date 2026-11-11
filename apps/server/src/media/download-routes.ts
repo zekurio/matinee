@@ -42,6 +42,7 @@ downloadRoutes.get("/:id/file.mp4", async (c) => {
   const query = FileQuery.safeParse(c.req.query())
   if (!query.success) return c.body(null, 400)
   const access = await accessDownload(c.req.param("id"), viewer)
+  if (access.kind === "forbidden") return c.body(null, 403)
   if (access.kind === "gone") return c.body(null, 404)
   if (access.kind === "changed") return c.body(null, 409)
   const { active } = access
@@ -67,6 +68,7 @@ downloadRoutes.get("/:id/init.mp4", async (c) => {
   const viewer = await readViewer(c)
   if (!viewer) return c.body(null, 401)
   const access = await accessDownload(c.req.param("id"), viewer)
+  if (access.kind === "forbidden") return c.body(null, 403)
   if (access.kind === "gone") return c.body(null, 404)
   if (access.kind === "changed") return c.body(null, 409)
   // Matroska downloads only come whole.
@@ -90,6 +92,7 @@ downloadRoutes.get("/:id/:name", async (c) => {
   const name = SEGMENT_NAME.exec(c.req.param("name"))
   if (!name) return c.body(null, 404)
   const access = await accessDownload(c.req.param("id"), viewer)
+  if (access.kind === "forbidden") return c.body(null, 403)
   if (access.kind === "gone") return c.body(null, 404)
   if (access.kind === "changed") return c.body(null, 409)
   if (access.active.record.spec.container === "mkv") return c.body(null, 404)

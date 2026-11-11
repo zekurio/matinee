@@ -8,6 +8,8 @@ import { t } from "@matinee/contracts/schema"
 import { mediaItem, subtitleFile } from "@matinee/db"
 import { type SQL, sql } from "drizzle-orm"
 
+import { allowedQualities } from "../access/media"
+import type { Viewer } from "../access/viewer"
 import { type Seer, visibleItems } from "../access/visible"
 import { db } from "../db"
 import { encodableAudioCodecs } from "../transcode/audio"
@@ -67,7 +69,9 @@ function rankLanguages(...sources: t.infer<typeof Counts>[]): string[] {
     .map(([tag]) => tag)
 }
 
-export async function playbackOptions(viewer: Seer): Promise<PlaybackOptions> {
+export async function playbackOptions(
+  viewer: Viewer,
+): Promise<PlaybackOptions> {
   const [{ settings, capabilities }, audio, embedded, sidecar] =
     await Promise.all([
       currentTranscoding(),
@@ -76,12 +80,17 @@ export async function playbackOptions(viewer: Seer): Promise<PlaybackOptions> {
       db.execute(sidecarLanguages(viewer)),
     ])
   return {
-    qualities: [...PLAYBACK_QUALITIES],
-    maxBitrate: null,
-    downloads: true,
-    downloadVideoPresets: [...DOWNLOAD_VIDEO_PRESETS],
+    qualities: allowedQualities(viewer.access, PLAYBACK_QUALITIES),
+    maxBitrate: viewer.access.maxBitrate,
+    downloads: viewer.access.downloads,
+    downloadVideoPresets:
+      viewer.access.downloads && viewer.access.transcode
+        ? [...DOWNLOAD_VIDEO_PRESETS]
+        : [],
     skipSteps: [...SKIP_STEPS],
-    videoCodecs: encodableVideoCodecs(settings, capabilities),
+    videoCodecs: viewer.access.transcode
+      ? encodableVideoCodecs(settings, capabilities)
+      : [],
     audioCodecs: encodableAudioCodecs(capabilities),
     audioLanguages: rankLanguages(Counts.parse(audio.rows)),
     subtitleLanguages: rankLanguages(

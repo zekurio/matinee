@@ -11,6 +11,8 @@ import {
   canCopyVideo,
 } from "@matinee/contracts"
 
+import { DOWNLOAD_VIDEO_OFF } from "../access/media"
+import type { Access } from "../access/policy"
 import { DownloadSpecError } from "./download-encode"
 import {
   decodesAudio,
@@ -19,11 +21,19 @@ import {
   type StartFacts,
 } from "./playback-start"
 
+/** Downloads use device facts but never the streaming bit rate limit. */
+type DownloadFacts = Omit<
+  StartFacts,
+  "access" | "sizeBytes" | "durationSeconds"
+> & {
+  access: Pick<Access, "transcode">
+}
+
 /** Container and device facts for both default selection and form edits. */
 export function downloadChoices(
   device: PlaybackDevice,
   wishes: DownloadWishes,
-  facts: StartFacts,
+  facts: DownloadFacts,
 ): DownloadChoices {
   const video = facts.probe.video
   const mkv = wishes.container === "mkv"
@@ -77,11 +87,12 @@ export function downloadChoices(
     subtitles: facts.subtitles.filter((track) =>
       mkv ? track.delivery !== null : track.delivery === "webvtt",
     ),
-    burnIn: mkv
-      ? []
-      : facts.subtitles.filter(
-          (track) => track.delivery === "pgs" || track.delivery === "burn-in",
-        ),
+    burnIn:
+      mkv || codecs.length === 0
+        ? []
+        : facts.subtitles.filter(
+            (track) => track.delivery === "pgs" || track.delivery === "burn-in",
+          ),
   }
 }
 
@@ -98,7 +109,7 @@ function language(tag: string | null): string | null {
 export function resolveDownload(
   device: PlaybackDevice,
   wishes: DownloadWishes,
-  facts: StartFacts,
+  facts: DownloadFacts,
 ) {
   if (!facts.probe.video)
     throw new DownloadSpecError("Only videos can be downloaded this way.")
@@ -139,6 +150,8 @@ export function resolveDownload(
     choices.presets[0]
   const codec = wishes.codec ?? choices.codecs[0]
   const copy = wishes.preset === null && choices.keepsVideo
+  if (!copy && !facts.access.transcode)
+    throw new DownloadSpecError(DOWNLOAD_VIDEO_OFF)
   if (!copy && (!preset || !codec || !choices.codecs.includes(codec)))
     throw new DownloadSpecError(
       "The server can't encode video in a codec this device plays.",
