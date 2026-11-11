@@ -26,7 +26,7 @@ export function AuthScreen({
   return (
     <main className="relative flex min-h-dvh flex-col items-center justify-center px-4 pt-24 pb-[calc(3rem+8vh)]">
       <header className="absolute top-8 left-6 sm:left-10">
-        <Logo className="text-xl" />
+        <Logo className="text-2xl" />
       </header>
       <div className={cn("w-full", wide ? "max-w-2xl" : "max-w-[360px]")}>
         {eyebrow && (

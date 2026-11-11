@@ -1,6 +1,8 @@
 import { cn } from "@matinee/ui/lib/utils"
 import { useId } from "react"
 
+import { LOGO } from "./logo.gen"
+
 /**
  * A sun going down behind three horizon bands: the cap, then two slices
  * that the gaps cut out of the disc (radius 10, centered at 12,13). Each
@@ -25,9 +27,18 @@ export function LogoMark({ className }: { className?: string }) {
       aria-hidden
       className={cn("size-6 shrink-0", className)}
     >
+      <Sunset id={gradient} />
+    </svg>
+  )
+}
+
+/** The mark's gradient and path, on its 24 unit grid. */
+function Sunset({ id, transform }: { id: string; transform?: string }) {
+  return (
+    <>
       <defs>
         <linearGradient
-          id={gradient}
+          id={id}
           x1="0"
           y1="3"
           x2="0"
@@ -39,25 +50,31 @@ export function LogoMark({ className }: { className?: string }) {
           <stop offset="1" style={{ stopColor: "var(--logo-horizon)" }} />
         </linearGradient>
       </defs>
-      <path d={SUNSET} fill={`url(#${gradient})`} />
-    </svg>
+      <path d={SUNSET} fill={`url(#${id})`} transform={transform} />
+    </>
   )
 }
 
 /**
- * The mark with the wordmark beside it. The mark scales with the font size,
- * so set the size with a text class.
+ * The mark with the wordmark beside it, lowercase "matinee" in Unbounded
+ * Bold drawn as outlines (brand/wordmark.py). The word takes the text
+ * color. It is as tall as the font size, so set the size with a text class.
  */
 export function Logo({ className }: { className?: string }) {
+  const gradient = useId()
   return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-[0.5em] text-[15px] leading-none font-semibold tracking-tight",
-        className,
-      )}
+    <svg
+      viewBox={`0 0 ${LOGO.width} ${LOGO.height}`}
+      role="img"
+      aria-label="Matinee"
+      className={cn("h-[1em] w-auto shrink-0 text-[15px]", className)}
     >
-      <LogoMark className="size-[1.6em]" />
-      Matinee
-    </span>
+      <Sunset id={gradient} transform={LOGO.mark} />
+      <path
+        d={LOGO.path}
+        fill="currentColor"
+        transform={`translate(${LOGO.wordX} 0)`}
+      />
+    </svg>
   )
 }
