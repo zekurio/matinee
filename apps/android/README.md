@@ -74,6 +74,18 @@ skip and glide while held, Select brings the controls, and the media keys
 work at any time. It has no picture in picture, and asks the display for
 the video's frame rate while it plays.
 
+Before and around the account, a TV has screens of its own in `ui/tv/auth/`,
+`ui/tv/settings/`, and `ui/tv/profile/`, picked once in `MatineeRoot`. It
+opens on the servers found on the local network, searched for while it
+shows, with the server used before and typing an address after them. It
+signs in with the code and QR code only; a code that runs out waits for
+"Get a new code". A server that doesn't answer shows Retry, never the
+downloads: a TV has no offline mode. Settings has categories on the left
+and their rows on the right, with choices in a panel at the right edge:
+playback, subtitles, languages, signed-in devices, and the account. It
+leaves out offline mode, appearance, downloads, linking a device, the
+admin pages, picture in picture, and the playback report.
+
 ## Status
 
 Written against the server on `main` as of the downloads and image

@@ -31,7 +31,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavDestination.Companion.hasRoute
-import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -77,6 +76,9 @@ import io.github.zekurio.matinee.ui.tv.browse.TvFavoritesScreen
 import io.github.zekurio.matinee.ui.tv.browse.TvLibraryScreen
 import io.github.zekurio.matinee.ui.tv.browse.TvSearchScreen
 import io.github.zekurio.matinee.ui.tv.home.TvHomeScreen
+import io.github.zekurio.matinee.ui.tv.profile.TvProfileScreen
+import io.github.zekurio.matinee.ui.tv.profile.TvRecentScreen
+import io.github.zekurio.matinee.ui.tv.settings.TvSettingsScreen
 
 /**
  * The signed-in app on a TV: its own pages, under a drawer at the left
@@ -206,8 +208,9 @@ private fun drawerKey(stack: List<NavBackStackEntry>): String {
 
 /**
  * The TV's pages, by the phone's routes. Pages change with a short fade,
- * the old one gone before the new one is in. Pages not written yet are
- * [TvPageStub]s that later tasks replace.
+ * the old one gone before the new one is in. The phone's pages that a TV
+ * leaves out (downloads, the admin pages, the image editor, identify, and
+ * linking a device) have no route here.
  */
 @Composable
 private fun Pages(controller: androidx.navigation.NavHostController) {
@@ -231,15 +234,11 @@ private fun Pages(controller: androidx.navigation.NavHostController) {
         composable<EpisodeRoute> { TvEpisodeScreen(it.toRoute<EpisodeRoute>().itemId) }
         composable<PersonRoute> { TvPersonScreen(it.toRoute<PersonRoute>().name) }
         composable<BrowseRoute> { it.toRoute<BrowseRoute>().let { route -> TvBrowseScreen(route.genre, route.studio) } }
-        stub<ProfileRoute>(R.string.tab_profile)
-        stub<RecentRoute>(R.string.tab_profile)
-        stub<SettingsRoute>(R.string.shell_settings)
-        stub<SettingsPageRoute>(R.string.shell_settings)
+        composable<ProfileRoute> { TvProfileScreen() }
+        composable<RecentRoute> { TvRecentScreen() }
+        composable<SettingsRoute> { TvSettingsScreen() }
+        composable<SettingsPageRoute> { TvSettingsScreen(it.toRoute<SettingsPageRoute>().page) }
     }
-}
-
-private inline fun <reified T : Any> NavGraphBuilder.stub(name: Int) {
-    composable<T> { TvPageStub(stringResource(name)) }
 }
 
 private fun pageIn(): EnterTransition = fadeIn(tween(Motion.ENTER_MS, delayMillis = Motion.EXIT_MS / 2, easing = Motion.Easing))

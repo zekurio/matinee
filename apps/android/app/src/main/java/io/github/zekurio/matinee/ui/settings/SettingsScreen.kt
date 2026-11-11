@@ -56,7 +56,6 @@ import androidx.lifecycle.compose.currentStateAsState
 import io.github.zekurio.matinee.BuildConfig
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.DEFAULT_PLAYBACK_PREFERENCES
-import io.github.zekurio.matinee.api.ORIGINAL_LANGUAGE
 import io.github.zekurio.matinee.api.PlaybackOptions
 import io.github.zekurio.matinee.api.PlaybackPreferences
 import io.github.zekurio.matinee.api.PlaybackQualityPreset
@@ -101,7 +100,6 @@ import io.github.zekurio.matinee.ui.player.PlayerPrefs
 import io.github.zekurio.matinee.ui.player.SUBTITLE_SCALES
 import io.github.zekurio.matinee.ui.player.SubtitleBackground
 import io.github.zekurio.matinee.ui.player.SubtitleColor
-import io.github.zekurio.matinee.ui.player.SubtitleEdge
 import io.github.zekurio.matinee.ui.player.SubtitleLine
 import io.github.zekurio.matinee.ui.player.SubtitleLook
 import io.github.zekurio.matinee.ui.player.rememberSubtitleLook
@@ -323,17 +321,11 @@ private const val DEVICE_POLL_MS = 6_000L
 /** The account's languages, then what this device plays and how. */
 @Composable
 private fun PlaybackPage(session: Session) {
-    val api = LocalApi.current
     val user = LocalUser.current
-    val snackbar = LocalSnackbar.current
-    val scope = rememberCoroutineScope()
     val prefs = LocalContext.current.app.player
     val options = rememberLoader("playbackOptions") { playback.options() }
     val playback = user.playback ?: DEFAULT_PLAYBACK_PREFERENCES
-    val saveFailure = stringResource(R.string.player_error_save_preferences)
-    val save = { changed: PlaybackPreferences ->
-        scope.launchShowing(snackbar, saveFailure) { session.updateUser(api.account.playback.setPreferences(changed)) }
-    }
+    val save = rememberPlaybackSave(session)
     val loaded = (options.state as? Load.Ready)?.value
     val viewer = LocalContext.current.app.viewer
     LaunchedEffect(loaded) { if (loaded != null) viewer.options = loaded }
@@ -353,11 +345,7 @@ private fun PlaybackPage(session: Session) {
 private fun LanguagesSection(playback: PlaybackPreferences, options: PlaybackOptions?, save: (PlaybackPreferences) -> Unit) {
     Section(stringResource(R.string.playback_languages_title)) {
         Panel {
-            val audioOptions = buildList {
-                add(null to stringResource(R.string.playback_audio_file_default))
-                add(ORIGINAL_LANGUAGE to stringResource(R.string.playback_audio_original))
-                options?.audioLanguages?.forEach { add(it to languageName(it)) }
-            }
+            val audioOptions = audioLanguageChoices(options)
             PickerRow(
                 stringResource(R.string.playback_audio_title),
                 audioOptions,
@@ -375,10 +363,7 @@ private fun LanguagesSection(playback: PlaybackPreferences, options: PlaybackOpt
                     RowDivider()
                     PickerRow(
                         stringResource(R.string.playback_subtitles_language),
-                        buildList {
-                            add(null to stringResource(R.string.playback_subtitles_device_language, languageName(Locale.getDefault().language)))
-                            options?.subtitleLanguages?.forEach { add(it to languageName(it)) }
-                        },
+                        subtitleLanguageChoices(options),
                         playback.subtitleLanguage,
                     ) { save(playback.copy(subtitleLanguage = it)) }
                 }
@@ -411,11 +396,6 @@ private fun SkipsSection(playback: PlaybackPreferences, options: PlaybackOptions
         }
     }
 }
-
-/** The skip lengths to pick from, with [current] too when another app set one the steps don't have. */
-@Composable
-private fun skipChoices(current: Int, options: PlaybackOptions?) = (options?.skipSteps.orEmpty() + current).distinct().sorted()
-    .map { it to pluralStringResource(R.plurals.playback_skip_seconds, it, it) }
 
 /**
  * How subtitles look here, with a sample: the system's caption style, which
@@ -729,10 +709,7 @@ private fun Context.openSettings(intent: Intent) {
 
 @Composable
 private fun SessionRow(session: AccountSession, onSignOut: () -> Unit) {
-    val name = session.deviceName
-        ?: session.browser
-        ?: session.platform?.let { stringResource(R.string.account_device_app, platformLabel(it)) }
-        ?: stringResource(R.string.account_device_browser)
+    val name = sessionName(session)
     Row(
         Modifier.fillMaxWidth().clip(PanelShape).background(Palette.Card).border(1.dp, Palette.Border, PanelShape).padding(14.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -771,47 +748,6 @@ private fun SessionRow(session: AccountSession, onSignOut: () -> Unit) {
         }
     }
 }
-
-@Composable
-private fun subtitleModeLabel(mode: String): String = stringResource(
-    when (mode) {
-        SubtitleMode.ALWAYS -> R.string.playback_subtitles_mode_always
-        SubtitleMode.FOREIGN -> R.string.playback_subtitles_mode_foreign
-        SubtitleMode.FORCED -> R.string.playback_subtitles_mode_forced
-        SubtitleMode.OFF -> R.string.playback_subtitles_mode_off
-        else -> R.string.playback_subtitles_mode_default
-    },
-)
-
-@Composable
-private fun subtitleColorLabel(color: SubtitleColor): String = stringResource(
-    when (color) {
-        SubtitleColor.WHITE -> R.string.settings_subtitles_color_white
-        SubtitleColor.YELLOW -> R.string.settings_subtitles_color_yellow
-        SubtitleColor.CYAN -> R.string.settings_subtitles_color_cyan
-        SubtitleColor.GREEN -> R.string.settings_subtitles_color_green
-    },
-)
-
-@Composable
-private fun subtitleBackgroundLabel(background: SubtitleBackground): String = stringResource(
-    when (background) {
-        SubtitleBackground.NONE -> R.string.settings_subtitles_background_none
-        SubtitleBackground.SHADED -> R.string.settings_subtitles_background_shaded
-        SubtitleBackground.BLACK -> R.string.settings_subtitles_background_black
-    },
-)
-
-@Composable
-private fun subtitleEdgeLabel(edge: SubtitleEdge): String = stringResource(
-    when (edge) {
-        SubtitleEdge.SHADOW -> R.string.settings_subtitles_edge_shadow
-        SubtitleEdge.OUTLINE -> R.string.settings_subtitles_edge_outline
-        SubtitleEdge.NONE -> R.string.settings_subtitles_edge_none
-        // Only the system's style asks for these, and it isn't picked here.
-        SubtitleEdge.RAISED, SubtitleEdge.DEPRESSED -> R.string.settings_subtitles_edge_shadow
-    },
-)
 
 /** "German" for `de`, in the device's language. */
 fun languageName(tag: String): String {

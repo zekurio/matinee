@@ -574,12 +574,6 @@
 
     <!-- TV -->
     <string name="tv_home_featured">Featured</string>
-    <string name="tv_page_library">Library</string>
-    <string name="tv_page_title">Title</string>
-    <string name="tv_page_season">Season</string>
-    <string name="tv_page_episode">Episode</string>
-    <string name="tv_page_person">Person</string>
-    <string name="tv_page_browse">Browse</string>
     <string name="tv_detail_people">Cast and crew</string>
     <string name="tv_detail_links">Genres and studios</string>
     <string name="tv_grid_failed">Couldn\'t load these titles</string>
@@ -587,4 +581,31 @@
     <string name="tv_kind_movie">Movie</string>
     <string name="tv_kind_show">Show</string>
     <string name="tv_favorites_empty_hint">Mark a movie, show, or episode as a favorite on its page to keep it here.</string>
+    <string name="tv_connect_title">Choose your server</string>
+    <string name="tv_connect_description">Matinee servers on this network show up here. Pick yours, or type its address.</string>
+    <string name="tv_connect_found">On this network</string>
+    <string name="tv_connect_searching">Searching…</string>
+    <string name="tv_connect_none">No servers found. Is the TV on the same network as the server?</string>
+    <string name="tv_connect_search_again">Search again</string>
+    <string name="tv_connect_last">Used before</string>
+    <string name="tv_connect_other">Somewhere else</string>
+    <string name="tv_connect_enter">Enter server address</string>
+    <string name="tv_connect_back_to_list">Back to servers found</string>
+    <string name="tv_signin_title">Sign in with your phone</string>
+    <string name="tv_signin_description">Scan the QR code with your phone\'s camera, or in the Matinee app under Settings › Account.</string>
+    <string name="tv_signin_enter">Or go to %1$s and enter</string>
+    <string name="tv_signin_expired">That code expired.</string>
+    <string name="tv_signin_expired_short">Code expired</string>
+    <string name="tv_signin_new_code">Get a new code</string>
+    <string name="tv_unreachable_retrying">Trying again…</string>
+    <string name="tv_settings_devices">Devices</string>
+    <string name="tv_settings_account">Account</string>
+    <string name="tv_settings_this_tv">This TV</string>
+    <string name="tv_settings_frame_rate">Match frame rate</string>
+    <string name="tv_settings_frame_rate_description">Switch the TV to the video\'s frame rate while it plays, for smooth motion. Some TVs go dark for a moment as they switch.</string>
+    <string name="tv_settings_transcoding_note">Only used when the server converts a file to play it.</string>
+    <string name="tv_settings_languages_note">These follow your account, on every device you watch on.</string>
+    <string name="tv_settings_sign_out_device">Sign out %1$s?</string>
+    <string name="tv_settings_sign_out_device_description">It has to sign in again to use Matinee.</string>
+    <string name="tv_profile_see_all">See all</string>
 </resources>

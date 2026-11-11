@@ -25,12 +25,9 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -48,11 +45,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.zekurio.matinee.R
-import io.github.zekurio.matinee.api.ApiException
-import io.github.zekurio.matinee.api.AppDevice
-import io.github.zekurio.matinee.api.AppSession
 import io.github.zekurio.matinee.api.DeviceCode
-import io.github.zekurio.matinee.api.DeviceSignIn
 import io.github.zekurio.matinee.auth.AuthState
 import io.github.zekurio.matinee.auth.Session
 import io.github.zekurio.matinee.ui.components.ButtonLook
@@ -64,12 +57,8 @@ import io.github.zekurio.matinee.ui.components.MatineeButton
 import io.github.zekurio.matinee.ui.components.MatineeTextField
 import io.github.zekurio.matinee.ui.components.QrCode
 import io.github.zekurio.matinee.ui.components.isWide
-import io.github.zekurio.matinee.ui.describeFailure
 import io.github.zekurio.matinee.ui.theme.Palette
-import java.io.IOException
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.launch
 
 /** The mark and name, in the top corner of the sign-in screens. */
 @Composable
@@ -104,19 +93,10 @@ internal fun AuthLayout(content: @Composable ColumnScope.() -> Unit) {
 @Composable
 fun ConnectScreen(session: Session) {
     var address by rememberSaveable { mutableStateOf("") }
-    var error by remember { mutableStateOf<String?>(null) }
-    var busy by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
-    val connect = {
-        if (!busy) {
-            busy = true
-            error = null
-            scope.launch {
-                error = session.connect(address)
-                busy = false
-            }
-        }
-    }
+    val connector = rememberServerConnect(session)
+    val error = connector.error
+    val busy = connector.busy
+    val connect = { connector.connect(address) }
     AuthLayout {
         Text(stringResource(R.string.connect_title), style = MaterialTheme.typography.headlineMedium)
         Gap(8.dp)
@@ -207,50 +187,12 @@ fun SignInScreen(session: Session, state: AuthState.SignedOut, browserError: Mut
  */
 @Composable
 private fun DeviceCodeSignIn(session: Session, onBack: (() -> Unit)?) {
-    var code by remember { mutableStateOf<DeviceCode?>(null) }
-    var error by remember { mutableStateOf<String?>(null) }
-    var attempt by remember { mutableStateOf(0) }
-    val resources = LocalContext.current.resources
-    LaunchedEffect(attempt) {
-        val api = session.requireApi()
-        error = null
-        val started = try {
-            api.auth.device.start(AppDevice(session.deviceName, session.platform))
-        } catch (e: IOException) {
-            error = describeFailure(resources, e)
-            return@LaunchedEffect
-        }
-        code = started
-        while (true) {
-            delay(started.interval * 1000L)
-            val answer = try {
-                api.auth.device.poll(started.deviceCode)
-            } catch (e: ApiException) {
-                // The code expired: get a new one, and with it a new QR code.
-                if (e.status == 404) {
-                    attempt++
-                    return@LaunchedEffect
-                }
-                error = describeFailure(resources, e)
-                continue
-            } catch (e: IOException) {
-                // Wi-Fi dropping, or Android cutting off the network while
-                // the browser has the screen: keep asking about the same
-                // code, which someone may have approved meanwhile.
-                error = describeFailure(resources, e)
-                continue
-            }
-            error = null
-            if (answer is DeviceSignIn.Approved) {
-                session.signedIn(AppSession(answer.token, answer.user))
-                return@LaunchedEffect
-            }
-        }
-    }
-    val current = code
+    val flow = rememberDeviceCode(session, renewExpired = true)
+    val error = flow.error
+    val current = flow.code
     val details: @Composable ColumnScope.() -> Unit = {
         // Only a code that never came needs a new start; a poll that failed tries again on its own.
-        CodeDetails(current, error, onRetry = if (current == null) ({ attempt++ }) else null)
+        CodeDetails(current, error, onRetry = if (current == null) flow::newCode else null)
         Gap(24.dp)
         if (session.isTv) {
             // Nothing else gets a TV out of here, and it may have the wrong server.

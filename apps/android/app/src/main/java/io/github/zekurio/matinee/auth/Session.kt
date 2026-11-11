@@ -182,15 +182,21 @@ class Session(context: Context) {
         })
     }
 
-    /** Offline mode, as Findroid's: the app shows the downloads and leaves the server alone. */
-    val offlineMode: Boolean get() = store.offlineMode
+    /**
+     * Offline mode, as Findroid's: the app shows the downloads and leaves the
+     * server alone. A TV has no downloads, so it's never offline.
+     */
+    val offlineMode: Boolean get() = store.offlineMode && !isTv
+
+    /** The server last connected to, as `https://media.example.com`, even after switching away from it. */
+    val lastServer: String? get() = store.lastServer?.toHttpUrlOrNull()?.display
 
     /**
      * Turn offline mode on, straight to the downloads, or off, which checks
      * the server again. It holds across restarts until it's turned off.
      */
     fun setOfflineMode(on: Boolean) {
-        store.offlineMode = on
+        store.offlineMode = on && !isTv
         if (on) goOffline() else start()
     }
 
@@ -203,7 +209,7 @@ class Session(context: Context) {
         val client = api ?: MatineeApi(server, http).also { api = it }
         val made = generation
         val user = lastUser
-        if (store.offlineMode && user != null) {
+        if (offlineMode && user != null) {
             _state.value = AuthState.Offline(server.display, user)
             return
         }
@@ -249,6 +255,7 @@ class Session(context: Context) {
                 val config = MatineeApi(candidate, http).auth.config()
                 origin = candidate
                 store.server = candidate.toString()
+                store.lastServer = candidate.toString()
                 clearToken()
                 _state.value = AuthState.SignedOut(candidate.display, config)
                 return null
@@ -329,6 +336,7 @@ class Session(context: Context) {
 
     /** Show the downloads, without the server. [setOfflineMode] keeps it so. */
     private fun goOffline() {
+        if (isTv) return start()
         val server = origin ?: return
         val user = lastUser ?: return
         _state.value = AuthState.Offline(server.display, user)

@@ -34,7 +34,6 @@ fun UnreachableScreen(session: Session, state: AuthState.Unreachable) {
     val downloads by LocalContext.current.app.downloads.store.items.collectAsState()
     val canWatchOffline = downloads.isNotEmpty() && session.lastUser != null
     val noNetwork = state.reason == Unreachability.NoNetwork
-    val host = state.server.substringAfter("://")
 
     AuthLayout {
         Text(
@@ -43,15 +42,7 @@ fun UnreachableScreen(session: Session, state: AuthState.Unreachable) {
         )
         Gap(8.dp)
         Text(
-            when (state.reason) {
-                Unreachability.NoNetwork ->
-                    stringResource(if (canWatchOffline) R.string.unreachable_offline_downloads else R.string.unreachable_offline)
-                Unreachability.Refused -> stringResource(R.string.unreachable_refused, host)
-                Unreachability.NotFound -> stringResource(R.string.unreachable_not_found, host)
-                Unreachability.Timeout -> stringResource(R.string.unreachable_timeout, host)
-                Unreachability.Certificate -> stringResource(R.string.unreachable_certificate, host)
-                Unreachability.Other -> stringResource(R.string.unreachable_other, host)
-            },
+            unreachableMessage(state.reason, state.server, canWatchOffline),
             style = MaterialTheme.typography.bodyMedium,
             color = Palette.Muted,
         )

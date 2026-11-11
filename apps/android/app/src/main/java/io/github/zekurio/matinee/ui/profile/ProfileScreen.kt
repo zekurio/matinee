@@ -18,12 +18,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -32,7 +27,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.Profile
-import io.github.zekurio.matinee.api.WatchStats
 import io.github.zekurio.matinee.api.isAdmin
 import io.github.zekurio.matinee.api.name
 import io.github.zekurio.matinee.auth.Session
@@ -66,10 +60,7 @@ import io.github.zekurio.matinee.ui.settings.LinkRow
 import io.github.zekurio.matinee.ui.settings.Panel
 import io.github.zekurio.matinee.ui.tabBarPadding
 import io.github.zekurio.matinee.ui.theme.Palette
-import java.time.Instant
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 /**
  * The profile tab, behind the person's picture in the tab bar, as the web's
@@ -165,12 +156,7 @@ private fun Header(profile: Profile?, action: @Composable () -> Unit) {
     val api = LocalApi.current
     val nav = LocalNavigator.current
     val user = LocalUser.current
-    val joined = profile?.user?.createdAt?.let { at ->
-        runCatching {
-            DateTimeFormatter.ofPattern(android.text.format.DateFormat.getBestDateTimePattern(Locale.getDefault(), "MMMMyyyy"), Locale.getDefault())
-                .format(Instant.parse(at).atZone(ZoneId.systemDefault()))
-        }.getOrNull()
-    }
+    val joined = profile?.let(::joinedMonth)
     // One row, as a profile's header on a phone: the picture, who it is,
     // and Settings at its end, a button of the same weight as the avatar.
     Row(
@@ -251,44 +237,6 @@ private val SectionGap = 32.dp
 
 /** The gap between the statistics' cards. */
 private val CardGap = 28.dp
-
-/**
- * The statistics for a range, all time to start. The last range's figures
- * stay up while the next one loads, so the page doesn't jump. [loader] is
- * null offline, where they're only what was saved.
- */
-private class ProfileStats(
-    val range: String,
-    val onRange: (String) -> Unit,
-    val state: Load<WatchStats?>,
-    /** The figures shown: the range's, or the last range's while it loads. */
-    val stats: WatchStats?,
-    val loader: Loader<WatchStats?>?,
-) {
-    /** With nothing ever watched, picking a period changes nothing. */
-    val neverWatched get() = stats != null && range == "all" && stats.totals.plays == 0
-}
-
-@Composable
-private fun rememberProfileStats(username: String, snapshot: ProfileSnapshot): ProfileStats {
-    var range by rememberSaveable { mutableStateOf("all") }
-    val zone = remember { ZoneId.systemDefault().id }
-    val loader = rememberLoader("profile-stats-$username-$range", snapshot.stats(range)) { profiles.stats(username, range, zone) }
-    RefreshOnResume(loader)
-    var last by remember { mutableStateOf<WatchStats?>(null) }
-    val state = loader.state
-    LaunchedEffect(state) { if (state is Load.Ready) last = state.value }
-    return ProfileStats(range, { range = it }, state, (state as? Load.Ready)?.value ?: last, loader)
-}
-
-/** Offline, each range's statistics as the server last sent them; one never opened online can't show. */
-@Composable
-private fun rememberSavedStats(snapshot: ProfileSnapshot): ProfileStats {
-    var range by rememberSaveable { mutableStateOf("all") }
-    val saved = remember(snapshot, range) { snapshot.stats(range).read() }
-    val state = if (saved != null) Load.Ready(saved) else Load.Failed("", disconnected = true)
-    return ProfileStats(range, { range = it }, state, saved, null)
-}
 
 /**
  * The statistics' heading and range, then a list item per card. Kept apart,

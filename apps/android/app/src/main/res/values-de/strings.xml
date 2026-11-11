@@ -545,12 +545,6 @@
 
     <!-- TV -->
     <string name="tv_home_featured">Empfohlen</string>
-    <string name="tv_page_library">Mediathek</string>
-    <string name="tv_page_title">Titel</string>
-    <string name="tv_page_season">Staffel</string>
-    <string name="tv_page_episode">Folge</string>
-    <string name="tv_page_person">Person</string>
-    <string name="tv_page_browse">Durchsuchen</string>
     <string name="tv_detail_people">Besetzung und Stab</string>
     <string name="tv_detail_links">Genres und Studios</string>
     <string name="tv_grid_failed">Die Titel konnten nicht geladen werden</string>
@@ -558,4 +552,31 @@
     <string name="tv_kind_movie">Film</string>
     <string name="tv_kind_show">Serie</string>
     <string name="tv_favorites_empty_hint">Markiere einen Film, eine Serie oder eine Folge auf ihrer Seite als Favorit, um sie hier zu sammeln.</string>
+    <string name="tv_connect_title">Wähle deinen Server</string>
+    <string name="tv_connect_description">Matinee-Server in diesem Netzwerk erscheinen hier. Wähle deinen aus oder gib seine Adresse ein.</string>
+    <string name="tv_connect_found">In diesem Netzwerk</string>
+    <string name="tv_connect_searching">Suche läuft …</string>
+    <string name="tv_connect_none">Kein Server gefunden. Ist der Fernseher im selben Netzwerk wie der Server?</string>
+    <string name="tv_connect_search_again">Erneut suchen</string>
+    <string name="tv_connect_last">Zuletzt verwendet</string>
+    <string name="tv_connect_other">Woanders</string>
+    <string name="tv_connect_enter">Serveradresse eingeben</string>
+    <string name="tv_connect_back_to_list">Zurück zu den gefundenen Servern</string>
+    <string name="tv_signin_title">Mit dem Handy anmelden</string>
+    <string name="tv_signin_description">Scanne den QR-Code mit der Kamera deines Handys oder in der Matinee-App unter Einstellungen › Konto.</string>
+    <string name="tv_signin_enter">Oder öffne %1$s und gib ein</string>
+    <string name="tv_signin_expired">Dieser Code ist abgelaufen.</string>
+    <string name="tv_signin_expired_short">Code abgelaufen</string>
+    <string name="tv_signin_new_code">Neuen Code holen</string>
+    <string name="tv_unreachable_retrying">Neuer Versuch …</string>
+    <string name="tv_settings_devices">Geräte</string>
+    <string name="tv_settings_account">Konto</string>
+    <string name="tv_settings_this_tv">Dieser Fernseher</string>
+    <string name="tv_settings_frame_rate">Bildrate anpassen</string>
+    <string name="tv_settings_frame_rate_description">Stellt den Fernseher während der Wiedergabe auf die Bildrate des Videos um, für flüssige Bewegungen. Manche Fernseher werden beim Umschalten kurz schwarz.</string>
+    <string name="tv_settings_transcoding_note">Wird nur verwendet, wenn der Server eine Datei zum Abspielen umwandelt.</string>
+    <string name="tv_settings_languages_note">Diese gelten für dein Konto, auf jedem Gerät, auf dem du schaust.</string>
+    <string name="tv_settings_sign_out_device">%1$s abmelden?</string>
+    <string name="tv_settings_sign_out_device_description">Das Gerät muss sich erneut anmelden, um Matinee zu nutzen.</string>
+    <string name="tv_profile_see_all">Alle ansehen</string>
 </resources>

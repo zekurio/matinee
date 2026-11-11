@@ -24,6 +24,11 @@ class SessionStore(context: Context) {
         get() = prefs.getString(KEY_SERVER, null)
         set(value) = prefs.edit { putString(KEY_SERVER, value) }
 
+    /** The last server connected to, kept after switching away, for a TV to offer again. */
+    var lastServer: String?
+        get() = prefs.getString(KEY_LAST_SERVER, null)
+        set(value) = prefs.edit { putString(KEY_LAST_SERVER, value) }
+
     var token: String?
         get() = prefs.getString(KEY_TOKEN, null)?.let(::decrypt)
         set(value) = prefs.edit {
@@ -91,6 +96,7 @@ class SessionStore(context: Context) {
         const val TRANSFORMATION = "AES/GCM/NoPadding"
         const val IV_BYTES = 12
         const val KEY_SERVER = "server"
+        const val KEY_LAST_SERVER = "last_server"
         const val KEY_TOKEN = "token"
         const val KEY_USER = "user"
         const val KEY_OFFLINE = "offline_mode"

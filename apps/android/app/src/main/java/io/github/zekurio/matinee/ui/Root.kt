@@ -21,13 +21,20 @@ import io.github.zekurio.matinee.ui.signin.ConnectScreen
 import io.github.zekurio.matinee.ui.signin.SignInScreen
 import io.github.zekurio.matinee.ui.signin.UnreachableScreen
 import io.github.zekurio.matinee.ui.theme.Palette
+import io.github.zekurio.matinee.ui.theme.LocalTv
+import io.github.zekurio.matinee.ui.tv.auth.TvRoot
 import kotlinx.coroutines.flow.MutableStateFlow
 
-/** Server, then sign-in, then the app. */
+/** Server, then sign-in, then the app. A TV has screens of its own for each, in [TvRoot]. */
 @Composable
 fun MatineeRoot(session: Session, signInError: MutableStateFlow<String?>) {
     val state by session.state.collectAsState()
+    val tv = LocalTv.current
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+        if (tv) {
+            TvRoot(session, state)
+            return@Surface
+        }
         when (val current = state) {
             AuthState.NoServer -> ConnectScreen(session)
             is AuthState.Connecting -> Column(
