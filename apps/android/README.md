@@ -99,9 +99,12 @@ Without Nix, install JDK 17 or later and the Android SDK with platform
 `android-37.0` and build tools 36.0.0, point `ANDROID_HOME` at it, and run
 `./gradlew assembleDebug`. Android Studio opens the folder as it is.
 
-`nix develop ../..#android-emulator -c matinee-emulator` starts an emulator
-with a Pixel 7 profile. To reach a dev server on the host from it, forward
-the port, so the app connects to the same `PUBLIC_URL` the browser uses:
+The flake has no emulator. Run the app on one from your own Android SDK,
+started from T3 Code's Device panel, Android Studio, or `emulator -avd`. A TV
+needs an AVD on an `android-tv` system image, such as
+`system-images;android-36;android-tv;x86_64` with the `tv_1080p` device. To
+reach a dev server on the host from an emulator, forward the port, so the
+app connects to the same `PUBLIC_URL` the browser uses:
 
 ```sh
 adb reverse tcp:5173 tcp:5173   # then connect to http://localhost:5173
