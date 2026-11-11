@@ -10,52 +10,20 @@ import { oidcConfig } from "./oidc-client"
 import { activeOidc, sameIssuer } from "./oidc-settings"
 import { deleteUserSessions } from "./session"
 
-function rejectedToken(
-  error: string | undefined,
-  description: string | undefined,
-): boolean {
-  if (
-    [
-      "invalid_grant",
-      "invalid_token",
-      "invalid_client",
-      "unauthorized_client",
-    ].includes(error ?? "")
-  )
-    return true
-  const problem = `${error ?? ""} ${description ?? ""}`.replaceAll("_", " ")
-  return (
-    /\b(?:invalid|expired|revoked|rejected|disabled|unauthorized) (?:refresh |access )?(?:token|client)\b/i.test(
-      problem,
-    ) ||
-    /\b(?:token|client) (?:is |was |has been )?(?:invalid|expired|revoked|rejected|disabled|unauthorized)\b/i.test(
-      problem,
-    )
-  )
-}
-
-/** Only a definite token or client rejection should end local sessions. */
+/**
+ * The provider refused this account's token for good: `invalid_grant`, as
+ * RFC 6749 names a refresh token that expired, was revoked, or belongs to
+ * someone the provider disabled. Anything else waits for the next run. A
+ * rejected client (`invalid_client`) is the server's own setup failing,
+ * for every account at once, and must not sign anyone out.
+ */
 export function refreshRefused(cause: unknown): boolean {
-  if (cause instanceof client.ResponseBodyError) {
-    return (
-      cause.status >= 400 &&
-      cause.status < 500 &&
-      rejectedToken(cause.error, cause.error_description)
-    )
-  }
-  if (cause instanceof client.WWWAuthenticateChallengeError) {
-    return (
-      cause.status >= 400 &&
-      cause.status < 500 &&
-      cause.cause.some((challenge) =>
-        rejectedToken(
-          challenge.parameters.error,
-          challenge.parameters.error_description,
-        ),
-      )
-    )
-  }
-  return false
+  return (
+    cause instanceof client.ResponseBodyError &&
+    cause.status >= 400 &&
+    cause.status < 500 &&
+    cause.error === "invalid_grant"
+  )
 }
 
 /** Read provider changes even for accounts that only use sliding app sessions. */
