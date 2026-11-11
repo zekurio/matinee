@@ -9,6 +9,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -22,9 +23,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -145,6 +144,8 @@ internal fun TvDrawer(
                     }
                 }
             }
+            // The properties above are the group's, not each entry's.
+            .focusGroup()
             .onPreviewKeyEvent { event ->
                 if (event.key == Key.DirectionRight) {
                     if (event.type == KeyEventType.KeyDown) onLeave()
@@ -158,12 +159,10 @@ internal fun TvDrawer(
         Column(Modifier.fillMaxHeight().width(width), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Entry(top, current, state, open, onPick, avatar)
             Spacer(Modifier.height(18.dp))
-            Column(
-                Modifier.weight(1f).verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                entries.forEach { Entry(it, current, state, open, onPick) }
-            }
+            // One column, no scrolling group inside it: Down from the
+            // profile went past a nested one to Settings.
+            entries.forEach { Entry(it, current, state, open, onPick) }
+            Spacer(Modifier.weight(1f))
             Entry(bottom, current, state, open, onPick)
         }
     }

@@ -1,6 +1,7 @@
 package io.github.zekurio.matinee.ui.tv
 
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.interaction.InteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.runtime.Composable
@@ -97,7 +98,7 @@ class TvFocusMemory internal constructor(lastRow: String?, lastItem: String?, ro
             val requester = item?.let { requesters[key to it] }
             if (requester != null) requester.requestFocus()
         }
-    }
+    }.focusGroup()
 
     /** A card in [row], remembered when it takes focus. */
     fun Modifier.item(row: String, key: String): Modifier = composed {
