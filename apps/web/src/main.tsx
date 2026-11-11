@@ -7,7 +7,7 @@ import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
 
 import { LocaleBoundary } from "./i18n/react"
-import { homeQueries } from "./lib/home-queries"
+import { prefetchHome } from "./lib/home-queries"
 import { orpc, queryClient, sessionLost } from "./lib/rpc"
 import { syncUiText } from "./lib/ui-text"
 import { routeTree } from "./routeTree.gen"
@@ -30,9 +30,7 @@ if (!SIGNED_OUT_PAGES.includes(location.pathname)) {
   void queryClient.prefetchQuery(orpc.libraries.list.queryOptions())
 }
 if (location.pathname === "/") {
-  void queryClient.prefetchQuery(homeQueries.resume())
-  void queryClient.prefetchQuery(homeQueries.nextUp())
-  void queryClient.prefetchQuery(homeQueries.featured())
+  prefetchHome(queryClient)
 }
 // The first render is in the right language, so it waits for it to load.
 await applyLanguage()

@@ -1,3 +1,5 @@
+import type { QueryClient } from "@tanstack/react-query"
+
 import { orpc } from "./rpc"
 
 // The contract's cap. Twelve posters fit side by side on a wide monitor,
@@ -14,4 +16,11 @@ export const homeQueries = {
   // new next episode. What the user is watching has its own rows.
   featured: () =>
     orpc.home.featured.queryOptions({ input: { limit: HERO_SLIDES } }),
+}
+
+/** Starts Home's queries, for the page about to show it. */
+export function prefetchHome(queryClient: QueryClient) {
+  void queryClient.prefetchQuery(homeQueries.resume())
+  void queryClient.prefetchQuery(homeQueries.nextUp())
+  void queryClient.prefetchQuery(homeQueries.featured())
 }
