@@ -420,7 +420,6 @@
     <string name="settings_admin_jobs">Aufgaben</string>
     <string name="settings_admin_appearance">Darstellung</string>
     <string name="settings_offline_mode">Offline-Modus</string>
-    <string name="settings_go_online">Online gehen</string>
 
     <string name="player_load_failed">Der Titel konnte nicht geladen werden</string>
     <string name="player_back">Zurück</string>
@@ -469,7 +468,6 @@
     <string name="player_picture">Bild</string>
     <string name="downloads_title">Downloads</string>
     <string name="downloads_action">Herunterladen</string>
-    <string name="downloads_sheet_title">Herunterladen</string>
     <string name="downloads_sheet_title_named">%1$s herunterladen</string>
     <string name="downloads_about">ca. %1$s</string>
     <string name="downloads_choice_device">Volle Qualität</string>

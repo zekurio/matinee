@@ -444,7 +444,6 @@
     <string name="settings_admin_jobs">Jobs</string>
     <string name="settings_admin_appearance">Appearance</string>
     <string name="settings_offline_mode">Offline mode</string>
-    <string name="settings_go_online">Go online</string>
 
     <!-- The player -->
     <string name="player_load_failed">Couldn\'t load this title</string>
@@ -497,7 +496,6 @@
     <string name="player_picture">Picture</string>
     <string name="downloads_title">Downloads</string>
     <string name="downloads_action">Download</string>
-    <string name="downloads_sheet_title">Download</string>
     <string name="downloads_sheet_title_named">Download %1$s</string>
     <string name="downloads_about">About %1$s</string>
     <string name="downloads_choice_device">Full quality</string>
