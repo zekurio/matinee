@@ -51,6 +51,7 @@ import io.github.zekurio.matinee.api.TitleSummary
 import io.github.zekurio.matinee.app
 import io.github.zekurio.matinee.ui.LocalNavigator
 import io.github.zekurio.matinee.ui.LocalOffline
+import io.github.zekurio.matinee.ui.Navigator
 import io.github.zekurio.matinee.ui.Motion
 import io.github.zekurio.matinee.ui.episodeCode
 import io.github.zekurio.matinee.ui.episodeNumber
@@ -296,43 +297,51 @@ fun PosterCard(
     }
 }
 
+/**
+ * What a shelf entry's card shows and opens: a movie by its year, a show by
+ * what it got last, with the season's poster and page, or the one new
+ * episode's, where that's what's new.
+ */
+class ShelfCardModel(val poster: ImageSource?, val detail: String?, val open: (Navigator) -> Unit)
+
+fun shelfCardModel(entry: ShelfEntry, api: io.github.zekurio.matinee.api.MatineeApi, res: android.content.res.Resources): ShelfCardModel {
+    val (title, _, count, _, added) = entry
+    val openTitle: (Navigator) -> Unit = { it.title(title) }
+    return when {
+        title.kind == TitleKind.MOVIE -> ShelfCardModel(api.art(title.images.poster), title.year?.toString(), openTitle)
+        added == null -> ShelfCardModel(
+            api.art(title.images.poster),
+            res.getQuantityString(R.plurals.media_episode_count, count, count),
+            openTitle,
+        )
+        added.count == 1 -> {
+            val code = episodeCode(added.item, res)
+            val name = itemLabel(added.item, res).title
+            ShelfCardModel(
+                api.art(added.season?.poster ?: title.images.poster),
+                if (code != null) res.getString(R.string.media_code_title, code, name) else name,
+            ) { it.episode(added.item.id) }
+        }
+        else -> {
+            val fresh = res.getQuantityString(R.plurals.media_new_episodes, added.count, added.count)
+            val season = added.season
+            ShelfCardModel(
+                api.art(season?.poster ?: title.images.poster),
+                if (season != null) "${seasonName(season.number, res)} · $fresh" else fresh,
+                if (season != null) ({ nav: Navigator -> nav.season(title.id, season.number) }) else openTitle,
+            )
+        }
+    }
+}
+
 /** A movie or show from a library's shelf, saying what it got last. */
 @Composable
 fun ShelfCard(entry: ShelfEntry, modifier: Modifier = Modifier) {
     val api = LocalApi.current
     val nav = LocalNavigator.current
     val res = LocalResources.current
-    val (title, _, count, _, added) = entry
-    when {
-        title.kind == TitleKind.MOVIE -> PosterCard(title, title.year?.toString(), modifier)
-        added == null -> PosterCard(
-            title,
-            res.getQuantityString(R.plurals.media_episode_count, count, count),
-            modifier,
-        )
-        added.count == 1 -> {
-            val code = episodeCode(added.item, res)
-            val name = itemLabel(added.item, res).title
-            PosterCard(
-                title,
-                if (code != null) res.getString(R.string.media_code_title, code, name) else name,
-                modifier,
-                poster = api.art(added.season?.poster ?: title.images.poster),
-                onClick = { nav.episode(added.item.id) },
-            )
-        }
-        else -> {
-            val fresh = res.getQuantityString(R.plurals.media_new_episodes, added.count, added.count)
-            val season = added.season
-            PosterCard(
-                title,
-                if (season != null) "${seasonName(season.number, res)} · $fresh" else fresh,
-                modifier,
-                poster = api.art(season?.poster ?: title.images.poster),
-                onClick = if (season != null) ({ nav.season(title.id, season.number) }) else null,
-            )
-        }
-    }
+    val card = shelfCardModel(entry, api, res)
+    PosterCard(entry.title, card.detail, modifier, poster = card.poster, onClick = { card.open(nav) })
 }
 
 /** Someone in the cast or crew: a round portrait, the name, and the part. */

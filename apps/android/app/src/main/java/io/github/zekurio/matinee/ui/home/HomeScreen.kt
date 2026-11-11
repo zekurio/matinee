@@ -18,14 +18,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -40,7 +38,6 @@ import io.github.zekurio.matinee.ui.Loader
 import io.github.zekurio.matinee.ui.LocalNavigator
 import io.github.zekurio.matinee.ui.LocalOffline
 import io.github.zekurio.matinee.ui.LocalUser
-import io.github.zekurio.matinee.ui.RefreshOnResume
 import io.github.zekurio.matinee.ui.StatusBarScrim
 import io.github.zekurio.matinee.ui.components.DisconnectedAction
 import io.github.zekurio.matinee.ui.components.EpisodeCard
@@ -54,7 +51,6 @@ import io.github.zekurio.matinee.ui.components.RailArt
 import io.github.zekurio.matinee.ui.components.ShelfCard
 import io.github.zekurio.matinee.ui.components.isWide
 import io.github.zekurio.matinee.ui.components.railItemWidth
-import io.github.zekurio.matinee.ui.rememberLoader
 import io.github.zekurio.matinee.ui.tabBarPadding
 import io.github.zekurio.matinee.ui.theme.Palette
 
@@ -70,19 +66,11 @@ fun HomeScreen() {
 
 @Composable
 private fun OnlineHomeScreen() {
-    val libraries = rememberLoader("libraries") { libraries.list() }
-    val resume = rememberLoader("continue") { home.continueWatching(limit = 20) }
-    val nextUp = rememberLoader("nextUp") { home.nextUp(limit = 20).map { it.item } }
-    val featured = rememberLoader("featured") { home.featured() }
-    // What the server puts in these two rows, kept for offline Home.
-    val context = LocalContext.current
-    val snapshot = remember { HomeSnapshot(context) }
-    LaunchedEffect(resume.state) { (resume.state as? Load.Ready)?.value?.let { list -> snapshot.saveResume(list.map { it.id }) } }
-    LaunchedEffect(nextUp.state) { (nextUp.state as? Load.Ready)?.value?.let { list -> snapshot.saveNextUp(list.map { it.id }) } }
-    // Back on Home, what's in progress may have moved on, here or on
-    // another device. Featured stays: it's picked at random, so fetching it
-    // again would swap the banner under the person.
-    RefreshOnResume(libraries, resume, nextUp)
+    val loaders = rememberHomeLoaders()
+    val libraries = loaders.libraries
+    val resume = loaders.resume
+    val nextUp = loaders.nextUp
+    val featured = loaders.featured
     // Shelves on screen whose refresh failed, for the one notice that says so.
     val staleShelves = remember { mutableStateMapOf<String, Loader<*>>() }
     val config = LocalConfiguration.current
@@ -203,9 +191,8 @@ private fun EpisodeRail(title: String, items: List<MediaItem>) {
 @Composable
 private fun LibraryShelf(library: Library, stale: MutableMap<String, Loader<*>>) {
     val nav = LocalNavigator.current
-    val entries = rememberLoader("shelf-${library.id}") { media.shelf(library.id, 12) }
-    // Also when it scrolls back into view, once the last answer is old enough.
-    RefreshOnResume(entries)
+    // Also refreshes when it scrolls back into view, once the last answer is old enough.
+    val entries = rememberShelf(library)
     val refreshFailed = entries.refreshError != null
     DisposableEffect(entries, refreshFailed) {
         if (refreshFailed) stale[library.id] = entries else stale.remove(library.id)
