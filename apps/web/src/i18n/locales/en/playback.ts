@@ -19,8 +19,6 @@ export default defineMessages("playback", {
   // Whether a track picked in the player plays again; see the footer.
   "playback.audio.remember": "Remember audio picks",
   "playback.subtitles.remember": "Remember subtitle picks",
-  "playback.remember.footer":
-    "A track you pick in the player plays again in that file, and the closest match plays in the title's other files, like the next episode. Files you never picked in follow the languages above.",
 
   // How far the player's skip buttons and keys go, which the account syncs.
   "playback.skip.title": "Skipping",
