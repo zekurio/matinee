@@ -61,6 +61,7 @@ import io.github.zekurio.matinee.ui.player.PlayerData
 import io.github.zekurio.matinee.ui.player.PlayerNoticeNote
 import io.github.zekurio.matinee.ui.player.Subtitles
 import io.github.zekurio.matinee.ui.player.Video
+import io.github.zekurio.matinee.ui.player.refusalTitle
 import io.github.zekurio.matinee.ui.player.rememberPlayerController
 import io.github.zekurio.matinee.ui.player.rememberSubtitleLook
 import io.github.zekurio.matinee.ui.player.rememberUpNext
@@ -84,15 +85,17 @@ internal fun TvPlayerScreen(itemId: String, start: Double?, state: Load<PlayerDa
             is Load.Failed -> TvPlayerFailure(stringResource(R.string.player_load_failed), state.message, reload)
             is Load.Ready -> when (val value = state.value) {
                 PlayerData.Unplayable -> TvPlayerFailure(stringResource(R.string.player_error_lost), stringResource(R.string.player_unplayable), reload)
+                // Asking again gets the same answer, so there's nothing to try.
+                is PlayerData.Refused -> TvPlayerFailure(refusalTitle(value.refusal), value.message, null)
                 else -> TvPlayback(itemId, value, start)
             }
         }
     }
 }
 
-/** Why nothing plays, with Try again focused and Back beside it. */
+/** Why nothing plays, with Try again focused and Back beside it. Without [retry], only Back. */
 @Composable
-private fun TvPlayerFailure(title: String, message: String?, retry: () -> Unit) {
+private fun TvPlayerFailure(title: String, message: String?, retry: (() -> Unit)?) {
     val host = LocalPlayerHost.current
     val again = remember { FocusRequester() }
     LaunchedEffect(Unit) {
@@ -117,8 +120,8 @@ private fun TvPlayerFailure(title: String, message: String?, retry: () -> Unit) 
         }
         Box(Modifier.height(28.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            TvButton(stringResource(R.string.common_retry), retry, Modifier.focusRequester(again), icon = Lucide.RefreshCw)
-            TvButton(stringResource(R.string.player_back), host.close)
+            if (retry != null) TvButton(stringResource(R.string.common_retry), retry, Modifier.focusRequester(again), icon = Lucide.RefreshCw)
+            TvButton(stringResource(R.string.player_back), host.close, if (retry == null) Modifier.focusRequester(again) else Modifier)
         }
     }
 }
@@ -342,7 +345,11 @@ private fun TvPlayback(itemId: String, data: PlayerData, start: Double?) {
         )
         controller.error?.let { message ->
             Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.85f))) {
-                TvPlayerFailure(stringResource(R.string.player_error_lost), message, controller::retry)
+                when (val refusal = controller.refusal) {
+                    null -> TvPlayerFailure(stringResource(R.string.player_error_lost), message, controller::retry)
+                    // The server won't play it for this account, in its own words.
+                    else -> TvPlayerFailure(refusalTitle(refusal), message, null)
+                }
             }
         }
         // Back cancels the countdown and takes the button away; the controls still have it.

@@ -310,7 +310,7 @@ private fun FullScreen() {
 
 /** The heading over the server's words when it won't play the file for this account. */
 @Composable
-private fun refusalTitle(refusal: Refusal) = stringResource(
+internal fun refusalTitle(refusal: Refusal) = stringResource(
     when (refusal) {
         Refusal.RESTRICTED -> R.string.player_restricted
         Refusal.BUSY -> R.string.player_busy
