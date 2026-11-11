@@ -12,6 +12,7 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -31,6 +32,9 @@ import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.InputMode
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.ui.Motion
 import io.github.zekurio.matinee.ui.theme.Palette
@@ -228,3 +232,17 @@ class TvPageFocus {
 }
 
 val LocalTvPageFocus = androidx.compose.runtime.staticCompositionLocalOf<TvPageFocus?> { null }
+
+/**
+ * A touch or a mouse click takes focus off everything, and the D-pad press
+ * after it has nowhere to move from. This puts focus back with [restore]
+ * when the keys take over again. For the root of a TV screen.
+ */
+fun Modifier.tvRefocus(restore: () -> Unit): Modifier = composed {
+    val mode = LocalInputModeManager.current
+    var focused by remember { mutableStateOf(false) }
+    LaunchedEffect(mode.inputMode) {
+        if (mode.inputMode == InputMode.Keyboard && !focused) restore()
+    }
+    onFocusChanged { focused = it.hasFocus }
+}
