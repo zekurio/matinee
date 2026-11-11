@@ -314,56 +314,58 @@ fun TvTitleGrid(
     val viewer = LocalContext.current.app.viewer
     val error = pages.error
     val line: @Composable () -> Unit = { TvFocusLine(focused) }
-    when {
-        pages.items.isEmpty() && error != null -> GridFrame(true, header, line) {
-            GridNotice(stringResource(R.string.tv_grid_failed), error, pages::more, Modifier)
-        }
-        pages.items.isEmpty() && pages.done -> GridFrame(true, header, line) { GridNotice(empty, null, null, Modifier) }
-        pages.items.isEmpty() -> GridFrame(true, header, line) {
-            Box(Modifier.fillMaxSize().padding(top = 96.dp), contentAlignment = Alignment.TopCenter) {
-                CircularProgressIndicator(color = Palette.Muted, strokeWidth = 3.dp, modifier = Modifier.size(32.dp))
-            }
-        }
-        else -> TvPosterGrid(
-            pages.items,
-            key = { it.id },
-            memory = memory,
-            header = header,
-            line = line,
-            onNearEnd = pages::more,
-            scrollKey = scrollKey,
-            footer = {
-                when {
-                    error != null -> item(span = { GridItemSpan(maxLineSpan) }, key = "more-failed") {
-                        GridNotice(stringResource(R.string.tv_grid_more_failed), error, pages::more, Modifier, inGrid = true)
-                    }
-                    pages.loading -> item(span = { GridItemSpan(maxLineSpan) }, key = "loading") {
-                        Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(color = Palette.Muted, strokeWidth = 3.dp, modifier = Modifier.size(28.dp))
-                        }
+    // One grid whatever the state, so the header stays put and keeps focus while a new sort or filter loads.
+    val none = pages.items.isEmpty()
+    TvPosterGrid(
+        pages.items,
+        key = { it.id },
+        memory = memory,
+        header = header,
+        line = line,
+        onNearEnd = pages::more,
+        scrollKey = scrollKey,
+        footer = {
+            when {
+                error != null -> item(span = { GridItemSpan(maxLineSpan) }, key = "failed") {
+                    GridNotice(
+                        stringResource(if (none) R.string.tv_grid_failed else R.string.tv_grid_more_failed),
+                        error,
+                        pages::more,
+                        top = if (none) NOTICE_TOP else 8.dp,
+                    )
+                }
+                none && pages.done -> item(span = { GridItemSpan(maxLineSpan) }, key = "empty") {
+                    GridNotice(empty, null, null, top = NOTICE_TOP)
+                }
+                none || pages.loading -> item(span = { GridItemSpan(maxLineSpan) }, key = "loading") {
+                    Box(
+                        Modifier.fillMaxWidth().padding(top = if (none) SPINNER_TOP else 16.dp, bottom = 16.dp),
+                        contentAlignment = if (none) Alignment.TopCenter else Alignment.Center,
+                    ) {
+                        CircularProgressIndicator(color = Palette.Muted, strokeWidth = 3.dp, modifier = Modifier.size(if (none) 32.dp else 28.dp))
                     }
                 }
-            },
-        ) { title, focus ->
-            TvPosterCard(
-                title.name,
-                api.art(title.images.poster),
-                onClick = { nav.title(title) },
-                watched = viewer.isWatched(title),
-                modifier = focus.fillMaxWidth().onFocusChanged { if (it.isFocused) onFocus(title) },
-            )
-        }
+            }
+        },
+    ) { title, focus ->
+        TvPosterCard(
+            title.name,
+            api.art(title.images.poster),
+            onClick = { nav.title(title) },
+            watched = viewer.isWatched(title),
+            modifier = focus.fillMaxWidth().onFocusChanged { if (it.isFocused) onFocus(title) },
+        )
     }
 }
 
-/** Where the grid would be: why it's empty, with a way to try again where there is one. */
+/** Below the grid's own top room, where a notice or the spinner stands in for the first row. */
+private val NOTICE_TOP = 28.dp
+private val SPINNER_TOP = 76.dp
+
+/** In the grid, spanning it: why it's empty, with a way to try again where there is one. */
 @Composable
-private fun GridNotice(headline: String, message: String?, onRetry: (() -> Unit)?, modifier: Modifier, inGrid: Boolean = false) {
-    Column(
-        modifier
-            .fillMaxWidth()
-            .padding(start = if (inGrid) 0.dp else TvPage.Start, end = if (inGrid) 0.dp else TvPage.End, top = if (inGrid) 8.dp else 48.dp),
-    ) {
+private fun GridNotice(headline: String, message: String?, onRetry: (() -> Unit)?, top: Dp) {
+    Column(Modifier.fillMaxWidth().padding(top = top)) {
         Text(headline, style = TvType.Title, color = Palette.Foreground.copy(alpha = 0.9f))
         if (message != null) Text(message, style = TvType.Body, color = Palette.Muted, modifier = Modifier.padding(top = 6.dp))
         if (onRetry != null) {
