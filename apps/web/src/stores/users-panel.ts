@@ -11,8 +11,13 @@ type UsersPanelState = {
    */
   confirming: { action: UserAction; user: AdminUser } | null
   confirmOpen: boolean
+  /** The account whose access is open, kept the same way. */
+  accessUserId: string | null
+  accessOpen: boolean
   openConfirm: (action: UserAction, user: AdminUser) => void
   closeConfirm: () => void
+  openAccess: (user: AdminUser) => void
+  closeAccess: () => void
 }
 
 /**
@@ -23,8 +28,12 @@ export function createUsersPanelStore() {
   return createStore<UsersPanelState>()((set) => ({
     confirming: null,
     confirmOpen: false,
+    accessUserId: null,
+    accessOpen: false,
     openConfirm: (action, user) =>
       set({ confirming: { action, user }, confirmOpen: true }),
     closeConfirm: () => set({ confirmOpen: false }),
+    openAccess: (user) => set({ accessUserId: user.id, accessOpen: true }),
+    closeAccess: () => set({ accessOpen: false }),
   }))
 }

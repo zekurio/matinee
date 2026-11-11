@@ -6,8 +6,9 @@ export default {
   "browse.home.noLibraries": "Noch keine Mediatheken",
   "browse.home.noLibrariesAdmin":
     "Füge einen Ordner mit Videos auf diesem Server hinzu, um loszulegen.",
-  "browse.home.noLibrariesUser":
-    "Ein Admin hat noch keine Mediathek hinzugefügt.",
+  "browse.home.nothingYet": "Noch nichts zu sehen",
+  "browse.home.nothingYetDescription":
+    "Dein Konto kann noch nichts öffnen. Frag, wer diesen Server betreibt, ob du Zugriff bekommst.",
   "browse.home.addLibrary": "Mediathek hinzufügen",
   "browse.home.continueWatching": "Weiterschauen",
   "browse.home.nextUp": "Als Nächstes",

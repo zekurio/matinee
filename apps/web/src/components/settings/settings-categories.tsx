@@ -8,6 +8,7 @@ import {
   type LucideIcon,
   PaintbrushIcon,
   PaletteIcon,
+  ShieldCheckIcon,
   TvMinimalPlayIcon,
   UserIcon,
   UsersIcon,
@@ -17,6 +18,7 @@ import { type ComponentType, useMemo } from "react"
 import { tr } from "@/i18n"
 import type { SettingsSectionId } from "@/lib/settings"
 
+import { AccessPanel } from "./access-panel"
 import { AccountPanel } from "./account-panel"
 import { AppearancePanel } from "./appearance-panel"
 import { AuthPanel } from "./auth-panel"
@@ -68,6 +70,7 @@ const SECTIONS: SectionEntry[] = [
     Panel: LibrariesPanel,
   },
   { id: "users", group: "admin", icon: UsersIcon, Panel: UsersPanel },
+  { id: "access", group: "admin", icon: ShieldCheckIcon, Panel: AccessPanel },
   {
     id: "authentication",
     group: "admin",

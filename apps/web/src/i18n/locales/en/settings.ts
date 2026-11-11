@@ -32,6 +32,10 @@ export default defineMessages("settings", {
   "settings.section.users.description": "Accounts and roles",
   "settings.section.users.keywords":
     "Admin, Role, Delete user, Sign out everywhere, Sessions, Invite, Invite link",
+  "settings.section.access.label": "Access",
+  "settings.section.access.description": "Groups, libraries, and limits",
+  "settings.section.access.keywords":
+    "Access groups, Groups, Permissions, Libraries, Bit rate, Limit, Bandwidth, Encoding, Transcoding, Downloads, Streams, Devices, Provider groups, Kids",
   "settings.section.authentication.label": "Authentication",
   "settings.section.authentication.description": "Passkeys and single sign-on",
   "settings.section.authentication.keywords":

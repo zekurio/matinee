@@ -1,4 +1,5 @@
 import type { AdminUser } from "@matinee/contracts"
+import { Badge } from "@matinee/ui/components/badge"
 import { Button } from "@matinee/ui/components/button"
 import {
   DropdownMenu,
@@ -25,6 +26,7 @@ import {
   RefreshCwIcon,
   ShieldIcon,
   ShieldOffIcon,
+  SlidersHorizontalIcon,
   Trash2Icon,
   TriangleAlertIcon,
 } from "lucide-react"
@@ -37,8 +39,10 @@ import { formatDate, formatRelative } from "@/lib/format"
 import { client, errorMessage, orpc } from "@/lib/rpc"
 import { createUsersPanelStore, type UserAction } from "@/stores/users-panel"
 
+import { Fact } from "./access-facts"
 import { Invites } from "./invites"
 import { SettingsSections, SettingsSubsection } from "./settings-panel"
+import { UserAccessDialog } from "./user-access-dialog"
 import { confirmCopy, ConfirmDialog } from "./user-dialogs"
 
 // The server moves a session's last-seen time at most hourly, so anything
@@ -63,7 +67,10 @@ export function UsersPanel() {
   const [store] = useState(createUsersPanelStore)
   const confirming = useStore(store, (state) => state.confirming)
   const confirmOpen = useStore(store, (state) => state.confirmOpen)
-  const { openConfirm, closeConfirm } = store.getState()
+  const accessUserId = useStore(store, (state) => state.accessUserId)
+  const accessOpen = useStore(store, (state) => state.accessOpen)
+  const { openConfirm, closeConfirm, openAccess, closeAccess } =
+    store.getState()
 
   const refresh = () =>
     queryClient.invalidateQueries({ queryKey: orpc.admin.users.key() })
@@ -185,6 +192,7 @@ export function UsersPanel() {
                 passkeysOn={passkeysOn}
                 lastAdmin={isLastAdmin(user)}
                 onConfirm={(action) => ask(action, user)}
+                onAccess={() => openAccess(user)}
               />
             ))}
           </List>
@@ -192,6 +200,13 @@ export function UsersPanel() {
       </SettingsSubsection>
 
       <Invites passkeysOn={passkeysOn} />
+
+      <UserAccessDialog
+        userId={accessUserId}
+        oidcName={oidcName}
+        open={accessOpen}
+        onOpenChange={(open) => !open && closeAccess()}
+      />
 
       <ConfirmDialog
         open={confirmOpen}
@@ -217,6 +232,7 @@ function UserItem({
   passkeysOn,
   lastAdmin,
   onConfirm,
+  onAccess,
 }: {
   user: AdminUser
   self: boolean
@@ -224,6 +240,7 @@ function UserItem({
   passkeysOn: boolean
   lastAdmin: boolean
   onConfirm: (action: UserAction) => void
+  onAccess: () => void
 }) {
   const name = displayName(user)
   const signOutLabel = self
@@ -261,6 +278,7 @@ function UserItem({
           oidcName={oidcName}
           passkeysOn={passkeysOn}
         />
+        <UserGroups user={user} oidcName={oidcName} />
       </div>
       <DropdownMenu>
         <DropdownMenuTrigger
@@ -276,6 +294,15 @@ function UserItem({
           <EllipsisIcon />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" sideOffset={6} className="min-w-56">
+          {/* An admin's access is everything, so there's nothing to set. */}
+          <BlockableItem
+            blocked={user.role === "admin" ? tr("users.adminAccess") : null}
+            onClick={onAccess}
+          >
+            <SlidersHorizontalIcon />
+            {tr("users.menu.access")}
+          </BlockableItem>
+          <DropdownMenuSeparator />
           <BlockableItem
             blocked={user.role === "admin" && lastAdmin ? lastAdminNote : null}
             onClick={() => onConfirm("role")}
@@ -388,12 +415,58 @@ function UserDetails({
   )
 }
 
-function Fact({ icon, children }: { icon: ReactNode; children: ReactNode }) {
+/**
+ * The groups an account is in besides Everyone, with the ones the provider
+ * put it in marked, and whether it has settings of its own.
+ */
+function UserGroups({
+  user,
+  oidcName,
+}: {
+  user: AdminUser
+  oidcName: string | null
+}) {
+  const { groups, override } = user.access
+  const own = Object.keys(override).length > 0
+  if (groups.length === 0 && !own) return null
+  const provider = oidcName ?? tr("access.user.theProvider")
   return (
-    <span className="inline-flex min-w-0 items-center gap-1.5 [&_svg]:size-3.5 [&_svg]:shrink-0 [&_svg]:opacity-80">
-      {icon}
-      <span className="truncate">{children}</span>
-    </span>
+    <p className="mt-1.5 flex flex-wrap gap-1">
+      {groups.map((group) =>
+        group.source === "provider" ? (
+          <Badge
+            key={group.id}
+            variant="secondary"
+            title={tr("users.groupFromProvider", { provider })}
+          >
+            <LogInIcon aria-hidden />
+            {group.name}
+            <span className="sr-only">
+              {tr("users.groupFromProviderShort", { provider })}
+            </span>
+          </Badge>
+        ) : (
+          <Badge key={group.id} variant="secondary">
+            {group.name}
+          </Badge>
+        ),
+      )}
+      {own && (
+        <Badge
+          variant="outline"
+          title={
+            user.access.overrideSource === "provider"
+              ? tr("users.ownAccessFromProvider", { provider })
+              : tr("users.ownAccessHint")
+          }
+        >
+          {user.access.overrideSource === "provider" && (
+            <LogInIcon aria-hidden />
+          )}
+          {tr("users.ownAccess")}
+        </Badge>
+      )}
+    </p>
   )
 }
 

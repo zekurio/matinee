@@ -45,6 +45,14 @@ export default {
   "users.menu.deleteOwn": "Mein Konto löschen",
   "users.menu.delete": "Benutzer löschen",
   "users.lastAdmin": "Mach zuerst jemand anderen zum Admin.",
+  "users.menu.access": "Zugriff bearbeiten",
+  "users.adminAccess": "Admins öffnen jede Mediathek und haben keine Grenzen.",
+  "users.groupFromProvider": "Bei der Anmeldung von {provider} gesetzt",
+  "users.groupFromProviderShort": "(von {provider})",
+  "users.ownAccess": "Eigene Grenzen",
+  "users.ownAccessHint": "Hat eigene Einstellungen über seinen Gruppen",
+  "users.ownAccessFromProvider":
+    "Bei der Anmeldung vom Richtlinien-Claim von {provider} gesetzt",
   "users.passkeys": plural({
     one: "{count} Passkey",
     other: "{count} Passkeys",
@@ -87,6 +95,7 @@ export default {
   "users.invites.made": "Erstellt am {date}",
   "users.invites.expires": "Läuft {when} ab",
   "users.invites.expiresAt": "Läuft am {date} ab",
+  "users.invites.joins": "Kommt in {groups}",
   "users.invites.revoke": "Einladungslink widerrufen",
   "users.invites.revokeNamed": "Einladungslink für {note} widerrufen",
   "users.invites.revoked": "Einladungslink widerrufen",
@@ -98,6 +107,9 @@ export default {
   "users.invites.dialog.note": "Notiz",
   "users.invites.dialog.noteHint": "Für wen er ist. Nur Admins sehen sie.",
   "users.invites.dialog.expiry": "Gültig für",
+  "users.invites.dialog.groups": "Gruppen",
+  "users.invites.dialog.groupsHint":
+    "Das neue Konto startet in diesen Gruppen und in der Gruppe Alle.",
   "users.invites.dialog.submit": "Link erstellen",
   "users.invites.link.title": "Schick diesen Link",
   "users.invites.link.description":

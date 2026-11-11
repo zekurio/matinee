@@ -30,6 +30,37 @@ const DownloadForm = lazy(() =>
 )
 
 /**
+ * Whether the account may download, as the server says. False until it
+ * has, so nothing offers a download the server would refuse.
+ */
+export function useDownloadsAllowed(): boolean {
+  const options = useQuery({
+    ...orpc.playback.options.queryOptions(),
+    select: (data) => data.downloads,
+  })
+  return options.data ?? false
+}
+
+/** In a dialog that opened while downloads were allowed, and no longer are. */
+function DownloadsOff({ onDone }: { onDone: () => void }) {
+  return (
+    <>
+      <DialogHeader>
+        <DialogTitle className="text-lg leading-7 font-semibold">
+          {tr("downloads.off.title")}
+        </DialogTitle>
+        <DialogDescription>{tr("downloads.off.description")}</DialogDescription>
+      </DialogHeader>
+      <DialogFooter className="-mx-6 -mb-6 px-6 py-4">
+        <Button type="button" onClick={onDone}>
+          {tr("downloads.off.done")}
+        </Button>
+      </DialogFooter>
+    </>
+  )
+}
+
+/**
  * Save a file to watch offline: as it is, or a version the server makes
  * for this device while the browser saves it.
  */
@@ -45,20 +76,25 @@ export function DownloadDialog({
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
+  const allowed = useDownloadsAllowed()
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[calc(100dvh-2rem)] gap-5 overflow-y-auto p-6 sm:max-w-lg">
         {/* The dialog unmounts its content when closed, so each opening
             starts from the defaults again. */}
-        <Suspense
-          fallback={<Spinner className="mx-auto my-16 size-6 opacity-60" />}
-        >
-          <DownloadForm
-            item={item}
-            name={name}
-            onDone={() => onOpenChange(false)}
-          />
-        </Suspense>
+        {allowed ? (
+          <Suspense
+            fallback={<Spinner className="mx-auto my-16 size-6 opacity-60" />}
+          >
+            <DownloadForm
+              item={item}
+              name={name}
+              onDone={() => onOpenChange(false)}
+            />
+          </Suspense>
+        ) : (
+          <DownloadsOff onDone={() => onOpenChange(false)} />
+        )}
       </DialogContent>
     </Dialog>
   )
@@ -84,15 +120,20 @@ export function DownloadFilesDialog({
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
+  const allowed = useDownloadsAllowed()
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="gap-5 p-6 sm:max-w-md">
-        <DownloadFiles
-          title={title}
-          season={season}
-          name={name}
-          onDone={() => onOpenChange(false)}
-        />
+        {allowed ? (
+          <DownloadFiles
+            title={title}
+            season={season}
+            name={name}
+            onDone={() => onOpenChange(false)}
+          />
+        ) : (
+          <DownloadsOff onDone={() => onOpenChange(false)} />
+        )}
       </DialogContent>
     </Dialog>
   )
@@ -173,7 +214,10 @@ function DownloadFiles({
   )
 }
 
-/** "Download" in a menu. Its owner renders the dialog. */
+/**
+ * "Download" in a menu, for an account that may download. Its owner
+ * renders the dialog.
+ */
 export function DownloadMenuItem({ onSelect }: { onSelect: () => void }) {
   return (
     <DropdownMenuItem onClick={onSelect}>

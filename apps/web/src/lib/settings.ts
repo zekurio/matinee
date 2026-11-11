@@ -15,6 +15,7 @@ export type SettingsSectionId =
   | "playback"
   | "libraries"
   | "users"
+  | "access"
   | "authentication"
   | "transcoding"
   | "trickplay"

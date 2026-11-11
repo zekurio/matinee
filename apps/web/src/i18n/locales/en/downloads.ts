@@ -4,6 +4,11 @@ export default defineMessages("downloads", {
   // download-dialog.tsx and download-form.tsx: saving a file to watch
   // offline. {name} is the movie or episode.
   "downloads.menuItem": "Download",
+  // A download dialog for an account that may no longer download.
+  "downloads.off.title": "Downloads are off",
+  "downloads.off.description":
+    "Your account can't download. Ask whoever runs this server if you need to.",
+  "downloads.off.done": "Close",
   "downloads.title": "Download {name}",
   "downloads.description": "Download the original or a custom version.",
   "downloads.version": "Version",

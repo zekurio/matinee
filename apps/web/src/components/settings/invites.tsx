@@ -15,11 +15,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@matinee/ui/components/dialog"
-import { FieldGroup } from "@matinee/ui/components/field"
+import { FieldGroup, FieldLegend, FieldSet } from "@matinee/ui/components/field"
 import { Input } from "@matinee/ui/components/input"
 import { List, ListItem } from "@matinee/ui/components/list"
 import { Skeleton } from "@matinee/ui/components/skeleton"
 import { toast } from "@matinee/ui/components/sonner"
+import { Switch } from "@matinee/ui/components/switch"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   CheckIcon,
@@ -38,6 +39,7 @@ import { formatDate, formatDateTime, formatRelative } from "@/lib/format"
 import { client, errorMessage, orpc } from "@/lib/rpc"
 import { useActionFeedback } from "@/lib/use-action-feedback"
 
+import { formatList } from "./access-facts"
 import { RowIcon, SettingNote, SettingsSubsection } from "./settings-panel"
 
 /**
@@ -145,6 +147,13 @@ function InviteRow({
   const details = [
     tr("users.invites.made", { date: formatDate(invite.createdAt) }),
     tr("users.invites.expires", { when: formatRelative(invite.expiresAt) }),
+    ...(invite.groups.length > 0
+      ? [
+          tr("users.invites.joins", {
+            groups: formatList(invite.groups.map((group) => group.name)),
+          }),
+        ]
+      : []),
   ]
   return (
     <ListItem className="pr-2">
@@ -218,17 +227,25 @@ function InviteForm({
     mutationFn: (input: InviteInput) => client.admin.invites.create(input),
     onSuccess: onCreated,
   })
+  // Everyone holds every account already, so it isn't offered.
+  const groups = useQuery({
+    ...orpc.admin.groups.list.queryOptions(),
+    select: (list) => list.filter((group) => !group.everyone),
+  })
+  const noGroups: string[] = []
   const form = useAppForm({
     // The select holds strings, so the days are one until the submit.
     defaultValues: {
       label: "",
       expiresInDays: String(DEFAULT_INVITE_EXPIRY_DAYS),
+      groupIds: noGroups,
     },
     onSubmit: ({ value }) =>
       create.mutate(
         InviteInput.parse({
           label: value.label,
           expiresInDays: Number(value.expiresInDays),
+          groupIds: value.groupIds,
         }),
       ),
   })
@@ -272,6 +289,41 @@ function InviteForm({
               />
             )}
           </form.AppField>
+          {groups.data && groups.data.length > 0 && (
+            <form.Field name="groupIds">
+              {(field) => (
+                <FieldSet>
+                  <FieldLegend variant="label">
+                    {tr("users.invites.dialog.groups")}
+                  </FieldLegend>
+                  <ul className="-mt-1 flex flex-col gap-2.5">
+                    {groups.data.map((group) => (
+                      <li key={group.id}>
+                        <label className="flex min-w-0 items-center gap-3 text-sm">
+                          <Switch
+                            checked={field.state.value.includes(group.id)}
+                            onCheckedChange={(on) =>
+                              field.handleChange(
+                                on
+                                  ? [...field.state.value, group.id]
+                                  : field.state.value.filter(
+                                      (id) => id !== group.id,
+                                    ),
+                              )
+                            }
+                          />
+                          <span className="truncate">{group.name}</span>
+                        </label>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="text-muted-foreground -mt-1 text-sm">
+                    {tr("users.invites.dialog.groupsHint")}
+                  </p>
+                </FieldSet>
+              )}
+            </form.Field>
+          )}
         </FieldGroup>
         {create.error && <FormAlert message={errorMessage(create.error)} />}
         <DialogFooter className="-mx-6 -mb-6 px-6 py-4">

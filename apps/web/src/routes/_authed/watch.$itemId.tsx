@@ -15,6 +15,7 @@ import { itemLabel } from "@/lib/media"
 import {
   type FirstStart,
   isUnplayable,
+  playbackRefusal,
   startQuery,
   startQueryKey,
 } from "@/lib/playback-start"
@@ -186,6 +187,7 @@ function WatchItem({
 
   const container = item.data?.container ?? playing?.container
   const failure = stopped && !stopped.unplayable ? stopped.cause : started.error
+  const refusal = unplayable ? null : playbackRefusal(failure)
   return (
     <div className="fixed inset-0 grid place-items-center bg-black p-6 text-white">
       {!first && started.isPending ? (
@@ -193,7 +195,13 @@ function WatchItem({
       ) : (
         <div className="max-w-md text-center">
           <h1 className="text-2xl font-semibold tracking-tight">
-            {unplayable ? tr("player.unsupported") : tr("player.loadFailed")}
+            {unplayable
+              ? tr("player.unsupported")
+              : refusal === "restricted"
+                ? tr("player.restricted")
+                : refusal === "busy"
+                  ? tr("player.busy")
+                  : tr("player.loadFailed")}
           </h1>
           <p className="mt-2 text-sm text-white/70">
             {unplayable

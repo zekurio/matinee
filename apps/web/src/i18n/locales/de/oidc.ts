@@ -14,6 +14,8 @@ export default {
   "oidc.field.usernameClaim": "Benutzername-Claim",
   "oidc.field.roleClaim": "Rollen-Claim",
   "oidc.field.clientSecret": "Client-Secret",
+  "oidc.field.groupsClaim": "Gruppen-Claim",
+  "oidc.field.policyClaim": "Richtlinien-Claim",
 
   "oidc.passkeys.title": "Passkeys",
   "oidc.passkeys.unlinked": plural({
@@ -53,6 +55,15 @@ export default {
   "oidc.copy": "Kopieren",
   "oidc.copied": "Kopiert",
 
+  "oidc.access.title": "Gruppen und Zugriff",
+  "oidc.claim.off": "Aus",
+  "oidc.groupsClaim.description":
+    "Der Claim, der die Gruppen eines Kontos beim Anbieter auflistet. Bei jeder Anmeldung enthält eine Zugriffsgruppe die Konten der Anbietergruppe, die in ihren Einstellungen steht. Ein Konto ohne den Claim ist in keiner Anbietergruppe.",
+  "oidc.policyClaim.description":
+    "Der Claim mit den Grenzen eines Kontos, ein Objekt mit beliebigen von libraries, maxBitrate, transcode, downloads und maxStreams. Bei jeder Anmeldung ersetzt er, was unter Benutzer für das Konto eingestellt ist.",
+  "oidc.signOutRefused": "Konten abmelden, die der Anbieter ablehnt",
+  "oidc.signOutRefused.description":
+    "Beendet jede Sitzung eines Kontos, sobald der Anbieter es ablehnt, seine Anmeldung zu erneuern, wie bei einem Konto, das er gesperrt oder gelöscht hat. Das erreicht nur Konten mit einem Refresh-Token, wofür es den Scope offline_access braucht.",
   "oidc.advanced": "Erweitert",
   "oidc.advanced.show": "Anzeigen",
   "oidc.advanced.hide": "Ausblenden",

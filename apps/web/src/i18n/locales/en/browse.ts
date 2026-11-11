@@ -6,7 +6,10 @@ export default defineMessages("browse", {
   "browse.home.noLibraries": "No libraries yet",
   "browse.home.noLibrariesAdmin":
     "Add a folder of videos on this server to start watching.",
-  "browse.home.noLibrariesUser": "An admin hasn't added any libraries yet.",
+  // For an account that opens no library, which may be in no group yet.
+  "browse.home.nothingYet": "Nothing to watch yet",
+  "browse.home.nothingYetDescription":
+    "There's nothing your account can open yet. Ask whoever runs this server to give you access.",
   "browse.home.addLibrary": "Add a library",
   "browse.home.continueWatching": "Continue watching",
   "browse.home.nextUp": "Next up",

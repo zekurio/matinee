@@ -1,5 +1,7 @@
 import { ORPCError } from "@matinee/client"
 import {
+  PLAYBACK_BUSY,
+  PLAYBACK_RESTRICTED,
   PLAYBACK_UNPLAYABLE,
   type PlaybackDevice,
   type PlaybackQuality,
@@ -65,4 +67,18 @@ export function startQueryKey(itemId: string) {
 /** The server found nothing this device plays. */
 export function isUnplayable(cause: unknown): boolean {
   return cause instanceof ORPCError && cause.code === PLAYBACK_UNPLAYABLE
+}
+
+/**
+ * Why the account may not play the file now: its access rules out every
+ * way left, or it plays on as many devices as it may. Asking again gets
+ * the same answer, so the player shows the server's message and stops.
+ */
+export type PlaybackRefusal = "restricted" | "busy"
+
+export function playbackRefusal(cause: unknown): PlaybackRefusal | null {
+  if (!(cause instanceof ORPCError)) return null
+  if (cause.code === PLAYBACK_RESTRICTED) return "restricted"
+  if (cause.code === PLAYBACK_BUSY) return "busy"
+  return null
 }

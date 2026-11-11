@@ -25,6 +25,7 @@ import {
   DownloadDialog,
   DownloadFilesDialog,
   DownloadMenuItem,
+  useDownloadsAllowed,
 } from "@/components/download-dialog"
 import { FavoriteMenuItem, useItemFavorite } from "@/components/favorite-button"
 import {
@@ -253,6 +254,7 @@ export function ActionsMenu({
   const owner = scope.title
   const provider = useLibraryProvider(scope.libraryId, admin && owner !== null)
   const queryClient = useQueryClient()
+  const downloads = useDownloadsAllowed()
   // Kept after closing, so the dialogs can animate out.
   const [file, setFile] = useState<MediaItem | null>(null)
   const [downloading, setDownloading] = useState(false)
@@ -320,6 +322,10 @@ export function ActionsMenu({
   const images = admin && owner ? scope.images : null
   const adminItems = Boolean(adminProvider) || images !== null
   const label = tr("media.moreActions", { name: scope.name })
+  const playItems = Boolean(restart || children)
+  // An account that may not download, on a card with nothing else to do,
+  // gets no menu.
+  if (!playItems && !downloads && !adminItems) return null
   return (
     <>
       <DropdownMenu>
@@ -347,9 +353,11 @@ export function ActionsMenu({
             </DropdownMenuItem>
           )}
           {children}
-          {(restart || children) && <DropdownMenuSeparator />}
-          <DownloadMenuItem onSelect={() => void startDownload()} />
-          {adminItems && <DropdownMenuSeparator />}
+          {playItems && (downloads || adminItems) && <DropdownMenuSeparator />}
+          {downloads && (
+            <DownloadMenuItem onSelect={() => void startDownload()} />
+          )}
+          {downloads && adminItems && <DropdownMenuSeparator />}
           {owner && adminProvider && (
             <>
               <DropdownMenuItem

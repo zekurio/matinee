@@ -68,21 +68,25 @@ export function SwitchField(row: Omit<SwitchRowProps, "checked" | "onChange">) {
 
 type SelectRowProps<T extends string> = {
   title: string
+  footer?: ReactNode
   value: T
   options: readonly T[]
   labelOf: (value: T) => string
+  disabled?: boolean
   onChange: (value: T) => void
 }
 
 export function SelectRow<T extends string>({
   title,
+  footer,
   value,
   options,
   labelOf,
+  disabled,
   onChange,
 }: SelectRowProps<T>) {
   return (
-    <SettingRow title={title} layout="split">
+    <SettingRow title={title} layout="split" footer={footer}>
       {(ids) => (
         <Select
           items={options.map((option) => ({
@@ -90,6 +94,7 @@ export function SelectRow<T extends string>({
             label: labelOf(option),
           }))}
           value={value}
+          disabled={disabled}
           onValueChange={(next) => next && onChange(next)}
         >
           <SelectTrigger id={ids.controlId} className="w-full">

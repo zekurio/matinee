@@ -10,6 +10,7 @@ import {
   videoCodecName,
 } from "@matinee/contracts"
 import { useQuery } from "@tanstack/react-query"
+import type { ReactNode } from "react"
 import { useShallow } from "zustand/shallow"
 
 import { formatBitrate } from "@/components/player-format"
@@ -30,6 +31,7 @@ import {
 
 import { SelectRow, SwitchRow } from "./setting-controls"
 import {
+  SettingNote,
   SettingRow,
   SettingRows,
   SettingsSections,
@@ -204,9 +206,17 @@ function qualityLabel(id: PlaybackQuality): string {
 }
 
 /** A row whose setting has a single possible value here, shown as text. */
-function FixedRow({ title, value }: { title: string; value: string }) {
+function FixedRow({
+  title,
+  footer,
+  value,
+}: {
+  title: string
+  footer?: ReactNode
+  value: string
+}) {
   return (
-    <SettingRow title={title} layout="split">
+    <SettingRow title={title} layout="split" footer={footer}>
       {(ids) => (
         <span
           id={ids.controlId}
@@ -244,17 +254,40 @@ function DeviceSection({ options }: { options: PlaybackOptions | undefined }) {
   const autoAudio = audioCodecs[0] ?? "aac"
   const videoChoices: VideoCodecChoice[] = ["auto", ...videoCodecs]
   const audioChoices: AudioCodecChoice[] = ["auto", ...audioCodecs]
+  // The qualities this account may stream. Until the server answers, all.
+  const qualities: PlaybackQuality[] = options
+    ? ["original", ...options.qualities.map((preset) => preset.id)]
+    : [...PLAYBACK_QUALITY_IDS]
+  const limitNote =
+    options && options.maxBitrate !== null ? (
+      <SettingNote>
+        {tr("playback.quality.limit", {
+          rate: formatBitrate(options.maxBitrate),
+        })}
+      </SettingNote>
+    ) : undefined
 
   return (
     <SettingsSubsection id="device" title={tr("playback.device.title")}>
       <SettingRows>
-        <SelectRow
-          title={tr("playback.quality.title")}
-          value={device.quality}
-          options={PLAYBACK_QUALITY_IDS}
-          labelOf={qualityLabel}
-          onChange={(quality) => device.setDevicePlayback({ quality })}
-        />
+        {qualities.length > 1 ? (
+          <SelectRow
+            title={tr("playback.quality.title")}
+            footer={limitNote}
+            value={
+              qualities.includes(device.quality) ? device.quality : "original"
+            }
+            options={qualities}
+            labelOf={qualityLabel}
+            onChange={(quality) => device.setDevicePlayback({ quality })}
+          />
+        ) : (
+          <FixedRow
+            title={tr("playback.quality.title")}
+            footer={limitNote}
+            value={qualityLabel("original")}
+          />
+        )}
         {videoCodecs.length > 1 ? (
           <SelectRow
             title={tr("playback.videoCodec.title")}

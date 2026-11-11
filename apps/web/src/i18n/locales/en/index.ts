@@ -1,3 +1,4 @@
+import access from "./access"
 import account from "./account"
 import appearance from "./appearance"
 import auth from "./auth"
@@ -56,6 +57,7 @@ export default {
   ...libraries,
   ...ui,
   ...users,
+  ...access,
   ...validation,
   ...oidc,
   ...transcoding,

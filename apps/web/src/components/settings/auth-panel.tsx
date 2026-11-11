@@ -116,6 +116,8 @@ const FIELD_NAMES = new Map<string, MessageKey>([
   ["scopes", "oidc.field.scopes"],
   ["usernameClaim", "oidc.field.usernameClaim"],
   ["roleClaim", "oidc.field.roleClaim"],
+  ["groupsClaim", "oidc.field.groupsClaim"],
+  ["policyClaim", "oidc.field.policyClaim"],
   ["clientSecret", "oidc.field.clientSecret"],
 ])
 
@@ -197,6 +199,7 @@ function OidcForm({ settings }: { settings: AdminAuthSettings }) {
     <form className="contents" onSubmit={(event) => event.preventDefault()}>
       <PasskeysSection form={form} settings={settings} />
       <SingleSignOnSection form={form} settings={settings} />
+      <ProviderAccessSection form={form} defaults={settings.defaults} />
       <AdvancedSection form={form} defaults={settings.defaults} />
       <SettingsSaveBar
         dirty={dirty}
@@ -326,6 +329,68 @@ const SingleSignOnSection = withForm({
           </form.AppField>
           <ClientSecretRow form={form} settings={settings} />
           <CallbackRow url={settings.callbackUrl} />
+        </SettingRows>
+      </SettingsSubsection>
+    )
+  },
+})
+
+/**
+ * What the provider's claims say about an account's access, and whether a
+ * refusal from the provider signs the account out.
+ */
+const ProviderAccessSection = withForm({
+  defaultValues: typeOnly<Draft>(),
+  props: typeOnly<{ defaults: OidcSettings }>(),
+  render: function Render({ form, defaults }) {
+    return (
+      <SettingsSubsection
+        id="single-sign-on-access"
+        title={tr("oidc.access.title")}
+      >
+        <SettingRows>
+          <form.AppField name="groupsClaim">
+            {() => (
+              <InputField
+                title={tr("oidc.field.groupsClaim")}
+                footer={
+                  <SettingNote>
+                    {tr("oidc.groupsClaim.description")}
+                  </SettingNote>
+                }
+                autoComplete="off"
+                spellCheck={false}
+                placeholder={defaults.groupsClaim || tr("oidc.claim.off")}
+              />
+            )}
+          </form.AppField>
+          <form.AppField name="policyClaim">
+            {() => (
+              <InputField
+                title={tr("oidc.field.policyClaim")}
+                footer={
+                  <SettingNote>
+                    {tr("oidc.policyClaim.description")}
+                  </SettingNote>
+                }
+                autoComplete="off"
+                spellCheck={false}
+                placeholder={defaults.policyClaim || tr("oidc.claim.off")}
+              />
+            )}
+          </form.AppField>
+          <form.AppField name="signOutRefused">
+            {() => (
+              <SwitchField
+                title={tr("oidc.signOutRefused")}
+                footer={
+                  <SettingNote>
+                    {tr("oidc.signOutRefused.description")}
+                  </SettingNote>
+                }
+              />
+            )}
+          </form.AppField>
         </SettingRows>
       </SettingsSubsection>
     )

@@ -8,6 +8,8 @@ export default {
   "player.unsupportedDetailUnknown":
     "Dieser Browser unterstützt die Datei oder ihre Codecs nicht, und der Server konnte sie nicht transkodieren. Sieh im Serverprotokoll nach.",
   "player.loadFailed": "Der Titel konnte nicht geladen werden",
+  "player.restricted": "Dein Konto kann das nicht abspielen",
+  "player.busy": "Auf zu vielen Geräten in Wiedergabe",
   "player.backHome": "Zurück zur Startseite",
 
   "player.back": "Zurück",

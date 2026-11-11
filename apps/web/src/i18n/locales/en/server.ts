@@ -100,6 +100,11 @@ export default defineMessages("server", {
   // rpc/admin-users.ts.
   "server.adminUsers.gone": "That user no longer exists. Reload the list.",
   "server.adminInvites.gone": "That invite no longer exists. Reload the list.",
+  // rpc/admin-groups.ts and access/groups.ts: access groups.
+  "server.adminGroups.gone": "That group no longer exists. Reload the list.",
+  "server.adminGroups.nameTaken": "Another group has that name.",
+  "server.adminGroups.everyone":
+    "Every account is in this group, so it can't be deleted. Take its libraries away instead.",
   "server.adminUsers.lastAdmin":
     "{name} is the only admin who can sign in. Make someone who can sign in an admin first.",
   "server.adminUsers.lastAdminDemote":

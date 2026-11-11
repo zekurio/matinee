@@ -37,6 +37,9 @@ export default defineMessages("playback", {
   // A quality preset: "1080p, 8 Mbps".
   "playback.quality.preset": "{height}p, {bitrate}",
   "playback.quality.original": "Original",
+  // {rate} like 8 Mbps.
+  "playback.quality.limit":
+    "The server limits streaming to {rate} for this account.",
   "playback.videoCodec.title": "Video codec",
   "playback.audioCodec.title": "Audio codec",
   // {codec} is the codec automatic picks, like HEVC or Opus.

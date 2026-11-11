@@ -31,6 +31,8 @@ export default {
   "playback.quality.title": "Qualität",
   "playback.quality.preset": "{height}p, {bitrate}",
   "playback.quality.original": "Original",
+  "playback.quality.limit":
+    "Der Server begrenzt das Streaming für dieses Konto auf {rate}.",
   "playback.videoCodec.title": "Videocodec",
   "playback.audioCodec.title": "Audiocodec",
   "playback.codec.automatic": "Automatisch ({codec})",

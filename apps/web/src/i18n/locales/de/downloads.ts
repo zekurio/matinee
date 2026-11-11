@@ -3,6 +3,10 @@ import type source from "../en/downloads"
 
 export default {
   "downloads.menuItem": "Herunterladen",
+  "downloads.off.title": "Downloads sind aus",
+  "downloads.off.description":
+    "Dein Konto kann nicht herunterladen. Frag, wer diesen Server betreibt, falls du es brauchst.",
+  "downloads.off.done": "Schließen",
   "downloads.title": "{name} herunterladen",
   "downloads.description":
     "Lade das Original oder eine angepasste Version herunter.",

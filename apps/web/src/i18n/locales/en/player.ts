@@ -8,6 +8,10 @@ export default defineMessages("player", {
   "player.unsupportedDetailUnknown":
     "This browser doesn't support this file or its codecs, and the server couldn't transcode it. Check the server log.",
   "player.loadFailed": "Couldn't load this title",
+  // The server's message follows: the account's access rules out every
+  // way to play the file, or it plays on as many devices as it may.
+  "player.restricted": "Your account can't play this",
+  "player.busy": "Playing on too many devices",
   "player.backHome": "Back to Home",
 
   // The control bar and the overlay. The letter in parentheses is the key

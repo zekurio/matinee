@@ -46,6 +46,17 @@ export default defineMessages("users", {
   "users.menu.deleteOwn": "Delete my account",
   "users.menu.delete": "Delete user",
   "users.lastAdmin": "Make someone else an admin first.",
+  "users.menu.access": "Edit access",
+  "users.adminAccess": "Admins open every library and have no limits.",
+  // A group badge in a user's row, for a group the OIDC provider put
+  // the account in.
+  "users.groupFromProvider": "Set by {provider} at sign-in",
+  "users.groupFromProviderShort": "(from {provider})",
+  // A badge for an account with access settings of its own.
+  "users.ownAccess": "Own limits",
+  "users.ownAccessHint": "Has settings of its own over its groups",
+  "users.ownAccessFromProvider":
+    "Set at sign-in by the policy claim from {provider}",
   "users.passkeys": plural({
     one: "{count} passkey",
     other: "{count} passkeys",
@@ -88,6 +99,8 @@ export default defineMessages("users", {
   // {when} is relative, like "in 6 days".
   "users.invites.expires": "Expires {when}",
   "users.invites.expiresAt": "Expires {date}",
+  // {groups} lists access groups, like "Family and Friends".
+  "users.invites.joins": "Joins {groups}",
   "users.invites.revoke": "Revoke invite link",
   "users.invites.revokeNamed": "Revoke the invite link for {note}",
   "users.invites.revoked": "Invite link revoked",
@@ -99,6 +112,9 @@ export default defineMessages("users", {
   "users.invites.dialog.note": "Note",
   "users.invites.dialog.noteHint": "Who it's for. Only admins see it.",
   "users.invites.dialog.expiry": "Works for",
+  "users.invites.dialog.groups": "Groups",
+  "users.invites.dialog.groupsHint":
+    "The new account starts in these groups, and in Everyone.",
   "users.invites.dialog.submit": "Create link",
   "users.invites.link.title": "Send this link",
   "users.invites.link.description":

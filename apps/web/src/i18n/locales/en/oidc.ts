@@ -14,6 +14,8 @@ export default defineMessages("oidc", {
   "oidc.field.usernameClaim": "Username claim",
   "oidc.field.roleClaim": "Role claim",
   "oidc.field.clientSecret": "Client secret",
+  "oidc.field.groupsClaim": "Groups claim",
+  "oidc.field.policyClaim": "Policy claim",
 
   // The passkeys section, above single sign-on.
   "oidc.passkeys.title": "Passkeys",
@@ -55,6 +57,18 @@ export default defineMessages("oidc", {
   "oidc.redirectUri": "Redirect URI",
   "oidc.copy": "Copy",
   "oidc.copied": "Copied",
+
+  // What the provider's claims say about access, under single sign-on.
+  "oidc.access.title": "Groups and access",
+  // A claim's placeholder while none is set here or in the environment.
+  "oidc.claim.off": "Off",
+  "oidc.groupsClaim.description":
+    "The claim that lists an account's groups at the provider. At each sign-in, an access group holds the accounts in the provider group named in its settings. An account without the claim is in no provider groups.",
+  "oidc.policyClaim.description":
+    "The claim that holds one account's limits, an object with any of libraries, maxBitrate, transcode, downloads, and maxStreams. At each sign-in it replaces what's set on the account under Users.",
+  "oidc.signOutRefused": "Sign out accounts the provider refuses",
+  "oidc.signOutRefused.description":
+    "Ends every session of an account once the provider refuses to renew its sign-in, as it does for one it disabled or deleted. This reaches only accounts with a refresh token, which takes the offline_access scope.",
 
   // The advanced section.
   "oidc.advanced": "Advanced",

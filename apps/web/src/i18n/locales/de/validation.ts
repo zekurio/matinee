@@ -24,6 +24,10 @@ export default {
     "Verwende eine {scheme}:-URI oder eine Loopback-URL mit http.",
   "validation.userCode": "Gib die 8 Buchstaben ein, die das Gerät anzeigt.",
 
+  "validation.bitrateLimit": "Wähle ein Limit von mindestens 1 Mbit/s.",
+  "validation.streamLimit": "Erlaube mindestens einen Stream.",
+  "validation.groupName": "Gib der Gruppe einen Namen.",
+  "validation.max256": "Verwende höchstens 256 Zeichen.",
   "validation.inviteToken": "Dieser Einladungslink ist unvollständig.",
 
   "validation.timeZone": "Verwende eine IANA-Zeitzone wie Europe/Berlin.",

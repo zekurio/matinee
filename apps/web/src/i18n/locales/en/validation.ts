@@ -33,6 +33,12 @@ export default defineMessages("validation", {
   "validation.redirectUri": "Use a {scheme}: URI or a loopback http URL.",
   "validation.userCode": "Enter the 8 letters the device shows.",
 
+  // access.ts: access groups and limits.
+  "validation.bitrateLimit": "Pick a limit of at least 1 Mb/s.",
+  "validation.streamLimit": "Allow at least one stream.",
+  "validation.groupName": "Give the group a name.",
+  "validation.max256": "Use at most 256 characters.",
+
   // invites.ts: invite links.
   "validation.inviteToken": "That invite link is incomplete.",
 

@@ -13,7 +13,7 @@ import { Spinner } from "@matinee/ui/components/spinner"
 import { cn } from "@matinee/ui/lib/utils"
 import { useQuery } from "@tanstack/react-query"
 import { createFileRoute, Link } from "@tanstack/react-router"
-import { ChevronRightIcon, FolderPlusIcon } from "lucide-react"
+import { ChevronRightIcon, FolderPlusIcon, PopcornIcon } from "lucide-react"
 
 import { Hero, heroFill, heroFrame } from "@/components/hero"
 import { LibraryChips } from "@/components/library-chips"
@@ -49,6 +49,7 @@ function Home() {
     featured.isPending
 
   if (libraries.data?.length === 0) {
+    const admin = user.role === "admin"
     return (
       <>
         <PageHeader
@@ -56,19 +57,25 @@ function Home() {
             name: user.displayName ?? user.username,
           })}
         />
+        {/* An admin sees every library, so none means none exist. Anyone
+            else may be in no group that opens one. */}
         <Empty className="border border-dashed">
           <EmptyHeader>
             <EmptyMedia variant="icon">
-              <FolderPlusIcon />
+              {admin ? <FolderPlusIcon /> : <PopcornIcon />}
             </EmptyMedia>
-            <EmptyTitle>{tr("browse.home.noLibraries")}</EmptyTitle>
+            <EmptyTitle>
+              {admin
+                ? tr("browse.home.noLibraries")
+                : tr("browse.home.nothingYet")}
+            </EmptyTitle>
             <EmptyDescription>
-              {user.role === "admin"
+              {admin
                 ? tr("browse.home.noLibrariesAdmin")
-                : tr("browse.home.noLibrariesUser")}
+                : tr("browse.home.nothingYetDescription")}
             </EmptyDescription>
           </EmptyHeader>
-          {user.role === "admin" && (
+          {admin && (
             <EmptyContent>
               <Link
                 to="/"

@@ -133,13 +133,18 @@ export function PlayerMenus({
         }
 
   // Quality: the file as it is, then the encodes the server offers for it.
+  // A file over the account's bit rate limit plays only as an encode.
   const video = playback.plan.item.probe?.video
   const qualities: MenuChoice[] = [
-    {
-      id: "original",
-      label: tr("player.quality.original"),
-      detail: video?.resolution ?? undefined,
-    },
+    ...(playback.plan.original
+      ? [
+          {
+            id: "original",
+            label: tr("player.quality.original"),
+            detail: video?.resolution ?? undefined,
+          },
+        ]
+      : []),
     ...playback.plan.qualities.map((quality) => ({
       id: quality.id,
       label: `${quality.height}p`,

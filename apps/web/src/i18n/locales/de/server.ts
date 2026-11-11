@@ -100,6 +100,11 @@ export default {
     "Diesen Benutzer gibt es nicht mehr. Lade die Liste neu.",
   "server.adminInvites.gone":
     "Diese Einladung gibt es nicht mehr. Lade die Liste neu.",
+  "server.adminGroups.gone":
+    "Diese Gruppe gibt es nicht mehr. Lade die Liste neu.",
+  "server.adminGroups.nameTaken": "Eine andere Gruppe hat diesen Namen.",
+  "server.adminGroups.everyone":
+    "Jedes Konto ist in dieser Gruppe, deshalb kann sie nicht gelöscht werden. Nimm ihr stattdessen die Mediatheken weg.",
   "server.adminUsers.lastAdmin":
     "{name} ist der einzige Admin, der sich anmelden kann. Mach zuerst jemanden zum Admin, der sich anmelden kann.",
   "server.adminUsers.lastAdminDemote":

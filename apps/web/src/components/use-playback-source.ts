@@ -5,7 +5,7 @@ import type {
 } from "@matinee/contracts"
 import { type RefObject, useRef } from "react"
 
-import { isUnplayable } from "@/lib/playback-start"
+import { isUnplayable, playbackRefusal } from "@/lib/playback-start"
 import { client } from "@/lib/rpc"
 import type { PlayerStore } from "@/stores/player"
 
@@ -248,8 +248,9 @@ export function sourceStarters(core: PlaybackCore) {
       asking.current = false
       state.setPending(null)
       if (isUnplayable(cause)) core.onUnplayable()
-      // Nothing plays: the old source is the one that failed.
-      else if (change.failed) core.onFailed(cause)
+      // Nothing plays: the old source is the one that failed, or the
+      // account may not play the file now, which asking again won't change.
+      else if (change.failed || playbackRefusal(cause)) core.onFailed(cause)
       else {
         // A switch that didn't go through leaves what plays.
         state.restore(undo.picks, undo.failed)

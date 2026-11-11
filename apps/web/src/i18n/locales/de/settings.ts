@@ -31,6 +31,10 @@ export default {
   "settings.section.users.description": "Konten und Rollen",
   "settings.section.users.keywords":
     "Admin, Rolle, Benutzer löschen, Überall abmelden, Sitzungen, Einladen, Einladungslink",
+  "settings.section.access.label": "Zugriff",
+  "settings.section.access.description": "Gruppen, Mediatheken und Grenzen",
+  "settings.section.access.keywords":
+    "Zugriffsgruppen, Gruppen, Berechtigungen, Mediatheken, Bitrate, Limit, Bandbreite, Kodierung, Transkodierung, Downloads, Streams, Geräte, Anbietergruppen, Kinder",
   "settings.section.authentication.label": "Authentifizierung",
   "settings.section.authentication.description": "Passkeys und Single Sign-on",
   "settings.section.authentication.keywords":
