@@ -1,3 +1,4 @@
+import { UserAccess } from "./access"
 import { t } from "./schema"
 import { User } from "./schemas"
 
@@ -21,8 +22,29 @@ export const OidcSettings = t.object({
    * a list. Synced on every sign-in; setup takes only an admin.
    */
   roleClaim: t.string(),
+  /**
+   * Claim that lists the account's groups at the provider, as a string or
+   * a list. Access groups that name one of them hold the account, synced
+   * on every sign-in. Empty leaves groups to admins and invites.
+   */
+  groupsClaim: t.string(),
+  /**
+   * Claim that holds an access override for the account, an object with
+   * any of `libraries` (`"all"`, or a list of library names or ids),
+   * `maxBitrate`, `transcode`, `downloads`, and `maxStreams`. Synced on
+   * every sign-in. Empty leaves overrides to admins.
+   */
+  policyClaim: t.string(),
   /** Create an account on first sign-in instead of only accepting links. */
   allowSignUp: t.boolean(),
+  /**
+   * Sign an account out everywhere once the provider refuses to refresh
+   * it, as it does for one it disabled or deleted. Off, the account keeps
+   * its sessions and what it last had. Either way this only reaches
+   * accounts the provider gave a refresh token, which takes the
+   * `offline_access` scope.
+   */
+  signOutRefused: t.boolean(),
 })
 export type OidcSettings = t.infer<typeof OidcSettings>
 
@@ -82,6 +104,7 @@ export const OidcSettingsInput = t
   .object({
     enabled: t.boolean(),
     allowSignUp: t.boolean(),
+    signOutRefused: t.boolean(),
     displayName: text(64),
     issuerUrl: text(2048)
       .refine(
@@ -94,6 +117,8 @@ export const OidcSettingsInput = t
     scopes: text(512),
     usernameClaim: text(128),
     roleClaim: text(128),
+    groupsClaim: text(128),
+    policyClaim: text(128),
     /** A new secret. Null drops the saved one; omitted keeps it. */
     clientSecret: t.string().trim().min(1).max(4096).nullable().optional(),
   })
@@ -123,5 +148,12 @@ export const AdminUser = User.extend({
   oidcLinked: t.boolean(),
   /** Sessions that haven't expired. */
   sessions: t.number().int(),
+  /**
+   * When the provider's claims were last read for the account: at a
+   * sign-in, or a refresh in the background. Null without a linked
+   * account.
+   */
+  claimsSyncedAt: t.date().nullable(),
+  access: UserAccess,
 })
 export type AdminUser = t.infer<typeof AdminUser>

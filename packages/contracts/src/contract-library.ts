@@ -33,6 +33,7 @@ import {
 import { TrickplayStatus } from "./trickplay"
 
 export const librariesContract = oc.tag("Libraries").router({
+  /** The libraries the account may open. */
   list: get("/libraries").output(t.array(Library)),
   get: get("/libraries/{id}").input(IdInput).output(Library),
   create: post("/libraries").input(LibraryInput).output(Library),

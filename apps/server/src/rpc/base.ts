@@ -3,8 +3,8 @@ import { oo } from "@orpc/openapi"
 import { implement, ORPCError, os } from "@orpc/server"
 import type { Context } from "hono"
 
+import { readViewer } from "../access/viewer"
 import { passkeysEnabled } from "../auth/passkey-settings"
-import { readSession } from "../auth/session"
 
 export type RpcContext = {
   /** The Hono request, for cookies and headers. */
@@ -16,7 +16,8 @@ export const pub = implement(contract).$context<RpcContext>()
 const requireSession = os
   .$context<RpcContext>()
   .middleware(async ({ context, next }) => {
-    const user = await readSession(context.hono)
+    // The user with what they may open; see `access/visible.ts`.
+    const user = await readViewer(context.hono)
     if (!user) {
       throw new ORPCError("UNAUTHORIZED", { message: "Sign in first." })
     }

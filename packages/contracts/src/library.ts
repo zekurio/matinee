@@ -33,6 +33,7 @@ export const Library = t.object({
   id: t.uuid(),
   name: t.string(),
   kind: LibraryKind,
+  /** The folders on the server. Empty unless an admin asks. */
   paths: t.array(t.string()),
   itemCount: t.number().int(),
   /** Movies or shows found. */

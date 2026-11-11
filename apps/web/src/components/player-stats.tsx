@@ -199,6 +199,8 @@ function reasons(
             ? []
             : tr(`player.stats.reason.${method}Failed`),
         )
+      case "limit":
+        return tr("player.stats.reason.limit")
     }
   })
 }

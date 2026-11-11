@@ -69,6 +69,8 @@ export async function playbackOptions(): Promise<PlaybackOptions> {
     ])
   return {
     qualities: [...PLAYBACK_QUALITIES],
+    maxBitrate: null,
+    downloads: true,
     downloadVideoPresets: [...DOWNLOAD_VIDEO_PRESETS],
     skipSteps: [...SKIP_STEPS],
     videoCodecs: encodableVideoCodecs(settings, capabilities),

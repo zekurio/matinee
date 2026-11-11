@@ -107,24 +107,42 @@ export const TRANSCODE_AUDIO_CODECS = ["opus", "aac"] as const
 export const TranscodeAudioCodec = t.enum(TRANSCODE_AUDIO_CODECS)
 export type TranscodeAudioCodec = t.infer<typeof TranscodeAudioCodec>
 
-/** What a player's playback settings can offer on this server. */
+/**
+ * What a player's playback settings can offer the account on this server,
+ * within its access.
+ */
 export const PlaybackOptions = t.object({
-  /** The quality ladder, largest first. Original playback is separate. */
+  /**
+   * The quality ladder, largest first, none over `maxBitrate`. Original
+   * playback is separate. Empty when the server may not encode for the
+   * account.
+   */
   qualities: t.array(PlaybackQualityPreset),
+  /**
+   * The most the server streams to the account, in bits per second. A
+   * file over it plays as an encode. Null for no limit.
+   */
+  maxBitrate: t.number().int().nullable(),
+  /** The account may download. Off, a client offers no downloads. */
+  downloads: t.boolean(),
   /** Download video sizes and bit rates, largest first. */
   downloadVideoPresets: t.array(DownloadVideoPreset),
   /** Allowed skip lengths in seconds, smallest first. */
   skipSteps: t.array(t.number().int()),
   /**
    * The codecs an encode can produce here, H.264 first. A player lists the
-   * ones it wants in `mediaHlsPath()`.
+   * ones it wants in `mediaHlsPath()`. Empty when the server may not
+   * encode for the account.
    */
   videoCodecs: t.array(TranscodeVideoCodec),
   /** The codecs a stream can convert audio to here, AAC always among them. */
   audioCodecs: t.array(TranscodeAudioCodec),
-  /** The languages of the audio tracks in the libraries, most files first. */
+  /**
+   * The languages of the audio tracks in the libraries the account opens,
+   * most files first.
+   */
   audioLanguages: t.array(LanguageTag),
-  /** The languages of the subtitle tracks in the libraries, most files first. */
+  /** The same for subtitle tracks. */
   subtitleLanguages: t.array(LanguageTag),
 })
 export type PlaybackOptions = t.infer<typeof PlaybackOptions>

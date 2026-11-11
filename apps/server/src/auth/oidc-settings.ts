@@ -32,6 +32,8 @@ const TEXT_FIELDS = [
   "scopes",
   "usernameClaim",
   "roleClaim",
+  "groupsClaim",
+  "policyClaim",
 ] as const
 
 /** The fields a MATINEE_OIDC_* variable gives a default for. */
@@ -42,7 +44,10 @@ const VARIABLES = new Map<keyof OidcSettings, string>([
   ["scopes", "MATINEE_OIDC_SCOPES"],
   ["usernameClaim", "MATINEE_OIDC_USERNAME_CLAIM"],
   ["roleClaim", "MATINEE_OIDC_ROLE_CLAIM"],
+  ["groupsClaim", "MATINEE_OIDC_GROUPS_CLAIM"],
+  ["policyClaim", "MATINEE_OIDC_POLICY_CLAIM"],
   ["allowSignUp", "MATINEE_OIDC_ALLOW_SIGN_UP"],
+  ["signOutRefused", "MATINEE_OIDC_SIGN_OUT_REFUSED"],
 ])
 
 const SavedOidc = OidcSettings.partial()
@@ -73,7 +78,10 @@ export function oidcDefaults(): OidcSettings {
     scopes: env.MATINEE_OIDC_SCOPES,
     usernameClaim: env.MATINEE_OIDC_USERNAME_CLAIM,
     roleClaim: env.MATINEE_OIDC_ROLE_CLAIM,
+    groupsClaim: env.MATINEE_OIDC_GROUPS_CLAIM,
+    policyClaim: env.MATINEE_OIDC_POLICY_CLAIM,
     allowSignUp: env.MATINEE_OIDC_ALLOW_SIGN_UP,
+    signOutRefused: env.MATINEE_OIDC_SIGN_OUT_REFUSED,
   }
 }
 
@@ -177,6 +185,7 @@ function nextSaved(current: Saved, input: OidcSettingsInput): Saved {
   const oidc: Partial<OidcSettings> = {
     enabled: input.enabled,
     allowSignUp: input.allowSignUp,
+    signOutRefused: input.signOutRefused,
   }
   for (const key of TEXT_FIELDS) {
     if (input[key]) oidc[key] = input[key]

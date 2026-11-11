@@ -353,7 +353,8 @@ object PlaybackReason {
     const val SUBTITLE = "subtitle"
     const val QUALITY = "quality"
     const val FAILED = "failed"
-    val all = listOf(CONTAINER, VIDEO, AUDIO, AUDIO_SELECTION, SUBTITLE, QUALITY, FAILED)
+    const val LIMIT = "limit"
+    val all = listOf(CONTAINER, VIDEO, AUDIO, AUDIO_SELECTION, SUBTITLE, QUALITY, FAILED, LIMIT)
 }
 
 @Serializable
@@ -376,6 +377,7 @@ data class PlaybackStart(
     val subtitleTracks: List<SubtitleTrack>,
     val quality: String,
     val qualities: List<PlaybackQualityPreset>,
+    val original: Boolean,
     val reasons: List<String>,
     val next: MediaItem?,
 )
@@ -421,7 +423,10 @@ data class OidcSettings(
     val scopes: String,
     val usernameClaim: String,
     val roleClaim: String,
+    val groupsClaim: String,
+    val policyClaim: String,
     val allowSignUp: Boolean,
+    val signOutRefused: Boolean,
 )
 
 @Serializable
@@ -721,7 +726,54 @@ data class AdminUser(
     val passkeys: Int,
     val oidcLinked: Boolean,
     val sessions: Int,
-)
+    val claimsSyncedAt: String?,
+    val access: AdminUser.Access,
+) {
+    @Serializable
+    data class Access(
+        val groups: List<AdminUser.Access.Group>,
+        val override: AdminUser.Access.Override,
+        val overrideSource: String,
+        val effective: AdminUser.Access.Effective,
+    ) {
+        @Serializable
+        data class Group(
+            val id: String,
+            val name: String,
+            val source: String,
+        )
+
+        @Serializable
+        data class Override(
+            val libraries: AdminUser.Access.Override.Libraries? = null,
+            val maxBitrate: Explicit<Int>? = null,
+            val transcode: Boolean? = null,
+            val downloads: Boolean? = null,
+            val maxStreams: Explicit<Int>? = null,
+        ) {
+            @Serializable
+            data class Libraries(
+                val all: Boolean,
+                val ids: List<String>,
+            )
+        }
+
+        @Serializable
+        data class Effective(
+            val libraries: AdminUser.Access.Effective.Libraries,
+            val maxBitrate: Int?,
+            val transcode: Boolean,
+            val downloads: Boolean,
+            val maxStreams: Int?,
+        ) {
+            @Serializable
+            data class Libraries(
+                val all: Boolean,
+                val ids: List<String>,
+            )
+        }
+    }
+}
 
 @Serializable
 data class User(
@@ -816,8 +868,15 @@ data class CreatedInvite(
     val label: String?,
     val createdAt: String,
     val expiresAt: String,
+    val groups: List<CreatedInvite.Group>,
     val url: String,
-)
+) {
+    @Serializable
+    data class Group(
+        val id: String,
+        val name: String,
+    )
+}
 
 @Serializable
 data class DeviceCode(
@@ -1106,7 +1165,14 @@ data class Invite(
     val label: String?,
     val createdAt: String,
     val expiresAt: String,
-)
+    val groups: List<Invite.Group>,
+) {
+    @Serializable
+    data class Group(
+        val id: String,
+        val name: String,
+    )
+}
 
 @Serializable
 data class JobFailure(
@@ -1505,6 +1571,8 @@ data class PersonSummary(
 @Serializable
 data class PlaybackOptions(
     val qualities: List<PlaybackQualityPreset>,
+    val maxBitrate: Int?,
+    val downloads: Boolean,
     val downloadVideoPresets: List<DownloadVideoPreset>,
     val skipSteps: List<Int>,
     val videoCodecs: List<String>,
@@ -1801,12 +1869,15 @@ data class AuthenticationResponse(
 data class OidcSettingsInput(
     val enabled: Boolean,
     val allowSignUp: Boolean,
+    val signOutRefused: Boolean,
     val displayName: String,
     val issuerUrl: String,
     val clientId: String,
     val scopes: String,
     val usernameClaim: String,
     val roleClaim: String,
+    val groupsClaim: String,
+    val policyClaim: String,
     val clientSecret: Explicit<String>? = null,
 )
 
@@ -2050,9 +2121,138 @@ data class FavoritesSetItemInput(
 )
 
 @Serializable
+data class AdminGroupsListOutput(
+    val id: String,
+    val name: String,
+    val everyone: Boolean,
+    val providerGroup: String?,
+    val policy: AdminGroupsListOutput.Policy,
+    val members: Int,
+    val createdAt: String,
+) {
+    @Serializable
+    data class Policy(
+        val libraries: AdminGroupsListOutput.Policy.Libraries,
+        val maxBitrate: Int?,
+        val transcode: Boolean,
+        val downloads: Boolean,
+        val maxStreams: Int?,
+    ) {
+        @Serializable
+        data class Libraries(
+            val all: Boolean,
+            val ids: List<String>,
+        )
+    }
+}
+
+@Serializable
+data class AdminGroupsCreateInput(
+    val name: String,
+    val providerGroup: String?,
+    val policy: AdminGroupsCreateInput.Policy,
+) {
+    @Serializable
+    data class Policy(
+        val libraries: AdminGroupsCreateInput.Policy.Libraries,
+        val maxBitrate: Int?,
+        val transcode: Boolean,
+        val downloads: Boolean,
+        val maxStreams: Int?,
+    ) {
+        @Serializable
+        data class Libraries(
+            val all: Boolean,
+            val ids: List<String>,
+        )
+    }
+}
+
+@Serializable
+data class AdminGroupsCreateOutput(
+    val id: String,
+    val name: String,
+    val everyone: Boolean,
+    val providerGroup: String?,
+    val policy: AdminGroupsCreateOutput.Policy,
+    val members: Int,
+    val createdAt: String,
+) {
+    @Serializable
+    data class Policy(
+        val libraries: AdminGroupsCreateOutput.Policy.Libraries,
+        val maxBitrate: Int?,
+        val transcode: Boolean,
+        val downloads: Boolean,
+        val maxStreams: Int?,
+    ) {
+        @Serializable
+        data class Libraries(
+            val all: Boolean,
+            val ids: List<String>,
+        )
+    }
+}
+
+@Serializable
+data class AdminGroupsUpdateInput(
+    val name: String,
+    val providerGroup: String?,
+    val policy: AdminGroupsUpdateInput.Policy,
+) {
+    @Serializable
+    data class Policy(
+        val libraries: AdminGroupsUpdateInput.Policy.Libraries,
+        val maxBitrate: Int?,
+        val transcode: Boolean,
+        val downloads: Boolean,
+        val maxStreams: Int?,
+    ) {
+        @Serializable
+        data class Libraries(
+            val all: Boolean,
+            val ids: List<String>,
+        )
+    }
+}
+
+@Serializable
+data class AdminGroupsUpdateOutput(
+    val id: String,
+    val name: String,
+    val everyone: Boolean,
+    val providerGroup: String?,
+    val policy: AdminGroupsUpdateOutput.Policy,
+    val members: Int,
+    val createdAt: String,
+) {
+    @Serializable
+    data class Policy(
+        val libraries: AdminGroupsUpdateOutput.Policy.Libraries,
+        val maxBitrate: Int?,
+        val transcode: Boolean,
+        val downloads: Boolean,
+        val maxStreams: Int?,
+    ) {
+        @Serializable
+        data class Libraries(
+            val all: Boolean,
+            val ids: List<String>,
+        )
+    }
+}
+
+@Serializable
+data class AdminGroupsProviderGroupsOutput(
+    val name: String,
+    val accounts: Int,
+)
+
+@Serializable
 data class AdminInvitesCreateInput(
     val label: String? = null,
     val expiresInDays: Int,
+    val groupIds: List<String>? = null,
 )
 
 @Serializable
@@ -2064,6 +2264,27 @@ data class AdminJobsUpdateConcurrencyInput(
 data class AdminUsersSetRoleInput(
     val role: String,
 )
+
+@Serializable
+data class AdminUsersSetAccessInput(
+    val groupIds: List<String>,
+    val override: AdminUsersSetAccessInput.Override,
+) {
+    @Serializable
+    data class Override(
+        val libraries: AdminUsersSetAccessInput.Override.Libraries? = null,
+        val maxBitrate: Explicit<Int>? = null,
+        val transcode: Boolean? = null,
+        val downloads: Boolean? = null,
+        val maxStreams: Explicit<Int>? = null,
+    ) {
+        @Serializable
+        data class Libraries(
+            val all: Boolean,
+            val ids: List<String>,
+        )
+    }
+}
 
 @Serializable
 data class AdminUsersSignOutOutput(

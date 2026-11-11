@@ -2,6 +2,7 @@ import { t } from "@matinee/contracts/schema"
 import { user } from "@matinee/db"
 import { eq } from "drizzle-orm"
 
+import { forgetGroups, inviteGroupIds, setMemberships } from "../access/groups"
 import { redeemAppCode } from "../auth/apps"
 import {
   approveDeviceRequest,
@@ -214,6 +215,9 @@ export const auth = {
         if (setup && !empty) {
           throw badRequest("Setup is already done. Sign in instead.")
         }
+        // Using the invite up deletes its groups with it.
+        const groupIds =
+          !setup && inviteId ? await inviteGroupIds(tx, inviteId) : []
         if (!setup) {
           if (inviteId && !(await consumeInvite(tx, inviteId))) {
             throw badRequest(INVITE_GONE)
@@ -231,8 +235,10 @@ export const auth = {
           role: empty ? "admin" : "user",
         })
         await storePasskey(tx, { userId: row.id, verified, usedNow: true })
+        await setMemberships(tx, row.id, "manual", groupIds)
         return row
       })
+      forgetGroups()
 
       if (created.role === "admin") {
         markSetupDone()

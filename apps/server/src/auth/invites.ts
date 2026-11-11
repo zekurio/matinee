@@ -4,8 +4,8 @@ import {
   type InviteInput,
   invitePagePath,
 } from "@matinee/contracts"
-import { invite, user } from "@matinee/db"
-import { and, desc, eq, gt, lte, sql } from "drizzle-orm"
+import { accessGroup, invite, inviteGroup, user } from "@matinee/db"
+import { and, asc, desc, eq, gt, inArray, lte, sql } from "drizzle-orm"
 
 import { db } from "../db"
 import { env } from "../env"
@@ -47,7 +47,28 @@ export async function createInvite(
       })
       .returning(publicColumns)
     if (!created) throw new Error("Could not store the invite.")
-    return created
+    // Groups deleted since the form loaded, and the built-in one, drop out.
+    const groups =
+      input.groupIds.length > 0
+        ? await tx
+            .select({ id: accessGroup.id, name: accessGroup.name })
+            .from(accessGroup)
+            .where(
+              and(
+                inArray(accessGroup.id, input.groupIds),
+                eq(accessGroup.everyone, false),
+              ),
+            )
+            .orderBy(asc(accessGroup.name))
+        : []
+    if (groups.length > 0) {
+      await tx
+        .insert(inviteGroup)
+        .values(
+          groups.map((group) => ({ inviteId: created.id, groupId: group.id })),
+        )
+    }
+    return { ...created, groups }
   })
   return row
     ? { ...row, url: `${env.PUBLIC_URL}${invitePagePath(token)}` }
@@ -55,11 +76,33 @@ export async function createInvite(
 }
 
 export async function listInvites(): Promise<Invite[]> {
-  return db
+  const rows = await db
     .select(publicColumns)
     .from(invite)
     .where(gt(invite.expiresAt, new Date()))
     .orderBy(desc(invite.createdAt))
+  if (rows.length === 0) return []
+  const groups = await db
+    .select({
+      inviteId: inviteGroup.inviteId,
+      id: accessGroup.id,
+      name: accessGroup.name,
+    })
+    .from(inviteGroup)
+    .innerJoin(accessGroup, eq(accessGroup.id, inviteGroup.groupId))
+    .where(
+      inArray(
+        inviteGroup.inviteId,
+        rows.map((row) => row.id),
+      ),
+    )
+    .orderBy(asc(accessGroup.name))
+  return rows.map((row) => ({
+    ...row,
+    groups: groups
+      .filter((group) => group.inviteId === row.id)
+      .map(({ id, name }) => ({ id, name })),
+  }))
 }
 
 export async function revokeInvite(id: string): Promise<boolean> {

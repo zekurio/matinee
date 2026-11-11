@@ -23,6 +23,7 @@ import {
   sql,
 } from "drizzle-orm"
 
+import { forgetGroups } from "../access/groups"
 import { db } from "../db"
 import { isScanning, scanLibrary } from "../library/scanner"
 import { watchLibraries } from "../library/watcher"
@@ -222,6 +223,8 @@ export const libraries = {
       .where(eq(library.id, input.id))
       .returning({ id: library.id })
     if (deleted.length === 0) throw notFound("Library not found.")
+    // Groups that listed it don't anymore.
+    forgetGroups()
     void watchLibraries()
   }),
 

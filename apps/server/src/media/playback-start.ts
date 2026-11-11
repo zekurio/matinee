@@ -444,6 +444,7 @@ function playbackAnswer(
     subtitleTracks: facts.subtitles,
     quality,
     qualities: file.qualities,
+    original: true,
     reasons,
     next: null,
   }

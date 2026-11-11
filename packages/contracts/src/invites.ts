@@ -23,6 +23,8 @@ export const InviteLabel = t
 export const InviteInput = t.object({
   label: InviteLabel.optional(),
   expiresInDays: t.number().int().min(1).max(MAX_INVITE_EXPIRY_DAYS),
+  /** Access groups the new account starts in. */
+  groupIds: t.array(t.uuid()).max(32).$default([]),
 })
 export type InviteInput = t.infer<typeof InviteInput>
 
@@ -36,6 +38,8 @@ export const Invite = t.object({
   label: t.string().nullable(),
   createdAt: t.date(),
   expiresAt: t.date(),
+  /** The access groups the new account starts in. */
+  groups: t.array(t.object({ id: t.uuid(), name: t.string() })),
 })
 export type Invite = t.infer<typeof Invite>
 

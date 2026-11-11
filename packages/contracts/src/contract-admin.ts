@@ -1,5 +1,11 @@
 import { oc } from "@orpc/contract"
 
+import {
+  AccessGroup,
+  AccessGroupInput,
+  ProviderGroup,
+  UserAccessInput,
+} from "./access"
 import { AdminAuthSettings, AdminUser, AuthSettingsInput } from "./admin"
 import { del, get, post, put } from "./contract-routes"
 import {
@@ -119,12 +125,43 @@ export const adminContract = oc.tag("Admin").router({
     setRole: put("/admin/users/{id}/role")
       .input(t.object({ id: t.uuid(), role: UserRole }))
       .output(AdminUser),
+    /**
+     * Put the account in groups and set its override. Takes effect on the
+     * user's next request. An override the provider's policy claim set
+     * comes back at the account's next sign-in.
+     */
+    setAccess: put("/admin/users/{id}/access")
+      .input(UserAccessInput)
+      .output(AdminUser),
     /** Delete the account with its sessions, passkeys, and progress. */
     remove: del("/admin/users/{id}").input(IdInput).output(t.void()),
     /** End the user's sessions. Yours keeps the one making the call. */
     signOut: post("/admin/users/{id}/sign-out")
       .input(IdInput)
       .output(t.object({ ended: t.number().int() })),
+  },
+  /**
+   * Access groups: which libraries an account opens and how the server
+   * streams to it. See `access.ts`. Changes take effect on each member's
+   * next request.
+   */
+  groups: {
+    /** The built-in group first, then by name. */
+    list: get("/admin/groups").output(t.array(AccessGroup)),
+    create: post("/admin/groups").input(AccessGroupInput).output(AccessGroup),
+    /** For the built-in group, only the policy changes. */
+    update: put("/admin/groups/{id}")
+      .input(AccessGroupInput.extend({ id: t.uuid() }))
+      .output(AccessGroup),
+    /** Its members lose what only it allowed. Fails for the built-in group. */
+    remove: del("/admin/groups/{id}").input(IdInput).output(t.void()),
+    /**
+     * The group names the provider sent for linked accounts at their last
+     * sign-ins, most accounts first. Empty while no groups claim is set.
+     */
+    providerGroups: get("/admin/provider-groups").output(
+      t.array(ProviderGroup),
+    ),
   },
   /**
    * Invite links, for letting one person in while passkey sign-up is

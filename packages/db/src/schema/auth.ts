@@ -86,6 +86,18 @@ export const oidcAccount = pgTable(
     label: text(),
     /** The `picture` claim at the last sign-in. */
     picture: text(),
+    /**
+     * The groups claim at the last sync, for admins to pick provider
+     * groups from. Null while no groups claim was read.
+     */
+    groups: text().array(),
+    /**
+     * What the provider gave to read the account's claims again without
+     * its owner, when the scopes ask for `offline_access`. Null without.
+     */
+    refreshToken: text(),
+    /** When the claims were last read: a sign-in or a refresh. */
+    syncedAt: timestamp({ withTimezone: true }),
     createdAt: createdAt(),
   },
   (t) => [

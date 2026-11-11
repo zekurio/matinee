@@ -46,6 +46,8 @@ const TEXT_FIELDS = [
   "scopes",
   "usernameClaim",
   "roleClaim",
+  "groupsClaim",
+  "policyClaim",
 ] as const
 type TextField = (typeof TEXT_FIELDS)[number]
 
@@ -59,6 +61,7 @@ type Draft = Record<TextField, string> & {
   passkeySignUp: boolean
   enabled: boolean
   allowSignUp: boolean
+  signOutRefused: boolean
   /** A new secret to save; empty keeps the current one. */
   clientSecret: string
   /** Drop the saved secret, so the environment's applies again. */
@@ -77,8 +80,11 @@ function draftFrom({ passkeys, oidc, defaults }: AdminAuthSettings): Draft {
     scopes: text("scopes"),
     usernameClaim: text("usernameClaim"),
     roleClaim: text("roleClaim"),
+    groupsClaim: text("groupsClaim"),
+    policyClaim: text("policyClaim"),
     enabled: oidc.enabled,
     allowSignUp: oidc.allowSignUp,
+    signOutRefused: oidc.signOutRefused,
     clientSecret: "",
     dropSecret: false,
   }
@@ -90,12 +96,15 @@ function inputFrom(draft: Draft) {
   return OidcSettingsInput.safeParse({
     enabled: draft.enabled,
     allowSignUp: draft.allowSignUp,
+    signOutRefused: draft.signOutRefused,
     displayName: draft.displayName.trim(),
     issuerUrl: draft.issuerUrl.trim(),
     clientId: draft.clientId.trim(),
     scopes: draft.scopes.trim().replace(/\s+/g, " "),
     usernameClaim: draft.usernameClaim.trim(),
     roleClaim: draft.roleClaim.trim(),
+    groupsClaim: draft.groupsClaim.trim(),
+    policyClaim: draft.policyClaim.trim(),
     clientSecret: secret ? secret : draft.dropSecret ? null : undefined,
   })
 }

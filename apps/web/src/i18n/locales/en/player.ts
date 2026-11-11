@@ -96,6 +96,7 @@ export default defineMessages("player", {
   // {quality} is a resolution, like 720p.
   "player.stats.reason.quality": "{quality} picked",
   "player.stats.reason.burnIn": "Subtitles burned in",
+  "player.stats.reason.limit": "Over your account's bit rate limit",
   "player.stats.delivery": "Delivery",
   "player.stats.delivery.direct": "Original file",
   "player.stats.delivery.stream": "MP4 stream",

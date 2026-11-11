@@ -1,4 +1,4 @@
-import type { AdminUser } from "@matinee/contracts"
+import { type AdminUser, AccessOverride } from "@matinee/contracts"
 import {
   invite,
   oidcAccount,
@@ -9,6 +9,7 @@ import {
 } from "@matinee/db"
 import { asc, count, eq, inArray, max, sql } from "drizzle-orm"
 
+import { describeAccess, forgetGroups, setMemberships } from "../access/groups"
 import { deleteAvatarFile } from "../auth/avatars"
 import { deleteUserSessions, publicUser, signOut } from "../auth/session"
 import { lockUsers, otherAdminCanSignIn, type Tx } from "../auth/users"
@@ -21,14 +22,14 @@ const USER_GONE = "That user no longer exists. Reload the list."
 async function toAdminUsers(rows: UserRow[]): Promise<AdminUser[]> {
   if (rows.length === 0) return []
   const ids = rows.map((row) => row.id)
-  const [passkeys, accounts, sessions] = await Promise.all([
+  const [passkeys, accounts, sessions, access] = await Promise.all([
     db
       .select({ userId: passkey.userId, n: count() })
       .from(passkey)
       .where(inArray(passkey.userId, ids))
       .groupBy(passkey.userId),
     db
-      .select({ userId: oidcAccount.userId })
+      .select({ userId: oidcAccount.userId, syncedAt: oidcAccount.syncedAt })
       .from(oidcAccount)
       .where(inArray(oidcAccount.userId, ids)),
     db
@@ -42,18 +43,27 @@ async function toAdminUsers(rows: UserRow[]): Promise<AdminUser[]> {
       .from(session)
       .where(inArray(session.userId, ids))
       .groupBy(session.userId),
+    describeAccess(rows),
   ])
   const passkeyCount = new Map(passkeys.map((row) => [row.userId, row.n]))
-  const linked = new Set(accounts.map((row) => row.userId))
+  const linked = new Map(accounts.map((row) => [row.userId, row]))
   const activity = new Map(sessions.map((row) => [row.userId, row]))
-  return rows.map((row) => ({
-    ...publicUser(row),
-    createdAt: row.createdAt,
-    lastSeenAt: activity.get(row.id)?.lastSeenAt ?? null,
-    passkeys: passkeyCount.get(row.id) ?? 0,
-    oidcLinked: linked.has(row.id),
-    sessions: activity.get(row.id)?.live ?? 0,
-  }))
+  return rows.flatMap((row) => {
+    const described = access.get(row.id)
+    if (!described) return []
+    return [
+      {
+        ...publicUser(row),
+        createdAt: row.createdAt,
+        lastSeenAt: activity.get(row.id)?.lastSeenAt ?? null,
+        passkeys: passkeyCount.get(row.id) ?? 0,
+        oidcLinked: linked.has(row.id),
+        sessions: activity.get(row.id)?.live ?? 0,
+        claimsSyncedAt: linked.get(row.id)?.syncedAt ?? null,
+        access: described,
+      },
+    ]
+  })
 }
 
 async function toAdminUser(row: UserRow): Promise<AdminUser> {
@@ -136,6 +146,29 @@ export const adminUsers = {
     return toAdminUser(row)
   }),
 
+  setAccess: admin.admin.users.setAccess.handler(async ({ context, input }) => {
+    // The fields the form left out drop out of the stored override too.
+    const override = AccessOverride.parse(input.override)
+    const row = await db.transaction(async (tx) => {
+      const target = await lockedUser(tx, input.id, context.user.id)
+      await setMemberships(tx, target.id, "manual", input.groupIds)
+      const [updated] = await tx
+        .update(user)
+        .set({
+          accessOverride: Object.keys(override).length > 0 ? override : null,
+          accessOverrideSource: "manual",
+          updatedAt: new Date(),
+        })
+        .where(eq(user.id, target.id))
+        .returning()
+      if (!updated) throw notFound(USER_GONE)
+      return updated
+    })
+    forgetGroups()
+    log.info(`${context.user.username} changed ${row.username}'s access`)
+    return toAdminUser(row)
+  }),
+
   remove: admin.admin.users.remove.handler(async ({ context, input }) => {
     // Sessions, passkeys, linked accounts, and watch progress go with the
     // user through their foreign keys.
@@ -150,6 +183,8 @@ export const adminUsers = {
       await tx.delete(user).where(eq(user.id, target.id))
       return target
     })
+    // Its memberships went with it.
+    forgetGroups()
     log.info(`${context.user.username} deleted ${removed.username}`)
     await deleteAvatarFile(removed.avatarId)
     if (removed.id === context.user.id) await signOut(context.hono)

@@ -47,7 +47,10 @@ export const playbackContract = oc.tag("Playback").router({
    * player calls it to begin, and again with what changed when the viewer
    * picks a track or a quality, or when a source fails. Nothing is kept
    * between calls, so each one carries every pick made so far. Fails with
-   * `PLAYBACK_UNPLAYABLE` when nothing the device plays is left.
+   * `PLAYBACK_UNPLAYABLE` when nothing the device plays is left, with
+   * `PLAYBACK_RESTRICTED` when the account's access rules the rest out,
+   * and with `PLAYBACK_BUSY` while the account plays on as many devices
+   * as it may.
    */
   start: post("/playback/start")
     .input(PlaybackStartInput)

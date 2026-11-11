@@ -1,4 +1,6 @@
 import type {
+  AccessOverride,
+  AccessSource,
   AvatarSource,
   PlaybackPreferences,
   UserRole,
@@ -24,6 +26,16 @@ export const user = pgTable(
     role: text().$type<UserRole>().notNull().default("user"),
     /** The synced audio and subtitle choices; readers parse it. Null before the first change. */
     playbackPreferences: jsonb().$type<PlaybackPreferences>(),
+    /**
+     * What's set on the account over its access groups; readers parse it.
+     * Null follows the groups.
+     */
+    accessOverride: jsonb().$type<AccessOverride>(),
+    /** `provider` when the OIDC policy claim set `accessOverride`. */
+    accessOverrideSource: text()
+      .$type<AccessSource>()
+      .notNull()
+      .default("manual"),
     /** Names the file in `$MATINEE_DATA_DIR/avatars`. Null shows the initial. */
     avatarId: text(),
     avatarSource: text().$type<AvatarSource>().notNull().default("provider"),

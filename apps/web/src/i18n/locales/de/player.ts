@@ -82,6 +82,7 @@ export default {
   "player.stats.reason.audioTrack": "Nicht die Standard-Audiospur der Datei",
   "player.stats.reason.quality": "{quality} gewählt",
   "player.stats.reason.burnIn": "Untertitel eingebrannt",
+  "player.stats.reason.limit": "Über dem Bitratenlimit deines Kontos",
   "player.stats.delivery": "Übertragung",
   "player.stats.delivery.direct": "Originaldatei",
   "player.stats.delivery.stream": "MP4-Stream",

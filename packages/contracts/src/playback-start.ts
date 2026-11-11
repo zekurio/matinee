@@ -159,6 +159,7 @@ export const PLAYBACK_REASONS = [
   "subtitle",
   "quality",
   "failed",
+  "limit",
 ] as const
 /**
  * Why a file doesn't play as it is, for a player to say in its own
@@ -166,6 +167,7 @@ export const PLAYBACK_REASONS = [
  * of the file. `audio-selection`: it plays the track, but can't pick it
  * in the file. `subtitle`: the subtitle has to be burned in. `quality`:
  * the viewer picked one. `failed`: a method was tried and didn't play.
+ * `limit`: the file is over the bit rate the account may stream.
  */
 export const PlaybackReason = t.enum(PLAYBACK_REASONS)
 export type PlaybackReason = t.infer<typeof PlaybackReason>
@@ -221,6 +223,12 @@ export const PlaybackStart = t.object({
    * file without video.
    */
   qualities: t.array(PlaybackQualityPreset),
+  /**
+   * The quality menu offers `original`. False when the file is over the
+   * bit rate the account may stream, and then `qualities` holds only the
+   * encodes under it.
+   */
+  original: t.boolean(),
   /** Empty when the file plays as it is. */
   reasons: t.array(PlaybackReason),
   /** The file after this one in its show, to offer when this one ends. */
@@ -233,6 +241,22 @@ export type PlaybackStart = t.infer<typeof PlaybackStart>
  * device plays is left to try. A player says so and stops.
  */
 export const PLAYBACK_UNPLAYABLE = "UNPLAYABLE"
+
+/**
+ * The code `playback.start` fails with, as HTTP 403, when the account's
+ * access rules out every way left to play the file: it's over the bit
+ * rate the account may stream, or needs an encode, and the server may not
+ * encode for the account or the encode failed. The message says which. A
+ * player shows it and stops.
+ */
+export const PLAYBACK_RESTRICTED = "PLAYBACK_RESTRICTED"
+
+/**
+ * The code `playback.start` fails with, as HTTP 429, while the account
+ * plays on as many devices as it may. A player shows the message and
+ * stops. Stopping playback elsewhere frees a place.
+ */
+export const PLAYBACK_BUSY = "TOO_MANY_STREAMS"
 
 export const PlaybackSeekInput = t.object({
   itemId: t.uuid(),

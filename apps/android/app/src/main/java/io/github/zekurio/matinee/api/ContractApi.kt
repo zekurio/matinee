@@ -993,6 +993,7 @@ class StatsApi internal constructor(private val transport: ApiTransport) {
 class AdminApi internal constructor(private val transport: ApiTransport) {
     val appearance = AdminAppearanceApi(transport)
     val auth = AdminAuthApi(transport)
+    val groups = AdminGroupsApi(transport)
     val invites = AdminInvitesApi(transport)
     val jobs = AdminJobsApi(transport)
     val setup = AdminSetupApi(transport)
@@ -1055,6 +1056,62 @@ class AdminAuthApi internal constructor(private val transport: ApiTransport) {
         )
 }
 
+class AdminGroupsApi internal constructor(private val transport: ApiTransport) {
+    /** `GET /admin/groups` */
+    suspend fun list(): List<AdminGroupsListOutput> =
+        transport.call(
+            "GET",
+            listOf("admin", "groups"),
+            emptyList(),
+            null,
+            ListSerializer(AdminGroupsListOutput.serializer()),
+        )
+
+    /** `POST /admin/groups` */
+    suspend fun create(
+        name: String,
+        providerGroup: String?,
+        policy: AdminGroupsCreateInput.Policy,
+    ): AdminGroupsCreateOutput =
+        transport.call(
+            "POST",
+            listOf("admin", "groups"),
+            emptyList(),
+            transport.json(AdminGroupsCreateInput.serializer(), AdminGroupsCreateInput(name = name, providerGroup = providerGroup, policy = policy)),
+            AdminGroupsCreateOutput.serializer(),
+        )
+
+    /** `PUT /admin/groups/{id}` */
+    suspend fun update(
+        id: String,
+        name: String,
+        providerGroup: String?,
+        policy: AdminGroupsUpdateInput.Policy,
+    ): AdminGroupsUpdateOutput =
+        transport.call(
+            "PUT",
+            listOf("admin", "groups", id),
+            emptyList(),
+            transport.json(AdminGroupsUpdateInput.serializer(), AdminGroupsUpdateInput(name = name, providerGroup = providerGroup, policy = policy)),
+            AdminGroupsUpdateOutput.serializer(),
+        )
+
+    /** `DELETE /admin/groups/{id}` */
+    suspend fun remove(id: String) {
+        transport.send("DELETE", listOf("admin", "groups", id), emptyList(), null)
+    }
+
+    /** `GET /admin/provider-groups` */
+    suspend fun providerGroups(): List<AdminGroupsProviderGroupsOutput> =
+        transport.call(
+            "GET",
+            listOf("admin", "provider-groups"),
+            emptyList(),
+            null,
+            ListSerializer(AdminGroupsProviderGroupsOutput.serializer()),
+        )
+}
+
 class AdminInvitesApi internal constructor(private val transport: ApiTransport) {
     /** `GET /admin/invites` */
     suspend fun list(): List<Invite> =
@@ -1067,12 +1124,16 @@ class AdminInvitesApi internal constructor(private val transport: ApiTransport) 
         )
 
     /** `POST /admin/invites` */
-    suspend fun create(expiresInDays: Int, label: String? = null): CreatedInvite =
+    suspend fun create(
+        expiresInDays: Int,
+        label: String? = null,
+        groupIds: List<String>? = null,
+    ): CreatedInvite =
         transport.call(
             "POST",
             listOf("admin", "invites"),
             emptyList(),
-            transport.json(AdminInvitesCreateInput.serializer(), AdminInvitesCreateInput(label = label, expiresInDays = expiresInDays)),
+            transport.json(AdminInvitesCreateInput.serializer(), AdminInvitesCreateInput(label = label, expiresInDays = expiresInDays, groupIds = groupIds)),
             CreatedInvite.serializer(),
         )
 
@@ -1227,6 +1288,20 @@ class AdminUsersApi internal constructor(private val transport: ApiTransport) {
             listOf("admin", "users", id, "role"),
             emptyList(),
             transport.json(AdminUsersSetRoleInput.serializer(), AdminUsersSetRoleInput(role = role)),
+            AdminUser.serializer(),
+        )
+
+    /** `PUT /admin/users/{id}/access` */
+    suspend fun setAccess(
+        id: String,
+        groupIds: List<String>,
+        override: AdminUsersSetAccessInput.Override,
+    ): AdminUser =
+        transport.call(
+            "PUT",
+            listOf("admin", "users", id, "access"),
+            emptyList(),
+            transport.json(AdminUsersSetAccessInput.serializer(), AdminUsersSetAccessInput(groupIds = groupIds, override = override)),
             AdminUser.serializer(),
         )
 

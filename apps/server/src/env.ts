@@ -111,7 +111,16 @@ const EnvSchema = t.object({
    * a list, as alloy and Immich read it.
    */
   MATINEE_OIDC_ROLE_CLAIM: t.string().trim().min(1).$default("matinee_role"),
+  /**
+   * Claim that lists the account's groups at the provider. Access groups
+   * that name one of them hold the account. Empty turns that off.
+   */
+  MATINEE_OIDC_GROUPS_CLAIM: t.string().trim().$default(""),
+  /** Claim that holds an access override for the account. Empty for none. */
+  MATINEE_OIDC_POLICY_CLAIM: t.string().trim().$default(""),
   MATINEE_OIDC_ALLOW_SIGN_UP: flag(false),
+  /** Sign an account out once the provider refuses to refresh it. */
+  MATINEE_OIDC_SIGN_OUT_REFUSED: flag(false),
   /** TMDB API key (v3) or API read access token. */
   MATINEE_TMDB_API_KEY: optional,
   /** TheTVDB v4 project API key, plus a subscriber PIN for user keys. */
