@@ -1,7 +1,8 @@
 import type { PersonSummary } from "@matinee/contracts"
 import { credit, title, user } from "@matinee/db"
-import { asc, desc, ilike, or, sql } from "drizzle-orm"
+import { and, asc, desc, eq, ilike, or, sql } from "drizzle-orm"
 
+import { type Seer, visibleTitles } from "../access/visible"
 import { profileUser } from "../auth/session"
 import { db } from "../db"
 import { placeholders, toArtwork } from "../media/artwork"
@@ -16,6 +17,7 @@ import { escapeLike } from "./like"
  * people with more titles first.
  */
 async function findPeople(
+  viewer: Seer,
   escaped: string,
   limit: number,
 ): Promise<PersonSummary[]> {
@@ -36,7 +38,8 @@ async function findPeople(
       titleCount,
     })
     .from(credit)
-    .where(ilike(credit.name, `%${escaped}%`))
+    .innerJoin(title, eq(title.id, credit.titleId))
+    .where(and(visibleTitles(viewer), ilike(credit.name, `%${escaped}%`)))
     .groupBy(credit.name)
     .orderBy(
       sql`${credit.name} ilike ${`${escaped}%`} desc`,
@@ -68,7 +71,13 @@ export const search = {
         .select()
         .from(title)
         .where(
-          or(ilike(title.name, anywhere), ilike(title.originalName, anywhere)),
+          and(
+            visibleTitles(context.user),
+            or(
+              ilike(title.name, anywhere),
+              ilike(title.originalName, anywhere),
+            ),
+          ),
         )
         .orderBy(
           sql`${title.name} ilike ${start} desc`,
@@ -87,9 +96,15 @@ export const search = {
           asc(sql`lower(${user.username})`),
         )
         .limit(input.limit),
-      findPeople(escaped, input.limit),
-      tagCounts(title.genres, { match: input.query, limit: input.limit }),
-      tagCounts(title.studios, { match: input.query, limit: input.limit }),
+      findPeople(context.user, escaped, input.limit),
+      tagCounts(context.user, title.genres, {
+        match: input.query,
+        limit: input.limit,
+      }),
+      tagCounts(context.user, title.studios, {
+        match: input.query,
+        limit: input.limit,
+      }),
     ])
     return {
       titles: await toSummaries(titles, context.user.id),

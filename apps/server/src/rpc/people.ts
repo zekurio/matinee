@@ -5,8 +5,9 @@ import {
   type PersonCredit,
 } from "@matinee/contracts"
 import { credit, title, type TitleRow } from "@matinee/db"
-import { asc, eq, sql } from "drizzle-orm"
+import { and, asc, eq, sql } from "drizzle-orm"
 
+import { visibleTitles } from "../access/visible"
 import { db } from "../db"
 import { placeholders, toArtwork } from "../media/artwork"
 import { titleArtwork, toSummary, viewerStates } from "../media/items"
@@ -51,7 +52,7 @@ export const people = {
         })
         .from(credit)
         .innerJoin(title, eq(title.id, credit.titleId))
-        .where(eq(credit.name, input.name))
+        .where(and(visibleTitles(context.user), eq(credit.name, input.name)))
         .orderBy(
           sql`${title.year} desc nulls last`,
           asc(title.sortName),

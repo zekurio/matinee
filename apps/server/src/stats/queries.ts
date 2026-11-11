@@ -21,6 +21,8 @@ import {
   sql,
 } from "drizzle-orm"
 
+import type { Viewer } from "../access/viewer"
+import { visibleItems, visibleTitles, type Seer } from "../access/visible"
 import { profileUser } from "../auth/session"
 import { db } from "../db"
 import { placeholders } from "../media/artwork"
@@ -47,12 +49,12 @@ const PAUSED_LIVE_SECONDS = 120
 const RECENT_TITLES = 12
 
 /** Every title played in the scope, most watched first. */
-async function titlesOf(where: SQL | undefined) {
+async function titlesOf(viewer: Seer, where: SQL | undefined) {
   const rows = await db
     .select({ row: title, watchSeconds: watchedSum(), plays: playCount() })
     .from(playbackSession)
     .innerJoin(title, eq(title.id, playbackSession.titleId))
-    .where(where)
+    .where(and(visibleTitles(viewer), where))
     .groupBy(title.id)
   // A stray click isn't watching the title.
   return rows
@@ -120,14 +122,14 @@ async function totalsOf(where: SQL | undefined) {
 async function collectWatchStats(
   input: StatsInput,
   userId: string | undefined,
-  viewerId: string,
+  viewer: Viewer,
 ) {
   const zone = await knownZone(input.timeZone)
   const where = scopeOf(input.range, zone, userId)
   const [{ unit, buckets }, activity, titles, totals] = await Promise.all([
     bucketsOf(input.range, zone, where),
     activityOf(zone, where),
-    titlesOf(where),
+    titlesOf(viewer, where),
     totalsOf(where),
   ])
   const { viewers, ...watchTotals } = totals
@@ -136,7 +138,7 @@ async function collectWatchStats(
     placeholders(top.flatMap((entry) => titleArtwork(entry.row))),
     viewerStates(
       top.map((entry) => entry.row.id),
-      viewerId,
+      viewer.id,
     ),
   ])
   const stats: WatchStats = {
@@ -158,21 +160,21 @@ async function collectWatchStats(
 export async function watchStats(
   input: StatsInput,
   userId: string,
-  viewerId: string,
+  viewer: Viewer,
 ): Promise<WatchStats> {
-  const { stats } = await collectWatchStats(input, userId, viewerId)
+  const { stats } = await collectWatchStats(input, userId, viewer)
   return stats
 }
 
 /** Everyone's watching in the range, and how it played. */
 export async function serverStats(
   input: StatsInput,
-  viewerId: string,
+  viewer: Viewer,
 ): Promise<ServerStats> {
   const { stats, viewers, where } = await collectWatchStats(
     input,
     undefined,
-    viewerId,
+    viewer,
   )
   const [methods, transcoding, users, clients] = await Promise.all([
     methodsOf(where),
@@ -191,7 +193,7 @@ export async function serverStats(
 }
 
 /** Sessions playing now, or paused a little while ago. */
-export async function liveActivity(viewerId: string): Promise<LiveActivity> {
+export async function liveActivity(viewer: Viewer): Promise<LiveActivity> {
   const rows = await db
     .select({ session: playbackSession, owner: user })
     .from(playbackSession)
@@ -220,10 +222,13 @@ export async function liveActivity(viewerId: string): Promise<LiveActivity> {
   )
   const files =
     ids.length > 0
-      ? await db.select().from(mediaItem).where(inArray(mediaItem.id, ids))
+      ? await db
+          .select()
+          .from(mediaItem)
+          .where(and(visibleItems(viewer), inArray(mediaItem.id, ids)))
       : []
   const items = new Map(
-    (await publicItems(files, viewerId)).map((item) => [item.id, item]),
+    (await publicItems(files, viewer.id)).map((item) => [item.id, item]),
   )
   const running = runningStreams()
   const answeredAt = Date.now()
@@ -292,7 +297,7 @@ export async function sessionStream(
  */
 export async function recentlyWatched(
   userId: string,
-  viewerId: string,
+  viewer: Viewer,
   limit = RECENT_TITLES,
 ): Promise<WatchedEntry[]> {
   // Enough sessions to find the titles through a binge of one show.
@@ -301,7 +306,14 @@ export async function recentlyWatched(
     .from(playbackSession)
     .innerJoin(mediaItem, eq(mediaItem.id, playbackSession.mediaItemId))
     // A play without a day has no place in what was watched last.
-    .where(and(eq(playbackSession.userId, userId), isPlay, dated))
+    .where(
+      and(
+        visibleItems(viewer),
+        eq(playbackSession.userId, userId),
+        isPlay,
+        dated,
+      ),
+    )
     .orderBy(desc(playbackSession.updatedAt))
     .limit(Math.max(200, limit * 20))
   const seen = new Set<string>()
@@ -313,7 +325,7 @@ export async function recentlyWatched(
   })
   const items = await publicItems(
     picks.map((row) => row.item),
-    viewerId,
+    viewer.id,
   )
   return items.flatMap((item, index) => {
     const pick = picks[index]

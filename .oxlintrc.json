@@ -17,7 +17,10 @@
     "react",
     "jsx-a11y"
   ],
-  "jsPlugins": ["./tools/oxlint/anti-slop/index.ts"],
+  "jsPlugins": [
+    "./tools/oxlint/anti-slop/index.ts",
+    "./tools/oxlint/matinee/index.ts"
+  ],
   "env": {
     "browser": true,
     "es2024": true,
@@ -157,6 +160,22 @@
     "anti-slop/require-safety-comment-for-type-assertion": "error"
   },
   "overrides": [
+    {
+      "files": [
+        "apps/server/src/rpc/**",
+        "apps/server/src/media/**",
+        "apps/server/src/stats/**"
+      ],
+      "rules": { "matinee/require-access-filter": "error" }
+    },
+    {
+      // Probe and trickplay jobs run in the background without a viewer.
+      "files": [
+        "apps/server/src/media/probe.ts",
+        "apps/server/src/media/trickplay.ts"
+      ],
+      "rules": { "matinee/require-access-filter": "off" }
+    },
     {
       "files": ["**/*.config.ts"],
       "rules": {

@@ -70,6 +70,7 @@ async function addMarkedPlays(
   files: SQL | undefined,
   watchedAt: WatchedAt | undefined,
 ): Promise<void> {
+  // ACCESS: files is keyed by a visible item or title checked by the playback procedure.
   const rows = await tx
     .select({
       itemId: mediaItem.id,
@@ -141,6 +142,7 @@ export async function markWatched(
     await addMarkedPlays(tx, userId, files, watchedAt)
     // One statement, so every file gets the same time; reverseEpisodeOrder
     // then counts the last one as the latest for Play and next up.
+    // ACCESS: files is keyed by a visible item or title checked by the playback procedure.
     await tx
       .insert(watchProgress)
       .select(
@@ -172,6 +174,7 @@ export async function markUnwatched(
   userId: string,
   files: SQL | undefined,
 ): Promise<void> {
+  // ACCESS: files is keyed by a visible item or title checked by the playback procedure.
   const ids = db.select({ id: mediaItem.id }).from(mediaItem).where(files)
   await db.transaction(async (tx) => {
     await tx

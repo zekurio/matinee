@@ -16,6 +16,7 @@ function seasonName(number: number | null): string {
 }
 
 // Prepared once, for every show on Home and every title page.
+// ACCESS: Counts are keyed by the visible titles supplied to seasonsByTitle.
 const seasonCounts = db
   .select({
     titleId: mediaItem.titleId,

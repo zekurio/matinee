@@ -143,6 +143,7 @@ async function setSlot(
 ): Promise<string | null> {
   return db.transaction(async (tx) => {
     // A refresh locks the row too, so the two don't overwrite each other.
+    // ACCESS: Only admin image procedures call setSlot, after loading the title.
     const [row] = await tx
       .select()
       .from(title)

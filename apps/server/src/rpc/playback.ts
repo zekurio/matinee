@@ -19,6 +19,14 @@ import {
   sql,
 } from "drizzle-orm"
 
+import {
+  inLibrariesArg,
+  itemFor,
+  libraryArgs,
+  titleFor,
+  visibleItems,
+  visibleTitles,
+} from "../access/visible"
 import { anyOf, arg, db } from "../db"
 import { releaseSession } from "../media/hls"
 import {
@@ -67,10 +75,7 @@ export const playback = {
   start: startPlayback,
   seek: seekPlayback,
   report: authed.playback.report.handler(async ({ context, input }) => {
-    const [item] = await db
-      .select()
-      .from(mediaItem)
-      .where(eq(mediaItem.id, input.itemId))
+    const item = await itemFor(context.user, input.itemId)
     if (!item) throw notFound("This title isn't in any library.")
 
     // The player knows the real runtime; keep it for progress bars.
@@ -129,10 +134,7 @@ export const playback = {
   }),
 
   tracks: authed.playback.tracks.handler(async ({ context, input }) => {
-    const [item] = await db
-      .select()
-      .from(mediaItem)
-      .where(eq(mediaItem.id, input.itemId))
+    const item = await itemFor(context.user, input.itemId)
     if (!item) throw notFound("This title isn't in any library.")
     return rememberedTracks(context.user, item)
   }),
@@ -146,10 +148,7 @@ export const playback = {
   ),
 
   pickTracks: authed.playback.pickTracks.handler(async ({ context, input }) => {
-    const [item] = await db
-      .select()
-      .from(mediaItem)
-      .where(eq(mediaItem.id, input.itemId))
+    const item = await itemFor(context.user, input.itemId)
     if (!item) throw notFound("This title isn't in any library.")
     await savePick(context.user, item, input)
   }),
@@ -168,9 +167,12 @@ export const playback = {
       .select()
       .from(mediaItem)
       .where(
-        inArray(
-          mediaItem.id,
-          plays.map((play) => play.itemId),
+        and(
+          visibleItems(context.user),
+          inArray(
+            mediaItem.id,
+            plays.map((play) => play.itemId),
+          ),
         ),
       )
     const userAgent = context.hono.req.header("user-agent")
@@ -194,13 +196,12 @@ export const playback = {
     }
     events.publish("playback", undefined)
   }),
-  options: authed.playback.options.handler(() => playbackOptions()),
+  options: authed.playback.options.handler(({ context }) =>
+    playbackOptions(context.user),
+  ),
 
   setWatched: authed.playback.setWatched.handler(async ({ context, input }) => {
-    const [item] = await db
-      .select({ id: mediaItem.id })
-      .from(mediaItem)
-      .where(eq(mediaItem.id, input.itemId))
+    const item = await itemFor(context.user, input.itemId)
     if (!item) throw notFound("This title isn't in any library.")
     const files = eq(mediaItem.id, item.id)
     if (input.watched) {
@@ -212,10 +213,7 @@ export const playback = {
 
   setTitleWatched: authed.playback.setTitleWatched.handler(
     async ({ context, input }) => {
-      const [row] = await db
-        .select({ id: title.id })
-        .from(title)
-        .where(eq(title.id, input.titleId))
+      const row = await titleFor(context.user, input.titleId)
       if (!row) {
         throw notFound("This title isn't in any library. Reload the page.")
       }
@@ -236,6 +234,7 @@ const inProgress = db
   .innerJoin(mediaItem, eq(mediaItem.id, watchProgress.mediaItemId))
   .where(
     and(
+      inLibrariesArg(mediaItem.libraryId),
       eq(watchProgress.userId, arg("userId")),
       eq(watchProgress.completed, false),
     ),
@@ -259,6 +258,7 @@ const lastFinished = db
   .innerJoin(title, eq(title.id, mediaItem.titleId))
   .where(
     and(
+      inLibrariesArg(mediaItem.libraryId),
       eq(watchProgress.userId, arg("userId")),
       eq(watchProgress.completed, true),
       ne(title.kind, "movie"),
@@ -273,6 +273,7 @@ const lastFinished = db
 
 // The files after a position in a title. A few extra skip over any the
 // user already watched or started.
+// ACCESS: Files are keyed by a visible title from lastFinished.
 const filesAfter = db
   .select()
   .from(mediaItem)
@@ -304,6 +305,7 @@ export const home = {
   continueWatching: authed.home.continueWatching.handler(
     async ({ context, input }) => {
       const rows = await inProgress.execute({
+        ...libraryArgs(context.user),
         userId: context.user.id,
         limit: input.limit,
       })
@@ -315,7 +317,10 @@ export const home = {
   ),
 
   nextUp: authed.home.nextUp.handler(async ({ context, input }) => {
-    const finished = await lastFinished.execute({ userId: context.user.id })
+    const finished = await lastFinished.execute({
+      userId: context.user.id,
+      ...libraryArgs(context.user),
+    })
     finished.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
 
     const next = []
@@ -356,7 +361,7 @@ export const home = {
       })
       .from(watchProgress)
       .innerJoin(mediaItem, eq(mediaItem.id, watchProgress.mediaItemId))
-      .where(eq(watchProgress.userId, userId))
+      .where(and(visibleItems(context.user), eq(watchProgress.userId, userId)))
       .groupBy(mediaItem.titleId)
       .as("watched")
     // Titles the user hasn't started, and shows that got a file since they
@@ -372,7 +377,7 @@ export const home = {
         .from(title)
         .innerJoin(mediaItem, eq(mediaItem.titleId, title.id))
         .leftJoin(watched, eq(watched.titleId, title.id))
-        .where(and(unseen, where))
+        .where(and(visibleTitles(context.user), unseen, where))
         .groupBy(title.id, watched.at)
         .orderBy(...order)
         .limit(input.limit * 2)
@@ -431,6 +436,7 @@ export const home = {
 
 /** The file arrived after `since`. */
 async function addedSince(itemId: string, since: Date): Promise<boolean> {
+  // ACCESS: itemId is the next file of a visible featured title.
   const [row] = await db
     .select({ id: mediaItem.id })
     .from(mediaItem)

@@ -80,6 +80,7 @@ export function clientName(agent: string | undefined): string | null {
 
 /** The columns a new session starts with. */
 async function startValues(owner: SessionOwner) {
+  // ACCESS: The title is keyed by the visible item passed by the playback route.
   const [owning] = owner.item.titleId
     ? await db
         .select({ kind: title.kind })

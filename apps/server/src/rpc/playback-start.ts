@@ -10,6 +10,7 @@ import { mediaItem, title, watchProgress } from "@matinee/db"
 import { ORPCError } from "@orpc/server"
 import { and, eq } from "drizzle-orm"
 
+import { itemFor } from "../access/visible"
 import { db } from "../db"
 import { episodeOrder, publicItems } from "../media/items"
 import { keyframesNear, listAudio } from "../media/playback"
@@ -30,44 +31,40 @@ function unplayable(): ORPCError<typeof PLAYBACK_UNPLAYABLE, unknown> {
   })
 }
 
-export const seekPlayback = authed.playback.seek.handler(async ({ input }) => {
-  const [item] = await db
-    .select()
-    .from(mediaItem)
-    .where(eq(mediaItem.id, input.itemId))
-  if (!item) throw notFound("This title isn't in any library.")
-  // Only video starts on a keyframe. A file without any starts anywhere,
-  // as `start` has it.
-  const keyframes =
-    item.probe && !item.probe.video
-      ? { before: input.position, after: null }
-      : await keyframesNear(item, input.position)
-  if (!keyframes)
-    throw badRequest("Can't find a point to start this file from.")
-  const offset =
-    input.snap === "nearest" &&
-    keyframes.after !== null &&
-    keyframes.after - input.position < input.position - keyframes.before
-      ? keyframes.after
-      : keyframes.before
-  return {
-    offset,
-    url: mediaPlaybackPath(item.id, {
-      audio: input.audio,
-      start: offset,
-      quality: "original",
-      audioCodecs: input.audioCodecs,
-      session: input.sessionId,
-    }),
-  }
-})
+export const seekPlayback = authed.playback.seek.handler(
+  async ({ context, input }) => {
+    const item = await itemFor(context.user, input.itemId)
+    if (!item) throw notFound("This title isn't in any library.")
+    // Only video starts on a keyframe. A file without any starts anywhere,
+    // as `start` has it.
+    const keyframes =
+      item.probe && !item.probe.video
+        ? { before: input.position, after: null }
+        : await keyframesNear(item, input.position)
+    if (!keyframes)
+      throw badRequest("Can't find a point to start this file from.")
+    const offset =
+      input.snap === "nearest" &&
+      keyframes.after !== null &&
+      keyframes.after - input.position < input.position - keyframes.before
+        ? keyframes.after
+        : keyframes.before
+    return {
+      offset,
+      url: mediaPlaybackPath(item.id, {
+        audio: input.audio,
+        start: offset,
+        quality: "original",
+        audioCodecs: input.audioCodecs,
+        session: input.sessionId,
+      }),
+    }
+  },
+)
 
 export const startPlayback = authed.playback.start.handler(
   async ({ context, input }) => {
-    const [item] = await db
-      .select()
-      .from(mediaItem)
-      .where(eq(mediaItem.id, input.itemId))
+    const item = await itemFor(context.user, input.itemId)
     if (!item) throw notFound("This title isn't in any library.")
     const info = await stat(item.path).catch(() => null)
     const probe = info?.isFile() ? await currentProbe(item, info) : null
@@ -75,6 +72,7 @@ export const startPlayback = authed.playback.start.handler(
       throw badRequest(
         "This file can't be read. Try again once the server has scanned it.",
       )
+    // ACCESS: The parent title is keyed by the visible item above.
     const [audio, subtitles, picks, [row], [progress], transcoding] =
       await Promise.all([
         listAudio(item),
@@ -119,6 +117,7 @@ export const startPlayback = authed.playback.start.handler(
       plan = snapPlayback(plan, input, keyframes)
     }
     if (row?.kind === "show") {
+      // ACCESS: Files share the visible item's title and library.
       const files = await db
         .select()
         .from(mediaItem)

@@ -387,6 +387,7 @@ export async function uploadedArtwork(
 /** Whether a title, season, or episode still shows the image. */
 async function inUse(id: string): Promise<boolean> {
   const [titles, seasons, episodes] = await Promise.all([
+    // ACCESS: Upload cleanup must check all titles before deleting shared artwork.
     db
       .select({ id: title.id })
       .from(title)

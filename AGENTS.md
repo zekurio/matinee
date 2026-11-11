@@ -22,6 +22,7 @@ See README.md for setup and the auth design.
   providers and refresh (`src/metadata`), streaming and artwork (`src/media`),
   job queues and scheduled tasks (`src/jobs`), in-process events and live
   streams (`src/realtime`).
+- `apps/server/src/access`: account policies, viewers, and the shared library visibility filters.
 - `apps/web`: Vite React app. File routes live in `src/routes`;
   `src/routeTree.gen.ts` is generated.
 - `brand/`: the logo and the native app icons, with the script that
@@ -53,6 +54,8 @@ See README.md for setup and the auth design.
     `Record`.
   - Every `as` cast needs a `// SAFETY:` comment on its statement saying
     what makes it true. Prefer removing the cast.
+  - Request-path library, title, and file reads need an access filter, or an
+    `// ACCESS:` comment explaining the visible row they derive from.
   - Fix the code before reaching for a disable comment.
 - No automated tests yet. Check affected flows by hand in the browser.
 - Generate migrations with a descriptive snake_case name:

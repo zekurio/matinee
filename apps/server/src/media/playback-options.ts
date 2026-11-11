@@ -8,6 +8,7 @@ import { t } from "@matinee/contracts/schema"
 import { mediaItem, subtitleFile } from "@matinee/db"
 import { type SQL, sql } from "drizzle-orm"
 
+import { type Seer, visibleItems } from "../access/visible"
 import { db } from "../db"
 import { encodableAudioCodecs } from "../transcode/audio"
 import { currentTranscoding } from "../transcode/capabilities"
@@ -25,22 +26,29 @@ const Counts = t.array(
 )
 
 /** Files per language code of the probe's `audio` or `subtitles` streams. */
-function streamLanguages(kind: "audio" | "subtitles"): SQL {
+function streamLanguages(viewer: Seer, kind: "audio" | "subtitles"): SQL {
   const streams = sql`(${mediaItem.probe} -> ${kind})`
+  const visible = visibleItems(viewer)
   return sql`
     select stream ->> 'language' as code, count(distinct ${mediaItem.id}) as files
     from ${mediaItem},
       jsonb_array_elements(case when jsonb_typeof(${streams}) = 'array' then ${streams} else '[]'::jsonb end) as stream
     where stream ->> 'language' is not null
+      ${visible ? sql`and ${visible}` : sql.empty()}
     group by 1`
 }
 
 /** Files per language of the subtitle files beside them. */
-const sidecarLanguages = sql`
+function sidecarLanguages(viewer: Seer): SQL {
+  const visible = visibleItems(viewer)
+  return sql`
   select ${subtitleFile.language} as code, count(distinct ${subtitleFile.mediaItemId}) as files
   from ${subtitleFile}
+  inner join ${mediaItem} on ${mediaItem.id} = ${subtitleFile.mediaItemId}
   where ${subtitleFile.language} is not null
+    ${visible ? sql`and ${visible}` : sql.empty()}
   group by 1`
+}
 
 /**
  * BCP 47 tags, the most files first. Codes from different sources that
@@ -59,13 +67,13 @@ function rankLanguages(...sources: t.infer<typeof Counts>[]): string[] {
     .map(([tag]) => tag)
 }
 
-export async function playbackOptions(): Promise<PlaybackOptions> {
+export async function playbackOptions(viewer: Seer): Promise<PlaybackOptions> {
   const [{ settings, capabilities }, audio, embedded, sidecar] =
     await Promise.all([
       currentTranscoding(),
-      db.execute(streamLanguages("audio")),
-      db.execute(streamLanguages("subtitles")),
-      db.execute(sidecarLanguages),
+      db.execute(streamLanguages(viewer, "audio")),
+      db.execute(streamLanguages(viewer, "subtitles")),
+      db.execute(sidecarLanguages(viewer)),
     ])
   return {
     qualities: [...PLAYBACK_QUALITIES],

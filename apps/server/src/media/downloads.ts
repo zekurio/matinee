@@ -21,6 +21,8 @@ import { t } from "@matinee/contracts/schema"
 import { episode, mediaItem, type MediaItemRow, title } from "@matinee/db"
 import { and, eq } from "drizzle-orm"
 
+import type { Viewer } from "../access/viewer"
+import { itemFor } from "../access/visible"
 import { db } from "../db"
 import { env } from "../env"
 import { defineQueue, type Queue } from "../jobs/queue"
@@ -458,6 +460,7 @@ async function check(active: Active): Promise<DownloadBuild | null> {
 }
 
 async function itemOf(active: Active): Promise<MediaItemRow | null> {
+  // ACCESS: Internal encode validation reloads the file of an existing download, not a request result.
   const [item] = await db
     .select()
     .from(mediaItem)
@@ -1044,11 +1047,12 @@ export type DownloadAccess =
 /** The user's download with `id`, ready to make. */
 export async function accessDownload(
   id: string,
-  userId: string,
+  viewer: Viewer,
 ): Promise<DownloadAccess> {
   if (!ID.test(id)) return { kind: "gone" }
   const active = await openDownload(id)
-  if (!active || active.record.userId !== userId) return { kind: "gone" }
+  if (!active || active.record.userId !== viewer.id) return { kind: "gone" }
+  if (!(await itemFor(viewer, active.record.itemId))) return { kind: "gone" }
   const build = await prepare(active)
   return build ? { kind: "found", active } : { kind: "changed" }
 }
@@ -1560,6 +1564,7 @@ export async function matroskaStream(
 /** The library's names for `item`, for its download's file name. */
 async function namingOf(item: MediaItemRow): Promise<DownloadNaming> {
   if (!item.titleId) return { title: null, year: null, episode: null }
+  // ACCESS: Naming is keyed by the visible item passed to startDownload.
   const [found] = await db
     .select({ name: title.name, year: title.year })
     .from(title)

@@ -3,6 +3,7 @@ import { credit, library, mediaItem, title, type TitleRow } from "@matinee/db"
 import { ORPCError } from "@orpc/server"
 import { and, asc, count, eq } from "drizzle-orm"
 
+import { libraryFor, titleFor } from "../access/visible"
 import { db } from "../db"
 import { log } from "../log"
 import { placeholders, saveArtwork, toArtwork } from "../media/artwork"
@@ -24,6 +25,7 @@ import { admin, authed, badRequest, notFound } from "./base"
 import { tagCounts, titleOrder, titleWhere } from "./browse"
 
 export async function loadRow(id: string): Promise<TitleRow> {
+  // ACCESS: This loader is used only by admin metadata and image procedures.
   const [row] = await db.select().from(title).where(eq(title.id, id))
   if (!row) throw notFound("This title isn't in any library.")
   return row
@@ -58,6 +60,7 @@ async function toTitle(row: TitleRow, userId: string): Promise<Title> {
     viewerStates([row.id], userId),
     placeholders(titleArtwork(row)),
   ])
+  // ACCESS: Count files of the visible title passed to toTitle.
   const [total] = await db
     .select({ n: count() })
     .from(mediaItem)
@@ -99,6 +102,7 @@ export function providerFailure(name: string, cause: unknown): never {
 
 export async function withLibrary(id: string) {
   const row = await loadRow(id)
+  // ACCESS: The library belongs to the title loaded by the admin-only loader.
   const [lib] = await db
     .select()
     .from(library)
@@ -120,7 +124,11 @@ function requireSource(lib: typeof library.$inferSelect) {
 
 export const titles = {
   list: authed.titles.list.handler(async ({ context, input }) => {
-    const where = titleWhere(input, input.libraryId)
+    if (!(await libraryFor(context.user, input.libraryId))) {
+      throw notFound("Library not found.")
+    }
+    const where = titleWhere(context.user, input, input.libraryId)
+    // ACCESS: Both queries use titleWhere, which applies the viewer's visibleTitles filter.
     const [rows, [total]] = await Promise.all([
       db
         .select()
@@ -138,18 +146,19 @@ export const titles = {
   }),
 
   browse: authed.titles.browse.handler(async ({ context, input }) => {
+    // ACCESS: Both queries use titleWhere, which applies the viewer's visibleTitles filter.
     const [rows, kinds] = await Promise.all([
       db
         .select()
         .from(title)
-        .where(titleWhere(input))
+        .where(titleWhere(context.user, input))
         .orderBy(...titleOrder(input.sort))
         .limit(input.limit)
         .offset(input.offset),
       db
         .select({ kind: title.kind, n: count() })
         .from(title)
-        .where(titleWhere({ ...input, kind: undefined }))
+        .where(titleWhere(context.user, { ...input, kind: undefined }))
         .groupBy(title.kind),
     ])
     const byKind = new Map(kinds.map((row) => [row.kind, row.n]))
@@ -164,24 +173,33 @@ export const titles = {
     }
   }),
 
-  facets: authed.titles.facets.handler(async ({ input }) => {
-    const where = titleWhere({ kind: input.kind }, input.libraryId)
+  facets: authed.titles.facets.handler(async ({ context, input }) => {
+    const where = titleWhere(
+      context.user,
+      { kind: input.kind },
+      input.libraryId,
+    )
     const [genres, studios] = await Promise.all([
-      tagCounts(title.genres, { where }),
-      tagCounts(title.studios, { where }),
+      tagCounts(context.user, title.genres, { where }),
+      tagCounts(context.user, title.studios, { where }),
     ])
     return { genres, studios }
   }),
 
-  get: authed.titles.get.handler(async ({ context, input }) =>
-    toTitle(await loadRow(input.id), context.user.id),
-  ),
+  get: authed.titles.get.handler(async ({ context, input }) => {
+    const row = await titleFor(context.user, input.id)
+    if (!row) throw notFound("This title isn't in any library.")
+    return toTitle(row, context.user.id)
+  }),
 
   items: authed.titles.items.handler(async ({ context, input }) => {
+    const row = await titleFor(context.user, input.id)
+    if (!row) throw notFound("This title isn't in any library.")
+    // ACCESS: Files are keyed by the visible title above.
     const rows = await db
       .select()
       .from(mediaItem)
-      .where(and(eq(mediaItem.titleId, input.id), inSeason(input.season)))
+      .where(and(eq(mediaItem.titleId, row.id), inSeason(input.season)))
       .orderBy(...episodeOrder)
     return publicItems(rows, context.user.id)
   }),

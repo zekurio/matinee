@@ -82,6 +82,7 @@ const likedTitles = db
   )
   .prepare("liked_titles")
 
+// ACCESS: The caller supplies ids of visible titles for their own watched state.
 const watchedTitles = db
   .select({
     id: mediaItem.titleId,
@@ -121,6 +122,7 @@ const likedItems = db
   )
   .prepare("liked_items")
 
+// ACCESS: Parent titles are keyed by the visible files passed to publicItems.
 const titleRows = db
   .select()
   .from(title)
@@ -317,6 +319,7 @@ export async function publicItems(
   return rows.map((row) => toItem(row, details))
 }
 
+// ACCESS: Files are keyed by the visible title passed to nextItem.
 const titleFiles = db
   .select()
   .from(mediaItem)
@@ -325,6 +328,7 @@ const titleFiles = db
   .prepare("title_files")
 
 // The user's progress in the title, latest first.
+// ACCESS: Progress is keyed by the visible title passed to nextItem.
 const titleProgress = db
   .select({
     id: watchProgress.mediaItemId,

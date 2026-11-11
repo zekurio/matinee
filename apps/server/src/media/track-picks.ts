@@ -170,6 +170,7 @@ export async function rememberedTracks(
   if (!preferences.rememberAudio && !preferences.rememberSubtitles) {
     return none
   }
+  // ACCESS: Track picks are limited to the visible item or other files of its title.
   const rows = await db
     .select({ pick: trackPick, item: mediaItem })
     .from(trackPick)

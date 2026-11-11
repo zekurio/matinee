@@ -24,6 +24,13 @@ import {
 } from "drizzle-orm"
 
 import { forgetGroups } from "../access/groups"
+import type { Viewer } from "../access/viewer"
+import {
+  itemFor,
+  libraryFor,
+  visibleItems,
+  visibleLibraries,
+} from "../access/visible"
 import { db } from "../db"
 import { isScanning, scanLibrary } from "../library/scanner"
 import { watchLibraries } from "../library/watcher"
@@ -45,6 +52,7 @@ import { admin, authed, badRequest, notFound } from "./base"
  */
 async function libraryBackdrops(ids: string[]): Promise<Map<string, string>> {
   const day = new Date().toISOString().slice(0, 10)
+  // ACCESS: Backdrops are keyed by the visible library ids passed by toLibraries.
   const rows = await db
     .selectDistinctOn([title.libraryId], {
       libraryId: title.libraryId,
@@ -60,9 +68,13 @@ async function libraryBackdrops(ids: string[]): Promise<Map<string, string>> {
   return found
 }
 
-async function toLibraries(rows: LibraryRow[]): Promise<Library[]> {
+async function toLibraries(
+  rows: LibraryRow[],
+  isAdmin: boolean,
+): Promise<Library[]> {
   if (rows.length === 0) return []
   const ids = rows.map((row) => row.id)
+  // ACCESS: Counts and folders are keyed by the visible libraries passed in rows.
   const [folders, items, titles, backdrops] = await Promise.all([
     db
       .select()
@@ -86,7 +98,9 @@ async function toLibraries(rows: LibraryRow[]): Promise<Library[]> {
     id: row.id,
     name: row.name,
     kind: row.kind,
-    paths: folders.filter((f) => f.libraryId === row.id).map((f) => f.path),
+    paths: isAdmin
+      ? folders.filter((f) => f.libraryId === row.id).map((f) => f.path)
+      : [],
     itemCount: items.find((c) => c.libraryId === row.id)?.n ?? 0,
     titleCount: titles.find((c) => c.libraryId === row.id)?.n ?? 0,
     metadataProvider: row.metadataProvider,
@@ -98,9 +112,9 @@ async function toLibraries(rows: LibraryRow[]): Promise<Library[]> {
   }))
 }
 
-async function loadLibrary(id: string): Promise<Library> {
-  const rows = await db.select().from(library).where(eq(library.id, id))
-  const [result] = await toLibraries(rows)
+async function loadLibrary(viewer: Viewer, id: string): Promise<Library> {
+  const row = await libraryFor(viewer, id)
+  const [result] = await toLibraries(row ? [row] : [], viewer.role === "admin")
   if (!result) throw notFound("Library not found.")
   return result
 }
@@ -155,13 +169,22 @@ async function writeFolders(libraryId: string, input: LibraryInput) {
 }
 
 export const libraries = {
-  list: authed.libraries.list.handler(async () =>
-    toLibraries(await db.select().from(library).orderBy(asc(library.name))),
+  list: authed.libraries.list.handler(async ({ context }) =>
+    toLibraries(
+      await db
+        .select()
+        .from(library)
+        .where(visibleLibraries(context.user))
+        .orderBy(asc(library.name)),
+      context.user.role === "admin",
+    ),
   ),
 
-  get: authed.libraries.get.handler(({ input }) => loadLibrary(input.id)),
+  get: authed.libraries.get.handler(({ context, input }) =>
+    loadLibrary(context.user, input.id),
+  ),
 
-  create: admin.libraries.create.handler(async ({ input }) => {
+  create: admin.libraries.create.handler(async ({ context, input }) => {
     await checkFolders(input.paths)
     const [row] = await db
       .insert(library)
@@ -176,15 +199,12 @@ export const libraries = {
     await writeFolders(row.id, input)
     scanLibrary(row.id, { regroup: true })
     void watchLibraries()
-    return loadLibrary(row.id)
+    return loadLibrary(context.user, row.id)
   }),
 
-  update: admin.libraries.update.handler(async ({ input }) => {
+  update: admin.libraries.update.handler(async ({ context, input }) => {
     const metadataProvider = checkProvider(input)
-    const [before] = await db
-      .select()
-      .from(library)
-      .where(eq(library.id, input.id))
+    const before = await libraryFor(context.user, input.id)
     if (!before) throw notFound("Library not found.")
     await db
       .update(library)
@@ -214,7 +234,7 @@ export const libraries = {
     // The kind or the folders may have changed, so regroup every title.
     scanLibrary(input.id, { regroup: true })
     void watchLibraries()
-    return loadLibrary(input.id)
+    return loadLibrary(context.user, input.id)
   }),
 
   remove: admin.libraries.remove.handler(async ({ input }) => {
@@ -228,14 +248,14 @@ export const libraries = {
     void watchLibraries()
   }),
 
-  scan: admin.libraries.scan.handler(async ({ input }) => {
-    await loadLibrary(input.id)
+  scan: admin.libraries.scan.handler(async ({ context, input }) => {
+    await loadLibrary(context.user, input.id)
     scanLibrary(input.id)
   }),
 
   refreshMetadata: admin.libraries.refreshMetadata.handler(
-    async ({ input }) => {
-      const lib = await loadLibrary(input.id)
+    async ({ context, input }) => {
+      const lib = await loadLibrary(context.user, input.id)
       if (!lib.metadataProvider) {
         throw badRequest("Pick a metadata provider for this library first.")
       }
@@ -256,11 +276,12 @@ const folderOf = sql<string>`regexp_replace(${mediaItem.relativePath}, '/[^/]*$'
  * until it's no longer pending.
  */
 async function* trickplayUpdates(
+  viewer: Viewer,
   id: string,
   signal: AbortSignal | undefined,
 ): AsyncGenerator<TrickplayStatus, void, void> {
   const load = async (): Promise<TrickplayStatus> => {
-    const [row] = await db.select().from(mediaItem).where(eq(mediaItem.id, id))
+    const row = await itemFor(viewer, id)
     return row ? trickplayStatus(row) : { status: "unavailable" }
   }
   for await (const status of follow({ topics: ["trickplay"], load, signal })) {
@@ -272,6 +293,7 @@ async function* trickplayUpdates(
 export const media = {
   list: authed.media.list.handler(async ({ context, input }) => {
     const where = and(
+      visibleItems(context.user),
       eq(mediaItem.libraryId, input.libraryId),
       input.folder
         ? like(mediaItem.relativePath, `${escapeLike(input.folder)}/%`)
@@ -284,6 +306,7 @@ export const media = {
           )
         : undefined,
     )
+    // ACCESS: Both queries use where, which includes visibleItems for the viewer.
     const [items, [total]] = await Promise.all([
       db
         .select()
@@ -312,42 +335,30 @@ export const media = {
   }),
 
   shelf: authed.media.shelf.handler(({ context, input }) =>
-    shelf(input.libraryId, input.limit, context.user.id),
+    shelf(input.libraryId, input.limit, context.user),
   ),
 
   get: authed.media.get.handler(async ({ context, input }) => {
-    const [row] = await db
-      .select()
-      .from(mediaItem)
-      .where(eq(mediaItem.id, input.id))
+    const row = await itemFor(context.user, input.id)
     if (!row) throw notFound("This title isn't in any library.")
     const [item] = await publicItems([row], context.user.id)
     return item!
   }),
 
-  subtitles: authed.media.subtitles.handler(async ({ input }) => {
-    const [row] = await db
-      .select()
-      .from(mediaItem)
-      .where(eq(mediaItem.id, input.id))
+  subtitles: authed.media.subtitles.handler(async ({ context, input }) => {
+    const row = await itemFor(context.user, input.id)
     if (!row) throw notFound("This title isn't in any library.")
     return listSubtitles(row)
   }),
 
-  audio: authed.media.audio.handler(async ({ input }) => {
-    const [row] = await db
-      .select()
-      .from(mediaItem)
-      .where(eq(mediaItem.id, input.id))
+  audio: authed.media.audio.handler(async ({ context, input }) => {
+    const row = await itemFor(context.user, input.id)
     if (!row) throw notFound("This title isn't in any library.")
     return listAudio(row)
   }),
 
-  keyframes: authed.media.keyframes.handler(async ({ input }) => {
-    const [row] = await db
-      .select()
-      .from(mediaItem)
-      .where(eq(mediaItem.id, input.id))
+  keyframes: authed.media.keyframes.handler(async ({ context, input }) => {
+    const row = await itemFor(context.user, input.id)
     if (!row) throw notFound("This title isn't in any library.")
     const keyframes = await keyframesNear(row, input.seconds)
     if (!keyframes) {
@@ -356,14 +367,13 @@ export const media = {
     return keyframes
   }),
 
-  trickplay: authed.media.trickplay.handler(async ({ input, signal }) => {
-    const [row] = await db
-      .select({ id: mediaItem.id })
-      .from(mediaItem)
-      .where(eq(mediaItem.id, input.id))
-    if (!row) throw notFound("This title isn't in any library.")
-    return trickplayUpdates(row.id, signal)
-  }),
+  trickplay: authed.media.trickplay.handler(
+    async ({ context, input, signal }) => {
+      const row = await itemFor(context.user, input.id)
+      if (!row) throw notFound("This title isn't in any library.")
+      return trickplayUpdates(context.user, row.id, signal)
+    },
+  ),
 }
 
 export const adminRoutes = {

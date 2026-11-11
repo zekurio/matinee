@@ -10,12 +10,11 @@ import {
   TranscodeVideoCodec,
 } from "@matinee/contracts"
 import { t } from "@matinee/contracts/schema"
-import { mediaItem, type MediaItemRow } from "@matinee/db"
-import { eq } from "drizzle-orm"
+import { type MediaItemRow } from "@matinee/db"
 import { Hono } from "hono"
 
-import { readSession } from "../auth/session"
-import { db } from "../db"
+import { readViewer } from "../access/viewer"
+import { itemFor } from "../access/visible"
 import { log } from "../log"
 import {
   addEncodeSeconds,
@@ -73,12 +72,13 @@ function parseRange(header: string, size: number): ByteRange | null {
 export const streamRoutes = new Hono()
 
 streamRoutes.get("/:id/thumbnail", async (c) => {
-  if (!(await readSession(c))) return c.body(null, 401)
+  const viewer = await readViewer(c)
+  if (!viewer) return c.body(null, 401)
   const id = c.req.param("id")
   if (!/^[0-9a-f-]{36}$/i.test(id)) return c.body(null, 404)
   const size = c.req.query("size") === "large" ? "large" : "small"
 
-  const [item] = await db.select().from(mediaItem).where(eq(mediaItem.id, id))
+  const item = await itemFor(viewer, id)
   if (!item) return c.body(null, 404)
   const file = await thumbnailFor(item, size)
   if (!file) return c.body(null, 404)
@@ -101,10 +101,11 @@ const TILE_NAME = /^(\d{1,5})\.jpg$/
 
 /** Trickplay images as an HLS image playlist; see `trickplayPlaylistPath`. */
 streamRoutes.get("/:id/trickplay/tiles.m3u8", async (c) => {
-  if (!(await readSession(c))) return c.body(null, 401)
+  const viewer = await readViewer(c)
+  if (!viewer) return c.body(null, 401)
   const id = c.req.param("id")
   if (!/^[0-9a-f-]{36}$/i.test(id)) return c.body(null, 404)
-  const [item] = await db.select().from(mediaItem).where(eq(mediaItem.id, id))
+  const item = await itemFor(viewer, id)
   if (!item) return c.body(null, 404)
   // Queues the images when they're missing, as the status does.
   const status = await trickplayStatus(item)
@@ -118,13 +119,15 @@ streamRoutes.get("/:id/trickplay/tiles.m3u8", async (c) => {
 
 /** A tile of trickplay images; see `trickplayTilePath`. */
 streamRoutes.get("/:id/trickplay/:key/:name", async (c) => {
-  if (!(await readSession(c))) return c.body(null, 401)
+  const viewer = await readViewer(c)
+  if (!viewer) return c.body(null, 401)
   const id = c.req.param("id")
   const key = c.req.param("key")
   const name = TILE_NAME.exec(c.req.param("name"))
   if (!/^[0-9a-f-]{36}$/i.test(id) || !/^[0-9a-f]{32}$/.test(key) || !name) {
     return c.body(null, 404)
   }
+  if (!(await itemFor(viewer, id))) return c.body(null, 404)
   const path = trickplayTileFile(id.toLowerCase(), key, Number(name[1]))
   const info = await stat(path).catch(() => null)
   if (!info?.isFile()) return c.body(null, 404)
@@ -176,14 +179,14 @@ const PlayQuery = t.object({
 
 /** One audio track, the video copied or encoded; see `mediaPlaybackPath`. */
 streamRoutes.get("/:id/play", async (c) => {
-  const viewer = await readSession(c)
+  const viewer = await readViewer(c)
   if (!viewer) return c.body(null, 401)
   const id = c.req.param("id")
   if (!/^[0-9a-f-]{36}$/i.test(id)) return c.body(null, 404)
   const query = PlayQuery.safeParse(c.req.query())
   if (!query.success) return c.body(null, 400)
 
-  const [item] = await db.select().from(mediaItem).where(eq(mediaItem.id, id))
+  const item = await itemFor(viewer, id)
   if (!item) return c.body(null, 404)
   const opened = await openPlayback(item, query.data, c.req.raw.signal)
   if (!opened) return c.body(null, 500)
@@ -274,14 +277,14 @@ function fileBody(path: string): ReadableStream<Uint8Array> {
 
 /** An encode as HLS; see `mediaHlsPath`. */
 streamRoutes.get("/:id/hls/main.m3u8", async (c) => {
-  const viewer = await readSession(c)
+  const viewer = await readViewer(c)
   if (!viewer) return c.body(null, 401)
   const id = c.req.param("id")
   if (!/^[0-9a-f-]{36}$/i.test(id)) return c.body(null, 404)
   const query = HlsQuery.safeParse(c.req.query())
   if (!query.success) return c.body(null, 400)
 
-  const [item] = await db.select().from(mediaItem).where(eq(mediaItem.id, id))
+  const item = await itemFor(viewer, id)
   if (!item) return c.body(null, 404)
   const request = await hlsRequest(item, query.data)
   if (request === "missing") return c.body(null, 404)
@@ -310,7 +313,7 @@ const SEGMENT_NAME = /^(?:init\.mp4|(\d{1,6})\.m4s)$/
 
 /** One segment of an encode, or its init segment. */
 streamRoutes.get("/:id/hls/:key/:name", async (c) => {
-  const viewer = await readSession(c)
+  const viewer = await readViewer(c)
   if (!viewer) return c.body(null, 401)
   const id = c.req.param("id")
   const key = c.req.param("key")
@@ -321,7 +324,7 @@ streamRoutes.get("/:id/hls/:key/:name", async (c) => {
   const query = HlsQuery.safeParse(c.req.query())
   if (!query.success) return c.body(null, 400)
 
-  const [item] = await db.select().from(mediaItem).where(eq(mediaItem.id, id))
+  const item = await itemFor(viewer, id)
   if (!item) return c.body(null, 404)
   let job = knownJob(key)
   if (!job) {
@@ -363,11 +366,12 @@ streamRoutes.get("/:id/hls/:key/:name", async (c) => {
 })
 
 streamRoutes.get("/:id/subtitles/:trackId", async (c) => {
-  if (!(await readSession(c))) return c.body(null, 401)
+  const viewer = await readViewer(c)
+  if (!viewer) return c.body(null, 401)
   const id = c.req.param("id")
   if (!/^[0-9a-f-]{36}$/i.test(id)) return c.body(null, 404)
 
-  const [item] = await db.select().from(mediaItem).where(eq(mediaItem.id, id))
+  const item = await itemFor(viewer, id)
   if (!item) return c.body(null, 404)
   const track = await openSubtitle(item, c.req.param("trackId"))
   if (!track) return c.body(null, 404)
@@ -398,15 +402,12 @@ streamRoutes.get("/:id/subtitles/:trackId", async (c) => {
 })
 
 streamRoutes.on(["GET", "HEAD"], "/:id/stream", async (c) => {
-  if (!(await readSession(c))) return c.body(null, 401)
+  const viewer = await readViewer(c)
+  if (!viewer) return c.body(null, 401)
   const id = c.req.param("id")
   if (!/^[0-9a-f-]{36}$/i.test(id)) return c.body(null, 404)
 
-  const [item] = await db
-    .select({ path: mediaItem.path, container: mediaItem.container })
-    .from(mediaItem)
-    .where(eq(mediaItem.id, id))
-    .limit(1)
+  const item = await itemFor(viewer, id)
   if (!item) return c.body(null, 404)
 
   const info = await stat(item.path).catch(() => null)

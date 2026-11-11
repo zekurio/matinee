@@ -5,9 +5,10 @@ import {
   PlaybackPreferences,
   type DownloadResolution,
 } from "@matinee/contracts"
-import { mediaItem, title, type MediaItemRow } from "@matinee/db"
+import { title, type MediaItemRow } from "@matinee/db"
 import { eq } from "drizzle-orm"
 
+import { itemFor, type Seer } from "../access/visible"
 import { db } from "../db"
 import { buildDownload, DownloadSpecError } from "../media/download-encode"
 import { resolveDownload } from "../media/download-resolve"
@@ -21,8 +22,8 @@ import { currentTranscoding } from "../transcode/capabilities"
 import { encodableVideoCodecs } from "../transcode/pipeline"
 import { authed, badRequest, notFound } from "./base"
 
-async function itemRow(id: string): Promise<MediaItemRow> {
-  const [row] = await db.select().from(mediaItem).where(eq(mediaItem.id, id))
+async function itemRow(viewer: Seer, id: string): Promise<MediaItemRow> {
+  const row = await itemFor(viewer, id)
   if (!row) throw notFound("This title isn't in any library.")
   return row
 }
@@ -44,10 +45,7 @@ export const downloads = {
     // Bound memory and filesystem pressure, even for a whole season.
     for (const id of input.ids) {
       try {
-        const [row] = await db
-          .select()
-          .from(mediaItem)
-          .where(eq(mediaItem.id, id))
+        const row = await itemFor(context.user, id)
         if (!row)
           throw new DownloadSpecError("This title isn't in any library.")
         const info = await stat(row.path).catch(() => null)
@@ -59,6 +57,7 @@ export const downloads = {
         const audio = await listAudio(row)
         const subtitles = await listSubtitles(row)
         const picks = await rememberedTracks(context.user, row)
+        // ACCESS: The parent title is keyed by the visible file above.
         const [parent] = row.titleId
           ? await db.select().from(title).where(eq(title.id, row.titleId))
           : []
@@ -89,13 +88,13 @@ export const downloads = {
     return results
   }),
 
-  plan: authed.downloads.plan.handler(async ({ input }) => {
-    const row = await itemRow(input.id)
+  plan: authed.downloads.plan.handler(async ({ context, input }) => {
+    const row = await itemRow(context.user, input.id)
     return asBadRequest(async () => (await buildDownload(row, input.spec)).plan)
   }),
 
   start: authed.downloads.start.handler(async ({ context, input }) => {
-    const row = await itemRow(input.id)
+    const row = await itemRow(context.user, input.id)
     return asBadRequest(() => startDownload(row, input.spec, context.user.id))
   }),
 

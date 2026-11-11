@@ -1,7 +1,7 @@
 import { t } from "@matinee/contracts/schema"
 import { Hono } from "hono"
 
-import { readSession } from "../auth/session"
+import { readViewer } from "../access/viewer"
 import {
   accessDownload,
   downloadInit,
@@ -37,11 +37,11 @@ function attachment(fileName: string): string {
 
 /** The download as one file: Matroska, or fragmented MP4; see `downloadFilePath`. */
 downloadRoutes.get("/:id/file.mp4", async (c) => {
-  const viewer = await readSession(c)
+  const viewer = await readViewer(c)
   if (!viewer) return c.body(null, 401)
   const query = FileQuery.safeParse(c.req.query())
   if (!query.success) return c.body(null, 400)
-  const access = await accessDownload(c.req.param("id"), viewer.id)
+  const access = await accessDownload(c.req.param("id"), viewer)
   if (access.kind === "gone") return c.body(null, 404)
   if (access.kind === "changed") return c.body(null, 409)
   const { active } = access
@@ -64,9 +64,9 @@ downloadRoutes.get("/:id/file.mp4", async (c) => {
 
 /** A download's init segment; see `downloadInitPath`. */
 downloadRoutes.get("/:id/init.mp4", async (c) => {
-  const viewer = await readSession(c)
+  const viewer = await readViewer(c)
   if (!viewer) return c.body(null, 401)
-  const access = await accessDownload(c.req.param("id"), viewer.id)
+  const access = await accessDownload(c.req.param("id"), viewer)
   if (access.kind === "gone") return c.body(null, 404)
   if (access.kind === "changed") return c.body(null, 409)
   // Matroska downloads only come whole.
@@ -85,11 +85,11 @@ const SEGMENT_NAME = /^(\d{1,6})\.m4s$/
 
 /** One segment of a download; see `downloadSegmentPath`. */
 downloadRoutes.get("/:id/:name", async (c) => {
-  const viewer = await readSession(c)
+  const viewer = await readViewer(c)
   if (!viewer) return c.body(null, 401)
   const name = SEGMENT_NAME.exec(c.req.param("name"))
   if (!name) return c.body(null, 404)
-  const access = await accessDownload(c.req.param("id"), viewer.id)
+  const access = await accessDownload(c.req.param("id"), viewer)
   if (access.kind === "gone") return c.body(null, 404)
   if (access.kind === "changed") return c.body(null, 409)
   if (access.active.record.spec.container === "mkv") return c.body(null, 404)

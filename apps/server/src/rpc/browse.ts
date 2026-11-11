@@ -13,6 +13,8 @@ import {
   sql,
 } from "drizzle-orm"
 
+import type { Seer } from "../access/visible"
+import { visibleTitles } from "../access/visible"
 import { db } from "../db"
 import { escapeLike } from "./like"
 
@@ -28,11 +30,13 @@ export type TitleMatch = Pick<
  * library that matches too much.
  */
 export function titleWhere(
+  viewer: Seer,
   filter: TitleMatch,
   libraryId?: string,
 ): SQL | undefined {
   const pattern = filter.query ? `%${escapeLike(filter.query)}%` : null
   return and(
+    visibleTitles(viewer),
     libraryId ? eq(title.libraryId, libraryId) : undefined,
     filter.kind ? eq(title.kind, filter.kind) : undefined,
     filter.genre ? arrayContains(title.genres, [filter.genre]) : undefined,
@@ -64,13 +68,14 @@ export function titleOrder(sort: TitleSort): SQL[] {
  * it, those that start with it first, as a search does.
  */
 export async function tagCounts(
+  viewer: Seer,
   column: typeof title.genres | typeof title.studios,
   options: { where?: SQL; match?: string; limit?: number } = {},
 ): Promise<Facet[]> {
   const tags = db
     .select({ name: sql<string>`unnest(${column})`.as("name") })
     .from(title)
-    .where(options.where)
+    .where(and(visibleTitles(viewer), options.where))
     .as("tags")
   const escaped = options.match ? escapeLike(options.match) : null
   const titleCount = count()

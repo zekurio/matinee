@@ -1,7 +1,9 @@
 import type { ShelfAdditions, ShelfEntry } from "@matinee/contracts"
 import { mediaItem, type MediaItemRow, title } from "@matinee/db"
-import { asc, count, desc, eq, max, sql } from "drizzle-orm"
+import { and, asc, count, desc, eq, max, sql } from "drizzle-orm"
 
+import type { Viewer } from "../access/viewer"
+import { inLibrariesArg, libraryArgs } from "../access/visible"
 import { anyOf, arg, db } from "../db"
 import { episodeOrder, publicItems } from "./items"
 import { seasonsByTitle } from "./seasons"
@@ -20,13 +22,16 @@ const newestTitles = db
   .select({ row: title, n: count(mediaItem.id) })
   .from(title)
   .innerJoin(mediaItem, eq(mediaItem.titleId, title.id))
-  .where(eq(title.libraryId, arg("libraryId")))
+  .where(
+    and(inLibrariesArg(title.libraryId), eq(title.libraryId, arg("libraryId"))),
+  )
   .groupBy(title.id)
   .orderBy(desc(title.addedAt), asc(title.sortName))
   .limit(arg("limit"))
   .prepare("shelf_titles")
 
 // Each title's first file, which is what Play starts.
+// ACCESS: First files are keyed by the visible titles selected by newestTitles.
 const firstFiles = db
   .selectDistinctOn([mediaItem.titleId])
   .from(mediaItem)
@@ -34,6 +39,7 @@ const firstFiles = db
   .orderBy(mediaItem.titleId, ...episodeOrder)
   .prepare("shelf_first_files")
 
+// ACCESS: Newest dates are keyed by the visible titles selected by newestTitles.
 const newestByTitle = db
   .select({
     titleId: mediaItem.titleId,
@@ -47,6 +53,7 @@ const newestByTitle = db
 const batchWindow = sql`over (partition by ${mediaItem.titleId})`
 // No season sorts as -1, below the specials' 0.
 const seasonOrNone = sql`coalesce(${mediaItem.seasonNumber}, -1)`
+// ACCESS: Batches join newestByTitle, keyed by the visible titles from newestTitles.
 const latestBatches = db
   .selectDistinctOn([mediaItem.titleId], {
     item: mediaItem,
@@ -75,9 +82,14 @@ async function latestAdditions(titleIds: string[]): Promise<Batch[]> {
 export async function shelf(
   libraryId: string,
   limit: number,
-  userId: string,
+  viewer: Viewer,
 ): Promise<ShelfEntry[]> {
-  const titles = await newestTitles.execute({ libraryId, limit })
+  const userId = viewer.id
+  const titles = await newestTitles.execute({
+    libraryId,
+    limit,
+    ...libraryArgs(viewer),
+  })
   if (titles.length === 0) return []
   const totals = new Map(titles.map(({ row, n }) => [row.id, n]))
   const [firsts, latest] = await Promise.all([

@@ -9,8 +9,14 @@ import type {
   StatsUnit,
 } from "@matinee/contracts"
 import { library, mediaItem, title } from "@matinee/db"
-import { asc, count, desc, eq, type SQL, sql } from "drizzle-orm"
+import { and, asc, count, desc, eq, type SQL, sql } from "drizzle-orm"
 
+import {
+  type Seer,
+  visibleItems,
+  visibleLibraries,
+  visibleTitles,
+} from "../access/visible"
 import { db } from "../db"
 import { knownZone, planBuckets, sinceStart, todayIn } from "./range"
 import { fileDuration } from "./sql"
@@ -58,9 +64,13 @@ const audioCodec = sql<string>`coalesce((
   limit 1
 ), 'unknown')`
 
-async function libraryTotals(): Promise<LibraryTotals> {
+async function libraryTotals(viewer: Seer): Promise<LibraryTotals> {
   const [kinds, [files]] = await Promise.all([
-    db.select({ kind: title.kind, n: count() }).from(title).groupBy(title.kind),
+    db
+      .select({ kind: title.kind, n: count() })
+      .from(title)
+      .where(visibleTitles(viewer))
+      .groupBy(title.kind),
     db
       .select({
         files: count(),
@@ -72,7 +82,8 @@ async function libraryTotals(): Promise<LibraryTotals> {
         durationSeconds: durationSum(),
       })
       .from(mediaItem)
-      .leftJoin(title, eq(title.id, mediaItem.titleId)),
+      .leftJoin(title, eq(title.id, mediaItem.titleId))
+      .where(visibleItems(viewer)),
   ])
   return {
     movies: kinds.find((row) => row.kind === "movie")?.n ?? 0,
@@ -86,6 +97,7 @@ async function libraryTotals(): Promise<LibraryTotals> {
 
 /** Files that arrived per bucket, with the running total. */
 async function growthOf(
+  viewer: Seer,
   range: StatsRange,
   zone: string,
 ): Promise<{ unit: StatsUnit; buckets: LibraryGrowthBucket[] }> {
@@ -104,6 +116,7 @@ async function growthOf(
         ),
     })
     .from(mediaItem)
+    .where(visibleItems(viewer))
   const today = span?.today ?? new Date().toISOString().slice(0, 10)
   const { unit, starts } = planBuckets(range, today, span?.first ?? today)
 
@@ -123,7 +136,7 @@ async function growthOf(
     })
     .from(mediaItem)
     .leftJoin(title, eq(title.id, mediaItem.titleId))
-    .where(since)
+    .where(and(visibleItems(viewer), since))
     .groupBy(sql`1`)
   const byStart = new Map(rows.map((row) => [row.start, row]))
   let totalFiles = span?.files ?? 0
@@ -145,16 +158,20 @@ async function growthOf(
 }
 
 /** Files and their size per value of `label`, most files first. */
-async function qualityBy(label: SQL<string>): Promise<QualityStat[]> {
+async function qualityBy(
+  viewer: Seer,
+  label: SQL<string>,
+): Promise<QualityStat[]> {
   const files = count()
   return db
     .select({ name: label, files, sizeBytes: sizeSum() })
     .from(mediaItem)
+    .where(visibleItems(viewer))
     .groupBy(sql`1`)
     .orderBy(desc(files))
 }
 
-async function librariesOf(): Promise<LibraryShare[]> {
+async function librariesOf(viewer: Seer): Promise<LibraryShare[]> {
   const rows = await db
     .select({
       id: library.id,
@@ -170,23 +187,27 @@ async function librariesOf(): Promise<LibraryShare[]> {
     })
     .from(library)
     .leftJoin(mediaItem, eq(mediaItem.libraryId, library.id))
+    .where(visibleLibraries(viewer))
     .groupBy(library.id)
     .orderBy(asc(library.name))
   return rows
 }
 
 /** What the libraries hold, how they grew over the range, and in what quality. */
-export async function libraryStats(input: StatsInput): Promise<LibraryStats> {
+export async function libraryStats(
+  viewer: Seer,
+  input: StatsInput,
+): Promise<LibraryStats> {
   const zone = await knownZone(input.timeZone)
   const [totals, growth, resolutions, videoCodecs, dynamic, audio, libraries] =
     await Promise.all([
-      libraryTotals(),
-      growthOf(input.range, zone),
-      qualityBy(resolution),
-      qualityBy(videoCodec),
-      qualityBy(dynamicRange),
-      qualityBy(audioCodec),
-      librariesOf(),
+      libraryTotals(viewer),
+      growthOf(viewer, input.range, zone),
+      qualityBy(viewer, resolution),
+      qualityBy(viewer, videoCodec),
+      qualityBy(viewer, dynamicRange),
+      qualityBy(viewer, audioCodec),
+      librariesOf(viewer),
     ])
   return {
     range: input.range,
