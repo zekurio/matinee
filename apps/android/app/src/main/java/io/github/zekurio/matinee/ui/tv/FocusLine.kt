@@ -33,6 +33,7 @@ import io.github.zekurio.matinee.ui.tv.home.FocusedItem
  */
 fun titleInfo(title: TitleSummary, api: MatineeApi, res: Resources, kind: Boolean = false): FocusedItem = FocusedItem(
     name = title.name,
+    logo = title.images.logo,
     subtitle = null,
     facts = listOfNotNull(
         title.year?.toString(),

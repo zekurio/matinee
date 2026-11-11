@@ -9,20 +9,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import coil3.compose.AsyncImage
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.ArtworkSize
 import io.github.zekurio.matinee.api.Title
@@ -50,6 +44,7 @@ import io.github.zekurio.matinee.ui.tv.ShowBackdrop
 import io.github.zekurio.matinee.ui.tv.TvButton
 import io.github.zekurio.matinee.ui.tv.TvFocusMemory
 import io.github.zekurio.matinee.ui.tv.TvIconButton
+import io.github.zekurio.matinee.ui.tv.TvTitleLogo
 import io.github.zekurio.matinee.ui.tv.TvType
 import io.github.zekurio.matinee.ui.tv.rememberTvFocusMemory
 
@@ -90,25 +85,10 @@ private fun TitlePage(title: Title) {
     }
 }
 
-/**
- * The title as its logo, or as its name when it has none or the logo won't
- * load. A logo is see-through, so it gets no blurred stand-in beneath it.
- */
+/** The title as its logo, or as its name when it has none or the logo won't load. */
 @Composable
 private fun TitleMark(title: Title) {
-    val api = LocalApi.current
-    val logo = title.images.logo
-    var failed by remember(logo?.id) { mutableStateOf(false) }
-    if (logo != null && !failed) {
-        AsyncImage(
-            model = api.paths.artwork(logo.id, ArtworkSize.Medium),
-            contentDescription = title.name,
-            contentScale = ContentScale.Fit,
-            alignment = Alignment.CenterStart,
-            onError = { failed = true },
-            modifier = Modifier.size(width = 420.dp, height = 110.dp),
-        )
-    } else {
+    TvTitleLogo(title.name, title.images.logo, Modifier.size(width = 420.dp, height = 110.dp)) {
         Text(title.name, style = TvType.Hero, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.width(720.dp))
     }
 }

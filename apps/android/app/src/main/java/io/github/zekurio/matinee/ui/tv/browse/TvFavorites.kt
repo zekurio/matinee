@@ -68,7 +68,7 @@ private const val EPISODES = "episodes"
 private const val EMPTY = "empty"
 
 /** Above the focused card in the rows: the list's top padding, a row's heading, and the gap under it. */
-private val ROW_PIVOT = 8.dp + 26.dp + TvCards.TitleGap
+private val ROW_PIVOT = 8.dp + TvCards.TitleHeight + TvCards.TitleGap
 
 /**
  * The person's favorites on a TV, split as the phone splits them: the

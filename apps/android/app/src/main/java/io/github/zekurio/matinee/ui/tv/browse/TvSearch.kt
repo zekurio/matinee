@@ -80,7 +80,7 @@ private const val STUDIOS = "studios"
 private fun libraryRow(id: String) = "lib-$id"
 
 /** Above the focused card in the rows: the list's top padding, a row's heading, and the gap under it. */
-private val ROW_PIVOT = 8.dp + 26.dp + TvCards.TitleGap
+private val ROW_PIVOT = 8.dp + TvCards.TitleHeight + TvCards.TitleGap
 
 /** The search's results kept while the page is on the back stack, so they're there when the page comes back. */
 class TvSearchModel : ViewModel() {
@@ -210,6 +210,7 @@ fun TvSearchScreen() {
 
 private fun personInfo(person: PersonSummary, res: android.content.res.Resources) = FocusedItem(
     name = person.name,
+    logo = null,
     subtitle = null,
     facts = listOf(creditKind(person.kind, res, 1), res.getQuantityString(R.plurals.browse_title_count, person.titleCount, person.titleCount)),
     contentRating = null,
@@ -220,6 +221,7 @@ private fun personInfo(person: PersonSummary, res: android.content.res.Resources
 
 private fun facetInfo(facet: Facet, res: android.content.res.Resources) = FocusedItem(
     name = facet.name,
+    logo = null,
     subtitle = null,
     facts = listOf(res.getQuantityString(R.plurals.browse_title_count, facet.titleCount, facet.titleCount)),
     contentRating = null,

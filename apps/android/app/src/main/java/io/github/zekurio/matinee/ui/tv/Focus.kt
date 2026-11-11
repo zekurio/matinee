@@ -5,6 +5,8 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.InteractionSource
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -43,6 +45,7 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.LocalViewConfiguration
@@ -93,7 +96,10 @@ object TvFocus {
 /**
  * The focus look for a picture: it grows by [scale], lifts, and gets a
  * ring. Put it before the picture's `clip`, so the ring draws outside its
- * [shape], and give it the same [interaction] as the `clickable`.
+ * [shape], and after its [tvClickable], with the same [interaction]. A
+ * list scrolls the focused card into place by the clickable's bounds,
+ * which then don't grow with the picture: a row that does would come to
+ * rest a few pixels off, and move again as the picture shrinks.
  */
 @Composable
 fun Modifier.tvPicture(interaction: InteractionSource, shape: Shape, scale: Float = TvFocus.SCALE): Modifier {
@@ -163,6 +169,10 @@ class TvFocusMemory internal constructor(lastRow: String?, lastItem: String?, ro
     var lastItem by mutableStateOf(lastItem)
         private set
     internal val rowItems = HashMap(rows)
+    private var fallback: (() -> Pair<String, String>?)? = null
+
+    /** [Restore] is still waiting for the card it starts on, as a page loads. */
+    private var opening = false
     private val requesters = mutableStateMapOf<Pair<String, String>, FocusRequester>()
 
     /** A row of cards: focus that comes in lands on the card it left. */
@@ -181,13 +191,22 @@ class TvFocusMemory internal constructor(lastRow: String?, lastItem: String?, ro
             requesters[row to key] = requester
             onDispose { if (requesters[row to key] === requester) requesters.remove(row to key) }
         }
-        focusRequester(requester).onFocusChanged {
-            if (it.isFocused) {
-                lastRow = row
-                lastItem = key
-                rowItems[row] = key
+        focusRequester(requester)
+            // A press names this card as its row's before the tap focuses it.
+            // Focus coming into the row would land on the card it had last instead.
+            .pointerInput(row, key) {
+                awaitEachGesture {
+                    awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                    rowItems[row] = key
+                }
             }
-        }
+            .onFocusChanged {
+                if (it.isFocused) {
+                    lastRow = row
+                    lastItem = key
+                    rowItems[row] = key
+                }
+            }
     }
 
     /**
@@ -199,28 +218,47 @@ class TvFocusMemory internal constructor(lastRow: String?, lastItem: String?, ro
     fun Restore(fallback: () -> Pair<String, String>?) {
         // Back from the drawer, the card that had focus.
         val shell = LocalTvPageFocus.current
+        val start by rememberUpdatedState(fallback)
         androidx.compose.runtime.DisposableEffect(shell) {
             val restore = { focusLast() }
             shell?.restore = restore
-            onDispose { if (shell?.restore === restore) shell.restore = null }
+            this@TvFocusMemory.fallback = { start() }
+            onDispose {
+                if (shell?.restore === restore) shell.restore = null
+                this@TvFocusMemory.fallback = null
+            }
         }
         val window = androidx.compose.ui.platform.LocalWindowInfo.current
         LaunchedEffect(this) {
+            opening = true
+            // A page that never shows its card, as one that failed to load, lets the shell focus what it has.
+            val wait = launch {
+                delay(OPENING_MS)
+                opening = false
+            }
             // Focus asked for before the window has it, as the app starts, doesn't stick.
             snapshotFlow { window.isWindowFocused }.first { it }
             val requester = snapshotFlow {
                 val saved = lastRow?.let { row -> lastItem?.let { requesters[row to it] } }
-                saved ?: fallback()?.let { requesters[it] }
+                saved ?: start()?.let { requesters[it] }
             }.filterNotNull().first()
             // Composed is not yet placed; one frame on, it can take focus.
             androidx.compose.runtime.withFrameNanos { }
             runCatching { requester.requestFocus() }
+            wait.cancel()
+            opening = false
         }
     }
 
-    /** Focus the card that had it last, if it's on screen. */
+    /**
+     * Focus the card that had it last, if it's on screen, or else the one
+     * [Restore] starts on: a row that loaded again may no longer have it.
+     * True while [Restore] is still waiting for its card, so the shell
+     * doesn't put focus on whatever showed first in the meantime.
+     */
     fun focusLast(): Boolean {
-        val requester = lastRow?.let { row -> lastItem?.let { requesters[row to it] } } ?: return false
+        val saved = lastRow?.let { row -> lastItem?.let { requesters[row to it] } }
+        val requester = saved ?: fallback?.invoke()?.let { requesters[it] } ?: return opening
         return runCatching { requester.requestFocus() }.getOrDefault(false)
     }
 
@@ -359,16 +397,33 @@ fun Modifier.tvFocusOnTap(): Modifier = composed {
 }
 
 /**
- * A touch or a mouse click in an empty spot can leave nothing focused,
- * and the D-pad press after it has nowhere to move from. This puts focus
- * back with [restore] when the keys take over again. For the root of a TV
- * screen.
+ * Puts focus back with [restore] when nothing on a TV screen has it and
+ * the D-pad is in charge, since a key press then has nowhere to move from.
+ * That happens when the keys take over after a touch or a mouse click in
+ * an empty spot, and when the focused card leaves: a row loads again
+ * without it, as Continue watching does after its episode is finished.
+ * For the root of a TV screen.
  */
 fun Modifier.tvRefocus(restore: () -> Unit): Modifier = composed {
     val mode = LocalInputModeManager.current
     var focused by remember { mutableStateOf(false) }
+    val current by rememberUpdatedState(restore)
     LaunchedEffect(mode.inputMode) {
-        if (mode.inputMode == InputMode.Keyboard && !focused) restore()
+        if (mode.inputMode == InputMode.Keyboard && !focused) current()
+    }
+    LaunchedEffect(mode.inputMode, focused) {
+        if (mode.inputMode != InputMode.Keyboard || focused) return@LaunchedEffect
+        // A page opening has no focus for a moment and takes it itself.
+        // Tried again while nothing can take it yet, as on a page still loading.
+        while (true) {
+            delay(REFOCUS_AFTER_MS)
+            current()
+        }
     }
     onFocusChanged { focused = it.hasFocus }
 }
+
+private const val REFOCUS_AFTER_MS = 300L
+
+/** How long [TvFocusMemory.Restore] holds off the shell while its page loads. */
+private const val OPENING_MS = 2_000L

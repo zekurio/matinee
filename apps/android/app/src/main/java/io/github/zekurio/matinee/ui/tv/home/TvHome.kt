@@ -24,12 +24,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
@@ -38,6 +41,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.FeaturedTitle
 import io.github.zekurio.matinee.api.Library
@@ -77,6 +82,7 @@ import io.github.zekurio.matinee.ui.tv.TvLandscapeCard
 import io.github.zekurio.matinee.ui.tv.TvPage
 import io.github.zekurio.matinee.ui.tv.TvPosterCard
 import io.github.zekurio.matinee.ui.tv.TvRow
+import io.github.zekurio.matinee.ui.tv.TvTitleLogo
 import io.github.zekurio.matinee.ui.tv.TvType
 import io.github.zekurio.matinee.ui.tv.fadeTop
 import io.github.zekurio.matinee.ui.tv.rememberPinnedRowsFling
@@ -86,7 +92,7 @@ import io.github.zekurio.matinee.ui.tv.rememberTvFocusMemory
 private val HEADER_HEIGHT = 226.dp
 
 /** Above the focused card in the rows: the list's top padding, a row's heading, and the gap under it. */
-private val ROW_PIVOT = 12.dp + 26.dp + TvCards.TitleGap
+private val ROW_PIVOT = 12.dp + TvCards.TitleHeight + TvCards.TitleGap
 
 /** Room after the last row, so it too can scroll up to where the focused row sits. */
 private val ROWS_END = 320.dp
@@ -101,11 +107,18 @@ private val ROWS_END = 320.dp
 fun TvHomeScreen() {
     val loaders = rememberHomeLoaders()
     val memory = rememberTvFocusMemory()
-    var focused by remember { mutableStateOf<FocusedItem?>(null) }
+    val model: TvHomeModel = viewModel()
+    val focused = model.focused
     // Each row's first card, in the rows' order, for focus the first time.
     val firsts = remember { mutableStateMapOf<String, String>() }
     val order = remember { mutableStateOf(emptyList<String>()) }
-    memory.Restore { order.value.firstNotNullOfOrNull { row -> firsts[row]?.let { row to it } } }
+    memory.Restore {
+        // The rows above the libraries show only once loaded, so wait for them: focus taken
+        // sooner would sit in a row they then push down.
+        if (listOf(loaders.featured, loaders.resume, loaders.nextUp).any { it.state is Load.Loading }) return@Restore null
+        // The row focus was in last comes first, for when its card is gone.
+        (listOfNotNull(memory.lastRow) + order.value).firstNotNullOfOrNull { row -> firsts[row]?.let { row to it } }
+    }
     ShowBackdrop(focused?.backdrop.orEmpty())
 
     val libraries = loaders.libraries
@@ -117,8 +130,21 @@ fun TvHomeScreen() {
         return
     }
     val libs = (libraries.state as? Load.Ready)?.value
+    val loaded = (loaders.featured.state as? Load.Ready)?.value
+    LaunchedEffect(loaded) { loaded?.let(model::offer) }
+    val featured = model.featured ?: loaded
+    val list = rememberLazyListState()
+    LaunchedEffect(model, list) {
+        // A new pick waits until the row is out of sight and focus isn't in it.
+        snapshotFlow {
+            val info = list.layoutInfo
+            // The list lays out a row a little past its edge, so look at where it is.
+            val seen = info.visibleItemsInfo.any { it.key == FEATURED && it.offset + it.size > info.viewportStartOffset }
+            model.pending != null && memory.lastRow != FEATURED && info.visibleItemsInfo.isNotEmpty() && !seen
+        }.collect { hidden -> if (hidden) model.swap() }
+    }
     val rows = buildList {
-        if ((loaders.featured.state as? Load.Ready)?.value?.isNotEmpty() == true) add(FEATURED)
+        if (!featured.isNullOrEmpty()) add(FEATURED)
         add(CONTINUE)
         add(NEXT_UP)
         libs?.forEach { add(shelfKey(it)) }
@@ -126,18 +152,17 @@ fun TvHomeScreen() {
     SideEffect { order.value = rows }
 
     Box(Modifier.fillMaxSize()) {
-        Header(focused, Modifier.padding(start = TvPage.Start, end = 220.dp, top = Overscan.Vertical + 8.dp).height(HEADER_HEIGHT - Overscan.Vertical - 8.dp))
-        val onFocus: (FocusedItem) -> Unit = { focused = it }
+        Header(focused, Modifier.padding(start = TvPage.Start, end = 220.dp, top = Overscan.Vertical + 8.dp).height(HEADER_BODY))
+        val onFocus: (FocusedItem) -> Unit = { model.focused = it }
         PinnedRows(ROW_PIVOT) {
-            val rows = rememberLazyListState()
             LazyColumn(
                 Modifier.fillMaxSize().padding(top = HEADER_HEIGHT).fadeTop(12.dp),
-                state = rows,
-                flingBehavior = rememberPinnedRowsFling(rows),
+                state = list,
+                flingBehavior = rememberPinnedRowsFling(list),
                 contentPadding = PaddingValues(top = 12.dp, bottom = ROWS_END),
                 verticalArrangement = Arrangement.spacedBy(28.dp),
             ) {
-                featuredRow(loaders.featured, memory, firsts, onFocus)
+                featuredRow(featured, memory, firsts, onFocus)
                 itemRow(CONTINUE, R.string.browse_continue_watching, R.string.home_continue_failed, loaders.resume, memory, firsts, onFocus)
                 itemRow(NEXT_UP, R.string.browse_next_up, R.string.home_next_up_failed, loaders.nextUp, memory, firsts, onFocus)
                 when (val state = libraries.state) {
@@ -158,6 +183,32 @@ fun TvHomeScreen() {
     }
 }
 
+/**
+ * What TV Home keeps while it's on the back stack, so it comes back as it
+ * was left: the card the header shows, and the featured titles. The server
+ * picks other featured titles each time it's asked, and Home asks again
+ * whenever something is watched. That suits the phone's banner, but a row
+ * that changed under the person, or on the way back from a title, would
+ * lose the card focus was on. A new pick waits in [pending] for [swap].
+ */
+internal class TvHomeModel : ViewModel() {
+    var focused by mutableStateOf<FocusedItem?>(null)
+    var featured by mutableStateOf<List<FeaturedTitle>?>(null)
+        private set
+    var pending by mutableStateOf<List<FeaturedTitle>?>(null)
+        private set
+
+    fun offer(next: List<FeaturedTitle>) {
+        if (featured == null) featured = next else if (next != featured) pending = next
+    }
+
+    /** Show the newest pick, if one is waiting. */
+    fun swap() {
+        pending?.let { featured = it }
+        pending = null
+    }
+}
+
 private const val FEATURED = "featured"
 private const val CONTINUE = "continue"
 private const val NEXT_UP = "nextUp"
@@ -172,13 +223,12 @@ private fun FirstCard(firsts: MutableMap<String, String>, row: String, first: St
 
 /** The featured titles, the phone's banner, as a row of posters; the header shows the one focused. */
 private fun LazyListScope.featuredRow(
-    loader: Loader<List<FeaturedTitle>>,
+    slides: List<FeaturedTitle>?,
     memory: TvFocusMemory,
     firsts: MutableMap<String, String>,
     onFocus: (FocusedItem) -> Unit,
 ) {
-    val slides = (loader.state as? Load.Ready)?.value ?: return
-    if (slides.isEmpty()) return
+    if (slides.isNullOrEmpty()) return
     item(key = FEATURED) {
         val api = LocalApi.current
         val nav = LocalNavigator.current
@@ -258,15 +308,15 @@ private fun ShelfRow(library: Library, memory: TvFocusMemory, firsts: MutableMap
     when (val state = railState(entries.state)) {
         RailState.Loading -> {
             FirstCard(firsts, key, null)
-            RowNotice(title, null, null, null)
+            RowNotice(title, null, null, null, SHELF_HEIGHT)
         }
         is RailState.Failed -> {
             FirstCard(firsts, key, null)
-            RowNotice(title, stringResource(R.string.home_shelf_failed), state.message, entries::reload)
+            RowNotice(title, stringResource(R.string.home_shelf_failed), state.message, entries::reload, SHELF_HEIGHT)
         }
         RailState.Empty -> {
             FirstCard(firsts, key, null)
-            RowNotice(title, stringResource(R.string.browse_empty_shelf), null, null)
+            RowNotice(title, stringResource(R.string.browse_empty_shelf), null, null, SHELF_HEIGHT)
         }
         is RailState.Shown -> {
             FirstCard(firsts, key, state.items.first().title.id)
@@ -289,8 +339,9 @@ private fun ShelfRow(library: Library, memory: TvFocusMemory, firsts: MutableMap
 }
 
 /**
- * The focused card's name, facts, and overview, over the backdrop. It
- * fades from one card to the next rather than jumping.
+ * The focused card's logo or name, facts, and overview, over the backdrop.
+ * It fades from one card to the next rather than jumping. Its height is
+ * fixed, so the overview takes what lines the rest leaves.
  */
 @Composable
 private fun Header(item: FocusedItem?, modifier: Modifier = Modifier) {
@@ -302,8 +353,22 @@ private fun Header(item: FocusedItem?, modifier: Modifier = Modifier) {
         label = "homeHeader",
     ) { shown ->
         if (shown == null) return@AnimatedContent
+        // One line until the name is laid out and says it took two. A logo that fails shows the name.
+        var nameLines by remember { mutableIntStateOf(1) }
+        val name = NAME_LINE * nameLines
+        val mark = if (shown.logo != null) maxOf(LOGO_HEIGHT, name) else name
+        val subtitle = if (shown.subtitle != null) SUBTITLE_HEIGHT else 0.dp
+        val overviewLines = ((HEADER_BODY - mark - subtitle - FACTS_HEIGHT - 12.dp) / OVERVIEW_LINE).toInt().coerceIn(0, if (shown.subtitle != null) 2 else 3)
         Column(Modifier.fillMaxWidth()) {
-            Text(shown.name, style = TvType.Display, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            TvTitleLogo(shown.name, shown.logo, Modifier.size(width = LOGO_WIDTH, height = LOGO_HEIGHT), alignment = Alignment.BottomStart) {
+                Text(
+                    shown.name,
+                    style = TvType.Display,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    onTextLayout = { nameLines = it.lineCount },
+                )
+            }
             if (shown.subtitle != null) {
                 Text(
                     shown.subtitle,
@@ -315,12 +380,12 @@ private fun Header(item: FocusedItem?, modifier: Modifier = Modifier) {
                 )
             }
             Facts(shown, Modifier.padding(top = 10.dp))
-            if (shown.overview != null) {
+            if (shown.overview != null && overviewLines > 0) {
                 Text(
                     shown.overview,
                     style = TvType.Body,
                     color = Palette.Foreground.copy(alpha = 0.75f),
-                    maxLines = if (shown.subtitle != null) 2 else 3,
+                    maxLines = overviewLines,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.padding(top = 12.dp).widthIn(max = 560.dp),
                 )
@@ -328,6 +393,24 @@ private fun Header(item: FocusedItem?, modifier: Modifier = Modifier) {
         }
     }
 }
+
+/** The header's room under the overscan: [HEADER_HEIGHT] less its top padding. */
+private val HEADER_BODY = HEADER_HEIGHT - Overscan.Vertical - 8.dp
+
+/**
+ * The box a logo fits in, at its bottom left: as tall as still leaves an
+ * episode's overview its two lines.
+ */
+private val LOGO_WIDTH = 360.dp
+private val LOGO_HEIGHT = 70.dp
+
+/** A line of the name, in [TvType.Display]. */
+private val NAME_LINE = 40.dp
+
+/** The episode line with its gap, the facts with theirs, and a line of overview. */
+private val SUBTITLE_HEIGHT = 28.dp
+private val FACTS_HEIGHT = 32.dp
+private val OVERVIEW_LINE = 24.dp
 
 /** Year, length, and the like, then the age rating in a box and the score by its star. */
 @Composable
@@ -358,13 +441,15 @@ private fun Facts(item: FocusedItem, modifier: Modifier = Modifier) {
 /**
  * A row that has no cards to show: its heading and why, with a way to try
  * again where there is one. Without [headline], a row still loading.
+ * [height] is the room under the heading, a library's as tall as its
+ * posters, so the rows under it stay put when they come.
  */
 @Composable
-private fun RowNotice(title: String?, headline: String?, message: String?, onRetry: (() -> Unit)?) {
+private fun RowNotice(title: String?, headline: String?, message: String?, onRetry: (() -> Unit)?, height: Dp = ROW_NOTICE_HEIGHT) {
     Column(Modifier.fillMaxWidth().padding(start = TvPage.Start, end = TvPage.End)) {
-        if (title != null) Text(title, style = TvType.Title, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        if (title != null) Text(title, style = TvType.Title, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.height(TvCards.TitleHeight))
         Row(
-            Modifier.padding(top = TvCards.TitleGap).height(ROW_NOTICE_HEIGHT),
+            Modifier.padding(top = TvCards.TitleGap).height(height),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(20.dp),
         ) {
@@ -384,6 +469,9 @@ private fun RowNotice(title: String?, headline: String?, message: String?, onRet
 }
 
 private val ROW_NOTICE_HEIGHT: Dp = 96.dp
+
+/** A row of posters under its heading: [TvRow]'s posters and the room it leaves below them. */
+private val SHELF_HEIGHT: Dp = TvCards.PosterWidth * 1.5f + 4.dp
 
 @Composable
 private fun Loading() {

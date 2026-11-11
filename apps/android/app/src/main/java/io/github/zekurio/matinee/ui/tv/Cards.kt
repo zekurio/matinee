@@ -62,6 +62,12 @@ object TvCards {
 
     /** Between a row's heading and its cards, with room for the focus ring. */
     val TitleGap: Dp = 14.dp
+
+    /**
+     * A row's heading, one line of [TvType.Title]. Fixed, so a page that
+     * pins its rows knows where the cards start to the pixel.
+     */
+    val TitleHeight: Dp = 26.dp
 }
 
 /**
@@ -104,16 +110,16 @@ fun TvArtCard(
                 if (event.type == KeyEventType.KeyUp) open()
                 true
             }
-            .tvPicture(interaction, TvCards.Shape)
-            .clip(TvCards.Shape)
-            .tone(toneKey)
             .tvClickable(
                 interaction,
                 role = Role.Button,
                 onClickLabel = contentDescription,
                 onLongClick = open,
                 onClick = onClick,
-            ),
+            )
+            .tvPicture(interaction, TvCards.Shape)
+            .clip(TvCards.Shape)
+            .tone(toneKey),
         contentAlignment = Alignment.Center,
         content = art,
     )
@@ -221,7 +227,7 @@ fun TvRow(
             style = TvType.Title,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(start = TvPage.Start, end = TvPage.End),
+            modifier = Modifier.padding(start = TvPage.Start, end = TvPage.End).height(TvCards.TitleHeight),
         )
         CompositionLocalProvider(LocalBringIntoViewSpec provides spec) {
             LazyRow(

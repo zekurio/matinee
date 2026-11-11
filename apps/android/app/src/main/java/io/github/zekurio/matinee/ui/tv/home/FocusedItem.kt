@@ -2,6 +2,7 @@ package io.github.zekurio.matinee.ui.tv.home
 
 import android.content.res.Resources
 import io.github.zekurio.matinee.R
+import io.github.zekurio.matinee.api.Artwork
 import io.github.zekurio.matinee.api.ArtworkSize
 import io.github.zekurio.matinee.api.FeaturedTitle
 import io.github.zekurio.matinee.api.MatineeApi
@@ -24,6 +25,8 @@ import io.github.zekurio.matinee.ui.timeLeft
  */
 class FocusedItem(
     val name: String,
+    /** The title's logo, a show's for an episode, shown in place of [name]. */
+    val logo: Artwork?,
     /** The episode, or what a show got last. */
     val subtitle: String?,
     val facts: List<String>,
@@ -34,7 +37,7 @@ class FocusedItem(
 )
 
 /** The art behind a file, best first, as the phone's banner has it. */
-private fun backdropOf(api: MatineeApi, item: MediaItem, backdrop: io.github.zekurio.matinee.api.Artwork?): List<ImageSource> = listOfNotNull(
+private fun backdropOf(api: MatineeApi, item: MediaItem, backdrop: Artwork?): List<ImageSource> = listOfNotNull(
     api.art(backdrop, ArtworkSize.Large),
     api.art(item.episode?.still, ArtworkSize.Large),
     api.frame(item.id, large = true),
@@ -44,6 +47,7 @@ fun featuredInfo(slide: FeaturedTitle, api: MatineeApi, res: Resources): Focused
     val (title, item, count) = slide
     return FocusedItem(
         name = title.name,
+        logo = title.images.logo,
         subtitle = null,
         facts = listOfNotNull(
             title.year?.toString(),
@@ -64,6 +68,7 @@ fun itemInfo(item: MediaItem, api: MatineeApi, res: Resources): FocusedItem {
     val left = if (item.progress?.completed == false) timeLeft(item, res) else null
     return FocusedItem(
         name = label.showName,
+        logo = item.title?.images?.logo,
         subtitle = if (code != null) res.getString(R.string.media_code_title, code, label.title) else null,
         facts = listOfNotNull(label.year, formatRuntime(runtimeMinutes(item), res), left),
         contentRating = item.title?.contentRating,
@@ -79,6 +84,7 @@ fun shelfInfo(entry: ShelfEntry, card: ShelfCardModel, api: MatineeApi, res: Res
     val movie = title.kind == TitleKind.MOVIE
     return FocusedItem(
         name = title.name,
+        logo = title.images.logo,
         subtitle = if (movie) null else card.detail,
         facts = listOfNotNull(
             title.year?.toString(),

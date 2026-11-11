@@ -21,6 +21,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -38,6 +39,7 @@ import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavDestination.Companion.hasRoute
+import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -126,7 +128,8 @@ fun TvSignedInApp(session: Session, user: User) {
         val shown = stack.lastOrNull()?.takeUnless { it.destination.hasRoute<RecentRoute>() }?.let(::entryKey)
         val onHome = stack.lastOrNull()?.destination?.hasRoute<HomeRoute>() == true
         Box(Modifier.fillMaxSize().background(Palette.Background).tvRefocus { if (panels.count == 0) toPage() }) {
-            BackdropLayer(backdrop)
+            SideEffect { backdrop.retain(stack.map { it.id }) }
+            BackdropLayer(backdrop, stack.lastOrNull()?.id)
             Box(
                 Modifier
                     .fillMaxSize()
@@ -264,22 +267,30 @@ private fun Pages(controller: androidx.navigation.NavHostController) {
         popEnterTransition = { pageIn() },
         popExitTransition = { pageOut() },
     ) {
-        composable<HomeRoute> { TvHomeScreen() }
-        composable<SearchRoute> { TvSearchScreen() }
-        composable<FavoritesRoute> { TvFavoritesScreen() }
-        composable<KindRoute> { TvKindScreen(it.toRoute()) }
-        composable<TitleRoute> { TvTitleScreen(it.toRoute<TitleRoute>().id) }
-        composable<SeasonRoute> { entry ->
+        page<HomeRoute> { TvHomeScreen() }
+        page<SearchRoute> { TvSearchScreen() }
+        page<FavoritesRoute> { TvFavoritesScreen() }
+        page<KindRoute> { TvKindScreen(it.toRoute()) }
+        page<TitleRoute> { TvTitleScreen(it.toRoute<TitleRoute>().id) }
+        page<SeasonRoute> { entry ->
             val route = entry.toRoute<SeasonRoute>()
             TvSeasonScreen(route.titleId, route.season.takeIf { it >= 0 })
         }
-        composable<EpisodeRoute> { TvEpisodeScreen(it.toRoute<EpisodeRoute>().itemId) }
-        composable<PersonRoute> { TvPersonScreen(it.toRoute<PersonRoute>().name) }
-        composable<BrowseRoute> { it.toRoute<BrowseRoute>().let { route -> TvBrowseScreen(route.genre, route.studio) } }
-        composable<ProfileRoute> { TvProfileScreen() }
-        composable<RecentRoute> { TvRecentScreen() }
-        composable<SettingsRoute> { TvSettingsScreen() }
-        composable<SettingsPageRoute> { TvSettingsScreen(it.toRoute<SettingsPageRoute>().page) }
+        page<EpisodeRoute> { TvEpisodeScreen(it.toRoute<EpisodeRoute>().itemId) }
+        page<PersonRoute> { TvPersonScreen(it.toRoute<PersonRoute>().name) }
+        page<BrowseRoute> { it.toRoute<BrowseRoute>().let { route -> TvBrowseScreen(route.genre, route.studio) } }
+        page<ProfileRoute> { TvProfileScreen() }
+        page<RecentRoute> { TvRecentScreen() }
+        page<SettingsRoute> { TvSettingsScreen() }
+        page<SettingsPageRoute> { TvSettingsScreen(it.toRoute<SettingsPageRoute>().page) }
+    }
+}
+
+/** A TV page at [T]'s route, marked for the backdrop, so one that shows none shows none at once. */
+private inline fun <reified T : Any> NavGraphBuilder.page(noinline content: @Composable (NavBackStackEntry) -> Unit) {
+    composable<T> { entry ->
+        BackdropPage()
+        content(entry)
     }
 }
 

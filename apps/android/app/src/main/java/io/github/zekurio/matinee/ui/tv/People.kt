@@ -62,10 +62,10 @@ fun TvPersonCard(person: TvPerson, onClick: () -> Unit, modifier: Modifier = Mod
             focus
                 .fillMaxWidth()
                 .aspectRatio(1f)
+                .tvClickable(interaction, role = Role.Button, onClickLabel = person.name, onClick = onClick)
                 .tvPicture(interaction, CircleShape)
                 .clip(CircleShape)
-                .background(Palette.Secondary)
-                .tvClickable(interaction, role = Role.Button, onClickLabel = person.name, onClick = onClick),
+                .background(Palette.Secondary),
             contentAlignment = Alignment.Center,
         ) {
             Text(initials(person.name), style = TvType.Headline, color = Palette.Muted)
