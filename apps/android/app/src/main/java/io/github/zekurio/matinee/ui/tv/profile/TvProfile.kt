@@ -73,7 +73,10 @@ import io.github.zekurio.matinee.ui.tv.TvRow
 import io.github.zekurio.matinee.ui.tv.TvType
 import io.github.zekurio.matinee.ui.tv.rememberTvFocusMemory
 import io.github.zekurio.matinee.ui.tv.scrolledUp
+import io.github.zekurio.matinee.api.LeaderboardBoard
+import io.github.zekurio.matinee.ui.profile.BoardStanding
 import java.text.NumberFormat
+import java.time.ZoneId
 
 private const val ACTIONS = "actions"
 private const val RECENT = "recent"
@@ -85,9 +88,10 @@ private const val SEE_ALL = "seeAll"
 /**
  * The signed-in person on a TV, from the drawer's top entry: who they are,
  * Settings and Sign out, what they watched last as a row of cards, then
- * their statistics for a range: the totals as large figures, their most
- * watched titles, and their genres. The phone's watch-time chart, viewing
- * times, and leaderboard are touch charts and a sheet, and stay off.
+ * their statistics for a range: watch time over the range as bars, the
+ * other totals as large figures, their most watched titles, their genres,
+ * where they stand on the leaderboard, and when in the week they watch.
+ * A leaderboard board opens whole in the right-edge panel.
  */
 @Composable
 fun TvProfileScreen() {
@@ -103,25 +107,31 @@ fun TvProfileScreen() {
     val list = rememberLazyListState()
     val scrolled by remember { derivedStateOf { list.scrolledUp } }
     HideClockWhen(scrolled)
-    LazyColumn(
-        Modifier.fillMaxSize(),
-        state = list,
-        contentPadding = PaddingValues(top = Overscan.Vertical + 8.dp, bottom = 120.dp),
-        verticalArrangement = Arrangement.spacedBy(32.dp),
-    ) {
-        item(key = "who") { Header(loaded?.let(::joinedMonth)) }
-        item(key = ACTIONS) { Actions(session, memory) }
-        when (val state = profile.state) {
-            Load.Loading -> item(key = "loading") { Spinner() }
-            is Load.Failed -> item(key = "failed") {
-                Notice(stringResource(R.string.profile_load_failed), state.message)
+    val board = remember { BoardPanelState() }
+    val zone = remember { ZoneId.systemDefault().id }
+    val standings = stats.stats?.takeIf { it.totals.plays > 0 }?.let { rememberStandings(stats.range, zone) }.orEmpty()
+    Box(Modifier.fillMaxSize()) {
+        LazyColumn(
+            Modifier.fillMaxSize(),
+            state = list,
+            contentPadding = PaddingValues(top = Overscan.Vertical + 8.dp, bottom = 120.dp),
+            verticalArrangement = Arrangement.spacedBy(32.dp),
+        ) {
+            item(key = "who") { Header(loaded?.let(::joinedMonth)) }
+            item(key = ACTIONS) { Actions(session, memory) }
+            when (val state = profile.state) {
+                Load.Loading -> item(key = "loading") { Spinner() }
+                is Load.Failed -> item(key = "failed") {
+                    Notice(stringResource(R.string.profile_load_failed), state.message)
+                }
+                is Load.Ready -> {
+                    val recent = state.value.recent.orEmpty().map { it.item }
+                    if (recent.isNotEmpty()) item(key = RECENT) { RecentRow(recent, memory) }
+                }
             }
-            is Load.Ready -> {
-                val recent = state.value.recent.orEmpty().map { it.item }
-                if (recent.isNotEmpty()) item(key = RECENT) { RecentRow(recent, memory) }
-            }
+            statistics(stats, standings, memory, board::show)
         }
-        statistics(stats, memory)
+        BoardPanel(board, stats.range, memory)
     }
 }
 
@@ -210,10 +220,16 @@ internal fun WatchedCard(item: MediaItem, focus: Modifier) {
 }
 
 /**
- * The statistics: the heading and the ranges, then the totals, the most
- * watched titles, and the genres for the range picked.
+ * The statistics: the heading and the ranges, then for the range picked
+ * the watch-time chart, the other totals, the most watched titles, the
+ * genres, the leaderboard, and the viewing times.
  */
-private fun LazyListScope.statistics(model: ProfileStats, memory: TvFocusMemory) {
+private fun LazyListScope.statistics(
+    model: ProfileStats,
+    standings: List<BoardStanding>,
+    memory: TvFocusMemory,
+    onBoard: (LeaderboardBoard) -> Unit,
+) {
     item(key = "statsHead") {
         Column(Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.profile_statistics), style = TvType.Headline, modifier = Modifier.padding(start = TvPage.Start))
@@ -232,9 +248,12 @@ private fun LazyListScope.statistics(model: ProfileStats, memory: TvFocusMemory)
             Notice(stringResource(R.string.profile_nothing_watched, rangePhrase(model.range)), null)
         }
         else -> {
+            item(key = "watchTime") { WatchTimeChart(stats, memory) }
             item(key = "totals") { Totals(stats) }
             if (stats.titles.isNotEmpty()) item(key = TOP) { TopTitles(stats, memory) }
             if (stats.genres.isNotEmpty()) item(key = GENRES) { Genres(stats, memory) }
+            if (standings.isNotEmpty()) item(key = STANDING) { Standing(standings, memory, onBoard) }
+            if (stats.activity.isNotEmpty()) item(key = "viewingTimes") { ViewingTimes(stats, memory) }
         }
     }
 }
@@ -258,14 +277,12 @@ private fun Ranges(model: ProfileStats, memory: TvFocusMemory) {
     }
 }
 
-/** Watch time, plays, and what was finished, as large figures across. */
+/** Plays and what was finished, as large figures across. The watch time is the chart's, above. */
 @Composable
 private fun Totals(stats: WatchStats) {
-    val res = LocalResources.current
     val count = remember { NumberFormat.getIntegerInstance() }
     val totals = stats.totals
     val figures = listOf(
-        formatWatchTime(totals.watchSeconds, res) to stringResource(R.string.stats_watch_time),
         count.format(totals.plays) to stringResource(R.string.stats_plays),
         count.format(totals.movies) to stringResource(R.string.stats_movies_finished),
         count.format(totals.episodes) to stringResource(R.string.stats_episodes_finished),
