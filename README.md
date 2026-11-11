@@ -167,6 +167,44 @@ changes. Uploading a picture or removing it under Settings → Account stops
 that until the user picks the provider's picture again. Pictures are cropped
 to 256px squares and kept in `$MATINEE_DATA_DIR/avatars`.
 
+## Access
+
+Admins see every library and have no limits. What everyone else may open,
+and how the server streams to them, comes from access groups under
+Settings → Access. A group sets:
+
+- Libraries: all of them, including ones added later, or a list. A library
+  an account can't open doesn't exist for it: not in lists, search, other
+  people's profiles, or by a guessed address.
+- A bit rate limit for streaming. A file over it plays as an encode under
+  it. Downloads aren't limited, since a download only takes longer.
+- Whether the server may encode video for its members. Off, a file plays as
+  it is or with its video copied, and one that needs an encode doesn't play.
+- Whether its members may download.
+- How many devices may play at once.
+
+An account is in any number of groups and gets the most generous of what
+they allow: every library any of them opens, the highest limit, and
+anything one of them permits. Everyone is the built-in group that holds
+every account. It starts with every library and no limits, so nothing
+changes until an admin changes it. Take its libraries away to make access
+opt-in, then open them through other groups.
+
+Accounts get into a group three ways. An admin puts them there under
+Settings → Users. An invite link can name groups for the account it
+creates. Or the group names a group at the OIDC provider, and then holds
+whoever the provider's groups claim lists, kept in step at every sign-in;
+see [Configuration](#configuration). A group that starts following a
+provider group fills up at once, from the claims each linked account last
+sent.
+
+Edit access in a user's menu also sets things on that one account, over
+its groups: a field left at From groups follows them, and anything else
+wins. The OIDC policy claim sets the same per account from the provider.
+
+Changes apply to an account's next request. A stream that is already
+playing keeps going until it next asks the server how to play.
+
 ## Scanning
 
 A scan looks only at the folders it is given and writes only what changed:
