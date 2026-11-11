@@ -6,6 +6,11 @@ export default {
   "jobs.loadFailed": "Die Aufträge konnten nicht geladen werden. {error}",
   "jobs.retry": "Erneut versuchen",
 
+  "jobs.fact.status": "Status",
+  "jobs.fact.lastRun": "Letzter Lauf",
+  "jobs.fact.currentRun": "Aktueller Lauf",
+  "jobs.fact.nextRun": "Nächster Lauf",
+
   "jobs.queue.library-scan.name": "Mediathek-Scans",
   "jobs.queue.library-scan.description":
     "Durchsucht Mediatheksordner nach neuen, geänderten und entfernten Dateien.",
@@ -88,12 +93,13 @@ export default {
     "Rollen, Profilbilder und Zugriff beim Anmeldeanbieter für Konten mit einem Refresh-Token aktualisieren.",
 
   "jobs.task.neverRan": "Noch nie gelaufen",
-  "jobs.task.completed": "Zuletzt gelaufen {when}, Dauer {took}",
-  "jobs.task.cancelled": "Abgebrochen {when}, nach {took}",
-  "jobs.task.failed": "Fehlgeschlagen {when}",
-  "jobs.task.failedWith": "Fehlgeschlagen {when}: {error}",
+  "jobs.task.took": "Dauer {took}",
+  "jobs.task.cancelledAfter": "Abgebrochen nach {took}",
+  "jobs.task.failed": "Fehlgeschlagen",
+  "jobs.task.failedWith": "Fehlgeschlagen: {error}",
   "jobs.task.running": "Läuft…",
-  "jobs.task.runningPercent": "Läuft, {percent} %",
+  "jobs.task.started": "Gestartet {when}",
+  "jobs.task.percent": "{percent} %",
   "jobs.task.progress": "Fortschritt von {task}",
   "jobs.task.run": "Jetzt ausführen",
   "jobs.task.cancel": "Abbrechen",
@@ -113,7 +119,8 @@ export default {
   "jobs.schedule.every.atStartup": "Alle {interval} und beim Start",
   "jobs.schedule.every.afterStartup":
     "Alle {interval} und {delay} nach dem Start",
-  "jobs.schedule.next": "{schedule}, nächster Lauf {when}",
+  "jobs.schedule.notScheduled": "Nicht geplant",
+  "jobs.schedule.afterThisRun": "Nach diesem Lauf",
 
   "jobs.concurrency": "Parallelität",
   "jobs.concurrency.limits": "Standard {default}, höchstens {max}.",

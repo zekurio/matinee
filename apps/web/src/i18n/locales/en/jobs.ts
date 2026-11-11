@@ -6,6 +6,12 @@ export default defineMessages("jobs", {
   "jobs.loadFailed": "Couldn't load the jobs. {error}",
   "jobs.retry": "Try again",
 
+  // The labels over a row's facts.
+  "jobs.fact.status": "Status",
+  "jobs.fact.lastRun": "Last run",
+  "jobs.fact.currentRun": "Current run",
+  "jobs.fact.nextRun": "Next run",
+
   // Queues, by their id. The server sends the same words in English.
   "jobs.queue.library-scan.name": "Library scans",
   "jobs.queue.library-scan.description":
@@ -90,12 +96,13 @@ export default defineMessages("jobs", {
 
   // A task's row.
   "jobs.task.neverRan": "Hasn't run yet",
-  "jobs.task.completed": "Last ran {when}, took {took}",
-  "jobs.task.cancelled": "Cancelled {when}, after {took}",
-  "jobs.task.failed": "Failed {when}",
-  "jobs.task.failedWith": "Failed {when}: {error}",
+  "jobs.task.took": "Took {took}",
+  "jobs.task.cancelledAfter": "Cancelled after {took}",
+  "jobs.task.failed": "Failed",
+  "jobs.task.failedWith": "Failed: {error}",
   "jobs.task.running": "Running…",
-  "jobs.task.runningPercent": "Running, {percent}%",
+  "jobs.task.started": "Started {when}",
+  "jobs.task.percent": "{percent}%",
   "jobs.task.progress": "{task} progress",
   "jobs.task.run": "Run now",
   "jobs.task.cancel": "Cancel",
@@ -116,7 +123,8 @@ export default defineMessages("jobs", {
   "jobs.schedule.every.atStartup": "Every {interval} and at startup",
   "jobs.schedule.every.afterStartup":
     "Every {interval} and {delay} after startup",
-  "jobs.schedule.next": "{schedule}, next {when}",
+  "jobs.schedule.notScheduled": "Not scheduled",
+  "jobs.schedule.afterThisRun": "After this run",
 
   // How many jobs each queue runs at once.
   "jobs.concurrency": "Concurrency",
