@@ -13,6 +13,8 @@ import coil3.request.crossfade
 import io.github.zekurio.matinee.auth.AuthState
 import io.github.zekurio.matinee.auth.Session
 import io.github.zekurio.matinee.downloads.Downloads
+import io.github.zekurio.matinee.launcher.WatchNext
+import io.github.zekurio.matinee.launcher.WatchNextForeground
 import io.github.zekurio.matinee.ui.ViewerState
 import io.github.zekurio.matinee.ui.player.PlayerPrefs
 import io.github.zekurio.matinee.ui.theme.ThemeStore
@@ -28,12 +30,16 @@ class MatineeApp : Application(), SingletonImageLoader.Factory {
         get() {
             if (viewerVersion != session.version) {
                 viewerVersion = session.version
-                currentViewer = ViewerState()
+                currentViewer = ViewerState { watchNext?.requestSync() }
             }
             return currentViewer
         }
     private var viewerVersion = -1L
-    private var currentViewer = ViewerState()
+    private var currentViewer = ViewerState { watchNext?.requestSync() }
+
+    /** The launcher integration exists only on Android TV. */
+    var watchNext: WatchNext? = null
+        private set
 
     val downloads by lazy { Downloads(this) }
 
@@ -48,6 +54,9 @@ class MatineeApp : Application(), SingletonImageLoader.Factory {
     override fun onCreate() {
         super.onCreate()
         session = Session(this)
+        if (session.isTv) {
+            watchNext = WatchNext(this).also { registerActivityLifecycleCallbacks(WatchNextForeground(it)) }
+        }
         downloads.restore()
         // Once signed in with the server answering, send where the person got
         // to in downloads they watched offline.

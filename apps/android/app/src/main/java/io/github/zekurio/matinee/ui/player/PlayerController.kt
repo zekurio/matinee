@@ -34,6 +34,7 @@ import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.session.MediaSession
 import io.github.zekurio.matinee.PlaybackService
+import io.github.zekurio.matinee.app
 import io.github.zekurio.matinee.PlayerActivity
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.ApiException
@@ -898,6 +899,7 @@ class PlayerController(
                 )
                 pending?.drop(item.id)
                 pending?.dropPlay(sessionId)
+                if (closed) appContext.app.watchNext?.requestSync()
             } catch (_: IOException) {
                 // Offline, as when watching a download: send it once the server answers.
                 pending?.put(item.id, PendingReport(at, length))

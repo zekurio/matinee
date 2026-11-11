@@ -2,6 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- Publish the signed-in TV account's Watch Next programs. -->
+    <uses-permission android:name="com.android.providers.tv.permission.WRITE_EPG_DATA" />
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- LAN discovery. Runtime permission when targeting API 37 or above. -->
     <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK" />
@@ -55,7 +57,25 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="matinee" android:host="auth" android:path="/callback" />
             </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="matinee" android:host="watch-next" />
+            </intent-filter>
         </activity>
+
+        <!-- Enabled at runtime on TVs only. Each launcher gets read grants. -->
+        <provider
+            android:name=".launcher.WatchNextArtwork"
+            android:authorities="${applicationId}.watch-next-art"
+            android:enabled="false"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/watch_next_artwork" />
+        </provider>
 
         <!-- The player, in landscape on its own as Findroid has it: leaving
              closes it, and the system turns the screen back as it goes. -->
@@ -87,6 +107,10 @@
 
     <!-- Custom Tabs: find the browsers that can open the sign-in page. -->
     <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.HOME" />
+        </intent>
         <intent>
             <action android:name="android.support.customtabs.action.CustomTabsService" />
         </intent>

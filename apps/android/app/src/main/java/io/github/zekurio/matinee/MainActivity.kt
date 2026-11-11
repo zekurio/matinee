@@ -10,6 +10,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.lifecycleScope
+import io.github.zekurio.matinee.launcher.WatchNextLink
 import io.github.zekurio.matinee.auth.BrowserSignIn
 import io.github.zekurio.matinee.ui.MatineeRoot
 import io.github.zekurio.matinee.ui.theme.MatineeTheme
@@ -18,6 +19,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
+    private val watchNextLink by lazy { WatchNextLink(this) }
+
     /** What went wrong finishing a browser sign-in, for the sign-in screen to show. */
     val signInError = MutableStateFlow<String?>(null)
 
@@ -62,6 +65,7 @@ class MainActivity : ComponentActivity() {
     /** The browser handing back a sign-in code. */
     private fun handle(intent: Intent?) {
         val uri = intent?.data ?: return
+        if (app.session.isTv && watchNextLink.open(intent)) return
         if (!BrowserSignIn.isCallback(uri)) return
         lifecycleScope.launch { signInError.value = app.session.finishBrowserSignIn(uri) }
     }

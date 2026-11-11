@@ -130,6 +130,8 @@ app/src/main/java/io/github/zekurio/matinee/
   auth/       The server, the session and its token, browser sign-in
   downloads/  The download list, the WorkManager job that fetches them, and
               progress made offline
+  launcher/   TV-only Watch Next publishing, authenticated artwork copies,
+              launcher playback links, and the periodic WorkManager sync
   ui/         Compose screens: home, browse, title, search, settings, player
   ui/player/  The device's decoders, what the player loads of the server's
               answers, a download's tracks, the WebVTT renderer, and the

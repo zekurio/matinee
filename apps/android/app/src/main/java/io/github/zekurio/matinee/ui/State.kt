@@ -43,7 +43,7 @@ import kotlinx.serialization.SerializationException
  * marks can't say, like a whole show marked watched or a video played, and
  * screens fetch again then.
  */
-class ViewerState {
+class ViewerState(private val onChanged: () -> Unit = {}) {
     private val titleFavorites = Marks(mutableStateMapOf(), ::changed)
     private val itemFavorites = Marks(mutableStateMapOf(), ::changed)
     private val itemWatched = Marks(mutableStateMapOf(), ::changed)
@@ -67,6 +67,7 @@ class ViewerState {
 
     fun changed() {
         version++
+        onChanged()
     }
 
     fun isFavorite(title: TitleSummary) = titleFavorites[title.id] ?: title.favorite
