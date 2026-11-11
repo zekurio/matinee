@@ -1,7 +1,10 @@
 # Matinee
 
 Self-hosted media server: Hono + oRPC server, React web client, Postgres.
-See README.md for setup and the auth design.
+README.md has the NixOS setup and the dev shell. Each app's README has the
+rest: `apps/server/README.md` for configuration, auth, and how the server
+behaves, `apps/web/README.md` for translations, `apps/android/README.md`
+for building and sideloading the app.
 
 ## Repository map
 
@@ -25,15 +28,16 @@ See README.md for setup and the auth design.
 - `apps/server/src/access`: account policies, viewers, and the shared library visibility filters.
 - `apps/web`: Vite React app. File routes live in `src/routes`;
   `src/routeTree.gen.ts` is generated.
-- `brand/`: the logo and the native app icons, with the script that
-  renders their PNGs and the web app's favicon. See `brand/README.md`.
+- `brand/`: the logo, the wordmark, and the native app icons, with the
+  scripts that draw the wordmark and render their PNGs, the web app's
+  favicon, and `apps/web/src/components/logo.gen.ts`. See `brand/README.md`.
 - `apps/android`: the native Android app (Kotlin, Compose, Media3), a
   Gradle project outside the pnpm workspace. Its API client,
   `api/ContractModels.kt` and `api/ContractApi.kt`, is generated from the
   OpenAPI document by `pnpm api:android`
   (`apps/server/scripts/kotlin-client.ts`). Run it after a contract change;
   `pnpm verify` fails while they're out of date. Build the app with
-  `nix develop .#android`; see its README.
+  `nix develop .#android` or `just android build`; see its README.
 - `nix/`: the flake's package (`package.nix`) and NixOS module
   (`module.nix`), with tests in `nix/tests`. A server variable the module
   should set for people gets a typed option there; any other goes through
@@ -78,7 +82,8 @@ See README.md for setup and the auth design.
   its handler.
 - Text the user reads goes through `tr("area.key", params)` from `@/i18n`,
   with the message added to its area in `src/i18n/locales/en/` first and
-  translated in the other languages' folders (see README, Translations).
+  translated in the other languages' folders (see `apps/web/README.md`,
+  Translations).
   Use `trRich` when a placeholder holds an element, a `plural(...)`
   message for a count, and `Intl.ListFormat` through `perLocale` for a
   list. A component in `packages/ui` reads `uiText()` instead. Call `tr`

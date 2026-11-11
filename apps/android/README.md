@@ -9,12 +9,95 @@ lucide icons, the banner on Home, library chips, rails of cards, and title
 pages over their backdrop. Text comes in English and German, copied from the
 web app's catalogs where the words are the same.
 
+- [Install](#install)
+- [Build](#build)
+- [What it does](#what-it-does)
+- [Android TV](#android-tv)
+- [Develop](#develop)
+- [Layout](#layout)
+- [Status](#status)
+- [License](#license)
+
+## Install
+
+Android 8.0 (API 26) or later. There are no published builds yet, so you
+build the APK yourself ([Build](#build)) and sideload it.
+
+With the device on USB or Wi-Fi debugging, where `adb devices` lists it:
+
+```sh
+just android sideload   # build a release APK and adb install it
+```
+
+Without adb, build it with `just android release`, copy
+`apps/android/app/build/outputs/apk/release/app-release.apk` to the
+device, open it in a file manager, and allow that app to install unknown
+apps when Android asks.
+
+For an Android TV or a Google TV, turn on developer options (press the
+build number in Settings → System → About seven times), then USB or
+network debugging. Connect with `adb connect <tv-address>:5555`, accept the
+prompt on the TV, and run `just android sideload`. With more than one
+device connected, pick one with `ANDROID_SERIAL=<serial>`, as `adb devices`
+names it.
+
+Android installs an update only over an app signed with the same key.
+Without a keystore, release builds use the debug key of the machine that
+built them, so an APK from another machine has to replace the app, which
+deletes its downloads and sign-in. For builds you keep updating, make one
+keystore and point `MATINEE_KEYSTORE_PROPERTIES` at a properties file with
+`storeFile`, `storePassword`, `keyAlias`, and `keyPassword`:
+
+```sh
+keytool -genkeypair -v -keystore matinee.jks -alias matinee \
+  -keyalg RSA -keysize 4096 -validity 10000
+```
+
+The debug build is its own app, `io.github.zekurio.matinee.debug`, so it
+installs beside a release build.
+
+## Build
+
+The flake has a shell with a JDK and the Android SDK this needs. Entering it
+accepts the Android SDK license. The recipes in `justfile` enter it for you,
+so from the repository root:
+
+| Recipe                  | What it does                                                 |
+| ----------------------- | ------------------------------------------------------------ |
+| `just android build`    | Debug APK in `app/build/outputs/apk/debug/`                  |
+| `just android release`  | Release APK in `app/build/outputs/apk/release/`              |
+| `just android install`  | Builds the debug app and installs it on the connected device |
+| `just android run`      | Installs the debug app and opens it                          |
+| `just android sideload` | Builds a release APK and installs it                         |
+| `just android reverse`  | Lets the device reach the dev server at `localhost:5173`     |
+| `just android logcat`   | Follows the running debug app's log                          |
+| `just android test`     | Runs the unit tests                                          |
+| `just android api`      | Generates the API client again after a contract change       |
+
+In `apps/android`, leave out the `android`: `just build`. Arguments after a
+Gradle recipe go to Gradle, as in `just build --offline`. The same by hand:
+
+```sh
+cd apps/android
+nix develop ../..#android -c ./gradlew assembleDebug
+adb install app/build/outputs/apk/debug/app-debug.apk
+```
+
+The debug build isn't debuggable, since Compose runs several times slower
+in a debuggable app and its animations stutter. Build with
+`just build -Pmatinee.debuggable` to attach a debugger or the Layout
+Inspector.
+
+Without Nix, install JDK 17 or later and the Android SDK with platform
+`android-37.0` and build tools 36.0.0, point `ANDROID_HOME` at it, and run
+`./gradlew assembleDebug`. Android Studio opens the folder as it is.
+
 ## What it does
 
 - Connects to a server by its address. Without a scheme it tries https, then
   http, since a server on a home network often has no certificate.
 - Signs in two ways, both from the contract's `auth.app` and `auth.device`
-  (see "Signing in apps" in the repository README):
+  (see [Signing in apps](../server/README.md#signing-in-apps)):
   - In the browser: a Custom Tab opens `/authorize` with a PKCE challenge,
     the page signs in with a passkey or the OIDC provider, and sends the
     browser back to `matinee://auth/callback`.
@@ -49,7 +132,8 @@ web app's catalogs where the words are the same.
   or converted to stereo), or the file as it is. WorkManager fetches them,
   on Wi-Fi only unless Settings says otherwise, and picks up after a break:
   the original with a byte range, a version from the first segment it
-  doesn't have, as the README's Downloads section describes. Subtitles in
+  doesn't have, as the server's
+  [Downloads](../server/README.md#downloads) section describes. Subtitles in
   the languages you read or hear save beside the video. A downloaded file
   plays from the phone. When the server doesn't answer, the app offers the
   downloads, and where you got to in them goes to the server once it's back.
@@ -123,52 +207,61 @@ and identify, linking a device by camera, appearance, picture in picture,
 and the playback report. Nothing on a TV leads to them. The launcher's
 Watch Next row is TV-only, in `launcher/`.
 
-## Status
-
-Written against the server on `main` as of the downloads and image
-editor commits, and checked on an emulator up to the player: connecting,
-signing in with a code, Home, title, season, and episode pages, playback
-as a stream with converted audio, seeking, and subtitles, and the TV
-player with the remote on an Android TV emulator. Downloads, the offline
-mode, and the last phone player fixes (the thin seek bar, the banner's
-swipe hold, light status bar icons) are written but not built or tried
-yet. The account's access (the bit rate limit, a server that may not
-encode for it, downloads switched off, and the limit on devices) builds
-and passes the unit tests, but isn't tried on a device yet.
-
-## Building
-
-The flake has a shell with a JDK and the Android SDK this needs. Entering it
-accepts the Android SDK license.
-
-```sh
-cd apps/android
-nix develop ../..#android -c ./gradlew assembleDebug
-adb install app/build/outputs/apk/debug/app-debug.apk
-```
-
-The debug build isn't debuggable, since Compose runs several times slower
-in a debuggable app and its animations stutter. Build with
-`-Pmatinee.debuggable` to attach a debugger or the Layout Inspector.
-
-Without Nix, install JDK 17 or later and the Android SDK with platform
-`android-37.0` and build tools 36.0.0, point `ANDROID_HOME` at it, and run
-`./gradlew assembleDebug`. Android Studio opens the folder as it is.
+## Develop
 
 The flake has no emulator. Run the app on one from your own Android SDK,
 started from T3 Code's Device panel, Android Studio, or `emulator -avd`. A TV
 needs an AVD on an `android-tv` system image, such as
-`system-images;android-36;android-tv;x86_64` with the `tv_1080p` device. To
-reach a dev server on the host from an emulator, forward the port, so the
-app connects to the same `PUBLIC_URL` the browser uses:
+`system-images;android-36;android-tv;x86_64` with the `tv_1080p` device.
+
+To reach a dev server on the host from an emulator or a phone on USB,
+forward the port with `just android reverse`, then connect to
+`http://localhost:5173`, the same `PUBLIC_URL` the browser uses.
+
+### The API client
+
+The API client is generated from the server's OpenAPI document, as the
+contract describes it: `api/ContractModels.kt` has a class for each
+schema, and `api/ContractApi.kt` a function for each procedure, named as
+on the web (`api.titles.get(id)` is `orpc.titles.get`). An API change
+starts in the contract, as always; then, from the repository root:
 
 ```sh
-adb reverse tcp:5173 tcp:5173   # then connect to http://localhost:5173
+pnpm api:android
 ```
 
-Release builds sign with the keystore that `MATINEE_KEYSTORE_PROPERTIES`
-names (`storeFile`, `storePassword`, `keyAlias`, `keyPassword`), or the debug
-key without one.
+`pnpm verify` and CI fail while the two files are out of date. Don't edit
+them; what the app adds goes beside them in `api/`: `ApiTransport.kt`
+sends the requests, `Extensions.kt` has names and constants the document
+doesn't carry, and `Saved.kt` reads what an older app saved. In the
+generated Kotlin, enums stay strings with an object of their values, a
+union with a tag is a sealed interface, and a field that can be left out,
+null, or set takes an `Explicit`. A schema the generator can't map fails
+the run, so a new kind of shape in the contract gets a deliberate form in
+`apps/server/scripts/kotlin-client.ts`.
+
+### Strings and icons
+
+Strings go in `res/values/strings.xml` and `res/values-de/strings.xml`.
+
+Icons are lucide's, as on the web. Add one with
+`scripts/lucide.py <name>` (or `<name>:filled`) from a checkout where
+`pnpm install` has run, and reference it in `Lucide` in
+`ui/components/Picture.kt`.
+
+### Finding servers on the network
+
+The Android `auth/discoverServers` function returns a cold flow of name and
+URL pairs, with a three-second timeout and injectable destinations for tests.
+Collect it in a cancellable screen scope. Call `serverDiscoveryPermission`
+first and request the returned permission if any. Android 17 requires
+`ACCESS_LOCAL_NETWORK` once the app targets SDK 37; our current target 36
+gets LAN access through `INTERNET` and must not request it yet. Replies are
+unicast, so no Wi-Fi multicast lock is needed. Pass the selected URL to
+`Session.connect`, which already checks health and compatibility. The TV's
+connect screen (`ui/tv/auth/TvConnect.kt`) uses it; the phone doesn't yet.
+The protocol is in the server's
+[Local server discovery](../server/README.md#local-server-discovery).
 
 ## Layout
 
@@ -193,32 +286,18 @@ scripts/
                   res/values*/strings_web_*.xml
 ```
 
-The API client is generated from the server's OpenAPI document, as the
-contract describes it: `api/ContractModels.kt` has a class for each
-schema, and `api/ContractApi.kt` a function for each procedure, named as
-on the web (`api.titles.get(id)` is `orpc.titles.get`). An API change
-starts in the contract, as always; then, from the repository root:
+## Status
 
-```sh
-pnpm api:android
-```
-
-`pnpm verify` and CI fail while the two files are out of date. Don't edit
-them; what the app adds goes beside them in `api/`: `ApiTransport.kt`
-sends the requests, `Extensions.kt` has names and constants the document
-doesn't carry, and `Saved.kt` reads what an older app saved. In the
-generated Kotlin, enums stay strings with an object of their values, a
-union with a tag is a sealed interface, and a field that can be left out,
-null, or set takes an `Explicit`. A schema the generator can't map fails
-the run, so a new kind of shape in the contract gets a deliberate form in
-`apps/server/scripts/kotlin-client.ts`.
-
-Strings go in `res/values/strings.xml` and `res/values-de/strings.xml`.
-
-Icons are lucide's, as on the web. Add one with
-`scripts/lucide.py <name>` (or `<name>:filled`) from a checkout where
-`pnpm install` has run, and reference it in `Lucide` in
-`ui/components/Picture.kt`.
+Written against the server on `main` as of the downloads and image
+editor commits, and checked on an emulator up to the player: connecting,
+signing in with a code, Home, title, season, and episode pages, playback
+as a stream with converted audio, seeking, and subtitles, and the TV
+player with the remote on an Android TV emulator. Downloads, the offline
+mode, and the last phone player fixes (the thin seek bar, the banner's
+swipe hold, light status bar icons) are written but not built or tried
+yet. The account's access (the bit rate limit, a server that may not
+encode for it, downloads switched off, and the limit on devices) builds
+and passes the unit tests, but isn't tried on a device yet.
 
 ## License
 
