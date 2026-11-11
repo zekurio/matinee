@@ -183,6 +183,9 @@ export async function encodeSpec(
     request.audioCodecs,
     settings,
     capabilities,
+    // tfdt is unsigned. Clip audio priming before zero, without shifting
+    // either track's later timestamps or rebasing runs after a seek.
+    ["setts=ts=max(TS\\,0)"],
   )
   const key = createHash("sha256")
     .update(
@@ -261,8 +264,8 @@ export async function encodeSpec(
       "event",
       "-hls_list_size",
       "0",
-      // Jellyfin: frag_discont writes the audio's initial delay into the
-      // segments, and HLS needs no sidx.
+      // Keep absolute track times across runs. Audio priming is clipped
+      // above so frag_discont cannot write a negative tfdt. HLS needs no sidx.
       segmentOptionsFlag(capabilities),
       "movflags=+frag_discont+skip_sidx",
       "-y",

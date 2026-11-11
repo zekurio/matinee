@@ -138,14 +138,19 @@ export function encodableAudioCodecs(
 /**
  * The arguments that copy or encode `stream` for a player that decodes
  * `decodes`. The player lists the codecs in the order it wants them, so
- * the first one this server encodes is what the rest become.
+ * the first one this server encodes is what the rest become. Additional
+ * bitstream filters run on both copied and encoded audio, after any
+ * container conversion.
  */
 export function buildAudioPipeline(
   stream: AudioStream,
   decodes: readonly PlaybackAudioCodec[],
   settings: TranscodingSettings,
   capabilities: TranscodingCapabilities,
+  bitstreamFilters: readonly string[] = [],
 ): AudioPipeline {
+  const filtersArgs = (filters: readonly string[]) =>
+    filters.length > 0 ? ["-bsf:a", filters.join(",")] : []
   if (decodes.some((codec) => codec === stream.codec)) {
     const oldFfmpeg =
       capabilities.versionNumbers !== null &&
@@ -158,7 +163,10 @@ export function buildAudioPipeline(
         // AAC from MPEG-TS has a header on every packet, which MP4 can't
         // hold. ffmpeg stops on it when it writes to a pipe. AAC from other
         // containers passes through the filter as it is.
-        ...(stream.codec === "aac" ? ["-bsf:a", "aac_adtstoasc"] : []),
+        ...filtersArgs([
+          ...(stream.codec === "aac" ? ["aac_adtstoasc"] : []),
+          ...bitstreamFilters,
+        ]),
       ],
       encoder: null,
     }
@@ -206,6 +214,7 @@ export function buildAudioPipeline(
       ...(pan ? [] : ["-ac", String(channels)]),
       ...rate,
       ...(filters.length > 0 ? ["-af", filters.join(",")] : []),
+      ...filtersArgs(bitstreamFilters),
     ],
     encoder,
   }
