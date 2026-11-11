@@ -202,8 +202,8 @@ Edit access in a user's menu also sets things on that one account, over
 its groups: a field left at From groups follows them, and anything else
 wins. The OIDC policy claim sets the same per account from the provider.
 
-Changes apply to an account's next request. A stream that is already
-playing keeps going until it next asks the server how to play.
+Changes apply to an account's next request, which for a stream that is
+playing is its next piece of the file.
 
 ## Scanning
 
