@@ -13,14 +13,15 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
@@ -44,6 +45,7 @@ import io.github.zekurio.matinee.ui.components.LocalApi
 import io.github.zekurio.matinee.ui.components.LocalSnackbar
 import io.github.zekurio.matinee.ui.components.Lucide
 import io.github.zekurio.matinee.ui.components.launchShowing
+import io.github.zekurio.matinee.ui.formatBitrate
 import io.github.zekurio.matinee.ui.formatInstant
 import io.github.zekurio.matinee.ui.player.AUTOMATIC
 import io.github.zekurio.matinee.ui.player.Capabilities
@@ -99,15 +101,20 @@ internal fun ColumnScope.PlaybackRows(session: Session, panels: SettingsPanels, 
     val passthrough = remember { Capabilities.passthrough }
 
     TvListHeading(stringResource(R.string.tv_settings_this_tv))
+    // The qualities this account may stream, once `playback.options` answers.
+    val qualities = buildList {
+        add(ORIGINAL_QUALITY to stringResource(R.string.player_quality_original))
+        options?.qualities?.forEach { add(it.id to qualityLabel(it)) }
+    }
     PickRow(
         stringResource(R.string.playback_quality_title),
-        buildList {
-            add(ORIGINAL_QUALITY to stringResource(R.string.player_quality_original))
-            options?.qualities?.forEach { add(it.id to qualityLabel(it)) }
-        },
-        prefs.quality,
+        qualities,
+        // One the account may no longer use shows as the original, the best the server
+        // allows; it stays saved, so a lifted limit brings it back.
+        if (options == null || qualities.any { it.first == prefs.quality }) prefs.quality else ORIGINAL_QUALITY,
         panels,
         first,
+        description = options?.maxBitrate?.let { stringResource(R.string.playback_quality_limit, formatBitrate(it, LocalResources.current)) },
     ) { prefs.quality = it }
     SwitchRow(
         stringResource(R.string.tv_settings_frame_rate),
