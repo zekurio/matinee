@@ -25,6 +25,10 @@ data object FavoritesRoute
 @Serializable
 data class LibraryRoute(val id: String, val sort: String? = null)
 
+/** Every title of one [kind] (`TitleKind`) from all libraries together: the TV drawer's Movies and Shows. */
+@Serializable
+data class KindRoute(val kind: String)
+
 @Serializable
 data class TitleRoute(val id: String)
 

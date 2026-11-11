@@ -55,8 +55,12 @@ class LibraryFilters internal constructor(
 }
 
 @Composable
-fun rememberLibraryFilters(route: LibraryRoute): LibraryFilters {
-    val sort = rememberSaveable { mutableStateOf(route.sort ?: TitleSort.NAME) }
+fun rememberLibraryFilters(route: LibraryRoute): LibraryFilters = rememberLibraryFilters(route.sort)
+
+/** A page's filters as [LibraryFilters], starting in [initialSort], or by name. */
+@Composable
+fun rememberLibraryFilters(initialSort: String? = null): LibraryFilters {
+    val sort = rememberSaveable { mutableStateOf(initialSort ?: TitleSort.NAME) }
     val genre = rememberSaveable { mutableStateOf<String?>(null) }
     val query = rememberSaveable { mutableStateOf("") }
     // Waits for a pause in typing before asking the server.
@@ -91,8 +95,11 @@ fun rememberLibraryPages(route: LibraryRoute, filters: LibraryFilters): TitlePag
 fun rememberLibraryGenres(libraryId: String): Loader<List<Facet>> = rememberLoader("genres-$libraryId") { titles.facets(libraryId).genres }
 
 /** Why a library page shows no titles: nothing matches the search, nothing the genre, or there are none. */
-fun libraryEmptyMessage(res: Resources, library: Library?, filters: LibraryFilters): String {
-    val shows = library?.kind == LibraryKind.SHOWS
+fun libraryEmptyMessage(res: Resources, library: Library?, filters: LibraryFilters): String =
+    libraryEmptyMessage(res, library?.kind == LibraryKind.SHOWS, filters)
+
+/** As [libraryEmptyMessage] for a page of shows, or of movies. */
+fun libraryEmptyMessage(res: Resources, shows: Boolean, filters: LibraryFilters): String {
     val settled = filters.settled
     return when {
         settled.isNotEmpty() -> res.getString(if (shows) R.string.library_no_match_shows else R.string.library_no_match_movies, settled)
@@ -100,6 +107,23 @@ fun libraryEmptyMessage(res: Resources, library: Library?, filters: LibraryFilte
         else -> res.getString(if (shows) R.string.library_none_shows else R.string.library_none_movies)
     }
 }
+
+/** Every title of [kind] from every library in [filters]' order, filtered and searched by the server. */
+@Composable
+fun rememberKindPages(kind: String, filters: LibraryFilters): TitlePages {
+    val sort = filters.sort
+    val genre = filters.genre
+    val settled = filters.settled
+    return rememberTitlePages("kind-$kind-$sort-$genre-$settled") { offset, limit ->
+        titles.browse(kind = kind, sort = sort, query = settled.ifEmpty { null }, genre = genre, limit = limit, offset = offset).let {
+            TitleList(it.items, it.total)
+        }
+    }
+}
+
+/** The genres the titles of [kind] have in every library, with how many each, for its filter. */
+@Composable
+fun rememberKindGenres(kind: String): Loader<List<Facet>> = rememberLoader("genres-kind-$kind") { titles.facets(kind = kind).genres }
 
 /** A genre's or a studio's page's choice of kind: [TitleKind.MOVIE], [TitleKind.SHOW], or null for both. */
 val BROWSE_KINDS: List<Pair<String?, Int>> = listOf(

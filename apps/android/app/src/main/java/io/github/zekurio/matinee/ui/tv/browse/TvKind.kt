@@ -18,15 +18,15 @@ import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
-import io.github.zekurio.matinee.api.LibraryKind
-import io.github.zekurio.matinee.ui.LibraryRoute
+import io.github.zekurio.matinee.api.TitleKind
+import io.github.zekurio.matinee.ui.KindRoute
 import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.browse.LIBRARY_SORTS
 import io.github.zekurio.matinee.ui.browse.libraryEmptyMessage
-import io.github.zekurio.matinee.ui.browse.rememberLibrary
+import io.github.zekurio.matinee.ui.browse.rememberKindGenres
+import io.github.zekurio.matinee.ui.browse.rememberKindPages
 import io.github.zekurio.matinee.ui.browse.rememberLibraryFilters
-import io.github.zekurio.matinee.ui.browse.rememberLibraryGenres
-import io.github.zekurio.matinee.ui.browse.rememberLibraryPages
+import io.github.zekurio.matinee.ui.components.ImageSource
 import io.github.zekurio.matinee.ui.components.LocalApi
 import io.github.zekurio.matinee.ui.components.Lucide
 import io.github.zekurio.matinee.ui.tv.ShowBackdrop
@@ -45,25 +45,25 @@ private const val GENRE = "genre"
 private const val SEARCH = "search"
 
 /**
- * A library on a TV: its name, the sort, the genre filter, and a search
- * of the library in a row at the top, which steps aside while focus is
- * below the first row of posters, the focused title's name and facts
- * under them, and its titles as a grid of posters, the focused one's
- * backdrop behind the page. The sort and the genre open a panel at the
- * right. They're the phone's, kept the same way, and the server sorts,
- * filters, and searches.
+ * Every movie or every show on a TV, from all libraries together: the
+ * drawer's Movies and Shows. The name and count, the sort, the genre
+ * filter, and a search sit in a row at the top, which steps aside while
+ * focus is below the first row of posters, the focused title's name and
+ * facts under them, and the titles as a grid of posters, the focused
+ * one's backdrop behind the page. The sort and the genre open a panel at
+ * the right. They're a library page's, kept the same way, and the server
+ * sorts, filters, and searches.
  */
 @Composable
-fun TvLibraryScreen(route: LibraryRoute) {
+fun TvKindScreen(route: KindRoute) {
     val api = LocalApi.current
     val res = LocalResources.current
-    val library = rememberLibrary(route.id)
-    val filters = rememberLibraryFilters(route)
-    val pages = rememberLibraryPages(route, filters)
-    val genres = rememberLibraryGenres(route.id)
+    val filters = rememberLibraryFilters()
+    val pages = rememberKindPages(route.kind, filters)
+    val genres = rememberKindGenres(route.kind)
     val memory = rememberTvFocusMemory()
     var focused by remember { mutableStateOf<FocusedItem?>(null) }
-    var backdrop by remember { mutableStateOf(emptyList<io.github.zekurio.matinee.ui.components.ImageSource>()) }
+    var backdrop by remember { mutableStateOf(emptyList<ImageSource>()) }
     var panel by rememberSaveable { mutableStateOf<String?>(null) }
     val sortButton = remember { FocusRequester() }
     val genreButton = remember { FocusRequester() }
@@ -81,13 +81,13 @@ fun TvLibraryScreen(route: LibraryRoute) {
         backdrop = emptyList()
     }
 
-    val shows = library?.kind == LibraryKind.SHOWS
+    val shows = route.kind == TitleKind.SHOW
     val sortLabel = LIBRARY_SORTS.firstOrNull { it.first == filters.sort }?.second ?: R.string.library_sort_name
     Box(Modifier.fillMaxSize()) {
         TvTitleGrid(
             pages,
             memory,
-            empty = libraryEmptyMessage(res, library, filters),
+            empty = libraryEmptyMessage(res, shows, filters),
             focused = focused,
             onFocus = { title ->
                 val info = titleInfo(title, api, res)
@@ -96,7 +96,7 @@ fun TvLibraryScreen(route: LibraryRoute) {
             },
             header = {
                 GridHeader(
-                    title = library?.name.orEmpty(),
+                    title = stringResource(if (shows) R.string.browse_kind_show else R.string.browse_kind_movie),
                     detail = pages.total?.let { res.getQuantityString(R.plurals.browse_title_count, it, it) },
                 ) {
                     TvButton(

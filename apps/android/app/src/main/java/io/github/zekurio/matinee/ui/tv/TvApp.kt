@@ -1,6 +1,7 @@
 package io.github.zekurio.matinee.ui.tv
 
 import androidx.activity.compose.BackHandler
+import androidx.annotation.DrawableRes
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.animateFloatAsState
@@ -42,8 +43,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import io.github.zekurio.matinee.R
-import io.github.zekurio.matinee.api.Library
-import io.github.zekurio.matinee.api.LibraryKind
+import io.github.zekurio.matinee.api.TitleKind
 import io.github.zekurio.matinee.api.User
 import io.github.zekurio.matinee.api.name
 import io.github.zekurio.matinee.auth.Session
@@ -51,7 +51,7 @@ import io.github.zekurio.matinee.ui.BrowseRoute
 import io.github.zekurio.matinee.ui.EpisodeRoute
 import io.github.zekurio.matinee.ui.FavoritesRoute
 import io.github.zekurio.matinee.ui.HomeRoute
-import io.github.zekurio.matinee.ui.LibraryRoute
+import io.github.zekurio.matinee.ui.KindRoute
 import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.LocalNavigator
 import io.github.zekurio.matinee.ui.LocalUser
@@ -75,7 +75,7 @@ import io.github.zekurio.matinee.ui.rememberLoader
 import io.github.zekurio.matinee.ui.theme.Palette
 import io.github.zekurio.matinee.ui.tv.browse.TvBrowseScreen
 import io.github.zekurio.matinee.ui.tv.browse.TvFavoritesScreen
-import io.github.zekurio.matinee.ui.tv.browse.TvLibraryScreen
+import io.github.zekurio.matinee.ui.tv.browse.TvKindScreen
 import io.github.zekurio.matinee.ui.tv.browse.TvSearchScreen
 import io.github.zekurio.matinee.ui.tv.detail.TvEpisodeScreen
 import io.github.zekurio.matinee.ui.tv.detail.TvPersonScreen
@@ -191,15 +191,18 @@ private fun rememberSignInStore(): ViewModelStoreOwner {
 @Composable
 private fun Drawer(user: User, current: String, shown: String?, state: DrawerState, nav: Navigator, onLeave: () -> Unit) {
     val api = LocalApi.current
-    val libraries = rememberLoader("libraries") { libraries.list() }
-    RefreshOnResume(libraries)
-    val list = (libraries.state as? Load.Ready)?.value.orEmpty()
+    // How many movies and shows there are, so the drawer offers only the kinds the server has.
+    val kinds = rememberLoader("title-kinds") { titles.browse(limit = 1).kinds }
+    RefreshOnResume(kinds)
+    val counts = (kinds.state as? Load.Ready)?.value
     val profile = DrawerEntry(PROFILE, user.name, null, ProfileRoute)
-    val entries = listOf(
+    val entries = listOfNotNull(
         DrawerEntry(SEARCH, stringResource(R.string.search_title), Lucide.Search, SearchRoute),
         DrawerEntry(HOME, stringResource(R.string.tab_home), Lucide.House, HomeRoute),
         DrawerEntry(FAVORITES, stringResource(R.string.favorites_title), Lucide.Heart, FavoritesRoute),
-    ) + list.map { DrawerEntry(libraryKey(it.id), it.name, libraryIcon(it), LibraryRoute(it.id)) }
+        kindEntry(TitleKind.MOVIE, stringResource(R.string.browse_kind_movie), Lucide.Film).takeIf { (counts?.movie ?: 0) > 0 },
+        kindEntry(TitleKind.SHOW, stringResource(R.string.browse_kind_show), Lucide.Tv).takeIf { (counts?.show ?: 0) > 0 },
+    )
     val settings = DrawerEntry(SETTINGS, stringResource(R.string.shell_settings), Lucide.Settings, SettingsRoute)
     TvDrawer(
         top = profile,
@@ -217,7 +220,7 @@ private fun Drawer(user: User, current: String, shown: String?, state: DrawerSta
     )
 }
 
-private fun libraryIcon(library: Library) = if (library.kind == LibraryKind.SHOWS) Lucide.Tv else Lucide.Film
+private fun kindEntry(kind: String, label: String, @DrawableRes icon: Int) = DrawerEntry(kindKey(kind), label, icon, KindRoute(kind))
 
 private const val PROFILE = "profile"
 private const val SEARCH = "search"
@@ -225,7 +228,7 @@ private const val HOME = "home"
 private const val FAVORITES = "favorites"
 private const val SETTINGS = "settings"
 
-private fun libraryKey(id: String) = "library-$id"
+private fun kindKey(kind: String) = "kind-$kind"
 
 /** The drawer's entry to mark for the page on screen: its own, or that of the nearest page under it that has one. */
 private fun drawerKey(stack: List<NavBackStackEntry>): String = stack.asReversed().firstNotNullOfOrNull(::entryKey) ?: HOME
@@ -239,7 +242,7 @@ private fun entryKey(entry: NavBackStackEntry): String? {
         destination.hasRoute<FavoritesRoute>() -> FAVORITES
         destination.hasRoute<SettingsRoute>() || destination.hasRoute<SettingsPageRoute>() -> SETTINGS
         destination.hasRoute<ProfileRoute>() || destination.hasRoute<RecentRoute>() -> PROFILE
-        destination.hasRoute<LibraryRoute>() -> libraryKey(entry.toRoute<LibraryRoute>().id)
+        destination.hasRoute<KindRoute>() -> kindKey(entry.toRoute<KindRoute>().kind)
         else -> null
     }
 }
@@ -248,7 +251,8 @@ private fun entryKey(entry: NavBackStackEntry): String? {
  * The TV's pages, by the phone's routes. Pages change with a short fade,
  * the old one gone before the new one is in. The phone's pages that a TV
  * leaves out (downloads, the admin pages, the image editor, identify, and
- * linking a device) have no route here.
+ * linking a device) have no route here, and neither has a single
+ * library's grid: the drawer's Movies and Shows take every library at once.
  */
 @Composable
 private fun Pages(controller: androidx.navigation.NavHostController) {
@@ -263,7 +267,7 @@ private fun Pages(controller: androidx.navigation.NavHostController) {
         composable<HomeRoute> { TvHomeScreen() }
         composable<SearchRoute> { TvSearchScreen() }
         composable<FavoritesRoute> { TvFavoritesScreen() }
-        composable<LibraryRoute> { TvLibraryScreen(it.toRoute()) }
+        composable<KindRoute> { TvKindScreen(it.toRoute()) }
         composable<TitleRoute> { TvTitleScreen(it.toRoute<TitleRoute>().id) }
         composable<SeasonRoute> { entry ->
             val route = entry.toRoute<SeasonRoute>()
