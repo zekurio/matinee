@@ -75,4 +75,36 @@ export default defineMessages("users", {
   "users.role.removeTitle": "Remove {name}'s admin role?",
   "users.role.removeDescription": "They keep their account and watch progress.",
   "users.role.removeConfirm": "Remove admin role",
+
+  // Invite links, under the users list.
+  "users.invites.title": "Invite links",
+  "users.invites.create": "Invite someone",
+  "users.invites.passkeysOff":
+    "An invite link creates an account with a passkey. Turn on passkeys under Settings → Authentication to make one.",
+  "users.invites.loadFailed": "Couldn't load invite links. {error}",
+  "users.invites.empty": "No invite links are waiting to be used.",
+  "users.invites.noNote": "No note",
+  "users.invites.made": "Made {date}",
+  // {when} is relative, like "in 6 days".
+  "users.invites.expires": "Expires {when}",
+  "users.invites.expiresAt": "Expires {date}",
+  "users.invites.revoke": "Revoke invite link",
+  "users.invites.revokeNamed": "Revoke the invite link for {note}",
+  "users.invites.revoked": "Invite link revoked",
+  "users.invites.revokeFailed": "Couldn't revoke the invite link",
+
+  // Making an invite link.
+  "users.invites.dialog.description":
+    "They open the link, pick a username, and create a passkey.",
+  "users.invites.dialog.note": "Note",
+  "users.invites.dialog.noteHint": "Who it's for. Only admins see it.",
+  "users.invites.dialog.expiry": "Works for",
+  "users.invites.dialog.submit": "Create link",
+  "users.invites.link.title": "Send this link",
+  "users.invites.link.description":
+    "It works once, until {date}. Copy it now, since it can't be shown again.",
+  "users.invites.link.label": "Invite link",
+  "users.invites.link.copy": "Copy",
+  "users.invites.link.copied": "Copied",
+  "users.invites.link.done": "Done",
 })

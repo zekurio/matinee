@@ -33,6 +33,9 @@ export default defineMessages("validation", {
   "validation.redirectUri": "Use a {scheme}: URI or a loopback http URL.",
   "validation.userCode": "Enter the 8 letters the device shows.",
 
+  // invites.ts: invite links.
+  "validation.inviteToken": "That invite link is incomplete.",
+
   // stats.ts.
   "validation.timeZone": "Use an IANA time zone like Europe/Berlin.",
 

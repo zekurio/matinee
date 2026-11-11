@@ -101,7 +101,7 @@ function SignInPage({
     onSuccess: signedIn,
   })
   const signUp = useMutation({
-    mutationFn: signUpWithPasskey,
+    mutationFn: (username: string) => signUpWithPasskey(username),
     onSuccess: signedIn,
   })
 

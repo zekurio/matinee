@@ -5,22 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1794229867519,
+      "when": 1794354167264,
       "tag": "0000_initial_schema",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1794242253167,
-      "tag": "0001_drop_user_themes",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1794271987513,
-      "tag": "0002_track_picks",
       "breakpoints": true
     }
   ]

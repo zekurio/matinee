@@ -37,6 +37,7 @@ import { formatDate, formatRelative } from "@/lib/format"
 import { client, errorMessage, orpc } from "@/lib/rpc"
 import { createUsersPanelStore, type UserAction } from "@/stores/users-panel"
 
+import { Invites } from "./invites"
 import { SettingsSections, SettingsSubsection } from "./settings-panel"
 import { confirmCopy, ConfirmDialog } from "./user-dialogs"
 
@@ -189,6 +190,8 @@ export function UsersPanel() {
           </List>
         )}
       </SettingsSubsection>
+
+      <Invites passkeysOn={passkeysOn} />
 
       <ConfirmDialog
         open={confirmOpen}

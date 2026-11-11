@@ -36,6 +36,18 @@ export const session = pgTable(
   (t) => [index("session_user_idx").on(t.userId)],
 )
 
+/** A single-use sign-up link. Only the token's SHA-256 is stored. */
+export const invite = pgTable("invite", {
+  id: uuid().primaryKey().defaultRandom(),
+  tokenHash: text().notNull().unique(),
+  label: text(),
+  createdBy: uuid()
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  expiresAt: timestamp({ withTimezone: true }).notNull(),
+  createdAt: createdAt(),
+})
+
 export const passkey = pgTable(
   "passkey",
   {

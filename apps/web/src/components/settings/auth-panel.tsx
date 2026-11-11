@@ -55,6 +55,8 @@ type TextField = (typeof TEXT_FIELDS)[number]
  */
 type Draft = Record<TextField, string> & {
   passkeys: boolean
+  /** Anyone may create an account with a passkey, without an invite. */
+  passkeySignUp: boolean
   enabled: boolean
   allowSignUp: boolean
   /** A new secret to save; empty keeps the current one. */
@@ -68,6 +70,7 @@ function draftFrom({ passkeys, oidc, defaults }: AdminAuthSettings): Draft {
     oidc[key] === defaults[key] ? "" : oidc[key]
   return {
     passkeys: passkeys.enabled,
+    passkeySignUp: passkeys.allowSignUp,
     displayName: text("displayName"),
     issuerUrl: text("issuerUrl"),
     clientId: text("clientId"),
@@ -162,7 +165,10 @@ function OidcForm({ settings }: { settings: AdminAuthSettings }) {
       const parsed = inputFrom(value)
       if (!parsed.success) throw inputError(parsed.error.issues[0])
       const next = await save.mutateAsync({
-        passkeys: { enabled: value.passkeys },
+        passkeys: {
+          enabled: value.passkeys,
+          allowSignUp: value.passkeySignUp,
+        },
         oidc: parsed.data,
       })
       queryClient.setQueryData(orpc.admin.auth.get.queryKey(), next)
@@ -196,6 +202,7 @@ const PasskeysSection = withForm({
   defaultValues: typeOnly<Draft>(),
   props: typeOnly<{ settings: AdminAuthSettings }>(),
   render: function Render({ form, settings }) {
+    const passkeysOn = useSelector(form.store, (state) => state.values.passkeys)
     return (
       <SettingsSubsection id="passkeys" title={tr("oidc.passkeys.title")}>
         <SettingRows>
@@ -214,6 +221,19 @@ const PasskeysSection = withForm({
                       })}
                     </SettingWarning>
                   ) : null
+                }
+              />
+            )}
+          </form.AppField>
+          <form.AppField name="passkeySignUp">
+            {() => (
+              <SwitchField
+                title={tr("oidc.passkeys.allowSignUp")}
+                disabled={!passkeysOn}
+                footer={
+                  <SettingNote>
+                    {tr("oidc.passkeys.allowSignUpHint")}
+                  </SettingNote>
                 }
               />
             )}

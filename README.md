@@ -66,6 +66,13 @@ The server applies migrations on start. After changing
 pnpm db:generate --name add_watch_progress
 ```
 
+The early migrations were squashed into `0000_initial_schema` when invites
+were added. If your development database has the old migration history,
+back up anything you need, stop the server, and recreate the database before
+starting this version. This deletes its data. The new initial migration
+cannot run over the old tables, and deleting only the migration history
+won't fix that.
+
 Run `pnpm verify` (format check, lint, typecheck) before committing.
 
 Without Nix, copy `.env.example` to `.env` and point `DATABASE_URL` at your
@@ -103,8 +110,8 @@ that matter for a real deployment:
   get scanned. See [Scanning](#scanning).
 
 Settings → Authentication and Settings → Transcoding start from the
-`MATINEE_PASSKEYS_ENABLED`, `MATINEE_OIDC_*`, and transcoding variables, as
-alloy's admin settings do. The
+`MATINEE_PASSKEYS_ENABLED`, `MATINEE_OPEN_REGISTRATION`, `MATINEE_OIDC_*`, and
+transcoding variables, as alloy's admin settings do. The
 server saves only the fields an admin changed: a field saved with the
 variable's value is no override, so a later change to the variable still
 applies, and an empty text field hands the field back to it. At start the
@@ -708,13 +715,19 @@ Until the admin finishes, signing in as an admin goes back to setup.
   back. If you can't wait, delete the saved switch with
   `delete from setting where key = 'passkeys'` and restart. Passkeys then
   follow `MATINEE_PASSKEYS_ENABLED` again.
-- People create their own accounts. With `MATINEE_OPEN_REGISTRATION` and
-  passkeys on, the login page lets anyone pick a username and create a
-  passkey. With sign-up allowed in the OIDC settings (or
-  `MATINEE_OIDC_ALLOW_SIGN_UP`), the first sign-in of an unlinked provider
-  account creates a new account. Both start off, so only the admin from
-  setup can sign in until you turn one on. Settings → Users lists the
-  accounts for admins to manage.
+- People create their own accounts. With passkeys and open registration on,
+  the login page lets anyone pick a username and create a passkey. Admins
+  change open registration under Settings → Authentication;
+  `MATINEE_OPEN_REGISTRATION` is its default. With sign-up allowed in the OIDC
+  settings (or `MATINEE_OIDC_ALLOW_SIGN_UP`), the first sign-in of an unlinked
+  provider account creates a new account. Both start off. Settings → Users
+  lists the accounts for admins to manage.
+- Admins can create invite links under Settings → Users to let people in
+  while passkey sign-up is closed. Each link works once and expires. The person picks a username and
+  registers a passkey, and no account exists until the passkey is verified.
+  The server stores only the token's SHA-256, so it can show the link only
+  when it is created. An admin's links stop working if the admin is deleted
+  or loses the role, including through an OIDC role claim.
 - An unlinked OIDC sign-in whose username claim matches an account, as sent
   or as Matinee would turn it into a username, doesn't sign in to it or make
   a numbered copy. Linking on the claim alone would hand the account to

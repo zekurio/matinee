@@ -15,6 +15,7 @@ import {
   DeviceSignIn,
   DisplayName,
   IdInput,
+  InviteToken,
   OidcAccount,
   Passkey,
   PasskeyCreation,
@@ -45,14 +46,33 @@ export const authContract = oc.tag("Auth").router({
         t.object({ challengeId: t.uuid(), response: AuthenticationResponse }),
       )
       .output(User),
+    /**
+     * Start creating an account. Works during setup, while passkey sign-up
+     * is open, or with an invite. The invite is used up when `signUp`
+     * succeeds, so a passkey prompt someone cancels leaves it working.
+     */
     signUpOptions: post("/auth/passkey/sign-up/options")
-      .input(t.object({ username: Username }))
+      .input(t.object({ username: Username, invite: InviteToken.optional() }))
       .output(PasskeyCreation),
     signUp: post("/auth/passkey/sign-up")
       .input(
         t.object({ challengeId: t.uuid(), response: RegistrationResponse }),
       )
       .output(User),
+  },
+  /**
+   * Invite links from `admin.invites`. The invite page reads the token from
+   * its fragment and creates the account with `passkey.signUpOptions`.
+   */
+  invite: {
+    /**
+     * Whether the link still works, before the page asks for a username. A
+     * POST, so the token stays out of URLs. Fails with NOT_FOUND once it was
+     * used, revoked, or expired.
+     */
+    check: post("/auth/invite")
+      .input(t.object({ token: InviteToken }))
+      .output(t.object({ expiresAt: t.date() })),
   },
   /**
    * An OIDC sign-in whose username claim matched an existing account. The

@@ -66,7 +66,11 @@ async function registrationOptions(input: {
 }
 
 /** Start creating an account whose first sign-in method is a passkey. */
-export async function beginSignUp(input: { username: string; setup: boolean }) {
+export async function beginSignUp(input: {
+  username: string
+  setup: boolean
+  inviteId: string | null
+}) {
   const userId = crypto.randomUUID()
   const options = await registrationOptions({
     userId,
@@ -76,7 +80,12 @@ export async function beginSignUp(input: { username: string; setup: boolean }) {
   const challengeId = await createChallenge({
     purpose: "passkey-sign-up",
     challenge: options.challenge,
-    payload: { userId, username: input.username, setup: input.setup },
+    payload: {
+      userId,
+      username: input.username,
+      setup: input.setup,
+      inviteId: input.setup ? null : input.inviteId,
+    },
     ttlMs: REGISTRATION_TTL_MS,
   })
   return { challengeId, options }

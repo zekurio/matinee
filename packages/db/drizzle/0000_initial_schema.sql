@@ -41,6 +41,16 @@ CREATE TABLE "playback_session" (
 	"ended_at" timestamp with time zone
 );
 --> statement-breakpoint
+CREATE TABLE "track_pick" (
+	"user_id" uuid NOT NULL,
+	"media_item_id" uuid NOT NULL,
+	"audio_stream_index" integer,
+	"audio_picked_at" timestamp with time zone,
+	"subtitle_track_id" text,
+	"subtitle_picked_at" timestamp with time zone,
+	CONSTRAINT "track_pick_user_id_media_item_id_pk" PRIMARY KEY("user_id","media_item_id")
+);
+--> statement-breakpoint
 CREATE TABLE "watch_progress" (
 	"user_id" uuid NOT NULL,
 	"media_item_id" uuid NOT NULL,
@@ -70,6 +80,16 @@ CREATE TABLE "device_authorization" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "device_authorization_deviceCodeHash_unique" UNIQUE("device_code_hash"),
 	CONSTRAINT "device_authorization_userCode_unique" UNIQUE("user_code")
+);
+--> statement-breakpoint
+CREATE TABLE "invite" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"token_hash" text NOT NULL,
+	"label" text,
+	"created_by" uuid NOT NULL,
+	"expires_at" timestamp with time zone NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "invite_tokenHash_unique" UNIQUE("token_hash")
 );
 --> statement-breakpoint
 CREATE TABLE "oidc_account" (
@@ -270,7 +290,6 @@ CREATE TABLE "user" (
 	"username" text NOT NULL,
 	"display_name" text,
 	"role" text DEFAULT 'user' NOT NULL,
-	"theme_preferences" jsonb,
 	"playback_preferences" jsonb,
 	"avatar_id" text,
 	"avatar_source" text DEFAULT 'provider' NOT NULL,
@@ -281,18 +300,6 @@ CREATE TABLE "user" (
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "user_theme" (
-	"user_id" uuid NOT NULL,
-	"id" text NOT NULL,
-	"name" text NOT NULL,
-	"variants" jsonb NOT NULL,
-	"guided" boolean DEFAULT false NOT NULL,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "user_theme_user_id_id_pk" PRIMARY KEY("user_id","id"),
-	CONSTRAINT "user_theme_variants_check" CHECK (jsonb_typeof("user_theme"."variants") = 'array' and jsonb_array_length("user_theme"."variants") > 0)
-);
---> statement-breakpoint
 ALTER TABLE "favorite" ADD CONSTRAINT "favorite_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "favorite" ADD CONSTRAINT "favorite_title_id_title_id_fk" FOREIGN KEY ("title_id") REFERENCES "public"."title"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "favorite_item" ADD CONSTRAINT "favorite_item_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -300,9 +307,12 @@ ALTER TABLE "favorite_item" ADD CONSTRAINT "favorite_item_media_item_id_media_it
 ALTER TABLE "playback_session" ADD CONSTRAINT "playback_session_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "playback_session" ADD CONSTRAINT "playback_session_media_item_id_media_item_id_fk" FOREIGN KEY ("media_item_id") REFERENCES "public"."media_item"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "playback_session" ADD CONSTRAINT "playback_session_title_id_title_id_fk" FOREIGN KEY ("title_id") REFERENCES "public"."title"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "track_pick" ADD CONSTRAINT "track_pick_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "track_pick" ADD CONSTRAINT "track_pick_media_item_id_media_item_id_fk" FOREIGN KEY ("media_item_id") REFERENCES "public"."media_item"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "watch_progress" ADD CONSTRAINT "watch_progress_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "watch_progress" ADD CONSTRAINT "watch_progress_media_item_id_media_item_id_fk" FOREIGN KEY ("media_item_id") REFERENCES "public"."media_item"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "device_authorization" ADD CONSTRAINT "device_authorization_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "invite" ADD CONSTRAINT "invite_created_by_user_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "oidc_account" ADD CONSTRAINT "oidc_account_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "passkey" ADD CONSTRAINT "passkey_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "session" ADD CONSTRAINT "session_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -322,7 +332,6 @@ ALTER TABLE "media_item" ADD CONSTRAINT "media_item_folder_id_library_folder_id_
 ALTER TABLE "media_item" ADD CONSTRAINT "media_item_title_id_title_id_fk" FOREIGN KEY ("title_id") REFERENCES "public"."title"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "subtitle_file" ADD CONSTRAINT "subtitle_file_media_item_id_media_item_id_fk" FOREIGN KEY ("media_item_id") REFERENCES "public"."media_item"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "trickplay" ADD CONSTRAINT "trickplay_media_item_id_media_item_id_fk" FOREIGN KEY ("media_item_id") REFERENCES "public"."media_item"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "user_theme" ADD CONSTRAINT "user_theme_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "favorite_recent_idx" ON "favorite" USING btree ("user_id","created_at");--> statement-breakpoint
 CREATE INDEX "favorite_item_recent_idx" ON "favorite_item" USING btree ("user_id","created_at");--> statement-breakpoint
 CREATE INDEX "playback_session_started_idx" ON "playback_session" USING btree ("started_at","user_id","watched_seconds","completed","title_kind","title_id","media_item_id");--> statement-breakpoint

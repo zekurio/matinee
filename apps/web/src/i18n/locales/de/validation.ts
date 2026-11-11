@@ -24,6 +24,8 @@ export default {
     "Verwende eine {scheme}:-URI oder eine Loopback-URL mit http.",
   "validation.userCode": "Gib die 8 Buchstaben ein, die das Gerät anzeigt.",
 
+  "validation.inviteToken": "Dieser Einladungslink ist unvollständig.",
+
   "validation.timeZone": "Verwende eine IANA-Zeitzone wie Europe/Berlin.",
 
   "validation.hexColor": "Verwende #rrggbb.",

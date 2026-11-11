@@ -17,6 +17,8 @@
         <item quantity="one">%1$d Konto ist nicht mit %2$s verknüpft und kann sich nicht anmelden, solange Passkeys aus sind. Solange es noch angemeldet ist, kann es %2$s unter Einstellungen → Konto verknüpfen.</item>
         <item quantity="other">%1$d Konten sind nicht mit %2$s verknüpft und können sich nicht anmelden, solange Passkeys aus sind. Solange sie noch angemeldet sind, können sie %2$s unter Einstellungen → Konto verknüpfen.</item>
     </plurals>
+    <string name="web_oidc_passkeys_allowSignUp">Konten erstellen</string>
+    <string name="web_oidc_passkeys_allowSignUpHint">Alle, die diesen Server erreichen, können ein Konto mit Passkey erstellen. Solange das aus ist, braucht eine neue Person einen Einladungslink aus Einstellungen → Benutzer.</string>
     <string name="web_oidc_title">Single Sign-on</string>
     <string name="web_oidc_enabled">Aktiviert</string>
     <plurals name="web_oidc_ssoOnly">

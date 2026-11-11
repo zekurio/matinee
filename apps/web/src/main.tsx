@@ -1,4 +1,5 @@
 import "@matinee/ui/globals.css"
+import { INVITE_PAGE_PATH } from "@matinee/contracts"
 import { initTheme } from "@matinee/ui/lib/theme"
 import { QueryClientProvider } from "@tanstack/react-query"
 import { createRouter, RouterProvider } from "@tanstack/react-router"
@@ -14,12 +15,18 @@ import { applyLanguage } from "./stores/language"
 
 initTheme()
 syncUiText()
+/**
+ * Pages for someone signed out. They ask for nothing that needs a session,
+ * and a lost session doesn't send them to the login. An invite link has its
+ * token in the fragment, which must not end up in the login's `redirect`.
+ */
+const SIGNED_OUT_PAGES = ["/login", "/setup", INVITE_PAGE_PATH]
 // Every page but the login asks who is signed in first. Asking now, while
 // the language loads, saves the round trip after it. So does asking for
 // what the signed-in pages show first: the libraries in the menu, and on
 // Home its rows. Without a session they fail, and the login follows.
 void queryClient.prefetchQuery(orpc.auth.session.queryOptions())
-if (!["/login", "/setup"].includes(location.pathname)) {
+if (!SIGNED_OUT_PAGES.includes(location.pathname)) {
   void queryClient.prefetchQuery(orpc.libraries.list.queryOptions())
 }
 if (location.pathname === "/") {
@@ -41,7 +48,7 @@ const router = createRouter({
 sessionLost.handler = () => {
   queryClient.setQueryData(orpc.auth.session.queryKey(), { user: null })
   const { pathname, href } = router.state.location
-  if (pathname === "/login" || pathname === "/setup") return
+  if (SIGNED_OUT_PAGES.includes(pathname)) return
   void router.navigate({ to: "/login", search: { redirect: href } })
 }
 

@@ -1,5 +1,5 @@
 import type { UserRole } from "@matinee/contracts"
-import { oidcAccount, user, type UserRow } from "@matinee/db"
+import { invite, oidcAccount, user, type UserRow } from "@matinee/db"
 import { and, eq } from "drizzle-orm"
 
 import { db } from "../db"
@@ -134,6 +134,9 @@ export async function syncRole(
     if (!current || current.role === role) return null
     if (current.role === "admin" && !(await otherAdminCanSignIn(tx, userId))) {
       return { username: current.username, changed: false }
+    }
+    if (current.role === "admin") {
+      await tx.delete(invite).where(eq(invite.createdBy, userId))
     }
     await tx
       .update(user)

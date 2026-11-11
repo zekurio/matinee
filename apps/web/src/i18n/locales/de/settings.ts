@@ -30,11 +30,11 @@ export default {
   "settings.section.users.label": "Benutzer",
   "settings.section.users.description": "Konten und Rollen",
   "settings.section.users.keywords":
-    "Admin, Rolle, Benutzer löschen, Überall abmelden, Sitzungen",
+    "Admin, Rolle, Benutzer löschen, Überall abmelden, Sitzungen, Einladen, Einladungslink",
   "settings.section.authentication.label": "Authentifizierung",
   "settings.section.authentication.description": "Passkeys und Single Sign-on",
   "settings.section.authentication.keywords":
-    "Passkeys, Anmeldemethoden, Single Sign-on, SSO, OIDC, OpenID Connect, Issuer-URL, Client-ID, Client-Secret, Weiterleitungs-URI, Konten erstellen, Authelia, Authentik, Keycloak",
+    "Passkeys, Anmeldemethoden, Single Sign-on, SSO, OIDC, OpenID Connect, Issuer-URL, Client-ID, Client-Secret, Weiterleitungs-URI, Konten erstellen, Registrierung, Authelia, Authentik, Keycloak",
   "settings.section.transcoding.label": "Transkodierung",
   "settings.section.transcoding.description":
     "FFmpeg, GPUs und HDR-Tone-Mapping",

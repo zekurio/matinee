@@ -40,6 +40,8 @@ export default defineMessages("server", {
   "server.auth.appSignInGone":
     "This sign-in expired or was used already. Try again.",
   "server.auth.deviceCodeExpired": "This code expired. Get a new one.",
+  "server.auth.inviteGone":
+    "This invite link doesn't work. It may have expired, or been used already.",
 
   // auth/oidc.ts and auth/oidc-accounts.ts: single sign-on, also as the
   // auth error on redirects.
@@ -97,6 +99,7 @@ export default defineMessages("server", {
 
   // rpc/admin-users.ts.
   "server.adminUsers.gone": "That user no longer exists. Reload the list.",
+  "server.adminInvites.gone": "That invite no longer exists. Reload the list.",
   "server.adminUsers.lastAdmin":
     "{name} is the only admin who can sign in. Make someone who can sign in an admin first.",
   "server.adminUsers.lastAdminDemote":

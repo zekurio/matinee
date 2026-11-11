@@ -28,6 +28,7 @@ open class ContractApi(transport: ApiTransport) {
 }
 
 class AuthApi internal constructor(private val transport: ApiTransport) {
+    val invite = AuthInviteApi(transport)
     val passkey = AuthPasskeyApi(transport)
     val oidc = AuthOidcApi(transport)
     val app = AuthAppApi(transport)
@@ -63,6 +64,18 @@ class AuthApi internal constructor(private val transport: ApiTransport) {
     }
 }
 
+class AuthInviteApi internal constructor(private val transport: ApiTransport) {
+    /** `POST /auth/invite` */
+    suspend fun check(token: String): AuthInviteCheckOutput =
+        transport.call(
+            "POST",
+            listOf("auth", "invite"),
+            emptyList(),
+            transport.json(AuthInviteCheckInput.serializer(), AuthInviteCheckInput(token = token)),
+            AuthInviteCheckOutput.serializer(),
+        )
+}
+
 class AuthPasskeyApi internal constructor(private val transport: ApiTransport) {
     /** `POST /auth/passkey/sign-in/options` */
     suspend fun signInOptions(): PasskeyRequest =
@@ -85,12 +98,12 @@ class AuthPasskeyApi internal constructor(private val transport: ApiTransport) {
         )
 
     /** `POST /auth/passkey/sign-up/options` */
-    suspend fun signUpOptions(username: String): PasskeyCreation =
+    suspend fun signUpOptions(username: String, invite: String? = null): PasskeyCreation =
         transport.call(
             "POST",
             listOf("auth", "passkey", "sign-up", "options"),
             emptyList(),
-            transport.json(AuthPasskeySignUpOptionsInput.serializer(), AuthPasskeySignUpOptionsInput(username = username)),
+            transport.json(AuthPasskeySignUpOptionsInput.serializer(), AuthPasskeySignUpOptionsInput(username = username, invite = invite)),
             PasskeyCreation.serializer(),
         )
 
@@ -980,6 +993,7 @@ class StatsApi internal constructor(private val transport: ApiTransport) {
 class AdminApi internal constructor(private val transport: ApiTransport) {
     val appearance = AdminAppearanceApi(transport)
     val auth = AdminAuthApi(transport)
+    val invites = AdminInvitesApi(transport)
     val jobs = AdminJobsApi(transport)
     val setup = AdminSetupApi(transport)
     val transcoding = AdminTranscodingApi(transport)
@@ -1039,6 +1053,33 @@ class AdminAuthApi internal constructor(private val transport: ApiTransport) {
             transport.json(AuthSettingsInput.serializer(), authSettingsInput),
             AdminAuthSettings.serializer(),
         )
+}
+
+class AdminInvitesApi internal constructor(private val transport: ApiTransport) {
+    /** `GET /admin/invites` */
+    suspend fun list(): List<Invite> =
+        transport.call(
+            "GET",
+            listOf("admin", "invites"),
+            emptyList(),
+            null,
+            ListSerializer(Invite.serializer()),
+        )
+
+    /** `POST /admin/invites` */
+    suspend fun create(expiresInDays: Int, label: String? = null): CreatedInvite =
+        transport.call(
+            "POST",
+            listOf("admin", "invites"),
+            emptyList(),
+            transport.json(AdminInvitesCreateInput.serializer(), AdminInvitesCreateInput(label = label, expiresInDays = expiresInDays)),
+            CreatedInvite.serializer(),
+        )
+
+    /** `DELETE /admin/invites/{id}` */
+    suspend fun revoke(id: String) {
+        transport.send("DELETE", listOf("admin", "invites", id), emptyList(), null)
+    }
 }
 
 class AdminJobsApi internal constructor(private val transport: ApiTransport) {

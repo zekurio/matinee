@@ -22,6 +22,9 @@ export default defineMessages("oidc", {
     other:
       "{count} accounts aren't linked to {provider}, so they can't sign in while passkeys are off. While still signed in, they can link {provider} under Settings → Account.",
   }),
+  "oidc.passkeys.allowSignUp": "Create accounts",
+  "oidc.passkeys.allowSignUpHint":
+    "Anyone who can reach this server can create an account with a passkey. While this is off, a new person needs an invite link from Settings → Users.",
 
   // The single sign-on section.
   "oidc.title": "Single sign-on",

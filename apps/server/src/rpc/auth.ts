@@ -9,6 +9,7 @@ import {
   pollDeviceSignIn,
   startDeviceSignIn,
 } from "../auth/devices"
+import { consumeInvite, findInvite, INVITE_GONE } from "../auth/invites"
 import {
   createOidcUser,
   linkOidcAccount,
@@ -17,7 +18,7 @@ import {
 } from "../auth/oidc-accounts"
 import { readPendingLink, takePendingLink } from "../auth/oidc-pending"
 import { activeOidc } from "../auth/oidc-settings"
-import { passkeysEnabled } from "../auth/passkey-settings"
+import { passkeysEnabled, passkeySignUpOpen } from "../auth/passkey-settings"
 import {
   beginSignIn,
   beginSignUp,
@@ -46,7 +47,6 @@ import {
 import { themeAccents } from "../auth/theme-accents"
 import { insertUser, lockUsers, usernameTaken } from "../auth/users"
 import { db } from "../db"
-import { env } from "../env"
 import { log } from "../log"
 import { badRequest, authed, notFound, pub, requirePasskeys } from "./base"
 
@@ -55,6 +55,7 @@ const SignUpPayload = t.object({
   userId: t.string(),
   username: t.string(),
   setup: t.boolean(),
+  inviteId: t.uuid().nullable().optional(),
 })
 
 const SIGN_UP_CLOSED = "Sign-up is closed on this server."
@@ -110,7 +111,7 @@ export const auth = {
     return {
       setup,
       passkeys,
-      passkeySignUp: passkeys && env.MATINEE_OPEN_REGISTRATION,
+      passkeySignUp: passkeys && (await passkeySignUpOpen()),
       oidc: provider
         ? {
             displayName: provider.settings.displayName,
@@ -139,6 +140,15 @@ export const auth = {
     }
   }),
 
+  invite: {
+    check: pub.auth.invite.check.handler(async ({ input }) => {
+      await requirePasskeys()
+      const row = await findInvite(input.token)
+      if (!row) throw notFound(INVITE_GONE)
+      return { expiresAt: row.expiresAt }
+    }),
+  },
+
   passkey: {
     signInOptions: pub.auth.passkey.signInOptions.handler(async () => {
       await requirePasskeys()
@@ -165,13 +175,20 @@ export const auth = {
         if (setup && !hasSetupAccess(context.hono)) {
           throw badRequest("Enter the setup token first.")
         }
-        if (!setup && !env.MATINEE_OPEN_REGISTRATION) {
-          throw badRequest(SIGN_UP_CLOSED)
+        let inviteId: string | null = null
+        if (!setup) {
+          if (input.invite) {
+            const row = await findInvite(input.invite)
+            if (!row) throw badRequest(INVITE_GONE)
+            inviteId = row.id
+          } else if (!(await passkeySignUpOpen())) {
+            throw badRequest(SIGN_UP_CLOSED)
+          }
         }
         if (await usernameTaken(input.username)) {
           throw badRequest("That username is taken.")
         }
-        return beginSignUp({ username: input.username, setup })
+        return beginSignUp({ username: input.username, setup, inviteId })
       },
     ),
 
@@ -186,7 +203,7 @@ export const auth = {
       if (!payload.success) {
         throw badRequest("The sign-up request is invalid.")
       }
-      const { userId, username, setup } = payload.data
+      const { userId, username, setup, inviteId } = payload.data
       if (setup) await refuseOidcSetup()
       if (setup && !hasSetupAccess(context.hono)) {
         throw badRequest("Enter the setup token first.")
@@ -197,8 +214,13 @@ export const auth = {
         if (setup && !empty) {
           throw badRequest("Setup is already done. Sign in instead.")
         }
-        if (!setup && (empty || !env.MATINEE_OPEN_REGISTRATION)) {
-          throw badRequest(SIGN_UP_CLOSED)
+        if (!setup) {
+          if (inviteId && !(await consumeInvite(tx, inviteId))) {
+            throw badRequest(INVITE_GONE)
+          }
+          if (empty || (!inviteId && !(await passkeySignUpOpen()))) {
+            throw badRequest(SIGN_UP_CLOSED)
+          }
         }
         if (await usernameTaken(username, tx)) {
           throw badRequest("That username is taken.")

@@ -22,6 +22,7 @@ const KEY = "passkeys"
 
 const VARIABLES = new Map<keyof PasskeySettings, string>([
   ["enabled", "MATINEE_PASSKEYS_ENABLED"],
+  ["allowSignUp", "MATINEE_OPEN_REGISTRATION"],
 ])
 
 const SavedPasskeys = PasskeySettings.partial()
@@ -31,7 +32,10 @@ let saved: Saved | null = null
 let loading: Promise<Saved> | null = null
 
 function passkeyDefaults(): PasskeySettings {
-  return { enabled: env.MATINEE_PASSKEYS_ENABLED }
+  return {
+    enabled: env.MATINEE_PASSKEYS_ENABLED,
+    allowSignUp: env.MATINEE_OPEN_REGISTRATION,
+  }
 }
 
 async function load(): Promise<Saved> {
@@ -82,6 +86,11 @@ export async function passkeySettings(): Promise<PasskeySettings> {
 
 export async function passkeysEnabled(): Promise<boolean> {
   return (await passkeySettings()).enabled
+}
+
+/** Whether people may create passkey accounts without an invite. */
+export async function passkeySignUpOpen(): Promise<boolean> {
+  return (await passkeySettings()).allowSignUp
 }
 
 /** Store only what differs from the environment. */

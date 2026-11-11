@@ -15,6 +15,24 @@ export default {
     "Bei diesem Server kann man sich gerade nicht anmelden. Frag den Admin.",
   "auth.signIn.newHere": "Neu auf diesem Server?",
   "auth.signIn.createAccount": "Konto mit Passkey erstellen",
+  "auth.invite.title": "Du bist zu Matinee eingeladen",
+  "auth.invite.description":
+    "Wähle einen Benutzernamen und erstelle dann einen Passkey, mit dem du dich anmeldest. Dieser Link funktioniert bis {date}.",
+  "auth.invite.checking": "Einladungslink wird geprüft",
+  "auth.invite.checkFailed": "Der Einladungslink konnte nicht geprüft werden",
+  "auth.invite.retry": "Erneut versuchen",
+  "auth.invite.brokenTitle": "Dieser Einladungslink funktioniert nicht",
+  "auth.invite.brokenDescription":
+    "Vielleicht ist er abgelaufen, wurde schon benutzt oder widerrufen, oder ein Teil fehlt. Bitte die Person, die ihn geschickt hat, um einen neuen.",
+  "auth.invite.unusableTitle":
+    "Dieser Einladungslink kann nicht benutzt werden",
+  "auth.invite.passkeysOff":
+    "Einladungslinks erstellen ein Konto mit Passkey, und Passkeys sind auf diesem Server ausgeschaltet. Bitte die Person, die ihn geschickt hat, um einen anderen Weg.",
+  "auth.invite.toSignIn": "Zur Anmeldung",
+  "auth.invite.signedInTitle": "Du hast hier schon ein Konto",
+  "auth.invite.signedInDescription":
+    "Du bist als {username} angemeldet, deshalb bleibt die Einladung unbenutzt. Lass sie für die Person, für die sie gedacht ist.",
+  "auth.invite.continue": "Weiter zu Matinee",
   "auth.setup.title": "Matinee einrichten",
   "auth.setup.createAdmin": "Erstelle das Admin-Konto.",
   "auth.setup.oidc":

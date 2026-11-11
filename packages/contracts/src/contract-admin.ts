@@ -11,7 +11,14 @@ import {
   TaskInput,
 } from "./jobs"
 import { t } from "./schema"
-import { DirectoryListing, IdInput, UserRole } from "./schemas"
+import {
+  CreatedInvite,
+  DirectoryListing,
+  IdInput,
+  Invite,
+  InviteInput,
+  UserRole,
+} from "./schemas"
 import { ThemeAccents } from "./theme"
 import { AdminTranscodingSettings, TranscodingSettings } from "./transcoding"
 import { AdminTrickplaySettings, TrickplaySettings } from "./trickplay"
@@ -100,9 +107,9 @@ export const adminContract = oc.tag("Admin").router({
       .output(AdminTrickplaySettings),
   },
   /**
-   * Accounts. People make their own, with a passkey while open registration
-   * and passkeys are on, or through the OIDC provider while it allows
-   * sign-up. The server keeps at least one admin who can sign in, so
+   * Accounts. People make their own: with a passkey while passkey sign-up
+   * is open or they hold an invite, or through the OIDC provider while it
+   * allows sign-up. The server keeps at least one admin who can sign in, so
    * demoting or deleting the last one fails.
    */
   users: {
@@ -118,5 +125,18 @@ export const adminContract = oc.tag("Admin").router({
     signOut: post("/admin/users/{id}/sign-out")
       .input(IdInput)
       .output(t.object({ ended: t.number().int() })),
+  },
+  /**
+   * Invite links, for letting one person in while passkey sign-up is
+   * closed. An admin's links stop working when the admin is deleted or
+   * loses the role.
+   */
+  invites: {
+    /** The links that still work, newest first. */
+    list: get("/admin/invites").output(t.array(Invite)),
+    /** Fails while passkeys are off, since nobody could use the link. */
+    create: post("/admin/invites").input(InviteInput).output(CreatedInvite),
+    /** Stop a link from working. */
+    revoke: del("/admin/invites/{id}").input(IdInput).output(t.void()),
   },
 })

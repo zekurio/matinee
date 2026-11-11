@@ -38,6 +38,8 @@ export default {
     "Diese Anmeldung ist abgelaufen oder wurde schon benutzt. Versuch es noch einmal.",
   "server.auth.deviceCodeExpired":
     "Dieser Code ist abgelaufen. Hol dir einen neuen.",
+  "server.auth.inviteGone":
+    "Dieser Einladungslink funktioniert nicht. Vielleicht ist er abgelaufen oder wurde schon benutzt.",
 
   "server.oidc.noLinkedAccount":
     "Mit dieser Anmeldung ist kein Konto verknüpft. Melde dich mit einem Passkey an und verknüpfe sie dann in den Einstellungen.",
@@ -96,6 +98,8 @@ export default {
 
   "server.adminUsers.gone":
     "Diesen Benutzer gibt es nicht mehr. Lade die Liste neu.",
+  "server.adminInvites.gone":
+    "Diese Einladung gibt es nicht mehr. Lade die Liste neu.",
   "server.adminUsers.lastAdmin":
     "{name} ist der einzige Admin, der sich anmelden kann. Mach zuerst jemanden zum Admin, der sich anmelden kann.",
   "server.adminUsers.lastAdminDemote":

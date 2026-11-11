@@ -409,6 +409,7 @@ data class ActivityCell(
 @Serializable
 data class PasskeySettings(
     val enabled: Boolean,
+    val allowSignUp: Boolean,
 )
 
 @Serializable
@@ -810,6 +811,15 @@ data class Credit(
 )
 
 @Serializable
+data class CreatedInvite(
+    val id: String,
+    val label: String?,
+    val createdAt: String,
+    val expiresAt: String,
+    val url: String,
+)
+
+@Serializable
 data class DeviceCode(
     val deviceCode: String,
     val userCode: String,
@@ -1088,6 +1098,14 @@ data class ItemImage(
     val image: Artwork?,
     val chosen: Boolean,
     val uploaded: Boolean,
+)
+
+@Serializable
+data class Invite(
+    val id: String,
+    val label: String?,
+    val createdAt: String,
+    val expiresAt: String,
 )
 
 @Serializable
@@ -1850,6 +1868,16 @@ data class AuthUnlockSetupInput(
 )
 
 @Serializable
+data class AuthInviteCheckInput(
+    val token: String,
+)
+
+@Serializable
+data class AuthInviteCheckOutput(
+    val expiresAt: String,
+)
+
+@Serializable
 data class AuthPasskeySignInInput(
     val challengeId: String,
     val response: AuthenticationResponse,
@@ -1858,6 +1886,7 @@ data class AuthPasskeySignInInput(
 @Serializable
 data class AuthPasskeySignUpOptionsInput(
     val username: String,
+    val invite: String? = null,
 )
 
 @Serializable
@@ -2018,6 +2047,12 @@ data class FavoritesSetInput(
 @Serializable
 data class FavoritesSetItemInput(
     val favorite: Boolean,
+)
+
+@Serializable
+data class AdminInvitesCreateInput(
+    val label: String? = null,
+    val expiresInDays: Int,
 )
 
 @Serializable

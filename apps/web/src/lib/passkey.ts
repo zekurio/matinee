@@ -8,9 +8,11 @@ export async function signInWithPasskey() {
   return client.auth.passkey.signIn({ challengeId, response })
 }
 
-export async function signUpWithPasskey(username: string) {
+/** Create an account. `invite` is the token of the link it comes from. */
+export async function signUpWithPasskey(username: string, invite?: string) {
   const { challengeId, options } = await client.auth.passkey.signUpOptions({
     username,
+    invite,
   })
   const response = await startRegistration({ optionsJSON: options })
   return client.auth.passkey.signUp({ challengeId, response })

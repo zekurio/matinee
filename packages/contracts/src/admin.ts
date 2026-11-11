@@ -33,6 +33,11 @@ export type OidcSettings = t.infer<typeof OidcSettings>
  */
 export const PasskeySettings = t.object({
   enabled: t.boolean(),
+  /**
+   * Anyone may create an account with a passkey. Off, a new person needs
+   * an invite link from an admin.
+   */
+  allowSignUp: t.boolean(),
 })
 export type PasskeySettings = t.infer<typeof PasskeySettings>
 
@@ -41,7 +46,7 @@ export const SecretSource = t.enum(["saved", "environment"]).nullable()
 export type SecretSource = t.infer<typeof SecretSource>
 
 export const AdminAuthSettings = t.object({
-  /** Saved values over MATINEE_PASSKEYS_ENABLED. */
+  /** Saved values over MATINEE_PASSKEYS_ENABLED and MATINEE_OPEN_REGISTRATION. */
   passkeys: PasskeySettings,
   /** The provider in use: saved values over the environment's. */
   oidc: OidcSettings,

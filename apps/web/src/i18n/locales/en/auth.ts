@@ -15,6 +15,25 @@ export default defineMessages("auth", {
     "There's no way to sign in to this server right now. Ask the admin.",
   "auth.signIn.newHere": "New to this server?",
   "auth.signIn.createAccount": "Create account with a passkey",
+
+  // The page an invite link from Settings → Users opens.
+  "auth.invite.title": "You're invited to Matinee",
+  "auth.invite.description":
+    "Pick a username, then create a passkey to sign in with. This link works until {date}.",
+  "auth.invite.checking": "Checking the invite link",
+  "auth.invite.checkFailed": "Couldn't check the invite link",
+  "auth.invite.retry": "Try again",
+  "auth.invite.brokenTitle": "This invite link doesn't work",
+  "auth.invite.brokenDescription":
+    "It may have expired, been used, or been revoked, or part of it is missing. Ask whoever sent it for a new one.",
+  "auth.invite.unusableTitle": "This invite link can't be used",
+  "auth.invite.passkeysOff":
+    "Invite links create an account with a passkey, and passkeys are turned off on this server. Ask whoever sent it for another way in.",
+  "auth.invite.toSignIn": "Go to sign-in",
+  "auth.invite.signedInTitle": "You already have an account here",
+  "auth.invite.signedInDescription":
+    "You're signed in as {username}, so the invite stays unused. Leave it for the person it's meant for.",
+  "auth.invite.continue": "Continue to Matinee",
   "auth.setup.title": "Set up Matinee",
   "auth.setup.createAdmin": "Create the admin account.",
   "auth.setup.oidc":

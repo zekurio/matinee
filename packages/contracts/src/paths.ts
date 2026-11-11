@@ -324,6 +324,16 @@ export function appAuthorizePagePath(request: AppAuthorizeRequest): string {
  */
 export const APP_AUTHORIZE_PATH = "/api/auth/app/authorize"
 
+/**
+ * The web page an invite link opens. The token is the fragment, which the
+ * browser doesn't send, so the page hands it to `auth.invite.check`.
+ */
+export const INVITE_PAGE_PATH = "/invite"
+
+export function invitePagePath(token: string): string {
+  return `${INVITE_PAGE_PATH}#${token}`
+}
+
 /** The web page where someone enters the code an app shows. */
 export const DEVICE_LINK_PAGE_PATH = "/link"
 

@@ -77,6 +77,19 @@ export function formatDate(date: Date): string {
   return dates().format(date)
 }
 
+const dateTimes = perLocale(
+  (locale) =>
+    new Intl.DateTimeFormat(locale, {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }),
+)
+
+/** "Jun 4, 2026, 3:15 PM", for a moment that matters to the hour. */
+export function formatDateTime(date: Date): string {
+  return dateTimes().format(date)
+}
+
 /**
  * Time spent watching: "45m", "12h 30m", or "142h" from 100 hours up,
  * where minutes stop mattering.

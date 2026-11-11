@@ -28,7 +28,6 @@ import io.github.zekurio.matinee.api.AdminAuthSettings
 import io.github.zekurio.matinee.api.AuthSettingsInput
 import io.github.zekurio.matinee.api.Explicit
 import io.github.zekurio.matinee.api.OidcSettingsInput
-import io.github.zekurio.matinee.api.PasskeySettings
 import io.github.zekurio.matinee.ui.Reveal
 import io.github.zekurio.matinee.ui.components.Gap
 import io.github.zekurio.matinee.ui.components.LocalApi
@@ -89,8 +88,16 @@ private fun AuthForm(saved: AdminAuthSettings, saver: Saver, save: (AuthSettings
     Column {
         Section(stringResource(R.string.web_oidc_passkeys_title)) {
             Panel {
-                SwitchRow(stringResource(R.string.web_oidc_passkeys_title), passkeys.enabled, icon = Lucide.KeyRound) { passkeys = PasskeySettings(it) }
+                SwitchRow(stringResource(R.string.web_oidc_passkeys_title), passkeys.enabled, icon = Lucide.KeyRound) { passkeys = passkeys.copy(enabled = it) }
+                RowDivider()
+                SwitchRow(stringResource(R.string.web_oidc_passkeys_allowSignUp), passkeys.allowSignUp) { passkeys = passkeys.copy(allowSignUp = it) }
             }
+            Gap(8.dp)
+            Text(
+                stringResource(R.string.web_oidc_passkeys_allowSignUpHint),
+                style = MaterialTheme.typography.bodySmall,
+                color = Palette.Muted,
+            )
             // Accounts that can only sign in with a passkey, told before they're locked out.
             if (!passkeys.enabled && saved.unlinkedUsers > 0) {
                 Gap(8.dp)

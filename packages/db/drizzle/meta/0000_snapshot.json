@@ -1,5 +1,5 @@
 {
-  "id": "957b939f-2a5b-4a43-8140-592f5cfc8289",
+  "id": "bba9cd01-1d08-4beb-8c7b-0e4b97248b9e",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -553,6 +553,90 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.track_pick": {
+      "name": "track_pick",
+      "schema": "",
+      "columns": {
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "media_item_id": {
+          "name": "media_item_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "audio_stream_index": {
+          "name": "audio_stream_index",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "audio_picked_at": {
+          "name": "audio_picked_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "subtitle_track_id": {
+          "name": "subtitle_track_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "subtitle_picked_at": {
+          "name": "subtitle_picked_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "track_pick_user_id_user_id_fk": {
+          "name": "track_pick_user_id_user_id_fk",
+          "tableFrom": "track_pick",
+          "tableTo": "user",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "track_pick_media_item_id_media_item_id_fk": {
+          "name": "track_pick_media_item_id_media_item_id_fk",
+          "tableFrom": "track_pick",
+          "tableTo": "media_item",
+          "columnsFrom": [
+            "media_item_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "track_pick_user_id_media_item_id_pk": {
+          "name": "track_pick_user_id_media_item_id_pk",
+          "columns": [
+            "user_id",
+            "media_item_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.watch_progress": {
       "name": "watch_progress",
       "schema": "",
@@ -808,6 +892,79 @@
           "nullsNotDistinct": false,
           "columns": [
             "user_code"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.invite": {
+      "name": "invite",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "token_hash": {
+          "name": "token_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "label": {
+          "name": "label",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "invite_created_by_user_id_fk": {
+          "name": "invite_created_by_user_id_fk",
+          "tableFrom": "invite",
+          "tableTo": "user",
+          "columnsFrom": [
+            "created_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "invite_tokenHash_unique": {
+          "name": "invite_tokenHash_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "token_hash"
           ]
         }
       },
@@ -2542,12 +2699,6 @@
           "notNull": true,
           "default": "'user'"
         },
-        "theme_preferences": {
-          "name": "theme_preferences",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
         "playback_preferences": {
           "name": "playback_preferences",
           "type": "jsonb",
@@ -2624,91 +2775,6 @@
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.user_theme": {
-      "name": "user_theme",
-      "schema": "",
-      "columns": {
-        "user_id": {
-          "name": "user_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "variants": {
-          "name": "variants",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "guided": {
-          "name": "guided",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "user_theme_user_id_user_id_fk": {
-          "name": "user_theme_user_id_user_id_fk",
-          "tableFrom": "user_theme",
-          "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "user_theme_user_id_id_pk": {
-          "name": "user_theme_user_id_id_pk",
-          "columns": [
-            "user_id",
-            "id"
-          ]
-        }
-      },
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {
-        "user_theme_variants_check": {
-          "name": "user_theme_variants_check",
-          "value": "jsonb_typeof(\"user_theme\".\"variants\") = 'array' and jsonb_array_length(\"user_theme\".\"variants\") > 0"
-        }
-      },
       "isRLSEnabled": false
     }
   },

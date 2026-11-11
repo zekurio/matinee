@@ -2,6 +2,7 @@ import { t } from "./schema"
 
 export * from "./artwork"
 export * from "./auth"
+export * from "./invites"
 export * from "./library"
 export * from "./search"
 export * from "./sessions"

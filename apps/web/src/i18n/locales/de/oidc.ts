@@ -21,6 +21,9 @@ export default {
     other:
       "{count} Konten sind nicht mit {provider} verknüpft und können sich nicht anmelden, solange Passkeys aus sind. Solange sie noch angemeldet sind, können sie {provider} unter Einstellungen → Konto verknüpfen.",
   }),
+  "oidc.passkeys.allowSignUp": "Konten erstellen",
+  "oidc.passkeys.allowSignUpHint":
+    "Alle, die diesen Server erreichen, können ein Konto mit Passkey erstellen. Solange das aus ist, braucht eine neue Person einen Einladungslink aus Einstellungen → Benutzer.",
 
   "oidc.title": "Single Sign-on",
   "oidc.enabled": "Aktiviert",

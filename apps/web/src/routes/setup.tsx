@@ -170,7 +170,7 @@ function CreateAdmin() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const signUp = useMutation({
-    mutationFn: signUpWithPasskey,
+    mutationFn: (username: string) => signUpWithPasskey(username),
     onSuccess: async (user) => {
       queryClient.setQueryData(orpc.auth.session.queryKey(), { user })
       await queryClient.invalidateQueries({ queryKey: orpc.auth.config.key() })

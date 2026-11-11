@@ -74,4 +74,36 @@ export default {
   "users.role.removeDescription":
     "Das Konto und sein Wiedergabefortschritt bleiben erhalten.",
   "users.role.removeConfirm": "Admin-Rolle entziehen",
+
+  "users.invites.title": "Einladungslinks",
+  "users.invites.create": "Jemanden einladen",
+  "users.invites.passkeysOff":
+    "Ein Einladungslink erstellt ein Konto mit Passkey. Schalte Passkeys unter Einstellungen → Authentifizierung ein, um einen zu erstellen.",
+  "users.invites.loadFailed":
+    "Die Einladungslinks konnten nicht geladen werden. {error}",
+  "users.invites.empty":
+    "Kein Einladungslink wartet darauf, benutzt zu werden.",
+  "users.invites.noNote": "Keine Notiz",
+  "users.invites.made": "Erstellt am {date}",
+  "users.invites.expires": "Läuft {when} ab",
+  "users.invites.expiresAt": "Läuft am {date} ab",
+  "users.invites.revoke": "Einladungslink widerrufen",
+  "users.invites.revokeNamed": "Einladungslink für {note} widerrufen",
+  "users.invites.revoked": "Einladungslink widerrufen",
+  "users.invites.revokeFailed":
+    "Der Einladungslink konnte nicht widerrufen werden",
+
+  "users.invites.dialog.description":
+    "Die Person öffnet den Link, wählt einen Benutzernamen und erstellt einen Passkey.",
+  "users.invites.dialog.note": "Notiz",
+  "users.invites.dialog.noteHint": "Für wen er ist. Nur Admins sehen sie.",
+  "users.invites.dialog.expiry": "Gültig für",
+  "users.invites.dialog.submit": "Link erstellen",
+  "users.invites.link.title": "Schick diesen Link",
+  "users.invites.link.description":
+    "Er funktioniert einmal, bis {date}. Kopiere ihn jetzt, denn er kann nicht noch einmal angezeigt werden.",
+  "users.invites.link.label": "Einladungslink",
+  "users.invites.link.copy": "Kopieren",
+  "users.invites.link.copied": "Kopiert",
+  "users.invites.link.done": "Fertig",
 } satisfies TranslationOf<typeof source>

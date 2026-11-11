@@ -1,5 +1,12 @@
 import type { AdminUser } from "@matinee/contracts"
-import { oidcAccount, passkey, session, user, type UserRow } from "@matinee/db"
+import {
+  invite,
+  oidcAccount,
+  passkey,
+  session,
+  user,
+  type UserRow,
+} from "@matinee/db"
 import { asc, count, eq, inArray, max, sql } from "drizzle-orm"
 
 import { deleteAvatarFile } from "../auth/avatars"
@@ -109,6 +116,9 @@ export const adminUsers = {
         !(await otherAdminCanSignIn(tx, target.id))
       ) {
         throw badRequest(lastAdminMessage(target, context.user.id, "demote"))
+      }
+      if (target.role === "admin") {
+        await tx.delete(invite).where(eq(invite.createdBy, target.id))
       }
       // Sessions stay. Every request reads the role again, so the change
       // applies to the user's next one.

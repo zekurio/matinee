@@ -17,6 +17,8 @@
         <item quantity="one">%1$d account isn\'t linked to %2$s, so it can\'t sign in while passkeys are off. While still signed in, it can link %2$s under Settings → Account.</item>
         <item quantity="other">%1$d accounts aren\'t linked to %2$s, so they can\'t sign in while passkeys are off. While still signed in, they can link %2$s under Settings → Account.</item>
     </plurals>
+    <string name="web_oidc_passkeys_allowSignUp">Create accounts</string>
+    <string name="web_oidc_passkeys_allowSignUpHint">Anyone who can reach this server can create an account with a passkey. While this is off, a new person needs an invite link from Settings → Users.</string>
     <string name="web_oidc_title">Single sign-on</string>
     <string name="web_oidc_enabled">Enabled</string>
     <plurals name="web_oidc_ssoOnly">
