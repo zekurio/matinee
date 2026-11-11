@@ -63,6 +63,7 @@ import io.github.zekurio.matinee.ui.player.Subtitles
 import io.github.zekurio.matinee.ui.player.Video
 import io.github.zekurio.matinee.ui.player.rememberPlayerController
 import io.github.zekurio.matinee.ui.player.rememberSubtitleLook
+import io.github.zekurio.matinee.ui.player.rememberUpNext
 import io.github.zekurio.matinee.ui.theme.Palette
 import io.github.zekurio.matinee.ui.tv.Overscan
 import io.github.zekurio.matinee.ui.tv.TvButton
@@ -122,6 +123,9 @@ private fun TvPlayerFailure(title: String, message: String?, retry: () -> Unit) 
     }
 }
 
+/** The keys that press a button. */
+private val SELECT = setOf(Key.DirectionCenter, Key.Enter, Key.NumPadEnter)
+
 /** Keys held across events: the arrow gliding the seek bar, and a key whose release the screen already answered. */
 private class HeldKeys {
     var seeking: Key? = null
@@ -162,8 +166,17 @@ private fun TvPlayback(itemId: String, data: PlayerData, start: Double?) {
     var touched by remember { mutableIntStateOf(0) }
     // The controls came up for a held arrow, so focus goes to the seek bar.
     var focusSeek by remember { mutableStateOf(false) }
-    var upNextShown by remember { mutableStateOf(false) }
-    val visible = controls || controller.ended
+    // Once a file ends: the next episode, counting down as on the phone.
+    val next = if (controller.ended) rememberUpNext(controller, prefs.autoplayNext) else null
+    // Back took its button off the picture. It stays with the controls, as Play stays on the web's card.
+    var nextAway by remember(next) { mutableStateOf(false) }
+    val action = next?.let {
+        TvPictureAction(stringResource(R.string.player_next_episode), if (it.cancelled) null else it.left) { host.playInstead(it.item.id) }
+    }
+    // The button shows alone on the picture, and takes focus there.
+    val onPicture = action != null && !nextAway && !controls
+    // A file that ended with nothing after it brings the controls.
+    val visible = controls || (controller.ended && next == null)
     val targets = remember { TvTargets() }
     val root = remember { FocusRequester() }
     val held = remember { HeldKeys() }
@@ -196,18 +209,30 @@ private fun TvPlayback(itemId: String, data: PlayerData, start: Double?) {
         )
     }
 
-    // Focus follows the controls: on play, or the seek bar after a held
-    // arrow, as they come; on the screen itself, which takes the keys, as they go.
-    LaunchedEffect(visible) {
+    // Focus follows the controls: on play, the seek bar after a held arrow,
+    // or the button for the next episode, as they come; on that button or
+    // the screen itself, which takes the keys, as they go.
+    LaunchedEffect(visible, onPicture) {
         if (!visible) {
-            runCatching { root.requestFocus() }
+            if (onPicture) withFrameNanos {}
+            runCatching { (if (onPicture) targets.corner else root).requestFocus() }
             return@LaunchedEffect
         }
         withFrameNanos {}
-        if (menu != null || upNextShown) return@LaunchedEffect
-        val target = if (focusSeek) targets.seek else targets.play
+        if (menu != null) return@LaunchedEffect
+        val target = when {
+            focusSeek -> targets.seek
+            action != null && !nextAway -> targets.action
+            else -> targets.play
+        }
         focusSeek = false
         runCatching { target.requestFocus() }
+    }
+    // A file that ends with the controls up hands focus to the button.
+    LaunchedEffect(next) {
+        if (next == null || !controls || menu != null) return@LaunchedEffect
+        withFrameNanos {}
+        runCatching { targets.action.requestFocus() }
     }
     fun openMenu(which: Menu) {
         controls = true
@@ -219,7 +244,9 @@ private fun TvPlayback(itemId: String, data: PlayerData, start: Double?) {
             .fillMaxSize()
             .background(Color.Black)
             .focusRequester(root)
-            .tvRefocus { if (menu == null) runCatching { (if (visible) targets.play else root).requestFocus() } }
+            .tvRefocus {
+                if (menu == null) runCatching { (if (visible) targets.play else if (onPicture) targets.corner else root).requestFocus() }
+            }
             .onPreviewKeyEvent { event ->
                 val key = event.key
                 val down = event.type == KeyEventType.KeyDown
@@ -266,6 +293,8 @@ private fun TvPlayback(itemId: String, data: PlayerData, start: Double?) {
                     }
                     return@onPreviewKeyEvent true
                 }
+                // Select presses the button on the picture, rather than bringing the controls.
+                if (onPicture && key in SELECT) return@onPreviewKeyEvent false
                 if (!visible && down) {
                     when (key) {
                         Key.DirectionCenter, Key.Enter, Key.NumPadEnter, Key.DirectionUp, Key.DirectionDown -> {
@@ -299,7 +328,8 @@ private fun TvPlayback(itemId: String, data: PlayerData, start: Double?) {
         // Back hides the controls before it leaves; a menu's Back, composed later, comes first.
         BackHandler(enabled = controls && menu == null) { controls = false }
         AnimatedVisibility(visible, enter = Motion.fadeIn, exit = Motion.fadeOut) {
-            TvOverlay(controller, targets, back = back, ahead = ahead, scrub = scrub, keys = seekKeys, playRests = menu == null && !upNextShown && !focusSeek, onMenu = ::openMenu)
+            val playRests = menu == null && !focusSeek && !(action != null && !nextAway)
+            TvOverlay(controller, targets, back = back, ahead = ahead, scrub = scrub, keys = seekKeys, playRests = playRests, action = action, onMenu = ::openMenu)
         }
         // Over the scrim, so it doesn't dim them; they rise clear of the controls.
         Subtitles(
@@ -315,14 +345,22 @@ private fun TvPlayback(itemId: String, data: PlayerData, start: Double?) {
                 TvPlayerFailure(stringResource(R.string.player_error_lost), message, controller::retry)
             }
         }
-        if (controller.ended) {
-            TvUpNext(
-                controller,
-                autoplay = prefs.autoplayNext,
-                menuOpen = menu != null,
-                onShown = { upNextShown = it },
-                modifier = Modifier.align(Alignment.BottomEnd).padding(end = Overscan.Horizontal, bottom = TV_OVERLAY_HEIGHT + 8.dp),
-            )
+        // Back cancels the countdown and takes the button away; the controls still have it.
+        BackHandler(enabled = onPicture) {
+            next?.cancelled = true
+            nextAway = true
+        }
+        // The action drawn as it goes, after it ended.
+        var shownAction by remember { mutableStateOf(action) }
+        if (action != null) shownAction = action
+        // In the corner while the controls are away. They have it in their row, beside the menus.
+        AnimatedVisibility(
+            onPicture,
+            Modifier.align(Alignment.BottomEnd).padding(end = Overscan.Horizontal, bottom = Overscan.Vertical),
+            enter = Motion.fadeIn,
+            exit = Motion.fadeOut,
+        ) {
+            shownAction?.let { TvPictureButton(it, Modifier.focusRequester(targets.corner)) }
         }
         TvMenuPanel(menu, controller, prefs, button = targets.menus::getValue, onDismiss = { menu = null })
     }

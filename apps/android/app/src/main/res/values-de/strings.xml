@@ -459,6 +459,7 @@
     <string name="player_up_next">Als Nächstes</string>
     <string name="player_up_next_in">Startet in %1$d</string>
     <string name="player_up_next_cancel">Abbrechen</string>
+    <string name="player_next_episode">Nächste Folge</string>
 
     <string name="error_unreachable">Der Server ist gerade nicht erreichbar.</string>
     <string name="server_unreachable">Server nicht erreichbar</string>

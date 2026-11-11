@@ -1,5 +1,16 @@
 package io.github.zekurio.matinee.ui.player.tv
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.semantics.Role
+import io.github.zekurio.matinee.ui.tv.TvButtons
+import io.github.zekurio.matinee.ui.tv.tvClickable
+import io.github.zekurio.matinee.ui.tv.tvContent
+import io.github.zekurio.matinee.ui.tv.tvControl
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -81,11 +92,17 @@ import java.text.DateFormat
 import java.util.Date
 
 /** How high the overlay's block reaches from the bottom, for the subtitles to clear it. */
-internal val TV_OVERLAY_HEIGHT = 250.dp
+internal val TV_OVERLAY_HEIGHT = 190.dp
 
-/** Where focus goes in the overlay: the play button, the seek bar, and each menu's button. */
+/**
+ * Where focus goes in the player: the play button, the seek bar, each
+ * menu's button, and the button for the next episode, in the controls'
+ * row ([action]) or alone on the picture ([corner]).
+ */
 internal class TvTargets {
     val play = FocusRequester()
+    val action = FocusRequester()
+    val corner = FocusRequester()
     val seek = FocusRequester()
     val menus = Menu.entries.associateWith { FocusRequester() }
 }
@@ -94,10 +111,12 @@ internal class TvTargets {
 internal class TvSeekKeys(val press: (direction: Int, repeat: Int, atMs: Long) -> Unit, val release: () -> Unit)
 
 /**
- * The TV player's controls, laid out as TV players lay them: a scrim up
- * from the bottom, the title, one wide seek bar with the time on either
- * side, and a row of large buttons, play in the middle and the menus on
- * the right. All of it inside the overscan margins.
+ * The TV player's controls, kept low and small so the picture stays the
+ * thing to look at: a scrim up from the bottom, the title at the left, one
+ * wide seek bar with the time on either side, and one row of small round
+ * buttons, play and the skips at the left, the menus at the right, and
+ * [action], the button for the next episode, beside the menus when there
+ * is one. All of it inside the overscan margins.
  */
 @Composable
 internal fun TvOverlay(
@@ -108,6 +127,7 @@ internal fun TvOverlay(
     scrub: Double?,
     keys: TvSeekKeys,
     playRests: Boolean,
+    action: TvPictureAction?,
     onMenu: (Menu) -> Unit,
 ) {
     // Play is where focus rests, so it looks focused unless another control here has focus.
@@ -132,37 +152,33 @@ internal fun TvOverlay(
         // A click between the controls stays here, rather than reaching the picture and hiding them.
         Column(Modifier.align(Alignment.BottomStart).fillMaxWidth().pointerInput(Unit) { detectTapGestures { } }.padding(Overscan.Padding)) {
             Heading(controller)
-            Box(Modifier.height(20.dp))
+            Box(Modifier.height(12.dp))
             TvSeekBar(controller, scrub, targets, keys)
-            // Room for the name over a focused menu button.
-            Box(Modifier.height(40.dp))
-            Box(Modifier.fillMaxWidth()) {
-                Row(
-                    Modifier.align(Alignment.Center),
-                    horizontalArrangement = Arrangement.spacedBy(24.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    val up = Modifier.focusProperties { this.up = targets.seek }
+            Box(Modifier.height(16.dp))
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                val up = Modifier.focusProperties { this.up = targets.seek }
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
                     TvRoundButton(null, { controller.skip(-back) }, up, size = SMALL) {
                         SkipIcon(Lucide.RotateCcw, back, stringResource(R.string.player_skip_back, back.toInt()))
                     }
-                    TvRoundButton(null, controller::togglePlay, up.focusRequester(targets.play).onFocusChanged { onPlay = it.isFocused }, size = 68.dp, lit = playLit) {
+                    TvRoundButton(null, controller::togglePlay, up.focusRequester(targets.play).onFocusChanged { onPlay = it.isFocused }, size = PLAY, lit = playLit) {
                         val playing = controller.playing
                         LucideIcon(
                             if (playing) Lucide.Pause else Lucide.Play,
                             stringResource(if (playing) R.string.player_pause else R.string.player_play),
-                            size = 32.dp,
+                            size = 22.dp,
                         )
                     }
                     TvRoundButton(null, { controller.skip(ahead) }, up, size = SMALL) {
                         SkipIcon(Lucide.RotateCw, ahead, stringResource(R.string.player_skip_forward, ahead.toInt()))
                     }
                 }
-                Row(
-                    Modifier.align(Alignment.CenterEnd),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
+                Box(Modifier.weight(1f))
+                if (action != null) {
+                    TvPictureButton(action, up.focusRequester(targets.action))
+                    Box(Modifier.width(16.dp))
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
                     MenuButton(Menu.Audio, Lucide.AudioLines, R.string.player_menu_audio, targets, onMenu)
                     MenuButton(Menu.Subtitles, Lucide.Captions, R.string.player_menu_subtitles, targets, onMenu, on = controller.subtitle != null)
                     MenuButton(Menu.Settings, Lucide.Settings, R.string.player_menu_settings, targets, onMenu)
@@ -176,13 +192,16 @@ internal fun TvOverlay(
 private fun TextStyle.onPicture() = copy(shadow = Shadow(Color.Black.copy(alpha = 0.6f), Offset(0f, 2f), blurRadius = 10f))
 
 /** How wide the player's buttons are, but play's. */
-private val SMALL = 56.dp
+private val SMALL = 40.dp
+
+/** How wide play is: a step up from the others, the height of the app's other buttons. */
+private val PLAY = TvButtons.Height
 
 /** A skip arrow with how far it skips in its middle, as the phone draws it. */
 @Composable
 private fun SkipIcon(icon: Int, seconds: Double, label: String) {
     Box(contentAlignment = Alignment.Center) {
-        LucideIcon(icon, label, size = 34.dp)
+        LucideIcon(icon, label, size = 28.dp)
         Text(
             seconds.toInt().toString(),
             style = TvType.IconNumber,
@@ -203,7 +222,7 @@ private fun Heading(controller: PlayerController) {
             if (code != null) {
                 Text(
                     "$code · ${label.showName}",
-                    style = TvType.Title.onPicture(),
+                    style = TvType.Label.onPicture(),
                     color = Palette.Foreground.copy(alpha = 0.75f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -211,7 +230,7 @@ private fun Heading(controller: PlayerController) {
             }
             Text(
                 label.title,
-                style = TvType.Display.onPicture(),
+                style = TvType.Headline.onPicture(),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -226,46 +245,46 @@ private fun Heading(controller: PlayerController) {
                 stringResource(R.string.player_ends_at, ends),
                 style = TvType.Facts.onPicture(),
                 color = Palette.Foreground.copy(alpha = 0.75f),
-                modifier = Modifier.padding(start = 24.dp, bottom = 4.dp),
+                modifier = Modifier.padding(start = 24.dp, bottom = 3.dp),
             )
         }
     }
 }
 
 /**
- * A menu's button: its icon in a circle, and its name above it while
- * focused. Focus returns to it when the menu closes.
+ * A menu's button: its icon in a circle, which opens to say the menu's
+ * name while focused, as the app's other icon buttons do. Focus returns to
+ * it when the menu closes.
  */
 @Composable
 private fun MenuButton(menu: Menu, icon: Int, name: Int, targets: TvTargets, onMenu: (Menu) -> Unit, on: Boolean = false) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
     val text = stringResource(name)
-    Box(contentAlignment = Alignment.TopCenter) {
-        TvRoundButton(
-            null,
-            { onMenu(menu) },
-            Modifier.focusRequester(targets.menus.getValue(menu)).focusProperties { up = targets.seek },
-            size = SMALL,
-            interaction = interaction,
-        ) {
-            Box(contentAlignment = Alignment.BottomCenter) {
-                LucideIcon(icon, text, size = 26.dp)
-                // A line under the icon while subtitles are on, as on the phone.
-                if (on) Box(Modifier.offset(y = 7.dp).width(18.dp).height(3.dp).clip(RoundedCornerShape(2.dp)).background(Palette.Accent))
-            }
+    val content = tvContent(focused)
+    Row(
+        Modifier
+            .focusRequester(targets.menus.getValue(menu))
+            .focusProperties { up = targets.seek }
+            .height(SMALL)
+            .widthIn(min = SMALL)
+            .tvControl(focused, CircleShape)
+            .tvClickable(interaction, role = Role.Button, onClickLabel = text) { onMenu(menu) }
+            .padding(horizontal = 10.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(contentAlignment = Alignment.BottomCenter) {
+            LucideIcon(icon, text, size = 20.dp, tint = content)
+            // A line under the icon while subtitles are on, as on the phone.
+            if (on) Box(Modifier.offset(y = 6.dp).width(14.dp).height(2.dp).clip(RoundedCornerShape(1.dp)).background(Palette.Accent))
         }
-        if (focused) {
-            // Floats above the button without taking room in the row.
-            Text(
-                text,
-                style = TvType.Facts.onPicture(),
-                maxLines = 1,
-                modifier = Modifier.layout { measurable, _ ->
-                    val placeable = measurable.measure(Constraints())
-                    layout(0, 0) { placeable.place(-placeable.width / 2, -placeable.height - 10.dp.roundToPx()) }
-                },
-            )
+        AnimatedVisibility(
+            focused,
+            enter = expandHorizontally(Motion.enter()) + fadeIn(Motion.enter()),
+            exit = shrinkHorizontally(Motion.exit()) + fadeOut(Motion.exit()),
+        ) {
+            Text(text, style = TvType.Label, color = content, maxLines = 1, modifier = Modifier.padding(start = 8.dp, end = 4.dp))
         }
     }
 }

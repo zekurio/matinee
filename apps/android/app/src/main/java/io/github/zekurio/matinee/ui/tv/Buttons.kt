@@ -44,7 +44,8 @@ object TvButtons {
  * [label], with [detail] after it, dimmer, like the time left, and a
  * [trailingIcon] at its end, like the chevron of one that opens a choice.
  * [active] marks one whose choice is in force, like a filter that narrows
- * a grid, in the accent. Focused it fills with the text color.
+ * a grid, in the accent. Focused it fills with the text color. [rest]
+ * replaces the fill it has without focus, as for one on the moving picture.
  */
 @Composable
 fun TvButton(
@@ -56,6 +57,7 @@ fun TvButton(
     @DrawableRes trailingIcon: Int? = null,
     active: Boolean = false,
     enabled: Boolean = true,
+    rest: Color? = null,
 ) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
@@ -63,7 +65,7 @@ fun TvButton(
     Row(
         modifier
             .height(TvButtons.Height)
-            .tvControl(focused, CircleShape, rest = if (active) Palette.AccentSoft else TvFocus.Rest)
+            .tvControl(focused, CircleShape, rest = rest ?: if (active) Palette.AccentSoft else TvFocus.Rest)
             .tvClickable(interaction, enabled = enabled, role = Role.Button, onClick = onClick)
             .padding(start = if (icon != null) 20.dp else 24.dp, end = if (trailingIcon != null) 16.dp else 24.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
