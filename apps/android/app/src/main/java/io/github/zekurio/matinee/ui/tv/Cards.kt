@@ -3,6 +3,7 @@ package io.github.zekurio.matinee.ui.tv
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.BringIntoViewSpec
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -36,6 +37,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
@@ -43,6 +51,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import io.github.zekurio.matinee.ui.components.ActionTarget
 import io.github.zekurio.matinee.ui.components.ImageSource
 import io.github.zekurio.matinee.ui.components.Picture
 import io.github.zekurio.matinee.ui.components.tone
@@ -71,8 +80,10 @@ object TvPage {
 
 /**
  * A card's picture as the focus target: [art] over the item's tone, with
- * the TV focus look. Select runs [onClick]. Put the card's caption, if
- * any, outside it, so only the picture grows.
+ * the TV focus look. Select runs [onClick]. With [menu], holding Select or
+ * pressing Menu opens the actions panel for it instead, and focus comes
+ * back here when the panel closes. Put the card's caption, if any,
+ * outside it, so only the picture grows.
  */
 @Composable
 fun TvArtCard(
@@ -81,25 +92,49 @@ fun TvArtCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     contentDescription: String? = null,
+    menu: ActionTarget? = null,
     art: @Composable BoxScope.() -> Unit,
 ) {
     val interaction = remember { MutableInteractionSource() }
+    val panel = LocalTvMenu.current
+    val requester = remember { FocusRequester() }
+    val open: (() -> Unit)? = if (menu != null && panel != null) ({ panel.open(menu, requester) }) else null
     Box(
         modifier
             .aspectRatio(aspect)
+            .focusRequester(requester)
+            .onKeyEvent { event ->
+                if (open == null || event.key != Key.Menu) return@onKeyEvent false
+                if (event.type == KeyEventType.KeyUp) open()
+                true
+            }
             .tvFocus(interaction, TvCards.Shape)
             .clip(TvCards.Shape)
             .tone(toneKey)
-            .clickable(interaction, indication = null, role = Role.Button, onClickLabel = contentDescription, onClick = onClick),
+            .combinedClickable(
+                interaction,
+                indication = null,
+                role = Role.Button,
+                onClickLabel = contentDescription,
+                onLongClick = open,
+                onClick = onClick,
+            ),
         contentAlignment = Alignment.Center,
         content = art,
     )
 }
 
-/** A movie or show as its 2:3 poster, its name on the tone until the picture loads. */
+/** A movie or show as its 2:3 poster, its name on the tone until the picture loads. [menu] is as on [TvArtCard]. */
 @Composable
-fun TvPosterCard(name: String, poster: ImageSource?, onClick: () -> Unit, modifier: Modifier = Modifier, watched: Boolean = false) {
-    TvArtCard(name, 2f / 3f, onClick, modifier.width(TvCards.PosterWidth), contentDescription = name) {
+fun TvPosterCard(
+    name: String,
+    poster: ImageSource?,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    watched: Boolean = false,
+    menu: ActionTarget? = null,
+) {
+    TvArtCard(name, 2f / 3f, onClick, modifier.width(TvCards.PosterWidth), contentDescription = name, menu = menu) {
         Text(
             name,
             style = TvType.Label,
@@ -117,7 +152,7 @@ fun TvPosterCard(name: String, poster: ImageSource?, onClick: () -> Unit, modifi
 /**
  * A file as a 16:9 still, for Continue watching and Next up, with how far
  * in the person is along its bottom and a caption under it. [focus] goes
- * on the picture, which is what takes focus.
+ * on the picture, which is what takes focus. [menu] is as on [TvArtCard].
  */
 @Composable
 fun TvLandscapeCard(
@@ -130,9 +165,10 @@ fun TvLandscapeCard(
     progress: Float? = null,
     watched: Boolean = false,
     focus: Modifier = Modifier,
+    menu: ActionTarget? = null,
 ) {
     Column(modifier.width(TvCards.LandscapeWidth)) {
-        TvArtCard(toneKey, 16f / 9f, onClick, focus.fillMaxWidth(), contentDescription = caption) {
+        TvArtCard(toneKey, 16f / 9f, onClick, focus.fillMaxWidth(), contentDescription = caption, menu = menu) {
             Picture(art, Modifier.fillMaxSize())
             if (watched) TvWatchedMark(Modifier.align(Alignment.TopEnd).padding(8.dp))
             else if (progress != null && progress > 0f) TvProgress(progress, Modifier.align(Alignment.BottomCenter).padding(10.dp))

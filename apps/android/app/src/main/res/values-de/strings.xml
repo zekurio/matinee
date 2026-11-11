@@ -551,4 +551,6 @@
     <string name="tv_page_episode">Folge</string>
     <string name="tv_page_person">Person</string>
     <string name="tv_page_browse">Durchsuchen</string>
+    <string name="tv_detail_people">Besetzung und Stab</string>
+    <string name="tv_detail_links">Genres und Studios</string>
 </resources>

@@ -68,6 +68,10 @@ import io.github.zekurio.matinee.ui.components.LocalSnackbar
 import io.github.zekurio.matinee.ui.components.Lucide
 import io.github.zekurio.matinee.ui.rememberLoader
 import io.github.zekurio.matinee.ui.theme.Palette
+import io.github.zekurio.matinee.ui.tv.detail.TvEpisodeScreen
+import io.github.zekurio.matinee.ui.tv.detail.TvPersonScreen
+import io.github.zekurio.matinee.ui.tv.detail.TvSeasonScreen
+import io.github.zekurio.matinee.ui.tv.detail.TvTitleScreen
 import io.github.zekurio.matinee.ui.tv.home.TvHomeScreen
 
 /**
@@ -82,8 +86,9 @@ fun TvSignedInApp(session: Session, user: User) {
     val controller = rememberNavController()
     val navigator = remember(controller) { Navigator(controller) }
     val actionScope = rememberCoroutineScope()
-    // TV pages don't open the phone's actions sheet; the local is there for shared code that reads it.
+    // The phone's actions, shown in the TV's own panel rather than its sheet.
     val actions = remember { Actions(actionScope) }
+    val menu = remember(actions) { TvMenu(actions) }
     val snackbar = remember { SnackbarHostState() }
     val backdrop = remember { TvBackdrop() }
     val drawer = remember { DrawerState() }
@@ -98,6 +103,7 @@ fun TvSignedInApp(session: Session, user: User) {
         LocalUser provides user,
         LocalTvBackdrop provides backdrop,
         LocalTvPageFocus provides pageFocus,
+        LocalTvMenu provides menu,
     ) {
         val stack by controller.currentBackStack.collectAsState()
         val current = drawerKey(stack)
@@ -115,6 +121,7 @@ fun TvSignedInApp(session: Session, user: User) {
             // Lowered so it lines up with the profile picture at the top of the rail.
             TvClock(Modifier.align(Alignment.TopEnd).padding(top = Overscan.Vertical + 11.dp, end = Overscan.Horizontal))
             Drawer(user, current, drawer, navigator, onLeave = { toPage() })
+            TvActionsPanel(menu, fallback = { toPage() })
             SnackbarHost(
                 snackbar,
                 Modifier.align(Alignment.BottomCenter).padding(start = TvPage.Start, end = TvPage.End, bottom = Overscan.Vertical + 16.dp),
@@ -133,8 +140,9 @@ fun TvSignedInApp(session: Session, user: User) {
         }
         // After the pages, so these come before the NavHost's own Back.
         // Home with the drawer shut: Back opens it; with it open, Back leaves the app.
-        BackHandler(enabled = onHome && !drawer.isOpen) { drawer.open() }
-        BackHandler(enabled = !onHome && drawer.isOpen) { toPage() }
+        // The actions panel, while open, takes Back itself.
+        BackHandler(enabled = onHome && !drawer.isOpen && !menu.isOpen) { drawer.open() }
+        BackHandler(enabled = !onHome && drawer.isOpen && !menu.isOpen) { toPage() }
     }
 }
 
@@ -194,8 +202,8 @@ private fun drawerKey(stack: List<NavBackStackEntry>): String {
 
 /**
  * The TV's pages, by the phone's routes. Pages change with a short fade,
- * the old one gone before the new one is in. Only Home is written so far;
- * the rest are [TvPageStub]s that later tasks replace.
+ * the old one gone before the new one is in. Pages not written yet are
+ * [TvPageStub]s that later tasks replace.
  */
 @Composable
 private fun Pages(controller: androidx.navigation.NavHostController) {
@@ -211,10 +219,13 @@ private fun Pages(controller: androidx.navigation.NavHostController) {
         stub<SearchRoute>(R.string.search_title)
         stub<FavoritesRoute>(R.string.favorites_title)
         stub<LibraryRoute>(R.string.tv_page_library)
-        stub<TitleRoute>(R.string.tv_page_title)
-        stub<SeasonRoute>(R.string.tv_page_season)
-        stub<EpisodeRoute>(R.string.tv_page_episode)
-        stub<PersonRoute>(R.string.tv_page_person)
+        composable<TitleRoute> { TvTitleScreen(it.toRoute<TitleRoute>().id) }
+        composable<SeasonRoute> { entry ->
+            val route = entry.toRoute<SeasonRoute>()
+            TvSeasonScreen(route.titleId, route.season.takeIf { it >= 0 })
+        }
+        composable<EpisodeRoute> { TvEpisodeScreen(it.toRoute<EpisodeRoute>().itemId) }
+        composable<PersonRoute> { TvPersonScreen(it.toRoute<PersonRoute>().name) }
         stub<BrowseRoute>(R.string.tv_page_browse)
         stub<ProfileRoute>(R.string.tab_profile)
         stub<RecentRoute>(R.string.tab_profile)

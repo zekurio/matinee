@@ -52,13 +52,10 @@ import io.github.zekurio.matinee.api.CreditKind
 import io.github.zekurio.matinee.api.MediaItem
 import io.github.zekurio.matinee.api.Season
 import io.github.zekurio.matinee.api.Title
-import io.github.zekurio.matinee.api.isShow
 import io.github.zekurio.matinee.api.summary
 import io.github.zekurio.matinee.app
-import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.LocalNavigator
 import io.github.zekurio.matinee.ui.browse.creditKind
-import io.github.zekurio.matinee.ui.channelLayout
 import io.github.zekurio.matinee.ui.components.ArtFrame
 import io.github.zekurio.matinee.ui.components.Badge
 import io.github.zekurio.matinee.ui.components.CardShape
@@ -94,14 +91,11 @@ import io.github.zekurio.matinee.ui.formatDay
 import io.github.zekurio.matinee.ui.formatRating
 import io.github.zekurio.matinee.ui.formatRuntime
 import io.github.zekurio.matinee.ui.itemLabel
-import io.github.zekurio.matinee.ui.languageList
 import io.github.zekurio.matinee.ui.progressRatio
-import io.github.zekurio.matinee.ui.rememberLoader
 import io.github.zekurio.matinee.ui.runtimeMinutes
 import io.github.zekurio.matinee.ui.seasonName
 import io.github.zekurio.matinee.ui.theme.Palette
 import io.github.zekurio.matinee.ui.timeLeft
-import io.github.zekurio.matinee.ui.videoSummary
 
 /** The art across the top of a title's pages, faded into the page under the header. */
 @Composable
@@ -271,12 +265,7 @@ fun TitleHeading(title: Title, flags: List<String>, poster: Boolean = true) {
                 Text(title.originalName, style = MaterialTheme.typography.bodyLarge, color = Palette.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             Gap(8.dp)
-            val facts = listOfNotNull(
-                title.year?.toString(),
-                if (title.isShow) res.getQuantityString(R.plurals.media_episode_count, title.itemCount, title.itemCount)
-                else formatRuntime(title.runtimeMinutes, res),
-                if (title.isShow) title.status else null,
-            )
+            val facts = titleFacts(title, res)
             if (facts.isNotEmpty()) {
                 Text(facts.joinToString(" · "), style = MaterialTheme.typography.bodyMedium, color = Palette.Foreground.copy(alpha = 0.8f))
             }
@@ -462,45 +451,14 @@ fun StillFrame(item: MediaItem, watched: Boolean) {
     }
 }
 
-/** The tracks a file holds, as the server lists them for the player. */
-private data class FileTracks(val audio: List<String?>, val subtitles: List<String?>)
-
-/**
- * What a file holds, a line each with its icon: the picture, the audio's
- * languages with the main track's layout, and the subtitles' languages.
- * The languages come from the server's track lists, which include
- * subtitle files beside the video; until they load, or if they fail, from
- * what the probe found in the file.
- */
+/** What a file holds, a line each with its icon: the picture, the audio, and the subtitles, from [rememberFileInfo]. */
 @Composable
 fun MediaInfo(item: MediaItem, modifier: Modifier = Modifier) {
-    val probe = item.probe ?: return
-    val res = LocalResources.current
-    val tracks = rememberLoader("tracks-${item.id}") {
-        FileTracks(
-            audio = media.audio(item.id).sortedByDescending { it.primary }.map { it.language },
-            subtitles = media.subtitles(item.id).tracks.map { it.language },
-        )
-    }
-    val loaded = (tracks.state as? Load.Ready)?.value
-    val audio = loaded?.audio ?: probe.audio.sortedByDescending { it.default }.map { it.language }
-    val subtitles = loaded?.subtitles ?: probe.subtitles.map { it.language }
-    val main = probe.audio.firstOrNull { it.default } ?: probe.audio.firstOrNull()
-
-    val video = videoSummary(item)
-    // Each language once; a file whose tracks don't say gets their count instead.
-    val audioLine = listOfNotNull(
-        languageList(audio) ?: audio.size.takeIf { it > 0 }?.let { res.getQuantityString(R.plurals.media_audio_tracks, it, it) },
-        main?.let(::channelLayout),
-    ).joinToString(" · ").ifEmpty { null }
-    val subtitleLine = languageList(subtitles)
-        ?: subtitles.size.takeIf { it > 0 }?.let { res.getQuantityString(R.plurals.media_subtitles, it, it) }
-    if (video == null && audioLine == null && subtitleLine == null) return
-
+    val info = rememberFileInfo(item) ?: return
     Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        video?.let { InfoLine(Lucide.Film, stringResource(R.string.media_info_video), it) }
-        audioLine?.let { InfoLine(Lucide.AudioLines, stringResource(R.string.media_info_audio), it) }
-        subtitleLine?.let { InfoLine(Lucide.Captions, stringResource(R.string.media_info_subtitles), it) }
+        info.video?.let { InfoLine(Lucide.Film, stringResource(R.string.media_info_video), it) }
+        info.audio?.let { InfoLine(Lucide.AudioLines, stringResource(R.string.media_info_audio), it) }
+        info.subtitles?.let { InfoLine(Lucide.Captions, stringResource(R.string.media_info_subtitles), it) }
     }
 }
 

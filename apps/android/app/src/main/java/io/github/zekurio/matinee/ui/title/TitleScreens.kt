@@ -57,15 +57,11 @@ import io.github.zekurio.matinee.ui.components.hasActions
 import io.github.zekurio.matinee.ui.components.isWide
 import io.github.zekurio.matinee.ui.components.railItemWidth
 import io.github.zekurio.matinee.ui.episodeCode
-import io.github.zekurio.matinee.ui.formatDay
-import io.github.zekurio.matinee.ui.formatRuntime
 import io.github.zekurio.matinee.ui.itemLabel
 import io.github.zekurio.matinee.ui.mediaFlags
 import io.github.zekurio.matinee.ui.rememberLoader
-import io.github.zekurio.matinee.ui.runtimeMinutes
 import io.github.zekurio.matinee.ui.seasonName
 import io.github.zekurio.matinee.ui.theme.Palette
-import io.github.zekurio.matinee.ui.timeLeft
 
 /** How far down the backdrop a page's heading starts, so it overlaps the art's faded end. */
 @Composable
@@ -144,7 +140,7 @@ private fun TitlePage(title: Title) {
             item(key = "actions") {
                 ActionRow(
                     play = next,
-                    resume = next?.progress?.let { !it.completed && it.positionSeconds > 0 } == true,
+                    resume = isResuming(next),
                     playDetail = if (title.isShow) next?.let { episodeCode(it, res) } else null,
                     name = title.name,
                     watched = viewer.isWatched(summary),
@@ -156,7 +152,7 @@ private fun TitlePage(title: Title) {
                 )
             }
             if (title.isShow) {
-                if (next != null && next.progress?.completed != true && title.seasons.size > 1) {
+                if (next != null && showsNextUp(title)) {
                     item(key = "nextUp") { NextUpEpisode(next) }
                 }
                 if (only != null) {
@@ -176,9 +172,7 @@ private fun TitlePage(title: Title) {
 /** A season's episodes as a row of stills, starting at the one up next. */
 @Composable
 private fun SeasonEpisodesRail(title: Title, season: Season, next: MediaItem?) {
-    val items = rememberLoader("items-${title.id}-${season.number}") {
-        if (season.number == null) looseItems(title.id) else titleItems(title.id, season.number)
-    }
+    val items = rememberSeasonItems(title.id, season.number)
     val list = (items.state as? Load.Ready)?.value ?: return
     val state = androidx.compose.foundation.lazy.rememberLazyListState(
         initialFirstVisibleItemIndex = list.indexOfFirst { it.id == next?.id }.coerceAtLeast(0),
@@ -221,15 +215,10 @@ private fun SeasonPage(title: Title, season: Season) {
     val actions = LocalActions.current
     val res = LocalResources.current
     val viewer = LocalContext.current.app.viewer
-    val items = rememberLoader("items-${title.id}-${season.number}") {
-        if (season.number == null) looseItems(title.id) else titleItems(title.id, season.number)
-    }
+    val items = rememberSeasonItems(title.id, season.number)
     val list = (items.state as? Load.Ready)?.value
-    // What Play starts in this season: the episode in progress, else the first unwatched.
-    val next = list?.firstOrNull { it.progress?.completed == false && it.progress.positionSeconds > 0 }
-        ?: list?.firstOrNull { !viewer.isWatched(it) }
-        ?: list?.firstOrNull()
-    val allWatched = list?.isNotEmpty() == true && list.all { viewer.isWatched(it) }
+    val next = seasonNext(list, viewer)
+    val allWatched = seasonWatched(list, viewer)
     val listState = rememberLazyListState()
     Box(Modifier.fillMaxSize()) {
         LazyColumn(
@@ -276,20 +265,12 @@ private fun SeasonPage(title: Title, season: Season) {
             item(key = "actions") {
                 ActionRow(
                     play = next,
-                    resume = next?.progress?.let { !it.completed && it.positionSeconds > 0 } == true,
+                    resume = isResuming(next),
                     playDetail = next?.let { episodeCode(it, res) },
                     name = "${title.name} · ${seasonName(season.number, res)}",
                     watched = allWatched,
                     favorite = viewer.isFavorite(title.summary),
-                    onWatched = { watched, at ->
-                        val number = season.number
-                        if (number == null) {
-                            // Null in the title-wide operation means every season, not the unnumbered files.
-                            api.looseItems(title.id).forEach { viewer.setWatched(api, it, watched, at) }
-                        } else {
-                            viewer.setWatched(api, title.summary, watched, number, at)
-                        }
-                    },
+                    onWatched = { watched, at -> setSeasonWatched(api, viewer, title.summary, season.number, watched, at) },
                     onFavorite = { viewer.setFavorite(api, title.summary, !viewer.isFavorite(title.summary)) },
                     onMore = ActionTarget.Season(title.summary, season, here = true)
                         .let { more -> if (hasActions(more)) ({ actions.open(more) }) else null },
@@ -371,7 +352,7 @@ private fun EpisodePage(item: MediaItem) {
             item(key = "actions") {
                 ActionRow(
                     play = item,
-                    resume = item.progress?.let { !it.completed && it.positionSeconds > 0 } == true,
+                    resume = isResuming(item),
                     playDetail = null,
                     name = label.title,
                     watched = viewer.isWatched(item),
@@ -425,11 +406,7 @@ private fun EpisodeHeading(item: MediaItem) {
         Gap(6.dp)
         Text(label.title, style = MaterialTheme.typography.headlineLarge, maxLines = 3, overflow = TextOverflow.Ellipsis)
         Gap(10.dp)
-        val resuming = item.progress?.let { !it.completed && it.positionSeconds > 0 } == true && !viewer.isWatched(item)
-        val facts = listOfNotNull(
-            formatDay(item.episode?.airDate),
-            if (resuming) timeLeft(item, res) else formatRuntime(runtimeMinutes(item), res),
-        ).joinToString(" · ")
+        val facts = episodeFacts(item, viewer, res).joinToString(" · ")
         val rating = title?.contentRating
         if (facts.isNotEmpty() || rating != null) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -446,9 +423,7 @@ private fun MoreFromSeason(item: MediaItem, titleId: String) {
     val nav = LocalNavigator.current
     val res = LocalResources.current
     val season = item.seasonNumber
-    val items = rememberLoader("items-$titleId-$season") {
-        if (season == null) looseItems(titleId) else titleItems(titleId, season)
-    }
+    val items = rememberSeasonItems(titleId, season)
     val others = (items.state as? Load.Ready)?.value?.filter { it.id != item.id }.orEmpty()
     if (others.isEmpty()) return
     Rail(

@@ -580,4 +580,6 @@
     <string name="tv_page_episode">Episode</string>
     <string name="tv_page_person">Person</string>
     <string name="tv_page_browse">Browse</string>
+    <string name="tv_detail_people">Cast and crew</string>
+    <string name="tv_detail_links">Genres and studios</string>
 </resources>

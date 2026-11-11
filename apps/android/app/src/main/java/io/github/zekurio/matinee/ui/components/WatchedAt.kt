@@ -138,7 +138,7 @@ private fun WatchedDatePicker(onPick: (String) -> Unit, onDismiss: () -> Unit) {
  * for a release date, so the play lands on that day in nearly every zone.
  * Today is now, since noon may not have come yet.
  */
-private fun watchedAtOn(utcMillis: Long): String {
+internal fun watchedAtOn(utcMillis: Long): String {
     val day = Instant.ofEpochMilli(utcMillis).atZone(ZoneOffset.UTC).toLocalDate()
     val noon = day.atTime(12, 0).atZone(ZoneId.systemDefault()).toInstant()
     return minOf(noon, Instant.now()).toString()

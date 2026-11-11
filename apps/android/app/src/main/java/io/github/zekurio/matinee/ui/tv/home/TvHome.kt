@@ -49,6 +49,7 @@ import io.github.zekurio.matinee.ui.Loader
 import io.github.zekurio.matinee.ui.LocalNavigator
 import io.github.zekurio.matinee.ui.LocalUser
 import io.github.zekurio.matinee.ui.Motion
+import io.github.zekurio.matinee.ui.components.ActionTarget
 import io.github.zekurio.matinee.ui.components.LocalApi
 import io.github.zekurio.matinee.ui.components.Lucide
 import io.github.zekurio.matinee.ui.components.LucideIcon
@@ -188,6 +189,7 @@ private fun LazyListScope.featuredRow(
                     api.art(slide.title.images.poster),
                     onClick = { nav.title(slide.title) },
                     watched = viewer.isWatched(slide.title),
+                    menu = ActionTarget.Title(slide.title, null, here = false),
                     modifier = with(memory) { Modifier.item(FEATURED, slide.title.id) }.onFocusChanged { if (it.isFocused) onFocus(info) },
                 )
             }
@@ -230,6 +232,7 @@ private fun LazyListScope.itemRow(
                         onClick = { nav.item(item) },
                         progress = progressRatio(item),
                         watched = viewer.isWatched(item),
+                        menu = ActionTarget.Item(item, here = false),
                         focus = with(memory) { Modifier.item(key, item.id) }.onFocusChanged { if (it.isFocused) onFocus(info) },
                     )
                 }
@@ -272,6 +275,7 @@ private fun ShelfRow(library: Library, memory: TvFocusMemory, firsts: MutableMap
                         card.poster,
                         onClick = { card.open(nav) },
                         watched = viewer.isWatched(entry.title),
+                        menu = ActionTarget.Title(entry.title, null, here = false),
                         modifier = with(memory) { Modifier.item(key, entry.title.id) }.onFocusChanged { if (it.isFocused) onFocus(info) },
                     )
                 }
