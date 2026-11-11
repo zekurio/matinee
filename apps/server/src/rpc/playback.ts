@@ -324,6 +324,7 @@ export const home = {
     finished.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
 
     const next = []
+    const lastWatched = new Map<string, Date>()
     for (const row of finished) {
       if (next.length >= input.limit) break
       if (!row.titleId) continue
@@ -343,11 +344,19 @@ export const home = {
         const completed = state.get(candidate.id)
         if (completed === true) continue
         // An episode in progress already shows under "continue watching".
-        if (completed === undefined) next.push(candidate)
+        if (completed === undefined) {
+          next.push(candidate)
+          lastWatched.set(candidate.id, row.updatedAt)
+        }
         break
       }
     }
-    return publicItems(next, context.user.id)
+    const items = await publicItems(next, context.user.id)
+    return items.map((item) => ({
+      item,
+      // Every candidate above has its show's timestamp.
+      lastWatchedAt: lastWatched.get(item.id)!,
+    }))
   }),
 
   featured: authed.home.featured.handler(async ({ context, input }) => {

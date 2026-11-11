@@ -72,7 +72,7 @@ fun HomeScreen() {
 private fun OnlineHomeScreen() {
     val libraries = rememberLoader("libraries") { libraries.list() }
     val resume = rememberLoader("continue") { home.continueWatching(limit = 20) }
-    val nextUp = rememberLoader("nextUp") { home.nextUp(limit = 20) }
+    val nextUp = rememberLoader("nextUp") { home.nextUp(limit = 20).map { it.item } }
     val featured = rememberLoader("featured") { home.featured() }
     // What the server puts in these two rows, kept for offline Home.
     val context = LocalContext.current

@@ -1528,6 +1528,12 @@ data class NamedCount(
 )
 
 @Serializable
+data class NextUpEntry(
+    val item: MediaItem,
+    val lastWatchedAt: String,
+)
+
+@Serializable
 data class OidcAccount(
     val label: String?,
     val hasPicture: Boolean,

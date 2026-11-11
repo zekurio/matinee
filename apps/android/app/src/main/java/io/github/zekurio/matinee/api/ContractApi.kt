@@ -856,13 +856,13 @@ class HomeApi internal constructor(private val transport: ApiTransport) {
         )
 
     /** `GET /home/next-up` */
-    suspend fun nextUp(limit: Int? = null): List<MediaItem> =
+    suspend fun nextUp(limit: Int? = null): List<NextUpEntry> =
         transport.call(
             "GET",
             listOf("home", "next-up"),
             listOf("limit" to limit?.toString()),
             null,
-            ListSerializer(MediaItem.serializer()),
+            ListSerializer(NextUpEntry.serializer()),
         )
 
     /** `GET /home/featured` */

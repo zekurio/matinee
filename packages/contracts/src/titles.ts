@@ -150,6 +150,14 @@ export const MediaItem = t.object({
 })
 export type MediaItem = t.infer<typeof MediaItem>
 
+/** The next unstarted episode of a show the viewer has watched. */
+export const NextUpEntry = t.object({
+  item: MediaItem,
+  /** When the viewer last finished an episode of this show, used for ordering. */
+  lastWatchedAt: t.date(),
+})
+export type NextUpEntry = t.infer<typeof NextUpEntry>
+
 /** A title in Home's banner. */
 export const FeaturedTitle = t.object({
   title: TitleSummary,

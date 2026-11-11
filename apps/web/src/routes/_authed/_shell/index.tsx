@@ -150,7 +150,7 @@ function Home() {
         ) : (
           hasNextUp && (
             <Rail title={tr("browse.home.nextUp")}>
-              {nextUp.data?.map((item) => (
+              {nextUp.data?.map(({ item }) => (
                 <RailItem key={item.id}>
                   <EpisodeCard item={item} />
                 </RailItem>

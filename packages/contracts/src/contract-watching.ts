@@ -9,7 +9,13 @@ import {
 } from "./playback-start"
 import { PlaybackOptions } from "./preferences"
 import { t } from "./schema"
-import { FeaturedTitle, MediaItem, TitleSummary, WatchedAt } from "./schemas"
+import {
+  FeaturedTitle,
+  MediaItem,
+  NextUpEntry,
+  TitleSummary,
+  WatchedAt,
+} from "./schemas"
 import {
   Leaderboard,
   LibraryStats,
@@ -177,10 +183,13 @@ export const homeContract = oc.tag("Home").router({
   continueWatching: get("/home/continue-watching")
     .input(t.object({ limit: t.number().int().min(1).max(50).$default(12) }))
     .output(t.array(MediaItem)),
-  /** For each show the user is watching, the episode after the last one finished. */
+  /**
+   * For each show the user is watching, the episode after the last one
+   * finished, ordered by lastWatchedAt, most recent first.
+   */
   nextUp: get("/home/next-up")
     .input(t.object({ limit: t.number().int().min(1).max(50).$default(12) }))
-    .output(t.array(MediaItem)),
+    .output(t.array(NextUpEntry)),
   /**
    * Titles for the banner across every library: the newest, alternating
    * with well-rated ones picked at random. Leaves out titles the user
