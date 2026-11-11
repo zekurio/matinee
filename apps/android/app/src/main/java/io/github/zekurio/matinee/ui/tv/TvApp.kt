@@ -103,6 +103,7 @@ fun TvSignedInApp(session: Session, user: User) {
     val page = remember { FocusRequester() }
     val pageFocus = remember { TvPageFocus() }
     val panels = remember { TvOpenPanels() }
+    val scrolled = remember { TvScrolledPages() }
     val toPage = { if (pageFocus.restore?.invoke() != true) runCatching { page.requestFocus() } }
     CompositionLocalProvider(
         LocalApi provides session.requireApi(),
@@ -114,6 +115,7 @@ fun TvSignedInApp(session: Session, user: User) {
         LocalTvPageFocus provides pageFocus,
         LocalTvMenu provides menu,
         LocalTvOpenPanels provides panels,
+        LocalTvScrolledPages provides scrolled,
     ) {
         val stack by controller.currentBackStack.collectAsState()
         val current = drawerKey(stack)
@@ -129,8 +131,9 @@ fun TvSignedInApp(session: Session, user: User) {
             ) {
                 Pages(controller)
             }
-            // Lowered so it lines up with the profile picture at the top of the rail; gone under a panel.
-            val clock by animateFloatAsState(if (panels.count > 0) 0f else 1f, Motion.color(), label = "clock")
+            // Lowered so it lines up with the profile picture at the top of the rail.
+            // Gone under a panel, and while a page has scrolled its content up to it.
+            val clock by animateFloatAsState(if (panels.count > 0 || scrolled.count > 0) 0f else 1f, Motion.color(), label = "clock")
             TvClock(
                 Modifier
                     .align(Alignment.TopEnd)

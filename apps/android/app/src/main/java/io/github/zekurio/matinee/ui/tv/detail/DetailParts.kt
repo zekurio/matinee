@@ -51,6 +51,7 @@ import io.github.zekurio.matinee.ui.components.LucideIcon
 import io.github.zekurio.matinee.ui.formatRating
 import io.github.zekurio.matinee.ui.theme.Palette
 import io.github.zekurio.matinee.ui.title.FileInfo
+import io.github.zekurio.matinee.ui.tv.HideClockWhen
 import io.github.zekurio.matinee.ui.tv.Overscan
 import io.github.zekurio.matinee.ui.tv.TvButton
 import io.github.zekurio.matinee.ui.tv.TvPage
@@ -93,6 +94,7 @@ internal fun DetailList(header: @Composable () -> Unit, rows: LazyListScope.() -
         }
     }
     val scrolled by remember { derivedStateOf { state.firstVisibleItemIndex > 0 || state.firstVisibleItemScrollOffset > 0 } }
+    HideClockWhen(scrolled)
     CompositionLocalProvider(LocalBringIntoViewSpec provides spec) {
         LazyColumn(
             Modifier

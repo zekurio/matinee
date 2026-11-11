@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -49,12 +50,14 @@ import io.github.zekurio.matinee.ui.components.art
 import io.github.zekurio.matinee.ui.components.initials
 import io.github.zekurio.matinee.ui.rememberLoader
 import io.github.zekurio.matinee.ui.theme.Palette
+import io.github.zekurio.matinee.ui.tv.HideClockWhen
 import io.github.zekurio.matinee.ui.tv.ShowBackdrop
 import io.github.zekurio.matinee.ui.tv.TvCaptionedPoster
 import io.github.zekurio.matinee.ui.tv.TvCards
 import io.github.zekurio.matinee.ui.tv.TvPage
 import io.github.zekurio.matinee.ui.tv.TvType
 import io.github.zekurio.matinee.ui.tv.rememberTvFocusMemory
+import io.github.zekurio.matinee.ui.tv.scrolledUp
 
 /** Someone in the cast or crew on a TV, and everything they're in. */
 @Composable
@@ -84,11 +87,14 @@ private fun PersonPage(person: Person) {
     ShowBackdrop(listOfNotNull(api.art(focused?.title?.images?.backdrop, ArtworkSize.Large)))
     val density = LocalDensity.current
     val spec = remember(density) { with(density) { GridSpec(EDGE.toPx(), PIVOT.toPx()) } }
+    val grid = rememberLazyGridState()
+    val scrolled by remember { derivedStateOf { grid.scrolledUp } }
+    HideClockWhen(scrolled)
     CompositionLocalProvider(LocalBringIntoViewSpec provides spec) {
         LazyVerticalGrid(
             GridCells.Fixed(COLUMNS),
             Modifier.fillMaxSize(),
-            state = rememberLazyGridState(),
+            state = grid,
             contentPadding = PaddingValues(start = TvPage.Start, end = TvPage.End, top = HEADER_TOP, bottom = 48.dp),
             horizontalArrangement = Arrangement.spacedBy(TvCards.Gap),
             verticalArrangement = Arrangement.spacedBy(28.dp),

@@ -18,6 +18,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -57,6 +59,7 @@ import io.github.zekurio.matinee.ui.profile.rememberProfileStats
 import io.github.zekurio.matinee.ui.progressRatio
 import io.github.zekurio.matinee.ui.rememberLoader
 import io.github.zekurio.matinee.ui.theme.Palette
+import io.github.zekurio.matinee.ui.tv.HideClockWhen
 import io.github.zekurio.matinee.ui.tv.Overscan
 import io.github.zekurio.matinee.ui.tv.TvArtCard
 import io.github.zekurio.matinee.ui.tv.TvButton
@@ -69,6 +72,7 @@ import io.github.zekurio.matinee.ui.tv.TvPosterCard
 import io.github.zekurio.matinee.ui.tv.TvRow
 import io.github.zekurio.matinee.ui.tv.TvType
 import io.github.zekurio.matinee.ui.tv.rememberTvFocusMemory
+import io.github.zekurio.matinee.ui.tv.scrolledUp
 import java.text.NumberFormat
 
 private const val ACTIONS = "actions"
@@ -96,9 +100,12 @@ fun TvProfileScreen() {
     memory.Restore { ACTIONS to "settings" }
     val loaded = (profile.state as? Load.Ready)?.value
 
+    val list = rememberLazyListState()
+    val scrolled by remember { derivedStateOf { list.scrolledUp } }
+    HideClockWhen(scrolled)
     LazyColumn(
         Modifier.fillMaxSize(),
-        state = rememberLazyListState(),
+        state = list,
         contentPadding = PaddingValues(top = Overscan.Vertical + 8.dp, bottom = 120.dp),
         verticalArrangement = Arrangement.spacedBy(32.dp),
     ) {
