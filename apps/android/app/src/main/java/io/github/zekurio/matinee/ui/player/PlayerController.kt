@@ -167,6 +167,11 @@ class PlayerController(
     /** What mpv sends the server, which doesn't go through [http]: the session's token. */
     serverHeaders: Map<String, String> = emptyMap(),
     userAgent: String = "Matinee",
+    /**
+     * Asks the display for the file's frame rate, on a TV: true asks, false
+     * keeps ExoPlayer from asking too. Null leaves each engine as it is.
+     */
+    private val matchFrameRate: Boolean? = null,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val server = opening as? Opening.Server
@@ -391,12 +396,27 @@ class PlayerController(
             }
         })
         (player as? ExoPlayer)?.setVideoFrameMetadataListener { _, _, _, _ -> freeze.frame(SystemClock.elapsedRealtime()) }
+        applyFrameRateStrategy()
         listenForDecoders()
         scope.launch { tick() }
         scope.launch { loadTrickplay() }
         mpv?.setSubtitleScale(
             if (prefs.subtitleSystemStyle) context.getSystemService(CaptioningManager::class.java)?.fontScale ?: 1f else prefs.subtitleScale,
         )
+    }
+
+    /**
+     * ExoPlayer sets the frame rate it plays on its surface by itself, and
+     * the display switches when it can without a pause. mpv gets the server's
+     * frame rate for its surface. The display mode that matches comes from
+     * the player screen, for either engine.
+     */
+    @OptIn(UnstableApi::class)
+    private fun applyFrameRateStrategy() {
+        val match = matchFrameRate ?: return
+        (player as? ExoPlayer)?.videoChangeFrameRateStrategy =
+            if (match) C.VIDEO_CHANGE_FRAME_RATE_STRATEGY_ONLY_IF_SEAMLESS else C.VIDEO_CHANGE_FRAME_RATE_STRATEGY_OFF
+        if (match) mpv?.setFrameRate(item.probe?.video?.frameRate?.toFloat())
     }
 
     /** Loads the first answer's source, or the download, and plays. */

@@ -65,20 +65,27 @@ web app's catalogs where the words are the same.
   per-app setting; sessions; and the server.
 
 Not built yet: Chromecast, a media session for the lock screen, downloads
-of a whole season, and a TV layout of its own. On a TV, the remote plays
-and pauses, and left and right skip while the controls are away.
+of a whole season, and a TV layout of its own outside the player. On a TV
+the player has its own controls for the remote, in `ui/player/tv/`: a
+scrim at the bottom with the title, one seek bar, and a row of large
+buttons, menus in a panel on the right, and Back closing the menu, then
+the controls, then the player. With the controls away, left and right
+skip and glide while held, Select brings the controls, and the media keys
+work at any time. It has no picture in picture, and asks the display for
+the video's frame rate while it plays.
 
 ## Status
 
 Written against the server on `main` as of the downloads and image
 editor commits, and checked on an emulator up to the player: connecting,
 signing in with a code, Home, title, season, and episode pages, playback
-as a stream with converted audio, seeking, and subtitles. Downloads, the
-offline mode, the remote's keys, and the last player fixes (the thin seek
-bar, the banner's swipe hold, light status bar icons) are written but not
-built or tried yet. The account's access (the bit rate limit, a server that
-may not encode for it, downloads switched off, and the limit on devices)
-builds and passes the unit tests, but isn't tried on a device yet.
+as a stream with converted audio, seeking, and subtitles, and the TV
+player with the remote on an Android TV emulator. Downloads, the offline
+mode, and the last phone player fixes (the thin seek bar, the banner's
+swipe hold, light status bar icons) are written but not built or tried
+yet. The account's access (the bit rate limit, a server that may not
+encode for it, downloads switched off, and the limit on devices) builds
+and passes the unit tests, but isn't tried on a device yet.
 
 ## Building
 

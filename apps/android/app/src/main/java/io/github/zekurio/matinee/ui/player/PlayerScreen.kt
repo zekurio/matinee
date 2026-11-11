@@ -70,6 +70,7 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -118,6 +119,7 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.coerceAtMost
@@ -174,9 +176,11 @@ import io.github.zekurio.matinee.ui.components.focusRing
 import io.github.zekurio.matinee.ui.episodeCode
 import io.github.zekurio.matinee.ui.formatClock
 import io.github.zekurio.matinee.ui.itemLabel
+import io.github.zekurio.matinee.ui.player.tv.TvPlayerScreen
 import io.github.zekurio.matinee.ui.rememberLoader
 import io.github.zekurio.matinee.ui.settings.languageName
 import io.github.zekurio.matinee.ui.settings.qualityLabel
+import io.github.zekurio.matinee.ui.theme.LocalTv
 import io.github.zekurio.matinee.ui.theme.Palette
 import io.github.zekurio.matinee.ui.theme.Theming
 import java.io.File
@@ -193,7 +197,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 
 /** Everything the player needs before it starts. */
-private sealed interface PlayerData {
+internal sealed interface PlayerData {
     /** A file from the server, with its first `playback.start` answer. */
     class Server(val opening: Opening.Server, val device: PlaybackDevice, val options: PlaybackOptions) : PlayerData
 
@@ -207,10 +211,10 @@ private sealed interface PlayerData {
     class Refused(val refusal: Refusal, val message: String) : PlayerData
 }
 
-private const val HIDE_AFTER_MS = 3500L
+internal const val HIDE_AFTER_MS = 3500L
 private const val UP_NEXT_SECONDS = 10
 
-private fun Context.activity(): ComponentActivity? {
+internal fun Context.activity(): ComponentActivity? {
     var current: Context? = this
     while (current is ContextWrapper) {
         if (current is ComponentActivity) return current
@@ -254,6 +258,11 @@ fun PlayerScreen(itemId: String, start: Double?) {
         }
     }
     FullScreen()
+    // A TV draws a player of its own, for a remote, from the same controller.
+    if (LocalTv.current) {
+        TvPlayerScreen(itemId, start, data.state, data::reload)
+        return
+    }
     Box(Modifier.fillMaxSize().background(Color.Black)) {
         when (val state = data.state) {
             Load.Loading -> CircularProgressIndicator(Modifier.align(Alignment.Center), color = Palette.Accent)
@@ -355,15 +364,19 @@ private fun rememberPictureInPicture(controller: PlayerController, allowed: Bool
     return inPip
 }
 
+/**
+ * The controller for [data], started while it shows and released after,
+ * which the phone's player and the TV's both play with. A load again, as
+ * when the viewer's marks change, keeps the player that plays.
+ */
 @Composable
-private fun Playback(itemId: String, data: PlayerData, start: Double?) {
+internal fun rememberPlayerController(itemId: String, data: PlayerData, start: Double?, tv: Boolean = false): PlayerController {
     val context = LocalContext.current
     val app = context.app
     val api = LocalApi.current
     val user = LocalUser.current
     val prefs = app.player
     val preferences = user.playback ?: DEFAULT_PLAYBACK_PREFERENCES
-    // A load again, as when the viewer's marks change, keeps the player that plays.
     val controller = remember(itemId) {
         val (opening, device, options) = when (data) {
             is PlayerData.Server -> Triple(data.opening, data.device, data.options)
@@ -396,6 +409,7 @@ private fun Playback(itemId: String, data: PlayerData, start: Double?) {
             pending = app.downloads.pending,
             serverHeaders = app.session.playerHeaders(),
             userAgent = app.session.userAgent,
+            matchFrameRate = if (tv) prefs.matchFrameRate else null,
         )
     }
     DisposableEffect(controller) {
@@ -405,6 +419,17 @@ private fun Playback(itemId: String, data: PlayerData, start: Double?) {
             app.viewer.changed()
         }
     }
+    return controller
+}
+
+@Composable
+private fun Playback(itemId: String, data: PlayerData, start: Double?) {
+    val context = LocalContext.current
+    val app = context.app
+    val user = LocalUser.current
+    val prefs = app.player
+    val preferences = user.playback ?: DEFAULT_PLAYBACK_PREFERENCES
+    val controller = rememberPlayerController(itemId, data, start)
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val inPip = rememberPictureInPicture(controller, allowed = prefs.pictureInPicture)
     DisposableEffect(lifecycle, inPip) {
@@ -566,7 +591,7 @@ private fun Playback(itemId: String, data: PlayerData, start: Double?) {
     }
 }
 
-private enum class Menu { Audio, Subtitles, Settings }
+internal enum class Menu { Audio, Subtitles, Settings }
 
 /** Whether a screen reader explores the screen by touch, as TalkBack does. */
 @Composable
@@ -610,7 +635,7 @@ private const val NOTICE_MS = 5_000L
 
 /** Says what the server did instead of what the viewer asked for, for a few seconds. */
 @Composable
-private fun PlayerNoticeNote(notice: Notice?, modifier: Modifier) {
+internal fun PlayerNoticeNote(notice: Notice?, modifier: Modifier) {
     var shown by remember { mutableStateOf<Notice?>(null) }
     LaunchedEffect(notice) {
         if (notice == null) return@LaunchedEffect
@@ -651,7 +676,7 @@ private fun PlayerNoticeNote(notice: Notice?, modifier: Modifier) {
 
 /** The video, whole or filling the screen and cut at its edges. */
 @Composable
-private fun Video(controller: PlayerController, fill: Boolean) {
+internal fun Video(controller: PlayerController, fill: Boolean) {
     if (controller.usesMpv) {
         // mpv fits or fills the video in a surface the size of the screen, its subtitles with it.
         LaunchedEffect(fill) { controller.showFilled(fill) }
@@ -675,7 +700,7 @@ private fun Video(controller: PlayerController, fill: Boolean) {
  * as the video shows.
  */
 @Composable
-private fun PictureSubtitles(controller: PlayerController, fill: Boolean) {
+internal fun PictureSubtitles(controller: PlayerController, fill: Boolean) {
     val cues = controller.pictureCues
     if (cues.isEmpty()) return
     val aspect = controller.videoAspect
@@ -711,11 +736,11 @@ private fun anchor(type: Int): Float = when (type) {
     else -> 0f
 }
 
-/** The cues showing now, drawn over the video, above the controls while they show. */
+/** The cues showing now, drawn over the video, [raised] above the controls while they show. */
 @Composable
-private fun Subtitles(controller: PlayerController, look: SubtitleLook, lifted: Boolean, modifier: Modifier) {
+internal fun Subtitles(controller: PlayerController, look: SubtitleLook, lifted: Boolean, modifier: Modifier, raised: Dp = 150.dp, rest: Dp = 28.dp) {
     // Moves with the controls rather than jumping when they come and go.
-    val bottom by animateDpAsState(if (lifted) 150.dp else 28.dp, Motion.move(), label = "subtitle lift")
+    val bottom by animateDpAsState(if (lifted) raised else rest, Motion.move(), label = "subtitle lift")
     val cues = controller.cues ?: return
     val shown = cues.at(controller.position)
     if (shown.isEmpty()) return
@@ -1028,6 +1053,23 @@ private fun SeekTrack(
 @Composable
 private fun TrickplayPreview(controller: PlayerController, seconds: Double, modifier: Modifier) {
     val images = controller.trickplay ?: return
+    val density = LocalDensity.current
+    Column(modifier.padding(bottom = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        TrickplayFrame(
+            controller,
+            seconds,
+            Modifier.fillMaxWidth().height(with(density) { 176.dp * images.height / images.width })
+                .clip(RoundedCornerShape(6.dp)).background(Color.Black).border(1.dp, Palette.Foreground.copy(alpha = 0.3f), RoundedCornerShape(6.dp)),
+        )
+        Gap(4.dp)
+        Text(formatClock(seconds), style = MaterialTheme.typography.labelMedium)
+    }
+}
+
+/** The trickplay frame at [seconds], drawn to fill [modifier]'s box; the box shows while its tile loads. */
+@Composable
+internal fun TrickplayFrame(controller: PlayerController, seconds: Double, modifier: Modifier) {
+    val images = controller.trickplay ?: return
     val api = LocalApi.current
     val context = LocalContext.current
     val perTile = images.columns * images.rows
@@ -1041,27 +1083,49 @@ private fun TrickplayPreview(controller: PlayerController, seconds: Double, modi
             .build()
         value = SingletonImageLoader.get(context).execute(request).image?.toBitmap()?.asImageBitmap()
     }
-    val density = LocalDensity.current
-    Column(modifier.padding(bottom = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(
-            Modifier.fillMaxWidth().height(with(density) { 176.dp * images.height / images.width })
-                .clip(RoundedCornerShape(6.dp)).background(Color.Black).border(1.dp, Palette.Foreground.copy(alpha = 0.3f), RoundedCornerShape(6.dp)),
-        ) {
-            val image = bitmap
-            if (image != null) {
-                Canvas(Modifier.fillMaxSize()) {
-                    drawImage(
-                        image,
-                        srcOffset = IntOffset((cell % images.columns) * images.width, (cell / images.columns) * images.height),
-                        srcSize = IntSize(images.width, images.height),
-                        dstSize = IntSize(size.width.toInt(), size.height.toInt()),
-                    )
-                }
+    Box(modifier) {
+        val image = bitmap
+        if (image != null) {
+            Canvas(Modifier.fillMaxSize()) {
+                drawImage(
+                    image,
+                    srcOffset = IntOffset((cell % images.columns) * images.width, (cell / images.columns) * images.height),
+                    srcSize = IntSize(images.width, images.height),
+                    dstSize = IntSize(size.width.toInt(), size.height.toInt()),
+                )
             }
         }
-        Gap(4.dp)
-        Text(formatClock(seconds), style = MaterialTheme.typography.labelMedium)
     }
+}
+
+/** The next episode once one ended, and how far its countdown got. */
+@Stable
+internal class UpNextState(val item: MediaItem, autoplay: Boolean) {
+    /** Seconds until it starts by itself. */
+    var left by mutableIntStateOf(UP_NEXT_SECONDS)
+
+    /** The countdown stopped, or never ran, so it waits for Play. */
+    var cancelled by mutableStateOf(!autoplay)
+}
+
+/**
+ * The episode after the one that ended, counting down to it and starting
+ * it unless cancelled, or null when there's none. A file the server plays
+ * has it in the answer; a download asks.
+ */
+@Composable
+internal fun rememberUpNext(controller: PlayerController, autoplay: Boolean): UpNextState? {
+    val host = LocalPlayerHost.current
+    val upcoming = (if (controller.isLocal) downloadNext(controller.item) else controller.next) ?: return null
+    val state = remember(upcoming.id) { UpNextState(upcoming, autoplay) }
+    LaunchedEffect(upcoming.id, state.cancelled) {
+        while (!state.cancelled && state.left > 0) {
+            delay(1000)
+            state.left--
+        }
+        if (!state.cancelled) host.playInstead(upcoming.id)
+    }
+    return state
 }
 
 /**
@@ -1072,16 +1136,10 @@ private fun TrickplayPreview(controller: PlayerController, seconds: Double, modi
 private fun UpNext(controller: PlayerController, autoplay: Boolean, modifier: Modifier) {
     val host = LocalPlayerHost.current
     val res = LocalResources.current
-    val upcoming = (if (controller.isLocal) downloadNext(controller.item) else controller.next) ?: return
-    var left by remember(upcoming.id) { mutableIntStateOf(UP_NEXT_SECONDS) }
-    var cancelled by remember(upcoming.id) { mutableStateOf(!autoplay) }
-    LaunchedEffect(upcoming.id, cancelled) {
-        while (!cancelled && left > 0) {
-            delay(1000)
-            left--
-        }
-        if (!cancelled) host.playInstead(upcoming.id)
-    }
+    val next = rememberUpNext(controller, autoplay) ?: return
+    val upcoming = next.item
+    val left = next.left
+    val cancelled = next.cancelled
     val label = itemLabel(upcoming, res)
     Column(
         modifier.safeDrawingPadding().padding(24.dp).widthIn(max = 360.dp)
@@ -1103,7 +1161,7 @@ private fun UpNext(controller: PlayerController, autoplay: Boolean, modifier: Mo
                 Text(if (cancelled) stringResource(R.string.player_play) else stringResource(R.string.player_up_next_in, left))
             }
             if (!cancelled) {
-                MatineeButton(onClick = { cancelled = true }, look = ButtonLook.Frosted, height = 40.dp) {
+                MatineeButton(onClick = { next.cancelled = true }, look = ButtonLook.Frosted, height = 40.dp) {
                     Text(stringResource(R.string.player_up_next_cancel))
                 }
             }
@@ -1177,6 +1235,7 @@ private fun PlayerPanel(open: Menu?, controller: PlayerController, onDismiss: ()
             exit = slideOutHorizontally(Motion.slide()) { it } + Motion.fadeOut,
         ) {
             val menu = last ?: return@AnimatedVisibility
+            val entries = menuEntries(menu, controller)
             LazyColumn(
                 Modifier
                     .fillMaxHeight()
@@ -1186,88 +1245,128 @@ private fun PlayerPanel(open: Menu?, controller: PlayerController, onDismiss: ()
                     .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.End + WindowInsetsSides.Vertical))
                     .padding(vertical = 12.dp),
             ) {
-                menuItems(menu, controller, picked, onDismiss)
+                items(entries, key = { it.key }) { entry ->
+                    when (entry) {
+                        is MenuEntry.Heading -> MenuHeading(entry.text)
+                        is MenuEntry.Note -> MenuNote(entry.text)
+                        is MenuEntry.Divider -> HorizontalDivider(Modifier.padding(vertical = 8.dp), color = Palette.Border)
+                        is MenuEntry.Choice -> MenuRow(entry.title, entry.detail, entry.selected, entry.enabled, picked) {
+                            entry.pick()
+                            onDismiss()
+                        }
+                    }
+                }
             }
         }
     }
 }
 
-private fun androidx.compose.foundation.lazy.LazyListScope.menuItems(menu: Menu, controller: PlayerController, picked: FocusRequester, onDismiss: () -> Unit) {
+/** One line of a player menu: a heading, a note, a divider, or a choice. */
+internal sealed interface MenuEntry {
+    /** Unique in its menu, for the list's keys. */
+    val key: String
+
+    class Heading(val text: String, override val key: String) : MenuEntry
+
+    class Note(val text: String, override val key: String) : MenuEntry
+
+    class Divider(override val key: String) : MenuEntry
+
+    /** A choice, current when [selected]; [pick] makes it so. */
+    class Choice(
+        val title: String,
+        val detail: String?,
+        val selected: Boolean,
+        val enabled: Boolean = true,
+        override val key: String,
+        val pick: () -> Unit,
+    ) : MenuEntry
+}
+
+/**
+ * What [menu] offers: the tracks and qualities the server answered and the
+ * speeds, each marked when it's the current one. The phone's panel and the
+ * TV's draw the same list.
+ */
+@Composable
+internal fun menuEntries(menu: Menu, controller: PlayerController): List<MenuEntry> = buildList {
     when (menu) {
         Menu.Audio -> {
-            item { MenuHeading(stringResource(R.string.player_menu_audio)) }
+            add(MenuEntry.Heading(stringResource(R.string.player_menu_audio), "heading"))
             if (controller.audioTracks.isEmpty()) {
-                item { MenuNote(stringResource(R.string.player_audio_no_tracks)) }
+                add(MenuEntry.Note(stringResource(R.string.player_audio_no_tracks), "none"))
             }
-            items(controller.audioTracks, key = { it.index }) { track ->
-                MenuRow(
-                    audioLabel(track),
-                    listOfNotNull(track.format, track.layout).joinToString(" · "),
-                    selected = track == controller.audio,
-                    picked = picked,
-                ) {
-                    controller.pickAudio(track)
-                    onDismiss()
-                }
+            controller.audioTracks.forEach { track ->
+                add(
+                    MenuEntry.Choice(
+                        audioLabel(track),
+                        listOfNotNull(track.format, track.layout).joinToString(" · "),
+                        selected = track == controller.audio,
+                        key = "audio-${track.index}",
+                    ) { controller.pickAudio(track) },
+                )
             }
         }
         Menu.Subtitles -> {
-            item { MenuHeading(stringResource(R.string.player_menu_subtitles)) }
-            item {
-                MenuRow(stringResource(R.string.player_subtitles_off), null, selected = controller.subtitle == null, picked = picked) {
+            add(MenuEntry.Heading(stringResource(R.string.player_menu_subtitles), "heading"))
+            add(
+                MenuEntry.Choice(stringResource(R.string.player_subtitles_off), null, selected = controller.subtitle == null, key = "off") {
                     controller.pickSubtitle(null)
-                    onDismiss()
-                }
+                },
+            )
+            controller.subtitles.forEach { track ->
+                add(
+                    MenuEntry.Choice(
+                        subtitleLabel(track, controller.subtitles),
+                        subtitleDetail(track, burns = controller.burnsIn(track)),
+                        selected = track == controller.subtitle,
+                        enabled = track.delivery != null,
+                        key = "subtitle-${track.id}",
+                    ) { controller.pickSubtitle(track) },
+                )
             }
-            items(controller.subtitles, key = { it.id }) { track ->
-                MenuRow(
-                    subtitleLabel(track, controller.subtitles),
-                    subtitleDetail(track, burns = controller.burnsIn(track)),
-                    selected = track == controller.subtitle,
-                    enabled = track.delivery != null,
-                    picked = picked,
-                ) {
-                    controller.pickSubtitle(track)
-                    onDismiss()
-                }
-            }
-            if (controller.subtitleError) item { MenuNote(stringResource(R.string.player_error_subtitles)) }
+            if (controller.subtitleError) add(MenuEntry.Note(stringResource(R.string.player_error_subtitles), "error"))
         }
         Menu.Settings -> {
             if (!controller.isLocal) {
-                item { MenuHeading(stringResource(R.string.player_quality)) }
+                add(MenuEntry.Heading(stringResource(R.string.player_quality), "quality"))
                 // A file over the account's bit rate limit plays only as an encode.
                 if (controller.offersOriginal) {
-                    item {
-                        MenuRow(stringResource(R.string.player_quality_original), null, selected = controller.quality == ORIGINAL_QUALITY, picked = picked) {
-                            controller.pickQuality(ORIGINAL_QUALITY)
-                            onDismiss()
-                        }
-                    }
+                    add(
+                        MenuEntry.Choice(
+                            stringResource(R.string.player_quality_original),
+                            null,
+                            selected = controller.quality == ORIGINAL_QUALITY,
+                            key = "quality-original",
+                        ) { controller.pickQuality(ORIGINAL_QUALITY) },
+                    )
                 }
-                items(controller.qualities, key = { it.id }) { quality ->
-                    MenuRow(qualityLabel(quality), null, selected = controller.quality == quality.id, picked = picked) {
-                        controller.pickQuality(quality.id)
-                        onDismiss()
-                    }
+                controller.qualities.forEach { quality ->
+                    add(
+                        MenuEntry.Choice(qualityLabel(quality), null, selected = controller.quality == quality.id, key = "quality-${quality.id}") {
+                            controller.pickQuality(quality.id)
+                        },
+                    )
                 }
-                item { HorizontalDivider(Modifier.padding(vertical = 8.dp), color = Palette.Border) }
+                add(MenuEntry.Divider("quality-end"))
             }
-            item { MenuHeading(stringResource(R.string.player_speed)) }
-            items(listOf(0.5f, 0.75f, 1f, 1.25f, 1.5f, 2f)) { rate ->
-                MenuRow(
-                    if (rate == 1f) stringResource(R.string.player_speed_normal) else stringResource(R.string.player_speed_rate, rate.toString().removeSuffix(".0")),
-                    null,
-                    selected = controller.speed == rate,
-                    picked = picked,
-                ) {
-                    controller.pickSpeed(rate)
-                    onDismiss()
-                }
+            add(MenuEntry.Heading(stringResource(R.string.player_speed), "speed"))
+            PLAYER_SPEEDS.forEach { rate ->
+                add(
+                    MenuEntry.Choice(
+                        if (rate == 1f) stringResource(R.string.player_speed_normal) else stringResource(R.string.player_speed_rate, rate.toString().removeSuffix(".0")),
+                        null,
+                        selected = controller.speed == rate,
+                        key = "speed-$rate",
+                    ) { controller.pickSpeed(rate) },
+                )
             }
         }
     }
 }
+
+/** The speeds the menu offers. */
+private val PLAYER_SPEEDS = listOf(0.5f, 0.75f, 1f, 1.25f, 1.5f, 2f)
 
 @Composable
 private fun MenuHeading(text: String) {

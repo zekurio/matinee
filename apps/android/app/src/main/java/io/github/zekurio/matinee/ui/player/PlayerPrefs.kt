@@ -68,6 +68,9 @@ class PlayerPrefs(context: Context) {
     /** Keep playing in a small window on leaving the app. */
     var pictureInPicture by boolean("picture_in_picture", true)
 
+    /** On a TV, switch the display to the video's frame rate while it plays, at the same resolution. */
+    var matchFrameRate by boolean("match_frame_rate", true)
+
     /** Draw subtitles as the system's caption settings say, instead of the choices below. */
     var subtitleSystemStyle by boolean("subtitle_system_style", false)
     var subtitleScale by float("subtitle_scale", 1f)

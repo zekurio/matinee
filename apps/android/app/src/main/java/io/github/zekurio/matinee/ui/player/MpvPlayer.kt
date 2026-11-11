@@ -7,6 +7,7 @@ import android.content.IntentFilter
 import android.media.AudioAttributes as SystemAudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.util.Base64
@@ -375,8 +376,26 @@ class MpvPlayer(
         }
     }
 
+    /**
+     * The video's frame rate, which the surface tells the display, as
+     * ExoPlayer does for its own: it switches when it can without a pause.
+     * Null or 0 asks for nothing.
+     */
+    fun setFrameRate(fps: Float?) {
+        frameRate = fps?.takeIf { it > 0 } ?: 0f
+        surface?.let(::voteFrameRate)
+    }
+
+    private var frameRate = 0f
+
+    private fun voteFrameRate(target: Surface) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || !target.isValid) return
+        runCatching { target.setFrameRate(frameRate, Surface.FRAME_RATE_COMPATIBILITY_FIXED_SOURCE, Surface.CHANGE_FRAME_RATE_ONLY_IF_SEAMLESS) }
+    }
+
     private fun attach(next: Surface) {
         surface = next
+        if (frameRate > 0) voteFrameRate(next)
         mpv.attachSurface(next)
         mpv.setOptionString("force-window", "yes")
         mpv.setOptionString("vo", VIDEO_OUTPUT)

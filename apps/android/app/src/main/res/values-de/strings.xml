@@ -466,6 +466,7 @@
     <string name="error_connection_lost">Die Verbindung zum Server ist abgebrochen.</string>
     <string name="player_fill">Bildschirm füllen</string>
     <string name="player_fit">Ganzes Bild</string>
+    <string name="player_picture">Bild</string>
     <string name="downloads_title">Downloads</string>
     <string name="downloads_action">Herunterladen</string>
     <string name="downloads_sheet_title">Herunterladen</string>

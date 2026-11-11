@@ -494,6 +494,7 @@
     <string name="error_connection_lost">The connection to the server broke off.</string>
     <string name="player_fill">Fill screen</string>
     <string name="player_fit">Whole picture</string>
+    <string name="player_picture">Picture</string>
     <string name="downloads_title">Downloads</string>
     <string name="downloads_action">Download</string>
     <string name="downloads_sheet_title">Download</string>
