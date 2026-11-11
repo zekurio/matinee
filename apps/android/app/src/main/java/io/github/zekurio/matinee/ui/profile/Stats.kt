@@ -1,7 +1,5 @@
 package io.github.zekurio.matinee.ui.profile
 
-import android.content.res.Resources
-import android.text.format.DateFormat
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -57,47 +55,10 @@ import io.github.zekurio.matinee.ui.components.PosterArt
 import io.github.zekurio.matinee.ui.components.art
 import io.github.zekurio.matinee.ui.theme.Palette
 import java.text.NumberFormat
-import java.time.LocalDate
-import java.util.Locale
-import kotlin.math.ceil
-import kotlin.math.roundToInt
 
 /* A profile's statistics, as the web's watch-stats: the range chips, the
  * headline figures, watch time per day, week, or month, the most watched
  * titles, and the genres. */
-
-/** "45 Min.", "3 Std. 20 Min.", "120 Std.", as the web's formatWatchTime. */
-fun formatWatchTime(seconds: Double, res: Resources): String {
-    val minutes = (seconds / 60).roundToInt()
-    if (minutes < 60) return res.getString(R.string.format_minutes_short, minutes)
-    val hours = minutes / 60
-    val rest = minutes % 60
-    return if (hours >= 100 || rest == 0) res.getString(R.string.format_hours_short, hours)
-    else res.getString(R.string.format_hours_minutes_short, hours, rest)
-}
-
-@Composable
-fun rangeName(range: String): String = stringResource(
-    when (range) {
-        "7d" -> R.string.stats_range_7d
-        "30d" -> R.string.stats_range_30d
-        "90d" -> R.string.stats_range_90d
-        "365d" -> R.string.stats_range_365d
-        else -> R.string.stats_range_all
-    },
-)
-
-/** How a sentence ends for the range: "in the last 30 days". */
-@Composable
-fun rangePhrase(range: String): String = stringResource(
-    when (range) {
-        "7d" -> R.string.stats_period_7d
-        "30d" -> R.string.stats_period_30d
-        "90d" -> R.string.stats_period_90d
-        "365d" -> R.string.stats_period_365d
-        else -> R.string.stats_period_all
-    },
-)
 
 /** The ranges as chips, scrolling sideways past the page's edge. */
 @Composable
@@ -135,32 +96,6 @@ fun StatList(stats: WatchStats, modifier: Modifier = Modifier) {
             }
         }
     }
-}
-
-/** "9. Nov.", "Woche vom 3. Nov.", "November 2026", for a bucket. */
-private fun bucketName(start: String, unit: String, res: Resources): String {
-    val date = runCatching { LocalDate.parse(start) }.getOrNull() ?: return start
-    val locale = Locale.getDefault()
-    val thisYear = date.year == LocalDate.now().year
-    fun format(skeleton: String) = java.time.format.DateTimeFormatter.ofPattern(DateFormat.getBestDateTimePattern(locale, skeleton), locale).format(date)
-    return when (unit) {
-        "month" -> format("MMMMyyyy")
-        "week" -> res.getString(R.string.stats_bucket_week, format(if (thisYear) "dMMM" else "dMMMyyyy"))
-        else -> format(if (thisYear) "dMMM" else "dMMMyyyy")
-    }
-}
-
-/** The top of the scale: whole minutes up to an hour, then hours, rounded up to a tidy number. */
-private fun scaleTop(seconds: Double): Double {
-    fun nice(value: Double): Double {
-        val steps = listOf(1.0, 2.0, 5.0, 10.0, 15.0, 20.0, 30.0, 45.0, 60.0)
-        steps.firstOrNull { it >= value }?.let { return it }
-        var magnitude = 10.0
-        while (magnitude * 10 < value) magnitude *= 10
-        return listOf(1.0, 2.0, 5.0, 10.0).map { it * magnitude }.first { it >= value }
-    }
-    val minutes = ceil(seconds / 60)
-    return if (minutes <= 60) nice(maxOf(minutes, 1.0)) * 60 else nice(minutes / 60) * 3600
 }
 
 /**
@@ -308,31 +243,6 @@ fun Genres(stats: WatchStats, modifier: Modifier = Modifier) {
     }
 }
 
-/** A board's value as the leaderboard shows it: "4 Std.", "12 Wiedergaben", "3 Tage". */
-private fun metricValue(metric: String, value: Double, res: Resources): String {
-    val count = value.toInt()
-    return when (metric) {
-        "watchTime" -> formatWatchTime(value, res)
-        "plays" -> res.getQuantityString(R.plurals.stats_play_count, count, count)
-        "currentStreak", "longestStreak" -> res.getQuantityString(R.plurals.stats_day_count, count, count)
-        "movies" -> res.getQuantityString(R.plurals.stats_movie_count, count, count)
-        "episodes" -> res.getQuantityString(R.plurals.stats_episode_count, count, count)
-        else -> count.toString()
-    }
-}
-
-@Composable
-private fun metricName(metric: String): String = stringResource(
-    when (metric) {
-        "plays" -> R.string.stats_metric_plays
-        "currentStreak" -> R.string.stats_metric_currentStreak
-        "longestStreak" -> R.string.stats_metric_longestStreak
-        "movies" -> R.string.stats_metric_movies
-        "episodes" -> R.string.stats_metric_episodes
-        else -> R.string.stats_metric_watchTime
-    },
-)
-
 /**
  * Where the signed-in user stands on each board of the leaderboard for the
  * range, as the web's profile shows it: their place between the people
@@ -342,12 +252,8 @@ private fun metricName(metric: String): String = stringResource(
 @Composable
 fun Standing(range: String, zone: String, modifier: Modifier = Modifier) {
     var open by remember { mutableStateOf<io.github.zekurio.matinee.api.LeaderboardBoard?>(null) }
-    val loader = io.github.zekurio.matinee.ui.rememberLoader("leaderboard-$range") { stats.leaderboard(range, zone) }
-    val boards = (loader.state as? io.github.zekurio.matinee.ui.Load.Ready)?.value?.boards.orEmpty()
-    val standings = boards.mapNotNull { board ->
-        val at = board.entries.indexOfFirst { it.self }
-        if (at < 0) null else board to board.entries.subList(maxOf(0, at - 1), minOf(board.entries.size, at + 2))
-    }
+    val loader = rememberLeaderboard(range, zone)
+    val standings = standings((loader.state as? io.github.zekurio.matinee.ui.Load.Ready)?.value)
     if (standings.isEmpty()) return
     val res = LocalResources.current
     StatsCard(stringResource(R.string.stats_standing_title), modifier) {
@@ -368,9 +274,6 @@ fun Standing(range: String, zone: String, modifier: Modifier = Modifier) {
     open?.let { board -> BoardSheet(board, range) { open = null } }
 }
 
-/** Places shown at the top of a board; the viewer's neighborhood comes after. */
-private const val TOP_PLACES = 10
-
 /** A whole board, as the leaderboard has it: the top places, then the viewer's neighborhood, set off. */
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
@@ -385,7 +288,7 @@ private fun BoardSheet(board: io.github.zekurio.matinee.api.LeaderboardBoard, ra
             Column(Modifier.padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 board.entries.forEachIndexed { index, place ->
                     // Set off when it doesn't carry straight on from the top places.
-                    if (index == TOP_PLACES && place.rank > (board.entries.getOrNull(TOP_PLACES - 1)?.rank ?: 0) + 1) Gap(10.dp)
+                    if (startsNeighborhood(board, index)) Gap(10.dp)
                     PlaceRow(place, metricValue(board.metric, place.value, res))
                 }
             }
@@ -430,13 +333,6 @@ private fun PlaceRow(place: io.github.zekurio.matinee.api.LeaderboardEntry, valu
         Text(value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
     }
 }
-
-/** "18:00" or "6:00 PM", an hour in the device's way. */
-private fun hourName(hour: Int): String =
-    java.time.format.DateTimeFormatter.ofLocalizedTime(java.time.format.FormatStyle.SHORT).withLocale(Locale.getDefault()).format(java.time.LocalTime.of(hour, 0))
-
-private fun weekdayName(weekday: Int, style: java.time.format.TextStyle): String =
-    java.time.DayOfWeek.of(weekday).getDisplayName(style, Locale.getDefault())
 
 /**
  * When in the week watching starts, as the web's heatmap draws it: a
