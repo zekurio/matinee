@@ -1,0 +1,59 @@
+# Tasks for the Android app. Run `just` in this folder for the list, or
+# `just android <recipe>` from the repository root. Gradle runs in the
+# flake's Android shell, entered for each command unless you're in it, and
+# adb is whichever is on the PATH, or the shell's.
+
+set shell := ["bash", "-euo", "pipefail", "-c"]
+
+in_shell := env("MATINEE_ANDROID_SHELL", "")
+gradle := if in_shell != "" { "./gradlew" } else { "nix develop ../..#android -c ./gradlew" }
+adb := `command -v adb >/dev/null && echo adb || echo nix develop ../..#android -c adb`
+
+app := "io.github.zekurio.matinee"
+debug_apk := "app/build/outputs/apk/debug/app-debug.apk"
+release_apk := "app/build/outputs/apk/release/app-release.apk"
+
+[private]
+default:
+    @just --list --unsorted
+
+# Build a debug APK
+build *args:
+    {{ gradle }} assembleDebug {{ args }}
+
+# Build a release APK, signed with your keystore or else the debug key
+release *args:
+    {{ gradle }} assembleRelease {{ args }}
+    @echo "{{ release_apk }}"
+
+# Build the debug app and install it on the device adb sees
+install *args:
+    {{ gradle }} installDebug {{ args }}
+
+# Install the debug app and open it
+run: install
+    {{ adb }} shell am start -n {{ app }}.debug/{{ app }}.MainActivity
+
+# Build a release APK and install it on the device adb sees
+sideload: release
+    {{ adb }} install -r {{ release_apk }}
+
+# Let the device or emulator reach the dev server on its localhost
+reverse port="5173":
+    {{ adb }} reverse tcp:{{ port }} tcp:{{ port }}
+
+# Follow the log of the running debug app, or `just logcat release`
+logcat variant="debug":
+    {{ adb }} logcat --pid="$({{ adb }} shell pidof -s {{ app }}{{ if variant == "debug" { ".debug" } else { "" } }})"
+
+# Run the unit tests
+test *args:
+    {{ gradle }} testDebugUnitTest {{ args }}
+
+# Generate the API client again after a contract change
+api:
+    cd ../.. && pnpm api:android
+
+# Delete Gradle's build output
+clean:
+    {{ gradle }} clean

@@ -3,6 +3,7 @@
 # with the Android SDK license accepted; entering the shell accepts it.
 #
 #   nix develop .#android -c ./gradlew assembleDebug     (from apps/android)
+#   just android build                                  (the same, from anywhere)
 #
 # No emulator: run the app on one from your own SDK, see apps/android/README.md.
 { nixpkgs, system }:
@@ -37,7 +38,11 @@ in
     packages = [
       sdk
       jdk
+      pkgs.just
     ];
+    # apps/android/justfile runs Gradle directly when it sees this, and
+    # through this shell otherwise.
+    MATINEE_ANDROID_SHELL = "1";
     JAVA_HOME = jdk.home;
     ANDROID_HOME = home;
     ANDROID_SDK_ROOT = home;

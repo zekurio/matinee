@@ -14,6 +14,7 @@
   nixd,
   nil,
   jellyfin-ffmpeg,
+  just,
 }:
 let
   pnpmPackage = import ./pnpm.nix { inherit pnpm_11; };
@@ -37,6 +38,7 @@ mkShell {
     nixd
     nil
     jellyfin-ffmpeg
+    just
     postgres
   ];
 
