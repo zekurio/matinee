@@ -48,6 +48,8 @@ const EnvSchema = t.object({
     .url()
     .$default("http://localhost:8420")
     .transform((value) => new URL(value).origin),
+  /** Answer IPv4 LAN discovery probes, unless PUBLIC_URL is loopback. */
+  MATINEE_DISCOVERY_ENABLED: flag(true),
   /** Built web app to serve. Unset in dev, where Vite serves it. */
   MATINEE_WEB_DIST: optional,
   MATINEE_MIGRATIONS_DIR: optional,

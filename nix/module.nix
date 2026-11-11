@@ -161,7 +161,20 @@ in
     openFirewall = mkOption {
       type = types.bool;
       default = false;
-      description = "Open {option}`services.matinee.port` in the firewall.";
+      description = ''
+        Open {option}`services.matinee.port` for TCP and, when discovery is
+        enabled, UDP 8421 in the firewall.
+      '';
+    };
+
+    discovery.enable = mkOption {
+      type = types.bool;
+      default = true;
+      description = ''
+        Answer IPv4 LAN discovery probes on UDP 8421 with the public URL.
+        Loopback public URLs are not advertised. Opening the port follows
+        {option}`services.matinee.openFirewall`.
+      '';
     };
 
     user = mkOption {
@@ -501,6 +514,7 @@ in
         DATABASE_URL = databaseUrl;
         HOST = cfg.host;
         PORT = cfg.port;
+        MATINEE_DISCOVERY_ENABLED = cfg.discovery.enable;
         MATINEE_DATA_DIR = toString cfg.dataDir;
         MATINEE_TRANSCODE_DIR = toString cfg.transcodeDir;
         MATINEE_FFMPEG_PATH = lib.getExe' cfg.ffmpegPackage "ffmpeg";
@@ -559,6 +573,7 @@ in
     };
 
     networking.firewall.allowedTCPPorts = mkIf cfg.openFirewall [ cfg.port ];
+    networking.firewall.allowedUDPPorts = mkIf (cfg.openFirewall && cfg.discovery.enable) [ 8421 ];
 
     systemd.tmpfiles.rules = map (dir: "d ${dir} 0750 ${cfg.user} ${cfg.group} - -") externalDirs;
 

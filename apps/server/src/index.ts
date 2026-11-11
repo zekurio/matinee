@@ -6,6 +6,7 @@ import { oidcState } from "./auth/oidc-settings"
 import { passkeySettings, warnWithoutSignIn } from "./auth/passkey-settings"
 import { initSetupToken, setupRequired } from "./auth/setup"
 import { db, pool } from "./db"
+import { startDiscovery } from "./discovery"
 import { env } from "./env"
 import { stopQueues } from "./jobs/queue"
 import { startTasks, stopTasks } from "./jobs/scheduler"
@@ -42,9 +43,12 @@ const server = serve(
   },
 )
 
+const stopDiscovery = startDiscovery()
+
 function shutdown(signal: string) {
   log.info(`${signal} received, shutting down`)
   setTimeout(() => process.exit(1), 10_000).unref()
+  stopDiscovery()
   // Open event streams would keep the server from closing.
   stopStreams()
   stopEncodes()

@@ -90,6 +90,25 @@ let
       && (serviceConfig plain).CacheDirectory == "matinee/transcodes"
       && (serviceConfig plain).ReadWritePaths == [ ]
       && tmpfiles plain == [ ];
+    "discovery is on without opening the firewall by default" =
+      (env plain).MATINEE_DISCOVERY_ENABLED == "true"
+      && !lib.elem 8421 plain.networking.firewall.allowedUDPPorts;
+    "openFirewall opens HTTP and discovery" =
+      let
+        opened = server { openFirewall = true; };
+      in
+      lib.elem 8420 opened.networking.firewall.allowedTCPPorts
+      && lib.elem 8421 opened.networking.firewall.allowedUDPPorts;
+    "disabling discovery closes its firewall port" =
+      let
+        disabled = server {
+          openFirewall = true;
+          discovery.enable = false;
+        };
+      in
+      (env disabled).MATINEE_DISCOVERY_ENABLED == "false"
+      && lib.elem 8420 disabled.networking.firewall.allowedTCPPorts
+      && !lib.elem 8421 disabled.networking.firewall.allowedUDPPorts;
     "ffmpeg is jellyfin-ffmpeg" = lib.hasInfix "jellyfin-ffmpeg" (env plain).MATINEE_FFMPEG_PATH;
     "without a GPU choice, setup's pick decides and every device is open" =
       !(env plain ? MATINEE_HARDWARE_ACCELERATION)

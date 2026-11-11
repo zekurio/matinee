@@ -43,6 +43,56 @@ document carries the same one as its `info.version`. A generated client
 keeps the one it was generated from, so it can tell a server of another
 version from one that answers nonsense.
 
+## Local server discovery
+
+Discovery is IPv4 UDP on port **8421**, separate from the HTTP API. Broadcast
+an ASCII `Matinee discovery v1` padded with spaces to exactly 512 bytes,
+without a newline, to each active interface's broadcast address and
+`255.255.255.255`. Listen on the sending socket for unicast replies. Clients
+can scan for three seconds and start another scan when asked.
+
+A reply is UTF-8 JSON, at most 512 bytes:
+
+```json
+{ "version": 1, "name": "Matinee", "url": "https://media.example.com" }
+```
+
+`name` is a nonempty display name of at most 64 code points. Matinee has no
+configurable server name, so it currently sends `Matinee`. `url` is the
+server's `PUBLIC_URL`, never an address inferred from the probe. It is an
+HTTP or HTTPS URL without credentials, at most 400 code points. Clients
+ignore unknown fields, reject other versions and malformed replies, and
+skip duplicate URLs. A future incompatible protocol gets a new probe and
+version. The TypeScript constants and reply schema live in
+`packages/contracts/src/discovery.ts`; this is not part of OpenAPI.
+
+Discovery is on by default. `MATINEE_DISCOVERY_ENABLED=false` turns it off.
+Loopback public URLs, including the dev default, are not advertised because
+a client would connect to itself. The responder also skips URLs that don't
+fit the reply. Set `PUBLIC_URL` to an address LAN clients can actually reach.
+A bind failure only warns and leaves HTTP running. IPv6 multicast is not
+implemented. Broadcasts don't cross routers, container bridge networks, or
+most emulator NATs. Publish UDP 8421 on the host network when deploying in a
+container, and allow it only on trusted LAN interfaces in your firewall.
+The NixOS module's `discovery.enable` controls the responder; `openFirewall`
+opens UDP 8421 with the HTTP port when discovery is enabled.
+
+Only the exact probe gets a reply. The server answers one probe per source
+IP per second and at most 20 per one-second window in total. The padded
+probe prevents byte amplification. Discovery is unauthenticated, so treat
+replies as hints and check `/api/health` before using a URL. Never sign in
+automatically.
+
+The Android `auth/discoverServers` function returns a cold flow of name and
+URL pairs, with a three-second timeout and injectable destinations for tests.
+Collect it in a cancellable screen scope. Call `serverDiscoveryPermission`
+first and request the returned permission if any. Android 17 requires
+`ACCESS_LOCAL_NETWORK` once the app targets SDK 37; our current target 36
+gets LAN access through `INTERNET` and must not request it yet. Replies are
+unicast, so no Wi-Fi multicast lock is needed. Pass the selected URL to
+`Session.connect`, which already checks health and compatibility. No screen
+or permission-request UI is included here.
+
 ## Development
 
 Needs Node 24 and pnpm 11. `nix develop` provides both, Jellyfin's FFmpeg,
