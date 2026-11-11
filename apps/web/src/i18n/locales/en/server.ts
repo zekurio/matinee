@@ -100,6 +100,25 @@ export default defineMessages("server", {
   // rpc/admin-users.ts.
   "server.adminUsers.gone": "That user no longer exists. Reload the list.",
   "server.adminInvites.gone": "That invite no longer exists. Reload the list.",
+  // access/media.ts and rpc/playback-start.ts: an account's limits.
+  "server.access.downloadsOff": "Downloads are turned off for your account.",
+  "server.access.downloadVideoOff":
+    "The server may not convert video for your account. Download the file as it is or keep its video.",
+  "server.access.overLimitSeek":
+    "This file is over the bit rate your account may stream. Pick a lower quality to watch it.",
+  "server.access.overLimitNoEncoding":
+    "This file is over the bit rate your account may stream, and the server may not convert video for your account. Ask whoever runs the server.",
+  "server.access.overLimitEncodeFailed":
+    "This file is over the bit rate your account may stream, and converting its video failed. Try again or ask whoever runs the server.",
+  "server.access.overLimitNoVersion":
+    "This file is over the bit rate your account may stream, and the server can't make a version this device plays under that limit. Try another device or ask whoever runs the server.",
+  "server.access.needsEncoding":
+    "This device needs the video converted, but the server may not convert video for your account. Try another device or ask whoever runs the server.",
+  "server.access.tooManyStreamsOne":
+    "Your account is playing on 1 device, the most it may. Stop one to watch here.",
+  "server.access.tooManyStreams":
+    "Your account is playing on {count} devices, the most it may. Stop one to watch here.",
+
   // rpc/admin-groups.ts and access/groups.ts: access groups.
   "server.adminGroups.gone": "That group no longer exists. Reload the list.",
   "server.adminGroups.nameTaken": "Another group has that name.",

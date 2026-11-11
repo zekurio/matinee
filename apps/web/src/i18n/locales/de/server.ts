@@ -100,6 +100,24 @@ export default {
     "Diesen Benutzer gibt es nicht mehr. Lade die Liste neu.",
   "server.adminInvites.gone":
     "Diese Einladung gibt es nicht mehr. Lade die Liste neu.",
+  // access/media.ts and rpc/playback-start.ts: an account's limits.
+  "server.access.downloadsOff": "Downloads sind für dein Konto ausgeschaltet.",
+  "server.access.downloadVideoOff":
+    "Der Server darf für dein Konto kein Video umwandeln. Lade die Datei unverändert herunter oder behalte ihr Video bei.",
+  "server.access.overLimitSeek":
+    "Diese Datei liegt über der Bitrate, die dein Konto streamen darf. Wähle eine niedrigere Qualität, um sie anzusehen.",
+  "server.access.overLimitNoEncoding":
+    "Diese Datei liegt über der Bitrate, die dein Konto streamen darf, und der Server darf für dein Konto kein Video umwandeln. Frag die Person, die den Server betreibt.",
+  "server.access.overLimitEncodeFailed":
+    "Diese Datei liegt über der Bitrate, die dein Konto streamen darf, und das Umwandeln des Videos ist fehlgeschlagen. Versuch es noch einmal oder frag die Person, die den Server betreibt.",
+  "server.access.overLimitNoVersion":
+    "Diese Datei liegt über der Bitrate, die dein Konto streamen darf, und der Server kann unter diesem Limit keine Version erstellen, die dieses Gerät abspielt. Versuch ein anderes Gerät oder frag die Person, die den Server betreibt.",
+  "server.access.needsEncoding":
+    "Dieses Gerät braucht das Video umgewandelt, aber der Server darf für dein Konto kein Video umwandeln. Versuch ein anderes Gerät oder frag die Person, die den Server betreibt.",
+  "server.access.tooManyStreamsOne":
+    "Dein Konto spielt auf 1 Gerät ab, mehr sind nicht erlaubt. Beende die Wiedergabe dort, um hier zu schauen.",
+  "server.access.tooManyStreams":
+    "Dein Konto spielt auf {count} Geräten ab, mehr sind nicht erlaubt. Beende die Wiedergabe auf einem, um hier zu schauen.",
   "server.adminGroups.gone":
     "Diese Gruppe gibt es nicht mehr. Lade die Liste neu.",
   "server.adminGroups.nameTaken": "Eine andere Gruppe hat diesen Namen.",
