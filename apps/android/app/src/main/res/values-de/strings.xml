@@ -541,4 +541,13 @@
         <item quantity="one">%1$d Datei konnte nicht heruntergeladen werden</item>
         <item quantity="other">%1$d Dateien konnten nicht heruntergeladen werden</item>
     </plurals>
+
+    <!-- TV -->
+    <string name="tv_home_featured">Empfohlen</string>
+    <string name="tv_page_library">Mediathek</string>
+    <string name="tv_page_title">Titel</string>
+    <string name="tv_page_season">Staffel</string>
+    <string name="tv_page_episode">Folge</string>
+    <string name="tv_page_person">Person</string>
+    <string name="tv_page_browse">Durchsuchen</string>
 </resources>

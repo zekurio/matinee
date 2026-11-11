@@ -73,6 +73,8 @@ import io.github.zekurio.matinee.ui.settings.SettingsScreen
 import io.github.zekurio.matinee.ui.settings.admin.FolderPickerScreen
 import io.github.zekurio.matinee.ui.settings.admin.LibraryEditorScreen
 import io.github.zekurio.matinee.ui.theme.Palette
+import io.github.zekurio.matinee.ui.theme.LocalTv
+import io.github.zekurio.matinee.ui.tv.TvSignedInApp
 import io.github.zekurio.matinee.ui.title.EpisodeScreen
 import io.github.zekurio.matinee.ui.title.SeasonScreen
 import io.github.zekurio.matinee.ui.title.TitleScreen
@@ -89,6 +91,11 @@ val LocalUser = staticCompositionLocalOf<User> { error("not signed in") }
  */
 @Composable
 fun SignedInApp(session: Session, user: User, offline: Boolean = false) {
+    // A TV has pages of its own; none of the phone's are composed there.
+    if (LocalTv.current) {
+        TvSignedInApp(session, user)
+        return
+    }
     val controller = rememberNavController()
     val navigator = remember(controller) { Navigator(controller) }
     val actionScope = rememberCoroutineScope()

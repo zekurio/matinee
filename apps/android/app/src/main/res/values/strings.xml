@@ -570,4 +570,13 @@
         <item quantity="one">Couldn\'t download %1$d file</item>
         <item quantity="other">Couldn\'t download %1$d files</item>
     </plurals>
+
+    <!-- TV -->
+    <string name="tv_home_featured">Featured</string>
+    <string name="tv_page_library">Library</string>
+    <string name="tv_page_title">Title</string>
+    <string name="tv_page_season">Season</string>
+    <string name="tv_page_episode">Episode</string>
+    <string name="tv_page_person">Person</string>
+    <string name="tv_page_browse">Browse</string>
 </resources>
