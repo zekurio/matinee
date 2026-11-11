@@ -4,8 +4,12 @@ import { PLAYBACK_QUALITIES } from "./transcoding"
 /*
  * What an account may open, and how the server streams to it. Admins set
  * it on groups. An account is in any number of them, and gets the most
- * generous of what they allow. What's set on the account itself wins over
- * its groups. Admins have no limits.
+ * generous of what they allow: every library any of them opens, and the
+ * loosest of their limits. A group that opens no library has no say in
+ * the limits while another of the account's groups opens one, so the
+ * built-in group, emptied to make access opt-in, doesn't lift the limits
+ * other groups set. What's set on the account itself wins over its
+ * groups. Admins have no limits.
  *
  * Group membership comes from an admin, from an invite link, or from the
  * OIDC provider: a group that names a provider group holds whoever the

@@ -187,8 +187,12 @@ An account is in any number of groups and gets the most generous of what
 they allow: every library any of them opens, the highest limit, and
 anything one of them permits. Everyone is the built-in group that holds
 every account. It starts with every library and no limits, so nothing
-changes until an admin changes it. Take its libraries away to make access
-opt-in, then open them through other groups.
+changes until an admin changes it, and while it stays that way no other
+group can hold anyone back. Take its libraries away to make access opt-in,
+then open them through other groups. A group that opens no library has no
+say in the limits, so the emptied Everyone doesn't lift the ones the other
+groups set. Its limits only count for an account that no group opens
+anything for.
 
 Accounts get into a group three ways. An admin puts them there under
 Settings → Users. An invite link can name groups for the account it

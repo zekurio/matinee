@@ -42,7 +42,7 @@ export default {
   "access.groups.title": "Zugriffsgruppen",
   "access.groups.create": "Neue Gruppe",
   "access.groups.intro":
-    "Ein Konto bekommt das Großzügigste, was seine Gruppen erlauben. Was unter Benutzer für ein Konto eingestellt ist, gilt vor seinen Gruppen. Admins haben keine Grenzen.",
+    "Ein Konto bekommt das Großzügigste, was seine Gruppen erlauben, Alle eingeschlossen. Solange Alle Mediatheken ohne Grenzen öffnet, hält keine andere Gruppe ein Konto zurück. Eine Gruppe, die keine Mediathek öffnet, redet bei den Grenzen nicht mit. Was unter Benutzer für ein Konto eingestellt ist, gilt vor seinen Gruppen. Admins haben keine Grenzen.",
   "access.groups.loadFailed":
     "Die Gruppen konnten nicht geladen werden. {error}",
   "access.groups.onlyEveryone":
@@ -70,7 +70,7 @@ export default {
   "access.group.description":
     "Mitglieder bekommen das Großzügigste, was ihre Gruppen erlauben.",
   "access.group.everyoneDescription":
-    "Jedes Konto ist in dieser Gruppe. Nimm ihr die Mediatheken weg, damit Zugriff nur noch über andere Gruppen geht.",
+    "Jedes Konto ist in dieser Gruppe. Nimm ihr die Mediatheken weg, damit Zugriff nur noch über andere Gruppen geht. Ihre Grenzen gelten dann nur für Konten, denen keine Gruppe etwas öffnet.",
   "access.group.name": "Name",
   "access.group.namePlaceholder": "Familie",
   "access.group.providerGroup": "Anbietergruppe",

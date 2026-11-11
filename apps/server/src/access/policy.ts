@@ -36,13 +36,10 @@ function looser(a: number | null, b: number | null): number | null {
   return a === null || b === null ? null : Math.max(a, b)
 }
 
-function moreGenerous(a: AccessPolicy, b: AccessPolicy): AccessPolicy {
-  const all = a.libraries.all || b.libraries.all
+type Limits = Omit<AccessPolicy, "libraries">
+
+function looserLimits(a: Limits, b: Limits): Limits {
   return {
-    libraries: {
-      all,
-      ids: all ? [] : [...new Set([...a.libraries.ids, ...b.libraries.ids])],
-    },
     maxBitrate: looser(a.maxBitrate, b.maxBitrate),
     transcode: a.transcode || b.transcode,
     downloads: a.downloads || b.downloads,
@@ -50,13 +47,40 @@ function moreGenerous(a: AccessPolicy, b: AccessPolicy): AccessPolicy {
   }
 }
 
+function opensSomething(policy: AccessPolicy): boolean {
+  return policy.libraries.all || policy.libraries.ids.length > 0
+}
+
 /**
  * The most generous of `policies`: every library any of them opens, the
  * highest of their limits, and what any of them allows.
+ *
+ * A group that opens no library has no say in the limits while another
+ * one opens something. Otherwise the built-in group, once its libraries
+ * are taken away to make access opt-in, would still lift every limit the
+ * other groups set, since it starts with none.
  */
 export function mostGenerous(policies: readonly AccessPolicy[]): AccessPolicy {
-  const [first, ...rest] = policies
-  return first ? rest.reduce(moreGenerous, first) : NOTHING
+  if (policies.length === 0) return NOTHING
+  const all = policies.some((policy) => policy.libraries.all)
+  const opening = policies.filter(opensSomething)
+  const limits = (opening.length > 0 ? opening : policies)
+    .map((policy): Limits => ({
+      maxBitrate: policy.maxBitrate,
+      transcode: policy.transcode,
+      downloads: policy.downloads,
+      maxStreams: policy.maxStreams,
+    }))
+    .reduce(looserLimits)
+  return {
+    libraries: {
+      all,
+      ids: all
+        ? []
+        : [...new Set(policies.flatMap((policy) => policy.libraries.ids))],
+    },
+    ...limits,
+  }
 }
 
 /** `policy` with the fields `override` sets. */

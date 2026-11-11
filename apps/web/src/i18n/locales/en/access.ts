@@ -44,7 +44,7 @@ export default defineMessages("access", {
   "access.groups.title": "Access groups",
   "access.groups.create": "New group",
   "access.groups.intro":
-    "An account gets the most generous of what its groups allow. What's set on an account under Users wins over its groups. Admins have no limits.",
+    "An account gets the most generous of what its groups allow, Everyone included. While Everyone opens libraries without limits, no other group holds an account back. A group that opens no library has no say in the limits. What's set on an account under Users wins over its groups. Admins have no limits.",
   "access.groups.loadFailed": "Couldn't load the groups. {error}",
   "access.groups.onlyEveryone":
     "Every account is in Everyone. Make a group to give some accounts more than others.",
@@ -73,7 +73,7 @@ export default defineMessages("access", {
   "access.group.description":
     "Members get the most generous of what their groups allow.",
   "access.group.everyoneDescription":
-    "Every account is in this group. Take its libraries away to make access opt-in, then open them through other groups.",
+    "Every account is in this group. Take its libraries away to make access opt-in, then open them through other groups. Its limits then count only for accounts no group opens anything for.",
   "access.group.name": "Name",
   "access.group.namePlaceholder": "Family",
   "access.group.providerGroup": "Provider group",
