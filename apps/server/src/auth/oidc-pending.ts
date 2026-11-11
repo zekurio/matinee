@@ -1,4 +1,8 @@
-import { OIDC_LINK_QUERY_KEY, UserRole } from "@matinee/contracts"
+import {
+  AccessOverride,
+  OIDC_LINK_QUERY_KEY,
+  UserRole,
+} from "@matinee/contracts"
 import { t } from "@matinee/contracts/schema"
 import type { ChallengePayload } from "@matinee/db"
 import type { Context } from "hono"
@@ -29,6 +33,10 @@ const PendingPayload = t.object({
   name: t.string().nullable(),
   picture: t.string().nullable().optional(),
   role: UserRole.optional(),
+  // Challenge payloads hold scalars, so the two structured claims travel as JSON.
+  groups: t.string().optional(),
+  access: t.string().optional(),
+  refreshToken: t.string().optional(),
   /** Where the sign-in started, already checked to be a local path. */
   redirect: t.string(),
 })
@@ -61,6 +69,15 @@ export async function savePendingLink(
       name: identity.name,
       ...(identity.picture !== undefined && { picture: identity.picture }),
       ...(identity.role && { role: identity.role }),
+      ...(identity.groups !== undefined && {
+        groups: JSON.stringify(identity.groups),
+      }),
+      ...(identity.access !== undefined && {
+        access: JSON.stringify(identity.access),
+      }),
+      ...(identity.refreshToken !== undefined && {
+        refreshToken: identity.refreshToken,
+      }),
       redirect,
     },
     ttlMs: TTL_MS,
@@ -85,8 +102,29 @@ function cookieId(c: Context): string | null {
 function fromPayload(payload: ChallengePayload): PendingLink | null {
   const parsed = PendingPayload.safeParse(payload)
   if (!parsed.success) return null
-  const { redirect, picture, role, ...rest } = parsed.data
-  return { identity: { ...rest, picture, role }, redirect }
+  const { redirect, picture, role, groups, access, refreshToken, ...rest } =
+    parsed.data
+  try {
+    return {
+      identity: {
+        ...rest,
+        picture,
+        role,
+        refreshToken,
+        groups:
+          groups === undefined
+            ? undefined
+            : t.array(t.string()).parse(JSON.parse(groups)),
+        access:
+          access === undefined
+            ? undefined
+            : AccessOverride.nullable().parse(JSON.parse(access)),
+      },
+      redirect,
+    }
+  } catch {
+    return null
+  }
 }
 
 /** The sign-in this browser holds, left in place. */

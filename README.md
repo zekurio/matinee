@@ -123,6 +123,44 @@ the provider is `$PUBLIC_URL/api/auth/oidc/callback`. Set the `MATINEE_OIDC_*`
 variables to create the admin account itself through the provider, since
 settings can't be opened before setup.
 
+`MATINEE_OIDC_GROUPS_CLAIM` names a claim holding a group name or a list of
+names. Dotted paths such as `realm_access.roles` work too. Access groups
+that name a provider group follow it at every sign-in, adding and removing
+members while leaving memberships set in Matinee alone. Empty turns this
+off. Only the provider's admins should be able to set the claim.
+
+`MATINEE_OIDC_POLICY_CLAIM` names a claim holding an account's access
+override, as an object or a string containing JSON. Only the provider's
+admins should be able to set this claim too. For example:
+
+```json
+{
+  "libraries": ["Movies", "Family"],
+  "maxBitrate": 8000000,
+  "transcode": true,
+  "downloads": false,
+  "maxStreams": 2
+}
+```
+
+Leave fields out to follow the account's access groups. Libraries can be
+names, compared without regard to case, or ids; `"all"` allows every
+library, including ones added later. Unknown libraries are skipped and
+logged. Bit rates are bits per second, at least 1000000; `null` removes a
+bit rate or stream limit. A missing claim clears a provider-set override,
+not one an admin set. An invalid policy is logged and leaves access alone.
+Empty turns policy syncing off. Unlinking a provider removes its memberships
+and override, including when a link to another issuer replaces it.
+
+Add `offline_access` to `MATINEE_OIDC_SCOPES` if the provider supports
+refresh tokens. Matinee stores the token and uses the Sync provider
+accounts task to update roles, pictures, and access every six hours and a
+few minutes after startup, even for people who only use an app. If the
+provider refuses the token for good, Matinee stops retrying it. Set
+`MATINEE_OIDC_SIGN_OUT_REFUSED=true` to also sign that account out
+everywhere, so its next sign-in goes through the provider. Off, it keeps
+its sessions and last claims. Network failures wait for the next run.
+
 If the provider sends a `picture` claim, in the ID token or from userinfo,
 Matinee uses it as the account's picture and fetches it again when it
 changes. Uploading a picture or removing it under Settings → Account stops

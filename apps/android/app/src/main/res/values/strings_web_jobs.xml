@@ -61,6 +61,8 @@
     <string name="web_jobs_task_clean_transcodes_name">Clean up encodes</string>
     <string name="web_jobs_task_clean_sessions_name">Delete expired sessions</string>
     <string name="web_jobs_task_clean_sessions_description">Remove sign-ins that expired from the database.</string>
+    <string name="web_jobs_task_sync_oidc_accounts_name">Sync provider accounts</string>
+    <string name="web_jobs_task_sync_oidc_accounts_description">Refresh roles, pictures, and access from the sign-in provider for accounts with a refresh token.</string>
     <string name="web_jobs_task_neverRan">Hasn\'t run yet</string>
     <string name="web_jobs_task_completed">Last ran %1$s, took %2$s</string>
     <string name="web_jobs_task_cancelled">Cancelled %1$s, after %2$s</string>

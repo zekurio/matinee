@@ -84,6 +84,10 @@ export default defineMessages("jobs", {
   "jobs.task.clean-sessions.description":
     "Remove sign-ins that expired from the database.",
 
+  "jobs.task.sync-oidc-accounts.name": "Sync provider accounts",
+  "jobs.task.sync-oidc-accounts.description":
+    "Refresh roles, pictures, and access from the sign-in provider for accounts with a refresh token.",
+
   // A task's row.
   "jobs.task.neverRan": "Hasn't run yet",
   "jobs.task.completed": "Last ran {when}, took {took}",

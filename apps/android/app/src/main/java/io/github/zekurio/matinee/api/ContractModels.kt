@@ -1228,7 +1228,8 @@ object TaskId {
     const val MAKE_TRICKPLAY = "make-trickplay"
     const val CLEAN_TRANSCODES = "clean-transcodes"
     const val CLEAN_SESSIONS = "clean-sessions"
-    val all = listOf(SCAN_LIBRARIES, REFRESH_METADATA, PROBE_MEDIA, PREFETCH_ARTWORK, MAKE_TRICKPLAY, CLEAN_TRANSCODES, CLEAN_SESSIONS)
+    const val SYNC_OIDC_ACCOUNTS = "sync-oidc-accounts"
+    val all = listOf(SCAN_LIBRARIES, REFRESH_METADATA, PROBE_MEDIA, PREFETCH_ARTWORK, MAKE_TRICKPLAY, CLEAN_TRANSCODES, CLEAN_SESSIONS, SYNC_OIDC_ACCOUNTS)
 }
 
 object TaskResult {

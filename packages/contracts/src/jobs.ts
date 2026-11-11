@@ -78,6 +78,7 @@ export const TASK_IDS = [
   "make-trickplay",
   "clean-transcodes",
   "clean-sessions",
+  "sync-oidc-accounts",
 ] as const
 export const TaskId = t.enum(TASK_IDS)
 export type TaskId = t.infer<typeof TaskId>

@@ -7,6 +7,7 @@ import {
   removeAvatar,
   uploadAvatar,
 } from "../auth/avatars"
+import { unlinkOidcAccount } from "../auth/oidc-accounts"
 import { activeOidc, sameIssuer } from "../auth/oidc-settings"
 import { passkeysEnabled } from "../auth/passkey-settings"
 import {
@@ -196,11 +197,9 @@ export const account = {
       if (methods.linked > 0 && methods.passkeys + methods.linked <= 1) {
         throw badRequest((await passkeysEnabled()) ? LAST_METHOD : LAST_LINK)
       }
-      const deleted = await db
-        .delete(oidcAccount)
-        .where(eq(oidcAccount.userId, context.user.id))
-        .returning({ id: oidcAccount.id })
-      if (deleted.length === 0) throw notFound("No account is linked.")
+      if (!(await unlinkOidcAccount(context.user.id))) {
+        throw notFound("No account is linked.")
+      }
     }),
   },
 

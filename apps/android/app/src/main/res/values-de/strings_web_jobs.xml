@@ -61,6 +61,8 @@
     <string name="web_jobs_task_clean_transcodes_name">Transkodierungen aufräumen</string>
     <string name="web_jobs_task_clean_sessions_name">Abgelaufene Sitzungen löschen</string>
     <string name="web_jobs_task_clean_sessions_description">Entfernt abgelaufene Anmeldungen aus der Datenbank.</string>
+    <string name="web_jobs_task_sync_oidc_accounts_name">Anbieterkonten synchronisieren</string>
+    <string name="web_jobs_task_sync_oidc_accounts_description">Rollen, Profilbilder und Zugriff beim Anmeldeanbieter für Konten mit einem Refresh-Token aktualisieren.</string>
     <string name="web_jobs_task_neverRan">Noch nie gelaufen</string>
     <string name="web_jobs_task_completed">Zuletzt gelaufen %1$s, Dauer %2$s</string>
     <string name="web_jobs_task_cancelled">Abgebrochen %1$s, nach %2$s</string>

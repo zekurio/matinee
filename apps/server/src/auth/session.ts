@@ -14,6 +14,7 @@ import { arg, db } from "../db"
 import { env } from "../env"
 import { clientName } from "../stats/sessions"
 import { randomToken, sha256 } from "./tokens"
+import type { Tx } from "./users"
 
 export const SESSION_COOKIE = "matinee_session"
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000
@@ -197,8 +198,9 @@ export async function deleteSession(
 export async function deleteUserSessions(
   userId: string,
   keep?: string,
+  tx: Tx | typeof db = db,
 ): Promise<number> {
-  const ended = await db
+  const ended = await tx
     .delete(session)
     .where(
       and(eq(session.userId, userId), keep ? ne(session.id, keep) : undefined),

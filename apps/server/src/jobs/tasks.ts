@@ -1,6 +1,7 @@
 import { library } from "@matinee/db"
 import { sql } from "drizzle-orm"
 
+import { syncOidcAccounts } from "../auth/oidc-refresh"
 import { deleteExpiredSessions } from "../auth/session"
 import { db } from "../db"
 import { env } from "../env"
@@ -123,6 +124,17 @@ const cleanSessions: TaskDefinition = {
   run: () => deleteExpiredSessions(),
 }
 
+const syncProviderAccounts: TaskDefinition = {
+  id: "sync-oidc-accounts",
+  name: "Sync provider accounts",
+  description:
+    "Refresh roles, pictures, and access from the sign-in provider for accounts with a refresh token.",
+  queue: null,
+  startupDelayMs: 3 * MINUTE_MS,
+  intervalMs: 6 * HOUR_MS,
+  run: (context) => syncOidcAccounts(context),
+}
+
 /** The scheduled tasks, in the order admins see them. */
 export const TASKS: TaskDefinition[] = [
   scanLibraries,
@@ -132,4 +144,5 @@ export const TASKS: TaskDefinition[] = [
   makeTrickplay,
   cleanTranscodes,
   cleanSessions,
+  syncProviderAccounts,
 ]

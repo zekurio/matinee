@@ -1,7 +1,17 @@
-import type { UserRole } from "@matinee/contracts"
-import { invite, oidcAccount, user, type UserRow } from "@matinee/db"
+import { isDeepStrictEqual } from "node:util"
+
+import { AccessOverride, type UserRole } from "@matinee/contracts"
+import {
+  accessGroup,
+  accessGroupMember,
+  invite,
+  oidcAccount,
+  user,
+  type UserRow,
+} from "@matinee/db"
 import { and, eq } from "drizzle-orm"
 
+import { forgetGroups, groupsFollowing, setMemberships } from "../access/groups"
 import { db } from "../db"
 import { log } from "../log"
 import { recordProviderPicture } from "./avatars"
@@ -12,6 +22,7 @@ import {
   insertUser,
   lockUsers,
   otherAdminCanSignIn,
+  type Tx,
 } from "./users"
 
 /** A failure the person can act on. Its message is shown as is. */
@@ -42,6 +53,11 @@ export type OidcIdentity = {
   picture: string | null | undefined
   /** What the role claim names. Undefined leaves the account's role alone. */
   role: UserRole | undefined
+  /** Undefined leaves the provider's last groups and policy alone. */
+  groups: string[] | undefined
+  access: AccessOverride | null | undefined
+  /** A new token replaces the stored token; an omitted one keeps it. */
+  refreshToken: string | undefined
 }
 
 /** The account the identity is linked to, if any. */
@@ -96,6 +112,7 @@ export async function linkOidcAccount(
         )
       }
       if (current) {
+        await clearProviderAccess(tx, userId)
         await tx.delete(oidcAccount).where(eq(oidcAccount.id, current.id))
       }
       await tx.insert(oidcAccount).values({
@@ -105,7 +122,10 @@ export async function linkOidcAccount(
         label: identity.label,
       })
     })
+    forgetGroups()
   }
+  await syncRole(userId, identity)
+  await syncAccess(userId, identity)
   await takePicture(userId, identity)
 }
 
@@ -186,6 +206,158 @@ export async function createOidcUser(
     })
     return row
   })
+  await syncAccess(created.id, identity)
   await takePicture(created.id, identity)
   return created
+}
+
+/** Remove what only the old provider vouched for, within the unlink transaction. */
+export async function clearProviderAccess(
+  tx: Tx,
+  userId: string,
+): Promise<void> {
+  await tx
+    .select({ id: user.id })
+    .from(user)
+    .where(eq(user.id, userId))
+    .for("update")
+  await setMemberships(tx, userId, "provider", [])
+  await tx
+    .update(user)
+    .set({
+      accessOverride: null,
+      accessOverrideSource: "manual",
+      updatedAt: new Date(),
+    })
+    .where(and(eq(user.id, userId), eq(user.accessOverrideSource, "provider")))
+}
+
+/** Apply only claims the provider actually sent, preserving manual memberships. */
+export async function syncAccess(
+  userId: string,
+  identity: OidcIdentity,
+): Promise<void> {
+  const groupIds =
+    identity.groups === undefined
+      ? undefined
+      : await groupsFollowing(identity.groups)
+  const changes = await db.transaction(async (tx) => {
+    const [current] = await tx
+      .select()
+      .from(user)
+      .where(eq(user.id, userId))
+      .for("update")
+    if (!current) return []
+    const [account] = await tx
+      .select()
+      .from(oidcAccount)
+      .where(
+        and(
+          eq(oidcAccount.userId, userId),
+          eq(oidcAccount.issuer, identity.issuer),
+          eq(oidcAccount.subject, identity.subject),
+        ),
+      )
+      .for("update")
+    // An unlink or replacement may have committed while the claims were being read.
+    if (!account) return []
+    const messages: string[] = []
+    await tx
+      .update(oidcAccount)
+      .set({
+        ...(identity.groups !== undefined && { groups: identity.groups }),
+        ...(identity.refreshToken !== undefined && {
+          refreshToken: identity.refreshToken,
+        }),
+        syncedAt: new Date(),
+      })
+      .where(eq(oidcAccount.id, account.id))
+    if (groupIds !== undefined) {
+      const before = await tx
+        .select({ id: accessGroupMember.groupId })
+        .from(accessGroupMember)
+        .where(
+          and(
+            eq(accessGroupMember.userId, userId),
+            eq(accessGroupMember.source, "provider"),
+          ),
+        )
+      if (
+        !isDeepStrictEqual(
+          before.map((row) => row.id).sort(),
+          [...groupIds].sort(),
+        )
+      ) {
+        await setMemberships(tx, userId, "provider", groupIds)
+        const groups = await tx
+          .select({ id: accessGroup.id, name: accessGroup.name })
+          .from(accessGroup)
+        const names = groups
+          .filter((group) => groupIds.includes(group.id))
+          .map((group) => group.name)
+          .sort()
+        messages.push(
+          names.length > 0
+            ? `The OIDC groups claim put ${current.username} in ${names.join(", ")}`
+            : `The OIDC groups claim removed ${current.username} from provider access groups`,
+        )
+      } else if (!isDeepStrictEqual(account.groups, identity.groups)) {
+        messages.push(
+          `The OIDC groups claim for ${current.username} now names ${identity.groups?.join(", ") || "no groups"}`,
+        )
+      }
+    }
+    if (identity.access !== undefined) {
+      if (identity.access === null) {
+        if (current.accessOverrideSource === "provider") {
+          await tx
+            .update(user)
+            .set({
+              accessOverride: null,
+              accessOverrideSource: "manual",
+              updatedAt: new Date(),
+            })
+            .where(eq(user.id, userId))
+          messages.push(
+            `The OIDC policy claim cleared the access override for ${current.username}`,
+          )
+        }
+      } else if (
+        current.accessOverrideSource !== "provider" ||
+        !isDeepStrictEqual(
+          AccessOverride.safeParse(current.accessOverride).data,
+          identity.access,
+        )
+      ) {
+        await tx
+          .update(user)
+          .set({
+            accessOverride: identity.access,
+            accessOverrideSource: "provider",
+            updatedAt: new Date(),
+          })
+          .where(eq(user.id, userId))
+        messages.push(
+          `The OIDC policy claim set the access override for ${current.username}`,
+        )
+      }
+    }
+    return messages
+  })
+  forgetGroups()
+  for (const message of changes) log.info(message)
+}
+
+/** Unlink and revoke provider access together. Manual access remains. */
+export async function unlinkOidcAccount(userId: string): Promise<boolean> {
+  const removed = await db.transaction(async (tx) => {
+    await clearProviderAccess(tx, userId)
+    const rows = await tx
+      .delete(oidcAccount)
+      .where(eq(oidcAccount.userId, userId))
+      .returning({ id: oidcAccount.id })
+    return rows.length > 0
+  })
+  forgetGroups()
+  return removed
 }

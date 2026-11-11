@@ -2,7 +2,6 @@ import {
   AUTH_ERROR_QUERY_KEY,
   OIDC_CALLBACK_PATH,
   type OidcMode,
-  UserRole,
 } from "@matinee/contracts"
 import { t } from "@matinee/contracts/schema"
 import { type Context, Hono } from "hono"
@@ -11,7 +10,6 @@ import * as client from "openid-client"
 
 import { env } from "../env"
 import { log } from "../log"
-import { PictureUrl } from "./avatars"
 import { consumeChallenge, createChallenge } from "./challenges"
 import {
   createOidcUser,
@@ -19,16 +17,19 @@ import {
   linkOidcAccount,
   noLinkedAccount,
   OidcError,
-  type OidcIdentity,
+  syncAccess,
   syncRole,
   takePicture,
 } from "./oidc-accounts"
+import { readOidcIdentity } from "./oidc-claims"
+import { oidcConfig } from "./oidc-client"
 import { linkPagePath, savePendingLink } from "./oidc-pending"
-import { activeOidc, type OidcState, sameIssuer } from "./oidc-settings"
 import { passkeysEnabled } from "./passkey-settings"
 import { readSession, signIn } from "./session"
 import { endSetupAccess, markSetupDone, setupRequired } from "./setup"
 import { findUserByUsernameHint } from "./users"
+
+export { discover, WrongIssuerError } from "./oidc-client"
 
 const FLOW_COOKIE = "matinee_oidc"
 const FLOW_TTL_MS = 10 * 60 * 1000
@@ -47,79 +48,6 @@ const OidcFlow = t.object({
 })
 type FlowStart = Omit<t.infer<typeof OidcFlow>, "codeVerifier" | "nonce">
 
-/** A non-empty string claim, trimmed. */
-const ClaimString = t.string().trim().min(1)
-
-/** A role claim: one role, or a list of them, in any case. */
-const RoleList = t.array(t.unknown())
-const RoleName = t.string().transform((value) => value.trim().toLowerCase())
-
-let discovered: {
-  version: number
-  config: Promise<client.Configuration>
-} | null = null
-
-/**
- * The provider names another issuer than the configured URL. Its ID tokens
- * carry that one, so linked accounts wouldn't match the settings.
- */
-export class WrongIssuerError extends OidcError {
-  constructor(readonly issuer: string) {
-    super(
-      `Single sign-on is set up with the wrong issuer URL. An admin needs to change it to ${issuer}.`,
-    )
-  }
-}
-
-/**
- * Fetch the provider's discovery document and build a client from it. Also
- * used to check settings before they're saved.
- */
-export async function discover(
-  state: OidcState,
-): Promise<client.Configuration> {
-  const issuer = new URL(state.settings.issuerUrl)
-  const config = await client.discovery(
-    issuer,
-    state.settings.clientId,
-    state.secret,
-    state.secret ? undefined : client.None(),
-    {
-      timeout: 10,
-      execute:
-        issuer.protocol === "http:" ? [client.allowInsecureRequests] : [],
-    },
-  )
-  // openid-client checks the issuer only when it finds the document itself,
-  // not for a URL that already points at it.
-  const named = config.serverMetadata().issuer
-  if (!sameIssuer(named, state.settings.issuerUrl)) {
-    throw new WrongIssuerError(named)
-  }
-  return config
-}
-
-/** The provider and its client, rediscovered after the settings change. */
-async function oidcConfig(): Promise<{
-  state: OidcState
-  config: client.Configuration
-}> {
-  const state = await activeOidc()
-  if (!state) throw new OidcError("Single sign-on is turned off.")
-  if (discovered?.version !== state.version) {
-    const entry = {
-      version: state.version,
-      config: discover(state).catch((cause: unknown) => {
-        // Forget the failure so the next sign-in retries discovery.
-        if (discovered === entry) discovered = null
-        throw cause
-      }),
-    }
-    discovered = entry
-  }
-  return { state, config: await discovered.config }
-}
-
 /** Settings, open on the account section, where linking starts and ends. */
 const LINK_PAGE = "/?settings=account"
 
@@ -135,28 +63,6 @@ function errorRedirect(c: Context, page: string, message: string) {
   const url = new URL(page, env.PUBLIC_URL)
   url.searchParams.set(AUTH_ERROR_QUERY_KEY, message)
   return c.redirect(`${url.pathname}${url.search}`)
-}
-
-function claimString(
-  claims: Readonly<Record<string, client.JsonValue | undefined>>,
-  key: string,
-): string | undefined {
-  return ClaimString.safeParse(claims[key]).data
-}
-
-/**
- * The role a claim names, as alloy and Immich read it: `admin` or `user`,
- * or a list holding them, where admin wins. Anything else names none.
- */
-function claimRole(
-  claims: Readonly<Record<string, client.JsonValue | undefined>>,
-  key: string,
-): UserRole | undefined {
-  const value = claims[key]
-  const roles = (RoleList.safeParse(value).data ?? [value])
-    .map((entry) => UserRole.safeParse(RoleName.safeParse(entry).data).data)
-    .filter((role) => role !== undefined)
-  return roles.includes("admin") ? "admin" : roles[0]
 }
 
 /**
@@ -262,47 +168,13 @@ export const oidcRoutes = new Hono()
       })
       const idClaims = tokens.claims()
       if (!idClaims) throw new OidcError("The provider sent no ID token.")
-      const usernameClaim =
-        provider.settings.usernameClaim || "preferred_username"
+      const { identity, claims } = await readOidcIdentity(
+        config,
+        provider.settings,
+        tokens,
+        idClaims,
+      )
       const { roleClaim } = provider.settings
-      const hasUsername = claimString(idClaims, usernameClaim) !== undefined
-      // The ID token may leave the username, picture, or role out; the
-      // userinfo endpoint fills in what it lacks. Only a missing username
-      // fails the sign-in when userinfo can't be read.
-      let userInfo: client.UserInfoResponse | null = null
-      let userInfoFailed = false
-      if (
-        (!hasUsername ||
-          !claimString(idClaims, "picture") ||
-          claimRole(idClaims, roleClaim) === undefined) &&
-        tokens.access_token
-      ) {
-        try {
-          userInfo = await client.fetchUserInfo(
-            config,
-            tokens.access_token,
-            idClaims.sub,
-          )
-        } catch (cause) {
-          if (!hasUsername) throw cause
-          log.warn("Couldn't read the OIDC userinfo", cause)
-          userInfoFailed = true
-        }
-      }
-      const claims = { ...userInfo, ...idClaims }
-      const picture = PictureUrl.safeParse(claims.picture).data
-      const identity: OidcIdentity = {
-        issuer: idClaims.iss,
-        subject: idClaims.sub,
-        label:
-          claimString(claims, usernameClaim) ??
-          claimString(claims, "preferred_username") ??
-          null,
-        name: claimString(claims, "name") ?? null,
-        // Without userinfo, a missing picture may just be unsent.
-        picture: picture ?? (userInfoFailed ? undefined : null),
-        role: claimRole(claims, roleClaim),
-      }
 
       if (mode === "link") {
         const current = await readSession(c)
@@ -316,6 +188,7 @@ export const oidcRoutes = new Hono()
       const linked = await linkedUserId(identity)
       if (linked) {
         await syncRole(linked, identity)
+        await syncAccess(linked, identity)
         await takePicture(linked, identity)
         await signIn(c, linked)
         return c.redirect(redirect)

@@ -348,6 +348,39 @@ in
         '';
       };
 
+      groupsClaim = mkOption {
+        type = nullOr types.str;
+        default = null;
+        description = ''
+          The claim listing provider groups as a string or list. Access
+          groups that follow a provider group update at every sign-in.
+          Dotted paths such as realm_access.roles work. Only the provider's
+          admins should be able to set this claim. Null or empty turns it off.
+        '';
+      };
+
+      policyClaim = mkOption {
+        type = nullOr types.str;
+        default = null;
+        description = ''
+          The claim holding a per-account access override, as an object or
+          JSON string with libraries, maxBitrate, transcode, downloads, and
+          maxStreams. Only the provider's admins should be able to set this
+          claim. Null or empty leaves overrides to Matinee's admins.
+        '';
+      };
+
+      signOutRefused = mkOption {
+        type = nullOr types.bool;
+        default = null;
+        description = ''
+          End all of an account's sessions when the provider refuses its
+          refresh token. Requires offline_access in the scopes and a token
+          from the provider. Off keeps sessions and the last claims. Null
+          leaves Matinee's default, off.
+        '';
+      };
+
       allowSignUp = mkOption {
         type = nullOr types.bool;
         default = null;
@@ -487,6 +520,11 @@ in
         MATINEE_OIDC_USERNAME_CLAIM = cfg.oidc.usernameClaim;
       }
       // optionalAttrs (cfg.oidc.roleClaim != null) { MATINEE_OIDC_ROLE_CLAIM = cfg.oidc.roleClaim; }
+      // optionalAttrs (cfg.oidc.groupsClaim != null) { MATINEE_OIDC_GROUPS_CLAIM = cfg.oidc.groupsClaim; }
+      // optionalAttrs (cfg.oidc.policyClaim != null) { MATINEE_OIDC_POLICY_CLAIM = cfg.oidc.policyClaim; }
+      // optionalAttrs (cfg.oidc.signOutRefused != null) {
+        MATINEE_OIDC_SIGN_OUT_REFUSED = cfg.oidc.signOutRefused;
+      }
       // optionalAttrs (cfg.oidc.allowSignUp != null) {
         MATINEE_OIDC_ALLOW_SIGN_UP = cfg.oidc.allowSignUp;
       }

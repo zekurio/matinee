@@ -83,6 +83,10 @@ export default {
   "jobs.task.clean-sessions.description":
     "Entfernt abgelaufene Anmeldungen aus der Datenbank.",
 
+  "jobs.task.sync-oidc-accounts.name": "Anbieterkonten synchronisieren",
+  "jobs.task.sync-oidc-accounts.description":
+    "Rollen, Profilbilder und Zugriff beim Anmeldeanbieter für Konten mit einem Refresh-Token aktualisieren.",
+
   "jobs.task.neverRan": "Noch nie gelaufen",
   "jobs.task.completed": "Zuletzt gelaufen {when}, Dauer {took}",
   "jobs.task.cancelled": "Abgebrochen {when}, nach {took}",
