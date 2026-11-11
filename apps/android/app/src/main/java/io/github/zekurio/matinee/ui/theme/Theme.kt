@@ -1,12 +1,17 @@
 package io.github.zekurio.matinee.ui.theme
 
+import android.content.pm.PackageManager
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
@@ -128,7 +133,18 @@ private val typography = Typography(
     labelSmall = style(11, 500, 16),
 )
 
+/**
+ * The app is on a TV: a remote instead of fingers, read from the couch. The
+ * theme provides it, so the app's pages and the player get the same answer
+ * as `Session.isTv`.
+ */
+val LocalTv = staticCompositionLocalOf { false }
+
 @Composable
 fun MatineeTheme(content: @Composable () -> Unit) {
-    MaterialTheme(colorScheme = colorScheme(), typography = typography, content = content)
+    val context = LocalContext.current
+    val tv = remember(context) { context.packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK) }
+    CompositionLocalProvider(LocalTv provides tv) {
+        MaterialTheme(colorScheme = colorScheme(), typography = typography, content = content)
+    }
 }
