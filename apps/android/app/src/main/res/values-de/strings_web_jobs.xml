@@ -20,9 +20,11 @@
     <string name="web_jobs_queue_subtitles_description">Wandelt Untertitel in WebVTT um und kopiert PGS-Untertitel aus Videos.</string>
     <string name="web_jobs_queue_avatars_name">Profilbilder</string>
     <string name="web_jobs_queue_avatars_description">Schneidet und skaliert Uploads und die Bilder, die Anmeldeanbieter schicken.</string>
-    <string name="web_jobs_queue_downloads_name">Downloads</string>
-    <string name="web_jobs_queue_downloads_description">Erstellt die Versionen von Dateien, die Apps zum Offline-Ansehen herunterladen, während sie sie abrufen.</string>
-    <string name="web_jobs_queue_downloads_note">Downloads, die gleichzeitig umgewandelt werden. Jeder belegt einen Encoder wie ein Stream; erhöhe den Wert, wenn der Server mithält.</string>
+    <string name="web_jobs_queue_downloads_name">Download-Kodierungen</string>
+    <string name="web_jobs_queue_downloads_description">Kodiert das Video von Downloads in einer anderen Größe oder einem anderen Codec, während die App oder der Browser sie abruft.</string>
+    <string name="web_jobs_queue_downloads_note">Downloads, die gleichzeitig kodiert werden. Jeder belegt einen Encoder wie ein Stream; erhöhe den Wert, wenn der Server mithält.</string>
+    <string name="web_jobs_queue_download_copies_name">Download-Kopien</string>
+    <string name="web_jobs_queue_download_copies_description">Stellt Downloads zusammen, die ihr Video unverändert behalten, während die App oder der Browser sie abruft.</string>
     <string name="web_jobs_queue_running">%1$s von %2$s aktiv</string>
     <plurals name="web_jobs_queue_waiting">
         <item quantity="one">%1$d wartet</item>
