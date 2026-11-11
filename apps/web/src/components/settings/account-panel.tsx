@@ -65,7 +65,7 @@ import { Sessions } from "./sessions"
 import { RowIcon, SettingsSections, SettingsSubsection } from "./settings-panel"
 
 /** Where an OIDC link round trip lands, success or failure. */
-const LINK_RETURN = "/?settings=account"
+const LINK_RETURN = "/settings/account"
 
 export function AccountPanel() {
   const search = useSearch({ from: "/_authed/_shell" })

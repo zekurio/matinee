@@ -15,6 +15,7 @@ import { type ReactNode, useMemo, useRef, useState } from "react"
 
 import { UserAvatar } from "@/components/user-avatar"
 import { tr } from "@/i18n"
+import type { SettingsTarget } from "@/lib/settings"
 import { useSettingsDialogStore } from "@/stores/settings-dialog"
 
 import {
@@ -25,9 +26,9 @@ import {
 
 interface SettingsNavigation {
   /** Switch sections in place, as the sidebar does. */
-  onNavigate: (section: string) => void
+  onNavigate: (section: SettingsTarget) => void
   /** Open a section from the phone menu, as a new history entry. */
-  onOpenSection: (section: string) => void
+  onOpenSection: (section: SettingsTarget) => void
   /** Leave a section for the phone menu. */
   onBack: () => void
 }
@@ -48,7 +49,7 @@ export function SettingsDialog({
 }: SettingsNavigation & {
   user: User
   /** The requested section, or null while closed. */
-  section: string | null
+  section: SettingsTarget | null
   onClose: () => void
 }) {
   const categories = useSettingsCategories(user)
@@ -93,7 +94,7 @@ function SettingsBody({
 }: SettingsNavigation & {
   user: User
   categories: SettingsCategory[]
-  section: string | null
+  section: SettingsTarget | null
 }) {
   const isMobile = useIsMobile()
   const requested = categories.find((category) => category.id === section)
@@ -151,7 +152,7 @@ function SettingsOverview({
 }: {
   user: User
   categories: SettingsCategory[]
-  onOpenSection: (section: string) => void
+  onOpenSection: (section: SettingsTarget) => void
 }) {
   const [query, setQuery] = useState("")
   const groups = useMemo(

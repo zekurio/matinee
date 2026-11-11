@@ -23,6 +23,7 @@ import { Rail, RailItem } from "@/components/rail"
 import { tr } from "@/i18n"
 import { homeQueries, SHELF } from "@/lib/home-queries"
 import { orpc } from "@/lib/rpc"
+import { settingsLink } from "@/lib/settings"
 
 /** Home: what to watch next, then each library's latest. */
 export function Home() {
@@ -68,11 +69,7 @@ export function Home() {
           </EmptyHeader>
           {admin && (
             <EmptyContent>
-              <Link
-                to="/"
-                search={{ settings: "libraries" }}
-                className={buttonVariants()}
-              >
+              <Link {...settingsLink("libraries")} className={buttonVariants()}>
                 {tr("browse.home.addLibrary")}
               </Link>
             </EmptyContent>

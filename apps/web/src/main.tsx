@@ -29,7 +29,11 @@ void queryClient.prefetchQuery(orpc.auth.session.queryOptions())
 if (!SIGNED_OUT_PAGES.includes(location.pathname)) {
   void queryClient.prefetchQuery(orpc.libraries.list.queryOptions())
 }
-if (location.pathname === "/") {
+// A settings address opened fresh shows its dialog over Home.
+if (
+  location.pathname === "/" ||
+  /^\/settings(?:\/|$)/.test(location.pathname)
+) {
   prefetchHome(queryClient)
 }
 // The first render is in the right language, so it waits for it to load.

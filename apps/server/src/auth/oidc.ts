@@ -49,7 +49,7 @@ const OidcFlow = t.object({
 type FlowStart = Omit<t.infer<typeof OidcFlow>, "codeVerifier" | "nonce">
 
 /** Settings, open on the account section, where linking starts and ends. */
-const LINK_PAGE = "/?settings=account"
+const LINK_PAGE = "/settings/account"
 
 /** Only same-origin paths, so the callback can't bounce users elsewhere. */
 function safeRedirect(value: string | undefined, fallback: string): string {
