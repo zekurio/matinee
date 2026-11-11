@@ -28,11 +28,13 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavDestination
 import androidx.navigation.NavDestination.Companion.hasRoute
@@ -45,6 +47,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import io.github.zekurio.matinee.api.ImageTarget
 import io.github.zekurio.matinee.api.User
+import io.github.zekurio.matinee.app
 import io.github.zekurio.matinee.auth.Session
 import io.github.zekurio.matinee.ui.browse.BrowseScreen
 import io.github.zekurio.matinee.ui.browse.LibraryScreen
@@ -73,6 +76,9 @@ import io.github.zekurio.matinee.ui.theme.Palette
 import io.github.zekurio.matinee.ui.title.EpisodeScreen
 import io.github.zekurio.matinee.ui.title.SeasonScreen
 import io.github.zekurio.matinee.ui.title.TitleScreen
+import java.io.IOException
+import kotlinx.coroutines.launch
+import kotlinx.serialization.SerializationException
 
 /** The signed-in account. */
 val LocalUser = staticCompositionLocalOf<User> { error("not signed in") }
@@ -110,6 +116,29 @@ fun SignedInApp(session: Session, user: User, offline: Boolean = false) {
             )
         }
         ActionsSheet(actions)
+        if (!offline) FollowPlaybackOptions()
+    }
+}
+
+/**
+ * Asks for the account's `playback.options` each time the app comes back,
+ * so what it offers, like downloads, follows what the server allows now.
+ */
+@Composable
+private fun FollowPlaybackOptions() {
+    val app = LocalContext.current.app
+    val api = LocalApi.current
+    val scope = rememberCoroutineScope()
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        scope.launch {
+            try {
+                app.viewer.options = api.playback.options()
+            } catch (_: IOException) {
+                // What it said last still holds; the next return asks again.
+            } catch (_: SerializationException) {
+                // Likewise for an answer this app can't read.
+            }
+        }
     }
 }
 

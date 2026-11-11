@@ -23,8 +23,9 @@ web app's catalogs where the words are the same.
     The token lives in the app's preferences, encrypted with a key in the
     Android Keystore, and stays out of backups.
 - Home: the featured banner, Continue watching, Next up, and what each
-  library got last. Libraries with sorting, a genre filter, and search;
-  genres, studios, people, search across the server.
+  library got last, or, for an account that may open no library, a note to
+  ask whoever runs the server. Libraries with sorting, a genre filter, and
+  search; genres, studios, people, search across the server.
 - Title, season, and episode pages, with watched marks and favorites. A
   long press on any card offers the rest.
 - The player tells the server what this device plays, for the engine and
@@ -38,7 +39,10 @@ web app's catalogs where the words are the same.
   the engine draws picture tracks inside a file that plays as it is, and the
   server burns the rest into an encode. It shows trickplay frames while
   scrubbing, counts down to the next episode, reports progress, and keeps
-  playing in picture in picture.
+  playing in picture in picture. The quality menu leaves Original out for a
+  file over the account's bit rate limit. When the account may not play a
+  file, or plays on as many devices as it may, the player shows the
+  server's message and stops, as the web does.
 - Downloads for watching offline, from a file's menu: a version the
   server makes for this device (the video kept when the phone decodes it,
   else encoded to H.264 at a picked size, and the preferred audio track kept
@@ -49,9 +53,13 @@ web app's catalogs where the words are the same.
   the languages you read or hear save beside the video. A downloaded file
   plays from the phone. When the server doesn't answer, the app offers the
   downloads, and where you got to in them goes to the server once it's back.
+  An account that may not download, as `playback.options` says, gets no
+  Download in any menu and keeps what's on the phone; a download the server
+  refuses stops with words that say so, without retrying.
 - Settings: the account's language preferences; how subtitles look, in the
   system's caption style or the app's own size, color, background, and edge;
-  this device's quality, codecs for encodes, decoders, skip length, autoplay
+  this device's quality, of those the account may use and with its bit
+  rate limit, codecs for encodes, decoders, skip length, autoplay
   of the next episode, picture in picture, and audio passthrough; downloads'
   network, version, and subtitles; the app's language through Android's
   per-app setting; sessions; and the server.
@@ -68,7 +76,9 @@ signing in with a code, Home, title, season, and episode pages, playback
 as a stream with converted audio, seeking, and subtitles. Downloads, the
 offline mode, the remote's keys, and the last player fixes (the thin seek
 bar, the banner's swipe hold, light status bar icons) are written but not
-built or tried yet.
+built or tried yet. The account's access (the bit rate limit, a server that
+may not encode for it, downloads switched off, and the limit on devices)
+builds and passes the unit tests, but isn't tried on a device yet.
 
 ## Building
 

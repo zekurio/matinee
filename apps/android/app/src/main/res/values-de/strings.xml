@@ -116,7 +116,8 @@
     <string name="browse_empty_shelf">Hier ist noch nichts.</string>
     <string name="browse_home_no_libraries">Noch keine Mediatheken</string>
     <string name="browse_home_no_libraries_admin">Füge einen Ordner mit Videos auf diesem Server hinzu, um loszulegen.</string>
-    <string name="browse_home_no_libraries_user">Ein Admin hat noch keine Mediatheken hinzugefügt.</string>
+    <string name="browse_home_nothing_yet">Noch nichts zu sehen</string>
+    <string name="browse_home_nothing_yet_description">Dein Konto kann noch nichts öffnen. Frag, wer diesen Server betreibt, ob du Zugriff bekommst.</string>
 
     <string name="browse_genre">Genre</string>
     <string name="browse_studio">Studio</string>
@@ -330,6 +331,7 @@
     <string name="playback_device_title">Dieses Gerät</string>
     <string name="playback_quality_title">Qualität</string>
     <string name="playback_quality_preset">%1$dp, %2$s</string>
+    <string name="playback_quality_limit">Der Server begrenzt das Streaming für dieses Konto auf %1$s.</string>
     <string name="account_sessions_title">Sitzungen</string>
     <string name="account_sessions_load_failed">Deine Sitzungen konnten nicht geladen werden. %1$s</string>
     <string name="account_sessions_sign_out_failed">Diese Sitzung konnte nicht abgemeldet werden</string>
@@ -370,6 +372,8 @@
     <string name="playback_audio_codec_title">Audiocodec</string>
     <string name="playback_codec_automatic">Automatisch (%1$s)</string>
     <string name="playback_transcoding_title">Transkodierung</string>
+    <string name="playback_video_codec_none">Keine Videokodierung</string>
+    <string name="playback_transcoding_no_encodes">Der Server kodiert für dieses Konto kein Video, also spielt eine Datei so, wie sie ist, oder mit kopiertem Video.</string>
     <string name="playback_transcoding_note">Gilt nur, wenn der Server eine Datei zum Abspielen umwandelt. Downloads haben unter Downloads einen eigenen Codec.</string>
     <string name="playback_engine_title">Player</string>
     <string name="playback_decoders_title">Decoder</string>
@@ -441,9 +445,13 @@
     <string name="player_speed_normal">Normal</string>
     <string name="player_speed_rate">%1$s×</string>
     <string name="player_bitrate_mbps">%1$d Mbit/s</string>
+    <string name="player_bitrate_mbps_exact">%1$s Mbit/s</string>
+    <string name="player_bitrate_kbps">%1$d kbit/s</string>
     <string name="player_error_lost">Dieses Video kann nicht abgespielt werden</string>
     <string name="player_error_subtitles">Die Untertitel konnten nicht geladen werden. Wähle eine andere Spur oder schalte sie aus.</string>
     <string name="player_unplayable">Dieses Gerät kann die Datei nicht abspielen.</string>
+    <string name="player_restricted">Dein Konto kann das nicht abspielen</string>
+    <string name="player_busy">Auf zu vielen Geräten in Wiedergabe</string>
     <string name="player_notice_burn_in_failed">Die Untertitel konnten nicht eingebrannt werden</string>
     <string name="player_notice_burn_in_failed_detail">Die Untertitel sind aus. Wähle eine andere Spur oder versuch es noch einmal.</string>
     <string name="player_notice_switch_failed">Das ließ sich nicht abspielen</string>
@@ -488,6 +496,9 @@
     <string name="downloads_state_failed">Abgebrochen · %1$s</string>
     <string name="downloads_error_unreachable">Server nicht erreichbar</string>
     <string name="downloads_error_broke_off">Verbindung abgebrochen</string>
+    <string name="downloads_error_forbidden">Dein Konto kann nicht herunterladen</string>
+    <string name="downloads_off_title">Downloads sind aus</string>
+    <string name="downloads_off_description">Dein Konto kann nicht herunterladen. Frag, wer diesen Server betreibt, falls du es brauchst.</string>
     <string name="downloads_retry">Jetzt erneut versuchen</string>
     <string name="downloads_retry_all">Alle erneut versuchen</string>
     <string name="downloads_state_waiting">Wartet</string>

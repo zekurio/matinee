@@ -149,6 +149,7 @@ object Lucide {
     val Palette = R.drawable.lucide_palette
     val Play = R.drawable.lucide_play_filled
     val PlayOutline = R.drawable.lucide_play
+    val Popcorn = R.drawable.lucide_popcorn
     val RefreshCw = R.drawable.lucide_refresh_cw
     val RotateCcw = R.drawable.lucide_rotate_ccw
     val RotateCw = R.drawable.lucide_rotate_cw

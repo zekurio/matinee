@@ -44,6 +44,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
@@ -87,6 +88,7 @@ import io.github.zekurio.matinee.ui.components.LucideIcon
 import io.github.zekurio.matinee.ui.components.RoundIconButton
 import io.github.zekurio.matinee.ui.components.launchShowing
 import io.github.zekurio.matinee.ui.downloads.mbps
+import io.github.zekurio.matinee.ui.formatBitrate
 import io.github.zekurio.matinee.ui.formatBytes
 import io.github.zekurio.matinee.ui.formatInstant
 import io.github.zekurio.matinee.ui.player.AUTOMATIC
@@ -333,6 +335,8 @@ private fun PlaybackPage(session: Session) {
         scope.launchShowing(snackbar, saveFailure) { session.updateUser(api.account.playback.setPreferences(changed)) }
     }
     val loaded = (options.state as? Load.Ready)?.value
+    val viewer = LocalContext.current.app.viewer
+    LaunchedEffect(loaded) { if (loaded != null) viewer.options = loaded }
     val passthrough = remember { Capabilities.passthrough }
     SettingsScaffold(stringResource(R.string.settings_page_playback)) {
         item(key = "languages") { LanguagesSection(playback, loaded, save) }
@@ -492,16 +496,21 @@ private fun SubtitlePreview(look: SubtitleLook) {
 @Composable
 private fun DeviceSection(prefs: PlayerPrefs, options: PlaybackOptions?) {
     val context = LocalContext.current
+    // The qualities this account may stream, once `playback.options` answers.
+    val qualities = buildList {
+        add(ORIGINAL_QUALITY to stringResource(R.string.player_quality_original))
+        options?.qualities?.forEach { add(it.id to qualityLabel(it)) }
+    }
     Section(stringResource(R.string.playback_device_title)) {
         Panel {
+            // One the account may no longer use shows as the original, the best the server
+            // allows; it stays saved, so a lifted limit brings it back.
+            val current = if (options == null || qualities.any { it.first == prefs.quality }) prefs.quality else ORIGINAL_QUALITY
             PickerRow(
                 stringResource(R.string.playback_quality_title),
-                buildList {
-                    add(ORIGINAL_QUALITY to stringResource(R.string.player_quality_original))
-                    // The server's ladder, once `playback.options` answers.
-                    options?.qualities?.forEach { add(it.id to qualityLabel(it)) }
-                },
-                prefs.quality,
+                qualities,
+                current,
+                enabled = options == null || qualities.size > 1,
             ) { prefs.quality = it }
             RowDivider()
             PickerRow(
@@ -531,6 +540,14 @@ private fun DeviceSection(prefs: PlayerPrefs, options: PlaybackOptions?) {
                 ) { prefs.pictureInPicture = it }
             }
         }
+        options?.maxBitrate?.let { limit ->
+            Gap(8.dp)
+            Text(
+                stringResource(R.string.playback_quality_limit, formatBitrate(limit, LocalResources.current)),
+                style = MaterialTheme.typography.bodySmall,
+                color = Palette.Muted,
+            )
+        }
     }
 }
 
@@ -543,10 +560,14 @@ private fun TranscodingSection(prefs: PlayerPrefs, options: PlaybackOptions?) {
     // A codec shows only when there's a choice: what the server encodes and this device decodes.
     val video = Capabilities.encodeVideoChoices(options?.videoCodecs ?: listOf("h264"))
     val audio = Capabilities.convertAudioCodecs(options?.audioCodecs ?: listOf("aac"))
-    if (video.size <= 1 && audio.size <= 1) return
+    // The server may not encode video for this account, so there's no codec to pick for it.
+    val noEncodes = options != null && options.videoCodecs.isEmpty()
+    if (!noEncodes && video.size <= 1 && audio.size <= 1) return
     Section(stringResource(R.string.playback_transcoding_title)) {
         Panel {
-            if (video.size > 1) {
+            if (noEncodes) {
+                ValueRow(stringResource(R.string.playback_video_codec_title), stringResource(R.string.playback_video_codec_none))
+            } else if (video.size > 1) {
                 PickerRow(
                     stringResource(R.string.playback_video_codec_title),
                     listOf(AUTOMATIC to stringResource(R.string.playback_codec_automatic, videoCodecName("h264"))) +
@@ -555,7 +576,7 @@ private fun TranscodingSection(prefs: PlayerPrefs, options: PlaybackOptions?) {
                 ) { prefs.videoCodec = it }
             }
             if (audio.size > 1) {
-                if (video.size > 1) RowDivider()
+                if (noEncodes || video.size > 1) RowDivider()
                 PickerRow(
                     stringResource(R.string.playback_audio_codec_title),
                     listOf(AUTOMATIC to stringResource(R.string.playback_codec_automatic, audioFormatName(audio.first()))) +
@@ -565,7 +586,11 @@ private fun TranscodingSection(prefs: PlayerPrefs, options: PlaybackOptions?) {
             }
         }
         Gap(8.dp)
-        Text(stringResource(R.string.playback_transcoding_note), style = MaterialTheme.typography.bodySmall, color = Palette.Muted)
+        Text(
+            stringResource(if (noEncodes) R.string.playback_transcoding_no_encodes else R.string.playback_transcoding_note),
+            style = MaterialTheme.typography.bodySmall,
+            color = Palette.Muted,
+        )
     }
 }
 
@@ -590,6 +615,9 @@ private fun DownloadsSection() {
     val api = LocalApi.current
     val options = rememberLoader("downloadOptions") { playback.options() }
     val loaded = (options.state as? Load.Ready)?.value
+    LaunchedEffect(loaded) { if (loaded != null) context.app.viewer.options = loaded }
+    // An account that may not download keeps what's on the phone, and nothing more to set.
+    val off = loaded?.downloads == false
     val downloads = context.app.downloads
     val items by downloads.store.items.collectAsState()
     var unmetered by remember { mutableStateOf(downloads.unmeteredOnly) }
@@ -600,63 +628,73 @@ private fun DownloadsSection() {
     val total = formatBytes(items.values.sumOf { it.bytes })
     val free = remember(items.size) { formatBytes(context.filesDir.usableSpace) }
     Column {
+        if (off) {
+            Text(stringResource(R.string.downloads_off_title), style = MaterialTheme.typography.titleMedium)
+            Gap(4.dp)
+            Text(stringResource(R.string.downloads_off_description), style = MaterialTheme.typography.bodyMedium, color = Palette.Muted)
+            Gap(20.dp)
+        }
         Panel {
             ValueRow(stringResource(R.string.downloads_storage), stringResource(R.string.downloads_storage_value, total, free))
-            RowDivider()
-            SwitchRow(
-                stringResource(R.string.downloads_unmetered),
-                unmetered,
-            ) {
-                unmetered = it
-                downloads.unmeteredOnly = it
+            if (!off) {
+                RowDivider()
+                SwitchRow(
+                    stringResource(R.string.downloads_unmetered),
+                    unmetered,
+                ) {
+                    unmetered = it
+                    downloads.unmeteredOnly = it
+                }
             }
         }
-        Gap(28.dp)
-        // What the download sheet starts on.
-        Section(stringResource(R.string.downloads_defaults)) {
-            Panel {
-                PickerRow(
-                    stringResource(R.string.downloads_default_title),
-                    buildList {
-                        add(DEFAULT_DEVICE to stringResource(R.string.downloads_choice_device))
-                        loaded?.downloadVideoPresets?.forEach { add(it.height.toString() to stringResource(R.string.downloads_choice_preset, it.height, mbps(it.bitrate))) }
-                        add(DEFAULT_ORIGINAL to stringResource(R.string.downloads_choice_original))
-                    },
-                    version,
-                ) {
-                    version = it
-                    downloads.defaultVersion = it
-                }
-                RowDivider()
-                PickerRow(
-                    stringResource(R.string.downloads_default_subtitles),
-                    listOf(
-                        DownloadSubtitles.USED to stringResource(R.string.downloads_subtitles_used),
-                        DownloadSubtitles.ALL to stringResource(R.string.downloads_subtitles_all),
-                        DownloadSubtitles.NONE to stringResource(R.string.downloads_subtitles_none),
-                    ),
-                    subtitles,
-                ) {
-                    subtitles = it
-                    downloads.subtitles = it
-                }
-                // What an encoded download comes in: of the server's codecs, those this device decodes.
-                val codecs = Capabilities.encodeVideoChoices(loaded?.videoCodecs ?: listOf("h264"))
-                if (codecs.size > 1) {
+        if (!off) {
+            Gap(28.dp)
+            // What the download sheet starts on.
+            Section(stringResource(R.string.downloads_defaults)) {
+                Panel {
+                    PickerRow(
+                        stringResource(R.string.downloads_default_title),
+                        buildList {
+                            add(DEFAULT_DEVICE to stringResource(R.string.downloads_choice_device))
+                            loaded?.downloadVideoPresets?.forEach { add(it.height.toString() to stringResource(R.string.downloads_choice_preset, it.height, mbps(it.bitrate))) }
+                            add(DEFAULT_ORIGINAL to stringResource(R.string.downloads_choice_original))
+                        },
+                        version,
+                    ) {
+                        version = it
+                        downloads.defaultVersion = it
+                    }
                     RowDivider()
                     PickerRow(
-                        stringResource(R.string.downloads_codec),
-                        listOf(AUTOMATIC to stringResource(R.string.playback_codec_automatic, videoCodecName("h264"))) +
-                            codecs.map { it to videoCodecName(it) },
-                        codec.takeIf { it in codecs } ?: AUTOMATIC,
+                        stringResource(R.string.downloads_default_subtitles),
+                        listOf(
+                            DownloadSubtitles.USED to stringResource(R.string.downloads_subtitles_used),
+                            DownloadSubtitles.ALL to stringResource(R.string.downloads_subtitles_all),
+                            DownloadSubtitles.NONE to stringResource(R.string.downloads_subtitles_none),
+                        ),
+                        subtitles,
                     ) {
-                        codec = it
-                        downloads.videoCodec = it
+                        subtitles = it
+                        downloads.subtitles = it
+                    }
+                    // What an encoded download comes in: of the server's codecs, those this device decodes.
+                    val codecs = Capabilities.encodeVideoChoices(loaded?.videoCodecs ?: listOf("h264"))
+                    if (codecs.size > 1) {
+                        RowDivider()
+                        PickerRow(
+                            stringResource(R.string.downloads_codec),
+                            listOf(AUTOMATIC to stringResource(R.string.playback_codec_automatic, videoCodecName("h264"))) +
+                                codecs.map { it to videoCodecName(it) },
+                            codec.takeIf { it in codecs } ?: AUTOMATIC,
+                        ) {
+                            codec = it
+                            downloads.videoCodec = it
+                        }
                     }
                 }
+                Gap(8.dp)
+                Text(stringResource(R.string.downloads_codec_note), style = MaterialTheme.typography.bodySmall, color = Palette.Muted)
             }
-            Gap(8.dp)
-            Text(stringResource(R.string.downloads_codec_note), style = MaterialTheme.typography.bodySmall, color = Palette.Muted)
         }
         if (items.isNotEmpty()) {
             Gap(28.dp)

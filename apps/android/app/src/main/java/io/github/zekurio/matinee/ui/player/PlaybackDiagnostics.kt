@@ -145,10 +145,11 @@ enum class TrackKind { VIDEO, AUDIO, TEXT, OTHER }
 
 /**
  * Things that went wrong beside the video, counted: a subtitle that didn't
- * load, a `playback.start` or `playback.seek` that failed, and the server
- * saying nothing it knows plays here.
+ * load, a `playback.start` or `playback.seek` that failed, the server
+ * saying nothing it knows plays here, and the server refusing the account:
+ * its access rules the file out, or it plays on too many devices.
  */
-enum class DiagnosticsNote { SUBTITLE_LOAD_FAILED, START_FAILED, SEEK_FAILED, UNPLAYABLE }
+enum class DiagnosticsNote { SUBTITLE_LOAD_FAILED, START_FAILED, SEEK_FAILED, UNPLAYABLE, RESTRICTED, TOO_MANY_STREAMS }
 
 /** The app and the device, without anything that tells them apart from others of the same model. */
 data class DeviceDiagnostics(
@@ -260,7 +261,7 @@ data class SelectionDiagnostics(
     }
 }
 
-/** What the player told the server this device plays, and what the server encodes to. */
+/** What the player told the server this device plays, what the server encodes to, and the most it streams to the account. */
 data class CapabilityDiagnostics(
     val videoCodecs: List<Safe>,
     val audioCodecs: List<Safe>,
@@ -269,6 +270,8 @@ data class CapabilityDiagnostics(
     val encodeVideoCodecs: List<Safe>,
     val serverVideoCodecs: List<Safe>,
     val serverAudioCodecs: List<Safe>,
+    /** Bits per second, null without a limit. */
+    val maxBitrate: Int? = null,
 ) {
     companion object {
         fun of(device: PlaybackDevice, options: PlaybackOptions) = CapabilityDiagnostics(
@@ -279,6 +282,7 @@ data class CapabilityDiagnostics(
             encodeVideoCodecs = safeCodecs(device.encodeVideo),
             serverVideoCodecs = safeCodecs(options.videoCodecs),
             serverAudioCodecs = safeCodecs(options.audioCodecs),
+            maxBitrate = options.maxBitrate,
         )
     }
 }
@@ -509,7 +513,7 @@ fun formatReport(report: PlaybackReport): String = buildString {
     val c = report.capabilities
     line("device plays: video=${list(c.videoCodecs)} audio=${list(c.audioCodecs)} embedded_subtitles=${list(c.embeddedSubtitles)}")
     line("asks for: stream_audio=${list(c.streamAudioCodecs)} encode_video=${list(c.encodeVideoCodecs)}")
-    line("server offers: video=${list(c.serverVideoCodecs)} audio=${list(c.serverAudioCodecs)}")
+    line("server offers: video=${list(c.serverVideoCodecs)} audio=${list(c.serverAudioCodecs)}" + c.maxBitrate?.let { " max_bitrate=${it / 1000}kbps" }.orEmpty())
 
     line("attempts:${if (report.droppedAttempts > 0) " (${report.droppedAttempts} earlier left out)" else ""}")
     if (report.attempts.isEmpty()) line("  none")

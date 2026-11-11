@@ -248,12 +248,15 @@ private fun NoLibraries() {
         Modifier.fillMaxWidth().padding(horizontal = Gutter, vertical = 48.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        LucideIcon(Lucide.FolderPlus, null, size = 32.dp, tint = Palette.Muted)
+        // An admin sees every library, so none means none exist. Anyone else
+        // may be in no group that opens one.
+        val admin = user.isAdmin
+        LucideIcon(if (admin) Lucide.FolderPlus else Lucide.Popcorn, null, size = 32.dp, tint = Palette.Muted)
         Gap(16.dp)
-        Text(stringResource(R.string.browse_home_no_libraries), style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(if (admin) R.string.browse_home_no_libraries else R.string.browse_home_nothing_yet), style = MaterialTheme.typography.titleMedium)
         Gap(4.dp)
         Text(
-            stringResource(if (user.isAdmin) R.string.browse_home_no_libraries_admin else R.string.browse_home_no_libraries_user),
+            stringResource(if (admin) R.string.browse_home_no_libraries_admin else R.string.browse_home_nothing_yet_description),
             style = MaterialTheme.typography.bodyMedium,
             color = Palette.Muted,
             textAlign = TextAlign.Center,

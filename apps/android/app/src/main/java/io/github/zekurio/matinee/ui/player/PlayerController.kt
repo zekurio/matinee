@@ -185,6 +185,10 @@ class PlayerController(
     val qualities: List<PlaybackQualityPreset>
         get() = plan?.qualities.orEmpty()
 
+    /** The quality menu offers the original: not for a file over the account's bit rate limit. */
+    val offersOriginal: Boolean
+        get() = plan?.original ?: true
+
     /** ExoPlayer, or mpv when settings pick it. */
     val player: Player = if (prefs.engine == PlayerEngine.MPV) {
         MpvPlayer(context, serverHeaders, userAgent, hardware = prefs.decoders == Decoders.HARDWARE)
@@ -296,6 +300,10 @@ class PlayerController(
 
     /** Why nothing plays, once nothing is left to try. */
     var error by mutableStateOf<String?>(null)
+        private set
+
+    /** The server refused to play the file for this account, which [error] holds its words for. Trying again won't help. */
+    var refusal by mutableStateOf<Refusal?>(null)
         private set
     var notice by mutableStateOf<Notice?>(null)
         private set
@@ -459,6 +467,7 @@ class PlayerController(
             recordSelection()
         }
         error = null
+        refusal = null
         ended = false
         sourceFailed = false
         // A new source gets its own wait for frames.
@@ -640,16 +649,31 @@ class PlayerController(
     /**
      * A call that failed. When the source failed too, nothing plays, so the
      * player says why, as when the server finds nothing this device plays.
-     * A switch that didn't go through leaves what plays, and says so.
+     * A switch that didn't go through leaves what plays, and says so. A
+     * refusal stops the player either way, with the server's words.
      */
     private fun refused(change: Ask, undo: Asking, e: Exception) {
         inFlight = null
         pendingAt = null
         val unplayable = e is ApiException && e.code == PLAYBACK_UNPLAYABLE
-        diagnostics.note(if (unplayable) DiagnosticsNote.UNPLAYABLE else DiagnosticsNote.START_FAILED)
+        val refusal = refusal(e)
+        diagnostics.note(
+            when {
+                unplayable -> DiagnosticsNote.UNPLAYABLE
+                refusal == Refusal.RESTRICTED -> DiagnosticsNote.RESTRICTED
+                refusal == Refusal.BUSY -> DiagnosticsNote.TOO_MANY_STREAMS
+                else -> DiagnosticsNote.START_FAILED
+            },
+        )
         val message = if (unplayable) resources.getString(R.string.player_unplayable) else describeFailure(resources, e)
         val sought = seekOnAnswer
         seekOnAnswer = null
+        if (refusal != null) {
+            this.refusal = refusal
+            error = message
+            player.stop()
+            return
+        }
         if (sourceFailed || change.failed != null) {
             error = message
             return
@@ -668,6 +692,7 @@ class PlayerController(
     /** Tries again from where it stopped, every method with it. */
     fun retry() {
         error = null
+        refusal = null
         player.playWhenReady = true
         val current = source
         if (server == null) {

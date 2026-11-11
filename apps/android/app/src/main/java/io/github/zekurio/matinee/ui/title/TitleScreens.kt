@@ -37,6 +37,7 @@ import io.github.zekurio.matinee.ui.ItemTopBar
 import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.LocalNavigator
 import io.github.zekurio.matinee.ui.StatusBarScrim
+import io.github.zekurio.matinee.ui.components.ActionTarget
 import io.github.zekurio.matinee.ui.components.Badge
 import io.github.zekurio.matinee.ui.components.EpisodeCard
 import io.github.zekurio.matinee.ui.components.EpisodeRow
@@ -52,6 +53,7 @@ import io.github.zekurio.matinee.ui.components.RailArt
 import io.github.zekurio.matinee.ui.components.SectionTitle
 import io.github.zekurio.matinee.ui.components.art
 import io.github.zekurio.matinee.ui.components.frame
+import io.github.zekurio.matinee.ui.components.hasActions
 import io.github.zekurio.matinee.ui.components.isWide
 import io.github.zekurio.matinee.ui.components.railItemWidth
 import io.github.zekurio.matinee.ui.episodeCode
@@ -149,7 +151,8 @@ private fun TitlePage(title: Title) {
                     favorite = viewer.isFavorite(summary),
                     onWatched = { watched, at -> viewer.setWatched(api, summary, watched, watchedAt = at) },
                     onFavorite = { viewer.setFavorite(api, summary, !viewer.isFavorite(summary)) },
-                    onMore = { actions.title(summary, file = if (title.isShow) null else next, here = true) },
+                    onMore = ActionTarget.Title(summary, file = if (title.isShow) null else next, here = true)
+                        .let { more -> if (hasActions(more)) ({ actions.open(more) }) else null },
                 )
             }
             if (title.isShow) {
@@ -288,7 +291,8 @@ private fun SeasonPage(title: Title, season: Season) {
                         }
                     },
                     onFavorite = { viewer.setFavorite(api, title.summary, !viewer.isFavorite(title.summary)) },
-                    onMore = { actions.season(title.summary, season, here = true) },
+                    onMore = ActionTarget.Season(title.summary, season, here = true)
+                        .let { more -> if (hasActions(more)) ({ actions.open(more) }) else null },
                 )
             }
             item(key = "episodesTitle") {
@@ -374,7 +378,8 @@ private fun EpisodePage(item: MediaItem) {
                     favorite = viewer.isFavorite(item),
                     onWatched = { watched, at -> viewer.setWatched(api, item, watched, at) },
                     onFavorite = { viewer.setFavorite(api, item, !viewer.isFavorite(item)) },
-                    onMore = { actions.item(item, here = true) },
+                    onMore = ActionTarget.Item(item, here = true)
+                        .let { more -> if (hasActions(more)) ({ actions.open(more) }) else null },
                 )
             }
             if (title != null) {

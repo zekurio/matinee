@@ -49,10 +49,13 @@ internal sealed interface DownloadFailure {
 
     /** It was reached, then the connection broke off. */
     data object BrokeOff : DownloadFailure
+
+    /** Downloads are off for the account, which trying again won't change. */
+    data object Forbidden : DownloadFailure
 }
 
 internal fun downloadFailure(e: IOException): DownloadFailure = when (e) {
-    is ApiException -> DownloadFailure.Server(e.message)
+    is ApiException -> if (e.status == 403) DownloadFailure.Forbidden else DownloadFailure.Server(e.message)
     is UnknownHostException, is ConnectException, is SocketTimeoutException, is NoRouteToHostException, is SSLException ->
         DownloadFailure.Unreachable
     else -> DownloadFailure.BrokeOff
@@ -106,8 +109,10 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
             store.update(id) { if (it.state == DownloadState.RUNNING) it.copy(state = DownloadState.QUEUED) else it }
             throw e
         } catch (e: IOException) {
-            val message = failureLabel(e)
-            if (runAttemptCount >= MAX_ATTEMPTS) {
+            val failure = downloadFailure(e)
+            val message = failureLabel(failure)
+            // Downloads off for the account fail at once, rather than wait out every retry.
+            if (failure == DownloadFailure.Forbidden || runAttemptCount >= MAX_ATTEMPTS) {
                 store.update(id) { it.copy(state = DownloadState.FAILED, error = message) }
                 Result.failure()
             } else {
@@ -121,12 +126,13 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
      * What went wrong, short enough for a download's status line, like
      * "Server not reachable", rather than the exception's "timeout".
      */
-    private fun failureLabel(e: IOException): String {
+    private fun failureLabel(failure: DownloadFailure): String {
         val res = applicationContext.resources
-        return when (val failure = downloadFailure(e)) {
+        return when (failure) {
             is DownloadFailure.Server -> failure.message
             DownloadFailure.Unreachable -> res.getString(R.string.downloads_error_unreachable)
             DownloadFailure.BrokeOff -> res.getString(R.string.downloads_error_broke_off)
+            DownloadFailure.Forbidden -> res.getString(R.string.downloads_error_forbidden)
         }
     }
 

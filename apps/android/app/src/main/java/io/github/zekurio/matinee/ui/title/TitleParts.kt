@@ -209,7 +209,8 @@ fun ActionRow(
     favorite: Boolean,
     onWatched: suspend (watched: Boolean, watchedAt: String?) -> Unit,
     onFavorite: suspend () -> Unit,
-    onMore: () -> Unit,
+    /** Opens the page's menu; null when it would be empty. */
+    onMore: (() -> Unit)?,
 ) {
     val nav = LocalNavigator.current
     val actions = LocalActions.current
@@ -246,7 +247,7 @@ fun ActionRow(
             { scope.launchShowing(snackbar, favoriteFailure) { onFavorite() } },
             tint = if (favorite) Palette.Danger else Palette.Foreground,
         )
-        RoundIconButton(Lucide.Ellipsis, stringResource(R.string.title_more_actions), onMore)
+        if (onMore != null) RoundIconButton(Lucide.Ellipsis, stringResource(R.string.title_more_actions), onMore)
     }
 }
 

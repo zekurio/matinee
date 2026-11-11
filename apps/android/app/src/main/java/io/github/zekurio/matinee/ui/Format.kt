@@ -128,6 +128,14 @@ fun formatBytes(bytes: Long): String {
     return "$number ${units[unit]}"
 }
 
+/** A bit rate as the web writes it: 8 Mbps, 2.5 Mbps, or 800 kbps. */
+fun formatBitrate(bits: Int, res: Resources): String {
+    if (bits < 1_000_000) return res.getString(R.string.player_bitrate_kbps, (bits / 1000.0).roundToInt())
+    val tenths = (bits / 100_000.0).roundToInt()
+    val number = if (tenths % 10 == 0) (tenths / 10).toString() else "%.1f".format(Locale.getDefault(), tenths / 10.0)
+    return res.getString(R.string.player_bitrate_mbps_exact, number)
+}
+
 /** Names for encode choices, which aren't probe streams. */
 fun videoCodecName(codec: String) = if (codec == "h264") "H.264" else codec.uppercase()
 

@@ -96,6 +96,9 @@ class ContractJsonTest {
         assertTrue(FALLBACK_PLAYBACK_OPTIONS.qualities.isEmpty())
         assertTrue(FALLBACK_PLAYBACK_OPTIONS.downloadVideoPresets.isEmpty())
         assertTrue(FALLBACK_PLAYBACK_OPTIONS.skipSteps.isEmpty())
+        // Only the server can say the account may download, or how much it may stream.
+        assertFalse(FALLBACK_PLAYBACK_OPTIONS.downloads)
+        assertNull(FALLBACK_PLAYBACK_OPTIONS.maxBitrate)
     }
 
     @Test

@@ -70,6 +70,7 @@ class PlaybackDiagnosticsTest {
             encodeVideoCodecs = safeCodecs(listOf("hevc", "h264")),
             serverVideoCodecs = safeCodecs(listOf("h264", "hevc")),
             serverAudioCodecs = safeCodecs(listOf("aac", "opus")),
+            maxBitrate = 8_000_000,
         ),
     )
 
@@ -115,7 +116,19 @@ class PlaybackDiagnosticsTest {
         assertTrue(text.contains("video selected video/avc codecs=avc1.640028 1920x1080 8000kbps support=YES"))
         assertTrue(text.contains("audio selected audio/opus 2ch 48000Hz support=YES"))
         assertTrue(text.contains("decoders: video=c2.android.avc.decoder"))
+        assertTrue(text.contains("server offers: video=h264,hevc audio=aac,opus max_bitrate=8000kbps"))
         assertFalse(r.report.failed)
+    }
+
+    @Test
+    fun theAccountsLimitsShowAsCodes() {
+        val r = recorder()
+        r.attempt(SourceMode.HLS, AttemptReason.START, 0.0, 1, "720p-4", burnIn = false, why = listOf("limit"))
+        r.note(DiagnosticsNote.RESTRICTED)
+        r.note(DiagnosticsNote.TOO_MANY_STREAMS)
+        val text = formatReport(r.report)
+        assertTrue(text.contains("why=limit"))
+        assertTrue(text.contains("notes: restricted x1, too_many_streams x1"))
     }
 
     @Test

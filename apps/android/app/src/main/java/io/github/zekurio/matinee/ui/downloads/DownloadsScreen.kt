@@ -50,6 +50,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -131,6 +132,7 @@ fun DownloadsScreen() {
     val nav = LocalNavigator.current
     val downloads = context.app.downloads
     val items by downloads.store.items.collectAsState()
+    val offline = LocalOffline.current
     var acting by remember { mutableStateOf<OfflineItem?>(null) }
     val coming = items.values.filter { it.state != DownloadState.DONE }.sortedBy { it.addedAt }
     val done = items.values.filter { it.state == DownloadState.DONE }
@@ -141,7 +143,7 @@ fun DownloadsScreen() {
         .sortedByDescending { it.first }
     Column(Modifier.fillMaxSize()) {
         TopBar(stringResource(R.string.downloads_title), back = false) {
-            if (LocalOffline.current) {
+            if (offline) {
                 LucideIcon(Lucide.CloudOff, stringResource(R.string.downloads_offline), size = 20.dp, tint = Palette.Muted)
                 Gap(Gutter - 4.dp)
             }
@@ -152,6 +154,8 @@ fun DownloadsScreen() {
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             if (items.isEmpty()) {
+                // Offline, the server can't say, so the usual hint stays.
+                val off = !offline && !context.app.viewer.mayDownload && context.app.viewer.options != null
                 item(key = "empty") {
                     Column(
                         Modifier.fillMaxWidth().padding(vertical = 48.dp),
@@ -159,9 +163,14 @@ fun DownloadsScreen() {
                     ) {
                         LucideIcon(Lucide.Download, null, size = 28.dp, tint = Palette.Muted)
                         Gap(12.dp)
-                        Text(stringResource(R.string.downloads_empty), style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(if (off) R.string.downloads_off_title else R.string.downloads_empty), style = MaterialTheme.typography.titleMedium)
                         Gap(4.dp)
-                        Text(stringResource(R.string.downloads_empty_hint), style = MaterialTheme.typography.bodyMedium, color = Palette.Muted)
+                        Text(
+                            stringResource(if (off) R.string.downloads_off_description else R.string.downloads_empty_hint),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Palette.Muted,
+                            textAlign = TextAlign.Center,
+                        )
                     }
                 }
             }

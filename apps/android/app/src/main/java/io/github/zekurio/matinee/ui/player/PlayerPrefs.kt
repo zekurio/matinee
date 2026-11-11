@@ -43,6 +43,7 @@ val SUBTITLE_SCALES = listOf(0.75f, 1f, 1.25f, 1.5f, 2f)
 class PlayerPrefs(context: Context) {
     private val prefs = context.getSharedPreferences("player", Context.MODE_PRIVATE)
 
+    /** The quality videos start in. The server answers with the nearest one the account may use, so one over its limit stays saved for when it's lifted. */
     var quality by string("quality", ORIGINAL_QUALITY)
 
     /** The codec encodes come in: one of TRANSCODE_VIDEO_CODECS, or [AUTOMATIC]. */

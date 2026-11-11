@@ -1,5 +1,6 @@
 package io.github.zekurio.matinee.ui.player
 
+import io.github.zekurio.matinee.api.ApiException
 import io.github.zekurio.matinee.api.DeviceCodecs
 import io.github.zekurio.matinee.api.PlaybackDevice
 import io.github.zekurio.matinee.api.PlaybackStart
@@ -41,6 +42,7 @@ internal object Answers {
         subtitleMode: String? = null,
         subtitleUrl: String? = null,
         reasons: List<String> = emptyList(),
+        original: Boolean = true,
     ): PlaybackStart {
         val sub = subtitle?.let { """"subtitle":{"id":"${it.id}","label":"${it.label}","language":"${it.language}","source":"${it.source}","format":"${it.format}","delivery":"${it.delivery}"},""" }.orEmpty()
         val audioJson = if (audio == 2) AC3 else AAC
@@ -53,7 +55,7 @@ internal object Answers {
              "audio":$audioJson,"convertedAudio":${convertedAudio?.let { "\"$it\"" } ?: "null"},"convertedVideo":null,"standIn":null,
              $sub
              "subtitleMode":${subtitleMode?.let { "\"$it\"" } ?: "null"},"subtitleUrl":${subtitleUrl?.let { "\"$it\"" } ?: "null"},
-             "audioTracks":[$AAC,$AC3],"subtitleTracks":[],"quality":"$quality",
+             "audioTracks":[$AAC,$AC3],"subtitleTracks":[],"quality":"$quality","original":$original,
              "reasons":[${reasons.joinToString(",") { "\"$it\"" }}],"next":null}
             """,
         )
@@ -176,6 +178,34 @@ class PlaybackTest {
         assertEquals(asking to null, asking.settle(null, Answers.plan(quality = "original")))
         // A file that failed as it is says nothing: the stream after it is what the server does.
         assertEquals(null, Asking(Picks(quality = "original")).settle(Answers.plan(), Answers.plan(method = "remux")).second)
+    }
+
+    @Test
+    fun aQualityTheServerPlayedTheOriginalForFailsNothing() {
+        // The account may not encode, so the picked encode played as the file; when the file fails, a stream follows.
+        val asking = Asking(Picks(quality = "1080p-20"))
+        val (after, notice) = asking.settle(Answers.plan(), Answers.plan(method = "remux"))
+        assertNull(notice)
+        assertEquals("1080p-20", after.picks.quality)
+    }
+
+    @Test
+    fun aRememberedOriginalOverTheLimitTakesTheServersEncode() {
+        // The file is over the account's limit: the server answers with an encode under it, and the menu has no original.
+        val plan = Answers.plan(method = "transcode", hls = true, quality = "720p-4", reasons = listOf("limit"), original = false)
+        assertFalse(plan.original)
+        assertEquals(Asking(Picks(quality = "original")) to null, Asking(Picks(quality = "original")).settle(null, plan))
+        // An encode that fails then stays an encode, and says nothing of the original.
+        val next = Answers.plan(method = "transcode", hls = false, quality = "720p-4", reasons = listOf("limit", "failed"), original = false)
+        assertNull(Asking(Picks(quality = "original")).settle(plan, next).second)
+    }
+
+    @Test
+    fun refusalsStopThePlayer() {
+        assertEquals(Refusal.RESTRICTED, refusal(ApiException(403, "PLAYBACK_RESTRICTED", "This file is over your account's limit.")))
+        assertEquals(Refusal.BUSY, refusal(ApiException(429, "TOO_MANY_STREAMS", "You're playing on 2 devices already.")))
+        assertNull(refusal(ApiException(422, "UNPLAYABLE", "Nothing plays.")))
+        assertNull(refusal(java.io.IOException("reset")))
     }
 
     @Test

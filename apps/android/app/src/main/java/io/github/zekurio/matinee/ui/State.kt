@@ -21,6 +21,7 @@ import io.github.zekurio.matinee.api.ApiException
 import io.github.zekurio.matinee.api.Explicit
 import io.github.zekurio.matinee.api.MatineeApi
 import io.github.zekurio.matinee.api.MediaItem
+import io.github.zekurio.matinee.api.PlaybackOptions
 import io.github.zekurio.matinee.api.TitleKind
 import io.github.zekurio.matinee.api.TitleSummary
 import io.github.zekurio.matinee.app
@@ -53,6 +54,16 @@ class ViewerState {
 
     var version by mutableIntStateOf(0)
         private set
+
+    /**
+     * The account's `playback.options` as the server last sent them in this
+     * sign-in: what it may stream, and whether it may download. Null until
+     * it answered.
+     */
+    var options by mutableStateOf<PlaybackOptions?>(null)
+
+    /** The account may download. False until the server said so, so nothing offers a download it would refuse. */
+    val mayDownload: Boolean get() = options?.downloads == true
 
     fun changed() {
         version++

@@ -1,5 +1,8 @@
 package io.github.zekurio.matinee.ui.player
 
+import io.github.zekurio.matinee.api.ApiException
+import io.github.zekurio.matinee.api.PLAYBACK_BUSY
+import io.github.zekurio.matinee.api.PLAYBACK_RESTRICTED
 import io.github.zekurio.matinee.api.PlaybackDevice
 import io.github.zekurio.matinee.api.PlaybackMethod
 import io.github.zekurio.matinee.api.PlaybackSnap
@@ -31,6 +34,21 @@ data class Picks(val audio: Int? = null, val subtitle: SubtitlePick? = null, val
 
 /** Something to tell the viewer about an answer. */
 enum class NoticeKind { BURN_IN_FAILED, QUALITY_FAILED, SWITCH_FAILED }
+
+/**
+ * Why the server won't play the file for this account now: its access
+ * rules out every way left, or it plays on as many devices as it may.
+ * Asking again gets the same answer, so the player shows the server's
+ * message and stops.
+ */
+enum class Refusal { RESTRICTED, BUSY }
+
+/** The refusal [e] is, or null for any other failure. */
+fun refusal(e: Exception): Refusal? = when ((e as? ApiException)?.code) {
+    PLAYBACK_RESTRICTED -> Refusal.RESTRICTED
+    PLAYBACK_BUSY -> Refusal.BUSY
+    else -> null
+}
 
 /**
  * What every `playback.start` of a sitting carries again, since the server
@@ -74,14 +92,17 @@ data class Asking(val picks: Picks = Picks(), val failed: List<String> = emptyLi
      * What an answer to a failure leaves of the picks. An encode that burned
      * a subtitle in failed, and the server played on without it, so the
      * subtitle is off. An encode at a picked quality failed, and the
-     * original plays, so that's the pick. [lost] is the answer whose source
-     * failed, null for an answer to anything else.
+     * original plays, so that's the pick. A source that failed while it
+     * played the original, as when the picked quality is one the account
+     * may not use, lost nothing the viewer picked. [lost] is the answer
+     * whose source failed, null for an answer to anything else.
      */
     fun settle(lost: PlaybackStart?, plan: PlaybackStart): Pair<Asking, NoticeKind?> = when {
         lost == null -> this to null
         lost.subtitleMode == PlaybackSubtitleMode.BURN_IN && plan.subtitleMode != PlaybackSubtitleMode.BURN_IN ->
             copy(picks = picks.copy(subtitle = SubtitlePick(null))) to NoticeKind.BURN_IN_FAILED
-        picks.quality != null && picks.quality != ORIGINAL_QUALITY && plan.quality == ORIGINAL_QUALITY ->
+        picks.quality != null && picks.quality != ORIGINAL_QUALITY &&
+            lost.quality != ORIGINAL_QUALITY && plan.quality == ORIGINAL_QUALITY ->
             copy(picks = picks.copy(quality = ORIGINAL_QUALITY)) to NoticeKind.QUALITY_FAILED
         else -> this to null
     }

@@ -34,4 +34,11 @@ class DownloadFailureTest {
             downloadFailure(ApiException(422, "encode_failed", "This file can't be encoded.")),
         )
     }
+
+    @Test
+    fun downloadsOffForTheAccountSaySoInTheAppsWords() {
+        assertEquals(DownloadFailure.Forbidden, downloadFailure(ApiException(403, "FORBIDDEN", "Downloads are off for this account.")))
+        // The byte routes answer with a bare status.
+        assertEquals(DownloadFailure.Forbidden, downloadFailure(ApiException(403, null, "The server answered 403.")))
+    }
 }

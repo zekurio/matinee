@@ -127,7 +127,9 @@
     <string name="browse_empty_shelf">Nothing here yet.</string>
     <string name="browse_home_no_libraries">No libraries yet</string>
     <string name="browse_home_no_libraries_admin">Add a folder of videos on this server to start watching.</string>
-    <string name="browse_home_no_libraries_user">An admin hasn\'t added any libraries yet.</string>
+    <!-- For an account that opens no library, which may be in no group yet. -->
+    <string name="browse_home_nothing_yet">Nothing to watch yet</string>
+    <string name="browse_home_nothing_yet_description">There\'s nothing your account can open yet. Ask whoever runs this server to give you access.</string>
 
     <!-- Genres and studios -->
     <string name="browse_genre">Genre</string>
@@ -349,6 +351,8 @@
     <string name="playback_device_title">This device</string>
     <string name="playback_quality_title">Quality</string>
     <string name="playback_quality_preset">%1$dp, %2$s</string>
+    <!-- %1$s is a bit rate, like 8 Mbps. -->
+    <string name="playback_quality_limit">The server limits streaming to %1$s for this account.</string>
     <string name="account_sessions_title">Sessions</string>
     <string name="account_sessions_load_failed">Couldn\'t load your sessions. %1$s</string>
     <string name="account_sessions_sign_out_failed">Couldn\'t sign out that session</string>
@@ -392,6 +396,8 @@
     <string name="playback_audio_codec_title">Audio codec</string>
     <string name="playback_codec_automatic">Automatic (%1$s)</string>
     <string name="playback_transcoding_title">Transcoding</string>
+    <string name="playback_video_codec_none">No video encoding</string>
+    <string name="playback_transcoding_no_encodes">The server doesn\'t encode video for this account, so a file plays as it is or with its video copied.</string>
     <string name="playback_transcoding_note">Only used when the server converts a file to play it. Downloads have their own codec under Downloads.</string>
     <string name="playback_engine_title">Player</string>
     <string name="playback_decoders_title">Decoders</string>
@@ -464,9 +470,15 @@
     <string name="player_speed_normal">Normal</string>
     <string name="player_speed_rate">%1$s×</string>
     <string name="player_bitrate_mbps">%1$d Mbps</string>
+    <string name="player_bitrate_mbps_exact">%1$s Mbps</string>
+    <string name="player_bitrate_kbps">%1$d kbps</string>
     <string name="player_error_lost">Couldn\'t play this video</string>
     <string name="player_error_subtitles">Couldn\'t load subtitles. Pick another track or turn them off.</string>
     <string name="player_unplayable">This device can\'t play this file.</string>
+    <!-- The server's message follows: the account's access rules out every
+         way to play the file, or it plays on as many devices as it may. -->
+    <string name="player_restricted">Your account can\'t play this</string>
+    <string name="player_busy">Playing on too many devices</string>
     <string name="player_notice_burn_in_failed">Couldn\'t burn in those subtitles</string>
     <string name="player_notice_burn_in_failed_detail">Subtitles are off. Pick another track or try again.</string>
     <string name="player_notice_switch_failed">Couldn\'t play that</string>
@@ -512,6 +524,10 @@
     <string name="downloads_state_failed">Stopped · %1$s</string>
     <string name="downloads_error_unreachable">Server not reachable</string>
     <string name="downloads_error_broke_off">Connection lost</string>
+    <string name="downloads_error_forbidden">Your account can\'t download</string>
+    <!-- For an account that may not download. -->
+    <string name="downloads_off_title">Downloads are off</string>
+    <string name="downloads_off_description">Your account can\'t download. Ask whoever runs this server if you need to.</string>
     <string name="downloads_retry">Try again now</string>
     <string name="downloads_retry_all">Try all again</string>
     <string name="downloads_state_waiting">Waiting</string>

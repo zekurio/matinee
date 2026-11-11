@@ -202,6 +202,9 @@ private sealed interface PlayerData {
 
     /** The server found nothing this device plays. */
     data object Unplayable : PlayerData
+
+    /** The server won't play the file for this account now, in [message]'s words. */
+    class Refused(val refusal: Refusal, val message: String) : PlayerData
 }
 
 private const val HIDE_AFTER_MS = 3500L
@@ -242,9 +245,10 @@ fun PlayerScreen(itemId: String, start: Double?) {
             val plan = try {
                 playback.start(input)
             } catch (e: ApiException) {
-                if (e.code != PLAYBACK_UNPLAYABLE) throw e
                 options.cancel()
-                return@coroutineScope PlayerData.Unplayable
+                if (e.code == PLAYBACK_UNPLAYABLE) return@coroutineScope PlayerData.Unplayable
+                val refusal = refusal(e) ?: throw e
+                return@coroutineScope PlayerData.Refused(refusal, e.message)
             }
             PlayerData.Server(Opening.Server(plan, sessionId, quality), device, options.await())
         }
@@ -257,6 +261,8 @@ fun PlayerScreen(itemId: String, start: Double?) {
             is Load.Ready -> when (val value = state.value) {
                 // What shows when nothing plays, as after the last source failed.
                 PlayerData.Unplayable -> PlayerFailure(stringResource(R.string.player_error_lost), stringResource(R.string.player_unplayable), data::reload)
+                // Asking again gets the same answer, so there's nothing to try.
+                is PlayerData.Refused -> PlayerFailure(refusalTitle(value.refusal), value.message, null)
                 else -> Playback(itemId, value, start)
             }
         }
@@ -292,6 +298,15 @@ private fun FullScreen() {
         }
     }
 }
+
+/** The heading over the server's words when it won't play the file for this account. */
+@Composable
+private fun refusalTitle(refusal: Refusal) = stringResource(
+    when (refusal) {
+        Refusal.RESTRICTED -> R.string.player_restricted
+        Refusal.BUSY -> R.string.player_busy
+    },
+)
 
 @Composable
 private fun PlayerFailure(title: String, message: String?, retry: (() -> Unit)?) {
@@ -368,7 +383,7 @@ private fun Playback(itemId: String, data: PlayerData, start: Double?) {
                 )
                 Triple(opening, data.device, FALLBACK_PLAYBACK_OPTIONS)
             }
-            PlayerData.Unplayable -> error("nothing to play")
+            PlayerData.Unplayable, is PlayerData.Refused -> error("nothing to play")
         }
         PlayerController(
             context = context,
@@ -539,7 +554,10 @@ private fun Playback(itemId: String, data: PlayerData, start: Double?) {
             }
             controller.error?.let { message ->
                 Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.8f))) {
-                    PlayerFailure(stringResource(R.string.player_error_lost), message, controller::retry)
+                    when (val refusal = controller.refusal) {
+                        null -> PlayerFailure(stringResource(R.string.player_error_lost), message, controller::retry)
+                        else -> PlayerFailure(refusalTitle(refusal), message, null)
+                    }
                 }
             }
             if (controller.ended) UpNext(controller, autoplay = prefs.autoplayNext, Modifier.align(Alignment.BottomEnd))
@@ -1218,10 +1236,13 @@ private fun androidx.compose.foundation.lazy.LazyListScope.menuItems(menu: Menu,
         Menu.Settings -> {
             if (!controller.isLocal) {
                 item { MenuHeading(stringResource(R.string.player_quality)) }
-                item {
-                    MenuRow(stringResource(R.string.player_quality_original), null, selected = controller.quality == ORIGINAL_QUALITY, picked = picked) {
-                        controller.pickQuality(ORIGINAL_QUALITY)
-                        onDismiss()
+                // A file over the account's bit rate limit plays only as an encode.
+                if (controller.offersOriginal) {
+                    item {
+                        MenuRow(stringResource(R.string.player_quality_original), null, selected = controller.quality == ORIGINAL_QUALITY, picked = picked) {
+                            controller.pickQuality(ORIGINAL_QUALITY)
+                            onDismiss()
+                        }
                     }
                 }
                 items(controller.qualities, key = { it.id }) { quality ->

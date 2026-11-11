@@ -104,6 +104,30 @@ class Actions(val scope: CoroutineScope) {
     fun season(title: TitleSummary, season: ShowSeason, here: Boolean = false) {
         target = ActionTarget.Season(title, season, here)
     }
+
+    fun open(target: ActionTarget) {
+        this.target = target
+    }
+}
+
+/**
+ * Whether [target]'s menu has anything in it. One opened on its own page
+ * holds only starting over, downloads, and an admin's items, so for an
+ * account that may not download it can be empty, and the page leaves its
+ * button out.
+ */
+@Composable
+fun hasActions(target: ActionTarget): Boolean {
+    val app = LocalContext.current.app
+    val stored by app.downloads.store.items.collectAsState()
+    if (!target.here || app.viewer.mayDownload) return true
+    val admin = LocalUser.current.isAdmin
+    fun startsOver(item: MediaItem?) = item?.progress?.let { !it.completed && it.positionSeconds > 0 } == true
+    return when (target) {
+        is ActionTarget.Item -> admin || startsOver(target.item) || stored[target.item.id] != null
+        is ActionTarget.Title -> admin || startsOver(target.file) || target.file?.let { stored[it.id] } != null
+        is ActionTarget.Season -> admin && target.season.number != null
+    }
 }
 
 val LocalActions = staticCompositionLocalOf<Actions> { error("no actions") }
@@ -338,6 +362,8 @@ private fun TitleActions(title: TitleSummary, file: MediaItem?, here: Boolean, d
         }
     }
     when {
+        // What's on the phone already can still go.
+        !viewer.mayDownload -> if (file != null) DownloadItem(file, dismiss)
         show -> SheetItem(Lucide.Download, stringResource(R.string.downloads_action)) {
             dismiss()
             actions.files = FileSet(title)
@@ -370,9 +396,11 @@ private fun SeasonActions(title: TitleSummary, season: ShowSeason, here: Boolean
     val actions = LocalActions.current
     val res = LocalResources.current
     SheetHeader(seasonName(season.number, res), title.name)
-    SheetItem(Lucide.Download, stringResource(R.string.downloads_action)) {
-        dismiss()
-        actions.files = FileSet(title, season)
+    if (LocalContext.current.app.viewer.mayDownload) {
+        SheetItem(Lucide.Download, stringResource(R.string.downloads_action)) {
+            dismiss()
+            actions.files = FileSet(title, season)
+        }
     }
     if (!here) {
         SheetItem(Lucide.List, stringResource(R.string.media_hero_episodes)) {
@@ -425,7 +453,10 @@ private fun MetadataItems(title: TitleSummary, images: ImageTarget?, matchable: 
     }
 }
 
-/** Download a file, or take back its download. */
+/**
+ * Download a file, or take back its download. An account that may not
+ * download gets only the second, for a file on the phone already.
+ */
 @Composable
 private fun DownloadItem(item: MediaItem, dismiss: () -> Unit) {
     val actions = LocalActions.current
@@ -433,6 +464,7 @@ private fun DownloadItem(item: MediaItem, dismiss: () -> Unit) {
     val downloads = context.app.downloads
     val stored by downloads.store.items.collectAsState()
     if (stored[item.id] == null) {
+        if (!context.app.viewer.mayDownload) return
         SheetItem(Lucide.Download, stringResource(R.string.downloads_action)) {
             dismiss()
             actions.download = item
