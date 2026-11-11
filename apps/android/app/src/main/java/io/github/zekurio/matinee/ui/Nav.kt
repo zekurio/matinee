@@ -122,6 +122,19 @@ class Navigator(private val controller: NavHostController) {
 
     fun media() = tab(MediaRoute)
 
+    /**
+     * A page from the TV's drawer, on top of Home so Back goes there. Home
+     * itself goes back to Home's page.
+     */
+    fun drawer(route: Any) {
+        val start = controller.graph.findStartDestination()
+        if (start.hasRoute(route::class)) {
+            controller.popBackStack(start.id, inclusive = false)
+            return
+        }
+        controller.navigate(route) { popUpTo(start.id) }
+    }
+
     fun downloads() = tab(DownloadsRoute)
 
     fun downloadsShow(titleId: String) = controller.navigate(DownloadsShowRoute(titleId)) { launchSingleTop = true }
