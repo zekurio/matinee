@@ -19,6 +19,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -31,6 +32,9 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.ViewModelStoreOwner
+import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.compose.NavHost
@@ -69,14 +73,14 @@ import io.github.zekurio.matinee.ui.components.LocalSnackbar
 import io.github.zekurio.matinee.ui.components.Lucide
 import io.github.zekurio.matinee.ui.rememberLoader
 import io.github.zekurio.matinee.ui.theme.Palette
-import io.github.zekurio.matinee.ui.tv.detail.TvEpisodeScreen
-import io.github.zekurio.matinee.ui.tv.detail.TvPersonScreen
-import io.github.zekurio.matinee.ui.tv.detail.TvSeasonScreen
-import io.github.zekurio.matinee.ui.tv.detail.TvTitleScreen
 import io.github.zekurio.matinee.ui.tv.browse.TvBrowseScreen
 import io.github.zekurio.matinee.ui.tv.browse.TvFavoritesScreen
 import io.github.zekurio.matinee.ui.tv.browse.TvLibraryScreen
 import io.github.zekurio.matinee.ui.tv.browse.TvSearchScreen
+import io.github.zekurio.matinee.ui.tv.detail.TvEpisodeScreen
+import io.github.zekurio.matinee.ui.tv.detail.TvPersonScreen
+import io.github.zekurio.matinee.ui.tv.detail.TvSeasonScreen
+import io.github.zekurio.matinee.ui.tv.detail.TvTitleScreen
 import io.github.zekurio.matinee.ui.tv.home.TvHomeScreen
 import io.github.zekurio.matinee.ui.tv.profile.TvProfileScreen
 import io.github.zekurio.matinee.ui.tv.profile.TvRecentScreen
@@ -140,7 +144,9 @@ fun TvSignedInApp(session: Session, user: User) {
                     .padding(top = Overscan.Vertical + 11.dp, end = Overscan.Horizontal)
                     .graphicsLayer { alpha = clock },
             )
-            Drawer(user, current, shown, drawer, navigator, onLeave = { toPage() })
+            CompositionLocalProvider(LocalViewModelStoreOwner provides rememberSignInStore()) {
+                Drawer(user, current, shown, drawer, navigator, onLeave = { toPage() })
+            }
             TvActionsPanel(menu, fallback = { toPage() })
             SnackbarHost(
                 snackbar,
@@ -164,6 +170,22 @@ fun TvSignedInApp(session: Session, user: User) {
         BackHandler(enabled = onHome && !drawer.isOpen && !menu.isOpen) { drawer.open() }
         BackHandler(enabled = !onHome && drawer.isOpen && !menu.isOpen) { toPage() }
     }
+}
+
+/**
+ * Holds what the shell loads outside its pages, and ends with this sign-in.
+ * The activity's own store outlives a sign-out, so a loader kept there goes
+ * on asking the server before.
+ */
+@Composable
+private fun rememberSignInStore(): ViewModelStoreOwner {
+    val owner = remember {
+        object : ViewModelStoreOwner {
+            override val viewModelStore = ViewModelStore()
+        }
+    }
+    DisposableEffect(owner) { onDispose { owner.viewModelStore.clear() } }
+    return owner
 }
 
 @Composable
