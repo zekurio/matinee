@@ -38,20 +38,7 @@ engagement time would let launchers sort and display Next up reliably.
 
 ## Checking the provider
 
-The shell's `content query` sees only the shell's rows on TV images that
-restrict callers to their own package. The instrumentation probe reads
-Matinee's rows from its own context, without exporting a debug endpoint.
-Bring the signed-in app to the foreground before probing to run a sync.
-
-```sh
-nix develop ../..#android -c ./gradlew testDebugUnitTest assembleDebug assembleDebugAndroidTest
-adb -s emulator-5554 install -r app/build/outputs/apk/debug/app-debug.apk
-adb -s emulator-5554 install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
-adb -s emulator-5554 shell am instrument -w \
-  io.github.zekurio.matinee.debug.test/io.github.zekurio.matinee.launcher.WatchNextProbe
-```
-
-After signing out, pass `-e empty true` before `-w` to assert there are no
-rows. `-e signOut true -e empty true` invokes the session's sign-out and
-checks cleanup, for TV builds whose Settings page is not available yet.
-Instrumentation restarts the app process, so leave the player first.
+`adb shell content query --uri content://android.media.tv/watch_next_program`
+shows nothing on TV images that restrict callers to their own package's
+rows, even while the launcher shows Matinee's cards. Look at the launcher's
+Play Next row instead.
