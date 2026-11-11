@@ -67,9 +67,15 @@ val PlaybackPreferences.skipBack: Int get() = skipBackSeconds ?: DEFAULT_SKIP_SE
 /** Seconds a skip forward moves. */
 val PlaybackPreferences.skipForward: Int get() = skipForwardSeconds ?: DEFAULT_SKIP_SECONDS
 
-/** What to assume when `playback.options` doesn't load: H.264 and AAC, which every server encodes to. */
+/**
+ * What to assume when `playback.options` doesn't load: H.264 and AAC, which
+ * every server encodes to, no limit, and no downloads, since only the
+ * server can say the account may.
+ */
 val FALLBACK_PLAYBACK_OPTIONS = PlaybackOptions(
     qualities = emptyList(),
+    maxBitrate = null,
+    downloads = false,
     downloadVideoPresets = emptyList(),
     skipSteps = emptyList(),
     videoCodecs = listOf(TranscodeVideoCodec.H264),
@@ -83,3 +89,9 @@ typealias OfflinePlay = PlaybackOfflineInput.Play
 
 /** The code `playback.start` fails with when nothing this device plays is left, as the contract's `PLAYBACK_UNPLAYABLE`. */
 const val PLAYBACK_UNPLAYABLE = "UNPLAYABLE"
+
+/** The code `playback.start` fails with when the account's access rules out every way left to play the file, as the contract's `PLAYBACK_RESTRICTED`. */
+const val PLAYBACK_RESTRICTED = "PLAYBACK_RESTRICTED"
+
+/** The code `playback.start` fails with while the account plays on as many devices as it may, as the contract's `PLAYBACK_BUSY`. */
+const val PLAYBACK_BUSY = "TOO_MANY_STREAMS"

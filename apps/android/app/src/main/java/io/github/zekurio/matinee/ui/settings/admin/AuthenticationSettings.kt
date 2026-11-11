@@ -211,12 +211,16 @@ private fun AuthForm(saved: AdminAuthSettings, saver: Saver, save: (AuthSettings
                     oidc = OidcSettingsInput(
                         enabled = oidc.enabled,
                         allowSignUp = oidc.allowSignUp,
+                        // The app has no fields for these yet, so a save keeps what the web set.
+                        signOutRefused = oidc.signOutRefused,
                         displayName = oidc.displayName,
                         issuerUrl = oidc.issuerUrl,
                         clientId = oidc.clientId,
                         scopes = oidc.scopes,
                         usernameClaim = oidc.usernameClaim,
                         roleClaim = oidc.roleClaim,
+                        groupsClaim = oidc.groupsClaim,
+                        policyClaim = oidc.policyClaim,
                         clientSecret = change,
                     ),
                 ),
