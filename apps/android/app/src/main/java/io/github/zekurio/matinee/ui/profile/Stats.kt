@@ -45,6 +45,7 @@ import io.github.zekurio.matinee.api.StatsRange
 import io.github.zekurio.matinee.api.WatchStats
 import io.github.zekurio.matinee.api.name
 import io.github.zekurio.matinee.ui.LocalNavigator
+import io.github.zekurio.matinee.ui.LocalOffline
 import io.github.zekurio.matinee.ui.components.CardShape
 import io.github.zekurio.matinee.ui.components.Chip
 import io.github.zekurio.matinee.ui.components.Gap
@@ -250,11 +251,13 @@ fun TopTitles(stats: WatchStats, modifier: Modifier = Modifier) {
     val api = LocalApi.current
     val nav = LocalNavigator.current
     val res = LocalResources.current
+    // Offline, a title's page is the server's.
+    val offline = LocalOffline.current
     StatsCard(stringResource(R.string.stats_top), modifier) {
         stats.titles.forEachIndexed { index, entry ->
             if (index > 0) HorizontalDivider(Modifier.padding(start = 16.dp), color = Palette.Border)
             Row(
-                Modifier.fillMaxWidth().clickable { nav.title(entry.title) }.padding(horizontal = 16.dp, vertical = 12.dp),
+                Modifier.fillMaxWidth().clickable(enabled = !offline) { nav.title(entry.title) }.padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
@@ -290,11 +293,12 @@ fun Genres(stats: WatchStats, modifier: Modifier = Modifier) {
     if (stats.genres.isEmpty()) return
     val nav = LocalNavigator.current
     val res = LocalResources.current
+    val offline = LocalOffline.current
     StatsCard(stringResource(R.string.stats_genres), modifier) {
         stats.genres.forEachIndexed { index, genre ->
             if (index > 0) HorizontalDivider(Modifier.padding(start = 16.dp), color = Palette.Border)
             Row(
-                Modifier.fillMaxWidth().clickable { nav.genre(genre.name) }.padding(horizontal = 16.dp, vertical = 14.dp),
+                Modifier.fillMaxWidth().clickable(enabled = !offline) { nav.genre(genre.name) }.padding(horizontal = 16.dp, vertical = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(genre.name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))

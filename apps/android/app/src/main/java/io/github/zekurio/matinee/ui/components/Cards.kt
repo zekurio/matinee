@@ -50,6 +50,7 @@ import io.github.zekurio.matinee.api.TitleKind
 import io.github.zekurio.matinee.api.TitleSummary
 import io.github.zekurio.matinee.app
 import io.github.zekurio.matinee.ui.LocalNavigator
+import io.github.zekurio.matinee.ui.LocalOffline
 import io.github.zekurio.matinee.ui.Motion
 import io.github.zekurio.matinee.ui.episodeCode
 import io.github.zekurio.matinee.ui.episodeNumber
@@ -189,11 +190,14 @@ private fun Modifier.cardClick(
     onLongClick: (() -> Unit)?,
     interaction: MutableInteractionSource = remember { MutableInteractionSource() },
 ): Modifier {
+    // Offline, a card's page and actions are the server's; it only shows.
+    val enabled = !LocalOffline.current
     return clip(CardShape)
         .focusRing(interaction, CardShape)
         .combinedClickable(
             interactionSource = interaction,
             indication = androidx.compose.material3.ripple(),
+            enabled = enabled,
             role = Role.Button,
             onLongClick = onLongClick,
             onClick = onClick,
@@ -229,7 +233,7 @@ fun EpisodeCard(item: MediaItem, modifier: Modifier = Modifier, showName: Boolea
                 Picture(api.landscape(item), Modifier.fillMaxSize())
                 if (watched) WatchedBadge(Modifier.align(Alignment.TopEnd).padding(6.dp))
                 else if (ratio != null && ratio > 0f) ProgressBar(ratio, Modifier.align(Alignment.BottomCenter))
-                HoverPlay(
+                if (!LocalOffline.current) HoverPlay(
                     interaction,
                     onClick = { nav.play(item.id) },
                     contentDescription = if (left != null) stringResource(R.string.media_resume_named, name)

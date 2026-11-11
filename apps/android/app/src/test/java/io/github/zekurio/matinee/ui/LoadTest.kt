@@ -64,4 +64,25 @@ class LoadTest {
         assertEquals(Load.Failed("broke"), before.failedWith("broke").state)
         assertFalse(Load.Ready(listOf(1)).failedWith("broke").refreshDisconnected)
     }
+
+    @Test
+    fun aFirstLoadOutOfReachShowsWhatWasKept() {
+        val before: Load<List<Int>> = Load.Loading
+        val settled = before.failedWith("unreachable", disconnected = true) { listOf(3) }
+        assertEquals(Load.Ready(listOf(3)), settled.state)
+        assertEquals("unreachable", settled.refreshError)
+        assertTrue(settled.refreshDisconnected)
+    }
+
+    @Test
+    fun aServerErrorDoesNotFallBackToWhatWasKept() {
+        val before: Load<List<Int>> = Load.Loading
+        assertEquals(Load.Failed("broke"), before.failedWith("broke") { listOf(3) }.state)
+    }
+
+    @Test
+    fun nothingKeptStillFails() {
+        val before: Load<List<Int>> = Load.Loading
+        assertEquals(Load.Failed("unreachable", disconnected = true), before.failedWith("unreachable", disconnected = true) { null }.state)
+    }
 }

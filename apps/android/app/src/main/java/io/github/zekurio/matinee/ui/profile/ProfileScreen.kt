@@ -26,6 +26,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -36,18 +37,23 @@ import io.github.zekurio.matinee.api.isAdmin
 import io.github.zekurio.matinee.api.name
 import io.github.zekurio.matinee.auth.Session
 import io.github.zekurio.matinee.ui.Load
+import io.github.zekurio.matinee.ui.Loader
 import io.github.zekurio.matinee.ui.LocalNavigator
 import io.github.zekurio.matinee.ui.LocalOffline
 import io.github.zekurio.matinee.ui.LocalUser
+import io.github.zekurio.matinee.ui.RefreshOnResume
 import io.github.zekurio.matinee.ui.StatusBarScrim
 import io.github.zekurio.matinee.ui.components.Avatar
 import io.github.zekurio.matinee.ui.components.Badge
 import io.github.zekurio.matinee.ui.components.ButtonLook
+import io.github.zekurio.matinee.ui.components.Disconnected
+import io.github.zekurio.matinee.ui.components.DisconnectedAction
 import io.github.zekurio.matinee.ui.components.EpisodeCard
 import io.github.zekurio.matinee.ui.components.Gap
 import io.github.zekurio.matinee.ui.components.Gutter
 import io.github.zekurio.matinee.ui.components.LocalApi
 import io.github.zekurio.matinee.ui.components.Lucide
+import io.github.zekurio.matinee.ui.components.LucideIcon
 import io.github.zekurio.matinee.ui.components.MatineeButton
 import io.github.zekurio.matinee.ui.components.PosterCard
 import io.github.zekurio.matinee.ui.components.Rail
@@ -69,17 +75,31 @@ import java.util.Locale
  * The profile tab, behind the person's picture in the tab bar, as the web's
  * profile page: who's signed in, their favorites, their statistics, and
  * what they watched last, with the way on to Settings, where signing out
- * is. Offline, only who it is and Settings, where offline mode is turned
- * off again.
+ * is. What the server sent last is kept, as Home keeps its rows: while the
+ * server can't be reached it stays up with the disconnect icon in the
+ * header, and offline mode shows it, though nothing in it opens.
  */
 @Composable
 fun ProfileScreen(session: Session) {
-    val offline = LocalOffline.current
     val user = LocalUser.current
-    val profile = if (offline) null else rememberLoader("profile-${user.username}") { profiles.get(user.username) }
-    val loaded = (profile?.state as? Load.Ready)?.value
-    // Offline there's no server to ask.
-    val stats = if (offline) null else rememberProfileStats(user.username)
+    val context = LocalContext.current
+    val snapshot = remember(user.username) { ProfileSnapshot(context, user.username) }
+    if (LocalOffline.current) {
+        // Offline mode leaves the server alone: only what it sent before.
+        val saved = remember(snapshot) { snapshot.profile.read() }
+        ProfilePage(saved?.let { Load.Ready(it) }, null, rememberSavedStats(snapshot))
+        return
+    }
+    val profile = rememberLoader("profile-${user.username}", snapshot.profile) { profiles.get(user.username) }
+    // Back on the tab, favorites and what was watched may have moved on.
+    RefreshOnResume(profile)
+    ProfilePage(profile.state, profile, rememberProfileStats(user.username, snapshot))
+}
+
+/** The page for [state], fetched by [loader], or saved, offline, where there's none; null with nothing saved. */
+@Composable
+private fun ProfilePage(state: Load<Profile>?, loader: Loader<Profile>?, stats: ProfileStats) {
+    val loaded = (state as? Load.Ready)?.value
     val listState = rememberLazyListState()
     Box(Modifier.fillMaxSize()) {
         LazyColumn(
@@ -87,10 +107,16 @@ fun ProfileScreen(session: Session) {
             state = listState,
             contentPadding = PaddingValues(bottom = tabBarPadding() + 24.dp),
         ) {
-            item(key = "who") { Header(loaded) }
-            if (!offline) {
-                when (val state = profile?.state) {
-                    is Load.Failed -> item(key = "failed") {
+            item(key = "who") {
+                // Showing what loaded before while the server can't be reached: the icon, up top.
+                Header(loaded) { if (loader != null) DisconnectedAction(*listOfNotNull(loader, stats.loader).toTypedArray()) }
+            }
+            when (state) {
+                null -> Unit
+                is Load.Failed -> item(key = "failed") {
+                    if (state.disconnected) {
+                        Disconnected(loader?.let { it::reload }, Modifier.fillMaxWidth().padding(top = SectionGap))
+                    } else {
                         Text(
                             stringResource(R.string.profile_load_failed),
                             style = MaterialTheme.typography.bodyMedium,
@@ -98,26 +124,29 @@ fun ProfileScreen(session: Session) {
                             modifier = Modifier.padding(start = Gutter, end = Gutter, top = SectionGap),
                         )
                     }
-                    is Load.Ready -> {
-                        item(key = "favorites") { Box(Modifier.padding(top = SectionGap)) { Favorites(state.value) } }
-                        // Each card its own item, so a tab switch builds only the ones on screen.
-                        stats?.let { statistics(it) }
-                        state.value.recent?.takeIf { it.isNotEmpty() }?.let { recent ->
-                            item(key = "recent") {
-                                Rail(
-                                    modifier = Modifier.padding(top = SectionGap),
-                                    title = stringResource(R.string.profile_recent), onTitleClick = LocalNavigator.current::recent) {
-                                    items(recent, key = { it.item.id }) { entry ->
-                                        EpisodeCard(entry.item, Modifier.width(railItemWidth(RailArt.Landscape)))
-                                    }
+                }
+                is Load.Ready -> {
+                    item(key = "favorites") { Box(Modifier.padding(top = SectionGap)) { Favorites(state.value) } }
+                    // Each card its own item, so a tab switch builds only the ones on screen.
+                    statistics(stats)
+                    state.value.recent?.takeIf { it.isNotEmpty() }?.let { recent ->
+                        item(key = "recent") {
+                            val offline = LocalOffline.current
+                            Rail(
+                                modifier = Modifier.padding(top = SectionGap),
+                                title = stringResource(R.string.profile_recent),
+                                onTitleClick = if (offline) null else LocalNavigator.current::recent,
+                            ) {
+                                items(recent, key = { it.item.id }) { entry ->
+                                    EpisodeCard(entry.item, Modifier.width(railItemWidth(RailArt.Landscape)))
                                 }
                             }
                         }
                     }
-                    else -> item(key = "loading") {
-                        Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(color = Palette.Accent)
-                        }
+                }
+                Load.Loading -> item(key = "loading") {
+                    Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = Palette.Accent)
                     }
                 }
             }
@@ -128,10 +157,11 @@ fun ProfileScreen(session: Session) {
 
 /**
  * The picture and name, the username under a display name, and since when
- * they're here, with Settings in the corner as on most profiles.
+ * they're here, with Settings in the corner as on most profiles. [action]
+ * goes before Settings; offline, the offline icon, as on Home.
  */
 @Composable
-private fun Header(profile: Profile?) {
+private fun Header(profile: Profile?, action: @Composable () -> Unit) {
     val api = LocalApi.current
     val nav = LocalNavigator.current
     val user = LocalUser.current
@@ -169,6 +199,12 @@ private fun Header(profile: Profile?) {
             }
         }
         Gap(12.dp)
+        if (LocalOffline.current) {
+            LucideIcon(Lucide.CloudOff, stringResource(R.string.downloads_offline), size = 20.dp, tint = Palette.Muted)
+            Gap(12.dp)
+        } else {
+            action()
+        }
         RoundIconButton(Lucide.Settings, stringResource(R.string.shell_settings), nav::settings, iconSize = 20.dp)
     }
 }
@@ -180,6 +216,8 @@ private fun Header(profile: Profile?) {
 @Composable
 private fun Favorites(profile: Profile) {
     val nav = LocalNavigator.current
+    // Offline the whole lists are the server's to send.
+    val openAll = if (LocalOffline.current) null else nav::favorites
     val titles = profile.favorites.orEmpty()
     val items = profile.favoriteItems.orEmpty()
     if (titles.isEmpty() && items.isEmpty()) {
@@ -192,14 +230,14 @@ private fun Favorites(profile: Profile) {
     }
     Column(verticalArrangement = Arrangement.spacedBy(32.dp)) {
         if (titles.isNotEmpty()) {
-            Rail(stringResource(R.string.favorites_title), onTitleClick = nav::favorites) {
+            Rail(stringResource(R.string.favorites_title), onTitleClick = openAll) {
                 items(titles, key = { it.id }) { title ->
                     PosterCard(title, title.year?.toString(), Modifier.width(railItemWidth(RailArt.Poster)))
                 }
             }
         }
         if (items.isNotEmpty()) {
-            Rail(stringResource(R.string.profile_favorite_episodes), onTitleClick = nav::favorites) {
+            Rail(stringResource(R.string.profile_favorite_episodes), onTitleClick = openAll) {
                 items(items, key = { it.id }) { item ->
                     EpisodeCard(item, Modifier.width(railItemWidth(RailArt.Landscape)))
                 }
@@ -216,7 +254,8 @@ private val CardGap = 28.dp
 
 /**
  * The statistics for a range, all time to start. The last range's figures
- * stay up while the next one loads, so the page doesn't jump.
+ * stay up while the next one loads, so the page doesn't jump. [loader] is
+ * null offline, where they're only what was saved.
  */
 private class ProfileStats(
     val range: String,
@@ -224,20 +263,31 @@ private class ProfileStats(
     val state: Load<WatchStats?>,
     /** The figures shown: the range's, or the last range's while it loads. */
     val stats: WatchStats?,
+    val loader: Loader<WatchStats?>?,
 ) {
     /** With nothing ever watched, picking a period changes nothing. */
     val neverWatched get() = stats != null && range == "all" && stats.totals.plays == 0
 }
 
 @Composable
-private fun rememberProfileStats(username: String): ProfileStats {
+private fun rememberProfileStats(username: String, snapshot: ProfileSnapshot): ProfileStats {
     var range by rememberSaveable { mutableStateOf("all") }
     val zone = remember { ZoneId.systemDefault().id }
-    val loader = rememberLoader("profile-stats-$username-$range") { profiles.stats(username, range, zone) }
+    val loader = rememberLoader("profile-stats-$username-$range", snapshot.stats(range)) { profiles.stats(username, range, zone) }
+    RefreshOnResume(loader)
     var last by remember { mutableStateOf<WatchStats?>(null) }
     val state = loader.state
     LaunchedEffect(state) { if (state is Load.Ready) last = state.value }
-    return ProfileStats(range, { range = it }, state, (state as? Load.Ready)?.value ?: last)
+    return ProfileStats(range, { range = it }, state, (state as? Load.Ready)?.value ?: last, loader)
+}
+
+/** Offline, each range's statistics as the server last sent them; one never opened online can't show. */
+@Composable
+private fun rememberSavedStats(snapshot: ProfileSnapshot): ProfileStats {
+    var range by rememberSaveable { mutableStateOf("all") }
+    val saved = remember(snapshot, range) { snapshot.stats(range).read() }
+    val state = if (saved != null) Load.Ready(saved) else Load.Failed("", disconnected = true)
+    return ProfileStats(range, { range = it }, state, saved, null)
 }
 
 /**
@@ -257,7 +307,8 @@ private fun LazyListScope.statistics(model: ProfileStats) {
     val card = Modifier.padding(start = Gutter, end = Gutter, top = 16.dp)
     when {
         state is Load.Failed && stats == null -> item(key = "stats-failed") {
-            Text(state.message, style = MaterialTheme.typography.bodyMedium, color = Palette.Muted, modifier = card)
+            if (state.disconnected) Disconnected(model.loader?.let { it::reload }, card.fillMaxWidth())
+            else Text(state.message, style = MaterialTheme.typography.bodyMedium, color = Palette.Muted, modifier = card)
         }
         stats == null -> item(key = "stats-loading") {
             Box(card.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
@@ -286,7 +337,10 @@ private fun LazyListScope.statistics(model: ProfileStats) {
             item(key = "stats-list") { StatList(stats, next) }
             item(key = "stats-titles") { TopTitles(stats, next) }
             item(key = "stats-genres") { Genres(stats, next) }
-            item(key = "stats-standing") { Standing(model.range, remember { ZoneId.systemDefault().id }, next) }
+            // Where they stand is a board of everyone's, which isn't saved.
+            if (model.loader != null) {
+                item(key = "stats-standing") { Standing(model.range, remember { ZoneId.systemDefault().id }, next) }
+            }
             item(key = "stats-activity") { Activity(stats, next) }
         }
     }

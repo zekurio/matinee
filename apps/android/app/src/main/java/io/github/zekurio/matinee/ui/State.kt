@@ -201,17 +201,34 @@ internal data class Settled<out T>(val state: Load<T>, val refreshError: String?
 /**
  * A fetch that failed with [message], over what showed before it: an
  * earlier answer stays on screen, marked stale, so a refresh that fails
- * doesn't blank what the person saw.
+ * doesn't blank what the person saw. With nothing on screen yet and the
+ * server out of reach, the answer [kept] from an earlier run shows the
+ * same way.
  */
-internal fun <T> Load<T>.failedWith(message: String, disconnected: Boolean = false): Settled<T> =
-    if (this is Load.Ready) Settled(this, message, disconnected) else Settled(Load.Failed(message, disconnected), null)
+internal fun <T> Load<T>.failedWith(message: String, disconnected: Boolean = false, kept: (() -> T?)? = null): Settled<T> {
+    if (this is Load.Ready) return Settled(this, message, disconnected)
+    val saved = if (disconnected) kept?.invoke() else null
+    return if (saved != null) Settled(Load.Ready(saved), message, true) else Settled(Load.Failed(message, disconnected), null)
+}
+
+/** A load's last answer, kept on the phone for when the server can't be reached. */
+interface Kept<T> {
+    /** The answer saved last, or null with none. */
+    fun read(): T?
+
+    fun write(value: T)
+}
 
 /**
  * What a screen loads from the server, kept while the screen is on the
  * back stack. [state] is Ready from the first answer on; a fetch after
  * that which fails leaves it and sets [refreshError] instead.
  */
-class Loader<T>(private val describe: (Exception) -> String, private val fetch: suspend () -> T) : ViewModel() {
+class Loader<T>(
+    private val describe: (Exception) -> String,
+    private val kept: Kept<T>? = null,
+    private val fetch: suspend () -> T,
+) : ViewModel() {
     var state by mutableStateOf<Load<T>>(Load.Loading)
         private set
 
@@ -254,11 +271,14 @@ class Loader<T>(private val describe: (Exception) -> String, private val fetch: 
             fun current() = mine == generation
             try {
                 val value = fetch()
-                if (current()) settle(Settled(Load.Ready(value), null))
+                if (current()) {
+                    settle(Settled(Load.Ready(value), null))
+                    kept?.write(value)
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: IOException) {
-                if (current()) settle(state.failedWith(describe(e), isDisconnect(e)))
+                if (current()) settle(state.failedWith(describe(e), isDisconnect(e), kept?.let { it::read }))
             } catch (e: SerializationException) {
                 Log.w(TAG, "The server's answer didn't parse", e)
                 if (current()) settle(state.failedWith(describe(e)))
@@ -287,14 +307,16 @@ class Loader<T>(private val describe: (Exception) -> String, private val fetch: 
 /**
  * Load [fetch] for this screen. [key] names what it loads, so two loads on
  * one screen stay apart. Fetches again when the viewer's marks change.
+ * With [kept], each answer is saved, and the saved one shows while the
+ * server can't be reached.
  */
 @Composable
-fun <T> rememberLoader(key: String, fetch: suspend MatineeApi.() -> T): Loader<T> {
+fun <T> rememberLoader(key: String, kept: Kept<T>? = null, fetch: suspend MatineeApi.() -> T): Loader<T> {
     val context = LocalContext.current
     val app = context.app
     val loader: Loader<T> = viewModel(key = key) {
         val api = app.session.requireApi()
-        Loader({ describeFailure(app.resources, it) }) { api.fetch() }
+        Loader({ describeFailure(app.resources, it) }, kept) { api.fetch() }
     }
     val version = app.viewer.version
     LaunchedEffect(loader, version) {
