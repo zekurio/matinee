@@ -1,7 +1,7 @@
 package io.github.zekurio.matinee.ui.tv
 
 import androidx.annotation.DrawableRes
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Row
@@ -27,6 +27,7 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
@@ -359,6 +360,10 @@ private fun seasonEntries(title: TitleSummary, season: Season, here: Boolean): L
     }
 }
 
+/** A tap on a [DayField]'s arrow, once the field is focused and the arrow shows. */
+private fun Modifier.stepOnTap(shown: Boolean, onStep: () -> Unit): Modifier =
+    if (!shown) this else pointerInput(onStep) { detectTapGestures { onStep() } }
+
 private fun LocalDate.coerceAtMost(max: LocalDate) = if (isAfter(max)) max else this
 
 /**
@@ -384,12 +389,13 @@ private fun DayField(value: String, modifier: Modifier = Modifier, onStep: (Int)
                 true
             }
             .tvControl(focused, TvListItems.Shape, rest = Palette.Foreground.copy(alpha = 0.07f), scale = TvFocus.ROW_SCALE)
-            .clickable(interaction, indication = null, role = Role.Button) { }
+            .tvClickable(interaction, role = Role.Button) { }
             .padding(horizontal = TvListItems.Inset),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        LucideIcon(Lucide.ChevronLeft, null, size = 20.dp, tint = if (focused) content else Color.Transparent)
+        // A pointer steps it with the arrows, which show while it's focused, as a click focuses it.
+        LucideIcon(Lucide.ChevronLeft, null, size = 20.dp, tint = if (focused) content else Color.Transparent, modifier = Modifier.stepOnTap(focused) { onStep(-1) })
         Text(value, style = TvType.Facts, color = content, textAlign = TextAlign.Center, modifier = Modifier.weight(1f).padding(horizontal = 12.dp))
-        LucideIcon(Lucide.ChevronRight, null, size = 20.dp, tint = if (focused) content else Color.Transparent)
+        LucideIcon(Lucide.ChevronRight, null, size = 20.dp, tint = if (focused) content else Color.Transparent, modifier = Modifier.stepOnTap(focused) { onStep(1) })
     }
 }

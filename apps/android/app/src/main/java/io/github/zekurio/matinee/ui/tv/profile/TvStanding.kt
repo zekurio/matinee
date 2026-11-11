@@ -1,7 +1,6 @@
 package io.github.zekurio.matinee.ui.tv.profile
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
@@ -61,8 +60,10 @@ import io.github.zekurio.matinee.ui.tv.TvListItems
 import io.github.zekurio.matinee.ui.tv.TvRow
 import io.github.zekurio.matinee.ui.tv.TvSidePanel
 import io.github.zekurio.matinee.ui.tv.TvType
+import io.github.zekurio.matinee.ui.tv.tvClickable
 import io.github.zekurio.matinee.ui.tv.tvContent
 import io.github.zekurio.matinee.ui.tv.tvControl
+import io.github.zekurio.matinee.ui.tv.tvFocusOnTap
 
 internal const val STANDING = "standing"
 
@@ -111,7 +112,7 @@ private fun BoardCard(standing: BoardStanding, rows: Int, modifier: Modifier, on
         modifier
             .width(BoardWidth)
             .tvControl(focused, CardShape, rest = Palette.Foreground.copy(alpha = 0.07f))
-            .clickable(interaction, indication = null, role = Role.Button, onClick = onClick)
+            .tvClickable(interaction, role = Role.Button, onClick = onClick)
             .padding(horizontal = 14.dp, vertical = 16.dp),
     ) {
         Row(Modifier.padding(start = 6.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -246,6 +247,7 @@ internal fun BoardPanel(state: BoardPanelState, range: String, memory: TvFocusMe
                     .padding(top = if (startsNeighborhood(board, index)) 16.dp else 0.dp)
                     .then(if (index == selfIndex) Modifier.focusRequester(self) else Modifier)
                     .tvControl(focused, TvListItems.Shape, rest = if (place.self) Palette.AccentSoft else Color.Transparent, scale = TvFocus.ROW_SCALE)
+                    .tvFocusOnTap()
                     .focusable(interactionSource = interaction)
                     .height(TvListItems.Height)
                     .padding(horizontal = TvListItems.Inset - 6.dp),

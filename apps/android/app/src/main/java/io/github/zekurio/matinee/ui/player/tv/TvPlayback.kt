@@ -4,6 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,6 +35,7 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalAccessibilityManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -50,6 +52,7 @@ import io.github.zekurio.matinee.app
 import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.LocalUser
 import io.github.zekurio.matinee.ui.Motion
+import io.github.zekurio.matinee.ui.components.Lucide
 import io.github.zekurio.matinee.ui.player.HIDE_AFTER_MS
 import io.github.zekurio.matinee.ui.player.LocalPlayerHost
 import io.github.zekurio.matinee.ui.player.Menu
@@ -61,10 +64,10 @@ import io.github.zekurio.matinee.ui.player.Video
 import io.github.zekurio.matinee.ui.player.rememberPlayerController
 import io.github.zekurio.matinee.ui.player.rememberSubtitleLook
 import io.github.zekurio.matinee.ui.theme.Palette
-import io.github.zekurio.matinee.ui.components.Lucide
 import io.github.zekurio.matinee.ui.tv.Overscan
 import io.github.zekurio.matinee.ui.tv.TvButton
 import io.github.zekurio.matinee.ui.tv.TvType
+import io.github.zekurio.matinee.ui.tv.tvRefocus
 import kotlinx.coroutines.delay
 
 /**
@@ -216,6 +219,7 @@ private fun TvPlayback(itemId: String, data: PlayerData, start: Double?) {
             .fillMaxSize()
             .background(Color.Black)
             .focusRequester(root)
+            .tvRefocus { if (menu == null) runCatching { (if (visible) targets.play else root).requestFocus() } }
             .onPreviewKeyEvent { event ->
                 val key = event.key
                 val down = event.type == KeyEventType.KeyDown
@@ -273,6 +277,15 @@ private fun TvPlayback(itemId: String, data: PlayerData, start: Double?) {
                     }
                 }
                 false
+            }
+            // A click on the picture shows the controls, or hides them, as Select and Back do.
+            .pointerInput(Unit) {
+                detectTapGestures {
+                    if (menu == null) {
+                        touched++
+                        controls = !controls
+                    }
+                }
             }
             .focusable(),
     ) {

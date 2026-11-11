@@ -3,6 +3,7 @@ package io.github.zekurio.matinee.ui.tv.auth
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -31,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -47,11 +49,12 @@ import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.ui.components.LogoMark
 import io.github.zekurio.matinee.ui.theme.Palette
 import io.github.zekurio.matinee.ui.tv.Overscan
-import io.github.zekurio.matinee.ui.tv.TvListItems
 import io.github.zekurio.matinee.ui.tv.TvFocus
+import io.github.zekurio.matinee.ui.tv.TvListItems
 import io.github.zekurio.matinee.ui.tv.TvType
 import io.github.zekurio.matinee.ui.tv.tvContent
 import io.github.zekurio.matinee.ui.tv.tvControl
+import io.github.zekurio.matinee.ui.tv.tvRefocus
 import kotlinx.coroutines.flow.first
 
 /**
@@ -70,11 +73,14 @@ internal fun TvAuthFrame(
     side: @Composable ColumnScope.() -> Unit = {},
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Box(modifier.fillMaxSize().background(Palette.Background)) {
+    val rows = remember { FocusRequester() }
+    Box(modifier.fillMaxSize().background(Palette.Background).tvRefocus { runCatching { rows.requestFocus() } }) {
         Brand(Modifier.padding(start = Overscan.Horizontal, top = Overscan.Vertical + 16.dp))
         Row(
             Modifier
                 .fillMaxSize()
+                .focusRequester(rows)
+                .focusGroup()
                 .padding(start = Overscan.Horizontal, end = Overscan.Horizontal, top = Overscan.Vertical, bottom = Overscan.Vertical),
             horizontalArrangement = Arrangement.spacedBy(64.dp),
         ) {

@@ -4,7 +4,10 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.InteractionSource
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -13,6 +16,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -33,13 +38,28 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.InputMode
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalInputModeManager
+import androidx.compose.ui.platform.LocalViewConfiguration
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.onLongClick
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.ui.Motion
 import io.github.zekurio.matinee.ui.theme.Palette
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 
 /**
  * How a focused thing on a TV stands out. There are two looks, and every
@@ -234,9 +254,115 @@ class TvPageFocus {
 val LocalTvPageFocus = androidx.compose.runtime.staticCompositionLocalOf<TvPageFocus?> { null }
 
 /**
- * A touch or a mouse click takes focus off everything, and the D-pad press
- * after it has nowhere to move from. This puts focus back with [restore]
- * when the keys take over again. For the root of a TV screen.
+ * Clicks for a TV control or card, in place of `clickable`. A `clickable`
+ * can't hold focus in touch mode, so a mouse click or a touch takes focus
+ * off everything and the next D-pad press has nowhere to move from. This
+ * one stays focusable in touch mode, and a click focuses what it clicks
+ * before running [onClick], so the pointer and the D-pad share one focus:
+ * a click shows what focus would show, and the D-pad goes on from there.
+ *
+ * Select or Enter clicks on release. Held as long as a long press, it runs
+ * [onLongClick] instead, if there is one, as a long press of the pointer
+ * does. Give it the [interaction] the focus look reads.
+ */
+fun Modifier.tvClickable(
+    interaction: MutableInteractionSource,
+    enabled: Boolean = true,
+    role: Role = Role.Button,
+    onClickLabel: String? = null,
+    onLongClick: (() -> Unit)? = null,
+    onClick: () -> Unit,
+): Modifier = composed {
+    val requester = remember { FocusRequester() }
+    val click by rememberUpdatedState(onClick)
+    val longClick by rememberUpdatedState(onLongClick)
+    val scope = rememberCoroutineScope()
+    val timeout = LocalViewConfiguration.current.longPressTimeoutMillis
+    val press = remember { KeyPress() }
+    val long = onLongClick != null
+    this
+        .focusRequester(requester)
+        .onKeyEvent { event ->
+            if (!enabled || event.key !in SELECT_KEYS) return@onKeyEvent false
+            when (event.type) {
+                KeyEventType.KeyDown -> if (event.nativeKeyEvent.repeatCount == 0) {
+                    press.down = true
+                    press.held = longClick?.let { run ->
+                        scope.launch {
+                            delay(timeout)
+                            press.down = false
+                            run()
+                        }
+                    }
+                }
+                KeyEventType.KeyUp -> if (press.down) {
+                    press.down = false
+                    press.held?.cancel()
+                    click()
+                }
+            }
+            true
+        }
+        .focusable(enabled, interaction)
+        .semantics(mergeDescendants = true) {
+            this.role = role
+            onClick(onClickLabel) {
+                click()
+                true
+            }
+            if (long) {
+                onLongClick {
+                    longClick?.invoke()
+                    true
+                }
+            }
+            if (!enabled) disabled()
+        }
+        .pointerInput(enabled, long) {
+            if (!enabled) return@pointerInput
+            detectTapGestures(
+                onLongPress = if (long) {
+                    {
+                        runCatching { requester.requestFocus() }
+                        longClick?.invoke()
+                    }
+                } else {
+                    null
+                },
+                onTap = {
+                    runCatching { requester.requestFocus() }
+                    click()
+                },
+            )
+        }
+}
+
+/** The keys that click a [tvClickable]. */
+private val SELECT_KEYS = setOf(Key.DirectionCenter, Key.Enter, Key.NumPadEnter)
+
+/** A Select press [tvClickable] has seen go down, and the wait for it to become a long one. */
+private class KeyPress {
+    var down = false
+    var held: Job? = null
+}
+
+/**
+ * A click or a touch focuses this, for something that takes focus but
+ * isn't clicked, like a chart read with Left and Right. Put it before the
+ * `focusable`.
+ */
+fun Modifier.tvFocusOnTap(): Modifier = composed {
+    val requester = remember { FocusRequester() }
+    focusRequester(requester).pointerInput(Unit) {
+        detectTapGestures { runCatching { requester.requestFocus() } }
+    }
+}
+
+/**
+ * A touch or a mouse click in an empty spot can leave nothing focused,
+ * and the D-pad press after it has nowhere to move from. This puts focus
+ * back with [restore] when the keys take over again. For the root of a TV
+ * screen.
  */
 fun Modifier.tvRefocus(restore: () -> Unit): Modifier = composed {
     val mode = LocalInputModeManager.current

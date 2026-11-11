@@ -56,17 +56,19 @@ import io.github.zekurio.matinee.ui.tv.Overscan
 import io.github.zekurio.matinee.ui.tv.PinnedRows
 import io.github.zekurio.matinee.ui.tv.ShowBackdrop
 import io.github.zekurio.matinee.ui.tv.TvButton
-import io.github.zekurio.matinee.ui.tv.TvPerson
-import io.github.zekurio.matinee.ui.tv.TvPersonCard
 import io.github.zekurio.matinee.ui.tv.TvCards
 import io.github.zekurio.matinee.ui.tv.TvFocusLine
 import io.github.zekurio.matinee.ui.tv.TvFocusMemory
 import io.github.zekurio.matinee.ui.tv.TvPage
+import io.github.zekurio.matinee.ui.tv.TvPerson
+import io.github.zekurio.matinee.ui.tv.TvPersonCard
 import io.github.zekurio.matinee.ui.tv.TvPosterCard
 import io.github.zekurio.matinee.ui.tv.TvRow
 import io.github.zekurio.matinee.ui.tv.TvSearchField
 import io.github.zekurio.matinee.ui.tv.TvType
+import io.github.zekurio.matinee.ui.tv.fadeTop
 import io.github.zekurio.matinee.ui.tv.home.FocusedItem
+import io.github.zekurio.matinee.ui.tv.rememberPinnedRowsFling
 import io.github.zekurio.matinee.ui.tv.rememberTvFocusMemory
 import io.github.zekurio.matinee.ui.tv.titleInfo
 
@@ -149,9 +151,11 @@ fun TvSearchScreen() {
             else -> PinnedRows(ROW_PIVOT) {
                 val nav = LocalNavigator.current
                 val viewer = LocalContext.current.app.viewer
+                val rows = rememberLazyListState()
                 LazyColumn(
-                    Modifier.fillMaxSize(),
-                    state = rememberLazyListState(),
+                    Modifier.fillMaxSize().fadeTop(8.dp),
+                    state = rows,
+                    flingBehavior = rememberPinnedRowsFling(rows),
                     contentPadding = PaddingValues(top = 8.dp, bottom = 320.dp),
                     verticalArrangement = Arrangement.spacedBy(28.dp),
                 ) {

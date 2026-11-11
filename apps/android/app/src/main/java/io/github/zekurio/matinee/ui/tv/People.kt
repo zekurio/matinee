@@ -1,7 +1,6 @@
 package io.github.zekurio.matinee.ui.tv
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -66,7 +65,7 @@ fun TvPersonCard(person: TvPerson, onClick: () -> Unit, modifier: Modifier = Mod
                 .tvPicture(interaction, CircleShape)
                 .clip(CircleShape)
                 .background(Palette.Secondary)
-                .clickable(interaction, indication = null, role = Role.Button, onClickLabel = person.name, onClick = onClick),
+                .tvClickable(interaction, role = Role.Button, onClickLabel = person.name, onClick = onClick),
             contentAlignment = Alignment.Center,
         ) {
             Text(initials(person.name), style = TvType.Headline, color = Palette.Muted)

@@ -1,7 +1,5 @@
 package io.github.zekurio.matinee.ui.tv.browse
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -21,8 +19,8 @@ import io.github.zekurio.matinee.ui.components.ImageSource
 import io.github.zekurio.matinee.ui.components.LocalApi
 import io.github.zekurio.matinee.ui.components.Lucide
 import io.github.zekurio.matinee.ui.tv.ShowBackdrop
-import io.github.zekurio.matinee.ui.tv.TvGrid
 import io.github.zekurio.matinee.ui.tv.TvButton
+import io.github.zekurio.matinee.ui.tv.TvGrid
 import io.github.zekurio.matinee.ui.tv.TvTitleGrid
 import io.github.zekurio.matinee.ui.tv.home.FocusedItem
 import io.github.zekurio.matinee.ui.tv.rememberTvFocusMemory
@@ -54,42 +52,41 @@ fun TvBrowseScreen(genre: String?, studio: String?) {
         backdrop = emptyList()
     }
 
-    Column(Modifier.fillMaxSize()) {
-        GridHeader(
-            title = genre ?: studio.orEmpty(),
-            detail = listOfNotNull(
-                stringResource(if (genre != null) R.string.browse_genre else R.string.browse_studio),
-                pages.total?.let { res.getQuantityString(R.plurals.browse_title_count, it, it) },
-            ).joinToString("  ·  "),
-            focused = focused,
-        ) {
-            BROWSE_KINDS.forEach { (value, label) ->
-                TvButton(
-                    stringResource(label),
-                    { kind = value },
-                    with(memory) { Modifier.item(CONTROLS, kindKey(value)) },
-                    icon = when (value) {
-                        TitleKind.MOVIE -> Lucide.Film
-                        TitleKind.SHOW -> Lucide.Tv
-                        else -> Lucide.LibraryBig
-                    },
-                    active = kind == value,
-                )
+    TvTitleGrid(
+        pages,
+        memory,
+        empty = stringResource(if (genre != null) R.string.browse_genre_empty else R.string.browse_studio_empty),
+        focused = focused,
+        onFocus = { title ->
+            val info = titleInfo(title, api, res, kind = kind == null)
+            focused = info
+            backdrop = info.backdrop
+        },
+        header = {
+            GridHeader(
+                title = genre ?: studio.orEmpty(),
+                detail = listOfNotNull(
+                    stringResource(if (genre != null) R.string.browse_genre else R.string.browse_studio),
+                    pages.total?.let { res.getQuantityString(R.plurals.browse_title_count, it, it) },
+                ).joinToString("  ·  "),
+            ) {
+                BROWSE_KINDS.forEach { (value, label) ->
+                    TvButton(
+                        stringResource(label),
+                        { kind = value },
+                        with(memory) { Modifier.item(CONTROLS, kindKey(value)) },
+                        icon = when (value) {
+                            TitleKind.MOVIE -> Lucide.Film
+                            TitleKind.SHOW -> Lucide.Tv
+                            else -> Lucide.LibraryBig
+                        },
+                        active = kind == value,
+                    )
+                }
             }
-        }
-        TvTitleGrid(
-            pages,
-            memory,
-            empty = stringResource(if (genre != null) R.string.browse_genre_empty else R.string.browse_studio_empty),
-            onFocus = { title ->
-                val info = titleInfo(title, api, res, kind = kind == null)
-                focused = info
-                backdrop = info.backdrop
-            },
-            modifier = Modifier.weight(1f),
-            scrollKey = kind,
-        )
-    }
+        },
+        scrollKey = kind,
+    )
 }
 
 private fun kindKey(kind: String?) = kind ?: "all"

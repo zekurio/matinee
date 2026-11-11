@@ -1,7 +1,6 @@
 package io.github.zekurio.matinee.ui.tv
 
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -97,7 +96,7 @@ fun TvSearchField(
                 .height(height)
                 .focusRequester(outer)
                 .tvControl(lit, CircleShape, scale = TvFocus.ROW_SCALE)
-                .clickable(interaction, indication = null, role = Role.Button, onClickLabel = placeholder) { editing = true }
+                .tvClickable(interaction, role = Role.Button, onClickLabel = placeholder) { editing = true }
                 .padding(start = 18.dp, end = 22.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,

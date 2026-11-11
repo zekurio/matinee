@@ -1,7 +1,6 @@
 package io.github.zekurio.matinee.ui.tv.browse
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
@@ -47,7 +46,8 @@ private const val SEARCH = "search"
 
 /**
  * A library on a TV: its name, the sort, the genre filter, and a search
- * of the library in a row at the top, the focused title's name and facts
+ * of the library in a row at the top, which steps aside while focus is
+ * below the first row of posters, the focused title's name and facts
  * under them, and its titles as a grid of posters, the focused one's
  * backdrop behind the page. The sort and the genre open a panel at the
  * right. They're the phone's, kept the same way, and the server sorts,
@@ -84,49 +84,48 @@ fun TvLibraryScreen(route: LibraryRoute) {
     val shows = library?.kind == LibraryKind.SHOWS
     val sortLabel = LIBRARY_SORTS.firstOrNull { it.first == filters.sort }?.second ?: R.string.library_sort_name
     Box(Modifier.fillMaxSize()) {
-        Column(Modifier.fillMaxSize()) {
-            GridHeader(
-                title = library?.name.orEmpty(),
-                detail = pages.total?.let { res.getQuantityString(R.plurals.browse_title_count, it, it) },
-                focused = focused,
-            ) {
-                TvButton(
-                    stringResource(sortLabel),
-                    { panel = SORT },
-                    with(memory) { Modifier.item(CONTROLS, SORT) }.focusRequester(sortButton),
-                    icon = Lucide.ArrowUpDown,
-                    trailingIcon = Lucide.ChevronDown,
-                )
-                TvButton(
-                    filters.genre ?: stringResource(R.string.library_any_genre),
-                    { panel = GENRE },
-                    with(memory) { Modifier.item(CONTROLS, GENRE) }.focusRequester(genreButton),
-                    icon = Lucide.ListFilter,
-                    trailingIcon = Lucide.ChevronDown,
-                    active = filters.genre != null,
-                )
-                TvSearchField(
-                    filters.query,
-                    { filters.query = it },
-                    placeholder = stringResource(if (shows) R.string.library_search_shows else R.string.library_search_movies),
-                    clearLabel = stringResource(R.string.library_clear_search),
-                    modifier = Modifier.width(SEARCH_WIDTH),
-                    field = with(memory) { Modifier.item(CONTROLS, SEARCH) },
-                )
-            }
-            TvTitleGrid(
-                pages,
-                memory,
-                empty = libraryEmptyMessage(res, library, filters),
-                onFocus = { title ->
-                    val info = titleInfo(title, api, res)
-                    focused = info
-                    backdrop = info.backdrop
-                },
-                modifier = Modifier.weight(1f),
-                scrollKey = "${filters.sort}-${filters.genre}-${filters.settled}",
-            )
-        }
+        TvTitleGrid(
+            pages,
+            memory,
+            empty = libraryEmptyMessage(res, library, filters),
+            focused = focused,
+            onFocus = { title ->
+                val info = titleInfo(title, api, res)
+                focused = info
+                backdrop = info.backdrop
+            },
+            header = {
+                GridHeader(
+                    title = library?.name.orEmpty(),
+                    detail = pages.total?.let { res.getQuantityString(R.plurals.browse_title_count, it, it) },
+                ) {
+                    TvButton(
+                        stringResource(sortLabel),
+                        { panel = SORT },
+                        with(memory) { Modifier.item(CONTROLS, SORT) }.focusRequester(sortButton),
+                        icon = Lucide.ArrowUpDown,
+                        trailingIcon = Lucide.ChevronDown,
+                    )
+                    TvButton(
+                        filters.genre ?: stringResource(R.string.library_any_genre),
+                        { panel = GENRE },
+                        with(memory) { Modifier.item(CONTROLS, GENRE) }.focusRequester(genreButton),
+                        icon = Lucide.ListFilter,
+                        trailingIcon = Lucide.ChevronDown,
+                        active = filters.genre != null,
+                    )
+                    TvSearchField(
+                        filters.query,
+                        { filters.query = it },
+                        placeholder = stringResource(if (shows) R.string.library_search_shows else R.string.library_search_movies),
+                        clearLabel = stringResource(R.string.library_clear_search),
+                        modifier = Modifier.width(SEARCH_WIDTH),
+                        field = with(memory) { Modifier.item(CONTROLS, SEARCH) },
+                    )
+                }
+            },
+            scrollKey = "${filters.sort}-${filters.genre}-${filters.settled}",
+        )
         TvOptionsPanel(
             open = panel == SORT,
             title = stringResource(R.string.library_sort),

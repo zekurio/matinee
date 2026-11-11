@@ -22,6 +22,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -29,6 +30,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
@@ -109,7 +111,8 @@ private val TOP = Overscan.Vertical + 60.dp
 /**
  * Settings on a TV, as Google TV's own: the categories on the left, the
  * focused one's rows on the right. Focusing a category shows its rows;
- * Right goes into them, Left or Back comes out to the category again.
+ * Right, Select, or a click goes into them, Left or Back comes out to the
+ * category again.
  * Choices open in a panel at the right edge, switches flip in place.
  * [initial] picks the category to start on, by its key.
  */
@@ -120,10 +123,22 @@ fun TvSettingsScreen(initial: String? = null) {
     val categories = remember { TvSettingsCategory.entries.associateWith { FocusRequester() } }
     val firstRow = remember { FocusRequester() }
     var inRows by remember { mutableStateOf(false) }
+    // Select or a click on a category goes into its rows, once the rows of
+    // the category it picked are there: a click on another category picks
+    // it in the same moment as it asks for its rows.
+    var toRows by remember { mutableStateOf(false) }
+    LaunchedEffect(toRows, selected) {
+        if (!toRows) return@LaunchedEffect
+        withFrameNanos { }
+        runCatching { firstRow.requestFocus() }
+        toRows = false
+    }
     val panels = remember { SettingsPanels() }
     val toCategory = { runCatching { categories.getValue(selected).requestFocus() } }
 
-    FocusOnShow(categories.getValue(selected))
+    // The category it opened on, once. Keyed on the one selected, it would
+    // pull focus back from the rows a click on a category went into.
+    FocusOnShow(remember { categories.getValue(selected) })
     // Back from the drawer, the category that's open.
     val shell = LocalTvPageFocus.current
     DisposableEffect(shell) {
@@ -141,7 +156,10 @@ fun TvSettingsScreen(initial: String? = null) {
                     TvSettingsCategory.entries.forEach { category ->
                         TvListItem(
                             stringResource(category.title),
-                            onClick = { runCatching { firstRow.requestFocus() } },
+                            onClick = {
+                                selected = category
+                                toRows = true
+                            },
                             icon = category.icon,
                             quiet = true,
                             selected = category == selected,

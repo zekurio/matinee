@@ -2,6 +2,9 @@ package io.github.zekurio.matinee.ui.tv.profile
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -30,10 +33,12 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.WatchStats
@@ -47,6 +52,7 @@ import io.github.zekurio.matinee.ui.theme.Palette
 import io.github.zekurio.matinee.ui.tv.TvFocusMemory
 import io.github.zekurio.matinee.ui.tv.TvPage
 import io.github.zekurio.matinee.ui.tv.TvType
+import io.github.zekurio.matinee.ui.tv.tvFocusOnTap
 import java.time.format.TextStyle
 
 /*
@@ -88,6 +94,7 @@ internal fun WatchTimeChart(stats: WatchStats, memory: TvFocusMemory) {
     Column(
         with(memory) { Modifier.item(WATCH_TIME, WATCH_TIME) }
             .onKeyEvent { event -> event.across(buckets.size, picked) { picked = it } }
+            .tvFocusOnTap()
             .focusable(interactionSource = interaction)
             .fillMaxWidth()
             .padding(start = TvPage.Start, end = TvPage.End),
@@ -104,7 +111,12 @@ internal fun WatchTimeChart(stats: WatchStats, memory: TvFocusMemory) {
         Text(formatWatchTime(shown?.watchSeconds ?: stats.totals.watchSeconds, res), style = TvType.Display, maxLines = 1)
         if (buckets.isEmpty()) return@Column
         Row(Modifier.padding(top = 20.dp)) {
-            Canvas(Modifier.weight(1f).height(BarsHeight)) {
+            Canvas(
+                Modifier
+                    .weight(1f)
+                    .height(BarsHeight)
+                    .onTapAt { at, size -> picked = (at.x / size.width * buckets.size).toInt().coerceIn(0, buckets.lastIndex) },
+            ) {
                 // All time can hold hundreds of months, so the bars thin out
                 // to lines rather than leave the chart.
                 val slot = size.width / buckets.size
@@ -181,6 +193,7 @@ internal fun ViewingTimes(stats: WatchStats, memory: TvFocusMemory) {
             .onKeyEvent { event ->
                 event.across(24, hour) { hour = it } || event.down(7, day - 1) { day = it + 1 }
             }
+            .tvFocusOnTap()
             .focusable(interactionSource = interaction)
             .fillMaxWidth()
             .padding(start = TvPage.Start, end = TvPage.End),
@@ -212,7 +225,15 @@ internal fun ViewingTimes(stats: WatchStats, memory: TvFocusMemory) {
                     }
                 }
             }
-            Canvas(Modifier.weight(1f).height(CellHeight * 7 + CellGap * 6)) {
+            Canvas(
+                Modifier
+                    .weight(1f)
+                    .height(CellHeight * 7 + CellGap * 6)
+                    .onTapAt { at, size ->
+                        hour = (at.x / size.width * 24).toInt().coerceIn(0, 23)
+                        day = (at.y / size.height * 7).toInt().coerceIn(0, 6) + 1
+                    },
+            ) {
                 val gap = CellGap.toPx()
                 val width = (size.width - gap * 23) / 24
                 val height = CellHeight.toPx()
@@ -239,6 +260,19 @@ internal fun ViewingTimes(stats: WatchStats, memory: TvFocusMemory) {
                 }
             }
         }
+    }
+}
+
+/**
+ * A click or a touch here marks the place under it, through [onTap] with
+ * where it landed and this one's size. It leaves the press unconsumed, so
+ * the chart's [tvFocusOnTap] still focuses the chart.
+ */
+private fun Modifier.onTapAt(onTap: (Offset, IntSize) -> Unit): Modifier = pointerInput(onTap) {
+    awaitEachGesture {
+        awaitFirstDown(requireUnconsumed = false)
+        val up = waitForUpOrCancellation() ?: return@awaitEachGesture
+        onTap(up.position, size)
     }
 }
 

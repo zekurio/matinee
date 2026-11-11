@@ -125,7 +125,7 @@ fun TvSignedInApp(session: Session, user: User) {
         val current = drawerKey(stack)
         val shown = stack.lastOrNull()?.takeUnless { it.destination.hasRoute<RecentRoute>() }?.let(::entryKey)
         val onHome = stack.lastOrNull()?.destination?.hasRoute<HomeRoute>() == true
-        Box(Modifier.fillMaxSize().background(Palette.Background).tvRefocus { toPage() }) {
+        Box(Modifier.fillMaxSize().background(Palette.Background).tvRefocus { if (panels.count == 0) toPage() }) {
             BackdropLayer(backdrop)
             Box(
                 Modifier

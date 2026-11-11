@@ -6,6 +6,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -44,6 +45,7 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
@@ -114,7 +116,8 @@ internal fun TvOverlay(
                 ),
             ),
         )
-        Column(Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(Overscan.Padding)) {
+        // A click between the controls stays here, rather than reaching the picture and hiding them.
+        Column(Modifier.align(Alignment.BottomStart).fillMaxWidth().pointerInput(Unit) { detectTapGestures { } }.padding(Overscan.Padding)) {
             Heading(controller)
             Box(Modifier.height(20.dp))
             TvSeekBar(controller, scrub, targets, keys)
@@ -305,6 +308,13 @@ private fun TvSeekBar(controller: PlayerController, scrub: Double?, targets: TvT
                 }
                 .focusRequester(targets.seek)
                 .focusProperties { down = targets.play }
+                // A click focuses the bar and seeks to where it landed.
+                .pointerInput(duration) {
+                    detectTapGestures { at ->
+                        runCatching { targets.seek.requestFocus() }
+                        if (seekable(duration)) controller.seekTo(duration * (at.x / size.width).coerceIn(0f, 1f))
+                    }
+                }
                 .focusable(interactionSource = interaction),
             contentAlignment = Alignment.CenterStart,
         ) {

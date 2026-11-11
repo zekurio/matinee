@@ -6,7 +6,6 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
@@ -203,7 +202,7 @@ private fun Entry(
                 rest = if (selected && !open) Palette.Foreground.copy(alpha = 0.1f) else Color.Transparent,
                 scale = TvFocus.ROW_SCALE,
             )
-            .clickable(interaction, indication = null, role = Role.Button, onClickLabel = entry.label) { onPick(entry) },
+            .tvClickable(interaction, role = Role.Button, onClickLabel = entry.label) { onPick(entry) },
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.size(RAIL_ICON, ROW_HEIGHT), contentAlignment = Alignment.Center) {

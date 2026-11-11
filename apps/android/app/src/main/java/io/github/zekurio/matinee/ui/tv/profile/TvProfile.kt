@@ -26,11 +26,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
+import io.github.zekurio.matinee.api.LeaderboardBoard
 import io.github.zekurio.matinee.api.MediaItem
 import io.github.zekurio.matinee.api.StatsRange
 import io.github.zekurio.matinee.api.WatchStats
@@ -46,10 +47,11 @@ import io.github.zekurio.matinee.ui.components.Avatar
 import io.github.zekurio.matinee.ui.components.LocalApi
 import io.github.zekurio.matinee.ui.components.Lucide
 import io.github.zekurio.matinee.ui.components.LucideIcon
-import io.github.zekurio.matinee.ui.components.landscape
 import io.github.zekurio.matinee.ui.components.art
+import io.github.zekurio.matinee.ui.components.landscape
 import io.github.zekurio.matinee.ui.episodeCode
 import io.github.zekurio.matinee.ui.itemLabel
+import io.github.zekurio.matinee.ui.profile.BoardStanding
 import io.github.zekurio.matinee.ui.profile.ProfileStats
 import io.github.zekurio.matinee.ui.profile.formatWatchTime
 import io.github.zekurio.matinee.ui.profile.joinedMonth
@@ -63,8 +65,8 @@ import io.github.zekurio.matinee.ui.tv.HideClockWhen
 import io.github.zekurio.matinee.ui.tv.Overscan
 import io.github.zekurio.matinee.ui.tv.TvArtCard
 import io.github.zekurio.matinee.ui.tv.TvButton
-import io.github.zekurio.matinee.ui.tv.TvChip
 import io.github.zekurio.matinee.ui.tv.TvCards
+import io.github.zekurio.matinee.ui.tv.TvChip
 import io.github.zekurio.matinee.ui.tv.TvFocusMemory
 import io.github.zekurio.matinee.ui.tv.TvLandscapeCard
 import io.github.zekurio.matinee.ui.tv.TvPage
@@ -73,8 +75,6 @@ import io.github.zekurio.matinee.ui.tv.TvRow
 import io.github.zekurio.matinee.ui.tv.TvType
 import io.github.zekurio.matinee.ui.tv.rememberTvFocusMemory
 import io.github.zekurio.matinee.ui.tv.scrolledUp
-import io.github.zekurio.matinee.api.LeaderboardBoard
-import io.github.zekurio.matinee.ui.profile.BoardStanding
 import java.text.NumberFormat
 import java.time.ZoneId
 
@@ -84,10 +84,11 @@ private const val RANGES = "ranges"
 private const val TOP = "top"
 private const val GENRES = "genres"
 private const val SEE_ALL = "seeAll"
+private const val SIGN_OUT = "signOut"
 
 /**
  * The signed-in person on a TV, from the drawer's top entry: who they are,
- * Settings and Sign out, what they watched last as a row of cards, then
+ * Sign out, what they watched last as a row of cards, then
  * their statistics for a range: watch time over the range as bars, the
  * other totals as large figures, their most watched titles, their genres,
  * where they stand on the leaderboard, and when in the week they watch.
@@ -101,7 +102,14 @@ fun TvProfileScreen() {
     RefreshOnResume(profile)
     val stats = rememberProfileStats(user.username)
     val memory = rememberTvFocusMemory()
-    memory.Restore { ACTIONS to "settings" }
+    // The first card they watched, rather than Sign out, once the profile shows whether there is one.
+    memory.Restore {
+        when (val state = profile.state) {
+            Load.Loading -> null
+            is Load.Ready -> state.value.recent?.firstOrNull()?.let { RECENT to it.item.id } ?: (ACTIONS to SIGN_OUT)
+            is Load.Failed -> ACTIONS to SIGN_OUT
+        }
+    }
     val loaded = (profile.state as? Load.Ready)?.value
 
     val list = rememberLazyListState()
@@ -160,16 +168,14 @@ private fun Header(joined: String?) {
     }
 }
 
-/** Settings and Sign out, the profile's ways on. */
+/** Sign out. Settings is in the drawer. */
 @Composable
 private fun Actions(session: Session, memory: TvFocusMemory) {
-    val nav = LocalNavigator.current
     Row(
         with(memory) { Modifier.row(ACTIONS) }.padding(start = TvPage.Start),
         horizontalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        TvButton(stringResource(R.string.shell_settings), nav::settings, with(memory) { Modifier.item(ACTIONS, "settings") }, icon = Lucide.Settings)
-        TvButton(stringResource(R.string.shell_sign_out), session::signOut, with(memory) { Modifier.item(ACTIONS, "signOut") }, icon = Lucide.LogOut)
+        TvButton(stringResource(R.string.shell_sign_out), session::signOut, with(memory) { Modifier.item(ACTIONS, SIGN_OUT) }, icon = Lucide.LogOut)
     }
 }
 

@@ -8,6 +8,7 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -45,6 +46,7 @@ import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -126,7 +128,13 @@ fun TvSidePanel(
     }
     Box(modifier.fillMaxSize()) {
         AnimatedVisibility(open, Modifier.matchParentSize(), enter = fadeIn(Motion.enter()), exit = fadeOut(Motion.exit())) {
-            Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(0f to Scrim.copy(alpha = 0.35f), 1f to Scrim.copy(alpha = 0.85f))))
+            // A click on the dimmed screen closes the panel, as Back does.
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .background(Brush.horizontalGradient(0f to Scrim.copy(alpha = 0.35f), 1f to Scrim.copy(alpha = 0.85f)))
+                    .pointerInput(Unit) { detectTapGestures { if (isOpen) onBack() } },
+            )
         }
         AnimatedVisibility(
             open,
@@ -141,6 +149,9 @@ fun TvSidePanel(
                     .width(TvPanels.Width)
                     .fillMaxHeight()
                     .background(Palette.Raised)
+                    // Takes a click between the rows, which would otherwise reach the screen under it.
+                    .pointerInput(Unit) { detectTapGestures { } }
+                    .tvRefocus { if (isOpen) runCatching { (initial ?: fallback).requestFocus() } }
                     .focusProperties { onExit = { if (isOpen && requestedFocusDirection in TRAPPED) cancelFocusChange() } }
                     .focusGroup()
                     .padding(top = Overscan.Vertical + 16.dp),

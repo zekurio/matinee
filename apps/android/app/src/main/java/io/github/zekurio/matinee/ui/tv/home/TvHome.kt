@@ -78,6 +78,8 @@ import io.github.zekurio.matinee.ui.tv.TvPage
 import io.github.zekurio.matinee.ui.tv.TvPosterCard
 import io.github.zekurio.matinee.ui.tv.TvRow
 import io.github.zekurio.matinee.ui.tv.TvType
+import io.github.zekurio.matinee.ui.tv.fadeTop
+import io.github.zekurio.matinee.ui.tv.rememberPinnedRowsFling
 import io.github.zekurio.matinee.ui.tv.rememberTvFocusMemory
 
 /** The header's room above the rows, so the rows start in the same place whatever it says. */
@@ -127,9 +129,11 @@ fun TvHomeScreen() {
         Header(focused, Modifier.padding(start = TvPage.Start, end = 220.dp, top = Overscan.Vertical + 8.dp).height(HEADER_HEIGHT - Overscan.Vertical - 8.dp))
         val onFocus: (FocusedItem) -> Unit = { focused = it }
         PinnedRows(ROW_PIVOT) {
+            val rows = rememberLazyListState()
             LazyColumn(
-                Modifier.fillMaxSize().padding(top = HEADER_HEIGHT),
-                state = rememberLazyListState(),
+                Modifier.fillMaxSize().padding(top = HEADER_HEIGHT).fadeTop(12.dp),
+                state = rows,
+                flingBehavior = rememberPinnedRowsFling(rows),
                 contentPadding = PaddingValues(top = 12.dp, bottom = ROWS_END),
                 verticalArrangement = Arrangement.spacedBy(28.dp),
             ) {

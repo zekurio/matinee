@@ -2,9 +2,11 @@ package io.github.zekurio.matinee.ui.tv
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.BringIntoViewSpec
+import androidx.compose.foundation.gestures.FlingBehavior
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
+import androidx.compose.foundation.gestures.snapping.SnapPosition
+import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,6 +21,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -32,12 +35,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
@@ -104,9 +107,8 @@ fun TvArtCard(
             .tvPicture(interaction, TvCards.Shape)
             .clip(TvCards.Shape)
             .tone(toneKey)
-            .combinedClickable(
+            .tvClickable(
                 interaction,
-                indication = null,
                 role = Role.Button,
                 onClickLabel = contentDescription,
                 onLongClick = open,
@@ -266,3 +268,13 @@ fun PinnedRows(pivot: Dp, content: @Composable () -> Unit) {
     }
     CompositionLocalProvider(LocalBringIntoViewSpec provides spec, content = content)
 }
+
+/**
+ * The fling for the `LazyColumn` in [PinnedRows]: a drag of the pointer
+ * stops with a row at the top, where focus would put it. Give the list
+ * [fadeTop] as well, over its top padding, so a row dragged half away
+ * under the header ends softly.
+ */
+@Composable
+fun rememberPinnedRowsFling(state: LazyListState): FlingBehavior = rememberSnapFlingBehavior(state, SnapPosition.Start)
+

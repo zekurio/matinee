@@ -3,7 +3,6 @@ package io.github.zekurio.matinee.ui.tv
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -98,7 +97,7 @@ fun TvListItem(
             .fillMaxWidth()
             .heightIn(min = minHeight)
             .tvControl(focused, TvListItems.Shape, rest = rest, scale = TvFocus.ROW_SCALE)
-            .clickable(interaction, indication = null, enabled = enabled, role = Role.Button, onClick = onClick)
+            .tvClickable(interaction, enabled = enabled, role = Role.Button, onClick = onClick)
             .padding(horizontal = TvListItems.Inset, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(16.dp),

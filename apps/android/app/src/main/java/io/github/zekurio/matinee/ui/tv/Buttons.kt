@@ -6,7 +6,6 @@ import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -65,7 +64,7 @@ fun TvButton(
         modifier
             .height(TvButtons.Height)
             .tvControl(focused, CircleShape, rest = if (active) Palette.AccentSoft else TvFocus.Rest)
-            .clickable(interaction, indication = null, enabled = enabled, role = Role.Button, onClick = onClick)
+            .tvClickable(interaction, enabled = enabled, role = Role.Button, onClick = onClick)
             .padding(start = if (icon != null) 20.dp else 24.dp, end = if (trailingIcon != null) 16.dp else 24.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically,
@@ -100,7 +99,7 @@ fun TvIconButton(
             .height(TvButtons.Height)
             .widthIn(min = TvButtons.Height)
             .tvControl(focused, CircleShape)
-            .clickable(interaction, indication = null, role = Role.Button, onClickLabel = label, onClick = onClick)
+            .tvClickable(interaction, role = Role.Button, onClickLabel = label, onClick = onClick)
             .padding(horizontal = 14.dp),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
@@ -136,7 +135,7 @@ fun TvRoundButton(
         modifier
             .size(size)
             .tvControl(focused, CircleShape)
-            .clickable(interaction, indication = null, role = Role.Button, onClickLabel = label, onClick = onClick),
+            .tvClickable(interaction, role = Role.Button, onClickLabel = label, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         CompositionLocalProvider(LocalContentColor provides tvContent(focused), content = content)
@@ -167,7 +166,7 @@ fun TvChip(label: String, onClick: () -> Unit, modifier: Modifier = Modifier, se
         maxLines = 1,
         modifier = modifier
             .tvControl(focused, CircleShape, rest = if (selected) Palette.AccentSoft else TvFocus.Rest)
-            .clickable(interaction, indication = null, role = role, onClick = onClick)
+            .tvClickable(interaction, role = role, onClick = onClick)
             .padding(horizontal = 18.dp, vertical = 10.dp),
     )
 }
