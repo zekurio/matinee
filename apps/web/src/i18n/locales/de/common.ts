@@ -4,7 +4,7 @@ import type source from "../en/common"
 export default {
   "common.saveBar.unsaved": "Ungespeicherte Änderungen",
   "common.saveBar.saved": "Änderungen gespeichert",
-  "common.saveBar.failed": "Speichern fehlgeschlagen.",
+  "common.saveBar.failed": "Änderungen konnten nicht gespeichert werden",
   "common.saveBar.reset": "Zurücksetzen",
   "common.saveBar.save": "Änderungen speichern",
   "common.saveBar.saving": "Wird gespeichert …",

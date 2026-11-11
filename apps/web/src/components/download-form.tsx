@@ -396,6 +396,7 @@ function DownloadFields({
       })
       onDone()
     },
+    onError: (error) => toast.error(errorMessage(error)),
   })
 
   const defaultValues: DownloadValues = {
@@ -426,12 +427,13 @@ function DownloadFields({
       const ready = cachedReady(item.id, value.container)
       if (ready) start.mutate(specOf(value, ready.choices))
     },
+    onSubmitInvalid: ({ formApi }) => {
+      const message = firstError(formApi.state.errors)
+      if (message) toast.error(message)
+    },
   })
 
   const values = useSelector(form.store, (state) => state.values)
-  const validation = useSelector(form.store, (state) =>
-    firstError(state.errors),
-  )
   const custom = values.version === "custom"
 
   // Cached by the first answer or by the container switch below.
@@ -463,6 +465,7 @@ function DownloadFields({
       }
       form.setFieldValue("container", container)
     },
+    onError: (error) => toast.error(errorMessage(error)),
   })
   const switching = switchContainer.isPending
 
@@ -493,18 +496,13 @@ function DownloadFields({
           (track.delivery === "webvtt" || track.delivery === "pgs") &&
           track.source === "sidecar",
       )
+  // Why the custom version can't be made, which holds the submit back, so
+  // it stays in the form rather than going to a toast.
   const failed =
     custom && !switching
       ? (unavailable ??
         (planned && plan.error ? errorMessage(plan.error) : null))
       : null
-  const error =
-    validation ??
-    (start.error ? errorMessage(start.error) : null) ??
-    (custom && switchContainer.error
-      ? errorMessage(switchContainer.error)
-      : null) ??
-    failed
 
   return (
     <form.AppForm>
@@ -689,7 +687,7 @@ function DownloadFields({
           )}
         </FieldGroup>
 
-        {sized && !error && (
+        {sized && !failed && (
           <p className="text-muted-foreground text-sm" aria-live="polite">
             {estimate
               ? [
@@ -703,7 +701,7 @@ function DownloadFields({
               : tr("downloads.estimating")}
           </p>
         )}
-        {error && <FormAlert message={error} />}
+        {failed && <FormAlert message={failed} />}
 
         <DialogFooter className="-mx-6 -mb-6 px-6 py-4">
           <Button type="button" variant="ghost" onClick={onDone}>

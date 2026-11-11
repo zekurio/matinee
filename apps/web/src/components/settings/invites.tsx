@@ -31,7 +31,6 @@ import {
 } from "lucide-react"
 import { useState } from "react"
 
-import { FormAlert } from "@/components/form-alert"
 import { SelectField } from "@/components/select-field"
 import { tr } from "@/i18n"
 import { useAppForm } from "@/lib/form"
@@ -226,6 +225,7 @@ function InviteForm({
   const create = useMutation({
     mutationFn: (input: InviteInput) => client.admin.invites.create(input),
     onSuccess: onCreated,
+    onError: (error) => toast.error(errorMessage(error)),
   })
   // Everyone holds every account already, so it isn't offered.
   const groups = useQuery({
@@ -325,7 +325,6 @@ function InviteForm({
             </form.Field>
           )}
         </FieldGroup>
-        {create.error && <FormAlert message={errorMessage(create.error)} />}
         <DialogFooter className="-mx-6 -mb-6 px-6 py-4">
           <Button type="button" variant="ghost" onClick={onCancel}>
             {tr("users.dialog.cancel")}
@@ -346,7 +345,7 @@ function CreatedLink({
   invite: CreatedInvite
   onDone: () => void
 }) {
-  const { feedback, run } = useActionFeedback(1500)
+  const { feedback, run } = useActionFeedback({ successDuration: 1500 })
   const copied = feedback.state === "success"
   return (
     <div className="flex flex-col gap-6">
@@ -379,7 +378,6 @@ function CreatedLink({
             : tr("users.invites.link.copy")}
         </Button>
       </div>
-      {feedback.state === "error" && <FormAlert message={feedback.message} />}
       <DialogFooter className="-mx-6 -mb-6 px-6 py-4">
         <Button onClick={onDone}>{tr("users.invites.link.done")}</Button>
       </DialogFooter>

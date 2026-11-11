@@ -2,6 +2,7 @@ import { ORPCError } from "@matinee/client"
 import { formatUserCode, UserCode } from "@matinee/contracts"
 import { Button } from "@matinee/ui/components/button"
 import { Skeleton } from "@matinee/ui/components/skeleton"
+import { toast } from "@matinee/ui/components/sonner"
 import { Spinner } from "@matinee/ui/components/spinner"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { getRouteApi } from "@tanstack/react-router"
@@ -9,7 +10,6 @@ import { CheckIcon, RefreshCwIcon } from "lucide-react"
 import type { ComponentType, ReactNode } from "react"
 
 import { DeviceCard } from "@/components/device-card"
-import { FormAlert } from "@/components/form-alert"
 import { tr } from "@/i18n"
 import { trRich } from "@/i18n/react"
 import { deviceLabel } from "@/lib/devices"
@@ -91,6 +91,7 @@ export function DeviceApproval({
   const { user } = authed.useRouteContext()
   const approve = useMutation({
     mutationFn: () => client.auth.device.approve({ userCode }),
+    onError: (error) => toast.error(errorMessage(error)),
   })
   const request = useQuery({
     ...orpc.auth.device.get.queryOptions({ input: { userCode } }),
@@ -181,7 +182,6 @@ export function DeviceApproval({
           {approve.isPending ? <Spinner /> : <CheckIcon />}
           {tr("link.device.approve")}
         </Button>
-        {approve.error && <FormAlert message={errorMessage(approve.error)} />}
         <p className="text-muted-foreground text-[13px] leading-5">
           {tr("link.device.warning")}
         </p>

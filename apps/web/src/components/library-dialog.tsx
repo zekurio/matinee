@@ -27,6 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@matinee/ui/components/select"
+import { toast } from "@matinee/ui/components/sonner"
 import { useSelector } from "@tanstack/react-form"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { FolderIcon, FolderPlusIcon, XIcon } from "lucide-react"
@@ -38,7 +39,6 @@ import { languageName } from "@/lib/languages"
 import { client, errorMessage, orpc } from "@/lib/rpc"
 
 import { FolderPicker } from "./folder-browser"
-import { FormAlert } from "./form-alert"
 import { SelectField } from "./select-field"
 
 // Languages every provider has a fair amount of data in, with the tag
@@ -138,6 +138,7 @@ function LibraryForm({
       await queryClient.invalidateQueries({ queryKey: orpc.libraries.key() })
       onDone()
     },
+    onError: (error) => toast.error(errorMessage(error)),
   })
 
   /** What the form saves, with the provider it shows when none was picked. */
@@ -156,7 +157,7 @@ function LibraryForm({
   const form = useAppForm({
     defaultValues: initialValues(library),
     validators: {
-      // One message for the whole form, above the buttons.
+      // One message for the whole form, in a toast.
       onSubmit: ({ value }) => {
         const parsed = LibraryInput.safeParse(toInput(value))
         if (parsed.success) return undefined
@@ -168,6 +169,11 @@ function LibraryForm({
       },
     },
     onSubmit: ({ value }) => save.mutate(LibraryInput.parse(toInput(value))),
+    onSubmitInvalid: ({ formApi }) => {
+      // Field errors show under their fields.
+      const message = firstError(formApi.state.errors)
+      if (message) toast.error(message)
+    },
   })
 
   const kind = useSelector(form.store, (state) => state.values.kind)
@@ -176,9 +182,6 @@ function LibraryForm({
     (state) => state.values.provider,
   )
   const language = useSelector(form.store, (state) => state.values.language)
-  const validation = useSelector(form.store, (state) =>
-    firstError(state.errors),
-  )
 
   const provider = providerChoice ?? defaultProvider(kind, providers.data ?? [])
   const providerInfo = providers.data?.find((p) => p.id === provider)
@@ -199,7 +202,6 @@ function LibraryForm({
   const known = library?.paths[0] ?? libraries.data?.[0]?.paths[0]
   const startFolder = known ? parentFolder(known) : undefined
 
-  const error = validation ?? (save.error ? errorMessage(save.error) : null)
   const [picking, setPicking] = useState(false)
 
   return (
@@ -376,8 +378,6 @@ function LibraryForm({
             }}
           </form.Field>
         </FieldGroup>
-
-        {error && <FormAlert message={error} />}
 
         <DialogFooter className="-mx-6 -mb-6 px-6 py-4">
           <Button type="button" variant="ghost" onClick={onDone}>

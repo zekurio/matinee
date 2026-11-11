@@ -1,6 +1,7 @@
 import { ORPCError } from "@matinee/client"
 import { InviteToken } from "@matinee/contracts"
 import { Button, buttonVariants } from "@matinee/ui/components/button"
+import { toast } from "@matinee/ui/components/sonner"
 import { Spinner } from "@matinee/ui/components/spinner"
 import { cn } from "@matinee/ui/lib/utils"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
@@ -129,8 +130,10 @@ function InviteSignUp({ token }: { token: string }) {
     },
     // A cancelled prompt leaves the invite working, but someone may have
     // used or revoked it meanwhile. Asking again shows which.
-    onError: () =>
-      queryClient.invalidateQueries({ queryKey: checkOptions.queryKey }),
+    onError: (error) => {
+      toast.error(errorMessage(error))
+      return queryClient.invalidateQueries({ queryKey: checkOptions.queryKey })
+    },
   })
 
   if (check.isPending) {
@@ -170,7 +173,6 @@ function InviteSignUp({ token }: { token: string }) {
       <UsernamePasskeyForm
         submitLabel={tr("auth.signIn.createAccount")}
         pending={signUp.isPending || signUp.isSuccess}
-        error={signUp.error}
         onSubmit={(username) => signUp.mutate(username)}
       />
     </AuthScreen>

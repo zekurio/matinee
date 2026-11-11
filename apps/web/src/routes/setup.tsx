@@ -1,6 +1,7 @@
 import { AUTH_ERROR_QUERY_KEY, oidcStartPath } from "@matinee/contracts"
 import { t } from "@matinee/contracts/schema"
 import { buttonVariants } from "@matinee/ui/components/button"
+import { toast } from "@matinee/ui/components/sonner"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import {
   createFileRoute,
@@ -15,10 +16,11 @@ import { AuthScreen } from "@/components/auth-screen"
 import { FormAlert } from "@/components/form-alert"
 import { SetupSteps, type SetupStep } from "@/components/setup-steps"
 import { UsernamePasskeyForm } from "@/components/username-passkey-form"
-import { tr, translateKnown } from "@/i18n"
+import { tr } from "@/i18n"
 import { useAppForm } from "@/lib/form"
 import { signUpWithPasskey } from "@/lib/passkey"
 import { client, errorMessage, orpc } from "@/lib/rpc"
+import { useAuthErrorToast } from "@/lib/use-auth-error-toast"
 
 const SetupSearch = t.object({
   [AUTH_ERROR_QUERY_KEY]: t.string().optional().catch(undefined),
@@ -68,7 +70,7 @@ function SetupPage() {
   const { steps } = Route.useLoaderData()
   const search = Route.useSearch()
   const [unlocked, setUnlocked] = useState(!setup.tokenRequired)
-  const authError = search[AUTH_ERROR_QUERY_KEY]
+  useAuthErrorToast(search[AUTH_ERROR_QUERY_KEY])
 
   if (!setup.accountRequired) return <SetupSteps steps={steps} />
 
@@ -89,16 +91,13 @@ function SetupPage() {
         title={tr("auth.setup.title")}
         description={tr("auth.setup.oidc", { provider })}
       >
-        <div className="flex flex-col gap-4">
-          {authError && <FormAlert message={translateKnown(authError)} />}
-          <a
-            href={oidcStartPath("sign-in", "/setup")}
-            className={buttonVariants({ size: "lg" })}
-          >
-            <LogInIcon />
-            {tr("auth.setup.adminOidc", { provider })}
-          </a>
-        </div>
+        <a
+          href={oidcStartPath("sign-in", "/setup")}
+          className={buttonVariants({ size: "lg" })}
+        >
+          <LogInIcon />
+          {tr("auth.setup.adminOidc", { provider })}
+        </a>
       </AuthScreen>
     )
   }
@@ -110,14 +109,11 @@ function SetupPage() {
         unlocked ? tr("auth.setup.createAdmin") : tr("auth.setup.enterToken")
       }
     >
-      <div className="flex flex-col gap-4">
-        {authError && <FormAlert message={translateKnown(authError)} />}
-        {unlocked ? (
-          <CreateAdmin />
-        ) : (
-          <SetupToken onUnlocked={() => setUnlocked(true)} />
-        )}
-      </div>
+      {unlocked ? (
+        <CreateAdmin />
+      ) : (
+        <SetupToken onUnlocked={() => setUnlocked(true)} />
+      )}
     </AuthScreen>
   )
 }
@@ -126,6 +122,7 @@ function SetupToken({ onUnlocked }: { onUnlocked: () => void }) {
   const unlock = useMutation({
     mutationFn: (value: string) => client.auth.unlockSetup({ token: value }),
     onSuccess: onUnlocked,
+    onError: (error) => toast.error(errorMessage(error)),
   })
   const form = useAppForm({
     defaultValues: { token: "" },
@@ -149,7 +146,6 @@ function SetupToken({ onUnlocked }: { onUnlocked: () => void }) {
             id="setup-token"
             label={tr("auth.setup.token")}
             description={tr("auth.setup.tokenHint")}
-            serverError={unlock.error ? errorMessage(unlock.error) : null}
             autoComplete="off"
             spellCheck={false}
             className="font-mono"
@@ -178,12 +174,12 @@ function CreateAdmin() {
       await navigate({ to: "/setup" })
       await router.invalidate()
     },
+    onError: (error) => toast.error(errorMessage(error)),
   })
   return (
     <UsernamePasskeyForm
       submitLabel={tr("auth.setup.adminPasskey")}
       pending={signUp.isPending}
-      error={signUp.error}
       onSubmit={(username) => signUp.mutate(username)}
     />
   )

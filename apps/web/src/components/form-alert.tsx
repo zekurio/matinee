@@ -5,7 +5,11 @@ import {
 } from "@matinee/ui/components/alert"
 import { CircleAlertIcon } from "lucide-react"
 
-/** An error above a form, with an optional next step. */
+/**
+ * An error that stays because it holds the page or form back, such as data
+ * that didn't load, with an optional next step. A failed action gets a
+ * toast instead.
+ */
 export function FormAlert({
   message,
   hint,

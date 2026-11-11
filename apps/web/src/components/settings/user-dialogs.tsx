@@ -13,10 +13,9 @@ import { Spinner } from "@matinee/ui/components/spinner"
 import type { ReactNode } from "react"
 
 import { tr } from "@/i18n"
-import { errorMessage } from "@/lib/rpc"
 import type { UserAction } from "@/stores/users-panel"
 
-/** Asks before an action on an account, and shows why it failed. */
+/** Asks before an action on an account. A failure gets a toast. */
 export function ConfirmDialog({
   open,
   title,
@@ -24,7 +23,6 @@ export function ConfirmDialog({
   confirmLabel,
   destructive = false,
   pending,
-  error,
   onConfirm,
   onClose,
 }: {
@@ -34,7 +32,6 @@ export function ConfirmDialog({
   confirmLabel: string
   destructive?: boolean
   pending: boolean
-  error: Error | null
   onConfirm: () => void
   onClose: () => void
 }) {
@@ -48,11 +45,6 @@ export function ConfirmDialog({
           <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
-        {error && (
-          <p role="alert" className="text-destructive text-sm">
-            {errorMessage(error)}
-          </p>
-        )}
         <AlertDialogFooter>
           <AlertDialogCancel disabled={pending}>
             {tr("users.dialog.cancel")}

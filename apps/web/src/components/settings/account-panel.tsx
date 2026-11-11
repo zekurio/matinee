@@ -51,7 +51,6 @@ import {
 } from "lucide-react"
 import { useRef, useState } from "react"
 
-import { FormAlert } from "@/components/form-alert"
 import { UserAvatar } from "@/components/user-avatar"
 import { tr } from "@/i18n"
 import { prepareAvatar } from "@/lib/avatar"
@@ -59,6 +58,7 @@ import { firstError, useAppForm } from "@/lib/form"
 import { formatDate, formatRelative } from "@/lib/format"
 import { addPasskey } from "@/lib/passkey"
 import { client, errorMessage, orpc } from "@/lib/rpc"
+import { useAuthErrorToast } from "@/lib/use-auth-error-toast"
 
 import { SharingRows } from "./profile-sharing"
 import { Sessions } from "./sessions"
@@ -72,12 +72,11 @@ export function AccountPanel() {
   const config = useQuery(orpc.auth.config.queryOptions())
   const session = useQuery(orpc.auth.session.queryOptions())
   const oidc = config.data?.oidc ?? null
-  const authError = search[AUTH_ERROR_QUERY_KEY]
+  useAuthErrorToast(search[AUTH_ERROR_QUERY_KEY])
   const user = session.data?.user ?? null
 
   return (
     <SettingsSections>
-      {authError ? <FormAlert message={authError} /> : null}
       {user ? (
         <Profile user={user} providerName={oidc?.displayName ?? null} />
       ) : null}
@@ -248,6 +247,10 @@ function DisplayNameField({ user }: { user: User }) {
   const save = useMutation({
     mutationFn: (displayName: string) =>
       client.account.profile.update({ displayName }),
+    onError: (error) =>
+      toast.error(
+        tr("account.displayName.saveFailed", { reason: errorMessage(error) }),
+      ),
   })
   const form = useAppForm({
     defaultValues: { displayName: current },
@@ -259,7 +262,7 @@ function DisplayNameField({ user }: { user: User }) {
         await saved(updated)
         formApi.reset({ displayName: updated.displayName ?? "" })
       } catch {
-        // The failure shows under the field, over the saved name.
+        // The failure gets a toast, and the field goes back to the saved name.
         formApi.reset()
       }
     },
@@ -275,13 +278,7 @@ function DisplayNameField({ user }: { user: User }) {
   return (
     <form.Field name="displayName" validators={{ onChange: DisplayName }}>
       {(field) => {
-        const message =
-          firstError(field.state.meta.errors) ??
-          (save.isError
-            ? tr("account.displayName.saveFailed", {
-                reason: errorMessage(save.error),
-              })
-            : undefined)
+        const message = firstError(field.state.meta.errors)
         return (
           <div className="flex min-w-0 flex-1 flex-col gap-1.5">
             <Label htmlFor="profile-display-name">
@@ -299,7 +296,6 @@ function DisplayNameField({ user }: { user: User }) {
               }
               onChange={(event) => {
                 field.handleChange(event.target.value)
-                if (save.isError) save.reset()
               }}
               onBlur={commit}
               onKeyDown={(event) => {

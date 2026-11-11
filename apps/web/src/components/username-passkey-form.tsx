@@ -3,20 +3,20 @@ import { KeyRoundIcon } from "lucide-react"
 
 import { tr } from "@/i18n"
 import { useAppForm } from "@/lib/form"
-import { errorMessage } from "@/lib/rpc"
 
 import { forgetEmptyBlur } from "./username-field"
 
-/** Pick a username, then create the passkey that signs in to it. */
+/**
+ * Pick a username, then create the passkey that signs in to it. The caller
+ * toasts a failed sign-up.
+ */
 export function UsernamePasskeyForm({
   submitLabel,
   pending,
-  error,
   onSubmit,
 }: {
   submitLabel: string
   pending: boolean
-  error: Error | null
   onSubmit: (username: string) => void
 }) {
   const form = useAppForm({
@@ -37,7 +37,6 @@ export function UsernamePasskeyForm({
           <field.TextField
             label={tr("auth.username")}
             description={tr("auth.usernameHint")}
-            serverError={error ? errorMessage(error) : null}
             autoComplete="username webauthn"
             autoCapitalize="none"
             spellCheck={false}

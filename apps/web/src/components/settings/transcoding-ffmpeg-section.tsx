@@ -24,12 +24,10 @@ const lists = perLocale(
 export function FfmpegSection({
   capabilities,
   detecting,
-  detectError,
   onDetect,
 }: {
   capabilities: TranscodingCapabilities
   detecting: boolean
-  detectError: string | null
   onDetect: () => void
 }) {
   const { features } = capabilities
@@ -81,7 +79,6 @@ export function FfmpegSection({
       {capabilities.error && (
         <SettingWarning>{capabilities.error}</SettingWarning>
       )}
-      {detectError && <SettingWarning>{detectError}</SettingWarning>}
       {!capabilities.error && missing.length > 0 && (
         <SettingWarning>
           {tr("transcoding.ffmpeg.lacks", {

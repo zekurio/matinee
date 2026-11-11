@@ -7,7 +7,6 @@ import { useNavigate, useRouter } from "@tanstack/react-router"
 import { KeyRoundIcon, LinkIcon, UserPlusIcon } from "lucide-react"
 
 import { AuthScreen } from "@/components/auth-screen"
-import { FormAlert } from "@/components/form-alert"
 import { tr } from "@/i18n"
 import { signInWithPasskey } from "@/lib/passkey"
 import { safeRedirect } from "@/lib/redirect"
@@ -58,6 +57,7 @@ function LinkSignIn({ link }: { link: PendingLink }) {
     onSuccess: (user) => {
       queryClient.setQueryData(orpc.auth.session.queryKey(), { user })
     },
+    onError: (error) => toast.error(errorMessage(error)),
   })
 
   const createAccount = useMutation({
@@ -111,7 +111,6 @@ function LinkSignIn({ link }: { link: PendingLink }) {
           {passkey.isPending ? <Spinner /> : <KeyRoundIcon />}
           {tr("link.oidc.passkey")}
         </Button>
-        {passkey.error && <FormAlert message={errorMessage(passkey.error)} />}
         {link.provider.allowSignUp && (
           <p className="text-muted-foreground mt-3 text-center text-sm">
             {tr("link.oidc.notYours")}{" "}

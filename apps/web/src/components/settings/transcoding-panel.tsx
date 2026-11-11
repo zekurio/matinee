@@ -3,6 +3,7 @@ import type {
   TranscodingSettings,
 } from "@matinee/contracts"
 import { Skeleton } from "@matinee/ui/components/skeleton"
+import { toast } from "@matinee/ui/components/sonner"
 import { useSelector } from "@tanstack/react-form"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
@@ -70,6 +71,7 @@ export function useTranscodingForm(
   const detect = useMutation({
     mutationFn: () => client.admin.transcoding.detect(),
     onSuccess: apply,
+    onError: (error) => toast.error(errorMessage(error)),
   })
   // Until the first edit, the form follows the saved settings, so a refetch
   // or a new detection shows through.
@@ -108,7 +110,6 @@ function TranscodingForm({ settings }: { settings: AdminTranscodingSettings }) {
       <FfmpegSection
         capabilities={capabilities}
         detecting={detect.isPending}
-        detectError={detect.error ? errorMessage(detect.error) : null}
         onDetect={() => detect.mutate()}
       />
       <HardwareSection form={form} settings={settings} hardware={hardware} />

@@ -110,7 +110,13 @@ export function SettingsSaveBar({
       return true
     },
   })
-  const { feedback: result, reset, run } = useActionFeedback()
+  const {
+    feedback: result,
+    reset,
+    run,
+  } = useActionFeedback({
+    failed: tr("common.saveBar.failed"),
+  })
   // An edit after a save starts a new round, so "Saved" shouldn't linger:
   // the edit dismisses that save's result.
   const [dismissed, setDismissed] = useState<ActionFeedback | null>(null)
@@ -139,18 +145,11 @@ export function SettingsSaveBar({
         attention > 0 && "settings-attention",
       )}
     >
-      {feedback.state === "error" ? (
-        <p role="alert" className="text-destructive min-w-0 flex-1 text-sm">
-          <span className="font-medium">{tr("common.saveBar.failed")}</span>{" "}
-          {feedback.message}
-        </p>
-      ) : (
-        <p role="status" className="text-sm font-medium">
-          {feedback.state === "success"
-            ? tr("common.saveBar.saved")
-            : tr("common.saveBar.unsaved")}
-        </p>
-      )}
+      <p role="status" className="text-sm font-medium">
+        {feedback.state === "success"
+          ? tr("common.saveBar.saved")
+          : tr("common.saveBar.unsaved")}
+      </p>
       <div className="ml-auto flex gap-2">
         <Button
           type="button"

@@ -30,11 +30,11 @@ import {
   FieldLabel,
 } from "@matinee/ui/components/field"
 import { Input } from "@matinee/ui/components/input"
+import { toast } from "@matinee/ui/components/sonner"
 import { useSelector } from "@tanstack/react-form"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useId } from "react"
 
-import { FormAlert } from "@/components/form-alert"
 import { tr } from "@/i18n"
 import { firstError, useAppForm, useFieldContext } from "@/lib/form"
 import { client, errorMessage, orpc } from "@/lib/rpc"
@@ -137,6 +137,7 @@ function GroupForm({
       ])
       onDone()
     },
+    onError: (error) => toast.error(errorMessage(error)),
   })
 
   const toInput = (value: GroupValues) => ({
@@ -149,7 +150,7 @@ function GroupForm({
   const form = useAppForm({
     defaultValues: valuesOf(group),
     validators: {
-      // One message for the whole form, above the buttons.
+      // One message for the whole form, in a toast.
       onSubmit: ({ value }) => {
         const parsed = AccessGroupInput.safeParse(toInput(value))
         if (parsed.success) return undefined
@@ -161,6 +162,11 @@ function GroupForm({
     },
     onSubmit: ({ value }) =>
       save.mutate(AccessGroupInput.parse(toInput(value))),
+    onSubmitInvalid: ({ formApi }) => {
+      // Field errors show under their fields.
+      const message = firstError(formApi.state.errors)
+      if (message) toast.error(message)
+    },
   })
   const libraryChoice = useSelector(
     form.store,
@@ -168,10 +174,6 @@ function GroupForm({
   )
   const maxBitrate = useSelector(form.store, (state) => state.values.maxBitrate)
   const maxStreams = useSelector(form.store, (state) => state.values.maxStreams)
-  const validation = useSelector(form.store, (state) =>
-    firstError(state.errors),
-  )
-  const error = validation ?? (save.error ? errorMessage(save.error) : null)
 
   return (
     <form.AppForm>
@@ -295,8 +297,6 @@ function GroupForm({
             </form.AppField>
           </SettingRows>
         </div>
-
-        {error && <FormAlert message={error} />}
 
         <DialogFooter className="-mx-6 -mb-6 px-6 py-4">
           <Button type="button" variant="ghost" onClick={onDone}>

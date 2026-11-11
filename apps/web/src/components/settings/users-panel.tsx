@@ -101,6 +101,7 @@ export function UsersPanel() {
       }
       await refresh()
     },
+    onError: (error) => toast.error(errorMessage(error)),
   })
 
   const remove = useMutation({
@@ -115,6 +116,7 @@ export function UsersPanel() {
       toast.success(tr("users.deleted", { name: displayName(user) }))
       await refresh()
     },
+    onError: (error) => toast.error(errorMessage(error)),
   })
 
   const signOut = useMutation({
@@ -132,6 +134,7 @@ export function UsersPanel() {
       )
       await refresh()
     },
+    onError: (error) => toast.error(errorMessage(error)),
   })
 
   const ask = (action: UserAction, user: AdminUser) => {
@@ -217,7 +220,6 @@ export function UsersPanel() {
           confirming?.action !== "role" || confirming.user.role === "admin"
         }
         pending={mutation?.isPending ?? false}
-        error={mutation?.error ?? null}
         onConfirm={() => confirming && mutation?.mutate(confirming.user)}
         onClose={closeConfirm}
       />

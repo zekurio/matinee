@@ -20,7 +20,6 @@ import { useAppForm } from "@/lib/form"
 import { art, present } from "@/lib/media"
 import { client, errorMessage, orpc } from "@/lib/rpc"
 
-import { FormAlert } from "./form-alert"
 import { Picture, tone } from "./picture"
 
 /** Refetch everything that shows a title's name or art. */
@@ -95,6 +94,7 @@ function IdentifyForm({
       toast.success(tr("title.identify.matched", { name: updated.name }))
       onDone()
     },
+    onError: (error) => toast.error(errorMessage(error)),
   })
 
   const form = useAppForm({
@@ -111,8 +111,6 @@ function IdentifyForm({
       })
     },
   })
-
-  const error = identify.error ?? results.error
 
   return (
     <>
@@ -171,15 +169,17 @@ function IdentifyForm({
         </Button>
       </form>
 
-      {error && <FormAlert message={errorMessage(error)} />}
-
       {/* The dialog has a fixed height, so this pane fills it whether it
-          shows the spinner, the empty state, or results. */}
+          shows the spinner, a failed search, the empty state, or results. */}
       <div className="-mx-6 flex min-h-0 flex-1 flex-col overflow-y-auto border-t px-3 pt-2">
         {results.isPending ? (
           <div className="grid flex-1 place-items-center pb-2">
             <Spinner className="size-5" />
           </div>
+        ) : results.isError ? (
+          <p className="text-muted-foreground grid flex-1 place-items-center px-3 pb-2 text-center text-sm">
+            {errorMessage(results.error)}
+          </p>
         ) : results.data?.length === 0 ? (
           <p className="text-muted-foreground grid flex-1 place-items-center px-3 pb-2 text-center text-sm">
             {tr("title.identify.empty", {

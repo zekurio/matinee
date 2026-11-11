@@ -1,6 +1,7 @@
 import type { AdminTranscodingSettings } from "@matinee/contracts"
 import { Button } from "@matinee/ui/components/button"
 import { Skeleton } from "@matinee/ui/components/skeleton"
+import { toast } from "@matinee/ui/components/sonner"
 import { Spinner } from "@matinee/ui/components/spinner"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
@@ -128,15 +129,11 @@ function TranscodingForm({
         <FfmpegSection
           capabilities={settings.capabilities}
           detecting={detect.isPending}
-          detectError={detect.error ? errorMessage(detect.error) : null}
           onDetect={() => detect.mutate()}
         />
         <HardwareSection form={form} settings={settings} hardware={hardware} />
         <HardwareDecodingSection form={form} />
       </SettingsSections>
-      {feedback.state === "error" && (
-        <FormAlert className="mt-6" message={feedback.message} />
-      )}
       <StepActions onBack={onBack}>
         <Button type="button" variant="ghost" onClick={onNext}>
           {tr("auth.setup.skip")}
@@ -177,6 +174,7 @@ function DoneStep({ eyebrow, onBack }: StepProps) {
       )
       await navigate({ to: "/" })
     },
+    onError: (error) => toast.error(errorMessage(error)),
   })
   return (
     <AuthScreen
@@ -184,7 +182,6 @@ function DoneStep({ eyebrow, onBack }: StepProps) {
       title={tr("auth.setup.done.title")}
       description={tr("auth.setup.done.description")}
     >
-      {finish.error && <FormAlert message={errorMessage(finish.error)} />}
       <StepActions onBack={onBack}>
         <Button disabled={finish.isPending} onClick={() => finish.mutate()}>
           {finish.isPending && <Spinner />}

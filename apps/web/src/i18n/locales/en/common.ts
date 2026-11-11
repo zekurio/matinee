@@ -4,7 +4,7 @@ export default defineMessages("common", {
   // The save bar of a settings panel, in settings-panel.tsx.
   "common.saveBar.unsaved": "Unsaved changes",
   "common.saveBar.saved": "Changes saved",
-  "common.saveBar.failed": "Couldn't save.",
+  "common.saveBar.failed": "Couldn't save your changes",
   "common.saveBar.reset": "Reset",
   "common.saveBar.save": "Save changes",
   "common.saveBar.saving": "Saving…",

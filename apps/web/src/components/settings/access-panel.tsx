@@ -64,6 +64,7 @@ export function AccessPanel() {
         queryClient.invalidateQueries({ queryKey: orpc.admin.invites.key() }),
       ])
     },
+    onError: (error) => toast.error(errorMessage(error)),
   })
 
   const edit = (group?: AccessGroup) => {
@@ -145,7 +146,6 @@ export function AccessPanel() {
         confirmLabel={tr("access.group.delete")}
         destructive
         pending={remove.isPending}
-        error={remove.error}
         onConfirm={() => deleting && remove.mutate(deleting)}
         onClose={() => setDeleteOpen(false)}
       />

@@ -555,7 +555,7 @@ const ClientSecretRow = withForm({
 })
 
 function CallbackRow({ url }: { url: string }) {
-  const { feedback, run } = useActionFeedback(1500)
+  const { feedback, run } = useActionFeedback({ successDuration: 1500 })
   const copied = feedback.state === "success"
   return (
     <SettingRow title={tr("oidc.redirectUri")} layout="stack">

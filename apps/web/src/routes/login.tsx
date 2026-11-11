@@ -7,6 +7,7 @@ import {
 import { t } from "@matinee/contracts/schema"
 import { Button, buttonVariants } from "@matinee/ui/components/button"
 import { Separator } from "@matinee/ui/components/separator"
+import { toast } from "@matinee/ui/components/sonner"
 import { Spinner } from "@matinee/ui/components/spinner"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router"
@@ -16,10 +17,11 @@ import { AuthScreen } from "@/components/auth-screen"
 import { FormAlert } from "@/components/form-alert"
 import { OidcLinkPage, type PendingLink } from "@/components/oidc-link-page"
 import { UsernamePasskeyForm } from "@/components/username-passkey-form"
-import { tr, translateKnown } from "@/i18n"
+import { tr } from "@/i18n"
 import { signInWithPasskey, signUpWithPasskey } from "@/lib/passkey"
 import { safeRedirect } from "@/lib/redirect"
 import { client, errorMessage, orpc } from "@/lib/rpc"
+import { useAuthErrorToast } from "@/lib/use-auth-error-toast"
 
 const LoginSearch = t.object({
   redirect: t.string().optional().catch(undefined),
@@ -96,16 +98,23 @@ function SignInPage({
     await navigate({ href: target })
   }
 
+  useAuthErrorToast(
+    authError,
+    config.passkeys
+      ? tr("auth.signIn.errorHint")
+      : tr("auth.signIn.errorHintSso"),
+  )
+
   const passkey = useMutation({
     mutationFn: signInWithPasskey,
     onSuccess: signedIn,
+    onError: (error) => toast.error(errorMessage(error)),
   })
   const signUp = useMutation({
     mutationFn: (username: string) => signUpWithPasskey(username),
     onSuccess: signedIn,
+    onError: (error) => toast.error(errorMessage(error)),
   })
-
-  const error = passkey.error ?? null
 
   return (
     <AuthScreen title={tr("auth.signIn.title")}>
@@ -136,17 +145,6 @@ function SignInPage({
           <FormAlert message={tr("auth.signIn.noMethod")} />
         )}
 
-        {authError && (
-          <FormAlert
-            message={translateKnown(authError)}
-            hint={
-              config.passkeys
-                ? tr("auth.signIn.errorHint")
-                : tr("auth.signIn.errorHintSso")
-            }
-          />
-        )}
-        {error && <FormAlert message={errorMessage(error)} />}
         {config.passkeySignUp && (
           <>
             <div className="text-muted-foreground my-4 flex items-center gap-3 text-xs">
@@ -157,7 +155,6 @@ function SignInPage({
             <UsernamePasskeyForm
               submitLabel={tr("auth.signIn.createAccount")}
               pending={signUp.isPending}
-              error={signUp.error}
               onSubmit={(username) => signUp.mutate(username)}
             />
           </>

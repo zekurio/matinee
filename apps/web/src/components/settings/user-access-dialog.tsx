@@ -21,7 +21,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { LogInIcon } from "lucide-react"
 import type { ReactNode } from "react"
 
-import { FormAlert } from "@/components/form-alert"
 import { tr } from "@/i18n"
 import { firstError, useAppForm } from "@/lib/form"
 import { formatDateTime, formatRelative } from "@/lib/format"
@@ -434,8 +433,6 @@ function AccessEditor({
           </form.AppField>
         </SettingRows>
       </Block>
-
-      {feedback.state === "error" && <FormAlert message={feedback.message} />}
 
       <DialogFooter className="-mx-6 -mb-6 px-6 py-4">
         <Button type="button" variant="ghost" onClick={onDone}>
