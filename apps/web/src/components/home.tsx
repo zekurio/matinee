@@ -21,7 +21,7 @@ import { EpisodeCard, TitleCard } from "@/components/media-item"
 import { PageHeader } from "@/components/page-header"
 import { Rail, RailItem } from "@/components/rail"
 import { tr } from "@/i18n"
-import { homeQueries, SHELF } from "@/lib/home-queries"
+import { homeQueries } from "@/lib/home-queries"
 import { orpc } from "@/lib/rpc"
 import { settingsLink } from "@/lib/settings"
 
@@ -174,11 +174,7 @@ function EpisodeRailSkeleton({ title }: { title: string }) {
 }
 
 function LibraryShelf({ library }: { library: Library }) {
-  const entries = useQuery(
-    orpc.media.shelf.queryOptions({
-      input: { libraryId: library.id, limit: SHELF },
-    }),
-  )
+  const entries = useQuery(homeQueries.shelf(library.id))
   const title = tr("browse.home.recentlyAdded", { library: library.name })
   const heading =
     library.itemCount > 0 ? (
