@@ -69,16 +69,18 @@ export default {
 
   "player.stats.toggle": "Wiedergabestatistik",
   "player.stats.close": "Wiedergabestatistik schließen",
-  "player.stats.method": "Methode",
-  "player.stats.method.direct": "Direkte Wiedergabe",
-  "player.stats.method.remux": "Direktes Streaming",
-  "player.stats.method.encode": "Transkodierung",
+  "player.stats.method": "Wiedergabe",
+  "player.stats.method.direct": "Originaldatei",
+  "player.stats.method.remux": "Umgewandelt, Video unverändert",
+  "player.stats.method.encode": "Umgewandelt, Video neu kodiert",
   "player.stats.reason": "Grund",
   "player.stats.reason.container":
     "Dieser Browser kann keine {container}-Dateien abspielen",
   "player.stats.reason.video": "Dieser Browser kann kein {codec} abspielen",
-  "player.stats.reason.directFailed": "Direkte Wiedergabe fehlgeschlagen",
-  "player.stats.reason.remuxFailed": "Direktes Streaming fehlgeschlagen",
+  "player.stats.reason.directFailed":
+    "Die Originaldatei ließ sich nicht abspielen",
+  "player.stats.reason.remuxFailed":
+    "Umwandeln ohne Neukodierung fehlgeschlagen",
   "player.stats.reason.audioCodec":
     "Dieser Browser kann kein {format}-Audio abspielen",
   "player.stats.reason.audioTrack": "Nicht die Standard-Audiospur der Datei",
@@ -86,7 +88,6 @@ export default {
   "player.stats.reason.burnIn": "Untertitel eingebrannt",
   "player.stats.reason.limit": "Über dem Bitratenlimit deines Kontos",
   "player.stats.delivery": "Übertragung",
-  "player.stats.delivery.direct": "Originaldatei",
   "player.stats.delivery.stream": "MP4-Stream",
   "player.stats.delivery.hls": "HLS",
   "player.stats.bitrate": "Stream-Bitrate",

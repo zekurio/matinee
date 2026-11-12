@@ -225,7 +225,7 @@ function playbackRows(
   const why = source.method === "direct" ? [] : reasons(plan, file, failed)
   const bitrate = preset?.bitrate ?? file.probe?.format.bitRate ?? null
   const delivery =
-    source.method === "direct" ? "direct" : source.hls ? "hls" : "stream"
+    source.method === "direct" ? null : source.hls ? "hls" : "stream"
   return [
     {
       label: tr("player.stats.method"),
@@ -234,10 +234,15 @@ function playbackRows(
     ...(why.length > 0
       ? [{ label: tr("player.stats.reason"), value: why.join(" · ") }]
       : []),
-    {
-      label: tr("player.stats.delivery"),
-      value: tr(`player.stats.delivery.${delivery}`),
-    },
+    // The original file has no delivery of its own to show.
+    ...(delivery
+      ? [
+          {
+            label: tr("player.stats.delivery"),
+            value: tr(`player.stats.delivery.${delivery}`),
+          },
+        ]
+      : []),
     ...(bitrate
       ? [{ label: tr("player.stats.bitrate"), value: formatBitrate(bitrate) }]
       : []),

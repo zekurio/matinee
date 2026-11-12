@@ -21,9 +21,9 @@ export default {
   "stats.period.365d": "im letzten Jahr",
   "stats.period.all": "bisher",
 
-  "stats.method.direct": "Direkte Wiedergabe",
-  "stats.method.remux": "Direkter Stream",
-  "stats.method.transcode": "Transkodierung",
+  "stats.method.direct": "Originaldatei",
+  "stats.method.remux": "Umgewandelt, Video unverändert",
+  "stats.method.transcode": "Umgewandelt, Video neu kodiert",
   "stats.quality.original": "Original",
   "stats.quality.preset": "{height}p {bitrate} Mbit/s",
   "stats.notRead": "Noch nicht ausgelesen",

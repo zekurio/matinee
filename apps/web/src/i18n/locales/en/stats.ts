@@ -23,9 +23,10 @@ export default defineMessages("stats", {
   "stats.period.all": "so far",
 
   // Names in lib/stats.ts.
-  "stats.method.direct": "Direct play",
-  "stats.method.remux": "Direct stream",
-  "stats.method.transcode": "Transcode",
+  // The same names as the player's stats, player.stats.method.*.
+  "stats.method.direct": "Original file",
+  "stats.method.remux": "Converted, video unchanged",
+  "stats.method.transcode": "Converted, video re-encoded",
   "stats.quality.original": "Original",
   // A transcode preset: "1080p 10 Mbps".
   "stats.quality.preset": "{height}p {bitrate} Mbps",

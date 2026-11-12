@@ -83,17 +83,19 @@ export default defineMessages("player", {
   // The playback stats over the picture, like Jellyfin's playback info.
   "player.stats.toggle": "Playback stats",
   "player.stats.close": "Close playback stats",
-  "player.stats.method": "Method",
-  "player.stats.method.direct": "Direct play",
-  "player.stats.method.remux": "Direct stream",
-  "player.stats.method.encode": "Transcode",
+  // How the file plays: as it is, converted with the video copied over
+  // (the audio or the file format changes), or with the video re-encoded.
+  "player.stats.method": "Playback",
+  "player.stats.method.direct": "Original file",
+  "player.stats.method.remux": "Converted, video unchanged",
+  "player.stats.method.encode": "Converted, video re-encoded",
   "player.stats.reason": "Reason",
   // {container} is a file format, like MKV.
   "player.stats.reason.container": "This browser can't play {container} files",
   // {codec} is a video codec, like HEVC.
   "player.stats.reason.video": "This browser can't play {codec}",
-  "player.stats.reason.directFailed": "Direct play failed",
-  "player.stats.reason.remuxFailed": "Direct stream failed",
+  "player.stats.reason.directFailed": "The original file didn't play",
+  "player.stats.reason.remuxFailed": "Converting without re-encoding failed",
   // {format} is an audio format, like TrueHD Atmos.
   "player.stats.reason.audioCodec": "This browser can't play {format} audio",
   "player.stats.reason.audioTrack": "Not the file's default audio track",
@@ -102,7 +104,6 @@ export default defineMessages("player", {
   "player.stats.reason.burnIn": "Subtitles burned in",
   "player.stats.reason.limit": "Over your account's bit rate limit",
   "player.stats.delivery": "Delivery",
-  "player.stats.delivery.direct": "Original file",
   "player.stats.delivery.stream": "MP4 stream",
   "player.stats.delivery.hls": "HLS",
   "player.stats.bitrate": "Stream bitrate",
