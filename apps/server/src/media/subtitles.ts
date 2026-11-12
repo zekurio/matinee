@@ -394,6 +394,19 @@ export async function openSubtitle(
 }
 
 /**
+ * Start converting a track the player is about to ask for, so the wait
+ * overlaps with the start of playback. The subtitle route joins the same
+ * job by its key, or finds the file it left.
+ */
+export function prepareSubtitle(item: MediaItemRow, trackId: string): void {
+  openSubtitle(item, trackId)
+    .then((body) => body?.read())
+    .catch((cause: unknown) => {
+      log.warn(`Couldn't prepare subtitle ${trackId} of ${item.path}`, cause)
+    })
+}
+
+/**
  * A picture subtitle to burn into an encode: a stream of the file, or a
  * subtitle file read as an input of its own.
  */
