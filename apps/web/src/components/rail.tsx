@@ -300,6 +300,11 @@ function nearestStop(el: HTMLElement, target: number) {
  * a 2:3 poster around 175px, a round portrait around 130px. On phones and
  * desktop, 16:9 cards also follow the window's height, so Home's first two
  * rows fit under the banner.
+ *
+ * Cards after the first skip their style, layout, and paint while they're
+ * scrolled out of view, which most of a long row is. The first keeps the
+ * row's height; the rest stretch to it. Their clip leaves room for a focus
+ * ring.
  */
 export function RailItem({
   artwork = "landscape",
@@ -311,7 +316,7 @@ export function RailItem({
   return (
     <li
       className={cn(
-        "shrink-0 snap-start",
+        "shrink-0 snap-start not-first:[contain-intrinsic-size:auto_0px] not-first:[content-visibility:auto] not-first:[overflow-clip-margin:8px]",
         artwork === "landscape" &&
           "w-[min(80%,34svh)] sm:w-[300px] lg:w-[clamp(280px,30vh,360px)]",
         artwork === "poster" &&
