@@ -39,7 +39,6 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.SpanStyle
@@ -231,21 +230,17 @@ fun ActionRow(
                 .semantics { contentDescription = listOfNotNull(label, playDetail, left).joinToString(", ") },
         ) {
             LucideIcon(Lucide.Play, null, size = 16.dp)
-            if (left == null) {
-                Text(label)
-                if (playDetail != null) Text(playDetail, color = Palette.AccentForeground.copy(alpha = 0.6f))
-            } else {
-                // Two lines: the time left beside a season's episode code is too long for one on a phone.
-                Column(Modifier.clearAndSetSemantics {}) {
-                    Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(
-                        listOfNotNull(playDetail, left).joinToString(" · "),
-                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Normal),
-                        color = Palette.AccentForeground.copy(alpha = 0.7f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
+            Text(label, maxLines = 1)
+            // On one line, as on a TV. The label stays whole; what's left over goes to the detail.
+            val detail = listOfNotNull(playDetail, left).joinToString(" · ")
+            if (detail.isNotEmpty()) {
+                Text(
+                    detail,
+                    color = Palette.AccentForeground.copy(alpha = 0.6f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
             }
         }
         RoundIconButton(
