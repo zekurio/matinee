@@ -113,6 +113,8 @@ function WatchItem({
   const playing = first?.plan.item
   const label = playing ? itemLabel(playing) : null
   const pageTitle = label?.title
+  // The poster reads at the size of a lock screen; a still is the fallback.
+  const art = playing?.title?.images.poster ?? playing?.episode?.still ?? null
 
   // The show's next episode, which the player offers once this one ends.
   const next = first?.plan.next
@@ -167,6 +169,15 @@ function WatchItem({
               ? (label.year ?? "")
               : label.groupLabel.join(" · ")
         }
+        nowPlaying={{
+          title: label.title,
+          artist: label.code ? label.showName : (label.year ?? ""),
+          album: label.code ? (label.groupLabel.at(-1) ?? "") : "",
+          art: art && {
+            id: art.id,
+            aspectRatio: art.placeholder?.aspectRatio ?? null,
+          },
+        }}
         trickplay={
           trickplayImages && {
             images: trickplayImages,

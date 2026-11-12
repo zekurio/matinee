@@ -43,6 +43,7 @@ import { PlayerStats } from "./player-stats"
 import type { TrickplayTiles } from "./trickplay-thumb"
 import { type UpNext, UpNextCard } from "./up-next"
 import { useHls } from "./use-hls"
+import { type NowPlaying, useMediaSession } from "./use-media-session"
 import { usePlayback } from "./use-playback"
 import { usePlayerKeys } from "./use-player-keys"
 import {
@@ -59,6 +60,8 @@ type VideoPlayerProps = {
   start: FirstStart
   title: string
   subtitle: string
+  /** What the system's media controls show. */
+  nowPlaying: NowPlaying
   /** The seek bar's thumbnails, once the server has them. */
   trickplay: TrickplayTiles | null
   /** The episode after this one, offered once this one ends. */
@@ -133,6 +136,7 @@ function useIdle(store: PlayerStore, ms: number) {
 function Player({
   title,
   subtitle,
+  nowPlaying,
   trickplay,
   upNext,
   onBack,
@@ -289,6 +293,23 @@ function Player({
     toggleSubtitles: subs.toggle,
     moveSubtitles,
     toggleStats: () => actions.setStatsOpen(!store.getState().statsOpen),
+  })
+
+  useMediaSession(video, {
+    nowPlaying,
+    setPaused: (paused) => {
+      if (store.getState().playing === paused) toggle()
+    },
+    skip,
+    skipBackSeconds,
+    skipForwardSeconds,
+    seek: (to) => {
+      actions.setTime(to)
+      seek(to)
+    },
+    position,
+    duration: lengthOf,
+    next: upNext?.play ?? null,
   })
 
   return (
