@@ -27,8 +27,16 @@ const PersonSearch = t.object({
 
 export const Route = createFileRoute("/_authed/_shell/people/$name")({
   validateSearch: PersonSearch,
+  // Starts the person's fetch while the page's code loads, and on hover.
+  loader: ({ context: { queryClient }, params: { name } }) => {
+    void queryClient.prefetchQuery(personOptions(name))
+  },
   component: PersonPage,
 })
+
+function personOptions(name: string) {
+  return orpc.people.get.queryOptions({ input: { name } })
+}
 
 /** The kinds of credit someone has, what they're known for first. */
 function creditKinds(person: Person): CreditKind[] {
@@ -45,7 +53,7 @@ function creditKinds(person: Person): CreditKind[] {
  */
 function PersonPage() {
   const { name } = Route.useParams()
-  const person = useQuery(orpc.people.get.queryOptions({ input: { name } }))
+  const person = useQuery(personOptions(name))
   useDocumentTitle(name)
 
   if (person.isPending) return <PersonSkeleton />

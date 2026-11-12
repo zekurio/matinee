@@ -33,14 +33,24 @@ const SearchParams = t.object({
   q: t.string().trim().min(1).optional().catch(undefined),
 })
 
-export const Route = createFileRoute("/_authed/_shell/search")({
-  validateSearch: SearchParams,
-  component: SearchPage,
-})
-
 // What the server sends of each kind. Past it, the page says to narrow
 // the search down.
 const LIMIT = 60
+
+/** The results for a query, shared by the page and its loader. */
+function searchOptions(query: string) {
+  return orpc.search.query.queryOptions({ input: { query, limit: LIMIT } })
+}
+
+export const Route = createFileRoute("/_authed/_shell/search")({
+  validateSearch: SearchParams,
+  loaderDeps: ({ search }) => ({ q: search.q }),
+  // Starts the search while the page's code loads, not once it renders.
+  loader: ({ context: { queryClient }, deps: { q } }) => {
+    if (q !== undefined) void queryClient.prefetchQuery(searchOptions(q))
+  },
+  component: SearchPage,
+})
 
 /**
  * Every result for a search from the spotlight, a section per kind and
@@ -55,9 +65,7 @@ function SearchPage() {
   const openSpotlight = useSearchSpotlightStore((state) => state.setOpen)
   const libraries = useQuery(orpc.libraries.list.queryOptions())
   const results = useQuery({
-    ...orpc.search.query.queryOptions({
-      input: { query: q ?? "", limit: LIMIT },
-    }),
+    ...searchOptions(q ?? ""),
     enabled: q !== undefined,
     placeholderData: keepPreviousData,
   })

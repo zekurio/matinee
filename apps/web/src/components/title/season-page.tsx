@@ -23,6 +23,7 @@ import {
   PlayButton,
 } from "./title-header"
 import { TitleSkeleton } from "./title-page"
+import { titleOptions } from "./title-queries"
 
 const route = getRouteApi("/_authed/_shell/titles/$titleId_/seasons/$season")
 
@@ -30,9 +31,7 @@ const route = getRouteApi("/_authed/_shell/titles/$titleId_/seasons/$season")
 export function SeasonPage() {
   const { titleId, season: param } = route.useParams()
   const number = parseSeasonParam(param)
-  const title = useQuery(
-    orpc.titles.get.queryOptions({ input: { id: titleId } }),
-  )
+  const title = useQuery(titleOptions(titleId))
   // Asked for alongside the title rather than after it.
   const items = useQuery(
     orpc.titles.items.queryOptions({

@@ -5,7 +5,11 @@ import { FeedbackButton } from "@matinee/ui/components/feedback-button"
 import { Skeleton } from "@matinee/ui/components/skeleton"
 import { toast } from "@matinee/ui/components/sonner"
 import { useMediaQuery } from "@matinee/ui/hooks/use-media-query"
-import { keepPreviousData, useQuery } from "@tanstack/react-query"
+import {
+  keepPreviousData,
+  type QueryClient,
+  useQuery,
+} from "@tanstack/react-query"
 import { createFileRoute, Link } from "@tanstack/react-router"
 import {
   CalendarDaysIcon,
@@ -52,10 +56,43 @@ const ProfileSearch = t.object({
 
 export const Route = createFileRoute("/_authed/_shell/profiles/$username")({
   validateSearch: ProfileSearch,
+  loaderDeps: ({ search }) => ({ range: search.range }),
+  // Starts the profile's fetch while the page's code loads, and on hover,
+  // and its statistics as soon as the profile says they show.
+  loader: ({ context, params, deps }) => {
+    void preloadProfile(context.queryClient, params.username, deps.range)
+  },
   component: ProfilePage,
 })
 
-const TIME_ZONE = browserTimeZone()
+function profileOptions(username: string) {
+  return orpc.profiles.get.queryOptions({ input: { username } })
+}
+
+// The loader runs with the app's code, so the time zone is read when asked
+// for rather than as the app starts.
+function statsOptions(username: string, range: StatsRange) {
+  return orpc.profiles.stats.queryOptions({
+    input: { username, range, timeZone: browserTimeZone() },
+  })
+}
+
+async function preloadProfile(
+  queryClient: QueryClient,
+  username: string,
+  range: StatsRange = "all",
+) {
+  const options = profileOptions(username)
+  await queryClient.prefetchQuery(options)
+  const profile = queryClient.getQueryData(options.queryKey)
+  if (!profile || !statsShown(profile)) return
+  await queryClient.prefetchQuery(statsOptions(profile.user.username, range))
+}
+
+/** Whether the page shows the profile's statistics. */
+function statsShown(profile: Profile) {
+  return profile.self || profile.sharing.stats
+}
 
 function displayName(profile: Profile): string {
   return profile.user.displayName ?? profile.user.username
@@ -63,9 +100,7 @@ function displayName(profile: Profile): string {
 
 function ProfilePage() {
   const { username } = Route.useParams()
-  const profile = useQuery(
-    orpc.profiles.get.queryOptions({ input: { username } }),
-  )
+  const profile = useQuery(profileOptions(username))
   useDocumentTitle(profile.data ? displayName(profile.data) : null)
 
   if (profile.isPending) return <ProfileSkeleton />
@@ -103,7 +138,7 @@ function ProfilePage() {
       ) : (
         <>
           <Favorites profile={data} />
-          {(data.self || data.sharing.stats) && <Statistics profile={data} />}
+          {statsShown(data) && <Statistics profile={data} />}
           {data.recent && data.recent.length > 0 && (
             <Rail title={tr("profile.recent")}>
               {data.recent.map((entry) => (
@@ -284,9 +319,7 @@ function Statistics({ profile }: { profile: Profile }) {
   const { range = "all" } = Route.useSearch()
   const navigate = Route.useNavigate()
   const stats = useQuery({
-    ...orpc.profiles.stats.queryOptions({
-      input: { username: profile.user.username, range, timeZone: TIME_ZONE },
-    }),
+    ...statsOptions(profile.user.username, range),
     placeholderData: keepPreviousData,
   })
   const setRange = (next: StatsRange) =>

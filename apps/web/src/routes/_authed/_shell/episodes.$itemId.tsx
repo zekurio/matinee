@@ -3,7 +3,7 @@ import { buttonVariants } from "@matinee/ui/components/button"
 import { Skeleton } from "@matinee/ui/components/skeleton"
 import { useMediaQuery } from "@matinee/ui/hooks/use-media-query"
 import { cn } from "@matinee/ui/lib/utils"
-import { skipToken, useQuery } from "@tanstack/react-query"
+import { type QueryClient, skipToken, useQuery } from "@tanstack/react-query"
 import { createFileRoute, Link, Navigate } from "@tanstack/react-router"
 import { ChevronRightIcon, PlayIcon } from "lucide-react"
 
@@ -15,6 +15,10 @@ import { useDocumentTitle } from "@/components/page-header"
 import { Rail, RailItem } from "@/components/rail"
 import { MediaInfo } from "@/components/title/media-info"
 import { seasonParams } from "@/components/title/seasons"
+import {
+  seasonItemsOptions,
+  titleOptions,
+} from "@/components/title/title-queries"
 import { useItemWatched, WatchedButton } from "@/components/watched-menu"
 import { tr } from "@/i18n"
 import { formatDate, formatRuntime } from "@/lib/format"
@@ -32,14 +36,32 @@ import { errorMessage, orpc } from "@/lib/rpc"
 import { useOverviewToggle } from "@/lib/use-overview-toggle"
 
 export const Route = createFileRoute("/_authed/_shell/episodes/$itemId")({
-  // Starts the episode's fetch while the page's code loads, and on hover.
+  // Starts the episode's fetch while the page's code loads, and on hover,
+  // and its season's as soon as the episode says which.
   loader: ({ context, params }) => {
-    void context.queryClient.prefetchQuery(
-      orpc.media.get.queryOptions({ input: { id: params.itemId } }),
-    )
+    void preloadEpisode(context.queryClient, params.itemId)
   },
   component: EpisodePage,
 })
+
+async function preloadEpisode(queryClient: QueryClient, id: string) {
+  const options = orpc.media.get.queryOptions({ input: { id } })
+  await queryClient.prefetchQuery(options)
+  const show = seasonShow(queryClient.getQueryData(options.queryKey))
+  if (!show) return
+  await Promise.all([
+    queryClient.prefetchQuery(titleOptions(show.id)),
+    queryClient.prefetchQuery(seasonItemsOptions(show.id, show.season)),
+  ])
+}
+
+/** The show an episode is in, and its season, for the row of the rest. */
+function seasonShow(item: MediaItem | undefined) {
+  const owner = item?.title
+  return owner?.kind === "show"
+    ? { id: owner.id, season: item?.seasonNumber ?? null }
+    : null
+}
 
 function EpisodePage() {
   const { itemId } = Route.useParams()
@@ -261,8 +283,7 @@ function EpisodeHeader({ item }: { item: MediaItem }) {
  * before this one, so the next follows it.
  */
 function SeasonRail({ item }: { item: MediaItem }) {
-  const owner = item.title
-  const show = owner?.kind === "show" ? owner : null
+  const show = seasonShow(item)
   const title = useQuery(
     orpc.titles.get.queryOptions({
       input: show ? { id: show.id } : skipToken,
@@ -270,7 +291,7 @@ function SeasonRail({ item }: { item: MediaItem }) {
   )
   const items = useQuery(
     orpc.titles.items.queryOptions({
-      input: show ? { id: show.id, season: item.seasonNumber } : skipToken,
+      input: show ? { id: show.id, season: show.season } : skipToken,
     }),
   )
   if (!show || !title.data || !items.data) return null
