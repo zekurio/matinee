@@ -30,7 +30,7 @@ function precompress(): Plugin {
       const dir = options.dir
       if (!dir) return
       const files = Object.keys(bundle).filter((file) =>
-        /\.(?:js|css|html|svg|json)$/.test(file),
+        /\.(?:js|css|html|svg|json|wasm)$/.test(file),
       )
       await Promise.all(
         files.map(async (file) => {
