@@ -2,7 +2,7 @@ import type { MediaItem, Season, Title } from "@matinee/contracts"
 import { Skeleton } from "@matinee/ui/components/skeleton"
 import { cn } from "@matinee/ui/lib/utils"
 import { useQuery } from "@tanstack/react-query"
-import { useState } from "react"
+import { useDeferredValue, useState } from "react"
 
 import { ActionsMenu } from "@/components/actions-menu"
 import { CardActions, CardScrim } from "@/components/card-actions"
@@ -65,6 +65,10 @@ export function SeasonEpisodes({
   /** Why they didn't load. */
   error: string | null
 }) {
+  // When they arrive, a long season is a lot to render, so it renders in
+  // the background, in slices, and the page answers input meanwhile. The
+  // skeletons stay until it's done. Already loaded, they render at once.
+  const shown = useDeferredValue(items)
   if (error !== null) {
     return (
       <section aria-labelledby="episodes-heading">
@@ -80,7 +84,7 @@ export function SeasonEpisodes({
       </section>
     )
   }
-  if (items === undefined) {
+  if (shown === undefined) {
     return (
       <Rail title={tr("title.episodes")}>
         {[0, 1, 2, 3, 4, 5].map((i) => (
@@ -93,7 +97,7 @@ export function SeasonEpisodes({
       </Rail>
     )
   }
-  return <EpisodesRail items={items} start={seasonNext(title, items)} />
+  return <EpisodesRail items={shown} start={seasonNext(title, shown)} />
 }
 
 /** The loaded row, which starts on `start`. */
