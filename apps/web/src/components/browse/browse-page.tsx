@@ -1,5 +1,3 @@
-import { TitleKind } from "@matinee/contracts"
-import { t } from "@matinee/contracts/schema"
 import { buttonVariants } from "@matinee/ui/components/button"
 import {
   Empty,
@@ -24,7 +22,6 @@ import {
   PhoneControls,
 } from "@/components/library/list-controls"
 import {
-  type Sort,
   titleSort,
   titleSorts,
   useListSearch,
@@ -32,19 +29,10 @@ import {
 import { PosterCard, posterGrid } from "@/components/media-item"
 import { PageHeader, useDocumentTitle } from "@/components/page-header"
 import { tr } from "@/i18n"
+import type { BrowseSearch } from "@/lib/browse-search"
 import { errorMessage, orpc } from "@/lib/rpc"
 
 import { KindPicker } from "./kind-picker"
-
-/** A genre's or studio's search params. Both kinds is the default. */
-export const BrowseSearch = t.object({
-  q: t.string().min(1).optional().catch(undefined),
-  sort: t.enum(["recent", "year"]).optional().catch(undefined) satisfies t.Type<
-    Sort | undefined
-  >,
-  kind: TitleKind.optional().catch(undefined),
-})
-export type BrowseSearch = t.infer<typeof BrowseSearch>
 
 const PAGE_SIZE = 60
 

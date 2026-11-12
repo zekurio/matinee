@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router"
 
-import { BrowsePage, BrowseSearch } from "@/components/browse/browse-page"
+import { BrowsePage } from "@/components/browse/browse-page"
+import { BrowseSearch } from "@/lib/browse-search"
 
 export const Route = createFileRoute("/_authed/_shell/genres/$genre")({
   validateSearch: BrowseSearch,
