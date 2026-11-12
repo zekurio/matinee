@@ -42,11 +42,11 @@ export default {
   "access.groups.title": "Zugriffsgruppen",
   "access.groups.create": "Neue Gruppe",
   "access.groups.intro":
-    "Ein Konto bekommt das Großzügigste, was seine Gruppen erlauben, Alle eingeschlossen. Solange Alle Mediatheken ohne Grenzen öffnet, hält keine andere Gruppe ein Konto zurück. Eine Gruppe, die keine Mediathek öffnet, redet bei den Grenzen nicht mit. Was unter Benutzer für ein Konto eingestellt ist, gilt vor seinen Gruppen. Admins haben keine Grenzen.",
+    "Ein Konto bekommt das Meiste, was seine Gruppen erlauben. Einstellungen unter Benutzer gehen vor. Admins haben keine Grenzen.",
   "access.groups.loadFailed":
     "Die Gruppen konnten nicht geladen werden. {error}",
   "access.groups.onlyEveryone":
-    "Jedes Konto ist in der Gruppe Alle. Leg eine Gruppe an, um manchen Konten mehr zu geben als anderen.",
+    "Jedes Konto ist in Alle. Weitere Gruppen geben einzelnen Konten mehr.",
   "access.group.everyAccount": "Jedes Konto",
   "access.group.members": plural({
     one: "{count} Mitglied",
@@ -68,7 +68,7 @@ export default {
   "access.group.newTitle": "Neue Gruppe",
   "access.group.editTitle": "{name} bearbeiten",
   "access.group.description":
-    "Mitglieder bekommen das Großzügigste, was ihre Gruppen erlauben.",
+    "Mitglieder bekommen das Meiste, was ihre Gruppen erlauben.",
   "access.group.everyoneDescription":
     "Jedes Konto ist in dieser Gruppe. Nimm ihr die Mediatheken weg, damit Zugriff nur noch über andere Gruppen geht. Ihre Grenzen gelten dann nur für Konten, denen keine Gruppe etwas öffnet.",
   "access.group.name": "Name",
@@ -90,7 +90,7 @@ export default {
 
   "access.user.title": "Zugriff für {name}",
   "access.user.description":
-    "Gruppen geben das Großzügigste, was sie erlauben. Was hier eingestellt ist, gilt vor den Gruppen.",
+    "Ein Konto bekommt das Meiste, was seine Gruppen erlauben. Einstellungen hier gehen vor.",
   "access.user.gets": "Was {name} bekommt",
   "access.user.getsAfterSave":
     "Speichere, um zu sehen, was deine Änderungen ergeben.",

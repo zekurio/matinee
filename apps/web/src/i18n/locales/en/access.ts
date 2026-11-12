@@ -44,10 +44,10 @@ export default defineMessages("access", {
   "access.groups.title": "Access groups",
   "access.groups.create": "New group",
   "access.groups.intro":
-    "An account gets the most generous of what its groups allow, Everyone included. While Everyone opens libraries without limits, no other group holds an account back. A group that opens no library has no say in the limits. What's set on an account under Users wins over its groups. Admins have no limits.",
+    "An account gets the most its groups allow. Settings under Users override groups. Admins have no limits.",
   "access.groups.loadFailed": "Couldn't load the groups. {error}",
   "access.groups.onlyEveryone":
-    "Every account is in Everyone. Make a group to give some accounts more than others.",
+    "Every account is in Everyone. Add groups to give some accounts more.",
   "access.group.everyAccount": "Every account",
   "access.group.members": plural({
     one: "{count} member",
@@ -70,8 +70,7 @@ export default defineMessages("access", {
   // Making or editing a group.
   "access.group.newTitle": "New group",
   "access.group.editTitle": "Edit {name}",
-  "access.group.description":
-    "Members get the most generous of what their groups allow.",
+  "access.group.description": "Members get the most their groups allow.",
   "access.group.everyoneDescription":
     "Every account is in this group. Take its libraries away to make access opt-in, then open them through other groups. Its limits then count only for accounts no group opens anything for.",
   "access.group.name": "Name",
@@ -95,7 +94,7 @@ export default defineMessages("access", {
   // One account's access, from its menu under Settings → Users.
   "access.user.title": "Access for {name}",
   "access.user.description":
-    "Groups give the most generous of what they allow. What's set here wins over the groups.",
+    "An account gets the most its groups allow. Settings here override them.",
   "access.user.gets": "What {name} gets",
   "access.user.getsAfterSave": "Save to see what your changes give.",
   // Stands in for the provider's name while single sign-on is off.
