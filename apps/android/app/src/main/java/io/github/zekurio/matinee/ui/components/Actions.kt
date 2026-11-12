@@ -233,7 +233,7 @@ private fun ItemActions(item: MediaItem, here: Boolean, dismiss: () -> Unit) {
     val resume = item.progress?.let { !it.completed && it.positionSeconds > 0 } == true
     SheetHeader(
         if (code != null) label.title else label.showName,
-        if (code != null) "${label.showName} · $code" else label.year,
+        if (code != null) label.showName else label.year,
     )
     if (!here) {
         SheetItem(Lucide.PlayOutline, stringResource(if (resume) R.string.title_resume else R.string.title_play)) {

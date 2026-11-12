@@ -229,7 +229,7 @@ private fun menuHeading(target: ActionTarget, res: android.content.res.Resources
     is ActionTarget.Item -> {
         val label = itemLabel(target.item, res)
         val code = episodeCode(target.item, res)
-        if (code != null) label.title to "${label.showName} · $code" else label.showName to label.year
+        if (code != null) label.title to label.showName else label.showName to label.year
     }
     is ActionTarget.Title -> target.title.name to target.title.year?.toString()
     is ActionTarget.Season -> seasonName(target.season.number, res) to target.title.name
