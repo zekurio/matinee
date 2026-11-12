@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto"
 import type { Stats } from "node:fs"
 import {
   mkdir,
@@ -9,7 +10,10 @@ import {
   writeFile,
 } from "node:fs/promises"
 import { basename, join } from "node:path"
+import { setTimeout as delay } from "node:timers/promises"
+import { fileURLToPath } from "node:url"
 
+import { MediaProbe } from "@matinee/contracts"
 import type {
   SubtitleDelivery,
   Subtitles,
@@ -18,11 +22,12 @@ import type {
 } from "@matinee/contracts"
 import { t } from "@matinee/contracts/schema"
 import {
+  mediaItem,
   type MediaItemRow,
   subtitleFile,
   type SubtitleFileRow,
 } from "@matinee/db"
-import { and, asc, eq } from "drizzle-orm"
+import { and, asc, eq, inArray } from "drizzle-orm"
 
 import { db } from "../db"
 import { env } from "../env"
@@ -31,7 +36,7 @@ import { log } from "../log"
 import { languageTag, trackLabel } from "./language"
 import { indexedSubtitle } from "./matroska-subtitles"
 import { currentProbe } from "./probe"
-import { run } from "./process"
+import { run, runProcess } from "./process"
 import { cleanVtt, decodeText, srtToVtt, vttText } from "./webvtt"
 
 // Display names for ffmpeg's codec names and sidecar extensions.
@@ -149,7 +154,7 @@ export async function listSubtitles(item: MediaItemRow): Promise<Subtitles> {
 }
 
 function etagFor(name: string, info: Stats): string {
-  return `"v${VERSION}-${name}-${info.size.toString(16)}-${Math.floor(info.mtimeMs).toString(16)}"`
+  return `"v${VERSION}-${name}-${info.size.toString(16)}-${info.mtime.getTime().toString(16)}"`
 }
 
 async function removeStale(
@@ -176,35 +181,85 @@ type Conversion = {
   input: string[]
   output: Output
   embedded?: { path: string; index: number }
+  small?: { path: string; index: number }
+  indexedOnly?: boolean
 }
 
-async function extract(job: Conversion): Promise<void> {
+async function extract(
+  job: Conversion,
+  signal?: AbortSignal,
+): Promise<boolean> {
   await mkdir(dir, { recursive: true })
-  const tmp = `${job.file}.${process.pid}.tmp`
+  const lock = `${job.file}.lock`
+  while (true) {
+    if (signal?.aborted) throw signal.reason
+    if (await stat(job.file).catch(() => null)) return true
+    try {
+      await mkdir(lock)
+      break
+    } catch (cause) {
+      const locked = await stat(lock).catch(() => null)
+      if (!locked) throw cause
+      if (Date.now() - locked.mtimeMs > EXTRACT_TIMEOUT_MS * 2) {
+        await rm(lock, { recursive: true, force: true })
+      }
+      await delay(50, undefined, { signal })
+    }
+  }
+  const tmp = `${job.file}.${randomUUID()}.tmp`
   const indexed = `${tmp}.mkv`
   try {
-    const small = job.embedded
-      ? await indexedSubtitle(job.embedded.path, job.embedded.index)
-      : null
+    if (await stat(job.file).catch(() => null)) return true
+    const small = job.small
+      ? null
+      : job.embedded
+        ? await indexedSubtitle(job.embedded.path, job.embedded.index)
+        : null
+    if (job.indexedOnly && !small && !job.small && job.embedded) return false
     if (small) await writeFile(indexed, small.bytes)
     const convert = (input: string[]) =>
-      run(
-        env.MATINEE_FFMPEG_PATH,
-        [
-          "-hide_banner",
-          "-loglevel",
-          "error",
-          ...input,
-          ...OUTPUT_ARGS[job.output],
-          "-y",
-          tmp,
-        ],
-        EXTRACT_TIMEOUT_MS,
-      )
-    if (small) {
+      job.indexedOnly
+        ? runProcess({
+            name: "ffmpeg",
+            command: env.MATINEE_FFMPEG_PATH,
+            args: [
+              "-hide_banner",
+              "-loglevel",
+              "error",
+              ...input,
+              ...OUTPUT_ARGS[job.output],
+              "-y",
+              tmp,
+            ],
+            timeoutMs: EXTRACT_TIMEOUT_MS,
+            signal,
+            priority: 10,
+            idleIo: true,
+          })
+        : run(
+            env.MATINEE_FFMPEG_PATH,
+            [
+              "-hide_banner",
+              "-loglevel",
+              "error",
+              ...input,
+              ...OUTPUT_ARGS[job.output],
+              "-y",
+              tmp,
+            ],
+            EXTRACT_TIMEOUT_MS,
+          )
+    if (small || job.small) {
       try {
-        await convert(["-copyts", "-i", indexed, "-map", "0:s:0"])
-      } catch {
+        await convert([
+          "-copyts",
+          "-i",
+          job.small?.path ?? indexed,
+          "-map",
+          `0:s:${job.small?.index ?? 0}`,
+        ])
+      } catch (cause) {
+        if (job.indexedOnly) throw cause
         // A decoder may need context the index cannot supply.
         await convert(job.input)
       }
@@ -220,8 +275,10 @@ async function extract(job: Conversion): Promise<void> {
     throw cause
   } finally {
     await rm(indexed, { force: true })
+    await rm(lock, { recursive: true, force: true })
   }
   await removeStale(job.name, job.output, basename(job.file))
+  return true
 }
 
 /**
@@ -239,10 +296,304 @@ const conversions = defineQueue<Conversion, void>({
   concurrency: 2,
   key: (job) => job.key,
   label: (job) => job.name,
+  group: (job) =>
+    job.name.startsWith("file-")
+      ? job.name.slice(5, 41)
+      : job.name.slice(0, 36),
   retryAfterMs: Number.POSITIVE_INFINITY,
   failure: (job) => `Couldn't convert subtitles ${job.name}`,
-  run: extract,
+  run: async (job) => {
+    await extract(job)
+  },
 })
+
+/** Outputs a player can request. Picture tracks remain on demand. */
+function textConversions(item: MediaItemRow): Conversion[] {
+  return (item.probe?.subtitles ?? [])
+    .filter((stream) => streamDelivery(stream) === "webvtt")
+    .flatMap((stream) => {
+      const outputs: Output[] =
+        stream.codec === "ass" || stream.codec === "ssa"
+          ? ["vtt", "ass"]
+          : ["vtt"]
+      return outputs.map((output) => {
+        const name = `${item.id}-${stream.index}`
+        const key = `${name}-${item.modifiedAt.getTime()}-${item.sizeBytes}.${output}`
+        return {
+          name,
+          key,
+          file: join(dir, key),
+          input: ["-i", item.path, "-map", `0:${stream.index}`],
+          output,
+          embedded: { path: item.path, index: stream.index },
+          indexedOnly: true,
+        }
+      })
+    })
+}
+
+type Preparation = MediaItemRow & { sidecars?: Conversion[] }
+
+function preparationKey(item: Preparation): string {
+  return `${item.id}-${item.modifiedAt.getTime()}-${item.sizeBytes}${item.sidecars?.map((job) => `-${job.key}`).join("") ?? ""}`
+}
+
+const preparations = defineQueue<Preparation, void>({
+  id: "subtitle-prepare",
+  name: "Prepare subtitles",
+  description: "Cache indexed text subtitles without reading video streams.",
+  concurrency: 1,
+  tuning: {
+    max: 4,
+    note: "Files whose indexed text subtitles are prepared at once.",
+  },
+  key: preparationKey,
+  group: (item) => item.id,
+  label: (item) => item.relativePath,
+  retryAfterMs: Number.POSITIVE_INFINITY,
+  failure: (item) => `Couldn't prepare subtitles for ${item.relativePath}`,
+  run: async (item, { signal }) => {
+    const jobs = [...textConversions(item), ...(item.sidecars ?? [])]
+    const missing: Conversion[] = []
+    for (const job of jobs) {
+      if (
+        !(await stat(job.file).catch(() => null)) &&
+        !(await stat(`${job.file}.skip`).catch(() => null))
+      )
+        missing.push(job)
+    }
+    if (!missing.length) return
+    if (missing.some((job) => job.embedded)) {
+      const info = await stat(item.path)
+      if (
+        info.size !== item.sizeBytes ||
+        info.mtime.getTime() !== item.modifiedAt.getTime()
+      )
+        return
+    }
+    const start = performance.now()
+    await mkdir(dir, { recursive: true })
+    const input = join(dir, `${item.id}.${randomUUID()}.work.mkv`)
+    let sourceBytes: number | null = 0
+    let streams: number[] = []
+    const wanted = [
+      ...new Set(
+        missing.flatMap((job) => (job.embedded ? [job.embedded.index] : [])),
+      ),
+    ]
+    let written = 0
+    const movie = item.container === "mp4" || item.container === "mov"
+    try {
+      if (wanted.length) {
+        const worker = fileURLToPath(
+          new URL(
+            import.meta.url.endsWith(".ts")
+              ? "./subtitle-worker.ts"
+              : "./subtitle-worker.mjs",
+            import.meta.url,
+          ),
+        )
+        let resultLine = ""
+        await runProcess({
+          name: "subtitle index reader",
+          command: process.execPath,
+          args: [
+            ...process.execArgv,
+            worker,
+            movie ? "movie" : "matroska",
+            item.path,
+            input,
+            ...wanted.map(String),
+          ],
+          signal,
+          timeoutMs: EXTRACT_TIMEOUT_MS,
+          priority: 10,
+          idleIo: true,
+          onStdoutLine: (line) => {
+            resultLine = line
+          },
+        })
+        const result = t
+          .object({ bytesRead: t.number(), streams: t.array(t.number()) })
+          .parse(JSON.parse(resultLine))
+        sourceBytes = result.bytesRead
+        streams = result.streams
+      }
+      if (movie && streams.length) {
+        // Only static sample tables passed the bounded metadata check.
+        await runProcess({
+          name: "ffmpeg",
+          command: env.MATINEE_FFMPEG_PATH,
+          args: [
+            "-v",
+            "error",
+            "-copyts",
+            "-f",
+            "mov",
+            "-i",
+            item.path,
+            ...streams.flatMap((index) => ["-map", `0:${index}`]),
+            "-c:s",
+            "srt",
+            "-f",
+            "matroska",
+            "-y",
+            input,
+          ],
+          signal,
+          timeoutMs: EXTRACT_TIMEOUT_MS,
+          priority: 10,
+          idleIo: true,
+        })
+        sourceBytes = null
+      }
+      for (const job of missing) {
+        signal.throwIfAborted()
+        if (!job.embedded) {
+          await extract(job, signal)
+          written += (await stat(job.file)).size
+          continue
+        }
+        const index = streams.indexOf(job.embedded.index)
+        if (index < 0) {
+          await writeFile(`${job.file}.skip`, "No usable subtitle index\n")
+          continue
+        }
+        await extract({ ...job, small: { path: input, index } }, signal)
+        written += (await stat(job.file)).size
+      }
+      log.info(
+        `Prepared subtitles for ${item.relativePath}: ${streams.length} tracks, ${sourceBytes ?? "sample-table"} source bytes, ${written} cache bytes, ${Math.round(performance.now() - start)} ms`,
+      )
+    } finally {
+      await rm(input, { force: true })
+    }
+  },
+})
+
+/** Inventory the cache once, never stat media that needs no work. */
+export async function prepareMissingSubtitles(
+  options: {
+    libraryId?: string
+    signal?: AbortSignal
+    progress?: (fraction: number) => void
+  } = {},
+): Promise<void> {
+  // ACCESS: Scheduled maintenance covers every library, not a viewer request.
+  const rows = (await db.select().from(mediaItem)).map((item) => ({
+    ...item,
+    probe: MediaProbe.safeParse(item.probe).data ?? null,
+  }))
+  const present = new Set(await readdir(dir).catch(() => []))
+  const expected = new Set(
+    rows.flatMap((item) =>
+      textConversions(item).flatMap((job) => [job.key, `${job.key}.skip`]),
+    ),
+  )
+  const ids = new Map(rows.map((item) => [item.id, item]))
+  // Keep current outputs and active writers. Sidecars and fonts have separate lifetimes.
+  for (const name of present) {
+    if (
+      !/^[0-9a-f-]{36}-\d+-\d+-\d+\.(vtt|ass|sup)(\.skip)?$/i.test(name) ||
+      expected.has(name)
+    )
+      continue
+    const id = name.slice(0, 36)
+    const item = ids.get(id)
+    if (preparations.busy(id) || conversions.busy(id)) continue
+    // PGS outputs still belong to current media, even though we don't prepare them.
+    if (
+      item &&
+      name.includes(`-${item.modifiedAt.getTime()}-${item.sizeBytes}.`)
+    )
+      continue
+    await rm(join(dir, name), { force: true })
+  }
+  const sidecars = await db
+    .select()
+    .from(subtitleFile)
+    .where(inArray(subtitleFile.format, ["ass", "ssa"]))
+  const sidecarJobs = new Map<string, Conversion[]>()
+  const cachedSidecars = new Set(
+    [...present].flatMap((name) => {
+      const match = /^file-([0-9a-f-]{36})-\d+-\d+\.(vtt|ass)$/i.exec(name)
+      return match ? [`${match[1]}.${match[2]}`] : []
+    }),
+  )
+  for (const row of sidecars) {
+    const item = ids.get(row.mediaItemId)
+    if (!item || (options.libraryId && item.libraryId !== options.libraryId))
+      continue
+    // Sidecars have no stored size/mtime. Scheduled catch-up stats only
+    // missing outputs; scans check revisions after walking those disks anyway.
+    if (
+      !options.libraryId &&
+      cachedSidecars.has(`${row.id}.vtt`) &&
+      cachedSidecars.has(`${row.id}.ass`)
+    )
+      continue
+    const info = await stat(row.path).catch(() => null)
+    if (!info?.isFile()) continue
+    const jobs = sidecarJobs.get(row.mediaItemId) ?? []
+    for (const output of ["vtt", "ass"] satisfies Output[]) {
+      const name = `file-${row.id}`
+      const key = `${name}-${info.mtime.getTime()}-${info.size}.${output}`
+      if (!present.has(key))
+        jobs.push({
+          name,
+          key,
+          file: join(dir, key),
+          input: ["-i", row.path, "-map", "0:s:0"],
+          output,
+          indexedOnly: true,
+        })
+    }
+    sidecarJobs.set(row.mediaItemId, jobs)
+  }
+  const sidecarIds = new Set(sidecars.map((row) => row.id))
+  for (const name of present) {
+    const match = /^file-([0-9a-f-]{36})-\d+-\d+\.(vtt|ass)$/i.exec(name)
+    if (match?.[1] && !sidecarIds.has(match[1]) && !conversions.busy(match[1]))
+      await rm(join(dir, name), { force: true })
+  }
+  for (const name of present) {
+    if (!/\.(work\.mkv|tmp|tmp\.mkv|lock)$/.test(name)) continue
+    const id = name.startsWith("file-") ? name.slice(5, 41) : name.slice(0, 36)
+    if (preparations.busy(id) || conversions.busy(id)) continue
+    const path = join(dir, name)
+    const info = await stat(path).catch(() => null)
+    if (info && Date.now() - info.mtimeMs > EXTRACT_TIMEOUT_MS * 2)
+      await rm(path, { force: true, recursive: true })
+  }
+  const pending: Preparation[] = rows
+    .filter(
+      (item) =>
+        (!options.libraryId || item.libraryId === options.libraryId) &&
+        (Boolean(sidecarJobs.get(item.id)?.length) ||
+          textConversions(item).some(
+            (job) => !present.has(job.key) && !present.has(`${job.key}.skip`),
+          )),
+    )
+    .map((item) => ({ ...item, sidecars: sidecarJobs.get(item.id) }))
+  let done = 0
+  const abort = () => {
+    for (const item of pending) preparations.cancel(preparationKey(item))
+  }
+  options.signal?.addEventListener("abort", abort, { once: true })
+  try {
+    await Promise.all(
+      pending.map(async (item) => {
+        if (options.signal?.aborted) return
+        await preparations.run(item, { priority: "low" }).catch(() => {
+          /* Logged by the queue. */
+        })
+        options.progress?.(++done / pending.length)
+      }),
+    )
+  } finally {
+    options.signal?.removeEventListener("abort", abort)
+  }
+}
 
 /**
  * The path of ffmpeg's output for a subtitle file or stream, cached under
@@ -257,7 +608,7 @@ async function converted(
   output: Output,
   embedded?: { path: string; index: number },
 ): Promise<string | null> {
-  const key = `${name}-${Math.floor(info.mtimeMs)}-${info.size}.${output}`
+  const key = `${name}-${info.mtime.getTime()}-${info.size}.${output}`
   const file = join(dir, key)
   const cached = await stat(file).catch(() => null)
   if (cached?.isFile()) return file

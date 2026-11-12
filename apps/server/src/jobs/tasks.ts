@@ -10,6 +10,7 @@ import { prefetchArtwork } from "../media/artwork"
 import { sweepDownloads } from "../media/downloads"
 import { sweepTranscodes } from "../media/hls"
 import { probeMissing } from "../media/probe"
+import { prepareMissingSubtitles } from "../media/subtitles"
 import { makeMissingTrickplay, sweepTrickplay } from "../media/trickplay"
 import { refreshMetadata } from "../metadata/refresh"
 import type { TaskDefinition } from "./scheduler"
@@ -86,6 +87,17 @@ const fetchArtwork: TaskDefinition = {
   run: (context) => prefetchArtwork(context),
 }
 
+const prepareSubtitles: TaskDefinition = {
+  id: "prepare-subtitles",
+  name: "Prepare subtitles",
+  description:
+    "Cache indexed text subtitles and delete outputs of removed or changed files. Picture subtitles stay on demand.",
+  queue: "subtitle-prepare",
+  startupDelayMs: MINUTE_MS,
+  intervalMs: 24 * HOUR_MS,
+  run: (context) => prepareMissingSubtitles(context),
+}
+
 const makeTrickplay: TaskDefinition = {
   id: "make-trickplay",
   name: "Make trickplay images",
@@ -141,6 +153,7 @@ export const TASKS: TaskDefinition[] = [
   refreshStale,
   probeMedia,
   fetchArtwork,
+  prepareSubtitles,
   makeTrickplay,
   cleanTranscodes,
   cleanSessions,

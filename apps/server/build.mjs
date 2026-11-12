@@ -1,6 +1,5 @@
-// Bundles the server into one file for production, so it starts as plain
-// Node: no TypeScript compiler in the process, and a fraction of the
-// memory and start-up time of running the sources through tsx.
+// Bundles the server and its idle-I/O subtitle reader for production, so
+// both start as plain Node without a TypeScript compiler in the process.
 import { cp, rm } from "node:fs/promises"
 import { fileURLToPath } from "node:url"
 
@@ -23,6 +22,17 @@ await build({
   banner: {
     js: "import { createRequire as __createRequire } from 'node:module'; const require = __createRequire(import.meta.url);",
   },
+  logLevel: "warning",
+})
+await build({
+  entryPoints: [
+    fileURLToPath(new URL("src/media/subtitle-worker.ts", import.meta.url)),
+  ],
+  outfile: `${dist}server/subtitle-worker.mjs`,
+  bundle: true,
+  platform: "node",
+  format: "esm",
+  target: "node24",
   logLevel: "warning",
 })
 // @matinee/db finds its migrations at ../drizzle from its own file, which

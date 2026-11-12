@@ -5,6 +5,7 @@ import { db } from "../db"
 import { defineQueue, type Priority } from "../jobs/queue"
 import { log } from "../log"
 import { probeMissing } from "../media/probe"
+import { prepareMissingSubtitles } from "../media/subtitles"
 import { queueTrickplay } from "../media/trickplay"
 import { queueRefresh } from "../metadata/refresh"
 import {
@@ -273,7 +274,10 @@ export const scans = defineQueue<ScanRequest, void>({
  */
 function queueFileWork(libraryId: string): void {
   probeMissing({ libraryId })
-    .then(() => queueTrickplay(libraryId))
+    .then(async () => {
+      queueTrickplay(libraryId)
+      await prepareMissingSubtitles({ libraryId })
+    })
     .catch((cause: unknown) =>
       log.error(`Couldn't queue media probes for library ${libraryId}`, cause),
     )
