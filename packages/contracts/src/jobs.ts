@@ -15,6 +15,7 @@ export const JOB_QUEUE_IDS = [
   "trickplay",
   "artwork",
   "subtitles",
+  "subtitle-fonts",
   "avatars",
   "downloads",
   "download-copies",

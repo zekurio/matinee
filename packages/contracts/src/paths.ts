@@ -199,8 +199,18 @@ export function downloadSegmentPath(
  * for `burn-in` tracks, and when the server can't read or convert one.
  * Taking a track out of a large file can take the server minutes.
  */
-export function subtitlePath(itemId: string, trackId: string): string {
-  return `/api/media/${encodeURIComponent(itemId)}/subtitles/${encodeURIComponent(trackId)}`
+export function subtitlePath(
+  itemId: string,
+  trackId: string,
+  delivery?: "ass",
+): string {
+  const path = `/api/media/${encodeURIComponent(itemId)}/subtitles/${encodeURIComponent(trackId)}`
+  return delivery === "ass" ? `${path}?delivery=ass` : path
+}
+
+/** Font attachments for this item's ASS renderer, behind media access checks. */
+export function subtitleFontsPath(itemId: string): string {
+  return `/api/media/${encodeURIComponent(itemId)}/fonts`
 }
 
 /**

@@ -35,7 +35,8 @@ data class PlaybackSeekInput(
 object PlaybackSubtitleDelivery {
     const val WEBVTT = "webvtt"
     const val PGS = "pgs"
-    val all = listOf(WEBVTT, PGS)
+    const val ASS = "ass"
+    val all = listOf(WEBVTT, PGS, ASS)
 }
 
 object HdrFormat {
@@ -301,8 +302,9 @@ object SubtitleSource {
 object SubtitleDelivery {
     const val WEBVTT = "webvtt"
     const val PGS = "pgs"
+    const val ASS = "ass"
     const val BURN_IN = "burn-in"
-    val all = listOf(WEBVTT, PGS, BURN_IN)
+    val all = listOf(WEBVTT, PGS, ASS, BURN_IN)
 }
 
 @Serializable
@@ -1206,10 +1208,11 @@ object JobQueueId {
     const val TRICKPLAY = "trickplay"
     const val ARTWORK = "artwork"
     const val SUBTITLES = "subtitles"
+    const val SUBTITLE_FONTS = "subtitle-fonts"
     const val AVATARS = "avatars"
     const val DOWNLOADS = "downloads"
     const val DOWNLOAD_COPIES = "download-copies"
-    val all = listOf(LIBRARY_SCAN, MEDIA_PROBE, METADATA, THUMBNAILS, TRICKPLAY, ARTWORK, SUBTITLES, AVATARS, DOWNLOADS, DOWNLOAD_COPIES)
+    val all = listOf(LIBRARY_SCAN, MEDIA_PROBE, METADATA, THUMBNAILS, TRICKPLAY, ARTWORK, SUBTITLES, SUBTITLE_FONTS, AVATARS, DOWNLOADS, DOWNLOAD_COPIES)
 }
 
 @Serializable

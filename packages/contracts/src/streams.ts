@@ -167,9 +167,11 @@ export const SUBTITLE_SOURCES = ["sidecar", "embedded"] as const
 export const SubtitleSource = t.enum(SUBTITLE_SOURCES)
 export type SubtitleSource = t.infer<typeof SubtitleSource>
 
-export const SUBTITLE_DELIVERIES = ["webvtt", "pgs", "burn-in"] as const
+export const SUBTITLE_DELIVERIES = ["webvtt", "pgs", "ass", "burn-in"] as const
 /**
- * How a player shows a subtitle track. `webvtt`: `subtitlePath()` serves it
+ * How a player shows a subtitle track. `ass` is negotiated by playback.start
+ * only for devices advertising ASS support; the default route stays WebVTT.
+ * `webvtt`: `subtitlePath()` serves it
  * as WebVTT. `pgs`: `subtitlePath()` serves the PGS pictures as a `.sup`
  * file for the player to draw over the video; an encode can also burn them
  * in. `burn-in`: only an encode shows it, with the track id as `subtitle`

@@ -38,7 +38,7 @@ export const PlaybackDecoder = t.object({
 })
 export type PlaybackDecoder = t.infer<typeof PlaybackDecoder>
 
-export const PLAYBACK_SUBTITLE_DELIVERIES = ["webvtt", "pgs"] as const
+export const PLAYBACK_SUBTITLE_DELIVERIES = ["webvtt", "pgs", "ass"] as const
 /** A `SubtitleDelivery` a player can draw itself, from `subtitlePath()`. */
 export const PlaybackSubtitleDelivery = t.enum(PLAYBACK_SUBTITLE_DELIVERIES)
 export type PlaybackSubtitleDelivery = t.infer<typeof PlaybackSubtitleDelivery>
