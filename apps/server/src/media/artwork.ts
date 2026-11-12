@@ -150,9 +150,37 @@ export async function fetchImage(
   })
   if (!response.ok) throw new Error(`${url} answered ${response.status}`)
   const length = Number(response.headers.get("content-length") ?? 0)
-  if (length > MAX_BYTES) throw new Error(`${url} is too large`)
-  const bytes = new Uint8Array(await response.arrayBuffer())
-  if (bytes.byteLength > MAX_BYTES) throw new Error(`${url} is too large`)
+  if (length > MAX_BYTES) {
+    await response.body?.cancel()
+    throw new Error(`${url} is too large`)
+  }
+  // Content-Length is optional and may describe the compressed transfer,
+  // not the decoded body. Enforce the limit while reading too.
+  const chunks: Uint8Array[] = []
+  let received = 0
+  const reader = response.body?.getReader()
+  if (reader) {
+    try {
+      for (;;) {
+        const { done, value } = await reader.read()
+        if (done) break
+        received += value.byteLength
+        if (received > MAX_BYTES) {
+          await reader.cancel()
+          throw new Error(`${url} is too large`)
+        }
+        chunks.push(value)
+      }
+    } finally {
+      reader.releaseLock()
+    }
+  }
+  const bytes = new Uint8Array(received)
+  let offset = 0
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset)
+    offset += chunk.byteLength
+  }
   const format = sniffImage(bytes)
   if (!format) throw new Error(`${url} isn't a JPEG, PNG, or WebP image`)
   return { bytes, format }
