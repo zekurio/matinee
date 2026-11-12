@@ -29,6 +29,9 @@ export default {
   "jobs.queue.artwork.name": "Artwork",
   "jobs.queue.artwork.description":
     "Lädt Bilder vom Metadatenanbieter herunter, skaliert sie und liest ihre unscharfen Platzhalter aus.",
+  "jobs.queue.subtitle-fonts.name": "Untertitelschriften",
+  "jobs.queue.subtitle-fonts.description":
+    "Extrahiert eingebettete Schriftarten für formatierte Untertitel.",
   "jobs.queue.subtitles.name": "Untertitel",
   "jobs.queue.subtitles.description":
     "Wandelt Untertitel in WebVTT um und kopiert PGS-Untertitel aus Videos.",

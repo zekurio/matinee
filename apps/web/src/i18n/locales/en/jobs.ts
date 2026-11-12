@@ -31,6 +31,9 @@ export default defineMessages("jobs", {
   "jobs.queue.artwork.name": "Artwork",
   "jobs.queue.artwork.description":
     "Download images from the metadata provider, scale them, and read their blurred placeholders.",
+  "jobs.queue.subtitle-fonts.name": "Subtitle fonts",
+  "jobs.queue.subtitle-fonts.description":
+    "Extract font attachments for styled subtitles.",
   "jobs.queue.subtitles.name": "Subtitles",
   "jobs.queue.subtitles.description":
     "Convert subtitles to WebVTT, and copy PGS subtitles out of videos.",

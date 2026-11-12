@@ -88,6 +88,66 @@ function integer(id: number, value: number): Buffer {
   return encoded(id, bytes)
 }
 
+export async function matroskaFonts(path: string): Promise<Buffer[]> {
+  const file = await open(path, "r")
+  try {
+    const reader = new Reader(file, (await file.stat()).size)
+    const ebml = await reader.header(0)
+    if (ebml.id !== 0x1a45dfa3) return []
+    const segment = await reader.header(ebml.end)
+    if (segment.id !== 0x18538067) return []
+    const pending = [segment.start]
+    const visited = new Set<number>()
+    while (pending.length && visited.size < 32) {
+      const at = pending.pop()
+      if (at === undefined || visited.has(at)) continue
+      visited.add(at)
+      const seek = await reader.payload(at, 0x114d9b74)
+      for (const entry of children(seek)) {
+        if (entry.id !== 0x4dbb) continue
+        const values = fields(seek.subarray(entry.start, entry.end))
+        const id = uint(required(values, 0x53ab))
+        const offset = segment.start + uint(required(values, 0x53ac))
+        if (id === 0x114d9b74) pending.push(offset)
+        if (id !== 0x1941a469) continue
+        const attachments = await reader.payload(offset, id)
+        const fonts: Buffer[] = []
+        let total = 0
+        for (const child of children(attachments)) {
+          if (child.id !== 0x61a7) continue
+          const attachment = fields(
+            attachments.subarray(child.start, child.end),
+          )
+          const name = required(attachment, 0x466e).toString("utf8")
+          const mime = required(attachment, 0x4660).toString("utf8")
+          if (
+            !/\.(ttf|otf|woff2?)$/i.test(name) ||
+            !/^(font\/(ttf|otf|woff2?)|application\/(x-truetype-font|vnd.ms-opentype|font-sfnt|font-woff|x-font-ttf))$/i.test(
+              mime,
+            )
+          )
+            continue
+          const data = required(attachment, 0x465c)
+          total += data.length
+          if (
+            fonts.length >= 32 ||
+            data.length > 8 * 1024 * 1024 ||
+            total > 24 * 1024 * 1024
+          )
+            continue
+          fonts.push(data)
+        }
+        return fonts
+      }
+    }
+    return []
+  } catch {
+    return []
+  } finally {
+    await file.close()
+  }
+}
+
 class Reader {
   bytesRead = 0
   private file: FileHandle

@@ -152,7 +152,7 @@ export const startPlayback = authed.playback.start.handler(
       plan = snapPlayback(plan, input, keyframes)
     }
     if (plan.subtitle && plan.subtitleMode === "client")
-      prepareSubtitle(item, plan.subtitle.id)
+      prepareSubtitle(item, plan.subtitle.id, plan.subtitle.delivery === "ass")
     if (row?.kind === "show") {
       // ACCESS: Files share the visible item's title and library.
       const files = await db

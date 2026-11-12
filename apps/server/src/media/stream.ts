@@ -37,6 +37,7 @@ import { encodeSpec, type HlsRequest } from "./hls-encode"
 import { ifNoneMatchSatisfied } from "./http-conditional"
 import { mimeType } from "./mime"
 import { mayStreamOriginal, openPlayback } from "./playback"
+import { itemFonts } from "./subtitle-fonts"
 import { burnInSource, openSubtitle } from "./subtitles"
 import { thumbnailFor } from "./thumbnails"
 import {
@@ -379,6 +380,37 @@ streamRoutes.get("/:id/hls/:key/:name", async (c) => {
   })
 })
 
+streamRoutes.get("/:id/fonts/:index?", async (c) => {
+  const viewer = await readViewer(c)
+  if (!viewer) return c.body(null, 401)
+  const id = c.req.param("id")
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return c.body(null, 404)
+  const item = await itemFor(viewer, id)
+  if (!item) return c.body(null, 404)
+  const result = await itemFonts(item)
+  const headers = {
+    "Cache-Control": "private, no-cache",
+    ETag: `"${result.key}"`,
+  }
+  if (ifNoneMatchSatisfied(c.req.header("if-none-match"), headers.ETag))
+    return c.body(null, 304, headers)
+  const index = c.req.param("index")
+  if (index === undefined)
+    return c.json(
+      result.fonts.map((_, i) => `/api/media/${id}/fonts/${i}`),
+      200,
+      headers,
+    )
+  if (!/^\d{1,2}$/.test(index)) return c.body(null, 404)
+  const font = result.fonts[Number(index)]
+  return font
+    ? c.body(Uint8Array.from(font), 200, {
+        ...headers,
+        "Content-Type": "application/octet-stream",
+      })
+    : c.body(null, 404)
+})
+
 streamRoutes.get("/:id/subtitles/:trackId", async (c) => {
   const viewer = await readViewer(c)
   if (!viewer) return c.body(null, 401)
@@ -387,7 +419,11 @@ streamRoutes.get("/:id/subtitles/:trackId", async (c) => {
 
   const item = await itemFor(viewer, id)
   if (!item) return c.body(null, 404)
-  const track = await openSubtitle(item, c.req.param("trackId"))
+  const track = await openSubtitle(
+    item,
+    c.req.param("trackId"),
+    c.req.query("delivery") === "ass",
+  )
   if (!track) return c.body(null, 404)
   // The URL stays the same when the file changes, so check every time.
   const headers = {
@@ -410,7 +446,10 @@ streamRoutes.get("/:id/subtitles/:trackId", async (c) => {
   return c.body(fileBody(content.path), 200, {
     ...headers,
     // PGS has no media type of its own.
-    "Content-Type": "application/octet-stream",
+    "Content-Type":
+      content.kind === "ass"
+        ? "text/x-ssa; charset=utf-8"
+        : "application/octet-stream",
     "Content-Length": String(info.size),
   })
 })

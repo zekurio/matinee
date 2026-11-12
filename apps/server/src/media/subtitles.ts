@@ -61,10 +61,11 @@ const VERSION = 2
 const dir = join(env.dataDir, "subtitles")
 
 /** What the cache holds: WebVTT, or PGS copied out of a video. */
-type Output = "vtt" | "sup"
+type Output = "vtt" | "sup" | "ass"
 
 const OUTPUT_ARGS = {
   vtt: ["-c:s", "webvtt", "-f", "webvtt"],
+  ass: ["-c:s", "copy", "-f", "ass"],
   sup: ["-c:s", "copy", "-f", "sup"],
 } satisfies Record<Output, string[]>
 
@@ -271,6 +272,7 @@ async function converted(
 /** A track's bytes, as the subtitle route sends them. */
 type SubtitleContent =
   | { kind: "webvtt"; text: string }
+  | { kind: "ass"; path: string }
   | { kind: "pgs"; path: string }
 
 async function webvtt(file: string | null): Promise<SubtitleContent | null> {
@@ -347,6 +349,7 @@ async function embeddedStream(
 export async function openSubtitle(
   item: MediaItemRow,
   trackId: string,
+  ass = false,
 ): Promise<SubtitleBody | null> {
   const match = STREAM_ID.exec(trackId)
   if (match) {
@@ -358,6 +361,15 @@ export async function openSubtitle(
     const name = `${item.id}-${index}`
     const input = ["-i", item.path, "-map", `0:${index}`]
     const embedded = { path: item.path, index }
+    if (ass && (stream.codec === "ass" || stream.codec === "ssa")) {
+      return {
+        etag: etagFor(`${name}-ass`, info),
+        read: async () => {
+          const path = await converted(name, info, input, "ass", embedded)
+          return path ? { kind: "ass", path } : null
+        },
+      }
+    }
     if (delivery === "webvtt") {
       return {
         etag: etagFor(name, info),
@@ -384,6 +396,20 @@ export async function openSubtitle(
   if (delivery === "burn-in") return null
   const info = await stat(row.path).catch(() => null)
   if (!info?.isFile()) return null
+  if (ass && (row.format === "ass" || row.format === "ssa")) {
+    return {
+      etag: etagFor(`${row.id}-ass`, info),
+      read: async () => {
+        const path = await converted(
+          `file-${row.id}`,
+          info,
+          ["-i", row.path, "-map", "0:s:0"],
+          "ass",
+        )
+        return path ? { kind: "ass", path } : null
+      },
+    }
+  }
   return {
     etag: etagFor(row.id, info),
     read:
@@ -398,8 +424,12 @@ export async function openSubtitle(
  * overlaps with the start of playback. The subtitle route joins the same
  * job by its key, or finds the file it left.
  */
-export function prepareSubtitle(item: MediaItemRow, trackId: string): void {
-  openSubtitle(item, trackId)
+export function prepareSubtitle(
+  item: MediaItemRow,
+  trackId: string,
+  ass = false,
+): void {
+  openSubtitle(item, trackId, ass)
     .then((body) => body?.read())
     .catch((cause: unknown) => {
       log.warn(`Couldn't prepare subtitle ${trackId} of ${item.path}`, cause)

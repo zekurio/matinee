@@ -388,7 +388,20 @@ The player shows subtitle files beside a video and subtitle streams inside it.
   ordinary ffmpeg path. That can read the whole file and take minutes.
   MP4/MOV and sidecar conversion still use their existing paths. Nothing
   is extracted at library scan time or for unselected tracks.
-- Browsers get WebVTT for text. ASS and SSA lose their styling on the way.
+- Browsers advertising ASS support get ASS/SSA scripts with their styles,
+  positioning and timing intact, rendered locally by JASSUB and libass. The
+  renderer, WASM and bundled Liberation Sans fallback font load only when
+  an ASS track is shown. Rendering is capped at 1080 pixels high. Scripts
+  render as authored; WebVTT cue styling and lifting above the controls do
+  not apply. If loading fails, the player asks for WebVTT for the same track.
+  Devices without ASS support still get WebVTT, including for ASS/SSA.
+- Matroska font attachments are read through SeekHead without scanning video
+  blocks, then cached beside subtitles under a key containing the item's id,
+  modification time and size. Authenticated, library-filtered font routes
+  list and serve only font MIME types with font extensions. Limits are 32
+  fonts, 8 MiB per font and 24 MiB total; attachment metadata is bounded to
+  32 MiB. Files without a usable attachment index use the bundled fallback.
+  The renderer never looks up fonts on the internet.
 - PGS goes to the browser as it is, a `.sup` file, and the player draws it
   over the video with [libpgs](https://github.com/Arcus92/libpgs-js). It
   works with every source, the file as it is included.
@@ -861,6 +874,6 @@ automatically.
 - Copied streams in Safari. A stream with its video copied is fragmented
   MP4 without byte ranges, which Safari won't play. Encodes are HLS and do.
 - Surround in streams. Converted audio is always stereo.
-- Text subtitle burn-in, so ASS and SSA play without their styling.
+- Text subtitle burn-in for devices without a local ASS renderer.
 - Metadata from NFO files and local artwork, absolute episode numbering for
   anime, and provider keys set in admin settings instead of the environment.

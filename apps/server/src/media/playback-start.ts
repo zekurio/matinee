@@ -210,6 +210,17 @@ function playbackDecision(
   input: PlaybackStartInput,
   facts: StartFacts,
 ): PlaybackDecision | null {
+  facts = {
+    ...facts,
+    subtitles: facts.subtitles.map((track) =>
+      (track.format === "ASS" || track.format === "SSA") &&
+      (input.device.subtitles.includes("ass") ||
+        (track.source === "sidecar" &&
+          input.device.sidecarSubtitles.includes("ass")))
+        ? { ...track, delivery: "ass" }
+        : track,
+    ),
+  }
   const audio = playbackAudio(input, facts)
   const file = playbackFile(input, facts, audio.audio)
   const subtitle = playbackSubtitle(input, facts, audio.audio, file)
@@ -487,7 +498,11 @@ function playbackAnswer(
     subtitleMode,
     subtitleUrl:
       subtitle && subtitleMode === "client"
-        ? subtitlePath(input.itemId, subtitle.id)
+        ? subtitlePath(
+            input.itemId,
+            subtitle.id,
+            subtitle.delivery === "ass" ? "ass" : undefined,
+          )
         : null,
     audioTracks: facts.audio,
     subtitleTracks: facts.subtitles,
