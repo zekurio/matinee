@@ -1,4 +1,10 @@
-import type { MediaItem, Season, Title, TitleSummary } from "@matinee/contracts"
+import type {
+  MediaItem,
+  MetadataProvider,
+  Season,
+  Title,
+  TitleSummary,
+} from "@matinee/contracts"
 import { Button } from "@matinee/ui/components/button"
 import {
   DropdownMenu,
@@ -18,9 +24,15 @@ import {
   RotateCcwIcon,
   SearchIcon,
 } from "lucide-react"
-import { type ReactElement, type ReactNode, useState } from "react"
+import {
+  type ComponentProps,
+  type ReactElement,
+  type ReactNode,
+  useState,
+} from "react"
 
 import { cardIconButton } from "@/components/card-actions"
+import { useDeferredMenu } from "@/components/deferred-menu"
 import {
   DownloadDialog,
   DownloadFilesDialog,
@@ -192,12 +204,15 @@ const rowButton =
 
 /**
  * The trigger's button, for `render`. An element, not a component: the
- * trigger hands it the icon, its handlers, and its state as props.
+ * trigger hands it the icon, its handlers, and its state as props. `props`
+ * go on it as well, as the bare button's before the menu mounts.
  */
 function triggerButton(
   look: MenuLook,
   label: string,
   className: string | undefined,
+  props?: ComponentProps<typeof Button>,
+  icon?: ReactNode,
 ): ReactElement {
   switch (look) {
     case "card":
@@ -206,8 +221,11 @@ function triggerButton(
           variant="ghost"
           size="icon"
           aria-label={label}
+          {...props}
           className={cn(cardIconButton, className)}
-        />
+        >
+          {icon}
+        </Button>
       )
     case "page":
       return (
@@ -215,8 +233,11 @@ function triggerButton(
           variant="secondary"
           size="icon-lg"
           aria-label={label}
+          {...props}
           className={cn(pageButton, className)}
-        />
+        >
+          {icon}
+        </Button>
       )
     case "row":
       return (
@@ -224,15 +245,19 @@ function triggerButton(
           variant="ghost"
           size="icon-sm"
           aria-label={label}
+          {...props}
           className={cn(rowButton, className)}
-        />
+        >
+          {icon}
+        </Button>
       )
   }
 }
 
 /**
  * The menu of a movie, show, season, or file. Items in `children` come
- * first, as a folder row's watched and favorite.
+ * first, as a folder row's watched and favorite. The menu and its dialogs
+ * mount once someone reaches for its button.
  */
 export function ActionsMenu({
   target,
@@ -247,17 +272,100 @@ export function ActionsMenu({
   children?: ReactNode
 }) {
   const { user } = authed.useRouteContext()
-  const navigate = useNavigate()
   const admin = user.role === "admin"
   const scope = scopeOf(target)
   const restart = restartable(target)
   const owner = scope.title
   const provider = useLibraryProvider(scope.libraryId, admin && owner !== null)
-  const queryClient = useQueryClient()
   const downloads = useDownloadsAllowed()
-  // Kept after closing, so the dialogs can animate out.
+
+  // Set when the user can fix the match and refresh.
+  const adminProvider = (admin && owner ? provider : null) ?? null
+  const images = admin && owner ? scope.images : null
+  // An account that may not download, on a card with nothing else to do,
+  // gets no menu.
+  if (!restart && !children && !downloads && !adminProvider && !images) {
+    return null
+  }
+  return (
+    <DeferredActionsMenu
+      scope={scope}
+      restart={restart}
+      adminProvider={adminProvider}
+      images={images}
+      downloads={downloads}
+      look={look}
+      className={className}
+    >
+      {children}
+    </DeferredActionsMenu>
+  )
+}
+
+/** What {@link ActionsMenu} decided the menu holds. */
+type MenuPlan = {
+  scope: Scope
+  restart: MediaItem | null
+  adminProvider: MetadataProvider | null
+  images: ImageOwner | null
+  downloads: boolean
+  look: MenuLook
+  children?: ReactNode
+}
+
+/**
+ * The trigger alone until someone reaches for it, then the menu. Apart
+ * from {@link ActionsMenu}, so a menu that goes away and comes back starts
+ * bare again.
+ */
+function DeferredActionsMenu({
+  className,
+  ...plan
+}: MenuPlan & { className: string | undefined }) {
+  const deferred = useDeferredMenu()
+  const label = tr("media.moreActions", { name: plan.scope.name })
+  const icon = (
+    <EllipsisIcon className={plan.look === "card" ? "size-5" : undefined} />
+  )
+  if (!deferred.mounted) {
+    return triggerButton(plan.look, label, className, deferred.bare, icon)
+  }
+  return (
+    <MountedActionsMenu
+      {...plan}
+      trigger={triggerButton(plan.look, label, className, {
+        ref: deferred.focusRef,
+      })}
+      icon={icon}
+      defaultOpen={deferred.defaultOpen}
+    />
+  )
+}
+
+/** {@link ActionsMenu} once it mounts, with what it decided. */
+function MountedActionsMenu({
+  scope,
+  restart,
+  adminProvider,
+  images,
+  downloads,
+  look,
+  children,
+  trigger,
+  icon,
+  defaultOpen,
+}: MenuPlan & {
+  trigger: ReactElement
+  icon: ReactNode
+  defaultOpen: boolean
+}) {
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const owner = scope.title
+  // Kept after closing, so the dialogs can animate out. Null until one
+  // first opens, so none mounts before then.
   const [file, setFile] = useState<MediaItem | null>(null)
-  const [downloading, setDownloading] = useState(false)
+  const [downloading, setDownloading] = useState<boolean | null>(null)
   const [full, setFull] = useState<Title | null>(null)
   const [identifying, setIdentifying] = useState(false)
   const [editingImages, setEditingImages] = useState(false)
@@ -307,7 +415,7 @@ export function ActionsMenu({
       await invalidateTitleData(queryClient)
       toast.success(tr("title.refresh.done", { name: title.name }), {
         description: tr("title.refresh.doneDescription", {
-          provider: provider?.name ?? "",
+          provider: adminProvider?.name ?? "",
         }),
       })
     },
@@ -317,21 +425,12 @@ export function ActionsMenu({
       }),
   })
 
-  // Set when the user can fix the match and refresh.
-  const adminProvider = admin && owner ? provider : null
-  const images = admin && owner ? scope.images : null
   const adminItems = Boolean(adminProvider) || images !== null
-  const label = tr("media.moreActions", { name: scope.name })
   const playItems = Boolean(restart || children)
-  // An account that may not download, on a card with nothing else to do,
-  // gets no menu.
-  if (!playItems && !downloads && !adminItems) return null
   return (
     <>
-      <DropdownMenu>
-        <DropdownMenuTrigger render={triggerButton(look, label, className)}>
-          <EllipsisIcon className={look === "card" ? "size-5" : undefined} />
-        </DropdownMenuTrigger>
+      <DropdownMenu defaultOpen={defaultOpen}>
+        <DropdownMenuTrigger render={trigger}>{icon}</DropdownMenuTrigger>
         <DropdownMenuContent
           align={look === "page" ? "start" : "end"}
           sideOffset={look === "page" ? 6 : 4}
@@ -385,24 +484,25 @@ export function ActionsMenu({
           )}
         </DropdownMenuContent>
       </DropdownMenu>
-      {scope.download.kind === "files" ? (
-        <DownloadFilesDialog
-          title={scope.download.title}
-          season={scope.download.season}
-          name={scope.name}
-          open={downloading}
-          onOpenChange={setDownloading}
-        />
-      ) : (
-        file && (
-          <DownloadDialog
-            item={file}
+      {downloading !== null &&
+        (scope.download.kind === "files" ? (
+          <DownloadFilesDialog
+            title={scope.download.title}
+            season={scope.download.season}
             name={scope.name}
             open={downloading}
             onOpenChange={setDownloading}
           />
-        )
-      )}
+        ) : (
+          file && (
+            <DownloadDialog
+              item={file}
+              name={scope.name}
+              open={downloading}
+              onOpenChange={setDownloading}
+            />
+          )
+        ))}
       {adminProvider && full && (
         <IdentifyDialog
           title={full}
@@ -442,7 +542,8 @@ export function ItemMenu({
 }) {
   const watched = useItemWatched(item)
   const favorite = useItemFavorite(item)
-  const [picking, setPicking] = useState(false)
+  // Null until "Other date" is first picked, so the dialog mounts then.
+  const [picking, setPicking] = useState<boolean | null>(null)
   return (
     <>
       <ActionsMenu
@@ -460,11 +561,13 @@ export function ItemMenu({
         <DropdownMenuSeparator />
         <FavoriteMenuItem favorite={favorite} />
       </ActionsMenu>
-      <WatchedDateDialog
-        open={picking}
-        onOpenChange={setPicking}
-        onPick={(watchedAt) => watched.mark(true, watchedAt)}
-      />
+      {picking !== null && (
+        <WatchedDateDialog
+          open={picking}
+          onOpenChange={setPicking}
+          onPick={(watchedAt) => watched.mark(true, watchedAt)}
+        />
+      )}
     </>
   )
 }

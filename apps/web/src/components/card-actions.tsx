@@ -9,6 +9,7 @@ import { cn } from "@matinee/ui/lib/utils"
 import { CheckIcon } from "lucide-react"
 import { type ReactNode, useState } from "react"
 
+import { useDeferredMenu } from "@/components/deferred-menu"
 import { FavoriteHeart } from "@/components/favorite-button"
 import { WatchedDateDialog } from "@/components/watched-date-dialog"
 import { WatchedAtItems } from "@/components/watched-menu"
@@ -49,7 +50,7 @@ export function CardScrim() {
  * on it rather than on the card.
  *
  * The check asks when, as the menus do. Once watched, it marks unwatched
- * at once.
+ * at once. The menus and the date dialog mount when first needed.
  */
 export function CardActions({
   name,
@@ -69,7 +70,8 @@ export function CardActions({
   touch?: boolean
   className?: string
 }) {
-  const [picking, setPicking] = useState(false)
+  // Null until "Other date" is first picked, so the dialog mounts then.
+  const [picking, setPicking] = useState<boolean | null>(null)
   return (
     <div
       className={cn(
@@ -92,29 +94,11 @@ export function CardActions({
           <CheckIcon className="size-6" strokeWidth={3} />
         </Button>
       ) : (
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            render={
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label={tr("media.markNamedWatched", { name })}
-                title={tr("media.markWatched")}
-                className={cardIconButton}
-              />
-            }
-          >
-            <CheckIcon className="size-6" />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" sideOffset={4} className="min-w-44">
-            <DropdownMenuGroup aria-label={tr("media.markWatched")}>
-              <WatchedAtItems
-                onSelect={(watchedAt) => watched.mark(true, watchedAt)}
-                onPickDate={() => setPicking(true)}
-              />
-            </DropdownMenuGroup>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <WatchedMenu
+          name={name}
+          watched={watched}
+          onPickDate={() => setPicking(true)}
+        />
       )}
       <Button
         variant="ghost"
@@ -133,11 +117,60 @@ export function CardActions({
         <FavoriteHeart on={favorite.on} className="size-5" />
       </Button>
       {menu}
-      <WatchedDateDialog
-        open={picking}
-        onOpenChange={setPicking}
-        onPick={(watchedAt) => watched.mark(true, watchedAt)}
-      />
+      {picking !== null && (
+        <WatchedDateDialog
+          open={picking}
+          onOpenChange={setPicking}
+          onPick={(watchedAt) => watched.mark(true, watchedAt)}
+        />
+      )}
     </div>
+  )
+}
+
+/**
+ * The unwatched check, which asks when. It mounts its menu when reached,
+ * and from scratch each time the card is unwatched again.
+ */
+function WatchedMenu({
+  name,
+  watched,
+  onPickDate,
+}: {
+  name: string
+  watched: WatchedState
+  onPickDate: () => void
+}) {
+  const deferred = useDeferredMenu()
+  const button = {
+    variant: "ghost",
+    size: "icon",
+    "aria-label": tr("media.markNamedWatched", { name }),
+    title: tr("media.markWatched"),
+    className: cardIconButton,
+  } as const
+  if (!deferred.mounted) {
+    return (
+      <Button {...button} {...deferred.bare}>
+        <CheckIcon className="size-6" />
+      </Button>
+    )
+  }
+  return (
+    <DropdownMenu defaultOpen={deferred.defaultOpen}>
+      <DropdownMenuTrigger
+        render={<Button {...button} ref={deferred.focusRef} />}
+      >
+        <CheckIcon className="size-6" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" sideOffset={4} className="min-w-44">
+        <DropdownMenuGroup aria-label={tr("media.markWatched")}>
+          <WatchedAtItems
+            onSelect={(watchedAt) => watched.mark(true, watchedAt)}
+            onPickDate={onPickDate}
+          />
+        </DropdownMenuGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }
