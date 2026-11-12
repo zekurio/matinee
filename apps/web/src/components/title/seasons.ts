@@ -43,3 +43,13 @@ export function seasonNext(
     items[0]
   )
 }
+
+/**
+ * The season of a show that has just one, so no specials either. Its
+ * episodes go on the show's own page.
+ */
+export function onlySeason(title: Title): Season | undefined {
+  return title.kind === "show" && title.seasons.length === 1
+    ? title.seasons[0]
+    : undefined
+}

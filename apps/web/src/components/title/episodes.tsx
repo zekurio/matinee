@@ -27,9 +27,10 @@ import {
   progressRatio,
   timeLeft,
 } from "@/lib/media"
-import { errorMessage, orpc } from "@/lib/rpc"
+import { errorMessage } from "@/lib/rpc"
 
 import { seasonNext } from "./seasons"
+import { seasonItemsOptions } from "./title-queries"
 
 /** A season's episodes on the show's own page, for a show with one season. */
 export function ShowEpisodes({
@@ -39,11 +40,7 @@ export function ShowEpisodes({
   title: Title
   season: Season
 }) {
-  const items = useQuery(
-    orpc.titles.items.queryOptions({
-      input: { id: title.id, season: season.number },
-    }),
-  )
+  const items = useQuery(seasonItemsOptions(title.id, season.number))
   return (
     <SeasonEpisodes
       title={title}

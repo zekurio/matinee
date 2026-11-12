@@ -8,20 +8,20 @@ import { pageBleed, pageColumn } from "@/components/app-shell"
 import { CastRail } from "@/components/credits"
 import { useDocumentTitle } from "@/components/page-header"
 import { tr } from "@/i18n"
-import { errorMessage, orpc } from "@/lib/rpc"
+import { errorMessage } from "@/lib/rpc"
 
 import { ShowEpisodes } from "./episodes"
 import { NextUp } from "./next-up"
+import { onlySeason } from "./seasons"
 import { SeasonsRail } from "./seasons-rail"
 import { TitleHeader } from "./title-header"
+import { titleOptions } from "./title-queries"
 
 const route = getRouteApi("/_authed/_shell/titles/$titleId")
 
 export function TitlePage() {
   const { titleId } = route.useParams()
-  const title = useQuery(
-    orpc.titles.get.queryOptions({ input: { id: titleId } }),
-  )
+  const title = useQuery(titleOptions(titleId))
 
   useDocumentTitle(title.data?.name)
 
@@ -47,9 +47,7 @@ export function TitlePage() {
       </div>
     )
   }
-  // One season, so no specials either: its episodes go right here.
-  const only =
-    title.data.seasons.length === 1 ? title.data.seasons[0] : undefined
+  const only = onlySeason(title.data)
   return (
     <div className="flex flex-col gap-6 sm:gap-8">
       <TitleHeader title={title.data} />
