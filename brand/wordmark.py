@@ -21,6 +21,7 @@ from fontTools.varLib.instancer import instantiateVariableFont
 
 BRAND = Path(__file__).resolve().parent
 WEB = BRAND.parent / "apps" / "web" / "src" / "components"
+ANDROID = BRAND.parent / "apps" / "android" / "app" / "src" / "main" / "res" / "drawable"
 
 # Unbounded (SIL OFL 1.1), pinned to a commit of google/fonts. A logo made
 # of its outlines isn't the font software, so the license asks nothing of
@@ -73,9 +74,10 @@ def load_font() -> TTFont:
     return instantiateVariableFont(TTFont(path), {"wght": WEIGHT})
 
 
-def draw_word() -> tuple[str, float, float]:
-    """The outlines of the word, with its width and height. The word starts
-    at x 0 and stands on its baseline at y = height."""
+def draw_word() -> tuple[str, float, float, float]:
+    """The outlines of the word, with its width, its height, and how far its
+    round letters dip below the baseline. The word starts at x 0 and stands
+    on its baseline at y = height."""
     font = load_font()
     data = io.BytesIO()
     font.save(data)
@@ -98,13 +100,13 @@ def draw_word() -> tuple[str, float, float]:
     bounds = BoundsPen(glyphs)
     for name, gx in placed:
         glyphs[name].draw(TransformPen(bounds, (1, 0, 0, -1, gx, 0)))
-    left, top, right, _ = bounds.bounds
+    left, top, right, bottom = bounds.bounds
 
     pen = SVGPathPen(glyphs, ntos=number)
     for name, gx in placed:
         transform = (SCALE, 0, 0, -SCALE, (gx - left) * SCALE, -top * SCALE)
         glyphs[name].draw(TransformPen(pen, transform))
-    return pen.getCommands(), (right - left) * SCALE, -top * SCALE
+    return pen.getCommands(), (right - left) * SCALE, -top * SCALE, max(bottom, 0) * SCALE
 
 
 def gradient(colors: dict[str, str] | None, id: str) -> str:
@@ -165,13 +167,64 @@ def svg(view: tuple[float, float, float, float], body: str, comment: str, size: 
     )
 
 
+def android_logo(word: str, width: float, height: float, depth: float, colors: dict[str, str]) -> str:
+    """The logo as an Android vector drawable, 24 dp tall at the word's
+    height. The viewport reaches down to the round letters' overshoot, which
+    a vector drawable would otherwise clip."""
+    x0, y0, x1, y1 = MARK_BOX
+    scale = MARK_HEIGHT * height / (y1 - y0)
+    _, word_x, total = placement(width, height)
+    tall = height + depth
+    dp = 24 / height
+
+    def argb(color: str) -> str:
+        return "#FF" + color[1:].upper()
+
+    stops = "".join(
+        f'\n                    <item android:offset="{offset}" android:color="{argb(colors[name])}" />'
+        for offset, name in (("0", "sun"), ("0.5", "dusk"), ("1", "horizon"))
+    )
+    return f"""<?xml version="1.0" encoding="utf-8"?>
+<!-- The logo, for {"dark" if colors is DARK else "light"} backgrounds. Written by brand/wordmark.py. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="{number(total * dp)}dp"
+    android:height="{number(tall * dp)}dp"
+    android:viewportWidth="{number(total)}"
+    android:viewportHeight="{number(tall)}">
+    <group
+        android:translateX="{number(-x0 * scale)}"
+        android:translateY="{number(height - y1 * scale)}"
+        android:scaleX="{scale:.4f}"
+        android:scaleY="{scale:.4f}">
+        <path android:pathData="{SUNSET}">
+            <aapt:attr name="android:fillColor">
+                <gradient
+                    android:type="linear"
+                    android:startX="0"
+                    android:startY="{number(y0)}"
+                    android:endX="0"
+                    android:endY="{number(y1)}">{stops}
+                </gradient>
+            </aapt:attr>
+        </path>
+    </group>
+    <group android:translateX="{number(word_x)}">
+        <path
+            android:fillColor="{argb(colors["ink"])}"
+            android:pathData="{word}" />
+    </group>
+</vector>
+"""
+
+
 def write(path: Path, text: str) -> None:
     path.write_text(text)
     print(f"wrote {path.relative_to(BRAND.parent)}")
 
 
 def main() -> None:
-    word, width, height = draw_word()
+    word, width, height, depth = draw_word()
     pad = height * 0.08
 
     write(
@@ -237,6 +290,10 @@ def main() -> None:
         f'  path: "{word}",\n'
         "}\n",
     )
+
+    # The Android app picks one by its theme, as it does logo_mark.xml.
+    write(ANDROID / "logo.xml", android_logo(word, width, height, depth, LIGHT))
+    write(ANDROID / "logo_dark.xml", android_logo(word, width, height, depth, DARK))
 
 
 if __name__ == "__main__":

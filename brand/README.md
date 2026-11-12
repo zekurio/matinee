@@ -27,13 +27,14 @@ with a gap of 30% of its width.
 | `ios/AppIcon.appiconset` | Drop into an Xcode asset catalog. One 1024 image per appearance.                               |
 | `android/res`            | Android adaptive icon and themed layer, used directly by the app's Gradle resource source set. |
 | `android/play-store.png` | The 512 icon for the Play Console listing.                                                     |
-| `wordmark.py`            | Draws the wordmark and writes the wordmark and logo files.                                     |
+| `wordmark.py`            | Draws the wordmark and writes the wordmark and logo files, the web's and Android's included.   |
 | `render.sh`              | Runs `wordmark.py`, then renders every PNG here and the web app's icons from the SVGs.         |
 
 The web app serves copies, `apps/web/public/favicon.svg` and
 `apple-touch-icon.png`. `apps/web/src/components/brand.tsx` draws the mark
 inline from the same path, and the logo from `logo.gen.ts`, which
-`wordmark.py` writes.
+`wordmark.py` writes. It also writes the Android app's logo drawables,
+`logo.xml` and `logo_dark.xml` in `apps/android/app/src/main/res/drawable`.
 
 ## Colors
 

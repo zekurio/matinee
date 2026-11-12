@@ -22,7 +22,9 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
@@ -186,6 +188,18 @@ fun LucideIcon(
 fun LogoMark(modifier: Modifier = Modifier) {
     val mark = if (Palette.isDark) R.drawable.logo_mark_dark else R.drawable.logo_mark
     Image(painterResource(mark), contentDescription = null, modifier = modifier)
+}
+
+/**
+ * The mark with the wordmark beside it, from brand/wordmark.py. [height] is
+ * the word's, which the mark matches; the round letters dip a little below.
+ */
+@Composable
+fun Logo(modifier: Modifier = Modifier, height: Dp = 24.dp) {
+    val logo = painterResource(if (Palette.isDark) R.drawable.logo_dark else R.drawable.logo)
+    // The drawable is 24 dp to the baseline, so scale its own size to [height].
+    val size = with(LocalDensity.current) { logo.intrinsicSize.toDpSize() } * (height / 24.dp)
+    Image(logo, contentDescription = stringResource(R.string.app_name), modifier = modifier.size(size))
 }
 
 /** Content color for what sits on [background]. */
