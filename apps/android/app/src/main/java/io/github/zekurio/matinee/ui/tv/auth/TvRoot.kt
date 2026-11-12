@@ -34,6 +34,7 @@ import io.github.zekurio.matinee.auth.Unreachability
 import io.github.zekurio.matinee.ui.Motion
 import io.github.zekurio.matinee.ui.components.LogoMark
 import io.github.zekurio.matinee.ui.components.Lucide
+import io.github.zekurio.matinee.ui.signin.rememberLocalNetworkAccess
 import io.github.zekurio.matinee.ui.signin.unreachableMessage
 import io.github.zekurio.matinee.ui.theme.Palette
 import io.github.zekurio.matinee.ui.tv.TvListItem
@@ -48,6 +49,8 @@ import io.github.zekurio.matinee.ui.tv.TvType
  */
 @Composable
 fun TvRoot(session: Session, state: AuthState) {
+    // A saved LAN server is unreachable without local network access, which Settings can take back.
+    val withLocalNetwork = rememberLocalNetworkAccess()
     AnimatedContent(
         state,
         Modifier.fillMaxSize().background(Palette.Background),
@@ -71,7 +74,7 @@ fun TvRoot(session: Session, state: AuthState) {
         when (current) {
             AuthState.NoServer -> TvConnectScreen(session)
             is AuthState.Connecting -> TvConnecting(current.server)
-            is AuthState.Unreachable -> TvUnreachableScreen(current.server, current.reason, current.retrying, session::start, session::forgetServer)
+            is AuthState.Unreachable -> TvUnreachableScreen(current.server, current.reason, current.retrying, { withLocalNetwork(session::start) }, session::forgetServer)
             is AuthState.SignedOut -> TvSignInScreen(session, current)
             // A new account starts the screens, and what they keep, afresh.
             is AuthState.SignedIn -> key(current.user.id, current.server) { TvSignedInApp(session, current.user) }

@@ -20,6 +20,7 @@
     <string name="connect_not_matinee">%1$s doesn\'t look like a Matinee server.</string>
     <string name="connect_failed">Couldn\'t reach %1$s.</string>
     <string name="connect_empty">Enter the address of your Matinee server.</string>
+    <string name="connect_local_network">If the server is on your local network, allow Matinee to find and connect to local devices in the app\'s settings.</string>
 
     <!-- The saved server didn't answer -->
     <string name="unreachable_title">Can\'t reach your server</string>

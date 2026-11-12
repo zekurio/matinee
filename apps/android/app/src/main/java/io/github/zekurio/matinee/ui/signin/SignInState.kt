@@ -19,6 +19,7 @@ import io.github.zekurio.matinee.api.DeviceCode
 import io.github.zekurio.matinee.api.DeviceSignIn
 import io.github.zekurio.matinee.auth.Session
 import io.github.zekurio.matinee.auth.Unreachability
+import io.github.zekurio.matinee.auth.localNetworkPermission
 import io.github.zekurio.matinee.ui.describeFailure
 import java.io.IOException
 import kotlinx.coroutines.CoroutineScope
@@ -29,20 +30,34 @@ import kotlinx.coroutines.launch
 
 /** Connecting to the server the person typed or picked: whether it's under way, and what went wrong. */
 @Stable
-class ServerConnect internal constructor(private val session: Session, private val scope: CoroutineScope) {
+class ServerConnect internal constructor(
+    private val session: Session,
+    private val scope: CoroutineScope,
+    private val withLocalNetwork: (() -> Unit) -> Unit,
+    private val localNetworkHint: () -> String?,
+) {
     var busy by mutableStateOf(false)
         private set
     var error by mutableStateOf<String?>(null)
         private set
 
-    /** Try [address], unless a try is under way. Once it answers, the session moves on to signing in. */
+    /**
+     * Try [address], unless a try is under way, asking for local network
+     * access first where Android needs it. Once it answers, the session
+     * moves on to signing in.
+     */
     fun connect(address: String) {
         if (busy) return
         busy = true
         error = null
-        scope.launch {
-            error = session.connect(address)
-            busy = false
+        withLocalNetwork {
+            scope.launch {
+                // Without the access a LAN server only says it can't be reached.
+                error = session.connect(address)?.let { failure ->
+                    localNetworkHint()?.let { "$failure\n$it" } ?: failure
+                }
+                busy = false
+            }
         }
     }
 
@@ -54,7 +69,13 @@ class ServerConnect internal constructor(private val session: Session, private v
 @Composable
 fun rememberServerConnect(session: Session): ServerConnect {
     val scope = rememberCoroutineScope()
-    return remember(session) { ServerConnect(session, scope) }
+    val context = LocalContext.current
+    val withLocalNetwork = rememberLocalNetworkAccess()
+    return remember(session, withLocalNetwork) {
+        ServerConnect(session, scope, withLocalNetwork) {
+            localNetworkPermission(context)?.let { context.getString(R.string.connect_local_network) }
+        }
+    }
 }
 
 /**

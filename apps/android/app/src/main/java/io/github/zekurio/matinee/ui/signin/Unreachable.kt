@@ -34,6 +34,9 @@ fun UnreachableScreen(session: Session, state: AuthState.Unreachable) {
     val downloads by LocalContext.current.app.downloads.store.items.collectAsState()
     val canWatchOffline = downloads.isNotEmpty() && session.lastUser != null
     val noNetwork = state.reason == Unreachability.NoNetwork
+    // A saved LAN server is unreachable without local network access, which Settings can take back.
+    val withLocalNetwork = rememberLocalNetworkAccess()
+    val retryNow = { withLocalNetwork(session::start) }
 
     AuthLayout {
         Text(
@@ -50,7 +53,7 @@ fun UnreachableScreen(session: Session, state: AuthState.Unreachable) {
 
         val retry = @Composable { look: ButtonLook ->
             MatineeButton(
-                onClick = session::start,
+                onClick = retryNow,
                 look = look,
                 enabled = !state.retrying,
                 modifier = Modifier.fillMaxWidth(),

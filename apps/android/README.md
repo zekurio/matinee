@@ -249,14 +249,25 @@ Icons are lucide's, as on the web. Add one with
 `pnpm install` has run, and reference it in `Lucide` in
 `ui/components/Picture.kt`.
 
+### Local network access
+
+Android 17 keeps an app off the local network until it has
+`ACCESS_LOCAL_NETWORK`. The docs tie that to target SDK 37, but a Pixel on
+Android 17 held this app to it at target 36, so the app asks on every
+Android 17 device. `localNetworkPermission` in `auth/ServerDiscovery.kt`
+says whether to ask, and `rememberLocalNetworkAccess` in
+`ui/signin/LocalNetwork.kt` asks, then runs what comes next either way.
+Connecting to a server goes through it, on the phone and the TV, and so
+does Retry when the saved server doesn't answer, since the permission can
+be taken back in Settings. When connecting fails while it's still missing,
+the error says where to allow it.
+
 ### Finding servers on the network
 
 The Android `auth/discoverServers` function returns a cold flow of name and
 URL pairs, with a three-second timeout and injectable destinations for tests.
-Collect it in a cancellable screen scope. Call `serverDiscoveryPermission`
-first and request the returned permission if any. Android 17 requires
-`ACCESS_LOCAL_NETWORK` once the app targets SDK 37; our current target 36
-gets LAN access through `INTERNET` and must not request it yet. Replies are
+Collect it in a cancellable screen scope. Call `localNetworkPermission`
+first and request the returned permission if any. Replies are
 unicast, so no Wi-Fi multicast lock is needed. Pass the selected URL to
 `Session.connect`, which already checks health and compatibility. The TV's
 connect screen (`ui/tv/auth/TvConnect.kt`) uses it; the phone doesn't yet.

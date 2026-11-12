@@ -37,7 +37,7 @@ import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.auth.DiscoveredServer
 import io.github.zekurio.matinee.auth.Session
 import io.github.zekurio.matinee.auth.discoverServers
-import io.github.zekurio.matinee.auth.serverDiscoveryPermission
+import io.github.zekurio.matinee.auth.localNetworkPermission
 import io.github.zekurio.matinee.ui.components.Lucide
 import io.github.zekurio.matinee.ui.signin.ServerConnect
 import io.github.zekurio.matinee.ui.signin.rememberServerConnect
@@ -92,7 +92,7 @@ private fun ServerList(session: Session, connector: ServerConnect, onType: () ->
     }
     LaunchedEffect(search) {
         // Ask before each search: the permission can be taken back in the system's settings.
-        val needed = serverDiscoveryPermission(context)
+        val needed = localNetworkPermission(context)
         if (needed != null) {
             permission.launch(needed)
             return@LaunchedEffect

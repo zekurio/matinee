@@ -38,20 +38,21 @@ private val discoveryJson = Json { ignoreUnknownKeys = true }
 private data class DiscoveryReply(val version: JsonPrimitive, val name: String, val url: String)
 
 /**
- * The permission the screen must request before collecting [discoverServers], or null.
- * Android 17 requires ACCESS_LOCAL_NETWORK for target SDK 37 and above. At our
- * current target of 36, INTERNET grants LAN access implicitly, so don't request it.
- * Check again before each scan, since the user can revoke permission in Settings.
+ * The permission to request before reaching a server on the local network or
+ * collecting [discoverServers], or null. Android 17 keeps apps off the LAN
+ * without ACCESS_LOCAL_NETWORK, and it held this app to that at target SDK 36
+ * too, so ask on every Android 17 device. Check again before each use, since
+ * the user can revoke it in Settings.
  */
-fun serverDiscoveryPermission(context: Context): String? =
-    if (Build.VERSION.SDK_INT >= 37 && context.applicationInfo.targetSdkVersion >= 37 &&
+fun localNetworkPermission(context: Context): String? =
+    if (Build.VERSION.SDK_INT >= 37 &&
         context.checkSelfPermission(Manifest.permission.ACCESS_LOCAL_NETWORK) != PackageManager.PERMISSION_GRANTED
     ) Manifest.permission.ACCESS_LOCAL_NETWORK else null
 
 /**
  * A cold IPv4 LAN scan, ending after [timeoutMillis] or cancellation. Each collector
  * owns a socket. Network errors and denied access give no results, not an exception.
- * Check [serverDiscoveryPermission] and request its result before collecting.
+ * Check [localNetworkPermission] and request its result before collecting.
  * Pass [destinations] to aim a JVM test at a loopback responder and its port.
  *
  * Probes go to each active interface's broadcast address and 255.255.255.255.

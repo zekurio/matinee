@@ -17,6 +17,7 @@
     <string name="connect_not_matinee">%1$s scheint kein Matinee-Server zu sein.</string>
     <string name="connect_failed">%1$s ist nicht erreichbar.</string>
     <string name="connect_empty">Gib die Adresse deines Matinee-Servers ein.</string>
+    <string name="connect_local_network">Wenn der Server in deinem lokalen Netzwerk ist, erlaube Matinee in den App-Einstellungen, Geräte im lokalen Netzwerk zu finden und sich mit ihnen zu verbinden.</string>
 
     <string name="unreachable_title">Server nicht erreichbar</string>
     <string name="unreachable_offline_title">Du bist offline</string>
