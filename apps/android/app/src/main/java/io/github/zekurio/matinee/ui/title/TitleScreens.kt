@@ -56,7 +56,6 @@ import io.github.zekurio.matinee.ui.components.frame
 import io.github.zekurio.matinee.ui.components.hasActions
 import io.github.zekurio.matinee.ui.components.isWide
 import io.github.zekurio.matinee.ui.components.railItemWidth
-import io.github.zekurio.matinee.ui.episodeCode
 import io.github.zekurio.matinee.ui.itemLabel
 import io.github.zekurio.matinee.ui.mediaFlags
 import io.github.zekurio.matinee.ui.rememberLoader
@@ -141,7 +140,6 @@ private fun TitlePage(title: Title) {
                 ActionRow(
                     play = next,
                     resume = isResuming(next),
-                    playDetail = if (title.isShow) next?.let { episodeCode(it, res) } else null,
                     name = title.name,
                     watched = viewer.isWatched(summary),
                     favorite = viewer.isFavorite(summary),
@@ -266,7 +264,6 @@ private fun SeasonPage(title: Title, season: Season) {
                 ActionRow(
                     play = next,
                     resume = isResuming(next),
-                    playDetail = next?.let { episodeCode(it, res) },
                     name = "${title.name} · ${seasonName(season.number, res)}",
                     watched = allWatched,
                     favorite = viewer.isFavorite(title.summary),
@@ -353,7 +350,6 @@ private fun EpisodePage(item: MediaItem) {
                 ActionRow(
                     play = item,
                     resume = isResuming(item),
-                    playDetail = null,
                     name = label.title,
                     watched = viewer.isWatched(item),
                     favorite = viewer.isFavorite(item),

@@ -54,7 +54,6 @@ import io.github.zekurio.matinee.ui.components.LocalSnackbar
 import io.github.zekurio.matinee.ui.components.Lucide
 import io.github.zekurio.matinee.ui.components.art
 import io.github.zekurio.matinee.ui.components.launchShowing
-import io.github.zekurio.matinee.ui.episodeCode
 import io.github.zekurio.matinee.ui.episodeNumber
 import io.github.zekurio.matinee.ui.itemLabel
 import io.github.zekurio.matinee.ui.rememberLoader
@@ -253,8 +252,7 @@ private fun SeasonButtons(title: Title, season: Season, list: List<MediaItem>?, 
             icon = Lucide.Play,
             onClick = { next?.let { nav.play(it.id) } },
             modifier = with(memory) { Modifier.item(ACTIONS, PLAY) }.widthIn(min = 180.dp),
-            detail = listOfNotNull(next?.let { episodeCode(it, res) }, if (resume) next?.let { timeLeft(it, res) } else null)
-                .joinToString(" · ").ifEmpty { null },
+            detail = if (resume) next?.let { timeLeft(it, res) } else null,
             enabled = next != null,
         )
         TvIconButton(

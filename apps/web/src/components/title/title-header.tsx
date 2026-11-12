@@ -18,13 +18,7 @@ import { MediaInfo } from "@/components/title/media-info"
 import { useTitleWatched, WatchedButton } from "@/components/watched-menu"
 import { perLocale, tr } from "@/i18n"
 import { formatRuntime } from "@/lib/format"
-import {
-  art,
-  episodeCode,
-  type ImageSource,
-  mediaFlags,
-  timeLeft,
-} from "@/lib/media"
+import { art, type ImageSource, mediaFlags, timeLeft } from "@/lib/media"
 
 import { HeaderOverview } from "./header-overview"
 import { MatchNote } from "./title-menu"
@@ -159,7 +153,7 @@ export function TitleHeader({ title }: { title: Title }) {
 
               <div className="pt-6 sm:mt-auto">
                 <div className="flex items-center gap-2">
-                  <PlayButton item={title.next} code={title.kind === "show"} />
+                  <PlayButton item={title.next} />
                   {title.itemCount > 0 && <TitleWatchedButton title={title} />}
                   <FavoriteButton title={title} />
                   <ActionsMenu
@@ -289,22 +283,13 @@ function TitleName({ title }: { title: Title }) {
 }
 
 /**
- * Resume what's in progress, or play the next or first file. `code` adds
- * the episode's number. Fills the row on phones.
+ * Resume what's in progress, with the time left, or play the next or
+ * first file. Fills the row on phones.
  */
-export function PlayButton({
-  item,
-  code,
-}: {
-  item: MediaItem | null | undefined
-  code: boolean
-}) {
+export function PlayButton({ item }: { item: MediaItem | null | undefined }) {
   if (!item) return null
   const resume = item.progress && !item.progress.completed
-  const detail = [
-    code ? episodeCode(item) : null,
-    resume ? timeLeft(item) : null,
-  ].filter(Boolean)
+  const left = resume ? timeLeft(item) : null
   return (
     <Link
       to="/watch/$itemId"
@@ -316,9 +301,9 @@ export function PlayButton({
     >
       <PlayIcon className="fill-current" />
       {resume ? tr("title.resume") : tr("title.play")}
-      {detail.length > 0 && (
+      {left && (
         <span className="truncate font-normal tabular-nums opacity-70">
-          {detail.join(" · ")}
+          {left}
         </span>
       )}
     </Link>

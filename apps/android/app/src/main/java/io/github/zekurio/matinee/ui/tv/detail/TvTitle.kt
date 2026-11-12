@@ -31,7 +31,6 @@ import io.github.zekurio.matinee.ui.components.Lucide
 import io.github.zekurio.matinee.ui.components.art
 import io.github.zekurio.matinee.ui.components.frame
 import io.github.zekurio.matinee.ui.components.launchShowing
-import io.github.zekurio.matinee.ui.episodeCode
 import io.github.zekurio.matinee.ui.mediaFlags
 import io.github.zekurio.matinee.ui.rememberLoader
 import io.github.zekurio.matinee.ui.theme.Palette
@@ -149,10 +148,7 @@ private fun TitleButtons(title: Title, memory: TvFocusMemory, modifier: Modifier
             icon = Lucide.Play,
             onClick = { next?.let { nav.play(it.id) } },
             modifier = with(memory) { Modifier.item(ACTIONS, PLAY) }.widthIn(min = 180.dp),
-            detail = listOfNotNull(
-                if (title.isShow) next?.let { episodeCode(it, res) } else null,
-                if (resume) next?.let { timeLeft(it, res) } else null,
-            ).joinToString(" · ").ifEmpty { null },
+            detail = if (resume) next?.let { timeLeft(it, res) } else null,
             enabled = next != null,
         )
         if (!title.isShow && next != null && resume) {

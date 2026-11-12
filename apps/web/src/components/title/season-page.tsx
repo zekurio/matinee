@@ -202,10 +202,7 @@ function SeasonHeader({
               />
 
               <div className="flex items-center gap-2 pt-6 sm:mt-auto">
-                <PlayButton
-                  item={items ? seasonNext(title, items) : null}
-                  code={season.number !== null}
-                />
+                <PlayButton item={items ? seasonNext(title, items) : null} />
                 <SeasonWatchedButton
                   title={title}
                   season={season}

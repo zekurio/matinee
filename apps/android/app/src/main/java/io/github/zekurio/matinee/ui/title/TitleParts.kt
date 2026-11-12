@@ -191,8 +191,7 @@ fun Overview(text: String, tagline: String? = null, lines: Int = 3) {
 
 /**
  * Play, then the round watched, favorite, and more buttons, as under a
- * title's or episode's heading. [playDetail] says what Play starts, like
- * "S1, E3". Resume says the time left on a second line, with the detail.
+ * title's or episode's heading. Resume says the time left beside it.
  * The tick, as the web's, marks unwatched at once and asks when
  * the person watched [name] before marking it watched.
  */
@@ -200,7 +199,6 @@ fun Overview(text: String, tagline: String? = null, lines: Int = 3) {
 fun ActionRow(
     play: MediaItem?,
     resume: Boolean,
-    playDetail: String?,
     name: String,
     watched: Boolean,
     favorite: Boolean,
@@ -227,15 +225,14 @@ fun ActionRow(
             onClick = { play?.let { nav.play(it.id) } },
             enabled = play != null,
             modifier = (if (isWide()) Modifier.width(260.dp) else Modifier.weight(1f))
-                .semantics { contentDescription = listOfNotNull(label, playDetail, left).joinToString(", ") },
+                .semantics { contentDescription = listOfNotNull(label, left).joinToString(", ") },
         ) {
             LucideIcon(Lucide.Play, null, size = 16.dp)
             Text(label, maxLines = 1)
-            // On one line, as on a TV. The label stays whole; what's left over goes to the detail.
-            val detail = listOfNotNull(playDetail, left).joinToString(" · ")
-            if (detail.isNotEmpty()) {
+            // On one line, as on a TV. The label stays whole; what's left over goes to the time.
+            if (left != null) {
                 Text(
-                    detail,
+                    left,
                     color = Palette.AccentForeground.copy(alpha = 0.6f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
