@@ -473,7 +473,7 @@ export function EpisodeCard({
   const favorite = useItemFavorite(item)
   return (
     <div>
-      <div className="group/thumb group/card relative">
+      <div className="group/card relative">
         <ItemLink item={item} hidden className="block rounded-md">
           <Thumb
             sources={landscapeSources(item)}
@@ -482,7 +482,7 @@ export function EpisodeCard({
             watched={watched.on}
             badge={false}
             play={false}
-            className="group-hover/thumb:border-foreground/25 w-full"
+            className="w-full"
           >
             <CardScrim />
           </Thumb>
@@ -670,23 +670,27 @@ export function TitleCard({ entry }: { entry: ShelfEntry }) {
 
 /**
  * A 2:3 poster, with the name on the title's tone until it or its
- * placeholder shows. `children` sit on top, like a badge.
+ * placeholder shows. `children` sit on top, like a badge. Its border
+ * lightens under the pointer unless `scrim` says the art blurs then.
  */
 export function PosterArt({
   name,
   toneKey,
   poster,
+  scrim = false,
   children,
 }: {
   name: string
   toneKey: string
   poster: ImageSource | null
+  scrim?: boolean
   children?: ReactNode
 }) {
   return (
     <span
       className={cn(
-        "group-hover:border-foreground/25 group-hover/card:border-foreground/25 relative grid aspect-[2/3] place-items-center overflow-hidden rounded-md border p-3 text-center shadow-[inset_0_1px_0_rgb(255_255_255/0.04)]",
+        !scrim && "group-hover:border-foreground/25",
+        "relative grid aspect-[2/3] place-items-center overflow-hidden rounded-md border p-3 text-center shadow-[inset_0_1px_0_rgb(255_255_255/0.04)]",
         tone(toneKey),
       )}
     >
@@ -785,7 +789,7 @@ export function PosterCard({
   return (
     <div className="group/card relative">
       <PosterLink title={title} to={to} label={label}>
-        <PosterArt name={title.name} toneKey={title.id} poster={poster}>
+        <PosterArt name={title.name} toneKey={title.id} poster={poster} scrim>
           <CardScrim />
         </PosterArt>
         <CardText

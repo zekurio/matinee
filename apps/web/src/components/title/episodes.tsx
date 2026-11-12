@@ -153,7 +153,7 @@ export function EpisodeRow({ item }: { item: MediaItem }) {
   const overview = item.episode?.overview
   return (
     <div className="grid grid-cols-[auto_1fr] items-start gap-x-4 gap-y-2">
-      <div className="group/thumb group/card relative w-48 sm:w-64 lg:w-72">
+      <div className="group/card relative w-48 sm:w-64 lg:w-72">
         <ItemLink item={item} hidden className="block rounded-md">
           <Thumb
             sources={landscapeSources(item, "large")}
@@ -162,7 +162,7 @@ export function EpisodeRow({ item }: { item: MediaItem }) {
             watched={watched.on}
             badge={false}
             play={false}
-            className="group-hover/thumb:border-foreground/25 w-full"
+            className="w-full"
           >
             <CardScrim />
           </Thumb>
