@@ -17,6 +17,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import io.github.zekurio.matinee.auth.AuthState
 import io.github.zekurio.matinee.ui.LocalOffline
@@ -57,6 +58,8 @@ class PlayerActivity : ComponentActivity() {
         target = targetOf(intent)
         val host = PlayerHost(close = ::finish, playInstead = { id -> target = PlayTarget(id, 0.0) })
         setContent {
+            // The sign-in it opened in; another server or account closes it.
+            val made = remember { app.session.version }
             val state by app.session.state.collectAsState()
             val user = when (val current = state) {
                 is AuthState.SignedIn -> current.user
@@ -65,8 +68,8 @@ class PlayerActivity : ComponentActivity() {
             }
             val api = app.session.api
             val playing = target
-            if (user == null || api == null || playing == null) {
-                // Nobody to play for, as after the app was signed out meanwhile.
+            if (user == null || api == null || playing == null || app.session.version != made) {
+                // Nobody to play for, as after the app was signed out or switched servers meanwhile.
                 LaunchedEffect(Unit) { finish() }
                 return@setContent
             }

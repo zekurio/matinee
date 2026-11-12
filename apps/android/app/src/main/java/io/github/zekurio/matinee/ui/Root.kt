@@ -36,7 +36,7 @@ fun MatineeRoot(session: Session, signInError: MutableStateFlow<String?>) {
             return@Surface
         }
         when (val current = state) {
-            AuthState.NoServer -> ConnectScreen(session)
+            is AuthState.NoServer -> ConnectScreen(session, current.canCancel)
             is AuthState.Connecting -> Column(
                 Modifier.fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -50,7 +50,8 @@ fun MatineeRoot(session: Session, signInError: MutableStateFlow<String?>) {
                 )
             }
             is AuthState.Unreachable -> UnreachableScreen(session, current)
-            is AuthState.SignedOut -> SignInScreen(session, current, signInError)
+            // Another server's sign-in starts afresh, with its own code.
+            is AuthState.SignedOut -> key(current.server) { SignInScreen(session, current, signInError) }
             // A new account starts the screens, and what they keep, afresh.
             is AuthState.SignedIn -> key(current.user.id, current.server) { SignedInApp(session, current.user) }
             is AuthState.Offline -> key(current.user.id, current.server, "offline") {

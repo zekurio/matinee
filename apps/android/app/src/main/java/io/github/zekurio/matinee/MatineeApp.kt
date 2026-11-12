@@ -18,8 +18,10 @@ import io.github.zekurio.matinee.launcher.WatchNextForeground
 import io.github.zekurio.matinee.ui.ViewerState
 import io.github.zekurio.matinee.ui.player.PlayerPrefs
 import io.github.zekurio.matinee.ui.theme.ThemeStore
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class MatineeApp : Application(), SingletonImageLoader.Factory {
     lateinit var session: Session
@@ -58,11 +60,24 @@ class MatineeApp : Application(), SingletonImageLoader.Factory {
             watchNext = WatchNext(this).also { registerActivityLifecycleCallbacks(WatchNextForeground(it)) }
         }
         downloads.restore()
+        // A server removed takes its downloads, what waited to reach it, and its artwork along.
+        session.onRemove = { origin, api ->
+            downloads.forgetServer(origin, api)
+            withContext(Dispatchers.IO) {
+                SingletonImageLoader.get(this@MatineeApp).let { loader ->
+                    loader.memoryCache?.clear()
+                    loader.diskCache?.clear()
+                }
+            }
+        }
         // Once signed in with the server answering, send where the person got
-        // to in downloads they watched offline.
+        // to in downloads they watched offline, of that server only.
         scope.launch {
             session.state.collect { state ->
-                if (state is AuthState.SignedIn) session.api?.let { downloads.pending.flush(it) }
+                if (state !is AuthState.SignedIn) return@collect
+                val api = session.api ?: return@collect
+                val server = session.activeServer.value ?: return@collect
+                downloads.pendingFor(server).flush(api)
             }
         }
         // The account's theme and the server's accent, whenever a session or

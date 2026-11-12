@@ -83,8 +83,9 @@ import java.text.NumberFormat
 /*
  * The rows of each TV settings category, from the phone's pages. What the
  * phone has that these leave out: offline mode, appearance, downloads,
- * linking a device, the admin pages, picture in picture, and the playback
- * report, none of which a TV has a use for or a way to do.
+ * linking a device, the admin pages, and picture in picture, none of
+ * which a TV has a use for or a way to do. The About category is in
+ * TvAbout.kt.
  */
 
 /**
@@ -361,7 +362,7 @@ private fun SessionRow(session: AccountSession, name: String, modifier: Modifier
 
 /** Who's signed in and to which server, and the ways out: another server, or signing out. */
 @Composable
-internal fun ColumnScope.AccountRows(session: Session, first: Modifier) {
+internal fun ColumnScope.AccountRows(session: Session, panels: SettingsPanels, first: Modifier) {
     val api = LocalApi.current
     val user = LocalUser.current
     val server = (session.state.value as? AuthState.SignedIn)?.server.orEmpty()
@@ -385,6 +386,18 @@ internal fun ColumnScope.AccountRows(session: Session, first: Modifier) {
         quiet = true,
     )
     GroupGap()
-    TvListItem(stringResource(R.string.connect_change_server), onClick = session::forgetServer, icon = Lucide.RefreshCw, quiet = true)
+    // The saved servers, in the panel at the right edge.
+    val change = remember { FocusRequester() }
+    TvListItem(
+        stringResource(R.string.connect_change_server),
+        onClick = {
+            panels.show(change) { open ->
+                io.github.zekurio.matinee.ui.tv.auth.TvServerPanel(open, session, panels::close, panels::restore)
+            }
+        },
+        modifier = Modifier.focusRequester(change),
+        icon = Lucide.RefreshCw,
+        quiet = true,
+    )
     TvListItem(stringResource(R.string.shell_sign_out), onClick = session::signOut, icon = Lucide.LogOut, quiet = true, destructive = true)
 }

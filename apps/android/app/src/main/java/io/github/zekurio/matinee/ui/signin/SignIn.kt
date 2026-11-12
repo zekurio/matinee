@@ -3,6 +3,7 @@ package io.github.zekurio.matinee.ui.signin
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import androidx.activity.compose.BackHandler
 import androidx.browser.customtabs.CustomTabColorSchemeParams
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.layout.Arrangement
@@ -90,8 +91,10 @@ internal fun AuthLayout(content: @Composable ColumnScope.() -> Unit) {
     }
 }
 
+/** Typing a server's address. [canCancel] while adding one, with one in use to go back to. */
 @Composable
-fun ConnectScreen(session: Session) {
+fun ConnectScreen(session: Session, canCancel: Boolean = false) {
+    BackHandler(enabled = canCancel, onBack = session::cancelAdd)
     var address by rememberSaveable { mutableStateOf("") }
     val connector = rememberServerConnect(session)
     val error = connector.error
@@ -121,6 +124,10 @@ fun ConnectScreen(session: Session) {
             if (busy) CircularProgressIndicator(Modifier.size(18.dp), color = Palette.Background, strokeWidth = 2.dp)
             Text(stringResource(R.string.connect_button))
         }
+        if (canCancel) {
+            Gap(32.dp)
+            BackToServer(session, Modifier.align(Alignment.CenterHorizontally))
+        }
     }
 }
 
@@ -129,9 +136,13 @@ fun SignInScreen(session: Session, state: AuthState.SignedOut, browserError: Mut
     val context = LocalContext.current
     var withCode by rememberSaveable { mutableStateOf(false) }
     val error by browserError.collectAsState()
+    // Back from the code to the browser, then, for a server being added, to typing another address.
+    BackHandler(enabled = withCode || state.adding) {
+        if (withCode) withCode = false else session.addServer()
+    }
     // A TV has no browser to sign in with, so it only has the code.
     if (withCode || session.isTv) {
-        DeviceCodeSignIn(session, onBack = if (session.isTv) null else ({ withCode = false }))
+        DeviceCodeSignIn(session, state.adding, onBack = if (session.isTv) null else ({ withCode = false }))
         return
     }
     AuthLayout {
@@ -173,8 +184,11 @@ fun SignInScreen(session: Session, state: AuthState.SignedOut, browserError: Mut
             Text(it, color = Palette.Danger, style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
         }
         Gap(32.dp)
-        MatineeButton(onClick = session::forgetServer, look = ButtonLook.Ghost, modifier = Modifier.align(Alignment.CenterHorizontally)) {
-            Text(stringResource(R.string.connect_change_server), color = Palette.Muted)
+        // A server being added goes back to the one in use; a saved one offers the others.
+        if (state.adding) {
+            BackToServer(session, Modifier.align(Alignment.CenterHorizontally))
+        } else {
+            ChangeServerButton(session, Modifier.align(Alignment.CenterHorizontally))
         }
     }
 }
@@ -186,7 +200,7 @@ fun SignInScreen(session: Session, state: AuthState.SignedOut, browserError: Mut
  * Account. Typing the code at /link works too.
  */
 @Composable
-private fun DeviceCodeSignIn(session: Session, onBack: (() -> Unit)?) {
+private fun DeviceCodeSignIn(session: Session, adding: Boolean, onBack: (() -> Unit)?) {
     val flow = rememberDeviceCode(session, renewExpired = true)
     val error = flow.error
     val current = flow.code
@@ -196,9 +210,7 @@ private fun DeviceCodeSignIn(session: Session, onBack: (() -> Unit)?) {
         Gap(24.dp)
         if (session.isTv) {
             // Nothing else gets a TV out of here, and it may have the wrong server.
-            MatineeButton(onClick = session::forgetServer, look = ButtonLook.Ghost) {
-                Text(stringResource(R.string.connect_change_server), color = Palette.Muted)
-            }
+            if (adding) BackToServer(session) else ChangeServerButton(session)
         } else {
             if (current != null) {
                 val context = LocalContext.current

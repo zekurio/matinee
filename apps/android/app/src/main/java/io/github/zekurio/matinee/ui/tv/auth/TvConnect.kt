@@ -18,6 +18,7 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
@@ -41,6 +42,7 @@ import io.github.zekurio.matinee.auth.localNetworkPermission
 import io.github.zekurio.matinee.ui.components.Lucide
 import io.github.zekurio.matinee.ui.signin.ServerConnect
 import io.github.zekurio.matinee.ui.signin.rememberServerConnect
+import io.github.zekurio.matinee.ui.signin.title
 import io.github.zekurio.matinee.ui.theme.Palette
 import io.github.zekurio.matinee.ui.tv.TvListHeading
 import io.github.zekurio.matinee.ui.tv.TvListItem
@@ -59,9 +61,11 @@ private const val SCANS = 3
  * apart.
  */
 @Composable
-fun TvConnectScreen(session: Session) {
+fun TvConnectScreen(session: Session, canCancel: Boolean = false) {
     var typing by rememberSaveable { mutableStateOf(false) }
     val connector = rememberServerConnect(session)
+    // Adding a server: Back from the list returns to the one in use, as it was.
+    BackHandler(enabled = canCancel && !typing, onBack = session::cancelAdd)
     if (typing) {
         BackHandler {
             connector.clearError()
@@ -72,7 +76,7 @@ fun TvConnectScreen(session: Session) {
             typing = false
         })
     } else {
-        ServerList(session, connector, onType = {
+        ServerList(session, connector, canCancel, onType = {
             connector.clearError()
             typing = true
         })
@@ -80,7 +84,7 @@ fun TvConnectScreen(session: Session) {
 }
 
 @Composable
-private fun ServerList(session: Session, connector: ServerConnect, onType: () -> Unit) {
+private fun ServerList(session: Session, connector: ServerConnect, canCancel: Boolean, onType: () -> Unit) {
     val context = LocalContext.current
     val found = remember { mutableStateListOf<DiscoveredServer>() }
     var search by rememberSaveable { mutableIntStateOf(0) }
@@ -108,10 +112,10 @@ private fun ServerList(session: Session, connector: ServerConnect, onType: () ->
     val busyOn = trying.takeIf { connector.busy }
     val failedOn = trying.takeIf { !connector.busy }
     // A row stays enabled while another is tried, so focus stays on it; a second try waits.
-    val connect = { url: String ->
+    val connect = { url: String, name: String? ->
         if (!connector.busy) {
             trying = url
-            connector.connect(url)
+            connector.connect(url, name)
         }
     }
 
@@ -141,7 +145,7 @@ private fun ServerList(session: Session, connector: ServerConnect, onType: () ->
                         Lucide.Server,
                         busy = busyOn == server.url,
                         modifier = if (server == found.first()) Modifier.focusRequester(firstFound) else Modifier,
-                    ) { connect(server.url) }
+                    ) { connect(server.url, server.name) }
                     // What went wrong, under the row it went wrong for.
                     if (failedOn == server.url) connector.error?.let { AuthNote(it, danger = true) }
                 }
@@ -166,7 +170,7 @@ private fun ServerList(session: Session, connector: ServerConnect, onType: () ->
                     Lucide.RotateCcw,
                     busy = busyOn == last,
                     modifier = Modifier.focusRequester(lastRow),
-                ) { connect(last) }
+                ) { connect(last, null) }
                 if (failedOn == last) connector.error?.let { AuthNote(it, danger = true) }
             }
             TvListHeading(stringResource(R.string.tv_connect_other))
@@ -176,6 +180,18 @@ private fun ServerList(session: Session, connector: ServerConnect, onType: () ->
                 icon = Lucide.Link,
                 modifier = Modifier.focusRequester(typeRow),
             )
+            if (canCancel) {
+                val servers by session.servers.collectAsState()
+                servers.firstOrNull { it.active }?.let { current ->
+                    TvListItem(
+                        stringResource(R.string.servers_back_to, current.title()),
+                        onClick = session::cancelAdd,
+                        icon = Lucide.ArrowLeft,
+                        quiet = true,
+                        modifier = Modifier.padding(top = 12.dp),
+                    )
+                }
+            }
         }
     }
 }

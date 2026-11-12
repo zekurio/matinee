@@ -91,8 +91,6 @@ fun UnreachableScreen(session: Session, state: AuthState.Unreachable) {
         }
 
         Gap(32.dp)
-        MatineeButton(onClick = session::forgetServer, look = ButtonLook.Ghost, modifier = Modifier.align(Alignment.CenterHorizontally)) {
-            Text(stringResource(R.string.connect_change_server), color = Palette.Muted)
-        }
+        ChangeServerButton(session, Modifier.align(Alignment.CenterHorizontally))
     }
 }

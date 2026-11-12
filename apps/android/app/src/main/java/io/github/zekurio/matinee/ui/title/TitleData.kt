@@ -67,9 +67,13 @@ fun titleFacts(title: Title, res: Resources): List<String> = listOfNotNull(
     if (title.isShow) title.status else null,
 )
 
-/** An episode's facts: its air date, then the time left in it, or its runtime. */
-fun episodeFacts(item: MediaItem, viewer: ViewerState, res: Resources): List<String> {
-    val resuming = isResuming(item) && !viewer.isWatched(item)
+/**
+ * An episode's facts: its air date, then its runtime. With [left], the
+ * time left in it instead while it's in progress; an episode's page leaves
+ * that out, since its Resume button says it.
+ */
+fun episodeFacts(item: MediaItem, viewer: ViewerState, res: Resources, left: Boolean = false): List<String> {
+    val resuming = left && isResuming(item) && !viewer.isWatched(item)
     return listOfNotNull(
         formatDay(item.episode?.airDate),
         if (resuming) timeLeft(item, res) else formatRuntime(runtimeMinutes(item), res),

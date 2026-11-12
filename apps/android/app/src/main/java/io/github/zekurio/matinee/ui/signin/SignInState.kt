@@ -44,16 +44,16 @@ class ServerConnect internal constructor(
     /**
      * Try [address], unless a try is under way, asking for local network
      * access first where Android needs it. Once it answers, the session
-     * moves on to signing in.
+     * moves on to signing in. [name] is what a server found nearby calls itself.
      */
-    fun connect(address: String) {
+    fun connect(address: String, name: String? = null) {
         if (busy) return
         busy = true
         error = null
         withLocalNetwork {
             scope.launch {
                 // Without the access a LAN server only says it can't be reached.
-                error = session.connect(address)?.let { failure ->
+                error = session.connect(address, name)?.let { failure ->
                     localNetworkHint()?.let { "$failure\n$it" } ?: failure
                 }
                 busy = false
@@ -110,7 +110,8 @@ fun rememberDeviceCode(session: Session, renewExpired: Boolean): DeviceCodeState
     val state = remember { DeviceCodeState() }
     val resources = LocalContext.current.resources
     LaunchedEffect(state.attempt) {
-        val api = session.requireApi()
+        // A server being added, before it's saved, or the one in use.
+        val api = session.signInApi()
         state.error = null
         state.expired = false
         val started = try {

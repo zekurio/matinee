@@ -3,7 +3,7 @@
 <resources>
     <string name="web_common_saveBar_unsaved">Ungespeicherte Änderungen</string>
     <string name="web_common_saveBar_saved">Änderungen gespeichert</string>
-    <string name="web_common_saveBar_failed">Speichern fehlgeschlagen.</string>
+    <string name="web_common_saveBar_failed">Änderungen konnten nicht gespeichert werden</string>
     <string name="web_common_saveBar_reset">Zurücksetzen</string>
     <string name="web_common_saveBar_save">Änderungen speichern</string>
     <string name="web_common_saveBar_saving">Wird gespeichert …</string>

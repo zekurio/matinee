@@ -30,6 +30,7 @@ import io.github.zekurio.matinee.api.TonemapMode
 import io.github.zekurio.matinee.api.TonemapRange
 import io.github.zekurio.matinee.api.TranscodingCapabilities
 import io.github.zekurio.matinee.api.TranscodingSettings
+import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.Reveal
 import io.github.zekurio.matinee.ui.components.Gap
 import io.github.zekurio.matinee.ui.components.LocalApi
@@ -41,7 +42,6 @@ import io.github.zekurio.matinee.ui.settings.Panel
 import io.github.zekurio.matinee.ui.settings.PickerRow
 import io.github.zekurio.matinee.ui.settings.RowDivider
 import io.github.zekurio.matinee.ui.settings.Section
-import io.github.zekurio.matinee.ui.settings.SettingsScaffold
 import io.github.zekurio.matinee.ui.settings.SwitchRow
 import io.github.zekurio.matinee.ui.theme.Palette
 import io.github.zekurio.matinee.ui.videoCodecName
@@ -110,41 +110,65 @@ private fun settings(json: JsonObject) = SettingsJson.decodeFromJsonElement(Tran
 /** "12" for 12.0, "0.5" for 0.5, as a field shows a number. */
 private fun show(number: Double): String = if (number % 1.0 == 0.0) number.toLong().toString() else number.toString()
 
+/** The form's edits to [saved], kept by the page so the save bar can read them. */
+private class TranscodingDraft(val saved: AdminTranscodingSettings) {
+    val original = json(saved.settings)
+    var draft by mutableStateOf(original)
+
+    /** What each number field holds while it's typed, kept apart until it's a number in range. */
+    var typed by mutableStateOf(mapOf<String, String>())
+
+    val invalid: Set<String>
+        get() = typed.filter { (key, text) ->
+            val limits = NUMBERS.getValue(key)
+            val value = text.trim().replace(',', '.').toDoubleOrNull()
+            value == null || value < limits.min || value > limits.max || (limits.whole && value % 1.0 != 0.0)
+        }.keys
+
+    val dirty get() = draft != original || typed.isNotEmpty()
+
+    fun reset() {
+        draft = original
+        typed = emptyMap()
+    }
+}
+
 /**
  * How the server transcodes video, as the web's transcoding panel: what
  * its ffmpeg and GPUs can do, the acceleration and its decoders, what
  * encodes produce, tone mapping, deinterlacing, audio, and throttling.
- * The fields save together.
+ * The fields save together, from the save bar.
  */
 @Composable
 fun TranscodingSettings() {
     val api = LocalApi.current
     val loader = rememberLoader("admin-transcoding") { admin.transcoding.get() }
     val saver = rememberSaver()
-    SettingsScaffold(stringResource(R.string.settings_admin_transcoding)) {
-        loaded(loader, { stringResource(R.string.web_transcoding_loadFailed, it) }) { saved ->
-            item(key = "form") {
-                TranscodingForm(
-                    saved,
-                    saver,
-                    onDetect = { saver { loader.show(api.admin.transcoding.detect()) } },
-                ) { settings -> saver { loader.show(api.admin.transcoding.update(settings)) } }
+    val saved = (loader.state as? Load.Ready)?.value
+    val form = remember(saved) { saved?.let(::TranscodingDraft) }
+    SaveBarScaffold(
+        stringResource(R.string.settings_admin_transcoding),
+        dirty = form?.dirty == true,
+        canSave = form?.invalid?.isEmpty() == true,
+        onReset = { form?.reset() },
+        onSave = { form?.let { loader.show(api.admin.transcoding.update(settings(it.draft))) } },
+    ) {
+        loaded(loader, { stringResource(R.string.web_transcoding_loadFailed, it) }) { _ ->
+            if (form != null) {
+                item(key = "form") {
+                    TranscodingForm(form, saver, onDetect = { saver { loader.show(api.admin.transcoding.detect()) } })
+                }
             }
         }
     }
 }
 
 @Composable
-private fun TranscodingForm(saved: AdminTranscodingSettings, saver: Saver, onDetect: () -> Unit, save: (TranscodingSettings) -> Unit) {
-    val original = remember(saved) { json(saved.settings) }
-    var draft by remember(saved) { mutableStateOf(original) }
-    // What each number field holds while it's typed, kept apart until it's a number in range.
-    var typed by remember(saved) { mutableStateOf(mapOf<String, String>()) }
-    val invalid = typed.filter { (key, text) ->
-        val limits = NUMBERS.getValue(key)
-        val value = text.trim().replace(',', '.').toDoubleOrNull()
-        value == null || value < limits.min || value > limits.max || (limits.whole && value % 1.0 != 0.0)
-    }.keys
+private fun TranscodingForm(form: TranscodingDraft, saver: Saver, onDetect: () -> Unit) {
+    val saved = form.saved
+    var draft by form::draft
+    var typed by form::typed
+    val invalid = form.invalid
     val acceleration = draft.text("hardwareAcceleration")
     val hardware = acceleration != "none"
     val capabilities = saved.capabilities
@@ -333,15 +357,6 @@ private fun TranscodingForm(saved: AdminTranscodingSettings, saver: Saver, onDet
                 }
             }
         }
-
-        SaveButtons(
-            dirty = (draft != original || typed.isNotEmpty()) && invalid.isEmpty(),
-            saver = saver,
-            onReset = {
-                draft = original
-                typed = emptyMap()
-            },
-        ) { save(settings(draft)) }
     }
 }
 

@@ -16,11 +16,25 @@
     <string name="connect_placeholder">media.example.com</string>
     <string name="connect_button">Connect</string>
     <string name="connect_connecting">Connecting to %1$s…</string>
-    <string name="connect_change_server">Use another server</string>
+    <string name="connect_change_server">Change server</string>
     <string name="connect_not_matinee">%1$s doesn\'t look like a Matinee server.</string>
     <string name="connect_failed">Couldn\'t reach %1$s.</string>
     <string name="connect_empty">Enter the address of your Matinee server.</string>
     <string name="connect_local_network">If the server is on your local network, allow Matinee to find and connect to local devices in the app\'s settings.</string>
+
+    <string name="servers_title">Servers</string>
+    <string name="servers_add">Add server</string>
+    <string name="servers_signed_in_as">Signed in as %1$s</string>
+    <string name="servers_signed_out">Not signed in</string>
+    <string name="servers_in_use">In use</string>
+    <string name="servers_remove">Remove %1$s</string>
+    <string name="servers_remove_title">Remove %1$s?</string>
+    <string name="servers_remove_body">Matinee signs out there and forgets the server on this device, with its downloads.</string>
+    <string name="servers_remove_body_tv">Matinee signs out there and forgets the server on this TV.</string>
+    <string name="servers_removing">Removing…</string>
+    <string name="servers_back_to">Back to %1$s</string>
+    <string name="tv_servers_remove">Remove a server</string>
+    <string name="tv_servers_remove_description">Pick the server to remove.</string>
 
     <!-- The saved server didn't answer -->
     <string name="unreachable_title">Can\'t reach your server</string>

@@ -62,6 +62,13 @@ data class OfflineItem(
     val image: String? = null,
     val error: String? = null,
     val addedAt: Long = System.currentTimeMillis(),
+    /**
+     * The server it came from, by its saved origin, as
+     * `https://media.example.com/`. It shows, plays, and syncs only with
+     * that server. Null only in a list from before saved servers, until
+     * [DownloadStore.adopt] gives it the server that app used.
+     */
+    val server: String? = null,
 ) {
     val id get() = item.id
 
@@ -73,14 +80,35 @@ data class OfflineItem(
  * The downloads, kept as one JSON file in the app's files, and their files
  * in a folder per item. Every change writes the list again, so a download
  * picks up where it was after the app or the phone restarts.
+ *
+ * Every server's downloads are in [all], for the work that fetches them;
+ * [items] and [done] hold only those of [server], the one in use, for
+ * everything that shows or plays them.
  */
 class DownloadStore(filesDir: File) {
     val root = File(filesDir, "downloads").apply { mkdirs() }
     private val index = File(root, "index.json")
     private val serializer = ListSerializer(OfflineItem.serializer())
     private val json = Json(MatineeJson) { encodeDefaults = true }
-    private val _items = MutableStateFlow(read())
+    private val _all = MutableStateFlow(read())
+    val all: StateFlow<Map<String, OfflineItem>> = _all.asStateFlow()
+
+    /** The server in use, whose downloads [items] holds. */
+    @Volatile var server: String? = null
+        set(value) {
+            synchronized(this) {
+                field = value
+                _items.value = shown(_all.value)
+            }
+        }
+
+    private val _items = MutableStateFlow(shown(_all.value))
     val items: StateFlow<Map<String, OfflineItem>> = _items.asStateFlow()
+
+    private fun shown(all: Map<String, OfflineItem>): Map<String, OfflineItem> {
+        val current = server ?: return emptyMap()
+        return all.filterValues { it.server == current }
+    }
 
     /** Each entry on its own, so one this app can't read any more doesn't lose the others. */
     private fun read(): Map<String, OfflineItem> {
@@ -96,9 +124,16 @@ class DownloadStore(filesDir: File) {
         tmp.renameTo(index)
     }
 
-    operator fun get(id: String): OfflineItem? = _items.value[id]
+    private fun set(next: Map<String, OfflineItem>) {
+        write(next)
+        _all.value = next
+        _items.value = shown(next)
+    }
 
-    /** The finished download of [id], if there is one. */
+    /** Any server's download of [id], for the work that fetches it. */
+    operator fun get(id: String): OfflineItem? = _all.value[id]
+
+    /** The finished download of [id] from the server in use, if there is one. */
     fun done(id: String): OfflineItem? = _items.value[id]?.takeIf { it.state == DownloadState.DONE }
 
     fun folder(id: String) = File(root, id)
@@ -106,28 +141,27 @@ class DownloadStore(filesDir: File) {
     fun file(entry: OfflineItem) = File(root, entry.file)
 
     @Synchronized
-    fun put(entry: OfflineItem) {
-        val next = _items.value + (entry.id to entry)
-        write(next)
-        _items.value = next
-    }
+    fun put(entry: OfflineItem) = set(_all.value + (entry.id to entry))
 
     /** Change an entry, if it's still there. Returns what it became. */
     @Synchronized
     fun update(id: String, change: (OfflineItem) -> OfflineItem): OfflineItem? {
-        val current = _items.value[id] ?: return null
+        val current = _all.value[id] ?: return null
         val changed = change(current)
-        val next = _items.value + (id to changed)
-        write(next)
-        _items.value = next
+        set(_all.value + (id to changed))
         return changed
     }
 
     @Synchronized
     fun remove(id: String) {
         folder(id).deleteRecursively()
-        val next = _items.value - id
-        write(next)
-        _items.value = next
+        set(_all.value - id)
+    }
+
+    /** The downloads from before saved servers came from [server], the one that app used. */
+    @Synchronized
+    fun adopt(server: String) {
+        if (_all.value.values.none { it.server == null }) return
+        set(_all.value.mapValues { (_, entry) -> if (entry.server == null) entry.copy(server = server) else entry })
     }
 }

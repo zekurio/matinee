@@ -12,6 +12,8 @@
     <string name="web_oidc_field_usernameClaim">Username claim</string>
     <string name="web_oidc_field_roleClaim">Role claim</string>
     <string name="web_oidc_field_clientSecret">Client secret</string>
+    <string name="web_oidc_field_groupsClaim">Groups claim</string>
+    <string name="web_oidc_field_policyClaim">Policy claim</string>
     <string name="web_oidc_passkeys_title">Passkeys</string>
     <plurals name="web_oidc_passkeys_unlinked">
         <item quantity="one">%1$d account isn\'t linked to %2$s, so it can\'t sign in while passkeys are off. While still signed in, it can link %2$s under Settings → Account.</item>
@@ -39,6 +41,12 @@
     <string name="web_oidc_redirectUri">Redirect URI</string>
     <string name="web_oidc_copy">Copy</string>
     <string name="web_oidc_copied">Copied</string>
+    <string name="web_oidc_access_title">Groups and access</string>
+    <string name="web_oidc_claim_off">Off</string>
+    <string name="web_oidc_groupsClaim_description">The claim that lists an account\'s groups at the provider. At each sign-in, an access group holds the accounts in the provider group named in its settings. An account without the claim is in no provider groups.</string>
+    <string name="web_oidc_policyClaim_description">The claim that holds one account\'s limits, an object with any of libraries, maxBitrate, transcode, downloads, and maxStreams. At each sign-in it replaces what\'s set on the account under Users.</string>
+    <string name="web_oidc_signOutRefused">Sign out accounts the provider refuses</string>
+    <string name="web_oidc_signOutRefused_description">Ends every session of an account once the provider refuses to renew its sign-in, as it does for one it disabled or deleted. This reaches only accounts with a refresh token, which takes the offline_access scope.</string>
     <string name="web_oidc_advanced">Advanced</string>
     <string name="web_oidc_advanced_show">Show</string>
     <string name="web_oidc_advanced_hide">Hide</string>

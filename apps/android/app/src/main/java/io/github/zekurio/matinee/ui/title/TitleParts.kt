@@ -39,6 +39,9 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -190,7 +193,8 @@ fun Overview(text: String, tagline: String? = null, lines: Int = 3) {
 /**
  * Play, then the round watched, favorite, and more buttons, as under a
  * title's or episode's heading. [playDetail] says what Play starts, like
- * "S1, E3". The tick, as the web's, marks unwatched at once and asks when
+ * "S1, E3". Resume says the time left on a second line, with the detail.
+ * The tick, as the web's, marks unwatched at once and asks when
  * the person watched [name] before marking it watched.
  */
 @Composable
@@ -207,6 +211,7 @@ fun ActionRow(
     onMore: (() -> Unit)?,
 ) {
     val nav = LocalNavigator.current
+    val res = LocalResources.current
     val actions = LocalActions.current
     val snackbar = LocalSnackbar.current
     val scope = rememberCoroutineScope()
@@ -217,14 +222,31 @@ fun ActionRow(
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        val label = stringResource(if (resume) R.string.title_resume else R.string.title_play)
+        val left = if (resume) play?.let { timeLeft(it, res) } else null
         MatineeButton(
             onClick = { play?.let { nav.play(it.id) } },
             enabled = play != null,
-            modifier = if (isWide()) Modifier.width(260.dp) else Modifier.weight(1f),
+            modifier = (if (isWide()) Modifier.width(260.dp) else Modifier.weight(1f))
+                .semantics { contentDescription = listOfNotNull(label, playDetail, left).joinToString(", ") },
         ) {
             LucideIcon(Lucide.Play, null, size = 16.dp)
-            Text(stringResource(if (resume) R.string.title_resume else R.string.title_play))
-            if (playDetail != null) Text(playDetail, color = Palette.AccentForeground.copy(alpha = 0.6f))
+            if (left == null) {
+                Text(label)
+                if (playDetail != null) Text(playDetail, color = Palette.AccentForeground.copy(alpha = 0.6f))
+            } else {
+                // Two lines: the time left beside a season's episode code is too long for one on a phone.
+                Column(Modifier.clearAndSetSemantics {}) {
+                    Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(
+                        listOfNotNull(playDetail, left).joinToString(" · "),
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Normal),
+                        color = Palette.AccentForeground.copy(alpha = 0.7f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
         }
         RoundIconButton(
             Lucide.Check,

@@ -46,13 +46,13 @@ import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.ThemeAccents
 import io.github.zekurio.matinee.app
+import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.components.Gap
 import io.github.zekurio.matinee.ui.components.LocalApi
 import io.github.zekurio.matinee.ui.rememberLoader
 import io.github.zekurio.matinee.ui.settings.Panel
 import io.github.zekurio.matinee.ui.settings.RowDivider
 import io.github.zekurio.matinee.ui.settings.Section
-import io.github.zekurio.matinee.ui.settings.SettingsScaffold
 import io.github.zekurio.matinee.ui.theme.Palette
 
 /** The Matinee theme's own accents, as packages/ui's theme-colors has them. */
@@ -85,38 +85,61 @@ private fun stored(color: String, default: String): String? = normalize(color)?.
 
 private fun color(hex: String): Color = Color(android.graphics.Color.parseColor(hex))
 
+/** The form's edits to [saved], kept by the page so the save bar can read them. */
+private class AccentDraft(val saved: ThemeAccents) {
+    var light by mutableStateOf(saved.light ?: DEFAULT_LIGHT)
+    var dark by mutableStateOf(saved.dark ?: DEFAULT_DARK)
+    val draft get() = ThemeAccents(stored(light, DEFAULT_LIGHT), stored(dark, DEFAULT_DARK))
+    val valid get() = normalize(light) != null && normalize(dark) != null
+
+    /** A color that isn't one yet counts as an edit, so the bar stays while it's typed. */
+    val dirty get() = !valid || draft != saved
+
+    fun reset() {
+        light = saved.light ?: DEFAULT_LIGHT
+        dark = saved.dark ?: DEFAULT_DARK
+    }
+}
+
 /**
  * The accent the Matinee theme uses for everyone on the server, as the
- * web's server appearance panel: a preset, or a color per appearance.
+ * web's server appearance panel: a preset, or a color per appearance,
+ * saved from the save bar.
  */
 @Composable
 fun ServerAppearanceSettings() {
     val api = LocalApi.current
     val loader = rememberLoader("admin-appearance") { admin.appearance.get() }
     val theme = LocalContext.current.app.theme
-    val saver = rememberSaver()
-    SettingsScaffold(stringResource(R.string.settings_admin_appearance)) {
-        loaded(loader, { stringResource(R.string.web_serverAppearance_loadFailed, it) }) { saved ->
-            item(key = "accents") {
-                AccentForm(saved, saver) { next ->
-                    saver {
-                        val accents = api.admin.appearance.update(next)
-                        loader.show(accents)
-                        // The app shows the new accent at once, as the web does.
-                        theme.setAccents(accents)
-                    }
-                }
+    val saved = (loader.state as? Load.Ready)?.value
+    val form = remember(saved) { saved?.let(::AccentDraft) }
+    SaveBarScaffold(
+        stringResource(R.string.settings_admin_appearance),
+        dirty = form?.dirty == true,
+        canSave = form?.valid == true,
+        onReset = { form?.reset() },
+        onSave = {
+            form?.let {
+                val accents = api.admin.appearance.update(it.draft)
+                loader.show(accents)
+                // The app shows the new accent at once, as the web does.
+                theme.setAccents(accents)
             }
+        },
+    ) {
+        loaded(loader, { stringResource(R.string.web_serverAppearance_loadFailed, it) }) { _ ->
+            if (form != null) item(key = "accents") { AccentForm(form) }
         }
     }
 }
 
 @Composable
-private fun AccentForm(saved: ThemeAccents, saver: Saver, save: (ThemeAccents) -> Unit) {
-    var light by remember(saved) { mutableStateOf(saved.light ?: DEFAULT_LIGHT) }
-    var dark by remember(saved) { mutableStateOf(saved.dark ?: DEFAULT_DARK) }
-    val draft = ThemeAccents(stored(light, DEFAULT_LIGHT), stored(dark, DEFAULT_DARK))
-    val valid = normalize(light) != null && normalize(dark) != null
+private fun AccentForm(form: AccentDraft) {
+    val saved = form.saved
+    var light by form::light
+    var dark by form::dark
+    val draft = form.draft
+    val valid = form.valid
     val theme = LocalContext.current.app.theme
     val current by rememberUpdatedState(saved)
     // The app previews each edit, as the web does, and goes back to the
@@ -141,15 +164,6 @@ private fun AccentForm(saved: ThemeAccents, saver: Saver, save: (ThemeAccents) -
                 ColorRow(stringResource(R.string.web_serverAppearance_mode_dark), dark) { dark = it }
             }
         }
-        Gap(16.dp)
-        SaveButtons(
-            dirty = valid && draft != saved,
-            saver = saver,
-            onReset = {
-                light = saved.light ?: DEFAULT_LIGHT
-                dark = saved.dark ?: DEFAULT_DARK
-            },
-        ) { save(draft) }
     }
 }
 

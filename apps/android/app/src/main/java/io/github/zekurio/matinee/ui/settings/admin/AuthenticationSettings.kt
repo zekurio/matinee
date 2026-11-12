@@ -28,6 +28,7 @@ import io.github.zekurio.matinee.api.AdminAuthSettings
 import io.github.zekurio.matinee.api.AuthSettingsInput
 import io.github.zekurio.matinee.api.Explicit
 import io.github.zekurio.matinee.api.OidcSettingsInput
+import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.Reveal
 import io.github.zekurio.matinee.ui.components.Gap
 import io.github.zekurio.matinee.ui.components.LocalApi
@@ -38,52 +39,95 @@ import io.github.zekurio.matinee.ui.rememberLoader
 import io.github.zekurio.matinee.ui.settings.Panel
 import io.github.zekurio.matinee.ui.settings.RowDivider
 import io.github.zekurio.matinee.ui.settings.Section
-import io.github.zekurio.matinee.ui.settings.SettingsScaffold
 import io.github.zekurio.matinee.ui.settings.SwitchRow
 import io.github.zekurio.matinee.ui.theme.Palette
 import kotlinx.coroutines.launch
 
+/** The form's edits to [saved], kept by the page so the save bar can read them. */
+private class AuthDraft(val saved: AdminAuthSettings) {
+    var passkeys by mutableStateOf(saved.passkeys)
+    var oidc by mutableStateOf(saved.oidc)
+    var secret by mutableStateOf("")
+    var dropSecret by mutableStateOf(false)
+
+    /** A new secret to save, the saved one dropped, or the saved one kept. */
+    val change: Explicit<String>?
+        get() = when {
+            secret.isNotBlank() -> Explicit(secret.trim())
+            dropSecret -> Explicit(null)
+            else -> null
+        }
+
+    val dirty get() = passkeys != saved.passkeys || oidc != saved.oidc || change != null
+
+    val issuerInvalid get() = oidc.issuerUrl.isNotBlank() && !Regex("^https?://", RegexOption.IGNORE_CASE).containsMatchIn(oidc.issuerUrl)
+    val scopesInvalid get() = oidc.scopes.isNotBlank() && "openid" !in oidc.scopes.split(Regex("\\s+"))
+
+    fun reset() {
+        passkeys = saved.passkeys
+        oidc = saved.oidc
+        secret = ""
+        dropSecret = false
+    }
+
+    fun input() = AuthSettingsInput(
+        passkeys = passkeys,
+        oidc = OidcSettingsInput(
+            enabled = oidc.enabled,
+            allowSignUp = oidc.allowSignUp,
+            // The app has no fields for these yet, so a save keeps what the web set.
+            signOutRefused = oidc.signOutRefused,
+            displayName = oidc.displayName,
+            issuerUrl = oidc.issuerUrl,
+            clientId = oidc.clientId,
+            scopes = oidc.scopes,
+            usernameClaim = oidc.usernameClaim,
+            roleClaim = oidc.roleClaim,
+            groupsClaim = oidc.groupsClaim,
+            policyClaim = oidc.policyClaim,
+            clientSecret = change,
+        ),
+    )
+}
+
 /**
  * How people sign in, as the web's authentication panel: passkeys, and the
- * OpenID Connect provider for single sign-on. The fields save together;
- * an empty one falls back to what the server's environment sets, which it
- * shows as the field's placeholder.
+ * OpenID Connect provider for single sign-on. The fields save together,
+ * from the save bar; an empty one falls back to what the server's
+ * environment sets, which it shows as the field's placeholder.
  */
 @Composable
 fun AuthenticationSettings() {
     val api = LocalApi.current
     val loader = rememberLoader("admin-auth") { admin.auth.get() }
-    val saver = rememberSaver()
-    SettingsScaffold(stringResource(R.string.settings_admin_authentication)) {
-        loaded(loader, { stringResource(R.string.web_oidc_loadFailed, it) }) { saved ->
-            item(key = "form") {
-                AuthForm(saved, saver) { settings -> saver { loader.show(api.admin.auth.update(settings)) } }
-            }
+    val saved = (loader.state as? Load.Ready)?.value
+    val form = remember(saved) { saved?.let(::AuthDraft) }
+    SaveBarScaffold(
+        stringResource(R.string.settings_admin_authentication),
+        dirty = form?.dirty == true,
+        canSave = form != null && !form.issuerInvalid && !form.scopesInvalid,
+        onReset = { form?.reset() },
+        onSave = { form?.let { loader.show(api.admin.auth.update(it.input())) } },
+    ) {
+        loaded(loader, { stringResource(R.string.web_oidc_loadFailed, it) }) { _ ->
+            if (form != null) item(key = "form") { AuthForm(form) }
         }
     }
 }
 
 @Composable
-private fun AuthForm(saved: AdminAuthSettings, saver: Saver, save: (AuthSettingsInput) -> Unit) {
+private fun AuthForm(form: AuthDraft) {
     val res = LocalResources.current
-    var passkeys by remember(saved) { mutableStateOf(saved.passkeys) }
-    var oidc by remember(saved) { mutableStateOf(saved.oidc) }
-    var secret by remember(saved) { mutableStateOf("") }
-    var dropSecret by remember(saved) { mutableStateOf(false) }
+    val saved = form.saved
+    var passkeys by form::passkeys
+    var oidc by form::oidc
+    var secret by form::secret
+    var dropSecret by form::dropSecret
     var advanced by rememberSaveable { mutableStateOf(false) }
-    // A new secret to save, the saved one dropped, or the saved one kept.
-    val change: Explicit<String>? = when {
-        secret.isNotBlank() -> Explicit(secret.trim())
-        dropSecret -> Explicit(null)
-        else -> null
-    }
-    val dirty = passkeys != saved.passkeys || oidc != saved.oidc || change != null
     val defaults = saved.defaults
     val provider = oidc.displayName.ifBlank { defaults.displayName }.ifBlank { stringResource(R.string.web_oidc_title) }
-    val issuerError = oidc.issuerUrl.takeIf { it.isNotBlank() && !Regex("^https?://", RegexOption.IGNORE_CASE).containsMatchIn(it) }
-        ?.let { stringResource(R.string.web_oidc_checkField, stringResource(R.string.web_oidc_field_issuerUrl)) }
-    val scopesError = oidc.scopes.takeIf { it.isNotBlank() && "openid" !in it.split(Regex("\\s+")) }
-        ?.let { stringResource(R.string.web_oidc_scopes_description) }
+    val issuerError = if (form.issuerInvalid) stringResource(R.string.web_oidc_checkField, stringResource(R.string.web_oidc_field_issuerUrl)) else null
+    val scopesError = if (form.scopesInvalid) stringResource(R.string.web_oidc_scopes_description) else null
 
     Column {
         Section(stringResource(R.string.web_oidc_passkeys_title)) {
@@ -193,38 +237,6 @@ private fun AuthForm(saved: AdminAuthSettings, saver: Saver, save: (AuthSettings
                     }
                 }
             }
-        }
-        Gap(20.dp)
-        SaveButtons(
-            dirty = dirty && issuerError == null && scopesError == null,
-            saver = saver,
-            onReset = {
-                passkeys = saved.passkeys
-                oidc = saved.oidc
-                secret = ""
-                dropSecret = false
-            },
-        ) {
-            save(
-                AuthSettingsInput(
-                    passkeys = passkeys,
-                    oidc = OidcSettingsInput(
-                        enabled = oidc.enabled,
-                        allowSignUp = oidc.allowSignUp,
-                        // The app has no fields for these yet, so a save keeps what the web set.
-                        signOutRefused = oidc.signOutRefused,
-                        displayName = oidc.displayName,
-                        issuerUrl = oidc.issuerUrl,
-                        clientId = oidc.clientId,
-                        scopes = oidc.scopes,
-                        usernameClaim = oidc.usernameClaim,
-                        roleClaim = oidc.roleClaim,
-                        groupsClaim = oidc.groupsClaim,
-                        policyClaim = oidc.policyClaim,
-                        clientSecret = change,
-                    ),
-                ),
-            )
         }
     }
 }

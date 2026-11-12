@@ -19,8 +19,11 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -66,20 +69,22 @@ fun TvRoot(session: Session, state: AuthState) {
         contentKey = { current ->
             when (current) {
                 is AuthState.SignedIn -> "in-${current.user.id}-${current.server}"
+                // Another server's sign-in starts afresh, with its own code.
+                is AuthState.SignedOut -> "out-${current.server}"
                 else -> current::class
             }
         },
         label = "tvRoot",
     ) { current ->
         when (current) {
-            AuthState.NoServer -> TvConnectScreen(session)
+            is AuthState.NoServer -> TvConnectScreen(session, current.canCancel)
             is AuthState.Connecting -> TvConnecting(current.server)
-            is AuthState.Unreachable -> TvUnreachableScreen(current.server, current.reason, current.retrying, { withLocalNetwork(session::start) }, session::forgetServer)
+            is AuthState.Unreachable -> TvUnreachableScreen(session, current.server, current.reason, current.retrying) { withLocalNetwork(session::start) }
             is AuthState.SignedOut -> TvSignInScreen(session, current)
             // A new account starts the screens, and what they keep, afresh.
             is AuthState.SignedIn -> key(current.user.id, current.server) { TvSignedInApp(session, current.user) }
             // Not reached: a TV never turns offline mode on. If it were on, turning it off checks the server again.
-            is AuthState.Offline -> TvUnreachableScreen(current.server, Unreachability.Other, false, { session.setOfflineMode(false) }, session::forgetServer)
+            is AuthState.Offline -> TvUnreachableScreen(session, current.server, Unreachability.Other, false) { session.setOfflineMode(false) }
         }
     }
 }
@@ -98,45 +103,51 @@ fun TvConnecting(server: String) {
 
 /**
  * The saved server didn't answer: what happened and why on the left, and
- * Retry, focused, over the way to another server on the right. The app
+ * Retry, focused, over the way to the server list on the right. The app
  * also tries again when the network comes back.
  */
 @Composable
-fun TvUnreachableScreen(server: String, reason: Unreachability, retrying: Boolean, onRetry: () -> Unit, onChange: () -> Unit) {
+fun TvUnreachableScreen(session: Session, server: String, reason: Unreachability, retrying: Boolean, onRetry: () -> Unit) {
     val retry = remember { FocusRequester() }
+    val change = remember { FocusRequester() }
+    var switching by remember { mutableStateOf(false) }
     FocusOnShow(retry)
     val noNetwork = reason == Unreachability.NoNetwork
-    TvAuthFrame(
-        stringResource(if (noNetwork) R.string.unreachable_offline_title else R.string.unreachable_title),
-        unreachableMessage(reason, server, canWatchOffline = false),
-        side = {
-            Text(
-                server,
-                style = TvType.Label,
-                color = Palette.Muted,
-                modifier = Modifier.padding(top = SIDE_GAP),
-            )
-        },
-    ) {
-        Column(Modifier.fillMaxWidth().focusGroup(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            TvListItem(
-                stringResource(if (retrying) R.string.tv_unreachable_retrying else R.string.common_retry),
-                // While it tries, Select waits for the answer.
-                onClick = { if (!retrying) onRetry() },
-                icon = Lucide.RefreshCw,
-                modifier = Modifier.focusRequester(retry),
-                trailing = if (retrying) {
-                    { CircularProgressIndicator(Modifier.size(22.dp), color = LocalContentColor.current, strokeWidth = 2.dp) }
-                } else {
-                    null
-                },
-            )
-            TvListItem(
-                stringResource(R.string.connect_change_server),
-                onClick = onChange,
-                icon = Lucide.Server,
-                quiet = true,
-            )
+    Box(Modifier.fillMaxSize()) {
+        TvAuthFrame(
+            stringResource(if (noNetwork) R.string.unreachable_offline_title else R.string.unreachable_title),
+            unreachableMessage(reason, server, canWatchOffline = false),
+            side = {
+                Text(
+                    server,
+                    style = TvType.Label,
+                    color = Palette.Muted,
+                    modifier = Modifier.padding(top = SIDE_GAP),
+                )
+            },
+        ) {
+            Column(Modifier.fillMaxWidth().focusGroup(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                TvListItem(
+                    stringResource(if (retrying) R.string.tv_unreachable_retrying else R.string.common_retry),
+                    // While it tries, Select waits for the answer.
+                    onClick = { if (!retrying) onRetry() },
+                    icon = Lucide.RefreshCw,
+                    modifier = Modifier.focusRequester(retry),
+                    trailing = if (retrying) {
+                        { CircularProgressIndicator(Modifier.size(22.dp), color = LocalContentColor.current, strokeWidth = 2.dp) }
+                    } else {
+                        null
+                    },
+                )
+                TvListItem(
+                    stringResource(R.string.connect_change_server),
+                    onClick = { switching = true },
+                    icon = Lucide.Server,
+                    quiet = true,
+                    modifier = Modifier.focusRequester(change),
+                )
+            }
         }
+        TvServerPanel(switching, session, onClose = { switching = false }, returnFocus = { runCatching { change.requestFocus() } })
     }
 }

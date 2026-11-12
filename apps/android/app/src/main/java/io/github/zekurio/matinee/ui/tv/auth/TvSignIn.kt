@@ -1,5 +1,6 @@
 package io.github.zekurio.matinee.ui.tv.auth
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.focusGroup
@@ -7,6 +8,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -15,7 +17,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -30,6 +36,7 @@ import io.github.zekurio.matinee.ui.components.Lucide
 import io.github.zekurio.matinee.ui.components.QrCode
 import io.github.zekurio.matinee.ui.signin.DeviceCodeState
 import io.github.zekurio.matinee.ui.signin.rememberDeviceCode
+import io.github.zekurio.matinee.ui.signin.title
 import io.github.zekurio.matinee.ui.theme.Palette
 import io.github.zekurio.matinee.ui.tv.TvListItem
 import io.github.zekurio.matinee.ui.tv.TvType
@@ -49,26 +56,42 @@ fun TvSignInScreen(session: Session, state: AuthState.SignedOut) {
     val code = flow.code
     val again = remember { FocusRequester() }
     val change = remember { FocusRequester() }
+    var switching by remember { mutableStateOf(false) }
     // A code that ran out, or never came, puts focus on getting one; else the one way out.
     val stuck = flow.expired || (code == null && flow.error != null)
     FocusOnShow(if (stuck) again else change, stuck)
+    // A server being added: Back goes to finding or typing another, its row back to the one in use.
+    BackHandler(enabled = state.adding, onBack = session::addServer)
+    val servers by session.servers.collectAsState()
+    val current = servers.firstOrNull { it.active }?.takeIf { state.adding }
+    val way = if (current != null) {
+        WayOut(stringResource(R.string.servers_back_to, current.title()), Lucide.ArrowLeft, session::cancelAdd)
+    } else {
+        WayOut(stringResource(R.string.connect_change_server), Lucide.Server) { switching = true }
+    }
 
-    TvAuthFrame(
-        stringResource(R.string.tv_signin_title),
-        // A server not set up yet can't approve anyone; its setup runs in a browser.
-        stringResource(if (state.config.setup != null) R.string.signin_setup else R.string.tv_signin_description),
-        split = 0.56f,
-        side = { CodeSide(flow, state.server, again, change, session::forgetServer) },
-    ) {
-        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-            CodeQr(flow)
+    Box(Modifier.fillMaxSize()) {
+        TvAuthFrame(
+            stringResource(R.string.tv_signin_title),
+            // A server not set up yet can't approve anyone; its setup runs in a browser.
+            stringResource(if (state.config.setup != null) R.string.signin_setup else R.string.tv_signin_description),
+            split = 0.56f,
+            side = { CodeSide(flow, state.server, again, change, way) },
+        ) {
+            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                CodeQr(flow)
+            }
         }
+        TvServerPanel(switching, session, onClose = { switching = false }, returnFocus = { runCatching { change.requestFocus() } })
     }
 }
 
+/** The row that leaves signing in: to the server list, or back to the server in use. */
+private class WayOut(val label: String, val icon: Int, val onClick: () -> Unit)
+
 /** The steps to type the code, whether it's waiting, and the buttons. */
 @Composable
-private fun CodeSide(flow: DeviceCodeState, server: String, again: FocusRequester, change: FocusRequester, onChange: () -> Unit) {
+private fun CodeSide(flow: DeviceCodeState, server: String, again: FocusRequester, change: FocusRequester, way: WayOut) {
     val code = flow.code
     Column(Modifier.padding(top = 28.dp)) {
         when {
@@ -113,10 +136,10 @@ private fun CodeSide(flow: DeviceCodeState, server: String, again: FocusRequeste
                 )
             }
             TvListItem(
-                stringResource(R.string.connect_change_server),
-                onClick = onChange,
+                way.label,
+                onClick = way.onClick,
                 subtitle = server.substringAfter("://"),
-                icon = Lucide.Server,
+                icon = way.icon,
                 quiet = true,
                 modifier = Modifier.focusRequester(change),
             )

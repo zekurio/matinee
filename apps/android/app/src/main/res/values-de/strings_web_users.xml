@@ -39,6 +39,13 @@
     <string name="web_users_menu_deleteOwn">Mein Konto löschen</string>
     <string name="web_users_menu_delete">Benutzer löschen</string>
     <string name="web_users_lastAdmin">Mach zuerst jemand anderen zum Admin.</string>
+    <string name="web_users_menu_access">Zugriff bearbeiten</string>
+    <string name="web_users_adminAccess">Admins öffnen jede Mediathek und haben keine Grenzen.</string>
+    <string name="web_users_groupFromProvider">Bei der Anmeldung von %1$s gesetzt</string>
+    <string name="web_users_groupFromProviderShort">(von %1$s)</string>
+    <string name="web_users_ownAccess">Eigene Grenzen</string>
+    <string name="web_users_ownAccessHint">Hat eigene Einstellungen über seinen Gruppen</string>
+    <string name="web_users_ownAccessFromProvider">Bei der Anmeldung vom Richtlinien-Claim von %1$s gesetzt</string>
     <plurals name="web_users_passkeys">
         <item quantity="one">%1$d Passkey</item>
         <item quantity="other">%1$d Passkeys</item>
@@ -73,6 +80,7 @@
     <string name="web_users_invites_made">Erstellt am %1$s</string>
     <string name="web_users_invites_expires">Läuft %1$s ab</string>
     <string name="web_users_invites_expiresAt">Läuft am %1$s ab</string>
+    <string name="web_users_invites_joins">Kommt in %1$s</string>
     <string name="web_users_invites_revoke">Einladungslink widerrufen</string>
     <string name="web_users_invites_revokeNamed">Einladungslink für %1$s widerrufen</string>
     <string name="web_users_invites_revoked">Einladungslink widerrufen</string>
@@ -81,6 +89,8 @@
     <string name="web_users_invites_dialog_note">Notiz</string>
     <string name="web_users_invites_dialog_noteHint">Für wen er ist. Nur Admins sehen sie.</string>
     <string name="web_users_invites_dialog_expiry">Gültig für</string>
+    <string name="web_users_invites_dialog_groups">Gruppen</string>
+    <string name="web_users_invites_dialog_groupsHint">Das neue Konto startet in diesen Gruppen und in der Gruppe Alle.</string>
     <string name="web_users_invites_dialog_submit">Link erstellen</string>
     <string name="web_users_invites_link_title">Schick diesen Link</string>
     <string name="web_users_invites_link_description">Er funktioniert einmal, bis %1$s. Kopiere ihn jetzt, denn er kann nicht noch einmal angezeigt werden.</string>

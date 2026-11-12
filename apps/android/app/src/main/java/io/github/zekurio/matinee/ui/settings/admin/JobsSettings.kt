@@ -28,6 +28,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -47,7 +50,6 @@ import io.github.zekurio.matinee.ui.rememberLoader
 import io.github.zekurio.matinee.ui.settings.Panel
 import io.github.zekurio.matinee.ui.settings.RowDivider
 import io.github.zekurio.matinee.ui.settings.Section
-import io.github.zekurio.matinee.ui.settings.SettingsScaffold
 import io.github.zekurio.matinee.ui.theme.Palette
 import java.time.Instant
 import kotlinx.coroutines.delay
@@ -58,9 +60,10 @@ private const val POLL_MILLIS = 2_000L
 /**
  * Background work, as the web's jobs panel: one list of the queues, how
  * busy each is, and the scheduled task that fills it, then the tasks that
- * fill none and do their upkeep themselves. A queue's sheet pauses it,
- * clears what waits, and sets how many jobs it runs at once; a task runs
- * now or stops from its row. The page keeps itself current while it shows.
+ * fill none and do their upkeep themselves, and how many jobs each queue
+ * runs at once, saved from the save bar as on the web. A queue's sheet
+ * pauses it and clears what waits; a task runs now or stops from its row.
+ * The page keeps itself current while it shows.
  */
 @Composable
 fun JobsSettings() {
@@ -68,13 +71,25 @@ fun JobsSettings() {
     val loader = rememberLoader("admin-jobs") { admin.jobs.get() }
     val saver = rememberSaver()
     var open by remember { mutableStateOf<String?>(null) }
+    // The numbers changed and not saved yet, by queue; the rest follow the server as it polls.
+    var edits by remember { mutableStateOf(mapOf<String, Int>()) }
+    val tunable = (loader.state as? Load.Ready)?.value?.queues?.filter { it.concurrencyNote != null }.orEmpty()
+    val changed = tunable.mapNotNull { queue -> edits[queue.id]?.takeIf { it != queue.concurrency }?.let { queue.id to it } }.toMap()
     LaunchedEffect(loader) {
         while (true) {
             delay(POLL_MILLIS)
             loader.reload()
         }
     }
-    SettingsScaffold(stringResource(R.string.settings_admin_jobs)) {
+    SaveBarScaffold(
+        stringResource(R.string.settings_admin_jobs),
+        dirty = changed.isNotEmpty(),
+        onReset = { edits = emptyMap() },
+        onSave = {
+            loader.show(api.admin.jobs.updateConcurrency(changed))
+            edits = emptyMap()
+        },
+    ) {
         loaded(loader, { stringResource(R.string.web_jobs_loadFailed, it) }) { overview ->
             item(key = "jobs") {
                 val runTask = { task: ScheduledTask, action: String ->
@@ -97,6 +112,19 @@ fun JobsSettings() {
                     }
                 }
             }
+            val queues = overview.queues.filter { it.concurrencyNote != null }
+            if (queues.isNotEmpty()) {
+                item(key = "concurrency") {
+                    Section(stringResource(R.string.web_jobs_concurrency)) {
+                        Panel {
+                            queues.forEachIndexed { index, queue ->
+                                if (index > 0) RowDivider()
+                                ConcurrencyRow(queue, edits[queue.id] ?: queue.concurrency) { n -> edits = edits + (queue.id to n) }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
     val queue = (loader.state as? Load.Ready)?.value?.queues?.firstOrNull { it.id == open }
@@ -113,7 +141,6 @@ fun JobsSettings() {
                     loader.reload()
                 }
             },
-            onConcurrency = { n -> saver { loader.show(api.admin.jobs.updateConcurrency(mapOf(queue.id to n))) } },
         ) { open = null }
     }
 }
@@ -255,31 +282,50 @@ private fun TaskRow(task: ScheduledTask, onAction: (String) -> Unit) {
     }
 }
 
+/** How many jobs [queue] runs at once, [value] as it's edited, stepped between one and its maximum. */
+@Composable
+private fun ConcurrencyRow(queue: JobQueueStatus, value: Int, onChange: (Int) -> Unit) {
+    val name = queueName(queue)
+    Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text(name, style = MaterialTheme.typography.bodyLarge)
+            Text(
+                stringResource(R.string.web_jobs_concurrency_limits, queue.defaultConcurrency.toString(), queue.maxConcurrency.toString()),
+                style = MaterialTheme.typography.bodySmall,
+                color = Palette.Muted,
+            )
+        }
+        RoundIconButton(
+            Lucide.ChevronLeft,
+            stringResource(R.string.web_jobs_concurrency_decrease, name),
+            { onChange(value - 1) },
+            enabled = value > 1,
+            background = Color.Transparent,
+        )
+        Text(
+            value.toString(),
+            style = MaterialTheme.typography.titleMedium,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.width(36.dp).semantics { liveRegion = LiveRegionMode.Polite },
+        )
+        RoundIconButton(
+            Lucide.ChevronRight,
+            stringResource(R.string.web_jobs_concurrency_increase, name),
+            { onChange(value + 1) },
+            enabled = value < queue.maxConcurrency,
+            background = Color.Transparent,
+        )
+    }
+}
+
 /** A queue's details and what can be done to it. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun QueueSheet(queue: JobQueueStatus, onAction: (String) -> Unit, onConcurrency: (Int) -> Unit, onDismiss: () -> Unit) {
+private fun QueueSheet(queue: JobQueueStatus, onAction: (String) -> Unit, onDismiss: () -> Unit) {
     val name = queueName(queue)
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Palette.Raised, dragHandle = null) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(vertical = 12.dp)) {
             SheetHeader(name, queueStatus(queue))
-            // How many at once, where the queue lets that change.
-            if (queue.concurrencyNote != null) {
-                Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(stringResource(R.string.web_jobs_concurrency), style = MaterialTheme.typography.bodyLarge)
-                        Text(
-                            stringResource(R.string.web_jobs_concurrency_limits, queue.defaultConcurrency.toString(), queue.maxConcurrency.toString()),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Palette.Muted,
-                        )
-                    }
-                    RoundIconButton(Lucide.ChevronLeft, stringResource(R.string.web_jobs_concurrency_decrease, name), { onConcurrency(queue.concurrency - 1) }, enabled = queue.concurrency > 1)
-                    Text(queue.concurrency.toString(), style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center, modifier = Modifier.width(36.dp))
-                    RoundIconButton(Lucide.ChevronRight, stringResource(R.string.web_jobs_concurrency_increase, name), { onConcurrency(queue.concurrency + 1) }, enabled = queue.concurrency < queue.maxConcurrency)
-                }
-                HorizontalDivider(Modifier.padding(vertical = 6.dp), color = Palette.Border)
-            }
             SheetItem(if (queue.paused) Lucide.Play else Lucide.Pause, stringResource(if (queue.paused) R.string.web_jobs_queue_resume else R.string.web_jobs_queue_pause)) {
                 onAction(if (queue.paused) "resume" else "pause")
             }

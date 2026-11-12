@@ -3,7 +3,7 @@
 <resources>
     <string name="web_common_saveBar_unsaved">Unsaved changes</string>
     <string name="web_common_saveBar_saved">Changes saved</string>
-    <string name="web_common_saveBar_failed">Couldn\'t save.</string>
+    <string name="web_common_saveBar_failed">Couldn\'t save your changes</string>
     <string name="web_common_saveBar_reset">Reset</string>
     <string name="web_common_saveBar_save">Save changes</string>
     <string name="web_common_saveBar_saving">Saving…</string>

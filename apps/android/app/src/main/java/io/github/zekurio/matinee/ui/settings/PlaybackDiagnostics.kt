@@ -1,8 +1,5 @@
 package io.github.zekurio.matinee.ui.settings
 
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
 import android.os.Build
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.heightIn
@@ -28,7 +25,6 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.zekurio.matinee.R
-import io.github.zekurio.matinee.ui.components.Gap
 import io.github.zekurio.matinee.ui.components.LocalSnackbar
 import io.github.zekurio.matinee.ui.player.AttemptDiagnostics
 import io.github.zekurio.matinee.ui.player.AttemptOutcome
@@ -39,10 +35,10 @@ import io.github.zekurio.matinee.ui.theme.Palette
 import kotlinx.coroutines.launch
 
 /**
- * The report of the latest playback, in Settings, Playback: what it holds
- * and what it leaves out, how the last try went, and ways to read, copy,
- * and clear it. It reads the report kept in memory, so it's there after
- * the player closes.
+ * The report of the latest playback, in Settings, About: how the last try
+ * went, and ways to read, copy, and clear it. It reads the report kept in
+ * memory, so it's there after the player closes. What it holds and leaves
+ * out is in the report's own first lines.
  */
 @Composable
 fun PlaybackDiagnosticsSection() {
@@ -52,15 +48,14 @@ fun PlaybackDiagnosticsSection() {
     val report by PlaybackDiagnostics.latest.collectAsState()
     val text = remember(report) { report?.let(::formatReport) }
     var open by remember { mutableStateOf(false) }
+    val title = stringResource(R.string.diagnostics_title)
     val copied = stringResource(R.string.diagnostics_copied)
     val copy = { value: String ->
-        context.copyReport(value)
+        context.copyText(title, value)
         // Android 13 and later confirm a copy themselves.
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) scope.launch { snackbar.showSnackbar(copied) }
     }
-    Section(stringResource(R.string.diagnostics_title)) {
-        Text(stringResource(R.string.diagnostics_privacy), style = MaterialTheme.typography.bodySmall, color = Palette.Muted)
-        Gap(14.dp)
+    Section(title) {
         Panel {
             val latest = report?.latest
             if (text == null || latest == null) {
@@ -88,7 +83,7 @@ fun PlaybackDiagnosticsSection() {
         AlertDialog(
             onDismissRequest = { open = false },
             containerColor = Palette.Raised,
-            title = { Text(stringResource(R.string.diagnostics_title)) },
+            title = { Text(title) },
             text = {
                 Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState())) {
                     SelectionContainer {
@@ -108,7 +103,7 @@ fun PlaybackDiagnosticsSection() {
 
 /** "Failed (stream)": how the latest try went, and with which source. */
 @Composable
-private fun statusLabel(attempt: AttemptDiagnostics): String {
+internal fun statusLabel(attempt: AttemptDiagnostics): String {
     val mode = stringResource(
         when (attempt.mode) {
             SourceMode.DIRECT -> R.string.diagnostics_mode_direct
@@ -127,10 +122,4 @@ private fun statusLabel(attempt: AttemptDiagnostics): String {
         },
         mode,
     )
-}
-
-/** Puts the report on the clipboard, as plain text the viewer pastes where they like. */
-private fun Context.copyReport(text: String) {
-    val clipboard = getSystemService(ClipboardManager::class.java) ?: return
-    clipboard.setPrimaryClip(ClipData.newPlainText(getString(R.string.diagnostics_title), text))
 }

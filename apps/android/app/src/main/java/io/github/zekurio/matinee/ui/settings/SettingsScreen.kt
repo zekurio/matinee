@@ -127,6 +127,7 @@ enum class SettingsPage(val key: String, @param:DrawableRes val icon: Int, @para
     Playback("playback", Lucide.TvPlay, R.string.settings_page_playback),
     Subtitles("subtitles", Lucide.Captions, R.string.settings_subtitles_title),
     Downloads("downloads", Lucide.Download, R.string.downloads_title),
+    About("about", Lucide.Info, R.string.about_title),
 
     // The server's settings, for admins, as the web's admin sections. Each page lives in ui/settings/admin.
     Libraries("libraries", Lucide.LibraryBig, R.string.settings_admin_libraries, admin = true),
@@ -202,6 +203,8 @@ fun SettingsScreen(session: Session) {
         item(key = "device") {
             Panel {
                 PageRow(SettingsPage.Downloads)
+                RowDivider()
+                PageRow(SettingsPage.About)
             }
         }
         if (admin) {
@@ -228,7 +231,7 @@ fun SettingsScreen(session: Session) {
                     }
                     RowDivider()
                     // Full rows, so the two ways out are easy to hit; signing out in red, as it ends the session.
-                    LinkRow(stringResource(R.string.connect_change_server), icon = Lucide.RefreshCw, onClick = session::forgetServer)
+                    io.github.zekurio.matinee.ui.signin.ChangeServerRow(session)
                     RowDivider()
                     LinkRow(stringResource(R.string.shell_sign_out), destructive = true, icon = Lucide.LogOut, onClick = session::signOut)
                 }
@@ -251,6 +254,7 @@ fun SettingsPageScreen(session: Session, key: String) {
         SettingsPage.Downloads -> SettingsScaffold(stringResource(page.title)) {
             item(key = "downloads") { DownloadsSection() }
         }
+        SettingsPage.About -> AboutPage()
         SettingsPage.Libraries -> LibrariesSettings()
         SettingsPage.Users -> UsersSettings()
         SettingsPage.Authentication -> AuthenticationSettings()
@@ -336,7 +340,6 @@ private fun PlaybackPage(session: Session) {
         item(key = "device") { DeviceSection(prefs, loaded) }
         item(key = "transcoding") { TranscodingSection(prefs, loaded) }
         if (passthrough.isNotEmpty()) item(key = "passthrough") { PassthroughSection(prefs, passthrough) }
-        item(key = "diagnostics") { PlaybackDiagnosticsSection() }
     }
 }
 

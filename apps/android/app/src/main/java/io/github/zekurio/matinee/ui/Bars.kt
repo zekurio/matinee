@@ -284,6 +284,8 @@ fun TopBar(
     modifier: Modifier = Modifier,
     back: Boolean = true,
     home: Boolean = false,
+    /** What back does instead of leaving, as a page that holds itself open. */
+    onBack: (() -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     val nav = LocalNavigator.current
@@ -297,7 +299,7 @@ fun TopBar(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (back) {
-            RoundIconButton(Lucide.ArrowLeft, stringResource(R.string.common_back), nav::back, size = 48.dp, iconSize = 24.dp, background = Color.Transparent)
+            RoundIconButton(Lucide.ArrowLeft, stringResource(R.string.common_back), onBack ?: nav::back, size = 48.dp, iconSize = 24.dp, background = Color.Transparent)
         }
         if (home && !LocalOffline.current) {
             RoundIconButton(Lucide.House, stringResource(R.string.shell_home_link), nav::home, size = 48.dp, iconSize = 22.dp, background = Color.Transparent)

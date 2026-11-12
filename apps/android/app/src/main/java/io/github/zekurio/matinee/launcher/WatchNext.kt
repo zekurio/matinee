@@ -68,12 +68,11 @@ class WatchNext(private val app: MatineeApp) {
         }
     }
 
-    /** Cached account identity also works while the session is being checked. */
-    internal fun identity(): String? {
-        val user = app.session.lastUser ?: return null
-        val api = app.session.api ?: return null
-        return digest("${api.paths.artwork("identity")}\n${user.id}")
-    }
+    /**
+     * Cached account identity also works while the session is being checked,
+     * and stays while another server is being added.
+     */
+    internal fun identity(): String? = app.session.identity()?.let(::digest)
 
     fun requestSync() {
         scope.launch { sync() }

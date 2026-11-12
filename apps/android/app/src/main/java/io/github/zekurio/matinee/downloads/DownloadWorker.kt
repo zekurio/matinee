@@ -80,21 +80,24 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
         val entry = store[id] ?: return Result.success()
         if (entry.state == DownloadState.DONE || entry.state == DownloadState.PAUSED) return Result.success()
         val session = applicationContext.app.session
-        val api = session.api ?: return Result.retry()
+        // The server it came from, with that server's sign-in, whichever server is in use.
+        val client = entry.server?.let(session::serverClient) ?: return Result.retry()
+        val api = client.api
+        val http = client.http
         store.update(id) { it.copy(state = DownloadState.RUNNING, error = null) }
         foreground(id)
         return try {
             withContext(Dispatchers.IO) {
                 // Subtitles taken out of a large file can keep the server busy for minutes.
-                val slow = session.http.newBuilder().readTimeout(5, TimeUnit.MINUTES).build()
-                saveImage(api, session.http, id)
+                val slow = http.newBuilder().readTimeout(5, TimeUnit.MINUTES).build()
+                saveImage(api, http, id)
                 saveSubtitles(api, slow, id)
                 var tries = 0
                 while (true) {
                     try {
                         when (entry.kind) {
-                            DownloadKind.DEVICE -> fetchVersion(api, session.http, id)
-                            else -> fetchOriginal(api, session.http, id)
+                            DownloadKind.DEVICE -> fetchVersion(api, http, id)
+                            else -> fetchOriginal(api, http, id)
                         }
                         break
                     } catch (e: StartOver) {

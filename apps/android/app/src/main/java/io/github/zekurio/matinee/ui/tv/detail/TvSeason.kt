@@ -140,7 +140,9 @@ private fun SeasonPage(title: Title, season: Season, onSeason: (Season) -> Unit)
         }
         Box(Modifier.weight(1f))
         // What the focused episode is about; with focus above, the one Play starts.
-        EpisodeAbout(focused ?: next, Modifier.padding(start = TvPage.Start, end = TvPage.End))
+        // The time left in the episode Play resumes is on the button, so not here.
+        val about = focused ?: next
+        EpisodeAbout(about, left = about?.id != next?.id, modifier = Modifier.padding(start = TvPage.Start, end = TvPage.End))
         when (val state = items.state) {
             Load.Loading -> Box(Modifier.fillMaxWidth().height(ROW_HEIGHT), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = Palette.Muted, strokeWidth = 3.dp, modifier = Modifier.size(32.dp))
@@ -192,9 +194,9 @@ private fun EpisodeRow(list: List<MediaItem>, row: String, memory: TvFocusMemory
     }
 }
 
-/** An episode's number and name, facts, and the start of its overview, above the row. */
+/** An episode's number and name, facts, and the start of its overview, above the row. [left] adds the time left in it. */
 @Composable
-private fun EpisodeAbout(item: MediaItem?, modifier: Modifier = Modifier) {
+private fun EpisodeAbout(item: MediaItem?, left: Boolean, modifier: Modifier = Modifier) {
     val res = LocalResources.current
     val viewer = LocalContext.current.app.viewer
     Column(modifier.height(ABOUT_HEIGHT), verticalArrangement = Arrangement.Bottom) {
@@ -207,7 +209,7 @@ private fun EpisodeAbout(item: MediaItem?, modifier: Modifier = Modifier) {
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
-        val facts = episodeFacts(item, viewer, res)
+        val facts = episodeFacts(item, viewer, res, left)
         if (facts.isNotEmpty()) Text(facts.joinToString("  ·  "), style = TvType.Caption, color = Palette.Muted, maxLines = 1)
         item.episode?.overview?.let {
             Text(

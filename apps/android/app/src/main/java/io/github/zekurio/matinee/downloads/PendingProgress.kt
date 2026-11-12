@@ -11,27 +11,32 @@ import java.io.IOException
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonObject
 
 @Serializable
 data class PendingReport(val positionSeconds: Double, val durationSeconds: Double?)
 
 /**
- * What happened while the server was out of reach, sent once it answers
+ * What happened while [server] was out of reach, sent once it answers
  * again: where the person got to in each file, the last place per file, so
  * Continue watching and watched marks catch up; and each sitting, for the
- * statistics' watch time.
+ * statistics' watch time. Each saved server has its own, so one server's
+ * progress never goes to another.
  */
-class PendingProgress(context: Context) {
-    private val prefs = context.getSharedPreferences("pending_progress", Context.MODE_PRIVATE)
+class PendingProgress(context: Context, private val server: String) {
+    private val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+    private val playsKey = "$KEY_PLAYS:$server"
+    private val reportsKey = "$KEY_REPORTS:$server"
     private val serializer = MapSerializer(String.serializer(), PendingReport.serializer())
     private val playsSerializer = MapSerializer(String.serializer(), OfflinePlay.serializer())
 
     private fun readPlays(): Map<String, OfflinePlay> = runCatching {
-        decodeSaved(playsSerializer, prefs.getString("plays", null) ?: "{}")
+        decodeSaved(playsSerializer, prefs.getString(playsKey, null) ?: "{}")
     }.getOrDefault(emptyMap())
 
     private fun writePlays(plays: Map<String, OfflinePlay>) =
-        prefs.edit { putString("plays", MatineeJson.encodeToString(playsSerializer, plays)) }
+        prefs.edit { putString(playsKey, MatineeJson.encodeToString(playsSerializer, plays)) }
 
     /** A sitting that didn't reach the server, kept as far as it got, by its session. */
     @Synchronized
@@ -45,13 +50,13 @@ class PendingProgress(context: Context) {
     }
 
     private fun read(): Map<String, PendingReport> = runCatching {
-        MatineeJson.decodeFromString(serializer, prefs.getString("reports", null) ?: "{}")
+        MatineeJson.decodeFromString(serializer, prefs.getString(reportsKey, null) ?: "{}")
     }.getOrDefault(emptyMap())
 
     @Synchronized
     fun put(itemId: String, report: PendingReport) {
         val next = read() + (itemId to report)
-        prefs.edit { putString("reports", MatineeJson.encodeToString(serializer, next)) }
+        prefs.edit { putString(reportsKey, MatineeJson.encodeToString(serializer, next)) }
     }
 
     /** Where the person got to in [itemId] while offline, if that hasn't reached the server yet. */
@@ -62,7 +67,14 @@ class PendingProgress(context: Context) {
     @Synchronized
     fun drop(itemId: String) {
         val next = read() - itemId
-        prefs.edit { putString("reports", MatineeJson.encodeToString(serializer, next)) }
+        prefs.edit { putString(reportsKey, MatineeJson.encodeToString(serializer, next)) }
+    }
+
+    /** Everything waiting, as the server it was for is removed. */
+    @Synchronized
+    fun clear() = prefs.edit {
+        remove(playsKey)
+        remove(reportsKey)
     }
 
     /** Send what's waiting, the sittings first. What still fails waits for the next time. */
@@ -97,8 +109,40 @@ class PendingProgress(context: Context) {
         }
     }
 
-    private companion object {
+    companion object {
         /** The most `playback.offline` takes at once. */
-        const val PLAYS_PER_REQUEST = 200
+        private const val PLAYS_PER_REQUEST = 200
+        private const val PREFS = "pending_progress"
+        private const val KEY_PLAYS = "plays"
+        private const val KEY_REPORTS = "reports"
+
+        /**
+         * What an app before saved servers kept waiting, under keys of no
+         * server, was for [server]. It joins what [server] already has, and
+         * the old keys go only once that's written. Returns whether nothing
+         * is left to move.
+         */
+        fun adopt(context: Context, server: String): Boolean {
+            val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            val edit = prefs.edit()
+            for (key in listOf(KEY_PLAYS, KEY_REPORTS)) {
+                val old = prefs.getString(key, null) ?: continue
+                val target = "$key:$server"
+                val merged = when (val current = prefs.getString(target, null)) {
+                    null -> old
+                    // Unreadable as maps: keep both as they are rather than lose either.
+                    else -> mergeMaps(old, current) ?: return false
+                }
+                edit.putString(target, merged).remove(key)
+            }
+            return edit.commit()
+        }
+
+        /** Two JSON objects as one, [newer]'s entries winning. */
+        private fun mergeMaps(older: String, newer: String): String? = runCatching {
+            val a = MatineeJson.parseToJsonElement(older).jsonObject
+            val b = MatineeJson.parseToJsonElement(newer).jsonObject
+            JsonObject(a + b).toString()
+        }.getOrNull()
     }
 }

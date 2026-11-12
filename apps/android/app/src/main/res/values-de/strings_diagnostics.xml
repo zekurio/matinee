@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="diagnostics_title">Wiedergabebericht</string>
-    <string name="diagnostics_privacy">Wenn ein Video nicht abspielt, hilft dieser Bericht dabei herauszufinden, warum. Er nennt die Versionen von App und Android, das Gerätemodell, die Einstellungen des Players, die Formate der Datei, was der Player versucht hat, und Fehlercodes. Titel, Dateinamen, die Adresse des Servers, dein Konto oder Anmeldetokens enthält er nie. Er bleibt im Speicher der App, bis sie beendet wird, und verlässt das Gerät nur, wenn du ihn kopierst.</string>
     <string name="diagnostics_empty">Seit dem Start der App wurde nichts abgespielt. Spiel das Video ab, das Probleme macht, und komm dann hierher zurück.</string>
     <string name="diagnostics_latest">Letzte Wiedergabe</string>
     <string name="diagnostics_status_loading">Lädt (%1$s)</string>
@@ -18,4 +17,14 @@
     <string name="diagnostics_copied">Bericht kopiert</string>
     <string name="diagnostics_clear">Bericht löschen</string>
     <string name="diagnostics_close">Schließen</string>
+    <string name="about_title">Über die App</string>
+    <string name="about_version">Version</string>
+    <string name="about_android">Android</string>
+    <string name="about_device">Gerät</string>
+    <string name="logs_title">App-Protokoll</string>
+    <string name="logs_show">Protokoll anzeigen</string>
+    <string name="logs_note">Letzte Meldungen dieser App, ohne Adressen, Konten oder Dateinamen</string>
+    <string name="logs_copy">Protokoll kopieren</string>
+    <string name="logs_copied">Protokoll kopiert</string>
+    <string name="logs_share">Protokoll teilen</string>
 </resources>

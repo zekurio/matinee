@@ -1,10 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The playback report in Settings, Playback. The report's own text stays
-     in English so anyone can read a pasted one; only these words around it
-     are translated. -->
+<!-- Settings, About: the app and device, the playback report, and the app's
+     log. The report's and the log's own text stay in English so anyone can
+     read a pasted one; only these words around them are translated. -->
 <resources>
     <string name="diagnostics_title">Playback report</string>
-    <string name="diagnostics_privacy">If a video won\'t play, this report helps whoever runs the server or the app work out why. It lists the app and Android versions, the device model, the player settings, the file\'s formats, what the player tried, and error codes. It never holds titles, file names, the server\'s address, your account, or sign-in tokens. It stays in this app\'s memory until the app closes, and leaves the device only if you copy it.</string>
     <string name="diagnostics_empty">Nothing played since the app started. Play the video that has trouble, then come back here.</string>
     <string name="diagnostics_latest">Latest playback</string>
     <string name="diagnostics_status_loading">Loading (%1$s)</string>
@@ -21,4 +20,14 @@
     <string name="diagnostics_copied">Report copied</string>
     <string name="diagnostics_clear">Clear report</string>
     <string name="diagnostics_close">Close</string>
+    <string name="about_title">About</string>
+    <string name="about_version">Version</string>
+    <string name="about_android">Android</string>
+    <string name="about_device">Device</string>
+    <string name="logs_title">App log</string>
+    <string name="logs_show">Show log</string>
+    <string name="logs_note">Recent messages from this app, without addresses, accounts, or file names</string>
+    <string name="logs_copy">Copy log</string>
+    <string name="logs_copied">Log copied</string>
+    <string name="logs_share">Share log</string>
 </resources>

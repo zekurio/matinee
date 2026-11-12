@@ -65,6 +65,7 @@ enum class TvSettingsCategory(val key: String, @param:DrawableRes val icon: Int,
     Languages("languages", Lucide.AudioLines, R.string.playback_languages_title),
     Devices("account", Lucide.Monitor, R.string.tv_settings_devices),
     Account("server", Lucide.UserRound, R.string.tv_settings_account),
+    About("about", Lucide.Info, R.string.about_title),
     ;
 
     companion object {
@@ -193,7 +194,8 @@ fun TvSettingsScreen(initial: String? = null) {
                         TvSettingsCategory.Subtitles -> SubtitleRows(panels, first)
                         TvSettingsCategory.Languages -> LanguageRows(session, panels, first)
                         TvSettingsCategory.Devices -> DeviceRows(panels, first)
-                        TvSettingsCategory.Account -> AccountRows(session, first)
+                        TvSettingsCategory.Account -> AccountRows(session, panels, first)
+                        TvSettingsCategory.About -> AboutRows(panels, first)
                     }
                 }
             }

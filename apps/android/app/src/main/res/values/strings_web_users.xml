@@ -39,6 +39,13 @@
     <string name="web_users_menu_deleteOwn">Delete my account</string>
     <string name="web_users_menu_delete">Delete user</string>
     <string name="web_users_lastAdmin">Make someone else an admin first.</string>
+    <string name="web_users_menu_access">Edit access</string>
+    <string name="web_users_adminAccess">Admins open every library and have no limits.</string>
+    <string name="web_users_groupFromProvider">Set by %1$s at sign-in</string>
+    <string name="web_users_groupFromProviderShort">(from %1$s)</string>
+    <string name="web_users_ownAccess">Own limits</string>
+    <string name="web_users_ownAccessHint">Has settings of its own over its groups</string>
+    <string name="web_users_ownAccessFromProvider">Set at sign-in by the policy claim from %1$s</string>
     <plurals name="web_users_passkeys">
         <item quantity="one">%1$d passkey</item>
         <item quantity="other">%1$d passkeys</item>
@@ -73,6 +80,7 @@
     <string name="web_users_invites_made">Made %1$s</string>
     <string name="web_users_invites_expires">Expires %1$s</string>
     <string name="web_users_invites_expiresAt">Expires %1$s</string>
+    <string name="web_users_invites_joins">Joins %1$s</string>
     <string name="web_users_invites_revoke">Revoke invite link</string>
     <string name="web_users_invites_revokeNamed">Revoke the invite link for %1$s</string>
     <string name="web_users_invites_revoked">Invite link revoked</string>
@@ -81,6 +89,8 @@
     <string name="web_users_invites_dialog_note">Note</string>
     <string name="web_users_invites_dialog_noteHint">Who it\'s for. Only admins see it.</string>
     <string name="web_users_invites_dialog_expiry">Works for</string>
+    <string name="web_users_invites_dialog_groups">Groups</string>
+    <string name="web_users_invites_dialog_groupsHint">The new account starts in these groups, and in Everyone.</string>
     <string name="web_users_invites_dialog_submit">Create link</string>
     <string name="web_users_invites_link_title">Send this link</string>
     <string name="web_users_invites_link_description">It works once, until %1$s. Copy it now, since it can\'t be shown again.</string>

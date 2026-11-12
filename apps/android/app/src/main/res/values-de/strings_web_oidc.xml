@@ -12,6 +12,8 @@
     <string name="web_oidc_field_usernameClaim">Benutzername-Claim</string>
     <string name="web_oidc_field_roleClaim">Rollen-Claim</string>
     <string name="web_oidc_field_clientSecret">Client-Secret</string>
+    <string name="web_oidc_field_groupsClaim">Gruppen-Claim</string>
+    <string name="web_oidc_field_policyClaim">Richtlinien-Claim</string>
     <string name="web_oidc_passkeys_title">Passkeys</string>
     <plurals name="web_oidc_passkeys_unlinked">
         <item quantity="one">%1$d Konto ist nicht mit %2$s verknüpft und kann sich nicht anmelden, solange Passkeys aus sind. Solange es noch angemeldet ist, kann es %2$s unter Einstellungen → Konto verknüpfen.</item>
@@ -39,6 +41,12 @@
     <string name="web_oidc_redirectUri">Weiterleitungs-URI</string>
     <string name="web_oidc_copy">Kopieren</string>
     <string name="web_oidc_copied">Kopiert</string>
+    <string name="web_oidc_access_title">Gruppen und Zugriff</string>
+    <string name="web_oidc_claim_off">Aus</string>
+    <string name="web_oidc_groupsClaim_description">Der Claim, der die Gruppen eines Kontos beim Anbieter auflistet. Bei jeder Anmeldung enthält eine Zugriffsgruppe die Konten der Anbietergruppe, die in ihren Einstellungen steht. Ein Konto ohne den Claim ist in keiner Anbietergruppe.</string>
+    <string name="web_oidc_policyClaim_description">Der Claim mit den Grenzen eines Kontos, ein Objekt mit beliebigen von libraries, maxBitrate, transcode, downloads und maxStreams. Bei jeder Anmeldung ersetzt er, was unter Benutzer für das Konto eingestellt ist.</string>
+    <string name="web_oidc_signOutRefused">Konten abmelden, die der Anbieter ablehnt</string>
+    <string name="web_oidc_signOutRefused_description">Beendet jede Sitzung eines Kontos, sobald der Anbieter es ablehnt, seine Anmeldung zu erneuern, wie bei einem Konto, das er gesperrt oder gelöscht hat. Das erreicht nur Konten mit einem Refresh-Token, wofür es den Scope offline_access braucht.</string>
     <string name="web_oidc_advanced">Erweitert</string>
     <string name="web_oidc_advanced_show">Anzeigen</string>
     <string name="web_oidc_advanced_hide">Ausblenden</string>

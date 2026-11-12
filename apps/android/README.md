@@ -96,6 +96,13 @@ Without Nix, install JDK 17 or later and the Android SDK with platform
 
 - Connects to a server by its address. Without a scheme it tries https, then
   http, since a server on a home network often has no certificate.
+- Keeps several servers, each with its own sign-in, as the Jellyfin and Plex
+  apps do. Change server lists them: a tap switches, with no sign-in while
+  that server's session stands; Add server connects to another, and going
+  back from its connect or sign-in screen returns to the server in use,
+  which stays as it was until the new one is signed in. Removing a server
+  signs out there first, as far as it answers, then deletes its token and
+  its downloads. Sign out ends the session on the server in use only.
 - Signs in two ways, both from the contract's `auth.app` and `auth.device`
   (see [Signing in apps](../server/README.md#signing-in-apps)):
   - In the browser: a Custom Tab opens `/authorize` with a PKCE challenge,
@@ -103,8 +110,8 @@ Without Nix, install JDK 17 or later and the Android SDK with platform
     browser back to `matinee://auth/callback`.
   - With a code: the app shows a user code, someone signed in enters it at
     `/link`, and the app polls until it's approved. TVs only offer this.
-    The token lives in the app's preferences, encrypted with a key in the
-    Android Keystore, and stays out of backups.
+    The token lives in the app's preferences, one per server, encrypted with
+    a key in the Android Keystore, and stays out of backups.
 - Home: the featured banner, Continue watching, Next up, and what each
   library got last, or, for an account that may open no library, a note to
   ask whoever runs the server. Libraries with sorting, a genre filter, and
@@ -137,6 +144,10 @@ Without Nix, install JDK 17 or later and the Android SDK with platform
   the languages you read or hear save beside the video. A downloaded file
   plays from the phone. When the server doesn't answer, the app offers the
   downloads, and where you got to in them goes to the server once it's back.
+  Each download, and the progress waiting to be sent, belongs to the server
+  it came from: the app shows and plays only the server in use's, sends
+  progress only to its own server, and fetches each with its server's
+  sign-in, whichever server is in use.
   An account that may not download, as `playback.options` says, gets no
   Download in any menu and keeps what's on the phone; a download the server
   refuses stops with words that say so, without retrying.
@@ -146,7 +157,12 @@ Without Nix, install JDK 17 or later and the Android SDK with platform
   rate limit, codecs for encodes, decoders, skip length, autoplay
   of the next episode, picture in picture, and audio passthrough; downloads'
   network, version, and subtitles; the app's language through Android's
-  per-app setting; sessions; and the server.
+  per-app setting; sessions; the server; and About, with the app's
+  version, Android's, and the model, the latest playback's report, and
+  the app's own log. Both are read on the device only and leave it when
+  you copy or share them. The report holds codes and formats; the log is
+  this process's logcat, with the server, the account, addresses, paths,
+  file names, quoted text, ids, and tokens replaced (`ui/settings/AppLog.kt`).
 
 Not built yet: Chromecast, a media session for the lock screen, and
 downloads of a whole season.
@@ -160,7 +176,8 @@ own. Those live in `ui/tv/`, and the player's in `ui/player/tv/`.
 - `ui/tv/auth/` is what a TV shows before and around the account: the
   servers found on the local network, searched for while it shows, the
   server used before, typing an address, signing in with the code and QR
-  code, and a server that doesn't answer.
+  code, a server that doesn't answer, and the saved servers' panel
+  (`TvServers.kt`), which settings opens too.
 - `TvApp.kt` is the signed-in app: a drawer at the left edge, a rail of
   icons that opens into labels when focus comes in from the page, the
   clock at the top right, and its own `NavHost` that maps the phone's
@@ -203,8 +220,8 @@ the state each page loads (`HomeData`, `TitleData`, `LibraryData`, and the
 rest, beside the phone's screens), `Navigator` and its routes, `Actions`,
 the player's controller, formatters, `Palette`, and image loading. A TV
 leaves out downloads and offline mode, the admin pages, the image editor
-and identify, linking a device by camera, appearance, picture in picture,
-and the playback report. Nothing on a TV leads to them. The launcher's
+and identify, linking a device by camera, appearance, and picture in
+picture. Nothing on a TV leads to them. The launcher's
 Watch Next row is TV-only, in `launcher/`.
 
 ## Develop
