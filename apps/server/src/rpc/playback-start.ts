@@ -18,7 +18,7 @@ import { episodeOrder, publicItems } from "../media/items"
 import { keyframesNear, listAudio, mayStreamOriginal } from "../media/playback"
 import { decidePlayback, snapPlayback } from "../media/playback-start"
 import { currentProbe } from "../media/probe"
-import { listSubtitles, prepareSubtitle } from "../media/subtitles"
+import { listSubtitles } from "../media/subtitles"
 import { rememberedTracks } from "../media/track-picks"
 import { otherLiveSessions } from "../stats/sessions"
 import { encodableAudioCodecs } from "../transcode/audio"
@@ -151,8 +151,6 @@ export const startPlayback = authed.playback.start.handler(
         throw badRequest("Can't find a point to start this file from.")
       plan = snapPlayback(plan, input, keyframes)
     }
-    if (plan.subtitle && plan.subtitleMode === "client")
-      prepareSubtitle(item, plan.subtitle.id, plan.subtitle.delivery === "ass")
     if (row?.kind === "show") {
       // ACCESS: Files share the visible item's title and library.
       const files = await db
