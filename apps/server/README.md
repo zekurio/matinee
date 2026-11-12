@@ -349,7 +349,7 @@ once. What a player waits for, like a thumbnail or the file it's about to
 play, goes ahead of background work. Under Settings → Jobs admins see what
 each queue is doing and its latest failures, pause it, or drop its waiting
 jobs. Concurrency, further down, sets how many jobs the media info,
-trickplay, and artwork queues run at once, the three that build up long
+trickplay, subtitle preparation, and artwork queues run at once, the ones that build up long
 backlogs. Higher numbers clear one sooner but take CPU, disk, and network
 from people streaming. A change applies at once and stays for the next
 start. The other queues run a fixed number.
@@ -386,8 +386,29 @@ The player shows subtitle files beside a video and subtitle streams inside it.
   Files without usable cues for that track, unsupported layouts or codecs,
   encrypted tracks, and inputs above the reader's safety limits use the
   ordinary ffmpeg path. That can read the whole file and take minutes.
-  MP4/MOV and sidecar conversion still use their existing paths. Nothing
-  is extracted at library scan time or for unselected tracks.
+  After scans and once a day, Prepare subtitles fills the cache for embedded
+  text tracks with a usable Matroska index, and MP4/MOV text tracks through
+  ffmpeg's sample-table seeks. Fragmented MP4/MOV, missing static chunk
+  tables, oversized metadata and malformed atom layouts stay on demand.
+  Each Matroska file shares one Cues scan
+  and offset-ordered block pass across its text tracks. It writes WebVTT and,
+  for ASS/SSA, an ASS copy. ASS/SSA sidecars are prepared too; SRT and VTT
+  sidecars need no converted cache. Sidecar revisions are checked after
+  scans, since their database rows have no size or modification time. A
+  scheduled catch-up only stats sidecars with missing outputs.
+  Picture tracks are never prepared. Unsupported
+  inputs are remembered by size and modification time and left to on-demand
+  extraction; the background job never falls back to reading the video.
+  Font attachments remain on demand because their indexed extraction takes
+  milliseconds.
+  The task inventories cache names against stored probes without opening or
+  stating library files that need no work. It also removes embedded outputs
+  for deleted or changed media. In Settings → Jobs it can be run manually;
+  its separate queue defaults to one file at a time, with low-priority jobs
+  and idle-I/O reader and ffmpeg processes. The reader yields between
+  bounded read windows. Pausing the queue stops new files, not the file already running.
+  On-demand conversion keeps its two independent slots. Per-output locks
+  coordinate the queues, and unique temporary files are renamed atomically.
 - Browsers advertising ASS support get ASS/SSA scripts with their styles,
   positioning and timing intact, rendered locally by JASSUB and libass. The
   renderer, WASM and bundled Liberation Sans fallback font load only when
