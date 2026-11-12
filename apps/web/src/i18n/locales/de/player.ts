@@ -145,6 +145,8 @@ export default {
   "player.error.retry": "Erneut versuchen",
   "player.error.revert": "Das ließ sich nicht abspielen",
   "player.error.revertToQuality": "Zurück zur Originalqualität.",
+  "player.error.assFallback":
+    "Formatierte Untertitel fehlgeschlagen. Wechsel zu einfachem Text.",
   "player.error.subtitles": "Die Untertitel konnten nicht geladen werden",
   "player.error.subtitlesDetail":
     "Wähle eine andere Spur oder schalte sie aus.",

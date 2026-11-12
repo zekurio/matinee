@@ -38,6 +38,18 @@ for the server to send. Point `MATINEE_WEB_DIST` at it.
 `AGENTS.md` at the repository root has the conventions for forms, effects,
 stores, and text.
 
+## Subtitles
+
+The player advertises WebVTT, PGS and ASS rendering to the server. ASS/SSA
+scripts render as authored through a lazy-loaded JASSUB worker, with fonts
+from the media item's Matroska attachments and a bundled Liberation Sans
+fallback. Nothing loads from a CDN. Rendering is capped at 1080 pixels high;
+ordinary video picture-in-picture cannot include this canvas overlay.
+WebVTT appearance and control-avoidance positioning do not override ASS
+styles. A renderer failure requests the same track again with ASS support
+removed for that player session, so the server delivers WebVTT instead.
+Downloads continue to use their existing subtitle formats.
+
 ## Translations
 
 The web app's text lives in catalogs under `apps/web/src/i18n/locales/`,

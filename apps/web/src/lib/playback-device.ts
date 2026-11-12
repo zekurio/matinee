@@ -56,7 +56,7 @@ function browserPlayback(): Browser {
       "ManagedMediaSource" in window ||
       probe.canPlayType("application/vnd.apple.mpegurl") !== "",
     // The player draws both over any source, PGS with libpgs.
-    subtitles: ["webvtt", "pgs"],
+    subtitles: ["webvtt", "pgs", "ass"],
     language: deviceLanguage(),
   }
   return browser

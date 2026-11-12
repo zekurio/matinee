@@ -170,6 +170,8 @@ export default defineMessages("player", {
   "player.error.retry": "Retry",
   "player.error.revert": "Couldn't play that",
   "player.error.revertToQuality": "Back to the original quality.",
+  "player.error.assFallback":
+    "Styled subtitles failed. Switching to plain text.",
   "player.error.subtitles": "Couldn't load subtitles",
   "player.error.subtitlesDetail": "Pick another track or turn them off.",
   "player.error.savePreferences": "Couldn't save your playback preferences",

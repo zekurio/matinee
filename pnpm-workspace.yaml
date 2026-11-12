@@ -25,6 +25,7 @@ catalog:
 
 allowBuilds:
   esbuild: true
+  lfa-ponyfill: false
   # Picks between Vue 2 and 3 on install; its default is already Vue 3.
   vue-demi: false
 

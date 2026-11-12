@@ -11,10 +11,12 @@ import {
 } from "@/stores/player"
 
 import { subtitlesLoadingNotice } from "./playback-notices"
+import { useAss } from "./use-ass"
 import { usePgs } from "./use-pgs"
 
 /** A track's file as fetched: WebVTT text, or a PGS `.sup` file. */
 type SubtitleFile =
+  | { kind: "ass"; text: string }
   | { kind: "webvtt"; text: string }
   | { kind: "pgs"; data: ArrayBuffer }
 
@@ -157,9 +159,11 @@ export function useSubtitles(
   onPick: (trackId: string | null) => void,
 ) {
   const store = usePlayerStoreApi()
-  const { plan, selected, objectUrl, delay } = usePlayerStore(
+  const { plan, selected, objectUrl, delay, itemId, source } = usePlayerStore(
     useShallow((state) => ({
       plan: state.plan,
+      itemId: state.itemId,
+      source: state.source,
       selected: selectSubtitle(state),
       objectUrl: state.subtitleUrl,
       delay: state.subtitleDelay,
@@ -182,9 +186,23 @@ export function useSubtitles(
     loadFailed()
   }
 
+  const assFailed = () => {
+    const { device } = store.getState()
+    store.setState({
+      device: {
+        ...device,
+        subtitles: device.subtitles.filter((value) => value !== "ass"),
+        sidecarSubtitles: device.sidecarSubtitles.filter(
+          (value) => value !== "ass",
+        ),
+      },
+    })
+    toast.error(tr("player.error.assFallback"), { position: "top-center" })
+    onSelect(shownId)
+  }
   // The shown track's file. A pick that changes cancels the fetch.
   const url =
-    track && (delivery === "webvtt" || delivery === "pgs")
+    track && (delivery === "webvtt" || delivery === "pgs" || delivery === "ass")
       ? plan.subtitleUrl
       : null
   const file = useQuery({
@@ -200,9 +218,15 @@ export function useSubtitles(
               }
               return delivery === "pgs"
                 ? { kind: "pgs", data: await response.arrayBuffer() }
-                : { kind: "webvtt", text: await response.text() }
+                : {
+                    kind: delivery === "ass" ? "ass" : "webvtt",
+                    text: await response.text(),
+                  }
             } catch (cause) {
-              if (!signal.aborted) turnOff()
+              if (!signal.aborted) {
+                if (delivery === "ass") assFailed()
+                else turnOff()
+              }
               throw cause
             }
           },
@@ -213,6 +237,15 @@ export function useSubtitles(
     retry: false,
   }).data
   const text = file?.kind === "webvtt" ? file.text : undefined
+
+  useAss(
+    video,
+    file?.kind === "ass" ? file.text : undefined,
+    itemId,
+    `${source.url}:${shownId}`,
+    cueOffset,
+    assFailed,
+  )
 
   usePgs(
     pgsLayer,
