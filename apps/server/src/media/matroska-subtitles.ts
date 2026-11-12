@@ -1,4 +1,5 @@
 import { open, type FileHandle } from "node:fs/promises"
+import { setImmediate } from "node:timers/promises"
 
 // Only metadata and subtitle blocks are read. Limits also bound malformed inputs.
 const MAX_ELEMENT = 32 * 1024 * 1024
@@ -203,10 +204,22 @@ export async function indexedSubtitle(
   path: string,
   stream: number,
 ): Promise<{ bytes: Buffer; bytesRead: number } | null> {
+  return indexedSubtitles(path, [stream])
+}
+
+/** Read several tracks through one SeekHead/Cues scan and ordered block pass. */
+export async function indexedSubtitles(
+  path: string,
+  streams: number[],
+  signal?: AbortSignal,
+  onRead?: (bytes: number) => void,
+): Promise<{ bytes: Buffer; bytesRead: number; streams: number[] } | null> {
+  if (!streams.length) return null
   const file = await open(path, "r").catch(() => null)
   if (!file) return null
+  let reader: Reader | undefined
   try {
-    const reader = new Reader(file, (await file.stat()).size)
+    reader = new Reader(file, (await file.stat()).size)
     const ebml = await reader.header(0)
     if (ebml.id !== 0x1a45dfa3) return null
     const header = await reader.read(0, ebml.end)
@@ -237,37 +250,43 @@ export async function indexedSubtitle(
       0x1654ae6b,
     )
     const entries = children(tracks).filter((entry) => entry.id === 0xae)
-    const track = entries[stream]
-    if (!track) return null
-    const entry = tracks.subarray(track.start, track.end)
-    const values = fields(entry)
-    const codec = required(values, 0x86).toString("utf8")
-    if (
-      !["S_TEXT/UTF8", "S_TEXT/ASS", "S_TEXT/SSA", "S_HDMV/PGS"].includes(codec)
-    )
-      return null
-    if (uint(required(values, 0x83)) !== 17) return null
-    const encodings = values.get(0x6d80)
-    for (const encoding of encodings ? children(encodings) : []) {
-      if (encoding.id !== 0x6240) return null
-      const config = fields(
-        encodings
-          ? encodings.subarray(encoding.start, encoding.end)
-          : Buffer.alloc(0),
-      )
+    const selected = new Map<number, { entry: Buffer; stream: number }>()
+    tracks: for (const stream of streams) {
+      const track = entries[stream]
+      if (!track) continue
+      const entry = tracks.subarray(track.start, track.end)
+      const values = fields(entry)
+      const codec = required(values, 0x86).toString("utf8")
       if (
-        config.has(0x5035) ||
-        uint(config.get(0x5033) ?? Buffer.from([0])) !== 0
+        !["S_TEXT/UTF8", "S_TEXT/ASS", "S_TEXT/SSA", "S_HDMV/PGS"].includes(
+          codec,
+        )
       )
-        return null
-      const compression = config.get(0x5034)
-      if (!compression) return null
-      const algorithm = uint(
-        fields(compression).get(0x4254) ?? Buffer.from([0]),
-      )
-      if (algorithm !== 0 && algorithm !== 3) return null
+        continue
+      if (uint(required(values, 0x83)) !== 17) continue
+      const encodings = values.get(0x6d80)
+      for (const encoding of encodings ? children(encodings) : []) {
+        if (encoding.id !== 0x6240) continue tracks
+        const config = fields(
+          encodings
+            ? encodings.subarray(encoding.start, encoding.end)
+            : Buffer.alloc(0),
+        )
+        if (
+          config.has(0x5035) ||
+          uint(config.get(0x5033) ?? Buffer.from([0])) !== 0
+        )
+          continue tracks
+        const compression = config.get(0x5034)
+        if (!compression) continue tracks
+        const algorithm = uint(
+          fields(compression).get(0x4254) ?? Buffer.from([0]),
+        )
+        if (algorithm !== 0 && algorithm !== 3) continue tracks
+      }
+      const number = uint(required(values, 0xd7))
+      selected.set(number, { entry, stream })
     }
-    const number = uint(required(values, 0xd7))
     const info = await reader.payload(
       locations.get(0x1549a966) ?? -1,
       0x1549a966,
@@ -277,7 +296,12 @@ export async function indexedSubtitle(
       locations.get(0x1c53bb6b) ?? -1,
       0x1c53bb6b,
     )
-    const picks: { cluster: number; relative: number; time: number }[] = []
+    const picks: {
+      cluster: number
+      relative: number
+      time: number
+      number: number
+    }[] = []
     for (const point of children(cues)) {
       if (point.id !== 0xbb) continue
       const bytes = cues.subarray(point.start, point.end)
@@ -285,8 +309,10 @@ export async function indexedSubtitle(
       for (const position of children(bytes)) {
         if (position.id !== 0xb7) continue
         const pos = fields(bytes.subarray(position.start, position.end))
-        if (uint(required(pos, 0xf7)) !== number) continue
+        const number = uint(required(pos, 0xf7))
+        if (!selected.has(number)) continue
         picks.push({
+          number,
           cluster: base + uint(required(pos, 0xf1)),
           relative: uint(required(pos, 0xf0)),
           time,
@@ -295,25 +321,35 @@ export async function indexedSubtitle(
     }
     if (!picks.length || picks.length > 100_000) return null
     picks.sort((a, b) => a.cluster - b.cluster || a.relative - b.relative)
+    const present = new Set(picks.map((pick) => pick.number))
+    const included = [...selected].filter(([number]) => present.has(number))
     const parts = [
       header,
       Buffer.from("1853806701ffffffffffffff", "hex"),
       encoded(0x1549a966, encoded(0x2ad7b1, scale)),
-      encoded(0x1654ae6b, encoded(0xae, entry)),
+      encoded(
+        0x1654ae6b,
+        Buffer.concat(included.map(([, track]) => encoded(0xae, track.entry))),
+      ),
     ]
     let total = parts.reduce((sum, part) => sum + part.length, 0)
     let previous = -1
     for (let first = 0; first < picks.length; first += 16) {
+      if (signal) {
+        signal.throwIfAborted()
+        await setImmediate()
+      }
       // Give the disk scheduler a bounded, offset-ordered window of reads.
+      const activeReader = reader
       const batch = await Promise.all(
         picks.slice(first, first + 16).map(async (pick) => {
-          const cluster = await reader.header(pick.cluster)
+          const cluster = await activeReader.header(pick.cluster)
           if (cluster.id !== 0x1f43b675) throw new Error("Invalid cue cluster")
           const at = cluster.start + pick.relative
-          const block = await reader.header(at)
+          const block = await activeReader.header(at)
           if (block.id !== 0xa0 && block.id !== 0xa3)
             throw new Error("Invalid cue block")
-          const payload = await reader.read(
+          const payload = await activeReader.read(
             block.start,
             block.end - block.start,
           )
@@ -326,7 +362,10 @@ export async function indexedSubtitle(
         const data =
           block.id === 0xa0 ? required(fields(payload), 0xa1) : payload
         const trackNumber = vint(data, 0)
-        if (trackNumber.value !== number || data.length < trackNumber.width + 3)
+        if (
+          trackNumber.value !== pick.number ||
+          data.length < trackNumber.width + 3
+        )
           return null
         const time = pick.time - data.readInt16BE(trackNumber.width)
         const part = encoded(
@@ -338,11 +377,17 @@ export async function indexedSubtitle(
         parts.push(part)
       }
     }
-    return { bytes: Buffer.concat(parts), bytesRead: reader.bytesRead }
+    return {
+      bytes: Buffer.concat(parts),
+      bytesRead: reader.bytesRead,
+      streams: included.map(([, track]) => track.stream),
+    }
   } catch {
+    signal?.throwIfAborted()
     // Unsupported layouts, truncated files and read failures use ffmpeg.
     return null
   } finally {
+    onRead?.(reader?.bytesRead ?? 0)
     await file.close()
   }
 }
