@@ -18,25 +18,26 @@
           document.head.appendChild(themeStyle)
         }
       } catch {}
+      var mode = "system"
       try {
         var preferences = JSON.parse(
           localStorage.getItem("matinee.theme") || "null",
         )
-        var mode =
+        if (
           preferences &&
           (preferences.mode === "dark" ||
             preferences.mode === "light" ||
             preferences.mode === "system")
-            ? preferences.mode
-            : "dark"
-        var dark =
-          mode === "dark" ||
-          (mode !== "light" &&
-            matchMedia("(prefers-color-scheme: dark)").matches)
-        document.documentElement.classList.add(dark ? "dark" : "light")
-      } catch {
-        document.documentElement.classList.add("dark")
+        )
+          mode = preferences.mode
+      } catch {}
+      var dark = mode === "dark"
+      if (mode === "system") {
+        try {
+          dark = matchMedia("(prefers-color-scheme: dark)").matches
+        } catch {}
       }
+      document.documentElement.classList.add(dark ? "dark" : "light")
     </script>
     <script>
       // Ask who is signed in while the app's code loads; every page but the

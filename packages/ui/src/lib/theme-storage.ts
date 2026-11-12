@@ -10,9 +10,10 @@ export interface ThemePreferences {
   mode: ThemeMode
 }
 
-// Dark until someone picks otherwise: video reads best on a dark page.
+// The OS's appearance until someone picks otherwise, so a new device (and
+// its login page) matches the rest of the phone or desktop.
 // Keep in sync with the pre-paint script in apps/web/index.html.
-export const DEFAULT_THEME_PREFERENCES: ThemePreferences = { mode: "dark" }
+export const DEFAULT_THEME_PREFERENCES: ThemePreferences = { mode: "system" }
 
 export function normalizeThemePreferences(value: JsonInput): ThemePreferences {
   if (!isObjectRecord(value)) return { ...DEFAULT_THEME_PREFERENCES }

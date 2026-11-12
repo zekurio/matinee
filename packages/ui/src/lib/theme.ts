@@ -22,6 +22,7 @@ import {
 } from "@matinee/ui/lib/theme-document"
 import { MATINEE_THEME } from "@matinee/ui/lib/theme-presets"
 import {
+  DEFAULT_THEME_PREFERENCES,
   readThemePreferences,
   refreshThemePreferences,
   THEME_STORAGE_KEY,
@@ -57,7 +58,9 @@ let state = buildState()
 const listeners = new Set<() => void>()
 
 function readStoredPreferences(): ThemePreferences {
-  return globalThis.window ? readThemePreferences() : { mode: "dark" }
+  return globalThis.window
+    ? readThemePreferences()
+    : { ...DEFAULT_THEME_PREFERENCES }
 }
 
 export function getThemeState(): ThemeState {
