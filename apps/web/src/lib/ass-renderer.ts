@@ -15,28 +15,50 @@ export function drawAss(
   ) {
     throw new Error("Incomplete ASS script")
   }
-  const renderer = new JASSUB({
-    video,
-    subContent: text,
-    fonts,
-    queryFonts: false,
-    maxRenderHeight: 1080,
-    libassMemoryLimit: 64,
-    libassGlyphLimit: 2000,
-    timeOffset: offset,
-  })
+  const canvas = document.createElement("canvas")
+  canvas.className = "JASSUB"
+  canvas.style.position = "absolute"
+  canvas.style.pointerEvents = "none"
+  video.insertAdjacentElement("afterend", canvas)
+  let renderer: JASSUB
+  try {
+    // Attach the video ourselves so a worker initialization failure also
+    // handles setVideo's rejected promise instead of leaving it unhandled.
+    renderer = new JASSUB({
+      canvas,
+      subContent: text,
+      fonts,
+      queryFonts: false,
+      maxRenderHeight: 1080,
+      libassMemoryLimit: 64,
+      libassGlyphLimit: 2000,
+      timeOffset: offset,
+    })
+  } catch (cause) {
+    canvas.remove()
+    throw cause
+  }
+  let stopped = false
+  let reported = false
+  const fail = () => {
+    if (stopped || reported) return
+    reported = true
+    onError()
+  }
+  void renderer.setVideo(video).catch(fail)
   const worker = renderer._worker
-  worker.addEventListener("error", onError)
-  const timeout = window.setTimeout(onError, 30_000)
-  renderer.ready.then(() => window.clearTimeout(timeout), onError)
+  worker.addEventListener("error", fail)
+  const timeout = window.setTimeout(fail, 30_000)
+  renderer.ready.then(() => window.clearTimeout(timeout), fail)
   return {
     offset: (value: number) => {
       renderer.timeOffset = value
-      void renderer.resize(true).catch(onError)
+      void renderer.resize(true).catch(fail)
     },
     destroy: () => {
+      stopped = true
       window.clearTimeout(timeout)
-      worker.removeEventListener("error", onError)
+      worker.removeEventListener("error", fail)
       void renderer.destroy().catch(() => {})
       // A failed worker cannot acknowledge destroy's IPC request.
       worker.terminate()
