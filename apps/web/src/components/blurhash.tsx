@@ -17,6 +17,35 @@ function canvasSize(aspectRatio: number): { width: number; height: number } {
       }
 }
 
+/** Placeholders waiting to come near the screen, with what draws each. */
+const waiting = new Map<Element, () => void>()
+let observer: IntersectionObserver | null = null
+
+/**
+ * Draws a placeholder once it comes within half a screen of view, also
+ * inside a row that scrolls sideways. A page of cards decoded every one at
+ * once, most of them out of sight. Returns what stops watching it.
+ */
+function drawWhenNear(canvas: HTMLCanvasElement, draw: () => void) {
+  observer ??= new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue
+        observer?.unobserve(entry.target)
+        waiting.get(entry.target)?.()
+        waiting.delete(entry.target)
+      }
+    },
+    { rootMargin: "50%", scrollMargin: "50%" },
+  )
+  waiting.set(canvas, draw)
+  observer.observe(canvas)
+  return () => {
+    observer?.unobserve(canvas)
+    waiting.delete(canvas)
+  }
+}
+
 /**
  * An image's BlurHash, decoded small and stretched to fit. The canvas has
  * the image's shape, so `object-cover` and `object-position` crop it the
@@ -31,19 +60,20 @@ export function Blurhash({
 }) {
   const { blurhash, aspectRatio } = placeholder
   const { width, height } = canvasSize(aspectRatio)
-  const draw = useCallback(
-    (canvas: HTMLCanvasElement | null) => {
-      const context = canvas?.getContext("2d")
-      if (!context || !isBlurhashValid(blurhash).result) return
-      const image = context.createImageData(width, height)
-      image.data.set(decode(blurhash, width, height))
-      context.putImageData(image, 0, 0)
-    },
+  const watch = useCallback(
+    (canvas: HTMLCanvasElement) =>
+      drawWhenNear(canvas, () => {
+        const context = canvas.getContext("2d")
+        if (!context || !isBlurhashValid(blurhash).result) return
+        const image = context.createImageData(width, height)
+        image.data.set(decode(blurhash, width, height))
+        context.putImageData(image, 0, 0)
+      }),
     [blurhash, width, height],
   )
   return (
     <canvas
-      ref={draw}
+      ref={watch}
       width={width}
       height={height}
       aria-hidden
