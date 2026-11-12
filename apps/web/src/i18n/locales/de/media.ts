@@ -12,6 +12,9 @@ export default {
   "media.showCodeTitle": "{show}, {code}: {title}",
   "media.timeLeft": "noch {minutes} Min.",
   "media.channels": plural({ one: "{count} Kanal", other: "{count} Kanäle" }),
+  "media.info.video": "Video",
+  "media.info.audio": "Audio",
+  "media.info.subtitles": "Untertitel",
   "media.audioTracks": plural({
     one: "{count} Audiospur",
     other: "{count} Audiospuren",

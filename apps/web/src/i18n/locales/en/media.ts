@@ -16,6 +16,9 @@ export default defineMessages("media", {
     one: "{count} channel",
     other: "{count} channels",
   }),
+  "media.info.video": "Video",
+  "media.info.audio": "Audio",
+  "media.info.subtitles": "Subtitles",
   "media.audioTracks": plural({
     one: "{count} audio track",
     other: "{count} audio tracks",

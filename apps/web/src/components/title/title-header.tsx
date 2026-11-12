@@ -14,6 +14,7 @@ import { pageBleed, pageColumn } from "@/components/app-shell"
 import { CrewFacts, listNodes, unitList } from "@/components/credits"
 import { FavoriteButton } from "@/components/favorite-button"
 import { Picture, textLink, tone } from "@/components/media-item"
+import { MediaInfo } from "@/components/title/media-info"
 import { useTitleWatched, WatchedButton } from "@/components/watched-menu"
 import { perLocale, tr } from "@/i18n"
 import { formatRuntime } from "@/lib/format"
@@ -151,6 +152,10 @@ export function TitleHeader({ title }: { title: Title }) {
                 className="sm:mt-4"
               />
               <CrewFacts title={title} className="mt-4" />
+              {/* A movie's file. A show's differ by episode. */}
+              {title.kind === "movie" && title.next && (
+                <MediaInfo item={title.next} className="mt-4" />
+              )}
 
               <div className="pt-6 sm:mt-auto">
                 <div className="flex items-center gap-2">

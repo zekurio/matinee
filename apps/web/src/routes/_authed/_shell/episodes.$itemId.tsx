@@ -10,15 +10,10 @@ import { ChevronRightIcon, PlayIcon } from "lucide-react"
 import { ActionsMenu } from "@/components/actions-menu"
 import { pageBleed, pageColumn } from "@/components/app-shell"
 import { ItemFavoriteButton } from "@/components/favorite-button"
-import {
-  EpisodeCard,
-  Picture,
-  StreamLine,
-  Thumb,
-  tone,
-} from "@/components/media-item"
+import { EpisodeCard, Picture, Thumb, tone } from "@/components/media-item"
 import { useDocumentTitle } from "@/components/page-header"
 import { Rail, RailItem } from "@/components/rail"
+import { MediaInfo } from "@/components/title/media-info"
 import { seasonParams } from "@/components/title/seasons"
 import { useItemWatched, WatchedButton } from "@/components/watched-menu"
 import { tr } from "@/i18n"
@@ -210,7 +205,6 @@ function EpisodeHeader({ item }: { item: MediaItem }) {
                 </span>
               )}
             </div>
-            <StreamLine item={item} />
 
             {overview && (
               <div className="mt-4 max-w-2xl">
@@ -233,6 +227,8 @@ function EpisodeHeader({ item }: { item: MediaItem }) {
                 )}
               </div>
             )}
+
+            <MediaInfo item={item} className="mt-4" />
 
             <div className="flex items-center gap-2 pt-6 sm:mt-auto">
               <Link
