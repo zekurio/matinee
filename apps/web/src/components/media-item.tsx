@@ -21,7 +21,6 @@ import {
   itemLabel,
   landscapeSources,
   progressRatio,
-  streamSummary,
   timeLeft,
   seasonName,
 } from "@/lib/media"
@@ -32,6 +31,7 @@ import { ActionsMenu, ItemMenu } from "./actions-menu"
 import { CardActions, CardScrim } from "./card-actions"
 import { useItemFavorite, useTitleFavorite } from "./favorite-button"
 import { Picture, tone } from "./picture"
+import { MediaInfoLine } from "./title/media-info"
 import { seasonParams } from "./title/seasons"
 import { useItemWatched, useTitleWatched } from "./watched-menu"
 
@@ -180,17 +180,11 @@ export function Thumb({
 }
 
 /**
- * The file's resolution, codec, audio, and subtitles in one quiet line,
- * once the server has probed it.
+ * The file's picture, audio languages, and subtitle languages in one quiet
+ * line, once the server has probed it.
  */
 export function StreamLine({ item }: { item: MediaItem }) {
-  const summary = streamSummary(item)
-  if (!summary) return null
-  return (
-    <span className="text-muted-foreground/70 block truncate text-xs leading-5">
-      {summary}
-    </span>
-  )
+  return <MediaInfoLine item={item} />
 }
 
 /**

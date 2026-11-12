@@ -193,23 +193,3 @@ export function mediaFlags(item: MediaItem): string[] {
     main && channelLayout(main.layout, main.channels),
   ].filter((flag): flag is string => Boolean(flag))
 }
-
-/**
- * "1080p · HEVC · 5.1 · 3 subtitles", from what the server probed. Null
- * until it has.
- */
-export function streamSummary(item: MediaItem): string | null {
-  const probe = item.probe
-  if (!probe) return null
-  const { video, audio, subtitles } = probe
-  const main = audio.find((stream) => stream.default) ?? audio[0]
-  const parts = [
-    video?.resolution,
-    video?.format,
-    video?.dynamicRange,
-    main && channelLayout(main.layout, main.channels),
-    audio.length > 1 && tr("media.audioTracks", { count: audio.length }),
-    subtitles.length > 0 && tr("media.subtitles", { count: subtitles.length }),
-  ].filter(Boolean)
-  return parts.length > 0 ? parts.join(" · ") : null
-}

@@ -28,46 +28,21 @@ function languageList(tags: (string | null)[]): string | null {
   return names.length > 0 ? names.join(", ") : null
 }
 
-/**
- * What a file holds, a line each: the picture, the audio's languages with
- * the main track's layout, and the subtitles' languages, as the apps show
- * it. The languages come from the server's track lists, which include
- * subtitle files beside the video; until they load, from what the probe
- * found in the file. Nothing until the server has probed it.
- */
-export function MediaInfo({
-  item,
-  className,
-}: {
-  item: MediaItem
-  className?: string
-}) {
-  const probe = item.probe
-  const input = { input: { id: item.id } }
-  const audioTracks = useQuery({
-    ...orpc.media.audio.queryOptions(input),
-    enabled: probe !== null,
-  })
-  const subtitleTracks = useQuery({
-    ...orpc.media.subtitles.queryOptions(input),
-    enabled: probe !== null,
-  })
-  if (!probe) return null
+type InfoLine = { Icon: LucideIcon; label: string; text: string }
 
-  const audio =
-    audioTracks.data
-      ?.toSorted((a, b) => Number(b.primary) - Number(a.primary))
-      .map((track) => track.language) ??
-    probe.audio
-      .toSorted((a, b) => Number(b.default) - Number(a.default))
-      .map((stream) => stream.language)
-  const subtitles =
-    subtitleTracks.data?.tracks.map((track) => track.language) ??
-    probe.subtitles.map((stream) => stream.language)
+/**
+ * The picture, the audio's languages with the main track's layout, and
+ * the subtitles' languages. `audio` and `subtitles` are the tracks'
+ * language tags, from the probe unless the caller has the server's lists.
+ */
+function infoLines(
+  probe: NonNullable<MediaItem["probe"]>,
+  audio: (string | null)[],
+  subtitles: (string | null)[],
+): InfoLine[] {
   const main = probe.audio.find((stream) => stream.default) ?? probe.audio[0]
   const { video } = probe
-
-  const lines: { Icon: LucideIcon; label: string; text: string }[] = [
+  return [
     {
       Icon: FilmIcon,
       label: tr("media.info.video"),
@@ -98,6 +73,83 @@ export function MediaInfo({
           : ""),
     },
   ].filter((line) => line.text !== "")
+}
+
+function probeAudio(probe: NonNullable<MediaItem["probe"]>) {
+  return probe.audio
+    .toSorted((a, b) => Number(b.default) - Number(a.default))
+    .map((stream) => stream.language)
+}
+
+/**
+ * What a file holds in one quiet line, for a row in a list: the picture,
+ * the audio's languages and layout, and the subtitles' languages, each
+ * after its icon. From the probe alone, so a list asks the server nothing
+ * more; subtitle files beside the video show on the file's own page.
+ */
+export function MediaInfoLine({ item }: { item: MediaItem }) {
+  const probe = item.probe
+  if (!probe) return null
+  const lines = infoLines(
+    probe,
+    probeAudio(probe),
+    probe.subtitles.map((stream) => stream.language),
+  )
+  if (lines.length === 0) return null
+  return (
+    <span className="text-muted-foreground/70 flex min-w-0 items-center gap-x-3 overflow-hidden text-xs leading-5 whitespace-nowrap">
+      {lines.map(({ Icon, label, text }, at) => (
+        <span
+          key={label}
+          className={cn(
+            "inline-flex items-center gap-1",
+            // The last part gives way first, then the one before it.
+            at === 0 ? "shrink-0" : "min-w-0",
+          )}
+        >
+          <Icon aria-hidden className="size-3.5 shrink-0" />
+          <span className="sr-only">{label}</span>
+          <span className="truncate">{text}</span>
+        </span>
+      ))}
+    </span>
+  )
+}
+
+/**
+ * What a file holds, a line each: the picture, the audio's languages with
+ * the main track's layout, and the subtitles' languages, as the apps show
+ * it. The languages come from the server's track lists, which include
+ * subtitle files beside the video; until they load, from what the probe
+ * found in the file. Nothing until the server has probed it.
+ */
+export function MediaInfo({
+  item,
+  className,
+}: {
+  item: MediaItem
+  className?: string
+}) {
+  const probe = item.probe
+  const input = { input: { id: item.id } }
+  const audioTracks = useQuery({
+    ...orpc.media.audio.queryOptions(input),
+    enabled: probe !== null,
+  })
+  const subtitleTracks = useQuery({
+    ...orpc.media.subtitles.queryOptions(input),
+    enabled: probe !== null,
+  })
+  if (!probe) return null
+
+  const lines = infoLines(
+    probe,
+    audioTracks.data
+      ?.toSorted((a, b) => Number(b.primary) - Number(a.primary))
+      .map((track) => track.language) ?? probeAudio(probe),
+    subtitleTracks.data?.tracks.map((track) => track.language) ??
+      probe.subtitles.map((stream) => stream.language),
+  )
   if (lines.length === 0) return null
 
   return (
