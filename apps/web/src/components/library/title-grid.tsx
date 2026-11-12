@@ -1,9 +1,5 @@
 import type { Library } from "@matinee/contracts"
-import {
-  keepPreviousData,
-  useInfiniteQuery,
-  useQuery,
-} from "@tanstack/react-query"
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
 
 import { LibraryChips } from "@/components/library-chips"
 import { PosterCard, posterGrid } from "@/components/media-item"
@@ -24,42 +20,20 @@ import {
   type ListControlsProps,
   PhoneControls,
 } from "./list-controls"
-import {
-  titleSort,
-  titleSorts,
-  useLibraryFilters,
-  useListParams,
-} from "./list-params"
-
-const GRID_PAGE_SIZE = 60
+import { titleSorts, useLibraryFilters, useListParams } from "./list-params"
+import { libraryTitlesOptions } from "./title-queries"
 
 export function TitleGrid({ library }: { library: Library }) {
   const { search, setSearch, query, sort, setSort } = useListParams()
   const filterState = useLibraryFilters()
   const { genre, studio } = filterState
   const busy = library.scanning || library.refreshing
-  const titles = useInfiniteQuery(
-    orpc.titles.list.infiniteOptions({
-      input: (offset: number) => ({
-        libraryId: library.id,
-        query: query || undefined,
-        genre,
-        studio,
-        sort: titleSort(sort),
-        limit: GRID_PAGE_SIZE,
-        offset,
-      }),
-      initialPageParam: 0,
-      getNextPageParam: (last, pages) => {
-        const loaded = pages.reduce((n, page) => n + page.items.length, 0)
-        return loaded < last.total ? loaded : undefined
-      },
-      placeholderData: keepPreviousData,
-      // Posters arrive one title at a time while metadata is fetched. The
-      // library's poll refreshes the list once more when the work ends.
-      refetchInterval: busy ? 3000 : false,
-    }),
-  )
+  const titles = useInfiniteQuery({
+    ...libraryTitlesOptions(library.id, { q: query, sort, genre, studio }),
+    // Refresh while metadata arrives; the library poll refreshes once more
+    // when the work ends.
+    refetchInterval: busy ? 3000 : false,
+  })
   const facets = useQuery(
     orpc.titles.facets.queryOptions({ input: { libraryId: library.id } }),
   )

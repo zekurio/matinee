@@ -3,6 +3,8 @@ import { createFileRoute } from "@tanstack/react-router"
 
 import { LibraryPage } from "@/components/library/library-page"
 import type { Sort } from "@/components/library/list-params"
+import { libraryTitlesOptions } from "@/components/library/title-queries"
+import { orpc } from "@/lib/rpc"
 
 /** Title is the default sort, so the URL leaves it out. */
 const LibrarySearch = t.object({
@@ -17,5 +19,18 @@ const LibrarySearch = t.object({
 
 export const Route = createFileRoute("/_authed/_shell/libraries/$libraryId")({
   validateSearch: LibrarySearch,
+  loaderDeps: ({ search }) => search,
+  loader: ({ context: { queryClient }, params: { libraryId }, deps }) => {
+    void queryClient.prefetchQuery(
+      orpc.libraries.get.queryOptions({ input: { id: libraryId } }),
+    )
+    if (deps.show) return
+    void queryClient.prefetchInfiniteQuery(
+      libraryTitlesOptions(libraryId, deps),
+    )
+    void queryClient.prefetchQuery(
+      orpc.titles.facets.queryOptions({ input: { libraryId } }),
+    )
+  },
   component: LibraryPage,
 })
