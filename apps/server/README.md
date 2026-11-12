@@ -436,6 +436,13 @@ one. The video can only start on a keyframe, so a seek lands on the
 nearest one. Safari won't play media without byte ranges, so these streams
 don't play there yet.
 
+Changing audio tracks on a copied stream requires a keyframe lookup. New
+media probes retain the file's timestamp origin, so Matroska lookups read
+packets without repeating ffprobe's codec discovery. Probes saved before
+the timestamp origin was recorded keep the discovery step until the file
+is probed again. Other containers retain discovery. Both paths use the same
+packet timestamps for seeking.
+
 Encodes work the way Jellyfin's transcodes do: ffmpeg writes six-second
 fMP4 segments to disk, and the player loads them from an HLS playlist with
 hls.js, or natively where the browser has no Media Source Extensions. A

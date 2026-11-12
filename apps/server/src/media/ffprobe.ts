@@ -83,7 +83,12 @@ type FfprobeStream = t.infer<typeof FfprobeStream>
 
 const FfprobeOutput = t.object({
   format: t
-    .object({ format_name: Text, duration: Numeric, bit_rate: Numeric })
+    .object({
+      format_name: Text,
+      duration: Numeric,
+      bit_rate: Numeric,
+      start_time: Numeric,
+    })
     .optional()
     .catch(undefined),
   // Checked one by one, so one odd stream doesn't hide the rest.
@@ -302,6 +307,7 @@ function readProbe(stdout: string): MediaProbe {
         output.format?.duration && output.format.duration > 0
           ? output.format.duration
           : null,
+      startSeconds: output.format?.start_time ?? null,
       bitRate: integer(output.format?.bit_rate),
     },
     video: null,

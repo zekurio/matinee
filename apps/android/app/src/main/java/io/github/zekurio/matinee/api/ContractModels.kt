@@ -239,6 +239,7 @@ data class DisplayMediaProbe(
     data class Format(
         val name: String,
         val durationSeconds: Double?,
+        val startSeconds: Explicit<Double>? = null,
         val bitRate: Long?,
     )
 }
@@ -1490,6 +1491,7 @@ data class MediaProbe(
     data class Format(
         val name: String,
         val durationSeconds: Double?,
+        val startSeconds: Explicit<Double>? = null,
         val bitRate: Long?,
     )
 }

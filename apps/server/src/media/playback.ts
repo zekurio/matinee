@@ -137,6 +137,11 @@ export async function keyframesNear(
 ): Promise<Keyframes | null> {
   const probe = await probeOf(item)
   if (!probe?.video) return null
+  // Matroska declares stream indexes in its header. Other demuxers may
+  // discover streams while reading packets, so retain discovery for them.
+  const startSeconds = probe.format.name.split(",").includes("matroska")
+    ? probe.format.startSeconds
+    : undefined
   const lines: string[] = []
   try {
     await runProcess({
@@ -145,6 +150,9 @@ export async function keyframesNear(
       args: [
         "-v",
         "error",
+        // Packet timestamps and flags need no codec discovery. Keep discovery
+        // for older probes: it also establishes the file's timestamp origin.
+        ...(startSeconds != null ? ["-nofind_stream_info"] : []),
         "-print_format",
         "json",
         "-select_streams",
@@ -170,7 +178,7 @@ export async function keyframesNear(
   }
   const output = Packets.parse(json)
   // `-ss` counts from the file's start time; packets carry absolute times.
-  const offset = output.format?.start_time ?? 0
+  const offset = startSeconds ?? output.format?.start_time ?? 0
   const keyframes = output.packets
     .filter((packet) => packet.flags?.startsWith("K"))
     .flatMap((packet) =>

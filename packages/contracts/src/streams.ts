@@ -121,6 +121,8 @@ export const MediaProbe = t.object({
     /** ffmpeg's demuxer names, like `matroska,webm` or `mov,mp4,m4a,3gp,3g2,mj2`. */
     name: t.string(),
     durationSeconds: t.number().nullable(),
+    /** Absolute timestamp origin. Absent in probes saved before it was recorded. */
+    startSeconds: t.number().nullable().optional(),
     /** Overall bits per second. */
     bitRate: t.number().int().int64().nullable(),
   }),
