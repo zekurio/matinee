@@ -13,4 +13,7 @@ export default defineMessages("shell", {
   "shell.settings": "Settings",
   "shell.signOut": "Sign out",
   "shell.skipToContent": "Skip to content",
+
+  // The REST API's reference page, in routes/api-docs.tsx.
+  "shell.apiReference": "API reference",
 })

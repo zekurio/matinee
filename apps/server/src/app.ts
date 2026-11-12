@@ -3,7 +3,9 @@ import { join, resolve } from "node:path"
 
 import { serveStatic } from "@hono/node-server/serve-static"
 import {
+  API_REFERENCE_PAGE_PATH,
   HEALTH_PATH,
+  OPENAPI_DOCS_PATH,
   OPENAPI_PATH,
   OPENAPI_SPEC_PATH,
   RPC_PATH,
@@ -75,6 +77,8 @@ export function createApp() {
 
   app.use(`${RPC_PATH}/*`, mount(rpc, RPC_PATH))
   app.get(OPENAPI_SPEC_PATH, async (c) => c.json(await openapiSpec()))
+  // The reference is a page of the web app, which can't live under /api.
+  app.get(OPENAPI_DOCS_PATH, (c) => c.redirect(API_REFERENCE_PAGE_PATH))
   app.use(`${OPENAPI_PATH}/*`, mount(openapi, OPENAPI_PATH))
 
   app.all("/api/*", (c) => c.json({ error: "Not found" }, 404))

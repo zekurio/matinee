@@ -13,4 +13,5 @@ export default {
   "shell.settings": "Einstellungen",
   "shell.signOut": "Abmelden",
   "shell.skipToContent": "Zum Inhalt springen",
+  "shell.apiReference": "API-Referenz",
 } satisfies TranslationOf<typeof source>

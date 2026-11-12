@@ -1,0 +1,54 @@
+/*
+ * Scalar's reference in Matinee's colors. Scalar marks its mode on <body>
+ * as .light-mode or .dark-mode and reads its colors from there. Matinee's
+ * tokens already switch on <html>, so one mapping serves both modes, and
+ * the server's accent comes along with them. Unlayered, so it wins over
+ * Scalar's own layers.
+ */
+body.light-mode,
+body.dark-mode {
+  --scalar-font:
+    "Red Hat Text Variable", ui-sans-serif, system-ui, "Hiragino Sans",
+    "Yu Gothic UI", "Noto Sans CJK JP", sans-serif;
+  --scalar-font-code:
+    "Red Hat Mono Variable", ui-monospace, SFMono-Regular, Menlo, Monaco,
+    Consolas, "Liberation Mono", monospace;
+  --scalar-radius: calc(var(--radius) - 4px);
+
+  --scalar-background-1: var(--background);
+  --scalar-background-2: var(--card);
+  --scalar-background-3: var(--secondary);
+  --scalar-background-accent: var(--accent-soft);
+  --scalar-color-1: var(--foreground);
+  --scalar-color-2: var(--muted-foreground);
+  --scalar-color-3: var(--foreground-faint);
+  --scalar-color-accent: var(--accent);
+  --scalar-border-color: var(--border);
+  --scalar-focus-color: var(--ring);
+
+  --scalar-button-1: var(--primary);
+  --scalar-button-1-hover: var(--accent-hover);
+  --scalar-button-1-color: var(--primary-foreground);
+  --scalar-link-color: var(--accent);
+  --scalar-link-color-hover: var(--accent-hover);
+  --scalar-tooltip-background: var(--popover);
+  --scalar-tooltip-color: var(--popover-foreground);
+
+  /* The request methods' colors. Orange and purple keep Scalar's. */
+  --scalar-color-green: var(--success);
+  --scalar-color-red: var(--danger);
+  --scalar-color-yellow: var(--warning);
+  --scalar-color-blue: var(--info);
+
+  --scalar-sidebar-background-1: var(--sidebar);
+  --scalar-sidebar-color-1: var(--foreground);
+  --scalar-sidebar-color-2: var(--muted-foreground);
+  --scalar-sidebar-border-color: var(--border);
+  --scalar-sidebar-item-hover-background: var(--secondary);
+  --scalar-sidebar-item-hover-color: var(--foreground);
+  --scalar-sidebar-item-active-background: var(--accent-soft);
+  --scalar-sidebar-color-active: var(--foreground);
+  --scalar-sidebar-search-background: var(--field);
+  --scalar-sidebar-search-border-color: var(--input);
+  --scalar-sidebar-search-color: var(--muted-foreground);
+}

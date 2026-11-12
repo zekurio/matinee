@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthedRouteImport } from './routes/_authed'
+import { Route as ApiDocsRouteImport } from './routes/api-docs'
 import { Route as InviteRouteImport } from './routes/invite'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as SetupRouteImport } from './routes/setup'
@@ -32,6 +33,11 @@ import { Route as AuthedShellTitlesTitleIdSeasonsSeasonRouteImport } from './rou
 
 const AuthedRoute = AuthedRouteImport.update({
   id: '/_authed',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiDocsRoute = ApiDocsRouteImport.update({
+  id: '/api-docs',
+  path: '/api-docs',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InviteRoute = InviteRouteImport.update({
@@ -138,6 +144,7 @@ const AuthedShellTitlesTitleIdSeasonsSeasonRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthedShellIndexRoute
+  '/api-docs': typeof ApiDocsRoute
   '/invite': typeof InviteRoute
   '/login': typeof LoginRoute
   '/setup': typeof SetupRoute
@@ -158,6 +165,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof AuthedShellIndexRoute
+  '/api-docs': typeof ApiDocsRoute
   '/invite': typeof InviteRoute
   '/login': typeof LoginRoute
   '/setup': typeof SetupRoute
@@ -179,6 +187,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authed': typeof AuthedRouteWithChildren
+  '/api-docs': typeof ApiDocsRoute
   '/invite': typeof InviteRoute
   '/login': typeof LoginRoute
   '/setup': typeof SetupRoute
@@ -203,6 +212,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/api-docs'
     | '/invite'
     | '/login'
     | '/setup'
@@ -223,6 +233,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/api-docs'
     | '/invite'
     | '/login'
     | '/setup'
@@ -243,6 +254,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/_authed'
+    | '/api-docs'
     | '/invite'
     | '/login'
     | '/setup'
@@ -266,6 +278,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   AuthedRoute: typeof AuthedRouteWithChildren
+  ApiDocsRoute: typeof ApiDocsRoute
   InviteRoute: typeof InviteRoute
   LoginRoute: typeof LoginRoute
   SetupRoute: typeof SetupRoute
@@ -278,6 +291,13 @@ declare module '@tanstack/react-router' {
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof AuthedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api-docs': {
+      id: '/api-docs'
+      path: '/api-docs'
+      fullPath: '/api-docs'
+      preLoaderRoute: typeof ApiDocsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/invite': {
@@ -470,6 +490,7 @@ const AuthedRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   AuthedRoute: AuthedRouteWithChildren,
+  ApiDocsRoute: ApiDocsRoute,
   InviteRoute: InviteRoute,
   LoginRoute: LoginRoute,
   SetupRoute: SetupRoute,

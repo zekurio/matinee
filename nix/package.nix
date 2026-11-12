@@ -15,7 +15,7 @@
     root = ../.;
   },
   # Update with the hash nix prints after pnpm-lock.yaml changes.
-  pnpmDepsHash ? "sha256-+N9+TBn/ji+Y81jiy2JCoaGM1UlK+eQ4dKzrGY5+Ozg=",
+  pnpmDepsHash ? "sha256-CsesFcLTcdRmlzfGigfKB7/jJXNUKdDqSdH9WizvAVs=",
 }:
 
 let

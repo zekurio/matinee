@@ -47,6 +47,12 @@ the token they get from one of the sign-ins in
 [Signing in apps](#signing-in-apps). Errors come back as JSON with `code`,
 `status`, and `message`.
 
+The web app shows the document as a reference at `/api-docs`, which
+`/api/v1/docs` redirects to. It's open to anyone, like the document, and
+requests tried from it go to the page's own origin with the browser's
+session. Scalar draws it from the bundle; it loads nothing from Scalar's
+servers.
+
 `/api/health` answers `{ "ok": true, "contract": "…" }` without a session.
 `contract` is a hash of the REST API's paths and schemas, and the OpenAPI
 document carries the same one as its `info.version`. A generated client

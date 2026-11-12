@@ -124,7 +124,8 @@ export default defineConfig(({ mode }) => {
       port: 5173,
       strictPort: true,
       // The browser stays on this origin; the server sees it as PUBLIC_URL.
-      proxy: { "/api": { target: server, changeOrigin: false } },
+      // The slash keeps pages like /api-docs with the app.
+      proxy: { "/api/": { target: server, changeOrigin: false } },
     },
     build: {
       rolldownOptions: {

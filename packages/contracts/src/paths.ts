@@ -13,6 +13,15 @@ export const OPENAPI_PATH = "/api/v1"
 export const OPENAPI_SPEC_PATH = `${OPENAPI_PATH}/openapi.json`
 
 /**
+ * The web page that reads the OpenAPI document as a reference, where the
+ * requests can be tried out with the session the browser has.
+ */
+export const API_REFERENCE_PAGE_PATH = "/api-docs"
+
+/** Redirects to `API_REFERENCE_PAGE_PATH`, beside the document. */
+export const OPENAPI_DOCS_PATH = `${OPENAPI_PATH}/docs`
+
+/**
  * Whether a server is there and which contract it speaks, without a
  * session: `{ "ok": true, "contract": "…" }`. `contract` is a hash of the
  * REST API's paths and schemas, the same as the `info.version` of the

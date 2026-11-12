@@ -25,6 +25,8 @@ catalog:
 
 allowBuilds:
   esbuild: true
+  # Picks between Vue 2 and 3 on install; its default is already Vue 3.
+  vue-demi: false
 
 overrides:
   # GHSA-67mh-4wv8-2f99: drizzle-kit still loads esbuild 0.18 through the
