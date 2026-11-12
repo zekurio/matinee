@@ -109,7 +109,7 @@ type Remembered = { at: number; cause: unknown }
 
 /** First in, first out, without `shift` copying a long queue every time. */
 class Lane<T> {
-  private items: T[] = []
+  private items: (T | undefined)[] = []
   private head = 0
 
   push(item: T): void {
@@ -118,7 +118,10 @@ class Lane<T> {
 
   take(): T | undefined {
     if (this.head >= this.items.length) return undefined
-    const item = this.items[this.head++]
+    const item = this.items[this.head]
+    // A settled entry holds its payload and the promise's result. Release
+    // it now, not when a later batch finally compacts the lane.
+    this.items[this.head++] = undefined
     if (this.head > 1024 && this.head * 2 > this.items.length) {
       this.items = this.items.slice(this.head)
       this.head = 0
@@ -183,6 +186,7 @@ export class Queue<P, R> implements QueueControl {
   private readonly after = new Map<string, Entry<P, R>>()
   private readonly active = new Map<string, Entry<P, R>>()
   private readonly failedKeys = new Map<string, Remembered>()
+  private nextFailureExpiry = Infinity
   private readonly failures: { label: string; message: string; at: Date }[] = []
   private completed = 0
   private failed = 0
@@ -203,6 +207,7 @@ export class Queue<P, R> implements QueueControl {
   /** Queue a job and wait for its result. Rejects with its error. */
   run(payload: P, options: { priority?: Priority } = {}): Promise<R> {
     if (this.stopped) return Promise.reject(abortError())
+    this.expireFailures()
     const priority = options.priority ?? "normal"
     const key = this.definition.key(payload)
     const remembered = this.failedKeys.get(key)
@@ -265,6 +270,7 @@ export class Queue<P, R> implements QueueControl {
 
   /** Whether the key failed lately, so `run` would fail at once. */
   hasFailed(key: string): boolean {
+    this.expireFailures()
     const remembered = this.failedKeys.get(key)
     return (
       remembered !== undefined &&
@@ -320,6 +326,7 @@ export class Queue<P, R> implements QueueControl {
   }
 
   status(): JobQueueStatus {
+    this.expireFailures()
     return {
       id: this.id,
       name: this.definition.name,
@@ -454,7 +461,12 @@ export class Queue<P, R> implements QueueControl {
     this.failures.unshift({ label, message: messageOf(cause), at: new Date() })
     this.failures.splice(RECENT_FAILURES)
     if (this.definition.retryAfterMs) {
-      this.failedKeys.set(entry.key, { at: Date.now(), cause })
+      const at = Date.now()
+      this.failedKeys.set(entry.key, { at, cause })
+      this.nextFailureExpiry = Math.min(
+        this.nextFailureExpiry,
+        at + this.definition.retryAfterMs,
+      )
     }
     const fatal = this.definition.fatal?.(cause, entry.payload)
     if (fatal) {
@@ -476,6 +488,19 @@ export class Queue<P, R> implements QueueControl {
     }
     const failure = this.definition.failure
     if (failure) log.warn(failure(entry.payload), cause)
+  }
+
+  /** Expired errors must not retain their stacks and causes indefinitely. */
+  private expireFailures(): void {
+    const now = Date.now()
+    if (now < this.nextFailureExpiry) return
+    const retryAfter = this.definition.retryAfterMs ?? 0
+    this.nextFailureExpiry = Infinity
+    for (const [key, remembered] of this.failedKeys) {
+      const expires = remembered.at + retryAfter
+      if (expires <= now) this.failedKeys.delete(key)
+      else this.nextFailureExpiry = Math.min(this.nextFailureExpiry, expires)
+    }
   }
 
   /** Log the batch once nothing waits or runs any more. */
