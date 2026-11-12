@@ -11,7 +11,8 @@ adb := `command -v adb >/dev/null && echo adb || echo nix develop ../..#android 
 
 app := "io.github.zekurio.matinee"
 debug_apk := "app/build/outputs/apk/debug/app-debug.apk"
-release_apk := "app/build/outputs/apk/release/app-release.apk"
+release_apks := "app/build/outputs/apk/release"
+release_apk := release_apks / "app-universal-release.apk"
 
 [private]
 default:
@@ -21,10 +22,10 @@ default:
 build *args:
     {{ gradle }} assembleDebug {{ args }}
 
-# Build a release APK, signed with your keystore or else the debug key
+# Build the release APKs, signed with your keystore or else the debug key
 release *args:
     {{ gradle }} assembleRelease {{ args }}
-    @echo "{{ release_apk }}"
+    @ls {{ release_apks }}/*.apk
 
 # Build the debug app and install it on the device adb sees
 install *args:
@@ -34,7 +35,7 @@ install *args:
 run: install
     {{ adb }} shell am start -n {{ app }}.debug/{{ app }}.MainActivity
 
-# Build a release APK and install it on the device adb sees
+# Build the release APKs and install the universal one on the device adb sees
 sideload: release
     {{ adb }} install -r {{ release_apk }}
 

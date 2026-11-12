@@ -9,7 +9,8 @@
   pnpm_11,
   pnpmConfigHook,
   makeWrapper,
-  version ? "0.0.0",
+  # The version of every part of Matinee, set by `just tag`.
+  version ? (lib.importJSON ../package.json).version,
   source ? import ./source.nix {
     inherit lib;
     root = ../.;

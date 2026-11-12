@@ -6,6 +6,25 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
+// The app has the version of the whole repository, from the root
+// package.json, which `just tag` sets. The version code packs it as
+// major, minor, patch, two digits for each of the last two.
+val matineeVersion: String =
+    providers
+        .fileContents(rootProject.layout.projectDirectory.file("../../package.json"))
+        .asText
+        .map { json ->
+            Regex(""""version"\s*:\s*"([^"]+)"""").find(json)?.groupValues?.get(1)
+                ?: throw GradleException("The root package.json has no version")
+        }.get()
+val matineeVersionCode: Int =
+    Regex("""^(\d+)\.(\d+)\.(\d+)$""").find(matineeVersion)?.destructured?.let { (major, minor, patch) ->
+        require(minor.toInt() < 100 && patch.toInt() < 100) {
+            "Version $matineeVersion: minor and patch must stay under 100 to fit the version code"
+        }
+        major.toInt() * 10000 + minor.toInt() * 100 + patch.toInt()
+    } ?: throw GradleException("Version $matineeVersion in the root package.json isn't major.minor.patch")
+
 android {
     namespace = "io.github.zekurio.matinee"
     // Keep in step with platformVersion in nix/android.nix: AGP finds API
@@ -16,15 +35,20 @@ android {
         applicationId = "io.github.zekurio.matinee"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = matineeVersionCode
+        versionName = matineeVersion
     }
 
     // Release signing reads a keystore.properties kept outside the repo,
     // named by MATINEE_KEYSTORE_PROPERTIES, with storeFile, storePassword,
-    // keyAlias, and keyPassword. Without one, release builds use the debug
-    // key, which is fine for sideloading but not for a store.
-    val keystoreProperties = System.getenv("MATINEE_KEYSTORE_PROPERTIES")?.let(::file)
+    // keyAlias, and keyPassword. Without the variable, release builds use
+    // the debug key, which is fine for sideloading but not for a release.
+    // With it set and the file missing the build fails, so the release
+    // workflow can't publish an APK signed with a runner's debug key.
+    val keystoreProperties = System.getenv("MATINEE_KEYSTORE_PROPERTIES")?.takeIf { it.isNotBlank() }?.let(::file)
+    if (keystoreProperties?.exists() == false) {
+        throw GradleException("MATINEE_KEYSTORE_PROPERTIES names $keystoreProperties, which doesn't exist")
+    }
     signingConfigs {
         if (keystoreProperties?.exists() == true) {
             val properties = Properties().apply { keystoreProperties.inputStream().use(::load) }
@@ -74,6 +98,22 @@ android {
 
     packaging {
         resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
+    }
+
+    // A release builds an APK for each ABI, a quarter the size, beside the
+    // universal one that runs on all of them. One app serves phones,
+    // tablets, and TVs, so these are all the APKs there are. Debug builds
+    // stay one APK. A bundle splits by ABI itself, and with splits on AGP
+    // fails to shrink its resources
+    // (https://issuetracker.google.com/issues/402800800).
+    splits {
+        abi {
+            val tasks = gradle.startParameter.taskNames.map { it.lowercase() }
+            isEnable = tasks.any { "release" in it } && tasks.none { "bundle" in it }
+            reset()
+            include("arm64-v8a", "armeabi-v7a", "x86", "x86_64")
+            isUniversalApk = true
+        }
     }
 }
 
