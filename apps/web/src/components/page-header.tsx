@@ -5,14 +5,14 @@ import { tr } from "@/i18n"
 
 /**
  * Names the browser tab after the page while it's open. Until there's a
- * name, and after the page closes, the tab says just Matinee.
+ * name, and after the page closes, the tab says just matinee.
  */
 export function useDocumentTitle(name: string | null | undefined) {
   // The tab's title lives in the document, outside React.
   useEffect(() => {
-    if (name) document.title = `${name} · Matinee`
+    if (name) document.title = `${name} · matinee`
     return () => {
-      document.title = "Matinee"
+      document.title = "matinee"
     }
   }, [name])
 }
