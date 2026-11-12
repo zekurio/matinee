@@ -44,6 +44,7 @@ import {
 import { UserAvatar } from "@/components/user-avatar"
 import { tr } from "@/i18n"
 import { formatMonth } from "@/lib/format"
+import { reloadOnEnter } from "@/lib/route-loading"
 import { errorMessage, orpc } from "@/lib/rpc"
 import { useOpenSettings } from "@/lib/settings"
 import { browserTimeZone, rangePhrase } from "@/lib/stats"
@@ -59,6 +60,7 @@ export const Route = createFileRoute("/_authed/_shell/profiles/$username")({
   loaderDeps: ({ search }) => ({ range: search.range }),
   // Starts the profile's fetch while the page's code loads, and on hover,
   // and its statistics as soon as the profile says they show.
+  shouldReload: reloadOnEnter,
   loader: ({ context, params, deps }) => {
     void preloadProfile(context.queryClient, params.username, deps.range)
   },

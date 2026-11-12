@@ -33,6 +33,19 @@ export function prefetchHome(queryClient: QueryClient) {
   void prefetchShelves(queryClient)
 }
 
+/**
+ * As {@link prefetchHome}, for Home under a settings address: only when
+ * Home hasn't loaded yet. Each section has its own address there, and
+ * moving between them shouldn't refetch the page under the dialog.
+ */
+export function ensureHome(queryClient: QueryClient) {
+  const loaded =
+    queryClient.getQueryData(homeQueries.resume().queryKey) !== undefined &&
+    queryClient.getQueryData(homeQueries.nextUp().queryKey) !== undefined &&
+    queryClient.getQueryData(homeQueries.featured().queryKey) !== undefined
+  if (!loaded) prefetchHome(queryClient)
+}
+
 async function prefetchShelves(queryClient: QueryClient) {
   const options = orpc.libraries.list.queryOptions()
   await queryClient.prefetchQuery(options)

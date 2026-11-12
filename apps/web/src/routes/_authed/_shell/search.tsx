@@ -26,6 +26,7 @@ import {
 import { UserAvatar } from "@/components/user-avatar"
 import { tr } from "@/i18n"
 import { formatCount } from "@/lib/format"
+import { reloadOnEnter } from "@/lib/route-loading"
 import { orpc } from "@/lib/rpc"
 import { useSearchSpotlightStore } from "@/stores/search-spotlight"
 
@@ -46,6 +47,7 @@ export const Route = createFileRoute("/_authed/_shell/search")({
   validateSearch: SearchParams,
   loaderDeps: ({ search }) => ({ q: search.q }),
   // Starts the search while the page's code loads, not once it renders.
+  shouldReload: reloadOnEnter,
   loader: ({ context: { queryClient }, deps: { q } }) => {
     if (q !== undefined) void queryClient.prefetchQuery(searchOptions(q))
   },

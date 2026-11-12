@@ -18,6 +18,7 @@ import { PosterGridSkeleton } from "@/components/library/library-states"
 import { PosterCard, posterGrid } from "@/components/media-item"
 import { useDocumentTitle } from "@/components/page-header"
 import { tr } from "@/i18n"
+import { reloadOnEnter } from "@/lib/route-loading"
 import { errorMessage, orpc } from "@/lib/rpc"
 
 /** Both kinds is the default, so the URL leaves it out. */
@@ -28,6 +29,7 @@ const PersonSearch = t.object({
 export const Route = createFileRoute("/_authed/_shell/people/$name")({
   validateSearch: PersonSearch,
   // Starts the person's fetch while the page's code loads, and on hover.
+  shouldReload: reloadOnEnter,
   loader: ({ context: { queryClient }, params: { name } }) => {
     void queryClient.prefetchQuery(personOptions(name))
   },

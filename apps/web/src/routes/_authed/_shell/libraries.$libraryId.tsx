@@ -4,6 +4,7 @@ import { createFileRoute } from "@tanstack/react-router"
 import { LibraryPage } from "@/components/library/library-page"
 import type { Sort } from "@/components/library/list-params"
 import { libraryTitlesOptions } from "@/components/library/title-queries"
+import { reloadOnEnter } from "@/lib/route-loading"
 import { orpc } from "@/lib/rpc"
 
 /** Title is the default sort, so the URL leaves it out. */
@@ -20,6 +21,7 @@ const LibrarySearch = t.object({
 export const Route = createFileRoute("/_authed/_shell/libraries/$libraryId")({
   validateSearch: LibrarySearch,
   loaderDeps: ({ search }) => search,
+  shouldReload: reloadOnEnter,
   loader: ({ context: { queryClient }, params: { libraryId }, deps }) => {
     void queryClient.prefetchQuery(
       orpc.libraries.get.queryOptions({ input: { id: libraryId } }),

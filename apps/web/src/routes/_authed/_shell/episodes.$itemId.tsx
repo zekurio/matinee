@@ -32,12 +32,14 @@ import {
   timeLeft,
   seasonName,
 } from "@/lib/media"
+import { reloadOnEnter } from "@/lib/route-loading"
 import { errorMessage, orpc } from "@/lib/rpc"
 import { useOverviewToggle } from "@/lib/use-overview-toggle"
 
 export const Route = createFileRoute("/_authed/_shell/episodes/$itemId")({
   // Starts the episode's fetch while the page's code loads, and on hover,
   // and its season's as soon as the episode says which.
+  shouldReload: reloadOnEnter,
   loader: ({ context, params }) => {
     void preloadEpisode(context.queryClient, params.itemId)
   },
