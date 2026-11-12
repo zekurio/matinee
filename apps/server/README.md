@@ -376,9 +376,18 @@ The player shows subtitle files beside a video and subtitle streams inside it.
   in `Subs` with no video's name goes to the folder's only video.
 - Streams: text subtitles inside the file, such as SubRip, ASS/SSA,
   mov_text, and WebVTT, and picture subtitles: PGS, VobSub, and DVB. The
-  first time someone turns a text or PGS stream on, ffmpeg copies it into
+  first time someone turns a text or PGS stream on, the server caches it in
   `$MATINEE_DATA_DIR/subtitles`, where it stays until the file changes.
-  That reads the whole file, so on a large one it can take minutes.
+  For Matroska UTF-8, ASS/SSA and PGS tracks with block-level subtitle cues,
+  it reads the index and only the selected track's blocks, in bounded,
+  offset-ordered windows. It builds a small temporary Matroska input for
+  ffmpeg, retaining the track header, compression, block durations and
+  lacing. Text becomes WebVTT; PGS is copied without decoding pictures.
+  Files without usable cues for that track, unsupported layouts or codecs,
+  encrypted tracks, and inputs above the reader's safety limits use the
+  ordinary ffmpeg path. That can read the whole file and take minutes.
+  MP4/MOV and sidecar conversion still use their existing paths. Nothing
+  is extracted at library scan time or for unselected tracks.
 - Browsers get WebVTT for text. ASS and SSA lose their styling on the way.
 - PGS goes to the browser as it is, a `.sup` file, and the player draws it
   over the video with [libpgs](https://github.com/Arcus92/libpgs-js). It

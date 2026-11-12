@@ -29,6 +29,7 @@ import { env } from "../env"
 import { defineQueue } from "../jobs/queue"
 import { log } from "../log"
 import { languageTag, trackLabel } from "./language"
+import { indexedSubtitle } from "./matroska-subtitles"
 import { currentProbe } from "./probe"
 import { run } from "./process"
 import { cleanVtt, decodeText, srtToVtt, vttText } from "./webvtt"
@@ -173,25 +174,42 @@ type Conversion = {
   file: string
   input: string[]
   output: Output
+  embedded?: { path: string; index: number }
 }
 
 async function extract(job: Conversion): Promise<void> {
   await mkdir(dir, { recursive: true })
   const tmp = `${job.file}.${process.pid}.tmp`
+  const indexed = `${tmp}.mkv`
   try {
-    await run(
-      env.MATINEE_FFMPEG_PATH,
-      [
-        "-hide_banner",
-        "-loglevel",
-        "error",
-        ...job.input,
-        ...OUTPUT_ARGS[job.output],
-        "-y",
-        tmp,
-      ],
-      EXTRACT_TIMEOUT_MS,
-    )
+    const small = job.embedded
+      ? await indexedSubtitle(job.embedded.path, job.embedded.index)
+      : null
+    if (small) await writeFile(indexed, small.bytes)
+    const convert = (input: string[]) =>
+      run(
+        env.MATINEE_FFMPEG_PATH,
+        [
+          "-hide_banner",
+          "-loglevel",
+          "error",
+          ...input,
+          ...OUTPUT_ARGS[job.output],
+          "-y",
+          tmp,
+        ],
+        EXTRACT_TIMEOUT_MS,
+      )
+    if (small) {
+      try {
+        await convert(["-copyts", "-i", indexed, "-map", "0:s:0"])
+      } catch {
+        // A decoder may need context the index cannot supply.
+        await convert(job.input)
+      }
+    } else {
+      await convert(job.input)
+    }
     if (job.output === "vtt") {
       await writeFile(tmp, cleanVtt(await readFile(tmp, "utf8")))
     }
@@ -199,14 +217,16 @@ async function extract(job: Conversion): Promise<void> {
   } catch (cause) {
     await rm(tmp, { force: true })
     throw cause
+  } finally {
+    await rm(indexed, { force: true })
   }
   await removeStale(job.name, job.output, basename(job.file))
 }
 
 /**
- * Subtitles turned into WebVTT, and PGS tracks copied out of videos. Each
- * extraction of an embedded track reads the whole file; two at a time
- * leaves the disk room for the streams people are watching. One that
+ * Subtitles turned into WebVTT, and PGS tracks copied out of videos.
+ * Matroska subtitle cues avoid a full read where available. Two jobs at
+ * a time leave room for playback when a full demux is necessary. One that
  * failed isn't tried again until the source changes, which changes its
  * key.
  */
@@ -234,13 +254,14 @@ async function converted(
   info: Stats,
   input: string[],
   output: Output,
+  embedded?: { path: string; index: number },
 ): Promise<string | null> {
   const key = `${name}-${Math.floor(info.mtimeMs)}-${info.size}.${output}`
   const file = join(dir, key)
   const cached = await stat(file).catch(() => null)
   if (cached?.isFile()) return file
   return conversions
-    .run({ key, name, file, input, output }, { priority: "high" })
+    .run({ key, name, file, input, output, embedded }, { priority: "high" })
     .then(
       () => file,
       () => null,
@@ -336,17 +357,19 @@ export async function openSubtitle(
     const delivery = streamDelivery(stream)
     const name = `${item.id}-${index}`
     const input = ["-i", item.path, "-map", `0:${index}`]
+    const embedded = { path: item.path, index }
     if (delivery === "webvtt") {
       return {
         etag: etagFor(name, info),
-        read: async () => webvtt(await converted(name, info, input, "vtt")),
+        read: async () =>
+          webvtt(await converted(name, info, input, "vtt", embedded)),
       }
     }
     if (delivery === "pgs") {
       return {
         etag: etagFor(name, info),
         read: async () => {
-          const path = await converted(name, info, input, "sup")
+          const path = await converted(name, info, input, "sup", embedded)
           return path === null ? null : { kind: "pgs", path }
         },
       }
