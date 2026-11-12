@@ -1,0 +1,50 @@
+name: android
+
+# Builds the Android app and runs its unit tests. The pnpm checks only
+# compare the generated API client, they don't compile the app.
+on:
+  pull_request:
+    paths:
+      - "apps/android/**"
+      - "brand/android/**"
+      - "nix/android.nix"
+      - "flake.nix"
+      - "flake.lock"
+      - "package.json"
+      - ".github/workflows/android.yml"
+      - "!**/*.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android:
+    name: build and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: install nix
+        uses: cachix/install-nix-action@448cde739abec1eaf0646249e3d25bb8d9bc7702 # v31.11.2
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+
+      # Caches Gradle's downloads and build cache. Gradle itself runs in
+      # the flake's Android shell, with its JDK and SDK.
+      - name: set up gradle cache
+        uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+
+      - name: build and test
+        working-directory: apps/android
+        run: nix develop ../..#android -c ./gradlew assembleDebug testDebugUnitTest

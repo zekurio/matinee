@@ -22,3 +22,7 @@ brand:
 # Build the server package and run the NixOS module's tests
 check:
     nix flake check
+
+# Set the version, commit and tag it on main, and push, which releases it
+tag version:
+    node tools/release/tag.mjs {{ version }}

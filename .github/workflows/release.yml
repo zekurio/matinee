@@ -1,0 +1,136 @@
+name: release
+
+# A v* tag on main is a release: the server package goes to the binary
+# cache and the signed APKs to a draft GitHub release, to publish by hand. `just tag <version>` makes
+# the tag. See Releasing in README.md for the secrets this needs.
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  version:
+    name: check version
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: check the tag against package.json and main
+        run: node tools/release/version.mjs
+
+  server:
+    name: server package
+    needs: version
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: install nix
+        uses: cachix/install-nix-action@448cde739abec1eaf0646249e3d25bb8d9bc7702 # v31.11.2
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+
+      - name: set up cachix
+        uses: cachix/cachix-action@38b082610b782e7e93e209c35fd730d399dee866 # v17
+        with:
+          name: zekurio
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+
+      - name: check nix flake
+        run: nix flake check --print-build-logs
+
+      # A pin keeps the release's package when the cache collects garbage.
+      - name: push and pin the package
+        env:
+          CACHIX_AUTH_TOKEN: ${{ secrets.CACHIX_AUTH_TOKEN }}
+        run: node tools/release/cache.mjs
+
+  android:
+    name: android apks
+    needs: version
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    # Holds the signing key. Give it a required reviewer in the
+    # repository's settings to approve each release by hand.
+    environment: release
+
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: install nix
+        uses: cachix/install-nix-action@448cde739abec1eaf0646249e3d25bb8d9bc7702 # v31.11.2
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+
+      - name: write the keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: node tools/release/keystore.mjs
+
+      # No Gradle cache: a release builds from the tagged sources alone.
+      - name: build and test
+        working-directory: apps/android
+        run: nix develop ../..#android -c ./gradlew --no-build-cache testDebugUnitTest assembleRelease
+
+      - name: check the signatures and name the apks
+        run: nix develop .#android -c node tools/release/apk.mjs "$RUNNER_TEMP/release"
+
+      - name: remove the keystore
+        if: always()
+        run: rm -f "$RUNNER_TEMP/matinee.jks" "$RUNNER_TEMP/keystore.properties"
+
+      - name: upload the apks
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: apks
+          path: ${{ runner.temp }}/release/
+          if-no-files-found: error
+
+  publish:
+    name: draft github release
+    needs: [version, server, android]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+
+    steps:
+      - name: download the apks
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: apks
+          path: release
+
+      # A draft: try the APKs on a phone and a TV, then publish it.
+      - name: create the draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: gh release create "$TAG" release/* --draft --verify-tag --generate-notes --title "$TAG"

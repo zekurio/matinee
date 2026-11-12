@@ -82,6 +82,10 @@ nix.settings = {
 };
 ```
 
+`github:zekurio/matinee` follows `main`. To stay on a release, name its
+tag, as in `github:zekurio/matinee/v0.0.1`. The cache keeps every
+release's package.
+
 The server listens on `127.0.0.1:8420`, and the module requires an https
 `publicUrl`, so put a reverse proxy in front. With Caddy on the same host:
 
@@ -138,6 +142,7 @@ coding agents alike. The Android app builds in its own shell, see
 | `nix flake check`                | Builds it and runs the NixOS module's tests                 |
 | `nix develop .#android`          | Enters a shell with a JDK and the Android SDK               |
 | `just`                           | Lists the shortcuts, including `just android ...`           |
+| `just tag <version>`             | Releases that version, see [Release](#release)              |
 
 After `pnpm-lock.yaml` changes, `nix build` fails and prints the new
 dependency hash. Put it in `pnpmDepsHash` in `nix/package.nix`.
@@ -169,6 +174,58 @@ need and create the database again, which deletes its data.
 
 </details>
 
+## Release
+
+The server, the web app, and the Android app share one version, the
+`version` in the root `package.json`. The Nix package and the Android
+build read it from there. A release is a `v<version>` tag on `main`:
+
+```sh
+just tag 0.2.0
+```
+
+That writes the version to `package.json`, commits it as
+`chore: release v0.2.0`, tags the commit, and pushes both. It refuses
+unless you're on `main`, level with `origin/main`, with a clean tree. Minor
+and patch stay under 100, because the Android version code is
+`major * 10000 + minor * 100 + patch`.
+
+The tag starts [`release.yml`](.github/workflows/release.yml), which
+
+- fails if the tag isn't the version in `package.json` or isn't on `main`,
+- runs `nix flake check`, pushes the server package to the binary cache,
+  and pins it there as `matinee-v<version>`,
+- builds the Android app, signs it, and fails if a debug key signed it,
+- drafts a GitHub release with generated notes, an APK for each ABI and a
+  universal one, as `matinee-v<version>-<abi>.apk`, and `checksums.txt`.
+
+Try the draft's APKs on a phone and a TV, then publish it on GitHub. The
+app isn't on Google Play. `./gradlew bundleRelease` builds the bundle Play
+takes, and nothing uploads it.
+
+The scripts it runs are in [`tools/release`](tools/release). It needs the
+`CACHIX_AUTH_TOKEN` repository secret the `nix` workflow already uses, and
+a `release` environment (Settings → Environments) with the signing key:
+
+| Secret                      | What it holds                                   |
+| --------------------------- | ----------------------------------------------- |
+| `ANDROID_KEYSTORE_BASE64`   | The keystore, from `base64 -w0 matinee.jks`     |
+| `ANDROID_KEYSTORE_PASSWORD` | The keystore's password                         |
+| `ANDROID_KEY_ALIAS`         | The key's alias, `matinee` in the command below |
+| `ANDROID_KEY_PASSWORD`      | The key's password                              |
+
+Make the keystore once and keep a copy offline. Android installs an update
+only over an app signed with the same key, so a lost key means everyone
+installs the app again and loses its downloads and sign-in.
+
+```sh
+keytool -genkeypair -v -keystore matinee.jks -alias matinee \
+  -keyalg RSA -keysize 4096 -validity 10000
+```
+
+Give the `release` environment a required reviewer to approve each
+release's signing by hand.
+
 ## Repository layout
 
 ```
@@ -182,6 +239,7 @@ packages/
   db/          Drizzle schema and migrations
   ui/          shadcn components on Base UI, and the theme
 brand/         Logo, wordmark, app icons
+tools/         The lint rules and the release scripts
 nix/           The package, the NixOS module and its tests, the dev shells
 ```
 

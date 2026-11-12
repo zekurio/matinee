@@ -20,18 +20,34 @@ web app's catalogs where the words are the same.
 
 ## Install
 
-Android 8.0 (API 26) or later. There are no published builds yet, so you
-build the APK yourself ([Build](#build)) and sideload it.
+Android 8.0 (API 26) or later. Each
+[release](https://github.com/zekurio/matinee/releases) has signed APKs,
+named `matinee-v<version>-<abi>.apk`, and their SHA-256 in `checksums.txt`.
+The same app runs on phones, tablets, and TVs:
 
-With the device on USB or Wi-Fi debugging, where `adb devices` lists it:
+| APK           | For                                                      |
+| ------------- | -------------------------------------------------------- |
+| `universal`   | Any device. Four times the download, take it if unsure   |
+| `arm64-v8a`   | Phones and tablets, the Nvidia Shield, newer TV boxes    |
+| `armeabi-v7a` | Most TVs and streaming sticks, which run a 32-bit system |
+| `x86_64`      | Emulators, Chromebooks                                   |
+| `x86`         | Old emulators and x86 tablets                            |
+
+Copy one to the device, open it in a file manager, and allow that app to
+install unknown apps when Android asks. Releases share one signing key, so a newer one installs over an
+older one, and [Obtainium](https://obtainium.imranr.dev) can follow the
+repository for updates.
+
+To build the APK yourself ([Build](#build)), with the device on USB or
+Wi-Fi debugging, where `adb devices` lists it:
 
 ```sh
-just android sideload   # build a release APK and adb install it
+just android sideload   # build the release APKs and adb install the universal one
 ```
 
 Without adb, build it with `just android release`, copy
-`apps/android/app/build/outputs/apk/release/app-release.apk` to the
-device, open it in a file manager, and allow that app to install unknown
+`apps/android/app/build/outputs/apk/release/app-universal-release.apk` to
+the device, open it in a file manager, and allow that app to install unknown
 apps when Android asks.
 
 For an Android TV or a Google TV, turn on developer options (press the
@@ -43,8 +59,8 @@ names it.
 
 Android installs an update only over an app signed with the same key.
 Without a keystore, release builds use the debug key of the machine that
-built them, so an APK from another machine has to replace the app, which
-deletes its downloads and sign-in. For builds you keep updating, make one
+built them, so an APK from another machine, or from a release, has to
+replace the app, which deletes its downloads and sign-in. For builds you keep updating, make one
 keystore and point `MATINEE_KEYSTORE_PROPERTIES` at a properties file with
 `storeFile`, `storePassword`, `keyAlias`, and `keyPassword`:
 
@@ -62,17 +78,17 @@ The flake has a shell with a JDK and the Android SDK this needs. Entering it
 accepts the Android SDK license. The recipes in `justfile` enter it for you,
 so from the repository root:
 
-| Recipe                  | What it does                                                 |
-| ----------------------- | ------------------------------------------------------------ |
-| `just android build`    | Debug APK in `app/build/outputs/apk/debug/`                  |
-| `just android release`  | Release APK in `app/build/outputs/apk/release/`              |
-| `just android install`  | Builds the debug app and installs it on the connected device |
-| `just android run`      | Installs the debug app and opens it                          |
-| `just android sideload` | Builds a release APK and installs it                         |
-| `just android reverse`  | Lets the device reach the dev server at `localhost:5173`     |
-| `just android logcat`   | Follows the running debug app's log                          |
-| `just android test`     | Runs the unit tests                                          |
-| `just android api`      | Generates the API client again after a contract change       |
+| Recipe                  | What it does                                                        |
+| ----------------------- | ------------------------------------------------------------------- |
+| `just android build`    | Debug APK in `app/build/outputs/apk/debug/`                         |
+| `just android release`  | Release APKs, one for each ABI, in `app/build/outputs/apk/release/` |
+| `just android install`  | Builds the debug app and installs it on the connected device        |
+| `just android run`      | Installs the debug app and opens it                                 |
+| `just android sideload` | Builds the release APKs and installs the universal one              |
+| `just android reverse`  | Lets the device reach the dev server at `localhost:5173`            |
+| `just android logcat`   | Follows the running debug app's log                                 |
+| `just android test`     | Runs the unit tests                                                 |
+| `just android api`      | Generates the API client again after a contract change              |
 
 In `apps/android`, leave out the `android`: `just build`. Arguments after a
 Gradle recipe go to Gradle, as in `just build --offline`. The same by hand:

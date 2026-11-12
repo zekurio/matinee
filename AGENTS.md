@@ -38,6 +38,10 @@ for building and sideloading the app.
   (`apps/server/scripts/kotlin-client.ts`). Run it after a contract change;
   `pnpm verify` fails while they're out of date. Build the app with
   `nix develop .#android` or `just android build`; see its README.
+- `tools/release`: the scripts behind `just tag` and
+  `.github/workflows/release.yml`, in `.mjs` on Node's own modules, since
+  the workflow runs them before any install. Workflow steps and `just`
+  recipes call a script there rather than hold shell of their own.
 - `nix/`: the flake's package (`package.nix`) and NixOS module
   (`module.nix`), with tests in `nix/tests`. A server variable the module
   should set for people gets a typed option there; any other goes through
@@ -61,6 +65,9 @@ for building and sideloading the app.
   - Request-path library, title, and file reads need an access filter, or an
     `// ACCESS:` comment explaining the visible row they derive from.
   - Fix the code before reaching for a disable comment.
+- Every part has the version in the root `package.json`. Don't set one
+  anywhere else; `just tag <version>` changes it and releases (README.md,
+  Release).
 - No automated tests yet. Check affected flows by hand in the browser.
 - Generate migrations with a descriptive snake_case name:
   `pnpm db:generate --name watch_progress`. Never edit a migration after it

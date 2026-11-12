@@ -1,10 +1,11 @@
 name: nix
 
 # Builds the flake's package and runs its checks. Scoped to what the
-# derivation builds from, since the pnpm checks don't run it.
+# derivation builds from, since the pnpm checks don't run it. The run on
+# main pushes the package to the binary cache, for hosts that follow main.
 on:
   pull_request:
-    paths:
+    paths: &paths
       - "nix/**"
       - "apps/**"
       - "packages/**"
@@ -17,6 +18,11 @@ on:
       - ".env.example"
       - ".github/workflows/nix.yml"
       - "!**/*.md"
+      - "!apps/android/**"
+  push:
+    branches:
+      - main
+    paths: *paths
   workflow_dispatch:
 
 permissions:
