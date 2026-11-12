@@ -40,7 +40,8 @@ export function drawAss(
       void renderer.destroy().catch(() => {})
       // A failed worker cannot acknowledge destroy's IPC request.
       worker.terminate()
-      video.cancelVideoFrameCallback(renderer._rvfcLoop)
+      // JASSUB's loop value is a generation counter, not a callback id.
+      // destroy marks it stopped; its pending frame callback exits on its own.
     },
   }
 }
