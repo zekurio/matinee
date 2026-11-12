@@ -31,13 +31,16 @@ const DownloadForm = lazy(() =>
 
 /**
  * Whether the account may download, as the server says. False until it
- * has, so nothing offers a download the server would refuse.
+ * has, so nothing offers a download the server would refuse. With `once`,
+ * an answer from earlier in the visit will do, as for a card deciding
+ * whether it has a menu at all; an open menu or dialog asks again once the
+ * answer is stale.
  */
-export function useDownloadsAllowed(): boolean {
-  const options = useQuery({
-    ...orpc.playback.options.queryOptions(),
+export function useDownloadsAllowed(once = false): boolean {
+  const query = orpc.playback.options.queryOptions({
     select: (data) => data.downloads,
   })
+  const options = useQuery(once ? { ...query, staleTime: Infinity } : query)
   return options.data ?? false
 }
 

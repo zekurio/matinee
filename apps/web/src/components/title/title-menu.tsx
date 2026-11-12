@@ -6,7 +6,8 @@ import { useLibraryProvider } from "./library-provider"
 
 /** Says when the provider found nothing, so a name in a folder isn't mistaken for a match. */
 export function MatchNote({ title }: { title: Title }) {
-  const provider = useLibraryProvider(title.libraryId)
+  // A matched title has nothing to say, so it doesn't ask.
+  const provider = useLibraryProvider(title.libraryId, !title.providerId)
   if (!provider || title.providerId) return null
   return (
     <p className="text-muted-foreground mt-4 text-sm">

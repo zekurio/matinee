@@ -1,10 +1,4 @@
-import type {
-  MediaItem,
-  MetadataProvider,
-  Season,
-  Title,
-  TitleSummary,
-} from "@matinee/contracts"
+import type { MediaItem, Season, Title, TitleSummary } from "@matinee/contracts"
 import { Button } from "@matinee/ui/components/button"
 import {
   DropdownMenu,
@@ -274,43 +268,49 @@ export function ActionsMenu({
   const { user } = authed.useRouteContext()
   const admin = user.role === "admin"
   const scope = scopeOf(target)
-  const restart = restartable(target)
-  const owner = scope.title
-  const provider = useLibraryProvider(scope.libraryId, admin && owner !== null)
-  const downloads = useDownloadsAllowed()
-
-  // Set when the user can fix the match and refresh.
-  const adminProvider = (admin && owner ? provider : null) ?? null
-  const images = admin && owner ? scope.images : null
-  // An account that may not download, on a card with nothing else to do,
-  // gets no menu.
-  if (!restart && !children && !downloads && !adminProvider && !images) {
-    return null
+  const plan = {
+    scope,
+    restart: restartable(target),
+    admin,
+    images: admin && scope.title ? scope.images : null,
+    look,
+    children,
   }
-  return (
-    <DeferredActionsMenu
-      scope={scope}
-      restart={restart}
-      adminProvider={adminProvider}
-      images={images}
-      downloads={downloads}
-      look={look}
-      className={className}
-    >
-      {children}
-    </DeferredActionsMenu>
-  )
+  // Most menus hold something whatever the server says: playing from the
+  // start, a row's own items, or an admin's image editor. Only the rest
+  // ask it before showing a trigger.
+  if (plan.restart || children || plan.images) {
+    return <DeferredActionsMenu {...plan} className={className} />
+  }
+  return <CheckedActionsMenu {...plan} className={className} />
 }
 
-/** What {@link ActionsMenu} decided the menu holds. */
+/** What a menu holds before it asks the server anything. */
 type MenuPlan = {
   scope: Scope
+  /** The file Play from the start plays. */
   restart: MediaItem | null
-  adminProvider: MetadataProvider | null
+  admin: boolean
+  /** Whose images the editor edits, for an admin. */
   images: ImageOwner | null
-  downloads: boolean
   look: MenuLook
   children?: ReactNode
+}
+
+/**
+ * A menu that holds only what the server allows: Download, when the
+ * account may, and an admin's fix match and refresh, when the library has
+ * a provider. An account that may do neither gets no menu.
+ */
+function CheckedActionsMenu({
+  className,
+  ...plan
+}: MenuPlan & { className: string | undefined }) {
+  const downloads = useDownloadsAllowed(true)
+  const owner = plan.admin ? plan.scope.title : null
+  const provider = useLibraryProvider(plan.scope.libraryId, owner !== null)
+  if (!downloads && !provider) return null
+  return <DeferredActionsMenu {...plan} className={className} />
 }
 
 /**
@@ -342,13 +342,16 @@ function DeferredActionsMenu({
   )
 }
 
-/** {@link ActionsMenu} once it mounts, with what it decided. */
+/**
+ * {@link ActionsMenu} once someone reaches for it. Whether the account may
+ * download and the library's provider load from then, before the press
+ * that opens it, and their items join the menu when they arrive.
+ */
 function MountedActionsMenu({
   scope,
   restart,
-  adminProvider,
+  admin,
   images,
-  downloads,
   look,
   children,
   trigger,
@@ -359,9 +362,13 @@ function MountedActionsMenu({
   icon: ReactNode
   defaultOpen: boolean
 }) {
+  const owner = scope.title
+  const provider = useLibraryProvider(scope.libraryId, admin && owner !== null)
+  // Set when the user can fix the match and refresh.
+  const adminProvider = (admin && owner ? provider : null) ?? null
+  const downloads = useDownloadsAllowed()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const owner = scope.title
   // Kept after closing, so the dialogs can animate out. Null until one
   // first opens, so none mounts before then.
   const [file, setFile] = useState<MediaItem | null>(null)
