@@ -25,6 +25,14 @@ export default defineMessages("jobs", {
   "jobs.queue.thumbnails.name": "Thumbnails",
   "jobs.queue.thumbnails.description":
     "Take a frame from videos that have no artwork.",
+  "jobs.queue.subtitle-prepare.name": "Prepare subtitles",
+  "jobs.queue.subtitle-prepare.description":
+    "Cache indexed text subtitles without reading video streams.",
+  "jobs.queue.subtitle-prepare.note":
+    "Files whose indexed text subtitles are prepared at once.",
+  "jobs.task.prepare-subtitles.name": "Prepare subtitles",
+  "jobs.task.prepare-subtitles.description":
+    "Cache indexed text subtitles and delete outputs of removed or changed files. Picture subtitles stay on demand.",
   "jobs.queue.trickplay.name": "Trickplay images",
   "jobs.queue.trickplay.description":
     "Make the thumbnails the seek bar shows while scrubbing.",

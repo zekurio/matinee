@@ -1205,6 +1205,7 @@ object JobQueueId {
     const val MEDIA_PROBE = "media-probe"
     const val METADATA = "metadata"
     const val THUMBNAILS = "thumbnails"
+    const val SUBTITLE_PREPARE = "subtitle-prepare"
     const val TRICKPLAY = "trickplay"
     const val ARTWORK = "artwork"
     const val SUBTITLES = "subtitles"
@@ -1212,7 +1213,7 @@ object JobQueueId {
     const val AVATARS = "avatars"
     const val DOWNLOADS = "downloads"
     const val DOWNLOAD_COPIES = "download-copies"
-    val all = listOf(LIBRARY_SCAN, MEDIA_PROBE, METADATA, THUMBNAILS, TRICKPLAY, ARTWORK, SUBTITLES, SUBTITLE_FONTS, AVATARS, DOWNLOADS, DOWNLOAD_COPIES)
+    val all = listOf(LIBRARY_SCAN, MEDIA_PROBE, METADATA, THUMBNAILS, SUBTITLE_PREPARE, TRICKPLAY, ARTWORK, SUBTITLES, SUBTITLE_FONTS, AVATARS, DOWNLOADS, DOWNLOAD_COPIES)
 }
 
 @Serializable
@@ -1245,11 +1246,12 @@ object TaskId {
     const val REFRESH_METADATA = "refresh-metadata"
     const val PROBE_MEDIA = "probe-media"
     const val PREFETCH_ARTWORK = "prefetch-artwork"
+    const val PREPARE_SUBTITLES = "prepare-subtitles"
     const val MAKE_TRICKPLAY = "make-trickplay"
     const val CLEAN_TRANSCODES = "clean-transcodes"
     const val CLEAN_SESSIONS = "clean-sessions"
     const val SYNC_OIDC_ACCOUNTS = "sync-oidc-accounts"
-    val all = listOf(SCAN_LIBRARIES, REFRESH_METADATA, PROBE_MEDIA, PREFETCH_ARTWORK, MAKE_TRICKPLAY, CLEAN_TRANSCODES, CLEAN_SESSIONS, SYNC_OIDC_ACCOUNTS)
+    val all = listOf(SCAN_LIBRARIES, REFRESH_METADATA, PROBE_MEDIA, PREFETCH_ARTWORK, PREPARE_SUBTITLES, MAKE_TRICKPLAY, CLEAN_TRANSCODES, CLEAN_SESSIONS, SYNC_OIDC_ACCOUNTS)
 }
 
 object TaskResult {

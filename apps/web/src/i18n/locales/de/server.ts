@@ -259,6 +259,8 @@ export default {
   "server.process.exitedDetail": "{name} wurde mit {code} beendet: {detail}",
   "server.process.exited": "{name} wurde mit {code} beendet",
 
+  "server.media.subtitlePrepareFailed":
+    "Untertitel für {path} konnten nicht vorbereitet werden",
   "server.media.ffprobeNotJson":
     "ffprobe hat etwas anderes als JSON ausgegeben",
   "server.media.ffprobeNoStreams":

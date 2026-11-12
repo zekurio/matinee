@@ -23,6 +23,14 @@ export default {
   "jobs.queue.thumbnails.name": "Miniaturbilder",
   "jobs.queue.thumbnails.description":
     "Nimmt ein Einzelbild aus Videos, die kein Artwork haben.",
+  "jobs.queue.subtitle-prepare.name": "Untertitel vorbereiten",
+  "jobs.queue.subtitle-prepare.description":
+    "Indizierte Textuntertitel zwischenspeichern, ohne Videospuren zu lesen.",
+  "jobs.queue.subtitle-prepare.note":
+    "Dateien, deren indizierte Textuntertitel gleichzeitig vorbereitet werden.",
+  "jobs.task.prepare-subtitles.name": "Untertitel vorbereiten",
+  "jobs.task.prepare-subtitles.description":
+    "Indizierte Textuntertitel zwischenspeichern und Ausgaben entfernter oder geänderter Dateien löschen. Bilduntertitel bleiben auf Abruf.",
   "jobs.queue.trickplay.name": "Trickplay-Bilder",
   "jobs.queue.trickplay.description":
     "Erstellt die Vorschaubilder, die die Zeitleiste beim Spulen zeigt.",

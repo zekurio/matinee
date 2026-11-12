@@ -227,16 +227,16 @@ private fun relative(at: String): String =
 private fun taskStatus(task: ScheduledTask): String {
     if (task.startedAt != null) {
         val progress = task.progress
-        return if (progress != null) stringResource(R.string.web_jobs_task_runningPercent, (progress * 100).toInt().toString())
+        return if (progress != null) stringResource(R.string.web_jobs_task_percent, (progress * 100).toInt().toString())
         else stringResource(R.string.web_jobs_task_running)
     }
     val last = task.lastRun?.let { run ->
         val took = duration(((millis(run.endedAt) ?: 0) - (millis(run.startedAt) ?: 0)) / 1000)
         when (run.result) {
-            "completed" -> stringResource(R.string.web_jobs_task_completed, relative(run.endedAt), took)
-            "cancelled" -> stringResource(R.string.web_jobs_task_cancelled, relative(run.endedAt), took)
-            else -> run.error?.let { stringResource(R.string.web_jobs_task_failedWith, relative(run.endedAt), it) }
-                ?: stringResource(R.string.web_jobs_task_failed, relative(run.endedAt))
+            "completed" -> "${relative(run.endedAt)} · ${stringResource(R.string.web_jobs_task_took, took)}"
+            "cancelled" -> "${relative(run.endedAt)} · ${stringResource(R.string.web_jobs_task_cancelledAfter, took)}"
+            else -> run.error?.let { stringResource(R.string.web_jobs_task_failedWith, it) }
+                ?: stringResource(R.string.web_jobs_task_failed)
         }
     } ?: stringResource(R.string.web_jobs_task_neverRan)
     val interval = task.intervalSeconds
@@ -246,7 +246,7 @@ private fun taskStatus(task: ScheduledTask): String {
         interval == 3_600.0 -> stringResource(R.string.web_jobs_schedule_hourly)
         else -> stringResource(R.string.web_jobs_schedule_every, duration(interval.toLong()))
     }
-    val next = task.nextRunAt?.let { stringResource(R.string.web_jobs_schedule_next, schedule, relative(it)) } ?: schedule
+    val next = task.nextRunAt?.let { "$schedule · ${relative(it)}" } ?: schedule
     return "$last\n$next"
 }
 

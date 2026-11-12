@@ -262,6 +262,7 @@ export default defineMessages("server", {
   "server.process.exited": "{name} exited with {code}",
 
   // Job failures in media/: ffprobe.ts, blurhash.ts, trickplay.ts, artwork.ts.
+  "server.media.subtitlePrepareFailed": "Couldn't prepare subtitles for {path}",
   "server.media.ffprobeNotJson": "ffprobe printed something other than JSON",
   "server.media.ffprobeNoStreams": "ffprobe found no video or audio streams",
   "server.media.noPamHeader": "ffmpeg's output has no PAM header",
