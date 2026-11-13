@@ -467,30 +467,32 @@ struct Activity: View {
   let stats: WatchStats
   @Environment(\.palette) private var palette
   @Environment(\.dynamicTypeSize) private var typeSize
-  @ScaledMetric(relativeTo: .caption2) private var dayWidth: CGFloat = 30
+  @ScaledMetric(relativeTo: .caption2) private var dayWidth: CGFloat = 24
 
   var body: some View {
     let grid = ActivityGrid(stats.activity)
     if let peak = grid.peak {
       StatsCard(label: Str.statsHeatmapTitle) {
         VStack(alignment: .leading, spacing: 3) {
-          VStack(alignment: .leading, spacing: 3) {
+          // A grid, so the weekdays' column is as wide as the longest name in the language.
+          Grid(alignment: .leading, horizontalSpacing: 6, verticalSpacing: 3) {
             ForEach(1...7, id: \.self) { weekday in
-              HStack(spacing: 0) {
+              GridRow {
                 Text(weekdayName(weekday, short: true)).textStyle(.labelSmall).foregroundStyle(palette.muted)
-                  .lineLimit(1).minimumScaleFactor(0.7)
-                  .frame(width: dayWidth, alignment: .leading)
+                  .lineLimit(1).frame(minWidth: dayWidth, alignment: .leading)
                 Squares(grid: grid, weekday: weekday).frame(height: 12)
               }
             }
             // The hours under the squares, every six, or every twelve where the words are big.
             let marks = activityHourMarks(roomy: !typeSize.isAccessibilitySize)
-            HStack(spacing: 0) {
-              Color.clear.frame(width: dayWidth, height: 1)
-              ForEach(marks, id: \.self) { hour in
-                Text(hourName(hour)).textStyle(.labelSmall).foregroundStyle(palette.muted)
-                  .lineLimit(1).minimumScaleFactor(0.7)
-                  .frame(maxWidth: .infinity, alignment: .leading)
+            GridRow {
+              Color.clear.frame(width: 1, height: 1).gridCellUnsizedAxes([.horizontal, .vertical])
+              HStack(spacing: 0) {
+                ForEach(marks, id: \.self) { hour in
+                  Text(hourName(hour)).textStyle(.labelSmall).foregroundStyle(palette.muted)
+                    .lineLimit(1).minimumScaleFactor(0.7)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
               }
             }
           }
