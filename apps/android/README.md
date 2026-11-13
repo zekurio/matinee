@@ -97,7 +97,9 @@ folder as is.
 - The player sends the server what the device can play and plays what
   `playback.start` returns. If a source fails, it asks again and the server
   falls back. It draws WebVTT itself, shows trickplay while scrubbing,
-  counts down to the next episode, and supports picture-in-picture. Phone
+  counts down to the next episode, and supports picture-in-picture, from
+  its button or on leaving the app. The lock button makes the screen ignore
+  touches until you tap Unlock. Phone
   gestures work like Findroid's. Swipe the left side for brightness, the
   right for volume, sideways to seek, double tap to skip, and hold for 2×
   speed.

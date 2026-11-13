@@ -4,6 +4,7 @@ import android.app.PictureInPictureParams
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.pm.ActivityInfo
+import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.os.Build
 import android.util.Rational
@@ -167,6 +168,7 @@ import io.github.zekurio.matinee.ui.LocalOffline
 import io.github.zekurio.matinee.ui.LocalUser
 import io.github.zekurio.matinee.ui.Motion
 import io.github.zekurio.matinee.ui.components.ButtonLook
+import io.github.zekurio.matinee.ui.components.ControlShape
 import io.github.zekurio.matinee.ui.components.ErrorBox
 import io.github.zekurio.matinee.ui.components.Gap
 import io.github.zekurio.matinee.ui.components.LocalApi
@@ -327,6 +329,16 @@ private fun PlayerFailure(title: String, message: String?, retry: (() -> Unit)?)
     }
 }
 
+private val PIP_ASPECT = Rational(16, 9)
+
+/**
+ * Shrinks the player into a small window now, and says whether it did. The
+ * system can refuse, as when picture in picture is off for the app in its
+ * settings.
+ */
+private fun ComponentActivity.enterPictureInPicture(): Boolean =
+    runCatching { enterPictureInPictureMode(PictureInPictureParams.Builder().setAspectRatio(PIP_ASPECT).build()) }.getOrDefault(false)
+
 /**
  * Picture in picture follows the video: on while it plays, so leaving the
  * app keeps it on screen, unless settings turned it off.
@@ -341,7 +353,7 @@ private fun rememberPictureInPicture(controller: PlayerController, allowed: Bool
         activity?.addOnPictureInPictureModeChangedListener(listener)
         val leave = Runnable {
             if (allowed && controller.playing && Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
-                runCatching { activity?.enterPictureInPictureMode(PictureInPictureParams.Builder().setAspectRatio(Rational(16, 9)).build()) }
+                activity?.enterPictureInPicture()
             }
         }
         activity?.addOnUserLeaveHintListener(leave)
@@ -358,7 +370,7 @@ private fun rememberPictureInPicture(controller: PlayerController, allowed: Bool
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             runCatching {
                 activity?.setPictureInPictureParams(
-                    PictureInPictureParams.Builder().setAspectRatio(Rational(16, 9)).setAutoEnterEnabled(playing).build(),
+                    PictureInPictureParams.Builder().setAspectRatio(PIP_ASPECT).setAutoEnterEnabled(playing).build(),
                 )
             }
         }
@@ -434,6 +446,14 @@ private fun Playback(itemId: String, data: PlayerData, start: Double?) {
     val controller = rememberPlayerController(itemId, data, start)
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val inPip = rememberPictureInPicture(controller, allowed = prefs.pictureInPicture)
+    val activity = remember(context) { context.activity() }
+    // Some devices, like low-memory ones, have no picture in picture.
+    val hasPip = remember(context) { context.packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE) }
+    val enterPip: (() -> Unit)? = if (hasPip && prefs.pictureInPicture && activity != null) {
+        { activity.enterPictureInPicture() }
+    } else {
+        null
+    }
     DisposableEffect(lifecycle, inPip) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_STOP && !inPip) controller.player.pause()
@@ -443,6 +463,10 @@ private fun Playback(itemId: String, data: PlayerData, start: Double?) {
     }
 
     var controls by remember { mutableStateOf(true) }
+    // Locked, touches on the screen do nothing but show the way to unlock.
+    var locked by remember { mutableStateOf(false) }
+    // Counts touches while locked, so each shows the unlock button again.
+    var lockTouched by remember { mutableIntStateOf(0) }
     var menu by remember { mutableStateOf<Menu?>(null) }
     var scrub by remember { mutableStateOf<Double?>(null) }
     var touched by remember { mutableIntStateOf(0) }
@@ -495,6 +519,9 @@ private fun Playback(itemId: String, data: PlayerData, start: Double?) {
                     Key.MediaPause -> controller.player::pause
                     Key.MediaFastForward -> ({ controller.skip(ahead) })
                     Key.MediaRewind -> ({ controller.skip(-back) })
+                    // Locked, media keys still work, and the ones that would
+                    // bring up the controls show the unlock button instead.
+                    in NAVIGATION_KEYS if locked -> ({ lockTouched++ })
                     Key.DirectionLeft -> if (controls) null else ({ controller.skip(-back) })
                     Key.DirectionRight -> if (controls) null else ({ controller.skip(ahead) })
                     Key.DirectionCenter, Key.Enter, Key.DirectionUp, Key.DirectionDown ->
@@ -568,7 +595,7 @@ private fun Playback(itemId: String, data: PlayerData, start: Double?) {
                 levels,
                 gestureEdges,
                 layoutDirection,
-                allowed = { controller.error == null && menu == null },
+                allowed = { controller.error == null && menu == null && !locked },
                 onStart = { kind ->
                     // A seek's note sits where the play button is.
                     if (kind == GestureKind.SEEK) controls = false
@@ -584,7 +611,7 @@ private fun Playback(itemId: String, data: PlayerData, start: Double?) {
             CircularProgressIndicator(Modifier.align(Alignment.Center).size(48.dp), color = Palette.Foreground)
         }
         if (!inPip) {
-            AnimatedVisibility(controls || controller.ended, enter = Motion.fadeIn, exit = Motion.fadeOut) {
+            AnimatedVisibility((controls || controller.ended) && !locked, enter = Motion.fadeIn, exit = Motion.fadeOut) {
                 Controls(
                     controller,
                     back = back,
@@ -604,6 +631,11 @@ private fun Playback(itemId: String, data: PlayerData, start: Double?) {
                     },
                     onMenu = { menu = it },
                     onTouch = { touched++ },
+                    onPictureInPicture = enterPip,
+                    onLock = {
+                        locked = true
+                        controls = false
+                    },
                 )
             }
             controller.error?.let { message ->
@@ -615,12 +647,30 @@ private fun Playback(itemId: String, data: PlayerData, start: Double?) {
                 }
             }
             if (controller.ended) UpNext(controller, autoplay = prefs.autoplayNext, Modifier.align(Alignment.BottomEnd))
+            // Over everything else, so no touch reaches what's under it. It
+            // steps aside while an error shows, so its buttons stay in reach.
+            if (locked && controller.error == null) {
+                LockedScreen(
+                    lockTouched,
+                    hideAfter = hideAfter,
+                    keep = exploring,
+                    onTouch = { lockTouched++ },
+                    onUnlock = {
+                        locked = false
+                        controls = true
+                        touched++
+                    },
+                )
+            }
         }
         PlayerPanel(menu, controller, onDismiss = { menu = null })
     }
 }
 
 internal enum class Menu { Audio, Subtitles, Settings }
+
+/** The keys that skip or bring up the controls, which a locked player keeps from doing either. */
+private val NAVIGATION_KEYS = setOf(Key.DirectionLeft, Key.DirectionRight, Key.DirectionCenter, Key.Enter, Key.DirectionUp, Key.DirectionDown)
 
 /** Whether a screen reader explores the screen by touch, as TalkBack does. */
 @Composable
@@ -793,6 +843,8 @@ private fun Controls(
     onSeek: (Double) -> Unit,
     onMenu: (Menu) -> Unit,
     onTouch: () -> Unit,
+    onPictureInPicture: (() -> Unit)?,
+    onLock: () -> Unit,
 ) {
     val res = LocalResources.current
     val item = controller.item
@@ -809,17 +861,23 @@ private fun Controls(
                 .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.85f)))),
         )
         Row(
-            Modifier.align(Alignment.TopStart).safeDrawingPadding().padding(horizontal = 12.dp, vertical = 8.dp),
+            Modifier.align(Alignment.TopStart).fillMaxWidth().safeDrawingPadding().padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             RoundIconButton(Lucide.ArrowLeft, stringResource(R.string.player_back), LocalPlayerHost.current.close, size = 52.dp, iconSize = 26.dp, background = Color.Transparent)
             Gap(8.dp)
-            Column {
+            Column(Modifier.weight(1f)) {
                 Text(label.title, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 if (code != null) {
-                    Text("$code · ${label.showName}", style = MaterialTheme.typography.bodyMedium, color = Palette.Foreground.copy(alpha = 0.75f))
+                    Text("$code · ${label.showName}", style = MaterialTheme.typography.bodyMedium, color = Palette.Foreground.copy(alpha = 0.75f), maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
+            Gap(8.dp)
+            if (onPictureInPicture != null) {
+                RoundIconButton(Lucide.PictureInPicture, stringResource(R.string.player_pip), onPictureInPicture, size = 52.dp, iconSize = 26.dp, background = Color.Transparent)
+            }
+            // The unlock button shows where this one is.
+            RoundIconButton(Lucide.Lock, stringResource(R.string.player_lock), onLock, size = 52.dp, iconSize = 26.dp, background = Color.Transparent)
         }
         Row(
             Modifier.align(Alignment.Center),
@@ -885,6 +943,56 @@ private fun Controls(
                     }
                 }
                 RoundIconButton(Lucide.Settings, stringResource(R.string.player_menu_settings), { onMenu(Menu.Settings) }, size = 52.dp, iconSize = 26.dp, background = Color.Transparent)
+            }
+        }
+    }
+}
+
+/**
+ * Covers the player while it's locked and takes every touch, so none
+ * reaches the controls or the gestures under it. A touch shows the unlock
+ * button, up where the lock button was, for [hideAfter] ms; with [keep], as
+ * while a screen reader explores by touch, it stays. [touches] counts the
+ * touches, and each change shows it again.
+ */
+@Composable
+private fun LockedScreen(touches: Int, hideAfter: Long, keep: Boolean, onTouch: () -> Unit, onUnlock: () -> Unit) {
+    var shown by remember { mutableStateOf(true) }
+    LaunchedEffect(touches, keep, hideAfter) {
+        shown = true
+        if (keep) return@LaunchedEffect
+        delay(hideAfter)
+        shown = false
+    }
+    val currentTouch by rememberUpdatedState(onTouch)
+    Box(
+        Modifier.fillMaxSize().pointerInput(Unit) {
+            awaitEachGesture {
+                awaitFirstDown(requireUnconsumed = false)
+                currentTouch()
+                // The unlock button hears its tap first; this keeps the rest.
+                do {
+                    val event = awaitPointerEvent()
+                    event.changes.forEach { it.consume() }
+                } while (event.changes.any { it.pressed })
+            }
+        },
+    ) {
+        AnimatedVisibility(
+            shown,
+            Modifier.align(Alignment.TopEnd).safeDrawingPadding().padding(horizontal = 12.dp, vertical = 8.dp),
+            enter = Motion.fadeIn,
+            exit = Motion.fadeOut,
+        ) {
+            // Shaded like the notes over the video, so it reads over a bright scene.
+            MatineeButton(
+                onUnlock,
+                Modifier.clip(ControlShape).background(Color.Black.copy(alpha = 0.6f)),
+                look = ButtonLook.Frosted,
+                height = 52.dp,
+            ) {
+                LucideIcon(Lucide.LockOpen, null, size = 22.dp)
+                Text(stringResource(R.string.player_unlock))
             }
         }
     }

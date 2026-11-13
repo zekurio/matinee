@@ -478,6 +478,9 @@
     <string name="player_menu_audio">Audio</string>
     <string name="player_menu_subtitles">Subtitles</string>
     <string name="player_menu_settings">Settings</string>
+    <string name="player_pip">Picture in picture</string>
+    <string name="player_lock">Lock controls</string>
+    <string name="player_unlock">Unlock</string>
     <string name="player_track_unnamed">Track %1$d</string>
     <string name="player_track_unknown_language">Unknown language</string>
     <string name="player_track_with_title">%1$s (%2$s)</string>
