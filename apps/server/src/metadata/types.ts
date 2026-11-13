@@ -3,7 +3,7 @@ import type {
   ImageSlot,
   MetadataProviderId,
 } from "@matinee/contracts"
-import type { ExternalIds } from "@matinee/db"
+import type { ExternalIds, YouTubeTrailer } from "@matinee/db"
 
 type MatchKind = "movie" | "show"
 
@@ -83,6 +83,8 @@ export type TitleDetails = {
   studios: string[]
   /** Cast in billing order, then crew. */
   credits: CreditDetails[]
+  /** Best first, as `rankTrailers` orders them. */
+  trailers: YouTubeTrailer[]
   /** Shows only. Empty when the provider has no season data. */
   seasons: SeasonDetails[]
   /** Shows only. Empty when the provider has no episode data. */

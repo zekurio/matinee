@@ -1,0 +1,1 @@
+ALTER TABLE "title" ADD COLUMN "trailers" jsonb DEFAULT '[]'::jsonb NOT NULL;

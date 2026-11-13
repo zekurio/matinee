@@ -8,6 +8,19 @@ export type Image = {
   vote_count?: number
 }
 type Images = { logos?: Image[]; posters?: Image[]; backdrops?: Image[] }
+export type Video = {
+  key: string
+  /** `YouTube` or `Vimeo`. */
+  site?: string
+  /** `Trailer`, `Teaser`, `Clip`, `Featurette`, and so on. */
+  type?: string
+  name?: string
+  /** ISO 639-1, or null for no language. */
+  iso_639_1?: string | null
+  official?: boolean
+  published_at?: string
+}
+type Videos = { results?: Video[] }
 /** What the `/images` endpoints answer. */
 export type ImageList = Images & { stills?: Image[] }
 export type Person = { id: number; name?: string; profile_path?: string | null }
@@ -54,6 +67,7 @@ export type Movie = MovieResult & {
   imdb_id?: string | null
   backdrop_path?: string | null
   images?: Images
+  videos?: Videos
   production_companies?: Named[]
   credits?: { cast?: CastMember[]; crew?: CrewMember[] }
   release_dates?: {
@@ -89,6 +103,7 @@ export type Show = ShowResult & {
   status?: string
   backdrop_path?: string | null
   images?: Images
+  videos?: Videos
   seasons?: SeasonResult[]
   production_companies?: Named[]
   created_by?: Person[]

@@ -21,6 +21,13 @@ export type Artwork = {
   includesText?: boolean
 }
 export type RemoteId = { id: string; sourceName?: string }
+export type Trailer = {
+  /** Usually a YouTube link. */
+  url?: string | null
+  name?: string | null
+  /** ISO 639-2, like `eng`. */
+  language?: string | null
+}
 /** A person on a series or movie, whether they play someone or not. */
 export type Character = {
   /** The character's name, for actors. */
@@ -63,6 +70,7 @@ export type BaseRecord = {
   contentRatings?: { name: string; country: string }[]
   originalLanguage?: string
   characters?: Character[] | null
+  trailers?: Trailer[] | null
 }
 
 export type Series = BaseRecord & {

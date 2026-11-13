@@ -232,6 +232,16 @@ export const Credit = t.object({
 })
 export type Credit = t.infer<typeof Credit>
 
+/** A trailer on YouTube, from the metadata provider. */
+export const Trailer = t.object({
+  /** The video's page on YouTube. */
+  url: t.string(),
+  name: t.string().nullable(),
+  /** BCP 47. Null when it has no spoken language or the provider doesn't say. */
+  language: t.string().nullable(),
+})
+export type Trailer = t.infer<typeof Trailer>
+
 /**
  * A genre or studio, with how many titles carry it. Titles name them as
  * the provider does, so the name is also how to ask for them.
@@ -335,6 +345,12 @@ export const Title = TitleSummary.extend({
   studios: t.array(t.string()),
   /** Cast in billing order, then crew. */
   credits: t.array(Credit),
+  /**
+   * Best first: in the library's metadata language, then English, then
+   * without a language. A client may put those in its own language first.
+   * Empty when the provider has none.
+   */
+  trailers: t.array(Trailer),
   itemCount: t.number().int(),
   seasons: t.array(Season),
   /** What Play starts: the file in progress, the next one, or the first. */
