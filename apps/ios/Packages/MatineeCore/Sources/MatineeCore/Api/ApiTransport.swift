@@ -94,18 +94,39 @@ public struct RequestBody: Sendable {
   let contentType: String
 }
 
+private final class OriginRedirectDelegate: NSObject, URLSessionTaskDelegate {
+  let base: URL
+  init(base: URL) { self.base = base }
+  func urlSession(
+    _ session: URLSession, task: URLSessionTask,
+    willPerformHTTPRedirection response: HTTPURLResponse, newRequest request: URLRequest
+  ) async -> URLRequest? {
+    func port(_ url: URL) -> Int? { url.port ?? (url.scheme == "https" ? 443 : 80) }
+    guard let url = request.url, url.scheme == base.scheme, url.host == base.host,
+      port(url) == port(base)
+    else { return nil }
+    return request
+  }
+}
+
 public final class ApiTransport: Sendable {
   public let base: URL
   private let session: URLSession
-  private let tokenProvider: @Sendable () async -> String?
+  private let tokenProvider: @Sendable () async throws -> String?
+  private let onUnauthorized: @Sendable () async -> Void
   public init(
     base: URL, configuration: URLSessionConfiguration = .default,
-    tokenProvider: @escaping @Sendable () async -> String? = { nil }
+    tokenProvider: @escaping @Sendable () async throws -> String? = { nil },
+    onUnauthorized: @escaping @Sendable () async -> Void = {}
   ) {
     self.base = base
-    self.session = URLSession(configuration: configuration)
+    self.session = URLSession(
+      configuration: configuration, delegate: OriginRedirectDelegate(base: base), delegateQueue: nil
+    )
     self.tokenProvider = tokenProvider
+    self.onUnauthorized = onUnauthorized
   }
+  deinit { session.invalidateAndCancel() }
   public func json<T: Encodable>(_ value: T) throws -> RequestBody {
     RequestBody(data: try JSONEncoder().encode(value), contentType: "application/json")
   }
@@ -146,13 +167,14 @@ public final class ApiTransport: Sendable {
     request.httpMethod = method
     request.httpBody = body?.data ?? (method == "GET" || method == "DELETE" ? nil : Data())
     request.setValue(body?.contentType, forHTTPHeaderField: "Content-Type")
-    if let token = await tokenProvider() {
+    if let token = try await tokenProvider() {
       request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
     }
     return request
   }
-  private func validate(_ response: URLResponse, data: Data) throws {
+  private func validate(_ response: URLResponse, data: Data) async throws {
     guard let http = response as? HTTPURLResponse else { throw URLError(.badServerResponse) }
+    if http.statusCode == 401 { await onUnauthorized() }
     guard (200..<300).contains(http.statusCode) else {
       let parsed = try? JSONDecoder().decode(ApiErrorBody.self, from: data)
       throw ApiException(
@@ -165,7 +187,7 @@ public final class ApiTransport: Sendable {
   ) async throws -> T {
     let request = try await request(method: method, path: path, query: query, body: body)
     let (data, response) = try await session.data(for: request)
-    try validate(response, data: data)
+    try await validate(response, data: data)
     return try JSONDecoder().decode(T.self, from: data.isEmpty ? Data("null".utf8) : data)
   }
   public func send(method: String, path: [String], query: [(String, String?)], body: RequestBody?)
@@ -173,7 +195,7 @@ public final class ApiTransport: Sendable {
   {
     let request = try await request(method: method, path: path, query: query, body: body)
     let (data, response) = try await session.data(for: request)
-    try validate(response, data: data)
+    try await validate(response, data: data)
   }
   // Like Android, a single subscription ends at EOF. Only trickplayUntilSettled reconnects.
   public func events<T: Decodable & Sendable>(
@@ -188,7 +210,7 @@ public final class ApiTransport: Sendable {
           if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
             var data = Data()
             for try await byte in bytes { data.append(byte) }
-            try validate(response, data: data)
+            try await validate(response, data: data)
           }
           var event = "message"
           for try await line in bytes.lines {
