@@ -7,6 +7,11 @@ export default defineMessages("shell", {
   "shell.tabs": "Tabs",
   "shell.media": "Media",
   "shell.back": "Back",
+  // The banner over a phone's tab bar, on Android.
+  "shell.appBanner.title": "Get the Android app",
+  "shell.appBanner.text": "It plays better on a phone.",
+  "shell.appBanner.get": "Download",
+  "shell.appBanner.dismiss": "Dismiss",
   "shell.homeLink": "Matinee home",
   "shell.home": "Home",
   "shell.libraries": "Libraries",

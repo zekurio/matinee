@@ -25,6 +25,8 @@ export default {
   "validation.userCode": "Gib die 8 Buchstaben ein, die das Gerät anzeigt.",
 
   "validation.bitrateLimit": "Wähle ein Limit von mindestens 1 Mbit/s.",
+  "validation.networkRange":
+    "Nutze eine Adresse oder einen Bereich wie 192.168.0.0/16.",
   "validation.streamLimit": "Erlaube mindestens einen Stream.",
   "validation.groupName": "Gib der Gruppe einen Namen.",
   "validation.max256": "Verwende höchstens 256 Zeichen.",

@@ -21,6 +21,7 @@ import { Route as AuthedShellIndexRouteImport } from './routes/_authed/_shell/in
 import { Route as AuthedShellMediaRouteImport } from './routes/_authed/_shell/media'
 import { Route as AuthedShellSearchRouteImport } from './routes/_authed/_shell/search'
 import { Route as AuthedShellStatsRouteImport } from './routes/_authed/_shell/stats'
+import { Route as AuthedPartyPartyIdRouteImport } from './routes/_authed/party.$partyId'
 import { Route as AuthedWatchItemIdRouteImport } from './routes/_authed/watch.$itemId'
 import { Route as AuthedShellEpisodesItemIdRouteImport } from './routes/_authed/_shell/episodes.$itemId'
 import { Route as AuthedShellGenresGenreRouteImport } from './routes/_authed/_shell/genres.$genre'
@@ -90,6 +91,11 @@ const AuthedShellStatsRoute = AuthedShellStatsRouteImport.update({
   id: '/stats',
   path: '/stats',
   getParentRoute: () => AuthedShellRoute,
+} as any)
+const AuthedPartyPartyIdRoute = AuthedPartyPartyIdRouteImport.update({
+  id: '/party/$partyId',
+  path: '/party/$partyId',
+  getParentRoute: () => AuthedRoute,
 } as any)
 const AuthedWatchItemIdRoute = AuthedWatchItemIdRouteImport.update({
   id: '/watch/$itemId',
@@ -166,6 +172,7 @@ export interface FileRoutesByFullPath {
   '/media': typeof AuthedShellMediaRoute
   '/search': typeof AuthedShellSearchRoute
   '/stats': typeof AuthedShellStatsRoute
+  '/party/$partyId': typeof AuthedPartyPartyIdRoute
   '/watch/$itemId': typeof AuthedWatchItemIdRoute
   '/episodes/$itemId': typeof AuthedShellEpisodesItemIdRoute
   '/genres/$genre': typeof AuthedShellGenresGenreRoute
@@ -189,6 +196,7 @@ export interface FileRoutesByTo {
   '/media': typeof AuthedShellMediaRoute
   '/search': typeof AuthedShellSearchRoute
   '/stats': typeof AuthedShellStatsRoute
+  '/party/$partyId': typeof AuthedPartyPartyIdRoute
   '/watch/$itemId': typeof AuthedWatchItemIdRoute
   '/episodes/$itemId': typeof AuthedShellEpisodesItemIdRoute
   '/genres/$genre': typeof AuthedShellGenresGenreRoute
@@ -214,6 +222,7 @@ export interface FileRoutesById {
   '/_authed/_shell/media': typeof AuthedShellMediaRoute
   '/_authed/_shell/search': typeof AuthedShellSearchRoute
   '/_authed/_shell/stats': typeof AuthedShellStatsRoute
+  '/_authed/party/$partyId': typeof AuthedPartyPartyIdRoute
   '/_authed/watch/$itemId': typeof AuthedWatchItemIdRoute
   '/_authed/_shell/': typeof AuthedShellIndexRoute
   '/_authed/_shell/episodes/$itemId': typeof AuthedShellEpisodesItemIdRoute
@@ -240,6 +249,7 @@ export interface FileRouteTypes {
     | '/media'
     | '/search'
     | '/stats'
+    | '/party/$partyId'
     | '/watch/$itemId'
     | '/episodes/$itemId'
     | '/genres/$genre'
@@ -263,6 +273,7 @@ export interface FileRouteTypes {
     | '/media'
     | '/search'
     | '/stats'
+    | '/party/$partyId'
     | '/watch/$itemId'
     | '/episodes/$itemId'
     | '/genres/$genre'
@@ -287,6 +298,7 @@ export interface FileRouteTypes {
     | '/_authed/_shell/media'
     | '/_authed/_shell/search'
     | '/_authed/_shell/stats'
+    | '/_authed/party/$partyId'
     | '/_authed/watch/$itemId'
     | '/_authed/_shell/'
     | '/_authed/_shell/episodes/$itemId'
@@ -394,6 +406,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/stats'
       preLoaderRoute: typeof AuthedShellStatsRouteImport
       parentRoute: typeof AuthedShellRoute
+    }
+    '/_authed/party/$partyId': {
+      id: '/_authed/party/$partyId'
+      path: '/party/$partyId'
+      fullPath: '/party/$partyId'
+      preLoaderRoute: typeof AuthedPartyPartyIdRouteImport
+      parentRoute: typeof AuthedRoute
     }
     '/_authed/watch/$itemId': {
       id: '/_authed/watch/$itemId'
@@ -519,6 +538,7 @@ interface AuthedRouteChildren {
   AuthedShellRoute: typeof AuthedShellRouteWithChildren
   AuthedAuthorizeRoute: typeof AuthedAuthorizeRoute
   AuthedLinkRoute: typeof AuthedLinkRoute
+  AuthedPartyPartyIdRoute: typeof AuthedPartyPartyIdRoute
   AuthedWatchItemIdRoute: typeof AuthedWatchItemIdRoute
 }
 
@@ -526,6 +546,7 @@ const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedShellRoute: AuthedShellRouteWithChildren,
   AuthedAuthorizeRoute: AuthedAuthorizeRoute,
   AuthedLinkRoute: AuthedLinkRoute,
+  AuthedPartyPartyIdRoute: AuthedPartyPartyIdRoute,
   AuthedWatchItemIdRoute: AuthedWatchItemIdRoute,
 }
 

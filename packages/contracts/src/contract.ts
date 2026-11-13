@@ -9,6 +9,7 @@ import {
   searchContract,
   titlesContract,
 } from "./contract-library"
+import { partyContract } from "./contract-party"
 import {
   favoritesContract,
   homeContract,
@@ -35,6 +36,7 @@ export const contract = {
   media: mediaContract,
   downloads: downloadsContract,
   playback: playbackContract,
+  party: partyContract,
   home: homeContract,
   favorites: favoritesContract,
   profiles: profilesContract,

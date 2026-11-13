@@ -4,6 +4,8 @@ import { cn } from "@matinee/ui/lib/utils"
 import {
   ArrowLeftIcon,
   CaptionsIcon,
+  GaugeIcon,
+  UsersRoundIcon,
   Volume2Icon,
   VolumeXIcon,
 } from "lucide-react"
@@ -44,6 +46,7 @@ import type { TrickplayTiles } from "./trickplay-thumb"
 import { type UpNext, UpNextCard } from "./up-next"
 import { useHls } from "./use-hls"
 import { type NowPlaying, useMediaSession } from "./use-media-session"
+import { type PartyLink, usePartySync } from "./use-party-sync"
 import { usePlayback } from "./use-playback"
 import { usePlayerKeys } from "./use-player-keys"
 import {
@@ -66,6 +69,11 @@ type VideoPlayerProps = {
   trickplay: TrickplayTiles | null
   /** The episode after this one, offered once this one ends. */
   upNext?: UpNext | null
+  /**
+   * The watch party this file plays in. The player then follows it, and
+   * tells it when the viewer plays, pauses, or seeks.
+   */
+  party?: PartyLink | null
   onBack: () => void
   /** Nothing this browser can play is left. */
   onUnplayable: () => void
@@ -82,7 +90,8 @@ type VideoPlayerProps = {
  * and ahead by the lengths in the settings, up and down change the volume, 0 to 9 jump
  * to a tenth of the way, M mutes, F toggles full screen, C turns subtitles
  * on and off, G and H show them earlier and later, I shows the playback
- * stats.
+ * stats. In a watch party, playing, pausing, and seeking do so for
+ * everyone in it.
  */
 export function VideoPlayer(props: VideoPlayerProps) {
   // One store per player, which remounts for another file. It starts from
@@ -139,6 +148,7 @@ function Player({
   nowPlaying,
   trickplay,
   upNext,
+  party = null,
   onBack,
   onUnplayable,
   onFailed,
@@ -158,7 +168,27 @@ function Player({
   const { sessionId } = actions
 
   const playback = usePlayback({ video, onUnplayable, onFailed })
-  const { position, duration: lengthOf, seek } = playback
+  const { position, duration: lengthOf } = playback
+  const sync = usePartySync(
+    video,
+    store,
+    { position, duration: lengthOf, seek: playback.seek },
+    party,
+  )
+  /** The viewer's own seek, which a party follows. */
+  const seek = (to: number) => {
+    playback.seek(to)
+    if (party) sync.tell(party.playback.playing, to)
+  }
+  /**
+   * Tells the party the viewer played or paused. Not when that only
+   * catches up with it, as a press on play does where autoplay is blocked.
+   */
+  const tellPlaying = (playing: boolean) => {
+    if (party && playing !== party.playback.playing) {
+      sync.tell(playing, position())
+    }
+  }
 
   const report = useProgressReport(
     video,
@@ -217,10 +247,13 @@ function Player({
     if (pending !== null) {
       playback.setPlayOnLoad(!playing)
       actions.setPlaying(!playing)
+      tellPlaying(!playing)
       return
     }
-    if (el.paused) void el.play().catch(() => {})
+    const play = el.paused
+    if (play) void el.play().catch(() => {})
     else el.pause()
+    tellPlaying(play)
   }
   const skip = (by: number) => {
     const target = Math.max(0, position() + by)
@@ -261,6 +294,10 @@ function Player({
   const changeSpeed = (next: number) => {
     const el = video.current
     if (!el) return
+    if (party) {
+      show(GaugeIcon, tr("party.flash.speed"))
+      return
+    }
     // The default carries over when a new source loads.
     el.defaultPlaybackRate = next
     el.playbackRate = next
@@ -347,6 +384,7 @@ function Player({
           playedTime.stop()
           actions.setEnded(true)
           report(false, true)
+          party?.ended()
         }}
         onLoadStart={() => {
           playedTime.stop()
@@ -391,9 +429,11 @@ function Player({
           actions.setVolume(volume, muted)
           usePlayerPreferencesStore.getState().setVolume(volume, muted)
         }}
-        onRateChange={(event) =>
-          actions.setSpeed(event.currentTarget.playbackRate)
-        }
+        onRateChange={(event) => {
+          // Following a party changes the rate to catch up, which isn't
+          // the viewer's speed.
+          if (!party) actions.setSpeed(event.currentTarget.playbackRate)
+        }}
         onError={() => {
           playedTime.stop()
           actions.setWaiting(false)
@@ -439,6 +479,12 @@ function Player({
             </p>
           )}
         </div>
+        {party && (
+          <p className="ml-auto flex shrink-0 items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-sm font-medium backdrop-blur-md [&_svg]:size-4">
+            <UsersRoundIcon aria-hidden />
+            {tr("party.player.watching", { count: party.watching })}
+          </p>
+        )}
       </div>
 
       <div

@@ -24,7 +24,8 @@ for building and sideloading the app.
   (`src/auth`), scanner and title grouping (`src/library`), metadata
   providers and refresh (`src/metadata`), streaming and artwork (`src/media`),
   job queues and scheduled tasks (`src/jobs`), in-process events and live
-  streams (`src/realtime`).
+  streams (`src/realtime`), watch parties, which live in memory
+  (`src/party`).
 - `apps/server/src/access`: account policies, viewers, and the shared library visibility filters.
 - `apps/web`: Vite React app. File routes live in `src/routes`;
   `src/routeTree.gen.ts` is generated.

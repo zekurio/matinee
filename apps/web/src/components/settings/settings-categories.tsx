@@ -6,6 +6,7 @@ import {
   LibraryBigIcon,
   ListChecksIcon,
   type LucideIcon,
+  NetworkIcon,
   PaintbrushIcon,
   PaletteIcon,
   ShieldCheckIcon,
@@ -25,6 +26,7 @@ import { AuthPanel } from "./auth-panel"
 import { BrandingPanel } from "./branding-panel"
 import { JobsPanel } from "./jobs-panel"
 import { LibrariesPanel } from "./libraries-panel"
+import { NetworkPanel } from "./network-panel"
 import { PlaybackPanel } from "./playback-panel"
 import { TranscodingPanel } from "./transcoding-panel"
 import { TrickplayPanel } from "./trickplay-panel"
@@ -89,6 +91,7 @@ const SECTIONS: SectionEntry[] = [
     icon: GalleryHorizontalEndIcon,
     Panel: TrickplayPanel,
   },
+  { id: "network", group: "admin", icon: NetworkIcon, Panel: NetworkPanel },
   { id: "jobs", group: "admin", icon: ListChecksIcon, Panel: JobsPanel },
   {
     id: "branding",

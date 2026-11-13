@@ -37,7 +37,9 @@ import { useOpenSettings } from "@/lib/settings"
 import { useSignOut } from "@/lib/sign-out"
 import { useSearchSpotlightStore } from "@/stores/search-spotlight"
 
+import { AppBanner } from "./app-banner"
 import { LogoMark } from "./brand"
+import { PartyButton } from "./party/party-panel"
 import { TabBar, tabBarPadding, usePhoneTab } from "./phone-nav"
 import { SearchButton, SearchSpotlight } from "./search/search-spotlight"
 import { usePhone } from "./sheet-menu"
@@ -347,6 +349,7 @@ function NavBar({ user }: { user: User }) {
             className="bg-foreground/10 mx-1 h-5 w-px shrink-0"
           />
           <SearchButton className={cn(pillItem, "px-0")} />
+          <PartyButton className={cn(pillItem, "px-0")} />
           <AccountMenu user={user} />
         </nav>
       </div>
@@ -377,7 +380,12 @@ export function AppShell({
         {tr("shell.skipToContent")}
       </a>
       {phone ? (
-        tab && <TabBar user={user} current={tab} />
+        tab && (
+          <>
+            <AppBanner />
+            <TabBar user={user} current={tab} />
+          </>
+        )
       ) : (
         <NavBar user={user} />
       )}

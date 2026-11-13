@@ -49,6 +49,11 @@ export default defineMessages("settings", {
   "settings.section.trickplay.description": "Thumbnails on the seek bar",
   "settings.section.trickplay.keywords":
     "Seek bar, Scrubbing, Preview thumbnails, Thumbnails, Keyframes, Interval",
+  "settings.section.network.label": "Network",
+  "settings.section.network.description":
+    "Local networks, proxies, and upload speed",
+  "settings.section.network.keywords":
+    "Local network, LAN, Remote, Reverse proxy, Trusted proxies, X-Forwarded-For, CIDR, IP address, Upload, Bandwidth, Bit rate, Watch party",
   "settings.section.jobs.label": "Jobs",
   "settings.section.jobs.description": "Background queues and scheduled tasks",
   "settings.section.jobs.keywords":

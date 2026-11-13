@@ -22,7 +22,12 @@ export function UserAvatar({
     <Avatar aria-hidden className={cn("after:border-foreground/10", className)}>
       {user.avatarId && <AvatarImage src={avatarPath(user.avatarId)} alt="" />}
       <AvatarFallback className="bg-secondary text-secondary-foreground [font-size:inherit] font-semibold">
-        {name.slice(0, 1).toUpperCase()}
+        {/* Trimmed to the capital's own height, so the letter sits in the
+            middle. A line box centers the room under the baseline too,
+            which leaves a capital a little high. */}
+        <span className="block leading-none [text-box:trim-both_cap_alphabetic]">
+          {name.slice(0, 1).toUpperCase()}
+        </span>
       </AvatarFallback>
     </Avatar>
   )

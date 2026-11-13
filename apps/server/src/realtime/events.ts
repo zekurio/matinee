@@ -16,6 +16,8 @@ import { EventPublisher } from "@orpc/server"
 export type Topics = {
   /** A playback session reported, or a stream started or stopped. */
   playback: undefined
+  /** A watch party changed: its members, its file, where it is, its queue. */
+  party: undefined
   /** A file's trickplay images were made, or couldn't be. */
   trickplay: undefined
 }

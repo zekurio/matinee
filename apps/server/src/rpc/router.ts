@@ -4,6 +4,7 @@ import { adminBranding } from "./admin-branding"
 import { adminGroups } from "./admin-groups"
 import { adminInvites } from "./admin-invites"
 import { adminJobs } from "./admin-jobs"
+import { adminNetwork } from "./admin-network"
 import { adminSetup } from "./admin-setup"
 import { adminTranscoding } from "./admin-transcoding"
 import { adminTrickplay } from "./admin-trickplay"
@@ -13,6 +14,7 @@ import { pub } from "./base"
 import { downloads } from "./downloads"
 import { titleImages } from "./images"
 import { adminRoutes, libraries, media } from "./libraries"
+import { party } from "./party"
 import { people } from "./people"
 import { home, playback } from "./playback"
 import { favorites, profiles } from "./profiles"
@@ -37,6 +39,7 @@ export const procedures = {
   media,
   downloads,
   playback,
+  party,
   home,
   favorites,
   profiles,
@@ -48,6 +51,7 @@ export const procedures = {
     groups: adminGroups,
     invites: adminInvites,
     jobs: adminJobs,
+    network: adminNetwork,
     setup: adminSetup,
     transcoding: adminTranscoding,
     trickplay: adminTrickplay,

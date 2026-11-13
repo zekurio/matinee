@@ -1,0 +1,81 @@
+import { plural, type TranslationOf } from "../../catalog"
+import type source from "../en/party"
+
+export default {
+  "party.title": "Watch-Party",
+  "party.intro":
+    "Schau gemeinsam mit anderen auf diesem Server. Alle in einer Party können für alle abspielen, pausieren und spulen. Was läuft, bestimmt, wer sie gestartet hat.",
+  "party.start": "Watch-Party starten",
+  "party.startFailed": "Die Watch-Party konnte nicht gestartet werden",
+  "party.inviteCopied": "Einladungslink kopiert",
+  "party.inviteHint":
+    "Damit kann jeder beitreten, der ein Konto auf diesem Server hat.",
+  "party.inviteFailed": "Der Link konnte nicht kopiert werden",
+  "party.owner": "Leitung",
+  "party.nothing.owner":
+    "Noch nichts. Spiel etwas ab, und die Party schaut mit.",
+  "party.nothing.member": "Noch nichts. Die Leitung bestimmt, was läuft.",
+  "party.restricted":
+    "Die Party schaut etwas, das dein Konto nicht öffnen kann.",
+  "party.watchAlong": "Mitschauen",
+  "party.queue": "Als Nächstes",
+  "party.queue.owner": "Füge Filme und Folgen über ihr ⋯-Menü hinzu.",
+  "party.queue.member": "Schlage Filme und Folgen über ihr ⋯-Menü vor.",
+  "party.invite": "Leute einladen",
+  "party.proposals": "Vorschläge",
+  "party.proposedBy": "Vorgeschlagen von {name}",
+  "party.entryActions": "Mehr zu {name}",
+  "party.memberActions": "Mehr zu {name}",
+  "party.playNow": "Jetzt abspielen",
+  "party.moveUp": "Nach oben",
+  "party.moveDown": "Nach unten",
+  "party.remove": "Entfernen",
+  "party.accept": "In die Warteschlange",
+  "party.dismiss": "Ablehnen",
+  "party.withdraw": "Zurücknehmen",
+  "party.makeOwner": "Leitung übergeben",
+  "party.kick": "Aus der Party entfernen",
+  "party.rename": "Party umbenennen",
+  "party.rename.save": "Speichern",
+  "party.leave": "Party verlassen",
+  "party.failed": "Das hat nicht geklappt",
+  "party.name": "Name",
+  "party.name.optional": "Name (optional)",
+  "party.name.placeholder": "Filmabend",
+  "party.makeOwner.title": "Die Party an {name} übergeben?",
+  "party.makeOwner.description":
+    "{name} bestimmt dann, was läuft, ordnet die Warteschlange und kann Leute entfernen. Du bleibst in der Party.",
+  "party.makeOwner.confirm": "Leitung übergeben",
+  "party.kick.title": "{name} entfernen?",
+  "party.kick.description":
+    "{name} verlässt die Party und kann ihr mit dem Link nicht wieder beitreten.",
+  "party.kick.confirm": "Entfernen",
+  "party.cancel": "Abbrechen",
+  "party.menu.queue": "Zur Party-Warteschlange hinzufügen",
+  "party.menu.propose": "Für die Party vorschlagen",
+  "party.queued": "{name} ist in der Warteschlange der Party",
+  "party.proposed": "{name} ist für die Party vorgeschlagen",
+  "party.join.title": "Der Watch-Party von {owner} beitreten?",
+  "party.join.titleNamed": "{name} beitreten?",
+  "party.join.namedBy": "Die Watch-Party von {owner}.",
+  "party.join.people": plural({
+    one: "{count} Person ist dabei.",
+    other: "{count} Personen sind dabei.",
+  }),
+  "party.join.over": "Diese Watch-Party ist vorbei",
+  "party.join.overDescription":
+    "Alle sind gegangen, oder der Link gilt nicht mehr. Frag nach einem neuen.",
+  "party.join.description":
+    "Du schaust mit den Leuten darin mit. Eine Party, in der du gerade bist, verlässt du dabei.",
+  "party.join.button": "Beitreten",
+  "party.join.failed": "Beitreten fehlgeschlagen",
+  "party.join.home": "Zur Startseite",
+  "party.player.watching": plural({
+    one: "{count} schaut zu",
+    other: "{count} schauen zu",
+  }),
+  "party.flash.paused": "{name} hat pausiert",
+  "party.flash.played": "{name} hat auf Abspielen gedrückt",
+  "party.flash.moved": "{name} ist zu {time} gesprungen",
+  "party.flash.speed": "Eine Party läuft in normaler Geschwindigkeit",
+} satisfies TranslationOf<typeof source>
