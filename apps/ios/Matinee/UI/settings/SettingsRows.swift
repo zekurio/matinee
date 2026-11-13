@@ -120,6 +120,38 @@ private struct RowIcon: View {
   }
 }
 
+/// A row's title and the value at its end, which takes at most 160 points
+/// and the room the title leaves. At the accessibility text sizes the value
+/// goes under the title instead, as iOS's own settings put it, rather than
+/// be cut to an ellipsis.
+private struct TitleValue<Trailing: View>: View {
+  let title: String
+  let value: String
+  @ViewBuilder let trailing: () -> Trailing
+  @Environment(\.palette) private var palette
+  @Environment(\.dynamicTypeSize) private var dynamicType
+
+  var body: some View {
+    HStack(spacing: 0) {
+      if dynamicType.isAccessibilitySize {
+        VStack(alignment: .leading, spacing: 2) {
+          Text(title).textStyle(.bodyLarge).foregroundStyle(palette.foreground)
+          Text(value).textStyle(.bodyMedium).foregroundStyle(palette.muted)
+        }
+        .multilineTextAlignment(.leading)
+        .frame(maxWidth: .infinity, alignment: .leading)
+      } else {
+        Text(title).textStyle(.bodyLarge).foregroundStyle(palette.foreground).layoutPriority(1)
+          .multilineTextAlignment(.leading)
+        Spacer(minLength: 12)
+        Text(value).textStyle(.bodyMedium).foregroundStyle(palette.muted).lineLimit(1)
+          .frame(maxWidth: 160, alignment: .trailing)
+      }
+      trailing()
+    }
+  }
+}
+
 /// A choice among `options`, shown at the row's end and picked from a menu
 /// that opens there, with a check by the current one. A row that isn't
 /// `enabled` only shows its value.
@@ -144,11 +176,7 @@ struct PickerRow<Value: Hashable>: View {
 
   var body: some View {
     let value = options.first { $0.0 == current }?.1 ?? String(describing: current)
-    let row = HStack(spacing: 0) {
-      Text(title).textStyle(.bodyLarge).foregroundStyle(palette.foreground).layoutPriority(1)
-      Spacer(minLength: 12)
-      Text(value).textStyle(.bodyMedium).foregroundStyle(palette.muted).lineLimit(1)
-        .frame(maxWidth: 160, alignment: .trailing)
+    let row = TitleValue(title: title, value: value) {
       if enabled { LucideIcon(.chevronDown, size: 16, tint: palette.muted).padding(.leading, 4) }
     }
     .modifier(RowFrame())
@@ -194,12 +222,7 @@ struct ListPickerRow<Value: Hashable>: View {
     NavigationLink {
       ChoicePage(title: title, options: options, current: current, onPick: onPick)
     } label: {
-      HStack(spacing: 0) {
-        Text(title).textStyle(.bodyLarge).foregroundStyle(palette.foreground).layoutPriority(1)
-          .multilineTextAlignment(.leading)
-        Spacer(minLength: 12)
-        Text(value).textStyle(.bodyMedium).foregroundStyle(palette.muted).lineLimit(1)
-          .frame(maxWidth: 160, alignment: .trailing)
+      TitleValue(title: title, value: value) {
         LucideIcon(.chevronRight, size: 16, tint: palette.muted).padding(.leading, 4)
       }
       .modifier(RowFrame())
@@ -303,6 +326,7 @@ struct LinkRow: View {
   var description: String?
   let action: () -> Void
   @Environment(\.palette) private var palette
+  @Environment(\.dynamicTypeSize) private var dynamicType
 
   init(
     _ title: String, value: String? = nil, destructive: Bool = false, icon: Lucide? = nil,
@@ -321,16 +345,21 @@ struct LinkRow: View {
     Button(action: action) {
       HStack(spacing: 0) {
         RowIcon(icon: icon, tint: destructive ? palette.danger : palette.muted)
+        // At the accessibility sizes the value goes under the title, as in `TitleValue`.
+        let stacked = dynamicType.isAccessibilitySize
         VStack(alignment: .leading, spacing: 0) {
           Text(title).textStyle(.bodyLarge).foregroundStyle(color)
+          if stacked, let value {
+            Text(value).textStyle(.bodyMedium).foregroundStyle(palette.muted)
+          }
           if let description {
             Text(description).textStyle(.bodySmall).foregroundStyle(palette.muted)
           }
         }
         .multilineTextAlignment(.leading)
         .layoutPriority(1)
-        Spacer(minLength: value == nil ? 0 : 12)
-        if let value {
+        Spacer(minLength: value == nil || stacked ? 0 : 12)
+        if !stacked, let value {
           Text(value).textStyle(.bodyMedium).foregroundStyle(palette.muted).lineLimit(1)
             .frame(maxWidth: 160, alignment: .trailing)
         }

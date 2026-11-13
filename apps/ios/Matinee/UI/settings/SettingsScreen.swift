@@ -258,6 +258,7 @@ private struct SessionRow: View {
   let session: Session
   let onSignOut: () -> Void
   @Environment(\.palette) private var palette
+  @Environment(\.dynamicTypeSize) private var dynamicType
 
   var body: some View {
     let name = sessionName(session)
@@ -277,7 +278,8 @@ private struct SessionRow: View {
             if session.current { ThisDevice() }
           }
         }
-        Text(detail).textStyle(.bodySmall).foregroundStyle(palette.muted).lineLimit(2)
+        Text(detail).textStyle(.bodySmall).foregroundStyle(palette.muted)
+          .lineLimit(dynamicType.isAccessibilitySize ? nil : 2)
       }
       .frame(maxWidth: .infinity, alignment: .leading)
       .accessibilityElement(children: .combine)
