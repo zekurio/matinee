@@ -39,14 +39,19 @@ public let SUBTITLE_SCALES: [Double] = [0.75, 1, 1.25, 1.5, 2]
     subtitleSystemStyle = p["subtitle_system_style"] as? Bool ?? false
     subtitleScale = p["subtitle_scale"] as? Double ?? 1
     subtitleColor = SubtitleColor(rawValue: p["subtitle_color"] as? String ?? "") ?? .white
-    subtitleBackground = SubtitleBackground(rawValue: p["subtitle_background"] as? String ?? "") ?? .shaded
+    subtitleBackground =
+      SubtitleBackground(rawValue: p["subtitle_background"] as? String ?? "") ?? .shaded
     subtitleEdge = SubtitleEdge(rawValue: p["subtitle_edge"] as? String ?? "") ?? .shadow
   }
   private func save() {
-    defaults.set(["quality": quality, "video_codec": videoCodec, "audio_codec": audioCodec,
-      "convert_audio": Array(convertAudio), "autoplay_next": autoplayNext, "fill_screen": fillScreen,
-      "picture_in_picture": pictureInPicture, "subtitle_system_style": subtitleSystemStyle,
-      "subtitle_scale": subtitleScale, "subtitle_color": subtitleColor.rawValue,
-      "subtitle_background": subtitleBackground.rawValue, "subtitle_edge": subtitleEdge.rawValue], forKey: "player")
+    defaults.set(
+      [
+        "quality": quality, "video_codec": videoCodec, "audio_codec": audioCodec,
+        "convert_audio": Array(convertAudio), "autoplay_next": autoplayNext,
+        "fill_screen": fillScreen,
+        "picture_in_picture": pictureInPicture, "subtitle_system_style": subtitleSystemStyle,
+        "subtitle_scale": subtitleScale, "subtitle_color": subtitleColor.rawValue,
+        "subtitle_background": subtitleBackground.rawValue, "subtitle_edge": subtitleEdge.rawValue,
+      ], forKey: "player")
   }
 }

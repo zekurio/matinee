@@ -104,10 +104,56 @@ Not yet verified on physical hardware: HDR color output, Dolby Vision, AirPlay,
 PiP restoration, lock-screen artwork, headphone removal, audio interruptions,
 and freeze detection on a visible layer. The Mac live test checks clocks and
 server-selected subtitle delivery, not subtitle pixels or HDR color accuracy.
-The diagnostic report records bounded attempts, outcome/error codes, format
-descriptions, access-log rates, stalls and dropped frames. It is smaller than
-Android's report: the full device/settings/file/capability context and named
-notes have not yet been ported. Unit tests cover the shared arithmetic,
-profiles, cues, failure accumulation, and report bounds, not every Kotlin
-case. Refusals and offline playback still need controller-level integration
-tests with injected responses/downloads.
+The report now includes bounded attempts and outcomes, named failure notes,
+allowlisted settings, file formats and capability codec lists, format descriptions,
+access-log rates, stalls and dropped frames. It also records elapsed time from
+`start` to the first decoded frame observed by the video output. This is not a
+measurement of a frame reaching a physical display.
+
+## Second-pass audit, incomplete
+
+This pass is **not the completed parity audit**. Only the members below have
+been compared directly. Unreviewed members are not classified as platform
+exclusions. The remaining audit must cover all the other Kotlin members,
+especially diagnostics privacy and error chains, in-flight request replacement,
+subtitle engine modes, device profiles, preferences, service/activity lifecycle,
+and the screen's callers. The remaining PlaybackDevice, Playback and
+PlaybackDiagnostics Kotlin test cases still need to be ported.
+
+| Kotlin member                                                                                                                | Swift member                             | Comparison                                                                                                                                                                                                                     |
+| ---------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `Picks.plus`                                                                                                                 | `Picks.merging`                          | Same. Absent changes keep the sitting's picks.                                                                                                                                                                                 |
+| `Asking.pick`, `fail`, `forgetFailures`, `input`, `settle`                                                                   | Same names                               | Same arithmetic and branch structure in `Playback.swift`; exhaustive fixture tests of settle remain outstanding.                                                                                                               |
+| `refusal`                                                                                                                    | `refusal`                                | Same codes. Both controller refusal paths now have URLProtocol tests.                                                                                                                                                          |
+| `Source.mode`, `kind`, `position`, `startMs`, `seeksItself`, `holdsTracks`, `seek`, `fileSeconds`, `sourceMs`, `of`, `local` | `Source`                                 | Same file/source timeline model. Controller tests exercise direct, remux and HLS seeks.                                                                                                                                        |
+| `sameSource`, `burnedIn`                                                                                                     | `sameSource`                             | Same source comparison. More controller-level pick tests are still needed.                                                                                                                                                     |
+| `CueTrack.at`, `parse`, `seconds`, `unescape`, `styled`                                                                      | `CueTrack`                               | Same bounded 16-cue backward search, timing parser and tag/entity handling. Cue positions are ignored by Kotlin too; not newly implemented here.                                                                               |
+| `seekable`, `seekClamp`, `seekFraction`, `seekAt`, `seekSteps`, `seekStepped`                                                | Same names                               | Same. All six Kotlin SeekTest cases ported separately.                                                                                                                                                                         |
+| `FreezeWatch.frame`, `check`, `reset`                                                                                        | Same names                               | Same. All five Kotlin FreezeWatchTest cases ported separately.                                                                                                                                                                 |
+| `PlayerController.fallBack`                                                                                                  | `sourceFailed`                           | Same server-directed failed-method chain; direct to remux to transcode tested.                                                                                                                                                 |
+| `PlayerController.retry`                                                                                                     | `retry`                                  | Same reset of failed methods; fake-engine test confirms direct is offered again.                                                                                                                                               |
+| `PlayerController.seekStream`                                                                                                | `seekTo`, `.newStream`                   | Same use of server offset and nearest snapping. Stub verifies returned stream replaces current source.                                                                                                                         |
+| `PlayerController.tick` played-time accumulation                                                                             | `tick`                                   | Corrected: no one-second cap. Counts elapsed playback time times speed, as Kotlin does. Wall clock is injectable for tests; freeze still uses uptime.                                                                          |
+| `PlayerController.report`                                                                                                    | `report`                                 | Same 10-second playing / 30-second paused cadence, transition reports and queued failure path tested. Offline aggregate-play upload is not audited.                                                                            |
+| `PlayerController.release`                                                                                                   | `stop`                                   | Differs because Swift has explicit async disposal. Stop now sends only one close report even if called twice.                                                                                                                  |
+| `DiagnosticsNote`                                                                                                            | `DiagnosticsNote`, `PlaybackReport.note` | Same six named notes, counted without retaining server messages.                                                                                                                                                               |
+| `AttemptOutcome` replacement and closure                                                                                     | `PlaybackReport.attempt`, `close`        | Corrected replacement of playing attempts and closure of the final attempt.                                                                                                                                                    |
+| ExoPlayer renderers and decoder listeners                                                                                    | `AVPlayerEngine`, `DiagnosticsProbe`     | Differs because AVPlayer owns decoder selection. Format descriptions and access/error logs replace Media3 callbacks. Renderer factory and MediaCodec decoder initialization callbacks have no AVPlayer API and are not ported. |
+| mpv subtitle overlay                                                                                                         | No AVPlayer overlay                      | Not ported because it belongs to mpv, which is outside the AVPlayer engine. The device description does not claim PGS/ASS rendering.                                                                                           |
+
+### Verification of this increment
+
+- macOS `swift build` and `swift test` passed, 44 enabled tests versus 30
+  before this increment. No compiler warnings were emitted for these changes.
+- iOS Simulator package build passed with the requested `xcodebuild` command.
+- Root `pnpm verify` passed under Node 24 / pnpm 11.
+- Before and after live tests passed for all seven movie fixtures. Audio,
+  WebVTT, PGS burn-in and long-file encode seeks remained working.
+- Start to first decoded frame after the remux -11850 fallback: Interstellar
+  0.353 s, Blade Runner 0.304 s, Dune 0.326 s. These results use the shared
+  server's warm transcode cache. Remux remains honestly advertised and remains
+  in the sitting's failed list. A cold encode and physical display latency
+  have not been measured.
+- `PlayerDownloads` is unchanged. `PlaybackEngine` gained internal state and
+  transport methods for fake engines; the view's public construction API is
+  unchanged. An internal initializer accepts a fake engine and a report clock.

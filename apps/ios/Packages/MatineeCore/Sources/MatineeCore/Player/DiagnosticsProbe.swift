@@ -16,9 +16,18 @@ public enum DiagnosticsProbe {
       for format in try await track.load(.formatDescriptions) {
         let subtype = CMFormatDescriptionGetMediaSubType(format)
         let bytes: [UInt8] = [24, 16, 8, 0].map { UInt8((subtype >> $0) & 255) }
-        let dimensions = track.mediaType == .video ? CMVideoFormatDescriptionGetDimensions(format) : CMVideoDimensions(width: 0, height: 0)
-        let audio = track.mediaType == .audio ? CMAudioFormatDescriptionGetStreamBasicDescription(format)?.pointee : nil
-        result.append(TrackDiagnostics(mediaType: track.mediaType.rawValue, codec: String(bytes: bytes, encoding: .ascii) ?? "", width: dimensions.width, height: dimensions.height, channels: audio?.mChannelsPerFrame, sampleRate: audio?.mSampleRate))
+        let dimensions =
+          track.mediaType == .video
+          ? CMVideoFormatDescriptionGetDimensions(format) : CMVideoDimensions(width: 0, height: 0)
+        let audio =
+          track.mediaType == .audio
+          ? CMAudioFormatDescriptionGetStreamBasicDescription(format)?.pointee : nil
+        result.append(
+          TrackDiagnostics(
+            mediaType: track.mediaType.rawValue,
+            codec: String(bytes: bytes, encoding: .ascii) ?? "", width: dimensions.width,
+            height: dimensions.height, channels: audio?.mChannelsPerFrame,
+            sampleRate: audio?.mSampleRate))
       }
     }
     return Array(result.prefix(4))
