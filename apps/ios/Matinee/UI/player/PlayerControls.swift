@@ -30,12 +30,14 @@ struct PlayerControls: View {
       }
       .ignoresSafeArea()
       .allowsHitTesting(false)
+      // Under the bars, so the trickplay frame above the seek bar covers the
+      // play button rather than the other way round, as on Android.
+      middle
       VStack(spacing: 0) {
         top
         Spacer(minLength: 0)
         bottom
       }
-      middle
     }
   }
 

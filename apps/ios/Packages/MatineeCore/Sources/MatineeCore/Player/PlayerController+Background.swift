@@ -72,7 +72,12 @@ extension PlayerController {
     if playing { playedSeconds += max(0, elapsed) * Double(speed) }
     guard let current = source else { return }
     let clock = engine.positionSeconds
-    if clock.isFinite { position = pendingAt ?? (current.offset + clock) }
+    // Only a source the engine has and plays tells where it is: one still
+    // loading, or failed before it sought to its start, is at 0, which
+    // isn't where the viewer is, and a fallback would ask from there.
+    if sourceLoaded, !sourceFailed, engine.failure == nil, clock.isFinite {
+      position = pendingAt ?? (current.offset + clock)
+    }
     if let seconds = engine.bufferedSeconds, seconds.isFinite {
       buffered = current.offset + seconds
     }
