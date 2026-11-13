@@ -238,7 +238,9 @@ struct TopTitles: View {
                 .textStyle(.titleMedium, weight: .semibold)
                 .foregroundStyle(index < 3 ? palette.foreground : palette.muted)
                 .frame(width: rankWidth, alignment: .leading)
-              PosterArt(name: entry.title.name, poster: api?.art(entry.title.images.poster)).frame(width: 40)
+              // The poster alone: at this size the name the art falls back to would be an ellipsis.
+              ArtFrame(entry.title.name, aspect: 2 / 3) { Picture(api?.art(entry.title.images.poster)) }
+                .frame(width: 40)
               VStack(alignment: .leading, spacing: 0) {
                 Text(entry.title.name).textStyle(.bodyLarge).foregroundStyle(palette.foreground).lineLimit(2)
                 Text(Str.statsPlayCount(entry.plays)).textStyle(.bodySmall).foregroundStyle(palette.muted)
@@ -401,7 +403,8 @@ private struct PlaceRow: View {
     HStack(spacing: 10) {
       Text(formatCount(place.rank))
         .textStyle(.labelMedium, weight: .semibold)
-        .foregroundStyle(place.rank == 1 ? Color.black : place.rank <= 3 ? palette.foreground : palette.muted)
+        .foregroundStyle(
+          place.rank == 1 ? palette.accentForeground : place.rank <= 3 ? palette.foreground : palette.muted)
         .lineLimit(1)
         .minimumScaleFactor(0.7)
         .frame(minWidth: rankSize, minHeight: rankSize)

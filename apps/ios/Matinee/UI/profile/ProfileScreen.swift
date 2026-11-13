@@ -153,7 +153,8 @@ private struct ProfileHeader<Action: View>: View {
             if user.isAdmin { Badge(Str.profileAdmin, outlined: true) }
           }
           if !facts.isEmpty {
-            Text(facts).textStyle(.bodyMedium).foregroundStyle(palette.muted).lineLimit(1)
+            // Two lines rather than an ellipsis, where the language's words are long.
+            Text(facts).textStyle(.bodyMedium).foregroundStyle(palette.muted).lineLimit(2)
           }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
