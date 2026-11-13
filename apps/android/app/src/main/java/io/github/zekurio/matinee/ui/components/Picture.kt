@@ -144,12 +144,15 @@ object Lucide {
     val ListChecks = R.drawable.lucide_list_checks
     val ListFilter = R.drawable.lucide_list_filter
     val LibraryBig = R.drawable.lucide_library_big
+    val Lock = R.drawable.lucide_lock
+    val LockOpen = R.drawable.lucide_lock_open
     val LogIn = R.drawable.lucide_log_in
     val LogOut = R.drawable.lucide_log_out
     val Monitor = R.drawable.lucide_monitor
     val Pause = R.drawable.lucide_pause_filled
     val Paintbrush = R.drawable.lucide_paintbrush
     val Palette = R.drawable.lucide_palette
+    val PictureInPicture = R.drawable.lucide_picture_in_picture_2
     val Play = R.drawable.lucide_play_filled
     val PlayOutline = R.drawable.lucide_play
     val Plus = R.drawable.lucide_plus

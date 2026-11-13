@@ -453,6 +453,9 @@
     <string name="player_menu_audio">Audio</string>
     <string name="player_menu_subtitles">Untertitel</string>
     <string name="player_menu_settings">Einstellungen</string>
+    <string name="player_pip">Bild im Bild</string>
+    <string name="player_lock">Bedienung sperren</string>
+    <string name="player_unlock">Entsperren</string>
     <string name="player_track_unnamed">Spur %1$d</string>
     <string name="player_track_unknown_language">Unbekannte Sprache</string>
     <string name="player_track_with_title">%1$s (%2$s)</string>
