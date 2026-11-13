@@ -23,8 +23,8 @@ import Testing
     let device = playbackProfile(snapshot: phone, locale: Locale(identifier: "de_DE"))
     // AVPlayer differs from ExoPlayer in containers and embedded subtitle support.
     #expect(device.containers == ["mp4", "m4v", "mov"])
-    #expect(device.audio == ["aac", "mp3", "opus", "flac", "ac3", "eac3", "pcm_*"])
-    #expect(device.streamAudio == ["opus", "aac", "mp3", "flac", "ac3", "eac3"])
+    #expect(device.audio == ["aac", "opus", "flac", "ac3", "eac3", "pcm_*"])
+    #expect(device.streamAudio == ["opus", "aac", "flac", "ac3", "eac3"])
     #expect(device.encodeVideo == ["h264", "hevc"])
     #expect(device.hls && device.selectAudio)
     #expect(device.subtitles == ["webvtt"])
@@ -40,7 +40,7 @@ import Testing
     #expect(hevc.allSatisfy { $0.maxBitDepth == 10 })
     #expect(
       hevc.allSatisfy {
-        $0.dolbyVisionProfiles?.contains(5) == false && $0.dolbyVisionProfiles?.contains(8) == true
+        $0.dolbyVisionProfiles == []
       })
     #expect(device.video.first { $0.codec == "h264" }?.maxBitDepth == 8)
     let vp9 = device.video.filter { $0.codec == "vp9" }
@@ -52,7 +52,7 @@ import Testing
       ).count == 1)
     let single = profileDecoders(
       .init(codec: "av1", widest: square, tallest: nil, tenBit: false), dolbyVision: true)
-    #expect(try #require(single.first).dolbyVisionProfiles == nil)
+    #expect(try #require(single.first).dolbyVisionProfiles == [])
   }
 
   @Test func leavesOutWhatSettingsConvert() {
@@ -60,7 +60,7 @@ import Testing
       settings: .init(convertAudio: ["eac3", "ac3"], audioCodec: "aac", videoCodec: "hevc"),
       snapshot: phone)
     #expect(!device.audio.contains("ac3") && !device.audio.contains("eac3"))
-    #expect(device.streamAudio == ["aac", "opus", "mp3", "flac"])
+    #expect(device.streamAudio == ["aac", "opus", "flac"])
     #expect(device.encodeVideo == ["hevc", "h264"])
     #expect(
       playbackProfile(settings: .init(videoCodec: "av1"), snapshot: phone).encodeVideo == [
@@ -74,7 +74,31 @@ import Testing
     #expect(profileLanguage(Locale(identifier: "pt-BR")) == "pt")
   }
 
-  @Test func currentMacDescription() throws {
+  @Test func hdrAndDolbyVisionArePerCodecAndBitDepth() {
+    var snapshot = phone
+    snapshot.hdr = [HdrFormat.hdr10, HdrFormat.hlg, HdrFormat.dolby_vision]
+    snapshot.codecs = .init(
+      video: phone.codecs.video + [
+        .init(codec: "av1", widest: nil, tallest: nil, tenBit: true)
+      ], audio: [], dolbyVision: true)
+    let device = playbackProfile(snapshot: snapshot)
+    #expect(
+      device.video.filter { $0.codec == "h264" }.allSatisfy {
+        $0.hdr == [] && $0.dolbyVisionProfiles == [] && $0.maxLevel == 52
+      })
+    #expect(
+      device.video.filter { $0.codec == "hevc" }.allSatisfy {
+        $0.hdr == snapshot.hdr && $0.dolbyVisionProfiles == [5, 8]
+          && $0.profiles == ["Main", "Main 10"] && $0.maxLevel == 153
+      })
+    #expect(
+      device.video.filter { $0.codec == "av1" }.allSatisfy {
+        $0.hdr == ["hdr10", "hlg"] && $0.dolbyVisionProfiles == [] && $0.maxLevel == 18
+      })
+    #expect(device.video.allSatisfy { $0.dolbyVisionProfiles?.contains(7) == false })
+  }
+
+  @Test @MainActor func currentMacDescription() throws {
     let encoder = JSONEncoder()
     encoder.outputFormatting = [.sortedKeys]
     print(

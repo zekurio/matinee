@@ -3,6 +3,10 @@ import AudioToolbox
 import Foundation
 import VideoToolbox
 
+#if os(macOS)
+  import AppKit
+#endif
+
 public struct CapabilitySnapshot: Sendable {
   public var codecs: DeviceCodecs
   public var hdr: [String]
@@ -44,9 +48,10 @@ public enum Capabilities {
       server.contains($0) && ($0 == "aac" || decodesAudio($0, snapshot: snapshot))
     }
   }
-  public static func probe() -> CapabilitySnapshot {
-    // VideoToolbox doesn't publish the decoder's maximum frame rectangle. A
-    // conservative 4K landscape/portrait bound avoids claiming 8K on older phones.
+  @MainActor public static func probe() -> CapabilitySnapshot {
+    // Apple's HLS authoring specification, section 1.25, supplies a 3840x2160
+    // delivery envelope, not the hardware's maximum. VT's hardware query gives
+    // codec availability but no supported rectangle or profile/level range.
     let size = FrameSize(width: 3840, height: 2160)
     let portrait = FrameSize(width: 2160, height: 3840)
     let candidates: [(String, CMVideoCodecType)] = [
@@ -62,8 +67,14 @@ public enum Capabilities {
       if modes.contains(.hdr10) { hdr.append(HdrFormat.hdr10) }
       if modes.contains(.hlg) { hdr.append(HdrFormat.hlg) }
       if modes.contains(.dolbyVision) { hdr.append(HdrFormat.dolby_vision) }
+    #else
+      if AVPlayer.eligibleForHDRPlayback,
+        let screen = NSScreen.main,
+        screen.maximumPotentialExtendedDynamicRangeColorComponentValue > 1
+      {
+        hdr = [HdrFormat.hdr10, HdrFormat.hlg]
+      }
     #endif
-    // macOS has no availableHDRModes API; don't claim HDR on a headless Mac.
     // AudioFormat reports installed decoders, rather than assuming an OS's
     // support for Opus or Dolby codecs. Container compatibility stays server-side.
     var bytes: UInt32 = 0
@@ -96,10 +107,12 @@ public func playbackProfile(
 ) -> PlaybackDevice {
   let codecs = snapshot.codecs
   let converted = settings.convertAudio.intersection(OPTIONAL_PASSTHROUGH)
-  let audio = ["aac", "mp3", "opus", "flac", "alac", "ac3", "eac3"].filter {
+  // ffmpeg's MP3-in-MP4 sample does not advance in AVPlayer over HTTP,
+  // and its fMP4 HLS fails with -16170 on both Mac and simulator.
+  let audio = ["aac", "opus", "flac", "alac", "ac3", "eac3"].filter {
     codecs.audio.contains($0) && !converted.contains($0)
   }
-  var stream = ["opus", "aac", "mp3", "flac", "alac", "ac3", "eac3"].filter {
+  var stream = ["opus", "aac", "flac", "alac", "ac3", "eac3"].filter {
     $0 == "aac" || audio.contains($0)
   }
   if let index = stream.firstIndex(of: settings.audioCodec) {
@@ -113,10 +126,32 @@ public func playbackProfile(
   let video = codecs.video.flatMap { decoder in
     profileDecoders(decoder, dolbyVision: codecs.dolbyVision).map { value in
       var value = value
-      value.hdr = decoder.tenBit ? snapshot.hdr : []
-      // Apple's native path supports single-layer Dolby Vision 5 and 8, not
-      // every dual-layer disc profile an Android Dolby decoder may advertise.
-      if codecs.dolbyVision { value.dolbyVisionProfiles = decoder.codec == "hevc" ? [5, 8] : [] }
+      value.hdr =
+        decoder.tenBit
+        ? snapshot.hdr.filter {
+          $0 != HdrFormat.dolby_vision || decoder.codec == "hevc"
+        } : []
+      // Profile 7 is dual-layer. The wire contract cannot distinguish 8.1
+      // from 8.4 or describe their base-layer fallback, so do not inherit
+      // Android's blanket allowance of all profiles except 5.
+      value.dolbyVisionProfiles =
+        decoder.codec == "hevc" && decoder.tenBit && codecs.dolbyVision
+        ? [5, 8] : []
+      // ffprobe's level units differ by codec. Apple HLS authoring 1.3b,
+      // 1.6b and 1.37 bound delivery at AVC 5.2, HEVC 5.1 and AV1 6.2.
+      // These are delivery ceilings, not a discovered hardware maximum.
+      switch decoder.codec {
+      case "h264":
+        value.profiles = ["Constrained Baseline", "Baseline", "Main", "High"]
+        value.maxLevel = 52
+      case "hevc":
+        value.profiles = decoder.tenBit ? ["Main", "Main 10"] : ["Main"]
+        value.maxLevel = 153
+      case "av1":
+        value.profiles = ["Main"]
+        value.maxLevel = 18
+      default: break
+      }
       return value
     }
   }
@@ -128,12 +163,12 @@ public func playbackProfile(
     sidecarSubtitles: [], embeddedSubtitles: [], language: profileLanguage(locale))
 }
 @MainActor public func downloadDevice(
-  _ prefs: PlayerPrefs, probe: () -> CapabilitySnapshot = Capabilities.probe
+  _ prefs: PlayerPrefs, probe: @MainActor () -> CapabilitySnapshot = Capabilities.probe
 ) -> PlaybackDevice {
   playbackProfile(settings: ProfileSettings(convertAudio: prefs.convertAudio), snapshot: probe())
 }
 @MainActor public func playbackDevice(
-  _ prefs: PlayerPrefs, probe: () -> CapabilitySnapshot = Capabilities.probe
+  _ prefs: PlayerPrefs, probe: @MainActor () -> CapabilitySnapshot = Capabilities.probe
 ) -> PlaybackDevice {
   playbackProfile(
     settings: ProfileSettings(
