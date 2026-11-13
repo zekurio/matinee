@@ -55,6 +55,19 @@
             .foregroundStyle(palette.muted)
         }
         .padding(.horizontal, Gutter)
+
+        GalleryHeading("Plurals, numbers, and dates in the app's language")
+        VStack(alignment: .leading, spacing: 4) {
+          Text([Str.mediaEpisodeCount(1), Str.mediaEpisodeCount(12), Str.mediaNewEpisodes(3)].joined(separator: " · "))
+          Text(
+            [formatRuntime(135), formatBytes(1_400_000_000), formatBitrate(2_500_000), formatCount(12_400)]
+              .compactMap(\.self).joined(separator: " · "))
+          Text([formatDay("2024-03-05"), formatRating(7.84), languageList(["de", "en"])].compactMap(\.self)
+            .joined(separator: " · "))
+        }
+        .textStyle(.bodyMedium)
+        .foregroundStyle(palette.muted)
+        .padding(.horizontal, Gutter)
       }
     }
   }
