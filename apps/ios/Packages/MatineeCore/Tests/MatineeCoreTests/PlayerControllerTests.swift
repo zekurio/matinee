@@ -190,6 +190,15 @@ struct PlayerControllerTests {
     await controller.tick()
     #expect(harness.downloads.reports.count == 2)
     #expect(harness.downloads.reports.last?.played == 10)
+    controller.pause()
+    await controller.tick()
+    let pausedReports = harness.downloads.reports.count
+    harness.now += 29
+    await controller.tick()
+    #expect(harness.downloads.reports.count == pausedReports)
+    harness.now += 1
+    await controller.tick()
+    #expect(harness.downloads.reports.count == pausedReports + 1)
     harness.engine.positionSeconds = 100
     harness.engine.isPlaying = false
     await controller.tick()

@@ -73,6 +73,7 @@ public struct Asking: Sendable {
     return (self, nil)
   }
 }
+public enum SourceMode: String, Codable, Sendable { case direct, stream, hls, encode, local }
 public enum SourceKind: Sendable { case file, mp4, hls }
 public enum SeekWay: Sendable { case inSource, newStream, newStart }
 public struct Source: Sendable, Equatable {
@@ -89,6 +90,13 @@ public struct Source: Sendable, Equatable {
     self.start = start
   }
   public var position: Double { offset + start }
+  public var startMs: Int64 { Int64((start * 1000).rounded()) }
+  public var mode: SourceMode {
+    if method == nil { return .local }
+    if method == PlaybackMethod.direct { return .direct }
+    if hls { return .hls }
+    return method == PlaybackMethod.remux ? .stream : .encode
+  }
   public var holdsTracks: Bool { method == nil || method == PlaybackMethod.direct }
   public var seeksItself: Bool { holdsTracks || hls }
   public var seek: SeekWay {

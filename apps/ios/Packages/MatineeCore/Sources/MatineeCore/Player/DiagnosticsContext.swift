@@ -5,7 +5,7 @@ import Foundation
 private let diagnosticCodecs: Set<String> = [
   "h264", "hevc", "av1", "vp8", "vp9", "mpeg1video", "mpeg2video", "mpeg4",
   "vc1", "theora", "aac", "ac3", "eac3", "truehd", "dts", "flac", "alac",
-  "mp3", "mp2", "opus", "vorbis", "automatic", "*", "pcm_*",
+  "mp3", "mp2", "opus", "vorbis", "auto", "*", "pcm_*",
 ]
 
 private func knownCodec(_ value: String?) -> String? {

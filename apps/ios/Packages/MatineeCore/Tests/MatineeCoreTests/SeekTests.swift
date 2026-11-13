@@ -67,7 +67,9 @@ struct FreezeWatchTests {
   }
   @Test func pausedOrBufferingWaitsAgain() {
     var watch = FreezeWatch()
-    func check(_ now: Int64, playing: Bool = true) -> Bool { watch.check(nowMs: now, playing: playing, shown: true) }
+    func check(_ now: Int64, playing: Bool = true) -> Bool {
+      watch.check(nowMs: now, playing: playing, shown: true)
+    }
     watch.frame(atMs: 0)
     #expect(!check(4000))
     #expect(!check(60_000, playing: false))
