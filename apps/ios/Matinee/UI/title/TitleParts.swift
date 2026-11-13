@@ -410,6 +410,8 @@ struct CastRail: View {
         ForEach(Array(cast.enumerated()), id: \.offset) { _, credit in
           RailItem(.person) {
             PersonCard(credit.name, role: credit.role, photo: api?.art(credit.photo, size: .thumb))
+              // Its own height, so a name on two lines doesn't shrink the portrait to fit the rail.
+              .fixedSize(horizontal: false, vertical: true)
           }
         }
       }
