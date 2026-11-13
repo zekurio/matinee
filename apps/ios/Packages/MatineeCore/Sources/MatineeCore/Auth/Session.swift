@@ -163,7 +163,10 @@ public struct SessionChanged: Error {}
   private func unauthorized(_ key: String, revision: Int) async {
     guard revisions[key, default: 0] == revision, tokens[key] != nil else { return }
     try? clearToken(key)
-    if key == activeServer { await start() }
+    // In a task of its own: the request that was turned down may belong to
+    // a screen the sign-out takes away, whose cancellation would otherwise
+    // cut off the check that leads to the sign-in screen.
+    if key == activeServer { await Task { await start() }.value }
   }
   private func rebind() {
     version += 1
