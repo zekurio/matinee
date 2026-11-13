@@ -11,7 +11,7 @@ import { readFile, writeFile } from "node:fs/promises"
 import { dirname, join, relative } from "node:path"
 import { fileURLToPath } from "node:url"
 
-import type { Document } from "./kotlin-client"
+import { clientDocument } from "./client-document"
 import { kotlinClient } from "./kotlin-client"
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "../../..")
@@ -20,14 +20,7 @@ const target = join(
   "apps/android/app/src/main/java/io/github/zekurio/matinee/api",
 )
 
-// env.ts wants a database to start, though the document never opens one.
-process.env.DATABASE_URL ??= "postgres://localhost/matinee"
-const { openapiSpec } = await import("../src/rpc/openapi")
-
-// SAFETY: Every schema in the document is one TypeBoxToJsonSchemaConverter
-// wrote or an event stream oRPC wrapped around one; `Document` names the
-// parts of those the generator reads.
-const document = (await openapiSpec()) as Document
+const document = await clientDocument()
 
 const check = process.argv.includes("--check")
 const stale: string[] = []
