@@ -108,6 +108,10 @@ public func deviceDiagnostics() -> DeviceDiagnostics {
       if status == 0 { machine = String(decoding: bytes.prefix { $0 != 0 }, as: UTF8.self) }
     }
   #endif
+  #if targetEnvironment(simulator)
+    // A simulator's machine is the Mac's architecture; the model it plays is in its environment.
+    machine = ProcessInfo.processInfo.environment["SIMULATOR_MODEL_IDENTIFIER"] ?? machine
+  #endif
   let version = ProcessInfo.processInfo.operatingSystemVersion
   #if DEBUG
     let buildType = "debug"

@@ -206,6 +206,30 @@ import Testing
     #expect(!json.contains("http"))
     #expect(report.attempts.last?.error?.code == -11800)
   }
+  @Test func appleModelIdentifiers() throws {
+    // Phones, Macs, and what a simulator's SIMULATOR_MODEL_IDENTIFIER says.
+    for model in ["iPhone17,1", "iPad16,3", "Mac16,12", "MacBookPro18,3", "arm64"] {
+      let device = DeviceDiagnostics.of(
+        appVersion: "0.1.0", appBuild: 1, buildType: "debug", osRelease: "27.2", model: model,
+        abi: "arm64")
+      #expect(device.model?.text == model)
+      #expect(
+        try JSONDecoder().decode(Safe.self, from: JSONEncoder().encode(device.model))
+          == device.model)
+    }
+    for bad in [
+      "Jane's iPhone", "iPhone 17", "iPhone17.1", "iPhone17_1", "iPhone-17", "a/b", "C02XL0GHJGH5;",
+      String(repeating: "x", count: 41),
+    ] {
+      #expect(Safe.model(bad) == .OTHER)
+    }
+    #expect(Safe.model(" ") == nil)
+    let here = deviceDiagnostics().model?.text
+    #expect(here != nil && here != "other")
+    if let simulated = ProcessInfo.processInfo.environment["SIMULATOR_MODEL_IDENTIFIER"] {
+      #expect(here == simulated)
+    }
+  }
   @Test func errorChainUsesOnlyDomainsAndCodes() {
     let cause = NSError(
       domain: NSURLErrorDomain, code: -1001,
