@@ -105,13 +105,17 @@ enum Orientation {
   private static var locked: UIInterfaceOrientationMask?
 
   static func lock(_ orientations: UIInterfaceOrientationMask) {
+    UIDevice.current.beginGeneratingDeviceOrientationNotifications()
     locked = orientations
     update(orientations)
   }
 
+  /// Lets go, turning the screen back the way the device is held.
   static func unlock() {
     locked = nil
-    update(mask)
+    let held = UIDevice.current.orientation
+    update(held.isLandscape ? .landscape : .portrait)
+    UIDevice.current.endGeneratingDeviceOrientationNotifications()
   }
 
   private static func update(_ orientations: UIInterfaceOrientationMask) {

@@ -239,8 +239,11 @@ extension View {
 
   /// Dark whatever the theme, as the player is: video plays on black.
   func forceDarkTheme(_ store: ThemeStore) -> some View {
-    environment(\.palette, Palette(store.dark))
+    let palette = Palette(store.dark)
+    return environment(\.palette, palette)
       .environment(\.colorScheme, .dark)
+      .foregroundStyle(palette.foreground)
+      .tint(palette.accent)
   }
 }
 
