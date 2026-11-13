@@ -403,6 +403,12 @@
     </plurals>
     <string name="playback_autoplay_title">Nächste Folge abspielen</string>
     <string name="playback_pip_title">Bild im Bild</string>
+    <string name="playback_gestures_title">Gesten</string>
+    <string name="playback_gestures_levels">Helligkeit und Lautstärke</string>
+    <string name="playback_gestures_remember_brightness">Helligkeit merken</string>
+    <string name="playback_gestures_seek">Spulen</string>
+    <string name="playback_gestures_hold">Halten für doppelte Geschwindigkeit</string>
+    <string name="playback_gestures_hint">Im Player links nach oben oder unten wischen ändert die Helligkeit, rechts die Lautstärke. Zur Seite wischen spult, und gedrückt halten spielt doppelt so schnell, bis du loslässt.</string>
     <string name="playback_passthrough_title">Audio-Passthrough</string>
     <string name="settings_subtitles_title">Untertitel</string>
     <string name="settings_subtitles_preview">So sehen Untertitel aus.</string>

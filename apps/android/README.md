@@ -145,7 +145,13 @@ Without Nix, install JDK 17 or later and the Android SDK with platform
   the engine draws picture tracks inside a file that plays as it is, and the
   server burns the rest into an encode. It shows trickplay frames while
   scrubbing, counts down to the next episode, reports progress, and keeps
-  playing in picture in picture. The quality menu leaves Original out for a
+  playing in picture in picture. On a phone, a double tap on either side
+  skips and a pinch fills the screen or shows it whole. Swipes work as in
+  Findroid: up or down on the left sets the brightness, on the right the
+  volume, and sideways seeks, with the trickplay frame where it lands. A
+  finger held on the video plays it at double speed until it lifts, and
+  Settings can keep the brightness for the next time the player opens.
+  The quality menu leaves Original out for a
   file over the account's bit rate limit. When the account may not play a
   file, or plays on as many devices as it may, the player shows the
   server's message and stops, as the web does.
@@ -171,7 +177,7 @@ Without Nix, install JDK 17 or later and the Android SDK with platform
   system's caption style or the app's own size, color, background, and edge;
   this device's quality, of those the account may use and with its bit
   rate limit, codecs for encodes, decoders, skip length, autoplay
-  of the next episode, picture in picture, and audio passthrough; downloads'
+  of the next episode, picture in picture, the player's swipes, and audio passthrough; downloads'
   network, version, and subtitles; the app's language through Android's
   per-app setting; sessions; the server; and About, with the app's
   version, Android's, and the model, the latest playback's report, and

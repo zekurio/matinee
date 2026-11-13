@@ -427,6 +427,12 @@
     </plurals>
     <string name="playback_autoplay_title">Play the next episode</string>
     <string name="playback_pip_title">Picture in picture</string>
+    <string name="playback_gestures_title">Gestures</string>
+    <string name="playback_gestures_levels">Brightness and volume</string>
+    <string name="playback_gestures_remember_brightness">Remember brightness</string>
+    <string name="playback_gestures_seek">Seeking</string>
+    <string name="playback_gestures_hold">Hold for double speed</string>
+    <string name="playback_gestures_hint">In the player, swipe up or down on the left for brightness and on the right for volume. Swipe sideways to seek, and touch and hold to play at double speed until you let go.</string>
     <string name="playback_passthrough_title">Audio passthrough</string>
     <string name="settings_subtitles_title">Subtitles</string>
     <string name="settings_subtitles_preview">This is how subtitles look.</string>
