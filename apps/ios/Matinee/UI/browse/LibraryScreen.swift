@@ -71,10 +71,10 @@ struct LibraryScreen: View {
   /// Search, a genre filter, and the sort, at the end of the bar.
   @ViewBuilder private var actions: some View {
     @Bindable var filters = filters
-    if !searching {
-      Button(action: openSearch) { Image(Lucide.search) }
-        .accessibilityLabel(Str.librarySearchTitles)
-    }
+    // Stays while searching, where it puts the keyboard back in the field,
+    // so the bar's title doesn't move as the field opens.
+    Button(action: openSearch) { Image(Lucide.search) }
+      .accessibilityLabel(Str.librarySearchTitles)
     Button { filtering = true } label: {
       Image(Lucide.listFilter).foregroundStyle(filters.genre != nil ? palette.accent : palette.foreground)
     }
@@ -152,7 +152,12 @@ private struct GenreSheet: View {
         }
       }
     }
-    .loads(genres) { api in try await api.titles.facets(libraryId: libraryId).genres }
+    .loads(genres) { api in
+      #if DEBUG
+        if BrowseFixtures.on { return BrowseFixtures.genres }
+      #endif
+      return try await api.titles.facets(libraryId: libraryId).genres
+    }
     .matineeSheet()
   }
 }

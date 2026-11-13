@@ -28,7 +28,7 @@ struct SearchScreen: View {
       } else if search.failed {
         Hint(Str.searchFailed)
       } else if let found = search.results {
-        if found.isEmpty {
+        if !found.hasShown {
           Hint(Str.searchNoMatch(text), detail: Str.searchNoMatchHint, icon: .searchX)
         } else {
           SearchResultsList(found: found, names: names, searching: search.searching)
@@ -213,5 +213,14 @@ private struct FlowRow: Layout {
     }
     if !row.indices.isEmpty { rows.append(row) }
     return rows
+  }
+}
+
+extension SearchResults {
+  /// Something the page lists matched. People on the server match too, but
+  /// no page shows them; Android leaves the page blank then, and this one
+  /// says nothing matched.
+  fileprivate var hasShown: Bool {
+    !titles.isEmpty || !people.isEmpty || !genres.isEmpty || !studios.isEmpty
   }
 }

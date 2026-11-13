@@ -44,6 +44,12 @@ struct BrowseScreen: View {
       }
     }
     .pages(pages, key: kind ?? "") { api, offset, limit in
+      var genre = genre
+      var studio = studio
+      #if DEBUG
+        // The fixtures' genres and studios aren't the server's: show its titles.
+        if BrowseFixtures.on { (genre, studio) = (nil, nil) }
+      #endif
       let page = try await api.titles.browse(kind: kind, genre: genre, studio: studio, limit: limit, offset: offset)
       return TitleList(items: page.items, total: page.total)
     }
@@ -69,7 +75,12 @@ struct PersonScreen: View {
       case .ready(let value): content(value)
       }
     }
-    .loads(person) { api in try await api.people.get(name: name) }
+    .loads(person) { api in
+      #if DEBUG
+        if BrowseFixtures.on { return try await BrowseFixtures.person(name, api: api) }
+      #endif
+      return try await api.people.get(name: name)
+    }
     .topBar(nil, home: true) { DisconnectedAction(person) }
   }
 
@@ -81,7 +92,7 @@ struct PersonScreen: View {
           .padding(.top, 8)
           .padding(.bottom, 32)
         CardGrid {
-          ForEach(value.credits, id: \.self) { credit in
+          ForEach(value.credits, id: \.id) { credit in
             PosterCard(
               credit.title,
               detail: credit.role ?? formatYear(credit.title.year) ?? creditKind(credit.kind, count: 1))
@@ -129,6 +140,11 @@ private struct PersonHeader: View {
       .frame(maxWidth: .infinity, alignment: .leading)
     }
   }
+}
+
+extension PersonCredit {
+  /// A title once for each way they're credited on it, as Android keys them.
+  fileprivate var id: String { "\(title.id)-\(kind)" }
 }
 
 /// "Director", or "Directors" for `count` above one.
