@@ -72,6 +72,42 @@
           }
         }
       }
+    },
+    "ios_title_trailer": {
+      "comment": "The button beside Play on a title's page, which opens the trailer on YouTube; the web's title.trailer, which Android doesn't have yet.",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trailer"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trailer"
+          }
+        }
+      }
+    },
+    "ios_title_trailer_hint": {
+      "comment": "What the trailer button does, for VoiceOver; the web's title.trailerHint.",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trailer auf YouTube ansehen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Watch the trailer on YouTube"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

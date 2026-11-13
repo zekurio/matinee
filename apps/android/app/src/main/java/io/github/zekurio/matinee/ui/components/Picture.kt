@@ -124,6 +124,7 @@ object Lucide {
     val ChevronRight = R.drawable.lucide_chevron_right
     val CircleAlert = R.drawable.lucide_circle_alert
     val CircleCheck = R.drawable.lucide_circle_check
+    val Clapperboard = R.drawable.lucide_clapperboard
     val Clock = R.drawable.lucide_clock
     val CloudOff = R.drawable.lucide_cloud_off
     val Download = R.drawable.lucide_download
