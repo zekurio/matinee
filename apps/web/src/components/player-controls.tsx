@@ -18,6 +18,7 @@ import {
   type Ref,
   useEffect,
   useReducer,
+  useRef,
   useState,
   useSyncExternalStore,
 } from "react"
@@ -90,6 +91,80 @@ export function SkipIcon({
 /** The thumb's width, `size-3.5`. Edge alignment keeps it inside the track. */
 const THUMB_PX = 14
 
+/** Where `value` sits between `from` and `to`, from 0 to 1. */
+function ramp(value: number, from: number, to: number): number {
+  return Math.max(0, Math.min(1, (value - from) / (to - from)))
+}
+
+/**
+ * A finger dragging the thumb. It moves the value by how far it travels
+ * rather than to where it is, so a slow drag can move a little at a time.
+ */
+type TouchDrag = {
+  pointer: number
+  x: number
+  at: number
+  /** Smoothed speed, in px per ms. */
+  speed: number
+  /** Where the drag has the value, or null before it changes it. */
+  value: number | null
+  /** Committed, on release or cancel. */
+  done: boolean
+}
+
+// Speeds in px per ms. At 0.04 (a finger creeping) a pixel moves a tenth
+// as far as it would at 0.5, a normal drag, which moves it the full way.
+const FINE_SPEED = 0.04
+const FULL_SPEED = 0.5
+const FINEST_GAIN = 0.1
+// No finer than this, so a short video doesn't crawl.
+const FINEST_PER_PX = 0.25
+// From 0.25 a thumb behind the finger catches up to it, quicker the faster
+// it moves, up to 35% of the gap per event.
+const CATCH_UP_SPEED = 0.25
+const CATCH_UP_FULL_SPEED = 1
+const CATCH_UP_RATE = 0.35
+
+/**
+ * The value a touch drag moves to. The thumb trails a slow finger and
+ * catches up with a quick one, and a finger past either end of the track
+ * takes it to that end.
+ */
+function touchDragValue({
+  from,
+  dx,
+  speed,
+  x,
+  left,
+  width,
+  max,
+}: {
+  from: number
+  dx: number
+  speed: number
+  x: number
+  left: number
+  width: number
+  max: number
+}): number {
+  const travel = Math.max(1, width - THUMB_PX)
+  const perPx = max / travel
+  const finest = Math.min(1, Math.max(FINEST_GAIN, FINEST_PER_PX / perPx))
+  const gain = finest + (1 - finest) * ramp(speed, FINE_SPEED, FULL_SPEED)
+  let next = from + dx * perPx * gain
+  const under =
+    Math.max(0, Math.min(1, (x - left - THUMB_PX / 2) / travel)) * max
+  // Only toward the finger, so the thumb never runs against it.
+  if ((under - next) * Math.sign(dx) > 0) {
+    const outside = x < left || x > left + width
+    const rate = outside
+      ? 1
+      : CATCH_UP_RATE * ramp(speed, CATCH_UP_SPEED, CATCH_UP_FULL_SPEED)
+    next += (under - next) * rate
+  }
+  return Math.max(0, Math.min(max, next))
+}
+
 /** The track for seeking and volume: the accent on translucent white. */
 function MediaSlider({
   ref,
@@ -101,6 +176,7 @@ function MediaSlider({
   valueText,
   renderPreview,
   previewAtThumb = false,
+  preciseTouch = false,
   onChange,
   onCommit,
   className,
@@ -113,8 +189,9 @@ function MediaSlider({
   buffered?: number
   valueText: (value: number) => string
   /**
-   * Shown above the pointer, like the time it would seek to. It stays
-   * inside the track by `--preview-inset`, half its width, when set.
+   * Shown above the pointer, like the time it would seek to. With
+   * `--preview-inset` set to half its width, it stays inside the nearest
+   * `data-preview-bounds` parent, or the track without one.
    */
   renderPreview?: (value: number) => ReactNode
   /**
@@ -122,6 +199,11 @@ function MediaSlider({
    * rather than at the pointer. Touch has no pointer to hover with.
    */
   previewAtThumb?: boolean
+  /**
+   * Drag by touch relative to where the finger started, slower the slower
+   * it moves, for a value too long to set to the pixel.
+   */
+  preciseTouch?: boolean
   onChange: (value: number) => void
   onCommit?: (value: number) => void
   className?: string
@@ -129,7 +211,77 @@ function MediaSlider({
   const safeMax = max > 0 ? max : 1
   const shown = Math.min(value, safeMax)
   const [hover, setHover] = useState<{ x: number; value: number } | null>(null)
+  const control = useRef<HTMLDivElement>(null)
+  const drag = useRef<TouchDrag | null>(null)
+
+  // The preview may hang past the track's ends, over the times beside it,
+  // as far as the nearest `data-preview-bounds` parent.
+  useEffect(() => {
+    const element = control.current
+    const bounds = element?.parentElement?.closest("[data-preview-bounds]")
+    if (!renderPreview || !element || !bounds) return
+    const measure = () => {
+      const inner = element.getBoundingClientRect()
+      const outer = bounds.getBoundingClientRect()
+      element.style.setProperty(
+        "--preview-room-start",
+        `${Math.max(0, inner.left - outer.left)}px`,
+      )
+      element.style.setProperty(
+        "--preview-room-end",
+        `${Math.max(0, outer.right - inner.right)}px`,
+      )
+    }
+    const observer = new ResizeObserver(measure)
+    observer.observe(element)
+    observer.observe(bounds)
+    return () => observer.disconnect()
+  }, [renderPreview])
+
+  const startDrag = (event: PointerEvent<HTMLDivElement>) => {
+    drag.current =
+      preciseTouch && event.pointerType !== "mouse"
+        ? {
+            pointer: event.pointerId,
+            x: event.clientX,
+            at: event.timeStamp,
+            speed: 0,
+            value: null,
+            done: false,
+          }
+        : null
+  }
+  const moveDrag = (event: PointerEvent<HTMLDivElement>) => {
+    const current = drag.current
+    if (!current || current.done || current.pointer !== event.pointerId) return
+    const dx = event.clientX - current.x
+    if (dx === 0) return
+    const sample = Math.abs(dx) / Math.max(1, event.timeStamp - current.at)
+    current.speed = current.speed * 0.6 + sample * 0.4
+    current.x = event.clientX
+    current.at = event.timeStamp
+    const box = event.currentTarget.getBoundingClientRect()
+    current.value = touchDragValue({
+      from: current.value ?? shown,
+      dx,
+      speed: current.speed,
+      x: event.clientX,
+      left: box.left,
+      width: box.width,
+      max: safeMax,
+    })
+    onChange(current.value)
+  }
+  // Idempotent: release, cancel, and the slider's own commit all end it.
+  const endDrag = () => {
+    const current = drag.current
+    if (!current || current.done) return
+    current.done = true
+    if (current.value !== null) onCommit?.(current.value)
+  }
+
   const track = (event: PointerEvent<HTMLDivElement>) => {
+    moveDrag(event)
     if (!renderPreview || event.pointerType === "touch") return
     const box = event.currentTarget.getBoundingClientRect()
     const x = Math.max(0, Math.min(box.width, event.clientX - box.left))
@@ -154,17 +306,33 @@ function MediaSlider({
       min={0}
       max={safeMax}
       step={step}
-      onValueChange={(next) =>
-        onChange(Array.isArray(next) ? (next[0] ?? 0) : next)
-      }
-      onValueCommitted={(next) =>
+      onValueChange={(next, details) => {
+        const value = Array.isArray(next) ? (next[0] ?? 0) : next
+        const current = drag.current
+        if (current && details.reason !== "keyboard") {
+          // A touch drag moves the value itself; a press still jumps.
+          if (current.done || details.reason !== "track-press") return
+          current.value = value
+        }
+        onChange(value)
+      }}
+      onValueCommitted={(next, details) => {
+        if (drag.current && details.reason !== "keyboard") {
+          endDrag()
+          return
+        }
         onCommit?.(Array.isArray(next) ? (next[0] ?? 0) : next)
-      }
+      }}
       thumbAlignment="edge"
       className={cn("group/slider", className)}
     >
       {/* The track stays thin; the hit area is 32px, or 44px for touch. */}
       <Slider.Control
+        ref={control}
+        onPointerDown={startDrag}
+        onPointerUp={endDrag}
+        onPointerCancel={endDrag}
+        onLostPointerCapture={endDrag}
         onPointerMove={track}
         onPointerLeave={() => setHover(null)}
         className="relative flex h-8 w-full cursor-pointer touch-none items-center select-none [@media(pointer:coarse)]:h-11"
@@ -174,7 +342,7 @@ function MediaSlider({
             aria-hidden
             className="pointer-events-none absolute bottom-full mb-1 -translate-x-1/2"
             style={{
-              left: `clamp(var(--preview-inset, 0px), ${previewAt.left}, calc(100% - var(--preview-inset, 0px)))`,
+              left: `clamp(calc(var(--preview-inset, 0px) - var(--preview-room-start, 0px)), ${previewAt.left}, calc(100% - var(--preview-inset, 0px) + var(--preview-room-end, 0px)))`,
             }}
           >
             {renderPreview(previewAt.value)}
@@ -265,7 +433,7 @@ export function SeekBar({
     })
 
   return (
-    <div className="flex items-center gap-3 px-1">
+    <div data-preview-bounds className="flex items-center gap-3 px-1">
       <span className={cn("min-w-11", overlayTextClass)}>
         {formatTime(shown)}
       </span>
@@ -282,6 +450,7 @@ export function SeekBar({
         )}
         // Touch has no hover, so a drag shows where it's headed.
         previewAtThumb={scrubbing}
+        preciseTouch
         onChange={setScrub}
         onCommit={(value) => {
           commitScrub(value)
