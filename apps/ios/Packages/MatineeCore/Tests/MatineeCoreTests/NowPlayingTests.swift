@@ -18,6 +18,14 @@ import Testing
   var nowPlayingSubtitle: String? = "Other show"
   var skipForward = 30.0
   var nextCount = 0
+  var interruptions: [String] = []
+  func audioInterruptionBegan() {
+    interruptions.append("began")
+    playing = false
+  }
+  func audioInterruptionEnded(shouldResume: Bool) {
+    interruptions.append("ended \(shouldResume)")
+  }
   func play() { playing = true }
   func pause() { playing = false }
   func togglePlay() { playing.toggle() }
@@ -167,24 +175,24 @@ import Testing
     session.stop()
     #expect(commands.handler == nil)
   }
-  @Test func interruptionsResumeOnlyPreviouslyPlayingAndWhenAllowed() {
+  /// The controller decides about resuming (PlayerControllerTests has it);
+  /// the session passes the events on, once each, and pauses on unplugging.
+  @Test func interruptionsGoToTheController() {
     let (session, player, _, _, audio) = fixture()
-    audio.event?(.interruption)
-    audio.event?(.interruptionEnded(resume: true))
-    #expect(!player.playing)
     player.play()
     session.update()
     audio.event?(.interruption)
-    #expect(!player.playing)
-    audio.event?(.interruptionEnded(resume: false))
-    #expect(!player.playing)
-    player.play()
-    audio.event?(.interruption)
     audio.event?(.interruptionEnded(resume: true))
-    #expect(player.playing)
+    audio.event?(.interruption)
+    audio.event?(.interruptionEnded(resume: false))
+    #expect(player.interruptions == ["began", "ended true", "began", "ended false"])
+    player.play()
     audio.event?(.unplugged)
     #expect(!player.playing)
+    #expect(player.interruptions.count == 4)
     session.stop()
+    audio.event?(.interruption)
+    #expect(player.interruptions.count == 4)
   }
   @Test func artworkIsAuthorizedAndClearedOnReplacementAndStop() async {
     let player = LockScreenPlayer()

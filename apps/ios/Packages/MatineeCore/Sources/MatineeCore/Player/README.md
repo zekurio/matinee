@@ -66,15 +66,15 @@ matching moment.
 | `onResume` and `onPause` only switch the dark theme. The controller isn't touched.                                                                                                                               | `scenePhase == .inactive` (Control Center, the app switcher): nothing.                                                                                                                                                                                                  |
 | `ON_STOP` without picture in picture: `player.pause()`. The surface goes, so `onSurfaceSizeChanged` clears `surfaceShown`.                                                                                       | `scenePhase == .background`: `sceneDidEnterBackground()`, which clears `surfaceShown` and pauses unless `pictureInPictureActive`. `.active`: `sceneDidBecomeActive()`.                                                                                                  |
 | Picture in picture enters by itself while playing (Android 12 and later) or on the user leaving; the screen hides its controls.                                                                                  | `pictureInPictureChanged(true)` from `pictureInPictureControllerDidStartPictureInPicture`, `false` from `…DidStop…`. Enable `canStartPictureInPictureAutomaticallyFromInline` while `playing` and `prefs.pictureInPicture`. A frame in PiP counts for the freeze watch. |
-| ExoPlayer's audio focus pauses for a call or another app and plays on after a transient loss; becoming noisy (headphones out) pauses.                                                                            | `AVAudioSession.interruptionNotification`: `audioInterruptionBegan()`, then `audioInterruptionEnded(shouldResume:)` with the `.shouldResume` option. A route change with `.oldDeviceUnavailable`: `pause()`. `PlayerNowPlaying` observes both today; see below.         |
+| ExoPlayer's audio focus pauses for a call or another app and plays on after a transient loss; becoming noisy (headphones out) pauses.                                                                            | `AVAudioSession.interruptionNotification`: `audioInterruptionBegan()`, then `audioInterruptionEnded(shouldResume:)` with the `.shouldResume` option. A route change with `.oldDeviceUnavailable`: `pause()`. `PlayerNowPlaying` observes both and makes these calls; see below.         |
 | The next episode or a new intent changes the activity's target; `key(playing)` disposes the old controller (`release()`) and makes another.                                                                      | `onNext`: `await stop()` this controller, then make one for the next item.                                                                                                                                                                                              |
 | Leaving the player, or the sign-in changing under it: the composition disposes, `release()` reports `closed`, stops the service and the session, and frees the player.                                           | The view disappearing, or the session or server changing: `await stop()`. It sends the closing report once, even if called twice.                                                                                                                                       |
 | `PlaybackService.onTaskRemoved` (the app swiped away) pauses and stops the service.                                                                                                                              | No callback is reliable when iOS ends the app. The 10 and 30 second reports, and the queued offline ones, stand in for the closing report.                                                                                                                              |
 
-`PlayerNowPlaying` (owned by another change) currently pauses on an
-interruption's start and never resumes. It should call
-`audioInterruptionBegan` and `audioInterruptionEnded(shouldResume:)` instead,
-so the controller resumes as ExoPlayer does.
+`PlayerNowPlaying` observes both and passes them on: an interruption goes to
+`audioInterruptionBegan` and `audioInterruptionEnded(shouldResume:)`, so only
+the controller decides to resume, as ExoPlayer does, and unplugging pauses.
+The view adds no observers of its own.
 
 ## Capability sources, historical
 
@@ -728,8 +728,8 @@ most 600 pixels, cleared before replacement, and guarded against stale completio
 Play, pause, toggle, configured-step skips, scrub and next have availability gates
 checked again in their handlers. Skip intervals are published to MediaPlayer.
 The audio session uses playback/moviePlayback, activates only on playing, and
-notifies other audio on disposal. Interruptions remember whether playback was
-running, pause, and resume only with `shouldResume`. Headphone removal pauses.
+notifies other audio on disposal. Interruptions go to the controller, which
+remembers whether playback was running and resumes only with `shouldResume`. Headphone removal pauses.
 Observers and command targets are removed on idempotent stop. Android's service
 `onTaskRemoved` has no direct iOS equivalent; the controller still owns explicit
 session disposal. Physical lock-screen, interruption and unplug behavior have
