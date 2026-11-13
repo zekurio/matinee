@@ -22,6 +22,16 @@ public struct SavedServer: Sendable, Identifiable {
   public let active: Bool
 }
 public struct ServerClient: Sendable { public let api: MatineeApi }
+/// Why `connect` didn't reach a server, for the app to word in its own
+/// language: Android's `connect_empty`, `connect_not_matinee`, and
+/// `connect_failed`. `server` is the address last tried, without the
+/// trailing slash; `local` when its host is on the local network, where iOS
+/// may be keeping the app away from it.
+public enum ConnectFailure: Error, Sendable, Equatable {
+  case empty
+  case notMatinee(server: String)
+  case unreachable(server: String, local: Bool)
+}
 public struct SessionChanged: Error {}
 
 @Observable @MainActor public final class MatineeSession {
@@ -153,7 +163,10 @@ public struct SessionChanged: Error {}
   private func unauthorized(_ key: String, revision: Int) async {
     guard revisions[key, default: 0] == revision, tokens[key] != nil else { return }
     try? clearToken(key)
-    if key == activeServer { await start() }
+    // In a task of its own: the request that was turned down may belong to
+    // a screen the sign-out takes away, whose cancellation would otherwise
+    // cut off the check that leads to the sign-in screen.
+    if key == activeServer { await Task { await start() }.value }
   }
   private func rebind() {
     version += 1
@@ -217,7 +230,12 @@ public struct SessionChanged: Error {}
     let contract: String
   }
   private func checkHealth(_ url: URL) async throws {
-    let session = URLSession(configuration: configuration)
+    // Android's 15 s to connect: a server that isn't there shouldn't hold
+    // the connect screen for the minute an encode may take to answer.
+    // SAFETY: Foundation's configuration copy preserves its concrete class.
+    let config = configuration.copy() as! URLSessionConfiguration
+    config.timeoutIntervalForRequest = 15
+    let session = URLSession(configuration: config)
     defer { session.invalidateAndCancel() }
     let (data, response) = try await session.data(from: url.appending(path: "api/health"))
     guard (response as? HTTPURLResponse)?.statusCode == 200,
@@ -227,17 +245,18 @@ public struct SessionChanged: Error {}
     // Decoding auth.config below checks the fields this client needs. The health
     // fingerprint is not a version range and cannot establish compatibility alone.
   }
-  public func connect(_ input: String, name: String? = nil) async -> String? {
+  public func connect(_ input: String, name: String? = nil) async -> ConnectFailure? {
     let urls = Self.serverCandidates(input)
-    guard !urls.isEmpty else { return "Enter a server address." }
+    guard !urls.isEmpty else { return .empty }
     if let saved = urls.first(where: { url in
       store.servers.contains { $0.origin == url.absoluteString }
     }) {
       await switchTo(origin: saved.absoluteString)
       return nil
     }
-    var failure = "Could not connect."
+    var failure = ConnectFailure.empty
     for url in urls {
+      let server = display(url.absoluteString)
       do {
         try await checkHealth(url)
         let config = try await MatineeApi(base: url, configuration: configuration).auth.config()
@@ -252,9 +271,34 @@ public struct SessionChanged: Error {}
           state = .signedOut(server: display(key), config: config, adding: true)
         }
         return nil
-      } catch { failure = error.localizedDescription }
+      } catch let error as URLError where error.code != .badServerResponse {
+        failure = .unreachable(server: server, local: Self.isLocalNetwork(url))
+      } catch {
+        // It answered, but not as a Matinee server does: an error, or something else.
+        failure = .notMatinee(server: server)
+      }
     }
     return failure
+  }
+
+  /// Whether `url`'s host is on the local network, which iOS asks the person
+  /// to allow: a private or link-local address, or a `.local` name. Loopback
+  /// isn't; it needs no permission.
+  nonisolated public static func isLocalNetwork(_ url: URL) -> Bool {
+    guard let host = url.host?.lowercased().trimmingCharacters(in: CharacterSet(charactersIn: "[]"))
+    else { return false }
+    if host.hasSuffix(".local") { return true }
+    if let v4 = IPv4Address(host) {
+      let b = [UInt8](v4.rawValue)
+      return b[0] == 10 || (b[0] == 172 && (16...31).contains(b[1])) || (b[0] == 192 && b[1] == 168)
+        || (b[0] == 169 && b[1] == 254)
+    }
+    if let v6 = IPv6Address(host) {
+      let b = [UInt8](v6.rawValue)
+      return (b[0] & 0xFE) == 0xFC || (b[0] == 0xFE && (b[1] & 0xC0) == 0x80)
+    }
+    // A bare name, like `nas`, resolves on the local network too.
+    return !host.contains(".") && host != "localhost"
   }
   public func addServer() {
     if beforeAdding == nil { beforeAdding = state }
@@ -283,6 +327,8 @@ public struct SessionChanged: Error {}
   }
   public func switchTo(origin: String) async {
     guard store.servers.contains(where: { $0.origin == origin }) else { return }
+    // The one in use, signed in and not being left for another: nothing to do.
+    if origin == activeServer, candidate == nil, beforeAdding == nil, case .signedIn = state { return }
     activate(origin)
     await start()
   }

@@ -184,7 +184,12 @@ def catalog(languages: dict[str, dict[str, dict]]) -> str:
         if not entry["translatable"]:
             record["shouldTranslate"] = False
         for language, entries in languages.items():
-            if language == SOURCE or not entry["translatable"]:
+            if language == SOURCE:
+                continue
+            if not entry["translatable"]:
+                # The same in every language, like the app's name; without a
+                # copy, a lookup in another language gets the key back.
+                record["localizations"][language] = localization(entry)
                 continue
             translated = entries.get(key)
             if translated is None:

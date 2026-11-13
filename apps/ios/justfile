@@ -35,8 +35,16 @@ run *args: build
 gallery *args: build
     xcrun simctl boot "{{ simulator }}" 2>/dev/null || true
     xcrun simctl install "{{ simulator }}" "{{ built_app }}"
-    xcrun simctl launch --terminate-running-process "{{ simulator }}" {{ app }} \
+    xcrun simctl launch --terminate-running-process "{{ simulator }}" {{ app }} -gallery YES \
         -gallery.server http://localhost:18420 -gallery.token "$(scripts/dev/token ios-admin)" {{ args }}
+
+# Open the app signed in to the dev server (DEV.md) as `account`, ios-admin or ios-viewer, with more launch arguments after
+dev account="ios-admin" *args: build
+    xcrun simctl boot "{{ simulator }}" 2>/dev/null || true
+    open -a Simulator 2>/dev/null || true
+    xcrun simctl install "{{ simulator }}" "{{ built_app }}"
+    xcrun simctl launch --terminate-running-process "{{ simulator }}" {{ app }} \
+        -dev.server http://localhost:18420 -dev.token "$(scripts/dev/token {{ account }})" {{ args }}
 
 # Run MatineeCore's tests on the Mac, and check the generated files are current
 test:

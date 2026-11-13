@@ -3,10 +3,11 @@
   import Nuke
   import SwiftUI
 
-  /// The pages of the gallery, the app's root in debug builds until the
-  /// shell lands: every component, on the theme, in both appearances.
-  /// Launch arguments pick what shows, so screenshots can be scripted:
+  /// The pages of the gallery, in debug builds with `-gallery YES`: every
+  /// component, on the theme, in both appearances. Launch arguments pick
+  /// what shows, so screenshots can be scripted:
   ///
+  ///     -gallery YES               the gallery instead of the app
   ///     -gallery.page cards        colors, icons, controls, cards, rows, states
   ///     -theme.mode dark           system, light, dark (ThemeStore's own key)
   ///     -gallery.accent rose       matinee, rose, emerald, amber: a server accent

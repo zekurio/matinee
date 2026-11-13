@@ -1,11 +1,13 @@
+import MatineeCore
 import SwiftUI
 import UIKit
 
 /*
- * Bars.kt's bars as far as they belong to a page rather than the shell: the
- * top bar of a page opened from a tab, the floating buttons over a title's
- * art, Home's header, and the scrim that keeps the status bar readable over
- * art. The tabs are the shell's.
+ * Bars.kt: the top bar of a page opened from a tab, the floating buttons
+ * over a title's art, Home's header, the scrim that keeps the status bar
+ * readable over art, and what the tabs show. The tab bar itself is the
+ * system's (Shell.swift): at the bottom on a phone, at the top or as a
+ * sidebar on an iPad, as iOS apps have it.
  *
  * On iOS the top bar is the navigation bar, so back is the system's button
  * and its edge swipe; these set its colors, font, and buttons to Android's.
@@ -205,5 +207,62 @@ private struct StatusBarScrim: ViewModifier {
         .frame(height: 0)
         .allowsHitTesting(false)
       }
+  }
+}
+
+extension ShellTab {
+  /// The tab's name, as Android's tab bar says it.
+  var label: String {
+    switch self {
+    case .home: Str.tabHome
+    case .media: Str.tabMedia
+    case .downloads: Str.downloadsTitle
+    case .profile: Str.tabProfile
+    case .search: Str.searchTitle
+    }
+  }
+
+  /// The tab's icon; the profile's is the person's picture instead (`ProfilePicture`).
+  var icon: Lucide {
+    switch self {
+    case .home: .house
+    case .media: .libraryBig
+    case .downloads: .download
+    case .profile: .userRound
+    case .search: .search
+    }
+  }
+}
+
+/// The signed-in person's picture as the profile tab's icon, as Android's
+/// tab bar shows it, or their initials while it loads or when they have
+/// none. A tab bar takes only an image, so it's drawn into one.
+enum ProfilePicture {
+  /// The side of the circle, as Android's 28 dp.
+  static let side: CGFloat = 28
+
+  static func image(_ picture: UIImage?, name: String, palette: Palette) -> UIImage {
+    let bounds = CGRect(x: 0, y: 0, width: side, height: side)
+    let drawn = UIGraphicsImageRenderer(size: bounds.size).image { _ in
+      UIBezierPath(ovalIn: bounds).addClip()
+      if let picture {
+        // Fills the circle, cropped to its middle.
+        let scale = max(side / picture.size.width, side / picture.size.height)
+        let size = CGSize(width: picture.size.width * scale, height: picture.size.height * scale)
+        picture.draw(in: CGRect(x: (side - size.width) / 2, y: (side - size.height) / 2, width: size.width, height: size.height))
+      } else {
+        palette.colors.input.uiColor.setFill()
+        UIRectFill(bounds)
+        let text = NSAttributedString(
+          string: initials(name),
+          attributes: [
+            .font: RedHatText.uiFont(size: 11, weight: .medium),
+            .foregroundColor: palette.colors.textDim.uiColor,
+          ])
+        let size = text.size()
+        text.draw(at: CGPoint(x: (side - size.width) / 2, y: (side - size.height) / 2))
+      }
+    }
+    return drawn.withRenderingMode(.alwaysOriginal)
   }
 }

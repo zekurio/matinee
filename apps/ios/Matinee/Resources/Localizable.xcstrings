@@ -395,6 +395,12 @@
     "app_name" : {
       "extractionState" : "manual",
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Matinee"
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
@@ -3230,6 +3236,12 @@
     "link_code_placeholder" : {
       "extractionState" : "manual",
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "BCDF-GHJK"
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
