@@ -17,6 +17,7 @@ import { creditLabel, PersonPortrait, unitList } from "@/components/credits"
 import { PosterGridSkeleton } from "@/components/library/library-states"
 import { PosterCard, posterGrid } from "@/components/media-item"
 import { useDocumentTitle } from "@/components/page-header"
+import { PhoneTopBar } from "@/components/phone-nav"
 import { tr } from "@/i18n"
 import { reloadOnEnter } from "@/lib/route-loading"
 import { errorMessage, orpc } from "@/lib/rpc"
@@ -54,6 +55,15 @@ function creditKinds(person: Person): CreditKind[] {
  * across the libraries, a section for each kind of credit.
  */
 function PersonPage() {
+  return (
+    <>
+      <PhoneTopBar home />
+      <PersonContent />
+    </>
+  )
+}
+
+function PersonContent() {
   const { name } = Route.useParams()
   const person = useQuery(personOptions(name))
   useDocumentTitle(name)

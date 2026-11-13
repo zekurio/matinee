@@ -21,8 +21,12 @@ function Root() {
       <Outlet />
       <PageScrollbar />
       <Toaster
-        // Above the home indicator.
-        mobileOffset={{ bottom: "calc(env(safe-area-inset-bottom) + 16px)" }}
+        // Above the home indicator, and the phone's tab bar while it shows
+        // (`TabBar` sets the variable).
+        mobileOffset={{
+          bottom:
+            "calc(env(safe-area-inset-bottom) + 16px + var(--tab-bar-space, 0px))",
+        }}
       />
     </TooltipProvider>
   )

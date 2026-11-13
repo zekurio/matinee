@@ -175,7 +175,8 @@ export function EpisodeRow({ item }: { item: MediaItem }) {
           className="absolute top-1.5 right-1.5"
         />
         <ThumbPlayButton item={item} label={name} />
-        {/* The progress bar fades while these show. Touch screens show both. */}
+        {/* The progress bar fades while these show. Touch screens always
+            show them. */}
         <CardActions
           name={name}
           watched={watched}

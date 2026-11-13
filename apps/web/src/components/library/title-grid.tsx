@@ -1,7 +1,6 @@
 import type { Library } from "@matinee/contracts"
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
 
-import { LibraryChips } from "@/components/library-chips"
 import { PosterCard, posterGrid } from "@/components/media-item"
 import { PageHeader } from "@/components/page-header"
 import { tr } from "@/i18n"
@@ -61,7 +60,6 @@ export function TitleGrid({ library }: { library: Library }) {
         title={library.name}
         description={libraryStatus(library)}
         actions={<HeaderControls {...controls} />}
-        phoneTitle={<LibraryChips className="-ml-4 pl-4" />}
         phoneActions={<PhoneControls {...controls} />}
       />
       <ActiveFilters {...filterState} />

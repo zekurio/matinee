@@ -1,5 +1,4 @@
 import type { Library, User } from "@matinee/contracts"
-import { DrawerTitle } from "@matinee/ui/components/drawer"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,7 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@matinee/ui/components/dropdown-menu"
 import { cn } from "@matinee/ui/lib/utils"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useQuery } from "@tanstack/react-query"
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router"
 import {
   ChartColumnIcon,
@@ -33,13 +32,15 @@ import {
 } from "react"
 
 import { tr } from "@/i18n"
-import { client, orpc } from "@/lib/rpc"
+import { orpc } from "@/lib/rpc"
 import { useOpenSettings } from "@/lib/settings"
+import { useSignOut } from "@/lib/sign-out"
 import { useSearchSpotlightStore } from "@/stores/search-spotlight"
 
 import { LogoMark } from "./brand"
+import { TabBar, tabBarPadding, usePhoneTab } from "./phone-nav"
 import { SearchButton, SearchSpotlight } from "./search/search-spotlight"
-import { SheetItem, SheetMenu, SheetSeparator, usePhone } from "./sheet-menu"
+import { usePhone } from "./sheet-menu"
 import { UserAvatar } from "./user-avatar"
 
 export const libraryIcons = {
@@ -58,19 +59,20 @@ const INLINE_LIBRARIES = 3
 export const pageColumn = "mx-auto w-full max-w-[160rem] px-4 sm:px-6 lg:px-14"
 
 /**
- * Where a page's content starts: below the phone header, or the floating
- * bar from `sm` up. `<main>` pads its top by this much.
+ * Where a page's content starts: below the floating bar from `sm` up.
+ * `<main>` pads its top by this much. Phones have no bar up there; each
+ * page starts with its own (`PageHeader`, `PhoneTopBar`, `ItemTopBar`), or
+ * with art, under the status bar.
  */
-const pageTop = "pt-[calc(env(safe-area-inset-top)+4rem)] sm:pt-24"
+const pageTop = "sm:pt-24"
 
 /**
  * Breaks a page's top section out of the column to the window edges and up
- * under the header or bar, for a backdrop behind it. The negative margin
- * cancels `<main>`'s top padding. Negative margins, not a -50% translate,
- * which lands on a half pixel at odd window widths.
+ * under the bar, for a backdrop behind it. The negative margin cancels
+ * `<main>`'s top padding. Negative margins, not a -50% translate, which
+ * lands on a half pixel at odd window widths.
  */
-export const pageBleed =
-  "relative mx-[calc(50%-50vw)] -mt-[calc(env(safe-area-inset-top)+4rem)] w-screen sm:-mt-24"
+export const pageBleed = "relative mx-[calc(50%-50vw)] w-screen sm:-mt-24"
 
 /** Shared look for everything that sits inside the bar. */
 const pillItem =
@@ -80,22 +82,6 @@ const pillActive = "bg-foreground/10 text-foreground"
 /** The translucent capsule the bar sits in. */
 const glass =
   "bg-background/60 rounded-full border border-foreground/10 p-1 shadow-[0_6px_20px_-8px_rgb(0_0_0/0.25)] dark:shadow-[0_8px_24px_-6px_rgb(0_0_0/0.6)] backdrop-blur-xl backdrop-saturate-150"
-
-/** A round icon button in the phone header. */
-const headerButton =
-  "focus-visible:ring-ring text-foreground/80 hover:text-foreground inline-flex size-11 shrink-0 items-center justify-center rounded-full outline-none transition-colors focus-visible:ring-2 [&_svg]:size-5.5"
-
-function useSignOut() {
-  const queryClient = useQueryClient()
-  const navigate = useNavigate()
-  return useMutation({
-    mutationFn: () => client.auth.signOut(),
-    onSuccess: async () => {
-      queryClient.clear()
-      await navigate({ to: "/login" })
-    },
-  })
-}
 
 /** A menu item that marks the page you're on with a check. */
 function CurrentItem({
@@ -162,7 +148,7 @@ function PillLink({
 
 /**
  * Libraries inline while there are few, one menu once there are many.
- * Phones move between them with the library chips instead.
+ * Phones list them on the Media tab instead.
  */
 function LibraryLinks() {
   const libraries = useQuery(orpc.libraries.list.queryOptions())
@@ -244,7 +230,6 @@ function AccountMenu({ user }: { user: User }) {
   const signOut = useSignOut()
   const openSettings = useOpenSettings()
   const navigate = useNavigate()
-  const phone = usePhone()
   const name = user.displayName ?? user.username
   const actions = [
     {
@@ -268,15 +253,7 @@ function AccountMenu({ user }: { user: User }) {
     },
   ]
   const accountLabel = tr("shell.account", { name })
-  const trigger = phone ? (
-    <button
-      type="button"
-      aria-label={accountLabel}
-      className={cn(headerButton, "data-popup-open:bg-foreground/10")}
-    >
-      <UserAvatar user={user} className="size-9 text-sm" />
-    </button>
-  ) : (
+  const trigger = (
     <button
       type="button"
       aria-label={accountLabel}
@@ -287,43 +264,6 @@ function AccountMenu({ user }: { user: User }) {
       <ChevronDownIcon className="text-muted-foreground !size-3.5" />
     </button>
   )
-
-  if (phone) {
-    return (
-      <SheetMenu
-        trigger={trigger}
-        header={
-          <div className="flex items-center gap-3 px-5 pt-3 pb-2">
-            <UserAvatar user={user} className="size-11 text-base" />
-            <div className="min-w-0">
-              <DrawerTitle className="flex items-center gap-1.5 text-base">
-                <AccountName user={user} />
-              </DrawerTitle>
-              {user.displayName && (
-                <p className="text-muted-foreground truncate text-sm">
-                  @{user.username}
-                </p>
-              )}
-            </div>
-          </div>
-        }
-      >
-        {actions.map((action) => (
-          <SheetItem key={action.label} icon={action.icon} onClick={action.run}>
-            {action.label}
-          </SheetItem>
-        ))}
-        <SheetSeparator />
-        <SheetItem
-          icon={LogOutIcon}
-          destructive
-          onClick={() => signOut.mutate()}
-        >
-          {tr("shell.signOut")}
-        </SheetItem>
-      </SheetMenu>
-    )
-  }
 
   return (
     <DropdownMenu>
@@ -414,50 +354,6 @@ function NavBar({ user }: { user: User }) {
   )
 }
 
-/**
- * The phone header: the logo home, search, and the account. It sits at the
- * top of the page and scrolls away with it, over Home's banner art. Pages
- * put what else belongs up there, like the library chips, under it. Home
- * leaves the logo out: it would lead nowhere, and the banner's title logo
- * sits right under it.
- */
-function PhoneHeader({ user }: { user: User }) {
-  const home = useRouterState({
-    select: (state) => state.location.pathname === "/",
-  })
-  return (
-    <header className="absolute inset-x-0 top-0 z-30 pt-[env(safe-area-inset-top)]">
-      {/* Keeps the header readable over bright art. */}
-      <div
-        aria-hidden
-        className="from-background/70 pointer-events-none absolute inset-x-0 top-0 -bottom-10 bg-gradient-to-b to-transparent"
-      />
-      <div
-        className={cn(
-          pageColumn,
-          "relative flex h-14 items-center justify-between gap-2",
-        )}
-      >
-        {home ? (
-          <span />
-        ) : (
-          <Link
-            to="/"
-            aria-label={tr("shell.homeLink")}
-            className="focus-visible:ring-ring -ml-1.5 grid size-11 place-items-center rounded-full outline-none focus-visible:ring-2"
-          >
-            <LogoMark className="size-7" />
-          </Link>
-        )}
-        <div className="-mr-1.5 flex items-center">
-          <SearchButton className={headerButton} />
-          <AccountMenu user={user} />
-        </div>
-      </div>
-    </header>
-  )
-}
-
 export function AppShell({
   user,
   children,
@@ -466,6 +362,7 @@ export function AppShell({
   children: ReactNode
 }) {
   const phone = usePhone()
+  const tab = usePhoneTab()
   // A shell that mounts again, after signing out and in, starts with an
   // empty search.
   useEffect(() => () => useSearchSpotlightStore.getState().reset(), [])
@@ -479,7 +376,11 @@ export function AppShell({
       >
         {tr("shell.skipToContent")}
       </a>
-      {phone ? <PhoneHeader user={user} /> : <NavBar user={user} />}
+      {phone ? (
+        tab && <TabBar user={user} current={tab} />
+      ) : (
+        <NavBar user={user} />
+      )}
       <SearchSpotlight />
       <main
         id="main"
@@ -488,6 +389,7 @@ export function AppShell({
           pageColumn,
           pageTop,
           "pb-[calc(env(safe-area-inset-bottom)+2rem)] outline-none sm:pb-12",
+          tab && tabBarPadding,
         )}
       >
         {children}

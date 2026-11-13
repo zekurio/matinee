@@ -12,7 +12,8 @@ import {
 import { cn } from "@matinee/ui/lib/utils"
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import { createFileRoute, Link } from "@tanstack/react-router"
-import { SearchIcon, SearchXIcon } from "lucide-react"
+import { SearchIcon, SearchXIcon, XIcon } from "lucide-react"
+import { useEffect, useRef, useState } from "react"
 
 import { creditLabel, PersonCard } from "@/components/credits"
 import { PosterGridSkeleton } from "@/components/library/library-states"
@@ -23,6 +24,7 @@ import {
   type SearchSection,
   searchSections,
 } from "@/components/search/search-sections"
+import { usePhone } from "@/components/sheet-menu"
 import { UserAvatar } from "@/components/user-avatar"
 import { tr } from "@/i18n"
 import { formatCount } from "@/lib/format"
@@ -37,6 +39,9 @@ const SearchParams = t.object({
 // What the server sends of each kind. Past it, the page says to narrow
 // the search down.
 const LIMIT = 60
+
+// The pause in typing on a phone before the search goes out.
+const DEBOUNCE_MS = 250
 
 /** The results for a query, shared by the page and its loader. */
 function searchOptions(query: string) {
@@ -55,12 +60,14 @@ export const Route = createFileRoute("/_authed/_shell/search")({
 })
 
 /**
- * Every result for a search from the spotlight, a section per kind and
- * library. The query lives in the URL, so Back from a title brings the
- * results back.
+ * Every result for a search, a section per kind and library. Wider screens
+ * come here from the spotlight; on phones it's the search tab, with the
+ * field at its top. The query lives in the URL, so Back from a title
+ * brings the results back.
  */
 function SearchPage() {
   const { q } = Route.useSearch()
+  const phone = usePhone()
   useDocumentTitle(
     q ? tr("search.page.documentTitle", { query: q }) : tr("search.title"),
   )
@@ -73,6 +80,8 @@ function SearchPage() {
   })
 
   if (q === undefined) {
+    // The field's placeholder already says what search finds.
+    if (phone) return <PhoneSearchBar query={q} />
     return (
       <Empty className="py-16">
         <EmptyHeader>
@@ -109,7 +118,8 @@ function SearchPage() {
 
   return (
     <div>
-      <h1 className="mb-6 text-[26px] leading-8 font-semibold tracking-tight text-balance break-words md:text-[32px] md:leading-10">
+      {phone && <PhoneSearchBar query={q} />}
+      <h1 className="mb-6 text-[26px] leading-8 font-semibold tracking-tight text-balance break-words max-sm:sr-only md:text-[32px] md:leading-10">
         {tr("search.page.heading", { query: q })}
       </h1>
       {results.isPending ? (
@@ -251,5 +261,89 @@ function FacetText({ facet }: { facet: Facet }) {
         {formatCount(facet.titleCount)}
       </span>
     </>
+  )
+}
+
+/**
+ * The search tab's top on phones: its name, then the field, which takes the
+ * keyboard when the tab opens empty. What's typed goes in the URL once
+ * typing pauses, and the results follow it.
+ */
+function PhoneSearchBar({ query }: { query: string | undefined }) {
+  const navigate = Route.useNavigate()
+  const [text, setText] = useState(query ?? "")
+  const input = useRef<HTMLInputElement>(null)
+  const timer = useRef<number | undefined>(undefined)
+  useEffect(() => () => window.clearTimeout(timer.current), [])
+  // Opening the tab empty is for typing; Back to results is for reading.
+  const [typing] = useState(query === undefined)
+  useEffect(() => {
+    if (typing) input.current?.focus()
+  }, [typing])
+
+  const search = (next: string) => {
+    const trimmed = next.trim()
+    void navigate({
+      search: { q: trimmed === "" ? undefined : trimmed },
+      replace: true,
+      resetScroll: false,
+    })
+  }
+  const update = (next: string) => {
+    setText(next)
+    window.clearTimeout(timer.current)
+    timer.current = window.setTimeout(() => search(next), DEBOUNCE_MS)
+  }
+
+  return (
+    <div className="bg-background sticky top-0 z-20 -mx-4 mb-4 px-4 pt-[env(safe-area-inset-top)] pb-3">
+      <p className="flex h-16 items-center text-xl leading-7 font-semibold tracking-tight">
+        {tr("search.title")}
+      </p>
+      <search>
+        <form
+          onSubmit={(event) => {
+            event.preventDefault()
+            window.clearTimeout(timer.current)
+            search(text)
+            input.current?.blur()
+          }}
+          className="border-foreground/10 bg-foreground/5 flex h-12 items-center rounded-full border"
+        >
+          <SearchIcon
+            aria-hidden
+            className="text-muted-foreground mx-3.5 size-5 shrink-0"
+          />
+          <input
+            ref={input}
+            type="search"
+            enterKeyHint="search"
+            autoComplete="off"
+            spellCheck={false}
+            aria-label={tr("search.field")}
+            placeholder={tr("search.field")}
+            value={text}
+            onChange={(event) => update(event.currentTarget.value)}
+            // 16px keeps iOS from zooming in on focus.
+            className="placeholder:text-muted-foreground h-full min-w-0 flex-1 bg-transparent text-base outline-none [&::-webkit-search-cancel-button]:appearance-none"
+          />
+          {text ? (
+            <button
+              type="button"
+              aria-label={tr("search.clear")}
+              onClick={() => {
+                update("")
+                input.current?.focus()
+              }}
+              className="focus-visible:ring-ring text-muted-foreground hover:text-foreground grid size-11 shrink-0 place-items-center rounded-full outline-none focus-visible:ring-2"
+            >
+              <XIcon className="size-[18px]" />
+            </button>
+          ) : (
+            <span aria-hidden className="w-3 shrink-0" />
+          )}
+        </form>
+      </search>
+    </div>
   )
 }

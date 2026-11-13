@@ -217,7 +217,7 @@ export function FolderList() {
             {groups.map((group) => (
               <section key={group.key} aria-label={group.label.join(", ")}>
                 {/* Mobile stacks show and season; wider screens keep them inline. */}
-                <h2 className="bg-background/95 after:bg-border/60 sticky top-[env(safe-area-inset-top)] z-[5] -mx-2 mb-1 flex flex-col items-start gap-1 px-2 py-2 text-sm backdrop-blur after:absolute after:inset-x-2 after:bottom-0 after:h-px sm:top-16 sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-x-2 md:py-2.5">
+                <h2 className="bg-background/95 after:bg-border/60 sticky top-[calc(env(safe-area-inset-top)+4rem)] z-[5] -mx-2 mb-1 flex flex-col items-start gap-1 px-2 py-2 text-sm backdrop-blur after:absolute after:inset-x-2 after:bottom-0 after:h-px sm:top-16 sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-x-2 md:py-2.5">
                   <GroupHeading
                     libraryId={libraryId}
                     group={group}

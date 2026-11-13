@@ -1,29 +1,19 @@
 import type { Library } from "@matinee/contracts"
-import { buttonVariants } from "@matinee/ui/components/button"
-import {
-  Empty,
-  EmptyContent,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@matinee/ui/components/empty"
 import { Skeleton } from "@matinee/ui/components/skeleton"
 import { Spinner } from "@matinee/ui/components/spinner"
 import { cn } from "@matinee/ui/lib/utils"
 import { useQuery } from "@tanstack/react-query"
 import { Link, useRouteContext } from "@tanstack/react-router"
-import { ChevronRightIcon, FolderPlusIcon, PopcornIcon } from "lucide-react"
+import { ChevronRightIcon } from "lucide-react"
 
 import { Hero, heroFill, heroFrame } from "@/components/hero"
-import { LibraryChips } from "@/components/library-chips"
+import { NoLibraries } from "@/components/library/no-libraries"
 import { EpisodeCard, TitleCard } from "@/components/media-item"
 import { PageHeader } from "@/components/page-header"
 import { Rail, RailItem } from "@/components/rail"
 import { tr } from "@/i18n"
 import { homeQueries } from "@/lib/home-queries"
 import { orpc } from "@/lib/rpc"
-import { settingsLink } from "@/lib/settings"
 
 /** Home: what to watch next, then each library's latest. */
 export function Home() {
@@ -41,7 +31,6 @@ export function Home() {
     featured.isPending
 
   if (libraries.data?.length === 0) {
-    const admin = user.role === "admin"
     return (
       <>
         <PageHeader
@@ -49,60 +38,33 @@ export function Home() {
             name: user.displayName ?? user.username,
           })}
         />
-        {/* An admin sees every library, so none means none exist. Anyone
-            else may be in no group that opens one. */}
-        <Empty className="border border-dashed">
-          <EmptyHeader>
-            <EmptyMedia variant="icon">
-              {admin ? <FolderPlusIcon /> : <PopcornIcon />}
-            </EmptyMedia>
-            <EmptyTitle>
-              {admin
-                ? tr("browse.home.noLibraries")
-                : tr("browse.home.nothingYet")}
-            </EmptyTitle>
-            <EmptyDescription>
-              {admin
-                ? tr("browse.home.noLibrariesAdmin")
-                : tr("browse.home.nothingYetDescription")}
-            </EmptyDescription>
-          </EmptyHeader>
-          {admin && (
-            <EmptyContent>
-              <Link {...settingsLink("libraries")} className={buttonVariants()}>
-                {tr("browse.home.addLibrary")}
-              </Link>
-            </EmptyContent>
-          )}
-        </Empty>
+        <NoLibraries admin={user.role === "admin"} />
       </>
     )
   }
 
   const hasResume = (resume.data?.length ?? 0) > 0
   const hasNextUp = (nextUp.data?.length ?? 0) > 0
-  // On phones and desktop, the banner and the rows of what to watch next
-  // share the first screen: the banner takes what the rows leave. The column
-  // ends at the window's bottom (<main>'s top padding is cancelled by the
-  // banner's negative margin). Its own bottom padding keeps the rows off the
-  // edge and pushes the shelves below the fold. Phones measure the small
-  // viewport, so the banner doesn't resize as the browser's toolbar hides
-  // on scroll. While the queries load, the page assumes the banner and the
-  // rows will come and holds their places with skeletons, so the banner
-  // doesn't shrink once they arrive.
+  // On desktop, the banner and the rows of what to watch next share the
+  // first screen: the banner takes what the rows leave. The column ends at
+  // the window's bottom (<main>'s top padding is cancelled by the banner's
+  // negative margin). Its own bottom padding keeps the rows off the edge
+  // and pushes the shelves below the fold. While the queries load, the page
+  // assumes the banner and the rows will come and holds their places with
+  // skeletons, so the banner doesn't shrink once they arrive. A phone's
+  // banner has a height of its own, short enough for both rows to fit
+  // under it.
   const fold =
     (featured.isPending || slides.length > 0) &&
     (resume.isPending || nextUp.isPending || hasResume || hasNextUp)
 
   return (
-    <div className="flex flex-col gap-10">
+    <div className="flex flex-col gap-10 max-sm:gap-6">
       <div
         className={cn(
           "contents",
-          fold && [
-            "max-sm:flex max-sm:min-h-[calc(100svh-env(safe-area-inset-top)-4rem)] max-sm:flex-col max-sm:gap-5 max-sm:pb-[calc(env(safe-area-inset-bottom)+1.5rem)]",
-            "lg:flex lg:min-h-[calc(100dvh-6rem)] lg:flex-col lg:pb-12 lg:gap-8",
-          ],
+          fold &&
+            "lg:flex lg:min-h-[calc(100dvh-6rem)] lg:flex-col lg:gap-8 lg:pb-12",
         )}
       >
         {loading ? (
@@ -110,13 +72,13 @@ export function Home() {
             className={cn(heroFrame, "rounded-none", fold && heroFill)}
           />
         ) : slides.length > 0 ? (
-          <Hero
-            slides={slides}
-            top={<LibraryChips className="px-4" />}
-            className={fold ? heroFill : undefined}
-          />
+          <Hero slides={slides} className={fold ? heroFill : undefined} />
         ) : (
-          <LibraryChips className="-mx-4 px-4 sm:hidden" />
+          // The rows start under the status bar, where there's no banner.
+          <div
+            aria-hidden
+            className="h-[calc(env(safe-area-inset-top)+0.5rem)] sm:hidden"
+          />
         )}
 
         {resume.isPending ? (

@@ -47,5 +47,4 @@ export default {
   "library.sortCurrent": "Sortierung: {sort}",
   "library.sortBy": "Sortieren nach",
   "library.sortPrefix": "Sortierung:",
-  "library.chips": "Mediatheken",
 } satisfies TranslationOf<typeof source>

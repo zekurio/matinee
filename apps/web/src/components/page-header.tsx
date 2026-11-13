@@ -3,6 +3,8 @@ import { type ReactNode, useEffect } from "react"
 
 import { tr } from "@/i18n"
 
+import { BackButton, usePhoneTab } from "./phone-nav"
+
 /**
  * Names the browser tab after the page while it's open. Until there's a
  * name, and after the page closes, the tab says just matinee.
@@ -17,17 +19,21 @@ export function useDocumentTitle(name: string | null | undefined) {
   }, [name])
 }
 
+/**
+ * A page's name and controls. On phones it's the bar at the top of the
+ * page, as the Android app has it: Back, unless the page is a tab's first,
+ * then the name and `phoneActions`. It stays put while the page scrolls.
+ */
 export function PageHeader({
   title,
   breadcrumb,
   description,
   actions,
-  phoneTitle,
   phoneActions,
   className,
 }: {
   title: string
-  /** A link back to the parent page, shown above the title. */
+  /** A link back to the parent page, shown above the title from `sm` up. */
   breadcrumb?: ReactNode
   description?: ReactNode
   /**
@@ -35,54 +41,61 @@ export function PageHeader({
    * give phones theirs in `phoneActions`.
    */
   actions?: ReactNode
-  /**
-   * Stands in for the title on phones, like the library chips, which name
-   * the page by the one that's filled. The heading stays for screen readers.
-   */
-  phoneTitle?: ReactNode
-  /** Controls at the end of the title's row on phones only. */
+  /** Controls at the end of the bar on phones only. */
   phoneActions?: ReactNode
   className?: string
 }) {
+  const back = usePhoneTab() === null
   return (
     <header
       className={cn(
         "mb-4 flex items-end justify-between gap-4 md:mb-6",
+        // The page's column pads its sides; the bar spans the screen.
+        "max-sm:bg-background max-sm:sticky max-sm:top-0 max-sm:z-20 max-sm:-mx-4 max-sm:mb-2 max-sm:block max-sm:pt-[env(safe-area-inset-top)]",
         className,
       )}
     >
       <div className="min-w-0 flex-1">
         {breadcrumb && (
-          <nav aria-label={tr("browse.breadcrumb")} className="mb-1 text-sm">
+          <nav
+            aria-label={tr("browse.breadcrumb")}
+            className="mb-1 text-sm max-sm:hidden"
+          >
             {breadcrumb}
           </nav>
         )}
-        {/* An open phone filter (`data-filter-open`) takes the whole row. */}
-        <div className="group/title-row flex items-center gap-2">
-          {phoneTitle && (
-            <div className="min-w-0 flex-1 group-has-data-filter-open/title-row:hidden sm:hidden">
-              {phoneTitle}
-            </div>
+        {/* An open phone filter (`data-filter-open`) takes the bar. */}
+        <div
+          className={cn(
+            "group/title-row flex items-center gap-2",
+            "max-sm:h-16 max-sm:gap-1 max-sm:pr-1",
+            back ? "max-sm:pl-1" : "max-sm:pl-4",
+            "max-sm:has-data-filter-open:pl-4",
+          )}
+        >
+          {back && (
+            <BackButton className="group-has-data-filter-open/title-row:hidden sm:hidden" />
           )}
           <h1
             title={title}
             className={cn(
               "line-clamp-2 min-w-0 text-[26px] leading-8 font-semibold tracking-tight text-balance break-words md:text-[32px] md:leading-10",
-              phoneTitle
-                ? "max-sm:sr-only"
-                : "max-sm:group-has-data-filter-open/title-row:sr-only",
+              "max-sm:line-clamp-1 max-sm:flex-1 max-sm:pl-1 max-sm:text-xl max-sm:leading-7 max-sm:group-has-data-filter-open/title-row:sr-only",
+              !back && "max-sm:pl-0",
             )}
           >
             {title}
           </h1>
           {phoneActions && (
-            <div className="-mr-2 ml-auto flex shrink-0 items-center gap-1 group-has-data-filter-open/title-row:ml-0 group-has-data-filter-open/title-row:min-w-0 group-has-data-filter-open/title-row:flex-1 sm:hidden">
+            <div className="ml-auto flex shrink-0 items-center gap-1 group-has-data-filter-open/title-row:ml-0 group-has-data-filter-open/title-row:min-w-0 group-has-data-filter-open/title-row:flex-1 sm:hidden">
               {phoneActions}
             </div>
           )}
         </div>
         {description && (
-          <p className="text-muted-foreground mt-1 text-sm">{description}</p>
+          <p className="text-muted-foreground mt-1 text-sm max-sm:-mt-2 max-sm:truncate max-sm:px-4 max-sm:pb-2 max-sm:text-[13px]">
+            {description}
+          </p>
         )}
       </div>
       {actions && (

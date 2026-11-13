@@ -61,9 +61,11 @@ function StatsPage() {
 
   return (
     <>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-x-8 gap-y-4">
+      {/* Phones keep the header as the page's bar, which stays put while
+          the page scrolls, so it can't sit in a row of its own. */}
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-x-8 gap-y-4 max-sm:contents">
         <PageHeader title={tr("stats.title")} className="mb-0 md:mb-0" />
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-3 max-sm:mb-6">
           <Select
             items={options}
             value={view}

@@ -6,6 +6,7 @@ import { getRouteApi, Link, Navigate } from "@tanstack/react-router"
 import { ActionsMenu } from "@/components/actions-menu"
 import { pageBleed } from "@/components/app-shell"
 import { useDocumentTitle } from "@/components/page-header"
+import { ItemTopBar, parentLink } from "@/components/phone-nav"
 import { useSeasonWatched, WatchedButton } from "@/components/watched-menu"
 import { tr } from "@/i18n"
 import { art, seasonName } from "@/lib/media"
@@ -49,10 +50,18 @@ export function SeasonPage() {
       : null,
   )
 
-  if (title.isPending) return <TitleSkeleton />
+  if (title.isPending) {
+    return (
+      <>
+        <ItemTopBar />
+        <TitleSkeleton />
+      </>
+    )
+  }
   if (!title.data || !season) {
     return (
       <div className="py-24 text-center">
+        <ItemTopBar />
         <h1 className="text-2xl font-semibold tracking-tight">
           {title.data
             ? tr("title.season.missing", { name: title.data.name })
@@ -100,16 +109,27 @@ export function SeasonPage() {
   }
   return (
     <div className="flex flex-col gap-6 sm:gap-8">
+      <ItemTopBar
+        parent={
+          <Link
+            to="/titles/$titleId"
+            params={{ titleId: title.data.id }}
+            className={parentLink}
+          >
+            {title.data.name}
+          </Link>
+        }
+      />
       {/* A new season starts the header over, collapsing its overview. */}
       <SeasonHeader
-        key={seasonKey(season)}
+        key={`header-${seasonKey(season)}`}
         title={title.data}
         season={season}
         items={items.data}
       />
       {/* A new season starts the row over, on its own next episode. */}
       <SeasonEpisodes
-        key={seasonKey(season)}
+        key={`episodes-${seasonKey(season)}`}
         title={title.data}
         items={items.data}
         error={items.isError ? errorMessage(items.error) : null}

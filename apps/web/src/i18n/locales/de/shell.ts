@@ -3,6 +3,9 @@ import type source from "../en/shell"
 
 export default {
   "shell.mainNav": "Hauptnavigation",
+  "shell.tabs": "Tabs",
+  "shell.media": "Medien",
+  "shell.back": "Zurück",
   "shell.homeLink": "Matinee-Startseite",
   "shell.home": "Start",
   "shell.libraries": "Mediatheken",

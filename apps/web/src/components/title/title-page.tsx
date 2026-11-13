@@ -7,6 +7,7 @@ import { getRouteApi, Link } from "@tanstack/react-router"
 import { pageBleed, pageColumn } from "@/components/app-shell"
 import { CastRail } from "@/components/credits"
 import { useDocumentTitle } from "@/components/page-header"
+import { ItemTopBar } from "@/components/phone-nav"
 import { tr } from "@/i18n"
 import { errorMessage } from "@/lib/rpc"
 
@@ -25,10 +26,18 @@ export function TitlePage() {
 
   useDocumentTitle(title.data?.name)
 
-  if (title.isPending) return <TitleSkeleton />
+  if (title.isPending) {
+    return (
+      <>
+        <ItemTopBar />
+        <TitleSkeleton />
+      </>
+    )
+  }
   if (!title.data) {
     return (
       <div className="py-24 text-center">
+        <ItemTopBar />
         <h1 className="text-2xl font-semibold tracking-tight">
           {tr("title.loadError")}
         </h1>
@@ -50,6 +59,7 @@ export function TitlePage() {
   const only = onlySeason(title.data)
   return (
     <div className="flex flex-col gap-6 sm:gap-8">
+      <ItemTopBar />
       <TitleHeader title={title.data} />
       {title.data.kind === "show" && (
         <>
