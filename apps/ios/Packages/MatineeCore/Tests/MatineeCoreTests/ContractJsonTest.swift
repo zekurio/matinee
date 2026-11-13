@@ -138,7 +138,7 @@ private func transport() -> ApiTransport {
     codec: "av1", widest: .init(width: 1920, height: 1920),
     tallest: .init(width: 1920, height: 1920), tenBit: false)
   #expect(profileDecoders(square, dolbyVision: true).count == 1)
-  #expect(profileDecoders(square, dolbyVision: true)[0].dolbyVisionProfiles == nil)
+  #expect(profileDecoders(square, dolbyVision: true)[0].dolbyVisionProfiles == [])
   let unlimited = profileDecoders(
     .init(codec: "vp9", widest: nil, tallest: nil, tenBit: false), dolbyVision: false)
   #expect(unlimited.count == 1)

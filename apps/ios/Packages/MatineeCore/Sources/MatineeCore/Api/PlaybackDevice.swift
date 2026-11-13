@@ -46,6 +46,6 @@ public func profileDecoders(_ decoder: VideoDecoder, dolbyVision: Bool) -> [Play
       codec: decoder.codec, maxWidth: size.map { Double($0.width) },
       maxHeight: size.map { Double($0.height) }, maxBitDepth: decoder.tenBit ? 10 : 8,
       profiles: nil, maxLevel: nil, hdr: nil,
-      dolbyVisionProfiles: dolbyVision ? nil : (0...10).filter { $0 != 5 })
+      dolbyVisionProfiles: decoder.codec == "hevc" && decoder.tenBit && dolbyVision ? [5, 8] : [])
   }
 }

@@ -76,7 +76,9 @@ interruption's start and never resumes. It should call
 `audioInterruptionBegan` and `audioInterruptionEnded(shouldResume:)` instead,
 so the controller resumes as ExoPlayer does.
 
-## Capability sources
+## Capability sources, historical
+
+The Device description section below supersedes this earlier snapshot.
 
 Video codecs come from VideoToolbox hardware-decode queries, including AV1.
 Audio codecs come from AudioToolbox's installed decode-format IDs. The
@@ -376,7 +378,7 @@ DOWNLOADS.md for the ownership rules and current live verification.
   MP4 selection, long HLS seeks and PGS burn-in. Remux still fails with -11850 and
   falls back through the server.
 
-### This Mac's capability report and audio experiment
+### Earlier capability report and audio experiment, historical
 
 The current probe reports MP4/M4V/MOV; H.264 8-bit, HEVC and AV1 10-bit;
 3840x2160 and 2160x3840 rectangles for each; no HDR; AAC, MP3, Opus, FLAC,
@@ -651,6 +653,112 @@ Verified on this branch:
   version/build metadata, so it reports unknown and zero; app bundles use
   their actual version/build.
 
-- `PlayerDownloads` is unchanged. `PlaybackEngine` gained internal state and
-  transport methods for fake engines; the view's public construction API is
-  unchanged. An internal initializer accepts a fake engine and a report clock.
+## Device description
+
+This pass narrows unsafe claims but does not finish the hardware-limit audit.
+The table describes the implemented wire values, not a physical-device certification.
+
+| Contract field                  | iOS value and source                                                                           | Why, and limits of the claim                                                                                                                                                                                    |
+| ------------------------------- | ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `containers`                    | `mp4`, `m4v`, `mov`, AVFoundation file readers                                                 | MP4 HTTP tests below; M4V/MOV remain reader-family claims, not separately tested here. No MKV claim.                                                                                                            |
+| `video`                         | Hardware-supported H.264, HEVC, AV1 from `VTIsHardwareDecodeSupported`                         | No software AV1 claim. Each codec produces landscape and portrait entries.                                                                                                                                      |
+| decoder `codec`                 | ffmpeg names mapped from CoreMedia codec constants                                             | Matches the server's codec comparison.                                                                                                                                                                          |
+| decoder `maxWidth`, `maxHeight` | 3840x2160 and 2160x3840                                                                        | Conservative delivery envelope from Apple's HLS authoring 1.25, not a system-discovered maximum. This is still a policy ceiling, not proof that every older hardware decoder takes 4K.                          |
+| decoder `maxBitDepth`           | H.264 8; HEVC and AV1 10                                                                       | AVC High 10 excluded. HEVC Main and Main 10 only. No 12-bit or 4:2:2 claim.                                                                                                                                     |
+| decoder `profiles`              | AVC Constrained Baseline/Baseline/Main/High; HEVC Main/Main 10; AV1 Main                       | Explicit profile names as ffprobe reports them, not unlimited profiles.                                                                                                                                         |
+| decoder `maxLevel`              | AVC 52; HEVC 153; AV1 18                                                                       | Apple HLS authoring 1.3b, 1.6b, 1.37: AVC 5.2, HEVC 5.1, AV1 6.2, in ffprobe units. These are authoring ceilings, not discovered per-device limits.                                                             |
+| decoder `hdr`                   | iOS `AVPlayer.availableHDRModes`, filtered to 10-bit decoders; Dolby Vision only on HEVC       | HDR10 and HLG remain separate. macOS requires `eligibleForHDRPlayback` and main-screen potential EDR headroom above 1, then permits HDR10/HLG, not Dolby Vision. No headless HDR claim.                         |
+| decoder `dolbyVisionProfiles`   | HEVC 10-bit with Dolby Vision mode: `[5,8]`; otherwise `[]`                                    | Single-layer delivery only. Profile 7 and the inherited Android 0...10 fallback list are removed. Profile 8 subprofiles remain a contract limitation described below.                                           |
+| `audio`                         | Installed AudioToolbox decoders intersected with AAC, Opus, FLAC, ALAC, AC-3, E-AC-3; plus PCM | HTTP MP4 results below. User conversion settings remove optional codecs. PCM remains the native MOV/file reader claim. MP3 removed after the ffmpeg MP4 failed to advance. DTS, TrueHD, MP2 are not advertised. |
+| `streamAudio`                   | Opus, AAC, FLAC, ALAC, AC-3, E-AC-3, supported and not converted; AAC always available         | fMP4 HLS results below. A supported preference moves to the front; unsupported preferences cannot add a codec.                                                                                                  |
+| `encodeVideo`                   | H.264, then hardware-supported HEVC/AV1                                                        | A supported preference reorders the list. The server chooses the encode and quality.                                                                                                                            |
+| `hls`                           | `true`                                                                                         | AVPlayer's native HLS loader; live fixture test covers server encodes.                                                                                                                                          |
+| `selectAudio`                   | `true`                                                                                         | AVMediaSelectionGroup selection; live two-language MP4 fixture.                                                                                                                                                 |
+| `subtitles`                     | `[webvtt]`                                                                                     | App cue renderer draws `subtitlePath()` output independently of AVPlayer.                                                                                                                                       |
+| `sidecarSubtitles`              | `[]`                                                                                           | No extra engine sidecar renderer.                                                                                                                                                                               |
+| `embeddedSubtitles`             | `[]`                                                                                           | No engine subtitle claim, even if AVPlayer could display some formats itself.                                                                                                                                   |
+| `language`                      | `Locale.language.languageCode`, fallback `en`                                                  | Base BCP 47 language, matching Android and server base-language matching. Region/extensions intentionally discarded.                                                                                            |
+
+Apple's [HLS authoring specification](https://developer.apple.com/streaming/hls-authoring-specification-for-apple-devices.html)
+is the source of the delivery ceilings above. The contract has no frame-rate
+field. Apple's 60 fps authoring ceiling therefore cannot be sent. It also has
+no bitrate, channel-count or spatial-video field. `VTIsStereoMVHEVCDecodeSupported`
+would describe a different capability, not prove an ordinary HEVC rectangle.
+The examined VT decompression/specification keys configure an existing session
+or require hardware; they do not publish a codec-wide rectangle/profile/level
+matrix. A complete `VTCopyVideoDecoderList` and `AVAssetVariant` investigation
+and empirical High 10 rejection are still outstanding.
+
+The server's `decodesVideo` ANDs `hdr` and `dolbyVisionProfiles`. Its probe labels
+any Dolby Vision stream `dolby-vision`, even when its base layer is HDR10 or HLG.
+The device schema cannot express “profile 8 with compatibility ID 1 on HDR10”
+versus “profile 8 with compatibility ID 4 on HLG”. Claiming all profile 8 fallback
+would therefore overclaim. Non-Dolby-Vision devices now conservatively reject
+these streams. Completing fallback needs a server/contract change outside this
+task's scope. Native profile 5/8 MP4 and HLS remain published-format claims,
+not experimentally verified Dolby Vision samples in this pass.
+
+### HTTP audio measurements
+
+Six-second mono 48 kHz sine files, ffmpeg encoders `aac`, `libmp3lame`, `libopus`,
+`flac`, `alac`, `ac3`, `eac3`, `dca`, `truehd`, `mp2`, MP4 `-strict -2`.
+HLS copied each track into fMP4 with distinct init segments and two-second targets.
+Both containers were fetched over loopback HTTP with byte ranges, confirmed as
+206 responses for MP4. The simulator used a temporary SwiftUI AVPlayer host on
+iPhone 18 Pro, iOS 27.2. Values are clock seconds after three seconds, not a
+listening test or proof of every channel/profile combination.
+
+| Audio  | Mac HTTP MP4        | Mac fMP4 HLS     | Simulator HTTP MP4  | Simulator fMP4 HLS |
+| ------ | ------------------- | ---------------- | ------------------- | ------------------ |
+| AAC    | 2.730               | 2.885            | 2.101               | 3.047              |
+| MP3    | stalled             | error -16170     | stalled             | error -16170       |
+| Opus   | 3.000               | 2.921            | 3.098               | 2.999              |
+| FLAC   | 2.896               | 3.041            | 2.964               | 2.963              |
+| ALAC   | 2.903               | 2.923            | 2.970               | 3.068              |
+| AC-3   | 2.941               | 3.073            | 3.031               | 2.951              |
+| E-AC-3 | 2.942               | 3.081            | 2.927               | 2.967              |
+| DTS    | stalled             | error -16170     | stalled             | error -16170       |
+| TrueHD | 2.992, inconclusive | error 1718449215 | 3.070, inconclusive | error 1718449215   |
+| MP2    | stalled             | error -16170     | stalled             | error -16170       |
+
+TrueHD MP4 is not a confirmed negative: the clock advances, so a decoded-audio
+check is needed before calling that a rejection or adding support. MP3/MP2
+produced ESDS parse errors. These results apply to these ffmpeg outputs, not
+to every possible sample description. MOV/M4V have not been remeasured.
+
+### Now Playing changes
+
+`PlayerNowPlaying` retains its controller-facing initializer and methods.
+Small internal player, info-center, command-center, artwork-loader and audio-session
+protocols make the behavior testable without a real media session. It publishes
+title, show name plus episode code for shows or year for movies, duration, file-timeline elapsed time, effective rate
+and default speed. Source replacement keeps the file clock. An item ID change
+replaces labels and clears artwork. Authenticated artwork is downsampled to at
+most 600 pixels, cleared before replacement, and guarded against stale completion.
+
+Play, pause, toggle, configured-step skips, scrub and next have availability gates
+checked again in their handlers. Skip intervals are published to MediaPlayer.
+The audio session uses playback/moviePlayback, activates only on playing, and
+notifies other audio on disposal. Interruptions remember whether playback was
+running, pause, and resume only with `shouldResume`. Headphone removal pauses.
+Observers and command targets are removed on idempotent stop. Android's service
+`onTaskRemoved` has no direct iOS equivalent; the controller still owns explicit
+session disposal. Physical lock-screen, interruption and unplug behavior have
+not been exercised on a phone.
+
+### Verification of this pass
+
+- Before: 105 tests in 21 suites. After: 112 tests in 22 suites. Six new Now
+  Playing tests and one new per-codec HDR/profile test. The existing four
+  applicable Android profile cases remain covered with native-player differences.
+- macOS `swift build`, `swift test`, and the generic iOS Simulator package build
+  pass without compiler warnings in the changed code.
+- `swift format format` leaves the edited Swift files unchanged. Strict format
+  lint additionally flags the pre-existing public `OPTIONAL_PASSTHROUGH` name;
+  it was not renamed because callers must remain source-compatible.
+- Root `pnpm verify` passes under Node 24 and pnpm 11.
+- The opt-in seven-movie player fixture test passes after the profile changes,
+  including authenticated direct playback, HLS seeks, WebVTT and PGS burn-in.
+- Capability completion is still blocked on the profile-8 fallback contract
+  limitation and remaining hardware-limit/sample validation noted above. The
+  TrueHD MP4 experiment is expressly inconclusive, not a negative result.
