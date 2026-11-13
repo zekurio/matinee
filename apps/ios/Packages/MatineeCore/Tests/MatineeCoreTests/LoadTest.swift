@@ -100,7 +100,7 @@ struct LoadTest {
 
   @Test func aFailedRefreshKeepsTheAnswerAndSaysWhy() async {
     let loader = Loader<Int>()
-    let answers = Answers([.success(1), .failure(URLError(.cannotConnectToHost))])
+    let answers = FetchAnswers([.success(1), .failure(URLError(.cannotConnectToHost))])
     loader.configure(describe: { "\($0)" }) { try await answers.next() }
     await loader.settled()
     loader.reload()
@@ -113,7 +113,7 @@ struct LoadTest {
 
   @Test func aFailedFirstLoadShowsLoadingAgainOnRetry() async {
     let loader = Loader<Int>()
-    let answers = Answers([.failure(ApiException(status: 500, code: nil, message: "broke")), .success(2)])
+    let answers = FetchAnswers([.failure(ApiException(status: 500, code: nil, message: "broke")), .success(2)])
     loader.configure(describe: { failure in
       if case .server(let message) = failure { return message }
       return "other"
@@ -140,7 +140,7 @@ struct LoadTest {
 
   @Test func refreshesOnlyWhenStale() async {
     let loader = Loader<Int>()
-    let answers = Answers([.success(1), .success(2)])
+    let answers = FetchAnswers([.success(1), .success(2)])
     loader.configure(describe: { _ in "" }) { try await answers.next() }
     await loader.settled()
     loader.refreshIfStale()
@@ -152,7 +152,7 @@ struct LoadTest {
 }
 
 /// Answers handed out in order, one per fetch.
-actor Answers {
+actor FetchAnswers {
   private var queue: [Result<Int, any Error>]
 
   init(_ queue: [Result<Int, any Error>]) { self.queue = queue }

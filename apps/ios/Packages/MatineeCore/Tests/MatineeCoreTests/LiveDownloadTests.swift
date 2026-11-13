@@ -79,7 +79,7 @@ import Testing
         transport: ApiTransport(base: URL(string: "http://127.0.0.1:1/")!))
       let player = PlayerController(
         api: offlineApi, device: device, prefs: prefs,
-        downloads: DownloadPlayerAdapter(downloads: downloads, server: server),
+        downloads: ServerPlayerDownloads(downloads: downloads, server: server),
         preferences: .init(
           audioLanguage: "en", subtitleMode: SubtitleMode.always, subtitleLanguage: "en",
           rememberSubtitles: false, skipBackSeconds: 10, skipForwardSeconds: 30))

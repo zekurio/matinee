@@ -2,6 +2,7 @@ import AVFoundation
 import Foundation
 import Observation
 
+/// A note over the picture about the last answer: its kind and, for some, the server's words.
 public struct Notice: Sendable {
   public let kind: NoticeKind
   public let detail: String?
@@ -10,113 +11,213 @@ public struct Notice: Sendable {
     self.detail = detail
   }
 }
-public struct LocalPlayback: Sendable {
-  public var item: MediaItem
-  public var file: URL
-  public var audio: [AudioTrack]
-  public var subtitles: [SubtitleTrack]
-  public var saved: [String: URL]
-  public var at: Double
-  public init(
-    item: MediaItem, file: URL, audio: [AudioTrack], subtitles: [SubtitleTrack],
-    saved: [String: URL], at: Double
-  ) {
-    self.item = item
-    self.file = file
-    self.audio = audio
-    self.subtitles = subtitles
-    self.saved = saved
-    self.at = at
-  }
-}
-@MainActor public protocol PlayerDownloads {
-  func playback(itemId: String) async throws -> LocalPlayback
-  func next(after item: MediaItem) async -> MediaItem?
-  func queueReport(
-    itemId: String, sessionId: String, position: Double, duration: Double?, played: Double,
-    closed: Bool) async
+
+/// A `playback.start` with what changed since the last one.
+struct Ask {
+  /// Seconds into the file to start from; nil for where the viewer stopped,
+  /// which only the opening asks for.
+  var at: Double?
+  /// What the report calls the source it loads; nil for a seek.
+  var reason: PlayerController.AttemptReason?
+  /// The viewer's picks that change.
+  var picks: Picks?
+  /// The method of the source that just failed.
+  var failed: String?
+  /// The answer whose source failed.
+  var lost: PlaybackStart?
+  var snap = PlaybackSnap.before
+  /// Load the answer even when it's what plays, as a retry does.
+  var reload = false
 }
 
-extension PlayerDownloads {
-  public func next(after item: MediaItem) async -> MediaItem? { nil }
-}
-
-/// Owns one sitting. Call stop before discarding it, including when replacing
-/// it with the next episode. All positions exposed here use the file timeline.
+/// Plays one file as the server says: loads the source of each
+/// `playback.start` answer into AVPlayer, asks again with the viewer's
+/// picks and with the methods that failed, seeks in a copied stream with
+/// `playback.seek`, draws the subtitles the answer gives the player, and
+/// reports progress for Continue watching and the statistics. A download
+/// plays from the device without asking.
+///
+/// Owns one sitting. Call `stop` before discarding it, including when
+/// replacing it with the next episode. All positions are in the file's time.
+/// The members follow `PlayerController.kt` in order; the extensions in
+/// `PlayerController+Controls.swift` and `PlayerController+Background.swift`
+/// carry on where this file stops, and `PlayerController+Screen.swift` has
+/// what Android's player screen keeps itself.
 @Observable @MainActor public final class PlayerController {
-  public private(set) var plan: PlaybackStart?
-  public private(set) var options = FALLBACK_PLAYBACK_OPTIONS
-  public private(set) var localNext: MediaItem?
-  public private(set) var source: Source?
-  public private(set) var item: MediaItem?
-  public private(set) var audio: AudioTrack?
-  public private(set) var subtitle: SubtitleTrack?
-  public private(set) var quality = ORIGINAL_QUALITY
-  public private(set) var cues: CueTrack?
-  public private(set) var subtitleError = false
-  public private(set) var speed: Float = 1
-  public private(set) var position = 0.0
-  public private(set) var buffered = 0.0
-  public private(set) var playing = false
-  public private(set) var loading = true
-  public private(set) var ended = false
-  public private(set) var error: String?
-  public private(set) var refusal: Refusal?
-  public private(set) var notice: Notice?
-  public private(set) var trickplay: Trickplay?
-  public private(set) var nextCountdown: Int?
-  public private(set) var scrubPosition: Double?
-  public private(set) var diagnostics = PlaybackReport()
-  public var onNext: (@MainActor (MediaItem) -> Void)?
-  public var surfaceShown = false
-  public var pictureInPictureActive = false
+  /// Why a source loads, for the report. Kotlin's `AttemptReason` lives with
+  /// the diagnostics, whose iOS report doesn't take one yet; until it does,
+  /// only whether there is one counts: a seek within a stream records no attempt.
+  enum AttemptReason { case start, fallback, retry, audioChange, subtitleChange, qualityChange }
+
+  @ObservationIgnored let api: MatineeApi
+  /// What this device plays, which every call to the server carries.
+  @ObservationIgnored let device: PlaybackDevice
+  /// This device's settings: the quality it starts at, autoplay, how subtitles look.
+  @ObservationIgnored let prefs: PlayerPrefs
+  @ObservationIgnored let token: @Sendable () async -> String?
+  /// Where reports that don't reach the server wait, and where downloads come from.
+  @ObservationIgnored let downloads: (any PlayerDownloads)?
+  @ObservationIgnored let engine: any PlaybackEngine
+  @ObservationIgnored let clock: @MainActor () -> Date
+  /// Fetches subtitles; the tests' stubbed session in place of the shared one.
+  @ObservationIgnored let session: URLSession
+  /// The account's playback preferences, for a download's tracks and the skip steps.
   public let preferences: PlaybackPreferences
+
+  /// The file this sitting plays; Kotlin has it from the opening.
+  @ObservationIgnored var itemId: String?
+  @ObservationIgnored var sessionId = UUID().uuidString
+  /// Where the opening asked to start; nil resumes where the server says.
+  @ObservationIgnored var openingAt: Double?
+  /// When this sitting with the file began, for a play kept offline.
+  @ObservationIgnored var startedAt = Date()
+
+  /// Nil until the first answer or the download arrives.
+  public internal(set) var item: MediaItem?
+
+  /// The encodes the quality menu offers for this file, from the server's answer.
+  public var qualities: [PlaybackQualityPreset] { plan?.qualities ?? [] }
+
+  /// The quality menu offers the original: not for a file over the account's bit rate limit.
+  public var offersOriginal: Bool { plan?.original ?? true }
+
+  /// AVPlayer, for the view's `AVPlayerLayer`.
   public var player: AVPlayer { engine.player }
-  public var duration: Double {
-    item?.durationSeconds ?? player.currentItem.flatMap {
-      let d = $0.duration.seconds
-      return d.isFinite ? d + (source?.offset ?? 0) : nil
-    } ?? 0
-  }
+
+  /// Notices the picture freezing while playback runs on.
+  @ObservationIgnored var freeze = FreezeWatch()
+
+  /// A surface shows the video: not while the app is away and only the sound plays.
+  public var surfaceShown = false
+
+  /// Picture in picture shows the video, which counts as a surface.
+  public var pictureInPictureActive = false
+
+  /// A freeze of a download already got one seek in place to shake it loose.
+  @ObservationIgnored var nudged = false
+
+  /// The system's controls: Kotlin's media session and `PlaybackService`.
+  @ObservationIgnored var nowPlaying: PlayerNowPlaying?
+
+  /// The server's latest answer: the tracks, the subtitle, and the source it last loaded. Nil for a download.
+  public internal(set) var plan: PlaybackStart?
+
+  /// What the player loads now.
+  public internal(set) var source: Source?
+
+  /// The picks and failures every call carries.
+  @ObservationIgnored var asking = Asking()
+
+  /// The download that plays, when one does.
+  @ObservationIgnored var local: LocalPlayback?
+
+  /// A download's subtitle, which it picks itself.
+  @ObservationIgnored var localSubtitle: SubtitleTrack?
+
+  /// The audio in the menu: the viewer's pick, else the one that plays.
+  public internal(set) var audio: AudioTrack?
+
+  /// The subtitle in the menu: the viewer's pick, else the one that shows.
+  public internal(set) var subtitle: SubtitleTrack?
+
+  /// The quality in the menu: the one that plays, or the one on its way.
+  public internal(set) var quality = ORIGINAL_QUALITY
+  public internal(set) var cues: CueTrack?
+
+  /// The track `cues` are for, or loading for.
+  @ObservationIgnored var cuesFor: String?
+
+  /// The video's shape, width over height, for placing subtitles on it.
+  public internal(set) var videoAspect = 16.0 / 9.0
+  public internal(set) var subtitleError = false
+  public internal(set) var speed: Float = 1
+
+  /// Seconds into the file.
+  public internal(set) var position = 0.0
+
+  /// How far the file is buffered, in its own time.
+  public internal(set) var buffered = 0.0
+  public internal(set) var playing = false
+  public internal(set) var loading = true
+  public internal(set) var ended = false
+
+  /// Why nothing plays, once nothing is left to try.
+  public internal(set) var error: String?
+
+  /// The server found nothing this device plays. The view shows its own
+  /// words for that in place of `error`, as Android's `player_unplayable`.
+  public internal(set) var unplayable = false
+
+  /// The server refused to play the file for this account, which `error` holds its words for. Trying again won't help.
+  public internal(set) var refusal: Refusal?
+  public internal(set) var notice: Notice?
+  public internal(set) var trickplay: Trickplay?
+
   public var audioTracks: [AudioTrack] { plan?.audioTracks ?? local?.audio ?? [] }
   public var subtitles: [SubtitleTrack] { plan?.subtitleTracks ?? local?.subtitles ?? [] }
-  public var qualities: [PlaybackQualityPreset] { plan?.qualities ?? [] }
-  public var offersOriginal: Bool { plan?.original ?? true }
+
+  /// The file after this one in its show, as the server answered, or as the downloads said for one.
   public var next: MediaItem? { plan?.next ?? localNext }
-  public var isLocal: Bool { local != nil }
-  public var videoAspect: Double {
-    let size = player.currentItem?.presentationSize ?? .zero
-    return size.height > 0 ? size.width / size.height : 16 / 9
+
+  public var duration: Double {
+    item?.durationSeconds
+      ?? player.currentItem.flatMap {
+        let d = $0.duration.seconds
+        return d.isFinite ? d + (source?.offset ?? 0) : nil
+      } ?? 0
   }
+
+  /// Where a switch or seek is headed, shown until the source for it loads.
+  @ObservationIgnored var pendingAt: Double?
+
+  /// The source failed, so nothing plays until another loads.
+  @ObservationIgnored var sourceFailed = false
+  @ObservationIgnored var playedSeconds = 0.0
+  @ObservationIgnored var lastReport = Date.distantPast
+
+  /// The `playback.start` on its way, which another replaces.
+  @ObservationIgnored var askTask: Task<Result<PlaybackStart, any Error>, Never>?
+  @ObservationIgnored var seekTask: Task<Result<PlaybackSeek, any Error>, Never>?
+
+  /// Counts calls and loads, so an answer or a load that another replaced is dropped.
+  @ObservationIgnored var asks = 0
+  @ObservationIgnored var seeks = 0
+  @ObservationIgnored var loads = 0
+
+  /// The `playback.start` on its way, and the picks to put back if it fails.
+  @ObservationIgnored var inFlight: (ask: Ask, undo: Asking)?
+
+  /// Where the viewer sought while an answer was on its way, for when the source it answers is the one that plays.
+  @ObservationIgnored var seekOnAnswer: Double?
+
+  /// The report About shows of this sitting: codes and formats, never names or addresses.
+  public internal(set) var diagnostics = PlaybackReport()
+
+  // What Android's player screen keeps, and the iOS view reads here.
+  public internal(set) var options = FALLBACK_PLAYBACK_OPTIONS
+  public internal(set) var localNext: MediaItem?
+  public internal(set) var nextCountdown: Int?
+  public internal(set) var scrubPosition: Double?
+  /// Stop this sitting and open the next item, as Android's `PlayerHost.playInstead`.
+  public var onNext: (@MainActor (MediaItem) -> Void)?
   public var failedMethods: [String] { asking.failed }
-  @ObservationIgnored private let api: MatineeApi
-  @ObservationIgnored private let device: PlaybackDevice
-  @ObservationIgnored private let prefs: PlayerPrefs
-  @ObservationIgnored private let token: @Sendable () async -> String?
-  @ObservationIgnored private let downloads: (any PlayerDownloads)?
-  @ObservationIgnored private let engine: any PlaybackEngine
-  @ObservationIgnored private let clock: @MainActor () -> Date
-  @ObservationIgnored private var pendingAt: Double?
-  @ObservationIgnored private var ticking: Task<Void, Never>?
-  @ObservationIgnored private var trickTask: Task<Void, Never>?
-  @ObservationIgnored private var generation = 0
-  @ObservationIgnored private var askingNow = false
-  @ObservationIgnored private var stopped = false
-  @ObservationIgnored private var wantPlay = true
-  @ObservationIgnored private var local: LocalPlayback?
-  @ObservationIgnored private var asking = Asking()
-  @ObservationIgnored private var sessionId = UUID().uuidString
-  @ObservationIgnored private var playedSeconds = 0.0
-  @ObservationIgnored private var lastReport = Date.distantPast
-  @ObservationIgnored private var lastPosition = 0.0
-  @ObservationIgnored private var stalledSince: Date?
-  @ObservationIgnored private var nextCancelled = false
-  @ObservationIgnored private var endedAt: Date?
-  @ObservationIgnored private var nowPlaying: PlayerNowPlaying?
-  @ObservationIgnored private var freeze = FreezeWatch()
-  @ObservationIgnored private var lastTick = Date()
-  @ObservationIgnored private var startedAt = Date()
-  @ObservationIgnored private var nudged = false
+  public var isLocal: Bool { local != nil }
+
+  @ObservationIgnored var ticking: Task<Void, Never>?
+  @ObservationIgnored var trickTask: Task<Void, Never>?
+  @ObservationIgnored var nextTask: Task<Void, Never>?
+  /// The last report and pick sent, which tests wait for.
+  @ObservationIgnored var reporting: Task<Void, Never>?
+  @ObservationIgnored var picking: Task<Void, Never>?
+  @ObservationIgnored var stopped = false
+  /// Kotlin's `playWhenReady`: the viewer wants it playing.
+  @ObservationIgnored var wantPlay = true
+  /// The viewer had it playing when an audio interruption began.
+  @ObservationIgnored var resumeAfterInterruption = false
+  @ObservationIgnored var stalledSince: Date?
+  @ObservationIgnored var nextCancelled = false
+  @ObservationIgnored var endedAt: Date?
+  @ObservationIgnored var lastTick = Date()
 
   public init(
     api: MatineeApi, device: PlaybackDevice, prefs: PlayerPrefs,
@@ -131,6 +232,7 @@ extension PlayerDownloads {
     self.token = tokenProvider
     self.downloads = downloads
     self.clock = { Date() }
+    session = .shared
     engine = AVPlayerEngine()
   }
 
@@ -138,8 +240,9 @@ extension PlayerDownloads {
     api: MatineeApi, device: PlaybackDevice, prefs: PlayerPrefs,
     engine: any PlaybackEngine, clock: @escaping @MainActor () -> Date,
     downloads: (any PlayerDownloads)? = nil,
-    preferences: PlaybackPreferences = DEFAULT_PLAYBACK_PREFERENCES
+    preferences: PlaybackPreferences = DEFAULT_PLAYBACK_PREFERENCES, session: URLSession = .shared
   ) {
+    self.session = session
     self.api = api
     self.device = device
     self.prefs = prefs
@@ -149,456 +252,351 @@ extension PlayerDownloads {
     self.preferences = preferences
     self.token = { nil }
   }
+
   deinit {
     ticking?.cancel()
     trickTask?.cancel()
+    nextTask?.cancel()
   }
 
+  /// Asks the server how the file plays, loads the answer's source, and
+  /// plays. Android's screen asks for that first answer before it makes the
+  /// controller; here the controller asks, so a refusal or a file nothing
+  /// plays shows in `refusal` and `error`. `at` nil resumes where the server
+  /// says the viewer stopped.
   public func start(itemId: String, at: Double? = nil, sessionId: String = UUID().uuidString) async
   {
+    self.itemId = itemId
     self.sessionId = sessionId
+    openingAt = at
     stopped = false
+    wantPlay = true
     asking = Asking(picks: Picks(quality: prefs.quality))
+    quality = prefs.quality
     lastTick = clock()
     startedAt = lastTick
-    if let available = try? await api.playback.options() { options = available }
-    await ask(itemId: itemId, at: at, reload: true)
-    guard !stopped else { return }
     beginTick()
-    trickTask?.cancel()
-    trickTask = Task { [weak self, api] in
-      do {
-        for try await status in api.trickplayUntilSettled(itemId) {
-          if case .ready(let ready) = status { self?.trickplay = ready.images }
-        }
-      } catch {}
-    }
+    loadTrickplay(itemId)
+    if let available = try? await api.playback.options() { options = available }
+    guard !stopped else { return }
+    await request(Ask(at: at, reason: .start, reload: true), undo: asking)
   }
-  public func startLocal(itemId: String) async {
+
+  /// Plays a download, from `at` seconds or where it stopped. Its audio
+  /// and subtitle are picked here, as Android's screen picks them, since
+  /// there's no server to ask.
+  public func startLocal(itemId: String, at: Double? = nil) async {
     guard let downloads else { return }
+    self.itemId = itemId
+    stopped = false
+    wantPlay = true
+    lastTick = clock()
+    startedAt = lastTick
+    let local: LocalPlayback
     do {
-      let local = try await downloads.playback(itemId: itemId)
-      self.local = local
-      item = local.item
-      stopped = false
-      lastTick = clock()
-      startedAt = lastTick
-      audio = downloadAudio(
-        local.audio, language: preferences.audioLanguage,
-        originalLanguage: local.item.title?.originalLanguage,
-        decodes: { device.audio.contains($0) || $0.hasPrefix("pcm_") })
-      localNext = await downloads.next(after: local.item)
-      subtitle = downloadSubtitle(
-        local.subtitles, audioLanguage: audio?.language, preferences: preferences)
-      await load(.local(url: local.file.absoluteString, at: local.at))
-      await showSubtitle()
-      beginTick()
-    } catch { self.error = error.localizedDescription }
+      local = try await downloads.playback(itemId: itemId)
+    } catch {
+      self.error = error.localizedDescription
+      return
+    }
+    guard !stopped else { return }
+    self.local = local
+    item = local.item
+    audio = downloadAudio(
+      local.audio, language: preferences.audioLanguage,
+      originalLanguage: local.item.title?.originalLanguage,
+      decodes: { [device] in device.audio.contains($0) || $0.hasPrefix("pcm_") })
+    subtitle = downloadSubtitle(
+      local.subtitles, audioLanguage: audio?.language, preferences: preferences)
+    localSubtitle = subtitle
+    beginTick()
+    loadTrickplay(itemId)
+    nextTask = Task { [weak self] in
+      let next = await downloads.next(after: local.item)
+      self?.localNext = next
+    }
+    await load(.local(url: local.file.absoluteString, at: at ?? local.at), reason: .start)
   }
-  private func headers() async -> [String: String] {
+
+  /// A path from an answer as an address on the server.
+  func resolve(_ path: String) -> String { api.paths.server(path) }
+
+  /// The session's header for the server's own addresses.
+  func headers() async -> [String: String] {
     if let value = await token() { return ["Authorization": "Bearer \(value)"] }
     return [:]
   }
-  private func ask(
-    itemId: String, at: Double?, reload: Bool = false, lost: PlaybackStart? = nil,
-    undo: Asking? = nil, snap: String = PlaybackSnap.before
-  ) async {
-    generation += 1
-    let request = generation
-    askingNow = true
-    pendingAt = at
-    defer {
-      if request == generation {
-        askingNow = false
-        pendingAt = nil
-      }
+
+  /// Who draws the subtitle that shows: the answer's, or the download's.
+  func shown() -> SubtitleShow {
+    if let plan { return subtitleShow(plan) }
+    guard let item, let track = localSubtitle else { return .off }
+    return downloadSubtitleShow(track, url: api.paths.subtitle(item.id, trackId: track.id))
+  }
+
+  /// Whether `track` in the menu is burned into the picture: the one shown as the answer has it, else by its format alone.
+  public func burnsIn(_ track: SubtitleTrack) -> Bool {
+    let show = shown()
+    if show.track?.id == track.id {
+      if case .burned = show { return true }
+      return false
     }
-    loading = true
-    do {
-      let answer = try await api.playback.start(
-        playbackStartInput: asking.input(
-          itemId: itemId, sessionId: sessionId, device: device, at: at, snap: snap))
-      guard request == generation, !stopped else { return }
-      let previous = plan
-      let settled = asking.settle(lost: lost, plan: answer)
-      asking = settled.0
-      if let kind = settled.1 { notice = Notice(kind) }
-      plan = answer
-      item = answer.item
-      audio = answer.audio
-      subtitle = answer.subtitle
-      quality = answer.quality
-      if reload || previous == nil || !sameSource(previous!, answer) {
-        await load(.of(answer, resolve: api.paths.server))
-      } else {
-        await selectAudio()
-      }
-      guard request == generation else { return }
+    return track.delivery == SubtitleDelivery.burn_in
+  }
+
+  /// Takes an answer: loads its source unless the one that plays is the
+  /// same, and shows its tracks.
+  func take(_ next: PlaybackStart, _ change: Ask) async {
+    let previous = plan
+    let sought = seekOnAnswer
+    seekOnAnswer = nil
+    let (settled, said) = asking.settle(lost: change.lost, plan: next)
+    asking = settled
+    plan = next
+    item = next.item
+    audio = next.audio
+    subtitle = next.subtitle
+    quality = next.quality
+    if let said { notice = Notice(said) }
+    if change.reload || source == nil || previous == nil || !sameSource(previous!, next) {
+      await load(.of(next, resolve: resolve), reason: change.reason)
+    } else {
+      // The same source plays on, with the audio and subtitle answered.
+      pendingAt = nil
+      if source?.holdsTracks == true { await selectAudioInFile() }
       await showSubtitle()
-    } catch {
-      guard request == generation, !stopped else { return }
-      if let refused = MatineeCore.refusal(error) {
-        diagnostics.note(refused == .restricted ? .restricted : .tooManyStreams)
-        refusal = refused
-        self.error = error.localizedDescription
-        pause()
-      } else if let undo, lost == nil {
-        asking = undo
-        notice = Notice(.switchFailed, detail: error.localizedDescription)
-      } else {
-        self.error = error.localizedDescription
-        pause()
-      }
-      loading = false
-      if MatineeCore.refusal(error) == nil {
-        diagnostics.note(
-          (error as? ApiException)?.code == PLAYBACK_UNPLAYABLE ? .unplayable : .startFailed)
-      }
+      if let sought { await seekTo(sought) }
     }
   }
-  private func load(_ next: Source) async {
-    source = next
-    position = next.position
-    pendingAt = nil
+
+  /// Loads `next`; a `reason` records it as an attempt, which a seek within a stream isn't.
+  func load(_ next: Source, reason: AttemptReason?) async {
+    if reason != nil {
+      diagnostics.attempt(method: next.method, offset: next.offset)
+      diagnostics.settings = SettingsDiagnostics(prefs)
+      diagnostics.capabilities = CapabilityDiagnostics(device)
+      diagnostics.file = item.map(FileDiagnostics.init)
+    }
     error = nil
+    unplayable = false
     refusal = nil
     ended = false
+    sourceFailed = false
     stalledSince = nil
+    // A new source gets its own wait for frames.
     freeze.reset()
-    let request = generation
-    diagnostics.attempt(method: next.method, offset: next.offset)
-    diagnostics.settings = SettingsDiagnostics(prefs)
-    diagnostics.capabilities = CapabilityDiagnostics(device)
-    diagnostics.file = item.map(FileDiagnostics.init)
-    if nowPlaying == nil, let item {
-      enableNowPlaying(title: item.label.title ?? item.fileTitle, subtitle: item.title?.name)
-    }
+    pendingAt = nil
+    source = next
+    position = next.position
+    loads += 1
+    let request = loads
+    if nowPlaying == nil, let item { enableNowPlaying(metadata(item)) }
     do {
-      let headers = await headers()
-      guard !stopped, request == generation else { return }
+      let headers = next.method == nil ? [:] : await headers()
+      guard !stopped, request == loads else { return }
       try await engine.load(next, headers: headers)
-      guard !stopped, request == generation else { return }
-      await selectAudio()
+      guard !stopped, request == loads else { return }
+      // AVPlayer picks among the file's audio only once its tracks are known,
+      // as ExoPlayer's pending override waits for `onTracksChanged`.
+      if next.holdsTracks { await selectAudioInFile() }
+      if wantPlay { engine.play(atRate: speed) }
       if let asset = player.currentItem?.asset,
-        let tracks = try? await DiagnosticsProbe.tracks(asset), request == generation
+        let tracks = try? await DiagnosticsProbe.tracks(asset), request == loads
       {
         diagnostics.tracks = tracks
       }
-      if wantPlay { engine.play(atRate: speed) }
-    } catch { if request == generation && !stopped { await sourceFailed(error) } }
+    } catch {
+      if request == loads && !stopped { await sourceFailed(error) }
+      return
+    }
+    guard !stopped, request == loads else { return }
+    await showSubtitle()
   }
-  private func selectAudio() async {
-    guard source?.holdsTracks == true, let audio, let ordinal = audioTracks.firstIndex(of: audio)
-    else { return }
+
+  /// Shows the subtitle the answer gives: the view draws WebVTT, the
+  /// engine a stream of the file, and an encode brings a burned-in one along.
+  func showSubtitle() async {
+    let show = shown()
+    var fetch: (SubtitleTrack, String)?
+    if case .screen(let track, let url) = show {
+      if cuesFor != track.id {
+        cues = nil
+        cuesFor = track.id
+        fetch = (track, url)
+      }
+    } else {
+      cues = nil
+      cuesFor = nil
+    }
+    await applyTextOverride(show)
+    if let (track, url) = fetch { await loadCues(track, url: url) }
+  }
+
+  /// Picks `audio` inside the file, for the file as it is.
+  func selectAudioInFile() async {
+    // AVFoundation's options carry no track id, so the audio goes by its
+    // place among the file's audio tracks, ExoPlayer's fallback when ids don't match.
+    guard let audio, let ordinal = audioTracks.firstIndex(of: audio) else { return }
     await engine.selectAudio(ordinal)
   }
-  private func showSubtitle() async {
-    cues = nil
-    subtitleError = false
-    let id = subtitle?.id
-    let url: URL?
-    if let local {
-      url = id.flatMap { local.saved[$0] }
-    } else if let plan, case .screen(_, let path) = subtitleShow(plan) {
-      url = URL(string: api.paths.server(path))
-    } else {
-      url = nil
+
+  /// Lets AVPlayer draw the stream of the file the answer gives it, and
+  /// keeps its own text output off otherwise: the view draws text tracks
+  /// from the server's WebVTT, styled the viewer's way.
+  func applyTextOverride(_ show: SubtitleShow) async {
+    guard case .inFile(let track, _) = show else {
+      await engine.selectSubtitle(nil)
+      return
     }
-    guard let url else { return }
-    do {
-      let data: Data
-      if url.isFileURL {
-        data = try Data(contentsOf: url)
-      } else {
-        var request = URLRequest(url: url)
-        for (key, value) in await headers() { request.setValue(value, forHTTPHeaderField: key) }
-        let (body, response) = try await URLSession.shared.data(for: request)
-        guard let response = response as? HTTPURLResponse, (200..<300).contains(response.statusCode)
-        else { throw URLError(.badServerResponse) }
-        data = body
-      }
-      if subtitle?.id == id { cues = CueTrack.parse(String(decoding: data, as: UTF8.self)) }
-    } catch {
-      diagnostics.note(.subtitleLoadFailed)
-      if subtitle?.id == id { subtitleError = true }
-    }
+    // The legible group lists the file's own subtitle streams in file order.
+    let inFile = subtitles.compactMap { t in streamIndex(t).map { (t, $0) } }.sorted { $0.1 < $1.1 }
+    await engine.selectSubtitle(inFile.firstIndex { $0.0.id == track.id })
   }
-  public func play() {
-    wantPlay = true
-    engine.play(atRate: speed)
-  }
-  public func pause() {
-    wantPlay = false
+
+  /// Where the viewer is: where a switch or seek is headed, else where the video plays.
+  func now() -> Double { pendingAt ?? position }
+
+  /// What didn't play asks the server again with its method among the
+  /// failed, and the server falls back: from the file to a stream, from a
+  /// stream to an encode. A download has nothing to fall back to.
+  func fallBack(_ cause: any Error) async {
+    guard let current = source else { return }
+    sourceFailed = true
+    cancelSeek()
+    // ExoPlayer stops on an error; AVPlayer can still be waiting on a stalled
+    // item, so it pauses until the next source loads.
     engine.pause()
-  }
-  public func togglePlay() {
-    if ended {
-      Task {
-        await seekTo(0)
-        play()
-      }
-    } else if playing {
-      pause()
-    } else {
-      play()
-    }
-  }
-  public func pickSpeed(_ rate: Float) {
-    guard rate.isFinite, rate > 0 else { return }
-    speed = rate
-    if wantPlay { engine.play(atRate: rate) }
-  }
-  public func seekTo(_ seconds: Double) async {
-    guard let source, let item else { return }
-    let at = seekClamp(seconds, duration: max(0, duration - 1))
-    ended = false
-    position = at
-    stalledSince = nil
-    if askingNow {
-      await ask(itemId: item.id, at: at, reload: true, snap: PlaybackSnap.nearest)
+    guard let method = current.method else {
+      error = cause.localizedDescription
       return
     }
-    switch source.seek {
-    case .inSource: await engine.seek(max(0, at - source.offset))
-    case .newStream:
-      generation += 1
-      let request = generation
-      do {
-        let answer = try await api.playback.seek(
-          playbackSeekInput: PlaybackSeekInput(
-            itemId: item.id, sessionId: sessionId, audio: audio?.index ?? 0, position: at,
-            snap: PlaybackSnap.nearest, audioCodecs: device.streamAudio))
-        guard generation == request, !stopped else { return }
-        var next = source
-        next.url = api.paths.server(answer.url)
-        next.offset = answer.offset
-        next.start = 0
-        await load(next)
-      } catch {
-        diagnostics.note(.seekFailed)
-        notice = Notice(.switchFailed, detail: error.localizedDescription)
-      }
-    case .newStart: await ask(itemId: item.id, at: at, reload: true, snap: PlaybackSnap.nearest)
-    }
-    await report()
+    await ask(Ask(at: now(), reason: .fallback, failed: method, lost: plan))
   }
-  public func skip(_ seconds: Double) async { await seekTo(position + seconds) }
-  public func pickAudio(_ track: AudioTrack) async {
-    guard let item else { return }
-    if isLocal {
-      audio = track
-      await selectAudio()
-      return
-    }
-    try? await api.playback.pickTracks(itemId: item.id, audio: track.index)
-    await pick(Picks(audio: track.index))
-  }
-  public func pickSubtitle(_ track: SubtitleTrack?) async {
-    guard let item else { return }
-    if isLocal {
-      subtitle = track
-      await showSubtitle()
-      return
-    }
-    let pick = SubtitlePick(trackId: track?.id)
-    try? await api.playback.pickTracks(itemId: item.id, subtitle: pick)
-    await self.pick(Picks(subtitle: pick))
-  }
-  public func pickQuality(_ id: String) async { if !isLocal { await pick(Picks(quality: id)) } }
-  private func pick(_ change: Picks) async {
-    guard let item else { return }
-    let undo = asking
-    asking = asking.pick(change, tracks: subtitles)
-    await ask(itemId: item.id, at: position, undo: undo)
-  }
-  public func retry() async {
-    asking = asking.forgetFailures()
-    wantPlay = true
-    if let item, !isLocal {
-      await ask(itemId: item.id, at: position, reload: true)
-    } else if var source {
-      source.start = position
-      await load(source)
-    }
-  }
-  /// Also used by the integration check to exercise fallback without inventing
-  /// a client-side replacement source. Only the server chooses the next method.
+
+  /// What didn't play, as Kotlin's `onPlayerError`: the report notes it and
+  /// the server falls back. The live test also calls it to exercise the
+  /// chain without a client-side replacement source.
   public func sourceFailed(_ cause: any Error) async {
-    guard let source else { return }
     diagnostics.failed(code: (cause as NSError).code)
-    guard let method = source.method, let item else {
-      error = cause.localizedDescription
-      pause()
+    await fallBack(cause)
+  }
+
+  /// The picture froze while playback ran on. From the server, that source
+  /// failed, and the server falls back as for an error. A download has
+  /// nothing to fall back to, so it gets one seek in place first, which
+  /// restarts the decoder; frozen again, it fails.
+  func frozen() async {
+    freeze.reset()
+    guard let current = source else { return }
+    if current.method == nil && !nudged {
+      nudged = true
+      await engine.seek(engine.positionSeconds)
       return
     }
-    if asking.failed.contains(method) {
-      error = cause.localizedDescription
-      pause()
+    await sourceFailed(URLError(.cannotDecodeContentData))
+  }
+
+  /// Asks the server how the file plays with `change`, and takes its answer.
+  func ask(_ change: Ask) async {
+    guard local == nil, itemId != nil else { return }
+    let undo = asking
+    if let picks = change.picks { asking = asking.pick(picks, tracks: subtitles) }
+    if let failed = change.failed { asking = asking.fail(failed) }
+    await request(change, undo: undo)
+  }
+
+  /// Sends the call for `change`, in place of any still on its way. `undo` is what to put back if it fails.
+  func request(_ change: Ask, undo: Asking) async {
+    guard let itemId else { return }
+    askTask?.cancel()
+    cancelSeek()
+    inFlight = (change, undo)
+    pendingAt = change.at
+    asks += 1
+    let request = asks
+    let input = asking.input(
+      itemId: itemId, sessionId: sessionId, device: device, at: change.at, snap: change.snap)
+    let task = Task { [api] () -> Result<PlaybackStart, any Error> in
+      do { return .success(try await api.playback.start(playbackStartInput: input)) } catch {
+        return .failure(error)
+      }
+    }
+    askTask = task
+    let result = await task.value
+    // Another call took its place, or the player closed: this answer is stale.
+    guard request == asks, !stopped else { return }
+    askTask = nil
+    switch result {
+    case .success(let answer):
+      inFlight = nil
+      await take(answer, change)
+    case .failure(let error):
+      await refused(change, undo, error)
+    }
+  }
+
+  /// A call that failed. When the source failed too, nothing plays, so the
+  /// player says why, as when the server finds nothing this device plays.
+  /// A switch that didn't go through leaves what plays, and says so. A
+  /// refusal stops the player either way, with the server's words.
+  func refused(_ change: Ask, _ undo: Asking, _ cause: any Error) async {
+    inFlight = nil
+    pendingAt = nil
+    let unplayable = (cause as? ApiException)?.code == PLAYBACK_UNPLAYABLE
+    let refusal = MatineeCore.refusal(cause)
+    diagnostics.note(
+      unplayable
+        ? .unplayable
+        : refusal == .restricted ? .restricted : refusal == .busy ? .tooManyStreams : .startFailed)
+    let message = cause.localizedDescription
+    let sought = seekOnAnswer
+    seekOnAnswer = nil
+    if let refusal {
+      self.refusal = refusal
+      error = message
+      wantPlay = false
+      engine.pause()
       return
     }
-    engine.pause()
-    asking = asking.fail(method)
-    await ask(itemId: item.id, at: position, reload: true, lost: plan)
-  }
-  public func report(closed: Bool = false) async {
-    guard let item, source != nil else { return }
-    lastReport = clock()
-    do {
-      try await api.playback.report(
-        itemId: item.id, positionSeconds: max(0, position),
-        durationSeconds: duration > 0 ? duration : nil, sessionId: sessionId,
-        playedSeconds: playedSeconds, paused: !playing, closed: closed ? true : nil)
-    } catch {
-      await downloads?.queueReport(
-        itemId: item.id, sessionId: sessionId, position: position,
-        duration: duration > 0 ? duration : nil, played: playedSeconds, closed: closed)
-    }
-  }
-  public func burnsIn(_ track: SubtitleTrack) -> Bool {
-    if subtitle?.id == track.id { return plan?.subtitleMode == PlaybackSubtitleMode.burn_in }
-    return track.delivery != SubtitleDelivery.webvtt
-  }
-  public func dismissNotice() { notice = nil }
-  public func beginScrub() { scrubPosition = position }
-  public func scrub(to seconds: Double) { scrubPosition = seekClamp(seconds, duration: duration) }
-  public func endScrub(commit: Bool = true) async {
-    let target = scrubPosition
-    scrubPosition = nil
-    if commit, let target { await seekTo(target) }
-  }
-  public func trickplayFrame(at seconds: Double) -> TrickplayFrame? {
-    guard let images = trickplay, let item, images.intervalSeconds > 0,
-      images.count > 0, images.columns > 0, images.rows > 0
-    else { return nil }
-    let index = min(
-      images.count - 1, max(0, Int(seekClamp(seconds, duration: duration) / images.intervalSeconds))
-    )
-    let perTile = images.columns * images.rows
-    return TrickplayFrame(
-      url: api.paths.trickplayTile(item.id, key: images.key, tile: index / perTile),
-      x: index % images.columns * images.width, y: index % perTile / images.columns * images.height,
-      width: images.width, height: images.height)
-  }
-  /// Use for artwork and trickplay image loading as well as media requests.
-  public func mediaRequest(url: URL) async -> URLRequest {
-    var request = URLRequest(url: url)
-    guard url.scheme == api.base.scheme, url.host == api.base.host, url.port == api.base.port else {
-      return request
-    }
-    for (key, value) in await headers() { request.setValue(value, forHTTPHeaderField: key) }
-    return request
-  }
-  public func cancelNext() {
-    nextCancelled = true
-    nextCountdown = nil
-  }
-  public func playNext() {
-    guard let next else { return }
-    nextCancelled = true
-    nextCountdown = nil
-    onNext?(next)
-  }
-  public func enableNowPlaying(title: String, subtitle: String? = nil) {
-    nowPlaying?.stop()
-    nowPlaying = PlayerNowPlaying(controller: self, title: title, subtitle: subtitle)
-    if let picture = item?.episode?.still ?? item?.title?.images.backdrop
-      ?? item?.title?.images.poster,
-      let url = URL(string: api.paths.artwork(picture.id))
-    {
-      nowPlaying?.loadArtwork(url)
-    }
-  }
-  public func stop() async {
-    guard !stopped else { return }
-    stopped = true
-    generation += 1
-    ticking?.cancel()
-    ticking = nil
-    trickTask?.cancel()
-    trickTask = nil
-    engine.pause()
-    playing = false
-    await report(closed: true)
-    diagnostics.close()
-    PlaybackDiagnostics.latest = diagnostics
-    nowPlaying?.stop()
-    nowPlaying = nil
-    engine.clear()
-    playing = false
-  }
-  private func beginTick() {
-    ticking?.cancel()
-    ticking = Task { [weak self] in
-      while !Task.isCancelled {
-        try? await Task.sleep(for: .milliseconds(250))
-        guard !Task.isCancelled, let self else { return }
-        await self.tick()
-      }
-    }
-  }
-  func tick() async {
-    guard !stopped, let source else { return }
-    let wasPlaying = playing
-    let now = clock()
-    let elapsed = now.timeIntervalSince(lastTick)
-    lastTick = now
-    playing = engine.isPlaying
-    loading = engine.isLoading
-    let clock = engine.positionSeconds
-    if clock.isFinite { position = pendingAt ?? (source.offset + clock) }
-    if let range = player.currentItem?.loadedTimeRanges.last?.timeRangeValue {
-      buffered = source.offset + range.start.seconds + range.duration.seconds
-    }
-    if playing { playedSeconds += max(0, elapsed) * Double(speed) }
-    if let failure = engine.failure {
-      await sourceFailed(failure)
+    // The opening has nothing playing to keep, as Android's screen fails
+    // before its controller exists.
+    if sourceFailed || change.failed != nil || plan == nil {
+      self.unplayable = unplayable
+      error = message
       return
     }
-    let nowMs = Int64(ProcessInfo.processInfo.systemUptime * 1000)
-    if surfaceShown || pictureInPictureActive, engine.hasVideoFrame() {
-      freeze.frame(atMs: nowMs)
-      if diagnostics.firstFrameSeconds == nil {
-        diagnostics.firstFrameSeconds = max(0, now.timeIntervalSince(startedAt))
+    asking = undo
+    if let plan {
+      audio = plan.audio
+      subtitle = plan.subtitle
+      quality = plan.quality
+    }
+    notice = Notice(.switchFailed, detail: message)
+    // What plays stays, so a seek made meanwhile goes to it.
+    if let sought { await seekTo(sought) }
+  }
+
+  /// Tries again from where it stopped, every method with it.
+  public func retry() async {
+    error = nil
+    unplayable = false
+    refusal = nil
+    wantPlay = true
+    if local != nil {
+      if var current = source {
+        current.start = position
+        await load(current, reason: .retry)
       }
+      return
     }
-    if freeze.check(
-      nowMs: nowMs, playing: playing,
-      shown: (surfaceShown || pictureInPictureActive)
-        && (player.currentItem?.presentationSize.height ?? 0) > 0)
-    {
-      freeze.reset()
-      if isLocal && !nudged {
-        nudged = true
-        await engine.seek(clock)
-      } else {
-        await sourceFailed(URLError(.cannotDecodeContentData))
-        return
-      }
-    }
-    if wantPlay && !ended && abs(position - lastPosition) < 0.01 {
-      if stalledSince == nil { stalledSince = now }
-      if now.timeIntervalSince(stalledSince!) > 20 {
-        await sourceFailed(URLError(.timedOut))
-        return
-      }
-    } else {
-      stalledSince = nil
-    }
-    lastPosition = position
-    ended = duration > 0 && position >= duration - 0.3 && !playing
-    if ended, next != nil, prefs.autoplayNext, !nextCancelled {
-      if endedAt == nil { endedAt = now }
-      nextCountdown = max(0, 10 - Int(now.timeIntervalSince(endedAt!)))
-      if nextCountdown == 0 { playNext() }
-    } else if !ended {
-      endedAt = nil
-      nextCountdown = nil
-    }
-    if wasPlaying != playing || now.timeIntervalSince(lastReport) >= (playing ? 10 : 30) {
-      await report()
-    }
-    diagnostics.sample(player)
-    PlaybackDiagnostics.latest = diagnostics
-    nowPlaying?.update()
+    asking = asking.forgetFailures()
+    await ask(Ask(at: plan == nil ? openingAt : now(), reason: .retry, reload: true))
+  }
+
+  /// Stops a `playback.seek` on its way, whose answer no longer counts.
+  func cancelSeek() {
+    seekTask?.cancel()
+    seekTask = nil
+    seeks += 1
   }
 }

@@ -16,7 +16,7 @@ import Testing
       try Data("video".utf8).write(to: downloads.store.file(entry))
       try downloads.store.put(entry)
     }
-    let adapter = DownloadPlayerAdapter(downloads: downloads, server: a.server)
+    let adapter = ServerPlayerDownloads(downloads: downloads, server: a.server)
     downloads.store.server = b.server
     let pending = try downloads.pendingFor(a.server)
     try pending.put(a.id, .init(positionSeconds: 42, durationSeconds: 1000))
@@ -24,7 +24,11 @@ import Testing
     #expect(local.file == downloads.store.file(a))
     #expect(local.at == 42)
     await adapter.queueReport(
-      itemId: a.id, sessionId: "sitting", position: 55, duration: 1000, played: 13, closed: true)
+      itemId: a.id, report: .init(positionSeconds: 55, durationSeconds: 1000),
+      play: .init(
+        sessionId: "sitting", itemId: a.id, startedAt: "2026-01-01T00:00:00Z",
+        endedAt: "2026-01-01T00:00:13Z", playedSeconds: 13, positionSeconds: 55,
+        durationSeconds: 1000))
     #expect(pending.report(a.id)?.positionSeconds == 55)
     #expect(try downloads.pendingFor(b.server).report(b.id) == nil)
     let files = try FileManager.default.contentsOfDirectory(
@@ -35,7 +39,7 @@ import Testing
     #expect(encoded.contains("sitting"))
     #expect(encoded.contains("playedSeconds"))
     try FileManager.default.removeItem(at: local.file)
-    await #expect(throws: CocoaError.self) { try await adapter.playback(itemId: a.id) }
+    await #expect(throws: NoDownload.self) { try await adapter.playback(itemId: a.id) }
   }
 
   @Test func nextDownloadedEpisode() async throws {
@@ -51,7 +55,7 @@ import Testing
       try Data().write(to: downloads.store.file(entry))
       try downloads.store.put(entry)
     }
-    let adapter = DownloadPlayerAdapter(downloads: downloads, server: first.server)
+    let adapter = ServerPlayerDownloads(downloads: downloads, server: first.server)
     #expect(await adapter.next(after: first.item)?.id == next.id)
     #expect(await adapter.next(after: next.item)?.id == later.id)
     #expect(await adapter.next(after: later.item) == nil)
