@@ -46,6 +46,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemGestures
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -102,6 +103,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalInputModeManager
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
@@ -444,6 +446,15 @@ private fun Playback(itemId: String, data: PlayerData, start: Double?) {
     var menu by remember { mutableStateOf<Menu?>(null) }
     var scrub by remember { mutableStateOf<Double?>(null) }
     var touched by remember { mutableIntStateOf(0) }
+    val swipe = remember { GestureState() }
+    val levels = rememberDeviceLevels()
+    val gestureEdges = WindowInsets.systemGestures
+    val layoutDirection = LocalLayoutDirection.current
+    // The brightness the last swipe left, when settings keep it.
+    LaunchedEffect(levels) {
+        val saved = prefs.brightness
+        if (prefs.swipeLevels && prefs.rememberBrightness && saved in 0f..1f) levels.setBrightness(saved)
+    }
     // A screen reader exploring by touch reads the controls one by one, so
     // they stay until asked away; otherwise they wait as long as the
     // person's accessibility settings ask.
@@ -453,8 +464,8 @@ private fun Playback(itemId: String, data: PlayerData, start: Double?) {
         a11y?.calculateRecommendedTimeoutMillis(HIDE_AFTER_MS, containsIcons = true, containsText = true, containsControls = true)
             ?: HIDE_AFTER_MS
     }
-    LaunchedEffect(controls, controller.playing, menu, scrub, touched, exploring, hideAfter) {
-        if (controls && controller.playing && menu == null && scrub == null && !exploring) {
+    LaunchedEffect(controls, controller.playing, menu, scrub, touched, exploring, hideAfter, swipe.kind) {
+        if (controls && controller.playing && menu == null && scrub == null && !exploring && swipe.kind == null) {
             delay(hideAfter)
             controls = false
         }
@@ -500,6 +511,10 @@ private fun Playback(itemId: String, data: PlayerData, start: Double?) {
         Subtitles(controller, rememberSubtitleLook(prefs), lifted = controls && !inPip, Modifier.align(Alignment.BottomCenter))
         // Taps show and hide the controls; a double tap on either side skips;
         // spreading two fingers fills the screen, and pinching shows it whole.
+        // Swipes set the brightness, the volume, and the time, and a held
+        // finger plays faster (VideoGestures.kt). They come last, so they see
+        // each touch before the taps do and keep a swipe or a hold from
+        // counting as one.
         // A screen reader gets the tap as this area's one action.
         val videoLabel = stringResource(R.string.a11y_player_video)
         val toggleLabel = stringResource(if (controls) R.string.a11y_player_hide_controls else R.string.a11y_player_show_controls)
@@ -546,8 +561,22 @@ private fun Playback(itemId: String, data: PlayerData, start: Double?) {
                         touched++
                     },
                 )
-            },
+            }.videoGestures(
+                swipe,
+                controller,
+                prefs,
+                levels,
+                gestureEdges,
+                layoutDirection,
+                allowed = { controller.error == null && menu == null },
+                onStart = { kind ->
+                    // A seek's note sits where the play button is.
+                    if (kind == GestureKind.SEEK) controls = false
+                    touched++
+                },
+            ),
         )
+        if (!inPip) GestureNotes(swipe, controller)
         // Up top, clear of the play button in the middle.
         ZoomNote(zoomNote, fill, Modifier.align(Alignment.TopCenter).safeDrawingPadding().padding(top = 16.dp))
         PlayerNoticeNote(controller.notice, Modifier.align(Alignment.TopCenter).safeDrawingPadding().padding(top = 16.dp, start = 24.dp, end = 24.dp))

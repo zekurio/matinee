@@ -65,6 +65,21 @@ class PlayerPrefs(context: Context) {
     /** The video fills the screen, cut at its edges, rather than showing whole; a pinch switches. */
     var fillScreen by boolean("fill_screen", false)
 
+    /** On a phone, swiping up or down on the video's left half sets the brightness, on its right half the volume. */
+    var swipeLevels by boolean("swipe_levels", true)
+
+    /** Start the player at the brightness the last swipe left it at, rather than the system's. */
+    var rememberBrightness by boolean("remember_brightness", false)
+
+    /** The brightness the last swipe left, from 0 to 1, or below 0 before any. */
+    var brightness by float("brightness", -1f)
+
+    /** On a phone, swiping sideways on the video seeks. */
+    var swipeSeek by boolean("swipe_seek", true)
+
+    /** On a phone, holding a finger on the video plays it at double speed until it lifts. */
+    var holdSpeed by boolean("hold_speed", true)
+
     /** Keep playing in a small window on leaving the app. */
     var pictureInPicture by boolean("picture_in_picture", true)
 

@@ -290,6 +290,10 @@ class PlayerController(
     var speed by mutableFloatStateOf(1f)
         private set
 
+    /** A finger holds the video, so it plays at [HOLD_SPEED] for now instead of [speed]. */
+    var holding by mutableStateOf(false)
+        private set
+
     /** Seconds into the file. */
     var position by mutableDoubleStateOf(0.0)
         private set
@@ -825,7 +829,24 @@ class PlayerController(
 
     fun pickSpeed(rate: Float) {
         speed = rate
+        holding = false
         player.setPlaybackSpeed(rate)
+    }
+
+    /** Plays at [HOLD_SPEED] until [endHold], if the video plays and slower than that. Says whether it did. */
+    fun startHold(): Boolean {
+        if (holding || !playing || speed >= HOLD_SPEED) return false
+        holding = true
+        player.setPlaybackSpeed(HOLD_SPEED)
+        return true
+    }
+
+    /** Back to the picked speed after [startHold]. */
+    fun endHold() {
+        if (!holding) return
+        holding = false
+        // The finger may lift after the player closed.
+        if (scope.isActive) player.setPlaybackSpeed(speed)
     }
 
     private fun loadCues(show: SubtitleShow.Screen) {
@@ -863,7 +884,7 @@ class PlayerController(
         while (scope.isActive) {
             delay(250)
             val now = System.nanoTime()
-            if (player.isPlaying) playedSeconds += (now - last) / 1e9 * speed
+            if (player.isPlaying) playedSeconds += (now - last) / 1e9 * (if (holding) HOLD_SPEED else speed)
             last = now
             val current = source
             if (current != null && player.playbackState != Player.STATE_IDLE) {

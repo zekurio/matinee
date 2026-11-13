@@ -128,6 +128,7 @@ object Lucide {
     val CloudOff = R.drawable.lucide_cloud_off
     val Download = R.drawable.lucide_download
     val Ellipsis = R.drawable.lucide_ellipsis
+    val FastForward = R.drawable.lucide_fast_forward_filled
     val Film = R.drawable.lucide_film
     val FolderPlus = R.drawable.lucide_folder_plus
     val GalleryHorizontalEnd = R.drawable.lucide_gallery_horizontal_end
@@ -164,11 +165,14 @@ object Lucide {
     val Shield = R.drawable.lucide_shield
     val Smartphone = R.drawable.lucide_smartphone
     val Star = R.drawable.lucide_star_filled
+    val Sun = R.drawable.lucide_sun
     val Trash = R.drawable.lucide_trash_2
     val Tv = R.drawable.lucide_tv
     val TvPlay = R.drawable.lucide_tv_minimal_play
     val UserRound = R.drawable.lucide_user_round
     val Users = R.drawable.lucide_users
+    val Volume = R.drawable.lucide_volume_2
+    val VolumeX = R.drawable.lucide_volume_x
     val X = R.drawable.lucide_x
 }
 

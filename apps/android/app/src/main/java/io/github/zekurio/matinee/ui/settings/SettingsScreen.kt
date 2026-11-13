@@ -338,6 +338,7 @@ private fun PlaybackPage(session: Session) {
         item(key = "languages") { LanguagesSection(playback, loaded, save) }
         item(key = "skips") { SkipsSection(playback, loaded, save) }
         item(key = "device") { DeviceSection(prefs, loaded) }
+        item(key = "gestures") { GesturesSection(prefs) }
         item(key = "transcoding") { TranscodingSection(prefs, loaded) }
         if (passthrough.isNotEmpty()) item(key = "passthrough") { PassthroughSection(prefs, passthrough) }
     }
@@ -531,6 +532,34 @@ private fun DeviceSection(prefs: PlayerPrefs, options: PlaybackOptions?) {
                 color = Palette.Muted,
             )
         }
+    }
+}
+
+/** The swipes on the video, which this device keeps. */
+@Composable
+private fun GesturesSection(prefs: PlayerPrefs) {
+    Section(stringResource(R.string.playback_gestures_title)) {
+        Panel {
+            SwitchRow(stringResource(R.string.playback_gestures_levels), prefs.swipeLevels) { prefs.swipeLevels = it }
+            if (prefs.swipeLevels) {
+                RowDivider()
+                SwitchRow(stringResource(R.string.playback_gestures_remember_brightness), prefs.rememberBrightness) { on ->
+                    prefs.rememberBrightness = on
+                    // Kept from the next swipe on, not one made before.
+                    if (!on) prefs.brightness = -1f
+                }
+            }
+            RowDivider()
+            SwitchRow(stringResource(R.string.playback_gestures_seek), prefs.swipeSeek) { prefs.swipeSeek = it }
+            RowDivider()
+            SwitchRow(stringResource(R.string.playback_gestures_hold), prefs.holdSpeed) { prefs.holdSpeed = it }
+        }
+        Gap(8.dp)
+        Text(
+            stringResource(R.string.playback_gestures_hint),
+            style = MaterialTheme.typography.bodySmall,
+            color = Palette.Muted,
+        )
     }
 }
 
