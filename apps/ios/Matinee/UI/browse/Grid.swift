@@ -9,7 +9,7 @@ import SwiftUI
 
 /// A page's `TitlePages`, a page the size Android asks for, or in debug
 /// builds the `-dev.pageSize` launch argument's, so paging shows on the
-/// dev server's small libraries.
+/// dev server's small libraries; `-dev.pageDelay` slows each page.
 func makeTitlePages() -> TitlePages {
   #if DEBUG
     let asked = UserDefaults.standard.integer(forKey: "dev.pageSize")
@@ -48,6 +48,17 @@ private struct LoadsPages: ViewModifier {
   private func configure() {
     guard let api else { return }
     let fetch = fetch
+    #if DEBUG
+      // `-dev.pageDelay` (milliseconds) slows each page, to see the skeleton and the next page's spinner.
+      let delay = UserDefaults.standard.integer(forKey: "dev.pageDelay")
+      if delay > 0 {
+        pages.configure(key: key) { offset, limit in
+          try await Task.sleep(for: .milliseconds(delay))
+          return try await fetch(api, offset, limit)
+        }
+        return
+      }
+    #endif
     pages.configure(key: key) { offset, limit in try await fetch(api, offset, limit) }
   }
 }
