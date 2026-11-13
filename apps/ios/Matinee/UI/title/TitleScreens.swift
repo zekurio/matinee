@@ -130,19 +130,22 @@ private struct SeasonEpisodesRail: View {
       if let list = items.state.value {
         VStack(alignment: .leading, spacing: 12) {
           SectionTitle(Str.titleEpisodes).padding(.horizontal, Gutter)
-          ScrollView(.horizontal) {
-            LazyHStack(alignment: .top, spacing: 12) {
-              ForEach(list, id: \.id) { item in
-                RailItem(.landscape) { EpisodeCard(shown(item), showName: false) }.id(item.id)
+          ScrollViewReader { proxy in
+            ScrollView(.horizontal) {
+              LazyHStack(alignment: .top, spacing: 12) {
+                ForEach(list, id: \.id) { item in
+                  RailItem(.landscape) { EpisodeCard(shown(item), showName: false) }.id(item.id)
+                }
               }
+              .scrollTargetLayout()
             }
-            .scrollTargetLayout()
+            .contentMargins(.horizontal, Gutter, for: .scrollContent)
+            .scrollIndicators(.hidden)
+            .scrollTargetBehavior(.viewAligned)
+            .onAppear {
+              if let next, list.contains(where: { $0.id == next.id }) { proxy.scrollTo(next.id, anchor: .leading) }
+            }
           }
-          .contentMargins(.horizontal, Gutter, for: .scrollContent)
-          .scrollIndicators(.hidden)
-          .scrollTargetBehavior(.viewAligned)
-          .defaultScrollAnchor(.leading)
-          .scrollPosition(id: .constant(list.contains { $0.id == next?.id } ? next?.id : nil), anchor: .leading)
         }
       } else {
         Color.clear.frame(height: 0)

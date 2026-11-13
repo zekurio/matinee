@@ -555,7 +555,10 @@ struct NextUpEpisode: View {
       .cardMenu(.item(item, here: false))
       .accessibilityLabel(label.title)
       .padding(.top, 12)
-      Button { nav.episode(item.id) } label: {
+      // Its words open its menu, as Android's do; the still opens its page.
+      Menu {
+        ActionItems(target: .item(item, here: false)).tint(palette.foreground)
+      } label: {
         VStack(alignment: .leading, spacing: 0) {
           let heading = episodeNumber(item).map { Str.titleEpisodesCodedName($0, label.title) } ?? label.title
           Text(heading).textStyle(.titleMedium).lineLimit(2).foregroundStyle(palette.foreground)
@@ -575,8 +578,8 @@ struct NextUpEpisode: View {
         .multilineTextAlignment(.leading)
         .contentShape(Rectangle())
       }
+      .menuStyle(.button)
       .buttonStyle(CardPress())
-      .cardMenu(.item(item, here: false))
       .padding(.top, 10)
     }
     .padding(.horizontal, Gutter)
