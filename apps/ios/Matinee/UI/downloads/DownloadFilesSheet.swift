@@ -109,10 +109,12 @@ struct DownloadFilesSheet: View {
     .safeAreaInset(edge: .bottom) {
       if !missing.isEmpty {
         MatineeButton(.primary, action: { start(missing, results) }) {
-          LucideIcon(.download, size: 18)
-          Text(Str.downloadsStart)
+          HStack(spacing: 8) {
+            LucideIcon(.download, size: 18)
+            Text(Str.downloadsStart)
+          }
+          .frame(maxWidth: .infinity)
         }
-        .frame(maxWidth: .infinity)
         .padding(.horizontal, 20)
         .padding(.vertical, 12)
         .background(palette.raised)

@@ -117,10 +117,13 @@ struct DownloadSheet: View {
     .scrollBounceBehavior(.basedOnSize)
     .safeAreaInset(edge: .bottom) {
       MatineeButton(.primary, action: { start(source, texts: texts) }) {
-        LucideIcon(.download, size: 18)
-        Text(Str.downloadsStart)
+        // As wide as the sheet, as Android's.
+        HStack(spacing: 8) {
+          LucideIcon(.download, size: 18)
+          Text(Str.downloadsStart)
+        }
+        .frame(maxWidth: .infinity)
       }
-      .frame(maxWidth: .infinity)
       .disabled(!(picked == .original || (!planning && !noAudio && plans[picked] != nil)))
       .padding(.horizontal, 20)
       .padding(.vertical, 12)

@@ -224,16 +224,19 @@ struct ActionRow: View {
     return Button {
       if let play { nav.play(play.id, nil) }
     } label: {
-      LucideIcon(.play, size: 16)
-      Text(label).layoutPriority(1)
-      // On one line, as on a TV. The label stays whole; what's left over goes to the time.
-      if let left {
-        Text(left).foregroundStyle(palette.accentForeground.opacity(0.6)).lineLimit(1)
+      HStack(spacing: 8) {
+        LucideIcon(.play, size: 16)
+        Text(label).layoutPriority(1)
+        // On one line, as on a TV. The label stays whole; what's left over goes to the time.
+        if let left {
+          Text(left).foregroundStyle(palette.accentForeground.opacity(0.6)).lineLimit(1)
+        }
       }
+      // The button's width, not the words', is what's drawn.
+      .frame(maxWidth: .infinity)
     }
     .buttonStyle(.matinee(.primary))
     .frame(width: wide ? 260 : nil)
-    .frame(maxWidth: wide ? nil : .infinity)
     .disabled(play == nil)
     .accessibilityElement(children: .ignore)
     .accessibilityLabel([label, left].compactMap(\.self).joined(separator: ", "))
