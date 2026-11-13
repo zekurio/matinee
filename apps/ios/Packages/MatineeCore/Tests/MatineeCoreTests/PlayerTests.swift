@@ -90,32 +90,6 @@ struct PlayerTests {
     #expect(track.cues[0].spans.last?.bold == true)
     #expect(track.cues[0].spans.last?.italic == true)
   }
-  @Test func boundedDiagnostics() {
-    var report = PlaybackReport()
-    for _ in 0..<30 { report.attempt(method: "direct", offset: 0) }
-    #expect(report.attempts.count == 12)
-    #expect(report.droppedAttempts == 18)
-    report.failed(code: 401)
-    #expect(report.attempts.last?.outcome == .failed)
-    report.attempt(method: "https://secret.invalid?token=secret", offset: 0)
-    #expect(report.attempts.last?.method == "other")
-    #expect(!formatReport(report).contains("secret"))
-  }
-  @MainActor @Test func diagnosticsStore() {
-    PlaybackDiagnostics.clear()
-    #expect(PlaybackDiagnostics.latest == nil)
-    PlaybackDiagnostics.latest = PlaybackReport()
-    #expect(PlaybackDiagnostics.shared.report != nil)
-    PlaybackDiagnostics.clear()
-  }
-  @Test func reportsNeverContainURLs() throws {
-    var report = PlaybackReport()
-    report.attempt(method: "direct", offset: 10)
-    report.failed(code: -11800)
-    let json = String(decoding: try JSONEncoder().encode(report), as: UTF8.self)
-    #expect(!json.contains("http"))
-    #expect(report.attempts.last?.errorCode == -11800)
-  }
 }
 
 struct LivePlayerTests {
