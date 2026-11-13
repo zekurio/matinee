@@ -1,3 +1,4 @@
+import CoreMedia
 import Foundation
 import Testing
 
@@ -19,6 +20,14 @@ import Testing
         dolbyVision: false))
   }
 
+  @Test func theSimulatorDecodesH264AndHevcWithoutHardware() {
+    let none: (CMVideoCodecType) -> Bool = { _ in false }
+    #expect(Capabilities.videoDecodes(kCMVideoCodecType_H264, hardware: none, simulator: true))
+    #expect(Capabilities.videoDecodes(kCMVideoCodecType_HEVC, hardware: none, simulator: true))
+    #expect(!Capabilities.videoDecodes(kCMVideoCodecType_AV1, hardware: none, simulator: true))
+    #expect(!Capabilities.videoDecodes(kCMVideoCodecType_H264, hardware: none, simulator: false))
+    #expect(Capabilities.videoDecodes(kCMVideoCodecType_AV1, hardware: { _ in true }, simulator: false))
+  }
   @Test func avPlayerSaysWhatTheProfileSupports() {
     let device = playbackProfile(snapshot: phone, locale: Locale(identifier: "de_DE"))
     // AVPlayer differs from ExoPlayer in containers and embedded subtitle support.
