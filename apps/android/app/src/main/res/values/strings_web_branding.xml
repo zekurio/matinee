@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Made by scripts/web_strings.py from apps/web/src/i18n/locales/en/branding.ts. Don't edit. -->
+<resources>
+    <string name="web_branding_loadFailed">Couldn\'t load the branding settings. %1$s</string>
+    <string name="web_branding_title">Accent color</string>
+    <string name="web_branding_presets">Suggested accents</string>
+    <string name="web_branding_default">Default</string>
+    <string name="web_branding_mode_light">Light mode</string>
+    <string name="web_branding_mode_dark">Dark mode</string>
+    <string name="web_branding_accent_light">Light mode accent</string>
+    <string name="web_branding_accent_dark">Dark mode accent</string>
+    <string name="web_branding_backdrop_title">Login screen</string>
+    <string name="web_branding_backdrop_enabled">Show artwork behind the form</string>
+    <string name="web_branding_backdrop_source">Shows titles from the libraries the Everyone group opens.</string>
+    <string name="web_branding_backdrop_artwork">Artwork</string>
+    <string name="web_branding_backdrop_artwork_mixed">Posters and thumbs</string>
+    <string name="web_branding_backdrop_artwork_posters">Posters</string>
+    <string name="web_branding_backdrop_artwork_thumbs">Thumbs</string>
+    <string name="web_branding_backdrop_blur">Blur</string>
+    <string name="web_branding_backdrop_blurValue">%1$s px</string>
+    <string name="web_branding_backdrop_fade">Fade</string>
+    <string name="web_branding_backdrop_fadeValue">%1$s %%</string>
+    <string name="web_branding_backdrop_preview">Preview</string>
+    <string name="web_branding_backdrop_shuffle">Shuffle</string>
+    <string name="web_branding_backdrop_previewOff">The login screen shows no artwork.</string>
+    <string name="web_branding_backdrop_empty">No artwork to show yet. The libraries the Everyone group opens have no titles with images the server has downloaded.</string>
+</resources>

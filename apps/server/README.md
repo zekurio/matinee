@@ -227,6 +227,23 @@ wins. The OIDC policy claim sets the same per account from the provider.
 Changes apply to an account's next request, which for a stream that is
 playing is its next piece of the file.
 
+## Branding
+
+Settings → Branding sets how the server looks to everyone, signed in or
+not: the accent of the Matinee theme in light and dark mode, and the login
+screen. The login screen can show a wall of artwork behind the form, as in
+Jellyfin and alloy, on the web's login and invite pages and the apps'
+sign-in screens: rows of title posters, thumbs (the titles' backdrops),
+or both mixed at random, that drift in turns left and right, sloped,
+blurred, and faded into the page by as much as the admin set. It's off
+until an admin turns it on.
+
+Anyone who opens the login page sees the wall, so it only shows titles
+from the libraries Everyone opens, and only images the server has
+downloaded already. `auth.loginBackdrop` picks a new random set on every
+call. While the wall is on, `/api/artwork` serves those images, in the two
+smallest sizes, without a session; every other image still needs one.
+
 ## Scanning
 
 A scan looks only at the folders it is given and writes only what changed:

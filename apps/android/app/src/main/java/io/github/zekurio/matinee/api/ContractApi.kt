@@ -38,6 +38,16 @@ class AuthApi internal constructor(private val transport: ApiTransport) {
     suspend fun config(): AuthConfig =
         transport.call("GET", listOf("auth", "config"), emptyList(), null, AuthConfig.serializer())
 
+    /** `GET /auth/login-backdrop` */
+    suspend fun loginBackdrop(): LoginBackdropTiles =
+        transport.call(
+            "GET",
+            listOf("auth", "login-backdrop"),
+            emptyList(),
+            null,
+            LoginBackdropTiles.serializer(),
+        )
+
     /** `GET /auth/session` */
     suspend fun session(): AuthSessionOutput =
         transport.call(
@@ -991,8 +1001,8 @@ class StatsApi internal constructor(private val transport: ApiTransport) {
 }
 
 class AdminApi internal constructor(private val transport: ApiTransport) {
-    val appearance = AdminAppearanceApi(transport)
     val auth = AdminAuthApi(transport)
+    val branding = AdminBrandingApi(transport)
     val groups = AdminGroupsApi(transport)
     val invites = AdminInvitesApi(transport)
     val jobs = AdminJobsApi(transport)
@@ -1009,28 +1019,6 @@ class AdminApi internal constructor(private val transport: ApiTransport) {
             listOf("path" to path),
             null,
             DirectoryListing.serializer(),
-        )
-}
-
-class AdminAppearanceApi internal constructor(private val transport: ApiTransport) {
-    /** `GET /admin/appearance` */
-    suspend fun get(): ThemeAccents =
-        transport.call(
-            "GET",
-            listOf("admin", "appearance"),
-            emptyList(),
-            null,
-            ThemeAccents.serializer(),
-        )
-
-    /** `PUT /admin/appearance` */
-    suspend fun update(themeAccents: ThemeAccents): ThemeAccents =
-        transport.call(
-            "PUT",
-            listOf("admin", "appearance"),
-            emptyList(),
-            transport.json(ThemeAccents.serializer(), themeAccents),
-            ThemeAccents.serializer(),
         )
 }
 
@@ -1053,6 +1041,32 @@ class AdminAuthApi internal constructor(private val transport: ApiTransport) {
             emptyList(),
             transport.json(AuthSettingsInput.serializer(), authSettingsInput),
             AdminAuthSettings.serializer(),
+        )
+}
+
+class AdminBrandingApi internal constructor(private val transport: ApiTransport) {
+    /** `GET /admin/branding` */
+    suspend fun get(): Branding =
+        transport.call("GET", listOf("admin", "branding"), emptyList(), null, Branding.serializer())
+
+    /** `PUT /admin/branding` */
+    suspend fun update(branding: Branding): Branding =
+        transport.call(
+            "PUT",
+            listOf("admin", "branding"),
+            emptyList(),
+            transport.json(Branding.serializer(), branding),
+            Branding.serializer(),
+        )
+
+    /** `GET /admin/branding/login-backdrop` */
+    suspend fun preview(artwork: String): LoginBackdropTiles =
+        transport.call(
+            "GET",
+            listOf("admin", "branding", "login-backdrop"),
+            listOf("artwork" to artwork),
+            null,
+            LoginBackdropTiles.serializer(),
         )
 }
 

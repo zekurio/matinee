@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm"
 
 import { forgetGroups, inviteGroupIds, setMemberships } from "../access/groups"
 import { redeemAppCode } from "../auth/apps"
+import { branding, loginBackdrop } from "../auth/branding"
 import {
   approveDeviceRequest,
   findDeviceRequest,
@@ -45,10 +46,10 @@ import {
   setupTokenRequired,
   unlockSetup,
 } from "../auth/setup"
-import { themeAccents } from "../auth/theme-accents"
 import { insertUser, lockUsers, usernameTaken } from "../auth/users"
 import { db } from "../db"
 import { log } from "../log"
+import { loginBackdropTiles } from "../media/login-backdrop"
 import { badRequest, authed, notFound, pub, requirePasskeys } from "./base"
 
 /** What `beginSignUp` stored with the challenge. */
@@ -119,7 +120,14 @@ export const auth = {
             allowSignUp: provider.settings.allowSignUp,
           }
         : null,
-      themeAccents: await themeAccents(),
+      ...(await branding()),
+    }
+  }),
+
+  loginBackdrop: pub.auth.loginBackdrop.handler(async () => {
+    const backdrop = await loginBackdrop()
+    return {
+      tiles: backdrop.enabled ? await loginBackdropTiles(backdrop.artwork) : [],
     }
   }),
 

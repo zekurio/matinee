@@ -457,7 +457,7 @@
     <string name="settings_admin_transcoding">Transcoding</string>
     <string name="settings_admin_trickplay">Trickplay</string>
     <string name="settings_admin_jobs">Jobs</string>
-    <string name="settings_admin_appearance">Appearance</string>
+    <string name="settings_admin_branding">Branding</string>
     <string name="settings_offline_mode">Offline mode</string>
 
     <!-- The player -->

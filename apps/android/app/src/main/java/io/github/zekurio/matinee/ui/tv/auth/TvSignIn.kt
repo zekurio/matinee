@@ -35,6 +35,7 @@ import io.github.zekurio.matinee.auth.Session
 import io.github.zekurio.matinee.ui.components.Lucide
 import io.github.zekurio.matinee.ui.components.QrCode
 import io.github.zekurio.matinee.ui.signin.DeviceCodeState
+import io.github.zekurio.matinee.ui.signin.LoginBackdropWall
 import io.github.zekurio.matinee.ui.signin.rememberDeviceCode
 import io.github.zekurio.matinee.ui.signin.title
 import io.github.zekurio.matinee.ui.theme.Palette
@@ -76,6 +77,7 @@ fun TvSignInScreen(session: Session, state: AuthState.SignedOut) {
             // A server not set up yet can't approve anyone; its setup runs in a browser.
             stringResource(if (state.config.setup != null) R.string.signin_setup else R.string.tv_signin_description),
             split = 0.56f,
+            backdrop = { LoginBackdropWall(session.signInApi(), state.config.loginBackdrop) },
             side = { CodeSide(flow, state.server, again, change, way) },
         ) {
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {

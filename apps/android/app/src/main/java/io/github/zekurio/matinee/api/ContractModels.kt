@@ -830,6 +830,21 @@ data class ThemeAccents(
     val dark: String?,
 )
 
+object LoginBackdropArtwork {
+    const val MIXED = "mixed"
+    const val POSTERS = "posters"
+    const val THUMBS = "thumbs"
+    val all = listOf(MIXED, POSTERS, THUMBS)
+}
+
+@Serializable
+data class LoginBackdrop(
+    val enabled: Boolean,
+    val artwork: String,
+    val blur: Int,
+    val fade: Int,
+)
+
 @Serializable
 data class AuthConfig(
     val setup: AuthConfig.Setup?,
@@ -837,6 +852,7 @@ data class AuthConfig(
     val passkeySignUp: Boolean,
     val oidc: AuthConfig.Oidc?,
     val themeAccents: ThemeAccents,
+    val loginBackdrop: LoginBackdrop,
 ) {
     @Serializable
     data class Setup(
@@ -851,6 +867,12 @@ data class AuthConfig(
         val allowSignUp: Boolean,
     )
 }
+
+@Serializable
+data class Branding(
+    val themeAccents: ThemeAccents,
+    val loginBackdrop: LoginBackdrop,
+)
 
 @Serializable
 data class BrowsedTitles(
@@ -1457,6 +1479,23 @@ data class NowPlaying(
 data class LiveActivity(
     val sessions: List<NowPlaying>,
     val streams: Int,
+)
+
+object LoginBackdropKind {
+    const val POSTER = "poster"
+    const val THUMB = "thumb"
+    val all = listOf(POSTER, THUMB)
+}
+
+@Serializable
+data class LoginBackdropTile(
+    val artwork: Artwork,
+    val kind: String,
+)
+
+@Serializable
+data class LoginBackdropTiles(
+    val tiles: List<LoginBackdropTile>,
 )
 
 @Serializable

@@ -53,8 +53,8 @@ export default defineMessages("settings", {
   "settings.section.jobs.description": "Background queues and scheduled tasks",
   "settings.section.jobs.keywords":
     "Queues, Workers, Concurrency, Scheduled tasks, Scan libraries, Refresh metadata, Media info, ffprobe, Thumbnails, Trickplay, Pause, Cancel, Run now",
-  "settings.section.server-appearance.label": "Appearance",
-  "settings.section.server-appearance.description": "Accent color for everyone",
-  "settings.section.server-appearance.keywords":
-    "Accent color, Brand color, Default theme",
+  "settings.section.branding.label": "Branding",
+  "settings.section.branding.description": "Accent color and login screen",
+  "settings.section.branding.keywords":
+    "Accent color, Brand color, Default theme, Appearance, Login screen, Sign-in page, Backdrop, Posters, Thumbs, Artwork",
 })

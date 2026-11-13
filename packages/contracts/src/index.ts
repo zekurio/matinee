@@ -1,5 +1,6 @@
 export * from "./access"
 export * from "./admin"
+export * from "./branding"
 export * from "./codecs"
 export * from "./contract"
 export * from "./discovery"

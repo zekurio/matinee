@@ -13,9 +13,11 @@ import {
   useNavigate,
 } from "@tanstack/react-router"
 import { RefreshCwIcon } from "lucide-react"
+import type { ComponentProps } from "react"
 
 import { AuthScreen } from "@/components/auth-screen"
 import { FormAlert } from "@/components/form-alert"
+import { PublicLoginBackdrop } from "@/components/login-backdrop"
 import { UsernamePasskeyForm } from "@/components/username-passkey-form"
 import { tr } from "@/i18n"
 import { formatDateTime } from "@/lib/format"
@@ -52,7 +54,7 @@ function InvitePage() {
   // Someone with an account leaves the link for whoever it's meant for.
   if (signedInAs) {
     return (
-      <AuthScreen
+      <InviteScreen
         title={tr("auth.invite.signedInTitle")}
         description={tr("auth.invite.signedInDescription", {
           username: signedInAs.username,
@@ -61,17 +63,17 @@ function InvitePage() {
         <Link to="/" className={WIDE_BUTTON}>
           {tr("auth.invite.continue")}
         </Link>
-      </AuthScreen>
+      </InviteScreen>
     )
   }
   if (!config.passkeys) {
     return (
-      <AuthScreen
+      <InviteScreen
         title={tr("auth.invite.unusableTitle")}
         description={tr("auth.invite.passkeysOff")}
       >
         <SignInLink />
-      </AuthScreen>
+      </InviteScreen>
     )
   }
   const token = InviteToken.safeParse(hash)
@@ -79,14 +81,27 @@ function InvitePage() {
   return <InviteSignUp key={token.data} token={token.data} />
 }
 
-function BrokenLink() {
+/** The auth screen over the server's login backdrop, as the login page shows it. */
+function InviteScreen(
+  props: Omit<ComponentProps<typeof AuthScreen>, "backdrop">,
+) {
+  const { config } = Route.useRouteContext()
   return (
     <AuthScreen
+      {...props}
+      backdrop={<PublicLoginBackdrop settings={config.loginBackdrop} />}
+    />
+  )
+}
+
+function BrokenLink() {
+  return (
+    <InviteScreen
       title={tr("auth.invite.brokenTitle")}
       description={tr("auth.invite.brokenDescription")}
     >
       <SignInLink />
-    </AuthScreen>
+    </InviteScreen>
   )
 }
 
@@ -138,15 +153,15 @@ function InviteSignUp({ token }: { token: string }) {
 
   if (check.isPending) {
     return (
-      <AuthScreen title={tr("auth.invite.checking")}>
+      <InviteScreen title={tr("auth.invite.checking")}>
         <Spinner className="text-muted-foreground mx-auto size-6" />
-      </AuthScreen>
+      </InviteScreen>
     )
   }
   if (check.isError) {
     if (rejected(check.error)) return <BrokenLink />
     return (
-      <AuthScreen title={tr("auth.invite.checkFailed")}>
+      <InviteScreen title={tr("auth.invite.checkFailed")}>
         <div className="flex flex-col gap-3">
           <FormAlert message={errorMessage(check.error)} />
           <Button
@@ -159,12 +174,12 @@ function InviteSignUp({ token }: { token: string }) {
             {tr("auth.invite.retry")}
           </Button>
         </div>
-      </AuthScreen>
+      </InviteScreen>
     )
   }
 
   return (
-    <AuthScreen
+    <InviteScreen
       title={tr("auth.invite.title")}
       description={tr("auth.invite.description", {
         date: formatDateTime(check.data.expiresAt),
@@ -175,6 +190,6 @@ function InviteSignUp({ token }: { token: string }) {
         pending={signUp.isPending || signUp.isSuccess}
         onSubmit={(username) => signUp.mutate(username)}
       />
-    </AuthScreen>
+    </InviteScreen>
   )
 }

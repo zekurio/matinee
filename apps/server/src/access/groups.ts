@@ -134,6 +134,16 @@ function policyOf(account: Account, state: Snapshot): AccessPolicy {
   return withOverride(groupPolicy(account, state), overrideOf(account))
 }
 
+/**
+ * What the built-in group opens, every account's least before overrides.
+ * Nothing when its row is gone. For what the server shows people who
+ * aren't signed in, such as the login backdrop.
+ */
+export async function everyoneAccess(): Promise<Access> {
+  const { everyone } = await load()
+  return toAccess(everyone?.policy ?? mostGenerous([]))
+}
+
 /** What the account may open and how the server streams to it. */
 export async function accessOf(account: Account): Promise<Access> {
   return toAccess(policyOf(account, await load()))
