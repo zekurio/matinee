@@ -51,7 +51,7 @@ import io.github.zekurio.matinee.auth.AuthState
 import io.github.zekurio.matinee.auth.Session
 import io.github.zekurio.matinee.ui.components.ButtonLook
 import io.github.zekurio.matinee.ui.components.Gap
-import io.github.zekurio.matinee.ui.components.LogoMark
+import io.github.zekurio.matinee.ui.components.Logo
 import io.github.zekurio.matinee.ui.components.Lucide
 import io.github.zekurio.matinee.ui.components.LucideIcon
 import io.github.zekurio.matinee.ui.components.MatineeButton
@@ -61,20 +61,13 @@ import io.github.zekurio.matinee.ui.components.isWide
 import io.github.zekurio.matinee.ui.theme.Palette
 import kotlinx.coroutines.flow.MutableStateFlow
 
-/** The mark and name, in the top corner of the sign-in screens. */
+/** The logo, in the top corner of the sign-in screens. */
 @Composable
 private fun Brand(modifier: Modifier = Modifier) {
-    Row(
-        modifier.padding(horizontal = 26.dp, vertical = 24.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        LogoMark(Modifier.size(30.dp))
-        Text(stringResource(R.string.app_name), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-    }
+    Logo(modifier.padding(horizontal = 26.dp, vertical = 24.dp), height = 22.dp)
 }
 
-/** The web's auth screen: the mark and name at the top, the form below the middle. */
+/** The web's auth screen: the logo at the top, the form below the middle. */
 @Composable
 internal fun AuthLayout(content: @Composable ColumnScope.() -> Unit) {
     Box(Modifier.fillMaxSize().safeDrawingPadding().imePadding()) {
