@@ -304,7 +304,8 @@ other files is still incomplete and belongs to their own changes.
 
 This increment does not complete the supporting-piece audit. Capabilities,
 PlaybackDevice's member-by-member implementation audit, NowPlaying/PlaybackService, the download
-worker's Kotlin parity and off-main file IO remain unreviewed. The fixed decoder
+worker's broader Kotlin parity remain unreviewed. See `../../../DOWNLOADS.md`
+for file ownership and crash-recovery verification. The fixed decoder
 rectangle has not been experimentally checked. The four applicable Kotlin
 PlaybackDevice test cases are ported in CapabilitiesTests, with AVPlayer's
 container/audio/subtitle expectations instead of ExoPlayer's. The two mpv tests
@@ -338,15 +339,15 @@ are not ported because that engine is deferred.
 | `TAG`, `unescape`, `styled`                                                                   | `styled` and its entity loop                               | Same bold/italic/underline nesting and six entities. Other tags are removed, preserving their text, including ruby annotation text.                                                                              |
 | `CueTrack.parse`                                                                              | Same name                                                  | Differs because NOTE, STYLE and REGION blocks are explicitly skipped even if they contain timing arrows. Identifiers, BOM header, CRLF, multiline and overlapping cues are tested.                               |
 | `baseLanguage`, `sameLanguage`, `deviceLanguage`, `isCommentary`                              | `sameLanguage`, `profileLanguage`, inline commentary check | Same base-tag comparison for tested ordinary language tags; malformed Locale tag fallback has not been audited.                                                                                                  |
-| `downloadAudio`                                                                               | Same name                                                  | Same primary, preferred/original language, channel ranking and decodable same-language stand-in rules on inspection; dedicated tests remain outstanding.                                                         |
-| `drawable`, `bestInLanguage`, `forcedTrack`, `downloadSubtitle`                               | `downloadSubtitle` filter and local `best`                 | Same mode branches and score on inspection; dedicated tests remain outstanding.                                                                                                                                  |
-| `downloadSubtitleShow`                                                                        | None                                                       | Not ported in this increment. AVPlayer cannot claim embedded PGS/ASS support; saved WebVTT uses the controller's existing screen-cue path.                                                                       |
-| `PlayerController` local open and pending reports                                             | `DownloadPlayerAdapter.playback`, `queueReport`            | Same saved video, audio list, subtitle URLs, pending-or-server position, last-position report and cumulative sitting report. Adapter binds one server independently of the selected-server UI.                   |
-| `PlayerScreen.downloadNext`                                                                   | `DownloadPlayerAdapter.next`                               | Differs because it selects the next completed, existing local episode without a network request. Android asks the offline API's title-item list. Specials and duplicate episode editions still need comparison.  |
+| `downloadAudio`                                                                               | Same name                                                  | Same primary, preferred/original language, channel ranking and decodable same-language stand-in rules; covered by DownloadTracksTests.                                                                           |
+| `drawable`, `bestInLanguage`, `forcedTrack`, `downloadSubtitle`                               | `downloadSubtitle` filter and local `best`                 | Same mode branches and score; covered by DownloadTracksTests.                                                                                                                                                    |
+| `downloadSubtitleShow`                                                                        | Same name                                                  | Ported and tested for embedded picture tracks, mpv ASS/SSA and saved WebVTT. This pure decision helper does not add engine support to AVPlayer or change its advertised capabilities.                            |
+| `PlayerController` local open and pending reports                                             | `ServerPlayerDownloads.playback`, `queueReport`            | Same saved video, audio list, subtitle URLs, pending-or-server position, last-position report and cumulative sitting report. Adapter binds one server independently of the selected-server UI.                   |
+| `PlayerScreen.downloadNext`                                                                   | `ServerPlayerDownloads.next`                               | Differs because it selects the next completed, existing local episode without a network request. Android asks the offline API's title-item list. Specials and duplicate episode editions still need comparison.  |
 
 ### Integration and remaining protocol gap
 
-Construct `DownloadPlayerAdapter(downloads: downloads, server: origin)` per
+Construct `ServerPlayerDownloads(downloads: downloads, server: origin)` per
 server and pass it to `PlayerController`'s `downloads` argument. Keep that origin
 the same as the controller's API. No controller or diagnostics owner files changed.
 
@@ -357,9 +358,9 @@ played time and keeps it stable. This loses paused/buffering time before the
 first report. No protocol change was made here. Its nonthrowing report method
 also cannot tell the controller about a local persistence failure; that is logged.
 
-The worker still assembles files and writes the index on the main actor. No
-large-append actor test was added. This remains a required follow-up, not a
-platform exclusion.
+The worker now assembles files and writes the index through DownloadFiles,
+with responsiveness, deletion and crash-replay tests. See the package's
+DOWNLOADS.md for the ownership rules and current live verification.
 
 ### Verification of this partial increment
 

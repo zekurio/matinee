@@ -41,6 +41,7 @@ private struct Transfer: Codable, Sendable {
 
 @MainActor public final class DownloadWorker: NSObject, URLSessionDownloadDelegate {
   public static let identifier = "io.github.zekurio.matinee.downloads"
+  private var files: DownloadFiles { store.files }
   private let store: DownloadStore
   private let client: @MainActor (String) -> MatineeApi?
   private var session: URLSession!
@@ -68,9 +69,8 @@ private struct Transfer: Codable, Sendable {
           try? await pause(entry.key)
           // Resume data contains the old request's network policy. A Range
           // request is safer when the person changes the allowed network.
-          try? FileManager.default.removeItem(
-            at: store.root.appending(path: "\(entry.key)/resume.data"))
-          try? store.update(entry.key) { $0.state = .queued }
+          try? await files.delete(store.root.appending(path: "\(entry.key)/resume.data"))
+          try? await store.update(entry.key) { $0.state = .queued }
           await schedule(entry.key)
         }
       }
@@ -133,15 +133,21 @@ private struct Transfer: Codable, Sendable {
     else { return }
     let resume = store.root.appending(path: "\(entry.key)/resume.data")
     let task: URLSessionDownloadTask
-    if part == -2, let data = try? Data(contentsOf: resume) {
+    if part == -2, let data = try? await files.read(resume) {
       task = session.downloadTask(withResumeData: data)
-      try? FileManager.default.removeItem(at: resume)
+      try? await files.delete(resume)
     } else {
       task = session.downloadTask(with: request)
     }
     task.taskDescription =
       Transfer(entry, part: part, subtitle: subtitle, offset: offset).description
     if isBackground { task.earliestBeginDate = entry.retryAt }
+    guard store.all[entry.key]?.generation == entry.generation,
+      store.all[entry.key]?.state == .running
+    else {
+      task.cancel()
+      return
+    }
     task.resume()
   }
   public func schedule(_ key: String) async {
@@ -166,8 +172,15 @@ private struct Transfer: Codable, Sendable {
       return
     }
     do {
-      try store.update(key) { $0.state = .running }
-      entry = store.all[key]!
+      let generation = entry.generation
+      try await store.update(key) {
+        guard $0.generation == generation, [.queued, .running].contains($0.state) else { return }
+        $0.state = .running
+      }
+      guard let current = store.all[key], current.generation == entry.generation,
+        current.state == .running
+      else { return }
+      entry = current
       guard let api = client(entry.server) else { throw URLError(.userAuthenticationRequired) }
       let active = await tasks(key)
       guard let latest = store.all[key], latest.generation == entry.generation,
@@ -177,13 +190,12 @@ private struct Transfer: Codable, Sendable {
       if entry.kind == .device, entry.bytes > 0 {
         // An append is committed by the atomic index write. Discard an
         // uncommitted tail after a crash, then drain already staged fragments.
-        if FileManager.default.fileExists(atPath: store.file(entry).path) {
-          let handle = try FileHandle(forWritingTo: store.file(entry))
-          try handle.truncate(atOffset: UInt64(entry.bytes))
-          try handle.close()
-        }
+        try await files.truncate(store.file(entry), bytes: entry.bytes, entry: entry)
         if try await drain(key) { return }
-        entry = store.all[key]!
+        guard let current = store.all[key], current.generation == entry.generation,
+          current.state == .running
+        else { return }
+        entry = current
       }
       if entry.image == nil, !active.contains(where: { Transfer.read($0)?.part == -3 }) {
         try await enqueue(entry, part: -3, url: api.paths.thumbnail(entry.id))
@@ -200,14 +212,17 @@ private struct Transfer: Codable, Sendable {
         let version = try await api.downloads.start(id: entry.id, spec: spec)
         guard store.all[key]?.generation == entry.generation, store.all[key]?.state == .running
         else { return }
-        try store.update(key) {
+        try await store.update(key) {
           $0.serverId = version.id
           $0.totalBytes = version.plan.estimatedBytes
         }
-        entry = store.all[key]!
+        guard let current = store.all[key], current.generation == entry.generation,
+          current.state == .running
+        else { return }
+        entry = current
       }
       for (index, sub) in entry.subtitles.enumerated()
-      where !FileManager.default.fileExists(atPath: store.root.appending(path: sub.file).path) {
+      where !(await files.exists(store.root.appending(path: sub.file))) {
         if !active.contains(where: {
           let t = Transfer.read($0)
           return t?.subtitle == true && t?.part == index
@@ -219,7 +234,7 @@ private struct Transfer: Codable, Sendable {
       }
       if entry.kind == .original {
         if !active.contains(where: { Transfer.read($0)?.part == -2 }) {
-          let size = (try? store.file(entry).resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
+          let size = await files.size(store.file(entry))
           try await enqueue(entry, part: -2, url: api.paths.stream(entry.id), offset: Int64(size))
         }
       } else if let id = entry.serverId {
@@ -230,7 +245,7 @@ private struct Transfer: Codable, Sendable {
         } else {
           for segment in entry.segment..<(entry.segment + 1) {
             let path = store.root.appending(path: "\(key)/segment-\(segment)")
-            if !FileManager.default.fileExists(atPath: path.path),
+            if !(await files.exists(path)),
               !active.contains(where: {
                 Transfer.read($0)?.part == segment && Transfer.read($0)?.subtitle == false
               })
@@ -241,13 +256,15 @@ private struct Transfer: Codable, Sendable {
           }
         }
       }
+    } catch is CancellationError {
+      return
     } catch {
       await failed(key, error: error)
       Task { await self.schedule(key) }
     }
   }
   public func pause(_ key: String) async throws {
-    try store.update(key) {
+    try await store.update(key) {
       $0.state = .paused
       $0.generation = UUID().uuidString
     }
@@ -256,7 +273,7 @@ private struct Transfer: Codable, Sendable {
       if let download = task as? URLSessionDownloadTask, Transfer.read(task)?.part == -2 {
         let data = await download.cancelByProducingResumeData()
         if let data, store.all[key] != nil {
-          try data.write(to: store.root.appending(path: "\(key)/resume.data"), options: .atomic)
+          try await files.write(data, to: store.root.appending(path: "\(key)/resume.data"))
         }
       } else {
         task.cancel()
@@ -266,7 +283,7 @@ private struct Transfer: Codable, Sendable {
   public func remove(_ key: String) async throws {
     let entry = store.all[key]
     try await pause(key)
-    try store.remove(key)
+    try await store.remove(key)
     if let entry, let id = entry.serverId, let api = client(entry.server) {
       Task { try? await api.downloads.remove(downloadId: id) }
     }
@@ -285,7 +302,7 @@ private struct Transfer: Codable, Sendable {
     default: terminal = entry.attempts >= 8
     }
     do {
-      try store.update(key) {
+      try await store.update(key) {
         $0.failure = failure
         $0.error = (error as? ApiException)?.message
         $0.state = terminal ? .failed : .queued
@@ -304,13 +321,12 @@ private struct Transfer: Codable, Sendable {
     didFinishDownloadingTo location: URL
   ) {
     // URLSession deletes its temporary file when this callback returns.
-    let kept = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
     do {
-      try FileManager.default.moveItem(at: location, to: kept)
+      let kept = try DownloadFiles.keepTemporary(location)
       let transfer = Transfer.read(downloadTask)
       let response = downloadTask.response as? HTTPURLResponse
       Task { @MainActor in
-        defer { try? FileManager.default.removeItem(at: kept) }
+        defer { Task { try? await self.files.delete(kept) } }
         guard let transfer, let response else { return }
         await self.received(transfer, response: response, file: kept)
       }
@@ -331,8 +347,8 @@ private struct Transfer: Codable, Sendable {
     Task { @MainActor in
       guard self.store.all[transfer.key]?.generation == transfer.generation else { return }
       if let data = (error as NSError).userInfo[NSURLSessionDownloadTaskResumeData] as? Data {
-        try? data.write(
-          to: self.store.root.appending(path: "\(transfer.key)/resume.data"), options: .atomic)
+        try? await self.files.write(
+          data, to: self.store.root.appending(path: "\(transfer.key)/resume.data"))
       }
       await self.failed(transfer.key, error: error)
     }
@@ -348,7 +364,7 @@ private struct Transfer: Codable, Sendable {
       guard now.timeIntervalSince(self.lastProgress[t.key] ?? .distantPast) >= self.progressInterval
       else { return }
       self.lastProgress[t.key] = now
-      try? self.store.update(t.key) {
+      self.store.showProgress(t.key) {
         $0.bytes = t.offset + totalBytesWritten
         if totalBytesExpectedToWrite > 0 { $0.totalBytes = t.offset + totalBytesExpectedToWrite }
       }
@@ -370,22 +386,6 @@ private struct Transfer: Codable, Sendable {
     else { return nil }
     return request
   }
-  private func append(_ source: URL, to target: URL, offset: Int64) throws -> Int64 {
-    if !FileManager.default.fileExists(atPath: target.path) { try Data().write(to: target) }
-    let out = try FileHandle(forWritingTo: target)
-    defer { try? out.close() }
-    try out.truncate(atOffset: UInt64(offset))
-    try out.seekToEnd()
-    let input = try FileHandle(forReadingFrom: source)
-    defer { try? input.close() }
-    var count = offset
-    while let data = try input.read(upToCount: 65536), !data.isEmpty {
-      try out.write(contentsOf: data)
-      count += Int64(data.count)
-    }
-    try out.synchronize()
-    return count
-  }
   private func received(_ t: Transfer, response: HTTPURLResponse, file: URL) async {
     processing += 1
     defer {
@@ -399,30 +399,26 @@ private struct Transfer: Codable, Sendable {
       if t.part == -3 {
         if (200..<300).contains(status) {
           let target = store.root.appending(path: "\(t.key)/image.jpg")
-          try? FileManager.default.removeItem(at: target)
-          try FileManager.default.moveItem(at: file, to: target)
-          try store.update(t.key) { $0.image = "\(t.key)/image.jpg" }
+          try await files.move(file, to: target, entry: entry)
+          try await store.update(t.key) { $0.image = "\(t.key)/image.jpg" }
         }
         return
       }
       if t.subtitle {
         if (200..<300).contains(status), entry.subtitles.indices.contains(t.part) {
           let target = store.root.appending(path: entry.subtitles[t.part].file)
-          try FileManager.default.createDirectory(
-            at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
-          try FileManager.default.moveItem(at: file, to: target)
+          try await files.move(file, to: target, entry: entry)
         }
         return
       }
       if entry.kind == .device, [404, 409].contains(status), entry.restarts < 2 {
         try await pause(t.key)
-        try? FileManager.default.removeItem(at: store.file(entry))
-        for url in try FileManager.default.contentsOfDirectory(
-          at: store.root.appending(path: t.key), includingPropertiesForKeys: nil)
+        try? await files.delete(store.file(entry))
+        for url in try await files.contents(store.root.appending(path: t.key))
         where url.lastPathComponent.hasPrefix("segment-") {
-          try FileManager.default.removeItem(at: url)
+          try await files.delete(url)
         }
-        try store.update(t.key) {
+        try await store.update(t.key) {
           $0.state = .queued
           $0.serverId = nil
           $0.segment = 0
@@ -435,12 +431,12 @@ private struct Transfer: Codable, Sendable {
       if status == 503, entry.kind == .device {
         let delay = min(
           60, max(1, Double(response.value(forHTTPHeaderField: "Retry-After") ?? "5") ?? 5))
-        try store.update(t.key) { $0.retryAt = Date().addingTimeInterval(delay) }
+        try await store.update(t.key) { $0.retryAt = Date().addingTimeInterval(delay) }
         await schedule(t.key)
         return
       }
       guard (200..<300).contains(status) || (status == 416 && t.offset > 0) else {
-        let body = try? JSONDecoder().decode(ApiErrorBody.self, from: Data(contentsOf: file))
+        let body = try? JSONDecoder().decode(ApiErrorBody.self, from: await files.read(file))
         throw ApiException(
           status: status, code: body?.code,
           message: body?.message ?? "The server answered \(status).")
@@ -448,48 +444,51 @@ private struct Transfer: Codable, Sendable {
       if t.part >= 0 && t.part < entry.segment { return }
       if t.part == -1 && entry.bytes > 0 { return }
       if t.part == -2 {
-        let bytes =
-          status == 416
-          ? t.offset : try append(file, to: store.file(entry), offset: status == 206 ? t.offset : 0)
-        try store.update(t.key) {
-          $0.bytes = bytes
-          $0.totalBytes = bytes
+        if status != 416 {
+          try await store.append(file, entry: entry, offset: status == 206 ? t.offset : 0)
+        } else {
+          let bytes = await files.size(store.file(entry))
+          try await store.update(t.key) {
+            guard $0.generation == entry.generation, $0.state == .running else { return }
+            $0.bytes = bytes
+            $0.totalBytes = bytes
+          }
         }
         await finish(t.key)
         return
       }
       if t.part == -1 {
-        let bytes = try append(file, to: store.file(entry), offset: 0)
-        try store.update(t.key) { $0.bytes = bytes }
+        try await store.append(file, entry: entry, offset: 0)
       } else {
         let staged = store.root.appending(path: "\(t.key)/segment-\(t.part)")
-        try? FileManager.default.removeItem(at: staged)
-        try FileManager.default.moveItem(at: file, to: staged)
+        try await files.move(file, to: staged, entry: entry)
         if status == 204 || response.value(forHTTPHeaderField: "X-Matinee-Last-Segment") == "1" {
-          try Data().write(to: staged.appendingPathExtension("last"))
+          try await files.write(Data(), to: staged.appendingPathExtension("last"))
         }
         if try await drain(t.key) { return }
       }
       // A completed task may still be in allTasks until the delegate returns.
       await schedule(t.key)
+    } catch is CancellationError {
+      // A pause or deletion invalidated this completion.
     } catch { await failed(t.key, error: error) }
   }
   private func drain(_ key: String) async throws -> Bool {
     guard var entry = store.all[key] else { return false }
     while true {
       let next = store.root.appending(path: "\(key)/segment-\(entry.segment)")
-      guard FileManager.default.fileExists(atPath: next.path) else { return false }
+      guard await files.exists(next) else { return false }
       let last = next.appendingPathExtension("last")
-      let isLast = FileManager.default.fileExists(atPath: last.path)
-      let bytes = try append(next, to: store.file(entry), offset: entry.bytes)
-      try store.update(key) {
-        $0.bytes = bytes
-        $0.segment += 1
-      }
-      try FileManager.default.removeItem(at: next)
-      entry = store.all[key]!
+      let isLast = await files.exists(last)
+      try await store.append(
+        next, entry: entry, offset: entry.bytes, segment: true, keepSource: true)
+      try await files.delete(next)
+      guard let current = store.all[key], current.generation == entry.generation,
+        current.state == .running
+      else { return false }
+      entry = current
       if isLast {
-        try FileManager.default.removeItem(at: last)
+        try await files.delete(last)
         await finish(key)
         return true
       }
@@ -497,7 +496,12 @@ private struct Transfer: Codable, Sendable {
   }
   private func finish(_ key: String) async {
     guard let before = store.all[key], [.queued, .running].contains(before.state) else { return }
-    try? store.update(key) { $0.videoComplete = true }
+    try? await store.update(key) {
+      guard $0.generation == before.generation, [.queued, .running].contains($0.state) else {
+        return
+      }
+      $0.videoComplete = true
+    }
     // Subtitle tasks are allowed to finish before the entry is made playable.
     for task in await tasks(key) where Transfer.read(task)?.subtitle == false { task.cancel() }
     guard let entry = store.all[key], entry.generation == before.generation,
@@ -511,16 +515,21 @@ private struct Transfer: Codable, Sendable {
       return
     }
     do {
-      for file in try FileManager.default.contentsOfDirectory(
-        at: store.root.appending(path: key), includingPropertiesForKeys: nil)
+      for file in try await files.contents(store.root.appending(path: key))
       where file.lastPathComponent.hasPrefix("segment-") || file.lastPathComponent == "resume.data"
       {
-        try FileManager.default.removeItem(at: file)
+        try await files.delete(file)
       }
-      try store.update(key) {
-        $0.subtitles = $0.subtitles.filter {
-          FileManager.default.fileExists(atPath: store.root.appending(path: $0.file).path)
+      var saved: [OfflineSubtitle] = []
+      for sub in entry.subtitles where await files.exists(store.root.appending(path: sub.file)) {
+        saved.append(sub)
+      }
+      let subtitles = saved
+      try await store.update(key) {
+        guard $0.generation == entry.generation, [.queued, .running].contains($0.state) else {
+          return
         }
+        $0.subtitles = subtitles
         $0.state = .done
         $0.totalBytes = $0.bytes
         $0.serverId = nil

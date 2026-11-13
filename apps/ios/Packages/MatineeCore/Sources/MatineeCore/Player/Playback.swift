@@ -256,25 +256,3 @@ public func subtitleShow(_ plan: PlaybackStart, mpv: Bool = false) -> SubtitleSh
   default: return .off
   }
 }
-
-/// Who draws `track` of a download: the engine draws a picture track, like
-/// PGS, from a download that's the file as it is, and mpv an ASS or SSA
-/// track there with its styling and fonts. The view draws text from the
-/// WebVTT saved beside it, or from `url` when it wasn't saved.
-///
-/// Kotlin keeps this in `DownloadTracks.kt`; it's here because the iOS
-/// `DownloadTracks.swift` belongs to another change. Move it there with it.
-public func downloadSubtitleShow(_ track: SubtitleTrack?, mpv: Bool = false, url: String)
-  -> SubtitleShow
-{
-  guard let track else { return .off }
-  let stream = streamIndex(track)
-  let picture =
-    track.delivery == SubtitleDelivery.pgs || track.delivery == SubtitleDelivery.burn_in
-  let styled = track.format == "ASS" || track.format == "SSA"
-  if let stream, track.source == SubtitleSource.embedded, picture || (mpv && styled) {
-    return .inFile(track, stream)
-  }
-  if track.delivery == SubtitleDelivery.webvtt { return .screen(track, url) }
-  return .off
-}

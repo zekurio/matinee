@@ -74,7 +74,7 @@ func offlineFixture(
       try FileManager.default.createDirectory(
         at: root.appending(path: entry.key), withIntermediateDirectories: true)
       try Data("video".utf8).write(to: store.file(entry))
-      try store.put(entry)
+      try await store.put(entry)
     }
     let loaded = try DownloadStore(root: root)
     loaded.server = a.server
