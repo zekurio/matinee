@@ -80,24 +80,24 @@ apps/ios/
 
 ## What Android does and what iOS uses for it
 
-| Android                              | iOS                                                         |
-| ------------------------------------ | ----------------------------------------------------------- |
-| OkHttp, kotlinx.serialization        | URLSession, Codable                                         |
-| Generated `ContractModels/Api.kt`    | Generated `ContractModels/Api.swift`, `pnpm api:ios`        |
-| Keystore-encrypted preferences       | Keychain for tokens, UserDefaults for the rest              |
-| Custom Tab + `matinee://` intent     | `ASWebAuthenticationSession`                                |
-| `ACCESS_LOCAL_NETWORK`               | `NSLocalNetworkUsageDescription`, `NSBonjourServices` if used |
-| Compose Navigation, `Navigator`      | `NavigationStack` with a typed route enum                   |
-| Coil                                 | Nuke, with the session's auth header                        |
-| ExoPlayer / Media3                   | AVPlayer, AVKit for picture in picture                      |
-| `PlaybackService`, media session     | `MPNowPlayingInfoCenter`, `MPRemoteCommandCenter`           |
-| WorkManager downloads                | A background `URLSession`                                   |
-| System caption style                 | MediaAccessibility (`MACaptionAppearance`)                  |
-| CameraX + ZXing                      | AVFoundation capture or VisionKit; CoreImage draws QR codes |
-| Per-app language                     | iOS's per-app language setting, from the string catalog     |
-| logcat for the app log               | `OSLogStore` for this process                               |
-| `strings.xml`, `values-de`           | `Localizable.xcstrings`, generated from Android's files     |
-| Vector drawables from lucide         | SVG template images in the asset catalog                    |
+| Android                           | iOS                                                           |
+| --------------------------------- | ------------------------------------------------------------- |
+| OkHttp, kotlinx.serialization     | URLSession, Codable                                           |
+| Generated `ContractModels/Api.kt` | Generated `ContractModels/Api.swift`, `pnpm api:ios`          |
+| Keystore-encrypted preferences    | Keychain for tokens, UserDefaults for the rest                |
+| Custom Tab + `matinee://` intent  | `ASWebAuthenticationSession`                                  |
+| `ACCESS_LOCAL_NETWORK`            | `NSLocalNetworkUsageDescription`, `NSBonjourServices` if used |
+| Compose Navigation, `Navigator`   | `NavigationStack` with a typed route enum                     |
+| Coil                              | Nuke, with the session's auth header                          |
+| ExoPlayer / Media3                | AVPlayer, AVKit for picture in picture                        |
+| `PlaybackService`, media session  | `MPNowPlayingInfoCenter`, `MPRemoteCommandCenter`             |
+| WorkManager downloads             | A background `URLSession`                                     |
+| System caption style              | MediaAccessibility (`MACaptionAppearance`)                    |
+| CameraX + ZXing                   | AVFoundation capture or VisionKit; CoreImage draws QR codes   |
+| Per-app language                  | iOS's per-app language setting, from the string catalog       |
+| logcat for the app log            | `OSLogStore` for this process                                 |
+| `strings.xml`, `values-de`        | `Localizable.xcstrings`, generated from Android's files       |
+| Vector drawables from lucide      | SVG template images in the asset catalog                      |
 
 Where iOS has a platform convention that differs from Android's (the back
 swipe, sheets with detents, context menus on a long press, the share
@@ -116,6 +116,8 @@ order, and the words the same.
   comments, no restating the code.
 - Core code gets unit tests (Swift Testing). Port the Android test that
   covers the Kotlin you port.
+- The flake's dev shell is Linux-only. On this Mac, Node and pnpm come
+  from `nix shell nixpkgs#nodejs_24 nixpkgs#pnpm_11 -c <cmd>`.
 - Build before you report: `swift build && swift test` for the package,
   `xcodebuild` for the app. UI work is checked on a simulator, with
   screenshots, against the dev server in `DEV.md`.

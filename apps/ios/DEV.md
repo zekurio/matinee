@@ -191,7 +191,3 @@ including both real device-code exchanges and a video encode. The health
 endpoint is `http://localhost:18420/api/health`; REST docs are
 `http://localhost:18420/api/v1/openapi.json`. No simulator UI testing was
 needed to provision this service.
-
-Repository lint, typechecking, and Android generation checks passed. Full
-`pnpm verify` stops at an existing formatting issue in `apps/ios/PLAN.md`;
-that unrelated file was left unchanged. `DEV.md` passes the formatter.
