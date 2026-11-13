@@ -34,6 +34,8 @@ func downloadStatus(_ entry: OfflineItem, unmetered: Bool) -> String {
   switch entry.state {
   case .done: return formatBytes(entry.bytes)
   case .running:
+    // Waiting to try again after an error, its task held back until then: why.
+    if entry.isBroken, let failure = failureText(entry) { return failure }
     guard let total = entry.totalBytes else { return formatBytes(entry.bytes) }
     return Str.downloadsOf(formatBytes(entry.bytes), formatBytes(total))
   case .paused: return Str.downloadsStatePaused
@@ -355,7 +357,8 @@ struct ComingRow: View {
             }
             Text(downloadStatus(entry, unmetered: downloads.unmeteredOnly)).textStyle(.bodySmall)
               .foregroundStyle(broken ? palette.danger : palette.faint)
-              .rowLines(1)
+              // What went wrong, often the server's own words, gets a second line rather than being cut.
+              .rowLines(broken ? 2 : 1)
           }
         }
         .accessibilityElement(children: .combine)
