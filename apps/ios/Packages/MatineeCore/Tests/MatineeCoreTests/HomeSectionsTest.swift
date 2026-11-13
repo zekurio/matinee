@@ -56,6 +56,14 @@ struct HomeSectionsTest {
     #expect(heroHeight(window: 400, wide: true) == 360)
   }
 
+  @Test func onlyATabletSizedWindowGetsTheTallBanner() {
+    #expect(heroIsWide(width: 820, height: 1180))
+    #expect(heroIsWide(width: 1180, height: 820))
+    #expect(!heroIsWide(width: 402, height: 874))
+    // A phone on its side.
+    #expect(!heroIsWide(width: 874, height: 402))
+  }
+
   @Test func aSlideListsTheYearAndAShowsEpisodes() {
     let episodes: (Int) -> String = { "\($0) episodes" }
     #expect(featured(kind: TitleKind.movie, year: 1999, count: 1).facts(episodes: episodes) == ["1999"])

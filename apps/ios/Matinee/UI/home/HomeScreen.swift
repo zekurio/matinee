@@ -95,7 +95,8 @@ private struct OnlineHomeScreen: View {
   /// before while the server can't be reached: the icon, up top.
   @ViewBuilder private func banner(topInset: CGFloat, stale: [any Reloadable]) -> some View {
     let featured = loaders.featured
-    let height = heroHeight(window: window.height, wide: isWide(window), topInset: topInset)
+    let height = heroHeight(
+      window: window.height, wide: heroIsWide(width: window.width, height: window.height), topInset: topInset)
     let header = { AppHeader { DisconnectedAction(stale) } }
     switch featured.state {
     case .loading:

@@ -89,6 +89,12 @@ public enum HeroPaging {
   }
 }
 
+/// Whether Home's banner takes the tablet's layout: a tall banner with the
+/// overview, a large logo, and the dots. It needs a window as wide as a
+/// tablet's, as Android's `isWide`, and tall enough for all that above the
+/// rails; a phone on its side is wide but short, and keeps the phone's.
+public func heroIsWide(width: Double, height: Double) -> Bool { width >= 600 && height >= 500 }
+
 /// How tall Home's banner is in a window `height` tall. On a phone, short
 /// enough that two rows of stills fit under it, and no shorter than 320, or
 /// its title and buttons would reach the header; `topInset` is the status

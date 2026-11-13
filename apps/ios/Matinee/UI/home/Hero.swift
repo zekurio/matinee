@@ -32,6 +32,9 @@ struct Hero<Top: View>: View {
   @State private var held = false
   /// How tall the buttons are, which a slide's text leaves free.
   @State private var buttonsHeight: CGFloat = 44
+  /// The safe area's sides, as a phone on its side has: the art spans the
+  /// width, and the text keeps inside them.
+  @State private var sides = EdgeInsets()
 
   init(slides: [FeaturedTitle], height: CGFloat, topInset: CGFloat, @ViewBuilder top: @escaping () -> Top) {
     self.slides = slides
@@ -47,14 +50,14 @@ struct Hero<Top: View>: View {
   var body: some View {
     let count = slides.count
     let loops = count > 1
-    let wide = isWide(window)
+    let wide = heroIsWide(width: window.width, height: window.height)
     let bottom = heroBottom(wide: wide)
     ScrollView(.horizontal) {
       LazyHStack(alignment: .top, spacing: 0) {
         ForEach(0..<HeroPaging.pages(count), id: \.self) { page in
           Slide(
             slide: slides[HeroPaging.slide(page, count: count)], wide: wide, topInset: topInset,
-            reserved: bottom + buttonsHeight + 14
+            sides: sides, reserved: bottom + buttonsHeight + 14
           )
           .frame(minHeight: height)
           .containerRelativeFrame(.horizontal)
@@ -84,6 +87,9 @@ struct Hero<Top: View>: View {
       guard !Task.isCancelled else { return }
       withMotion(.timingCurve(0.2, 0, 0, 1, duration: 0.5)) { position.scrollTo(id: settled + 1) }
     }
+    // The art reaches the screen's edges; the overlays below keep inside the safe area.
+    .ignoresSafeArea(edges: .horizontal)
+    .onGeometryChange(for: EdgeInsets.self) { $0.safeAreaInsets } action: { sides = $0 }
     .overlay(alignment: .bottomLeading) {
       HeroButtons(slide: slides[HeroPaging.slide(current, count: count)], wide: wide)
         .padding(.horizontal, Gutter)
@@ -154,6 +160,7 @@ private struct Slide: View {
   let slide: FeaturedTitle
   let wide: Bool
   let topInset: CGFloat
+  let sides: EdgeInsets
   /// Room left at the bottom for the buttons, which stay while the slides swipe.
   let reserved: CGFloat
 
@@ -244,7 +251,8 @@ private struct Slide: View {
       }
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
-    .padding(.horizontal, Gutter)
+    .padding(.leading, Gutter + sides.leading)
+    .padding(.trailing, Gutter + sides.trailing)
     // Clear of the header at the top, which is the status bar's and 56 more.
     .padding(.top, topInset + 56)
     .padding(.bottom, reserved)
@@ -336,6 +344,8 @@ private struct HeroButtons: View {
       }
     }
     .fixedSize(horizontal: wide, vertical: false)
+    // A phone's buttons share its width; on its side, not all of it.
+    .frame(maxWidth: wide ? nil : 560, alignment: .leading)
   }
 }
 
@@ -395,7 +405,7 @@ private struct HeroHeader<Top: View>: View {
 
   var body: some View {
     VStack(spacing: 0) {
-      palette.background.opacity(0.85).frame(height: topInset)
+      palette.background.opacity(0.85).frame(height: topInset).ignoresSafeArea(edges: .horizontal)
       top()
     }
   }
@@ -416,7 +426,7 @@ struct HeroSkeleton<Top: View>: View {
       small.fill(palette.secondary).frame(width: 140, height: 16)
     }
     .padding(Gutter)
-    .padding(.bottom, heroBottom(wide: isWide(window)))
+    .padding(.bottom, heroBottom(wide: heroIsWide(width: window.width, height: window.height)))
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
     .frame(height: height)
     .background(palette.card)
