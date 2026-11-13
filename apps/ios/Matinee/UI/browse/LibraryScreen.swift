@@ -71,14 +71,17 @@ struct LibraryScreen: View {
   /// Search, a genre filter, and the sort, at the end of the bar.
   @ViewBuilder private var actions: some View {
     @Bindable var filters = filters
-    // Stays while searching, where it puts the keyboard back in the field,
-    // so the bar's title doesn't move as the field opens.
-    Button(action: openSearch) { Image(Lucide.search) }
-      .accessibilityLabel(Str.librarySearchTitles)
-    Button { filtering = true } label: {
-      Image(Lucide.listFilter).foregroundStyle(filters.genre != nil ? palette.accent : palette.foreground)
+    // Search stays while searching, where it puts the keyboard back in the
+    // field, so the bar's title doesn't move as the field opens. The labels
+    // have words for when an iPad's tabs crowd them into the bar's overflow menu.
+    Button(action: openSearch) {
+      Label { Text(Str.librarySearchTitles) } icon: { Image(Lucide.search) }
     }
-    .accessibilityLabel(Str.libraryFilter)
+    Button { filtering = true } label: {
+      Label { Text(Str.libraryFilter) } icon: { Image(Lucide.listFilter) }
+    }
+    // In the accent while a genre filters, as Android tints it.
+    .tint(filters.genre != nil ? palette.accent : palette.foreground)
     .accessibilityValue(filters.genre ?? "")
     Menu {
       Picker(Str.librarySort, selection: $filters.sort) {
@@ -86,9 +89,8 @@ struct LibraryScreen: View {
       }
       .pickerStyle(.inline)
     } label: {
-      Image(Lucide.arrowUpDown)
+      Label { Text(Str.librarySort) } icon: { Image(Lucide.arrowUpDown) }
     }
-    .accessibilityLabel(Str.librarySort)
     .accessibilityValue(librarySortLabel(filters.sort))
   }
 
