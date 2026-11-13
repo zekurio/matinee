@@ -611,7 +611,8 @@ private fun Playback(itemId: String, data: PlayerData, start: Double?) {
             CircularProgressIndicator(Modifier.align(Alignment.Center).size(48.dp), color = Palette.Foreground)
         }
         if (!inPip) {
-            AnimatedVisibility((controls || controller.ended) && !locked, enter = Motion.fadeIn, exit = Motion.fadeOut) {
+            // An error has the screen to itself, with a back button of its own.
+            AnimatedVisibility((controls || controller.ended) && !locked && controller.error == null, enter = Motion.fadeIn, exit = Motion.fadeOut) {
                 Controls(
                     controller,
                     back = back,
@@ -639,7 +640,8 @@ private fun Playback(itemId: String, data: PlayerData, start: Double?) {
                 )
             }
             controller.error?.let { message ->
-                Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.8f))) {
+                // It takes the taps too, so none reaches the video under it.
+                Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.8f)).pointerInput(Unit) { detectTapGestures() }) {
                     when (val refusal = controller.refusal) {
                         null -> PlayerFailure(stringResource(R.string.player_error_lost), message, controller::retry)
                         else -> PlayerFailure(refusalTitle(refusal), message, null)

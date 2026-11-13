@@ -363,6 +363,14 @@ class PlayerController(
         player.addListener(object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 playing = isPlaying
+                // What plays again didn't fail for good, so the screen stops
+                // saying it did, and a freeze counts anew. A refusal stops
+                // the player, so it never gets here.
+                if (isPlaying && error != null && refusal == null) {
+                    error = null
+                    sourceFailed = false
+                    freeze.reset()
+                }
                 report()
             }
 
@@ -701,6 +709,8 @@ class PlayerController(
         }
         if (sourceFailed || change.failed != null) {
             error = message
+            // A frozen picture plays on under its sound, which the error would cover.
+            if (player.isPlaying) player.pause()
             return
         }
         asking = undo
