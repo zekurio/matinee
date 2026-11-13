@@ -74,25 +74,30 @@ import Testing
       print(
         "LIVE downloaded bytes=\(done.bytes) segment=\(done.segment) subtitles=\(done.subtitles.count)"
       )
-      let player = AVPlayer(url: downloads.store.file(done))
-      player.isMuted = true
-      player.play()
+      let prefs = PlayerPrefs()
+      let offlineApi = MatineeApi(
+        transport: ApiTransport(base: URL(string: "http://127.0.0.1:1/")!))
+      let player = PlayerController(
+        api: offlineApi, device: device, prefs: prefs,
+        downloads: DownloadPlayerAdapter(downloads: downloads, server: server),
+        preferences: .init(
+          audioLanguage: "en", subtitleMode: SubtitleMode.always, subtitleLanguage: "en",
+          rememberSubtitles: false, skipBackSeconds: 10, skipForwardSeconds: 30))
+      player.player.isMuted = true
+      await player.startLocal(itemId: item.id)
       try await Task.sleep(for: .seconds(3))
-      #expect(player.currentItem?.status == .readyToPlay)
-      #expect(player.currentTime().seconds > 0)
-      let sought = await player.seek(
-        to: CMTime(seconds: 10, preferredTimescale: 600), toleranceBefore: .zero,
-        toleranceAfter: .zero)
+      #expect(player.player.currentItem?.status == .readyToPlay)
+      #expect(player.position > 0)
+      #expect(player.subtitle != nil)
+      #expect(player.cues?.cues.isEmpty == false)
+      await player.seekTo(10)
       try await Task.sleep(for: .seconds(2))
-      #expect(sought)
-      #expect(player.currentTime().seconds >= 10)
-      print(
-        "LIVE AVPlayer ready=\(player.currentItem?.status.rawValue ?? -1) seek=\(sought) time=\(player.currentTime().seconds)"
-      )
-      player.pause()
-      player.replaceCurrentItem(with: nil)
+      #expect(player.position >= 10)
+      await player.stop()
       let pending = try downloads.pendingFor(server)
-      try pending.put(item.id, .init(positionSeconds: 12, durationSeconds: item.durationSeconds))
+      #expect(pending.report(item.id) != nil)
+      print(
+        "LIVE PlayerController subtitles loaded, seek=\(player.position), offline report queued")
       try await pending.flush(client: { $0 == server ? api : nil })
       #expect(pending.report(item.id) == nil)
       print("LIVE offline progress accepted")

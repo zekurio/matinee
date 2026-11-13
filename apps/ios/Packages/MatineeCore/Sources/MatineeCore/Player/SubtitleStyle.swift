@@ -1,6 +1,24 @@
 import CoreGraphics
 import CoreText
 import MediaAccessibility
+import Observation
+
+/// Reading the revision lets an observed render follow Accessibility changes
+/// without requiring the player to close and reopen.
+@Observable @MainActor public final class SystemCaptionStyle {
+  public static let shared = SystemCaptionStyle()
+  public private(set) var revision = 0
+
+  private init() {
+    CFNotificationCenterAddObserver(
+      CFNotificationCenterGetLocalCenter(), Unmanaged.passUnretained(self).toOpaque(),
+      { _, observer, _, _, _ in
+        guard let observer else { return }
+        let style = Unmanaged<SystemCaptionStyle>.fromOpaque(observer).takeUnretainedValue()
+        Task { @MainActor in style.revision += 1 }
+      }, kMACaptionAppearanceSettingsChangedNotification, nil, .deliverImmediately)
+  }
+}
 
 public struct CaptionColor: Sendable, Equatable {
   public var red: Double
@@ -34,9 +52,9 @@ public struct SubtitleLook: Sendable, Equatable {
   let color: CaptionColor =
     switch prefs.subtitleColor {
     case .white: CaptionColor(1, 1, 1)
-    case .yellow: CaptionColor(1, 0.882, 0.302)
-    case .cyan: CaptionColor(0.424, 0.898, 1)
-    case .green: CaptionColor(0.486, 0.949, 0.604)
+    case .yellow: CaptionColor(1, 225.0 / 255, 77.0 / 255)
+    case .cyan: CaptionColor(108.0 / 255, 229.0 / 255, 1)
+    case .green: CaptionColor(124.0 / 255, 242.0 / 255, 154.0 / 255)
     }
   var look = SubtitleLook(
     color: color,
@@ -45,6 +63,7 @@ public struct SubtitleLook: Sendable, Equatable {
     ), window: CaptionColor(0, 0, 0, 0), edge: prefs.subtitleEdge, edgeColor: CaptionColor(0, 0, 0),
     scale: prefs.subtitleScale)
   guard prefs.subtitleSystemStyle else { return look }
+  _ = SystemCaptionStyle.shared.revision
   let domain = MACaptionAppearanceDomain.user
   look.color = CaptionColor(
     MACaptionAppearanceCopyForegroundColor(domain, nil).takeRetainedValue(),

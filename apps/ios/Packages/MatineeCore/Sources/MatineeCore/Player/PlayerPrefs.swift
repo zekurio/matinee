@@ -11,13 +11,22 @@ public let SUBTITLE_SCALES: [Double] = [0.75, 1, 1.25, 1.5, 2]
 
 @Observable @MainActor public final class PlayerPrefs {
   @ObservationIgnored private let defaults: UserDefaults
+  /// The quality videos start in. The server answers with the nearest one the
+  /// account may use, so one over its limit stays saved for when it's lifted.
   public var quality: String { didSet { save() } }
+  /// The codec encodes come in, or AUTOMATIC.
   public var videoCodec: String { didSet { save() } }
+  /// The codec streams convert audio to, or AUTOMATIC.
   public var audioCodec: String { didSet { save() } }
+  /// Formats the device plays that streams convert anyway.
   public var convertAudio: Set<String> { didSet { save() } }
+  /// Count down to the next episode and start it.
   public var autoplayNext: Bool { didSet { save() } }
+  /// The video fills the screen, cut at its edges, rather than showing whole.
   public var fillScreen: Bool { didSet { save() } }
+  /// Keep playing in a small window on leaving the app.
   public var pictureInPicture: Bool { didSet { save() } }
+  /// Draw subtitles as the system's caption settings say, instead of our choices.
   public var subtitleSystemStyle: Bool { didSet { save() } }
   public var subtitleScale: Double { didSet { save() } }
   public var subtitleColor: SubtitleColor { didSet { save() } }
