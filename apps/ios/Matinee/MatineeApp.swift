@@ -1,27 +1,155 @@
 import MatineeCore
+import Nuke
+import OSLog
 import SwiftUI
+import UIKit
 
-@main
-struct MatineeApp: App {
-  @State private var theme = ThemeStore()
-  @State private var viewer = ViewerState()
+/// MatineeApp.kt's application: the one session and the one set of
+/// downloads the app has, made at launch and kept for its life, with the
+/// theme. The app delegate makes it, since the system may launch the app in
+/// the background for a download before any scene, and the scene shares it.
+@Observable final class AppModel {
+  let session: MatineeSession
+  let downloads: Downloads
+  let theme = ThemeStore()
+  let signInErrors = SignInErrors()
 
-  var body: some Scene {
-    WindowGroup {
-      root
-        .environment(theme)
-        .environment(viewer)
-        .measuresWindow()
-        .matineeTheme(theme)
+  init() {
+    let store = SessionStore()
+    #if DEBUG
+      DevLaunch.prepare(store)
+    #endif
+    session = MatineeSession(store: store, deviceName: UIDevice.current.name)
+    downloads = Self.makeDownloads(session)
+    // A server removed takes its downloads, what waited to reach it, and its artwork along.
+    session.onRemove = { [downloads] origin, api in
+      do {
+        try await downloads.forgetServer(origin, api: api)
+      } catch {
+        AppLog.downloads.error("Could not remove a server's downloads")
+      }
+      ImagePipeline.forgetAll()
+    }
+    Task { [downloads] in await downloads.restore() }
+    #if DEBUG
+      DevLaunch.follow(session)
+    #endif
+  }
+
+  private static func makeDownloads(_ session: MatineeSession) -> Downloads {
+    let client: @MainActor (String) -> MatineeApi? = { [weak session] origin in
+      session?.serverClient(origin: origin)?.api
+    }
+    do {
+      return try Downloads(client: client)
+    } catch {
+      // Without its folder the app still runs; downloads just don't outlive the launch.
+      AppLog.downloads.error("Could not open the downloads folder")
+      let temporary = FileManager.default.temporaryDirectory.appending(path: "downloads")
+      // SAFETY: a fresh folder in the app's own temporary directory can always be made.
+      return try! Downloads(root: temporary, client: client)
     }
   }
 
-  /// The gallery in debug builds, until the shell (Root.swift) takes over.
+  /// The browser handing back a sign-in code by opening the app, as when
+  /// /authorize was opened outside the web sign-in sheet. The sheet itself
+  /// gets its callback without this.
+  func open(_ url: URL) {
+    guard BrowserSignIn.isCallback(url) else { return }
+    Task {
+      do {
+        try await session.finishBrowserSignIn(url)
+        signInErrors.browser = nil
+      } catch {
+        signInErrors.browser = browserFailure(error)
+      }
+    }
+  }
+}
+
+final class AppDelegate: NSObject, UIApplicationDelegate {
+  lazy var model = AppModel()
+
+  func application(
+    _ application: UIApplication, didFinishLaunchingWithOptions options: [UIApplication.LaunchOptionsKey: Any]? = nil
+  ) -> Bool {
+    _ = model
+    return true
+  }
+
+  /// A download's background session finished while the app wasn't running: the worker takes it over.
+  func application(
+    _ application: UIApplication, handleEventsForBackgroundURLSession identifier: String,
+    completionHandler: @escaping () -> Void
+  ) {
+    // SAFETY: UIKit calls this on the main thread and takes the handler back there; the worker calls it on the main actor.
+    nonisolated(unsafe) let completion = completionHandler
+    let handled = model.downloads.worker.handleEventsForBackgroundURLSession(
+      identifier: identifier, completionHandler: { completion() })
+    if !handled { completion() }
+  }
+
+  func application(_ application: UIApplication, supportedInterfaceOrientationsFor window: UIWindow?)
+    -> UIInterfaceOrientationMask
+  {
+    Orientation.mask
+  }
+}
+
+/// Which way the screen may turn: any way, but for the player, which turns
+/// it to landscape as Android's player activity does, and lets it go back.
+enum Orientation {
+  static var mask: UIInterfaceOrientationMask {
+    locked ?? (UIDevice.current.userInterfaceIdiom == .pad ? .all : .allButUpsideDown)
+  }
+  private static var locked: UIInterfaceOrientationMask?
+
+  static func lock(_ orientations: UIInterfaceOrientationMask) {
+    locked = orientations
+    update(orientations)
+  }
+
+  static func unlock() {
+    locked = nil
+    update(mask)
+  }
+
+  private static func update(_ orientations: UIInterfaceOrientationMask) {
+    for scene in UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene }) {
+      scene.keyWindow?.rootViewController?.setNeedsUpdateOfSupportedInterfaceOrientations()
+      scene.requestGeometryUpdate(.iOS(interfaceOrientations: orientations)) { _ in }
+    }
+  }
+}
+
+@main
+struct MatineeApp: App {
+  @UIApplicationDelegateAdaptor private var delegate: AppDelegate
+
+  var body: some Scene {
+    WindowGroup {
+      let model = delegate.model
+      root
+        .environment(model.theme)
+        .environment(model.session)
+        .environment(model.downloads)
+        .environment(model.signInErrors)
+        .measuresWindow()
+        .matineeTheme(model.theme)
+        .onOpenURL(perform: model.open)
+    }
+  }
+
   @ViewBuilder private var root: some View {
     #if DEBUG
-      GalleryRoot()
+      // The components on the theme, for checking them: `-gallery YES` (Gallery.swift).
+      if UserDefaults.standard.bool(forKey: "gallery") {
+        GalleryRoot().environment(ViewerState())
+      } else {
+        MatineeRoot()
+      }
     #else
-      Logo(height: 32).frame(maxWidth: .infinity, maxHeight: .infinity)
+      MatineeRoot()
     #endif
   }
 }

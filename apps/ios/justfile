@@ -35,7 +35,7 @@ run *args: build
 gallery *args: build
     xcrun simctl boot "{{ simulator }}" 2>/dev/null || true
     xcrun simctl install "{{ simulator }}" "{{ built_app }}"
-    xcrun simctl launch --terminate-running-process "{{ simulator }}" {{ app }} \
+    xcrun simctl launch --terminate-running-process "{{ simulator }}" {{ app }} -gallery YES \
         -gallery.server http://localhost:18420 -gallery.token "$(scripts/dev/token ios-admin)" {{ args }}
 
 # Run MatineeCore's tests on the Mac, and check the generated files are current

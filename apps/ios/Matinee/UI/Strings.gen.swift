@@ -1984,8 +1984,14 @@ nonisolated enum Str {
   static var webUsersTitle: String { tr("web_users_title") }
   /// (you)
   static var webUsersYou: String { tr("web_users_you") }
+  /// If the server is on your local network, turn on Local Network for Matinee in Settings.
+  static var iosConnectLocalNetwork: String { tr("ios_connect_local_network", table: "iOS") }
+  /// Open Settings
+  static var iosOpenSettings: String { tr("ios_open_settings", table: "iOS") }
   /// %lld%% watched
   static func iosProgressWatched(_ p1: Int) -> String { tr("ios_progress_watched", table: "iOS", p1) }
+  /// Matinee for iOS %@
+  static func iosSettingsVersion(_ p1: String) -> String { tr("ios_settings_version", table: "iOS", p1) }
 }
 
 nonisolated private func tr(_ key: String, table: String = "Localizable") -> String {

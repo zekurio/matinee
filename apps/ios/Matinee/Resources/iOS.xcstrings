@@ -1,6 +1,42 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "ios_connect_local_network": {
+      "comment": "Under a failed connect to a server on the local network; iOS asks for Local Network access, which the person can turn on in the app's settings.",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wenn der Server in deinem lokalen Netzwerk ist, schalte in den Einstellungen „Lokales Netzwerk“ für Matinee ein."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "If the server is on your local network, turn on Local Network for Matinee in Settings."
+          }
+        }
+      }
+    },
+    "ios_open_settings": {
+      "comment": "Button that opens Matinee's page in the iOS Settings app.",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einstellungen öffnen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Settings"
+          }
+        }
+      }
+    },
     "ios_progress_watched": {
       "comment": "VoiceOver's value for the bar of how much of a file was watched.",
       "extractionState": "manual",
@@ -15,6 +51,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld%% watched"
+          }
+        }
+      }
+    },
+    "ios_settings_version": {
+      "comment": "Under the server's address in Settings: the app and its version, as Android's settings_version says Matinee for Android.",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Matinee für iOS %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Matinee for iOS %@"
           }
         }
       }
