@@ -15,6 +15,10 @@ public enum UserCode {
 public struct ScannedCode: Sendable, Equatable {
   public let userCode: String
   public let server: String?
+  public init(userCode: String, server: String?) {
+    self.userCode = userCode
+    self.server = server
+  }
 }
 public func scannedCode(_ text: String) -> ScannedCode? {
   if let code = UserCode.parse(text) { return .init(userCode: code, server: nil) }

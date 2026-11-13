@@ -25,6 +25,22 @@ import Testing
     #expect(OWN_SUBTITLE_EDGES == [.shadow, .outline, .none])
   }
 
+  @Test func sharedIsOneSet() {
+    #expect(PlayerPrefs.shared === PlayerPrefs.shared)
+  }
+
+  /// Two sets over the same defaults lose each other's changes, which is why the app keeps one.
+  @Test func secondSetOverwrites() throws {
+    let name = "PlayerPrefsTests-\(UUID().uuidString)"
+    let defaults = try #require(UserDefaults(suiteName: name))
+    defer { defaults.removePersistentDomain(forName: name) }
+    let first = PlayerPrefs(defaults: defaults)
+    let second = PlayerPrefs(defaults: defaults)
+    first.autoplayNext = false
+    second.subtitleScale = 2
+    #expect(PlayerPrefs(defaults: defaults).autoplayNext)
+  }
+
   @Test func persistsDeviceWideKeys() throws {
     let name = "PlayerPrefsTests-\(UUID().uuidString)"
     let defaults = try #require(UserDefaults(suiteName: name))

@@ -10,6 +10,10 @@ public let OWN_SUBTITLE_EDGES: [SubtitleEdge] = [.shadow, .outline, .none]
 public let SUBTITLE_SCALES: [Double] = [0.75, 1, 1.25, 1.5, 2]
 
 @Observable @MainActor public final class PlayerPrefs {
+  /// The app's one set, which Settings and the player share, as Android's
+  /// `app.player`: each writes the whole set on a change, so a second one
+  /// over the same defaults would put back what the other changed.
+  public static let shared = PlayerPrefs()
   @ObservationIgnored private let defaults: UserDefaults
   /// The quality videos start in. The server answers with the nearest one the
   /// account may use, so one over its limit stays saved for when it's lifted.
