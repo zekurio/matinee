@@ -1984,12 +1984,20 @@ nonisolated enum Str {
   static var webUsersTitle: String { tr("web_users_title") }
   /// (you)
   static var webUsersYou: String { tr("web_users_you") }
+  /// Picked in the Settings app
+  static var iosAppearanceLanguageDescription: String { tr("ios_appearance_language_description", table: "iOS") }
   /// If the server is on your local network, turn on Local Network for Matinee in Settings.
   static var iosConnectLocalNetwork: String { tr("ios_connect_local_network", table: "iOS") }
+  /// Share report
+  static var iosDiagnosticsShare: String { tr("ios_diagnostics_share", table: "iOS") }
   /// Open Settings
   static var iosOpenSettings: String { tr("ios_open_settings", table: "iOS") }
+  /// Remember audio picks
+  static var iosPlaybackAudioRemember: String { tr("ios_playback_audio_remember", table: "iOS") }
   /// %lld%% watched
   static func iosProgressWatched(_ p1: Int) -> String { tr("ios_progress_watched", table: "iOS", p1) }
+  /// In Settings › Accessibility › Subtitles & Captioning
+  static var iosSettingsSubtitlesSystemWhere: String { tr("ios_settings_subtitles_system_where", table: "iOS") }
   /// Matinee for iOS %@
   static func iosSettingsVersion(_ p1: String) -> String { tr("ios_settings_version", table: "iOS", p1) }
   /// Trailer

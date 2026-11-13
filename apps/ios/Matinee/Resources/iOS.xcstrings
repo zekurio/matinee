@@ -1,6 +1,24 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "ios_appearance_language_description": {
+      "comment": "Under Interface language in Settings, Appearance: the row opens Matinee's page in the iOS Settings app, where its language is picked.",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wird in der Einstellungen-App gewählt"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Picked in the Settings app"
+          }
+        }
+      }
+    },
     "ios_connect_local_network": {
       "comment": "Under a failed connect to a server on the local network; iOS asks for Local Network access, which the person can turn on in the app's settings.",
       "extractionState": "manual",
@@ -15,6 +33,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "If the server is on your local network, turn on Local Network for Matinee in Settings."
+          }
+        }
+      }
+    },
+    "ios_diagnostics_share": {
+      "comment": "Row in Settings, About, Playback report: opens the share sheet with the report's text.",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bericht teilen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Share report"
           }
         }
       }
@@ -37,6 +73,24 @@
         }
       }
     },
+    "ios_playback_audio_remember": {
+      "comment": "Switch in Settings, Playback, Languages: an audio track picked in the player comes back when the file plays again. The web's playback.audio.remember; Android has no switch for it yet.",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Audioauswahl merken"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remember audio picks"
+          }
+        }
+      }
+    },
     "ios_progress_watched": {
       "comment": "VoiceOver's value for the bar of how much of a file was watched.",
       "extractionState": "manual",
@@ -51,6 +105,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld%% watched"
+          }
+        }
+      }
+    },
+    "ios_settings_subtitles_system_where": {
+      "comment": "Under Caption preferences in Settings, Subtitles: where iOS keeps its caption style, which no app can open directly.",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In Einstellungen › Bedienungshilfen › Untertitel & erweiterte Untertitel"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In Settings › Accessibility › Subtitles & Captioning"
           }
         }
       }
