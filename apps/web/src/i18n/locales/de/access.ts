@@ -76,9 +76,9 @@ export default {
   "access.group.providerGroup": "Anbietergruppe",
   "access.group.providerGroupPlaceholder": "Keine",
   "access.group.providerGroupHint":
-    "Konten, die der Anbieter in dieser Gruppe führt, kommen bei jeder Anmeldung hinzu und gehen, sobald er sie dort nicht mehr führt. Leer lassen für eine Gruppe, die nur Admins und Einladungen füllen.",
+    "Konten aus dieser Anbietergruppe kommen bei der Anmeldung hinzu und gehen, wenn sie dort entfernt werden.",
   "access.group.providerGroupHintNoClaim":
-    "Konten, die der Anbieter in dieser Gruppe führt, kommen bei jeder Anmeldung hinzu. Vom Anbieter sind noch keine Gruppen gekommen. Dafür braucht es den Gruppen-Claim unter Einstellungen → Authentifizierung.",
+    "Noch keine Anbietergruppen. Setze den Gruppen-Claim unter Einstellungen → Authentifizierung.",
   "access.group.providerAccounts": plural({
     one: "{count} Konto",
     other: "{count} Konten",

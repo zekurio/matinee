@@ -78,9 +78,9 @@ export default defineMessages("access", {
   "access.group.providerGroup": "Provider group",
   "access.group.providerGroupPlaceholder": "None",
   "access.group.providerGroupHint":
-    "Accounts the provider lists in this group join it at each sign-in, and leave once it stops listing them. Leave it empty for a group only admins and invites fill.",
+    "Accounts in this provider group join at sign-in and leave when removed there.",
   "access.group.providerGroupHintNoClaim":
-    "Accounts the provider lists in this group join it at each sign-in. No groups have come from the provider yet. They need the groups claim under Settings → Authentication.",
+    "No provider groups yet. Set the groups claim under Settings → Authentication.",
   // How many linked accounts the provider has in a group it sent.
   "access.group.providerAccounts": plural({
     one: "{count} account",
