@@ -37,6 +37,7 @@ import { useOpenSettings } from "@/lib/settings"
 import { useSignOut } from "@/lib/sign-out"
 import { useSearchSpotlightStore } from "@/stores/search-spotlight"
 
+import { AppBanner } from "./app-banner"
 import { LogoMark } from "./brand"
 import { PartyButton } from "./party/party-panel"
 import { TabBar, tabBarPadding, usePhoneTab } from "./phone-nav"
@@ -379,7 +380,12 @@ export function AppShell({
         {tr("shell.skipToContent")}
       </a>
       {phone ? (
-        tab && <TabBar user={user} current={tab} />
+        tab && (
+          <>
+            <AppBanner />
+            <TabBar user={user} current={tab} />
+          </>
+        )
       ) : (
         <NavBar user={user} />
       )}
