@@ -137,41 +137,74 @@ private struct ProfileHeader<Action: View>: View {
   @Environment(\.palette) private var palette
   @Environment(\.user) private var user
 
+  @Environment(\.dynamicTypeSize) private var typeSize
+
   var body: some View {
     if let user {
-      let joined = profile.flatMap(joinedMonth)
-      let facts = [user.displayName.map { _ in "@\(user.username)" }, joined.map(Str.profileJoined)]
-        .compactMap(\.self).joined(separator: " · ")
-      // One row, as a profile's header on a phone: the picture, who it is,
-      // and Settings at its end, a button of the same weight as the avatar.
-      HStack(spacing: 0) {
-        Avatar(user.name, url: user.avatarId.flatMap { api?.paths.avatar($0) }, size: 64)
-        VStack(alignment: .leading, spacing: 0) {
-          HStack(spacing: 8) {
-            Text(user.name).textStyle(.titleLarge).foregroundStyle(palette.foreground).lineLimit(1)
-              .accessibilityAddTraits(.isHeader)
-            if user.isAdmin { Badge(Str.profileAdmin, outlined: true) }
+      // At the largest text sizes, who it is gets the width under the
+      // picture and Settings, rather than an ellipsis beside them.
+      if typeSize.isAccessibilitySize {
+        VStack(alignment: .leading, spacing: 12) {
+          HStack(spacing: 0) {
+            picture(user)
+            Spacer(minLength: 12)
+            buttons
           }
-          if !facts.isEmpty {
-            // Two lines rather than an ellipsis, where the language's words are long.
-            Text(facts).textStyle(.bodyMedium).foregroundStyle(palette.muted).lineLimit(2)
-          }
+          who(user, stacked: true)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.leading, 16)
-        .accessibilityElement(children: .combine)
-        Spacer().frame(width: 12)
-        if offline {
-          LucideIcon(.cloudOff, label: Str.downloadsOffline, size: 20, tint: palette.muted)
+        .padding(.horizontal, Gutter)
+        .padding(.top, 16)
+      } else {
+        // One row, as a profile's header on a phone: the picture, who it is,
+        // and Settings at its end, a button of the same weight as the avatar.
+        HStack(spacing: 0) {
+          picture(user)
+          who(user, stacked: false).padding(.leading, 16)
           Spacer().frame(width: 12)
-        } else {
-          action()
+          buttons
         }
-        RoundIconButton(.settings, label: Str.shellSettings, iconSize: 20, action: nav.settings)
+        .padding(.horizontal, Gutter)
+        .padding(.top, 16)
       }
-      .padding(.horizontal, Gutter)
-      .padding(.top, 16)
     }
+  }
+
+  private func picture(_ user: User) -> some View {
+    Avatar(user.name, url: user.avatarId.flatMap { api?.paths.avatar($0) }, size: 64)
+  }
+
+  /// The name, with Admin beside it, over the username and the month they joined.
+  private func who(_ user: User, stacked: Bool) -> some View {
+    let joined = profile.flatMap(joinedMonth)
+    // Each fact kept whole beside the picture, so a second line starts at a
+    // dot rather than inside "Joined November 2026".
+    let facts = [user.displayName.map { _ in "@\(user.username)" }, joined.map(Str.profileJoined)]
+      .compactMap { $0.map { stacked ? $0 : $0.replacingOccurrences(of: " ", with: "\u{00A0}") } }
+      .joined(separator: " · ")
+    return VStack(alignment: .leading, spacing: 0) {
+      HStack(spacing: 8) {
+        Text(user.name).textStyle(.titleLarge).foregroundStyle(palette.foreground).lineLimit(stacked ? nil : 1)
+          .accessibilityAddTraits(.isHeader)
+        if user.isAdmin { Badge(Str.profileAdmin, outlined: true) }
+      }
+      if !facts.isEmpty {
+        // Two lines rather than an ellipsis, where the language's words are long.
+        Text(facts).textStyle(.bodyMedium).foregroundStyle(palette.muted).lineLimit(stacked ? nil : 2)
+      }
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .accessibilityElement(children: .combine)
+  }
+
+  /// The disconnect icon or offline, then Settings.
+  @ViewBuilder private var buttons: some View {
+    if offline {
+      LucideIcon(.cloudOff, label: Str.downloadsOffline, size: 20, tint: palette.muted)
+      Spacer().frame(width: 12)
+    } else {
+      action()
+    }
+    RoundIconButton(.settings, label: Str.shellSettings, iconSize: 20, action: nav.settings)
   }
 }
 

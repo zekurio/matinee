@@ -72,6 +72,25 @@ private struct CardDivider: View {
   var body: some View { Rectangle().fill(palette.border).frame(height: 1).padding(.leading, inset) }
 }
 
+/// What a row counts and its figure: side by side, the figure at the end,
+/// or at the largest text sizes the figure under the words, so neither is
+/// squeezed into a column of letters.
+private struct LabelValue<Label: View, Value: View>: View {
+  var spacing: CGFloat = 14
+  @ViewBuilder let label: () -> Label
+  @ViewBuilder let value: () -> Value
+  @Environment(\.dynamicTypeSize) private var typeSize
+
+  var body: some View {
+    let stacked = typeSize.isAccessibilitySize
+    let layout = stacked ? AnyLayout(VStackLayout(alignment: .leading, spacing: 2)) : AnyLayout(HStackLayout(spacing: spacing))
+    layout {
+      label().frame(maxWidth: .infinity, alignment: .leading).multilineTextAlignment(.leading)
+      value().fixedSize(horizontal: !stacked, vertical: false)
+    }
+  }
+}
+
 /// Plays and what was finished, a row each as Settings lists its rows: an
 /// icon, what it counts, and the number at the end.
 struct StatList: View {
@@ -260,16 +279,16 @@ struct TopTitles: View {
               // The poster alone: at this size the name the art falls back to would be an ellipsis.
               ArtFrame(entry.title.name, aspect: 2 / 3) { Picture(api?.art(entry.title.images.poster)) }
                 .frame(width: 40)
-              VStack(alignment: .leading, spacing: 0) {
-                Text(entry.title.name).textStyle(.bodyLarge).foregroundStyle(palette.foreground).lineLimit(2)
-                Text(Str.statsPlayCount(entry.plays)).textStyle(.bodySmall).foregroundStyle(palette.muted)
+              LabelValue {
+                VStack(alignment: .leading, spacing: 0) {
+                  Text(entry.title.name).textStyle(.bodyLarge).foregroundStyle(palette.foreground).lineLimit(3)
+                  Text(Str.statsPlayCount(entry.plays)).textStyle(.bodySmall).foregroundStyle(palette.muted)
+                }
+              } value: {
+                Text(formatWatchTime(entry.watchSeconds)).textStyle(.bodyLarge, weight: .semibold)
+                  .foregroundStyle(palette.foreground)
               }
-              .frame(maxWidth: .infinity, alignment: .leading)
-              .multilineTextAlignment(.leading)
-              .padding(.horizontal, 14)
-              Text(formatWatchTime(entry.watchSeconds)).textStyle(.bodyLarge, weight: .semibold)
-                .foregroundStyle(palette.foreground)
-                .fixedSize()
+              .padding(.leading, 14)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
@@ -298,13 +317,11 @@ struct Genres: View {
         ForEach(Array(stats.genres.enumerated()), id: \.element.name) { index, genre in
           if index > 0 { CardDivider() }
           Button { nav.genre(genre.name) } label: {
-            HStack(spacing: 14) {
+            LabelValue {
               Text(genre.name).textStyle(.bodyLarge).foregroundStyle(palette.foreground)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .multilineTextAlignment(.leading)
+            } value: {
               Text(formatWatchTime(genre.watchSeconds)).textStyle(.bodyLarge, weight: .semibold)
                 .foregroundStyle(palette.foreground)
-                .fixedSize()
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 14)
@@ -429,10 +446,12 @@ private struct PlaceRow: View {
         .frame(minWidth: rankSize, minHeight: rankSize)
         .background(podium, in: Capsule())
       Avatar(user.name, url: user.avatarId.flatMap { api?.paths.avatar($0) }, size: 28)
-      Text(place.isSelf ? "\(user.name) \(Str.statsYou)" : user.name)
-        .textStyle(.bodyLarge).foregroundStyle(palette.foreground).lineLimit(1)
-        .frame(maxWidth: .infinity, alignment: .leading)
-      Text(value).textStyle(.bodyMedium, weight: .semibold).foregroundStyle(palette.foreground).fixedSize()
+      LabelValue(spacing: 10) {
+        Text(place.isSelf ? "\(user.name) \(Str.statsYou)" : user.name)
+          .textStyle(.bodyLarge).foregroundStyle(palette.foreground).lineLimit(2)
+      } value: {
+        Text(value).textStyle(.bodyMedium, weight: .semibold).foregroundStyle(palette.foreground)
+      }
     }
     .padding(.horizontal, 8)
     .padding(.vertical, 6)
