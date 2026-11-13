@@ -153,4 +153,27 @@ final class AuthProtocol: URLProtocol, @unchecked Sendable {
     try await session.removeServer(origin: "http://two.example/")
     #expect(session.state == .noServer())
   }
+  @Test @MainActor func connectFailuresSayWhy() async throws {
+    AuthProtocol.lock.withLock {
+      AuthProtocol.mode = "offline"
+      AuthProtocol.requests = []
+    }
+    let config = URLSessionConfiguration.ephemeral
+    config.protocolClasses = [AuthProtocol.self]
+    let session = MatineeSession(store: testStore(), configuration: config, automaticallyStart: false)
+    #expect(await session.connect("  ") == .empty)
+    #expect(
+      await session.connect("192.168.1.5:8420")
+        == .unreachable(server: "http://192.168.1.5:8420", local: true))
+    #expect(
+      await session.connect("media.example") == .unreachable(server: "http://media.example", local: false))
+    AuthProtocol.lock.withLock { AuthProtocol.mode = "ok" }
+    #expect(await session.connect("media.example") == nil)
+    #expect(MatineeSession.isLocalNetwork(URL(string: "http://nas.local:8420/")!))
+    #expect(MatineeSession.isLocalNetwork(URL(string: "http://[fd00::5]/")!))
+    #expect(MatineeSession.isLocalNetwork(URL(string: "http://10.0.0.2/")!))
+    #expect(!MatineeSession.isLocalNetwork(URL(string: "http://localhost:18420/")!))
+    #expect(!MatineeSession.isLocalNetwork(URL(string: "http://127.0.0.1:18420/")!))
+    #expect(!MatineeSession.isLocalNetwork(URL(string: "https://media.example.com/")!))
+  }
 }
