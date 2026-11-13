@@ -162,7 +162,8 @@ struct AppHeader<Action: View>: View {
         ], startPoint: .top, endPoint: .bottom
       )
       .padding(.bottom, -40)
-      .ignoresSafeArea(edges: .top)
+      // To the screen's edges on a phone on its side, too, under art that spans them.
+      .ignoresSafeArea(edges: [.top, .horizontal])
     }
   }
 }
