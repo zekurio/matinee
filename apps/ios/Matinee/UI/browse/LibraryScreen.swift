@@ -77,6 +77,7 @@ struct LibraryScreen: View {
     Button(action: openSearch) {
       Label { Text(Str.librarySearchTitles) } icon: { Image(Lucide.search) }
     }
+    .tint(palette.foreground)
     Button { filtering = true } label: {
       Label { Text(Str.libraryFilter) } icon: { Image(Lucide.listFilter) }
     }
@@ -91,6 +92,7 @@ struct LibraryScreen: View {
     } label: {
       Label { Text(Str.librarySort) } icon: { Image(Lucide.arrowUpDown) }
     }
+    .tint(palette.foreground)
     .accessibilityValue(librarySortLabel(filters.sort))
   }
 
