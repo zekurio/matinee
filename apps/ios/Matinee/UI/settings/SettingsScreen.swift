@@ -213,16 +213,21 @@ struct AccountPage: View {
       Panel {
         LinkRow(Str.linkTitle, icon: .scanQrCode, description: Str.linkRowDescription) { nav.linkDevice() }
       }
-      Text(Str.accountSessionsTitle).textStyle(.titleLarge).accessibilityAddTraits(.isHeader)
-      switch sessions.state {
-      case .loading:
-        Text(verbatim: "…").textStyle(.bodyLarge).foregroundStyle(palette.muted)
-          .accessibilityLabel(Str.loadingInProgress)
-      case .failed(let message, _):
-        Text(Str.accountSessionsLoadFailed(message)).textStyle(.bodyMedium).foregroundStyle(palette.muted)
-      case .ready(let list):
-        ForEach(list, id: \.id) { item in
-          SessionRow(session: item) { signOut(item) }
+      // The sessions as one group under their title, closer together than Android's
+      // list has them, so a long list reads as one.
+      SettingsSection(Str.accountSessionsTitle) {
+        LazyVStack(alignment: .leading, spacing: 10) {
+          switch sessions.state {
+          case .loading:
+            Text(verbatim: "…").textStyle(.bodyLarge).foregroundStyle(palette.muted)
+              .accessibilityLabel(Str.loadingInProgress)
+          case .failed(let message, _):
+            Text(Str.accountSessionsLoadFailed(message)).textStyle(.bodyMedium).foregroundStyle(palette.muted)
+          case .ready(let list):
+            ForEach(list, id: \.id) { item in
+              SessionRow(session: item) { signOut(item) }
+            }
+          }
         }
       }
     }
@@ -706,7 +711,7 @@ struct DownloadsSettingsPage: View {
                 Str.downloadsDefaultTitle,
                 options: [(DEFAULT_DEVICE, Str.downloadsChoiceDevice)]
                   + (loaded?.downloadVideoPresets ?? []).map {
-                    ("\($0.height)", Str.downloadsChoicePreset($0.height, mbps($0.bitrate)))
+                    ("\($0.height)", ungrouped(Str.downloadsChoicePreset($0.height, mbps($0.bitrate)), $0.height))
                   } + [(DEFAULT_ORIGINAL, Str.downloadsChoiceOriginal)],
                 current: downloads.defaultVersion
               ) { downloads.defaultVersion = $0 }

@@ -45,6 +45,19 @@ struct PlaybackDiagnosticsSection: View {
         copyText(text ?? "", snackbar: snackbar, copied: Str.diagnosticsCopied)
       }
     }
+    #if DEBUG
+      // -dev.report YES: a report as a failed encode leaves it, to see this section before anything played.
+      .onAppear {
+        guard UserDefaults.standard.bool(forKey: "dev.report"), PlaybackDiagnostics.latest == nil else { return }
+        var sample = PlaybackReport()
+        sample.attempt(mode: .direct, reason: .start, at: 0, audioIndex: 1, quality: nil, burnIn: false)
+        sample.attempt(
+          mode: .hls, reason: .fallback, at: 12, audioIndex: 1, quality: "1080p-10", burnIn: false,
+          why: [PlaybackReason.video, PlaybackReason.failed], videoTo: "h264", audioTo: "aac")
+        sample.failed(errorDiagnostics(NSError(domain: "AVFoundationErrorDomain", code: -11828)))
+        PlaybackDiagnostics.latest = sample
+      }
+    #endif
   }
 }
 

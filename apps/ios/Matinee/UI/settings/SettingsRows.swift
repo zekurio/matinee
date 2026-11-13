@@ -266,6 +266,8 @@ struct SwitchRow: View {
     }
     .toggleStyle(.matinee)
     .modifier(RowFrame())
+    // The switch takes its own taps; the rest of the row flips it too, as on Android.
+    .onTapGesture { isOn.toggle() }
   }
 }
 
