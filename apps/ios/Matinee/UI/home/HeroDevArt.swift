@@ -1,0 +1,59 @@
+import Foundation
+import MatineeCore
+
+/*
+ * The banner with full artwork on a server that has none, as the dev
+ * server has no metadata provider: with `-dev.art YES` in a debug build,
+ * fixed public pictures stand in for backdrops, the first slide gets a
+ * logo, and every slide an overview, genres, and ratings. Release builds
+ * leave everything as the server sent it.
+ */
+enum HeroDevArt {
+  #if DEBUG
+    private static var on: Bool { UserDefaults.standard.bool(forKey: "dev.art") }
+
+    private static let backdrops = [
+      "https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=1280",
+      "https://images.unsplash.com/photo-1478720568477-152d9b164e26?w=1280",
+      "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=1280",
+    ]
+    private static let logoURL = "https://www.gstatic.com/images/branding/googlelogo/2x/googlelogo_light_color_272x92dp.png"
+  #endif
+
+  static func backdrop(_ slide: FeaturedTitle) -> [ImageSource]? {
+    #if DEBUG
+      guard on else { return nil }
+      let index = slide.title.id.unicodeScalars.reduce(0) { $0 + Int($1.value) } % backdrops.count
+      return ImageSource(backdrops[index]).map { [$0] }
+    #else
+      return nil
+    #endif
+  }
+
+  static func logo(_ slide: FeaturedTitle) -> URL? {
+    #if DEBUG
+      guard on, slide.title.year == 1999 else { return nil }
+      return URL(string: logoURL)
+    #else
+      return nil
+    #endif
+  }
+
+  static func fill(_ slides: [FeaturedTitle]) -> [FeaturedTitle] {
+    #if DEBUG
+      guard on else { return slides }
+      return slides.map { slide in
+        var slide = slide
+        slide.title.overview =
+          slide.title.overview
+          ?? "A stand-in overview, long enough to run to the three lines a wide banner gives it, so the fade and the clipping can be checked against what the server would send for a title with full metadata."
+        if slide.title.genres.isEmpty { slide.title.genres = ["Science Fiction", "Action", "Drama", "Thriller"] }
+        slide.title.rating = slide.title.rating ?? 8.2
+        slide.title.contentRating = slide.title.contentRating ?? "PG-13"
+        return slide
+      }
+    #else
+      return slides
+    #endif
+  }
+}

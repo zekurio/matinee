@@ -58,6 +58,8 @@ struct DisconnectedAction: View {
 
   init(_ loaders: any Reloadable...) { self.loaders = loaders }
 
+  init(_ loaders: [any Reloadable]) { self.loaders = loaders }
+
   var body: some View {
     let cut = loaders.filter { $0.refreshError != nil && $0.refreshDisconnected }
     if !cut.isEmpty {
