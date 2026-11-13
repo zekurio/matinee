@@ -547,23 +547,36 @@ private struct PassthroughSection: View {
 /// leaves only the way to its settings, or the app's own choices.
 struct SubtitlesPage: View {
   @Bindable private var prefs = PlayerPrefs.shared
+  @Environment(\.horizontalSizeClass) private var sizeClass
 
   var body: some View {
     SettingsScaffold(Str.settingsSubtitlesTitle) {
-      VStack(spacing: 12) {
-        SubtitlePreview(look: subtitleLook(prefs))
-        Panel {
-          SwitchRow(Str.settingsSubtitlesSystem, isOn: $prefs.subtitleSystemStyle)
-          RowDivider()
-          // One set of rows closes as the other opens, rather than the panel jumping.
-          Reveal(prefs.subtitleSystemStyle) {
-            // iOS keeps the caption style where no app can open it, so the row says where.
-            NoteRow(Str.settingsSubtitlesSystemOpen, description: Str.iosSettingsSubtitlesSystemWhere)
-          }
-          Reveal(!prefs.subtitleSystemStyle) {
-            OwnSubtitleLook(prefs: prefs)
-          }
+      // Side by side across an iPad, the sample as big as the rows beside it; above them on a phone.
+      if sizeClass == .regular {
+        HStack(alignment: .top, spacing: 16) {
+          SubtitlePreview(look: subtitleLook(prefs), wide: true)
+          rows
         }
+      } else {
+        VStack(spacing: 12) {
+          SubtitlePreview(look: subtitleLook(prefs))
+          rows
+        }
+      }
+    }
+  }
+
+  private var rows: some View {
+    Panel {
+      SwitchRow(Str.settingsSubtitlesSystem, isOn: $prefs.subtitleSystemStyle)
+      RowDivider()
+      // One set of rows closes as the other opens, rather than the panel jumping.
+      Reveal(prefs.subtitleSystemStyle) {
+        // iOS keeps the caption style where no app can open it, so the row says where.
+        NoteRow(Str.settingsSubtitlesSystemOpen, description: Str.iosSettingsSubtitlesSystemWhere)
+      }
+      Reveal(!prefs.subtitleSystemStyle) {
+        OwnSubtitleLook(prefs: prefs)
       }
     }
   }
@@ -601,6 +614,8 @@ private struct OwnSubtitleLook: View {
 /// A line of subtitles over a stand-in for a bright frame, as the player would draw it.
 private struct SubtitlePreview: View {
   let look: SubtitleLook
+  /// Beside the rows on an iPad: a frame of a video's shape, with the size the player starts from.
+  var wide = false
   @Environment(\.palette) private var palette
 
   var body: some View {
@@ -610,9 +625,10 @@ private struct SubtitlePreview: View {
       startPoint: .topLeading, endPoint: .bottomTrailing
     )
     .frame(maxWidth: .infinity)
-    .frame(height: 140)
+    .frame(height: wide ? nil : 140)
+    .aspectRatio(wide ? 16 / 9 : nil, contentMode: .fit)
     .overlay(alignment: .bottom) {
-      SubtitleSample(text: Str.settingsSubtitlesPreview, look: look, size: 16)
+      SubtitleSample(text: Str.settingsSubtitlesPreview, look: look, size: wide ? 20 : 16)
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
     }

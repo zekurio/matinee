@@ -31,7 +31,8 @@ struct AppearancePage: View {
         }
       }
       SettingsSection(Str.webAppearanceColorScheme) {
-        SchemePicker(theme: theme)
+        // The miniatures are drawn to a phone's width; across an iPad they keep it.
+        SchemePicker(theme: theme).frame(maxWidth: 520, alignment: .leading)
       }
     }
     // An accent an admin changed since the app started comes in when the page opens.
