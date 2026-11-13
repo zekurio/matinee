@@ -292,11 +292,12 @@ def accessors(shared: dict[str, dict], ios: dict[str, dict]) -> str:
         "  Bundle.main.localizedString(forKey: key, value: nil, table: table)\n"
         "}\n"
         "\n"
-        "/// A string with arguments, formatted in the app's language. A plural's\n"
-        "/// format carries its forms, which formatting picks from by the count.\n"
+        "/// A string with arguments, formatted in the app's language (`Locale.app`,\n"
+        "/// in Format.swift). A plural's format carries its forms, which\n"
+        "/// formatting picks from by the count.\n"
         "nonisolated private func tr(_ key: String, table: String = \"Localizable\", _ args: any CVarArg...) -> String {\n"
         "  let format = Bundle.main.localizedString(forKey: key, value: nil, table: table)\n"
-        "  return String(format: format, locale: Locale.current, arguments: args)\n"
+        "  return String(format: format, locale: Locale.app, arguments: args)\n"
         "}\n"
     )
 

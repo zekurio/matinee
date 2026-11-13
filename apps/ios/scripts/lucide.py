@@ -142,7 +142,10 @@ def swift_source(icons: list[tuple[str, str]]) -> str:
         "  private init(_ name: String) { self.name = name }\n"
         "\n"
         + "\n".join(lines)
-        + "\n}\n"
+        + "\n\n  /// Every icon, by its Kotlin name, for the gallery.\n"
+        + "  static let all: [(name: String, icon: Lucide)] = [\n"
+        + "".join(f'    ("{name}", .{name[0].lower() + name[1:]}),\n' for name, _ in icons)
+        + "  ]\n}\n"
     )
 
 

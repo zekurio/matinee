@@ -1,0 +1,64 @@
+# Tasks for the iOS app. Run `just` in this folder for the list, or
+# `just ios <recipe>` from the repository root. XcodeGen comes from Nixpkgs,
+# Xcode from the Mac. Builds go to build/ here (git-ignored), so checkouts
+# don't share one.
+
+set shell := ["bash", "-euo", "pipefail", "-c"]
+
+app := "io.github.zekurio.matinee"
+derived := "build/DerivedData"
+simulator := env("MATINEE_SIMULATOR", "iPhone 17")
+destination := "platform=iOS Simulator,name=" + simulator
+built_app := derived / "Build/Products/Debug-iphonesimulator/Matinee.app"
+xcodebuild := "xcodebuild -project Matinee.xcodeproj -scheme Matinee -derivedDataPath " + derived
+
+[private]
+default:
+    @just --list --unsorted
+
+# Write Matinee.xcodeproj from project.yml
+generate:
+    nix run nixpkgs#xcodegen -- generate --quiet
+
+# Build the debug app for the simulator, `just build -quiet` and other xcodebuild flags after
+build *args: generate
+    {{ xcodebuild }} -configuration Debug -destination "{{ destination }}" build {{ args }}
+
+# Build, install, and open the app on a simulator (MATINEE_SIMULATOR names it), with launch arguments after
+run *args: build
+    xcrun simctl boot "{{ simulator }}" 2>/dev/null || true
+    open -a Simulator
+    xcrun simctl install "{{ simulator }}" "{{ built_app }}"
+    xcrun simctl launch --terminate-running-process "{{ simulator }}" {{ app }} {{ args }}
+
+# Open the gallery on the dev server's library (apps/ios/DEV.md), with more launch arguments after
+gallery *args: build
+    xcrun simctl boot "{{ simulator }}" 2>/dev/null || true
+    xcrun simctl install "{{ simulator }}" "{{ built_app }}"
+    xcrun simctl launch --terminate-running-process "{{ simulator }}" {{ app }} \
+        -gallery.server http://localhost:18420 -gallery.token "$(scripts/dev/token ios-admin)" {{ args }}
+
+# Run MatineeCore's tests on the Mac, and check the generated files are current
+test:
+    cd Packages/MatineeCore && swift test
+    scripts/strings.py --check
+    scripts/lucide.py --check
+    nix shell nixpkgs#nodejs_24 -c node scripts/themes.mjs --check
+
+# Generate the API client again after a contract change
+api:
+    cd ../.. && nix shell nixpkgs#nodejs_24 nixpkgs#pnpm_11 -c pnpm api:ios
+
+# Write the string catalog and Strings.gen.swift from Android's strings
+strings:
+    scripts/strings.py
+
+# Write the icon assets and Lucide.gen.swift from Android's drawables, and the palettes from the web's
+icons:
+    scripts/lucide.py
+    nix shell nixpkgs#nodejs_24 -c node scripts/themes.mjs
+
+# Delete the build output and the generated project
+clean:
+    rm -rf build Matinee.xcodeproj Config
+    cd Packages/MatineeCore && swift package clean
