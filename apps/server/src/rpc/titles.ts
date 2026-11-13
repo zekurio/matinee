@@ -20,6 +20,7 @@ import {
 import { seasonsByTitle } from "../media/seasons"
 import { refreshTitleNow, sourceFor } from "../metadata/refresh"
 import { providerList } from "../metadata/sources"
+import { youTubeUrl } from "../metadata/trailers"
 import { ProviderError } from "../metadata/types"
 import { admin, authed, badRequest, notFound } from "./base"
 import { tagCounts, titleOrder, titleWhere } from "./browse"
@@ -79,6 +80,11 @@ async function toTitle(row: TitleRow, userId: string): Promise<Title> {
     refreshedAt: row.refreshedAt,
     studios: row.studios,
     credits,
+    trailers: row.trailers.map((trailer) => ({
+      url: youTubeUrl(trailer.key),
+      name: trailer.name,
+      language: trailer.language,
+    })),
     itemCount: total?.n ?? 0,
     seasons,
     next,

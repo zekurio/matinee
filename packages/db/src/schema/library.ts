@@ -76,6 +76,14 @@ const artworkRef = () =>
 
 export type ExternalIds = Record<string, string>
 
+/** A trailer the metadata provider lists, by its YouTube video id. */
+export type YouTubeTrailer = {
+  key: string
+  name: string | null
+  /** BCP 47. Null when it has no spoken language or the provider doesn't say. */
+  language: string | null
+}
+
 /**
  * A movie or show, grouping one or more files. The scanner creates
  * it from folder and file names; a metadata refresh fills in the rest.
@@ -131,6 +139,8 @@ export const title = pgTable(
     providerId: text(),
     /** Ids from the folder name and the provider, by site. */
     externalIds: jsonb().$type<ExternalIds>().notNull().default({}),
+    /** Best first: the library's metadata language, English, then none. */
+    trailers: jsonb().$type<YouTubeTrailer[]>().notNull().default([]),
     /** When the newest file arrived. */
     addedAt: createdAt(),
     refreshedAt: timestamp({ withTimezone: true }),

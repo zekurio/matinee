@@ -1774,6 +1774,13 @@ object ThemeMode {
 }
 
 @Serializable
+data class Trailer(
+    val url: String,
+    val name: String?,
+    val language: String?,
+)
+
+@Serializable
 data class Title(
     val id: String,
     val libraryId: String,
@@ -1800,6 +1807,7 @@ data class Title(
     val refreshedAt: String?,
     val studios: List<String>,
     val credits: List<Credit>,
+    val trailers: List<Trailer>,
     val itemCount: Int,
     val seasons: List<Season>,
     val next: MediaItem?,

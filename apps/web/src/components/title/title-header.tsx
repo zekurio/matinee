@@ -3,11 +3,12 @@ import type {
   MediaItem,
   Title,
   TitleSummary,
+  Trailer,
 } from "@matinee/contracts"
 import { buttonVariants } from "@matinee/ui/components/button"
 import { cn } from "@matinee/ui/lib/utils"
 import { Link } from "@tanstack/react-router"
-import { PlayIcon, StarIcon } from "lucide-react"
+import { ClapperboardIcon, PlayIcon, StarIcon } from "lucide-react"
 
 import { ActionsMenu } from "@/components/actions-menu"
 import { pageBleed, pageColumn } from "@/components/app-shell"
@@ -16,7 +17,7 @@ import { FavoriteButton } from "@/components/favorite-button"
 import { Picture, textLink, tone } from "@/components/media-item"
 import { MediaInfo } from "@/components/title/media-info"
 import { useTitleWatched, WatchedButton } from "@/components/watched-menu"
-import { perLocale, tr } from "@/i18n"
+import { getLocale, perLocale, tr } from "@/i18n"
 import { formatRuntime } from "@/lib/format"
 import { art, type ImageSource, mediaFlags, timeLeft } from "@/lib/media"
 
@@ -154,6 +155,7 @@ export function TitleHeader({ title }: { title: Title }) {
               <div className="pt-6 sm:mt-auto">
                 <div className="flex items-center gap-2">
                   <PlayButton item={title.next} />
+                  <TrailerButton trailers={title.trailers} />
                   {title.itemCount > 0 && <TitleWatchedButton title={title} />}
                   <FavoriteButton title={title} />
                   <ActionsMenu
@@ -307,5 +309,39 @@ export function PlayButton({ item }: { item: MediaItem | null | undefined }) {
         </span>
       )}
     </Link>
+  )
+}
+
+function baseLanguage(tag: string): string {
+  return tag.split("-")[0]?.toLowerCase() ?? tag
+}
+
+/**
+ * The title's first trailer in the interface's language, else the
+ * server's first, on YouTube in a new tab. Just the icon on phones, where
+ * Play takes the row.
+ */
+function TrailerButton({ trailers }: { trailers: Trailer[] }) {
+  const language = baseLanguage(getLocale())
+  const trailer =
+    trailers.find((t) => t.language && baseLanguage(t.language) === language) ??
+    trailers[0]
+  if (!trailer) return null
+  return (
+    <a
+      href={trailer.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      title={tr("title.trailerHint")}
+      className={buttonVariants({
+        variant: "secondary",
+        size: "lg",
+        className:
+          "border-foreground/10 bg-foreground/15 hover:bg-foreground/25 backdrop-blur max-sm:size-11 max-sm:rounded-full max-sm:px-0",
+      })}
+    >
+      <ClapperboardIcon className="max-sm:size-5" />
+      <span className="max-sm:sr-only">{tr("title.trailer")}</span>
+    </a>
   )
 }

@@ -1,4 +1,5 @@
 import { languageTag } from "../../media/language"
+import { rankTrailers, youTubeId } from "../trailers"
 import {
   type EpisodeDetails,
   isoDate,
@@ -22,9 +23,28 @@ import type {
   Movie,
   SeasonRecord,
   Series,
+  Trailer,
   Translation,
 } from "./payloads"
 import { artworkType, seriesStudios } from "./reference"
+
+/** The YouTube ones, in TVDB's order, as `rankTrailers` orders them. */
+function trailers(list: Trailer[] | null | undefined, language: string) {
+  return rankTrailers(
+    (list ?? []).flatMap((trailer) => {
+      const key = youTubeId(trailer.url ?? "")
+      if (!key) return []
+      return [
+        {
+          key,
+          name: text(trailer.name),
+          language: languageTag(trailer.language ?? ""),
+        },
+      ]
+    }),
+    language,
+  )
+}
 
 async function seasonTranslation(
   id: number,
@@ -147,6 +167,7 @@ export async function seriesDetails(id: string, language: string) {
     },
     studios,
     credits: credits(series.characters),
+    trailers: trailers(series.trailers, language),
     seasons,
     episodes: list.map((episode): EpisodeDetails => ({
       season: episode.seasonNumber,
@@ -204,6 +225,7 @@ export async function movieDetails(id: string, language: string) {
       ).map((c) => c.name),
     ),
     credits: credits(movie.characters),
+    trailers: trailers(movie.trailers, language),
     seasons: [],
     episodes: [],
   } satisfies TitleDetails

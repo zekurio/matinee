@@ -21,6 +21,8 @@ export default {
   }),
   "title.loadError": "Dieser Titel konnte nicht geladen werden",
   "title.rating": "Bewertung {rating}",
+  "title.trailer": "Trailer",
+  "title.trailerHint": "Trailer auf YouTube ansehen",
   "title.menu.fixMatch": "Zuordnung korrigieren",
   "title.menu.refresh": "Metadaten aktualisieren",
   "title.menu.editImages": "Bilder bearbeiten",

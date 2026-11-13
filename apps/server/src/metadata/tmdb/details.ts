@@ -1,6 +1,7 @@
 import type { ExternalIds } from "@matinee/db"
 
 import { languageTag } from "../../media/language"
+import { isYouTubeId, rankTrailers } from "../trailers"
 import {
   type EpisodeDetails,
   isoDate,
@@ -12,7 +13,7 @@ import {
 } from "../types"
 import { image, request } from "./client"
 import { billed, credit, movieCrew, showCast, showCrew } from "./credits"
-import type { Image, Movie, SeasonResult, Show } from "./payloads"
+import type { Image, Movie, SeasonResult, Show, Video } from "./payloads"
 
 // append_to_response takes at most 20 entries.
 const SEASONS_PER_REQUEST = 20
@@ -36,12 +37,40 @@ function rating(average?: number, count?: number): number | null {
   return average && count ? Math.round(average * 10) / 10 : null
 }
 
+// In this order: a teaser comes after the trailers in its language.
+const VIDEO_TYPES = ["Trailer", "Teaser"]
+
+/** Trailers, then teasers, on YouTube. Official and newer ones first. */
+function trailers(videos: Video[] | undefined, language: string) {
+  const usable = (videos ?? []).filter(
+    (v) =>
+      v.site === "YouTube" &&
+      VIDEO_TYPES.includes(v.type ?? "") &&
+      isYouTubeId(v.key),
+  )
+  usable.sort(
+    (a, b) =>
+      VIDEO_TYPES.indexOf(a.type ?? "") - VIDEO_TYPES.indexOf(b.type ?? "") ||
+      Number(b.official ?? false) - Number(a.official ?? false) ||
+      (b.published_at ?? "").localeCompare(a.published_at ?? ""),
+  )
+  return rankTrailers(
+    usable.map((v) => ({
+      key: v.key,
+      name: text(v.name),
+      language: v.iso_639_1 ? languageTag(v.iso_639_1) : null,
+    })),
+    language,
+  )
+}
+
 export async function movieDetails(id: string, language: string) {
   const { lang, region } = languageParts(language)
   const movie = await request<Movie>(`/movie/${encodeURIComponent(id)}`, {
     language,
-    append_to_response: "images,release_dates,credits",
+    append_to_response: "images,release_dates,credits,videos",
     include_image_language: `${lang},en,null`,
+    include_video_language: `${lang},en,null`,
   })
   const releases =
     movie.release_dates?.results.find((r) => r.iso_3166_1 === region) ??
@@ -76,6 +105,7 @@ export async function movieDetails(id: string, language: string) {
         .filter((member) => member !== null),
       ...movieCrew(movie.credits?.crew),
     ],
+    trailers: trailers(movie.videos?.results, language),
     seasons: [],
     episodes: [],
   } satisfies TitleDetails
@@ -123,8 +153,10 @@ export async function showDetails(id: string, language: string) {
   const path = `/tv/${encodeURIComponent(id)}`
   const show = await request<Show>(path, {
     language,
-    append_to_response: "images,content_ratings,external_ids,aggregate_credits",
+    append_to_response:
+      "images,content_ratings,external_ids,aggregate_credits,videos",
     include_image_language: `${lang},en,null`,
+    include_video_language: `${lang},en,null`,
   })
   const { seasons, episodes } = await showSeasons(path, language, show)
 
@@ -158,6 +190,7 @@ export async function showDetails(id: string, language: string) {
     },
     studios: uniqueNames(show.production_companies?.map((c) => c.name) ?? []),
     credits: [...showCast(show.aggregate_credits?.cast), ...showCrew(show)],
+    trailers: trailers(show.videos?.results, language),
     seasons,
     episodes,
   } satisfies TitleDetails
