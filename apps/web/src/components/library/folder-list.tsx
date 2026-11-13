@@ -236,6 +236,7 @@ export function FolderList() {
           {items.hasNextPage && (
             <ShowMore
               fetching={items.isFetchingNextPage}
+              failed={items.isFetchNextPageError}
               onClick={() => void items.fetchNextPage()}
               className="mt-6"
             />

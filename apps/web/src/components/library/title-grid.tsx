@@ -102,6 +102,7 @@ export function TitleGrid({ library }: { library: Library }) {
           {titles.hasNextPage && (
             <ShowMore
               fetching={titles.isFetchingNextPage}
+              failed={titles.isFetchNextPageError}
               onClick={() => void titles.fetchNextPage()}
               className="mt-8"
             />
