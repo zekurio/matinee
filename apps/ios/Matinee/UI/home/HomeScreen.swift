@@ -101,12 +101,15 @@ private struct OnlineHomeScreen: View {
         header()
         Notice(Str.homeFeaturedFailed, message, disconnected: disconnected, onRetry: featured.reload)
       }
-    case .ready(let slides) where !slides.isEmpty:
-      Hero(slides: HeroDevArt.fill(slides), height: height, topInset: topInset, top: header)
-        .id(slides.count)
-        .padding(.top, -topInset)
-    case .ready:
-      header()
+    case .ready(let featured):
+      let slides = HeroDevArt.fill(featured, standIns: (loaders.resume.state.value ?? []) + (loaders.nextUp.state.value ?? []))
+      if slides.isEmpty {
+        header()
+      } else {
+        Hero(slides: slides, height: height, topInset: topInset, top: header)
+          .id(slides.count)
+          .padding(.top, -topInset)
+      }
     }
   }
 

@@ -1,4 +1,5 @@
 import MatineeCore
+import Nuke
 import NukeUI
 import SwiftUI
 
@@ -57,6 +58,8 @@ struct Hero<Top: View>: View {
           )
           .frame(minHeight: height)
           .containerRelativeFrame(.horizontal)
+          // The pages beside it are laid out for the swipe, but not there to read.
+          .accessibilityHidden(page != current)
         }
       }
       .scrollTargetLayout()
@@ -87,9 +90,7 @@ struct Hero<Top: View>: View {
         .padding(.bottom, bottom)
         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { buttonsHeight = $0 - bottom }
     }
-    .overlay(alignment: .top) {
-      top().padding(.top, topInset)
-    }
+    .overlay(alignment: .top) { HeroHeader(topInset: topInset, top: top) }
     .overlay(alignment: .bottom) {
       // A phone's banner is kept short so two rows fit under it, and has
       // no room for dots; it's swiped, and advances on its own.
@@ -384,6 +385,22 @@ private struct TitleMark: View {
   }
 }
 
+/// Home's header over the banner, under the status bar. The header's shade
+/// starts below the bar, so behind the bar it's as dense as the shade's top:
+/// readable over bright art, without a seam where the two meet.
+private struct HeroHeader<Top: View>: View {
+  let topInset: CGFloat
+  @ViewBuilder let top: () -> Top
+  @Environment(\.palette) private var palette
+
+  var body: some View {
+    VStack(spacing: 0) {
+      palette.background.opacity(0.85).frame(height: topInset)
+      top()
+    }
+  }
+}
+
 /// The banner's place while it loads.
 struct HeroSkeleton<Top: View>: View {
   let height: CGFloat
@@ -403,7 +420,7 @@ struct HeroSkeleton<Top: View>: View {
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
     .frame(height: height)
     .background(palette.card)
-    .overlay(alignment: .top) { top().padding(.top, topInset) }
+    .overlay(alignment: .top) { HeroHeader(topInset: topInset, top: top) }
     .accessibilityElement(children: .contain)
     .accessibilityLabel(Str.loadingInProgress)
   }

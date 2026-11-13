@@ -5,7 +5,8 @@ import MatineeCore
  * The banner with full artwork on a server that has none, as the dev
  * server has no metadata provider: with `-dev.art YES` in a debug build,
  * fixed public pictures stand in for backdrops, the first slide gets a
- * logo, and every slide an overview, genres, and ratings. Release builds
+ * logo, and every slide an overview, genres, and ratings. With no
+ * featured titles, Continue watching and Next up stand in. Release builds
  * leave everything as the server sent it.
  */
 enum HeroDevArt {
@@ -39,10 +40,17 @@ enum HeroDevArt {
     #endif
   }
 
-  static func fill(_ slides: [FeaturedTitle]) -> [FeaturedTitle] {
+  /// The slides with what a provider would add; with none, as the dev
+  /// server picks none without art, slides made of `standIns`' titles.
+  static func fill(_ slides: [FeaturedTitle], standIns: [MediaItem]) -> [FeaturedTitle] {
     #if DEBUG
       guard on else { return slides }
-      return slides.map { slide in
+      var seen = Set<String>()
+      let made = standIns.compactMap { item -> FeaturedTitle? in
+        guard let title = item.title, seen.insert(title.id).inserted else { return nil }
+        return FeaturedTitle(title: title, item: item, count: title.isShow ? 6 : 1)
+      }
+      return (slides.isEmpty ? made : slides).map { slide in
         var slide = slide
         slide.title.overview =
           slide.title.overview
