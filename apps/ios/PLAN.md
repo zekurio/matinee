@@ -57,8 +57,10 @@ apps/ios/
                         the Red Hat Text font, Localizable.xcstrings
     UI/                 mirrors apps/android/.../ui/
       Root.swift Shell.swift Nav.swift State.swift Bars.swift Motion.swift
+      Format.swift Navigator.swift Strings.gen.swift
       theme/ components/ signin/ home/ browse/ search/ media/ title/
       metadata/ player/ downloads/ profile/ settings/ settings/admin/
+      gallery/          debug builds only: every component on the theme
   Packages/MatineeCore/
     Sources/MatineeCore/
       Api/              ContractModels.swift, ContractApi.swift (generated),
@@ -69,13 +71,16 @@ apps/ios/
                         PendingProgress
       Player/           Playback, Capabilities, Cues, DownloadTracks, Seek,
                         PlayerPrefs, SubtitleStyle, PlaybackDiagnostics
+      State/            Load, Loader, Marks, ViewerState
       Format/           Format, WatchedAt, AppLog redaction
+      Images/           ImageSource, the API's art URLs, BlurHash
     Tests/MatineeCoreTests/   the Android unit tests, ported
   scripts/
     strings.py          Android's strings.xml files -> Localizable.xcstrings
                         and UI/Strings.gen.swift
     lucide.py           lucide icons -> Assets.xcassets
     themes.mjs          the web's palettes -> UI/theme/ThemePresets.swift
+    version.sh, appicon.sh   run by XcodeGen before it generates
 ```
 
 ## What Android does and what iOS uses for it
@@ -125,6 +130,135 @@ order, and the words the same.
   (`feat(ios): ...`). Don't push and don't open a pull request. End your
   report with the branch, the commits, what you verified and how, and
   what's left or doubtful.
+
+## Conventions
+
+What the skeleton set up, and how every screen uses it. The gallery
+(`Matinee/UI/gallery/`, the root in debug builds until `Root.swift` takes
+over) shows each piece on the theme; open it with `just ios gallery`.
+
+### Building and checking
+
+- `just ios generate` writes `Matinee.xcodeproj` (git-ignored) and, before
+  that, `Config/Version.xcconfig` from the root `package.json` and
+  `Resources/AppIcon.xcassets` from `brand/ios`, both git-ignored.
+- `just ios build` (simulator in `MATINEE_SIMULATOR`, default `iPhone 17`)
+  builds into `apps/ios/build/`. Keep `-derivedDataPath` under your own
+  checkout when you call `xcodebuild` yourself. No warnings from our code.
+- `just ios test` runs MatineeCore's tests on the Mac and checks that the
+  strings, icons, and palettes are current.
+- The app target is Swift 6 with the main actor as default isolation.
+  Views and their state need no annotations; pure helpers that run
+  anywhere are `nonisolated`, as in `Format.swift`.
+
+### Adding a screen
+
+1. Put it in the folder Android has it in: `HomeScreen.kt` is
+   `Matinee/UI/home/HomeScreen.swift`, with the same type and function
+   names. The folder is picked up by the spec; don't edit `project.yml`.
+2. Read what it needs from the environment, never globals:
+   `@Environment(\.palette)`, `@Environment(\.api)` (nil until signed in),
+   `@Environment(ViewerState.self) private var viewer: ViewerState?`,
+   `@Environment(\.navigator)` to open other pages, `@Environment(\.offline)`,
+   `@Environment(\.snackbar)`.
+3. Load with a `Loader` in `@State` and `.loads(loader) { api in … }`
+   (`UI/State.swift` has the pattern). It fetches on first showing, again
+   when the viewer's marks change and when the page comes back after 30 s,
+   and keeps what showed while it refreshes. Switch on `loader.state` and
+   show `LoadingBox`, `ErrorBox`, `Notice`, `RailSkeleton`, or the content.
+   Pure logic goes in MatineeCore with a test, ported from Android's.
+4. Lay out with `Gutter` (16) and the components below; text with
+   `.textStyle(.titleLarge)` (Android's `MaterialTheme.typography` names),
+   never `.font(.title)` or a system font; colors from `palette`, never
+   `Color.gray` or `.secondary`. A page opened from a tab sets its bar with
+   `.topBar(title) { actions }`; a page over art uses `.itemTopBar(...)`
+   and `.statusBarScrim()` on its scroll view. Sheets get `.matineeSheet()`.
+5. Animate with `Motion`'s timings through `.motion(_:value:)` or
+   `withMotion`, which honor Reduce Motion.
+6. Add it to the gallery if it's a component others will use.
+
+### Adding a string
+
+- A word Android has: use it. `stringResource(R.string.home_continue_watching)`
+  is `Str.homeContinueWatching`; one with arguments is a function typed by
+  its format (`Str.browseRecentlyAdded(name)`, `Str.mediaTimeLeft(12)`), and
+  a plural takes its count first (`Str.mediaEpisodeCount(count)`).
+- A word both apps need that Android lacks: it belongs in Android's
+  `res/values*/strings*.xml`; if your task doesn't cover the Android app,
+  put it in `iOS.xcstrings` for now and say so in your report. A word only
+  iOS needs: add it to
+  `Matinee/Resources/iOS.xcstrings` (English and German, iOS specifiers
+  such as `%@` and `%lld`, key prefixed `ios_`), then `just ios strings`.
+  Commit the regenerated `Localizable.xcstrings` and `Strings.gen.swift`.
+- Words for Info.plist keys are in `Resources/InfoPlist.xcstrings`.
+- Dates, numbers, sizes, and durations go through `UI/Format.swift`
+  (`formatRuntime`, `formatDay`, `formatBytes`, `formatCount`, …), which use
+  `Locale.app`, the app's language.
+
+### Adding an icon
+
+- Add it to the Android app first (`apps/android/scripts/lucide.py` and its
+  `Lucide` object in `Picture.kt`), then `just ios icons`. Kotlin's
+  `Lucide.ArrowLeft` is `Lucide.arrowLeft`.
+- Draw it with `LucideIcon(.arrowLeft, size: 20)`: the foreground color,
+  or `tint:`, growing with Dynamic Type; give it `label:` when it's the only
+  thing saying what a control does. In a `Label`, a `Menu`, or a toolbar
+  button, use `Image(Lucide.arrowLeft)`.
+- The logo is `Logo(height:)` and the mark `LogoMark(size:)`, from `brand/`
+  through the same script.
+
+### Components
+
+`UI/components/` (Android's file in brackets):
+
+- Pictures [Picture.kt]: `Picture([ImageSource])`, the first that loads over
+  its blur hash, fading in, nothing when all fail; `api.art(_:size:)`,
+  `api.frame(_:)`, `api.landscape(_:)` (MatineeCore); `Tone(key)` for missing
+  art; `LucideIcon`; `Logo`, `LogoMark`. Images load through
+  `\.imagePipeline`; the root sets `ImagePipeline.matinee(headers:)` with
+  the session's `Authorization` once it has one.
+- Cards [Cards.kt]: `EpisodeCard(item, showName:)`, `PosterCard(title,
+  detail:, poster:, onTap:)`, `PosterArt(name:, poster:, watched:)`,
+  `ShelfCard(entry)` and `shelfCardModel(entry)`, `PersonCard(name, role:,
+  photo:)`, `EpisodeRow(item)`, `ArtFrame`, `CardText`, `PlayGlyph`;
+  `Rail(title, onTitleTap:) { RailItem(.poster) { … } }`, `RailArt.width(in:)`,
+  `CardGrid { … }` (adaptive columns, two on a phone, more on an iPad).
+  Cards open pages through the environment's `Navigator` and offer a
+  context menu on a long press through `.cardMenu(ActionTarget)`.
+- Context menus [Actions.kt's hook]: `ActionTarget` and the root's
+  `\.actionMenu = ActionMenu { target in AnyView(…) }`. The Actions task
+  fills it in `Actions.swift`; until then cards offer no menu.
+- Controls [Controls.kt]: `.buttonStyle(.matinee(.primary))` or
+  `MatineeButton(.outline) { … }`, `RoundIconButton(icon, label:)`,
+  `Chip(label, selected:)`, `WatchedBadge`, `ProgressBar(progress:)`,
+  `SectionTitle(title, action:)`, `Avatar(name, url:)`, `Badge(text)`,
+  `SegmentedControl(options, selection:)`, `.toggleStyle(.matinee)`,
+  `MatineeSlider(label, value:, in:)`; `ControlShape`, `CardShape`,
+  `Gutter`, `MinTouch`.
+- States [Controls.kt, HomeSections.kt]: `LoadingBox`, `ErrorBox(title,
+  message, disconnected:, onRetry:)`, `Disconnected`, `DisconnectedAction`,
+  `Notice`, `RailFailure`, `RailSkeleton(title:, art:)`, `EmptyState(icon,
+  title, message)`, `RetryButton`.
+- Fields: `MatineeTextField($text, placeholder:, leadingIcon:, isError:,
+  secure:)` [TextField.kt], `SearchField($query)` and `SearchBarFrame`
+  [SearchBar.kt], `QrCode(text, label:, size:)` [QrCode.kt].
+- Sheets: `.matineeSheet(detents)`, `SheetHeader`, `SheetItem`
+  [Actions.kt], `WatchedAtSheet(WatchedAsk)` [WatchedAt.kt].
+- Rows [settings/SettingsRows.kt]: `SettingsSection`, `Panel`, `RowDivider`,
+  `PickerRow`, `SwitchRow`, `ValueRow`, `LinkRow`.
+- Elsewhere in `UI/`: `Bars.swift` (`.topBar`, `.itemTopBar`, `AppHeader`,
+  `.statusBarScrim`), `Motion.swift` (`Motion`, `.motion`, `withMotion`,
+  `Reveal`), `Format.swift`, `State.swift`, `Navigator.swift`, and
+  `theme/` (`Palette`, `Typography`, `ThemeStore`, `.matineeTheme`).
+
+### Where iOS differs on purpose
+
+- A long press opens a context menu over the card, not a bottom sheet.
+- Top bars are the navigation bar, with the system's back button and edge
+  swipe; the tab bar is the shell's to choose.
+- Sheets are the system's, with a grabber and detents.
+- Round icon buttons keep their size at large text sizes and show in the
+  large content viewer; text and other icons grow with Dynamic Type.
 
 ## Order of work
 

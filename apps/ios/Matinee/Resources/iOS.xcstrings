@@ -1,0 +1,24 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "ios_progress_watched": {
+      "comment": "VoiceOver's value for the bar of how much of a file was watched.",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld %% gesehen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld%% watched"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}
