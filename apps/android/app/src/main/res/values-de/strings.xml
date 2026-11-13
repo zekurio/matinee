@@ -410,6 +410,12 @@
     <string name="playback_gestures_seek">Spulen</string>
     <string name="playback_gestures_hold">Halten für doppelte Geschwindigkeit</string>
     <string name="playback_gestures_hint">Im Player links nach oben oder unten wischen ändert die Helligkeit, rechts die Lautstärke. Zur Seite wischen spult, und gedrückt halten spielt doppelt so schnell, bis du loslässt.</string>
+    <string name="playback_buttons_title">Tasten im Player</string>
+    <string name="playback_buttons_skip">Zurück- und Vorspringen</string>
+    <string name="playback_buttons_lock">Sperren</string>
+    <string name="playback_buttons_audio">Audio</string>
+    <string name="playback_buttons_subtitles">Untertitel</string>
+    <string name="playback_buttons_hint">Ausgeschaltete Tasten fehlen in der Player-Steuerung. Doppelt tippen springt auf beiden Seiten weiterhin. Ohne die Audio- oder Untertiteltaste bleibt der Player bei den Spuren, die deine Sprachen wählen.</string>
     <string name="playback_passthrough_title">Audio-Passthrough</string>
     <string name="settings_subtitles_title">Untertitel</string>
     <string name="settings_subtitles_preview">So sehen Untertitel aus.</string>

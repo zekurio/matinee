@@ -109,8 +109,9 @@ folder as is.
   unreachable, the app offers downloads and syncs progress later. Each
   download belongs to the server it came from.
 - Settings for languages, caption style, quality, codecs, decoders,
-  gestures, passthrough, downloads, sessions, and an About page with the
-  last playback report and a redacted app log.
+  gestures, which buttons the player shows, passthrough, downloads,
+  sessions, and an About page with the last playback report and a
+  redacted app log.
 
 Not built yet: Chromecast, a lock screen media session, and season
 downloads.

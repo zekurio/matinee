@@ -80,6 +80,13 @@ class PlayerPrefs(context: Context) {
     /** On a phone, holding a finger on the video plays it at double speed until it lifts. */
     var holdSpeed by boolean("hold_speed", true)
 
+    /** On a phone, the buttons the player's controls show. Double taps skip either way. */
+    var skipButtons by boolean("button_skip", true)
+    var pictureInPictureButton by boolean("button_picture_in_picture", true)
+    var lockButton by boolean("button_lock", true)
+    var audioButton by boolean("button_audio", true)
+    var subtitlesButton by boolean("button_subtitles", true)
+
     /** Keep playing in a small window on leaving the app. */
     var pictureInPicture by boolean("picture_in_picture", true)
 
