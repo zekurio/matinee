@@ -29,6 +29,7 @@ import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.Profile
 import io.github.zekurio.matinee.api.isAdmin
 import io.github.zekurio.matinee.api.name
+import io.github.zekurio.matinee.app
 import io.github.zekurio.matinee.auth.Session
 import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.Loader
@@ -43,18 +44,20 @@ import io.github.zekurio.matinee.ui.components.ButtonLook
 import io.github.zekurio.matinee.ui.components.Disconnected
 import io.github.zekurio.matinee.ui.components.DisconnectedAction
 import io.github.zekurio.matinee.ui.components.EpisodeCard
+import io.github.zekurio.matinee.ui.components.FavoriteCard
 import io.github.zekurio.matinee.ui.components.Gap
 import io.github.zekurio.matinee.ui.components.Gutter
 import io.github.zekurio.matinee.ui.components.LocalApi
 import io.github.zekurio.matinee.ui.components.Lucide
 import io.github.zekurio.matinee.ui.components.LucideIcon
 import io.github.zekurio.matinee.ui.components.MatineeButton
-import io.github.zekurio.matinee.ui.components.PosterCard
 import io.github.zekurio.matinee.ui.components.Rail
 import io.github.zekurio.matinee.ui.components.RailArt
 import io.github.zekurio.matinee.ui.components.RoundIconButton
 import io.github.zekurio.matinee.ui.components.SectionTitle
+import io.github.zekurio.matinee.ui.components.favoriteKey
 import io.github.zekurio.matinee.ui.components.railItemWidth
+import io.github.zekurio.matinee.ui.media.isFavorite
 import io.github.zekurio.matinee.ui.rememberLoader
 import io.github.zekurio.matinee.ui.settings.LinkRow
 import io.github.zekurio.matinee.ui.settings.Panel
@@ -196,17 +199,19 @@ private fun Header(profile: Profile?, action: @Composable () -> Unit) {
 }
 
 /**
- * Favorite titles as posters, then favorite episodes; each heading opens
- * the whole list. With none yet, how to make one.
+ * Favorites of every kind in one rail of posters, newest first, as the web
+ * shows them; its heading opens the whole lists. With none yet, how to
+ * make one.
  */
 @Composable
 private fun Favorites(profile: Profile) {
     val nav = LocalNavigator.current
+    val viewer = LocalContext.current.app.viewer
     // Offline the whole lists are the server's to send.
     val openAll = if (LocalOffline.current) null else nav::favorites
-    val titles = profile.favorites.orEmpty()
-    val items = profile.favoriteItems.orEmpty()
-    if (titles.isEmpty() && items.isEmpty()) {
+    // One taken off here goes at once, before the profile is fetched again.
+    val favorites = profile.favorites.orEmpty().filter(viewer::isFavorite)
+    if (favorites.isEmpty()) {
         Column(Modifier.padding(horizontal = Gutter)) {
             SectionTitle(stringResource(R.string.favorites_title))
             Gap(8.dp)
@@ -214,20 +219,9 @@ private fun Favorites(profile: Profile) {
         }
         return
     }
-    Column(verticalArrangement = Arrangement.spacedBy(32.dp)) {
-        if (titles.isNotEmpty()) {
-            Rail(stringResource(R.string.favorites_title), onTitleClick = openAll) {
-                items(titles, key = { it.id }) { title ->
-                    PosterCard(title, title.year?.toString(), Modifier.width(railItemWidth(RailArt.Poster)))
-                }
-            }
-        }
-        if (items.isNotEmpty()) {
-            Rail(stringResource(R.string.profile_favorite_episodes), onTitleClick = openAll) {
-                items(items, key = { it.id }) { item ->
-                    EpisodeCard(item, Modifier.width(railItemWidth(RailArt.Landscape)))
-                }
-            }
+    Rail(stringResource(R.string.favorites_title), onTitleClick = openAll) {
+        items(favorites, key = ::favoriteKey) { favorite ->
+            FavoriteCard(favorite, Modifier.width(railItemWidth(RailArt.Poster)))
         }
     }
 }

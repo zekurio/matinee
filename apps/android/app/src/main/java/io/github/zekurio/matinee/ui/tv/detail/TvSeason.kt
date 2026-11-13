@@ -227,7 +227,8 @@ private val ABOUT_HEIGHT = 100.dp
 
 /**
  * Play the season's next episode, or resume it with the time left, then
- * the season's watched mark, the show's favorite, and the show.
+ * the season's watched mark, its favorite, and the show. The files
+ * without a season number aren't a season to mark, so they get no heart.
  */
 @Composable
 private fun SeasonButtons(title: Title, season: Season, list: List<MediaItem>?, memory: TvFocusMemory, modifier: Modifier = Modifier) {
@@ -242,7 +243,7 @@ private fun SeasonButtons(title: Title, season: Season, list: List<MediaItem>?, 
     val next = seasonNext(list, viewer)
     val resume = isResuming(next)
     val watched = seasonWatched(list, viewer)
-    val favorite = viewer.isFavorite(summary)
+    val favorite = viewer.isFavorite(summary, season)
     val watchedFailure = stringResource(if (watched) R.string.media_mark_unwatched_failed else R.string.media_mark_watched_failed)
     val favoriteFailure = stringResource(R.string.media_favorite_failed)
     val name = "${title.name} · ${seasonName(season.number, res)}"
@@ -265,10 +266,10 @@ private fun SeasonButtons(title: Title, season: Season, list: List<MediaItem>?, 
             with(memory) { Modifier.item(ACTIONS, WATCHED) },
             tint = if (watched) Palette.Accent else Palette.Foreground,
         )
-        TvIconButton(
+        if (season.number != null) TvIconButton(
             if (favorite) Lucide.HeartFilled else Lucide.Heart,
             stringResource(if (favorite) R.string.media_remove_favorite else R.string.media_add_favorite),
-            { scope.launchShowing(snackbar, favoriteFailure) { viewer.setFavorite(api, summary, !favorite) } },
+            { scope.launchShowing(snackbar, favoriteFailure) { viewer.setFavorite(api, summary, season, !favorite) } },
             with(memory) { Modifier.item(ACTIONS, "favorite") },
             tint = if (favorite) Palette.Danger else Palette.Foreground,
         )

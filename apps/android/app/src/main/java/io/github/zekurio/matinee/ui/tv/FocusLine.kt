@@ -17,12 +17,14 @@ import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.ArtworkSize
 import io.github.zekurio.matinee.api.MatineeApi
+import io.github.zekurio.matinee.api.Season
 import io.github.zekurio.matinee.api.TitleKind
 import io.github.zekurio.matinee.api.TitleSummary
 import io.github.zekurio.matinee.ui.components.Lucide
 import io.github.zekurio.matinee.ui.components.LucideIcon
 import io.github.zekurio.matinee.ui.components.art
 import io.github.zekurio.matinee.ui.formatRating
+import io.github.zekurio.matinee.ui.seasonName
 import io.github.zekurio.matinee.ui.theme.Palette
 import io.github.zekurio.matinee.ui.tv.home.FocusedItem
 
@@ -43,6 +45,21 @@ fun titleInfo(title: TitleSummary, api: MatineeApi, res: Resources, kind: Boolea
     contentRating = title.contentRating,
     rating = title.rating,
     overview = title.overview,
+    backdrop = listOfNotNull(api.art(title.images.backdrop, ArtworkSize.Large)),
+)
+
+/**
+ * As [titleInfo], for a season of a show: the show's name with the
+ * season's, how many episodes it has, and its overview, or the show's.
+ */
+fun seasonInfo(title: TitleSummary, season: Season, api: MatineeApi, res: Resources): FocusedItem = FocusedItem(
+    name = res.getString(R.string.title_season_of, title.name, seasonName(season.number, res)),
+    logo = null,
+    subtitle = null,
+    facts = listOf(res.getQuantityString(R.plurals.media_episode_count, season.itemCount, season.itemCount)),
+    contentRating = title.contentRating,
+    rating = title.rating,
+    overview = season.overview ?: title.overview,
     backdrop = listOfNotNull(api.art(title.images.backdrop, ArtworkSize.Large)),
 )
 

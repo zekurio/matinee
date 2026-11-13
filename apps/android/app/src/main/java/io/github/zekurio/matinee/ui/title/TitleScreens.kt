@@ -266,9 +266,10 @@ private fun SeasonPage(title: Title, season: Season) {
                     resume = isResuming(next),
                     name = "${title.name} · ${seasonName(season.number, res)}",
                     watched = allWatched,
-                    favorite = viewer.isFavorite(title.summary),
+                    favorite = viewer.isFavorite(title.summary, season),
                     onWatched = { watched, at -> setSeasonWatched(api, viewer, title.summary, season.number, watched, at) },
-                    onFavorite = { viewer.setFavorite(api, title.summary, !viewer.isFavorite(title.summary)) },
+                    // The files without a season number aren't a season to mark.
+                    onFavorite = if (season.number == null) null else ({ viewer.setFavorite(api, title.summary, season, !viewer.isFavorite(title.summary, season)) }),
                     onMore = ActionTarget.Season(title.summary, season, here = true)
                         .let { more -> if (hasActions(more)) ({ actions.open(more) }) else null },
                 )

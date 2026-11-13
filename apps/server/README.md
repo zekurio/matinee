@@ -737,9 +737,11 @@ the leaderboard and the admins' statistics. A profile always shows the name
 and picture. Its owner decides under Settings → Account whether others
 also see:
 
-- Favorites: the movies, shows, and episodes they marked with the heart,
-  on a title's or episode's page or on its poster or still. Home lists
-  your own favorites too.
+- Favorites: the movies, shows, seasons, and episodes they marked with
+  the heart, on a title's, season's, or episode's page or on its poster
+  or still. The profile shows the latest of every kind in one row, and
+  its heading opens `/profiles/<username>/favorites`, with a row for
+  each kind: shows, seasons, episodes, then movies.
 - Statistics: watch time, the most watched titles and genres, when they
   watch, and the last file of each title they played.
 

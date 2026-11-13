@@ -44,7 +44,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.ArtworkSize
+import io.github.zekurio.matinee.api.Favorite
 import io.github.zekurio.matinee.api.MediaItem
+import io.github.zekurio.matinee.api.Season
 import io.github.zekurio.matinee.api.ShelfEntry
 import io.github.zekurio.matinee.api.TitleKind
 import io.github.zekurio.matinee.api.TitleSummary
@@ -295,6 +297,74 @@ fun PosterCard(
         }
         CardText(title.name, detail)
     }
+}
+
+/**
+ * A season of a show as a poster, for a row of posters: the season's
+ * poster, or the show's, the show's name over the season's, opening the
+ * season's page. A long press offers the season's menu.
+ */
+@Composable
+fun SeasonPosterCard(title: TitleSummary, season: Season, modifier: Modifier = Modifier) {
+    val api = LocalApi.current
+    val nav = LocalNavigator.current
+    val actions = LocalActions.current
+    val res = LocalResources.current
+    val name = seasonName(season.number, res)
+    Column(modifier) {
+        Box(Modifier.cardClick({ nav.season(title.id, season.number) }, { actions.season(title, season) })) {
+            PosterArt(
+                stringResource(R.string.title_season_of, title.name, name),
+                api.art(season.poster ?: title.images.poster),
+                watched = season.itemCount > 0 && season.watchedCount >= season.itemCount,
+            )
+        }
+        CardText(title.name, name)
+    }
+}
+
+/**
+ * An episode as its show's poster, for a row of posters: the show's name
+ * over the episode's, opening the episode's page. A long press offers the
+ * rest.
+ */
+@Composable
+fun EpisodePosterCard(item: MediaItem, modifier: Modifier = Modifier) {
+    val api = LocalApi.current
+    val nav = LocalNavigator.current
+    val actions = LocalActions.current
+    val res = LocalResources.current
+    val viewer = androidx.compose.ui.platform.LocalContext.current.app.viewer
+    val label = itemLabel(item, res)
+    val code = episodeCode(item, res)
+    Column(modifier) {
+        Box(Modifier.cardClick({ nav.item(item) }, { actions.item(item) })) {
+            PosterArt(label.showName, api.art(item.title?.images?.poster), watched = viewer.isWatched(item))
+        }
+        CardText(label.showName, if (code != null) stringResource(R.string.media_code_title, code, label.title) else label.title)
+    }
+}
+
+/**
+ * A favorite of any kind as a poster, so a row that mixes them lines up:
+ * a movie, a show, a season, or an episode on its show's poster.
+ */
+@Composable
+fun FavoriteCard(favorite: Favorite, modifier: Modifier = Modifier) {
+    when (favorite) {
+        is Favorite.Movie -> PosterCard(favorite.title, favorite.title.year?.toString(), modifier)
+        is Favorite.Show -> PosterCard(favorite.title, favorite.title.year?.toString(), modifier)
+        is Favorite.ShowSeason -> SeasonPosterCard(favorite.title, favorite.season, modifier)
+        is Favorite.Episode -> EpisodePosterCard(favorite.item, modifier)
+    }
+}
+
+/** Tells favorites apart in a row that mixes their kinds. */
+fun favoriteKey(favorite: Favorite): String = when (favorite) {
+    is Favorite.Movie -> "title/${favorite.title.id}"
+    is Favorite.Show -> "title/${favorite.title.id}"
+    is Favorite.ShowSeason -> "season/${favorite.title.id}/${favorite.season.number}"
+    is Favorite.Episode -> "episode/${favorite.item.id}"
 }
 
 /**

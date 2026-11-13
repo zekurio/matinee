@@ -1,4 +1,4 @@
-import type { MediaItem, TitleSummary } from "@matinee/contracts"
+import type { MediaItem, Season, TitleSummary } from "@matinee/contracts"
 import { Button } from "@matinee/ui/components/button"
 import { DropdownMenuItem } from "@matinee/ui/components/dropdown-menu"
 import { toast } from "@matinee/ui/components/sonner"
@@ -58,6 +58,26 @@ function useSetItemFavorite() {
 }
 
 /**
+ * Mark a season as a favorite or not. The mutation stays pending until the
+ * refetch after it lands.
+ */
+function useSetSeasonFavorite() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: {
+      titleId: string
+      season: number
+      favorite: boolean
+    }) => client.favorites.setSeason(input),
+    onError: (error) =>
+      toast.error(tr("media.favoriteFailed"), {
+        description: errorMessage(error),
+      }),
+    onSettled: () => invalidateViewerState(queryClient),
+  })
+}
+
+/**
  * Whether the title is a favorite, and a way to flip it. A change shows at
  * once, and stays until the refetched title says the same or the call fails.
  */
@@ -91,6 +111,25 @@ export function useItemFavorite(item: MediaItem): Toggle {
   return {
     on,
     toggle: () => setItem.mutate({ itemId: item.id, favorite: !on }),
+  }
+}
+
+/**
+ * As {@link useTitleFavorite}, for a season. Null for the files without a
+ * season number, which aren't a season to mark.
+ */
+export function useSeasonFavorite(
+  title: Pick<TitleSummary, "id">,
+  season: Season,
+): Toggle | null {
+  const set = useSetSeasonFavorite()
+  const { number } = season
+  if (number === null) return null
+  const on = set.isPending ? set.variables.favorite : season.favorite
+  return {
+    on,
+    toggle: () =>
+      set.mutate({ titleId: title.id, season: number, favorite: !on }),
   }
 }
 
@@ -171,4 +210,22 @@ export function ItemFavoriteButton({
   className?: string
 }) {
   return <HeartButton {...useItemFavorite(item)} className={className} />
+}
+
+/**
+ * The heart beside a season's Play. Filled while it's a favorite. None for
+ * the files without a season number.
+ */
+export function SeasonFavoriteButton({
+  title,
+  season,
+  className,
+}: {
+  title: Pick<TitleSummary, "id">
+  season: Season
+  className?: string
+}) {
+  const favorite = useSeasonFavorite(title, season)
+  if (!favorite) return null
+  return <HeartButton {...favorite} className={className} />
 }

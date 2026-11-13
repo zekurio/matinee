@@ -76,8 +76,7 @@
     <string name="tab_profile">Profile</string>
     <string name="profile_admin">Admin</string>
     <string name="profile_joined">Joined %1$s</string>
-    <string name="profile_favorite_episodes">Favorite episodes</string>
-    <string name="profile_no_favorites_hint">Tap the heart on a movie, show, or episode to keep it here.</string>
+    <string name="profile_no_favorites_hint">Tap the heart on a movie, show, season, or episode to keep it here.</string>
     <string name="profile_statistics">Statistics</string>
     <string name="profile_self_empty">Your statistics fill in as you watch</string>
     <string name="profile_self_empty_hint">Watch time and your most watched titles show up here after your first play.</string>
@@ -128,10 +127,12 @@
 
     <!-- Favorites -->
     <string name="favorites_title">Favorites</string>
-    <string name="favorites_titles">Titles</string>
-    <string name="favorites_episodes">Favorite episodes</string>
+    <string name="favorites_shows">Shows</string>
+    <string name="favorites_seasons">Seasons</string>
+    <string name="favorites_episodes">Episodes</string>
+    <string name="favorites_movies">Movies</string>
     <string name="favorites_empty">No favorites yet</string>
-    <string name="favorites_empty_hint">Tap the heart on a movie, show, or episode to keep it here.</string>
+    <string name="favorites_empty_hint">Tap the heart on a movie, show, season, or episode to keep it here.</string>
     <string name="favorites_load_failed">Couldn\'t load your favorites</string>
 
     <!-- Home -->
@@ -600,7 +601,7 @@
     <string name="tv_grid_more_failed">Couldn\'t load more titles</string>
     <string name="tv_kind_movie">Movie</string>
     <string name="tv_kind_show">Show</string>
-    <string name="tv_favorites_empty_hint">Mark a movie, show, or episode as a favorite on its page to keep it here.</string>
+    <string name="tv_favorites_empty_hint">Mark a movie, show, season, or episode as a favorite on its page to keep it here.</string>
     <string name="tv_connect_title">Choose your server</string>
     <string name="tv_connect_description">Matinee servers on this network show up here. Pick yours, or type its address.</string>
     <string name="tv_connect_found">On this network</string>

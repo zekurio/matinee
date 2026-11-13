@@ -1541,6 +1541,60 @@ data class MediaProbe(
 }
 
 @Serializable
+data class Season(
+    val number: Int?,
+    val name: String,
+    val overview: String?,
+    val poster: Artwork?,
+    val itemCount: Int,
+    val watchedCount: Int,
+    val favorite: Boolean,
+)
+
+@Serializable
+@JsonClassDiscriminator("kind")
+sealed interface Favorite {
+    @Serializable
+    @SerialName("movie")
+    data class Movie(
+        val title: TitleSummary,
+    ) : Favorite
+
+    @Serializable
+    @SerialName("show")
+    data class Show(
+        val title: TitleSummary,
+    ) : Favorite
+
+    @Serializable
+    @SerialName("showSeason")
+    data class ShowSeason(
+        val title: TitleSummary,
+        val season: Season,
+    ) : Favorite
+
+    @Serializable
+    @SerialName("episode")
+    data class Episode(
+        val item: MediaItem,
+    ) : Favorite
+}
+
+@Serializable
+data class FavoriteSeason(
+    val title: TitleSummary,
+    val season: Season,
+)
+
+@Serializable
+data class Favorites(
+    val shows: List<TitleSummary>,
+    val seasons: List<FavoriteSeason>,
+    val episodes: List<MediaItem>,
+    val movies: List<TitleSummary>,
+)
+
+@Serializable
 data class MetadataMatch(
     val provider: String,
     val id: String,
@@ -1662,8 +1716,7 @@ data class Profile(
     val user: ProfileUser,
     val self: Boolean,
     val sharing: ProfileSharing,
-    val favorites: List<TitleSummary>?,
-    val favoriteItems: List<MediaItem>?,
+    val favorites: List<Favorite>?,
     val recent: List<WatchedEntry>?,
 )
 
@@ -1683,16 +1736,6 @@ data class SearchResults(
     val people: List<PersonSummary>,
     val genres: List<Facet>,
     val studios: List<Facet>,
-)
-
-@Serializable
-data class Season(
-    val number: Int?,
-    val name: String,
-    val overview: String?,
-    val poster: Artwork?,
-    val itemCount: Int,
-    val watchedCount: Int,
 )
 
 @Serializable
@@ -2189,6 +2232,12 @@ data class PlaybackSetTitleWatchedInput(
 
 @Serializable
 data class FavoritesSetInput(
+    val favorite: Boolean,
+)
+
+@Serializable
+data class FavoritesSetSeasonInput(
+    val season: Int,
     val favorite: Boolean,
 )
 

@@ -15,6 +15,7 @@ import { createFileRoute, Link } from "@tanstack/react-router"
 import {
   CalendarDaysIcon,
   ChartColumnIcon,
+  ChevronRightIcon,
   HeartIcon,
   LinkIcon,
   LockIcon,
@@ -25,7 +26,8 @@ import {
   ShieldIcon,
 } from "lucide-react"
 
-import { EpisodeCard, PosterCard } from "@/components/media-item"
+import { FavoriteCard, favoriteKey } from "@/components/favorites"
+import { EpisodeCard } from "@/components/media-item"
 import { useDocumentTitle } from "@/components/page-header"
 import { PhoneTopBar, usePhoneTab } from "@/components/phone-nav"
 import { Rail, RailItem } from "@/components/rail"
@@ -334,15 +336,16 @@ function ShareButton({
 }
 
 /**
- * Posters of the owner's favorite titles, then their favorite episodes.
- * Hidden for others when there are none.
+ * The owner's latest favorites of every kind in one row of posters. Its
+ * heading opens the favorites page, a row for each kind. Hidden for others
+ * when there are none.
  */
 function Favorites({ profile }: { profile: Profile }) {
-  const { favorites, favoriteItems } = profile
-  if (!favorites || !favoriteItems) return null
+  const { favorites } = profile
+  if (!favorites) return null
   const privateNote =
     profile.self && !profile.sharing.favorites ? <PrivateNote /> : undefined
-  if (favorites.length === 0 && favoriteItems.length === 0) {
+  if (favorites.length === 0) {
     if (!profile.self) return null
     return (
       <section aria-label={tr("profile.favorites")}>
@@ -359,29 +362,29 @@ function Favorites({ profile }: { profile: Profile }) {
     )
   }
   return (
-    <>
-      {favorites.length > 0 && (
-        <Rail title={tr("profile.favorites")} action={privateNote}>
-          {favorites.map((title) => (
-            <RailItem key={title.id} artwork="poster">
-              <PosterCard title={title} />
-            </RailItem>
-          ))}
-        </Rail>
-      )}
-      {favoriteItems.length > 0 && (
-        <Rail
-          title={tr("profile.favoriteEpisodes")}
-          action={favorites.length === 0 ? privateNote : undefined}
+    <Rail
+      title={tr("profile.favorites")}
+      heading={
+        <Link
+          to="/profiles/$username/favorites"
+          params={{ username: profile.user.username }}
+          className="focus-visible:ring-ring group/heading inline-flex max-w-full items-center gap-1 rounded-sm outline-none focus-visible:ring-2"
         >
-          {favoriteItems.map((item) => (
-            <RailItem key={item.id}>
-              <EpisodeCard item={item} />
-            </RailItem>
-          ))}
-        </Rail>
-      )}
-    </>
+          <span className="truncate">{tr("profile.favorites")}</span>
+          <ChevronRightIcon
+            aria-hidden
+            className="text-muted-foreground group-hover/heading:text-foreground size-5 shrink-0 transition-colors"
+          />
+        </Link>
+      }
+      action={privateNote}
+    >
+      {favorites.map((favorite) => (
+        <RailItem key={favoriteKey(favorite)} artwork="poster">
+          <FavoriteCard favorite={favorite} />
+        </RailItem>
+      ))}
+    </Rail>
   )
 }
 

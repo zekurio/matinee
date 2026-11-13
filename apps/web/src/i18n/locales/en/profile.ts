@@ -20,10 +20,18 @@ export default defineMessages("profile", {
 
   // Favorites.
   "profile.favorites": "Favorites",
-  "profile.favoriteEpisodes": "Favorite episodes",
   "profile.noFavorites": "No favorites yet",
   "profile.noFavoritesHint":
-    "Tap the heart on a movie, show, or episode to keep it here.",
+    "Tap the heart on a movie, show, season, or episode to keep it here.",
+
+  // The favorites page, a row for each kind.
+  "profile.favorites.shows": "Shows",
+  "profile.favorites.seasons": "Seasons",
+  "profile.favorites.episodes": "Episodes",
+  "profile.favorites.movies": "Movies",
+  "profile.favorites.loadFailed": "Couldn't load these favorites",
+  "profile.favorites.hidden": "{name} doesn't share their favorites",
+  "profile.favorites.otherEmpty": "{name} has no favorites yet",
 
   // Statistics.
   "profile.statistics": "Statistics",

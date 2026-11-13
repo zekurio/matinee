@@ -9,14 +9,9 @@ import {
 } from "./playback-start"
 import { PlaybackOptions } from "./preferences"
 import { t } from "./schema"
+import { FeaturedTitle, MediaItem, NextUpEntry, WatchedAt } from "./schemas"
 import {
-  FeaturedTitle,
-  MediaItem,
-  NextUpEntry,
-  TitleSummary,
-  WatchedAt,
-} from "./schemas"
-import {
+  Favorites,
   Leaderboard,
   LibraryStats,
   LiveActivity,
@@ -202,17 +197,23 @@ export const homeContract = oc.tag("Home").router({
 })
 
 export const favoritesContract = oc.tag("Favorites").router({
-  /** The signed-in user's favorite titles, newest first. */
-  list: get("/favorites")
-    .input(t.object({ limit: t.number().int().min(1).max(200).$default(60) }))
-    .output(t.array(TitleSummary)),
-  /** The signed-in user's favorite files, such as episodes, newest first. */
-  items: get("/favorites/items")
-    .input(t.object({ limit: t.number().int().min(1).max(200).$default(60) }))
-    .output(t.array(MediaItem)),
   /** Mark a title as a favorite or not. Either is fine to repeat. */
   set: put("/titles/{titleId}/favorite")
     .input(t.object({ titleId: t.uuid(), favorite: t.boolean() }))
+    .output(t.void()),
+  /**
+   * Mark a season of a show as a favorite or not. Either is fine to
+   * repeat. The season is in the body, as a number; the files without a
+   * season number aren't a season to mark.
+   */
+  setSeason: put("/titles/{titleId}/season-favorite")
+    .input(
+      t.object({
+        titleId: t.uuid(),
+        season: t.number().int().min(0),
+        favorite: t.boolean(),
+      }),
+    )
     .output(t.void()),
   /**
    * Mark a file, such as an episode, as a favorite or not. Either is fine
@@ -249,6 +250,19 @@ export const profilesContract = oc.tag("Profiles").router({
       }),
     )
     .output(t.array(WatchedEntry).nullable()),
+  /**
+   * The owner's favorites by kind, each newest first, up to `limit` of
+   * each, as the profile's `favorites` mixes the latest of. Null when the
+   * owner doesn't share favorites.
+   */
+  favorites: get("/profiles/{username}/favorites")
+    .input(
+      t.object({
+        username: ProfileName,
+        limit: t.number().int().min(1).max(200).$default(100),
+      }),
+    )
+    .output(Favorites.nullable()),
 })
 
 /** What everyone watched, how the server played it, and the libraries. */

@@ -22,6 +22,13 @@
       "when": 1794530955572,
       "tag": "0002_title_trailers",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1794579282555,
+      "tag": "0003_favorite_seasons",
+      "breakpoints": true
     }
   ]
 }
