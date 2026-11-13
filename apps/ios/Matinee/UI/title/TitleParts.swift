@@ -356,7 +356,7 @@ struct TitleHeading: View {
 
 /// Views side by side, wrapping onto more lines as they need, each line's
 /// views centred on each other: Compose's `FlowRow`.
-struct FlowRow: Layout {
+private struct FlowRow: Layout {
   var spacing: CGFloat = 8
   var lineSpacing: CGFloat = 6
 
