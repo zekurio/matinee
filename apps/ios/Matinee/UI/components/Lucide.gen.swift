@@ -23,6 +23,7 @@ nonisolated struct Lucide: Hashable, Sendable {
   static let chevronRight = Lucide("lucide_chevron_right")
   static let circleAlert = Lucide("lucide_circle_alert")
   static let circleCheck = Lucide("lucide_circle_check")
+  static let clapperboard = Lucide("lucide_clapperboard")
   static let clock = Lucide("lucide_clock")
   static let cloudOff = Lucide("lucide_cloud_off")
   static let download = Lucide("lucide_download")
@@ -86,6 +87,7 @@ nonisolated struct Lucide: Hashable, Sendable {
     ("ChevronRight", .chevronRight),
     ("CircleAlert", .circleAlert),
     ("CircleCheck", .circleCheck),
+    ("Clapperboard", .clapperboard),
     ("Clock", .clock),
     ("CloudOff", .cloudOff),
     ("Download", .download),

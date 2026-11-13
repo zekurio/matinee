@@ -1992,6 +1992,10 @@ nonisolated enum Str {
   static func iosProgressWatched(_ p1: Int) -> String { tr("ios_progress_watched", table: "iOS", p1) }
   /// Matinee for iOS %@
   static func iosSettingsVersion(_ p1: String) -> String { tr("ios_settings_version", table: "iOS", p1) }
+  /// Trailer
+  static var iosTitleTrailer: String { tr("ios_title_trailer", table: "iOS") }
+  /// Watch the trailer on YouTube
+  static var iosTitleTrailerHint: String { tr("ios_title_trailer_hint", table: "iOS") }
 }
 
 nonisolated private func tr(_ key: String, table: String = "Localizable") -> String {
