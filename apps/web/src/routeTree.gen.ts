@@ -18,6 +18,7 @@ import { Route as AuthedShellRouteImport } from './routes/_authed/_shell'
 import { Route as AuthedAuthorizeRouteImport } from './routes/_authed/authorize'
 import { Route as AuthedLinkRouteImport } from './routes/_authed/link'
 import { Route as AuthedShellIndexRouteImport } from './routes/_authed/_shell/index'
+import { Route as AuthedShellMediaRouteImport } from './routes/_authed/_shell/media'
 import { Route as AuthedShellSearchRouteImport } from './routes/_authed/_shell/search'
 import { Route as AuthedShellStatsRouteImport } from './routes/_authed/_shell/stats'
 import { Route as AuthedWatchItemIdRouteImport } from './routes/_authed/watch.$itemId'
@@ -72,6 +73,11 @@ const AuthedLinkRoute = AuthedLinkRouteImport.update({
 const AuthedShellIndexRoute = AuthedShellIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AuthedShellRoute,
+} as any)
+const AuthedShellMediaRoute = AuthedShellMediaRouteImport.update({
+  id: '/media',
+  path: '/media',
   getParentRoute: () => AuthedShellRoute,
 } as any)
 const AuthedShellSearchRoute = AuthedShellSearchRouteImport.update({
@@ -150,6 +156,7 @@ export interface FileRoutesByFullPath {
   '/setup': typeof SetupRoute
   '/authorize': typeof AuthedAuthorizeRoute
   '/link': typeof AuthedLinkRoute
+  '/media': typeof AuthedShellMediaRoute
   '/search': typeof AuthedShellSearchRoute
   '/stats': typeof AuthedShellStatsRoute
   '/watch/$itemId': typeof AuthedWatchItemIdRoute
@@ -171,6 +178,7 @@ export interface FileRoutesByTo {
   '/setup': typeof SetupRoute
   '/authorize': typeof AuthedAuthorizeRoute
   '/link': typeof AuthedLinkRoute
+  '/media': typeof AuthedShellMediaRoute
   '/search': typeof AuthedShellSearchRoute
   '/stats': typeof AuthedShellStatsRoute
   '/watch/$itemId': typeof AuthedWatchItemIdRoute
@@ -194,6 +202,7 @@ export interface FileRoutesById {
   '/_authed/_shell': typeof AuthedShellRouteWithChildren
   '/_authed/authorize': typeof AuthedAuthorizeRoute
   '/_authed/link': typeof AuthedLinkRoute
+  '/_authed/_shell/media': typeof AuthedShellMediaRoute
   '/_authed/_shell/search': typeof AuthedShellSearchRoute
   '/_authed/_shell/stats': typeof AuthedShellStatsRoute
   '/_authed/watch/$itemId': typeof AuthedWatchItemIdRoute
@@ -218,6 +227,7 @@ export interface FileRouteTypes {
     | '/setup'
     | '/authorize'
     | '/link'
+    | '/media'
     | '/search'
     | '/stats'
     | '/watch/$itemId'
@@ -239,6 +249,7 @@ export interface FileRouteTypes {
     | '/setup'
     | '/authorize'
     | '/link'
+    | '/media'
     | '/search'
     | '/stats'
     | '/watch/$itemId'
@@ -261,6 +272,7 @@ export interface FileRouteTypes {
     | '/_authed/_shell'
     | '/_authed/authorize'
     | '/_authed/link'
+    | '/_authed/_shell/media'
     | '/_authed/_shell/search'
     | '/_authed/_shell/stats'
     | '/_authed/watch/$itemId'
@@ -347,6 +359,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof AuthedShellIndexRouteImport
+      parentRoute: typeof AuthedShellRoute
+    }
+    '/_authed/_shell/media': {
+      id: '/_authed/_shell/media'
+      path: '/media'
+      fullPath: '/media'
+      preLoaderRoute: typeof AuthedShellMediaRouteImport
       parentRoute: typeof AuthedShellRoute
     }
     '/_authed/_shell/search': {
@@ -437,6 +456,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthedShellRouteChildren {
+  AuthedShellMediaRoute: typeof AuthedShellMediaRoute
   AuthedShellSearchRoute: typeof AuthedShellSearchRoute
   AuthedShellStatsRoute: typeof AuthedShellStatsRoute
   AuthedShellIndexRoute: typeof AuthedShellIndexRoute
@@ -452,6 +472,7 @@ interface AuthedShellRouteChildren {
 }
 
 const AuthedShellRouteChildren: AuthedShellRouteChildren = {
+  AuthedShellMediaRoute: AuthedShellMediaRoute,
   AuthedShellSearchRoute: AuthedShellSearchRoute,
   AuthedShellStatsRoute: AuthedShellStatsRoute,
   AuthedShellIndexRoute: AuthedShellIndexRoute,

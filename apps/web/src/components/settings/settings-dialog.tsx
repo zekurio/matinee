@@ -10,12 +10,13 @@ import { List, ListItemButton } from "@matinee/ui/components/list"
 import { ScrollArea } from "@matinee/ui/components/scroll-area"
 import { useIsMobile } from "@matinee/ui/hooks/use-media-query"
 import { cn } from "@matinee/ui/lib/utils"
-import { ArrowLeftIcon, SearchIcon, XIcon } from "lucide-react"
+import { ArrowLeftIcon, LogOutIcon, SearchIcon, XIcon } from "lucide-react"
 import { type ReactNode, useMemo, useRef, useState } from "react"
 
 import { UserAvatar } from "@/components/user-avatar"
 import { tr } from "@/i18n"
 import type { SettingsTarget } from "@/lib/settings"
+import { useSignOut } from "@/lib/sign-out"
 import { useSettingsDialogStore } from "@/stores/settings-dialog"
 
 import {
@@ -144,7 +145,10 @@ function MobileHeader({
   )
 }
 
-/** The phone menu: search, the signed-in account, then every section. */
+/**
+ * The phone menu: search, the signed-in account, then every section, and
+ * signing out at its end, as phones have no account menu.
+ */
 function SettingsOverview({
   user,
   categories,
@@ -160,6 +164,7 @@ function SettingsOverview({
     [categories, query],
   )
   const name = user.displayName ?? user.username
+  const signOut = useSignOut()
 
   return (
     <div className="flex min-w-0 flex-1 flex-col">
@@ -221,6 +226,21 @@ function SettingsOverview({
           <p className="text-muted-foreground px-1 text-sm">
             {tr("settings.noMatch", { query: query.trim() })}
           </p>
+        )}
+        {!query.trim() && (
+          <List>
+            <ListItemButton
+              className="text-destructive"
+              disabled={signOut.isPending}
+              onClick={() => signOut.mutate()}
+              trailing={false}
+            >
+              <LogOutIcon className="size-5 shrink-0" />
+              <span className="min-w-0 flex-1 truncate font-medium">
+                {tr("shell.signOut")}
+              </span>
+            </ListItemButton>
+          </List>
         )}
       </div>
     </div>

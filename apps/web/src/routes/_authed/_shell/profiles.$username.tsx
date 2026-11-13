@@ -5,6 +5,7 @@ import { FeedbackButton } from "@matinee/ui/components/feedback-button"
 import { Skeleton } from "@matinee/ui/components/skeleton"
 import { toast } from "@matinee/ui/components/sonner"
 import { useMediaQuery } from "@matinee/ui/hooks/use-media-query"
+import { cn } from "@matinee/ui/lib/utils"
 import {
   keepPreviousData,
   type QueryClient,
@@ -13,17 +14,20 @@ import {
 import { createFileRoute, Link } from "@tanstack/react-router"
 import {
   CalendarDaysIcon,
+  ChartColumnIcon,
   HeartIcon,
   LinkIcon,
   LockIcon,
   PencilIcon,
   PopcornIcon,
+  SettingsIcon,
   Share2Icon,
   ShieldIcon,
 } from "lucide-react"
 
 import { EpisodeCard, PosterCard } from "@/components/media-item"
 import { useDocumentTitle } from "@/components/page-header"
+import { PhoneTopBar, usePhoneTab } from "@/components/phone-nav"
 import { Rail, RailItem } from "@/components/rail"
 import { RangePicker } from "@/components/stats/range-picker"
 import { ActivitySection, StandingSection } from "@/components/stats/standing"
@@ -101,6 +105,18 @@ function displayName(profile: Profile): string {
 }
 
 function ProfilePage() {
+  // Your own is the profile tab's first page on phones; anyone else's has
+  // the bar with Back.
+  const bar = usePhoneTab() === null && <PhoneTopBar home />
+  return (
+    <>
+      {bar}
+      <ProfileContent />
+    </>
+  )
+}
+
+function ProfileContent() {
   const { username } = Route.useParams()
   const profile = useQuery(profileOptions(username))
   useDocumentTitle(profile.data ? displayName(profile.data) : null)
@@ -156,9 +172,13 @@ function ProfilePage() {
   )
 }
 
+// Your own profile on a phone starts under the status bar, without a bar.
+const ownTop = "max-sm:pt-[calc(env(safe-area-inset-top)+1rem)]"
+
 function ProfileSkeleton() {
+  const own = usePhoneTab() === "profile"
   return (
-    <div className="flex flex-col gap-10">
+    <div className={cn("flex flex-col gap-10", own && ownTop)}>
       <div className="flex items-center gap-5">
         <Skeleton className="size-16 shrink-0 rounded-full sm:size-20" />
         <div className="flex-1">
@@ -171,19 +191,29 @@ function ProfileSkeleton() {
   )
 }
 
-/** The picture, the name, and a way to share the page or change it. */
+/**
+ * The picture, the name, and a way to share the page or change it. Your
+ * own on a phone is one row, as the Android app's profile tab: the
+ * picture, who it is, and statistics and Settings at its end.
+ */
 function ProfileHeader({ profile }: { profile: Profile }) {
   const { user } = profile
   const openSettings = useOpenSettings()
+  const own = usePhoneTab() === "profile"
   return (
-    <header>
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-4">
+    <header className={cn(own && ownTop)}>
+      <div
+        className={cn(
+          "flex flex-wrap items-center gap-x-6 gap-y-4",
+          own && "max-sm:flex-nowrap max-sm:gap-x-4",
+        )}
+      >
         <UserAvatar
           user={user}
           className="size-16 text-2xl shadow-lg shadow-black/40 sm:size-20 sm:text-3xl"
         />
         <div className="min-w-0 flex-1">
-          <h1 className="truncate text-[26px] leading-8 font-semibold tracking-tight md:text-[32px] md:leading-10">
+          <h1 className="truncate text-[26px] leading-8 font-semibold tracking-tight max-sm:text-[22px] max-sm:leading-7 md:text-[32px] md:leading-10">
             {displayName(profile)}
           </h1>
           <p className="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
@@ -201,23 +231,59 @@ function ProfileHeader({ profile }: { profile: Profile }) {
         </div>
         <div className="flex items-center gap-2">
           {profile.self && (
-            <Button variant="secondary" onClick={() => openSettings("account")}>
+            <Button
+              variant="secondary"
+              onClick={() => openSettings("account")}
+              className={cn(own && "max-sm:hidden")}
+            >
               <PencilIcon />
               {tr("profile.edit")}
             </Button>
           )}
-          <ShareButton profile={profile} />
+          <ShareButton
+            profile={profile}
+            className={cn(own && "max-sm:hidden")}
+          />
+          {own && (
+            <>
+              <Link
+                to="/stats"
+                aria-label={tr("shell.statistics")}
+                className={cn(roundButton, "sm:hidden")}
+              >
+                <ChartColumnIcon />
+              </Link>
+              <button
+                type="button"
+                aria-label={tr("shell.settings")}
+                onClick={() => openSettings()}
+                className={cn(roundButton, "sm:hidden")}
+              >
+                <SettingsIcon />
+              </button>
+            </>
+          )}
         </div>
       </div>
     </header>
   )
 }
 
+/** A round button at the end of your own profile's row on a phone. */
+const roundButton =
+  "bg-secondary text-secondary-foreground hover:bg-secondary/80 focus-visible:ring-ring grid size-11 shrink-0 place-items-center rounded-full outline-none transition-colors focus-visible:ring-2 [&_svg]:size-5"
+
 /**
  * Hands the page's address to a phone's share sheet, or copies it. Only
  * people with an account here can open it.
  */
-function ShareButton({ profile }: { profile: Profile }) {
+function ShareButton({
+  profile,
+  className,
+}: {
+  profile: Profile
+  className?: string
+}) {
   const { feedback, run } = useActionFeedback()
   const coarse = useMediaQuery("(pointer: coarse)")
   const url = new URL(
@@ -231,6 +297,7 @@ function ShareButton({ profile }: { profile: Profile }) {
     return (
       <Button
         variant="secondary"
+        className={className}
         onClick={() =>
           void navigator
             .share({
@@ -254,6 +321,7 @@ function ShareButton({ profile }: { profile: Profile }) {
   return (
     <FeedbackButton
       variant="secondary"
+      className={className}
       state={feedback.state}
       successLabel={tr("profile.copied")}
       errorLabel={tr("profile.tryAgain")}

@@ -1,8 +1,12 @@
 import { defineMessages } from "../../catalog"
 
 export default defineMessages("shell", {
-  // The app shell: the bar, the phone header, and the account menu.
+  // The app shell: the bar, the account menu, and on phones the tab bar
+  // and the bars at the top of pages opened from a tab.
   "shell.mainNav": "Main",
+  "shell.tabs": "Tabs",
+  "shell.media": "Media",
+  "shell.back": "Back",
   "shell.homeLink": "Matinee home",
   "shell.home": "Home",
   "shell.libraries": "Libraries",

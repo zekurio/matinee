@@ -344,16 +344,13 @@ export const textLink =
 const playControl =
   "group/play focus-visible:ring-ring absolute top-1/2 left-1/2 grid size-16 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full text-white opacity-0 transition-opacity outline-none group-has-[:focus-visible]/card:opacity-100 group-hover/card:opacity-100 group-has-[[aria-expanded=true]]/card:opacity-100 focus-visible:ring-2 motion-reduce:transition-none"
 
-/**
- * The inside of a {@link playControl}. Touch screens have no hover, so
- * where the control shows there, the circle stays.
- */
+/** The inside of a {@link playControl}. */
 function PlayGlyph() {
   return (
     <>
       <span
         aria-hidden
-        className="absolute inset-0 rounded-full bg-black/30 opacity-0 backdrop-blur-md transition-opacity group-hover/play:opacity-100 group-focus-visible/play:opacity-100 motion-reduce:transition-none [@media(pointer:coarse)]:opacity-100"
+        className="absolute inset-0 rounded-full bg-black/30 opacity-0 backdrop-blur-md transition-opacity group-hover/play:opacity-100 group-focus-visible/play:opacity-100 motion-reduce:transition-none"
       />
       <PlayIcon
         aria-hidden
@@ -364,8 +361,9 @@ function PlayGlyph() {
 }
 
 /**
- * Play or Resume in the middle of a still, inside a `group/card`. Pointers
- * that hover see it on hover; touch screens always do.
+ * Play or Resume in the middle of a still, inside a `group/card`, shown on
+ * hover or focus. Touch screens leave it out: a tap opens the file's page,
+ * which has Play, as in the Android app.
  */
 export function ThumbPlayButton({
   item,
@@ -385,7 +383,7 @@ export function ThumbPlayButton({
           ? tr("media.resume", { name: label })
           : tr("media.play", { name: label })
       }
-      className={cn(playControl, "[@media(pointer:coarse)]:opacity-100")}
+      className={cn(playControl, "[@media(pointer:coarse)]:hidden")}
     >
       <PlayGlyph />
     </Link>
@@ -488,7 +486,8 @@ export function EpisodeCard({
           className="absolute top-1.5 right-1.5"
         />
         <ThumbPlayButton item={item} label={name} />
-        {/* The progress bar fades while these show. Touch screens show both. */}
+        {/* The progress bar fades while these show. Touch screens always
+            show them. */}
         <CardActions
           name={name}
           watched={watched}

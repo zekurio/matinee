@@ -10,7 +10,7 @@ import {
   PlayIcon,
   StarIcon,
 } from "lucide-react"
-import { type ReactNode, useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 import { useStore } from "zustand"
 import { useShallow } from "zustand/shallow"
 
@@ -27,7 +27,6 @@ import {
 import { createHeroStore } from "@/stores/browse-hero"
 
 import { pageColumn } from "./app-shell"
-import { Blurhash } from "./blurhash"
 import { Picture, tone } from "./media-item"
 
 const ADVANCE_MS = 8000
@@ -43,24 +42,24 @@ const ratings = perLocale(
 /**
  * The banner's box, shared with Home's loading skeleton. Without rows of
  * what to watch next to share the first screen with, it stays short enough
- * for the first shelf to start under it. A phone on its side (short and
- * from `sm` up) gets exactly the screen. Full bleed, like
- * `pageBleed`: it breaks out of the page column to the window edges and up
- * under the phone header or the floating bar. Negative margins rather than
- * a -50% translate: the translate lands on a half pixel at odd window
- * widths, and the zooming backdrop then shows past the shading at the edge.
+ * for the first shelf to start under it. A phone's is shorter still, as in
+ * the Android app, so Continue watching and Next up both fit under it above
+ * the tab bar; it measures the small viewport, so it doesn't resize as the
+ * browser's toolbar hides on scroll. A phone on its side (short and from
+ * `sm` up) gets exactly the screen. Full bleed, like `pageBleed`: it breaks
+ * out of the page column to the window edges and up under the floating
+ * bar. Negative margins rather than a -50% translate: the translate lands
+ * on a half pixel at odd window widths, and the zooming backdrop then shows
+ * past the shading at the edge.
  */
 export const heroFrame =
-  "relative mx-[calc(50%-50vw)] -mt-[calc(env(safe-area-inset-top)+4rem)] h-[min(68vh,720px)] min-h-[480px] w-screen sm:-mt-24 sm:max-lg:[@media(max-height:540px)]:h-svh sm:max-lg:[@media(max-height:540px)]:min-h-0"
+  "relative mx-[calc(50%-50vw)] h-[min(68vh,720px)] min-h-[480px] w-screen max-sm:h-[clamp(20rem,34.5svh,25rem)] max-sm:min-h-0 sm:-mt-24 sm:max-lg:[@media(max-height:540px)]:h-svh sm:max-lg:[@media(max-height:540px)]:min-h-0"
 
 /**
- * On phones and desktop, lets the banner take whatever height its flex
- * column leaves, so the rows under it fit in the first screen. Phones keep
- * room for the header and the library chips over its top, and the slide
- * under them.
+ * On desktop, lets the banner take whatever height its flex column leaves,
+ * so the rows under it fit in the first screen.
  */
-export const heroFill =
-  "max-sm:h-auto max-sm:min-h-[calc(env(safe-area-inset-top)+20rem)] max-sm:flex-1 lg:h-auto lg:min-h-[360px] lg:flex-1"
+export const heroFill = "lg:h-auto lg:min-h-[360px] lg:flex-1"
 
 // Phones split the row between the buttons.
 const heroButton = "max-sm:h-11 max-sm:flex-1"
@@ -85,7 +84,6 @@ function Backdrop({
     art(item.episode?.still, "large"),
     frame(item.id, "large"),
   )
-  const ambient = sources[0]?.placeholder
   return (
     <div
       aria-hidden
@@ -98,30 +96,19 @@ function Backdrop({
         tone(label.showKey),
       )}
     >
-      {/* Phones: the art starts under the header row, which would cover
-          the top of it, faces and all, and fades in from the art's own
-          colors blurred behind the header. */}
-      {ambient && (
-        <Blurhash
-          placeholder={ambient}
-          className="absolute inset-0 size-full object-cover opacity-70 sm:hidden"
-        />
-      )}
-      <div className="absolute inset-x-0 top-0 bottom-0 max-sm:top-[calc(env(safe-area-inset-top)+3.5rem)] max-sm:[mask-image:linear-gradient(to_bottom,transparent,black_3rem)]">
-        {/* A slow push-in while the slide shows. The reset waits until the
-            fade-out ends, so it never jumps on screen. */}
-        <div
-          className={cn(
-            "absolute inset-0 transition-transform motion-reduce:transition-none",
-            active
-              ? "motion-safe:scale-[1.06] motion-safe:duration-[10000ms] motion-safe:ease-out"
-              : "scale-100 delay-700 duration-0",
-          )}
-        >
-          {primed && (
-            <Picture sources={sources} eager={active} className="object-top" />
-          )}
-        </div>
+      {/* A slow push-in while the slide shows. The reset waits until the
+          fade-out ends, so it never jumps on screen. */}
+      <div
+        className={cn(
+          "absolute inset-0 transition-transform motion-reduce:transition-none",
+          active
+            ? "motion-safe:scale-[1.06] motion-safe:duration-[10000ms] motion-safe:ease-out"
+            : "scale-100 delay-700 duration-0",
+        )}
+      >
+        {primed && (
+          <Picture sources={sources} eager={active} className="object-top" />
+        )}
       </div>
     </div>
   )
@@ -134,12 +121,9 @@ function Backdrop({
  */
 export function Hero({
   slides,
-  top,
   className,
 }: {
   slides: FeaturedTitle[]
-  /** Shown over the top of the banner on phones, like the library chips. */
-  top?: ReactNode
   className?: string
 }) {
   const [store] = useState(createHeroStore)
@@ -205,21 +189,27 @@ export function Hero({
           primed={primed.has(i)}
         />
       ))}
-      {/* Darken where the text sits and fade into the page below. */}
+      {/* Darken where the text sits and fade into the page below. A
+          phone's text spans the width at the bottom, so it gets a shade
+          there and none down the side, which hid half the picture. */}
       <div
         aria-hidden
-        className="from-background/95 via-background/60 absolute inset-0 bg-gradient-to-r to-transparent"
+        className="from-background/95 via-background/60 absolute inset-0 bg-gradient-to-r to-transparent max-sm:hidden"
       />
       <div
         aria-hidden
-        className="from-background via-background/40 absolute inset-0 bg-gradient-to-t via-35% to-transparent"
+        className="from-background via-background/40 absolute inset-0 bg-gradient-to-t via-35% to-transparent max-sm:hidden"
       />
-      {top && (
-        // Under the phone header, where a page's content starts.
-        <div className="absolute inset-x-0 top-[calc(env(safe-area-inset-top)+4rem)] z-10 sm:hidden">
-          {top}
-        </div>
-      )}
+      <div
+        aria-hidden
+        className="from-background via-background/70 absolute inset-x-0 bottom-0 h-[62%] bg-gradient-to-t via-55% to-transparent sm:hidden"
+      />
+      {/* Keeps the status bar readable over bright art, in an installed
+          app that draws under it. */}
+      <div
+        aria-hidden
+        className="from-background/85 absolute inset-x-0 top-0 h-[calc(env(safe-area-inset-top)*2)] bg-gradient-to-b to-transparent sm:hidden"
+      />
 
       {slides.map((slide, i) => (
         <SlideContent
@@ -233,10 +223,11 @@ export function Hero({
       <HeroButtons slide={current} />
 
       {count > 1 && (
-        // Phones center the dots under the buttons; desktop sets them level
-        // with the buttons. The full-width strip lets clicks through so it
-        // doesn't cover them; only the controls take pointer events.
-        <div className="pointer-events-none absolute inset-x-0 bottom-3 sm:bottom-12 lg:bottom-[34px] sm:max-lg:[@media(max-height:540px)]:bottom-3">
+        // Desktop sets the dots level with the buttons. A phone's banner is
+        // kept short and has no room for them; it advances on its own. The
+        // full-width strip lets clicks through so it doesn't cover the
+        // buttons; only the controls take pointer events.
+        <div className="pointer-events-none absolute inset-x-0 bottom-3 max-sm:hidden sm:bottom-12 lg:bottom-[34px] sm:max-lg:[@media(max-height:540px)]:bottom-3">
           <div
             className={cn(
               pageColumn,
@@ -314,7 +305,7 @@ function TitleMark({ item, primed }: { item: MediaItem; primed: boolean }) {
           sizes="(min-width: 640px) 32rem, 80vw"
           alt=""
           onError={() => setLogoFailed(true)}
-          className="max-h-[clamp(3.5rem,9svh,6rem)] max-w-[min(80vw,32rem)] object-contain object-left-bottom drop-shadow-[0_2px_12px_rgb(0_0_0/0.5)] sm:max-h-[clamp(3.5rem,16vh,9rem)] lg:max-h-[clamp(6rem,14vh,11rem)]"
+          className="max-h-13 max-w-[min(80vw,32rem)] object-contain object-left-bottom drop-shadow-[0_2px_12px_rgb(0_0_0/0.5)] sm:max-h-[clamp(3.5rem,16vh,9rem)] lg:max-h-[clamp(6rem,14vh,11rem)]"
         />
       </h2>
     )
@@ -322,8 +313,9 @@ function TitleMark({ item, primed }: { item: MediaItem; primed: boolean }) {
   return (
     // Scales with the window's height from `sm` up: on desktop the banner
     // shares the first screen with the rows below it, and a phone on its
-    // side has little height to give.
-    <h2 className="text-foreground line-clamp-2 max-w-2xl text-4xl leading-[1.05] font-bold tracking-tight text-balance [text-shadow:0_2px_24px_rgb(0_0_0/0.45)] sm:text-[clamp(2.25rem,7vh,3rem)] lg:text-[clamp(3rem,5.5vh,4.5rem)]">
+    // side has little height to give. A phone's banner is short; a name
+    // that big would reach its top.
+    <h2 className="text-foreground line-clamp-2 max-w-2xl text-[28px] leading-[1.1] font-bold tracking-tight text-balance [text-shadow:0_2px_24px_rgb(0_0_0/0.45)] sm:text-[clamp(2.25rem,7vh,3rem)] lg:text-[clamp(3rem,5.5vh,4.5rem)]">
       {name}
     </h2>
   )
@@ -367,7 +359,7 @@ function SlideContent({
       className={cn(
         // Above the buttons, which stay while the slides change: their
         // place, plus their height and the gap over them.
-        "absolute inset-x-0 bottom-[108px] transition-opacity duration-500 motion-reduce:transition-none sm:bottom-[176px] lg:bottom-24 sm:max-lg:[@media(max-height:540px)]:bottom-[104px]",
+        "absolute inset-x-0 bottom-[70px] transition-opacity duration-500 motion-reduce:transition-none sm:bottom-[176px] lg:bottom-24 sm:max-lg:[@media(max-height:540px)]:bottom-[104px]",
         active ? "opacity-100" : "pointer-events-none opacity-0",
       )}
     >
@@ -394,10 +386,15 @@ function SlideContent({
           )}
         </div>
         {genres.length > 0 && (
-          // Short phones give the banner too little room for them.
+          // A phone's short banner has room for the genres or how far the
+          // person is, not both; where they are matters more. Short windows
+          // give the banner too little room for them.
           <ul
             aria-label={tr("media.hero.genres")}
-            className="mt-3 flex flex-wrap gap-1.5 sm:max-lg:[@media(max-height:540px)]:hidden max-sm:[@media(max-height:860px)]:hidden"
+            className={cn(
+              "mt-3 flex flex-wrap gap-1.5 max-sm:mt-2 sm:max-lg:[@media(max-height:540px)]:hidden",
+              resuming && "max-sm:hidden",
+            )}
           >
             {genres.map((genre) => (
               <li key={genre}>
@@ -419,7 +416,7 @@ function SlideContent({
           </p>
         )}
         {resuming && (
-          <div className="mt-4 flex max-w-xs items-center gap-3">
+          <div className="mt-4 flex max-w-xs items-center gap-3 max-sm:mt-3">
             <span
               aria-hidden
               className="bg-foreground/25 h-1 flex-1 overflow-hidden rounded-full"
@@ -449,7 +446,7 @@ function SlideContent({
 function HeroButtons({ slide }: { slide: FeaturedTitle }) {
   const { item, title } = slide
   return (
-    <div className="absolute inset-x-0 bottom-12 sm:bottom-28 lg:bottom-8 sm:max-lg:[@media(max-height:540px)]:bottom-12">
+    <div className="absolute inset-x-0 bottom-3 sm:bottom-28 lg:bottom-8 sm:max-lg:[@media(max-height:540px)]:bottom-12">
       <div className={cn(pageColumn, "flex gap-2")}>
         <Link
           to="/watch/$itemId"

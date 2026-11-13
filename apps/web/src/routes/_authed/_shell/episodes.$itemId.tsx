@@ -12,6 +12,7 @@ import { pageBleed, pageColumn } from "@/components/app-shell"
 import { ItemFavoriteButton } from "@/components/favorite-button"
 import { EpisodeCard, Picture, Thumb, tone } from "@/components/media-item"
 import { useDocumentTitle } from "@/components/page-header"
+import { ItemTopBar, parentLink } from "@/components/phone-nav"
 import { Rail, RailItem } from "@/components/rail"
 import { MediaInfo } from "@/components/title/media-info"
 import { seasonParams } from "@/components/title/seasons"
@@ -73,10 +74,18 @@ function EpisodePage() {
     label?.code ? `${label.title} · ${label.showName}` : label?.title,
   )
 
-  if (item.isPending) return <EpisodeSkeleton />
+  if (item.isPending) {
+    return (
+      <>
+        <ItemTopBar />
+        <EpisodeSkeleton />
+      </>
+    )
+  }
   if (!item.data) {
     return (
       <div className="py-24 text-center">
+        <ItemTopBar />
         <h1 className="text-2xl font-semibold tracking-tight">
           {tr("title.episode.loadError")}
         </h1>
@@ -104,6 +113,7 @@ function EpisodePage() {
   }
   return (
     <div className="flex flex-col gap-8 sm:gap-10">
+      <ItemTopBar parent={<EpisodeParent item={item.data} />} />
       <EpisodeHeader item={item.data} />
       <SeasonRail item={item.data} />
     </div>
@@ -123,6 +133,35 @@ function EpisodeSkeleton() {
         </div>
       </div>
     </div>
+  )
+}
+
+/**
+ * The pill over a phone's art back to the episode's season, or its show
+ * when it has no season. A loose file has neither.
+ */
+function EpisodeParent({ item }: { item: MediaItem }) {
+  const { title, seasonNumber: season } = item
+  if (!title) return null
+  if (season === null) {
+    return (
+      <Link
+        to="/titles/$titleId"
+        params={{ titleId: title.id }}
+        className={parentLink}
+      >
+        {title.name}
+      </Link>
+    )
+  }
+  return (
+    <Link
+      to="/titles/$titleId/seasons/$season"
+      params={{ titleId: title.id, season: String(season) }}
+      className={parentLink}
+    >
+      {seasonName(season)}
+    </Link>
   )
 }
 

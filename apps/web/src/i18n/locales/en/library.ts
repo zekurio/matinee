@@ -51,6 +51,4 @@ export default defineMessages("library", {
   "library.sortCurrent": "Sort: {sort}",
   "library.sortBy": "Sort by",
   "library.sortPrefix": "Sort:",
-  // The library chips on phones.
-  "library.chips": "Libraries",
 })
