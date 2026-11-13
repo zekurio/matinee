@@ -2,8 +2,8 @@ import MatineeCore
 import SwiftUI
 
 /*
- * BrowseScreen.kt. A stub from the shell's task until the browse task fills it in;
- * keep the types and their parameters, which Nav.swift opens them with.
+ * BrowseScreen.kt: a genre's or a studio's titles from every library, and
+ * a person's page, which Android keeps here too.
  */
 
 /// A genre's or a studio's titles across the server.
@@ -11,12 +11,132 @@ struct BrowseScreen: View {
   let genre: String?
   let studio: String?
 
-  var body: some View { Stub("BrowseScreen", stubValue("genre", genre), stubValue("studio", studio)) }
+  @State private var kind: String?
+  @State private var pages = makeTitlePages()
+  @Environment(\.palette) private var palette
+
+  var body: some View {
+    let genre = genre
+    let studio = studio
+    let kind = kind
+    PosterGrid(
+      pages, detail: { formatYear($0.year) },
+      empty: { GridEmpty(genre != nil ? Str.browseGenreEmpty : Str.browseStudioEmpty) }
+    ) {
+      VStack(alignment: .leading, spacing: 0) {
+        Text(
+          [genre != nil ? Str.browseGenre : Str.browseStudio, pages.total.map { Str.browseTitleCount($0) }]
+            .compactMap(\.self).joined(separator: " · ")
+        )
+        .textStyle(.bodyMedium)
+        .foregroundStyle(palette.muted)
+        Gap(12)
+        ScrollView(.horizontal) {
+          HStack(spacing: 6) {
+            ForEach(BROWSE_KINDS, id: \.self) { value in
+              Chip(browseKindLabel(value), selected: self.kind == value) { self.kind = value }
+            }
+          }
+        }
+        .scrollIndicators(.hidden)
+        .scrollClipDisabled()
+        .padding(.bottom, 12)
+      }
+    }
+    .pages(pages, key: kind ?? "") { api, offset, limit in
+      let page = try await api.titles.browse(kind: kind, genre: genre, studio: studio, limit: limit, offset: offset)
+      return TitleList(items: page.items, total: page.total)
+    }
+    .topBar(genre ?? studio ?? "")
+  }
 }
 
 /// A person's page: who they are and what they're in. Android keeps it in BrowseScreen.kt.
 struct PersonScreen: View {
   let name: String
 
-  var body: some View { Stub("PersonScreen", "name: \(name)") }
+  @State private var person = Loader<Person>()
+  @Environment(\.api) private var api
+  @Environment(\.palette) private var palette
+
+  var body: some View {
+    let name = name
+    Group {
+      switch person.state {
+      case .loading: LoadingBox()
+      case .failed(let message, let disconnected):
+        ErrorBox(Str.personLoadFailed, message, disconnected: disconnected, onRetry: person.reload)
+      case .ready(let value): content(value)
+      }
+    }
+    .loads(person) { api in try await api.people.get(name: name) }
+    .topBar(nil, home: true) { DisconnectedAction(person) }
+  }
+
+  private func content(_ value: Person) -> some View {
+    ScrollView {
+      VStack(alignment: .leading, spacing: 0) {
+        PersonHeader(person: value, photo: api?.art(value.photo, size: .medium))
+          .padding(.horizontal, Gutter)
+          .padding(.top, 8)
+          .padding(.bottom, 32)
+        CardGrid {
+          ForEach(value.credits, id: \.self) { credit in
+            PosterCard(
+              credit.title,
+              detail: credit.role ?? formatYear(credit.title.year) ?? creditKind(credit.kind, count: 1))
+          }
+        }
+      }
+      .padding(.bottom, 32)
+    }
+    .refreshable {
+      person.reload()
+      await person.settled()
+    }
+  }
+}
+
+/// The photo on its circle, the name, and what they're known for with how many titles.
+private struct PersonHeader: View {
+  let person: Person
+  let photo: ImageSource?
+  @Environment(\.palette) private var palette
+  @Environment(\.dynamicTypeSize) private var typeSize
+
+  var body: some View {
+    let layout =
+      typeSize.isAccessibilitySize
+      ? AnyLayout(VStackLayout(alignment: .leading, spacing: 16)) : AnyLayout(HStackLayout(spacing: 20))
+    layout {
+      Circle()
+        .fill(palette.secondary)
+        .overlay {
+          Text(initials(person.name)).textStyle(.headlineMedium).foregroundStyle(palette.muted)
+            .accessibilityHidden(true)
+        }
+        .overlay { Picture(photo) }
+        .clipShape(Circle())
+        .frame(width: 112, height: 112)
+        .accessibilityHidden(true)
+      VStack(alignment: .leading, spacing: 4) {
+        Text(person.name).textStyle(.headlineMedium).foregroundStyle(palette.foreground)
+          .accessibilityAddTraits(.isHeader)
+        Text([creditKind(person.kind, count: 1), Str.browseTitleCount(person.titleCount)].joined(separator: " · "))
+          .textStyle(.bodyMedium)
+          .foregroundStyle(palette.muted)
+      }
+      .frame(maxWidth: .infinity, alignment: .leading)
+    }
+  }
+}
+
+/// "Director", or "Directors" for `count` above one.
+func creditKind(_ kind: String, count: Int) -> String {
+  switch kind {
+  case CreditKind.creator: Str.peopleCreditCreator(count)
+  case CreditKind.director: Str.peopleCreditDirector(count)
+  case CreditKind.writer: Str.peopleCreditWriter(count)
+  default: Str.peopleCreditActor(count)
+  }
 }

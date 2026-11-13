@@ -2,8 +2,10 @@ import MatineeCore
 import SwiftUI
 
 /*
- * LibraryScreen.kt. A stub from the shell's task until the browse task fills it in;
- * keep the types and their parameters, which Nav.swift opens them with.
+ * LibraryScreen.kt: a library's titles as posters, with search, a genre
+ * filter, and the sort at the end of its bar. Searching puts the field
+ * under the bar, where Android swaps the bar for it, so back and the
+ * edge swipe stay the system's.
  */
 
 /// A library's titles, with sorting, a genre filter, and search. `sort` is a `TitleSort`, or nil for the library's own.
@@ -11,5 +13,172 @@ struct LibraryScreen: View {
   let id: String
   let sort: String?
 
-  var body: some View { Stub("LibraryScreen", "id: \(id)", stubValue("sort", sort)) }
+  @State private var libraries = Loader<[Library]>()
+  @State private var filters: LibraryFilters
+  @State private var pages = makeTitlePages()
+  @State private var searching = false
+  @State private var filtering = false
+  @FocusState private var fieldFocused: Bool
+  @Environment(\.palette) private var palette
+
+  init(id: String, sort: String?) {
+    self.id = id
+    self.sort = sort
+    _filters = State(initialValue: LibraryFilters(sort: sort))
+  }
+
+  var body: some View {
+    let library = libraries.state.value?.first { $0.id == id }
+    let filters = filters
+    let id = id
+    let sort = filters.sort
+    let genre = filters.genre
+    let settled = filters.settled
+    PosterGrid(
+      pages,
+      // The year whatever the order, as the web's cards, so the cards don't change as the person sorts.
+      detail: { formatYear($0.year) },
+      empty: { GridEmpty(libraryEmptyMessage(library, filters)) }
+    ) {
+      if let genre {
+        Chip(genre, selected: true, trailingIcon: .x) { filters.genre = nil }
+          .accessibilityHint(Str.libraryFilter)
+          .padding(.bottom, 12)
+      }
+    }
+    .pages(pages, key: filters.key) { api, offset, limit in
+      try await api.titles.list(
+        libraryId: id, query: settled.isEmpty ? nil : settled, genre: genre, sort: sort, limit: limit,
+        offset: offset)
+    }
+    .loads(libraries) { api in try await api.libraries.list() }
+    .safeAreaInset(edge: .top, spacing: 0) {
+      if searching { searchBar(library) }
+    }
+    .topBar(library?.name) { actions }
+    .sheet(isPresented: $filtering) {
+      GenreSheet(libraryId: id, current: genre) { picked in
+        filtering = false
+        filters.genre = picked
+      }
+    }
+    .background {
+      // A hardware keyboard's Cmd-F opens the search, as in iOS's own apps.
+      Button(Str.librarySearchTitles, action: openSearch).keyboardShortcut("f").hidden()
+    }
+  }
+
+  /// Search, a genre filter, and the sort, at the end of the bar.
+  @ViewBuilder private var actions: some View {
+    @Bindable var filters = filters
+    if !searching {
+      Button(action: openSearch) { Image(Lucide.search) }
+        .accessibilityLabel(Str.librarySearchTitles)
+    }
+    Button { filtering = true } label: {
+      Image(Lucide.listFilter).foregroundStyle(filters.genre != nil ? palette.accent : palette.foreground)
+    }
+    .accessibilityLabel(Str.libraryFilter)
+    .accessibilityValue(filters.genre ?? "")
+    Menu {
+      Picker(Str.librarySort, selection: $filters.sort) {
+        ForEach(LIBRARY_SORTS, id: \.self) { value in Text(librarySortLabel(value)).tag(value) }
+      }
+      .pickerStyle(.inline)
+    } label: {
+      Image(Lucide.arrowUpDown)
+    }
+    .accessibilityLabel(Str.librarySort)
+    .accessibilityValue(librarySortLabel(filters.sort))
+  }
+
+  /// The field while searching the library, and Cancel, which closes it.
+  private func searchBar(_ library: Library?) -> some View {
+    @Bindable var filters = filters
+    let shows = library?.kind == LibraryKind.shows
+    return HStack(spacing: 12) {
+      SearchField(
+        $filters.query, placeholder: shows ? Str.librarySearchShows : Str.librarySearchMovies,
+        focused: $fieldFocused
+      )
+      .onSubmit(of: .text) { filters.settleNow() }
+      Button(Str.commonCancel) {
+        filters.clearQuery()
+        withMotion(Motion.exit) { searching = false }
+      }
+      .textStyle(.bodyLarge)
+      .foregroundStyle(palette.accent)
+      .frame(minHeight: MinTouch)
+    }
+    .padding(.horizontal, Gutter)
+    .padding(.vertical, 8)
+    .background(palette.background)
+    .transition(.opacity)
+  }
+
+  private func openSearch() {
+    withMotion(Motion.enter) { searching = true }
+    fieldFocused = true
+  }
+}
+
+/// The genres the library's titles have, with how many each, and Any genre first.
+private struct GenreSheet: View {
+  let libraryId: String
+  let current: String?
+  let onPick: (String?) -> Void
+  @State private var genres = Loader<[Facet]>()
+  @Environment(\.palette) private var palette
+
+  var body: some View {
+    let libraryId = libraryId
+    VStack(spacing: 0) {
+      SheetHeader(Str.libraryGenre).padding(.top, 12)
+      ScrollView {
+        LazyVStack(spacing: 0) {
+          GenreRow(name: Str.libraryAnyGenre, count: nil, selected: current == nil) { onPick(nil) }
+          switch genres.state {
+          case .loading:
+            ProgressView().tint(palette.accent).padding(24).accessibilityLabel(Str.loadingInProgress)
+          case .failed(let message, let disconnected):
+            Notice(message, disconnected: disconnected, onRetry: genres.reload).padding(.vertical, 12)
+          case .ready(let list):
+            ForEach(list, id: \.name) { facet in
+              GenreRow(name: facet.name, count: facet.titleCount, selected: current == facet.name) {
+                onPick(facet.name)
+              }
+            }
+          }
+        }
+      }
+    }
+    .loads(genres) { api in try await api.titles.facets(libraryId: libraryId).genres }
+    .matineeSheet()
+  }
+}
+
+private struct GenreRow: View {
+  let name: String
+  let count: Int?
+  let selected: Bool
+  let action: () -> Void
+  @Environment(\.palette) private var palette
+
+  var body: some View {
+    Button(action: action) {
+      HStack(spacing: 12) {
+        Text(name).textStyle(.bodyLarge).foregroundStyle(palette.foreground)
+          .frame(maxWidth: .infinity, alignment: .leading)
+          .multilineTextAlignment(.leading)
+        if let count { Text(formatCount(count)).textStyle(.bodyMedium).foregroundStyle(palette.muted) }
+        if selected { LucideIcon(.check, size: 18, tint: palette.accent) }
+      }
+      .padding(.horizontal, 20)
+      .padding(.vertical, 14)
+      .frame(minHeight: MinTouch)
+      .contentShape(Rectangle())
+    }
+    .buttonStyle(RowPress())
+    .accessibilityAddTraits(selected ? .isSelected : [])
+  }
 }
