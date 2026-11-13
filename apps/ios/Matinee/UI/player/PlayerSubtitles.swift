@@ -30,7 +30,9 @@ struct Subtitles: View {
     let size = max(12, min(video.height, video.width * 9 / 16) / 19.5)
     let inVideo = screen.height - video.maxY + video.height * 0.05
     let rest = max(inVideo, 28 + safeBottom)
-    let bottom = lifted ? max(rest, 150 + safeBottom) : rest
+    // Lifted, just over the seek bar, as Android's 150 dp over the screen's
+    // bottom edge, which on iOS starts at the home indicator.
+    let bottom = lifted ? max(rest, 128 + safeBottom) : rest
     VStack(spacing: 2) {
       ForEach(Array(shown.enumerated()), id: \.offset) { _, cue in
         SubtitleLine(cue: cue, look: look, size: size)

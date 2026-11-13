@@ -140,9 +140,12 @@ func subtitleDetail(_ track: SubtitleTrack, burns: Bool) -> String {
 }
 
 /// A menu's panel at the side, over a shade that closes it when tapped.
+/// It's laid out over the whole screen, `safe` being the screen's insets,
+/// so the panel runs to the screen's edge with its rows clear of the notch.
 struct PlayerPanel: View {
   let open: PlayerMenu?
   let controller: PlayerController
+  let safe: EdgeInsets
   let onDismiss: () -> Void
   @Environment(\.palette) private var palette
   /// The menu that was open stays drawn while the panel slides away.
@@ -150,12 +153,11 @@ struct PlayerPanel: View {
 
   var body: some View {
     GeometryReader { geo in
-      let full = geo.size.width + geo.safeAreaInsets.leading + geo.safeAreaInsets.trailing
+      let full = geo.size.width
       let width = min(full, min(420, max(300, full * 0.42)))
       ZStack(alignment: .trailing) {
         if open != nil {
           Color(white: 0, opacity: 0.45)
-            .ignoresSafeArea()
             .contentShape(Rectangle())
             .onTapGesture(perform: onDismiss)
             .accessibilityElement()
@@ -165,17 +167,18 @@ struct PlayerPanel: View {
             .transition(Motion.fade)
         }
         if open != nil, let menu = last ?? open {
-          panel(menu, width: width, safe: geo.safeAreaInsets)
+          panel(menu, width: width)
             .transition(.move(edge: .trailing).combined(with: .opacity))
         }
       }
       .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
     }
+    .ignoresSafeArea()
     .motion(Motion.move, value: open)
     .onChange(of: open, initial: true) { _, menu in if let menu { last = menu } }
   }
 
-  private func panel(_ menu: PlayerMenu, width: CGFloat, safe: EdgeInsets) -> some View {
+  private func panel(_ menu: PlayerMenu, width: CGFloat) -> some View {
     ScrollView {
       LazyVStack(alignment: .leading, spacing: 0) {
         ForEach(menuEntries(menu, controller)) { entry in
@@ -200,15 +203,14 @@ struct PlayerPanel: View {
       .padding(.vertical, 12)
       .padding(.top, safe.top)
       .padding(.bottom, safe.bottom)
+      .padding(.trailing, safe.trailing)
     }
     .scrollBounceBehavior(.basedOnSize)
-    .padding(.trailing, safe.trailing)
     .frame(width: width + safe.trailing)
     .frame(maxHeight: .infinity)
     .background(
       UnevenRoundedRectangle(topLeadingRadius: 16, bottomLeadingRadius: 16).fill(palette.raised)
     )
-    .ignoresSafeArea(edges: [.vertical, .trailing])
   }
 }
 

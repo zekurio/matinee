@@ -60,6 +60,7 @@ struct VideoSurface: UIViewRepresentable {
 final class PictureInPicture: NSObject, AVPictureInPictureControllerDelegate {
   private let controller: PlayerController
   private var pip: AVPictureInPictureController?
+  private var returned: NSObjectProtocol?
 
   init(_ controller: PlayerController) { self.controller = controller }
 
@@ -68,6 +69,15 @@ final class PictureInPicture: NSObject, AVPictureInPictureControllerDelegate {
     let pip = AVPictureInPictureController(playerLayer: layer)
     pip?.delegate = self
     self.pip = pip
+    // Opened from its icon while the small window plays, the app shows the
+    // player again, so the window goes back into it.
+    returned = NotificationCenter.default.addObserver(
+      forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main
+    ) { [weak self] _ in
+      MainActor.assumeIsolated {
+        if self?.pip?.isPictureInPictureActive == true { self?.pip?.stopPictureInPicture() }
+      }
+    }
   }
 
   func autoStart(_ enabled: Bool) {
@@ -77,6 +87,8 @@ final class PictureInPicture: NSObject, AVPictureInPictureControllerDelegate {
   }
 
   func detach() {
+    if let returned { NotificationCenter.default.removeObserver(returned) }
+    returned = nil
     pip?.stopPictureInPicture()
     pip?.delegate = nil
     pip = nil

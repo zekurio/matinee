@@ -170,7 +170,7 @@ private struct Playback: View {
           touches(width: screen.width)
         }
         .ignoresSafeArea()
-        overlays
+        overlays(safe: safe)
       }
     }
     .focusable()
@@ -244,7 +244,7 @@ private struct Playback: View {
     touched += 1
   }
 
-  @ViewBuilder private var overlays: some View {
+  @ViewBuilder private func overlays(safe: EdgeInsets) -> some View {
     // Up top, clear of the play button in the middle.
     VStack(spacing: 8) {
       ZoomNote(count: zoomNote, fill: fill)
@@ -290,7 +290,7 @@ private struct Playback: View {
           .dynamicTypeSize(...DynamicTypeSize.accessibility2)
       }
     }
-    PlayerPanel(open: menu, controller: controller) { menu = nil }
+    PlayerPanel(open: menu, controller: controller, safe: safe) { menu = nil }
   }
 
   @ViewBuilder private func failure(_ message: String) -> some View {
