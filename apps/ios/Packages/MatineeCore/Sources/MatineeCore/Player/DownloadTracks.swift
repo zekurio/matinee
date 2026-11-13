@@ -1,9 +1,16 @@
 import Foundation
 
+// Which audio and subtitles a download starts with, and who draws them.
+// A file from the server gets all of that from playback.start. A download
+// can't ask the server, so it picks here.
+
+/// pt-BR and pt are the same language here.
 private func sameLanguage(_ a: String?, _ b: String?) -> Bool {
   guard let a, let b else { return false }
   return a.lowercased().split(separator: "-").first == b.lowercased().split(separator: "-").first
 }
+/// The track for language, or the title's own for `original`, else the file's
+/// primary one. Substitute a decodable track in the same language if needed.
 public func downloadAudio(
   _ tracks: [AudioTrack], language: String?, originalLanguage: String?, decodes: (String) -> Bool
 ) -> AudioTrack? {
@@ -21,12 +28,15 @@ public func downloadAudio(
       && !$0.label.localizedCaseInsensitiveContains("commentary")
   }.max { ($0.channels ?? 0) < ($1.channels ?? 0) } ?? wanted
 }
+/// The subtitle a download starts with, or nil for off, by the subtitle mode.
 public func downloadSubtitle(
   _ tracks: [SubtitleTrack], audioLanguage: String?, preferences: PlaybackPreferences,
   deviceLanguage: String = profileLanguage(.current)
 ) -> SubtitleTrack? {
+  // Text the screen draws, from the WebVTT saved beside the download.
   let shown = tracks.filter { $0.delivery == SubtitleDelivery.webvtt }
   let language = preferences.subtitleLanguage ?? deviceLanguage
+  // The exact tag first, then the file's default, then one without SDH.
   func best(_ language: String?, forced: Bool = false) -> SubtitleTrack? {
     func score(_ track: SubtitleTrack) -> Int {
       (track.language == language ? 4 : 0) + (track.default ? 2 : 0) + (track.sdh ? 0 : 1)
@@ -44,7 +54,22 @@ public func downloadSubtitle(
     return audioLanguage != nil && !sameLanguage(audioLanguage, language)
       ? best(language) ?? forced : forced
   default:
+    // Some muxers mark every track default, which says nothing.
     let flagged = shown.filter(\.default)
     return forced ?? (shown.count > 1 && flagged.count == shown.count ? nil : flagged.first)
   }
+}
+
+/// The engine draws embedded picture subtitles, and mpv draws ASS or SSA with
+/// styling and fonts. The screen draws saved WebVTT, or the URL if not saved.
+public func downloadSubtitleShow(_ track: SubtitleTrack?, mpv: Bool, url: String) -> SubtitleShow {
+  guard let track else { return .off }
+  let picture = track.delivery == SubtitleDelivery.pgs || track.delivery == SubtitleDelivery.burn_in
+  let styled = track.format == "ASS" || track.format == "SSA"
+  if let stream = streamIndex(track), track.source == SubtitleSource.embedded,
+    picture || (mpv && styled)
+  {
+    return .inFile(track, stream)
+  }
+  return track.delivery == SubtitleDelivery.webvtt ? .screen(track, url) : .off
 }

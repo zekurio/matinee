@@ -159,7 +159,8 @@ PlaybackDiagnostics Kotlin test cases still need to be ported.
 
 This increment does not complete the supporting-piece audit. Capabilities,
 PlaybackDevice's member-by-member implementation audit, NowPlaying/PlaybackService, the download
-worker's Kotlin parity and off-main file IO remain unreviewed. The fixed decoder
+worker's broader Kotlin parity remain unreviewed. See `../../../DOWNLOADS.md`
+for file ownership and crash-recovery verification. The fixed decoder
 rectangle has not been experimentally checked. The four applicable Kotlin
 PlaybackDevice test cases are ported in CapabilitiesTests, with AVPlayer's
 container/audio/subtitle expectations instead of ExoPlayer's. The two mpv tests
@@ -167,37 +168,37 @@ are not ported because that engine is deferred.
 
 ### Compared members
 
-| Kotlin member | Swift member | Comparison |
-| --- | --- | --- |
-| `PlayerPrefs.ORIGINAL_QUALITY`, `AUTOMATIC` | Same constants in the API layer | Same contract values. |
-| `Decoders` | `Decoders.hardware`, `PlayerPrefs.decoders` | Differs because AVPlayer owns decoder selection; no software preference API. |
-| `PlayerEngine` | `PlayerEngine.avPlayer`, `PlayerPrefs.engine` | Differs because ExoPlayer is Android-only and mpv is deferred by the iOS plan. |
-| `SubtitleColor` | `SubtitleColor` | Same choices and exact sRGB colors after removing rounded components. |
-| `SubtitleBackground` | `SubtitleBackground` | Same none, shaded and black choices. |
-| `SubtitleEdge`, `OWN_SUBTITLE_EDGES` | Same names | Same five system edges and three own-style choices. |
-| `SUBTITLE_SCALES` | Same name | Same five sizes. |
-| `PlayerPrefs.quality` | Same name | Same default, global device scope and storage key. Account limits do not overwrite it. |
-| `videoCodec`, `audioCodec`, `convertAudio` | Same names | Same defaults, device scope and snake_case keys. |
-| `autoplayNext`, `fillScreen`, `pictureInPicture` | Same names | Same defaults, device scope and snake_case keys. |
-| `matchFrameRate` | None | Not ported because this is Android TV display-mode switching; TV is out of scope. |
-| `subtitleSystemStyle`, `subtitleScale`, `subtitleColor`, `subtitleBackground`, `subtitleEdge` | Same names | Same defaults, device scope and snake_case keys. |
-| `Stored.getValue`, `Stored.setValue` | Observable properties and `save` | Differs because Swift Observation and UserDefaults replace Compose state and SharedPreferences. |
-| `string`, `strings`, `boolean`, `float`, `enum` storage helpers | `PlayerPrefs.init`, `save` | Differs because UserDefaults stores a typed dictionary under `player`, rather than a separate SharedPreferences file. Invalid enum values fall back to defaults. |
-| `SubtitleLook` | `SubtitleLook` | Same style fields; a CoreText font name replaces Android FontFamily. |
-| `COLORS`, `SubtitleColor.color` | `subtitleLook` color switch | Same exact byte colors. |
-| `rememberSubtitleLook`, `systemLook` | `subtitleLook`, `SystemCaptionStyle` | Differs because MediaAccessibility supplies platform caption defaults. A process-lifetime CF notification observer increments an observable revision, so renders reading `subtitleLook` follow Settings changes. |
-| `SubtitleLine` and PlayerScreen drawing | No view in this increment | Not ported because this task excludes views. Edge rendering, padding and line height still need a view audit. |
-| `Cue.start`, `end`, `text` | `Cue.start`, `end`, `spans`, `text` | Same timeline; styled spans replace AnnotatedString. |
-| `CueTrack.at` | Same name | Same sorted binary search and bounded 16-cue backward lookup, with exclusive end time. |
-| `TIMING`, `seconds` | Local timing regex and `seconds` in `parse` | Same hours, decimal comma and cue settings handling. |
-| `TAG`, `unescape`, `styled` | `styled` and its entity loop | Same bold/italic/underline nesting and six entities. Other tags are removed, preserving their text, including ruby annotation text. |
-| `CueTrack.parse` | Same name | Differs because NOTE, STYLE and REGION blocks are explicitly skipped even if they contain timing arrows. Identifiers, BOM header, CRLF, multiline and overlapping cues are tested. |
-| `baseLanguage`, `sameLanguage`, `deviceLanguage`, `isCommentary` | `sameLanguage`, `profileLanguage`, inline commentary check | Same base-tag comparison for tested ordinary language tags; malformed Locale tag fallback has not been audited. |
-| `downloadAudio` | Same name | Same primary, preferred/original language, channel ranking and decodable same-language stand-in rules on inspection; dedicated tests remain outstanding. |
-| `drawable`, `bestInLanguage`, `forcedTrack`, `downloadSubtitle` | `downloadSubtitle` filter and local `best` | Same mode branches and score on inspection; dedicated tests remain outstanding. |
-| `downloadSubtitleShow` | None | Not ported in this increment. AVPlayer cannot claim embedded PGS/ASS support; saved WebVTT uses the controller's existing screen-cue path. |
-| `PlayerController` local open and pending reports | `DownloadPlayerAdapter.playback`, `queueReport` | Same saved video, audio list, subtitle URLs, pending-or-server position, last-position report and cumulative sitting report. Adapter binds one server independently of the selected-server UI. |
-| `PlayerScreen.downloadNext` | `DownloadPlayerAdapter.next` | Differs because it selects the next completed, existing local episode without a network request. Android asks the offline API's title-item list. Specials and duplicate episode editions still need comparison. |
+| Kotlin member                                                                                 | Swift member                                               | Comparison                                                                                                                                                                                                       |
+| --------------------------------------------------------------------------------------------- | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PlayerPrefs.ORIGINAL_QUALITY`, `AUTOMATIC`                                                   | Same constants in the API layer                            | Same contract values.                                                                                                                                                                                            |
+| `Decoders`                                                                                    | `Decoders.hardware`, `PlayerPrefs.decoders`                | Differs because AVPlayer owns decoder selection; no software preference API.                                                                                                                                     |
+| `PlayerEngine`                                                                                | `PlayerEngine.avPlayer`, `PlayerPrefs.engine`              | Differs because ExoPlayer is Android-only and mpv is deferred by the iOS plan.                                                                                                                                   |
+| `SubtitleColor`                                                                               | `SubtitleColor`                                            | Same choices and exact sRGB colors after removing rounded components.                                                                                                                                            |
+| `SubtitleBackground`                                                                          | `SubtitleBackground`                                       | Same none, shaded and black choices.                                                                                                                                                                             |
+| `SubtitleEdge`, `OWN_SUBTITLE_EDGES`                                                          | Same names                                                 | Same five system edges and three own-style choices.                                                                                                                                                              |
+| `SUBTITLE_SCALES`                                                                             | Same name                                                  | Same five sizes.                                                                                                                                                                                                 |
+| `PlayerPrefs.quality`                                                                         | Same name                                                  | Same default, global device scope and storage key. Account limits do not overwrite it.                                                                                                                           |
+| `videoCodec`, `audioCodec`, `convertAudio`                                                    | Same names                                                 | Same defaults, device scope and snake_case keys.                                                                                                                                                                 |
+| `autoplayNext`, `fillScreen`, `pictureInPicture`                                              | Same names                                                 | Same defaults, device scope and snake_case keys.                                                                                                                                                                 |
+| `matchFrameRate`                                                                              | None                                                       | Not ported because this is Android TV display-mode switching; TV is out of scope.                                                                                                                                |
+| `subtitleSystemStyle`, `subtitleScale`, `subtitleColor`, `subtitleBackground`, `subtitleEdge` | Same names                                                 | Same defaults, device scope and snake_case keys.                                                                                                                                                                 |
+| `Stored.getValue`, `Stored.setValue`                                                          | Observable properties and `save`                           | Differs because Swift Observation and UserDefaults replace Compose state and SharedPreferences.                                                                                                                  |
+| `string`, `strings`, `boolean`, `float`, `enum` storage helpers                               | `PlayerPrefs.init`, `save`                                 | Differs because UserDefaults stores a typed dictionary under `player`, rather than a separate SharedPreferences file. Invalid enum values fall back to defaults.                                                 |
+| `SubtitleLook`                                                                                | `SubtitleLook`                                             | Same style fields; a CoreText font name replaces Android FontFamily.                                                                                                                                             |
+| `COLORS`, `SubtitleColor.color`                                                               | `subtitleLook` color switch                                | Same exact byte colors.                                                                                                                                                                                          |
+| `rememberSubtitleLook`, `systemLook`                                                          | `subtitleLook`, `SystemCaptionStyle`                       | Differs because MediaAccessibility supplies platform caption defaults. A process-lifetime CF notification observer increments an observable revision, so renders reading `subtitleLook` follow Settings changes. |
+| `SubtitleLine` and PlayerScreen drawing                                                       | No view in this increment                                  | Not ported because this task excludes views. Edge rendering, padding and line height still need a view audit.                                                                                                    |
+| `Cue.start`, `end`, `text`                                                                    | `Cue.start`, `end`, `spans`, `text`                        | Same timeline; styled spans replace AnnotatedString.                                                                                                                                                             |
+| `CueTrack.at`                                                                                 | Same name                                                  | Same sorted binary search and bounded 16-cue backward lookup, with exclusive end time.                                                                                                                           |
+| `TIMING`, `seconds`                                                                           | Local timing regex and `seconds` in `parse`                | Same hours, decimal comma and cue settings handling.                                                                                                                                                             |
+| `TAG`, `unescape`, `styled`                                                                   | `styled` and its entity loop                               | Same bold/italic/underline nesting and six entities. Other tags are removed, preserving their text, including ruby annotation text.                                                                              |
+| `CueTrack.parse`                                                                              | Same name                                                  | Differs because NOTE, STYLE and REGION blocks are explicitly skipped even if they contain timing arrows. Identifiers, BOM header, CRLF, multiline and overlapping cues are tested.                               |
+| `baseLanguage`, `sameLanguage`, `deviceLanguage`, `isCommentary`                              | `sameLanguage`, `profileLanguage`, inline commentary check | Same base-tag comparison for tested ordinary language tags; malformed Locale tag fallback has not been audited.                                                                                                  |
+| `downloadAudio`                                                                               | Same name                                                  | Same primary, preferred/original language, channel ranking and decodable same-language stand-in rules; covered by DownloadTracksTests.                                                                           |
+| `drawable`, `bestInLanguage`, `forcedTrack`, `downloadSubtitle`                               | `downloadSubtitle` filter and local `best`                 | Same mode branches and score; covered by DownloadTracksTests.                                                                                                                                                    |
+| `downloadSubtitleShow`                                                                        | Same name                                                  | Ported and tested for embedded picture tracks, mpv ASS/SSA and saved WebVTT. This pure decision helper does not add engine support to AVPlayer or change its advertised capabilities.                            |
+| `PlayerController` local open and pending reports                                             | `DownloadPlayerAdapter.playback`, `queueReport`            | Same saved video, audio list, subtitle URLs, pending-or-server position, last-position report and cumulative sitting report. Adapter binds one server independently of the selected-server UI.                   |
+| `PlayerScreen.downloadNext`                                                                   | `DownloadPlayerAdapter.next`                               | Differs because it selects the next completed, existing local episode without a network request. Android asks the offline API's title-item list. Specials and duplicate episode editions still need comparison.  |
 
 ### Integration and remaining protocol gap
 
@@ -212,9 +213,9 @@ played time and keeps it stable. This loses paused/buffering time before the
 first report. No protocol change was made here. Its nonthrowing report method
 also cannot tell the controller about a local persistence failure; that is logged.
 
-The worker still assembles files and writes the index on the main actor. No
-large-append actor test was added. This remains a required follow-up, not a
-platform exclusion.
+The worker now assembles files and writes the index through DownloadFiles,
+with responsiveness, deletion and crash-replay tests. See the package's
+DOWNLOADS.md for the ownership rules and current live verification.
 
 ### Verification of this partial increment
 
@@ -250,18 +251,17 @@ All eight reached readyToPlay, advanced approximately three seconds and
 reported no error. These are audio-only synthetic files, not an exhaustive
 codec/profile/channel test or a physical-device listening check.
 
-| Audio | Local MP4 time after 3 s | fMP4 HLS time after 3 s |
-| --- | --- | --- |
-| Opus | 2.828 s | 3.084 s |
-| FLAC | 3.008 s | 2.910 s |
-| AC-3 | 3.077 s | 2.899 s |
-| E-AC-3 | 3.063 s | 2.896 s |
+| Audio  | Local MP4 time after 3 s | fMP4 HLS time after 3 s |
+| ------ | ------------------------ | ----------------------- |
+| Opus   | 2.828 s                  | 3.084 s                 |
+| FLAC   | 3.008 s                  | 2.910 s                 |
+| AC-3   | 3.077 s                  | 2.899 s                 |
+| E-AC-3 | 3.063 s                  | 2.896 s                 |
 
 An initial HTTP MP4 attempt through Python's non-range server failed for all
 four with -11850. Local files removed that transport confound. No capability
 was removed based on that failure. The two-language live MP4 fixtures selected
 German audio successfully, confirming direct-file AVMediaSelectionGroup use.
-
 
 - `PlayerDownloads` is unchanged. `PlaybackEngine` gained internal state and
   transport methods for fake engines; the view's public construction API is
