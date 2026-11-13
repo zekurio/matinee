@@ -297,7 +297,8 @@ private struct Viewfinder: UIViewRepresentable {
     camera.onFailed = onFailed
     view.previewLayer.videoGravity = .resizeAspectFill
     view.previewLayer.session = camera.session
-    camera.start()
+    // After this update, as starting may fail at once and change the screen.
+    Task { camera.start() }
     return view
   }
 
