@@ -17,11 +17,23 @@ func headingTop(_ window: CGSize) -> CGFloat { backdropHeight(window) - 150 }
 /// more of the backdrop, as the web's `max(10rem, 30vh)`.
 func phoneHeadingTop(_ window: CGSize) -> CGFloat { max(160, window.height * 0.3) }
 
+/// How far the window's sides are inset for a notch or the Dynamic Island,
+/// which the backdrop reaches past, as Android's goes edge to edge. Read
+/// from the window rather than measured on the page: a page that measured
+/// its own insets and widened its content by them would measure again.
+private func windowSides(_ direction: LayoutDirection) -> (leading: CGFloat, trailing: CGFloat) {
+  let window = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+    .flatMap(\.windows).first(where: \.isKeyWindow)
+  let insets = window?.safeAreaInsets ?? .zero
+  return direction == .rightToLeft ? (insets.right, insets.left) : (insets.left, insets.right)
+}
+
 /// The art across the top of a title's pages, faded into the page under the header.
 struct Backdrop: View {
   let sources: [ImageSource]
   let toneKey: String
   @Environment(\.windowSize) private var window
+  @Environment(\.layoutDirection) private var direction
   @Environment(\.palette) private var palette
 
   init(_ sources: [ImageSource?], toneKey: String) {
@@ -30,6 +42,8 @@ struct Backdrop: View {
   }
 
   var body: some View {
+    // The window's size is what changes with the insets, on a turn; reading it here redraws this then.
+    let sides = window.width > 0 ? windowSides(direction) : (leading: 0, trailing: 0)
     Tone(toneKey)
       .overlay { Picture(sources, alignment: .top) }
       // The web's two shades: from the start, where the text sits, and up
@@ -54,6 +68,8 @@ struct Backdrop: View {
       .frame(maxWidth: .infinity)
       .frame(height: backdropHeight(window))
       .clipped()
+      .padding(.leading, -sides.leading)
+      .padding(.trailing, -sides.trailing)
       .accessibilityHidden(true)
   }
 }
@@ -186,36 +202,51 @@ struct ActionRow: View {
   @Environment(\.snackbar) private var snackbar
   @Environment(\.openURL) private var openURL
   @Environment(\.windowSize) private var window
+  @Environment(\.dynamicTypeSize) private var dynamicType
   @Environment(\.palette) private var palette
 
   var body: some View {
     let wide = isWide(window)
-    HStack(spacing: 10) {
-      playButton(wide: wide)
-      if let trailer, let url = URL(string: trailer.url) {
-        TrailerButton(wide: wide) { openURL(url) }
-      }
-      RoundIconButton(
-        .check, label: watched ? Str.mediaMarkUnwatched : Str.mediaMarkWatched,
-        tint: watched ? palette.accent : palette.foreground
-      ) {
-        if watched {
-          launchShowing(snackbar, Str.mediaMarkUnwatchedFailed) { try await onWatched(false, nil) }
-        } else {
-          actions?.askWatched(name) { at in try await onWatched(true, at) }
+    Group {
+      // At the accessibility sizes Play's words need the row; the round buttons go under it.
+      if dynamicType.isAccessibilitySize && !wide {
+        VStack(alignment: .leading, spacing: 10) {
+          playButton(wide: wide)
+          HStack(spacing: 10) { buttons(wide: wide) }
+        }
+      } else {
+        HStack(spacing: 10) {
+          playButton(wide: wide)
+          buttons(wide: wide)
+          if wide { Spacer(minLength: 0) }
         }
       }
-      .accessibilityAddTraits(watched ? .isSelected : [])
-      RoundIconButton(
-        favorite ? .heartFilled : .heart, label: favorite ? Str.mediaRemoveFavorite : Str.mediaAddFavorite,
-        tint: favorite ? palette.danger : palette.foreground
-      ) {
-        launchShowing(snackbar, Str.mediaFavoriteFailed) { try await onFavorite() }
-      }
-      ActionsButton(more)
-      if wide { Spacer(minLength: 0) }
     }
     .padding(.horizontal, Gutter)
+  }
+
+  @ViewBuilder private func buttons(wide: Bool) -> some View {
+    if let trailer, let url = URL(string: trailer.url) {
+      TrailerButton(wide: wide) { openURL(url) }
+    }
+    RoundIconButton(
+      .check, label: watched ? Str.mediaMarkUnwatched : Str.mediaMarkWatched,
+      tint: watched ? palette.accent : palette.foreground
+    ) {
+      if watched {
+        launchShowing(snackbar, Str.mediaMarkUnwatchedFailed) { try await onWatched(false, nil) }
+      } else {
+        actions?.askWatched(name) { at in try await onWatched(true, at) }
+      }
+    }
+    .accessibilityAddTraits(watched ? .isSelected : [])
+    RoundIconButton(
+      favorite ? .heartFilled : .heart, label: favorite ? Str.mediaRemoveFavorite : Str.mediaAddFavorite,
+      tint: favorite ? palette.danger : palette.foreground
+    ) {
+      launchShowing(snackbar, Str.mediaFavoriteFailed) { try await onFavorite() }
+    }
+    ActionsButton(more)
   }
 
   private func playButton(wide: Bool) -> some View {
