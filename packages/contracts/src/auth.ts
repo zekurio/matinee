@@ -6,6 +6,7 @@ import type {
   RegistrationResponseJSON,
 } from "@simplewebauthn/browser"
 
+import { LoginBackdrop } from "./branding"
 import { t } from "./schema"
 import { ThemeAccents } from "./theme"
 
@@ -48,6 +49,8 @@ export const AuthConfig = t.object({
     .nullable(),
   /** Accents an admin picked for the Matinee theme on this server. */
   themeAccents: ThemeAccents,
+  /** The wall of artwork behind the login form; see `auth.loginBackdrop`. */
+  loginBackdrop: LoginBackdrop,
 })
 export type AuthConfig = t.infer<typeof AuthConfig>
 

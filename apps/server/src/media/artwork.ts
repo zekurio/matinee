@@ -22,6 +22,7 @@ import { env } from "../env"
 import { defineQueue, perCpu, type Priority } from "../jobs/queue"
 import { log } from "../log"
 import { readPlaceholder } from "./blurhash"
+import { showsOnLoginBackdrop } from "./login-backdrop"
 import { run } from "./process"
 
 const MAX_BYTES = 25 * 1024 * 1024
@@ -541,11 +542,15 @@ export async function prefetchArtwork(
 export const artworkRoutes = new Hono()
 
 artworkRoutes.get("/:id", async (c) => {
-  if (!(await readSession(c))) return c.body(null, 401)
   const id = c.req.param("id")
-  if (!/^[0-9a-f]{32}$/.test(id)) return c.body(null, 404)
   const size =
     ARTWORK_SIZES.find((name) => name === c.req.query("size")) ?? "small"
+  // The login page loads its backdrop before anyone signs in.
+  const allowed =
+    (await readSession(c)) !== null ||
+    (/^[0-9a-f]{32}$/.test(id) && (await showsOnLoginBackdrop(id, size)))
+  if (!allowed) return c.body(null, 401)
+  if (!/^[0-9a-f]{32}$/.test(id)) return c.body(null, 404)
 
   const file = await artworkFile(id, size)
   if (!file) return c.body(null, 404)

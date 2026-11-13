@@ -13,6 +13,8 @@ export function AuthScreen({
   eyebrow,
   description,
   wide = false,
+  backdrop,
+  contained = false,
   children,
 }: {
   title: string
@@ -21,14 +23,26 @@ export function AuthScreen({
   description?: ReactNode
   /** Room for settings, as setup's steps after the admin account show. */
   wide?: boolean
+  /** Behind everything, such as the login backdrop. */
+  backdrop?: ReactNode
+  /** Fill the parent rather than the window, as a preview does. */
+  contained?: boolean
   children: ReactNode
 }) {
   return (
-    <main className="relative flex min-h-dvh flex-col items-center justify-center px-4 pt-24 pb-[calc(3rem+8vh)]">
+    <main
+      className={cn(
+        "relative isolate flex flex-col items-center justify-center overflow-hidden px-4",
+        contained ? "h-full py-16" : "min-h-dvh pt-24 pb-[calc(3rem+8vh)]",
+      )}
+    >
+      {backdrop}
       <header className="absolute top-8 left-6 sm:left-10">
         <Logo className="text-2xl" />
       </header>
-      <div className={cn("w-full", wide ? "max-w-2xl" : "max-w-[360px]")}>
+      <div
+        className={cn("relative w-full", wide ? "max-w-2xl" : "max-w-[360px]")}
+      >
         {eyebrow && (
           <p className="text-muted-foreground mb-2 text-sm">{eyebrow}</p>
         )}

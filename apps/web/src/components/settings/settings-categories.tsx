@@ -22,10 +22,10 @@ import { AccessPanel } from "./access-panel"
 import { AccountPanel } from "./account-panel"
 import { AppearancePanel } from "./appearance-panel"
 import { AuthPanel } from "./auth-panel"
+import { BrandingPanel } from "./branding-panel"
 import { JobsPanel } from "./jobs-panel"
 import { LibrariesPanel } from "./libraries-panel"
 import { PlaybackPanel } from "./playback-panel"
-import { ServerAppearancePanel } from "./server-appearance-panel"
 import { TranscodingPanel } from "./transcoding-panel"
 import { TrickplayPanel } from "./trickplay-panel"
 import { UsersPanel } from "./users-panel"
@@ -91,10 +91,10 @@ const SECTIONS: SectionEntry[] = [
   },
   { id: "jobs", group: "admin", icon: ListChecksIcon, Panel: JobsPanel },
   {
-    id: "server-appearance",
+    id: "branding",
     group: "admin",
     icon: PaintbrushIcon,
-    Panel: ServerAppearancePanel,
+    Panel: BrandingPanel,
   },
 ]
 

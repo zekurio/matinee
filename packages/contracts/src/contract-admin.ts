@@ -7,6 +7,7 @@ import {
   UserAccessInput,
 } from "./access"
 import { AdminAuthSettings, AdminUser, AuthSettingsInput } from "./admin"
+import { Branding, LoginBackdropArtwork, LoginBackdropTiles } from "./branding"
 import { del, get, post, put } from "./contract-routes"
 import {
   ConcurrencyInput,
@@ -25,7 +26,6 @@ import {
   InviteInput,
   UserRole,
 } from "./schemas"
-import { ThemeAccents } from "./theme"
 import { AdminTranscodingSettings, TranscodingSettings } from "./transcoding"
 import { AdminTrickplaySettings, TrickplaySettings } from "./trickplay"
 
@@ -34,10 +34,20 @@ export const adminContract = oc.tag("Admin").router({
   browse: get("/admin/browse")
     .input(t.object({ path: t.string().optional() }))
     .output(DirectoryListing),
-  /** The accent of the default Matinee theme for everyone on the server. */
-  appearance: {
-    get: get("/admin/appearance").output(ThemeAccents),
-    update: put("/admin/appearance").input(ThemeAccents).output(ThemeAccents),
+  /**
+   * How the server looks to everyone on it: the accent of the default
+   * Matinee theme, and the login backdrop.
+   */
+  branding: {
+    get: get("/admin/branding").output(Branding),
+    update: put("/admin/branding").input(Branding).output(Branding),
+    /**
+     * Artwork the login backdrop would show with `artwork`, whether or not
+     * it's on, for previewing it before saving.
+     */
+    preview: get("/admin/branding/login-backdrop")
+      .input(t.object({ artwork: LoginBackdropArtwork }))
+      .output(LoginBackdropTiles),
   },
   /** First-run setup, after the admin account exists. */
   setup: {

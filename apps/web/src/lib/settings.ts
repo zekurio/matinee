@@ -30,7 +30,7 @@ const SECTIONS = [
   { id: "transcoding", path: "admin/transcoding" },
   { id: "trickplay", path: "admin/trickplay" },
   { id: "jobs", path: "admin/jobs" },
-  { id: "server-appearance", path: "admin/branding" },
+  { id: "branding", path: "admin/branding" },
 ] as const
 
 export type SettingsSectionId = (typeof SECTIONS)[number]["id"]

@@ -53,8 +53,8 @@ export default {
     "Hintergrund-Warteschlangen und geplante Aufgaben",
   "settings.section.jobs.keywords":
     "Warteschlangen, Worker, Parallelität, Geplante Aufgaben, Mediatheken scannen, Metadaten aktualisieren, Medieninfo, ffprobe, Vorschaubilder, Trickplay, Pausieren, Abbrechen, Jetzt ausführen",
-  "settings.section.server-appearance.label": "Darstellung",
-  "settings.section.server-appearance.description": "Akzentfarbe für alle",
-  "settings.section.server-appearance.keywords":
-    "Akzentfarbe, Markenfarbe, Standarddesign",
+  "settings.section.branding.label": "Branding",
+  "settings.section.branding.description": "Akzentfarbe und Anmeldeseite",
+  "settings.section.branding.keywords":
+    "Akzentfarbe, Markenfarbe, Standarddesign, Darstellung, Anmeldeseite, Anmeldung, Hintergrund, Poster, Szenenbilder, Artwork",
 } satisfies TranslationOf<typeof source>

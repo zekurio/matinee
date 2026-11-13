@@ -67,9 +67,20 @@ private fun Brand(modifier: Modifier = Modifier) {
     Logo(modifier.padding(horizontal = 26.dp, vertical = 24.dp), height = 22.dp)
 }
 
-/** The web's auth screen: the logo at the top, the form below the middle. */
+/**
+ * The web's auth screen: the logo at the top, the form below the middle.
+ * [backdrop] fills the screen behind them, edge to edge.
+ */
 @Composable
-internal fun AuthLayout(content: @Composable ColumnScope.() -> Unit) {
+internal fun AuthLayout(backdrop: @Composable () -> Unit = {}, content: @Composable ColumnScope.() -> Unit) {
+    Box(Modifier.fillMaxSize()) {
+        backdrop()
+        AuthColumn(content)
+    }
+}
+
+@Composable
+private fun AuthColumn(content: @Composable ColumnScope.() -> Unit) {
     Box(Modifier.fillMaxSize().safeDrawingPadding().imePadding()) {
         Brand()
         Column(
@@ -134,11 +145,13 @@ fun SignInScreen(session: Session, state: AuthState.SignedOut, browserError: Mut
         if (withCode) withCode = false else session.addServer()
     }
     // A TV has no browser to sign in with, so it only has the code.
+    // The server's login backdrop, if it has one on.
+    val backdrop: @Composable () -> Unit = { LoginBackdropWall(session.signInApi(), state.config.loginBackdrop) }
     if (withCode || session.isTv) {
-        DeviceCodeSignIn(session, state.adding, onBack = if (session.isTv) null else ({ withCode = false }))
+        DeviceCodeSignIn(session, state.adding, backdrop, onBack = if (session.isTv) null else ({ withCode = false }))
         return
     }
-    AuthLayout {
+    AuthLayout(backdrop) {
         Text(stringResource(R.string.signin_title), style = MaterialTheme.typography.headlineMedium)
         Gap(8.dp)
         Text(
@@ -193,7 +206,7 @@ fun SignInScreen(session: Session, state: AuthState.SignedOut, browserError: Mut
  * Account. Typing the code at /link works too.
  */
 @Composable
-private fun DeviceCodeSignIn(session: Session, adding: Boolean, onBack: (() -> Unit)?) {
+private fun DeviceCodeSignIn(session: Session, adding: Boolean, backdrop: @Composable () -> Unit, onBack: (() -> Unit)?) {
     val flow = rememberDeviceCode(session, renewExpired = true)
     val error = flow.error
     val current = flow.code
@@ -230,32 +243,41 @@ private fun DeviceCodeSignIn(session: Session, adding: Boolean, onBack: (() -> U
         configuration.screenHeightDp >= 480 &&
         configuration.screenWidthDp > configuration.screenHeightDp
     if (sideBySide) {
-        Box(Modifier.fillMaxSize().safeDrawingPadding()) {
-            Brand()
-            Row(
-                Modifier
-                    .align(Alignment.Center)
-                    .widthIn(max = 920.dp)
-                    .fillMaxWidth()
-                    .padding(horizontal = 56.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(64.dp),
-            ) {
-                Column(Modifier.weight(1f)) {
-                    CodeHeading()
-                    Gap(36.dp)
-                    details()
-                }
-                CodeQr(current, 288.dp)
-            }
+        Box(Modifier.fillMaxSize()) {
+            backdrop()
+            SideBySide(current, details)
         }
     } else {
-        AuthLayout {
+        AuthLayout(backdrop) {
             CodeHeading()
             Gap(28.dp)
             CodeQr(current, 224.dp, Modifier.align(Alignment.CenterHorizontally))
             Gap(28.dp)
             details()
+        }
+    }
+}
+
+/** The steps on the left, the QR code beside them. */
+@Composable
+private fun SideBySide(current: DeviceCode?, details: @Composable ColumnScope.() -> Unit) {
+    Box(Modifier.fillMaxSize().safeDrawingPadding()) {
+        Brand()
+        Row(
+            Modifier
+                .align(Alignment.Center)
+                .widthIn(max = 920.dp)
+                .fillMaxWidth()
+                .padding(horizontal = 56.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(64.dp),
+        ) {
+            Column(Modifier.weight(1f)) {
+                CodeHeading()
+                Gap(36.dp)
+                details()
+            }
+            CodeQr(current, 288.dp)
         }
     }
 }

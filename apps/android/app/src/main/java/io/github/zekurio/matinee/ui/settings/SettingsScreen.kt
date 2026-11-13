@@ -107,7 +107,7 @@ import io.github.zekurio.matinee.ui.rememberLoader
 import io.github.zekurio.matinee.ui.settings.admin.AuthenticationSettings
 import io.github.zekurio.matinee.ui.settings.admin.JobsSettings
 import io.github.zekurio.matinee.ui.settings.admin.LibrariesSettings
-import io.github.zekurio.matinee.ui.settings.admin.ServerAppearanceSettings
+import io.github.zekurio.matinee.ui.settings.admin.ServerBrandingSettings
 import io.github.zekurio.matinee.ui.settings.admin.TranscodingSettings
 import io.github.zekurio.matinee.ui.settings.admin.TrickplaySettings
 import io.github.zekurio.matinee.ui.settings.admin.UsersSettings
@@ -136,7 +136,7 @@ enum class SettingsPage(val key: String, @param:DrawableRes val icon: Int, @para
     Transcoding("transcoding", Lucide.Film, R.string.settings_admin_transcoding, admin = true),
     Trickplay("trickplay", Lucide.GalleryHorizontalEnd, R.string.settings_admin_trickplay, admin = true),
     Jobs("jobs", Lucide.ListChecks, R.string.settings_admin_jobs, admin = true),
-    ServerAppearance("server-appearance", Lucide.Paintbrush, R.string.settings_admin_appearance, admin = true),
+    ServerBranding("branding", Lucide.Paintbrush, R.string.settings_admin_branding, admin = true),
     ;
 
     companion object {
@@ -261,7 +261,7 @@ fun SettingsPageScreen(session: Session, key: String) {
         SettingsPage.Transcoding -> TranscodingSettings()
         SettingsPage.Trickplay -> TrickplaySettings()
         SettingsPage.Jobs -> JobsSettings()
-        SettingsPage.ServerAppearance -> ServerAppearanceSettings()
+        SettingsPage.ServerBranding -> ServerBrandingSettings()
     }
 }
 

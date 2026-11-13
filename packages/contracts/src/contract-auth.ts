@@ -1,5 +1,6 @@
 import { oc } from "@orpc/contract"
 
+import { LoginBackdropTiles } from "./branding"
 import { del, get, patch, post, put } from "./contract-routes"
 import { PlaybackPreferences } from "./preferences"
 import { t } from "./schema"
@@ -32,6 +33,11 @@ import {
 
 export const authContract = oc.tag("Auth").router({
   config: get("/auth/config").output(AuthConfig),
+  /**
+   * Artwork for the login backdrop, picked at random on every call from the
+   * libraries the built-in group opens. Empty while the backdrop is off.
+   */
+  loginBackdrop: get("/auth/login-backdrop").output(LoginBackdropTiles),
   session: get("/auth/session").output(t.object({ user: User.nullable() })),
   signOut: post("/auth/sign-out").output(t.void()),
   /** Prove the setup token once; the server remembers it in a cookie. */

@@ -59,7 +59,8 @@ import kotlinx.coroutines.flow.first
  * and name at the top left, what this step is about on the left, and the
  * things to pick on the right, both centred down the screen. [side] takes
  * the left's room under the heading, like a code to type; [split] is
- * how much of the width the left gets.
+ * how much of the width the left gets. [backdrop] fills the screen behind
+ * it all, like the server's login backdrop.
  */
 @Composable
 internal fun TvAuthFrame(
@@ -67,11 +68,13 @@ internal fun TvAuthFrame(
     description: String?,
     modifier: Modifier = Modifier,
     split: Float = 0.42f,
+    backdrop: @Composable () -> Unit = {},
     side: @Composable ColumnScope.() -> Unit = {},
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val rows = remember { FocusRequester() }
     Box(modifier.fillMaxSize().background(Palette.Background).tvRefocus { runCatching { rows.requestFocus() } }) {
+        backdrop()
         Brand(Modifier.padding(start = Overscan.Horizontal, top = Overscan.Vertical + 16.dp))
         Row(
             Modifier

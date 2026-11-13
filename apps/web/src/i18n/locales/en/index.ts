@@ -2,6 +2,7 @@ import access from "./access"
 import account from "./account"
 import appearance from "./appearance"
 import auth from "./auth"
+import branding from "./branding"
 import browse from "./browse"
 import common from "./common"
 import downloads from "./downloads"
@@ -18,7 +19,6 @@ import player from "./player"
 import profile from "./profile"
 import search from "./search"
 import server from "./server"
-import serverAppearance from "./serverAppearance"
 import settings from "./settings"
 import shell from "./shell"
 import stats from "./stats"
@@ -63,7 +63,7 @@ export default {
   ...transcoding,
   ...trickplay,
   ...jobs,
-  ...serverAppearance,
+  ...branding,
   ...account,
   ...playback,
   ...common,

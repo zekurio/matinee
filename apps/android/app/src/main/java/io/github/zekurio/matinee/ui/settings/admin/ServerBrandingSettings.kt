@@ -44,6 +44,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
+import io.github.zekurio.matinee.api.Branding
 import io.github.zekurio.matinee.api.ThemeAccents
 import io.github.zekurio.matinee.app
 import io.github.zekurio.matinee.ui.Load
@@ -85,8 +86,13 @@ private fun stored(color: String, default: String): String? = normalize(color)?.
 
 private fun color(hex: String): Color = Color(android.graphics.Color.parseColor(hex))
 
-/** The form's edits to [saved], kept by the page so the save bar can read them. */
-private class AccentDraft(val saved: ThemeAccents) {
+/**
+ * The form's edits to the accents of [branding], kept by the page so the
+ * save bar can read them. The login backdrop is set on the web, so a save
+ * here keeps it as it was.
+ */
+private class AccentDraft(val branding: Branding) {
+    val saved get() = branding.themeAccents
     var light by mutableStateOf(saved.light ?: DEFAULT_LIGHT)
     var dark by mutableStateOf(saved.dark ?: DEFAULT_DARK)
     val draft get() = ThemeAccents(stored(light, DEFAULT_LIGHT), stored(dark, DEFAULT_DARK))
@@ -103,31 +109,31 @@ private class AccentDraft(val saved: ThemeAccents) {
 
 /**
  * The accent the Matinee theme uses for everyone on the server, as the
- * web's server appearance panel: a preset, or a color per appearance,
- * saved from the save bar.
+ * web's branding panel has it: a preset, or a color per appearance, saved
+ * from the save bar.
  */
 @Composable
-fun ServerAppearanceSettings() {
+fun ServerBrandingSettings() {
     val api = LocalApi.current
-    val loader = rememberLoader("admin-appearance") { admin.appearance.get() }
+    val loader = rememberLoader("admin-branding") { admin.branding.get() }
     val theme = LocalContext.current.app.theme
     val saved = (loader.state as? Load.Ready)?.value
     val form = remember(saved) { saved?.let(::AccentDraft) }
     SaveBarScaffold(
-        stringResource(R.string.settings_admin_appearance),
+        stringResource(R.string.settings_admin_branding),
         dirty = form?.dirty == true,
         canSave = form?.valid == true,
         onReset = { form?.reset() },
         onSave = {
             form?.let {
-                val accents = api.admin.appearance.update(it.draft)
-                loader.show(accents)
+                val branding = api.admin.branding.update(it.branding.copy(themeAccents = it.draft))
+                loader.show(branding)
                 // The app shows the new accent at once, as the web does.
-                theme.setAccents(accents)
+                theme.setAccents(branding.themeAccents)
             }
         },
     ) {
-        loaded(loader, { stringResource(R.string.web_serverAppearance_loadFailed, it) }) { _ ->
+        loaded(loader, { stringResource(R.string.web_branding_loadFailed, it) }) { _ ->
             if (form != null) item(key = "accents") { AccentForm(form) }
         }
     }
@@ -147,10 +153,10 @@ private fun AccentForm(form: AccentDraft) {
     LaunchedEffect(draft, valid) { if (valid) theme.setAccents(draft) }
     DisposableEffect(Unit) { onDispose { theme.setAccents(current) } }
     Column {
-        Section(stringResource(R.string.web_serverAppearance_title)) {
+        Section(stringResource(R.string.web_branding_title)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 PRESETS.forEachIndexed { index, (presetLight, presetDark) ->
-                    val name = if (index == 0) stringResource(R.string.web_serverAppearance_default) else "$presetLight / $presetDark"
+                    val name = if (index == 0) stringResource(R.string.web_branding_default) else "$presetLight / $presetDark"
                     Swatch(presetLight, presetDark, normalize(light) == presetLight && normalize(dark) == presetDark, name) {
                         light = presetLight
                         dark = presetDark
@@ -159,9 +165,9 @@ private fun AccentForm(form: AccentDraft) {
             }
             Gap(16.dp)
             Panel {
-                ColorRow(stringResource(R.string.web_serverAppearance_mode_light), light) { light = it }
+                ColorRow(stringResource(R.string.web_branding_mode_light), light) { light = it }
                 RowDivider()
-                ColorRow(stringResource(R.string.web_serverAppearance_mode_dark), dark) { dark = it }
+                ColorRow(stringResource(R.string.web_branding_mode_dark), dark) { dark = it }
             }
         }
     }

@@ -433,7 +433,7 @@
     <string name="settings_admin_transcoding">Transkodierung</string>
     <string name="settings_admin_trickplay">Trickplay</string>
     <string name="settings_admin_jobs">Aufgaben</string>
-    <string name="settings_admin_appearance">Darstellung</string>
+    <string name="settings_admin_branding">Branding</string>
     <string name="settings_offline_mode">Offline-Modus</string>
 
     <string name="player_load_failed">Der Titel konnte nicht geladen werden</string>
