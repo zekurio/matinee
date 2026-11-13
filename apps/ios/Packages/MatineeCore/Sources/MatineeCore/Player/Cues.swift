@@ -36,6 +36,13 @@ public struct CueTrack: Sendable {
     var cues: [Cue] = []
     for block in normalized.split(separator: /\n{2,}/) {
       let lines = block.split(separator: "\n", omittingEmptySubsequences: false)
+      let header = lines.first?.trimmingCharacters(in: .whitespaces) ?? ""
+      // Metadata blocks may contain arrows, but never contain cues.
+      if header == "NOTE" || header.hasPrefix("NOTE ") || header.hasPrefix("NOTE\t")
+        || header == "STYLE" || header == "REGION"
+      {
+        continue
+      }
       guard let index = lines.firstIndex(where: { $0.firstMatch(of: timing) != nil }),
         let match = lines[index].firstMatch(of: timing)
       else { continue }
