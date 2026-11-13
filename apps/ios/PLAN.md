@@ -133,9 +133,9 @@ order, and the words the same.
 
 ## Conventions
 
-What the skeleton set up, and how every screen uses it. The gallery
-(`Matinee/UI/gallery/`, the root in debug builds until `Root.swift` takes
-over) shows each piece on the theme; open it with `just ios gallery`.
+What the skeleton and the shell set up, and how every screen uses it. The
+gallery (`Matinee/UI/gallery/`, in debug builds with `-gallery YES`) shows
+each piece on the theme; open it with `just ios gallery`.
 
 ### Building and checking
 
@@ -147,6 +147,30 @@ over) shows each piece on the theme; open it with `just ios gallery`.
   checkout when you call `xcodebuild` yourself. No warnings from our code.
 - `just ios test` runs MatineeCore's tests on the Mac and checks that the
   strings, icons, and palettes are current.
+- `just ios dev [ios-admin|ios-viewer] [launch arguments]` builds, installs,
+  and opens the app signed in to the dev server (DEV.md) as that account,
+  for instance `just ios dev ios-viewer -dev.route title/<id>`.
+
+### Launch arguments
+
+Debug builds only; `DevLaunch.swift` reads them and release builds don't
+compile it. Pass them after `just ios run`, `just ios dev`, or
+`xcrun simctl launch <udid> io.github.zekurio.matinee`.
+
+| Argument                                                                    | What it does                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| --------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `-dev.server URL -dev.token TOKEN`                                          | Signed in to URL with TOKEN, without the flow (`scripts/dev/token ios-admin` prints one). The token goes where a sign-in puts it, the server's Keychain item, before the session starts, and the session checks it with the server as at every launch, so it stays signed in after a launch without the arguments.                                                                                                                                                                                                                                        |
+| `-dev.route PATH`                                                           | Opens a page at launch: a tab (`home`, `media`, `downloads`, `profile`, `search`) or a page on one (`title/<id>`, `season/<titleId>/<n>`, `episode/<id>`, `person/<name>`, `genre/<name>`, `studio/<name>`, `library/<id>?sort=<sort>`, `favorites`, `recent`, `settings`, `settings/<page key>`, `link-device`, `downloads/<titleId>`, `identify/<titleId>`, `images/<titleId>[/<season>[/<episode>]]`, `library-editor[/<id>]`, `folder-picker?start=<path>&added=<a,b>`), or the player (`player/<itemId>?start=<seconds>`). `RoutePath` in Nav.swift. |
+| `-dev.offline YES`                                                          | Offline mode on, as Settings' switch, once the account is known; `NO` turns it off. It holds across launches, as the switch does.                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `-theme.mode dark`                                                          | `system`, `light`, or `dark` (ThemeStore's own key).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `-AppleLanguages "(de)"`                                                    | The app in German, iOS's own argument.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `-UIPreferredContentSizeCategoryName UICTContentSizeCategoryAccessibilityL` | A Dynamic Type size, iOS's own argument.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `-gallery YES`                                                              | The gallery instead of the app, with its own `-gallery.*` arguments (Gallery.swift).                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+
+A saved page comes back at launch only after the app went to the
+background first, as iOS keeps scene state; `simctl launch
+--terminate-running-process` alone starts afresh.
+
 - The app target is Swift 6 with the main actor as default isolation.
   Views and their state need no annotations; pure helpers that run
   anywhere are `nonisolated`, as in `Format.swift`.
@@ -160,7 +184,14 @@ over) shows each piece on the theme; open it with `just ios gallery`.
    `@Environment(\.palette)`, `@Environment(\.api)` (nil until signed in),
    `@Environment(ViewerState.self) private var viewer: ViewerState?`,
    `@Environment(\.navigator)` to open other pages, `@Environment(\.offline)`,
-   `@Environment(\.snackbar)`.
+   `@Environment(\.snackbar)`, `@Environment(\.user)` (the signed-in
+   `User`, Android's `LocalUser`), `@Environment(MatineeSession.self)` where
+   Android passes the `Session` (settings, profile), `@Environment(Downloads.self)`
+   for the downloads (`Packages/MatineeCore/DOWNLOADS.md`), and
+   `@Environment(\.imagePipeline)`, which the root keeps signed in.
+   The page's type and parameters are its stub's (see Screens below);
+   replace the stub's body, and don't edit `Nav.swift`, `Shell.swift`, or
+   `Root.swift`.
 3. Load with a `Loader` in `@State` and `.loads(loader) { api in … }`
    (`UI/State.swift` has the pattern). It fetches on first showing, again
    when the viewer's marks change and when the page comes back after 30 s,
@@ -247,9 +278,24 @@ over) shows each piece on the theme; open it with `just ios gallery`.
 - Rows [settings/SettingsRows.kt]: `SettingsSection`, `Panel`, `RowDivider`,
   `PickerRow`, `SwitchRow`, `ValueRow`, `LinkRow`.
 - Elsewhere in `UI/`: `Bars.swift` (`.topBar`, `.itemTopBar`, `AppHeader`,
-  `.statusBarScrim`), `Motion.swift` (`Motion`, `.motion`, `withMotion`,
-  `Reveal`), `Format.swift`, `State.swift`, `Navigator.swift`, and
-  `theme/` (`Palette`, `Typography`, `ThemeStore`, `.matineeTheme`).
+  `.statusBarScrim`, the tabs' names and icons), `Motion.swift` (`Motion`,
+  `.motion`, `withMotion`, `Reveal`), `Format.swift`, `State.swift`,
+  `Navigator.swift`, and `theme/` (`Palette`, `Typography`, `ThemeStore`,
+  `.matineeTheme`).
+- Navigation [Nav.kt]: `@Environment(\.navigator)` has every way Android's
+  `Navigator` opens a page: `title`, `titleUp` (back to it when it came
+  before), `season`, `seasonUp`, `episode`, `item`, `person`, `genre`,
+  `studio`, `library(id, sort)`, `favorites`, `recent`, `settings`,
+  `settingsPage(key)`, `linkDevice`, `libraryEditor`, `folderPicker`,
+  `identify`, `images`, `downloadsShow`, `play(itemId, start)`, `home`,
+  `tab`, `back`, and `backWith(key, value)`, whose value the page under
+  takes from `NavResults` (the library editor's `results`). A page opens on
+  the stack of the tab it's in; the player opens over everything.
+- The shell [Shell.kt]: on a tab's first page, `.scrollsToTopOnReselect()`
+  on the `ScrollView` brings it to the top when the tab is picked again
+  (picked on a page above, it goes back to the first page first); a page
+  with a `ScrollPosition` of its own watches `\.tabReselected` instead.
+  `Stub` is the placeholder every unbuilt page shows.
 
 ### Where iOS differs on purpose
 
@@ -259,6 +305,17 @@ over) shows each piece on the theme; open it with `just ios gallery`.
 - Sheets are the system's, with a grabber and detents.
 - Round icon buttons keep their size at large text sizes and show in the
   large content viewer; text and other icons grow with Dynamic Type.
+- Each tab keeps a navigation stack of its own, and the tab bar stays on
+  pages opened from a tab, as iOS apps have it; Android has one stack with
+  the bar on the tabs' first pages only. On an iPad the bar is at the top
+  and opens into a sidebar. Search is the system's search tab, which iOS 27
+  draws inside the bar rather than in a circle beside it.
+- The profile tab shows the person's picture, drawn into the tab's image.
+- Browser sign-in is the system's web sign-in sheet, which asks first
+  whether the app may use the server's site to sign in.
+- iOS has no run-time local network permission to ask for: when a server on
+  the local network doesn't answer, the error says where to turn Local
+  Network on, with a button to the app's settings.
 
 ## Order of work
 
@@ -272,3 +329,65 @@ over) shows each piece on the theme; open it with `just ios gallery`.
    `Player/` logic.
 4. Integration, a screen-by-screen comparison with the Android app,
    README, `just ios`, CI, and the notes in `AGENTS.md`.
+
+## Screens
+
+Every page exists, as a stub with its final type name and parameters,
+wired into `Nav.swift`. A page's task replaces the stub's body in its file
+and leaves the routes alone. Routes are `Route` cases in `Nav.swift`; the
+tabs' first pages are `ShellTab`s.
+
+| File                                            | Type                                                                                                | Route                                     | Filled in by |
+| ----------------------------------------------- | --------------------------------------------------------------------------------------------------- | ----------------------------------------- | ------------ |
+| `home/HomeScreen.swift`                         | `HomeScreen()`                                                                                      | tab `home`                                |              |
+| `home/OfflineHome.swift`                        | `OfflineHomeScreen()`                                                                               | tab `home`, offline (HomeScreen shows it) |              |
+| `media/MediaScreen.swift`                       | `MediaScreen()`                                                                                     | tab `media`                               |              |
+| `media/FavoritesScreen.swift`                   | `FavoritesScreen()`                                                                                 | `.favorites`                              |              |
+| `browse/LibraryScreen.swift`                    | `LibraryScreen(id:sort:)`                                                                           | `.library(id:sort:)`                      |              |
+| `browse/BrowseScreen.swift`                     | `BrowseScreen(genre:studio:)`                                                                       | `.browse(genre:studio:)`                  |              |
+| `browse/BrowseScreen.swift`                     | `PersonScreen(name:)`                                                                               | `.person(name:)`                          |              |
+| `search/SearchScreen.swift`                     | `SearchScreen()`                                                                                    | tab `search`                              |              |
+| `title/TitleScreens.swift`                      | `TitleScreen(id:)`                                                                                  | `.title(id:)`                             |              |
+| `title/TitleScreens.swift`                      | `SeasonScreen(titleId:season:)`                                                                     | `.season(titleId:season:)`                |              |
+| `title/TitleScreens.swift`                      | `EpisodeScreen(itemId:)`                                                                            | `.episode(itemId:)`                       |              |
+| `metadata/MetadataScreens.swift`                | `IdentifyScreen(titleId:)`                                                                          | `.identify(titleId:)`                     |              |
+| `metadata/MetadataScreens.swift`                | `ImagesScreen(target:)`                                                                             | `.images(titleId:season:episode:)`        |              |
+| `player/PlayerScreen.swift`                     | `PlayerScreen(itemId:start:)`                                                                       | `nav.play`, over everything               |              |
+| `downloads/DownloadsScreen.swift`               | `DownloadsScreen()`                                                                                 | tab `downloads`                           |              |
+| `downloads/DownloadsScreen.swift`               | `DownloadsShowScreen(titleId:)`                                                                     | `.downloadsShow(titleId:)`                |              |
+| `profile/ProfileScreen.swift`                   | `ProfileScreen()`                                                                                   | tab `profile`                             |              |
+| `profile/RecentScreen.swift`                    | `RecentScreen()`                                                                                    | `.recent`                                 |              |
+| `settings/SettingsScreen.swift`                 | `SettingsScreen()`                                                                                  | `.settings`                               |              |
+| `settings/SettingsScreen.swift`                 | `SettingsPageScreen(key:)`, `AccountPage`, `PlaybackPage`, `SubtitlesPage`, `DownloadsSettingsPage` | `.settingsPage(key)`                      |              |
+| `settings/AppearanceSettings.swift`             | `AppearancePage()`                                                                                  | `.settingsPage("appearance")`             |              |
+| `settings/AboutSettings.swift`                  | `AboutPage()`                                                                                       | `.settingsPage("about")`                  |              |
+| `settings/LinkDevice.swift`                     | `LinkDeviceScreen()`                                                                                | `.linkDevice`                             |              |
+| `settings/admin/LibrariesSettings.swift`        | `LibrariesSettings()`                                                                               | `.settingsPage("libraries")`              |              |
+| `settings/admin/LibrariesSettings.swift`        | `LibraryEditorScreen(id:results:)`                                                                  | `.libraryEditor(id:)`                     |              |
+| `settings/admin/LibrariesSettings.swift`        | `FolderPickerScreen(start:added:)`                                                                  | `.folderPicker(start:added:)`             |              |
+| `settings/admin/UsersSettings.swift`            | `UsersSettings()`                                                                                   | `.settingsPage("users")`                  |              |
+| `settings/admin/AuthenticationSettings.swift`   | `AuthenticationSettings()`                                                                          | `.settingsPage("authentication")`         |              |
+| `settings/admin/TranscodingSettings.swift`      | `TranscodingSettings()`                                                                             | `.settingsPage("transcoding")`            |              |
+| `settings/admin/TrickplaySettings.swift`        | `TrickplaySettings()`                                                                               | `.settingsPage("trickplay")`              |              |
+| `settings/admin/JobsSettings.swift`             | `JobsSettings()`                                                                                    | `.settingsPage("jobs")`                   |              |
+| `settings/admin/ServerAppearanceSettings.swift` | `ServerAppearanceSettings()`                                                                        | `.settingsPage("server-appearance")`      |              |
+
+Notes for the tasks that fill them in:
+
+- `SettingsPage` (keys, icons, titles, admin) and `SettingsPageScreen`'s
+  dispatch are ported already. `SettingsScreen`'s stub carries Android's
+  offline switch and server section (`SettingsServerSection`, with
+  `ChangeServerRow` and Sign out), which the shell needs meanwhile; keep
+  them when the page is built.
+- `ProfileScreen`'s stub has a row to Settings, standing in for the
+  header's settings button.
+- `PersonScreen` is in `BrowseScreen.swift` because Android keeps it in
+  `BrowseScreen.kt`.
+- The library editor takes the folder picker's answer from `results`
+  under `PICKED_FOLDER`; the picker hands it back with
+  `nav.backWith(PICKED_FOLDER, folder)`.
+- The player leaves with `@Environment(\.dismiss)`; the shell turns the
+  screen to landscape and back (`Orientation` in MatineeApp.swift).
+- Signing in and the server list are built: `signin/` (ConnectScreen,
+  SignInScreen, ServerSwitcherSheet, ChangeServerRow, ChangeServerButton,
+  UnreachableScreen, LocalNetworkHint).
