@@ -449,7 +449,7 @@ private fun Playback(itemId: String, data: PlayerData, start: Double?) {
     val activity = remember(context) { context.activity() }
     // Some devices, like low-memory ones, have no picture in picture.
     val hasPip = remember(context) { context.packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE) }
-    val enterPip: (() -> Unit)? = if (hasPip && prefs.pictureInPicture && activity != null) {
+    val enterPip: (() -> Unit)? = if (hasPip && prefs.pictureInPicture && prefs.pictureInPictureButton && activity != null) {
         { activity.enterPictureInPicture() }
     } else {
         null
@@ -615,6 +615,7 @@ private fun Playback(itemId: String, data: PlayerData, start: Double?) {
             AnimatedVisibility((controls || controller.ended) && !locked && controller.error == null, enter = Motion.fadeIn, exit = Motion.fadeOut) {
                 Controls(
                     controller,
+                    prefs,
                     back = back,
                     ahead = ahead,
                     scrub = scrub,
@@ -633,9 +634,13 @@ private fun Playback(itemId: String, data: PlayerData, start: Double?) {
                     onMenu = { menu = it },
                     onTouch = { touched++ },
                     onPictureInPicture = enterPip,
-                    onLock = {
-                        locked = true
-                        controls = false
+                    onLock = if (prefs.lockButton) {
+                        {
+                            locked = true
+                            controls = false
+                        }
+                    } else {
+                        null
                     },
                 )
             }
@@ -837,6 +842,7 @@ internal fun Subtitles(controller: PlayerController, look: SubtitleLook, lifted:
 @Composable
 private fun Controls(
     controller: PlayerController,
+    prefs: PlayerPrefs,
     back: Double,
     ahead: Double,
     scrub: Double?,
@@ -846,7 +852,7 @@ private fun Controls(
     onMenu: (Menu) -> Unit,
     onTouch: () -> Unit,
     onPictureInPicture: (() -> Unit)?,
-    onLock: () -> Unit,
+    onLock: (() -> Unit)?,
 ) {
     val res = LocalResources.current
     val item = controller.item
@@ -879,16 +885,20 @@ private fun Controls(
                 RoundIconButton(Lucide.PictureInPicture, stringResource(R.string.player_pip), onPictureInPicture, size = 52.dp, iconSize = 26.dp, background = Color.Transparent)
             }
             // The unlock button shows where this one is.
-            RoundIconButton(Lucide.Lock, stringResource(R.string.player_lock), onLock, size = 52.dp, iconSize = 26.dp, background = Color.Transparent)
+            if (onLock != null) {
+                RoundIconButton(Lucide.Lock, stringResource(R.string.player_lock), onLock, size = 52.dp, iconSize = 26.dp, background = Color.Transparent)
+            }
         }
         Row(
             Modifier.align(Alignment.Center),
             horizontalArrangement = Arrangement.spacedBy(56.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            SkipButton(Lucide.RotateCcw, back, stringResource(R.string.player_skip_back, back.toInt())) {
-                controller.skip(-back)
-                onTouch()
+            if (prefs.skipButtons) {
+                SkipButton(Lucide.RotateCcw, back, stringResource(R.string.player_skip_back, back.toInt())) {
+                    controller.skip(-back)
+                    onTouch()
+                }
             }
             // The loading spinner is drawn at the screen's center, even when
             // controls are hidden. Keep its slot without an overlapping button.
@@ -909,9 +919,11 @@ private fun Controls(
                     )
                 }
             }
-            SkipButton(Lucide.RotateCw, ahead, stringResource(R.string.player_skip_forward, ahead.toInt())) {
-                controller.skip(ahead)
-                onTouch()
+            if (prefs.skipButtons) {
+                SkipButton(Lucide.RotateCw, ahead, stringResource(R.string.player_skip_forward, ahead.toInt())) {
+                    controller.skip(ahead)
+                    onTouch()
+                }
             }
         }
         Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().safeDrawingPadding().padding(horizontal = 20.dp, vertical = 10.dp)) {
@@ -926,26 +938,34 @@ private fun Controls(
                     Text(stringResource(R.string.player_ends_at, ends), style = MaterialTheme.typography.bodyMedium, color = Palette.Foreground.copy(alpha = 0.8f))
                 }
                 Box(Modifier.weight(1f))
-                RoundIconButton(Lucide.AudioLines, stringResource(R.string.player_menu_audio), { onMenu(Menu.Audio) }, size = 52.dp, iconSize = 26.dp, background = Color.Transparent)
-                Box {
-                    // The line under the icon shows subtitles are on; a screen reader hears which.
-                    val subtitleState = controller.subtitle?.let { subtitleLabel(it, controller.subtitles) }
-                        ?: stringResource(R.string.player_subtitles_off)
-                    RoundIconButton(
-                        Lucide.Captions,
-                        stringResource(R.string.player_menu_subtitles),
-                        { onMenu(Menu.Subtitles) },
-                        Modifier.semantics { stateDescription = subtitleState },
-                        size = 52.dp,
-                        iconSize = 26.dp,
-                        background = Color.Transparent,
-                    )
-                    if (controller.subtitle != null) {
-                        Box(Modifier.align(Alignment.BottomCenter).offset(y = (-8).dp).width(20.dp).height(2.dp).clip(CircleShape).background(Palette.Accent))
-                    }
+                if (prefs.audioButton) {
+                    RoundIconButton(Lucide.AudioLines, stringResource(R.string.player_menu_audio), { onMenu(Menu.Audio) }, size = 52.dp, iconSize = 26.dp, background = Color.Transparent)
                 }
+                if (prefs.subtitlesButton) SubtitlesButton(controller, onMenu)
                 RoundIconButton(Lucide.Settings, stringResource(R.string.player_menu_settings), { onMenu(Menu.Settings) }, size = 52.dp, iconSize = 26.dp, background = Color.Transparent)
             }
+        }
+    }
+}
+
+/** Opens the subtitles menu, with a line under it while subtitles are on. */
+@Composable
+private fun SubtitlesButton(controller: PlayerController, onMenu: (Menu) -> Unit) {
+    Box {
+        // The line under the icon shows subtitles are on; a screen reader hears which.
+        val subtitleState = controller.subtitle?.let { subtitleLabel(it, controller.subtitles) }
+            ?: stringResource(R.string.player_subtitles_off)
+        RoundIconButton(
+            Lucide.Captions,
+            stringResource(R.string.player_menu_subtitles),
+            { onMenu(Menu.Subtitles) },
+            Modifier.semantics { stateDescription = subtitleState },
+            size = 52.dp,
+            iconSize = 26.dp,
+            background = Color.Transparent,
+        )
+        if (controller.subtitle != null) {
+            Box(Modifier.align(Alignment.BottomCenter).offset(y = (-8).dp).width(20.dp).height(2.dp).clip(CircleShape).background(Palette.Accent))
         }
     }
 }

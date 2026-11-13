@@ -339,6 +339,7 @@ private fun PlaybackPage(session: Session) {
         item(key = "skips") { SkipsSection(playback, loaded, save) }
         item(key = "device") { DeviceSection(prefs, loaded) }
         item(key = "gestures") { GesturesSection(prefs) }
+        item(key = "buttons") { ButtonsSection(prefs) }
         item(key = "transcoding") { TranscodingSection(prefs, loaded) }
         if (passthrough.isNotEmpty()) item(key = "passthrough") { PassthroughSection(prefs, passthrough) }
     }
@@ -557,6 +558,38 @@ private fun GesturesSection(prefs: PlayerPrefs) {
         Gap(8.dp)
         Text(
             stringResource(R.string.playback_gestures_hint),
+            style = MaterialTheme.typography.bodySmall,
+            color = Palette.Muted,
+        )
+    }
+}
+
+/**
+ * Which buttons the player's controls show, which this device keeps. Back,
+ * play, and the settings menu always show, so none of them strands anyone.
+ */
+@Composable
+private fun ButtonsSection(prefs: PlayerPrefs) {
+    val context = LocalContext.current
+    val hasPip = remember { context.packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE) }
+    Section(stringResource(R.string.playback_buttons_title)) {
+        Panel {
+            SwitchRow(stringResource(R.string.playback_buttons_skip), prefs.skipButtons) { prefs.skipButtons = it }
+            // With picture in picture off, there's no button to hide.
+            if (hasPip && prefs.pictureInPicture) {
+                RowDivider()
+                SwitchRow(stringResource(R.string.playback_pip_title), prefs.pictureInPictureButton) { prefs.pictureInPictureButton = it }
+            }
+            RowDivider()
+            SwitchRow(stringResource(R.string.playback_buttons_lock), prefs.lockButton) { prefs.lockButton = it }
+            RowDivider()
+            SwitchRow(stringResource(R.string.playback_buttons_audio), prefs.audioButton) { prefs.audioButton = it }
+            RowDivider()
+            SwitchRow(stringResource(R.string.playback_buttons_subtitles), prefs.subtitlesButton) { prefs.subtitlesButton = it }
+        }
+        Gap(8.dp)
+        Text(
+            stringResource(R.string.playback_buttons_hint),
             style = MaterialTheme.typography.bodySmall,
             color = Palette.Muted,
         )
