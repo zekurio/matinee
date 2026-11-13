@@ -46,7 +46,9 @@ def fail(message: str) -> None:
 
 
 def contents(document: dict) -> str:
-    return json.dumps(document, indent=2, sort_keys=True, separators=(",", " : ")) + "\n"
+    # Plain two-space JSON, which is how the repository's formatter
+    # (`pnpm fmt`) writes it too; Xcode reads either.
+    return json.dumps(document, indent=2, sort_keys=True) + "\n"
 
 
 def svg_from_drawable(path: Path) -> str:
