@@ -1,17 +1,20 @@
 import { RPC_PATH, trickplayTilePath } from "@matinee/contracts"
 import { t } from "@matinee/contracts/schema"
 import { buttonVariants } from "@matinee/ui/components/button"
+import { toast } from "@matinee/ui/components/sonner"
 import { Spinner } from "@matinee/ui/components/spinner"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router"
-import { useEffect, useState } from "react"
+import { useEffect, useEffectEvent, useState } from "react"
 
 import { useDocumentTitle } from "@/components/page-header"
 import type { UpNext } from "@/components/up-next"
+import type { PartyLink } from "@/components/use-party-sync"
 import type { ProgressReport } from "@/components/use-progress-report"
 import { VideoPlayer } from "@/components/video-player"
 import { tr } from "@/i18n"
 import { itemLabel } from "@/lib/media"
+import { partyPosition, useParty } from "@/lib/party"
 import {
   type FirstStart,
   isUnplayable,
@@ -83,6 +86,7 @@ function WatchItem({
 }) {
   const router = useRouter()
   const queryClient = useQueryClient()
+  const { user } = Route.useRouteContext()
   // The first answer, which the player starts from and keeps. The ones
   // after it are the player's own.
   const started = useQuery(startQuery(itemId, start))
@@ -137,6 +141,72 @@ function WatchItem({
 
   useDocumentTitle(pageTitle)
 
+  // In a watch party, the player follows it while it plays this file.
+  // The owner's player is where the party's file comes from: what they
+  // open, the party watches. Anyone else who opens another file watches
+  // it alone, and stays in the party.
+  const { party, offsetMs } = useParty()
+  const partyItemId = party?.item?.id ?? null
+  const inStep = partyItemId === itemId
+  const [wasInStep, setWasInStep] = useState(false)
+  if (inStep && !wasInStep) setWasInStep(true)
+  const link: PartyLink | null =
+    party && inStep && party.playback
+      ? {
+          playback: party.playback,
+          offsetMs,
+          watching: party.members.length,
+          nameOf: (id) => {
+            if (id === user.id) return null
+            const member = party.members.find((other) => other.user.id === id)
+            return member
+              ? (member.user.displayName ?? member.user.username)
+              : null
+          },
+          control: (playing, positionSeconds) =>
+            void client.party
+              .control({ itemId, playing, positionSeconds })
+              .catch(() => {}),
+          // The party goes on to its queue, and this player after it.
+          ended: () => void client.party.next({ itemId }).catch(() => {}),
+        }
+      : null
+
+  // The owner opened this file, so the party watches it from where the
+  // owner starts.
+  const startsAt = first?.plan.position
+  const announce =
+    party !== null && party.owner && !wasInStep && startsAt !== undefined
+  useEffect(() => {
+    if (!announce) return
+    client.party
+      .play({ itemId, positionSeconds: startsAt })
+      .catch((cause: unknown) =>
+        toast.error(tr("party.failed"), { description: errorMessage(cause) }),
+      )
+  }, [announce, itemId, startsAt])
+
+  // The party went on to another file, and a player that was with it
+  // goes along.
+  const follow =
+    wasInStep && partyItemId !== null && !inStep ? partyItemId : null
+  const goAlong = useEffectEvent((to: string) => {
+    void router.navigate({
+      to: "/watch/$itemId",
+      params: { itemId: to },
+      // Where the party is in it by now, in place of the resume point.
+      search: {
+        start: party?.playback
+          ? Math.floor(partyPosition(party.playback, offsetMs))
+          : 0,
+      },
+      replace: true,
+    })
+  })
+  useEffect(() => {
+    if (follow !== null) goAlong(follow)
+  }, [follow])
+
   // Home's rows, title pages, and statistics depend on what was just watched.
   // The next visit asks anew, for a new sitting from where this one ends.
   // A remount under StrictMode asks again too, and keeps the first answer.
@@ -184,7 +254,9 @@ function WatchItem({
             src: (tile) => trickplayTilePath(itemId, trickplayImages.key, tile),
           }
         }
-        upNext={upNext}
+        // A party's queue says what comes next.
+        upNext={link ? null : upNext}
+        party={link}
         onBack={back}
         onUnplayable={() => setStopped({ unplayable: true })}
         onFailed={(cause) => setStopped({ unplayable: false, cause })}

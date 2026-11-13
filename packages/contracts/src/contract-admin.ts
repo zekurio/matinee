@@ -17,6 +17,7 @@ import {
   ScheduledTask,
   TaskInput,
 } from "./jobs"
+import { AdminNetworkSettings, NetworkSettings } from "./network"
 import { t } from "./schema"
 import {
   CreatedInvite,
@@ -121,6 +122,18 @@ export const adminContract = oc.tag("Admin").router({
     update: put("/admin/trickplay")
       .input(TrickplaySettings)
       .output(AdminTrickplaySettings),
+  },
+  /**
+   * Which addresses are local, which proxies to believe, and what the
+   * connection sends. See `NetworkSettings`. Saving applies at once, to
+   * the next request. `connection` is how the server sees the request
+   * that asked, for checking the result.
+   */
+  network: {
+    get: get("/admin/network").output(AdminNetworkSettings),
+    update: put("/admin/network")
+      .input(NetworkSettings)
+      .output(AdminNetworkSettings),
   },
   /**
    * Accounts. People make their own: with a passkey while passkey sign-up

@@ -29,6 +29,7 @@ const SECTIONS = [
   { id: "authentication", path: "admin/authentication" },
   { id: "transcoding", path: "admin/transcoding" },
   { id: "trickplay", path: "admin/trickplay" },
+  { id: "network", path: "admin/network" },
   { id: "jobs", path: "admin/jobs" },
   { id: "branding", path: "admin/branding" },
 ] as const

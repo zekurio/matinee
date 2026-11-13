@@ -13,7 +13,9 @@ import libraries from "./libraries"
 import library from "./library"
 import link from "./link"
 import media from "./media"
+import network from "./network"
 import oidc from "./oidc"
+import party from "./party"
 import people from "./people"
 import playback from "./playback"
 import player from "./player"
@@ -61,4 +63,6 @@ export default {
   ...playback,
   ...common,
   ...link,
+  ...party,
+  ...network,
 } satisfies Translation

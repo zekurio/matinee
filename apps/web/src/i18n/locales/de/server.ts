@@ -181,6 +181,22 @@ export default {
     "Es wurde keine Stelle gefunden, an der diese Datei starten kann.",
   "server.libraries.cantRead": "{path} kann nicht gelesen werden.",
 
+  "server.network.invalidRange":
+    "{entry} ist keine Adresse und kein Bereich wie 192.168.0.0/16.",
+
+  "server.party.over": "Diese Watch-Party ist vorbei.",
+  "server.party.ownerOnly": "Das kann nur die Leitung der Party.",
+  "server.party.full": "Diese Watch-Party ist voll.",
+  "server.party.queueFull": "Die Warteschlange der Party ist voll.",
+  "server.party.ownerSkips":
+    "Nur die Leitung der Party kann zum Nächsten springen.",
+  "server.party.entryGone":
+    "Das ist nicht mehr in der Warteschlange der Party.",
+  "server.party.removed": "Du wurdest aus dieser Watch-Party entfernt.",
+  "server.party.notMember": "Diese Person ist nicht mehr in der Party.",
+  "server.party.self": "Wähle jemand anderen als dich selbst.",
+  "server.party.notIn": "Du bist in keiner Watch-Party.",
+
   "server.titles.notFound": "Dieser Titel ist in keiner Mediathek.",
   "server.titles.gone":
     "Dieser Titel ist in keiner Mediathek. Lade die Seite neu.",

@@ -650,6 +650,26 @@ data class AdminTranscodingSettings(
     val capabilities: TranscodingCapabilities,
 )
 
+@Serializable
+data class NetworkSettings(
+    val localNetworks: List<String>,
+    val trustedProxies: List<String>,
+    val uploadBitrate: Int?,
+)
+
+@Serializable
+data class NetworkConnection(
+    val address: String?,
+    val local: Boolean,
+    val unheededProxy: Boolean,
+)
+
+@Serializable
+data class AdminNetworkSettings(
+    val settings: NetworkSettings,
+    val connection: NetworkConnection,
+)
+
 object TrickplayInterval {
     val all = listOf(2, 5, 10, 15, 30)
 }
@@ -1642,6 +1662,51 @@ data class OidcAccount(
 )
 
 @Serializable
+data class PartyMember(
+    val user: ProfileUser,
+    val owner: Boolean,
+)
+
+@Serializable
+data class PartyPlayback(
+    val playing: Boolean,
+    val positionSeconds: Double,
+    val at: String,
+    val by: String?,
+)
+
+@Serializable
+data class PartyEntry(
+    val id: String,
+    val item: MediaItem,
+    val by: ProfileUser?,
+    val removable: Boolean,
+)
+
+@Serializable
+data class Party(
+    val id: String,
+    val name: String?,
+    val owner: Boolean,
+    val members: List<PartyMember>,
+    val item: MediaItem?,
+    val restricted: Boolean,
+    val playback: PartyPlayback?,
+    val queue: List<PartyEntry>,
+    val proposals: List<PartyEntry>,
+    val now: String,
+)
+
+@Serializable
+data class PartyInvite(
+    val id: String,
+    val name: String?,
+    val owner: ProfileUser,
+    val members: Int,
+    val joined: Boolean,
+)
+
+@Serializable
 data class Passkey(
     val id: String,
     val name: String?,
@@ -2228,6 +2293,49 @@ data class PlaybackSetTitleWatchedInput(
     val season: Explicit<Int>? = null,
     val watched: Boolean,
     val watchedAt: String? = null,
+)
+
+@Serializable
+data class PartyCreateInput(
+    val name: String? = null,
+)
+
+@Serializable
+data class PartyRenameInput(
+    val name: String,
+)
+
+@Serializable
+data class PartyTransferInput(
+    val userId: String,
+)
+
+@Serializable
+data class PartyPlayInput(
+    val itemId: String,
+    val positionSeconds: Double? = null,
+)
+
+@Serializable
+data class PartyControlInput(
+    val itemId: String,
+    val playing: Boolean,
+    val positionSeconds: Double,
+)
+
+@Serializable
+data class PartyNextInput(
+    val itemId: String,
+)
+
+@Serializable
+data class PartyQueueAddInput(
+    val itemId: String,
+)
+
+@Serializable
+data class PartyQueueMoveInput(
+    val index: Int,
 )
 
 @Serializable

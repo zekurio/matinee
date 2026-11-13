@@ -20,6 +20,7 @@ open class ContractApi(transport: ApiTransport) {
     val media = MediaApi(transport)
     val downloads = DownloadsApi(transport)
     val playback = PlaybackApi(transport)
+    val party = PartyApi(transport)
     val home = HomeApi(transport)
     val favorites = FavoritesApi(transport)
     val profiles = ProfilesApi(transport)
@@ -854,6 +855,146 @@ class PlaybackApi internal constructor(private val transport: ApiTransport) {
     }
 }
 
+class PartyApi internal constructor(private val transport: ApiTransport) {
+    val queue = PartyQueueApi(transport)
+
+    /** `GET /party` */
+    suspend fun get(): Party? =
+        transport.call("GET", listOf("party"), emptyList(), null, Party.serializer().nullable)
+
+    /** `POST /party` */
+    suspend fun create(name: String? = null): Party =
+        transport.call(
+            "POST",
+            listOf("party"),
+            emptyList(),
+            transport.json(PartyCreateInput.serializer(), PartyCreateInput(name = name)),
+            Party.serializer(),
+        )
+
+    /** `GET /party/live` */
+    fun follow(): Flow<Party?> =
+        transport.events(
+            "GET",
+            listOf("party", "live"),
+            emptyList(),
+            null,
+            Party.serializer().nullable,
+        )
+
+    /** `GET /parties/{partyId}` */
+    suspend fun invite(partyId: String): PartyInvite =
+        transport.call(
+            "GET",
+            listOf("parties", partyId),
+            emptyList(),
+            null,
+            PartyInvite.serializer(),
+        )
+
+    /** `POST /parties/{partyId}/join` */
+    suspend fun join(partyId: String): Party =
+        transport.call(
+            "POST",
+            listOf("parties", partyId, "join"),
+            emptyList(),
+            null,
+            Party.serializer(),
+        )
+
+    /** `POST /party/leave` */
+    suspend fun leave() {
+        transport.send("POST", listOf("party", "leave"), emptyList(), null)
+    }
+
+    /** `PUT /party/name` */
+    suspend fun rename(name: String) {
+        transport.send(
+            "PUT",
+            listOf("party", "name"),
+            emptyList(),
+            transport.json(PartyRenameInput.serializer(), PartyRenameInput(name = name)),
+        )
+    }
+
+    /** `PUT /party/owner` */
+    suspend fun transfer(userId: String) {
+        transport.send(
+            "PUT",
+            listOf("party", "owner"),
+            emptyList(),
+            transport.json(PartyTransferInput.serializer(), PartyTransferInput(userId = userId)),
+        )
+    }
+
+    /** `DELETE /party/members/{userId}` */
+    suspend fun kick(userId: String) {
+        transport.send("DELETE", listOf("party", "members", userId), emptyList(), null)
+    }
+
+    /** `PUT /party/item` */
+    suspend fun play(itemId: String, positionSeconds: Double? = null) {
+        transport.send(
+            "PUT",
+            listOf("party", "item"),
+            emptyList(),
+            transport.json(PartyPlayInput.serializer(), PartyPlayInput(itemId = itemId, positionSeconds = positionSeconds)),
+        )
+    }
+
+    /** `PUT /party/playback` */
+    suspend fun control(itemId: String, playing: Boolean, positionSeconds: Double) {
+        transport.send(
+            "PUT",
+            listOf("party", "playback"),
+            emptyList(),
+            transport.json(PartyControlInput.serializer(), PartyControlInput(itemId = itemId, playing = playing, positionSeconds = positionSeconds)),
+        )
+    }
+
+    /** `POST /party/next` */
+    suspend fun next(itemId: String) {
+        transport.send(
+            "POST",
+            listOf("party", "next"),
+            emptyList(),
+            transport.json(PartyNextInput.serializer(), PartyNextInput(itemId = itemId)),
+        )
+    }
+}
+
+class PartyQueueApi internal constructor(private val transport: ApiTransport) {
+    /** `POST /party/queue` */
+    suspend fun add(itemId: String) {
+        transport.send(
+            "POST",
+            listOf("party", "queue"),
+            emptyList(),
+            transport.json(PartyQueueAddInput.serializer(), PartyQueueAddInput(itemId = itemId)),
+        )
+    }
+
+    /** `POST /party/queue/{entryId}/accept` */
+    suspend fun accept(entryId: String) {
+        transport.send("POST", listOf("party", "queue", entryId, "accept"), emptyList(), null)
+    }
+
+    /** `PUT /party/queue/{entryId}` */
+    suspend fun move(entryId: String, index: Int) {
+        transport.send(
+            "PUT",
+            listOf("party", "queue", entryId),
+            emptyList(),
+            transport.json(PartyQueueMoveInput.serializer(), PartyQueueMoveInput(index = index)),
+        )
+    }
+
+    /** `DELETE /party/queue/{entryId}` */
+    suspend fun remove(entryId: String) {
+        transport.send("DELETE", listOf("party", "queue", entryId), emptyList(), null)
+    }
+}
+
 class HomeApi internal constructor(private val transport: ApiTransport) {
     /** `GET /home/continue-watching` */
     suspend fun continueWatching(limit: Int? = null): List<MediaItem> =
@@ -1006,6 +1147,7 @@ class AdminApi internal constructor(private val transport: ApiTransport) {
     val groups = AdminGroupsApi(transport)
     val invites = AdminInvitesApi(transport)
     val jobs = AdminJobsApi(transport)
+    val network = AdminNetworkApi(transport)
     val setup = AdminSetupApi(transport)
     val transcoding = AdminTranscodingApi(transport)
     val trickplay = AdminTrickplayApi(transport)
@@ -1220,6 +1362,28 @@ class AdminJobsApi internal constructor(private val transport: ApiTransport) {
             emptyList(),
             null,
             ScheduledTask.serializer(),
+        )
+}
+
+class AdminNetworkApi internal constructor(private val transport: ApiTransport) {
+    /** `GET /admin/network` */
+    suspend fun get(): AdminNetworkSettings =
+        transport.call(
+            "GET",
+            listOf("admin", "network"),
+            emptyList(),
+            null,
+            AdminNetworkSettings.serializer(),
+        )
+
+    /** `PUT /admin/network` */
+    suspend fun update(networkSettings: NetworkSettings): AdminNetworkSettings =
+        transport.call(
+            "PUT",
+            listOf("admin", "network"),
+            emptyList(),
+            transport.json(NetworkSettings.serializer(), networkSettings),
+            AdminNetworkSettings.serializer(),
         )
 }
 

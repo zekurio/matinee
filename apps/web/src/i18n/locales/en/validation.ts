@@ -39,6 +39,9 @@ export default defineMessages("validation", {
   "validation.groupName": "Give the group a name.",
   "validation.max256": "Use at most 256 characters.",
 
+  // network.ts: the network settings.
+  "validation.networkRange": "Use an address or a range like 192.168.0.0/16.",
+
   // invites.ts: invite links.
   "validation.inviteToken": "That invite link is incomplete.",
 

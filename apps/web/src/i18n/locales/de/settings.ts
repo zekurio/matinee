@@ -48,6 +48,11 @@ export default {
   "settings.section.trickplay.description": "Vorschaubilder auf der Zeitleiste",
   "settings.section.trickplay.keywords":
     "Zeitleiste, Spulen, Vorschaubilder, Thumbnails, Keyframes, Intervall",
+  "settings.section.network.label": "Netzwerk",
+  "settings.section.network.description":
+    "Lokale Netzwerke, Proxys und Upload-Geschwindigkeit",
+  "settings.section.network.keywords":
+    "Lokales Netzwerk, LAN, Entfernt, Reverse-Proxy, Vertrauenswürdige Proxys, X-Forwarded-For, CIDR, IP-Adresse, Upload, Bandbreite, Bitrate, Watch-Party",
   "settings.section.jobs.label": "Aufgaben",
   "settings.section.jobs.description":
     "Hintergrund-Warteschlangen und geplante Aufgaben",

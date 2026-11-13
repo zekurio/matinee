@@ -18,6 +18,11 @@ export type FollowOptions<T> = {
    * stale on its own, like sessions that stop reporting.
    */
   refreshMs?: number
+  /**
+   * How long to wait after a change for more, `SETTLE_MS` when left out.
+   * 0 for state a client acts on at once, like a party's pause.
+   */
+  settleMs?: number
 }
 
 /**
@@ -31,6 +36,7 @@ export async function* follow<T>({
   load,
   signal: request,
   refreshMs,
+  settleMs = SETTLE_MS,
 }: FollowOptions<T>): AsyncGenerator<T, void, void> {
   const signal = streamSignal(request)
   let changed = false
@@ -72,7 +78,7 @@ export async function* follow<T>({
       }
       yield value
       await nextChange()
-      if (changed && !signal.aborted) await sleep(SETTLE_MS)
+      if (changed && settleMs > 0 && !signal.aborted) await sleep(settleMs)
     }
   } finally {
     for (const unsubscribe of unsubscribes) unsubscribe()

@@ -22,6 +22,8 @@ For NixOS and the dev shell, see the [repository README](../../README.md).
 - [Downloads](#downloads)
 - [Transcoding and ffmpeg](#transcoding-and-ffmpeg)
 - [Trickplay](#trickplay)
+- [Watch parties](#watch-parties)
+- [Local and remote](#local-and-remote)
 - [Statistics](#statistics)
 - [Profiles and favorites](#profiles-and-favorites)
 - [How auth works](#how-auth-works)
@@ -418,6 +420,51 @@ decoding every frame, and failures fall back to the CPU.
 Clients read `media.trickplay` and load tiles with `trickplayTilePath()`.
 Players that read HLS image playlists can use `trickplayPlaylistPath()`,
 but must send the `Authorization` header with tile requests.
+
+## Watch parties
+
+Accounts on the server watch a file together, at the same point. Someone
+starts a party from the bar and shares its link; anyone with an account
+joins with it, after the page asks. An account is in one party at a time.
+
+- Everyone plays, pauses, and seeks for all. A party plays at normal speed.
+- The owner picks what plays: whatever they open in the player, the party
+  watches. Only the owner sets the queue. Anyone else's file becomes a
+  suggestion, which the owner takes into the queue or dismisses.
+- The owner names the party, hands it to another member, and removes
+  members, who can't join that party again.
+- A file that ends goes on to the queue's first, or the party rests at the
+  end.
+- A player that buffers falls behind alone and catches up after. Up to two
+  seconds off it plays a little faster or slower; further off it jumps.
+
+The party's state is a position at a moment on the server's clock, sent to
+each member as a stream (`party.follow`). Players work out where that is
+now and match it. A member with no stream open for a minute has left, and
+when the owner leaves, the member who joined next owns the party. Parties
+live in memory, so a restart ends them.
+
+## Local and remote
+
+Settings → Network holds what the server is told about its network. It
+works none of it out.
+
+- **Local networks**: the addresses that are at home, the private ranges by
+  default. A request from any other address is remote. Friends on a VPN
+  arrive with private addresses but through the upload, so take their range
+  out.
+- **Trusted proxies**: the reverse proxies in front of the server. Only
+  from these does it believe `X-Forwarded-For`, which anyone can send.
+  Without its proxy listed, every request looks like the proxy's, and the
+  panel says so.
+- **Upload speed**: what the connection sends. A watch party's remote
+  members each get an equal share of it as their bit rate limit, on top of
+  their group's. Local members aren't limited and don't count. The share
+  applies when a player asks how to play, so a stream that runs already
+  keeps its rate when someone joins.
+
+The panel shows the address the server sees the admin's own browser at, and
+whether that counts as local.
 
 ## Statistics
 

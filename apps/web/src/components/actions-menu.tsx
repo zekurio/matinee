@@ -38,6 +38,7 @@ import {
   IdentifyDialog,
   invalidateTitleData,
 } from "@/components/identify-dialog"
+import { PartyMenuItem } from "@/components/party/party-menu-item"
 import {
   ImageEditorDialog,
   type ImageOwner,
@@ -47,6 +48,7 @@ import { WatchedDateDialog } from "@/components/watched-date-dialog"
 import { useItemWatched, WatchedMenuItems } from "@/components/watched-menu"
 import { tr } from "@/i18n"
 import { seasonName } from "@/lib/media"
+import { type PartyRole, usePartyRole } from "@/lib/party"
 import { client, errorMessage, orpc } from "@/lib/rpc"
 
 /*
@@ -54,6 +56,7 @@ import { client, errorMessage, orpc } from "@/lib/rpc"
  * its page, and its row in a folder: what has no button of its own.
  * Marking watched and favorites have the tick and the heart beside it.
  * A file the viewer stopped partway into can play from the start.
+ * In a watch party, a file can go to its queue, or be proposed for it.
  * Everyone gets Download…; admins also get fix match and refresh, which
  * act on the movie or show, and the image editor for what the menu is of.
  * Those need the whole title, which loads when they open.
@@ -140,6 +143,18 @@ function restartable(target: ActionsTarget): MediaItem | null {
     return null
   }
   return file
+}
+
+/**
+ * The one file the menu is of, which a watch party can queue: an episode,
+ * or a movie's file. A show or a season is many.
+ */
+function fileOf(target: ActionsTarget): MediaItem | null {
+  if (target.kind === "item") return target.item
+  if (target.kind === "title" && target.title.kind === "movie") {
+    return target.file ?? null
+  }
+  return null
 }
 
 function titleDownload(
@@ -268,9 +283,12 @@ export function ActionsMenu({
   const { user } = authed.useRouteContext()
   const admin = user.role === "admin"
   const scope = scopeOf(target)
+  const role = usePartyRole()
+  const file = fileOf(target)
   const plan = {
     scope,
     restart: restartable(target),
+    party: role && file ? { role, file } : null,
     admin,
     images: admin && scope.title ? scope.images : null,
     look,
@@ -279,7 +297,7 @@ export function ActionsMenu({
   // Most menus hold something whatever the server says: playing from the
   // start, a row's own items, or an admin's image editor. Only the rest
   // ask it before showing a trigger.
-  if (plan.restart || children || plan.images) {
+  if (plan.restart || plan.party || children || plan.images) {
     return <DeferredActionsMenu {...plan} className={className} />
   }
   return <CheckedActionsMenu {...plan} className={className} />
@@ -290,6 +308,8 @@ type MenuPlan = {
   scope: Scope
   /** The file Play from the start plays. */
   restart: MediaItem | null
+  /** The file a watch party can queue, while the viewer is in one. */
+  party: { role: PartyRole; file: MediaItem } | null
   admin: boolean
   /** Whose images the editor edits, for an admin. */
   images: ImageOwner | null
@@ -350,6 +370,7 @@ function DeferredActionsMenu({
 function MountedActionsMenu({
   scope,
   restart,
+  party,
   admin,
   images,
   look,
@@ -433,7 +454,7 @@ function MountedActionsMenu({
   })
 
   const adminItems = Boolean(adminProvider) || images !== null
-  const playItems = Boolean(restart || children)
+  const playItems = Boolean(restart || party || children)
   return (
     <>
       <DropdownMenu defaultOpen={defaultOpen}>
@@ -457,6 +478,13 @@ function MountedActionsMenu({
               <RotateCcwIcon />
               {tr("media.playFromStart")}
             </DropdownMenuItem>
+          )}
+          {party && (
+            <PartyMenuItem
+              item={party.file}
+              name={scope.name}
+              role={party.role}
+            />
           )}
           {children}
           {playItems && (downloads || adminItems) && <DropdownMenuSeparator />}

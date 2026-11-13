@@ -184,6 +184,22 @@ export default defineMessages("server", {
   "server.libraries.cantRead": "Can't read {path}.",
 
   // rpc/titles.ts, rpc/playback.ts, rpc/profiles.ts, and rpc/people.ts.
+  // rpc/admin-network.ts: the network settings.
+  "server.network.invalidRange":
+    "{entry} isn't an address or a range like 192.168.0.0/16.",
+
+  // rpc/party.ts: watch parties.
+  "server.party.over": "This watch party is over.",
+  "server.party.ownerOnly": "Only the party's owner can do this.",
+  "server.party.full": "This watch party is full.",
+  "server.party.queueFull": "The party's queue is full.",
+  "server.party.ownerSkips": "Only the party's owner can skip to the next one.",
+  "server.party.entryGone": "That's no longer in the party's queue.",
+  "server.party.removed": "You were removed from this watch party.",
+  "server.party.notMember": "That person isn't in the party anymore.",
+  "server.party.self": "Pick someone other than yourself.",
+  "server.party.notIn": "You aren't in a watch party.",
+
   "server.titles.notFound": "This title isn't in any library.",
   "server.titles.gone": "This title isn't in any library. Reload the page.",
   "server.titles.fileGone": "This file isn't in any library. Reload the page.",
