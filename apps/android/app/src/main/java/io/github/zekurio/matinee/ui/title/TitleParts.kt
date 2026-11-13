@@ -193,7 +193,8 @@ fun Overview(text: String, tagline: String? = null, lines: Int = 3) {
  * Play, then the round watched, favorite, and more buttons, as under a
  * title's or episode's heading. Resume says the time left beside it.
  * The tick, as the web's, marks unwatched at once and asks when
- * the person watched [name] before marking it watched.
+ * the person watched [name] before marking it watched. Without
+ * [onFavorite], for what can't be a favorite, the heart stays out.
  */
 @Composable
 fun ActionRow(
@@ -203,7 +204,7 @@ fun ActionRow(
     watched: Boolean,
     favorite: Boolean,
     onWatched: suspend (watched: Boolean, watchedAt: String?) -> Unit,
-    onFavorite: suspend () -> Unit,
+    onFavorite: (suspend () -> Unit)?,
     /** Opens the page's menu; null when it would be empty. */
     onMore: (() -> Unit)?,
 ) {
@@ -249,7 +250,7 @@ fun ActionRow(
             },
             tint = if (watched) Palette.Accent else Palette.Foreground,
         )
-        RoundIconButton(
+        if (onFavorite != null) RoundIconButton(
             if (favorite) Lucide.HeartFilled else Lucide.Heart,
             stringResource(if (favorite) R.string.media_remove_favorite else R.string.media_add_favorite),
             { scope.launchShowing(snackbar, favoriteFailure) { onFavorite() } },

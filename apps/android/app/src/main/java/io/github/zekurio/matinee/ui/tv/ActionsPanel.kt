@@ -350,12 +350,30 @@ private fun titleEntries(title: TitleSummary, file: MediaItem?, here: Boolean): 
     }
 }
 
-/** A season's entries: its page. The phone's download and image editor stay off the TV. */
+/**
+ * A season's entries: its favorite and its page, from its card. The phone's
+ * download and image editor stay off the TV.
+ */
 @Composable
 private fun seasonEntries(title: TitleSummary, season: Season, here: Boolean): List<Entry> {
+    val api = LocalApi.current
     val nav = LocalNavigator.current
+    val snackbar = LocalSnackbar.current
     val res = LocalResources.current
+    val viewer = LocalContext.current.app.viewer
+    val scope = LocalTvMenu.current?.actions?.scope ?: return emptyList()
+    val favorite = viewer.isFavorite(title, season)
+    val favoriteFailure = stringResource(R.string.media_favorite_failed)
     return buildList {
+        // The files without a season number aren't a season to mark.
+        if (!here && season.number != null) {
+            add(
+                Entry(
+                    if (favorite) Lucide.HeartFilled else Lucide.Heart,
+                    res.getString(if (favorite) R.string.media_remove_favorite else R.string.media_add_favorite),
+                ) { scope.launchShowing(snackbar, favoriteFailure) { viewer.setFavorite(api, title, season, !favorite) } },
+            )
+        }
         if (!here) add(Entry(Lucide.List, res.getString(R.string.media_hero_episodes), leaves = true) { nav.season(title.id, season.number) })
     }
 }

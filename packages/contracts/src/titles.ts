@@ -177,6 +177,11 @@ export const Season = t.object({
   itemCount: t.number().int(),
   /** Files the signed-in user finished. */
   watchedCount: t.number().int(),
+  /**
+   * The signed-in user marked the season as a favorite. Always false for
+   * the files without a season number, which aren't a season to mark.
+   */
+  favorite: t.boolean(),
 })
 export type Season = t.infer<typeof Season>
 

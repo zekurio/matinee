@@ -88,6 +88,29 @@ export const favorite = pgTable(
 )
 
 /**
+ * A season of a show a user marked as a favorite. Files without a season
+ * number aren't a season to mark. The season needn't have provider
+ * metadata, so the row hangs off the show.
+ */
+export const favoriteSeason = pgTable(
+  "favorite_season",
+  {
+    userId: uuid()
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    titleId: uuid()
+      .notNull()
+      .references(() => title.id, { onDelete: "cascade" }),
+    seasonNumber: integer().notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.userId, t.titleId, t.seasonNumber] }),
+    index("favorite_season_recent_idx").on(t.userId, t.createdAt),
+  ],
+)
+
+/**
  * A file a user marked as a favorite, such as an episode. A movie is a
  * favorite through its title.
  */

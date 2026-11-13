@@ -887,26 +887,6 @@ class HomeApi internal constructor(private val transport: ApiTransport) {
 }
 
 class FavoritesApi internal constructor(private val transport: ApiTransport) {
-    /** `GET /favorites` */
-    suspend fun list(limit: Int? = null): List<TitleSummary> =
-        transport.call(
-            "GET",
-            listOf("favorites"),
-            listOf("limit" to limit?.toString()),
-            null,
-            ListSerializer(TitleSummary.serializer()),
-        )
-
-    /** `GET /favorites/items` */
-    suspend fun items(limit: Int? = null): List<MediaItem> =
-        transport.call(
-            "GET",
-            listOf("favorites", "items"),
-            listOf("limit" to limit?.toString()),
-            null,
-            ListSerializer(MediaItem.serializer()),
-        )
-
     /** `PUT /titles/{titleId}/favorite` */
     suspend fun set(titleId: String, favorite: Boolean) {
         transport.send(
@@ -914,6 +894,16 @@ class FavoritesApi internal constructor(private val transport: ApiTransport) {
             listOf("titles", titleId, "favorite"),
             emptyList(),
             transport.json(FavoritesSetInput.serializer(), FavoritesSetInput(favorite = favorite)),
+        )
+    }
+
+    /** `PUT /titles/{titleId}/season-favorite` */
+    suspend fun setSeason(titleId: String, season: Int, favorite: Boolean) {
+        transport.send(
+            "PUT",
+            listOf("titles", titleId, "season-favorite"),
+            emptyList(),
+            transport.json(FavoritesSetSeasonInput.serializer(), FavoritesSetSeasonInput(season = season, favorite = favorite)),
         )
     }
 
@@ -955,6 +945,16 @@ class ProfilesApi internal constructor(private val transport: ApiTransport) {
             listOf("limit" to limit?.toString()),
             null,
             ListSerializer(WatchedEntry.serializer()).nullable,
+        )
+
+    /** `GET /profiles/{username}/favorites` */
+    suspend fun favorites(username: String, limit: Int? = null): Favorites? =
+        transport.call(
+            "GET",
+            listOf("profiles", username, "favorites"),
+            listOf("limit" to limit?.toString()),
+            null,
+            Favorites.serializer().nullable,
         )
 }
 

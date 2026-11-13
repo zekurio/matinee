@@ -63,7 +63,8 @@ export function CardActions({
   /** Names the movie, show, or episode for screen readers. */
   name: string
   watched: WatchedState
-  favorite: Toggle
+  /** None for what can't be a favorite. */
+  favorite: Toggle | null
   /** The card's "⋯" menu, in the card look. */
   menu?: ReactNode
   /** Show the icons on touch screens, always. */
@@ -100,22 +101,24 @@ export function CardActions({
           onPickDate={() => setPicking(true)}
         />
       )}
-      <Button
-        variant="ghost"
-        size="icon"
-        aria-label={
-          favorite.on
-            ? tr("media.removeNamedFavorite", { name })
-            : tr("media.addNamedFavorite", { name })
-        }
-        title={
-          favorite.on ? tr("media.removeFavorite") : tr("media.addFavorite")
-        }
-        onClick={favorite.toggle}
-        className={cardIconButton}
-      >
-        <FavoriteHeart on={favorite.on} className="size-5" />
-      </Button>
+      {favorite && (
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label={
+            favorite.on
+              ? tr("media.removeNamedFavorite", { name })
+              : tr("media.addNamedFavorite", { name })
+          }
+          title={
+            favorite.on ? tr("media.removeFavorite") : tr("media.addFavorite")
+          }
+          onClick={favorite.toggle}
+          className={cardIconButton}
+        >
+          <FavoriteHeart on={favorite.on} className="size-5" />
+        </Button>
+      )}
       {menu}
       {picking !== null && (
         <WatchedDateDialog

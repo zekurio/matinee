@@ -18,10 +18,18 @@ export default {
   "profile.tryAgain": "Erneut versuchen",
 
   "profile.favorites": "Favoriten",
-  "profile.favoriteEpisodes": "Lieblingsfolgen",
   "profile.noFavorites": "Noch keine Favoriten",
   "profile.noFavoritesHint":
-    "Tippe bei einem Film, einer Serie oder einer Folge auf das Herz, um sie hier zu sammeln.",
+    "Tippe bei einem Film, einer Serie, einer Staffel oder einer Folge auf das Herz, um sie hier zu sammeln.",
+
+  "profile.favorites.shows": "Serien",
+  "profile.favorites.seasons": "Staffeln",
+  "profile.favorites.episodes": "Folgen",
+  "profile.favorites.movies": "Filme",
+  "profile.favorites.loadFailed":
+    "Diese Favoriten konnten nicht geladen werden",
+  "profile.favorites.hidden": "{name} teilt die Favoriten nicht",
+  "profile.favorites.otherEmpty": "{name} hat noch keine Favoriten",
 
   "profile.statistics": "Statistiken",
   "profile.stoppedSharing": "{name} teilt die Statistiken nicht mehr",

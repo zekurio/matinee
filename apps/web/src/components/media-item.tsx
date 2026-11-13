@@ -29,11 +29,19 @@ import type { WatchedState } from "@/lib/viewer-state"
 
 import { ActionsMenu, ItemMenu } from "./actions-menu"
 import { CardActions, CardScrim } from "./card-actions"
-import { useItemFavorite, useTitleFavorite } from "./favorite-button"
+import {
+  useItemFavorite,
+  useSeasonFavorite,
+  useTitleFavorite,
+} from "./favorite-button"
 import { Picture, tone } from "./picture"
 import { MediaInfoLine } from "./title/media-info"
 import { seasonParams } from "./title/seasons"
-import { useItemWatched, useTitleWatched } from "./watched-menu"
+import {
+  useItemWatched,
+  useSeasonWatched,
+  useTitleWatched,
+} from "./watched-menu"
 
 // Many components take these from here.
 export { Picture, tone }
@@ -368,10 +376,12 @@ function PlayGlyph() {
 export function ThumbPlayButton({
   item,
   label,
+  className,
 }: {
   item: MediaItem
   /** Names the file for screen readers. */
   label: string
+  className?: string
 }) {
   const resume = item.progress && !item.progress.completed
   return (
@@ -383,7 +393,7 @@ export function ThumbPlayButton({
           ? tr("media.resume", { name: label })
           : tr("media.play", { name: label })
       }
-      className={cn(playControl, "[@media(pointer:coarse)]:hidden")}
+      className={cn(playControl, "[@media(pointer:coarse)]:hidden", className)}
     >
       <PlayGlyph />
     </Link>
@@ -823,6 +833,124 @@ export function PosterCard({
               target={{ kind: "title", title, file: play }}
               look="card"
             />
+          }
+          className="pointer-events-auto absolute right-1 bottom-1"
+        />
+      </div>
+    </div>
+  )
+}
+
+/**
+ * A season of a show in a row of posters: the season's poster, or the
+ * show's, the show's name over the season's, opening the season's page.
+ * Its icons mark the season watched or a favorite.
+ */
+export function SeasonPosterCard({
+  title,
+  season,
+}: {
+  title: TitleSummary
+  season: Season
+}) {
+  const watched = useSeasonWatched(title, season, undefined)
+  const favorite = useSeasonFavorite(title, season)
+  const name = tr("title.seasonOf", {
+    show: title.name,
+    season: seasonName(season.number),
+  })
+  return (
+    <div className="group/card relative">
+      <Link
+        to="/titles/$titleId/seasons/$season"
+        params={seasonParams(title, season)}
+        title={name}
+        className={cardClass}
+      >
+        <PosterArt
+          name={name}
+          toneKey={title.id}
+          poster={art(season.poster ?? title.images.poster)}
+          scrim
+        >
+          <CardScrim />
+        </PosterArt>
+        <CardText primary={title.name} secondary={seasonName(season.number)} />
+      </Link>
+      <div className="pointer-events-none absolute inset-x-0 top-0 aspect-[2/3]">
+        <UnwatchBadge
+          name={name}
+          watched={watched}
+          className="pointer-events-auto absolute top-1.5 right-1.5"
+        />
+        <CardActions
+          name={name}
+          watched={watched}
+          favorite={favorite}
+          menu={
+            <ActionsMenu
+              target={{ kind: "season", title, season }}
+              look="card"
+            />
+          }
+          className="pointer-events-auto absolute right-1 bottom-1"
+        />
+      </div>
+    </div>
+  )
+}
+
+/**
+ * An episode in a row of posters: the show's poster, the show's name over
+ * the episode's, opening the episode's page. Play starts the episode, and
+ * the icons mark the episode watched or a favorite.
+ */
+export function EpisodePosterCard({ item }: { item: MediaItem }) {
+  const label = itemLabel(item)
+  const code = episodeCode(item)
+  const episode = code
+    ? tr("media.codeTitle", { code, title: label.title })
+    : label.title
+  const name = code
+    ? tr("media.showCodeTitle", {
+        show: label.showName,
+        code,
+        title: label.title,
+      })
+    : label.title
+  const watched = useItemWatched(item)
+  const favorite = useItemFavorite(item)
+  const poster = item.title ? art(item.title.images.poster) : null
+  return (
+    <div className="group/card relative">
+      <ItemLink item={item} label={name} className={cardClass}>
+        <PosterArt
+          name={label.showName}
+          toneKey={label.showKey}
+          poster={poster}
+          scrim
+        >
+          <CardScrim />
+        </PosterArt>
+        <CardText primary={label.showName} secondary={episode} />
+      </ItemLink>
+      <div className="pointer-events-none absolute inset-x-0 top-0 aspect-[2/3]">
+        <ThumbPlayButton
+          item={item}
+          label={name}
+          className="pointer-events-auto"
+        />
+        <UnwatchBadge
+          name={name}
+          watched={watched}
+          className="pointer-events-auto absolute top-1.5 right-1.5"
+        />
+        <CardActions
+          name={name}
+          watched={watched}
+          favorite={favorite}
+          menu={
+            <ActionsMenu target={{ kind: "item", item, name }} look="card" />
           }
           className="pointer-events-auto absolute right-1 bottom-1"
         />

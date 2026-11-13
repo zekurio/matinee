@@ -5,6 +5,7 @@ import { getRouteApi, Link, Navigate } from "@tanstack/react-router"
 
 import { ActionsMenu } from "@/components/actions-menu"
 import { pageBleed } from "@/components/app-shell"
+import { SeasonFavoriteButton } from "@/components/favorite-button"
 import { useDocumentTitle } from "@/components/page-header"
 import { ItemTopBar, parentLink } from "@/components/phone-nav"
 import { useSeasonWatched, WatchedButton } from "@/components/watched-menu"
@@ -227,6 +228,7 @@ function SeasonHeader({
                   season={season}
                   items={items}
                 />
+                <SeasonFavoriteButton title={title} season={season} />
                 <ActionsMenu
                   target={{ kind: "season", title, season }}
                   look="page"

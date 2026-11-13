@@ -22,6 +22,7 @@ import io.github.zekurio.matinee.api.Explicit
 import io.github.zekurio.matinee.api.MatineeApi
 import io.github.zekurio.matinee.api.MediaItem
 import io.github.zekurio.matinee.api.PlaybackOptions
+import io.github.zekurio.matinee.api.Season
 import io.github.zekurio.matinee.api.TitleKind
 import io.github.zekurio.matinee.api.TitleSummary
 import io.github.zekurio.matinee.app
@@ -46,6 +47,9 @@ import kotlinx.serialization.SerializationException
 class ViewerState(private val onChanged: () -> Unit = {}) {
     private val titleFavorites = Marks(mutableStateMapOf(), ::changed)
     private val itemFavorites = Marks(mutableStateMapOf(), ::changed)
+
+    /** By [seasonKey]. */
+    private val seasonFavorites = Marks(mutableStateMapOf(), ::changed)
     private val itemWatched = Marks(mutableStateMapOf(), ::changed)
     private val titleWatched = Marks(mutableStateMapOf(), ::changed)
 
@@ -78,6 +82,12 @@ class ViewerState(private val onChanged: () -> Unit = {}) {
         return if (title?.kind == TitleKind.MOVIE) isFavorite(title) else itemFavorites[item.id] ?: item.favorite
     }
 
+    /** The files without a season number aren't a season to mark, so they never are. */
+    fun isFavorite(title: TitleSummary, season: Season): Boolean {
+        val number = season.number ?: return false
+        return seasonFavorites[seasonKey(title.id, number)] ?: season.favorite
+    }
+
     fun isWatched(title: TitleSummary) = titleWatched[title.id] ?: title.watched
 
     fun isWatched(item: MediaItem) = itemWatched[item.id] ?: item.progress?.completed ?: false
@@ -90,6 +100,14 @@ class ViewerState(private val onChanged: () -> Unit = {}) {
         if (title?.kind == TitleKind.MOVIE) return setFavorite(api, title, favorite)
         itemFavorites.send(item.id, favorite) { api.favorites.setItem(item.id, favorite) }
     }
+
+    /** Does nothing for the files without a season number, which aren't a season to mark. */
+    suspend fun setFavorite(api: MatineeApi, title: TitleSummary, season: Season, favorite: Boolean) {
+        val number = season.number ?: return
+        seasonFavorites.send(seasonKey(title.id, number), favorite) { api.favorites.setSeason(title.id, number, favorite) }
+    }
+
+    private fun seasonKey(titleId: String, season: Int) = "$titleId/$season"
 
     /** [watchedAt] is when, for watched, as the contract's `WatchedAt`: [WatchedAt.RELEASED], [WatchedAt.UNKNOWN], or an ISO time; null is now. */
     suspend fun setWatched(api: MatineeApi, item: MediaItem, watched: Boolean, watchedAt: String? = null) {

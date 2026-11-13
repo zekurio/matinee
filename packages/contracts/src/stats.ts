@@ -4,6 +4,7 @@ import {
   MediaItem,
   ProfileSharing,
   ProfileUser,
+  Season,
   TitleSummary,
 } from "./schemas"
 import { PlaybackQuality } from "./transcoding"
@@ -329,18 +330,50 @@ export const WatchedEntry = t.object({
 })
 export type WatchedEntry = t.infer<typeof WatchedEntry>
 
+/** A season someone marked as a favorite, with its show. */
+export const FavoriteSeason = t.object({
+  title: TitleSummary,
+  season: Season,
+})
+export type FavoriteSeason = t.infer<typeof FavoriteSeason>
+
+/**
+ * One favorite of any kind, for a row that mixes them: a movie, a show, a
+ * season of a show, or an episode. The season's tag isn't `season`, which
+ * would name a generated client's class as `Season` does.
+ */
+export const Favorite = t.union([
+  t.object({ kind: t.literal("movie"), title: TitleSummary }),
+  t.object({ kind: t.literal("show"), title: TitleSummary }),
+  t.object({
+    kind: t.literal("showSeason"),
+    title: TitleSummary,
+    season: Season,
+  }),
+  t.object({ kind: t.literal("episode"), item: MediaItem }),
+])
+export type Favorite = t.infer<typeof Favorite>
+
+/** Someone's favorites by kind, each newest first. */
+export const Favorites = t.object({
+  shows: t.array(TitleSummary),
+  seasons: t.array(FavoriteSeason),
+  episodes: t.array(MediaItem),
+  movies: t.array(TitleSummary),
+})
+export type Favorites = t.infer<typeof Favorites>
+
 export const Profile = t.object({
   user: ProfileUser,
   /** The signed-in user's own profile, which shows everything. */
   self: t.boolean(),
   sharing: ProfileSharing,
-  /** Newest first. Null when the owner doesn't share them. */
-  favorites: t.array(TitleSummary).nullable(),
   /**
-   * Their favorite files, such as episodes, newest first. Null when the
-   * owner doesn't share favorites.
+   * The latest favorites of every kind together, newest first, as
+   * `profiles.favorites` lists them all by kind. Null when the owner
+   * doesn't share them.
    */
-  favoriteItems: t.array(MediaItem).nullable(),
+  favorites: t.array(Favorite).nullable(),
   /**
    * The latest file of each title they played, newest first. Null when
    * the owner doesn't share statistics.

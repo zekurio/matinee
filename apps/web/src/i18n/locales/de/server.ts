@@ -186,6 +186,9 @@ export default {
     "Dieser Titel ist in keiner Mediathek. Lade die Seite neu.",
   "server.titles.fileGone":
     "Diese Datei ist in keiner Mediathek. Lade die Seite neu.",
+  "server.favorites.notShow": "Nur Serien haben Staffeln.",
+  "server.favorites.seasonGone":
+    "Diese Staffel hat keine Dateien mehr. Lade die Seite neu.",
   "server.playback.unplayable":
     "Dieses Gerät kann diese Datei nicht abspielen.",
   "server.downloads.unreadable":

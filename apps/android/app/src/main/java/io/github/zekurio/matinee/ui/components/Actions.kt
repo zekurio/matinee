@@ -387,16 +387,33 @@ private fun TitleActions(title: TitleSummary, file: MediaItem?, here: Boolean, d
 }
 
 /**
- * A season's menu: its download, and its page from its card. Its tick is
- * on its page, where the season's own episodes say whether it's watched.
+ * A season's menu: its download, and from its card its favorite and its
+ * page. Its tick is on its page, where the season's own episodes say
+ * whether it's watched.
  */
 @Composable
 private fun SeasonActions(title: TitleSummary, season: ShowSeason, here: Boolean, dismiss: () -> Unit) {
+    val api = LocalApi.current
     val nav = LocalNavigator.current
     val actions = LocalActions.current
+    val snackbar = LocalSnackbar.current
     val res = LocalResources.current
+    val viewer = LocalContext.current.app.viewer
     SheetHeader(seasonName(season.number, res), title.name)
-    if (LocalContext.current.app.viewer.mayDownload) {
+    // The files without a season number aren't a season to mark.
+    if (!here && season.number != null) {
+        val favorite = viewer.isFavorite(title, season)
+        val favoriteFailure = stringResource(R.string.media_favorite_failed)
+        SheetItem(
+            if (favorite) Lucide.HeartFilled else Lucide.Heart,
+            stringResource(if (favorite) R.string.media_remove_favorite else R.string.media_add_favorite),
+        ) {
+            dismiss()
+            // The sheet goes before the request ends, so it runs in the app's scope.
+            actions.scope.launchShowing(snackbar, favoriteFailure) { viewer.setFavorite(api, title, season, !favorite) }
+        }
+    }
+    if (viewer.mayDownload) {
         SheetItem(Lucide.Download, stringResource(R.string.downloads_action)) {
             dismiss()
             actions.files = FileSet(title, season)
