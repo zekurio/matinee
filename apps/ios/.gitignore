@@ -1,0 +1,7 @@
+# Generated: XcodeGen writes the project and Info.plist, scripts/version.sh the version.
+Matinee.xcodeproj/
+Matinee/Info.plist
+Config/
+# Build output, kept here so agents' builds don't share one.
+build/
+DerivedData/
