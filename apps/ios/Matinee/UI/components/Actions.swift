@@ -386,7 +386,6 @@ private struct MetadataItems: View {
           ActionItem(.image, Str.titleMenuEditImages) { nav.images(images) }
         }
       }
-      }
     }
   }
 

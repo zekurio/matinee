@@ -80,6 +80,8 @@ struct SignedInApp: View {
       }
     }
     .modifier(TabStyle())
+    // The context menus' items and the sheets they open (Actions.swift), under everything below.
+    .modifier(ActionsHost())
     .fullScreenCover(item: $nav.player) { PlayerCover(request: $0) }
     .environment(nav)
     .environment(\.navigator, nav.navigator)
@@ -88,8 +90,6 @@ struct SignedInApp: View {
     .environment(\.user, user)
     .environment(\.offline, offline)
     .environment(\.snackbar, Snackbar(show: snackbar.show))
-    // The context menus' items are the Actions task's (Actions.swift); until then cards offer none.
-    .environment(\.actionMenu, ActionMenu())
     .onAppear {
       #if DEBUG
         DevLaunch.openRoute(nav)
