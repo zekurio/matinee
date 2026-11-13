@@ -219,11 +219,8 @@ public enum SubtitleShow: Sendable, Equatable {
     }
   }
 
-  /// Who draws it, for the diagnostics report. Kotlin's `SubtitleRendering`
-  /// lives with the diagnostics; this stays nested until that file has one.
-  public enum Rendering: String, Codable, Sendable { case screen, player, burnIn }
-
-  public var rendering: Rendering? {
+  /// Who draws it, for the diagnostics report.
+  public var rendering: SubtitleRendering? {
     switch self {
     case .off: nil
     case .screen: .screen

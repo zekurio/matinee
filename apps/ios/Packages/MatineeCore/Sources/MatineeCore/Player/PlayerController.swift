@@ -18,7 +18,7 @@ struct Ask {
   /// which only the opening asks for.
   var at: Double?
   /// What the report calls the source it loads; nil for a seek.
-  var reason: PlayerController.AttemptReason?
+  var reason: AttemptReason?
   /// The viewer's picks that change.
   var picks: Picks?
   /// The method of the source that just failed.
@@ -44,11 +44,6 @@ struct Ask {
 /// carry on where this file stops, and `PlayerController+Screen.swift` has
 /// what Android's player screen keeps itself.
 @Observable @MainActor public final class PlayerController {
-  /// Why a source loads, for the report. Kotlin's `AttemptReason` lives with
-  /// the diagnostics, whose iOS report doesn't take one yet; until it does,
-  /// only whether there is one counts: a seek within a stream records no attempt.
-  enum AttemptReason { case start, fallback, retry, audioChange, subtitleChange, qualityChange }
-
   @ObservationIgnored let api: MatineeApi
   /// What this device plays, which every call to the server carries.
   @ObservationIgnored let device: PlaybackDevice
@@ -172,6 +167,8 @@ struct Ask {
 
   /// The source failed, so nothing plays until another loads.
   @ObservationIgnored var sourceFailed = false
+  /// The engine has the source that loads now, not the one before it.
+  @ObservationIgnored var sourceLoaded = false
   @ObservationIgnored var playedSeconds = 0.0
   @ObservationIgnored var lastReport = Date.distantPast
 
@@ -190,8 +187,11 @@ struct Ask {
   /// Where the viewer sought while an answer was on its way, for when the source it answers is the one that plays.
   @ObservationIgnored var seekOnAnswer: Double?
 
-  /// The report About shows of this sitting: codes and formats, never names or addresses.
-  public internal(set) var diagnostics = PlaybackReport()
+  /// The report About shows of this sitting: codes and formats, never names
+  /// or addresses. Each change is published, as Kotlin's `DiagnosticsRecorder` does.
+  public internal(set) var diagnostics = PlaybackReport() {
+    didSet { PlaybackDiagnostics.publish(diagnostics) }
+  }
 
   // What Android's player screen keeps, and the iOS view reads here.
   public internal(set) var options = FALLBACK_PLAYBACK_OPTIONS
@@ -239,6 +239,7 @@ struct Ask {
   init(
     api: MatineeApi, device: PlaybackDevice, prefs: PlayerPrefs,
     engine: any PlaybackEngine, clock: @escaping @MainActor () -> Date,
+    tokenProvider: @escaping @Sendable () async -> String? = { nil },
     downloads: (any PlayerDownloads)? = nil,
     preferences: PlaybackPreferences = DEFAULT_PLAYBACK_PREFERENCES, session: URLSession = .shared
   ) {
@@ -250,7 +251,7 @@ struct Ask {
     self.clock = clock
     self.downloads = downloads
     self.preferences = preferences
-    self.token = { nil }
+    self.token = tokenProvider
   }
 
   deinit {
@@ -279,6 +280,10 @@ struct Ask {
     loadTrickplay(itemId)
     if let available = try? await api.playback.options() { options = available }
     guard !stopped else { return }
+    // What Kotlin's report starts with, once the server's offerings are known.
+    diagnostics.settings = SettingsDiagnostics(prefs)
+    diagnostics.capabilities(.of(device, options: options))
+    recordSelection()
     await request(Ask(at: at, reason: .start, reload: true), undo: asking)
   }
 
@@ -309,6 +314,10 @@ struct Ask {
     subtitle = downloadSubtitle(
       local.subtitles, audioLanguage: audio?.language, preferences: preferences)
     localSubtitle = subtitle
+    diagnostics.settings = SettingsDiagnostics(prefs)
+    diagnostics.file = .of(local.item)
+    diagnostics.capabilities(.of(device, options: options))
+    recordSelection()
     beginTick()
     loadTrickplay(itemId)
     nextTask = Task { [weak self] in
@@ -354,6 +363,7 @@ struct Ask {
     asking = settled
     plan = next
     item = next.item
+    if diagnostics.file == nil { diagnostics.file = .of(next.item) }
     audio = next.audio
     subtitle = next.subtitle
     quality = next.quality
@@ -363,25 +373,28 @@ struct Ask {
     } else {
       // The same source plays on, with the audio and subtitle answered.
       pendingAt = nil
-      if source?.holdsTracks == true { await selectAudioInFile() }
+      if source?.holdsTracks == true {
+        await selectAudioInFile()
+        await recordTracks()
+      }
       await showSubtitle()
+      recordSelection()
       if let sought { await seekTo(sought) }
     }
   }
 
   /// Loads `next`; a `reason` records it as an attempt, which a seek within a stream isn't.
   func load(_ next: Source, reason: AttemptReason?) async {
-    if reason != nil {
-      diagnostics.attempt(method: next.method, offset: next.offset)
-      diagnostics.settings = SettingsDiagnostics(prefs)
-      diagnostics.capabilities = CapabilityDiagnostics(device)
-      diagnostics.file = item.map(FileDiagnostics.init)
+    if let reason {
+      diagnostics.attempt(next, plan: plan, reason: reason, audioIndex: audio?.index)
+      recordSelection()
     }
     error = nil
     unplayable = false
     refusal = nil
     ended = false
     sourceFailed = false
+    sourceLoaded = false
     stalledSince = nil
     // A new source gets its own wait for frames.
     freeze.reset()
@@ -396,15 +409,14 @@ struct Ask {
       guard !stopped, request == loads else { return }
       try await engine.load(next, headers: headers)
       guard !stopped, request == loads else { return }
+      sourceLoaded = true
+      // Kotlin's `STATE_READY`; a source still getting ready is marked by the tick once it plays.
+      if engine.isReady { diagnostics.playing() }
       // AVPlayer picks among the file's audio only once its tracks are known,
       // as ExoPlayer's pending override waits for `onTracksChanged`.
       if next.holdsTracks { await selectAudioInFile() }
       if wantPlay { engine.play(atRate: speed) }
-      if let asset = player.currentItem?.asset,
-        let tracks = try? await DiagnosticsProbe.tracks(asset), request == loads
-      {
-        diagnostics.tracks = tracks
-      }
+      await recordTracks()
     } catch {
       if request == loads && !stopped { await sourceFailed(error) }
       return
@@ -438,6 +450,15 @@ struct Ask {
     // place among the file's audio tracks, ExoPlayer's fallback when ids don't match.
     guard let audio, let ordinal = audioTracks.firstIndex(of: audio) else { return }
     await engine.selectAudio(ordinal)
+  }
+
+  /// The tracks of what plays, as Kotlin's `onTracksChanged` reports them:
+  /// after a load and after the audio inside the file changes.
+  func recordTracks() async {
+    let request = loads
+    let tracks = await engine.tracks()
+    guard !stopped, request == loads else { return }
+    diagnostics.tracks(tracks)
   }
 
   /// Lets AVPlayer draw the stream of the file the answer gives it, and
@@ -477,7 +498,7 @@ struct Ask {
   /// the server falls back. The live test also calls it to exercise the
   /// chain without a client-side replacement source.
   public func sourceFailed(_ cause: any Error) async {
-    diagnostics.failed(code: (cause as NSError).code)
+    diagnostics.failed(errorDiagnostics(cause as NSError))
     await fallBack(cause)
   }
 

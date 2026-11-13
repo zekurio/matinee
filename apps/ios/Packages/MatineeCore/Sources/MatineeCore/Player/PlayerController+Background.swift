@@ -82,6 +82,9 @@ extension PlayerController {
       await sourceFailed(failure)
       return
     }
+    // An HLS item gets its tracks only after it loads, where ExoPlayer calls
+    // `onTracksChanged` again; the report takes them once they're there.
+    if sourceLoaded, diagnostics.tracks.isEmpty, engine.isReady { await recordTracks() }
     let nowMs = Int64(ProcessInfo.processInfo.systemUptime * 1000)
     let shown = surfaceShown || pictureInPictureActive
     if shown, engine.hasVideoFrame() {
@@ -114,7 +117,6 @@ extension PlayerController {
     let every: TimeInterval = playing ? 10 : 30
     if wasPlaying != playing || now.timeIntervalSince(lastReport) >= every { sendReport() }
     diagnostics.sample(player)
-    PlaybackDiagnostics.latest = diagnostics
     nowPlaying?.update()
   }
 
@@ -188,6 +190,14 @@ extension PlayerController {
     }
   }
 
+  /// What the report says is picked: the audio, and the subtitle that shows and who draws it.
+  func selectionDiagnostics() -> SelectionDiagnostics {
+    let show = shown()
+    return .of(audio: audio, subtitle: show.track, rendering: show.rendering)
+  }
+
+  func recordSelection() { diagnostics.select(selectionDiagnostics()) }
+
   /// Closes the sitting, as Kotlin's `release`: the last report says it
   /// closed, and the system's controls go.
   public func stop() async {
@@ -207,7 +217,6 @@ extension PlayerController {
     engine.pause()
     playing = false
     diagnostics.close()
-    PlaybackDiagnostics.latest = diagnostics
     await report(closed: true)
     nowPlaying?.stop()
     nowPlaying = nil

@@ -38,21 +38,6 @@ public struct ErrorDiagnostics: Codable, Sendable, Equatable {
   public var causeCodes: [Int] = []
 }
 public struct AttemptDiagnostics: Codable, Sendable, Equatable {
-  private var safeMethod: Safe?
-  public var method: String? {
-    get { safeMethod?.text }
-    set { safeMethod = Safe.known(newValue, Set(PlaybackMethod.knownValues)) }
-  }
-  public init(
-    method: String?, offset: Double, errorCode: Int? = nil, outcome: AttemptOutcome = .loading
-  ) {
-    safeMethod = Safe.known(method, Set(PlaybackMethod.knownValues))
-    self.offset = offset
-    self.errorCode = errorCode
-    self.outcome = outcome
-  }
-  public var offset: Double
-  public var errorCode: Int?
   public var number = 0
   public var mode: SourceMode = .direct
   public var reason: AttemptReason = .start
@@ -66,7 +51,6 @@ public struct AttemptDiagnostics: Codable, Sendable, Equatable {
   public var outcome: AttemptOutcome = .loading
   public var error: ErrorDiagnostics?
 }
-public typealias PlaybackAttempt = AttemptDiagnostics
 
 /// In memory until cleared or the app closes. Nothing here sends a report anywhere.
 /// Every string is an allowlisted value or a typed short code, never free text.
@@ -106,7 +90,7 @@ public struct PlaybackReport: Codable, Sendable, Equatable {
       attempts[index].outcome = .replaced
     }
     let seconds = at.isFinite ? max(0, min(at, Double(Int64.max / 2))) : 0
-    var next = AttemptDiagnostics(method: nil, offset: seconds)
+    var next = AttemptDiagnostics()
     next.number = (attempts.last?.number ?? droppedAttempts) + 1
     next.mode = mode
     next.reason = reason
@@ -127,15 +111,6 @@ public struct PlaybackReport: Codable, Sendable, Equatable {
     }
     tracks = []
   }
-  public mutating func attempt(method: String?, offset: Double) {
-    let mode: SourceMode =
-      method == nil
-      ? .local : method == "remux" ? .stream : method == "transcode" ? .encode : .direct
-    attempt(mode: mode, reason: .start, at: offset, audioIndex: nil, quality: nil, burnIn: false)
-    attempts[attempts.count - 1].method = method.map {
-      PlaybackMethod.knownValues.contains($0) ? $0 : "other"
-    }
-  }
   public mutating func attempt(
     _ source: Source, plan: PlaybackStart?, reason: AttemptReason, audioIndex: Int?
   ) {
@@ -144,9 +119,6 @@ public struct PlaybackReport: Codable, Sendable, Equatable {
       audioIndex: plan?.audio?.index ?? audioIndex,
       quality: plan?.quality, burnIn: plan?.subtitleMode == PlaybackSubtitleMode.burn_in,
       why: plan?.reasons ?? [], videoTo: plan?.convertedVideo, audioTo: plan?.convertedAudio)
-    attempts[attempts.count - 1].method = source.method.map {
-      PlaybackMethod.knownValues.contains($0) ? $0 : "other"
-    }
   }
   public mutating func playing() {
     guard let index = attempts.indices.last, attempts[index].outcome == .loading else { return }
@@ -158,10 +130,8 @@ public struct PlaybackReport: Codable, Sendable, Equatable {
     bounded.causes = Array(error.causes.prefix(MAX_CAUSES))
     bounded.causeCodes = Array(error.causeCodes.prefix(MAX_CAUSES))
     attempts[index].error = bounded
-    attempts[index].errorCode = error.code
     attempts[index].outcome = .failed
   }
-  public mutating func failed(code: Int) { failed(ErrorDiagnostics(code: code)) }
   public mutating func close() {
     closed = true
     guard let index = attempts.indices.last, attempts[index].outcome == .loading else { return }

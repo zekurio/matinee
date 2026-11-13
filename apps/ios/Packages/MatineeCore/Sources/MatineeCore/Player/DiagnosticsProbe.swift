@@ -83,15 +83,11 @@ public struct DiagnosticsSnapshot: Sendable {
 /// Tests supply typed snapshots, without constructing an AVPlayer or a network request.
 @MainActor public protocol DiagnosticsProbing {
   func snapshot(_ player: AVPlayer) -> DiagnosticsSnapshot
-  func tracks(_ asset: AVAsset) async throws -> [TrackDiagnostics]
 }
 public struct AVPlayerDiagnosticsProbe: DiagnosticsProbing {
   public init() {}
   public func snapshot(_ player: AVPlayer) -> DiagnosticsSnapshot {
     DiagnosticsProbe.snapshot(player)
-  }
-  public func tracks(_ asset: AVAsset) async throws -> [TrackDiagnostics] {
-    try await DiagnosticsProbe.tracks(asset)
   }
 }
 
@@ -269,20 +265,5 @@ public enum DiagnosticsProbe {
       }
     }
     return trackDiagnostics(candidates)
-  }
-  @MainActor public static func tracks(_ asset: AVAsset) async throws -> [TrackDiagnostics] {
-    var result: [TrackDiagnostics] = []
-    for track in try await asset.load(.tracks)
-    where track.mediaType == .video || track.mediaType == .audio {
-      let frameRate = try await track.load(.nominalFrameRate)
-      let rate = try await track.load(.estimatedDataRate)
-      for format in try await track.load(.formatDescriptions) {
-        result.append(
-          formatDiagnostics(
-            format, selected: false, frameRate: frameRate,
-            bitrate: rate.isFinite && rate > 0 && rate < Float(Int32.max) ? Int(rate) : nil))
-      }
-    }
-    return trackDiagnostics(result)
   }
 }

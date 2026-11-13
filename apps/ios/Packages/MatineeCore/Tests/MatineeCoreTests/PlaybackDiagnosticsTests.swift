@@ -175,13 +175,17 @@ import Testing
   }
   @Test func boundedDiagnostics() {
     var report = PlaybackReport()
-    for _ in 0..<30 { report.attempt(method: "direct", offset: 0) }
+    let source = Source(
+      method: "direct", url: "https://secret.invalid", hls: false, offset: 0, start: 0)
+    for _ in 0..<30 { report.attempt(source, plan: nil, reason: .start, audioIndex: nil) }
     #expect(report.attempts.count == 12)
     #expect(report.droppedAttempts == 18)
-    report.failed(code: 401)
+    report.failed(ErrorDiagnostics(code: 401))
     #expect(report.attempts.last?.outcome == .failed)
-    report.attempt(method: "https://secret.invalid?token=secret", offset: 0)
-    #expect(report.attempts.last?.method == "other")
+    var odd = source
+    odd.method = "https://secret.invalid?token=secret"
+    report.attempt(odd, plan: nil, reason: .retry, audioIndex: nil)
+    #expect(report.attempts.last?.mode == .encode)
     #expect(!formatReport(report).contains("secret"))
   }
   @MainActor @Test func diagnosticsStore() {
@@ -193,11 +197,14 @@ import Testing
   }
   @Test func reportsNeverContainURLs() throws {
     var report = PlaybackReport()
-    report.attempt(method: "direct", offset: 10)
-    report.failed(code: -11800)
+    report.attempt(
+      Source(
+        method: "direct", url: "https://secret.invalid/a.mkv", hls: false, offset: 0, start: 10),
+      plan: nil, reason: .start, audioIndex: nil)
+    report.failed(errorDiagnostics(NSError(domain: AVFoundationErrorDomain, code: -11800)))
     let json = String(decoding: try JSONEncoder().encode(report), as: UTF8.self)
     #expect(!json.contains("http"))
-    #expect(report.attempts.last?.errorCode == -11800)
+    #expect(report.attempts.last?.error?.code == -11800)
   }
   @Test func errorChainUsesOnlyDomainsAndCodes() {
     let cause = NSError(
@@ -352,7 +359,6 @@ import Testing
         value.status = "ready"
         return value
       }
-      func tracks(_ asset: AVAsset) async throws -> [TrackDiagnostics] { [] }
     }
     var r = report()
     attempt(&r)

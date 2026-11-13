@@ -189,6 +189,7 @@ private final class PlayerProtocol: URLProtocol, @unchecked Sendable {
   var bufferedSeconds: Double?
   var videoSize = CGSize.zero
   var failure: (any Error)?
+  var isReady = false
   var sources: [Source] = []
   var seeks: [Double] = []
   var rates: [Float] = []
@@ -198,6 +199,7 @@ private final class PlayerProtocol: URLProtocol, @unchecked Sendable {
   func load(_ source: Source, headers: [String: String]) async throws {
     sources.append(source)
     failure = nil
+    isReady = true
     positionSeconds = source.start
   }
   func play(atRate rate: Float) {
@@ -212,6 +214,26 @@ private final class PlayerProtocol: URLProtocol, @unchecked Sendable {
   func selectAudio(_ ordinal: Int) async { audioPicks.append(ordinal) }
   func selectSubtitle(_ ordinal: Int?) async { subtitlePicks.append(ordinal) }
   func hasVideoFrame() -> Bool { false }
+  /// The file holds both audio tracks, the one picked inside it selected; a
+  /// stream or an encode holds only the one it plays.
+  func tracks() async -> [TrackDiagnostics] {
+    guard let source = sources.last else { return [] }
+    func track(_ type: TrackKind, _ codec: String, selected: Bool) -> TrackDiagnostics {
+      var track = TrackDiagnostics(
+        mediaType: type.rawValue, codec: codec, width: type == .video ? 1920 : 0,
+        height: type == .video ? 1080 : 0, channels: type == .audio ? 2 : nil,
+        sampleRate: type == .audio ? 48000 : nil)
+      track.type = type
+      track.selected = selected
+      return track
+    }
+    let audio =
+      source.holdsTracks
+      ? ["aac ", "ac-3"].enumerated().map {
+        track(.audio, $0.element, selected: $0.offset == (audioPicks.last ?? 0))
+      } : [track(.audio, "aac ", selected: true)]
+    return DiagnosticsProbe.trackDiagnostics([track(.video, "avc1", selected: true)] + audio)
+  }
   func clear() { cleared = true }
 }
 
@@ -245,7 +267,7 @@ private final class PlayerProtocol: URLProtocol, @unchecked Sendable {
     self.server = server
     if !prefix.isEmpty { StubServer.lock.withLock { StubServer.hosts[self.host] = server } }
   }
-  func controller() -> PlayerController {
+  func controller(token: String? = nil) -> PlayerController {
     let configuration = URLSessionConfiguration.ephemeral
     configuration.protocolClasses = [PlayerProtocol.self]
     let api = MatineeApi(
@@ -254,8 +276,8 @@ private final class PlayerProtocol: URLProtocol, @unchecked Sendable {
       api: api,
       device: playbackProfile(
         snapshot: CapabilitySnapshot(codecs: DeviceCodecs(video: [], audio: [], dolbyVision: false))
-      ), prefs: prefs, engine: engine, clock: { self.now }, downloads: downloads,
-      session: URLSession(configuration: configuration))
+      ), prefs: prefs, engine: engine, clock: { self.now }, tokenProvider: { token },
+      downloads: downloads, session: URLSession(configuration: configuration))
   }
 }
 
@@ -293,7 +315,9 @@ private final class PlayerProtocol: URLProtocol, @unchecked Sendable {
     #expect(controller.source?.method == "direct")
     #expect(harness.server.starts.last?.failed == [])
     await controller.stop()
-    #expect(controller.diagnostics.attempts.last?.outcome == .closed)
+    // The retry played, so closing leaves it played.
+    #expect(controller.diagnostics.attempts.last?.outcome == .playing)
+    #expect(controller.diagnostics.closed)
   }
 
   @Test func anOpeningFromTheStartAsksForIt() async {
@@ -410,6 +434,11 @@ private final class PlayerProtocol: URLProtocol, @unchecked Sendable {
     #expect(harness.engine.sources.count == 1)
     #expect(harness.engine.audioPicks.last == 1)
     #expect(controller.audio == Answers.ac3)
+    // The report follows the audio picked inside the file, and the pick.
+    #expect(controller.diagnostics.tracks.filter { $0.type == .audio }.map(\.codec) == ["ac-3"])
+    #expect(controller.diagnostics.tracks.allSatisfy { $0.selected })
+    #expect(controller.diagnostics.selection.audioIndex == 2)
+    #expect(controller.diagnostics.attempts.count == 1)
     let calls = harness.server.starts.count
     await controller.pickAudio(Answers.ac3)
     #expect(harness.server.starts.count == calls)
@@ -763,5 +792,128 @@ private final class PlayerProtocol: URLProtocol, @unchecked Sendable {
     await controller.stop()
     #expect(!controller.playing)
     #expect(harness.engine.cleared)
+  }
+
+  @Test func aSittingsReport() async throws {
+    let harness = PlayerHarness()
+    let secret = try JSONDecoder().decode(
+      MediaItem.self,
+      from: Data(
+        """
+        {"id":"item-1","libraryId":"library-1","fileTitle":"Secret Heist",
+         "relativePath":"Movies/Secret Heist (2024)/secret.heist.mkv","container":"mkv",
+         "mimeType":"video/x-matroska","sizeBytes":1,"modifiedAt":"2024-01-01T00:00:00Z",
+         "durationSeconds":3000,"favorite":false,
+         "title":{"id":"title-1","libraryId":"library-1","kind":"movie","name":"Secret Heist",
+          "year":2024,"images":{},"genres":[],"favorite":false,"watched":false},
+         "label":{"show":"movie","showName":"Secret Heist","showKey":"k","untitled":false,
+          "group":"g","groupLabel":[]},
+         "probe":{"format":{"name":"matroska,webm"},"video":{"index":0,"codec":"hevc",
+          "profile":"Main 10","width":3840,"height":2160,"bitDepth":10,"hdr":"hdr10",
+          "interlaced":false,"hdr10Plus":false,"masteringDisplay":false,"format":"HEVC",
+          "resolution":"4K"},
+          "audio":[{"index":1,"codec":"aac","channels":2,"default":true,"format":"AAC"},
+           {"index":2,"codec":"ac3","channels":6,"default":false,"format":"AC3"}],
+          "subtitles":[]}}
+        """.utf8))
+    let server = harness.server
+    let options = PlaybackOptions(
+      qualities: [], maxBitrate: 20_000_000, downloads: false, downloadVideoPresets: [],
+      skipSteps: [], videoCodecs: ["h264", "hevc"], audioCodecs: ["aac", "opus"],
+      audioLanguages: [], subtitleLanguages: [])
+    server.respond = { call in
+      if call.path.hasSuffix("/playback/options") {
+        return .init(body: try! JSONEncoder().encode(options))
+      }
+      guard call.path.hasSuffix("/playback/start"), var input = call.start else { return nil }
+      // The file fails over straight to an encode, as one only an encode plays.
+      if input.failed?.contains("direct") == true { input.failed = ["direct", "remux"] }
+      var answer = server.answer(input, host: "")
+      answer.item = secret
+      if answer.method == "transcode" {
+        answer.reasons = ["failed"]
+        answer.convertedAudio = "aac"
+      }
+      return .init(body: try! JSONEncoder().encode(answer))
+    }
+    let token = "tok-\(UUID().uuidString)"
+    let controller = harness.controller(token: token)
+    await controller.start(itemId: "item-1")
+    #expect(controller.source?.mode == .direct)
+    // Ready, the file shows its own tracks, the picked audio selected.
+    #expect(controller.diagnostics.attempts.map(\.outcome) == [.playing])
+    #expect(controller.diagnostics.tracks.map(\.codec) == ["avc1", "aac"])
+    #expect(controller.diagnostics.tracks.allSatisfy { $0.selected })
+    // A subtitle the view draws plays on in the file, and the selection says so.
+    await controller.pickSubtitle(Answers.vtt)
+    #expect(controller.diagnostics.attempts.count == 1)
+    #expect(controller.diagnostics.selection.subtitleRendering == .screen)
+    let failure = NSError(
+      domain: AVFoundationErrorDomain, code: -11850,
+      userInfo: [
+        NSLocalizedDescriptionKey: "Secret Heist at http://\(harness.host)/a?token=\(token)",
+        NSURLErrorKey: URL(string: "http://\(harness.host)/secret.heist.mkv")!,
+        NSUnderlyingErrorKey: NSError(
+          domain: NSOSStatusErrorDomain, code: -12847,
+          userInfo: [NSUnderlyingErrorKey: NSError(domain: NSURLErrorDomain, code: -1100)]),
+      ])
+    await controller.sourceFailed(failure)
+    #expect(controller.source?.mode == .hls)
+    await controller.pickAudio(Answers.ac3)
+    #expect(harness.engine.sources.count == 3)
+    // A seek within HLS isn't an attempt.
+    await controller.seekTo(600)
+    #expect(harness.engine.seeks.last == 600)
+    await controller.stop()
+
+    let report = controller.diagnostics
+    #expect(report.closed)
+    #expect(report.attempts.map(\.number) == [1, 2, 3])
+    #expect(report.attempts.map(\.mode) == [.direct, .hls, .hls])
+    #expect(report.attempts.map(\.reason) == [.start, .fallback, .audioChange])
+    #expect(report.attempts.map(\.outcome) == [.failed, .playing, .playing])
+    #expect(report.attempts.map(\.audioIndex) == [1, 1, 2])
+    #expect(report.attempts.map(\.startAt) == [42, 42, 42])
+    #expect(report.attempts.map { $0.quality?.text } == ["original", "1080p-20", "1080p-20"])
+    #expect(report.attempts.map { $0.why.map(\.text) } == [[], ["failed"], ["failed"]])
+    #expect(report.attempts.map { $0.audioTo?.text } == [nil, "aac", "aac"])
+    let error = try #require(report.attempts[0].error)
+    #expect(error.code == -11850)
+    #expect(error.name?.text == AVFoundationErrorDomain)
+    #expect(error.causes.map(\.text) == [NSOSStatusErrorDomain, NSURLErrorDomain])
+    #expect(error.causeCodes == [-12847, -1100])
+    #expect(report.attempts[1].error == nil)
+    #expect(
+      report.selection
+        == SelectionDiagnostics.of(audio: Answers.ac3, subtitle: Answers.vtt, rendering: .screen))
+    #expect(report.capabilities == .of(controller.device, options: options))
+    #expect(report.capabilities?.serverVideoCodecs.map(\.text) == ["h264", "hevc"])
+    #expect(report.settings == SettingsDiagnostics(harness.prefs))
+    #expect(report.file == .of(secret))
+    // The encode carries the one audio it plays.
+    #expect(report.tracks.map(\.type) == [.video, .audio])
+    #expect(report.tracks.allSatisfy { $0.selected })
+
+    let text = formatReport(report)
+    for line in [
+      "file: container=mkv video=hevc (Main 10) 3840x2160 10bit hdr=hdr10",
+      "audio picked: #2 ac3 6ch",
+      "subtitle picked: srt sidecar delivery=webvtt drawn_by=screen",
+      "server offers: video=h264,hevc audio=aac,opus max_bitrate=20000kbps",
+      "  1. direct reason=start at=42s audio=#1 -> failed",
+      "     error: AVFoundationErrorDomain (-11850) type=source causes=NSOSStatusErrorDomain(-12847)>NSURLErrorDomain(-1100)",
+      "  2. hls reason=fallback at=42s audio=#1 quality=1080p-20 why=failed audio_to=aac -> playing",
+      "  3. hls reason=audio_change at=42s audio=#2 quality=1080p-20 why=failed audio_to=aac -> playing",
+      "  video selected codecs=avc1 1920x1080",
+      "  audio selected codecs=aac 2ch 48000.0Hz",
+    ] { #expect(text.contains(line), "\(line)") }
+    let json = String(decoding: try JSONEncoder().encode(report), as: UTF8.self)
+    for secret in [
+      "Secret", "Heist", "secret.heist", "Movies/", "2024", harness.host, "stub-", token, "tok-",
+      "Bearer", "://", "item-1", "title-1", "library-1", "English",
+    ] {
+      #expect(!text.localizedCaseInsensitiveContains(secret), "\(secret)")
+      #expect(!json.localizedCaseInsensitiveContains(secret), "\(secret)")
+    }
   }
 }

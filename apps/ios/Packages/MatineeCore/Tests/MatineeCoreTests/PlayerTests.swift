@@ -181,6 +181,8 @@ struct LivePlayerTests {
       }
       await controller.report()
       await controller.stop()
+      print(
+        "RENDERED REPORT BEGIN\n" + formatReport(controller.diagnostics) + "RENDERED REPORT END")
     }
   }
 }

@@ -211,7 +211,7 @@ public struct CapabilityDiagnostics: Codable, Sendable, Equatable {
   public var maxBitrate: Int?
   public let hls: Bool
   public let selectAudio: Bool
-  init(_ device: PlaybackDevice) {
+  private init(_ device: PlaybackDevice) {
     var seen: Set<String> = []
     videoCodecs = safeCodecs(device.video.map(\.codec).filter { seen.insert($0).inserted })
     audioCodecs = safeCodecs(device.audio, max: 16)
