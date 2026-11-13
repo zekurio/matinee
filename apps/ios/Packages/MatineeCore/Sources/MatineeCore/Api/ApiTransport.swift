@@ -127,6 +127,18 @@ public final class ApiTransport: Sendable {
     self.onUnauthorized = onUnauthorized
   }
   deinit { session.invalidateAndCancel() }
+  /// Builds a same-origin byte-route request for background downloads, using
+  /// this client's server-bound credentials rather than the active server's.
+  public func mediaRequest(url: URL) async throws -> URLRequest {
+    guard url.scheme == base.scheme, url.host == base.host, url.port == base.port else {
+      throw URLError(.badURL)
+    }
+    var request = URLRequest(url: url)
+    if let token = try await tokenProvider() {
+      request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+    }
+    return request
+  }
   public func json<T: Encodable>(_ value: T) throws -> RequestBody {
     RequestBody(data: try JSONEncoder().encode(value), contentType: "application/json")
   }
