@@ -45,12 +45,15 @@ struct MatineeButtonStyle: ButtonStyle {
     let style: MatineeButtonStyle
     @Environment(\.palette) private var palette
     @Environment(\.isEnabled) private var enabled
+    @Environment(\.dynamicTypeSize) private var dynamicType
 
     var body: some View {
       let (background, foreground) = colors
       HStack(spacing: 8) { configuration.label }
         .textStyle(.labelLarge)
-        .lineLimit(1)
+        // One line, as Android's; two at the accessibility sizes rather than cut off.
+        .lineLimit(dynamicType.isAccessibilitySize ? 2 : 1)
+        .padding(.vertical, dynamicType.isAccessibilitySize ? 6 : 0)
         .foregroundStyle(enabled ? foreground : foreground.opacity(0.5))
         .padding(.horizontal, style.horizontalPadding)
         .frame(minHeight: style.height)
@@ -300,6 +303,8 @@ struct Avatar: View {
       .overlay {
         Text(initials(name))
           .font(RedHatText.font(fixedSize: 14 * size / 36, weight: .medium))
+          .lineLimit(1)
+          .fixedLineHeight()
           .foregroundStyle(palette.muted)
       }
       .overlay { Picture(url.flatMap { ImageSource($0) }) }
@@ -326,6 +331,7 @@ struct Badge: View {
       .textStyle(.labelMedium)
       .foregroundStyle(palette.foreground.opacity(0.85))
       .lineLimit(1)
+      .fixedSize()
       .padding(.horizontal, 6)
       .padding(.vertical, 1)
       .background { if !outlined { shape.fill(palette.foreground.opacity(0.12)) } }

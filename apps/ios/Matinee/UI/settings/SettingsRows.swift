@@ -57,7 +57,9 @@ struct RowDivider: View {
   var body: some View { Rectangle().fill(palette.border).frame(height: 1) }
 }
 
-/// A row's padding and minimum height, the same for every kind.
+/// A row's padding and minimum height, the same for every kind. Its title
+/// takes the room it needs first, wrapping at large text sizes, and what's
+/// at its end, at most 160 points, gets the rest.
 private struct RowFrame: ViewModifier {
   func body(content: Content) -> some View {
     content
@@ -103,11 +105,10 @@ struct PickerRow<Value: Hashable>: View {
   var body: some View {
     let value = options.first { $0.0 == current }?.1 ?? String(describing: current)
     let row = HStack(spacing: 0) {
-      Text(title).textStyle(.bodyLarge).foregroundStyle(palette.foreground)
-        .frame(maxWidth: .infinity, alignment: .leading)
+      Text(title).textStyle(.bodyLarge).foregroundStyle(palette.foreground).layoutPriority(1)
+      Spacer(minLength: 12)
       Text(value).textStyle(.bodyMedium).foregroundStyle(palette.muted).lineLimit(1)
         .frame(maxWidth: 160, alignment: .trailing)
-        .padding(.leading, 12)
       if enabled { LucideIcon(.chevronDown, size: 16, tint: palette.muted).padding(.leading, 4) }
     }
     .modifier(RowFrame())
@@ -168,9 +169,9 @@ struct ValueRow: View {
   }
 
   var body: some View {
-    HStack(spacing: 12) {
-      Text(title).textStyle(.bodyLarge).foregroundStyle(palette.foreground)
-        .frame(maxWidth: .infinity, alignment: .leading)
+    HStack(spacing: 0) {
+      Text(title).textStyle(.bodyLarge).foregroundStyle(palette.foreground).layoutPriority(1)
+      Spacer(minLength: 12)
       Text(value).textStyle(.bodyMedium).foregroundStyle(palette.muted).multilineTextAlignment(.trailing)
     }
     .modifier(RowFrame())
@@ -212,12 +213,12 @@ struct LinkRow: View {
             Text(description).textStyle(.bodySmall).foregroundStyle(palette.muted)
           }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
         .multilineTextAlignment(.leading)
+        .layoutPriority(1)
+        Spacer(minLength: value == nil ? 0 : 12)
         if let value {
           Text(value).textStyle(.bodyMedium).foregroundStyle(palette.muted).lineLimit(1)
             .frame(maxWidth: 160, alignment: .trailing)
-            .padding(.leading, 12)
         }
         if !destructive { LucideIcon(.chevronRight, size: 16, tint: palette.muted).padding(.leading, 4) }
       }

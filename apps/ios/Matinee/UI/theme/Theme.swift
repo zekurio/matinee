@@ -190,6 +190,7 @@ nonisolated enum Typography: CaseIterable, Sendable {
 private struct TypographyModifier: ViewModifier {
   let style: Typography
   let weight: Font.Weight?
+  var lineHeight = true
   @Environment(\.dynamicTypeSize) private var dynamicType
 
   @ViewBuilder func body(content: Content) -> some View {
@@ -200,7 +201,9 @@ private struct TypographyModifier: ViewModifier {
     let styled = content.font(Font(font)).tracking(spec.tracking * spec.size * scale)
     // Android's line heights are tighter than the font's own, which
     // `lineSpacing` can only add to; iOS 26 sets them exactly.
-    if #available(iOS 26, *) {
+    if !lineHeight {
+      styled
+    } else if #available(iOS 26, *) {
       styled.lineHeight(.exact(points: line))
     } else {
       styled.lineSpacing(max(0, line - font.lineHeight))
@@ -214,6 +217,14 @@ extension View {
   /// is `.textStyle(.bodyMedium, weight: .medium)`.
   func textStyle(_ style: Typography, weight: Font.Weight? = nil) -> some View {
     modifier(TypographyModifier(style: style, weight: weight))
+  }
+}
+
+extension View {
+  /// The font's own line height for text in a frame of fixed size, rather
+  /// than the type scale's, which a `textStyle` around it would hand down.
+  @ViewBuilder func fixedLineHeight() -> some View {
+    if #available(iOS 26, *) { lineHeight(.normal) } else { self }
   }
 }
 
@@ -243,7 +254,9 @@ private struct ThemeRoot: ViewModifier {
       .environment(\.palette, palette)
       .tint(palette.accent)
       .foregroundStyle(palette.foreground)
-      .textStyle(.bodyLarge)
+      // The font for text that sets none, not its line height, which
+      // would reach text in a fixed frame, like an avatar's initials.
+      .modifier(TypographyModifier(style: .bodyLarge, weight: nil, lineHeight: false))
       .background(palette.background.ignoresSafeArea())
       .onChange(of: palette, initial: true) { SystemBars.apply(palette) }
   }

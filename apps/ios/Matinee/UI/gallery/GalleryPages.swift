@@ -102,25 +102,23 @@
       VStack(alignment: .leading, spacing: 24) {
         GalleryHeading("Buttons")
         VStack(alignment: .leading, spacing: 12) {
-          HStack(spacing: 8) {
+          GalleryRow {
             MatineeButton(.primary, action: {}) {
               LucideIcon(.play, size: 16)
               Text(Str.titlePlay)
             }
             MatineeButton(.secondary, action: {}) { Text(Str.titleResume) }
-          }
-          HStack(spacing: 8) {
             MatineeButton(.outline, action: {}) { Text(Str.commonCancel) }
+          }
+          GalleryRow {
             MatineeButton(.frosted, action: {}) {
               LucideIcon(.info, size: 16)
               Text(Str.mediaHeroDetails)
             }
-          }
-          HStack(spacing: 8) {
             MatineeButton(.ghost, action: {}) { Text(Str.commonBack) }
             MatineeButton(.primary, action: {}) { Text(Str.connectButton) }.disabled(true)
-            RetryButton {}
           }
+          RetryButton {}
         }
         .padding(.horizontal, Gutter)
 
@@ -162,14 +160,18 @@
         .padding(.horizontal, Gutter)
 
         GalleryHeading("Badges, progress, avatars")
-        HStack(spacing: 10) {
-          WatchedBadge()
-          Badge("1080p")
-          Badge("HDR10", outlined: true)
-          Badge("FSK 12")
-          Avatar("Masi Oka", url: nil)
-          Avatar("zekurio", url: nil, size: 28)
-          Avatar("Face", url: Sample.face?.url.absoluteString)
+        VStack(alignment: .leading, spacing: 10) {
+          HStack(spacing: 10) {
+            WatchedBadge()
+            Badge("1080p")
+            Badge("HDR10", outlined: true)
+            Badge("FSK 12")
+          }
+          HStack(spacing: 10) {
+            Avatar("Masi Oka", url: nil)
+            Avatar("zekurio", url: nil, size: 28)
+            Avatar("Face", url: Sample.face?.url.absoluteString)
+          }
         }
         .padding(.horizontal, Gutter)
         ArtFrame("progress", aspect: 16 / 9) {
@@ -199,6 +201,18 @@
         GalleryHeading("QR code")
         QrCode("http://localhost:18420/link?code=BCDF-GHJK", label: Str.signinCodeScan, size: 200)
           .padding(.horizontal, Gutter)
+      }
+    }
+  }
+
+  /// A row of controls, stacked when the text size leaves no room for it.
+  struct GalleryRow<Content: View>: View {
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+      ViewThatFits(in: .horizontal) {
+        HStack(spacing: 8, content: content)
+        VStack(alignment: .leading, spacing: 8, content: content)
       }
     }
   }
@@ -412,9 +426,9 @@
 
         GalleryHeading("Failed")
         ErrorBox(Str.homeFailed, Str.errorUnreadable) {}
-          .frame(height: 300)
+          .frame(minHeight: 300)
         ErrorBox(Str.homeFailed, Str.errorUnreachable, disconnected: true) {}
-          .frame(height: 160)
+          .frame(minHeight: 160)
         Notice(Str.loadingStale, Str.errorConnectionLost) {}
         Notice(Str.homeFeaturedFailed, nil, disconnected: true) {}
         RailFailure(
