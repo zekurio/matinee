@@ -1,13 +1,11 @@
 # Matinee server
 
-The Hono server behind every Matinee client. It scans your library
-folders, fetches metadata, streams and transcodes video with
-jellyfin-ffmpeg, and handles accounts, access, and sign-in. It serves the
-web app's build too, so one process is the whole deployment.
+The Hono server behind every client. It scans libraries, fetches metadata,
+streams and transcodes with jellyfin-ffmpeg, and handles accounts and
+sign-in. It also serves the web app, so one process is the whole
+deployment.
 
-For installing it on NixOS and setting up a development shell, start with
-the [repository README](../../README.md). This file covers how the server
-behaves and how to configure it.
+For NixOS and the dev shell, see the [repository README](../../README.md).
 
 - [The API](#the-api)
 - [Running in production](#running-in-production)
@@ -15,11 +13,12 @@ behaves and how to configure it.
 - [Setup](#setup)
 - [Configuration](#configuration)
 - [Access](#access)
+- [Branding](#branding)
 - [Scanning](#scanning)
 - [Metadata](#metadata)
 - [Jobs](#jobs)
 - [Subtitles](#subtitles)
-- [Audio tracks and quality](#audio-tracks-and-quality)
+- [Playback](#playback)
 - [Downloads](#downloads)
 - [Transcoding and ffmpeg](#transcoding-and-ffmpeg)
 - [Trickplay](#trickplay)
@@ -32,32 +31,22 @@ behaves and how to configure it.
 
 ## The API
 
-The contract in `packages/contracts/src/contract.ts` is the API. The server
-implements it with `implement(contract)` and clients call it through
-`createMatineeClient()`, so a rename or a schema change fails typechecking on
-both ends. Video bytes and the OIDC redirects are plain HTTP routes, listed in
-`packages/contracts/src/paths.ts`.
+`packages/contracts/src/contract.ts` is the API. The server implements it
+and clients call it through `createMatineeClient()`, so a schema change
+breaks the type check on both sides. Video, artwork, and OIDC redirects
+are plain HTTP routes in `packages/contracts/src/paths.ts`.
 
-The server also serves the contract as REST under `/api/v1`, for clients that
-aren't written in TypeScript. Each procedure's method and path sit beside it
-in the contract. The OpenAPI document is at `/api/v1/openapi.json`; feed it to
-a generator such as openapi-generator or swift-openapi-generator. Browsers
-authenticate with the session cookie. Apps send `Authorization: Bearer` with
-the token they get from one of the sign-ins in
-[Signing in apps](#signing-in-apps). Errors come back as JSON with `code`,
-`status`, and `message`.
+The same contract is served as REST under `/api/v1`, with the OpenAPI
+document at `/api/v1/openapi.json`. Browsers use the session cookie. Apps
+send `Authorization: Bearer <token>` from one of the flows in
+[Signing in apps](#signing-in-apps). Errors are JSON with `code`, `status`,
+and `message`. The web app shows a reference at `/api-docs`, rendered
+locally with Scalar.
 
-The web app shows the document as a reference at `/api-docs`, which
-`/api/v1/docs` redirects to. It's open to anyone, like the document, and
-requests tried from it go to the page's own origin with the browser's
-session. Scalar draws it from the bundle; it loads nothing from Scalar's
-servers.
-
-`/api/health` answers `{ "ok": true, "contract": "…" }` without a session.
-`contract` is a hash of the REST API's paths and schemas, and the OpenAPI
-document carries the same one as its `info.version`. A generated client
-keeps the one it was generated from, so it can tell a server of another
-version from one that answers nonsense.
+`/api/health` returns `{ "ok": true, "contract": "…" }` without a session.
+`contract` is a hash of the REST paths and schemas, also in the OpenAPI
+`info.version`, so a generated client can detect a server on a different
+version.
 
 ## Running in production
 
@@ -68,88 +57,74 @@ MATINEE_WEB_DIST=apps/web/dist PUBLIC_URL=https://media.example.com \
   DATABASE_URL=postgres://... pnpm start
 ```
 
-The build bundles the server into `apps/server/dist`, with the migrations
-beside it, so it runs on plain Node without the TypeScript sources. `pnpm
-start` keeps a pnpm process around it; a service manager can run
-`node dist/server/index.mjs` with `NODE_ENV=production` from `apps/server`
-instead, which is all `pnpm start` does.
+The build bundles the server and its migrations into `apps/server/dist`,
+so it runs on plain Node 24. A service manager can skip pnpm and run
+`node dist/server/index.mjs` with `NODE_ENV=production` from `apps/server`.
 
 ## Running on NixOS
 
-The [repository README](../../README.md#run-it-on-nixos) has the flake input,
-a module configuration, and a reverse proxy in front. The module's options
-live in `nix/module.nix`. Beyond the typed ones, `settings` takes any
-variable from `.env.example`, and `secrets` takes files, which systemd hands
-the server as credentials, so they can stay readable by root only. A remote
-database with a password goes in `secrets.DATABASE_URL` with
-`database.createLocally = false`.
+The [repository README](../../README.md#run-it-on-nixos) has the basic
+setup. Options are in `nix/module.nix`. `settings` takes any variable from
+`.env.example`, and `secrets` takes files that systemd passes as
+credentials. For a remote database with a password, set
+`secrets.DATABASE_URL` and `database.createLocally = false`.
 
-The service sees no `/home`, so keep the libraries under a path such as
-`/srv` or `/mnt`. With `transcoding.hardwareAcceleration` unset, the admin
-picks the GPU during setup, so the service may open every device. `"vaapi"`,
-or `"qsv"` with `transcoding.qsvDevice`, limits it to that render node, and
-`"none"` closes them all; `accelerationDevices` sets the list outright.
-The host needs the GPU's drivers in `hardware.graphics.extraPackages`, such
-as `intel-media-driver` and `vpl-gpu-rt` for Intel.
+With `transcoding.hardwareAcceleration` unset, the service can open every
+GPU device so the admin can pick one during setup. `"vaapi"`, or `"qsv"`
+with `transcoding.qsvDevice`, limits it to that render node, and `"none"`
+blocks them all. `accelerationDevices` sets the list directly. The host
+still needs GPU drivers in `hardware.graphics.extraPackages`, like
+`intel-media-driver` and `vpl-gpu-rt` for Intel.
 
 ## Setup
 
-Until setup is done, the first visit goes to `/setup`. How it creates the
-admin account depends on whether `MATINEE_OIDC_ISSUER_URL` and
-`MATINEE_OIDC_CLIENT_ID` are set:
+The first visit goes to `/setup`. How it creates the admin depends on
+whether `MATINEE_OIDC_ISSUER_URL` and `MATINEE_OIDC_CLIENT_ID` are set.
 
-- Without them, the server logs a setup token at start, or takes
-  `MATINEE_SETUP_TOKEN`. Enter it, then create the admin with a username and
-  a passkey. With `MATINEE_PASSKEYS_ENABLED=false` as well, nothing can
-  create the admin, and the setup page and the log say so.
-- With them, setup only offers the provider, and there is no token. The
-  first sign-in becomes the admin only if its role claim says `admin`; the
-  server turns anyone else away and logs what the claim held. The claim is
-  `matinee_role` unless `MATINEE_OIDC_ROLE_CLAIM` names another, and only
-  the provider's admins should be able to set it. In Pocket ID, give a group
-  such as `matinee-admins` the custom claim `matinee_role` with the value
-  `admin`. Custom claims come with the `profile` scope.
+Without OIDC, the server logs a setup token at start, or uses
+`MATINEE_SETUP_TOKEN`. Enter it, pick a username, and create a passkey. If
+`MATINEE_PASSKEYS_ENABLED=false` too, there's no way to create an admin,
+and setup says so.
 
-Setup then asks which GPU to transcode on, unless
-`MATINEE_HARDWARE_ACCELERATION` sets it, and for the libraries, unless some
-exist. Each step can be skipped, and everything in it is in Settings later.
-Until the admin finishes, signing in as an admin goes back to setup.
+With OIDC, setup only offers the provider. The first sign-in becomes admin
+only if its role claim is `admin`. The claim is `matinee_role` unless
+`MATINEE_OIDC_ROLE_CLAIM` says otherwise. In Pocket ID, give a group like
+`matinee-admins` the custom claim `matinee_role` = `admin`. Custom claims
+need the `profile` scope.
+
+Setup then asks for a GPU, unless `MATINEE_HARDWARE_ACCELERATION` is set,
+and for libraries. You can skip either and set them in Settings later.
 
 ## Configuration
 
-Server settings are environment variables, documented in `.env.example`. Any
-of them can come from a file: `NAME_FILE` names a file to read `NAME` from,
-such as a systemd credential, without its surrounding whitespace. The ones
-that matter for a real deployment:
+Settings are environment variables, documented in `.env.example`. Any of
+them can be read from a file with `NAME_FILE`. The important ones:
 
-- `PUBLIC_URL`: the https origin people use. Passkeys only work on this origin.
-- `MATINEE_WEB_DIST`: path to the built web app, served by the server.
-- `MATINEE_WATCH_LIBRARIES` and `MATINEE_SCAN_INTERVAL_HOURS`: when libraries
-  get scanned. See [Scanning](#scanning).
+- `PUBLIC_URL`: the https origin people use. Passkeys only work there.
+- `MATINEE_WEB_DIST`: the built web app.
+- `MATINEE_WATCH_LIBRARIES` and `MATINEE_SCAN_INTERVAL_HOURS`: see
+  [Scanning](#scanning).
 
-Settings → Authentication and Settings → Transcoding start from the
-`MATINEE_PASSKEYS_ENABLED`, `MATINEE_OPEN_REGISTRATION`, `MATINEE_OIDC_*`, and
-transcoding variables, as alloy's admin settings do. The
-server saves only the fields an admin changed: a field saved with the
-variable's value is no override, so a later change to the variable still
-applies, and an empty text field hands the field back to it. At start the
-server logs each variable that a saved value overrides.
+The authentication and transcoding variables are defaults for Settings →
+Authentication and Settings → Transcoding. The database stores only fields
+an admin actually changed, so later changes to a variable still apply to
+the rest. Clearing a text field goes back to the variable. The server logs
+every variable a saved value overrides.
 
-Single sign-on is set up by an admin under Settings → Authentication, and takes
-effect on the next sign-in without a restart. The redirect URI to register with
-the provider is `$PUBLIC_URL/api/auth/oidc/callback`. Set the `MATINEE_OIDC_*`
-variables to create the admin account itself through the provider, since
-settings can't be opened before setup.
+### OIDC
 
-`MATINEE_OIDC_GROUPS_CLAIM` names a claim holding a group name or a list of
-names. Dotted paths such as `realm_access.roles` work too. Access groups
-that name a provider group follow it at every sign-in, adding and removing
-members while leaving memberships set in Matinee alone. Empty turns this
-off. Only the provider's admins should be able to set the claim.
+Admins configure single sign-on in Settings → Authentication, and changes
+apply on the next sign-in. Register `$PUBLIC_URL/api/auth/oidc/callback`
+as the redirect URI. To create the admin through the provider, set the
+`MATINEE_OIDC_*` variables, since Settings isn't reachable before setup.
 
-`MATINEE_OIDC_POLICY_CLAIM` names a claim holding an account's access
-override, as an object or a string containing JSON. Only the provider's
-admins should be able to set this claim too. For example:
+`MATINEE_OIDC_GROUPS_CLAIM` names a claim with a group name or list, and
+dotted paths like `realm_access.roles` work. Access groups linked to a
+provider group sync their members on every sign-in. Memberships set in
+Matinee aren't touched.
+
+`MATINEE_OIDC_POLICY_CLAIM` names a claim with a per-account access
+override, as an object or a JSON string:
 
 ```json
 {
@@ -161,759 +136,429 @@ admins should be able to set this claim too. For example:
 }
 ```
 
-Leave fields out to follow the account's access groups. Libraries can be
-names, compared without regard to case, or ids; `"all"` allows every
-library, including ones added later. Unknown libraries are skipped and
-logged. Bit rates are bits per second, at least 1000000; `null` removes a
-bit rate or stream limit. A missing claim clears a provider-set override,
-not one an admin set. An invalid policy is logged and leaves access alone.
-Empty turns policy syncing off. Unlinking a provider removes its memberships
-and override, including when a link to another issuer replaces it.
+Omitted fields follow the account's groups. Libraries are names, matched
+case-insensitively, or ids. `"all"` includes future libraries. Bit rates
+are bits per second, minimum 1000000, and `null` removes a limit. A
+missing claim clears an override the provider set, but keeps one an admin
+set. Invalid policies get logged and ignored.
+
+Only the provider's admins should be able to set the role, groups, and
+policy claims.
 
 Add `offline_access` to `MATINEE_OIDC_SCOPES` if the provider supports
-refresh tokens. Matinee stores the token and uses the Sync provider
-accounts task to update roles, pictures, and access every six hours and a
-few minutes after startup, even for people who only use an app. If the
-provider refuses the token for good, Matinee stops retrying it. Set
-`MATINEE_OIDC_SIGN_OUT_REFUSED=true` to also sign that account out
-everywhere, so its next sign-in goes through the provider. Off, it keeps
-its sessions and last claims. Network failures wait for the next run.
+refresh tokens. A task then refreshes roles, pictures, and access every six
+hours, so app-only users stay current. If the provider permanently rejects
+a token, Matinee stops trying. With `MATINEE_OIDC_SIGN_OUT_REFUSED=true` it
+also signs that account out everywhere.
 
-If the provider sends a `picture` claim, in the ID token or from userinfo,
-Matinee uses it as the account's picture and fetches it again when it
-changes. Uploading a picture or removing it under Settings → Account stops
-that until the user picks the provider's picture again. Pictures are cropped
-to 256px squares and kept in `$MATINEE_DATA_DIR/avatars`.
+A `picture` claim becomes the account picture until the user uploads or
+removes one. Pictures are cropped to 256px squares in
+`$MATINEE_DATA_DIR/avatars`.
 
 ## Access
 
-Admins see every library and have no limits. What everyone else may open,
-and how the server streams to them, comes from access groups under
-Settings → Access. A group sets:
+Admins see everything with no limits. Everyone else gets access from
+groups in Settings → Access. A group sets:
 
-- Libraries: all of them, including ones added later, or a list. A library
-  an account can't open doesn't exist for it: not in lists, search, other
-  people's profiles, or by a guessed address.
-- A bit rate limit for streaming. A file over it plays as an encode under
-  it. Downloads aren't limited, since a download only takes longer.
-- Whether the server may encode video for its members. Off, a file plays as
-  it is or with its video copied, and one that needs an encode doesn't play.
-- Whether its members may download.
+- Which libraries, or all of them including future ones. A hidden library
+  doesn't show up anywhere, not even by guessing its URL.
+- A streaming bit rate limit. Files over it play as an encode. Downloads
+  aren't limited.
+- Whether the server may encode video for them.
+- Whether they may download.
 - How many devices may play at once.
 
-An account is in any number of groups and gets the most generous of what
-they allow: every library any of them opens, the highest limit, and
-anything one of them permits. Everyone is the built-in group that holds
-every account. It starts with every library and no limits, so nothing
-changes until an admin changes it, and while it stays that way no other
-group can hold anyone back. Take its libraries away to make access opt-in,
-then open them through other groups. A group that opens no library has no
-say in the limits, so the emptied Everyone doesn't lift the ones the other
-groups set. Its limits only count for an account that no group opens
-anything for.
+An account in several groups gets the most generous combination. The
+built-in Everyone group holds every account and starts with all libraries
+and no limits. To make access opt-in, remove its libraries and grant them
+through other groups. A group that opens no libraries doesn't affect
+limits, so an emptied Everyone won't override other groups.
 
-Accounts get into a group three ways. An admin puts them there under
-Settings → Users. An invite link can name groups for the account it
-creates. Or the group names a group at the OIDC provider, and then holds
-whoever the provider's groups claim lists, kept in step at every sign-in;
-see [Configuration](#configuration). A group that starts following a
-provider group fills up at once, from the claims each linked account last
-sent.
-
-Edit access in a user's menu also sets things on that one account, over
-its groups: a field left at From groups follows them, and anything else
-wins. The OIDC policy claim sets the same per account from the provider.
-
-Changes apply to an account's next request, which for a stream that is
-playing is its next piece of the file.
+Admins add accounts to groups in Settings → Users. Invite links can assign
+groups, and groups can follow an OIDC group. The user menu's Edit access
+overrides settings for one account, as does the OIDC policy claim. Changes
+apply on the next request, including the next chunk of a playing stream.
 
 ## Branding
 
-Settings → Branding sets how the server looks to everyone, signed in or
-not: the accent of the Matinee theme in light and dark mode, and the login
-screen. The login screen can show a wall of artwork behind the form, as in
-Jellyfin and alloy, on the web's login and invite pages and the apps'
-sign-in screens: rows of title posters, thumbs (the titles' backdrops),
-or both mixed at random, that drift in turns left and right, sloped,
-blurred, and faded into the page by as much as the admin set. It's off
-until an admin turns it on.
-
-Anyone who opens the login page sees the wall, so it only shows titles
-from the libraries Everyone opens, and only images the server has
-downloaded already. `auth.loginBackdrop` picks a new random set on every
-call. While the wall is on, `/api/artwork` serves those images, in the two
-smallest sizes, without a session; every other image still needs one.
+Settings → Branding sets the theme accent for light and dark mode, and can
+turn on an artwork wall behind the login form. It's off by default. The
+wall only uses already-downloaded images from libraries Everyone can see,
+because anyone can open the login page. While it's on, `/api/artwork`
+serves those images in the two smallest sizes without a session.
 
 ## Scanning
 
-A scan looks only at the folders it is given and writes only what changed:
-new and changed files, files that are gone, their subtitle files, and the
-titles they belong to. Scans run one at a time. They start from:
+A scan only reads the folders it's given and only writes changes. Scans
+run one at a time and start from:
 
-- The watcher, for the folders that changed. See below.
-- A full scan of every library a minute after the server starts, for what
-  changed while it was down.
-- A full scan every `MATINEE_SCAN_INTERVAL_HOURS`, 12 by default, for what
-  the watcher can't see. 0 turns it off.
-- Scan now in Settings → Libraries, and adding or editing a library.
+- The file watcher, for changed folders.
+- A full scan one minute after startup.
+- A full scan every `MATINEE_SCAN_INTERVAL_HOURS`, default 12, 0 to turn
+  off.
+- Scan now in Settings → Libraries, or adding or editing a library.
 - Run now on Scan libraries in Settings → Jobs.
 
-The watcher watches every folder in a library. Once a library's files have
-stopped changing for 10 seconds, it scans a folder that appeared with
-everything in it, and for a folder where a video or subtitle file came,
-changed, or went, just that folder's own entries. A change in a `Subs`
-folder rescans the folder of its videos. An import from Sonarr or Radarr, or
-a subtitle from Bazarr, shows up on its own that way. Watching uses inotify,
-with one watch per folder. Two limits:
+The watcher uses inotify. It waits until a library has been quiet for 10
+seconds, then scans what changed, so Sonarr, Radarr, and Bazarr imports
+show up on their own. inotify can't see changes another host makes on an
+NFS or SMB share, so those wait for the timed scan. Large libraries can
+run out of watches. The server warns, and you can raise
+`fs.inotify.max_user_watches`. `MATINEE_WATCH_LIBRARIES=false` turns the
+watcher off.
 
-- inotify only sees changes made on the same machine. On an NFS or SMB share
-  that another host writes to, nothing fires, and changes show up with the
-  timed scan or Scan now.
-- A large library can run out of watches. The server logs a warning; raise
-  `fs.inotify.max_user_watches` with sysctl and restart.
+A file that's renamed or moved keeps its watch progress if one scan sees
+both paths with the same size and either the same name or modification
+time. Its subtitles move with it.
 
-`MATINEE_WATCH_LIBRARIES=false` turns watching off. The startup and timed
-scans still run.
+Scans skip hidden files and NAS folders like `@eaDir` and `#recycle`. To
+avoid emptying a library when storage disappears, a scan:
 
-A file that was moved or renamed keeps its row, and with it everyone's watch
-progress, when one scan sees both its old and new path: same size, and the
-same file name or the same modification time. Its subtitle files keep their
-rows too when they move with it.
-
-Scans skip hidden entries and NAS system folders such as `@eaDir` and
-`#recycle`. So that storage going away doesn't empty a library, a scan:
-
-- Skips a library folder that is missing, can't be read, or is empty while it
-  still has files, which usually means a share isn't mounted. It logs a
-  warning. If the folder really is empty now, remove it from the library.
-  This only covers library folders, so point a library at a share's mount
-  point, not at a folder above it.
-- Keeps the files and subtitles below a folder it couldn't list completely.
-- Deletes nothing when the server stops partway through.
+- Skips a library folder that's missing, unreadable, or suddenly empty,
+  and logs a warning. Point libraries at the share's mount point, not a
+  folder above it, or this check won't catch an unmounted share.
+- Keeps everything under a folder it couldn't fully list.
+- Deletes nothing if the server stops partway through.
 
 ## Metadata
 
-Each movies or shows library picks one metadata provider and a language when
-it is created or edited:
+Each library picks a provider and a language:
 
-- TMDB: movies and shows, with episode stills and logos. Radarr matches on
-  it. Needs `MATINEE_TMDB_API_KEY`.
-- TheTVDB: shows in the season order Sonarr uses, plus movies. Needs
-  `MATINEE_TVDB_API_KEY`, and `MATINEE_TVDB_PIN` for user-supported keys.
+- TMDB, for movies and shows. Radarr uses it. Needs `MATINEE_TMDB_API_KEY`.
+- TheTVDB, for shows in Sonarr's season order, and movies. Needs
+  `MATINEE_TVDB_API_KEY`, plus `MATINEE_TVDB_PIN` for user-supported keys.
 
-A scan groups files into titles: a show is a top-level folder, a movie is a
-folder holding one video (or a lone file), and `Season 2` folders or `S02E05`
-in file names give episode numbers. After the scan, titles that are new,
-unmatched for a day, gained files, or are 30 days old get fetched again.
-In the background, ffprobe reads the codecs, audio tracks, and subtitles of
-files that are new or changed, a few at a time. A file it can't read is
-left alone until it changes.
+A show is a top-level folder. A movie is a folder with one video, or a
+lone file. `Season 2` folders and `S02E05` in names give episode numbers.
+Matching tries provider ids in the folder name first (`{tvdb-81189}`,
+`[tmdbid-603]`, `{imdb-tt0133093}`), then the previous match, then ids from
+another provider, then a search by name and year. Admins fix bad matches
+with Fix match on the title page.
 
-Matching tries, in order, a provider id in the folder name (`{tvdb-81189}`,
-`[tmdbid-603]`, `{imdb-tt0133093}`, as Sonarr, Radarr, and Jellyfin write
-them), the title's earlier match, ids another provider found, and last a
-search by the folder's name and year. Admins fix wrong matches from a title's
-page with Fix match.
+New titles, unmatched titles older than a day, titles with new files, and
+titles 30 days old get refreshed after a scan. ffprobe reads codecs and
+tracks of new or changed files in the background.
 
-A fetch also keeps the first 20 billed actors with their characters, the
-studios, and some of the crew. Movies get their directors and writers,
-including screenplay, story, and source credits such as a novel. Shows get
-their creators and whoever directed or wrote the show as a whole: anime's
-series director and series composition, anyone credited on a third of the
-episodes, and the author of the source. TheTVDB only lists crew per episode,
-so its shows get the cast and studios. Like Jellyfin, Matinee leaves out the
-rest of the crew and episode guest stars.
+Metadata includes the first 20 actors, studios, and key crew: directors
+and writers for movies, creators and series-level directors and writers
+for shows. TheTVDB lists crew per episode only, so its shows get cast and
+studios.
 
-The server downloads artwork into `$MATINEE_DATA_DIR/artwork` and scales
-it with ffmpeg to WebP copies 240, 480, 960, and 1920 px wide, made as
-they're first asked for (JPEG and PNG when ffmpeg lacks libwebp). Clients
-get artwork ids and load them through `artworkPath()`, or offer every size
-with `artworkSrcSet()` and let the browser pick; the server only fetches
-URLs a provider gave it. As in
-Jellyfin, a metadata fetch downloads every image it saved: posters,
-backdrops, logos, season posters, episode stills, and cast photos.
-Posters and backdrops go first, and an image someone opens goes ahead of
-all of them. The original and its card copies take about 150 KB per image
-on average, so a library of 1,000 titles needs a few GB.
+Artwork downloads to `$MATINEE_DATA_DIR/artwork`, with WebP copies at 240,
+480, 960, and 1920 px made on first request, or JPEG and PNG if ffmpeg
+lacks libwebp. Clients use `artworkPath()` or `artworkSrcSet()`. Each image
+also gets a BlurHash for placeholders. Expect about 150 KB per image, so a
+few GB for 1,000 titles.
 
-Like Jellyfin, the server reads a [BlurHash](https://blurha.sh) from each
-image it downloads and sends it, with the image's aspect ratio, next to
-the artwork id. The web app draws it as a blurred stand-in until the image
-loads. An image opened before its download finished has none on that
-view. The Fetch artwork task downloads whatever a restart or a failure
-left without a BlurHash.
+Admins can replace a poster, backdrop, logo, or still with Edit images.
+It lists the provider's options and accepts JPEG, PNG, and WebP uploads up
+to 25 MB. Refreshes keep the admin's choices.
 
-Admins pick a title's poster, backdrop, and logo, a season's poster, and an
-episode's still with Edit images in its menu, as in Jellyfin's image editor.
-It lists what the library's provider has for that image, those in the
-library's language, English, or without text first, and every language on
-request. It also takes JPEG, PNG, and WebP uploads of up to 25 MB, stored
-under an id from their bytes. A refresh keeps what an admin picked, uploaded,
-or removed. Fix match to another entry drops the picks from the old one and
-keeps the uploads, and the server deletes an upload once nothing shows it.
-
-Providers live in `apps/server/src/metadata`. Adding one means implementing
-`MetadataSource` in `types.ts`, listing it in `sources.ts`, and adding its id
+To add a provider, implement `MetadataSource` in
+`apps/server/src/metadata/types.ts`, list it in `sources.ts`, and add its id
 to `METADATA_PROVIDERS` in the contract.
 
 ## Jobs
 
-Background work runs in queues, as in Immich: library scans, media info
-(ffprobe), metadata, thumbnails, trickplay images, artwork, subtitle
-conversion, and profile pictures. Each queue runs a few jobs at a time, and asking for a job that
-is already waiting or running joins it, so a file is never probed twice at
-once. What a player waits for, like a thumbnail or the file it's about to
-play, goes ahead of background work. Under Settings → Jobs admins see what
-each queue is doing and its latest failures, pause it, or drop its waiting
-jobs. Concurrency, further down, sets how many jobs the media info,
-trickplay, subtitle preparation, and artwork queues run at once, the ones that build up long
-backlogs. Higher numbers clear one sooner but take CPU, disk, and network
-from people streaming. A change applies at once and stays for the next
-start. The other queues run a fixed number.
+Background work runs in queues for scans, ffprobe, metadata, thumbnails,
+trickplay, artwork, subtitles, and profile pictures. Duplicate requests
+join the existing job, and work a player is waiting on jumps the queue.
+Settings → Jobs shows each queue's state and failures, and lets admins
+pause queues, clear them, and set concurrency for the media info,
+trickplay, subtitle, and artwork queues. Higher concurrency clears
+backlogs faster but competes with streams.
 
-Scheduled tasks fill the queues, as in Jellyfin: scanning every library,
-refreshing stale metadata, reading media info of files that haven't been
-read, fetching artwork, making trickplay images, cleaning up old encodes,
-and deleting expired sessions. Each runs at startup, on an interval, or when an admin presses
-Run now, and can be cancelled, which also drops the jobs it queued. The
-last run of each is stored, so an interval counts across restarts. The
-queues live in memory: the tasks find unfinished work again after a
-restart, since it's all derived from the database.
+Scheduled tasks fill the queues. They scan libraries, refresh metadata,
+probe files, fetch artwork, make trickplay, prepare subtitles, clean up
+encodes, and expire sessions. Each runs at startup, on an interval, or on
+Run now. Queues are in memory. After a restart, the tasks find unfinished
+work again from the database.
 
 ## Subtitles
 
-The player shows subtitle files beside a video and subtitle streams inside it.
+The player supports subtitle files next to the video and streams inside
+it.
 
-- Files: `Movie.srt`, `Movie.en.srt`, `Movie.eng.forced.srt`,
-  `Movie.de.sdh.srt`, also `.vtt`, `.ass`, `.ssa`, `.sup` (PGS), and `.idx`
-  (VobSub), in the video's folder or
-  a `Subs` or `Subtitles` folder next to it. Release packs with
-  `Subs/<video name>/2_English.srt` work too. A scan of the video's folder
-  picks them up, and the watcher sees them come and go like videos. A file
-  in `Subs` with no video's name goes to the folder's only video.
-- Streams: text subtitles inside the file, such as SubRip, ASS/SSA,
-  mov_text, and WebVTT, and picture subtitles: PGS, VobSub, and DVB. The
-  first time someone turns a text or PGS stream on, the server caches it in
-  `$MATINEE_DATA_DIR/subtitles`, where it stays until the file changes.
-  For Matroska UTF-8, ASS/SSA and PGS tracks with block-level subtitle cues,
-  it reads the index and only the selected track's blocks, in bounded,
-  offset-ordered windows. It builds a small temporary Matroska input for
-  ffmpeg, retaining the track header, compression, block durations and
-  lacing. Text becomes WebVTT; PGS is copied without decoding pictures.
-  Files without usable cues for that track, unsupported layouts or codecs,
-  encrypted tracks, and inputs above the reader's safety limits use the
-  ordinary ffmpeg path. That can read the whole file and take minutes.
-  After scans and once a day, Prepare subtitles fills the cache for embedded
-  text tracks with a usable Matroska index, and MP4/MOV text tracks through
-  ffmpeg's sample-table seeks. Fragmented MP4/MOV, missing static chunk
-  tables, oversized metadata and malformed atom layouts stay on demand.
-  Each Matroska file shares one Cues scan
-  and offset-ordered block pass across its text tracks. It writes WebVTT and,
-  for ASS/SSA, an ASS copy. ASS/SSA sidecars are prepared too; SRT and VTT
-  sidecars need no converted cache. Sidecar revisions are checked after
-  scans, since their database rows have no size or modification time. A
-  scheduled catch-up only stats sidecars with missing outputs.
-  Picture tracks are never prepared. Unsupported
-  inputs are remembered by size and modification time and left to on-demand
-  extraction; the background job never falls back to reading the video.
-  Font attachments remain on demand because their indexed extraction takes
-  milliseconds.
-  The task inventories cache names against stored probes without opening or
-  stating library files that need no work. It also removes embedded outputs
-  for deleted or changed media. In Settings → Jobs it can be run manually;
-  its separate queue defaults to one file at a time, with low-priority jobs
-  and idle-I/O reader and ffmpeg processes. The reader yields between
-  bounded read windows. Pausing the queue stops new files, not the file already running.
-  On-demand conversion keeps its two independent slots. Per-output locks
-  coordinate the queues, and unique temporary files are renamed atomically.
-- Browsers advertising ASS support get ASS/SSA scripts with their styles,
-  positioning and timing intact, rendered locally by JASSUB and libass. The
-  renderer, WASM and bundled Liberation Sans fallback font load only when
-  an ASS track is shown. Rendering is capped at 1080 pixels high. Scripts
-  render as authored; WebVTT cue styling and lifting above the controls do
-  not apply. If loading fails, the player asks for WebVTT for the same track.
-  Devices without ASS support still get WebVTT, including for ASS/SSA.
-- Matroska font attachments are read through SeekHead without scanning video
-  blocks, then cached beside subtitles under a key containing the item's id,
-  modification time and size. Authenticated, library-filtered font routes
-  list and serve only font MIME types with font extensions. Limits are 32
-  fonts, 8 MiB per font and 24 MiB total; attachment metadata is bounded to
-  32 MiB. Files without a usable attachment index use the bundled fallback.
-  The renderer never looks up fonts on the internet.
-- PGS goes to the browser as it is, a `.sup` file, and the player draws it
-  over the video with [libpgs](https://github.com/Arcus92/libpgs-js). It
-  works with every source, the file as it is included.
-- VobSub and DVB only show burned into the video. Picking one switches to
-  an encode with the subtitle drawn on, at the quality picked, or the
-  fallback quality for Original. The overlay runs on the CPU; the GPU still
-  decodes and encodes if it's set up. Other clients can burn in PGS the
-  same way, with `subtitle` in `mediaHlsPath()`.
+- Files can be `.srt`, `.vtt`, `.ass`, `.ssa`, `.sup` (PGS), or `.idx`
+  (VobSub), named like `Movie.en.srt` or `Movie.eng.forced.srt`. They can
+  sit next to the video or in a `Subs` or `Subtitles` folder, including
+  release-pack layouts like `Subs/<video name>/2_English.srt`.
+- Embedded text tracks and PGS get extracted to
+  `$MATINEE_DATA_DIR/subtitles` the first time someone turns them on. For
+  Matroska, the server reads only that track's blocks using the file's
+  cue index. Other files go through ffmpeg, which can take minutes on a
+  large file.
+- The Prepare subtitles task extracts text tracks ahead of time when it
+  can do so cheaply, at low I/O priority, one file at a time. It never
+  falls back to reading the whole video.
+- Browsers with ASS support get ASS/SSA as authored, rendered with JASSUB.
+  Fonts come from the file's attachments, at most 32 fonts and 24 MiB
+  total, with a bundled fallback. Everything else gets WebVTT.
+- PGS goes to the browser as `.sup` and renders with
+  [libpgs](https://github.com/Arcus92/libpgs-js).
+- VobSub and DVB can only be burned in, which forces an encode. Other
+  clients can request PGS burn-in with `subtitle` in `mediaHlsPath()`.
 
-A file starts with the viewer's last language if they had subtitles on, else a
-forced track in the audio's language, else a track the file marks default.
-Tracks that need burning in never start by themselves. The player remembers
-the last choice, a language or Off, for the next file. Press C to toggle
-subtitles.
+The default track is your last language if you had subtitles on, then a
+forced track in the audio language, then the file's default. Burn-in
+tracks never start automatically. C toggles subtitles. G and H shift them
+earlier or later by 0.1 s for the rest of the file.
 
-When subtitles run early or late, the Offset buttons at the bottom of the
-subtitles menu move them by a tenth of a second, as do G (earlier) and H
-(later). The offset holds for the rest of the file, across tracks and
-qualities, and starts at zero for the next one. Burned-in subtitles are
-part of the picture and can't move.
+## Playback
 
-## Audio tracks and quality
+The default audio track plays straight from the file if the browser can
+decode it. Other tracks, or audio the browser can't decode, play as a
+stream with the video copied and one audio track. Any quality besides
+Original plays an H.264 HLS encode. If the browser can't play the file at
+all, the player switches to an encode on its own.
 
-The player's audio menu lists every audio track in the file. The track the
-file marks default plays from the file as it is, if the browser decodes
-it. Any other track, or a default track the browser can't decode, plays a
-stream that ffmpeg makes on the fly: fragmented MP4 with that one audio
-track and the video copied. A quality other than Original in the settings
-menu plays an encode, the video in H.264 at the picked size and bit rate,
-as HLS. When the browser can't play a file as it is, the player switches
-to an encode by itself. The quality you pick is remembered for the next
-file.
+The player reports which audio codecs it decodes: Opus, AAC, MP3, FLAC,
+ALAC, AC-3, or E-AC-3. Anything else, like DTS, TrueHD, or PCM, becomes
+stereo Opus at 192 kb/s, or AAC at 256 kb/s without Opus. Mono is
+128 kb/s. Surround uses the downmix from Settings → Transcoding. So a DTS
+file in Chrome only costs an audio conversion.
 
-An account's bit rate limit applies to streaming, not downloads. A file
-over it plays as an encode at a quality under the limit, and Original
-isn't offered. A file whose bit rate isn't known counts as over it too.
-When video conversion is turned off for the account, the player offers
-no encode qualities. Files still play as they are or with their video
-copied and their audio converted, but one that needs its video converted
-can't play. An account with a stream limit must stop on another device
-before starting on one more.
+Copied streams have no byte ranges, so seeking starts a new stream at the
+nearest keyframe. Safari doesn't play them yet.
 
-The player tells the server which audio codecs the browser decodes in MP4,
-out of Opus, AAC, MP3, FLAC, ALAC, AC-3, and E-AC-3. A stream copies a
-track in one of them. Anything else, like DTS, TrueHD, or PCM, becomes
-Opus, or AAC in a browser without Opus. Converted audio is stereo, at
-Jellyfin's bit rates: 192 kb/s for Opus, 256 kb/s for AAC, 128 kb/s for
-mono. Surround goes through the downmix set under Settings → Transcoding.
-So a file with DTS audio plays in Chrome with its video copied and Opus
-audio, which costs the server little.
+Encodes are six-second fMP4 HLS segments written to disk. Everyone playing
+the same file, track, and quality with the same audio codecs shares one
+encode, so each segment is encoded once. Seeking past the encoded part
+restarts ffmpeg there. ffmpeg pauses when far enough ahead and stops two
+minutes after the last request. Changing the file or transcoding settings
+starts a new encode.
 
-A copied stream has no byte ranges, so the player seeks by starting a new
-one. The video can only start on a keyframe, so a seek lands on the
-nearest one. Safari won't play media without byte ranges, so these streams
-don't play there yet.
+Encodes live in `$MATINEE_DATA_DIR/transcodes`, or `MATINEE_TRANSCODE_DIR`,
+for `MATINEE_TRANSCODE_CACHE_HOURS` (24) after the last play. Past
+`MATINEE_TRANSCODE_CACHE_GB` (50), the least recently played go first.
 
-Changing audio tracks on a copied stream requires a keyframe lookup. New
-media probes retain the file's timestamp origin, so Matroska lookups read
-packets without repeating ffprobe's codec discovery. Probes saved before
-the timestamp origin was recorded keep the discovery step until the file
-is probed again. Other containers retain discovery. Both paths use the same
-packet timestamps for seeking.
-
-Encodes work the way Jellyfin's transcodes do: ffmpeg writes six-second
-fMP4 segments to disk, and the player loads them from an HLS playlist with
-hls.js, or natively where the browser has no Media Source Extensions. A
-seek past what's encoded starts ffmpeg at the segment the player asked
-for. Unlike Jellyfin, an encode belongs to no one player. Everyone who
-plays the same file with the same audio track and quality, in browsers
-that decode the same audio codecs, reads the same segments, so the server
-encodes each segment once and serves it from disk after that, also on a
-second viewing. A change to the file or to the transcoding settings
-starts a new encode. ffmpeg runs while someone is watching ahead of what's
-on disk and stops when it reaches segments it already wrote, or two
-minutes after the last player asked for anything. Throttling pauses it
-once it is far enough ahead of every player, and segment deletion removes
-segments every player is past.
-
-Encodes stay in `$MATINEE_DATA_DIR/transcodes`, or `MATINEE_TRANSCODE_DIR`,
-for `MATINEE_TRANSCODE_CACHE_HOURS` (24) after anyone last played them,
-and the least recently played go first once they pass
-`MATINEE_TRANSCODE_CACHE_GB` (50) together.
+Bit rate limits, disabled encoding, and stream limits from
+[Access](#access) apply here. A file with an unknown bit rate counts as
+over the limit.
 
 ## Downloads
 
-A file's menu has Download…, for watching offline. The original is the
-file as it is, from the stream route, which any downloader resumes with
-byte ranges. The other choice is a version made for the device. It keeps
-the video, or encodes it to a size, bit rate, and codec. It holds the audio
-tracks you pick, each kept or converted to AAC or Opus in mono, stereo,
-5.1, or 7.1. It can also burn in a picture subtitle. The dialog offers only
-the codecs the server encodes and the browser plays, and shows the size
-the server estimates. Text subtitles stay out of the file and save next to
-it as WebVTT. Downloads can be turned off for an account; when video
-conversion is off, download the file as it is or keep its video.
+Download… in a file's menu offers the original file or a version for the
+device. The version keeps or re-encodes the video, keeps or converts each
+chosen audio track to AAC or Opus, and can burn in a picture subtitle. The
+dialog shows an estimated size. Text subtitles save beside it as WebVTT.
 
-The server doesn't keep a finished copy. `downloads.start` sets up a
-download, and ffmpeg makes it as the client fetches it: six-second
-fragmented MP4 segments, which make one MP4 file when appended to the init
-segment. The client fetches them in order, and segments behind it are
-deleted. A run that gets ten segments ahead pauses, so a slow connection
-doesn't fill the disk. When the client goes away, ffmpeg stops after 30
-seconds. When it asks for the next segment, a new run starts there: on the
-segment grid for an encode, and on the keyframe the segment starts with
-for kept video. So a download picks up where it broke off, after a
-restart of the server too, and nothing made before is made again. The
-audio joins sample for sample. Each segment's `moof` boxes say where
-every track ended and how many packets it has had, so the new run drops
-the kept tracks' packets the file already has, and starts each converted
-track's encoder a few seconds early on the old run's frame grid, keeping
-only what follows. Matroska's millisecond timestamps leave the decode
-after a seek up to half of one off; frames lie on a fixed grid from the
-start, so the server snaps to it, and for TrueHD, whose frames are
-shorter than that, it encodes each candidate and compares it with the
-last segment. Runs go through two queues under Settings → Jobs. Download
-encodes runs two at a time by default, for downloads whose video is
-encoded, each of which takes an encoder as a stream does. Download copies
-runs four, for downloads that keep their video, which read the file,
-convert at most the audio, and mostly wait for their client. So a copy
-never waits behind an encode. A download nobody fetched from for
-`MATINEE_TRANSCODE_CACHE_HOURS` is deleted.
+The server doesn't store finished downloads. ffmpeg makes six-second fMP4
+segments as the client fetches them and deletes the ones behind it. It
+pauses ten segments ahead and stops 30 seconds after the client leaves.
+When the client comes back, a new run starts at the next segment, even
+after a restart, without redoing earlier work. Audio lines up sample for
+sample across runs.
 
-Browsers save it as one stream from `downloadFilePath()`, which can't
-resume. Apps fetch `downloadInitPath()` and then `downloadSegmentPath()`
-from 0 until it answers 204, and after a break ask for the first segment
-they don't have. If the file or the transcoding settings changed in
-between, the server answers 409, and the download starts over.
+Download encodes, which re-encode video, run two at a time by default.
+Download copies, which keep the video, run four. Both are queues in
+Settings → Jobs. Downloads idle for `MATINEE_TRANSCODE_CACHE_HOURS` get
+deleted.
 
-No request waits in silence for long, since proxies and HTTP clients cut
-a quiet connection after a minute or so. A request for a segment that
-isn't made within 25 seconds answers 503 with Retry-After, whether the
-run is still at it or waits for its turn in the queue, and the client
-asks again; a download keeps its place in the queue while its client asks
-at least every half minute. The whole file as one stream answers 503 the
-same way when its run got no turn in that time, before anything is sent,
-so a browser shows a download that failed and can be tried again rather
-than one that hangs.
+Browsers download one stream from `downloadFilePath()`, which can't
+resume. Apps fetch `downloadInitPath()`, then `downloadSegmentPath()` from
+0 until it returns 204, and resume from the first missing segment. A 409
+means the file or settings changed and the download has to restart.
+
+If a segment isn't ready within 25 seconds, the server returns 503 with
+Retry-After so proxies don't cut a silent connection. A download keeps its
+place in the queue while the client retries at least every 30 seconds.
 
 ## Transcoding and ffmpeg
 
-Matinee encodes video the way Jellyfin does, with Jellyfin's filter chains
-and defaults, and is built for
-[jellyfin-ffmpeg](https://github.com/jellyfin/jellyfin-ffmpeg): FFmpeg 8.1
-with Jellyfin's patches. Get it as the Nix package `jellyfin-ffmpeg` (the
-dev shell has it), as the Debian and Ubuntu packages from
-repo.jellyfin.org (what Jellyfin's Docker image ships, in
-`/usr/lib/jellyfin-ffmpeg`), or as a portable build from its GitHub
-releases. Point `MATINEE_FFMPEG_PATH` and `MATINEE_FFPROBE_PATH` at it if it
-isn't first on `PATH`.
+Matinee uses Jellyfin's filter chains and defaults, and expects
+[jellyfin-ffmpeg](https://github.com/jellyfin/jellyfin-ffmpeg). Get it
+from Nix (`jellyfin-ffmpeg`, already in the dev shell), the Debian and
+Ubuntu packages on repo.jellyfin.org, or a portable build. Set
+`MATINEE_FFMPEG_PATH` and `MATINEE_FFPROBE_PATH` if it isn't on `PATH`.
 
-What needs jellyfin-ffmpeg:
+You need jellyfin-ffmpeg for:
 
-- tonemapx, the software tone mapper. It turns HDR10, HLG, and Dolby Vision
-  into SDR, including Dolby Vision profile 5, which has no HDR10 layer and
-  needs the RPU applied. Without it, HDR that no GPU tone maps comes out
-  washed out.
-- The GPU paths in full: BT.2390 in `tonemap_opencl`, `tonemap_cuda`,
-  `tonemap_videotoolbox`, VPP tone mapping without HDR10 metadata, and
-  `hwupload_vaapi`. Without them VAAPI and QSV fall back to scaling on the
-  CPU and uploading frames for the encoder.
-- Pausing ffmpeg with `p` and `u`, which throttling needs.
-- Dropping Dolby Vision and HDR10+ from a stream copy with `hevc_metadata`
-  and `av1_metadata`. Stock FFmpeg 7.1 and later can drop Dolby Vision with
-  `dovi_rpu`.
+- tonemapx, the software tone mapper for HDR10, HLG, and Dolby Vision,
+  including profile 5. Without it, HDR looks washed out unless a GPU tone
+  maps it.
+- Full GPU paths, including BT.2390 tone mapping and `hwupload_vaapi`.
+  Without them, VAAPI and QSV scale on the CPU.
+- Pausing ffmpeg, which throttling needs.
+- Stripping Dolby Vision and HDR10+ from copied streams.
 
-Stock FFmpeg still decodes and encodes in software (libx264, libx265,
-libsvtav1), encodes on VAAPI, QSV, NVENC, and VideoToolbox, deinterlaces,
-and keeps HDR10 and HLG in 10-bit HEVC and AV1 encodes.
+Stock FFmpeg still handles software encoding, GPU encoding on VAAPI, QSV,
+NVENC, and VideoToolbox, deinterlacing, and 10-bit HDR10 and HLG encodes.
 
-Admins set it up under Settings → Transcoding: the GPU (VAAPI, Intel Quick
-Sync, NVIDIA NVENC, or Apple VideoToolbox) and its device, which codecs it
-decodes, HEVC and AV1 encoding, the x264 preset and CRF, tone mapping,
-deinterlacing, the stereo downmix and its boost, VBR for AAC, and
-throttling. Changes apply to the next transcode. The
+Admins configure transcoding in Settings → Transcoding.
 `MATINEE_HARDWARE_ACCELERATION`, `MATINEE_VAAPI_DEVICE`, and
-`MATINEE_QSV_DEVICE` variables are the defaults for that form.
+`MATINEE_QSV_DEVICE` set its defaults. On startup and device changes, the
+server tests each GPU encoder and tone mapper, and the page only offers
+what passed. Run detection again after updating drivers or ffmpeg.
 
-When the server starts, and when the devices change, it finds out what
-ffmpeg can do: its encoders, filters, and options, then a short test encode
-with each GPU encoder and each tone mapper. The settings page shows the
-result, and offers only what passed. Detect again after updating drivers
-or ffmpeg. A GPU path that can't tone map a file falls back to tonemapx.
+Intel's low-power encoder, VDENC, speeds up 4K and tone-mapped encodes. It
+has a switch per codec, off by default. It needs Skylake or newer for
+H.264, Ice Lake or newer for HEVC, and HuC firmware. Arc always uses it.
 
-Intel GPUs also have a low-power encoder (VDENC) for H.264 and HEVC. It
-skips CPU-GPU syncs, which helps 4K and tone mapped encodes. As in
-Jellyfin, a switch per codec turns it on for QSV and for VAAPI on an Intel
-driver, and both are off by default. Low power needs a GPU with VDENC for
-the codec (Skylake and later for H.264, Ice Lake and later for HEVC) and
-the HuC firmware for bitrate control, so detection tries it too, and the
-switches work only where it passed. Arc GPUs encode in low power either
-way.
-
-In Docker, pass the GPU through: `/dev/dri` for VAAPI and QSV, plus the
-OpenCL runtime of the driver (such as `intel-compute-runtime`) for OpenCL
-tone mapping; the NVIDIA container toolkit for NVENC.
+In Docker, pass through `/dev/dri` for VAAPI and QSV, plus the driver's
+OpenCL runtime like `intel-compute-runtime` for OpenCL tone mapping. NVENC
+needs the NVIDIA container toolkit.
 
 ## Trickplay
 
-While someone hovers over or drags the seek bar, the player shows the
-frame at that point, as Jellyfin does. The server makes these trickplay
-images with ffmpeg in the background: a 320 px thumbnail every 10
-seconds, in JPEG tiles of 10 by 10, kept in `$MATINEE_DATA_DIR/trickplay`.
-In a test, a 24-minute 1080p episode took 18 seconds and 1.2 MB, and a
-99-minute 4K HDR10 remux two minutes and 4.3 MB. HDR is tone mapped with
-tonemapx. ffmpeg runs at low priority.
+The seek bar shows preview frames. The server makes a 320 px thumbnail
+every 10 seconds in 10×10 JPEG tiles under `$MATINEE_DATA_DIR/trickplay`.
+A 24-minute 1080p episode took 18 seconds and 1.2 MB. A 99-minute 4K HDR
+remux took two minutes and 4.3 MB.
 
-Scans queue images for their files once ffprobe has read them. The Make
-trickplay images task catches the rest once a day, and deletes the images
-of files that are gone. A file someone opens before its images exist moves
-to the front of the queue, and the seek bar picks them up when they're
-done.
+Images get made after ffprobe reads a file, with a daily task catching the
+rest. Opening a file moves it to the front of the queue.
 
-By default ffmpeg decodes only keyframes, so a thumbnail can be a second
-or two off its time. That makes a whole library practical: decoding every
-frame of that episode took four CPU minutes, its keyframes 20 seconds.
-Admins change this, the interval, and the width under Settings →
-Trickplay, or turn trickplay off. New settings make every file's images
-again; the old ones show until then.
+By default ffmpeg decodes keyframes only, so thumbnails can be a second or
+two off. Decoding every frame of that episode took four CPU minutes
+instead of 20 seconds. Admins can change this, the interval, the width,
+and GPU decoding in Settings → Trickplay. GPU decoding helps most when
+decoding every frame, and failures fall back to the CPU.
 
-Hardware decoding, off by default as in Jellyfin, decodes on the GPU set
-up under Transcoding, for the codecs it decodes there, and copies each
-frame back for the CPU filters. It saves the most with keyframes only off:
-decoding every frame of three minutes of the 4K remux took 306 CPU
-seconds in software and 32 with VAAPI. A run that fails on the GPU runs
-again on the CPU, and a keyframes-only run that fails or finds nothing
-decodes every frame, as Jellyfin does.
-
-Clients read a file's images from `media.trickplay` and load the tiles
-through `trickplayTilePath()`. Players that read HLS image playlists, as
-Roku's and Apple's do, can load `trickplayPlaylistPath()` instead: an
-`#EXT-X-IMAGES-ONLY` playlist with `#EXT-X-TILES` per tile, like
-Jellyfin's `tiles.m3u8`. Its tile URLs are relative and carry no token, so
-the player has to send the `Authorization` header with them.
+Clients read `media.trickplay` and load tiles with `trickplayTilePath()`.
+Players that read HLS image playlists can use `trickplayPlaylistPath()`,
+but must send the `Authorization` header with tile requests.
 
 ## Statistics
 
-Each time someone opens a file in the player, it starts a playback session
-with an id it makes up, and sends that id with its progress reports and its
-stream requests. Reports carry the seconds spent playing, not counting
-pauses, buffering, or seeks. The server never counts more than the time
-since the session began plus 30 seconds, so a client can't claim more than
-it could have watched. Stream requests record what the server did: copied
-the file, copied the video into a stream ("direct stream"), or encoded it,
-with the encoder, whether a GPU did it, tone mapping, the converted audio,
-and how long ffmpeg ran.
+Each player session has a client-made id sent with progress reports and
+stream requests. Reports count seconds actually played. The server caps
+them at the session's age plus 30 seconds. Stream requests record whether
+the file played directly, as a direct stream, or as a transcode, plus the
+encoder, GPU, tone mapping, and audio conversion.
 
-A session counts as a play once it has played a minute or reached the end.
-Movies and episodes count as watched when a session played them to the
-end, or when someone marked them watched. Marking asks when, as Trakt
-does: just now, on the release date (an episode's air date, a movie's
-release date), or on a date and time picked in a dialog. It adds a play at
-that time holding the runtime from the resume point on, since the player
-already counted what came before. A file that's already watched gets no
-second play, and marking it unwatched takes the marked plays back while
-the player's sessions stay. Marked plays count everywhere except the
-playback method breakdown, since the server played nothing.
+A session counts as a play after a minute or at the end. A file is
+watched when a session reaches the end or someone marks it. Marking asks
+for a time: now, the release date, or a custom date. Marked plays count
+everywhere except the playback method breakdown.
 
-The migration that added marks gave every file that was already watched,
-but never played to the end in a session, a marked play at its last
-progress update. That covers files marked by hand earlier and files
-watched before statistics existed. Sessions outlive the files and titles
-they played, so watch time stays when a library loses them.
+Statistics, in the account menu, has four views. Times use the browser's
+time zone. Other clients send `timeZone`, default UTC.
 
-Statistics, in the account menu, shows one of four views, picked from a
-dropdown. Days and hours count in the browser's time zone; other clients
-send `timeZone` with the request, and it defaults to UTC. Everything but
-the library totals follows the period picked beside the dropdown.
-
-- Activity, for admins: who is watching right now and how each stream
-  plays, watch time per day, week, or month, the most watched titles and
-  genres, when playback starts, and viewers.
-- Playback, for admins: how plays split between direct play, direct
-  stream, and transcode, which encoders and source codecs transcoding
-  needed, and browsers and apps.
-- Library, for everyone: what the libraries hold, the files that arrived
-  over time, and their resolution, dynamic range, and codecs. A file
-  arrived at its modification time, or when a scan found it if that came
-  first, so a new server shows when its files were downloaded rather than
-  one spike on the day of the first scan.
-- Leaderboard, for everyone: watch time, plays, the current and longest
-  streak of days in a row with a play, and movies and episodes finished.
-  Only people who share their statistics take part. You always see your
-  own place, and nobody else does until you share. The current streak
-  runs up to today or yesterday, whatever the period.
-
-The leaderboard is one statement that ranks in Postgres. Its totals and
-play days come from index-only scans of `playback_session_user_idx`, which
-carries every column they read; `playback_session_started_idx` does the
-same for the server-wide views.
+- Activity, for admins: current streams, watch time, top titles and
+  genres, start times, and viewers.
+- Playback, for admins: direct play vs. direct stream vs. transcode,
+  encoders, source codecs, and clients.
+- Library, for everyone: library contents, file arrivals over time, and
+  resolutions, HDR, and codecs.
+- Leaderboard, for everyone: watch time, plays, streaks, and completions.
+  Only people who share their stats appear. You always see your own rank.
 
 ## Profiles and favorites
 
-Everyone on the server has a profile at `/profiles/<username>`, linked from
-the leaderboard and the admins' statistics. A profile always shows the name
-and picture. Its owner decides under Settings → Account whether others
-also see:
-
-- Favorites: the movies, shows, seasons, and episodes they marked with
-  the heart, on a title's, season's, or episode's page or on its poster
-  or still. The profile shows the latest of every kind in one row, and
-  its heading opens `/profiles/<username>/favorites`, with a row for
-  each kind: shows, seasons, episodes, then movies.
-- Statistics: watch time, the most watched titles and genres, when they
-  watch, and the last file of each title they played.
-
-Both start off. The owner sees everything on their own profile either way,
-with a note on the parts nobody else can see.
-The Share button copies the profile's address, or opens the share sheet on
-a phone. The page needs an account on the server; nothing on it is public.
-Admins still see each person's total watch time in the server's
-statistics.
+Everyone has a profile at `/profiles/<username>` showing their name and
+picture. In Settings → Account, owners can also share their favorites and
+their statistics. Both are off by default. Profiles require an account on
+the server.
 
 ## How auth works
 
-- Sessions are random tokens. The database stores only their SHA-256. Browsers
-  get an HttpOnly cookie; apps send `Authorization: Bearer`. A session ends
-  30 days after it was last used.
-- Settings → Account lists every session: browsers by the browser and system
-  in their User-Agent, apps by the device name and platform they sent when
-  they signed in. You can sign out any of them, or all but the current one.
-- Passkeys use discoverable credentials with user verification, via
+- Sessions are random tokens. The database stores only the SHA-256.
+  Browsers get an HttpOnly cookie, apps send `Authorization: Bearer`.
+  Sessions expire 30 days after last use. Settings → Account lists them
+  and can sign any of them out.
+- Passkeys use discoverable credentials with user verification, through
   SimpleWebAuthn.
-- OIDC uses authorization code + PKCE with state and nonce, via openid-client.
-  A short-lived cookie binds each round trip to the browser that started it.
-  Accounts are matched on issuer + subject, never on email. Each account
-  links at most one provider account. Linking one at a new issuer replaces
-  the link at the old one, which can't sign in anymore. Settings → Account
-  says when a link is at an old issuer.
-- The issuer URL is the `issuer` the provider's discovery document names,
-  or the document's own address. Linked accounts match on it, so the
-  server refuses a provider that names another issuer, both when an admin
-  saves the settings and at sign-in.
-- Nobody can remove their last passkey or linked account. A passkey only
-  counts while passkeys are on, and a linked account while single sign-on
-  is on. An admin who signs in only through single sign-on can't turn it
-  off or change the issuer.
-- Admins turn passkeys off under Settings → Authentication, as in alloy, and
-  `MATINEE_PASSKEYS_ENABLED=false` makes off the default. Single sign-on is
-  then the only way in. The login page shows only the provider, and the
-  server refuses passkey sign-in, sign-up, setup, and adding a passkey.
-  Stored passkeys stay for when they're back on, and nobody gets signed out.
-  The server turns passkeys off only once your own account is linked at the
-  current issuer. The form counts the accounts that aren't, since those
-  can't sign in afterwards. So link yours, ask everyone else to link theirs
-  under Settings → Account, then turn passkeys off. Someone still signed in
-  can link later.
-- With passkeys off, a provider that is down keeps everyone out until it's
-  back. If you can't wait, delete the saved switch with
-  `delete from setting where key = 'passkeys'` and restart. Passkeys then
-  follow `MATINEE_PASSKEYS_ENABLED` again.
-- People create their own accounts. With passkeys and open registration on,
-  the login page lets anyone pick a username and create a passkey. Admins
-  change open registration under Settings → Authentication;
-  `MATINEE_OPEN_REGISTRATION` is its default. With sign-up allowed in the OIDC
-  settings (or `MATINEE_OIDC_ALLOW_SIGN_UP`), the first sign-in of an unlinked
-  provider account creates a new account. Both start off. Settings → Users
-  lists the accounts for admins to manage.
-- Admins can create invite links under Settings → Users to let people in
-  while passkey sign-up is closed. Each link works once and expires. The person picks a username and
-  registers a passkey, and no account exists until the passkey is verified.
-  The server stores only the token's SHA-256, so it can show the link only
-  when it is created. An admin's links stop working if the admin is deleted
-  or loses the role, including through an OIDC role claim.
-- An unlinked OIDC sign-in whose username claim matches an account, as sent
-  or as Matinee would turn it into a username, doesn't sign in to it or make
-  a numbered copy. Linking on the claim alone would hand the account to
-  whoever controls that claim at the provider. The server keeps the
-  verified sign-in for 10 minutes, tied to the browser by an HttpOnly
-  cookie, and the login page asks the person to sign in to that account and
-  link it, without another trip to the provider. While sign-up is allowed,
-  they can create a new account from it instead. This works whether or not
-  sign-up is on. With passkeys off, a signed-out person can't sign in to
-  the account to link it, so the page offers only a new account, and with
-  sign-up off the sign-in fails.
-- There is always an admin who can sign in: the server refuses to demote or
-  delete the last one, yourself included. Every request reads the role from
-  the database, so a demotion applies to the user's next request. Deleting a
-  user deletes their sessions, passkeys, linked accounts, watch progress,
-  favorites, and playback history.
-- With single sign-on, the role claim sets the account's role on every
-  sign-in, as alloy and Immich read it: `admin` or `user`, or a list holding
-  them, where admin wins. Without the claim the role stays. A claim that
-  would demote the last admin who can sign in is ignored, and logged.
-- An OIDC client secret saved in settings is stored in the database as is,
-  like the rest of the settings. Use `MATINEE_OIDC_CLIENT_SECRET_FILE` to keep
-  it out of the database.
+- OIDC uses authorization code with PKCE, state, and nonce, through
+  openid-client. Accounts match on issuer and subject, never email. Each
+  account links one provider account. The server rejects a provider whose
+  discovery document names a different issuer.
+- You can't remove your last passkey or linked account. An admin who only
+  uses SSO can't turn SSO off or change the issuer.
+- Admins can turn passkeys off in Settings → Authentication, or default
+  them off with `MATINEE_PASSKEYS_ENABLED=false`. SSO is then the only way
+  in. The server only allows this once your own account is linked, and it
+  shows how many accounts aren't. If the provider goes down while passkeys
+  are off, run `delete from setting where key = 'passkeys'` and restart.
+- Self sign-up is off by default. With passkeys and open registration on,
+  anyone can create an account. `MATINEE_OPEN_REGISTRATION` sets the
+  default. With OIDC sign-up allowed, or `MATINEE_OIDC_ALLOW_SIGN_UP`, an
+  unlinked provider account creates a new one.
+- Invite links in Settings → Users work once and expire. They stop working
+  if the admin who made them is deleted or demoted.
+- An OIDC sign-in whose username matches an existing unlinked account
+  never signs in to it automatically, since that would hand the account to
+  whoever controls the claim. The login page asks the person to sign in to
+  that account and link it, or create a new one if sign-up is allowed.
+- The server won't demote or delete the last admin. Roles are read on
+  every request. Deleting a user deletes their sessions, passkeys, links,
+  progress, favorites, and history.
+- With SSO, the role claim sets the role on every sign-in: `admin`, `user`,
+  or a list where admin wins. A claim that would demote the last admin is
+  ignored and logged.
+- A client secret saved in Settings is stored in plain text. Use
+  `MATINEE_OIDC_CLIENT_SECRET_FILE` to keep it out of the database.
 
 ## Signing in apps
 
-Apps get a session of their own, separate from the browser's, so signing
-out of one leaves the other signed in. There are two ways, both in the
-`auth.app` and `auth.device` procedures of the contract, and both end in
-`{ token, user }`. An app sends its device name, like `Living room TV`, and
-its platform: `android`, `ios`, `linux`, `macos`, `tizen`, or `windows`.
+Apps get their own session, separate from the browser's. Both flows are in
+the contract's `auth.app` and `auth.device` and return `{ token, user }`.
+Apps send a device name like `Living room TV` and a platform: `android`,
+`ios`, `linux`, `macos`, `tizen`, or `windows`.
 
-Apps that can open a browser, on phones and desktops, follow OAuth for
-native apps (RFC 8252) with PKCE:
+Apps that can open a browser use OAuth for native apps (RFC 8252) with
+PKCE:
 
-1. The app makes a random code verifier and opens `/authorize` in the system
-   browser (`ASWebAuthenticationSession` on iOS, Custom Tabs on Android) with
-   `redirect_uri`, `state`, `code_challenge` (base64url SHA-256 of the
-   verifier), `code_challenge_method=S256`, `platform`, and `device_name`.
-   `appAuthorizePagePath()` builds the URL.
-2. The page signs the person in if they aren't already, with a passkey or the
-   OIDC provider, and asks them to approve the app.
-3. The browser goes to `redirect_uri` with `code` and `state`. The redirect
-   URI is either a `matinee:` URI the app registered, or a loopback URL such
-   as `http://127.0.0.1:43123/callback` for a desktop app that listens on a
-   port.
-4. The app posts `code` and `codeVerifier` to `/api/v1/auth/app/token`.
-   A code works once, for two minutes, and only with its verifier.
+1. Generate a code verifier and open `/authorize` in the system browser
+   with `redirect_uri`, `state`, `code_challenge` as the base64url SHA-256
+   of the verifier, `code_challenge_method=S256`, `platform`, and
+   `device_name`. `appAuthorizePagePath()` builds the URL.
+2. The page signs the person in and asks them to approve.
+3. The browser redirects to `redirect_uri` with `code` and `state`. That's
+   either a registered `matinee:` URI or a loopback URL like
+   `http://127.0.0.1:43123/callback`.
+4. Post `code` and `codeVerifier` to `/api/v1/auth/app/token`. Codes are
+   single-use and expire after two minutes.
 
-Apps without a browser, like TV apps, follow the OAuth device grant
-(RFC 8628):
+Apps without a browser, like TV apps, use the device grant (RFC 8628):
 
-1. The app posts its device to `/api/v1/auth/device` and shows the
-   `userCode`, like `BCDF-GHJK`, with `verificationUri`, which is
-   `$PUBLIC_URL/link`. `verificationUriComplete` has the code filled in, for
-   a QR code.
-2. Someone signed in opens the page on their phone, enters the code, checks
-   the device, and approves.
-3. The app polls `/api/v1/auth/device/token` with `deviceCode` every
-   `interval` seconds. It answers `pending` until the approval, then the
-   session. After `expiresIn` seconds, 10 minutes, it answers 404 and the app
-   starts again.
+1. Post the device to `/api/v1/auth/device`. Show `userCode`, like
+   `BCDF-GHJK`, and `verificationUri`, which is `$PUBLIC_URL/link`.
+   `verificationUriComplete` has the code filled in, for a QR code.
+2. A signed-in user opens the page, enters the code, and approves.
+3. Poll `/api/v1/auth/device/token` with `deviceCode` every `interval`
+   seconds. It returns `pending` until approved. After `expiresIn`, ten
+   minutes, it returns 404 and the app starts over.
 
-Both pages warn that approving hands the device the account. They are the
-only guard against someone sending a link or code of their own to get in.
+Both pages warn that approving gives the device the account. That warning
+is the only defense against someone sending you their own link or code.
 
 ## Local server discovery
 
-Discovery is IPv4 UDP on port **8421**, separate from the HTTP API. Broadcast
-an ASCII `Matinee discovery v1` padded with spaces to exactly 512 bytes,
-without a newline, to each active interface's broadcast address and
-`255.255.255.255`. Listen on the sending socket for unicast replies. Clients
-can scan for three seconds and start another scan when asked.
+Discovery uses IPv4 UDP on port 8421. Clients broadcast the ASCII string
+`Matinee discovery v1`, padded with spaces to exactly 512 bytes and no
+newline, to each interface's broadcast address and `255.255.255.255`, then
+listen for unicast replies. A three-second scan is enough.
 
-A reply is UTF-8 JSON, at most 512 bytes:
+Replies are UTF-8 JSON, at most 512 bytes:
 
 ```json
 { "version": 1, "name": "Matinee", "url": "https://media.example.com" }
 ```
 
-`name` is a nonempty display name of at most 64 code points. Matinee has no
-configurable server name, so it currently sends `Matinee`. `url` is the
-server's `PUBLIC_URL`, never an address inferred from the probe. It is an
-HTTP or HTTPS URL without credentials, at most 400 code points. Clients
-ignore unknown fields, reject other versions and malformed replies, and
-skip duplicate URLs. A future incompatible protocol gets a new probe and
-version. The TypeScript constants and reply schema live in
-`packages/contracts/src/discovery.ts`; this is not part of OpenAPI.
+`name` is at most 64 code points and is always `Matinee` for now. `url` is
+the server's `PUBLIC_URL`, an http or https URL of at most 400 code points
+with no credentials. Clients ignore unknown fields, reject other versions
+and malformed replies, and drop duplicate URLs. Constants and the schema
+are in `packages/contracts/src/discovery.ts`. Discovery isn't part of
+OpenAPI.
 
-Discovery is on by default. `MATINEE_DISCOVERY_ENABLED=false` turns it off.
-Loopback public URLs, including the dev default, are not advertised because
-a client would connect to itself. The responder also skips URLs that don't
-fit the reply. Set `PUBLIC_URL` to an address LAN clients can actually reach.
-A bind failure only warns and leaves HTTP running. IPv6 multicast is not
-implemented. Broadcasts don't cross routers, container bridge networks, or
-most emulator NATs. Publish UDP 8421 on the host network when deploying in a
-container, and allow it only on trusted LAN interfaces in your firewall.
-The NixOS module's `discovery.enable` controls the responder; `openFirewall`
-opens UDP 8421 with the HTTP port when discovery is enabled.
+`MATINEE_DISCOVERY_ENABLED=false` turns it off. Loopback URLs aren't
+advertised, so set `PUBLIC_URL` to something the LAN can reach. A bind
+failure only logs a warning. Broadcasts don't cross routers, Docker bridge
+networks, or most emulator NATs, so use host networking in containers.
+Only allow UDP 8421 on trusted interfaces. In NixOS, `discovery.enable`
+controls it and `openFirewall` opens the port.
 
-Only the exact probe gets a reply. The server answers one probe per source
-IP per second and at most 20 per one-second window in total. The padded
-probe prevents byte amplification. Discovery is unauthenticated, so treat
-replies as hints and check `/api/health` before using a URL. Never sign in
+The server rate-limits replies to one per source IP per second and 20 per
+second total. The padded probe prevents amplification. Discovery isn't
+authenticated, so check `/api/health` before using a URL and never sign in
 automatically.
 
 ## Not built yet
 
-- Copied streams in Safari. A stream with its video copied is fragmented
-  MP4 without byte ranges, which Safari won't play. Encodes are HLS and do.
-- Surround in streams. Converted audio is always stereo.
-- Text subtitle burn-in for devices without a local ASS renderer.
-- Metadata from NFO files and local artwork, absolute episode numbering for
-  anime, and provider keys set in admin settings instead of the environment.
+- Copied streams in Safari. Encodes work there.
+- Surround audio in streams. Converted audio is always stereo.
+- Text subtitle burn-in for devices that can't render ASS.
+- NFO metadata, local artwork, absolute episode numbers for anime, and
+  setting provider keys in Settings.

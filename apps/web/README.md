@@ -1,10 +1,9 @@
 # Matinee web
 
-The browser client: React with Vite, TanStack Router and Query, and the
-shadcn components from `packages/ui`. It talks to the server only through
-the typed client from `packages/client` and the plain routes in
-`packages/contracts/src/paths.ts`. In production the server serves its
-build, so there is nothing to deploy on its own.
+The browser client. React, Vite, TanStack Router and Query, and the
+components from `packages/ui`. It talks to the server only through
+`packages/client` and the routes in `packages/contracts/src/paths.ts`. The
+server serves the build, so there's nothing to deploy separately.
 
 ## Running it
 
@@ -12,70 +11,57 @@ From the repository root, inside `nix develop`:
 
 ```sh
 pnpm dev          # server on :8420 and this app on :5173
-pnpm dev:web      # this app alone, against a server that's already up
+pnpm dev:web      # this app alone, against a running server
 ```
 
-Vite proxies `/api` to `http://localhost:8420`, or to `VITE_SERVER_URL`
-when it's set, so the browser stays on one origin and cookies work as in
-production. Keep `PUBLIC_URL` on the Vite address, `http://localhost:5173`,
-since passkeys and OIDC redirects bind to it.
+Vite proxies `/api` to `http://localhost:8420`, or to `VITE_SERVER_URL` if
+set, so cookies work like in production. Keep `PUBLIC_URL` at
+`http://localhost:5173`, because passkeys and OIDC redirects bind to it.
 
-`pnpm build` writes `dist/`, with Brotli and gzip copies of each text file
-for the server to send. Point `MATINEE_WEB_DIST` at it.
+`pnpm build` writes `dist/` with Brotli and gzip copies of each text file.
+Point `MATINEE_WEB_DIST` at it.
 
-## Where things are
+## Layout
 
-- `src/routes`: file routes. `src/routeTree.gen.ts` is generated, so don't
-  edit it.
-- `src/components`: pages and the pieces they share. `brand.tsx` draws the
-  logo from `logo.gen.ts`, which `brand/render.sh` writes.
-- `src/stores`: zustand stores for state that several components share.
-  Server data stays in TanStack Query and URL state in search params.
-- `src/lib`: the RPC client, forms (`form.tsx`), formatting, and what the
-  browser can play.
-- `src/i18n`: the message catalogs, below.
-
-`AGENTS.md` at the repository root has the conventions for forms, effects,
-stores, and text.
+- `src/routes`: file routes. Don't edit the generated `src/routeTree.gen.ts`.
+- `src/components`: pages and shared pieces. `brand.tsx` draws the logo
+  from `logo.gen.ts`, which `brand/render.sh` writes.
+- `src/stores`: zustand stores for shared state.
+- `src/lib`: the RPC client, forms, formatting, and codec support checks.
+- `src/i18n`: message catalogs.
 
 ## Subtitles
 
-The player advertises WebVTT, PGS and ASS rendering to the server. ASS/SSA
-scripts render as authored through a lazy-loaded JASSUB worker, with fonts
-from the media item's Matroska attachments and a bundled Liberation Sans
-fallback. Nothing loads from a CDN. Rendering is capped at 1080 pixels high;
-ordinary video picture-in-picture cannot include this canvas overlay.
-WebVTT appearance and control-avoidance positioning do not override ASS
-styles. A renderer failure requests the same track again with ASS support
-removed for that player session, so the server delivers WebVTT instead.
-Downloads continue to use their existing subtitle formats.
+The player tells the server it can render WebVTT, PGS, and ASS. ASS/SSA
+renders through JASSUB in a worker that loads only when needed. Fonts come
+from the file's Matroska attachments, with Liberation Sans bundled as a
+fallback. Nothing loads from a CDN.
+
+ASS rendering is capped at 1080p, and picture-in-picture can't show it.
+WebVTT styling and control avoidance don't apply to ASS. If the renderer
+fails, the player asks for the same track again without ASS support, and
+the server sends WebVTT.
 
 ## Translations
 
-The web app's text lives in catalogs under `apps/web/src/i18n/locales/`,
-one folder per language and one file per area of the app (`player.ts`,
-`stats.ts`, and so on). `en/` is the source and holds every message. Each
-other folder is a language, named by its BCP 47 tag (`de/`, `pt-BR/`), and
-loads only when picked. Settings → Appearance → Language picks one per
-device, and by default the app follows the browser's languages. Dates,
-numbers, language names, and the calendar follow the pick.
+Catalogs live in `src/i18n/locales/`, one folder per language and one file
+per area (`player.ts`, `stats.ts`). `en/` is the source. Other folders are
+named by BCP 47 tag (`de/`, `pt-BR/`) and load only when picked. Users pick
+a language in Settings → Appearance. The default follows the browser.
 
-To add a language, copy `de/` to `<tag>/` and translate the values.
-Nothing else needs changing: the picker lists the folder under the
-language's own name. Keys left out show the English text, so a
-translation can ship partial. The types reject unknown keys, a dropped
-`{placeholder}`, and a plain string where English has a `plural(...)`.
-A plural lists the forms its language has, as `Intl.PluralRules` names
-them: English has `one` and `other`, Polish also has `few` and `many`.
+To add a language, copy `de/` to `<tag>/` and translate the values. The
+picker finds it automatically. Missing keys fall back to English, so
+partial translations are fine. The types reject unknown keys, dropped
+`{placeholders}`, and plain strings where English uses `plural(...)`. A
+plural lists the forms its language has, as `Intl.PluralRules` names them.
+English has `one` and `other`. Polish adds `few` and `many`.
 
-The shared components in `packages/ui` can't reach the catalog. The app
-hands them their text (the `ui` area) through `setUiText` from
-`@matinee/ui/lib/ui-text`.
+`packages/ui` can't import the catalog. The app passes its text, the `ui`
+area, through `setUiText` from `@matinee/ui/lib/ui-text`.
 
-The server's error messages and the contract schemas' validation
-messages arrive in English. The `server` and `validation` areas copy them
-word for word, and `translateKnown()` matches what arrives against those
-copies, with `{name}` standing for a value. A message changed on the
-server needs the same change in `en/server.ts` (or `en/validation.ts`),
-or it shows in English. Metadata from providers, such as overviews,
-genres, and statuses, shows as the provider sent it.
+Server errors and validation messages arrive in English. The `server` and
+`validation` areas copy them word for word, and `translateKnown()` matches
+incoming text against them, with `{name}` for values. If you change a
+message on the server, change `en/server.ts` or `en/validation.ts` too, or
+it stays in English. Provider metadata like overviews and genres shows as
+the provider sent it.

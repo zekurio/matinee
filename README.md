@@ -6,37 +6,32 @@
 </p>
 
 <p align="center">
-  A self-hosted media server for your own folders of movies and shows.
+  A self-hosted media server for your folders of movies and shows.
 </p>
 
 ---
 
-Point Matinee at the folders your videos already live in. It groups the
-files into movies and shows, fetches posters, cast, and episode details from
-TMDB or TheTVDB, and picks up new files as Sonarr, Radarr, or Bazarr drop
-them in. People sign in with a passkey or your OIDC provider and watch in
-the browser or the Android app. A file plays as it is when the device can
-decode it. When it can't, the server copies the video and converts only
-the audio, or transcodes on your GPU with jellyfin-ffmpeg, HDR tone mapping
-included.
+Matinee reads the folders your videos are already in, groups them into
+movies and shows, and pulls metadata from TMDB or TheTVDB. New files from
+Sonarr, Radarr, or Bazarr show up on their own. People sign in with a
+passkey or OIDC and watch in the browser or the Android app. Files play
+as they are when the device can decode them. Otherwise the server copies
+the video and converts the audio, or transcodes on the GPU with
+jellyfin-ffmpeg.
 
-Matinee is an early MVP. Expect rough edges and breaking changes until a
-first release.
+It's an early MVP. Expect breaking changes until the first release.
 
-| Part                    | What it is                                                                       |
-| ----------------------- | -------------------------------------------------------------------------------- |
-| [Server](apps/server)   | Hono and oRPC, Postgres, the library scanner, streaming and transcoding, sign-in |
-| [Web](apps/web)         | The React client the server serves                                               |
-| [Android](apps/android) | A native app for phones, tablets, and Android TV, with offline downloads         |
-| [Brand](brand)          | The logo, the wordmark, the app icons, and the script that renders them          |
-
-Each one's README goes into detail. The server's covers configuration,
-access groups, transcoding, and the API.
+| Part                    | What it is                                                |
+| ----------------------- | --------------------------------------------------------- |
+| [Server](apps/server)   | Hono and oRPC on Postgres. Scanning, streaming, sign-in   |
+| [Web](apps/web)         | The React client, served by the server                    |
+| [Android](apps/android) | Phones, tablets, and Android TV, with offline downloads   |
+| [Brand](brand)          | Logo, wordmark, app icons, and the scripts that draw them |
 
 ## Run it on NixOS
 
-The flake has the server as a package for `x86_64-linux` and a NixOS module
-that runs it with a local PostgreSQL. Add the input and the module:
+The flake has a package for `x86_64-linux` and a NixOS module that runs it
+with a local Postgres.
 
 ```nix
 {
@@ -50,7 +45,7 @@ that runs it with a local PostgreSQL. Add the input and the module:
 }
 ```
 
-Then turn it on in `host.nix`:
+In `host.nix`:
 
 ```nix
 services.matinee = {
@@ -70,8 +65,7 @@ services.matinee = {
 };
 ```
 
-The package builds with the flake's own nixpkgs and is pushed to a binary
-cache. To download it instead of building it, add the cache:
+Builds are cached, so you can skip compiling:
 
 ```nix
 nix.settings = {
@@ -82,12 +76,11 @@ nix.settings = {
 };
 ```
 
-`github:zekurio/matinee` follows `main`. To stay on a release, name its
-tag, as in `github:zekurio/matinee/v0.0.1`. The cache keeps every
-release's package.
+The input follows `main`. Pin a release with its tag, like
+`github:zekurio/matinee/v0.0.1`.
 
-The server listens on `127.0.0.1:8420`, and the module requires an https
-`publicUrl`, so put a reverse proxy in front. With Caddy on the same host:
+The server listens on `127.0.0.1:8420` and the module wants an https
+`publicUrl`, so put a reverse proxy in front:
 
 ```nix
 services.caddy = {
@@ -96,68 +89,60 @@ services.caddy = {
 };
 ```
 
-On a tailnet, `tailscale serve --bg 8420` does the same on the machine's
-`https://<host>.<tailnet>.ts.net` address, which is then the `publicUrl`.
+On a tailnet, `tailscale serve --bg 8420` works too. Use the
+`https://<host>.<tailnet>.ts.net` address as `publicUrl`.
 
-Data goes in `/var/lib/matinee` and encodes in
-`/var/cache/matinee/transcodes`. The service can't see `/home`, so keep the
-libraries under a path like `/srv` or `/mnt`. Any variable from
-[`.env.example`](.env.example) goes in `services.matinee.settings`, and any
-secret file in `secrets`.
+Data lives in `/var/lib/matinee` and encodes in
+`/var/cache/matinee/transcodes`. The service can't see `/home`, so put
+libraries somewhere like `/srv` or `/mnt`. Any variable from
+[`.env.example`](.env.example) goes in `services.matinee.settings`, and
+secret files go in `secrets`.
 
 Open the `publicUrl` and `/setup` walks you through the admin account, the
 GPU, and the first libraries. Without OIDC, the setup token is in
 `journalctl -u matinee`.
 
-Not on NixOS? `pnpm build` makes a bundle that runs on Node 24. See
+Not on NixOS? See
 [Running in production](apps/server/README.md#running-in-production).
 
 ## Develop
 
-The flake's dev shell has Node 24, pnpm 11, jellyfin-ffmpeg, `just`, and a
-Postgres for this checkout on a Unix socket. It creates `.env` from
-`.env.example` on first entry.
-
 ```sh
-nix develop        # or `direnv allow` once, to enter it on cd
+nix develop        # or `direnv allow`
 pnpm install
 pnpm dev           # server on :8420, web app on http://localhost:5173
 ```
 
-The first visit goes to `/setup`, which skips the setup token on
-localhost. The server applies migrations on start. Stop the database with
-`matinee-postgres stop`; its files are in `data/postgres`.
+The dev shell has Node 24, pnpm 11, jellyfin-ffmpeg, `just`, and a Postgres
+on a Unix socket in `data/postgres`. It creates `.env` from `.env.example`
+the first time. Migrations run when the server starts. On localhost,
+`/setup` doesn't ask for a token. `matinee-postgres stop` stops the
+database.
 
-Run `pnpm verify` before you commit. It checks formatting, runs oxlint and
-the type checker, and fails if the Android API client is out of date.
-[`AGENTS.md`](AGENTS.md) has the repository's conventions, for people and
-coding agents alike. The Android app builds in its own shell, see
-[its README](apps/android/README.md#build).
+Without Nix, install Node 24 and pnpm 11, copy `.env.example` to `.env`,
+and point `DATABASE_URL` at your own Postgres.
 
-| Command                          | What it does                                                |
-| -------------------------------- | ----------------------------------------------------------- |
-| `pnpm db:generate --name <what>` | Writes a migration for a change in `packages/db/src/schema` |
-| `pnpm api:android`               | Generates the Android API client after a contract change    |
-| `nix build`                      | Builds the server package                                   |
-| `nix flake check`                | Builds it and runs the NixOS module's tests                 |
-| `nix develop .#android`          | Enters a shell with a JDK and the Android SDK               |
-| `just`                           | Lists the shortcuts, including `just android ...`           |
-| `just tag <version>`             | Releases that version, see [Release](#release)              |
+Run `pnpm verify` before you commit. [`AGENTS.md`](AGENTS.md) has the
+conventions.
 
-After `pnpm-lock.yaml` changes, `nix build` fails and prints the new
-dependency hash. Put it in `pnpmDepsHash` in `nix/package.nix`.
-`nix flake update nixpkgs` updates the package's and the shell's toolchain
-together.
+| Command                          | What it does                              |
+| -------------------------------- | ----------------------------------------- |
+| `pnpm db:generate --name <what>` | Writes a migration for a schema change    |
+| `pnpm api:android`               | Regenerates the Android API client        |
+| `nix build`                      | Builds the server package                 |
+| `nix flake check`                | Builds it and runs the NixOS module tests |
+| `nix develop .#android`          | Shell with a JDK and the Android SDK      |
+| `just`                           | Lists the shortcuts                       |
+| `just tag <version>`             | Cuts a release, see [Release](#release)   |
 
-Without Nix, install Node 24 and pnpm 11, copy `.env.example` to `.env`, and
-point `DATABASE_URL` at a Postgres of your own.
+When `pnpm-lock.yaml` changes, `nix build` fails and prints the new hash.
+Put it in `pnpmDepsHash` in `nix/package.nix`.
 
 <details>
 <summary>Coming from the old devenv shell</summary>
 
-The dev database used to live in `.devenv/state/matinee-postgres`. The new
-shell won't start while it's still there. Stop it from the old shell, then
-move it:
+The dev database used to live in `.devenv/state/matinee-postgres`, and the
+new shell won't start while it's there. Move it first:
 
 ```sh
 pg_ctl -D .devenv/state/matinee-postgres -w stop  # from the old shell, if running
@@ -166,85 +151,54 @@ mv .devenv/state/matinee-postgres data/postgres
 direnv allow
 ```
 
-Don't delete `.devenv` before the database has moved.
+Don't delete `.devenv` until the database has moved.
 
-The early migrations were later squashed into `0000_initial_schema`. A
-database with the old migration history can't take it. Back up what you
-need and create the database again, which deletes its data.
+The early migrations were squashed into `0000_initial_schema`. A database
+with the old history can't apply it, so back up what you need and recreate
+it.
 
 </details>
 
 ## Release
 
-The server, the web app, and the Android app share one version, the
-`version` in the root `package.json`. The Nix package and the Android
-build read it from there. A release is a `v<version>` tag on `main`:
+Everything shares the `version` in the root `package.json`. To release:
 
 ```sh
 just tag 0.2.0
 ```
 
-That writes the version to `package.json`, commits it as
-`chore: release v0.2.0`, tags the commit, and pushes both. It refuses
-unless you're on `main`, level with `origin/main`, with a clean tree. Minor
-and patch stay under 100, because the Android version code is
+This bumps `package.json`, commits `chore: release v0.2.0`, tags it, and
+pushes. You need to be on a clean `main` that matches `origin/main`. Keep
+minor and patch under 100, since the Android version code is
 `major * 10000 + minor * 100 + patch`.
 
-The tag starts [`release.yml`](.github/workflows/release.yml), which
+The tag runs [`release.yml`](.github/workflows/release.yml). It checks the
+tag against `package.json`, runs `nix flake check`, pushes the package to
+Cachix, and builds and signs the Android APKs. Then it drafts a GitHub
+release with one APK per ABI, a universal one, and `checksums.txt`. Try
+the APKs on a phone and a TV before you publish the draft.
 
-- fails if the tag isn't the version in `package.json` or isn't on `main`,
-- runs `nix flake check`, pushes the server package to the binary cache,
-  and pins it there as `matinee-v<version>`,
-- builds the Android app, signs it, and fails if a debug key signed it,
-- drafts a GitHub release with generated notes, an APK for each ABI and a
-  universal one, as `matinee-v<version>-<abi>.apk`, and `checksums.txt`.
+The workflow needs `CACHIX_AUTH_TOKEN` and a `release` environment with
+these secrets:
 
-Try the draft's APKs on a phone and a TV, then publish it on GitHub. The
-app isn't on Google Play. `./gradlew bundleRelease` builds the bundle Play
-takes, and nothing uploads it.
-
-The scripts it runs are in [`tools/release`](tools/release). It needs the
-`CACHIX_AUTH_TOKEN` repository secret the `nix` workflow already uses, and
-a `release` environment (Settings → Environments) with the signing key:
-
-| Secret                      | What it holds                                   |
-| --------------------------- | ----------------------------------------------- |
-| `ANDROID_KEYSTORE_BASE64`   | The keystore, from `base64 -w0 matinee.jks`     |
-| `ANDROID_KEYSTORE_PASSWORD` | The keystore's password                         |
-| `ANDROID_KEY_ALIAS`         | The key's alias, `matinee` in the command below |
-| `ANDROID_KEY_PASSWORD`      | The key's password                              |
-
-Make the keystore once and keep a copy offline. Android installs an update
-only over an app signed with the same key, so a lost key means everyone
-installs the app again and loses its downloads and sign-in.
+| Secret                      | Value                          |
+| --------------------------- | ------------------------------ |
+| `ANDROID_KEYSTORE_BASE64`   | `base64 -w0 matinee.jks`       |
+| `ANDROID_KEYSTORE_PASSWORD` | The keystore password          |
+| `ANDROID_KEY_ALIAS`         | The key alias, `matinee` below |
+| `ANDROID_KEY_PASSWORD`      | The key password               |
 
 ```sh
 keytool -genkeypair -v -keystore matinee.jks -alias matinee \
   -keyalg RSA -keysize 4096 -validity 10000
 ```
 
-Give the `release` environment a required reviewer to approve each
-release's signing by hand.
-
-## Repository layout
-
-```
-apps/
-  server/      Hono server: oRPC and REST, auth, library scanner, streaming
-  web/         React web client (Vite, TanStack Router and Query)
-  android/     Android app (Kotlin, Compose, Media3), a Gradle project
-packages/
-  contracts/   The oRPC contract and its schemas, shared by the server and clients
-  client/      The typed client every TypeScript app uses
-  db/          Drizzle schema and migrations
-  ui/          shadcn components on Base UI, and the theme
-brand/         Logo, wordmark, app icons
-tools/         The lint rules and the release scripts
-nix/           The package, the NixOS module and its tests, the dev shells
-```
+Keep an offline copy of the keystore. Android only installs updates signed
+with the same key, so losing it means everyone reinstalls and loses their
+downloads.
 
 ## License
 
-MIT, see [LICENSE](LICENSE), except the Android app in `apps/android`, which
-is GPL-3.0 (see [its LICENSE](apps/android/LICENSE)) because it plays DTS
-and TrueHD with a GPL build of FFmpeg and can play with mpv.
+MIT, except `apps/android`, which is GPL-3.0 because it ships GPL builds of
+FFmpeg and mpv. See [LICENSE](LICENSE) and
+[apps/android/LICENSE](apps/android/LICENSE).
