@@ -79,6 +79,7 @@
         .navigationDestination(for: String.self) { name in GalleryTitlePage(name: name) }
       }
       .environment(\.api, server.api)
+      .environment(\.actionMenu, ActionMenu { AnyView(GalleryMenu(target: $0)) })
       .environment(\.imagePipeline, pipeline)
       .onAppear {
         theme.setAccents(accent.accents)
@@ -142,6 +143,21 @@
       .ignoresSafeArea(edges: .top)
       .statusBarScrim()
       .itemTopBar(parent: Sample.show.name) {}
+    }
+  }
+
+  /// A stand-in for Actions.kt's menus, to show the long press works.
+  struct GalleryMenu: View {
+    let target: ActionTarget
+
+    var body: some View {
+      Button {} label: { Label { Text(Str.titlePlay) } icon: { Image(Lucide.playOutline) } }
+      Button {} label: { Label { Text(Str.mediaMarkWatched) } icon: { Image(Lucide.check) } }
+      Button {} label: { Label { Text(Str.mediaAddFavorite) } icon: { Image(Lucide.heart) } }
+      Divider()
+      Button(role: .destructive) {} label: {
+        Label { Text(Str.downloadsRemove) } icon: { Image(Lucide.trash) }
+      }
     }
   }
 

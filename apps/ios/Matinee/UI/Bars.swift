@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /*
  * Bars.kt's bars as far as they belong to a page rather than the shell: the
@@ -72,6 +73,7 @@ private struct ItemTopBar: ViewModifier {
   func body(content: Content) -> some View {
     content
       .toolbar(.hidden, for: .navigationBar)
+      .background { BackSwipe() }
       .overlay(alignment: .top) {
         HStack(spacing: 6) {
           RoundIconButton(.arrowLeft, label: Str.commonBack, iconSize: 22, background: floating) { dismiss() }
@@ -97,6 +99,33 @@ private struct ItemTopBar: ViewModifier {
 
   /// The page's color veiling the art behind a floating button, as the web's bars have it.
   private var floating: Color { palette.background.opacity(0.6) }
+}
+
+/// Keeps the edge swipe going back on a page whose navigation bar is
+/// hidden: UIKit only lets it begin while the bar's own back button would
+/// show, so this answers for it, on any page but the first.
+private struct BackSwipe: UIViewControllerRepresentable {
+  func makeUIViewController(context: Context) -> Controller { Controller() }
+  func updateUIViewController(_ controller: Controller, context: Context) {}
+
+  final class Controller: UIViewController {
+    override func viewWillAppear(_ animated: Bool) {
+      super.viewWillAppear(animated)
+      guard let gesture = navigationController?.interactivePopGestureRecognizer else { return }
+      gesture.delegate = Delegate.shared
+      gesture.isEnabled = true
+    }
+  }
+
+  final class Delegate: NSObject, UIGestureRecognizerDelegate {
+    static let shared = Delegate()
+
+    func gestureRecognizerShouldBegin(_ gesture: UIGestureRecognizer) -> Bool {
+      // The gesture's view is the navigation controller's own.
+      guard let navigation = gesture.view?.next as? UINavigationController else { return false }
+      return navigation.viewControllers.count > 1
+    }
+  }
 }
 
 /// Home's header: room for the status bar over the banner's art, faded for

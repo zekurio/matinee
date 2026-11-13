@@ -108,17 +108,19 @@
               Text(Str.titlePlay)
             }
             MatineeButton(.secondary, action: {}) { Text(Str.titleResume) }
-            MatineeButton(.outline, action: {}) { Text(Str.commonCancel) }
           }
           HStack(spacing: 8) {
+            MatineeButton(.outline, action: {}) { Text(Str.commonCancel) }
             MatineeButton(.frosted, action: {}) {
               LucideIcon(.info, size: 16)
               Text(Str.mediaHeroDetails)
             }
+          }
+          HStack(spacing: 8) {
             MatineeButton(.ghost, action: {}) { Text(Str.commonBack) }
             MatineeButton(.primary, action: {}) { Text(Str.connectButton) }.disabled(true)
+            RetryButton {}
           }
-          RetryButton {}
         }
         .padding(.horizontal, Gutter)
 

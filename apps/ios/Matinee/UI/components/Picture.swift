@@ -128,20 +128,25 @@ struct LucideIcon: View {
   var label: String?
   var size: CGFloat
   var tint: Color?
+  /// False for an icon in a frame of fixed size, like a round button's,
+  /// which VoiceOver's large content viewer shows bigger instead.
+  var scales = true
   /// How Dynamic Type has grown body text, which icons follow.
   @ScaledMetric(relativeTo: .body) private var scale: CGFloat = 1
 
-  init(_ icon: Lucide, label: String? = nil, size: CGFloat = 20, tint: Color? = nil) {
+  init(_ icon: Lucide, label: String? = nil, size: CGFloat = 20, tint: Color? = nil, scales: Bool = true) {
     self.icon = icon
     self.label = label
     self.size = size
     self.tint = tint
+    self.scales = scales
   }
 
   var body: some View {
+    let side = scales ? size * scale : size
     let image = Image(icon)
       .resizable()
-      .frame(width: size * scale, height: size * scale)
+      .frame(width: side, height: side)
     Group {
       if let tint { image.foregroundStyle(tint) } else { image }
     }
@@ -152,9 +157,10 @@ struct LucideIcon: View {
 
 extension Image {
   /// A lucide icon as a template image, for a `Label`, a menu item, or a
-  /// button the system draws.
+  /// button the system draws. VoiceOver skips it: the label or button
+  /// around it says what it is.
   init(_ icon: Lucide) {
-    self.init(icon.name)
+    self.init(decorative: icon.name)
     self = self.renderingMode(.template)
   }
 }

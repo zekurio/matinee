@@ -2,12 +2,13 @@ import MatineeCore
 import SwiftUI
 
 /*
- * The hook Actions.kt hangs on, and the rows its sheets are made of. A long
- * press on a card offers what can be done with what it shows; on iOS that's
- * a context menu over the card, as Photos and the TV app have it, where
- * Android opens a bottom sheet. The menu's items are a later task's
- * (Actions.kt's ItemActions, TitleActions, and SeasonActions): it sets
- * `actionMenu` on the root, and every card offers its menu from then on.
+ * The hook Actions.kt hangs on. A long press on a card offers what can be
+ * done with what it shows; on iOS that's a context menu over the card, as
+ * Photos and the TV app have it, where Android opens a bottom sheet. The
+ * menu's items are a later task's (Actions.kt's ItemActions, TitleActions,
+ * and SeasonActions, in an Actions.swift of its own): it sets `actionMenu`
+ * on the root, and every card offers its menu from then on. The rows
+ * Actions.kt's sheets are made of are in Sheets.swift.
  */
 
 /// What a menu is for: a file, a whole title, or one season of a show. A
@@ -35,12 +36,14 @@ private struct CardMenu: ViewModifier {
   let target: ActionTarget
   @Environment(\.actionMenu) private var menu
   @Environment(\.offline) private var offline
+  @Environment(\.palette) private var palette
 
   func body(content: Content) -> some View {
     if let items = menu.items, !offline {
       content
         .contentShape(.contextMenuPreview, CardShape)
-        .contextMenu { items(target) }
+        // Icons in the text's color, as Android's sheet draws its rows, not the accent.
+        .contextMenu { items(target).tint(palette.foreground) }
     } else {
       content
     }

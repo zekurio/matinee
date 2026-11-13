@@ -136,7 +136,7 @@ struct RoundIconButton: View {
 
   var body: some View {
     Button(action: action) {
-      LucideIcon(icon, size: iconSize, tint: tint ?? palette.foreground)
+      LucideIcon(icon, size: iconSize, tint: tint ?? palette.foreground, scales: false)
         .frame(width: size, height: size)
         .background(background ?? palette.secondary, in: Circle())
     }
@@ -144,6 +144,11 @@ struct RoundIconButton: View {
     .frame(minWidth: MinTouch, minHeight: MinTouch)
     .contentShape(Rectangle())
     .accessibilityLabel(label)
+    // The circle keeps its size at large text sizes; a long press shows it bigger, with its name.
+    .accessibilityShowsLargeContentViewer {
+      Image(icon)
+      Text(label)
+    }
   }
 }
 
