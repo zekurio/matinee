@@ -6,7 +6,7 @@ let package = Package(
   platforms: [.iOS(.v18), .macOS(.v15)],
   products: [.library(name: "MatineeCore", targets: ["MatineeCore"])],
   targets: [
-    .target(name: "MatineeCore"),
+    .target(name: "MatineeCore", exclude: ["Player/README.md"]),
     .testTarget(name: "MatineeCoreTests", dependencies: ["MatineeCore"]),
   ],
   swiftLanguageModes: [.v6]
