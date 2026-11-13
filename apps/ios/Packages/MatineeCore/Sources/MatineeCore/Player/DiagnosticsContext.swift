@@ -18,6 +18,17 @@ public struct Safe: Codable, Sendable, Equatable, Hashable, CustomStringConverti
     let allowed = Set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-+ ".utf8)
     return value.utf8.count <= max && value.utf8.allSatisfy(allowed.contains) ? Safe(value) : OTHER
   }
+  /// An Apple model identifier, `iPhone17,1` or `Mac16,12`: letters, digits, and a comma.
+  public static func model(_ value: String?, max: Int = 40) -> Safe? {
+    guard let value = value?.trimmingCharacters(in: .whitespacesAndNewlines), !value.isEmpty else {
+      return nil
+    }
+    return value.utf8.count <= max && isModel(value) ? Safe(value) : OTHER
+  }
+  private static func isModel(_ value: String) -> Bool {
+    let allowed = Set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789,".utf8)
+    return value.utf8.allSatisfy(allowed.contains)
+  }
   public static func known(_ value: String?, _ known: Set<String>) -> Safe? {
     guard let value = value?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
       !value.isEmpty
@@ -47,6 +58,8 @@ public struct Safe: Codable, Sendable, Equatable, Hashable, CustomStringConverti
     if token != .OTHER {
       self = token ?? .OTHER
     } else if value == "*" || value == "pcm_*" {
+      self = Safe(value)
+    } else if value.utf8.count <= 40, Safe.isModel(value) {
       self = Safe(value)
     } else {
       self = Safe.mime(value) ?? .OTHER
@@ -105,7 +118,7 @@ public struct DeviceDiagnostics: Codable, Sendable, Equatable {
     Self(
       appVersion: Safe.token(appVersion, max: 32), appBuild: appBuild,
       buildType: Safe.token(buildType, max: 16), osRelease: Safe.token(osRelease, max: 16),
-      manufacturer: Safe.token("Apple"), model: Safe.token(model, max: 40),
+      manufacturer: Safe.token("Apple"), model: Safe.model(model),
       abi: Safe.token(abi, max: 16))
   }
 }
@@ -211,7 +224,7 @@ public struct CapabilityDiagnostics: Codable, Sendable, Equatable {
   public var maxBitrate: Int?
   public let hls: Bool
   public let selectAudio: Bool
-  init(_ device: PlaybackDevice) {
+  private init(_ device: PlaybackDevice) {
     var seen: Set<String> = []
     videoCodecs = safeCodecs(device.video.map(\.codec).filter { seen.insert($0).inserted })
     audioCodecs = safeCodecs(device.audio, max: 16)

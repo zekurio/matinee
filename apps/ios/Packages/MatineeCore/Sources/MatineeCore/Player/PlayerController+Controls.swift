@@ -104,6 +104,8 @@ extension PlayerController {
     if local != nil {
       // A download holds only its own tracks, so it picks among them whatever plays.
       await selectAudioInFile()
+      await recordTracks()
+      recordSelection()
       return
     }
     guard let itemId else { return }
@@ -119,6 +121,7 @@ extension PlayerController {
     if local != nil {
       localSubtitle = track
       await showSubtitle()
+      recordSelection()
       return
     }
     guard let itemId else { return }

@@ -13,6 +13,8 @@ import Foundation
   /// The picture's size as it shows, its pixel aspect applied.
   var videoSize: CGSize { get }
   var failure: (any Error)? { get }
+  /// The source can play: ExoPlayer's `STATE_READY`.
+  var isReady: Bool { get }
   func play(atRate rate: Float)
   func pause()
   func load(_ source: Source, headers: [String: String]) async throws
@@ -23,6 +25,8 @@ import Foundation
   /// the file's subtitle tracks, or none for nil. The view draws the rest.
   func selectSubtitle(_ ordinal: Int?) async
   func hasVideoFrame() -> Bool
+  /// The tracks of what plays, which of them are selected, for the report.
+  func tracks() async -> [TrackDiagnostics]
   func clear()
 }
 extension PlaybackEngine {
@@ -35,6 +39,12 @@ extension PlaybackEngine {
   }
   var videoSize: CGSize { player.currentItem?.presentationSize ?? .zero }
   var failure: (any Error)? { player.currentItem?.error }
+  var isReady: Bool { player.currentItem?.status == .readyToPlay }
+  func tracks() async -> [TrackDiagnostics] {
+    // The item knows which tracks play; its asset alone would call them all not selected.
+    guard let item = player.currentItem else { return [] }
+    return (try? await DiagnosticsProbe.tracks(item)) ?? []
+  }
   func play(atRate rate: Float) { player.playImmediately(atRate: rate) }
   func pause() { player.pause() }
 }
