@@ -1,6 +1,7 @@
 import Accessibility
 import MatineeCore
 import SwiftUI
+import UIKit
 
 /*
  * Stats.kt: a profile's statistics, as the web's watch-stats: the range
@@ -104,7 +105,7 @@ struct StatList: View {
 }
 
 /// The range's watch time as a card, as the web shows it: the total, big,
-/// over watch time per day, week, or month as bars. Touching a bar reads
+/// over watch time per day, week, or month as bars. Holding a bar reads
 /// that day, week, or month out in the total's place; VoiceOver's swipes
 /// up and down step through them the same way.
 struct WatchTimeCard: View {
@@ -163,12 +164,10 @@ private struct WatchChart: View {
     }
     .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
     .contentShape(Rectangle())
-    // Alongside the page's scrolling, as Android's pointer input: a finger
-    // on the chart reads the bar under it until it lifts.
-    .simultaneousGesture(
-      DragGesture(minimumDistance: 0)
-        .onChanged { drag in active = BarLayout(width: width, count: buckets.count).index(at: drag.location.x) }
-        .onEnded { _ in active = nil }
+    // Held, then slid along, as iOS's own charts read a point: a finger
+    // that moves at once scrolls the page instead.
+    .gesture(
+      BarPress { x in active = x.flatMap { BarLayout(width: width, count: buckets.count).index(at: $0) } }
     )
     .onContinuousHover { phase in
       switch phase {
@@ -195,6 +194,26 @@ private struct WatchChart: View {
     guard let active, buckets.indices.contains(active) else { return formatWatchTime(stats.totals.watchSeconds) }
     let bucket = buckets[active]
     return "\(bucketName(bucket.start, unit: stats.unit)), \(formatWatchTime(bucket.watchSeconds))"
+  }
+}
+
+/// A finger held on the chart, where it is along it while it stays down,
+/// nil once it lifts. SwiftUI's long press says nothing of where, and its
+/// drag would take the page's scrolling, so it's UIKit's long press.
+private struct BarPress: UIGestureRecognizerRepresentable {
+  let onChange: (CGFloat?) -> Void
+
+  func makeUIGestureRecognizer(context: Context) -> UILongPressGestureRecognizer {
+    let press = UILongPressGestureRecognizer()
+    press.minimumPressDuration = 0.2
+    return press
+  }
+
+  func handleUIGestureRecognizerAction(_ press: UILongPressGestureRecognizer, context: Context) {
+    switch press.state {
+    case .began, .changed: onChange(context.converter.localLocation.x)
+    default: onChange(nil)
+    }
   }
 }
 
