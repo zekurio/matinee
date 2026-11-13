@@ -230,7 +230,12 @@ public struct SessionChanged: Error {}
     let contract: String
   }
   private func checkHealth(_ url: URL) async throws {
-    let session = URLSession(configuration: configuration)
+    // Android's 15 s to connect: a server that isn't there shouldn't hold
+    // the connect screen for the minute an encode may take to answer.
+    // SAFETY: Foundation's configuration copy preserves its concrete class.
+    let config = configuration.copy() as! URLSessionConfiguration
+    config.timeoutIntervalForRequest = 15
+    let session = URLSession(configuration: config)
     defer { session.invalidateAndCancel() }
     let (data, response) = try await session.data(from: url.appending(path: "api/health"))
     guard (response as? HTTPURLResponse)?.statusCode == 200,

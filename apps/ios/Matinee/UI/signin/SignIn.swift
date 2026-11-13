@@ -24,30 +24,40 @@ private struct Brand: View {
 }
 
 /// The web's auth screen: the logo at the top, the form below the middle.
-/// It scrolls, so the keyboard and large text never hide the form.
+/// It scrolls, so the keyboard and large text never hide the form, and the
+/// logo scrolls with it rather than lie over it.
 struct AuthLayout<Content: View>: View {
   @ViewBuilder let content: () -> Content
 
   var body: some View {
     GeometryReader { proxy in
       ScrollView {
-        VStack(alignment: .leading, spacing: 0, content: content)
-          .frame(maxWidth: 420)
-          .padding(.horizontal, 26)
-          .padding(.vertical, 96)
-          .frame(maxWidth: .infinity, minHeight: proxy.size.height)
+        VStack(spacing: 0) {
+          Brand().frame(maxWidth: .infinity, alignment: .leading)
+          Spacer(minLength: 0)
+          VStack(alignment: .leading, spacing: 0, content: content)
+            .frame(maxWidth: 420)
+            .padding(.horizontal, 26)
+            .padding(.vertical, 24)
+          Spacer(minLength: 0)
+          // As tall as the logo's row, so the form sits in the middle of the screen, as on Android.
+          Color.clear.frame(height: 70)
+        }
+        .frame(maxWidth: .infinity, minHeight: proxy.size.height)
       }
       .scrollDismissesKeyboard(.interactively)
       .scrollBounceBehavior(.basedOnSize)
+      .statusBarScrim()
     }
-    .overlay(alignment: .topLeading) { Brand() }
   }
 }
 
 /// A button's content across the whole width of the form.
 private struct Wide<Content: View>: View {
   @ViewBuilder let content: () -> Content
-  var body: some View { HStack(spacing: 8, content: content).frame(maxWidth: .infinity) }
+  var body: some View {
+    HStack(spacing: 8, content: content).multilineTextAlignment(.center).frame(maxWidth: .infinity)
+  }
 }
 
 /// Typing a server's address. `canCancel` while adding one, with one in use to go back to.

@@ -126,13 +126,16 @@ struct SignedInApp: View {
   }
 }
 
-/// The tab bar as each device has it: a bar at the bottom of a phone, with
-/// search in a circle of its own beside it, as Android's; on an iPad, the
-/// bar at the top that opens into a sidebar.
+/// The tab bar as each device has it: a bar at the bottom of a phone; on an
+/// iPad, the bar at the top, which opens into a sidebar with the logo at
+/// its head, as iPad apps have it.
 private struct TabStyle: ViewModifier {
   func body(content: Content) -> some View {
     if UIDevice.current.userInterfaceIdiom == .pad {
-      content.tabViewStyle(.sidebarAdaptable)
+      content
+        .tabViewStyle(.sidebarAdaptable)
+        .defaultAdaptableTabBarPlacement(.tabBar)
+        .tabViewSidebarHeader { Logo(height: 22).frame(maxWidth: .infinity, alignment: .leading) }
     } else {
       content
     }

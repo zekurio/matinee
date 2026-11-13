@@ -317,10 +317,29 @@ enum SystemBars {
     UIPageControl.appearance().pageIndicatorTintColor = colors.borderStrong.uiColor
     // Alerts, menus, and text selection take the window's tint.
     for scene in UIApplication.shared.connectedScenes {
-      for window in (scene as? UIWindowScene)?.windows ?? [] {
+      // Only the app's own windows: the system adds others over them, on an
+      // iPad, which an opaque background would hide the app behind.
+      for window in (scene as? UIWindowScene)?.windows ?? [] where window.windowLevel == .normal {
         window.tintColor = colors.accent.uiColor
         window.backgroundColor = colors.background.uiColor
+        // Bars already on screen keep what they were made with; the proxies only reach new ones.
+        restyle(window, tabs: tabs, navigation: bar, tint: colors.text.uiColor)
       }
     }
+  }
+
+  private static func restyle(
+    _ view: UIView, tabs: UITabBarAppearance, navigation: UINavigationBarAppearance, tint: UIColor
+  ) {
+    if let bar = view as? UITabBar {
+      bar.standardAppearance = tabs
+      bar.scrollEdgeAppearance = tabs
+    } else if let bar = view as? UINavigationBar {
+      bar.standardAppearance = navigation
+      bar.compactAppearance = navigation
+      bar.scrollEdgeAppearance = navigation
+      bar.tintColor = tint
+    }
+    for child in view.subviews { restyle(child, tabs: tabs, navigation: navigation, tint: tint) }
   }
 }
