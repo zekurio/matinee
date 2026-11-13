@@ -1984,15 +1984,18 @@ nonisolated enum Str {
   static var webUsersTitle: String { tr("web_users_title") }
   /// (you)
   static var webUsersYou: String { tr("web_users_you") }
+  /// %lld%% watched
+  static func iosProgressWatched(_ p1: Int) -> String { tr("ios_progress_watched", table: "iOS", p1) }
 }
 
 nonisolated private func tr(_ key: String, table: String = "Localizable") -> String {
   Bundle.main.localizedString(forKey: key, value: nil, table: table)
 }
 
-/// A string with arguments, formatted in the app's language. A plural's
-/// format carries its forms, which formatting picks from by the count.
+/// A string with arguments, formatted in the app's language (`Locale.app`,
+/// in Format.swift). A plural's format carries its forms, which
+/// formatting picks from by the count.
 nonisolated private func tr(_ key: String, table: String = "Localizable", _ args: any CVarArg...) -> String {
   let format = Bundle.main.localizedString(forKey: key, value: nil, table: table)
-  return String(format: format, locale: Locale.current, arguments: args)
+  return String(format: format, locale: Locale.app, arguments: args)
 }
