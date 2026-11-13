@@ -14,7 +14,7 @@ import Testing
       try FileManager.default.createDirectory(
         at: root.appending(path: entry.key), withIntermediateDirectories: true)
       try Data("video".utf8).write(to: downloads.store.file(entry))
-      try downloads.store.put(entry)
+      try await downloads.store.put(entry)
     }
     let adapter = DownloadPlayerAdapter(downloads: downloads, server: a.server)
     downloads.store.server = b.server
@@ -49,7 +49,7 @@ import Testing
       try FileManager.default.createDirectory(
         at: root.appending(path: entry.key), withIntermediateDirectories: true)
       try Data().write(to: downloads.store.file(entry))
-      try downloads.store.put(entry)
+      try await downloads.store.put(entry)
     }
     let adapter = DownloadPlayerAdapter(downloads: downloads, server: first.server)
     #expect(await adapter.next(after: first.item)?.id == next.id)

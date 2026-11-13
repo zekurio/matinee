@@ -150,9 +150,8 @@ public struct OfflinePlayback: Sendable {
     entry.subtitles = (subtitles ?? defaultSubtitles(source)).enumerated().map {
       OfflineSubtitle(track: $0.element, file: "\(entry.key)/subtitles/\($0.offset).vtt")
     }
-    try FileManager.default.createDirectory(
-      at: store.root.appending(path: entry.key), withIntermediateDirectories: true)
-    try store.put(entry)
+    try await store.files.directory(store.root.appending(path: entry.key))
+    try await store.put(entry)
     await worker.schedule(entry.key)
     return entry
   }
@@ -162,7 +161,7 @@ public struct OfflinePlayback: Sendable {
   }
   public func resume(_ id: String) async throws {
     guard let entry = store.items[id] else { return }
-    try store.update(entry.key) {
+    try await store.update(entry.key) {
       $0.state = .queued
       $0.error = nil
       $0.failure = nil

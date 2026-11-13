@@ -47,10 +47,11 @@ public struct OfflineItem: Codable, Sendable, Identifiable, Hashable {
   }
 }
 
-// The UI reads and mutates the index on one actor. URLSession owns network IO;
-// no lock or second observable copy of the index is needed.
+// The UI observes snapshots; DownloadFiles owns disk mutations and the index.
 @Observable @MainActor public final class DownloadStore {
   public let root: URL
+  let files: DownloadFiles
+  private var revision = 0
   public var server: String?
   public private(set) var all: [String: OfflineItem] = [:]
   public var items: [String: OfflineItem] {
@@ -68,6 +69,7 @@ public struct OfflineItem: Codable, Sendable, Identifiable, Hashable {
     var values = URLResourceValues()
     values.isExcludedFromBackup = true
     try url.setResourceValues(values)
+    var loaded: [String: OfflineItem] = [:]
     if let data = try? Data(contentsOf: self.root.appending(path: "index.json")) {
       let entries = try JSONDecoder().decode([JSONValue].self, from: data)
       for entry in entries {
@@ -79,47 +81,48 @@ public struct OfflineItem: Codable, Sendable, Identifiable, Hashable {
               !$0.hasPrefix(value.key + "/") || $0.split(separator: "/").contains("..")
             })
         {
-          all[value.key] = value
+          loaded[value.key] = value
         }
       }
     }
+    files = DownloadFiles(root: self.root, entries: loaded)
+    all = loaded
   }
-  public func put(_ entry: OfflineItem) throws {
-    var next = all
-    next[entry.key] = entry
-    try JSONEncoder().encode(Array(next.values)).write(
-      to: root.appending(path: "index.json"), options: .atomic)
-    all = next
+  private func accept(_ snapshot: DownloadFiles.Snapshot) {
+    guard snapshot.revision > revision else { return }
+    revision = snapshot.revision
+    all = snapshot.entries
   }
-  public func update(_ key: String, _ change: (inout OfflineItem) -> Void) throws {
-    guard var entry = all[key] else { return }
+  // URLSession's progress describes its temporary file, not committed media.
+  // Show it without advancing the durable byte cursor.
+  func showProgress(_ key: String, _ change: (inout OfflineItem) -> Void) {
+    guard var entry = all[key], entry.state == .running else { return }
     change(&entry)
-    try put(entry)
+    all[key] = entry
+  }
+  public func put(_ entry: OfflineItem) async throws {
+    accept(try await files.put(entry))
+  }
+  public func update(_ key: String, _ change: @Sendable (inout OfflineItem) -> Void) async throws {
+    accept(try await files.change(key, change))
+  }
+  func append(
+    _ source: URL, entry: OfflineItem, offset: Int64, segment: Bool = false,
+    keepSource: Bool = false
+  ) async throws {
+    accept(
+      try await files.commitAppend(
+        source, entry: entry, offset: offset, segment: segment, keepSource: keepSource))
   }
   public func done(_ id: String) -> OfflineItem? {
     items[id].flatMap { $0.state == .done ? $0 : nil }
   }
   public func file(_ entry: OfflineItem) -> URL { root.appending(path: entry.file) }
-  public func remove(_ key: String) throws {
-    guard all[key] != nil else { return }
-    let folder = root.appending(path: key)
-    if FileManager.default.fileExists(atPath: folder.path) {
-      try FileManager.default.removeItem(at: folder)
-    }
-    var next = all
-    next[key] = nil
-    try JSONEncoder().encode(Array(next.values)).write(
-      to: root.appending(path: "index.json"), options: .atomic)
-    all = next
+  public func remove(_ key: String) async throws {
+    accept(try await files.remove(key))
   }
   public var storageUsed: Int64 {
-    guard
-      let files = FileManager.default.enumerator(
-        at: root, includingPropertiesForKeys: [.fileSizeKey])
-    else { return 0 }
-    return files.compactMap { $0 as? URL }.reduce(0) {
-      $0 + Int64((try? $1.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0)
-    }
+    get async { await files.storageUsed() }
   }
 }
 

@@ -1,9 +1,12 @@
 # Downloads integration
 
 `Downloads` and `DownloadStore` are observable main-actor objects. Keep one
-`Downloads` alive for the app's lifetime. The main actor serializes index
-changes and fragment commits; URLSession performs the transfers. JSON index
-writes are atomic. Media lives in Application Support with backup exclusion.
+`Downloads` alive for the app's lifetime. `DownloadFiles` owns media mutations,
+size checks and atomic index writes on its own actor. The store awaits revisioned
+snapshots, so an older result cannot overwrite a newer UI snapshot. Its `put`,
+`update`, `remove` and `storageUsed` APIs are asynchronous. Media lives in
+Application Support with backup exclusion. Initial index loading and root setup
+are synchronous during store construction, before transfers start.
 
 ## Session and screens
 
@@ -32,7 +35,7 @@ The app must update `store.server` whenever `activeServer` changes. Compose
 - `pause`, `resume` (also retry), `remove`, and `removeAll` use selected-server
   item ids. `forgetServer` removes just that server, including pending progress.
 - Settings are `unmeteredOnly`, `defaultVersion`, `videoCodec`, and `subtitles`.
-  Pass `wishes()` to resolve to apply them. `store.storageUsed` counts disk bytes.
+  Pass `wishes()` to resolve to apply them. `await store.storageUsed` counts disk bytes.
 - `OfflineItem` exposes state, optional ratio, bytes, tracks, subtitles, image,
   and a typed `DownloadFailure`. Translate the failure cases in the app. A
   server failure carries its message unchanged.
@@ -67,8 +70,16 @@ wanted, flush its progress with a caller-owned timeout before local deletion.
 
 The server emits init MP4 plus `.m4s` fMP4 fragments, not TS or an HLS download
 asset. The worker appends complete fragments to `video.mp4`, flushing the file
-before committing its byte/segment cursor. On restore, it truncates an
-uncommitted tail and drains staged fragments. AVPlayer opens the finished
+before committing its byte/segment cursor. Append and index commit occupy one
+non-suspending file-actor turn. Staged fragments remain until the index commits;
+on restore, the worker truncates an uncommitted tail and replays the fragment.
+A stale generation cannot append after pause or deletion. Deletion uses the same
+actor, so it waits behind an active append and removes its result. The first
+piece is moved when possible; otherwise assembly streams in 64 KiB chunks.
+URLSession temporary files must be adopted synchronously on its background
+delegate queue before returning, then their private UUID URLs pass to the actor.
+Original transfer progress is observable but does not advance the durable cursor.
+AVPlayer opens the finished
 `file://` MP4 directly. No local HTTP server or resource loader is required.
 
 **One outstanding version fragment is intentional.** The server deletes
@@ -134,22 +145,22 @@ to a temporary download root, resolves live server decisions, pauses/resumes,
 loads both files with AVPlayer, seeks, flushes offline progress, and deletes
 the media. It changes watch progress for those fixture files.
 
-Latest successful run with serial version fetching:
+Latest successful run after moving file assembly to `DownloadFiles`:
 
 ```text
 LIVE resolve The Matrix: copy, subtitles 2
-LIVE interrupted bytes=51412848 segment=0
+LIVE interrupted bytes=48168096 segment=0
 LIVE downloaded bytes=92615594 segment=0 subtitles=2
-LIVE AVPlayer ready=1 seek=true time=12.049292482
+LIVE PlayerController subtitles loaded, seek=11.72976036, offline report queued
 LIVE offline progress accepted
 LIVE deleted media directory
 LIVE resolve Jurassic Park: encode, subtitles 2
 LIVE interrupted bytes=525321 segment=1
 LIVE downloaded bytes=2072924 segment=4 subtitles=2
-LIVE AVPlayer ready=1 seek=true time=11.968534897
+LIVE PlayerController subtitles loaded, seek=11.698267901, offline report queued
 LIVE offline progress accepted
 LIVE deleted media directory
-Test live() passed after 10.894 seconds.
+Test live() passed after 10.942 seconds.
 ```
 
 `ios-viewer` returned HTTP 200 with a ready resolution for The Matrix, so it
@@ -160,6 +171,9 @@ Still needs device/app-target checks: actual suspended transfers, force-quit
 behavior, relaunch handoff, unmetered/cellular transitions, OS retry deferral,
 large real-world fMP4 seeking, and transfers while the device is locked.
 Unit tests fake network eligibility and assert request policy flags; they
-cannot simulate the OS network scheduler. File assembly and atomic index IO
-currently run on the main actor, so profile very large originals on a device
-before deciding whether to move disk operations to a serial file actor.
+cannot simulate the OS network scheduler. The package suite now has 114 tests
+versus 105 before this change. A blocked file-operation hook checks off-main
+execution and main-actor responsiveness during a 32 MiB streamed append, then
+queues deletion. A separate injected crash after append but before index commit
+checks replay through a newly loaded worker. `DownloadTracksTests` covers audio,
+subtitle preferences, forced/default flags and offline drawing decisions.
