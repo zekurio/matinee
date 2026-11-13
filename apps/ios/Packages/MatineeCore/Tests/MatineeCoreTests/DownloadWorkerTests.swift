@@ -267,4 +267,39 @@ private final class DownloadStub: URLProtocol, @unchecked Sendable {
     })
     #expect(pending.report("item") == nil)
   }
+  @Test func tryingAgainClearsWhatBrokeOff() async throws {
+    let root = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+    let release = DispatchSemaphore(value: 0)
+    defer {
+      release.signal()
+      try? FileManager.default.removeItem(at: root)
+      DownloadStub.handler = nil
+    }
+    let config = URLSessionConfiguration.ephemeral
+    config.protocolClasses = [DownloadStub.self]
+    let api = MatineeApi(base: URL(string: "https://one/")!, configuration: config)
+    let store = try DownloadStore(root: root)
+    var entry = try offlineFixture("again", state: .queued)
+    entry.failure = .brokeOff
+    entry.attempts = 1
+    try FileManager.default.createDirectory(
+      at: root.appending(path: entry.key), withIntermediateDirectories: true)
+    try await store.put(entry)
+    DownloadStub.handler = { _ in
+      release.wait()
+      return (200, ["Content-Length": "2"], Data("ok".utf8))
+    }
+    let worker = DownloadWorker(store: store, configuration: config, client: { _ in api })
+    // Still waiting for its time to try again, it says why.
+    try await store.update(entry.key) { $0.retryAt = Date().addingTimeInterval(60) }
+    await worker.schedule(entry.key)
+    #expect(store.all[entry.key]?.failure == .brokeOff)
+    try await store.update(entry.key) { $0.retryAt = nil }
+    await worker.schedule(entry.key)
+    #expect(store.all[entry.key]?.state == .running)
+    #expect(store.all[entry.key]?.failure == nil)
+    #expect(store.all[entry.key]?.isBroken == false)
+    release.signal()
+    try await wait { store.all[entry.key]?.state == .done }
+  }
 }

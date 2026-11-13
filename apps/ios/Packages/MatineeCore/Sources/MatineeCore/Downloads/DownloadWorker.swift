@@ -176,6 +176,13 @@ private struct Transfer: Codable, Sendable {
       try await store.update(key) {
         guard $0.generation == generation, [.queued, .running].contains($0.state) else { return }
         $0.state = .running
+        // Trying again: what broke off last time no longer stands, as Android
+        // clears it. A failure on this try sets it again. A background
+        // session's task that waits for its retry time keeps it until then.
+        if ($0.retryAt ?? .distantPast) <= Date() {
+          $0.failure = nil
+          $0.error = nil
+        }
       }
       guard let current = store.all[key], current.generation == entry.generation,
         current.state == .running

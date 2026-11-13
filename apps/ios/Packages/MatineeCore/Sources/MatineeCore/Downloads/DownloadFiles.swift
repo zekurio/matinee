@@ -57,6 +57,25 @@ actor DownloadFiles {
     else { return 0 }
     return files.compactMap { $0 as? URL }.reduce(0) { $0 + size($1) }
   }
+  /// The space the folders of `keys` take on disk, as the file system
+  /// allocates it, so it reads as `du` and the system's storage settings do.
+  func storageUsed(keys: [String]) -> Int64 {
+    let wanted: Set<URLResourceKey> = [.totalFileAllocatedSizeKey, .fileSizeKey, .isRegularFileKey]
+    var total: Int64 = 0
+    for key in keys {
+      guard
+        let files = FileManager.default.enumerator(
+          at: root.appending(path: key), includingPropertiesForKeys: Array(wanted))
+      else { continue }
+      for case let url as URL in files {
+        guard let values = try? url.resourceValues(forKeys: wanted), values.isRegularFile == true else {
+          continue
+        }
+        total += Int64(values.totalFileAllocatedSize ?? values.fileSize ?? 0)
+      }
+    }
+    return total
+  }
   func exists(_ url: URL) -> Bool { FileManager.default.fileExists(atPath: url.path) }
   func size(_ url: URL) -> Int64 {
     Int64((try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0)
