@@ -13,7 +13,7 @@ import { Spinner } from "@matinee/ui/components/spinner"
 import { cn } from "@matinee/ui/lib/utils"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { FolderOpenIcon, SearchXIcon } from "lucide-react"
-import type { ReactNode } from "react"
+import { type ReactNode, useEffect, useEffectEvent, useRef } from "react"
 
 import { posterGrid } from "@/components/media-item"
 import { tr } from "@/i18n"
@@ -119,17 +119,45 @@ export function EmptyList({
   )
 }
 
+/**
+ * The end of a paged list. It loads the next page by itself once it comes
+ * within a screen or so of the viewport, so the list keeps growing as you
+ * scroll and a part-filled last row is gone before you reach it. The button
+ * stays as the way to retry after a failed page, when it stops loading by
+ * itself.
+ */
 export function ShowMore({
   fetching,
+  failed = false,
   onClick,
   className,
 }: {
   fetching: boolean
+  /** The last page failed; wait for a click rather than retry in a loop. */
+  failed?: boolean
   onClick: () => void
   className?: string
 }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const load = useEffectEvent(onClick)
+
+  // Made again after every fetch: a new observer reports at once, so a page
+  // that still leaves this on screen pulls the next one in.
+  useEffect(() => {
+    const node = ref.current
+    if (!node || fetching || failed) return
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) load()
+      },
+      { rootMargin: "0px 0px 150% 0px" },
+    )
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [fetching, failed])
+
   return (
-    <div className={cn("flex justify-center", className)}>
+    <div ref={ref} className={cn("flex justify-center", className)}>
       <Button variant="outline" disabled={fetching} onClick={onClick}>
         {fetching && <Spinner />}
         {tr("library.showMore")}
