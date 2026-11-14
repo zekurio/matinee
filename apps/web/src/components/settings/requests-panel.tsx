@@ -295,6 +295,7 @@ function ConnectionCard({
                   key={`${landing.kind}-${landing.folder}`}
                   landing={landing}
                   quality={quality}
+                  byKind={(source?.kinds.length ?? 1) > 1}
                 />
               ))}
             </span>
@@ -391,14 +392,19 @@ function ConnectionCard({
 function LandingLine({
   landing,
   quality,
+  byKind,
 }: {
   landing: FulfilmentLanding
   quality: string | null
+  /** The connection takes films and shows, so each line names its kind. */
+  byKind: boolean
 }) {
   return (
     <span className="flex min-w-0 flex-wrap items-baseline gap-x-2">
       <span className="text-muted-foreground w-16 shrink-0">
-        {tr(`connections.card.from.${landing.from}`)}
+        {byKind && landing.from === "default"
+          ? tr(`connections.card.kind.${landing.kind}`)
+          : tr(`connections.card.from.${landing.from}`)}
       </span>
       <span className="min-w-0 break-words">
         {[quality, landing.folder].filter(Boolean).join(" · ")}
@@ -609,7 +615,15 @@ function RuleSummary({
       value: lists().format(rule.keywords.map((keyword) => keyword.name)),
     },
   ].filter((entry) => entry !== false)
-  const settings = Object.keys(rule.settings).map((key) => {
+  // In the order the form lists them.
+  const order = (key: string) => {
+    const index = fields?.findIndex((each) => each.key === key) ?? -1
+    return index < 0 ? Number.MAX_SAFE_INTEGER : index
+  }
+  const keys = Object.keys(rule.settings).toSorted(
+    (a, b) => order(a) - order(b),
+  )
+  const settings = keys.map((key) => {
     const field = fields?.find((each) => each.key === key)
     const shown = lists().format(shownValue(field, rule.settings, key))
     const lands = field?.folder

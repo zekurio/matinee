@@ -79,6 +79,8 @@ export default {
   "connections.card.from.default": "Schickt",
   "connections.card.from.anime": "Anime",
   "connections.card.from.rule": "Regel",
+  "connections.card.kind.movie": "Filme",
+  "connections.card.kind.show": "Serien",
   "connections.card.nowhere": "keine Mediathek",
 
   "connections.rules.title": "Überschreibungsregeln",

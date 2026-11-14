@@ -79,6 +79,8 @@ export default defineMessages("connections", {
   "connections.card.from.default": "Sends",
   "connections.card.from.anime": "Anime",
   "connections.card.from.rule": "Rule",
+  "connections.card.kind.movie": "Films",
+  "connections.card.kind.show": "Shows",
   "connections.card.nowhere": "no library",
 
   // A connection's override rules.
