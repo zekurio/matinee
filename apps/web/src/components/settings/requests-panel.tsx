@@ -238,11 +238,7 @@ function ConnectionCard({
         <RowIcon>
           <CableIcon />
         </RowIcon>
-        <button
-          type="button"
-          onClick={onEdit}
-          className="focus-visible:ring-ring/50 -my-1 flex min-w-0 flex-1 flex-col gap-1 rounded-md py-1 text-left outline-none focus-visible:ring-3"
-        >
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
           <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm leading-5">
             <span className="truncate font-medium">{connection.name}</span>
             <span className="text-muted-foreground shrink-0 text-[13px]">
@@ -322,7 +318,7 @@ function ConnectionCard({
               </span>
             )}
           </span>
-        </button>
+        </div>
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
