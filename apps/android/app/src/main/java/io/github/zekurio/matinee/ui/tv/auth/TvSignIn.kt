@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -32,8 +31,9 @@ import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.auth.AuthState
 import io.github.zekurio.matinee.auth.Session
-import io.github.zekurio.matinee.ui.components.Lucide
 import io.github.zekurio.matinee.ui.components.QrCode
+import io.github.zekurio.matinee.ui.kit.Lucide
+import io.github.zekurio.matinee.ui.kit.Spinner
 import io.github.zekurio.matinee.ui.signin.DeviceCodeState
 import io.github.zekurio.matinee.ui.signin.LoginBackdropWall
 import io.github.zekurio.matinee.ui.signin.rememberDeviceCode
@@ -115,7 +115,7 @@ private fun CodeSide(flow: DeviceCodeState, server: String, again: FocusRequeste
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    CircularProgressIndicator(Modifier.size(18.dp), color = Palette.Muted, strokeWidth = 2.dp)
+                    Spinner(size = 18.dp, color = Palette.Muted)
                     Text(stringResource(R.string.signin_code_waiting), style = TvType.Body, color = Palette.Muted)
                 }
             }
@@ -170,7 +170,7 @@ private fun CodeQr(flow: DeviceCodeState) {
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(24.dp),
             )
-            flow.error == null -> CircularProgressIndicator(color = Palette.Accent)
+            flow.error == null -> Spinner(size = 32.dp, color = Palette.Accent)
         }
     }
 }

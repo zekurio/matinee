@@ -60,13 +60,13 @@ import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.name
 import io.github.zekurio.matinee.ui.components.Avatar
-import io.github.zekurio.matinee.ui.requests.LocalRequests
-import io.github.zekurio.matinee.ui.components.Gutter
 import io.github.zekurio.matinee.ui.components.LocalApi
-import io.github.zekurio.matinee.ui.components.Lucide
-import io.github.zekurio.matinee.ui.components.LucideIcon
-import io.github.zekurio.matinee.ui.components.RoundIconButton
-import io.github.zekurio.matinee.ui.components.focusRing
+import io.github.zekurio.matinee.ui.kit.Gutter
+import io.github.zekurio.matinee.ui.kit.Lucide
+import io.github.zekurio.matinee.ui.kit.LucideIcon
+import io.github.zekurio.matinee.ui.kit.RoundIconButton
+import io.github.zekurio.matinee.ui.kit.focusRing
+import io.github.zekurio.matinee.ui.requests.LocalRequests
 import io.github.zekurio.matinee.ui.theme.Palette
 
 /* The bars around pages: Home's header, the top bars of pages opened from a

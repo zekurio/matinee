@@ -1,9 +1,10 @@
 package io.github.zekurio.matinee.ui.theme
 
 import android.content.pm.PackageManager
+import androidx.compose.foundation.LocalIndication
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
-import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
@@ -20,6 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import io.github.zekurio.matinee.R
+import io.github.zekurio.matinee.ui.kit.PressIndication
 
 /*
  * The colors on screen, by the names the app's screens use, from the theme
@@ -36,11 +38,16 @@ object Palette {
     val Secondary get() = colors.input // --neutral-150
     val Border get() = colors.border // --neutral-200
     val Input get() = colors.borderStrong // --neutral-300
+    val InputHover get() = colors.borderEmphasis // --neutral-400, --input-hover
     val Muted get() = colors.textDim // --neutral-600, muted text
     val Faint get() = colors.textFaint // --foreground-faint
     val Foreground get() = colors.text // --neutral-900
     val Accent get() = colors.accent
     val AccentForeground get() = colors.accentForeground
+    val AccentHover get() = colors.accentHover
+
+    /** The hairline around anything floating, as the web's `ring-1 ring-foreground/10`. */
+    val Ring get() = colors.text.copy(alpha = 0.1f)
 
     /** The accent's tint behind it, as faint as it must be for the accent to read on it (--accent-soft). */
     val AccentSoft: Color
@@ -145,6 +152,9 @@ fun MatineeTheme(content: @Composable () -> Unit) {
     val context = LocalContext.current
     val tv = remember(context) { context.packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK) }
     CompositionLocalProvider(LocalTv provides tv) {
-        MaterialTheme(colorScheme = colorScheme(), typography = typography, content = content)
+        MaterialTheme(colorScheme = colorScheme(), typography = typography) {
+            // After MaterialTheme, which would provide its ripple.
+            CompositionLocalProvider(LocalIndication provides PressIndication, content = content)
+        }
     }
 }

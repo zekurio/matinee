@@ -7,6 +7,8 @@
     <string name="common_cancel">Abbrechen</string>
     <string name="common_remove">Entfernen</string>
     <string name="common_and">und</string>
+    <string name="calendar_previous_month">Zum vorherigen Monat</string>
+    <string name="calendar_next_month">Zum nächsten Monat</string>
 
     <string name="connect_title">Mit deinem Server verbinden</string>
     <string name="connect_description">Gib die Adresse ein, unter der du Matinee im Browser öffnest.</string>
@@ -51,7 +53,10 @@
     <string name="signin_with_code">Mit einem Code anmelden</string>
     <string name="signin_code_title">Zum Anmelden scannen</string>
     <string name="signin_code_scan">Scanne den Code mit der Kamera deines Handys oder in der Matinee-App unter Einstellungen › Konto.</string>
+    <string name="signin_code_title_typed">Mit einem Code anmelden</string>
+    <string name="signin_code_approve">Bestätige dieses Gerät auf einem, das schon bei Matinee angemeldet ist.</string>
     <string name="signin_code_enter">Oder gib diesen Code unter %1$s ein</string>
+    <string name="signin_code_enter_only">Gib diesen Code unter %1$s ein</string>
     <string name="signin_code_qr">QR-Code für den Code %1$s</string>
     <string name="signin_code_loading">Code wird geholt …</string>
     <string name="signin_code_waiting">Warte auf Bestätigung …</string>
@@ -69,10 +74,9 @@
     <string name="tab_profile">Profil</string>
     <string name="profile_admin">Admin</string>
     <string name="profile_joined">Dabei seit %1$s</string>
-    <string name="profile_no_favorites_hint">Tippe bei einem Film, einer Serie, einer Staffel oder einer Folge auf das Herz, um sie hier zu sammeln.</string>
     <string name="profile_statistics">Statistiken</string>
-    <string name="profile_self_empty">Deine Statistiken füllen sich, während du schaust</string>
-    <string name="profile_self_empty_hint">Sehzeit und deine meistgeschauten Titel erscheinen hier nach deiner ersten Wiedergabe.</string>
+    <string name="profile_self_empty">Noch nichts geschaut</string>
+    <string name="profile_self_empty_hint">Deine Sehzeit und deine meistgeschauten Titel erscheinen hier.</string>
     <string name="profile_nothing_watched">Nichts geschaut %1$s</string>
     <string name="profile_show_all_time">Gesamten Zeitraum zeigen</string>
     <string name="profile_recent">Zuletzt geschaut</string>
@@ -123,7 +127,7 @@
     <string name="favorites_episodes">Folgen</string>
     <string name="favorites_movies">Filme</string>
     <string name="favorites_empty">Noch keine Favoriten</string>
-    <string name="favorites_empty_hint">Tippe bei einem Film, einer Serie, einer Staffel oder einer Folge auf das Herz, um sie hier zu sammeln.</string>
+    <string name="favorites_empty_hint">Tippe bei einem Titel auf das Herz, um ihn hier zu speichern.</string>
     <string name="favorites_load_failed">Deine Favoriten konnten nicht geladen werden</string>
     <string name="home_load_failed">Deine Mediatheken konnten nicht geladen werden</string>
     <string name="browse_continue_watching">Weiterschauen</string>

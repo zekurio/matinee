@@ -14,7 +14,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -39,12 +38,13 @@ import io.github.zekurio.matinee.ui.RefreshOnResume
 import io.github.zekurio.matinee.ui.components.ActionTarget
 import io.github.zekurio.matinee.ui.components.ImageSource
 import io.github.zekurio.matinee.ui.components.LocalApi
-import io.github.zekurio.matinee.ui.components.Lucide
-import io.github.zekurio.matinee.ui.components.LucideIcon
 import io.github.zekurio.matinee.ui.components.art
 import io.github.zekurio.matinee.ui.components.landscape
 import io.github.zekurio.matinee.ui.episodeCode
 import io.github.zekurio.matinee.ui.itemLabel
+import io.github.zekurio.matinee.ui.kit.Lucide
+import io.github.zekurio.matinee.ui.kit.LucideIcon
+import io.github.zekurio.matinee.ui.kit.Spinner
 import io.github.zekurio.matinee.ui.media.isEmpty
 import io.github.zekurio.matinee.ui.media.rememberFavorites
 import io.github.zekurio.matinee.ui.progressRatio
@@ -143,7 +143,7 @@ fun TvFavoritesScreen() {
                 with(memory) { Modifier.item(EMPTY, EMPTY) },
             ) { favorites.loader.reload() }
             lists == null -> Box(Modifier.fillMaxWidth().padding(top = 48.dp), contentAlignment = Alignment.TopCenter) {
-                CircularProgressIndicator(color = Palette.Muted, strokeWidth = 3.dp, modifier = Modifier.size(32.dp))
+                Spinner(size = 32.dp, color = Palette.Muted)
             }
             lists.isEmpty -> Notice(
                 stringResource(R.string.favorites_empty),

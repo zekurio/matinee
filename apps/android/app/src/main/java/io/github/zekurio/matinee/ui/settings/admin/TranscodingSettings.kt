@@ -32,10 +32,10 @@ import io.github.zekurio.matinee.api.TranscodingCapabilities
 import io.github.zekurio.matinee.api.TranscodingSettings
 import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.Reveal
-import io.github.zekurio.matinee.ui.components.Gap
 import io.github.zekurio.matinee.ui.components.LocalApi
-import io.github.zekurio.matinee.ui.components.Lucide
-import io.github.zekurio.matinee.ui.components.LucideIcon
+import io.github.zekurio.matinee.ui.kit.Gap
+import io.github.zekurio.matinee.ui.kit.Lucide
+import io.github.zekurio.matinee.ui.kit.LucideIcon
 import io.github.zekurio.matinee.ui.rememberLoader
 import io.github.zekurio.matinee.ui.settings.LinkRow
 import io.github.zekurio.matinee.ui.settings.Panel

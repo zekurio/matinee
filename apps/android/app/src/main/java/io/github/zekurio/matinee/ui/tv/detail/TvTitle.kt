@@ -27,10 +27,10 @@ import io.github.zekurio.matinee.ui.LocalNavigator
 import io.github.zekurio.matinee.ui.components.LocalActions
 import io.github.zekurio.matinee.ui.components.LocalApi
 import io.github.zekurio.matinee.ui.components.LocalSnackbar
-import io.github.zekurio.matinee.ui.components.Lucide
 import io.github.zekurio.matinee.ui.components.art
 import io.github.zekurio.matinee.ui.components.frame
 import io.github.zekurio.matinee.ui.components.launchShowing
+import io.github.zekurio.matinee.ui.kit.Lucide
 import io.github.zekurio.matinee.ui.mediaFlags
 import io.github.zekurio.matinee.ui.rememberLoader
 import io.github.zekurio.matinee.ui.theme.Palette

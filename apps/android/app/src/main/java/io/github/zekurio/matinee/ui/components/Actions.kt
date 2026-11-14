@@ -1,21 +1,10 @@
 package io.github.zekurio.matinee.ui.components
 
-import androidx.annotation.DrawableRes
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.SheetState
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -23,12 +12,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.ImageTarget
@@ -46,6 +33,12 @@ import io.github.zekurio.matinee.ui.downloads.DownloadSheet
 import io.github.zekurio.matinee.ui.downloads.FileSet
 import io.github.zekurio.matinee.ui.episodeCode
 import io.github.zekurio.matinee.ui.itemLabel
+import io.github.zekurio.matinee.ui.kit.Lucide
+import io.github.zekurio.matinee.ui.kit.Sheet
+import io.github.zekurio.matinee.ui.kit.SheetHeader
+import io.github.zekurio.matinee.ui.kit.SheetItem
+import io.github.zekurio.matinee.ui.kit.ToastState
+import io.github.zekurio.matinee.ui.kit.rememberSheetState
 import io.github.zekurio.matinee.ui.metadata.rememberLibraryProvider
 import io.github.zekurio.matinee.ui.seasonName
 import io.github.zekurio.matinee.ui.theme.Palette
@@ -133,10 +126,10 @@ fun hasActions(target: ActionTarget): Boolean {
 val LocalActions = staticCompositionLocalOf<Actions> { error("no actions") }
 
 /** Messages that pop up at the bottom, like a failed mark. */
-val LocalSnackbar = staticCompositionLocalOf { SnackbarHostState() }
+val LocalSnackbar = staticCompositionLocalOf { ToastState() }
 
 /** Run [block], showing its error at the bottom of the screen. */
-fun CoroutineScope.launchShowing(snackbar: SnackbarHostState, failure: String, block: suspend () -> Unit) {
+fun CoroutineScope.launchShowing(snackbar: ToastState, failure: String, block: suspend () -> Unit) {
     launch {
         try {
             block()
@@ -149,25 +142,19 @@ fun CoroutineScope.launchShowing(snackbar: SnackbarHostState, failure: String, b
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ActionsSheet(actions: Actions) {
     actions.download?.let { item -> DownloadSheet(item) { actions.download = null } }
     actions.files?.let { files -> DownloadFilesSheet(files) { actions.files = null } }
     actions.watched?.let { ask -> WatchedAtSheet(ask) { actions.watched = null } }
     val target = actions.target ?: return
-    val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val sheet = rememberSheetState()
     val scope = rememberCoroutineScope()
     val dismiss = {
         scope.launch { sheet.hide() }.invokeOnCompletion { actions.target = null }
         Unit
     }
-    ModalBottomSheet(
-        onDismissRequest = { actions.target = null },
-        sheetState = sheet,
-        containerColor = Palette.Raised,
-        dragHandle = null,
-    ) {
+    Sheet(onDismissRequest = { actions.target = null }, state = sheet) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(vertical = 12.dp)) {
             when (target) {
                 is ActionTarget.Item -> ItemActions(target.item, target.here, dismiss)
@@ -175,45 +162,6 @@ fun ActionsSheet(actions: Actions) {
                 is ActionTarget.Season -> SeasonActions(target.title, target.season, target.here, dismiss)
             }
         }
-    }
-}
-
-/**
- * For a sheet's items: the sheet slides away, then it's gone and the
- * item's action runs, so a page or dialog it opens doesn't cut it off.
- */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun rememberSheetCloser(sheet: SheetState, onDismiss: () -> Unit): (() -> Unit) -> Unit {
-    val scope = rememberCoroutineScope()
-    return { action ->
-        scope.launch { sheet.hide() }.invokeOnCompletion {
-            onDismiss()
-            action()
-        }
-    }
-}
-
-@Composable
-internal fun SheetHeader(title: String, subtitle: String?) {
-    Column(Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
-        Text(title, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
-        if (subtitle != null) Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = Palette.Muted, maxLines = 1)
-    }
-    HorizontalDivider(Modifier.padding(vertical = 6.dp), color = Palette.Border)
-}
-
-/** A row in a sheet menu: an icon and a label. */
-@Composable
-fun SheetItem(@DrawableRes icon: Int, label: String, destructive: Boolean = false, onClick: () -> Unit) {
-    val color = if (destructive) Palette.Danger else Palette.Foreground
-    Row(
-        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 20.dp, vertical = 14.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        LucideIcon(icon, null, tint = if (destructive) color else Palette.Muted)
-        Text(label, style = MaterialTheme.typography.bodyLarge, color = color)
     }
 }
 

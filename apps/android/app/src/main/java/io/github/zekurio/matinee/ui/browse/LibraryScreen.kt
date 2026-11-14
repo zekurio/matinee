@@ -34,17 +34,17 @@ import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.LibraryKind
 import io.github.zekurio.matinee.api.TitleKind
-import io.github.zekurio.matinee.ui.TopBar
-import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.LibraryRoute
+import io.github.zekurio.matinee.ui.Load
+import io.github.zekurio.matinee.ui.TopBar
 import io.github.zekurio.matinee.ui.components.ActiveFilterChips
-import io.github.zekurio.matinee.ui.components.ButtonLook
 import io.github.zekurio.matinee.ui.components.FilterButton
-import io.github.zekurio.matinee.ui.components.MatineeButton
-import io.github.zekurio.matinee.ui.components.Gap
-import io.github.zekurio.matinee.ui.components.Lucide
-import io.github.zekurio.matinee.ui.components.MatineeTextField
-import io.github.zekurio.matinee.ui.components.RoundIconButton
+import io.github.zekurio.matinee.ui.kit.ButtonLook
+import io.github.zekurio.matinee.ui.kit.Gap
+import io.github.zekurio.matinee.ui.kit.Lucide
+import io.github.zekurio.matinee.ui.kit.MatineeButton
+import io.github.zekurio.matinee.ui.kit.MatineeTextField
+import io.github.zekurio.matinee.ui.kit.RoundIconButton
 import io.github.zekurio.matinee.ui.theme.Palette
 
 @Composable

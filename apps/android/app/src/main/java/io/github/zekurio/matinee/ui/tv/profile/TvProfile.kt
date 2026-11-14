@@ -15,7 +15,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
@@ -45,12 +44,13 @@ import io.github.zekurio.matinee.ui.LocalUser
 import io.github.zekurio.matinee.ui.RefreshOnResume
 import io.github.zekurio.matinee.ui.components.Avatar
 import io.github.zekurio.matinee.ui.components.LocalApi
-import io.github.zekurio.matinee.ui.components.Lucide
-import io.github.zekurio.matinee.ui.components.LucideIcon
 import io.github.zekurio.matinee.ui.components.art
 import io.github.zekurio.matinee.ui.components.landscape
 import io.github.zekurio.matinee.ui.episodeCode
 import io.github.zekurio.matinee.ui.itemLabel
+import io.github.zekurio.matinee.ui.kit.Lucide
+import io.github.zekurio.matinee.ui.kit.LucideIcon
+import io.github.zekurio.matinee.ui.kit.Spinner
 import io.github.zekurio.matinee.ui.profile.BoardStanding
 import io.github.zekurio.matinee.ui.profile.ProfileStats
 import io.github.zekurio.matinee.ui.profile.formatWatchTime
@@ -128,7 +128,7 @@ fun TvProfileScreen() {
             item(key = "who") { Header(loaded?.let(::joinedMonth)) }
             item(key = ACTIONS) { Actions(session, memory) }
             when (val state = profile.state) {
-                Load.Loading -> item(key = "loading") { Spinner() }
+                Load.Loading -> item(key = "loading") { LoadingRow() }
                 is Load.Failed -> item(key = "failed") {
                     Notice(stringResource(R.string.profile_load_failed), state.message)
                 }
@@ -246,7 +246,7 @@ private fun LazyListScope.statistics(
     val state = model.state
     when {
         state is Load.Failed && stats == null -> item(key = "statsFailed") { Notice(state.message, null) }
-        stats == null -> item(key = "statsLoading") { Spinner() }
+        stats == null -> item(key = "statsLoading") { LoadingRow() }
         model.neverWatched -> item(key = "statsNever") {
             Notice(stringResource(R.string.profile_self_empty), stringResource(R.string.profile_self_empty_hint))
         }
@@ -355,9 +355,9 @@ private fun Genres(stats: WatchStats, memory: TvFocusMemory) {
 }
 
 @Composable
-private fun Spinner() {
+private fun LoadingRow() {
     Box(Modifier.fillMaxWidth().height(96.dp), contentAlignment = Alignment.Center) {
-        CircularProgressIndicator(Modifier.size(32.dp), color = Palette.Muted, strokeWidth = 3.dp)
+        Spinner(size = 32.dp, color = Palette.Muted)
     }
 }
 

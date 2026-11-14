@@ -1,10 +1,11 @@
 package io.github.zekurio.matinee.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -17,6 +18,7 @@ import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.auth.AuthState
 import io.github.zekurio.matinee.auth.Session
 import io.github.zekurio.matinee.ui.components.LoadingBox
+import io.github.zekurio.matinee.ui.kit.OnColor
 import io.github.zekurio.matinee.ui.signin.ConnectScreen
 import io.github.zekurio.matinee.ui.signin.SignInScreen
 import io.github.zekurio.matinee.ui.signin.UnreachableScreen
@@ -30,33 +32,37 @@ import kotlinx.coroutines.flow.MutableStateFlow
 fun MatineeRoot(session: Session, signInError: MutableStateFlow<String?>) {
     val state by session.state.collectAsState()
     val tv = LocalTv.current
-    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-        if (tv) {
-            TvRoot(session, state)
-            return@Surface
+    Box(Modifier.fillMaxSize().background(Palette.Background)) {
+        OnColor(Palette.Foreground) {
+            if (tv) TvRoot(session, state) else Pages(session, state, signInError)
         }
-        when (val current = state) {
-            is AuthState.NoServer -> ConnectScreen(session, current.canCancel)
-            is AuthState.Connecting -> Column(
-                Modifier.fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-            ) {
-                LoadingBox(Modifier.weight(1f, fill = false))
-                Text(
-                    stringResource(R.string.connect_connecting, current.server),
-                    color = Palette.Muted,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
-            is AuthState.Unreachable -> UnreachableScreen(session, current)
-            // Another server's sign-in starts afresh, with its own code.
-            is AuthState.SignedOut -> key(current.server) { SignInScreen(session, current, signInError) }
-            // A new account starts the screens, and what they keep, afresh.
-            is AuthState.SignedIn -> key(current.user.id, current.server) { SignedInApp(session, current.user) }
-            is AuthState.Offline -> key(current.user.id, current.server, "offline") {
-                SignedInApp(session, current.user, offline = true)
-            }
+    }
+}
+
+/** The phone's screens for where the session is. */
+@Composable
+private fun Pages(session: Session, state: AuthState, signInError: MutableStateFlow<String?>) {
+    when (val current = state) {
+        is AuthState.NoServer -> ConnectScreen(session, current.canCancel)
+        is AuthState.Connecting -> Column(
+            Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            LoadingBox(Modifier.weight(1f, fill = false))
+            Text(
+                stringResource(R.string.connect_connecting, current.server),
+                color = Palette.Muted,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
+        is AuthState.Unreachable -> UnreachableScreen(session, current)
+        // Another server's sign-in starts afresh, with its own code.
+        is AuthState.SignedOut -> key(current.server) { SignInScreen(session, current, signInError) }
+        // A new account starts the screens, and what they keep, afresh.
+        is AuthState.SignedIn -> key(current.user.id, current.server) { SignedInApp(session, current.user) }
+        is AuthState.Offline -> key(current.user.id, current.server, "offline") {
+            SignedInApp(session, current.user, offline = true)
         }
     }
 }

@@ -13,12 +13,8 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -31,9 +27,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import io.github.zekurio.matinee.ui.components.Gap
-import io.github.zekurio.matinee.ui.components.Lucide
-import io.github.zekurio.matinee.ui.components.LucideIcon
+import io.github.zekurio.matinee.ui.kit.Gap
+import io.github.zekurio.matinee.ui.kit.Lucide
+import io.github.zekurio.matinee.ui.kit.LucideIcon
+import io.github.zekurio.matinee.ui.kit.Menu
+import io.github.zekurio.matinee.ui.kit.MenuItem
+import io.github.zekurio.matinee.ui.kit.Switch
 import io.github.zekurio.matinee.ui.theme.Palette
 
 /* The rows Settings is built from, as the web's setting-controls. */
@@ -94,16 +93,12 @@ fun <T> PickerRow(title: String, options: List<Pair<T, String>>, current: T, ena
         // Anchored to a point under the chevron: the menu never fits to the right of it, so it
         // lines its right edge up with the chevron's instead of opening at the row's left.
         Box(Modifier.align(Alignment.BottomEnd).offset(x = (-16).dp)) {
-            DropdownMenu(expanded = open, onDismissRequest = { open = false }, containerColor = Palette.Raised) {
+            Menu(expanded = open, onDismissRequest = { open = false }) {
                 options.forEach { (value, label) ->
-                    DropdownMenuItem(
-                        text = { Text(label) },
-                        trailingIcon = if (value == current) ({ LucideIcon(Lucide.Check, null, size = 16.dp) }) else null,
-                        onClick = {
-                            open = false
-                            if (value != current) onPick(value)
-                        },
-                    )
+                    MenuItem(label, selected = value == current, onClick = {
+                        open = false
+                        if (value != current) onPick(value)
+                    })
                 }
             }
         }
@@ -122,11 +117,7 @@ fun SwitchRow(title: String, checked: Boolean, @DrawableRes icon: Int? = null, o
         }
         RowText(title)
         Gap(12.dp)
-        Switch(
-            checked = checked,
-            onCheckedChange = onChange,
-            colors = SwitchDefaults.colors(checkedTrackColor = Palette.Accent, checkedThumbColor = Palette.AccentForeground),
-        )
+        Switch(checked = checked, onCheckedChange = onChange)
     }
 }
 

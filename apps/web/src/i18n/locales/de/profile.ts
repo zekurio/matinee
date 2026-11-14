@@ -20,7 +20,7 @@ export default {
   "profile.favorites": "Favoriten",
   "profile.noFavorites": "Noch keine Favoriten",
   "profile.noFavoritesHint":
-    "Tippe bei einem Film, einer Serie, einer Staffel oder einer Folge auf das Herz, um sie hier zu sammeln.",
+    "Tippe bei einem Titel auf das Herz, um ihn hier zu speichern.",
 
   "profile.favorites.shows": "Serien",
   "profile.favorites.seasons": "Staffeln",
@@ -33,9 +33,9 @@ export default {
 
   "profile.statistics": "Statistiken",
   "profile.stoppedSharing": "{name} teilt die Statistiken nicht mehr",
-  "profile.selfEmpty": "Deine Statistiken füllen sich, während du schaust",
+  "profile.selfEmpty": "Noch nichts geschaut",
   "profile.selfEmptyHint":
-    "Sehzeit und deine meistgeschauten Titel erscheinen hier nach deiner ersten Wiedergabe.",
+    "Deine Sehzeit und deine meistgeschauten Titel erscheinen hier.",
   "profile.findSomething": "Etwas zum Schauen finden",
   "profile.otherEmpty": "{name} hat noch nichts geschaut",
   "profile.otherEmptyHint":

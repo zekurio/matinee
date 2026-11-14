@@ -21,8 +21,7 @@ export default defineMessages("profile", {
   // Favorites.
   "profile.favorites": "Favorites",
   "profile.noFavorites": "No favorites yet",
-  "profile.noFavoritesHint":
-    "Tap the heart on a movie, show, season, or episode to keep it here.",
+  "profile.noFavoritesHint": "Tap the heart on a title to save it here.",
 
   // The favorites page, a row for each kind.
   "profile.favorites.shows": "Shows",
@@ -36,9 +35,9 @@ export default defineMessages("profile", {
   // Statistics.
   "profile.statistics": "Statistics",
   "profile.stoppedSharing": "{name} stopped sharing their statistics",
-  "profile.selfEmpty": "Your statistics fill in as you watch",
+  "profile.selfEmpty": "Nothing watched yet",
   "profile.selfEmptyHint":
-    "Watch time and your most watched titles show up here after your first play.",
+    "Your watch time and most watched titles show up here.",
   "profile.findSomething": "Find something to watch",
   "profile.otherEmpty": "{name} hasn't watched anything yet",
   "profile.otherEmptyHint":

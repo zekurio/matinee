@@ -9,12 +9,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -38,14 +34,17 @@ import io.github.zekurio.matinee.api.MediaItem
 import io.github.zekurio.matinee.api.Season
 import io.github.zekurio.matinee.api.TitleSummary
 import io.github.zekurio.matinee.app
-import io.github.zekurio.matinee.ui.components.Gap
 import io.github.zekurio.matinee.ui.components.LocalActions
 import io.github.zekurio.matinee.ui.components.LocalApi
 import io.github.zekurio.matinee.ui.components.LocalSnackbar
-import io.github.zekurio.matinee.ui.components.Lucide
-import io.github.zekurio.matinee.ui.components.LucideIcon
-import io.github.zekurio.matinee.ui.components.MatineeButton
 import io.github.zekurio.matinee.ui.formatBytes
+import io.github.zekurio.matinee.ui.kit.Gap
+import io.github.zekurio.matinee.ui.kit.Lucide
+import io.github.zekurio.matinee.ui.kit.LucideIcon
+import io.github.zekurio.matinee.ui.kit.MatineeButton
+import io.github.zekurio.matinee.ui.kit.Sheet
+import io.github.zekurio.matinee.ui.kit.Spinner
+import io.github.zekurio.matinee.ui.kit.rememberSheetState
 import io.github.zekurio.matinee.ui.seasonName
 import io.github.zekurio.matinee.ui.theme.Palette
 import java.io.IOException
@@ -61,7 +60,6 @@ data class FileSet(val title: TitleSummary, val season: Season? = null) {
 }
 
 /** Resolve a season in batches, then queue the returned plans without more requests. */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DownloadFilesSheet(files: FileSet, onDismiss: () -> Unit) {
     val api = LocalApi.current
@@ -69,7 +67,7 @@ fun DownloadFilesSheet(files: FileSet, onDismiss: () -> Unit) {
     val actions = LocalActions.current
     val snackbar = LocalSnackbar.current
     val downloads = LocalContext.current.app.downloads
-    val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val sheet = rememberSheetState()
     val stored by downloads.store.items.collectAsState()
     var items by remember { mutableStateOf<List<MediaItem>?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -112,7 +110,7 @@ fun DownloadFilesSheet(files: FileSet, onDismiss: () -> Unit) {
         }
     }
 
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheet, containerColor = Palette.Raised, dragHandle = null) {
+    Sheet(onDismissRequest = onDismiss, state = sheet) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(vertical = 16.dp)) {
             val resolved = results
             val name = files.season?.let { stringResource(R.string.title_season_of, files.title.name, seasonName(it.number, res)) }
@@ -135,7 +133,7 @@ fun DownloadFilesSheet(files: FileSet, onDismiss: () -> Unit) {
                     modifier = Modifier.padding(horizontal = 20.dp),
                 )
                 list == null || resolved == null -> Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = Palette.Accent)
+                    Spinner(size = 32.dp, color = Palette.Accent)
                 }
                 else -> {
                     val missing = list.filter { stored[it.id] == null }

@@ -15,7 +15,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.auth.Session
-import io.github.zekurio.matinee.ui.components.Lucide
+import io.github.zekurio.matinee.ui.kit.Lucide
 import io.github.zekurio.matinee.ui.signin.facts
 import io.github.zekurio.matinee.ui.signin.title
 import io.github.zekurio.matinee.ui.tv.TvListItem

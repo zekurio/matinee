@@ -39,10 +39,8 @@ import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.app
 import io.github.zekurio.matinee.ui.LocalOffline
 import io.github.zekurio.matinee.ui.LocalUser
-import io.github.zekurio.matinee.ui.components.Gap
 import io.github.zekurio.matinee.ui.components.LocalApi
-import io.github.zekurio.matinee.ui.components.Lucide
-import io.github.zekurio.matinee.ui.components.LucideIcon
+import io.github.zekurio.matinee.ui.kit.Gap
 import io.github.zekurio.matinee.ui.theme.Appearance
 import io.github.zekurio.matinee.ui.theme.Palette
 import io.github.zekurio.matinee.ui.theme.ThemeColors

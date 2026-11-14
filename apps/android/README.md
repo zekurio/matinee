@@ -184,13 +184,29 @@ strings, tagged unions become sealed interfaces, and optional nullable
 fields use `Explicit`. A schema the generator can't map fails the run, so
 handle new shapes in `apps/server/scripts/kotlin-client.ts`.
 
+### The kit
+
+Screens build from `ui/kit`, which ports `packages/ui`'s components and
+keeps their names where it can: `Sheet` for the Drawer, `Dialog` and
+`ConfirmDialog` for the dialogs, `Menu`, `Switch`, `Spinner`, `Toast`,
+`MatineeTextField` for Input, `Calendar`, and the buttons. `Tokens.kt` has
+the web's radius scale. `PressIndication` replaces Material's ripple for
+every `clickable`; `MatineeTheme` provides it.
+
+Only `ui/kit` and `ui/theme` import material3 for more than `Text`, the
+text styles, `LocalContentColor`, and dividers. `KitBoundaryTest` fails on
+anything else. If a screen needs something Material has and the kit
+doesn't, add it to the kit, drawn the way the web draws it. A kit
+component may wrap the Material one for its behavior, as `Sheet` keeps
+`ModalBottomSheet`'s dragging.
+
 ### Strings and icons
 
 Strings go in `res/values/strings.xml` and `res/values-de/strings.xml`.
 
 Icons come from lucide. Run `scripts/lucide.py <name>`, or
 `<name>:filled`, after `pnpm install`, then add it to `Lucide` in
-`ui/components/Picture.kt`.
+`ui/kit/Icon.kt`.
 
 ### Local network access
 
@@ -219,6 +235,7 @@ app/src/main/java/io/github/zekurio/matinee/
   downloads/  Download list, WorkManager job, offline progress
   launcher/   TV Watch Next publishing
   ui/         Compose screens
+  ui/kit/     The web's components and tokens, which screens build from
   ui/requests/ Requests: catalog pages, requesting, Discover, the admin queue
   ui/tv/      TV screens and shared TV pieces
   ui/player/  Decoders, playback, download tracks, WebVTT, player

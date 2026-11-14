@@ -35,10 +35,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -79,25 +76,27 @@ import io.github.zekurio.matinee.app
 import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.LocalNavigator
 import io.github.zekurio.matinee.ui.TopBar
-import io.github.zekurio.matinee.ui.components.Badge
-import io.github.zekurio.matinee.ui.components.ButtonLook
-import io.github.zekurio.matinee.ui.components.ControlShape
 import io.github.zekurio.matinee.ui.components.ErrorBox
-import io.github.zekurio.matinee.ui.components.Gap
-import io.github.zekurio.matinee.ui.components.Gutter
 import io.github.zekurio.matinee.ui.components.LoadingBox
 import io.github.zekurio.matinee.ui.components.LocalActions
 import io.github.zekurio.matinee.ui.components.LocalApi
 import io.github.zekurio.matinee.ui.components.LocalSnackbar
-import io.github.zekurio.matinee.ui.components.Lucide
-import io.github.zekurio.matinee.ui.components.LucideIcon
-import io.github.zekurio.matinee.ui.components.MatineeButton
-import io.github.zekurio.matinee.ui.components.MatineeTextField
 import io.github.zekurio.matinee.ui.components.Picture
 import io.github.zekurio.matinee.ui.components.art
 import io.github.zekurio.matinee.ui.components.isWide
 import io.github.zekurio.matinee.ui.components.tone
 import io.github.zekurio.matinee.ui.describeFailure
+import io.github.zekurio.matinee.ui.kit.Badge
+import io.github.zekurio.matinee.ui.kit.ButtonLook
+import io.github.zekurio.matinee.ui.kit.ControlShape
+import io.github.zekurio.matinee.ui.kit.Gap
+import io.github.zekurio.matinee.ui.kit.Gutter
+import io.github.zekurio.matinee.ui.kit.Lucide
+import io.github.zekurio.matinee.ui.kit.LucideIcon
+import io.github.zekurio.matinee.ui.kit.MatineeButton
+import io.github.zekurio.matinee.ui.kit.MatineeTextField
+import io.github.zekurio.matinee.ui.kit.Spinner
+import io.github.zekurio.matinee.ui.kit.Switch
 import io.github.zekurio.matinee.ui.rememberLoader
 import io.github.zekurio.matinee.ui.seasonName
 import io.github.zekurio.matinee.ui.theme.Palette
@@ -319,7 +318,7 @@ private fun MatchRow(match: MetadataMatch, current: Boolean, pending: Boolean, e
                 Text(it, style = MaterialTheme.typography.bodySmall, color = Palette.Muted, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
         }
-        if (pending) CircularProgressIndicator(Modifier.size(18.dp), color = Palette.Accent, strokeWidth = 2.dp)
+        if (pending) Spinner(size = 18.dp, color = Palette.Accent)
     }
 }
 
@@ -528,11 +527,7 @@ private fun ImageEditor(title: Title, target: ImageTarget) {
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(stringResource(R.string.title_images_all_languages), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-                        Switch(
-                            checked = allLanguages,
-                            onCheckedChange = { allLanguages = it },
-                            colors = SwitchDefaults.colors(checkedTrackColor = Palette.Accent, checkedThumbColor = Palette.AccentForeground),
-                        )
+                        Switch(checked = allLanguages, onCheckedChange = { allLanguages = it })
                     }
                 }
             }
@@ -593,7 +588,7 @@ private fun LazyGridScope.wide(key: String, content: @Composable () -> Unit) {
 
 @Composable
 private fun Busy(busy: Boolean, icon: Int) {
-    if (busy) CircularProgressIndicator(Modifier.size(16.dp), color = Palette.Foreground, strokeWidth = 2.dp)
+    if (busy) Spinner(size = 16.dp, color = Palette.Foreground)
     else LucideIcon(icon, null, size = 16.dp)
 }
 
@@ -710,7 +705,7 @@ private fun Choice(
             }
             if (pending) {
                 Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.5f)), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(Modifier.size(22.dp), color = Color.White, strokeWidth = 2.dp)
+                    Spinner(size = 22.dp, color = Color.White)
                 }
             }
         }

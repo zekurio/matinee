@@ -18,12 +18,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -40,18 +36,21 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
-import io.github.zekurio.matinee.api.DownloadResolution
 import io.github.zekurio.matinee.api.DownloadPlan
+import io.github.zekurio.matinee.api.DownloadResolution
 import io.github.zekurio.matinee.api.DownloadSpec
 import io.github.zekurio.matinee.api.MediaItem
 import io.github.zekurio.matinee.app
 import io.github.zekurio.matinee.downloads.DownloadSource
-import io.github.zekurio.matinee.ui.components.Gap
 import io.github.zekurio.matinee.ui.components.LocalApi
-import io.github.zekurio.matinee.ui.components.Lucide
-import io.github.zekurio.matinee.ui.components.LucideIcon
-import io.github.zekurio.matinee.ui.components.MatineeButton
 import io.github.zekurio.matinee.ui.formatBytes
+import io.github.zekurio.matinee.ui.kit.Gap
+import io.github.zekurio.matinee.ui.kit.Lucide
+import io.github.zekurio.matinee.ui.kit.LucideIcon
+import io.github.zekurio.matinee.ui.kit.MatineeButton
+import io.github.zekurio.matinee.ui.kit.Sheet
+import io.github.zekurio.matinee.ui.kit.Spinner
+import io.github.zekurio.matinee.ui.kit.rememberSheetState
 import io.github.zekurio.matinee.ui.player.audioLabel
 import io.github.zekurio.matinee.ui.player.subtitleDetail
 import io.github.zekurio.matinee.ui.player.subtitleLabel
@@ -69,13 +68,12 @@ import java.io.IOException
  * settings pick them. Shows how big each version is before anything
  * starts, for the audio picked.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DownloadSheet(item: MediaItem, onDismiss: () -> Unit) {
     val api = LocalApi.current
     val context = LocalContext.current
     val downloads = context.app.downloads
-    val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val sheet = rememberSheetState()
     var source by remember { mutableStateOf<DownloadSource?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     val plans = remember { mutableStateMapOf<Choice, DownloadPlan>() }
@@ -142,7 +140,7 @@ fun DownloadSheet(item: MediaItem, onDismiss: () -> Unit) {
         if ((picked as? Choice.Device)?.preset != null && plans[picked] == null) picked = Choice.Device(null)
     }
 
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheet, containerColor = Palette.Raised, dragHandle = null) {
+    Sheet(onDismissRequest = onDismiss, state = sheet) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(vertical = 16.dp)) {
             val (primary, secondary) = names(item)
             Column(Modifier.padding(horizontal = 20.dp)) {
@@ -160,7 +158,7 @@ fun DownloadSheet(item: MediaItem, onDismiss: () -> Unit) {
             when {
                 error != null -> Text(error.orEmpty(), color = Palette.Danger, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(horizontal = 20.dp))
                 loaded == null -> Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = Palette.Accent)
+                    Spinner(size = 32.dp, color = Palette.Accent)
                 }
                 else -> {
                     val device = picked is Choice.Device

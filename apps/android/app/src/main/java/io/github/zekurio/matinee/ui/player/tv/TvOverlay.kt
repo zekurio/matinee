@@ -1,18 +1,12 @@
 package io.github.zekurio.matinee.ui.player.tv
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.ui.semantics.Role
-import io.github.zekurio.matinee.ui.tv.TvButtons
-import io.github.zekurio.matinee.ui.tv.tvClickable
-import io.github.zekurio.matinee.ui.tv.tvContent
-import io.github.zekurio.matinee.ui.tv.tvControl
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -34,6 +28,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.Text
@@ -63,6 +58,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -74,10 +70,10 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.ui.Motion
-import io.github.zekurio.matinee.ui.components.Lucide
-import io.github.zekurio.matinee.ui.components.LucideIcon
 import io.github.zekurio.matinee.ui.formatClock
 import io.github.zekurio.matinee.ui.itemLabel
+import io.github.zekurio.matinee.ui.kit.Lucide
+import io.github.zekurio.matinee.ui.kit.LucideIcon
 import io.github.zekurio.matinee.ui.player.Menu
 import io.github.zekurio.matinee.ui.player.PlayerController
 import io.github.zekurio.matinee.ui.player.TrickplayFrame
@@ -85,9 +81,13 @@ import io.github.zekurio.matinee.ui.player.seekFraction
 import io.github.zekurio.matinee.ui.player.seekable
 import io.github.zekurio.matinee.ui.theme.Palette
 import io.github.zekurio.matinee.ui.tv.Overscan
+import io.github.zekurio.matinee.ui.tv.TvButtons
 import io.github.zekurio.matinee.ui.tv.TvCards
 import io.github.zekurio.matinee.ui.tv.TvRoundButton
 import io.github.zekurio.matinee.ui.tv.TvType
+import io.github.zekurio.matinee.ui.tv.tvClickable
+import io.github.zekurio.matinee.ui.tv.tvContent
+import io.github.zekurio.matinee.ui.tv.tvControl
 import java.text.DateFormat
 import java.util.Date
 

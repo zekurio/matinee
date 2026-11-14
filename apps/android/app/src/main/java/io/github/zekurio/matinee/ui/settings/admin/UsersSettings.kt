@@ -7,11 +7,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -33,13 +30,16 @@ import io.github.zekurio.matinee.app
 import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.LocalUser
 import io.github.zekurio.matinee.ui.components.Avatar
-import io.github.zekurio.matinee.ui.components.Badge
 import io.github.zekurio.matinee.ui.components.LocalApi
 import io.github.zekurio.matinee.ui.components.LocalSnackbar
-import io.github.zekurio.matinee.ui.components.Lucide
-import io.github.zekurio.matinee.ui.components.SheetHeader
-import io.github.zekurio.matinee.ui.components.SheetItem
 import io.github.zekurio.matinee.ui.formatInstant
+import io.github.zekurio.matinee.ui.kit.Badge
+import io.github.zekurio.matinee.ui.kit.ConfirmDialog
+import io.github.zekurio.matinee.ui.kit.Lucide
+import io.github.zekurio.matinee.ui.kit.Sheet
+import io.github.zekurio.matinee.ui.kit.SheetHeader
+import io.github.zekurio.matinee.ui.kit.SheetItem
+import io.github.zekurio.matinee.ui.kit.rememberSheetState
 import io.github.zekurio.matinee.ui.rememberLoader
 import io.github.zekurio.matinee.ui.settings.Panel
 import io.github.zekurio.matinee.ui.settings.RowDivider
@@ -130,13 +130,12 @@ private fun UserRow(user: AdminUser, onClick: () -> Unit) {
 }
 
 /** What can be done to an account: its role, its sessions, the account itself. */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun UserSheet(user: AdminUser, lastAdmin: Boolean, scope: CoroutineScope, onPick: (UserAction) -> Unit, onDismiss: () -> Unit) {
     val self = LocalUser.current.id == user.id
     val snackbar = LocalSnackbar.current
     val lastAdminNote = stringResource(R.string.web_users_lastAdmin)
-    val sheet = rememberModalBottomSheetState()
+    val sheet = rememberSheetState(skipPartiallyExpanded = false)
     // The sheet slides away first, then the question opens.
     val pick = { action: UserAction ->
         scope.launch { sheet.hide() }.invokeOnCompletion {
@@ -149,7 +148,7 @@ private fun UserSheet(user: AdminUser, lastAdmin: Boolean, scope: CoroutineScope
             }
         }
     }
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheet, containerColor = Palette.Raised, dragHandle = null) {
+    Sheet(onDismissRequest = onDismiss, state = sheet) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(vertical = 12.dp)) {
             SheetHeader(user.name, "@${user.username}")
             SheetItem(
@@ -219,6 +218,8 @@ private fun Confirm(action: UserAction, saver: Saver, reload: () -> Unit, onDism
                     }
                 },
                 onDismiss = onDismiss,
+                // Making an admin takes nothing away; the web asks in its plain look.
+                destructive = !action.admin,
             )
         }
         is UserAction.SignOut -> ConfirmDialog(

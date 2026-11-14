@@ -34,19 +34,19 @@ import io.github.zekurio.matinee.api.CreditKind
 import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.TopBar
 import io.github.zekurio.matinee.ui.components.ActiveFilterChips
-import io.github.zekurio.matinee.ui.components.ButtonLook
-import io.github.zekurio.matinee.ui.components.Chip
-import io.github.zekurio.matinee.ui.components.FilterButton
-import io.github.zekurio.matinee.ui.components.MatineeButton
 import io.github.zekurio.matinee.ui.components.ErrorBox
-import io.github.zekurio.matinee.ui.components.Gap
-import io.github.zekurio.matinee.ui.components.Gutter
+import io.github.zekurio.matinee.ui.components.FilterButton
 import io.github.zekurio.matinee.ui.components.LoadingBox
 import io.github.zekurio.matinee.ui.components.LocalApi
 import io.github.zekurio.matinee.ui.components.Picture
 import io.github.zekurio.matinee.ui.components.PosterCard
 import io.github.zekurio.matinee.ui.components.art
 import io.github.zekurio.matinee.ui.components.initials
+import io.github.zekurio.matinee.ui.kit.ButtonLook
+import io.github.zekurio.matinee.ui.kit.Chip
+import io.github.zekurio.matinee.ui.kit.Gap
+import io.github.zekurio.matinee.ui.kit.Gutter
+import io.github.zekurio.matinee.ui.kit.MatineeButton
 import io.github.zekurio.matinee.ui.rememberLoader
 import io.github.zekurio.matinee.ui.theme.Palette
 

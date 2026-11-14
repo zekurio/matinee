@@ -30,7 +30,6 @@ import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -68,8 +67,9 @@ import io.github.zekurio.matinee.ui.LocalNavigator
 import io.github.zekurio.matinee.ui.Motion
 import io.github.zekurio.matinee.ui.browse.TitlePages
 import io.github.zekurio.matinee.ui.components.LocalApi
-import io.github.zekurio.matinee.ui.components.Lucide
 import io.github.zekurio.matinee.ui.components.art
+import io.github.zekurio.matinee.ui.kit.Lucide
+import io.github.zekurio.matinee.ui.kit.Spinner
 import io.github.zekurio.matinee.ui.theme.Palette
 import io.github.zekurio.matinee.ui.tv.home.FocusedItem
 
@@ -342,7 +342,7 @@ fun TvTitleGrid(
                         Modifier.fillMaxWidth().padding(top = if (none) SPINNER_TOP else 16.dp, bottom = 16.dp),
                         contentAlignment = if (none) Alignment.TopCenter else Alignment.Center,
                     ) {
-                        CircularProgressIndicator(color = Palette.Muted, strokeWidth = 3.dp, modifier = Modifier.size(if (none) 32.dp else 28.dp))
+                        Spinner(size = if (none) 32.dp else 28.dp, color = Palette.Muted)
                     }
                 }
             }

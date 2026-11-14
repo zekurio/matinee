@@ -18,12 +18,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -57,17 +53,21 @@ import io.github.zekurio.matinee.ui.LocalNavigator
 import io.github.zekurio.matinee.ui.RefreshOnResume
 import io.github.zekurio.matinee.ui.Reveal
 import io.github.zekurio.matinee.ui.TopBar
-import io.github.zekurio.matinee.ui.components.Gap
-import io.github.zekurio.matinee.ui.components.Gutter
 import io.github.zekurio.matinee.ui.components.LocalApi
 import io.github.zekurio.matinee.ui.components.LocalSnackbar
-import io.github.zekurio.matinee.ui.components.Lucide
-import io.github.zekurio.matinee.ui.components.LucideIcon
-import io.github.zekurio.matinee.ui.components.MatineeButton
-import io.github.zekurio.matinee.ui.components.MatineeTextField
-import io.github.zekurio.matinee.ui.components.RoundIconButton
-import io.github.zekurio.matinee.ui.components.SheetHeader
-import io.github.zekurio.matinee.ui.components.SheetItem
+import io.github.zekurio.matinee.ui.kit.ConfirmDialog
+import io.github.zekurio.matinee.ui.kit.Gap
+import io.github.zekurio.matinee.ui.kit.Gutter
+import io.github.zekurio.matinee.ui.kit.Lucide
+import io.github.zekurio.matinee.ui.kit.LucideIcon
+import io.github.zekurio.matinee.ui.kit.MatineeButton
+import io.github.zekurio.matinee.ui.kit.MatineeTextField
+import io.github.zekurio.matinee.ui.kit.RoundIconButton
+import io.github.zekurio.matinee.ui.kit.Sheet
+import io.github.zekurio.matinee.ui.kit.SheetHeader
+import io.github.zekurio.matinee.ui.kit.SheetItem
+import io.github.zekurio.matinee.ui.kit.Spinner
+import io.github.zekurio.matinee.ui.kit.rememberSheetState
 import io.github.zekurio.matinee.ui.rememberLoader
 import io.github.zekurio.matinee.ui.settings.Panel
 import io.github.zekurio.matinee.ui.settings.PickerRow
@@ -187,12 +187,11 @@ private fun LibraryRow(library: Library, providers: Load<List<MetadataProvider>>
             Text(status, style = MaterialTheme.typography.bodySmall, color = Palette.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         if (library.scanning || library.refreshing) {
-            CircularProgressIndicator(Modifier.size(18.dp), color = Palette.Accent, strokeWidth = 2.dp)
+            Spinner(size = 18.dp, color = Palette.Accent)
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun LibrarySheet(
     library: Library,
@@ -202,7 +201,7 @@ private fun LibrarySheet(
     onRemove: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val sheet = rememberModalBottomSheetState()
+    val sheet = rememberSheetState(skipPartiallyExpanded = false)
     val scope = rememberCoroutineScope()
     // The sheet slides away first, then the action runs, so what it opens
     // doesn't cut the sheet off halfway.
@@ -212,7 +211,7 @@ private fun LibrarySheet(
             action()
         }
     }
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheet, containerColor = Palette.Raised, dragHandle = null) {
+    Sheet(onDismissRequest = onDismiss, state = sheet) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(vertical = 12.dp)) {
             SheetHeader(library.name, library.paths.joinToString(", "))
             SheetItem(Lucide.RefreshCw, stringResource(R.string.web_libraries_scanNow)) { pick(onScan) }
@@ -270,7 +269,7 @@ fun LibraryEditorScreen(id: String?, results: SavedStateHandle) {
         Column(Modifier.fillMaxSize()) {
             TopBar(title)
             Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = Palette.Accent)
+                Spinner(size = 32.dp, color = Palette.Accent)
             }
         }
         return
@@ -457,7 +456,7 @@ fun FolderPickerScreen(start: String?, added: List<String>) {
                     }
                 }
                 error != null -> Text(error.orEmpty(), color = Palette.Danger, style = MaterialTheme.typography.bodySmall, modifier = Modifier.align(Alignment.Center).padding(Gutter))
-                else -> CircularProgressIndicator(Modifier.align(Alignment.Center), color = Palette.Accent, strokeWidth = 2.dp)
+                else -> Spinner(Modifier.align(Alignment.Center), size = 32.dp, color = Palette.Accent)
             }
         }
         // Always there, so the list above doesn't jump when the first folder loads.

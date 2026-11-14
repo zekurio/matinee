@@ -2,7 +2,6 @@ package io.github.zekurio.matinee.ui.signin
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -18,11 +17,12 @@ import io.github.zekurio.matinee.app
 import io.github.zekurio.matinee.auth.AuthState
 import io.github.zekurio.matinee.auth.Session
 import io.github.zekurio.matinee.auth.Unreachability
-import io.github.zekurio.matinee.ui.components.ButtonLook
-import io.github.zekurio.matinee.ui.components.Gap
-import io.github.zekurio.matinee.ui.components.Lucide
-import io.github.zekurio.matinee.ui.components.LucideIcon
-import io.github.zekurio.matinee.ui.components.MatineeButton
+import io.github.zekurio.matinee.ui.kit.ButtonLook
+import io.github.zekurio.matinee.ui.kit.Gap
+import io.github.zekurio.matinee.ui.kit.Lucide
+import io.github.zekurio.matinee.ui.kit.LucideIcon
+import io.github.zekurio.matinee.ui.kit.MatineeButton
+import io.github.zekurio.matinee.ui.kit.Spinner
 import io.github.zekurio.matinee.ui.theme.Palette
 
 /**
@@ -59,11 +59,7 @@ fun UnreachableScreen(session: Session, state: AuthState.Unreachable) {
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 if (state.retrying) {
-                    CircularProgressIndicator(
-                        Modifier.size(18.dp),
-                        color = if (look == ButtonLook.Primary) Palette.Background else Palette.Foreground,
-                        strokeWidth = 2.dp,
-                    )
+                    Spinner(size = 18.dp, color = if (look == ButtonLook.Primary) Palette.Background else Palette.Foreground)
                 } else {
                     LucideIcon(Lucide.RefreshCw, null, size = 18.dp)
                 }
