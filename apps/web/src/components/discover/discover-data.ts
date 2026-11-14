@@ -64,7 +64,6 @@ export function railName(rail: Rail): string {
  */
 const slugs = {
   comingSoon: "coming-soon",
-  othersAsked: "others-asked",
 } satisfies Partial<Record<RailId, string>>
 
 /** Where a row's heading leads. */

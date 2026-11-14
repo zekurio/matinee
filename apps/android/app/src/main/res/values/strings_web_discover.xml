@@ -5,7 +5,6 @@
     <string name="web_discover_rail_popularFilms">Popular movies</string>
     <string name="web_discover_rail_popularShows">Popular shows</string>
     <string name="web_discover_rail_comingSoon">Coming soon</string>
-    <string name="web_discover_rail_othersAsked">Requested by others</string>
     <string name="web_discover_card_release">%1$s · %2$s</string>
     <string name="web_discover_stale">Some of these may be out of date.</string>
     <string name="web_discover_railFailed">This row didn\'t load.</string>

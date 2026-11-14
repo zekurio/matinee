@@ -76,8 +76,7 @@ private const val RAIL_CARDS = 20
 fun railName(rail: DiscoverRail, res: Resources): String = when (rail.id) {
     "popularFilms" -> res.getString(R.string.web_discover_rail_popularFilms)
     "popularShows" -> res.getString(R.string.web_discover_rail_popularShows)
-    "comingSoon" -> res.getString(R.string.web_discover_rail_comingSoon)
-    else -> res.getString(R.string.web_discover_rail_othersAsked)
+    else -> res.getString(R.string.web_discover_rail_comingSoon)
 }
 
 /** Coming soon says when, where other rows say the year: "14 Aug · Movie". */
