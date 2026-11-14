@@ -15,8 +15,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -72,7 +70,9 @@ import io.github.zekurio.matinee.ui.components.Actions
 import io.github.zekurio.matinee.ui.components.LocalActions
 import io.github.zekurio.matinee.ui.components.LocalApi
 import io.github.zekurio.matinee.ui.components.LocalSnackbar
-import io.github.zekurio.matinee.ui.components.Lucide
+import io.github.zekurio.matinee.ui.kit.Lucide
+import io.github.zekurio.matinee.ui.kit.ToastHost
+import io.github.zekurio.matinee.ui.kit.ToastState
 import io.github.zekurio.matinee.ui.rememberLoader
 import io.github.zekurio.matinee.ui.theme.Palette
 import io.github.zekurio.matinee.ui.tv.browse.TvBrowseScreen
@@ -103,7 +103,7 @@ fun TvSignedInApp(session: Session, user: User) {
     // The phone's actions, shown in the TV's own panel rather than its sheet.
     val actions = remember { Actions(actionScope) }
     val menu = remember(actions) { TvMenu(actions) }
-    val snackbar = remember { SnackbarHostState() }
+    val snackbar = remember { ToastState() }
     val backdrop = remember { TvBackdrop() }
     val drawer = remember { DrawerState() }
     val page = remember { FocusRequester() }
@@ -151,12 +151,12 @@ fun TvSignedInApp(session: Session, user: User) {
                 Drawer(user, current, shown, drawer, navigator, onLeave = { toPage() })
             }
             TvActionsPanel(menu, fallback = { toPage() })
-            SnackbarHost(
+            ToastHost(
                 snackbar,
                 Modifier.align(Alignment.BottomCenter).padding(start = TvPage.Start, end = TvPage.End, bottom = Overscan.Vertical + 16.dp),
-            ) { data ->
+            ) { message ->
                 Text(
-                    data.visuals.message,
+                    message,
                     style = TvType.Body,
                     color = Palette.Foreground,
                     modifier = Modifier

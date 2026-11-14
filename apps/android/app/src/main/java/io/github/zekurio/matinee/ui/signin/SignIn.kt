@@ -22,7 +22,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -49,15 +48,16 @@ import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.DeviceCode
 import io.github.zekurio.matinee.auth.AuthState
 import io.github.zekurio.matinee.auth.Session
-import io.github.zekurio.matinee.ui.components.ButtonLook
-import io.github.zekurio.matinee.ui.components.Gap
 import io.github.zekurio.matinee.ui.components.Logo
-import io.github.zekurio.matinee.ui.components.Lucide
-import io.github.zekurio.matinee.ui.components.LucideIcon
-import io.github.zekurio.matinee.ui.components.MatineeButton
-import io.github.zekurio.matinee.ui.components.MatineeTextField
 import io.github.zekurio.matinee.ui.components.QrCode
 import io.github.zekurio.matinee.ui.components.isWide
+import io.github.zekurio.matinee.ui.kit.ButtonLook
+import io.github.zekurio.matinee.ui.kit.Gap
+import io.github.zekurio.matinee.ui.kit.Lucide
+import io.github.zekurio.matinee.ui.kit.LucideIcon
+import io.github.zekurio.matinee.ui.kit.MatineeButton
+import io.github.zekurio.matinee.ui.kit.MatineeTextField
+import io.github.zekurio.matinee.ui.kit.Spinner
 import io.github.zekurio.matinee.ui.theme.Palette
 import kotlinx.coroutines.flow.MutableStateFlow
 
@@ -125,7 +125,7 @@ fun ConnectScreen(session: Session, canCancel: Boolean = false) {
         }
         Gap(16.dp)
         MatineeButton(onClick = { connect() }, enabled = address.isNotBlank() && !busy, modifier = Modifier.fillMaxWidth()) {
-            if (busy) CircularProgressIndicator(Modifier.size(18.dp), color = Palette.Background, strokeWidth = 2.dp)
+            if (busy) Spinner(size = 18.dp, color = Palette.Background)
             Text(stringResource(R.string.connect_button))
         }
         if (canCancel) {
@@ -294,7 +294,7 @@ private fun CodeHeading() {
 private fun CodeQr(code: DeviceCode?, size: Dp, modifier: Modifier = Modifier) {
     if (code == null) {
         Box(modifier.size(size), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(color = Palette.Accent)
+            Spinner(size = 32.dp, color = Palette.Accent)
         }
         return
     }
@@ -321,7 +321,7 @@ private fun CodeDetails(code: DeviceCode?, error: String?, onRetry: (() -> Unit)
         )
         Gap(20.dp)
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            CircularProgressIndicator(Modifier.size(14.dp), color = Palette.Muted, strokeWidth = 2.dp)
+            Spinner(size = 14.dp, color = Palette.Muted)
             Text(stringResource(R.string.signin_code_waiting), style = MaterialTheme.typography.bodySmall, color = Palette.Muted)
         }
     } else if (error == null) {

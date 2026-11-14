@@ -38,12 +38,9 @@ import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.LocalNavigator
 import io.github.zekurio.matinee.ui.StatusBarScrim
 import io.github.zekurio.matinee.ui.components.ActionTarget
-import io.github.zekurio.matinee.ui.components.Badge
 import io.github.zekurio.matinee.ui.components.EpisodeCard
 import io.github.zekurio.matinee.ui.components.EpisodeRow
 import io.github.zekurio.matinee.ui.components.ErrorBox
-import io.github.zekurio.matinee.ui.components.Gap
-import io.github.zekurio.matinee.ui.components.Gutter
 import io.github.zekurio.matinee.ui.components.LoadingBox
 import io.github.zekurio.matinee.ui.components.LocalActions
 import io.github.zekurio.matinee.ui.components.LocalApi
@@ -57,6 +54,9 @@ import io.github.zekurio.matinee.ui.components.hasActions
 import io.github.zekurio.matinee.ui.components.isWide
 import io.github.zekurio.matinee.ui.components.railItemWidth
 import io.github.zekurio.matinee.ui.itemLabel
+import io.github.zekurio.matinee.ui.kit.Badge
+import io.github.zekurio.matinee.ui.kit.Gap
+import io.github.zekurio.matinee.ui.kit.Gutter
 import io.github.zekurio.matinee.ui.mediaFlags
 import io.github.zekurio.matinee.ui.rememberLoader
 import io.github.zekurio.matinee.ui.seasonName

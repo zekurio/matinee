@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -52,7 +51,8 @@ import io.github.zekurio.matinee.app
 import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.LocalUser
 import io.github.zekurio.matinee.ui.Motion
-import io.github.zekurio.matinee.ui.components.Lucide
+import io.github.zekurio.matinee.ui.kit.Lucide
+import io.github.zekurio.matinee.ui.kit.Spinner
 import io.github.zekurio.matinee.ui.player.HIDE_AFTER_MS
 import io.github.zekurio.matinee.ui.player.LocalPlayerHost
 import io.github.zekurio.matinee.ui.player.Menu
@@ -81,7 +81,7 @@ import kotlinx.coroutines.delay
 internal fun TvPlayerScreen(itemId: String, start: Double?, state: Load<PlayerData>, reload: () -> Unit) {
     Box(Modifier.fillMaxSize().background(Color.Black)) {
         when (state) {
-            Load.Loading -> CircularProgressIndicator(Modifier.align(Alignment.Center).size(56.dp), color = Palette.Accent)
+            Load.Loading -> Spinner(Modifier.align(Alignment.Center), size = 56.dp, color = Palette.Accent)
             is Load.Failed -> TvPlayerFailure(stringResource(R.string.player_load_failed), state.message, reload)
             is Load.Ready -> when (val value = state.value) {
                 PlayerData.Unplayable -> TvPlayerFailure(stringResource(R.string.player_error_lost), stringResource(R.string.player_unplayable), reload)
@@ -326,7 +326,7 @@ private fun TvPlayback(itemId: String, data: PlayerData, start: Double?) {
         PictureSubtitles(controller, fill = fill)
         PlayerNoticeNote(controller.notice, Modifier.align(Alignment.TopCenter).padding(Overscan.Padding))
         if (controller.loading && controller.error == null) {
-            CircularProgressIndicator(Modifier.align(Alignment.Center).size(56.dp), color = Palette.Foreground)
+            Spinner(Modifier.align(Alignment.Center), size = 56.dp, color = Palette.Foreground)
         }
         // Back hides the controls before it leaves; a menu's Back, composed later, comes first.
         BackHandler(enabled = controls && menu == null) { controls = false }

@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -46,6 +45,7 @@ import io.github.zekurio.matinee.ui.browse.creditKind
 import io.github.zekurio.matinee.ui.components.ImageSource
 import io.github.zekurio.matinee.ui.components.LocalApi
 import io.github.zekurio.matinee.ui.components.art
+import io.github.zekurio.matinee.ui.kit.Spinner
 import io.github.zekurio.matinee.ui.rememberLoader
 import io.github.zekurio.matinee.ui.search.SearchEffect
 import io.github.zekurio.matinee.ui.search.SearchState
@@ -145,7 +145,7 @@ fun TvSearchScreen() {
             text.isEmpty() -> Unit
             search.failed -> Hint(stringResource(R.string.search_failed), null)
             found == null -> Box(Modifier.fillMaxWidth().padding(top = 48.dp), contentAlignment = Alignment.TopCenter) {
-                CircularProgressIndicator(color = Palette.Muted, strokeWidth = 3.dp, modifier = Modifier.size(32.dp))
+                Spinner(size = 32.dp, color = Palette.Muted)
             }
             found.isEmpty -> Hint(stringResource(R.string.search_no_match, text), stringResource(R.string.search_no_match_hint))
             else -> PinnedRows(ROW_PIVOT) {

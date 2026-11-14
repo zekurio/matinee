@@ -46,7 +46,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -103,15 +102,16 @@ import io.github.zekurio.matinee.auth.scannedCode
 import io.github.zekurio.matinee.ui.LocalNavigator
 import io.github.zekurio.matinee.ui.LocalUser
 import io.github.zekurio.matinee.ui.TopBar
-import io.github.zekurio.matinee.ui.components.ButtonLook
-import io.github.zekurio.matinee.ui.components.Gap
-import io.github.zekurio.matinee.ui.components.Gutter
 import io.github.zekurio.matinee.ui.components.LocalApi
-import io.github.zekurio.matinee.ui.components.Lucide
-import io.github.zekurio.matinee.ui.components.LucideIcon
-import io.github.zekurio.matinee.ui.components.MatineeButton
-import io.github.zekurio.matinee.ui.components.MatineeTextField
 import io.github.zekurio.matinee.ui.describeFailure
+import io.github.zekurio.matinee.ui.kit.ButtonLook
+import io.github.zekurio.matinee.ui.kit.Gap
+import io.github.zekurio.matinee.ui.kit.Gutter
+import io.github.zekurio.matinee.ui.kit.Lucide
+import io.github.zekurio.matinee.ui.kit.LucideIcon
+import io.github.zekurio.matinee.ui.kit.MatineeButton
+import io.github.zekurio.matinee.ui.kit.MatineeTextField
+import io.github.zekurio.matinee.ui.kit.Spinner
 import io.github.zekurio.matinee.ui.theme.Palette
 import java.io.IOException
 import java.util.concurrent.Executors
@@ -502,7 +502,7 @@ private fun ApproveStep(userCode: String, from: String?, typed: Boolean, onAgain
 
     when (val current = state) {
         Approval.Checking -> Box(Modifier.fillMaxWidth().height(160.dp), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(color = Palette.Accent)
+            Spinner(size = 32.dp, color = Palette.Accent)
         }
         is Approval.Waiting -> {
             val request = current.request
@@ -547,7 +547,7 @@ private fun ApproveStep(userCode: String, from: String?, typed: Boolean, onAgain
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 if (approving) {
-                    CircularProgressIndicator(Modifier.size(18.dp), color = Palette.AccentForeground, strokeWidth = 2.dp)
+                    Spinner(size = 18.dp, color = Palette.AccentForeground)
                 } else {
                     LucideIcon(Lucide.Check, null, size = 18.dp)
                 }

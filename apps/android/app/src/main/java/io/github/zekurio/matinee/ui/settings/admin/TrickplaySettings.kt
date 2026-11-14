@@ -15,8 +15,8 @@ import io.github.zekurio.matinee.api.TrickplayInterval
 import io.github.zekurio.matinee.api.TrickplaySettings
 import io.github.zekurio.matinee.api.TrickplayWidth
 import io.github.zekurio.matinee.ui.Load
-import io.github.zekurio.matinee.ui.components.Gap
 import io.github.zekurio.matinee.ui.components.LocalApi
+import io.github.zekurio.matinee.ui.kit.Gap
 import io.github.zekurio.matinee.ui.rememberLoader
 import io.github.zekurio.matinee.ui.settings.Panel
 import io.github.zekurio.matinee.ui.settings.PickerRow

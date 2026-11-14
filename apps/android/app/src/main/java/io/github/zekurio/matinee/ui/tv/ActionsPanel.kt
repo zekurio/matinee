@@ -46,13 +46,13 @@ import io.github.zekurio.matinee.ui.components.ActionTarget
 import io.github.zekurio.matinee.ui.components.Actions
 import io.github.zekurio.matinee.ui.components.LocalApi
 import io.github.zekurio.matinee.ui.components.LocalSnackbar
-import io.github.zekurio.matinee.ui.components.Lucide
-import io.github.zekurio.matinee.ui.components.LucideIcon
 import io.github.zekurio.matinee.ui.components.WatchedAsk
 import io.github.zekurio.matinee.ui.components.launchShowing
 import io.github.zekurio.matinee.ui.components.watchedAtOn
 import io.github.zekurio.matinee.ui.episodeCode
 import io.github.zekurio.matinee.ui.itemLabel
+import io.github.zekurio.matinee.ui.kit.Lucide
+import io.github.zekurio.matinee.ui.kit.LucideIcon
 import io.github.zekurio.matinee.ui.seasonName
 import io.github.zekurio.matinee.ui.theme.Palette
 import io.github.zekurio.matinee.ui.title.isResuming

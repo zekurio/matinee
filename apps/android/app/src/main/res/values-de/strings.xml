@@ -7,6 +7,8 @@
     <string name="common_cancel">Abbrechen</string>
     <string name="common_remove">Entfernen</string>
     <string name="common_and">und</string>
+    <string name="calendar_previous_month">Zum vorherigen Monat</string>
+    <string name="calendar_next_month">Zum nächsten Monat</string>
 
     <string name="connect_title">Mit deinem Server verbinden</string>
     <string name="connect_description">Gib die Adresse ein, unter der du Matinee im Browser öffnest.</string>

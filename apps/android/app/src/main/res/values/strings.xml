@@ -9,6 +9,8 @@
     <string name="common_cancel">Cancel</string>
     <string name="common_remove">Remove</string>
     <string name="common_and">and</string>
+    <string name="calendar_previous_month">Go to the previous month</string>
+    <string name="calendar_next_month">Go to the next month</string>
 
     <!-- Picking a server -->
     <string name="connect_title">Connect to your server</string>

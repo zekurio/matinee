@@ -18,15 +18,14 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -51,11 +50,12 @@ import io.github.zekurio.matinee.ui.LocalNavigator
 import io.github.zekurio.matinee.ui.components.LocalActions
 import io.github.zekurio.matinee.ui.components.LocalApi
 import io.github.zekurio.matinee.ui.components.LocalSnackbar
-import io.github.zekurio.matinee.ui.components.Lucide
 import io.github.zekurio.matinee.ui.components.art
 import io.github.zekurio.matinee.ui.components.launchShowing
 import io.github.zekurio.matinee.ui.episodeNumber
 import io.github.zekurio.matinee.ui.itemLabel
+import io.github.zekurio.matinee.ui.kit.Lucide
+import io.github.zekurio.matinee.ui.kit.Spinner
 import io.github.zekurio.matinee.ui.rememberLoader
 import io.github.zekurio.matinee.ui.seasonName
 import io.github.zekurio.matinee.ui.theme.Palette
@@ -68,10 +68,10 @@ import io.github.zekurio.matinee.ui.title.seasonWatched
 import io.github.zekurio.matinee.ui.title.setSeasonWatched
 import io.github.zekurio.matinee.ui.tv.Overscan
 import io.github.zekurio.matinee.ui.tv.ShowBackdrop
-import io.github.zekurio.matinee.ui.tv.TvCards
-import io.github.zekurio.matinee.ui.tv.TvFocusMemory
 import io.github.zekurio.matinee.ui.tv.TvButton
+import io.github.zekurio.matinee.ui.tv.TvCards
 import io.github.zekurio.matinee.ui.tv.TvChip
+import io.github.zekurio.matinee.ui.tv.TvFocusMemory
 import io.github.zekurio.matinee.ui.tv.TvIconButton
 import io.github.zekurio.matinee.ui.tv.TvPage
 import io.github.zekurio.matinee.ui.tv.TvType
@@ -144,7 +144,7 @@ private fun SeasonPage(title: Title, season: Season, onSeason: (Season) -> Unit)
         EpisodeAbout(about, left = about?.id != next?.id, modifier = Modifier.padding(start = TvPage.Start, end = TvPage.End))
         when (val state = items.state) {
             Load.Loading -> Box(Modifier.fillMaxWidth().height(ROW_HEIGHT), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = Palette.Muted, strokeWidth = 3.dp, modifier = Modifier.size(32.dp))
+                Spinner(size = 32.dp, color = Palette.Muted)
             }
             is Load.Failed -> Text(
                 stringResource(R.string.title_episodes_error, state.message),

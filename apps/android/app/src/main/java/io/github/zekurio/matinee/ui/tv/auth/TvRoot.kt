@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -36,7 +35,8 @@ import io.github.zekurio.matinee.auth.Session
 import io.github.zekurio.matinee.auth.Unreachability
 import io.github.zekurio.matinee.ui.Motion
 import io.github.zekurio.matinee.ui.components.LogoMark
-import io.github.zekurio.matinee.ui.components.Lucide
+import io.github.zekurio.matinee.ui.kit.Lucide
+import io.github.zekurio.matinee.ui.kit.Spinner
 import io.github.zekurio.matinee.ui.signin.rememberLocalNetworkAccess
 import io.github.zekurio.matinee.ui.signin.unreachableMessage
 import io.github.zekurio.matinee.ui.theme.Palette
@@ -95,7 +95,7 @@ fun TvConnecting(server: String) {
     Box(Modifier.fillMaxSize().background(Palette.Background), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(28.dp)) {
             LogoMark(Modifier.size(72.dp))
-            CircularProgressIndicator(Modifier.size(32.dp), color = Palette.Muted, strokeWidth = 3.dp)
+            Spinner(size = 32.dp, color = Palette.Muted)
             Text(stringResource(R.string.connect_connecting, server.substringAfter("://")), style = TvType.Body, color = Palette.Muted)
         }
     }
@@ -134,7 +134,7 @@ fun TvUnreachableScreen(session: Session, server: String, reason: Unreachability
                     icon = Lucide.RefreshCw,
                     modifier = Modifier.focusRequester(retry),
                     trailing = if (retrying) {
-                        { CircularProgressIndicator(Modifier.size(22.dp), color = LocalContentColor.current, strokeWidth = 2.dp) }
+                        { Spinner(size = 22.dp, color = LocalContentColor.current) }
                     } else {
                         null
                     },

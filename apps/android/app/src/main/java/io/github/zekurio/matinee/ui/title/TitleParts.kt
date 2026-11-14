@@ -1,6 +1,7 @@
 package io.github.zekurio.matinee.ui.title
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -21,7 +22,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -59,27 +59,18 @@ import io.github.zekurio.matinee.app
 import io.github.zekurio.matinee.ui.LocalNavigator
 import io.github.zekurio.matinee.ui.browse.creditKind
 import io.github.zekurio.matinee.ui.components.ArtFrame
-import io.github.zekurio.matinee.ui.components.Badge
-import io.github.zekurio.matinee.ui.components.CardShape
 import io.github.zekurio.matinee.ui.components.CardText
-import io.github.zekurio.matinee.ui.components.ControlShape
-import io.github.zekurio.matinee.ui.components.Gap
-import io.github.zekurio.matinee.ui.components.Gutter
 import io.github.zekurio.matinee.ui.components.HoverPlay
 import io.github.zekurio.matinee.ui.components.ImageSource
 import io.github.zekurio.matinee.ui.components.LocalActions
 import io.github.zekurio.matinee.ui.components.LocalApi
 import io.github.zekurio.matinee.ui.components.LocalSnackbar
-import io.github.zekurio.matinee.ui.components.Lucide
-import io.github.zekurio.matinee.ui.components.LucideIcon
-import io.github.zekurio.matinee.ui.components.MatineeButton
 import io.github.zekurio.matinee.ui.components.PersonCard
 import io.github.zekurio.matinee.ui.components.Picture
 import io.github.zekurio.matinee.ui.components.PosterArt
 import io.github.zekurio.matinee.ui.components.ProgressBar
 import io.github.zekurio.matinee.ui.components.Rail
 import io.github.zekurio.matinee.ui.components.RailArt
-import io.github.zekurio.matinee.ui.components.RoundIconButton
 import io.github.zekurio.matinee.ui.components.SectionTitle
 import io.github.zekurio.matinee.ui.components.WatchedBadge
 import io.github.zekurio.matinee.ui.components.art
@@ -93,6 +84,15 @@ import io.github.zekurio.matinee.ui.formatDay
 import io.github.zekurio.matinee.ui.formatRating
 import io.github.zekurio.matinee.ui.formatRuntime
 import io.github.zekurio.matinee.ui.itemLabel
+import io.github.zekurio.matinee.ui.kit.Badge
+import io.github.zekurio.matinee.ui.kit.CardShape
+import io.github.zekurio.matinee.ui.kit.ControlShape
+import io.github.zekurio.matinee.ui.kit.Gap
+import io.github.zekurio.matinee.ui.kit.Gutter
+import io.github.zekurio.matinee.ui.kit.Lucide
+import io.github.zekurio.matinee.ui.kit.LucideIcon
+import io.github.zekurio.matinee.ui.kit.MatineeButton
+import io.github.zekurio.matinee.ui.kit.RoundIconButton
 import io.github.zekurio.matinee.ui.progressRatio
 import io.github.zekurio.matinee.ui.runtimeMinutes
 import io.github.zekurio.matinee.ui.seasonName
@@ -407,7 +407,7 @@ fun NextUpEpisode(item: MediaItem) {
         SectionTitle(stringResource(if (item.progress != null) R.string.title_next_up_continue else R.string.title_next_up_next))
         Gap(12.dp)
         val interaction = remember { MutableInteractionSource() }
-        Box(Modifier.clip(CardShape).clickable(interaction, ripple()) { nav.episode(item.id) }) {
+        Box(Modifier.clip(CardShape).clickable(interaction, LocalIndication.current) { nav.episode(item.id) }) {
             ArtFrame(label.showName, 16f / 9f) {
                 Picture(api.landscape(item, ArtworkSize.Medium), Modifier.fillMaxSize())
                 if (watched) WatchedBadge(Modifier.align(Alignment.TopEnd).padding(8.dp))
@@ -456,7 +456,7 @@ fun StillFrame(item: MediaItem, watched: Boolean) {
             .clip(ControlShape)
             .tone(label.showName)
             .border(1.dp, Palette.Border, ControlShape)
-            .clickable(interaction, ripple(), onClickLabel = play) { nav.play(item.id) },
+            .clickable(interaction, LocalIndication.current, onClickLabel = play) { nav.play(item.id) },
         contentAlignment = Alignment.Center,
     ) {
         Picture(api.landscape(item, ArtworkSize.Medium), Modifier.fillMaxSize())

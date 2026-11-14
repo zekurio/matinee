@@ -2,6 +2,7 @@ package io.github.zekurio.matinee.ui.components
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
@@ -53,12 +54,19 @@ import io.github.zekurio.matinee.api.TitleSummary
 import io.github.zekurio.matinee.app
 import io.github.zekurio.matinee.ui.LocalNavigator
 import io.github.zekurio.matinee.ui.LocalOffline
-import io.github.zekurio.matinee.ui.Navigator
 import io.github.zekurio.matinee.ui.Motion
+import io.github.zekurio.matinee.ui.Navigator
 import io.github.zekurio.matinee.ui.episodeCode
 import io.github.zekurio.matinee.ui.episodeNumber
 import io.github.zekurio.matinee.ui.formatRuntime
 import io.github.zekurio.matinee.ui.itemLabel
+import io.github.zekurio.matinee.ui.kit.CardShape
+import io.github.zekurio.matinee.ui.kit.Gap
+import io.github.zekurio.matinee.ui.kit.Gutter
+import io.github.zekurio.matinee.ui.kit.Lucide
+import io.github.zekurio.matinee.ui.kit.LucideIcon
+import io.github.zekurio.matinee.ui.kit.RoundIconButton
+import io.github.zekurio.matinee.ui.kit.focusRing
 import io.github.zekurio.matinee.ui.progressRatio
 import io.github.zekurio.matinee.ui.runtimeMinutes
 import io.github.zekurio.matinee.ui.seasonName
@@ -199,7 +207,7 @@ private fun Modifier.cardClick(
         .focusRing(interaction, CardShape)
         .combinedClickable(
             interactionSource = interaction,
-            indication = androidx.compose.material3.ripple(),
+            indication = LocalIndication.current,
             enabled = enabled,
             role = Role.Button,
             onLongClick = onLongClick,
@@ -423,7 +431,7 @@ fun PersonCard(name: String, role: String?, photo: ImageSource?, modifier: Modif
         modifier
             .clip(CardShape)
             .focusRing(interaction, CardShape)
-            .combinedClickable(interaction, androidx.compose.material3.ripple(), role = Role.Button) { nav.person(name) },
+            .combinedClickable(interaction, LocalIndication.current, role = Role.Button) { nav.person(name) },
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box(

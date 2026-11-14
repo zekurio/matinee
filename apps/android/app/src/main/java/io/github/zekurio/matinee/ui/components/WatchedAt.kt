@@ -4,29 +4,28 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDefaults
-import androidx.compose.material3.DatePickerDialog
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.SelectableDates
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberDatePickerState
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.WatchedAt
-import io.github.zekurio.matinee.ui.theme.Palette
+import io.github.zekurio.matinee.ui.kit.ButtonLook
+import io.github.zekurio.matinee.ui.kit.Calendar
+import io.github.zekurio.matinee.ui.kit.Dialog
+import io.github.zekurio.matinee.ui.kit.DialogButton
+import io.github.zekurio.matinee.ui.kit.Lucide
+import io.github.zekurio.matinee.ui.kit.Sheet
+import io.github.zekurio.matinee.ui.kit.SheetHeader
+import io.github.zekurio.matinee.ui.kit.SheetItem
+import io.github.zekurio.matinee.ui.kit.rememberSheetState
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -42,13 +41,12 @@ import kotlinx.coroutines.launch
 class WatchedAsk(val name: String, val mark: suspend (watchedAt: String?) -> Unit)
 
 /** The question, as a sheet of the three answers; the third opens a calendar. */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun WatchedAtSheet(ask: WatchedAsk, onDone: () -> Unit) {
     val actions = LocalActions.current
     val snackbar = LocalSnackbar.current
     val failure = stringResource(R.string.media_mark_watched_failed)
-    val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val sheet = rememberSheetState()
     val scope = rememberCoroutineScope()
     var picking by remember { mutableStateOf(false) }
     // The mark outlives the sheet, so it runs in the app's scope.
@@ -68,7 +66,7 @@ internal fun WatchedAtSheet(ask: WatchedAsk, onDone: () -> Unit) {
         )
         return
     }
-    ModalBottomSheet(onDismissRequest = onDone, sheetState = sheet, containerColor = Palette.Raised, dragHandle = null) {
+    Sheet(onDismissRequest = onDone, state = sheet) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(vertical = 12.dp)) {
             SheetHeader(stringResource(R.string.media_mark_watched), ask.name)
             SheetItem(Lucide.Clock, stringResource(R.string.media_watched_at_now)) {
@@ -91,45 +89,24 @@ internal fun WatchedAtSheet(ask: WatchedAsk, onDone: () -> Unit) {
 }
 
 /** A calendar up to today, starting on today, as the web's watched-date form. */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun WatchedDatePicker(onPick: (String) -> Unit, onDismiss: () -> Unit) {
     val today = remember { LocalDate.now() }
-    // The picker counts days as midnight UTC.
-    val todayMillis = remember(today) { today.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli() }
-    val state = rememberDatePickerState(
-        initialSelectedDateMillis = todayMillis,
-        selectableDates = object : SelectableDates {
-            override fun isSelectableDate(utcTimeMillis: Long) = utcTimeMillis <= todayMillis
-
-            override fun isSelectableYear(year: Int) = year <= today.year
-        },
-    )
-    val colors = DatePickerDefaults.colors(containerColor = Palette.Raised)
-    DatePickerDialog(
+    var day by rememberSaveable { mutableStateOf(today) }
+    Dialog(
         onDismissRequest = onDismiss,
-        confirmButton = {
-            TextButton(
-                onClick = { state.selectedDateMillis?.let { onPick(watchedAtOn(it)) } },
-                enabled = state.selectedDateMillis != null,
-            ) { Text(stringResource(R.string.media_mark_watched)) }
+        title = stringResource(R.string.media_watched_date_title),
+        footer = {
+            DialogButton(
+                stringResource(R.string.media_mark_watched),
+                // The day as midnight UTC, which is how watchedAtOn reads it.
+                { onPick(watchedAtOn(day.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli())) },
+                look = ButtonLook.Primary,
+            )
+            DialogButton(stringResource(R.string.common_cancel), onDismiss)
         },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel), color = Palette.Foreground) }
-        },
-        colors = colors,
     ) {
-        DatePicker(
-            state,
-            colors = colors,
-            title = {
-                Text(
-                    stringResource(R.string.media_watched_date_title),
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(start = 24.dp, end = 12.dp, top = 16.dp),
-                )
-            },
-        )
+        Calendar(day, { day = it }, Modifier.align(Alignment.CenterHorizontally), latest = today)
     }
 }
 

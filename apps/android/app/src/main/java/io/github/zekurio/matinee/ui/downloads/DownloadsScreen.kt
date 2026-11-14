@@ -24,15 +24,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -71,21 +65,25 @@ import io.github.zekurio.matinee.downloads.OfflineItem
 import io.github.zekurio.matinee.ui.LocalNavigator
 import io.github.zekurio.matinee.ui.LocalOffline
 import io.github.zekurio.matinee.ui.TopBar
-import io.github.zekurio.matinee.ui.components.CardShape
-import io.github.zekurio.matinee.ui.components.Gap
-import io.github.zekurio.matinee.ui.components.Gutter
 import io.github.zekurio.matinee.ui.components.LocalApi
-import io.github.zekurio.matinee.ui.components.Lucide
-import io.github.zekurio.matinee.ui.components.LucideIcon
-import io.github.zekurio.matinee.ui.components.MatineeButton
-import io.github.zekurio.matinee.ui.components.RoundIconButton
-import io.github.zekurio.matinee.ui.components.SheetItem
-import io.github.zekurio.matinee.ui.components.rememberSheetCloser
 import io.github.zekurio.matinee.ui.components.tone
 import io.github.zekurio.matinee.ui.episodeCode
 import io.github.zekurio.matinee.ui.episodeNumber
 import io.github.zekurio.matinee.ui.formatBytes
 import io.github.zekurio.matinee.ui.itemLabel
+import io.github.zekurio.matinee.ui.kit.ButtonLook
+import io.github.zekurio.matinee.ui.kit.CardShape
+import io.github.zekurio.matinee.ui.kit.ConfirmDialog
+import io.github.zekurio.matinee.ui.kit.Gap
+import io.github.zekurio.matinee.ui.kit.Gutter
+import io.github.zekurio.matinee.ui.kit.Lucide
+import io.github.zekurio.matinee.ui.kit.LucideIcon
+import io.github.zekurio.matinee.ui.kit.MatineeButton
+import io.github.zekurio.matinee.ui.kit.RoundIconButton
+import io.github.zekurio.matinee.ui.kit.Sheet
+import io.github.zekurio.matinee.ui.kit.SheetItem
+import io.github.zekurio.matinee.ui.kit.rememberSheetCloser
+import io.github.zekurio.matinee.ui.kit.rememberSheetState
 import io.github.zekurio.matinee.ui.seasonName
 import io.github.zekurio.matinee.ui.tabBarPadding
 import io.github.zekurio.matinee.ui.theme.Palette
@@ -181,17 +179,11 @@ fun DownloadsScreen() {
                     ListHeading(stringResource(R.string.downloads_coming)) {
                         // What broke off is what wants doing first.
                         if (broken.isNotEmpty()) {
-                            TextButton(onClick = { broken.forEach { downloads.resume(it.id) } }) {
-                                Text(stringResource(R.string.downloads_retry_all), color = Palette.Accent)
-                            }
+                            HeadingButton(stringResource(R.string.downloads_retry_all)) { broken.forEach { downloads.resume(it.id) } }
                         } else if (moving.isNotEmpty()) {
-                            TextButton(onClick = { moving.forEach { downloads.pause(it.id) } }) {
-                                Text(stringResource(R.string.downloads_pause_all), color = Palette.Accent)
-                            }
+                            HeadingButton(stringResource(R.string.downloads_pause_all)) { moving.forEach { downloads.pause(it.id) } }
                         } else {
-                            TextButton(onClick = { coming.forEach { downloads.resume(it.id) } }) {
-                                Text(stringResource(R.string.downloads_resume_all), color = Palette.Accent)
-                            }
+                            HeadingButton(stringResource(R.string.downloads_resume_all)) { coming.forEach { downloads.resume(it.id) } }
                         }
                     }
                 }
@@ -298,22 +290,12 @@ private fun RemoveDialog(removal: Removal, onDone: () -> Unit) {
     val context = LocalContext.current
     val downloads = context.app.downloads
     val api = context.app.session.api
-    AlertDialog(
-        onDismissRequest = onDone,
-        containerColor = Palette.Raised,
-        title = { Text(stringResource(R.string.downloads_remove_named_confirm, removal.name)) },
-        text = {
-            Text(stringResource(R.string.downloads_remove_all_body, formatBytes(removal.entries.sumOf { it.bytes })), color = Palette.Muted)
-        },
-        confirmButton = {
-            TextButton(onClick = {
-                onDone()
-                removal.entries.forEach { downloads.remove(it.id, api) }
-            }) { Text(stringResource(R.string.common_remove), color = Palette.Danger) }
-        },
-        dismissButton = {
-            TextButton(onClick = onDone) { Text(stringResource(R.string.common_cancel), color = Palette.Foreground) }
-        },
+    ConfirmDialog(
+        title = stringResource(R.string.downloads_remove_named_confirm, removal.name),
+        body = stringResource(R.string.downloads_remove_all_body, formatBytes(removal.entries.sumOf { it.bytes })),
+        confirm = stringResource(R.string.common_remove),
+        onConfirm = { removal.entries.forEach { downloads.remove(it.id, api) } },
+        onDismiss = onDone,
     )
 }
 
@@ -323,6 +305,14 @@ private fun ListHeading(text: String, action: @Composable () -> Unit = {}) {
     Row(Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(text, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
         action()
+    }
+}
+
+/** A heading's action, as the web's ghost buttons: the accent's words on nothing. */
+@Composable
+private fun HeadingButton(label: String, onClick: () -> Unit) {
+    MatineeButton(onClick = onClick, look = ButtonLook.Ghost, height = 36.dp, contentPadding = PaddingValues(horizontal = 12.dp)) {
+        Text(label, color = Palette.Accent)
     }
 }
 
@@ -460,7 +450,6 @@ private fun ComingRow(entry: OfflineItem, primary: String, secondary: String?, m
 }
 
 /** A show's menu: pause or resume what's still coming, its page, and removing every episode. */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ShowActions(title: TitleSummary, entries: List<OfflineItem>, onRemove: () -> Unit, onDismiss: () -> Unit) {
     val nav = LocalNavigator.current
@@ -469,9 +458,9 @@ private fun ShowActions(title: TitleSummary, entries: List<OfflineItem>, onRemov
     val downloads = LocalContext.current.app.downloads
     val active = entries.filter { it.state == DownloadState.RUNNING || it.state == DownloadState.QUEUED }
     val stopped = entries.filter { it.state == DownloadState.PAUSED || it.state == DownloadState.FAILED }
-    val sheet = rememberModalBottomSheetState()
+    val sheet = rememberSheetState(skipPartiallyExpanded = false)
     val close = rememberSheetCloser(sheet, onDismiss)
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheet, containerColor = Palette.Raised, dragHandle = null) {
+    Sheet(onDismissRequest = onDismiss, state = sheet) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(vertical = 12.dp)) {
             Column(Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
                 Text(title.name, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -523,7 +512,6 @@ private fun status(entry: OfflineItem): String {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DownloadActions(entry: OfflineItem, onDismiss: () -> Unit) {
     val nav = LocalNavigator.current
@@ -532,9 +520,9 @@ private fun DownloadActions(entry: OfflineItem, onDismiss: () -> Unit) {
     val downloads = context.app.downloads
     val api = context.app.session.api
     val (primary, secondary) = names(entry.item)
-    val sheet = rememberModalBottomSheetState()
+    val sheet = rememberSheetState(skipPartiallyExpanded = false)
     val close = rememberSheetCloser(sheet, onDismiss)
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheet, containerColor = Palette.Raised, dragHandle = null) {
+    Sheet(onDismissRequest = onDismiss, state = sheet) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(vertical = 12.dp)) {
             Column(Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
                 Text(primary, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)

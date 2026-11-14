@@ -28,15 +28,15 @@ import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.TopBar
 import io.github.zekurio.matinee.ui.components.EpisodeCard
 import io.github.zekurio.matinee.ui.components.ErrorBox
-import io.github.zekurio.matinee.ui.components.Gap
 import io.github.zekurio.matinee.ui.components.LoadingBox
-import io.github.zekurio.matinee.ui.components.Lucide
-import io.github.zekurio.matinee.ui.components.LucideIcon
 import io.github.zekurio.matinee.ui.components.PosterCard
 import io.github.zekurio.matinee.ui.components.Rail
 import io.github.zekurio.matinee.ui.components.RailArt
 import io.github.zekurio.matinee.ui.components.SeasonPosterCard
 import io.github.zekurio.matinee.ui.components.railItemWidth
+import io.github.zekurio.matinee.ui.kit.Gap
+import io.github.zekurio.matinee.ui.kit.Lucide
+import io.github.zekurio.matinee.ui.kit.LucideIcon
 import io.github.zekurio.matinee.ui.theme.Palette
 
 /**

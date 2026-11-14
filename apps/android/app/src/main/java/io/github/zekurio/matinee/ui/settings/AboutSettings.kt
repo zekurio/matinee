@@ -11,9 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.selection.SelectionContainer
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -31,7 +29,9 @@ import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.app
 import io.github.zekurio.matinee.auth.AuthState
 import io.github.zekurio.matinee.ui.components.LocalSnackbar
-import io.github.zekurio.matinee.ui.theme.Palette
+import io.github.zekurio.matinee.ui.kit.ButtonLook
+import io.github.zekurio.matinee.ui.kit.Dialog
+import io.github.zekurio.matinee.ui.kit.DialogButton
 import java.util.Locale
 import kotlinx.coroutines.launch
 
@@ -138,26 +138,22 @@ private fun AppLogSection() {
     }
     shown?.let { text ->
         val lines = remember(text) { text.trimEnd().lines() }
-        AlertDialog(
+        Dialog(
             onDismissRequest = { shown = null },
-            containerColor = Palette.Raised,
-            title = { Text(title) },
-            text = {
-                SelectionContainer {
-                    // The latest at the bottom, where it opens.
-                    LazyColumn(Modifier.fillMaxWidth().height(420.dp), reverseLayout = true) {
-                        items(lines.asReversed()) { line ->
-                            Text(line, fontFamily = FontFamily.Monospace, fontSize = 11.sp, lineHeight = 15.sp)
-                        }
+            title = title,
+            footer = {
+                DialogButton(stringResource(R.string.logs_copy), { copy(text) }, look = ButtonLook.Secondary)
+                DialogButton(stringResource(R.string.diagnostics_close), { shown = null })
+            },
+        ) {
+            SelectionContainer {
+                // The latest at the bottom, where it opens.
+                LazyColumn(Modifier.fillMaxWidth().height(420.dp), reverseLayout = true) {
+                    items(lines.asReversed()) { line ->
+                        Text(line, fontFamily = FontFamily.Monospace, fontSize = 11.sp, lineHeight = 15.sp)
                     }
                 }
-            },
-            confirmButton = {
-                TextButton(onClick = { copy(text) }) { Text(stringResource(R.string.logs_copy), color = Palette.Foreground) }
-            },
-            dismissButton = {
-                TextButton(onClick = { shown = null }) { Text(stringResource(R.string.diagnostics_close), color = Palette.Foreground) }
-            },
-        )
+            }
+        }
     }
 }

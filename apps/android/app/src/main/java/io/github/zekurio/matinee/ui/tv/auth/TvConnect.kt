@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -39,7 +38,8 @@ import io.github.zekurio.matinee.auth.DiscoveredServer
 import io.github.zekurio.matinee.auth.Session
 import io.github.zekurio.matinee.auth.discoverServers
 import io.github.zekurio.matinee.auth.localNetworkPermission
-import io.github.zekurio.matinee.ui.components.Lucide
+import io.github.zekurio.matinee.ui.kit.Lucide
+import io.github.zekurio.matinee.ui.kit.Spinner
 import io.github.zekurio.matinee.ui.signin.ServerConnect
 import io.github.zekurio.matinee.ui.signin.rememberServerConnect
 import io.github.zekurio.matinee.ui.signin.title
@@ -157,7 +157,7 @@ private fun ServerList(session: Session, connector: ServerConnect, canCancel: Bo
                 onClick = { if (!searching) search++ },
                 icon = Lucide.RefreshCw,
                 trailing = if (searching) {
-                    { CircularProgressIndicator(Modifier.size(22.dp), color = LocalContentColor.current, strokeWidth = 2.dp) }
+                    { Spinner(size = 22.dp, color = LocalContentColor.current) }
                 } else {
                     null
                 },
@@ -215,7 +215,7 @@ private fun ServerRow(
         icon = icon,
         minHeight = if (url != null) TvListItems.Height + 12.dp else TvListItems.Height,
         trailing = if (busy) {
-            { CircularProgressIndicator(Modifier.size(22.dp), color = LocalContentColor.current, strokeWidth = 2.dp) }
+            { Spinner(size = 22.dp, color = LocalContentColor.current) }
         } else {
             null
         },
@@ -255,7 +255,7 @@ private fun AddressEntry(connector: ServerConnect, onBack: () -> Unit) {
                 icon = Lucide.LogIn,
                 modifier = Modifier.heightIn(min = TvListItems.Height),
                 trailing = if (connector.busy) {
-                    { CircularProgressIndicator(Modifier.size(22.dp), color = LocalContentColor.current, strokeWidth = 2.dp) }
+                    { Spinner(size = 22.dp, color = LocalContentColor.current) }
                 } else {
                     null
                 },

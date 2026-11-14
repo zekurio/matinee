@@ -44,8 +44,8 @@ import io.github.zekurio.matinee.api.name
 import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.components.Avatar
 import io.github.zekurio.matinee.ui.components.LocalApi
-import io.github.zekurio.matinee.ui.components.Lucide
-import io.github.zekurio.matinee.ui.components.LucideIcon
+import io.github.zekurio.matinee.ui.kit.Lucide
+import io.github.zekurio.matinee.ui.kit.LucideIcon
 import io.github.zekurio.matinee.ui.profile.BoardStanding
 import io.github.zekurio.matinee.ui.profile.metricName
 import io.github.zekurio.matinee.ui.profile.metricValue

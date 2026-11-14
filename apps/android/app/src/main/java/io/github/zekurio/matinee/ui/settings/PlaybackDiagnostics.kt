@@ -7,10 +7,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -26,6 +24,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.ui.components.LocalSnackbar
+import io.github.zekurio.matinee.ui.kit.ButtonLook
+import io.github.zekurio.matinee.ui.kit.Dialog
+import io.github.zekurio.matinee.ui.kit.DialogButton
 import io.github.zekurio.matinee.ui.player.AttemptDiagnostics
 import io.github.zekurio.matinee.ui.player.AttemptOutcome
 import io.github.zekurio.matinee.ui.player.PlaybackDiagnostics
@@ -80,24 +81,20 @@ fun PlaybackDiagnosticsSection() {
         }
     }
     if (open && text != null) {
-        AlertDialog(
+        Dialog(
             onDismissRequest = { open = false },
-            containerColor = Palette.Raised,
-            title = { Text(title) },
-            text = {
-                Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState())) {
-                    SelectionContainer {
-                        Text(text, fontFamily = FontFamily.Monospace, fontSize = 12.sp, lineHeight = 16.sp)
-                    }
+            title = title,
+            footer = {
+                DialogButton(stringResource(R.string.diagnostics_copy), { copy(text) }, look = ButtonLook.Secondary)
+                DialogButton(stringResource(R.string.diagnostics_close), { open = false })
+            },
+        ) {
+            Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState())) {
+                SelectionContainer {
+                    Text(text, fontFamily = FontFamily.Monospace, fontSize = 12.sp, lineHeight = 16.sp)
                 }
-            },
-            confirmButton = {
-                TextButton(onClick = { copy(text) }) { Text(stringResource(R.string.diagnostics_copy), color = Palette.Foreground) }
-            },
-            dismissButton = {
-                TextButton(onClick = { open = false }) { Text(stringResource(R.string.diagnostics_close), color = Palette.Foreground) }
-            },
-        )
+            }
+        }
     }
 }
 

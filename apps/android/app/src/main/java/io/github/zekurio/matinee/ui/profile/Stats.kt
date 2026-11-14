@@ -44,15 +44,17 @@ import io.github.zekurio.matinee.api.WatchStats
 import io.github.zekurio.matinee.api.name
 import io.github.zekurio.matinee.ui.LocalNavigator
 import io.github.zekurio.matinee.ui.LocalOffline
-import io.github.zekurio.matinee.ui.components.CardShape
-import io.github.zekurio.matinee.ui.components.Chip
-import io.github.zekurio.matinee.ui.components.Gap
-import io.github.zekurio.matinee.ui.components.Gutter
 import io.github.zekurio.matinee.ui.components.LocalApi
-import io.github.zekurio.matinee.ui.components.Lucide
-import io.github.zekurio.matinee.ui.components.LucideIcon
 import io.github.zekurio.matinee.ui.components.PosterArt
 import io.github.zekurio.matinee.ui.components.art
+import io.github.zekurio.matinee.ui.kit.CardShape
+import io.github.zekurio.matinee.ui.kit.Chip
+import io.github.zekurio.matinee.ui.kit.Gap
+import io.github.zekurio.matinee.ui.kit.Gutter
+import io.github.zekurio.matinee.ui.kit.Lucide
+import io.github.zekurio.matinee.ui.kit.LucideIcon
+import io.github.zekurio.matinee.ui.kit.Sheet
+import io.github.zekurio.matinee.ui.kit.rememberSheetState
 import io.github.zekurio.matinee.ui.theme.Palette
 import java.text.NumberFormat
 
@@ -275,16 +277,15 @@ fun Standing(range: String, zone: String, modifier: Modifier = Modifier) {
 }
 
 /** A whole board, as the leaderboard has it: the top places, then the viewer's neighborhood, set off. */
-@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 private fun BoardSheet(board: io.github.zekurio.matinee.api.LeaderboardBoard, range: String, onDismiss: () -> Unit) {
     val res = LocalResources.current
-    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Palette.Raised, dragHandle = null) {
+    Sheet(onDismissRequest = onDismiss, state = rememberSheetState(skipPartiallyExpanded = false)) {
         Column(
             Modifier.fillMaxWidth().navigationBarsPadding().padding(vertical = 12.dp)
                 .verticalScroll(androidx.compose.foundation.rememberScrollState()),
         ) {
-            io.github.zekurio.matinee.ui.components.SheetHeader(metricName(board.metric), rangeName(range))
+            io.github.zekurio.matinee.ui.kit.SheetHeader(metricName(board.metric), rangeName(range))
             Column(Modifier.padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 board.entries.forEachIndexed { index, place ->
                     // Set off when it doesn't carry straight on from the top places.

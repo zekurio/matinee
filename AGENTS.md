@@ -37,7 +37,9 @@ for building and sideloading the app.
   `api/ContractModels.kt` and `api/ContractApi.kt`, is generated from the
   OpenAPI document by `pnpm api:android`
   (`apps/server/scripts/kotlin-client.ts`). Run it after a contract change;
-  `pnpm verify` fails while they're out of date. Build the app with
+  `pnpm verify` fails while they're out of date. Screens build from
+  `ui/kit`, its port of `packages/ui`; only the kit and `ui/theme` use
+  Material components, and `KitBoundaryTest` holds that. Build the app with
   `nix develop .#android` or `just android build`; see its README.
 - `tools/release`: the scripts behind `just tag` and
   `.github/workflows/release.yml`, in `.mjs` on Node's own modules, since

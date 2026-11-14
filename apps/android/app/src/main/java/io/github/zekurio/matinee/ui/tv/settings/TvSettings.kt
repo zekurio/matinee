@@ -41,7 +41,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.app
-import io.github.zekurio.matinee.ui.components.Lucide
+import io.github.zekurio.matinee.ui.kit.Lucide
 import io.github.zekurio.matinee.ui.theme.Palette
 import io.github.zekurio.matinee.ui.tv.LocalTvPageFocus
 import io.github.zekurio.matinee.ui.tv.Overscan

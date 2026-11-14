@@ -17,8 +17,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -60,6 +58,8 @@ import io.github.zekurio.matinee.ui.components.LocalSnackbar
 import io.github.zekurio.matinee.ui.downloads.DownloadsScreen
 import io.github.zekurio.matinee.ui.downloads.DownloadsShowScreen
 import io.github.zekurio.matinee.ui.home.HomeScreen
+import io.github.zekurio.matinee.ui.kit.ToastHost
+import io.github.zekurio.matinee.ui.kit.ToastState
 import io.github.zekurio.matinee.ui.media.FavoritesScreen
 import io.github.zekurio.matinee.ui.media.MediaScreen
 import io.github.zekurio.matinee.ui.metadata.IdentifyScreen
@@ -72,12 +72,12 @@ import io.github.zekurio.matinee.ui.settings.SettingsPageScreen
 import io.github.zekurio.matinee.ui.settings.SettingsScreen
 import io.github.zekurio.matinee.ui.settings.admin.FolderPickerScreen
 import io.github.zekurio.matinee.ui.settings.admin.LibraryEditorScreen
-import io.github.zekurio.matinee.ui.theme.Palette
 import io.github.zekurio.matinee.ui.theme.LocalTv
-import io.github.zekurio.matinee.ui.tv.TvSignedInApp
+import io.github.zekurio.matinee.ui.theme.Palette
 import io.github.zekurio.matinee.ui.title.EpisodeScreen
 import io.github.zekurio.matinee.ui.title.SeasonScreen
 import io.github.zekurio.matinee.ui.title.TitleScreen
+import io.github.zekurio.matinee.ui.tv.TvSignedInApp
 import java.io.IOException
 import kotlinx.coroutines.launch
 import kotlinx.serialization.SerializationException
@@ -100,7 +100,7 @@ fun SignedInApp(session: Session, user: User, offline: Boolean = false) {
     val navigator = remember(controller) { Navigator(controller) }
     val actionScope = rememberCoroutineScope()
     val actions = remember { Actions(actionScope) }
-    val snackbar = remember { SnackbarHostState() }
+    val snackbar = remember { ToastState() }
     CompositionLocalProvider(
         LocalApi provides session.requireApi(),
         LocalNavigator provides navigator,
@@ -117,7 +117,7 @@ fun SignedInApp(session: Session, user: User, offline: Boolean = false) {
             }
             val entry by controller.currentBackStackEntryAsState()
             val bar = entry?.destination?.let(::tabOf) != null
-            SnackbarHost(
+            ToastHost(
                 snackbar,
                 Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = if (bar) BOTTOM_BAR_HEIGHT else 0.dp),
             )

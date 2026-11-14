@@ -17,7 +17,7 @@ import io.github.zekurio.matinee.ui.browse.BROWSE_KINDS
 import io.github.zekurio.matinee.ui.browse.rememberBrowsePages
 import io.github.zekurio.matinee.ui.components.ImageSource
 import io.github.zekurio.matinee.ui.components.LocalApi
-import io.github.zekurio.matinee.ui.components.Lucide
+import io.github.zekurio.matinee.ui.kit.Lucide
 import io.github.zekurio.matinee.ui.tv.ShowBackdrop
 import io.github.zekurio.matinee.ui.tv.TvButton
 import io.github.zekurio.matinee.ui.tv.TvGrid
