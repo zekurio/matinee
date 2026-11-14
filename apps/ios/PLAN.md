@@ -260,7 +260,7 @@ background first, as iOS keeps scene state; `simctl launch
   `\.actionMenu = ActionMenu { target in AnyView(…) }`. The Actions task
   fills it in `Actions.swift`; until then cards offer no menu.
 - Controls [Controls.kt]: `.buttonStyle(.matinee(.primary))` or
-  `MatineeButton(.outline) { … }`, `RoundIconButton(icon, label:)`,
+  `MatineeButton(.outline) { … }`, `RoundIconButton(icon, label:, background:, border:)`,
   `Chip(label, selected:)`, `WatchedBadge`, `ProgressBar(progress:)`,
   `SectionTitle(title, action:)`, `Avatar(name, url:)`, `Badge(text)`,
   `SegmentedControl(options, selection:)`, `.toggleStyle(.matinee)`,

@@ -89,9 +89,13 @@ private struct ItemTopBar: ViewModifier {
       .background { BackSwipe() }
       .overlay(alignment: .top) {
         HStack(spacing: 6) {
-          RoundIconButton(.arrowLeft, label: Str.commonBack, iconSize: 22, background: floating) { dismiss() }
+          RoundIconButton(
+            .arrowLeft, label: Str.commonBack, iconSize: 22, background: floating, border: edge
+          ) { dismiss() }
           if !offline {
-            RoundIconButton(.house, label: Str.shellHomeLink, iconSize: 20, background: floating) { nav.home() }
+            RoundIconButton(.house, label: Str.shellHomeLink, iconSize: 20, background: floating, border: edge) {
+              nav.home()
+            }
           }
           if let parent, let onParent {
             Button(action: onParent) {
@@ -99,12 +103,16 @@ private struct ItemTopBar: ViewModifier {
                 .padding(.horizontal, 16)
                 .frame(height: 44)
                 .background(floating, in: Capsule())
+                .overlay { Capsule().strokeBorder(edge) }
                 .contentShape(Capsule())
             }
             .buttonStyle(RoundPress())
           }
           Spacer(minLength: 0)
         }
+        // Lifted off a page as dark as the veil, as the web's floating bar is.
+        .compositingGroup()
+        .shadow(color: .black.opacity(palette.isDark ? 0.45 : 0.15), radius: 10, y: 4)
         .padding(.horizontal, 8)
         .padding(.vertical, 6)
       }
@@ -112,6 +120,11 @@ private struct ItemTopBar: ViewModifier {
 
   /// The page's color veiling the art behind a floating button, as the web's bars have it.
   private var floating: Color { palette.background.opacity(0.6) }
+
+  /// The web's glass has a hairline edge in the text's color, which keeps a
+  /// button there over a plain page without art, where the veil alone is the
+  /// page's own color and the circle vanished.
+  private var edge: Color { palette.foreground.opacity(0.1) }
 }
 
 /// Keeps the edge swipe going back on a page whose navigation bar is
