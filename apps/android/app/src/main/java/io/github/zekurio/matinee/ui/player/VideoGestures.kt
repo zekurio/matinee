@@ -23,6 +23,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
@@ -317,7 +318,14 @@ private fun LevelNote(icon: Int, level: Float) {
         Modifier.clip(RoundedCornerShape(16.dp)).background(Color.Black.copy(alpha = 0.6f)).padding(horizontal = 12.dp, vertical = 14.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(percent.format(level.toDouble()), style = MaterialTheme.typography.labelLarge, color = Color.White)
+        // As wide as the fullest level, so the box and its bar hold still.
+        SteadyText(
+            percent.format(level.toDouble()),
+            percent.format(1.0),
+            MaterialTheme.typography.labelLarge,
+            color = Color.White,
+            textAlign = TextAlign.Center,
+        )
         Gap(10.dp)
         Box(
             Modifier.width(6.dp).height(120.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.25f)),
@@ -348,15 +356,21 @@ private fun SeekNote(controller: PlayerController, from: Double, to: Double) {
             Gap(8.dp)
         }
         val delta = to - from
-        Text(
+        val longest = longestClock(controller.duration)
+        SteadyText(
             (if (delta < 0) "-" else "+") + formatClock(abs(delta)),
-            style = MaterialTheme.typography.titleLarge,
+            "+$longest",
+            MaterialTheme.typography.titleLarge,
             color = Color.White,
+            textAlign = TextAlign.Center,
         )
-        Text(
-            "${formatClock(to)} / ${formatClock(controller.duration)}",
-            style = MaterialTheme.typography.bodyMedium,
+        val total = formatClock(controller.duration)
+        SteadyText(
+            "${formatClock(to)} / $total",
+            "$longest / $total",
+            MaterialTheme.typography.bodyMedium,
             color = Color.White.copy(alpha = 0.75f),
+            textAlign = TextAlign.Center,
         )
     }
 }
