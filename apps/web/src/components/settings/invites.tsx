@@ -122,7 +122,6 @@ export function Invites({ passkeysOn }: { passkeysOn: boolean }) {
                   setCreated(invite)
                   void refresh()
                 }}
-                onCancel={() => setCreating(false)}
               />
             ))}
         </DialogContent>
@@ -193,10 +192,8 @@ function InviteRow({
 
 function InviteForm({
   onCreated,
-  onCancel,
 }: {
   onCreated: (invite: CreatedInvite) => void
-  onCancel: () => void
 }) {
   const create = useMutation({
     mutationFn: (input: InviteInput) => client.admin.invites.create(input),
@@ -302,9 +299,6 @@ function InviteForm({
           )}
         </FieldGroup>
         <DialogFooter className="-mx-6 -mb-6 px-6 py-4">
-          <Button type="button" variant="ghost" onClick={onCancel}>
-            {tr("users.dialog.cancel")}
-          </Button>
           <form.SubmitButton pending={create.isPending}>
             {tr("users.invites.dialog.submit")}
           </form.SubmitButton>

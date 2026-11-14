@@ -21,7 +21,7 @@ export default {
   "settings.section.playback.label": "Wiedergabe",
   "settings.section.playback.description": "Sprachen, Qualität und Codecs",
   "settings.section.playback.keywords":
-    "Audiosprache, Untertitel, Erzwungene Untertitel, Sprache, Qualität, Videocodec, Audiocodec, HEVC, AV1, Opus, Passthrough, Dolby, Surround",
+    "Audiosprache, Untertitel, Erzwungene Untertitel, Sprache, Qualität, Videocodec, Audiocodec, HEVC, AV1, Opus, Passthrough, Dolby, Surround, Specials, Staffel 0",
   "settings.section.libraries.label": "Mediatheken",
   "settings.section.libraries.description":
     "Ordner, die Matinee nach Videos durchsucht",
@@ -35,6 +35,11 @@ export default {
   "settings.section.access.description": "Gruppen, Mediatheken und Grenzen",
   "settings.section.access.keywords":
     "Zugriffsgruppen, Gruppen, Berechtigungen, Mediatheken, Bitrate, Limit, Bandbreite, Kodierung, Transkodierung, Downloads, Streams, Geräte, Anbietergruppen, Kinder",
+  "settings.section.requests.label": "Anfragen",
+  "settings.section.requests.description":
+    "Verbindungen und was jede Mediathek befüllt",
+  "settings.section.requests.keywords":
+    "Wünsche, Verbindungen, Radarr, Sonarr, Von Hand, API-Schlüssel, Befüllen über, Qualität, Speichern in, Stammordner, Qualitätsprofil, Anime, Serientyp",
   "settings.section.authentication.label": "Authentifizierung",
   "settings.section.authentication.description": "Passkeys und Single Sign-on",
   "settings.section.authentication.keywords":

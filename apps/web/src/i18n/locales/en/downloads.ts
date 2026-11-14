@@ -57,7 +57,6 @@ export default defineMessages("downloads", {
   "downloads.estimate": "About {size}",
   "downloads.estimating": "Working out the size…",
   "downloads.toneMapped": "HDR is converted to SDR.",
-  "downloads.cancel": "Cancel",
   "downloads.submit": "Download",
   "downloads.started": "Download started",
   "downloads.started.description":

@@ -8,6 +8,7 @@ import {
   type MediaItemRow,
   title,
   type TitleRow,
+  user,
   watchProgress,
   type WatchProgressRow,
 } from "@matinee/db"
@@ -56,6 +57,21 @@ export function inSeason(season: number | null | undefined): SQL | undefined {
     : eq(mediaItem.seasonNumber, season)
 }
 
+/** A file that isn't a special, which season 0 holds. */
+export const notSpecial = sql`${mediaItem.seasonNumber} is distinct from 0`
+
+/**
+ * The files a viewer's lists show: all of them, or for an account that
+ * hides specials, all but season 0's. For a prepared query, see
+ * {@link shownFilesArg}.
+ */
+export function shownFiles(viewer: { showSpecials: boolean }): SQL | undefined {
+  return viewer.showSpecials ? undefined : notSpecial
+}
+
+/** {@link shownFiles} for a prepared query, with `specials` its argument. */
+export const shownFilesArg = sql`(${arg("specials")}::boolean or ${notSpecial})`
+
 /** The artwork ids a title's summary shows. */
 export function titleArtwork(row: TitleRow): (string | null)[] {
   return [row.posterId, row.backdropId, row.logoId]
@@ -82,11 +98,16 @@ const likedTitles = db
   )
   .prepare("liked_titles")
 
+// For an account that hides specials, a show is watched without them,
+// unless it has nothing else.
+const finished = sql`coalesce(${watchProgress.completed}, false)`
+const hidesSpecials = sql`exists (select 1 from ${user} where ${user.id} = ${arg("userId")} and not ${user.showSpecials})`
+
 // ACCESS: The caller supplies ids of visible titles for their own watched state.
 const watchedTitles = db
   .select({
     id: mediaItem.titleId,
-    watched: sql<boolean>`bool_and(coalesce(${watchProgress.completed}, false))`,
+    watched: sql<boolean>`coalesce(bool_and(${finished}) filter (where not ${hidesSpecials} or ${notSpecial}), bool_and(${finished}))`,
   })
   .from(mediaItem)
   .leftJoin(
@@ -188,6 +209,7 @@ export function toSummary(
     genres: row.genres,
     rating: row.rating,
     contentRating: row.contentRating,
+    runtimeMinutes: row.runtimeMinutes,
     originalLanguage: row.originalLanguage,
     ...(states.get(row.id) ?? NO_STATE),
   }
@@ -351,11 +373,20 @@ const titleProgress = db
  */
 export async function nextItem(
   row: TitleRow,
-  userId: string,
+  viewer: { id: string; showSpecials: boolean },
 ): Promise<MediaItem | null> {
-  const files = await titleFiles.execute({ titleId: row.id })
+  const all = await titleFiles.execute({ titleId: row.id })
+  // Hidden specials don't come next, unless they're all the show has.
+  const shown = viewer.showSpecials
+    ? all
+    : all.filter((file) => file.seasonNumber !== 0)
+  const files = shown.length > 0 ? shown : all
   if (files.length === 0) return null
-  const progress = await titleProgress.execute({ userId, titleId: row.id })
+  const ids = new Set(files.map((file) => file.id))
+  const userId = viewer.id
+  const progress = (
+    await titleProgress.execute({ userId, titleId: row.id })
+  ).filter((p) => ids.has(p.id))
   const latest = progress[0]
   let pick = files[0]
   if (latest) {

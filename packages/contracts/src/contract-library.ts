@@ -3,6 +3,7 @@ import { eventIterator, oc } from "@orpc/contract"
 import { del, get, post, put } from "./contract-routes"
 import { DownloadResolveInput, DownloadResolution } from "./download-resolve"
 import { Download, DownloadPlan, DownloadSpecInput } from "./downloads"
+import { Person, PersonInput } from "./people"
 import { t } from "./schema"
 import {
   AudioTrack,
@@ -18,7 +19,6 @@ import {
   MediaItem,
   MetadataMatch,
   MetadataProvider,
-  Person,
   RemoteImage,
   SearchInput,
   SearchResults,
@@ -26,9 +26,11 @@ import {
   Subtitles,
   Title,
   TitleFacets,
-  TitleFilter,
+  TitleFilterOptions,
   TitleKind,
   TitleList,
+  TitleQuery,
+  TitleScope,
 } from "./schemas"
 import { TrickplayStatus } from "./trickplay"
 
@@ -60,21 +62,29 @@ export const searchContract = oc.tag("Search").router({
 
 export const peopleContract = oc.tag("People").router({
   /** Someone in the cast or crew of a title, and everything they're in. */
-  get: get("/people/{name}")
-    .input(t.object({ name: t.string().trim().min(1).max(200) }))
-    .output(Person),
+  get: get("/people/{name}").input(PersonInput).output(Person),
 })
 
 export const titlesContract = oc.tag("Titles").router({
-  /** The movies or shows in a library. */
-  list: get("/libraries/{libraryId}/titles")
-    .input(TitleFilter.extend({ libraryId: t.uuid() }))
+  /**
+   * The movies or shows in a library, filtered and sorted. A POST in
+   * REST, since a query string can't carry the filters' lists and nulls.
+   */
+  list: post("/libraries/{libraryId}/titles/browse")
+    .input(TitleQuery.extend({ libraryId: t.uuid() }))
     .output(TitleList),
   /**
    * Titles from every library, such as a genre's or a studio's. The
    * query matches names only, not paths as in a library's list.
    */
-  browse: get("/titles").input(TitleFilter).output(BrowsedTitles),
+  browse: post("/titles/browse").input(TitleQuery).output(BrowsedTitles),
+  /**
+   * What each of `list`'s and `browse`'s filters offers for the titles in
+   * a scope, with how many titles have each choice.
+   */
+  filterOptions: get("/titles/filter-options")
+    .input(TitleScope)
+    .output(TitleFilterOptions),
   /**
    * The genres and studios in a library, or in every library without
    * `libraryId`, for picking a filter.

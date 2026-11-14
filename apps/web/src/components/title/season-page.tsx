@@ -40,10 +40,14 @@ export function SeasonPage() {
       input: number === undefined ? skipToken : { id: titleId, season: number },
     }),
   )
+  // Hidden specials still open from a link.
   const season =
     number === undefined
       ? undefined
-      : title.data?.seasons.find((s) => s.number === number)
+      : (title.data?.seasons.find((s) => s.number === number) ??
+        (title.data?.specials?.number === number
+          ? title.data.specials
+          : undefined))
 
   useDocumentTitle(
     title.data && season
@@ -98,8 +102,9 @@ export function SeasonPage() {
       </div>
     )
   }
-  // A show with one season lists its episodes on its own page.
-  if (title.data.seasons.length === 1) {
+  // A show with one season lists its episodes on its own page; hidden
+  // specials aren't that season.
+  if (title.data.seasons.length === 1 && season !== title.data.specials) {
     return (
       <Navigate
         to="/titles/$titleId"
@@ -132,6 +137,7 @@ export function SeasonPage() {
       <SeasonEpisodes
         key={`episodes-${seasonKey(season)}`}
         title={title.data}
+        season={season.number}
         items={items.data}
         error={items.isError ? errorMessage(items.error) : null}
       />

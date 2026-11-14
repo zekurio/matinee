@@ -15,8 +15,10 @@ import {
   ChartColumnIcon,
   CheckIcon,
   ChevronDownIcon,
+  CompassIcon,
   FilmIcon,
   HouseIcon,
+  InboxIcon,
   LibraryBigIcon,
   LogOutIcon,
   SettingsIcon,
@@ -32,6 +34,7 @@ import {
 } from "react"
 
 import { tr } from "@/i18n"
+import { formatCount } from "@/lib/format"
 import { orpc } from "@/lib/rpc"
 import { useOpenSettings } from "@/lib/settings"
 import { useSignOut } from "@/lib/sign-out"
@@ -39,11 +42,13 @@ import { useSearchSpotlightStore } from "@/stores/search-spotlight"
 
 import { AppBanner } from "./app-banner"
 import { LogoMark } from "./brand"
+import { useDiscoverEnabled } from "./discover/discover-data"
 import { PartyButton } from "./party/party-panel"
 import { TabBar, tabBarPadding, usePhoneTab } from "./phone-nav"
+import { useNeedsYou } from "./requests/request-queue"
 import { SearchButton, SearchSpotlight } from "./search/search-spotlight"
 import { usePhone } from "./sheet-menu"
-import { UserAvatar } from "./user-avatar"
+import { AvatarWithDot, UserAvatar } from "./user-avatar"
 
 export const libraryIcons = {
   movies: FilmIcon,
@@ -233,7 +238,15 @@ function AccountMenu({ user }: { user: User }) {
   const openSettings = useOpenSettings()
   const navigate = useNavigate()
   const name = user.displayName ?? user.username
-  const actions = [
+  const admin = user.role === "admin"
+  const needsYou = useNeedsYou(admin)
+  const actions: {
+    label: string
+    icon: ComponentType
+    run: () => void
+    /** How many wait for the admin, shown at the end. */
+    count?: number
+  }[] = [
     {
       label: tr("shell.profile"),
       icon: UserRoundIcon,
@@ -243,6 +256,16 @@ function AccountMenu({ user }: { user: User }) {
           params: { username: user.username },
         }),
     },
+    ...(admin
+      ? [
+          {
+            label: tr("requests.menu"),
+            icon: InboxIcon,
+            run: () => void navigate({ to: "/requests" }),
+            count: needsYou,
+          },
+        ]
+      : []),
     {
       label: tr("shell.statistics"),
       icon: ChartColumnIcon,
@@ -258,10 +281,14 @@ function AccountMenu({ user }: { user: User }) {
   const trigger = (
     <button
       type="button"
-      aria-label={accountLabel}
+      aria-label={
+        needsYou > 0 ? `${accountLabel}. ${tr("requests.dot")}` : accountLabel
+      }
       className={cn(pillItem, "gap-2 pl-1", "data-popup-open:bg-foreground/10")}
     >
-      <UserAvatar user={user} className="size-7 text-xs" />
+      <AvatarWithDot dot={needsYou > 0}>
+        <UserAvatar user={user} className="size-7 text-xs" />
+      </AvatarWithDot>
       <NavLabel className="max-w-32">{name}</NavLabel>
       <ChevronDownIcon className="text-muted-foreground !size-3.5" />
     </button>
@@ -285,9 +312,22 @@ function AccountMenu({ user }: { user: User }) {
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         {actions.map((action) => (
-          <DropdownMenuItem key={action.label} onClick={action.run}>
+          <DropdownMenuItem
+            key={action.label}
+            aria-label={
+              action.count
+                ? tr("requests.menuWaiting", { count: action.count })
+                : undefined
+            }
+            onClick={action.run}
+          >
             <action.icon />
             {action.label}
+            {action.count !== undefined && action.count > 0 && (
+              <span className="text-primary ml-auto text-xs font-medium tabular-nums">
+                {formatCount(action.count)}
+              </span>
+            )}
           </DropdownMenuItem>
         ))}
         <DropdownMenuSeparator />
@@ -308,6 +348,7 @@ function AccountMenu({ user }: { user: User }) {
  * pages use the full width instead of sharing it with a sidebar.
  */
 function NavBar({ user }: { user: User }) {
+  const discover = useDiscoverEnabled()
   return (
     <>
       {/* Content fades out as it scrolls under the bar. */}
@@ -343,6 +384,11 @@ function NavBar({ user }: { user: User }) {
               {tr("shell.home")}
             </PillLink>
             <LibraryLinks />
+            {discover && (
+              <PillLink to="/discover" icon={CompassIcon}>
+                {tr("discover.title")}
+              </PillLink>
+            )}
           </div>
           <span
             aria-hidden

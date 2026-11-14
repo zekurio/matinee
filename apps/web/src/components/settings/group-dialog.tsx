@@ -13,7 +13,6 @@ import {
   AutocompleteItem,
   AutocompleteList,
 } from "@matinee/ui/components/autocomplete"
-import { Button } from "@matinee/ui/components/button"
 import {
   Dialog,
   DialogContent,
@@ -42,14 +41,22 @@ import { client, errorMessage, orpc } from "@/lib/rpc"
 import {
   bitrateLabel,
   bitrateOptions,
+  DEFAULT_QUOTA,
+  LIMIT_CHOICES,
   LibraryPicker,
+  limitChoiceLabel,
+  limitChoiceOf,
   limitOf,
   limitValue,
+  NO_LIMIT,
+  QuotaInputs,
+  REQUEST_CHOICES,
+  requestsLabel,
   streamLabel,
   streamOptions,
 } from "./access-controls"
 import { groupName } from "./access-facts"
-import { SelectField, SwitchField } from "./setting-controls"
+import { SelectField, SelectRow, SwitchField } from "./setting-controls"
 import { SettingNote, SettingRows } from "./settings-panel"
 
 type LibraryChoice = "all" | "some"
@@ -63,6 +70,8 @@ type GroupValues = {
   libraryIds: string[]
   maxBitrate: string
   transcode: boolean
+  requests: AccessPolicy["requests"]
+  requestLimit: AccessPolicy["requestLimit"]
   downloads: boolean
   maxStreams: string
 }
@@ -76,6 +85,8 @@ function valuesOf(group: AccessGroup | undefined): GroupValues {
     libraryIds: group?.policy.libraries.ids ?? [],
     maxBitrate: limitValue(group?.policy.maxBitrate ?? null),
     transcode: group?.policy.transcode ?? true,
+    requests: group?.policy.requests ?? "off",
+    requestLimit: group?.policy.requestLimit ?? null,
     downloads: group?.policy.downloads ?? true,
     maxStreams: limitValue(group?.policy.maxStreams ?? null),
   }
@@ -87,6 +98,8 @@ function policyOf(value: GroupValues): AccessPolicy {
     libraries: { all, ids: all ? [] : value.libraryIds },
     maxBitrate: limitOf(value.maxBitrate),
     transcode: value.transcode,
+    requests: value.requests,
+    requestLimit: value.requestLimit,
     downloads: value.downloads,
     maxStreams: limitOf(value.maxStreams),
   }
@@ -174,6 +187,7 @@ function GroupForm({
   )
   const maxBitrate = useSelector(form.store, (state) => state.values.maxBitrate)
   const maxStreams = useSelector(form.store, (state) => state.values.maxStreams)
+  const requests = useSelector(form.store, (state) => state.values.requests)
 
   return (
     <form.AppForm>
@@ -295,13 +309,44 @@ function GroupForm({
                 />
               )}
             </form.AppField>
+            <form.AppField name="requests">
+              {() => (
+                <SelectField
+                  title={tr("access.requests")}
+                  options={REQUEST_CHOICES}
+                  labelOf={requestsLabel}
+                />
+              )}
+            </form.AppField>
+            {requests !== "off" && (
+              <form.Field name="requestLimit">
+                {(field) => (
+                  <SelectRow
+                    title={tr("access.requestLimit")}
+                    options={LIMIT_CHOICES}
+                    value={limitChoiceOf(field.state.value)}
+                    labelOf={limitChoiceLabel}
+                    onChange={(choice) =>
+                      field.handleChange(
+                        choice === NO_LIMIT ? null : DEFAULT_QUOTA,
+                      )
+                    }
+                    footer={
+                      field.state.value === null ? undefined : (
+                        <QuotaInputs
+                          value={field.state.value}
+                          onChange={field.handleChange}
+                        />
+                      )
+                    }
+                  />
+                )}
+              </form.Field>
+            )}
           </SettingRows>
         </div>
 
         <DialogFooter className="-mx-6 -mb-6 px-6 py-4">
-          <Button type="button" variant="ghost" onClick={onDone}>
-            {tr("access.cancel")}
-          </Button>
           <form.Subscribe
             selector={(state) => !everyone && !state.values.name.trim()}
           >

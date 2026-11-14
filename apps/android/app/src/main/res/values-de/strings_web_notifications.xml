@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Made by scripts/web_strings.py from apps/web/src/i18n/locales/de/notifications.ts. Don't edit. -->
+<resources>
+    <string name="web_notifications_requests">Anfragen</string>
+    <string name="web_notifications_ready">%1$s ist bereit</string>
+    <string name="web_notifications_unavailable">%1$s: Nicht verfügbar</string>
+    <string name="web_notifications_waitingOne">1 Anfrage wartet</string>
+    <string name="web_notifications_waiting">%1$s Anfragen warten</string>
+    <string name="web_notifications_attentionOne">1 Anfrage braucht Aufmerksamkeit</string>
+    <string name="web_notifications_attention">%1$s Anfragen brauchen Aufmerksamkeit</string>
+    <string name="web_notifications_readySeasonNumber">%1$s: Staffel %2$s ist bereit</string>
+    <string name="web_notifications_readySeason">%1$s: %2$s ist bereit</string>
+    <string name="web_notifications_unavailableHint">Das kommt nicht auf diesen Server.</string>
+</resources>

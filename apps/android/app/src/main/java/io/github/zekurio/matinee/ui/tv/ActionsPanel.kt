@@ -56,6 +56,7 @@ import io.github.zekurio.matinee.ui.kit.LucideIcon
 import io.github.zekurio.matinee.ui.seasonName
 import io.github.zekurio.matinee.ui.theme.Palette
 import io.github.zekurio.matinee.ui.title.isResuming
+import io.github.zekurio.matinee.ui.title.setSeasonWatched
 import java.time.LocalDate
 import java.time.ZoneOffset
 import java.time.format.TextStyle
@@ -351,8 +352,8 @@ private fun titleEntries(title: TitleSummary, file: MediaItem?, here: Boolean): 
 }
 
 /**
- * A season's entries: its favorite and its page, from its card. The phone's
- * download and image editor stay off the TV.
+ * A season's entries: its tick, its favorite, and its page, from its card.
+ * The phone's download and image editor stay off the TV.
  */
 @Composable
 private fun seasonEntries(title: TitleSummary, season: Season, here: Boolean): List<Entry> {
@@ -361,10 +362,23 @@ private fun seasonEntries(title: TitleSummary, season: Season, here: Boolean): L
     val snackbar = LocalSnackbar.current
     val res = LocalResources.current
     val viewer = LocalContext.current.app.viewer
-    val scope = LocalTvMenu.current?.actions?.scope ?: return emptyList()
+    val actions = LocalTvMenu.current?.actions ?: return emptyList()
+    val scope = actions.scope
     val favorite = viewer.isFavorite(title, season)
     val favoriteFailure = stringResource(R.string.media_favorite_failed)
+    val watched = season.itemCount > 0 && season.watchedCount >= season.itemCount
+    val watchedFailure = stringResource(if (watched) R.string.media_mark_unwatched_failed else R.string.media_mark_watched_failed)
+    val name = stringResource(R.string.title_season_of, title.name, seasonName(season.number, res))
     return buildList {
+        if (!here) {
+            add(
+                Entry(Lucide.Check, res.getString(if (watched) R.string.media_mark_unwatched else R.string.media_mark_watched)) {
+                    // Unwatched at once; watched asks when first.
+                    if (watched) scope.launchShowing(snackbar, watchedFailure) { setSeasonWatched(api, viewer, title, season.number, false, null) }
+                    else actions.askWatched(name) { at -> setSeasonWatched(api, viewer, title, season.number, true, at) }
+                },
+            )
+        }
         // The files without a season number aren't a season to mark.
         if (!here && season.number != null) {
             add(

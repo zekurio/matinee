@@ -2,6 +2,7 @@ package io.github.zekurio.matinee.ui.settings
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import io.github.zekurio.matinee.R
@@ -10,6 +11,7 @@ import io.github.zekurio.matinee.api.PlaybackOptions
 import io.github.zekurio.matinee.api.PlaybackPreferences
 import io.github.zekurio.matinee.api.Session as AccountSession
 import io.github.zekurio.matinee.api.SubtitleMode
+import io.github.zekurio.matinee.app
 import io.github.zekurio.matinee.auth.Session
 import io.github.zekurio.matinee.ui.components.LocalApi
 import io.github.zekurio.matinee.ui.components.LocalSnackbar
@@ -33,6 +35,25 @@ fun rememberPlaybackSave(session: Session): (PlaybackPreferences) -> Unit {
     val saveFailure = stringResource(R.string.player_error_save_preferences)
     return { changed: PlaybackPreferences ->
         scope.launchShowing(snackbar, saveFailure) { session.updateUser(api.account.playback.setPreferences(changed)) }
+    }
+}
+
+/**
+ * Saves whether a show's specials list with its seasons, which the server
+ * applies for every device of the account. Screens fetch again after it.
+ */
+@Composable
+fun rememberSpecialsSave(session: Session): (Boolean) -> Unit {
+    val api = LocalApi.current
+    val snackbar = LocalSnackbar.current
+    val viewer = LocalContext.current.app.viewer
+    val scope = rememberCoroutineScope()
+    val failure = stringResource(R.string.playback_specials_failed)
+    return { show: Boolean ->
+        scope.launchShowing(snackbar, failure) {
+            session.updateUser(api.account.library.setPreferences(showSpecials = show))
+            viewer.changed()
+        }
     }
 }
 

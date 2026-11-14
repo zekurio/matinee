@@ -29,6 +29,11 @@ export default defineMessages("playback", {
     other: "{count} seconds",
   }),
 
+  // Whether season 0 lists with a show's seasons, which the account syncs.
+  "playback.shows.title": "Shows",
+  "playback.specials.title": "Show specials",
+  "playback.specials.failed": "Couldn't change whether specials show",
+
   // Quality and codecs, which stay with this browser.
   "playback.device.title": "This device",
   "playback.quality.title": "Quality",

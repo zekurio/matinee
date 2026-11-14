@@ -2,7 +2,7 @@ import type { MediaItem, Season, Title } from "@matinee/contracts"
 import { Skeleton } from "@matinee/ui/components/skeleton"
 import { cn } from "@matinee/ui/lib/utils"
 import { useQuery } from "@tanstack/react-query"
-import { useDeferredValue, useState } from "react"
+import { type ReactNode, useDeferredValue, useState } from "react"
 
 import { ActionsMenu } from "@/components/actions-menu"
 import { CardActions, CardScrim } from "@/components/card-actions"
@@ -29,7 +29,9 @@ import {
 } from "@/lib/media"
 import { errorMessage } from "@/lib/rpc"
 
+import { RestOfSeasonCard } from "./rest-of-season"
 import { seasonNext } from "./seasons"
+import { useShowGaps } from "./show-gaps"
 import { seasonItemsOptions } from "./title-queries"
 
 /** A season's episodes on the show's own page, for a show with one season. */
@@ -44,6 +46,7 @@ export function ShowEpisodes({
   return (
     <SeasonEpisodes
       title={title}
+      season={season.number}
       items={items.data}
       error={items.isError ? errorMessage(items.error) : null}
     />
@@ -57,10 +60,13 @@ export function ShowEpisodes({
  */
 export function SeasonEpisodes({
   title,
+  season,
   items,
   error,
 }: {
   title: Title
+  /** Its number, null for the files without one. */
+  season: number | null
   items: MediaItem[] | undefined
   /** Why they didn't load. */
   error: string | null
@@ -69,6 +75,8 @@ export function SeasonEpisodes({
   // the background, in slices, and the page answers input meanwhile. The
   // skeletons stay until it's done. Already loaded, they render at once.
   const shown = useDeferredValue(items)
+  const gaps = useShowGaps(title)
+  const partial = gaps?.partial.find((entry) => entry.number === season)
   if (error !== null) {
     return (
       <section aria-labelledby="episodes-heading">
@@ -97,16 +105,30 @@ export function SeasonEpisodes({
       </Rail>
     )
   }
-  return <EpisodesRail items={shown} start={seasonNext(title, shown)} />
+  return (
+    <EpisodesRail
+      items={shown}
+      start={seasonNext(title, shown)}
+      rest={
+        gaps &&
+        partial && (
+          <RestOfSeasonCard title={title} gaps={gaps} season={partial} />
+        )
+      }
+    />
+  )
 }
 
 /** The loaded row, which starts on `start`. */
 function EpisodesRail({
   items,
   start,
+  rest,
 }: {
   items: MediaItem[]
   start: MediaItem | undefined
+  /** After the episodes, for those that aren't here. */
+  rest?: ReactNode
 }) {
   // Kept from the first render: marking an episode watched moves Play on,
   // and the row shouldn't scroll away under the pointer.
@@ -123,6 +145,7 @@ function EpisodesRail({
           <EpisodeCard item={item} showName={false} />
         </RailItem>
       ))}
+      {rest && <RailItem>{rest}</RailItem>}
     </Rail>
   )
 }

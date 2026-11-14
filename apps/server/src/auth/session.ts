@@ -33,6 +33,7 @@ export function publicUser(row: UserRow): User {
     avatarSource: row.avatarSource,
     playback:
       PlaybackPreferences.safeParse(row.playbackPreferences).data ?? null,
+    library: { showSpecials: row.showSpecials },
     sharing: { favorites: row.shareFavorites, stats: row.shareStats },
   }
 }

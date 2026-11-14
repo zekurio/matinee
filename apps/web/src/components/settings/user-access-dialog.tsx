@@ -1,6 +1,7 @@
 import {
   type AccessGroup,
   type AccessOverride,
+  type AccessPolicy,
   type AdminUser,
   type UserAccess,
   UserAccessInput,
@@ -30,10 +31,15 @@ import { useActionFeedback } from "@/lib/use-action-feedback"
 import {
   bitrateLabel,
   bitrateOptions,
+  DEFAULT_QUOTA,
   LibraryPicker,
+  limitChoiceLabel,
   limitOf,
   limitValue,
   NO_LIMIT,
+  QuotaInputs,
+  REQUEST_CHOICES,
+  requestsLabel,
   streamLabel,
   streamOptions,
 } from "./access-controls"
@@ -42,9 +48,15 @@ import {
   Fact,
   librariesLabel,
   PolicyFacts,
+  requestLimitLabel,
   streamLimitLabel,
 } from "./access-facts"
-import { SelectField, SettingWarning, SwitchRow } from "./setting-controls"
+import {
+  SelectField,
+  SelectRow,
+  SettingWarning,
+  SwitchRow,
+} from "./setting-controls"
 import { SettingNote, SettingRows } from "./settings-panel"
 
 /** A field of the override left out, so the groups decide it. */
@@ -56,6 +68,20 @@ const LIBRARY_CHOICES: readonly LibraryChoice[] = [FROM_GROUPS, "all", "some"]
 type SwitchChoice = typeof FROM_GROUPS | "on" | "off"
 const SWITCH_CHOICES: readonly SwitchChoice[] = [FROM_GROUPS, "on", "off"]
 
+type RequestsChoice = typeof FROM_GROUPS | AccessPolicy["requests"]
+const REQUESTS_CHOICES: readonly RequestsChoice[] = [
+  FROM_GROUPS,
+  ...REQUEST_CHOICES,
+]
+
+type QuotaChoice = typeof FROM_GROUPS | typeof NO_LIMIT | "some"
+const QUOTA_CHOICES: readonly QuotaChoice[] = [FROM_GROUPS, NO_LIMIT, "some"]
+
+function quotaChoice(limit: AccessOverride["requestLimit"]): QuotaChoice {
+  if (limit === undefined) return FROM_GROUPS
+  return limit === null ? NO_LIMIT : "some"
+}
+
 /** The dialog's form. Limits are text, as the selects hold them. */
 type AccessValues = {
   /** The groups an admin or an invite put the account in. */
@@ -64,6 +90,8 @@ type AccessValues = {
   libraryIds: string[]
   maxBitrate: string
   transcode: SwitchChoice
+  requests: AccessOverride["requests"]
+  requestLimit: AccessOverride["requestLimit"]
   downloads: SwitchChoice
   maxStreams: string
 }
@@ -90,6 +118,8 @@ function valuesOf(access: UserAccess): AccessValues {
         ? FROM_GROUPS
         : limitValue(override.maxBitrate),
     transcode: switchChoice(override.transcode),
+    requests: override.requests,
+    requestLimit: override.requestLimit,
     downloads: switchChoice(override.downloads),
     maxStreams:
       override.maxStreams === undefined
@@ -112,6 +142,10 @@ function overrideOf(value: AccessValues): AccessOverride {
     }),
     ...(value.downloads !== FROM_GROUPS && {
       downloads: value.downloads === "on",
+    }),
+    ...(value.requests !== undefined && { requests: value.requests }),
+    ...(value.requestLimit !== undefined && {
+      requestLimit: value.requestLimit,
     }),
     ...(value.maxStreams !== FROM_GROUPS && {
       maxStreams: limitOf(value.maxStreams),
@@ -194,17 +228,15 @@ function AccessForm({
       </>
     )
   }
-  return <AccessEditor user={user} oidcName={oidcName} onDone={onDone} />
+  return <AccessEditor user={user} oidcName={oidcName} />
 }
 
 function AccessEditor({
   user,
   oidcName,
-  onDone,
 }: {
   user: AdminUser
   oidcName: string | null
-  onDone: () => void
 }) {
   const queryClient = useQueryClient()
   const groups = useQuery(orpc.admin.groups.list.queryOptions())
@@ -431,13 +463,62 @@ function AccessEditor({
               />
             )}
           </form.AppField>
+          <form.Field name="requests">
+            {(field) => (
+              <SelectRow
+                title={tr("access.requests")}
+                options={REQUESTS_CHOICES}
+                value={field.state.value ?? FROM_GROUPS}
+                labelOf={(choice) =>
+                  choice === FROM_GROUPS
+                    ? inherited(requestsLabel(fromGroups.requests))
+                    : requestsLabel(choice)
+                }
+                onChange={(choice) =>
+                  field.handleChange(
+                    choice === FROM_GROUPS ? undefined : choice,
+                  )
+                }
+              />
+            )}
+          </form.Field>
+          {(values.requests ?? fromGroups.requests) !== "off" && (
+            <form.Field name="requestLimit">
+              {(field) => (
+                <SelectRow
+                  title={tr("access.requestLimit")}
+                  options={QUOTA_CHOICES}
+                  value={quotaChoice(field.state.value)}
+                  labelOf={(choice) =>
+                    choice === FROM_GROUPS
+                      ? inherited(requestLimitLabel(fromGroups.requestLimit))
+                      : limitChoiceLabel(choice)
+                  }
+                  onChange={(choice) =>
+                    field.handleChange(
+                      choice === FROM_GROUPS
+                        ? undefined
+                        : choice === NO_LIMIT
+                          ? null
+                          : (fromGroups.requestLimit ?? DEFAULT_QUOTA),
+                    )
+                  }
+                  footer={
+                    field.state.value ? (
+                      <QuotaInputs
+                        value={field.state.value}
+                        onChange={field.handleChange}
+                      />
+                    ) : undefined
+                  }
+                />
+              )}
+            </form.Field>
+          )}
         </SettingRows>
       </Block>
 
       <DialogFooter className="-mx-6 -mb-6 px-6 py-4">
-        <Button type="button" variant="ghost" onClick={onDone}>
-          {dirty ? tr("access.cancel") : tr("access.done")}
-        </Button>
         <FeedbackButton
           type="submit"
           state={feedback.state}

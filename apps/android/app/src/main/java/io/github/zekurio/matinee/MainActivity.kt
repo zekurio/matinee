@@ -13,6 +13,7 @@ import androidx.lifecycle.lifecycleScope
 import io.github.zekurio.matinee.launcher.WatchNextLink
 import io.github.zekurio.matinee.auth.BrowserSignIn
 import io.github.zekurio.matinee.ui.MatineeRoot
+import io.github.zekurio.matinee.ui.requests.OpenTarget
 import io.github.zekurio.matinee.ui.theme.MatineeTheme
 import io.github.zekurio.matinee.ui.theme.Palette
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -62,8 +63,12 @@ class MainActivity : ComponentActivity() {
         handle(intent)
     }
 
-    /** The browser handing back a sign-in code. */
+    /** The browser handing back a sign-in code, a TV's Watch Next row, or a notification tapped. */
     private fun handle(intent: Intent?) {
+        OpenTarget.of(intent)?.let {
+            app.opening.value = it
+            return
+        }
         val uri = intent?.data ?: return
         if (app.session.isTv && watchNextLink.open(intent)) return
         if (!BrowserSignIn.isCallback(uri)) return

@@ -1,5 +1,12 @@
-import { BITRATE_LIMITS, type Library } from "@matinee/contracts"
+import {
+  type AccessPolicy,
+  BITRATE_LIMITS,
+  type Library,
+  type RequestQuota,
+} from "@matinee/contracts"
+import { Input } from "@matinee/ui/components/input"
 import { Switch } from "@matinee/ui/components/switch"
+import { useId } from "react"
 
 import { libraryIcons } from "@/components/app-shell"
 import { tr } from "@/i18n"
@@ -108,5 +115,93 @@ export function LibraryPicker({
         )
       })}
     </ul>
+  )
+}
+
+/** Who may ask for titles the server doesn't have, and whether an admin approves. */
+export const REQUEST_CHOICES: readonly AccessPolicy["requests"][] = [
+  "off",
+  "ask",
+  "add",
+]
+
+export function requestsLabel(value: AccessPolicy["requests"]): string {
+  return tr(`access.requests.${value}`)
+}
+
+/** A request limit as its select holds it: none, or a number per days. */
+export type LimitChoice = typeof NO_LIMIT | "some"
+export const LIMIT_CHOICES: readonly LimitChoice[] = [NO_LIMIT, "some"]
+
+/** What "Limited" starts at. */
+export const DEFAULT_QUOTA: RequestQuota = { titles: 5, days: 7 }
+
+export function limitChoiceLabel(choice: LimitChoice): string {
+  return choice === NO_LIMIT
+    ? tr("access.requestLimit.none")
+    : tr("access.requestLimit.some")
+}
+
+export function limitChoiceOf(limit: RequestQuota | null): LimitChoice {
+  return limit === null ? NO_LIMIT : "some"
+}
+
+/** "[5] titles every [7] days", under a limit that's set. */
+export function QuotaInputs({
+  value,
+  onChange,
+}: {
+  value: RequestQuota
+  onChange: (value: RequestQuota) => void
+}) {
+  const id = useId()
+  const number = (text: string, max: number) =>
+    Math.min(max, Math.max(0, Math.trunc(Number(text) || 0)))
+  // An emptied field holds 0 while it's typed into, and 1 once left.
+  const atLeastOne = (key: keyof RequestQuota) => () => {
+    if (value[key] < 1) onChange({ ...value, [key]: 1 })
+  }
+  return (
+    // Each number keeps its words beside it when a narrow screen wraps.
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-2 text-sm">
+      <span className="inline-flex items-center gap-2">
+        <Input
+          id={`${id}-titles`}
+          type="number"
+          inputMode="numeric"
+          min={1}
+          max={10000}
+          aria-label={tr("access.requestLimit.titlesField")}
+          value={value.titles || ""}
+          className="w-16 tabular-nums"
+          onChange={(event) =>
+            onChange({ ...value, titles: number(event.target.value, 10000) })
+          }
+          onBlur={atLeastOne("titles")}
+        />
+        <span className="text-muted-foreground">
+          {tr("access.requestLimit.titlesEvery")}
+        </span>
+      </span>
+      <span className="inline-flex items-center gap-2">
+        <Input
+          id={`${id}-days`}
+          type="number"
+          inputMode="numeric"
+          min={1}
+          max={365}
+          aria-label={tr("access.requestLimit.daysField")}
+          value={value.days || ""}
+          className="w-16 tabular-nums"
+          onChange={(event) =>
+            onChange({ ...value, days: number(event.target.value, 365) })
+          }
+          onBlur={atLeastOne("days")}
+        />
+        <span className="text-muted-foreground">
+          {tr("access.requestLimit.days")}
+        </span>
+      </span>
+    </div>
   )
 }

@@ -19,6 +19,11 @@ export function tone(key: string): string {
   return TONES[Math.abs(hash) % TONES.length] ?? TONES[0]!
 }
 
+// Images this page has shown already. One that mounts again, like a
+// poster when its card or page becomes another, shows at once rather than
+// fading in a second time.
+const shown = new Set<string>()
+
 /**
  * The first of `sources` that loads, faded in over its blurred placeholder
  * while it loads, or over whatever sits beneath it when it has none.
@@ -53,7 +58,10 @@ function PictureSources({
   eager = false,
   sizes,
 }: PictureProps) {
-  const [current, setState] = useState({ index: 0, ready: false })
+  const [current, setState] = useState(() => {
+    const first = sources[0]?.src
+    return { index: 0, ready: first !== undefined && shown.has(first) }
+  })
   const source = sources[current.index]
   if (!source) return null
   const fill = "absolute inset-0 size-full object-cover"
@@ -79,7 +87,10 @@ function PictureSources({
         alt=""
         loading={eager ? "eager" : "lazy"}
         decoding="async"
-        onLoad={() => setState({ ...current, ready: true })}
+        onLoad={() => {
+          shown.add(source.src)
+          setState({ ...current, ready: true })
+        }}
         onError={() =>
           setState({ ...current, index: current.index + 1, ready: false })
         }

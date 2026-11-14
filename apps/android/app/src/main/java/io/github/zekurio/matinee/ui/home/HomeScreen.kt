@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.Library
 import io.github.zekurio.matinee.api.MediaItem
+import io.github.zekurio.matinee.ui.requests.HomeAskedRail
 import io.github.zekurio.matinee.api.TitleSort
 import io.github.zekurio.matinee.api.isAdmin
 import io.github.zekurio.matinee.ui.AppHeader
@@ -146,6 +147,7 @@ private fun OnlineHomeScreen() {
 
             episodeRail("continue", R.string.browse_continue_watching, R.string.home_continue_failed, resume)
             episodeRail("nextUp", R.string.browse_next_up, R.string.home_next_up_failed, nextUp)
+            item(key = "asked") { HomeAskedRail() }
             when (val state = libraries.state) {
                 Load.Loading -> item(key = "shelves-loading") { RailSkeleton(null, RailArt.Poster) }
                 is Load.Failed -> item(key = "shelves-failed") {

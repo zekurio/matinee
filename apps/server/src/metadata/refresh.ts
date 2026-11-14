@@ -17,6 +17,7 @@ import { localName } from "../library/titles"
 import { log } from "../log"
 import { queueArtwork, saveArtwork } from "../media/artwork"
 import { sortName } from "../media/title"
+import { libraryChanged } from "../requests/arrival"
 import { type Choices, episodeKey, readChoices } from "./choices"
 import { bestMatch } from "./match"
 import { sources } from "./sources"
@@ -145,6 +146,7 @@ async function reset(
     if (seasons.length > 0) await tx.insert(season).values(seasons)
     if (episodes.length > 0) await tx.insert(episode).values(episodes)
   })
+  libraryChanged(row.libraryId)
 }
 
 async function save(
@@ -363,6 +365,7 @@ async function refreshTitle(
   }
   const details = await source.details(id, lookup)
   await save(row, source.id, details, local.ids)
+  libraryChanged(row.libraryId)
 }
 
 type RefreshJob = {

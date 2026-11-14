@@ -70,5 +70,4 @@ export default {
   "media.playFromStart": "Von vorne abspielen",
   "media.watchedDate.title": "Wann hast du es gesehen?",
   "media.watchedDate.date": "Datum",
-  "media.watchedDate.cancel": "Abbrechen",
 } satisfies TranslationOf<typeof source>

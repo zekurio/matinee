@@ -117,11 +117,12 @@ export function MediaInfoLine({ item }: { item: MediaItem }) {
 }
 
 /**
- * What a file holds, a line each: the picture, the audio's languages with
- * the main track's layout, and the subtitles' languages, as the apps show
- * it. The languages come from the server's track lists, which include
- * subtitle files beside the video; until they load, from what the probe
- * found in the file. Nothing until the server has probed it.
+ * What a file holds in one row: the picture, the audio's languages with
+ * the main track's layout, and the subtitles' languages, each after its
+ * icon. A part that doesn't fit goes to the next line. The languages come
+ * from the server's track lists, which include subtitle files beside the
+ * video; until they load, from what the probe found in the file. Nothing
+ * until the server has probed it.
  */
 export function MediaInfo({
   item,
@@ -153,14 +154,19 @@ export function MediaInfo({
   if (lines.length === 0) return null
 
   return (
-    <dl className={cn("flex max-w-2xl flex-col gap-1 text-sm", className)}>
+    <dl
+      className={cn(
+        "flex max-w-2xl flex-wrap gap-x-5 gap-y-1 text-sm",
+        className,
+      )}
+    >
       {lines.map(({ Icon, label, text }) => (
-        <div key={label} className="flex min-w-0 items-start gap-2.5">
-          <dt className="text-muted-foreground mt-0.5 shrink-0">
+        <div key={label} className="flex min-w-0 items-center gap-2">
+          <dt className="text-muted-foreground shrink-0">
             <Icon aria-hidden className="size-4" />
             <span className="sr-only">{label}</span>
           </dt>
-          <dd className="text-foreground/80 line-clamp-2 min-w-0">{text}</dd>
+          <dd className="text-foreground/80 min-w-0 truncate">{text}</dd>
         </div>
       ))}
     </dl>

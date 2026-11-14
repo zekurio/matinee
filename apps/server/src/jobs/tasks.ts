@@ -3,9 +3,12 @@ import { sql } from "drizzle-orm"
 
 import { syncOidcAccounts } from "../auth/oidc-refresh"
 import { deleteExpiredSessions } from "../auth/session"
+import { CACHE_HOURS, forgetBrowsedPages } from "../catalog/cache"
+import { prepareDiscover } from "../catalog/discover"
 import { db } from "../db"
 import { env } from "../env"
 import { scans } from "../library/scanner"
+import { log } from "../log"
 import { prefetchArtwork } from "../media/artwork"
 import { sweepDownloads } from "../media/downloads"
 import { sweepTranscodes } from "../media/hls"
@@ -13,7 +16,18 @@ import { probeMissing } from "../media/probe"
 import { prepareMissingSubtitles } from "../media/subtitles"
 import { makeMissingTrickplay, sweepTrickplay } from "../media/trickplay"
 import { refreshMetadata } from "../metadata/refresh"
+import { events } from "../realtime/events"
+import { arrivals } from "../requests/arrival"
+import { dispatchQueued } from "../requests/dispatch"
+import { pollProgress } from "../requests/poll"
 import type { TaskDefinition } from "./scheduler"
+
+// Queue database work on approval, scope edits and retries without waiting for the sweep.
+events.subscribe("requests", () => {
+  void dispatchQueued().catch((cause) =>
+    log.error("Cannot queue accepted requests", cause),
+  )
+})
 
 const MINUTE_MS = 60_000
 const HOUR_MS = 60 * MINUTE_MS
@@ -73,6 +87,18 @@ const probeMedia: TaskDefinition = {
   startupDelayMs: 0,
   intervalMs: 24 * HOUR_MS,
   run: ({ signal }) => probeMissing({ signal }),
+}
+
+const readDiscover: TaskDefinition = {
+  id: "prepare-discover",
+  name: "Prepare Discover",
+  description:
+    "Read Discover's rows ahead and fetch their posters, so they show their blurred placeholders the first time someone opens Discover.",
+  queue: "artwork",
+  startupDelayMs: 2 * MINUTE_MS,
+  // As long as a feed stays cached.
+  intervalMs: CACHE_HOURS.feed * HOUR_MS,
+  run: ({ signal }) => prepareDiscover({ signal }),
 }
 
 const fetchArtwork: TaskDefinition = {
@@ -136,6 +162,17 @@ const cleanSessions: TaskDefinition = {
   run: () => deleteExpiredSessions(),
 }
 
+const forgetBrowsed: TaskDefinition = {
+  id: "forget-browsed-pages",
+  name: "Forget browsed catalog pages",
+  description:
+    "Delete pages of the filtered catalog that nobody opened for a week.",
+  queue: null,
+  startupDelayMs: 5 * MINUTE_MS,
+  intervalMs: 24 * HOUR_MS,
+  run: () => forgetBrowsedPages(),
+}
+
 const syncProviderAccounts: TaskDefinition = {
   id: "sync-oidc-accounts",
   name: "Sync provider accounts",
@@ -149,13 +186,44 @@ const syncProviderAccounts: TaskDefinition = {
 
 /** The scheduled tasks, in the order admins see them. */
 export const TASKS: TaskDefinition[] = [
+  {
+    id: "dispatch-requests",
+    name: "Send requests",
+    description: "Find accepted requests waiting to be sent.",
+    queue: "request-dispatch",
+    startupDelayMs: 0,
+    intervalMs: MINUTE_MS,
+    run: dispatchQueued,
+  },
+  {
+    id: "poll-requests",
+    name: "Read request progress",
+    description: "Check active requests through each connection once.",
+    queue: "request-progress",
+    startupDelayMs: 0,
+    intervalMs: MINUTE_MS,
+    run: pollProgress,
+  },
+  {
+    id: "reconcile-requests",
+    name: "Reconcile request arrivals",
+    description: "Find playable films and seasons for accepted requests.",
+    queue: "request-arrival",
+    startupDelayMs: 0,
+    intervalMs: 5 * MINUTE_MS,
+    run: async () => {
+      await arrivals.run(null)
+    },
+  },
   scanLibraries,
   refreshStale,
   probeMedia,
   fetchArtwork,
+  readDiscover,
   prepareSubtitles,
   makeTrickplay,
   cleanTranscodes,
   cleanSessions,
+  forgetBrowsed,
   syncProviderAccounts,
 ]

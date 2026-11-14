@@ -4,6 +4,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
+import io.github.zekurio.matinee.api.CatalogRef
 import io.github.zekurio.matinee.api.MediaItem
 import io.github.zekurio.matinee.api.TitleKind
 import io.github.zekurio.matinee.api.TitleSummary
@@ -40,7 +41,7 @@ data class SeasonRoute(val titleId: String, val season: Int)
 data class EpisodeRoute(val itemId: String)
 
 @Serializable
-data class PersonRoute(val name: String)
+data class PersonRoute(val name: String, val tmdbId: String? = null)
 
 @Serializable
 data class BrowseRoute(val genre: String? = null, val studio: String? = null)
@@ -78,6 +79,30 @@ data class DownloadsShowRoute(val titleId: String)
 /** An admin picking the provider entry a title is, when its match is wrong or missing. */
 @Serializable
 data class IdentifyRoute(val titleId: String)
+
+/**
+ * A title the server doesn't have, by the reference the server issued:
+ * kind, provider, and the id there. [library] is the library an ask would
+ * go to, when the viewer picked one of two.
+ */
+@Serializable
+data class CatalogRoute(val kind: String, val provider: String, val providerId: String, val library: String? = null)
+
+/** One of Discover's rows in full, by its `DiscoverRail.id`. */
+@Serializable
+data class DiscoverRailRoute(val rail: String)
+
+/** All of TMDB's movies or shows with filters, from Discover, by `TitleKind`. */
+@Serializable
+data class CatalogBrowseRoute(val kind: String)
+
+/** Everything the signed-in person asked for, from Home's rail and the profile. */
+@Serializable
+data object AskedRoute
+
+/** An admin's requests, opening on [list]: waiting, needsAttention, onTheWay, or done. */
+@Serializable
+data class RequestsRoute(val list: String = "waiting")
 
 /** An admin's image editor for a title, or with [season], a season, and with [episode] too, an episode; -1 for neither. */
 @Serializable
@@ -153,6 +178,23 @@ class Navigator(private val controller: NavHostController) {
 
     fun title(title: TitleSummary) = title(title.id)
 
+    /** A title the server doesn't have, or its library page once it's here. */
+    fun catalog(ref: CatalogRef, library: String? = null) =
+        controller.navigate(CatalogRoute(ref.kind, ref.provider, ref.providerId, library))
+
+    /** A catalog page that became a library title, as it arrived: the title's page takes its place. */
+    fun arrived(titleId: String) = controller.navigate(TitleRoute(titleId)) {
+        popUpTo<CatalogRoute> { inclusive = true }
+    }
+
+    fun discoverRail(id: String) = controller.navigate(DiscoverRailRoute(id)) { launchSingleTop = true }
+
+    fun catalogBrowse(kind: String) = controller.navigate(CatalogBrowseRoute(kind)) { launchSingleTop = true }
+
+    fun asked() = controller.navigate(AskedRoute) { launchSingleTop = true }
+
+    fun requests(list: String = "waiting") = controller.navigate(RequestsRoute(list)) { launchSingleTop = true }
+
     /** A title's page from one of its seasons or episodes: back to it when it's what came before. */
     fun titleUp(id: String) {
         if (!controller.popBackStack(TitleRoute(id), inclusive = false)) title(id)
@@ -173,7 +215,8 @@ class Navigator(private val controller: NavHostController) {
         if (title?.kind == TitleKind.MOVIE) title(title.id) else episode(item.id)
     }
 
-    fun person(name: String) = controller.navigate(PersonRoute(name))
+    /** Someone's page, by their TMDB id too where a TMDB title's credit has it. */
+    fun person(name: String, tmdbId: String? = null) = controller.navigate(PersonRoute(name, tmdbId))
 
     fun genre(name: String) = controller.navigate(BrowseRoute(genre = name))
 

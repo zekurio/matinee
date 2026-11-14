@@ -1,4 +1,5 @@
-type Named = { name: string }
+type Named = { id?: number; name: string }
+export type Keyword = { id: number; name?: string }
 export type Image = {
   file_path: string
   iso_639_1: string | null
@@ -70,6 +71,8 @@ export type Movie = MovieResult & {
   videos?: Videos
   production_companies?: Named[]
   credits?: { cast?: CastMember[]; crew?: CrewMember[] }
+  /** With `append_to_response=keywords`. */
+  keywords?: { keywords?: Keyword[] }
   release_dates?: {
     results: {
       iso_3166_1: string
@@ -114,6 +117,8 @@ export type Show = ShowResult & {
   }
   content_ratings?: { results: { iso_3166_1: string; rating: string }[] }
   external_ids?: { imdb_id?: string | null; tvdb_id?: number | null }
+  /** With `append_to_response=keywords`. Shows name the list `results`. */
+  keywords?: { results?: Keyword[] }
 }
 
 export type Found = {

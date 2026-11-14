@@ -2,6 +2,7 @@ import type { User } from "@matinee/contracts"
 import {
   FilmIcon,
   GalleryHorizontalEndIcon,
+  InboxIcon,
   KeyRoundIcon,
   LibraryBigIcon,
   ListChecksIcon,
@@ -28,6 +29,7 @@ import { JobsPanel } from "./jobs-panel"
 import { LibrariesPanel } from "./libraries-panel"
 import { NetworkPanel } from "./network-panel"
 import { PlaybackPanel } from "./playback-panel"
+import { RequestsPanel } from "./requests-panel"
 import { TranscodingPanel } from "./transcoding-panel"
 import { TrickplayPanel } from "./trickplay-panel"
 import { UsersPanel } from "./users-panel"
@@ -73,6 +75,12 @@ const SECTIONS: SectionEntry[] = [
   },
   { id: "users", group: "admin", icon: UsersIcon, Panel: UsersPanel },
   { id: "access", group: "admin", icon: ShieldCheckIcon, Panel: AccessPanel },
+  {
+    id: "requests",
+    group: "admin",
+    icon: InboxIcon,
+    Panel: RequestsPanel,
+  },
   {
     id: "authentication",
     group: "admin",

@@ -88,4 +88,18 @@ export default {
   "account.device.browser": "Browser",
 
   "account.cancel": "Abbrechen",
+
+  "account.push.section": "Benachrichtigungen",
+  "account.push.title": "Benachrichtigungen auf diesem Gerät",
+  "account.push.off":
+    "Erhalte hier eine, wenn etwas, das du angefragt hast, bereit ist oder nicht kommt, auch wenn Matinee geschlossen ist.",
+  "account.push.on":
+    "Für diesen Browser an. Du erhältst eine, wenn etwas, das du angefragt hast, bereit ist oder nicht kommt.",
+  "account.push.blocked":
+    "In den Einstellungen dieses Browsers blockiert. Erlaube dort Benachrichtigungen für diese Seite und komm dann zurück.",
+  "account.push.unsupported":
+    "Dieser Browser kann keine Benachrichtigungen von Matinee anzeigen.",
+  "account.push.insecure":
+    "Braucht HTTPS. Öffne Matinee über seine https://-Adresse, um sie einzuschalten.",
+  "account.push.failed": "Benachrichtigungen konnten nicht geändert werden",
 } satisfies TranslationOf<typeof source>

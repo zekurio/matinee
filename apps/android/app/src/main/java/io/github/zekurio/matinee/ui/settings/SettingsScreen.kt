@@ -298,6 +298,7 @@ private fun AccountPage() {
                 )
             }
         }
+        item(key = "notifications") { io.github.zekurio.matinee.ui.requests.NotificationsSection() }
         item(key = "sessionsTitle") {
             Text(stringResource(R.string.account_sessions_title), style = MaterialTheme.typography.titleLarge)
         }
@@ -336,6 +337,7 @@ private fun PlaybackPage(session: Session) {
     SettingsScaffold(stringResource(R.string.settings_page_playback)) {
         item(key = "languages") { LanguagesSection(playback, loaded, save) }
         item(key = "skips") { SkipsSection(playback, loaded, save) }
+        item(key = "shows") { ShowsSection(session) }
         item(key = "device") { DeviceSection(prefs, loaded) }
         item(key = "gestures") { GesturesSection(prefs) }
         item(key = "buttons") { ButtonsSection(prefs) }
@@ -397,6 +399,17 @@ private fun SkipsSection(playback: PlaybackPreferences, options: PlaybackOptions
                 skipChoices(playback.skipForward, options),
                 playback.skipForward,
             ) { save(playback.copy(skipForwardSeconds = it)) }
+        }
+    }
+}
+
+/** Whether a show's specials list with its seasons, for every device of the account. */
+@Composable
+private fun ShowsSection(session: Session) {
+    val save = rememberSpecialsSave(session)
+    Section(stringResource(R.string.playback_shows_title)) {
+        Panel {
+            SwitchRow(stringResource(R.string.playback_specials_title), LocalUser.current.library.showSpecials, onChange = save)
         }
     }
 }

@@ -13,7 +13,56 @@ import {
 } from "../types"
 import { image, request } from "./client"
 import { billed, credit, movieCrew, showCast, showCrew } from "./credits"
-import type { Image, Movie, SeasonResult, Show, Video } from "./payloads"
+import type {
+  Image,
+  Keyword,
+  Movie,
+  SeasonResult,
+  Show,
+  Video,
+} from "./payloads"
+
+/**
+ * TMDB's "anime" keyword, the one Seerr routes anime by. Its genres only
+ * say "Animation", which Arcane and Spider-Verse have too.
+ */
+const ANIME_KEYWORD = 210024
+
+function anime(keywords: Keyword[] | undefined): boolean {
+  return (keywords ?? []).some((keyword) => keyword.id === ANIME_KEYWORD)
+}
+
+function ids(list: { id?: number }[] | undefined): number[] {
+  return (list ?? []).flatMap((entry) => (entry.id ? [entry.id] : []))
+}
+
+/**
+ * What override rules look at in a title, in one call: its genres, the
+ * language it was made in, and its keywords. For a title a library knows
+ * from TheTVDB, read by its TMDB id.
+ */
+export async function titleFacts(kind: "movie" | "show", id: string) {
+  if (kind === "movie") {
+    const movie = await request<Movie>(`/movie/${encodeURIComponent(id)}`, {
+      append_to_response: "keywords",
+    })
+    return {
+      anime: anime(movie.keywords?.keywords),
+      genreIds: ids(movie.genres),
+      keywordIds: ids(movie.keywords?.keywords),
+      originalLanguage: languageTag(movie.original_language ?? ""),
+    }
+  }
+  const show = await request<Show>(`/tv/${encodeURIComponent(id)}`, {
+    append_to_response: "keywords",
+  })
+  return {
+    anime: anime(show.keywords?.results),
+    genreIds: ids(show.genres),
+    keywordIds: ids(show.keywords?.results),
+    originalLanguage: languageTag(show.original_language ?? ""),
+  }
+}
 
 // append_to_response takes at most 20 entries.
 const SEASONS_PER_REQUEST = 20
@@ -68,7 +117,7 @@ export async function movieDetails(id: string, language: string) {
   const { lang, region } = languageParts(language)
   const movie = await request<Movie>(`/movie/${encodeURIComponent(id)}`, {
     language,
-    append_to_response: "images,release_dates,credits,videos",
+    append_to_response: "images,release_dates,credits,videos,keywords",
     include_image_language: `${lang},en,null`,
     include_video_language: `${lang},en,null`,
   })
@@ -87,6 +136,9 @@ export async function movieDetails(id: string, language: string) {
     overview: text(movie.overview),
     tagline: text(movie.tagline),
     genres: movie.genres?.map((genre) => genre.name) ?? [],
+    anime: anime(movie.keywords?.keywords),
+    genreIds: ids(movie.genres),
+    keywordIds: ids(movie.keywords?.keywords),
     rating: rating(movie.vote_average, movie.vote_count),
     contentRating: text(certification?.certification),
     releaseDate: isoDate(movie.release_date),
@@ -154,7 +206,7 @@ export async function showDetails(id: string, language: string) {
   const show = await request<Show>(path, {
     language,
     append_to_response:
-      "images,content_ratings,external_ids,aggregate_credits,videos",
+      "images,content_ratings,external_ids,aggregate_credits,videos,keywords",
     include_image_language: `${lang},en,null`,
     include_video_language: `${lang},en,null`,
   })
@@ -177,6 +229,9 @@ export async function showDetails(id: string, language: string) {
     overview: text(show.overview),
     tagline: text(show.tagline),
     genres: show.genres?.map((genre) => genre.name) ?? [],
+    anime: anime(show.keywords?.results),
+    genreIds: ids(show.genres),
+    keywordIds: ids(show.keywords?.results),
     rating: rating(show.vote_average, show.vote_count),
     contentRating: text(ageRating?.rating),
     releaseDate: isoDate(show.first_air_date),

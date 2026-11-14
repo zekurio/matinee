@@ -92,4 +92,19 @@ export default defineMessages("account", {
   "account.device.browser": "Browser",
 
   "account.cancel": "Cancel",
+
+  // Web push on this device, for what the person requested.
+  "account.push.section": "Notifications",
+  "account.push.title": "Notifications on this device",
+  "account.push.off":
+    "Get one here when something you requested is ready or isn't coming, even with Matinee closed.",
+  "account.push.on":
+    "On for this browser. You'll get one when something you requested is ready or isn't coming.",
+  "account.push.blocked":
+    "Blocked in this browser's settings. Allow notifications for this site there, then come back.",
+  "account.push.unsupported":
+    "This browser can't show notifications from Matinee.",
+  "account.push.insecure":
+    "Needs HTTPS. Open Matinee at its https:// address to turn these on.",
+  "account.push.failed": "Couldn't change notifications",
 })

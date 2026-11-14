@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query"
 import { Link, useRouteContext } from "@tanstack/react-router"
 import { ChevronRightIcon } from "lucide-react"
 
+import { AskedRail } from "@/components/asked/asked"
 import { Hero, heroFill, heroFrame } from "@/components/hero"
 import { NoLibraries } from "@/components/library/no-libraries"
 import { EpisodeCard, TitleCard } from "@/components/media-item"
@@ -109,6 +110,8 @@ export function Home() {
           )
         )}
       </div>
+
+      <AskedRail username={user.username} />
 
       {libraries.data?.map((library) => (
         <LibraryShelf key={library.id} library={library} />

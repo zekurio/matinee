@@ -79,5 +79,4 @@ export default defineMessages("media", {
   // The dialog that asks when the user watched.
   "media.watchedDate.title": "When did you watch it?",
   "media.watchedDate.date": "Date",
-  "media.watchedDate.cancel": "Cancel",
 })

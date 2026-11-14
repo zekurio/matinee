@@ -14,6 +14,14 @@ import { EventPublisher } from "@orpc/server"
  * carries the event.
  */
 export type Topics = {
+  /** Request status, followers, scope or in-memory progress changed. */
+  requests: undefined
+  /** Scan or metadata matching changed library identity or playable files. */
+  library: undefined
+  /** Stored notification rows or read state changed. Reload per viewer. */
+  notifications: undefined
+  /** Connections or per-library mappings changed. */
+  fulfilment: undefined
   /** A playback session reported, or a stream started or stopped. */
   playback: undefined
   /** A watch party changed: its members, its file, where it is, its queue. */

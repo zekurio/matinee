@@ -102,6 +102,22 @@ export const DEFAULT_PLAYBACK_PREFERENCES: Readonly<PlaybackPreferences> =
     skipForwardSeconds: DEFAULT_SKIP_SECONDS,
   })
 
+/**
+ * How a show's episodes list for the account, on every device. The server
+ * applies these, so each client shows the same.
+ */
+export const LibraryPreferences = t.object({
+  /**
+   * Season 0, a show's specials, is one of its seasons, comes up next in
+   * Next up and continue watching, and is offered in requests. Off, the
+   * server leaves it out of all of those, unless a show has nothing else;
+   * a special opened directly, by a link to its page or episode, still
+   * opens.
+   */
+  showSpecials: t.boolean(),
+})
+export type LibraryPreferences = t.infer<typeof LibraryPreferences>
+
 /** Codecs a stream can convert an audio track to. */
 export const TRANSCODE_AUDIO_CODECS = ["opus", "aac"] as const
 export const TranscodeAudioCodec = t.enum(TRANSCODE_AUDIO_CODECS)

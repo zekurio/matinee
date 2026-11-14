@@ -15,7 +15,11 @@ import { createFileRoute, Link } from "@tanstack/react-router"
 import { SearchIcon, SearchXIcon, XIcon } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 
+import { catalogSearchOptions } from "@/components/catalog/catalog-data"
+import { askable, NotHereSection } from "@/components/catalog/catalog-search"
 import { creditLabel, PersonCard } from "@/components/credits"
+import { railsOptions } from "@/components/discover/discover-data"
+import { DiscoverRails } from "@/components/discover/discover-rails"
 import { PosterGridSkeleton } from "@/components/library/library-states"
 import { PosterCard, posterGrid } from "@/components/media-item"
 import { useDocumentTitle } from "@/components/page-header"
@@ -53,6 +57,8 @@ export const Route = createFileRoute("/_authed/_shell/search")({
   shouldReload: reloadOnEnter,
   loader: ({ context: { queryClient }, deps: { q } }) => {
     if (q !== undefined) void queryClient.prefetchQuery(searchOptions(q))
+    // Phones show Discover under the field until something's typed.
+    else void queryClient.prefetchQuery(railsOptions())
   },
   component: SearchPage,
 })
@@ -60,8 +66,8 @@ export const Route = createFileRoute("/_authed/_shell/search")({
 /**
  * Every result for a search, a section per kind and library. Wider screens
  * come here from the spotlight; on phones it's the search tab, with the
- * field at its top. The query lives in the URL, so Back from a title
- * brings the results back.
+ * field at its top and Discover under it until something's typed. The
+ * query lives in the URL, so Back from a title brings the results back.
  */
 function SearchPage() {
   const { q } = Route.useSearch()
@@ -70,16 +76,9 @@ function SearchPage() {
     q ? tr("search.page.documentTitle", { query: q }) : tr("search.title"),
   )
   const openSpotlight = useSearchSpotlightStore((state) => state.setOpen)
-  const libraries = useQuery(orpc.libraries.list.queryOptions())
-  const results = useQuery({
-    ...searchOptions(q ?? ""),
-    enabled: q !== undefined,
-    placeholderData: keepPreviousData,
-  })
+  const discover = useQuery(railsOptions())
 
-  if (q === undefined) {
-    // The field's placeholder already says what search finds.
-    if (phone) return <PhoneSearchBar query={q} />
+  if (q === undefined && !phone) {
     return (
       <Empty className="py-16">
         <EmptyHeader>
@@ -101,6 +100,41 @@ function SearchPage() {
     )
   }
 
+  return (
+    <div>
+      {/* The field keeps its place, and what's typed, between the tab's
+          two faces. */}
+      {phone && (
+        <PhoneSearchBar
+          query={q}
+          // Discover is for looking around, so the keyboard waits for a
+          // tap rather than covering it.
+          takeKeyboard={
+            discover.isSuccess ? !discover.data.enabled : discover.isError
+          }
+        />
+      )}
+      {q === undefined ? (
+        // The field's placeholder already says what search finds.
+        discover.data?.enabled && <DiscoverRails />
+      ) : (
+        <SearchResults query={q} />
+      )}
+    </div>
+  )
+}
+
+/** Every result for `q`: the library's sections, then the catalog's. */
+function SearchResults({ query: q }: { query: string }) {
+  const libraries = useQuery(orpc.libraries.list.queryOptions())
+  const results = useQuery({
+    ...searchOptions(q),
+    placeholderData: keepPreviousData,
+  })
+  // Titles no library here has, on their own, so the library's results
+  // never wait for the catalog.
+  const catalog = useQuery(catalogSearchOptions(q))
+
   const sections = results.data
     ? searchSections(results.data, libraries.data ?? [])
     : []
@@ -115,8 +149,7 @@ function SearchPage() {
     ].some((list) => list.length === LIMIT)
 
   return (
-    <div>
-      {phone && <PhoneSearchBar query={q} />}
+    <>
       <h1 className="mb-6 text-[26px] leading-8 font-semibold tracking-tight text-balance break-words max-sm:sr-only md:text-[32px] md:leading-10">
         {tr("search.page.heading", { query: q })}
       </h1>
@@ -124,7 +157,8 @@ function SearchPage() {
         <PosterGridSkeleton />
       ) : results.isError ? (
         <p className="text-muted-foreground text-sm">{tr("search.failed")}</p>
-      ) : sections.length === 0 ? (
+      ) : sections.length === 0 &&
+        !(catalog.isPending || askable(catalog.data?.items).length > 0) ? (
         <Empty className="py-16">
           <EmptyHeader>
             <EmptyMedia variant="icon" className="mb-4 size-9 [&_svg]:size-5">
@@ -135,12 +169,18 @@ function SearchPage() {
             </EmptyTitle>
             <EmptyDescription>{tr("search.page.noMatchHint")}</EmptyDescription>
           </EmptyHeader>
+          {catalog.isError && (
+            <EmptyContent className="text-muted-foreground text-sm">
+              {tr("catalog.search.failed")}
+            </EmptyContent>
+          )}
         </Empty>
       ) : (
         <div className="flex flex-col gap-10">
           {sections.map((section) => (
             <Section key={section.key} section={section} />
           ))}
+          <NotHereSection results={catalog} first={sections.length === 0} />
           {capped && (
             <p className="text-muted-foreground text-sm">
               {tr("search.page.capped", { limit: LIMIT })}
@@ -148,7 +188,7 @@ function SearchPage() {
           )}
         </div>
       )}
-    </div>
+    </>
   )
 }
 
@@ -264,10 +304,17 @@ function FacetText({ facet }: { facet: Facet }) {
 
 /**
  * The search tab's top on phones: its name, then the field, which takes the
- * keyboard when the tab opens empty. What's typed goes in the URL once
+ * keyboard when the tab opens empty with no Discover under it. What's typed goes in the URL once
  * typing pauses, and the results follow it.
  */
-function PhoneSearchBar({ query }: { query: string | undefined }) {
+function PhoneSearchBar({
+  query,
+  takeKeyboard,
+}: {
+  query: string | undefined
+  /** Whether the field takes the keyboard when the tab opens empty. */
+  takeKeyboard: boolean
+}) {
   const navigate = Route.useNavigate()
   const [text, update, flush] = useUrlText(query, (next) => {
     void navigate({
@@ -280,8 +327,8 @@ function PhoneSearchBar({ query }: { query: string | undefined }) {
   // Opening the tab empty is for typing; Back to results is for reading.
   const [typing] = useState(query === undefined)
   useEffect(() => {
-    if (typing) input.current?.focus()
-  }, [typing])
+    if (typing && takeKeyboard) input.current?.focus()
+  }, [typing, takeKeyboard])
 
   return (
     <div className="bg-background sticky top-0 z-20 -mx-4 mb-4 px-4 pt-[env(safe-area-inset-top)] pb-3">

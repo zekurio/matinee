@@ -1,23 +1,29 @@
 import { account } from "./account"
 import { adminAuth } from "./admin-auth"
 import { adminBranding } from "./admin-branding"
+import { adminFulfilment } from "./admin-fulfilment"
 import { adminGroups } from "./admin-groups"
 import { adminInvites } from "./admin-invites"
 import { adminJobs } from "./admin-jobs"
 import { adminNetwork } from "./admin-network"
+import { adminRequests } from "./admin-requests"
 import { adminSetup } from "./admin-setup"
 import { adminTranscoding } from "./admin-transcoding"
 import { adminTrickplay } from "./admin-trickplay"
 import { adminUsers } from "./admin-users"
 import { auth } from "./auth"
 import { pub } from "./base"
+import { catalog } from "./catalog"
+import { discover } from "./discover"
 import { downloads } from "./downloads"
 import { titleImages } from "./images"
 import { adminRoutes, libraries, media } from "./libraries"
+import { notifications } from "./notifications"
 import { party } from "./party"
 import { people } from "./people"
 import { home, playback } from "./playback"
 import { favorites, profiles } from "./profiles"
+import { requests } from "./requests"
 import { search } from "./search"
 import { stats } from "./stats"
 import { metadata, titles } from "./titles"
@@ -29,6 +35,10 @@ import { metadata, titles } from "./titles"
  * adds.
  */
 export const procedures = {
+  catalog,
+  discover,
+  requests,
+  notifications,
   auth,
   account,
   libraries,
@@ -45,6 +55,8 @@ export const procedures = {
   profiles,
   stats,
   admin: {
+    requests: adminRequests,
+    fulfilment: adminFulfilment,
     ...adminRoutes,
     auth: adminAuth,
     branding: adminBranding,

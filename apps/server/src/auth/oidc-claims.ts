@@ -1,4 +1,5 @@
 import {
+  RequestLimit,
   AccessOverride,
   BitrateLimit,
   StreamLimit,
@@ -28,6 +29,8 @@ const PolicyClaim = t
     maxBitrate: BitrateLimit.optional(),
     transcode: t.boolean().optional(),
     downloads: t.boolean().optional(),
+    requests: t.enum(["off", "ask", "add"]).optional(),
+    requestLimit: RequestLimit.optional(),
     maxStreams: StreamLimit.optional(),
   })
   .strict()

@@ -194,9 +194,13 @@ fun CardText(primary: String, secondary: String?, modifier: Modifier = Modifier,
     }
 }
 
+/**
+ * A card's tap and long press, with the focus ring and the press look.
+ * Offline it does nothing, since what it opens is the server's.
+ */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun Modifier.cardClick(
+fun Modifier.cardClick(
     onClick: () -> Unit,
     onLongClick: (() -> Unit)?,
     interaction: MutableInteractionSource = remember { MutableInteractionSource() },
@@ -424,14 +428,14 @@ fun ShelfCard(entry: ShelfEntry, modifier: Modifier = Modifier) {
 
 /** Someone in the cast or crew: a round portrait, the name, and the part. */
 @Composable
-fun PersonCard(name: String, role: String?, photo: ImageSource?, modifier: Modifier = Modifier) {
+fun PersonCard(name: String, role: String?, photo: ImageSource?, modifier: Modifier = Modifier, tmdbId: String? = null) {
     val nav = LocalNavigator.current
     val interaction = remember { MutableInteractionSource() }
     Column(
         modifier
             .clip(CardShape)
             .focusRing(interaction, CardShape)
-            .combinedClickable(interaction, LocalIndication.current, role = Role.Button) { nav.person(name) },
+            .combinedClickable(interaction, LocalIndication.current, role = Role.Button) { nav.person(name, tmdbId) },
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box(

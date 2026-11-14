@@ -8,6 +8,7 @@ import { probeMissing } from "../media/probe"
 import { prepareMissingSubtitles } from "../media/subtitles"
 import { queueTrickplay } from "../media/trickplay"
 import { queueRefresh } from "../metadata/refresh"
+import { libraryChanged } from "../requests/arrival"
 import {
   BATCH_SIZE,
   dateFiles,
@@ -214,6 +215,7 @@ async function runScan(
   await updateSidecars(lib.name, libraryId, targets, state, signal)
   if (regroupAll) await assignTitles(libraryId, lib.kind)
   else if (touched.size > 0) await assignTitles(libraryId, lib.kind, touched)
+  libraryChanged(libraryId)
   if (!request.targets) {
     await db
       .update(library)

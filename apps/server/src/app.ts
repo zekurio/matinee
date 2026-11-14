@@ -99,7 +99,20 @@ export function createApp() {
     // A missing asset is a 404, not the app shell: a browser holding an
     // older build's page should fail to load it, not parse HTML as code.
     app.get("/assets/*", (c) => c.body(null, 404))
-    app.use("*", serveStatic({ root, precompressed: true }))
+    // Everything else, `/` and its index.html included, keeps its name
+    // across builds, so the browser asks again each time. The store gives
+    // these files a 1970 mtime, which would otherwise let a browser cache
+    // them for years.
+    app.use(
+      "*",
+      serveStatic({
+        root,
+        precompressed: true,
+        onFound: (_path, c) => {
+          c.header("Cache-Control", "no-cache")
+        },
+      }),
+    )
     // Client-side routes all load the app shell.
     app.get("*", async (c) => {
       indexHtml ??= loadIndexHtml(join(root, "index.html"))

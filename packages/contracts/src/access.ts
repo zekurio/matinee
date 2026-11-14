@@ -1,3 +1,4 @@
+import { RequestLimit } from "./catalog"
 import { t } from "./schema"
 import { PLAYBACK_QUALITIES } from "./transcoding"
 
@@ -66,6 +67,8 @@ export const AccessPolicy = t.object({
   transcode: t.boolean(),
   /** The account may download, files as they are and versions made for a device. */
   downloads: t.boolean(),
+  requests: t.enum(["off", "ask", "add"]),
+  requestLimit: RequestLimit,
   maxStreams: StreamLimit,
 })
 export type AccessPolicy = t.infer<typeof AccessPolicy>

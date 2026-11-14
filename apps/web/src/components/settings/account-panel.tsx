@@ -62,6 +62,7 @@ import { useAuthErrorToast } from "@/lib/use-auth-error-toast"
 import { createSettingsPasskeysStore } from "@/stores/settings-passkeys"
 
 import { SharingRows } from "./profile-sharing"
+import { PushSetting } from "./push-setting"
 import { Sessions } from "./sessions"
 import { RowIcon, SettingsSections, SettingsSubsection } from "./settings-panel"
 
@@ -83,6 +84,7 @@ export function AccountPanel() {
       ) : null}
       {config.data?.passkeys ? <Passkeys oidcEnabled={oidc !== null} /> : null}
       {oidc ? <LinkedAccount displayName={oidc.displayName} /> : null}
+      <PushSetting />
       <Sessions />
     </SettingsSections>
   )
@@ -503,13 +505,6 @@ function AddPasskey() {
               )}
             </form.AppField>
             <DialogFooter className="-mx-6 -mb-6 px-6 py-4">
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => setOpen(false)}
-              >
-                {tr("account.cancel")}
-              </Button>
               <form.AppForm>
                 <form.SubmitButton pending={add.isPending}>
                   {add.isPending

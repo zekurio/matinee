@@ -15,6 +15,15 @@ import { applyLanguage } from "./stores/language"
 
 initTheme()
 syncUiText()
+// The text face loads only once text needs it, and until it's in, text
+// shows in a wider fallback, so everything shifts when it swaps in. Asking
+// now lets it load with the language; the first render waits for both,
+// but no longer than FONT_WAIT_MS on a slow line.
+const FONT_WAIT_MS = 500
+const fontReady = Promise.race([
+  document.fonts.load('1em "Red Hat Text Variable"').catch(() => []),
+  new Promise((resolve) => setTimeout(resolve, FONT_WAIT_MS)),
+])
 /**
  * Pages for someone signed out. They ask for nothing that needs a session,
  * and a lost session doesn't send them to the login. An invite link has its
@@ -41,8 +50,9 @@ if (
 ) {
   prefetchHome(queryClient)
 }
-// The first render is in the right language, so it waits for it to load.
-await applyLanguage()
+// The first render is in the right language and face, so it waits for
+// both to load.
+await Promise.all([applyLanguage(), fontReady])
 
 const router = createRouter({
   routeTree,

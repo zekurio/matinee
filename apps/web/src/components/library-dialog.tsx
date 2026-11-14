@@ -380,9 +380,6 @@ function LibraryForm({
         </FieldGroup>
 
         <DialogFooter className="-mx-6 -mb-6 px-6 py-4">
-          <Button type="button" variant="ghost" onClick={onDone}>
-            {tr("libraries.dialog.cancel")}
-          </Button>
           <form.Subscribe
             selector={(state) =>
               !state.values.name.trim() || state.values.paths.length === 0

@@ -36,6 +36,23 @@ async function preloadedFetch(request: Request): Promise<Response> {
 }
 
 export const client = createMatineeClient({ fetch: preloadedFetch })
+
+/**
+ * The same client, with requests the browser finishes after the page
+ * closes, for a call made as it closes. Only for small bodies: a
+ * keepalive request carries at most 64 KB.
+ */
+export const keepaliveClient = createMatineeClient({
+  fetch: async (request) =>
+    fetch(request.url, {
+      method: request.method,
+      headers: request.headers,
+      credentials: request.credentials,
+      // Read out first, since a keepalive request can't send a stream.
+      body: request.method === "GET" ? undefined : await request.text(),
+      keepalive: true,
+    }),
+})
 export const orpc = createTanstackQueryUtils(client)
 
 /** Called when the server says the session is gone. Set by the router. */

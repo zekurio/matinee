@@ -7,8 +7,15 @@ function Slider({
   value,
   min = 0,
   max = 100,
+  thumbLabel,
+  thumbValueText,
   ...props
-}: SliderPrimitive.Root.Props) {
+}: SliderPrimitive.Root.Props & {
+  /** Each thumb's name for screen readers, by its index. */
+  thumbLabel?: (index: number) => string
+  /** What a screen reader says a thumb is at, in place of the number. */
+  thumbValueText?: (value: number, index: number) => string
+}) {
   const values = Array.isArray(value)
     ? value
     : Array.isArray(defaultValue)
@@ -40,7 +47,12 @@ function Slider({
           <SliderPrimitive.Thumb
             data-slot="slider-thumb"
             key={index}
-            className="border-ring ring-ring/50 relative block size-3 shrink-0 rounded-full border bg-white transition-[color,box-shadow] select-none after:absolute after:-inset-2 hover:ring-3 focus-visible:ring-3 focus-visible:outline-hidden active:ring-3 disabled:pointer-events-none disabled:opacity-50"
+            getAriaLabel={thumbLabel}
+            getAriaValueText={
+              thumbValueText &&
+              ((_formatted, value, thumb) => thumbValueText(value, thumb))
+            }
+            className="border-ring ring-ring/50 relative block size-3 shrink-0 rounded-full border bg-white transition-[color,box-shadow] select-none after:absolute after:-inset-2 hover:ring-3 focus-visible:ring-3 focus-visible:outline-hidden active:ring-3 disabled:pointer-events-none disabled:opacity-50 [@media(pointer:coarse)]:size-5"
           />
         ))}
       </SliderPrimitive.Control>

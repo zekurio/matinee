@@ -18,6 +18,7 @@ import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.Json
 import okhttp3.Call
 import okhttp3.Callback
+import okhttp3.Dispatcher
 import okhttp3.HttpUrl
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
@@ -83,6 +84,16 @@ class ExplicitSerializer<T : Any>(private val inner: KSerializer<T>) : KSerializ
 class ApiTransport internal constructor(private val base: HttpUrl, private val client: OkHttpClient) {
     private val jsonType = "application/json".toMediaType()
 
+    /**
+     * The client for event streams, with a dispatcher of its own: a stream
+     * stays open while its screen shows, and OkHttp runs five calls to a
+     * host at once, so on the shared one a few streams would hold up every
+     * other request and the artwork. The token and the rest come along.
+     */
+    private val streams: OkHttpClient by lazy {
+        client.newBuilder().dispatcher(Dispatcher().apply { maxRequestsPerHost = 32 }).build()
+    }
+
     private fun url(path: List<String>, query: List<Pair<String, String?>>): HttpUrl =
         base.newBuilder().apply {
             addPathSegments("api/v1")
@@ -137,7 +148,7 @@ class ApiTransport internal constructor(private val base: HttpUrl, private val c
         output: KSerializer<T>,
     ): Flow<T> = flow {
         val request = request(method, path, query, body).header("Accept", "text/event-stream").build()
-        client.newCall(request).await().use { response ->
+        streams.newCall(request).await().use { response ->
             if (!response.isSuccessful) throw errorOf(response, response.body.string())
             val source = response.body.source()
             var event = "message"

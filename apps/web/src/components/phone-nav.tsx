@@ -18,7 +18,8 @@ import { type ReactNode, useEffect } from "react"
 
 import { tr } from "@/i18n"
 
-import { UserAvatar } from "./user-avatar"
+import { useNeedsYou } from "./requests/request-queue"
+import { AvatarWithDot, UserAvatar } from "./user-avatar"
 
 /*
  * Phones lay the app out as the Android app does: Home, Media, and the
@@ -99,6 +100,7 @@ export function TabBar({ user, current }: { user: User; current: PhoneTab }) {
   // Home stays under the other tabs, so Back from one goes Home rather
   // than through every tab picked on the way.
   const replace = current !== "home"
+  const needsYou = useNeedsYou(user.role === "admin")
   return (
     <nav
       aria-label={tr("shell.tabs")}
@@ -125,17 +127,23 @@ export function TabBar({ user, current }: { user: User; current: PhoneTab }) {
           to="/profiles/$username"
           params={{ username: user.username }}
           replace={replace}
-          aria-label={tr("shell.profile")}
+          aria-label={
+            needsYou > 0
+              ? `${tr("shell.profile")}. ${tr("requests.dot")}`
+              : tr("shell.profile")
+          }
           aria-current={current === "profile" ? "page" : undefined}
           className={cn(tabItem, tabLook(current === "profile"))}
         >
-          {current === "profile" ? (
-            <span className="border-foreground grid size-7 place-items-center rounded-full border-[1.5px]">
-              <UserAvatar user={user} className="size-[22px] text-[10px]" />
-            </span>
-          ) : (
-            <UserAvatar user={user} className="size-7 text-xs" />
-          )}
+          <AvatarWithDot dot={needsYou > 0}>
+            {current === "profile" ? (
+              <span className="border-foreground grid size-7 place-items-center rounded-full border-[1.5px]">
+                <UserAvatar user={user} className="size-[22px] text-[10px]" />
+              </span>
+            ) : (
+              <UserAvatar user={user} className="size-7 text-xs" />
+            )}
+          </AvatarWithDot>
           {current === "profile" && (
             <span className="text-sm font-medium">{tr("shell.profile")}</span>
           )}

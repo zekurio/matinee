@@ -1,7 +1,9 @@
 package io.github.zekurio.matinee
 
+import android.app.Activity
 import android.app.Application
 import android.content.Context
+import android.os.Bundle
 import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
@@ -17,9 +19,13 @@ import io.github.zekurio.matinee.launcher.WatchNext
 import io.github.zekurio.matinee.launcher.WatchNextForeground
 import io.github.zekurio.matinee.ui.ViewerState
 import io.github.zekurio.matinee.ui.player.PlayerPrefs
+import io.github.zekurio.matinee.ui.requests.OpenTarget
+import io.github.zekurio.matinee.ui.requests.RequestNotices
+import io.github.zekurio.matinee.ui.requests.RequestNoticesWorker
 import io.github.zekurio.matinee.ui.theme.ThemeStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -51,6 +57,27 @@ class MatineeApp : Application(), SingletonImageLoader.Factory {
     /** The color theme, which follows the account and the server's accent. */
     val theme by lazy { ThemeStore(this) }
 
+    /** Whether to look for request notifications while closed, and whether the permission was asked for. */
+    val notices by lazy { RequestNotices(this) }
+
+    /** A notification tapped, for the signed-in app to open. */
+    val opening = MutableStateFlow<OpenTarget?>(null)
+
+    /**
+     * The app's own screens are on screen, so the snackbar shows new
+     * notifications and the background check leaves them to it. The player
+     * doesn't count: it has no snackbar.
+     */
+    @Volatile var inForeground = false
+        private set
+
+    /** Looks for request notifications while the app is closed, on phones whose person wants that. */
+    fun scheduleNotices() {
+        if (session.isTv) return
+        val signedIn = session.state.value is AuthState.SignedIn
+        if (signedIn && notices.background) RequestNoticesWorker.schedule(this) else RequestNoticesWorker.cancel(this)
+    }
+
     private val scope = MainScope()
 
     override fun onCreate() {
@@ -60,6 +87,29 @@ class MatineeApp : Application(), SingletonImageLoader.Factory {
             watchNext = WatchNext(this).also { registerActivityLifecycleCallbacks(WatchNextForeground(it)) }
         }
         downloads.restore()
+        registerActivityLifecycleCallbacks(object : ActivityLifecycleCallbacks {
+            private var started = 0
+
+            override fun onActivityStarted(activity: Activity) {
+                if (activity is MainActivity) inForeground = ++started > 0
+            }
+
+            override fun onActivityStopped(activity: Activity) {
+                if (activity is MainActivity) inForeground = --started > 0
+            }
+
+            override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) = Unit
+            override fun onActivityResumed(activity: Activity) = Unit
+            override fun onActivityPaused(activity: Activity) = Unit
+            override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) = Unit
+            override fun onActivityDestroyed(activity: Activity) = Unit
+        })
+        // The background check runs while signed in, and stops with the session.
+        scope.launch {
+            session.state.collect { state ->
+                if (state !is AuthState.Connecting) scheduleNotices()
+            }
+        }
         // A server removed takes its downloads, what waited to reach it, and its artwork along.
         session.onRemove = { origin, api ->
             downloads.forgetServer(origin, api)

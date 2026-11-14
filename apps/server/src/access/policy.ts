@@ -17,6 +17,8 @@ export const EVERYTHING: AccessPolicy = {
   transcode: true,
   downloads: true,
   maxStreams: null,
+  requests: "add",
+  requestLimit: null,
 }
 
 /**
@@ -29,6 +31,8 @@ const NOTHING: AccessPolicy = {
   transcode: false,
   downloads: false,
   maxStreams: 1,
+  requests: "off",
+  requestLimit: null,
 }
 
 /** The larger of two limits, where null is no limit. */
@@ -36,7 +40,7 @@ function looser(a: number | null, b: number | null): number | null {
   return a === null || b === null ? null : Math.max(a, b)
 }
 
-type Limits = Omit<AccessPolicy, "libraries">
+type Limits = Omit<AccessPolicy, "libraries" | "requests" | "requestLimit">
 
 function looserLimits(a: Limits, b: Limits): Limits {
   return {
@@ -80,7 +84,35 @@ export function mostGenerous(policies: readonly AccessPolicy[]): AccessPolicy {
         : [...new Set(policies.flatMap((policy) => policy.libraries.ids))],
     },
     ...limits,
+    // Request grants merge across ALL groups, independently of streaming access.
+    // A request-only group must be able to grant permission without opening a library.
+    requests: policies.some((p) => p.requests === "add")
+      ? "add"
+      : policies.some((p) => p.requests === "ask")
+        ? "ask"
+        : "off",
+    requestLimit: requestQuota(policies),
   }
+}
+
+/** Compare title rates; equal rates prefer the shorter rolling window. */
+function requestQuota(
+  policies: readonly AccessPolicy[],
+): AccessPolicy["requestLimit"] {
+  const granting = policies.filter((p) => p.requests !== "off")
+  if (granting.some((p) => p.requestLimit === null)) return null
+  return granting.reduce<AccessPolicy["requestLimit"]>((best, p) => {
+    const next = p.requestLimit
+    if (!next) return best
+    if (
+      !best ||
+      next.titles / next.days > best.titles / best.days ||
+      (next.titles / next.days === best.titles / best.days &&
+        next.days < best.days)
+    )
+      return next
+    return best
+  }, null)
 }
 
 /** `policy` with the fields `override` sets. */
@@ -89,6 +121,11 @@ export function withOverride(
   override: AccessOverride,
 ): AccessPolicy {
   return {
+    requests: override.requests ?? policy.requests,
+    requestLimit:
+      override.requestLimit === undefined
+        ? policy.requestLimit
+        : override.requestLimit,
     libraries: override.libraries ?? policy.libraries,
     maxBitrate:
       override.maxBitrate === undefined
@@ -112,11 +149,15 @@ export type Access = {
   maxBitrate: number | null
   transcode: boolean
   downloads: boolean
+  requests: AccessPolicy["requests"]
+  requestLimit: AccessPolicy["requestLimit"]
   maxStreams: number | null
 }
 
 export function toAccess(policy: AccessPolicy): Access {
   return {
+    requests: policy.requests,
+    requestLimit: policy.requestLimit,
     libraries: policy.libraries.all ? null : new Set(policy.libraries.ids),
     maxBitrate: policy.maxBitrate,
     transcode: policy.transcode,

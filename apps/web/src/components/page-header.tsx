@@ -18,6 +18,13 @@ export function useDocumentTitle(name: string | null | undefined) {
 }
 
 /**
+ * The gap the header leaves below it. A row of chips right under the
+ * header leaves the same below itself, so it sits evenly between the
+ * title and what follows.
+ */
+export const belowHeader = "mb-4 max-sm:mb-2 md:mb-6"
+
+/**
  * A page's name and controls. On phones it's the bar at the top of the
  * page, as the Android app has it: Back, unless the page is a tab's first,
  * then the name and `phoneActions`. It stays put while the page scrolls.
@@ -44,7 +51,8 @@ export function PageHeader({
   return (
     <header
       className={cn(
-        "mb-4 flex items-end justify-between gap-4 md:mb-6",
+        "flex items-end justify-between gap-4",
+        belowHeader,
         // The page's column pads its sides; the bar spans the screen.
         "max-sm:bg-background max-sm:sticky max-sm:top-0 max-sm:z-20 max-sm:-mx-4 max-sm:mb-2 max-sm:block max-sm:pt-[env(safe-area-inset-top)]",
         className,

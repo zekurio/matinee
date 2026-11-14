@@ -7,9 +7,11 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@matinee/ui/components/empty"
-import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query"
+import { cn } from "@matinee/ui/lib/utils"
+import { useInfiniteQuery } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
 import { Building2Icon, TagIcon } from "lucide-react"
+import { useState } from "react"
 
 import {
   EmptyList,
@@ -17,24 +19,32 @@ import {
   ShowMore,
 } from "@/components/library/library-states"
 import {
+  FilterChips,
   HeaderControls,
   type ListControlsProps,
   PhoneControls,
 } from "@/components/library/list-controls"
+import { useSearchText } from "@/components/library/list-params"
 import {
-  titleSort,
-  titleSorts,
-  useListSearch,
-} from "@/components/library/list-params"
+  activeTitleFilters,
+  TitleFilterPanel,
+} from "@/components/library/title-filter-panel"
+import { cardDetail } from "@/components/library/title-filter-params"
+import {
+  browsedTitlesOptions,
+  useTitleFilters,
+} from "@/components/library/title-queries"
 import { PosterCard, posterGrid } from "@/components/media-item"
-import { PageHeader, useDocumentTitle } from "@/components/page-header"
+import {
+  belowHeader,
+  PageHeader,
+  useDocumentTitle,
+} from "@/components/page-header"
 import { tr } from "@/i18n"
 import type { BrowseSearch } from "@/lib/browse-search"
-import { errorMessage, orpc } from "@/lib/rpc"
+import { errorMessage } from "@/lib/rpc"
 
 import { KindPicker } from "./kind-picker"
-
-const PAGE_SIZE = 60
 
 const icons = { genre: TagIcon, studio: Building2Icon }
 
@@ -58,37 +68,56 @@ export function BrowsePage({
   useDocumentTitle(name)
   const Icon = icons[by]
   const groupLabel = tr(`browse.${by}`)
-  const list = useListSearch(search, update)
+  const text = useSearchText(search.q, update)
   const kind = search.kind
-  const titles = useInfiniteQuery(
-    orpc.titles.browse.infiniteOptions({
-      input: (offset: number) => ({
-        genre: by === "genre" ? name : undefined,
-        studio: by === "studio" ? name : undefined,
-        query: list.query || undefined,
-        kind,
-        sort: titleSort(list.sort),
-        limit: PAGE_SIZE,
-        offset,
-      }),
-      initialPageParam: 0,
-      getNextPageParam: (last, pages) => {
-        const loaded = pages.reduce((n, page) => n + page.items.length, 0)
-        return loaded < last.total ? loaded : undefined
-      },
-      placeholderData: keepPreviousData,
+  const scope = by === "genre" ? { genre: name } : { studio: name }
+  const list = useTitleFilters(search, update, { ...scope, kind })
+  const [panelOpen, setPanelOpen] = useState(false)
+  // The page's own genre or studio, which every title here has, isn't
+  // a filter to take off; the server gets it with the rest.
+  const others = (names: string[]) => names.filter((other) => other !== name)
+  const shown =
+    by === "genre"
+      ? { ...list.filters, genres: others(list.filters.genres) }
+      : { ...list.filters, studios: others(list.filters.studios) }
+  const filters =
+    by === "genre"
+      ? { ...shown, genres: [name, ...shown.genres] }
+      : { ...shown, studios: [name, ...shown.studios] }
+  const titles = useInfiniteQuery({
+    ...browsedTitlesOptions({
+      query: text.query,
+      kind,
+      filters,
+      order: list.order,
     }),
-  )
+    enabled: list.ready,
+  })
 
   const rows = titles.data?.pages.flatMap((page) => page.items) ?? []
   const counts = titles.data?.pages[0]?.kinds
+  const options = list.options
+  const chips = options ? activeTitleFilters(shown, options, list.change) : []
   const controls: ListControlsProps = {
-    search: list.search,
-    setSearch: list.setSearch,
+    search: text.search,
+    setSearch: text.setSearch,
     label: tr("browse.search", { name }),
-    sorts: titleSorts(),
+    sorts: list.sorts,
     sort: list.sort,
     setSort: list.setSort,
+    filter: options
+      ? (compact) => (
+          <TitleFilterPanel
+            kind={kind}
+            options={options}
+            filters={shown}
+            change={list.change}
+            open={panelOpen}
+            onOpenChange={setPanelOpen}
+            compact={compact}
+          />
+        )
+      : undefined,
   }
 
   return (
@@ -108,9 +137,10 @@ export function BrowsePage({
           counts={counts}
           value={kind}
           onChange={(next) => update({ kind: next })}
-          className="mb-5"
+          className={belowHeader}
         />
       )}
+      <FilterChips active={chips} clear={list.clear} />
 
       {titles.isPending ? (
         <PosterGridSkeleton />
@@ -120,10 +150,20 @@ export function BrowsePage({
         </p>
       ) : rows.length > 0 ? (
         <>
-          <ul className={posterGrid}>
+          <ul
+            aria-busy={titles.isPlaceholderData}
+            className={cn(
+              posterGrid,
+              "transition-opacity duration-200 motion-reduce:transition-none",
+              titles.isPlaceholderData && "opacity-50",
+            )}
+          >
             {rows.map((title) => (
               <li key={title.id}>
-                <PosterCard title={title} />
+                <PosterCard
+                  title={title}
+                  detail={cardDetail(title, list.order.sort)}
+                />
               </li>
             ))}
           </ul>
@@ -136,14 +176,20 @@ export function BrowsePage({
             />
           )}
         </>
-      ) : list.query ? (
+      ) : text.query ? (
         <EmptyList
-          title={tr("browse.noMatch", { query: list.query })}
+          title={tr("browse.noMatch", { query: text.query })}
           scanning={false}
           clear={{
             label: tr("browse.clearSearch"),
-            onClick: () => list.setSearch(""),
+            onClick: () => text.setSearch(""),
           }}
+        />
+      ) : chips.length > 0 ? (
+        <EmptyList
+          title={tr("browse.noFilterMatch")}
+          scanning={false}
+          clear={{ label: tr("library.clearFilters"), onClick: list.clear }}
         />
       ) : kind ? (
         <EmptyList

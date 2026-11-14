@@ -1,6 +1,32 @@
 import { defineMessages, plural } from "../../catalog"
 
 export default defineMessages("jobs", {
+  "jobs.task.dispatch-requests.name": "Send requests",
+  "jobs.task.dispatch-requests.description":
+    "Find accepted requests waiting to be sent.",
+  "jobs.task.poll-requests.name": "Read request progress",
+  "jobs.task.poll-requests.description":
+    "Check active requests through each connection once.",
+  "jobs.task.reconcile-requests.name": "Reconcile request arrivals",
+  "jobs.task.reconcile-requests.description":
+    "Find playable films and seasons for accepted requests.",
+
+  "jobs.queue.request-dispatch.name": "Request delivery",
+  "jobs.queue.request-dispatch.description":
+    "Send accepted titles to their library connection.",
+  "jobs.queue.request-progress.name": "Request progress",
+  "jobs.queue.request-progress.description":
+    "Check progress for titles on their way.",
+  "jobs.queue.request-arrival.name": "Request arrivals",
+  "jobs.queue.request-arrival.description":
+    "Match library arrivals and notify followers.",
+  "jobs.queue.notifications.name": "Notifications",
+  "jobs.queue.notifications.description":
+    "Deliver stored notifications through web push.",
+  "jobs.queue.catalog.name": "Catalog",
+  "jobs.queue.catalog.description":
+    "Refresh cached catalog and Discover responses.",
+
   // The jobs panel under Settings → Jobs.
   "jobs.queues": "Background work",
   "jobs.loadFailed": "Couldn't load the jobs. {error}",
@@ -93,6 +119,9 @@ export default defineMessages("jobs", {
   "jobs.task.prefetch-artwork.name": "Fetch artwork",
   "jobs.task.prefetch-artwork.description":
     "Download images the server has no blurred placeholder for yet, posters and backdrops first. Metadata fetches queue their images on their own; this catches up after a restart or a failed download.",
+  "jobs.task.prepare-discover.name": "Prepare Discover",
+  "jobs.task.prepare-discover.description":
+    "Read Discover's rows ahead and fetch their posters, so they show their blurred placeholders the first time someone opens Discover.",
   "jobs.task.make-trickplay.name": "Make trickplay images",
   "jobs.task.make-trickplay.description":
     "Make the seek bar's thumbnails for videos without them, or whose file or settings changed, newest first. Scans queue their new files on their own. Also deletes the images of files that are gone.",
@@ -100,6 +129,9 @@ export default defineMessages("jobs", {
   "jobs.task.clean-sessions.name": "Delete expired sessions",
   "jobs.task.clean-sessions.description":
     "Remove sign-ins that expired from the database.",
+  "jobs.task.forget-browsed-pages.name": "Forget browsed catalog pages",
+  "jobs.task.forget-browsed-pages.description":
+    "Delete pages of the filtered catalog that nobody opened for a week.",
 
   "jobs.task.sync-oidc-accounts.name": "Sync provider accounts",
   "jobs.task.sync-oidc-accounts.description":

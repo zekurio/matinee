@@ -100,7 +100,7 @@ class WatchNextProgramTest {
     private fun item(id: String = "item") = MediaItem(
         id = id, libraryId = "library", fileTitle = "file", relativePath = "not parsed", container = "mkv", mimeType = "video/x-matroska",
         label = ServerLabel("show", "The Show", "2025", "show", "The Return", false, 3, "S02E03", "E03", "show", emptyList()),
-        title = TitleSummary("show", "library", "show", "The Show", 2025, "Show overview", Images(Artwork("poster", null), Artwork("backdrop", null), null), emptyList(), null, null, null, false, false),
+        title = TitleSummary("show", "library", "show", "The Show", 2025, "Show overview", Images(Artwork("poster", null), Artwork("backdrop", null), null), emptyList(), null, null, null, null, false, false),
         seasonNumber = 2, episodeNumber = 3,
         episode = EpisodeInfo("The Return", "Episode overview", null, 10, Artwork("still", null)),
         sizeBytes = 1000, modifiedAt = "2020-01-01T00:00:00Z", durationSeconds = 600.5, probe = null,

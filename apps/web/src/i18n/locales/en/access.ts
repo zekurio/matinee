@@ -36,7 +36,33 @@ export default defineMessages("access", {
     other: "{count} devices at once",
   }),
   "access.streams.hint": "How many devices may play at the same time.",
-  "access.cancel": "Cancel",
+  "access.requests": "Requests",
+  "access.requests.off": "Off",
+  "access.requests.ask": "Needs approval",
+  "access.requests.add": "Add right away",
+  "access.requests.factOff": "No requests",
+  "access.requests.factAsk": "Requests need approval",
+  "access.requests.factAdd": "Requests added right away",
+  // {requests} like "Requests need approval", {limit} like "5 titles every 7 days".
+  "access.requests.factLimited": "{requests}, {limit}",
+  "access.requestLimit": "Limit",
+  "access.requestLimit.none": "No limit",
+  "access.requestLimit.some": "Limited",
+  "access.requestLimit.titles": plural({
+    one: "{count} title",
+    other: "{count} titles",
+  }),
+  "access.requestLimit.period": plural({
+    one: "a day",
+    other: "every {count} days",
+  }),
+  // {titles} like "5 titles", {period} like "every 7 days".
+  "access.requestLimit.rate": "{titles} {period}",
+  "access.requestLimit.titlesField": "Titles",
+  "access.requestLimit.daysField": "Days",
+  // Between the two numbers: [5] titles every [7] days.
+  "access.requestLimit.titlesEvery": "titles every",
+  "access.requestLimit.days": "days",
   "access.done": "Done",
   "access.retry": "Try again",
 

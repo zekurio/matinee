@@ -7,6 +7,111 @@ import { defineMessages } from "../../catalog"
  * pattern would also match a longer text, the longer one comes first.
  */
 export default defineMessages("server", {
+  "server.catalog.titleNotFound": "Matinee can't find this title.",
+  "server.catalog.lookupDown":
+    "Matinee can't look titles up right now. Try again in a minute.",
+  "server.catalog.filterGone":
+    "One of these filters isn't on offer anymore. Clear it and try again.",
+  "server.catalog.filtersRefused":
+    "The catalog didn't take these filters. Change them and try again.",
+  "server.fulfilment.slugConflict":
+    "A connection already uses this slug. Choose another slug.",
+  "server.fulfilment.optionsMissing":
+    "Choose each of the connection's options.",
+  "server.fulfilment.settingsInvalid": "Check the connection's settings.",
+  "server.fulfilment.folderLost":
+    "{folder} isn't in any library Matinee scans for this kind of title. Choose the library it lands in, or save it to another folder.",
+  "server.fulfilment.filmFolder": "Choose the folder films are saved to.",
+  "server.fulfilment.showFolder": "Choose the folder shows are saved to.",
+  "server.fulfilment.noRules": "This connection doesn't take override rules.",
+  "server.fulfilment.ruleCondition": "Give the rule at least one condition.",
+  "server.fulfilment.ruleSettings":
+    "Choose each of the rule's settings from the connection's choices.",
+  "server.fulfilment.ruleSetting":
+    "Choose at least one setting the rule changes.",
+  "server.fulfilment.ruleUsers": "Choose accounts that exist.",
+  "server.fulfilment.ruleMissing": "Rule not found.",
+  "server.fulfilment.rulesChanged":
+    "The rules changed. Reload them and try again.",
+  "server.fulfilment.keywordsNeedTmdb":
+    "Keywords come from TMDB. Set MATINEE_TMDB_API_KEY first.",
+  "server.fulfilment.ruleLanguage": "Choose a language from the list.",
+  "server.catalog.matchFailed":
+    "This title couldn't be matched at the destination library's metadata provider.",
+  "server.requests.missing": "This request isn't available.",
+  "server.requests.seasons": "Choose seasons listed for this show.",
+  "server.requests.notNow": "You can't request this title right now.",
+  "server.requests.declined":
+    "This title was declined, so it can't be requested until an admin allows it again.",
+  "server.requests.declineWaiting":
+    "Only a waiting request can be declined. Give up on an accepted one instead.",
+  "server.requests.giveUpAccepted":
+    "Only an accepted request that hasn't arrived can be given up.",
+  "server.requests.notDeclined":
+    "This request isn't declined any more. Reload the list.",
+  "server.requests.cancel": "Cancel your request to stop following this title.",
+  "server.requests.cursor": "Reload this list and try again.",
+  "server.requests.noConnection":
+    "Choose a usable fulfilment connection for this library.",
+  "server.requests.unresolvedTitle":
+    "Cannot resolve the title identity. Check its metadata match and retry.",
+  "server.requests.deliveryFailed":
+    "Request delivery failed. Check the connection and retry.",
+  "server.requests.moveTarget": "Choose a library this title can go to.",
+  "server.requests.moveWaiting":
+    "Only a waiting request can move to another library.",
+  "server.requests.moveChanged":
+    "This request changed. Reload the list and try again.",
+  "server.requests.moveHeld":
+    "{library} already has this show, so its new seasons go there too.",
+  "server.requests.moveTaken":
+    "{library} already has a request for this title. Leave this one where it is, or decline it.",
+
+  "server.notifications.endpoint": "Use a supported browser push service.",
+  "server.fulfilment.keyFile":
+    "Cannot read the connection key file. Check its path and permissions.",
+  "server.fulfilment.source.manual": "By hand",
+  "server.fulfilment.field.baseUrl": "Base URL",
+  "server.fulfilment.field.qualityProfile": "Quality profile",
+  "server.fulfilment.field.rootFolder": "Root folder",
+  "server.fulfilment.field.tags": "Tags",
+  "server.fulfilment.field.minimumAvailability": "Minimum availability",
+  "server.fulfilment.field.seasonFolders": "Season folders",
+  "server.fulfilment.field.monitorNewSeasons": "Monitor new seasons",
+  "server.fulfilment.field.animeSeriesType": "Anime series type",
+  "server.fulfilment.field.animeQualityProfile": "Anime quality profile",
+  "server.fulfilment.field.animeRootFolder": "Anime root folder",
+  "server.fulfilment.field.animeTags": "Anime tags",
+  "server.fulfilment.field.externalUrl": "External URL",
+  "server.fulfilment.field.search": "Automatic search",
+  "server.fulfilment.field.tagRequests": "Tag requests",
+  "server.fulfilment.field.filmsFolder": "Films folder",
+  "server.fulfilment.field.showsFolder": "Shows folder",
+  "server.fulfilment.availability.announced": "Announced",
+  "server.fulfilment.availability.inCinemas": "In cinemas",
+  "server.fulfilment.availability.released": "Released",
+  "server.fulfilment.field.seriesType": "Series type",
+  "server.fulfilment.httpUrl": "Use an HTTP or HTTPS URL.",
+  "server.fulfilment.unknownSource": "Choose an available fulfilment source.",
+  "server.fulfilment.keyTwice": "Set the connection key or its file, not both.",
+  "server.fulfilment.connectionMissing": "Connection not found.",
+  "server.fulfilment.unreachable":
+    "Cannot reach the connection. Check its URL and network access.",
+  "server.fulfilment.keyRejected":
+    "The connection rejected the API key. Check the saved key or environment variable.",
+  "server.fulfilment.operationRejected":
+    "The connection rejected the operation. Check its configuration and logs.",
+  "server.fulfilment.notRadarr": "This URL is not a Radarr server.",
+  "server.fulfilment.notSonarr": "This URL is not a Sonarr server.",
+  "server.fulfilment.titleNotFound":
+    "The connection could not find this title. Check its external identifier.",
+  "server.fulfilment.titleRemoved":
+    "The title was removed from the connection. Retry the request.",
+  "server.fulfilment.transferFailed":
+    "A transfer failed. Check the connection's queue.",
+  "server.fulfilment.seriesType.standard": "Standard",
+  "server.fulfilment.seriesType.daily": "Daily",
+  "server.fulfilment.seriesType.anime": "Anime",
   "server.downloads.tooManyAudioTracks":
     "A download can hold at most 16 audio tracks.",
   "server.downloads.selectedAudioUnavailable":

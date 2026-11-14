@@ -97,6 +97,21 @@ export const account = {
     ),
   },
 
+  library: {
+    setPreferences: authed.account.library.setPreferences.handler(
+      async ({ context, input }) => {
+        const [row] = await db
+          .update(user)
+          // Drizzle leaves out keys that are undefined.
+          .set({ showSpecials: input.showSpecials, updatedAt: new Date() })
+          .where(eq(user.id, context.user.id))
+          .returning()
+        if (!row) throw notFound("Account not found.")
+        return publicUser(row)
+      },
+    ),
+  },
+
   passkeys: {
     list: authed.account.passkeys.list.handler(async ({ context }) => {
       const rows = await db

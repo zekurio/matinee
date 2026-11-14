@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Made by scripts/web_strings.py from apps/web/src/i18n/locales/en/catalog.ts. Don't edit. -->
+<resources>
+    <string name="web_catalog_notHere">Not here yet</string>
+    <string name="web_catalog_state_asked">Requested</string>
+    <string name="web_catalog_state_coming">On its way</string>
+    <string name="web_catalog_state_comingPercent">On its way · %1$s</string>
+    <string name="web_catalog_state_out">Out %1$s</string>
+    <string name="web_catalog_state_notOut">Not out yet</string>
+    <string name="web_catalog_state_unavailable">Not available</string>
+    <string name="web_catalog_badge_here">Here now</string>
+    <string name="web_catalog_badge_fresh">New, from your request</string>
+    <string name="web_catalog_season_airing">Airing · %1$s of %2$s</string>
+    <string name="web_catalog_page_stale">These details may be out of date.</string>
+    <string name="web_catalog_page_badLink">This link doesn\'t lead to a title.</string>
+    <string name="web_catalog_related_moreLikeThis">More like this</string>
+    <string name="web_catalog_related_stale">Some of these may be out of date.</string>
+    <string name="web_catalog_search_failed">Couldn\'t search for new titles right now.</string>
+    <string name="web_catalog_search_stale">Some of these may be out of date.</string>
+</resources>

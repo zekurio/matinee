@@ -62,7 +62,8 @@ export type BaseRecord = {
   name: string
   year?: string
   image?: string | null
-  genres?: { name: string }[]
+  /** English names, whatever the language; `slug` is `anime` for anime. */
+  genres?: { name: string; slug?: string }[]
   status?: { name?: string } | null
   artworks?: Artwork[]
   remoteIds?: RemoteId[]

@@ -9,7 +9,8 @@ import {
   SUBTITLE_MODES,
   videoCodecName,
 } from "@matinee/contracts"
-import { useQuery } from "@tanstack/react-query"
+import { toast } from "@matinee/ui/components/sonner"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import type { ReactNode } from "react"
 import { useShallow } from "zustand/shallow"
 
@@ -21,7 +22,7 @@ import {
   updatePlaybackPreferences,
   usePlaybackPreferences,
 } from "@/lib/playback-sync"
-import { orpc } from "@/lib/rpc"
+import { client, errorMessage, orpc } from "@/lib/rpc"
 import { browserVideoCodecs } from "@/lib/video-support"
 import {
   type AudioCodecChoice,
@@ -42,7 +43,8 @@ import {
 const UNSET = ""
 
 /**
- * How videos play: the languages and skips, which the account syncs, and
+ * How videos play: the languages, skips, and specials, which the account
+ * syncs, and
  * the quality, codecs, and the next episode, which stay with this browser.
  * Only what this browser and the server both support is offered.
  */
@@ -52,6 +54,7 @@ export function PlaybackPanel() {
     <SettingsSections>
       <LanguagesSection options={options} />
       <SkipsSection />
+      <ShowsSection />
       <DeviceSection options={options} />
       <PassthroughSection />
     </SettingsSections>
@@ -188,6 +191,42 @@ function SkipsSection() {
           onChange={(value) =>
             updatePlaybackPreferences({ skipForwardSeconds: Number(value) })
           }
+        />
+      </SettingRows>
+    </SettingsSubsection>
+  )
+}
+
+/**
+ * Whether a show's specials list with its seasons, which the account
+ * syncs and the server applies. Everything listed loads again after it.
+ */
+function ShowsSection() {
+  const session = useQuery(orpc.auth.session.queryOptions())
+  const queryClient = useQueryClient()
+  const update = useMutation({
+    mutationFn: (showSpecials: boolean) =>
+      client.account.library.setPreferences({ showSpecials }),
+    onSuccess: async (saved) => {
+      queryClient.setQueryData(orpc.auth.session.queryKey(), { user: saved })
+      await queryClient.invalidateQueries()
+    },
+    onError: (error) =>
+      toast.error(tr("playback.specials.failed"), {
+        description: errorMessage(error),
+      }),
+  })
+  // The switch moves at once; a failure puts it back.
+  const checked = update.isPending
+    ? update.variables
+    : (session.data?.user?.library.showSpecials ?? true)
+  return (
+    <SettingsSubsection id="shows" title={tr("playback.shows.title")}>
+      <SettingRows>
+        <SwitchRow
+          title={tr("playback.specials.title")}
+          checked={checked}
+          onChange={(value) => update.mutate(value)}
         />
       </SettingRows>
     </SettingsSubsection>

@@ -1,4 +1,5 @@
 import {
+  RequestLimit,
   type AccessGroup,
   type AccessGroupInput,
   AccessOverride,
@@ -91,6 +92,8 @@ async function read(): Promise<Snapshot> {
         maxBitrate: row.maxBitrate,
         transcode: row.transcode,
         downloads: row.downloads,
+        requests: row.requests,
+        requestLimit: RequestLimit.parse(row.requestLimit),
         maxStreams: row.maxStreams,
       },
     })
@@ -304,6 +307,8 @@ function policyColumns(policy: AccessPolicy) {
     maxBitrate: policy.maxBitrate,
     transcode: policy.transcode,
     downloads: policy.downloads,
+    requests: policy.requests,
+    requestLimit: policy.requestLimit,
     maxStreams: policy.maxStreams,
   }
 }

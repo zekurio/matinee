@@ -8,7 +8,7 @@ import { toast } from "@matinee/ui/components/sonner"
 import { cn } from "@matinee/ui/lib/utils"
 import { useQueryClient } from "@tanstack/react-query"
 import { Link, useNavigate } from "@tanstack/react-router"
-import { CheckIcon, FilmIcon, PlayIcon } from "lucide-react"
+import { CheckIcon, FilmIcon, type LucideIcon, PlayIcon } from "lucide-react"
 import type { ReactNode } from "react"
 
 import { tr } from "@/i18n"
@@ -280,21 +280,29 @@ export const textLink =
 // The play control in the middle of a card's picture, as Jellyfin has it:
 // a bare icon while the card is hovered or focused, which gets a blurred
 // circle and the accent once the pointer is on it.
-const playControl =
+export const playControl =
   "group/play focus-visible:ring-ring absolute top-1/2 left-1/2 grid size-16 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full text-white opacity-0 transition-opacity outline-none group-has-[:focus-visible]/card:opacity-100 group-hover/card:opacity-100 group-has-[[aria-expanded=true]]/card:opacity-100 focus-visible:ring-2 motion-reduce:transition-none"
 
-/** The inside of a {@link playControl}. */
-function PlayGlyph() {
+/** The inside of a {@link playControl}: Play, or `icon` in its place. */
+export function PlayGlyph({ icon: Icon }: { icon?: LucideIcon }) {
   return (
     <>
       <span
         aria-hidden
         className="absolute inset-0 rounded-full bg-black/30 opacity-0 backdrop-blur-md transition-opacity group-hover/play:opacity-100 group-focus-visible/play:opacity-100 motion-reduce:transition-none"
       />
-      <PlayIcon
-        aria-hidden
-        className="group-hover/play:text-primary group-focus-visible/play:text-primary relative size-6 translate-x-0.5 fill-current drop-shadow-[0_1px_3px_rgb(0_0_0/0.6)] transition-colors motion-reduce:transition-none"
-      />
+      {Icon ? (
+        <Icon
+          aria-hidden
+          strokeWidth={2.5}
+          className="group-hover/play:text-primary group-focus-visible/play:text-primary relative size-7 drop-shadow-[0_1px_3px_rgb(0_0_0/0.6)] transition-colors motion-reduce:transition-none"
+        />
+      ) : (
+        <PlayIcon
+          aria-hidden
+          className="group-hover/play:text-primary group-focus-visible/play:text-primary relative size-6 translate-x-0.5 fill-current drop-shadow-[0_1px_3px_rgb(0_0_0/0.6)] transition-colors motion-reduce:transition-none"
+        />
+      )}
     </>
   )
 }

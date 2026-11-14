@@ -1,6 +1,7 @@
-import type { AccessSource } from "@matinee/contracts"
+import type { AccessSource, RequestLimit } from "@matinee/contracts"
 import { sql } from "drizzle-orm"
 import {
+  jsonb,
   boolean,
   index,
   integer,
@@ -39,6 +40,10 @@ export const accessGroup = pgTable(
     maxBitrate: integer(),
     transcode: boolean().notNull().default(true),
     downloads: boolean().notNull().default(true),
+    /** Whether members may ask for titles, and whether an ask needs approval. */
+    requests: text().$type<"off" | "ask" | "add">().notNull().default("off"),
+    /** Titles per days. Null for no limit. Readers parse the JSON. */
+    requestLimit: jsonb().$type<RequestLimit>(),
     /** Null for no limit. */
     maxStreams: integer(),
     createdAt: createdAt(),
