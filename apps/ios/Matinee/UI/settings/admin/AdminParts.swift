@@ -191,18 +191,25 @@ private struct SaveBar: View {
     let still = reduceMotion
     VStack(spacing: 0) {
       Rectangle().fill(palette.border).frame(height: 1)
-      // Side by side while they fit; the words above the buttons when a language or a text size makes them long.
+      // Side by side while they fit; the words above the buttons when a
+      // language or a text size makes them long, and the buttons one above
+      // the other when even they don't fit side by side.
       ViewThatFits(in: .horizontal) {
         HStack(spacing: 8) {
           status.frame(maxWidth: .infinity, alignment: .leading)
-          buttons
+          HStack(spacing: 8) { buttons }.fixedSize()
         }
         VStack(alignment: .leading, spacing: 8) {
           status.frame(maxWidth: .infinity, alignment: .leading)
           HStack(spacing: 8) {
             Spacer(minLength: 0)
-            buttons
+            HStack(spacing: 8) { buttons }.fixedSize()
           }
+        }
+        VStack(alignment: .leading, spacing: 8) {
+          status.frame(maxWidth: .infinity, alignment: .leading)
+          VStack(alignment: .trailing, spacing: 4) { buttons }
+            .frame(maxWidth: .infinity, alignment: .trailing)
         }
       }
       .padding(.leading, Gutter)
@@ -234,23 +241,20 @@ private struct SaveBar: View {
     .accessibilityElement(children: .combine)
   }
 
-  private var buttons: some View {
+  /// Reset and Save, for a row or a column.
+  @ViewBuilder private var buttons: some View {
     let pending = feedback == .pending
-    return HStack(spacing: 8) {
-      MatineeButton(.ghost, action: onReset) { Text(Str.webCommonSaveBarReset) }
-        .disabled(!dirty || pending)
-        .fixedSize()
-      MatineeButton(.primary, action: onSave) {
-        switch feedback {
-        case .pending: ProgressView().controlSize(.small).tint(palette.accentForeground)
-        case .success: LucideIcon(.check, size: 16)
-        default: EmptyView()
-        }
-        Text(saveText)
+    MatineeButton(.ghost, action: onReset) { Text(Str.webCommonSaveBarReset) }
+      .disabled(!dirty || pending)
+    MatineeButton(.primary, action: onSave) {
+      switch feedback {
+      case .pending: ProgressView().controlSize(.small).tint(palette.accentForeground)
+      case .success: LucideIcon(.check, size: 16)
+      default: EmptyView()
       }
-      .disabled(!(pending || feedback == .success || (dirty && canSave)))
-      .fixedSize()
+      Text(saveText)
     }
+    .disabled(!(pending || feedback == .success || (dirty && canSave)))
   }
 
   private var isFailed: Bool {

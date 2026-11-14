@@ -118,6 +118,8 @@ private func hexColor(_ hex: String) -> Color { RGB(hex: hex)?.color ?? .clear }
 private struct ColorRow: View {
   let label: String
   @Binding var value: String
+  /// Wide enough for "#rrggbb" at every text size.
+  @ScaledMetric(relativeTo: .body) private var fieldWidth: CGFloat = 144
   @Environment(\.palette) private var palette
 
   var body: some View {
@@ -131,6 +133,7 @@ private struct ColorRow: View {
         Text(label).textStyle(.bodyLarge)
         field
       }
+      .frame(maxWidth: .infinity, alignment: .leading)
     }
     .padding(.horizontal, 16)
     .padding(.vertical, 10)
@@ -155,7 +158,7 @@ private struct ColorRow: View {
         .accessibilityLabel(label)
     }
     .padding(.horizontal, 10)
-    .frame(width: 144)
+    .frame(width: fieldWidth)
     .frame(minHeight: 40)
     .background(palette.secondary, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
     .overlay {

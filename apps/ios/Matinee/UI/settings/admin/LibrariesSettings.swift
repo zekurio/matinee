@@ -115,8 +115,11 @@ private struct LibraryRow: View {
   let onEdit: () -> Void
   let onRemove: () -> Void
   @Environment(\.palette) private var palette
+  @Environment(\.dynamicTypeSize) private var dynamicType
 
   var body: some View {
+    // One line each, as Android's; whole at the accessibility sizes rather than cut off.
+    let lines = dynamicType.isAccessibilitySize ? nil : 1
     Menu {
       Section(library.paths.joined(separator: ", ")) {
         MenuItem(.refreshCw, Str.webLibrariesScanNow, action: onScan)
@@ -130,9 +133,10 @@ private struct LibraryRow: View {
       HStack(spacing: 14) {
         LucideIcon(library.kind == LibraryKind.shows ? .tv : .film, size: 20, tint: palette.muted)
         VStack(alignment: .leading, spacing: 0) {
-          Text(library.name).textStyle(.bodyLarge).foregroundStyle(palette.foreground).lineLimit(1)
-          Text(status).textStyle(.bodySmall).foregroundStyle(palette.muted).lineLimit(1)
+          Text(library.name).textStyle(.bodyLarge).foregroundStyle(palette.foreground).lineLimit(lines)
+          Text(status).textStyle(.bodySmall).foregroundStyle(palette.muted).lineLimit(lines)
         }
+        .multilineTextAlignment(.leading)
         .frame(maxWidth: .infinity, alignment: .leading)
         if state == .scanning || library.refreshing {
           ProgressView().controlSize(.small).tint(palette.accent)
@@ -229,7 +233,7 @@ private struct LibraryEditor: View {
     }
     .toolbar {
       ToolbarItem(placement: .topBarTrailing) {
-        SaveButton(
+        EditorSaveButton(
           label: existing == nil ? Str.webLibrariesBrowserAdd : Str.webLibrariesDialogSave,
           busy: saver.saving, action: save
         )
@@ -332,7 +336,7 @@ private struct LibraryEditor: View {
 }
 
 /// The bar's button that saves a page's form: its name, or a spinner while the save is out.
-struct SaveButton: View {
+private struct EditorSaveButton: View {
   let label: String
   let busy: Bool
   let action: () -> Void

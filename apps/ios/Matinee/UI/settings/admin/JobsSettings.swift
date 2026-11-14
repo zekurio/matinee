@@ -186,6 +186,7 @@ private struct QueueRow: View {
   let onTask: (TaskAction) -> Void
   let onOpen: () -> Void
   @Environment(\.palette) private var palette
+  @Environment(\.dynamicTypeSize) private var dynamicType
 
   var body: some View {
     Button(action: onOpen) {
@@ -194,7 +195,7 @@ private struct QueueRow: View {
           Text(queueName(queue)).textStyle(.bodyLarge).foregroundStyle(palette.foreground)
           Text(queueStatus(queue)).textStyle(.bodySmall)
             .foregroundStyle(queue.failed > 0 ? palette.danger : palette.muted)
-            .lineLimit(1)
+            .lineLimit(dynamicType.isAccessibilitySize ? nil : 1)
           if let task { TaskStatus(task: task) }
         }
         .multilineTextAlignment(.leading)

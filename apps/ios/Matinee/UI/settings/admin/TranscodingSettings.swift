@@ -251,7 +251,8 @@ private struct FfmpegSection: View {
           VStack(alignment: .leading, spacing: 0) {
             Text(verbatim: "ffmpeg").textStyle(.bodyLarge)
             if error == nil {
-              Text(Str.webTranscodingFfmpegDetected(version, relativeTime(capabilities.detectedAt)))
+              // The time as the web shows it: a relative one reads wrong in German's "erkannt am …".
+              Text(Str.webTranscodingFfmpegDetected(version, detectedAt(capabilities.detectedAt)))
                 .textStyle(.bodySmall).foregroundStyle(palette.muted)
             }
           }
@@ -272,6 +273,11 @@ private struct FfmpegSection: View {
       }
     }
   }
+}
+
+/// When ffmpeg was looked at, as a date and time in the app's language.
+private func detectedAt(_ at: String) -> String {
+  parseInstant(at).map { $0.formatted(Date.FormatStyle(date: .abbreviated, time: .shortened).locale(.app)) } ?? at
 }
 
 private func blank(_ text: String) -> String? {
