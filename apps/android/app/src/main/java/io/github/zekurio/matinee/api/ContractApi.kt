@@ -1294,16 +1294,6 @@ class HomeApi internal constructor(private val transport: ApiTransport) {
             ListSerializer(NextUpEntry.serializer()),
         )
 
-    /** `GET /home/next-seasons` */
-    suspend fun nextSeasons(limit: Int? = null): List<NextSeasonEntry> =
-        transport.call(
-            "GET",
-            listOf("home", "next-seasons"),
-            listOf("limit" to limit?.toString()),
-            null,
-            ListSerializer(NextSeasonEntry.serializer()),
-        )
-
     /** `GET /home/featured` */
     suspend fun featured(limit: Int? = null): List<FeaturedTitle> =
         transport.call(

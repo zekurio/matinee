@@ -97,8 +97,8 @@ export default defineMessages("title", {
   // next-up.tsx
   "title.nextUp.continue": "Continue watching",
   "title.nextUp.next": "Next up",
-  // In Next up's place once the viewer has watched every season here and
-  // the next one isn't on the server.
+  // A season someone asked for, on its show's card in the requests rail
+  // (asked.tsx).
   "title.nextUp.notHere": "{season} isn't here yet",
   "title.nextUp.seasonState": "{season} · {state}",
 

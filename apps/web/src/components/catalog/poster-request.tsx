@@ -61,23 +61,6 @@ const icons = {
 } satisfies Record<PosterAction, LucideIcon>
 
 /**
- * The darkening under a poster's button, from its lower edge up, so the
- * button reads on any picture. `hover` shows it only with the button.
- */
-export function PosterShade({ hover = false }: { hover?: boolean }) {
-  return (
-    <span
-      aria-hidden
-      className={cn(
-        "pointer-events-none absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/75 via-black/35 to-transparent",
-        hover &&
-          "opacity-0 transition-opacity group-hover/card:opacity-100 group-has-[:focus-visible]/card:opacity-100 motion-reduce:transition-none",
-      )}
-    />
-  )
-}
-
-/**
  * Whether a title has a button, on its card's poster or in its page's
  * row: one to press, or a Request that can't be, kept in place with its
  * reason.

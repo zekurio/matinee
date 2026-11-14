@@ -59,10 +59,8 @@ import io.github.zekurio.matinee.ui.kit.Gap
 import io.github.zekurio.matinee.ui.kit.Gutter
 import io.github.zekurio.matinee.ui.mediaFlags
 import io.github.zekurio.matinee.ui.rememberLoader
-import io.github.zekurio.matinee.ui.requests.NextSeasonRow
 import io.github.zekurio.matinee.ui.requests.RestOfSeasonCard
 import io.github.zekurio.matinee.ui.requests.ShowGaps
-import io.github.zekurio.matinee.ui.requests.offersSeason
 import io.github.zekurio.matinee.ui.requests.rememberShowGaps
 import io.github.zekurio.matinee.ui.seasonName
 import io.github.zekurio.matinee.ui.theme.Palette
@@ -112,11 +110,8 @@ private fun TitlePage(title: Title, reload: () -> Unit) {
     // One season, so no specials either: its episodes go right on the show's page.
     val only = title.seasons.singleOrNull()
     val listState = rememberLazyListState()
-    // What the server lacks of a show: seasons, the rest of one, the next one.
+    // What the server lacks of a show: seasons, and the rest of one.
     val gaps = rememberShowGaps(title, onRecovered = reload)
-    // Play's episode, as Next up offers it, or once every one here is watched, the next season to ask for.
-    val episode = next?.takeIf { it.progress?.completed != true }
-    val nextSeason = gaps?.next?.takeIf { episode == null && offersSeason(it) }
     Box(Modifier.fillMaxSize()) {
         LazyColumn(
             Modifier.fillMaxSize(),
@@ -164,8 +159,6 @@ private fun TitlePage(title: Title, reload: () -> Unit) {
             if (title.isShow) {
                 if (next != null && showsNextUp(title)) {
                     item(key = "nextUp") { NextUpEpisode(next) }
-                } else if (gaps != null && nextSeason != null) {
-                    item(key = "nextSeason") { NextSeasonRow(title, gaps, nextSeason) }
                 }
                 if (only != null) {
                     item(key = "episodes") { SeasonEpisodesRail(title, only, next, gaps) }

@@ -170,40 +170,6 @@ data class CatalogSeason(
     val selected: Boolean,
 )
 
-@Serializable
-data class Images(
-    val poster: Artwork?,
-    val backdrop: Artwork?,
-    val logo: Artwork?,
-)
-
-@Serializable
-data class TitleSummary(
-    val id: String,
-    val libraryId: String,
-    val kind: String,
-    val name: String,
-    val year: Int?,
-    val overview: String?,
-    val images: Images,
-    val genres: List<String>,
-    val rating: Double?,
-    val contentRating: String?,
-    val runtimeMinutes: Int?,
-    val originalLanguage: String?,
-    val favorite: Boolean,
-    val watched: Boolean,
-)
-
-@Serializable
-data class NextSeasonEntry(
-    val title: TitleSummary,
-    val ref: CatalogRef,
-    val libraryId: String,
-    val season: CatalogSeason,
-    val lastWatchedAt: String,
-)
-
 object CreditKind {
     const val ACTOR = "actor"
     const val CREATOR = "creator"
@@ -277,6 +243,31 @@ data class RelatedRail(
 data class RelatedRails(
     val rails: List<RelatedRail>,
     val stale: Boolean,
+)
+
+@Serializable
+data class Images(
+    val poster: Artwork?,
+    val backdrop: Artwork?,
+    val logo: Artwork?,
+)
+
+@Serializable
+data class TitleSummary(
+    val id: String,
+    val libraryId: String,
+    val kind: String,
+    val name: String,
+    val year: Int?,
+    val overview: String?,
+    val images: Images,
+    val genres: List<String>,
+    val rating: Double?,
+    val contentRating: String?,
+    val runtimeMinutes: Int?,
+    val originalLanguage: String?,
+    val favorite: Boolean,
+    val watched: Boolean,
 )
 
 @Serializable
@@ -2869,7 +2860,6 @@ data class CatalogMissingSeasonsOutput(
     val stale: Boolean,
     val seasons: List<CatalogSeason>,
     val partialSeasons: List<CatalogSeason>,
-    val nextSeason: CatalogSeason?,
     val defaultScope: ShowScope,
     val destinations: List<CatalogDestination>,
 )

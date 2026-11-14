@@ -280,10 +280,6 @@ fun chooserLabel(chosen: List<CatalogSeason>, future: Boolean, first: Boolean): 
 fun chooserStart(seasons: List<CatalogSeason>, only: Int? = null): Set<Int> =
     seasons.filter { (if (only != null) it.number == only else it.selected) && it.availability.asTitle().asks }.map { it.number }.toSet()
 
-/** Whether there's anything to say about a season the server lacks: an ask or a state. */
-fun offersSeason(season: CatalogSeason): Boolean =
-    season.availability.state != AvailabilityState.NONE || season.availability.asTitle().asks
-
 /** Numbered seasons in order, then the specials, as the web's rail and chooser have them. */
 fun bySeason(seasons: List<CatalogSeason>): List<CatalogSeason> =
     seasons.sortedBy { if (it.number == 0) Int.MAX_VALUE else it.number }

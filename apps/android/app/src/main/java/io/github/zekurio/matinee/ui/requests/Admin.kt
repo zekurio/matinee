@@ -205,17 +205,16 @@ fun AddButton(item: AdminRequestItem, modifier: Modifier = Modifier, page: Boole
 }
 
 /**
- * The quiet button beside [AddButton], opening the queue's Decline sheet:
- * [look] Ghost off a picture, Glass on one.
+ * The quiet button beside [AddButton], opening the queue's Decline sheet.
  */
 @Composable
-fun DeclineButton(item: AdminRequestItem, modifier: Modifier = Modifier, page: Boolean = false, look: ButtonLook = ButtonLook.Ghost) {
+fun DeclineButton(item: AdminRequestItem, modifier: Modifier = Modifier, page: Boolean = false) {
     val hub = LocalRequests.current
     var declining by remember { mutableStateOf(false) }
     MatineeButton(
         onClick = { declining = true },
         modifier = modifier,
-        look = look,
+        look = ButtonLook.Ghost,
         height = if (page) 44.dp else 36.dp,
         contentPadding = if (page) PaddingValues(horizontal = 16.dp) else PaddingValues(horizontal = 10.dp),
     ) {

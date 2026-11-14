@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -48,22 +47,18 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.Artwork
-import io.github.zekurio.matinee.api.ArtworkSize
 import io.github.zekurio.matinee.api.Availability
 import io.github.zekurio.matinee.api.CatalogRef
 import io.github.zekurio.matinee.api.CatalogSeason
 import io.github.zekurio.matinee.api.CatalogTitleSummary
-import io.github.zekurio.matinee.api.NextSeasonEntry
 import io.github.zekurio.matinee.api.ShowScope
 import io.github.zekurio.matinee.api.summary
 import io.github.zekurio.matinee.app
 import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.LocalNavigator
 import io.github.zekurio.matinee.ui.Motion
-import io.github.zekurio.matinee.ui.components.ArtFrame
 import io.github.zekurio.matinee.ui.components.CardText
 import io.github.zekurio.matinee.ui.components.LocalApi
-import io.github.zekurio.matinee.ui.components.Picture
 import io.github.zekurio.matinee.ui.components.PosterArt
 import io.github.zekurio.matinee.ui.components.PosterCard
 import io.github.zekurio.matinee.ui.components.art
@@ -252,36 +247,6 @@ fun CatalogSeasonCard(
             CatalogBadge(availability, Modifier.align(Alignment.TopEnd).padding(6.dp))
         }
         CardText(label, line)
-    }
-}
-
-/**
- * A show in Home's Next up whose next season isn't on the server, the
- * size of an episode's card beside it: the show's backdrop, the season's
- * state in the corner, and "Season 4 isn't here yet". A tap opens the
- * show, whose Next up has the ask with a button.
- */
-@Composable
-fun NextSeasonCard(entry: NextSeasonEntry, modifier: Modifier = Modifier) {
-    val api = LocalApi.current
-    val nav = LocalNavigator.current
-    val res = LocalResources.current
-    val hub = LocalRequests.current
-    val title = entry.title
-    val season = hub.season(entry.ref, entry.season)
-    val availability = season.availability.asTitle()
-    val line = nextSeasonLine(season.number, availability, res)
-    Column(modifier) {
-        Box(Modifier.cardTap({ nav.title(title.id) }, label = "${title.name}, $line")) {
-            ArtFrame(title.name, 16f / 9f) {
-                Picture(
-                    listOfNotNull(api.art(title.images.backdrop, ArtworkSize.Small), api.art(title.images.poster)),
-                    Modifier.fillMaxSize(),
-                )
-                CatalogBadge(availability, Modifier.align(Alignment.TopEnd).padding(6.dp))
-            }
-        }
-        CardText(title.name, line)
     }
 }
 

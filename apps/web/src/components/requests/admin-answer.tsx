@@ -82,14 +82,9 @@ export function requestedTip(item: AdminRequestItem): BadgeTip {
 
 /**
  * Where the buttons are drawn: `page`, leading a title page's row as
- * Request does there; `poster`, along a poster's lower edge, stacked; or
- * `plain`, off a picture.
+ * Request does there, or `plain`, off a picture.
  */
-export type AnswerLook = "page" | "poster" | "plain"
-
-// On a poster, over its shade, as a poster's secondary button is drawn.
-const glass =
-  "border-white/15 bg-white/15 text-white backdrop-blur-md hover:bg-white/25 hover:text-white data-popup-open:bg-white/25"
+export type AnswerLook = "page" | "plain"
 
 /**
  * Add, in the main button's place and style, and Decline beside it, as
@@ -114,7 +109,6 @@ export function AdminAnswer({
   const { library } = useGoesTo(item)
   const choice = choosesLibrary(item)
   const page = look === "page"
-  const poster = look === "poster"
   const size = page ? "lg" : "sm"
 
   // The buttons go once answered; focus moves on to whatever the row
@@ -138,16 +132,12 @@ export function AdminAnswer({
       className={cn(
         "min-w-0",
         page && "max-sm:h-11 max-sm:flex-1",
-        poster && "w-full px-2 shadow-lg shadow-black/30 max-sm:[&>svg]:hidden",
         choice && "rounded-r-none",
       )}
     >
       <CheckIcon aria-hidden strokeWidth={page ? 2 : 2.5} />
       <span className="truncate">
-        {/* A poster has no room for the library; its chevron names it. */}
-        {choice && !poster
-          ? tr("requests.addTo", { library })
-          : tr("requests.add")}
+        {choice ? tr("requests.addTo", { library }) : tr("requests.add")}
       </span>
     </Button>
   )
@@ -155,21 +145,10 @@ export function AdminAnswer({
   return (
     <div
       ref={root}
-      className={cn(
-        "flex min-w-0 gap-2",
-        page && "contents",
-        poster && "flex-col gap-1.5",
-        className,
-      )}
+      className={cn("flex min-w-0 gap-2", page && "contents", className)}
     >
       {choice ? (
-        <div
-          className={cn(
-            "flex min-w-0",
-            page && "max-sm:flex-1",
-            poster && "w-full",
-          )}
-        >
+        <div className={cn("flex min-w-0", page && "max-sm:flex-1")}>
           {add}
           <GoesToChooser
             item={item}
@@ -183,7 +162,6 @@ export function AdminAnswer({
                 className={cn(
                   "border-l-primary-foreground/25 shrink-0 rounded-l-none",
                   page ? "px-2.5 max-sm:h-11" : "px-1.5",
-                  poster && "shadow-lg shadow-black/30",
                 )}
               >
                 <ChevronDownIcon aria-hidden />
@@ -210,7 +188,6 @@ export function AdminAnswer({
             className={cn(
               page &&
                 "hover:bg-foreground/10 data-popup-open:bg-foreground/10 max-sm:h-11",
-              poster && glass,
               look === "plain" && "hover:bg-muted data-popup-open:bg-muted",
             )}
           >

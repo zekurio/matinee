@@ -1,4 +1,4 @@
-import type { RequestItem } from "@matinee/contracts"
+import type { Availability, RequestItem } from "@matinee/contracts"
 import type { t } from "@matinee/contracts/schema"
 import { useQuery } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
@@ -16,12 +16,12 @@ import {
   refKey,
   useLiveAvailability,
 } from "@/components/catalog/catalog-data"
-import { declineLine } from "@/components/catalog/words"
+import { declineLine, stateWord } from "@/components/catalog/words"
 import { cardClass, CardText, PosterArt } from "@/components/media-item"
 import { Rail, RailItem } from "@/components/rail"
-import { seasonLine } from "@/components/title/next-season"
 import { tr } from "@/i18n"
-import { art } from "@/lib/media"
+import { formatPercent } from "@/lib/format"
+import { art, seasonName } from "@/lib/media"
 import { orpc } from "@/lib/rpc"
 
 export type AskedItem = t.infer<typeof RequestItem>
@@ -79,6 +79,24 @@ export function AskedCard({
     return <ArrivedCard title={item.title} titleId={here} fresh={fresh} />
   }
   return <CatalogCard title={item.title} availability={availability} />
+}
+
+/** "Season 4 isn't here yet" while it can be asked for, else its state. */
+function seasonLine(season: {
+  number: number
+  availability: Availability
+}): string {
+  const label = seasonName(season.number)
+  const { availability } = season
+  const state =
+    availability.state === "coming" && availability.progress !== null
+      ? tr("catalog.state.comingPercent", {
+          percent: formatPercent(availability.progress),
+        })
+      : stateWord(availability)
+  return state
+    ? tr("title.nextUp.seasonState", { season: label, state })
+    : tr("title.nextUp.notHere", { season: label })
 }
 
 /**

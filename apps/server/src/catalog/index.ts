@@ -348,12 +348,6 @@ export async function missingSeasons(viewer: Viewer, titleId: string) {
     ref: { kind: "show", provider: row.provider, providerId: row.providerId },
     libraryId: row.libraryId,
   })
-  const last = Math.max(
-    0,
-    ...detail.seasons
-      .filter((season) => season.availability.episodesHere > 0)
-      .map((season) => season.number),
-  )
   const missing = detail.seasons.filter(
     (season) => season.availability.episodesHere === 0,
   )
@@ -366,7 +360,6 @@ export async function missingSeasons(viewer: Viewer, titleId: string) {
         season.availability.episodesHere > 0 &&
         season.availability.episodesHere < season.availability.episodesAired,
     ),
-    nextSeason: missing.find((season) => season.number > last) ?? null,
     defaultScope: detail.defaultScope ?? { seasons: [], future: true },
     destinations: detail.destinations,
   }

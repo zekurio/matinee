@@ -1,19 +1,13 @@
 package io.github.zekurio.matinee.ui.requests
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -29,7 +23,6 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.CatalogInput
@@ -40,28 +33,16 @@ import io.github.zekurio.matinee.api.Title
 import io.github.zekurio.matinee.api.isShow
 import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.components.CardText
-import io.github.zekurio.matinee.ui.components.LocalApi
-import io.github.zekurio.matinee.ui.components.PosterArt
-import io.github.zekurio.matinee.ui.components.SectionTitle
-import io.github.zekurio.matinee.ui.components.art
-import io.github.zekurio.matinee.ui.components.isWide
 import io.github.zekurio.matinee.ui.kit.CardShape
-import io.github.zekurio.matinee.ui.kit.Gap
-import io.github.zekurio.matinee.ui.kit.Gutter
-import io.github.zekurio.matinee.ui.kit.Lucide
-import io.github.zekurio.matinee.ui.kit.LucideIcon
 import io.github.zekurio.matinee.ui.rememberLoader
-import io.github.zekurio.matinee.ui.seasonName
 import io.github.zekurio.matinee.ui.theme.Palette
-import java.time.LocalDate
 import kotlinx.coroutines.delay
 
 /*
  * What the server lacks of a show in the library, as its provider lists
  * it: the seasons that aren't here, for the seasons rail; the ones only
- * partly here, with the ask for the rest at the end of their episodes;
- * and the one after the last season that is, for Next up. As the web's
- * show-gaps.ts, next-season.tsx, and rest-of-season.tsx.
+ * partly here, with the ask for the rest at the end of their episodes.
+ * As the web's show-gaps.ts and rest-of-season.tsx.
  */
 
 /** A show's gaps, with each season's state as the server streams it. */
@@ -70,7 +51,6 @@ class ShowGaps(
     val libraryId: String,
     val missing: List<CatalogSeason>,
     val partial: List<CatalogSeason>,
-    val next: CatalogSeason?,
     /** Nothing of the show is asked for yet, so Undo may take back an ask. */
     val first: Boolean,
 ) {
@@ -107,13 +87,11 @@ fun rememberShowGaps(title: Title, onRecovered: () -> Unit = {}): ShowGaps? {
     if (data == null) return null
     val missing = bySeason(hub.seasons(data.ref, data.seasons))
     val partial = hub.seasons(data.ref, data.partialSeasons)
-    val next = data.nextSeason?.let { wanted -> missing.firstOrNull { it.number == wanted.number } }
     return ShowGaps(
         data.ref,
         title.libraryId,
         missing,
         partial,
-        next,
         first = (missing + partial).all { it.availability.requestId == null },
     )
 }
@@ -121,43 +99,6 @@ fun rememberShowGaps(title: Title, onRecovered: () -> Unit = {}): ShowGaps? {
 /** How often, and how far apart, a failed load of a show's gaps tries again. */
 private const val GAP_RETRIES = 3
 private const val GAP_RETRY_MS = 5_000L
-
-/**
- * Next up on a show's page once the viewer has watched every season here
- * and the next isn't on the server: that season's poster, carrying its
- * state in the corner and the one thing to do about it along its lower
- * edge, beside "Season 4 isn't here yet". It catches the moment someone
- * wants more.
- */
-@Composable
-fun NextSeasonRow(title: Title, gaps: ShowGaps, season: CatalogSeason) {
-    val api = LocalApi.current
-    val res = LocalResources.current
-    val availability = season.availability.asTitle()
-    val label = seasonName(season.number, res)
-    val name = seasonOf(title.name, season.number, res)
-    Column(Modifier.padding(horizontal = Gutter)) {
-        SectionTitle(stringResource(R.string.title_next_up_next))
-        Gap(12.dp)
-        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            Box(Modifier.width(if (isWide()) 144.dp else 120.dp)) {
-                PosterArt(name, api.art(season.poster ?: title.images.poster))
-                Box(Modifier.matchParentSize().clip(CardShape)) {
-                    SeasonPosterRequest(gaps.ref, name, season, gaps.libraryId, first = availability.requestId == null)
-                }
-            }
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(res.getString(R.string.requests_season_not_here, label), style = MaterialTheme.typography.titleMedium)
-                Text(seasonDetailText(seasonDetail(season, LocalDate.now()), res), style = MaterialTheme.typography.bodySmall, color = Palette.Muted)
-                if (isWide()) {
-                    season.overview?.let {
-                        Text(it, style = MaterialTheme.typography.bodyMedium, color = Palette.Muted, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                    }
-                }
-            }
-        }
-    }
-}
 
 /** The empty frame where the missing episodes' stills would be: dashed, so it reads as the gap it is. */
 private fun Modifier.gapFrame(): Modifier = this

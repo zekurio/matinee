@@ -128,21 +128,6 @@ export const CatalogSeason = t.object({
   selected: t.boolean(),
 })
 
-/**
- * A show in the library whose last episode on the server the viewer
- * finished, and its next season, which the server doesn't have.
- */
-export const NextSeasonEntry = t.object({
-  title: TitleSummary,
-  /** The show at its library's metadata provider, for asking. */
-  ref: CatalogRef,
-  libraryId: t.uuid(),
-  season: CatalogSeason,
-  /** When the viewer last finished an episode of the show, for ordering. */
-  lastWatchedAt: t.date(),
-})
-export type NextSeasonEntry = t.infer<typeof NextSeasonEntry>
-
 export const CatalogTitleDetail = CatalogTitleSummary.extend({
   /** Provider metadata is from an expired cache entry after a provider failure. */
   stale: t.boolean(),
@@ -232,7 +217,6 @@ export const catalogContract = {
         stale: t.boolean(),
         seasons: t.array(CatalogSeason),
         partialSeasons: t.array(CatalogSeason),
-        nextSeason: CatalogSeason.nullable(),
         defaultScope: ShowScope,
         destinations: t.array(CatalogDestination),
       }),
