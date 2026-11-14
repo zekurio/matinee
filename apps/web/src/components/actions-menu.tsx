@@ -1,4 +1,4 @@
-import type { MediaItem, Season, Title, TitleSummary } from "@matinee/contracts"
+import type { MediaItem, Season, TitleSummary } from "@matinee/contracts"
 import { Button } from "@matinee/ui/components/button"
 import {
   DropdownMenu,
@@ -9,7 +9,7 @@ import {
 } from "@matinee/ui/components/dropdown-menu"
 import { toast } from "@matinee/ui/components/sonner"
 import { cn } from "@matinee/ui/lib/utils"
-import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { getRouteApi, useNavigate } from "@tanstack/react-router"
 import {
   EllipsisIcon,
@@ -24,6 +24,7 @@ import {
   type ReactNode,
   useState,
 } from "react"
+import { useStore } from "zustand"
 
 import { cardIconButton } from "@/components/card-actions"
 import { useDeferredMenu } from "@/components/deferred-menu"
@@ -50,6 +51,7 @@ import { tr } from "@/i18n"
 import { seasonName } from "@/lib/media"
 import { type PartyRole, usePartyRole } from "@/lib/party"
 import { client, errorMessage, orpc } from "@/lib/rpc"
+import { createTitleActionsStore } from "@/stores/title-actions"
 
 /*
  * The "⋯" menu of a movie, show, season, or episode, the same on its card,
@@ -391,11 +393,21 @@ function MountedActionsMenu({
   const queryClient = useQueryClient()
   // Kept after closing, so the dialogs can animate out. Null until one
   // first opens, so none mounts before then.
-  const [file, setFile] = useState<MediaItem | null>(null)
-  const [downloading, setDownloading] = useState<boolean | null>(null)
-  const [full, setFull] = useState<Title | null>(null)
-  const [identifying, setIdentifying] = useState(false)
-  const [editingImages, setEditingImages] = useState(false)
+  const [store] = useState(createTitleActionsStore)
+  const { file, downloading, titleId, identifying, editingImages } =
+    useStore(store)
+  const {
+    setFile,
+    setDownloading,
+    setTitleId,
+    setIdentifying,
+    setEditingImages,
+  } = store.getState()
+  // Keep the title in Query so refreshes also reach an open dialog.
+  const full = useQuery({
+    ...orpc.titles.get.queryOptions({ input: { id: titleId ?? "" } }),
+    enabled: titleId !== null,
+  }).data
 
   const load = (title: TitleSummary) =>
     queryClient.ensureQueryData(
@@ -429,7 +441,8 @@ function MountedActionsMenu({
     open: (value: boolean) => void,
   ) => {
     try {
-      setFull(await load(title))
+      await load(title)
+      setTitleId(title.id)
       open(true)
     } catch (cause) {
       loadFailed(title, cause)

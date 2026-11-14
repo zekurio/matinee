@@ -43,5 +43,12 @@ export function useUrlText(
     }, DELAY_MS)
   }
 
-  return [draft.text, setText] as const
+  const flush = () => {
+    window.clearTimeout(timer.current)
+    setDraft((prev) => ({ ...prev, typing: false }))
+    const next = draft.text.trim() || undefined
+    if (next !== value) write(next)
+  }
+
+  return [draft.text, setText, flush] as const
 }

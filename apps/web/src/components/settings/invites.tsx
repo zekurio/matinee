@@ -30,6 +30,7 @@ import {
   UserPlusIcon,
 } from "lucide-react"
 import { useState } from "react"
+import { useStore } from "zustand"
 
 import { SelectField } from "@/components/select-field"
 import { tr } from "@/i18n"
@@ -37,6 +38,7 @@ import { useAppForm } from "@/lib/form"
 import { formatDate, formatDateTime, formatRelative } from "@/lib/format"
 import { client, errorMessage, orpc } from "@/lib/rpc"
 import { useActionFeedback } from "@/lib/use-action-feedback"
+import { createSettingsInvitesStore } from "@/stores/settings-invites"
 
 import { formatList } from "./access-facts"
 import { RowIcon, SettingNote, SettingsSubsection } from "./settings-panel"
@@ -49,10 +51,8 @@ import { RowIcon, SettingNote, SettingsSubsection } from "./settings-panel"
 export function Invites({ passkeysOn }: { passkeysOn: boolean }) {
   const queryClient = useQueryClient()
   const invites = useQuery(orpc.admin.invites.list.queryOptions())
-  const [creating, setCreating] = useState(false)
-  // The link shows once, so a stray click outside the dialog mustn't close
-  // it. The buttons and Escape still do.
-  const [linkShown, setLinkShown] = useState(false)
+  const [store] = useState(createSettingsInvitesStore)
+  const { creating, created, start, setCreating, setCreated } = useStore(store)
   const refresh = () =>
     queryClient.invalidateQueries({ queryKey: orpc.admin.invites.key() })
 
@@ -74,13 +74,7 @@ export function Invites({ passkeysOn }: { passkeysOn: boolean }) {
       title={tr("users.invites.title")}
       action={
         passkeysOn ? (
-          <Button
-            variant="outline"
-            onClick={() => {
-              setLinkShown(false)
-              setCreating(true)
-            }}
-          >
+          <Button variant="outline" onClick={start}>
             <UserPlusIcon />
             {tr("users.invites.create")}
           </Button>
@@ -116,18 +110,21 @@ export function Invites({ passkeysOn }: { passkeysOn: boolean }) {
       <Dialog
         open={creating}
         onOpenChange={setCreating}
-        disablePointerDismissal={linkShown}
+        disablePointerDismissal={created !== null}
       >
         <DialogContent className="gap-5 p-6 sm:max-w-md">
-          {creating && (
-            <CreateInvite
-              onCreated={() => {
-                setLinkShown(true)
-                void refresh()
-              }}
-              onDone={() => setCreating(false)}
-            />
-          )}
+          {creating &&
+            (created ? (
+              <CreatedLink invite={created} onDone={() => setCreating(false)} />
+            ) : (
+              <InviteForm
+                onCreated={(invite) => {
+                  setCreated(invite)
+                  void refresh()
+                }}
+                onCancel={() => setCreating(false)}
+              />
+            ))}
         </DialogContent>
       </Dialog>
     </SettingsSubsection>
@@ -191,27 +188,6 @@ function InviteRow({
         <Trash2Icon />
       </Button>
     </ListItem>
-  )
-}
-
-/** The dialog's two steps: the note and expiry, then the link, once. */
-function CreateInvite({
-  onCreated,
-  onDone,
-}: {
-  onCreated: () => void
-  onDone: () => void
-}) {
-  const [created, setCreated] = useState<CreatedInvite | null>(null)
-  if (created) return <CreatedLink invite={created} onDone={onDone} />
-  return (
-    <InviteForm
-      onCreated={(invite) => {
-        setCreated(invite)
-        onCreated()
-      }}
-      onCancel={onDone}
-    />
   )
 }
 

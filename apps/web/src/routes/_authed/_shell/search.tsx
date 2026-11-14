@@ -30,6 +30,7 @@ import { tr } from "@/i18n"
 import { formatCount } from "@/lib/format"
 import { reloadOnEnter } from "@/lib/route-loading"
 import { orpc } from "@/lib/rpc"
+import { useUrlText } from "@/lib/use-url-text"
 import { useSearchSpotlightStore } from "@/stores/search-spotlight"
 
 const SearchParams = t.object({
@@ -39,9 +40,6 @@ const SearchParams = t.object({
 // What the server sends of each kind. Past it, the page says to narrow
 // the search down.
 const LIMIT = 60
-
-// The pause in typing on a phone before the search goes out.
-const DEBOUNCE_MS = 250
 
 /** The results for a query, shared by the page and its loader. */
 function searchOptions(query: string) {
@@ -271,29 +269,19 @@ function FacetText({ facet }: { facet: Facet }) {
  */
 function PhoneSearchBar({ query }: { query: string | undefined }) {
   const navigate = Route.useNavigate()
-  const [text, setText] = useState(query ?? "")
+  const [text, update, flush] = useUrlText(query, (next) => {
+    void navigate({
+      search: { q: next },
+      replace: true,
+      resetScroll: false,
+    })
+  })
   const input = useRef<HTMLInputElement>(null)
-  const timer = useRef<number | undefined>(undefined)
-  useEffect(() => () => window.clearTimeout(timer.current), [])
   // Opening the tab empty is for typing; Back to results is for reading.
   const [typing] = useState(query === undefined)
   useEffect(() => {
     if (typing) input.current?.focus()
   }, [typing])
-
-  const search = (next: string) => {
-    const trimmed = next.trim()
-    void navigate({
-      search: { q: trimmed === "" ? undefined : trimmed },
-      replace: true,
-      resetScroll: false,
-    })
-  }
-  const update = (next: string) => {
-    setText(next)
-    window.clearTimeout(timer.current)
-    timer.current = window.setTimeout(() => search(next), DEBOUNCE_MS)
-  }
 
   return (
     <div className="bg-background sticky top-0 z-20 -mx-4 mb-4 px-4 pt-[env(safe-area-inset-top)] pb-3">
@@ -301,11 +289,11 @@ function PhoneSearchBar({ query }: { query: string | undefined }) {
         {tr("search.title")}
       </p>
       <search>
+        {/* This is URL navigation as you type; Submit only flushes its debounce. */}
         <form
           onSubmit={(event) => {
             event.preventDefault()
-            window.clearTimeout(timer.current)
-            search(text)
+            flush()
             input.current?.blur()
           }}
           className="border-foreground/10 bg-foreground/5 flex h-12 items-center rounded-full border"

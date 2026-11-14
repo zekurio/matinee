@@ -17,12 +17,14 @@ import { toast } from "@matinee/ui/components/sonner"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { LogOutIcon } from "lucide-react"
 import { useState } from "react"
+import { useStore } from "zustand"
 
 import { PlatformIcon } from "@/components/device-card"
 import { tr } from "@/i18n"
 import { platformLabel, sessionLabel } from "@/lib/devices"
 import { formatDate, formatRelative } from "@/lib/format"
 import { client, errorMessage, orpc } from "@/lib/rpc"
+import { createSettingsSessionsStore } from "@/stores/settings-sessions"
 
 import { LinkDeviceButton } from "./link-device"
 import { RowIcon, SettingsSubsection } from "./settings-panel"
@@ -42,8 +44,9 @@ const DEVICE_POLL_MS = 6000
 export function Sessions() {
   const queryClient = useQueryClient()
   const sessions = useQuery(orpc.account.sessions.list.queryOptions())
-  const [revoking, setRevoking] = useState<Session | null>(null)
-  const [revokingOthers, setRevokingOthers] = useState(false)
+  const [store] = useState(createSettingsSessionsStore)
+  const { revoking, open, revokingOthers, ask, close, setRevokingOthers } =
+    useStore(store)
   const refresh = () =>
     queryClient.invalidateQueries({
       queryKey: orpc.account.sessions.list.key(),
@@ -114,15 +117,15 @@ export function Sessions() {
             <SessionRow
               key={session.id}
               session={session}
-              onSignOut={() => setRevoking(session)}
+              onSignOut={() => ask(session)}
             />
           ))}
         </List>
       )}
 
       <SignOutDialog
-        open={revoking !== null}
-        onOpenChange={(open) => !open && setRevoking(null)}
+        open={open}
+        onOpenChange={(open) => !open && close()}
         title={
           revoking
             ? tr("account.sessions.signOutTitle", {
@@ -134,7 +137,7 @@ export function Sessions() {
         confirmLabel={tr("account.sessions.signOut")}
         onConfirm={() => {
           if (revoking) revoke.mutate(revoking)
-          setRevoking(null)
+          close()
         }}
       />
 

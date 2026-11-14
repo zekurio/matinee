@@ -25,12 +25,17 @@ export function tone(key: string): string {
  * Nothing when every source fails. The image is opaque over the
  * placeholder, so dim a picture from a wrapper, not through `className`.
  */
-export function Picture({
-  sources,
-  className,
-  eager = false,
-  sizes,
-}: {
+export function Picture(props: PictureProps) {
+  // New sources start over, without an effect and a flash of the old image.
+  return (
+    <PictureSources
+      key={props.sources.map((source) => source.src).join("|")}
+      {...props}
+    />
+  )
+}
+
+type PictureProps = {
   sources: ImageSource[]
   className?: string
   eager?: boolean
@@ -40,11 +45,15 @@ export function Picture({
    * window unless told otherwise.
    */
   sizes?: string
-}) {
-  const key = sources.map((source) => source.src).join("|")
-  const [state, setState] = useState({ key, index: 0, ready: false })
-  // New sources start over, without an effect and a flash of the old image.
-  const current = state.key === key ? state : { key, index: 0, ready: false }
+}
+
+function PictureSources({
+  sources,
+  className,
+  eager = false,
+  sizes,
+}: PictureProps) {
+  const [current, setState] = useState({ index: 0, ready: false })
   const source = sources[current.index]
   if (!source) return null
   const fill = "absolute inset-0 size-full object-cover"

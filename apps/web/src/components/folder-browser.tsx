@@ -19,6 +19,7 @@ import {
 import { useState } from "react"
 
 import { tr } from "@/i18n"
+import { useAppForm } from "@/lib/form"
 import { errorMessage, orpc } from "@/lib/rpc"
 
 function folderName(path: string): string {
@@ -201,37 +202,48 @@ function PathField({
   path: string
   onOpen: (path: string) => void
 }) {
-  const [draft, setDraft] = useState(path)
-  const open = () => {
-    const typed = draft.trim()
-    if (typed) onOpen(typed)
-  }
+  const form = useAppForm({
+    defaultValues: { path },
+    onSubmit: ({ value }) => {
+      const typed = value.path.trim()
+      if (typed) onOpen(typed)
+    },
+  })
   return (
     <div className="flex gap-2">
-      <Input
-        aria-label={tr("libraries.browser.path")}
-        value={draft}
-        spellCheck={false}
-        autoCapitalize="off"
-        autoComplete="off"
-        className="font-mono"
-        onChange={(event) => setDraft(event.target.value)}
-        onKeyDown={(event) => {
-          // Enter opens the folder; it mustn't submit the library form behind.
-          if (event.key !== "Enter") return
-          event.preventDefault()
-          open()
-        }}
-      />
-      <Button
-        type="button"
-        variant="outline"
-        disabled={!draft.trim() || draft.trim() === path}
-        onClick={open}
-      >
-        <CornerDownLeftIcon />
-        {tr("libraries.browser.go")}
-      </Button>
+      <form.Field name="path">
+        {(field) => (
+          <>
+            <Input
+              aria-label={tr("libraries.browser.path")}
+              value={field.state.value}
+              spellCheck={false}
+              autoCapitalize="off"
+              autoComplete="off"
+              className="font-mono"
+              onChange={(event) => field.handleChange(event.target.value)}
+              onBlur={field.handleBlur}
+              onKeyDown={(event) => {
+                // Enter opens the folder; it mustn't submit the library form behind.
+                if (event.key !== "Enter") return
+                event.preventDefault()
+                void form.handleSubmit()
+              }}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              disabled={
+                !field.state.value.trim() || field.state.value.trim() === path
+              }
+              onClick={() => void form.handleSubmit()}
+            >
+              <CornerDownLeftIcon />
+              {tr("libraries.browser.go")}
+            </Button>
+          </>
+        )}
+      </form.Field>
     </div>
   )
 }

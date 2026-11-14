@@ -22,9 +22,11 @@ import {
   UsersIcon,
 } from "lucide-react"
 import { useState } from "react"
+import { useStore } from "zustand"
 
 import { tr } from "@/i18n"
 import { client, errorMessage, orpc } from "@/lib/rpc"
+import { createSettingsAccessStore } from "@/stores/settings-access"
 
 import { Fact, groupName, PolicyFacts } from "./access-facts"
 import { GroupDialog } from "./group-dialog"
@@ -44,18 +46,23 @@ export function AccessPanel() {
   const queryClient = useQueryClient()
   const groups = useQuery(orpc.admin.groups.list.queryOptions())
   const libraries = useQuery(orpc.libraries.list.queryOptions())
-  // Each is kept after its dialog closes, so the dialog's words stay put
-  // as it fades.
-  const [editing, setEditing] = useState<{ group?: AccessGroup }>({})
-  const [editOpen, setEditOpen] = useState(false)
-  const [deleting, setDeleting] = useState<AccessGroup | null>(null)
-  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [store] = useState(createSettingsAccessStore)
+  const {
+    editing,
+    editOpen,
+    deleting,
+    deleteOpen,
+    edit,
+    setEditOpen,
+    askDelete,
+    closeDelete,
+  } = useStore(store)
 
   const remove = useMutation({
     mutationFn: (group: AccessGroup) =>
       client.admin.groups.remove({ id: group.id }),
     onSuccess: async (_result, group) => {
-      setDeleteOpen(false)
+      closeDelete()
       toast.success(tr("access.group.deleted", { name: group.name }))
       // Accounts and invites name their groups.
       await Promise.all([
@@ -66,11 +73,6 @@ export function AccessPanel() {
     },
     onError: (error) => toast.error(errorMessage(error)),
   })
-
-  const edit = (group?: AccessGroup) => {
-    setEditing({ group })
-    setEditOpen(true)
-  }
 
   return (
     <SettingsSections>
@@ -109,8 +111,7 @@ export function AccessPanel() {
                 onEdit={() => edit(group)}
                 onDelete={() => {
                   remove.reset()
-                  setDeleting(group)
-                  setDeleteOpen(true)
+                  askDelete(group)
                 }}
               />
             ))}
@@ -147,7 +148,7 @@ export function AccessPanel() {
         destructive
         pending={remove.isPending}
         onConfirm={() => deleting && remove.mutate(deleting)}
-        onClose={() => setDeleteOpen(false)}
+        onClose={closeDelete}
       />
     </SettingsSections>
   )

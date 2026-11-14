@@ -2,7 +2,6 @@ import {
   AUTH_ERROR_QUERY_KEY,
   DisplayName,
   oidcStartPath,
-  type Passkey,
   PasskeyName,
   type User,
 } from "@matinee/contracts"
@@ -50,6 +49,7 @@ import {
   UserRoundIcon,
 } from "lucide-react"
 import { useRef, useState } from "react"
+import { useStore } from "zustand"
 
 import { UserAvatar } from "@/components/user-avatar"
 import { tr } from "@/i18n"
@@ -59,6 +59,7 @@ import { formatDate, formatRelative } from "@/lib/format"
 import { addPasskey } from "@/lib/passkey"
 import { client, errorMessage, orpc } from "@/lib/rpc"
 import { useAuthErrorToast } from "@/lib/use-auth-error-toast"
+import { createSettingsPasskeysStore } from "@/stores/settings-passkeys"
 
 import { SharingRows } from "./profile-sharing"
 import { Sessions } from "./sessions"
@@ -333,7 +334,8 @@ function Passkeys({ oidcEnabled }: { oidcEnabled: boolean }) {
   const methods =
     (passkeys.data?.length ?? 0) + (oidcEnabled && linked.data?.signsIn ? 1 : 0)
   const isLast = passkeys.isSuccess && methods <= 1
-  const [removing, setRemoving] = useState<Passkey | null>(null)
+  const [store] = useState(createSettingsPasskeysStore)
+  const { removing, open, ask, close } = useStore(store)
 
   const remove = useMutation({
     mutationFn: (id: string) => client.account.passkeys.remove({ id }),
@@ -398,7 +400,7 @@ function Passkeys({ oidcEnabled }: { oidcEnabled: boolean }) {
                         })
                       : tr("account.passkeys.remove")
                   }
-                  onClick={() => setRemoving(passkey)}
+                  onClick={() => ask(passkey)}
                 >
                   <Trash2Icon />
                 </Button>
@@ -408,10 +410,7 @@ function Passkeys({ oidcEnabled }: { oidcEnabled: boolean }) {
         </List>
       )}
 
-      <AlertDialog
-        open={removing !== null}
-        onOpenChange={(open) => !open && setRemoving(null)}
-      >
+      <AlertDialog open={open} onOpenChange={(open) => !open && close()}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
