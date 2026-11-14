@@ -12,7 +12,6 @@ export default defineMessages("discover", {
   "discover.rail.popularFilms": "Popular movies",
   "discover.rail.popularShows": "Popular shows",
   "discover.rail.comingSoon": "Coming soon",
-  "discover.rail.othersAsked": "Requested by others",
 
   // A card in Coming soon, in place of the year: "14 Aug · Movie".
   "discover.card.release": "{date} · {kind}",

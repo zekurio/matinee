@@ -4,7 +4,7 @@ import { t } from "./schema"
 import { TitleKind } from "./schemas"
 
 export const DiscoverRail = t.object({
-  id: t.enum(["popularFilms", "popularShows", "comingSoon", "othersAsked"]),
+  id: t.enum(["popularFilms", "popularShows", "comingSoon"]),
 })
 
 export const DiscoverRails = t.object({

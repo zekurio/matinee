@@ -1,10 +1,8 @@
 import type { CatalogRef, DiscoverRail } from "@matinee/contracts"
 import { t } from "@matinee/contracts/schema"
-import { library, request, requestFollower } from "@matinee/db"
-import { and, desc, eq, exists, ne } from "drizzle-orm"
+import { library } from "@matinee/db"
 
 import type { Viewer } from "../access/viewer"
-import { inLibraries } from "../access/visible"
 import { db } from "../db"
 import { env } from "../env"
 import {
@@ -13,7 +11,7 @@ import {
   saveArtwork,
   toArtwork,
 } from "../media/artwork"
-import { availability, ExternalIds } from "../requests/availability"
+import { availability } from "../requests/availability"
 import { withCachedDetails } from "../requests/cached-details"
 import { destinations, lookupLanguage } from "../requests/destinations"
 import { loadRouting } from "../requests/fulfilment/connections"
@@ -23,31 +21,6 @@ type Rail = t.infer<typeof DiscoverRail>
 
 function tmdbRef(kind: CatalogRef["kind"], providerId: string): CatalogRef {
   return { kind, provider: "tmdb", providerId }
-}
-
-async function others(viewer: Viewer) {
-  return db
-    .select()
-    .from(request)
-    .where(
-      and(
-        inLibraries(viewer, request.libraryId),
-        ne(request.status, "declined"),
-        exists(
-          db
-            .select({ id: requestFollower.userId })
-            .from(requestFollower)
-            .where(
-              and(
-                eq(requestFollower.requestId, request.id),
-                ne(requestFollower.userId, viewer.id),
-                eq(requestFollower.asked, true),
-              ),
-            ),
-        ),
-      ),
-    )
-    .orderBy(desc(request.createdAt), desc(request.id))
 }
 
 export async function rails(viewer: Viewer) {
@@ -69,29 +42,6 @@ export async function rails(viewer: Viewer) {
   for (const id of popular) {
     result.push({ id })
   }
-  const asked = await others(viewer)
-  const states = await availability(
-    viewer,
-    asked.map((row) => ({
-      ref: {
-        kind: row.kind,
-        provider: row.provider,
-        providerId: row.providerId,
-      },
-      externalIds: ExternalIds.parse(row.externalIds),
-    })),
-  )
-  if (
-    states.some(
-      (state, index) =>
-        asked[index] &&
-        ExternalIds.parse(asked[index].externalIds).tmdb &&
-        kinds.includes(asked[index].kind) &&
-        state.availability.state !== "here" &&
-        state.availability.state !== "unavailable",
-    )
-  )
-    result.push({ id: "othersAsked" })
   return { enabled: true, rails: result, browse: kinds }
 }
 
@@ -109,51 +59,6 @@ export async function page(
     destinations(viewer, "movie"),
     destinations(viewer, "show"),
   ])
-  if (descriptor.id === "othersAsked") {
-    const rows = (await others(viewer)).filter((row) =>
-      row.kind === "movie" ? movies.length : shows.length,
-    )
-    const states = await availability(
-      viewer,
-      rows.map((row) => ({
-        ref: {
-          kind: row.kind,
-          provider: row.provider,
-          providerId: row.providerId,
-        },
-        libraryId: row.libraryId,
-        externalIds: ExternalIds.parse(row.externalIds),
-      })),
-    )
-    const art = await placeholders(
-      rows.flatMap((row) => (row.posterId ? [row.posterId] : [])),
-    )
-    const items = rows.flatMap((row, index) => {
-      const state = states[index]?.availability
-      // Discover offers titles to request, so a declined one, which
-      // nobody can request, is left out. Search still finds it.
-      if (!state || state.state === "here" || state.state === "unavailable")
-        return []
-      const tmdb = ExternalIds.parse(row.externalIds).tmdb
-      // Local requests without a known TMDB id cannot issue a TMDB feed reference.
-      if (!tmdb) return []
-      return [
-        {
-          ref: tmdbRef(row.kind, tmdb),
-          name: row.name,
-          year: row.year,
-          poster: toArtwork(row.posterId, art),
-          availability: state,
-        },
-      ]
-    })
-    const start = (input.page - 1) * 20
-    return {
-      items: items.slice(start, start + 20),
-      nextPage: items.length > start + 20 ? input.page + 1 : null,
-      stale: false,
-    }
-  }
   const kinds: CatalogRef["kind"][] = []
   if (descriptor.id === "popularFilms") kinds.push("movie")
   else if (descriptor.id === "popularShows") kinds.push("show")

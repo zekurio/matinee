@@ -7,7 +7,6 @@ export default {
   "discover.rail.popularFilms": "Beliebte Filme",
   "discover.rail.popularShows": "Beliebte Serien",
   "discover.rail.comingSoon": "Demnächst",
-  "discover.rail.othersAsked": "Von anderen angefragt",
 
   "discover.card.release": "{date} · {kind}",
 

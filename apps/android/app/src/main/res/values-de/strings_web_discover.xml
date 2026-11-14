@@ -5,7 +5,6 @@
     <string name="web_discover_rail_popularFilms">Beliebte Filme</string>
     <string name="web_discover_rail_popularShows">Beliebte Serien</string>
     <string name="web_discover_rail_comingSoon">Demnächst</string>
-    <string name="web_discover_rail_othersAsked">Von anderen angefragt</string>
     <string name="web_discover_card_release">%1$s · %2$s</string>
     <string name="web_discover_stale">Einiges davon ist vielleicht nicht aktuell.</string>
     <string name="web_discover_railFailed">Diese Reihe hat nicht geladen.</string>
