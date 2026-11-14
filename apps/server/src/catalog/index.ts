@@ -270,6 +270,7 @@ export async function routedDetails(
       name: credit.name,
       role: credit.role,
       photo: art(credit.photo),
+      tmdbId: ref.provider === "tmdb" ? (credit.personId ?? null) : null,
     })),
     studios: data.studios ?? [],
     trailers: (data.trailers ?? []).map((trailer) => ({

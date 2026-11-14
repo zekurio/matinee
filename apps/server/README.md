@@ -303,9 +303,9 @@ a library someone can't see stays hidden from them.
 ### Catalog and Discover
 
 Search for titles the server lacks goes to the metadata provider of the
-library a request would land in. Discover, browsing with filters, and the
-rows of related titles on a title's page come from TMDB and need
-`MATINEE_TMDB_API_KEY`.
+library a request would land in. Discover, browsing with filters, the
+rows of related titles on a title's page, and person pages' TMDB part
+come from TMDB and need `MATINEE_TMDB_API_KEY`.
 
 - Discover's rows are TMDB's weekly trending movies and shows,
   recommendations for the viewer's last watched title, popular titles out
@@ -316,6 +316,12 @@ rows of related titles on a title's page come from TMDB and need
   leaves out titles with fewer than 250 votes.
 - A title's page lists its recommendations and, for a movie, the rest of
   its collection.
+- A person's page adds TMDB's photo, biography, and their other titles,
+  cast and crew, newest first, leaving out what's in the viewer's
+  libraries. A link from a TMDB title carries the person's TMDB id.
+  Without one, a TMDB library title's credit gives it; otherwise a TMDB
+  search by name counts only if the match shares a title with the
+  person's credits here.
 
 Provider answers are cached: search and feeds for 6 hours, details for 24.
 When a provider is down the last answer is served and marked stale.

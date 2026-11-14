@@ -27,6 +27,12 @@ import {
   related,
   Related,
 } from "../metadata/tmdb/feeds"
+import {
+  person,
+  PersonDetail,
+  PersonMatches,
+  searchPeople,
+} from "../metadata/tmdb/people"
 import { ExternalIds } from "../requests/availability"
 
 const cacheBody = () => t.record(t.string(), t.unknown())
@@ -63,7 +69,13 @@ const Detail = Candidate.extend({
   studios: t.array(t.string()).optional(),
   credits: t
     .array(
-      t.object({ kind: CreditKind, name: t.string(), role: text, photo: text }),
+      t.object({
+        kind: CreditKind,
+        name: t.string(),
+        role: text,
+        photo: text,
+        personId: text.optional(),
+      }),
     )
     .optional(),
   trailers: t
@@ -294,6 +306,26 @@ export function languageProvider() {
     CACHE_HOURS.lookup,
     (body) => Languages.parse(body).languages,
     () => languages(),
+  )
+}
+
+/** Someone at TMDB and their credits, kept as long as details. */
+export function personProvider(language: string, id: string) {
+  return cached(
+    JSON.stringify(["tmdb", language, "person", id]),
+    CACHE_HOURS.details,
+    (body) => PersonDetail.parse(body),
+    () => person(language, id),
+  )
+}
+
+/** The people TMDB finds by a name, kept as long as a search. */
+export function personSearchProvider(language: string, query: string) {
+  return cached(
+    JSON.stringify(["tmdb", language, "people", query]),
+    CACHE_HOURS.search,
+    (body) => PersonMatches.parse(body).people,
+    () => searchPeople(language, query),
   )
 }
 

@@ -3,6 +3,7 @@ import { eventIterator, oc } from "@orpc/contract"
 import { del, get, post, put } from "./contract-routes"
 import { DownloadResolveInput, DownloadResolution } from "./download-resolve"
 import { Download, DownloadPlan, DownloadSpecInput } from "./downloads"
+import { Person, PersonInput } from "./people"
 import { t } from "./schema"
 import {
   AudioTrack,
@@ -18,7 +19,6 @@ import {
   MediaItem,
   MetadataMatch,
   MetadataProvider,
-  Person,
   RemoteImage,
   SearchInput,
   SearchResults,
@@ -62,9 +62,7 @@ export const searchContract = oc.tag("Search").router({
 
 export const peopleContract = oc.tag("People").router({
   /** Someone in the cast or crew of a title, and everything they're in. */
-  get: get("/people/{name}")
-    .input(t.object({ name: t.string().trim().min(1).max(200) }))
-    .output(Person),
+  get: get("/people/{name}").input(PersonInput).output(Person),
 })
 
 export const titlesContract = oc.tag("Titles").router({
