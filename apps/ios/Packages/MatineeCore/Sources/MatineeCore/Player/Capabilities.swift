@@ -48,6 +48,24 @@ public enum Capabilities {
       server.contains($0) && ($0 == "aac" || decodesAudio($0, snapshot: snapshot))
     }
   }
+  /// Whether AVPlayer decodes `codec`. VideoToolbox answers for the device's
+  /// hardware, which the iOS Simulator has none of: it answers no for every
+  /// codec, though the simulator plays H.264 and HEVC through the Mac's own
+  /// decoders. Without them the server would encode every file there.
+  static func videoDecodes(
+    _ codec: CMVideoCodecType, hardware: (CMVideoCodecType) -> Bool,
+    simulator: Bool = runsInSimulator
+  ) -> Bool {
+    if hardware(codec) { return true }
+    return simulator && (codec == kCMVideoCodecType_H264 || codec == kCMVideoCodecType_HEVC)
+  }
+  static var runsInSimulator: Bool {
+    #if targetEnvironment(simulator)
+      true
+    #else
+      false
+    #endif
+  }
   @MainActor public static func probe() -> CapabilitySnapshot {
     // Apple's HLS authoring specification, section 1.25, supplies a 3840x2160
     // delivery envelope, not the hardware's maximum. VT's hardware query gives
@@ -58,7 +76,7 @@ public enum Capabilities {
       ("h264", kCMVideoCodecType_H264), ("hevc", kCMVideoCodecType_HEVC),
       ("av1", kCMVideoCodecType_AV1),
     ]
-    let video = candidates.filter { VTIsHardwareDecodeSupported($0.1) }.map {
+    let video = candidates.filter { videoDecodes($0.1, hardware: VTIsHardwareDecodeSupported) }.map {
       VideoDecoder(codec: $0.0, widest: size, tallest: portrait, tenBit: $0.0 != "h264")
     }
     var hdr: [String] = []

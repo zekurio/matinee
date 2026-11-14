@@ -26,6 +26,10 @@ import MediaPlayer
   func pause()
   func togglePlay()
   func playNext()
+  /// An audio interruption began or ended. The player keeps whether it
+  /// played, so it alone decides to resume, as ExoPlayer's audio focus does.
+  func audioInterruptionBegan()
+  func audioInterruptionEnded(shouldResume: Bool)
   func skip(_ seconds: Double) async
   func seekTo(_ seconds: Double) async
   func mediaRequest(url: URL) async -> URLRequest
@@ -188,7 +192,6 @@ private struct SystemArtworkLoader: NowPlayingArtworkLoader {
   private let artworkLoader: any NowPlayingArtworkLoader
   private var active = false
   private var stopped = false
-  private var resumeAfterInterruption = false
   private var artwork: MPMediaItemArtwork?
   private var artworkTask: Task<Void, Never>?
   private var artworkGeneration = 0
@@ -260,15 +263,14 @@ private struct SystemArtworkLoader: NowPlayingArtworkLoader {
   private func audioEvent(_ event: NowPlayingAudioEvent) {
     guard !stopped, let controller else { return }
     switch event {
+    // The controller handles interruptions; this only routes them, so the
+    // two don't both pause and resume.
     case .interruption:
-      resumeAfterInterruption = controller.playing
       active = false
-      controller.pause()
+      controller.audioInterruptionBegan()
     case .interruptionEnded(let resume):
-      if resume && resumeAfterInterruption { controller.play() }
-      resumeAfterInterruption = false
+      controller.audioInterruptionEnded(shouldResume: resume)
     case .unplugged:
-      resumeAfterInterruption = false
       controller.pause()
     }
     update()

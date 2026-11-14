@@ -196,9 +196,21 @@ private final class PlayerProtocol: URLProtocol, @unchecked Sendable {
   var audioPicks: [Int] = []
   var subtitlePicks: [Int?] = []
   var cleared = false
+  /// The next load holds until released, as AVPlayer reading a file's tracks.
+  var holdLoad = false
+  /// The next load fails as AVPlayer does with -11850: the item fails before
+  /// it seeks to its start, so its clock reads 0.
+  var failNextLoad = false
   func load(_ source: Source, headers: [String: String]) async throws {
     sources.append(source)
     failure = nil
+    positionSeconds = 0
+    while holdLoad { try? await Task.sleep(for: .milliseconds(5)) }
+    if failNextLoad {
+      failNextLoad = false
+      failure = URLError(.cannotDecodeContentData)
+      return
+    }
     isReady = true
     positionSeconds = source.start
   }
@@ -318,6 +330,26 @@ private final class PlayerProtocol: URLProtocol, @unchecked Sendable {
     // The retry played, so closing leaves it played.
     #expect(controller.diagnostics.attempts.last?.outcome == .playing)
     #expect(controller.diagnostics.closed)
+  }
+
+  @Test func aSourceThatFailsBeforeItSeeksFallsBackFromWhereItWasAsked() async {
+    let harness = PlayerHarness()
+    let controller = harness.controller()
+    harness.engine.holdLoad = true
+    harness.engine.failNextLoad = true
+    let opening = Task { await controller.start(itemId: "item-1", at: 30) }
+    await eventually { !harness.engine.sources.isEmpty }
+    // A tick while the engine still reads the file leaves the position be.
+    await controller.tick()
+    #expect(controller.position == 30)
+    harness.engine.holdLoad = false
+    await opening.value
+    await controller.tick()
+    await eventually { harness.server.starts.count == 2 }
+    #expect(harness.server.starts.last?.failed == ["direct"])
+    #expect(harness.server.starts.last?.position == 30)
+    #expect(controller.source?.method == "remux")
+    await controller.stop()
   }
 
   @Test func anOpeningFromTheStartAsksForIt() async {
