@@ -10,10 +10,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -39,13 +37,15 @@ import io.github.zekurio.matinee.api.JobQueueStatus
 import io.github.zekurio.matinee.api.ScheduledTask
 import io.github.zekurio.matinee.api.name
 import io.github.zekurio.matinee.ui.Load
-import io.github.zekurio.matinee.ui.components.Gap
 import io.github.zekurio.matinee.ui.components.LocalApi
-import io.github.zekurio.matinee.ui.components.Lucide
-import io.github.zekurio.matinee.ui.components.LucideIcon
-import io.github.zekurio.matinee.ui.components.RoundIconButton
-import io.github.zekurio.matinee.ui.components.SheetHeader
-import io.github.zekurio.matinee.ui.components.SheetItem
+import io.github.zekurio.matinee.ui.kit.Gap
+import io.github.zekurio.matinee.ui.kit.Lucide
+import io.github.zekurio.matinee.ui.kit.LucideIcon
+import io.github.zekurio.matinee.ui.kit.RoundIconButton
+import io.github.zekurio.matinee.ui.kit.Sheet
+import io.github.zekurio.matinee.ui.kit.SheetHeader
+import io.github.zekurio.matinee.ui.kit.SheetItem
+import io.github.zekurio.matinee.ui.kit.rememberSheetState
 import io.github.zekurio.matinee.ui.rememberLoader
 import io.github.zekurio.matinee.ui.settings.Panel
 import io.github.zekurio.matinee.ui.settings.RowDivider
@@ -319,11 +319,10 @@ private fun ConcurrencyRow(queue: JobQueueStatus, value: Int, onChange: (Int) ->
 }
 
 /** A queue's details and what can be done to it. */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun QueueSheet(queue: JobQueueStatus, onAction: (String) -> Unit, onDismiss: () -> Unit) {
     val name = queueName(queue)
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Palette.Raised, dragHandle = null) {
+    Sheet(onDismissRequest = onDismiss, state = rememberSheetState(skipPartiallyExpanded = false)) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(vertical = 12.dp)) {
             SheetHeader(name, queueStatus(queue))
             SheetItem(if (queue.paused) Lucide.Play else Lucide.Pause, stringResource(if (queue.paused) R.string.web_jobs_queue_resume else R.string.web_jobs_queue_pause)) {

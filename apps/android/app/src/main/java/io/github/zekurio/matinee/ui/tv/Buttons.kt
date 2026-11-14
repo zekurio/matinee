@@ -30,7 +30,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.ui.Motion
-import io.github.zekurio.matinee.ui.components.LucideIcon
+import io.github.zekurio.matinee.ui.kit.LucideIcon
 import io.github.zekurio.matinee.ui.theme.Palette
 
 /** The size TV buttons share, so a row of them lines up. */

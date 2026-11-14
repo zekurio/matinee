@@ -22,7 +22,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -49,15 +48,16 @@ import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.DeviceCode
 import io.github.zekurio.matinee.auth.AuthState
 import io.github.zekurio.matinee.auth.Session
-import io.github.zekurio.matinee.ui.components.ButtonLook
-import io.github.zekurio.matinee.ui.components.Gap
 import io.github.zekurio.matinee.ui.components.Logo
-import io.github.zekurio.matinee.ui.components.Lucide
-import io.github.zekurio.matinee.ui.components.LucideIcon
-import io.github.zekurio.matinee.ui.components.MatineeButton
-import io.github.zekurio.matinee.ui.components.MatineeTextField
 import io.github.zekurio.matinee.ui.components.QrCode
 import io.github.zekurio.matinee.ui.components.isWide
+import io.github.zekurio.matinee.ui.kit.ButtonLook
+import io.github.zekurio.matinee.ui.kit.Gap
+import io.github.zekurio.matinee.ui.kit.Lucide
+import io.github.zekurio.matinee.ui.kit.LucideIcon
+import io.github.zekurio.matinee.ui.kit.MatineeButton
+import io.github.zekurio.matinee.ui.kit.MatineeTextField
+import io.github.zekurio.matinee.ui.kit.Spinner
 import io.github.zekurio.matinee.ui.theme.Palette
 import kotlinx.coroutines.flow.MutableStateFlow
 
@@ -125,7 +125,7 @@ fun ConnectScreen(session: Session, canCancel: Boolean = false) {
         }
         Gap(16.dp)
         MatineeButton(onClick = { connect() }, enabled = address.isNotBlank() && !busy, modifier = Modifier.fillMaxWidth()) {
-            if (busy) CircularProgressIndicator(Modifier.size(18.dp), color = Palette.Background, strokeWidth = 2.dp)
+            if (busy) Spinner(size = 18.dp, color = Palette.Background)
             Text(stringResource(R.string.connect_button))
         }
         if (canCancel) {
@@ -200,19 +200,21 @@ fun SignInScreen(session: Session, state: AuthState.SignedOut, browserError: Mut
 }
 
 /**
- * The OAuth device grant: show a QR code and the code it holds, and wait
- * while someone signed in approves this device. A phone's camera opens the
- * QR code on the server's /link page; the app reads it under Settings,
- * Account. Typing the code at /link works too.
+ * The OAuth device grant: show the code, and wait while someone signed in
+ * approves this device at the server's /link page. A TV also shows the
+ * code as a QR code, which a phone's camera opens on /link and the app
+ * reads under Settings, Account. A phone or tablet shows no QR code, since
+ * the device that would scan it is usually the one signing in.
  */
 @Composable
 private fun DeviceCodeSignIn(session: Session, adding: Boolean, backdrop: @Composable () -> Unit, onBack: (() -> Unit)?) {
     val flow = rememberDeviceCode(session, renewExpired = true)
     val error = flow.error
     val current = flow.code
+    val qr = session.isTv
     val details: @Composable ColumnScope.() -> Unit = {
         // Only a code that never came needs a new start; a poll that failed tries again on its own.
-        CodeDetails(current, error, onRetry = if (current == null) flow::newCode else null)
+        CodeDetails(current, error, afterQr = qr, onRetry = if (current == null) flow::newCode else null)
         Gap(24.dp)
         if (session.isTv) {
             // Nothing else gets a TV out of here, and it may have the wrong server.
@@ -238,8 +240,9 @@ private fun DeviceCodeSignIn(session: Session, adding: Boolean, backdrop: @Compo
         }
     }
     val configuration = LocalConfiguration.current
-    // A TV, or a tablet on its side: the steps on the left, the QR code beside them.
-    val sideBySide = configuration.screenWidthDp >= 720 &&
+    // A landscape TV: the steps on the left, the QR code beside them.
+    val sideBySide = qr &&
+        configuration.screenWidthDp >= 720 &&
         configuration.screenHeightDp >= 480 &&
         configuration.screenWidthDp > configuration.screenHeightDp
     if (sideBySide) {
@@ -249,10 +252,12 @@ private fun DeviceCodeSignIn(session: Session, adding: Boolean, backdrop: @Compo
         }
     } else {
         AuthLayout(backdrop) {
-            CodeHeading()
+            CodeHeading(qr)
             Gap(28.dp)
-            CodeQr(current, 224.dp, Modifier.align(Alignment.CenterHorizontally))
-            Gap(28.dp)
+            if (qr) {
+                CodeQr(current, 224.dp, Modifier.align(Alignment.CenterHorizontally))
+                Gap(28.dp)
+            }
             details()
         }
     }
@@ -273,7 +278,7 @@ private fun SideBySide(current: DeviceCode?, details: @Composable ColumnScope.()
             horizontalArrangement = Arrangement.spacedBy(64.dp),
         ) {
             Column(Modifier.weight(1f)) {
-                CodeHeading()
+                CodeHeading(qr = true)
                 Gap(36.dp)
                 details()
             }
@@ -283,10 +288,17 @@ private fun SideBySide(current: DeviceCode?, details: @Composable ColumnScope.()
 }
 
 @Composable
-private fun CodeHeading() {
-    Text(stringResource(R.string.signin_code_title), style = MaterialTheme.typography.headlineMedium)
+private fun CodeHeading(qr: Boolean) {
+    Text(
+        stringResource(if (qr) R.string.signin_code_title else R.string.signin_code_title_typed),
+        style = MaterialTheme.typography.headlineMedium,
+    )
     Gap(8.dp)
-    Text(stringResource(R.string.signin_code_scan), style = MaterialTheme.typography.bodyMedium, color = Palette.Muted)
+    Text(
+        stringResource(if (qr) R.string.signin_code_scan else R.string.signin_code_approve),
+        style = MaterialTheme.typography.bodyMedium,
+        color = Palette.Muted,
+    )
 }
 
 /** The QR code of the link page with the code in it, or a spinner while there's no code yet. */
@@ -294,20 +306,26 @@ private fun CodeHeading() {
 private fun CodeQr(code: DeviceCode?, size: Dp, modifier: Modifier = Modifier) {
     if (code == null) {
         Box(modifier.size(size), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(color = Palette.Accent)
+            Spinner(size = 32.dp, color = Palette.Accent)
         }
         return
     }
     QrCode(code.verificationUriComplete, stringResource(R.string.signin_code_qr, code.userCode), size, modifier)
 }
 
-/** The code to type, where to type it, and whether it's still waiting. */
+/**
+ * The code to type, where to type it, and whether it's still waiting.
+ * `afterQr` words it as the other way in, under a QR code.
+ */
 @Composable
-private fun CodeDetails(code: DeviceCode?, error: String?, onRetry: (() -> Unit)?) {
+private fun CodeDetails(code: DeviceCode?, error: String?, afterQr: Boolean, onRetry: (() -> Unit)?) {
     if (code != null) {
         // The page without its scheme: shorter, and what people type anyway.
         Text(
-            stringResource(R.string.signin_code_enter, code.verificationUri.substringAfter("://")),
+            stringResource(
+                if (afterQr) R.string.signin_code_enter else R.string.signin_code_enter_only,
+                code.verificationUri.substringAfter("://"),
+            ),
             style = MaterialTheme.typography.bodyMedium,
             color = Palette.Muted,
         )
@@ -321,7 +339,7 @@ private fun CodeDetails(code: DeviceCode?, error: String?, onRetry: (() -> Unit)
         )
         Gap(20.dp)
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            CircularProgressIndicator(Modifier.size(14.dp), color = Palette.Muted, strokeWidth = 2.dp)
+            Spinner(size = 14.dp, color = Palette.Muted)
             Text(stringResource(R.string.signin_code_waiting), style = MaterialTheme.typography.bodySmall, color = Palette.Muted)
         }
     } else if (error == null) {

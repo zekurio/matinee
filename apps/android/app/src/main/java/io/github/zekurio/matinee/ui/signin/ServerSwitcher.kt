@@ -9,15 +9,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -27,6 +20,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -34,13 +28,18 @@ import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.name
 import io.github.zekurio.matinee.auth.SavedServer
 import io.github.zekurio.matinee.auth.Session
-import io.github.zekurio.matinee.ui.components.ButtonLook
-import io.github.zekurio.matinee.ui.components.Lucide
-import io.github.zekurio.matinee.ui.components.LucideIcon
-import io.github.zekurio.matinee.ui.components.MatineeButton
-import io.github.zekurio.matinee.ui.components.SheetHeader
-import io.github.zekurio.matinee.ui.components.SheetItem
-import io.github.zekurio.matinee.ui.components.rememberSheetCloser
+import io.github.zekurio.matinee.ui.kit.ButtonLook
+import io.github.zekurio.matinee.ui.kit.ConfirmDialog
+import io.github.zekurio.matinee.ui.kit.Lucide
+import io.github.zekurio.matinee.ui.kit.LucideIcon
+import io.github.zekurio.matinee.ui.kit.MatineeButton
+import io.github.zekurio.matinee.ui.kit.RoundIconButton
+import io.github.zekurio.matinee.ui.kit.Sheet
+import io.github.zekurio.matinee.ui.kit.SheetHeader
+import io.github.zekurio.matinee.ui.kit.SheetItem
+import io.github.zekurio.matinee.ui.kit.Spinner
+import io.github.zekurio.matinee.ui.kit.rememberSheetCloser
+import io.github.zekurio.matinee.ui.kit.rememberSheetState
 import io.github.zekurio.matinee.ui.settings.LinkRow
 import io.github.zekurio.matinee.ui.theme.Palette
 
@@ -80,15 +79,14 @@ fun ChangeServerButton(session: Session, modifier: Modifier = Modifier) {
  * connects to a new one, which can be left to come back here; the bin
  * removes one, after asking.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ServerSwitcherSheet(session: Session, onDismiss: () -> Unit) {
     val servers by session.servers.collectAsState()
     val removing by session.removing.collectAsState()
     var asking by remember { mutableStateOf<SavedServer?>(null) }
-    val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val sheet = rememberSheetState()
     val close = rememberSheetCloser(sheet, onDismiss)
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheet, containerColor = Palette.Raised, dragHandle = null) {
+    Sheet(onDismissRequest = onDismiss, state = sheet) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(vertical = 12.dp)) {
             SheetHeader(stringResource(R.string.servers_title), null)
             servers.forEach { server ->
@@ -103,20 +101,12 @@ fun ServerSwitcherSheet(session: Session, onDismiss: () -> Unit) {
         }
     }
     asking?.let { server ->
-        AlertDialog(
-            onDismissRequest = { asking = null },
-            containerColor = Palette.Raised,
-            title = { Text(stringResource(R.string.servers_remove_title, server.title())) },
-            text = { Text(stringResource(R.string.servers_remove_body), color = Palette.Muted) },
-            confirmButton = {
-                TextButton(onClick = {
-                    asking = null
-                    session.removeServer(server.origin)
-                }) { Text(stringResource(R.string.common_remove), color = Palette.Danger) }
-            },
-            dismissButton = {
-                TextButton(onClick = { asking = null }) { Text(stringResource(R.string.common_cancel), color = Palette.Foreground) }
-            },
+        ConfirmDialog(
+            title = stringResource(R.string.servers_remove_title, server.title()),
+            body = stringResource(R.string.servers_remove_body),
+            confirm = stringResource(R.string.common_remove),
+            onConfirm = { session.removeServer(server.origin) },
+            onDismiss = { asking = null },
         )
     }
 }
@@ -145,11 +135,16 @@ private fun ServerRow(server: SavedServer, busy: Boolean, onClick: () -> Unit, o
         if (server.active) LucideIcon(Lucide.Check, stringResource(R.string.servers_in_use), size = 20.dp, tint = Palette.Accent)
         Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
             if (busy) {
-                CircularProgressIndicator(Modifier.size(20.dp), color = Palette.Muted, strokeWidth = 2.dp)
+                Spinner(size = 20.dp, color = Palette.Muted)
             } else {
-                IconButton(onClick = onRemove) {
-                    LucideIcon(Lucide.Trash, stringResource(R.string.servers_remove, server.title()), size = 20.dp, tint = Palette.Muted)
-                }
+                RoundIconButton(
+                    Lucide.Trash,
+                    stringResource(R.string.servers_remove, server.title()),
+                    onRemove,
+                    size = 40.dp,
+                    tint = Palette.Muted,
+                    background = Color.Transparent,
+                )
             }
         }
     }

@@ -18,6 +18,7 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -56,15 +57,14 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -72,7 +72,6 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.Stable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -167,19 +166,20 @@ import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.LocalOffline
 import io.github.zekurio.matinee.ui.LocalUser
 import io.github.zekurio.matinee.ui.Motion
-import io.github.zekurio.matinee.ui.components.ButtonLook
-import io.github.zekurio.matinee.ui.components.ControlShape
 import io.github.zekurio.matinee.ui.components.ErrorBox
-import io.github.zekurio.matinee.ui.components.Gap
 import io.github.zekurio.matinee.ui.components.LocalApi
-import io.github.zekurio.matinee.ui.components.Lucide
-import io.github.zekurio.matinee.ui.components.LucideIcon
-import io.github.zekurio.matinee.ui.components.MatineeButton
-import io.github.zekurio.matinee.ui.components.RoundIconButton
-import io.github.zekurio.matinee.ui.components.focusRing
 import io.github.zekurio.matinee.ui.episodeCode
 import io.github.zekurio.matinee.ui.formatClock
 import io.github.zekurio.matinee.ui.itemLabel
+import io.github.zekurio.matinee.ui.kit.ButtonLook
+import io.github.zekurio.matinee.ui.kit.ControlShape
+import io.github.zekurio.matinee.ui.kit.Gap
+import io.github.zekurio.matinee.ui.kit.Lucide
+import io.github.zekurio.matinee.ui.kit.LucideIcon
+import io.github.zekurio.matinee.ui.kit.MatineeButton
+import io.github.zekurio.matinee.ui.kit.RoundIconButton
+import io.github.zekurio.matinee.ui.kit.Spinner
+import io.github.zekurio.matinee.ui.kit.focusRing
 import io.github.zekurio.matinee.ui.player.tv.TvPlayerScreen
 import io.github.zekurio.matinee.ui.rememberLoader
 import io.github.zekurio.matinee.ui.settings.languageName
@@ -269,7 +269,7 @@ fun PlayerScreen(itemId: String, start: Double?) {
     }
     Box(Modifier.fillMaxSize().background(Color.Black)) {
         when (val state = data.state) {
-            Load.Loading -> CircularProgressIndicator(Modifier.align(Alignment.Center), color = Palette.Accent)
+            Load.Loading -> Spinner(Modifier.align(Alignment.Center), size = 32.dp, color = Palette.Accent)
             is Load.Failed -> PlayerFailure(stringResource(R.string.player_load_failed), state.message, data::reload)
             is Load.Ready -> when (val value = state.value) {
                 // What shows when nothing plays, as after the last source failed.
@@ -608,7 +608,7 @@ private fun Playback(itemId: String, data: PlayerData, start: Double?) {
         ZoomNote(zoomNote, fill, Modifier.align(Alignment.TopCenter).safeDrawingPadding().padding(top = 16.dp))
         PlayerNoticeNote(controller.notice, Modifier.align(Alignment.TopCenter).safeDrawingPadding().padding(top = 16.dp, start = 24.dp, end = 24.dp))
         if (controller.loading && controller.error == null) {
-            CircularProgressIndicator(Modifier.align(Alignment.Center).size(48.dp), color = Palette.Foreground)
+            Spinner(Modifier.align(Alignment.Center), size = 48.dp, color = Palette.Foreground)
         }
         if (!inPip) {
             // An error has the screen to itself, with a back button of its own.
@@ -1026,7 +1026,7 @@ private fun SkipButton(icon: Int, seconds: Double, label: String, onClick: () ->
     val interaction = remember { MutableInteractionSource() }
     Box(
         Modifier.size(72.dp).clip(CircleShape).focusRing(interaction, CircleShape)
-            .clickable(interaction, indication = ripple(), role = Role.Button, onClick = onClick),
+            .clickable(interaction, indication = LocalIndication.current, role = Role.Button, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         LucideIcon(icon, label, size = 40.dp)

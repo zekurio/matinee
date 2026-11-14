@@ -25,11 +25,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -78,18 +76,19 @@ import io.github.zekurio.matinee.ui.Reveal
 import io.github.zekurio.matinee.ui.TopBar
 import io.github.zekurio.matinee.ui.audioFormatName
 import io.github.zekurio.matinee.ui.components.Avatar
-import io.github.zekurio.matinee.ui.components.Gap
-import io.github.zekurio.matinee.ui.components.Gutter
 import io.github.zekurio.matinee.ui.components.LocalApi
 import io.github.zekurio.matinee.ui.components.LocalSnackbar
-import io.github.zekurio.matinee.ui.components.Lucide
-import io.github.zekurio.matinee.ui.components.LucideIcon
-import io.github.zekurio.matinee.ui.components.RoundIconButton
 import io.github.zekurio.matinee.ui.components.launchShowing
 import io.github.zekurio.matinee.ui.downloads.mbps
 import io.github.zekurio.matinee.ui.formatBitrate
 import io.github.zekurio.matinee.ui.formatBytes
 import io.github.zekurio.matinee.ui.formatInstant
+import io.github.zekurio.matinee.ui.kit.ConfirmDialog
+import io.github.zekurio.matinee.ui.kit.Gap
+import io.github.zekurio.matinee.ui.kit.Gutter
+import io.github.zekurio.matinee.ui.kit.Lucide
+import io.github.zekurio.matinee.ui.kit.LucideIcon
+import io.github.zekurio.matinee.ui.kit.RoundIconButton
 import io.github.zekurio.matinee.ui.player.AUTOMATIC
 import io.github.zekurio.matinee.ui.player.Capabilities
 import io.github.zekurio.matinee.ui.player.Decoders
@@ -737,20 +736,12 @@ private fun DownloadsSection() {
         }
     }
     if (confirm) {
-        AlertDialog(
-            onDismissRequest = { confirm = false },
-            containerColor = Palette.Raised,
-            title = { Text(stringResource(R.string.downloads_remove_all_confirm)) },
-            text = { Text(stringResource(R.string.downloads_remove_all_body, total), color = Palette.Muted) },
-            confirmButton = {
-                TextButton(onClick = {
-                    confirm = false
-                    downloads.removeAll(api)
-                }) { Text(stringResource(R.string.common_remove), color = Palette.Danger) }
-            },
-            dismissButton = {
-                TextButton(onClick = { confirm = false }) { Text(stringResource(R.string.common_cancel), color = Palette.Foreground) }
-            },
+        ConfirmDialog(
+            title = stringResource(R.string.downloads_remove_all_confirm),
+            body = stringResource(R.string.downloads_remove_all_body, total),
+            confirm = stringResource(R.string.common_remove),
+            onConfirm = { downloads.removeAll(api) },
+            onDismiss = { confirm = false },
         )
     }
 }

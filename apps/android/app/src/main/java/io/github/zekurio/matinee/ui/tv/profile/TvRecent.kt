@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -18,7 +17,8 @@ import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.LocalUser
 import io.github.zekurio.matinee.ui.RefreshOnResume
-import io.github.zekurio.matinee.ui.components.Lucide
+import io.github.zekurio.matinee.ui.kit.Lucide
+import io.github.zekurio.matinee.ui.kit.Spinner
 import io.github.zekurio.matinee.ui.rememberLoader
 import io.github.zekurio.matinee.ui.theme.Palette
 import io.github.zekurio.matinee.ui.tv.TvButton
@@ -53,7 +53,7 @@ fun TvRecentScreen() {
         Load.Loading -> Column(Modifier.fillMaxSize().padding(top = TvGrid.Top)) {
             heading()
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(Modifier.size(32.dp), color = Palette.Muted, strokeWidth = 3.dp)
+                Spinner(size = 32.dp, color = Palette.Muted)
             }
         }
         is Load.Failed -> Column(Modifier.fillMaxSize().padding(top = TvGrid.Top)) {

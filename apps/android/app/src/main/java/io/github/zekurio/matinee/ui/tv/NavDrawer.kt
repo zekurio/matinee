@@ -51,7 +51,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.ui.Motion
 import io.github.zekurio.matinee.ui.components.Avatar
-import io.github.zekurio.matinee.ui.components.LucideIcon
+import io.github.zekurio.matinee.ui.kit.LucideIcon
 import io.github.zekurio.matinee.ui.theme.Palette
 
 /** An entry in the TV's drawer. [icon] null draws the signed-in person's picture. */

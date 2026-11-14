@@ -18,12 +18,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -49,14 +46,15 @@ import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.Loader
 import io.github.zekurio.matinee.ui.Reveal
 import io.github.zekurio.matinee.ui.TopBar
-import io.github.zekurio.matinee.ui.components.ButtonLook
-import io.github.zekurio.matinee.ui.components.Gap
-import io.github.zekurio.matinee.ui.components.Gutter
 import io.github.zekurio.matinee.ui.components.LocalSnackbar
-import io.github.zekurio.matinee.ui.components.Lucide
-import io.github.zekurio.matinee.ui.components.LucideIcon
-import io.github.zekurio.matinee.ui.components.MatineeButton
-import io.github.zekurio.matinee.ui.components.MatineeTextField
+import io.github.zekurio.matinee.ui.kit.ButtonLook
+import io.github.zekurio.matinee.ui.kit.Gap
+import io.github.zekurio.matinee.ui.kit.Gutter
+import io.github.zekurio.matinee.ui.kit.Lucide
+import io.github.zekurio.matinee.ui.kit.LucideIcon
+import io.github.zekurio.matinee.ui.kit.MatineeButton
+import io.github.zekurio.matinee.ui.kit.MatineeTextField
+import io.github.zekurio.matinee.ui.kit.Spinner
 import io.github.zekurio.matinee.ui.theme.Palette
 import java.io.IOException
 import kotlinx.coroutines.delay
@@ -74,7 +72,7 @@ internal fun <T> LazyListScope.loaded(loader: Loader<T>, failed: @Composable (St
     when (val state = loader.state) {
         Load.Loading -> item(key = "loading") {
             Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = Palette.Accent)
+                Spinner(size = 32.dp, color = Palette.Accent)
             }
         }
         is Load.Failed -> item(key = "failed") {
@@ -265,7 +263,7 @@ private fun SaveBar(feedback: SaveFeedback, dirty: Boolean, canSave: Boolean, at
                 enabled = pending || feedback == SaveFeedback.Success || (dirty && canSave),
             ) {
                 when (feedback) {
-                    SaveFeedback.Pending -> CircularProgressIndicator(Modifier.size(16.dp), color = Palette.AccentForeground, strokeWidth = 2.dp)
+                    SaveFeedback.Pending -> Spinner(size = 16.dp, color = Palette.AccentForeground)
                     SaveFeedback.Success -> LucideIcon(Lucide.Check, null, size = 16.dp)
                     else -> {}
                 }
@@ -319,26 +317,6 @@ internal fun TextRow(
             }
         }
     }
-}
-
-/** Asks before something that can't be undone; [confirm] names it. */
-@Composable
-internal fun ConfirmDialog(title: String, body: String?, confirm: String, onConfirm: () -> Unit, onDismiss: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        containerColor = Palette.Raised,
-        title = { Text(title) },
-        text = body?.let { { Text(it, color = Palette.Muted) } },
-        confirmButton = {
-            TextButton(onClick = {
-                onDismiss()
-                onConfirm()
-            }) { Text(confirm, color = Palette.Danger) }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel), color = Palette.Foreground) }
-        },
-    )
 }
 
 /** Small muted lines under a panel, for what a page has to say about itself. */

@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -43,10 +42,11 @@ import io.github.zekurio.matinee.ui.audioFormatName
 import io.github.zekurio.matinee.ui.components.Avatar
 import io.github.zekurio.matinee.ui.components.LocalApi
 import io.github.zekurio.matinee.ui.components.LocalSnackbar
-import io.github.zekurio.matinee.ui.components.Lucide
 import io.github.zekurio.matinee.ui.components.launchShowing
 import io.github.zekurio.matinee.ui.formatBitrate
 import io.github.zekurio.matinee.ui.formatInstant
+import io.github.zekurio.matinee.ui.kit.Lucide
+import io.github.zekurio.matinee.ui.kit.Spinner
 import io.github.zekurio.matinee.ui.player.AUTOMATIC
 import io.github.zekurio.matinee.ui.player.Capabilities
 import io.github.zekurio.matinee.ui.player.Decoders
@@ -287,7 +287,7 @@ internal fun ColumnScope.DeviceRows(panels: SettingsPanels, first: Modifier) {
     // Opening the category asks again, so a device signed in meanwhile shows.
     androidx.compose.runtime.LaunchedEffect(Unit) { sessions.refreshIfStale(0) }
     when (val state = sessions.state) {
-        Load.Loading -> CircularProgressIndicator(Modifier.padding(start = 20.dp, top = 12.dp).size(28.dp), color = Palette.Muted, strokeWidth = 3.dp)
+        Load.Loading -> Spinner(Modifier.padding(start = 20.dp, top = 12.dp), size = 28.dp, color = Palette.Muted)
         is Load.Failed -> {
             RowNote(stringResource(R.string.account_sessions_load_failed, state.message))
             TvListItem(stringResource(R.string.common_retry), onClick = sessions::reload, modifier = first, icon = Lucide.RefreshCw, quiet = true)

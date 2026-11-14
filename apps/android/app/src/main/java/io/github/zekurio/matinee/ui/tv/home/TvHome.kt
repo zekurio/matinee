@@ -21,14 +21,13 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -56,8 +55,6 @@ import io.github.zekurio.matinee.ui.LocalUser
 import io.github.zekurio.matinee.ui.Motion
 import io.github.zekurio.matinee.ui.components.ActionTarget
 import io.github.zekurio.matinee.ui.components.LocalApi
-import io.github.zekurio.matinee.ui.components.Lucide
-import io.github.zekurio.matinee.ui.components.LucideIcon
 import io.github.zekurio.matinee.ui.components.art
 import io.github.zekurio.matinee.ui.components.landscape
 import io.github.zekurio.matinee.ui.components.shelfCardModel
@@ -69,6 +66,9 @@ import io.github.zekurio.matinee.ui.home.railState
 import io.github.zekurio.matinee.ui.home.rememberHomeLoaders
 import io.github.zekurio.matinee.ui.home.rememberShelf
 import io.github.zekurio.matinee.ui.itemLabel
+import io.github.zekurio.matinee.ui.kit.Lucide
+import io.github.zekurio.matinee.ui.kit.LucideIcon
+import io.github.zekurio.matinee.ui.kit.Spinner
 import io.github.zekurio.matinee.ui.progressRatio
 import io.github.zekurio.matinee.ui.theme.Palette
 import io.github.zekurio.matinee.ui.timeLeft
@@ -454,7 +454,7 @@ private fun RowNotice(title: String?, headline: String?, message: String?, onRet
             horizontalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             if (headline == null) {
-                CircularProgressIndicator(color = Palette.Muted, strokeWidth = 3.dp, modifier = Modifier.size(28.dp))
+                Spinner(size = 28.dp, color = Palette.Muted)
             } else {
                 Column(Modifier.weight(1f, fill = false)) {
                     Text(headline, style = TvType.Body, color = Palette.Foreground.copy(alpha = 0.85f))
@@ -476,7 +476,7 @@ private val SHELF_HEIGHT: Dp = TvCards.PosterWidth * 1.5f + 4.dp
 @Composable
 private fun Loading() {
     Box(Modifier.fillMaxWidth().height(ROW_NOTICE_HEIGHT), contentAlignment = Alignment.Center) {
-        CircularProgressIndicator(color = Palette.Muted, strokeWidth = 3.dp, modifier = Modifier.size(32.dp))
+        Spinner(size = 32.dp, color = Palette.Muted)
     }
 }
 

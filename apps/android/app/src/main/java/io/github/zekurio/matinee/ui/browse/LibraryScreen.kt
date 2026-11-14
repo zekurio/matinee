@@ -18,12 +18,8 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -43,16 +39,20 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.Library
-import io.github.zekurio.matinee.ui.TopBar
-import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.LibraryRoute
-import io.github.zekurio.matinee.ui.components.Chip
-import io.github.zekurio.matinee.ui.components.Gap
-import io.github.zekurio.matinee.ui.components.Gutter
-import io.github.zekurio.matinee.ui.components.Lucide
-import io.github.zekurio.matinee.ui.components.LucideIcon
-import io.github.zekurio.matinee.ui.components.MatineeTextField
-import io.github.zekurio.matinee.ui.components.RoundIconButton
+import io.github.zekurio.matinee.ui.Load
+import io.github.zekurio.matinee.ui.TopBar
+import io.github.zekurio.matinee.ui.kit.Chip
+import io.github.zekurio.matinee.ui.kit.Gap
+import io.github.zekurio.matinee.ui.kit.Gutter
+import io.github.zekurio.matinee.ui.kit.Lucide
+import io.github.zekurio.matinee.ui.kit.LucideIcon
+import io.github.zekurio.matinee.ui.kit.MatineeTextField
+import io.github.zekurio.matinee.ui.kit.Menu
+import io.github.zekurio.matinee.ui.kit.MenuItem
+import io.github.zekurio.matinee.ui.kit.RoundIconButton
+import io.github.zekurio.matinee.ui.kit.Sheet
+import io.github.zekurio.matinee.ui.kit.rememberSheetState
 import io.github.zekurio.matinee.ui.theme.Palette
 
 @Composable
@@ -163,16 +163,12 @@ private fun LibraryActions(
     )
     Box {
         RoundIconButton(Lucide.ArrowUpDown, stringResource(R.string.library_sort), { sorting = true }, size = 48.dp, iconSize = 22.dp, background = Color.Transparent)
-        DropdownMenu(expanded = sorting, onDismissRequest = { sorting = false }, containerColor = Palette.Raised) {
+        Menu(expanded = sorting, onDismissRequest = { sorting = false }) {
             LIBRARY_SORTS.forEach { (value, label) ->
-                DropdownMenuItem(
-                    text = { Text(stringResource(label)) },
-                    trailingIcon = if (value == sort) ({ LucideIcon(Lucide.Check, null, size = 16.dp) }) else null,
-                    onClick = {
-                        sorting = false
-                        onSort(value)
-                    },
-                )
+                MenuItem(stringResource(label), selected = value == sort, onClick = {
+                    sorting = false
+                    onSort(value)
+                })
             }
         }
     }
@@ -184,11 +180,11 @@ private fun LibraryActions(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun GenreSheet(libraryId: String, current: String?, onPick: (String?) -> Unit, onDismiss: () -> Unit) {
     val genres = rememberLibraryGenres(libraryId)
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Palette.Raised) {
+    // A long list, opened halfway and dragged up, so it keeps its grip.
+    Sheet(onDismissRequest = onDismiss, state = rememberSheetState(skipPartiallyExpanded = false), handle = true) {
         Text(
             stringResource(R.string.library_genre),
             style = MaterialTheme.typography.titleMedium,
