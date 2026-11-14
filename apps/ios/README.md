@@ -199,8 +199,9 @@ release build process, signing, or TestFlight setup. The release scripts and
 workflow publish the server and Android APKs only; they need no iOS job
 until signing and distribution exist.
 
-The commit history records simulator layout checks across the phone screens,
-iPad layouts, and large text sizes. MatineeCore has automated tests for the
+The commit history records layout fixes across the phone screens,
+iPad layouts, and large text sizes, not a complete end-to-end acceptance pass.
+MatineeCore has automated tests for the
 ported logic, fake-engine playback, downloads, and offline track selection.
 The opt-in Mac live tests played direct MP4 and HLS from the dev fixture,
 checked audio picks, WebVTT loading, PGS burn-in selection, seeking and
