@@ -7,7 +7,7 @@ import SwiftUI
  * bar on each tab's first page; iOS gives each tab a stack of its own, as
  * its apps do, so a tab keeps its place while another is open. Pages
  * opened from a tab go on that tab's stack. The player opens over
- * everything, in landscape, as Android's own PlayerActivity.
+ * everything, in landscape on a phone, as Android's own PlayerActivity.
  *
  * Pages don't edit this file: they open each other through the
  * environment's `Navigator`, and every route a page needs is here.
@@ -264,12 +264,17 @@ struct TabStack: View {
   @Environment(\.palette) private var palette
 
   var body: some View {
+    // Every page on the stack, the first too, on the theme's background:
+    // the stack's own is the system's black or white.
     NavigationStack(path: nav.path(tab)) {
       TabRoot(tab: tab)
+        .background(palette.background.ignoresSafeArea())
         .environment(\.tabReselected, nav.reselected[tab, default: 0])
+        .environment(\.tabRoot, true)
         .navigationDestination(for: Route.self) { route in
           RouteScreen(route: route)
             .background(palette.background.ignoresSafeArea())
+            .environment(\.tabRoot, false)
         }
     }
   }
@@ -280,6 +285,9 @@ extension EnvironmentValues {
   /// of while it shows: scroll to the top, as iOS apps do. `scrollsToTopOnReselect`
   /// does it for a plain scroll view.
   @Entry var tabReselected = 0
+
+  /// The page is a tab's first page, not one opened from it.
+  @Entry var tabRoot = false
 }
 
 extension View {
@@ -300,7 +308,7 @@ private struct ScrollsToTop: ViewModifier {
   }
 }
 
-/// The player over everything, in landscape, in the dark theme, as Android's PlayerActivity.
+/// The player over everything, in landscape on a phone, in the dark theme, as Android's PlayerActivity.
 struct PlayerCover: View {
   let request: PlayerRequest
   @Environment(ThemeStore.self) private var theme

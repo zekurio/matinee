@@ -11,18 +11,13 @@ import SwiftUI
 /// library got last. Offline mode leaves the server alone: Home is the downloads.
 struct HomeScreen: View {
   @Environment(\.offline) private var offline
-  @Environment(\.palette) private var palette
 
   var body: some View {
-    Group {
-      if offline {
-        OfflineHomeScreen()
-      } else {
-        OnlineHomeScreen()
-      }
+    if offline {
+      OfflineHomeScreen()
+    } else {
+      OnlineHomeScreen()
     }
-    // A tab's first page, which the stack doesn't paint as it does the pages over it.
-    .background(palette.background.ignoresSafeArea())
   }
 }
 

@@ -61,8 +61,6 @@ struct DownloadsScreen: View {
     .environment(\.defaultMinListRowHeight, 0)
     .motion(Motion.move, value: list.coming.map(\.id) + list.finished.map(\.id))
     .scrollsToTopOnReselect()
-    // A tab's first page, which the stack doesn't paint as it does the pages over it.
-    .background(palette.background.ignoresSafeArea())
     .topBar(Str.downloadsTitle) {
       if offline { LucideIcon(.cloudOff, label: Str.downloadsOffline, size: 20, tint: palette.muted) }
     }

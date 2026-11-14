@@ -260,12 +260,14 @@ background first, as iOS keeps scene state; `simctl launch
   `\.actionMenu = ActionMenu { target in AnyView(…) }`. The Actions task
   fills it in `Actions.swift`; until then cards offer no menu.
 - Controls [Controls.kt]: `.buttonStyle(.matinee(.primary))` or
-  `MatineeButton(.outline) { … }`, `RoundIconButton(icon, label:)`,
+  `MatineeButton(.outline) { … }`, `RoundIconButton(icon, label:, background:, border:)`,
   `Chip(label, selected:)`, `WatchedBadge`, `ProgressBar(progress:)`,
   `SectionTitle(title, action:)`, `Avatar(name, url:)`, `Badge(text)`,
   `SegmentedControl(options, selection:)`, `.toggleStyle(.matinee)`,
   `MatineeSlider(label, value:, in:)`; `ControlShape`, `CardShape`,
   `Gutter`, `MinTouch`.
+- Layout [Compose's `FlowRow`]: `FlowRow(spacing:, lineSpacing:)`, views
+  that wrap onto more lines, each line centered.
 - States [Controls.kt, HomeSections.kt]: `LoadingBox`, `ErrorBox(title,
   message, disconnected:, onRetry:)`, `Disconnected`, `DisconnectedAction`,
   `Notice`, `RailFailure`, `RailSkeleton(title:, art:)`, `EmptyState(icon,
@@ -301,7 +303,11 @@ background first, as iOS keeps scene state; `simctl launch
 
 - A long press opens a context menu over the card, not a bottom sheet.
 - Top bars are the navigation bar, with the system's back button and edge
-  swipe; the tab bar is the shell's to choose.
+  swipe; the tab bar is the shell's to choose. A page over art keeps the
+  bar too, cleared, with Home and the page above as its glass buttons
+  (`.itemTopBar`): from iOS 26 a page whose bar is hidden loses both back
+  swipes, and an empty bar counts as hidden. Before iOS 26 it floats
+  Android's circles over the art instead.
 - Sheets are the system's, with a grabber and detents.
 - Round icon buttons keep their size at large text sizes and show in the
   large content viewer; text and other icons grow with Dynamic Type.
@@ -387,7 +393,8 @@ Notes for the tasks that fill them in:
   under `PICKED_FOLDER`; the picker hands it back with
   `nav.backWith(PICKED_FOLDER, folder)`.
 - The player leaves with `@Environment(\.dismiss)`; the shell turns the
-  screen to landscape and back (`Orientation` in MatineeApp.swift).
+  phone's screen to landscape and back (`Orientation` in MatineeApp.swift);
+  an iPad's player follows the device, and its controls lay out both ways.
 - Signing in and the server list are built: `signin/` (ConnectScreen,
   SignInScreen, ServerSwitcherSheet, ChangeServerRow, ChangeServerButton,
   UnreachableScreen, LocalNetworkHint).

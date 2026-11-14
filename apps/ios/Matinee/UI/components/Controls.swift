@@ -120,13 +120,15 @@ struct RoundIconButton: View {
   var iconSize: CGFloat = 20
   var tint: Color?
   var background: Color?
+  /// A hairline around the circle, for one floating over a page that may be as dark as it is.
+  var border: Color?
   let action: () -> Void
 
   @Environment(\.palette) private var palette
 
   init(
     _ icon: Lucide, label: String, size: CGFloat = 44, iconSize: CGFloat = 20, tint: Color? = nil,
-    background: Color? = nil, action: @escaping () -> Void
+    background: Color? = nil, border: Color? = nil, action: @escaping () -> Void
   ) {
     self.icon = icon
     self.label = label
@@ -134,6 +136,7 @@ struct RoundIconButton: View {
     self.iconSize = iconSize
     self.tint = tint
     self.background = background
+    self.border = border
     self.action = action
   }
 
@@ -142,6 +145,9 @@ struct RoundIconButton: View {
       LucideIcon(icon, size: iconSize, tint: tint ?? palette.foreground, scales: false)
         .frame(width: size, height: size)
         .background(background ?? palette.secondary, in: Circle())
+        .overlay {
+          if let border { Circle().strokeBorder(border) }
+        }
     }
     .buttonStyle(RoundPress())
     .frame(minWidth: MinTouch, minHeight: MinTouch)

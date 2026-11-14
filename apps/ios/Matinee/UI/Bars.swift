@@ -30,8 +30,8 @@ extension View {
 
   /// Back and Home over a title's, season's, or episode's art, with the
   /// page above it, like the show of a season, in a pill: Android's
-  /// `ItemTopBar`. The navigation bar steps aside for the art; the edge
-  /// swipe still goes back.
+  /// `ItemTopBar`. The navigation bar clears for the art, and back and its
+  /// swipes are the system's. The page goes under the bar, to the top edge.
   func itemTopBar(parent: String? = nil, onParent: (() -> Void)? = nil) -> some View {
     modifier(ItemTopBar(parent: parent, onParent: onParent))
   }
@@ -44,11 +44,13 @@ private struct TopBar<Actions: View>: ViewModifier {
   @Environment(\.palette) private var palette
   @Environment(\.navigator) private var nav
   @Environment(\.offline) private var offline
+  @Environment(\.tabRoot) private var tabRoot
+  @Environment(\.horizontalSizeClass) private var sizeClass
 
   func body(content: Content) -> some View {
     content
       .navigationTitle(title ?? "")
-      .navigationBarTitleDisplayMode(.inline)
+      .navigationBarTitleDisplayMode(largeTitle ? .large : .inline)
       .toolbarBackground(palette.background, for: .navigationBar)
       .toolbarBackground(.visible, for: .navigationBar)
       .toolbarColorScheme(palette.isDark ? .dark : .light, for: .navigationBar)
@@ -62,6 +64,15 @@ private struct TopBar<Actions: View>: ViewModifier {
         ToolbarItemGroup(placement: .topBarTrailing) { actions() }
       }
   }
+
+  /// An iPad's tabs sit in the middle of the navigation bar, where an inline
+  /// title would be, and a tab's first page, with no back button to give the
+  /// bar a second row, lost its title under them. It names itself in a large
+  /// title under the tabs instead, as iPad apps have it; the pages opened
+  /// from it keep the inline title, which iOS moves under the tabs.
+  private var largeTitle: Bool {
+    tabRoot && sizeClass == .regular && UIDevice.current.userInterfaceIdiom == .pad
+  }
 }
 
 private struct ItemTopBar: ViewModifier {
@@ -73,39 +84,81 @@ private struct ItemTopBar: ViewModifier {
   @Environment(\.palette) private var palette
 
   func body(content: Content) -> some View {
-    content
-      .toolbar(.hidden, for: .navigationBar)
-      .background { BackSwipe() }
-      .overlay(alignment: .top) {
-        HStack(spacing: 6) {
-          RoundIconButton(.arrowLeft, label: Str.commonBack, iconSize: 22, background: floating) { dismiss() }
+    if #available(iOS 26, *) {
+      // The navigation bar, cleared for the art: the system's back button,
+      // its edge swipe and its swipe from anywhere on the page, with Home and
+      // the page above beside it, each on the system's glass. iOS takes both
+      // swipes away from a page whose bar is hidden, and an empty bar counts
+      // as hidden, so the buttons live in it rather than over it.
+      content
+        .toolbarBackgroundVisibility(.hidden, for: .navigationBar)
+        .toolbarColorScheme(palette.isDark ? .dark : .light, for: .navigationBar)
+        .toolbar {
           if !offline {
-            RoundIconButton(.house, label: Str.shellHomeLink, iconSize: 20, background: floating) { nav.home() }
+            ToolbarItem(placement: .topBarLeading) {
+              Button { nav.home() } label: { Image(Lucide.house) }
+                .accessibilityLabel(Str.shellHomeLink)
+            }
           }
           if let parent, let onParent {
-            Button(action: onParent) {
-              Text(parent).textStyle(.labelLarge).lineLimit(1).foregroundStyle(palette.foreground)
-                .padding(.horizontal, 16)
-                .frame(height: 44)
-                .background(floating, in: Capsule())
-                .contentShape(Capsule())
+            // A glass of its own rather than one shared with Home, as Android's pill is.
+            if !offline { ToolbarSpacer(.fixed, placement: .topBarLeading) }
+            ToolbarItem(placement: .topBarLeading) {
+              Button(action: onParent) { Text(parent).textStyle(.labelLarge).lineLimit(1) }
             }
-            .buttonStyle(RoundPress())
           }
-          Spacer(minLength: 0)
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 6)
+    } else {
+      content
+        .toolbar(.hidden, for: .navigationBar)
+        .background { BackSwipe() }
+        .overlay(alignment: .top) { floatingBar }
+    }
+  }
+
+  /// Back, Home, and the page above, floating over the art, before iOS 26's glass bars.
+  private var floatingBar: some View {
+    HStack(spacing: 6) {
+      RoundIconButton(.arrowLeft, label: Str.commonBack, iconSize: 22, background: floating, border: edge) {
+        dismiss()
       }
+      if !offline {
+        RoundIconButton(.house, label: Str.shellHomeLink, iconSize: 20, background: floating, border: edge) {
+          nav.home()
+        }
+      }
+      if let parent, let onParent {
+        Button(action: onParent) {
+          Text(parent).textStyle(.labelLarge).lineLimit(1).foregroundStyle(palette.foreground)
+            .padding(.horizontal, 16)
+            .frame(height: 44)
+            .background(floating, in: Capsule())
+            .overlay { Capsule().strokeBorder(edge) }
+            .contentShape(Capsule())
+        }
+        .buttonStyle(RoundPress())
+      }
+      Spacer(minLength: 0)
+    }
+    // Lifted off a page as dark as the veil, as the web's floating bar is.
+    .compositingGroup()
+    .shadow(color: .black.opacity(palette.isDark ? 0.45 : 0.15), radius: 10, y: 4)
+    .padding(.horizontal, 8)
+    .padding(.vertical, 6)
   }
 
   /// The page's color veiling the art behind a floating button, as the web's bars have it.
   private var floating: Color { palette.background.opacity(0.6) }
+
+  /// The web's glass has a hairline edge in the text's color, which keeps a
+  /// button there over a plain page without art, where the veil alone is the
+  /// page's own color and the circle vanished.
+  private var edge: Color { palette.foreground.opacity(0.1) }
 }
 
 /// Keeps the edge swipe going back on a page whose navigation bar is
-/// hidden: UIKit only lets it begin while the bar's own back button would
-/// show, so this answers for it, on any page but the first.
+/// hidden, before iOS 26: UIKit only lets it begin while the bar's own back
+/// button would show, so this answers for it, on any page but the first.
 private struct BackSwipe: UIViewControllerRepresentable {
   func makeUIViewController(context: Context) -> Controller { Controller() }
   func updateUIViewController(_ controller: Controller, context: Context) {}

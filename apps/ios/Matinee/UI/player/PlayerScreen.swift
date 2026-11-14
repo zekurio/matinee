@@ -4,9 +4,9 @@ import UIKit
 
 /*
  * PlayerScreen.kt and PlayerActivity.kt. The shell presents the player over
- * everything, in landscape and the dark theme, without the status bar and
- * with the home indicator tucked away (`PlayerCover` in Nav.swift); it
- * leaves with `@Environment(\.dismiss)`, and the shell turns the screen
+ * everything, in the dark theme, in landscape on a phone, without the status
+ * bar and with the home indicator tucked away (`PlayerCover` in Nav.swift);
+ * it leaves with `@Environment(\.dismiss)`, and the shell turns the screen
  * back. `PlayerController` (MatineeCore/Player) plays; this draws it and
  * makes the calls its README's Lifecycle lists at their moments.
  *

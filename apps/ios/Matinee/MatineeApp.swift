@@ -96,15 +96,25 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
   }
 }
 
-/// Which way the screen may turn: any way, but for the player, which turns
-/// it to landscape as Android's player activity does, and lets it go back.
+/// Which way the screen may turn: any way, but for the player on a phone,
+/// which turns it to landscape as Android's player activity does, and lets
+/// it go back.
+///
+/// An iPad's player follows the device instead. An iPad app that supports
+/// multitasking isn't asked which way it may turn, so a lock there would
+/// do nothing; and an iPad is held either way to watch, stood on a desk
+/// upright as often as on its side, as Apple's own video apps let it be.
+/// The player's controls lay out for both.
 enum Orientation {
+  private static var phone: Bool { UIDevice.current.userInterfaceIdiom == .phone }
+
   static var mask: UIInterfaceOrientationMask {
-    locked ?? (UIDevice.current.userInterfaceIdiom == .pad ? .all : .allButUpsideDown)
+    locked ?? (phone ? .allButUpsideDown : .all)
   }
   private static var locked: UIInterfaceOrientationMask?
 
   static func lock(_ orientations: UIInterfaceOrientationMask) {
+    guard phone else { return }
     UIDevice.current.beginGeneratingDeviceOrientationNotifications()
     locked = orientations
     update(orientations)
@@ -112,6 +122,7 @@ enum Orientation {
 
   /// Lets go, turning the screen back the way the device is held.
   static func unlock() {
+    guard phone, locked != nil else { return }
     locked = nil
     let held = UIDevice.current.orientation
     update(held.isLandscape ? .landscape : .portrait)
