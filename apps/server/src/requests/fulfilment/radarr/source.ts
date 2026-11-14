@@ -156,7 +156,8 @@ export const adapter = {
       ...lookup,
       monitored: true,
       minimumAvailability: existing ? lookup.minimumAvailability : "released",
-      addOptions: { searchForMovie: false },
+      // Radarr searches a new movie after the refresh that follows the add.
+      addOptions: { searchForMovie: true },
     }
     const saved = title.parse(
       await call(
@@ -167,10 +168,11 @@ export const adapter = {
         payload,
       ),
     )
-    await call(connection, "command", object, "POST", {
-      name: "MoviesSearch",
-      movieIds: [saved.id],
-    })
+    if (existing)
+      await call(connection, "command", object, "POST", {
+        name: "MoviesSearch",
+        movieIds: [saved.id],
+      })
     return { id: saved.id }
   },
   async progress(connection, sent) {

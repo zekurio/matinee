@@ -187,7 +187,10 @@ export const adapter = {
             (season.monitored && Boolean(existing)) ||
             Boolean(order.scope?.seasons.includes(season.seasonNumber)),
         })),
-      addOptions: { searchForMissingEpisodes: false },
+      // Sonarr fills a new series' episodes in the refresh after the add,
+      // so a search sent now would find none. Let Sonarr search once they
+      // exist, as Seerr does.
+      addOptions: { searchForMissingEpisodes: true },
     }
     const saved = title.parse(
       await call(
@@ -213,11 +216,14 @@ export const adapter = {
           monitored: true,
         })
       }
+      for (const seasonNumber of order.scope?.seasons ?? []) {
+        await call(connection, "command", object, "POST", {
+          name: "SeasonSearch",
+          seriesId: saved.id,
+          seasonNumber,
+        })
+      }
     }
-    await call(connection, "command", object, "POST", {
-      name: "MissingEpisodeSearch",
-      seriesId: saved.id,
-    })
     return {
       id: saved.id,
       seasons: order.scope?.seasons ?? [],
