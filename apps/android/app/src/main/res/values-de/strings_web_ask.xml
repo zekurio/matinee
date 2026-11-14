@@ -7,7 +7,6 @@
     <string name="web_ask_stopNotifying">Nicht mehr benachrichtigen</string>
     <string name="web_ask_cancel">Anfrage zurückziehen</string>
     <string name="web_ask_dialog_title">%1$s anfragen</string>
-    <string name="web_ask_dialog_goesTo">Kommt in</string>
     <string name="web_ask_chooser_seasons">Staffeln</string>
     <string name="web_ask_chooser_future">Neue Staffeln, sobald sie laufen</string>
     <string name="web_ask_chooser_unavailable">Nicht im Angebot</string>

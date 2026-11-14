@@ -29,7 +29,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
-import io.github.zekurio.matinee.api.CatalogDestination
 import io.github.zekurio.matinee.api.CatalogRef
 import io.github.zekurio.matinee.api.CatalogSeason
 import io.github.zekurio.matinee.api.ShowScope
@@ -38,8 +37,6 @@ import io.github.zekurio.matinee.ui.components.LocalApi
 import io.github.zekurio.matinee.ui.components.Picture
 import io.github.zekurio.matinee.ui.components.art
 import io.github.zekurio.matinee.ui.kit.Checkbox
-import io.github.zekurio.matinee.ui.kit.Lucide
-import io.github.zekurio.matinee.ui.kit.LucideIcon
 import io.github.zekurio.matinee.ui.kit.MatineeButton
 import io.github.zekurio.matinee.ui.kit.Shapes
 import io.github.zekurio.matinee.ui.kit.Switch
@@ -52,10 +49,9 @@ import java.time.LocalDate
  * bottom, as the web's request dialog: a show's seasons, each the viewer
  * may still request with a box, the server's pick already ticked (or only
  * [only], from a season's card), the rest with their state, and on a
- * [first] request "New seasons as they air"; and, when the title could go
- * to more than one library, which. Picking another library closes the
- * sheet and reloads the page in it, since its provider may number the
- * seasons differently. The button says what pressing it requests.
+ * [first] request "New seasons as they air". Where it lands is the
+ * server's call; an admin moves a request from the queue. The button says
+ * what pressing it requests.
  */
 @Composable
 fun RequestSheet(
@@ -65,8 +61,6 @@ fun RequestSheet(
     first: Boolean,
     defaultFuture: Boolean,
     libraryId: String?,
-    destinations: List<CatalogDestination> = emptyList(),
-    onLibrary: ((String) -> Unit)? = null,
     only: Int? = null,
     onDismiss: () -> Unit,
 ) {
@@ -138,28 +132,6 @@ fun RequestSheet(
                 ) {
                     Text(stringResource(R.string.web_ask_chooser_future), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                     Switch(checked = future, onCheckedChange = { future = it })
-                }
-            }
-        }
-        if (first && onLibrary != null && destinations.size > 1) {
-            if (show) HorizontalDivider(color = Palette.Border)
-            Text(stringResource(R.string.web_ask_dialog_goesTo), style = MaterialTheme.typography.bodyMedium, color = Palette.Muted)
-            Column {
-                destinations.forEach { library ->
-                    Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .heightIn(min = 48.dp)
-                            .clip(Shapes.Md)
-                            .clickable(role = Role.RadioButton) {
-                                if (!library.selected) close { onLibrary(library.id) }
-                            }
-                            .padding(horizontal = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(library.name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
-                        if (library.selected) LucideIcon(Lucide.Check, null, size = 20.dp, tint = Palette.Accent)
-                    }
                 }
             }
         }

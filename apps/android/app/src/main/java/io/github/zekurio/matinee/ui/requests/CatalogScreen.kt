@@ -239,8 +239,6 @@ private fun CatalogPage(detail: CatalogTitleDetail, library: String?) {
             first = availability.asks,
             defaultFuture = detail.defaultScope?.future ?: false,
             libraryId = destination?.id,
-            destinations = detail.destinations,
-            onLibrary = { library -> nav.catalogLibrary(ref, library) },
             only = only.takeIf { it >= 0 },
         ) { sheet = null }
     }
@@ -286,7 +284,6 @@ private fun CatalogActions(
     val hub = LocalRequests.current
     val ref = detail.ref
     val more = ref.isShow && posterAction(availability) == null && seasons.any { it.availability.asTitle().asks }
-    val decides = ref.isShow || (availability.asks && detail.destinations.size > 1)
     val answering = waitingRequest(availability)?.takeIf { it.id !in hub.held }
     val action = more || hasPosterButton(availability)
     if (answering == null && !action && detail.trailers.isEmpty()) return
@@ -302,7 +299,7 @@ private fun CatalogActions(
             PosterActionButton(
                 availability,
                 detail.name,
-                onRequest = { if (decides || more) onSheet(-1) else hub.ask(ref, detail.name, libraryId) },
+                onRequest = { if (ref.isShow || more) onSheet(-1) else hub.ask(ref, detail.name, libraryId) },
                 modifier = if (isWide()) Modifier.width(260.dp) else Modifier.weight(1f),
                 busy = hub.busy[ref.key] == true,
                 action = if (more) PosterAction.Request else null,

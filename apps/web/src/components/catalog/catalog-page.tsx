@@ -173,14 +173,6 @@ function CatalogDetailPage({
     }
   }, [arrived, navigate, queryClient])
 
-  const onLibrary = (id: string) =>
-    void navigate({
-      to: ".",
-      search: { library: id },
-      replace: true,
-      resetScroll: false,
-    })
-
   const toneKey = refKey(detail.ref)
   const numbered = seasons.filter((season) => season.number > 0)
   // As a library title's page has them, without what only a file tells.
@@ -283,7 +275,6 @@ function CatalogDetailPage({
                         availability={availability}
                         seasons={seasons}
                         libraryId={destination?.id}
-                        onLibrary={onLibrary}
                       />
                     )}
                     <TrailerButton trailers={detail.trailers} />
@@ -318,22 +309,19 @@ function CatalogDetailPage({
  * The title's one action, leading the row of buttons as Play leads a
  * library title's, with Trailer after it: "Request", "Cancel request",
  * "Notify me" or "Stop notifying", or a dimmed Request with why in its
- * tooltip. A show's request, and a film's that could go to more than one
- * library, open the request dialog for that decision. Null while there's
- * nothing to do.
+ * tooltip. A show's request opens the request dialog for its seasons.
+ * Null while there's nothing to do.
  */
 function RequestControl({
   detail,
   availability,
   seasons,
   libraryId,
-  onLibrary,
 }: {
   detail: CatalogDetail
   availability: Availability
   seasons: CatalogSeasonEntry[]
   libraryId?: string
-  onLibrary: (id: string) => void
 }) {
   const ask = useAsk()
   const [dialog, setDialog] = useState(false)
@@ -345,9 +333,8 @@ function RequestControl({
     show &&
     posterAction(availability) === null &&
     seasons.some((season) => asks(season.availability))
-  const decides = show || (first && detail.destinations.length > 1)
   const request = () => {
-    if (decides || more) setDialog(true)
+    if (show) setDialog(true)
     else ask.mutate({ ref, name, libraryId })
   }
   if (!more && !hasPosterButton(availability)) return null
@@ -362,7 +349,7 @@ function RequestControl({
         look="page"
         onRequest={request}
       />
-      {(show || detail.destinations.length > 1) && (
+      {show && (
         <RequestDialog
           open={dialog}
           onOpenChange={setDialog}
@@ -372,8 +359,6 @@ function RequestControl({
           first={first}
           defaultFuture={detail.defaultScope?.future ?? false}
           libraryId={libraryId}
-          destinations={detail.destinations}
-          onLibrary={onLibrary}
         />
       )}
     </>

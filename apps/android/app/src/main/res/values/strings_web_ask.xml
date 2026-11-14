@@ -7,7 +7,6 @@
     <string name="web_ask_stopNotifying">Stop notifying</string>
     <string name="web_ask_cancel">Cancel request</string>
     <string name="web_ask_dialog_title">Request %1$s</string>
-    <string name="web_ask_dialog_goesTo">Goes to</string>
     <string name="web_ask_chooser_seasons">Seasons</string>
     <string name="web_ask_chooser_future">New seasons as they air</string>
     <string name="web_ask_chooser_unavailable">Not offered</string>

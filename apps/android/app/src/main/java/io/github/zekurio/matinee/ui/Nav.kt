@@ -182,12 +182,6 @@ class Navigator(private val controller: NavHostController) {
     fun catalog(ref: CatalogRef, library: String? = null) =
         controller.navigate(CatalogRoute(ref.kind, ref.provider, ref.providerId, library))
 
-    /** The catalog page in place for another library an ask would go to. */
-    fun catalogLibrary(ref: CatalogRef, library: String) =
-        controller.navigate(CatalogRoute(ref.kind, ref.provider, ref.providerId, library)) {
-            popUpTo<CatalogRoute> { inclusive = true }
-        }
-
     /** A catalog page that became a library title, as it arrived: the title's page takes its place. */
     fun arrived(titleId: String) = controller.navigate(TitleRoute(titleId)) {
         popUpTo<CatalogRoute> { inclusive = true }

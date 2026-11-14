@@ -9,7 +9,6 @@ export default {
   "ask.cancel": "Anfrage zurückziehen",
 
   "ask.dialog.title": "{name} anfragen",
-  "ask.dialog.goesTo": "Kommt in",
   "ask.chooser.seasons": "Staffeln",
   "ask.chooser.future": "Neue Staffeln, sobald sie laufen",
   "ask.chooser.unavailable": "Nicht im Angebot",

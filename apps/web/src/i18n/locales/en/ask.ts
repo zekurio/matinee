@@ -14,7 +14,6 @@ export default defineMessages("ask", {
 
   // The request dialog, for a show's seasons or a choice of library.
   "ask.dialog.title": "Request {name}",
-  "ask.dialog.goesTo": "Goes to",
   "ask.chooser.seasons": "Seasons",
   "ask.chooser.future": "New seasons as they air",
   "ask.chooser.unavailable": "Not offered",

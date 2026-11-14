@@ -8,13 +8,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@matinee/ui/components/dialog"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@matinee/ui/components/select"
 import { Switch } from "@matinee/ui/components/switch"
 import { cn } from "@matinee/ui/lib/utils"
 import { useId, useState } from "react"
@@ -27,14 +20,12 @@ import { type CatalogSeasonEntry, refKey } from "./catalog-data"
 import { useAsk } from "./use-ask"
 import { asks, seasonDetail, stateWord } from "./words"
 
-type Destination = { id: string; name: string; selected: boolean }
-
 /**
  * Where a request that needs a decision is made: a show's seasons, each
  * the viewer may still request with a box and the server's pick already
  * ticked, the rest with their state, and on a first request "New seasons
- * as they air"; and, when the title could go to more than one library,
- * which. A film with only one library to go to never opens it.
+ * as they air". Where it lands is the server's call, as in Seerr: an admin
+ * moves a request from the queue.
  */
 export function RequestDialog({
   open,
@@ -45,8 +36,6 @@ export function RequestDialog({
   first,
   defaultFuture,
   libraryId,
-  destinations = [],
-  onLibrary,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -59,9 +48,6 @@ export function RequestDialog({
   /** Whether the server's default takes new seasons as they air. */
   defaultFuture: boolean
   libraryId?: string
-  /** The libraries it could go to; a chooser when there's more than one. */
-  destinations?: Destination[]
-  onLibrary?: (id: string) => void
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -76,8 +62,6 @@ export function RequestDialog({
           first={first}
           defaultFuture={defaultFuture}
           libraryId={libraryId}
-          destinations={first ? destinations : []}
-          onLibrary={onLibrary}
           onDone={() => onOpenChange(false)}
         />
       </DialogContent>
@@ -93,8 +77,6 @@ function RequestForm({
   first,
   defaultFuture,
   libraryId,
-  destinations,
-  onLibrary,
   onDone,
 }: {
   titleRef: CatalogRef
@@ -103,8 +85,6 @@ function RequestForm({
   first: boolean
   defaultFuture: boolean
   libraryId?: string
-  destinations: Destination[]
-  onLibrary?: (id: string) => void
   onDone: () => void
 }) {
   const ask = useAsk()
@@ -119,7 +99,6 @@ function RequestForm({
   )
   const [future, setFuture] = useState(first && defaultFuture)
   const futureId = useId()
-  const libraryLabel = useId()
   const toggle = (number: number, on: boolean) =>
     setPicked((prev) => {
       const next = new Set(prev)
@@ -132,7 +111,6 @@ function RequestForm({
     .filter((season) => picked.has(season.number))
     .map((season) => season.number)
   const nothing = show && chosen.length === 0 && !(future && first)
-  const current = destinations.find((library) => library.selected)
 
   const submit = () =>
     ask.mutate(
@@ -218,33 +196,6 @@ function RequestForm({
             {tr("ask.chooser.future")}
           </label>
           <Switch id={futureId} checked={future} onCheckedChange={setFuture} />
-        </div>
-      )}
-
-      {current && onLibrary && destinations.length > 1 && (
-        <div className="flex items-center justify-between gap-3">
-          <span id={libraryLabel}>{tr("ask.dialog.goesTo")}</span>
-          <Select
-            items={destinations.map((library) => ({
-              value: library.id,
-              label: library.name,
-            }))}
-            value={current.id}
-            onValueChange={(id) => {
-              if (id && id !== current.id) onLibrary(id)
-            }}
-          >
-            <SelectTrigger aria-labelledby={libraryLabel} className="min-w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {destinations.map((library) => (
-                <SelectItem key={library.id} value={library.id}>
-                  {library.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
         </div>
       )}
 
