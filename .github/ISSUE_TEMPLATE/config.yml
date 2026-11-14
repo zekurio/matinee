@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Ask a question
+    url: https://github.com/zekurio/matinee/discussions/categories/q-a
+    about: Help with setup, configuration, or how something works.
+  - name: Report a security vulnerability
+    url: https://github.com/zekurio/matinee/security/advisories/new
+    about: Report it privately here, not in a public issue.
+  - name: Setup and configuration
+    url: https://github.com/zekurio/matinee/blob/main/apps/server/README.md
+    about: Configuration, OIDC, libraries, transcoding, and how the server behaves.

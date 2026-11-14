@@ -123,7 +123,8 @@ Without Nix, install Node 24 and pnpm 11, copy `.env.example` to `.env`,
 and point `DATABASE_URL` at your own Postgres.
 
 Run `pnpm verify` before you commit. [`AGENTS.md`](AGENTS.md) has the
-conventions.
+conventions, and [`CONTRIBUTING.md`](CONTRIBUTING.md) covers issues and
+pull requests.
 
 | Command                          | What it does                              |
 | -------------------------------- | ----------------------------------------- |

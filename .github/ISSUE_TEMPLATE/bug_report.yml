@@ -1,0 +1,116 @@
+name: Bug report
+description: Something broken, a regression, a crash, or a file that won't play.
+labels:
+  - bug
+  - needs-triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        One problem per issue. Keep it short and in your own words. A long generated
+        summary is harder to act on than three lines of what you saw.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched open and closed issues and this isn't a duplicate.
+          required: true
+        - label: It still happens on the latest release or on `main`.
+          required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Web app
+        - Android app (phone or tablet)
+        - Android TV
+        - Playback, streaming, or transcoding
+        - Library scanning or metadata
+        - Sign-in, accounts, or access
+        - Watch parties
+        - NixOS module or package
+        - Docs
+        - Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you saw, and what you expected instead.
+      placeholder: Seeking past the first minute of an HEVC episode restarts it from 0:00. It should jump to where I seeked.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open an episode whose video is HEVC 10-bit
+        2. Start playback in Firefox
+        3. Drag the seek bar to 12:00
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Matinee version
+      description: The release tag, or the commit if you run `main`.
+      placeholder: v0.0.1, or main @ 42f85f9
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install
+    attributes:
+      label: How the server runs
+      options:
+        - NixOS module
+        - nix build or nix run
+        - From source (pnpm start)
+        - Dev shell (pnpm dev)
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: client
+    attributes:
+      label: Client
+      description: Browser and version, or the Android device and Android version.
+      placeholder: Firefox 141 on Linux, or Chromecast with Google TV on Android 14
+
+  - type: textarea
+    id: playback
+    attributes:
+      label: Playback details
+      description: |
+        For playback bugs only. The file's container and codecs, HDR or not, the
+        Playback and Reason lines from the player's Playback stats, the quality you
+        picked, and the server's GPU and hardware acceleration setting.
+      placeholder: MKV, HEVC Main 10 HDR10, E-AC-3 5.1. "Converted, video re-encoded" because this browser can't play HEVC. Original quality. Intel Arc A380, Quick Sync.
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: |
+        The lines around the error only. On NixOS, `journalctl -u matinee`. For the
+        Android app, `just android logcat`. Remove tokens, cookies, and private paths.
+      render: shell
+
+  - type: upload
+    id: attachments
+    attributes:
+      label: Screenshots or recordings
+      description: Optional. Redact anything private first.
+    validations:
+      required: false
+      accept: ".png,.jpg,.jpeg,.gif,.webp,.mp4,.mov,.webm,.log,.txt"
