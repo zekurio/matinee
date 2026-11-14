@@ -4,17 +4,17 @@ import type source from "../en/party"
 export default {
   "party.title": "Watch-Party",
   "party.intro":
-    "Schau gemeinsam mit anderen auf diesem Server. Alle in einer Party können für alle abspielen, pausieren und spulen. Was läuft, bestimmt, wer sie gestartet hat.",
+    "Schau gemeinsam mit anderen auf diesem Server. Alle in einer Party können für alle abspielen, pausieren und spulen. Was läuft, bestimmt der Host.",
   "party.start": "Watch-Party starten",
   "party.startFailed": "Die Watch-Party konnte nicht gestartet werden",
   "party.inviteCopied": "Einladungslink kopiert",
   "party.inviteHint":
     "Damit kann jeder beitreten, der ein Konto auf diesem Server hat.",
   "party.inviteFailed": "Der Link konnte nicht kopiert werden",
-  "party.owner": "Leitung",
+  "party.owner": "Host",
   "party.nothing.owner":
     "Noch nichts. Spiel etwas ab, und die Party schaut mit.",
-  "party.nothing.member": "Noch nichts. Die Leitung bestimmt, was läuft.",
+  "party.nothing.member": "Noch nichts. Der Host bestimmt, was läuft.",
   "party.restricted":
     "Die Party schaut etwas, das dein Konto nicht öffnen kann.",
   "party.watchAlong": "Mitschauen",
@@ -33,7 +33,7 @@ export default {
   "party.accept": "In die Warteschlange",
   "party.dismiss": "Ablehnen",
   "party.withdraw": "Zurücknehmen",
-  "party.makeOwner": "Leitung übergeben",
+  "party.makeOwner": "Zum Host machen",
   "party.kick": "Aus der Party entfernen",
   "party.rename": "Party umbenennen",
   "party.rename.save": "Speichern",
@@ -45,7 +45,7 @@ export default {
   "party.makeOwner.title": "Die Party an {name} übergeben?",
   "party.makeOwner.description":
     "{name} bestimmt dann, was läuft, ordnet die Warteschlange und kann Leute entfernen. Du bleibst in der Party.",
-  "party.makeOwner.confirm": "Leitung übergeben",
+  "party.makeOwner.confirm": "Zum Host machen",
   "party.kick.title": "{name} entfernen?",
   "party.kick.description":
     "{name} verlässt die Party und kann ihr mit dem Link nicht wieder beitreten.",

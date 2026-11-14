@@ -29,13 +29,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@matinee/ui/components/dropdown-menu"
+import { Input } from "@matinee/ui/components/input"
 import { toast } from "@matinee/ui/components/sonner"
+import { Spinner } from "@matinee/ui/components/spinner"
 import { cn } from "@matinee/ui/lib/utils"
 import { useMutation } from "@tanstack/react-query"
 import { Link, useNavigate } from "@tanstack/react-router"
 import {
   ArrowDownIcon,
   ArrowUpIcon,
+  CheckIcon,
   CrownIcon,
   EllipsisIcon,
   ListPlusIcon,
@@ -47,7 +50,7 @@ import {
   UsersRoundIcon,
   XIcon,
 } from "lucide-react"
-import { type ReactNode, useState } from "react"
+import { type ReactNode, useRef, useState } from "react"
 
 import { Picture, tone } from "@/components/picture"
 import { UserAvatar } from "@/components/user-avatar"
@@ -110,12 +113,7 @@ function PartyPanel({ onClose }: { onClose: () => void }) {
           <DialogTitle>{tr("party.title")}</DialogTitle>
           <DialogDescription>{tr("party.intro")}</DialogDescription>
         </DialogHeader>
-        <NameForm
-          label={tr("party.name.optional")}
-          name=""
-          submitLabel={tr("party.start")}
-          submitIcon={<UsersRoundIcon />}
-          stacked
+        <StartForm
           onSubmit={async (name) => {
             try {
               setParty(await client.party.create({ name }))
@@ -133,36 +131,21 @@ function PartyPanel({ onClose }: { onClose: () => void }) {
 }
 
 /**
- * A party's name, to start one with or to rename it. Empty is fine: the
- * party then goes by its owner.
+ * The name to start a party with. Empty is fine: the party then goes by
+ * its owner.
  */
-function NameForm({
-  label,
-  name,
-  submitLabel,
-  submitIcon,
-  stacked = false,
+function StartForm({
   onSubmit,
 }: {
-  label: string
-  /** The name the party has now. */
-  name: string
-  submitLabel: string
-  submitIcon?: ReactNode
-  /** The button under the field, full width, in place of beside it. */
-  stacked?: boolean
   onSubmit: (name: string) => Promise<void>
 }) {
   const form = useAppForm({
-    defaultValues: { name },
+    defaultValues: { name: "" },
     onSubmit: ({ value }) => onSubmit(PartyName.parse(value.name)),
   })
   return (
     <form
-      className={cn(
-        "grid gap-3",
-        !stacked && "grid-cols-[1fr_auto] items-end gap-2",
-      )}
+      className="grid gap-3"
       onSubmit={(event) => {
         event.preventDefault()
         void form.handleSubmit()
@@ -171,7 +154,7 @@ function NameForm({
       <form.AppField name="name" validators={{ onChange: PartyName }}>
         {(field) => (
           <field.TextField
-            label={label}
+            label={tr("party.name.optional")}
             placeholder={tr("party.name.placeholder")}
             maxLength={64}
             autoComplete="off"
@@ -179,13 +162,139 @@ function NameForm({
         )}
       </form.AppField>
       <form.AppForm>
-        <form.SubmitButton
-          variant={stacked ? "default" : "outline"}
-          icon={submitIcon}
-        >
-          {submitLabel}
+        <form.SubmitButton icon={<UsersRoundIcon />}>
+          {tr("party.start")}
         </form.SubmitButton>
       </form.AppForm>
+    </form>
+  )
+}
+
+/**
+ * The party's name, which its owner edits in place: the title turns into
+ * a field with a save button in it. Enter or leaving the field saves,
+ * Escape puts the name back.
+ */
+function PartyTitle({ party }: { party: Party }) {
+  const [editing, setEditing] = useState(false)
+  const title = party.name ?? tr("party.title")
+  if (!editing) {
+    return (
+      <div className="flex min-w-0 items-center gap-1 pr-8">
+        <DialogTitle className="truncate py-1 text-lg">{title}</DialogTitle>
+        {party.owner && (
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={tr("party.rename")}
+            title={tr("party.rename")}
+            onClick={() => setEditing(true)}
+            className="text-muted-foreground shrink-0"
+          >
+            <PencilIcon />
+          </Button>
+        )}
+      </div>
+    )
+  }
+  return (
+    <div className="flex min-w-0 items-center pr-8">
+      <DialogTitle className="sr-only">{title}</DialogTitle>
+      <RenameField name={party.name ?? ""} onDone={() => setEditing(false)} />
+    </div>
+  )
+}
+
+/**
+ * Puts the cursor in a field the click that opened it asked for, with its
+ * text selected to type over. Module-level so React calls it once, on
+ * mount, and not again on every render.
+ */
+function focusAndSelect(node: HTMLInputElement | null) {
+  node?.focus()
+  node?.select()
+}
+
+function RenameField({
+  name,
+  onDone,
+}: {
+  /** The name the party has now. */
+  name: string
+  onDone: () => void
+}) {
+  // Set once the field is on its way out, so the blur its removal can
+  // cause doesn't save again, or save what Escape threw away.
+  const closed = useRef(false)
+  const close = () => {
+    closed.current = true
+    onDone()
+  }
+  const form = useAppForm({
+    defaultValues: { name },
+    onSubmit: async ({ value }) => {
+      const next = PartyName.parse(value.name)
+      if (next !== name) {
+        try {
+          await client.party.rename({ name: next })
+        } catch (cause) {
+          failed(cause)
+          return
+        }
+      }
+      close()
+    },
+  })
+  const commit = () => {
+    if (!closed.current && !form.state.isSubmitting) void form.handleSubmit()
+  }
+  return (
+    <form
+      className="relative -ml-2 min-w-0 flex-1"
+      onSubmit={(event) => {
+        event.preventDefault()
+        commit()
+      }}
+      onBlur={(event) => {
+        // Focus moving to the save button stays in the field.
+        if (!event.currentTarget.contains(event.relatedTarget)) commit()
+      }}
+    >
+      <form.Field name="name" validators={{ onChange: PartyName }}>
+        {(field) => (
+          <Input
+            ref={focusAndSelect}
+            aria-label={tr("party.name")}
+            placeholder={tr("party.name.placeholder")}
+            maxLength={64}
+            autoComplete="off"
+            value={field.state.value}
+            onChange={(event) => field.handleChange(event.target.value)}
+            onKeyDown={(event) => {
+              // Escape leaves the field before it closes the dialog.
+              if (event.key === "Escape") {
+                event.stopPropagation()
+                close()
+              }
+            }}
+            className="h-9 pr-10 pl-2 text-lg font-medium md:h-9 md:text-lg"
+          />
+        )}
+      </form.Field>
+      <form.Subscribe selector={(state) => state.isSubmitting}>
+        {(submitting) => (
+          <Button
+            type="submit"
+            size="icon-xs"
+            disabled={submitting}
+            aria-label={tr("party.rename.save")}
+            title={tr("party.rename.save")}
+            className="absolute top-1/2 right-1 -translate-y-1/2"
+          >
+            {submitting ? <Spinner /> : <CheckIcon />}
+          </Button>
+        )}
+      </form.Subscribe>
     </form>
   )
 }
@@ -204,7 +313,6 @@ function PartyDetails({
   offsetMs: number
   onClose: () => void
 }) {
-  const [renaming, setRenaming] = useState(false)
   const leave = useMutation({
     mutationFn: () => client.party.leave(),
     onSuccess: () => setParty(null),
@@ -225,38 +333,7 @@ function PartyDetails({
   return (
     <>
       <DialogHeader>
-        {renaming ? (
-          <>
-            <DialogTitle className="sr-only">{tr("party.rename")}</DialogTitle>
-            <NameForm
-              label={tr("party.name")}
-              name={party.name ?? ""}
-              submitLabel={tr("party.rename.save")}
-              onSubmit={async (name) => {
-                await client.party.rename({ name }).catch(failed)
-                setRenaming(false)
-              }}
-            />
-          </>
-        ) : (
-          <div className="flex min-w-0 items-center gap-1 pr-8">
-            <DialogTitle className="truncate py-1 text-lg">
-              {party.name ?? tr("party.title")}
-            </DialogTitle>
-            {party.owner && (
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                aria-label={tr("party.rename")}
-                title={tr("party.rename")}
-                onClick={() => setRenaming(true)}
-                className="text-muted-foreground shrink-0"
-              >
-                <PencilIcon />
-              </Button>
-            )}
-          </div>
-        )}
+        <PartyTitle party={party} />
       </DialogHeader>
 
       <ul className="-mx-2 grid">
