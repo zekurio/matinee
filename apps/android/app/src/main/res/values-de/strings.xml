@@ -139,6 +139,7 @@
     <string name="browse_studio">Studio</string>
     <string name="browse_genre_empty">Nichts in diesem Genre</string>
     <string name="browse_studio_empty">Nichts von diesem Studio</string>
+    <string name="browse_no_filter_match">Hier passt nichts zu diesen Filtern</string>
     <string name="browse_kind_all">Alle</string>
     <string name="browse_kind_movie">Filme</string>
     <string name="browse_kind_show">Serien</string>

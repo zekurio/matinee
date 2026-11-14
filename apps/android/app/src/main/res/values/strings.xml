@@ -152,6 +152,7 @@
     <string name="browse_studio">Studio</string>
     <string name="browse_genre_empty">Nothing in this genre</string>
     <string name="browse_studio_empty">Nothing from this studio</string>
+    <string name="browse_no_filter_match">Nothing here matches these filters</string>
     <string name="browse_kind_all">All</string>
     <string name="browse_kind_movie">Movies</string>
     <string name="browse_kind_show">Shows</string>

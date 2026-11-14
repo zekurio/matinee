@@ -80,24 +80,24 @@ fun rememberLibrary(id: String): Library? {
     return (libraries.state as? Load.Ready)?.value.orEmpty().firstOrNull { it.id == id }
 }
 
-/** A library's titles in [filters]' order, filtered and searched by the server. */
+/** A library's titles as [state] has them, filtered, searched, and sorted by the server. */
 @Composable
-fun rememberLibraryPages(route: LibraryRoute, filters: LibraryFilters): TitlePages {
-    val sort = filters.sort
-    val genre = filters.genre
-    val settled = filters.settled
-    return rememberTitlePages("titles-${route.id}-$sort-$genre-$settled") { offset, limit ->
-        titles.list(route.id, sort = sort, query = settled.ifEmpty { null }, filters = genreFilters(genre), limit = limit, offset = offset)
+fun rememberLibraryPages(libraryId: String, state: TitleListState): TitlePages {
+    val sort = state.sort
+    val order = state.order
+    val filters = state.filters
+    val settled = state.settled
+    return rememberTitlePages("titles-$libraryId-${state.key}") { offset, limit ->
+        titles.list(libraryId, query = settled.ifEmpty { null }, filters = filters, sort = sort, order = order, limit = limit, offset = offset)
     }
 }
 
-/** The genres a library's titles have, with how many each, for its filter. */
-@Composable
-fun rememberLibraryGenres(libraryId: String): Loader<List<Facet>> = rememberLoader("genres-$libraryId") { titles.facets(libraryId).genres }
-
-/** Why a library page shows no titles: nothing matches the search, nothing the genre, or there are none. */
-fun libraryEmptyMessage(res: Resources, library: Library?, filters: LibraryFilters): String =
-    libraryEmptyMessage(res, library?.kind == LibraryKind.SHOWS, filters)
+/** Why a library page shows no titles: nothing matches the search, nothing the filters, or there are none. */
+fun libraryEmptyMessage(res: Resources, shows: Boolean, state: TitleListState): String = when {
+    state.settled.isNotEmpty() -> res.getString(if (shows) R.string.library_no_match_shows else R.string.library_no_match_movies, state.settled)
+    state.filters.count() > 0 -> res.getString(if (shows) R.string.library_no_filter_match_shows else R.string.library_no_filter_match_movies)
+    else -> res.getString(if (shows) R.string.library_none_shows else R.string.library_none_movies)
+}
 
 /** As [libraryEmptyMessage] for a page of shows, or of movies. */
 fun libraryEmptyMessage(res: Resources, shows: Boolean, filters: LibraryFilters): String {
@@ -132,6 +132,29 @@ val BROWSE_KINDS: List<Pair<String?, Int>> = listOf(
     TitleKind.MOVIE to R.string.browse_kind_movie,
     TitleKind.SHOW to R.string.browse_kind_show,
 )
+
+/**
+ * A genre's or a studio's titles from every library, of [kind] if it's
+ * set, as [state] has them. The page's own genre or studio goes with the
+ * filters.
+ */
+@Composable
+fun rememberBrowsePages(genre: String?, studio: String?, kind: String?, state: TitleListState): TitlePages {
+    val sort = state.sort
+    val order = state.order
+    val settled = state.settled
+    val filters = state.filters.let { picked ->
+        picked.copy(
+            genres = listOfNotNull(genre) + picked.genres.orEmpty().filter { it != genre },
+            studios = listOfNotNull(studio) + picked.studios.orEmpty().filter { it != studio },
+        )
+    }
+    return rememberTitlePages("browse-$genre-$studio-$kind-${state.key}") { offset, limit ->
+        titles.browse(query = settled.ifEmpty { null }, kind = kind, filters = filters, sort = sort, order = order, limit = limit, offset = offset).let {
+            TitleList(it.items, it.total)
+        }
+    }
+}
 
 /** A genre's or a studio's titles from every library, of [kind] if it's set. */
 @Composable
