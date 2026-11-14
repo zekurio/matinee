@@ -16,8 +16,8 @@ import { errorMessage, keepaliveClient, orpc, queryClient } from "@/lib/rpc"
  * once when the page closes.
  *
  * Where a waiting request goes can be changed before Add, in the queue's
- * row or the title page's strip. The choice is kept here, by request, so
- * both show it and A in the queue adds it there.
+ * row or beside Add on the title's page. The choice is kept here, by
+ * request, so both show it and A in the queue adds it there.
  */
 
 /** How long an action waits for Undo before it's sent. */

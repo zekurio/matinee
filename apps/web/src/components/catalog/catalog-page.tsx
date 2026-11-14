@@ -11,7 +11,11 @@ import { CastRail, CrewFacts } from "@/components/credits"
 import { useDocumentTitle } from "@/components/page-header"
 import { ItemTopBar } from "@/components/phone-nav"
 import { Rail, RailItem } from "@/components/rail"
-import { AdminRequestStrip } from "@/components/requests/approve-strip"
+import {
+  AdminAnswer,
+  requestedTip,
+  useWaitingRequest,
+} from "@/components/requests/admin-answer"
 import { HeaderOverview } from "@/components/title/header-overview"
 import {
   HeaderBackdrop,
@@ -142,6 +146,9 @@ function CatalogDetailPage({
   const seasons = liveSeasons(detail.seasons, live).toSorted(
     (a, b) => (a.number || Infinity) - (b.number || Infinity),
   )
+  // For an admin, someone's request that waits for them: Add and Decline
+  // lead the row, and who requested it is in the badge's tooltip.
+  const waiting = useWaitingRequest(availability)
 
   // Once the title is in a library the viewer can see, this page becomes
   // that title's page. Its data loads first, so the page swaps without a
@@ -209,6 +216,7 @@ function CatalogDetailPage({
               <PosterBadge
                 availability={availability}
                 size="lg"
+                tip={waiting && requestedTip(waiting.item)}
                 className="absolute top-2 right-2 max-w-[calc(100%-1rem)] sm:top-2.5 sm:right-2.5"
               />
             </HeaderPoster>
@@ -261,19 +269,23 @@ function CatalogDetailPage({
                   className="sm:mt-4"
                 />
                 <CrewFacts title={detail} className="mt-4" />
-                {/* The admin's approval sits just above the buttons. */}
                 <div className="sm:mt-auto">
-                  <AdminRequestStrip requestId={availability.requestId} />
                   {/* As a library title's row: the main action, then
-                      Trailer. Either may be missing; with neither, no row. */}
+                      Trailer. For an admin with a request to answer, Add
+                      and Decline take the action's place. Any may be
+                      missing; with none, no row. */}
                   <div className="flex items-center gap-2 pt-6 empty:hidden">
-                    <RequestControl
-                      detail={detail}
-                      availability={availability}
-                      seasons={seasons}
-                      libraryId={destination?.id}
-                      onLibrary={onLibrary}
-                    />
+                    {waiting && !waiting.answered ? (
+                      <AdminAnswer item={waiting.item} look="page" />
+                    ) : (
+                      <RequestControl
+                        detail={detail}
+                        availability={availability}
+                        seasons={seasons}
+                        libraryId={destination?.id}
+                        onLibrary={onLibrary}
+                      />
+                    )}
                     <TrailerButton trailers={detail.trailers} />
                   </div>
                 </div>

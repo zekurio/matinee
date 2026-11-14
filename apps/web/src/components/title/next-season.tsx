@@ -18,6 +18,11 @@ import {
 import { useAsk } from "@/components/catalog/use-ask"
 import { asks, seasonDetail, stateWord } from "@/components/catalog/words"
 import { PosterArt, textLink, Thumb } from "@/components/media-item"
+import {
+  AdminAnswer,
+  requestedTip,
+  useWaitingRequest,
+} from "@/components/requests/admin-answer"
 import { tr } from "@/i18n"
 import { formatPercent } from "@/lib/format"
 import { art, present, seasonName } from "@/lib/media"
@@ -50,7 +55,9 @@ export function seasonLine(season: {
  * and the next one isn't on the server: that season's poster, carrying
  * its state in the corner and the one thing to do about it along its
  * lower edge, as a catalog title's poster does, beside "Season 4 isn't
- * here yet". It catches the moment someone wants more.
+ * here yet". It catches the moment someone wants more. For an admin with
+ * a request for it to answer, Add and Decline take the button's place,
+ * and the badge says who requested it.
  */
 export function NextSeasonRow({
   title,
@@ -69,6 +76,8 @@ export function NextSeasonRow({
   const label = seasonName(season.number)
   const name = tr("title.seasonOf", { show: title.name, season: label })
   const { availability } = season
+  const waiting = useWaitingRequest(availability)
+  const answering = waiting && !waiting.answered ? waiting.item : null
   return (
     <div className="grid max-w-5xl grid-cols-[auto_1fr] items-start gap-x-4 gap-y-2">
       <div className="relative w-28 sm:w-36">
@@ -79,27 +88,32 @@ export function NextSeasonRow({
         >
           <PosterBadge
             availability={availability}
+            tip={waiting && requestedTip(waiting.item)}
             className="absolute top-1.5 right-1.5 max-w-[calc(100%-0.75rem)]"
           />
-          {hasPosterButton(availability) && (
+          {(answering || hasPosterButton(availability)) && (
             <>
               <PosterShade />
               <span className="absolute inset-x-0 bottom-0 p-2">
-                <PosterActionButton
-                  availability={availability}
-                  name={name}
-                  size="sm"
-                  busy={ask.isPending}
-                  onRequest={() =>
-                    ask.mutate({
-                      ref: showRef,
-                      name,
-                      libraryId,
-                      scope: { seasons: [season.number], future: false },
-                      undo: first,
-                    })
-                  }
-                />
+                {answering ? (
+                  <AdminAnswer item={answering} look="poster" />
+                ) : (
+                  <PosterActionButton
+                    availability={availability}
+                    name={name}
+                    size="sm"
+                    busy={ask.isPending}
+                    onRequest={() =>
+                      ask.mutate({
+                        ref: showRef,
+                        name,
+                        libraryId,
+                        scope: { seasons: [season.number], future: false },
+                        undo: first,
+                      })
+                    }
+                  />
+                )}
               </span>
             </>
           )}

@@ -28,9 +28,11 @@ export default defineMessages("requests", {
   "requests.othersCount": "+{count}",
   // {names} is a list, like "Ben and Cara".
   "requests.alsoRequested": "also {names}",
-  // {when} is relative, like "2 hours ago".
-  "requests.strip.requested": "{name} requested this {when}",
-  "requests.strip.waiting": "Someone requested this",
+  // For an admin, the tooltip on a title's "Requested" badge. {when} is
+  // relative, like "2 hours ago"; {names} a list, like "anna and ben".
+  "requests.badge.requested": "{name} requested this {when}",
+  "requests.badge.requestedMany": "{names} requested this",
+  "requests.badge.waiting": "Someone requested this",
   // {numbers} like "1–3, 5".
   "requests.scope.seasons": plural({
     one: "Season {numbers}",
@@ -42,7 +44,6 @@ export default defineMessages("requests", {
   "requests.scope.andFuture": "{seasons} + new",
   "requests.scope.futureOnly": "New seasons",
   "requests.goesTo.label": "Goes to",
-  "requests.goesTo.short": "Goes to {library}",
   // The button that changes where a waiting request goes.
   "requests.goesTo.change": "Change where {name} goes, now {library}",
   "requests.goesTo.title": "Goes to",
@@ -54,6 +55,8 @@ export default defineMessages("requests", {
   "requests.decline": "Decline",
   "requests.retry": "Retry",
   "requests.addNamed": "Add {name}",
+  // On a title's page, when the request could go to more than one library.
+  "requests.addTo": "Add to {library}",
   "requests.retryNamed": "Retry {name}",
   // On the way and Needs attention: stop waiting for a copy.
   "requests.giveUp": "Give up",

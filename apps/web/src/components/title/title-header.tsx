@@ -16,7 +16,6 @@ import { pageBleed, pageColumn } from "@/components/app-shell"
 import { CrewFacts, listNodes, unitList } from "@/components/credits"
 import { FavoriteButton } from "@/components/favorite-button"
 import { Picture, textLink, tone } from "@/components/media-item"
-import { AdminRequestStrip } from "@/components/requests/approve-strip"
 import { MediaInfo } from "@/components/title/media-info"
 import { useTitleWatched, WatchedButton } from "@/components/watched-menu"
 import { getLocale, perLocale, tr } from "@/i18n"
@@ -24,7 +23,6 @@ import { formatRuntime } from "@/lib/format"
 import { art, type ImageSource, mediaFlags, timeLeft } from "@/lib/media"
 
 import { HeaderOverview } from "./header-overview"
-import { useShowGaps } from "./show-gaps"
 import { MatchNote } from "./title-menu"
 
 // A rating out of ten, with one decimal: "7.5".
@@ -164,8 +162,6 @@ export function TitleHeader({ title }: { title: Title }) {
               )}
 
               <div className={cn("sm:mt-auto", gained)}>
-                {/* The admin's approval sits just above the buttons. */}
-                {title.kind === "show" && <ShowRequestStrip title={title} />}
                 <div className="flex items-center gap-2 pt-6">
                   <PlayButton item={title.next} />
                   <TrailerButton trailers={title.trailers} />
@@ -302,19 +298,6 @@ function TitleName({ title }: { title: Title }) {
       )}
     </>
   )
-}
-
-/**
- * For an admin, someone's waiting ask for more of a show in the library,
- * with Add and Decline.
- */
-function ShowRequestStrip({ title }: { title: Title }) {
-  const gaps = useShowGaps(title)
-  const requestId =
-    [...(gaps?.missing ?? []), ...(gaps?.partial ?? [])].find(
-      (season) => season.availability.requestId !== null,
-    )?.availability.requestId ?? null
-  return <AdminRequestStrip requestId={requestId} />
 }
 
 /**

@@ -1,9 +1,14 @@
 import type { Availability } from "@matinee/contracts"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@matinee/ui/components/tooltip"
 import { cn } from "@matinee/ui/lib/utils"
 import { useQuery } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
 import { CalendarIcon, CircleSlashIcon, ClockIcon } from "lucide-react"
-import { type ReactNode, useEffect, useState } from "react"
+import { type ReactNode, useEffect, useId, useState } from "react"
 
 import { CardScrim } from "@/components/card-actions"
 import {
@@ -117,33 +122,48 @@ export function CatalogBadge({
 }
 
 /**
+ * What a badge's tooltip says, as a line and a quieter one under it: for
+ * an admin, who requested the title and what the request covers.
+ */
+export type BadgeTip = { text: string; detail?: string | null }
+
+/**
  * The state as a glass pill in a corner of a larger poster, a title page's
  * or a season's: the card badge's glyph with its word beside it, and the
  * share that's in while it's on its way. A title nobody requested shows
- * none.
+ * none. With `tip`, it says more on hover and keyboard focus, and the
+ * same words aloud.
  */
 export function PosterBadge({
   availability,
   size = "default",
+  tip,
   className,
 }: {
   availability: Availability
   /** `lg` for a title page's poster. */
   size?: "default" | "lg"
+  tip?: BadgeTip | null
   className?: string
 }) {
+  const tipId = useId()
   const word = stateWord(availability)
   const glyph = badgeGlyph(availability, false)
   if (!word || !glyph) return null
   const { state, progress } = availability
-  return (
+  const badge = (
     <span
       key={state}
+      // Focusable only with something to say, for the keyboard to reach it.
+      tabIndex={tip ? 0 : undefined}
+      aria-describedby={tip ? tipId : undefined}
       className={cn(
         "border-foreground/10 bg-background/70 animate-in fade-in-0 inline-flex max-w-full items-center rounded-full border font-medium shadow-sm backdrop-blur-md duration-200 motion-reduce:animate-none",
         size === "lg"
           ? "h-8 gap-2 px-3 text-[13px] [&_svg:not([class*='size-'])]:size-4"
           : "h-7 gap-1.5 px-2.5 text-xs [&_svg:not([class*='size-'])]:size-3.5",
+        tip &&
+          "focus-visible:outline-ring cursor-default outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-solid",
         className,
       )}
     >
@@ -162,6 +182,27 @@ export function PosterBadge({
         </span>
       )}
     </span>
+  )
+  if (!tip) return badge
+  return (
+    <>
+      <Tooltip>
+        <TooltipTrigger render={badge} />
+        <TooltipContent
+          side="bottom"
+          className="max-w-64 flex-col items-start gap-0.5 leading-4 text-pretty"
+        >
+          <span>{tip.text}</span>
+          {tip.detail && (
+            <span className="text-background/75">{tip.detail}</span>
+          )}
+        </TooltipContent>
+      </Tooltip>
+      {/* The tooltip is for eyes; this reads the same words aloud. */}
+      <span id={tipId} hidden>
+        {tip.detail ? `${tip.text}. ${tip.detail}` : tip.text}
+      </span>
+    </>
   )
 }
 
