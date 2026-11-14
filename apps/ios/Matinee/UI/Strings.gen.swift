@@ -1990,6 +1990,10 @@ nonisolated enum Str {
   static var iosConnectLocalNetwork: String { tr("ios_connect_local_network", table: "iOS") }
   /// Share report
   static var iosDiagnosticsShare: String { tr("ios_diagnostics_share", table: "iOS") }
+  /// Choose File
+  static var iosImagesFromFiles: String { tr("ios_images_from_files", table: "iOS") }
+  /// Photo Library
+  static var iosImagesFromPhotos: String { tr("ios_images_from_photos", table: "iOS") }
   /// Open Settings
   static var iosOpenSettings: String { tr("ios_open_settings", table: "iOS") }
   /// Remember audio picks
