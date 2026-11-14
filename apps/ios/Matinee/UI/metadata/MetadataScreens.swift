@@ -452,6 +452,7 @@ private struct ImageEditor: View {
   @State private var remote: Load<[RemoteImage]> = .loading
   @State private var remoteAttempt = 0
   @State private var busy: Change?
+  @State private var gridWidth: CGFloat = 0
   @State private var picking = false
   @State private var importing = false
   @State private var photo: PhotosPickerItem?
@@ -486,6 +487,10 @@ private struct ImageEditor: View {
         buttons(inUse, providerName: providerName, lists: lists)
           .padding(.horizontal, Gutter)
           .padding(.bottom, 16)
+        // The grid's width, inside the safe area and the gutters, for its columns.
+        Color.clear.frame(height: 0)
+          .padding(.horizontal, Gutter)
+          .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { gridWidth = $0 - 2 * Gutter }
         candidates(inUse, providerName: providerName, lists: lists)
       }
     }
@@ -616,7 +621,8 @@ private struct ImageEditor: View {
             ? Str.titleImagesEmpty(providerName ?? "") : Str.titleImagesEmptyLanguage(providerName ?? ""))
       case .ready(let found):
         let columns = imageColumns(
-          slot, width: window.width - 2 * Gutter, largeText: dynamicType.isAccessibilitySize)
+          slot, width: gridWidth > 0 ? gridWidth : window.width - 2 * Gutter,
+          largeText: dynamicType.isAccessibilitySize)
         LazyVGrid(
           columns: Array(repeating: GridItem(.flexible(), spacing: 12, alignment: .top), count: columns),
           alignment: .leading, spacing: 16
