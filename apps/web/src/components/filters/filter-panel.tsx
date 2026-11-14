@@ -10,6 +10,7 @@ import {
 import {
   Popover,
   PopoverContent,
+  PopoverHeader,
   PopoverTitle,
   PopoverTrigger,
 } from "@matinee/ui/components/popover"
@@ -110,15 +111,19 @@ export function FilterPanel({
       <PopoverContent
         align="end"
         sideOffset={6}
-        className="max-h-[min(44rem,var(--available-height))] w-[26rem] gap-0 overflow-y-auto overscroll-contain p-0"
+        className="max-h-[min(44rem,var(--available-height))] w-[26rem] gap-0 p-0"
       >
-        <div className="flex min-h-12 items-center justify-between gap-3 px-4 pt-2">
-          <PopoverTitle className="text-sm font-semibold">
+        {/* A title bar as the app's other popovers have, which stays put
+            while the fields scroll. */}
+        <PopoverHeader className="px-4">
+          <PopoverTitle className="font-semibold">
             {tr("filters.title")}
           </PopoverTitle>
           {clear}
+        </PopoverHeader>
+        <div className="min-h-0 overflow-y-auto overscroll-contain px-4 pt-3 pb-4">
+          {fields}
         </div>
-        <div className="px-4 pb-4">{fields}</div>
       </PopoverContent>
     </Popover>
   )
@@ -173,9 +178,11 @@ export function Section({
           <h3
             id={id}
             className={
+              // Smaller than the title, as the app's popover forms label
+              // their fields.
               small
-                ? "text-muted-foreground text-[13px] font-medium"
-                : "text-sm font-semibold"
+                ? "text-muted-foreground text-xs font-medium"
+                : "text-[13px] font-medium"
             }
           >
             {label}
