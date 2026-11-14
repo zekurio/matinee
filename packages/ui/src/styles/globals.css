@@ -393,15 +393,13 @@ html[data-theme-inspecting] *:not([data-theme-editor], [data-theme-editor] *) {
 
 /*
  * Toasts: the status icon on the title line, the description under it, and
- * the action at the bottom right. Closing is always the round button on the
- * top-right corner. Adapted from alloy.
+ * the action at the right of the text, on the same row. Closing is always
+ * the round button on the top-right corner. Adapted from alloy.
  */
 .matinee-toast {
   display: grid !important;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  grid-template-areas:
-    "icon content content"
-    "icon .       action";
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas: "icon content";
   align-items: start !important;
   column-gap: 10px !important;
   row-gap: 0 !important;
@@ -439,14 +437,17 @@ html[data-theme-inspecting] *:not([data-theme-editor], [data-theme-editor] *) {
 }
 /* Plain toasts have no status icon, so no icon column. */
 .matinee-toast:not(:has(> [data-icon])) {
-  grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-areas:
-    "content content"
-    ".       action";
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "content";
 }
-/* Only a real button opens the bottom row. */
+/* Only a real button opens the action column. */
 .matinee-toast:has(> [data-button]) {
-  row-gap: 10px !important;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas: "icon content action";
+}
+.matinee-toast:not(:has(> [data-icon])):has(> [data-button]) {
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "content action";
 }
 .matinee-toast-icon {
   grid-area: icon;
@@ -520,9 +521,9 @@ html[data-theme-inspecting] *:not([data-theme-editor], [data-theme-editor] *) {
 }
 .matinee-toast[data-styled="true"] > [data-button] {
   grid-area: action;
-  justify-self: end;
+  align-self: center;
   height: 28px !important;
-  margin: 0 !important;
+  margin: 0 0 0 4px !important;
   padding-inline: 12px !important;
   border-radius: var(--radius-md) !important;
   background: var(--primary) !important;
