@@ -3,6 +3,7 @@ node_modules
 dist
 .vite
 .tanstack
+.turbo
 
 .env
 .env.local
