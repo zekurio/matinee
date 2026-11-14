@@ -345,12 +345,6 @@ private struct CheckRow: View {
   }
 }
 
-/// A language tag's name in the app's language: "English", "Deutsch".
-private func languageName(_ tag: String) -> String {
-  guard let name = Locale.app.localizedString(forIdentifier: tag), !name.isEmpty else { return tag }
-  return name.prefix(1).uppercased(with: .app) + name.dropFirst()
-}
-
 /// A track's language, plus its own title when that adds something.
 private func trackLabel(_ language: String?, _ title: String?, unnamed: String) -> String {
   let name = language.map(languageName)
