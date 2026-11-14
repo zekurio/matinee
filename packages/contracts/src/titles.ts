@@ -237,6 +237,11 @@ export const Credit = t.object({
   role: t.string().nullable(),
   /** A portrait. */
   photo: Artwork.nullable(),
+  /**
+   * The person at TMDB, when the title's from there. Their page takes it
+   * with the name, since names alone can be shared.
+   */
+  tmdbId: t.string().nullable(),
 })
 export type Credit = t.infer<typeof Credit>
 
@@ -283,12 +288,6 @@ export const PersonCredit = t.object({
   role: t.string().nullable(),
 })
 export type PersonCredit = t.infer<typeof PersonCredit>
-
-export const Person = PersonSummary.extend({
-  /** Newest first. */
-  credits: t.array(PersonCredit),
-})
-export type Person = t.infer<typeof Person>
 
 /**
  * The orders a list of titles can take: by name, by when the newest file

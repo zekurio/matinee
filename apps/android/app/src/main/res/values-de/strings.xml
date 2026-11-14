@@ -312,6 +312,21 @@
     <string name="title_episode_number">Folge %1$d</string>
 
     <string name="person_load_failed">Diese Person konnte nicht geladen werden</string>
+    <string name="person_born">Geboren am %1$s</string>
+    <string name="person_died">Gestorben am %1$s</string>
+    <string name="person_department_acting">Schauspiel</string>
+    <string name="person_department_directing">Regie</string>
+    <string name="person_department_writing">Drehbuch</string>
+    <string name="person_department_creator">Idee</string>
+    <string name="person_department_production">Produktion</string>
+    <string name="person_department_editing">Schnitt</string>
+    <string name="person_department_camera">Kamera</string>
+    <string name="person_department_sound">Ton</string>
+    <string name="person_department_art">Szenenbild</string>
+    <string name="person_department_costume">Kostüm &amp; Maske</string>
+    <string name="person_department_visualEffects">Visuelle Effekte</string>
+    <string name="person_department_lighting">Licht</string>
+    <string name="person_department_crew">Crew</string>
     <plurals name="people_credit_creator">
         <item quantity="one">Idee</item>
         <item quantity="other">Idee</item>

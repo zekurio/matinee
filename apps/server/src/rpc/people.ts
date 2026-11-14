@@ -5,17 +5,49 @@ import {
   type PersonCredit,
 } from "@matinee/contracts"
 import { credit, title, type TitleRow } from "@matinee/db"
-import { and, asc, eq, sql } from "drizzle-orm"
+import { and, asc, eq, isNull, ne, or, sql } from "drizzle-orm"
 
 import { visibleTitles } from "../access/visible"
+import { tmdbPerson } from "../catalog/people"
 import { db } from "../db"
+import { log } from "../log"
 import { placeholders, toArtwork } from "../media/artwork"
 import { titleArtwork, toSummary, viewerStates } from "../media/items"
-import { uniqueNames } from "../metadata/types"
+import { ProviderError, uniqueNames } from "../metadata/types"
 import { authed, notFound } from "./base"
+import { catalogFailure } from "./catalog-errors"
 
 /** One title and kind of credit, with every part or job in it. */
 type Grouped = { row: TitleRow; kind: CreditKind; roles: string[] }
+
+const NOBODY = "No movie or show in the libraries credits this person."
+
+/** What TMDB says they're known for, as a kind of credit. */
+const KNOWN_FOR = new Map<string, CreditKind>([
+  ["acting", "actor"],
+  ["directing", "director"],
+  ["writing", "writer"],
+  ["creator", "creator"],
+])
+
+/**
+ * Their credits by name. With their TMDB id, a TMDB title's credits go by
+ * the id instead, so a namesake's aren't theirs.
+ */
+function credited(name: string, tmdbId: string | undefined) {
+  if (!tmdbId) return eq(credit.name, name)
+  return or(
+    and(eq(title.provider, "tmdb"), eq(credit.personId, tmdbId)),
+    and(
+      eq(credit.name, name),
+      or(
+        isNull(title.provider),
+        ne(title.provider, "tmdb"),
+        isNull(credit.personId),
+      ),
+    ),
+  )
+}
 
 /** The kind with the most titles. A tie goes to the kind listed first. */
 function mainKind(groups: Grouped[]): CreditKind {
@@ -49,18 +81,39 @@ export const people = {
           role: credit.role,
           position: credit.position,
           photoId: credit.photoId,
+          personId: credit.personId,
         })
         .from(credit)
         .innerJoin(title, eq(title.id, credit.titleId))
-        .where(and(visibleTitles(context.user), eq(credit.name, input.name)))
+        .where(
+          and(visibleTitles(context.user), credited(input.name, input.tmdbId)),
+        )
         .orderBy(
           sql`${title.year} desc nulls last`,
           asc(title.sortName),
           asc(credit.position),
         )
-      if (rows.length === 0) {
-        throw notFound("No movie or show in the libraries credits this person.")
-      }
+      const tmdb = await tmdbPerson(context.user, {
+        name: input.name,
+        tmdbId: input.tmdbId,
+        titles: rows.map((row) => ({
+          kind: row.title.kind,
+          provider: row.title.provider,
+          providerId: row.title.providerId,
+          externalIds: row.title.externalIds,
+          personId: row.personId,
+        })),
+      }).catch((cause: unknown) => {
+        // The library's credits make a page without TMDB.
+        if (rows.length === 0) {
+          if (cause instanceof ProviderError && cause.status === 404)
+            throw notFound(NOBODY)
+          return catalogFailure(cause)
+        }
+        log.warn("Couldn't read a person from TMDB", cause)
+        return null
+      })
+      if (rows.length === 0 && !tmdb) throw notFound(NOBODY)
 
       // An actor with two parts in a title has a credit for each.
       const groups = new Map<string, Grouped>()
@@ -79,11 +132,14 @@ export const people = {
       }
       const grouped = [...groups.values()]
 
-      // The portrait from the credit billed highest, as search picks it.
+      // TMDB's portrait, else the one from the credit billed highest, as
+      // search picks it.
       const photoId =
+        tmdb?.photoId ??
         rows
           .filter((row) => row.photoId !== null)
-          .toSorted((a, b) => a.position - b.position)[0]?.photoId ?? null
+          .toSorted((a, b) => a.position - b.position)[0]?.photoId ??
+        null
       const [art, states] = await Promise.all([
         placeholders([
           photoId,
@@ -107,9 +163,15 @@ export const people = {
       return {
         name: input.name,
         photo: toArtwork(photoId, art),
-        kind: mainKind(grouped),
+        kind:
+          grouped.length > 0
+            ? mainKind(grouped)
+            : (KNOWN_FOR.get(tmdb?.profile.knownFor ?? "") ?? "actor"),
         titleCount: new Set(grouped.map((group) => group.row.id)).size,
         credits,
+        profile: tmdb?.profile ?? null,
+        catalog: tmdb?.catalog ?? [],
+        stale: tmdb?.stale ?? false,
       }
     },
   ),

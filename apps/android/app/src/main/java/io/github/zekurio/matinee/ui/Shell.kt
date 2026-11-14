@@ -197,7 +197,7 @@ private fun Pages(controller: NavHostController, session: Session, offline: Bool
             SeasonScreen(route.titleId, route.season.takeIf { season -> season >= 0 })
         }
         screen<EpisodeRoute> { EpisodeScreen(it.toRoute<EpisodeRoute>().itemId) }
-        screen<PersonRoute> { PersonScreen(it.toRoute<PersonRoute>().name) }
+        screen<PersonRoute> { it.toRoute<PersonRoute>().let { route -> PersonScreen(route.name, route.tmdbId) } }
         screen<BrowseRoute> {
             val route = it.toRoute<BrowseRoute>()
             BrowseScreen(route.genre, route.studio)

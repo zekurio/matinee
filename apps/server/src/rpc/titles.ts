@@ -42,12 +42,17 @@ async function creditsOf(row: TitleRow): Promise<Credit[]> {
       name: credit.name,
       role: credit.role,
       photo: credit.photoId,
+      personId: credit.personId,
     })
     .from(credit)
     .where(eq(credit.titleId, row.id))
     .orderBy(asc(credit.position))
   const art = await placeholders(rows.map((c) => c.photo))
-  return rows.map((c) => ({ ...c, photo: toArtwork(c.photo, art) }))
+  return rows.map(({ personId, ...c }) => ({
+    ...c,
+    photo: toArtwork(c.photo, art),
+    tmdbId: row.provider === "tmdb" ? personId : null,
+  }))
 }
 
 /**

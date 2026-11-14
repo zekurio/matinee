@@ -1,6 +1,6 @@
 import type { Artwork, Credit, CreditKind, Title } from "@matinee/contracts"
 import { cn } from "@matinee/ui/lib/utils"
-import { Link } from "@tanstack/react-router"
+import { Link, linkOptions } from "@tanstack/react-router"
 import { Fragment, type ReactNode } from "react"
 
 import { perLocale, tr } from "@/i18n"
@@ -52,7 +52,16 @@ export function listNodes(
   ))
 }
 
-type Fact = { kind: "person" | "studio"; name: string }
+type Fact = { kind: "person" | "studio"; name: string; tmdbId?: string | null }
+
+/** A person's page: by name, and by their TMDB id where a credit has it. */
+export function personLink(name: string, tmdbId?: string | null) {
+  return linkOptions({
+    to: "/people/$name",
+    params: { name },
+    search: { tmdb: tmdbId ? Number(tmdbId) : undefined },
+  })
+}
 
 /** A name in the facts, linking to the person's or the studio's page. */
 function FactLink({ fact }: { fact: Fact }) {
@@ -66,7 +75,7 @@ function FactLink({ fact }: { fact: Fact }) {
       {fact.name}
     </Link>
   ) : (
-    <Link to="/people/$name" params={{ name: fact.name }} className={className}>
+    <Link {...personLink(fact.name, fact.tmdbId)} className={className}>
       {fact.name}
     </Link>
   )
@@ -93,6 +102,7 @@ export function CrewFacts({
         facts: people.map((person): Fact => ({
           kind: "person",
           name: person.name,
+          tmdbId: person.tmdbId,
         })),
       }
     })
@@ -150,6 +160,7 @@ export function CastRail({ credits }: { credits: Credit[] }) {
             name={person.name}
             photo={person.photo}
             detail={person.role}
+            tmdbId={person.tmdbId}
           />
         </RailItem>
       ))}
@@ -204,16 +215,17 @@ export function PersonCard({
   name,
   photo,
   detail,
+  tmdbId,
 }: {
   name: string
   photo: Artwork | null
   /** A line under the name, like the character. */
   detail?: string | null
+  tmdbId?: string | null
 }) {
   return (
     <Link
-      to="/people/$name"
-      params={{ name }}
+      {...personLink(name, tmdbId)}
       className="group focus-visible:ring-ring focus-visible:ring-offset-background block rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
     >
       <figure className="flex flex-col items-center text-center">

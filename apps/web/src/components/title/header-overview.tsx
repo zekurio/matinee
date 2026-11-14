@@ -88,12 +88,18 @@ export function HeaderOverview({
   name,
   tagline,
   overview,
+  fit = true,
   className,
 }: {
   /** What the text describes, as the dialog's title. */
   name: string
   tagline?: string | null
   overview: string | null
+  /**
+   * Whether it fills the room the header row leaves from `sm` up. Without,
+   * it shows three lines everywhere, as on phones.
+   */
+  fit?: boolean
   className?: string
 }) {
   const { boxRef, textRef, lines, truncated } = useFitLines(
@@ -106,14 +112,19 @@ export function HeaderOverview({
       className={cn(
         "max-w-4xl",
         // At least a line and More, or the row grows to make room.
-        "sm:min-h-12 sm:flex-1 sm:[contain:size]",
+        fit && "sm:min-h-12 sm:flex-1 sm:[contain:size]",
         className,
       )}
     >
       <p
         ref={textRef}
         style={{ WebkitLineClamp: lines }}
-        className="text-foreground/85 line-clamp-3 text-sm leading-6 whitespace-pre-line sm:text-[15px]"
+        className={cn(
+          "text-foreground/85 line-clamp-3 text-sm leading-6 sm:text-[15px]",
+          // Three lines run its paragraphs on rather than spend one on a
+          // gap. The dialog keeps them.
+          fit ? "whitespace-pre-line" : "whitespace-normal",
+        )}
       >
         {tagline && (
           <span className="text-foreground font-medium">{tagline}</span>

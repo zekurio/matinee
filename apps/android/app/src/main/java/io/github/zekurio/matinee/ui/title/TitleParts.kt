@@ -347,8 +347,11 @@ fun CrewLines(credits: List<Credit>, studios: List<String>) {
     val res = LocalResources.current
     Column(Modifier.padding(horizontal = Gutter), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         listOf(CreditKind.CREATOR, CreditKind.DIRECTOR, CreditKind.WRITER).forEach { kind ->
-            val names = credits.filter { it.kind == kind }.map { it.name }.distinct()
-            if (names.isNotEmpty()) CreditLine(creditKind(kind, res, names.size), names, nav::person)
+            val people = credits.filter { it.kind == kind }.distinctBy { it.name }
+            val names = people.map { it.name }
+            if (names.isNotEmpty()) {
+                CreditLine(creditKind(kind, res, names.size), names) { name -> nav.person(name, people.firstOrNull { it.name == name }?.tmdbId) }
+            }
         }
         if (studios.isNotEmpty()) {
             CreditLine(res.getQuantityString(R.plurals.people_studio, studios.size), studios, nav::studio)
@@ -363,7 +366,7 @@ fun CastRail(credits: List<Credit>) {
     if (cast.isEmpty()) return
     Rail(stringResource(R.string.title_cast)) {
         items(cast, key = { "${it.name}-${it.role}" }) { credit ->
-            PersonCard(credit.name, credit.role, api.art(credit.photo, ArtworkSize.Thumb), Modifier.width(railItemWidth(RailArt.Person)))
+            PersonCard(credit.name, credit.role, api.art(credit.photo, ArtworkSize.Thumb), Modifier.width(railItemWidth(RailArt.Person)), credit.tmdbId)
         }
     }
 }

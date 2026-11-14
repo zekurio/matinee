@@ -892,8 +892,14 @@ class TitlesApi internal constructor(private val transport: ApiTransport) {
 
 class PeopleApi internal constructor(private val transport: ApiTransport) {
     /** `GET /people/{name}` */
-    suspend fun get(name: String): Person =
-        transport.call("GET", listOf("people", name), emptyList(), null, Person.serializer())
+    suspend fun get(name: String, tmdbId: String? = null): Person =
+        transport.call(
+            "GET",
+            listOf("people", name),
+            listOf("tmdbId" to tmdbId),
+            null,
+            Person.serializer(),
+        )
 }
 
 class SearchApi internal constructor(private val transport: ApiTransport) {

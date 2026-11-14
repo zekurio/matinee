@@ -41,7 +41,7 @@ data class SeasonRoute(val titleId: String, val season: Int)
 data class EpisodeRoute(val itemId: String)
 
 @Serializable
-data class PersonRoute(val name: String)
+data class PersonRoute(val name: String, val tmdbId: String? = null)
 
 @Serializable
 data class BrowseRoute(val genre: String? = null, val studio: String? = null)
@@ -215,7 +215,8 @@ class Navigator(private val controller: NavHostController) {
         if (title?.kind == TitleKind.MOVIE) title(title.id) else episode(item.id)
     }
 
-    fun person(name: String) = controller.navigate(PersonRoute(name))
+    /** Someone's page, by their TMDB id too where a TMDB title's credit has it. */
+    fun person(name: String, tmdbId: String? = null) = controller.navigate(PersonRoute(name, tmdbId))
 
     fun genre(name: String) = controller.navigate(BrowseRoute(genre = name))
 

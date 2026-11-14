@@ -184,6 +184,7 @@ data class Credit(
     val name: String,
     val role: String?,
     val photo: Artwork?,
+    val tmdbId: String?,
 )
 
 @Serializable
@@ -2393,6 +2394,42 @@ data class PersonCredit(
     val role: String?,
 )
 
+object PersonDepartment {
+    const val ACTING = "acting"
+    const val DIRECTING = "directing"
+    const val WRITING = "writing"
+    const val CREATOR = "creator"
+    const val PRODUCTION = "production"
+    const val EDITING = "editing"
+    const val CAMERA = "camera"
+    const val SOUND = "sound"
+    const val ART = "art"
+    const val COSTUME = "costume"
+    const val VISUAL_EFFECTS = "visualEffects"
+    const val LIGHTING = "lighting"
+    const val CREW = "crew"
+    val all = listOf(ACTING, DIRECTING, WRITING, CREATOR, PRODUCTION, EDITING, CAMERA, SOUND, ART, COSTUME, VISUAL_EFFECTS, LIGHTING, CREW)
+}
+
+@Serializable
+data class PersonProfile(
+    val tmdbId: String,
+    val knownFor: String?,
+    val birthday: String?,
+    val deathday: String?,
+    val biography: String?,
+)
+
+@Serializable
+data class PersonCatalogCredit(
+    val ref: CatalogRef,
+    val name: String,
+    val year: Int?,
+    val poster: Artwork?,
+    val availability: Availability,
+    val role: String?,
+)
+
 @Serializable
 data class Person(
     val name: String,
@@ -2400,6 +2437,9 @@ data class Person(
     val kind: String,
     val titleCount: Int,
     val credits: List<PersonCredit>,
+    val profile: PersonProfile?,
+    val catalog: List<PersonCatalogCredit>,
+    val stale: Boolean,
 )
 
 @Serializable
