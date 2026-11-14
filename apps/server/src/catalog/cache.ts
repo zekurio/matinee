@@ -42,6 +42,8 @@ const Detail = Candidate.extend({
   rating: t.number().nullable(),
   contentRating: text,
   releaseDate: text,
+  /** Missing from entries cached before it was read. */
+  status: text.optional(),
   externalIds: ExternalIds,
   images: t.object({ poster: text, backdrop: text, logo: text }),
   seasons: t.array(

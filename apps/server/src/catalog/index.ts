@@ -195,7 +195,7 @@ export async function routedDetails(
     : (route?.animeFrom ?? null)
   const data = result.value
   const today = new Date().toISOString().slice(0, 10)
-  const seasons = data.seasons
+  const listed = data.seasons
     .toSorted((a, b) => a.number - b.number)
     .map((season) => {
       const episodes = data.episodes.filter(
@@ -213,6 +213,7 @@ export async function routedDetails(
         ).length,
       }
     })
+  const seasons = gettableSeasons(listed, data.status)
   const [state] = await availability(viewer, [
     {
       ref,
@@ -291,6 +292,28 @@ export async function routedDetails(
       })),
   }
   return { detail, animeFrom }
+}
+
+/**
+ * The seasons someone can get. TheTVDB lists a season with no episodes in
+ * its default order for some shows, like a second one for Monster, which
+ * ended with one. Such a season is left out, unless the show still runs
+ * and it comes right after the last season with episodes: an announced
+ * next season, whose episodes aren't listed yet. A provider that lists no
+ * episodes keeps its seasons.
+ */
+function gettableSeasons<T extends { number: number; episodeCount: number }>(
+  seasons: T[],
+  status: string | null | undefined,
+): T[] {
+  const listed = seasons.filter((season) => season.episodeCount > 0)
+  if (!listed.length) return seasons
+  const last = Math.max(...listed.map((season) => season.number))
+  const running = !/^(ended|canceled|cancelled)$/i.test(status ?? "")
+  return seasons.filter(
+    (season) =>
+      season.episodeCount > 0 || (running && season.number === last + 1),
+  )
 }
 
 export async function missingSeasons(viewer: Viewer, titleId: string) {
