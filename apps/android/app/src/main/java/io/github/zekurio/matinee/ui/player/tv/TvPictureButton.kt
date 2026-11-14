@@ -11,7 +11,7 @@ import io.github.zekurio.matinee.ui.tv.TvButton
 
 /**
  * The one thing to do now that the player offers by itself, like the next
- * episode once one ended: [label], and [countdown], the seconds until it
+ * episode while the credits roll, or Skip intro: [label], and [countdown], the seconds until it
  * happens without a press, if it will. Shown by [TvPictureButton].
  */
 internal class TvPictureAction(val label: String, val countdown: Int?, val onClick: () -> Unit)

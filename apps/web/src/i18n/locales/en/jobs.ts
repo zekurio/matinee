@@ -62,6 +62,9 @@ export default defineMessages("jobs", {
   "jobs.queue.trickplay.name": "Trickplay images",
   "jobs.queue.trickplay.description":
     "Make the thumbnails the seek bar shows while scrubbing.",
+  "jobs.queue.media-segments.name": "Intros and credits",
+  "jobs.queue.media-segments.description":
+    "Find the intro and credits of each episode, for Skip intro and for offering the next episode while the credits roll.",
   "jobs.queue.artwork.name": "Artwork",
   "jobs.queue.artwork.description":
     "Download images from the metadata provider, scale them, and read their blurred placeholders.",
@@ -125,6 +128,9 @@ export default defineMessages("jobs", {
   "jobs.task.make-trickplay.name": "Make trickplay images",
   "jobs.task.make-trickplay.description":
     "Make the seek bar's thumbnails for videos without them, or whose file or settings changed, newest first. Scans queue their new files on their own. Also deletes the images of files that are gone.",
+  "jobs.task.find-segments.name": "Find intros and credits",
+  "jobs.task.find-segments.description":
+    "Look for the intro and credits of episodes not looked at yet, or whose file changed, in their chapters and in the audio they share with their season. Scans queue their new files on their own.",
   "jobs.task.clean-transcodes.name": "Clean up encodes",
   "jobs.task.clean-sessions.name": "Delete expired sessions",
   "jobs.task.clean-sessions.description":

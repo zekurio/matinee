@@ -18,6 +18,7 @@ import { episodeOrder, publicItems } from "../media/items"
 import { keyframesNear, listAudio, mayStreamOriginal } from "../media/playback"
 import { decidePlayback, snapPlayback } from "../media/playback-start"
 import { currentProbe } from "../media/probe"
+import { playerSegments } from "../media/segments"
 import { listSubtitles } from "../media/subtitles"
 import { rememberedTracks } from "../media/track-picks"
 import { otherLiveSessions } from "../stats/sessions"
@@ -165,6 +166,14 @@ export const startPlayback = authed.playback.start.handler(
       if (next)
         plan.next = (await publicItems([next], context.user.id))[0] ?? null
     }
+    // ACCESS: The segments are keyed by the visible item above.
+    const offered = await playerSegments(
+      { ...item, probe },
+      row?.kind === "show" ? row : null,
+      plan.next !== null,
+    )
+    plan.segments = offered.segments
+    plan.upNextAt = offered.upNextAt
     const [publicItem] = await publicItems(
       [{ ...item, probe }],
       context.user.id,

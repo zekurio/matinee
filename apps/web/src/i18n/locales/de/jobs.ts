@@ -59,6 +59,9 @@ export default {
   "jobs.queue.trickplay.name": "Trickplay-Bilder",
   "jobs.queue.trickplay.description":
     "Erstellt die Vorschaubilder, die die Zeitleiste beim Spulen zeigt.",
+  "jobs.queue.media-segments.name": "Intros und Abspann",
+  "jobs.queue.media-segments.description":
+    "Findet Intro und Abspann jeder Folge, für „Intro überspringen“ und um die nächste Folge schon während des Abspanns anzubieten.",
   "jobs.queue.artwork.name": "Artwork",
   "jobs.queue.artwork.description":
     "Lädt Bilder vom Metadatenanbieter herunter, skaliert sie und liest ihre unscharfen Platzhalter aus.",
@@ -122,6 +125,9 @@ export default {
   "jobs.task.make-trickplay.name": "Trickplay-Bilder erstellen",
   "jobs.task.make-trickplay.description":
     "Erstellt die Vorschaubilder der Zeitleiste für Videos, die keine haben oder deren Datei oder Einstellungen sich geändert haben, neueste zuerst. Scans reihen ihre neuen Dateien selbst ein. Löscht auch die Bilder von Dateien, die nicht mehr da sind.",
+  "jobs.task.find-segments.name": "Intros und Abspann finden",
+  "jobs.task.find-segments.description":
+    "Sucht Intro und Abspann von Folgen, die noch nicht untersucht wurden oder deren Datei sich geändert hat, in ihren Kapiteln und im Ton, den sie mit ihrer Staffel teilen. Scans reihen ihre neuen Dateien selbst ein.",
   "jobs.task.clean-transcodes.name": "Transkodierungen aufräumen",
   "jobs.task.clean-sessions.name": "Abgelaufene Sitzungen löschen",
   "jobs.task.clean-sessions.description":

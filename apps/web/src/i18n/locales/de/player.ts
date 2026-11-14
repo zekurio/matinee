@@ -33,6 +33,12 @@ export default {
   "player.upNext": "Als Nächstes",
   "player.upNext.in": "Startet in {seconds}",
   "player.upNext.cancel": "Abbrechen",
+  "player.upNext.hide": "Ausblenden",
+
+  "player.skip.intro": "Intro überspringen",
+  "player.skip.recap": "Rückblick überspringen",
+  "player.skip.credits": "Abspann überspringen",
+  "player.skip.preview": "Vorschau überspringen",
 
   "player.flash.muted": "Stumm",
   "player.flash.skip": "{seconds} s",

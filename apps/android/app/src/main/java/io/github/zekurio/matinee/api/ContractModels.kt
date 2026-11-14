@@ -1013,6 +1013,21 @@ object PlaybackReason {
     val all = listOf(CONTAINER, VIDEO, AUDIO, AUDIO_SELECTION, SUBTITLE, QUALITY, FAILED, LIMIT)
 }
 
+object MediaSegmentKind {
+    const val RECAP = "recap"
+    const val INTRO = "intro"
+    const val CREDITS = "credits"
+    const val PREVIEW = "preview"
+    val all = listOf(RECAP, INTRO, CREDITS, PREVIEW)
+}
+
+@Serializable
+data class MediaSegment(
+    val kind: String,
+    val start: Double,
+    val end: Double,
+)
+
 @Serializable
 data class PlaybackStart(
     val item: MediaItem,
@@ -1036,6 +1051,8 @@ data class PlaybackStart(
     val original: Boolean,
     val reasons: List<String>,
     val next: MediaItem?,
+    val upNextAt: Double?,
+    val segments: List<MediaSegment>,
 )
 
 @Serializable
@@ -1900,6 +1917,7 @@ object JobQueueId {
     const val THUMBNAILS = "thumbnails"
     const val SUBTITLE_PREPARE = "subtitle-prepare"
     const val TRICKPLAY = "trickplay"
+    const val MEDIA_SEGMENTS = "media-segments"
     const val ARTWORK = "artwork"
     const val SUBTITLES = "subtitles"
     const val SUBTITLE_FONTS = "subtitle-fonts"
@@ -1911,7 +1929,7 @@ object JobQueueId {
     const val REQUEST_ARRIVAL = "request-arrival"
     const val NOTIFICATIONS = "notifications"
     const val CATALOG = "catalog"
-    val all = listOf(LIBRARY_SCAN, MEDIA_PROBE, METADATA, THUMBNAILS, SUBTITLE_PREPARE, TRICKPLAY, ARTWORK, SUBTITLES, SUBTITLE_FONTS, AVATARS, DOWNLOADS, DOWNLOAD_COPIES, REQUEST_DISPATCH, REQUEST_PROGRESS, REQUEST_ARRIVAL, NOTIFICATIONS, CATALOG)
+    val all = listOf(LIBRARY_SCAN, MEDIA_PROBE, METADATA, THUMBNAILS, SUBTITLE_PREPARE, TRICKPLAY, MEDIA_SEGMENTS, ARTWORK, SUBTITLES, SUBTITLE_FONTS, AVATARS, DOWNLOADS, DOWNLOAD_COPIES, REQUEST_DISPATCH, REQUEST_PROGRESS, REQUEST_ARRIVAL, NOTIFICATIONS, CATALOG)
 }
 
 @Serializable
@@ -1950,11 +1968,12 @@ object TaskId {
     const val PREPARE_DISCOVER = "prepare-discover"
     const val PREPARE_SUBTITLES = "prepare-subtitles"
     const val MAKE_TRICKPLAY = "make-trickplay"
+    const val FIND_SEGMENTS = "find-segments"
     const val CLEAN_TRANSCODES = "clean-transcodes"
     const val CLEAN_SESSIONS = "clean-sessions"
     const val FORGET_BROWSED_PAGES = "forget-browsed-pages"
     const val SYNC_OIDC_ACCOUNTS = "sync-oidc-accounts"
-    val all = listOf(DISPATCH_REQUESTS, POLL_REQUESTS, RECONCILE_REQUESTS, SCAN_LIBRARIES, REFRESH_METADATA, PROBE_MEDIA, PREFETCH_ARTWORK, PREPARE_DISCOVER, PREPARE_SUBTITLES, MAKE_TRICKPLAY, CLEAN_TRANSCODES, CLEAN_SESSIONS, FORGET_BROWSED_PAGES, SYNC_OIDC_ACCOUNTS)
+    val all = listOf(DISPATCH_REQUESTS, POLL_REQUESTS, RECONCILE_REQUESTS, SCAN_LIBRARIES, REFRESH_METADATA, PROBE_MEDIA, PREFETCH_ARTWORK, PREPARE_DISCOVER, PREPARE_SUBTITLES, MAKE_TRICKPLAY, FIND_SEGMENTS, CLEAN_TRANSCODES, CLEAN_SESSIONS, FORGET_BROWSED_PAGES, SYNC_OIDC_ACCOUNTS)
 }
 
 object TaskResult {
