@@ -11,6 +11,7 @@
     <string name="common_and">and</string>
     <string name="calendar_previous_month">Go to the previous month</string>
     <string name="calendar_next_month">Go to the next month</string>
+    <string name="toast_close">Close notification</string>
 
     <!-- Picking a server -->
     <string name="connect_title">Connect to your server</string>

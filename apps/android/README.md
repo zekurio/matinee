@@ -200,6 +200,21 @@ doesn't, add it to the kit, drawn the way the web draws it. A kit
 component may wrap the Material one for its behavior, as `Sheet` keeps
 `ModalBottomSheet`'s dragging.
 
+Requests and the filters added these, each after its web counterpart:
+
+- `RangeSlider` in `Slider.kt`, the two-thumb Slider the filters' ranges
+  use, wrapping Material's for the dragging and the steps.
+- `Checkbox`, the web's Checkbox, for the seasons in the request sheet.
+- `ChoiceChip` and `ToggleChip` in `Chips.kt`, the filter panel's small
+  chips: one of a radio group, or each on and off by itself, with a count.
+- `ProgressRing`, the catalog card's ring for how much of a title is in.
+- `Toast` takes an action, as Undo, and a close button, as sonner's
+  toasts have them; `ToastDuration` and `ToastResult` go with
+  `ToastState`.
+- `MatineeButton` takes a `shape`, for half of a split button, and
+  `dimmed`, for a button that looks disabled but still says why on a tap.
+  `ButtonLook.Glass` is white over a dark shade on a picture.
+
 ### Strings and icons
 
 Strings go in `res/values/strings.xml` and `res/values-de/strings.xml`.
