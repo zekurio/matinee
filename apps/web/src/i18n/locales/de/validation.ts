@@ -53,6 +53,8 @@ export default {
   "validation.avatarSize": "Wähle ein Bild unter 10 MB.",
   "validation.avatarType": "Wähle ein JPEG-, PNG- oder WebP-Bild.",
 
+  "validation.ageLimitCountry":
+    "Verwende einen zweibuchstabigen Ländercode wie DE.",
   "validation.browseLanguage":
     "Verwende einen zweibuchstabigen Sprachcode wie de.",
   "validation.browseYears":

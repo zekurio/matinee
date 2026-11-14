@@ -160,6 +160,11 @@ export const title = pgTable(
     // Genre and studio pages and filters ask for titles that contain one.
     index("title_genres_idx").using("gin", t.genres),
     index("title_studios_idx").using("gin", t.studios),
+    // The year, score, and runtime filters and sorts, in a library or
+    // across them.
+    index("title_year_idx").on(t.libraryId, t.year),
+    index("title_rating_idx").on(t.libraryId, t.rating),
+    index("title_runtime_idx").on(t.libraryId, t.runtimeMinutes),
   ],
 )
 

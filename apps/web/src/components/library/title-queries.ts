@@ -1,3 +1,4 @@
+import { NO_TITLE_FILTERS } from "@matinee/contracts"
 import { keepPreviousData } from "@tanstack/react-query"
 
 import { orpc } from "@/lib/rpc"
@@ -13,8 +14,11 @@ export function libraryTitlesOptions(
     input: (offset: number) => ({
       libraryId,
       query: search.q?.trim() || undefined,
-      genre: search.genre,
-      studio: search.studio,
+      filters: {
+        ...NO_TITLE_FILTERS,
+        genres: search.genre ? [search.genre] : [],
+        studios: search.studio ? [search.studio] : [],
+      },
       sort: titleSort(search.sort ?? "title"),
       limit: 60,
       offset,

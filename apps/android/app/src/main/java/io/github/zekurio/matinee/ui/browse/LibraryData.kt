@@ -15,6 +15,7 @@ import io.github.zekurio.matinee.api.Facet
 import io.github.zekurio.matinee.api.Library
 import io.github.zekurio.matinee.api.LibraryKind
 import io.github.zekurio.matinee.api.TitleKind
+import io.github.zekurio.matinee.api.TitleFilters
 import io.github.zekurio.matinee.api.TitleList
 import io.github.zekurio.matinee.api.TitleSort
 import io.github.zekurio.matinee.ui.Load
@@ -86,7 +87,7 @@ fun rememberLibraryPages(route: LibraryRoute, filters: LibraryFilters): TitlePag
     val genre = filters.genre
     val settled = filters.settled
     return rememberTitlePages("titles-${route.id}-$sort-$genre-$settled") { offset, limit ->
-        titles.list(route.id, sort = sort, query = settled.ifEmpty { null }, genre = genre, limit = limit, offset = offset)
+        titles.list(route.id, sort = sort, query = settled.ifEmpty { null }, filters = genreFilters(genre), limit = limit, offset = offset)
     }
 }
 
@@ -115,7 +116,7 @@ fun rememberKindPages(kind: String, filters: LibraryFilters): TitlePages {
     val genre = filters.genre
     val settled = filters.settled
     return rememberTitlePages("kind-$kind-$sort-$genre-$settled") { offset, limit ->
-        titles.browse(kind = kind, sort = sort, query = settled.ifEmpty { null }, genre = genre, limit = limit, offset = offset).let {
+        titles.browse(kind = kind, sort = sort, query = settled.ifEmpty { null }, filters = genreFilters(genre), limit = limit, offset = offset).let {
             TitleList(it.items, it.total)
         }
     }
@@ -136,7 +137,10 @@ val BROWSE_KINDS: List<Pair<String?, Int>> = listOf(
 @Composable
 fun rememberBrowsePages(genre: String?, studio: String?, kind: String?): TitlePages =
     rememberTitlePages("browse-$genre-$studio-$kind") { offset, limit ->
-        titles.browse(genre = genre, studio = studio, kind = kind, limit = limit, offset = offset).let {
+        titles.browse(filters = TitleFilters(genres = listOfNotNull(genre), studios = listOfNotNull(studio)), kind = kind, limit = limit, offset = offset).let {
             TitleList(it.items, it.total)
         }
     }
+
+/** Titles with [genre], or every title without one. */
+private fun genreFilters(genre: String?): TitleFilters? = genre?.let { TitleFilters(genres = listOf(it)) }

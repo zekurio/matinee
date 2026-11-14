@@ -24,6 +24,7 @@ import { youTubeUrl } from "../metadata/trailers"
 import { ProviderError } from "../metadata/types"
 import { admin, authed, badRequest, notFound } from "./base"
 import { tagCounts, titleOrder, titleWhere } from "./browse"
+import { filterOptions, ratingLimits } from "./title-filters"
 
 export async function loadRow(id: string): Promise<TitleRow> {
   // ACCESS: This loader is used only by admin metadata and image procedures.
@@ -133,14 +134,15 @@ export const titles = {
     if (!(await libraryFor(context.user, input.libraryId))) {
       throw notFound("Library not found.")
     }
-    const where = titleWhere(context.user, input, input.libraryId)
+    const limits = await ratingLimits(input.filters)
+    const where = titleWhere(context.user, input, limits, input.libraryId)
     // ACCESS: Both queries use titleWhere, which applies the viewer's visibleTitles filter.
     const [rows, [total]] = await Promise.all([
       db
         .select()
         .from(title)
         .where(where)
-        .orderBy(...titleOrder(input.sort))
+        .orderBy(...titleOrder(input.sort, input.order))
         .limit(input.limit)
         .offset(input.offset),
       db.select({ n: count() }).from(title).where(where),
@@ -152,19 +154,20 @@ export const titles = {
   }),
 
   browse: authed.titles.browse.handler(async ({ context, input }) => {
+    const limits = await ratingLimits(input.filters)
     // ACCESS: Both queries use titleWhere, which applies the viewer's visibleTitles filter.
     const [rows, kinds] = await Promise.all([
       db
         .select()
         .from(title)
-        .where(titleWhere(context.user, input))
-        .orderBy(...titleOrder(input.sort))
+        .where(titleWhere(context.user, input, limits))
+        .orderBy(...titleOrder(input.sort, input.order))
         .limit(input.limit)
         .offset(input.offset),
       db
         .select({ kind: title.kind, n: count() })
         .from(title)
-        .where(titleWhere(context.user, { ...input, kind: undefined }))
+        .where(titleWhere(context.user, { ...input, kind: undefined }, limits))
         .groupBy(title.kind),
     ])
     const byKind = new Map(kinds.map((row) => [row.kind, row.n]))
@@ -179,10 +182,23 @@ export const titles = {
     }
   }),
 
+  filterOptions: authed.titles.filterOptions.handler(
+    async ({ context, input }) => {
+      if (
+        input.libraryId &&
+        !(await libraryFor(context.user, input.libraryId))
+      ) {
+        throw notFound("Library not found.")
+      }
+      return filterOptions(context.user, input)
+    },
+  ),
+
   facets: authed.titles.facets.handler(async ({ context, input }) => {
     const where = titleWhere(
       context.user,
       { kind: input.kind },
+      new Map(),
       input.libraryId,
     )
     const [genres, studios] = await Promise.all([

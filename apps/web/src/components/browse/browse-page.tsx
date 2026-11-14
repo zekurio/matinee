@@ -1,3 +1,4 @@
+import { NO_TITLE_FILTERS } from "@matinee/contracts"
 import { buttonVariants } from "@matinee/ui/components/button"
 import {
   Empty,
@@ -67,8 +68,11 @@ export function BrowsePage({
   const titles = useInfiniteQuery(
     orpc.titles.browse.infiniteOptions({
       input: (offset: number) => ({
-        genre: by === "genre" ? name : undefined,
-        studio: by === "studio" ? name : undefined,
+        filters: {
+          ...NO_TITLE_FILTERS,
+          genres: by === "genre" ? [name] : [],
+          studios: by === "studio" ? [name] : [],
+        },
         query: list.query || undefined,
         kind,
         sort: titleSort(list.sort),

@@ -697,41 +697,56 @@ class MetadataApi internal constructor(private val transport: ApiTransport) {
 }
 
 class TitlesApi internal constructor(private val transport: ApiTransport) {
-    /** `GET /libraries/{libraryId}/titles` */
+    /** `POST /libraries/{libraryId}/titles/browse` */
     suspend fun list(
         libraryId: String,
         query: String? = null,
         kind: String? = null,
-        genre: String? = null,
-        studio: String? = null,
+        filters: TitleFilters? = null,
         sort: String? = null,
+        order: String? = null,
         limit: Int? = null,
         offset: Int? = null,
     ): TitleList =
         transport.call(
-            "GET",
-            listOf("libraries", libraryId, "titles"),
-            listOf("query" to query, "kind" to kind, "genre" to genre, "studio" to studio, "sort" to sort, "limit" to limit?.toString(), "offset" to offset?.toString()),
-            null,
+            "POST",
+            listOf("libraries", libraryId, "titles", "browse"),
+            emptyList(),
+            transport.json(TitlesListInput.serializer(), TitlesListInput(query = query, kind = kind, filters = filters, sort = sort, order = order, limit = limit, offset = offset)),
             TitleList.serializer(),
         )
 
-    /** `GET /titles` */
+    /** `POST /titles/browse` */
     suspend fun browse(
         query: String? = null,
         kind: String? = null,
-        genre: String? = null,
-        studio: String? = null,
+        filters: TitleFilters? = null,
         sort: String? = null,
+        order: String? = null,
         limit: Int? = null,
         offset: Int? = null,
     ): BrowsedTitles =
         transport.call(
-            "GET",
-            listOf("titles"),
-            listOf("query" to query, "kind" to kind, "genre" to genre, "studio" to studio, "sort" to sort, "limit" to limit?.toString(), "offset" to offset?.toString()),
-            null,
+            "POST",
+            listOf("titles", "browse"),
+            emptyList(),
+            transport.json(TitlesBrowseInput.serializer(), TitlesBrowseInput(query = query, kind = kind, filters = filters, sort = sort, order = order, limit = limit, offset = offset)),
             BrowsedTitles.serializer(),
+        )
+
+    /** `GET /titles/filter-options` */
+    suspend fun filterOptions(
+        libraryId: String? = null,
+        kind: String? = null,
+        genre: String? = null,
+        studio: String? = null,
+    ): TitleFilterOptions =
+        transport.call(
+            "GET",
+            listOf("titles", "filter-options"),
+            listOf("libraryId" to libraryId, "kind" to kind, "genre" to genre, "studio" to studio),
+            null,
+            TitleFilterOptions.serializer(),
         )
 
     /** `GET /titles/facets` */

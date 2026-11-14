@@ -2555,6 +2555,87 @@ data class TitleFacets(
     val studios: List<Facet>,
 )
 
+@Serializable
+data class AgeLimit(
+    val country: String,
+    val rating: String,
+)
+
+object WatchFilter {
+    const val UNWATCHED = "unwatched"
+    const val IN_PROGRESS = "inProgress"
+    const val WATCHED = "watched"
+    val all = listOf(UNWATCHED, IN_PROGRESS, WATCHED)
+}
+
+@Serializable
+data class TitleFilters(
+    val genres: List<String>? = null,
+    val studios: List<String>? = null,
+    val yearFrom: Int? = null,
+    val yearTo: Int? = null,
+    val scoreMin: Double? = null,
+    val scoreMax: Double? = null,
+    val movieRating: AgeLimit? = null,
+    val showRating: AgeLimit? = null,
+    val language: String? = null,
+    val runtimeMin: Int? = null,
+    val runtimeMax: Int? = null,
+    val watched: String? = null,
+)
+
+object SortOrder {
+    const val ASC = "asc"
+    const val DESC = "desc"
+    val all = listOf(ASC, DESC)
+}
+
+@Serializable
+data class FilterRange(
+    val min: Double,
+    val max: Double,
+    val step: Double,
+)
+
+@Serializable
+data class RatingCount(
+    val rating: String,
+    val titleCount: Int,
+)
+
+@Serializable
+data class RatingSystem(
+    val kind: String,
+    val country: String,
+    val ratings: List<RatingCount>,
+)
+
+@Serializable
+data class LanguageCount(
+    val language: String,
+    val titleCount: Int,
+)
+
+@Serializable
+data class TitleFilterOptions(
+    val genres: List<Facet>,
+    val studios: List<Facet>,
+    val ratings: List<RatingSystem>,
+    val languages: List<LanguageCount>,
+    val years: FilterRange?,
+    val scores: FilterRange?,
+    val runtime: FilterRange?,
+    val watched: TitleFilterOptions.Watched,
+    val total: Int,
+) {
+    @Serializable
+    data class Watched(
+        val unwatched: Int,
+        val inProgress: Int,
+        val watched: Int,
+    )
+}
+
 object TitleImageSlot {
     const val POSTER = "poster"
     const val BACKDROP = "backdrop"
@@ -2572,7 +2653,9 @@ object TitleSort {
     const val NAME = "name"
     const val RECENT = "recent"
     const val YEAR = "year"
-    val all = listOf(NAME, RECENT, YEAR)
+    const val SCORE = "score"
+    const val RUNTIME = "runtime"
+    val all = listOf(NAME, RECENT, YEAR, SCORE, RUNTIME)
 }
 
 @Serializable
@@ -2869,6 +2952,28 @@ data class LibrariesUpdateInput(
     val paths: List<String>,
     val metadataProvider: String?,
     val metadataLanguage: String,
+)
+
+@Serializable
+data class TitlesListInput(
+    val query: String? = null,
+    val kind: String? = null,
+    val filters: TitleFilters? = null,
+    val sort: String? = null,
+    val order: String? = null,
+    val limit: Int? = null,
+    val offset: Int? = null,
+)
+
+@Serializable
+data class TitlesBrowseInput(
+    val query: String? = null,
+    val kind: String? = null,
+    val filters: TitleFilters? = null,
+    val sort: String? = null,
+    val order: String? = null,
+    val limit: Int? = null,
+    val offset: Int? = null,
 )
 
 @Serializable

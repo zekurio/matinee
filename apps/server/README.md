@@ -267,6 +267,24 @@ To add a provider, implement `MetadataSource` in
 `apps/server/src/metadata/types.ts`, list it in `sources.ts`, and add its id
 to `METADATA_PROVIDERS` in the contract.
 
+### Filtering the libraries
+
+A library's page, a genre's, and a studio's filter their titles by what
+the metadata says: genres and studios (a title needs all those picked),
+release year, community score, age rating, original language, runtime,
+and whether the viewer has watched it. The choices come from the titles
+the viewer can see there, so nobody learns what another library holds.
+
+- A show's runtime is how long an episode runs, as its provider gives
+  it. TheTVDB has no community score, so its titles fail a score bound.
+- A title's age rating is from the country of its library's metadata
+  language, or the US where the provider has none for that country.
+  "Up to" a rating needs the order of that country's ratings, which
+  comes from TMDB's lists, so without `MATINEE_TMDB_API_KEY` there is
+  no age rating filter. Each kind gets the country whose ratings most
+  of its titles carry. Unrated titles, and those rated in another
+  country's system, don't pass an age limit.
+
 ## Requests
 
 People can request a title the server doesn't have, from search, from

@@ -69,6 +69,9 @@ export default defineMessages("validation", {
   "validation.avatarSize": "Pick an image under 10 MB.",
   "validation.avatarType": "Pick a JPEG, PNG, or WebP image.",
 
+  // titles.ts: filtering a library's titles.
+  "validation.ageLimitCountry": "Use a two-letter country code like US.",
+
   // discover.ts: browsing the catalog with filters.
   "validation.browseLanguage": "Use a two-letter language code like en.",
   "validation.browseYears": "The first year can't be after the last.",
