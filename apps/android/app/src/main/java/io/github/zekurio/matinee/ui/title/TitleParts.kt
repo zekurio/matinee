@@ -2,12 +2,10 @@ package io.github.zekurio.matinee.ui.title
 
 import android.content.Intent
 import android.net.Uri
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -79,6 +77,7 @@ import io.github.zekurio.matinee.ui.components.RailArt
 import io.github.zekurio.matinee.ui.components.SectionTitle
 import io.github.zekurio.matinee.ui.components.WatchedBadge
 import io.github.zekurio.matinee.ui.components.art
+import io.github.zekurio.matinee.ui.components.cardClick
 import io.github.zekurio.matinee.ui.components.isWide
 import io.github.zekurio.matinee.ui.components.landscape
 import io.github.zekurio.matinee.ui.components.launchShowing
@@ -411,14 +410,18 @@ fun SeasonsRail(title: Title, current: Season? = null, gaps: ShowGaps? = null, e
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+/**
+ * A season by its poster, with how many episodes are left or a check. As
+ * on a poster card, a long press offers its tick, its heart, and the rest
+ * of its menu.
+ */
 @Composable
 private fun SeasonCard(title: Title, season: Season, partial: CatalogSeason?, modifier: Modifier, onClick: () -> Unit) {
     val api = LocalApi.current
     val actions = LocalActions.current
     val res = LocalResources.current
     val left = season.itemCount - season.watchedCount
-    Column(modifier.clip(CardShape).combinedClickable(onLongClick = { actions.season(title.summary, season) }, onClick = onClick)) {
+    Column(modifier.cardClick(onClick, { actions.season(title.summary, season) })) {
         Box {
             PosterArt(
                 stringResource(R.string.title_season_of, title.name, seasonName(season.number, res)),
