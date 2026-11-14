@@ -98,11 +98,6 @@ private func speedText(_ rate: Float) -> String {
   return text.hasSuffix(".0") ? String(text.dropLast(2)) : text
 }
 
-/// "1080p, 20 Mbps" for an encode, as Settings words it.
-private func qualityLabel(_ quality: PlaybackQualityPreset) -> String {
-  Str.playbackQualityPreset(quality.height, Str.playerBitrateMbps(quality.bitrate / 1_000_000))
-}
-
 /// A language's name in the app's language, "German", "Deutsch".
 private func trackLanguageName(_ tag: String) -> String {
   guard let name = Locale.app.localizedString(forIdentifier: tag), !name.isEmpty else { return tag }

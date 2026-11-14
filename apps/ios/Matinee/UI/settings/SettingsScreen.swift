@@ -638,10 +638,6 @@ private struct SubtitlePreview: View {
   }
 }
 
-extension CaptionColor {
-  fileprivate var color: Color { Color(.sRGB, red: red, green: green, blue: blue, opacity: alpha) }
-}
-
 /// One cue, centered, at `size` times the look's scale, as Android's
 /// `SubtitleLine` draws it: the text over its background, inside the
 /// window, with a shadow or an outline drawn under the fill.

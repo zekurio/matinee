@@ -345,32 +345,6 @@ private struct CheckRow: View {
   }
 }
 
-/// A language tag's name in the app's language: "English", "Deutsch".
-private func languageName(_ tag: String) -> String {
-  guard let name = Locale.app.localizedString(forIdentifier: tag), !name.isEmpty else { return tag }
-  return name.prefix(1).uppercased(with: .app) + name.dropFirst()
-}
-
-/// A track's language, plus its own title when that adds something.
-private func trackLabel(_ language: String?, _ title: String?, unnamed: String) -> String {
-  let name = language.map(languageName)
-  guard let title, !title.trimmingCharacters(in: .whitespaces).isEmpty else { return name ?? unnamed }
-  guard let name, title.range(of: name, options: .caseInsensitive) == nil else { return title }
-  return Str.playerTrackWithTitle(name, title)
-}
-
-private func audioLabel(_ track: AudioTrack) -> String {
-  trackLabel(track.language, track.title, unnamed: Str.playerTrackUnnamed(track.index))
-}
-
-private func subtitleLabel(_ track: SubtitleTrack, _ tracks: [SubtitleTrack]) -> String {
-  if track.source != "embedded" {
-    return trackLabel(track.language, track.title, unnamed: Str.playerTrackUnknownLanguage)
-  }
-  let position = (tracks.filter { $0.source == "embedded" }.firstIndex(of: track) ?? 0) + 1
-  return trackLabel(track.language, track.title, unnamed: Str.playerTrackUnnamed(position))
-}
-
 /// A track's flags and format, and whether it is burned into the picture,
 /// for every track the screen can't draw, as the download sheet has it.
 private func subtitleDetail(_ track: SubtitleTrack) -> String {
