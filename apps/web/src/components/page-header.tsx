@@ -1,8 +1,6 @@
 import { cn } from "@matinee/ui/lib/utils"
 import { type ReactNode, useEffect } from "react"
 
-import { tr } from "@/i18n"
-
 import { BackButton, usePhoneTab } from "./phone-nav"
 
 /**
@@ -26,15 +24,12 @@ export function useDocumentTitle(name: string | null | undefined) {
  */
 export function PageHeader({
   title,
-  breadcrumb,
   description,
   actions,
   phoneActions,
   className,
 }: {
   title: string
-  /** A link back to the parent page, shown above the title from `sm` up. */
-  breadcrumb?: ReactNode
   description?: ReactNode
   /**
    * Controls beside the title from `sm` up. Phones don't show them; pages
@@ -56,14 +51,6 @@ export function PageHeader({
       )}
     >
       <div className="min-w-0 flex-1">
-        {breadcrumb && (
-          <nav
-            aria-label={tr("browse.breadcrumb")}
-            className="mb-1 text-sm max-sm:hidden"
-          >
-            {breadcrumb}
-          </nav>
-        )}
         {/* An open phone filter (`data-filter-open`) takes the bar. */}
         <div
           className={cn(

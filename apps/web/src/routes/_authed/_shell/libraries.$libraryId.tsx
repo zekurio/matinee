@@ -10,7 +10,6 @@ import { orpc } from "@/lib/rpc"
 /** Title is the default sort, so the URL leaves it out. */
 const LibrarySearch = t.object({
   q: t.string().min(1).optional().catch(undefined),
-  show: t.string().min(1).optional().catch(undefined),
   sort: t.enum(["recent", "year"]).optional().catch(undefined) satisfies t.Type<
     Sort | undefined
   >,
@@ -26,7 +25,6 @@ export const Route = createFileRoute("/_authed/_shell/libraries/$libraryId")({
     void queryClient.prefetchQuery(
       orpc.libraries.get.queryOptions({ input: { id: libraryId } }),
     )
-    if (deps.show) return
     void queryClient.prefetchInfiniteQuery(
       libraryTitlesOptions(libraryId, deps),
     )

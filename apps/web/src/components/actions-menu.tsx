@@ -34,7 +34,6 @@ import {
   DownloadMenuItem,
   useDownloadsAllowed,
 } from "@/components/download-dialog"
-import { FavoriteMenuItem, useItemFavorite } from "@/components/favorite-button"
 import {
   IdentifyDialog,
   invalidateTitleData,
@@ -45,8 +44,6 @@ import {
   type ImageOwner,
 } from "@/components/title/image-editor"
 import { useLibraryProvider } from "@/components/title/library-provider"
-import { WatchedDateDialog } from "@/components/watched-date-dialog"
-import { useItemWatched, WatchedMenuItems } from "@/components/watched-menu"
 import { tr } from "@/i18n"
 import { seasonName } from "@/lib/media"
 import { type PartyRole, usePartyRole } from "@/lib/party"
@@ -54,8 +51,8 @@ import { client, errorMessage, orpc } from "@/lib/rpc"
 import { createTitleActionsStore } from "@/stores/title-actions"
 
 /*
- * The "⋯" menu of a movie, show, season, or episode, the same on its card,
- * its page, and its row in a folder: what has no button of its own.
+ * The "⋯" menu of a movie, show, season, or episode, the same on its card
+ * and its page: what has no button of its own.
  * Marking watched and favorites have the tick and the heart beside it.
  * A file the viewer stopped partway into can play from the start.
  * In a watch party, a file can go to its queue, or be proposed for it.
@@ -66,11 +63,8 @@ import { createTitleActionsStore } from "@/stores/title-actions"
 
 const authed = getRouteApi("/_authed")
 
-/**
- * Bare over a card's picture, a round button beside Play, or a small one
- * at the end of a row that shows on hover.
- */
-export type MenuLook = "card" | "page" | "row"
+/** Bare over a card's picture, or a round button beside Play. */
+export type MenuLook = "card" | "page"
 
 /** What the menu is for. */
 export type ActionsTarget =
@@ -210,9 +204,6 @@ function scopeOf(target: ActionsTarget): Scope {
 const pageButton =
   "border-foreground/10 bg-foreground/15 hover:bg-foreground/25 backdrop-blur max-sm:size-11"
 
-const rowButton =
-  "text-muted-foreground opacity-0 group-focus-within/item:opacity-100 group-hover/item:opacity-100 aria-expanded:opacity-100 [@media(pointer:coarse)]:size-11 [@media(pointer:coarse)]:opacity-100"
-
 /**
  * The trigger's button, for `render`. An element, not a component: the
  * trigger hands it its handlers and state as props. `props` go on it as
@@ -252,37 +243,22 @@ function triggerButton(
           {icon}
         </Button>
       )
-    case "row":
-      return (
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label={label}
-          {...props}
-          className={cn(rowButton, className)}
-        >
-          {icon}
-        </Button>
-      )
   }
 }
 
 /**
- * The menu of a movie, show, season, or file. Items in `children` come
- * first, as a folder row's watched and favorite. The menu and its dialogs
+ * The menu of a movie, show, season, or file. The menu and its dialogs
  * mount once someone reaches for its button.
  */
 export function ActionsMenu({
   target,
   look,
   className,
-  children,
 }: {
   target: ActionsTarget
   look: MenuLook
   /** For the trigger, to place it. */
   className?: string
-  children?: ReactNode
 }) {
   const { user } = authed.useRouteContext()
   const admin = user.role === "admin"
@@ -296,12 +272,11 @@ export function ActionsMenu({
     admin,
     images: admin && scope.title ? scope.images : null,
     look,
-    children,
   }
   // Most menus hold something whatever the server says: playing from the
-  // start, a row's own items, or an admin's image editor. Only the rest
-  // ask it before showing a trigger.
-  if (plan.restart || plan.party || children || plan.images) {
+  // start, or an admin's image editor. Only the rest ask it before
+  // showing a trigger.
+  if (plan.restart || plan.party || plan.images) {
     return <DeferredActionsMenu {...plan} className={className} />
   }
   return <CheckedActionsMenu {...plan} className={className} />
@@ -318,7 +293,6 @@ type MenuPlan = {
   /** Whose images the editor edits, for an admin. */
   images: ImageOwner | null
   look: MenuLook
-  children?: ReactNode
 }
 
 /**
@@ -377,7 +351,6 @@ function MountedActionsMenu({
   admin,
   images,
   look,
-  children,
   trigger,
   defaultOpen,
 }: MenuPlan & {
@@ -466,7 +439,7 @@ function MountedActionsMenu({
   })
 
   const adminItems = Boolean(adminProvider) || images !== null
-  const playItems = Boolean(restart || party || children)
+  const playItems = Boolean(restart || party)
   return (
     <>
       <DropdownMenu defaultOpen={defaultOpen}>
@@ -498,7 +471,6 @@ function MountedActionsMenu({
               role={party.role}
             />
           )}
-          {children}
           {playItems && (downloads || adminItems) && <DropdownMenuSeparator />}
           {downloads && (
             <DownloadMenuItem onSelect={() => void startDownload()} />
@@ -565,54 +537,6 @@ function MountedActionsMenu({
           name={scope.name}
           open={editingImages}
           onOpenChange={setEditingImages}
-        />
-      )}
-    </>
-  )
-}
-
-/**
- * The "⋯" at the end of a file's row in a folder list: the file's
- * {@link ActionsMenu}, after marking it watched or a favorite, since the
- * row has no tick or heart. Pointers that hover see it on hover and
- * focus, inside a `group/item`; touch screens always do.
- */
-export function ItemMenu({
-  item,
-  label,
-  className,
-}: {
-  item: MediaItem
-  /** Names the file for screen readers. */
-  label: string
-  className?: string
-}) {
-  const watched = useItemWatched(item)
-  const favorite = useItemFavorite(item)
-  // Null until "Other date" is first picked, so the dialog mounts then.
-  const [picking, setPicking] = useState<boolean | null>(null)
-  return (
-    <>
-      <ActionsMenu
-        target={{ kind: "item", item, name: label }}
-        look="row"
-        className={className}
-      >
-        <WatchedMenuItems
-          scope="as"
-          watched={watched.on}
-          started={watched.on || item.progress !== null}
-          onSelect={watched.mark}
-          onPickDate={() => setPicking(true)}
-        />
-        <DropdownMenuSeparator />
-        <FavoriteMenuItem favorite={favorite} />
-      </ActionsMenu>
-      {picking !== null && (
-        <WatchedDateDialog
-          open={picking}
-          onOpenChange={setPicking}
-          onPick={(watchedAt) => watched.mark(true, watchedAt)}
         />
       )}
     </>

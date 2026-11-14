@@ -74,12 +74,6 @@ export default defineMessages("media", {
   "media.watchedAt.released": "Release date",
   "media.watchedAt.other": "Other date",
   "media.watchedAt.unknown": "Don't remember",
-  "media.mark.as.watched": "Mark as watched",
-  "media.mark.as.unwatched": "Mark as unwatched",
-  "media.mark.season.watched": "Mark season watched",
-  "media.mark.season.unwatched": "Mark season unwatched",
-  "media.mark.all.watched": "Mark all watched",
-  "media.mark.all.unwatched": "Mark all unwatched",
   "media.moreActions": "More actions for {name}",
   "media.playFromStart": "Play from the start",
   // The dialog that asks when the user watched.

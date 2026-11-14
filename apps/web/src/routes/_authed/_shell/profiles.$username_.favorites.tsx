@@ -1,8 +1,8 @@
 import type { Favorites, Profile } from "@matinee/contracts"
 import { Skeleton } from "@matinee/ui/components/skeleton"
 import { useQuery } from "@tanstack/react-query"
-import { createFileRoute, Link } from "@tanstack/react-router"
-import { ChevronLeftIcon, HeartIcon, LockIcon } from "lucide-react"
+import { createFileRoute } from "@tanstack/react-router"
+import { HeartIcon, LockIcon } from "lucide-react"
 import type { ReactNode } from "react"
 
 import {
@@ -58,19 +58,7 @@ function FavoritesPage() {
 
   return (
     <div>
-      <PageHeader
-        title={tr("profile.favorites")}
-        breadcrumb={
-          <Link
-            to="/profiles/$username"
-            params={{ username }}
-            className="text-muted-foreground hover:text-foreground focus-visible:ring-ring inline-flex items-center gap-1 rounded outline-none focus-visible:ring-2"
-          >
-            <ChevronLeftIcon className="size-3.5" />
-            {name ?? `@${username}`}
-          </Link>
-        }
-      />
+      <PageHeader title={tr("profile.favorites")} />
       {favorites.isPending ? (
         <FavoritesSkeleton />
       ) : favorites.isError ? (

@@ -10,13 +10,7 @@ export default defineMessages("library", {
   "library.showMore": "Show more",
   "library.clearSearch": "Clear search",
   "library.clearFilters": "Clear filters",
-  // A show's folder list.
-  "library.otherFiles": "Other files",
-  "library.searchEpisodes": "Search episodes",
-  "library.searchTitles": "Search titles",
-  "library.noEpisodesMatch": "No episodes match “{query}”",
-  "library.noTitlesMatch": "No titles match “{query}”",
-  "library.noVideos": "No videos found",
+  "library.loadFailed": "Couldn't load this library",
   // A library's poster grid, by the library's kind.
   "library.search.movies": "Search movies",
   "library.search.shows": "Search shows",
@@ -27,7 +21,6 @@ export default defineMessages("library", {
   "library.none.movies": "No movies found",
   "library.none.shows": "No shows found",
   // Sorts.
-  "library.sort.fileName": "File name",
   "library.sort.name": "Name",
   "library.sort.recent": "Recently added",
   "library.sort.year": "Year",

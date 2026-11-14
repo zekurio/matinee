@@ -1,6 +1,5 @@
 import type { MediaItem, Season, TitleSummary } from "@matinee/contracts"
 import { Button } from "@matinee/ui/components/button"
-import { DropdownMenuItem } from "@matinee/ui/components/dropdown-menu"
 import { toast } from "@matinee/ui/components/sonner"
 import { cn } from "@matinee/ui/lib/utils"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
@@ -153,16 +152,6 @@ export function FavoriteHeart({
         className,
       )}
     />
-  )
-}
-
-/** "Add to favorites" or "Remove from favorites", for a dropdown menu. */
-export function FavoriteMenuItem({ favorite }: { favorite: Toggle }) {
-  return (
-    <DropdownMenuItem onClick={favorite.toggle}>
-      <FavoriteHeart on={favorite.on} />
-      {favorite.on ? tr("media.removeFavorite") : tr("media.addFavorite")}
-    </DropdownMenuItem>
   )
 }
 

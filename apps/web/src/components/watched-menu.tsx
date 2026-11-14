@@ -10,15 +10,11 @@ import {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@matinee/ui/components/dropdown-menu"
 import { toast } from "@matinee/ui/components/sonner"
 import { cn } from "@matinee/ui/lib/utils"
 import {
-  type InfiniteData,
   type QueryClient,
   useMutation,
   useQueryClient,
@@ -29,7 +25,6 @@ import {
   CalendarOffIcon,
   CheckIcon,
   ClockIcon,
-  EyeOffIcon,
 } from "lucide-react"
 import { useState } from "react"
 
@@ -37,8 +32,6 @@ import { WatchedDateDialog } from "@/components/watched-date-dialog"
 import { tr } from "@/i18n"
 import { client, errorMessage, orpc } from "@/lib/rpc"
 import { invalidateViewerState, type WatchedState } from "@/lib/viewer-state"
-
-type MediaPage = { items: MediaItem[]; total: number }
 
 /** The item as it looks once marked. */
 function withWatched(item: MediaItem, watched: boolean): MediaItem {
@@ -63,7 +56,7 @@ async function patchLists(
   match: (item: MediaItem) => boolean,
   watched: boolean,
 ) {
-  const keys = [orpc.titles.items.key(), orpc.media.key(), orpc.home.key()]
+  const keys = [orpc.titles.items.key(), orpc.home.key()]
   // A refetch already on its way would land on top of the patch.
   await Promise.all(
     keys.map((queryKey) => queryClient.cancelQueries({ queryKey })),
@@ -73,14 +66,6 @@ async function patchLists(
   queryClient.setQueriesData<MediaItem[]>(
     { queryKey: orpc.titles.items.key() },
     (old) => old && patch(old),
-  )
-  queryClient.setQueriesData<InfiniteData<MediaPage>>(
-    { queryKey: orpc.media.list.key({ type: "infinite" }) },
-    (old) =>
-      old && {
-        ...old,
-        pages: old.pages.map((page) => ({ ...page, items: patch(page.items) })),
-      },
   )
   // Either way the file is no longer in progress. Next up only holds files
   // nobody started, so a watched one leaves it too.
@@ -302,56 +287,6 @@ export function WatchedButton({ watched }: { watched: WatchedState }) {
         onOpenChange={setPicking}
         onPick={(watchedAt) => watched.mark(true, watchedAt)}
       />
-    </>
-  )
-}
-
-/**
- * Mark watched and unwatched, whichever apply. Files in progress get both,
- * since unwatched also clears the resume point. Watched asks when, with
- * {@link WatchedAtItems}.
- */
-export function WatchedMenuItems({
-  scope,
-  watched,
-  started,
-  onSelect,
-  onPickDate,
-}: {
-  /** Fills in "Mark … watched". */
-  scope: "as" | "season" | "all"
-  /** Every file is watched. */
-  watched: boolean
-  /** Some file is watched or in progress. */
-  started: boolean
-  /** `watchedAt` as in `playback.setWatched`; unset is now. */
-  onSelect: (watched: boolean, watchedAt?: WatchedAt) => void
-  /** "Other date" was picked. */
-  onPickDate: () => void
-}) {
-  return (
-    <>
-      {!watched && (
-        <DropdownMenuSub>
-          {/* Items pad out for touch; the trigger has to be told. */}
-          <DropdownMenuSubTrigger className="[@media(pointer:coarse)]:py-2.5">
-            <CheckIcon />
-            {tr(`media.mark.${scope}.watched`)}
-          </DropdownMenuSubTrigger>
-          <DropdownMenuSubContent className="min-w-44">
-            <WatchedAtItems
-              onSelect={(watchedAt) => onSelect(true, watchedAt)}
-              onPickDate={onPickDate}
-            />
-          </DropdownMenuSubContent>
-        </DropdownMenuSub>
-      )}
-      {(watched || started) && (
-        <DropdownMenuItem onClick={() => onSelect(false)}>
-          <EyeOffIcon />
-          {tr(`media.mark.${scope}.unwatched`)}
-        </DropdownMenuItem>
-      )}
     </>
   )
 }

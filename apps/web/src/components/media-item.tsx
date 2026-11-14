@@ -12,11 +12,10 @@ import { CheckIcon, FilmIcon, PlayIcon } from "lucide-react"
 import type { ReactNode } from "react"
 
 import { tr } from "@/i18n"
-import { formatBytes, formatRuntime } from "@/lib/format"
+import { formatRuntime } from "@/lib/format"
 import {
   art,
   episodeCode,
-  frame,
   type ImageSource,
   itemLabel,
   landscapeSources,
@@ -27,7 +26,7 @@ import {
 import { errorMessage, orpc } from "@/lib/rpc"
 import type { WatchedState } from "@/lib/viewer-state"
 
-import { ActionsMenu, ItemMenu } from "./actions-menu"
+import { ActionsMenu } from "./actions-menu"
 import { CardActions, CardScrim } from "./card-actions"
 import {
   useItemFavorite,
@@ -115,7 +114,6 @@ export function Thumb({
   watched,
   badge = true,
   play = true,
-  compact = false,
   className,
   children,
 }: {
@@ -128,7 +126,6 @@ export function Thumb({
   /** Draw the watched badge. Off when an `UnwatchBadge` goes over it. */
   badge?: boolean
   play?: boolean
-  compact?: boolean
   className?: string
   children?: ReactNode
 }) {
@@ -157,10 +154,7 @@ export function Thumb({
           // Floats clear of the edges, the accent on a dark track: flush
           // white ran into a light page. In a `group/card` it gives way to
           // the `CardActions` whenever they show.
-          className={cn(
-            "absolute h-1 overflow-hidden rounded-full bg-black/45 transition-opacity group-hover/card:opacity-0 group-has-[:focus-visible]/card:opacity-0 group-has-[[aria-expanded=true]]/card:opacity-0 motion-reduce:transition-none",
-            compact ? "inset-x-1.5 bottom-1.5" : "inset-x-2 bottom-2",
-          )}
+          className="absolute inset-x-2 bottom-2 h-1 overflow-hidden rounded-full bg-black/45 transition-opacity group-hover/card:opacity-0 group-has-[:focus-visible]/card:opacity-0 group-has-[[aria-expanded=true]]/card:opacity-0 motion-reduce:transition-none"
         >
           <span
             className="bg-primary block h-full"
@@ -169,18 +163,8 @@ export function Thumb({
         </span>
       )}
       {play && (
-        <span
-          className={cn(
-            "bg-foreground text-background absolute grid place-items-center rounded-full opacity-0 shadow-sm transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100",
-            compact ? "size-8" : "size-9",
-          )}
-        >
-          <PlayIcon
-            className={cn(
-              "translate-x-px fill-current",
-              compact ? "size-3.5" : "size-4",
-            )}
-          />
+        <span className="bg-foreground text-background absolute grid size-9 place-items-center rounded-full opacity-0 shadow-sm transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+          <PlayIcon className="size-4 translate-x-px fill-current" />
         </span>
       )}
     </span>
@@ -193,59 +177,6 @@ export function Thumb({
  */
 export function StreamLine({ item }: { item: MediaItem }) {
   return <MediaInfoLine item={item} />
-}
-
-/**
- * One file in a folder list, under its folder header. The whole row starts
- * playback; the "⋯" at its end marks it watched.
- */
-export function MediaRow({ item }: { item: MediaItem }) {
-  const label = itemLabel(item)
-  const watched = item.progress?.completed ?? false
-  return (
-    <li className="group/item relative">
-      <Link
-        to="/watch/$itemId"
-        params={{ itemId: item.id }}
-        className="group hover:bg-foreground/[0.06] focus-visible:bg-foreground/[0.06] focus-visible:ring-ring flex items-center gap-4 rounded-lg p-2 pr-12 outline-none focus-visible:ring-2 [@media(pointer:coarse)]:pr-14"
-      >
-        <Thumb
-          sources={[frame(item.id)]}
-          toneKey={label.showKey}
-          progress={progressRatio(item)}
-          watched={watched}
-          compact
-          className="w-28 sm:w-36"
-        />
-        <span className="min-w-0 flex-1">
-          <span
-            className={cn(
-              "line-clamp-2 text-sm leading-5 sm:line-clamp-1",
-              label.untitled ? "font-normal" : "font-medium",
-            )}
-          >
-            {label.title}
-          </span>
-          <span className="text-muted-foreground mt-0.5 block text-[13px] leading-5 tabular-nums">
-            {[
-              label.untitled ? null : label.shortCode,
-              item.progress && !watched
-                ? timeLeft(item)
-                : formatBytes(item.sizeBytes),
-            ]
-              .filter(Boolean)
-              .join(" · ")}
-          </span>
-          <StreamLine item={item} />
-        </span>
-      </Link>
-      <ItemMenu
-        item={item}
-        label={label.title}
-        className="absolute top-1/2 right-2 -translate-y-1/2"
-      />
-    </li>
-  )
 }
 
 export const cardClass =
