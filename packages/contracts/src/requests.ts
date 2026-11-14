@@ -147,13 +147,11 @@ export const requestsContract = {
 export const adminRequestsContract = {
   /**
    * Current work lists plus a cursor-paged done list: arrived and
-   * declined requests, latest first. Query and cursor apply to done.
+   * declined requests, latest first. The cursor applies to done.
    */
-  queue: get("/admin/requests")
-    .input(RequestPageInput.extend({ query: t.string().max(256).optional() }))
-    .output(RequestQueue),
+  queue: get("/admin/requests").input(RequestPageInput).output(RequestQueue),
   live: get("/admin/requests/live")
-    .input(RequestPageInput.extend({ query: t.string().max(256).optional() }))
+    .input(RequestPageInput)
     .output(eventIterator(RequestQueue)),
   /**
    * With `libraryId`, the request moves to that library first, taking the

@@ -8,17 +8,8 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@matinee/ui/components/empty"
-import { Input } from "@matinee/ui/components/input"
-import {
-  Popover,
-  PopoverContent,
-  PopoverHeader,
-  PopoverTitle,
-  PopoverTrigger,
-} from "@matinee/ui/components/popover"
 import { Skeleton } from "@matinee/ui/components/skeleton"
 import { toast } from "@matinee/ui/components/sonner"
-import { useMediaQuery } from "@matinee/ui/hooks/use-media-query"
 import { cn } from "@matinee/ui/lib/utils"
 import {
   keepPreviousData,
@@ -31,12 +22,8 @@ import {
   CableIcon,
   CheckCheckIcon,
   InboxIcon,
-  KeyboardIcon,
   RefreshCwIcon,
-  SearchIcon,
-  SearchXIcon,
   TriangleAlertIcon,
-  XIcon,
 } from "lucide-react"
 import { type ReactNode, useEffect, useRef, useState } from "react"
 
@@ -55,7 +42,7 @@ import {
 } from "@/stores/request-actions"
 
 import type { Answer } from "./decline-popover"
-import { Key, KeyTip } from "./key-tip"
+import { KeyTip } from "./key-tip"
 import {
   addAction,
   askers,
@@ -69,9 +56,6 @@ import { RequestRow } from "./request-row"
 
 /** Rows of Done a page of it brings. */
 const DONE_PAGE = 40
-
-// The pause in typing before Done's search goes out.
-const DEBOUNCE_MS = 250
 
 /** A key press the queue shouldn't take: typing, or inside a popup. */
 function ignoredKey(event: KeyboardEvent): boolean {
@@ -94,14 +78,10 @@ function ignoredKey(event: KeyboardEvent): boolean {
 
 export function QueuePage({
   list,
-  query,
   onList,
-  onQuery,
 }: {
   list: QueueList
-  query: string | undefined
   onList: (list: QueueList) => void
-  onQuery: (query: string | undefined) => void
 }) {
   useDocumentTitle(tr("requests.title"))
   const queue = useRequestQueue()
@@ -110,9 +90,6 @@ export function QueuePage({
   const hold = useRequestActionsStore((state) => state.hold)
   const navigate = useNavigate()
   const openSettings = useOpenSettings()
-  // Shortcuts are listed unless the screen is touch first. A browser that
-  // reports no pointer at all, as some keyboard setups do, still gets them.
-  const keyboard = !useMediaQuery("(pointer: coarse)")
 
   // Held actions go out as the page is left, not when their toast ends.
   useSendHeldOnLeave()
@@ -122,7 +99,6 @@ export function QueuePage({
       input: (cursor: string | undefined) => ({
         limit: DONE_PAGE,
         cursor,
-        query,
       }),
       initialPageParam: undefined,
       getNextPageParam: (last) => last.nextCursor ?? undefined,
@@ -378,20 +354,9 @@ export function QueuePage({
       />
     )
   } else if (visible.length === 0) {
-    body =
-      list === "done" && query ? (
-        <QueueEmpty
-          icon={<SearchXIcon />}
-          title={tr("requests.done.noMatch", { query })}
-          action={
-            <Button variant="outline" onClick={() => onQuery(undefined)}>
-              {tr("requests.done.clearSearch")}
-            </Button>
-          }
-        />
-      ) : (
-        <QueueEmpty icon={<InboxIcon />} title={tr(`requests.empty.${list}`)} />
-      )
+    body = (
+      <QueueEmpty icon={<InboxIcon />} title={tr(`requests.empty.${list}`)} />
+    )
   } else {
     body = (
       <div className="bg-foreground/[0.02] overflow-hidden rounded-xl border">
@@ -492,10 +457,8 @@ export function QueuePage({
               )
             })}
           </div>
-          {list === "done" && <DoneSearch query={query} onQuery={onQuery} />}
           <div className="flex items-center gap-1 max-sm:hidden">
             {addAllButton("default")}
-            {keyboard && <KeysButton list={list} />}
           </div>
         </div>
       </div>
@@ -552,60 +515,6 @@ export function QueuePage({
   )
 }
 
-/** Searches Done, as a library's search box searches it. */
-function DoneSearch({
-  query,
-  onQuery,
-}: {
-  query: string | undefined
-  onQuery: (query: string | undefined) => void
-}) {
-  const [text, setText] = useState(query ?? "")
-  const timer = useRef<ReturnType<typeof setTimeout>>(undefined)
-  // A query from outside, like Back, replaces what's in the field. One
-  // that came from typing here already matches it.
-  const [seen, setSeen] = useState(query)
-  if (query !== seen) {
-    setSeen(query)
-    if ((query ?? "") !== text.trim()) setText(query ?? "")
-  }
-  const change = (next: string, wait = DEBOUNCE_MS) => {
-    setText(next)
-    clearTimeout(timer.current)
-    timer.current = setTimeout(() => onQuery(next.trim() || undefined), wait)
-  }
-  return (
-    <div className="relative w-full sm:w-72">
-      <SearchIcon
-        aria-hidden
-        className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2"
-      />
-      <Input
-        type="search"
-        value={text}
-        aria-label={tr("requests.done.search")}
-        placeholder={tr("requests.done.search")}
-        className="px-8 [&::-webkit-search-cancel-button]:appearance-none"
-        onChange={(event) => change(event.target.value)}
-        onKeyDown={(event) => {
-          if (event.key === "Escape" && text) change("", 0)
-        }}
-      />
-      {text && (
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label={tr("requests.done.clearSearch")}
-          className="absolute top-1/2 right-1 -translate-y-1/2 [@media(pointer:coarse)]:size-11"
-          onClick={() => change("", 0)}
-        >
-          <XIcon />
-        </Button>
-      )}
-    </div>
-  )
-}
-
 /** Nothing to list, as a library with nothing in it says so. */
 function QueueEmpty({
   icon,
@@ -645,65 +554,5 @@ function QueueSkeleton() {
         </div>
       ))}
     </div>
-  )
-}
-
-/** The queue's keys, behind a button rather than on a line of their own. */
-function KeysButton({ list }: { list: QueueList }) {
-  const keys: { keys: string[]; label: string }[] = [
-    { keys: ["J", "K"], label: tr("requests.keys.move") },
-    { keys: ["Enter"], label: tr("requests.keys.open") },
-  ]
-  if (list === "waiting") {
-    keys.push(
-      { keys: ["A"], label: tr("requests.keys.add") },
-      { keys: ["Shift", "A"], label: tr("requests.keys.addAll") },
-      { keys: ["D"], label: tr("requests.keys.decline") },
-    )
-  }
-  if (list === "needsAttention" || list === "onTheWay") {
-    keys.push({ keys: ["G"], label: tr("requests.keys.giveUp") })
-  }
-  if (list === "needsAttention") {
-    keys.push({ keys: ["R"], label: tr("requests.retry") })
-  }
-  keys.push({ keys: ["U"], label: tr("requests.keys.undo") })
-  return (
-    <Popover>
-      <PopoverTrigger
-        render={
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label={tr("requests.keys")}
-            className="text-muted-foreground hover:text-foreground data-popup-open:text-foreground"
-          />
-        }
-      >
-        <KeyboardIcon />
-      </PopoverTrigger>
-      <PopoverContent align="end" sideOffset={6} className="w-60 gap-0 p-0">
-        <PopoverHeader>
-          <PopoverTitle className="font-semibold">
-            {tr("requests.keys")}
-          </PopoverTitle>
-        </PopoverHeader>
-        <dl className="flex flex-col gap-2 p-3 text-[13px]">
-          {keys.map((entry) => (
-            <div
-              key={entry.label}
-              className="flex items-center justify-between gap-3"
-            >
-              <dt className="text-foreground/85">{entry.label}</dt>
-              <dd className="flex gap-1">
-                {entry.keys.map((key) => (
-                  <Key key={key}>{key}</Key>
-                ))}
-              </dd>
-            </div>
-          ))}
-        </dl>
-      </PopoverContent>
-    </Popover>
   )
 }

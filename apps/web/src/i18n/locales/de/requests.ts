@@ -118,9 +118,6 @@ export default {
   "requests.done.declinedUndated": "Abgelehnt",
   "requests.done.gaveUp": "{when} aufgegeben",
   "requests.done.gaveUpUndated": "Aufgegeben",
-  "requests.done.search": "Anfragen durchsuchen",
-  "requests.done.clearSearch": "Suche leeren",
-  "requests.done.noMatch": "Keine Anfrage passt zu „{query}“",
 
   "requests.empty.setup.title": "Noch befüllt nichts deine Mediatheken",
   "requests.empty.setup.description":
@@ -133,12 +130,5 @@ export default {
   "requests.loadFailed": "Anfragen konnten nicht geladen werden. {error}",
   "requests.reload": "Erneut versuchen",
 
-  "requests.keys": "Tastenkürzel",
-  "requests.keys.move": "Bewegen",
-  "requests.keys.open": "Öffnen",
-  "requests.keys.add": "Hinzufügen",
   "requests.keys.addAll": "Alle hinzufügen",
-  "requests.keys.decline": "Ablehnen",
-  "requests.keys.giveUp": "Aufgeben",
-  "requests.keys.undo": "Rückgängig",
 } satisfies TranslationOf<typeof source>

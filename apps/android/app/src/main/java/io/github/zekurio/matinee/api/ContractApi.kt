@@ -1443,29 +1443,21 @@ class AdminApi internal constructor(private val transport: ApiTransport) {
 
 class AdminRequestsApi internal constructor(private val transport: ApiTransport) {
     /** `GET /admin/requests` */
-    suspend fun queue(
-        cursor: String? = null,
-        limit: Int? = null,
-        query: String? = null,
-    ): RequestQueue =
+    suspend fun queue(cursor: String? = null, limit: Int? = null): RequestQueue =
         transport.call(
             "GET",
             listOf("admin", "requests"),
-            listOf("cursor" to cursor, "limit" to limit?.toString(), "query" to query),
+            listOf("cursor" to cursor, "limit" to limit?.toString()),
             null,
             RequestQueue.serializer(),
         )
 
     /** `GET /admin/requests/live` */
-    fun live(
-        cursor: String? = null,
-        limit: Int? = null,
-        query: String? = null,
-    ): Flow<RequestQueue> =
+    fun live(cursor: String? = null, limit: Int? = null): Flow<RequestQueue> =
         transport.events(
             "GET",
             listOf("admin", "requests", "live"),
-            listOf("cursor" to cursor, "limit" to limit?.toString(), "query" to query),
+            listOf("cursor" to cursor, "limit" to limit?.toString()),
             null,
             RequestQueue.serializer(),
         )

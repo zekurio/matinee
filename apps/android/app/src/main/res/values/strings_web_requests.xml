@@ -104,9 +104,6 @@
     <string name="web_requests_done_declinedUndated">Declined</string>
     <string name="web_requests_done_gaveUp">Given up %1$s</string>
     <string name="web_requests_done_gaveUpUndated">Given up</string>
-    <string name="web_requests_done_search">Search requests</string>
-    <string name="web_requests_done_clearSearch">Clear search</string>
-    <string name="web_requests_done_noMatch">No requests match “%1$s”</string>
     <string name="web_requests_empty_setup_title">Nothing fills your libraries yet</string>
     <string name="web_requests_empty_setup_description">Add a connection, then choose the libraries it fills.</string>
     <string name="web_requests_empty_setup_action">Set up requests</string>
@@ -116,12 +113,5 @@
     <string name="web_requests_empty_done">Nothing done yet</string>
     <string name="web_requests_loadFailed">Couldn\'t load requests. %1$s</string>
     <string name="web_requests_reload">Try again</string>
-    <string name="web_requests_keys">Keyboard shortcuts</string>
-    <string name="web_requests_keys_move">Move</string>
-    <string name="web_requests_keys_open">Open</string>
-    <string name="web_requests_keys_add">Add</string>
     <string name="web_requests_keys_addAll">Add all</string>
-    <string name="web_requests_keys_decline">Decline</string>
-    <string name="web_requests_keys_giveUp">Give up</string>
-    <string name="web_requests_keys_undo">Undo</string>
 </resources>

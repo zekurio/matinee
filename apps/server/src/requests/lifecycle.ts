@@ -22,7 +22,6 @@ import {
   inArray,
   isNull,
   or,
-  ilike,
   count,
   sql,
 } from "drizzle-orm"
@@ -508,7 +507,7 @@ export async function mine(
 
 export async function queue(
   viewer: Viewer,
-  input: { cursor?: string; limit: number; query?: string },
+  input: { cursor?: string; limit: number },
 ) {
   const visible = inLibraries(viewer, request.libraryId)
   const waiting = and(visible, eq(request.status, "asked"))
@@ -529,7 +528,6 @@ export async function queue(
   const done = and(
     visible,
     or(sql`${request.arrivedAt} is not null`, eq(request.status, "declined")),
-    input.query ? ilike(request.name, `%${input.query}%`) : undefined,
   )
   const lists = await Promise.all(
     [waiting, attention, onWay, done].map((filter, index) =>

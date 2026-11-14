@@ -145,9 +145,6 @@ export default defineMessages("requests", {
   "requests.done.declinedUndated": "Declined",
   "requests.done.gaveUp": "Given up {when}",
   "requests.done.gaveUpUndated": "Given up",
-  "requests.done.search": "Search requests",
-  "requests.done.clearSearch": "Clear search",
-  "requests.done.noMatch": "No requests match “{query}”",
 
   // Empty, loading, and error states.
   "requests.empty.setup.title": "Nothing fills your libraries yet",
@@ -161,13 +158,6 @@ export default defineMessages("requests", {
   "requests.loadFailed": "Couldn't load requests. {error}",
   "requests.reload": "Try again",
 
-  // The keys, in a popover from the button beside the lists.
-  "requests.keys": "Keyboard shortcuts",
-  "requests.keys.move": "Move",
-  "requests.keys.open": "Open",
-  "requests.keys.add": "Add",
+  // The tooltip of Add all, with its key.
   "requests.keys.addAll": "Add all",
-  "requests.keys.decline": "Decline",
-  "requests.keys.giveUp": "Give up",
-  "requests.keys.undo": "Undo",
 })

@@ -104,9 +104,6 @@
     <string name="web_requests_done_declinedUndated">Abgelehnt</string>
     <string name="web_requests_done_gaveUp">%1$s aufgegeben</string>
     <string name="web_requests_done_gaveUpUndated">Aufgegeben</string>
-    <string name="web_requests_done_search">Anfragen durchsuchen</string>
-    <string name="web_requests_done_clearSearch">Suche leeren</string>
-    <string name="web_requests_done_noMatch">Keine Anfrage passt zu „%1$s“</string>
     <string name="web_requests_empty_setup_title">Noch befüllt nichts deine Mediatheken</string>
     <string name="web_requests_empty_setup_description">Füge eine Verbindung hinzu und wähle die Mediatheken, die sie befüllt.</string>
     <string name="web_requests_empty_setup_action">Anfragen einrichten</string>
@@ -116,12 +113,5 @@
     <string name="web_requests_empty_done">Noch nichts erledigt</string>
     <string name="web_requests_loadFailed">Anfragen konnten nicht geladen werden. %1$s</string>
     <string name="web_requests_reload">Erneut versuchen</string>
-    <string name="web_requests_keys">Tastenkürzel</string>
-    <string name="web_requests_keys_move">Bewegen</string>
-    <string name="web_requests_keys_open">Öffnen</string>
-    <string name="web_requests_keys_add">Hinzufügen</string>
     <string name="web_requests_keys_addAll">Alle hinzufügen</string>
-    <string name="web_requests_keys_decline">Ablehnen</string>
-    <string name="web_requests_keys_giveUp">Aufgeben</string>
-    <string name="web_requests_keys_undo">Rückgängig</string>
 </resources>
