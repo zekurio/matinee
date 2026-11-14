@@ -79,9 +79,20 @@ function browseQuery(kind: TitleKind, browse: Browse) {
 function sortOptions(options: BrowseOptions) {
   return options.sorts.map((value) => ({
     value,
-    label: tr(`discover.browse.sort.${value}`),
+    label: tr(SORT_WORDS[value]),
   }))
 }
+
+const SORT_WORDS = {
+  popular: "discover.browse.sort.popular",
+  votes: "discover.browse.sort.votes",
+  scoreHigh: "filters.sort.scoreHigh",
+  scoreLow: "filters.sort.scoreLow",
+  newest: "filters.sort.newest",
+  oldest: "filters.sort.oldest",
+  nameAsc: "filters.sort.nameAsc",
+  nameDesc: "filters.sort.nameDesc",
+} as const satisfies Record<CatalogSort, string>
 
 export function BrowsePage({
   kind,
@@ -285,7 +296,7 @@ function BrowseGrid({
               ? tr(`discover.browse.none.${kind}`)
               : tr("discover.browse.nothing")
           }
-          description={chips.length > 0 ? tr("discover.browse.noneHint") : ""}
+          description={chips.length > 0 ? tr("filters.noneHint") : ""}
         >
           {chips.length > 0 && (
             <Button variant="outline" onClick={clear}>

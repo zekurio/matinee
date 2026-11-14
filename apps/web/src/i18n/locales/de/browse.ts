@@ -20,6 +20,7 @@ export default {
   "browse.titleCount": plural({ one: "{count} Titel", other: "{count} Titel" }),
   "browse.search": "{name} durchsuchen",
   "browse.noMatch": "Nichts passt zu „{query}“",
+  "browse.noFilterMatch": "Hier passt nichts zu diesen Filtern",
   "browse.clearSearch": "Suche leeren",
   "browse.genre.none.movie": "Keine Filme in diesem Genre",
   "browse.genre.none.show": "Keine Serien in diesem Genre",

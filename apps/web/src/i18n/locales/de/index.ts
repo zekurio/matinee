@@ -11,6 +11,7 @@ import common from "./common"
 import connections from "./connections"
 import discover from "./discover"
 import downloads from "./downloads"
+import filters from "./filters"
 import format from "./format"
 import jobs from "./jobs"
 import libraries from "./libraries"
@@ -56,6 +57,7 @@ export default {
   ...search,
   ...catalog,
   ...discover,
+  ...filters,
   ...ask,
   ...stats,
   ...profile,

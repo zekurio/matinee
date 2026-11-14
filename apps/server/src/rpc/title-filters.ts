@@ -1,6 +1,7 @@
 import {
   TITLE_RUNTIME_STEP,
   TITLE_SCORE_STEP,
+  TITLE_SORTS,
   type AgeLimit,
   type FilterRange,
   type TitleFilterOptions,
@@ -250,6 +251,9 @@ export async function filterOptions(
         scoreMax: max(title.rating),
         runtimeMin: min(title.runtimeMinutes),
         runtimeMax: max(title.runtimeMinutes),
+        dated: count(title.year),
+        scored: count(title.rating),
+        timed: count(title.runtimeMinutes),
         started: sql<number>`count(*) filter (where ${started})`.mapWith(
           Number,
         ),
@@ -290,5 +294,14 @@ export async function filterOptions(
       watched: finishedCount,
     },
     total,
+    sorts: TITLE_SORTS.filter((sort) =>
+      sort === "year"
+        ? (totals?.dated ?? 0) > 0
+        : sort === "score"
+          ? (totals?.scored ?? 0) > 0
+          : sort === "runtime"
+            ? (totals?.timed ?? 0) > 0
+            : true,
+    ),
   }
 }

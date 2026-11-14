@@ -2616,6 +2616,15 @@ data class LanguageCount(
     val titleCount: Int,
 )
 
+object TitleSort {
+    const val NAME = "name"
+    const val RECENT = "recent"
+    const val YEAR = "year"
+    const val SCORE = "score"
+    const val RUNTIME = "runtime"
+    val all = listOf(NAME, RECENT, YEAR, SCORE, RUNTIME)
+}
+
 @Serializable
 data class TitleFilterOptions(
     val genres: List<Facet>,
@@ -2627,6 +2636,7 @@ data class TitleFilterOptions(
     val runtime: FilterRange?,
     val watched: TitleFilterOptions.Watched,
     val total: Int,
+    val sorts: List<String>,
 ) {
     @Serializable
     data class Watched(
@@ -2648,15 +2658,6 @@ data class TitleList(
     val items: List<TitleSummary>,
     val total: Int,
 )
-
-object TitleSort {
-    const val NAME = "name"
-    const val RECENT = "recent"
-    const val YEAR = "year"
-    const val SCORE = "score"
-    const val RUNTIME = "runtime"
-    val all = listOf(NAME, RECENT, YEAR, SCORE, RUNTIME)
-}
 
 @Serializable
 data class TrackPicks(

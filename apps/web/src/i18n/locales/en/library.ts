@@ -21,9 +21,7 @@ export default defineMessages("library", {
   "library.none.movies": "No movies found",
   "library.none.shows": "No shows found",
   // Sorts.
-  "library.sort.name": "Name",
   "library.sort.recent": "Recently added",
-  "library.sort.year": "Year",
   // Filter, sort, and search controls.
   "library.filters": "Filters",
   "library.filtersOn": plural({
@@ -33,11 +31,6 @@ export default defineMessages("library", {
   "library.removeFilter": "Remove filter {name}",
   "library.clearAll": "Clear all",
   "library.filter": "Filter",
-  "library.genre": "Genre",
-  "library.anyGenre": "Any genre",
-  "library.studio": "Studio",
-  "library.anyStudio": "Any studio",
-  "library.any": "Any",
   "library.clearFilter": "Clear filter",
   "library.closeFilter": "Close filter",
   "library.sort": "Sort",

@@ -6,6 +6,8 @@ import type {
 import { CatalogSort as SortSchema } from "@matinee/contracts"
 import { t } from "@matinee/contracts/schema"
 
+import { plain, span } from "@/components/filters/ranges"
+
 /*
  * A browse's filters and sort as the URL holds them, so a filtered view
  * can be linked, reloaded and gone back to. Anything the URL says that
@@ -57,32 +59,6 @@ export const NO_FILTERS: CatalogFilters = {
   runtimeMax: null,
 }
 
-type Range = BrowseOptions["years"]
-
-/**
- * Two bounds on their range's steps, low first, each null at its end of
- * the range, where it leaves that side open. One outside the range is
- * ignored.
- */
-function span(
-  low: number | undefined,
-  high: number | undefined,
-  range: Range,
-): [number | null, number | null] {
-  const fit = (value: number | undefined) => {
-    if (value === undefined || !(value >= range.min && value <= range.max))
-      return null
-    return Math.min(
-      range.max,
-      range.min + Math.round((value - range.min) / range.step) * range.step,
-    )
-  }
-  let a = fit(low)
-  let b = fit(high)
-  if (a !== null && b !== null && a > b) [a, b] = [b, a]
-  return [a === range.min ? null : a, b === range.max ? null : b]
-}
-
 /** What the URL asks for, as far as `options` offers it. */
 export function browseFrom(
   search: BrowseSearch,
@@ -130,14 +106,6 @@ export function browseFrom(
         ? search.sort
         : "popular",
   }
-}
-
-/**
- * Text that reads as a number goes into the URL as one, so it comes out
- * as `?rating=12` rather than quoted.
- */
-function plain(value: string): string | number {
-  return String(Number(value)) === value ? Number(value) : value
 }
 
 /** The search params for a browse, leaving out what's off. */

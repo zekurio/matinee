@@ -509,6 +509,8 @@ export const TitleFilterOptions = t.object({
   }),
   /** Titles in the scope. */
   total: t.number().int(),
+  /** The sorts there is something to order by: no score sort where no title has a score. */
+  sorts: t.array(TitleSort),
 })
 export type TitleFilterOptions = t.infer<typeof TitleFilterOptions>
 
