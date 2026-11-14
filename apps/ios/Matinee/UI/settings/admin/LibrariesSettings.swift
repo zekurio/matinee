@@ -24,6 +24,7 @@ struct LibrariesSettings: View {
   @Environment(\.navigator) private var nav
   @Environment(\.snackbar) private var snackbar
   @Environment(\.palette) private var palette
+  @Environment(ShellNav.self) private var shell: ShellNav?
 
   var body: some View {
     let busy = librariesBusy(loader.state.value ?? [])
@@ -59,6 +60,10 @@ struct LibrariesSettings: View {
     // Back from the editor, the list shows what it saved.
     .loads(loader, maxAge: .zero) { api in try await api.libraries.list() }
     .loads(providers) { api in try await api.metadata.providers() }
+    // The editor says when it saved: going back by its button doesn't always show this page anew.
+    .onChange(of: shell?.results.peek(LIBRARY_SAVED), initial: true) {
+      if shell?.results.take(LIBRARY_SAVED) != nil { loader.reload() }
+    }
     .task(id: busy) {
       while busy, !Task.isCancelled {
         try? await Task.sleep(for: BUSY_POLL)
@@ -155,6 +160,9 @@ private struct LibraryRow: View {
 
 /// The key the folder picker leaves its folder under.
 let PICKED_FOLDER = "picked_folder"
+
+/// The key the library editor leaves the library it saved under, for the list to show it.
+private let LIBRARY_SAVED = "library_saved"
 
 /// An admin adding a library, or with `id`, changing one: the library's
 /// name, kind, metadata, and folders, as a page of its own. Folders are
@@ -286,6 +294,8 @@ private struct LibraryEditor: View {
           RowDivider()
         }
         Button {
+          // The name's keyboard would open again over the editor when the picker hands back.
+          naming = false
           nav.folderPicker(draft.pickerStart(existing: existing, knownPath: knownPath), draft.paths)
         } label: {
           HStack(spacing: 12) {
@@ -308,14 +318,15 @@ private struct LibraryEditor: View {
     let input = draft.input
     let existing = existing
     saver(snackbar) {
-      if let existing {
-        _ = try await api.libraries.update(
-          id: existing.id, name: input.name, kind: input.kind, paths: input.paths,
-          metadataProvider: input.metadataProvider, metadataLanguage: input.metadataLanguage)
-      } else {
-        _ = try await api.libraries.create(libraryInput: input)
-      }
-      nav.back()
+      let saved =
+        if let existing {
+          try await api.libraries.update(
+            id: existing.id, name: input.name, kind: input.kind, paths: input.paths,
+            metadataProvider: input.metadataProvider, metadataLanguage: input.metadataLanguage)
+        } else {
+          try await api.libraries.create(libraryInput: input)
+        }
+      nav.backWith(LIBRARY_SAVED, saved.id)
     }
   }
 }
@@ -484,7 +495,6 @@ private struct PathField: View {
     .autocorrectionDisabled()
     .submitLabel(.go)
     .onSubmit { if can { onOpen(typed) } }
-    .accessibilityLabel(Str.webLibrariesBrowserPath)
   }
 }
 

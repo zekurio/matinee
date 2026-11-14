@@ -306,13 +306,11 @@ struct TextRow<Trailing: View>: View {
   var body: some View {
     VStack(alignment: .leading, spacing: 6) {
       Text(label).textStyle(.bodyMedium).foregroundStyle(palette.muted)
-        .accessibilityHidden(true)
       MatineeTextField($text, placeholder: placeholder, isError: error != nil, secure: secret, trailing: trailing)
         .keyboardType(keyboard)
         .textInputAutocapitalization(.never)
         .autocorrectionDisabled()
         .submitLabel(.done)
-        .accessibilityLabel(label)
       // The last error stays while it closes, so the text doesn't vanish first.
       Reveal(error != nil) {
         Text(shownError).textStyle(.bodySmall).foregroundStyle(palette.danger)
@@ -421,17 +419,4 @@ func relativeTime(_ at: String, now: Date = .now) -> String {
 func webMessage(_ key: String, fallback: String) -> String {
   let value = Bundle.main.localizedString(forKey: key, value: "\u{0}", table: "Localizable")
   return value == "\u{0}" ? fallback : value
-}
-
-/// Measures the content's height for a sheet that fits what it holds.
-struct FittedSheet: ViewModifier {
-  @State private var height: CGFloat = 320
-
-  func body(content: Content) -> some View {
-    content
-      .fixedSize(horizontal: false, vertical: true)
-      .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height = $0 }
-      .frame(maxHeight: .infinity, alignment: .top)
-      .matineeSheet([.height(height), .large])
-  }
 }
