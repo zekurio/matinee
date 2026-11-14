@@ -34,11 +34,12 @@ import io.github.zekurio.matinee.api.CatalogSeason
 import io.github.zekurio.matinee.api.ShowScope
 import io.github.zekurio.matinee.api.isAdmin
 import io.github.zekurio.matinee.ui.LocalUser
-import io.github.zekurio.matinee.ui.components.ButtonLook
 import io.github.zekurio.matinee.ui.components.LocalSnackbar
-import io.github.zekurio.matinee.ui.components.Lucide
-import io.github.zekurio.matinee.ui.components.LucideIcon
-import io.github.zekurio.matinee.ui.components.MatineeButton
+import io.github.zekurio.matinee.ui.kit.ButtonLook
+import io.github.zekurio.matinee.ui.kit.Lucide
+import io.github.zekurio.matinee.ui.kit.LucideIcon
+import io.github.zekurio.matinee.ui.kit.MatineeButton
+import io.github.zekurio.matinee.ui.kit.ProgressRing
 import io.github.zekurio.matinee.ui.theme.Palette
 import java.time.LocalDate
 import kotlinx.coroutines.launch

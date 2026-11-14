@@ -2,8 +2,6 @@ package io.github.zekurio.matinee.ui.components
 
 import android.content.res.Resources
 import androidx.annotation.StringRes
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,36 +12,26 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.systemGestureExclusion
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.RangeSlider
-import androidx.compose.material3.RangeSliderState
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
@@ -54,11 +42,25 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.ui.formatRuntime
+import io.github.zekurio.matinee.ui.kit.ButtonLook
+import io.github.zekurio.matinee.ui.kit.Chip
+import io.github.zekurio.matinee.ui.kit.ChoiceChip
+import io.github.zekurio.matinee.ui.kit.Gap
+import io.github.zekurio.matinee.ui.kit.Gutter
+import io.github.zekurio.matinee.ui.kit.Lucide
+import io.github.zekurio.matinee.ui.kit.LucideIcon
+import io.github.zekurio.matinee.ui.kit.MatineeButton
+import io.github.zekurio.matinee.ui.kit.MatineeTextField
+import io.github.zekurio.matinee.ui.kit.RangeSlider
+import io.github.zekurio.matinee.ui.kit.RoundIconButton
+import io.github.zekurio.matinee.ui.kit.Sheet
+import io.github.zekurio.matinee.ui.kit.ToggleChip
+import io.github.zekurio.matinee.ui.kit.rememberSheetCloser
+import io.github.zekurio.matinee.ui.kit.rememberSheetState
 import io.github.zekurio.matinee.ui.theme.Palette
 import java.text.NumberFormat
 import java.util.Locale
 import kotlin.math.roundToInt
-import kotlinx.coroutines.launch
 
 /*
  * The filter sheet Discover's browse and the libraries share, as the web
@@ -110,13 +112,11 @@ fun ActiveFilterChips(chips: List<ActiveFilter>, onClear: () -> Unit) {
 }
 
 /** The sheet the filters open in, with Clear filters while any is on, and Show titles. */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FilterSheet(active: Int, onClear: () -> Unit, onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
-    val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val scope = rememberCoroutineScope()
-    val close: () -> Unit = { scope.launch { sheet.hide() }.invokeOnCompletion { onDismiss() } }
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheet, containerColor = Palette.Raised) {
+    val sheet = rememberSheetState()
+    val closer = rememberSheetCloser(sheet, onDismiss)
+    Sheet(onDismissRequest = onDismiss, state = sheet, handle = true) {
         Text(
             stringResource(R.string.web_filters_title),
             style = MaterialTheme.typography.titleMedium,
@@ -139,7 +139,7 @@ fun FilterSheet(active: Int, onClear: () -> Unit, onDismiss: () -> Unit, content
                 }
             }
             Box(Modifier.weight(1f))
-            MatineeButton(onClick = close) { Text(stringResource(R.string.web_filters_done)) }
+            MatineeButton(onClick = { closer {} }) { Text(stringResource(R.string.web_filters_done)) }
         }
     }
 }
@@ -168,10 +168,14 @@ fun FilterSection(title: String, hint: String? = null, value: String? = null, sm
 @Composable
 fun <T> ChoiceChips(choices: List<FilterChoice<T>>, value: T?, onChange: (T?) -> Unit) {
     val res = LocalResources.current
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Chip(stringResource(R.string.web_filters_any), selected = value == null, onClick = { onChange(null) })
+    FlowRow(
+        Modifier.selectableGroup(),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        ChoiceChip(stringResource(R.string.web_filters_any), selected = value == null, onClick = { onChange(null) })
         choices.forEach { choice ->
-            Chip(choice.label, selected = choice.value == value, onClick = { onChange(choice.value) }, count = choice.count?.let { formatCount(it, res) })
+            ChoiceChip(choice.label, selected = choice.value == value, onClick = { onChange(choice.value) }, count = choice.count?.let { formatCount(it, res) })
         }
     }
 }
@@ -214,10 +218,10 @@ fun ToggleChips(
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             shown.forEach { choice ->
                 val on = choice.value in value
-                Chip(
+                ToggleChip(
                     choice.label,
-                    selected = on,
-                    onClick = { onChange(if (on) value - choice.value else value + choice.value) },
+                    checked = on,
+                    onCheckedChange = { onChange(if (on) value - choice.value else value + choice.value) },
                     count = choice.count?.let { formatCount(it, res) },
                 )
             }
@@ -235,7 +239,6 @@ class FilterSpan(val min: Double, val max: Double, val step: Double)
  * Two handles on a range, each open at its end. What it says follows the
  * handles; the list changes once they're let go.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RangeField(
     title: String,
@@ -259,22 +262,6 @@ fun RangeField(
     val (shownLow, shownHigh) = open(moving)
     val said = words(shownLow, shownHigh)
     FilterSection(title, hint, said) {
-        val colors = SliderDefaults.colors(
-            thumbColor = Palette.Accent,
-            activeTrackColor = Palette.Accent,
-            inactiveTrackColor = Palette.Border,
-            activeTickColor = Color.Transparent,
-            inactiveTickColor = Color.Transparent,
-        )
-        // A thin track and round handles, as the web's range has them.
-        val thumb: @Composable (RangeSliderState) -> Unit = {
-            Box(
-                Modifier.size(20.dp)
-                    .shadow(1.dp, CircleShape)
-                    .background(Color.White, CircleShape)
-                    .border(1.5.dp, Palette.Accent, CircleShape),
-            )
-        }
         RangeSlider(
             value = moving,
             onValueChange = { moving = it },
@@ -283,18 +270,6 @@ fun RangeField(
             onValueChangeFinished = {
                 val (a, b) = open(moving)
                 onCommit(a, b)
-            },
-            colors = colors,
-            startThumb = thumb,
-            endThumb = thumb,
-            track = { state ->
-                SliderDefaults.Track(
-                    rangeSliderState = state,
-                    modifier = Modifier.height(4.dp),
-                    colors = colors,
-                    drawStopIndicator = null,
-                    thumbTrackGapSize = 0.dp,
-                )
             },
             // The handles sit at the screen's edges, where a swipe would
             // otherwise go back and close the sheet.
@@ -316,7 +291,6 @@ fun OptionRow(label: String, onClick: () -> Unit) {
 }
 
 /** A long list to pick one from, or none with [any], with a field to find one. */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OptionSheet(
     title: String,
@@ -330,7 +304,7 @@ fun OptionSheet(
     val res = LocalResources.current
     var query by remember { mutableStateOf("") }
     val shown = choices.filter { query.isBlank() || it.label.contains(query.trim(), ignoreCase = true) }
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), containerColor = Palette.Raised) {
+    Sheet(onDismissRequest = onDismiss, handle = true) {
         Text(title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = Gutter, vertical = 8.dp))
         MatineeTextField(
             value = query,

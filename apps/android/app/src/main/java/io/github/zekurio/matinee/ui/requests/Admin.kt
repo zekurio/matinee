@@ -21,15 +21,9 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -64,22 +58,26 @@ import io.github.zekurio.matinee.ui.LocalUser
 import io.github.zekurio.matinee.ui.Navigator
 import io.github.zekurio.matinee.ui.TopBar
 import io.github.zekurio.matinee.ui.components.Avatar
-import io.github.zekurio.matinee.ui.components.ButtonLook
-import io.github.zekurio.matinee.ui.components.Chip
 import io.github.zekurio.matinee.ui.components.ErrorBox
-import io.github.zekurio.matinee.ui.components.Gap
-import io.github.zekurio.matinee.ui.components.Gutter
 import io.github.zekurio.matinee.ui.components.LocalApi
-import io.github.zekurio.matinee.ui.components.Lucide
-import io.github.zekurio.matinee.ui.components.LucideIcon
-import io.github.zekurio.matinee.ui.components.MatineeButton
 import io.github.zekurio.matinee.ui.components.PosterArt
-import io.github.zekurio.matinee.ui.components.RoundIconButton
-import io.github.zekurio.matinee.ui.components.SheetHeader
-import io.github.zekurio.matinee.ui.components.SheetItem
 import io.github.zekurio.matinee.ui.components.art
-import io.github.zekurio.matinee.ui.components.rememberSheetCloser
 import io.github.zekurio.matinee.ui.downloads.RadioRow
+import io.github.zekurio.matinee.ui.kit.ButtonLook
+import io.github.zekurio.matinee.ui.kit.Chip
+import io.github.zekurio.matinee.ui.kit.Gap
+import io.github.zekurio.matinee.ui.kit.Gutter
+import io.github.zekurio.matinee.ui.kit.Lucide
+import io.github.zekurio.matinee.ui.kit.LucideIcon
+import io.github.zekurio.matinee.ui.kit.MatineeButton
+import io.github.zekurio.matinee.ui.kit.MatineeTextField
+import io.github.zekurio.matinee.ui.kit.RoundIconButton
+import io.github.zekurio.matinee.ui.kit.Sheet
+import io.github.zekurio.matinee.ui.kit.SheetHeader
+import io.github.zekurio.matinee.ui.kit.SheetItem
+import io.github.zekurio.matinee.ui.kit.Spinner
+import io.github.zekurio.matinee.ui.kit.rememberSheetCloser
+import io.github.zekurio.matinee.ui.kit.rememberSheetState
 import io.github.zekurio.matinee.ui.theme.Palette
 import java.io.IOException
 import kotlinx.coroutines.CancellationException
@@ -224,19 +222,21 @@ fun DeclineSheet(item: AdminRequestItem, onDismiss: () -> Unit, giveUp: Boolean 
                 }
             }
         }
-        OutlinedTextField(
-            value = note,
-            onValueChange = { note = it },
-            label = {
-                Text(
-                    if (askedBy.isEmpty()) stringResource(R.string.web_requests_decline_note)
-                    else res.getString(R.string.web_requests_decline_noteFor, formatList(askedBy, res)),
-                )
-            },
-            placeholder = { Text(stringResource(R.string.web_requests_decline_notePlaceholder)) },
-            modifier = Modifier.fillMaxWidth(),
-            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Palette.Accent, cursorColor = Palette.Accent, focusedLabelColor = Palette.Accent),
-        )
+        // The note's name sits above it, as the reason's does.
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(
+                if (askedBy.isEmpty()) stringResource(R.string.web_requests_decline_note)
+                else res.getString(R.string.web_requests_decline_noteFor, formatList(askedBy, res)),
+                style = MaterialTheme.typography.labelLarge,
+                color = Palette.Muted,
+            )
+            MatineeTextField(
+                value = note,
+                onValueChange = { note = it },
+                placeholder = stringResource(R.string.web_requests_decline_notePlaceholder),
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
         if (giveUp) {
             Text(
                 // A by-hand connection holds nothing to keep.
@@ -326,7 +326,7 @@ fun RequestsScreen(start: String) {
     Column(Modifier.fillMaxSize()) {
         TopBar(stringResource(R.string.web_requests_title))
         if (queue == null) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Palette.Accent) }
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Spinner(size = 32.dp, color = Palette.Accent) }
             return@Column
         }
         val counts = mapOf(
@@ -357,7 +357,7 @@ fun RequestsScreen(start: String) {
                 ErrorBox(stringResource(R.string.web_requests_loadFailed, done.error.orEmpty()), null, { loadDone() })
             } else {
                 LaunchedEffect(Unit) { loadDone() }
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Palette.Accent) }
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Spinner(size = 32.dp, color = Palette.Accent) }
             }
             return@Column
         }
@@ -400,7 +400,7 @@ fun RequestsScreen(start: String) {
                                 Text(stringResource(R.string.web_requests_reload))
                             }
                         } else {
-                            CircularProgressIndicator(color = Palette.Accent, modifier = Modifier.width(24.dp).height(24.dp), strokeWidth = 2.dp)
+                            Spinner(size = 24.dp, color = Palette.Accent)
                         }
                     }
                 }
@@ -523,7 +523,6 @@ private fun QueueRow(item: AdminRequestItem, list: String, onMenu: () -> Unit) {
 }
 
 /** A row's menu: what the list allows, and its title's page. */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun RowMenu(
     item: AdminRequestItem,
@@ -536,9 +535,9 @@ private fun RowMenu(
     val nav = LocalNavigator.current
     val hub = LocalRequests.current
     val res = LocalResources.current
-    val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val sheet = rememberSheetState()
     val close = rememberSheetCloser(sheet, onDismiss)
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheet, containerColor = Palette.Raised, dragHandle = null) {
+    Sheet(onDismissRequest = onDismiss, state = sheet) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(vertical = 12.dp)) {
             SheetHeader(item.title.name, whereText(item, res))
             when (list) {

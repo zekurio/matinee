@@ -291,7 +291,7 @@ private fun LazyGridScope.notHereSection(query: String, catalog: CatalogSearchSt
             when {
                 catalog.failed -> Text(stringResource(R.string.web_catalog_search_failed), style = MaterialTheme.typography.bodyMedium, color = Palette.Muted)
                 items == null -> Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = Palette.Accent)
+                    Spinner(size = 32.dp, color = Palette.Accent)
                 }
                 catalog.results?.stale == true ->
                     Text(stringResource(R.string.web_catalog_search_stale), style = MaterialTheme.typography.bodyMedium, color = Palette.Muted)

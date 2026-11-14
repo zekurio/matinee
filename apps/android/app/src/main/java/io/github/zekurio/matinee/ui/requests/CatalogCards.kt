@@ -2,8 +2,8 @@ package io.github.zekurio.matinee.ui.requests
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -24,28 +24,19 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
@@ -56,8 +47,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
-import io.github.zekurio.matinee.api.ArtworkSize
 import io.github.zekurio.matinee.api.Artwork
+import io.github.zekurio.matinee.api.ArtworkSize
 import io.github.zekurio.matinee.api.Availability
 import io.github.zekurio.matinee.api.CatalogRef
 import io.github.zekurio.matinee.api.CatalogSeason
@@ -70,53 +61,29 @@ import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.LocalNavigator
 import io.github.zekurio.matinee.ui.Motion
 import io.github.zekurio.matinee.ui.components.ArtFrame
-import io.github.zekurio.matinee.ui.components.CardShape
 import io.github.zekurio.matinee.ui.components.CardText
-import io.github.zekurio.matinee.ui.components.Gap
 import io.github.zekurio.matinee.ui.components.LocalApi
-import io.github.zekurio.matinee.ui.components.Lucide
-import io.github.zekurio.matinee.ui.components.LucideIcon
-import io.github.zekurio.matinee.ui.components.MatineeButton
 import io.github.zekurio.matinee.ui.components.Picture
 import io.github.zekurio.matinee.ui.components.PosterArt
 import io.github.zekurio.matinee.ui.components.PosterCard
 import io.github.zekurio.matinee.ui.components.art
-import io.github.zekurio.matinee.ui.components.focusRing
+import io.github.zekurio.matinee.ui.kit.CardShape
+import io.github.zekurio.matinee.ui.kit.Gap
+import io.github.zekurio.matinee.ui.kit.Lucide
+import io.github.zekurio.matinee.ui.kit.LucideIcon
+import io.github.zekurio.matinee.ui.kit.MatineeButton
+import io.github.zekurio.matinee.ui.kit.ProgressRing
+import io.github.zekurio.matinee.ui.kit.Sheet
+import io.github.zekurio.matinee.ui.kit.focusRing
+import io.github.zekurio.matinee.ui.kit.rememberSheetCloser
+import io.github.zekurio.matinee.ui.kit.rememberSheetState
 import io.github.zekurio.matinee.ui.rememberLoader
 import io.github.zekurio.matinee.ui.seasonName
 import io.github.zekurio.matinee.ui.theme.Palette
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 /** How long the badge takes to go when a title arrives, before the card becomes the library's. */
 private const val ARRIVAL_MS = 200
-
-/**
- * A ring that fills clockwise in the accent, for how much of a title is
- * in. Without a share yet it's dotted: on its way, nothing to count.
- */
-@Composable
-fun ProgressRing(progress: Double?, modifier: Modifier = Modifier, size: Dp = 20.dp) {
-    val accent = Palette.Accent
-    val track = Palette.Foreground.copy(alpha = 0.2f)
-    val shown by animateFloatAsState((progress ?: 0.0).toFloat().coerceIn(0f, 1f), tween(700), label = "ring")
-    Canvas(modifier.size(size)) {
-        val stroke = this.size.minDimension * 2.5f / 24f
-        val inset = this.size.minDimension * 3f / 24f
-        val box = Size(this.size.width - 2 * inset, this.size.height - 2 * inset)
-        val at = Offset(inset, inset)
-        drawArc(track, 0f, 360f, false, at, box, style = Stroke(stroke))
-        if (progress == null) {
-            val circumference = (Math.PI * box.width).toFloat()
-            drawArc(
-                accent, -90f, 360f, false, at, box,
-                style = Stroke(stroke, cap = StrokeCap.Round, pathEffect = PathEffect.dashPathEffect(floatArrayOf(0.1f, circumference / 12f))),
-            )
-        } else {
-            drawArc(accent, -90f, 360f * shown, false, at, box, style = Stroke(stroke, cap = StrokeCap.Round))
-        }
-    }
-}
 
 /**
  * The round glass mark in a catalog card's corner, where a library
@@ -174,7 +141,7 @@ internal fun Modifier.cardTap(onClick: () -> Unit, onLongClick: (() -> Unit)? = 
         .focusRing(interaction, CardShape)
         .combinedClickable(
             interactionSource = interaction,
-            indication = androidx.compose.material3.ripple(),
+            indication = LocalIndication.current,
             role = Role.Button,
             onClickLabel = label,
             onLongClick = onLongClick,
@@ -323,18 +290,11 @@ fun NextSeasonCard(entry: NextSeasonEntry, modifier: Modifier = Modifier) {
  * the thumb is, with [title] on top. [content] gets a way to close it
  * that lets the sheet slide away first.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AskSheet(title: String, onDismiss: () -> Unit, content: @Composable ColumnScope.(close: (then: () -> Unit) -> Unit) -> Unit) {
-    val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val scope = rememberCoroutineScope()
-    val close: (() -> Unit) -> Unit = { then ->
-        scope.launch { sheet.hide() }.invokeOnCompletion {
-            onDismiss()
-            then()
-        }
-    }
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheet, containerColor = Palette.Raised) {
+    val sheet = rememberSheetState()
+    val close = rememberSheetCloser(sheet, onDismiss)
+    Sheet(onDismissRequest = onDismiss, state = sheet, handle = true) {
         Column(
             Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(start = 20.dp, end = 20.dp, bottom = 20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),

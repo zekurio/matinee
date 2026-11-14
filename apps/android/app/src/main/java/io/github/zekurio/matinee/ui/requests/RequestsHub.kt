@@ -2,9 +2,6 @@ package io.github.zekurio.matinee.ui.requests
 
 import android.content.res.Resources
 import android.util.Log
-import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -30,6 +27,9 @@ import io.github.zekurio.matinee.api.RequestsLiveEvent
 import io.github.zekurio.matinee.api.SeasonAvailability
 import io.github.zekurio.matinee.api.ShowScope
 import io.github.zekurio.matinee.ui.components.LocalApi
+import io.github.zekurio.matinee.ui.kit.ToastDuration
+import io.github.zekurio.matinee.ui.kit.ToastResult
+import io.github.zekurio.matinee.ui.kit.ToastState
 import java.io.IOException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -65,7 +65,7 @@ private const val MOST_FOLLOWED = 100
 class RequestsHub(
     private val api: MatineeApi,
     private val scope: CoroutineScope,
-    private val snackbar: SnackbarHostState,
+    private val snackbar: ToastState,
     private val notices: RequestNotices,
 ) {
     /** Kept current by the composition, for the words in snackbars. */
@@ -158,10 +158,10 @@ class RequestsHub(
                     snackbar.showSnackbar(
                         message,
                         actionLabel = if (canUndo) text(R.string.web_ask_toast_undo) else null,
-                        duration = SnackbarDuration.Indefinite,
+                        duration = ToastDuration.Indefinite,
                     )
                 }
-                if (result == SnackbarResult.ActionPerformed) cancel(item.id, name)
+                if (result == ToastResult.ActionPerformed) cancel(item.id, name)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: IOException) {
@@ -227,9 +227,9 @@ class RequestsHub(
                 item.title.name,
             )
             val result = withTimeoutOrNull(UNDO_MS) {
-                snackbar.showSnackbar(message, actionLabel = text(R.string.web_requests_toast_undo), duration = SnackbarDuration.Indefinite)
+                snackbar.showSnackbar(message, actionLabel = text(R.string.web_requests_toast_undo), duration = ToastDuration.Indefinite)
             }
-            if (result == SnackbarResult.ActionPerformed) {
+            if (result == ToastResult.ActionPerformed) {
                 held.remove(item.id)
                 return@launch
             }
@@ -267,10 +267,10 @@ class RequestsHub(
         scope.launch {
             val message = resources?.getQuantityString(R.plurals.web_requests_toast_addedMany, items.size, items.size).orEmpty()
             val result = withTimeoutOrNull(UNDO_MS) {
-                snackbar.showSnackbar(message, actionLabel = text(R.string.web_requests_toast_undo), duration = SnackbarDuration.Indefinite)
+                snackbar.showSnackbar(message, actionLabel = text(R.string.web_requests_toast_undo), duration = ToastDuration.Indefinite)
             }
             try {
-                if (result != SnackbarResult.ActionPerformed) {
+                if (result != ToastResult.ActionPerformed) {
                     api.admin.requests.approveAll(items.map { it.id })
                     bump()
                     delay(1_000)

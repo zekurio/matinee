@@ -12,8 +12,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -30,7 +28,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.app
-import io.github.zekurio.matinee.ui.components.Gap
+import io.github.zekurio.matinee.ui.kit.Gap
+import io.github.zekurio.matinee.ui.kit.Switch
 import io.github.zekurio.matinee.ui.settings.LinkRow
 import io.github.zekurio.matinee.ui.settings.Panel
 import io.github.zekurio.matinee.ui.settings.RowDivider
@@ -73,11 +72,7 @@ fun NotificationsSection() {
                     Text(stringResource(R.string.requests_notify_description), style = MaterialTheme.typography.bodySmall, color = Palette.Muted)
                 }
                 Gap(12.dp)
-                Switch(
-                    checked = on,
-                    onCheckedChange = set,
-                    colors = SwitchDefaults.colors(checkedTrackColor = Palette.Accent, checkedThumbColor = Palette.AccentForeground),
-                )
+                Switch(checked = on, onCheckedChange = set)
             }
             if (on && !allowed) {
                 RowDivider()

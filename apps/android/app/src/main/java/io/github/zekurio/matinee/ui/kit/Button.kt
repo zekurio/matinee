@@ -143,8 +143,6 @@ fun Chip(
     modifier: Modifier = Modifier,
     frosted: Boolean = false,
     @DrawableRes trailingIcon: Int? = null,
-    /** How many titles it stands for, after the label, quieter. */
-    count: String? = null,
 ) {
     val interaction = remember { MutableInteractionSource() }
     val shape = CircleShape
@@ -174,9 +172,6 @@ fun Chip(
     ) {
         val color = if (selected) Palette.Background else Palette.Foreground.copy(alpha = 0.75f)
         Text(label, style = MaterialTheme.typography.labelLarge, color = color, maxLines = 1)
-        if (count != null) {
-            Text(count, style = MaterialTheme.typography.labelLarge, color = if (selected) Palette.Background.copy(alpha = 0.7f) else Palette.Muted, maxLines = 1)
-        }
         if (trailingIcon != null) LucideIcon(trailingIcon, null, size = 14.dp, tint = color)
     }
 }

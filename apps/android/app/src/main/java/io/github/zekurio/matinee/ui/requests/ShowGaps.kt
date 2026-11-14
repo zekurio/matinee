@@ -20,7 +20,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -41,19 +40,21 @@ import io.github.zekurio.matinee.api.Title
 import io.github.zekurio.matinee.api.isShow
 import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.components.CardText
-import io.github.zekurio.matinee.ui.components.Gap
-import io.github.zekurio.matinee.ui.components.Gutter
 import io.github.zekurio.matinee.ui.components.LocalApi
-import io.github.zekurio.matinee.ui.components.Lucide
-import io.github.zekurio.matinee.ui.components.LucideIcon
 import io.github.zekurio.matinee.ui.components.PosterArt
 import io.github.zekurio.matinee.ui.components.SectionTitle
 import io.github.zekurio.matinee.ui.components.art
 import io.github.zekurio.matinee.ui.components.isWide
+import io.github.zekurio.matinee.ui.kit.CardShape
+import io.github.zekurio.matinee.ui.kit.Gap
+import io.github.zekurio.matinee.ui.kit.Gutter
+import io.github.zekurio.matinee.ui.kit.Lucide
+import io.github.zekurio.matinee.ui.kit.LucideIcon
 import io.github.zekurio.matinee.ui.rememberLoader
 import io.github.zekurio.matinee.ui.seasonName
 import io.github.zekurio.matinee.ui.theme.Palette
 import java.time.LocalDate
+import kotlinx.coroutines.delay
 
 /*
  * What the server lacks of a show in the library, as its provider lists
@@ -150,7 +151,7 @@ fun NextSeasonRow(title: Title, gaps: ShowGaps, season: CatalogSeason) {
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             Box(Modifier.width(if (isWide()) 144.dp else 120.dp)) {
                 PosterArt(name, api.art(season.poster ?: title.images.poster))
-                Box(Modifier.matchParentSize().clip(io.github.zekurio.matinee.ui.components.CardShape)) {
+                Box(Modifier.matchParentSize().clip(CardShape)) {
                     SeasonPosterRequest(gaps.ref, name, season, gaps.libraryId, first = availability.requestId == null)
                 }
             }
@@ -171,7 +172,7 @@ fun NextSeasonRow(title: Title, gaps: ShowGaps, season: CatalogSeason) {
 private fun Modifier.gapFrame(): Modifier = this
     .fillMaxWidth()
     .aspectRatio(16f / 9f)
-    .clip(io.github.zekurio.matinee.ui.components.CardShape)
+    .clip(CardShape)
     .background(Palette.Foreground.copy(alpha = 0.03f))
     .drawBehind {
         drawRoundRect(

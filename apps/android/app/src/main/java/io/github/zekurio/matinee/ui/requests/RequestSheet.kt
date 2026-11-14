@@ -11,13 +11,8 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -40,11 +35,14 @@ import io.github.zekurio.matinee.api.CatalogSeason
 import io.github.zekurio.matinee.api.ShowScope
 import io.github.zekurio.matinee.ui.components.ArtFrame
 import io.github.zekurio.matinee.ui.components.LocalApi
-import io.github.zekurio.matinee.ui.components.Lucide
-import io.github.zekurio.matinee.ui.components.LucideIcon
-import io.github.zekurio.matinee.ui.components.MatineeButton
 import io.github.zekurio.matinee.ui.components.Picture
 import io.github.zekurio.matinee.ui.components.art
+import io.github.zekurio.matinee.ui.kit.Checkbox
+import io.github.zekurio.matinee.ui.kit.Lucide
+import io.github.zekurio.matinee.ui.kit.LucideIcon
+import io.github.zekurio.matinee.ui.kit.MatineeButton
+import io.github.zekurio.matinee.ui.kit.Shapes
+import io.github.zekurio.matinee.ui.kit.Switch
 import io.github.zekurio.matinee.ui.seasonName
 import io.github.zekurio.matinee.ui.theme.Palette
 import java.time.LocalDate
@@ -94,18 +92,17 @@ fun RequestSheet(
                         Modifier
                             .fillMaxWidth()
                             .heightIn(min = 52.dp)
-                            .clip(RoundedCornerShape(8.dp))
+                            .clip(Shapes.Md)
                             .then(if (open) Modifier.clickable(role = Role.Checkbox, onClick = toggle) else Modifier)
                             .padding(vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         if (open) {
-                            Checkbox(
-                                checked = checked,
-                                onCheckedChange = null,
-                                colors = CheckboxDefaults.colors(checkedColor = Palette.Accent, checkmarkColor = Palette.AccentForeground, uncheckedColor = Palette.Muted),
-                            )
+                            // In the 20dp a missing box keeps, so the posters line up.
+                            Box(Modifier.size(20.dp), contentAlignment = Alignment.Center) {
+                                Checkbox(checked = checked, onCheckedChange = null)
+                            }
                         } else {
                             Box(Modifier.size(20.dp))
                         }
@@ -140,11 +137,7 @@ fun RequestSheet(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(stringResource(R.string.web_ask_chooser_future), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                    Switch(
-                        checked = future,
-                        onCheckedChange = { future = it },
-                        colors = SwitchDefaults.colors(checkedTrackColor = Palette.Accent, checkedThumbColor = Palette.AccentForeground),
-                    )
+                    Switch(checked = future, onCheckedChange = { future = it })
                 }
             }
         }
@@ -157,7 +150,7 @@ fun RequestSheet(
                         Modifier
                             .fillMaxWidth()
                             .heightIn(min = 48.dp)
-                            .clip(RoundedCornerShape(8.dp))
+                            .clip(Shapes.Md)
                             .clickable(role = Role.RadioButton) {
                                 if (!library.selected) close { onLibrary(library.id) }
                             }

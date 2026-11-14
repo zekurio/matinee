@@ -15,9 +15,6 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -52,39 +49,42 @@ import io.github.zekurio.matinee.api.TitleKind
 import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.LocalNavigator
 import io.github.zekurio.matinee.ui.TopBar
+import io.github.zekurio.matinee.ui.components.ActiveFilter
 import io.github.zekurio.matinee.ui.components.ActiveFilterChips
-import io.github.zekurio.matinee.ui.components.ButtonLook
 import io.github.zekurio.matinee.ui.components.ChoiceChips
 import io.github.zekurio.matinee.ui.components.FilterButton
 import io.github.zekurio.matinee.ui.components.FilterChoice
 import io.github.zekurio.matinee.ui.components.FilterSection
 import io.github.zekurio.matinee.ui.components.FilterSheet
 import io.github.zekurio.matinee.ui.components.FilterSpan
+import io.github.zekurio.matinee.ui.components.LocalApi
 import io.github.zekurio.matinee.ui.components.OptionRow
 import io.github.zekurio.matinee.ui.components.OptionSheet
 import io.github.zekurio.matinee.ui.components.PANEL_WORDS
+import io.github.zekurio.matinee.ui.components.PosterCard
 import io.github.zekurio.matinee.ui.components.RUNTIME_CHIP_WORDS
 import io.github.zekurio.matinee.ui.components.RangeField
 import io.github.zekurio.matinee.ui.components.SCORE_CHIP_WORDS
 import io.github.zekurio.matinee.ui.components.ToggleChips
 import io.github.zekurio.matinee.ui.components.YEAR_WORDS
-import io.github.zekurio.matinee.ui.components.ActiveFilter
 import io.github.zekurio.matinee.ui.components.countryName
 import io.github.zekurio.matinee.ui.components.formatCount
 import io.github.zekurio.matinee.ui.components.rangeText
 import io.github.zekurio.matinee.ui.components.runtimeText
 import io.github.zekurio.matinee.ui.components.yearText
-import io.github.zekurio.matinee.ui.components.Gap
-import io.github.zekurio.matinee.ui.components.Gutter
-import io.github.zekurio.matinee.ui.components.LocalApi
-import io.github.zekurio.matinee.ui.components.Lucide
-import io.github.zekurio.matinee.ui.components.LucideIcon
-import io.github.zekurio.matinee.ui.components.MatineeButton
-import io.github.zekurio.matinee.ui.components.PosterCard
-import io.github.zekurio.matinee.ui.components.RoundIconButton
 import io.github.zekurio.matinee.ui.formatDay
 import io.github.zekurio.matinee.ui.formatRating
 import io.github.zekurio.matinee.ui.formatRuntime
+import io.github.zekurio.matinee.ui.kit.ButtonLook
+import io.github.zekurio.matinee.ui.kit.Gap
+import io.github.zekurio.matinee.ui.kit.Gutter
+import io.github.zekurio.matinee.ui.kit.Lucide
+import io.github.zekurio.matinee.ui.kit.LucideIcon
+import io.github.zekurio.matinee.ui.kit.MatineeButton
+import io.github.zekurio.matinee.ui.kit.Menu
+import io.github.zekurio.matinee.ui.kit.MenuItem
+import io.github.zekurio.matinee.ui.kit.RoundIconButton
+import io.github.zekurio.matinee.ui.kit.Spinner
 import io.github.zekurio.matinee.ui.rememberLoader
 import io.github.zekurio.matinee.ui.theme.Palette
 import java.io.IOException
@@ -207,7 +207,7 @@ fun CatalogBrowseScreen(kind: String) {
             }
         }
         when (val state = options.state) {
-            Load.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Palette.Accent) }
+            Load.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Spinner(size = 32.dp, color = Palette.Accent) }
             is Load.Failed -> Message(Lucide.CloudOff, stringResource(R.string.web_discover_browse_optionsFailed), stringResource(R.string.web_discover_failedHint)) {
                 MatineeButton(onClick = options::reload, look = ButtonLook.Outline) {
                     LucideIcon(Lucide.RotateCw, null, size = 16.dp)
@@ -238,16 +238,12 @@ private fun SortButton(sorts: List<String>, sort: String, onSort: (String) -> Un
             iconSize = 22.dp,
             background = Color.Transparent,
         )
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }, containerColor = Palette.Raised) {
+        Menu(expanded = open, onDismissRequest = { open = false }) {
             sorts.forEach { value ->
-                DropdownMenuItem(
-                    text = { Text(stringResource(sortWord(value))) },
-                    trailingIcon = if (value == sort) ({ LucideIcon(Lucide.Check, null, size = 16.dp) }) else null,
-                    onClick = {
-                        open = false
-                        onSort(value)
-                    },
-                )
+                MenuItem(stringResource(sortWord(value)), selected = value == sort, onClick = {
+                    open = false
+                    onSort(value)
+                })
             }
         }
     }
@@ -403,7 +399,7 @@ private fun BrowseGrid(
                         }
                     }
                     pages.loading || pages.next != null -> Box(Modifier.fillMaxWidth().padding(48.dp), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = Palette.Accent)
+                        Spinner(size = 32.dp, color = Palette.Accent)
                     }
                     chips.isNotEmpty() -> Message(
                         Lucide.SearchX,
@@ -423,7 +419,7 @@ private fun BrowseGrid(
             item(span = { GridItemSpan(maxLineSpan) }, key = "end") {
                 Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
                     when {
-                        pages.loading -> CircularProgressIndicator(color = Palette.Accent)
+                        pages.loading -> Spinner(size = 32.dp, color = Palette.Accent)
                         pages.error -> Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(stringResource(R.string.web_discover_moreFailed), style = MaterialTheme.typography.bodyMedium, color = Palette.Muted)
                             Gap(8.dp)

@@ -4,9 +4,6 @@ import android.content.res.Resources
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -40,14 +37,11 @@ import io.github.zekurio.matinee.ui.components.FilterChoice
 import io.github.zekurio.matinee.ui.components.FilterSection
 import io.github.zekurio.matinee.ui.components.FilterSheet
 import io.github.zekurio.matinee.ui.components.FilterSpan
-import io.github.zekurio.matinee.ui.components.Lucide
-import io.github.zekurio.matinee.ui.components.LucideIcon
 import io.github.zekurio.matinee.ui.components.OptionRow
 import io.github.zekurio.matinee.ui.components.OptionSheet
 import io.github.zekurio.matinee.ui.components.PANEL_WORDS
 import io.github.zekurio.matinee.ui.components.RUNTIME_CHIP_WORDS
 import io.github.zekurio.matinee.ui.components.RangeField
-import io.github.zekurio.matinee.ui.components.RoundIconButton
 import io.github.zekurio.matinee.ui.components.SCORE_CHIP_WORDS
 import io.github.zekurio.matinee.ui.components.ToggleChips
 import io.github.zekurio.matinee.ui.components.YEAR_WORDS
@@ -57,9 +51,12 @@ import io.github.zekurio.matinee.ui.components.runtimeText
 import io.github.zekurio.matinee.ui.components.yearText
 import io.github.zekurio.matinee.ui.formatRating
 import io.github.zekurio.matinee.ui.formatRuntime
+import io.github.zekurio.matinee.ui.kit.Lucide
+import io.github.zekurio.matinee.ui.kit.Menu
+import io.github.zekurio.matinee.ui.kit.MenuItem
+import io.github.zekurio.matinee.ui.kit.RoundIconButton
 import io.github.zekurio.matinee.ui.rememberLoader
 import io.github.zekurio.matinee.ui.settings.languageName
-import io.github.zekurio.matinee.ui.theme.Palette
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 
@@ -242,17 +239,13 @@ fun TitleSortButton(state: TitleListState, options: TitleFilterOptions?) {
             iconSize = 22.dp,
             background = Color.Transparent,
         )
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }, containerColor = Palette.Raised) {
+        Menu(expanded = open, onDismissRequest = { open = false }) {
             offered.forEach { choice ->
-                DropdownMenuItem(
-                    text = { Text(stringResource(choice.label)) },
-                    trailingIcon = if (choice == current) ({ LucideIcon(Lucide.Check, null, size = 16.dp) }) else null,
-                    onClick = {
-                        open = false
-                        state.sort = choice.sort
-                        state.order = choice.order
-                    },
-                )
+                MenuItem(stringResource(choice.label), selected = choice == current, onClick = {
+                    open = false
+                    state.sort = choice.sort
+                    state.order = choice.order
+                })
             }
         }
     }

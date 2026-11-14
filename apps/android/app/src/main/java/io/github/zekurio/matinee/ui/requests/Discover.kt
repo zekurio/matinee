@@ -18,7 +18,6 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -37,25 +36,26 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
-import io.github.zekurio.matinee.api.TitleKind
 import io.github.zekurio.matinee.api.CatalogInput
 import io.github.zekurio.matinee.api.CatalogPage
 import io.github.zekurio.matinee.api.CatalogTitleSummary
 import io.github.zekurio.matinee.api.DiscoverRail
+import io.github.zekurio.matinee.api.TitleKind
 import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.Loader
 import io.github.zekurio.matinee.ui.LocalNavigator
 import io.github.zekurio.matinee.ui.TopBar
-import io.github.zekurio.matinee.ui.components.ButtonLook
-import io.github.zekurio.matinee.ui.components.Gap
-import io.github.zekurio.matinee.ui.components.Gutter
 import io.github.zekurio.matinee.ui.components.LocalApi
-import io.github.zekurio.matinee.ui.components.Lucide
-import io.github.zekurio.matinee.ui.components.LucideIcon
-import io.github.zekurio.matinee.ui.components.MatineeButton
 import io.github.zekurio.matinee.ui.components.Rail
 import io.github.zekurio.matinee.ui.components.RailArt
 import io.github.zekurio.matinee.ui.components.railItemWidth
+import io.github.zekurio.matinee.ui.kit.ButtonLook
+import io.github.zekurio.matinee.ui.kit.Gap
+import io.github.zekurio.matinee.ui.kit.Gutter
+import io.github.zekurio.matinee.ui.kit.Lucide
+import io.github.zekurio.matinee.ui.kit.LucideIcon
+import io.github.zekurio.matinee.ui.kit.MatineeButton
+import io.github.zekurio.matinee.ui.kit.Spinner
 import io.github.zekurio.matinee.ui.rememberLoader
 import io.github.zekurio.matinee.ui.theme.Palette
 import java.io.IOException
@@ -223,7 +223,7 @@ fun DiscoverRailScreen(id: String) {
     Column(Modifier.fillMaxSize()) {
         TopBar(rail?.let { railName(it, res) } ?: stringResource(R.string.web_discover_title))
         when {
-            rails.state is Load.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Palette.Accent) }
+            rails.state is Load.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Spinner(size = 32.dp, color = Palette.Accent) }
             rails.state is Load.Failed -> DiscoverFailed(rails::reload)
             rail == null -> Column(Modifier.fillMaxWidth().padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 LucideIcon(Lucide.Compass, null, size = 28.dp, tint = Palette.Muted)
@@ -288,7 +288,7 @@ private fun RailGrid(rail: DiscoverRail, api: io.github.zekurio.matinee.api.Mati
     if (pages.items.isEmpty()) {
         LaunchedEffect(Unit) { more() }
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            if (pages.error) DiscoverFailed { more() } else CircularProgressIndicator(color = Palette.Accent)
+            if (pages.error) DiscoverFailed { more() } else Spinner(size = 32.dp, color = Palette.Accent)
         }
         return
     }
@@ -311,7 +311,7 @@ private fun RailGrid(rail: DiscoverRail, api: io.github.zekurio.matinee.api.Mati
         item(span = { GridItemSpan(maxLineSpan) }, key = "end") {
             Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
                 when {
-                    pages.loading -> CircularProgressIndicator(color = Palette.Accent)
+                    pages.loading -> Spinner(size = 32.dp, color = Palette.Accent)
                     pages.error -> Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(stringResource(R.string.web_discover_moreFailed), style = MaterialTheme.typography.bodyMedium, color = Palette.Muted)
                         Gap(8.dp)

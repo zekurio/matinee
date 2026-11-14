@@ -21,12 +21,12 @@ import io.github.zekurio.matinee.api.RelatedRails
 import io.github.zekurio.matinee.api.RelatedTitle
 import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.Loader
-import io.github.zekurio.matinee.ui.components.Gutter
 import io.github.zekurio.matinee.ui.components.PosterCard
 import io.github.zekurio.matinee.ui.components.Rail
 import io.github.zekurio.matinee.ui.components.RailArt
 import io.github.zekurio.matinee.ui.components.railItemWidth
 import io.github.zekurio.matinee.ui.home.RailSkeleton
+import io.github.zekurio.matinee.ui.kit.Gutter
 import io.github.zekurio.matinee.ui.rememberLoader
 import io.github.zekurio.matinee.ui.theme.Palette
 

@@ -15,7 +15,6 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -43,20 +42,21 @@ import io.github.zekurio.matinee.ui.LocalNavigator
 import io.github.zekurio.matinee.ui.RefreshOnResume
 import io.github.zekurio.matinee.ui.TopBar
 import io.github.zekurio.matinee.ui.components.CardText
-import io.github.zekurio.matinee.ui.components.Chip
 import io.github.zekurio.matinee.ui.components.ErrorBox
-import io.github.zekurio.matinee.ui.components.Gap
-import io.github.zekurio.matinee.ui.components.Gutter
 import io.github.zekurio.matinee.ui.components.LocalApi
-import io.github.zekurio.matinee.ui.components.Lucide
-import io.github.zekurio.matinee.ui.components.LucideIcon
-import io.github.zekurio.matinee.ui.components.MatineeButton
-import io.github.zekurio.matinee.ui.components.ButtonLook
 import io.github.zekurio.matinee.ui.components.PosterArt
 import io.github.zekurio.matinee.ui.components.Rail
 import io.github.zekurio.matinee.ui.components.RailArt
 import io.github.zekurio.matinee.ui.components.art
 import io.github.zekurio.matinee.ui.components.railItemWidth
+import io.github.zekurio.matinee.ui.kit.ButtonLook
+import io.github.zekurio.matinee.ui.kit.Chip
+import io.github.zekurio.matinee.ui.kit.Gap
+import io.github.zekurio.matinee.ui.kit.Gutter
+import io.github.zekurio.matinee.ui.kit.Lucide
+import io.github.zekurio.matinee.ui.kit.LucideIcon
+import io.github.zekurio.matinee.ui.kit.MatineeButton
+import io.github.zekurio.matinee.ui.kit.Spinner
 import io.github.zekurio.matinee.ui.rememberLoader
 import io.github.zekurio.matinee.ui.theme.Palette
 import java.io.IOException
@@ -218,7 +218,7 @@ fun AskedScreen() {
             error != null && pages.items.isEmpty() ->
                 ErrorBox(stringResource(R.string.web_ask_mine_error, error), null, { more() })
             !pages.done && pages.items.isEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = Palette.Accent)
+                Spinner(size = 32.dp, color = Palette.Accent)
             }
             pages.done && pages.items.isEmpty() -> Column(
                 Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 48.dp),
@@ -260,7 +260,7 @@ fun AskedScreen() {
                             if (pages.error != null) {
                                 MatineeButton(onClick = { more() }, look = ButtonLook.Outline) { Text(stringResource(R.string.common_retry)) }
                             } else {
-                                CircularProgressIndicator(color = Palette.Accent)
+                                Spinner(size = 32.dp, color = Palette.Accent)
                             }
                         }
                     }
