@@ -485,7 +485,7 @@ function ConnectionRules({
                 choices={choices.data}
                 landings={connection.landings}
               />
-              <div className="flex shrink-0 items-center">
+              <div className="flex shrink-0 items-center self-center">
                 <Button
                   variant="ghost"
                   size="icon-sm"
