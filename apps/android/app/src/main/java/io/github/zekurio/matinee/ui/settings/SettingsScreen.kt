@@ -555,12 +555,6 @@ private fun GesturesSection(prefs: PlayerPrefs) {
             RowDivider()
             SwitchRow(stringResource(R.string.playback_gestures_hold), prefs.holdSpeed) { prefs.holdSpeed = it }
         }
-        Gap(8.dp)
-        Text(
-            stringResource(R.string.playback_gestures_hint),
-            style = MaterialTheme.typography.bodySmall,
-            color = Palette.Muted,
-        )
     }
 }
 
@@ -587,12 +581,6 @@ private fun ButtonsSection(prefs: PlayerPrefs) {
             RowDivider()
             SwitchRow(stringResource(R.string.playback_buttons_subtitles), prefs.subtitlesButton) { prefs.subtitlesButton = it }
         }
-        Gap(8.dp)
-        Text(
-            stringResource(R.string.playback_buttons_hint),
-            style = MaterialTheme.typography.bodySmall,
-            color = Palette.Muted,
-        )
     }
 }
 
