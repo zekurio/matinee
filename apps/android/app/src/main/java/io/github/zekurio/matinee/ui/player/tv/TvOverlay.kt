@@ -76,6 +76,7 @@ import io.github.zekurio.matinee.ui.kit.Lucide
 import io.github.zekurio.matinee.ui.kit.LucideIcon
 import io.github.zekurio.matinee.ui.player.Menu
 import io.github.zekurio.matinee.ui.player.PlayerController
+import io.github.zekurio.matinee.ui.player.SeekClock
 import io.github.zekurio.matinee.ui.player.TrickplayFrame
 import io.github.zekurio.matinee.ui.player.seekFraction
 import io.github.zekurio.matinee.ui.player.seekable
@@ -307,7 +308,7 @@ private fun TvSeekBar(controller: PlayerController, scrub: Double?, targets: TvT
     val state = stringResource(R.string.a11y_player_position, formatClock(shown), formatClock(duration))
     val timeStyle = TvType.Facts.onPicture()
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(formatClock(shown), style = timeStyle, modifier = Modifier.widthIn(min = 56.dp))
+        SeekClock(shown, duration, timeStyle)
         BoxWithConstraints(
             Modifier
                 .weight(1f)
@@ -379,12 +380,12 @@ private fun TvSeekBar(controller: PlayerController, scrub: Double?, targets: TvT
                 }
             }
         }
-        Text(
-            "-${formatClock((duration - shown).coerceAtLeast(0.0))}",
-            style = timeStyle,
-            color = Palette.Foreground.copy(alpha = 0.75f),
+        SeekClock(
+            (duration - shown).coerceAtLeast(0.0),
+            duration,
+            timeStyle.copy(color = Palette.Foreground.copy(alpha = 0.75f)),
+            prefix = "-",
             textAlign = TextAlign.End,
-            modifier = Modifier.widthIn(min = 56.dp),
         )
     }
 }
@@ -406,7 +407,7 @@ private fun Bubble(controller: PlayerController, seconds: Double, preview: Boole
         }
         Text(
             formatClock(seconds),
-            style = TvType.Title,
+            style = TvType.Title.copy(fontFeatureSettings = "tnum"),
             color = Palette.Background,
             modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(Palette.Foreground).padding(horizontal = 12.dp, vertical = 4.dp),
         )
