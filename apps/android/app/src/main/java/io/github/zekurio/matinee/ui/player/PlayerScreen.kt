@@ -150,6 +150,8 @@ import io.github.zekurio.matinee.api.AudioTrack
 import io.github.zekurio.matinee.api.DEFAULT_PLAYBACK_PREFERENCES
 import io.github.zekurio.matinee.api.FALLBACK_PLAYBACK_OPTIONS
 import io.github.zekurio.matinee.api.MediaItem
+import io.github.zekurio.matinee.api.MediaSegment
+import io.github.zekurio.matinee.api.MediaSegmentKind
 import io.github.zekurio.matinee.api.PLAYBACK_UNPLAYABLE
 import io.github.zekurio.matinee.api.PlaybackDevice
 import io.github.zekurio.matinee.api.PlaybackOptions
@@ -192,6 +194,7 @@ import java.io.IOException
 import java.text.DateFormat
 import java.util.Date
 import java.util.UUID
+import kotlin.math.ceil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -217,6 +220,9 @@ internal sealed interface PlayerData {
 
 internal const val HIDE_AFTER_MS = 3500L
 private const val UP_NEXT_SECONDS = 10
+
+/** How long the skip button shows by itself once its segment starts. */
+private const val SKIP_SHOWN_MS = 8000L
 
 internal fun Context.activity(): ComponentActivity? {
     var current: Context? = this
@@ -653,7 +659,16 @@ private fun Playback(itemId: String, data: PlayerData, start: Double?) {
                     }
                 }
             }
-            if (controller.ended) UpNext(controller, autoplay = prefs.autoplayNext, Modifier.align(Alignment.BottomEnd))
+            // Clear of the controls while they show.
+            val lift by animateDpAsState(if (controls || controller.ended) 120.dp else 0.dp, label = "lift")
+            Column(
+                Modifier.align(Alignment.BottomEnd).safeDrawingPadding().padding(24.dp).padding(bottom = lift),
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                if (!locked && controller.error == null) SkipSegment(controller, controls)
+                if (controller.offersNext) UpNext(controller, autoplay = prefs.autoplayNext)
+            }
             // Over everything else, so no touch reaches what's under it. It
             // steps aside while an error shows, so its buttons stay in reach.
             if (locked && controller.error == null) {
@@ -1259,51 +1274,67 @@ internal fun TrickplayFrame(controller: PlayerController, seconds: Double, modif
     }
 }
 
-/** The next episode once one ended, and how far its countdown got. */
+/**
+ * The next episode while the player offers it, and how far its countdown
+ * got. Offered [early], before the file ended, it counts down to the end
+ * and starts there; offered at the end, it starts after a short countdown.
+ */
 @Stable
-internal class UpNextState(val item: MediaItem, autoplay: Boolean) {
-    /** Seconds until it starts by itself. */
+internal class UpNextState(val item: MediaItem, autoplay: Boolean, val early: Boolean) {
+    /** Seconds until it starts by itself, once the file ended. */
     var left by mutableIntStateOf(UP_NEXT_SECONDS)
 
     /** The countdown stopped, or never ran, so it waits for Play. */
     var cancelled by mutableStateOf(!autoplay)
+
+    /** Put away while the credits roll. It comes back once the file ends. */
+    var hidden by mutableStateOf(false)
+
+    /** The seconds its countdown shows: those left in the file, then its own. */
+    fun seconds(controller: PlayerController): Int =
+        if (controller.ended) left else ceil(controller.duration - controller.position).toInt().coerceAtLeast(0)
 }
 
 /**
- * The episode after the one that ended, counting down to it and starting
- * it unless cancelled, or null when there's none. A file the server plays
- * has it in the answer; a download asks.
+ * The episode after this one while [PlayerController.offersNext], counting
+ * down to it and starting it unless cancelled, or null when there's none.
+ * A file the server plays has it in the answer; a download asks.
  */
 @Composable
 internal fun rememberUpNext(controller: PlayerController, autoplay: Boolean): UpNextState? {
     val host = LocalPlayerHost.current
     val upcoming = (if (controller.isLocal) downloadNext(controller.item) else controller.next) ?: return null
-    val state = remember(upcoming.id) { UpNextState(upcoming, autoplay) }
-    LaunchedEffect(upcoming.id, state.cancelled) {
-        while (!state.cancelled && state.left > 0) {
-            delay(1000)
-            state.left--
+    val state = remember(upcoming.id) { UpNextState(upcoming, autoplay, early = !controller.ended) }
+    LaunchedEffect(upcoming.id, state.cancelled, controller.ended) {
+        if (state.cancelled || !controller.ended) return@LaunchedEffect
+        // The countdown ran while the credits rolled.
+        if (!state.early) {
+            while (state.left > 0) {
+                delay(1000)
+                state.left--
+            }
         }
-        if (!state.cancelled) host.playInstead(upcoming.id)
+        host.playInstead(upcoming.id)
     }
     return state
 }
 
 /**
- * The next episode when one ended, starting by itself after a countdown,
- * or waiting for Play when settings turned [autoplay] off.
+ * The next episode while the credits roll or once the file ended, starting
+ * by itself after its countdown, or waiting for Play when settings turned
+ * [autoplay] off. Hide puts it away until the end.
  */
 @Composable
-private fun UpNext(controller: PlayerController, autoplay: Boolean, modifier: Modifier) {
+private fun UpNext(controller: PlayerController, autoplay: Boolean) {
     val host = LocalPlayerHost.current
     val res = LocalResources.current
     val next = rememberUpNext(controller, autoplay) ?: return
+    if (next.hidden && !controller.ended) return
     val upcoming = next.item
-    val left = next.left
     val cancelled = next.cancelled
     val label = itemLabel(upcoming, res)
     Column(
-        modifier.safeDrawingPadding().padding(24.dp).widthIn(max = 360.dp)
+        Modifier.widthIn(max = 360.dp)
             .clip(RoundedCornerShape(12.dp)).background(Palette.Raised.copy(alpha = 0.95f)).padding(16.dp),
     ) {
         Text(stringResource(R.string.player_up_next), style = MaterialTheme.typography.labelLarge, color = Palette.Muted)
@@ -1319,14 +1350,62 @@ private fun UpNext(controller: PlayerController, autoplay: Boolean, modifier: Mo
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             MatineeButton(onClick = { host.playInstead(upcoming.id) }, height = 40.dp) {
                 LucideIcon(Lucide.Play, null, size = 14.dp)
-                Text(if (cancelled) stringResource(R.string.player_play) else stringResource(R.string.player_up_next_in, left))
+                Text(if (cancelled) stringResource(R.string.player_play) else stringResource(R.string.player_up_next_in, next.seconds(controller)))
             }
-            if (!cancelled) {
+            if (!controller.ended) {
+                MatineeButton(
+                    onClick = {
+                        next.cancelled = true
+                        next.hidden = true
+                    },
+                    look = ButtonLook.Frosted,
+                    height = 40.dp,
+                ) {
+                    Text(stringResource(R.string.player_up_next_hide))
+                }
+            } else if (!cancelled) {
                 MatineeButton(onClick = { next.cancelled = true }, look = ButtonLook.Frosted, height = 40.dp) {
                     Text(stringResource(R.string.player_up_next_cancel))
                 }
             }
         }
+    }
+}
+
+/** What the button that skips [kind] says, like "Skip intro". */
+@Composable
+internal fun skipSegmentLabel(kind: String): String = stringResource(
+    when (kind) {
+        MediaSegmentKind.RECAP -> R.string.player_skip_recap
+        MediaSegmentKind.CREDITS -> R.string.player_skip_credits
+        MediaSegmentKind.PREVIEW -> R.string.player_skip_preview
+        else -> R.string.player_skip_intro
+    },
+)
+
+/**
+ * Whether the button for the segment that plays shows: for a few seconds
+ * once the segment starts, as in Jellyfin, and with the controls after
+ * that. Null while no segment plays.
+ */
+@Composable
+internal fun rememberSkipSegment(controller: PlayerController, controls: Boolean): MediaSegment? {
+    val segment = controller.segment ?: return null
+    var fresh by remember(segment) { mutableStateOf(true) }
+    LaunchedEffect(segment) {
+        delay(SKIP_SHOWN_MS)
+        fresh = false
+    }
+    return segment.takeIf { fresh || controls }
+}
+
+/** Skip intro, and the like for the other segments the server found. */
+@Composable
+private fun SkipSegment(controller: PlayerController, controls: Boolean) {
+    val segment = rememberSkipSegment(controller, controls) ?: return
+    MatineeButton(onClick = { controller.seekTo(segment.end) }, look = ButtonLook.Frosted, height = 44.dp) {
+        Text(skipSegmentLabel(segment.kind))
+        LucideIcon(Lucide.FastForward, null, size = 14.dp)
     }
 }
 

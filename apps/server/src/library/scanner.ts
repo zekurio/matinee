@@ -5,6 +5,7 @@ import { db } from "../db"
 import { defineQueue, type Priority } from "../jobs/queue"
 import { log } from "../log"
 import { probeMissing } from "../media/probe"
+import { queueSegments } from "../media/segments"
 import { prepareMissingSubtitles } from "../media/subtitles"
 import { queueTrickplay } from "../media/trickplay"
 import { queueRefresh } from "../metadata/refresh"
@@ -271,13 +272,14 @@ export const scans = defineQueue<ScanRequest, void>({
 
 /**
  * Probe the library's new and changed files, then make their trickplay
- * images, which need the probe's video stream. Both are left to their
- * queues.
+ * images and find their intros and credits, which need the probe's
+ * streams. All are left to their queues.
  */
 function queueFileWork(libraryId: string): void {
   probeMissing({ libraryId })
     .then(async () => {
       queueTrickplay(libraryId)
+      queueSegments(libraryId)
       await prepareMissingSubtitles({ libraryId })
     })
     .catch((cause: unknown) =>

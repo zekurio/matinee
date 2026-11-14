@@ -120,7 +120,8 @@ function WatchItem({
   // The poster reads at the size of a lock screen; a still is the fallback.
   const art = playing?.title?.images.poster ?? playing?.episode?.still ?? null
 
-  // The show's next episode, which the player offers once this one ends.
+  // The show's next episode, which the player offers once the credits
+  // start or this one ends.
   const next = first?.plan.next
   const nextLabel = next ? itemLabel(next) : null
   const upNext: UpNext | null =
@@ -129,6 +130,7 @@ function WatchItem({
           name: nextLabel.code
             ? `${nextLabel.code} · ${nextLabel.title}`
             : nextLabel.title,
+          at: first.plan.upNextAt,
           // In place of this one, so back still leaves the player.
           play: () =>
             void router.navigate({

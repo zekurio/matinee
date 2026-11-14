@@ -35,11 +35,20 @@ export default defineMessages("player", {
   "player.showTimeLeft": "Show time left",
   "player.endsAt": "Ends at {time}",
 
-  // The card at the end of an episode that offers the next one.
+  // The card that offers the next episode while the credits roll, or
+  // once the episode ends.
   "player.upNext": "Up next",
   // On its Play button while it counts down, like "Playing in 7".
   "player.upNext.in": "Playing in {seconds}",
   "player.upNext.cancel": "Cancel",
+  // Puts the card away until the episode ends, to watch the credits.
+  "player.upNext.hide": "Hide",
+
+  // The button that jumps past a part of the episode while it plays.
+  "player.skip.intro": "Skip intro",
+  "player.skip.recap": "Skip recap",
+  "player.skip.credits": "Skip credits",
+  "player.skip.preview": "Skip preview",
 
   // Notes over the picture after a key press.
   "player.flash.muted": "Muted",

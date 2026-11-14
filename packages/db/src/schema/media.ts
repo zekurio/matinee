@@ -1,4 +1,4 @@
-import type { MediaProbe } from "@matinee/contracts"
+import type { MediaProbe, MediaSegmentKind } from "@matinee/contracts"
 import { sql } from "drizzle-orm"
 import {
   bigint,
@@ -138,3 +138,41 @@ export const trickplay = pgTable("trickplay", {
 })
 
 export type TrickplayRow = typeof trickplay.$inferSelect
+
+/** Where a segment was found: in the file's chapters, or in its audio. */
+export type SegmentSource = "chapters" | "audio"
+
+/** A part of an episode, in seconds into the file. */
+export type StoredSegment = {
+  kind: MediaSegmentKind
+  start: number
+  end: number
+  source: SegmentSource
+}
+
+/**
+ * What the server found in an episode: its intro, credits, recap, and
+ * preview, from the chapters or from audio it shares with the other
+ * episodes of its season. A file whose size or time differs from the
+ * row's has changed and gets looked at again, as does one looked at by an
+ * older `version` of the search.
+ */
+export const mediaSegments = pgTable("media_segments", {
+  mediaItemId: uuid()
+    .primaryKey()
+    .references(() => mediaItem.id, { onDelete: "cascade" }),
+  /** The file the segments were found in. */
+  sizeBytes: bigint({ mode: "number" }).notNull(),
+  modifiedAt: timestamp({ withTimezone: true }).notNull(),
+  version: integer().notNull(),
+  segments: jsonb().$type<StoredSegment[]>().notNull(),
+  /**
+   * The other episodes its audio was compared with. One compared with
+   * fewer than it could be, as the first of a season, is looked at again
+   * when another arrives.
+   */
+  peers: integer().notNull(),
+  analyzedAt: createdAt(),
+})
+
+export type MediaSegmentsRow = typeof mediaSegments.$inferSelect

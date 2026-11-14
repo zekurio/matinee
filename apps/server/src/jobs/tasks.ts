@@ -13,6 +13,7 @@ import { prefetchArtwork } from "../media/artwork"
 import { sweepDownloads } from "../media/downloads"
 import { sweepTranscodes } from "../media/hls"
 import { probeMissing } from "../media/probe"
+import { findMissingSegments } from "../media/segments"
 import { prepareMissingSubtitles } from "../media/subtitles"
 import { makeMissingTrickplay, sweepTrickplay } from "../media/trickplay"
 import { refreshMetadata } from "../metadata/refresh"
@@ -139,6 +140,17 @@ const makeTrickplay: TaskDefinition = {
   },
 }
 
+const findSegments: TaskDefinition = {
+  id: "find-segments",
+  name: "Find intros and credits",
+  description:
+    "Look for the intro and credits of episodes not looked at yet, or whose file changed, in their chapters and in the audio they share with their season. Scans queue their new files on their own.",
+  queue: "media-segments",
+  startupDelayMs: 5 * MINUTE_MS,
+  intervalMs: 24 * HOUR_MS,
+  run: ({ signal, progress }) => findMissingSegments({ signal, progress }),
+}
+
 const cleanTranscodes: TaskDefinition = {
   id: "clean-transcodes",
   name: "Clean up encodes",
@@ -222,6 +234,7 @@ export const TASKS: TaskDefinition[] = [
   readDiscover,
   prepareSubtitles,
   makeTrickplay,
+  findSegments,
   cleanTranscodes,
   cleanSessions,
   forgetBrowsed,

@@ -172,6 +172,33 @@ export const PLAYBACK_REASONS = [
 export const PlaybackReason = t.enum(PLAYBACK_REASONS)
 export type PlaybackReason = t.infer<typeof PlaybackReason>
 
+export const MEDIA_SEGMENT_KINDS = [
+  "recap",
+  "intro",
+  "credits",
+  "preview",
+] as const
+/**
+ * What a part of an episode is: a recap of the episodes before, the
+ * opening titles, the closing credits, or a preview of the next one.
+ */
+export const MediaSegmentKind = t.enum(MEDIA_SEGMENT_KINDS)
+export type MediaSegmentKind = t.infer<typeof MediaSegmentKind>
+
+/**
+ * A part of a file a player offers to skip, in the file's time. The
+ * server finds them in the file's chapters, or in the audio its episode
+ * shares with the others of its season.
+ */
+export const MediaSegment = t.object({
+  kind: MediaSegmentKind,
+  /** Seconds into the file. */
+  start: t.number().min(0),
+  /** Seconds into the file; skipping goes here. */
+  end: t.number().min(0),
+})
+export type MediaSegment = t.infer<typeof MediaSegment>
+
 export const PlaybackStart = t.object({
   /** The file, with its length, its probe, and where the viewer stopped. */
   item: MediaItem,
@@ -233,6 +260,19 @@ export const PlaybackStart = t.object({
   reasons: t.array(PlaybackReason),
   /** The file after this one in its show, to offer when this one ends. */
   next: MediaItem.nullable(),
+  /**
+   * Seconds into the file to start offering `next` at, before the file
+   * ends: where its closing credits start, else a little before the end.
+   * Null without a `next`, or for a short file, which offers it once it
+   * ends.
+   */
+  upNextAt: t.number().min(0).nullable(),
+  /**
+   * The parts to offer a skip for, in order. Empty until the server has
+   * looked, which it does in the background. Credits that run to the end
+   * aren't here, since `upNextAt` covers them.
+   */
+  segments: t.array(MediaSegment),
 })
 export type PlaybackStart = t.infer<typeof PlaybackStart>
 

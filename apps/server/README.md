@@ -23,6 +23,7 @@ For NixOS and the dev shell, see the [repository README](../../README.md).
 - [Downloads](#downloads)
 - [Transcoding and ffmpeg](#transcoding-and-ffmpeg)
 - [Trickplay](#trickplay)
+- [Intros and credits](#intros-and-credits)
 - [Watch parties](#watch-parties)
 - [Local and remote](#local-and-remote)
 - [Statistics](#statistics)
@@ -458,7 +459,7 @@ accepted: `fcm.googleapis.com`, `updates.push.services.mozilla.com`,
 ## Jobs
 
 Background work runs in queues for scans, ffprobe, metadata, thumbnails,
-trickplay, artwork, subtitles, and profile pictures. Duplicate requests
+trickplay, intros and credits, artwork, subtitles, and profile pictures. Duplicate requests
 join the existing job, and work a player is waiting on jumps the queue.
 Settings → Jobs shows each queue's state and failures, and lets admins
 pause queues, clear them, and set concurrency for the media info,
@@ -466,7 +467,8 @@ trickplay, subtitle, and artwork queues. Higher concurrency clears
 backlogs faster but competes with streams.
 
 Scheduled tasks fill the queues. They scan libraries, refresh metadata,
-probe files, fetch artwork, make trickplay, prepare subtitles, clean up
+probe files, fetch artwork, make trickplay, find intros and credits,
+prepare subtitles, clean up
 encodes, expire sessions, and send and track requests. Each runs at startup, on an interval, or on
 Run now. Queues are in memory. After a restart, the tasks find unfinished
 work again from the database.
@@ -615,6 +617,30 @@ decoding every frame, and failures fall back to the CPU.
 Clients read `media.trickplay` and load tiles with `trickplayTilePath()`.
 Players that read HLS image playlists can use `trickplayPlaylistPath()`,
 but must send the `Authorization` header with tile requests.
+
+## Intros and credits
+
+Players offer Skip intro, and the next episode once the credits start,
+the way Jellyfin's Intro Skipper plugin does. The server looks for each
+episode's intro, credits, recap, and preview in its chapters first, by
+names like `Opening`, `OP1`, `Credits`, `Ending`, or `Abspann`. Where the
+chapters don't name an intro or credits, it fingerprints the audio of a
+quarter of the episode at each end, at most 10 minutes, with ffmpeg's
+`chromaprint` muxer, and compares it with up to three episodes nearest it
+in the season. The longest stretch they share is the intro, if it's 15
+seconds to 2 minutes long, or the credits, if it's 15 seconds to 7½
+minutes. That takes a few seconds an episode, a season at a time.
+
+New files get looked at after ffprobe reads them, with a daily task
+catching the rest. Opening an episode that wasn't looked at yet moves its
+season to the front of the queue. The first episode of a season gets
+looked at again when the second arrives.
+
+`playback.start` answers with the `segments` to offer a skip for, and
+`upNextAt`, where to start offering `next`: where the credits start, or
+30 to 40 seconds before the end of an episode 10 minutes or longer, as in
+Jellyfin, when no credits were found. Credits that run to the end aren't
+offered as a skip, since the next episode covers them.
 
 ## Watch parties
 

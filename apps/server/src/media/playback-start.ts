@@ -511,6 +511,8 @@ function playbackAnswer(
     original: file.original,
     reasons,
     next: null,
+    upNextAt: null,
+    segments: [],
   }
 }
 

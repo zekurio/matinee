@@ -42,6 +42,7 @@ import {
 import { formatDelay, formatPercent } from "./player-format"
 import { PlayerMenus } from "./player-menus"
 import { PlayerStats } from "./player-stats"
+import { SkipSegment } from "./skip-segment"
 import type { TrickplayTiles } from "./trickplay-thumb"
 import { type UpNext, UpNextCard } from "./up-next"
 import { useHls } from "./use-hls"
@@ -207,6 +208,7 @@ function Player({
   useIdle(store, IDLE_MS)
   const hidden = usePlayerStore(selectHidden)
   const statsOpen = usePlayerStore((state) => state.statsOpen)
+  const segments = usePlayerStore((state) => state.plan.segments)
   const subs = useSubtitles(
     video,
     seekBar,
@@ -524,8 +526,17 @@ function Player({
         </div>
       </div>
 
-      {/* Last, so it's over the controls' gradient and takes the clicks. */}
-      {upNext && <UpNextCard upNext={upNext} />}
+      {/* Last, so they're over the controls' gradient and take the clicks. */}
+      <div className="absolute right-3 bottom-28 flex flex-col items-end gap-3 sm:right-5 sm:bottom-32">
+        <SkipSegment
+          segments={segments}
+          onSkip={(to) => {
+            actions.setTime(to)
+            seek(to)
+          }}
+        />
+        {upNext && <UpNextCard upNext={upNext} />}
+      </div>
     </div>
   )
 }

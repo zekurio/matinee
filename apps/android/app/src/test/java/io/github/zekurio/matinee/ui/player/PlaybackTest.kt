@@ -56,7 +56,7 @@ internal object Answers {
              $sub
              "subtitleMode":${subtitleMode?.let { "\"$it\"" } ?: "null"},"subtitleUrl":${subtitleUrl?.let { "\"$it\"" } ?: "null"},
              "audioTracks":[$AAC,$AC3],"subtitleTracks":[],"quality":"$quality","original":$original,
-             "reasons":[${reasons.joinToString(",") { "\"$it\"" }}],"next":null}
+             "reasons":[${reasons.joinToString(",") { "\"$it\"" }}],"next":null,"upNextAt":null,"segments":[]}
             """,
         )
     }

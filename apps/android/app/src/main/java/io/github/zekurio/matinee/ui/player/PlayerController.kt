@@ -42,6 +42,7 @@ import io.github.zekurio.matinee.api.ArtworkSize
 import io.github.zekurio.matinee.api.AudioTrack
 import io.github.zekurio.matinee.api.MatineeApi
 import io.github.zekurio.matinee.api.MediaItem
+import io.github.zekurio.matinee.api.MediaSegment
 import io.github.zekurio.matinee.api.OfflinePlay
 import io.github.zekurio.matinee.api.PLAYBACK_UNPLAYABLE
 import io.github.zekurio.matinee.api.PlaybackDevice
@@ -107,6 +108,9 @@ class Notice(val kind: NoticeKind, val detail: String? = null)
 
 /** What the video's sound is, for audio focus and the system's routing. */
 private val MOVIE_AUDIO = AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).build()
+
+/** The last second of a segment, which has nothing left worth skipping. */
+private const val SEGMENT_END_SECONDS = 1.0
 
 /**
  * ExoPlayer's renderers, trying the hardware decoders first as Android lists
@@ -325,6 +329,23 @@ class PlayerController(
 
     /** The file after this one in its show, as the server answered. Null for a download, which asks itself. */
     val next: MediaItem? get() = plan?.next
+
+    /**
+     * Where to start offering [next] before the file ends, as the server
+     * answered: where the credits start, or a little before the end. Null
+     * offers it once the file ends, as a download does.
+     */
+    val upNextAt: Double? get() = plan?.upNextAt
+
+    /** Whether the player offers the next episode now: the credits started, or the file ended. */
+    val offersNext: Boolean get() = ended || upNextAt?.let { position >= it } == true
+
+    /**
+     * The part the server offers to skip that plays now, like the intro.
+     * Its last second has nothing left worth skipping.
+     */
+    val segment: MediaSegment?
+        get() = plan?.segments?.firstOrNull { position >= it.start && position < it.end - SEGMENT_END_SECONDS }
 
     val duration: Double
         get() = item.durationSeconds

@@ -64,7 +64,9 @@ import io.github.zekurio.matinee.ui.player.Video
 import io.github.zekurio.matinee.ui.player.refusalTitle
 import io.github.zekurio.matinee.ui.player.rememberPlayerController
 import io.github.zekurio.matinee.ui.player.rememberSubtitleLook
+import io.github.zekurio.matinee.ui.player.rememberSkipSegment
 import io.github.zekurio.matinee.ui.player.rememberUpNext
+import io.github.zekurio.matinee.ui.player.skipSegmentLabel
 import io.github.zekurio.matinee.ui.theme.Palette
 import io.github.zekurio.matinee.ui.tv.Overscan
 import io.github.zekurio.matinee.ui.tv.TvButton
@@ -169,15 +171,24 @@ private fun TvPlayback(itemId: String, data: PlayerData, start: Double?) {
     var touched by remember { mutableIntStateOf(0) }
     // The controls came up for a held arrow, so focus goes to the seek bar.
     var focusSeek by remember { mutableStateOf(false) }
-    // Once a file ends: the next episode, counting down as on the phone.
-    val next = if (controller.ended) rememberUpNext(controller, prefs.autoplayNext) else null
+    // Once the credits start or the file ends: the next episode, counting down as on the phone.
+    val next = if (controller.offersNext) rememberUpNext(controller, prefs.autoplayNext) else null
     // Back took its button off the picture. It stays with the controls, as Play stays on the web's card.
     var nextAway by remember(next) { mutableStateOf(false) }
-    val action = next?.let {
-        TvPictureAction(stringResource(R.string.player_next_episode), if (it.cancelled) null else it.left) { host.playInstead(it.item.id) }
+    // Otherwise Skip intro, or the like, while the video is in a segment the server found.
+    val segment = rememberSkipSegment(controller, controls)
+    var skipAway by remember(segment) { mutableStateOf(false) }
+    val skipLabel = segment?.let { skipSegmentLabel(it.kind) }
+    val action = when {
+        next != null -> TvPictureAction(stringResource(R.string.player_next_episode), if (next.cancelled) null else next.seconds(controller)) {
+            host.playInstead(next.item.id)
+        }
+        segment != null && skipLabel != null -> TvPictureAction(skipLabel, null) { controller.seekTo(segment.end) }
+        else -> null
     }
+    val away = if (next != null) nextAway else skipAway
     // The button shows alone on the picture, and takes focus there.
-    val onPicture = action != null && !nextAway && !controls
+    val onPicture = action != null && !away && !controls
     // A file that ended with nothing after it brings the controls.
     val visible = controls || (controller.ended && next == null)
     val targets = remember { TvTargets() }
@@ -225,7 +236,7 @@ private fun TvPlayback(itemId: String, data: PlayerData, start: Double?) {
         if (menu != null) return@LaunchedEffect
         val target = when {
             focusSeek -> targets.seek
-            action != null && !nextAway -> targets.action
+            action != null && !away -> targets.action
             else -> targets.play
         }
         focusSeek = false
@@ -331,7 +342,7 @@ private fun TvPlayback(itemId: String, data: PlayerData, start: Double?) {
         // Back hides the controls before it leaves; a menu's Back, composed later, comes first.
         BackHandler(enabled = controls && menu == null) { controls = false }
         AnimatedVisibility(visible, enter = Motion.fadeIn, exit = Motion.fadeOut) {
-            val playRests = menu == null && !focusSeek && !(action != null && !nextAway)
+            val playRests = menu == null && !focusSeek && !(action != null && !away)
             TvOverlay(controller, targets, back = back, ahead = ahead, scrub = scrub, keys = seekKeys, playRests = playRests, action = action, onMenu = ::openMenu)
         }
         // Over the scrim, so it doesn't dim them; they rise clear of the controls.
@@ -354,8 +365,12 @@ private fun TvPlayback(itemId: String, data: PlayerData, start: Double?) {
         }
         // Back cancels the countdown and takes the button away; the controls still have it.
         BackHandler(enabled = onPicture) {
-            next?.cancelled = true
-            nextAway = true
+            if (next != null) {
+                next.cancelled = true
+                nextAway = true
+            } else {
+                skipAway = true
+            }
         }
         // The action drawn as it goes, after it ended.
         var shownAction by remember { mutableStateOf(action) }
