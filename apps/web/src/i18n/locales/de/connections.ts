@@ -1,0 +1,118 @@
+import type { TranslationOf } from "../../catalog"
+import type source from "../en/connections"
+
+export default {
+  "connections.title": "Verbindungen",
+  "connections.add": "Verbindung hinzufügen",
+  "connections.loadFailed":
+    "Die Verbindungen konnten nicht geladen werden. {error}",
+  "connections.retry": "Erneut versuchen",
+  "connections.empty.title": "Noch keine Verbindungen",
+  "connections.empty.description":
+    "Füge Radarr, Sonarr oder Von Hand hinzu und mach sie zum Standard für Filme oder Serien.",
+  "connections.testing": "Wird getestet…",
+  "connections.connected": "Verbunden",
+  "connections.testFailed": "Test fehlgeschlagen",
+  "connections.slug": "Kürzel",
+  "connections.key.saved":
+    "Schlüssel in Matinee gespeichert, gilt statt {variable}",
+  "connections.key.environment": "Schlüssel aus {variable}",
+  "connections.key.none":
+    "Noch kein Schlüssel. Speichere einen oder setze {variable}.",
+  "connections.actions": "Aktionen für {name}",
+  "connections.test": "Erneut testen",
+  "connections.edit": "Bearbeiten",
+  "connections.delete": "Verbindung löschen",
+  "connections.delete.title": "{name} löschen?",
+  "connections.delete.descriptionDefault":
+    "Sie ist ein Standard, also warten Anfragen ihrer Art, bis eine andere es ist.",
+  "connections.delete.descriptionUnused":
+    "Schon darüber geschickte Anfragen bleiben, wo sie sind.",
+  "connections.delete.confirm": "Löschen",
+  "connections.deleted": "{name} gelöscht",
+
+  "connections.dialog.addTitle": "Verbindung hinzufügen",
+  "connections.dialog.editTitle": "{name} bearbeiten",
+  "connections.dialog.source": "Art",
+  "connections.dialog.name": "Name",
+  "connections.dialog.namePlaceholder": "Radarr",
+  "connections.dialog.slug": "Kürzel",
+  "connections.dialog.slugHint":
+    "Benennt die Umgebungsvariable, aus der der Schlüssel kommen kann: {variable}",
+  "connections.dialog.slugHintNoKey": "Großbuchstaben, etwa VON_HAND.",
+  "connections.dialog.slugInvalid":
+    "Verwende Großbuchstaben, Ziffern und Unterstriche, beginnend mit einem Buchstaben.",
+  "connections.dialog.key": "API-Schlüssel",
+  "connections.dialog.keySaved": "Gespeichert. Tippe, um ihn zu ersetzen.",
+  "connections.dialog.keyFromEnvironment": "Gesetzt durch {variable}",
+  "connections.dialog.keyNone": "Keiner",
+  "connections.dialog.keyUseEnvironment":
+    "Den Schlüssel aus der Umgebung verwenden",
+  "connections.dialog.keyRemove": "Gespeicherten Schlüssel entfernen",
+  "connections.dialog.keyKeep": "Gespeicherten Schlüssel behalten",
+  "connections.dialog.keyEnvironmentApplies":
+    "Nach dem Speichern gilt der Schlüssel aus {variable}.",
+  "connections.dialog.keyRemoved":
+    "Der Schlüssel wird beim Speichern entfernt.",
+  "connections.dialog.test": "Testen",
+  "connections.dialog.default.movie": "Standard für Filme",
+  "connections.dialog.default.show": "Standard für Serien",
+  "connections.dialog.required": "Fülle {field} aus.",
+  "connections.dialog.checkFields": "Prüfe die Felder.",
+  "connections.dialog.save": "Speichern",
+  "connections.dialog.create": "Verbindung hinzufügen",
+  "connections.section.defaults": "Standard",
+  "connections.section.anime": "Anime",
+  "connections.section.behaviour": "Verhalten",
+  "connections.field.pick": "Auswählen",
+  "connections.field.unset": "Keine",
+  "connections.field.sameAsAbove": "Wie oben",
+  "connections.field.find": "Suchen",
+  "connections.field.findEmpty": "Nichts passt.",
+  "connections.field.noChoices": "Noch keine auf dem Server.",
+  "connections.landsIn": "Landet in {library}",
+  "connections.lost": "Unklar, wo {folder} liegt. Wähle, wo es landet.",
+  "connections.landsInPick": "Landet in",
+
+  "connections.card.default.movie": "Standard für Filme",
+  "connections.card.default.show": "Standard für Serien",
+  "connections.card.from.default": "Schickt",
+  "connections.card.from.anime": "Anime",
+  "connections.card.from.rule": "Regel",
+  "connections.card.kind.movie": "Filme",
+  "connections.card.kind.show": "Serien",
+  "connections.card.nowhere": "keine Mediathek",
+
+  "connections.rules.title": "Überschreibungsregeln",
+  "connections.rules.add": "Regel hinzufügen",
+  "connections.rules.up": "Nach oben",
+  "connections.rules.down": "Nach unten",
+  "connections.rules.edit": "Regel bearbeiten",
+  "connections.rules.delete": "Regel löschen",
+  "connections.rules.delete.title": "Diese Regel löschen?",
+  "connections.rules.delete.description":
+    "Titel, auf die sie passte, gehen wieder mit den Einstellungen der Verbindung.",
+  "connections.rules.delete.confirm": "Löschen",
+  "connections.rules.dialog.addTitle": "Überschreibungsregel hinzufügen",
+  "connections.rules.dialog.editTitle": "Überschreibungsregel bearbeiten",
+  "connections.rules.dialog.create": "Regel hinzufügen",
+  "connections.rules.dialog.save": "Speichern",
+  "connections.rules.conditions": "Bedingungen",
+  "connections.rules.settings": "Einstellungen",
+  "connections.rules.users": "Benutzer",
+  "connections.rules.users.find": "Benutzer suchen",
+  "connections.rules.genres": "Genres",
+  "connections.rules.languages": "Sprachen",
+  "connections.rules.languages.find": "Sprache suchen",
+  "connections.rules.keywords": "Schlagwörter",
+  "connections.rules.keywords.find": "Schlagwörter bei TMDB suchen",
+  "connections.rules.keywords.remove": "{name} entfernen",
+  "connections.rules.noTmdb":
+    "Genres und Schlagwörter kommen von TMDB, das nicht eingerichtet ist.",
+  "connections.rules.keep": "Wie die Verbindung",
+
+  "connections.libraries.title": "Was jede Mediathek befüllt",
+  "connections.libraries.filledBy": "Befüllt über {connections}",
+  "connections.libraries.unfilled": "Nichts befüllt sie",
+  "connections.libraries.noProvider": "Kein Metadatenanbieter",
+} satisfies TranslationOf<typeof source>

@@ -1,10 +1,11 @@
 import type { Library } from "@matinee/contracts"
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
+import { cn } from "@matinee/ui/lib/utils"
+import { useInfiniteQuery } from "@tanstack/react-query"
+import { useState } from "react"
 
 import { PosterCard, posterGrid } from "@/components/media-item"
 import { PageHeader } from "@/components/page-header"
 import { tr } from "@/i18n"
-import { orpc } from "@/lib/rpc"
 
 import {
   EmptyList,
@@ -13,46 +14,68 @@ import {
   ShowMore,
 } from "./library-states"
 import {
-  ActiveFilters,
-  type FilterControls,
+  FilterChips,
   HeaderControls,
   type ListControlsProps,
   PhoneControls,
 } from "./list-controls"
-import { titleSorts, useLibraryFilters, useListParams } from "./list-params"
-import { libraryTitlesOptions } from "./title-queries"
+import { libraryRoute, useSearchText } from "./list-params"
+import { activeTitleFilters, TitleFilterPanel } from "./title-filter-panel"
+import { cardDetail, type TitleListSearch } from "./title-filter-params"
+import { libraryTitlesOptions, useTitleFilters } from "./title-queries"
 
 export function TitleGrid({ library }: { library: Library }) {
-  const { search, setSearch, query, sort, setSort } = useListParams()
-  const filterState = useLibraryFilters()
-  const { genre, studio } = filterState
+  const current = libraryRoute.useSearch()
+  const navigate = libraryRoute.useNavigate()
+  const update = (patch: Partial<TitleListSearch> & { q?: string }) =>
+    void navigate({
+      search: (prev) => ({ ...prev, ...patch }),
+      replace: true,
+    })
+  const { search, setSearch, query } = useSearchText(current.q, update)
+  const list = useTitleFilters(current, update, { libraryId: library.id })
+  const [panelOpen, setPanelOpen] = useState(false)
   const busy = library.scanning || library.refreshing
   const titles = useInfiniteQuery({
-    ...libraryTitlesOptions(library.id, { q: query, sort, genre, studio }),
+    ...libraryTitlesOptions(library.id, {
+      query,
+      filters: list.filters,
+      order: list.order,
+    }),
+    enabled: list.ready,
     // Refresh while metadata arrives; the library poll refreshes once more
     // when the work ends.
     refetchInterval: busy ? 3000 : false,
   })
-  const facets = useQuery(
-    orpc.titles.facets.queryOptions({ input: { libraryId: library.id } }),
-  )
 
   const rows = titles.data?.pages.flatMap((page) => page.items) ?? []
   const kind = library.kind
-  const filters: FilterControls | undefined = facets.data && {
-    ...filterState,
-    facets: facets.data,
-  }
+  const options = list.options
+  const chips = options
+    ? activeTitleFilters(list.filters, options, list.change)
+    : []
   const controls: ListControlsProps = {
     search,
     setSearch,
     label: tr(`library.search.${kind}`),
-    sorts: titleSorts(),
-    sort,
-    setSort,
-    filters,
+    sorts: list.sorts,
+    sort: list.sort,
+    setSort: list.setSort,
+    filter: options
+      ? (compact) => (
+          <TitleFilterPanel
+            kind={kind === "movies" ? "movie" : "show"}
+            options={options}
+            filters={list.filters}
+            change={list.change}
+            open={panelOpen}
+            onOpenChange={setPanelOpen}
+            compact={compact}
+          />
+        )
+      : undefined,
   }
-  const filtered = genre !== undefined || studio !== undefined
+  const filtered = chips.length > 0
 
   return (
     <div>
@@ -62,7 +85,7 @@ export function TitleGrid({ library }: { library: Library }) {
         actions={<HeaderControls {...controls} />}
         phoneActions={<PhoneControls {...controls} />}
       />
-      <ActiveFilters {...filterState} />
+      <FilterChips active={chips} clear={list.clear} />
 
       {titles.isPending ? (
         <PosterGridSkeleton />
@@ -85,17 +108,27 @@ export function TitleGrid({ library }: { library: Library }) {
               : filtered
                 ? {
                     label: tr("library.clearFilters"),
-                    onClick: filterState.clear,
+                    onClick: list.clear,
                   }
                 : undefined
           }
         />
       ) : (
         <>
-          <ul className={posterGrid}>
+          <ul
+            aria-busy={titles.isPlaceholderData}
+            className={cn(
+              posterGrid,
+              "transition-opacity duration-200 motion-reduce:transition-none",
+              titles.isPlaceholderData && "opacity-50",
+            )}
+          >
             {rows.map((title) => (
               <li key={title.id}>
-                <PosterCard title={title} />
+                <PosterCard
+                  title={title}
+                  detail={cardDetail(title, list.order.sort)}
+                />
               </li>
             ))}
           </ul>

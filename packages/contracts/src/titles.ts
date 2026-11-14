@@ -1,5 +1,6 @@
 import { Artwork } from "./artwork"
 import { MetadataProviderId } from "./library"
+import { LanguageTag } from "./preferences"
 import { t } from "./schema"
 import { DisplayMediaProbe } from "./streams"
 
@@ -32,6 +33,8 @@ export const TitleSummary = t.object({
   rating: t.number().nullable(),
   /** Age rating, like `TV-14` or `PG-13`. */
   contentRating: t.string().nullable(),
+  /** A movie's length, or a show's episodes', in minutes. */
+  runtimeMinutes: t.number().int().nullable(),
   /**
    * The BCP 47 tag of the language it was made in, from the metadata
    * provider. Null when the provider doesn't say or there is no match.
@@ -287,24 +290,231 @@ export const Person = PersonSummary.extend({
 })
 export type Person = t.infer<typeof Person>
 
-export const TITLE_SORTS = ["name", "recent", "year"] as const
+/**
+ * The orders a list of titles can take: by name, by when the newest file
+ * arrived, by release year, by the provider's community score, and by
+ * runtime (a show's episodes'). Titles without the value come last
+ * either way.
+ */
+export const TITLE_SORTS = [
+  "name",
+  "recent",
+  "year",
+  "score",
+  "runtime",
+] as const
 export const TitleSort = t.enum(TITLE_SORTS)
 export type TitleSort = t.infer<typeof TitleSort>
 
-/** What narrows a list of titles. A title has to match every one given. */
-export const TitleFilter = t.object({
+/**
+ * Which way a sort runs. Left out, it's the sort's usual way: A to Z by
+ * name, and the newest, highest, or longest first for the rest.
+ */
+export const SortOrder = t.enum(["asc", "desc"])
+export type SortOrder = t.infer<typeof SortOrder>
+
+/** How far a score bound moves at a time, on 0 to 10. */
+export const TITLE_SCORE_STEP = 0.5
+/** How far a runtime bound moves at a time, in minutes. */
+export const TITLE_RUNTIME_STEP = 15
+
+/** Where the signed-in viewer is with a title. */
+export const WATCH_STATES = ["unwatched", "inProgress", "watched"] as const
+export const WatchFilter = t.enum(WATCH_STATES)
+export type WatchFilter = t.infer<typeof WatchFilter>
+
+/**
+ * An age limit: the rating and every milder one of the same country's
+ * system for one kind, as `titles.filterOptions` offers them.
+ */
+export const AgeLimit = t.object({
+  /** ISO 3166-1, like US or DE. */
+  country: t
+    .string()
+    .regex(/^[A-Z]{2}$/, "Use a two-letter country code like US."),
+  rating: t.string().trim().min(1).max(16),
+})
+export type AgeLimit = t.infer<typeof AgeLimit>
+
+const tags = t.array(t.string().trim().min(1).max(200)).max(20).$default([])
+const filterYear = t
+  .number()
+  .int()
+  .min(1800)
+  .max(2200)
+  .nullable()
+  .$default(null)
+const filterScore = t
+  .number()
+  .min(0)
+  .max(10)
+  .multipleOf(TITLE_SCORE_STEP)
+  .nullable()
+  .$default(null)
+const filterRuntime = t
+  .number()
+  .int()
+  .min(0)
+  .max(1440)
+  .multipleOf(TITLE_RUNTIME_STEP)
+  .nullable()
+  .$default(null)
+const ordered = (low: number | null, high: number | null) =>
+  low === null || high === null || low <= high
+
+/**
+ * What narrows a list of titles beyond its name. A title has to pass every
+ * filter that is on. Null, or an empty list, leaves a filter off. Bounds
+ * are inclusive, and a title without the value fails a bound.
+ */
+export const TitleFilters = t
+  .object({
+    /** Titles with every one of these genres, spelled as in `Title.genres`. */
+    genres: tags,
+    /** Titles from every one of these studios, spelled as in `Title.studios`. */
+    studios: tags,
+    yearFrom: filterYear,
+    yearTo: filterYear,
+    /** The provider's community score, out of 10. */
+    scoreMin: filterScore,
+    scoreMax: filterScore,
+    /** Movies rated this or milder. Unrated movies and other kinds' ratings fail it. */
+    movieRating: AgeLimit.nullable().$default(null),
+    /** Shows rated this or milder, as `movieRating` for movies. */
+    showRating: AgeLimit.nullable().$default(null),
+    /** The language it was made in, as in `Title.originalLanguage`. */
+    language: LanguageTag.nullable().$default(null),
+    /** A movie's runtime, or a show's episodes', in minutes. */
+    runtimeMin: filterRuntime,
+    runtimeMax: filterRuntime,
+    /** Where the signed-in viewer is with it. */
+    watched: WatchFilter.nullable().$default(null),
+  })
+  .refine((value) => ordered(value.yearFrom, value.yearTo), {
+    path: ["yearTo"],
+    message: "The first year can't be after the last.",
+  })
+  .refine((value) => ordered(value.scoreMin, value.scoreMax), {
+    path: ["scoreMax"],
+    message: "The lowest score can't be above the highest.",
+  })
+  .refine((value) => ordered(value.runtimeMin, value.runtimeMax), {
+    path: ["runtimeMax"],
+    message: "The shortest runtime can't be longer than the longest.",
+  })
+export type TitleFilters = t.infer<typeof TitleFilters>
+
+/** Every filter off. */
+export const NO_TITLE_FILTERS: TitleFilters = {
+  genres: [],
+  studios: [],
+  yearFrom: null,
+  yearTo: null,
+  scoreMin: null,
+  scoreMax: null,
+  movieRating: null,
+  showRating: null,
+  language: null,
+  runtimeMin: null,
+  runtimeMax: null,
+  watched: null,
+}
+
+/** A list of titles: what it holds, in which order, and which page. */
+export const TitleQuery = t.object({
   /** Part of the name or original name. */
   query: t.string().trim().max(200).optional(),
   kind: TitleKind.optional(),
-  /** A genre, spelled as in `Title.genres`. */
-  genre: t.string().trim().min(1).max(200).optional(),
-  /** A studio, spelled as in `Title.studios`. */
-  studio: t.string().trim().min(1).max(200).optional(),
+  filters: TitleFilters.$default(NO_TITLE_FILTERS),
   sort: TitleSort.$default("name"),
+  order: SortOrder.optional(),
   limit: t.number().int().min(1).max(200).$default(60),
   offset: t.number().int().min(0).$default(0),
 })
-export type TitleFilter = t.infer<typeof TitleFilter>
+export type TitleQuery = t.infer<typeof TitleQuery>
+
+/**
+ * The titles a filter's choices are drawn from: one library's, or every
+ * library's, of one kind, and with a genre or from a studio for those
+ * pages.
+ */
+export const TitleScope = t.object({
+  libraryId: t.uuid().optional(),
+  kind: TitleKind.optional(),
+  /** The genre page's genre, which its titles all have. */
+  genre: t.string().trim().min(1).max(200).optional(),
+  /** The studio page's studio. */
+  studio: t.string().trim().min(1).max(200).optional(),
+})
+export type TitleScope = t.infer<typeof TitleScope>
+
+/** A span a filter's bounds move in, by `step`, from the lowest value to the highest. */
+export const FilterRange = t.object({
+  min: t.number(),
+  max: t.number(),
+  step: t.number(),
+})
+export type FilterRange = t.infer<typeof FilterRange>
+
+/** An age rating titles carry, with how many do. */
+export const RatingCount = t.object({
+  rating: t.string(),
+  titleCount: t.number().int(),
+})
+
+/** The age ratings of one kind, in the system they belong to. */
+export const RatingSystem = t.object({
+  kind: TitleKind,
+  /** ISO 3166-1, like US or DE. Pass it back in an `AgeLimit`. */
+  country: t.string(),
+  /** Those the titles carry, mildest first. */
+  ratings: t.array(RatingCount),
+})
+export type RatingSystem = t.infer<typeof RatingSystem>
+
+export const LanguageCount = t.object({
+  /** BCP 47, as in `Title.originalLanguage`. Clients name it. */
+  language: t.string(),
+  titleCount: t.number().int(),
+})
+
+/**
+ * What each filter offers for the titles in a scope the viewer can see,
+ * from what those titles carry. A filter with nothing to choose between
+ * is empty or null.
+ */
+export const TitleFilterOptions = t.object({
+  /**
+   * By name. A genre page leaves its own genre out, and a studio page its
+   * studio.
+   */
+  genres: t.array(Facet),
+  /** Most titles first. */
+  studios: t.array(Facet),
+  /**
+   * One system for each kind there are rated titles of, movies first: the
+   * country's whose ratings most of them carry. Ratings from elsewhere
+   * aren't offered. Empty when no system is known to the server.
+   */
+  ratings: t.array(RatingSystem),
+  /** Most titles first. */
+  languages: t.array(LanguageCount),
+  years: FilterRange.nullable(),
+  scores: FilterRange.nullable(),
+  /** A movie's runtime, or a show's episodes', in minutes. */
+  runtime: FilterRange.nullable(),
+  /** How many titles the viewer hasn't started, is in the middle of, and has watched. */
+  watched: t.object({
+    unwatched: t.number().int(),
+    inProgress: t.number().int(),
+    watched: t.number().int(),
+  }),
+  /** Titles in the scope. */
+  total: t.number().int(),
+  /** The sorts there is something to order by: no score sort where no title has a score. */
+  sorts: t.array(TitleSort),
+})
+export type TitleFilterOptions = t.infer<typeof TitleFilterOptions>
 
 export const TitleList = t.object({
   items: t.array(TitleSummary),
@@ -337,7 +547,6 @@ export const Title = TitleSummary.extend({
   releaseDate: t.string().nullable(),
   /** Such as `Ended` or `Returning Series`, in the provider's words. */
   status: t.string().nullable(),
-  runtimeMinutes: t.number().int().nullable(),
   /** The folder or file below the library folder that makes this title. */
   path: t.string(),
   /** Null when the library has no provider or nothing matched. */
@@ -356,8 +565,18 @@ export const Title = TitleSummary.extend({
    * Empty when the provider has none.
    */
   trailers: t.array(Trailer),
+  /** Its files, less the specials when the account hides them. */
   itemCount: t.number().int(),
+  /**
+   * The seasons it has files in, in order. Season 0 is left out when the
+   * account hides specials and the show has other seasons.
+   */
   seasons: t.array(Season),
+  /**
+   * Season 0 when it's left out of `seasons`, so its own page still opens
+   * from a link. Null otherwise.
+   */
+  specials: Season.nullable(),
   /** What Play starts: the file in progress, the next one, or the first. */
   next: MediaItem.nullable(),
 })

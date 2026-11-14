@@ -194,9 +194,13 @@ fun CardText(primary: String, secondary: String?, modifier: Modifier = Modifier,
     }
 }
 
+/**
+ * A card's tap and long press, with the focus ring and the press look.
+ * Offline it does nothing, since what it opens is the server's.
+ */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun Modifier.cardClick(
+fun Modifier.cardClick(
     onClick: () -> Unit,
     onLongClick: (() -> Unit)?,
     interaction: MutableInteractionSource = remember { MutableInteractionSource() },

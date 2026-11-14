@@ -64,6 +64,7 @@ import io.github.zekurio.matinee.ui.settings.platformIcon
 import io.github.zekurio.matinee.ui.settings.platformLabel
 import io.github.zekurio.matinee.ui.settings.qualityLabel
 import io.github.zekurio.matinee.ui.settings.rememberPlaybackSave
+import io.github.zekurio.matinee.ui.settings.rememberSpecialsSave
 import io.github.zekurio.matinee.ui.settings.sessionName
 import io.github.zekurio.matinee.ui.settings.skipChoices
 import io.github.zekurio.matinee.ui.settings.subtitleBackgroundLabel
@@ -274,6 +275,11 @@ internal fun ColumnScope.LanguageRows(session: Session, panels: SettingsPanels, 
     SwitchRow(stringResource(R.string.playback_subtitles_remember), playback.rememberSubtitles) {
         save(playback.copy(rememberSubtitles = it))
     }
+    SwitchRow(
+        stringResource(R.string.playback_specials_title),
+        user.library.showSpecials,
+        onChange = rememberSpecialsSave(session),
+    )
     RowNote(stringResource(R.string.tv_settings_languages_note))
 }
 

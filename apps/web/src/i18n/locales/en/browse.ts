@@ -25,6 +25,7 @@ export default defineMessages("browse", {
   }),
   "browse.search": "Search {name}",
   "browse.noMatch": "Nothing matches “{query}”",
+  "browse.noFilterMatch": "Nothing here matches these filters",
   "browse.clearSearch": "Clear search",
   "browse.genre.none.movie": "No movies in this genre",
   "browse.genre.none.show": "No shows in this genre",

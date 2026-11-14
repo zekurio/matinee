@@ -1,4 +1,4 @@
-import { PlaybackPreferences } from "./preferences"
+import { LibraryPreferences, PlaybackPreferences } from "./preferences"
 import { t } from "./schema"
 
 export const USER_ROLES = ["admin", "user"] as const
@@ -39,6 +39,8 @@ export const User = t.object({
    * before the first change, which plays as `DEFAULT_PLAYBACK_PREFERENCES`.
    */
   playback: PlaybackPreferences.nullable(),
+  /** How shows list for this account, on every device. */
+  library: LibraryPreferences,
   sharing: ProfileSharing,
 })
 export type User = t.infer<typeof User>

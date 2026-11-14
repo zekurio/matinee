@@ -129,7 +129,15 @@ export default defineConfig(({ mode }) => {
     },
     build: {
       rolldownOptions: {
+        input: {
+          app: join(import.meta.dirname, "index.html"),
+          "push-worker": join(import.meta.dirname, "push-worker.ts"),
+        },
         output: {
+          entryFileNames: (chunk) =>
+            chunk.name === "push-worker"
+              ? "push-worker.js"
+              : "assets/[name]-[hash].js",
           // Folds chunks under 16 kB, mostly icons and route stubs, into
           // the chunks that use them. That costs a few duplicate kilobytes
           // in pages loaded later, and takes the app's first load from 70
@@ -139,6 +147,15 @@ export default defineConfig(({ mode }) => {
       },
     },
     plugins: [
+      {
+        name: "matinee:push-worker",
+        configureServer(server) {
+          server.middlewares.use((req, _res, next) => {
+            if (req.url === "/push-worker.js") req.url = "/push-worker.ts"
+            next()
+          })
+        },
+      },
       tanstackRouter({
         target: "react",
         autoCodeSplitting: true,

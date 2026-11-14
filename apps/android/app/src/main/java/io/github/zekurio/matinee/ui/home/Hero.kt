@@ -68,6 +68,7 @@ import io.github.zekurio.matinee.ui.kit.Gutter
 import io.github.zekurio.matinee.ui.kit.Lucide
 import io.github.zekurio.matinee.ui.kit.LucideIcon
 import io.github.zekurio.matinee.ui.kit.MatineeButton
+import io.github.zekurio.matinee.ui.kit.Shapes
 import io.github.zekurio.matinee.ui.progressRatio
 import io.github.zekurio.matinee.ui.theme.Palette
 import io.github.zekurio.matinee.ui.timeLeft
@@ -249,7 +250,7 @@ private fun Slide(slide: FeaturedTitle, offset: () -> Float) {
                         style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp),
                         color = Palette.Foreground.copy(alpha = 0.8f),
                         modifier = Modifier
-                            .border(1.dp, Palette.Foreground.copy(alpha = 0.3f), MaterialTheme.shapes.extraSmall)
+                            .border(1.dp, Palette.Foreground.copy(alpha = 0.3f), Shapes.Sm)
                             .padding(horizontal = 6.dp, vertical = 1.dp),
                     )
                 }
@@ -387,9 +388,9 @@ fun HeroSkeleton(modifier: Modifier = Modifier, top: @Composable () -> Unit) {
         Column(Modifier.fillMaxWidth()) { top() }
         Box(Modifier.align(Alignment.BottomStart).padding(Gutter).padding(bottom = heroBottom())) {
             Column {
-                Box(Modifier.size(220.dp, 48.dp).clip(MaterialTheme.shapes.small).background(Palette.Secondary))
+                Box(Modifier.size(220.dp, 48.dp).clip(Shapes.Md).background(Palette.Secondary))
                 Gap(16.dp)
-                Box(Modifier.size(140.dp, 16.dp).clip(MaterialTheme.shapes.small).background(Palette.Secondary))
+                Box(Modifier.size(140.dp, 16.dp).clip(Shapes.Md).background(Palette.Secondary))
             }
         }
     }

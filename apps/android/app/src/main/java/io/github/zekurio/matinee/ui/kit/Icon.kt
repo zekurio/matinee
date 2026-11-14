@@ -18,6 +18,8 @@ object Lucide {
     val ArrowLeft = R.drawable.lucide_arrow_left
     val ArrowUpDown = R.drawable.lucide_arrow_up_down
     val AudioLines = R.drawable.lucide_audio_lines
+    val Bell = R.drawable.lucide_bell
+    val BellRing = R.drawable.lucide_bell_ring
     val Calendar = R.drawable.lucide_calendar
     val CalendarClock = R.drawable.lucide_calendar_clock
     val CalendarOff = R.drawable.lucide_calendar_off
@@ -29,8 +31,11 @@ object Lucide {
     val ChevronRight = R.drawable.lucide_chevron_right
     val CircleAlert = R.drawable.lucide_circle_alert
     val CircleCheck = R.drawable.lucide_circle_check
+    val CircleSlash = R.drawable.lucide_circle_slash
+    val Clapperboard = R.drawable.lucide_clapperboard
     val Clock = R.drawable.lucide_clock
     val CloudOff = R.drawable.lucide_cloud_off
+    val Compass = R.drawable.lucide_compass
     val Download = R.drawable.lucide_download
     val Ellipsis = R.drawable.lucide_ellipsis
     val FastForward = R.drawable.lucide_fast_forward_filled
@@ -42,6 +47,7 @@ object Lucide {
     val House = R.drawable.lucide_house
     val Image = R.drawable.lucide_image
     val ImageUp = R.drawable.lucide_image_up
+    val Inbox = R.drawable.lucide_inbox
     val Info = R.drawable.lucide_info
     val KeyRound = R.drawable.lucide_key_round
     val Link = R.drawable.lucide_link

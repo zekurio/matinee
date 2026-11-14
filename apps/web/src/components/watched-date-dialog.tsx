@@ -33,7 +33,6 @@ export function WatchedDateDialog({
         >
           <WatchedDateForm
             triggerRef={triggerRef}
-            onCancel={() => onOpenChange(false)}
             onPick={(watchedAt) => {
               onPick(watchedAt)
               onOpenChange(false)

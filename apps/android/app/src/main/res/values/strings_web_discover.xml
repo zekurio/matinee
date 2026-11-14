@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Made by scripts/web_strings.py from apps/web/src/i18n/locales/en/discover.ts. Don't edit. -->
+<resources>
+    <string name="web_discover_title">Discover</string>
+    <string name="web_discover_rail_becauseWatched">Because you watched %1$s</string>
+    <string name="web_discover_rail_popularFilms">Popular movies</string>
+    <string name="web_discover_rail_popularShows">Popular shows</string>
+    <string name="web_discover_rail_comingSoon">Coming soon</string>
+    <string name="web_discover_rail_othersAsked">Requested by others</string>
+    <string name="web_discover_card_release">%1$s · %2$s</string>
+    <string name="web_discover_stale">Some of these may be out of date.</string>
+    <string name="web_discover_railFailed">This row didn\'t load.</string>
+    <plurals name="web_discover_railsFailed">
+        <item quantity="one">%1$d row didn\'t load.</item>
+        <item quantity="other">%1$d rows didn\'t load.</item>
+    </plurals>
+    <string name="web_discover_retry">Try again</string>
+    <string name="web_discover_failed">Discover isn\'t available right now.</string>
+    <string name="web_discover_failedHint">The catalog didn\'t answer. Search still works.</string>
+    <string name="web_discover_empty">Nothing to suggest right now</string>
+    <string name="web_discover_emptyHint">Search finds the rest.</string>
+    <string name="web_discover_off">Discover isn\'t set up here</string>
+    <string name="web_discover_offHint">Search still finds everything in the libraries you can open.</string>
+    <string name="web_discover_offAdmin">It needs a TMDB API key and a library that requests can go to.</string>
+    <string name="web_discover_gone">This row isn\'t on Discover anymore</string>
+    <string name="web_discover_back">Back to Discover</string>
+    <string name="web_discover_end">That\'s the whole list.</string>
+    <string name="web_discover_moreFailed">The next titles didn\'t load.</string>
+    <string name="web_discover_browse_movie">Browse movies</string>
+    <string name="web_discover_browse_show">Browse shows</string>
+    <string name="web_discover_browse_sort_popular">Popular</string>
+    <string name="web_discover_browse_sort_votes">Most votes</string>
+    <string name="web_discover_browse_scoreHint">From TMDB, out of 10</string>
+    <string name="web_discover_browse_votes">Votes</string>
+    <plurals name="web_discover_browse_chip_votes">
+        <item quantity="one">At least %1$d vote</item>
+        <item quantity="other">At least %1$d votes</item>
+    </plurals>
+    <string name="web_discover_browse_votesStep">%1$s+</string>
+    <string name="web_discover_browse_floorScore">Only titles with at least %1$s votes, so a handful of votes can\'t top the list.</string>
+    <string name="web_discover_browse_floorList">Only titles with at least %1$s votes, so the list isn\'t filled with ones hardly anyone has seen.</string>
+    <string name="web_discover_browse_floorChange">Choose a minimum</string>
+    <string name="web_discover_browse_none_movie">No movies match these filters</string>
+    <string name="web_discover_browse_none_show">No shows match these filters</string>
+    <string name="web_discover_browse_nothing">Nothing to show right now</string>
+    <string name="web_discover_browse_failed">These titles didn\'t load.</string>
+    <string name="web_discover_browse_optionsFailed">The filters didn\'t load.</string>
+</resources>

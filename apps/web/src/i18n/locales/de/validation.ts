@@ -52,4 +52,15 @@ export default {
   "validation.fileEmpty": "Diese Datei ist leer.",
   "validation.avatarSize": "Wähle ein Bild unter 10 MB.",
   "validation.avatarType": "Wähle ein JPEG-, PNG- oder WebP-Bild.",
+
+  "validation.ageLimitCountry":
+    "Verwende einen zweibuchstabigen Ländercode wie DE.",
+  "validation.browseLanguage":
+    "Verwende einen zweibuchstabigen Sprachcode wie de.",
+  "validation.browseYears":
+    "Das erste Jahr darf nicht nach dem letzten liegen.",
+  "validation.browseScores":
+    "Die niedrigste Bewertung darf nicht über der höchsten liegen.",
+  "validation.browseRuntime":
+    "Die kürzeste Laufzeit darf nicht länger als die längste sein.",
 } satisfies TranslationOf<typeof source>

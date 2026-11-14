@@ -33,38 +33,63 @@ import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.CreditKind
 import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.TopBar
+import io.github.zekurio.matinee.ui.components.ActiveFilterChips
 import io.github.zekurio.matinee.ui.components.ErrorBox
+import io.github.zekurio.matinee.ui.components.FilterButton
 import io.github.zekurio.matinee.ui.components.LoadingBox
 import io.github.zekurio.matinee.ui.components.LocalApi
 import io.github.zekurio.matinee.ui.components.Picture
 import io.github.zekurio.matinee.ui.components.PosterCard
 import io.github.zekurio.matinee.ui.components.art
 import io.github.zekurio.matinee.ui.components.initials
+import io.github.zekurio.matinee.ui.kit.ButtonLook
 import io.github.zekurio.matinee.ui.kit.Chip
 import io.github.zekurio.matinee.ui.kit.Gap
 import io.github.zekurio.matinee.ui.kit.Gutter
+import io.github.zekurio.matinee.ui.kit.MatineeButton
 import io.github.zekurio.matinee.ui.rememberLoader
 import io.github.zekurio.matinee.ui.theme.Palette
 
-/** A genre's or a studio's titles from every library. */
+/** A genre's or a studio's titles from every library, with the filters and sorts a library has. */
 @Composable
 fun BrowseScreen(genre: String?, studio: String?) {
     val name = genre ?: studio.orEmpty()
     var kind by rememberSaveable { mutableStateOf<String?>(null) }
-    val pages = rememberBrowsePages(genre, studio, kind)
+    val state = rememberTitleListState()
+    var filtering by rememberSaveable { mutableStateOf(false) }
+    val options = rememberFilterOptions(kind = kind, genre = genre, studio = studio)
+    val offered = (options.state as? Load.Ready)?.value
+    val pages = rememberBrowsePages(genre, studio, kind, state)
     val res = LocalResources.current
+    val chips = activeTitleFilters(state.filters, offered, res) { state.filters = it }
     Column(Modifier.fillMaxSize()) {
-        TopBar(name)
+        TopBar(name) {
+            if (offered != null) FilterButton(state.filters.count()) { filtering = true }
+            TitleSortButton(state, offered)
+        }
         PosterGrid(
             pages,
-            detail = { it.year?.toString() },
+            detail = { title -> titleCardDetail(title, state.sort, res) },
             empty = {
-                Text(
-                    stringResource(if (genre != null) R.string.browse_genre_empty else R.string.browse_studio_empty),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Palette.Muted,
-                    modifier = Modifier.padding(vertical = 48.dp),
-                )
+                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(vertical = 48.dp)) {
+                    Text(
+                        stringResource(
+                            when {
+                                chips.isNotEmpty() -> R.string.browse_no_filter_match
+                                genre != null -> R.string.browse_genre_empty
+                                else -> R.string.browse_studio_empty
+                            },
+                        ),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Palette.Muted,
+                    )
+                    if (chips.isNotEmpty()) {
+                        Gap(12.dp)
+                        MatineeButton(onClick = { state.filters = NO_TITLE_FILTERS }, look = ButtonLook.Outline) {
+                            Text(stringResource(R.string.browse_clear_filters))
+                        }
+                    }
+                }
             },
         ) {
             item(span = { GridItemSpan(maxLineSpan) }) {
@@ -81,9 +106,13 @@ fun BrowseScreen(genre: String?, studio: String?) {
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(bottom = 8.dp)) {
                         BROWSE_KINDS.forEach { (value, label) -> Chip(stringResource(label), kind == value, { kind = value }) }
                     }
+                    if (chips.isNotEmpty()) ActiveFilterChips(chips) { state.filters = NO_TITLE_FILTERS }
                 }
             }
         }
+    }
+    if (filtering && offered != null) {
+        TitleFilterSheet(kind, offered, state.filters, onChange = { state.filters = it }, onDismiss = { filtering = false })
     }
 }
 

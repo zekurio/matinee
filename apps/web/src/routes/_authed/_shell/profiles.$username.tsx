@@ -21,16 +21,19 @@ import {
   LockIcon,
   PencilIcon,
   PopcornIcon,
+  InboxIcon,
   SettingsIcon,
   Share2Icon,
   ShieldIcon,
 } from "lucide-react"
 
+import { ProfileAskedRail } from "@/components/asked/asked"
 import { FavoriteCard, favoriteKey } from "@/components/favorites"
 import { EpisodeCard } from "@/components/media-item"
 import { useDocumentTitle } from "@/components/page-header"
 import { PhoneTopBar, usePhoneTab } from "@/components/phone-nav"
 import { Rail, RailItem } from "@/components/rail"
+import { useNeedsYou } from "@/components/requests/request-queue"
 import { RangePicker } from "@/components/stats/range-picker"
 import { ActivitySection, StandingSection } from "@/components/stats/standing"
 import {
@@ -158,6 +161,8 @@ function ProfileContent() {
       ) : (
         <>
           <Favorites profile={data} />
+          {/* What you asked for is yours alone, never on show to others. */}
+          {data.self && <ProfileAskedRail username={data.user.username} />}
           {statsShown(data) && <Statistics profile={data} />}
           {data.recent && data.recent.length > 0 && (
             <Rail title={tr("profile.recent")}>
@@ -248,6 +253,7 @@ function ProfileHeader({ profile }: { profile: Profile }) {
           />
           {own && (
             <>
+              {user.role === "admin" && <RequestsButton />}
               <Link
                 to="/stats"
                 aria-label={tr("shell.statistics")}
@@ -268,6 +274,30 @@ function ProfileHeader({ profile }: { profile: Profile }) {
         </div>
       </div>
     </header>
+  )
+}
+
+/** The admin's way to the queue on a phone, with the dot while it needs them. */
+function RequestsButton() {
+  const needsYou = useNeedsYou(true)
+  return (
+    <Link
+      to="/requests"
+      aria-label={
+        needsYou > 0
+          ? tr("requests.menuWaiting", { count: needsYou })
+          : tr("requests.menu")
+      }
+      className={cn(roundButton, "relative sm:hidden")}
+    >
+      <InboxIcon />
+      {needsYou > 0 && (
+        <span
+          aria-hidden
+          className="bg-primary ring-secondary absolute top-1.5 right-1.5 size-2 rounded-full ring-2"
+        />
+      )}
+    </Link>
   )
 }
 

@@ -84,7 +84,9 @@ fun TvSeasonScreen(titleId: String, season: Int?) {
     // The season on screen, which the tabs change without leaving the page.
     var shown by rememberSaveable { mutableStateOf(season ?: NO_SEASON) }
     DetailState(loader.state, stringResource(R.string.title_season_show_error), loader::reload) { title ->
+        // Hidden specials still open from a link.
         val current = title.seasons.firstOrNull { (it.number ?: NO_SEASON) == shown }
+            ?: title.specials?.takeIf { (it.number ?: NO_SEASON) == shown }
         if (current == null) {
             DetailMessage(stringResource(R.string.title_season_missing, title.name), null, null)
         } else {
@@ -121,8 +123,10 @@ private fun SeasonPage(title: Title, season: Season, onSeason: (Season) -> Unit)
     Column(Modifier.fillMaxSize().padding(top = HEADER_TOP)) {
         Column(Modifier.padding(start = TvPage.Start, end = TvPage.End)) {
             Text(title.name, style = TvType.Title, color = Palette.Foreground.copy(alpha = 0.9f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-            if (title.seasons.size > 1) {
-                SeasonTabs(title, season, memory, onSeason, Modifier.padding(top = 10.dp))
+            // Hidden specials, opened from a link, get a tab while they're on screen.
+            val tabs = if (season == title.specials) listOf(season) + title.seasons else title.seasons
+            if (tabs.size > 1) {
+                SeasonTabs(tabs, season, memory, onSeason, Modifier.padding(top = 10.dp))
             } else {
                 Text(seasonName(season.number, res), style = TvType.Hero, maxLines = 1, modifier = Modifier.padding(top = 2.dp))
             }
@@ -282,12 +286,12 @@ private fun SeasonButtons(title: Title, season: Season, list: List<MediaItem>?, 
     }
 }
 
-/** Every season of the show as a tab; Select shows that season's episodes here. */
+/** The show's seasons as tabs; Select shows that season's episodes here. */
 @Composable
-private fun SeasonTabs(title: Title, current: Season, memory: TvFocusMemory, onSeason: (Season) -> Unit, modifier: Modifier = Modifier) {
+private fun SeasonTabs(seasons: List<Season>, current: Season, memory: TvFocusMemory, onSeason: (Season) -> Unit, modifier: Modifier = Modifier) {
     val res = LocalResources.current
     Row(with(memory) { modifier.row(TABS) }, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        title.seasons.forEach { season ->
+        seasons.forEach { season ->
             val key = (season.number ?: NO_SEASON).toString()
             TvChip(
                 seasonName(season.number, res),

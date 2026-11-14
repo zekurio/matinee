@@ -104,7 +104,11 @@
   --warning: oklch(0.62 0.15 75);
   --danger: oklch(0.6 0.22 25);
 
-  --glass-filter: blur(24px) saturate(1.8);
+  /* Milky rather than clear: on white, a big panel over posters stays
+     readable only with more of the popover in it and less colour from
+     behind. */
+  --glass-filter: blur(40px) saturate(1.2);
+  --glass-tint: 84%;
 
   /* Deeper, so the top of the sun still shows on white. */
   --logo-sun: #f59f00;
@@ -121,7 +125,11 @@
   --popover: var(--neutral-100);
   --popover-foreground: var(--neutral-900);
   /* The popover, see-through for glass. */
-  --popover-glass: color-mix(in oklab, var(--popover) 65%, transparent);
+  --popover-glass: color-mix(
+    in oklab,
+    var(--popover) var(--glass-tint, 65%),
+    transparent
+  );
   --secondary: var(--neutral-150);
   --secondary-foreground: var(--neutral-900);
   --muted: var(--neutral-100);

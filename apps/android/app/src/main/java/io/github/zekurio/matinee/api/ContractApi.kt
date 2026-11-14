@@ -7,9 +7,14 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.nullable
 import kotlinx.serialization.builtins.serializer
+import kotlinx.serialization.json.JsonElement
 
 /** The contract's procedures, grouped as its router is. */
 open class ContractApi(transport: ApiTransport) {
+    val catalog = CatalogApi(transport)
+    val discover = DiscoverApi(transport)
+    val requests = RequestsApi(transport)
+    val notifications = NotificationsApi(transport)
     val auth = AuthApi(transport)
     val account = AccountApi(transport)
     val libraries = LibrariesApi(transport)
@@ -26,6 +31,251 @@ open class ContractApi(transport: ApiTransport) {
     val profiles = ProfilesApi(transport)
     val stats = StatsApi(transport)
     val admin = AdminApi(transport)
+}
+
+class CatalogApi internal constructor(private val transport: ApiTransport) {
+    /** `GET /catalog/search` */
+    suspend fun search(
+        query: String,
+        kind: String? = null,
+        libraryId: String? = null,
+        page: Int? = null,
+    ): CatalogPage =
+        transport.call(
+            "GET",
+            listOf("catalog", "search"),
+            listOf("query" to query, "kind" to kind, "libraryId" to libraryId, "page" to page?.toString()),
+            null,
+            CatalogPage.serializer(),
+        )
+
+    /** `POST /catalog/details` */
+    suspend fun details(catalogInput: CatalogInput): CatalogTitleDetail =
+        transport.call(
+            "POST",
+            listOf("catalog", "details"),
+            emptyList(),
+            transport.json(CatalogInput.serializer(), catalogInput),
+            CatalogTitleDetail.serializer(),
+        )
+
+    /** `POST /catalog/related` */
+    suspend fun related(catalogInput: CatalogInput): RelatedRails =
+        transport.call(
+            "POST",
+            listOf("catalog", "related"),
+            emptyList(),
+            transport.json(CatalogInput.serializer(), catalogInput),
+            RelatedRails.serializer(),
+        )
+
+    /** `POST /catalog/related/titles` */
+    suspend fun relatedTitles(
+        ref: CatalogRef,
+        rail: String,
+        libraryId: String? = null,
+    ): RelatedPage =
+        transport.call(
+            "POST",
+            listOf("catalog", "related", "titles"),
+            emptyList(),
+            transport.json(CatalogRelatedTitlesInput.serializer(), CatalogRelatedTitlesInput(ref = ref, libraryId = libraryId, rail = rail)),
+            RelatedPage.serializer(),
+        )
+
+    /** `GET /catalog/missing-seasons` */
+    suspend fun missingSeasons(titleId: String): CatalogMissingSeasonsOutput =
+        transport.call(
+            "GET",
+            listOf("catalog", "missing-seasons"),
+            listOf("titleId" to titleId),
+            null,
+            CatalogMissingSeasonsOutput.serializer(),
+        )
+}
+
+class DiscoverApi internal constructor(private val transport: ApiTransport) {
+    /** `GET /discover/rails` */
+    suspend fun rails(): DiscoverRails =
+        transport.call(
+            "GET",
+            listOf("discover", "rails"),
+            emptyList(),
+            null,
+            DiscoverRails.serializer(),
+        )
+
+    /** `POST /discover/page` */
+    suspend fun page(rail: DiscoverRail, page: Int? = null): CatalogPage =
+        transport.call(
+            "POST",
+            listOf("discover", "page"),
+            emptyList(),
+            transport.json(DiscoverPageInput.serializer(), DiscoverPageInput(rail = rail, page = page)),
+            CatalogPage.serializer(),
+        )
+
+    /** `GET /discover/browse/options` */
+    suspend fun browseOptions(kind: String): CatalogBrowseOptions =
+        transport.call(
+            "GET",
+            listOf("discover", "browse", "options"),
+            listOf("kind" to kind),
+            null,
+            CatalogBrowseOptions.serializer(),
+        )
+
+    /** `POST /discover/browse` */
+    suspend fun browse(catalogBrowseInput: CatalogBrowseInput): CatalogBrowsePage =
+        transport.call(
+            "POST",
+            listOf("discover", "browse"),
+            emptyList(),
+            transport.json(CatalogBrowseInput.serializer(), catalogBrowseInput),
+            CatalogBrowsePage.serializer(),
+        )
+}
+
+class RequestsApi internal constructor(private val transport: ApiTransport) {
+    /** `POST /requests/live` */
+    fun live(titles: List<CatalogInput>): Flow<List<RequestsLiveEvent>> =
+        transport.events(
+            "POST",
+            listOf("requests", "live"),
+            emptyList(),
+            transport.json(RequestsLiveInput.serializer(), RequestsLiveInput(titles = titles)),
+            ListSerializer(RequestsLiveEvent.serializer()),
+        )
+
+    /** `POST /requests/ask` */
+    suspend fun ask(
+        ref: CatalogRef,
+        libraryId: String? = null,
+        scope: ShowScope? = null,
+    ): RequestItem =
+        transport.call(
+            "POST",
+            listOf("requests", "ask"),
+            emptyList(),
+            transport.json(RequestsAskInput.serializer(), RequestsAskInput(ref = ref, libraryId = libraryId, scope = scope)),
+            RequestItem.serializer(),
+        )
+
+    /** `POST /requests/add-seasons` */
+    suspend fun addSeasons(id: String, scope: ShowScope): RequestItem =
+        transport.call(
+            "POST",
+            listOf("requests", "add-seasons"),
+            emptyList(),
+            transport.json(RequestsAddSeasonsInput.serializer(), RequestsAddSeasonsInput(id = id, scope = scope)),
+            RequestItem.serializer(),
+        )
+
+    /** `POST /requests/cancel` */
+    suspend fun cancel(requestId: RequestId) {
+        transport.send(
+            "POST",
+            listOf("requests", "cancel"),
+            emptyList(),
+            transport.json(RequestId.serializer(), requestId),
+        )
+    }
+
+    /** `POST /requests/follow` */
+    suspend fun follow(requestId: RequestId) {
+        transport.send(
+            "POST",
+            listOf("requests", "follow"),
+            emptyList(),
+            transport.json(RequestId.serializer(), requestId),
+        )
+    }
+
+    /** `POST /requests/unfollow` */
+    suspend fun unfollow(requestId: RequestId) {
+        transport.send(
+            "POST",
+            listOf("requests", "unfollow"),
+            emptyList(),
+            transport.json(RequestId.serializer(), requestId),
+        )
+    }
+
+    /** `GET /requests/mine` */
+    suspend fun mine(
+        cursor: String? = null,
+        limit: Int? = null,
+        filter: String? = null,
+    ): RequestPage =
+        transport.call(
+            "GET",
+            listOf("requests", "mine"),
+            listOf("cursor" to cursor, "limit" to limit?.toString(), "filter" to filter),
+            null,
+            RequestPage.serializer(),
+        )
+}
+
+class NotificationsApi internal constructor(private val transport: ApiTransport) {
+    /** `GET /notifications` */
+    suspend fun list(cursor: String? = null, limit: Int? = null): NotificationPage =
+        transport.call(
+            "GET",
+            listOf("notifications"),
+            listOf("cursor" to cursor, "limit" to limit?.toString()),
+            null,
+            NotificationPage.serializer(),
+        )
+
+    /** `POST /notifications/read` */
+    suspend fun markRead(ids: List<String>, all: Boolean? = null) {
+        transport.send(
+            "POST",
+            listOf("notifications", "read"),
+            emptyList(),
+            transport.json(NotificationsMarkReadInput.serializer(), NotificationsMarkReadInput(ids = ids, all = all)),
+        )
+    }
+
+    /** `GET /notifications/unread` */
+    fun unreadCount(): Flow<NotificationsUnreadCountEvent> =
+        transport.events(
+            "GET",
+            listOf("notifications", "unread"),
+            emptyList(),
+            null,
+            NotificationsUnreadCountEvent.serializer(),
+        )
+
+    /** `GET /notifications/push-key` */
+    suspend fun pushPublicKey(): NotificationsPushPublicKeyOutput =
+        transport.call(
+            "GET",
+            listOf("notifications", "push-key"),
+            emptyList(),
+            null,
+            NotificationsPushPublicKeyOutput.serializer(),
+        )
+
+    /** `POST /notifications/subscribe` */
+    suspend fun subscribe(pushSubscriptionInput: PushSubscriptionInput) {
+        transport.send(
+            "POST",
+            listOf("notifications", "subscribe"),
+            emptyList(),
+            transport.json(PushSubscriptionInput.serializer(), pushSubscriptionInput),
+        )
+    }
+
+    /** `POST /notifications/unsubscribe` */
+    suspend fun unsubscribe(endpoint: String) {
+        transport.send(
+            "POST",
+            listOf("notifications", "unsubscribe"),
+            emptyList(),
+            transport.json(NotificationsUnsubscribeInput.serializer(), NotificationsUnsubscribeInput(endpoint = endpoint)),
+        )
+    }
 }
 
 class AuthApi internal constructor(private val transport: ApiTransport) {
@@ -223,6 +473,7 @@ class AccountApi internal constructor(private val transport: ApiTransport) {
     val profile = AccountProfileApi(transport)
     val avatar = AccountAvatarApi(transport)
     val playback = AccountPlaybackApi(transport)
+    val library = AccountLibraryApi(transport)
     val passkeys = AccountPasskeysApi(transport)
     val oidc = AccountOidcApi(transport)
     val sessions = AccountSessionsApi(transport)
@@ -277,6 +528,18 @@ class AccountPlaybackApi internal constructor(private val transport: ApiTranspor
             listOf("account", "playback"),
             emptyList(),
             transport.json(PlaybackPreferences.serializer(), playbackPreferences),
+            User.serializer(),
+        )
+}
+
+class AccountLibraryApi internal constructor(private val transport: ApiTransport) {
+    /** `PATCH /account/library` */
+    suspend fun setPreferences(showSpecials: Boolean? = null): User =
+        transport.call(
+            "PATCH",
+            listOf("account", "library"),
+            emptyList(),
+            transport.json(AccountLibrarySetPreferencesInput.serializer(), AccountLibrarySetPreferencesInput(showSpecials = showSpecials)),
             User.serializer(),
         )
 }
@@ -447,41 +710,56 @@ class MetadataApi internal constructor(private val transport: ApiTransport) {
 }
 
 class TitlesApi internal constructor(private val transport: ApiTransport) {
-    /** `GET /libraries/{libraryId}/titles` */
+    /** `POST /libraries/{libraryId}/titles/browse` */
     suspend fun list(
         libraryId: String,
         query: String? = null,
         kind: String? = null,
-        genre: String? = null,
-        studio: String? = null,
+        filters: TitleFilters? = null,
         sort: String? = null,
+        order: String? = null,
         limit: Int? = null,
         offset: Int? = null,
     ): TitleList =
         transport.call(
-            "GET",
-            listOf("libraries", libraryId, "titles"),
-            listOf("query" to query, "kind" to kind, "genre" to genre, "studio" to studio, "sort" to sort, "limit" to limit?.toString(), "offset" to offset?.toString()),
-            null,
+            "POST",
+            listOf("libraries", libraryId, "titles", "browse"),
+            emptyList(),
+            transport.json(TitlesListInput.serializer(), TitlesListInput(query = query, kind = kind, filters = filters, sort = sort, order = order, limit = limit, offset = offset)),
             TitleList.serializer(),
         )
 
-    /** `GET /titles` */
+    /** `POST /titles/browse` */
     suspend fun browse(
         query: String? = null,
         kind: String? = null,
-        genre: String? = null,
-        studio: String? = null,
+        filters: TitleFilters? = null,
         sort: String? = null,
+        order: String? = null,
         limit: Int? = null,
         offset: Int? = null,
     ): BrowsedTitles =
         transport.call(
-            "GET",
-            listOf("titles"),
-            listOf("query" to query, "kind" to kind, "genre" to genre, "studio" to studio, "sort" to sort, "limit" to limit?.toString(), "offset" to offset?.toString()),
-            null,
+            "POST",
+            listOf("titles", "browse"),
+            emptyList(),
+            transport.json(TitlesBrowseInput.serializer(), TitlesBrowseInput(query = query, kind = kind, filters = filters, sort = sort, order = order, limit = limit, offset = offset)),
             BrowsedTitles.serializer(),
+        )
+
+    /** `GET /titles/filter-options` */
+    suspend fun filterOptions(
+        libraryId: String? = null,
+        kind: String? = null,
+        genre: String? = null,
+        studio: String? = null,
+    ): TitleFilterOptions =
+        transport.call(
+            "GET",
+            listOf("titles", "filter-options"),
+            listOf("libraryId" to libraryId, "kind" to kind, "genre" to genre, "studio" to studio),
+            null,
+            TitleFilterOptions.serializer(),
         )
 
     /** `GET /titles/facets` */
@@ -1016,6 +1294,16 @@ class HomeApi internal constructor(private val transport: ApiTransport) {
             ListSerializer(NextUpEntry.serializer()),
         )
 
+    /** `GET /home/next-seasons` */
+    suspend fun nextSeasons(limit: Int? = null): List<NextSeasonEntry> =
+        transport.call(
+            "GET",
+            listOf("home", "next-seasons"),
+            listOf("limit" to limit?.toString()),
+            null,
+            ListSerializer(NextSeasonEntry.serializer()),
+        )
+
     /** `GET /home/featured` */
     suspend fun featured(limit: Int? = null): List<FeaturedTitle> =
         transport.call(
@@ -1142,6 +1430,8 @@ class StatsApi internal constructor(private val transport: ApiTransport) {
 }
 
 class AdminApi internal constructor(private val transport: ApiTransport) {
+    val requests = AdminRequestsApi(transport)
+    val fulfilment = AdminFulfilmentApi(transport)
     val auth = AdminAuthApi(transport)
     val branding = AdminBrandingApi(transport)
     val groups = AdminGroupsApi(transport)
@@ -1161,6 +1451,278 @@ class AdminApi internal constructor(private val transport: ApiTransport) {
             listOf("path" to path),
             null,
             DirectoryListing.serializer(),
+        )
+}
+
+class AdminRequestsApi internal constructor(private val transport: ApiTransport) {
+    /** `GET /admin/requests` */
+    suspend fun queue(cursor: String? = null, limit: Int? = null): RequestQueue =
+        transport.call(
+            "GET",
+            listOf("admin", "requests"),
+            listOf("cursor" to cursor, "limit" to limit?.toString()),
+            null,
+            RequestQueue.serializer(),
+        )
+
+    /** `GET /admin/requests/live` */
+    fun live(cursor: String? = null, limit: Int? = null): Flow<RequestQueue> =
+        transport.events(
+            "GET",
+            listOf("admin", "requests", "live"),
+            listOf("cursor" to cursor, "limit" to limit?.toString()),
+            null,
+            RequestQueue.serializer(),
+        )
+
+    /** `POST /admin/requests/approve` */
+    suspend fun approve(id: String, libraryId: String? = null) {
+        transport.send(
+            "POST",
+            listOf("admin", "requests", "approve"),
+            emptyList(),
+            transport.json(AdminRequestsApproveInput.serializer(), AdminRequestsApproveInput(id = id, libraryId = libraryId)),
+        )
+    }
+
+    /** `POST /admin/requests/approve-all` */
+    suspend fun approveAll(ids: List<String>) {
+        transport.send(
+            "POST",
+            listOf("admin", "requests", "approve-all"),
+            emptyList(),
+            transport.json(AdminRequestsApproveAllInput.serializer(), AdminRequestsApproveAllInput(ids = ids)),
+        )
+    }
+
+    /** `POST /admin/requests/decline` */
+    suspend fun decline(id: String, reason: String, note: String?) {
+        transport.send(
+            "POST",
+            listOf("admin", "requests", "decline"),
+            emptyList(),
+            transport.json(AdminRequestsDeclineInput.serializer(), AdminRequestsDeclineInput(id = id, reason = reason, note = note)),
+        )
+    }
+
+    /** `POST /admin/requests/give-up` */
+    suspend fun giveUp(id: String, note: String?) {
+        transport.send(
+            "POST",
+            listOf("admin", "requests", "give-up"),
+            emptyList(),
+            transport.json(AdminRequestsGiveUpInput.serializer(), AdminRequestsGiveUpInput(id = id, note = note)),
+        )
+    }
+
+    /** `POST /admin/requests/allow-again` */
+    suspend fun allowAgain(requestId: RequestId) {
+        transport.send(
+            "POST",
+            listOf("admin", "requests", "allow-again"),
+            emptyList(),
+            transport.json(RequestId.serializer(), requestId),
+        )
+    }
+
+    /** `POST /admin/requests/add-after-all` */
+    suspend fun addAfterAll(requestId: RequestId) {
+        transport.send(
+            "POST",
+            listOf("admin", "requests", "add-after-all"),
+            emptyList(),
+            transport.json(RequestId.serializer(), requestId),
+        )
+    }
+
+    /** `POST /admin/requests/retry` */
+    suspend fun retry(requestId: RequestId) {
+        transport.send(
+            "POST",
+            listOf("admin", "requests", "retry"),
+            emptyList(),
+            transport.json(RequestId.serializer(), requestId),
+        )
+    }
+}
+
+class AdminFulfilmentApi internal constructor(private val transport: ApiTransport) {
+    /** `GET /admin/fulfilment/sources` */
+    suspend fun sources(): List<FulfilmentSourceDescription> =
+        transport.call(
+            "GET",
+            listOf("admin", "fulfilment", "sources"),
+            emptyList(),
+            null,
+            ListSerializer(FulfilmentSourceDescription.serializer()),
+        )
+
+    /** `GET /admin/fulfilment/connections` */
+    suspend fun connections(): List<FulfilmentConnection> =
+        transport.call(
+            "GET",
+            listOf("admin", "fulfilment", "connections"),
+            emptyList(),
+            null,
+            ListSerializer(FulfilmentConnection.serializer()),
+        )
+
+    /** `POST /admin/fulfilment/connections` */
+    suspend fun create(fulfilmentConnectionInput: FulfilmentConnectionInput): FulfilmentConnection =
+        transport.call(
+            "POST",
+            listOf("admin", "fulfilment", "connections"),
+            emptyList(),
+            transport.json(FulfilmentConnectionInput.serializer(), fulfilmentConnectionInput),
+            FulfilmentConnection.serializer(),
+        )
+
+    /** `PUT /admin/fulfilment/connections/{id}` */
+    suspend fun update(
+        id: String,
+        name: String,
+        slug: String,
+        source: String,
+        settings: Map<String, JsonElement>,
+        options: Map<String, JsonElement>? = null,
+        defaultFor: List<String>? = null,
+        folderLibraries: Map<String, String>? = null,
+        apiKey: Explicit<String>? = null,
+    ): FulfilmentConnection =
+        transport.call(
+            "PUT",
+            listOf("admin", "fulfilment", "connections", id),
+            emptyList(),
+            transport.json(AdminFulfilmentUpdateInput.serializer(), AdminFulfilmentUpdateInput(name = name, slug = slug, source = source, settings = settings, options = options, defaultFor = defaultFor, folderLibraries = folderLibraries, apiKey = apiKey)),
+            FulfilmentConnection.serializer(),
+        )
+
+    /** `DELETE /admin/fulfilment/connections/{id}` */
+    suspend fun remove(id: String) {
+        transport.send(
+            "DELETE",
+            listOf("admin", "fulfilment", "connections", id),
+            emptyList(),
+            null,
+        )
+    }
+
+    /** `POST /admin/fulfilment/test` */
+    suspend fun test(id: String) {
+        transport.send(
+            "POST",
+            listOf("admin", "fulfilment", "test"),
+            emptyList(),
+            transport.json(AdminFulfilmentTestInput.serializer(), AdminFulfilmentTestInput(id = id)),
+        )
+    }
+
+    /** `POST /admin/fulfilment/options` */
+    suspend fun options(
+        source: String,
+        slug: String,
+        settings: Map<String, JsonElement>,
+        id: String? = null,
+        apiKey: String? = null,
+    ): FulfilmentOptions =
+        transport.call(
+            "POST",
+            listOf("admin", "fulfilment", "options"),
+            emptyList(),
+            transport.json(AdminFulfilmentOptionsInput.serializer(), AdminFulfilmentOptionsInput(id = id, source = source, slug = slug, settings = settings, apiKey = apiKey)),
+            FulfilmentOptions.serializer(),
+        )
+
+    /** `GET /admin/fulfilment/landing` */
+    suspend fun landing(kind: String, folder: String): AdminFulfilmentLandingOutput =
+        transport.call(
+            "GET",
+            listOf("admin", "fulfilment", "landing"),
+            listOf("kind" to kind, "folder" to folder),
+            null,
+            AdminFulfilmentLandingOutput.serializer(),
+        )
+
+    /** `GET /admin/fulfilment/connections/{connectionId}/rules` */
+    suspend fun rules(connectionId: String): List<FulfilmentRule> =
+        transport.call(
+            "GET",
+            listOf("admin", "fulfilment", "connections", connectionId, "rules"),
+            emptyList(),
+            null,
+            ListSerializer(FulfilmentRule.serializer()),
+        )
+
+    /** `POST /admin/fulfilment/connections/{connectionId}/rules` */
+    suspend fun createRule(
+        connectionId: String,
+        settings: Map<String, JsonElement>,
+        users: List<String>? = null,
+        genres: List<Int>? = null,
+        languages: List<String>? = null,
+        keywords: List<FulfilmentKeyword>? = null,
+        folderLibraryId: Explicit<String>? = null,
+    ): FulfilmentRule =
+        transport.call(
+            "POST",
+            listOf("admin", "fulfilment", "connections", connectionId, "rules"),
+            emptyList(),
+            transport.json(AdminFulfilmentCreateRuleInput.serializer(), AdminFulfilmentCreateRuleInput(users = users, genres = genres, languages = languages, keywords = keywords, settings = settings, folderLibraryId = folderLibraryId)),
+            FulfilmentRule.serializer(),
+        )
+
+    /** `PUT /admin/fulfilment/rules/{id}` */
+    suspend fun updateRule(
+        id: String,
+        connectionId: String,
+        settings: Map<String, JsonElement>,
+        users: List<String>? = null,
+        genres: List<Int>? = null,
+        languages: List<String>? = null,
+        keywords: List<FulfilmentKeyword>? = null,
+        folderLibraryId: Explicit<String>? = null,
+    ): FulfilmentRule =
+        transport.call(
+            "PUT",
+            listOf("admin", "fulfilment", "rules", id),
+            emptyList(),
+            transport.json(AdminFulfilmentUpdateRuleInput.serializer(), AdminFulfilmentUpdateRuleInput(connectionId = connectionId, users = users, genres = genres, languages = languages, keywords = keywords, settings = settings, folderLibraryId = folderLibraryId)),
+            FulfilmentRule.serializer(),
+        )
+
+    /** `DELETE /admin/fulfilment/rules/{id}` */
+    suspend fun removeRule(id: String) {
+        transport.send("DELETE", listOf("admin", "fulfilment", "rules", id), emptyList(), null)
+    }
+
+    /** `PUT /admin/fulfilment/connections/{connectionId}/rules/order` */
+    suspend fun reorderRules(connectionId: String, ids: List<String>): List<FulfilmentRule> =
+        transport.call(
+            "PUT",
+            listOf("admin", "fulfilment", "connections", connectionId, "rules", "order"),
+            emptyList(),
+            transport.json(AdminFulfilmentReorderRulesInput.serializer(), AdminFulfilmentReorderRulesInput(ids = ids)),
+            ListSerializer(FulfilmentRule.serializer()),
+        )
+
+    /** `GET /admin/fulfilment/rule-choices` */
+    suspend fun ruleChoices(kind: String): FulfilmentRuleChoices =
+        transport.call(
+            "GET",
+            listOf("admin", "fulfilment", "rule-choices"),
+            listOf("kind" to kind),
+            null,
+            FulfilmentRuleChoices.serializer(),
+        )
+
+    /** `GET /admin/fulfilment/keywords` */
+    suspend fun keywords(query: String): List<FulfilmentKeyword> =
+        transport.call(
+            "GET",
+            listOf("admin", "fulfilment", "keywords"),
+            listOf("query" to query),
+            null,
+            ListSerializer(FulfilmentKeyword.serializer()),
         )
 }
 

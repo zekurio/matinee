@@ -23,7 +23,7 @@ export default defineMessages("settings", {
   "settings.section.playback.label": "Playback",
   "settings.section.playback.description": "Languages, quality, and codecs",
   "settings.section.playback.keywords":
-    "Audio language, Subtitles, Captions, Forced subtitles, Language, Quality, Video codec, Audio codec, HEVC, AV1, Opus, Passthrough, Dolby, Surround",
+    "Audio language, Subtitles, Captions, Forced subtitles, Language, Quality, Video codec, Audio codec, HEVC, AV1, Opus, Passthrough, Dolby, Surround, Specials, Season 0",
   "settings.section.libraries.label": "Libraries",
   "settings.section.libraries.description": "Folders Matinee scans for video",
   "settings.section.libraries.keywords":
@@ -36,6 +36,11 @@ export default defineMessages("settings", {
   "settings.section.access.description": "Groups, libraries, and limits",
   "settings.section.access.keywords":
     "Access groups, Groups, Permissions, Libraries, Bit rate, Limit, Bandwidth, Encoding, Transcoding, Downloads, Streams, Devices, Provider groups, Kids",
+  "settings.section.requests.label": "Requests",
+  "settings.section.requests.description":
+    "Connections, and what fills each library",
+  "settings.section.requests.keywords":
+    "Asks, Connections, Radarr, Sonarr, By hand, API key, Fill from, Quality, Save to, Root folder, Quality profile, Anime, Series type",
   "settings.section.authentication.label": "Authentication",
   "settings.section.authentication.description": "Passkeys and single sign-on",
   "settings.section.authentication.keywords":

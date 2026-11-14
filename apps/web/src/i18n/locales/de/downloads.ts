@@ -46,7 +46,6 @@ export default {
   "downloads.estimate": "Etwa {size}",
   "downloads.estimating": "Größe wird berechnet…",
   "downloads.toneMapped": "HDR wird in SDR umgewandelt.",
-  "downloads.cancel": "Abbrechen",
   "downloads.submit": "Herunterladen",
   "downloads.started": "Download gestartet",
   "downloads.started.description":

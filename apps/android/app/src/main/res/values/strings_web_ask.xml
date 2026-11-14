@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Made by scripts/web_strings.py from apps/web/src/i18n/locales/en/ask.ts. Don't edit. -->
+<resources>
+    <string name="web_ask_ask">Request</string>
+    <string name="web_ask_more">Request more</string>
+    <string name="web_ask_notify">Notify me</string>
+    <string name="web_ask_stopNotifying">Stop notifying</string>
+    <string name="web_ask_cancel">Cancel request</string>
+    <string name="web_ask_dialog_title">Request %1$s</string>
+    <string name="web_ask_dialog_goesTo">Goes to</string>
+    <string name="web_ask_chooser_seasons">Seasons</string>
+    <string name="web_ask_chooser_future">New seasons as they air</string>
+    <string name="web_ask_chooser_unavailable">Not offered</string>
+    <string name="web_ask_chooser_none">Pick a season</string>
+    <string name="web_ask_chooser_one">Request season %1$s</string>
+    <plurals name="web_ask_chooser_many">
+        <item quantity="one">Request %1$d season</item>
+        <item quantity="other">Request %1$d seasons</item>
+    </plurals>
+    <string name="web_ask_chooser_specials">Request the specials</string>
+    <string name="web_ask_chooser_newOnly">Request new seasons</string>
+    <string name="web_ask_declined_why">Declined: %1$s.</string>
+    <string name="web_ask_declined_notFound">No copy of this could be found.</string>
+    <string name="web_ask_declined_note">“%1$s”</string>
+    <string name="web_ask_disabled_declined">An admin declined this title, so it can\'t be requested.</string>
+    <string name="web_ask_disabled_declinedAdmin">Declined. To allow requests again, find it under Done in Requests.</string>
+    <string name="web_ask_disabled_off">Your account can\'t request titles.</string>
+    <string name="web_ask_disabled_noDestination">No library here takes this.</string>
+    <string name="web_ask_limit_until">No requests left until %1$s.</string>
+    <string name="web_ask_limit_later">No requests left for now.</string>
+    <plurals name="web_ask_left">
+        <item quantity="one">%1$d request left.</item>
+        <item quantity="other">%1$d requests left.</item>
+    </plurals>
+    <string name="web_ask_reason_alreadyHere">Already have it.</string>
+    <string name="web_ask_reason_notForServer">Not for this server.</string>
+    <string name="web_ask_reason_notFound">No copy found.</string>
+    <string name="web_ask_reason_declined">Declined.</string>
+    <string name="web_ask_toast_asked">Requested %1$s</string>
+    <string name="web_ask_toast_undo">Undo</string>
+    <string name="web_ask_toast_failed">Couldn\'t request %1$s</string>
+    <string name="web_ask_toast_cancelFailed">Couldn\'t cancel %1$s</string>
+    <string name="web_ask_toast_followFailed">Couldn\'t change your notifications</string>
+    <string name="web_ask_mine_title">My requests</string>
+    <string name="web_ask_mine_seeAll">See all</string>
+    <string name="web_ask_mine_inProgress">In progress</string>
+    <string name="web_ask_mine_all">All</string>
+    <string name="web_ask_mine_filter">Show</string>
+    <string name="web_ask_mine_empty">Nothing requested yet</string>
+    <string name="web_ask_mine_emptyHint">Search for a film or show that isn\'t here and request it from its page.</string>
+    <string name="web_ask_mine_emptyInProgress">Nothing on its way</string>
+    <string name="web_ask_mine_error">Couldn\'t load your requests. %1$s</string>
+</resources>

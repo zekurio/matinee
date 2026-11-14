@@ -1,11 +1,11 @@
 package io.github.zekurio.matinee.ui.title
 
-import androidx.compose.foundation.ExperimentalFoundationApi
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -49,11 +50,13 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.ArtworkSize
+import io.github.zekurio.matinee.api.CatalogSeason
 import io.github.zekurio.matinee.api.Credit
 import io.github.zekurio.matinee.api.CreditKind
 import io.github.zekurio.matinee.api.MediaItem
 import io.github.zekurio.matinee.api.Season
 import io.github.zekurio.matinee.api.Title
+import io.github.zekurio.matinee.api.Trailer
 import io.github.zekurio.matinee.api.summary
 import io.github.zekurio.matinee.app
 import io.github.zekurio.matinee.ui.LocalNavigator
@@ -74,6 +77,7 @@ import io.github.zekurio.matinee.ui.components.RailArt
 import io.github.zekurio.matinee.ui.components.SectionTitle
 import io.github.zekurio.matinee.ui.components.WatchedBadge
 import io.github.zekurio.matinee.ui.components.art
+import io.github.zekurio.matinee.ui.components.cardClick
 import io.github.zekurio.matinee.ui.components.isWide
 import io.github.zekurio.matinee.ui.components.landscape
 import io.github.zekurio.matinee.ui.components.launchShowing
@@ -94,10 +98,15 @@ import io.github.zekurio.matinee.ui.kit.LucideIcon
 import io.github.zekurio.matinee.ui.kit.MatineeButton
 import io.github.zekurio.matinee.ui.kit.RoundIconButton
 import io.github.zekurio.matinee.ui.progressRatio
+import io.github.zekurio.matinee.ui.requests.CatalogSeasonCard
+import io.github.zekurio.matinee.ui.requests.RequestSheet
+import io.github.zekurio.matinee.ui.requests.ShowGaps
+import io.github.zekurio.matinee.ui.requests.partialLine
 import io.github.zekurio.matinee.ui.runtimeMinutes
 import io.github.zekurio.matinee.ui.seasonName
 import io.github.zekurio.matinee.ui.theme.Palette
 import io.github.zekurio.matinee.ui.timeLeft
+import java.util.Locale
 
 /** The art across the top of a title's pages, faded into the page under the header. */
 @Composable
@@ -190,8 +199,26 @@ fun Overview(text: String, tagline: String? = null, lines: Int = 3) {
 }
 
 /**
- * Play, then the round watched, favorite, and more buttons, as under a
- * title's or episode's heading. Resume says the time left beside it.
+ * The title's first trailer in the device's language, else the server's
+ * first, on YouTube or whatever opens it, as a round button beside the
+ * row's main action, as the web's Trailer is on a phone. Nothing without
+ * a trailer.
+ */
+@Composable
+fun TrailerButton(trailers: List<Trailer>) {
+    val context = LocalContext.current
+    val language = Locale.getDefault().language
+    val trailer = trailers.firstOrNull { it.language?.substringBefore('-')?.lowercase() == language } ?: trailers.firstOrNull() ?: return
+    RoundIconButton(
+        Lucide.Clapperboard,
+        stringResource(R.string.title_trailer),
+        { runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(trailer.url))) } },
+    )
+}
+
+/**
+ * Play, then Trailer and the round watched, favorite, and more buttons,
+ * as under a title's or episode's heading. Resume says the time left beside it.
  * The tick, as the web's, marks unwatched at once and asks when
  * the person watched [name] before marking it watched. Without
  * [onFavorite], for what can't be a favorite, the heart stays out.
@@ -207,6 +234,7 @@ fun ActionRow(
     onFavorite: (suspend () -> Unit)?,
     /** Opens the page's menu; null when it would be empty. */
     onMore: (() -> Unit)?,
+    trailers: List<Trailer> = emptyList(),
 ) {
     val nav = LocalNavigator.current
     val res = LocalResources.current
@@ -241,6 +269,7 @@ fun ActionRow(
                 )
             }
         }
+        TrailerButton(trailers)
         RoundIconButton(
             Lucide.Check,
             stringResource(if (watched) R.string.media_mark_unwatched else R.string.media_mark_watched),
@@ -341,28 +370,58 @@ fun CastRail(credits: List<Credit>) {
 
 /**
  * A show's seasons by their posters, with how many episodes are left in
- * each. On a season's page, [current] leaves that season out.
+ * each, then the seasons the server lacks, each with its own state and
+ * ask, from [gaps]. On a season's page, [current] leaves that season out.
+ * On the page of a show with one season here, whose episodes are listed
+ * above, [extraOnly] leaves the library's out, and the rail is there only
+ * when the server lacks some.
  */
 @Composable
-fun SeasonsRail(title: Title, current: Season? = null) {
+fun SeasonsRail(title: Title, current: Season? = null, gaps: ShowGaps? = null, extraOnly: Boolean = false) {
     val nav = LocalNavigator.current
-    val seasons = if (current == null) title.seasons else title.seasons.filter { it.number != current.number }
-    if (seasons.isEmpty()) return
-    Rail(stringResource(if (current != null) R.string.title_seasons_more else R.string.title_seasons)) {
+    val seasons = when {
+        extraOnly -> emptyList()
+        current == null -> title.seasons
+        else -> title.seasons.filter { it.number != current.number }
+    }
+    val missing = gaps?.missing.orEmpty()
+    if (seasons.isEmpty() && missing.isEmpty()) return
+    // The request sheet, open with the season whose card was tapped.
+    var requesting by remember { mutableStateOf<Int?>(null) }
+    Rail(stringResource(if (current != null || extraOnly) R.string.title_seasons_more else R.string.title_seasons)) {
         items(seasons, key = { it.number ?: -1 }) { season ->
-            SeasonCard(title, season, Modifier.width(railItemWidth(RailArt.Poster))) { nav.season(title.id, season.number) }
+            SeasonCard(title, season, gaps?.partialOf(season.number), Modifier.width(railItemWidth(RailArt.Poster))) { nav.season(title.id, season.number) }
         }
+        if (gaps != null) {
+            items(missing, key = { "missing-${it.number}" }) { season ->
+                CatalogSeasonCard(
+                    gaps.ref,
+                    title.name,
+                    title.images.poster,
+                    season,
+                    Modifier.width(railItemWidth(RailArt.Poster)),
+                ) { requesting = season.number }
+            }
+        }
+    }
+    val only = requesting
+    if (gaps != null && only != null) {
+        RequestSheet(gaps.ref, title.name, gaps.missing, gaps.first, defaultFuture = false, libraryId = gaps.libraryId, only = only) { requesting = null }
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+/**
+ * A season by its poster, with how many episodes are left or a check. As
+ * on a poster card, a long press offers its tick, its heart, and the rest
+ * of its menu.
+ */
 @Composable
-private fun SeasonCard(title: Title, season: Season, modifier: Modifier, onClick: () -> Unit) {
+private fun SeasonCard(title: Title, season: Season, partial: CatalogSeason?, modifier: Modifier, onClick: () -> Unit) {
     val api = LocalApi.current
     val actions = LocalActions.current
     val res = LocalResources.current
     val left = season.itemCount - season.watchedCount
-    Column(modifier.clip(CardShape).combinedClickable(onLongClick = { actions.season(title.summary, season) }, onClick = onClick)) {
+    Column(modifier.cardClick(onClick, { actions.season(title.summary, season) })) {
         Box {
             PosterArt(
                 stringResource(R.string.title_season_of, title.name, seasonName(season.number, res)),
@@ -378,13 +437,17 @@ private fun SeasonCard(title: Title, season: Season, modifier: Modifier, onClick
                     modifier = Modifier
                         .align(Alignment.TopEnd)
                         .padding(6.dp)
-                        .clip(MaterialTheme.shapes.extraLarge)
+                        .clip(CircleShape)
                         .background(Palette.Accent)
                         .padding(horizontal = 6.dp, vertical = 1.dp),
                 )
             }
         }
-        CardText(seasonName(season.number, res), res.getQuantityString(R.plurals.media_episode_count, season.itemCount, season.itemCount))
+        CardText(
+            seasonName(season.number, res),
+            if (partial != null) partialLine(partial)
+            else res.getQuantityString(R.plurals.media_episode_count, season.itemCount, season.itemCount),
+        )
     }
 }
 

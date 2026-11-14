@@ -2,19 +2,19 @@ import { t } from "@matinee/contracts/schema"
 import { createFileRoute } from "@tanstack/react-router"
 
 import { LibraryPage } from "@/components/library/library-page"
-import type { Sort } from "@/components/library/list-params"
-import { libraryTitlesOptions } from "@/components/library/title-queries"
+import { titleListSearch } from "@/components/library/title-filter-params"
+import {
+  libraryTitlesOptions,
+  preloadInput,
+  titleFilterOptionsQuery,
+} from "@/components/library/title-queries"
 import { reloadOnEnter } from "@/lib/route-loading"
 import { orpc } from "@/lib/rpc"
 
-/** Title is the default sort, so the URL leaves it out. */
+/** A library's search, and its titles' filters and order. */
 const LibrarySearch = t.object({
   q: t.string().min(1).optional().catch(undefined),
-  sort: t.enum(["recent", "year"]).optional().catch(undefined) satisfies t.Type<
-    Sort | undefined
-  >,
-  genre: t.string().min(1).optional().catch(undefined),
-  studio: t.string().min(1).optional().catch(undefined),
+  ...titleListSearch,
 })
 
 export const Route = createFileRoute("/_authed/_shell/libraries/$libraryId")({
@@ -25,12 +25,12 @@ export const Route = createFileRoute("/_authed/_shell/libraries/$libraryId")({
     void queryClient.prefetchQuery(
       orpc.libraries.get.queryOptions({ input: { id: libraryId } }),
     )
-    void queryClient.prefetchInfiniteQuery(
-      libraryTitlesOptions(libraryId, deps),
-    )
-    void queryClient.prefetchQuery(
-      orpc.titles.facets.queryOptions({ input: { libraryId } }),
-    )
+    void queryClient.prefetchQuery(titleFilterOptionsQuery({ libraryId }))
+    const input = preloadInput(deps)
+    if (input)
+      void queryClient.prefetchInfiniteQuery(
+        libraryTitlesOptions(libraryId, input),
+      )
   },
   component: LibraryPage,
 })

@@ -4,6 +4,7 @@ import { ORPCError } from "@orpc/server"
 import { and, asc, count, eq } from "drizzle-orm"
 
 import { libraryFor, titleFor } from "../access/visible"
+import type { SessionUser } from "../auth/session"
 import { db } from "../db"
 import { log } from "../log"
 import { placeholders, saveArtwork, toArtwork } from "../media/artwork"
@@ -11,6 +12,7 @@ import {
   episodeOrder,
   inSeason,
   nextItem,
+  notSpecial,
   publicItems,
   titleArtwork,
   toSummaries,
@@ -24,6 +26,7 @@ import { youTubeUrl } from "../metadata/trailers"
 import { ProviderError } from "../metadata/types"
 import { admin, authed, badRequest, notFound } from "./base"
 import { tagCounts, titleOrder, titleWhere } from "./browse"
+import { filterOptions, ratingLimits } from "./title-filters"
 
 export async function loadRow(id: string): Promise<TitleRow> {
   // ACCESS: This loader is used only by admin metadata and image procedures.
@@ -51,28 +54,34 @@ async function creditsOf(row: TitleRow): Promise<Credit[]> {
  * What Play should start: the file the user is in the middle of, else the
  * first unwatched one after the last they finished, else the first.
  */
-async function toTitle(row: TitleRow, userId: string): Promise<Title> {
-  const [seasons, next, credits, states, art] = await Promise.all([
+async function toTitle(row: TitleRow, viewer: SessionUser): Promise<Title> {
+  const userId = viewer.id
+  const [all, next, credits, states, art] = await Promise.all([
     row.kind === "show"
-      ? seasonsByTitle([row.id], userId).then((all) => all.get(row.id) ?? [])
+      ? seasonsByTitle([row.id], userId).then((by) => by.get(row.id) ?? [])
       : [],
-    nextItem(row, userId),
+    nextItem(row, viewer),
     creditsOf(row),
     viewerStates([row.id], userId),
     placeholders(titleArtwork(row)),
   ])
+  // Hidden specials leave the list, unless they're all the show has.
+  const hidden =
+    !viewer.showSpecials && all.some((season) => season.number !== 0)
+      ? (all.find((season) => season.number === 0) ?? null)
+      : null
+  const seasons = hidden ? all.filter((season) => season !== hidden) : all
   // ACCESS: Count files of the visible title passed to toTitle.
   const [total] = await db
     .select({ n: count() })
     .from(mediaItem)
-    .where(eq(mediaItem.titleId, row.id))
+    .where(and(eq(mediaItem.titleId, row.id), hidden ? notSpecial : undefined))
   return {
     ...toSummary(row, art, states),
     originalName: row.originalName,
     tagline: row.tagline,
     releaseDate: row.releaseDate,
     status: row.status,
-    runtimeMinutes: row.runtimeMinutes,
     path: row.path,
     provider: row.provider,
     providerId: row.providerId,
@@ -87,6 +96,7 @@ async function toTitle(row: TitleRow, userId: string): Promise<Title> {
     })),
     itemCount: total?.n ?? 0,
     seasons,
+    specials: hidden,
     next,
   }
 }
@@ -133,14 +143,15 @@ export const titles = {
     if (!(await libraryFor(context.user, input.libraryId))) {
       throw notFound("Library not found.")
     }
-    const where = titleWhere(context.user, input, input.libraryId)
+    const limits = await ratingLimits(input.filters)
+    const where = titleWhere(context.user, input, limits, input.libraryId)
     // ACCESS: Both queries use titleWhere, which applies the viewer's visibleTitles filter.
     const [rows, [total]] = await Promise.all([
       db
         .select()
         .from(title)
         .where(where)
-        .orderBy(...titleOrder(input.sort))
+        .orderBy(...titleOrder(input.sort, input.order))
         .limit(input.limit)
         .offset(input.offset),
       db.select({ n: count() }).from(title).where(where),
@@ -152,19 +163,20 @@ export const titles = {
   }),
 
   browse: authed.titles.browse.handler(async ({ context, input }) => {
+    const limits = await ratingLimits(input.filters)
     // ACCESS: Both queries use titleWhere, which applies the viewer's visibleTitles filter.
     const [rows, kinds] = await Promise.all([
       db
         .select()
         .from(title)
-        .where(titleWhere(context.user, input))
-        .orderBy(...titleOrder(input.sort))
+        .where(titleWhere(context.user, input, limits))
+        .orderBy(...titleOrder(input.sort, input.order))
         .limit(input.limit)
         .offset(input.offset),
       db
         .select({ kind: title.kind, n: count() })
         .from(title)
-        .where(titleWhere(context.user, { ...input, kind: undefined }))
+        .where(titleWhere(context.user, { ...input, kind: undefined }, limits))
         .groupBy(title.kind),
     ])
     const byKind = new Map(kinds.map((row) => [row.kind, row.n]))
@@ -179,10 +191,23 @@ export const titles = {
     }
   }),
 
+  filterOptions: authed.titles.filterOptions.handler(
+    async ({ context, input }) => {
+      if (
+        input.libraryId &&
+        !(await libraryFor(context.user, input.libraryId))
+      ) {
+        throw notFound("Library not found.")
+      }
+      return filterOptions(context.user, input)
+    },
+  ),
+
   facets: authed.titles.facets.handler(async ({ context, input }) => {
     const where = titleWhere(
       context.user,
       { kind: input.kind },
+      new Map(),
       input.libraryId,
     )
     const [genres, studios] = await Promise.all([
@@ -195,7 +220,7 @@ export const titles = {
   get: authed.titles.get.handler(async ({ context, input }) => {
     const row = await titleFor(context.user, input.id)
     if (!row) throw notFound("This title isn't in any library.")
-    return toTitle(row, context.user.id)
+    return toTitle(row, context.user)
   }),
 
   items: authed.titles.items.handler(async ({ context, input }) => {
@@ -244,7 +269,7 @@ export const titles = {
     await refreshTitleNow(row, lib, { providerId: input.providerId }).catch(
       (cause: unknown) => providerFailure(source.name, cause),
     )
-    return toTitle(await loadRow(input.id), context.user.id)
+    return toTitle(await loadRow(input.id), context.user)
   }),
 
   refresh: admin.titles.refresh.handler(async ({ context, input }) => {
@@ -253,7 +278,7 @@ export const titles = {
     await refreshTitleNow(row, lib).catch((cause: unknown) =>
       providerFailure(source.name, cause),
     )
-    return toTitle(await loadRow(input.id), context.user.id)
+    return toTitle(await loadRow(input.id), context.user)
   }),
 }
 

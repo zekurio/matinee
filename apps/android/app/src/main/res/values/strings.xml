@@ -11,6 +11,7 @@
     <string name="common_and">and</string>
     <string name="calendar_previous_month">Go to the previous month</string>
     <string name="calendar_next_month">Go to the next month</string>
+    <string name="toast_close">Close notification</string>
 
     <!-- Picking a server -->
     <string name="connect_title">Connect to your server</string>
@@ -156,6 +157,7 @@
     <string name="browse_studio">Studio</string>
     <string name="browse_genre_empty">Nothing in this genre</string>
     <string name="browse_studio_empty">Nothing from this studio</string>
+    <string name="browse_no_filter_match">Nothing here matches these filters</string>
     <string name="browse_kind_all">All</string>
     <string name="browse_kind_movie">Movies</string>
     <string name="browse_kind_show">Shows</string>
@@ -182,6 +184,14 @@
     <string name="library_filter">Filter</string>
     <string name="library_genre">Genre</string>
     <string name="library_any_genre">Any genre</string>
+
+    <!-- Browsing all movies or shows with filters, from Discover -->
+    <plurals name="browse_filters_on"><item quantity="one">Filters, %1$d on</item><item quantity="other">Filters, %1$d on</item></plurals>
+    <string name="browse_sort_current">Sort: %1$s</string>
+    <string name="browse_remove_filter">Remove filter %1$s</string>
+    <string name="browse_clear_all">Clear all</string>
+    <string name="browse_clear_filters">Clear filters</string>
+    <string name="browse_find_language">Find a language</string>
 
     <!-- Names and details of files -->
     <string name="media_season">Season %1$d</string>
@@ -250,6 +260,7 @@
     <string name="title_play">Play</string>
     <string name="title_resume">Resume</string>
     <string name="title_more_actions">More actions</string>
+    <string name="title_trailer">Watch the trailer on YouTube</string>
     <string name="title_more">More</string>
     <string name="title_less">Less</string>
     <string name="title_load_error">Couldn\'t load this title</string>
@@ -423,6 +434,9 @@
     <string name="playback_decoders_title">Decoders</string>
     <string name="playback_decoders_hardware">Hardware first</string>
     <string name="playback_decoders_software">Software first</string>
+    <string name="playback_shows_title">Shows</string>
+    <string name="playback_specials_title">Show specials</string>
+    <string name="playback_specials_failed">Couldn\'t change whether specials show</string>
     <string name="playback_skip_title">Skipping</string>
     <string name="playback_skip_back">Skip back</string>
     <string name="playback_skip_forward">Skip forward</string>
@@ -641,4 +655,43 @@
     <string name="tv_settings_sign_out_device_description">It has to sign in again to use Matinee.</string>
     <string name="tv_profile_see_all">See all</string>
     <string name="tv_stats_heatmap_cell">%1$s, %2$s to %3$s</string>
+    <!-- Requests: words the web has in other areas, and the app's own. The
+         rest are the web's, in strings_web_ask, _catalog, _discover,
+         _notifications, and _requests. None says "download". -->
+    <string name="requests_season_not_here">%1$s isn\'t here yet</string>
+    <string name="requests_season_state">%1$s · %2$s</string>
+    <plurals name="requests_rest_more">
+        <item quantity="one">%1$d more episode</item>
+        <item quantity="other">%1$d more episodes</item>
+    </plurals>
+    <string name="requests_rest_ask">Request the rest</string>
+    <string name="requests_rest_name">the rest of %1$s</string>
+    <string name="requests_season_partial">%1$d of %2$d episodes here</string>
+    <plurals name="requests_season_count">
+        <item quantity="one">%1$d season</item>
+        <item quantity="other">%1$d seasons</item>
+    </plurals>
+    <string name="requests_year_kind">%1$s · %2$s</string>
+    <plurals name="requests_span_seconds">
+        <item quantity="one">%1$d second</item>
+        <item quantity="other">%1$d seconds</item>
+    </plurals>
+    <plurals name="requests_span_minutes">
+        <item quantity="one">%1$d minute</item>
+        <item quantity="other">%1$d minutes</item>
+    </plurals>
+    <plurals name="requests_span_hours">
+        <item quantity="one">%1$d hour</item>
+        <item quantity="other">%1$d hours</item>
+    </plurals>
+    <plurals name="requests_span_days">
+        <item quantity="one">%1$d day</item>
+        <item quantity="other">%1$d days</item>
+    </plurals>
+    <string name="requests_channel_description">When something you requested is ready or isn\'t coming, and for admins, requests that wait.</string>
+    <string name="requests_notify_section">Notifications</string>
+    <string name="requests_notify_title">Notifications on this device</string>
+    <string name="requests_notify_description">Get one when something you requested is ready or isn\'t coming, even with Matinee closed. Matinee looks about every 15 minutes.</string>
+    <string name="requests_notify_blocked">Blocked in Android\'s settings. Allow notifications for Matinee there.</string>
+    <string name="requests_notify_open_settings">Open Android\'s settings</string>
 </resources>

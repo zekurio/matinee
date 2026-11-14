@@ -9,6 +9,7 @@
     <string name="common_and">und</string>
     <string name="calendar_previous_month">Zum vorherigen Monat</string>
     <string name="calendar_next_month">Zum nächsten Monat</string>
+    <string name="toast_close">Benachrichtigung schließen</string>
 
     <string name="connect_title">Mit deinem Server verbinden</string>
     <string name="connect_description">Gib die Adresse ein, unter der du Matinee im Browser öffnest.</string>
@@ -143,6 +144,7 @@
     <string name="browse_studio">Studio</string>
     <string name="browse_genre_empty">Nichts in diesem Genre</string>
     <string name="browse_studio_empty">Nichts von diesem Studio</string>
+    <string name="browse_no_filter_match">Hier passt nichts zu diesen Filtern</string>
     <string name="browse_kind_all">Alle</string>
     <string name="browse_kind_movie">Filme</string>
     <string name="browse_kind_show">Serien</string>
@@ -168,6 +170,13 @@
     <string name="library_filter">Filtern</string>
     <string name="library_genre">Genre</string>
     <string name="library_any_genre">Alle Genres</string>
+
+    <plurals name="browse_filters_on"><item quantity="one">Filter, %1$d aktiv</item><item quantity="other">Filter, %1$d aktiv</item></plurals>
+    <string name="browse_sort_current">Sortierung: %1$s</string>
+    <string name="browse_remove_filter">Filter %1$s entfernen</string>
+    <string name="browse_clear_all">Alle entfernen</string>
+    <string name="browse_clear_filters">Filter zurücksetzen</string>
+    <string name="browse_find_language">Sprache suchen</string>
 
     <string name="media_season">Staffel %1$d</string>
     <string name="media_specials">Specials</string>
@@ -233,6 +242,7 @@
     <string name="title_play">Abspielen</string>
     <string name="title_resume">Fortsetzen</string>
     <string name="title_more_actions">Weitere Aktionen</string>
+    <string name="title_trailer">Trailer auf YouTube ansehen</string>
     <string name="title_more">Mehr</string>
     <string name="title_less">Weniger</string>
     <string name="title_load_error">Dieser Titel konnte nicht geladen werden</string>
@@ -399,6 +409,9 @@
     <string name="playback_decoders_title">Decoder</string>
     <string name="playback_decoders_hardware">Hardware zuerst</string>
     <string name="playback_decoders_software">Software zuerst</string>
+    <string name="playback_shows_title">Serien</string>
+    <string name="playback_specials_title">Specials anzeigen</string>
+    <string name="playback_specials_failed">Konnte nicht ändern, ob Specials angezeigt werden</string>
     <string name="playback_skip_title">Springen</string>
     <string name="playback_skip_back">Zurückspringen um</string>
     <string name="playback_skip_forward">Vorspringen um</string>
@@ -612,4 +625,41 @@
     <string name="tv_settings_sign_out_device_description">Das Gerät muss sich erneut anmelden, um Matinee zu nutzen.</string>
     <string name="tv_profile_see_all">Alle ansehen</string>
     <string name="tv_stats_heatmap_cell">%1$s, %2$s bis %3$s</string>
+    <!-- Anfragen: Wörter, die das Web in anderen Bereichen hat, und die der App. -->
+    <string name="requests_season_not_here">%1$s ist noch nicht da</string>
+    <string name="requests_season_state">%1$s · %2$s</string>
+    <plurals name="requests_rest_more">
+        <item quantity="one">%1$d weitere Folge</item>
+        <item quantity="other">%1$d weitere Folgen</item>
+    </plurals>
+    <string name="requests_rest_ask">Den Rest anfragen</string>
+    <string name="requests_rest_name">Rest von %1$s</string>
+    <string name="requests_season_partial">%1$d von %2$d Folgen da</string>
+    <plurals name="requests_season_count">
+        <item quantity="one">%1$d Staffel</item>
+        <item quantity="other">%1$d Staffeln</item>
+    </plurals>
+    <string name="requests_year_kind">%1$s · %2$s</string>
+    <plurals name="requests_span_seconds">
+        <item quantity="one">%1$d Sekunde</item>
+        <item quantity="other">%1$d Sekunden</item>
+    </plurals>
+    <plurals name="requests_span_minutes">
+        <item quantity="one">%1$d Minute</item>
+        <item quantity="other">%1$d Minuten</item>
+    </plurals>
+    <plurals name="requests_span_hours">
+        <item quantity="one">%1$d Stunde</item>
+        <item quantity="other">%1$d Stunden</item>
+    </plurals>
+    <plurals name="requests_span_days">
+        <item quantity="one">%1$d Tag</item>
+        <item quantity="other">%1$d Tage</item>
+    </plurals>
+    <string name="requests_channel_description">Wenn etwas, das du angefragt hast, bereit ist oder nicht kommt, und für Admins, wenn Anfragen warten.</string>
+    <string name="requests_notify_section">Benachrichtigungen</string>
+    <string name="requests_notify_title">Benachrichtigungen auf diesem Gerät</string>
+    <string name="requests_notify_description">Erhalte eine, wenn etwas, das du angefragt hast, bereit ist oder nicht kommt, auch wenn Matinee geschlossen ist. Matinee sieht etwa alle 15 Minuten nach.</string>
+    <string name="requests_notify_blocked">In den Android-Einstellungen blockiert. Erlaube dort Benachrichtigungen für Matinee.</string>
+    <string name="requests_notify_open_settings">Android-Einstellungen öffnen</string>
 </resources>

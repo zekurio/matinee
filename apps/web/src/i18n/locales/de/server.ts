@@ -2,6 +2,117 @@ import type { TranslationOf } from "../../catalog"
 import type source from "../en/server"
 
 export default {
+  "server.catalog.titleNotFound": "Matinee findet diesen Titel nicht.",
+  "server.catalog.lookupDown":
+    "Matinee kann gerade keine Titel nachschlagen. Versuch es in einer Minute noch einmal.",
+  "server.catalog.filterGone":
+    "Einen dieser Filter gibt es nicht mehr. Nimm ihn heraus und versuch es noch einmal.",
+  "server.catalog.filtersRefused":
+    "Der Katalog nimmt diese Filter nicht an. Ändere sie und versuch es noch einmal.",
+  "server.fulfilment.slugConflict":
+    "Eine Verbindung verwendet diesen Slug bereits. Wähle einen anderen Slug.",
+  "server.fulfilment.optionsMissing": "Wähle jede Option der Verbindung.",
+  "server.fulfilment.settingsInvalid":
+    "Prüfe die Einstellungen der Verbindung.",
+  "server.fulfilment.folderLost":
+    "{folder} liegt in keiner Mediathek, die Matinee für diese Art Titel durchsucht. Wähle die Mediathek, in der es landet, oder speichere in einen anderen Ordner.",
+  "server.fulfilment.filmFolder": "Wähle den Ordner, in dem Filme landen.",
+  "server.fulfilment.showFolder": "Wähle den Ordner, in dem Serien landen.",
+  "server.fulfilment.noRules":
+    "Diese Verbindung nimmt keine Überschreibungsregeln.",
+  "server.fulfilment.ruleCondition": "Gib der Regel mindestens eine Bedingung.",
+  "server.fulfilment.ruleSettings":
+    "Wähle jede Einstellung der Regel aus den Angeboten der Verbindung.",
+  "server.fulfilment.ruleSetting":
+    "Wähle mindestens eine Einstellung, die die Regel ändert.",
+  "server.fulfilment.ruleUsers": "Wähle Konten, die es gibt.",
+  "server.fulfilment.ruleMissing": "Regel nicht gefunden.",
+  "server.fulfilment.rulesChanged":
+    "Die Regeln haben sich geändert. Lade sie neu und versuch es noch einmal.",
+  "server.fulfilment.keywordsNeedTmdb":
+    "Schlagwörter kommen von TMDB. Setze zuerst MATINEE_TMDB_API_KEY.",
+  "server.fulfilment.ruleLanguage": "Wähle eine Sprache aus der Liste.",
+  "server.catalog.matchFailed":
+    "Dieser Titel konnte beim Metadatenanbieter der Zielmediathek nicht zugeordnet werden.",
+  "server.requests.missing": "Diese Anfrage ist nicht verfügbar.",
+  "server.requests.seasons": "Wähle Staffeln aus der Liste dieser Serie.",
+  "server.requests.notNow": "Du kannst diesen Titel gerade nicht anfragen.",
+  "server.requests.declined":
+    "Dieser Titel wurde abgelehnt. Anfragen gehen erst wieder, wenn ein Admin sie zulässt.",
+  "server.requests.declineWaiting":
+    "Nur eine wartende Anfrage lässt sich ablehnen. Gib eine angenommene stattdessen auf.",
+  "server.requests.giveUpAccepted":
+    "Nur eine angenommene Anfrage, die noch nicht angekommen ist, lässt sich aufgeben.",
+  "server.requests.notDeclined":
+    "Diese Anfrage ist nicht mehr abgelehnt. Lade die Liste neu.",
+  "server.requests.cancel":
+    "Ziehe deine Anfrage zurück, um diesem Titel nicht mehr zu folgen.",
+  "server.requests.cursor": "Lade diese Liste neu und versuche es erneut.",
+  "server.requests.noConnection":
+    "Wähle eine nutzbare Beschaffungsverbindung für diese Mediathek.",
+  "server.requests.unresolvedTitle":
+    "Die Titelidentität konnte nicht ermittelt werden. Prüfe die Metadatenzuordnung und versuche es erneut.",
+  "server.requests.deliveryFailed":
+    "Die Anfrage konnte nicht gesendet werden. Prüfe die Verbindung und versuche es erneut.",
+  "server.requests.moveTarget":
+    "Wähle eine Mediathek, in die dieser Titel kommen kann.",
+  "server.requests.moveWaiting":
+    "Nur eine wartende Anfrage kann in eine andere Mediathek wechseln.",
+  "server.requests.moveChanged":
+    "Diese Anfrage hat sich geändert. Lade die Liste neu und versuche es erneut.",
+  "server.requests.moveHeld":
+    "{library} hat diese Serie schon, also kommen ihre neuen Staffeln auch dorthin.",
+  "server.requests.moveTaken":
+    "In {library} gibt es schon eine Anfrage für diesen Titel. Lass diese hier, wo sie ist, oder lehne sie ab.",
+  "server.notifications.endpoint":
+    "Verwende einen unterstützten Push-Dienst deines Browsers.",
+  "server.fulfilment.keyFile":
+    "Die Schlüsseldatei der Verbindung kann nicht gelesen werden. Prüfe Pfad und Berechtigungen.",
+  "server.fulfilment.source.manual": "Von Hand",
+  "server.fulfilment.field.baseUrl": "Basis-URL",
+  "server.fulfilment.field.qualityProfile": "Qualitätsprofil",
+  "server.fulfilment.field.rootFolder": "Stammordner",
+  "server.fulfilment.field.tags": "Tags",
+  "server.fulfilment.field.minimumAvailability": "Mindestverfügbarkeit",
+  "server.fulfilment.field.seasonFolders": "Staffelordner",
+  "server.fulfilment.field.monitorNewSeasons": "Neue Staffeln überwachen",
+  "server.fulfilment.field.animeSeriesType": "Serientyp für Anime",
+  "server.fulfilment.field.animeQualityProfile": "Qualitätsprofil für Anime",
+  "server.fulfilment.field.animeRootFolder": "Stammordner für Anime",
+  "server.fulfilment.field.animeTags": "Tags für Anime",
+  "server.fulfilment.field.externalUrl": "Externe URL",
+  "server.fulfilment.field.search": "Automatisch suchen",
+  "server.fulfilment.field.tagRequests": "Anfragen taggen",
+  "server.fulfilment.field.filmsFolder": "Ordner für Filme",
+  "server.fulfilment.field.showsFolder": "Ordner für Serien",
+  "server.fulfilment.availability.announced": "Angekündigt",
+  "server.fulfilment.availability.inCinemas": "Im Kino",
+  "server.fulfilment.availability.released": "Veröffentlicht",
+  "server.fulfilment.field.seriesType": "Serientyp",
+  "server.fulfilment.httpUrl": "Verwende eine HTTP- oder HTTPS-URL.",
+  "server.fulfilment.unknownSource": "Wähle eine verfügbare Bezugsquelle.",
+  "server.fulfilment.keyTwice":
+    "Setze den Verbindungsschlüssel oder seine Datei, nicht beides.",
+  "server.fulfilment.connectionMissing": "Verbindung nicht gefunden.",
+  "server.fulfilment.unreachable":
+    "Die Verbindung ist nicht erreichbar. Prüfe URL und Netzwerkzugriff.",
+  "server.fulfilment.keyRejected":
+    "Die Verbindung hat den API-Schlüssel abgelehnt. Prüfe den gespeicherten Schlüssel oder die Umgebungsvariable.",
+  "server.fulfilment.operationRejected":
+    "Die Verbindung hat den Vorgang abgelehnt. Prüfe Konfiguration und Protokolle.",
+  "server.fulfilment.notRadarr":
+    "Diese URL gehört nicht zu einem Radarr-Server.",
+  "server.fulfilment.notSonarr":
+    "Diese URL gehört nicht zu einem Sonarr-Server.",
+  "server.fulfilment.titleNotFound":
+    "Die Verbindung konnte diesen Titel nicht finden. Prüfe seine externe Kennung.",
+  "server.fulfilment.titleRemoved":
+    "Der Titel wurde aus der Verbindung entfernt. Versuche die Anfrage erneut.",
+  "server.fulfilment.transferFailed":
+    "Eine Übertragung ist fehlgeschlagen. Prüfe die Warteschlange der Verbindung.",
+  "server.fulfilment.seriesType.standard": "Standard",
+  "server.fulfilment.seriesType.daily": "Täglich",
+  "server.fulfilment.seriesType.anime": "Anime",
   "server.downloads.tooManyAudioTracks":
     "Ein Download kann höchstens 16 Audiospuren enthalten.",
   "server.downloads.selectedAudioUnavailable":

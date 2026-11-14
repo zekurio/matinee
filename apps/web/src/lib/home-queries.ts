@@ -12,6 +12,9 @@ export const homeQueries = {
   resume: () =>
     orpc.home.continueWatching.queryOptions({ input: { limit: 12 } }),
   nextUp: () => orpc.home.nextUp.queryOptions({ input: { limit: 12 } }),
+  /** Shows watched to their end whose next season the server lacks. */
+  nextSeasons: () =>
+    orpc.home.nextSeasons.queryOptions({ input: { limit: 12 } }),
   // New and well-rated titles the user hasn't started, plus shows with a
   // new next episode. What the user is watching has its own rows.
   featured: () =>
@@ -29,6 +32,7 @@ export const homeQueries = {
 export function prefetchHome(queryClient: QueryClient) {
   void queryClient.prefetchQuery(homeQueries.resume())
   void queryClient.prefetchQuery(homeQueries.nextUp())
+  void queryClient.prefetchQuery(homeQueries.nextSeasons())
   void queryClient.prefetchQuery(homeQueries.featured())
   void prefetchShelves(queryClient)
 }

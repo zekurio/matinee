@@ -29,6 +29,7 @@ import {
   ClapperboardIcon,
   FilmIcon,
   type LucideIcon,
+  PlusIcon,
   SearchIcon,
   TagIcon,
   TvIcon,
@@ -43,6 +44,14 @@ import { art, present } from "@/lib/media"
 import { orpc } from "@/lib/rpc"
 import { useSearchSpotlightStore } from "@/stores/search-spotlight"
 
+import {
+  catalogParams,
+  catalogSearchOptions,
+  type CatalogSummary,
+  refKey,
+} from "../catalog/catalog-data"
+import { askable } from "../catalog/catalog-search"
+import { cardLine } from "../catalog/words"
 import { creditLabel, PersonPortrait } from "../credits"
 import { Picture, tone } from "../media-item"
 import { UserAvatar } from "../user-avatar"
@@ -57,14 +66,26 @@ import {
 const PER_SECTION = 5
 // What the server sends of each kind, enough to fill every library's share.
 const FETCH_LIMIT = 30
+// How many titles from outside the library it lists, after the library's
+// own, and when the library has none.
+const CATALOG_AFTER = 3
+const CATALOG_ALONE = 5
 
-/** A row in the list: a hit, or the way to every result. */
-type Entry = SearchHit | { kind: "all"; id: "all" }
+/**
+ * A row in the list: a hit, a title no library here has, or the way to
+ * every result.
+ */
+type Entry =
+  | SearchHit
+  | { kind: "catalog"; id: string; item: CatalogSummary }
+  | { kind: "all"; id: "all" }
+
+type GroupKind = SearchSection["kind"] | "catalog"
 
 type Group = {
   key: string
   label: string | null
-  kind: SearchSection["kind"] | null
+  kind: GroupKind | null
   items: Entry[]
 }
 
@@ -75,7 +96,8 @@ const sectionIcons = {
   cast: ClapperboardIcon,
   genres: TagIcon,
   studios: Building2Icon,
-} satisfies Record<SearchSection["kind"], LucideIcon>
+  catalog: PlusIcon,
+} satisfies Record<GroupKind, LucideIcon>
 
 /**
  * Search as a spotlight: a field over the page that lists what matches as
@@ -186,16 +208,43 @@ function SpotlightSearch({
     // empties the list.
     placeholderData: keepPreviousData,
   })
+  // Titles no library here has, which never hold up the library's.
+  const catalog = useQuery({
+    ...catalogSearchOptions(settled),
+    enabled: settled !== "",
+    placeholderData: keepPreviousData,
+  })
   const trimmed = query.trim()
   const sections =
     trimmed !== "" && results.data
       ? searchSections(results.data, libraries.data ?? [], PER_SECTION)
       : []
-  // The sections, then the way to every result, when there's any.
+  const elsewhere =
+    trimmed !== "" && results.data
+      ? askable(catalog.data?.items)
+          .slice(0, sections.length > 0 ? CATALOG_AFTER : CATALOG_ALONE)
+          .map((item): Entry => ({
+            kind: "catalog",
+            id: refKey(item.ref),
+            item,
+          }))
+      : []
+  // The sections, the catalog's titles, then the way to every result,
+  // when there's any.
   const groups: Group[] =
-    sections.length > 0
+    sections.length > 0 || elsewhere.length > 0
       ? [
           ...sections.map((section) => ({ ...section, items: section.hits })),
+          ...(elsewhere.length > 0
+            ? [
+                {
+                  key: "catalog",
+                  label: tr("catalog.notHere"),
+                  kind: "catalog" as const,
+                  items: elsewhere,
+                },
+              ]
+            : []),
           {
             key: "all",
             label: null,
@@ -228,7 +277,11 @@ function SpotlightSearch({
         setQuery(next)
       }}
       itemToStringValue={(entry: Entry) =>
-        entry.kind === "all" ? trimmed : hitName(entry)
+        entry.kind === "all"
+          ? trimmed
+          : entry.kind === "catalog"
+            ? entry.item.name
+            : hitName(entry)
       }
     >
       <search>
@@ -311,7 +364,7 @@ function SpotlightSearch({
             ) : null}
           </AutocompleteStatus>
           <AutocompleteEmpty className="px-4 py-4">
-            {results.data && !pending
+            {results.data && !pending && !catalog.isFetching
               ? tr("search.noMatch", { query: settled })
               : null}
           </AutocompleteEmpty>
@@ -345,7 +398,7 @@ function SpotlightSearch({
   )
 }
 
-function SectionIcon({ kind }: { kind: SearchSection["kind"] }) {
+function SectionIcon({ kind }: { kind: GroupKind }) {
   const Icon = sectionIcons[kind]
   return <Icon aria-hidden />
 }
@@ -370,6 +423,32 @@ function EntryRow({
       >
         <SearchIcon aria-hidden className="mx-2.5" />
         <span className="truncate">{tr("search.everyResult", { query })}</span>
+      </AutocompleteItem>
+    )
+  }
+  if (entry.kind === "catalog") {
+    const { item } = entry
+    return (
+      <AutocompleteItem
+        value={entry}
+        onClick={onOpen}
+        render={
+          <Link
+            to="/catalog/$kind/$provider/$providerId"
+            params={catalogParams(item.ref)}
+          />
+        }
+      >
+        <span
+          aria-hidden
+          className={cn(
+            "relative block aspect-[2/3] w-9 shrink-0 overflow-hidden rounded-sm border",
+            tone(refKey(item.ref)),
+          )}
+        >
+          <Picture sources={present(art(item.poster))} />
+        </span>
+        <RowText name={item.name} detail={cardLine(item, item.availability)} />
       </AutocompleteItem>
     )
   }

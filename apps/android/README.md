@@ -112,6 +112,18 @@ folder as is.
   gestures, which buttons the player shows, passthrough, downloads,
   sessions, and an About page with the last playback report and a
   redacted app log.
+- Requests, on phones. Titles the server doesn't have show under Search's
+  "Not here yet", in the Discover rows under the empty search field, and
+  in Browse movies and Browse shows with the server's filters, which the
+  Popular rows' headings open. Their page carries the state and "Request"
+  on its poster, with a sheet to pick seasons. A library show lists the
+  seasons it lacks. Home and the profile have "My requests". Every state
+  comes from the server's `Availability`, and screens follow
+  `requests.live`, so an approval or an arrival shows up at once. A
+  WorkManager job checks for notifications about every 15 minutes; the
+  open app doesn't show them. Admins get the queue behind the profile's
+  inbox button and Add and Decline on a title's page. Requests settings
+  stay on the web, and a TV shows none of it yet.
 
 Not built yet: Chromecast, a lock screen media session, and season
 downloads.
@@ -188,6 +200,21 @@ doesn't, add it to the kit, drawn the way the web draws it. A kit
 component may wrap the Material one for its behavior, as `Sheet` keeps
 `ModalBottomSheet`'s dragging.
 
+Requests and the filters added these, each after its web counterpart:
+
+- `RangeSlider` in `Slider.kt`, the two-thumb Slider the filters' ranges
+  use, wrapping Material's for the dragging and the steps.
+- `Checkbox`, the web's Checkbox, for the seasons in the request sheet.
+- `ChoiceChip` and `ToggleChip` in `Chips.kt`, the filter panel's small
+  chips: one of a radio group, or each on and off by itself, with a count.
+- `ProgressRing`, the catalog card's ring for how much of a title is in.
+- `Toast` takes an action, as Undo, and a close button, as sonner's
+  toasts have them; `ToastDuration` and `ToastResult` go with
+  `ToastState`.
+- `MatineeButton` takes a `shape`, for half of a split button, and
+  `dimmed`, for a button that looks disabled but still says why on a tap.
+  `ButtonLook.Glass` is white over a dark shade on a picture.
+
 ### Strings and icons
 
 Strings go in `res/values/strings.xml` and `res/values-de/strings.xml`.
@@ -224,12 +251,14 @@ app/src/main/java/io/github/zekurio/matinee/
   launcher/   TV Watch Next publishing
   ui/         Compose screens
   ui/kit/     The web's components and tokens, which screens build from
+  ui/requests/ Requests: catalog pages, requesting, Discover, the admin queue
   ui/tv/      TV screens and shared TV pieces
   ui/player/  Decoders, playback, download tracks, WebVTT, player
 scripts/
   lucide.py       lucide icons to vector drawables
   themes.mjs      Writes ui/theme/ThemePresets.kt from the web palettes
-  web_strings.py  Copies web admin strings into res/values*/strings_web_*.xml
+  web_strings.py  Copies web admin and requests strings into
+                  res/values*/strings_web_*.xml
 ```
 
 ## Status

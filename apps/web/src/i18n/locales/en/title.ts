@@ -97,6 +97,20 @@ export default defineMessages("title", {
   // next-up.tsx
   "title.nextUp.continue": "Continue watching",
   "title.nextUp.next": "Next up",
+  // In Next up's place once the viewer has watched every season here and
+  // the next one isn't on the server.
+  "title.nextUp.notHere": "{season} isn't here yet",
+  "title.nextUp.seasonState": "{season} · {state}",
+
+  // The end of a season's episodes when only some of them are here.
+  "title.rest.more": plural({
+    one: "{count} more episode",
+    other: "{count} more episodes",
+  }),
+  "title.rest.ask": "Request the rest",
+  // Its name in the request's toast, like "Requested the rest of
+  // Firefly: Season 1".
+  "title.rest.name": "the rest of {name}",
 
   // episodes.tsx
   "title.episodes": "Episodes",
@@ -107,6 +121,8 @@ export default defineMessages("title", {
   // seasons-rail.tsx
   "title.seasons": "Seasons",
   "title.seasons.more": "More seasons",
+  // A season only partly on the server.
+  "title.seasons.partial": "{here} of {count} episodes here",
   "title.seasons.left": plural({
     one: "{count} episode left to watch",
     other: "{count} episodes left to watch",

@@ -28,6 +28,13 @@ import type {
 } from "./payloads"
 import { artworkType, seriesStudios } from "./reference"
 
+/** TheTVDB's Anime genre. Its Animation genre takes in Arcane as well. */
+function anime(genres: { name: string; slug?: string }[] | undefined) {
+  return (genres ?? []).some(
+    (genre) => (genre.slug ?? genre.name.toLowerCase()) === "anime",
+  )
+}
+
 /** The YouTube ones, in TVDB's order, as `rankTrailers` orders them. */
 function trailers(list: Trailer[] | null | undefined, language: string) {
   return rankTrailers(
@@ -152,6 +159,7 @@ export async function seriesDetails(id: string, language: string) {
     overview: names.overview ?? text(series.overview),
     tagline: null,
     genres: series.genres?.map((genre) => genre.name) ?? [],
+    anime: anime(series.genres),
     // TVDB's score counts favourites; it isn't a rating.
     rating: null,
     contentRating: contentRating(series.contentRatings, language),
@@ -206,6 +214,7 @@ export async function movieDetails(id: string, language: string) {
     overview: names.overview,
     tagline: text(tagline),
     genres: movie.genres?.map((genre) => genre.name) ?? [],
+    anime: anime(movie.genres),
     rating: null,
     contentRating: contentRating(movie.contentRatings, language),
     releaseDate: isoDate(movie.first_release?.date),

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Made by scripts/web_strings.py from apps/web/src/i18n/locales/de/discover.ts. Don't edit. -->
+<resources>
+    <string name="web_discover_title">Entdecken</string>
+    <string name="web_discover_rail_becauseWatched">Weil du %1$s geschaut hast</string>
+    <string name="web_discover_rail_popularFilms">Beliebte Filme</string>
+    <string name="web_discover_rail_popularShows">Beliebte Serien</string>
+    <string name="web_discover_rail_comingSoon">Demnächst</string>
+    <string name="web_discover_rail_othersAsked">Von anderen angefragt</string>
+    <string name="web_discover_card_release">%1$s · %2$s</string>
+    <string name="web_discover_stale">Einiges davon ist vielleicht nicht aktuell.</string>
+    <string name="web_discover_railFailed">Diese Reihe hat nicht geladen.</string>
+    <plurals name="web_discover_railsFailed">
+        <item quantity="one">%1$d Reihe hat nicht geladen.</item>
+        <item quantity="other">%1$d Reihen haben nicht geladen.</item>
+    </plurals>
+    <string name="web_discover_retry">Erneut versuchen</string>
+    <string name="web_discover_failed">Entdecken geht gerade nicht.</string>
+    <string name="web_discover_failedHint">Der Katalog antwortet nicht. Die Suche geht weiter.</string>
+    <string name="web_discover_empty">Gerade nichts vorzuschlagen</string>
+    <string name="web_discover_emptyHint">Die Suche findet den Rest.</string>
+    <string name="web_discover_off">Entdecken ist hier nicht eingerichtet</string>
+    <string name="web_discover_offHint">Die Suche findet weiter alles in den Mediatheken, die du öffnen kannst.</string>
+    <string name="web_discover_offAdmin">Dafür braucht es einen TMDB-API-Schlüssel und eine Mediathek, in die Anfragen gehen können.</string>
+    <string name="web_discover_gone">Diese Reihe gibt es bei Entdecken nicht mehr</string>
+    <string name="web_discover_back">Zurück zu Entdecken</string>
+    <string name="web_discover_end">Das ist die ganze Liste.</string>
+    <string name="web_discover_moreFailed">Die nächsten Titel haben nicht geladen.</string>
+    <string name="web_discover_browse_movie">Filme durchstöbern</string>
+    <string name="web_discover_browse_show">Serien durchstöbern</string>
+    <string name="web_discover_browse_sort_popular">Beliebt</string>
+    <string name="web_discover_browse_sort_votes">Meiste Stimmen</string>
+    <string name="web_discover_browse_scoreHint">Von TMDB, von 10</string>
+    <string name="web_discover_browse_votes">Stimmen</string>
+    <plurals name="web_discover_browse_chip_votes">
+        <item quantity="one">Mindestens %1$d Stimme</item>
+        <item quantity="other">Mindestens %1$d Stimmen</item>
+    </plurals>
+    <string name="web_discover_browse_votesStep">%1$s+</string>
+    <string name="web_discover_browse_floorScore">Nur Titel mit mindestens %1$s Stimmen, damit nicht eine Handvoll Stimmen die Liste anführt.</string>
+    <string name="web_discover_browse_floorList">Nur Titel mit mindestens %1$s Stimmen, damit die Liste nicht voller Titel ist, die kaum jemand kennt.</string>
+    <string name="web_discover_browse_floorChange">Mindestzahl wählen</string>
+    <string name="web_discover_browse_none_movie">Keine Filme passen zu diesen Filtern</string>
+    <string name="web_discover_browse_none_show">Keine Serien passen zu diesen Filtern</string>
+    <string name="web_discover_browse_nothing">Gerade nichts zu zeigen</string>
+    <string name="web_discover_browse_failed">Diese Titel haben nicht geladen.</string>
+    <string name="web_discover_browse_optionsFailed">Die Filter haben nicht geladen.</string>
+</resources>

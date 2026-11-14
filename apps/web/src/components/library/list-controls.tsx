@@ -1,15 +1,9 @@
-import type { Facet, TitleFacets } from "@matinee/contracts"
 import { Button } from "@matinee/ui/components/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
-  DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@matinee/ui/components/dropdown-menu"
 import { Input } from "@matinee/ui/components/input"
@@ -27,44 +21,42 @@ import {
   SearchIcon,
   XIcon,
 } from "lucide-react"
-import { useEffect, useRef, useState } from "react"
+import {
+  type ComponentProps,
+  type ReactNode,
+  useEffect,
+  useRef,
+  useState,
+} from "react"
 import { flushSync } from "react-dom"
 
 import { chipClass, chipRow } from "@/components/chips"
+import { belowHeader } from "@/components/page-header"
+import { usePhone } from "@/components/sheet-menu"
 import { tr } from "@/i18n"
-import { formatCount } from "@/lib/format"
 
-import type { Sort, SortOption } from "./list-params"
-
-/** Which genre and studio a list is narrowed to, and how to change them. */
-export type FilterState = {
-  genre: string | undefined
-  studio: string | undefined
-  setGenre: (value: string | undefined) => void
-  setStudio: (value: string | undefined) => void
-  clear: () => void
-}
-
-/** Genre and studio filters, with the choices, for lists that have them. */
-export type FilterControls = FilterState & { facets: TitleFacets }
-
-/** Search and sort, given to both layouts. */
+/** Search, sort, and filters, given to both layouts. */
 export type ListControlsProps = {
   search: string
   setSearch: (value: string) => void
   /** The search field's label and placeholder. */
   label: string
-  sorts: SortOption[]
-  sort: Sort
-  setSort: (value: Sort) => void
-  filters?: FilterControls
+  sorts: { value: string; label: string }[]
+  sort: string
+  setSort: (value: string) => void
+  /**
+   * The Filter button and its panel; `compact` is the icon phones have
+   * room for. Only the layout that shows renders it, so one panel opens.
+   */
+  filter?: (compact: boolean) => ReactNode
 }
 
 /** Filter, sort, and search beside the title, from `sm` up. */
 export function HeaderControls(props: ListControlsProps) {
+  const phone = usePhone()
   return (
     <>
-      {props.filters && <FilterMenu {...props.filters} />}
+      {!phone && props.filter?.(false)}
       <SortSelect
         options={props.sorts}
         value={props.sort}
@@ -85,6 +77,7 @@ export function HeaderControls(props: ListControlsProps) {
  * library.
  */
 export function PhoneControls(props: ListControlsProps) {
+  const phone = usePhone()
   return (
     <>
       <PhoneFilter
@@ -92,7 +85,7 @@ export function PhoneControls(props: ListControlsProps) {
         onChange={props.setSearch}
         label={props.label}
       />
-      {props.filters && <FilterMenu {...props.filters} compact />}
+      {phone && props.filter?.(true)}
       <SortMenu
         options={props.sorts}
         value={props.sort}
@@ -102,38 +95,28 @@ export function PhoneControls(props: ListControlsProps) {
   )
 }
 
+/** A filter in use, as its chip names it. */
+export type ActiveFilter = { key: string; label: string; remove: () => void }
+
 /**
- * The filters in use, as chips under the header that take them off again.
- * Nothing when none is on.
+ * Chips for the filters in use, each taking its own off, and "Clear all"
+ * once there are two. Nothing when none is on.
  */
-export function ActiveFilters({
-  genre,
-  studio,
-  setGenre,
-  setStudio,
+export function FilterChips({
+  active,
   clear,
-}: FilterState) {
-  const active: { key: string; label: string; remove: () => void }[] = []
-  if (genre) {
-    active.push({
-      key: "genre",
-      label: genre,
-      remove: () => setGenre(undefined),
-    })
-  }
-  if (studio) {
-    active.push({
-      key: "studio",
-      label: studio,
-      remove: () => setStudio(undefined),
-    })
-  }
+  className,
+}: {
+  active: ActiveFilter[]
+  clear: () => void
+  className?: string
+}) {
   if (active.length === 0) return null
   return (
     <div
       role="group"
       aria-label={tr("library.filters")}
-      className={cn(chipRow, "mb-4")}
+      className={cn(chipRow, belowHeader, className)}
     >
       {active.map((filter) => (
         <button
@@ -157,138 +140,60 @@ export function ActiveFilters({
 }
 
 /**
- * Genre and studio, each a submenu of what the list holds with how many
- * titles have it. `compact` is the icon-only button phones get.
+ * The button that opens a list's filters, with how many are on: "Filter"
+ * and a count from `sm` up, an icon with a dot on phones (`compact`).
+ * Give it as a trigger's `render`, with {@link FilterButtonFace} inside.
  */
-function FilterMenu({
-  facets,
-  genre,
-  studio,
-  setGenre,
-  setStudio,
-  clear,
+export function FilterButton({
   compact = false,
-}: FilterControls & { compact?: boolean }) {
-  const active = (genre ? 1 : 0) + (studio ? 1 : 0)
-  if (facets.genres.length === 0 && facets.studios.length === 0) return null
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        render={
-          compact ? (
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label={
-                active > 0
-                  ? tr("library.filtersOn", { count: active })
-                  : tr("library.filters")
-              }
-              className="data-popup-open:bg-foreground/10 relative [@media(pointer:coarse)]:size-11"
-            />
-          ) : (
-            <Button
-              variant="outline"
-              className="data-popup-open:border-ring h-10 font-normal md:h-9"
-            />
-          )
-        }
-      >
-        <ListFilterIcon className={compact ? "size-5" : undefined} />
-        {!compact && tr("library.filter")}
-        {active > 0 &&
-          (compact ? (
-            <span
-              aria-hidden
-              className="bg-primary absolute top-2 right-2 size-2 rounded-full"
-            />
-          ) : (
-            <span className="bg-foreground text-background rounded-full px-1.5 text-xs leading-5 tabular-nums">
-              {active}
-            </span>
-          ))}
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="min-w-56">
-        <FacetMenu
-          label={tr("library.genre")}
-          any={tr("library.anyGenre")}
-          facets={facets.genres}
-          value={genre}
-          onChange={setGenre}
-        />
-        <FacetMenu
-          label={tr("library.studio")}
-          any={tr("library.anyStudio")}
-          facets={facets.studios}
-          value={studio}
-          onChange={setStudio}
-        />
-        {active > 0 && (
-          <>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={clear}>
-              <XIcon />
-              {tr("library.clearFilters")}
-            </DropdownMenuItem>
-          </>
-        )}
-      </DropdownMenuContent>
-    </DropdownMenu>
+  active,
+  ...props
+}: ComponentProps<typeof Button> & { compact?: boolean; active: number }) {
+  return compact ? (
+    <Button
+      variant="ghost"
+      size="icon"
+      aria-label={
+        active > 0
+          ? tr("library.filtersOn", { count: active })
+          : tr("library.filters")
+      }
+      className="data-popup-open:bg-foreground/10 relative [@media(pointer:coarse)]:size-11"
+      {...props}
+    />
+  ) : (
+    <Button
+      variant="outline"
+      className="data-popup-open:border-ring h-10 font-normal md:h-9"
+      {...props}
+    />
   )
 }
 
-/** One filter as a submenu: "any", then each name with its title count. */
-function FacetMenu({
-  label,
-  any,
-  facets,
-  value,
-  onChange,
+/** What {@link FilterButton} shows: the icon, the word, and the count. */
+export function FilterButtonFace({
+  compact = false,
+  active,
 }: {
-  label: string
-  any: string
-  facets: Facet[]
-  value: string | undefined
-  onChange: (value: string | undefined) => void
+  compact?: boolean
+  active: number
 }) {
-  if (facets.length === 0) return null
   return (
-    <DropdownMenuSub>
-      <DropdownMenuSubTrigger className="[@media(pointer:coarse)]:min-h-11">
-        {label}
-        <span className="text-muted-foreground ml-auto max-w-32 truncate pl-4">
-          {value ?? tr("library.any")}
-        </span>
-      </DropdownMenuSubTrigger>
-      <DropdownMenuSubContent className="max-h-[min(24rem,var(--available-height))] min-w-56">
-        <DropdownMenuRadioGroup
-          value={value ?? ""}
-          onValueChange={(next: string) => onChange(next || undefined)}
-        >
-          <DropdownMenuRadioItem
-            value=""
-            closeOnClick
-            className="[@media(pointer:coarse)]:min-h-11"
-          >
-            {any}
-          </DropdownMenuRadioItem>
-          <DropdownMenuSeparator />
-          {facets.map((facet) => (
-            <DropdownMenuRadioItem
-              key={facet.name}
-              value={facet.name}
-              closeOnClick
-              className="[@media(pointer:coarse)]:min-h-11"
-            >
-              <span className="min-w-0 flex-1 truncate">{facet.name}</span>
-              <span className="text-muted-foreground pl-3 text-xs tabular-nums">
-                {formatCount(facet.titleCount)}
-              </span>
-            </DropdownMenuRadioItem>
-          ))}
-        </DropdownMenuRadioGroup>
-      </DropdownMenuSubContent>
-    </DropdownMenuSub>
+    <>
+      <ListFilterIcon className={compact ? "size-5" : undefined} />
+      {!compact && tr("library.filter")}
+      {active > 0 &&
+        (compact ? (
+          <span
+            aria-hidden
+            className="bg-primary absolute top-2 right-2 size-2 rounded-full"
+          />
+        ) : (
+          <span className="bg-foreground text-background rounded-full px-1.5 text-xs leading-5 tabular-nums">
+            {active}
+          </span>
+        ))}
+    </>
   )
 }
 
@@ -410,14 +315,15 @@ function PhoneFilter({
   )
 }
 
-function SortMenu({
+/** The sort as an icon button with a menu, for phones. */
+export function SortMenu<T extends string>({
   options,
   value,
   onChange,
 }: {
-  options: SortOption[]
-  value: Sort
-  onChange: (value: Sort) => void
+  options: { value: T; label: string }[]
+  value: T
+  onChange: (value: T) => void
 }) {
   const current = options.find((option) => option.value === value)
   return (
@@ -501,14 +407,15 @@ function SearchBox({
   )
 }
 
-function SortSelect({
+/** The sort as a select with "Sort:" before it, from `sm` up. */
+export function SortSelect<T extends string>({
   options,
   value,
   onChange,
 }: {
-  options: SortOption[]
-  value: Sort
-  onChange: (value: Sort) => void
+  options: { value: T; label: string }[]
+  value: T
+  onChange: (value: T) => void
 }) {
   return (
     <Select
