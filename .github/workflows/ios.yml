@@ -7,6 +7,8 @@ on:
       - "apps/ios/**"
       - "brand/ios/**"
       - "brand/logo*.svg"
+      - "brand/mark.svg"
+      - "apps/android/app/src/main/java/io/github/zekurio/matinee/ui/components/Picture.kt"
       - "apps/android/app/src/main/res/values*/**"
       - "apps/android/app/src/main/res/drawable/lucide_*"
       - "apps/android/app/src/main/res/font/**"

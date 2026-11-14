@@ -10,8 +10,9 @@ lib.cleanSourceWith {
     let
       name = baseNameOf path;
     in
-    # The Android app is no part of the server or the web app.
+    # Native apps are no part of the server or the web app.
     path != toString root + "/apps/android"
+    && path != toString root + "/apps/ios"
     # Local state and build output, at every depth of the workspace. The Nix
     # files configure the derivation but aren't inputs to the build, so
     # editing them doesn't rebuild it.
