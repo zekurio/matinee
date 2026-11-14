@@ -1946,13 +1946,14 @@ object TaskId {
     const val REFRESH_METADATA = "refresh-metadata"
     const val PROBE_MEDIA = "probe-media"
     const val PREFETCH_ARTWORK = "prefetch-artwork"
+    const val PREPARE_DISCOVER = "prepare-discover"
     const val PREPARE_SUBTITLES = "prepare-subtitles"
     const val MAKE_TRICKPLAY = "make-trickplay"
     const val CLEAN_TRANSCODES = "clean-transcodes"
     const val CLEAN_SESSIONS = "clean-sessions"
     const val FORGET_BROWSED_PAGES = "forget-browsed-pages"
     const val SYNC_OIDC_ACCOUNTS = "sync-oidc-accounts"
-    val all = listOf(DISPATCH_REQUESTS, POLL_REQUESTS, RECONCILE_REQUESTS, SCAN_LIBRARIES, REFRESH_METADATA, PROBE_MEDIA, PREFETCH_ARTWORK, PREPARE_SUBTITLES, MAKE_TRICKPLAY, CLEAN_TRANSCODES, CLEAN_SESSIONS, FORGET_BROWSED_PAGES, SYNC_OIDC_ACCOUNTS)
+    val all = listOf(DISPATCH_REQUESTS, POLL_REQUESTS, RECONCILE_REQUESTS, SCAN_LIBRARIES, REFRESH_METADATA, PROBE_MEDIA, PREFETCH_ARTWORK, PREPARE_DISCOVER, PREPARE_SUBTITLES, MAKE_TRICKPLAY, CLEAN_TRANSCODES, CLEAN_SESSIONS, FORGET_BROWSED_PAGES, SYNC_OIDC_ACCOUNTS)
 }
 
 object TaskResult {

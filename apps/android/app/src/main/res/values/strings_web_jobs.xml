@@ -83,6 +83,8 @@
     <string name="web_jobs_task_probe_media_description">Run ffprobe on files that weren\'t read yet. Scans queue their new files on their own.</string>
     <string name="web_jobs_task_prefetch_artwork_name">Fetch artwork</string>
     <string name="web_jobs_task_prefetch_artwork_description">Download images the server has no blurred placeholder for yet, posters and backdrops first. Metadata fetches queue their images on their own; this catches up after a restart or a failed download.</string>
+    <string name="web_jobs_task_prepare_discover_name">Prepare Discover</string>
+    <string name="web_jobs_task_prepare_discover_description">Read Discover\'s rows ahead and fetch their posters, so they show their blurred placeholders the first time someone opens Discover.</string>
     <string name="web_jobs_task_make_trickplay_name">Make trickplay images</string>
     <string name="web_jobs_task_make_trickplay_description">Make the seek bar\'s thumbnails for videos without them, or whose file or settings changed, newest first. Scans queue their new files on their own. Also deletes the images of files that are gone.</string>
     <string name="web_jobs_task_clean_transcodes_name">Clean up encodes</string>

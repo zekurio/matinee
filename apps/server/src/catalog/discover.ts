@@ -1,16 +1,22 @@
 import type { CatalogRef, DiscoverRail } from "@matinee/contracts"
 import { t } from "@matinee/contracts/schema"
-import { request, requestFollower } from "@matinee/db"
+import { library, request, requestFollower } from "@matinee/db"
 import { and, desc, eq, exists, ne } from "drizzle-orm"
 
 import type { Viewer } from "../access/viewer"
 import { inLibraries } from "../access/visible"
 import { db } from "../db"
 import { env } from "../env"
-import { placeholders, saveArtwork, toArtwork } from "../media/artwork"
+import {
+  placeholders,
+  queueArtwork,
+  saveArtwork,
+  toArtwork,
+} from "../media/artwork"
 import { availability, ExternalIds } from "../requests/availability"
 import { withCachedDetails } from "../requests/cached-details"
 import { destinations, lookupLanguage } from "../requests/destinations"
+import { loadRouting } from "../requests/fulfilment/connections"
 import { feedProvider } from "./cache"
 
 type Rail = t.infer<typeof DiscoverRail>
@@ -179,6 +185,7 @@ export async function page(
         result.value.items.map((row) => row.poster),
       )
       const art = await placeholders([...saved.values()])
+      queueArtwork([...saved.values()], "low")
       return {
         items: result.value.items.flatMap((row, index) => {
           const state = states[index]?.availability
@@ -224,4 +231,43 @@ function interleave<T>(lists: T[][]): T[] {
       return item === undefined ? [] : [item]
     }),
   ).flat()
+}
+
+/**
+ * Discover's rows read ahead, with their posters fetched, so the first
+ * person to open Discover after a feed changes sees each poster's
+ * placeholder rather than an empty card. The rows are the same for
+ * everyone who reads them in a language, one per language a library that
+ * takes requests uses.
+ */
+export async function prepareDiscover({
+  signal,
+}: { signal?: AbortSignal } = {}): Promise<void> {
+  if (!env.MATINEE_TMDB_API_KEY) return
+  const routing = await loadRouting()
+  // ACCESS: no viewer; only each library's kind and language are read, to
+  // fill the shared feed cache. Pages still filter by what a viewer sees.
+  const rows = await db.select().from(library)
+  for (const kind of ["movie", "show"] as const) {
+    const reached = routing.reached(kind)
+    const languages = new Set(
+      rows
+        .filter(
+          (row) =>
+            reached.has(row.id) &&
+            (row.kind === "movies") === (kind === "movie"),
+        )
+        .map((row) => row.metadataLanguage),
+    )
+    for (const language of languages) {
+      for (const operation of ["popular", "soon"] as const) {
+        if (signal?.aborted) return
+        const result = await feedProvider(kind, language, operation, 1)
+        const saved = await saveArtwork(
+          result.value.items.map((row) => row.poster),
+        )
+        queueArtwork([...saved.values()], "low")
+      }
+    }
+  }
 }

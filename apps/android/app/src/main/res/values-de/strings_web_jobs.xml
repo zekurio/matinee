@@ -83,6 +83,8 @@
     <string name="web_jobs_task_probe_media_description">Führt ffprobe für Dateien aus, die noch nicht gelesen wurden. Scans reihen ihre neuen Dateien selbst ein.</string>
     <string name="web_jobs_task_prefetch_artwork_name">Artwork abrufen</string>
     <string name="web_jobs_task_prefetch_artwork_description">Lädt Bilder herunter, für die der Server noch keinen unscharfen Platzhalter hat, Poster und Hintergründe zuerst. Metadatenabrufe reihen ihre Bilder selbst ein; diese Aufgabe holt nach einem Neustart oder einem fehlgeschlagenen Download auf.</string>
+    <string name="web_jobs_task_prepare_discover_name">Entdecken vorbereiten</string>
+    <string name="web_jobs_task_prepare_discover_description">Liest die Reihen von Entdecken vorab und holt ihre Poster, damit sie schon beim ersten Öffnen ihre unscharfen Platzhalter zeigen.</string>
     <string name="web_jobs_task_make_trickplay_name">Trickplay-Bilder erstellen</string>
     <string name="web_jobs_task_make_trickplay_description">Erstellt die Vorschaubilder der Zeitleiste für Videos, die keine haben oder deren Datei oder Einstellungen sich geändert haben, neueste zuerst. Scans reihen ihre neuen Dateien selbst ein. Löscht auch die Bilder von Dateien, die nicht mehr da sind.</string>
     <string name="web_jobs_task_clean_transcodes_name">Transkodierungen aufräumen</string>

@@ -119,6 +119,9 @@ export default defineMessages("jobs", {
   "jobs.task.prefetch-artwork.name": "Fetch artwork",
   "jobs.task.prefetch-artwork.description":
     "Download images the server has no blurred placeholder for yet, posters and backdrops first. Metadata fetches queue their images on their own; this catches up after a restart or a failed download.",
+  "jobs.task.prepare-discover.name": "Prepare Discover",
+  "jobs.task.prepare-discover.description":
+    "Read Discover's rows ahead and fetch their posters, so they show their blurred placeholders the first time someone opens Discover.",
   "jobs.task.make-trickplay.name": "Make trickplay images",
   "jobs.task.make-trickplay.description":
     "Make the seek bar's thumbnails for videos without them, or whose file or settings changed, newest first. Scans queue their new files on their own. Also deletes the images of files that are gone.",

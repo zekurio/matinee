@@ -116,6 +116,9 @@ export default {
   "jobs.task.prefetch-artwork.name": "Artwork abrufen",
   "jobs.task.prefetch-artwork.description":
     "Lädt Bilder herunter, für die der Server noch keinen unscharfen Platzhalter hat, Poster und Hintergründe zuerst. Metadatenabrufe reihen ihre Bilder selbst ein; diese Aufgabe holt nach einem Neustart oder einem fehlgeschlagenen Download auf.",
+  "jobs.task.prepare-discover.name": "Entdecken vorbereiten",
+  "jobs.task.prepare-discover.description":
+    "Liest die Reihen von Entdecken vorab und holt ihre Poster, damit sie schon beim ersten Öffnen ihre unscharfen Platzhalter zeigen.",
   "jobs.task.make-trickplay.name": "Trickplay-Bilder erstellen",
   "jobs.task.make-trickplay.description":
     "Erstellt die Vorschaubilder der Zeitleiste für Videos, die keine haben oder deren Datei oder Einstellungen sich geändert haben, neueste zuerst. Scans reihen ihre neuen Dateien selbst ein. Löscht auch die Bilder von Dateien, die nicht mehr da sind.",

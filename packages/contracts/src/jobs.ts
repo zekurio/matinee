@@ -85,6 +85,7 @@ export const TASK_IDS = [
   "refresh-metadata",
   "probe-media",
   "prefetch-artwork",
+  "prepare-discover",
   "prepare-subtitles",
   "make-trickplay",
   "clean-transcodes",

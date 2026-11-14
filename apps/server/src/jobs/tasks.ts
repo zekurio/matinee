@@ -3,7 +3,8 @@ import { sql } from "drizzle-orm"
 
 import { syncOidcAccounts } from "../auth/oidc-refresh"
 import { deleteExpiredSessions } from "../auth/session"
-import { forgetBrowsedPages } from "../catalog/cache"
+import { CACHE_HOURS, forgetBrowsedPages } from "../catalog/cache"
+import { prepareDiscover } from "../catalog/discover"
 import { db } from "../db"
 import { env } from "../env"
 import { scans } from "../library/scanner"
@@ -86,6 +87,18 @@ const probeMedia: TaskDefinition = {
   startupDelayMs: 0,
   intervalMs: 24 * HOUR_MS,
   run: ({ signal }) => probeMissing({ signal }),
+}
+
+const readDiscover: TaskDefinition = {
+  id: "prepare-discover",
+  name: "Prepare Discover",
+  description:
+    "Read Discover's rows ahead and fetch their posters, so they show their blurred placeholders the first time someone opens Discover.",
+  queue: "artwork",
+  startupDelayMs: 2 * MINUTE_MS,
+  // As long as a feed stays cached.
+  intervalMs: CACHE_HOURS.feed * HOUR_MS,
+  run: ({ signal }) => prepareDiscover({ signal }),
 }
 
 const fetchArtwork: TaskDefinition = {
@@ -206,6 +219,7 @@ export const TASKS: TaskDefinition[] = [
   refreshStale,
   probeMedia,
   fetchArtwork,
+  readDiscover,
   prepareSubtitles,
   makeTrickplay,
   cleanTranscodes,

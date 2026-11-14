@@ -6,7 +6,12 @@ import { and, inArray } from "drizzle-orm"
 import type { Viewer } from "../access/viewer"
 import { visibleTitles } from "../access/visible"
 import { db } from "../db"
-import { placeholders, saveArtwork, toArtwork } from "../media/artwork"
+import {
+  placeholders,
+  queueArtwork,
+  saveArtwork,
+  toArtwork,
+} from "../media/artwork"
 import { toSummaries } from "../media/items"
 import { availability } from "../requests/availability"
 import { withCachedDetails } from "../requests/cached-details"
@@ -58,6 +63,7 @@ export async function catalogCards<R extends Row>(
     : []
   const saved = await saveArtwork(rows.map((row) => row.poster))
   const art = await placeholders([...saved.values()])
+  queueArtwork([...saved.values()], "low")
   return rows.flatMap((row, index) => {
     const state = states[index]?.availability
     const ref = refs[index]?.ref

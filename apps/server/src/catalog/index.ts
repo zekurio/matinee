@@ -8,7 +8,12 @@ import { ORPCError } from "@orpc/server"
 
 import type { Viewer } from "../access/viewer"
 import { libraryFor, titleFor } from "../access/visible"
-import { placeholders, saveArtwork, toArtwork } from "../media/artwork"
+import {
+  placeholders,
+  queueArtwork,
+  saveArtwork,
+  toArtwork,
+} from "../media/artwork"
 import { youTubeUrl } from "../metadata/trailers"
 import { availability } from "../requests/availability"
 import { withCachedDetails } from "../requests/cached-details"
@@ -26,6 +31,9 @@ import { detailProvider, lookupProvider, searchProvider } from "./cache"
 async function artwork(urls: (string | null)[]) {
   const saved = await saveArtwork(urls)
   const art = await placeholders([...saved.values()])
+  // A poster gets its placeholder when it's first fetched, so fetch the
+  // ones still lacking it now, for the next list that shows them.
+  queueArtwork([...saved.values()], "low")
   return (url: string | null) =>
     toArtwork(url ? (saved.get(url) ?? null) : null, art)
 }
