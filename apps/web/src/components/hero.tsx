@@ -49,7 +49,7 @@ const ratings = perLocale(
  * `sm` up) gets exactly the screen. Full bleed, like `pageBleed`: it breaks
  * out of the page column to the window edges and up under the floating
  * bar. Negative margins rather than a -50% translate: the translate lands
- * on a half pixel at odd window widths, and the zooming backdrop then shows
+ * on a half pixel at odd window widths, and the backdrop then shows
  * past the shading at the edge.
  */
 export const heroFrame =
@@ -88,28 +88,19 @@ function Backdrop({
     <div
       aria-hidden
       className={cn(
-        // Short of the bottom edge by a pixel, and clipped there through the
-        // push-in: a banner of fractional height antialiases that edge, and
-        // the art showed through the fade there as a thin line.
+        // Short of the bottom edge by a pixel: a banner of fractional
+        // height antialiases that edge, and the art showed through the fade
+        // there as a thin line.
         "absolute inset-x-0 top-0 bottom-px overflow-hidden transition-opacity duration-700 motion-reduce:transition-none",
         active ? "opacity-100" : "opacity-0",
         tone(label.showKey),
       )}
     >
-      {/* A slow push-in while the slide shows. The reset waits until the
-          fade-out ends, so it never jumps on screen. */}
-      <div
-        className={cn(
-          "absolute inset-0 transition-transform motion-reduce:transition-none",
-          active
-            ? "motion-safe:scale-[1.06] motion-safe:duration-[10000ms] motion-safe:ease-out"
-            : "scale-100 delay-700 duration-0",
-        )}
-      >
-        {primed && (
-          <Picture sources={sources} eager={active} className="object-top" />
-        )}
-      </div>
+      {/* At its own size, as the title's page shows it, so Details opens
+          on the same picture. */}
+      {primed && (
+        <Picture sources={sources} eager={active} className="object-top" />
+      )}
     </div>
   )
 }

@@ -216,8 +216,9 @@ export function HeaderBackdrop({
           </div>
         )
       )}
-      <div className="from-background/95 via-background/50 absolute inset-0 bg-gradient-to-r to-transparent" />
-      <div className="from-background via-background/70 absolute inset-0 bg-gradient-to-t via-40% to-transparent" />
+      {/* Shaded as Home's banner is, so Details opens on the same picture. */}
+      <div className="from-background/95 via-background/60 absolute inset-0 bg-gradient-to-r to-transparent" />
+      <div className="from-background via-background/40 absolute inset-0 bg-gradient-to-t via-35% to-transparent" />
     </div>
   )
 }
