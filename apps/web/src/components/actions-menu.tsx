@@ -213,15 +213,17 @@ const rowButton =
 
 /**
  * The trigger's button, for `render`. An element, not a component: the
- * trigger hands it the icon, its handlers, and its state as props. `props`
- * go on it as well, as the bare button's before the menu mounts.
+ * trigger hands it its handlers and state as props. `props` go on it as
+ * well, as the bare button's before the menu mounts. The icon goes in it
+ * here, since the element's own props win over the trigger's, children
+ * too, even when undefined.
  */
 function triggerButton(
   look: MenuLook,
   label: string,
   className: string | undefined,
+  icon: ReactNode,
   props?: ComponentProps<typeof Button>,
-  icon?: ReactNode,
 ): ReactElement {
   switch (look) {
     case "card":
@@ -348,15 +350,14 @@ function DeferredActionsMenu({
     <EllipsisIcon className={plan.look === "card" ? "size-5" : undefined} />
   )
   if (!deferred.mounted) {
-    return triggerButton(plan.look, label, className, deferred.bare, icon)
+    return triggerButton(plan.look, label, className, icon, deferred.bare)
   }
   return (
     <MountedActionsMenu
       {...plan}
-      trigger={triggerButton(plan.look, label, className, {
+      trigger={triggerButton(plan.look, label, className, icon, {
         ref: deferred.focusRef,
       })}
-      icon={icon}
       defaultOpen={deferred.defaultOpen}
     />
   )
@@ -376,11 +377,9 @@ function MountedActionsMenu({
   look,
   children,
   trigger,
-  icon,
   defaultOpen,
 }: MenuPlan & {
   trigger: ReactElement
-  icon: ReactNode
   defaultOpen: boolean
 }) {
   const owner = scope.title
@@ -458,7 +457,7 @@ function MountedActionsMenu({
   return (
     <>
       <DropdownMenu defaultOpen={defaultOpen}>
-        <DropdownMenuTrigger render={trigger}>{icon}</DropdownMenuTrigger>
+        <DropdownMenuTrigger render={trigger} />
         <DropdownMenuContent
           align={look === "page" ? "start" : "end"}
           sideOffset={look === "page" ? 6 : 4}
