@@ -331,6 +331,21 @@
 
     <!-- People -->
     <string name="person_load_failed">Couldn\'t load this person</string>
+    <string name="person_born">Born %1$s</string>
+    <string name="person_died">Died %1$s</string>
+    <string name="person_department_acting">Acting</string>
+    <string name="person_department_directing">Directing</string>
+    <string name="person_department_writing">Writing</string>
+    <string name="person_department_creator">Creating</string>
+    <string name="person_department_production">Production</string>
+    <string name="person_department_editing">Editing</string>
+    <string name="person_department_camera">Camera</string>
+    <string name="person_department_sound">Sound</string>
+    <string name="person_department_art">Art</string>
+    <string name="person_department_costume">Costume &amp; Make-Up</string>
+    <string name="person_department_visualEffects">Visual Effects</string>
+    <string name="person_department_lighting">Lighting</string>
+    <string name="person_department_crew">Crew</string>
     <plurals name="people_credit_creator">
         <item quantity="one">Creator</item>
         <item quantity="other">Creators</item>

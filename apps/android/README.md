@@ -113,11 +113,12 @@ folder as is.
   sessions, and an About page with the last playback report and a
   redacted app log.
 - Requests, on phones. Titles the server doesn't have show under Search's
-  "Not here yet", in the Discover rows under the empty search field, and
-  in Browse movies and Browse shows with the server's filters, which the
-  Popular rows' headings open. Their page carries the state and "Request"
-  on its poster, with a sheet to pick seasons. A library show lists the
-  seasons it lacks. Home and the profile have "My requests". Every state
+  "Not here yet", in the Discover rows under the empty search field, in
+  Browse movies and Browse shows with the server's filters, which the
+  Popular rows' headings open, and on a person's page under their library
+  titles. Their page carries the state and "Request" on its poster, with
+  a sheet to pick seasons. A library show lists the seasons it lacks.
+  Home and the profile have "My requests". Every state
   comes from the server's `Availability`, and screens follow
   `requests.live`, so an approval or an arrival shows up at once. A
   WorkManager job checks for notifications about every 15 minutes; the
