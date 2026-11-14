@@ -44,20 +44,15 @@ function feedItems(rows: t.infer<typeof Result>[]) {
 export async function feed(
   kind: CatalogRef["kind"],
   language: string,
-  operation: "popular" | "soon" | "recommendations",
+  operation: "popular" | "soon",
   page: number,
-  seed?: string,
 ) {
   const type = kind === "movie" ? "movie" : "tv"
   const today = new Date().toISOString().slice(0, 10)
   const until = new Date(Date.now() + 90 * 86400000).toISOString().slice(0, 10)
   const date = kind === "movie" ? "primary_release_date" : "first_air_date"
   const path =
-    operation === "recommendations"
-      ? `/${type}/${encodeURIComponent(seed ?? "")}/recommendations`
-      : operation === "popular"
-        ? `/trending/${type}/week`
-        : `/discover/${type}`
+    operation === "popular" ? `/trending/${type}/week` : `/discover/${type}`
   const params = new Map<string, string | number>([
     ["language", language],
     ["page", page],

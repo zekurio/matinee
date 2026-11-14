@@ -1,18 +1,10 @@
-import { CatalogPage, CatalogRef, RelatedTitle } from "./catalog"
+import { CatalogPage, RelatedTitle } from "./catalog"
 import { get, post } from "./contract-routes"
 import { t } from "./schema"
 import { TitleKind } from "./schemas"
 
 export const DiscoverRail = t.object({
-  id: t.enum([
-    "becauseWatched",
-    "popularFilms",
-    "popularShows",
-    "comingSoon",
-    "othersAsked",
-  ]),
-  seed: CatalogRef.nullable(),
-  seedName: t.string().nullable(),
+  id: t.enum(["popularFilms", "popularShows", "comingSoon", "othersAsked"]),
 })
 
 export const DiscoverRails = t.object({

@@ -2,7 +2,6 @@
 <!-- Made by scripts/web_strings.py from apps/web/src/i18n/locales/de/discover.ts. Don't edit. -->
 <resources>
     <string name="web_discover_title">Entdecken</string>
-    <string name="web_discover_rail_becauseWatched">Weil du %1$s geschaut hast</string>
     <string name="web_discover_rail_popularFilms">Beliebte Filme</string>
     <string name="web_discover_rail_popularShows">Beliebte Serien</string>
     <string name="web_discover_rail_comingSoon">Demnächst</string>

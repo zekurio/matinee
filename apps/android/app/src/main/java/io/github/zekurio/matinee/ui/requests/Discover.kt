@@ -72,9 +72,8 @@ import kotlinx.coroutines.launch
 /** How many cards a row shows. Its heading leads to the rest. */
 private const val RAIL_CARDS = 20
 
-/** "Because you watched Dune", "Popular movies". */
+/** "Popular movies". */
 fun railName(rail: DiscoverRail, res: Resources): String = when (rail.id) {
-    "becauseWatched" -> res.getString(R.string.web_discover_rail_becauseWatched, rail.seedName.orEmpty())
     "popularFilms" -> res.getString(R.string.web_discover_rail_popularFilms)
     "popularShows" -> res.getString(R.string.web_discover_rail_popularShows)
     "comingSoon" -> res.getString(R.string.web_discover_rail_comingSoon)
@@ -107,7 +106,7 @@ fun LazyListScope.discoverRails(rails: List<DiscoverRail>, pages: Map<String, Lo
 /** The first page of each of [rails], kept while the search tab is. */
 @Composable
 fun rememberRailPages(rails: List<DiscoverRail>): Map<String, Loader<CatalogPage>> =
-    rails.associate { rail -> rail.id to rememberLoader("discover-${rail.id}-${rail.seed?.key}") { discover.page(rail, 1) } }
+    rails.associate { rail -> rail.id to rememberLoader("discover-${rail.id}") { discover.page(rail, 1) } }
 
 /** Follows the titles the rows show, once each, under the stream's hundred. */
 @Composable

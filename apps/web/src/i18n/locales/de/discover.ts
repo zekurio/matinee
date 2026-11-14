@@ -4,7 +4,6 @@ import type source from "../en/discover"
 export default {
   "discover.title": "Entdecken",
 
-  "discover.rail.becauseWatched": "Weil du {title} geschaut hast",
   "discover.rail.popularFilms": "Beliebte Filme",
   "discover.rail.popularShows": "Beliebte Serien",
   "discover.rail.comingSoon": "Demnächst",

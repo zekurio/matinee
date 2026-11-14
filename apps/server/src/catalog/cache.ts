@@ -198,27 +198,17 @@ export function detailProvider(ref: CatalogRef, language: string) {
 export function feedProvider(
   kind: CatalogRef["kind"],
   language: string,
-  operation: "popular" | "soon" | "recommendations",
+  operation: "popular" | "soon",
   page: number,
-  seed?: string,
 ) {
   // Date windows change at midnight, even while a previous page is still fresh.
   const day =
     operation === "soon" ? new Date().toISOString().slice(0, 10) : null
   return cached(
-    JSON.stringify([
-      "tmdb",
-      language,
-      "feed",
-      kind,
-      operation,
-      page,
-      seed,
-      day,
-    ]),
+    JSON.stringify(["tmdb", language, "feed", kind, operation, page, day]),
     CACHE_HOURS.feed,
     (body) => FeedPage.parse(body),
-    () => feed(kind, language, operation, page, seed),
+    () => feed(kind, language, operation, page),
   )
 }
 

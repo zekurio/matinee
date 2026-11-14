@@ -410,8 +410,6 @@ data class RequestQueue(
 @Serializable
 data class DiscoverRail(
     val id: String,
-    val seed: CatalogRef?,
-    val seedName: String?,
 )
 
 @Serializable

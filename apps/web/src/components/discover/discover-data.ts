@@ -53,11 +53,9 @@ export function railGridOptions(queryClient: QueryClient, rail: Rail) {
   })
 }
 
-/** "Because you watched Dune", "Popular movies". */
+/** "Popular movies". */
 export function railName(rail: Rail): string {
-  return rail.id === "becauseWatched"
-    ? tr("discover.rail.becauseWatched", { title: rail.seedName ?? "" })
-    : tr(`discover.rail.${rail.id}`)
+  return tr(`discover.rail.${rail.id}`)
 }
 
 /**
@@ -65,7 +63,6 @@ export function railName(rail: Rail): string {
  * have none: their headings open browsing that kind.
  */
 const slugs = {
-  becauseWatched: "because-you-watched",
   comingSoon: "coming-soon",
   othersAsked: "others-asked",
 } satisfies Partial<Record<RailId, string>>

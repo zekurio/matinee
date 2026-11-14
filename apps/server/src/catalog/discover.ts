@@ -1,16 +1,10 @@
 import type { CatalogRef, DiscoverRail } from "@matinee/contracts"
 import { t } from "@matinee/contracts/schema"
-import {
-  mediaItem,
-  request,
-  requestFollower,
-  title,
-  watchProgress,
-} from "@matinee/db"
-import { and, desc, eq, exists, ne, sql } from "drizzle-orm"
+import { request, requestFollower } from "@matinee/db"
+import { and, desc, eq, exists, ne } from "drizzle-orm"
 
 import type { Viewer } from "../access/viewer"
-import { inLibraries, visibleItems, visibleTitles } from "../access/visible"
+import { inLibraries } from "../access/visible"
 import { db } from "../db"
 import { env } from "../env"
 import { placeholders, saveArtwork, toArtwork } from "../media/artwork"
@@ -50,29 +44,6 @@ async function others(viewer: Viewer) {
     .orderBy(desc(request.createdAt), desc(request.id))
 }
 
-async function seed(viewer: Viewer, kinds: CatalogRef["kind"][]) {
-  const rows = await db
-    .select({ title })
-    .from(watchProgress)
-    .innerJoin(mediaItem, eq(mediaItem.id, watchProgress.mediaItemId))
-    .innerJoin(title, eq(title.id, mediaItem.titleId))
-    .where(
-      and(
-        eq(watchProgress.userId, viewer.id),
-        visibleTitles(viewer),
-        visibleItems(viewer),
-        sql`${title.externalIds} ? 'tmdb'`,
-      ),
-    )
-    .orderBy(desc(watchProgress.updatedAt))
-  return rows
-    .map((row) => ({
-      ...row.title,
-      ids: ExternalIds.parse(row.title.externalIds),
-    }))
-    .find((row) => kinds.includes(row.kind) && row.ids.tmdb)
-}
-
 export async function rails(viewer: Viewer) {
   const [movies, shows] = await Promise.all([
     destinations(viewer, "movie"),
@@ -84,24 +55,13 @@ export async function rails(viewer: Viewer) {
   const kinds: CatalogRef["kind"][] = []
   if (movies.length) kinds.push("movie")
   if (shows.length) kinds.push("show")
-  const watched = await seed(viewer, kinds)
   const result: Rail[] = []
-  if (watched?.ids.tmdb)
-    result.push({
-      id: "becauseWatched",
-      seed: {
-        kind: watched.kind,
-        provider: "tmdb",
-        providerId: watched.ids.tmdb,
-      },
-      seedName: watched.name,
-    })
   const popular: Rail["id"][] = []
   if (movies.length) popular.push("popularFilms")
   if (shows.length) popular.push("popularShows")
   popular.push("comingSoon")
   for (const id of popular) {
-    result.push({ id, seed: null, seedName: null })
+    result.push({ id })
   }
   const asked = await others(viewer)
   const states = await availability(
@@ -125,7 +85,7 @@ export async function rails(viewer: Viewer) {
         state.availability.state !== "unavailable",
     )
   )
-    result.push({ id: "othersAsked", seed: null, seedName: null })
+    result.push({ id: "othersAsked" })
   return { enabled: true, rails: result, browse: kinds }
 }
 
@@ -134,7 +94,7 @@ export async function page(
   input: { rail: Rail; page: number },
 ) {
   const empty = { items: [], nextPage: null, stale: false }
-  // Rebuild descriptors from this viewer. Never trust a client-supplied seed.
+  // Rebuild the rows from this viewer, so a client can't ask for another.
   const descriptor = (await rails(viewer)).rails.find(
     (rail) => rail.id === input.rail.id,
   )
@@ -189,9 +149,7 @@ export async function page(
     }
   }
   const kinds: CatalogRef["kind"][] = []
-  if (descriptor.id === "becauseWatched" && descriptor.seed)
-    kinds.push(descriptor.seed.kind)
-  else if (descriptor.id === "popularFilms") kinds.push("movie")
+  if (descriptor.id === "popularFilms") kinds.push("movie")
   else if (descriptor.id === "popularShows") kinds.push("show")
   else {
     if (movies.length) kinds.push("movie")
@@ -204,13 +162,8 @@ export async function page(
       const result = await feedProvider(
         kind,
         lookupLanguage(candidates),
-        descriptor.id === "becauseWatched"
-          ? "recommendations"
-          : descriptor.id === "comingSoon"
-            ? "soon"
-            : "popular",
+        descriptor.id === "comingSoon" ? "soon" : "popular",
         input.page,
-        descriptor.seed?.providerId,
       )
       const states = await availability(
         viewer,

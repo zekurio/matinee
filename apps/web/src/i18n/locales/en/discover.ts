@@ -9,7 +9,6 @@ export default defineMessages("discover", {
   "discover.title": "Discover",
 
   // The rows, in the order the server sends them.
-  "discover.rail.becauseWatched": "Because you watched {title}",
   "discover.rail.popularFilms": "Popular movies",
   "discover.rail.popularShows": "Popular shows",
   "discover.rail.comingSoon": "Coming soon",
