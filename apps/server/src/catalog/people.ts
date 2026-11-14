@@ -123,12 +123,17 @@ function merged(detail: Detail) {
   })
 }
 
-/** Newest first, the undated last. */
+/**
+ * Newest first, the undated last, and any without a poster after all of
+ * those: mostly announced projects, which would open the grid with blank
+ * cards.
+ */
 function newestFirst(
-  a: { releaseDate: string | null; name: string },
-  b: { releaseDate: string | null; name: string },
+  a: { releaseDate: string | null; name: string; poster: string | null },
+  b: { releaseDate: string | null; name: string; poster: string | null },
 ) {
   return (
+    Number(!a.poster) - Number(!b.poster) ||
     Number(!a.releaseDate) - Number(!b.releaseDate) ||
     (b.releaseDate ?? "").localeCompare(a.releaseDate ?? "") ||
     a.name.localeCompare(b.name)
