@@ -42,5 +42,4 @@ export default defineMessages("browse", {
   "browse.kind.movie": "Movies",
   "browse.kind.show": "Shows",
   // The page header.
-  "browse.breadcrumb": "Breadcrumb",
 })

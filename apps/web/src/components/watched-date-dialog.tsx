@@ -9,7 +9,7 @@ const WatchedDateForm = lazy(() =>
   })),
 )
 
-/** Asks when the user watched, for "Other date" in `WatchedMenuItems`. */
+/** Asks when the user watched, for "Other date" in `WatchedButton`. */
 export function WatchedDateDialog({
   open,
   onOpenChange,

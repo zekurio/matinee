@@ -35,5 +35,4 @@ export default {
   "browse.kind.all": "Alle",
   "browse.kind.movie": "Filme",
   "browse.kind.show": "Serien",
-  "browse.breadcrumb": "Brotkrumennavigation",
 } satisfies TranslationOf<typeof source>

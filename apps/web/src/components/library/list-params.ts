@@ -8,14 +8,6 @@ import { useUrlText } from "@/lib/use-url-text"
 export type Sort = "title" | "recent" | "year"
 export type SortOption = { value: Sort; label: string }
 
-/** The sorts for a list of files. */
-export function fileSorts(): SortOption[] {
-  return [
-    { value: "title", label: tr("library.sort.fileName") },
-    { value: "recent", label: tr("library.sort.recent") },
-  ]
-}
-
 /** The sorts for a list of movies and shows. */
 export function titleSorts(): SortOption[] {
   return [

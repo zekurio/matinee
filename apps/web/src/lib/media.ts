@@ -60,19 +60,6 @@ export type ItemLabel = {
   groupLabel: string[]
 }
 
-const TRAILING_YEAR = /^(.*\S)\s*\(((?:19|20)\d{2})\)$/
-
-/** Split a trailing "(2024)" off a show name. */
-export function splitYear(name: string): {
-  showName: string
-  year: string | null
-} {
-  const match = TRAILING_YEAR.exec(name.trim())
-  return match
-    ? { showName: match[1] ?? name, year: match[2] ?? null }
-    : { showName: name, year: null }
-}
-
 /** Add interface words to the server's label. */
 export function itemLabel(item: MediaItem): ItemLabel {
   const { episodeNumber, ...label } = item.label
