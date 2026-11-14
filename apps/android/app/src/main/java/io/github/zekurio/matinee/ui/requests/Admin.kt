@@ -57,6 +57,7 @@ import io.github.zekurio.matinee.ui.LocalNavigator
 import io.github.zekurio.matinee.ui.LocalUser
 import io.github.zekurio.matinee.ui.Navigator
 import io.github.zekurio.matinee.ui.TopBar
+import io.github.zekurio.matinee.ui.components.Avatar
 import io.github.zekurio.matinee.ui.components.ErrorBox
 import io.github.zekurio.matinee.ui.components.LocalApi
 import io.github.zekurio.matinee.ui.components.PosterArt
@@ -511,13 +512,16 @@ private fun QueueRow(item: AdminRequestItem, list: String, onMenu: () -> Unit) {
                             relativeTime(it.createdAt),
                         ).joinToString(" · ")
                     }
-                    Text(
-                        listOfNotNull(who, item.library.name).joinToString(" · "),
-                        style = small,
-                        color = Palette.Foreground.copy(alpha = 0.85f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        first?.let { Avatar(it.name, it.avatarId?.let(api.paths::avatar), size = 16.dp) }
+                        Text(
+                            listOfNotNull(who, item.library.name).joinToString(" · "),
+                            style = small,
+                            color = Palette.Foreground.copy(alpha = 0.85f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                     if (item.connection == null) Text(stringResource(R.string.web_requests_noConnection), style = small, color = Palette.Danger, maxLines = 1)
                 }
                 "needsAttention" -> Text(

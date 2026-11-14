@@ -562,6 +562,7 @@ export async function queue(
         follower: requestFollower,
         name: user.displayName,
         username: user.username,
+        avatarId: user.avatarId,
       })
       .from(requestFollower)
       .innerJoin(user, eq(user.id, requestFollower.userId))
@@ -609,6 +610,7 @@ export async function queue(
           .map((f) => ({
             id: f.follower.userId,
             name: f.name ?? f.username,
+            avatarId: f.avatarId,
             asked: f.follower.asked,
             createdAt: f.follower.createdAt,
           })),

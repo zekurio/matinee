@@ -386,6 +386,7 @@ data class AdminRequestItem(
     data class Follower(
         val id: String,
         val name: String,
+        val avatarId: String?,
         val asked: Boolean,
         val createdAt: String,
     )

@@ -359,7 +359,11 @@ function Who({ item }: { item: AdminRequestItem }) {
   return (
     <div className="flex min-w-0 items-center gap-2.5 max-sm:col-start-2">
       <UserAvatar
-        user={{ avatarId: null, displayName: first.name, username: first.name }}
+        user={{
+          avatarId: first.avatarId,
+          displayName: first.name,
+          username: first.name,
+        }}
         className="size-7 shrink-0 text-[11px] max-sm:hidden"
       />
       <Cell

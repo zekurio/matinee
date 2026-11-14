@@ -77,6 +77,8 @@ export const AdminRequestItem = RequestItem.extend({
     t.object({
       id: t.uuid(),
       name: t.string(),
+      /** Load it through `avatarPath()`. Null shows the initial instead. */
+      avatarId: t.string().nullable(),
       asked: t.boolean(),
       createdAt: t.date(),
     }),
