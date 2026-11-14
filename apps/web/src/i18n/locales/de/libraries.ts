@@ -41,7 +41,13 @@ export default {
   "libraries.dialog.kind.shows": "Serien",
   "libraries.dialog.metadata": "Metadaten",
   "libraries.dialog.noProvider": "Keine",
-  "libraries.dialog.needsKey": "Braucht einen API-Schlüssel",
+  "libraries.dialog.unavailable": "Nicht verfügbar",
+  "libraries.dialog.pluginProvider": "{provider} · {plugin}",
+  "libraries.dialog.providerOffline":
+    "{provider} läuft nicht. Aktiviere das Plugin unter Einstellungen → Plugins. Vorhandene Metadaten bleiben unverändert.",
+  "libraries.dialog.providerMissing":
+    "Das Plugin für {provider} ist nicht installiert. Installiere es unter Einstellungen → Plugins oder wähle einen anderen Anbieter. Vorhandene Metadaten bleiben unverändert.",
+  "libraries.dialog.needsKey": "Unter Plugins einrichten",
   "libraries.dialog.language": "Sprache",
   "libraries.dialog.noProviderHint":
     "Titel tragen die Namen ihrer Ordner und Dateien, ohne Artwork.",

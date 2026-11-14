@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.nullable
 import kotlinx.serialization.builtins.serializer
+import kotlinx.serialization.json.JsonElement
 
 /** The contract's procedures, grouped as its router is. */
 open class ContractApi(transport: ApiTransport) {
@@ -28,6 +29,7 @@ open class ContractApi(transport: ApiTransport) {
 }
 
 class AuthApi internal constructor(private val transport: ApiTransport) {
+    val plugin = AuthPluginApi(transport)
     val invite = AuthInviteApi(transport)
     val passkey = AuthPasskeyApi(transport)
     val oidc = AuthOidcApi(transport)
@@ -62,6 +64,18 @@ class AuthApi internal constructor(private val transport: ApiTransport) {
             transport.json(AuthUnlockSetupInput.serializer(), AuthUnlockSetupInput(token = token)),
         )
     }
+}
+
+class AuthPluginApi internal constructor(private val transport: ApiTransport) {
+    /** `POST /auth/plugin/sign-in` */
+    suspend fun signIn(pluginSignInInput: PluginSignInInput): User =
+        transport.call(
+            "POST",
+            listOf("auth", "plugin", "sign-in"),
+            emptyList(),
+            transport.json(PluginSignInInput.serializer(), pluginSignInInput),
+            User.serializer(),
+        )
 }
 
 class AuthInviteApi internal constructor(private val transport: ApiTransport) {
@@ -209,12 +223,40 @@ class AuthDeviceApi internal constructor(private val transport: ApiTransport) {
 }
 
 class AccountApi internal constructor(private val transport: ApiTransport) {
+    val identities = AccountIdentitiesApi(transport)
     val profile = AccountProfileApi(transport)
     val avatar = AccountAvatarApi(transport)
     val playback = AccountPlaybackApi(transport)
     val passkeys = AccountPasskeysApi(transport)
     val oidc = AccountOidcApi(transport)
     val sessions = AccountSessionsApi(transport)
+}
+
+class AccountIdentitiesApi internal constructor(private val transport: ApiTransport) {
+    /** `GET /account/identities` */
+    suspend fun list(): List<PluginIdentity> =
+        transport.call(
+            "GET",
+            listOf("account", "identities"),
+            emptyList(),
+            null,
+            ListSerializer(PluginIdentity.serializer()),
+        )
+
+    /** `POST /account/identities` */
+    suspend fun link(pluginSignInInput: PluginSignInInput) {
+        transport.send(
+            "POST",
+            listOf("account", "identities"),
+            emptyList(),
+            transport.json(PluginSignInInput.serializer(), pluginSignInInput),
+        )
+    }
+
+    /** `DELETE /account/identities/{key}` */
+    suspend fun unlink(key: String) {
+        transport.send("DELETE", listOf("account", "identities", key), emptyList(), null)
+    }
 }
 
 class AccountProfileApi internal constructor(private val transport: ApiTransport) {
@@ -996,6 +1038,7 @@ class AdminApi internal constructor(private val transport: ApiTransport) {
     val groups = AdminGroupsApi(transport)
     val invites = AdminInvitesApi(transport)
     val jobs = AdminJobsApi(transport)
+    val plugins = AdminPluginsApi(transport)
     val setup = AdminSetupApi(transport)
     val transcoding = AdminTranscodingApi(transport)
     val trickplay = AdminTrickplayApi(transport)
@@ -1206,6 +1249,177 @@ class AdminJobsApi internal constructor(private val transport: ApiTransport) {
             emptyList(),
             null,
             ScheduledTask.serializer(),
+        )
+}
+
+class AdminPluginsApi internal constructor(private val transport: ApiTransport) {
+    /** `GET /admin/plugins` */
+    suspend fun list(): List<PluginInfo> =
+        transport.call(
+            "GET",
+            listOf("admin", "plugins"),
+            emptyList(),
+            null,
+            ListSerializer(PluginInfo.serializer()),
+        )
+
+    /** `GET /admin/plugins/watch` */
+    fun watch(): Flow<List<PluginInfo>> =
+        transport.events(
+            "GET",
+            listOf("admin", "plugins", "watch"),
+            emptyList(),
+            null,
+            ListSerializer(PluginInfo.serializer()),
+        )
+
+    /** `POST /admin/plugins/inspect` */
+    suspend fun inspect(source: AdminPluginsInspectInput.Source): PluginPreview =
+        transport.call(
+            "POST",
+            listOf("admin", "plugins", "inspect"),
+            emptyList(),
+            transport.json(AdminPluginsInspectInput.serializer(), AdminPluginsInspectInput(source = source)),
+            PluginPreview.serializer(),
+        )
+
+    /** `POST /admin/plugins/install` */
+    suspend fun install(ticket: String, enable: Boolean): PluginInfo =
+        transport.call(
+            "POST",
+            listOf("admin", "plugins", "install"),
+            emptyList(),
+            transport.json(AdminPluginsInstallInput.serializer(), AdminPluginsInstallInput(ticket = ticket, enable = enable)),
+            PluginInfo.serializer(),
+        )
+
+    /** `POST /admin/plugins/rescan` */
+    suspend fun rescan(): List<PluginInfo> =
+        transport.call(
+            "POST",
+            listOf("admin", "plugins", "rescan"),
+            emptyList(),
+            null,
+            ListSerializer(PluginInfo.serializer()),
+        )
+
+    /** `POST /admin/plugins/{id}/enable` */
+    suspend fun enable(id: String): PluginInfo =
+        transport.call(
+            "POST",
+            listOf("admin", "plugins", id, "enable"),
+            emptyList(),
+            null,
+            PluginInfo.serializer(),
+        )
+
+    /** `POST /admin/plugins/{id}/disable` */
+    suspend fun disable(id: String): PluginInfo =
+        transport.call(
+            "POST",
+            listOf("admin", "plugins", id, "disable"),
+            emptyList(),
+            null,
+            PluginInfo.serializer(),
+        )
+
+    /** `POST /admin/plugins/{id}/approve` */
+    suspend fun approve(id: String, integrity: String): PluginInfo =
+        transport.call(
+            "POST",
+            listOf("admin", "plugins", id, "approve"),
+            emptyList(),
+            transport.json(AdminPluginsApproveInput.serializer(), AdminPluginsApproveInput(integrity = integrity)),
+            PluginInfo.serializer(),
+        )
+
+    /** `PUT /admin/plugins/{id}/config` */
+    suspend fun configure(
+        id: String,
+        values: Map<String, JsonElement>,
+        links: String? = null,
+    ): PluginInfo =
+        transport.call(
+            "PUT",
+            listOf("admin", "plugins", id, "config"),
+            emptyList(),
+            transport.json(AdminPluginsConfigureInput.serializer(), AdminPluginsConfigureInput(values = values, links = links)),
+            PluginInfo.serializer(),
+        )
+
+    /** `PUT /admin/plugins/{id}/auth/{provider}` */
+    suspend fun setAuthOptions(id: String, provider: String, allowSignUp: Boolean): PluginInfo =
+        transport.call(
+            "PUT",
+            listOf("admin", "plugins", id, "auth", provider),
+            emptyList(),
+            transport.json(AdminPluginsSetAuthOptionsInput.serializer(), AdminPluginsSetAuthOptionsInput(allowSignUp = allowSignUp)),
+            PluginInfo.serializer(),
+        )
+
+    /** `POST /admin/plugins/{id}/restart` */
+    suspend fun restart(id: String): PluginInfo =
+        transport.call(
+            "POST",
+            listOf("admin", "plugins", id, "restart"),
+            emptyList(),
+            null,
+            PluginInfo.serializer(),
+        )
+
+    /** `POST /admin/plugins/{id}/events/retry` */
+    suspend fun retryEvents(id: String): PluginInfo =
+        transport.call(
+            "POST",
+            listOf("admin", "plugins", id, "events", "retry"),
+            emptyList(),
+            null,
+            PluginInfo.serializer(),
+        )
+
+    /** `DELETE /admin/plugins/{id}` */
+    suspend fun remove(id: String) {
+        transport.send("DELETE", listOf("admin", "plugins", id), emptyList(), null)
+    }
+
+    /** `GET /admin/plugins/{id}/impact` */
+    suspend fun impact(id: String): PluginImpact =
+        transport.call(
+            "GET",
+            listOf("admin", "plugins", id, "impact"),
+            emptyList(),
+            null,
+            PluginImpact.serializer(),
+        )
+
+    /** `GET /admin/plugins/{id}/logs` */
+    fun logs(id: String): Flow<List<PluginLogLine>> =
+        transport.events(
+            "GET",
+            listOf("admin", "plugins", id, "logs"),
+            emptyList(),
+            null,
+            ListSerializer(PluginLogLine.serializer()),
+        )
+
+    /** `POST /admin/plugins/updates` */
+    suspend fun checkUpdates(force: Boolean? = null): List<PluginInfo> =
+        transport.call(
+            "POST",
+            listOf("admin", "plugins", "updates"),
+            emptyList(),
+            transport.json(AdminPluginsCheckUpdatesInput.serializer(), AdminPluginsCheckUpdatesInput(force = force)),
+            ListSerializer(PluginInfo.serializer()),
+        )
+
+    /** `GET /admin/plugins/browse` */
+    suspend fun browse(query: String? = null): List<PluginSearchResult> =
+        transport.call(
+            "GET",
+            listOf("admin", "plugins", "browse"),
+            listOf("query" to query),
+            null,
+            ListSerializer(PluginSearchResult.serializer()),
         )
 }
 

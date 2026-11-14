@@ -8,6 +8,7 @@ import {
   type LucideIcon,
   PaintbrushIcon,
   PaletteIcon,
+  PuzzleIcon,
   ShieldCheckIcon,
   TvMinimalPlayIcon,
   UserIcon,
@@ -25,6 +26,7 @@ import { AuthPanel } from "./auth-panel"
 import { JobsPanel } from "./jobs-panel"
 import { LibrariesPanel } from "./libraries-panel"
 import { PlaybackPanel } from "./playback-panel"
+import { PluginsPanel } from "./plugins-panel"
 import { ServerAppearancePanel } from "./server-appearance-panel"
 import { TranscodingPanel } from "./transcoding-panel"
 import { TrickplayPanel } from "./trickplay-panel"
@@ -77,6 +79,7 @@ const SECTIONS: SectionEntry[] = [
     icon: KeyRoundIcon,
     Panel: AuthPanel,
   },
+  { id: "plugins", group: "admin", icon: PuzzleIcon, Panel: PluginsPanel },
   {
     id: "transcoding",
     group: "admin",

@@ -1,5 +1,5 @@
-import { env } from "../../env"
 import { limiter } from "../../media/process"
+import { tvdbKey, tvdbPin, tvdbPlugin } from "../builtins"
 import { fetchJson } from "../http"
 import { ProviderError } from "../types"
 import { apiUrl } from "../url"
@@ -14,13 +14,21 @@ export type Envelope<T> = { data: T; links?: { next?: string | null } }
 
 let token: { value: string; expires: number } | null = null
 let loggingIn: Promise<string> | null = null
+let configVersion = 0
+tvdbPlugin.onChange(() => {
+  configVersion++
+  token = null
+  loggingIn = null
+})
 
 async function login(): Promise<string> {
-  if (!env.MATINEE_TVDB_API_KEY)
-    throw new Error("MATINEE_TVDB_API_KEY isn't set")
+  const version = configVersion
+  const key = tvdbKey()
+  if (!key)
+    throw new Error("TheTVDB has no API key. Add one under Settings → Plugins.")
   const body = {
-    apikey: env.MATINEE_TVDB_API_KEY,
-    pin: env.MATINEE_TVDB_PIN || undefined,
+    apikey: key,
+    pin: tvdbPin() || undefined,
   }
   const data = await fetchJson<Envelope<{ token: string }>>(
     "TheTVDB",
@@ -31,13 +39,19 @@ async function login(): Promise<string> {
       body: JSON.stringify(body),
     },
   )
+  if (version !== configVersion) return currentToken()
   token = { value: data.data.token, expires: Date.now() + TOKEN_TTL_MS }
   return token.value
 }
 
 function currentToken(): Promise<string> {
   if (token && token.expires > Date.now()) return Promise.resolve(token.value)
-  loggingIn ??= login().finally(() => (loggingIn = null))
+  if (!loggingIn) {
+    const attempt = login().finally(() => {
+      if (loggingIn === attempt) loggingIn = null
+    })
+    loggingIn = attempt
+  }
   return loggingIn
 }
 

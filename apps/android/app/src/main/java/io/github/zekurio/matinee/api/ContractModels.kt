@@ -11,6 +11,467 @@ import kotlinx.serialization.json.JsonClassDiscriminator
 import kotlinx.serialization.json.JsonElement
 
 @Serializable
+data class PluginLibraryRef(
+    val id: String,
+    val name: String,
+)
+
+@Serializable
+data class PluginCreatedUserRef(
+    val id: String,
+    val username: String,
+    val role: String,
+)
+
+@Serializable
+data class PluginMetadataContribution(
+    val id: String,
+    val name: String,
+    val description: String? = null,
+    val kinds: List<String>,
+    val episodes: Boolean? = null,
+)
+
+@Serializable
+data class PluginCredentialsField(
+    val key: String,
+    val label: String,
+    val type: String,
+)
+
+@Serializable
+@JsonClassDiscriminator("kind")
+sealed interface PluginAuthContribution {
+    @Serializable
+    @SerialName("redirect")
+    data class Redirect(
+        val id: String,
+        val name: String,
+    ) : PluginAuthContribution
+
+    @Serializable
+    @SerialName("credentials")
+    data class Credentials(
+        val id: String,
+        val name: String,
+        val fields: List<PluginCredentialsField>,
+    ) : PluginAuthContribution
+}
+
+object PluginEventName {
+    const val LIBRARY_SCANNED = "library.scanned"
+    const val TITLE_ADDED = "title.added"
+    const val TITLE_MATCHED = "title.matched"
+    const val PLAYBACK_STARTED = "playback.started"
+    const val PLAYBACK_STOPPED = "playback.stopped"
+    const val PLAYBACK_WATCHED = "playback.watched"
+    const val USER_CREATED = "user.created"
+    val all = listOf(LIBRARY_SCANNED, TITLE_ADDED, TITLE_MATCHED, PLAYBACK_STARTED, PLAYBACK_STOPPED, PLAYBACK_WATCHED, USER_CREATED)
+}
+
+@Serializable
+@JsonClassDiscriminator("type")
+sealed interface PluginConfigField {
+    @Serializable
+    @SerialName("string")
+    data class String(
+        val key: String,
+        val label: String,
+        val description: String? = null,
+        val required: Boolean? = null,
+        val identity: Boolean? = null,
+        val default: String? = null,
+    ) : PluginConfigField
+
+    @Serializable
+    @SerialName("secret")
+    data class Secret(
+        val key: String,
+        val label: String,
+        val description: String? = null,
+        val required: Boolean? = null,
+        val identity: Boolean? = null,
+        val default: String? = null,
+    ) : PluginConfigField
+
+    @Serializable
+    @SerialName("url")
+    data class Url(
+        val key: String,
+        val label: String,
+        val description: String? = null,
+        val required: Boolean? = null,
+        val identity: Boolean? = null,
+        val network: Boolean? = null,
+        val default: String? = null,
+    ) : PluginConfigField
+
+    @Serializable
+    @SerialName("boolean")
+    data class Boolean(
+        val key: String,
+        val label: String,
+        val description: String? = null,
+        val required: Boolean? = null,
+        val identity: Boolean? = null,
+        val default: Boolean? = null,
+    ) : PluginConfigField
+
+    @Serializable
+    @SerialName("number")
+    data class Number(
+        val key: String,
+        val label: String,
+        val description: String? = null,
+        val required: Boolean? = null,
+        val identity: Boolean? = null,
+        val min: Double? = null,
+        val max: Double? = null,
+        val default: Double? = null,
+    ) : PluginConfigField
+
+    @Serializable
+    @SerialName("select")
+    data class Select(
+        val key: String,
+        val label: String,
+        val description: String? = null,
+        val required: Boolean? = null,
+        val identity: Boolean? = null,
+        val default: String? = null,
+        val options: List<PluginConfigField.Select.Option>,
+    ) : PluginConfigField {
+        @Serializable
+        data class Option(
+            val value: String,
+            val label: String,
+        )
+    }
+}
+
+@Serializable
+data class PluginManifest(
+    val id: String,
+    val name: String,
+    val version: String,
+    val description: String,
+    val author: String?,
+    val homepage: String?,
+    val license: String,
+    val api: Int,
+    val main: String,
+    val permissions: PluginManifest.Permissions,
+    val contributes: PluginManifest.Contributes,
+    val config: List<PluginConfigField>,
+) {
+    @Serializable
+    data class Permissions(
+        val network: List<JsonElement?>? = null,
+        val storage: Boolean? = null,
+    )
+
+    @Serializable
+    data class Contributes(
+        val metadata: List<PluginMetadataContribution>? = null,
+        val auth: List<PluginAuthContribution>? = null,
+        val events: List<String>? = null,
+    )
+}
+
+@Serializable
+data class PluginGrant(
+    val network: List<String>,
+    val networkConfig: List<String>,
+    val storage: Boolean,
+    val metadata: List<String>,
+    val auth: List<PluginGrant.Auth>,
+    val events: List<String>,
+) {
+    @Serializable
+    data class Auth(
+        val id: String,
+        val kind: String,
+    )
+}
+
+@Serializable
+data class PluginPermission(
+    val kind: String,
+    val detail: List<String>,
+    val sensitive: Boolean,
+)
+
+@Serializable
+@JsonClassDiscriminator("type")
+sealed interface PluginSource {
+    @Serializable
+    @SerialName("npm")
+    data class Npm(
+        val spec: String,
+    ) : PluginSource
+
+    @Serializable
+    @SerialName("url")
+    data class Url(
+        val url: String,
+    ) : PluginSource
+
+    @Serializable
+    @SerialName("directory")
+    data class Directory(
+        val path: String,
+    ) : PluginSource
+
+    @Serializable
+    @SerialName("builtin")
+    data object Builtin : PluginSource
+}
+
+object PluginState {
+    const val INCOMPATIBLE = "incompatible"
+    const val MISSING = "missing"
+    const val DISABLED = "disabled"
+    const val NEEDS_APPROVAL = "needs-approval"
+    const val NEEDS_CONFIG = "needs-config"
+    const val STARTING = "starting"
+    const val RUNNING = "running"
+    const val ERROR = "error"
+    val all = listOf(INCOMPATIBLE, MISSING, DISABLED, NEEDS_APPROVAL, NEEDS_CONFIG, STARTING, RUNNING, ERROR)
+}
+
+@Serializable
+data class PluginImpactLibrary(
+    val id: String,
+    val name: String,
+)
+
+@Serializable
+data class PluginImpact(
+    val libraries: List<PluginImpactLibrary>,
+    val linkedAccounts: Int,
+    val lockedOut: Int,
+    val lockedOutNames: List<String>,
+)
+
+@Serializable
+data class PluginInfo(
+    val id: String,
+    val name: String,
+    val version: String,
+    val description: String,
+    val author: String?,
+    val homepage: String?,
+    val source: PluginSource,
+    val builtin: Boolean,
+    val removable: Boolean,
+    val enabled: Boolean,
+    val state: String,
+    val error: String?,
+    val awake: Boolean,
+    val events: PluginInfo.Events?,
+    val permissions: List<PluginPermission>,
+    val approval: PluginInfo.Approval?,
+    val config: PluginInfo.Config,
+    val contributes: PluginInfo.Contributes,
+    val update: PluginInfo.Update?,
+    val installedAt: String,
+) {
+    @Serializable
+    data class Events(
+        val pending: Int,
+        val failing: Int,
+        val blocked: Boolean,
+        val retryAt: String?,
+        val error: String?,
+        val attempts: Int,
+        val expiresAt: String?,
+    )
+
+    @Serializable
+    data class Approval(
+        val needed: Boolean,
+        val integrity: String,
+        val added: List<PluginPermission>,
+        val changedOnDisk: Boolean,
+    )
+
+    @Serializable
+    data class Config(
+        val fields: List<PluginConfigField>,
+        val values: Map<String, JsonElement>,
+        val secretsSet: List<String>,
+        val environment: List<String>,
+        val invalid: List<String>,
+        val identity: List<String>,
+    )
+
+    @Serializable
+    data class Contributes(
+        val metadata: List<PluginInfo.Contributes.Metadata>,
+        val auth: List<PluginInfo.Contributes.Auth>,
+        val events: List<String>,
+    ) {
+        @Serializable
+        data class Metadata(
+            val id: String,
+            val name: String,
+        )
+
+        @Serializable
+        data class Auth(
+            val id: String,
+            val key: String,
+            val name: String,
+            val kind: String,
+            val allowSignUp: Boolean,
+        )
+    }
+
+    @Serializable
+    data class Update(
+        val version: String,
+    )
+}
+
+@Serializable
+data class PluginPreview(
+    val ticket: String,
+    val manifest: PluginManifest,
+    val permissions: List<PluginPermission>,
+    val integrity: String,
+    val installedVersion: String?,
+    val added: List<PluginPermission>,
+)
+
+@Serializable
+data class PluginLogLine(
+    val at: String,
+    val level: String,
+    val message: String,
+)
+
+@Serializable
+data class PluginSearchResult(
+    val name: String,
+    val version: String,
+    val description: String,
+    val author: String?,
+    val homepage: String?,
+    val npmUrl: String,
+    val installedId: String?,
+)
+
+@Serializable
+data class PluginAuthProvider(
+    val key: String,
+    val name: String,
+    val kind: String,
+    val fields: List<PluginCredentialsField>,
+    val allowSignUp: Boolean,
+)
+
+@Serializable
+data class PluginIdentity(
+    val key: String,
+    val name: String,
+    val kind: String,
+    val fields: List<PluginCredentialsField>,
+    val linked: PluginIdentity.Linked?,
+) {
+    @Serializable
+    data class Linked(
+        val label: String?,
+        val createdAt: String,
+    )
+}
+
+@Serializable
+data class PluginSignInInput(
+    val key: String,
+    val fields: Map<String, String>,
+)
+
+@Serializable
+data class PluginEventMeta(
+    val id: String,
+    val at: String,
+    val attempt: Int,
+)
+
+@Serializable
+data class PluginTitleRef(
+    val id: String,
+    val name: String,
+    val year: Int?,
+    val kind: String,
+    val library: PluginLibraryRef,
+    val externalIds: Map<String, String>,
+)
+
+@Serializable
+data class PluginUserRef(
+    val id: String,
+    val username: String,
+)
+
+@Serializable
+data class PluginItemRef(
+    val id: String,
+    val label: String,
+    val season: Int?,
+    val episode: Int?,
+)
+
+@Serializable
+data class PluginLibraryScannedEvent(
+    val library: PluginLibraryRef,
+    val added: Int,
+    val removed: Int,
+)
+
+@Serializable
+data class PluginTitleAddedEvent(
+    val title: PluginTitleRef,
+)
+
+@Serializable
+data class PluginTitleMatchedEvent(
+    val title: PluginTitleRef,
+    val provider: String,
+    val providerId: String,
+)
+
+@Serializable
+data class PluginPlaybackStartedEvent(
+    val user: PluginUserRef,
+    val title: PluginTitleRef,
+    val item: PluginItemRef,
+    val positionSeconds: Double,
+)
+
+@Serializable
+data class PluginPlaybackStoppedEvent(
+    val user: PluginUserRef,
+    val title: PluginTitleRef,
+    val item: PluginItemRef,
+    val positionSeconds: Double,
+    val durationSeconds: Double?,
+)
+
+@Serializable
+data class PluginPlaybackWatchedEvent(
+    val user: PluginUserRef,
+    val title: PluginTitleRef,
+    val item: PluginItemRef,
+    val watched: Boolean,
+)
+
+@Serializable
+data class PluginUserCreatedEvent(
+    val user: PluginCreatedUserRef,
+)
+
+@Serializable
 data class PlaybackSeek(
     val url: String,
     val offset: Double,
@@ -832,6 +1293,7 @@ data class ThemeAccents(
 
 @Serializable
 data class AuthConfig(
+    val providers: List<PluginAuthProvider>,
     val setup: AuthConfig.Setup?,
     val passkeys: Boolean,
     val passkeySignUp: Boolean,
@@ -1210,10 +1672,11 @@ object JobQueueId {
     const val ARTWORK = "artwork"
     const val SUBTITLES = "subtitles"
     const val SUBTITLE_FONTS = "subtitle-fonts"
+    const val PLUGIN_EVENTS = "plugin-events"
     const val AVATARS = "avatars"
     const val DOWNLOADS = "downloads"
     const val DOWNLOAD_COPIES = "download-copies"
-    val all = listOf(LIBRARY_SCAN, MEDIA_PROBE, METADATA, THUMBNAILS, SUBTITLE_PREPARE, TRICKPLAY, ARTWORK, SUBTITLES, SUBTITLE_FONTS, AVATARS, DOWNLOADS, DOWNLOAD_COPIES)
+    val all = listOf(LIBRARY_SCAN, MEDIA_PROBE, METADATA, THUMBNAILS, SUBTITLE_PREPARE, TRICKPLAY, ARTWORK, SUBTITLES, SUBTITLE_FONTS, PLUGIN_EVENTS, AVATARS, DOWNLOADS, DOWNLOAD_COPIES)
 }
 
 @Serializable
@@ -1248,10 +1711,11 @@ object TaskId {
     const val PREFETCH_ARTWORK = "prefetch-artwork"
     const val PREPARE_SUBTITLES = "prepare-subtitles"
     const val MAKE_TRICKPLAY = "make-trickplay"
+    const val DELIVER_PLUGIN_EVENTS = "deliver-plugin-events"
     const val CLEAN_TRANSCODES = "clean-transcodes"
     const val CLEAN_SESSIONS = "clean-sessions"
     const val SYNC_OIDC_ACCOUNTS = "sync-oidc-accounts"
-    val all = listOf(SCAN_LIBRARIES, REFRESH_METADATA, PROBE_MEDIA, PREFETCH_ARTWORK, PREPARE_SUBTITLES, MAKE_TRICKPLAY, CLEAN_TRANSCODES, CLEAN_SESSIONS, SYNC_OIDC_ACCOUNTS)
+    val all = listOf(SCAN_LIBRARIES, REFRESH_METADATA, PROBE_MEDIA, PREFETCH_ARTWORK, PREPARE_SUBTITLES, MAKE_TRICKPLAY, DELIVER_PLUGIN_EVENTS, CLEAN_TRANSCODES, CLEAN_SESSIONS, SYNC_OIDC_ACCOUNTS)
 }
 
 object TaskResult {
@@ -1299,12 +1763,6 @@ object LibraryKind {
     const val MOVIES = "movies"
     const val SHOWS = "shows"
     val all = listOf(MOVIES, SHOWS)
-}
-
-object MetadataProviderId {
-    const val TMDB = "tmdb"
-    const val TVDB = "tvdb"
-    val all = listOf(TMDB, TVDB)
 }
 
 @Serializable
@@ -1513,13 +1971,23 @@ data class MetadataMatch(
 
 @Serializable
 data class MetadataProvider(
+    val plugin: MetadataProvider.Plugin,
+    val builtin: Boolean,
+    val available: Boolean,
     val id: String,
     val name: String,
     val description: String,
+    val kinds: List<String>,
     val episodes: Boolean,
     val configured: Boolean,
     val setup: String?,
-)
+) {
+    @Serializable
+    data class Plugin(
+        val id: String,
+        val name: String,
+    )
+}
 
 @Serializable
 data class MethodStat(
@@ -2288,6 +2756,54 @@ data class AdminInvitesCreateInput(
 @Serializable
 data class AdminJobsUpdateConcurrencyInput(
     val concurrency: Map<String, Int>,
+)
+
+@Serializable
+data class AdminPluginsInspectInput(
+    val source: AdminPluginsInspectInput.Source,
+) {
+    @Serializable
+    @JsonClassDiscriminator("type")
+    sealed interface Source {
+        @Serializable
+        @SerialName("npm")
+        data class Npm(
+            val spec: String,
+        ) : AdminPluginsInspectInput.Source
+
+        @Serializable
+        @SerialName("url")
+        data class Url(
+            val url: String,
+        ) : AdminPluginsInspectInput.Source
+    }
+}
+
+@Serializable
+data class AdminPluginsInstallInput(
+    val ticket: String,
+    val enable: Boolean,
+)
+
+@Serializable
+data class AdminPluginsApproveInput(
+    val integrity: String,
+)
+
+@Serializable
+data class AdminPluginsConfigureInput(
+    val values: Map<String, JsonElement>,
+    val links: String? = null,
+)
+
+@Serializable
+data class AdminPluginsSetAuthOptionsInput(
+    val allowSignUp: Boolean,
+)
+
+@Serializable
+data class AdminPluginsCheckUpdatesInput(
+    val force: Boolean? = null,
 )
 
 @Serializable

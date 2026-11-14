@@ -1,5 +1,5 @@
-// Bundles the server and its idle-I/O subtitle reader for production, so
-// both start as plain Node without a TypeScript compiler in the process.
+// Bundles the server and its workers for production. All runtime files live
+// in dist/server, including QuickJS's WebAssembly binary.
 import { cp, rm } from "node:fs/promises"
 import { fileURLToPath } from "node:url"
 
@@ -35,6 +35,37 @@ await build({
   target: "node24",
   logLevel: "warning",
 })
+// The worker a plugin's sandbox runs in. With `--checks`, also the sandbox
+// on its own, so `plugin-sandbox-check.ts --bundle` runs against what
+// ships without starting the server. Production has no use for that one.
+await build({
+  entryPoints: {
+    "plugin-worker": fileURLToPath(
+      new URL("src/plugins/sandbox/worker.ts", import.meta.url),
+    ),
+    ...(process.argv.includes("--checks") && {
+      "plugin-sandbox": fileURLToPath(
+        new URL("src/plugins/sandbox/index.ts", import.meta.url),
+      ),
+    }),
+  },
+  outdir: `${dist}server`,
+  outExtension: { ".js": ".mjs" },
+  bundle: true,
+  platform: "node",
+  format: "esm",
+  target: "node24",
+  banner: {
+    js: "import { createRequire as __createRequire } from 'node:module'; const require = __createRequire(import.meta.url);",
+  },
+  logLevel: "warning",
+})
+await cp(
+  fileURLToPath(
+    import.meta.resolve("@jitl/quickjs-ng-wasmfile-release-sync/wasm"),
+  ),
+  `${dist}server/plugin-quickjs.wasm`,
+)
 // @matinee/db finds its migrations at ../drizzle from its own file, which
 // is dist/server/index.mjs once bundled.
 await cp(

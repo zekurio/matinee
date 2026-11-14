@@ -18,6 +18,10 @@ export type Topics = {
   playback: undefined
   /** A file's trickplay images were made, or couldn't be. */
   trickplay: undefined
+  /** Plugin rows, runtime states, or update information changed. */
+  plugins: undefined
+  /** A plugin's log buffer changed, batched every 250 ms. */
+  "plugins-log": undefined
 }
 
 export type Topic = keyof Topics

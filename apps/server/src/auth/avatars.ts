@@ -17,6 +17,12 @@ import { defineQueue } from "../jobs/queue"
 import { log } from "../log"
 import { fetchImage, sniffImage } from "../media/artwork"
 import { processFailureKind, run } from "../media/process"
+import {
+  ANY_PUBLIC_HOST,
+  ruleForAddress,
+  type HostRule,
+} from "../net/guarded-fetch"
+import { activeOidc } from "./oidc-settings"
 import { readSession } from "./session"
 
 const SIZE = 256
@@ -181,6 +187,17 @@ type AvatarJob =
   | { kind: "fetch"; key: string; url: string }
   | { kind: "sync"; key: string; userId: string; url: string }
 
+/**
+ * Where a provider's picture may come from: any public https host, and the
+ * sign-in provider an admin set up, which often sits on the local network
+ * or a tailnet and serves its own pictures.
+ */
+async function pictureHosts(): Promise<HostRule[]> {
+  const provider = await activeOidc()
+  const issuer = provider && ruleForAddress(provider.settings.issuerUrl)
+  return issuer ? [issuer, ANY_PUBLIC_HOST] : [ANY_PUBLIC_HOST]
+}
+
 /** Take the provider's picture if the user follows it and it changed. */
 async function sync(userId: string, url: string): Promise<void> {
   const [row] = await db
@@ -193,7 +210,7 @@ async function sync(userId: string, url: string): Promise<void> {
     .where(eq(user.id, userId))
   if (!row || row.avatarSource !== "provider") return
   if (row.avatarId && row.avatarUrl === url) return
-  const id = await encode((await fetchImage(url)).bytes)
+  const id = await encode((await fetchImage(url, await pictureHosts())).bytes)
   await setAvatar(
     userId,
     { avatarId: id, avatarSource: "provider", avatarUrl: url },
@@ -215,7 +232,7 @@ const avatars = defineQueue<AvatarJob, string | null>({
       case "upload":
         return encode(job.bytes)
       case "fetch":
-        return encode((await fetchImage(job.url)).bytes)
+        return encode((await fetchImage(job.url, await pictureHosts())).bytes)
       case "sync":
         await sync(job.userId, job.url)
         return null

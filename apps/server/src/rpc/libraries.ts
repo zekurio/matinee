@@ -40,8 +40,13 @@ import { keyframesNear, listAudio } from "../media/playback"
 import { shelf } from "../media/shelf"
 import { listSubtitles } from "../media/subtitles"
 import { trickplayStatus } from "../media/trickplay"
-import { isRefreshing, queueRefresh } from "../metadata/refresh"
-import { sources } from "../metadata/sources"
+import { isRefreshing, queueRefresh, sourceProblem } from "../metadata/refresh"
+import {
+  providerKindUnsupported,
+  providerUnavailable,
+  sourceById,
+} from "../metadata/sources"
+import { declaredMetadata } from "../plugins"
 import { follow } from "../realtime/follow"
 import { admin, authed, badRequest, notFound } from "./base"
 
@@ -131,9 +136,26 @@ async function checkFolders(paths: string[]): Promise<string[]> {
 }
 
 /** The provider to store, if set up. */
-function checkProvider(input: LibraryInput) {
+function checkProvider(input: LibraryInput, before?: LibraryRow) {
   if (!input.metadataProvider) return null
-  const source = sources[input.metadataProvider]
+  const source = sourceById(input.metadataProvider)
+  const kind = input.kind === "movies" ? "movie" : "show"
+  const kinds =
+    source?.kinds ??
+    declaredMetadata().find(
+      (entry) => entry.contribution.id === input.metadataProvider,
+    )?.contribution.kinds
+  if (kinds && !kinds.includes(kind))
+    throw badRequest(
+      providerKindUnsupported(source?.name ?? input.metadataProvider),
+    )
+  // An existing library can keep an offline provider while being edited.
+  if (
+    before?.metadataProvider === input.metadataProvider &&
+    before.kind === input.kind
+  )
+    return input.metadataProvider
+  if (!source) throw badRequest(providerUnavailable(input.metadataProvider))
   if (!source.configured()) {
     throw badRequest(`${source.name} isn't set up. ${source.setup ?? ""}`)
   }
@@ -203,9 +225,9 @@ export const libraries = {
   }),
 
   update: admin.libraries.update.handler(async ({ context, input }) => {
-    const metadataProvider = checkProvider(input)
     const before = await libraryFor(context.user, input.id)
     if (!before) throw notFound("Library not found.")
+    const metadataProvider = checkProvider(input, before)
     await db
       .update(library)
       .set({
@@ -256,9 +278,8 @@ export const libraries = {
   refreshMetadata: admin.libraries.refreshMetadata.handler(
     async ({ context, input }) => {
       const lib = await loadLibrary(context.user, input.id)
-      if (!lib.metadataProvider) {
-        throw badRequest("Pick a metadata provider for this library first.")
-      }
+      const problem = sourceProblem(lib)
+      if (problem) throw badRequest(problem)
       queueRefresh(input.id, true)
     },
   ),

@@ -13,6 +13,8 @@ import { probeMissing } from "../media/probe"
 import { prepareMissingSubtitles } from "../media/subtitles"
 import { makeMissingTrickplay, sweepTrickplay } from "../media/trickplay"
 import { refreshMetadata } from "../metadata/refresh"
+import { deliverPluginEvents, pluginsListenFor } from "../plugins/events"
+import { closeStaleSessions } from "../stats/sessions"
 import type { TaskDefinition } from "./scheduler"
 
 const MINUTE_MS = 60_000
@@ -113,6 +115,22 @@ const makeTrickplay: TaskDefinition = {
   },
 }
 
+const deliverEvents: TaskDefinition = {
+  id: "deliver-plugin-events",
+  name: "Deliver plugin events",
+  description:
+    "Retry waiting plugin events and give up on expired or excess events.",
+  queue: "plugin-events",
+  startupDelayMs: 1000,
+  intervalMs: 5 * MINUTE_MS,
+  run: async (context) => {
+    // A session that stopped reporting never says it stopped. Close those
+    // first, so the stop is among what gets delivered.
+    if (pluginsListenFor("playback.stopped")) await closeStaleSessions()
+    await deliverPluginEvents(context)
+  },
+}
+
 const cleanTranscodes: TaskDefinition = {
   id: "clean-transcodes",
   name: "Clean up encodes",
@@ -155,6 +173,7 @@ export const TASKS: TaskDefinition[] = [
   fetchArtwork,
   prepareSubtitles,
   makeTrickplay,
+  deliverEvents,
   cleanTranscodes,
   cleanSessions,
   syncProviderAccounts,

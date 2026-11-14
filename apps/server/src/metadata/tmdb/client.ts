@@ -1,5 +1,5 @@
-import { env } from "../../env"
 import { limiter } from "../../media/process"
+import { tmdbKey } from "../builtins"
 import { fetchJson } from "../http"
 import { apiUrl } from "../url"
 
@@ -10,9 +10,10 @@ const IMAGES = "https://image.tmdb.org/t/p/"
 const limit = limiter(6)
 
 function apiKey(): string {
-  if (!env.MATINEE_TMDB_API_KEY)
-    throw new Error("MATINEE_TMDB_API_KEY isn't set")
-  return env.MATINEE_TMDB_API_KEY
+  const key = tmdbKey()
+  if (!key)
+    throw new Error("TMDB has no API key. Add one under Settings → Plugins.")
+  return key
 }
 
 export function request<T>(

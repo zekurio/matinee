@@ -15,6 +15,8 @@ export default {
     "Bei diesem Server kann man sich gerade nicht anmelden. Frag den Admin.",
   "auth.signIn.newHere": "Neu auf diesem Server?",
   "auth.signIn.createAccount": "Konto mit Passkey erstellen",
+  "auth.signIn.withProvider": "Mit {provider} anmelden",
+  "auth.signIn.otherWays": "Andere Wege zur Anmeldung",
   "auth.invite.title": "Du bist zu Matinee eingeladen",
   "auth.invite.description":
     "Wähle einen Benutzernamen und erstelle dann einen Passkey, mit dem du dich anmeldest. Dieser Link funktioniert bis {date}.",

@@ -21,6 +21,7 @@ import { anyOf, arg, db } from "../db"
 import { env } from "../env"
 import { defineQueue, perCpu, type Priority } from "../jobs/queue"
 import { log } from "../log"
+import { guardedFetch, type HostRule } from "../net/guarded-fetch"
 import { readPlaceholder } from "./blurhash"
 import { run } from "./process"
 
@@ -139,48 +140,24 @@ async function findOriginal(id: string): Promise<Cached | null> {
 
 /**
  * Download an image a provider named, at most 25 MB. Throws for anything but
- * a JPEG, PNG, or WebP image.
+ * a JPEG, PNG, or WebP image. Only public https hosts answer, so a URL
+ * from a provider or a plugin can't reach the local network. `allow` adds
+ * hosts an admin named, like a sign-in provider on the LAN.
  */
 export async function fetchImage(
   url: string,
+  allow: readonly HostRule[] | "public" = "public",
 ): Promise<{ bytes: Uint8Array; format: Format }> {
-  const response = await fetch(url, {
-    signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS),
-    headers: { "user-agent": "Matinee" },
+  const response = await guardedFetch(url, {
+    allow,
+    maxBytes: MAX_BYTES,
+    timeoutMs: DOWNLOAD_TIMEOUT_MS,
+    userAgent: "Matinee",
   })
-  if (!response.ok) throw new Error(`${url} answered ${response.status}`)
-  const length = Number(response.headers.get("content-length") ?? 0)
-  if (length > MAX_BYTES) {
-    await response.body?.cancel()
-    throw new Error(`${url} is too large`)
+  if (response.status < 200 || response.status >= 300) {
+    throw new Error(`${url} answered ${response.status}`)
   }
-  // Content-Length is optional and may describe the compressed transfer,
-  // not the decoded body. Enforce the limit while reading too.
-  const chunks: Uint8Array[] = []
-  let received = 0
-  const reader = response.body?.getReader()
-  if (reader) {
-    try {
-      for (;;) {
-        const { done, value } = await reader.read()
-        if (done) break
-        received += value.byteLength
-        if (received > MAX_BYTES) {
-          await reader.cancel()
-          throw new Error(`${url} is too large`)
-        }
-        chunks.push(value)
-      }
-    } finally {
-      reader.releaseLock()
-    }
-  }
-  const bytes = new Uint8Array(received)
-  let offset = 0
-  for (const chunk of chunks) {
-    bytes.set(chunk, offset)
-    offset += chunk.byteLength
-  }
+  const bytes = response.body
   const format = sniffImage(bytes)
   if (!format) throw new Error(`${url} isn't a JPEG, PNG, or WebP image`)
   return { bytes, format }

@@ -1,6 +1,6 @@
 import type { ExternalIds } from "@matinee/db"
 
-import { env } from "../../env"
+import { tmdbKey } from "../builtins"
 import {
   type Candidate,
   type Lookup,
@@ -82,9 +82,11 @@ export const tmdb: MetadataSource = {
   name: "TMDB",
   description:
     "The Movie Database. Movies and shows, with episode stills and logos. Radarr uses it.",
+  kinds: ["movie", "show"],
   episodes: true,
-  setup: "Set MATINEE_TMDB_API_KEY to an API key or read access token.",
-  configured: () => Boolean(env.MATINEE_TMDB_API_KEY),
+  setup:
+    "Add a TMDB API key under Settings → Plugins, or set MATINEE_TMDB_API_KEY.",
+  configured: () => Boolean(tmdbKey()),
   search,
   lookup,
   details: (id, { kind, language }) =>

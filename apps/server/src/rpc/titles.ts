@@ -91,7 +91,7 @@ export function providerFailure(name: string, cause: unknown): never {
     log.warn(`${name} request failed`, cause)
     const message =
       cause.status === 401 || cause.status === 403
-        ? `${name} rejected the API key. Check the server's configuration.`
+        ? `${name} refused access. Check its settings under Settings → Plugins.`
         : cause.status === 404
           ? `${name} has no entry with that id.`
           : `${name} didn't answer. Try again in a minute.`
@@ -112,13 +112,13 @@ export async function withLibrary(id: string) {
 }
 
 function requireSource(lib: typeof library.$inferSelect) {
-  const source = sourceFor(lib)
-  if (!source) {
+  const result = sourceFor(lib)
+  if (result.state === "none")
     throw badRequest("Pick a metadata provider for this library first.")
-  }
-  if (!source.configured()) {
+  if (result.state === "unavailable") throw badRequest(result.message)
+  const { source } = result
+  if (!source.configured())
     throw badRequest(`${source.name} isn't set up. ${source.setup ?? ""}`)
-  }
   return source
 }
 

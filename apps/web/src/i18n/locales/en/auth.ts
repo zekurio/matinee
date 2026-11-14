@@ -15,6 +15,9 @@ export default defineMessages("auth", {
     "There's no way to sign in to this server right now. Ask the admin.",
   "auth.signIn.newHere": "New to this server?",
   "auth.signIn.createAccount": "Create account with a passkey",
+  // A sign-in a plugin provides, by its name.
+  "auth.signIn.withProvider": "Sign in with {provider}",
+  "auth.signIn.otherWays": "Other ways to sign in",
 
   // The page an invite link from Settings → Users opens.
   "auth.invite.title": "You're invited to Matinee",

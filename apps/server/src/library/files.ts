@@ -30,6 +30,7 @@ export type HeldFile = FoundFile & { folderId: string }
 
 /** What a scan did, for its log line. */
 export type ScanCounts = {
+  added: number
   found: number
   written: number
   moved: number
@@ -61,9 +62,9 @@ export async function flush(
   folderId: string,
   seenAt: Date,
   batch: FoundFile[],
-): Promise<void> {
-  if (batch.length === 0) return
-  await db
+): Promise<number> {
+  if (batch.length === 0) return 0
+  const rows = await db
     .insert(mediaItem)
     .values(
       batch.map((file) => ({
@@ -95,6 +96,8 @@ export async function flush(
         probedAt: sql`case when ${mediaItem.sizeBytes} = excluded.size_bytes and ${mediaItem.modifiedAt} = excluded.modified_at then ${mediaItem.probedAt} else null end`,
       },
     })
+    .returning({ inserted: sql<boolean>`xmax = 0` })
+  return rows.filter((row) => row.inserted).length
 }
 
 /**
@@ -225,7 +228,12 @@ export async function settle(
   for (const folder of folders) {
     const files = added.filter((file) => file.folderId === folder.id)
     for (let i = 0; i < files.length; i += BATCH_SIZE) {
-      await flush(libraryId, folder.id, seenAt, files.slice(i, i + BATCH_SIZE))
+      counts.added += await flush(
+        libraryId,
+        folder.id,
+        seenAt,
+        files.slice(i, i + BATCH_SIZE),
+      )
     }
   }
   counts.written += added.length

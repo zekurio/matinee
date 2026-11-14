@@ -253,8 +253,10 @@ function unique(images: ImageCandidate[]): ImageCandidate[] {
 
 /** The match's provider, if the title has a match it can list images for. */
 function matchedSource(row: TitleRow, lib: LibraryRow) {
-  const source = sourceFor(lib)
-  if (!source?.configured() || row.provider !== source.id) return null
+  const result = sourceFor(lib)
+  if (result.state !== "available") return null
+  const { source } = result
+  if (!source.configured() || row.provider !== source.id) return null
   return row.providerId ? { source, providerId: row.providerId } : null
 }
 

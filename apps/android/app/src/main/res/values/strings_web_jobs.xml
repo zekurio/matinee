@@ -13,7 +13,7 @@
     <string name="web_jobs_queue_media_probe_name">Media info</string>
     <string name="web_jobs_queue_media_probe_description">Read the streams of new and changed files with ffprobe.</string>
     <string name="web_jobs_queue_metadata_name">Metadata</string>
-    <string name="web_jobs_queue_metadata_description">Fetch details, artwork, and episodes from TMDB or TheTVDB.</string>
+    <string name="web_jobs_queue_metadata_description">Fetch details, artwork, and episodes from metadata providers.</string>
     <string name="web_jobs_queue_thumbnails_name">Thumbnails</string>
     <string name="web_jobs_queue_thumbnails_description">Take a frame from videos that have no artwork.</string>
     <string name="web_jobs_queue_subtitle_prepare_name">Prepare subtitles</string>
@@ -29,6 +29,10 @@
     <string name="web_jobs_queue_subtitle_fonts_description">Extract font attachments for styled subtitles.</string>
     <string name="web_jobs_queue_subtitles_name">Subtitles</string>
     <string name="web_jobs_queue_subtitles_description">Convert subtitles to WebVTT, and copy PGS subtitles out of videos.</string>
+    <string name="web_jobs_queue_plugin_events_name">Plugin events</string>
+    <string name="web_jobs_queue_plugin_events_description">Deliver recorded server events to plugins, retrying failed handlers.</string>
+    <string name="web_jobs_task_deliver_plugin_events_name">Deliver plugin events</string>
+    <string name="web_jobs_task_deliver_plugin_events_description">Retry waiting plugin events and give up on expired or excess events.</string>
     <string name="web_jobs_queue_avatars_name">Profile pictures</string>
     <string name="web_jobs_queue_avatars_description">Crop and scale uploads and the pictures sign-in providers send.</string>
     <string name="web_jobs_queue_downloads_name">Download encodes</string>
@@ -98,7 +102,7 @@
     <string name="web_jobs_schedule_hourly_afterStartup">Every hour and %1$s after startup</string>
     <string name="web_jobs_schedule_every">Every %1$s</string>
     <string name="web_jobs_schedule_every_atStartup">Every %1$s and at startup</string>
-    <string name="web_jobs_schedule_every_afterStartup">Every %1$s and %2$s after startup</string>
+    <string name="web_jobs_schedule_every_afterStartup">Every %1$s, first %2$s after startup</string>
     <string name="web_jobs_schedule_notScheduled">Not scheduled</string>
     <string name="web_jobs_schedule_afterThisRun">After this run</string>
     <string name="web_jobs_concurrency">Concurrency</string>

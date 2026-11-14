@@ -4,6 +4,7 @@ import { adminAuth } from "./admin-auth"
 import { adminGroups } from "./admin-groups"
 import { adminInvites } from "./admin-invites"
 import { adminJobs } from "./admin-jobs"
+import { adminPlugins } from "./admin-plugins"
 import { adminSetup } from "./admin-setup"
 import { adminTranscoding } from "./admin-transcoding"
 import { adminTrickplay } from "./admin-trickplay"
@@ -48,6 +49,7 @@ export const procedures = {
     groups: adminGroups,
     invites: adminInvites,
     jobs: adminJobs,
+    plugins: adminPlugins,
     setup: adminSetup,
     transcoding: adminTranscoding,
     trickplay: adminTrickplay,

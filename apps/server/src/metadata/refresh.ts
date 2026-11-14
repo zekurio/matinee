@@ -9,7 +9,8 @@ import {
   title,
   type TitleRow,
 } from "@matinee/db"
-import { eq } from "drizzle-orm"
+import { ORPCError } from "@orpc/server"
+import { eq, inArray } from "drizzle-orm"
 
 import { db } from "../db"
 import { defineQueue } from "../jobs/queue"
@@ -17,9 +18,15 @@ import { localName } from "../library/titles"
 import { log } from "../log"
 import { queueArtwork, saveArtwork } from "../media/artwork"
 import { sortName } from "../media/title"
+import { recordPluginEvent, onPluginMetadataStarted } from "../plugins"
+import { tmdbPlugin, tvdbPlugin } from "./builtins"
 import { type Choices, episodeKey, readChoices } from "./choices"
 import { bestMatch } from "./match"
-import { sources } from "./sources"
+import {
+  providerKindUnsupported,
+  providerUnavailable,
+  sourceById,
+} from "./sources"
 import {
   type Lookup,
   type MetadataSource,
@@ -36,10 +43,38 @@ const RETRY_UNMATCHED_MS = DAY
 const MAX_FAILURES_IN_A_ROW = 5
 const BATCH_SIZE = 500
 
-/** The library's provider, if it has one the server can use. */
-export function sourceFor(lib: LibraryRow): MetadataSource | null {
-  if (!lib.metadataProvider) return null
-  return sources[lib.metadataProvider]
+type ProviderLibrary = Pick<LibraryRow, "metadataProvider" | "kind">
+type LibrarySource =
+  | { state: "none" }
+  | { state: "unavailable"; message: string }
+  | { state: "available"; source: MetadataSource }
+
+/** Missing plugins are not the same as removing a library's provider. */
+export function sourceFor(lib: ProviderLibrary): LibrarySource {
+  if (!lib.metadataProvider) return { state: "none" }
+  const source = sourceById(lib.metadataProvider)
+  if (!source)
+    return {
+      state: "unavailable",
+      message: providerUnavailable(lib.metadataProvider),
+    }
+  const kind = lib.kind === "movies" ? "movie" : "show"
+  if (!source.kinds.includes(kind))
+    return {
+      state: "unavailable",
+      message: providerKindUnsupported(source.name),
+    }
+  return { state: "available", source }
+}
+
+export function sourceProblem(lib: ProviderLibrary): string | null {
+  const result = sourceFor(lib)
+  if (result.state === "none")
+    return "Pick a metadata provider for this library first."
+  if (result.state === "unavailable") return result.message
+  return result.source.configured()
+    ? null
+    : `${result.source.name} isn't set up. ${result.source.setup ?? ""}`
 }
 
 function lookupFor(row: TitleRow, lib: LibraryRow): Lookup {
@@ -54,9 +89,11 @@ function needsRefresh(
   lib: LibraryRow,
   now = Date.now(),
 ): boolean {
-  const source = sourceFor(lib)
-  // Provider removed: put the folder names back.
-  if (!source) return row.provider !== null
+  const result = sourceFor(lib)
+  // Only an explicitly removed provider puts the folder names back.
+  if (result.state === "none") return row.provider !== null
+  if (result.state === "unavailable") return false
+  const { source } = result
   // Without its API key, leave whatever the titles have alone.
   if (!source.configured()) return false
   if (row.provider !== source.id || !row.refreshedAt) return true
@@ -275,6 +312,12 @@ async function save(
       photoId: id(c.photo),
     }))
     if (credits.length > 0) await tx.insert(credit).values(credits)
+    if (rematched)
+      await recordPluginEvent(tx, "title.matched", {
+        titleId: row.id,
+        provider,
+        providerId: details.id,
+      })
     return {
       covers: [images.posterId, images.backdropId],
       rest: [
@@ -339,11 +382,13 @@ async function refreshTitle(
   lib: LibraryRow,
   options: { providerId?: string } = {},
 ): Promise<void> {
-  const source = sourceFor(lib)
-  if (!source) {
+  const result = sourceFor(lib)
+  if (result.state === "none") {
     if (row.provider !== null) await reset(row, null)
     return
   }
+  if (result.state === "unavailable" || !result.source.configured()) return
+  const { source } = result
   const lookup = lookupFor(row, lib)
   const local = localName(row.path, row.kind)
   const known: ExternalIds = { ...row.externalIds, ...local.ids }
@@ -356,11 +401,12 @@ async function refreshTitle(
   id ??= await searchFor(source, lookup, local)
   if (!id) {
     log.info(`No ${source.name} match for ${row.path}`)
-    await reset(row, source.id)
+    if (sourceFor(lib).state === "available") await reset(row, source.id)
     return
   }
   const details = await source.details(id, lookup)
-  await save(row, source.id, details, local.ids)
+  if (sourceFor(lib).state === "available")
+    await save(row, source.id, details, local.ids)
 }
 
 type RefreshJob = {
@@ -390,6 +436,47 @@ class ProviderStopped extends Error {
 
 const failuresInARow = new Map<MetadataProviderId | null, number>()
 
+for (const plugin of [tmdbPlugin, tvdbPlugin]) {
+  const id = plugin === tmdbPlugin ? "tmdb" : "tvdb"
+  let configured = sourceById(id)?.configured() ?? false
+  plugin.onChange(() => {
+    failuresInARow.delete(id)
+    const next = sourceById(id)?.configured() ?? false
+    if (!configured && next) {
+      // A previous unmatched refresh may still be inside its retry window.
+      void db
+        .select({ id: library.id })
+        .from(library)
+        .where(eq(library.metadataProvider, id))
+        .then((libs) => {
+          for (const lib of libs) queueRefresh(lib.id, true)
+        })
+        .catch((cause: unknown) =>
+          log.error(
+            `Couldn't refresh libraries after configuring ${id}`,
+            cause,
+          ),
+        )
+    }
+    configured = next
+  })
+}
+
+// A plugin's provider was away, so its libraries' titles kept what they
+// had and new ones went without. Fetch what's due now that it's back.
+onPluginMetadataStarted((providerIds) => {
+  void db
+    .select({ id: library.id })
+    .from(library)
+    .where(inArray(library.metadataProvider, providerIds))
+    .then((libs) => {
+      for (const lib of libs) queueRefresh(lib.id)
+    })
+    .catch((cause: unknown) =>
+      log.error("Couldn't refresh libraries after a plugin started", cause),
+    )
+})
+
 async function runRefresh(job: RefreshJob): Promise<void> {
   const [row] = await db.select().from(title).where(eq(title.id, job.titleId))
   if (!row) return
@@ -398,27 +485,36 @@ async function runRefresh(job: RefreshJob): Promise<void> {
     .from(library)
     .where(eq(library.id, row.libraryId))
   if (!lib) return
+  const result = sourceFor(lib)
+  if (
+    result.state === "unavailable" ||
+    (result.state === "available" && !result.source.configured())
+  )
+    return
   if (!job.force && !job.providerId && !needsRefresh(row, lib)) return
   try {
     await refreshTitle(row, lib, { providerId: job.providerId })
-    failuresInARow.set(job.provider, 0)
+    failuresInARow.set(lib.metadataProvider, 0)
   } catch (cause) {
-    const source = sourceFor(lib)
-    const failures = (failuresInARow.get(job.provider) ?? 0) + 1
-    failuresInARow.set(job.provider, failures)
+    const current = sourceFor(lib)
+    // A plugin stopping is not a failed provider request.
+    if (current.state !== "available") return
+    const { source } = current
+    const failures = (failuresInARow.get(lib.metadataProvider) ?? 0) + 1
+    failuresInARow.set(lib.metadataProvider, failures)
     const status = cause instanceof ProviderError ? cause.status : null
     if (status === 401 || status === 403) {
       throw new ProviderStopped(
-        `${source?.name} rejected the API key. ${source?.setup ?? ""}`,
-        job.provider,
+        `${source.name} refused access. Check its settings under Settings → Plugins.`,
+        lib.metadataProvider,
         cause,
       )
     }
     if (failures >= MAX_FAILURES_IN_A_ROW) {
-      failuresInARow.set(job.provider, 0)
+      failuresInARow.set(lib.metadataProvider, 0)
       throw new ProviderStopped(
-        `${source?.name} keeps failing, stopping for now.`,
-        job.provider,
+        `${source.name} keeps failing, stopping for now.`,
+        lib.metadataProvider,
         cause,
       )
     }
@@ -438,7 +534,7 @@ async function runRefresh(job: RefreshJob): Promise<void> {
 const metadataJobs = defineQueue<RefreshJob, void>({
   id: "metadata",
   name: "Metadata",
-  description: "Fetch details, artwork, and episodes from TMDB or TheTVDB.",
+  description: "Fetch details, artwork, and episodes from metadata providers.",
   concurrency: 4,
   key: (job) => job.titleId,
   label: (job) => job.path,
@@ -478,6 +574,8 @@ export async function refreshTitleNow(
   lib: LibraryRow,
   options: { providerId?: string } = {},
 ): Promise<void> {
+  const problem = sourceProblem(lib)
+  if (problem) throw new ORPCError("BAD_REQUEST", { message: problem })
   try {
     await metadataJobs.run(
       {
@@ -490,6 +588,8 @@ export async function refreshTitleNow(
       },
       { priority: "high" },
     )
+    const after = sourceProblem(lib)
+    if (after) throw new ORPCError("BAD_REQUEST", { message: after })
   } catch (cause) {
     throw cause instanceof ProviderStopped ? cause.cause : cause
   }
@@ -510,6 +610,12 @@ export async function refreshMetadata(
   const now = Date.now()
   const jobs: RefreshJob[] = []
   for (const lib of libs) {
+    const result = sourceFor(lib)
+    if (result.state === "unavailable") {
+      log.info(`Skipping metadata for ${lib.name}: ${result.message}`)
+      continue
+    }
+    if (result.state === "available" && !result.source.configured()) continue
     const rows = await db
       .select()
       .from(title)
@@ -519,7 +625,7 @@ export async function refreshMetadata(
     )
     if (due.length === 0) continue
     log.info(
-      `Fetching ${sourceFor(lib)?.name ?? "no"} metadata for ${due.length} titles in ${lib.name}`,
+      `Fetching ${result.state === "available" ? result.source.name : "no"} metadata for ${due.length} titles in ${lib.name}`,
     )
     for (const row of due) {
       jobs.push({

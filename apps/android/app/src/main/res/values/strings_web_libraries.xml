@@ -35,7 +35,11 @@
     <string name="web_libraries_dialog_kind_shows">Shows</string>
     <string name="web_libraries_dialog_metadata">Metadata</string>
     <string name="web_libraries_dialog_noProvider">None</string>
-    <string name="web_libraries_dialog_needsKey">Needs an API key</string>
+    <string name="web_libraries_dialog_unavailable">Unavailable</string>
+    <string name="web_libraries_dialog_pluginProvider">%1$s · %2$s</string>
+    <string name="web_libraries_dialog_providerOffline">%1$s isn\'t running. Turn its plugin on under Settings → Plugins. Existing metadata stays unchanged.</string>
+    <string name="web_libraries_dialog_providerMissing">The plugin for %1$s isn\'t installed. Install it under Settings → Plugins, or choose another provider. Existing metadata stays unchanged.</string>
+    <string name="web_libraries_dialog_needsKey">Set up under Plugins</string>
     <string name="web_libraries_dialog_language">Language</string>
     <string name="web_libraries_dialog_noProviderHint">Titles use their folder and file names, with no artwork.</string>
     <string name="web_libraries_dialog_folders">Selected folders</string>

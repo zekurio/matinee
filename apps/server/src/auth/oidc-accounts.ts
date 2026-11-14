@@ -14,6 +14,7 @@ import { and, eq } from "drizzle-orm"
 import { forgetGroups, groupsFollowing, setMemberships } from "../access/groups"
 import { db } from "../db"
 import { log } from "../log"
+import { recordPluginEvent } from "../plugins"
 import { recordProviderPicture } from "./avatars"
 import { sameIssuer } from "./oidc-settings"
 import { passkeysEnabled } from "./passkey-settings"
@@ -204,6 +205,7 @@ export async function createOidcUser(
       subject: identity.subject,
       label: identity.label,
     })
+    await recordPluginEvent(tx, "user.created", { userId: row.id })
     return row
   })
   await syncAccess(created.id, identity)

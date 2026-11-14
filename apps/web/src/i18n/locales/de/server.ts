@@ -66,6 +66,27 @@ export default {
   "server.oidc.failed":
     "Die Anmeldung ist fehlgeschlagen. Details stehen im Server-Log.",
 
+  "server.pluginAuth.setupFirst":
+    "Schließe die Einrichtung mit einem Passkey oder Single Sign-on ab, bevor du dich über ein Plugin anmeldest.",
+  "server.pluginAuth.notFound": "Anmeldeanbieter nicht gefunden.",
+  "server.pluginAuth.noLinkedAccount":
+    "Mit dieser Anmeldung ist kein Konto verknüpft. Melde dich bei deinem Konto an und verknüpfe diesen Anbieter unter Einstellungen → Konto.",
+  "server.pluginAuth.usernameCollision":
+    "Ein Konto namens {username} gibt es bereits. Melde dich dort an und verknüpfe {provider} unter Einstellungen → Konto.",
+  "server.pluginAuth.failed":
+    "Die Anmeldung ist fehlgeschlagen. Versuch es später noch einmal.",
+  "server.pluginAuth.credentialsFailed":
+    "Das hat nicht geklappt. Überprüfe deine Eingaben.",
+  "server.pluginAuth.wait":
+    "Zu viele Anmeldeversuche. Warte ein paar Minuten und versuche es dann noch einmal.",
+  "server.pluginAuth.fieldsInvalid":
+    "Die Anmeldefelder passen nicht zu diesem Anbieter.",
+  "server.pluginAuth.requestInvalid": "Die Anmeldeanfrage ist ungültig.",
+  "server.pluginAuth.responseTooLarge":
+    "Die Anmeldeantwort ist zu groß. Versuch es noch einmal.",
+  "server.pluginAuth.addressBlocked":
+    "Der Anmeldeanbieter hat eine Adresse zurückgegeben, die er nicht verwenden darf.",
+
   "server.passkeys.requestExpired":
     "Die Passkey-Anfrage ist abgelaufen. Versuch es noch einmal.",
   "server.passkeys.checkFailed": "Die Passkey-Prüfung ist fehlgeschlagen.",
@@ -220,26 +241,46 @@ export default {
     "Filme und Serien haben ein Poster, einen Hintergrund oder ein Logo, Staffeln ein Poster und Folgen ein Standbild.",
   "server.images.gone": "Dieses Bild ist nicht mehr verfügbar. Suche erneut.",
 
+  "server.plugins.unavailable": "Plugins sind noch nicht verfügbar.",
+  "server.metadata.unavailable":
+    "Dieser Metadatenanbieter ist nicht verfügbar.",
+  "server.metadata.pluginOffline":
+    "{provider} läuft nicht. Aktiviere das Plugin unter Einstellungen → Plugins.",
+  "server.metadata.pluginMissing":
+    "Der Metadatenanbieter {provider} ist nicht installiert. Installiere sein Plugin unter Einstellungen → Plugins oder wähle einen anderen Anbieter.",
+  "server.metadata.kindUnsupported":
+    "{provider} unterstützt den Typ dieser Mediathek nicht. Wähle einen anderen Anbieter oder ändere den Mediathektyp.",
+  "server.metadata.tmdbPluginDescription":
+    "Film- und Serienmetadaten von The Movie Database.",
+  "server.metadata.tvdbPluginDescription":
+    "Serien- und Filmmetadaten von TheTVDB in Sonarrs Staffelreihenfolge.",
+  "server.metadata.tmdbKeyLabel": "API-Schlüssel oder Lesezugriffstoken",
+  "server.metadata.apiKeyLabel": "API-Schlüssel",
+  "server.metadata.tmdbKeyHint":
+    "Einen kostenlosen API-Schlüssel oder ein API-Lesezugriffstoken erhältst du in den API-Einstellungen deines TMDB-Kontos.",
+  "server.metadata.tvdbKeyHint":
+    "Einen API-Schlüssel erhältst du in den API-Zugriffseinstellungen deines TheTVDB-Kontos.",
+  "server.metadata.pinLabel": "Abonnenten-PIN",
+  "server.metadata.pinHint":
+    "Gib für abonnentenfinanzierte Schlüssel die PIN deines TheTVDB-Abos ein. Lass das Feld sonst leer.",
   "server.metadata.tmdbDescription":
     "The Movie Database. Filme und Serien, mit Standbildern von Folgen und Logos. Radarr nutzt sie.",
   "server.metadata.tmdbSetup":
-    "Setze MATINEE_TMDB_API_KEY auf einen API-Schlüssel oder ein Lesezugriffstoken.",
+    "Füge unter Einstellungen → Plugins einen TMDB-API-Schlüssel hinzu oder setze MATINEE_TMDB_API_KEY.",
   "server.metadata.tmdbNotSetUp":
-    "TMDB ist nicht eingerichtet. Setze MATINEE_TMDB_API_KEY auf einen API-Schlüssel oder ein Lesezugriffstoken.",
-  "server.metadata.tmdbRejectedKey":
-    "TMDB hat den API-Schlüssel abgelehnt. Setze MATINEE_TMDB_API_KEY auf einen API-Schlüssel oder ein Lesezugriffstoken.",
-  "server.metadata.tmdbKeyMissing": "MATINEE_TMDB_API_KEY ist nicht gesetzt",
+    "TMDB ist nicht eingerichtet. Füge unter Einstellungen → Plugins einen TMDB-API-Schlüssel hinzu oder setze MATINEE_TMDB_API_KEY.",
+  "server.metadata.tmdbKeyMissing":
+    "TMDB hat keinen API-Schlüssel. Füge unter Einstellungen → Plugins einen hinzu.",
   "server.metadata.tvdbDescription":
     "Serien in der Staffelreihenfolge, die Sonarr nutzt, dazu Filme, Logos und Bilder zu Folgen.",
   "server.metadata.tvdbSetup":
-    "Setze MATINEE_TVDB_API_KEY und MATINEE_TVDB_PIN, falls dein Schlüssel eine Abonnenten-PIN braucht.",
+    "Füge unter Einstellungen → Plugins einen TheTVDB-API-Schlüssel und bei Bedarf eine Abonnenten-PIN hinzu oder setze MATINEE_TVDB_API_KEY und MATINEE_TVDB_PIN.",
   "server.metadata.tvdbNotSetUp":
-    "TheTVDB ist nicht eingerichtet. Setze MATINEE_TVDB_API_KEY und MATINEE_TVDB_PIN, falls dein Schlüssel eine Abonnenten-PIN braucht.",
-  "server.metadata.tvdbRejectedKey":
-    "TheTVDB hat den API-Schlüssel abgelehnt. Setze MATINEE_TVDB_API_KEY und MATINEE_TVDB_PIN, falls dein Schlüssel eine Abonnenten-PIN braucht.",
-  "server.metadata.tvdbKeyMissing": "MATINEE_TVDB_API_KEY ist nicht gesetzt",
+    "TheTVDB ist nicht eingerichtet. Füge unter Einstellungen → Plugins einen TheTVDB-API-Schlüssel und bei Bedarf eine Abonnenten-PIN hinzu oder setze MATINEE_TVDB_API_KEY und MATINEE_TVDB_PIN.",
+  "server.metadata.tvdbKeyMissing":
+    "TheTVDB hat keinen API-Schlüssel. Füge unter Einstellungen → Plugins einen hinzu.",
   "server.metadata.rejectedKey":
-    "{provider} hat den API-Schlüssel abgelehnt. Überprüfe die Konfiguration des Servers.",
+    "{provider} hat den Zugriff verweigert. Prüfe die Einstellungen unter Einstellungen → Plugins.",
   "server.metadata.noEntry": "{provider} hat keinen Eintrag mit dieser ID.",
   "server.metadata.noAnswer":
     "{provider} hat nicht geantwortet. Versuch es in einer Minute noch einmal.",

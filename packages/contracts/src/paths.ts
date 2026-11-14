@@ -360,3 +360,18 @@ export function deviceLinkPagePath(userCode?: string): string {
   if (!userCode) return DEVICE_LINK_PAGE_PATH
   return `${DEVICE_LINK_PAGE_PATH}?${new URLSearchParams({ code: userCode })}`
 }
+
+/** Begin a plugin redirect sign-in or link for this browser. */
+export function pluginAuthStartPath(
+  key: string,
+  mode: "sign-in" | "link",
+  redirect?: string,
+): string {
+  const query = new URLSearchParams({ mode })
+  if (redirect) query.set("redirect", redirect)
+  return `/api/auth/plugins/${encodeURIComponent(key)}/start?${query}`
+}
+/** Callback registered with a plugin's redirect provider. */
+export function pluginAuthCallbackPath(key: string): string {
+  return `/api/auth/plugins/${encodeURIComponent(key)}/callback`
+}

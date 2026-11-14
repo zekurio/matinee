@@ -4,6 +4,8 @@ import {
   oidcStartPath,
   type Passkey,
   PasskeyName,
+  type PluginIdentity,
+  pluginAuthStartPath,
   type User,
 } from "@matinee/contracts"
 import {
@@ -44,6 +46,7 @@ import {
   ImageUpIcon,
   KeyRoundIcon,
   LinkIcon,
+  LogInIcon,
   PencilIcon,
   PlusIcon,
   Trash2Icon,
@@ -51,6 +54,7 @@ import {
 } from "lucide-react"
 import { useRef, useState } from "react"
 
+import { PluginCredentialsForm } from "@/components/plugin-credentials-form"
 import { UserAvatar } from "@/components/user-avatar"
 import { tr } from "@/i18n"
 import { prepareAvatar } from "@/lib/avatar"
@@ -82,6 +86,7 @@ export function AccountPanel() {
       ) : null}
       {config.data?.passkeys ? <Passkeys oidcEnabled={oidc !== null} /> : null}
       {oidc ? <LinkedAccount displayName={oidc.displayName} /> : null}
+      <PluginSignIns />
       <Sessions />
     </SettingsSections>
   )
@@ -552,7 +557,7 @@ function LinkedAccount({ displayName }: { displayName: string }) {
         linked.isSuccess && !account?.signsIn ? (
           <a
             href={oidcStartPath("link", LINK_RETURN)}
-            className={buttonVariants({ variant: "outline" })}
+            className={cn(buttonVariants({ variant: "outline" }))}
           >
             <LinkIcon />
             {tr("account.oidc.link", { provider: displayName })}
@@ -596,5 +601,176 @@ function LinkedAccount({ displayName }: { displayName: string }) {
         </p>
       )}
     </SettingsSubsection>
+  )
+}
+
+/**
+ * The plugin sign-ins running on the server, and which of them this
+ * account is linked to. Nothing shows while there are none.
+ */
+function PluginSignIns() {
+  const identities = useQuery(orpc.account.identities.list.queryOptions())
+  const [linking, setLinking] = useState<PluginIdentity | null>(null)
+  const [linkOpen, setLinkOpen] = useState(false)
+  if (!identities.data || identities.data.length === 0) return null
+
+  return (
+    <SettingsSubsection
+      id="plugin-sign-ins"
+      title={tr("account.plugins.title")}
+    >
+      <List>
+        {identities.data.map((identity) => (
+          <PluginIdentityRow
+            key={identity.key}
+            identity={identity}
+            onLink={() => {
+              setLinking(identity)
+              setLinkOpen(true)
+            }}
+          />
+        ))}
+      </List>
+      <Dialog open={linkOpen} onOpenChange={setLinkOpen}>
+        <DialogContent className="gap-5 p-6 sm:max-w-md">
+          {linking && (
+            <LinkCredentials
+              key={linking.key}
+              identity={linking}
+              onDone={() => setLinkOpen(false)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+    </SettingsSubsection>
+  )
+}
+
+function PluginIdentityRow({
+  identity,
+  onLink,
+}: {
+  identity: PluginIdentity
+  onLink: () => void
+}) {
+  const queryClient = useQueryClient()
+  const unlink = useMutation({
+    mutationFn: () => client.account.identities.unlink({ key: identity.key }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: orpc.account.identities.key(),
+      })
+      toast.success(tr("account.oidc.unlinked", { provider: identity.name }))
+    },
+    onError: (error) =>
+      toast.error(
+        tr("account.oidc.unlinkFailed", { provider: identity.name }),
+        { description: errorMessage(error) },
+      ),
+  })
+  const linked = identity.linked
+
+  return (
+    <ListItem className="pr-2">
+      <RowIcon>
+        <LogInIcon />
+      </RowIcon>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-medium" title={identity.name}>
+          {identity.name}
+        </p>
+        <p
+          className="text-muted-foreground truncate text-[13px]"
+          title={linked?.label ?? undefined}
+        >
+          {linked
+            ? linked.label
+              ? tr("account.plugins.linkedAs", {
+                  label: linked.label,
+                  date: formatDate(linked.createdAt),
+                })
+              : tr("account.oidc.linked", {
+                  date: formatDate(linked.createdAt),
+                })
+            : tr("account.plugins.notLinked")}
+        </p>
+      </div>
+      {linked ? (
+        <Button
+          variant="ghost"
+          className="shrink-0"
+          disabled={unlink.isPending}
+          onClick={() => unlink.mutate()}
+        >
+          {tr("account.oidc.unlink")}
+        </Button>
+      ) : identity.kind === "redirect" ? (
+        <a
+          href={pluginAuthStartPath(identity.key, "link", LINK_RETURN)}
+          className={cn(
+            buttonVariants({
+              variant: "outline",
+              className: "shrink-0",
+            }),
+          )}
+          aria-label={tr("account.oidc.link", { provider: identity.name })}
+        >
+          <LinkIcon />
+          {tr("account.plugins.link")}
+        </a>
+      ) : (
+        <Button
+          variant="outline"
+          className="shrink-0"
+          aria-label={tr("account.oidc.link", { provider: identity.name })}
+          onClick={onLink}
+        >
+          <LinkIcon />
+          {tr("account.plugins.link")}
+        </Button>
+      )}
+    </ListItem>
+  )
+}
+
+/** Link a credentials sign-in: the plugin checks what's typed. */
+function LinkCredentials({
+  identity,
+  onDone,
+}: {
+  identity: PluginIdentity
+  onDone: () => void
+}) {
+  const queryClient = useQueryClient()
+  const link = useMutation({
+    mutationFn: (fields: Record<string, string>) =>
+      client.account.identities.link({ key: identity.key, fields }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: orpc.account.identities.key(),
+      })
+      toast.success(tr("account.plugins.linked", { provider: identity.name }))
+      onDone()
+    },
+  })
+  return (
+    <>
+      <DialogHeader>
+        <DialogTitle className="wrap-anywhere">
+          {tr("account.oidc.link", { provider: identity.name })}
+        </DialogTitle>
+        <DialogDescription>
+          {tr("account.plugins.linkDescription", { provider: identity.name })}
+        </DialogDescription>
+      </DialogHeader>
+      <PluginCredentialsForm
+        provider={identity}
+        submitLabel={tr("account.plugins.link")}
+        pending={link.isPending}
+        error={link.isError ? errorMessage(link.error) : null}
+        onSubmit={(fields) => link.mutate(fields)}
+        onCancel={{ label: tr("account.cancel"), run: onDone }}
+      />
+    </>
   )
 }

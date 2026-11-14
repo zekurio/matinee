@@ -1,6 +1,7 @@
 packages:
   - "apps/*"
   - "packages/*"
+  - "plugins/*"
 
 catalog:
   "@base-ui/react": 1.9.0
@@ -26,6 +27,9 @@ catalog:
 allowBuilds:
   esbuild: true
   lfa-ponyfill: false
+  # Only prints a funding notice. The plugin sandbox's prelude bundles its
+  # URL polyfill.
+  core-js-pure: false
   # Picks between Vue 2 and 3 on install; its default is already Vue 3.
   vue-demi: false
 

@@ -58,6 +58,16 @@ export default defineMessages("account", {
   "account.oidc.unlinkFailed": "Couldn't unlink {provider}",
   "account.oidc.none": "No {provider} account linked.",
 
+  // Sign-ins plugins provide, linked to this account or not.
+  "account.plugins.title": "Other ways to sign in",
+  // {label} is the name the provider knows the account by.
+  "account.plugins.linkedAs": "{label}, linked {date}",
+  "account.plugins.notLinked": "Not linked",
+  "account.plugins.link": "Link",
+  "account.plugins.linked": "Linked {provider}",
+  "account.plugins.linkDescription":
+    "Sign in to {provider} once here. After that, it signs you in to this account.",
+
   // Sessions.
   "account.sessions.title": "Sessions",
   "account.sessions.signOutOthers": "Sign out other sessions",

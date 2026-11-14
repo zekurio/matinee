@@ -13,6 +13,7 @@ import {
   sortName,
   stem,
 } from "../media/title"
+import { recordPluginEvents } from "../plugins"
 
 const BATCH_SIZE = 500
 
@@ -172,8 +173,17 @@ export async function assignTitles(
           externalIds: sql`case when ${unmatched} then excluded.external_ids else ${title.externalIds} end`,
         },
       })
-      .returning({ id: title.id, path: title.path })
+      .returning({
+        id: title.id,
+        path: title.path,
+        inserted: sql<boolean>`xmax = 0`,
+      })
     for (const row of saved) ids.set(row.path, row.id)
+    await recordPluginEvents(
+      db,
+      "title.added",
+      saved.filter((row) => row.inserted).map((row) => ({ titleId: row.id })),
+    )
   }
 
   const current = new Map(items.map((item) => [item.id, item]))

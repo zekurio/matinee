@@ -175,6 +175,18 @@ function LibraryRow({
         <h4 className="truncate text-sm leading-5 font-medium">
           {library.name}
         </h4>
+        {library.metadataProvider &&
+          providers.data &&
+          (!provider || !provider.available) && (
+            <p className="text-muted-foreground text-[13px] leading-5">
+              {tr(
+                provider
+                  ? "libraries.dialog.providerOffline"
+                  : "libraries.dialog.providerMissing",
+                { provider: provider?.name ?? library.metadataProvider },
+              )}
+            </p>
+          )}
         {(library.scanning || library.refreshing) && (
           <p className="text-muted-foreground flex items-center gap-1.5 text-[13px] leading-5">
             <Spinner className="size-3.5" />
@@ -207,7 +219,7 @@ function LibraryRow({
             <RefreshCwIcon />
             {tr("libraries.scanNow")}
           </DropdownMenuItem>
-          {provider && (
+          {library.metadataProvider && (
             <DropdownMenuItem
               disabled={library.refreshing || refetchMetadata.isPending}
               onClick={() => refetchMetadata.mutate()}

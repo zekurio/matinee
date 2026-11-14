@@ -1,0 +1,72 @@
+{
+  "name": "matinee-plugin-anilist",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Anime movie and show metadata from AniList.",
+  "keywords": [
+    "matinee-plugin"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "matinee-plugin build",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@matinee/plugin": "workspace:*"
+  },
+  "matinee": {
+    "api": 1,
+    "id": "anilist",
+    "name": "AniList",
+    "main": "dist/plugin.js",
+    "permissions": {
+      "network": [
+        "graphql.anilist.co",
+        "s4.anilist.co"
+      ]
+    },
+    "contributes": {
+      "metadata": [
+        {
+          "id": "anilist",
+          "name": "AniList",
+          "description": "Anime movie and show metadata from AniList.",
+          "kinds": [
+            "movie",
+            "show"
+          ],
+          "episodes": false
+        }
+      ]
+    },
+    "config": [
+      {
+        "key": "titleLanguage",
+        "type": "select",
+        "label": "Title language",
+        "default": "romaji",
+        "options": [
+          {
+            "value": "romaji",
+            "label": "Romaji"
+          },
+          {
+            "value": "english",
+            "label": "English"
+          },
+          {
+            "value": "native",
+            "label": "Native"
+          }
+        ]
+      },
+      {
+        "key": "adult",
+        "type": "boolean",
+        "label": "Include adult titles",
+        "default": false
+      }
+    ]
+  }
+}

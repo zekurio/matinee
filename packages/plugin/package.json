@@ -1,0 +1,19 @@
+{
+  "name": "@matinee/plugin",
+  "private": true,
+  "license": "MIT",
+  "bin": {
+    "matinee-plugin": "./bin/matinee-plugin.mjs"
+  },
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./globals": "./src/globals.d.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "esbuild": "0.28.2"
+  }
+}

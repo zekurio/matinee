@@ -7,11 +7,15 @@
     "api:android": "tsx scripts/android-api.ts",
     "build": "node build.mjs",
     "dev": "tsx watch --clear-screen=false src/index.ts",
+    "plugins:prelude": "tsx scripts/plugin-prelude.ts",
     "start": "NODE_ENV=production node dist/server/index.mjs",
+    "test": "tsx scripts/guarded-fetch-check.ts && tsx scripts/plugin-sandbox-check.ts && tsx scripts/plugin-async-check.ts && tsx scripts/plugin-install-check.ts && tsx scripts/plugin-manager-check.ts && tsx scripts/plugin-events-check.ts",
+    "test:bundle": "node build.mjs --checks && tsx scripts/plugin-sandbox-check.ts --bundle && tsx scripts/plugin-async-check.ts --bundle",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@hono/node-server": "2.1.6",
+    "@jitl/quickjs-ng-wasmfile-release-sync": "0.32.0",
     "@matinee/contracts": "workspace:*",
     "@matinee/db": "workspace:*",
     "@orpc/contract": "catalog:",
@@ -22,9 +26,12 @@
     "blurhash": "catalog:",
     "drizzle-orm": "catalog:",
     "hono": "4.13.16",
-    "openid-client": "6.8.9"
+    "openid-client": "6.8.9",
+    "quickjs-emscripten-core": "0.32.0"
   },
   "devDependencies": {
+    "@matinee/plugin": "workspace:*",
+    "core-js-pure": "3.51.0",
     "esbuild": "0.28.2",
     "tsx": "4.23.15"
   }

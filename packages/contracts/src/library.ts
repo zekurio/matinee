@@ -1,12 +1,12 @@
 import { Artwork } from "./artwork"
+import { PLUGIN_ID_PATTERN } from "./plugins"
 import { t } from "./schema"
 
 export const LIBRARY_KINDS = ["movies", "shows"] as const
 export const LibraryKind = t.enum(LIBRARY_KINDS)
 export type LibraryKind = t.infer<typeof LibraryKind>
 
-export const METADATA_PROVIDERS = ["tmdb", "tvdb"] as const
-export const MetadataProviderId = t.enum(METADATA_PROVIDERS)
+export const MetadataProviderId = t.string().regex(PLUGIN_ID_PATTERN)
 export type MetadataProviderId = t.infer<typeof MetadataProviderId>
 
 /** A language with an optional region, like `en`, `de-DE`, or `pt-BR`. */
@@ -16,10 +16,14 @@ export const MetadataLanguage = t
   .regex(/^[a-z]{2}(-[A-Z]{2})?$/, "Use a language code like en or de-DE.")
 
 export const MetadataProvider = t.object({
+  plugin: t.object({ id: t.string(), name: t.string() }),
+  builtin: t.boolean(),
+  available: t.boolean(),
   id: MetadataProviderId,
   name: t.string(),
   /** What it is good at, in a line. */
   description: t.string(),
+  kinds: t.array(t.enum(["movie", "show"])),
   /** It names and describes episodes, not only the show. */
   episodes: t.boolean(),
   /** The server has the API key it needs. */

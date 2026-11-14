@@ -17,6 +17,7 @@ behaves and how to configure it.
 - [Access](#access)
 - [Scanning](#scanning)
 - [Metadata](#metadata)
+- [Plugins](#plugins)
 - [Jobs](#jobs)
 - [Subtitles](#subtitles)
 - [Audio tracks and quality](#audio-tracks-and-quality)
@@ -280,9 +281,15 @@ Each movies or shows library picks one metadata provider and a language when
 it is created or edited:
 
 - TMDB: movies and shows, with episode stills and logos. Radarr matches on
-  it. Needs `MATINEE_TMDB_API_KEY`.
-- TheTVDB: shows in the season order Sonarr uses, plus movies. Needs
-  `MATINEE_TVDB_API_KEY`, and `MATINEE_TVDB_PIN` for user-supported keys.
+  it. Needs an API key.
+- TheTVDB: shows in the season order Sonarr uses, plus movies. Needs an API
+  key, and the subscriber PIN for user-supported keys.
+- Any provider a [plugin](#plugins) adds, such as AniList.
+
+The two built in take their keys under Settings → Plugins, or from
+`MATINEE_TMDB_API_KEY`, `MATINEE_TVDB_API_KEY`, and `MATINEE_TVDB_PIN`. A key
+saved in the app wins over the variable, and saving one starts the fetches
+that waited for it.
 
 A scan groups files into titles: a show is a top-level folder, a movie is a
 folder holding one video (or a lone file), and `Season 2` folders or `S02E05`
@@ -335,9 +342,208 @@ under an id from their bytes. A refresh keeps what an admin picked, uploaded,
 or removed. Fix match to another entry drops the picks from the old one and
 keeps the uploads, and the server deletes an upload once nothing shows it.
 
-Providers live in `apps/server/src/metadata`. Adding one means implementing
-`MetadataSource` in `types.ts`, listing it in `sources.ts`, and adding its id
-to `METADATA_PROVIDERS` in the contract.
+A library whose provider comes from a plugin that is off, crashed, or
+removed keeps the metadata it has: nothing is fetched and nothing is reset
+until the plugin runs again, and then what came due meanwhile is fetched.
+Only taking the provider off the library puts the folder names back. To
+write a provider, see [`packages/plugin`](../../packages/plugin/README.md).
+
+## Plugins
+
+Plugins add metadata providers, ways to sign in, and listeners for what
+happens on the server, like a webhook for a finished scan. Admins manage
+them under Settings → Plugins. TMDB and TheTVDB show there too, as built-in
+plugins, for their keys.
+
+An installed plugin is one bundled JavaScript file and a `package.json`.
+It runs in a sandbox: a QuickJS interpreter compiled to WebAssembly, with
+a WebAssembly memory of its own, on one thread in a small pool of plugin
+host threads. Inside there is the language, `fetch`, timers, and a context
+object, and nothing of Node: no files, no sockets, no environment
+variables, no database, no sessions, and nothing of another plugin. Each
+thing it does outside is a call the server checks against what the plugin
+was allowed.
+
+What a plugin may do is in its manifest, the `matinee` object of its
+`package.json`, which the server reads without running any of the
+plugin's code. Before a plugin runs, an admin sees that list and approves
+it:
+
+- the internet hosts it connects to, by name, over https,
+- an address an admin types into its settings, which may be on the local
+  network, at exactly that host, port, and scheme,
+- storing a little data of its own, at most 5 MB,
+- providing metadata, or signing people in,
+- hearing about scans and new titles, about who plays what, or about new
+  accounts.
+
+The approval is for exactly that list and exactly those files. An update
+that asks for more, or a file that changed on disk, stops the plugin until
+an admin looks again. The plugin's page shows its state, its settings,
+and its recent log. The server's own log says which admin installed,
+approved, turned on or off, set up, or removed a plugin.
+
+An update can also leave a saved setting that the new version no longer
+takes, like an option it dropped. The plugin then waits, and its page
+names the settings to look at.
+
+A sign-in plugin links accounts to the names its provider gives people.
+Those names only mean something at that provider. So when an admin
+changes an address such a plugin talks to, or a setting its manifest
+marks as deciding who is who, while accounts are linked, the app asks
+what happens to the links: keep them, because it is the same service
+with the same people, or remove them. Without an answer the change is
+refused.
+
+Turning a plugin off keeps its settings, its data, and the accounts
+linked to it, and removing it deletes them. Before either, the app says
+what that takes away: the libraries that get their metadata from it,
+which keep what they have and fetch nothing new, the accounts that sign
+in through it, and how many of those have no other way in, the first few
+by name.
+
+A server event is kept in Postgres from the moment it happens until a
+plugin's handler took it, so it survives a restart and a plugin that is
+away. It is recorded for every plugin that is on and listens, and also
+for one that failed and waits for a restart, so nothing is missing once
+it runs again. A plugin that is off, or waits for approval or settings,
+gets none.
+
+Each plugin gets its events at least once, up to four at a time. Events
+about the same title, the same library, or the same person arrive in the
+order their changes were saved, and others can overtake them. A change
+that is slow to save can arrive after a later one about the same thing.
+A handler has 30 seconds. An event whose handler fails is tried again
+after 5 seconds, 30 seconds, 2 minutes, 10 minutes, then every 30
+minutes, and only later events about the same thing wait behind it.
+After a failure the plugin gets one event at a time until one succeeds,
+and an event that has not failed before goes first. When such events
+fail one after another, the server takes the plugin's other end for
+down and waits longer before each next try, with the same pauses. An
+event that fails again and again by itself doesn't add to that wait, so
+one bad event can't hold up the rest. The first success lets everything
+flow again.
+A sandbox that went away under a handler is not a failed try, and the
+event is delivered again once the plugin runs. An event is given up on
+24 hours after it was recorded, or when more than 5000 wait for one
+plugin, oldest first, and the plugin's log says how many.
+
+The plugin's page shows how many events wait, how many keep failing,
+whether anything gets through, and for the oldest failing one why, how
+often it was tried, and until when the server keeps trying. Try now
+there, saving the plugin's settings, and Restart all try the waiting
+events at once, for after the cause is fixed. Settings → Jobs shows the
+deliveries and the task that catches up after a restart. Each plugin's
+deliveries run for five seconds and then step back behind the other
+plugins', so a long backlog doesn't hold the others up. Removing a
+plugin deletes its events. An event carries names as they are when it is
+delivered, and one about a title, file, or account that is gone by then
+is dropped.
+
+Plugins come from three places:
+
+- Add plugin takes an npm package name, or the https address of a `.tgz`
+  made by `matinee-plugin pack`, and can search npm for packages tagged
+  `matinee-plugin`. The server downloads the tarball, checks it against
+  the registry's sha512, and reads the two files out of it. Nothing in it
+  runs, and no dependencies or install scripts are involved. It lands in
+  `plugins/` in the data dir. `MATINEE_PLUGIN_REGISTRY` names another
+  registry, such as a mirror. An update that doesn't start is undone:
+  the version that was installed goes back with its approval, and the
+  error says why. What the new version stored before it failed stays.
+- A plugin folder dropped into `plugins/` in the data dir shows up after
+  a rescan, off and waiting for approval.
+- `MATINEE_PLUGIN_DIRS` lists more directories of plugin folders,
+  separated by colons. The server only reads them, so they can be in a
+  read-only store. `MATINEE_PLUGINS_ENABLE` lists ids from those
+  directories to turn on at start, which approves what their manifests
+  ask for in place of an admin, for setups that declare their plugins.
+  On NixOS these are `services.matinee.plugins.folders` and
+  `services.matinee.plugins.enable`.
+
+The server holds every plugin to limits: 64 MB of memory, two seconds of
+uninterrupted CPU, 30 seconds per call unless the caller sets another,
+16 calls at once, 5 MB per response, eight requests at once, 32 MB of
+data in flight. A call past a limit fails. When the server stops waiting
+for a call, the plugin's handler is told through its signal. A handler
+that goes on anyway keeps its place among the 16 until it ends, and one
+that hasn't ended after 30 seconds gets the sandbox ended. A plugin
+whose sandbox ended is started again on the next call, no sooner than 1
+second, 5 seconds, 30 seconds, then 5 minutes after each failure, and
+five failures in ten minutes leave it in `error` until an admin restarts
+it or turns it on again. A failed plugin takes nothing down with it: a
+library keeps its metadata and the sign-in page drops the button.
+
+A plugin that is on holds no memory until something calls it. Its
+sandbox starts for the call and stops after
+`MATINEE_PLUGIN_IDLE_SECONDS` without one (120 by default, 0 for never).
+Stopping runs the plugin's `dispose`, and the next call runs its `setup`
+again. At most `MATINEE_PLUGIN_MAX_AWAKE` sandboxes are kept (8 by
+default): starting one more stops the one idle longest, and when all are
+busy it starts anyway. Turning a plugin on, approving it, saving its
+settings, installing it, and Restart start it once, so a broken one
+shows at once. Starting the server and rescanning start nothing.
+
+Sandboxes run on plugin host threads, apart from the server's own. A
+thread starts when a plugin first needs one, and
+`MATINEE_PLUGIN_THREADS` is the most there can be: by default one fewer
+than the machine's cores, at least one and at most four. One plugin is
+one sandbox on one thread, and its calls take turns there. Plugins that
+do little share a thread, which is what keeps memory low. A plugin gets
+a thread away from the others when it needs one:
+
+- A thread is busy when plugin code ran for a quarter of its last five
+  seconds, or is in the middle of a long run. A plugin that wakes goes
+  to a thread that isn't busy, and a new thread starts if all are.
+- A plugin that used half of a thread's time, or was ended for using
+  too much CPU, counts as heavy for ten minutes. It wakes on a thread
+  with nobody else when there is room, and the others stay off it.
+- When a thread gets that busy with several plugins on it, the ones with
+  no call in flight are put to sleep and wake on another thread at their
+  next call. This is not a failure and costs them nothing but the wake.
+- A sandbox can't change threads while it has calls in flight, so with
+  every thread busy a light plugin can still sit beside a heavy one.
+- A thread nobody uses ends after 30 seconds. The last one waits ten
+  minutes, since starting the first is the slow part.
+
+On one thread a plugin that computes without a pause holds the others
+there up until its two seconds are over and it is ended. QuickJS only
+checks that limit between its own steps, so a plugin looping over long
+built-in operations, like parsing a large JSON text again and again,
+can run a second or so past it. The server then ends that thread to
+stop it. That plugin counts a failure. The others on the thread lose
+their calls in flight and wake again on the next call, at no cost to
+their standing. Plugins on other threads notice nothing.
+
+What this costs, on a production build of this machine: the first awake
+plugin adds about 34 MiB to the server's resident memory, which is the
+thread and the compiled interpreter, and takes about 110 ms to wake.
+Each further plugin on that thread adds about 1.3 MiB and wakes in
+about 11 ms. A second thread adds about 19 MiB and a third about 12 MiB,
+and a plugin that starts one wakes in about 70 ms. Memory doesn't all
+come back. With every plugin asleep and one thread waiting, the server
+holds about 43 MiB more than before the first call, and about 23 MiB
+after that thread ended too, which the next start uses again rather than
+adding to. `scripts/plugin-footprint.ts` in `apps/server` measures this
+on your machine (`node build.mjs --checks`, then
+`node --expose-gc --import tsx scripts/plugin-footprint.ts --bundle`).
+
+Plugins assume one server on a database, as the job queues do: which
+plugins run, what they were allowed, and whose events are due are kept
+in the process. Don't point two servers at one database.
+
+What a plugin returns is checked before it is used. Image addresses from
+a metadata plugin must be https on a host the plugin listed, and the
+server downloads artwork only from public addresses. A sign-in plugin
+returns who signed in at its provider, and the server decides what
+account that is, see [How auth works](#how-auth-works).
+
+Four plugins are in [`plugins/`](../../plugins): AniList metadata, a
+webhook for server events, sign-in through an OAuth 2.0 provider such as
+GitHub, and sign-in with a Jellyfin server's accounts. Build one with
+`pnpm --filter matinee-plugin-anilist build` and point `MATINEE_PLUGIN_DIRS`
+at `plugins`, or copy its folder into the data dir. The
+[authoring guide](../../packages/plugin/README.md) has the API.
 
 ## Jobs
 
@@ -753,6 +959,18 @@ statistics.
   or the document's own address. Linked accounts match on it, so the
   server refuses a provider that names another issuer, both when an admin
   saves the settings and at sign-in.
+- A plugin can add ways to sign in: a redirect to a provider and back, or
+  a form whose fields the plugin checks. The plugin only says who signed
+  in there. That signs in to the account linked to exactly that person at
+  that provider, and to no other, whatever username the plugin reports.
+  People link one under Settings → Account while signed in. An admin can
+  let a provider create accounts, which are ordinary users, and a sign-in
+  whose username is taken is refused rather than merged. A plugin can't
+  set a role or access, never creates the first admin, and doesn't count
+  as a way in for the rule below, so passkeys or single sign-on stay on.
+  An account a plugin created has only that link, which can't be removed
+  until the account has a passkey or another link. The form is throttled:
+  five failures per username in five minutes.
 - Nobody can remove their last passkey or linked account. A passkey only
   counts while passkeys are on, and a linked account while single sign-on
   is on. An admin who signs in only through single sign-on can't turn it
@@ -896,5 +1114,7 @@ automatically.
   MP4 without byte ranges, which Safari won't play. Encodes are HLS and do.
 - Surround in streams. Converted audio is always stereo.
 - Text subtitle burn-in for devices without a local ASS renderer.
-- Metadata from NFO files and local artwork, absolute episode numbering for
-  anime, and provider keys set in admin settings instead of the environment.
+- Metadata from NFO files and local artwork, and absolute episode numbering
+  for anime.
+- Plugins that add scheduled tasks, pages, or API routes of their own, and
+  plugin management in the Android app.

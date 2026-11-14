@@ -39,6 +39,10 @@ export default {
   "settings.section.authentication.description": "Passkeys und Single Sign-on",
   "settings.section.authentication.keywords":
     "Passkeys, Anmeldemethoden, Single Sign-on, SSO, OIDC, OpenID Connect, Issuer-URL, Client-ID, Client-Secret, Weiterleitungs-URI, Konten erstellen, Registrierung, Authelia, Authentik, Keycloak",
+  "settings.section.plugins.label": "Plugins",
+  "settings.section.plugins.description": "Metadaten, Anmeldung und Ereignisse",
+  "settings.section.plugins.keywords":
+    "Plugins, Erweiterungen, Plugin hinzufügen, npm, Installieren, Aktualisieren, Berechtigungen, Freigeben, Metadaten, TMDB, TheTVDB, API-Schlüssel, Anmeldung, Ereignisse, Protokoll",
   "settings.section.transcoding.label": "Transkodierung",
   "settings.section.transcoding.description":
     "FFmpeg, GPUs und HDR-Tone-Mapping",

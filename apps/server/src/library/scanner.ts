@@ -8,6 +8,7 @@ import { probeMissing } from "../media/probe"
 import { prepareMissingSubtitles } from "../media/subtitles"
 import { queueTrickplay } from "../media/trickplay"
 import { queueRefresh } from "../metadata/refresh"
+import { recordPluginEvent } from "../plugins"
 import {
   BATCH_SIZE,
   dateFiles,
@@ -120,14 +121,14 @@ async function walkTargets(
       batch.push(file)
       touched.add(topLevelKey(file.relativePath))
       if (batch.length >= BATCH_SIZE) {
-        await flush(libraryId, folder.id, seenAt, batch)
+        counts.added += await flush(libraryId, folder.id, seenAt, batch)
         counts.written += batch.length
         batch = []
       }
     }
     // Stop before anything is deleted. The next scan redoes it.
     if (signal.aborted) break
-    await flush(libraryId, folder.id, seenAt, batch)
+    counts.added += await flush(libraryId, folder.id, seenAt, batch)
     counts.written += batch.length
   }
   await dateFiles(undated)
@@ -172,7 +173,14 @@ async function runScan(
     request.targets,
     state,
   )
-  const counts: ScanCounts = { found: 0, written: 0, moved: 0, gone: 0, kept }
+  const counts: ScanCounts = {
+    added: 0,
+    found: 0,
+    written: 0,
+    moved: 0,
+    gone: 0,
+    kept,
+  }
   // Files from earlier scans. Unchanged ones aren't written again, and the
   // ones the walk doesn't find are gone or moved.
   const known = await loadKnown(libraryId, targets)
@@ -220,6 +228,11 @@ async function runScan(
       .set({ lastScannedAt: new Date() })
       .where(eq(library.id, libraryId))
   }
+  await recordPluginEvent(db, "library.scanned", {
+    libraryId,
+    added: counts.added,
+    removed: counts.gone,
+  })
   // What was walked, or what was asked for when every folder was offline.
   const scope = request.targets
     ? describeTargets(folders, targets.size > 0 ? targets : request.targets)

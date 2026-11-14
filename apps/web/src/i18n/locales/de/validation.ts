@@ -2,6 +2,20 @@ import type { TranslationOf } from "../../catalog"
 import type source from "../en/validation"
 
 export default {
+  "validation.pluginReservedId": "Diese ID ist für den Server reserviert.",
+  "validation.pluginHttps": "Verwende eine HTTPS-URL.",
+  "validation.pluginMain":
+    "Verwende einen relativen Dateipfad ohne .. oder umgekehrte Schrägstriche.",
+  "validation.pluginHost":
+    "Verwende einen öffentlichen Hostnamen ohne IP-Adresse, Schema oder Port.",
+  "validation.pluginNumber": "Prüfe die Grenzen und den Standardwert der Zahl.",
+  "validation.pluginSelect":
+    "Auswahlwerte müssen eindeutig sein und den Standardwert enthalten.",
+  "validation.pluginCredentials":
+    "Feldschlüssel für Anmeldedaten müssen eindeutig sein.",
+  "validation.pluginMetadata": "Metadatenanbieter-IDs müssen eindeutig sein.",
+  "validation.pluginAuth": "Anmeldeanbieter-IDs müssen eindeutig sein.",
+  "validation.pluginConfig": "Konfigurationsschlüssel müssen eindeutig sein.",
   "validation.issuerUrl": "Gib den Issuer als http- oder https-URL ein.",
   "validation.scopesOpenid": "Die Scopes müssen openid enthalten.",
 

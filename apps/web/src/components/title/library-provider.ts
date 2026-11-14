@@ -24,5 +24,18 @@ export function useLibraryProvider(
   const id = library.data.metadataProvider
   if (!id) return null
   if (!providers.data) return undefined
-  return providers.data.find((p) => p.id === id) ?? null
+  return (
+    providers.data.find((p) => p.id === id) ?? {
+      id,
+      name: id,
+      plugin: { id, name: id },
+      builtin: false,
+      available: false,
+      configured: false,
+      setup: null,
+      description: "",
+      kinds: [],
+      episodes: false,
+    }
+  )
 }

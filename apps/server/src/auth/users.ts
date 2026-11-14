@@ -47,6 +47,7 @@ export async function availableUsername(raw: string, tx: Tx): Promise<string> {
  */
 export async function findUserByUsernameHint(
   hint: string | null,
+  tx: Tx | typeof db = db,
 ): Promise<string | null> {
   const exact = hint?.trim().toLowerCase()
   if (!hint || !exact) return null
@@ -55,7 +56,7 @@ export async function findUserByUsernameHint(
   if (Username.safeParse(cleaned).success) {
     candidates.add(cleaned.toLowerCase())
   }
-  const rows = await db
+  const rows = await tx
     .select({ id: user.id, username: user.username })
     .from(user)
     .where(inArray(sql`lower(${user.username})`, [...candidates]))

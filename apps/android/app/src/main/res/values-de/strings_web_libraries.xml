@@ -35,7 +35,11 @@
     <string name="web_libraries_dialog_kind_shows">Serien</string>
     <string name="web_libraries_dialog_metadata">Metadaten</string>
     <string name="web_libraries_dialog_noProvider">Keine</string>
-    <string name="web_libraries_dialog_needsKey">Braucht einen API-Schlüssel</string>
+    <string name="web_libraries_dialog_unavailable">Nicht verfügbar</string>
+    <string name="web_libraries_dialog_pluginProvider">%1$s · %2$s</string>
+    <string name="web_libraries_dialog_providerOffline">%1$s läuft nicht. Aktiviere das Plugin unter Einstellungen → Plugins. Vorhandene Metadaten bleiben unverändert.</string>
+    <string name="web_libraries_dialog_providerMissing">Das Plugin für %1$s ist nicht installiert. Installiere es unter Einstellungen → Plugins oder wähle einen anderen Anbieter. Vorhandene Metadaten bleiben unverändert.</string>
+    <string name="web_libraries_dialog_needsKey">Unter Plugins einrichten</string>
     <string name="web_libraries_dialog_language">Sprache</string>
     <string name="web_libraries_dialog_noProviderHint">Titel tragen die Namen ihrer Ordner und Dateien, ohne Artwork.</string>
     <string name="web_libraries_dialog_folders">Ausgewählte Ordner</string>

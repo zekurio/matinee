@@ -39,6 +39,7 @@ import {
 import { playbackOptions } from "../media/playback-options"
 import { rememberedTracks, savePick } from "../media/track-picks"
 import { markUnwatched, markWatched } from "../media/watched"
+import { recordPluginEvent } from "../plugins"
 import { events } from "../realtime/events"
 import { follow } from "../realtime/follow"
 import { sessionStream } from "../stats/queries"
@@ -114,7 +115,7 @@ export const playback = {
     }
     if (!completed && input.positionSeconds < resumeThreshold(duration)) return
 
-    await db
+    const [saved] = await db
       .insert(watchProgress)
       .values({
         userId: context.user.id,
@@ -131,6 +132,20 @@ export const playback = {
           updatedAt: new Date(),
         },
       })
+      .returning({
+        // Postgres 17's RETURNING subquery sees the old row on update,
+        // null on insert, and no row when setWhere rejects the write.
+        wasWatched: sql<
+          boolean | null
+        >`(select completed from watch_progress where user_id = ${context.user.id} and media_item_id = ${item.id})`,
+      })
+    if (completed && saved && !saved.wasWatched) {
+      await recordPluginEvent(db, "playback.watched", {
+        userId: context.user.id,
+        itemId: item.id,
+        watched: true,
+      })
+    }
   }),
 
   tracks: authed.playback.tracks.handler(async ({ context, input }) => {

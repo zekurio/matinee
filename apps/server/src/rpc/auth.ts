@@ -29,6 +29,13 @@ import {
   storePasskey,
 } from "../auth/passkeys"
 import {
+  acceptPluginIdentity,
+  authenticatePluginCredentials,
+  pluginRpcFailure,
+  publicAuthProvider,
+  resolveAuthProvider,
+} from "../auth/plugin-auth"
+import {
   createSession,
   publicUser,
   readSession,
@@ -49,6 +56,7 @@ import { themeAccents } from "../auth/theme-accents"
 import { insertUser, lockUsers, usernameTaken } from "../auth/users"
 import { db } from "../db"
 import { log } from "../log"
+import { recordPluginEvent, runningAuth } from "../plugins"
 import { badRequest, authed, notFound, pub, requirePasskeys } from "./base"
 
 /** What `beginSignUp` stored with the challenge. */
@@ -97,6 +105,27 @@ const DEVICE_GONE =
   "That code doesn't work. It may have expired, or been used already."
 
 export const auth = {
+  plugin: {
+    signIn: pub.auth.plugin.signIn.handler(async ({ context, input }) => {
+      try {
+        const provider = resolveAuthProvider(input.key, "credentials")
+        const identity = await authenticatePluginCredentials(
+          provider,
+          input.fields,
+        )
+        return publicUser(
+          await acceptPluginIdentity(
+            context.hono,
+            provider,
+            identity,
+            "sign-in",
+          ),
+        )
+      } catch (cause) {
+        return pluginRpcFailure(cause)
+      }
+    }),
+  },
   config: pub.auth.config.handler(async () => {
     const accountRequired = await setupRequired()
     const provider = await activeOidc()
@@ -110,6 +139,7 @@ export const auth = {
           }
         : null
     return {
+      providers: accountRequired ? [] : runningAuth().map(publicAuthProvider),
       setup,
       passkeys,
       passkeySignUp: passkeys && (await passkeySignUpOpen()),
@@ -236,6 +266,7 @@ export const auth = {
         })
         await storePasskey(tx, { userId: row.id, verified, usedNow: true })
         await setMemberships(tx, row.id, "manual", groupIds)
+        await recordPluginEvent(tx, "user.created", { userId: row.id })
         return row
       })
       forgetGroups()

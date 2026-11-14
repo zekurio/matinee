@@ -19,7 +19,7 @@ export default {
     "Liest die Streams neuer und geänderter Dateien mit ffprobe.",
   "jobs.queue.metadata.name": "Metadaten",
   "jobs.queue.metadata.description":
-    "Ruft Details, Artwork und Folgen von TMDB oder TheTVDB ab.",
+    "Ruft Details, Artwork und Folgen von Metadatenanbietern ab.",
   "jobs.queue.thumbnails.name": "Miniaturbilder",
   "jobs.queue.thumbnails.description":
     "Nimmt ein Einzelbild aus Videos, die kein Artwork haben.",
@@ -43,6 +43,12 @@ export default {
   "jobs.queue.subtitles.name": "Untertitel",
   "jobs.queue.subtitles.description":
     "Wandelt Untertitel in WebVTT um und kopiert PGS-Untertitel aus Videos.",
+  "jobs.queue.plugin-events.name": "Plugin-Ereignisse",
+  "jobs.queue.plugin-events.description":
+    "Gespeicherte Serverereignisse an Plugins zustellen und fehlgeschlagene Handler erneut aufrufen.",
+  "jobs.task.deliver-plugin-events.name": "Plugin-Ereignisse zustellen",
+  "jobs.task.deliver-plugin-events.description":
+    "Wartende Plugin-Ereignisse erneut zustellen und abgelaufene oder überzählige Ereignisse verwerfen.",
   "jobs.queue.avatars.name": "Profilbilder",
   "jobs.queue.avatars.description":
     "Schneidet und skaliert Uploads und die Bilder, die Anmeldeanbieter schicken.",
@@ -129,7 +135,7 @@ export default {
   "jobs.schedule.every": "Alle {interval}",
   "jobs.schedule.every.atStartup": "Alle {interval} und beim Start",
   "jobs.schedule.every.afterStartup":
-    "Alle {interval} und {delay} nach dem Start",
+    "Alle {interval}, zuerst {delay} nach dem Start",
   "jobs.schedule.notScheduled": "Nicht geplant",
   "jobs.schedule.afterThisRun": "Nach diesem Lauf",
 

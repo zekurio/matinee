@@ -1,0 +1,98 @@
+{
+  "name": "matinee-plugin-oauth2",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Sign in through an OAuth 2.0 authorization-code provider.",
+  "keywords": [
+    "matinee-plugin"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "matinee-plugin build",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@matinee/plugin": "workspace:*"
+  },
+  "matinee": {
+    "api": 1,
+    "id": "oauth2",
+    "name": "OAuth 2.0",
+    "main": "dist/plugin.js",
+    "contributes": {
+      "auth": [
+        {
+          "id": "oauth2",
+          "name": "OAuth 2.0",
+          "kind": "redirect"
+        }
+      ]
+    },
+    "config": [
+      {
+        "key": "authorizeUrl",
+        "type": "url",
+        "label": "Authorization URL",
+        "network": true,
+        "required": true
+      },
+      {
+        "key": "tokenUrl",
+        "type": "url",
+        "label": "Token URL",
+        "network": true,
+        "required": true
+      },
+      {
+        "key": "userInfoUrl",
+        "type": "url",
+        "label": "User info URL",
+        "network": true,
+        "required": true
+      },
+      {
+        "key": "clientId",
+        "type": "string",
+        "label": "Client ID",
+        "required": true
+      },
+      {
+        "key": "clientSecret",
+        "type": "secret",
+        "label": "Client secret"
+      },
+      {
+        "key": "scopes",
+        "type": "string",
+        "label": "Scopes",
+        "default": ""
+      },
+      {
+        "key": "subjectField",
+        "type": "string",
+        "label": "Subject field",
+        "default": "id",
+        "identity": true
+      },
+      {
+        "key": "usernameField",
+        "type": "string",
+        "label": "Username field",
+        "default": "login"
+      },
+      {
+        "key": "nameField",
+        "type": "string",
+        "label": "Name field",
+        "default": "name"
+      },
+      {
+        "key": "pkce",
+        "type": "boolean",
+        "label": "Use PKCE",
+        "default": true
+      }
+    ]
+  }
+}

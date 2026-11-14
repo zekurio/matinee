@@ -40,6 +40,10 @@ export default defineMessages("settings", {
   "settings.section.authentication.description": "Passkeys and single sign-on",
   "settings.section.authentication.keywords":
     "Passkeys, Sign-in methods, Single sign-on, SSO, OIDC, OpenID Connect, Issuer URL, Client ID, Client secret, Redirect URI, Create accounts, Sign-up, Registration, Authelia, Authentik, Keycloak",
+  "settings.section.plugins.label": "Plugins",
+  "settings.section.plugins.description": "Metadata, sign-in, and events",
+  "settings.section.plugins.keywords":
+    "Plugins, Extensions, Add plugin, npm, Install, Update, Permissions, Approve, Metadata, TMDB, TheTVDB, API key, Sign-in, Events, Log",
   "settings.section.transcoding.label": "Transcoding",
   "settings.section.transcoding.description":
     "FFmpeg, GPUs, and HDR tone mapping",

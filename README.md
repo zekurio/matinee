@@ -13,8 +13,8 @@
 
 Point Matinee at the folders your videos already live in. It groups the
 files into movies and shows, fetches posters, cast, and episode details from
-TMDB or TheTVDB, and picks up new files as Sonarr, Radarr, or Bazarr drop
-them in. People sign in with a passkey or your OIDC provider and watch in
+TMDB, TheTVDB, or a provider a plugin adds, and picks up new files as
+Sonarr, Radarr, or Bazarr drop them in. People sign in with a passkey or your OIDC provider and watch in
 the browser or the Android app. A file plays as it is when the device can
 decode it. When it can't, the server copies the video and converts only
 the audio, or transcodes on your GPU with jellyfin-ffmpeg, HDR tone mapping
@@ -23,15 +23,19 @@ included.
 Matinee is an early MVP. Expect rough edges and breaking changes until a
 first release.
 
-| Part                    | What it is                                                                       |
-| ----------------------- | -------------------------------------------------------------------------------- |
-| [Server](apps/server)   | Hono and oRPC, Postgres, the library scanner, streaming and transcoding, sign-in |
-| [Web](apps/web)         | The React client the server serves                                               |
-| [Android](apps/android) | A native app for phones, tablets, and Android TV, with offline downloads         |
-| [Brand](brand)          | The logo, the wordmark, the app icons, and the script that renders them          |
+| Part                          | What it is                                                                       |
+| ----------------------------- | -------------------------------------------------------------------------------- |
+| [Server](apps/server)         | Hono and oRPC, Postgres, the library scanner, streaming and transcoding, sign-in |
+| [Web](apps/web)               | The React client the server serves                                               |
+| [Android](apps/android)       | A native app for phones, tablets, and Android TV, with offline downloads         |
+| [Plugin SDK](packages/plugin) | What plugins are written against, with the authoring guide                       |
+| [Plugins](plugins)            | AniList metadata, a webhook, and sign-in through OAuth 2.0 or Jellyfin accounts  |
+| [Brand](brand)                | The logo, the wordmark, the app icons, and the script that renders them          |
 
 Each one's README goes into detail. The server's covers configuration,
-access groups, transcoding, and the API.
+access groups, transcoding, plugins, and the API. Plugins run in a sandbox
+and do only what an admin approved, see
+[Plugins](apps/server/README.md#plugins).
 
 ## Run it on NixOS
 

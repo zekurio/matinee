@@ -54,6 +54,13 @@ export default {
   "account.oidc.unlinkFailed":
     "Verknüpfung mit {provider} konnte nicht getrennt werden",
   "account.oidc.none": "Kein {provider}-Konto verknüpft.",
+  "account.plugins.title": "Weitere Anmeldewege",
+  "account.plugins.linkedAs": "{label}, verknüpft am {date}",
+  "account.plugins.notLinked": "Nicht verknüpft",
+  "account.plugins.link": "Verknüpfen",
+  "account.plugins.linked": "{provider} verknüpft",
+  "account.plugins.linkDescription":
+    "Melde dich hier einmal bei {provider} an. Danach meldet {provider} dich bei diesem Konto an.",
 
   "account.sessions.title": "Sitzungen",
   "account.sessions.signOutOthers": "Andere Sitzungen abmelden",

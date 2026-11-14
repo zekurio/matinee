@@ -8,6 +8,7 @@ export type ChallengePurpose =
   | "passkey-sign-up"
   | "passkey-register"
   | "oidc"
+  | "plugin-auth"
   | "oidc-pending-link"
   | "app-authorize"
 

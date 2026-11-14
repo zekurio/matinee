@@ -5,6 +5,20 @@ import { defineMessages } from "../../catalog"
  * word for word, so `translateKnown()` finds them.
  */
 export default defineMessages("validation", {
+  // plugins.ts: manifests are static package data.
+  "validation.pluginReservedId": "This id is reserved for the host.",
+  "validation.pluginHttps": "Use an https URL.",
+  "validation.pluginMain":
+    "Use a relative file path without .. or backslashes.",
+  "validation.pluginHost":
+    "Use a public host name, without an IP address, scheme, or port.",
+  "validation.pluginNumber": "Check the number's bounds and default.",
+  "validation.pluginSelect":
+    "Select options must be unique and contain the default.",
+  "validation.pluginCredentials": "Credential field keys must be unique.",
+  "validation.pluginMetadata": "Metadata provider ids must be unique.",
+  "validation.pluginAuth": "Auth provider ids must be unique.",
+  "validation.pluginConfig": "Config field keys must be unique.",
   // admin.ts: single sign-on settings.
   "validation.issuerUrl": "Enter the issuer as an http or https URL.",
   "validation.scopesOpenid": "Scopes must include openid.",

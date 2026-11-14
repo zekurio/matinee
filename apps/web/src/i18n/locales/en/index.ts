@@ -15,6 +15,7 @@ import oidc from "./oidc"
 import people from "./people"
 import playback from "./playback"
 import player from "./player"
+import plugins from "./plugins"
 import profile from "./profile"
 import search from "./search"
 import server from "./server"
@@ -66,6 +67,7 @@ export default {
   ...serverAppearance,
   ...account,
   ...playback,
+  ...plugins,
   ...common,
   ...link,
 }

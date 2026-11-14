@@ -6,6 +6,7 @@ import type {
   RegistrationResponseJSON,
 } from "@simplewebauthn/browser"
 
+import { PluginAuthProvider } from "./plugins"
 import { t } from "./schema"
 import { ThemeAccents } from "./theme"
 
@@ -18,6 +19,7 @@ export const SetupMode = t.enum(SETUP_MODES)
 export type SetupMode = t.infer<typeof SetupMode>
 
 export const AuthConfig = t.object({
+  providers: t.array(PluginAuthProvider),
   /**
    * First-run setup, until the admin finishes it; null after. The first
    * account becomes the admin, who then sets up transcoding and libraries.

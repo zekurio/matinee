@@ -26,6 +26,17 @@ for building and sideloading the app.
   job queues and scheduled tasks (`src/jobs`), in-process events and live
   streams (`src/realtime`).
 - `apps/server/src/access`: account policies, viewers, and the shared library visibility filters.
+- `apps/server/src/plugins`: the plugin system. `index.ts` is what the
+  rest of the server uses of it. `sandbox/` runs plugins' code in QuickJS,
+  one instance each on one thread in a small host pool, `install/` gets
+  packages from npm or a URL, and the
+  files beside them decide whether a plugin may run and answer its host
+  calls. `apps/server/src/net` has `guardedFetch`, which every request on
+  behalf of a plugin, and every artwork download, goes through.
+- `packages/plugin`: the SDK plugin authors write against (types,
+  `definePlugin`, the `matinee-plugin` build tool) and the authoring guide.
+- `plugins/`: plugins that ship with the repository, each an example of
+  one kind: metadata, events, redirect sign-in, credentials sign-in.
 - `apps/web`: Vite React app. File routes live in `src/routes`;
   `src/routeTree.gen.ts` is generated.
 - `brand/`: the logo, the wordmark, and the native app icons, with the
@@ -68,7 +79,10 @@ for building and sideloading the app.
 - Every part has the version in the root `package.json`. Don't set one
   anywhere else; `just tag <version>` changes it and releases (README.md,
   Release).
-- No automated tests yet. Check affected flows by hand in the browser.
+- `pnpm test` checks the plugin sandbox and what plugin code can do in it,
+  the request guard, the plugin installer, the rules of the plugin
+  manager, and the order events are delivered in. Nothing else has
+  automated tests yet. Check affected flows by hand in the browser.
 - Generate migrations with a descriptive snake_case name:
   `pnpm db:generate --name watch_progress`. Never edit a migration after it
   merges; add a new one.
@@ -113,6 +127,62 @@ for building and sideloading the app.
   Tasks find work and queue it; the scheduler stores their last run.
 - A job never waits on another job of its own queue; that can deadlock.
 
+## Plugins
+
+`apps/server/README.md`, Plugins, says how they behave, and
+`packages/plugin/README.md` how they're written. The rules for the code:
+
+- A plugin's code runs only inside its sandbox. The host reads plugin
+  files as bytes and never imports, requires, or evaluates them.
+- What a plugin may do comes from its manifest and an admin's approval of
+  it, never from what its code says at run time. A new thing a plugin can
+  do is a permission in `packages/contracts/src/plugins.ts`, with its
+  sentence in the web app's consent list.
+- Everything that comes out of a plugin is untrusted: results, log lines,
+  errors, URLs. Parse it with a `t` schema with size limits where it enters
+  the host, as `metadata/plugin-source.ts` does.
+- A plugin never gets a session, a cookie, a request's headers, another
+  plugin's data, or the database. It returns data and the host decides,
+  as with sign-in, where a plugin names who signed in and the host picks
+  the account.
+- Call a plugin through `runningMetadata()` or `runningAuth()` with a
+  timeout, and treat a failure as that plugin being away: the feature
+  degrades and the request or job goes on. A plugin that is on is asleep
+  until called, so never keep a sandbox, or count on one being there.
+- Everything about one plugin's sandbox lives in its `Guest` object in
+  `sandbox/worker.ts`, and every way into its code goes through that
+  object's `enter`. Nothing outside it may hold a reference to a guest,
+  or pass anything of one guest to another.
+- Host threads start on demand, up to `MATINEE_PLUGIN_THREADS`. Each has
+  its own watch, ping, and shared load counters. Keep guest ids unique
+  across the pool and compile the wasm module only once on the main
+  thread. A stuck thread takes only its guests; its bystanders get no
+  failure or backoff. A crowded idle lease may sleep to move on its next
+  call, but never while a call holds it.
+- Pass a caller's `signal` on to `callHandler`, so the plugin's handler
+  hears when nobody waits for it. A handler that ignores that keeps its
+  place among the plugin's calls until it ends.
+- Sandboxes share a few host threads (`sandbox/index.ts` places them by
+  load). Nothing may assume a plugin has a thread to itself, or stays on
+  the one it has: a sandbox can be put to sleep and wake elsewhere.
+- Record a server event with `recordPluginEvent(executor, name, payload)`
+  inside the change's transaction, or with `db` after a single statement.
+  Pass thin ids and numbers already in hand, never query for the payload.
+  With no subscriber it costs no query. A new event needs a thin schema,
+  a lane, and a hydrator in `plugins/event-payloads.ts`, a public contract
+  schema, and its type in `packages/plugin/src/events.ts`. Its lane is
+  what it is about (a title, a library, a person): events in one lane are
+  delivered in order, and others at the same time. What to deliver next
+  is decided in `plugins/event-schedule.ts`, which has no database in it
+  and is checked by `scripts/plugin-events-check.ts`.
+- A built-in provider that needs a key registers with
+  `defineBuiltinPlugin`, so the key is set under Settings → Plugins with
+  the environment variable as its default.
+- The sandbox's guest globals are in `sandbox/prelude/`. After changing
+  them run `pnpm plugins:prelude`; `pnpm verify` fails while
+  `prelude.gen.ts` is out of date. `pnpm test` runs the checks that the
+  sandbox, the request guard, and the installer hold.
+
 ## Live updates
 
 - A procedure that pushes changes outputs `eventIterator(...)` in the
@@ -154,7 +224,10 @@ for building and sideloading the app.
   message the user can act on; anything 500 is logged and hidden.
 - The server fetches only image URLs a metadata provider returned, stored in
   the `artwork` table, and the `picture` claim the OIDC provider signed or
-  sent from userinfo. Never fetch a URL a client sent.
+  sent from userinfo. Never fetch a URL a client sent. The exceptions are
+  an admin's: the OIDC issuer, a plugin package's address, and the
+  addresses in a plugin's settings. Anything fetched for a plugin, or that
+  a plugin named, goes through `guardedFetch`.
 - Passkeys and OIDC redirects bind to `PUBLIC_URL`. Never derive origins from
   request headers.
 - Auth cookies are HttpOnly and SameSite=Lax. Keep RPC on same-origin JSON

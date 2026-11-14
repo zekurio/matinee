@@ -20,6 +20,7 @@ import { secureHeaders } from "hono/secure-headers"
 import { appRoutes } from "./auth/apps"
 import { avatarRoutes } from "./auth/avatars"
 import { oidcRoutes } from "./auth/oidc"
+import { pluginAuthRoutes } from "./auth/plugin-routes"
 import { compressBytes, compressJson, pickEncoding } from "./compress"
 import { env } from "./env"
 import { artworkRoutes } from "./media/artwork"
@@ -69,6 +70,7 @@ export function createApp() {
     c.json({ ok: true, contract: await contractFingerprint() }),
   )
   app.route("/api/auth/oidc", oidcRoutes)
+  app.route("/api/auth/plugins", pluginAuthRoutes)
   app.route("/api/auth/app", appRoutes)
   app.route("/api/media", streamRoutes)
   app.route("/api/downloads", downloadRoutes)

@@ -19,7 +19,9 @@
     "lint": "oxlint",
     "typecheck": "pnpm -r --parallel typecheck && pnpm typecheck:oxlint",
     "typecheck:oxlint": "tsc -p tools/oxlint",
-    "verify": "pnpm fmt:check && pnpm lint && pnpm typecheck && pnpm api:android --check"
+    "verify": "pnpm fmt:check && pnpm lint && pnpm typecheck && pnpm api:android --check && pnpm plugins:prelude --check && pnpm test",
+    "plugins:prelude": "pnpm --filter @matinee/server plugins:prelude",
+    "test": "pnpm --filter @matinee/server test"
   },
   "devDependencies": {
     "@oxlint/plugins": "1.91.0",

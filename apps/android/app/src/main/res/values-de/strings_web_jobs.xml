@@ -13,7 +13,7 @@
     <string name="web_jobs_queue_media_probe_name">Medieninfo</string>
     <string name="web_jobs_queue_media_probe_description">Liest die Streams neuer und geänderter Dateien mit ffprobe.</string>
     <string name="web_jobs_queue_metadata_name">Metadaten</string>
-    <string name="web_jobs_queue_metadata_description">Ruft Details, Artwork und Folgen von TMDB oder TheTVDB ab.</string>
+    <string name="web_jobs_queue_metadata_description">Ruft Details, Artwork und Folgen von Metadatenanbietern ab.</string>
     <string name="web_jobs_queue_thumbnails_name">Miniaturbilder</string>
     <string name="web_jobs_queue_thumbnails_description">Nimmt ein Einzelbild aus Videos, die kein Artwork haben.</string>
     <string name="web_jobs_queue_subtitle_prepare_name">Untertitel vorbereiten</string>
@@ -29,6 +29,10 @@
     <string name="web_jobs_queue_subtitle_fonts_description">Extrahiert eingebettete Schriftarten für formatierte Untertitel.</string>
     <string name="web_jobs_queue_subtitles_name">Untertitel</string>
     <string name="web_jobs_queue_subtitles_description">Wandelt Untertitel in WebVTT um und kopiert PGS-Untertitel aus Videos.</string>
+    <string name="web_jobs_queue_plugin_events_name">Plugin-Ereignisse</string>
+    <string name="web_jobs_queue_plugin_events_description">Gespeicherte Serverereignisse an Plugins zustellen und fehlgeschlagene Handler erneut aufrufen.</string>
+    <string name="web_jobs_task_deliver_plugin_events_name">Plugin-Ereignisse zustellen</string>
+    <string name="web_jobs_task_deliver_plugin_events_description">Wartende Plugin-Ereignisse erneut zustellen und abgelaufene oder überzählige Ereignisse verwerfen.</string>
     <string name="web_jobs_queue_avatars_name">Profilbilder</string>
     <string name="web_jobs_queue_avatars_description">Schneidet und skaliert Uploads und die Bilder, die Anmeldeanbieter schicken.</string>
     <string name="web_jobs_queue_downloads_name">Download-Kodierungen</string>
@@ -98,7 +102,7 @@
     <string name="web_jobs_schedule_hourly_afterStartup">Stündlich und %1$s nach dem Start</string>
     <string name="web_jobs_schedule_every">Alle %1$s</string>
     <string name="web_jobs_schedule_every_atStartup">Alle %1$s und beim Start</string>
-    <string name="web_jobs_schedule_every_afterStartup">Alle %1$s und %2$s nach dem Start</string>
+    <string name="web_jobs_schedule_every_afterStartup">Alle %1$s, zuerst %2$s nach dem Start</string>
     <string name="web_jobs_schedule_notScheduled">Nicht geplant</string>
     <string name="web_jobs_schedule_afterThisRun">Nach diesem Lauf</string>
     <string name="web_jobs_concurrency">Parallelität</string>

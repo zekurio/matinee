@@ -13,6 +13,7 @@ import { and, eq, inArray, type SQL, sql } from "drizzle-orm"
 
 import type { Tx } from "../auth/users"
 import { db } from "../db"
+import { recordPluginEvents } from "../plugins"
 import { fileDuration } from "../stats/sql"
 
 /*
@@ -69,7 +70,7 @@ async function addMarkedPlays(
   userId: string,
   files: SQL | undefined,
   watchedAt: WatchedAt | undefined,
-): Promise<void> {
+): Promise<string[]> {
   // ACCESS: files is keyed by a visible item or title checked by the playback procedure.
   const rows = await tx
     .select({
@@ -125,6 +126,7 @@ async function addMarkedPlays(
       .insert(playbackSession)
       .values(plays.slice(start, start + INSERT_BATCH))
   }
+  return rows.map((row) => row.itemId)
 }
 
 /** Mark the user's files in `files` watched, each at `watchedAt`. */
@@ -139,7 +141,7 @@ export async function markWatched(
     await tx.execute(
       sql`select pg_advisory_xact_lock(hashtextextended(${`marks:${userId}`}, 0))`,
     )
-    await addMarkedPlays(tx, userId, files, watchedAt)
+    const changed = await addMarkedPlays(tx, userId, files, watchedAt)
     // One statement, so every file gets the same time; reverseEpisodeOrder
     // then counts the last one as the latest for Play and next up.
     // ACCESS: files is keyed by a visible item or title checked by the playback procedure.
@@ -163,6 +165,11 @@ export async function markWatched(
         target: [watchProgress.userId, watchProgress.mediaItemId],
         set: { completed: true, updatedAt: sql`now()` },
       })
+    await recordPluginEvents(
+      tx,
+      "playback.watched",
+      changed.map((itemId) => ({ userId, itemId, watched: true })),
+    )
   })
 }
 
@@ -177,7 +184,7 @@ export async function markUnwatched(
   // ACCESS: files is keyed by a visible item or title checked by the playback procedure.
   const ids = db.select({ id: mediaItem.id }).from(mediaItem).where(files)
   await db.transaction(async (tx) => {
-    await tx
+    const removed = await tx
       .delete(watchProgress)
       .where(
         and(
@@ -185,6 +192,10 @@ export async function markUnwatched(
           inArray(watchProgress.mediaItemId, ids),
         ),
       )
+      .returning({
+        id: watchProgress.mediaItemId,
+        completed: watchProgress.completed,
+      })
     await tx
       .delete(playbackSession)
       .where(
@@ -194,5 +205,12 @@ export async function markUnwatched(
           inArray(playbackSession.mediaItemId, ids),
         ),
       )
+    await recordPluginEvents(
+      tx,
+      "playback.watched",
+      removed
+        .filter((row) => row.completed)
+        .map((row) => ({ userId, itemId: row.id, watched: false })),
+    )
   })
 }

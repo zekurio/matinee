@@ -39,7 +39,13 @@ export default defineMessages("libraries", {
   "libraries.dialog.kind.shows": "Shows",
   "libraries.dialog.metadata": "Metadata",
   "libraries.dialog.noProvider": "None",
-  "libraries.dialog.needsKey": "Needs an API key",
+  "libraries.dialog.unavailable": "Unavailable",
+  "libraries.dialog.pluginProvider": "{provider} · {plugin}",
+  "libraries.dialog.providerOffline":
+    "{provider} isn't running. Turn its plugin on under Settings → Plugins. Existing metadata stays unchanged.",
+  "libraries.dialog.providerMissing":
+    "The plugin for {provider} isn't installed. Install it under Settings → Plugins, or choose another provider. Existing metadata stays unchanged.",
+  "libraries.dialog.needsKey": "Set up under Plugins",
   "libraries.dialog.language": "Language",
   "libraries.dialog.noProviderHint":
     "Titles use their folder and file names, with no artwork.",

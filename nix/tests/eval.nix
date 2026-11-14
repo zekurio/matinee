@@ -190,6 +190,31 @@ let
           "d /srv/matinee 0750 matinee matinee - -"
           "d /scratch/transcodes 0750 matinee matinee - -"
         ];
+    "plugin folders and the ones to turn on become their variables" =
+      let
+        withPlugins = server {
+          plugins = {
+            folders = [
+              "/srv/plugins"
+              "/srv/more/anilist"
+            ];
+            enable = [
+              "anilist"
+              "webhook"
+            ];
+          };
+        };
+      in
+      failed withPlugins == [ ]
+      && (env withPlugins).MATINEE_PLUGIN_DIRS == "/srv/plugins:/srv/more/anilist"
+      && (env withPlugins).MATINEE_PLUGINS_ENABLE == "anilist,webhook"
+      && !((env plain) ? MATINEE_PLUGIN_DIRS)
+      && !((env plain) ? MATINEE_PLUGINS_ENABLE);
+    "turning plugins on needs a folder to find them in" = lib.any (lib.hasInfix "plugins.enable") (
+      failed (server {
+        plugins.enable = [ "anilist" ];
+      })
+    );
     "the public URL is required" = lib.any (lib.hasInfix "publicUrl") (
       failed (eval {
         services.matinee.enable = true;

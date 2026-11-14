@@ -15,6 +15,7 @@ import { TASKS } from "./jobs/tasks"
 import { startWatching, stopWatching } from "./library/watcher"
 import { log } from "./log"
 import { stopEncodes } from "./media/hls"
+import { startPlugins, stopPlugins } from "./plugins"
 import { stopStreams } from "./realtime/events"
 import { currentTranscoding } from "./transcode/capabilities"
 import { transcodingSettings } from "./transcode/settings"
@@ -26,6 +27,7 @@ await Promise.all([oidcState(), passkeySettings(), transcodingSettings()])
 await initSetupToken()
 // Before setup, initSetupToken says what can create the admin.
 if (!(await setupRequired())) await warnWithoutSignIn()
+await startPlugins()
 await loadJobSettings()
 await startTasks(TASKS)
 if (env.MATINEE_WATCH_LIBRARIES) startWatching()
@@ -54,7 +56,7 @@ function shutdown(signal: string) {
   stopEncodes()
   // Jobs stop at their next check, a scan between files. Let them finish
   // before the pool closes.
-  void Promise.all([stopWatching(), stopTasks(), stopQueues()])
+  void Promise.all([stopWatching(), stopTasks(), stopQueues(), stopPlugins()])
     .catch((cause) => log.warn("Couldn't stop the background jobs", cause))
     .finally(() =>
       server.close(() => {

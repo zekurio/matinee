@@ -3,6 +3,7 @@ import { type MediaItemRow, playbackSession, title } from "@matinee/db"
 import { and, count, eq, gt, isNull, ne, or, type SQL, sql } from "drizzle-orm"
 
 import { db } from "../db"
+import { recordPluginEvent, recordPluginEvents } from "../plugins"
 import { events } from "../realtime/events"
 
 /*
@@ -164,7 +165,7 @@ const inserted = sql<boolean>`xmax = 0`
  */
 async function endLeftBehind(owner: SessionOwner): Promise<void> {
   const client = clientName(owner.userAgent)
-  await db
+  const rows = await db
     .update(playbackSession)
     .set({ endedAt: new Date() })
     .where(
@@ -177,6 +178,54 @@ async function endLeftBehind(owner: SessionOwner): Promise<void> {
           : eq(playbackSession.client, client),
       ),
     )
+    .returning()
+  await recordClosedSessions(rows)
+}
+
+async function recordClosedSessions(
+  rows: (typeof playbackSession.$inferSelect)[],
+): Promise<void> {
+  await recordPluginEvents(
+    db,
+    "playback.stopped",
+    rows.flatMap((row) =>
+      row.mediaItemId
+        ? [
+            {
+              userId: row.userId,
+              itemId: row.mediaItemId,
+              positionSeconds: row.positionSeconds,
+              durationSeconds: null,
+            },
+          ]
+        : [],
+    ),
+  )
+}
+
+/**
+ * End the sessions that stopped reporting without a closing report, at
+ * their last report, so plugins hear that they stopped. A report that
+ * comes after all reopens the session, as it does a closed one. Only the
+ * plugin events task calls this, and only while a plugin listens: without
+ * one, an abandoned session keeps no end time, as it always did.
+ */
+export async function closeStaleSessions(): Promise<void> {
+  const rows = await db
+    .update(playbackSession)
+    .set({ endedAt: sql`${playbackSession.updatedAt}` })
+    .where(and(isNull(playbackSession.endedAt), sql`not (${liveSessions()})`))
+    .returning()
+  await recordClosedSessions(rows)
+}
+
+// Tested on Postgres 17: this scalar subquery sees the pre-statement row,
+// null on insert, the old endedAt on update. A rejected setWhere returns
+// no row at all. Concurrent reports can still record a transition twice.
+function wasOpen(owner: SessionOwner) {
+  return sql<
+    boolean | null
+  >`(select ended_at is null from playback_session where id = ${owner.id})`
 }
 
 /** Record a progress report in its session. */
@@ -210,8 +259,22 @@ export async function recordReport(
       },
       setWhere: sameOwner(owner),
     })
-    .returning({ inserted })
+    .returning({ inserted, wasOpen: wasOpen(owner) })
   if (row?.inserted) await endLeftBehind(owner)
+  if (row) {
+    const payload = {
+      userId: owner.userId,
+      itemId: owner.item.id,
+      positionSeconds: report.positionSeconds,
+    }
+    if (!row.wasOpen && (!report.closed || row.inserted))
+      await recordPluginEvent(db, "playback.started", payload)
+    if (report.closed && (row.wasOpen || row.inserted))
+      await recordPluginEvent(db, "playback.stopped", {
+        ...payload,
+        durationSeconds: owner.item.durationSeconds,
+      })
+  }
   events.publish("playback", undefined)
 }
 
@@ -236,7 +299,7 @@ export async function recordOfflinePlay(
 ): Promise<void> {
   const span = (report.endedAt.getTime() - report.startedAt.getTime()) / 1000
   const watched = Math.min(report.playedSeconds, span + PLAYED_SLACK_S)
-  await db
+  const [row] = await db
     .insert(playbackSession)
     .values({
       ...(await startValues(owner)),
@@ -260,6 +323,19 @@ export async function recordOfflinePlay(
         updatedAt: sql`greatest(${playbackSession.updatedAt}, ${report.endedAt}::timestamptz)`,
       },
       setWhere: sameOwner(owner),
+    })
+    .returning({ inserted, wasOpen: wasOpen(owner) })
+  if (!row) return
+  const payload = {
+    userId: owner.userId,
+    itemId: owner.item.id,
+    positionSeconds: report.positionSeconds,
+  }
+  if (row.inserted) await recordPluginEvent(db, "playback.started", payload)
+  if (row.inserted || row.wasOpen)
+    await recordPluginEvent(db, "playback.stopped", {
+      ...payload,
+      durationSeconds: owner.item.durationSeconds,
     })
 }
 
@@ -295,8 +371,19 @@ export async function recordStream(
       },
       setWhere: sameOwner(owner),
     })
-    .returning({ inserted })
+    .returning({
+      inserted,
+      wasOpen: wasOpen(owner),
+      positionSeconds: playbackSession.positionSeconds,
+    })
   if (row?.inserted) await endLeftBehind(owner)
+  if (row && !row.wasOpen) {
+    await recordPluginEvent(db, "playback.started", {
+      userId: owner.userId,
+      itemId: owner.item.id,
+      positionSeconds: row.positionSeconds,
+    })
+  }
   events.publish("playback", undefined)
 }
 

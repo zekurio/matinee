@@ -52,14 +52,17 @@ type FlowStart = Omit<t.infer<typeof OidcFlow>, "codeVerifier" | "nonce">
 const LINK_PAGE = "/settings/account"
 
 /** Only same-origin paths, so the callback can't bounce users elsewhere. */
-function safeRedirect(value: string | undefined, fallback: string): string {
+export function safeRedirect(
+  value: string | undefined,
+  fallback: string,
+): string {
   if (!value || !value.startsWith("/") || value.startsWith("//")) {
     return fallback
   }
   return value
 }
 
-function errorRedirect(c: Context, page: string, message: string) {
+export function errorRedirect(c: Context, page: string, message: string) {
   const url = new URL(page, env.PUBLIC_URL)
   url.searchParams.set(AUTH_ERROR_QUERY_KEY, message)
   return c.redirect(`${url.pathname}${url.search}`)

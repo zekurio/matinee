@@ -1,6 +1,7 @@
 import { oc } from "@orpc/contract"
 
 import { del, get, patch, post, put } from "./contract-routes"
+import { PluginIdentity, PluginSignInInput } from "./plugins"
 import { PlaybackPreferences } from "./preferences"
 import { t } from "./schema"
 import {
@@ -31,6 +32,9 @@ import {
 } from "./schemas"
 
 export const authContract = oc.tag("Auth").router({
+  plugin: {
+    signIn: post("/auth/plugin/sign-in").input(PluginSignInInput).output(User),
+  },
   config: get("/auth/config").output(AuthConfig),
   session: get("/auth/session").output(t.object({ user: User.nullable() })),
   signOut: post("/auth/sign-out").output(t.void()),
@@ -140,6 +144,13 @@ export const authContract = oc.tag("Auth").router({
 })
 
 export const accountContract = oc.tag("Account").router({
+  identities: {
+    list: get("/account/identities").output(t.array(PluginIdentity)),
+    link: post("/account/identities").input(PluginSignInInput).output(t.void()),
+    unlink: del("/account/identities/{key}")
+      .input(t.object({ key: t.string().min(1).max(65) }))
+      .output(t.void()),
+  },
   /** Change how the account shows to others. Returns the user. */
   profile: {
     /** Fields left out stay as they are. */

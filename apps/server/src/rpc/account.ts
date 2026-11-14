@@ -18,6 +18,19 @@ import {
   storePasskey,
 } from "../auth/passkeys"
 import {
+  acceptPluginIdentity,
+  authenticatePluginCredentials,
+  authProviderKey,
+  pluginRpcFailure,
+  publicAuthProvider,
+  resolveAuthProvider,
+} from "../auth/plugin-auth"
+import {
+  listPluginIdentities,
+  PluginAuthError,
+  unlinkPluginIdentity,
+} from "../auth/plugin-identities"
+import {
   deleteSession,
   deleteUserSessions,
   listSessions,
@@ -25,6 +38,7 @@ import {
 } from "../auth/session"
 import { signInMethods } from "../auth/users"
 import { db } from "../db"
+import { runningAuth } from "../plugins"
 import { authed, badRequest, notFound, requirePasskeys } from "./base"
 
 const LAST_METHOD =
@@ -45,6 +59,69 @@ async function avatarChange(
 }
 
 export const account = {
+  identities: {
+    list: authed.account.identities.list.handler(async ({ context }) => {
+      const links = await listPluginIdentities(context.user.id)
+      return runningAuth().map((provider) => {
+        const link = links.find(
+          (entry) =>
+            `${entry.pluginId}.${entry.providerId}` ===
+            authProviderKey(provider),
+        )
+        const { allowSignUp: _allowSignUp, ...info } =
+          publicAuthProvider(provider)
+        return {
+          ...info,
+          linked: link
+            ? { label: link.label, createdAt: link.createdAt }
+            : null,
+        }
+      })
+    }),
+    link: authed.account.identities.link.handler(async ({ context, input }) => {
+      try {
+        const provider = resolveAuthProvider(input.key, "credentials")
+        const identity = await authenticatePluginCredentials(
+          provider,
+          input.fields,
+        )
+        await acceptPluginIdentity(
+          context.hono,
+          provider,
+          identity,
+          "link",
+          context.user.id,
+        )
+      } catch (cause) {
+        pluginRpcFailure(cause)
+      }
+    }),
+    unlink: authed.account.identities.unlink.handler(
+      async ({ context, input }) => {
+        try {
+          const provider = resolveAuthProvider(input.key)
+          // An account made by signing in through a plugin may have no
+          // passkey and no single sign-on. Its last link at a provider
+          // that runs is then its only way in, and stays.
+          const methods = await signInMethods(context.user.id)
+          if (methods.passkeys === 0 && methods.linked === 0) {
+            const running = new Set(runningAuth().map(authProviderKey))
+            const links = await listPluginIdentities(context.user.id)
+            const others = links.filter((link) => {
+              const key = `${link.pluginId}.${link.providerId}`
+              return key !== input.key && running.has(key)
+            })
+            if (others.length === 0) throw new PluginAuthError(LAST_METHOD)
+          }
+          if (!(await unlinkPluginIdentity(context.user.id, provider))) {
+            throw new PluginAuthError("No account is linked.", "NOT_FOUND")
+          }
+        } catch (cause) {
+          pluginRpcFailure(cause)
+        }
+      },
+    ),
+  },
   profile: {
     update: authed.account.profile.update.handler(
       async ({ context, input }) => {

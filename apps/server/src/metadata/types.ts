@@ -113,16 +113,17 @@ export type ImageCandidate = {
 }
 
 /**
- * One metadata source. Each library picks one; adding a provider means
- * implementing this and listing it in `sources.ts`.
+ * One metadata source. Built-ins and running plugin contributions share it.
  */
 export interface MetadataSource {
   id: MetadataProviderId
   name: string
   description: string
+  /** Title kinds the provider handles. */
+  kinds: ("movie" | "show")[]
   /** Gives episode names, descriptions, and stills. */
   episodes: boolean
-  /** The environment variables it needs, for the admin UI. */
+  /** How an admin enables it in Settings → Plugins. */
   setup: string | null
   configured(): boolean
   search(query: SearchQuery): Promise<Candidate[]>

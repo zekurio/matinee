@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from "node:fs"
+import { availableParallelism } from "node:os"
 import { dirname, join, resolve } from "node:path"
 
 import { DevicePath, HardwareAcceleration } from "@matinee/contracts"
@@ -128,6 +129,55 @@ const EnvSchema = t.object({
   /** TheTVDB v4 project API key, plus a subscriber PIN for user keys. */
   MATINEE_TVDB_API_KEY: optional,
   MATINEE_TVDB_PIN: optional,
+  /**
+   * Directories that hold plugin folders, separated by `:`, beside the
+   * `plugins` directory in the data dir. The server only reads them, so
+   * they can be in a read-only store.
+   */
+  MATINEE_PLUGIN_DIRS: t
+    .string()
+    .$default("")
+    .transform((value) =>
+      value
+        .split(":")
+        .map((dir) => dir.trim())
+        .filter((dir) => dir.length > 0),
+    ),
+  /**
+   * Ids of plugins from `MATINEE_PLUGIN_DIRS` to turn on and approve at
+   * start, separated by commas, for setups that declare their plugins.
+   * Plugins installed in the app always wait for an admin.
+   */
+  MATINEE_PLUGINS_ENABLE: t
+    .string()
+    .$default("")
+    .transform((value) =>
+      value
+        .split(",")
+        .map((id) => id.trim())
+        .filter((id) => id.length > 0),
+    ),
+  /** Seconds without a call before a sandbox sleeps; 0 keeps it awake. */
+  MATINEE_PLUGIN_IDLE_SECONDS: t.coerce
+    .number()
+    .min(0)
+    .max(2_000_000)
+    .$default(120),
+  /** Soft limit on awake sandboxes. Busy plugins are never evicted. */
+  MATINEE_PLUGIN_MAX_AWAKE: t.coerce.number().int().min(1).$default(8),
+  /** Hard limit on plugin host threads, started only when needed. */
+  MATINEE_PLUGIN_THREADS: t.coerce
+    .number()
+    .int()
+    .min(1)
+    .$default(Math.min(4, Math.max(1, availableParallelism() - 1))),
+  /** The npm registry plugins install from. */
+  MATINEE_PLUGIN_REGISTRY: t
+    .string()
+    .trim()
+    .url()
+    .$default("https://registry.npmjs.org")
+    .transform((value) => value.replace(/\/+$/, "")),
 })
 
 /**
@@ -168,6 +218,9 @@ function parseEnv() {
   return {
     ...env,
     dataDir,
+    /** Plugins installed in the app, and folders an operator drops in. */
+    pluginsDir: join(dataDir, "plugins"),
+    pluginDirs: env.MATINEE_PLUGIN_DIRS.map((dir) => resolve(dir)),
     transcodeDir: env.MATINEE_TRANSCODE_DIR
       ? resolve(env.MATINEE_TRANSCODE_DIR)
       : join(dataDir, "transcodes"),

@@ -68,6 +68,27 @@ export default defineMessages("server", {
   "server.oidc.refused": "The provider refused the sign-in: {reason}",
   "server.oidc.failed": "Sign-in failed. Check the server log for details.",
 
+  // auth/plugin-*.ts. ProviderError text belongs to the plugin.
+  "server.pluginAuth.setupFirst":
+    "Finish setup with a passkey or single sign-on before using plugin sign-in.",
+  "server.pluginAuth.notFound": "Sign-in provider not found.",
+  "server.pluginAuth.noLinkedAccount":
+    "No account is linked to this sign-in. Sign in to your account, then link this provider under Settings → Account.",
+  "server.pluginAuth.usernameCollision":
+    "An account named {username} already exists. Sign in to it, then link {provider} under Settings → Account.",
+  "server.pluginAuth.failed": "Sign-in failed. Try again later.",
+  "server.pluginAuth.credentialsFailed":
+    "That didn't work. Check what you entered.",
+  "server.pluginAuth.wait":
+    "Too many sign-in attempts. Wait a few minutes, then try again.",
+  "server.pluginAuth.fieldsInvalid":
+    "The sign-in fields don't match this provider.",
+  "server.pluginAuth.requestInvalid": "The sign-in request is invalid.",
+  "server.pluginAuth.responseTooLarge":
+    "The sign-in response is too large. Try again.",
+  "server.pluginAuth.addressBlocked":
+    "The sign-in provider returned an address it isn't allowed to use.",
+
   // auth/passkeys.ts.
   "server.passkeys.requestExpired": "The passkey request expired. Try again.",
   "server.passkeys.checkFailed": "Passkey check failed.",
@@ -223,26 +244,45 @@ export default defineMessages("server", {
 
   // The metadata providers, as the library dialog lists them, and their
   // failures in rpc/titles.ts, rpc/libraries.ts, and metadata/refresh.ts.
+  "server.plugins.unavailable": "Plugins aren't available yet.",
+  "server.metadata.unavailable": "That metadata provider isn't available.",
+  "server.metadata.pluginOffline":
+    "{provider} isn't running. Turn its plugin on under Settings → Plugins.",
+  "server.metadata.pluginMissing":
+    "The metadata provider {provider} isn't installed. Install its plugin under Settings → Plugins, or choose another provider.",
+  "server.metadata.kindUnsupported":
+    "{provider} doesn't handle this library's kind. Choose another provider or change the library's kind.",
+  "server.metadata.tmdbPluginDescription":
+    "Movie and TV metadata from The Movie Database.",
+  "server.metadata.tvdbPluginDescription":
+    "TV and movie metadata from TheTVDB, with Sonarr's season order.",
+  "server.metadata.tmdbKeyLabel": "API key or read access token",
+  "server.metadata.apiKeyLabel": "API key",
+  "server.metadata.tmdbKeyHint":
+    "Get a free API key or API Read Access Token from your TMDB account's API settings.",
+  "server.metadata.tvdbKeyHint":
+    "Get an API key from your TheTVDB account's API access settings.",
+  "server.metadata.pinLabel": "Subscriber PIN",
+  "server.metadata.pinHint":
+    "For subscriber-supported keys, enter the PIN from your TheTVDB subscription. Otherwise leave this empty.",
   "server.metadata.tmdbDescription":
     "The Movie Database. Movies and shows, with episode stills and logos. Radarr uses it.",
   "server.metadata.tmdbSetup":
-    "Set MATINEE_TMDB_API_KEY to an API key or read access token.",
+    "Add a TMDB API key under Settings → Plugins, or set MATINEE_TMDB_API_KEY.",
   "server.metadata.tmdbNotSetUp":
-    "TMDB isn't set up. Set MATINEE_TMDB_API_KEY to an API key or read access token.",
-  "server.metadata.tmdbRejectedKey":
-    "TMDB rejected the API key. Set MATINEE_TMDB_API_KEY to an API key or read access token.",
-  "server.metadata.tmdbKeyMissing": "MATINEE_TMDB_API_KEY isn't set",
+    "TMDB isn't set up. Add a TMDB API key under Settings → Plugins, or set MATINEE_TMDB_API_KEY.",
+  "server.metadata.tmdbKeyMissing":
+    "TMDB has no API key. Add one under Settings → Plugins.",
   "server.metadata.tvdbDescription":
     "Shows in the season order Sonarr uses, plus movies, logos, and episode images.",
   "server.metadata.tvdbSetup":
-    "Set MATINEE_TVDB_API_KEY, and MATINEE_TVDB_PIN if your key needs a subscriber PIN.",
+    "Add a TheTVDB API key and, if needed, a subscriber PIN under Settings → Plugins, or set MATINEE_TVDB_API_KEY and MATINEE_TVDB_PIN.",
   "server.metadata.tvdbNotSetUp":
-    "TheTVDB isn't set up. Set MATINEE_TVDB_API_KEY, and MATINEE_TVDB_PIN if your key needs a subscriber PIN.",
-  "server.metadata.tvdbRejectedKey":
-    "TheTVDB rejected the API key. Set MATINEE_TVDB_API_KEY, and MATINEE_TVDB_PIN if your key needs a subscriber PIN.",
-  "server.metadata.tvdbKeyMissing": "MATINEE_TVDB_API_KEY isn't set",
+    "TheTVDB isn't set up. Add a TheTVDB API key and, if needed, a subscriber PIN under Settings → Plugins, or set MATINEE_TVDB_API_KEY and MATINEE_TVDB_PIN.",
+  "server.metadata.tvdbKeyMissing":
+    "TheTVDB has no API key. Add one under Settings → Plugins.",
   "server.metadata.rejectedKey":
-    "{provider} rejected the API key. Check the server's configuration.",
+    "{provider} refused access. Check its settings under Settings → Plugins.",
   "server.metadata.noEntry": "{provider} has no entry with that id.",
   "server.metadata.noAnswer":
     "{provider} didn't answer. Try again in a minute.",

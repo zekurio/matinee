@@ -436,6 +436,36 @@ in
       };
     };
 
+    plugins = {
+      folders = mkOption {
+        type = types.listOf types.path;
+        default = [ ];
+        example = literalExpression "[ ./plugins/anilist pkgs.matinee-plugin-webhook ]";
+        description = ''
+          Plugin folders, or directories that hold several, for the server to
+          read beside the plugins an admin installs in the app. A plugin
+          folder has a package.json with a `matinee` object and the bundled
+          file it names. The server only reads these, so a store path works.
+          A plugin from here shows under Settings → Plugins, off until an
+          admin approves it there or
+          {option}`services.matinee.plugins.enable` names it.
+        '';
+      };
+
+      enable = mkOption {
+        type = types.listOf (types.strMatching "[a-z][a-z0-9-]{1,31}");
+        default = [ ];
+        example = [ "anilist" ];
+        description = ''
+          Ids of plugins from {option}`services.matinee.plugins.folders` to
+          turn on at start. Naming one here approves what its manifest asks
+          for, in place of the admin's approval in the app, so read its
+          package.json first. Plugins installed in the app always wait for
+          an admin.
+        '';
+      };
+    };
+
     settings = mkOption {
       type = settingsType;
       default = { };
@@ -492,6 +522,14 @@ in
         message = "Single sign-on needs both services.matinee.oidc.issuerUrl and services.matinee.oidc.clientId.";
       }
       {
+        assertion = cfg.plugins.enable == [ ] || cfg.plugins.folders != [ ];
+        message = "services.matinee.plugins.enable only turns on plugins from services.matinee.plugins.folders, which is empty.";
+      }
+      {
+        assertion = lib.all (folder: !lib.hasInfix ":" (toString folder)) cfg.plugins.folders;
+        message = "A path in services.matinee.plugins.folders can't contain a colon, which separates them.";
+      }
+      {
         assertion = !(db.createLocally && dbSocket) || db.user == cfg.user;
         message = "With the local database, services.matinee.database.user must be services.matinee.user, which signs in over the socket.";
       }
@@ -534,8 +572,12 @@ in
         MATINEE_OIDC_USERNAME_CLAIM = cfg.oidc.usernameClaim;
       }
       // optionalAttrs (cfg.oidc.roleClaim != null) { MATINEE_OIDC_ROLE_CLAIM = cfg.oidc.roleClaim; }
-      // optionalAttrs (cfg.oidc.groupsClaim != null) { MATINEE_OIDC_GROUPS_CLAIM = cfg.oidc.groupsClaim; }
-      // optionalAttrs (cfg.oidc.policyClaim != null) { MATINEE_OIDC_POLICY_CLAIM = cfg.oidc.policyClaim; }
+      // optionalAttrs (cfg.oidc.groupsClaim != null) {
+        MATINEE_OIDC_GROUPS_CLAIM = cfg.oidc.groupsClaim;
+      }
+      // optionalAttrs (cfg.oidc.policyClaim != null) {
+        MATINEE_OIDC_POLICY_CLAIM = cfg.oidc.policyClaim;
+      }
       // optionalAttrs (cfg.oidc.signOutRefused != null) {
         MATINEE_OIDC_SIGN_OUT_REFUSED = cfg.oidc.signOutRefused;
       }
@@ -548,6 +590,12 @@ in
       }
       // optionalAttrs (cfg.transcoding.qsvDevice != null) {
         MATINEE_QSV_DEVICE = cfg.transcoding.qsvDevice;
+      }
+      // optionalAttrs (cfg.plugins.folders != [ ]) {
+        MATINEE_PLUGIN_DIRS = lib.concatMapStringsSep ":" toString cfg.plugins.folders;
+      }
+      // optionalAttrs (cfg.plugins.enable != [ ]) {
+        MATINEE_PLUGINS_ENABLE = lib.concatStringsSep "," cfg.plugins.enable;
       }
     );
 

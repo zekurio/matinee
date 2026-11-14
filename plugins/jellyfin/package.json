@@ -1,0 +1,57 @@
+{
+  "name": "matinee-plugin-jellyfin",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Sign in with an existing Jellyfin username and password.",
+  "keywords": [
+    "matinee-plugin"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "matinee-plugin build",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@matinee/plugin": "workspace:*"
+  },
+  "matinee": {
+    "api": 1,
+    "id": "jellyfin",
+    "name": "Jellyfin",
+    "main": "dist/plugin.js",
+    "permissions": {
+      "storage": true
+    },
+    "contributes": {
+      "auth": [
+        {
+          "id": "jellyfin",
+          "name": "Jellyfin",
+          "kind": "credentials",
+          "fields": [
+            {
+              "key": "username",
+              "label": "Username",
+              "type": "text"
+            },
+            {
+              "key": "password",
+              "label": "Password",
+              "type": "password"
+            }
+          ]
+        }
+      ]
+    },
+    "config": [
+      {
+        "key": "url",
+        "type": "url",
+        "label": "Jellyfin server address",
+        "network": true,
+        "required": true
+      }
+    ]
+  }
+}

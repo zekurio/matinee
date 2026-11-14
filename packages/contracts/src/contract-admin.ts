@@ -7,6 +7,7 @@ import {
   UserAccessInput,
 } from "./access"
 import { AdminAuthSettings, AdminUser, AuthSettingsInput } from "./admin"
+import { pluginsContract } from "./contract-plugins"
 import { del, get, post, put } from "./contract-routes"
 import {
   ConcurrencyInput,
@@ -30,6 +31,7 @@ import { AdminTranscodingSettings, TranscodingSettings } from "./transcoding"
 import { AdminTrickplaySettings, TrickplaySettings } from "./trickplay"
 
 export const adminContract = oc.tag("Admin").router({
+  plugins: pluginsContract,
   /** List directories on the server, for picking library folders. */
   browse: get("/admin/browse")
     .input(t.object({ path: t.string().optional() }))

@@ -79,15 +79,39 @@ function initialValues(library: Library | undefined): LibraryValues {
   }
 }
 
-/** TheTVDB for shows and TMDB for movies, when the server has the key. */
+function orderedProviders(
+  kind: LibraryKind,
+  providers: MetadataProvider[],
+): MetadataProvider[] {
+  const order = kind === "shows" ? ["tvdb", "tmdb"] : ["tmdb", "tvdb"]
+  return providers
+    .filter((p) => p.kinds.includes(kind === "shows" ? "show" : "movie"))
+    .toSorted((a, b) => {
+      const rank = (p: MetadataProvider) => {
+        const index = order.indexOf(p.id)
+        return index < 0 ? order.length : index
+      }
+      return rank(a) - rank(b)
+    })
+}
+
+function providerLabel(provider: MetadataProvider): string {
+  return provider.name === provider.plugin.name
+    ? provider.name
+    : tr("libraries.dialog.pluginProvider", {
+        provider: provider.name,
+        plugin: provider.plugin.name,
+      })
+}
+
+/** Built-ins keep their suggested order; plugin providers follow. */
 function defaultProvider(
   kind: LibraryKind,
   providers: MetadataProvider[],
 ): ProviderChoice {
-  const order: MetadataProviderId[] =
-    kind === "shows" ? ["tvdb", "tmdb"] : ["tmdb", "tvdb"]
   return (
-    order.find((id) => providers.find((p) => p.id === id)?.configured) ?? "none"
+    orderedProviders(kind, providers).find((p) => p.available && p.configured)
+      ?.id ?? "none"
   )
 }
 
@@ -185,9 +209,18 @@ function LibraryForm({
 
   const provider = providerChoice ?? defaultProvider(kind, providers.data ?? [])
   const providerInfo = providers.data?.find((p) => p.id === provider)
+  const choices = orderedProviders(kind, providers.data ?? [])
+  const current = library?.metadataProvider
+  const unknownCurrent =
+    current && providers.data && !providers.data.some((p) => p.id === current)
+      ? current
+      : null
   const providerItems = [
     { value: "none", label: tr("libraries.dialog.noProvider") },
-    ...(providers.data ?? []).map((p) => ({ value: p.id, label: p.name })),
+    ...choices.map((p) => ({ value: p.id, label: providerLabel(p) })),
+    ...(unknownCurrent
+      ? [{ value: unknownCurrent, label: unknownCurrent }]
+      : []),
   ]
   const kinds = LIBRARY_KINDS.map((value) => ({
     value,
@@ -264,20 +297,29 @@ function LibraryForm({
                       <SelectItem value="none">
                         {tr("libraries.dialog.noProvider")}
                       </SelectItem>
-                      {providers.data?.map((p) => (
+                      {choices.map((p) => (
                         <SelectItem
                           key={p.id}
                           value={p.id}
-                          disabled={!p.configured}
+                          disabled={
+                            (!p.available || !p.configured) && p.id !== current
+                          }
                         >
-                          {p.name}
-                          {!p.configured && (
+                          {providerLabel(p)}
+                          {(!p.available || !p.configured) && (
                             <span className="text-muted-foreground">
-                              {tr("libraries.dialog.needsKey")}
+                              {!p.available
+                                ? tr("libraries.dialog.unavailable")
+                                : tr("libraries.dialog.needsKey")}
                             </span>
                           )}
                         </SelectItem>
                       ))}
+                      {unknownCurrent && (
+                        <SelectItem value={unknownCurrent}>
+                          {unknownCurrent} {tr("libraries.dialog.unavailable")}
+                        </SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                 </Field>
@@ -296,7 +338,16 @@ function LibraryForm({
             <FieldDescription className="-mt-2 sm:col-span-2">
               {provider === "none"
                 ? tr("libraries.dialog.noProviderHint")
-                : providerInfo && translateKnown(providerInfo.description)}
+                : unknownCurrent === provider
+                  ? tr("libraries.dialog.providerMissing", { provider })
+                  : providerInfo &&
+                    (!providerInfo.available
+                      ? tr("libraries.dialog.providerOffline", {
+                          provider: providerInfo.name,
+                        })
+                      : !providerInfo.configured && providerInfo.setup
+                        ? translateKnown(providerInfo.setup)
+                        : translateKnown(providerInfo.description))}
             </FieldDescription>
           </div>
 

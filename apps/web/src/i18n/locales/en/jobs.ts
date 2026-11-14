@@ -21,7 +21,7 @@ export default defineMessages("jobs", {
     "Read the streams of new and changed files with ffprobe.",
   "jobs.queue.metadata.name": "Metadata",
   "jobs.queue.metadata.description":
-    "Fetch details, artwork, and episodes from TMDB or TheTVDB.",
+    "Fetch details, artwork, and episodes from metadata providers.",
   "jobs.queue.thumbnails.name": "Thumbnails",
   "jobs.queue.thumbnails.description":
     "Take a frame from videos that have no artwork.",
@@ -45,6 +45,12 @@ export default defineMessages("jobs", {
   "jobs.queue.subtitles.name": "Subtitles",
   "jobs.queue.subtitles.description":
     "Convert subtitles to WebVTT, and copy PGS subtitles out of videos.",
+  "jobs.queue.plugin-events.name": "Plugin events",
+  "jobs.queue.plugin-events.description":
+    "Deliver recorded server events to plugins, retrying failed handlers.",
+  "jobs.task.deliver-plugin-events.name": "Deliver plugin events",
+  "jobs.task.deliver-plugin-events.description":
+    "Retry waiting plugin events and give up on expired or excess events.",
   "jobs.queue.avatars.name": "Profile pictures",
   "jobs.queue.avatars.description":
     "Crop and scale uploads and the pictures sign-in providers send.",
@@ -133,7 +139,7 @@ export default defineMessages("jobs", {
   "jobs.schedule.every": "Every {interval}",
   "jobs.schedule.every.atStartup": "Every {interval} and at startup",
   "jobs.schedule.every.afterStartup":
-    "Every {interval} and {delay} after startup",
+    "Every {interval}, first {delay} after startup",
   "jobs.schedule.notScheduled": "Not scheduled",
   "jobs.schedule.afterThisRun": "After this run",
 

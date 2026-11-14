@@ -1,6 +1,6 @@
 import type { ExternalIds } from "@matinee/db"
 
-import { env } from "../../env"
+import { tvdbKey } from "../builtins"
 import {
   type Candidate,
   type Lookup,
@@ -63,10 +63,11 @@ export const tvdb: MetadataSource = {
   name: "TheTVDB",
   description:
     "Shows in the season order Sonarr uses, plus movies, logos, and episode images.",
+  kinds: ["movie", "show"],
   episodes: true,
   setup:
-    "Set MATINEE_TVDB_API_KEY, and MATINEE_TVDB_PIN if your key needs a subscriber PIN.",
-  configured: () => Boolean(env.MATINEE_TVDB_API_KEY),
+    "Add a TheTVDB API key and, if needed, a subscriber PIN under Settings → Plugins, or set MATINEE_TVDB_API_KEY and MATINEE_TVDB_PIN.",
+  configured: () => Boolean(tvdbKey()),
   search,
   lookup,
   details: (id, { kind, language }) =>

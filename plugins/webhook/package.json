@@ -1,0 +1,67 @@
+{
+  "name": "matinee-plugin-webhook",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Deliver selected Matinee server events to a webhook.",
+  "keywords": [
+    "matinee-plugin"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "matinee-plugin build",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@matinee/plugin": "workspace:*"
+  },
+  "matinee": {
+    "api": 1,
+    "id": "webhook",
+    "name": "Webhook",
+    "main": "dist/plugin.js",
+    "contributes": {
+      "events": [
+        "library.scanned",
+        "title.added",
+        "title.matched",
+        "playback.started",
+        "playback.stopped",
+        "playback.watched",
+        "user.created"
+      ]
+    },
+    "config": [
+      {
+        "key": "url",
+        "type": "url",
+        "label": "Webhook URL",
+        "network": true,
+        "required": true
+      },
+      {
+        "key": "secret",
+        "type": "secret",
+        "label": "Signing secret"
+      },
+      {
+        "key": "library",
+        "type": "boolean",
+        "label": "Library events",
+        "default": true
+      },
+      {
+        "key": "playback",
+        "type": "boolean",
+        "label": "Playback events",
+        "default": false
+      },
+      {
+        "key": "users",
+        "type": "boolean",
+        "label": "Users events",
+        "default": false
+      }
+    ]
+  }
+}
