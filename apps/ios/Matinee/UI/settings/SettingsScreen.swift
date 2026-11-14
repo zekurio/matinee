@@ -639,12 +639,16 @@ private struct SubtitlePreview: View {
   }
 }
 
-/// Downloads' network, version, and subtitles, and the room they take.
+/// Downloads' network, version, and subtitles, the room they take, and
+/// removing them all, as Android has them here rather than on the tab.
 struct DownloadsSettingsPage: View {
   @State private var options = Loader<PlaybackOptions>()
   @State private var confirm = false
+  /// Read from the disk, as the system's storage settings count it.
+  @State private var storage: DownloadStorage?
   @Environment(Downloads.self) private var downloads
   @Environment(ViewerState.self) private var viewer: ViewerState?
+  @Environment(\.snackbar) private var snackbar
   @Environment(\.palette) private var palette
 
   var body: some View {
@@ -653,7 +657,7 @@ struct DownloadsSettingsPage: View {
     // An account that may not download keeps what's on the phone, and nothing more to set.
     let off = loaded?.downloads == false
     let items = downloads.store.items
-    let total = formatBytes(items.values.reduce(0) { $0 + $1.bytes })
+    let total = formatBytes(storage?.used ?? items.values.reduce(0) { $0 + $1.bytes })
     SettingsScaffold(Str.downloadsTitle) {
       if off {
         VStack(alignment: .leading, spacing: 4) {
@@ -662,7 +666,7 @@ struct DownloadsSettingsPage: View {
         }
       }
       Panel {
-        ValueRow(Str.downloadsStorage, value: Str.downloadsStorageValue(total, formatBytes(freeSpace(downloads))))
+        ValueRow(Str.downloadsStorage, value: Str.downloadsStorageValue(total, storage?.free.map(formatBytes) ?? "–"))
         if !off {
           RowDivider()
           SwitchRow(Str.downloadsUnmetered, isOn: $downloads.unmeteredOnly)
@@ -715,20 +719,19 @@ struct DownloadsSettingsPage: View {
     }
     .loads(options) { api in try await api.playback.options() }
     .onChange(of: loaded) { _, value in if let value { viewer?.options = value } }
+    // Again as files come and go, and as they grow.
+    .task(id: items.values.reduce(Int64(items.count)) { $0 + $1.bytes }) {
+      storage = await downloads.store.storage()
+    }
     .alert(Str.downloadsRemoveAllConfirm, isPresented: $confirm) {
       Button(Str.commonRemove, role: .destructive) {
-        Task { try? await downloads.removeAll() }
+        let downloads = downloads
+        launchShowing(snackbar, Str.downloadsFailed) { try await downloads.removeAll() }
       }
       Button(Str.commonCancel, role: .cancel) {}
     } message: {
       Text(Str.downloadsRemoveAllBody(total))
     }
-  }
-
-  /// What's left on the device for more, as iOS counts it for something the person asked for.
-  private func freeSpace(_ downloads: Downloads) -> Int64 {
-    let values = try? downloads.store.root.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey])
-    return values?.volumeAvailableCapacityForImportantUsage ?? 0
   }
 }
 
