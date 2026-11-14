@@ -1579,13 +1579,16 @@ class AdminFulfilmentApi internal constructor(private val transport: ApiTranspor
         slug: String,
         source: String,
         settings: Map<String, JsonElement>,
+        options: Map<String, JsonElement>? = null,
+        defaultFor: List<String>? = null,
+        folderLibraries: Map<String, String>? = null,
         apiKey: Explicit<String>? = null,
     ): FulfilmentConnection =
         transport.call(
             "PUT",
             listOf("admin", "fulfilment", "connections", id),
             emptyList(),
-            transport.json(AdminFulfilmentUpdateInput.serializer(), AdminFulfilmentUpdateInput(name = name, slug = slug, source = source, settings = settings, apiKey = apiKey)),
+            transport.json(AdminFulfilmentUpdateInput.serializer(), AdminFulfilmentUpdateInput(name = name, slug = slug, source = source, settings = settings, options = options, defaultFor = defaultFor, folderLibraries = folderLibraries, apiKey = apiKey)),
             FulfilmentConnection.serializer(),
         )
 
@@ -1609,53 +1612,112 @@ class AdminFulfilmentApi internal constructor(private val transport: ApiTranspor
         )
     }
 
-    /** `GET /admin/fulfilment/libraries/{libraryId}` */
-    suspend fun mapping(libraryId: String): LibraryFulfilment =
+    /** `POST /admin/fulfilment/options` */
+    suspend fun options(
+        source: String,
+        slug: String,
+        settings: Map<String, JsonElement>,
+        id: String? = null,
+        apiKey: String? = null,
+    ): FulfilmentOptions =
         transport.call(
-            "GET",
-            listOf("admin", "fulfilment", "libraries", libraryId),
-            emptyList(),
-            null,
-            LibraryFulfilment.serializer(),
-        )
-
-    /** `PUT /admin/fulfilment/libraries/{libraryId}` */
-    suspend fun setMapping(
-        libraryId: String,
-        connectionId: String?,
-        options: Map<String, JsonElement>,
-        anime: Explicit<AdminFulfilmentSetMappingInput.Anime>? = null,
-    ): LibraryFulfilment =
-        transport.call(
-            "PUT",
-            listOf("admin", "fulfilment", "libraries", libraryId),
-            emptyList(),
-            transport.json(AdminFulfilmentSetMappingInput.serializer(), AdminFulfilmentSetMappingInput(connectionId = connectionId, options = options, anime = anime)),
-            LibraryFulfilment.serializer(),
-        )
-
-    /** `GET /admin/fulfilment/options` */
-    suspend fun options(connectionId: String, libraryId: String): FulfilmentOptions =
-        transport.call(
-            "GET",
+            "POST",
             listOf("admin", "fulfilment", "options"),
-            listOf("connectionId" to connectionId, "libraryId" to libraryId),
-            null,
+            emptyList(),
+            transport.json(AdminFulfilmentOptionsInput.serializer(), AdminFulfilmentOptionsInput(id = id, source = source, slug = slug, settings = settings, apiKey = apiKey)),
             FulfilmentOptions.serializer(),
         )
 
-    /** `POST /admin/fulfilment/landing` */
-    suspend fun landing(
+    /** `GET /admin/fulfilment/landing` */
+    suspend fun landing(kind: String, folder: String): AdminFulfilmentLandingOutput =
+        transport.call(
+            "GET",
+            listOf("admin", "fulfilment", "landing"),
+            listOf("kind" to kind, "folder" to folder),
+            null,
+            AdminFulfilmentLandingOutput.serializer(),
+        )
+
+    /** `GET /admin/fulfilment/connections/{connectionId}/rules` */
+    suspend fun rules(connectionId: String): List<FulfilmentRule> =
+        transport.call(
+            "GET",
+            listOf("admin", "fulfilment", "connections", connectionId, "rules"),
+            emptyList(),
+            null,
+            ListSerializer(FulfilmentRule.serializer()),
+        )
+
+    /** `POST /admin/fulfilment/connections/{connectionId}/rules` */
+    suspend fun createRule(
         connectionId: String,
-        libraryId: String,
-        options: Map<String, JsonElement>,
-    ): FulfilmentLanding =
+        settings: Map<String, JsonElement>,
+        users: List<String>? = null,
+        genres: List<Int>? = null,
+        languages: List<String>? = null,
+        keywords: List<FulfilmentKeyword>? = null,
+        folderLibraryId: Explicit<String>? = null,
+    ): FulfilmentRule =
         transport.call(
             "POST",
-            listOf("admin", "fulfilment", "landing"),
+            listOf("admin", "fulfilment", "connections", connectionId, "rules"),
             emptyList(),
-            transport.json(AdminFulfilmentLandingInput.serializer(), AdminFulfilmentLandingInput(connectionId = connectionId, libraryId = libraryId, options = options)),
-            FulfilmentLanding.serializer(),
+            transport.json(AdminFulfilmentCreateRuleInput.serializer(), AdminFulfilmentCreateRuleInput(users = users, genres = genres, languages = languages, keywords = keywords, settings = settings, folderLibraryId = folderLibraryId)),
+            FulfilmentRule.serializer(),
+        )
+
+    /** `PUT /admin/fulfilment/rules/{id}` */
+    suspend fun updateRule(
+        id: String,
+        connectionId: String,
+        settings: Map<String, JsonElement>,
+        users: List<String>? = null,
+        genres: List<Int>? = null,
+        languages: List<String>? = null,
+        keywords: List<FulfilmentKeyword>? = null,
+        folderLibraryId: Explicit<String>? = null,
+    ): FulfilmentRule =
+        transport.call(
+            "PUT",
+            listOf("admin", "fulfilment", "rules", id),
+            emptyList(),
+            transport.json(AdminFulfilmentUpdateRuleInput.serializer(), AdminFulfilmentUpdateRuleInput(connectionId = connectionId, users = users, genres = genres, languages = languages, keywords = keywords, settings = settings, folderLibraryId = folderLibraryId)),
+            FulfilmentRule.serializer(),
+        )
+
+    /** `DELETE /admin/fulfilment/rules/{id}` */
+    suspend fun removeRule(id: String) {
+        transport.send("DELETE", listOf("admin", "fulfilment", "rules", id), emptyList(), null)
+    }
+
+    /** `PUT /admin/fulfilment/connections/{connectionId}/rules/order` */
+    suspend fun reorderRules(connectionId: String, ids: List<String>): List<FulfilmentRule> =
+        transport.call(
+            "PUT",
+            listOf("admin", "fulfilment", "connections", connectionId, "rules", "order"),
+            emptyList(),
+            transport.json(AdminFulfilmentReorderRulesInput.serializer(), AdminFulfilmentReorderRulesInput(ids = ids)),
+            ListSerializer(FulfilmentRule.serializer()),
+        )
+
+    /** `GET /admin/fulfilment/rule-choices` */
+    suspend fun ruleChoices(kind: String): FulfilmentRuleChoices =
+        transport.call(
+            "GET",
+            listOf("admin", "fulfilment", "rule-choices"),
+            listOf("kind" to kind),
+            null,
+            FulfilmentRuleChoices.serializer(),
+        )
+
+    /** `GET /admin/fulfilment/keywords` */
+    suspend fun keywords(query: String): List<FulfilmentKeyword> =
+        transport.call(
+            "GET",
+            listOf("admin", "fulfilment", "keywords"),
+            listOf("query" to query),
+            null,
+            ListSerializer(FulfilmentKeyword.serializer()),
         )
 }
 

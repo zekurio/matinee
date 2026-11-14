@@ -188,13 +188,27 @@ export const FulfilmentRuleInput = t.object({
 })
 export type FulfilmentRuleInput = t.infer<typeof FulfilmentRuleInput>
 
+/** A genre, language, or account a rule's conditions can name. */
+export const FulfilmentRuleGenre = t.object({
+  id: t.number().int(),
+  name: t.string(),
+})
+export const FulfilmentRuleLanguage = t.object({
+  id: t.string(),
+  name: t.string(),
+})
+export const FulfilmentRuleAccount = t.object({
+  id: t.uuid(),
+  name: t.string(),
+})
+
 /** What a rule's conditions offer for a kind of title. */
 export const FulfilmentRuleChoices = t.object({
   /** TMDB is set up, so genres and keywords can be chosen and matched. */
   tmdb: t.boolean(),
-  genres: t.array(t.object({ id: t.number().int(), name: t.string() })),
-  languages: t.array(t.object({ id: t.string(), name: t.string() })),
-  users: t.array(t.object({ id: t.uuid(), name: t.string() })),
+  genres: t.array(FulfilmentRuleGenre),
+  languages: t.array(FulfilmentRuleLanguage),
+  users: t.array(FulfilmentRuleAccount),
 })
 export type FulfilmentRuleChoices = t.infer<typeof FulfilmentRuleChoices>
 

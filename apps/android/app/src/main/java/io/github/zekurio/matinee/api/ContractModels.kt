@@ -531,6 +531,14 @@ object ExternalIdSite {
     val all = listOf(TMDB, TVDB, IMDB)
 }
 
+object FieldSection {
+    const val CONNECTION = "connection"
+    const val DEFAULTS = "defaults"
+    const val ANIME = "anime"
+    const val BEHAVIOUR = "behaviour"
+    val all = listOf(CONNECTION, DEFAULTS, ANIME, BEHAVIOUR)
+}
+
 @Serializable
 data class DescribedField(
     val key: String,
@@ -538,6 +546,8 @@ data class DescribedField(
     val kind: String,
     val required: Boolean,
     val choices: List<DescribedField.Choice>,
+    val section: String,
+    val folder: String?,
 ) {
     @Serializable
     data class Choice(
@@ -555,7 +565,23 @@ data class FulfilmentSourceDescription(
     val needs: List<String>,
     val scope: String,
     val apiKey: Boolean,
+    val rules: Boolean,
     val fields: List<DescribedField>,
+    val values: Map<String, JsonElement>,
+)
+
+@Serializable
+data class FulfilmentLibrary(
+    val id: String,
+    val name: String,
+)
+
+@Serializable
+data class FulfilmentLanding(
+    val kind: String,
+    val from: String,
+    val folder: String,
+    val library: FulfilmentLibrary?,
 )
 
 @Serializable
@@ -565,7 +591,11 @@ data class FulfilmentConnection(
     val slug: String,
     val source: String,
     val settings: Map<String, JsonElement>,
+    val options: Map<String, JsonElement>,
+    val defaultFor: List<String>,
+    val folderLibraries: Map<String, String>,
     val apiKey: FulfilmentConnection.ApiKey,
+    val landings: List<FulfilmentLanding>,
 ) {
     @Serializable
     data class ApiKey(
@@ -580,42 +610,71 @@ data class FulfilmentConnectionInput(
     val slug: String,
     val source: String,
     val settings: Map<String, JsonElement>,
+    val options: Map<String, JsonElement>? = null,
+    val defaultFor: List<String>? = null,
+    val folderLibraries: Map<String, String>? = null,
     val apiKey: Explicit<String>? = null,
-)
-
-@Serializable
-data class FulfilmentLibrary(
-    val id: String,
-    val name: String,
-)
-
-@Serializable
-data class AnimeFulfilment(
-    val options: Map<String, JsonElement>,
-    val library: FulfilmentLibrary?,
-    val found: Boolean,
-)
-
-@Serializable
-data class LibraryFulfilment(
-    val libraryId: String,
-    val connectionId: String?,
-    val options: Map<String, JsonElement>,
-    val anime: AnimeFulfilment?,
-    val animeFrom: List<FulfilmentLibrary>,
 )
 
 @Serializable
 data class FulfilmentOptions(
     val fields: List<DescribedField>,
     val values: Map<String, JsonElement>,
-    val anime: Map<String, JsonElement>,
+    val rule: List<DescribedField>,
 )
 
 @Serializable
-data class FulfilmentLanding(
-    val folder: String?,
-    val library: FulfilmentLibrary?,
+data class FulfilmentKeyword(
+    val id: Int,
+    val name: String,
+)
+
+@Serializable
+data class FulfilmentRule(
+    val id: String,
+    val connectionId: String,
+    val users: List<String>,
+    val genres: List<Int>,
+    val languages: List<String>,
+    val keywords: List<FulfilmentKeyword>,
+    val settings: Map<String, JsonElement>,
+)
+
+@Serializable
+data class FulfilmentRuleInput(
+    val connectionId: String,
+    val users: List<String>? = null,
+    val genres: List<Int>? = null,
+    val languages: List<String>? = null,
+    val keywords: List<FulfilmentKeyword>? = null,
+    val settings: Map<String, JsonElement>,
+    val folderLibraryId: Explicit<String>? = null,
+)
+
+@Serializable
+data class FulfilmentRuleGenre(
+    val id: Int,
+    val name: String,
+)
+
+@Serializable
+data class FulfilmentRuleLanguage(
+    val id: String,
+    val name: String,
+)
+
+@Serializable
+data class FulfilmentRuleAccount(
+    val id: String,
+    val name: String,
+)
+
+@Serializable
+data class FulfilmentRuleChoices(
+    val tmdb: Boolean,
+    val genres: List<FulfilmentRuleGenre>,
+    val languages: List<FulfilmentRuleLanguage>,
+    val users: List<FulfilmentRuleAccount>,
 )
 
 object NotificationKind {
@@ -3151,6 +3210,9 @@ data class AdminFulfilmentUpdateInput(
     val slug: String,
     val source: String,
     val settings: Map<String, JsonElement>,
+    val options: Map<String, JsonElement>? = null,
+    val defaultFor: List<String>? = null,
+    val folderLibraries: Map<String, String>? = null,
     val apiKey: Explicit<String>? = null,
 )
 
@@ -3160,23 +3222,43 @@ data class AdminFulfilmentTestInput(
 )
 
 @Serializable
-data class AdminFulfilmentSetMappingInput(
-    val connectionId: String?,
-    val options: Map<String, JsonElement>,
-    val anime: Explicit<AdminFulfilmentSetMappingInput.Anime>? = null,
-) {
-    @Serializable
-    data class Anime(
-        val options: Map<String, JsonElement>,
-        val libraryId: Explicit<String>? = null,
-    )
-}
+data class AdminFulfilmentOptionsInput(
+    val id: String? = null,
+    val source: String,
+    val slug: String,
+    val settings: Map<String, JsonElement>,
+    val apiKey: String? = null,
+)
 
 @Serializable
-data class AdminFulfilmentLandingInput(
+data class AdminFulfilmentLandingOutput(
+    val library: FulfilmentLibrary?,
+)
+
+@Serializable
+data class AdminFulfilmentCreateRuleInput(
+    val users: List<String>? = null,
+    val genres: List<Int>? = null,
+    val languages: List<String>? = null,
+    val keywords: List<FulfilmentKeyword>? = null,
+    val settings: Map<String, JsonElement>,
+    val folderLibraryId: Explicit<String>? = null,
+)
+
+@Serializable
+data class AdminFulfilmentUpdateRuleInput(
     val connectionId: String,
-    val libraryId: String,
-    val options: Map<String, JsonElement>,
+    val users: List<String>? = null,
+    val genres: List<Int>? = null,
+    val languages: List<String>? = null,
+    val keywords: List<FulfilmentKeyword>? = null,
+    val settings: Map<String, JsonElement>,
+    val folderLibraryId: Explicit<String>? = null,
+)
+
+@Serializable
+data class AdminFulfilmentReorderRulesInput(
+    val ids: List<String>,
 )
 
 @Serializable
