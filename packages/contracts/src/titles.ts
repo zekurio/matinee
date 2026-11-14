@@ -33,6 +33,8 @@ export const TitleSummary = t.object({
   rating: t.number().nullable(),
   /** Age rating, like `TV-14` or `PG-13`. */
   contentRating: t.string().nullable(),
+  /** A movie's length, or a show's episodes', in minutes. */
+  runtimeMinutes: t.number().int().nullable(),
   /**
    * The BCP 47 tag of the language it was made in, from the metadata
    * provider. Null when the provider doesn't say or there is no match.
@@ -545,7 +547,6 @@ export const Title = TitleSummary.extend({
   releaseDate: t.string().nullable(),
   /** Such as `Ended` or `Returning Series`, in the provider's words. */
   status: t.string().nullable(),
-  runtimeMinutes: t.number().int().nullable(),
   /** The folder or file below the library folder that makes this title. */
   path: t.string(),
   /** Null when the library has no provider or nothing matched. */

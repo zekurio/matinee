@@ -10,6 +10,8 @@ import {
 import { t } from "@matinee/contracts/schema"
 
 import { plain, span } from "@/components/filters/ranges"
+import { tr } from "@/i18n"
+import { formatRuntime, formatScore } from "@/lib/format"
 
 /*
  * A list of titles' filters and sort as the URL holds them, for a
@@ -232,4 +234,33 @@ export function titleFilterCount(filters: TitleFilters): number {
     Number(filters.runtimeMin !== null || filters.runtimeMax !== null) +
     Number(filters.watched !== null)
   )
+}
+
+/**
+ * What a card says under its name: the year, with the score or the
+ * runtime before it while the list is ordered by that, as Discover's
+ * cards do, so the order can be read. Undefined leaves the year.
+ */
+export function cardDetail(
+  title: {
+    year: number | null
+    rating: number | null
+    runtimeMinutes: number | null
+  },
+  sort: TitleSort,
+): string | undefined {
+  const year = title.year === null ? null : String(title.year)
+  if (sort === "score" && title.rating !== null) {
+    const score = formatScore(title.rating)
+    return year
+      ? tr("filters.card.score", { score, year })
+      : tr("filters.card.scoreOnly", { score })
+  }
+  const runtime =
+    sort === "runtime" ? formatRuntime(title.runtimeMinutes) : null
+  if (runtime)
+    return year
+      ? tr("filters.card.runtime", { runtime, year })
+      : tr("filters.card.runtimeOnly", { runtime })
+  return undefined
 }

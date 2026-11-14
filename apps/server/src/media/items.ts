@@ -188,6 +188,7 @@ export function toSummary(
     genres: row.genres,
     rating: row.rating,
     contentRating: row.contentRating,
+    runtimeMinutes: row.runtimeMinutes,
     originalLanguage: row.originalLanguage,
     ...(states.get(row.id) ?? NO_STATE),
   }

@@ -358,8 +358,8 @@ function cardDetail(
   if (detail === "score" && item.score !== null) {
     const score = formatScore(item.score)
     return item.year
-      ? tr("discover.browse.card.score", { score, year: String(item.year) })
-      : tr("discover.browse.card.scoreOnly", { score })
+      ? tr("filters.card.score", { score, year: String(item.year) })
+      : tr("filters.card.scoreOnly", { score })
   }
   if (detail === "releaseDate" && item.releaseDate) {
     const day = parseDay(item.releaseDate)

@@ -21,7 +21,7 @@ import {
 } from "./list-controls"
 import { libraryRoute, useSearchText } from "./list-params"
 import { activeTitleFilters, TitleFilterPanel } from "./title-filter-panel"
-import type { TitleListSearch } from "./title-filter-params"
+import { cardDetail, type TitleListSearch } from "./title-filter-params"
 import { libraryTitlesOptions, useTitleFilters } from "./title-queries"
 
 export function TitleGrid({ library }: { library: Library }) {
@@ -125,7 +125,10 @@ export function TitleGrid({ library }: { library: Library }) {
           >
             {rows.map((title) => (
               <li key={title.id}>
-                <PosterCard title={title} />
+                <PosterCard
+                  title={title}
+                  detail={cardDetail(title, list.order.sort)}
+                />
               </li>
             ))}
           </ul>

@@ -56,4 +56,8 @@ export default {
   "filters.sort.recentOld": "Zuerst hinzugefügt",
   "filters.sort.longest": "Längste",
   "filters.sort.shortest": "Kürzeste",
+  "filters.card.score": "★ {score} · {year}",
+  "filters.card.scoreOnly": "★ {score}",
+  "filters.card.runtime": "{runtime} · {year}",
+  "filters.card.runtimeOnly": "{runtime}",
 } satisfies TranslationOf<typeof source>

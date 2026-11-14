@@ -44,8 +44,6 @@ export default {
     other: "Mindestens {count} Stimmen",
   }),
   "discover.browse.votesStep": "{count}+",
-  "discover.browse.card.score": "★ {score} · {year}",
-  "discover.browse.card.scoreOnly": "★ {score}",
   "discover.browse.floorScore":
     "Nur Titel mit mindestens {count} Stimmen, damit nicht eine Handvoll Stimmen die Liste anführt.",
   "discover.browse.floorList":

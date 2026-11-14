@@ -29,6 +29,7 @@ import {
   activeTitleFilters,
   TitleFilterPanel,
 } from "@/components/library/title-filter-panel"
+import { cardDetail } from "@/components/library/title-filter-params"
 import {
   browsedTitlesOptions,
   useTitleFilters,
@@ -159,7 +160,10 @@ export function BrowsePage({
           >
             {rows.map((title) => (
               <li key={title.id}>
-                <PosterCard title={title} />
+                <PosterCard
+                  title={title}
+                  detail={cardDetail(title, list.order.sort)}
+                />
               </li>
             ))}
           </ul>

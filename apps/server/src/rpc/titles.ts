@@ -73,7 +73,6 @@ async function toTitle(row: TitleRow, userId: string): Promise<Title> {
     tagline: row.tagline,
     releaseDate: row.releaseDate,
     status: row.status,
-    runtimeMinutes: row.runtimeMinutes,
     path: row.path,
     provider: row.provider,
     providerId: row.providerId,

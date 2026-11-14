@@ -52,9 +52,6 @@ export default defineMessages("discover", {
   }),
   // A vote step as a chip: "1,000+".
   "discover.browse.votesStep": "{count}+",
-  // A card's line in place of the year: "★ 8.3 · 1985".
-  "discover.browse.card.score": "★ {score} · {year}",
-  "discover.browse.card.scoreOnly": "★ {score}",
   "discover.browse.floorScore":
     "Only titles with at least {count} votes, so a handful of votes can't top the list.",
   "discover.browse.floorList":

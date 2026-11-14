@@ -63,4 +63,9 @@ export default defineMessages("filters", {
   "filters.sort.recentOld": "First added",
   "filters.sort.longest": "Longest",
   "filters.sort.shortest": "Shortest",
+  // A card's line in place of the year, sorted by score or runtime: "★ 8.3 · 1985".
+  "filters.card.score": "★ {score} · {year}",
+  "filters.card.scoreOnly": "★ {score}",
+  "filters.card.runtime": "{runtime} · {year}",
+  "filters.card.runtimeOnly": "{runtime}",
 })
