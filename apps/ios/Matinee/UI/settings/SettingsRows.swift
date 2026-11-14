@@ -42,20 +42,6 @@ struct SettingsScaffold<Content: View>: View {
   }
 }
 
-/// The small print under a panel, like a limit or what a section is for.
-struct PanelNote: View {
-  let text: String
-  @Environment(\.palette) private var palette
-
-  init(_ text: String) { self.text = text }
-
-  var body: some View {
-    Text(text).textStyle(.bodySmall).foregroundStyle(palette.muted)
-      .frame(maxWidth: .infinity, alignment: .leading)
-      .padding(.top, 8)
-  }
-}
-
 /// A titled group of settings. Android's `Section`, renamed, as SwiftUI has one.
 struct SettingsSection<Content: View>: View {
   let title: String

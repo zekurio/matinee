@@ -98,15 +98,9 @@ private func speedText(_ rate: Float) -> String {
   return text.hasSuffix(".0") ? String(text.dropLast(2)) : text
 }
 
-/// A language's name in the app's language, "German", "Deutsch".
-private func trackLanguageName(_ tag: String) -> String {
-  guard let name = Locale.app.localizedString(forIdentifier: tag), !name.isEmpty else { return tag }
-  return name.prefix(1).capitalized(with: .app) + name.dropFirst()
-}
-
 /// A track's language, plus its own title when that adds something.
 private func trackLabel(language: String?, title: String?, unnamed: String) -> String {
-  let name = language.map(trackLanguageName)
+  let name = language.map(languageName)
   guard let title, !title.trimmingCharacters(in: .whitespaces).isEmpty else { return name ?? unnamed }
   guard let name, title.range(of: name, options: .caseInsensitive) == nil else { return title }
   return Str.playerTrackWithTitle(name, title)
@@ -125,6 +119,13 @@ func subtitleLabel(_ track: SubtitleTrack, _ tracks: [SubtitleTrack]) -> String 
 }
 
 /// A track's flags and format, and whether it is burned into the picture.
+/// A track's flags and format, and whether it's burned into the picture:
+/// by default for every track the screen can't draw, as the download sheet
+/// has it; the player says for each track what it does.
+func subtitleDetail(_ track: SubtitleTrack) -> String {
+  subtitleDetail(track, burns: track.delivery != SubtitleDelivery.webvtt)
+}
+
 func subtitleDetail(_ track: SubtitleTrack, burns: Bool) -> String {
   [
     track.forced ? Str.playerSubtitlesForced : nil,

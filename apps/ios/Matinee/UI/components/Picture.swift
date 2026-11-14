@@ -12,23 +12,54 @@ import UIKit
  */
 
 extension ImagePipeline {
-  /// The pipeline for a server's images. `headers` go with every request,
-  /// as the session's `Authorization` will: the root makes one per sign-in
-  /// and hands it down with `.environment(\.imagePipeline, …)`.
-  nonisolated static func matinee(headers: [String: String] = [:]) -> ImagePipeline {
-    ImagePipeline {
-      let configuration = DataLoader.defaultConfiguration
-      configuration.httpAdditionalHeaders = headers
-      $0.dataLoader = DataLoader(configuration: configuration)
-      // Decoded images are kept in memory as Nuke does by default; the
-      // server's answers are cached on disk too, so a rail scrolling back
-      // doesn't fetch them again.
-      $0.dataCache = try? DataCache(name: "io.github.zekurio.matinee.images")
-    }
+  /// The pipeline for the server in use: `headers`, the session's
+  /// `Authorization`, go with requests to `server` and nowhere else, so an
+  /// image from anywhere else never gets the token. The root makes one per
+  /// sign-in and hands it down with `.environment(\.imagePipeline, …)`.
+  nonisolated static func matinee(server: URL?, headers: [String: String]) -> ImagePipeline {
+    guard let server, !headers.isEmpty else { return .anonymous }
+    return ImagePipeline(delegate: SignedImages(server: server, headers: headers)) { configure(&$0) }
   }
 
   /// Without a session: the gallery, and public images.
-  nonisolated static let anonymous = ImagePipeline.matinee()
+  nonisolated static let anonymous = ImagePipeline { configure(&$0) }
+
+  /// Decoded images are kept in memory as Nuke does by default; the
+  /// server's answers are cached on disk too, so a rail scrolling back
+  /// doesn't fetch them again.
+  nonisolated private static func configure(_ configuration: inout ImagePipeline.Configuration) {
+    configuration.dataLoader = DataLoader(configuration: DataLoader.defaultConfiguration)
+    configuration.dataCache = try? DataCache(name: CACHE_NAME)
+  }
+
+  nonisolated private static let CACHE_NAME = "io.github.zekurio.matinee.images"
+
+  /// Every image the app keeps, in memory and on disk: a removed server's go with it.
+  nonisolated static func forgetAll() {
+    ImageCache.shared.removeAll()
+    (try? DataCache(name: CACHE_NAME))?.removeAll()
+  }
+}
+
+/// Adds the session's headers to requests for its server's origin.
+private final class SignedImages: ImagePipeline.Delegate {
+  let server: URL
+  let headers: [String: String]
+
+  init(server: URL, headers: [String: String]) {
+    self.server = server
+    self.headers = headers
+  }
+
+  func willLoadData(for request: ImageRequest, urlRequest: URLRequest, pipeline: ImagePipeline) async throws
+    -> URLRequest
+  {
+    guard let url = urlRequest.url, url.scheme == server.scheme, url.host == server.host, url.port == server.port
+    else { return urlRequest }
+    var signed = urlRequest
+    for (name, value) in headers { signed.setValue(value, forHTTPHeaderField: name) }
+    return signed
+  }
 }
 
 extension EnvironmentValues {

@@ -468,7 +468,7 @@ private struct DeviceSection: View {
           }
         }
         if let limit = options?.maxBitrate {
-          PanelNote(Str.playbackQualityLimit(formatBitrate(limit)))
+          Note(Str.playbackQualityLimit(formatBitrate(limit))).padding(.top, 8)
         }
       }
     }
@@ -513,7 +513,7 @@ private struct TranscodingSection: View {
               ) { prefs.audioCodec = $0 }
             }
           }
-          PanelNote(noEncodes ? Str.playbackTranscodingNoEncodes : Str.playbackTranscodingNote)
+          Note(noEncodes ? Str.playbackTranscodingNoEncodes : Str.playbackTranscodingNote).padding(.top, 8)
         }
       }
     }
@@ -707,7 +707,7 @@ struct DownloadsSettingsPage: View {
                 ) { downloads.videoCodec = $0 }
               }
             }
-            PanelNote(Str.downloadsCodecNote)
+            Note(Str.downloadsCodecNote).padding(.top, 8)
           }
         }
       }

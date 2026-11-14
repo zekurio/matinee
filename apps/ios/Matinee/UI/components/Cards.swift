@@ -170,16 +170,18 @@ struct PlayGlyph: View {
 
 /// Play over a card's still while a pointer hovers it, as the web shows it
 /// on a desktop: an iPad with a trackpad. A touch has no hover, so cards
-/// stay clean; a tap opens the item, and its page has Play.
-private struct HoverPlay: ViewModifier {
+/// stay clean; a tap opens the item, and its page has Play. A title's
+/// page has it over its big stills too, a little bigger.
+struct HoverPlay: ViewModifier {
   let label: String
+  var size: CGFloat = 56
   let action: () -> Void
   @State private var hovered = false
 
   func body(content: Content) -> some View {
     content
       .overlay {
-        if hovered { PlayGlyph(label: label, action: action).transition(Motion.fade) }
+        if hovered { PlayGlyph(label: label, size: size, action: action).transition(Motion.fade) }
       }
       .onHover { hovered = $0 }
   }

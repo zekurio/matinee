@@ -52,7 +52,9 @@
     @State private var accent =
       GalleryAccent(rawValue: UserDefaults.standard.string(forKey: "gallery.accent") ?? "") ?? .matinee
     /// One for the run, made before the first image asks: a new one would start them all again.
-    @State private var pipeline = ImagePipeline.matinee(headers: GalleryServer.imageHeaders)
+    @State private var pipeline = ImagePipeline.matinee(
+      server: UserDefaults.standard.string(forKey: "gallery.server").flatMap(URL.init(string:)),
+      headers: GalleryServer.imageHeaders)
     @State private var position = ScrollPosition(edge: .top)
     @Environment(\.palette) private var palette
     @Environment(\.windowSize) private var window
