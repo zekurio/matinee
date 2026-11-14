@@ -204,7 +204,11 @@ private struct RowLines: ViewModifier {
   let lines: Int
   @Environment(\.dynamicTypeSize) private var typeSize
 
-  func body(content: Content) -> some View { content.lineLimit(typeSize.isAccessibilitySize ? nil : lines) }
+  func body(content: Content) -> some View {
+    // A menu's label keeps to the height it's offered unless its lines may say so.
+    content.lineLimit(typeSize.isAccessibilitySize ? nil : lines)
+      .fixedSize(horizontal: false, vertical: true)
+  }
 }
 
 extension View {
