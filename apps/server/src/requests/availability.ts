@@ -14,6 +14,9 @@ import type { Viewer } from "../access/viewer"
 import { inLibraries, visibleItems, visibleTitles } from "../access/visible"
 import { db } from "../db"
 import { defaultDestination, destinations } from "./destinations"
+import { loadRouting } from "./fulfilment/connections"
+import { noFacts } from "./fulfilment/facts"
+import type { TitleFacts } from "./fulfilment/types"
 import { getProgress } from "./progress"
 import { requestAction, requestLimit, undoable } from "./rules"
 
@@ -24,8 +27,8 @@ export type AvailabilityInput = {
   externalIds?: t.infer<typeof ExternalIds>
   seasons?: { number: number; episodesAired: number; airDate: string | null }[]
   releaseDate?: string | null
-  /** A provider called it anime, in details already read. */
-  anime?: boolean
+  /** What details already read say for anime fields and override rules. */
+  facts?: TitleFacts
 }
 
 /** All holdings and requests are batched, including external-id containment matches. */
@@ -34,9 +37,10 @@ export async function availability(
   inputs: AvailabilityInput[],
 ) {
   if (!inputs.length) return []
+  const routing = await loadRouting()
   const [movies, shows] = await Promise.all([
-    destinations(viewer, "movie"),
-    destinations(viewer, "show"),
+    destinations(viewer, "movie", routing),
+    destinations(viewer, "show", routing),
   ])
   const identities = inputs.map((input) =>
     and(
@@ -172,10 +176,10 @@ export async function availability(
     const candidates = input.ref.kind === "movie" ? movies : shows
     const selected = input.libraryId
       ? candidates.find((library) => library.id === input.libraryId)
-      : defaultDestination(candidates, {
-          anime: input.anime ?? false,
+      : defaultDestination(routing, candidates, {
+          facts: input.facts ?? noFacts(input.ref.kind),
+          user: viewer.id,
           requestedIn: row ? [row.libraryId] : [],
-          provider: input.ref.provider,
         })?.library
     const context = {
       row,

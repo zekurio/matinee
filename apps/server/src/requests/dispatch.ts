@@ -1,8 +1,14 @@
 import { setTimeout as sleep } from "node:timers/promises"
 
 import { ExternalIdSite, RemoteRef } from "@matinee/contracts"
-import { library, request, requestSeason } from "@matinee/db"
-import { and, eq, sql } from "drizzle-orm"
+import {
+  library,
+  request,
+  requestFollower,
+  requestSeason,
+  user,
+} from "@matinee/db"
+import { and, asc, eq, sql } from "drizzle-orm"
 
 import { db } from "../db"
 import { defineQueue } from "../jobs/queue"
@@ -10,7 +16,7 @@ import { sources } from "../metadata/sources"
 import { notify } from "../notifications/notify"
 import { events } from "../realtime/events"
 import { ExternalIds } from "./availability"
-import { fulfilmentFor } from "./fulfilment/connections"
+import { sendingFor } from "./fulfilment/connections"
 import { UNREACHABLE } from "./fulfilment/types"
 
 /**
@@ -59,12 +65,25 @@ export const dispatch = defineQueue({
     if (!row || row.status !== "approved" || row.fulfilmentState !== "queued")
       return
     try {
-      const mapping = await fulfilmentFor(row)
-      if (!mapping)
+      const sending = await sendingFor(row)
+      if (!sending || !row.options)
         throw new Error(
           "Choose a usable fulfilment connection for this library.",
         )
-      const { source, connection, options } = mapping
+      const { source, connection } = sending
+      const options = row.options
+      const [requester] = await db
+        .select({ id: user.id, username: user.username })
+        .from(requestFollower)
+        .innerJoin(user, eq(user.id, requestFollower.userId))
+        .where(
+          and(
+            eq(requestFollower.requestId, id),
+            eq(requestFollower.asked, true),
+          ),
+        )
+        .orderBy(asc(requestFollower.createdAt))
+        .limit(1)
       // ACCESS: internal dispatch reads the destination of the approved request.
       const [destination] = await db
         .select()
@@ -121,6 +140,7 @@ export const dispatch = defineQueue({
                     }
                   : null,
               options,
+              requester: requester ?? null,
             }),
           )
           // A scope edit during submission must remain queued for another idempotent send.

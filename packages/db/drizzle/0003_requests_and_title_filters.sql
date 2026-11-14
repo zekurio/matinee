@@ -4,18 +4,26 @@ CREATE TABLE "fulfilment_connection" (
 	"slug" text NOT NULL,
 	"source" text NOT NULL,
 	"settings" jsonb DEFAULT '{}'::jsonb NOT NULL,
+	"options" jsonb DEFAULT '{}'::jsonb NOT NULL,
+	"default_movies" boolean DEFAULT false NOT NULL,
+	"default_shows" boolean DEFAULT false NOT NULL,
+	"folder_libraries" jsonb DEFAULT '{}'::jsonb NOT NULL,
 	"api_key" text,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "fulfilment_connection_slug_unique" UNIQUE("slug")
 );
 --> statement-breakpoint
-CREATE TABLE "library_fulfilment" (
-	"library_id" uuid PRIMARY KEY NOT NULL,
+CREATE TABLE "fulfilment_rule" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"connection_id" uuid NOT NULL,
-	"options" jsonb DEFAULT '{}'::jsonb NOT NULL,
-	"anime_options" jsonb,
-	"anime_library_id" uuid,
+	"position" integer DEFAULT 0 NOT NULL,
+	"users" jsonb DEFAULT '[]'::jsonb NOT NULL,
+	"genres" jsonb DEFAULT '[]'::jsonb NOT NULL,
+	"languages" jsonb DEFAULT '[]'::jsonb NOT NULL,
+	"keywords" jsonb DEFAULT '[]'::jsonb NOT NULL,
+	"settings" jsonb DEFAULT '{}'::jsonb NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
@@ -58,7 +66,7 @@ CREATE TABLE "request" (
 	"fulfilment_error" text,
 	"remote_ref" jsonb,
 	"connection_id" uuid,
-	"anime_from" uuid,
+	"options" jsonb,
 	"sent_at" timestamp with time zone,
 	"arrived_at" timestamp with time zone,
 	"approved_at" timestamp with time zone,
@@ -94,20 +102,20 @@ CREATE TABLE "web_push_subscription" (
 --> statement-breakpoint
 ALTER TABLE "access_group" ADD COLUMN "requests" text DEFAULT 'off' NOT NULL;--> statement-breakpoint
 ALTER TABLE "access_group" ADD COLUMN "request_limit" jsonb;--> statement-breakpoint
-ALTER TABLE "library_fulfilment" ADD CONSTRAINT "library_fulfilment_library_id_library_id_fk" FOREIGN KEY ("library_id") REFERENCES "public"."library"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "library_fulfilment" ADD CONSTRAINT "library_fulfilment_connection_id_fulfilment_connection_id_fk" FOREIGN KEY ("connection_id") REFERENCES "public"."fulfilment_connection"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "library_fulfilment" ADD CONSTRAINT "library_fulfilment_anime_library_id_library_id_fk" FOREIGN KEY ("anime_library_id") REFERENCES "public"."library"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "fulfilment_rule" ADD CONSTRAINT "fulfilment_rule_connection_id_fulfilment_connection_id_fk" FOREIGN KEY ("connection_id") REFERENCES "public"."fulfilment_connection"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "notification" ADD CONSTRAINT "notification_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "notification" ADD CONSTRAINT "notification_request_id_request_id_fk" FOREIGN KEY ("request_id") REFERENCES "public"."request"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "request" ADD CONSTRAINT "request_library_id_library_id_fk" FOREIGN KEY ("library_id") REFERENCES "public"."library"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "request" ADD CONSTRAINT "request_poster_id_artwork_id_fk" FOREIGN KEY ("poster_id") REFERENCES "public"."artwork"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "request" ADD CONSTRAINT "request_declined_by_user_id_fk" FOREIGN KEY ("declined_by") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "request" ADD CONSTRAINT "request_connection_id_fulfilment_connection_id_fk" FOREIGN KEY ("connection_id") REFERENCES "public"."fulfilment_connection"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "request" ADD CONSTRAINT "request_anime_from_library_id_fk" FOREIGN KEY ("anime_from") REFERENCES "public"."library"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "request_follower" ADD CONSTRAINT "request_follower_request_id_request_id_fk" FOREIGN KEY ("request_id") REFERENCES "public"."request"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "request_follower" ADD CONSTRAINT "request_follower_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "request_season" ADD CONSTRAINT "request_season_request_id_request_id_fk" FOREIGN KEY ("request_id") REFERENCES "public"."request"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "web_push_subscription" ADD CONSTRAINT "web_push_subscription_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+CREATE UNIQUE INDEX "fulfilment_default_movies" ON "fulfilment_connection" USING btree ("default_movies") WHERE "fulfilment_connection"."default_movies";--> statement-breakpoint
+CREATE UNIQUE INDEX "fulfilment_default_shows" ON "fulfilment_connection" USING btree ("default_shows") WHERE "fulfilment_connection"."default_shows";--> statement-breakpoint
+CREATE INDEX "fulfilment_rule_connection_idx" ON "fulfilment_rule" USING btree ("connection_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "notification_dedupe" ON "notification" USING btree ("user_id","dedupe_key");--> statement-breakpoint
 CREATE INDEX "notification_user_idx" ON "notification" USING btree ("user_id","created_at");--> statement-breakpoint
 CREATE INDEX "notification_unread_idx" ON "notification" USING btree ("user_id","read_at");--> statement-breakpoint

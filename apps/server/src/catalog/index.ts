@@ -13,13 +13,14 @@ import { youTubeUrl } from "../metadata/trailers"
 import { availability } from "../requests/availability"
 import { withCachedDetails } from "../requests/cached-details"
 import {
-  choices,
   defaultDestination,
   destinations,
   lookupLanguage,
   requestedIn,
-  routeTo,
 } from "../requests/destinations"
+import { titleFacts } from "../requests/facts"
+import { loadRouting, type Plan } from "../requests/fulfilment/connections"
+import { noFacts } from "../requests/fulfilment/facts"
 import { detailProvider, lookupProvider, searchProvider } from "./cache"
 
 async function artwork(urls: (string | null)[]) {
@@ -41,15 +42,19 @@ export async function search(
   // One list per kind, each in the provider's order of relevance.
   const lists: t.infer<typeof CatalogTitleSummary>[][] = []
   let stale = false
+  const routing = await loadRouting()
   for (const kind of input.kind
     ? [input.kind]
     : (["movie", "show"] satisfies CatalogRef["kind"][])) {
-    const candidates = await destinations(viewer, kind)
-    // Search goes through the library a title that isn't anime goes to.
-    // Which results are anime isn't known until their details are read.
+    const candidates = await destinations(viewer, kind, routing)
+    // Search goes through the library a title no rule picks out goes to.
+    // What the results are isn't known until their details are read.
     const destination = input.libraryId
       ? candidates.find((row) => row.id === input.libraryId)
-      : defaultDestination(candidates, { anime: false })?.library
+      : defaultDestination(routing, candidates, {
+          facts: noFacts(kind),
+          user: viewer.id,
+        })?.library
     if (!destination?.metadataProvider) continue
     const provider = destination.metadataProvider
     const result = await searchProvider(
@@ -108,17 +113,19 @@ export async function details(
 }
 
 /**
- * A title's details, and how an ask for it is sent: `animeFrom` names
- * the library whose mapping's options for anime it takes, or is null.
+ * A title's details, and how an ask for it is sent: through which
+ * connection, with which options, into which library. Null when it
+ * can't go anywhere the viewer can ask into.
  */
 export async function routedDetails(
   viewer: Viewer,
   input: { ref: CatalogRef; libraryId?: string },
 ): Promise<{
   detail: t.infer<typeof CatalogTitleDetail>
-  animeFrom: string | null
+  plan: Plan | null
 }> {
-  const candidates = await destinations(viewer, input.ref.kind)
+  const routing = await loadRouting()
+  const candidates = await destinations(viewer, input.ref.kind, routing)
   // A library the viewer chose, which may hold the title without taking
   // asks; it's then in no list of destinations.
   const destination = input.libraryId
@@ -131,8 +138,7 @@ export async function routedDetails(
     throw new ORPCError("NOT_FOUND", {
       message: "This title isn't in any library.",
     })
-  const firstLanguage =
-    chosen?.metadataLanguage ?? lookupLanguage(candidates, input.ref.provider)
+  const firstLanguage = chosen?.metadataLanguage ?? lookupLanguage(candidates)
   const first = await detailProvider(input.ref, firstLanguage)
   // The title at a library's provider. A reference from Discover is
   // resolved once on opening, not per feed card.
@@ -171,28 +177,32 @@ export async function routedDetails(
   const requested = chosen
     ? []
     : await requestedIn(viewer, input.ref, first.value.externalIds)
-  const pick = (anime: boolean) =>
-    defaultDestination(candidates, {
-      anime,
+  const pick = (facts: Awaited<ReturnType<typeof titleFacts>>) =>
+    defaultDestination(routing, candidates, {
+      facts,
+      user: viewer.id,
       requestedIn: requested,
-      provider: input.ref.provider,
     })
-  let route = chosen ? undefined : pick(first.value.anime ?? false)
+  let facts = await titleFacts(input.ref.kind, [first.value])
+  let route = chosen ? undefined : pick(facts)
   let target = chosen ?? route?.library
   let { ref, result } = await resolve(target)
-  // A title is anime if either provider says so. The destination's
-  // provider is only read once the title is resolved to it.
-  const anime = !!first.value.anime || !!result.value.anime
-  if (!chosen && !first.value.anime && anime) {
-    route = pick(true)
-    if (route && route.library.id !== target?.id) {
-      target = route.library
-      ;({ ref, result } = await resolve(target))
+  // The destination's provider is only read once the title is resolved
+  // to it, and may say more, like TheTVDB's Anime genre.
+  const known = await titleFacts(input.ref.kind, [first.value, result.value])
+  if (JSON.stringify(known) !== JSON.stringify(facts)) {
+    facts = known
+    if (!chosen) {
+      route = pick(facts)
+      if (route && route.library.id !== target?.id) {
+        target = route.library
+        ;({ ref, result } = await resolve(target))
+      }
     }
   }
-  const animeFrom = destination
-    ? routeTo(destination, anime).animeFrom
-    : (route?.animeFrom ?? null)
+  const plan = destination
+    ? routing.into(destination.id, facts, viewer.id)
+    : (route?.plan ?? null)
   const data = result.value
   const today = new Date().toISOString().slice(0, 10)
   const seasons = data.seasons
@@ -280,17 +290,13 @@ export async function routedDetails(
         : []
     }),
     defaultScope,
-    destinations: candidates
-      .filter(
-        (row) => row.id === target?.id || choices([row], anime).length > 0,
-      )
-      .map((row) => ({
-        id: row.id,
-        name: row.name,
-        selected: row.id === target?.id,
-      })),
+    destinations: candidates.map((row) => ({
+      id: row.id,
+      name: row.name,
+      selected: row.id === target?.id,
+    })),
   }
-  return { detail, animeFrom }
+  return { detail, plan }
 }
 
 export async function missingSeasons(viewer: Viewer, titleId: string) {

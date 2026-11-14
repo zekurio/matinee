@@ -1,4 +1,3 @@
-import type { DescribedField } from "@matinee/contracts"
 import { type SchemaBoundaryInput, t } from "@matinee/contracts/schema"
 import { ORPCError } from "@orpc/server"
 
@@ -49,14 +48,6 @@ export async function call<T>(
         "The connection rejected the operation. Check its configuration and logs.",
     })
   }
-}
-
-export function select(
-  key: string,
-  label: string,
-  choices: { value: string; label: string; description: null }[],
-): DescribedField {
-  return { key, label, kind: "select", required: true, choices }
 }
 
 export async function list(connection: FulfilmentConnection, path: string) {

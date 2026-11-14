@@ -5,14 +5,19 @@ import { inArray } from "drizzle-orm"
 
 import type { Viewer } from "../access/viewer"
 import { visibleLibraries } from "../access/visible"
-import { detailKey } from "../catalog/cache"
+import { detailKey, Facts, factsKey } from "../catalog/cache"
 import { db } from "../db"
 import { type AvailabilityInput, ExternalIds } from "./availability"
 import { destinations, lookupLanguage } from "./destinations"
+import { loadRouting } from "./fulfilment/connections"
+import { factsOf } from "./fulfilment/facts"
 
 const CachedDetail = t.object({
   externalIds: ExternalIds,
   anime: t.boolean().optional(),
+  originalLanguage: t.string().nullable().optional(),
+  genreIds: t.array(t.number()).optional(),
+  keywordIds: t.array(t.number()).optional(),
   releaseDate: t.string().nullable(),
   seasons: t.array(t.object({ number: t.number() })),
   episodes: t.array(
@@ -25,8 +30,9 @@ const PROVIDERS = ["tmdb", "tvdb"] satisfies CatalogRef["provider"][]
 
 /**
  * The inputs for `availability`, with what the provider cache knows of
- * each title: its other ids, its release date, its seasons, and whether
- * either provider's details, where already read, call it anime. Search,
+ * each title: its other ids, its release date, its seasons, and what
+ * either provider's details, where already read, say for override rules
+ * and anime fields: `facts`. Search,
  * the stream, and an ask's answer all read the same, so a title doesn't
  * say "On its way" in one and "Out 16 Dec" in another.
  */
@@ -35,9 +41,10 @@ export async function withCachedDetails(
   titles: AvailabilityInput[],
 ): Promise<AvailabilityInput[]> {
   if (!titles.length) return []
+  const routing = await loadRouting()
   const [movies, shows] = await Promise.all([
-    destinations(viewer, "movie"),
-    destinations(viewer, "show"),
+    destinations(viewer, "movie", routing),
+    destinations(viewer, "show", routing),
   ])
   const visible = await db
     .select()
@@ -49,7 +56,7 @@ export async function withCachedDetails(
       : undefined
     return (
       chosen?.metadataLanguage ??
-      lookupLanguage(ref.kind === "movie" ? movies : shows, ref.provider)
+      lookupLanguage(ref.kind === "movie" ? movies : shows)
     )
   }
   const keys = titles.map((input) =>
@@ -74,7 +81,15 @@ export async function withCachedDetails(
     const ref = { ...input.ref, provider, providerId: id }
     return detailKey(ref, language(ref))
   })
-  const wanted = otherKeys.filter((key) => key !== null)
+  // And TMDB's facts of a title neither details entry is TMDB's for.
+  const factKeys = titles.map((input, index) => {
+    const id =
+      input.ref.provider === "tmdb"
+        ? null
+        : (details[index]?.externalIds.tmdb ?? input.externalIds?.tmdb)
+    return id ? factsKey(input.ref.kind, id) : null
+  })
+  const wanted = [...otherKeys, ...factKeys].filter((key) => key !== null)
   const others = wanted.length
     ? await db
         .select()
@@ -88,9 +103,16 @@ export async function withCachedDetails(
     const other = CachedDetail.safeParse(
       others.find((row) => row.key === otherKeys[index])?.body,
     )
+    const facts = Facts.safeParse(
+      others.find((row) => row.key === factKeys[index])?.body,
+    )
     return {
       ...input,
-      anime: !!data.anime || (other.success && !!other.data.anime),
+      facts: factsOf(
+        input.ref.kind,
+        [data, other.success ? other.data : null],
+        facts.success ? facts.data : null,
+      ),
       externalIds: { ...data.externalIds, ...input.externalIds },
       releaseDate: data.releaseDate,
       seasons: data.seasons.map((season) => {

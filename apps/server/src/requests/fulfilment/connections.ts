@@ -1,10 +1,14 @@
 import { readFileSync } from "node:fs"
 
-import type { FulfilmentValues } from "@matinee/contracts"
+import type {
+  CatalogRef,
+  FulfilmentLanding,
+  FulfilmentValues,
+} from "@matinee/contracts"
 import {
   fulfilmentConnection,
+  fulfilmentRule,
   libraryFolder,
-  libraryFulfilment,
   library,
 } from "@matinee/db"
 import { ORPCError } from "@orpc/server"
@@ -12,7 +16,13 @@ import { asc, eq, isNotNull } from "drizzle-orm"
 
 import { db } from "../../db"
 import { sources } from "./sources"
-import type { FulfilmentSource } from "./types"
+import type { FulfilmentSource, TitleFacts } from "./types"
+
+type ConnectionRow = typeof fulfilmentConnection.$inferSelect
+type RuleRow = typeof fulfilmentRule.$inferSelect
+type Library = typeof library.$inferSelect
+type Kind = CatalogRef["kind"]
+type Reader = Pick<typeof db, "select">
 
 export function getSource(id: string) {
   const source = sources.get(id)
@@ -23,7 +33,7 @@ export function getSource(id: string) {
   return source
 }
 
-function environmentKey(slug: string) {
+export function environmentKey(slug: string) {
   const name = `MATINEE_CONNECTION_${slug}_API_KEY`
   const value = process.env[name]
   const file = process.env[`${name}_FILE`]
@@ -43,8 +53,8 @@ function environmentKey(slug: string) {
   }
 }
 
-export async function connectionById(id: string) {
-  const [row] = await db
+export async function connectionById(id: string, tx: Reader = db) {
+  const [row] = await tx
     .select()
     .from(fulfilmentConnection)
     .where(eq(fulfilmentConnection.id, id))
@@ -53,9 +63,7 @@ export async function connectionById(id: string) {
   return row
 }
 
-export function resolveConnection(
-  row: typeof fulfilmentConnection.$inferSelect,
-) {
+export function resolveConnection(row: ConnectionRow) {
   return {
     id: row.id,
     slug: row.slug,
@@ -64,9 +72,15 @@ export function resolveConnection(
   }
 }
 
-export function redactConnection(
-  row: typeof fulfilmentConnection.$inferSelect,
-) {
+/** The kinds of title a connection is the default for. */
+export function defaultFor(row: ConnectionRow): Kind[] {
+  return [
+    ...(row.defaultMovies ? (["movie"] as const) : []),
+    ...(row.defaultShows ? (["show"] as const) : []),
+  ]
+}
+
+export function redactConnection(row: ConnectionRow, routing: Routing) {
   const source = getSource(row.source)
   const settings = source.settings.parse(row.settings)
   for (const field of source.fields())
@@ -83,17 +97,19 @@ export function redactConnection(
     slug: row.slug,
     source: row.source,
     settings,
+    options: row.options,
+    defaultFor: defaultFor(row),
+    folderLibraries: row.folderLibraries,
     apiKey: {
       source: secretSource,
       environment,
     },
+    landings: routing.landings(row.id),
   }
 }
 
-type Library = typeof library.$inferSelect
-
 /** A path as written, without the separators it may end in. */
-function bare(path: string) {
+export function bare(path: string) {
   return path.replace(/(?<=.)[/\\]+$/, "")
 }
 
@@ -107,12 +123,15 @@ function inside(folder: string, root: string) {
   )
 }
 
+const libraryKind = (kind: Kind): Library["kind"] =>
+  kind === "movie" ? "movies" : "shows"
+
 /**
  * Every library folder Matinee scans, longest first, of the libraries
  * that can take requests: those with a metadata provider.
  */
-async function scannedFolders(tx: Pick<typeof db, "select"> = db) {
-  // ACCESS: admin settings and internal dispatch, over every library.
+async function scannedFolders(tx: Reader = db) {
+  // ACCESS: admin settings and internal routing, over every library.
   const rows = await tx
     .select({ path: libraryFolder.path, library })
     .from(libraryFolder)
@@ -129,256 +148,359 @@ type Folders = Awaited<ReturnType<typeof scannedFolders>>
  * the folder it is inside of, the deepest first. A download manager in a
  * container may see the folder under another path, so none can be found.
  */
-function landsIn(
-  folders: Folders,
-  folder: string | null,
-  kind: Library["kind"],
-): Library | null {
-  if (!folder) return null
+function foundIn(folders: Folders, folder: string, kind: Kind) {
   const path = bare(folder)
   return (
     folders.find(
-      (entry) => entry.library.kind === kind && inside(path, entry.path),
+      (entry) =>
+        entry.library.kind === libraryKind(kind) && inside(path, entry.path),
     )?.library ?? null
   )
 }
 
-/** A source's folder for a set of options, or null when it names none. */
-function folderOf(source: FulfilmentSource, options: FulfilmentValues) {
+/** Where a folder lands by the folders Matinee scans, for the settings. */
+export async function landing(kind: Kind, folder: string) {
+  const found = foundIn(await scannedFolders(), folder, kind)
+  return { library: found ? { id: found.id, name: found.name } : null }
+}
+
+/** How many of a rule's conditions a title meets, or 0 when one fails. */
+export function matchedConditions(
+  rule: Pick<RuleRow, "users" | "genres" | "languages" | "keywords">,
+  facts: TitleFacts,
+  user: string | null,
+) {
+  const primary = (tag: string) => tag.split("-")[0]?.toLowerCase()
+  const language = facts.language ? primary(facts.language) : null
+  const conditions: [boolean, () => boolean][] = [
+    [rule.users.length > 0, () => !!user && rule.users.includes(user)],
+    [
+      rule.genres.length > 0,
+      () => rule.genres.some((genre) => facts.genres.includes(genre)),
+    ],
+    [
+      rule.languages.length > 0,
+      () => rule.languages.some((code) => primary(code) === language),
+    ],
+    [
+      rule.keywords.length > 0,
+      () =>
+        rule.keywords.some((keyword) => facts.keywords.includes(keyword.id)),
+    ],
+  ]
+  let matched = 0
+  for (const [set, meets] of conditions) {
+    if (!set) continue
+    if (!meets()) return 0
+    matched++
+  }
+  return matched
+}
+
+/** A connection, with its options and rules parsed by its source. */
+type Entry = {
+  row: ConnectionRow
+  source: FulfilmentSource
+  /** Null when they no longer parse, as after its server changed. */
+  options: FulfilmentValues | null
+  rules: { row: RuleRow; settings: FulfilmentValues }[]
+}
+
+/**
+ * Where a request goes and what it is sent with: the connection, the
+ * options from its settings, anime fields, and override rules, and the
+ * library their folder lands in.
+ */
+export type Plan = {
+  connection: ConnectionRow
+  source: FulfilmentSource
+  options: FulfilmentValues
+  library: Library
+}
+
+function parsed<T>(parse: () => T): T | null {
   try {
-    return source.folder?.(source.parseOptions(options)) ?? null
+    return parse()
   } catch {
     return null
   }
 }
 
-/** A library's saved mapping, with where its options for anime land. */
-export type Mapping = {
-  library: Library
-  connection: typeof fulfilmentConnection.$inferSelect
-  source: FulfilmentSource
-  options: FulfilmentValues
-  anime: {
-    options: FulfilmentValues
-    /** The library they land in, or null when neither found nor picked. */
-    library: Library | null
-    /** Its folder holds theirs; false for a pick. */
-    found: boolean
-  } | null
-}
+/**
+ * Every connection with its rules, and the folders their settings send
+ * to, read once, for working out where requests land.
+ */
+export class Routing {
+  constructor(
+    private readonly entries: Entry[],
+    private readonly folders: Folders,
+    private readonly libraries: Library[],
+  ) {}
 
-/** Every saved mapping whose source is still registered, by library name. */
-export async function allMappings(
-  tx: Pick<typeof db, "select"> = db,
-): Promise<Mapping[]> {
-  const [rows, folders, libraries] = await Promise.all([
-    tx
-      .select({
-        mapping: libraryFulfilment,
-        library,
-        connection: fulfilmentConnection,
-      })
-      .from(libraryFulfilment)
-      // ACCESS: admin settings and routing read every mapping; callers
-      // filter the libraries a viewer can see.
-      .innerJoin(library, eq(library.id, libraryFulfilment.libraryId))
-      .innerJoin(
-        fulfilmentConnection,
-        eq(fulfilmentConnection.id, libraryFulfilment.connectionId),
+  /** The library a connection's folder lands in, found or picked. */
+  landsIn(entry: Entry, folder: string | null, kind: Kind): Library | null {
+    if (!folder) return null
+    const found = foundIn(this.folders, folder, kind)
+    if (found) return found
+    const picked = entry.row.folderLibraries[bare(folder)]
+    return (
+      this.libraries.find(
+        (row) => row.id === picked && row.kind === libraryKind(kind),
+      ) ?? null
+    )
+  }
+
+  /** What a title goes with through a connection, before any rule. */
+  private sending(entry: Entry, kind: Kind, anime: boolean) {
+    const { options } = entry
+    return (
+      options && parsed(() => entry.source.sending(options, { kind, anime }))
+    )
+  }
+
+  /** What a title goes with through a connection: anime fields, then rules. */
+  private resolved(entry: Entry, facts: TitleFacts, user: string | null) {
+    const sending = this.sending(entry, facts.kind, facts.anime)
+    if (!sending || !entry.source.override) return sending
+    const matches = entry.rules
+      .map((rule) => ({
+        rule,
+        count: matchedConditions(rule.row, facts, user),
+      }))
+      .filter((match) => match.count > 0)
+    // The most conditions met wins, then the one listed first.
+    const winner = matches.reduce<(typeof matches)[number] | null>(
+      (best, match) => (!best || match.count > best.count ? match : best),
+      null,
+    )
+    if (!winner) return sending
+    return entry.source.override(
+      sending,
+      winner.rule.settings,
+      matches.map((match) => match.rule.settings),
+    )
+  }
+
+  private plan(
+    entry: Entry,
+    options: FulfilmentValues | null,
+    kind: Kind,
+  ): Plan | null {
+    if (!options) return null
+    const library = this.landsIn(
+      entry,
+      parsed(() => entry.source.folder(options)),
+      kind,
+    )
+    return library
+      ? { connection: entry.row, source: entry.source, options, library }
+      : null
+  }
+
+  /** The connections that take a kind, the default first, then by name. */
+  private fitting(kind: Kind) {
+    const isDefault = (entry: Entry) =>
+      kind === "movie" ? entry.row.defaultMovies : entry.row.defaultShows
+    return this.entries
+      .filter((entry) => entry.source.kinds.includes(kind))
+      .toSorted(
+        (a, b) =>
+          Number(isDefault(b)) - Number(isDefault(a)) ||
+          a.row.name.localeCompare(b.row.name),
       )
-      .orderBy(asc(library.name), asc(library.id)),
-    scannedFolders(tx),
-    // ACCESS: as above, for an admin's pick of where anime lands.
-    tx.select().from(library).where(isNotNull(library.metadataProvider)),
-  ])
-  return rows.flatMap((row) => {
-    const source = sources.get(row.connection.source)
-    if (!source) return []
-    const saved = row.mapping.animeOptions
-    let anime: Mapping["anime"] = null
-    if (saved) {
-      const found = landsIn(folders, folderOf(source, saved), row.library.kind)
-      const picked = libraries.find(
-        (entry) =>
-          entry.id === row.mapping.animeLibraryId &&
-          entry.kind === row.library.kind,
-      )
-      anime = {
-        options: saved,
-        library: found ?? picked ?? null,
-        found: !!found,
+  }
+
+  private defaultEntry(kind: Kind) {
+    return this.entries.find(
+      (entry) =>
+        entry.source.kinds.includes(kind) &&
+        (kind === "movie" ? entry.row.defaultMovies : entry.row.defaultShows),
+    )
+  }
+
+  /**
+   * Where a title goes when nobody chose: through the default connection
+   * for its kind, with what its anime fields and rules make of it, into
+   * the library that folder lands in. Null when there's no default, or
+   * the folder lands in no library.
+   */
+  resolve(facts: TitleFacts, user: string | null): Plan | null {
+    const entry = this.defaultEntry(facts.kind)
+    return entry
+      ? this.plan(entry, this.resolved(entry, facts, user), facts.kind)
+      : null
+  }
+
+  /**
+   * How a title goes to a chosen library: what it would be sent with, if
+   * that lands there; else the first of a connection's settings that
+   * land there, the default connection's first, its anime fields and
+   * rules as they apply to the title before the others.
+   */
+  into(libraryId: string, facts: TitleFacts, user: string | null): Plan | null {
+    for (const entry of this.fitting(facts.kind)) {
+      const sendings = [this.resolved(entry, facts, user)]
+      for (const anime of [facts.anime, !facts.anime]) {
+        const base = this.sending(entry, facts.kind, anime)
+        sendings.push(base)
+        for (const rule of entry.rules)
+          if (base && entry.source.override)
+            sendings.push(
+              entry.source.override(base, rule.settings, [rule.settings]),
+            )
+      }
+      for (const options of sendings) {
+        const plan = this.plan(entry, options, facts.kind)
+        if (plan?.library.id === libraryId) return plan
       }
     }
+    return null
+  }
+
+  /** Each folder a connection's settings and rules send to, by kind. */
+  private folderList(entry: Entry) {
+    const found: {
+      kind: Kind
+      from: FulfilmentLanding["from"]
+      folder: string
+    }[] = []
+    const add = (
+      kind: Kind,
+      from: FulfilmentLanding["from"],
+      folder: string | null,
+    ) => {
+      if (
+        folder &&
+        !found.some((entry) => entry.kind === kind && entry.folder === folder)
+      )
+        found.push({ kind, from, folder })
+    }
+    for (const kind of entry.source.kinds) {
+      for (const anime of [false, true]) {
+        const sending = this.sending(entry, kind, anime)
+        add(
+          kind,
+          anime ? "anime" : "default",
+          sending && parsed(() => entry.source.folder(sending)),
+        )
+      }
+      for (const rule of entry.rules)
+        add(kind, "rule", entry.source.ruleFolder?.(rule.settings) ?? null)
+    }
+    return found
+  }
+
+  /** Every folder a connection sends to, and the library it lands in. */
+  landings(connectionId: string): FulfilmentLanding[] {
+    const entry = this.entries.find((each) => each.row.id === connectionId)
+    if (!entry) return []
+    return this.folderList(entry).map((each) => {
+      const library = this.landsIn(entry, each.folder, each.kind)
+      return {
+        ...each,
+        library: library ? { id: library.id, name: library.name } : null,
+      }
+    })
+  }
+
+  /**
+   * The libraries of a kind some connection's settings or rules land in,
+   * each with the first connection that reaches it.
+   */
+  reached(kind: Kind): Map<string, string> {
+    const found = new Map<string, string>()
+    for (const entry of this.fitting(kind))
+      for (const each of this.folderList(entry)) {
+        if (each.kind !== kind) continue
+        const library = this.landsIn(entry, each.folder, kind)
+        if (library && !found.has(library.id))
+          found.set(library.id, entry.row.name)
+      }
+    return found
+  }
+
+  /** The library a connection's options send a kind to, for the language to read in. */
+  defaultLibrary(kind: Kind): Library | null {
+    return (
+      this.resolve(
+        { kind, anime: false, genres: [], language: null, keywords: [] },
+        null,
+      )?.library ?? null
+    )
+  }
+}
+
+/** Reads every connection, rule, and library folder for routing. */
+export async function loadRouting(tx: Reader = db): Promise<Routing> {
+  const [connections, rules, folders, libraries] = await Promise.all([
+    tx.select().from(fulfilmentConnection),
+    tx
+      .select()
+      .from(fulfilmentRule)
+      .orderBy(asc(fulfilmentRule.position), asc(fulfilmentRule.createdAt)),
+    scannedFolders(tx),
+    // ACCESS: routing reads every library a folder can be picked for;
+    // callers filter what a viewer can see.
+    tx.select().from(library).where(isNotNull(library.metadataProvider)),
+  ])
+  const entries = connections.flatMap((row): Entry[] => {
+    const source = sources.get(row.source)
+    if (!source) return []
     return [
       {
-        library: row.library,
-        connection: row.connection,
+        row,
         source,
-        options: row.mapping.options,
-        anime,
+        options: parsed(() => source.parseOptions(row.options)),
+        rules: rules.flatMap((rule) => {
+          if (rule.connectionId !== row.id) return []
+          const settings = parsed(
+            () => source.parseRule?.(rule.settings) ?? rule.settings,
+          )
+          return settings ? [{ row: rule, settings }] : []
+        }),
       },
     ]
   })
+  return new Routing(entries, folders, libraries)
 }
 
-const named = (entry: Library) => ({ id: entry.id, name: entry.name })
-
-/** A library's mapping as the settings show it. */
-export async function mappingForLibrary(libraryId: string) {
-  const mappings = await allMappings()
-  const own = mappings.find((entry) => entry.library.id === libraryId)
-  return {
-    libraryId,
-    connectionId: own?.connection.id ?? null,
-    options: own?.options ?? {},
-    anime: own?.anime
-      ? {
-          options: own.anime.options,
-          library: own.anime.library ? named(own.anime.library) : null,
-          found: own.anime.found,
-        }
-      : null,
-    animeFrom: mappings
-      .filter(
-        (entry) =>
-          entry.library.id !== libraryId &&
-          entry.anime?.library?.id === libraryId,
-      )
-      .map((entry) => named(entry.library)),
-  }
-}
-
-/** Where a set of options saves, for a library's kind, before it's saved. */
-export async function landing(
-  libraryId: string,
+/**
+ * Checks that every folder a connection's options or a rule sends to
+ * lands in a library of its kind, found or picked, and that it has a
+ * folder for each kind it's the default for. `routing` was loaded with
+ * the connection as it would be saved.
+ */
+export function checkLandings(
+  routing: Routing,
   connectionId: string,
-  options: FulfilmentValues,
+  kinds: Kind[],
 ) {
-  // ACCESS: an admin procedure, over every library.
-  const [destination] = await db
-    .select()
-    .from(library)
-    .where(eq(library.id, libraryId))
-  if (!destination)
-    throw new ORPCError("NOT_FOUND", { message: "Library not found." })
-  const source = getSource((await connectionById(connectionId)).source)
-  const folder = folderOf(source, options)
-  const found = landsIn(await scannedFolders(), folder, destination.kind)
-  return { folder, library: found ? named(found) : null }
-}
-
-/** The options a source parses, or an error an admin can act on. */
-function choices(
-  source: FulfilmentSource,
-  options: FulfilmentValues,
-  message: string,
-) {
-  try {
-    return source.parseOptions(options)
-  } catch {
-    throw new ORPCError("BAD_REQUEST", { message })
-  }
-}
-
-export async function validateMapping(
-  libraryId: string,
-  connectionId: string,
-  options: FulfilmentValues,
-) {
-  // ACCESS: called only by admin procedures or internal dispatch.
-  const [destination] = await db
-    .select()
-    .from(library)
-    .where(eq(library.id, libraryId))
-  const row = await connectionById(connectionId)
-  const source = getSource(row.source)
-  if (
-    !destination ||
-    !destination.metadataProvider ||
-    !source.kinds.includes(destination.kind === "movies" ? "movie" : "show")
-  )
+  const landings = routing.landings(connectionId)
+  const lost = landings.find((each) => !each.library)
+  if (lost)
     throw new ORPCError("BAD_REQUEST", {
-      message: "Choose a connection that supports this library.",
+      message: `${lost.folder} isn't in any library Matinee scans for this kind of title. Choose the library it lands in, or save it to another folder.`,
     })
-  return {
-    library: destination,
-    source,
-    connection: resolveConnection(row),
-    options: choices(
-      source,
-      options,
-      "Choose each of the connection's options for this library.",
-    ),
-  }
-}
-
-/**
- * The options anime is sent with for a library, checked: they parse, and
- * they land in a library of its kind, the one their folder is in or, when
- * no library's folder holds it, the one picked.
- */
-export async function validateAnime(
-  destination: Library,
-  source: FulfilmentSource,
-  anime: { options: FulfilmentValues; libraryId?: string | null },
-) {
-  const options = choices(
-    source,
-    anime.options,
-    "Choose each of the options for anime, or leave them all empty.",
-  )
-  const folder = folderOf(source, options)
-  const found = landsIn(await scannedFolders(), folder, destination.kind)
-  if (found) return { options, libraryId: null }
-  // ACCESS: an admin procedure, over every library.
-  const [picked] = anime.libraryId
-    ? await db.select().from(library).where(eq(library.id, anime.libraryId))
-    : []
-  if (picked?.kind === destination.kind && picked.metadataProvider)
-    return { options, libraryId: picked.id }
-  throw new ORPCError("BAD_REQUEST", {
-    message: folder
-      ? `${folder} isn't in any library Matinee scans for this kind of title. Choose the library anime lands in, or save it to another folder.`
-      : "Choose the library anime lands in.",
-  })
-}
-
-/**
- * The mapping a request is sent with: the one whose options for anime it
- * took, while those still land in its library; else its library's own;
- * else, for a library only anime reaches, the first mapping whose anime
- * lands there.
- */
-export function sendingMapping(
-  mappings: Mapping[],
-  row: { libraryId: string; animeFrom: string | null },
-): { mapping: Mapping; anime: boolean } | null {
-  const lands = (entry: Mapping) => entry.anime?.library?.id === row.libraryId
-  const via = mappings.find(
-    (entry) => entry.library.id === row.animeFrom && lands(entry),
-  )
-  if (via) return { mapping: via, anime: true }
-  const own = mappings.find((entry) => entry.library.id === row.libraryId)
-  if (own) return { mapping: own, anime: false }
-  const other = mappings.find(lands)
-  return other ? { mapping: other, anime: true } : null
+  for (const kind of kinds)
+    if (!landings.some((each) => each.kind === kind && each.from === "default"))
+      throw new ORPCError("BAD_REQUEST", {
+        message:
+          kind === "movie"
+            ? "Choose the folder films are saved to."
+            : "Choose the folder shows are saved to.",
+      })
 }
 
 /** Internal dispatch entry point. Secrets must never leave the server. */
-export async function fulfilmentFor(row: {
-  libraryId: string
-  animeFrom: string | null
+export async function sendingFor(row: {
+  connectionId: string | null
+  options: FulfilmentValues | null
 }) {
-  const route = sendingMapping(await allMappings(), row)
-  if (!route) return null
+  if (!row.connectionId || !row.options) return null
   try {
-    return await validateMapping(
-      row.libraryId,
-      route.mapping.connection.id,
-      route.anime && route.mapping.anime
-        ? route.mapping.anime.options
-        : route.mapping.options,
-    )
+    const connection = await connectionById(row.connectionId)
+    const source = getSource(connection.source)
+    return { source, connection: resolveConnection(connection) }
   } catch {
     return null
   }

@@ -78,6 +78,10 @@ export type TitleDetails = {
    * keyword. Requests route anime by it; nothing else decides it.
    */
   anime: boolean
+  /** TMDB's genre ids, for override rules. Other providers leave it out. */
+  genreIds?: number[]
+  /** TMDB's keyword ids, for override rules. Other providers leave it out. */
+  keywordIds?: number[]
   rating: number | null
   contentRating: string | null
   releaseDate: string | null
