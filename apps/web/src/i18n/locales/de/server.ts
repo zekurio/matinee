@@ -185,11 +185,11 @@ export default {
     "{entry} ist keine Adresse und kein Bereich wie 192.168.0.0/16.",
 
   "server.party.over": "Diese Watch-Party ist vorbei.",
-  "server.party.ownerOnly": "Das kann nur die Leitung der Party.",
+  "server.party.ownerOnly": "Das kann nur der Host der Party.",
   "server.party.full": "Diese Watch-Party ist voll.",
   "server.party.queueFull": "Die Warteschlange der Party ist voll.",
   "server.party.ownerSkips":
-    "Nur die Leitung der Party kann zum Nächsten springen.",
+    "Nur der Host der Party kann zum Nächsten springen.",
   "server.party.entryGone":
     "Das ist nicht mehr in der Warteschlange der Party.",
   "server.party.removed": "Du wurdest aus dieser Watch-Party entfernt.",
