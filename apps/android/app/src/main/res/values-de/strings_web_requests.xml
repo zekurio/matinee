@@ -21,8 +21,9 @@
     <string name="web_requests_kind_show">Serie</string>
     <string name="web_requests_othersCount">+%1$s</string>
     <string name="web_requests_alsoRequested">auch %1$s</string>
-    <string name="web_requests_strip_requested">%1$s hat das %2$s angefragt</string>
-    <string name="web_requests_strip_waiting">Jemand hat das angefragt</string>
+    <string name="web_requests_badge_requested">%1$s hat das %2$s angefragt</string>
+    <string name="web_requests_badge_requestedMany">%1$s haben das angefragt</string>
+    <string name="web_requests_badge_waiting">Jemand hat das angefragt</string>
     <plurals name="web_requests_scope_seasons">
         <item quantity="one">Staffel %1$s</item>
         <item quantity="other">Staffeln %1$s</item>
@@ -32,7 +33,6 @@
     <string name="web_requests_scope_andFuture">%1$s + neue</string>
     <string name="web_requests_scope_futureOnly">Neue Staffeln</string>
     <string name="web_requests_goesTo_label">Kommt in</string>
-    <string name="web_requests_goesTo_short">Kommt in %1$s</string>
     <string name="web_requests_goesTo_change">Ändern, wohin %1$s kommt, jetzt %2$s</string>
     <string name="web_requests_goesTo_title">Kommt in</string>
     <string name="web_requests_noConnection">Keine Verbindung</string>
@@ -40,6 +40,7 @@
     <string name="web_requests_decline">Ablehnen</string>
     <string name="web_requests_retry">Wiederholen</string>
     <string name="web_requests_addNamed">%1$s hinzufügen</string>
+    <string name="web_requests_addTo">Zu %1$s hinzufügen</string>
     <string name="web_requests_retryNamed">%1$s wiederholen</string>
     <string name="web_requests_giveUp">Aufgeben</string>
     <string name="web_requests_giveUpNamed">%1$s aufgeben</string>

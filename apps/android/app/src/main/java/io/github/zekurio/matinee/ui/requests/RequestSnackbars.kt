@@ -20,7 +20,7 @@ import kotlinx.coroutines.launch
 
 /**
  * What requests need around the phone's signed-in app, while it's open:
- * an admin's queue, streamed once for the dot, the queue, and the strips;
+ * an admin's queue, streamed once for the dot, the queue, and title pages;
  * the notification permission, asked for after the first request; and
  * the page a tapped notification leads to. New notifications aren't shown
  * while the app is open; the background check posts them.

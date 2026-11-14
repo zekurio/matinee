@@ -206,7 +206,6 @@ private fun CatalogPage(detail: CatalogTitleDetail, library: String?) {
                 item(key = "overview") { Box(Modifier.padding(horizontal = Gutter)) { Overview(overview) } }
             }
             item(key = "crew") { CrewLines(detail.credits, detail.studios) }
-            item(key = "strip") { AdminStrip(availability.requestId) }
             item(key = "actions") { CatalogActions(detail, availability, seasons, destination?.id) { sheet = it } }
             if (ref.isShow && seasons.isNotEmpty()) {
                 item(key = "seasons") {
@@ -247,14 +246,20 @@ private fun CatalogPage(detail: CatalogTitleDetail, library: String?) {
     }
 }
 
-/** The header's poster, carrying the title's state in its corner. */
+/**
+ * The header's poster, carrying the title's state in its corner; for an
+ * admin with the title's request to answer, a tap on it says who
+ * requested it.
+ */
 @Composable
 private fun CatalogPoster(detail: CatalogTitleDetail, availability: Availability) {
     val api = LocalApi.current
+    val res = LocalResources.current
+    val tip = waitingRequest(availability)?.let { requestedText(it, res) }
     Box {
         PosterArt(detail.name, api.art(detail.poster))
         Box(Modifier.matchParentSize().clip(CardShape)) {
-            PosterBadge(availability, Modifier.align(Alignment.TopEnd).padding(6.dp))
+            PosterBadge(availability, Modifier.align(Alignment.TopEnd).padding(6.dp), tip = tip)
         }
     }
 }
@@ -264,8 +269,10 @@ private fun CatalogPoster(detail: CatalogTitleDetail, availability: Availability
  * viewer may do, then Trailer. A show's request, a film's that could go
  * to more than one library, and "Request more" for a show requested
  * already open the request sheet through [onSheet] (-1 for no season of
- * its own); a film's otherwise requests at once. Nothing when there's
- * neither an action nor a trailer.
+ * its own); a film's otherwise requests at once. For an admin with the
+ * title's request to answer, Add and Decline take the action's place
+ * until it's answered. Nothing when there's neither an action nor a
+ * trailer.
  */
 @Composable
 private fun CatalogActions(
@@ -280,14 +287,18 @@ private fun CatalogActions(
     val ref = detail.ref
     val more = ref.isShow && posterAction(availability) == null && seasons.any { it.availability.asTitle().asks }
     val decides = ref.isShow || (availability.asks && detail.destinations.size > 1)
+    val answering = waitingRequest(availability)?.takeIf { it.id !in hub.held }
     val action = more || hasPosterButton(availability)
-    if (!action && detail.trailers.isEmpty()) return
+    if (answering == null && !action && detail.trailers.isEmpty()) return
     Row(
         Modifier.fillMaxWidth().padding(horizontal = Gutter),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (action) {
+        if (answering != null) {
+            AddButton(answering, if (isWide()) Modifier.width(200.dp) else Modifier.weight(1f), page = true)
+            DeclineButton(answering, page = true)
+        } else if (action) {
             PosterActionButton(
                 availability,
                 detail.name,

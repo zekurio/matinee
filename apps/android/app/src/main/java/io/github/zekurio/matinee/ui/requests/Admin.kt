@@ -20,7 +20,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -47,6 +46,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.AdminRequestItem
+import io.github.zekurio.matinee.api.Availability
 import io.github.zekurio.matinee.api.DeclineReason
 import io.github.zekurio.matinee.api.FulfilmentState
 import io.github.zekurio.matinee.api.RequestStatus
@@ -57,7 +57,6 @@ import io.github.zekurio.matinee.ui.LocalNavigator
 import io.github.zekurio.matinee.ui.LocalUser
 import io.github.zekurio.matinee.ui.Navigator
 import io.github.zekurio.matinee.ui.TopBar
-import io.github.zekurio.matinee.ui.components.Avatar
 import io.github.zekurio.matinee.ui.components.ErrorBox
 import io.github.zekurio.matinee.ui.components.LocalApi
 import io.github.zekurio.matinee.ui.components.PosterArt
@@ -85,8 +84,9 @@ import kotlinx.coroutines.launch
 
 /*
  * An admin's side of requests on a phone: the way in from the profile,
- * with a dot while requests wait; the strip on a title's page, with Add
- * and Decline; and the queue, a list behind the profile as Downloads
+ * with a dot while requests wait; Add and Decline on a title's page,
+ * where Request sits, with who requested it behind a tap on the poster's
+ * badge; and the queue, a list behind the profile as Downloads
  * has one. Each row is the poster, the title and what it is, who
  * requested it and where it goes, with Add or Retry at its end; a tap
  * opens its menu with the rest. The queue has the web's four lists,
@@ -148,51 +148,83 @@ private fun whereText(item: AdminRequestItem, res: Resources): String =
     listOf(item.library.name, item.connection?.name ?: res.getString(R.string.web_requests_noConnection)).joinToString(" · ")
 
 /**
- * On a title's page, for an admin, a request that waits for them: who
- * requested it and when, with Decline and Add as the queue has them. On a
- * catalog page it's the title's request; on a library show's, the one for
- * more of its seasons. Nothing for anyone else, or while nothing waits.
+ * For an admin, the waiting request behind a title's or a season's
+ * "Requested", from the queue the whole app streams. A season outside the
+ * request, which only shares its id, has none. Null for anyone else and
+ * while nothing waits; still there while an answer waits out its Undo, so
+ * check [RequestsHub.held] before offering Add and Decline.
  */
 @Composable
-fun AdminStrip(requestId: String?) {
+fun waitingRequest(availability: Availability): AdminRequestItem? {
     val hub = LocalRequests.current
-    val res = LocalResources.current
-    if (!LocalUser.current.isAdmin || requestId == null) return
-    val item = hub.queue?.waiting?.firstOrNull { it.id == requestId } ?: return
-    if (item.id in hub.held) return
-    var declining by remember { mutableStateOf(false) }
+    if (!LocalUser.current.isAdmin) return null
+    val id = availability.requestId ?: return null
+    if (availability.state != AvailabilityState.ASKED) return null
+    return hub.queue?.waiting?.firstOrNull { it.id == id }
+}
+
+/**
+ * Who requested it, for a tap on the poster's badge: "anna requested this
+ * 2 days ago", or "anna and ben requested this", with what a show's
+ * request covers on a line under it.
+ */
+fun requestedText(item: AdminRequestItem, res: Resources): String {
     val (first, rest) = askers(item)
-    Column(
-        Modifier
-            .padding(horizontal = Gutter)
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
-            .background(Palette.Foreground.copy(alpha = 0.1f))
-            .padding(horizontal = 12.dp, vertical = 10.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+    val who = when {
+        first == null -> res.getString(R.string.web_requests_badge_waiting)
+        rest.isEmpty() -> res.getString(R.string.web_requests_badge_requested, first.name, relativeTime(first.createdAt).orEmpty())
+        else -> res.getString(R.string.web_requests_badge_requestedMany, formatList((listOf(first) + rest).map { it.name }, res))
+    }
+    return listOfNotNull(who, adminScopeText(item.scope, res)).joinToString("\n")
+}
+
+/**
+ * An admin's Add for a waiting request, where everyone else's Request
+ * sits and in its style, held for the snackbar's Undo as the queue holds
+ * it. [page] draws it leading a catalog page's row, as large as Play.
+ */
+@Composable
+fun AddButton(item: AdminRequestItem, modifier: Modifier = Modifier, page: Boolean = false) {
+    val hub = LocalRequests.current
+    MatineeButton(
+        onClick = { hub.answer(item, QueueAnswer.Add) },
+        modifier = modifier,
+        height = if (page) 44.dp else 36.dp,
+        contentPadding = if (page) PaddingValues(horizontal = 16.dp) else PaddingValues(horizontal = 10.dp),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            if (first != null) Avatar(first.name, null, size = 24.dp)
-            val who = if (first != null) res.getString(R.string.web_requests_strip_requested, first.name, relativeTime(first.createdAt).orEmpty())
-            else res.getString(R.string.web_requests_strip_waiting)
-            val facts = listOfNotNull(
-                rest.takeIf { it.isNotEmpty() }?.let { res.getString(R.string.web_requests_alsoRequested, formatList(it.map { f -> f.name }, res)) },
-                adminScopeText(item.scope, res),
-            )
-            Column(Modifier.weight(1f)) {
-                Text(who, style = MaterialTheme.typography.bodyMedium, color = Palette.Foreground.copy(alpha = 0.9f))
-                if (facts.isNotEmpty()) Text(facts.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = Palette.Muted)
-            }
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            MatineeButton(onClick = { declining = true }, look = ButtonLook.Ghost, height = 40.dp, modifier = Modifier.weight(1f)) {
-                Text(stringResource(R.string.web_requests_decline))
-            }
-            MatineeButton(onClick = { hub.answer(item, QueueAnswer.Add) }, look = ButtonLook.Outline, height = 40.dp, modifier = Modifier.weight(1f)) {
-                LucideIcon(Lucide.Check, null, size = 16.dp)
-                Text(stringResource(R.string.web_requests_add))
-            }
-        }
+        LucideIcon(Lucide.Check, null, size = if (page) 16.dp else 14.dp)
+        Text(
+            stringResource(R.string.web_requests_add),
+            style = if (page) MaterialTheme.typography.labelLarge else MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+/**
+ * The quiet button beside [AddButton], opening the queue's Decline sheet:
+ * [look] Ghost off a picture, Glass on one.
+ */
+@Composable
+fun DeclineButton(item: AdminRequestItem, modifier: Modifier = Modifier, page: Boolean = false, look: ButtonLook = ButtonLook.Ghost) {
+    val hub = LocalRequests.current
+    var declining by remember { mutableStateOf(false) }
+    MatineeButton(
+        onClick = { declining = true },
+        modifier = modifier,
+        look = look,
+        height = if (page) 44.dp else 36.dp,
+        contentPadding = if (page) PaddingValues(horizontal = 16.dp) else PaddingValues(horizontal = 10.dp),
+    ) {
+        Text(
+            stringResource(R.string.web_requests_decline),
+            style = if (page) MaterialTheme.typography.labelLarge else MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
     if (declining) DeclineSheet(item, onDismiss = { declining = false }) { hub.answer(item, it) }
 }

@@ -21,8 +21,9 @@
     <string name="web_requests_kind_show">Show</string>
     <string name="web_requests_othersCount">+%1$s</string>
     <string name="web_requests_alsoRequested">also %1$s</string>
-    <string name="web_requests_strip_requested">%1$s requested this %2$s</string>
-    <string name="web_requests_strip_waiting">Someone requested this</string>
+    <string name="web_requests_badge_requested">%1$s requested this %2$s</string>
+    <string name="web_requests_badge_requestedMany">%1$s requested this</string>
+    <string name="web_requests_badge_waiting">Someone requested this</string>
     <plurals name="web_requests_scope_seasons">
         <item quantity="one">Season %1$s</item>
         <item quantity="other">Seasons %1$s</item>
@@ -32,7 +33,6 @@
     <string name="web_requests_scope_andFuture">%1$s + new</string>
     <string name="web_requests_scope_futureOnly">New seasons</string>
     <string name="web_requests_goesTo_label">Goes to</string>
-    <string name="web_requests_goesTo_short">Goes to %1$s</string>
     <string name="web_requests_goesTo_change">Change where %1$s goes, now %2$s</string>
     <string name="web_requests_goesTo_title">Goes to</string>
     <string name="web_requests_noConnection">No connection</string>
@@ -40,6 +40,7 @@
     <string name="web_requests_decline">Decline</string>
     <string name="web_requests_retry">Retry</string>
     <string name="web_requests_addNamed">Add %1$s</string>
+    <string name="web_requests_addTo">Add to %1$s</string>
     <string name="web_requests_retryNamed">Retry %1$s</string>
     <string name="web_requests_giveUp">Give up</string>
     <string name="web_requests_giveUpNamed">Give up on %1$s</string>

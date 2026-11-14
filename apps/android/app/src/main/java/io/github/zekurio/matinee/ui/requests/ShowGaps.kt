@@ -74,9 +74,6 @@ class ShowGaps(
     /** Nothing of the show is asked for yet, so Undo may take back an ask. */
     val first: Boolean,
 ) {
-    /** A request for more of the show, for an admin's strip. */
-    val requestId: String? get() = (missing + partial).firstNotNullOfOrNull { it.availability.requestId }
-
     fun partialOf(number: Int?): CatalogSeason? = partial.firstOrNull { it.number == number }
 }
 
@@ -124,12 +121,6 @@ fun rememberShowGaps(title: Title, onRecovered: () -> Unit = {}): ShowGaps? {
 /** How often, and how far apart, a failed load of a show's gaps tries again. */
 private const val GAP_RETRIES = 3
 private const val GAP_RETRY_MS = 5_000L
-
-/** The admin's strip for someone's ask for more of a show in the library. */
-@Composable
-fun ShowRequestStrip(gaps: ShowGaps?) {
-    AdminStrip(gaps?.requestId)
-}
 
 /**
  * Next up on a show's page once the viewer has watched every season here
@@ -186,27 +177,38 @@ private fun Modifier.gapFrame(): Modifier = this
  * The end of a season's episodes when only some are here: how many more
  * there are, in a dashed frame the size of an episode's still, holding
  * what a poster would: the state once there is one, and the one thing to
- * do about it, "Request the rest" until it's requested.
+ * do about it, "Request the rest" until it's requested. For an admin with
+ * the season's request to answer, Add and Decline.
  */
 @Composable
 fun RestOfSeasonCard(title: Title, gaps: ShowGaps, season: CatalogSeason, modifier: Modifier = Modifier) {
     val res = LocalResources.current
     val hub = LocalRequests.current
     val availability = season.availability.asTitle()
+    // For an admin, the season's request to answer: who asked behind the badge, Add and Decline for the button.
+    val waiting = waitingRequest(availability)
+    val answering = waiting?.takeIf { it.id !in hub.held }
     val more = season.availability.episodesAired - season.availability.episodesHere
     val name = res.getString(R.string.requests_rest_name, seasonOf(title.name, season.number, res))
     Column(modifier) {
         Box(Modifier.gapFrame(), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                PosterBadge(availability)
-                PosterActionButton(
-                    availability,
-                    name,
-                    onRequest = { hub.ask(gaps.ref, name, gaps.libraryId, ShowScope(listOf(season.number), false), undo = gaps.first) },
-                    busy = hub.busy[gaps.ref.key] == true,
-                    label = stringResource(R.string.requests_rest_ask),
-                    plain = true,
-                )
+                PosterBadge(availability, tip = waiting?.let { requestedText(it, res) })
+                if (answering != null) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        AddButton(answering)
+                        DeclineButton(answering)
+                    }
+                } else {
+                    PosterActionButton(
+                        availability,
+                        name,
+                        onRequest = { hub.ask(gaps.ref, name, gaps.libraryId, ShowScope(listOf(season.number), false), undo = gaps.first) },
+                        busy = hub.busy[gaps.ref.key] == true,
+                        label = stringResource(R.string.requests_rest_ask),
+                        plain = true,
+                    )
+                }
             }
         }
         CardText(res.getQuantityString(R.plurals.requests_rest_more, more, more), null)

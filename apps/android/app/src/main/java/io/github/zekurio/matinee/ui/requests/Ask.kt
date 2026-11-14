@@ -2,9 +2,11 @@ package io.github.zekurio.matinee.ui.requests
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -56,17 +58,35 @@ import kotlinx.coroutines.launch
 /**
  * The state as a glass pill in a poster's corner: the card badge's glyph
  * with its word, and the share that's in while it's on its way. Nothing
- * for a title nobody requested.
+ * for a title nobody requested. With [tip], for an admin who requested
+ * it, a tap says it at the bottom of the screen, as the web's tooltip
+ * does, and screen readers read it with the state.
  */
 @Composable
-fun PosterBadge(availability: Availability, modifier: Modifier = Modifier) {
+fun PosterBadge(availability: Availability, modifier: Modifier = Modifier, tip: String? = null) {
     val res = LocalResources.current
+    val snackbar = LocalSnackbar.current
+    val scope = rememberCoroutineScope()
     val word = stateWord(availability, LocalDate.now()) ?: return
     val badge = badgeOf(availability) ?: return
     Row(
         modifier
             .heightIn(min = 28.dp)
             .clip(CircleShape)
+            .then(
+                if (tip == null) {
+                    Modifier
+                } else {
+                    Modifier
+                        .semantics { stateDescription = tip }
+                        .clickable {
+                            scope.launch {
+                                snackbar.currentSnackbarData?.dismiss()
+                                snackbar.showSnackbar(tip)
+                            }
+                        }
+                },
+            )
             .background(Palette.Background.copy(alpha = 0.75f))
             .border(1.dp, Palette.Foreground.copy(alpha = 0.1f), CircleShape)
             .padding(horizontal = 10.dp),
@@ -189,14 +209,27 @@ fun PosterActionButton(
 /**
  * A season's poster in a show's Next up, carrying its state and the one
  * thing to do about it, for [PosterActionButton]'s request: that season
- * alone.
+ * alone. For an admin with the season's request to answer, Add and
+ * Decline in the button's place.
  */
 @Composable
 fun BoxScope.SeasonPosterRequest(showRef: CatalogRef, name: String, season: CatalogSeason, libraryId: String?, first: Boolean) {
     val hub = LocalRequests.current
     val availability = season.availability.asTitle()
-    PosterBadge(availability, Modifier.align(Alignment.TopEnd).padding(6.dp))
-    if (hasPosterButton(availability)) {
+    // For an admin, a request for the season to answer: who asked behind the badge, Add and Decline for the button.
+    val waiting = waitingRequest(availability)
+    PosterBadge(availability, Modifier.align(Alignment.TopEnd).padding(6.dp), tip = waiting?.let { requestedText(it, LocalResources.current) })
+    val answering = waiting?.takeIf { it.id !in hub.held }
+    if (answering != null) {
+        PosterShade()
+        Column(
+            Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(6.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            AddButton(answering, Modifier.fillMaxWidth())
+            DeclineButton(answering, Modifier.fillMaxWidth(), look = ButtonLook.Glass)
+        }
+    } else if (hasPosterButton(availability)) {
         PosterShade()
         PosterActionButton(
             availability,

@@ -62,7 +62,6 @@ import io.github.zekurio.matinee.ui.rememberLoader
 import io.github.zekurio.matinee.ui.requests.NextSeasonRow
 import io.github.zekurio.matinee.ui.requests.RestOfSeasonCard
 import io.github.zekurio.matinee.ui.requests.ShowGaps
-import io.github.zekurio.matinee.ui.requests.ShowRequestStrip
 import io.github.zekurio.matinee.ui.requests.offersSeason
 import io.github.zekurio.matinee.ui.requests.rememberShowGaps
 import io.github.zekurio.matinee.ui.seasonName
@@ -148,7 +147,6 @@ private fun TitlePage(title: Title, reload: () -> Unit) {
             if (!title.isShow && next != null) {
                 item(key = "media") { MediaInfo(next, Modifier.padding(horizontal = Gutter)) }
             }
-            if (title.isShow) item(key = "strip") { ShowRequestStrip(gaps) }
             item(key = "actions") {
                 ActionRow(
                     play = next,
