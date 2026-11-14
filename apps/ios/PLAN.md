@@ -387,7 +387,8 @@ Notes for the tasks that fill them in:
   under `PICKED_FOLDER`; the picker hands it back with
   `nav.backWith(PICKED_FOLDER, folder)`.
 - The player leaves with `@Environment(\.dismiss)`; the shell turns the
-  screen to landscape and back (`Orientation` in MatineeApp.swift).
+  phone's screen to landscape and back (`Orientation` in MatineeApp.swift);
+  an iPad's player follows the device, and its controls lay out both ways.
 - Signing in and the server list are built: `signin/` (ConnectScreen,
   SignInScreen, ServerSwitcherSheet, ChangeServerRow, ChangeServerButton,
   UnreachableScreen, LocalNetworkHint).

@@ -7,7 +7,7 @@ import SwiftUI
  * bar on each tab's first page; iOS gives each tab a stack of its own, as
  * its apps do, so a tab keeps its place while another is open. Pages
  * opened from a tab go on that tab's stack. The player opens over
- * everything, in landscape, as Android's own PlayerActivity.
+ * everything, in landscape on a phone, as Android's own PlayerActivity.
  *
  * Pages don't edit this file: they open each other through the
  * environment's `Navigator`, and every route a page needs is here.
@@ -308,7 +308,7 @@ private struct ScrollsToTop: ViewModifier {
   }
 }
 
-/// The player over everything, in landscape, in the dark theme, as Android's PlayerActivity.
+/// The player over everything, in landscape on a phone, in the dark theme, as Android's PlayerActivity.
 struct PlayerCover: View {
   let request: PlayerRequest
   @Environment(ThemeStore.self) private var theme
