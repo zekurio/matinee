@@ -1062,7 +1062,7 @@ private fun SeekBar(
             }
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(formatClock(shown), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.widthIn(min = 56.dp))
+            SeekClock(shown, duration, MaterialTheme.typography.bodyMedium)
             SeekTrack(
                 position = shown,
                 duration = duration,
@@ -1077,11 +1077,13 @@ private fun SeekBar(
             )
             val remaining = formatClock((duration - shown).coerceAtLeast(0.0))
             val remainingLabel = stringResource(R.string.a11y_player_remaining, remaining)
-            Text(
-                "-$remaining",
-                style = MaterialTheme.typography.bodyMedium,
+            SeekClock(
+                (duration - shown).coerceAtLeast(0.0),
+                duration,
+                MaterialTheme.typography.bodyMedium,
+                Modifier.semantics { contentDescription = remainingLabel },
+                prefix = "-",
                 textAlign = TextAlign.End,
-                modifier = Modifier.widthIn(min = 64.dp).semantics { contentDescription = remainingLabel },
             )
         }
     }
