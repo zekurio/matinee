@@ -110,6 +110,7 @@ export const adapter = {
   rules: true,
   settings,
   fields: settingFields,
+  defaults: { search: true, tagRequests: false },
   parseOptions: (value) => options.parse(filled(value)),
   sending(value, title) {
     const own = options.parse(value)

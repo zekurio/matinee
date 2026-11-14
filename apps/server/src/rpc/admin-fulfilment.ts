@@ -292,6 +292,7 @@ export const adminFulfilment = {
       apiKey: source.apiKey,
       rules: source.rules,
       fields: source.fields(),
+      values: source.defaults,
     })),
   ),
   connections: admin.admin.fulfilment.connections.handler(async () => {

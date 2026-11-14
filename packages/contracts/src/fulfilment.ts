@@ -64,6 +64,8 @@ export const FulfilmentSourceDescription = t.object({
   rules: t.boolean(),
   /** How to reach it and how it behaves, the same for every request. */
   fields: t.array(DescribedField),
+  /** What a new connection's `fields` start from. */
+  values: FulfilmentValues,
 })
 export type FulfilmentSourceDescription = t.infer<
   typeof FulfilmentSourceDescription

@@ -92,6 +92,8 @@ export interface FulfilmentSource {
   /** How to reach it and how it behaves, described by `fields`. */
   settings: { parse: (value: FulfilmentValues) => FulfilmentValues }
   fields(): DescribedField[]
+  /** What a new connection's settings start from. */
+  defaults: FulfilmentValues
   /** The connection's options, as `options` describes them. Throws when one is missing. */
   parseOptions(value: FulfilmentValues): FulfilmentValues
   /**

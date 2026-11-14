@@ -29,6 +29,7 @@ export const manual = {
   rules: false,
   settings: { parse: () => ({}) },
   fields: () => [],
+  defaults: {},
   parseOptions: (value) => options.parse(filled(value)),
   sending(value, title) {
     const own = options.parse(value)

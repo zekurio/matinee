@@ -1,4 +1,4 @@
-import { defineMessages, plural } from "../../catalog"
+import { defineMessages } from "../../catalog"
 
 export default defineMessages("connections", {
   // Settings → Requests: the connections approved requests go through.
@@ -8,7 +8,7 @@ export default defineMessages("connections", {
   "connections.retry": "Try again",
   "connections.empty.title": "No connections yet",
   "connections.empty.description":
-    "Add one, then choose the libraries it fills.",
+    "Add Radarr, Sonarr, or By hand, and make it the default for films or shows.",
   "connections.testing": "Testing…",
   "connections.connected": "Connected",
   "connections.testFailed": "Test failed",
@@ -22,12 +22,10 @@ export default defineMessages("connections", {
   "connections.edit": "Edit",
   "connections.delete": "Delete connection",
   "connections.delete.title": "Delete {name}?",
-  "connections.delete.description": plural({
-    one: "{count} library stops taking requests until another connection fills it.",
-    other:
-      "{count} libraries stop taking requests until another connection fills them.",
-  }),
-  "connections.delete.descriptionUnused": "It doesn't fill any library.",
+  "connections.delete.descriptionDefault":
+    "It's a default, so requests of its kind wait until another connection is.",
+  "connections.delete.descriptionUnused":
+    "Requests already sent through it stay where they are.",
   "connections.delete.confirm": "Delete",
   "connections.deleted": "Deleted {name}",
 
@@ -36,11 +34,11 @@ export default defineMessages("connections", {
   "connections.dialog.editTitle": "Edit {name}",
   "connections.dialog.source": "Kind",
   "connections.dialog.name": "Name",
-  "connections.dialog.namePlaceholder": "Films",
+  "connections.dialog.namePlaceholder": "Radarr",
   "connections.dialog.slug": "Slug",
   "connections.dialog.slugHint":
     "Names the environment variable the key can come from: {variable}",
-  "connections.dialog.slugHintNoKey": "Capital letters, like FILMS.",
+  "connections.dialog.slugHintNoKey": "Capital letters, like BY_HAND.",
   "connections.dialog.slugInvalid":
     "Use capital letters, digits and underscores, starting with a letter.",
   "connections.dialog.key": "API key",
@@ -53,41 +51,69 @@ export default defineMessages("connections", {
   "connections.dialog.keyEnvironmentApplies":
     "The key from {variable} applies once you save.",
   "connections.dialog.keyRemoved": "The key is removed when you save.",
+  "connections.dialog.test": "Test",
+  "connections.dialog.default.movie": "Default for films",
+  "connections.dialog.default.show": "Default for shows",
   "connections.dialog.required": "Fill in {field}.",
   "connections.dialog.checkFields": "Check the fields.",
   "connections.dialog.save": "Save",
   "connections.dialog.create": "Add connection",
+  "connections.section.defaults": "Defaults",
+  "connections.section.anime": "Anime",
+  "connections.section.behaviour": "Behaviour",
+  "connections.field.pick": "Choose one",
+  "connections.field.unset": "None",
+  // An anime field left unset sends anime like everything else.
+  "connections.field.sameAsAbove": "Same as above",
+  "connections.field.find": "Find",
+  "connections.field.findEmpty": "Nothing matches.",
+  "connections.field.noChoices": "None on the server yet.",
+  // Under a folder: the library titles saved there land in.
+  "connections.landsIn": "Lands in {library}",
+  "connections.lost": "Can't tell where {folder} is. Choose where it lands.",
+  "connections.landsInPick": "Lands in",
 
-  // What fills each library.
+  // A connection's card.
+  "connections.card.default.movie": "Default for films",
+  "connections.card.default.show": "Default for shows",
+  "connections.card.from.default": "Sends",
+  "connections.card.from.anime": "Anime",
+  "connections.card.from.rule": "Rule",
+  "connections.card.nowhere": "no library",
+
+  // A connection's override rules.
+  "connections.rules.title": "Override rules",
+  "connections.rules.add": "Add rule",
+  "connections.rules.up": "Move up",
+  "connections.rules.down": "Move down",
+  "connections.rules.edit": "Edit rule",
+  "connections.rules.delete": "Delete rule",
+  "connections.rules.delete.title": "Delete this rule?",
+  "connections.rules.delete.description":
+    "Titles it matched are sent with the connection's settings again.",
+  "connections.rules.delete.confirm": "Delete",
+  "connections.rules.dialog.addTitle": "Add override rule",
+  "connections.rules.dialog.editTitle": "Edit override rule",
+  "connections.rules.dialog.create": "Add rule",
+  "connections.rules.dialog.save": "Save",
+  "connections.rules.conditions": "Conditions",
+  "connections.rules.settings": "Settings",
+  "connections.rules.users": "Users",
+  "connections.rules.users.find": "Find a user",
+  "connections.rules.genres": "Genres",
+  "connections.rules.languages": "Languages",
+  "connections.rules.languages.find": "Find a language",
+  "connections.rules.keywords": "Keywords",
+  "connections.rules.keywords.find": "Search TMDB's keywords",
+  "connections.rules.keywords.remove": "Remove {name}",
+  "connections.rules.noTmdb":
+    "Genres and keywords come from TMDB, which isn't set up.",
+  // A rule setting left unset keeps the connection's value.
+  "connections.rules.keep": "Connection's",
+
+  // Which connection fills each library.
   "connections.libraries.title": "What fills each library",
-  "connections.libraries.loadFailed": "Couldn't load the libraries. {error}",
-  "connections.libraries.none": "There are no libraries yet.",
-  "connections.fillFrom": "Fill from",
-  "connections.fillFrom.nothing": "Nothing",
-  "connections.libraries.noProvider":
-    "No metadata provider, so requests can't go here. Choose one under Libraries.",
-  "connections.libraries.noConnection": "Add a connection above first.",
-  "connections.libraries.nothingFits": "No connection takes {kind}.",
-  "connections.libraries.kind.movies": "movies",
-  "connections.libraries.kind.shows": "shows",
-  "connections.libraries.loadingChoices": "Loading choices from {name}…",
-  "connections.libraries.choicesFailed":
-    "Couldn't load the choices from {name}. {error}",
-  "connections.libraries.noChoices": "{name} offers no choices for this.",
-  "connections.libraries.pick": "Choose one",
-  "connections.libraries.saveFailed": "Couldn't save {library}. {error}",
-  "connections.libraries.elsewhere":
-    "{folder} isn't a folder of {library}. Fine if {connection} sees it under another path.",
-  // The options anime is sent with instead, under a library's own.
-  "connections.anime": "Anime",
-  "connections.anime.off": "Sent like everything else",
-  "connections.anime.lands": "Lands in {library}",
-  "connections.anime.choose": "Choose where it lands",
-  "connections.anime.lost":
-    "Can't tell where {folder} is. Choose where anime lands.",
-  "connections.anime.lostNoFolder": "Choose where anime lands.",
-  "connections.anime.landsIn": "Lands in",
-  "connections.anime.clear": "Send anime like everything else",
-  // On the row of a library another library's anime lands in.
-  "connections.anime.from": "Anime from {libraries} lands here.",
+  "connections.libraries.filledBy": "Filled by {connections}",
+  "connections.libraries.unfilled": "Nothing fills it",
+  "connections.libraries.noProvider": "No metadata provider",
 })
