@@ -43,8 +43,7 @@ async function seed(viewer: Viewer, input: Input) {
       (await libraryFor(viewer, input.libraryId)))
     : undefined
   if (input.libraryId && !chosen) return null
-  const language =
-    chosen?.metadataLanguage ?? lookupLanguage(candidates, input.ref.provider)
+  const language = chosen?.metadataLanguage ?? lookupLanguage(candidates)
   if (input.ref.provider === "tmdb")
     return { id: input.ref.providerId, language, stale: false }
   const detail = await detailProvider(input.ref, language)

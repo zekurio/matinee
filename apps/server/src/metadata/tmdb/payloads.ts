@@ -1,4 +1,4 @@
-type Named = { name: string }
+type Named = { id?: number; name: string }
 export type Keyword = { id: number; name?: string }
 export type Image = {
   file_path: string

@@ -7,145 +7,101 @@ import type { Access } from "../access/policy"
 import type { Viewer } from "../access/viewer"
 import { inLibraries, seesLibrary, visibleLibraries } from "../access/visible"
 import { db } from "../db"
-import { allMappings } from "./fulfilment/connections"
+import { loadRouting, type Plan, type Routing } from "./fulfilment/connections"
+import type { TitleFacts } from "./fulfilment/types"
 
 export type Destination = typeof library.$inferSelect & {
-  /** The name of the connection that fills it. */
+  /** The name of the first connection whose settings land in it. */
   connection: string
-  /**
-   * It has a mapping of its own, so any title of its kind can go here.
-   * Without one, only anime reaches it, through another library's.
-   */
-  own: boolean
-  /** Where anime that would come here goes instead, possibly here. */
-  animeTo: string | null
-  /** The libraries whose options for anime land here, by name. */
-  animeFrom: string[]
-}
-
-/** A destination, and whose options for anime send a request there. */
-export type Route<T extends Destination = Destination> = {
-  library: T
-  /** The library whose mapping's anime options it takes, or null. */
-  animeFrom: string | null
+  /** Titles no rule picks out go here through the default connection. */
+  home: boolean
 }
 
 /**
  * The libraries of a kind the viewer can ask into, by name: they can see
- * it, it has a metadata provider, and a connection that fetches the kind
- * fills it, through its own mapping or another's options for anime.
+ * it, it has a metadata provider, and some connection's settings, anime
+ * fields, or override rules send titles of the kind to a folder in it.
  */
 export async function destinations(
   viewer: Viewer,
   kind: CatalogRef["kind"],
+  routing?: Routing,
 ): Promise<Destination[]> {
-  const [mappings, rows] = await Promise.all([
-    allMappings(),
+  const [routes, rows] = await Promise.all([
+    routing ?? loadRouting(),
     db
       .select()
       .from(library)
       .where(visibleLibraries(viewer))
       .orderBy(asc(library.name), asc(library.id)),
   ])
-  const fitting = mappings.filter((entry) => entry.source.kinds.includes(kind))
+  const reached = routes.reached(kind)
+  const home = routes.defaultLibrary(kind)?.id
   return rows.flatMap((row) => {
+    const connection = reached.get(row.id)
     if (
+      !connection ||
       !row.metadataProvider ||
       (row.kind === "movies" ? kind !== "movie" : kind !== "show")
     )
       return []
-    const own = fitting.find((entry) => entry.library.id === row.id)
-    const from = fitting.filter((entry) => entry.anime?.library?.id === row.id)
-    const filler = own ?? from[0]
-    if (!filler) return []
-    return [
-      {
-        ...row,
-        connection: filler.connection.name,
-        own: !!own,
-        animeTo: own?.anime?.library?.id ?? null,
-        animeFrom: from.map((entry) => entry.library.id),
-      },
-    ]
+    return [{ ...row, connection, home: row.id === home }]
   })
 }
 
-/**
- * How a title goes to a library: anime with the options for anime that
- * land there, its own mapping's first, and anything else with the
- * library's own mapping. A library only anime reaches takes whatever
- * goes there as anime, as when an admin moves a request into it.
- */
-export function routeTo<T extends Destination>(
-  library: T,
-  anime: boolean,
-): Route<T> {
-  if (library.own)
-    return {
-      library,
-      animeFrom: anime && library.animeTo === library.id ? library.id : null,
-    }
-  return { library, animeFrom: library.animeFrom[0] ?? null }
-}
-
-/**
- * The libraries a viewer may choose between for a title: any with a
- * mapping of its own, and for anime, those its options for anime reach.
- */
-export function choices<T extends Destination>(
-  candidates: T[],
-  anime: boolean,
-): T[] {
-  return candidates.filter((row) => row.own || (anime && row.animeFrom.length))
+/** A destination, and how a title is sent there, when it can be. */
+export type Route<T extends Destination = Destination> = {
+  library: T
+  plan: Plan | null
 }
 
 /**
  * Where a title goes when nobody chose. The library its request already
- * sits in, if the viewer can ask into it. Else the library a title that
- * isn't anime goes to, the first by name with a mapping of its own, one
- * on the title's own provider first; for anime, where that library's
- * options for anime land instead, when it has them and the viewer can
- * ask into it. Every default destination comes from here, so a card, a
- * title's page, and an ask agree. `candidates` is what `destinations`
- * gave for the title's kind.
+ * sits in, if the viewer can ask into it. Else where the default
+ * connection for its kind sends it, with its anime fields and override
+ * rules, and failing that, when the viewer can't see that library, the
+ * first they can ask into. Nowhere without a default connection. Every
+ * default destination comes from here, so a card, a title's page, and an
+ * ask agree. `candidates` is what `destinations` gave for the kind.
  */
 export function defaultDestination<T extends Destination>(
+  routing: Routing,
   candidates: T[],
   title: {
-    anime: boolean
+    facts: TitleFacts
+    /** Who asks, for rules on users. */
+    user: string | null
     /** Libraries holding a request for the title. */
     requestedIn?: readonly string[]
-    provider?: CatalogRef["provider"]
   },
 ): Route<T> | undefined {
+  const into = (row: T) => ({
+    library: row,
+    plan: routing.into(row.id, title.facts, title.user),
+  })
   const requested = candidates.find((row) =>
     title.requestedIn?.includes(row.id),
   )
-  if (requested) return routeTo(requested, title.anime)
-  const own = candidates.filter((row) => row.own)
-  const base =
-    own.find((row) => row.metadataProvider === title.provider) ?? own[0]
-  if (!title.anime) return base && { library: base, animeFrom: null }
-  const home = candidates.find((row) => row.id === base?.animeTo)
-  if (base && home) return { library: home, animeFrom: base.id }
-  if (base) return { library: base, animeFrom: null }
-  // No library of its own for the viewer, but one anime reaches.
-  const reached = candidates.find((row) => row.animeFrom.length)
-  return reached && routeTo(reached, true)
+  if (requested) return into(requested)
+  const plan = routing.resolve(title.facts, title.user)
+  if (!plan) return undefined
+  const chosen = candidates.find((row) => row.id === plan.library.id)
+  if (chosen) return { library: chosen, plan }
+  const first = candidates[0]
+  return first && into(first)
 }
 
 /**
  * The language to read a title's details in before its destination is
- * known: that of the library it would go to if it isn't anime. It keys
- * the provider cache, so a card, its page, and its ask read one entry.
+ * known: that of the library the default connection sends a title to
+ * that no rule picks out. It keys the provider cache, so a card, its
+ * page, and its ask read one entry.
  */
-export function lookupLanguage(
-  candidates: Destination[],
-  provider: CatalogRef["provider"],
-) {
+export function lookupLanguage(candidates: Destination[]) {
   return (
-    defaultDestination(candidates, { anime: false, provider })?.library
-      .metadataLanguage ?? "en-US"
+    candidates.find((row) => row.home)?.metadataLanguage ??
+    candidates[0]?.metadataLanguage ??
+    "en-US"
   )
 }
 

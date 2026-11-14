@@ -203,7 +203,7 @@ export async function page(
       if (!candidates.length) return { items: [], nextPage: null, stale: false }
       const result = await feedProvider(
         kind,
-        lookupLanguage(candidates, "tmdb"),
+        lookupLanguage(candidates),
         descriptor.id === "becauseWatched"
           ? "recommendations"
           : descriptor.id === "comingSoon"

@@ -11,13 +11,27 @@ export default {
     "Der Katalog nimmt diese Filter nicht an. Ändere sie und versuch es noch einmal.",
   "server.fulfilment.slugConflict":
     "Eine Verbindung verwendet diesen Slug bereits. Wähle einen anderen Slug.",
-  "server.fulfilment.optionsMissing":
-    "Wähle jede Option der Verbindung für diese Mediathek.",
-  "server.fulfilment.animeOptionsMissing":
-    "Wähle jede Option für Anime oder lass alle leer.",
-  "server.fulfilment.animeFolderLost":
-    "{folder} liegt in keiner Mediathek, die Matinee für diese Art Titel durchsucht. Wähle die Mediathek, in der Anime landet, oder speichere in einen anderen Ordner.",
-  "server.fulfilment.animeLibrary": "Wähle die Mediathek, in der Anime landet.",
+  "server.fulfilment.optionsMissing": "Wähle jede Option der Verbindung.",
+  "server.fulfilment.settingsInvalid":
+    "Prüfe die Einstellungen der Verbindung.",
+  "server.fulfilment.folderLost":
+    "{folder} liegt in keiner Mediathek, die Matinee für diese Art Titel durchsucht. Wähle die Mediathek, in der es landet, oder speichere in einen anderen Ordner.",
+  "server.fulfilment.filmFolder": "Wähle den Ordner, in dem Filme landen.",
+  "server.fulfilment.showFolder": "Wähle den Ordner, in dem Serien landen.",
+  "server.fulfilment.noRules":
+    "Diese Verbindung nimmt keine Überschreibungsregeln.",
+  "server.fulfilment.ruleCondition": "Gib der Regel mindestens eine Bedingung.",
+  "server.fulfilment.ruleSettings":
+    "Wähle jede Einstellung der Regel aus den Angeboten der Verbindung.",
+  "server.fulfilment.ruleSetting":
+    "Wähle mindestens eine Einstellung, die die Regel ändert.",
+  "server.fulfilment.ruleUsers": "Wähle Konten, die es gibt.",
+  "server.fulfilment.ruleMissing": "Regel nicht gefunden.",
+  "server.fulfilment.rulesChanged":
+    "Die Regeln haben sich geändert. Lade sie neu und versuch es noch einmal.",
+  "server.fulfilment.keywordsNeedTmdb":
+    "Schlagwörter kommen von TMDB. Setze zuerst MATINEE_TMDB_API_KEY.",
+  "server.fulfilment.ruleLanguage": "Wähle eine Sprache aus der Liste.",
   "server.catalog.matchFailed":
     "Dieser Titel konnte beim Metadatenanbieter der Zielmediathek nicht zugeordnet werden.",
   "server.requests.missing": "Diese Anfrage ist nicht verfügbar.",
@@ -56,16 +70,30 @@ export default {
     "Die Schlüsseldatei der Verbindung kann nicht gelesen werden. Prüfe Pfad und Berechtigungen.",
   "server.fulfilment.source.manual": "Von Hand",
   "server.fulfilment.field.baseUrl": "Basis-URL",
-  "server.fulfilment.field.quality": "Qualität",
-  "server.fulfilment.field.saveTo": "Speichern in",
+  "server.fulfilment.field.qualityProfile": "Qualitätsprofil",
+  "server.fulfilment.field.rootFolder": "Stammordner",
+  "server.fulfilment.field.tags": "Tags",
+  "server.fulfilment.field.minimumAvailability": "Mindestverfügbarkeit",
+  "server.fulfilment.field.seasonFolders": "Staffelordner",
+  "server.fulfilment.field.monitorNewSeasons": "Neue Staffeln überwachen",
+  "server.fulfilment.field.animeSeriesType": "Serientyp für Anime",
+  "server.fulfilment.field.animeQualityProfile": "Qualitätsprofil für Anime",
+  "server.fulfilment.field.animeRootFolder": "Stammordner für Anime",
+  "server.fulfilment.field.animeTags": "Tags für Anime",
+  "server.fulfilment.field.externalUrl": "Externe URL",
+  "server.fulfilment.field.search": "Automatisch suchen",
+  "server.fulfilment.field.tagRequests": "Anfragen taggen",
+  "server.fulfilment.field.filmsFolder": "Ordner für Filme",
+  "server.fulfilment.field.showsFolder": "Ordner für Serien",
+  "server.fulfilment.availability.announced": "Angekündigt",
+  "server.fulfilment.availability.inCinemas": "Im Kino",
+  "server.fulfilment.availability.released": "Veröffentlicht",
   "server.fulfilment.field.seriesType": "Serientyp",
   "server.fulfilment.httpUrl": "Verwende eine HTTP- oder HTTPS-URL.",
   "server.fulfilment.unknownSource": "Wähle eine verfügbare Bezugsquelle.",
   "server.fulfilment.keyTwice":
     "Setze den Verbindungsschlüssel oder seine Datei, nicht beides.",
   "server.fulfilment.connectionMissing": "Verbindung nicht gefunden.",
-  "server.fulfilment.unsupportedLibrary":
-    "Wähle eine Verbindung, die diese Mediathek unterstützt.",
   "server.fulfilment.unreachable":
     "Die Verbindung ist nicht erreichbar. Prüfe URL und Netzwerkzugriff.",
   "server.fulfilment.keyRejected":

@@ -1,28 +1,40 @@
 import { t } from "@matinee/contracts/schema"
 import { ORPCError } from "@orpc/server"
 
-import { call, list, select } from "../arr/client"
+import { call, list } from "../arr/client"
+import {
+  field,
+  filled,
+  link,
+  override,
+  profileId,
+  requesterTag,
+  ruleFolder,
+  ruleSettings,
+  serverChoices,
+  settingFields,
+  settings,
+  tagIds,
+} from "../arr/shared"
 import type { FulfilmentSource } from "../types"
 
-const settings = t.object({
-  baseUrl: t
-    .string()
-    .url()
-    .refine(
-      (value) => ["http:", "https:"].includes(new URL(value).protocol),
-      "Use an HTTP or HTTPS URL.",
-    ),
-})
+const AVAILABILITY = ["announced", "inCinemas", "released"] as const
 
 const options = t.object({
-  qualityProfileId: t.coerce.number().int().min(1),
+  qualityProfileId: profileId,
   rootFolderPath: t.string().min(1),
+  minimumAvailability: t.enum(AVAILABILITY).$default("released"),
+  tags: tagIds.$default([]),
 })
+
+/** What a film is sent with: the options themselves, Radarr has no anime fields. */
+const sending = options
 
 const object = t.record(t.string(), t.unknown())
 const title = t.object({
   id: t.number(),
   tmdbId: t.number(),
+  titleSlug: t.string().optional(),
   monitored: t.boolean(),
   isAvailable: t.boolean(),
   inCinemas: t.string().nullable().optional(),
@@ -70,18 +82,16 @@ export const adapter = {
   needs: ["tmdb"],
   scope: "title",
   apiKey: true,
+  rules: true,
   settings,
-  parseOptions: (value) => options.parse(value),
-  folder: (value) => options.parse(value).rootFolderPath,
-  fields: () => [
-    {
-      key: "baseUrl",
-      label: "Base URL",
-      kind: "text",
-      required: true,
-      choices: [],
-    },
-  ],
+  fields: settingFields,
+  defaults: { search: true, tagRequests: false },
+  parseOptions: (value) => options.parse(filled(value)),
+  sending: (value) => sending.parse(value),
+  override,
+  folder: (value) => sending.parse(value).rootFolderPath,
+  ruleFolder,
+  parseRule: (value) => ruleSettings.parse(filled(value)),
   async test(connection) {
     const status = t
       .object({ appName: t.string() })
@@ -98,44 +108,59 @@ export const adapter = {
       })
   },
   async options(connection) {
-    const profiles = (await list(connection, "qualityprofile")).map((value) =>
-      t.object({ id: t.number(), name: t.string() }).parse(value),
-    )
-    const roots = (await list(connection, "rootfolder")).map((value) =>
-      t.object({ path: t.string() }).parse(value),
-    )
+    const { profiles, roots, tags } = await serverChoices(connection)
+    const quality = (required: boolean) =>
+      field("qualityProfileId", "Quality profile", "select", "defaults", {
+        required,
+        choices: profiles,
+      })
+    const root = (required: boolean) =>
+      field("rootFolderPath", "Root folder", "select", "defaults", {
+        required,
+        choices: roots,
+        folder: "movie",
+      })
+    const tagField = field("tags", "Tags", "multiselect", "defaults", {
+      choices: tags,
+    })
     return {
       fields: [
-        select(
-          "qualityProfileId",
-          "Quality",
-          profiles.map((value) => ({
-            value: String(value.id),
-            label: value.name,
-            description: null,
-          })),
+        quality(true),
+        root(true),
+        field(
+          "minimumAvailability",
+          "Minimum availability",
+          "select",
+          "defaults",
+          {
+            required: true,
+            choices: AVAILABILITY.map((value) => ({
+              value,
+              label:
+                value === "announced"
+                  ? "Announced"
+                  : value === "inCinemas"
+                    ? "In cinemas"
+                    : "Released",
+              description: null,
+            })),
+          },
         ),
-        select(
-          "rootFolderPath",
-          "Save to",
-          roots.map((value) => ({
-            value: value.path,
-            label: value.path,
-            description: null,
-          })),
-        ),
+        tagField,
       ],
       values: {
-        qualityProfileId: profiles[0]?.id ?? 0,
-        rootFolderPath: roots[0]?.path ?? "",
+        qualityProfileId: profiles[0]?.value ?? "",
+        rootFolderPath: roots[0]?.value ?? "",
+        minimumAvailability: "released",
+        tags: [],
       },
-      // Nothing is chosen for anime until an admin does.
-      anime: {},
+      rule: [root(false), quality(false), tagField],
     }
   },
   // Repeating an order must retain prior monitoring and include added seasons.
   async submit(connection, order) {
-    const chosen = options.parse(order.options)
+    const chosen = sending.parse(order.options)
+    const behaviour = settings.parse(connection.settings)
     const externalId = t.coerce
       .number()
       .int()
@@ -151,13 +176,23 @@ export const adapter = {
           "The connection could not find this title. Check its external identifier.",
       })
     // Keep the administrator's existing quality and destination settings.
-    if (!existing) Object.assign(lookup, chosen)
+    if (!existing) {
+      const tags = new Set(chosen.tags)
+      if (behaviour.tagRequests && order.requester)
+        tags.add(await requesterTag(connection, order.requester.username))
+      Object.assign(lookup, {
+        qualityProfileId: chosen.qualityProfileId,
+        rootFolderPath: chosen.rootFolderPath,
+        minimumAvailability: chosen.minimumAvailability,
+        tags: [...tags],
+      })
+    }
     const payload = {
       ...lookup,
       monitored: true,
-      minimumAvailability: existing ? lookup.minimumAvailability : "released",
-      // Radarr searches a new movie after the refresh that follows the add.
-      addOptions: { searchForMovie: true },
+      // Radarr searches a new movie after the refresh that follows the add,
+      // when the connection searches on approval.
+      addOptions: { searchForMovie: !existing && behaviour.search },
     }
     const saved = title.parse(
       await call(
@@ -168,13 +203,14 @@ export const adapter = {
         payload,
       ),
     )
-    if (existing)
+    if (existing && behaviour.search)
       await call(connection, "command", object, "POST", {
         name: "MoviesSearch",
         movieIds: [saved.id],
       })
-    return { id: saved.id }
+    return { id: saved.id, slug: saved.titleSlug ?? String(saved.tmdbId) }
   },
+  link: (connection, ref) => link(connection, ref, "movie"),
   async progress(connection, sent) {
     const records = await queueRecords(connection)
     return Promise.all(

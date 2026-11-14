@@ -78,7 +78,7 @@ async function setting(viewer: Viewer, kind: Kind) {
   if (!env.MATINEE_TMDB_API_KEY) return null
   const candidates = await destinations(viewer, kind)
   if (!candidates.length) return null
-  const language = lookupLanguage(candidates, "tmdb")
+  const language = lookupLanguage(candidates)
   let country: string | null = null
   try {
     country = new Intl.Locale(language).maximize().region ?? null
@@ -99,7 +99,7 @@ async function ratingsFor(kind: Kind, country: string | null) {
 }
 
 /** The languages by their names in `language`, alphabetically. */
-async function languagesIn(language: string) {
+export async function languagesIn(language: string) {
   const list = await languageProvider()
   let names: Intl.DisplayNames | null = null
   try {

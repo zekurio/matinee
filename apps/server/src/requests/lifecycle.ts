@@ -1,10 +1,12 @@
 import type {
   CatalogRef,
+  RemoteRef,
   ShowScope,
   WaitingDeclineReason,
 } from "@matinee/contracts"
 import { t } from "@matinee/contracts/schema"
 import {
+  fulfilmentConnection,
   library,
   request,
   requestFollower,
@@ -15,6 +17,7 @@ import {
 import { ORPCError } from "@orpc/server"
 import {
   and,
+  asc,
   eq,
   ne,
   gt,
@@ -37,14 +40,16 @@ import { notify } from "../notifications/notify"
 import { events } from "../realtime/events"
 import { availability, ExternalIds } from "./availability"
 import { withCachedDetails } from "./cached-details"
+import { destinations, followerAccess, seenByAll } from "./destinations"
+import { titleFacts } from "./facts"
 import {
-  destinations,
-  followerAccess,
-  routeTo,
-  seenByAll,
-} from "./destinations"
-import { allMappings, sendingMapping } from "./fulfilment/connections"
+  loadRouting,
+  type Plan,
+  resolveConnection,
+  type Routing,
+} from "./fulfilment/connections"
 import { sources } from "./fulfilment/sources"
+import type { FulfilmentSource } from "./fulfilment/types"
 import { clearProgress, getDiagnostics } from "./progress"
 import { requestAction, requestLimit, undoable } from "./rules"
 
@@ -120,7 +125,7 @@ export async function ask(
   viewer: Viewer,
   input: { ref: CatalogRef; libraryId?: string; scope?: Scope },
 ) {
-  const { detail, animeFrom } = await routedDetails(viewer, input)
+  const { detail, plan } = await routedDetails(viewer, input)
   const destination = detail.destinations.find((row) => row.selected)
   if (!destination) unavailable()
   // Provider payload, never client input, supplies external ids and artwork.
@@ -154,9 +159,10 @@ export async function ask(
         year: detail.year,
         posterId: detail.poster?.id,
         externalIds: metadata.value.externalIds,
-        // Kept as it was for a request already there, which may have
-        // been sent with it.
-        animeFrom,
+        // Kept as they were for a request already there, which may have
+        // been sent with them.
+        connectionId: plan?.connection.id ?? null,
+        options: plan?.options ?? null,
       })
       .onConflictDoNothing()
       .returning()
@@ -205,10 +211,16 @@ export async function ask(
     const approved =
       viewer.access.requests === "add" || row.status === "approved"
     const status = approved ? "approved" : "asked"
+    // One whose connection was deleted takes the one it would go to now.
+    const replanned = !row.connectionId && plan
     await tx
       .update(request)
       .set({
         status,
+        ...(replanned && {
+          connectionId: plan.connection.id,
+          options: plan.options,
+        }),
         future: row.future || (scope?.future ?? false),
         fulfilmentState:
           approved && (inserted || changed || row.status !== "approved")
@@ -570,12 +582,13 @@ export async function queue(
           rows.map((row) => row.id),
         ),
       )
-    const mappings = await allMappings()
+    const connections = await db.select().from(fulfilmentConnection)
     const asked = rows.filter((row) => row.status === "asked")
-    const [movies, shows, following, held] = asked.length
+    const routing = asked.length ? await loadRouting() : null
+    const [movies, shows, following, held] = routing
       ? await Promise.all([
-          destinations(viewer, "movie"),
-          destinations(viewer, "show"),
+          destinations(viewer, "movie", routing),
+          destinations(viewer, "show", routing),
           followerAccess(asked.map((row) => row.id)),
           heldInPlace(viewer, asked),
         ])
@@ -583,7 +596,10 @@ export async function queue(
     return cards.map((card, index) => {
       const row = rows[index]!
       // The connection it goes, or would go, through.
-      const connection = sendingMapping(mappings, row)?.mapping.connection
+      const connection = connections.find(
+        (entry) => entry.id === row.connectionId,
+      )
+      const source = connection && sources.get(connection.source)
       const choices = seenByAll(
         row.kind === "movie" ? movies : shows,
         following.get(row.id),
@@ -600,7 +616,7 @@ export async function queue(
           ? {
               id: connection.id,
               name: connection.name,
-              reportsProgress: !!sources.get(connection.source)?.progress,
+              reportsProgress: !!source?.progress,
             }
           : null,
         followers: followers
@@ -631,7 +647,10 @@ export async function queue(
                 selected: choice.id === row.libraryId,
               }))
             : [],
-        remoteUrl: null,
+        remoteUrl:
+          connection && source?.link && row.remoteRef
+            ? remoteUrl(connection, source, row.remoteRef)
+            : null,
         diagnostics: getDiagnostics(row.id),
       }
     })
@@ -649,6 +668,65 @@ export async function queue(
     },
     nextCursor: nextCursor(lists[3] ?? [], input.limit, true),
   }
+}
+
+/** Where a person opens a sent request in its connection's own app. */
+function remoteUrl(
+  connection: typeof fulfilmentConnection.$inferSelect,
+  source: FulfilmentSource,
+  ref: RemoteRef,
+) {
+  try {
+    return source.link?.(resolveConnection(connection), ref) ?? null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * What a request is now: its facts from its details, read through the
+ * provider cache, and who asked for it first, whose request it counts as
+ * for override rules on users.
+ */
+async function requestFacts(row: Row) {
+  // ACCESS: the library of a request the caller has already loaded.
+  const [own] = await db
+    .select({ language: library.metadataLanguage })
+    .from(library)
+    .where(eq(library.id, row.libraryId))
+  const ref = {
+    kind: row.kind,
+    provider: row.provider,
+    providerId: row.providerId,
+  }
+  const detail = await detailProvider(ref, own?.language ?? "en-US")
+    .then((result) => result.value)
+    .catch(() => null)
+  const facts = await titleFacts(row.kind, [
+    detail,
+    { externalIds: ExternalIds.parse(row.externalIds) },
+  ])
+  const [first] = await db
+    .select({ userId: requestFollower.userId })
+    .from(requestFollower)
+    .where(
+      and(
+        eq(requestFollower.requestId, row.id),
+        eq(requestFollower.asked, true),
+      ),
+    )
+    .orderBy(asc(requestFollower.createdAt))
+    .limit(1)
+  return { facts, user: first?.userId ?? null }
+}
+
+/**
+ * How a request goes to a library now: the connection and the options
+ * that land there for it, or null when nothing does.
+ */
+async function planInto(row: Row, libraryId: string, routing?: Routing) {
+  const { facts, user } = await requestFacts(row)
+  return (routing ?? (await loadRouting())).into(libraryId, facts, user)
 }
 
 /**
@@ -694,11 +772,8 @@ async function heldInPlace(viewer: Viewer, rows: Row[]) {
 /**
  * Where a waiting request would move to: the title's identity in that
  * library, the provider and id there, resolved as its page resolves a
- * reference to another provider, and the options it is sent with there.
- * Moved into a library only anime reaches, it takes the options for anime
- * that land there. Moved into one with a mapping of its own, it takes
- * that mapping's options for anime if it is anime and they land in that
- * same library, and its normal options otherwise.
+ * reference to another provider, and the connection and options that
+ * send it there, worked out again for the title and its first asker.
  */
 async function moveTarget(viewer: Viewer, id: string, libraryId: string) {
   const row = await visibleRequest(viewer, id)
@@ -735,15 +810,15 @@ async function moveTarget(viewer: Viewer, id: string, libraryId: string) {
   const metadata = detail
     ? (await detailProvider(moved, target.metadataLanguage)).value.externalIds
     : {}
-  // Anime if it was sent as anime, or a provider calls it that.
-  const [cached] = await withCachedDetails(viewer, [
-    { ref, libraryId: row.libraryId },
-  ])
-  const anime = row.animeFrom !== null || !!cached?.anime
+  const plan = await planInto(row, target.id)
+  if (!plan)
+    throw new ORPCError("BAD_REQUEST", {
+      message: "Choose a library this title can go to.",
+    })
   return {
     from: row,
     library: target,
-    animeFrom: routeTo(target, anime).animeFrom,
+    plan,
     provider: moved.provider,
     providerId: moved.providerId,
     externalIds: { ...ExternalIds.parse(row.externalIds), ...metadata },
@@ -788,6 +863,26 @@ export async function moderate(
     operation === "approve" && libraryId && only && ids.length === 1
       ? await moveTarget(viewer, only, libraryId)
       : null
+  // One whose connection was deleted goes the way it would go now.
+  const replans = new Map<string, Plan>()
+  const orphans = await db
+    .select()
+    .from(request)
+    .where(
+      and(
+        inArray(request.id, ids),
+        inLibraries(viewer, request.libraryId),
+        isNull(request.connectionId),
+      ),
+    )
+  if (orphans.length) {
+    const routing = await loadRouting()
+    for (const row of orphans) {
+      if (move && row.id === only) continue
+      const plan = await planInto(row, row.libraryId, routing)
+      if (plan) replans.set(row.id, plan)
+    }
+  }
   await db.transaction(async (tx) => {
     // Stable lock order prevents overlapping approve-all batches deadlocking.
     for (const id of [...new Set(ids)].sort()) {
@@ -832,7 +927,8 @@ export async function moderate(
             provider: move.provider,
             providerId: move.providerId,
             externalIds: ids,
-            animeFrom: move.animeFrom,
+            connectionId: move.plan.connection.id,
+            options: move.plan.options,
             updatedAt: new Date(),
           })
           .where(eq(request.id, id))
@@ -847,12 +943,17 @@ export async function moderate(
         (row.status !== "approved" || row.fulfilmentState !== "failed")
       )
         unavailable()
+      const replan = replans.get(id)
       await tx
         .update(request)
         .set({
           status: "approved",
           fulfilmentState: "queued",
           fulfilmentError: null,
+          ...(replan && {
+            connectionId: replan.connection.id,
+            options: replan.options,
+          }),
           approvedAt: row.approvedAt ?? new Date(),
           updatedAt: new Date(),
         })

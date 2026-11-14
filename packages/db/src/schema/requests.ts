@@ -3,6 +3,7 @@ import type {
   FulfilmentValues,
   RemoteRef,
 } from "@matinee/contracts"
+import { sql } from "drizzle-orm"
 import {
   boolean,
   index,
@@ -21,41 +22,83 @@ import { artworkRef, library } from "./library"
 import { user } from "./users"
 const instant = () => timestamp({ withTimezone: true })
 
-export const fulfilmentConnection = pgTable("fulfilment_connection", {
-  id: uuid().primaryKey().defaultRandom(),
-  name: text().notNull(),
-  slug: text().notNull().unique(),
-  source: text().notNull(),
-  /** Adapter-specific settings, parsed by its schema. Never returned without redaction. */
-  settings: jsonb().$type<FulfilmentValues>().notNull().default({}),
-  /** Saved plaintext secret overrides MATINEE_CONNECTION_<SLUG>_API_KEY. */
-  apiKey: text(),
-  createdAt: createdAt(),
-  updatedAt: createdAt(),
-})
+export const fulfilmentConnection = pgTable(
+  "fulfilment_connection",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    name: text().notNull(),
+    slug: text().notNull().unique(),
+    source: text().notNull(),
+    /**
+     * How to reach it and how it behaves, parsed by its source's schema.
+     * Never returned without redaction.
+     */
+    settings: jsonb().$type<FulfilmentValues>().notNull().default({}),
+    /**
+     * What a request is sent with, like the quality and the folder,
+     * parsed by its source's schema. Override rules change them per title.
+     */
+    options: jsonb().$type<FulfilmentValues>().notNull().default({}),
+    /** Requests for films go through it. At most one connection is. */
+    defaultMovies: boolean().notNull().default(false),
+    /** Requests for shows go through it. At most one connection is. */
+    defaultShows: boolean().notNull().default(false),
+    /**
+     * The library a folder lands in, by folder, picked by an admin because
+     * no library's folder holds it, as when the download manager runs in
+     * a container and sees it under another path.
+     */
+    folderLibraries: jsonb()
+      .$type<Record<string, string>>()
+      .notNull()
+      .default({}),
+    /** Saved plaintext secret overrides MATINEE_CONNECTION_<SLUG>_API_KEY. */
+    apiKey: text(),
+    createdAt: createdAt(),
+    updatedAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex("fulfilment_default_movies")
+      .on(t.defaultMovies)
+      .where(sql`${t.defaultMovies}`),
+    uniqueIndex("fulfilment_default_shows")
+      .on(t.defaultShows)
+      .where(sql`${t.defaultShows}`),
+  ],
+)
 
-export const libraryFulfilment = pgTable("library_fulfilment", {
-  libraryId: uuid()
-    .primaryKey()
-    .references(() => library.id, { onDelete: "cascade" }),
-  connectionId: uuid()
-    .notNull()
-    .references(() => fulfilmentConnection.id, { onDelete: "cascade" }),
-  options: jsonb().$type<FulfilmentValues>().notNull().default({}),
-  /**
-   * The options anime is sent with instead, parsed by the connection's
-   * source like `options`. Null when anime is sent like everything else.
-   */
-  animeOptions: jsonb().$type<FulfilmentValues>(),
-  /**
-   * The library anime lands in, picked by an admin because its folder is
-   * in no library's folders. Unused while a library's folder holds it.
-   */
-  animeLibraryId: uuid().references(() => library.id, {
-    onDelete: "set null",
-  }),
-  updatedAt: createdAt(),
-})
+/**
+ * An override rule of a connection: when a title matches its conditions,
+ * it is sent with the rule's settings instead of the connection's. A
+ * condition left empty matches anything, but at least one is set.
+ */
+export const fulfilmentRule = pgTable(
+  "fulfilment_rule",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    connectionId: uuid()
+      .notNull()
+      .references(() => fulfilmentConnection.id, { onDelete: "cascade" }),
+    /** Its place among the connection's rules. The first wins a tie. */
+    position: integer().notNull().default(0),
+    /** Accounts whose requests it applies to. */
+    users: jsonb().$type<string[]>().notNull().default([]),
+    /** TMDB genre ids. */
+    genres: jsonb().$type<number[]>().notNull().default([]),
+    /** ISO 639-1 codes of the language a title was made in. */
+    languages: jsonb().$type<string[]>().notNull().default([]),
+    /** TMDB keywords, with their names for showing the rule. */
+    keywords: jsonb()
+      .$type<{ id: number; name: string }[]>()
+      .notNull()
+      .default([]),
+    /** The options it changes, parsed by the connection's source. */
+    settings: jsonb().$type<FulfilmentValues>().notNull().default({}),
+    createdAt: createdAt(),
+    updatedAt: createdAt(),
+  },
+  (t) => [index("fulfilment_rule_connection_idx").on(t.connectionId)],
+)
 
 export const request = pgTable(
   "request",
@@ -83,16 +126,17 @@ export const request = pgTable(
     declinedAt: instant(),
     fulfilmentState: text().$type<"queued" | "sent" | "failed">(),
     fulfilmentError: text(),
-    /** Adapter-owned reference. Connection retained separately so changed mappings cannot misroute it. */
+    /** Adapter-owned reference to what the connection made of it. */
     remoteRef: jsonb().$type<RemoteRef>(),
+    /**
+     * The connection it is sent through, and the options it is sent with,
+     * worked out when it was requested or moved, so a later change to the
+     * connection or its rules doesn't send it somewhere else.
+     */
     connectionId: uuid().references(() => fulfilmentConnection.id, {
       onDelete: "set null",
     }),
-    /**
-     * The library whose mapping's anime options send it, which may be its
-     * own library. Null sends it with its own library's mapping.
-     */
-    animeFrom: uuid().references(() => library.id, { onDelete: "set null" }),
+    options: jsonb().$type<FulfilmentValues>(),
     sentAt: instant(),
     /** First film arrival, for notification deduplication only, never availability. */
     arrivedAt: instant(),

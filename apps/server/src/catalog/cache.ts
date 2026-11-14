@@ -13,9 +13,12 @@ import {
   type DiscoverQuery,
   genres,
   Genres,
+  keywords,
+  Keywords,
   languages,
   Languages,
 } from "../metadata/tmdb/browse"
+import { titleFacts } from "../metadata/tmdb/details"
 import {
   collection,
   Collection,
@@ -39,6 +42,10 @@ const Detail = Candidate.extend({
   genres: t.array(t.string()),
   /** Missing from entries cached before it was asked for. */
   anime: t.boolean().optional(),
+  originalLanguage: text.optional(),
+  /** TMDB's only, and missing from its entries cached before they were asked for. */
+  genreIds: t.array(t.number()).optional(),
+  keywordIds: t.array(t.number()).optional(),
   rating: t.number().nullable(),
   contentRating: text,
   releaseDate: text,
@@ -181,6 +188,7 @@ export function detailProvider(ref: CatalogRef, language: string) {
     },
     (value) =>
       value.anime !== undefined &&
+      (ref.provider !== "tmdb" || value.keywordIds !== undefined) &&
       value.studios !== undefined &&
       value.credits !== undefined &&
       value.trailers !== undefined,
@@ -306,5 +314,40 @@ export function collectionProvider(language: string, id: string) {
     CACHE_HOURS.feed,
     (body) => Collection.parse(body),
     () => collection(language, id),
+  )
+}
+
+export const Facts = t.object({
+  anime: t.boolean(),
+  genreIds: t.array(t.number()),
+  keywordIds: t.array(t.number()),
+  originalLanguage: text,
+})
+
+/** Where a title's facts at TMDB sit in the provider cache. */
+export function factsKey(kind: CatalogRef["kind"], id: string) {
+  return JSON.stringify(["tmdb", "facts", kind, id])
+}
+
+/**
+ * What override rules look at in a title TMDB knows by `id`, kept as long
+ * as details, for a title read from TheTVDB.
+ */
+export function factsProvider(kind: CatalogRef["kind"], id: string) {
+  return cached(
+    factsKey(kind, id),
+    CACHE_HOURS.details,
+    (body) => Facts.parse(body),
+    () => titleFacts(kind, id),
+  )
+}
+
+/** TMDB's keywords matching a search, kept as long as a search. */
+export function keywordProvider(query: string) {
+  return cached(
+    JSON.stringify(["tmdb", "keywords", query.toLowerCase()]),
+    CACHE_HOURS.search,
+    (body) => Keywords.parse(body).keywords,
+    () => keywords(query),
   )
 }

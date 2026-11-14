@@ -17,12 +17,25 @@ export default defineMessages("server", {
   "server.fulfilment.slugConflict":
     "A connection already uses this slug. Choose another slug.",
   "server.fulfilment.optionsMissing":
-    "Choose each of the connection's options for this library.",
-  "server.fulfilment.animeOptionsMissing":
-    "Choose each of the options for anime, or leave them all empty.",
-  "server.fulfilment.animeFolderLost":
-    "{folder} isn't in any library Matinee scans for this kind of title. Choose the library anime lands in, or save it to another folder.",
-  "server.fulfilment.animeLibrary": "Choose the library anime lands in.",
+    "Choose each of the connection's options.",
+  "server.fulfilment.settingsInvalid": "Check the connection's settings.",
+  "server.fulfilment.folderLost":
+    "{folder} isn't in any library Matinee scans for this kind of title. Choose the library it lands in, or save it to another folder.",
+  "server.fulfilment.filmFolder": "Choose the folder films are saved to.",
+  "server.fulfilment.showFolder": "Choose the folder shows are saved to.",
+  "server.fulfilment.noRules": "This connection doesn't take override rules.",
+  "server.fulfilment.ruleCondition": "Give the rule at least one condition.",
+  "server.fulfilment.ruleSettings":
+    "Choose each of the rule's settings from the connection's choices.",
+  "server.fulfilment.ruleSetting":
+    "Choose at least one setting the rule changes.",
+  "server.fulfilment.ruleUsers": "Choose accounts that exist.",
+  "server.fulfilment.ruleMissing": "Rule not found.",
+  "server.fulfilment.rulesChanged":
+    "The rules changed. Reload them and try again.",
+  "server.fulfilment.keywordsNeedTmdb":
+    "Keywords come from TMDB. Set MATINEE_TMDB_API_KEY first.",
+  "server.fulfilment.ruleLanguage": "Choose a language from the list.",
   "server.catalog.matchFailed":
     "This title couldn't be matched at the destination library's metadata provider.",
   "server.requests.missing": "This request isn't available.",
@@ -59,15 +72,29 @@ export default defineMessages("server", {
     "Cannot read the connection key file. Check its path and permissions.",
   "server.fulfilment.source.manual": "By hand",
   "server.fulfilment.field.baseUrl": "Base URL",
-  "server.fulfilment.field.quality": "Quality",
-  "server.fulfilment.field.saveTo": "Save to",
+  "server.fulfilment.field.qualityProfile": "Quality profile",
+  "server.fulfilment.field.rootFolder": "Root folder",
+  "server.fulfilment.field.tags": "Tags",
+  "server.fulfilment.field.minimumAvailability": "Minimum availability",
+  "server.fulfilment.field.seasonFolders": "Season folders",
+  "server.fulfilment.field.monitorNewSeasons": "Monitor new seasons",
+  "server.fulfilment.field.animeSeriesType": "Anime series type",
+  "server.fulfilment.field.animeQualityProfile": "Anime quality profile",
+  "server.fulfilment.field.animeRootFolder": "Anime root folder",
+  "server.fulfilment.field.animeTags": "Anime tags",
+  "server.fulfilment.field.externalUrl": "External URL",
+  "server.fulfilment.field.search": "Automatic search",
+  "server.fulfilment.field.tagRequests": "Tag requests",
+  "server.fulfilment.field.filmsFolder": "Films folder",
+  "server.fulfilment.field.showsFolder": "Shows folder",
+  "server.fulfilment.availability.announced": "Announced",
+  "server.fulfilment.availability.inCinemas": "In cinemas",
+  "server.fulfilment.availability.released": "Released",
   "server.fulfilment.field.seriesType": "Series type",
   "server.fulfilment.httpUrl": "Use an HTTP or HTTPS URL.",
   "server.fulfilment.unknownSource": "Choose an available fulfilment source.",
   "server.fulfilment.keyTwice": "Set the connection key or its file, not both.",
   "server.fulfilment.connectionMissing": "Connection not found.",
-  "server.fulfilment.unsupportedLibrary":
-    "Choose a connection that supports this library.",
   "server.fulfilment.unreachable":
     "Cannot reach the connection. Check its URL and network access.",
   "server.fulfilment.keyRejected":

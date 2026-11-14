@@ -1,5 +1,5 @@
 {
-  "id": "9118239d-80bb-4c0a-97df-5310e9d5c767",
+  "id": "e91a793e-da2b-47a2-8594-4d57d2209126",
   "prevId": "cd8fd953-26bb-42d2-9f81-f9e4cf8518a6",
   "version": "7",
   "dialect": "postgresql",
@@ -3392,6 +3392,34 @@
           "notNull": true,
           "default": "'{}'::jsonb"
         },
+        "options": {
+          "name": "options",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "default_movies": {
+          "name": "default_movies",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "default_shows": {
+          "name": "default_shows",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "folder_libraries": {
+          "name": "folder_libraries",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
         "api_key": {
           "name": "api_key",
           "type": "text",
@@ -3413,7 +3441,40 @@
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "fulfilment_default_movies": {
+          "name": "fulfilment_default_movies",
+          "columns": [
+            {
+              "expression": "default_movies",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"fulfilment_connection\".\"default_movies\"",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "fulfilment_default_shows": {
+          "name": "fulfilment_default_shows",
+          "columns": [
+            {
+              "expression": "default_shows",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"fulfilment_connection\".\"default_shows\"",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
@@ -3429,15 +3490,16 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.library_fulfilment": {
-      "name": "library_fulfilment",
+    "public.fulfilment_rule": {
+      "name": "fulfilment_rule",
       "schema": "",
       "columns": {
-        "library_id": {
-          "name": "library_id",
+        "id": {
+          "name": "id",
           "type": "uuid",
           "primaryKey": true,
-          "notNull": true
+          "notNull": true,
+          "default": "gen_random_uuid()"
         },
         "connection_id": {
           "name": "connection_id",
@@ -3445,24 +3507,54 @@
           "primaryKey": false,
           "notNull": true
         },
-        "options": {
-          "name": "options",
+        "position": {
+          "name": "position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "users": {
+          "name": "users",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "genres": {
+          "name": "genres",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "languages": {
+          "name": "languages",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "keywords": {
+          "name": "keywords",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "settings": {
+          "name": "settings",
           "type": "jsonb",
           "primaryKey": false,
           "notNull": true,
           "default": "'{}'::jsonb"
         },
-        "anime_options": {
-          "name": "anime_options",
-          "type": "jsonb",
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
           "primaryKey": false,
-          "notNull": false
-        },
-        "anime_library_id": {
-          "name": "anime_library_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
+          "notNull": true,
+          "default": "now()"
         },
         "updated_at": {
           "name": "updated_at",
@@ -3472,24 +3564,27 @@
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "fulfilment_rule_connection_idx": {
+          "name": "fulfilment_rule_connection_idx",
+          "columns": [
+            {
+              "expression": "connection_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
-        "library_fulfilment_library_id_library_id_fk": {
-          "name": "library_fulfilment_library_id_library_id_fk",
-          "tableFrom": "library_fulfilment",
-          "tableTo": "library",
-          "columnsFrom": [
-            "library_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "library_fulfilment_connection_id_fulfilment_connection_id_fk": {
-          "name": "library_fulfilment_connection_id_fulfilment_connection_id_fk",
-          "tableFrom": "library_fulfilment",
+        "fulfilment_rule_connection_id_fulfilment_connection_id_fk": {
+          "name": "fulfilment_rule_connection_id_fulfilment_connection_id_fk",
+          "tableFrom": "fulfilment_rule",
           "tableTo": "fulfilment_connection",
           "columnsFrom": [
             "connection_id"
@@ -3498,19 +3593,6 @@
             "id"
           ],
           "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "library_fulfilment_anime_library_id_library_id_fk": {
-          "name": "library_fulfilment_anime_library_id_library_id_fk",
-          "tableFrom": "library_fulfilment",
-          "tableTo": "library",
-          "columnsFrom": [
-            "anime_library_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -3841,9 +3923,9 @@
           "primaryKey": false,
           "notNull": false
         },
-        "anime_from": {
-          "name": "anime_from",
-          "type": "uuid",
+        "options": {
+          "name": "options",
+          "type": "jsonb",
           "primaryKey": false,
           "notNull": false
         },
@@ -3991,19 +4073,6 @@
           "tableTo": "fulfilment_connection",
           "columnsFrom": [
             "connection_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        },
-        "request_anime_from_library_id_fk": {
-          "name": "request_anime_from_library_id_fk",
-          "tableFrom": "request",
-          "tableTo": "library",
-          "columnsFrom": [
-            "anime_from"
           ],
           "columnsTo": [
             "id"

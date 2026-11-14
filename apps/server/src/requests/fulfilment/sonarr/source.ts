@@ -1,24 +1,59 @@
 import { t } from "@matinee/contracts/schema"
 import { ORPCError } from "@orpc/server"
 
-import { call, list, select } from "../arr/client"
+import { call, list } from "../arr/client"
+import {
+  field,
+  filled,
+  link,
+  override,
+  profileId,
+  requesterTag,
+  ruleFolder,
+  ruleSettings,
+  serverChoices,
+  settingFields,
+  settings,
+  tagIds,
+} from "../arr/shared"
 import type { FulfilmentSource } from "../types"
 
-const settings = t.object({
-  baseUrl: t
-    .string()
-    .url()
-    .refine(
-      (value) => ["http:", "https:"].includes(new URL(value).protocol),
-      "Use an HTTP or HTTPS URL.",
-    ),
-})
+const SERIES_TYPES = ["standard", "daily", "anime"] as const
+const seriesType = t.enum(SERIES_TYPES)
 
 const options = t.object({
-  qualityProfileId: t.coerce.number().int().min(1),
+  qualityProfileId: profileId,
   rootFolderPath: t.string().min(1),
-  seriesType: t.enum(["standard", "daily", "anime"]).$default("standard"),
+  seriesType: seriesType.$default("standard"),
+  seasonFolders: t.boolean().$default(true),
+  /** Monitor seasons that come out later for every show, asked for or not. */
+  monitorNewSeasons: t.boolean().$default(false),
+  tags: tagIds.$default([]),
+  // Used for anime instead of the ones above, each when it's filled.
+  animeSeriesType: seriesType.optional(),
+  animeQualityProfileId: profileId.optional(),
+  animeRootFolderPath: t.string().min(1).optional(),
+  animeTags: tagIds.optional(),
 })
+
+/** What a show is sent with, its anime fields already applied. */
+const sending = t.object({
+  qualityProfileId: profileId,
+  rootFolderPath: t.string().min(1),
+  seriesType: seriesType,
+  seasonFolders: t.boolean(),
+  monitorNewSeasons: t.boolean(),
+  tags: tagIds,
+})
+
+const rule = ruleSettings.extend({ seriesType: seriesType.optional() })
+
+const typeChoices = SERIES_TYPES.map((value) => ({
+  value,
+  label:
+    value === "standard" ? "Standard" : value === "daily" ? "Daily" : "Anime",
+  description: null,
+}))
 
 const object = t.record(t.string(), t.unknown())
 const title = t.object({
@@ -26,6 +61,7 @@ const title = t.object({
   nextAiring: t.string().nullable().optional(),
   id: t.number(),
   tvdbId: t.number(),
+  titleSlug: t.string().optional(),
   monitored: t.boolean(),
   seasons: t
     .array(t.object({ seasonNumber: t.number(), monitored: t.boolean() }))
@@ -71,18 +107,28 @@ export const adapter = {
   needs: ["tvdb"],
   scope: "season",
   apiKey: true,
+  rules: true,
   settings,
-  parseOptions: (value) => options.parse(value),
-  folder: (value) => options.parse(value).rootFolderPath,
-  fields: () => [
-    {
-      key: "baseUrl",
-      label: "Base URL",
-      kind: "text",
-      required: true,
-      choices: [],
-    },
-  ],
+  fields: settingFields,
+  defaults: { search: true, tagRequests: false },
+  parseOptions: (value) => options.parse(filled(value)),
+  sending(value, title) {
+    const own = options.parse(value)
+    const anime = title.anime
+    return {
+      qualityProfileId:
+        (anime && own.animeQualityProfileId) || own.qualityProfileId,
+      rootFolderPath: (anime && own.animeRootFolderPath) || own.rootFolderPath,
+      seriesType: (anime && own.animeSeriesType) || own.seriesType,
+      seasonFolders: own.seasonFolders,
+      monitorNewSeasons: own.monitorNewSeasons,
+      tags: anime && own.animeTags?.length ? own.animeTags : own.tags,
+    }
+  },
+  override,
+  folder: (value) => sending.parse(value).rootFolderPath,
+  ruleFolder,
+  parseRule: (value) => rule.parse(filled(value)),
   async test(connection) {
     const status = t
       .object({ appName: t.string() })
@@ -99,60 +145,85 @@ export const adapter = {
       })
   },
   async options(connection) {
-    const profiles = (await list(connection, "qualityprofile")).map((value) =>
-      t.object({ id: t.number(), name: t.string() }).parse(value),
-    )
-    const roots = (await list(connection, "rootfolder")).map((value) =>
-      t.object({ path: t.string() }).parse(value),
-    )
+    const { profiles, roots, tags } = await serverChoices(connection)
+    const quality = (key: string, label: string, required: boolean) =>
+      field(
+        key,
+        label,
+        "select",
+        key.startsWith("anime") ? "anime" : "defaults",
+        {
+          required,
+          choices: profiles,
+        },
+      )
+    const root = (key: string, label: string, required: boolean) =>
+      field(
+        key,
+        label,
+        "select",
+        key.startsWith("anime") ? "anime" : "defaults",
+        {
+          required,
+          choices: roots,
+          folder: "show",
+        },
+      )
+    const type = (key: string, label: string, required: boolean) =>
+      field(
+        key,
+        label,
+        "select",
+        key.startsWith("anime") ? "anime" : "defaults",
+        {
+          required,
+          choices: typeChoices,
+        },
+      )
+    const tagField = (key: string, label: string) =>
+      field(
+        key,
+        label,
+        "multiselect",
+        key.startsWith("anime") ? "anime" : "defaults",
+        {
+          choices: tags,
+        },
+      )
     return {
       fields: [
-        select(
-          "qualityProfileId",
-          "Quality",
-          profiles.map((value) => ({
-            value: String(value.id),
-            label: value.name,
-            description: null,
-          })),
-        ),
-        select(
-          "rootFolderPath",
-          "Save to",
-          roots.map((value) => ({
-            value: value.path,
-            label: value.path,
-            description: null,
-          })),
-        ),
-        select(
-          "seriesType",
-          "Series type",
-          ["standard", "daily", "anime"].map((value) => ({
-            value,
-            label:
-              value === "standard"
-                ? "Standard"
-                : value === "daily"
-                  ? "Daily"
-                  : "Anime",
-            description: null,
-          })),
-        ),
+        quality("qualityProfileId", "Quality profile", true),
+        root("rootFolderPath", "Root folder", true),
+        type("seriesType", "Series type", true),
+        tagField("tags", "Tags"),
+        field("seasonFolders", "Season folders", "switch", "defaults"),
+        field("monitorNewSeasons", "Monitor new seasons", "switch", "defaults"),
+        type("animeSeriesType", "Anime series type", false),
+        quality("animeQualityProfileId", "Anime quality profile", false),
+        root("animeRootFolderPath", "Anime root folder", false),
+        tagField("animeTags", "Anime tags"),
       ],
       values: {
-        qualityProfileId: profiles[0]?.id ?? 0,
-        rootFolderPath: roots[0]?.path ?? "",
+        qualityProfileId: profiles[0]?.value ?? "",
+        rootFolderPath: roots[0]?.value ?? "",
         seriesType: "standard",
+        seasonFolders: true,
+        monitorNewSeasons: false,
+        tags: [],
+        animeSeriesType: "anime",
       },
-      // Nothing is chosen for anime until an admin does, but its
-      // series type.
-      anime: { seriesType: "anime" },
+      rule: [
+        root("rootFolderPath", "Root folder", false),
+        quality("qualityProfileId", "Quality profile", false),
+        tagField("tags", "Tags"),
+        type("seriesType", "Series type", false),
+      ],
     }
   },
   // Repeating an order must retain prior monitoring and include added seasons.
   async submit(connection, order) {
-    const chosen = options.parse(order.options)
+    const chosen = sending.parse(order.options)
+    const behaviour = settings.parse(connection.settings)
     const externalId = t.coerce
       .number()
       .int()
@@ -168,12 +239,23 @@ export const adapter = {
           "The connection could not find this title. Check its external identifier.",
       })
     // Keep the administrator's existing quality and destination settings.
-    if (!existing) Object.assign(lookup, chosen)
+    if (!existing) {
+      const tags = new Set(chosen.tags)
+      if (behaviour.tagRequests && order.requester)
+        tags.add(await requesterTag(connection, order.requester.username))
+      Object.assign(lookup, {
+        qualityProfileId: chosen.qualityProfileId,
+        rootFolderPath: chosen.rootFolderPath,
+        seriesType: chosen.seriesType,
+        seasonFolder: chosen.seasonFolders,
+        tags: [...tags],
+      })
+    }
     const payload = {
       ...lookup,
       monitored: true,
-      seasonFolder: true,
-      monitorNewItems: order.scope?.future ? "all" : "none",
+      monitorNewItems:
+        order.scope?.future || chosen.monitorNewSeasons ? "all" : "none",
       seasons: t
         .object({
           seasons: t.array(
@@ -189,8 +271,8 @@ export const adapter = {
         })),
       // Sonarr fills a new series' episodes in the refresh after the add,
       // so a search sent now would find none. Let Sonarr search once they
-      // exist, as Seerr does.
-      addOptions: { searchForMissingEpisodes: true },
+      // exist, as Seerr does, when the connection searches on approval.
+      addOptions: { searchForMissingEpisodes: behaviour.search },
     }
     const saved = title.parse(
       await call(
@@ -216,7 +298,9 @@ export const adapter = {
           monitored: true,
         })
       }
-      for (const seasonNumber of order.scope?.seasons ?? []) {
+      for (const seasonNumber of behaviour.search
+        ? (order.scope?.seasons ?? [])
+        : []) {
         await call(connection, "command", object, "POST", {
           name: "SeasonSearch",
           seriesId: saved.id,
@@ -226,10 +310,12 @@ export const adapter = {
     }
     return {
       id: saved.id,
+      slug: saved.titleSlug ?? null,
       seasons: order.scope?.seasons ?? [],
       future: order.scope?.future ?? false,
     }
   },
+  link: (connection, ref) => link(connection, ref, "series"),
   async progress(connection, sent) {
     const records = await queueRecords(connection)
     return Promise.all(

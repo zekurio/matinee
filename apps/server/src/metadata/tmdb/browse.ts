@@ -167,3 +167,19 @@ export async function languages(): Promise<t.infer<typeof Languages>> {
     })),
   }
 }
+
+export const Keywords = t.object({
+  keywords: t.array(t.object({ id: t.number(), name: t.string() })),
+})
+
+/** TMDB's keywords whose names match `query`, its first page. */
+export async function keywords(
+  query: string,
+): Promise<t.infer<typeof Keywords>> {
+  const page = t
+    .object({
+      results: t.array(t.object({ id: t.number(), name: t.string() })),
+    })
+    .parse(await request("/search/keyword", { query, page: 1 }))
+  return { keywords: page.results }
+}

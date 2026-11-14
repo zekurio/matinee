@@ -324,10 +324,25 @@ Library search doesn't depend on any of it.
 ### Connections
 
 A connection sends approved requests to a download manager: Radarr, Sonarr,
-or By hand, where an admin adds the file and the scan finds it. Under
-Settings → Requests each library picks the connection that fills it, with
-its own quality and folder. The library needs a metadata provider. Radarr
-needs a TMDB id and Sonarr a TheTVDB id, which Matinee looks up.
+or By hand, where an admin adds the file and the scan finds it. Each is set
+up under Settings → Requests the way Seerr sets up a server:
+
+- Radarr and Sonarr: a quality profile, a root folder, and tags, which
+  Matinee reads from the server once its URL and key test. Radarr adds a
+  minimum availability; Sonarr a series type, season folders, and whether
+  to monitor new seasons of every show, not only of requests that asked
+  for them.
+- Automatic search, on by default, searches as soon as a title is added.
+  Tag requests adds a tag named after the person who asked first, made on
+  the server if it has none yet. The external URL is where the queue's
+  "Open in Radarr" link points; without one it uses the base URL.
+- By hand has a folder for films and one for shows, picked from the
+  folders Matinee scans.
+
+One connection is the default for films and one for shows, as Seerr's
+default server. Turning the default on for one turns it off for the
+connection that had it. Requests of a kind with no default can't be made.
+Radarr needs a TMDB id and Sonarr a TheTVDB id, which Matinee looks up.
 
 A connection's API key comes from `MATINEE_CONNECTION_<SLUG>_API_KEY`, or
 its `_FILE` form, unless one is saved in the settings. A saved key is
@@ -339,20 +354,54 @@ To add a download manager, implement `FulfilmentSource` in
 
 ### Anime
 
-A library's mapping has a second, optional set of options under Anime: the
-same quality, folder, and series type choices, used for anime instead of
-the normal ones. Left empty, anime is sent like everything else.
+Sonarr has Seerr's four anime fields on the same form: anime series type,
+quality profile, root folder, and tags. A show that is anime goes with
+each that is filled instead of the normal one; left empty, anime goes like
+everything else. A title is anime when TheTVDB lists the Anime genre or
+TMDB has the "anime" keyword. Radarr has no anime fields; a rule on the
+"anime" keyword does the same.
 
-The folder decides where anime lands. With Sonarr saving shows to
-`/media/shows` and anime to `/media/anime`, and Matinee libraries on those
-two folders, anime asked for through the Shows mapping lands in the Anime
-library. A folder inside the library's own, like `/media/films/anime`,
-lands in the same library. When a download manager sees the folder under
-another path, as in a container, the settings ask for the library instead.
+### Override rules
 
-A title is anime when TheTVDB lists the Anime genre or TMDB has the "anime"
-keyword. An admin can send a waiting request to another library before
-adding it.
+A Radarr or Sonarr connection can have override rules, as in Seerr. A rule
+has conditions, any of users, genres, original languages, and TMDB
+keywords, and settings: a root folder, a quality profile, tags, and for
+Sonarr a series type. A title matches when it meets every condition that
+is filled, any of the values within one. A setting left empty keeps the
+connection's.
+
+Rules apply after the anime fields. When several match, the one meeting
+the most conditions wins, then the one listed first; the settings reorder
+them. The tags of every matching rule are added to the connection's. The
+user a rule checks is the person who asked first.
+
+Genres and keywords are TMDB's, read from the title's details through the
+provider cache. A title a library knows from TheTVDB is read again at
+TMDB by its TMDB id for them, so without `MATINEE_TMDB_API_KEY` rules on
+genres and keywords never match, and keywords can't be searched. Rules on
+users and on the original language, which TheTVDB also gives, still work.
+
+### Where a request lands
+
+The library follows from the folder. Matinee takes the default connection
+for the title's kind, applies its anime fields and rules, and finds the
+library of that kind whose folder is the resulting root folder or holds
+it. With Sonarr saving shows to `/media/shows` and anime to
+`/media/anime`, and libraries on those two folders, anime lands in the
+Anime library; a folder inside a library's own, like `/media/films/anime`,
+lands in that library. When a download manager sees a folder under
+another path, as in a container, the settings ask which library it lands
+in. A connection or rule whose folder lands in no library can't be saved.
+
+"Goes to", on a title's page and in the queue, offers every library some
+connection's settings, anime fields, or rules land in. Choosing one sends
+the request with the settings that land there. A library nothing lands in
+takes no requests.
+
+The request keeps the connection and the options it goes with, worked out
+when it's made and again when an admin moves a waiting one, so a later
+change to the connection or its rules doesn't send it elsewhere. One whose
+connection was deleted is worked out again when it's approved or retried.
 
 ### Sending, progress, and arrival
 
