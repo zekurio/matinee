@@ -25,6 +25,13 @@ export default {
     other: "{count} Sekunden",
   }),
 
+  "playback.shows.title": "Serien",
+  "playback.specials.title": "Specials anzeigen",
+  "playback.specials.note":
+    "Ist das aus, fehlen Specials bei den Staffeln einer Serie, unter „Als Nächstes“ und in Anfragen. Ein Special, das du über einen Link öffnest, läuft trotzdem.",
+  "playback.specials.failed":
+    "Konnte nicht ändern, ob Specials angezeigt werden",
+
   "playback.device.title": "Dieses Gerät",
   "playback.quality.title": "Qualität",
   "playback.quality.preset": "{height}p, {bitrate}",

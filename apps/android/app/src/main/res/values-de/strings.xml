@@ -409,6 +409,10 @@
     <string name="playback_decoders_title">Decoder</string>
     <string name="playback_decoders_hardware">Hardware zuerst</string>
     <string name="playback_decoders_software">Software zuerst</string>
+    <string name="playback_shows_title">Serien</string>
+    <string name="playback_specials_title">Specials anzeigen</string>
+    <string name="playback_specials_note">Ist das aus, fehlen Specials bei den Staffeln einer Serie, unter „Als Nächstes“ und in Anfragen. Ein Special, das du über einen Link öffnest, läuft trotzdem.</string>
+    <string name="playback_specials_failed">Konnte nicht ändern, ob Specials angezeigt werden</string>
     <string name="playback_skip_title">Springen</string>
     <string name="playback_skip_back">Zurückspringen um</string>
     <string name="playback_skip_forward">Vorspringen um</string>

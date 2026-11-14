@@ -102,6 +102,7 @@ CREATE TABLE "web_push_subscription" (
 --> statement-breakpoint
 ALTER TABLE "access_group" ADD COLUMN "requests" text DEFAULT 'off' NOT NULL;--> statement-breakpoint
 ALTER TABLE "access_group" ADD COLUMN "request_limit" jsonb;--> statement-breakpoint
+ALTER TABLE "user" ADD COLUMN "show_specials" boolean DEFAULT true NOT NULL;--> statement-breakpoint
 ALTER TABLE "fulfilment_rule" ADD CONSTRAINT "fulfilment_rule_connection_id_fulfilment_connection_id_fk" FOREIGN KEY ("connection_id") REFERENCES "public"."fulfilment_connection"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "notification" ADD CONSTRAINT "notification_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "notification" ADD CONSTRAINT "notification_request_id_request_id_fk" FOREIGN KEY ("request_id") REFERENCES "public"."request"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint

@@ -5,7 +5,7 @@ import { and, asc, count, desc, eq, max, sql } from "drizzle-orm"
 import type { Viewer } from "../access/viewer"
 import { inLibrariesArg, libraryArgs } from "../access/visible"
 import { anyOf, arg, db } from "../db"
-import { episodeOrder, publicItems } from "./items"
+import { episodeOrder, publicItems, shownFilesArg } from "./items"
 import { seasonsByTitle } from "./seasons"
 
 /** A show's newest files, from {@link latestAdditions}. */
@@ -30,13 +30,14 @@ const newestTitles = db
   .limit(arg("limit"))
   .prepare("shelf_titles")
 
-// Each title's first file, which is what Play starts.
+// Each title's first file, which is what Play starts. Hidden specials go
+// after the rest, so they're first only in a show with nothing else.
 // ACCESS: First files are keyed by the visible titles selected by newestTitles.
 const firstFiles = db
   .selectDistinctOn([mediaItem.titleId])
   .from(mediaItem)
   .where(anyOf(mediaItem.titleId, arg("ids"), "uuid"))
-  .orderBy(mediaItem.titleId, ...episodeOrder)
+  .orderBy(mediaItem.titleId, sql`not ${shownFilesArg}`, ...episodeOrder)
   .prepare("shelf_first_files")
 
 // ACCESS: Newest dates are keyed by the visible titles selected by newestTitles.
@@ -93,7 +94,10 @@ export async function shelf(
   if (titles.length === 0) return []
   const totals = new Map(titles.map(({ row, n }) => [row.id, n]))
   const [firsts, latest] = await Promise.all([
-    firstFiles.execute({ ids: [...totals.keys()] }),
+    firstFiles.execute({
+      ids: [...totals.keys()],
+      specials: viewer.showSpecials,
+    }),
     latestAdditions(
       titles.flatMap(({ row }) => (row.kind === "show" ? [row.id] : [])),
     ),
@@ -121,6 +125,9 @@ export async function shelf(
     const batch = batches.get(id)
     const item = batch && byId.get(batch.item.id)
     if (!batch || !item) return null
+    // New specials alone aren't news to someone who hides them.
+    if (!viewer.showSpecials && batch.oneSeason && item.seasonNumber === 0)
+      return null
     const all = seasons.get(id) ?? []
     // A show's only season is the show, whose page lists the episodes.
     const season =

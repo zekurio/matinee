@@ -1393,6 +1393,11 @@ data class PlaybackPreferences(
 )
 
 @Serializable
+data class LibraryPreferences(
+    val showSpecials: Boolean,
+)
+
+@Serializable
 data class ProfileSharing(
     val favorites: Boolean,
     val stats: Boolean,
@@ -1407,6 +1412,7 @@ data class AdminUser(
     val avatarId: String?,
     val avatarSource: String,
     val playback: PlaybackPreferences?,
+    val library: LibraryPreferences,
     val sharing: ProfileSharing,
     val createdAt: String,
     val lastSeenAt: String?,
@@ -1493,6 +1499,7 @@ data class User(
     val avatarId: String?,
     val avatarSource: String,
     val playback: PlaybackPreferences?,
+    val library: LibraryPreferences,
     val sharing: ProfileSharing,
 )
 
@@ -2607,6 +2614,7 @@ data class Title(
     val trailers: List<Trailer>,
     val itemCount: Int,
     val seasons: List<Season>,
+    val specials: Season?,
     val next: MediaItem?,
 )
 
@@ -2989,6 +2997,11 @@ data class AccountProfileUpdateInput(
         val stats: Boolean? = null,
     )
 }
+
+@Serializable
+data class AccountLibrarySetPreferencesInput(
+    val showSpecials: Boolean? = null,
+)
 
 @Serializable
 data class AccountPasskeysRegisterInput(

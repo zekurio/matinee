@@ -1,15 +1,19 @@
 import type { Season, Title } from "@matinee/contracts"
 import { Link } from "@tanstack/react-router"
 
+import { ActionsMenu } from "@/components/actions-menu"
+import { CardActions, CardScrim } from "@/components/card-actions"
 import type { CatalogSeasonEntry } from "@/components/catalog/catalog-data"
 import { CatalogSeasonCard } from "@/components/catalog/catalog-season-card"
+import { useSeasonFavorite } from "@/components/favorite-button"
 import {
   cardClass,
   CardText,
   PosterArt,
-  WatchedBadge,
+  UnwatchBadge,
 } from "@/components/media-item"
 import { Rail, RailItem } from "@/components/rail"
+import { useSeasonWatched } from "@/components/watched-menu"
 import { tr } from "@/i18n"
 import { art, seasonName } from "@/lib/media"
 
@@ -77,7 +81,10 @@ export function SeasonsRail({
 
 /**
  * A season's poster, or the show's when it has none, with how many
- * episodes are left to watch in its corner, or a check once none are.
+ * episodes are left to watch in its corner, or a check once none are,
+ * which marks it unwatched again. As on a poster, hovering or focusing it
+ * shows the icons that mark it watched or a favorite and its "⋯" menu,
+ * which touch screens always show.
  */
 function SeasonCard({
   title,
@@ -89,23 +96,55 @@ function SeasonCard({
   /** What the server says of the season when only part of it is here. */
   partial?: CatalogSeasonEntry
 }) {
-  const left = season.itemCount - season.watchedCount
+  const watched = useSeasonWatched(title, season, undefined)
+  const favorite = useSeasonFavorite(title, season)
+  const name = tr("title.seasonOf", {
+    show: title.name,
+    season: seasonName(season.number),
+  })
+  // Marked unwatched, the counts catch up once the server answers; until
+  // then every episode is left.
+  const counted = season.itemCount - season.watchedCount
+  const left = counted > 0 ? counted : season.itemCount
   return (
-    <Link
-      to="/titles/$titleId/seasons/$season"
-      params={seasonParams(title, season)}
-      className={cardClass}
-    >
-      <PosterArt
-        name={tr("title.seasonOf", {
-          show: title.name,
-          season: seasonName(season.number),
-        })}
-        toneKey={title.id}
-        poster={art(season.poster ?? title.images.poster)}
+    <div className="group/card relative">
+      <Link
+        to="/titles/$titleId/seasons/$season"
+        params={seasonParams(title, season)}
+        title={name}
+        className={cardClass}
       >
-        {left === 0 ? (
-          <WatchedBadge className="absolute top-1.5 right-1.5" />
+        <PosterArt
+          name={name}
+          toneKey={title.id}
+          poster={art(season.poster ?? title.images.poster)}
+          scrim
+        >
+          <CardScrim />
+        </PosterArt>
+        <CardText
+          primary={seasonName(season.number)}
+          secondary={
+            partial
+              ? tr("title.seasons.partial", {
+                  here: partial.availability.episodesHere,
+                  count: partial.availability.episodesAired,
+                })
+              : tr("title.episodeCount", { count: season.itemCount })
+          }
+        />
+      </Link>
+      {/* The buttons can't sit in the link, so this box lies over the
+          poster to put them on it: the count or the check at the top, the
+          icons at the bottom, clear of each other. */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 aspect-[2/3]">
+        {watched.on ? (
+          <UnwatchBadge
+            name={name}
+            watched={watched}
+            touch
+            className="pointer-events-auto absolute top-1.5 right-1.5"
+          />
         ) : (
           <span
             role="img"
@@ -115,18 +154,20 @@ function SeasonCard({
             {left}
           </span>
         )}
-      </PosterArt>
-      <CardText
-        primary={seasonName(season.number)}
-        secondary={
-          partial
-            ? tr("title.seasons.partial", {
-                here: partial.availability.episodesHere,
-                count: partial.availability.episodesAired,
-              })
-            : tr("title.episodeCount", { count: season.itemCount })
-        }
-      />
-    </Link>
+        <CardActions
+          name={name}
+          watched={watched}
+          favorite={favorite}
+          menu={
+            <ActionsMenu
+              target={{ kind: "season", title, season }}
+              look="card"
+            />
+          }
+          touch
+          className="pointer-events-auto absolute right-1 bottom-1"
+        />
+      </div>
+    </div>
   )
 }

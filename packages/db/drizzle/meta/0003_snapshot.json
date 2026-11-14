@@ -1,5 +1,5 @@
 {
-  "id": "e91a793e-da2b-47a2-8594-4d57d2209126",
+  "id": "26603ee7-8b3c-4610-b4e8-0b913b65053d",
   "prevId": "cd8fd953-26bb-42d2-9f81-f9e4cf8518a6",
   "version": "7",
   "dialect": "postgresql",
@@ -3302,6 +3302,13 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
+        },
+        "show_specials": {
+          "name": "show_specials",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
         },
         "share_favorites": {
           "name": "share_favorites",

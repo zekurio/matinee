@@ -223,7 +223,10 @@ export async function routedDetails(
         ).length,
       }
     })
-  const seasons = gettableSeasons(listed, data.status)
+  const seasons = shownSeasons(
+    gettableSeasons(listed, data.status),
+    viewer.showSpecials,
+  )
   const [state] = await availability(viewer, [
     {
       ref,
@@ -320,6 +323,19 @@ function gettableSeasons<T extends { number: number; episodeCount: number }>(
     (season) =>
       season.episodeCount > 0 || (running && season.number === last + 1),
   )
+}
+
+/**
+ * The seasons a viewer is offered: with specials hidden, all but season 0,
+ * unless that's all the show has.
+ */
+function shownSeasons<T extends { number: number }>(
+  seasons: T[],
+  showSpecials: boolean,
+): T[] {
+  if (showSpecials) return seasons
+  const shown = seasons.filter((season) => season.number !== 0)
+  return shown.length > 0 ? shown : seasons
 }
 
 export async function missingSeasons(viewer: Viewer, titleId: string) {

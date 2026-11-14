@@ -565,8 +565,18 @@ export const Title = TitleSummary.extend({
    * Empty when the provider has none.
    */
   trailers: t.array(Trailer),
+  /** Its files, less the specials when the account hides them. */
   itemCount: t.number().int(),
+  /**
+   * The seasons it has files in, in order. Season 0 is left out when the
+   * account hides specials and the show has other seasons.
+   */
   seasons: t.array(Season),
+  /**
+   * Season 0 when it's left out of `seasons`, so its own page still opens
+   * from a link. Null otherwise.
+   */
+  specials: Season.nullable(),
   /** What Play starts: the file in progress, the next one, or the first. */
   next: MediaItem.nullable(),
 })
