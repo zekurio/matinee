@@ -158,23 +158,24 @@ private struct IdentifyForm: View {
       }
       .frame(width: stacked ? nil : yearWidth)
     }
-    let button = MatineeButton(.secondary, action: submit) {
-      LucideIcon(.search, size: 16)
-      Text(Str.titleIdentifySearch)
+    let button = { (fill: Bool) in
+      MatineeButton(.secondary, action: submit) {
+        ButtonContent(Str.titleIdentifySearch, icon: .search, fill: fill)
+      }
     }
     return VStack(alignment: .leading, spacing: 12) {
       if stacked {
         VStack(alignment: .leading, spacing: 12) { fields }
-        button.frame(maxWidth: .infinity)
+        button(true)
       } else if wide {
         // A tablet's width has room for the button beside the fields.
         HStack(alignment: .bottom, spacing: 8) {
           fields
-          button.padding(.bottom, 4)
+          button(false).padding(.bottom, 4)
         }
       } else {
         HStack(alignment: .bottom, spacing: 8) { fields }
-        button
+        button(true)
       }
     }
     .padding(.bottom, 12)
@@ -280,8 +281,9 @@ private struct Field<Content: View>: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 6) {
-      Text(label).textStyle(.labelMedium).foregroundStyle(palette.muted)
-      content()
+      Text(label).textStyle(.labelMedium).foregroundStyle(palette.muted).accessibilityHidden(true)
+      // The field says what it's for, as the label above can't to VoiceOver.
+      content().accessibilityLabel(label)
     }
   }
 }
@@ -537,19 +539,19 @@ private struct ImageEditor: View {
     VStack(alignment: .leading, spacing: 8) {
       if isWide(window) {
         HStack(spacing: 8) {
-          uploadButton
-          if offered.remove { removeButton }
-          if offered.reset { resetButton(providerName ?? "") }
+          uploadButton(fill: false)
+          if offered.remove { removeButton(fill: false) }
+          if offered.reset { resetButton(providerName ?? "", fill: false) }
         }
       } else {
         // A phone's buttons fill the width: upload and remove side by
         // side, and going back to the provider's, whose name is long, on a
         // line of its own.
         HStack(spacing: 8) {
-          uploadButton.frame(maxWidth: .infinity)
-          if offered.remove { removeButton.frame(maxWidth: .infinity) }
+          uploadButton(fill: true)
+          if offered.remove { removeButton(fill: true) }
         }
-        if offered.reset { resetButton(providerName ?? "").frame(maxWidth: .infinity) }
+        if offered.reset { resetButton(providerName ?? "", fill: true) }
       }
       if lists {
         Toggle(isOn: $allLanguages) {
@@ -564,29 +566,26 @@ private struct ImageEditor: View {
 
   /// Upload offers both of iOS's pickers, where Android has one: the photo
   /// library, which needs no permission, and Files.
-  private var uploadButton: some View {
+  private func uploadButton(fill: Bool) -> some View {
     Menu {
       Button(Str.iosImagesFromPhotos) { picking = true }
       Button(Str.iosImagesFromFiles) { importing = true }
     } label: {
-      Busy(busy?.isUpload == true, icon: .imageUp)
-      Text(Str.titleImagesUpload)
+      ButtonContent(Str.titleImagesUpload, icon: .imageUp, busy: busy?.isUpload == true, fill: fill)
     }
     .menuStyle(.button)
     .buttonStyle(.matinee(.secondary, height: 40))
   }
 
-  private var removeButton: some View {
+  private func removeButton(fill: Bool) -> some View {
     MatineeButton(.outline, height: 40) { change(.pick(nil)) } label: {
-      Busy(busy == .pick(nil), icon: .trash)
-      Text(Str.titleImagesRemove)
+      ButtonContent(Str.titleImagesRemove, icon: .trash, busy: busy == .pick(nil), fill: fill)
     }
   }
 
-  private func resetButton(_ providerName: String) -> some View {
+  private func resetButton(_ providerName: String, fill: Bool) -> some View {
     MatineeButton(.outline, height: 40) { change(.reset) } label: {
-      Busy(busy == .reset, icon: .rotateCcw)
-      Text(Str.titleImagesReset(providerName))
+      ButtonContent(Str.titleImagesReset(providerName), icon: .rotateCcw, busy: busy == .reset, fill: fill)
     }
   }
 
@@ -716,6 +715,29 @@ private struct ImageEditor: View {
     let handle = try? FileHandle(forReadingFrom: url)
     defer { try? handle?.close() }
     send(checkUpload(try? handle?.read(upToCount: Int(MAX_IMAGE_BYTES) + 1)))
+  }
+}
+
+/// A button's icon and words, filling its width with `fill`.
+private struct ButtonContent: View {
+  let text: String
+  let icon: Lucide
+  var busy = false
+  let fill: Bool
+
+  init(_ text: String, icon: Lucide, busy: Bool = false, fill: Bool) {
+    self.text = text
+    self.icon = icon
+    self.busy = busy
+    self.fill = fill
+  }
+
+  var body: some View {
+    HStack(spacing: 8) {
+      Busy(busy, icon: icon)
+      Text(text)
+    }
+    .frame(maxWidth: fill ? .infinity : nil)
   }
 }
 
