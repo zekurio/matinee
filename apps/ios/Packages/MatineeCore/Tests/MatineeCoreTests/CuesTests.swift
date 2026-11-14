@@ -59,4 +59,10 @@ import Testing
     #expect(track.at(-1).isEmpty)
     #expect(track.at(20).map(\.text) == (4..<20).map(String.init))
   }
+  @Test func plainTextIsOneUnstyledSpan() {
+    let cue = Cue(text: "Subtitles look like this")
+    #expect(cue.text == "Subtitles look like this")
+    #expect(cue.spans == [CueSpan(text: "Subtitles look like this")])
+    #expect(!cue.spans[0].bold && !cue.spans[0].italic && !cue.spans[0].underline)
+  }
 }

@@ -628,62 +628,14 @@ private struct SubtitlePreview: View {
     .frame(height: wide ? nil : 140)
     .aspectRatio(wide ? 16 / 9 : nil, contentMode: .fit)
     .overlay(alignment: .bottom) {
-      SubtitleSample(text: Str.settingsSubtitlesPreview, look: look, size: wide ? 20 : 16)
+      // The player's own cue line, so the sample is what plays.
+      SubtitleLine(cue: Cue(text: Str.settingsSubtitlesPreview), look: look, size: wide ? 20 : 16)
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
     }
     .clipShape(shape)
     .overlay { shape.strokeBorder(palette.border) }
     .accessibilityElement(children: .combine)
-  }
-}
-
-/// One cue, centered, at `size` times the look's scale, as Android's
-/// `SubtitleLine` draws it: the text over its background, inside the
-/// window, with a shadow or an outline drawn under the fill.
-///
-/// The player draws its cues from the same `subtitleLook(prefs)`; this is
-/// the sample's copy of how a line is drawn, until the player's own cue
-/// view can draw it here instead.
-private struct SubtitleSample: View {
-  let text: String
-  let look: SubtitleLook
-  var size: CGFloat = 20
-
-  var body: some View {
-    let fontSize = size * look.scale
-    let font = look.font.flatMap { UIFont(name: $0, size: fontSize) }.map { Font($0) }
-      ?? .system(size: fontSize, weight: .medium)
-    let line = Text(text).font(font).multilineTextAlignment(.center).lineSpacing(fontSize * 0.3)
-    let edge = look.edgeColor.color
-    ZStack {
-      if look.edge == .outline {
-        // A round stroke 0.14 of the size wide, as Android's, drawn as the text around it.
-        let width = fontSize * 0.07
-        ForEach(0..<8, id: \.self) { step in
-          let angle = Double(step) * .pi / 4
-          line.foregroundStyle(edge).offset(x: cos(angle) * width, y: sin(angle) * width)
-        }
-      }
-      line.foregroundStyle(look.color.color)
-        .shadow(color: shadow.color, radius: shadow.radius, x: shadow.x, y: shadow.y)
-    }
-    .padding(.horizontal, look.background.alpha > 0 ? 8 : 0)
-    .padding(.vertical, 2)
-    .background(look.background.color, in: RoundedRectangle(cornerRadius: 4))
-    .padding(look.window.alpha > 0 ? 6 : 0)
-    .background(look.window.color, in: RoundedRectangle(cornerRadius: 6))
-  }
-
-  /// A soft one below for a shadow; a hard edge above and to the left, or below and to the right, for raised and depressed.
-  private var shadow: (color: Color, radius: CGFloat, x: CGFloat, y: CGFloat) {
-    let edge = look.edgeColor.color
-    return switch look.edge {
-    case .shadow: (edge, 2, 0, 1)
-    case .raised: (edge, 0, -1, -1)
-    case .depressed: (edge, 0, 1, 1)
-    default: (.clear, 0, 0, 0)
-    }
   }
 }
 
