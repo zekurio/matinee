@@ -74,10 +74,9 @@
     <string name="tab_profile">Profil</string>
     <string name="profile_admin">Admin</string>
     <string name="profile_joined">Dabei seit %1$s</string>
-    <string name="profile_no_favorites_hint">Tippe bei einem Film, einer Serie, einer Staffel oder einer Folge auf das Herz, um sie hier zu sammeln.</string>
     <string name="profile_statistics">Statistiken</string>
-    <string name="profile_self_empty">Deine Statistiken füllen sich, während du schaust</string>
-    <string name="profile_self_empty_hint">Sehzeit und deine meistgeschauten Titel erscheinen hier nach deiner ersten Wiedergabe.</string>
+    <string name="profile_self_empty">Noch nichts geschaut</string>
+    <string name="profile_self_empty_hint">Deine Sehzeit und deine meistgeschauten Titel erscheinen hier.</string>
     <string name="profile_nothing_watched">Nichts geschaut %1$s</string>
     <string name="profile_show_all_time">Gesamten Zeitraum zeigen</string>
     <string name="profile_recent">Zuletzt geschaut</string>
@@ -128,7 +127,7 @@
     <string name="favorites_episodes">Folgen</string>
     <string name="favorites_movies">Filme</string>
     <string name="favorites_empty">Noch keine Favoriten</string>
-    <string name="favorites_empty_hint">Tippe bei einem Film, einer Serie, einer Staffel oder einer Folge auf das Herz, um sie hier zu sammeln.</string>
+    <string name="favorites_empty_hint">Tippe bei einem Titel auf das Herz, um ihn hier zu speichern.</string>
     <string name="favorites_load_failed">Deine Favoriten konnten nicht geladen werden</string>
     <string name="home_load_failed">Deine Mediatheken konnten nicht geladen werden</string>
     <string name="browse_continue_watching">Weiterschauen</string>

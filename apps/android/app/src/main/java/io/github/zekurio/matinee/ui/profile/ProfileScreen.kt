@@ -214,8 +214,10 @@ private fun Favorites(profile: Profile) {
     if (favorites.isEmpty()) {
         Column(Modifier.padding(horizontal = Gutter)) {
             SectionTitle(stringResource(R.string.favorites_title))
-            Gap(8.dp)
-            Text(stringResource(R.string.profile_no_favorites_hint), style = MaterialTheme.typography.bodyMedium, color = Palette.Muted)
+            Gap(16.dp)
+            Text(stringResource(R.string.favorites_empty), style = MaterialTheme.typography.bodyLarge)
+            Gap(4.dp)
+            Text(stringResource(R.string.favorites_empty_hint), style = MaterialTheme.typography.bodyMedium, color = Palette.Muted)
         }
         return
     }
