@@ -604,7 +604,7 @@ private struct ImageEditor: View {
     if provider.state.isLoading {
       LoadingBox().padding(32)
     } else if !lists {
-      Note(text: providerName.map(Str.titleImagesUnmatched) ?? Str.titleImagesNoProvider)
+      EmptyNote(text: providerName.map(Str.titleImagesUnmatched) ?? Str.titleImagesNoProvider)
     } else {
       switch remote {
       case .loading:
@@ -616,7 +616,7 @@ private struct ImageEditor: View {
         }
         .padding(.horizontal, Gutter)
       case .ready(let found) where found.isEmpty:
-        Note(
+        EmptyNote(
           text: allLanguages
             ? Str.titleImagesEmpty(providerName ?? "") : Str.titleImagesEmptyLanguage(providerName ?? ""))
       case .ready(let found):
@@ -775,7 +775,7 @@ private struct Busy: View {
 }
 
 /// Why there's nothing to pick, in the middle of the page.
-private struct Note: View {
+private struct EmptyNote: View {
   let text: String
   @Environment(\.palette) private var palette
 
