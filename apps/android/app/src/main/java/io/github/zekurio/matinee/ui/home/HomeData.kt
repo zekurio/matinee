@@ -24,6 +24,13 @@ class HomeLoaders(
 }
 
 /**
+ * When the viewer last watched each Next up episode's show, by the
+ * episode's id, as the server sent it, so the phone's Home can put the
+ * next seasons to ask for among them in the same order.
+ */
+internal val nextUpWatchedAt = java.util.concurrent.ConcurrentHashMap<String, String>()
+
+/**
  * Home's loads: the libraries, Continue watching, Next up, and featured.
  * Continue watching and Next up are kept for offline Home as they come.
  * Back on Home, what's in progress may have moved on, here or on another
@@ -34,7 +41,9 @@ class HomeLoaders(
 fun rememberHomeLoaders(): HomeLoaders {
     val libraries = rememberLoader("libraries") { libraries.list() }
     val resume = rememberLoader("continue") { home.continueWatching(limit = 20) }
-    val nextUp = rememberLoader("nextUp") { home.nextUp(limit = 20).map { it.item } }
+    val nextUp = rememberLoader("nextUp") {
+        home.nextUp(limit = 20).onEach { nextUpWatchedAt[it.item.id] = it.lastWatchedAt }.map { it.item }
+    }
     val featured = rememberLoader("featured") { home.featured() }
     val context = LocalContext.current
     val snapshot = remember { HomeSnapshot(context) }

@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Made by scripts/web_strings.py from apps/web/src/i18n/locales/de/ask.ts. Don't edit. -->
+<resources>
+    <string name="web_ask_ask">Anfragen</string>
+    <string name="web_ask_more">Mehr anfragen</string>
+    <string name="web_ask_notify">Mich benachrichtigen</string>
+    <string name="web_ask_stopNotifying">Nicht mehr benachrichtigen</string>
+    <string name="web_ask_cancel">Anfrage zurückziehen</string>
+    <string name="web_ask_dialog_title">%1$s anfragen</string>
+    <string name="web_ask_dialog_goesTo">Kommt in</string>
+    <string name="web_ask_chooser_seasons">Staffeln</string>
+    <string name="web_ask_chooser_future">Neue Staffeln, sobald sie laufen</string>
+    <string name="web_ask_chooser_unavailable">Nicht im Angebot</string>
+    <string name="web_ask_chooser_none">Wähle eine Staffel</string>
+    <string name="web_ask_chooser_one">Staffel %1$s anfragen</string>
+    <plurals name="web_ask_chooser_many">
+        <item quantity="one">%1$d Staffel anfragen</item>
+        <item quantity="other">%1$d Staffeln anfragen</item>
+    </plurals>
+    <string name="web_ask_chooser_specials">Specials anfragen</string>
+    <string name="web_ask_chooser_newOnly">Neue Staffeln anfragen</string>
+    <string name="web_ask_declined_why">Abgelehnt: %1$s.</string>
+    <string name="web_ask_declined_notFound">Der Titel ließ sich nicht finden.</string>
+    <string name="web_ask_declined_note">„%1$s“</string>
+    <string name="web_ask_disabled_declined">Ein Admin hat diesen Titel abgelehnt, deshalb kann man ihn nicht anfragen.</string>
+    <string name="web_ask_disabled_declinedAdmin">Abgelehnt. Um Anfragen wieder zuzulassen, such ihn unter Erledigt in Anfragen.</string>
+    <string name="web_ask_disabled_off">Dein Konto kann keine Titel anfragen.</string>
+    <string name="web_ask_disabled_noDestination">Keine Mediathek hier nimmt das auf.</string>
+    <string name="web_ask_limit_until">Bis zum %1$s keine Anfragen mehr.</string>
+    <string name="web_ask_limit_later">Gerade keine Anfragen mehr.</string>
+    <plurals name="web_ask_left">
+        <item quantity="one">Noch %1$d Anfrage.</item>
+        <item quantity="other">Noch %1$d Anfragen.</item>
+    </plurals>
+    <string name="web_ask_reason_alreadyHere">Haben wir schon.</string>
+    <string name="web_ask_reason_notForServer">Passt nicht auf diesen Server.</string>
+    <string name="web_ask_reason_notFound">Nicht auffindbar.</string>
+    <string name="web_ask_reason_declined">Abgelehnt.</string>
+    <string name="web_ask_toast_asked">%1$s angefragt</string>
+    <string name="web_ask_toast_undo">Rückgängig</string>
+    <string name="web_ask_toast_failed">%1$s konnte nicht angefragt werden</string>
+    <string name="web_ask_toast_cancelFailed">%1$s konnte nicht zurückgezogen werden</string>
+    <string name="web_ask_toast_followFailed">Benachrichtigungen konnten nicht geändert werden</string>
+    <string name="web_ask_mine_title">Meine Anfragen</string>
+    <string name="web_ask_mine_seeAll">Alle ansehen</string>
+    <string name="web_ask_mine_inProgress">Aktuell</string>
+    <string name="web_ask_mine_all">Alle</string>
+    <string name="web_ask_mine_filter">Zeigen</string>
+    <string name="web_ask_mine_empty">Noch nichts angefragt</string>
+    <string name="web_ask_mine_emptyHint">Such nach einem Film oder einer Serie, die es hier nicht gibt, und frag sie auf ihrer Seite an.</string>
+    <string name="web_ask_mine_emptyInProgress">Nichts unterwegs</string>
+    <string name="web_ask_mine_error">Deine Anfragen konnten nicht geladen werden. %1$s</string>
+</resources>

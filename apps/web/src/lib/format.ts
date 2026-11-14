@@ -132,3 +132,67 @@ const months = perLocale(
 export function formatMonth(date: Date): string {
   return months().format(date)
 }
+
+const days = perLocale(
+  (locale) =>
+    new Intl.DateTimeFormat(locale, { month: "short", day: "numeric" }),
+)
+
+/**
+ * "14 Aug" or "Aug 14", as the language has it, with the year only when
+ * it isn't this one: "Aug 14, 2027".
+ */
+export function formatDay(date: Date): string {
+  return date.getFullYear() === new Date().getFullYear()
+    ? days().format(date)
+    : formatDate(date)
+}
+
+/**
+ * A calendar day the server sent as `2026-08-14`, at local midnight, so
+ * it doesn't move a day in time zones west of UTC.
+ */
+export function parseDay(day: string): Date | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(day)
+  if (!match) return null
+  return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
+}
+
+const percents = perLocale(
+  (locale) =>
+    new Intl.NumberFormat(locale, {
+      style: "percent",
+      maximumFractionDigits: 0,
+    }),
+)
+
+/** "64 %" or "64%", for a share from 0 to 1. */
+export function formatPercent(share: number): string {
+  return percents().format(share)
+}
+
+const scores = perLocale(
+  (locale) =>
+    new Intl.NumberFormat(locale, {
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1,
+    }),
+)
+
+/** A user score on 0 to 10 with one decimal: "8.3" or "8,3". */
+export function formatScore(score: number): string {
+  return scores().format(score)
+}
+
+const regions = perLocale(
+  (locale) => new Intl.DisplayNames(locale, { type: "region" }),
+)
+
+/** A country's name for its ISO 3166-1 code, or the code if unknown. */
+export function formatRegion(code: string): string {
+  try {
+    return regions().of(code) ?? code
+  } catch {
+    return code
+  }
+}

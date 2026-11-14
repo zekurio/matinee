@@ -73,6 +73,11 @@ export type TitleDetails = {
   overview: string | null
   tagline: string | null
   genres: string[]
+  /**
+   * The provider calls it anime: TheTVDB's Anime genre, TMDB's "anime"
+   * keyword. Requests route anime by it; nothing else decides it.
+   */
+  anime: boolean
   rating: number | null
   contentRating: string | null
   releaseDate: string | null

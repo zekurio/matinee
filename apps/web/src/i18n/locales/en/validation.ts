@@ -68,4 +68,11 @@ export default defineMessages("validation", {
   "validation.fileEmpty": "That file is empty.",
   "validation.avatarSize": "Pick an image under 10 MB.",
   "validation.avatarType": "Pick a JPEG, PNG, or WebP image.",
+
+  // discover.ts: browsing the catalog with filters.
+  "validation.browseLanguage": "Use a two-letter language code like en.",
+  "validation.browseYears": "The first year can't be after the last.",
+  "validation.browseScores": "The lowest score can't be above the highest.",
+  "validation.browseRuntime":
+    "The shortest runtime can't be longer than the longest.",
 })

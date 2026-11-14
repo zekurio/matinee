@@ -65,11 +65,14 @@ export function TitlePage() {
         <>
           <NextUp title={title.data} />
           {only ? (
-            <ShowEpisodes
-              key={title.data.id}
-              title={title.data}
-              season={only}
-            />
+            <>
+              <ShowEpisodes
+                key={title.data.id}
+                title={title.data}
+                season={only}
+              />
+              <SeasonsRail title={title.data} extraOnly />
+            </>
           ) : (
             <SeasonsRail title={title.data} />
           )}

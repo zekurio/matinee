@@ -1,3 +1,4 @@
+import { catalogContract } from "./catalog"
 import { adminContract } from "./contract-admin"
 import { accountContract, authContract } from "./contract-auth"
 import {
@@ -17,6 +18,10 @@ import {
   profilesContract,
   statsContract,
 } from "./contract-watching"
+import { discoverContract } from "./discover"
+import { adminFulfilmentContract } from "./fulfilment"
+import { notificationsContract } from "./notifications"
+import { requestsContract, adminRequestsContract } from "./requests"
 
 /**
  * The API between the server and every client. The server implements it
@@ -26,6 +31,10 @@ import {
  * `paths.ts`.
  */
 export const contract = {
+  catalog: catalogContract,
+  discover: discoverContract,
+  requests: requestsContract,
+  notifications: notificationsContract,
   auth: authContract,
   account: accountContract,
   libraries: librariesContract,
@@ -41,7 +50,11 @@ export const contract = {
   favorites: favoritesContract,
   profiles: profilesContract,
   stats: statsContract,
-  admin: adminContract,
+  admin: {
+    ...adminContract,
+    requests: adminRequestsContract,
+    fulfilment: adminFulfilmentContract,
+  },
 }
 
 export type Contract = typeof contract

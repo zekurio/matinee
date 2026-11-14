@@ -1,6 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Made by scripts/web_strings.py from apps/web/src/i18n/locales/de/jobs.ts. Don't edit. -->
 <resources>
+    <string name="web_jobs_task_dispatch_requests_name">Anfragen senden</string>
+    <string name="web_jobs_task_dispatch_requests_description">Angenommene Anfragen zum Senden finden.</string>
+    <string name="web_jobs_task_poll_requests_name">Fortschritt der Anfragen lesen</string>
+    <string name="web_jobs_task_poll_requests_description">Aktive Anfragen einmal je Verbindung prüfen.</string>
+    <string name="web_jobs_task_reconcile_requests_name">Eingänge für Anfragen abgleichen</string>
+    <string name="web_jobs_task_reconcile_requests_description">Abspielbare Filme und Staffeln für angenommene Anfragen finden.</string>
+    <string name="web_jobs_queue_request_dispatch_name">Anfragen übermitteln</string>
+    <string name="web_jobs_queue_request_dispatch_description">Angenommene Titel an die Bibliotheksverbindung übermitteln.</string>
+    <string name="web_jobs_queue_request_progress_name">Anfragenfortschritt</string>
+    <string name="web_jobs_queue_request_progress_description">Fortschritt von Titeln prüfen, die unterwegs sind.</string>
+    <string name="web_jobs_queue_request_arrival_name">Eingetroffene Anfragen</string>
+    <string name="web_jobs_queue_request_arrival_description">Neue Bibliothekstitel zuordnen und Interessierte benachrichtigen.</string>
+    <string name="web_jobs_queue_notifications_name">Benachrichtigungen</string>
+    <string name="web_jobs_queue_notifications_description">Gespeicherte Benachrichtigungen per Web-Push zustellen.</string>
+    <string name="web_jobs_queue_catalog_name">Katalog</string>
+    <string name="web_jobs_queue_catalog_description">Zwischengespeicherte Katalog- und Entdecken-Antworten aktualisieren.</string>
     <string name="web_jobs_queues">Hintergrundaufgaben</string>
     <string name="web_jobs_loadFailed">Die Aufträge konnten nicht geladen werden. %1$s</string>
     <string name="web_jobs_retry">Erneut versuchen</string>
@@ -72,6 +88,8 @@
     <string name="web_jobs_task_clean_transcodes_name">Transkodierungen aufräumen</string>
     <string name="web_jobs_task_clean_sessions_name">Abgelaufene Sitzungen löschen</string>
     <string name="web_jobs_task_clean_sessions_description">Entfernt abgelaufene Anmeldungen aus der Datenbank.</string>
+    <string name="web_jobs_task_forget_browsed_pages_name">Gefilterte Katalogseiten vergessen</string>
+    <string name="web_jobs_task_forget_browsed_pages_description">Löscht Seiten des gefilterten Katalogs, die eine Woche lang niemand geöffnet hat.</string>
     <string name="web_jobs_task_sync_oidc_accounts_name">Anbieterkonten synchronisieren</string>
     <string name="web_jobs_task_sync_oidc_accounts_description">Rollen, Profilbilder und Zugriff beim Anmeldeanbieter für Konten mit einem Refresh-Token aktualisieren.</string>
     <string name="web_jobs_task_neverRan">Noch nie gelaufen</string>

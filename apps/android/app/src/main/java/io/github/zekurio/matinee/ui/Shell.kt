@@ -30,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -66,6 +67,14 @@ import io.github.zekurio.matinee.ui.metadata.IdentifyScreen
 import io.github.zekurio.matinee.ui.metadata.ImagesScreen
 import io.github.zekurio.matinee.ui.profile.ProfileScreen
 import io.github.zekurio.matinee.ui.profile.RecentScreen
+import io.github.zekurio.matinee.ui.requests.AskedScreen
+import io.github.zekurio.matinee.ui.requests.CatalogBrowseScreen
+import io.github.zekurio.matinee.ui.requests.CatalogScreen
+import io.github.zekurio.matinee.ui.requests.DiscoverRailScreen
+import io.github.zekurio.matinee.ui.requests.LocalRequests
+import io.github.zekurio.matinee.ui.requests.RequestsAround
+import io.github.zekurio.matinee.ui.requests.RequestsHub
+import io.github.zekurio.matinee.ui.requests.RequestsScreen
 import io.github.zekurio.matinee.ui.search.SearchScreen
 import io.github.zekurio.matinee.ui.settings.LinkDeviceScreen
 import io.github.zekurio.matinee.ui.settings.SettingsPageScreen
@@ -101,13 +110,18 @@ fun SignedInApp(session: Session, user: User, offline: Boolean = false) {
     val actionScope = rememberCoroutineScope()
     val actions = remember { Actions(actionScope) }
     val snackbar = remember { SnackbarHostState() }
+    val app = LocalContext.current.app
+    val api = session.requireApi()
+    val requests = remember(api) { RequestsHub(api, actionScope, snackbar, app.notices) }
+    requests.resources = LocalResources.current
     CompositionLocalProvider(
-        LocalApi provides session.requireApi(),
+        LocalApi provides api,
         LocalNavigator provides navigator,
         LocalActions provides actions,
         LocalSnackbar provides snackbar,
         LocalUser provides user,
         LocalOffline provides offline,
+        LocalRequests provides requests,
     ) {
         Box(Modifier.fillMaxSize()) {
             SharedTransitionLayout {
@@ -123,7 +137,10 @@ fun SignedInApp(session: Session, user: User, offline: Boolean = false) {
             )
         }
         ActionsSheet(actions)
-        if (!offline) FollowPlaybackOptions()
+        if (!offline) {
+            FollowPlaybackOptions()
+            RequestsAround(session)
+        }
     }
 }
 
@@ -202,6 +219,11 @@ private fun Pages(controller: NavHostController, session: Session, offline: Bool
         }
         screen<DownloadsRoute>(tab = DownloadsRoute) { DownloadsScreen() }
         screen<DownloadsShowRoute> { DownloadsShowScreen(it.toRoute<DownloadsShowRoute>().titleId) }
+        screen<CatalogRoute> { CatalogScreen(it.toRoute<CatalogRoute>()) }
+        screen<DiscoverRailRoute> { DiscoverRailScreen(it.toRoute<DiscoverRailRoute>().rail) }
+        screen<CatalogBrowseRoute> { CatalogBrowseScreen(it.toRoute<CatalogBrowseRoute>().kind) }
+        screen<AskedRoute> { AskedScreen() }
+        screen<RequestsRoute> { RequestsScreen(it.toRoute<RequestsRoute>().list) }
     }
 }
 

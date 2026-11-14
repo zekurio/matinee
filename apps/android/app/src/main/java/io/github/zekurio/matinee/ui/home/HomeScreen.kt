@@ -29,7 +29,16 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.Library
+import io.github.zekurio.matinee.api.CatalogInput
 import io.github.zekurio.matinee.api.MediaItem
+import io.github.zekurio.matinee.api.NextSeasonEntry
+import io.github.zekurio.matinee.ui.RefreshOnResume
+import io.github.zekurio.matinee.ui.rememberLoader
+import io.github.zekurio.matinee.ui.requests.FollowTitles
+import io.github.zekurio.matinee.ui.requests.HomeAskedRail
+import io.github.zekurio.matinee.ui.requests.NextSeasonCard
+import io.github.zekurio.matinee.ui.requests.ReloadOnAsk
+import java.time.Instant
 import io.github.zekurio.matinee.api.TitleSort
 import io.github.zekurio.matinee.api.isAdmin
 import io.github.zekurio.matinee.ui.AppHeader
@@ -71,6 +80,12 @@ private fun OnlineHomeScreen() {
     val resume = loaders.resume
     val nextUp = loaders.nextUp
     val featured = loaders.featured
+    // Slower than Next up, since it asks the catalog, so the row doesn't wait for it; its cards join when they come.
+    val nextSeasons = rememberLoader("nextSeasons") { home.nextSeasons(limit = 20) }
+    ReloadOnAsk(nextSeasons)
+    RefreshOnResume(nextSeasons)
+    val seasonEntries = (nextSeasons.state as? Load.Ready)?.value.orEmpty()
+    FollowTitles(seasonEntries.map { CatalogInput(it.ref, it.libraryId) })
     // Shelves on screen whose refresh failed, for the one notice that says so.
     val staleShelves = remember { mutableStateMapOf<String, Loader<*>>() }
     val config = LocalConfiguration.current
@@ -145,7 +160,8 @@ private fun OnlineHomeScreen() {
             }
 
             episodeRail("continue", R.string.browse_continue_watching, R.string.home_continue_failed, resume)
-            episodeRail("nextUp", R.string.browse_next_up, R.string.home_next_up_failed, nextUp)
+            nextUpRail(nextUp, seasonEntries)
+            item(key = "asked") { HomeAskedRail() }
             when (val state = libraries.state) {
                 Load.Loading -> item(key = "shelves-loading") { RailSkeleton(null, RailArt.Poster) }
                 is Load.Failed -> item(key = "shelves-failed") {
@@ -174,6 +190,53 @@ private fun LazyListScope.episodeRail(key: String, @StringRes title: Int, @Strin
         is RailState.Shown -> item(key = key) { EpisodeRail(stringResource(title), rail.items) }
     }
 }
+
+/** A Next up card: an episode to play, or a show's next season the server doesn't have. */
+private sealed interface NextCard {
+    val key: String
+    val at: Instant?
+
+    data class Episode(val item: MediaItem, override val at: Instant?) : NextCard {
+        override val key get() = item.id
+    }
+
+    data class NextSeason(val entry: NextSeasonEntry, override val at: Instant?) : NextCard {
+        override val key get() = "season-${entry.title.id}"
+    }
+}
+
+/**
+ * Next up: the episodes, and the shows whose next season isn't here,
+ * the show watched last first. Loading and empty show nothing, as for
+ * [episodeRail]; a failed load of the episodes says so.
+ */
+private fun LazyListScope.nextUpRail(loader: Loader<List<MediaItem>>, seasons: List<NextSeasonEntry>) {
+    val rail = railState(loader.state)
+    if (rail is RailState.Failed && seasons.isEmpty()) {
+        episodeRail("nextUp", R.string.browse_next_up, R.string.home_next_up_failed, loader)
+        return
+    }
+    val episodes = (rail as? RailState.Shown)?.items.orEmpty()
+    if (episodes.isEmpty() && seasons.isEmpty()) return
+    val cards = (
+        episodes.map { NextCard.Episode(it, nextUpWatchedAt[it.id]?.let(::instant)) } +
+            seasons.map { NextCard.NextSeason(it, instant(it.lastWatchedAt)) }
+        ).sortedByDescending { it.at ?: Instant.EPOCH }
+    item(key = "nextUp") {
+        key(cards.first().key) {
+            Rail(stringResource(R.string.browse_next_up)) {
+                items(cards, key = { it.key }) { card ->
+                    when (card) {
+                        is NextCard.Episode -> EpisodeCard(card.item, Modifier.width(railItemWidth(RailArt.Landscape)))
+                        is NextCard.NextSeason -> NextSeasonCard(card.entry, Modifier.width(railItemWidth(RailArt.Landscape)))
+                    }
+                }
+            }
+        }
+    }
+}
+
+private fun instant(value: String): Instant? = runCatching { Instant.parse(value) }.getOrNull()
 
 /** A row of files to start or resume. One that moved to the front starts the row there again. */
 @Composable

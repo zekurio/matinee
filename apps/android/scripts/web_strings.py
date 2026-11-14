@@ -25,7 +25,7 @@ ROOT = Path(__file__).resolve().parent.parent
 LOCALES = ROOT.parent / "web/src/i18n/locales"
 RES = ROOT / "app/src/main/res"
 
-AREAS = ["appearance", "branding", "common", "jobs", "libraries", "oidc", "transcoding", "trickplay", "users"]
+AREAS = ["appearance", "ask", "branding", "catalog", "common", "discover", "jobs", "libraries", "notifications", "oidc", "requests", "transcoding", "trickplay", "users"]
 # The app's languages: English in values/, the rest in values-<lang>/.
 LANGUAGES = {"en": "values", "de": "values-de"}
 

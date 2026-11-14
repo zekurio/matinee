@@ -504,10 +504,18 @@ in
     ];
 
     warnings =
-      map (
-        name:
-        "services.matinee.settings.${name} ends up in the world-readable Nix store. Use services.matinee.secrets.${name}."
-      ) (lib.filter (name: settings ? ${name}) secretNames)
+      map
+        (
+          name:
+          "services.matinee.settings.${name} ends up in the world-readable Nix store. Use services.matinee.secrets.${name}."
+        )
+        (
+          lib.filter (
+            name:
+            builtins.elem name secretNames
+            || builtins.match "MATINEE_CONNECTION_[A-Z][A-Z0-9_]*_API_KEY" name != null
+          ) (lib.attrNames settings)
+        )
       ++
         lib.optional (accel == "nvenc" && devices != null && devices != [ ])
           "services.matinee.accelerationDevices limits the service to ${lib.concatStringsSep ", " devices}. NVENC needs /dev/nvidia0, /dev/nvidiactl, /dev/nvidia-uvm, and /dev/nvidia-uvm-tools."
@@ -541,8 +549,12 @@ in
       }
       // optionalAttrs (cfg.oidc.nameClaim != null) { MATINEE_OIDC_NAME_CLAIM = cfg.oidc.nameClaim; }
       // optionalAttrs (cfg.oidc.roleClaim != null) { MATINEE_OIDC_ROLE_CLAIM = cfg.oidc.roleClaim; }
-      // optionalAttrs (cfg.oidc.groupsClaim != null) { MATINEE_OIDC_GROUPS_CLAIM = cfg.oidc.groupsClaim; }
-      // optionalAttrs (cfg.oidc.policyClaim != null) { MATINEE_OIDC_POLICY_CLAIM = cfg.oidc.policyClaim; }
+      // optionalAttrs (cfg.oidc.groupsClaim != null) {
+        MATINEE_OIDC_GROUPS_CLAIM = cfg.oidc.groupsClaim;
+      }
+      // optionalAttrs (cfg.oidc.policyClaim != null) {
+        MATINEE_OIDC_POLICY_CLAIM = cfg.oidc.policyClaim;
+      }
       // optionalAttrs (cfg.oidc.signOutRefused != null) {
         MATINEE_OIDC_SIGN_OUT_REFUSED = cfg.oidc.signOutRefused;
       }

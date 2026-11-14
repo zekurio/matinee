@@ -59,6 +59,12 @@ import io.github.zekurio.matinee.ui.components.railItemWidth
 import io.github.zekurio.matinee.ui.itemLabel
 import io.github.zekurio.matinee.ui.mediaFlags
 import io.github.zekurio.matinee.ui.rememberLoader
+import io.github.zekurio.matinee.ui.requests.NextSeasonRow
+import io.github.zekurio.matinee.ui.requests.RestOfSeasonCard
+import io.github.zekurio.matinee.ui.requests.ShowGaps
+import io.github.zekurio.matinee.ui.requests.ShowRequestStrip
+import io.github.zekurio.matinee.ui.requests.offersSeason
+import io.github.zekurio.matinee.ui.requests.rememberShowGaps
 import io.github.zekurio.matinee.ui.seasonName
 import io.github.zekurio.matinee.ui.theme.Palette
 
@@ -92,11 +98,12 @@ private fun <T> PageState(state: Load<T>, error: String, retry: () -> Unit, cont
 @Composable
 fun TitleScreen(id: String) {
     val loader = rememberLoader("title-$id") { titles.get(id) }
-    PageState(loader.state, stringResource(R.string.title_load_error), loader::reload) { title -> TitlePage(title) }
+    PageState(loader.state, stringResource(R.string.title_load_error), loader::reload) { title -> TitlePage(title, loader::reload) }
 }
 
+/** [reload] fetches the title again, as when a show that just arrived gets its details. */
 @Composable
-private fun TitlePage(title: Title) {
+private fun TitlePage(title: Title, reload: () -> Unit) {
     val api = LocalApi.current
     val actions = LocalActions.current
     val res = LocalResources.current
@@ -106,6 +113,11 @@ private fun TitlePage(title: Title) {
     // One season, so no specials either: its episodes go right on the show's page.
     val only = title.seasons.singleOrNull()
     val listState = rememberLazyListState()
+    // What the server lacks of a show: seasons, the rest of one, the next one.
+    val gaps = rememberShowGaps(title, onRecovered = reload)
+    // Play's episode, as Next up offers it, or once every one here is watched, the next season to ask for.
+    val episode = next?.takeIf { it.progress?.completed != true }
+    val nextSeason = gaps?.next?.takeIf { episode == null && offersSeason(it) }
     Box(Modifier.fillMaxSize()) {
         LazyColumn(
             Modifier.fillMaxSize(),
@@ -136,6 +148,7 @@ private fun TitlePage(title: Title) {
             if (!title.isShow && next != null) {
                 item(key = "media") { MediaInfo(next, Modifier.padding(horizontal = Gutter)) }
             }
+            if (title.isShow) item(key = "strip") { ShowRequestStrip(gaps) }
             item(key = "actions") {
                 ActionRow(
                     play = next,
@@ -147,16 +160,20 @@ private fun TitlePage(title: Title) {
                     onFavorite = { viewer.setFavorite(api, summary, !viewer.isFavorite(summary)) },
                     onMore = ActionTarget.Title(summary, file = if (title.isShow) null else next, here = true)
                         .let { more -> if (hasActions(more)) ({ actions.open(more) }) else null },
+                    trailers = title.trailers,
                 )
             }
             if (title.isShow) {
                 if (next != null && showsNextUp(title)) {
                     item(key = "nextUp") { NextUpEpisode(next) }
+                } else if (gaps != null && nextSeason != null) {
+                    item(key = "nextSeason") { NextSeasonRow(title, gaps, nextSeason) }
                 }
                 if (only != null) {
-                    item(key = "episodes") { SeasonEpisodesRail(title, only, next) }
+                    item(key = "episodes") { SeasonEpisodesRail(title, only, next, gaps) }
+                    item(key = "seasons") { SeasonsRail(title, gaps = gaps, extraOnly = true) }
                 } else {
-                    item(key = "seasons") { SeasonsRail(title) }
+                    item(key = "seasons") { SeasonsRail(title, gaps = gaps) }
                 }
             }
             item(key = "cast") { CastRail(title.credits) }
@@ -167,11 +184,12 @@ private fun TitlePage(title: Title) {
     }
 }
 
-/** A season's episodes as a row of stills, starting at the one up next. */
+/** A season's episodes as a row of stills, starting at the one up next, then the ask for the rest when only some are here. */
 @Composable
-private fun SeasonEpisodesRail(title: Title, season: Season, next: MediaItem?) {
+private fun SeasonEpisodesRail(title: Title, season: Season, next: MediaItem?, gaps: ShowGaps?) {
     val items = rememberSeasonItems(title.id, season.number)
     val list = (items.state as? Load.Ready)?.value ?: return
+    val partial = gaps?.partialOf(season.number)
     val state = androidx.compose.foundation.lazy.rememberLazyListState(
         initialFirstVisibleItemIndex = list.indexOfFirst { it.id == next?.id }.coerceAtLeast(0),
     )
@@ -185,6 +203,9 @@ private fun SeasonEpisodesRail(title: Title, season: Season, next: MediaItem?) {
         ) {
             items(list, key = { it.id }) { item ->
                 EpisodeCard(item, Modifier.width(railItemWidth(RailArt.Landscape)), showName = false)
+            }
+            if (gaps != null && partial != null) {
+                item(key = "rest") { RestOfSeasonCard(title, gaps, partial, Modifier.width(railItemWidth(RailArt.Landscape))) }
             }
         }
     }
@@ -218,6 +239,8 @@ private fun SeasonPage(title: Title, season: Season) {
     val next = seasonNext(list, viewer)
     val allWatched = seasonWatched(list, viewer)
     val listState = rememberLazyListState()
+    val gaps = rememberShowGaps(title)
+    val partial = gaps?.partialOf(season.number)
     Box(Modifier.fillMaxSize()) {
         LazyColumn(
             Modifier.fillMaxSize(),
@@ -291,7 +314,12 @@ private fun SeasonPage(title: Title, season: Season) {
                     Box(Modifier.padding(horizontal = Gutter)) { EpisodeRow(item) }
                 }
             }
-            item(key = "seasons") { SeasonsRail(title, season) }
+            if (gaps != null && partial != null && items.state is Load.Ready) {
+                item(key = "rest") {
+                    Box(Modifier.padding(horizontal = Gutter).width(railItemWidth(RailArt.Landscape))) { RestOfSeasonCard(title, gaps, partial) }
+                }
+            }
+            item(key = "seasons") { SeasonsRail(title, season, gaps) }
             item(key = "bottom") { Box(Modifier.navigationBarsPadding()) }
         }
         StatusBarScrim(listState)

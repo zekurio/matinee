@@ -132,6 +132,7 @@ export function SeasonPage() {
       <SeasonEpisodes
         key={`episodes-${seasonKey(season)}`}
         title={title.data}
+        season={season.number}
         items={items.data}
         error={items.isError ? errorMessage(items.error) : null}
       />

@@ -57,7 +57,8 @@ val CardShape = RoundedCornerShape(6.dp)
 /** The page gutter on phones. */
 val Gutter = 16.dp
 
-enum class ButtonLook { Primary, Secondary, Frosted, Outline, Ghost }
+/** [Glass] is white over a dark shade on a picture, whatever the theme. */
+enum class ButtonLook { Primary, Secondary, Frosted, Glass, Outline, Ghost }
 
 /**
  * A ring for the D-pad on TVs, where focus moves instead of a finger. Phones
@@ -77,6 +78,10 @@ fun MatineeButton(
     enabled: Boolean = true,
     height: Dp = 44.dp,
     contentPadding: PaddingValues = PaddingValues(horizontal = 16.dp),
+    /** Rounded all round, or on one side for half of a split button. */
+    shape: Shape = ControlShape,
+    /** Drawn as disabled while still taking a tap, for a button whose tap says why it can't do its job. */
+    dimmed: Boolean = !enabled,
     content: @Composable RowScope.() -> Unit,
 ) {
     val interaction = remember { MutableInteractionSource() }
@@ -84,23 +89,25 @@ fun MatineeButton(
         ButtonLook.Primary -> Palette.Accent to Palette.AccentForeground
         ButtonLook.Secondary -> Palette.Secondary to Palette.Foreground
         ButtonLook.Frosted -> Palette.Foreground.copy(alpha = 0.15f) to Palette.Foreground
+        ButtonLook.Glass -> Color.White.copy(alpha = 0.18f) to Color.White
         ButtonLook.Outline -> Color.Transparent to Palette.Foreground
         ButtonLook.Ghost -> Color.Transparent to Palette.Foreground
     }
     Row(
         modifier
             .heightIn(min = height)
-            .clip(ControlShape)
-            .background(if (enabled) background else background.copy(alpha = background.alpha * 0.5f))
-            .then(if (look == ButtonLook.Outline) Modifier.border(1.dp, Palette.Border, ControlShape) else Modifier)
-            .then(if (look == ButtonLook.Frosted) Modifier.border(1.dp, Palette.Foreground.copy(alpha = 0.1f), ControlShape) else Modifier)
-            .focusRing(interaction, ControlShape)
+            .clip(shape)
+            .background(if (dimmed) background.copy(alpha = background.alpha * 0.5f) else background)
+            .then(if (look == ButtonLook.Outline) Modifier.border(1.dp, Palette.Border, shape) else Modifier)
+            .then(if (look == ButtonLook.Frosted) Modifier.border(1.dp, Palette.Foreground.copy(alpha = 0.1f), shape) else Modifier)
+            .then(if (look == ButtonLook.Glass) Modifier.border(1.dp, Color.White.copy(alpha = 0.15f), shape) else Modifier)
+            .focusRing(interaction, shape)
             .clickable(interaction, indication = androidx.compose.material3.ripple(), enabled = enabled, role = Role.Button, onClick = onClick)
             .padding(contentPadding),
         horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        OnColor(if (enabled) foreground else foreground.copy(alpha = 0.5f)) {
+        OnColor(if (dimmed) foreground.copy(alpha = 0.5f) else foreground) {
             androidx.compose.material3.ProvideTextStyle(MaterialTheme.typography.labelLarge) { content() }
         }
     }

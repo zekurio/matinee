@@ -10,6 +10,650 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonClassDiscriminator
 import kotlinx.serialization.json.JsonElement
 
+object TitleKind {
+    const val MOVIE = "movie"
+    const val SHOW = "show"
+    val all = listOf(MOVIE, SHOW)
+}
+
+object MetadataProviderId {
+    const val TMDB = "tmdb"
+    const val TVDB = "tvdb"
+    val all = listOf(TMDB, TVDB)
+}
+
+@Serializable
+data class CatalogRef(
+    val kind: String,
+    val provider: String,
+    val providerId: String,
+)
+
+object DeclineReason {
+    const val ALREADY_HERE = "alreadyHere"
+    const val NOT_FOR_SERVER = "notForServer"
+    const val NOT_FOUND = "notFound"
+    val all = listOf(ALREADY_HERE, NOT_FOR_SERVER, NOT_FOUND)
+}
+
+object WaitingDeclineReason {
+    const val ALREADY_HERE = "alreadyHere"
+    const val NOT_FOR_SERVER = "notForServer"
+    val all = listOf(ALREADY_HERE, NOT_FOR_SERVER)
+}
+
+@Serializable
+data class RequestQuota(
+    val titles: Int,
+    val days: Int,
+)
+
+@Serializable
+data class Availability(
+    val state: String,
+    val action: String?,
+    val progress: Double?,
+    val etaSeconds: Int?,
+    val releaseDate: String?,
+    val stillLooking: Boolean,
+    val reason: Availability.Reason?,
+    val askedBySelf: Boolean,
+    val following: Boolean,
+    val requestId: String?,
+    val others: Availability.Others,
+    val limit: Availability.Limit?,
+    val libraryTitleId: String?,
+    val disabledReason: String?,
+) {
+    @Serializable
+    data class Reason(
+        val kind: String,
+        val code: String?,
+        val note: String?,
+    )
+
+    @Serializable
+    data class Others(
+        val count: Int,
+        val names: List<String>,
+    )
+
+    @Serializable
+    data class Limit(
+        val left: Int,
+        val resetsAt: String,
+    )
+}
+
+@Serializable
+data class SeasonAvailability(
+    val state: String,
+    val action: String?,
+    val progress: Double?,
+    val etaSeconds: Int?,
+    val releaseDate: String?,
+    val stillLooking: Boolean,
+    val reason: SeasonAvailability.Reason?,
+    val askedBySelf: Boolean,
+    val following: Boolean,
+    val requestId: String?,
+    val others: SeasonAvailability.Others,
+    val limit: SeasonAvailability.Limit?,
+    val libraryTitleId: String?,
+    val disabledReason: String?,
+    val number: Int,
+    val episodesHere: Int,
+    val episodesAired: Int,
+) {
+    @Serializable
+    data class Reason(
+        val kind: String,
+        val code: String?,
+        val note: String?,
+    )
+
+    @Serializable
+    data class Others(
+        val count: Int,
+        val names: List<String>,
+    )
+
+    @Serializable
+    data class Limit(
+        val left: Int,
+        val resetsAt: String,
+    )
+}
+
+@Serializable
+data class ShowScope(
+    val seasons: List<Int>,
+    val future: Boolean,
+)
+
+@Serializable
+data class CatalogDestination(
+    val id: String,
+    val name: String,
+    val selected: Boolean,
+)
+
+@Serializable
+data class ImagePlaceholder(
+    val blurhash: String,
+    val aspectRatio: Double,
+)
+
+@Serializable
+data class Artwork(
+    val id: String,
+    val placeholder: ImagePlaceholder?,
+)
+
+@Serializable
+data class CatalogTitleSummary(
+    val ref: CatalogRef,
+    val name: String,
+    val year: Int?,
+    val poster: Artwork?,
+    val availability: Availability,
+)
+
+@Serializable
+data class CatalogSeason(
+    val number: Int,
+    val overview: String?,
+    val poster: Artwork?,
+    val episodeCount: Int?,
+    val airDate: String?,
+    val availability: SeasonAvailability,
+    val selected: Boolean,
+)
+
+@Serializable
+data class Images(
+    val poster: Artwork?,
+    val backdrop: Artwork?,
+    val logo: Artwork?,
+)
+
+@Serializable
+data class TitleSummary(
+    val id: String,
+    val libraryId: String,
+    val kind: String,
+    val name: String,
+    val year: Int?,
+    val overview: String?,
+    val images: Images,
+    val genres: List<String>,
+    val rating: Double?,
+    val contentRating: String?,
+    val originalLanguage: String?,
+    val favorite: Boolean,
+    val watched: Boolean,
+)
+
+@Serializable
+data class NextSeasonEntry(
+    val title: TitleSummary,
+    val ref: CatalogRef,
+    val libraryId: String,
+    val season: CatalogSeason,
+    val lastWatchedAt: String,
+)
+
+object CreditKind {
+    const val ACTOR = "actor"
+    const val CREATOR = "creator"
+    const val DIRECTOR = "director"
+    const val WRITER = "writer"
+    val all = listOf(ACTOR, CREATOR, DIRECTOR, WRITER)
+}
+
+@Serializable
+data class Credit(
+    val kind: String,
+    val name: String,
+    val role: String?,
+    val photo: Artwork?,
+)
+
+@Serializable
+data class Trailer(
+    val url: String,
+    val name: String?,
+    val language: String?,
+)
+
+@Serializable
+data class CatalogTitleDetail(
+    val ref: CatalogRef,
+    val name: String,
+    val year: Int?,
+    val poster: Artwork?,
+    val availability: Availability,
+    val stale: Boolean,
+    val overview: String?,
+    val genres: List<String>,
+    val rating: Double?,
+    val contentRating: String?,
+    val backdrop: Artwork?,
+    val credits: List<Credit>,
+    val studios: List<String>,
+    val trailers: List<Trailer>,
+    val seasons: List<CatalogSeason>,
+    val defaultScope: ShowScope?,
+    val destinations: List<CatalogDestination>,
+)
+
+@Serializable
+data class CatalogPage(
+    val items: List<CatalogTitleSummary>,
+    val nextPage: Int?,
+    val stale: Boolean,
+)
+
+@Serializable
+data class CatalogInput(
+    val ref: CatalogRef,
+    val libraryId: String? = null,
+)
+
+object RelatedRailId {
+    const val COLLECTION = "collection"
+    const val MORE_LIKE_THIS = "moreLikeThis"
+    val all = listOf(COLLECTION, MORE_LIKE_THIS)
+}
+
+@Serializable
+data class RelatedRail(
+    val id: String,
+    val name: String?,
+)
+
+@Serializable
+data class RelatedRails(
+    val rails: List<RelatedRail>,
+    val stale: Boolean,
+)
+
+@Serializable
+data class RelatedTitle(
+    val ref: CatalogRef,
+    val name: String,
+    val year: Int?,
+    val poster: Artwork?,
+    val availability: Availability,
+    val title: TitleSummary?,
+)
+
+@Serializable
+data class RelatedPage(
+    val items: List<RelatedTitle>,
+    val stale: Boolean,
+)
+
+object RequestStatus {
+    const val ASKED = "asked"
+    const val APPROVED = "approved"
+    const val DECLINED = "declined"
+    val all = listOf(ASKED, APPROVED, DECLINED)
+}
+
+object FulfilmentState {
+    const val QUEUED = "queued"
+    const val SENT = "sent"
+    const val FAILED = "failed"
+    val all = listOf(QUEUED, SENT, FAILED)
+}
+
+@Serializable
+data class RequestId(
+    val id: String,
+)
+
+@Serializable
+data class RequestDestination(
+    val id: String,
+    val name: String,
+)
+
+@Serializable
+data class AdminRequestDestination(
+    val id: String,
+    val name: String,
+    val selected: Boolean,
+    val connection: String?,
+)
+
+@Serializable
+data class RequestItem(
+    val id: String,
+    val title: CatalogTitleSummary,
+    val library: RequestDestination,
+    val scope: ShowScope?,
+    val createdAt: String,
+    val arrivedAt: String?,
+    val availability: Availability,
+    val season: SeasonAvailability?,
+)
+
+@Serializable
+data class RequestPage(
+    val items: List<RequestItem>,
+    val nextCursor: String?,
+)
+
+@Serializable
+data class RequestPageInput(
+    val cursor: String? = null,
+    val limit: Int? = null,
+)
+
+@Serializable
+data class AdminRequestItem(
+    val id: String,
+    val title: CatalogTitleSummary,
+    val library: RequestDestination,
+    val scope: ShowScope?,
+    val createdAt: String,
+    val arrivedAt: String?,
+    val availability: Availability,
+    val season: SeasonAvailability?,
+    val status: String,
+    val fulfilmentState: String?,
+    val error: String?,
+    val reason: String?,
+    val note: String?,
+    val declinedAt: String?,
+    val connection: AdminRequestItem.Connection?,
+    val followers: List<AdminRequestItem.Follower>,
+    val destinationDescription: String,
+    val destinations: List<AdminRequestDestination>,
+    val remoteUrl: String?,
+    val diagnostics: List<AdminRequestItem.Diagnostic>,
+) {
+    @Serializable
+    data class Connection(
+        val id: String,
+        val name: String,
+        val reportsProgress: Boolean,
+    )
+
+    @Serializable
+    data class Follower(
+        val id: String,
+        val name: String,
+        val asked: Boolean,
+        val createdAt: String,
+    )
+
+    @Serializable
+    data class Diagnostic(
+        val label: String,
+        val value: String,
+    )
+}
+
+@Serializable
+data class RequestQueue(
+    val waiting: List<AdminRequestItem>,
+    val needsAttention: List<AdminRequestItem>,
+    val onTheWay: List<AdminRequestItem>,
+    val done: List<AdminRequestItem>,
+    val counts: RequestQueue.Counts,
+    val nextCursor: String?,
+) {
+    @Serializable
+    data class Counts(
+        val waiting: Int,
+        val needsAttention: Int,
+        val onTheWay: Int,
+        val done: Int,
+    )
+}
+
+@Serializable
+data class DiscoverRail(
+    val id: String,
+    val seed: CatalogRef?,
+    val seedName: String?,
+)
+
+@Serializable
+data class DiscoverRails(
+    val enabled: Boolean,
+    val rails: List<DiscoverRail>,
+    val browse: List<String>,
+)
+
+object CatalogSort {
+    const val POPULAR = "popular"
+    const val SCORE_HIGH = "scoreHigh"
+    const val SCORE_LOW = "scoreLow"
+    const val VOTES = "votes"
+    const val NEWEST = "newest"
+    const val OLDEST = "oldest"
+    const val NAME_ASC = "nameAsc"
+    const val NAME_DESC = "nameDesc"
+    val all = listOf(POPULAR, SCORE_HIGH, SCORE_LOW, VOTES, NEWEST, OLDEST, NAME_ASC, NAME_DESC)
+}
+
+@Serializable
+data class CatalogFilters(
+    val genres: List<Int>? = null,
+    val yearFrom: Int? = null,
+    val yearTo: Int? = null,
+    val scoreMin: Double? = null,
+    val scoreMax: Double? = null,
+    val votesMin: Int? = null,
+    val rating: String? = null,
+    val language: String? = null,
+    val runtimeMin: Int? = null,
+    val runtimeMax: Int? = null,
+)
+
+@Serializable
+data class CatalogBrowseInput(
+    val kind: String,
+    val filters: CatalogFilters,
+    val sort: String? = null,
+    val page: Int? = null,
+)
+
+@Serializable
+data class CatalogRange(
+    val min: Double,
+    val max: Double,
+    val step: Double,
+)
+
+@Serializable
+data class CatalogChoice(
+    val id: String,
+    val name: String,
+)
+
+@Serializable
+data class CatalogBrowseOptions(
+    val enabled: Boolean,
+    val stale: Boolean,
+    val genres: List<CatalogBrowseOptions.Genre>,
+    val ratings: CatalogBrowseOptions.Ratings?,
+    val languages: List<CatalogChoice>,
+    val sorts: List<String>,
+    val votes: List<Int>,
+    val years: CatalogRange,
+    val scores: CatalogRange,
+    val runtime: CatalogRange,
+) {
+    @Serializable
+    data class Genre(
+        val id: Int,
+        val name: String,
+    )
+
+    @Serializable
+    data class Ratings(
+        val country: String,
+        val ratings: List<String>,
+    )
+}
+
+@Serializable
+data class CatalogBrowseTitle(
+    val ref: CatalogRef,
+    val name: String,
+    val year: Int?,
+    val poster: Artwork?,
+    val availability: Availability,
+    val title: TitleSummary?,
+    val score: Double?,
+    val votes: Int,
+    val releaseDate: String?,
+)
+
+@Serializable
+data class CatalogBrowsePage(
+    val items: List<CatalogBrowseTitle>,
+    val nextPage: Int?,
+    val stale: Boolean,
+    val voteFloor: Int?,
+    val detail: String?,
+)
+
+object ExternalIdSite {
+    const val TMDB = "tmdb"
+    const val TVDB = "tvdb"
+    const val IMDB = "imdb"
+    val all = listOf(TMDB, TVDB, IMDB)
+}
+
+@Serializable
+data class DescribedField(
+    val key: String,
+    val label: String,
+    val kind: String,
+    val required: Boolean,
+    val choices: List<DescribedField.Choice>,
+) {
+    @Serializable
+    data class Choice(
+        val value: String,
+        val label: String,
+        val description: String?,
+    )
+}
+
+@Serializable
+data class FulfilmentSourceDescription(
+    val id: String,
+    val name: String,
+    val kinds: List<String>,
+    val needs: List<String>,
+    val scope: String,
+    val apiKey: Boolean,
+    val fields: List<DescribedField>,
+)
+
+@Serializable
+data class FulfilmentConnection(
+    val id: String,
+    val name: String,
+    val slug: String,
+    val source: String,
+    val settings: Map<String, JsonElement>,
+    val apiKey: FulfilmentConnection.ApiKey,
+) {
+    @Serializable
+    data class ApiKey(
+        val source: String?,
+        val environment: Boolean,
+    )
+}
+
+@Serializable
+data class FulfilmentConnectionInput(
+    val name: String,
+    val slug: String,
+    val source: String,
+    val settings: Map<String, JsonElement>,
+    val apiKey: Explicit<String>? = null,
+)
+
+@Serializable
+data class FulfilmentLibrary(
+    val id: String,
+    val name: String,
+)
+
+@Serializable
+data class AnimeFulfilment(
+    val options: Map<String, JsonElement>,
+    val library: FulfilmentLibrary?,
+    val found: Boolean,
+)
+
+@Serializable
+data class LibraryFulfilment(
+    val libraryId: String,
+    val connectionId: String?,
+    val options: Map<String, JsonElement>,
+    val anime: AnimeFulfilment?,
+    val animeFrom: List<FulfilmentLibrary>,
+)
+
+@Serializable
+data class FulfilmentOptions(
+    val fields: List<DescribedField>,
+    val values: Map<String, JsonElement>,
+    val anime: Map<String, JsonElement>,
+)
+
+@Serializable
+data class FulfilmentLanding(
+    val folder: String?,
+    val library: FulfilmentLibrary?,
+)
+
+object NotificationKind {
+    const val READY = "ready"
+    const val UNAVAILABLE = "unavailable"
+    const val WAITING = "waiting"
+    const val NEEDS_ATTENTION = "needsAttention"
+    val all = listOf(READY, UNAVAILABLE, WAITING, NEEDS_ATTENTION)
+}
+
+@Serializable
+data class Notification(
+    val id: String,
+    val kind: String,
+    val title: CatalogTitleSummary?,
+    val season: Int?,
+    val count: Int,
+    val createdAt: String,
+    val readAt: String?,
+)
+
+@Serializable
+data class NotificationPage(
+    val items: List<Notification>,
+    val nextCursor: String?,
+)
+
+@Serializable
+data class PushSubscriptionInput(
+    val endpoint: String,
+    val keys: PushSubscriptionInput.Keys,
+) {
+    @Serializable
+    data class Keys(
+        val p256dh: String,
+        val auth: String,
+    )
+}
+
 @Serializable
 data class PlaybackSeek(
     val url: String,
@@ -99,48 +743,6 @@ data class ItemLabel(
     val shortCode: String?,
     val group: String,
     val groupLabel: List<ItemLabelFolder>,
-)
-
-object TitleKind {
-    const val MOVIE = "movie"
-    const val SHOW = "show"
-    val all = listOf(MOVIE, SHOW)
-}
-
-@Serializable
-data class ImagePlaceholder(
-    val blurhash: String,
-    val aspectRatio: Double,
-)
-
-@Serializable
-data class Artwork(
-    val id: String,
-    val placeholder: ImagePlaceholder?,
-)
-
-@Serializable
-data class Images(
-    val poster: Artwork?,
-    val backdrop: Artwork?,
-    val logo: Artwork?,
-)
-
-@Serializable
-data class TitleSummary(
-    val id: String,
-    val libraryId: String,
-    val kind: String,
-    val name: String,
-    val year: Int?,
-    val overview: String?,
-    val images: Images,
-    val genres: List<String>,
-    val rating: Double?,
-    val contentRating: String?,
-    val originalLanguage: String?,
-    val favorite: Boolean,
-    val watched: Boolean,
 )
 
 @Serializable
@@ -774,6 +1376,8 @@ data class AdminUser(
             val maxBitrate: Explicit<Int>? = null,
             val transcode: Boolean? = null,
             val downloads: Boolean? = null,
+            val requests: String? = null,
+            val requestLimit: Explicit<RequestQuota>? = null,
             val maxStreams: Explicit<Int>? = null,
         ) {
             @Serializable
@@ -789,6 +1393,8 @@ data class AdminUser(
             val maxBitrate: Int?,
             val transcode: Boolean,
             val downloads: Boolean,
+            val requests: String,
+            val requestLimit: RequestQuota?,
             val maxStreams: Int?,
         ) {
             @Serializable
@@ -804,6 +1410,8 @@ data class AdminUser(
             val maxBitrate: Int?,
             val transcode: Boolean,
             val downloads: Boolean,
+            val requests: String,
+            val requestLimit: RequestQuota?,
             val maxStreams: Int?,
         ) {
             @Serializable
@@ -907,22 +1515,6 @@ data class BrowsedTitles(
         val show: Int,
     )
 }
-
-object CreditKind {
-    const val ACTOR = "actor"
-    const val CREATOR = "creator"
-    const val DIRECTOR = "director"
-    const val WRITER = "writer"
-    val all = listOf(ACTOR, CREATOR, DIRECTOR, WRITER)
-}
-
-@Serializable
-data class Credit(
-    val kind: String,
-    val name: String,
-    val role: String?,
-    val photo: Artwork?,
-)
 
 @Serializable
 data class CreatedInvite(
@@ -1256,7 +1848,12 @@ object JobQueueId {
     const val AVATARS = "avatars"
     const val DOWNLOADS = "downloads"
     const val DOWNLOAD_COPIES = "download-copies"
-    val all = listOf(LIBRARY_SCAN, MEDIA_PROBE, METADATA, THUMBNAILS, SUBTITLE_PREPARE, TRICKPLAY, ARTWORK, SUBTITLES, SUBTITLE_FONTS, AVATARS, DOWNLOADS, DOWNLOAD_COPIES)
+    const val REQUEST_DISPATCH = "request-dispatch"
+    const val REQUEST_PROGRESS = "request-progress"
+    const val REQUEST_ARRIVAL = "request-arrival"
+    const val NOTIFICATIONS = "notifications"
+    const val CATALOG = "catalog"
+    val all = listOf(LIBRARY_SCAN, MEDIA_PROBE, METADATA, THUMBNAILS, SUBTITLE_PREPARE, TRICKPLAY, ARTWORK, SUBTITLES, SUBTITLE_FONTS, AVATARS, DOWNLOADS, DOWNLOAD_COPIES, REQUEST_DISPATCH, REQUEST_PROGRESS, REQUEST_ARRIVAL, NOTIFICATIONS, CATALOG)
 }
 
 @Serializable
@@ -1285,6 +1882,9 @@ data class JobQueueStatus(
 )
 
 object TaskId {
+    const val DISPATCH_REQUESTS = "dispatch-requests"
+    const val POLL_REQUESTS = "poll-requests"
+    const val RECONCILE_REQUESTS = "reconcile-requests"
     const val SCAN_LIBRARIES = "scan-libraries"
     const val REFRESH_METADATA = "refresh-metadata"
     const val PROBE_MEDIA = "probe-media"
@@ -1293,8 +1893,9 @@ object TaskId {
     const val MAKE_TRICKPLAY = "make-trickplay"
     const val CLEAN_TRANSCODES = "clean-transcodes"
     const val CLEAN_SESSIONS = "clean-sessions"
+    const val FORGET_BROWSED_PAGES = "forget-browsed-pages"
     const val SYNC_OIDC_ACCOUNTS = "sync-oidc-accounts"
-    val all = listOf(SCAN_LIBRARIES, REFRESH_METADATA, PROBE_MEDIA, PREFETCH_ARTWORK, PREPARE_SUBTITLES, MAKE_TRICKPLAY, CLEAN_TRANSCODES, CLEAN_SESSIONS, SYNC_OIDC_ACCOUNTS)
+    val all = listOf(DISPATCH_REQUESTS, POLL_REQUESTS, RECONCILE_REQUESTS, SCAN_LIBRARIES, REFRESH_METADATA, PROBE_MEDIA, PREFETCH_ARTWORK, PREPARE_SUBTITLES, MAKE_TRICKPLAY, CLEAN_TRANSCODES, CLEAN_SESSIONS, FORGET_BROWSED_PAGES, SYNC_OIDC_ACCOUNTS)
 }
 
 object TaskResult {
@@ -1342,12 +1943,6 @@ object LibraryKind {
     const val MOVIES = "movies"
     const val SHOWS = "shows"
     val all = listOf(MOVIES, SHOWS)
-}
-
-object MetadataProviderId {
-    const val TMDB = "tmdb"
-    const val TVDB = "tvdb"
-    val all = listOf(TMDB, TVDB)
 }
 
 @Serializable
@@ -1922,13 +2517,6 @@ object ThemeMode {
 }
 
 @Serializable
-data class Trailer(
-    val url: String,
-    val name: String?,
-    val language: String?,
-)
-
-@Serializable
 data class Title(
     val id: String,
     val libraryId: String,
@@ -2114,6 +2702,76 @@ object WatchedAt {
     const val UNKNOWN = "unknown"
     val all = listOf(RELEASED, UNKNOWN)
 }
+
+@Serializable
+data class CatalogRelatedTitlesInput(
+    val ref: CatalogRef,
+    val libraryId: String? = null,
+    val rail: String,
+)
+
+@Serializable
+data class CatalogMissingSeasonsOutput(
+    val ref: CatalogRef,
+    val stale: Boolean,
+    val seasons: List<CatalogSeason>,
+    val partialSeasons: List<CatalogSeason>,
+    val nextSeason: CatalogSeason?,
+    val defaultScope: ShowScope,
+    val destinations: List<CatalogDestination>,
+)
+
+@Serializable
+data class DiscoverPageInput(
+    val rail: DiscoverRail,
+    val page: Int? = null,
+)
+
+@Serializable
+data class RequestsLiveInput(
+    val titles: List<CatalogInput>,
+)
+
+@Serializable
+data class RequestsLiveEvent(
+    val ref: CatalogRef,
+    val availability: Availability,
+    val seasons: List<SeasonAvailability>,
+)
+
+@Serializable
+data class RequestsAskInput(
+    val ref: CatalogRef,
+    val libraryId: String? = null,
+    val scope: ShowScope? = null,
+)
+
+@Serializable
+data class RequestsAddSeasonsInput(
+    val id: String,
+    val scope: ShowScope,
+)
+
+@Serializable
+data class NotificationsMarkReadInput(
+    val ids: List<String>,
+    val all: Boolean? = null,
+)
+
+@Serializable
+data class NotificationsUnreadCountEvent(
+    val count: Int,
+)
+
+@Serializable
+data class NotificationsPushPublicKeyOutput(
+    val publicKey: String?,
+)
+
+@Serializable
+data class NotificationsUnsubscribeInput(
+    val endpoint: String,
+)
 
 @Serializable
 data class AuthSessionOutput(
@@ -2357,6 +3015,64 @@ data class FavoritesSetItemInput(
 )
 
 @Serializable
+data class AdminRequestsApproveInput(
+    val id: String,
+    val libraryId: String? = null,
+)
+
+@Serializable
+data class AdminRequestsApproveAllInput(
+    val ids: List<String>,
+)
+
+@Serializable
+data class AdminRequestsDeclineInput(
+    val id: String,
+    val reason: String,
+    val note: String?,
+)
+
+@Serializable
+data class AdminRequestsGiveUpInput(
+    val id: String,
+    val note: String?,
+)
+
+@Serializable
+data class AdminFulfilmentUpdateInput(
+    val name: String,
+    val slug: String,
+    val source: String,
+    val settings: Map<String, JsonElement>,
+    val apiKey: Explicit<String>? = null,
+)
+
+@Serializable
+data class AdminFulfilmentTestInput(
+    val id: String,
+)
+
+@Serializable
+data class AdminFulfilmentSetMappingInput(
+    val connectionId: String?,
+    val options: Map<String, JsonElement>,
+    val anime: Explicit<AdminFulfilmentSetMappingInput.Anime>? = null,
+) {
+    @Serializable
+    data class Anime(
+        val options: Map<String, JsonElement>,
+        val libraryId: Explicit<String>? = null,
+    )
+}
+
+@Serializable
+data class AdminFulfilmentLandingInput(
+    val connectionId: String,
+    val libraryId: String,
+    val options: Map<String, JsonElement>,
+)
+
+@Serializable
 data class AdminGroupsListOutput(
     val id: String,
     val name: String,
@@ -2372,6 +3088,8 @@ data class AdminGroupsListOutput(
         val maxBitrate: Int?,
         val transcode: Boolean,
         val downloads: Boolean,
+        val requests: String,
+        val requestLimit: RequestQuota?,
         val maxStreams: Int?,
     ) {
         @Serializable
@@ -2394,6 +3112,8 @@ data class AdminGroupsCreateInput(
         val maxBitrate: Int?,
         val transcode: Boolean,
         val downloads: Boolean,
+        val requests: String,
+        val requestLimit: RequestQuota?,
         val maxStreams: Int?,
     ) {
         @Serializable
@@ -2420,6 +3140,8 @@ data class AdminGroupsCreateOutput(
         val maxBitrate: Int?,
         val transcode: Boolean,
         val downloads: Boolean,
+        val requests: String,
+        val requestLimit: RequestQuota?,
         val maxStreams: Int?,
     ) {
         @Serializable
@@ -2442,6 +3164,8 @@ data class AdminGroupsUpdateInput(
         val maxBitrate: Int?,
         val transcode: Boolean,
         val downloads: Boolean,
+        val requests: String,
+        val requestLimit: RequestQuota?,
         val maxStreams: Int?,
     ) {
         @Serializable
@@ -2468,6 +3192,8 @@ data class AdminGroupsUpdateOutput(
         val maxBitrate: Int?,
         val transcode: Boolean,
         val downloads: Boolean,
+        val requests: String,
+        val requestLimit: RequestQuota?,
         val maxStreams: Int?,
     ) {
         @Serializable
@@ -2512,6 +3238,8 @@ data class AdminUsersSetAccessInput(
         val maxBitrate: Explicit<Int>? = null,
         val transcode: Boolean? = null,
         val downloads: Boolean? = null,
+        val requests: String? = null,
+        val requestLimit: Explicit<RequestQuota>? = null,
         val maxStreams: Explicit<Int>? = null,
     ) {
         @Serializable

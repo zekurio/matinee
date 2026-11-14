@@ -5,6 +5,7 @@ import {
   AvatarImage,
 } from "@matinee/ui/components/avatar"
 import { cn } from "@matinee/ui/lib/utils"
+import type { ReactNode } from "react"
 
 /**
  * The user's picture, or the first letter of their name without one. Size it
@@ -30,5 +31,29 @@ export function UserAvatar({
         </span>
       </AvatarFallback>
     </Avatar>
+  )
+}
+
+/**
+ * An avatar with the accent dot on its corner, as an admin's shows while
+ * requests wait for them or need their attention.
+ */
+export function AvatarWithDot({
+  dot,
+  children,
+}: {
+  dot: boolean
+  children: ReactNode
+}) {
+  return (
+    <span className="relative inline-flex shrink-0">
+      {children}
+      {dot && (
+        <span
+          aria-hidden
+          className="bg-primary ring-background animate-in zoom-in-50 absolute -top-px -right-px size-2 rounded-full ring-2 duration-200 motion-reduce:animate-none"
+        />
+      )}
+    </span>
   )
 }

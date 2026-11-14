@@ -60,6 +60,7 @@ import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.name
 import io.github.zekurio.matinee.ui.components.Avatar
+import io.github.zekurio.matinee.ui.requests.LocalRequests
 import io.github.zekurio.matinee.ui.components.Gutter
 import io.github.zekurio.matinee.ui.components.LocalApi
 import io.github.zekurio.matinee.ui.components.Lucide
@@ -194,6 +195,17 @@ private fun TabItem(tab: Tab, selected: Boolean, onClick: () -> Unit) {
                         .padding(if (selected) 2.dp else 0.dp),
                 ) {
                     Avatar(user.name, user.avatarId?.let(api.paths::avatar), size = if (selected) 24.dp else 28.dp)
+                    // An admin's dot while requests wait or need them, as on the web's avatar.
+                    if (LocalRequests.current.needsYou > 0) {
+                        Box(
+                            Modifier
+                                .align(Alignment.TopEnd)
+                                .size(8.dp)
+                                .clip(CircleShape)
+                                .background(Palette.Accent)
+                                .border(1.5.dp, Palette.Raised, CircleShape),
+                        )
+                    }
                 }
             }
             if (selected) {

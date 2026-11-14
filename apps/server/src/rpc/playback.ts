@@ -1,4 +1,4 @@
-import type { FeaturedTitle } from "@matinee/contracts"
+import type { FeaturedTitle, NextSeasonEntry } from "@matinee/contracts"
 import { mediaItem, title, type TitleRow, watchProgress } from "@matinee/db"
 import {
   and,
@@ -19,6 +19,7 @@ import {
   sql,
 } from "drizzle-orm"
 
+import type { Viewer } from "../access/viewer"
 import {
   inLibrariesArg,
   itemFor,
@@ -27,6 +28,7 @@ import {
   visibleItems,
   visibleTitles,
 } from "../access/visible"
+import { missingSeasons } from "../catalog"
 import { anyOf, arg, db } from "../db"
 import { releaseSession } from "../media/hls"
 import {
@@ -35,6 +37,7 @@ import {
   nextItem,
   publicItems,
   reverseEpisodeOrder,
+  toSummaries,
 } from "../media/items"
 import { playbackOptions } from "../media/playback-options"
 import { rememberedTracks, savePick } from "../media/track-picks"
@@ -317,39 +320,13 @@ export const home = {
   ),
 
   nextUp: authed.home.nextUp.handler(async ({ context, input }) => {
-    const finished = await lastFinished.execute({
-      userId: context.user.id,
-      ...libraryArgs(context.user),
-    })
-    finished.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
-
     const next = []
     const lastWatched = new Map<string, Date>()
-    for (const row of finished) {
+    for await (const show of watchedShows(context.user)) {
       if (next.length >= input.limit) break
-      if (!row.titleId) continue
-      const candidates = await filesAfter.execute({
-        titleId: row.titleId,
-        season: row.seasonNumber ?? LAST,
-        episode: row.episodeNumber ?? LAST,
-        path: row.relativePath,
-      })
-      if (candidates.length === 0) continue
-      const started = await startedOf.execute({
-        userId: context.user.id,
-        ids: candidates.map((candidate) => candidate.id),
-      })
-      const state = new Map(started.map((s) => [s.id, s.completed]))
-      for (const candidate of candidates) {
-        const completed = state.get(candidate.id)
-        if (completed === true) continue
-        // An episode in progress already shows under "continue watching".
-        if (completed === undefined) {
-          next.push(candidate)
-          lastWatched.set(candidate.id, row.updatedAt)
-        }
-        break
-      }
+      if (show.next === "finished" || !show.next) continue
+      next.push(show.next)
+      lastWatched.set(show.next.id, show.lastWatchedAt)
     }
     const items = await publicItems(next, context.user.id)
     return items.map((item) => ({
@@ -357,6 +334,40 @@ export const home = {
       // Every candidate above has its show's timestamp.
       lastWatchedAt: lastWatched.get(item.id)!,
     }))
+  }),
+
+  nextSeasons: authed.home.nextSeasons.handler(async ({ context, input }) => {
+    const entries: NextSeasonEntry[] = []
+    for await (const show of watchedShows(context.user)) {
+      if (entries.length >= input.limit) break
+      if (show.next !== "finished") continue
+      // ACCESS: the title is from lastFinished, which reads visible files.
+      const [row] = await db
+        .select()
+        .from(title)
+        .where(eq(title.id, show.titleId))
+      if (!row?.provider || !row.providerId) continue
+      // The provider's answer is cached for hours; a show it can't answer
+      // for right now just has no card.
+      const missing = await missingSeasons(context.user, row.id).catch(
+        () => null,
+      )
+      const season = missing?.nextSeason
+      if (!missing || !season) continue
+      const { availability } = season
+      if (availability.state === "none" && availability.action === null)
+        continue
+      const [summary] = await toSummaries([row], context.user.id)
+      if (!summary) continue
+      entries.push({
+        title: summary,
+        ref: missing.ref,
+        libraryId: row.libraryId,
+        season,
+        lastWatchedAt: show.lastWatchedAt,
+      })
+    }
+    return entries
   }),
 
   featured: authed.home.featured.handler(async ({ context, input }) => {
@@ -441,6 +452,48 @@ export const home = {
     }
     return featured
   }),
+}
+
+/**
+ * The shows the viewer is watching, latest first, each with the file
+ * after the last one they finished: the next one they haven't started,
+ * null when that one is in progress (it's under "continue watching"),
+ * or "finished" when they've watched every file after it.
+ */
+async function* watchedShows(viewer: Viewer): AsyncGenerator<{
+  titleId: string
+  lastWatchedAt: Date
+  next: typeof mediaItem.$inferSelect | null | "finished"
+}> {
+  const finished = await lastFinished.execute({
+    userId: viewer.id,
+    ...libraryArgs(viewer),
+  })
+  finished.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
+  for (const row of finished) {
+    if (!row.titleId) continue
+    const candidates = await filesAfter.execute({
+      titleId: row.titleId,
+      season: row.seasonNumber ?? LAST,
+      episode: row.episodeNumber ?? LAST,
+      path: row.relativePath,
+    })
+    const started = candidates.length
+      ? await startedOf.execute({
+          userId: viewer.id,
+          ids: candidates.map((candidate) => candidate.id),
+        })
+      : []
+    const state = new Map(started.map((s) => [s.id, s.completed]))
+    const next = candidates.find(
+      (candidate) => state.get(candidate.id) !== true,
+    )
+    yield {
+      titleId: row.titleId,
+      lastWatchedAt: row.updatedAt,
+      next: !next ? "finished" : state.get(next.id) === undefined ? next : null,
+    }
+  }
 }
 
 /** The file arrived after `since`. */

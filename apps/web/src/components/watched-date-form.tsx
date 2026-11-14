@@ -36,11 +36,9 @@ function watchedAtOn(day: Date): Date {
 
 export function WatchedDateForm({
   triggerRef,
-  onCancel,
   onPick,
 }: {
   triggerRef: RefObject<HTMLButtonElement | null>
-  onCancel: () => void
   onPick: (watchedAt: Date) => void
 }) {
   const [today] = useState(() => new Date())
@@ -72,9 +70,6 @@ export function WatchedDateForm({
         )}
       </form.Field>
       <DialogFooter className="-mx-6 -mb-6 px-6 py-4">
-        <Button type="button" variant="ghost" onClick={onCancel}>
-          {tr("media.watchedDate.cancel")}
-        </Button>
         <form.AppForm>
           <form.SubmitButton icon={<CheckIcon />}>
             {tr("media.markWatched")}

@@ -15,7 +15,6 @@ import {
   type TranscodeVideoCodec,
   videoCodecName,
 } from "@matinee/contracts"
-import { Button } from "@matinee/ui/components/button"
 import {
   DialogDescription,
   DialogFooter,
@@ -704,9 +703,6 @@ function DownloadFields({
         {failed && <FormAlert message={failed} />}
 
         <DialogFooter className="-mx-6 -mb-6 px-6 py-4">
-          <Button type="button" variant="ghost" onClick={onDone}>
-            {tr("downloads.cancel")}
-          </Button>
           <form.SubmitButton
             icon={<DownloadIcon />}
             pending={start.isPending}

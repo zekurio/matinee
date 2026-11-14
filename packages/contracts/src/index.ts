@@ -18,3 +18,8 @@ export * from "./transcoding"
 export * from "./trickplay"
 
 export * from "./download-resolve"
+export * from "./catalog"
+export * from "./discover"
+export * from "./requests"
+export * from "./fulfilment"
+export * from "./notifications"

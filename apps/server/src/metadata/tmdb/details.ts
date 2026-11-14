@@ -13,7 +13,24 @@ import {
 } from "../types"
 import { image, request } from "./client"
 import { billed, credit, movieCrew, showCast, showCrew } from "./credits"
-import type { Image, Movie, SeasonResult, Show, Video } from "./payloads"
+import type {
+  Image,
+  Keyword,
+  Movie,
+  SeasonResult,
+  Show,
+  Video,
+} from "./payloads"
+
+/**
+ * TMDB's "anime" keyword, the one Seerr routes anime by. Its genres only
+ * say "Animation", which Arcane and Spider-Verse have too.
+ */
+const ANIME_KEYWORD = 210024
+
+function anime(keywords: Keyword[] | undefined): boolean {
+  return (keywords ?? []).some((keyword) => keyword.id === ANIME_KEYWORD)
+}
 
 // append_to_response takes at most 20 entries.
 const SEASONS_PER_REQUEST = 20
@@ -68,7 +85,7 @@ export async function movieDetails(id: string, language: string) {
   const { lang, region } = languageParts(language)
   const movie = await request<Movie>(`/movie/${encodeURIComponent(id)}`, {
     language,
-    append_to_response: "images,release_dates,credits,videos",
+    append_to_response: "images,release_dates,credits,videos,keywords",
     include_image_language: `${lang},en,null`,
     include_video_language: `${lang},en,null`,
   })
@@ -87,6 +104,7 @@ export async function movieDetails(id: string, language: string) {
     overview: text(movie.overview),
     tagline: text(movie.tagline),
     genres: movie.genres?.map((genre) => genre.name) ?? [],
+    anime: anime(movie.keywords?.keywords),
     rating: rating(movie.vote_average, movie.vote_count),
     contentRating: text(certification?.certification),
     releaseDate: isoDate(movie.release_date),
@@ -154,7 +172,7 @@ export async function showDetails(id: string, language: string) {
   const show = await request<Show>(path, {
     language,
     append_to_response:
-      "images,content_ratings,external_ids,aggregate_credits,videos",
+      "images,content_ratings,external_ids,aggregate_credits,videos,keywords",
     include_image_language: `${lang},en,null`,
     include_video_language: `${lang},en,null`,
   })
@@ -177,6 +195,7 @@ export async function showDetails(id: string, language: string) {
     overview: text(show.overview),
     tagline: text(show.tagline),
     genres: show.genres?.map((genre) => genre.name) ?? [],
+    anime: anime(show.keywords?.results),
     rating: rating(show.vote_average, show.vote_count),
     contentRating: text(ageRating?.rating),
     releaseDate: isoDate(show.first_air_date),

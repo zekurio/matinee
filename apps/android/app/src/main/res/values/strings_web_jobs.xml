@@ -1,6 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Made by scripts/web_strings.py from apps/web/src/i18n/locales/en/jobs.ts. Don't edit. -->
 <resources>
+    <string name="web_jobs_task_dispatch_requests_name">Send requests</string>
+    <string name="web_jobs_task_dispatch_requests_description">Find accepted requests waiting to be sent.</string>
+    <string name="web_jobs_task_poll_requests_name">Read request progress</string>
+    <string name="web_jobs_task_poll_requests_description">Check active requests through each connection once.</string>
+    <string name="web_jobs_task_reconcile_requests_name">Reconcile request arrivals</string>
+    <string name="web_jobs_task_reconcile_requests_description">Find playable films and seasons for accepted requests.</string>
+    <string name="web_jobs_queue_request_dispatch_name">Request delivery</string>
+    <string name="web_jobs_queue_request_dispatch_description">Send accepted titles to their library connection.</string>
+    <string name="web_jobs_queue_request_progress_name">Request progress</string>
+    <string name="web_jobs_queue_request_progress_description">Check progress for titles on their way.</string>
+    <string name="web_jobs_queue_request_arrival_name">Request arrivals</string>
+    <string name="web_jobs_queue_request_arrival_description">Match library arrivals and notify followers.</string>
+    <string name="web_jobs_queue_notifications_name">Notifications</string>
+    <string name="web_jobs_queue_notifications_description">Deliver stored notifications through web push.</string>
+    <string name="web_jobs_queue_catalog_name">Catalog</string>
+    <string name="web_jobs_queue_catalog_description">Refresh cached catalog and Discover responses.</string>
     <string name="web_jobs_queues">Background work</string>
     <string name="web_jobs_loadFailed">Couldn\'t load the jobs. %1$s</string>
     <string name="web_jobs_retry">Try again</string>
@@ -72,6 +88,8 @@
     <string name="web_jobs_task_clean_transcodes_name">Clean up encodes</string>
     <string name="web_jobs_task_clean_sessions_name">Delete expired sessions</string>
     <string name="web_jobs_task_clean_sessions_description">Remove sign-ins that expired from the database.</string>
+    <string name="web_jobs_task_forget_browsed_pages_name">Forget browsed catalog pages</string>
+    <string name="web_jobs_task_forget_browsed_pages_description">Delete pages of the filtered catalog that nobody opened for a week.</string>
     <string name="web_jobs_task_sync_oidc_accounts_name">Sync provider accounts</string>
     <string name="web_jobs_task_sync_oidc_accounts_description">Refresh roles, pictures, and access from the sign-in provider for accounts with a refresh token.</string>
     <string name="web_jobs_task_neverRan">Hasn\'t run yet</string>

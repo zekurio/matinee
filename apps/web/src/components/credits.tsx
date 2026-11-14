@@ -80,7 +80,8 @@ export function CrewFacts({
   title,
   className,
 }: {
-  title: Title
+  /** A library title, or a catalog title's details. */
+  title: Pick<Title, "credits" | "studios">
   className?: string
 }) {
   const kinds = ["creator", "director", "writer"] satisfies CreditKind[]

@@ -71,7 +71,7 @@ export const artwork = pgTable("artwork", {
   createdAt: createdAt(),
 })
 
-const artworkRef = () =>
+export const artworkRef = () =>
   text().references(() => artwork.id, { onDelete: "set null" })
 
 export type ExternalIds = Record<string, string>
@@ -148,6 +148,13 @@ export const title = pgTable(
   },
   (t) => [
     uniqueIndex("title_library_path").on(t.libraryId, t.path),
+    index("title_provider_identity_idx").on(
+      t.libraryId,
+      t.kind,
+      t.provider,
+      t.providerId,
+    ),
+    index("title_external_ids_idx").using("gin", t.externalIds),
     index("title_sort_idx").on(t.libraryId, t.sortName),
     index("title_added_idx").on(t.libraryId, t.addedAt),
     // Genre and studio pages and filters ask for titles that contain one.

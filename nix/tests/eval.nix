@@ -62,6 +62,7 @@ let
     };
     secrets = {
       MATINEE_OIDC_CLIENT_SECRET = "/run/secrets/oidc";
+      MATINEE_CONNECTION_FILMS_API_KEY = "/run/secrets/films";
       MATINEE_TMDB_API_KEY = "/run/secrets/tmdb";
     };
   };
@@ -149,12 +150,21 @@ let
     "secrets become credentials" =
       (env oidc).MATINEE_OIDC_CLIENT_SECRET_FILE == "%d/MATINEE_OIDC_CLIENT_SECRET"
       && !((env oidc) ? MATINEE_OIDC_CLIENT_SECRET)
+      && lib.elem "MATINEE_CONNECTION_FILMS_API_KEY:/run/secrets/films" (serviceConfig oidc)
+      .LoadCredential
       && lib.elem "MATINEE_TMDB_API_KEY:/run/secrets/tmdb" (serviceConfig oidc).LoadCredential;
     "a secret replaces the setting of the same name" =
       failed remoteDatabase == [ ]
       && !((env remoteDatabase) ? DATABASE_URL)
       && (env remoteDatabase).DATABASE_URL_FILE == "%d/DATABASE_URL"
       && !remoteDatabase.services.postgresql.enable;
+    "connection secrets use credentials without a store warning" =
+      failed oidc == [ ]
+      && (env oidc).MATINEE_CONNECTION_FILMS_API_KEY_FILE == "%d/MATINEE_CONNECTION_FILMS_API_KEY"
+      && !(lib.any (lib.hasInfix "world-readable") oidc.warnings);
+    "connection keys in settings warn" = lib.any (lib.hasInfix "world-readable") (
+      (server { settings.MATINEE_CONNECTION_FILMS_API_KEY = "key"; }).warnings
+    );
     "a secret in settings warns" = lib.any (lib.hasInfix "world-readable") (
       (server { settings.MATINEE_TMDB_API_KEY = "key"; }).warnings
     );

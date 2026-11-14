@@ -1,5 +1,6 @@
 import { eventIterator, oc } from "@orpc/contract"
 
+import { NextSeasonEntry } from "./catalog"
 import { get, post, put } from "./contract-routes"
 import {
   PlaybackSeek,
@@ -185,6 +186,14 @@ export const homeContract = oc.tag("Home").router({
   nextUp: get("/home/next-up")
     .input(t.object({ limit: t.number().int().min(1).max(50).$default(12) }))
     .output(t.array(NextUpEntry)),
+  /**
+   * For each show whose last episode on the server the user finished, the
+   * next season when its provider lists one the server lacks, ordered as
+   * `nextUp`. Leaves out a season the user can neither ask for nor follow.
+   */
+  nextSeasons: get("/home/next-seasons")
+    .input(t.object({ limit: t.number().int().min(1).max(50).$default(12) }))
+    .output(t.array(NextSeasonEntry)),
   /**
    * Titles for the banner across every library: the newest, alternating
    * with well-rated ones picked at random. Leaves out titles the user

@@ -16,6 +16,7 @@ For NixOS and the dev shell, see the [repository README](../../README.md).
 - [Branding](#branding)
 - [Scanning](#scanning)
 - [Metadata](#metadata)
+- [Requests](#requests)
 - [Jobs](#jobs)
 - [Subtitles](#subtitles)
 - [Playback](#playback)
@@ -266,6 +267,121 @@ To add a provider, implement `MetadataSource` in
 `apps/server/src/metadata/types.ts`, list it in `sources.ts`, and add its id
 to `METADATA_PROVIDERS` in the contract.
 
+## Requests
+
+People can request a title the server doesn't have, from search, from
+Discover, or from a show in the library that is missing seasons. A group's
+access says whether its members may request, whether a request waits for
+an admin or is added right away, and how many titles they may request in a
+number of days. Existing groups start with requests off. Admins answer what waits
+under Requests in the account menu, or on the title's page.
+
+There is one request per title and library. It collects the seasons
+requested and everyone who requested it or wants to be told. Whether a title is here is
+never stored. It is read from the library on every call with the viewer's
+library access, so a deleted file stops showing as playable and a title in
+a library someone can't see stays hidden from them.
+
+### Catalog and Discover
+
+Search for titles the server lacks goes to the metadata provider of the
+library a request would land in. Discover, browsing with filters, and the
+rows of related titles on a title's page come from TMDB and need
+`MATINEE_TMDB_API_KEY`.
+
+- Discover's rows are TMDB's weekly trending movies and shows,
+  recommendations for the viewer's last watched title, popular titles out
+  in the next 90 days, and what others requested.
+- Browsing filters TMDB's movies or shows by genre, release year, user
+  score, votes, age rating, original language, and runtime. The age
+  ratings are those of the library language's country. Sorting by score
+  leaves out titles with fewer than 250 votes.
+- A title's page lists its recommendations and, for a movie, the rest of
+  its collection.
+
+Provider answers are cached: search and feeds for 6 hours, details for 24.
+When a provider is down the last answer is served and marked stale.
+Library search doesn't depend on any of it.
+
+### Connections
+
+A connection sends approved requests to a download manager: Radarr, Sonarr,
+or By hand, where an admin adds the file and the scan finds it. Under
+Settings → Requests each library picks the connection that fills it, with
+its own quality and folder. The library needs a metadata provider. Radarr
+needs a TMDB id and Sonarr a TheTVDB id, which Matinee looks up.
+
+A connection's API key comes from `MATINEE_CONNECTION_<SLUG>_API_KEY`, or
+its `_FILE` form, unless one is saved in the settings. A saved key is
+stored in the database as is. The API only says where the key in use comes
+from. On NixOS, put it in `services.matinee.secrets`.
+
+To add a download manager, implement `FulfilmentSource` in
+`apps/server/src/requests/fulfilment/types.ts` and list it in `sources.ts`.
+
+### Anime
+
+A library's mapping has a second, optional set of options under Anime: the
+same quality, folder, and series type choices, used for anime instead of
+the normal ones. Left empty, anime is sent like everything else.
+
+The folder decides where anime lands. With Sonarr saving shows to
+`/media/shows` and anime to `/media/anime`, and Matinee libraries on those
+two folders, anime asked for through the Shows mapping lands in the Anime
+library. A folder inside the library's own, like `/media/films/anime`,
+lands in the same library. When a download manager sees the folder under
+another path, as in a container, the settings ask for the library instead.
+
+A title is anime when TheTVDB lists the Anime genre or TMDB has the "anime"
+keyword. An admin can send a waiting request to another library before
+adding it.
+
+### Sending, progress, and arrival
+
+An approved request is sent ten seconds after its approval. Until then the
+one person who requested it can take it back, which is what Undo does for
+someone whose requests need no approval. An unreachable connection is tried again after
+5, 10, and 20 seconds. After that the request shows under Needs attention
+with the error, and an admin retries it.
+
+Progress is read once a minute per connection while something is on its
+way, and kept in memory. A movie has arrived when a scan finds its file in
+the library. A season has arrived with its first playable episode. A check
+every five minutes covers anything a scan missed.
+
+### Declines
+
+An admin declines a waiting request with a reason, "Already have it" or
+"Not for this server", and an optional note. An accepted request that
+never turns up, under On the way or Needs attention, can be given up on,
+which declines it with "Can't find a copy". Giving up leaves the download
+manager alone: nothing there is cancelled or deleted. If the file turns up
+anyway, the scan decides as always, and the request counts as arrived.
+
+A decline doesn't run out. The title shows as not available to everyone
+who can see its library, and nobody can request it, until an admin lifts
+the decline from the request under Done. Allow requests again removes the
+request, so the title can be requested afresh. Add after all accepts it as
+it was, with its requesters and followers, and sends it. Only the people
+who requested or follow a declined title are told who declined it, why,
+and the admin's note. Discover's rows leave declined titles out; search
+and browsing still show them. A declined request doesn't count against
+anyone's limit.
+
+### Notifications
+
+Everyone who requested a title or follows it is told once when it is ready,
+or when it is declined or given up on. Admins get a summary of waiting requests at most
+once an hour, and of failed ones once a day. Approvals and progress notify
+nobody. They reach people through web push and the Android app's
+background check; neither app shows them while it's open.
+
+Web push is opt-in and needs HTTPS. The server makes its VAPID keys on
+first use and keeps them in the database. It is the one place the server
+calls a URL a client sent, so only the browsers' push services are
+accepted: `fcm.googleapis.com`, `updates.push.services.mozilla.com`,
+`web.push.apple.com`, and `*.notify.windows.com`.
+
 ## Jobs
 
 Background work runs in queues for scans, ffprobe, metadata, thumbnails,
@@ -278,7 +394,7 @@ backlogs faster but competes with streams.
 
 Scheduled tasks fill the queues. They scan libraries, refresh metadata,
 probe files, fetch artwork, make trickplay, prepare subtitles, clean up
-encodes, and expire sessions. Each runs at startup, on an interval, or on
+encodes, expire sessions, and send and track requests. Each runs at startup, on an interval, or on
 Run now. Queues are in memory. After a restart, the tasks find unfinished
 work again from the database.
 

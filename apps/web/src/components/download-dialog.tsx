@@ -205,9 +205,6 @@ function DownloadFiles({
       )}
 
       <DialogFooter className="-mx-6 -mb-6 px-6 py-4">
-        <Button type="button" variant="ghost" onClick={onDone}>
-          {tr("downloads.cancel")}
-        </Button>
         <Button type="button" disabled={files.length === 0} onClick={save}>
           <DownloadIcon />
           {tr("downloads.submit")}

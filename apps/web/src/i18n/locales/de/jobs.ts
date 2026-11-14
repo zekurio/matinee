@@ -2,6 +2,31 @@ import { plural, type TranslationOf } from "../../catalog"
 import type source from "../en/jobs"
 
 export default {
+  "jobs.task.dispatch-requests.name": "Anfragen senden",
+  "jobs.task.dispatch-requests.description":
+    "Angenommene Anfragen zum Senden finden.",
+  "jobs.task.poll-requests.name": "Fortschritt der Anfragen lesen",
+  "jobs.task.poll-requests.description":
+    "Aktive Anfragen einmal je Verbindung prüfen.",
+  "jobs.task.reconcile-requests.name": "Eingänge für Anfragen abgleichen",
+  "jobs.task.reconcile-requests.description":
+    "Abspielbare Filme und Staffeln für angenommene Anfragen finden.",
+  "jobs.queue.request-dispatch.name": "Anfragen übermitteln",
+  "jobs.queue.request-dispatch.description":
+    "Angenommene Titel an die Bibliotheksverbindung übermitteln.",
+  "jobs.queue.request-progress.name": "Anfragenfortschritt",
+  "jobs.queue.request-progress.description":
+    "Fortschritt von Titeln prüfen, die unterwegs sind.",
+  "jobs.queue.request-arrival.name": "Eingetroffene Anfragen",
+  "jobs.queue.request-arrival.description":
+    "Neue Bibliothekstitel zuordnen und Interessierte benachrichtigen.",
+  "jobs.queue.notifications.name": "Benachrichtigungen",
+  "jobs.queue.notifications.description":
+    "Gespeicherte Benachrichtigungen per Web-Push zustellen.",
+  "jobs.queue.catalog.name": "Katalog",
+  "jobs.queue.catalog.description":
+    "Zwischengespeicherte Katalog- und Entdecken-Antworten aktualisieren.",
+
   "jobs.queues": "Hintergrundaufgaben",
   "jobs.loadFailed": "Die Aufträge konnten nicht geladen werden. {error}",
   "jobs.retry": "Erneut versuchen",
@@ -98,6 +123,9 @@ export default {
   "jobs.task.clean-sessions.name": "Abgelaufene Sitzungen löschen",
   "jobs.task.clean-sessions.description":
     "Entfernt abgelaufene Anmeldungen aus der Datenbank.",
+  "jobs.task.forget-browsed-pages.name": "Gefilterte Katalogseiten vergessen",
+  "jobs.task.forget-browsed-pages.description":
+    "Löscht Seiten des gefilterten Katalogs, die eine Woche lang niemand geöffnet hat.",
 
   "jobs.task.sync-oidc-accounts.name": "Anbieterkonten synchronisieren",
   "jobs.task.sync-oidc-accounts.description":

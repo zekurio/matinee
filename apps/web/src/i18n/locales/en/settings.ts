@@ -36,6 +36,11 @@ export default defineMessages("settings", {
   "settings.section.access.description": "Groups, libraries, and limits",
   "settings.section.access.keywords":
     "Access groups, Groups, Permissions, Libraries, Bit rate, Limit, Bandwidth, Encoding, Transcoding, Downloads, Streams, Devices, Provider groups, Kids",
+  "settings.section.requests.label": "Requests",
+  "settings.section.requests.description":
+    "Connections, and what fills each library",
+  "settings.section.requests.keywords":
+    "Asks, Connections, Radarr, Sonarr, By hand, API key, Fill from, Quality, Save to, Root folder, Quality profile, Anime, Series type",
   "settings.section.authentication.label": "Authentication",
   "settings.section.authentication.description": "Passkeys and single sign-on",
   "settings.section.authentication.keywords":

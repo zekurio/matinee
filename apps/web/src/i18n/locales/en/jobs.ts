@@ -1,6 +1,32 @@
 import { defineMessages, plural } from "../../catalog"
 
 export default defineMessages("jobs", {
+  "jobs.task.dispatch-requests.name": "Send requests",
+  "jobs.task.dispatch-requests.description":
+    "Find accepted requests waiting to be sent.",
+  "jobs.task.poll-requests.name": "Read request progress",
+  "jobs.task.poll-requests.description":
+    "Check active requests through each connection once.",
+  "jobs.task.reconcile-requests.name": "Reconcile request arrivals",
+  "jobs.task.reconcile-requests.description":
+    "Find playable films and seasons for accepted requests.",
+
+  "jobs.queue.request-dispatch.name": "Request delivery",
+  "jobs.queue.request-dispatch.description":
+    "Send accepted titles to their library connection.",
+  "jobs.queue.request-progress.name": "Request progress",
+  "jobs.queue.request-progress.description":
+    "Check progress for titles on their way.",
+  "jobs.queue.request-arrival.name": "Request arrivals",
+  "jobs.queue.request-arrival.description":
+    "Match library arrivals and notify followers.",
+  "jobs.queue.notifications.name": "Notifications",
+  "jobs.queue.notifications.description":
+    "Deliver stored notifications through web push.",
+  "jobs.queue.catalog.name": "Catalog",
+  "jobs.queue.catalog.description":
+    "Refresh cached catalog and Discover responses.",
+
   // The jobs panel under Settings → Jobs.
   "jobs.queues": "Background work",
   "jobs.loadFailed": "Couldn't load the jobs. {error}",
@@ -100,6 +126,9 @@ export default defineMessages("jobs", {
   "jobs.task.clean-sessions.name": "Delete expired sessions",
   "jobs.task.clean-sessions.description":
     "Remove sign-ins that expired from the database.",
+  "jobs.task.forget-browsed-pages.name": "Forget browsed catalog pages",
+  "jobs.task.forget-browsed-pages.description":
+    "Delete pages of the filtered catalog that nobody opened for a week.",
 
   "jobs.task.sync-oidc-accounts.name": "Sync provider accounts",
   "jobs.task.sync-oidc-accounts.description":

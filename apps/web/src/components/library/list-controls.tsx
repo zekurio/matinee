@@ -27,10 +27,11 @@ import {
   SearchIcon,
   XIcon,
 } from "lucide-react"
-import { useEffect, useRef, useState } from "react"
+import { type ComponentProps, useEffect, useRef, useState } from "react"
 import { flushSync } from "react-dom"
 
 import { chipClass, chipRow } from "@/components/chips"
+import { belowHeader } from "@/components/page-header"
 import { tr } from "@/i18n"
 import { formatCount } from "@/lib/format"
 
@@ -113,7 +114,7 @@ export function ActiveFilters({
   setStudio,
   clear,
 }: FilterState) {
-  const active: { key: string; label: string; remove: () => void }[] = []
+  const active: ActiveFilter[] = []
   if (genre) {
     active.push({
       key: "genre",
@@ -128,12 +129,31 @@ export function ActiveFilters({
       remove: () => setStudio(undefined),
     })
   }
+  return <FilterChips active={active} clear={clear} />
+}
+
+/** A filter in use, as its chip names it. */
+export type ActiveFilter = { key: string; label: string; remove: () => void }
+
+/**
+ * Chips for the filters in use, each taking its own off, and "Clear all"
+ * once there are two. Nothing when none is on.
+ */
+export function FilterChips({
+  active,
+  clear,
+  className,
+}: {
+  active: ActiveFilter[]
+  clear: () => void
+  className?: string
+}) {
   if (active.length === 0) return null
   return (
     <div
       role="group"
       aria-label={tr("library.filters")}
-      className={cn(chipRow, "mb-4")}
+      className={cn(chipRow, belowHeader, className)}
     >
       {active.map((filter) => (
         <button
@@ -157,6 +177,64 @@ export function ActiveFilters({
 }
 
 /**
+ * The button that opens a list's filters, with how many are on: "Filter"
+ * and a count from `sm` up, an icon with a dot on phones (`compact`).
+ * Give it as a trigger's `render`, with {@link FilterButtonFace} inside.
+ */
+export function FilterButton({
+  compact = false,
+  active,
+  ...props
+}: ComponentProps<typeof Button> & { compact?: boolean; active: number }) {
+  return compact ? (
+    <Button
+      variant="ghost"
+      size="icon"
+      aria-label={
+        active > 0
+          ? tr("library.filtersOn", { count: active })
+          : tr("library.filters")
+      }
+      className="data-popup-open:bg-foreground/10 relative [@media(pointer:coarse)]:size-11"
+      {...props}
+    />
+  ) : (
+    <Button
+      variant="outline"
+      className="data-popup-open:border-ring h-10 font-normal md:h-9"
+      {...props}
+    />
+  )
+}
+
+/** What {@link FilterButton} shows: the icon, the word, and the count. */
+export function FilterButtonFace({
+  compact = false,
+  active,
+}: {
+  compact?: boolean
+  active: number
+}) {
+  return (
+    <>
+      <ListFilterIcon className={compact ? "size-5" : undefined} />
+      {!compact && tr("library.filter")}
+      {active > 0 &&
+        (compact ? (
+          <span
+            aria-hidden
+            className="bg-primary absolute top-2 right-2 size-2 rounded-full"
+          />
+        ) : (
+          <span className="bg-foreground text-background rounded-full px-1.5 text-xs leading-5 tabular-nums">
+            {active}
+          </span>
+        ))}
+    </>
+  )
+}
+
+/**
  * Genre and studio, each a submenu of what the list holds with how many
  * titles have it. `compact` is the icon-only button phones get.
  */
@@ -174,39 +252,9 @@ function FilterMenu({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        render={
-          compact ? (
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label={
-                active > 0
-                  ? tr("library.filtersOn", { count: active })
-                  : tr("library.filters")
-              }
-              className="data-popup-open:bg-foreground/10 relative [@media(pointer:coarse)]:size-11"
-            />
-          ) : (
-            <Button
-              variant="outline"
-              className="data-popup-open:border-ring h-10 font-normal md:h-9"
-            />
-          )
-        }
+        render={<FilterButton compact={compact} active={active} />}
       >
-        <ListFilterIcon className={compact ? "size-5" : undefined} />
-        {!compact && tr("library.filter")}
-        {active > 0 &&
-          (compact ? (
-            <span
-              aria-hidden
-              className="bg-primary absolute top-2 right-2 size-2 rounded-full"
-            />
-          ) : (
-            <span className="bg-foreground text-background rounded-full px-1.5 text-xs leading-5 tabular-nums">
-              {active}
-            </span>
-          ))}
+        <FilterButtonFace compact={compact} active={active} />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-56">
         <FacetMenu
@@ -410,14 +458,15 @@ function PhoneFilter({
   )
 }
 
-function SortMenu({
+/** The sort as an icon button with a menu, for phones. */
+export function SortMenu<T extends string>({
   options,
   value,
   onChange,
 }: {
-  options: SortOption[]
-  value: Sort
-  onChange: (value: Sort) => void
+  options: { value: T; label: string }[]
+  value: T
+  onChange: (value: T) => void
 }) {
   const current = options.find((option) => option.value === value)
   return (
@@ -501,14 +550,15 @@ function SearchBox({
   )
 }
 
-function SortSelect({
+/** The sort as a select with "Sort:" before it, from `sm` up. */
+export function SortSelect<T extends string>({
   options,
   value,
   onChange,
 }: {
-  options: SortOption[]
-  value: Sort
-  onChange: (value: Sort) => void
+  options: { value: T; label: string }[]
+  value: T
+  onChange: (value: T) => void
 }) {
   return (
     <Select

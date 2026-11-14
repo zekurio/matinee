@@ -27,7 +27,11 @@ import {
   useListSearch,
 } from "@/components/library/list-params"
 import { PosterCard, posterGrid } from "@/components/media-item"
-import { PageHeader, useDocumentTitle } from "@/components/page-header"
+import {
+  belowHeader,
+  PageHeader,
+  useDocumentTitle,
+} from "@/components/page-header"
 import { tr } from "@/i18n"
 import type { BrowseSearch } from "@/lib/browse-search"
 import { errorMessage, orpc } from "@/lib/rpc"
@@ -108,7 +112,7 @@ export function BrowsePage({
           counts={counts}
           value={kind}
           onChange={(next) => update({ kind: next })}
-          className="mb-5"
+          className={belowHeader}
         />
       )}
 

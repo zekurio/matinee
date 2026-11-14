@@ -6,11 +6,17 @@ import { useQuery } from "@tanstack/react-query"
 import { Link, useRouteContext } from "@tanstack/react-router"
 import { ChevronRightIcon } from "lucide-react"
 
+import { AskedRail } from "@/components/asked/asked"
+import {
+  liveEntry,
+  useLiveAvailability,
+} from "@/components/catalog/catalog-data"
 import { Hero, heroFill, heroFrame } from "@/components/hero"
 import { NoLibraries } from "@/components/library/no-libraries"
 import { EpisodeCard, TitleCard } from "@/components/media-item"
 import { PageHeader } from "@/components/page-header"
 import { Rail, RailItem } from "@/components/rail"
+import { NextSeasonCard } from "@/components/title/next-season"
 import { tr } from "@/i18n"
 import { homeQueries } from "@/lib/home-queries"
 import { orpc } from "@/lib/rpc"
@@ -21,6 +27,15 @@ export function Home() {
   const libraries = useQuery(orpc.libraries.list.queryOptions())
   const resume = useQuery(homeQueries.resume())
   const nextUp = useQuery(homeQueries.nextUp())
+  // Slower than Next up, since it asks the catalog, so the row doesn't
+  // wait for it; its cards join when they come.
+  const nextSeasons = useQuery(homeQueries.nextSeasons())
+  const seasonsLive = useLiveAvailability(
+    (nextSeasons.data ?? []).map((entry) => ({
+      ref: entry.ref,
+      libraryId: entry.libraryId,
+    })),
+  )
   const featured = useQuery(homeQueries.featured())
   const slides = featured.data ?? []
 
@@ -44,7 +59,32 @@ export function Home() {
   }
 
   const hasResume = (resume.data?.length ?? 0) > 0
-  const hasNextUp = (nextUp.data?.length ?? 0) > 0
+  // Episodes and next seasons together, the show watched last first.
+  const nextRow = [
+    ...(nextUp.data ?? []).map((entry) => ({
+      key: entry.item.id,
+      at: entry.lastWatchedAt.getTime(),
+      card: <EpisodeCard item={entry.item} />,
+    })),
+    ...(nextSeasons.data ?? []).map((entry) => {
+      const live = liveEntry(seasonsLive, entry.ref)?.seasons.find(
+        (season) => season.number === entry.season.number,
+      )
+      return {
+        key: `season-${entry.title.id}`,
+        at: entry.lastWatchedAt.getTime(),
+        card: (
+          <NextSeasonCard
+            entry={entry}
+            season={
+              live ? { ...entry.season, availability: live } : entry.season
+            }
+          />
+        ),
+      }
+    }),
+  ].toSorted((a, b) => b.at - a.at)
+  const hasNextUp = nextRow.length > 0
   // On desktop, the banner and the rows of what to watch next share the
   // first screen: the banner takes what the rows leave. The column ends at
   // the window's bottom (<main>'s top padding is cancelled by the banner's
@@ -100,15 +140,15 @@ export function Home() {
         ) : (
           hasNextUp && (
             <Rail title={tr("browse.home.nextUp")}>
-              {nextUp.data?.map(({ item }) => (
-                <RailItem key={item.id}>
-                  <EpisodeCard item={item} />
-                </RailItem>
+              {nextRow.map((entry) => (
+                <RailItem key={entry.key}>{entry.card}</RailItem>
               ))}
             </Rail>
           )
         )}
       </div>
+
+      <AskedRail username={user.username} />
 
       {libraries.data?.map((library) => (
         <LibraryShelf key={library.id} library={library} />

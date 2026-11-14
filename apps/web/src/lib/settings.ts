@@ -26,6 +26,7 @@ const SECTIONS = [
   { id: "libraries", path: "admin/libraries" },
   { id: "users", path: "admin/users" },
   { id: "access", path: "admin/access" },
+  { id: "requests", path: "admin/requests" },
   { id: "authentication", path: "admin/authentication" },
   { id: "transcoding", path: "admin/transcoding" },
   { id: "trickplay", path: "admin/trickplay" },

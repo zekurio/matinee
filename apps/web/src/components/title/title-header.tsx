@@ -7,14 +7,16 @@ import type {
 } from "@matinee/contracts"
 import { buttonVariants } from "@matinee/ui/components/button"
 import { cn } from "@matinee/ui/lib/utils"
-import { Link } from "@tanstack/react-router"
+import { Link, useRouterState } from "@tanstack/react-router"
 import { ClapperboardIcon, PlayIcon, StarIcon } from "lucide-react"
+import type { ReactNode } from "react"
 
 import { ActionsMenu } from "@/components/actions-menu"
 import { pageBleed, pageColumn } from "@/components/app-shell"
 import { CrewFacts, listNodes, unitList } from "@/components/credits"
 import { FavoriteButton } from "@/components/favorite-button"
 import { Picture, textLink, tone } from "@/components/media-item"
+import { AdminRequestStrip } from "@/components/requests/approve-strip"
 import { MediaInfo } from "@/components/title/media-info"
 import { useTitleWatched, WatchedButton } from "@/components/watched-menu"
 import { getLocale, perLocale, tr } from "@/i18n"
@@ -22,10 +24,11 @@ import { formatRuntime } from "@/lib/format"
 import { art, type ImageSource, mediaFlags, timeLeft } from "@/lib/media"
 
 import { HeaderOverview } from "./header-overview"
+import { useShowGaps } from "./show-gaps"
 import { MatchNote } from "./title-menu"
 
 // A rating out of ten, with one decimal: "7.5".
-const ratings = perLocale(
+export const ratings = perLocale(
   (locale) =>
     new Intl.NumberFormat(locale, {
       minimumFractionDigits: 1,
@@ -65,6 +68,14 @@ export function TitleHeader({ title }: { title: Title }) {
       : null,
     title.kind === "show" ? title.status : null,
   ].filter(Boolean)
+  // Just arrived from its catalog page: what's new fades in, while the
+  // backdrop, poster, and name stay where they were.
+  const arrived = useRouterState({
+    select: (state) => state.location.state.arrived === true,
+  })
+  const gained = arrived
+    ? "animate-in fade-in-0 duration-200 motion-reduce:animate-none"
+    : undefined
   // A show's episodes can differ, so only a movie's file speaks for the title.
   const flags =
     title.kind === "movie" && title.next ? mediaFlags(title.next) : []
@@ -146,14 +157,16 @@ export function TitleHeader({ title }: { title: Title }) {
                 overview={title.overview}
                 className="sm:mt-4"
               />
-              <CrewFacts title={title} className="mt-4" />
+              <CrewFacts title={title} className={cn("mt-4", gained)} />
               {/* A movie's file. A show's differ by episode. */}
               {title.kind === "movie" && title.next && (
-                <MediaInfo item={title.next} className="mt-4" />
+                <MediaInfo item={title.next} className={cn("mt-4", gained)} />
               )}
 
-              <div className="pt-6 sm:mt-auto">
-                <div className="flex items-center gap-2">
+              <div className={cn("sm:mt-auto", gained)}>
+                {/* The admin's approval sits just above the buttons. */}
+                {title.kind === "show" && <ShowRequestStrip title={title} />}
+                <div className="flex items-center gap-2 pt-6">
                   <PlayButton item={title.next} />
                   <TrailerButton trailers={title.trailers} />
                   {title.itemCount > 0 && <TitleWatchedButton title={title} />}
@@ -181,7 +194,10 @@ export function HeaderBackdrop({
   title,
   poster = title.images.poster,
 }: {
-  title: TitleSummary
+  /** A library title, or anything with a tone key and images like one. */
+  title: Pick<TitleSummary, "id"> & {
+    images: Pick<TitleSummary["images"], "backdrop" | "poster">
+  }
   /** Blurred in when the title has no backdrop. */
   poster?: Artwork | null
 }) {
@@ -231,11 +247,14 @@ export function HeaderPoster({
   toneKey,
   poster,
   className,
+  children,
 }: {
   name: string
   toneKey: string
   poster: ImageSource | null
   className?: string
+  /** What lies over the poster, like a catalog title's state and action. */
+  children?: ReactNode
 }) {
   return (
     <div
@@ -258,6 +277,7 @@ export function HeaderPoster({
           sizes="(min-width: 1536px) 256px, (min-width: 1024px) 224px, (min-width: 640px) 192px, 96px"
         />
       )}
+      {children}
     </div>
   )
 }
@@ -282,6 +302,19 @@ function TitleName({ title }: { title: Title }) {
       )}
     </>
   )
+}
+
+/**
+ * For an admin, someone's waiting ask for more of a show in the library,
+ * with Add and Decline.
+ */
+function ShowRequestStrip({ title }: { title: Title }) {
+  const gaps = useShowGaps(title)
+  const requestId =
+    [...(gaps?.missing ?? []), ...(gaps?.partial ?? [])].find(
+      (season) => season.availability.requestId !== null,
+    )?.availability.requestId ?? null
+  return <AdminRequestStrip requestId={requestId} />
 }
 
 /**
@@ -321,7 +354,7 @@ function baseLanguage(tag: string): string {
  * server's first, on YouTube in a new tab. Just the icon on phones, where
  * Play takes the row.
  */
-function TrailerButton({ trailers }: { trailers: Trailer[] }) {
+export function TrailerButton({ trailers }: { trailers: Trailer[] }) {
   const language = baseLanguage(getLocale())
   const trailer =
     trailers.find((t) => t.language && baseLanguage(t.language) === language) ??

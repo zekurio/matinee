@@ -59,6 +59,13 @@ import io.github.zekurio.matinee.ui.components.favoriteKey
 import io.github.zekurio.matinee.ui.components.railItemWidth
 import io.github.zekurio.matinee.ui.media.isFavorite
 import io.github.zekurio.matinee.ui.rememberLoader
+import io.github.zekurio.matinee.ui.requests.LocalRequests
+import io.github.zekurio.matinee.ui.requests.ProfileAskedRail
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalResources
 import io.github.zekurio.matinee.ui.settings.LinkRow
 import io.github.zekurio.matinee.ui.settings.Panel
 import io.github.zekurio.matinee.ui.tabBarPadding
@@ -121,6 +128,8 @@ private fun ProfilePage(state: Load<Profile>?, loader: Loader<Profile>?, stats: 
                 }
                 is Load.Ready -> {
                     item(key = "favorites") { Box(Modifier.padding(top = SectionGap)) { Favorites(state.value) } }
+                    // What you asked for is yours alone; this is only ever your own profile.
+                    if (loader != null) item(key = "asked") { ProfileAskedRail(Modifier.padding(top = SectionGap)) }
                     // Each card its own item, so a tab switch builds only the ones on screen.
                     statistics(stats)
                     state.value.recent?.takeIf { it.isNotEmpty() }?.let { recent ->
@@ -193,8 +202,38 @@ private fun Header(profile: Profile?, action: @Composable () -> Unit) {
             Gap(12.dp)
         } else {
             action()
+            if (user.isAdmin) {
+                RequestsButton()
+                Gap(8.dp)
+            }
         }
         RoundIconButton(Lucide.Settings, stringResource(R.string.shell_settings), nav::settings, iconSize = 20.dp)
+    }
+}
+
+/** The admin's way to the queue on a phone, with the accent dot while requests need them. */
+@Composable
+private fun RequestsButton() {
+    val nav = LocalNavigator.current
+    val needsYou = LocalRequests.current.needsYou
+    val res = LocalResources.current
+    Box {
+        RoundIconButton(
+            Lucide.Inbox,
+            if (needsYou > 0) res.getQuantityString(R.plurals.web_requests_menuWaiting, needsYou, needsYou) else res.getString(R.string.web_requests_menu),
+            { nav.requests() },
+            iconSize = 20.dp,
+        )
+        if (needsYou > 0) {
+            Box(
+                Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 8.dp, end = 8.dp)
+                    .size(8.dp)
+                    .clip(CircleShape)
+                    .background(Palette.Accent),
+            )
+        }
     }
 }
 

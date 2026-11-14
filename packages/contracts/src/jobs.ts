@@ -20,6 +20,11 @@ export const JOB_QUEUE_IDS = [
   "avatars",
   "downloads",
   "download-copies",
+  "request-dispatch",
+  "request-progress",
+  "request-arrival",
+  "notifications",
+  "catalog",
 ] as const
 export const JobQueueId = t.enum(JOB_QUEUE_IDS)
 export type JobQueueId = t.infer<typeof JobQueueId>
@@ -73,6 +78,9 @@ export const JobQueueStatus = t.object({
 export type JobQueueStatus = t.infer<typeof JobQueueStatus>
 
 export const TASK_IDS = [
+  "dispatch-requests",
+  "poll-requests",
+  "reconcile-requests",
   "scan-libraries",
   "refresh-metadata",
   "probe-media",
@@ -81,6 +89,7 @@ export const TASK_IDS = [
   "make-trickplay",
   "clean-transcodes",
   "clean-sessions",
+  "forget-browsed-pages",
   "sync-oidc-accounts",
 ] as const
 export const TaskId = t.enum(TASK_IDS)

@@ -1,9 +1,10 @@
-import type { AccessPolicy, Library } from "@matinee/contracts"
+import type { AccessPolicy, Library, RequestLimit } from "@matinee/contracts"
 import { cn } from "@matinee/ui/lib/utils"
 import {
   DownloadIcon,
   FilmIcon,
   GaugeIcon,
+  InboxIcon,
   LibraryBigIcon,
   MonitorPlayIcon,
 } from "lucide-react"
@@ -41,6 +42,32 @@ export function streamLimitLabel(limit: number | null): string {
   return limit === null
     ? tr("access.streams.none")
     : tr("access.streams.count", { count: limit })
+}
+
+/** "No limit", or "5 titles every 7 days". */
+export function requestLimitLabel(limit: RequestLimit): string {
+  if (limit === null) return tr("access.requestLimit.none")
+  return tr("access.requestLimit.rate", {
+    titles: tr("access.requestLimit.titles", { count: limit.titles }),
+    period: tr("access.requestLimit.period", { count: limit.days }),
+  })
+}
+
+/** "Requests need approval, 5 titles every 7 days", or "No requests". */
+export function requestsFactLabel(
+  policy: Pick<AccessPolicy, "requests" | "requestLimit">,
+): string {
+  const requests =
+    policy.requests === "off"
+      ? tr("access.requests.factOff")
+      : policy.requests === "ask"
+        ? tr("access.requests.factAsk")
+        : tr("access.requests.factAdd")
+  if (policy.requests === "off" || policy.requestLimit === null) return requests
+  return tr("access.requests.factLimited", {
+    requests,
+    limit: requestLimitLabel(policy.requestLimit),
+  })
 }
 
 /** How a policy's libraries read in a line of facts. */
@@ -104,7 +131,7 @@ export function Fact({
 
 /**
  * A line of what a policy allows: its libraries, its bit rate limit, the
- * encoding and download switches, and its stream limit.
+ * encoding and download switches, its stream limit, and its requests.
  */
 export function PolicyFacts({
   policy,
@@ -141,6 +168,7 @@ export function PolicyFacts({
       <Fact icon={<MonitorPlayIcon />}>
         {streamLimitLabel(policy.maxStreams)}
       </Fact>
+      <Fact icon={<InboxIcon />}>{requestsFactLabel(policy)}</Fact>
     </p>
   )
 }
