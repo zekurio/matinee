@@ -51,6 +51,7 @@ import {
   XIcon,
 } from "lucide-react"
 import { type ReactNode, useRef, useState } from "react"
+import { useStore } from "zustand"
 
 import { Picture, tone } from "@/components/picture"
 import { UserAvatar } from "@/components/user-avatar"
@@ -66,6 +67,7 @@ import {
   usePartyRole,
 } from "@/lib/party"
 import { client, errorMessage } from "@/lib/rpc"
+import { createMemberMenuStore } from "@/stores/party-member-menu"
 
 function failed(cause: unknown) {
   toast.error(tr("party.failed"), { description: errorMessage(cause) })
@@ -669,13 +671,8 @@ function ProposalMenu({ entry, owner }: { entry: PartyEntry; owner: boolean }) {
 function MemberMenu({ member }: { member: PartyMember }) {
   const name = member.user.displayName ?? member.user.username
   const userId = member.user.id
-  const [asking, setAsking] = useState<"owner" | "kick" | null>(null)
-  // The last question, kept while its dialog closes.
-  const [shown, setShown] = useState<"owner" | "kick">("kick")
-  const ask = (what: "owner" | "kick") => {
-    setShown(what)
-    setAsking(what)
-  }
+  const [store] = useState(createMemberMenuStore)
+  const { open, shown, ask, close } = useStore(store)
   const transfer = useMutation({
     mutationFn: () => client.party.transfer({ userId }),
     onError: failed,
@@ -697,9 +694,9 @@ function MemberMenu({ member }: { member: PartyMember }) {
         </DropdownMenuItem>
       </RowMenu>
       <AlertDialog
-        open={asking !== null}
-        onOpenChange={(open) => {
-          if (!open) setAsking(null)
+        open={open}
+        onOpenChange={(next) => {
+          if (!next) close()
         }}
       >
         <AlertDialogContent>

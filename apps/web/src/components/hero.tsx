@@ -127,11 +127,19 @@ export function Hero({
   className?: string
 }) {
   const [store] = useState(createHeroStore)
-  const { index: picked, held } = useStore(
+  const {
+    index: picked,
+    held,
+    primed,
+  } = useStore(
     store,
-    useShallow((state) => ({ index: state.index, held: state.held })),
+    useShallow((state) => ({
+      index: state.index,
+      held: state.held,
+      primed: state.primed,
+    })),
   )
-  const { show, hold, release } = store.getState()
+  const { show, hold, release, prime } = store.getState()
   const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)")
   const count = slides.length
   // Fewer slides after a refetch leave the last one on screen.
@@ -140,19 +148,14 @@ export function Hero({
 
   // Slides load their art once they show, and the next one halfway through
   // the current one, so the first screen loads one backdrop, not all.
-  const [primed, setPrimed] = useState<ReadonlySet<number>>(
-    () => new Set([index]),
-  )
-  if (!primed.has(index)) setPrimed(new Set(primed).add(index))
   useEffect(() => {
+    // A refetch with fewer slides moves the index without `show`.
+    prime(index)
     if (count < 2) return
     const next = (index + 1) % count
-    const timer = window.setTimeout(
-      () => setPrimed((loaded) => new Set(loaded).add(next)),
-      ADVANCE_MS / 2,
-    )
+    const timer = window.setTimeout(() => prime(next), ADVANCE_MS / 2)
     return () => window.clearTimeout(timer)
-  }, [index, count])
+  }, [index, count, prime])
 
   // Each slide change restarts the timer, so a manual change gets a full
   // interval too.
@@ -186,7 +189,7 @@ export function Hero({
           key={slide.title.id}
           slide={slide}
           active={i === index}
-          primed={primed.has(i)}
+          primed={i === index || primed.has(i)}
         />
       ))}
       {/* Darken where the text sits and fade into the page below. A
@@ -216,7 +219,7 @@ export function Hero({
           key={slide.title.id}
           slide={slide}
           active={i === index}
-          primed={primed.has(i)}
+          primed={i === index || primed.has(i)}
           position={tr("media.hero.position", { index: i + 1, count })}
         />
       ))}

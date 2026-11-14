@@ -232,7 +232,8 @@ function SpotlightSearch({
       }
     >
       <search>
-        {/* Enter with no row picked submits, for every result. */}
+        {/* This autocomplete navigates as rows are chosen, not a data-entry form.
+            Its shared draft stays in the spotlight store until Show All writes q. */}
         <form
           onSubmit={(event) => {
             event.preventDefault()

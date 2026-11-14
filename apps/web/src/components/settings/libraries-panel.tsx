@@ -38,16 +38,19 @@ import {
   Trash2Icon,
 } from "lucide-react"
 import { useState } from "react"
+import { useStore } from "zustand"
 
 import { libraryIcons } from "@/components/app-shell"
 import { LibraryDialog } from "@/components/library-dialog"
 import { tr } from "@/i18n"
 import { client, errorMessage, orpc } from "@/lib/rpc"
+import { createSettingsLibrariesStore } from "@/stores/settings-libraries"
 
 import { RowIcon, SettingsSections, SettingsSubsection } from "./settings-panel"
 
 export function LibrariesPanel() {
-  const [dialog, setDialog] = useState<{ library?: Library } | null>(null)
+  const [store] = useState(createSettingsLibrariesStore)
+  const { library, open, edit, close } = useStore(store)
   const libraries = useQuery(
     orpc.libraries.list.queryOptions({
       refetchInterval: (q) =>
@@ -57,7 +60,7 @@ export function LibrariesPanel() {
     }),
   )
   const addButton = (
-    <Button onClick={() => setDialog({})}>
+    <Button onClick={() => edit()}>
       <PlusIcon />
       {tr("libraries.add")}
     </Button>
@@ -100,7 +103,7 @@ export function LibrariesPanel() {
               <LibraryRow
                 key={library.id}
                 library={library}
-                onEdit={() => setDialog({ library })}
+                onEdit={() => edit(library)}
               />
             ))}
           </List>
@@ -108,9 +111,9 @@ export function LibrariesPanel() {
       </SettingsSubsection>
 
       <LibraryDialog
-        library={dialog?.library}
-        open={dialog !== null}
-        onOpenChange={(open) => !open && setDialog(null)}
+        library={library}
+        open={open}
+        onOpenChange={(open) => !open && close()}
       />
     </SettingsSections>
   )

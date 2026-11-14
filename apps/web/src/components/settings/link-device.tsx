@@ -8,31 +8,27 @@ import {
 } from "@matinee/ui/components/dialog"
 import { LogInIcon } from "lucide-react"
 import { type ReactNode, useState } from "react"
+import { useStore } from "zustand"
 
 import { DeviceApproval, DeviceCodeForm } from "@/components/device-link"
 import { tr } from "@/i18n"
+import { createSettingsLinkDeviceStore } from "@/stores/settings-link-device"
 
 /**
  * The sessions list's button for signing in a TV or app by its code, the
  * same steps as the /link page in a dialog. `onClosed` runs once it shuts.
  */
 export function LinkDeviceButton({ onClosed }: { onClosed: () => void }) {
-  const [open, setOpen] = useState(false)
-  const [code, setCode] = useState<string | null>(null)
+  const [store] = useState(createSettingsLinkDeviceStore)
+  const { open, code, start, close: closeDialog, setCode } = useStore(store)
   const close = () => {
-    setOpen(false)
+    closeDialog()
     onClosed()
   }
 
   return (
     <>
-      <Button
-        variant="outline"
-        onClick={() => {
-          setCode(null)
-          setOpen(true)
-        }}
-      >
+      <Button variant="outline" onClick={start}>
         <LogInIcon />
         {tr("link.device.title")}
       </Button>
