@@ -25,19 +25,26 @@ extension ImagePipeline {
   nonisolated static let anonymous = ImagePipeline { configure(&$0) }
 
   /// Decoded images are kept in memory as Nuke does by default; the
-  /// server's answers are cached on disk too, so a rail scrolling back
-  /// doesn't fetch them again.
+  /// server's answers are cached on disk too, once, in the data cache, so a
+  /// rail scrolling back doesn't fetch them again. Nuke's own URL cache
+  /// would keep a second copy that `forgetAll` doesn't reach.
   nonisolated private static func configure(_ configuration: inout ImagePipeline.Configuration) {
-    configuration.dataLoader = DataLoader(configuration: DataLoader.defaultConfiguration)
+    let loading = DataLoader.defaultConfiguration
+    loading.urlCache = nil
+    configuration.dataLoader = DataLoader(configuration: loading)
     configuration.dataCache = try? DataCache(name: CACHE_NAME)
   }
 
   nonisolated private static let CACHE_NAME = "io.github.zekurio.matinee.images"
 
-  /// Every image the app keeps, in memory and on disk: a removed server's go with it.
+  /// Every image the app keeps, in memory and on disk: a removed server's,
+  /// or a signed-out account's, go with it.
   nonisolated static func forgetAll() {
     ImageCache.shared.removeAll()
     (try? DataCache(name: CACHE_NAME))?.removeAll()
+    // What earlier builds left in the URL caches: Nuke's of images, the system's of the API's answers.
+    DataLoader.sharedUrlCache.removeAllCachedResponses()
+    URLCache.shared.removeAllCachedResponses()
   }
 }
 

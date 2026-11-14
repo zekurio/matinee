@@ -58,15 +58,7 @@ public struct SessionChanged: Error {}
     deviceName: String = ProcessInfo.processInfo.hostName, automaticallyStart: Bool = true
   ) {
     self.store = store
-    // SAFETY: Foundation's configuration copy preserves its concrete class.
-    let config = configuration.copy() as! URLSessionConfiguration
-    config.httpShouldSetCookies = false
-    config.httpCookieStorage = nil
-    config.timeoutIntervalForRequest = 60
-    config.httpAdditionalHeaders = (config.httpAdditionalHeaders ?? [:]).merging([
-      "User-Agent": "Matinee (iOS)"
-    ]) { _, new in new }
-    self.configuration = config
+    self.configuration = Self.apiConfiguration(configuration)
     self.deviceName = deviceName
     for saved in store.servers {
       tokens[saved.origin] = try? store.secrets.token(for: saved.origin)
@@ -87,6 +79,25 @@ public struct SessionChanged: Error {}
     }
   }
   deinit { monitor.cancel() }
+  /// The servers' clients' configuration: no cookies, as the token is the
+  /// sign-in, and no cache on disk, as OkHttp keeps none on Android. The
+  /// server's answers are the account's, its sessions, favorites, and
+  /// settings, and stay nowhere once it signs out.
+  nonisolated static func apiConfiguration(_ configuration: URLSessionConfiguration)
+    -> URLSessionConfiguration
+  {
+    // SAFETY: Foundation's configuration copy preserves its concrete class.
+    let config = configuration.copy() as! URLSessionConfiguration
+    config.httpShouldSetCookies = false
+    config.httpCookieStorage = nil
+    config.urlCache = nil
+    config.requestCachePolicy = .reloadIgnoringLocalCacheData
+    config.timeoutIntervalForRequest = 60
+    config.httpAdditionalHeaders = (config.httpAdditionalHeaders ?? [:]).merging([
+      "User-Agent": "Matinee (iOS)"
+    ]) { _, new in new }
+    return config
+  }
   nonisolated public static func serverCandidates(_ input: String) -> [URL] {
     let text = input.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !text.isEmpty else { return [] }
