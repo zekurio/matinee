@@ -58,7 +58,10 @@
     <string name="signin_with_code">Sign in with a code</string>
     <string name="signin_code_title">Scan to sign in</string>
     <string name="signin_code_scan">Scan the code with your phone\'s camera, or in the Matinee app under Settings › Account.</string>
+    <string name="signin_code_title_typed">Sign in with a code</string>
+    <string name="signin_code_approve">Approve this device from one that\'s already signed in to Matinee.</string>
     <string name="signin_code_enter">Or enter this code at %1$s</string>
+    <string name="signin_code_enter_only">Enter this code at %1$s</string>
     <string name="signin_code_qr">QR code for the code %1$s</string>
     <string name="signin_code_loading">Getting a code…</string>
     <string name="signin_code_waiting">Waiting for approval…</string>
