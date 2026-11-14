@@ -55,6 +55,42 @@
         }
       }
     },
+    "ios_images_from_files": {
+      "comment": "In the image editor's Upload menu: pick the image from the Files app. Android has one picker, iOS two.",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Datei auswählen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose File"
+          }
+        }
+      }
+    },
+    "ios_images_from_photos": {
+      "comment": "In the image editor's Upload menu: pick the image from the photo library. Android has one picker, iOS two.",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fotomediathek"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Photo Library"
+          }
+        }
+      }
+    },
     "ios_open_settings": {
       "comment": "Button that opens Matinee's page in the iOS Settings app.",
       "extractionState": "manual",
