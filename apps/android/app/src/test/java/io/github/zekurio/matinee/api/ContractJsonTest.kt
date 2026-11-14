@@ -112,7 +112,7 @@ class ContractJsonTest {
 
     private companion object {
         const val USER =
-            """{"id":"u","username":"ana","displayName":null,"role":"user","avatarId":null,"avatarSource":"none","playback":null,"sharing":{"favorites":false,"stats":false}}"""
+            """{"id":"u","username":"ana","displayName":null,"role":"user","avatarId":null,"avatarSource":"none","playback":null,"library":{"showSpecials":true},"sharing":{"favorites":false,"stats":false}}"""
 
         fun item(sizeBytes: Long) = """
             {"id":"i","libraryId":"l","fileTitle":"Film","relativePath":"Film.mkv","container":"mkv",

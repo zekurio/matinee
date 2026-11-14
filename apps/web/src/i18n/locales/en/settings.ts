@@ -23,7 +23,7 @@ export default defineMessages("settings", {
   "settings.section.playback.label": "Playback",
   "settings.section.playback.description": "Languages, quality, and codecs",
   "settings.section.playback.keywords":
-    "Audio language, Subtitles, Captions, Forced subtitles, Language, Quality, Video codec, Audio codec, HEVC, AV1, Opus, Passthrough, Dolby, Surround",
+    "Audio language, Subtitles, Captions, Forced subtitles, Language, Quality, Video codec, Audio codec, HEVC, AV1, Opus, Passthrough, Dolby, Surround, Specials, Season 0",
   "settings.section.libraries.label": "Libraries",
   "settings.section.libraries.description": "Folders Matinee scans for video",
   "settings.section.libraries.keywords":

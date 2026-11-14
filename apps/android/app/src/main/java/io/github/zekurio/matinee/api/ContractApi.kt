@@ -473,6 +473,7 @@ class AccountApi internal constructor(private val transport: ApiTransport) {
     val profile = AccountProfileApi(transport)
     val avatar = AccountAvatarApi(transport)
     val playback = AccountPlaybackApi(transport)
+    val library = AccountLibraryApi(transport)
     val passkeys = AccountPasskeysApi(transport)
     val oidc = AccountOidcApi(transport)
     val sessions = AccountSessionsApi(transport)
@@ -527,6 +528,18 @@ class AccountPlaybackApi internal constructor(private val transport: ApiTranspor
             listOf("account", "playback"),
             emptyList(),
             transport.json(PlaybackPreferences.serializer(), playbackPreferences),
+            User.serializer(),
+        )
+}
+
+class AccountLibraryApi internal constructor(private val transport: ApiTransport) {
+    /** `PATCH /account/library` */
+    suspend fun setPreferences(showSpecials: Boolean? = null): User =
+        transport.call(
+            "PATCH",
+            listOf("account", "library"),
+            emptyList(),
+            transport.json(AccountLibrarySetPreferencesInput.serializer(), AccountLibrarySetPreferencesInput(showSpecials = showSpecials)),
             User.serializer(),
         )
 }

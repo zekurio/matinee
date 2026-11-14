@@ -37,6 +37,7 @@ import {
   nextItem,
   publicItems,
   reverseEpisodeOrder,
+  shownFilesArg,
   toSummaries,
 } from "../media/items"
 import { playbackOptions } from "../media/playback-options"
@@ -240,6 +241,7 @@ const inProgress = db
       inLibrariesArg(mediaItem.libraryId),
       eq(watchProgress.userId, arg("userId")),
       eq(watchProgress.completed, false),
+      shownFilesArg,
     ),
   )
   .orderBy(desc(watchProgress.updatedAt))
@@ -247,7 +249,8 @@ const inProgress = db
   .prepare("continue_watching")
 
 // The most recently finished file of each show or folder. Movies have
-// nothing after them.
+// nothing after them. Hidden specials don't count, so the show goes on
+// from the episode before them.
 const lastFinished = db
   .selectDistinctOn([mediaItem.titleId], {
     titleId: mediaItem.titleId,
@@ -265,6 +268,7 @@ const lastFinished = db
       eq(watchProgress.userId, arg("userId")),
       eq(watchProgress.completed, true),
       ne(title.kind, "movie"),
+      shownFilesArg,
     ),
   )
   .orderBy(
@@ -274,8 +278,8 @@ const lastFinished = db
   )
   .prepare("last_finished")
 
-// The files after a position in a title. A few extra skip over any the
-// user already watched or started.
+// The files after a position in a title, less hidden specials. A few
+// extra skip over any the user already watched or started.
 // ACCESS: Files are keyed by a visible title from lastFinished.
 const filesAfter = db
   .select()
@@ -284,6 +288,7 @@ const filesAfter = db
     and(
       eq(mediaItem.titleId, arg("titleId")),
       sql`${position} > (${arg("season")}::int, ${arg("episode")}::int, ${arg("path")}::text)`,
+      shownFilesArg,
     ),
   )
   .orderBy(...episodeOrder)
@@ -310,6 +315,7 @@ export const home = {
       const rows = await inProgress.execute({
         ...libraryArgs(context.user),
         userId: context.user.id,
+        specials: context.user.showSpecials,
         limit: input.limit,
       })
       return publicItems(
@@ -429,7 +435,7 @@ export const home = {
       files,
       watchedAt,
     }: (typeof picks)[number]): Promise<FeaturedTitle[]> => {
-      const item = await nextItem(row, userId)
+      const item = await nextItem(row, context.user)
       if (!item?.title) return []
       // A show the user watched comes back only for its next episode, once
       // that arrives after they last watched.
@@ -467,6 +473,7 @@ async function* watchedShows(viewer: Viewer): AsyncGenerator<{
 }> {
   const finished = await lastFinished.execute({
     userId: viewer.id,
+    specials: viewer.showSpecials,
     ...libraryArgs(viewer),
   })
   finished.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
@@ -477,6 +484,7 @@ async function* watchedShows(viewer: Viewer): AsyncGenerator<{
       season: row.seasonNumber ?? LAST,
       episode: row.episodeNumber ?? LAST,
       path: row.relativePath,
+      specials: viewer.showSpecials,
     })
     const started = candidates.length
       ? await startedOf.execute({

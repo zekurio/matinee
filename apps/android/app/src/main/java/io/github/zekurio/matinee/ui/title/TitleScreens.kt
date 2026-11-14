@@ -213,7 +213,8 @@ private fun SeasonEpisodesRail(title: Title, season: Season, next: MediaItem?, g
 fun SeasonScreen(titleId: String, season: Int?) {
     val loader = rememberLoader("title-$titleId") { titles.get(titleId) }
     PageState(loader.state, stringResource(R.string.title_season_show_error), loader::reload) { title ->
-        val current = title.seasons.firstOrNull { it.number == season }
+        // Hidden specials still open from a link.
+        val current = title.seasons.firstOrNull { it.number == season } ?: title.specials?.takeIf { it.number == season }
         if (current == null) {
             Column(Modifier.fillMaxSize()) {
                 ItemTopBar()

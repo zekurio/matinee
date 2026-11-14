@@ -21,7 +21,7 @@ export default {
   "settings.section.playback.label": "Wiedergabe",
   "settings.section.playback.description": "Sprachen, Qualität und Codecs",
   "settings.section.playback.keywords":
-    "Audiosprache, Untertitel, Erzwungene Untertitel, Sprache, Qualität, Videocodec, Audiocodec, HEVC, AV1, Opus, Passthrough, Dolby, Surround",
+    "Audiosprache, Untertitel, Erzwungene Untertitel, Sprache, Qualität, Videocodec, Audiocodec, HEVC, AV1, Opus, Passthrough, Dolby, Surround, Specials, Staffel 0",
   "settings.section.libraries.label": "Mediatheken",
   "settings.section.libraries.description":
     "Ordner, die Matinee nach Videos durchsucht",

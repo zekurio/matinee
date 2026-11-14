@@ -94,6 +94,7 @@ CREATE TABLE "web_push_subscription" (
 --> statement-breakpoint
 ALTER TABLE "access_group" ADD COLUMN "requests" text DEFAULT 'off' NOT NULL;--> statement-breakpoint
 ALTER TABLE "access_group" ADD COLUMN "request_limit" jsonb;--> statement-breakpoint
+ALTER TABLE "user" ADD COLUMN "show_specials" boolean DEFAULT true NOT NULL;--> statement-breakpoint
 ALTER TABLE "library_fulfilment" ADD CONSTRAINT "library_fulfilment_library_id_library_id_fk" FOREIGN KEY ("library_id") REFERENCES "public"."library"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "library_fulfilment" ADD CONSTRAINT "library_fulfilment_connection_id_fulfilment_connection_id_fk" FOREIGN KEY ("connection_id") REFERENCES "public"."fulfilment_connection"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "library_fulfilment" ADD CONSTRAINT "library_fulfilment_anime_library_id_library_id_fk" FOREIGN KEY ("anime_library_id") REFERENCES "public"."library"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint

@@ -2,7 +2,7 @@ import { oc } from "@orpc/contract"
 
 import { LoginBackdropTiles } from "./branding"
 import { del, get, patch, post, put } from "./contract-routes"
-import { PlaybackPreferences } from "./preferences"
+import { LibraryPreferences, PlaybackPreferences } from "./preferences"
 import { t } from "./schema"
 import {
   AppDevice,
@@ -210,6 +210,13 @@ export const accountContract = oc.tag("Account").router({
     /** Save them. Returns the user with them. */
     setPreferences: put("/account/playback")
       .input(PlaybackPreferences)
+      .output(User),
+  },
+  /** How shows list for this account, on every device. */
+  library: {
+    /** Fields left out stay as they are. Returns the user with them. */
+    setPreferences: patch("/account/library")
+      .input(LibraryPreferences.partial())
       .output(User),
   },
 })

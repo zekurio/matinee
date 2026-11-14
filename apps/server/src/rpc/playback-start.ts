@@ -158,7 +158,10 @@ export const startPlayback = authed.playback.start.handler(
         .from(mediaItem)
         .where(eq(mediaItem.titleId, row.id))
         .orderBy(...episodeOrder)
-      const next = files[files.findIndex((file) => file.id === item.id) + 1]
+      // A hidden special doesn't come next, though one opened plays.
+      const next = files
+        .slice(files.findIndex((file) => file.id === item.id) + 1)
+        .find((file) => context.user.showSpecials || file.seasonNumber !== 0)
       if (next)
         plan.next = (await publicItems([next], context.user.id))[0] ?? null
     }

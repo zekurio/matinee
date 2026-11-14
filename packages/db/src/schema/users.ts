@@ -41,6 +41,8 @@ export const user = pgTable(
     avatarSource: text().$type<AvatarSource>().notNull().default("provider"),
     /** The provider picture URL the current avatar came from. */
     avatarUrl: text(),
+    /** Season 0 lists among a show's seasons and comes up next. */
+    showSpecials: boolean().notNull().default(true),
     /** Others see the user's favorites on their profile. */
     shareFavorites: boolean().notNull().default(false),
     /** Others see the user's watch statistics on their profile. */
