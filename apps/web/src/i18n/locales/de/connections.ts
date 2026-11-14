@@ -72,9 +72,6 @@ export default {
 
   "connections.card.default.movie": "Standard für Filme",
   "connections.card.default.show": "Standard für Serien",
-  "connections.card.from.default": "Schickt",
-  "connections.card.from.anime": "Anime",
-  "connections.card.from.rule": "Regel",
   "connections.card.kind.movie": "Filme",
   "connections.card.kind.show": "Serien",
   "connections.card.nowhere": "keine Mediathek",

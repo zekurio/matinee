@@ -73,9 +73,6 @@ export default defineMessages("connections", {
   // A connection's card.
   "connections.card.default.movie": "Default for films",
   "connections.card.default.show": "Default for shows",
-  "connections.card.from.default": "Sends",
-  "connections.card.from.anime": "Anime",
-  "connections.card.from.rule": "Rule",
   "connections.card.kind.movie": "Films",
   "connections.card.kind.show": "Shows",
   "connections.card.nowhere": "no library",

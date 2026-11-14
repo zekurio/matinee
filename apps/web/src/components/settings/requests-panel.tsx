@@ -45,7 +45,7 @@ import {
   RefreshCwIcon,
   Trash2Icon,
 } from "lucide-react"
-import { useState } from "react"
+import { type ReactNode, useState } from "react"
 
 import { libraryIcons } from "@/components/app-shell"
 import { perLocale, tr, translateKnown } from "@/i18n"
@@ -285,7 +285,7 @@ function ConnectionCard({
             ) : null}
           </span>
           {lines.length > 0 && (
-            <span className="flex flex-col gap-0.5 text-[13px] leading-5">
+            <span className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-0.5 text-[13px] leading-5">
               {lines.map(({ landing, quality }) => (
                 <LandingLine
                   key={`${landing.kind}-${landing.folder}`}
@@ -367,7 +367,11 @@ function ConnectionCard({
   )
 }
 
-/** One folder a connection sends to, what with, and where it lands. */
+/**
+ * Where one of a connection's setups lands: named as the form's section,
+ * or by kind for a source that takes both, then the library, its folder,
+ * and the quality.
+ */
 function LandingLine({
   landing,
   quality,
@@ -379,21 +383,46 @@ function LandingLine({
   byKind: boolean
 }) {
   return (
-    <span className="flex min-w-0 flex-wrap items-baseline gap-x-2">
-      <span className="text-muted-foreground w-16 shrink-0">
+    <>
+      <span className="text-muted-foreground">
         {byKind && landing.from === "default"
           ? tr(`connections.card.kind.${landing.kind}`)
-          : tr(`connections.card.from.${landing.from}`)}
+          : landing.from === "anime"
+            ? tr("connections.section.anime")
+            : tr("connections.section.defaults")}
       </span>
-      <span className="min-w-0 break-words">
-        {[quality, landing.folder].filter(Boolean).join(" · ")}
-        {" → "}
-        {landing.library ? (
-          <span className="font-medium">{landing.library.name}</span>
-        ) : (
-          <span className="text-warning">{tr("connections.card.nowhere")}</span>
-        )}
-      </span>
+      <Destination
+        library={landing.library?.name ?? null}
+        rest={[landing.folder, quality]}
+      />
+    </>
+  )
+}
+
+/** A library in bold, then what else says how a title gets there. */
+function Destination({
+  library,
+  rest,
+}: {
+  /** Null when the folder is in no library. */
+  library: string | null
+  rest: (ReactNode | null)[]
+}) {
+  const shown = rest.filter((part) => part !== null && part !== "")
+  return (
+    <span className="min-w-0 break-words">
+      {library ? (
+        <span className="font-medium">{library}</span>
+      ) : (
+        <span className="text-warning">{tr("connections.card.nowhere")}</span>
+      )}
+      {shown.map((part, index) => (
+        // The parts are fixed for a landing or a rule, so their places are.
+        <span key={index} className="text-muted-foreground">
+          {" · "}
+          {part}
+        </span>
+      ))}
     </span>
   )
 }
@@ -602,20 +631,31 @@ function RuleSummary({
   const keys = Object.keys(rule.settings).toSorted(
     (a, b) => order(a) - order(b),
   )
+  // A folder and a quality read as what they are; anything else by name.
+  const folderField = fields?.find(
+    (each) => each.folder && keys.includes(each.key),
+  )
+  const folder = folderField?.folder
+    ? {
+        library:
+          landings.find(
+            (landing) =>
+              landing.folder ===
+                shownValue(undefined, rule.settings, folderField.key)[0] &&
+              landing.kind === folderField.folder,
+          )?.library?.name ?? null,
+      }
+    : null
   const settings = keys.map((key) => {
     const field = fields?.find((each) => each.key === key)
     const shown = lists().format(shownValue(field, rule.settings, key))
-    const lands = field?.folder
-      ? landings.find(
-          (landing) =>
-            landing.folder === shownValue(undefined, rule.settings, key)[0] &&
-            landing.kind === field.folder,
-        )?.library
-      : undefined
-    return {
-      label: field ? translateKnown(field.label) : key,
-      value: lands ? `${shown} → ${lands.name}` : shown,
-    }
+    if (field?.folder || key === "qualityProfileId") return shown
+    return (
+      <>
+        {field ? translateKnown(field.label) : key}{" "}
+        <span className="text-foreground">{shown}</span>
+      </>
+    )
   })
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-0.5 text-[13px] leading-5">
@@ -628,14 +668,19 @@ function RuleSummary({
           </span>
         ))}
       </p>
-      <p className="text-muted-foreground min-w-0 break-words">
-        {settings.map((entry, index) => (
-          <span key={entry.label}>
-            {index > 0 && " · "}
-            {entry.label} <span className="text-foreground">{entry.value}</span>
-          </span>
-        ))}
-      </p>
+      {folder ? (
+        <Destination library={folder.library} rest={settings} />
+      ) : (
+        <p className="text-muted-foreground min-w-0 break-words">
+          {settings.map((part, index) => (
+            // The settings are fixed for a rule, so their places are.
+            <span key={index}>
+              {index > 0 && " · "}
+              {part}
+            </span>
+          ))}
+        </p>
+      )}
     </div>
   )
 }
