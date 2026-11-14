@@ -108,11 +108,13 @@ public func imageAspect(_ slot: String) -> Double {
 
 /// How many of a provider's images go in a row `width` wide: three posters
 /// or two of the wide ones on a phone, as Android's, and on a wider screen
-/// as many as keep each about as big as on a phone.
-public func imageColumns(_ slot: String, width: Double) -> Int {
+/// as many as keep each about as big as on a phone. With `largeText`, one
+/// fewer, so the captions under them still fit.
+public func imageColumns(_ slot: String, width: Double, largeText: Bool = false) -> Int {
   let poster = slot == ImageSlot.poster
-  guard width >= 600 else { return poster ? 3 : 2 }
-  return max(poster ? 3 : 2, Int(width / (poster ? 150 : 280)))
+  let fewest = poster ? 3 : 2
+  let columns = width >= 600 ? max(fewest, Int(width / (poster ? 150 : 280))) : fewest
+  return largeText ? max(1, columns - 1) : columns
 }
 
 /// The caption under a provider's image: its size, and its language or

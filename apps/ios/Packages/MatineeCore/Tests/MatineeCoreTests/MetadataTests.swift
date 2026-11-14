@@ -83,6 +83,8 @@ struct MetadataTests {
     #expect(imageColumns(ImageSlot.poster, width: 1000) == 6)
     #expect(imageColumns(ImageSlot.still, width: 1000) == 3)
     #expect(imageColumns(ImageSlot.logo, width: 600) == 2)
+    #expect(imageColumns(ImageSlot.poster, width: 390, largeText: true) == 2)
+    #expect(imageColumns(ImageSlot.still, width: 390, largeText: true) == 1)
   }
 
   @Test func captionLeavesTheLanguageOffStills() {

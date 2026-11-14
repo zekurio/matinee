@@ -443,6 +443,7 @@ private struct ImageEditor: View {
   @Environment(\.snackbar) private var snackbar
   @Environment(\.palette) private var palette
   @Environment(\.windowSize) private var window
+  @Environment(\.dynamicTypeSize) private var dynamicType
   @Environment(ViewerState.self) private var viewer: ViewerState?
   @State private var slot: String
   @State private var images = Loader<[ItemImage]>()
@@ -517,21 +518,26 @@ private struct ImageEditor: View {
   }
 
   /// Each slot with the image it has, which also picks the slot to change.
-  /// Scrolls sideways when they don't fit.
-  private func slots(_ current: [ItemImage]?, providerName: String?) -> some View {
+  /// Scrolls sideways when they don't fit. A slot alone, and each at the
+  /// accessibility text sizes, takes the width instead, so what it says
+  /// wraps rather than runs off the screen.
+  @ViewBuilder private func slots(_ current: [ItemImage]?, providerName: String?) -> some View {
     let several = target.slots.count > 1
-    return ScrollView(.horizontal, showsIndicators: false) {
-      HStack(spacing: 8) {
-        ForEach(target.slots, id: \.self) { each in
-          SlotCard(
-            slot: each, current: current?.first { $0.slot == each }, toneKey: title.id,
-            providerName: providerName, selected: several && each == slot,
-            onSelect: several ? { withMotion(Motion.color) { slot = each } } : nil)
-        }
-      }
+    let cards = ForEach(target.slots, id: \.self) { each in
+      SlotCard(
+        slot: each, current: current?.first { $0.slot == each }, toneKey: title.id,
+        providerName: providerName, selected: several && each == slot, wraps: !several || dynamicType.isAccessibilitySize,
+        onSelect: several ? { withMotion(Motion.color) { slot = each } } : nil)
     }
-    .contentMargins(.horizontal, Gutter, for: .scrollContent)
-    .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
+    if !several || dynamicType.isAccessibilitySize {
+      VStack(alignment: .leading, spacing: 8) { cards }.padding(.horizontal, Gutter)
+    } else {
+      ScrollView(.horizontal, showsIndicators: false) {
+        HStack(spacing: 8) { cards }
+      }
+      .contentMargins(.horizontal, Gutter, for: .scrollContent)
+      .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
+    }
   }
 
   @ViewBuilder private func buttons(_ inUse: ItemImage?, providerName: String?, lists: Bool) -> some View {
@@ -609,7 +615,8 @@ private struct ImageEditor: View {
           text: allLanguages
             ? Str.titleImagesEmpty(providerName ?? "") : Str.titleImagesEmptyLanguage(providerName ?? ""))
       case .ready(let found):
-        let columns = imageColumns(slot, width: window.width - 2 * Gutter)
+        let columns = imageColumns(
+          slot, width: window.width - 2 * Gutter, largeText: dynamicType.isAccessibilitySize)
         LazyVGrid(
           columns: Array(repeating: GridItem(.flexible(), spacing: 12, alignment: .top), count: columns),
           alignment: .leading, spacing: 16
@@ -817,6 +824,8 @@ private struct SlotCard: View {
   let toneKey: String
   let providerName: String?
   let selected: Bool
+  /// Whether it takes the width, its words wrapping, rather than its own width on one line.
+  let wraps: Bool
   let onSelect: (() -> Void)?
   @Environment(\.api) private var api
   @Environment(\.palette) private var palette
@@ -833,8 +842,9 @@ private struct SlotCard: View {
         Text(slotName(slot)).textStyle(.bodyMedium, weight: .medium).foregroundStyle(palette.foreground)
         Text(state ?? " ").textStyle(.bodySmall).foregroundStyle(palette.muted)
       }
-      .lineLimit(1)
-      .fixedSize()
+      .lineLimit(wraps ? nil : 1)
+      .fixedSize(horizontal: !wraps, vertical: false)
+      .frame(maxWidth: wraps ? .infinity : nil, alignment: .leading)
     }
     .padding(6)
     .padding(.trailing, 10)
