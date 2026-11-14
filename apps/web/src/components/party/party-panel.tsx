@@ -18,7 +18,6 @@ import { Button } from "@matinee/ui/components/button"
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@matinee/ui/components/dialog"
@@ -113,7 +112,6 @@ function PartyPanel({ onClose }: { onClose: () => void }) {
       <>
         <DialogHeader>
           <DialogTitle>{tr("party.title")}</DialogTitle>
-          <DialogDescription>{tr("party.intro")}</DialogDescription>
         </DialogHeader>
         <StartForm
           onSubmit={async (name) => {
