@@ -117,4 +117,7 @@ CREATE INDEX "request_arrival_idx" ON "request" USING btree ("arrived_at");--> s
 CREATE INDEX "request_follower_user_idx" ON "request_follower" USING btree ("user_id","created_at");--> statement-breakpoint
 CREATE INDEX "web_push_user_idx" ON "web_push_subscription" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "title_provider_identity_idx" ON "title" USING btree ("library_id","kind","provider","provider_id");--> statement-breakpoint
-CREATE INDEX "title_external_ids_idx" ON "title" USING gin ("external_ids");
+CREATE INDEX "title_external_ids_idx" ON "title" USING gin ("external_ids");--> statement-breakpoint
+CREATE INDEX "title_year_idx" ON "title" USING btree ("library_id","year");--> statement-breakpoint
+CREATE INDEX "title_rating_idx" ON "title" USING btree ("library_id","rating");--> statement-breakpoint
+CREATE INDEX "title_runtime_idx" ON "title" USING btree ("library_id","runtime_minutes");
