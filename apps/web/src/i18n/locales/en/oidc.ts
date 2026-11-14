@@ -12,6 +12,7 @@ export default defineMessages("oidc", {
   "oidc.field.clientId": "Client ID",
   "oidc.field.scopes": "Scopes",
   "oidc.field.usernameClaim": "Username claim",
+  "oidc.field.nameClaim": "Display name claim",
   "oidc.field.roleClaim": "Role claim",
   "oidc.field.clientSecret": "Client secret",
   "oidc.field.groupsClaim": "Groups claim",

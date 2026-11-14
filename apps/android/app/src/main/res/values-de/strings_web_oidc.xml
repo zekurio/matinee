@@ -10,6 +10,7 @@
     <string name="web_oidc_field_clientId">Client-ID</string>
     <string name="web_oidc_field_scopes">Scopes</string>
     <string name="web_oidc_field_usernameClaim">Benutzername-Claim</string>
+    <string name="web_oidc_field_nameClaim">Anzeigename-Claim</string>
     <string name="web_oidc_field_roleClaim">Rollen-Claim</string>
     <string name="web_oidc_field_clientSecret">Client-Secret</string>
     <string name="web_oidc_field_groupsClaim">Gruppen-Claim</string>

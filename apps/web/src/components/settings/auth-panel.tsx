@@ -45,6 +45,7 @@ const TEXT_FIELDS = [
   "clientId",
   "scopes",
   "usernameClaim",
+  "nameClaim",
   "roleClaim",
   "groupsClaim",
   "policyClaim",
@@ -79,6 +80,7 @@ function draftFrom({ passkeys, oidc, defaults }: AdminAuthSettings): Draft {
     clientId: text("clientId"),
     scopes: text("scopes"),
     usernameClaim: text("usernameClaim"),
+    nameClaim: text("nameClaim"),
     roleClaim: text("roleClaim"),
     groupsClaim: text("groupsClaim"),
     policyClaim: text("policyClaim"),
@@ -102,6 +104,7 @@ function inputFrom(draft: Draft) {
     clientId: draft.clientId.trim(),
     scopes: draft.scopes.trim().replace(/\s+/g, " "),
     usernameClaim: draft.usernameClaim.trim(),
+    nameClaim: draft.nameClaim.trim(),
     roleClaim: draft.roleClaim.trim(),
     groupsClaim: draft.groupsClaim.trim(),
     policyClaim: draft.policyClaim.trim(),
@@ -115,6 +118,7 @@ const FIELD_NAMES = new Map<string, MessageKey>([
   ["clientId", "oidc.field.clientId"],
   ["scopes", "oidc.field.scopes"],
   ["usernameClaim", "oidc.field.usernameClaim"],
+  ["nameClaim", "oidc.field.nameClaim"],
   ["roleClaim", "oidc.field.roleClaim"],
   ["groupsClaim", "oidc.field.groupsClaim"],
   ["policyClaim", "oidc.field.policyClaim"],
@@ -444,6 +448,16 @@ const AdvancedSection = withForm({
                   autoComplete="off"
                   spellCheck={false}
                   placeholder={defaults.usernameClaim}
+                />
+              )}
+            </form.AppField>
+            <form.AppField name="nameClaim">
+              {() => (
+                <InputField
+                  title={tr("oidc.field.nameClaim")}
+                  autoComplete="off"
+                  spellCheck={false}
+                  placeholder={defaults.nameClaim}
                 />
               )}
             </form.AppField>

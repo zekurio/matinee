@@ -350,6 +350,12 @@ in
         description = "The claim that names new accounts. Null leaves preferred_username.";
       };
 
+      nameClaim = mkOption {
+        type = nullOr types.str;
+        default = null;
+        description = "The claim that gives new accounts their display name. Null leaves name.";
+      };
+
       roleClaim = mkOption {
         type = nullOr types.str;
         default = null;
@@ -533,6 +539,7 @@ in
       // optionalAttrs (cfg.oidc.usernameClaim != null) {
         MATINEE_OIDC_USERNAME_CLAIM = cfg.oidc.usernameClaim;
       }
+      // optionalAttrs (cfg.oidc.nameClaim != null) { MATINEE_OIDC_NAME_CLAIM = cfg.oidc.nameClaim; }
       // optionalAttrs (cfg.oidc.roleClaim != null) { MATINEE_OIDC_ROLE_CLAIM = cfg.oidc.roleClaim; }
       // optionalAttrs (cfg.oidc.groupsClaim != null) { MATINEE_OIDC_GROUPS_CLAIM = cfg.oidc.groupsClaim; }
       // optionalAttrs (cfg.oidc.policyClaim != null) { MATINEE_OIDC_POLICY_CLAIM = cfg.oidc.policyClaim; }

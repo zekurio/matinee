@@ -47,7 +47,7 @@ export type OidcIdentity = {
    * finds a matching one, and labels the linked account.
    */
   label: string | null
-  /** The `name` claim, for a new account's display name. */
+  /** The name claim, else `name`, for a new account's display name. */
   name: string | null
   /** The `picture` claim. Undefined when the provider may not have sent it. */
   picture: string | null | undefined
