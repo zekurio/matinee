@@ -28,7 +28,7 @@ import {
 import type { Seer } from "../access/visible"
 import { visibleTitles } from "../access/visible"
 import { anyOf, db } from "../db"
-import { escapeLike } from "./like"
+import { escapeLike, looselyContains } from "./like"
 
 /** A viewer whose own watch state a list can filter by. */
 export type Watcher = Seer & { id: string }
@@ -101,7 +101,7 @@ export function titleWhere(
   limits: RatingLimits,
   libraryId?: string,
 ): SQL | undefined {
-  const pattern = match.query ? `%${escapeLike(match.query)}%` : null
+  const query = match.query
   const filters = match.filters
   return and(
     visibleTitles(viewer),
@@ -125,11 +125,11 @@ export function titleWhere(
       : undefined,
     ...[...limits].map(([kind, allowed]) => ratedWithin(kind, allowed)),
     filters?.watched ? watchedWhere(filters.watched, viewer.id) : undefined,
-    pattern
+    query
       ? or(
-          ilike(title.name, pattern),
-          ilike(title.originalName, pattern),
-          libraryId ? ilike(title.path, pattern) : undefined,
+          looselyContains(title.name, query),
+          looselyContains(title.originalName, query),
+          libraryId ? ilike(title.path, `%${escapeLike(query)}%`) : undefined,
         )
       : undefined,
   )

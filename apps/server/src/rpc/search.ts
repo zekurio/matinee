@@ -9,7 +9,7 @@ import { placeholders, toArtwork } from "../media/artwork"
 import { toSummaries } from "../media/items"
 import { authed } from "./base"
 import { tagCounts } from "./browse"
-import { escapeLike } from "./like"
+import { escapeLike, looselyContains, looselyStartsWith } from "./like"
 
 /**
  * Cast and crew whose name contains `escaped`: those it starts, then those
@@ -74,13 +74,13 @@ export const search = {
           and(
             visibleTitles(context.user),
             or(
-              ilike(title.name, anywhere),
-              ilike(title.originalName, anywhere),
+              looselyContains(title.name, input.query),
+              looselyContains(title.originalName, input.query),
             ),
           ),
         )
         .orderBy(
-          sql`${title.name} ilike ${start} desc`,
+          sql`${looselyStartsWith(title.name, input.query)} desc`,
           asc(title.sortName),
           asc(title.year),
         )
