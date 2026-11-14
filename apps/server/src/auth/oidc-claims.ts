@@ -135,10 +135,12 @@ export async function readOidcIdentity(
 ): Promise<{ identity: OidcIdentity; claims: Claims }> {
   const usernameClaim = settings.usernameClaim || "preferred_username"
   const hasUsername = claimString(idClaims, usernameClaim) !== undefined
+  const nameClaim = settings.nameClaim || "name"
   let userInfo: client.UserInfoResponse | null = null
   let userInfoFailed = false
   if (
     !hasUsername ||
+    !claimString(idClaims, nameClaim) ||
     !claimString(idClaims, "picture") ||
     claimRole(idClaims, settings.roleClaim) === undefined ||
     (settings.groupsClaim &&
@@ -173,7 +175,8 @@ export async function readOidcIdentity(
         claimString(claims, usernameClaim) ??
         claimString(claims, "preferred_username") ??
         null,
-      name: claimString(claims, "name") ?? null,
+      name:
+        claimString(claims, nameClaim) ?? claimString(claims, "name") ?? null,
       picture: picture ?? (userInfoFailed ? undefined : null),
       role: claimRole(claims, settings.roleClaim),
       groups: claimGroups(claims, settings.groupsClaim, userInfoFailed),

@@ -17,6 +17,8 @@ export const OidcSettings = t.object({
   scopes: t.string(),
   /** Claim that suggests the username for new accounts. */
   usernameClaim: t.string(),
+  /** Claim that gives new accounts their display name. */
+  nameClaim: t.string(),
   /**
    * Claim that holds the account's role, `admin` or `user`, as a string or
    * a list. Synced on every sign-in; setup takes only an admin.
@@ -116,6 +118,7 @@ export const OidcSettingsInput = t
     clientId: text(512),
     scopes: text(512),
     usernameClaim: text(128),
+    nameClaim: text(128),
     roleClaim: text(128),
     groupsClaim: text(128),
     policyClaim: text(128),

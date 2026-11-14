@@ -82,6 +82,7 @@ private class AuthDraft(val saved: AdminAuthSettings) {
             clientId = oidc.clientId,
             scopes = oidc.scopes,
             usernameClaim = oidc.usernameClaim,
+            nameClaim = oidc.nameClaim,
             roleClaim = oidc.roleClaim,
             groupsClaim = oidc.groupsClaim,
             policyClaim = oidc.policyClaim,
@@ -232,6 +233,8 @@ private fun AuthForm(form: AuthDraft) {
                     TextRow(stringResource(R.string.web_oidc_field_scopes), oidc.scopes, { oidc = oidc.copy(scopes = it) }, placeholder = defaults.scopes.ifBlank { "openid profile email" }, error = scopesError)
                     RowDivider()
                     TextRow(stringResource(R.string.web_oidc_field_usernameClaim), oidc.usernameClaim, { oidc = oidc.copy(usernameClaim = it) }, placeholder = defaults.usernameClaim.ifBlank { "preferred_username" })
+                    RowDivider()
+                    TextRow(stringResource(R.string.web_oidc_field_nameClaim), oidc.nameClaim, { oidc = oidc.copy(nameClaim = it) }, placeholder = defaults.nameClaim.ifBlank { "name" })
                     RowDivider()
                     TextRow(stringResource(R.string.web_oidc_field_roleClaim), oidc.roleClaim, { oidc = oidc.copy(roleClaim = it) }, placeholder = defaults.roleClaim.ifBlank { null })
                     }

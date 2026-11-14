@@ -120,6 +120,12 @@ apply on the next sign-in. Register `$PUBLIC_URL/api/auth/oidc/callback`
 as the redirect URI. To create the admin through the provider, set the
 `MATINEE_OIDC_*` variables, since Settings isn't reachable before setup.
 
+A new account takes its username from `MATINEE_OIDC_USERNAME_CLAIM`
+(`preferred_username`) and its display name from `MATINEE_OIDC_NAME_CLAIM`
+(`name`). Either falls back to the standard claim when the one it names is
+missing. Both apply only when the account is created; later sign-ins don't
+change them.
+
 `MATINEE_OIDC_GROUPS_CLAIM` names a claim with a group name or list, and
 dotted paths like `realm_access.roles` work. Access groups linked to a
 provider group sync their members on every sign-in. Memberships set in

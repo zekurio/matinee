@@ -12,6 +12,7 @@ export default {
   "oidc.field.clientId": "Client-ID",
   "oidc.field.scopes": "Scopes",
   "oidc.field.usernameClaim": "Benutzername-Claim",
+  "oidc.field.nameClaim": "Anzeigename-Claim",
   "oidc.field.roleClaim": "Rollen-Claim",
   "oidc.field.clientSecret": "Client-Secret",
   "oidc.field.groupsClaim": "Gruppen-Claim",

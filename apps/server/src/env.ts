@@ -108,6 +108,8 @@ const EnvSchema = t.object({
   MATINEE_OIDC_DISPLAY_NAME: t.string().$default("Single sign-on"),
   MATINEE_OIDC_SCOPES: t.string().$default("openid profile"),
   MATINEE_OIDC_USERNAME_CLAIM: t.string().$default("preferred_username"),
+  /** Claim that gives new accounts their display name. */
+  MATINEE_OIDC_NAME_CLAIM: t.string().$default("name"),
   /**
    * Claim that gives the account's role, `admin` or `user`, as a string or
    * a list, as alloy and Immich read it.
