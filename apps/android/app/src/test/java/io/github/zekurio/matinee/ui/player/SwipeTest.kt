@@ -13,6 +13,27 @@ class SwipeTest {
     }
 
     @Test
+    fun brightnessFollowsTheCurve() {
+        assertEquals(MIN_BRIGHTNESS, brightnessOfLevel(0f), 0f)
+        assertEquals(1f, brightnessOfLevel(1f), 1e-4f)
+        assertEquals(MIN_BRIGHTNESS, brightnessOfLevel(Float.NaN), 0f)
+        // Half the swipe is a twelfth of the backlight, and the top third is most of it.
+        assertEquals(MIN_BRIGHTNESS + (1f - MIN_BRIGHTNESS) / 12f, brightnessOfLevel(0.5f), 1e-5f)
+        assertEquals(true, brightnessOfLevel(0.65f) < 0.2f)
+        var last = -1f
+        for (step in 0..100) {
+            val level = step / 100f
+            val brightness = brightnessOfLevel(level)
+            assertEquals(true, brightness > last)
+            assertEquals(level, levelOfBrightness(brightness), 1e-3f)
+            last = brightness
+        }
+        assertEquals(0f, levelOfBrightness(0f), 0f)
+        assertEquals(1f, levelOfBrightness(3f), 1e-4f)
+        assertEquals(0f, levelOfBrightness(Float.NaN), 0f)
+    }
+
+    @Test
     fun levelStaysWithinRange() {
         assertEquals(1f, swipeLevel(0.9f, -5000f, 1000f), 0f)
         assertEquals(0f, swipeLevel(0.1f, 5000f, 1000f), 0f)

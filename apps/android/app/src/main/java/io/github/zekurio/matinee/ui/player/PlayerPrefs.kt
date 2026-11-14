@@ -71,8 +71,11 @@ class PlayerPrefs(context: Context) {
     /** Start the player at the brightness the last swipe left it at, rather than the system's. */
     var rememberBrightness by boolean("remember_brightness", false)
 
-    /** The brightness the last swipe left, from 0 to 1, or below 0 before any. */
-    var brightness by float("brightness", -1f)
+    /**
+     * The swipe level the last brightness swipe left, from 0 to 1, or below 0
+     * before any. The older "brightness" key held the window's own value.
+     */
+    var brightness by float("brightness_level", -1f)
 
     /** On a phone, swiping sideways on the video seeks. */
     var swipeSeek by boolean("swipe_seek", true)

@@ -106,23 +106,22 @@ internal class DeviceLevels(private val activity: ComponentActivity?) {
         return volume()
     }
 
+    /** The brightness as a swipe level, from 0 to 1, each step of which looks the same. */
     fun brightness(): Float {
         val activity = activity ?: return 0.5f
         val own = activity.window.attributes.screenBrightness
-        if (own in 0f..1f) return own
+        if (own in 0f..1f) return levelOfBrightness(own)
         // Until a swipe sets one, the window follows the system's brightness, 0 to 255.
         val system = runCatching { Settings.System.getInt(activity.contentResolver, Settings.System.SCREEN_BRIGHTNESS) }.getOrNull()
-        return system?.let { (it / 255f).coerceIn(0f, 1f) } ?: 0.5f
+        return system?.let { levelOfBrightness(it / 255f) } ?: 0.5f
     }
 
+    /** Sets the brightness to a swipe [level], from 0 to 1. */
     fun setBrightness(level: Float) {
         val window = activity?.window ?: return
-        // Some screens turn their backlight off at 0, so the lowest stays just above.
-        window.attributes = window.attributes.apply { screenBrightness = level.coerceIn(MIN_BRIGHTNESS, 1f) }
+        window.attributes = window.attributes.apply { screenBrightness = brightnessOfLevel(level) }
     }
 }
-
-private const val MIN_BRIGHTNESS = 0.01f
 
 /** How far from the top and bottom, and from the sides, a swipe starts for the system's own gestures. */
 private val EDGE_VERTICAL = 48.dp
