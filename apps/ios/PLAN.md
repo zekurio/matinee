@@ -301,7 +301,11 @@ background first, as iOS keeps scene state; `simctl launch
 
 - A long press opens a context menu over the card, not a bottom sheet.
 - Top bars are the navigation bar, with the system's back button and edge
-  swipe; the tab bar is the shell's to choose.
+  swipe; the tab bar is the shell's to choose. A page over art keeps the
+  bar too, cleared, with Home and the page above as its glass buttons
+  (`.itemTopBar`): from iOS 26 a page whose bar is hidden loses both back
+  swipes, and an empty bar counts as hidden. Before iOS 26 it floats
+  Android's circles over the art instead.
 - Sheets are the system's, with a grabber and detents.
 - Round icon buttons keep their size at large text sizes and show in the
   large content viewer; text and other icons grow with Dynamic Type.
