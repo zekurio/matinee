@@ -159,7 +159,7 @@ export async function availability(
             ([site, id]) => externalIds[site] === id,
           )),
     )
-    const row = requests.find(
+    const matching = requests.filter(
       (row) =>
         row.kind === input.ref.kind &&
         ((row.provider === input.ref.provider &&
@@ -168,21 +168,30 @@ export async function availability(
             ([site, id]) => externalIds[site] === id,
           )),
     )
-    const people = followers.filter((f) => f.requestId === row?.id)
     const candidates = input.ref.kind === "movie" ? movies : shows
     const selected = input.libraryId
       ? candidates.find((library) => library.id === input.libraryId)
       : defaultDestination(candidates, {
           anime: input.anime ?? false,
-          requestedIn: row ? [row.libraryId] : [],
+          requestedIn: matching.map((row) => row.libraryId),
           provider: input.ref.provider,
         })?.library
-    const context = {
+    // A title can have a request in more than one library, as when one
+    // went to the anime library and a later one to the library the show
+    // is in. The one in the library it's shown for speaks for it, else the
+    // latest.
+    const home = input.libraryId ?? selected?.id
+    const pick = (rows: typeof matching) =>
+      rows.find((row) => row.libraryId === home) ??
+      rows.toSorted((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0]
+    const contextOf = (row: (typeof matching)[number] | undefined) => ({
       row,
-      people,
+      people: followers.filter((f) => f.requestId === row?.id),
       destination: !!selected,
       limit,
-    }
+    })
+    const row = pick(matching)
+    const context = contextOf(row)
     return {
       ref: input.ref,
       libraryId: selected?.id ?? null,
@@ -195,24 +204,28 @@ export async function availability(
       ),
       seasons: (input.seasons ?? []).map((season) => {
         const files = owned.filter((file) => file.season === season.number)
-        const covered =
-          !!row &&
-          (scopes.some(
-            (scope) =>
-              scope.requestId === row.id && scope.number === season.number,
-          ) ||
-            // "New seasons as they air" covers the seasons that started
-            // airing after the ask, not ones left out of it that had aired.
-            (row.future &&
-              season.number > 0 &&
-              (season.airDate === null ||
-                season.airDate >= row.createdAt.toISOString().slice(0, 10))))
+        // The request that covers the season, whichever library it's in.
+        const covering = pick(
+          matching.filter(
+            (row) =>
+              scopes.some(
+                (scope) =>
+                  scope.requestId === row.id && scope.number === season.number,
+              ) ||
+              // "New seasons as they air" covers the seasons that started
+              // airing after the ask, not ones left out of it that had aired.
+              (row.future &&
+                season.number > 0 &&
+                (season.airDate === null ||
+                  season.airDate >= row.createdAt.toISOString().slice(0, 10))),
+          ),
+        )
         return {
           ...availabilityForScope(
             viewer,
-            context,
+            covering ? contextOf(covering) : context,
             files[0]?.titleId ?? null,
-            covered,
+            !!covering,
             season.airDate,
             new Set(files.map((file) => file.episode)).size <
               season.episodesAired,
