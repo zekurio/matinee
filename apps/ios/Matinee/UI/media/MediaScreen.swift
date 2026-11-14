@@ -9,7 +9,6 @@ import SwiftUI
 /// The Media tab: every library as a card, which opens the library.
 struct MediaScreen: View {
   @State private var libraries = Loader<[Library]>()
-  @Environment(\.palette) private var palette
   @Environment(\.dynamicTypeSize) private var typeSize
 
   var body: some View {
@@ -35,8 +34,6 @@ struct MediaScreen: View {
         }
       }
     }
-    // A tab's first page, which the stack doesn't paint as it does the pages over it.
-    .background(palette.background.ignoresSafeArea())
     // Still showing the libraries from before, while the server can't be reached.
     .topBar(Str.tabMedia) { DisconnectedAction(libraries) }
     .loads(libraries) { api in try await api.libraries.list() }

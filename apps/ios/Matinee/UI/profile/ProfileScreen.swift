@@ -83,7 +83,6 @@ private struct ProfilePage: View {
     }
     .scrollsToTopOnReselect()
     .statusBarScrim()
-    .background(palette.background)
     .toolbar(.hidden, for: .navigationBar)
     .background {
       if !offline {

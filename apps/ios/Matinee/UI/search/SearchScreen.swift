@@ -39,8 +39,6 @@ struct SearchScreen: View {
       }
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-    // The system's search tab doesn't sit on the shell's background as the other tabs do.
-    .background(palette.background.ignoresSafeArea())
     .searchable(text: $query, prompt: Text(Str.searchField))
     .searchFocused($focused)
     .onSubmit(of: .search) { submitted += 1 }

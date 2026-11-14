@@ -264,8 +264,11 @@ struct TabStack: View {
   @Environment(\.palette) private var palette
 
   var body: some View {
+    // Every page on the stack, the first too, on the theme's background:
+    // the stack's own is the system's black or white.
     NavigationStack(path: nav.path(tab)) {
       TabRoot(tab: tab)
+        .background(palette.background.ignoresSafeArea())
         .environment(\.tabReselected, nav.reselected[tab, default: 0])
         .navigationDestination(for: Route.self) { route in
           RouteScreen(route: route)
