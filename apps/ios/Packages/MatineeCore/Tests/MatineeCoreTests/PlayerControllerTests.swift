@@ -279,7 +279,7 @@ private final class PlayerProtocol: URLProtocol, @unchecked Sendable {
     self.server = server
     if !prefix.isEmpty { StubServer.lock.withLock { StubServer.hosts[self.host] = server } }
   }
-  func controller(token: String? = nil) -> PlayerController {
+  func controller(token: String? = nil, offline: Bool = false) -> PlayerController {
     let configuration = URLSessionConfiguration.ephemeral
     configuration.protocolClasses = [PlayerProtocol.self]
     let api = MatineeApi(
@@ -289,7 +289,7 @@ private final class PlayerProtocol: URLProtocol, @unchecked Sendable {
       device: playbackProfile(
         snapshot: CapabilitySnapshot(codecs: DeviceCodecs(video: [], audio: [], dolbyVision: false))
       ), prefs: prefs, engine: engine, clock: { self.now }, tokenProvider: { token },
-      downloads: downloads, session: URLSession(configuration: configuration))
+      downloads: downloads, session: URLSession(configuration: configuration), offline: offline)
   }
 }
 
@@ -595,6 +595,24 @@ private final class PlayerProtocol: URLProtocol, @unchecked Sendable {
     await controller.tick()
     #expect(controller.failedMethods == ["direct"])
     await controller.stop()
+  }
+
+  /// Offline mode leaves the server alone though it answers: the reports
+  /// wait with the downloads, where offline Home reads the place from.
+  @Test func offlineModeKeepsReportsForLater() async {
+    let harness = PlayerHarness()
+    harness.server.reportsReach = true
+    let controller = harness.controller(offline: true)
+    await controller.startLocal(itemId: "item-1")
+    harness.now += 10
+    harness.engine.positionSeconds = 33
+    await controller.tick()
+    await controller.reporting?.value
+    #expect(harness.server.progress.isEmpty)
+    #expect(harness.downloads.queued.last?.report.positionSeconds == 33)
+    await controller.stop()
+    #expect(harness.downloads.queued.count >= 2)
+    #expect(harness.server.calls.allSatisfy { !$0.path.contains("/trickplay") })
   }
 
   @Test func aDownloadResumesWhereItStopped() async {

@@ -142,16 +142,19 @@ extension PlayerController {
     let sessionId = sessionId
     let started = startedAt
     let ended = clock()
+    let offline = offline
     let task = Task { [api, downloads] in
       do {
+        if offline { throw URLError(.notConnectedToInternet) }
         try await api.playback.report(
           itemId: itemId, positionSeconds: at,
           durationSeconds: length.flatMap { $0 > 0 ? $0 : nil },
           sessionId: sessionId, playedSeconds: played, paused: paused, closed: closed ? true : nil)
         await downloads?.reported(itemId: itemId, sessionId: sessionId)
       } catch {
-        // Offline, as when watching a download: send it once the server answers,
-        // and the sitting so far, for watch time, under this session's id.
+        // Offline, as when watching a download, or in offline mode: send it
+        // once the server answers, and the sitting so far, for watch time,
+        // under this session's id.
         let stamp = ISO8601DateFormatter()
         stamp.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         await downloads?.queueReport(
