@@ -429,15 +429,19 @@ struct PersonCard: View {
           }
           .overlay { Picture(photo) }
           .clipShape(Circle())
+        // The card is as wide as the rail makes it, so at a large text size a
+        // long word, "Schauspieler", shrinks to fit rather than break.
         Text(name)
           .textStyle(.bodyMedium, weight: .medium)
           .foregroundStyle(palette.foreground)
           .multilineTextAlignment(.center)
           .lineLimit(2)
+          .keepsWordsWhole(name, .bodyMedium, weight: .medium, alignment: .center)
           .padding(.top, 8)
         if let role {
           Text(role).textStyle(.bodySmall).foregroundStyle(palette.muted).multilineTextAlignment(.center)
             .lineLimit(2)
+            .keepsWordsWhole(role, .bodySmall, alignment: .center)
         }
       }
       .frame(maxWidth: .infinity)
