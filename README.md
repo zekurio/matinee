@@ -15,7 +15,7 @@ Point Matinee at the folders your videos already live in. It groups the
 files into movies and shows, fetches posters, cast, and episode details from
 TMDB or TheTVDB, and picks up new files as Sonarr, Radarr, or Bazarr drop
 them in. People sign in with a passkey or your OIDC provider and watch in
-the browser or the Android app. A file plays as it is when the device can
+the browser, the Android app, or the iOS app. A file plays as it is when the device can
 decode it. When it can't, the server copies the video and converts only
 the audio, or transcodes on your GPU with jellyfin-ffmpeg, HDR tone mapping
 included.
@@ -28,6 +28,7 @@ first release.
 | [Server](apps/server)   | Hono and oRPC, Postgres, the library scanner, streaming and transcoding, sign-in |
 | [Web](apps/web)         | The React client the server serves                                               |
 | [Android](apps/android) | A native app for phones, tablets, and Android TV, with offline downloads         |
+| [iOS](apps/ios)         | A native SwiftUI app for iPhone and iPad, with offline downloads                 |
 | [Brand](brand)          | The logo, the wordmark, the app icons, and the script that renders them          |
 
 Each one's README goes into detail. The server's covers configuration,
@@ -129,20 +130,22 @@ localhost. The server applies migrations on start. Stop the database with
 `matinee-postgres stop`; its files are in `data/postgres`.
 
 Run `pnpm verify` before you commit. It checks formatting, runs oxlint and
-the type checker, and fails if the Android API client is out of date.
+the type checker, and fails if the Android or iOS API client is out of date.
 [`AGENTS.md`](AGENTS.md) has the repository's conventions, for people and
 coding agents alike. The Android app builds in its own shell, see
-[its README](apps/android/README.md#build).
+[its README](apps/android/README.md#build). The iOS app needs a Mac and
+Xcode, see [its README](apps/ios/README.md#build).
 
-| Command                          | What it does                                                |
-| -------------------------------- | ----------------------------------------------------------- |
-| `pnpm db:generate --name <what>` | Writes a migration for a change in `packages/db/src/schema` |
-| `pnpm api:android`               | Generates the Android API client after a contract change    |
-| `nix build`                      | Builds the server package                                   |
-| `nix flake check`                | Builds it and runs the NixOS module's tests                 |
-| `nix develop .#android`          | Enters a shell with a JDK and the Android SDK               |
-| `just`                           | Lists the shortcuts, including `just android ...`           |
-| `just tag <version>`             | Releases that version, see [Release](#release)              |
+| Command                          | What it does                                                         |
+| -------------------------------- | -------------------------------------------------------------------- |
+| `pnpm db:generate --name <what>` | Writes a migration for a change in `packages/db/src/schema`          |
+| `pnpm api:android`               | Generates the Android API client after a contract change             |
+| `pnpm api:ios`                   | Generates the iOS API client after a contract change                 |
+| `nix build`                      | Builds the server package                                            |
+| `nix flake check`                | Builds it and runs the NixOS module's tests                          |
+| `nix develop .#android`          | Enters a shell with a JDK and the Android SDK                        |
+| `just`                           | Lists the shortcuts, including `just android ...` and `just ios ...` |
+| `just tag <version>`             | Releases that version, see [Release](#release)                       |
 
 After `pnpm-lock.yaml` changes, `nix build` fails and prints the new
 dependency hash. Put it in `pnpmDepsHash` in `nix/package.nix`.
@@ -176,9 +179,9 @@ need and create the database again, which deletes its data.
 
 ## Release
 
-The server, the web app, and the Android app share one version, the
-`version` in the root `package.json`. The Nix package and the Android
-build read it from there. A release is a `v<version>` tag on `main`:
+The server, the web app, and both native apps share one version, the
+`version` in the root `package.json`. The Nix package, Android build, and
+iOS project generator read it from there. A release is a `v<version>` tag on `main`:
 
 ```sh
 just tag 0.2.0
@@ -233,6 +236,7 @@ apps/
   server/      Hono server: oRPC and REST, auth, library scanner, streaming
   web/         React web client (Vite, TanStack Router and Query)
   android/     Android app (Kotlin, Compose, Media3), a Gradle project
+  ios/         iPhone and iPad app, SwiftUI with a shared Swift package
 packages/
   contracts/   The oRPC contract and its schemas, shared by the server and clients
   client/      The typed client every TypeScript app uses

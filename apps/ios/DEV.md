@@ -175,8 +175,9 @@ Reset recreates libraries without providers.
 
 VideoToolbox is configured and detected on this Apple Silicon Mac. The
 smoke test requested MPEG-2-to-H.264 HLS through the server and fetched an
-actual video segment. Direct and remux **selection** also passed; AVPlayer
-rendering and the complete offline download flow have not been tested here.
+actual segment. Direct and remux **selection** also passed. Later app and
+package checks cover playback and offline versions, as recorded in the app's
+README; this fixture smoke test alone does not cover either.
 The server README warns copied streams currently lack Safari byte-range
 support, so a remux decision alone does not prove AVPlayer can play it.
 

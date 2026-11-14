@@ -145,35 +145,8 @@ to a temporary download root, resolves live server decisions, pauses/resumes,
 loads both files with AVPlayer, seeks, flushes offline progress, and deletes
 the media. It changes watch progress for those fixture files.
 
-Latest successful run after moving file assembly to `DownloadFiles`:
-
-```text
-LIVE resolve The Matrix: copy, subtitles 2
-LIVE interrupted bytes=48168096 segment=0
-LIVE downloaded bytes=92615594 segment=0 subtitles=2
-LIVE PlayerController subtitles loaded, seek=11.72976036, offline report queued
-LIVE offline progress accepted
-LIVE deleted media directory
-LIVE resolve Jurassic Park: encode, subtitles 2
-LIVE interrupted bytes=525321 segment=1
-LIVE downloaded bytes=2072924 segment=4 subtitles=2
-LIVE PlayerController subtitles loaded, seek=11.698267901, offline report queued
-LIVE offline progress accepted
-LIVE deleted media directory
-Test live() passed after 10.942 seconds.
-```
-
-`ios-viewer` returned HTTP 200 with a ready resolution for The Matrix, so it
-does not exercise downloads-off refusal. No shared account policy was changed.
-403 refusal and transient retries are covered through URLProtocol instead.
-
-Still needs device/app-target checks: actual suspended transfers, force-quit
-behavior, relaunch handoff, unmetered/cellular transitions, OS retry deferral,
-large real-world fMP4 seeking, and transfers while the device is locked.
-Unit tests fake network eligibility and assert request policy flags; they
-cannot simulate the OS network scheduler. The package suite now has 114 tests
-versus 105 before this change. A blocked file-operation hook checks off-main
-execution and main-actor responsiveness during a 32 MiB streamed append, then
-queues deletion. A separate injected crash after append but before index commit
-checks replay through a newly loaded worker. `DownloadTracksTests` covers audio,
-subtitle preferences, forced/default flags and offline drawing decisions.
+The live test uses a plain URLSession, not an app background session. Actual
+suspended transfers, force-quit behavior, relaunch handoff, cellular transitions,
+OS retry deferral, large fragmented-file seeks, and locked-device transfers
+still need device checks. Unit tests fake network eligibility and check request
+policy flags; they cannot simulate the OS scheduler.

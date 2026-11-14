@@ -13,7 +13,7 @@ default:
 dev:
     pnpm dev
 
-# Format check, lint, typecheck, and the Android client check, as CI runs
+# Format check, lint, typecheck, and the native API client checks, as CI runs
 verify:
     pnpm verify
 

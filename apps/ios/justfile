@@ -8,7 +8,6 @@ set shell := ["bash", "-euo", "pipefail", "-c"]
 app := "io.github.zekurio.matinee"
 derived := "build/DerivedData"
 simulator := env("MATINEE_SIMULATOR", "iPhone 17")
-destination := "platform=iOS Simulator,name=" + simulator
 built_app := derived / "Build/Products/Debug-iphonesimulator/Matinee.app"
 xcodebuild := "xcodebuild -project Matinee.xcodeproj -scheme Matinee -derivedDataPath " + derived
 
@@ -16,13 +15,13 @@ xcodebuild := "xcodebuild -project Matinee.xcodeproj -scheme Matinee -derivedDat
 default:
     @just --list --unsorted
 
-# Write Matinee.xcodeproj from project.yml
+# Generate with XcodeGen from Nixpkgs, or XCODEGEN on PATH.
 generate:
-    nix run nixpkgs#xcodegen -- generate --quiet
+    {{ env("XCODEGEN", "nix run nixpkgs#xcodegen --") }} generate --quiet
 
-# Build the debug app for the simulator, `just build -quiet` and other xcodebuild flags after
+# Build for any simulator without booting one; extra xcodebuild flags follow
 build *args: generate
-    {{ xcodebuild }} -configuration Debug -destination "{{ destination }}" build {{ args }}
+    {{ xcodebuild }} -configuration Debug -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build {{ args }}
 
 # Build, install, and open the app on a simulator (MATINEE_SIMULATOR names it), with launch arguments after
 run *args: build
@@ -51,7 +50,7 @@ test:
     cd Packages/MatineeCore && swift test
     scripts/strings.py --check
     scripts/lucide.py --check
-    nix shell nixpkgs#nodejs_24 -c node scripts/themes.mjs --check
+    {{ env("NODE", "nix shell nixpkgs#nodejs_24 -c node") }} scripts/themes.mjs --check
 
 # Generate the API client again after a contract change
 api:
@@ -64,7 +63,7 @@ strings:
 # Write the icon assets and Lucide.gen.swift from Android's drawables, and the palettes from the web's
 icons:
     scripts/lucide.py
-    nix shell nixpkgs#nodejs_24 -c node scripts/themes.mjs
+    {{ env("NODE", "nix shell nixpkgs#nodejs_24 -c node") }} scripts/themes.mjs
 
 # Delete the build output and the generated project
 clean:
