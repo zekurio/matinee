@@ -278,7 +278,6 @@ internal fun ColumnScope.LanguageRows(session: Session, panels: SettingsPanels, 
     SwitchRow(
         stringResource(R.string.playback_specials_title),
         user.library.showSpecials,
-        description = stringResource(R.string.playback_specials_note),
         onChange = rememberSpecialsSave(session),
     )
     RowNote(stringResource(R.string.tv_settings_languages_note))

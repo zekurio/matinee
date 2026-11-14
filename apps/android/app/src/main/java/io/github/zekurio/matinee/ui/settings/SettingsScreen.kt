@@ -411,8 +411,6 @@ private fun ShowsSection(session: Session) {
         Panel {
             SwitchRow(stringResource(R.string.playback_specials_title), LocalUser.current.library.showSpecials, onChange = save)
         }
-        Gap(8.dp)
-        Text(stringResource(R.string.playback_specials_note), style = MaterialTheme.typography.bodySmall, color = Palette.Muted)
     }
 }
 

@@ -436,7 +436,6 @@
     <string name="playback_decoders_software">Software first</string>
     <string name="playback_shows_title">Shows</string>
     <string name="playback_specials_title">Show specials</string>
-    <string name="playback_specials_note">When off, specials stay out of a show\'s seasons, Next up, and requests. A special you open from a link still plays.</string>
     <string name="playback_specials_failed">Couldn\'t change whether specials show</string>
     <string name="playback_skip_title">Skipping</string>
     <string name="playback_skip_back">Skip back</string>

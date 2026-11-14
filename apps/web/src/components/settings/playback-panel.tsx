@@ -227,7 +227,6 @@ function ShowsSection() {
           title={tr("playback.specials.title")}
           checked={checked}
           onChange={(value) => update.mutate(value)}
-          footer={<SettingNote>{tr("playback.specials.note")}</SettingNote>}
         />
       </SettingRows>
     </SettingsSubsection>
