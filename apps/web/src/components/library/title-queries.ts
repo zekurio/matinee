@@ -106,7 +106,10 @@ export function useTitleFilters(
   scope: TitleScope,
 ) {
   const options = useQuery(titleFilterOptionsQuery(scope))
-  const ready = options.data !== undefined || !asksFilters(search)
+  // Without the choices, as when they fail to load, the list goes
+  // unfiltered rather than waiting for good.
+  const ready =
+    options.data !== undefined || options.isError || !asksFilters(search)
   const filters = filtersFrom(search, options.data)
   const asked = orderFrom(search)
   // A sort with nothing to order by, like score where no title has one.
