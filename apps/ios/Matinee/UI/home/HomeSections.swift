@@ -40,7 +40,10 @@ private struct EpisodeRail: View {
         RailItem(.landscape) { EpisodeCard(item) }
       }
     }
-    .id(items.first?.id)
+    // By the rail as well: Continue watching and Next up can start with the
+    // same file, as one just started moves from one to the other, and two
+    // views with one id in Home's lazy stack show as one, the other gone.
+    .id("\(title)\n\(items.first?.id ?? "")")
   }
 }
 

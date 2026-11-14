@@ -90,8 +90,9 @@ private struct OfflineRail: View {
           RailItem(.landscape) { FileCard(entry: entry, place: place(entry), watched: watched(entry)) }
         }
       }
-      // One that moved to the front starts the row there again.
-      .id(entries.first?.id)
+      // One that moved to the front starts the row there again. By the row
+      // as well, as Home's rails: two views with one id in the lazy stack show as one.
+      .id("\(title)\n\(entries.first?.id ?? "")")
     }
   }
 }
