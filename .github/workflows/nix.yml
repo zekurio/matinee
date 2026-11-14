@@ -19,6 +19,7 @@ on:
       - ".github/workflows/nix.yml"
       - "!**/*.md"
       - "!apps/android/**"
+      - "!apps/ios/**"
   push:
     branches:
       - main
