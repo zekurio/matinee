@@ -270,9 +270,11 @@ struct TabStack: View {
       TabRoot(tab: tab)
         .background(palette.background.ignoresSafeArea())
         .environment(\.tabReselected, nav.reselected[tab, default: 0])
+        .environment(\.tabRoot, true)
         .navigationDestination(for: Route.self) { route in
           RouteScreen(route: route)
             .background(palette.background.ignoresSafeArea())
+            .environment(\.tabRoot, false)
         }
     }
   }
@@ -283,6 +285,9 @@ extension EnvironmentValues {
   /// of while it shows: scroll to the top, as iOS apps do. `scrollsToTopOnReselect`
   /// does it for a plain scroll view.
   @Entry var tabReselected = 0
+
+  /// The page is a tab's first page, not one opened from it.
+  @Entry var tabRoot = false
 }
 
 extension View {

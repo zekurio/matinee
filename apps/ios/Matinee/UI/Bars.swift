@@ -44,11 +44,13 @@ private struct TopBar<Actions: View>: ViewModifier {
   @Environment(\.palette) private var palette
   @Environment(\.navigator) private var nav
   @Environment(\.offline) private var offline
+  @Environment(\.tabRoot) private var tabRoot
+  @Environment(\.horizontalSizeClass) private var sizeClass
 
   func body(content: Content) -> some View {
     content
       .navigationTitle(title ?? "")
-      .navigationBarTitleDisplayMode(.inline)
+      .navigationBarTitleDisplayMode(largeTitle ? .large : .inline)
       .toolbarBackground(palette.background, for: .navigationBar)
       .toolbarBackground(.visible, for: .navigationBar)
       .toolbarColorScheme(palette.isDark ? .dark : .light, for: .navigationBar)
@@ -61,6 +63,15 @@ private struct TopBar<Actions: View>: ViewModifier {
         }
         ToolbarItemGroup(placement: .topBarTrailing) { actions() }
       }
+  }
+
+  /// An iPad's tabs sit in the middle of the navigation bar, where an inline
+  /// title would be, and a tab's first page, with no back button to give the
+  /// bar a second row, lost its title under them. It names itself in a large
+  /// title under the tabs instead, as iPad apps have it; the pages opened
+  /// from it keep the inline title, which iOS moves under the tabs.
+  private var largeTitle: Bool {
+    tabRoot && sizeClass == .regular && UIDevice.current.userInterfaceIdiom == .pad
   }
 }
 
