@@ -3,8 +3,6 @@ import type source from "../en/party"
 
 export default {
   "party.title": "Watch-Party",
-  "party.intro":
-    "Schau gemeinsam mit anderen auf diesem Server. Alle in einer Party können für alle abspielen, pausieren und spulen. Was läuft, bestimmt der Host.",
   "party.start": "Watch-Party starten",
   "party.startFailed": "Die Watch-Party konnte nicht gestartet werden",
   "party.inviteCopied": "Einladungslink kopiert",
