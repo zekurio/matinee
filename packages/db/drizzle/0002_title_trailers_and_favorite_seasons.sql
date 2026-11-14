@@ -6,6 +6,7 @@ CREATE TABLE "favorite_season" (
 	CONSTRAINT "favorite_season_user_id_title_id_season_number_pk" PRIMARY KEY("user_id","title_id","season_number")
 );
 --> statement-breakpoint
+ALTER TABLE "title" ADD COLUMN "trailers" jsonb DEFAULT '[]'::jsonb NOT NULL;--> statement-breakpoint
 ALTER TABLE "favorite_season" ADD CONSTRAINT "favorite_season_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "favorite_season" ADD CONSTRAINT "favorite_season_title_id_title_id_fk" FOREIGN KEY ("title_id") REFERENCES "public"."title"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "favorite_season_recent_idx" ON "favorite_season" USING btree ("user_id","created_at");
