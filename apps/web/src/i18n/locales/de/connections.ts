@@ -13,10 +13,6 @@ export default {
   "connections.testing": "Wird getestet…",
   "connections.connected": "Verbunden",
   "connections.testFailed": "Test fehlgeschlagen",
-  "connections.slug": "Kürzel",
-  "connections.key.saved":
-    "Schlüssel in Matinee gespeichert, gilt statt {variable}",
-  "connections.key.environment": "Schlüssel aus {variable}",
   "connections.key.none":
     "Noch kein Schlüssel. Speichere einen oder setze {variable}.",
   "connections.actions": "Aktionen für {name}",

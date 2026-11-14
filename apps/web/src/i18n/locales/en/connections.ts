@@ -13,9 +13,6 @@ export default defineMessages("connections", {
   "connections.connected": "Connected",
   "connections.testFailed": "Test failed",
   // {variable} is the environment variable, like MATINEE_CONNECTION_FILMS_API_KEY.
-  "connections.slug": "Slug",
-  "connections.key.saved": "Key saved in Matinee, used instead of {variable}",
-  "connections.key.environment": "Key from {variable}",
   "connections.key.none": "No key yet. Save one, or set {variable}.",
   "connections.actions": "Actions for {name}",
   "connections.test": "Test again",

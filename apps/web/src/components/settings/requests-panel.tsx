@@ -296,28 +296,11 @@ function ConnectionCard({
               ))}
             </span>
           )}
-          <span className="text-muted-foreground flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5 text-xs leading-5">
-            <span>
-              <span className="sr-only">{tr("connections.slug")} </span>
-              <code className="bg-foreground/[0.06] text-foreground/80 rounded px-1 py-px font-mono text-[11px]">
-                {connection.slug}
-              </code>
+          {source?.apiKey && connection.apiKey.source === null && (
+            <span className="text-warning text-xs leading-5">
+              {trRich("connections.key.none", { variable })}
             </span>
-            {source?.apiKey && (
-              <span
-                className={cn(
-                  "min-w-0",
-                  connection.apiKey.source === null && "text-warning",
-                )}
-              >
-                {connection.apiKey.source === "saved"
-                  ? trRich("connections.key.saved", { variable })
-                  : connection.apiKey.source === "environment"
-                    ? trRich("connections.key.environment", { variable })
-                    : trRich("connections.key.none", { variable })}
-              </span>
-            )}
-          </span>
+          )}
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger
