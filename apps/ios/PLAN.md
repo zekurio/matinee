@@ -266,6 +266,8 @@ background first, as iOS keeps scene state; `simctl launch
   `SegmentedControl(options, selection:)`, `.toggleStyle(.matinee)`,
   `MatineeSlider(label, value:, in:)`; `ControlShape`, `CardShape`,
   `Gutter`, `MinTouch`.
+- Layout [Compose's `FlowRow`]: `FlowRow(spacing:, lineSpacing:)`, views
+  that wrap onto more lines, each line centered.
 - States [Controls.kt, HomeSections.kt]: `LoadingBox`, `ErrorBox(title,
   message, disconnected:, onRetry:)`, `Disconnected`, `DisconnectedAction`,
   `Notice`, `RailFailure`, `RailSkeleton(title:, art:)`, `EmptyState(icon,
