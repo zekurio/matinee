@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -433,7 +434,7 @@ private fun SeasonCard(title: Title, season: Season, partial: CatalogSeason?, mo
                     modifier = Modifier
                         .align(Alignment.TopEnd)
                         .padding(6.dp)
-                        .clip(MaterialTheme.shapes.extraLarge)
+                        .clip(CircleShape)
                         .background(Palette.Accent)
                         .padding(horizontal = 6.dp, vertical = 1.dp),
                 )

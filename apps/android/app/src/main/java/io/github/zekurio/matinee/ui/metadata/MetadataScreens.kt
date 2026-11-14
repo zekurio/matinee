@@ -88,6 +88,7 @@ import io.github.zekurio.matinee.ui.components.tone
 import io.github.zekurio.matinee.ui.describeFailure
 import io.github.zekurio.matinee.ui.kit.Badge
 import io.github.zekurio.matinee.ui.kit.ButtonLook
+import io.github.zekurio.matinee.ui.kit.CardShape
 import io.github.zekurio.matinee.ui.kit.ControlShape
 import io.github.zekurio.matinee.ui.kit.Gap
 import io.github.zekurio.matinee.ui.kit.Gutter
@@ -300,7 +301,7 @@ private fun MatchRow(match: MetadataMatch, current: Boolean, pending: Boolean, e
             .padding(vertical = 10.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Box(Modifier.width(48.dp).aspectRatio(2f / 3f).clip(MaterialTheme.shapes.extraSmall).tone(match.id)) {
+        Box(Modifier.width(48.dp).aspectRatio(2f / 3f).clip(CardShape).tone(match.id)) {
             Picture(listOfNotNull(api.art(match.poster)), Modifier.fillMaxSize())
         }
         Column(Modifier.weight(1f)) {
@@ -649,7 +650,7 @@ private fun SlotCard(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Box(Modifier.height(56.dp).aspectRatio(aspect(slot)).clip(MaterialTheme.shapes.extraSmall).tone(toneKey)) {
+        Box(Modifier.height(56.dp).aspectRatio(aspect(slot)).clip(CardShape).tone(toneKey)) {
             Picture(
                 listOfNotNull(api.art(current?.image, ArtworkSize.Thumb)),
                 Modifier.fillMaxSize().then(if (slot == ImageSlot.LOGO) Modifier.padding(4.dp) else Modifier),

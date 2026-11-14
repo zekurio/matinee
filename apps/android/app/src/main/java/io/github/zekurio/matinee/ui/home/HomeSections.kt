@@ -40,6 +40,7 @@ import io.github.zekurio.matinee.ui.kit.Lucide
 import io.github.zekurio.matinee.ui.kit.LucideIcon
 import io.github.zekurio.matinee.ui.kit.MatineeButton
 import io.github.zekurio.matinee.ui.kit.RoundIconButton
+import io.github.zekurio.matinee.ui.kit.Shapes
 import io.github.zekurio.matinee.ui.theme.Palette
 
 /** What a Home rail shows for its load: an empty answer is not a failure. */
@@ -158,7 +159,7 @@ internal fun RailSkeleton(title: String?, art: RailArt, onTitleClick: (() -> Uni
         if (title != null) {
             SectionTitle(title, Modifier.padding(horizontal = Gutter), onTitleClick)
         } else {
-            Box(Modifier.padding(horizontal = Gutter).width(180.dp).height(24.dp).clip(MaterialTheme.shapes.small).background(Palette.Secondary))
+            Box(Modifier.padding(horizontal = Gutter).width(180.dp).height(24.dp).clip(Shapes.Md).background(Palette.Secondary))
         }
         Gap(12.dp)
         LazyRow(
@@ -170,9 +171,9 @@ internal fun RailSkeleton(title: String?, art: RailArt, onTitleClick: (() -> Uni
                 Column(Modifier.width(width)) {
                     Box(Modifier.fillMaxWidth().aspectRatio(aspect).clip(CardShape).background(Palette.Card))
                     Gap(10.dp)
-                    Box(Modifier.fillMaxWidth(0.7f).height(14.dp).clip(MaterialTheme.shapes.small).background(Palette.Secondary))
+                    Box(Modifier.fillMaxWidth(0.7f).height(14.dp).clip(Shapes.Md).background(Palette.Secondary))
                     Gap(6.dp)
-                    Box(Modifier.fillMaxWidth(0.45f).height(12.dp).clip(MaterialTheme.shapes.small).background(Palette.Secondary))
+                    Box(Modifier.fillMaxWidth(0.45f).height(12.dp).clip(Shapes.Md).background(Palette.Secondary))
                 }
             }
         }
