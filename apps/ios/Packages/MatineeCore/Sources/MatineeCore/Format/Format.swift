@@ -145,9 +145,15 @@ public func toneIndex(_ key: String, count: Int) -> Int {
 /// A YYYY-MM-DD day as a date at the start of that day in `calendar`'s zone.
 public func parseDay(_ day: String?, calendar: Calendar = .current) -> Date? {
   guard let day else { return nil }
+  guard day.count == 10, day[day.index(day.startIndex, offsetBy: 4)] == "-",
+    day[day.index(day.startIndex, offsetBy: 7)] == "-" else { return nil }
   let parts = day.split(separator: "-").compactMap { Int($0) }
-  guard parts.count == 3 else { return nil }
-  return calendar.date(from: DateComponents(year: parts[0], month: parts[1], day: parts[2]))
+  guard parts.count == 3,
+    let date = calendar.date(from: DateComponents(year: parts[0], month: parts[1], day: parts[2]))
+  else { return nil }
+  let actual = calendar.dateComponents([.year, .month, .day], from: date)
+  guard actual.year == parts[0], actual.month == parts[1], actual.day == parts[2] else { return nil }
+  return date
 }
 
 /// An ISO time from the server, with or without fractions of a second.
