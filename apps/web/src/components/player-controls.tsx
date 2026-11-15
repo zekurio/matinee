@@ -152,6 +152,8 @@ function touchDragValue({
   return Math.max(0, Math.min(max, next))
 }
 
+const ARROW_KEYS = new Set(["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"])
+
 /** The track for seeking and volume: the accent on translucent white. */
 function MediaSlider({
   ref,
@@ -164,6 +166,7 @@ function MediaSlider({
   renderPreview,
   previewAtThumb = false,
   preciseTouch = false,
+  playerKeys = false,
   onChange,
   onCommit,
   className,
@@ -191,6 +194,11 @@ function MediaSlider({
    * it moves, for a value too long to set to the pixel.
    */
   preciseTouch?: boolean
+  /**
+   * Leave the arrow keys to the player's shortcuts while focused, so they
+   * skip and change the volume as they do anywhere else in the player.
+   */
+  playerKeys?: boolean
   onChange: (value: number) => void
   onCommit?: (value: number) => void
   className?: string
@@ -354,6 +362,14 @@ function MediaSlider({
           <Slider.Thumb
             aria-label={label}
             getAriaValueText={(_formatted, current) => valueText(current)}
+            data-player-keys={playerKeys || undefined}
+            onKeyDown={(event) => {
+              // The slider's own handler skips a prevented event, and
+              // the key goes on to the player's listener on the window.
+              if (playerKeys && ARROW_KEYS.has(event.key)) {
+                event.preventDefault()
+              }
+            }}
             className="size-3.5 rounded-full bg-white opacity-0 shadow transition-opacity outline-none group-hover/slider:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-white/60 data-dragging:opacity-100"
           />
         </Slider.Track>
@@ -444,6 +460,7 @@ export function SeekBar({
         // Touch has no hover, so a drag shows where it's headed.
         previewAtThumb={scrubbing}
         preciseTouch
+        playerKeys
         onChange={setScrub}
         onCommit={(value) => {
           commitScrub(value)
