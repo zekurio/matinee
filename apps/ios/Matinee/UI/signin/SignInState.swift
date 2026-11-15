@@ -9,6 +9,9 @@ import SwiftUI
   private(set) var error: String?
   /// The address that failed is on the local network, which iOS may be keeping the app from.
   private(set) var local = false
+  /// What failed on the local network, to try once more when the app is back in front
+  /// (LocalNetwork.swift): after the system's prompt, or Settings.
+  private var retry: (address: String, name: String?)?
 
   /// Try `address`, unless a try is under way. Once it answers, the
   /// session moves on to signing in. `name` is what a server found nearby calls itself.
@@ -17,6 +20,7 @@ import SwiftUI
     busy = true
     error = nil
     local = false
+    retry = nil
     defer { busy = false }
     guard let failure = await session.connect(address, name: name) else { return }
     switch failure {
@@ -26,12 +30,21 @@ import SwiftUI
       error = Str.connectFailed(server)
       // Without the access a LAN server only says it can't be reached.
       local = isLocal
+      if isLocal { retry = (address, name) }
     }
+  }
+
+  /// The app came back to the front, from the local network prompt or from
+  /// Settings: a server on the local network that failed gets another try.
+  func retryLocal(_ session: MatineeSession) async {
+    guard let retry, !busy else { return }
+    await connect(session, retry.address, name: retry.name)
   }
 
   func clearError() {
     error = nil
     local = false
+    retry = nil
   }
 }
 
@@ -50,7 +63,7 @@ import SwiftUI
 
   /// Starts the device grant and polls until someone signed in approves
   /// this device, then signs the session in. A code that expires is
-  /// replaced at once when `renewExpired`, with a new QR code; otherwise
+  /// replaced at once when `renewExpired`, with a new one; otherwise
   /// `expired` says so and waits for `newCode`. Ends when its task is cancelled.
   func run(_ session: MatineeSession, renewExpired: Bool) async {
     // A server being added, before it's saved, or the one in use.
@@ -84,7 +97,7 @@ import SwiftUI
           return
         }
       } catch let failure as ApiException where failure.status == 404 {
-        // The code expired: get a new one, and with it a new QR code.
+        // The code expired: get a new one.
         if renewExpired {
           attempt += 1
         } else {
