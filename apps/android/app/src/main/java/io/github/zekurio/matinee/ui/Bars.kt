@@ -24,12 +24,9 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.layout.windowInsetsTopHeight
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
@@ -42,14 +39,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -127,11 +120,6 @@ fun BottomBar(current: Any?, onPick: (Any) -> Unit, modifier: Modifier = Modifie
     Row(
         modifier
             .fillMaxWidth()
-            // The page fades out under the bar, which Android can't blur
-            // behind it as iOS does, so rows passing beneath don't fight its labels.
-            .drawBehind {
-                drawRect(Brush.verticalGradient(0f to Color.Transparent, 0.55f to Palette.Background.copy(alpha = 0.85f), 1f to Palette.Background))
-            }
             .padding(top = 28.dp)
             .navigationBarsPadding()
             .padding(bottom = TAB_BAR_LIFT),
@@ -244,37 +232,15 @@ private fun TabButton(
 }
 
 /**
- * Home's header: room for the status bar over the banner's art, faded for
- * it to read, and whether the app is offline. It scrolls away with the
- * page. The banner's own title logo carries the top, so there's no app
- * logo competing with it; search and the account are in the tab bar.
+ * Home's header: room for the status bar over the banner's art, and
+ * whether the app is offline. It scrolls away with the page. The banner's
+ * own title logo carries the top, so there's no app logo competing with
+ * it; search and the account are in the tab bar.
  */
 @Composable
 fun AppHeader(modifier: Modifier = Modifier, action: @Composable () -> Unit = {}) {
     val offline = LocalOffline.current
-    val statusBar = WindowInsets.statusBars.getTop(LocalDensity.current).toFloat()
-    Box(
-        modifier
-            .fillMaxWidth()
-            // Keeps the header readable over bright art, fading out a little
-            // below it as on the web. Behind the status bar it's denser:
-            // Android picks each part of the bar's icons light or dark by
-            // what's behind it, so over bright art the clock went dark while
-            // the rest stayed light, a different mix for every slide.
-            .drawBehind {
-                val height = size.height + 40.dp.toPx()
-                val bar = (statusBar / height).coerceIn(0f, 1f)
-                drawRect(
-                    Brush.verticalGradient(
-                        0f to Palette.Background.copy(alpha = 0.85f),
-                        bar to Palette.Background.copy(alpha = 0.75f),
-                        1f to Color.Transparent,
-                        endY = height,
-                    ),
-                    size = Size(size.width, height),
-                )
-            },
-    ) {
+    Box(modifier.fillMaxWidth()) {
         Row(
             Modifier.statusBarsPadding().height(56.dp).fillMaxWidth().padding(horizontal = Gutter),
             horizontalArrangement = Arrangement.End,
@@ -367,39 +333,3 @@ fun ItemTopBar(modifier: Modifier = Modifier, parent: String? = null, onParent: 
 
 /** The page's color veiling the art behind a floating button, as the web's bars have it. */
 private val FLOATING get() = Palette.Background.copy(alpha = 0.6f)
-
-/**
- * Keeps the status bar's icons readable once a page scrolls under it. It
- * deepens with the first few dp of scrolling, as the page's top slides under
- * the bar, and fades from the top edge down to nothing, so there's no band
- * across the art while the page sits at its top.
- */
-@Composable
-fun StatusBarScrim(state: LazyListState, modifier: Modifier = Modifier) {
-    val distance = with(LocalDensity.current) { 40.dp.toPx() }
-    Box(
-        modifier
-            .fillMaxWidth()
-            .windowInsetsTopHeight(WindowInsets.statusBars)
-            .drawBehind {
-                // Read while drawing, so scrolling only redraws this.
-                val scrolled = if (state.firstVisibleItemIndex > 0) 1f else (state.firstVisibleItemScrollOffset / distance).coerceIn(0f, 1f)
-                // Never quite clear: Android picks the status bar's icons light
-                // or dark by what's behind each of them, so over bright art
-                // they'd come out mixed. A light shade keeps them the theme's.
-                val shown = 0.75f + 0.25f * scrolled
-                // Past the bar by half its height, so the fade has room.
-                val height = size.height * 1.5f
-                val shade = Palette.Background
-                drawRect(
-                    Brush.verticalGradient(
-                        0f to shade.copy(alpha = 0.9f * shown),
-                        0.6f to shade.copy(alpha = 0.6f * shown),
-                        1f to Color.Transparent,
-                        endY = height,
-                    ),
-                    size = Size(size.width, height),
-                )
-            },
-    )
-}

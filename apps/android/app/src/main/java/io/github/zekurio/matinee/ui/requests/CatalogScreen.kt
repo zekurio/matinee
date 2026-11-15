@@ -44,7 +44,6 @@ import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.Loader
 import io.github.zekurio.matinee.ui.LocalNavigator
 import io.github.zekurio.matinee.ui.RefreshOnResume
-import io.github.zekurio.matinee.ui.StatusBarScrim
 import io.github.zekurio.matinee.ui.components.ErrorBox
 import io.github.zekurio.matinee.ui.components.LoadingBox
 import io.github.zekurio.matinee.ui.components.LocalApi
@@ -227,7 +226,6 @@ private fun CatalogPage(detail: CatalogTitleDetail, library: String?) {
             relatedRails(related)
             item(key = "bottom") { Box(Modifier.navigationBarsPadding()) }
         }
-        StatusBarScrim(listState)
         ItemTopBar()
     }
     // Open with the season a card asked for, or -1 for the row's request.
