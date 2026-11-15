@@ -53,9 +53,11 @@ export function Home() {
   // On desktop, the banner and the rows of what to watch next share the
   // first screen: the banner takes what the rows leave, down to a floor
   // that keeps it from turning into a strip (`heroFill`). The column ends at
-  // the window's bottom (<main>'s top padding is cancelled by the banner's
-  // negative margin). Its own bottom padding keeps the rows off the edge
-  // and pushes the shelves below the fold. While the queries load, the page
+  // a page gap above the window's bottom (<main>'s top padding is cancelled
+  // by the banner's negative margin), so the rows stay off the edge and the
+  // shelves start at the fold. The rows keep the page's gap, both between
+  // themselves and before the shelves, so every rail sits the same distance
+  // apart once the banner reaches its floor. While the queries load, the page
   // assumes the banner and the rows will come and holds their places with
   // skeletons, so the banner doesn't shrink once they arrive. A phone's
   // banner has a height of its own, short enough for both rows to fit
@@ -70,7 +72,7 @@ export function Home() {
         className={cn(
           "contents",
           fold &&
-            "lg:flex lg:min-h-[calc(100dvh-6rem)] lg:flex-col lg:gap-8 lg:pb-12",
+            "lg:flex lg:min-h-[calc(100dvh-8.5rem)] lg:flex-col lg:gap-10",
         )}
       >
         {loading ? (
