@@ -161,14 +161,18 @@ struct BrowseTests {
     var asked: [String] = []
     var cancelled: [String] = []
     var failing = false
-    let wait: Duration
-    init(wait: Duration = .zero) { self.wait = wait }
+    var blockedQuery: String?
 
     func search(_ text: String) async throws -> SearchResults {
       asked.append(text)
       events.continuation.yield("started:\(text)")
-      if wait > .zero {
-        do { try await Task.sleep(for: wait) } catch {
+      if text == blockedQuery {
+        // Stay in flight until cancelled, even if the test task is starved.
+        let pending = AsyncStream<Void>.makeStream()
+        do {
+          for await _ in pending.stream {}
+          try Task.checkCancellation()
+        } catch {
           cancelled.append(text)
           events.continuation.yield("cancelled:\(text)")
           throw error
@@ -192,7 +196,8 @@ struct BrowseTests {
   }
 
   @Test func aNewQueryCancelsTheSearchStillOut() async {
-    let server = Searches(wait: .milliseconds(200))
+    let server = Searches()
+    server.blockedQuery = "dune"
     let state = SearchState(debounce: .zero)
     var events = server.events.stream.makeAsyncIterator()
     state.update("dune", now: true) { try await server.search($0) }
