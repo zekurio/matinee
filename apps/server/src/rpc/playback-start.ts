@@ -6,7 +6,10 @@ import {
   PLAYBACK_UNPLAYABLE,
   PLAYBACK_RESTRICTED,
   PLAYBACK_BUSY,
+  type PlaybackBusyData,
   PlaybackPreferences,
+  type PlaybackRestrictedData,
+  type PlaybackRestriction,
 } from "@matinee/contracts"
 import { mediaItem, title, watchProgress } from "@matinee/db"
 import { ORPCError } from "@orpc/server"
@@ -35,16 +38,37 @@ function unplayable(): ORPCError<typeof PLAYBACK_UNPLAYABLE, unknown> {
   })
 }
 
+/** Each restriction in English, the message a player without words of its own shows. */
+const RESTRICTED_MESSAGES = {
+  "bitrate-original":
+    "This file is over the bit rate your account may stream. Pick a lower quality to watch it.",
+  "bitrate-transcode":
+    "This file is over the bit rate your account may stream, and the server may not convert video for your account. Ask whoever runs the server.",
+  "bitrate-failed":
+    "This file is over the bit rate your account may stream, and converting its video failed. Try again or ask whoever runs the server.",
+  bitrate:
+    "This file is over the bit rate your account may stream, and the server can't make a version this device plays under that limit. Try another device or ask whoever runs the server.",
+  transcode:
+    "This device needs the video converted, but the server may not convert video for your account. Try another device or ask whoever runs the server.",
+} satisfies Record<PlaybackRestriction, string>
+
+/** The account's access rules out playing the file, for `reason`. */
+function restricted(
+  reason: PlaybackRestriction,
+): ORPCError<typeof PLAYBACK_RESTRICTED, PlaybackRestrictedData> {
+  return new ORPCError(PLAYBACK_RESTRICTED, {
+    status: 403,
+    message: RESTRICTED_MESSAGES[reason],
+    data: { reason },
+  })
+}
+
 export const seekPlayback = authed.playback.seek.handler(
   async ({ context, input }) => {
     const item = await itemFor(context.user, input.itemId)
     if (!item) throw notFound("This title isn't in any library.")
     if (!(await mayStreamOriginal(context.user.access, item)))
-      throw new ORPCError(PLAYBACK_RESTRICTED, {
-        status: 403,
-        message:
-          "This file is over the bit rate your account may stream. Pick a lower quality to watch it.",
-      })
+      throw restricted("bitrate-original")
     // Only video starts on a keyframe. A file without any starts anywhere,
     // as `start` has it.
     const keyframes =
@@ -83,6 +107,7 @@ export const startPlayback = authed.playback.start.handler(
         throw new ORPCError(PLAYBACK_BUSY, {
           status: 429,
           message: `Your account is playing on ${playing} ${playing === 1 ? "device" : "devices"}, the most it may. Stop one to watch here.`,
+          data: { playing } satisfies PlaybackBusyData,
         })
     }
     const info = await stat(item.path).catch(() => null)
@@ -132,20 +157,7 @@ export const startPlayback = authed.playback.start.handler(
       ),
     })
     if (!plan) throw unplayable()
-    if ("restricted" in plan)
-      throw new ORPCError(PLAYBACK_RESTRICTED, {
-        status: 403,
-        message: {
-          "bitrate-transcode":
-            "This file is over the bit rate your account may stream, and the server may not convert video for your account. Ask whoever runs the server.",
-          "bitrate-failed":
-            "This file is over the bit rate your account may stream, and converting its video failed. Try again or ask whoever runs the server.",
-          bitrate:
-            "This file is over the bit rate your account may stream, and the server can't make a version this device plays under that limit. Try another device or ask whoever runs the server.",
-          transcode:
-            "This device needs the video converted, but the server may not convert video for your account. Try another device or ask whoever runs the server.",
-        }[plan.restricted],
-      })
+    if ("restricted" in plan) throw restricted(plan.restricted)
     if (plan.method === "remux" && probe.video && plan.position > 0) {
       const keyframes = await keyframesNear(item, plan.position)
       if (!keyframes)

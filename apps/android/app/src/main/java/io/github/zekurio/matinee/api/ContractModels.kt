@@ -1103,6 +1103,25 @@ data class PlaybackStartInput(
     val failed: List<String>? = null,
 )
 
+object PlaybackRestriction {
+    const val BITRATE_ORIGINAL = "bitrate-original"
+    const val BITRATE_TRANSCODE = "bitrate-transcode"
+    const val BITRATE_FAILED = "bitrate-failed"
+    const val BITRATE = "bitrate"
+    const val TRANSCODE = "transcode"
+    val all = listOf(BITRATE_ORIGINAL, BITRATE_TRANSCODE, BITRATE_FAILED, BITRATE, TRANSCODE)
+}
+
+@Serializable
+data class PlaybackRestrictedData(
+    val reason: String,
+)
+
+@Serializable
+data class PlaybackBusyData(
+    val playing: Int,
+)
+
 @Serializable
 data class ActivityCell(
     val weekday: Int,

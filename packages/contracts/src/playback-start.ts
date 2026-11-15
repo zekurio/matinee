@@ -291,17 +291,51 @@ export const PLAYBACK_UNPLAYABLE = "UNPLAYABLE"
  * The code `playback.start` fails with, as HTTP 403, when the account's
  * access rules out every way left to play the file: it's over the bit
  * rate the account may stream, or needs an encode, and the server may not
- * encode for the account or the encode failed. The message says which. A
- * player shows it and stops.
+ * encode for the account or the encode failed. `playback.seek` fails with
+ * it for the original of a file over the limit. The error's data is a
+ * `PlaybackRestrictedData` saying which, for a player to say in its own
+ * words, and the message says it in English. A player shows it and stops.
  */
 export const PLAYBACK_RESTRICTED = "PLAYBACK_RESTRICTED"
 
+export const PLAYBACK_RESTRICTIONS = [
+  "bitrate-original",
+  "bitrate-transcode",
+  "bitrate-failed",
+  "bitrate",
+  "transcode",
+] as const
+/**
+ * Why the account's access stopped playback. The file is over the bit
+ * rate the account may stream, and: `bitrate-original`, the original was
+ * asked for, where a lower quality plays; `bitrate-transcode`, the server
+ * may not encode for the account; `bitrate-failed`, the encode under the
+ * limit failed; `bitrate`, no encode under the limit plays on the device.
+ * `transcode`: the device needs an encode, and the server may not encode
+ * for the account.
+ */
+export const PlaybackRestriction = t.enum(PLAYBACK_RESTRICTIONS)
+export type PlaybackRestriction = t.infer<typeof PlaybackRestriction>
+
+/** The data of a `PLAYBACK_RESTRICTED` error. */
+export const PlaybackRestrictedData = t.object({
+  reason: PlaybackRestriction,
+})
+export type PlaybackRestrictedData = t.infer<typeof PlaybackRestrictedData>
+
 /**
  * The code `playback.start` fails with, as HTTP 429, while the account
- * plays on as many devices as it may. A player shows the message and
- * stops. Stopping playback elsewhere frees a place.
+ * plays on as many devices as it may. The error's data is a
+ * `PlaybackBusyData`. A player shows the message and stops. Stopping
+ * playback elsewhere frees a place.
  */
 export const PLAYBACK_BUSY = "TOO_MANY_STREAMS"
+
+/** The data of a `PLAYBACK_BUSY` error: how many other devices play. */
+export const PlaybackBusyData = t.object({
+  playing: t.number().int().positive(),
+})
+export type PlaybackBusyData = t.infer<typeof PlaybackBusyData>
 
 export const PlaybackSeekInput = t.object({
   itemId: t.uuid(),

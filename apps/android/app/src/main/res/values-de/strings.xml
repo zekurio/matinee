@@ -512,6 +512,15 @@
     <string name="player_unplayable">Dieses Gerät kann die Datei nicht abspielen.</string>
     <string name="player_restricted">Dein Konto kann das nicht abspielen</string>
     <string name="player_busy">Auf zu vielen Geräten in Wiedergabe</string>
+    <string name="player_restricted_original">Diese Datei liegt über der Bitrate, die dein Konto streamen darf. Wähle eine niedrigere Qualität, um sie anzusehen.</string>
+    <string name="player_restricted_no_transcode">Diese Datei liegt über der Bitrate, die dein Konto streamen darf, und der Server darf für dein Konto kein Video umwandeln. Frag die Person, die den Server betreibt.</string>
+    <string name="player_restricted_failed">Diese Datei liegt über der Bitrate, die dein Konto streamen darf, und das Umwandeln des Videos ist fehlgeschlagen. Versuch es noch einmal oder frag die Person, die den Server betreibt.</string>
+    <string name="player_restricted_bitrate">Diese Datei liegt über der Bitrate, die dein Konto streamen darf, und der Server kann unter diesem Limit keine Version erstellen, die dieses Gerät abspielt. Versuch ein anderes Gerät oder frag die Person, die den Server betreibt.</string>
+    <string name="player_restricted_transcode">Dieses Gerät braucht das Video umgewandelt, aber der Server darf für dein Konto kein Video umwandeln. Versuch ein anderes Gerät oder frag die Person, die den Server betreibt.</string>
+    <plurals name="player_busy_detail">
+        <item quantity="one">Dein Konto spielt auf %1$d Gerät ab, mehr sind nicht erlaubt. Beende die Wiedergabe dort, um hier zu schauen.</item>
+        <item quantity="other">Dein Konto spielt auf %1$d Geräten ab, mehr sind nicht erlaubt. Beende die Wiedergabe auf einem, um hier zu schauen.</item>
+    </plurals>
     <string name="player_notice_burn_in_failed">Die Untertitel konnten nicht eingebrannt werden</string>
     <string name="player_notice_burn_in_failed_detail">Die Untertitel sind aus. Wähle eine andere Spur oder versuch es noch einmal.</string>
     <string name="player_notice_switch_failed">Das ließ sich nicht abspielen</string>

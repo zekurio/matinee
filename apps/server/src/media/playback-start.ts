@@ -6,6 +6,7 @@ import {
   type PlaybackPreferences,
   type PlaybackQuality,
   type PlaybackQualityPreset,
+  type PlaybackRestriction,
   type PlaybackStart,
   type PlaybackStartInput,
   type SubtitleTrack,
@@ -177,15 +178,15 @@ export function playbackAudio(
 }
 
 /** Why access, rather than the device, left no way to play. */
-export type PlaybackRestriction = {
-  restricted: "bitrate-transcode" | "bitrate-failed" | "bitrate" | "transcode"
+export type RestrictedPlayback = {
+  restricted: Exclude<PlaybackRestriction, "bitrate-original">
 }
 
 /** Decide without reading files, the database, or a device API. Null means unplayable. */
 export function decidePlayback(
   input: PlaybackStartInput,
   facts: StartFacts,
-): PlaybackDecision | PlaybackRestriction | null {
+): PlaybackDecision | RestrictedPlayback | null {
   const plan = playbackDecision(input, facts)
   if (plan) return plan
   // A device that could not play even without access limits keeps its

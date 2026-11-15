@@ -1,10 +1,13 @@
 package io.github.zekurio.matinee.ui.player
 
+import androidx.media3.common.PlaybackException
 import io.github.zekurio.matinee.api.ApiException
 import io.github.zekurio.matinee.api.PLAYBACK_BUSY
 import io.github.zekurio.matinee.api.PLAYBACK_RESTRICTED
+import io.github.zekurio.matinee.api.PlaybackBusyData
 import io.github.zekurio.matinee.api.PlaybackDevice
 import io.github.zekurio.matinee.api.PlaybackMethod
+import io.github.zekurio.matinee.api.PlaybackRestrictedData
 import io.github.zekurio.matinee.api.PlaybackSnap
 import io.github.zekurio.matinee.api.PlaybackStart
 import io.github.zekurio.matinee.api.PlaybackStartInput
@@ -38,8 +41,7 @@ enum class NoticeKind { BURN_IN_FAILED, QUALITY_FAILED, SWITCH_FAILED }
 /**
  * Why the server won't play the file for this account now: its access
  * rules out every way left, or it plays on as many devices as it may.
- * Asking again gets the same answer, so the player shows the server's
- * message and stops.
+ * Asking again gets the same answer, so the player says why and stops.
  */
 enum class Refusal { RESTRICTED, BUSY }
 
@@ -48,6 +50,36 @@ fun refusal(e: Exception): Refusal? = when ((e as? ApiException)?.code) {
     PLAYBACK_RESTRICTED -> Refusal.RESTRICTED
     PLAYBACK_BUSY -> Refusal.BUSY
     else -> null
+}
+
+/**
+ * The `PlaybackRestriction` a restricted refusal carries, for the player
+ * to say in the app's language. Null from a server that sends none, which
+ * leaves the server's message.
+ */
+fun restriction(e: ApiException): String? =
+    if (e.code == PLAYBACK_RESTRICTED) e.dataAs(PlaybackRestrictedData.serializer())?.reason else null
+
+/** How many other devices play, from a busy refusal. Null from a server that sends none. */
+fun busyPlaying(e: ApiException): Int? =
+    if (e.code == PLAYBACK_BUSY) e.dataAs(PlaybackBusyData.serializer())?.playing else null
+
+/**
+ * Whether a source failed because the server was out of reach, not
+ * because its method doesn't play: the connection failed or timed out, or
+ * a proxy in front of the server answered that it couldn't reach it, as
+ * while the server restarts. That says nothing of the method, so the
+ * player doesn't count it among the failed. [errorCode] is the player's
+ * `PlaybackException` code, [httpStatus] the status the source answered
+ * with, if any. An encode that fails on the server answers 503, which
+ * stays a failure of the method.
+ */
+fun serverOutOfReach(errorCode: Int, httpStatus: Int?): Boolean = when (errorCode) {
+    PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED,
+    PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT,
+    -> true
+    PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS -> httpStatus == 502 || httpStatus == 504
+    else -> false
 }
 
 /**

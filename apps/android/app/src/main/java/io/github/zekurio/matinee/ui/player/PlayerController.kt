@@ -26,6 +26,7 @@ import androidx.media3.common.text.CueGroup
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSourceBitmapLoader
 import androidx.media3.datasource.DefaultDataSource
+import androidx.media3.datasource.HttpDataSource
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
@@ -650,8 +651,22 @@ class PlayerController(
             error = e.errorCodeName.takeIf { e.cause == null } ?: (e.cause?.message ?: e.errorCodeName)
             return
         }
+        // The server went away, as while it restarts. Falling back past the
+        // method would blame it, and an encode over the account's limit
+        // has nothing to fall back to, so Try again asks for the same.
+        if (serverOutOfReach(e.errorCode, httpStatus(e))) {
+            error = resources.getString(R.string.error_unreachable)
+            return
+        }
         ask(Ask(at = now(), reason = AttemptReason.FALLBACK, failed = method, lost = plan))
     }
+
+    /** The status a source answered [e] with, if it got that far. */
+    private fun httpStatus(e: PlaybackException): Int? =
+        generateSequence(e.cause) { it.cause }
+            .filterIsInstance<HttpDataSource.InvalidResponseCodeException>()
+            .firstOrNull()
+            ?.responseCode
 
     /**
      * The picture froze while playback ran on. From the server, that source
@@ -707,7 +722,7 @@ class PlayerController(
      * A call that failed. When the source failed too, nothing plays, so the
      * player says why, as when the server finds nothing this device plays.
      * A switch that didn't go through leaves what plays, and says so. A
-     * refusal stops the player either way, with the server's words.
+     * refusal stops the player either way, saying why.
      */
     private fun refused(change: Ask, undo: Asking, e: Exception) {
         inFlight = null
@@ -722,7 +737,11 @@ class PlayerController(
                 else -> DiagnosticsNote.START_FAILED
             },
         )
-        val message = if (unplayable) resources.getString(R.string.player_unplayable) else describeFailure(resources, e)
+        val message = when {
+            unplayable -> resources.getString(R.string.player_unplayable)
+            refusal != null && e is ApiException -> refusalMessage(resources, e)
+            else -> describeFailure(resources, e)
+        }
         val sought = seekOnAnswer
         seekOnAnswer = null
         if (refusal != null) {
@@ -805,7 +824,7 @@ class PlayerController(
             } catch (e: IOException) {
                 pendingAt = null
                 diagnostics.note(DiagnosticsNote.SEEK_FAILED)
-                notice = Notice(NoticeKind.SWITCH_FAILED, describeFailure(resources, e))
+                notice = Notice(NoticeKind.SWITCH_FAILED, if (e is ApiException && refusal(e) != null) refusalMessage(resources, e) else describeFailure(resources, e))
                 return@launch
             }
             load(current.copy(url = resolve(answer.url), offset = answer.offset, start = 0.0), reason = null)

@@ -6,6 +6,7 @@ import android.content.ContextWrapper
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.content.res.Configuration
+import android.content.res.Resources
 import android.os.Build
 import android.util.Rational
 import android.view.WindowManager
@@ -158,6 +159,7 @@ import io.github.zekurio.matinee.api.MediaSegmentKind
 import io.github.zekurio.matinee.api.PLAYBACK_UNPLAYABLE
 import io.github.zekurio.matinee.api.PlaybackDevice
 import io.github.zekurio.matinee.api.PlaybackOptions
+import io.github.zekurio.matinee.api.PlaybackRestriction
 import io.github.zekurio.matinee.api.PlaybackStartInput
 import io.github.zekurio.matinee.api.SubtitleDelivery
 import io.github.zekurio.matinee.api.SubtitleTrack
@@ -216,7 +218,7 @@ internal sealed interface PlayerData {
     /** The server found nothing this device plays. */
     data object Unplayable : PlayerData
 
-    /** The server won't play the file for this account now, in [message]'s words. */
+    /** The server won't play the file for this account now, for the reason [message] gives. */
     class Refused(val refusal: Refusal, val message: String) : PlayerData
 }
 
@@ -264,7 +266,7 @@ fun PlayerScreen(itemId: String, start: Double?) {
                 options.cancel()
                 if (e.code == PLAYBACK_UNPLAYABLE) return@coroutineScope PlayerData.Unplayable
                 val refusal = refusal(e) ?: throw e
-                return@coroutineScope PlayerData.Refused(refusal, e.message)
+                return@coroutineScope PlayerData.Refused(refusal, refusalMessage(app.resources, e))
             }
             PlayerData.Server(Opening.Server(plan, sessionId, quality), device, options.await())
         }
@@ -320,7 +322,7 @@ private fun FullScreen() {
     }
 }
 
-/** The heading over the server's words when it won't play the file for this account. */
+/** The heading over [refusalMessage] when the server won't play the file for this account. */
 @Composable
 internal fun refusalTitle(refusal: Refusal) = stringResource(
     when (refusal) {
@@ -328,6 +330,24 @@ internal fun refusalTitle(refusal: Refusal) = stringResource(
         Refusal.BUSY -> R.string.player_busy
     },
 )
+
+/**
+ * What the player says under [refusalTitle]: why, in the app's language
+ * for a reason it knows, else in the server's words.
+ */
+internal fun refusalMessage(resources: Resources, e: ApiException): String {
+    val restricted = when (restriction(e)) {
+        PlaybackRestriction.BITRATE_ORIGINAL -> R.string.player_restricted_original
+        PlaybackRestriction.BITRATE_TRANSCODE -> R.string.player_restricted_no_transcode
+        PlaybackRestriction.BITRATE_FAILED -> R.string.player_restricted_failed
+        PlaybackRestriction.BITRATE -> R.string.player_restricted_bitrate
+        PlaybackRestriction.TRANSCODE -> R.string.player_restricted_transcode
+        else -> null
+    }
+    return restricted?.let(resources::getString)
+        ?: busyPlaying(e)?.let { resources.getQuantityString(R.plurals.player_busy_detail, it, it) }
+        ?: e.message
+}
 
 @Composable
 private fun PlayerFailure(title: String, message: String?, retry: (() -> Unit)?) {

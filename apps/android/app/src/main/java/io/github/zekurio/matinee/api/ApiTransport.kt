@@ -16,6 +16,7 @@ import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.Dispatcher
@@ -28,8 +29,21 @@ import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 
-/** A request the server answered with an error, with its message to show. */
-class ApiException(val status: Int, val code: String?, override val message: String) : IOException(message)
+/**
+ * A request the server answered with an error, with its message to show.
+ * [data] is what the error carries beside it, as the contract says for its
+ * code, such as a `PlaybackRestrictedData`.
+ */
+class ApiException(
+    val status: Int,
+    val code: String?,
+    override val message: String,
+    val data: JsonElement? = null,
+) : IOException(message) {
+    /** [data] read as [serializer], or null when it's missing or reads otherwise, as from an older server. */
+    fun <T> dataAs(serializer: KSerializer<T>): T? =
+        data?.let { runCatching { MatineeJson.decodeFromJsonElement(serializer, it) }.getOrNull() }
+}
 
 /** What the server sends with a failed request. */
 @Serializable
@@ -37,6 +51,7 @@ data class ApiErrorBody(
     val code: String? = null,
     val status: Int? = null,
     val message: String? = null,
+    val data: JsonElement? = null,
 )
 
 /** How the app reads the server's JSON: newer servers may add fields. */
@@ -179,6 +194,7 @@ class ApiTransport internal constructor(private val base: HttpUrl, private val c
             status = response.code,
             code = parsed?.code,
             message = parsed?.message ?: "The server answered ${response.code}.",
+            data = parsed?.data,
         )
     }
 
