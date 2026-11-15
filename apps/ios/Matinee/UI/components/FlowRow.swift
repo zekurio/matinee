@@ -47,7 +47,9 @@ struct FlowRow: Layout {
     for (index, subview) in subviews.enumerated() {
       var size = subview.sizeThatFits(.unspecified)
       if size.width > width { size = subview.sizeThatFits(ProposedViewSize(width: width, height: nil)) }
-      if !line.items.isEmpty, line.width + spacing + size.width > width {
+      // A point to spare: placed, the row may be a hair narrower than it
+      // measured, as sizes snap to pixels, which would drop its last view.
+      if !line.items.isEmpty, line.width + spacing + size.width > width + 1 {
         lines.append(line)
         line = Line()
       }

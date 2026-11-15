@@ -214,6 +214,7 @@ private struct StatusBarScrim: ViewModifier {
   @State private var scrolled: CGFloat = 0
   @Environment(\.palette) private var palette
   @Environment(\.shellStyle) private var style
+  @Environment(\.tabRoot) private var tabRoot
 
   /// The status bar's height: above the scroll view when it starts below
   /// the bar, or its own top inset when it reaches under it.
@@ -230,8 +231,9 @@ private struct StatusBarScrim: ViewModifier {
         scrolled = value
       }
       .overlay(alignment: .top) {
-        // On an iPad the tabs' own fade does this.
-        if style == .phone {
+        // On an iPad the tabs' own fade does this, where they show: a page
+        // opened from a tab covers them, and needs its own.
+        if style == .phone || !tabRoot {
           let shown = 0.75 + 0.25 * (scrolled.isFinite ? scrolled : 0)
           GeometryReader { proxy in
             LinearGradient(
