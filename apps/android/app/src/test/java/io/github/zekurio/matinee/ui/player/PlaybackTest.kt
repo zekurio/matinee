@@ -1,8 +1,11 @@
 package io.github.zekurio.matinee.ui.player
 
+import androidx.media3.common.PlaybackException
 import io.github.zekurio.matinee.api.ApiException
 import io.github.zekurio.matinee.api.DeviceCodecs
+import io.github.zekurio.matinee.api.MatineeJson
 import io.github.zekurio.matinee.api.PlaybackDevice
+import io.github.zekurio.matinee.api.PlaybackRestriction
 import io.github.zekurio.matinee.api.PlaybackStart
 import io.github.zekurio.matinee.api.SubtitlePick
 import io.github.zekurio.matinee.api.SubtitleTrack
@@ -206,6 +209,31 @@ class PlaybackTest {
         assertEquals(Refusal.BUSY, refusal(ApiException(429, "TOO_MANY_STREAMS", "You're playing on 2 devices already.")))
         assertNull(refusal(ApiException(422, "UNPLAYABLE", "Nothing plays.")))
         assertNull(refusal(java.io.IOException("reset")))
+    }
+
+    @Test
+    fun refusalsCarryTheirReason() {
+        val reason = MatineeJson.parseToJsonElement("""{"reason":"bitrate-failed"}""")
+        assertEquals(PlaybackRestriction.BITRATE_FAILED, restriction(ApiException(403, "PLAYBACK_RESTRICTED", "Over the limit.", reason)))
+        val playing = MatineeJson.parseToJsonElement("""{"playing":2}""")
+        assertEquals(2, busyPlaying(ApiException(429, "TOO_MANY_STREAMS", "Playing on 2 devices.", playing)))
+        // An older server sends none, or data of another shape: the server's message shows.
+        assertNull(restriction(ApiException(403, "PLAYBACK_RESTRICTED", "Over the limit.")))
+        assertNull(restriction(ApiException(403, "PLAYBACK_RESTRICTED", "Over the limit.", playing)))
+        assertNull(busyPlaying(ApiException(403, "PLAYBACK_RESTRICTED", "Over the limit.", playing)))
+    }
+
+    @Test
+    fun aServerOutOfReachIsNoFailedMethod() {
+        assertTrue(serverOutOfReach(PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED, null))
+        assertTrue(serverOutOfReach(PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT, null))
+        // The proxy in front of a server that restarts.
+        assertTrue(serverOutOfReach(PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS, 502))
+        assertTrue(serverOutOfReach(PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS, 504))
+        // The server's own answer for an encode that failed.
+        assertFalse(serverOutOfReach(PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS, 503))
+        assertFalse(serverOutOfReach(PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS, 404))
+        assertFalse(serverOutOfReach(PlaybackException.ERROR_CODE_DECODING_FAILED, null))
     }
 
     @Test

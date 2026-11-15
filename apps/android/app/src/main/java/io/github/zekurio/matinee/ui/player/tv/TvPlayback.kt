@@ -362,7 +362,7 @@ private fun TvPlayback(itemId: String, data: PlayerData, start: Double?) {
             Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.85f))) {
                 when (val refusal = controller.refusal) {
                     null -> TvPlayerFailure(stringResource(R.string.player_error_lost), message, controller::retry)
-                    // The server won't play it for this account, in its own words.
+                    // The server won't play it for this account, and says why.
                     else -> TvPlayerFailure(refusalTitle(refusal), message, null)
                 }
             }
