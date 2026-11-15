@@ -62,6 +62,8 @@ private struct MotionModifier<Value: Equatable>: ViewModifier {
 
 extension View {
   /// `.animation(_:value:)` with one of `Motion`'s, as Reduce Motion allows it.
+  // Disfavored while the app keeps an old `motion` of its own; see `\.palette`.
+  @_disfavoredOverload
   public func motion(_ animation: Animation, value: some Equatable) -> some View {
     modifier(MotionModifier(animation: animation, value: value))
   }

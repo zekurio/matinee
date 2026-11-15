@@ -123,5 +123,8 @@ public nonisolated struct Palette: Hashable, Sendable {
 
 extension EnvironmentValues {
   /// The theme's colors for the appearance on screen.
-  @Entry public var palette = Palette.matineeDark
+  // Disfavored while the app keeps an old `\.palette` of its own, which
+  // extension members from an imported module would otherwise make
+  // ambiguous in files that don't import the kit. Harmless once it's gone.
+  @_disfavoredOverload @Entry public var palette = Palette.matineeDark
 }

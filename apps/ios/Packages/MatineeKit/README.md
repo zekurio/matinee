@@ -144,8 +144,13 @@ disabled. Every pressable thing takes 44 points to hit.
 - `ToastState`, `.toastHost(state)`, `state.post(ToastMessage("Saved", description:, kind: .success, action: "Undo", closeButton:, duration:))`,
   or `await state.show(…)` for whether its action was pressed.
   `state.replace(with:)` turns a `.loading` toast into its result.
-- `@Environment(\.overlayDismiss)` and `\.sheetDismiss` close the dialog,
-  menu, or sheet a view is in, then run what's passed.
+- `.sidePanel(isPresented:, title:) { PanelChoice(…); PanelLabel(""); PanelNote(""); PanelSeparator() }`:
+  the player's menus, a glass panel from the trailing edge drawn in the
+  view's own window (a presentation would bring back the status bar the
+  player hides). `PanelChoice("English", detail: "AAC · 5.1", selected:, enabled:) { }`
+  is the web Drawer's choice row; it picks, then closes the panel.
+- `@Environment(\.overlayDismiss)`, `\.sheetDismiss`, and `\.sidePanelDismiss`
+  close the dialog, menu, sheet, or side panel a view is in, then run what's passed.
 
 ### Feedback
 
@@ -157,6 +162,15 @@ disabled. Every pressable thing takes 44 points to hit.
 - `Avatar("Name", size: 32, dot:) { picture }`: initials until the app
   gives it the loaded picture. The kit doesn't load images.
 - `Separator(vertical:)`.
+
+### Over the picture
+
+- `.pictureGlass(in: shape, shade: .light | .medium | .strong | .solid, ring:)`:
+  the web player's surfaces, black at 45, 60, 70, or 80% over a blur with a
+  `ring-white/15` hairline, whatever the theme; solid under Reduce
+  Transparency. The play button and seek preview are `.light`, notes
+  `.medium`, the skip button `.strong`, the next episode's card `.solid`.
+- `.pictureShadow()`: the web's text shadow for white text and icons over video.
 
 ### Bars
 
@@ -217,7 +231,7 @@ arguments: `-page` (`foundations`, `palettes`, `buttons`, `inputs`,
 `chips`, `lists`, `overlays`, `feedback`, `navigation`, `calendar`,
 `icons`), `-scheme light|dark`, `-accent matinee|ember|moss|sun`,
 `-locale de`, `-rtl YES`, `-text xxxLarge|accessibility2|…`, `-open
-menu|more|sheet|long|dialog|confirm|toast`, and `-scroll "<demo title>"`.
+menu|more|sheet|long|dialog|confirm|toast|panel`, and `-scroll "<demo title>"`.
 Or open `KitGallery.xcodeproj` and run it; the settings at its top change
 all of these live. `KitGallery()` is also a view the main app can show in
 a debug build.

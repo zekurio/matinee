@@ -208,6 +208,8 @@ KIT_EXTRAS = [
     ("chevronsUpDown", "chevrons-up-down", 2),
     ("eye", "eye", 2),
     ("circleX", "circle-x", 2),
+    # The player's AirPlay button, drawn over the system's route picker.
+    ("airplay", "airplay", 2),
 ]
 
 
