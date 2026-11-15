@@ -57,9 +57,13 @@ export const heroFrame =
 
 /**
  * On desktop, lets the banner take whatever height its flex column leaves,
- * so the rows under it fit in the first screen.
+ * so the rows under it fit in the first screen when there's room. It never
+ * gets slimmer than a wide banner should be, though: with both rows under
+ * it, a fixed 360px floor left a strip, part of it under the floating bar,
+ * with the art cropped to a sliver. The rows run past the fold instead.
  */
-export const heroFill = "lg:h-auto lg:min-h-[360px] lg:flex-1"
+export const heroFill =
+  "lg:h-auto lg:min-h-[max(360px,min(64vh,40vw))] lg:flex-1"
 
 // Phones split the row between the buttons.
 const heroButton = "max-sm:h-11 max-sm:flex-1"
@@ -188,11 +192,11 @@ export function Hero({
           there and none down the side, which hid half the picture. */}
       <div
         aria-hidden
-        className="from-background/95 via-background/60 absolute inset-0 bg-gradient-to-r to-transparent max-sm:hidden"
+        className="from-background/85 via-background/45 absolute inset-0 bg-gradient-to-r via-30% to-transparent to-65% max-sm:hidden"
       />
       <div
         aria-hidden
-        className="from-background via-background/40 absolute inset-0 bg-gradient-to-t via-35% to-transparent max-sm:hidden"
+        className="from-background via-background/30 absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t via-35% to-transparent max-sm:hidden"
       />
       <div
         aria-hidden

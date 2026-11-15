@@ -51,7 +51,8 @@ export function Home() {
   const hasResume = (resume.data?.length ?? 0) > 0
   const hasNextUp = (nextUp.data?.length ?? 0) > 0
   // On desktop, the banner and the rows of what to watch next share the
-  // first screen: the banner takes what the rows leave. The column ends at
+  // first screen: the banner takes what the rows leave, down to a floor
+  // that keeps it from turning into a strip (`heroFill`). The column ends at
   // the window's bottom (<main>'s top padding is cancelled by the banner's
   // negative margin). Its own bottom padding keeps the rows off the edge
   // and pushes the shelves below the fold. While the queries load, the page
