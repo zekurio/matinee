@@ -468,8 +468,9 @@ html[data-theme-inspecting] *:not([data-theme-editor], [data-theme-editor] *) {
 
 /*
  * Toasts: the status icon on the title line, the description under it, and
- * the action at the right of the text, on the same row. Closing is always
- * the round button on the top-right corner. Adapted from alloy.
+ * the action at the right of the text, centered on the toast's height.
+ * Closing is always the round button on the top-right corner. Adapted
+ * from alloy.
  */
 .matinee-toast {
   display: grid !important;
@@ -524,13 +525,6 @@ html[data-theme-inspecting] *:not([data-theme-editor], [data-theme-editor] *) {
   grid-template-columns: minmax(0, 1fr) auto;
   grid-template-areas: "content action";
 }
-/* The action is taller than the title's line. Drop the icon and the text
-   by the difference, so the title line runs through the button's middle,
-   and the description, if any, continues below it. */
-.matinee-toast:has(> [data-button]) > .matinee-toast-icon,
-.matinee-toast:has(> [data-button]) > [data-content] {
-  margin-top: 4px !important;
-}
 .matinee-toast-icon {
   grid-area: icon;
   display: inline-flex;
@@ -574,6 +568,8 @@ html[data-theme-inspecting] *:not([data-theme-editor], [data-theme-editor] *) {
   font-weight: 600 !important;
   line-height: 20px !important;
   color: var(--foreground) !important;
+  /* A wrapped title splits into even lines, not one with a lone word. */
+  text-wrap: balance;
 }
 .matinee-toast-description {
   font-size: 13px !important;
@@ -603,7 +599,8 @@ html[data-theme-inspecting] *:not([data-theme-editor], [data-theme-editor] *) {
 }
 .matinee-toast[data-styled="true"] > [data-button] {
   grid-area: action;
-  align-self: start;
+  /* Centered on the whole toast, however many lines the text runs to. */
+  align-self: center;
   height: 28px !important;
   margin: 0 0 0 4px !important;
   padding-inline: 12px !important;
