@@ -179,6 +179,15 @@ const PlayQuery = t.object({
   session: t.uuid().optional(),
 })
 
+/**
+ * The stream each player has open, by user and session. A player plays one
+ * stream at a time, so a new one ends the one before. The browser doesn't
+ * always: a video element it hasn't let go of holds its stream open and
+ * unread, and over HTTP/2 or 3 enough of those fill the connection's flow
+ * control window and stall every other request to the server.
+ */
+const playerStreams = new Map<string, AbortController>()
+
 /** One audio track, the video copied or encoded; see `mediaPlaybackPath`. */
 streamRoutes.get("/:id/play", async (c) => {
   const viewer = await readViewer(c)
@@ -196,10 +205,28 @@ streamRoutes.get("/:id/play", async (c) => {
       : !encodeAllowed(viewer.access, query.data.quality)
   )
     return c.body(null, 403)
-  const opened = await openPlayback(item, query.data, c.req.raw.signal)
-  if (!opened) return c.body(null, 500)
-
   const sessionId = query.data.session ?? null
+  const streamKey = sessionId ? `${viewer.id}:${sessionId}` : null
+  const replaced = new AbortController()
+  if (streamKey) {
+    playerStreams.get(streamKey)?.abort()
+    playerStreams.set(streamKey, replaced)
+  }
+  const forget = () => {
+    if (streamKey && playerStreams.get(streamKey) === replaced) {
+      playerStreams.delete(streamKey)
+    }
+  }
+  const opened = await openPlayback(
+    item,
+    query.data,
+    AbortSignal.any([c.req.raw.signal, replaced.signal]),
+  )
+  if (!opened) {
+    forget()
+    return c.body(null, 500)
+  }
+
   const untrack = trackStream(sessionId)
   const owner: SessionOwner | null = sessionId
     ? {
@@ -216,6 +243,7 @@ streamRoutes.get("/:id/play", async (c) => {
     log.warn("Couldn't record a stream in its session", cause)
   void opened.finished
     .then(async (seconds) => {
+      forget()
       untrack()
       if (owner && encodes) await addEncodeSeconds(owner, seconds)
     })
