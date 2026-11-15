@@ -31,6 +31,8 @@ import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.rememberHazeState
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.ArtworkSize
 import io.github.zekurio.matinee.api.Availability
@@ -134,10 +136,11 @@ private fun CatalogPage(detail: CatalogTitleDetail, library: String?) {
     LaunchedEffect(arrived) { if (arrived != null) nav.arrived(arrived) }
 
     val listState = rememberLazyListState()
+    val haze = rememberHazeState()
     var sheet by remember { mutableStateOf<Int?>(null) }
     Box(Modifier.fillMaxSize()) {
         LazyColumn(
-            Modifier.fillMaxSize(),
+            Modifier.fillMaxSize().hazeSource(haze),
             state = listState,
             contentPadding = PaddingValues(bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp),
@@ -227,7 +230,7 @@ private fun CatalogPage(detail: CatalogTitleDetail, library: String?) {
             relatedRails(related)
             item(key = "bottom") { Box(Modifier.navigationBarsPadding()) }
         }
-        StatusBarScrim(listState)
+        StatusBarScrim(listState, haze)
         ItemTopBar()
     }
     // Open with the season a card asked for, or -1 for the row's request.

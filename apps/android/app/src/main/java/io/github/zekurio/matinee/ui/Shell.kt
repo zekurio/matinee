@@ -44,6 +44,9 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.rememberHazeState
 import io.github.zekurio.matinee.api.ImageTarget
 import io.github.zekurio.matinee.api.User
 import io.github.zekurio.matinee.app
@@ -238,13 +241,13 @@ private val LocalPageTransitions = staticCompositionLocalOf<SharedTransitionScop
  * page it goes along with its own.
  */
 @Composable
-private fun TabBar(tab: Any, page: AnimatedVisibilityScope, modifier: Modifier = Modifier) {
+private fun TabBar(tab: Any, page: AnimatedVisibilityScope, haze: HazeState, modifier: Modifier = Modifier) {
     val nav = LocalNavigator.current
     val transitions = LocalPageTransitions.current
     val shared = if (transitions == null) Modifier else with(transitions) {
         Modifier.sharedElement(rememberSharedContentState(TabBarKey), page)
     }
-    BottomBar(tab, nav::tab, modifier.then(shared))
+    BottomBar(tab, nav::tab, haze, modifier.then(shared))
 }
 
 private const val TabBarKey = "tab-bar"
@@ -321,7 +324,8 @@ private fun fadeThroughOut(): ExitTransition = fadeOut(tween(60, easing = Motion
  * A page on the background of its own, so pages coming and going never show
  * through each other, with the bottom bar if it's [tab]'s first page. A
  * page that loses the screen lets go of the keyboard as it starts to leave,
- * rather than leaving it over the page coming in.
+ * rather than leaving it over the page coming in. A tab's page is what its
+ * bar blurs, so the bar sits beside it rather than in it.
  */
 private inline fun <reified T : Any> NavGraphBuilder.screen(
     tab: Any? = null,
@@ -340,9 +344,15 @@ private inline fun <reified T : Any> NavGraphBuilder.screen(
             entry.lifecycle.addObserver(observer)
             onDispose { entry.lifecycle.removeObserver(observer) }
         }
-        Box(Modifier.fillMaxSize().background(Palette.Background)) {
-            content(entry)
-            if (tab != null) TabBar(tab, this@composable, Modifier.align(Alignment.BottomCenter))
+        Box(Modifier.fillMaxSize()) {
+            val haze = rememberHazeState()
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .then(if (tab != null) Modifier.hazeSource(haze) else Modifier)
+                    .background(Palette.Background),
+            ) { content(entry) }
+            if (tab != null) TabBar(tab, this@composable, haze, Modifier.align(Alignment.BottomCenter))
         }
     }
 }

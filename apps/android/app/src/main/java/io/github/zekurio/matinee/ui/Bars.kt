@@ -28,7 +28,6 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
@@ -44,6 +43,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
@@ -56,6 +56,11 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import dev.chrisbanes.haze.HazeInput
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.blur.HazeBlurStyle
+import dev.chrisbanes.haze.blur.HazeColorEffect
+import dev.chrisbanes.haze.blur.hazeBlur
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.name
 import io.github.zekurio.matinee.ui.components.Avatar
@@ -115,14 +120,17 @@ private val ITEM_HEIGHT = TAB_BAR_HEIGHT - 8.dp
  *
  * The tabs belong to the page, so they move with it: aside under a page
  * opened from it, and back as that page slides off again. With the
- * keyboard up, as on the search page, they step aside for it.
+ * keyboard up, as on the search page, they step aside for it. They're
+ * frosted glass over [page], the page they float on, which shows through
+ * them blurred.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun BottomBar(current: Any?, onPick: (Any) -> Unit, modifier: Modifier = Modifier) {
+fun BottomBar(current: Any?, onPick: (Any) -> Unit, page: HazeState, modifier: Modifier = Modifier) {
     if (WindowInsets.isImeVisible) return
     val offline = LocalOffline.current
     val tabs = if (offline) OFFLINE_TABS else TABS
+    val glass = rememberTabBarGlass()
     Row(
         modifier
             .fillMaxWidth()
@@ -134,7 +142,7 @@ fun BottomBar(current: Any?, onPick: (Any) -> Unit, modifier: Modifier = Modifie
     ) {
         Row(
             Modifier
-                .floating(TabBarShape)
+                .floating(TabBarShape, page, glass)
                 .padding(4.dp)
                 .selectableGroup()
                 // The open tab's pill grows and shrinks rather than jumping.
@@ -144,7 +152,7 @@ fun BottomBar(current: Any?, onPick: (Any) -> Unit, modifier: Modifier = Modifie
             tabs.forEach { tab -> TabItem(tab, current == tab.route) { onPick(tab.route) } }
         }
         if (!offline) {
-            Box(Modifier.floating(CircleShape).padding(4.dp)) {
+            Box(Modifier.floating(CircleShape, page, glass).padding(4.dp)) {
                 TabButton(current == SearchRoute, Modifier.size(ITEM_HEIGHT), Role.Tab, { onPick(SearchRoute) }) { color ->
                     LucideIcon(Lucide.Search, stringResource(R.string.search_title), size = 22.dp, tint = color)
                 }
@@ -153,12 +161,34 @@ fun BottomBar(current: Any?, onPick: (Any) -> Unit, modifier: Modifier = Modifie
     }
 }
 
-/** The bar's surfaces: the app's raised color with a faint rim, lifted off the page by a shadow. */
-private fun Modifier.floating(shape: Shape): Modifier = this
-    .shadow(24.dp, shape, ambientColor = Color.Black, spotColor = Color.Black)
+/**
+ * The bar's glass: the page under it blurred, under a thin veil of the
+ * app's raised color, so the art and rows passing beneath show through as
+ * color and the icons stay readable. Android 11 and older can't blur, so
+ * there the veil is nearly opaque instead.
+ */
+@Composable
+private fun rememberTabBarGlass(): HazeBlurStyle {
+    val raised = Palette.Raised
+    val background = Palette.Background
+    return remember(raised, background) {
+        HazeBlurStyle {
+            blurRadius(28.dp)
+            noiseFactor(0.08f)
+            // Behind the page's own transparent parts, as on screen.
+            backgroundColor(background)
+            colorEffects(listOf(HazeColorEffect.tint(raised.copy(alpha = 0.5f))))
+            fallbackColorEffect(HazeColorEffect.tint(raised.copy(alpha = 0.92f)))
+        }
+    }
+}
+
+/** The bar's surfaces: [glass] over [page], with a faint rim, lifted off the page by a shadow. */
+private fun Modifier.floating(shape: Shape, page: HazeState, glass: HazeBlurStyle): Modifier = this
+    .shadow(20.dp, shape, ambientColor = Color.Black, spotColor = Color.Black)
     .clip(shape)
-    .background(Palette.Raised)
-    .border(1.dp, Palette.Foreground.copy(alpha = 0.08f), shape)
+    .hazeBlur(HazeInput.Sources(page), glass)
+    .border(1.dp, Palette.Foreground.copy(alpha = 0.1f), shape)
 
 @Composable
 private fun TabItem(tab: Tab, selected: Boolean, onClick: () -> Unit) {
@@ -342,36 +372,68 @@ fun ItemTopBar(modifier: Modifier = Modifier, parent: String? = null, onParent: 
 /** The page's color veiling the art behind a floating button, as the web's bars have it. */
 private val FLOATING get() = Palette.Background.copy(alpha = 0.6f)
 
+/** How far the status bar's frost feathers out below the bar. */
+private val STATUS_BAR_FEATHER = 20.dp
+
 /**
  * Keeps the status bar's icons readable over art and once a page scrolls
- * under it. A light, eased fade that's gone by the bar's bottom edge, so
- * there's no band across the art, even under a tall bar like a Pixel 9's.
- * It deepens over the first few dp of scrolling, as the page's top slides
- * under the bar.
+ * under it: [page], the list under the bar, blurred and veiled in the
+ * page's color, evenly across the whole bar. The old gradient faded out
+ * within the bar, so its icons sat half on shade and half on bare art,
+ * which read as a bar split in two. Below the bar the frost feathers out
+ * over a few dp, over a faint shadow, so it ends on no edge. The veil and
+ * shadow deepen over the first few dp of scrolling, as the page's top
+ * slides under the bar. Android 11 and older can't blur, and get a veil.
  */
 @Composable
-fun StatusBarScrim(state: LazyListState, modifier: Modifier = Modifier) {
-    val distance = with(LocalDensity.current) { 40.dp.toPx() }
+fun StatusBarScrim(state: LazyListState, page: HazeState, modifier: Modifier = Modifier) {
+    val density = LocalDensity.current
+    val distance = with(density) { 40.dp.toPx() }
+    val bar = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    val total = bar + STATUS_BAR_FEATHER
+    // Where the bar ends, as a fraction of the frost's height.
+    val edge = bar / total
+    val shade = Palette.Background
+    val shadow = if (Palette.isDark) 0.35f else 0.1f
+    // Read while drawing, so scrolling only redraws the frost.
+    val scrolled = { if (state.firstVisibleItemIndex > 0) 1f else (state.firstVisibleItemScrollOffset / distance).coerceIn(0f, 1f) }
+    val frost = remember(shade, edge, state, distance) {
+        HazeBlurStyle {
+            blurRadius(16.dp)
+            noiseFactor(0f)
+            backgroundColor(shade)
+            // Light at rest, so the art shows through, but never clear.
+            colorEffects(listOf(HazeColorEffect.tint(shade.copy(alpha = 0.35f + 0.4f * scrolled()))))
+            fallbackColorEffect(HazeColorEffect.tint(shade.copy(alpha = 0.6f + 0.25f * scrolled())))
+            // Whole across the bar, then eased out below it.
+            mask(
+                Brush.verticalGradient(
+                    0f to Color.Black,
+                    edge to Color.Black,
+                    edge + (1f - edge) * 0.4f to Color.Black.copy(alpha = 0.45f),
+                    1f to Color.Transparent,
+                ),
+            )
+        }
+    }
     Box(
         modifier
             .fillMaxWidth()
-            .windowInsetsTopHeight(WindowInsets.statusBars)
+            .height(total)
             .drawBehind {
-                // Read while drawing, so scrolling only redraws this.
-                val scrolled = if (state.firstVisibleItemIndex > 0) 1f else (state.firstVisibleItemScrollOffset / distance).coerceIn(0f, 1f)
-                // Never quite clear, so over bright art the icons still have
-                // something under them, but light at rest: the art shows through.
-                val top = 0.5f + 0.35f * scrolled
-                val shade = Palette.Background
-                // Eased stops, so it thins out quickly instead of ending on an edge.
+                // A soft shadow from the bar's edge, under the frost, which
+                // shows it as the frost thins: the bar's lift off the page.
+                val from = with(density) { (bar - 4.dp).toPx() }.coerceAtLeast(0f)
                 drawRect(
                     Brush.verticalGradient(
-                        0f to shade.copy(alpha = top),
-                        0.3f to shade.copy(alpha = top * 0.7f),
-                        0.6f to shade.copy(alpha = top * 0.3f),
+                        0f to Color.Black.copy(alpha = shadow * (0.5f + 0.5f * scrolled())),
                         1f to Color.Transparent,
+                        startY = from,
+                        endY = size.height,
                     ),
+                    topLeft = Offset(0f, from),
                 )
-            },
+            }
+            .hazeBlur(HazeInput.Sources(page), frost),
     )
 }
