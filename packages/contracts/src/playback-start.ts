@@ -258,6 +258,11 @@ export const PlaybackStart = t.object({
   original: t.boolean(),
   /** Empty when the file plays as it is. */
   reasons: t.array(PlaybackReason),
+  /**
+   * The file before this one in its show, for the player's previous
+   * episode button. Null for a movie or a show's first file.
+   */
+  previous: MediaItem.nullable(),
   /** The file after this one in its show, to offer when this one ends. */
   next: MediaItem.nullable(),
   /**

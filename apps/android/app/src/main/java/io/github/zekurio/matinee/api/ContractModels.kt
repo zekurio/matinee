@@ -1089,6 +1089,7 @@ data class PlaybackStart(
     val qualities: List<PlaybackQualityPreset>,
     val original: Boolean,
     val reasons: List<String>,
+    val previous: MediaItem?,
     val next: MediaItem?,
     val upNextAt: Double?,
     val segments: List<MediaSegment>,

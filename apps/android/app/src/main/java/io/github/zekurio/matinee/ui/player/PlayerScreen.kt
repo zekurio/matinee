@@ -14,6 +14,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.Canvas
@@ -64,6 +65,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -86,6 +88,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.asImageBitmap
@@ -174,7 +177,6 @@ import io.github.zekurio.matinee.ui.episodeCode
 import io.github.zekurio.matinee.ui.formatClock
 import io.github.zekurio.matinee.ui.itemLabel
 import io.github.zekurio.matinee.ui.kit.ButtonLook
-import io.github.zekurio.matinee.ui.kit.ControlShape
 import io.github.zekurio.matinee.ui.kit.Gap
 import io.github.zekurio.matinee.ui.kit.Lucide
 import io.github.zekurio.matinee.ui.kit.LucideIcon
@@ -469,9 +471,9 @@ private fun Playback(itemId: String, data: PlayerData, start: Double?) {
     }
 
     var controls by remember { mutableStateOf(true) }
-    // Locked, touches on the screen do nothing but show the way to unlock.
+    // Locked, touches on the screen do nothing; only the corner unlocks.
     var locked by remember { mutableStateOf(false) }
-    // Counts touches while locked, so each shows the unlock button again.
+    // Counts keys pressed while locked, so each shows the unlock icon again.
     var lockTouched by remember { mutableIntStateOf(0) }
     var menu by remember { mutableStateOf<Menu?>(null) }
     var scrub by remember { mutableStateOf<Double?>(null) }
@@ -502,6 +504,8 @@ private fun Playback(itemId: String, data: PlayerData, start: Double?) {
     }
     val back = preferences.skipBack.toDouble()
     val ahead = preferences.skipForward.toDouble()
+    val host = LocalPlayerHost.current
+    val episodes = rememberEpisodes(controller)
     var fill by remember { mutableStateOf(prefs.fillScreen) }
     // Counts pinches that switched, so the note shows again for each.
     var zoomNote by remember { mutableIntStateOf(0) }
@@ -525,6 +529,8 @@ private fun Playback(itemId: String, data: PlayerData, start: Double?) {
                     Key.MediaPause -> controller.player::pause
                     Key.MediaFastForward -> ({ controller.skip(ahead) })
                     Key.MediaRewind -> ({ controller.skip(-back) })
+                    Key.MediaPrevious -> episodes?.previous?.let { previous -> { host.playInstead(previous.id) } }
+                    Key.MediaNext -> episodes?.next?.let { next -> { host.playInstead(next.id) } }
                     // Locked, media keys still work, and the ones that would
                     // bring up the controls show the unlock button instead.
                     in NAVIGATION_KEYS if locked -> ({ lockTouched++ })
@@ -624,6 +630,8 @@ private fun Playback(itemId: String, data: PlayerData, start: Double?) {
                     prefs,
                     back = back,
                     ahead = ahead,
+                    episodes = episodes,
+                    onEpisode = { host.playInstead(it.id) },
                     scrub = scrub,
                     onScrub = {
                         scrub = it
@@ -676,7 +684,6 @@ private fun Playback(itemId: String, data: PlayerData, start: Double?) {
                     lockTouched,
                     hideAfter = hideAfter,
                     keep = exploring,
-                    onTouch = { lockTouched++ },
                     onUnlock = {
                         locked = false
                         controls = true
@@ -689,7 +696,11 @@ private fun Playback(itemId: String, data: PlayerData, start: Double?) {
     }
 }
 
-internal enum class Menu { Audio, Subtitles, Settings }
+/**
+ * The player's menus. A phone has quality and speed apart, each a button
+ * of its own; a TV has them together under settings, with the picture.
+ */
+internal enum class Menu { Audio, Subtitles, Quality, Speed, Settings }
 
 /** The keys that skip or bring up the controls, which a locked player keeps from doing either. */
 private val NAVIGATION_KEYS = setOf(Key.DirectionLeft, Key.DirectionRight, Key.DirectionCenter, Key.Enter, Key.DirectionUp, Key.DirectionDown)
@@ -854,12 +865,21 @@ internal fun Subtitles(controller: PlayerController, look: SubtitleLook, lifted:
     }
 }
 
+/**
+ * The controls over the video, laid out as Findroid has them: the title
+ * and the buttons for the menus up top, play in the middle between the
+ * skips and, for an episode, the previous and next episodes outside them,
+ * and at the bottom the times over a seek bar the full width, with nothing
+ * beside it or under it.
+ */
 @Composable
 private fun Controls(
     controller: PlayerController,
     prefs: PlayerPrefs,
     back: Double,
     ahead: Double,
+    episodes: Episodes?,
+    onEpisode: (MediaItem) -> Unit,
     scrub: Double?,
     onScrub: (Double) -> Unit,
     onScrubEnd: () -> Unit,
@@ -880,7 +900,7 @@ private fun Controls(
                 .background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.75f), Color.Transparent))),
         )
         Box(
-            Modifier.fillMaxWidth().height(220.dp).align(Alignment.BottomCenter)
+            Modifier.fillMaxWidth().height(160.dp).align(Alignment.BottomCenter)
                 .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.85f)))),
         )
         Row(
@@ -899,16 +919,31 @@ private fun Controls(
             if (onPictureInPicture != null) {
                 RoundIconButton(Lucide.PictureInPicture, stringResource(R.string.player_pip), onPictureInPicture, size = 52.dp, iconSize = 26.dp, background = Color.Transparent)
             }
-            // The unlock button shows where this one is.
+            if (prefs.audioButton) {
+                RoundIconButton(Lucide.AudioLines, stringResource(R.string.player_menu_audio), { onMenu(Menu.Audio) }, size = 52.dp, iconSize = 26.dp, background = Color.Transparent)
+            }
+            if (prefs.subtitlesButton) SubtitlesButton(controller, onMenu)
+            RoundIconButton(Lucide.Gauge, stringResource(R.string.player_speed), { onMenu(Menu.Speed) }, size = 52.dp, iconSize = 26.dp, background = Color.Transparent)
+            // A download plays as it is, with no other quality to pick.
+            if (!controller.isLocal) {
+                RoundIconButton(Lucide.Settings, stringResource(R.string.player_quality), { onMenu(Menu.Quality) }, size = 52.dp, iconSize = 26.dp, background = Color.Transparent)
+            }
+            // Last, at the corner, where the unlock icon shows.
             if (onLock != null) {
                 RoundIconButton(Lucide.Lock, stringResource(R.string.player_lock), onLock, size = 52.dp, iconSize = 26.dp, background = Color.Transparent)
             }
         }
         Row(
             Modifier.align(Alignment.Center),
-            horizontalArrangement = Arrangement.spacedBy(56.dp),
+            horizontalArrangement = Arrangement.spacedBy(32.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            if (episodes != null) {
+                EpisodeButton(Lucide.SkipBack, stringResource(R.string.player_previous_episode), episodes.previous) {
+                    onEpisode(it)
+                    onTouch()
+                }
+            }
             if (prefs.skipButtons) {
                 SkipButton(Lucide.RotateCcw, back, stringResource(R.string.player_skip_back, back.toInt())) {
                     controller.skip(-back)
@@ -940,27 +975,39 @@ private fun Controls(
                     onTouch()
                 }
             }
-        }
-        Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().safeDrawingPadding().padding(horizontal = 20.dp, vertical = 10.dp)) {
-            SeekBar(controller, scrub, back, ahead, onScrub, onScrubEnd, onSeek)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                val duration = controller.duration
-                if (duration > 0) {
-                    val ends = remember(controller.position.toInt() / 30, duration, controller.speed) {
-                        val left = (duration - controller.position) / controller.speed
-                        DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(System.currentTimeMillis() + (left * 1000).toLong()))
-                    }
-                    Text(stringResource(R.string.player_ends_at, ends), style = MaterialTheme.typography.bodyMedium, color = Palette.Foreground.copy(alpha = 0.8f))
+            if (episodes != null) {
+                EpisodeButton(Lucide.SkipForward, stringResource(R.string.player_next_episode), episodes.next) {
+                    onEpisode(it)
+                    onTouch()
                 }
-                Box(Modifier.weight(1f))
-                if (prefs.audioButton) {
-                    RoundIconButton(Lucide.AudioLines, stringResource(R.string.player_menu_audio), { onMenu(Menu.Audio) }, size = 52.dp, iconSize = 26.dp, background = Color.Transparent)
-                }
-                if (prefs.subtitlesButton) SubtitlesButton(controller, onMenu)
-                RoundIconButton(Lucide.Settings, stringResource(R.string.player_menu_settings), { onMenu(Menu.Settings) }, size = 52.dp, iconSize = 26.dp, background = Color.Transparent)
             }
         }
+        SeekBar(
+            controller,
+            scrub,
+            back,
+            ahead,
+            onScrub,
+            onScrubEnd,
+            onSeek,
+            Modifier.align(Alignment.BottomCenter).fillMaxWidth().safeDrawingPadding().padding(horizontal = 20.dp, vertical = 10.dp),
+        )
     }
+}
+
+/** Plays [episode] in place of this one, or sits dimmed when there's none. */
+@Composable
+private fun EpisodeButton(icon: Int, label: String, episode: MediaItem?, onClick: (MediaItem) -> Unit) {
+    RoundIconButton(
+        icon,
+        label,
+        { episode?.let(onClick) },
+        size = 64.dp,
+        iconSize = 30.dp,
+        tint = if (episode != null) Palette.Foreground else Palette.Foreground.copy(alpha = 0.4f),
+        background = Color.Transparent,
+        enabled = episode != null,
+    )
 }
 
 /** Opens the subtitles menu, with a line under it while subtitles are on. */
@@ -987,27 +1034,29 @@ private fun SubtitlesButton(controller: PlayerController, onMenu: (Menu) -> Unit
 
 /**
  * Covers the player while it's locked and takes every touch, so none
- * reaches the controls or the gestures under it. A touch shows the unlock
- * button, up where the lock button was, for [hideAfter] ms; with [keep], as
- * while a screen reader explores by touch, it stays. [touches] counts the
- * touches, and each change shows it again.
+ * reaches the controls or the gestures under it. An open lock shows in the
+ * corner, where the lock button was, for [hideAfter] ms, and tapping it
+ * unlocks. Once it's gone, a tap on that spot brings it back, and a touch
+ * anywhere else does nothing. A key that would bring up the controls
+ * brings it back too: [reveals] counts those. With [keep], as while a
+ * screen reader explores by touch, it stays.
  */
 @Composable
-private fun LockedScreen(touches: Int, hideAfter: Long, keep: Boolean, onTouch: () -> Unit, onUnlock: () -> Unit) {
+private fun LockedScreen(reveals: Int, hideAfter: Long, keep: Boolean, onUnlock: () -> Unit) {
     var shown by remember { mutableStateOf(true) }
-    LaunchedEffect(touches, keep, hideAfter) {
+    // Counts taps on the hidden icon's spot, each showing it again.
+    var tapped by remember { mutableIntStateOf(0) }
+    LaunchedEffect(reveals, tapped, keep, hideAfter) {
         shown = true
         if (keep) return@LaunchedEffect
         delay(hideAfter)
         shown = false
     }
-    val currentTouch by rememberUpdatedState(onTouch)
     Box(
         Modifier.fillMaxSize().pointerInput(Unit) {
             awaitEachGesture {
                 awaitFirstDown(requireUnconsumed = false)
-                currentTouch()
-                // The unlock button hears its tap first; this keeps the rest.
+                // The icon's spot hears its tap first; this keeps the rest.
                 do {
                     val event = awaitPointerEvent()
                     event.changes.forEach { it.consume() }
@@ -1015,22 +1064,21 @@ private fun LockedScreen(touches: Int, hideAfter: Long, keep: Boolean, onTouch: 
             }
         },
     ) {
-        AnimatedVisibility(
-            shown,
+        // The same size and place as the lock button in the controls' top row.
+        Box(
             Modifier.align(Alignment.TopEnd).safeDrawingPadding().padding(horizontal = 12.dp, vertical = 8.dp),
-            enter = Motion.fadeIn,
-            exit = Motion.fadeOut,
         ) {
-            // Shaded like the notes over the video, so it reads over a bright scene.
-            MatineeButton(
-                onUnlock,
-                Modifier.clip(ControlShape).background(Color.Black.copy(alpha = 0.6f)),
-                look = ButtonLook.Frosted,
-                height = 52.dp,
-            ) {
-                LucideIcon(Lucide.LockOpen, null, size = 22.dp)
-                Text(stringResource(R.string.player_unlock))
-            }
+            val fade by animateFloatAsState(if (shown) 1f else 0f, Motion.color(), label = "unlock")
+            RoundIconButton(
+                Lucide.LockOpen,
+                stringResource(R.string.player_unlock),
+                { if (shown) onUnlock() else tapped++ },
+                Modifier.graphicsLayer { alpha = fade },
+                size = 52.dp,
+                iconSize = 26.dp,
+                // Shaded like the notes over the video, so it reads over a bright scene.
+                background = Color.Black.copy(alpha = 0.6f),
+            )
         }
     }
 }
@@ -1054,6 +1102,7 @@ private fun SkipButton(icon: Int, seconds: Double, label: String, onClick: () ->
     }
 }
 
+/** The time played, when the file ends, and the time left, over the seek track. */
 @Composable
 private fun SeekBar(
     controller: PlayerController,
@@ -1063,10 +1112,11 @@ private fun SeekBar(
     onScrub: (Double) -> Unit,
     onScrubEnd: () -> Unit,
     onSeek: (Double) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val duration = controller.duration.coerceAtLeast(0.0)
     val shown = scrub ?: controller.position
-    Column {
+    Column(modifier) {
         BoxWithConstraints(Modifier.fillMaxWidth()) {
             val trickplay = controller.trickplay
             if (scrub != null && trickplay != null && duration > 0) {
@@ -1078,18 +1128,19 @@ private fun SeekBar(
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
             SeekClock(shown, duration, MaterialTheme.typography.bodyMedium)
-            SeekTrack(
-                position = shown,
-                duration = duration,
-                buffered = controller.buffered,
-                back = back,
-                ahead = ahead,
-                scrubbing = scrub != null,
-                onScrub = onScrub,
-                onScrubEnd = onScrubEnd,
-                onSeek = onSeek,
-                modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
-            )
+            Box(Modifier.weight(1f))
+            if (duration > 0) {
+                val ends = remember(controller.position.toInt() / 30, duration, controller.speed) {
+                    val left = (duration - controller.position) / controller.speed
+                    DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(System.currentTimeMillis() + (left * 1000).toLong()))
+                }
+                Text(
+                    stringResource(R.string.player_ends_at, ends),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Palette.Foreground.copy(alpha = 0.75f),
+                    modifier = Modifier.padding(end = 12.dp),
+                )
+            }
             val remaining = formatClock((duration - shown).coerceAtLeast(0.0))
             val remainingLabel = stringResource(R.string.a11y_player_remaining, remaining)
             SeekClock(
@@ -1101,6 +1152,18 @@ private fun SeekBar(
                 textAlign = TextAlign.End,
             )
         }
+        SeekTrack(
+            position = shown,
+            duration = duration,
+            buffered = controller.buffered,
+            back = back,
+            ahead = ahead,
+            scrubbing = scrub != null,
+            onScrub = onScrub,
+            onScrubEnd = onScrubEnd,
+            onSeek = onSeek,
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }
 
@@ -1409,27 +1472,45 @@ private fun SkipSegment(controller: PlayerController, controls: Boolean) {
     }
 }
 
+/** The episodes either side of the one playing, for its buttons. */
+@Immutable
+internal class Episodes(val previous: MediaItem?, val next: MediaItem?)
+
 /**
- * The episode after a download's, from the server when it answers. A file
- * the server plays has it in the answer from `playback.start`.
+ * The episodes before and after this one, or null for a movie. A file the
+ * server plays has them in the answer from `playback.start`; a download
+ * asks the server, and has none while it can't.
  */
 @Composable
-private fun downloadNext(item: MediaItem): MediaItem? {
+internal fun rememberEpisodes(controller: PlayerController): Episodes? {
+    val item = controller.item
+    if (item.title?.kind != TitleKind.SHOW) return null
+    if (!controller.isLocal) return Episodes(controller.previous, controller.next)
+    return downloadEpisodes(item)
+}
+
+/** The episodes either side of a download's, from the server when it answers. */
+@Composable
+private fun downloadEpisodes(item: MediaItem): Episodes {
     val api = LocalApi.current
     val title = item.title
-    val next by produceState<MediaItem?>(null, item.id) {
+    val episodes by produceState(Episodes(null, null), item.id) {
         if (title?.kind != TitleKind.SHOW) return@produceState
         value = try {
             val all = api.titleItems(title.id)
-            // Not in the list, as a file just removed, has no next.
+            // Not in the list, as a file just removed, has none.
             val index = all.indexOfFirst { it.id == item.id }
-            if (index < 0) null else all.getOrNull(index + 1)
+            if (index < 0) Episodes(null, null) else Episodes(all.getOrNull(index - 1), all.getOrNull(index + 1))
         } catch (_: IOException) {
-            null
+            Episodes(null, null)
         }
     }
-    return next
+    return episodes
 }
+
+/** The episode after a download's, from the server when it answers. */
+@Composable
+private fun downloadNext(item: MediaItem): MediaItem? = downloadEpisodes(item).next
 
 /**
  * A menu's panel at the side, drawn in the player's own window. A sheet
@@ -1567,41 +1648,55 @@ internal fun menuEntries(menu: Menu, controller: PlayerController): List<MenuEnt
             }
             if (controller.subtitleError) add(MenuEntry.Note(stringResource(R.string.player_error_subtitles), "error"))
         }
+        Menu.Quality -> addAll(qualityEntries(controller))
+        Menu.Speed -> addAll(speedEntries(controller))
         Menu.Settings -> {
             if (!controller.isLocal) {
-                add(MenuEntry.Heading(stringResource(R.string.player_quality), "quality"))
-                // A file over the account's bit rate limit plays only as an encode.
-                if (controller.offersOriginal) {
-                    add(
-                        MenuEntry.Choice(
-                            stringResource(R.string.player_quality_original),
-                            null,
-                            selected = controller.quality == ORIGINAL_QUALITY,
-                            key = "quality-original",
-                        ) { controller.pickQuality(ORIGINAL_QUALITY) },
-                    )
-                }
-                controller.qualities.forEach { quality ->
-                    add(
-                        MenuEntry.Choice(qualityLabel(quality), null, selected = controller.quality == quality.id, key = "quality-${quality.id}") {
-                            controller.pickQuality(quality.id)
-                        },
-                    )
-                }
+                addAll(qualityEntries(controller))
                 add(MenuEntry.Divider("quality-end"))
             }
-            add(MenuEntry.Heading(stringResource(R.string.player_speed), "speed"))
-            PLAYER_SPEEDS.forEach { rate ->
-                add(
-                    MenuEntry.Choice(
-                        if (rate == 1f) stringResource(R.string.player_speed_normal) else stringResource(R.string.player_speed_rate, rate.toString().removeSuffix(".0")),
-                        null,
-                        selected = controller.speed == rate,
-                        key = "speed-$rate",
-                    ) { controller.pickSpeed(rate) },
-                )
-            }
+            addAll(speedEntries(controller))
         }
+    }
+}
+
+/** The file as it is, then the encodes the server offers for it. */
+@Composable
+private fun qualityEntries(controller: PlayerController): List<MenuEntry> = buildList {
+    add(MenuEntry.Heading(stringResource(R.string.player_quality), "quality"))
+    // A file over the account's bit rate limit plays only as an encode.
+    if (controller.offersOriginal) {
+        add(
+            MenuEntry.Choice(
+                stringResource(R.string.player_quality_original),
+                null,
+                selected = controller.quality == ORIGINAL_QUALITY,
+                key = "quality-original",
+            ) { controller.pickQuality(ORIGINAL_QUALITY) },
+        )
+    }
+    controller.qualities.forEach { quality ->
+        add(
+            MenuEntry.Choice(qualityLabel(quality), null, selected = controller.quality == quality.id, key = "quality-${quality.id}") {
+                controller.pickQuality(quality.id)
+            },
+        )
+    }
+}
+
+/** The speeds, from half to double. */
+@Composable
+private fun speedEntries(controller: PlayerController): List<MenuEntry> = buildList {
+    add(MenuEntry.Heading(stringResource(R.string.player_speed), "speed"))
+    PLAYER_SPEEDS.forEach { rate ->
+        add(
+            MenuEntry.Choice(
+                if (rate == 1f) stringResource(R.string.player_speed_normal) else stringResource(R.string.player_speed_rate, rate.toString().removeSuffix(".0")),
+                null,
+                selected = controller.speed == rate,
+                key = "speed-$rate",
+            ) { controller.pickSpeed(rate) },
+        )
     }
 }
 

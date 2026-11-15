@@ -327,6 +327,9 @@ class PlayerController(
     val audioTracks: List<AudioTrack> get() = plan?.audioTracks ?: local?.audio.orEmpty()
     val subtitles: List<SubtitleTrack> get() = plan?.subtitleTracks ?: local?.subtitles.orEmpty()
 
+    /** The file before this one in its show, as the server answered. Null for a download, which asks itself. */
+    val previous: MediaItem? get() = plan?.previous
+
     /** The file after this one in its show, as the server answered. Null for a download, which asks itself. */
     val next: MediaItem? get() = plan?.next
 

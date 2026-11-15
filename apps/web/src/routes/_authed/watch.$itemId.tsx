@@ -11,7 +11,7 @@ import { useDocumentTitle } from "@/components/page-header"
 import type { UpNext } from "@/components/up-next"
 import type { PartyLink } from "@/components/use-party-sync"
 import type { ProgressReport } from "@/components/use-progress-report"
-import { VideoPlayer } from "@/components/video-player"
+import { type Episodes, VideoPlayer } from "@/components/video-player"
 import { tr } from "@/i18n"
 import { itemLabel } from "@/lib/media"
 import { partyPosition, useParty } from "@/lib/party"
@@ -120,6 +120,13 @@ function WatchItem({
   // The poster reads at the size of a lock screen; a still is the fallback.
   const art = playing?.title?.images.poster ?? playing?.episode?.still ?? null
 
+  // Another episode, in place of this one, so back still leaves the player.
+  const playInstead = (id: string) =>
+    void router.navigate({
+      to: "/watch/$itemId",
+      params: { itemId: id },
+      replace: true,
+    })
   // The show's next episode, which the player offers once the credits
   // start or this one ends.
   const next = first?.plan.next
@@ -131,13 +138,16 @@ function WatchItem({
             ? `${nextLabel.code} · ${nextLabel.title}`
             : nextLabel.title,
           at: first.plan.upNextAt,
-          // In place of this one, so back still leaves the player.
-          play: () =>
-            void router.navigate({
-              to: "/watch/$itemId",
-              params: { itemId: next.id },
-              replace: true,
-            }),
+          play: () => playInstead(next.id),
+        }
+      : null
+  const previous = first?.plan.previous
+  // An episode's buttons for the one before and the one after.
+  const episodes: Episodes | null =
+    playing?.title?.kind === "show"
+      ? {
+          previous: previous ? () => playInstead(previous.id) : null,
+          next: upNext?.play ?? null,
         }
       : null
 
@@ -258,6 +268,8 @@ function WatchItem({
         }
         // A party's queue says what comes next.
         upNext={link ? null : upNext}
+        // A party moves on through its own queue.
+        episodes={link ? null : episodes}
         party={link}
         onBack={back}
         onUnplayable={() => setStopped({ unplayable: true })}
@@ -276,7 +288,7 @@ function WatchItem({
   return (
     <div className="fixed inset-0 grid place-items-center bg-black p-6 text-white">
       {!first && started.isPending ? (
-        <Spinner className="size-8" />
+        <Spinner className="size-10 text-white/85" />
       ) : (
         <div className="max-w-md text-center">
           <h1 className="text-2xl font-semibold tracking-tight">

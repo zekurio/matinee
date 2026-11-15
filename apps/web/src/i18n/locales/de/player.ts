@@ -15,6 +15,8 @@ export default {
   "player.back": "Zurück",
   "player.skipBack": "{seconds} Sekunden zurück (j)",
   "player.skipForward": "{seconds} Sekunden vor (l)",
+  "player.previousEpisode": "Vorherige Folge (Umschalt+P)",
+  "player.nextEpisode": "Nächste Folge (Umschalt+N)",
   "player.play": "Abspielen",
   "player.pause": "Pausieren",
   "player.playKey": "Abspielen (k)",

@@ -159,12 +159,19 @@ export const startPlayback = authed.playback.start.handler(
         .from(mediaItem)
         .where(eq(mediaItem.titleId, row.id))
         .orderBy(...episodeOrder)
-      // A hidden special doesn't come next, though one opened plays.
-      const next = files
-        .slice(files.findIndex((file) => file.id === item.id) + 1)
-        .find((file) => context.user.showSpecials || file.seasonNumber !== 0)
-      if (next)
-        plan.next = (await publicItems([next], context.user.id))[0] ?? null
+      // A hidden special doesn't come before or next, though one opened plays.
+      const shown = (file: (typeof files)[number]) =>
+        context.user.showSpecials || file.seasonNumber !== 0
+      const at = files.findIndex((file) => file.id === item.id)
+      const previous = at > 0 ? files.slice(0, at).findLast(shown) : undefined
+      const next = files.slice(at + 1).find(shown)
+      const neighbours = await publicItems(
+        [previous, next].filter((file) => file !== undefined),
+        context.user.id,
+      )
+      plan.previous =
+        neighbours.find((file) => file.id === previous?.id) ?? null
+      plan.next = neighbours.find((file) => file.id === next?.id) ?? null
     }
     // ACCESS: The segments are keyed by the visible item above.
     const offered = await playerSegments(

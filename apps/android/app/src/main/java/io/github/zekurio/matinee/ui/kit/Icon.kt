@@ -43,6 +43,7 @@ object Lucide {
     val Film = R.drawable.lucide_film
     val FolderPlus = R.drawable.lucide_folder_plus
     val GalleryHorizontalEnd = R.drawable.lucide_gallery_horizontal_end
+    val Gauge = R.drawable.lucide_gauge
     val Heart = R.drawable.lucide_heart
     val HeartFilled = R.drawable.lucide_heart_filled
     val House = R.drawable.lucide_house
@@ -79,6 +80,8 @@ object Lucide {
     val Server = R.drawable.lucide_server
     val Settings = R.drawable.lucide_settings
     val Shield = R.drawable.lucide_shield
+    val SkipBack = R.drawable.lucide_skip_back_filled
+    val SkipForward = R.drawable.lucide_skip_forward_filled
     val Smartphone = R.drawable.lucide_smartphone
     val Star = R.drawable.lucide_star_filled
     val Sun = R.drawable.lucide_sun
