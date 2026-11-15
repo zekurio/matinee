@@ -44,7 +44,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
@@ -239,38 +238,17 @@ private fun TabButton(
 }
 
 /**
- * Home's header: room for the status bar over the banner's art, faded
- * under the bar for it to read, and whether the app is offline. It scrolls
- * away with the page. The banner's own title logo carries the top, so
+ * Home's header: room for the status bar over the banner's art, and
+ * whether the app is offline. It scrolls away with the page. The shade
+ * under the status bar is Home's [StatusBarScrim], not this, so the two
+ * don't stack into a band. The banner's own title logo carries the top, so
  * there's no app logo competing with it; search and the account are in the
  * tab bar.
  */
 @Composable
 fun AppHeader(modifier: Modifier = Modifier, action: @Composable () -> Unit = {}) {
     val offline = LocalOffline.current
-    val statusBar = WindowInsets.statusBars.getTop(LocalDensity.current).toFloat()
-    Box(
-        modifier
-            .fillMaxWidth()
-            // A short fade behind the status bar, gone just below it, so it
-            // doesn't haze the art. Android picks each part of the bar's
-            // icons light or dark by what's behind it, so over bright art
-            // the clock went dark while the rest stayed light, a different
-            // mix for every slide.
-            .drawBehind {
-                val height = (statusBar + 16.dp.toPx()).coerceAtMost(size.height)
-                val bar = (statusBar / height).coerceIn(0f, 1f)
-                drawRect(
-                    Brush.verticalGradient(
-                        0f to Palette.Background.copy(alpha = 0.85f),
-                        bar to Palette.Background.copy(alpha = 0.75f),
-                        1f to Color.Transparent,
-                        endY = height,
-                    ),
-                    size = Size(size.width, height),
-                )
-            },
-    ) {
+    Box(modifier.fillMaxWidth()) {
         Row(
             Modifier.statusBarsPadding().height(56.dp).fillMaxWidth().padding(horizontal = Gutter),
             horizontalArrangement = Arrangement.End,
@@ -365,10 +343,11 @@ fun ItemTopBar(modifier: Modifier = Modifier, parent: String? = null, onParent: 
 private val FLOATING get() = Palette.Background.copy(alpha = 0.6f)
 
 /**
- * Keeps the status bar's icons readable once a page scrolls under it. It
- * deepens with the first few dp of scrolling, as the page's top slides under
- * the bar, and fades from the top edge down to nothing, so there's no band
- * across the art while the page sits at its top.
+ * Keeps the status bar's icons readable over art and once a page scrolls
+ * under it. A light, eased fade that's gone by the bar's bottom edge, so
+ * there's no band across the art, even under a tall bar like a Pixel 9's.
+ * It deepens over the first few dp of scrolling, as the page's top slides
+ * under the bar.
  */
 @Composable
 fun StatusBarScrim(state: LazyListState, modifier: Modifier = Modifier) {
@@ -380,21 +359,18 @@ fun StatusBarScrim(state: LazyListState, modifier: Modifier = Modifier) {
             .drawBehind {
                 // Read while drawing, so scrolling only redraws this.
                 val scrolled = if (state.firstVisibleItemIndex > 0) 1f else (state.firstVisibleItemScrollOffset / distance).coerceIn(0f, 1f)
-                // Never quite clear: Android picks the status bar's icons light
-                // or dark by what's behind each of them, so over bright art
-                // they'd come out mixed. A light shade keeps them the theme's.
-                val shown = 0.75f + 0.25f * scrolled
-                // Only a little past the bar, so it reads as no band at all.
-                val height = size.height * 1.15f
+                // Never quite clear, so over bright art the icons still have
+                // something under them, but light at rest: the art shows through.
+                val top = 0.5f + 0.35f * scrolled
                 val shade = Palette.Background
+                // Eased stops, so it thins out quickly instead of ending on an edge.
                 drawRect(
                     Brush.verticalGradient(
-                        0f to shade.copy(alpha = 0.9f * shown),
-                        0.6f to shade.copy(alpha = 0.6f * shown),
+                        0f to shade.copy(alpha = top),
+                        0.3f to shade.copy(alpha = top * 0.7f),
+                        0.6f to shade.copy(alpha = top * 0.3f),
                         1f to Color.Transparent,
-                        endY = height,
                     ),
-                    size = Size(size.width, height),
                 )
             },
     )
