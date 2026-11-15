@@ -1,7 +1,7 @@
 "use client"
 
 import { Autocomplete as AutocompletePrimitive } from "@base-ui/react/autocomplete"
-import { cn } from "cn"
+import { cn } from "@matinee/ui/lib/utils"
 
 /**
  * Base UI's combobox for free text: a search field whose suggestions are

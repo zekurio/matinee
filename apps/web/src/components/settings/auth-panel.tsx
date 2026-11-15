@@ -579,7 +579,7 @@ function CallbackRow({ url }: { url: string }) {
             id={ids.controlId}
             readOnly
             value={url}
-            className="font-mono text-[13px]"
+            className="text-13px font-mono"
             onFocus={(event) => event.currentTarget.select()}
           />
           <Button

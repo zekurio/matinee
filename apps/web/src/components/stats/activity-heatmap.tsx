@@ -49,7 +49,7 @@ export function ActivityHeatmap({
             <Fragment key={weekday}>
               <span
                 aria-hidden
-                className="text-muted-foreground self-center text-[10px] leading-none"
+                className="text-muted-foreground text-10px self-center leading-none"
               >
                 {day}
               </span>
@@ -84,7 +84,7 @@ export function ActivityHeatmap({
         <span />
         <div
           aria-hidden
-          className="text-muted-foreground mt-1 grid grid-cols-[repeat(24,minmax(0,1fr))] gap-[3px] text-[10px]"
+          className="text-muted-foreground text-10px mt-1 grid grid-cols-[repeat(24,minmax(0,1fr))] gap-[3px]"
         >
           {AXIS_HOURS.map((hour) => (
             <span

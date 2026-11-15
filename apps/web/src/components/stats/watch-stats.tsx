@@ -138,14 +138,14 @@ export function TopTitlesSection({ stats }: { stats: WatchStats }) {
                   {poster && <Picture sources={[poster]} />}
                 </span>
                 <span className="flex min-w-0 flex-1 flex-col">
-                  <span className="truncate text-[15px] leading-6">
+                  <span className="text-15px truncate leading-6">
                     {entry.title.name}
                   </span>
                   <span className="text-muted-foreground text-sm tabular-nums">
                     {tr("stats.plays", { count: entry.plays })}
                   </span>
                 </span>
-                <span className="shrink-0 text-[15px] font-semibold tabular-nums">
+                <span className="text-15px shrink-0 font-semibold tabular-nums">
                   {formatWatchTime(entry.watchSeconds)}
                 </span>
               </Link>

@@ -133,7 +133,7 @@ export function BucketBars<Bucket extends { start: string }>({
     >
       <span
         aria-hidden
-        className="text-muted-foreground -translate-y-1/2 self-start text-[11px] leading-none tabular-nums"
+        className="text-muted-foreground text-11px -translate-y-1/2 self-start leading-none tabular-nums"
       >
         {top}
       </span>
@@ -146,7 +146,7 @@ export function BucketBars<Bucket extends { start: string }>({
       </div>
       <div
         aria-hidden
-        className="text-muted-foreground col-start-2 flex h-4 text-[11px] leading-4 tabular-nums"
+        className="text-muted-foreground text-11px col-start-2 flex h-4 leading-4 tabular-nums"
       >
         {buckets.map((bucket, index) => {
           const tick = ticks.get(index)

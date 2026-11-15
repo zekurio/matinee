@@ -182,7 +182,7 @@ export function DeviceApproval({
           {approve.isPending ? <Spinner /> : <CheckIcon />}
           {tr("link.device.approve")}
         </Button>
-        <p className="text-muted-foreground text-[13px] leading-5">
+        <p className="text-muted-foreground text-13px leading-5">
           {tr("link.device.warning")}
         </p>
       </div>

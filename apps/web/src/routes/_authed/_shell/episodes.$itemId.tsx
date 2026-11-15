@@ -273,7 +273,7 @@ function EpisodeHeader({ item }: { item: MediaItem }) {
               <div className="mt-4 max-w-2xl">
                 <p
                   className={cn(
-                    "text-sm leading-6 whitespace-pre-line text-foreground/85 sm:text-[15px]",
+                    "text-sm leading-6 whitespace-pre-line text-foreground/85 sm:text-15px",
                     !expanded && "line-clamp-3",
                   )}
                 >

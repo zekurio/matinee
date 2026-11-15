@@ -374,7 +374,7 @@ function Passkeys({ oidcEnabled }: { oidcEnabled: boolean }) {
                 <p className="truncate text-sm leading-5 font-medium">
                   {passkey.name ?? tr("account.passkeys.unnamed")}
                 </p>
-                <p className="text-muted-foreground truncate text-[13px] leading-5">
+                <p className="text-muted-foreground text-13px truncate leading-5">
                   {[
                     passkey.backedUp ? tr("account.passkeys.synced") : null,
                     passkey.lastUsedAt
@@ -566,7 +566,7 @@ function LinkedAccount({ displayName }: { displayName: string }) {
               <p className="truncate text-sm font-medium">
                 {account.label ?? displayName}
               </p>
-              <p className="text-muted-foreground text-[13px]">
+              <p className="text-muted-foreground text-13px">
                 {account.signsIn
                   ? tr("account.oidc.linked", {
                       date: formatDate(account.createdAt),

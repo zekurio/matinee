@@ -100,7 +100,7 @@ function LibraryCard({ library }: { library: Library }) {
           {library.name}
         </span>
       </span>
-      <span className="text-muted-foreground mt-2 block truncate text-[13px] leading-5">
+      <span className="text-muted-foreground text-13px mt-2 block truncate leading-5">
         {tr("browse.titleCount", { count: library.titleCount })}
       </span>
     </Link>

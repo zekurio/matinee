@@ -252,7 +252,7 @@ function UserItem({
 
   return (
     <ListItem className="gap-3 py-2.5 pr-2">
-      <UserAvatar user={user} className="size-8 self-start text-[13px]" />
+      <UserAvatar user={user} className="text-13px size-8 self-start" />
       <div className="min-w-0 flex-1">
         <p className="flex items-center gap-1.5 text-sm leading-5 font-medium">
           <span className="truncate">{name}</span>
@@ -409,7 +409,7 @@ function UserDetails({
 
   return (
     <p
-      className="text-muted-foreground mt-0.5 flex flex-wrap items-center gap-x-3.5 gap-y-0.5 text-[13px] leading-5"
+      className="text-muted-foreground text-13px mt-0.5 flex flex-wrap items-center gap-x-3.5 gap-y-0.5 leading-5"
       title={tr("users.joined", { date: formatDate(user.createdAt) })}
     >
       {facts}

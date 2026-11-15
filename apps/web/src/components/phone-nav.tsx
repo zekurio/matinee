@@ -138,7 +138,7 @@ export function TabBar({ user, current }: { user: User; current: PhoneTab }) {
           <AvatarWithDot dot={needsYou > 0}>
             {current === "profile" ? (
               <span className="border-foreground grid size-7 place-items-center rounded-full border-[1.5px]">
-                <UserAvatar user={user} className="size-[22px] text-[10px]" />
+                <UserAvatar user={user} className="text-10px size-[22px]" />
               </span>
             ) : (
               <UserAvatar user={user} className="size-7 text-xs" />

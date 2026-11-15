@@ -150,7 +150,7 @@ function SearchResults({ query: q }: { query: string }) {
 
   return (
     <>
-      <h1 className="mb-6 text-[26px] leading-8 font-semibold tracking-tight text-balance break-words max-sm:sr-only md:text-[32px] md:leading-10">
+      <h1 className="text-26px md:text-32px mb-6 leading-8 font-semibold tracking-tight text-balance break-words max-sm:sr-only md:leading-10">
         {tr("search.page.heading", { query: q })}
       </h1>
       {results.isPending ? (

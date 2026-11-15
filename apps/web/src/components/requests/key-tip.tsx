@@ -26,7 +26,7 @@ export function KeyTip({
         {label}
         <kbd
           data-slot="kbd"
-          className="bg-background/15 px-1 font-sans text-[11px] leading-4"
+          className="bg-background/15 text-11px px-1 font-sans leading-4"
         >
           {keys}
         </kbd>

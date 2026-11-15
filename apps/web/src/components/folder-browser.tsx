@@ -167,7 +167,7 @@ function FolderBrowser({
         )}
       </div>
 
-      <p className="text-muted-foreground text-[13px]">
+      <p className="text-muted-foreground text-13px">
         {root
           ? tr("libraries.browser.openRoot")
           : alreadyPicked

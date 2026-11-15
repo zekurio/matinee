@@ -2,8 +2,8 @@
 
 import { Label } from "@matinee/ui/components/label"
 import { Separator } from "@matinee/ui/components/separator"
+import { cn } from "@matinee/ui/lib/utils"
 import { cva, type VariantProps } from "class-variance-authority"
-import { cn } from "cn"
 import { useMemo } from "react"
 
 function FieldSet({ className, ...props }: React.ComponentProps<"fieldset">) {

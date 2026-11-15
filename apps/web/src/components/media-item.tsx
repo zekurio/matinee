@@ -141,7 +141,7 @@ export function Thumb({
       <Picture sources={sources} />
       {children}
       {pill && (
-        <span className="absolute top-1.5 left-1.5 rounded bg-black/70 px-1.5 py-0.5 text-[11px] leading-4 font-medium text-zinc-100 tabular-nums">
+        <span className="text-11px absolute top-1.5 left-1.5 rounded bg-black/70 px-1.5 py-0.5 leading-4 font-medium text-zinc-100 tabular-nums">
           {pill}
         </span>
       )}
@@ -198,7 +198,7 @@ export function CardText({
         {primary}
       </span>
       {secondary && (
-        <span className="text-muted-foreground block truncate text-[13px] leading-5">
+        <span className="text-muted-foreground text-13px block truncate leading-5">
           {secondary}
         </span>
       )}
@@ -487,7 +487,7 @@ function ShowEpisodeText({ item }: { item: MediaItem }) {
         )}
       </span>
       {episode ? (
-        <span className="text-muted-foreground flex min-w-0 text-[13px] leading-5">
+        <span className="text-muted-foreground text-13px flex min-w-0 leading-5">
           <ItemLink
             item={item}
             label={episode}
@@ -502,7 +502,7 @@ function ShowEpisodeText({ item }: { item: MediaItem }) {
           )}
         </span>
       ) : (
-        <span className="text-muted-foreground block truncate text-[13px] leading-5 tabular-nums">
+        <span className="text-muted-foreground text-13px block truncate leading-5 tabular-nums">
           {left ?? label.year}
         </span>
       )}
@@ -544,7 +544,7 @@ function EpisodeText({ item }: { item: MediaItem }) {
         </ItemLink>
       </span>
       {detail.length > 0 && (
-        <span className="text-muted-foreground block truncate text-[13px] leading-5 tabular-nums">
+        <span className="text-muted-foreground text-13px block truncate leading-5 tabular-nums">
           {detail.join(" · ")}
         </span>
       )}

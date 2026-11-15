@@ -147,7 +147,7 @@ export function PolicyFacts({
   return (
     <p
       className={cn(
-        "text-muted-foreground flex flex-wrap items-center gap-x-3.5 gap-y-0.5 text-[13px] leading-5",
+        "text-muted-foreground flex flex-wrap items-center gap-x-3.5 gap-y-0.5 text-13px leading-5",
         className,
       )}
     >

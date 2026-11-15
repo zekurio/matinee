@@ -206,9 +206,7 @@ export function SettingsSaveBar({
  * setting works, which the settings leave out.
  */
 export function SettingNote({ children }: { children: ReactNode }) {
-  return (
-    <p className="text-muted-foreground text-[13px] leading-5">{children}</p>
-  )
+  return <p className="text-muted-foreground text-13px leading-5">{children}</p>
 }
 
 /** A bordered stack of {@link SettingRow}s split by hairlines. */

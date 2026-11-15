@@ -1,5 +1,5 @@
 import { FIELD_CLASS_NAME } from "@matinee/ui/lib/field"
-import { cn } from "cn"
+import { cn } from "@matinee/ui/lib/utils"
 import * as React from "react"
 
 function Textarea({ className, ...props }: React.ComponentProps<"textarea">) {

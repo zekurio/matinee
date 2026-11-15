@@ -164,7 +164,7 @@ function InviteRow({
           )}
         </p>
         <p
-          className="text-muted-foreground truncate text-[13px] leading-5"
+          className="text-muted-foreground text-13px truncate leading-5"
           title={tr("users.invites.expiresAt", {
             date: formatDateTime(invite.expiresAt),
           })}
@@ -332,7 +332,7 @@ function CreatedLink({
           readOnly
           value={invite.url}
           aria-label={tr("users.invites.link.label")}
-          className="font-mono text-[13px]"
+          className="text-13px font-mono"
           onFocus={(event) => event.currentTarget.select()}
         />
         <Button

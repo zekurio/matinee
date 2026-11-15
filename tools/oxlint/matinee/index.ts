@@ -102,7 +102,39 @@ const requireAccessFilter = defineRule({
   },
 })
 
+const arbitraryFontSize = /(?:^|[\s:"'`])text-\[[\d.]+(?:px|rem)\]/u
+
+const noArbitraryFontSize = defineRule({
+  meta: {
+    type: "problem",
+    docs: {
+      description:
+        "Require font sizes from the theme, which come with an even line height.",
+    },
+    messages: {
+      arbitrary:
+        "Use a theme font size such as text-13px instead of text-[…]. An arbitrary size inherits line-height 1.5, and the fractional line box sets the text a pixel off from the icons beside it. Add a --text-* size to globals.css if none fits.",
+    },
+  },
+  createOnce(context) {
+    return {
+      // The raw source, quotes and all, so only string literals can match.
+      Literal(node) {
+        if (arbitraryFontSize.test(node.raw ?? ""))
+          context.report({ node, messageId: "arbitrary" })
+      },
+      TemplateElement(node) {
+        if (arbitraryFontSize.test(node.value.raw))
+          context.report({ node, messageId: "arbitrary" })
+      },
+    }
+  },
+})
+
 export default eslintCompatPlugin({
   meta: { name: "matinee" },
-  rules: { "require-access-filter": requireAccessFilter },
+  rules: {
+    "no-arbitrary-font-size": noArbitraryFontSize,
+    "require-access-filter": requireAccessFilter,
+  },
 })

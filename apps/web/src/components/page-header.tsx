@@ -74,7 +74,7 @@ export function PageHeader({
           <h1
             title={title}
             className={cn(
-              "line-clamp-2 min-w-0 text-[26px] leading-8 font-semibold tracking-tight text-balance break-words md:text-[32px] md:leading-10",
+              "line-clamp-2 min-w-0 text-26px leading-8 font-semibold tracking-tight text-balance break-words md:text-32px md:leading-10",
               "max-sm:line-clamp-1 max-sm:flex-1 max-sm:pl-1 max-sm:text-xl max-sm:leading-7 max-sm:group-has-data-filter-open/title-row:sr-only",
               !back && "max-sm:pl-0",
             )}
@@ -88,7 +88,7 @@ export function PageHeader({
           )}
         </div>
         {description && (
-          <p className="text-muted-foreground mt-1 text-sm max-sm:-mt-2 max-sm:truncate max-sm:px-4 max-sm:pb-2 max-sm:text-[13px]">
+          <p className="text-muted-foreground max-sm:text-13px mt-1 text-sm max-sm:-mt-2 max-sm:truncate max-sm:px-4 max-sm:pb-2">
             {description}
           </p>
         )}

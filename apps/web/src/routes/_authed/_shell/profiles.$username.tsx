@@ -220,7 +220,7 @@ function ProfileHeader({ profile }: { profile: Profile }) {
           className="size-16 text-2xl shadow-lg shadow-black/40 sm:size-20 sm:text-3xl"
         />
         <div className="min-w-0 flex-1">
-          <h1 className="truncate text-[26px] leading-8 font-semibold tracking-tight max-sm:text-[22px] max-sm:leading-7 md:text-[32px] md:leading-10">
+          <h1 className="text-26px max-sm:text-22px md:text-32px truncate leading-8 font-semibold tracking-tight max-sm:leading-7 md:leading-10">
             {displayName(profile)}
           </h1>
           <p className="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">

@@ -1,5 +1,5 @@
 import { uiText } from "@matinee/ui/lib/ui-text"
-import { cn } from "cn"
+import { cn } from "@matinee/ui/lib/utils"
 import { Loader2Icon } from "lucide-react"
 
 function Spinner({ className, ...props }: React.ComponentProps<"svg">) {

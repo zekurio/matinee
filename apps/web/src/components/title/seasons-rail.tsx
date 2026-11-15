@@ -149,7 +149,7 @@ function SeasonCard({
           <span
             role="img"
             aria-label={tr("title.seasons.left", { count: left })}
-            className="bg-primary text-primary-foreground absolute top-1.5 right-1.5 grid h-5 min-w-5 place-items-center rounded-full px-1.5 text-[11px] leading-none font-semibold tabular-nums shadow-sm"
+            className="bg-primary text-primary-foreground text-11px absolute top-1.5 right-1.5 grid h-5 min-w-5 place-items-center rounded-full px-1.5 leading-none font-semibold tabular-nums shadow-sm"
           >
             {left}
           </span>

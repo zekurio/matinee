@@ -128,7 +128,7 @@ function Section({
       <div>
         <h3 className="text-sm leading-5 font-medium">{title}</h3>
         {description && (
-          <p className="text-muted-foreground text-[13px] leading-5">
+          <p className="text-muted-foreground text-13px leading-5">
             {description}
           </p>
         )}
@@ -140,7 +140,7 @@ function Section({
 
 function Empty({ children }: { children: ReactNode }) {
   return (
-    <p className="text-muted-foreground rounded-xl border border-dashed px-4 py-3 text-[13px] leading-5">
+    <p className="text-muted-foreground text-13px rounded-xl border border-dashed px-4 py-3 leading-5">
       {children}
     </p>
   )
@@ -158,9 +158,9 @@ function Job({
 }) {
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-      <p className="text-[13px] leading-5 font-medium wrap-anywhere">{label}</p>
+      <p className="text-13px leading-5 font-medium wrap-anywhere">{label}</p>
       {detail && (
-        <p className="text-muted-foreground text-[13px] leading-5 wrap-anywhere whitespace-pre-line">
+        <p className="text-muted-foreground text-13px leading-5 wrap-anywhere whitespace-pre-line">
           {detail}
         </p>
       )}

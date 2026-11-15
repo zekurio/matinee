@@ -141,7 +141,7 @@ export function DeclinedNote({ item }: { item: AskedItem }) {
   const { reason } = item.availability
   if (item.availability.state !== "unavailable" || !reason) return null
   return (
-    <p className="text-muted-foreground mt-1 text-[13px] leading-5">
+    <p className="text-muted-foreground text-13px mt-1 leading-5">
       <span className="line-clamp-2">{declineLine(reason)}</span>
       {reason.note && (
         <span className="text-foreground/70 mt-0.5 line-clamp-2 italic">

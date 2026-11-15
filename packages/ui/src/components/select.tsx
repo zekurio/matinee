@@ -1,6 +1,6 @@
 import { Select as SelectPrimitive } from "@base-ui/react/select"
 import { FIELD_CLASS_NAME } from "@matinee/ui/lib/field"
-import { cn } from "cn"
+import { cn } from "@matinee/ui/lib/utils"
 import { ChevronDownIcon, CheckIcon, ChevronUpIcon } from "lucide-react"
 import * as React from "react"
 

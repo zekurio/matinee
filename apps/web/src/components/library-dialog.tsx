@@ -326,7 +326,7 @@ function LibraryForm({
                           >
                             <FolderIcon className="text-muted-foreground size-4 shrink-0" />
                             <span
-                              className="min-w-0 flex-1 truncate font-mono text-[13px]"
+                              className="text-13px min-w-0 flex-1 truncate font-mono"
                               title={path}
                             >
                               {path}

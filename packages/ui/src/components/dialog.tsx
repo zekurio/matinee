@@ -9,7 +9,7 @@ import {
   MODAL_OVERLAY_FORCE_RENDER,
 } from "@matinee/ui/lib/modal"
 import { uiText } from "@matinee/ui/lib/ui-text"
-import { cn } from "cn"
+import { cn } from "@matinee/ui/lib/utils"
 import { XIcon } from "lucide-react"
 import * as React from "react"
 

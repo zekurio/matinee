@@ -125,7 +125,7 @@ export function PlaybackView(props: RangeProps) {
             {converted ? (
               <TranscodingSections stats={stats} />
             ) : (
-              <p className="text-muted-foreground text-[13px]">
+              <p className="text-muted-foreground text-13px">
                 {tr("stats.server.nothingTranscoded")}
               </p>
             )}

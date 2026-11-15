@@ -1,4 +1,4 @@
-import { cn } from "cn"
+import { cn } from "@matinee/ui/lib/utils"
 import { ChevronRightIcon } from "lucide-react"
 import type { ComponentProps, ReactNode } from "react"
 

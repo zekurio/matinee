@@ -223,7 +223,7 @@ export function EpisodeRow({ item }: { item: MediaItem }) {
             label={label.title}
             className={cn(
               textLink,
-              "line-clamp-2 text-sm leading-5 sm:text-[15px]",
+              "line-clamp-2 text-sm leading-5 sm:text-15px",
               label.untitled ? "font-normal" : "font-medium",
             )}
           >
@@ -231,7 +231,7 @@ export function EpisodeRow({ item }: { item: MediaItem }) {
           </ItemLink>
         </p>
         {facts.length > 0 && (
-          <p className="text-muted-foreground mt-0.5 text-[13px] leading-5 tabular-nums">
+          <p className="text-muted-foreground text-13px mt-0.5 leading-5 tabular-nums">
             {facts.join(" · ")}
           </p>
         )}
@@ -244,7 +244,7 @@ export function EpisodeRow({ item }: { item: MediaItem }) {
       </div>
       {overview && (
         // Phones put the description under the still, across the row.
-        <p className="text-muted-foreground col-span-2 line-clamp-3 text-[13px] leading-5 sm:hidden">
+        <p className="text-muted-foreground text-13px col-span-2 line-clamp-3 leading-5 sm:hidden">
           {overview}
         </p>
       )}

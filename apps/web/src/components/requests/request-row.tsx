@@ -170,7 +170,7 @@ export function RequestRow({
               >
                 {item.title.name}
               </Link>
-              <span className="text-muted-foreground shrink-0 text-[13px]">
+              <span className="text-muted-foreground text-13px shrink-0">
                 {facts}
               </span>
             </h3>
@@ -341,7 +341,7 @@ function Cell({
   return (
     <div
       className={cn(
-        "flex min-w-0 flex-col justify-center text-[13px] leading-5",
+        "flex min-w-0 flex-col justify-center text-13px leading-5",
         className,
       )}
     >
@@ -364,7 +364,7 @@ function Who({ item }: { item: AdminRequestItem }) {
           displayName: first.name,
           username: first.name,
         }}
-        className="size-7 shrink-0 text-[11px] max-sm:hidden"
+        className="text-11px size-7 shrink-0 max-sm:hidden"
       />
       <Cell
         second={

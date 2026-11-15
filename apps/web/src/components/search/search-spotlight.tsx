@@ -168,7 +168,7 @@ export function SearchButton({ className }: { className: string }) {
         {tr("search.title")}
         <kbd
           data-slot="kbd"
-          className="bg-background/15 px-1 font-sans text-[11px] leading-4"
+          className="bg-background/15 text-11px px-1 font-sans leading-4"
         >
           {mac ? "⌘K" : tr("search.shortcut")}
         </kbd>
@@ -341,7 +341,7 @@ function SpotlightSearch({
             >
               Esc
             </DialogClose>
-            <DialogClose className="focus-visible:ring-ring text-foreground/80 hidden h-11 shrink-0 items-center rounded-full px-2 text-[15px] outline-none focus-visible:ring-2 [@media(pointer:coarse)]:inline-flex">
+            <DialogClose className="focus-visible:ring-ring text-foreground/80 text-15px hidden h-11 shrink-0 items-center rounded-full px-2 outline-none focus-visible:ring-2 [@media(pointer:coarse)]:inline-flex">
               {tr("search.cancel")}
             </DialogClose>
           </div>

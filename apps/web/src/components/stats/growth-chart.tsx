@@ -123,7 +123,7 @@ export function GrowthChart({
       <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-2 gap-y-2">
         <span
           aria-hidden
-          className="text-muted-foreground -translate-y-1/2 self-start text-[11px] leading-none tabular-nums"
+          className="text-muted-foreground text-11px -translate-y-1/2 self-start leading-none tabular-nums"
         >
           {formatCount(top)}
         </span>
@@ -181,7 +181,7 @@ export function GrowthChart({
         </div>
         <div
           aria-hidden
-          className="text-muted-foreground relative col-start-2 h-4 text-[11px] leading-4 tabular-nums"
+          className="text-muted-foreground text-11px relative col-start-2 h-4 leading-4 tabular-nums"
         >
           {[...axisTicks(count)].map(([index, tick]) => {
             const bucket = buckets[index]

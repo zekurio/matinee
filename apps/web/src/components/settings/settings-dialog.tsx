@@ -181,7 +181,7 @@ function SettingsOverview({
         {groups.map((group) => (
           <section key={group.id} className="flex flex-col gap-2">
             {group.id !== "account" && (
-              <h3 className="text-muted-foreground px-1 text-[13px] font-medium">
+              <h3 className="text-muted-foreground text-13px px-1 font-medium">
                 {group.label}
               </h3>
             )}
@@ -197,7 +197,7 @@ function SettingsOverview({
                     <UserAvatar user={user} className="size-10 text-sm" />
                     <span className="flex min-w-0 flex-1 flex-col">
                       <span className="truncate font-medium">{name}</span>
-                      <span className="text-muted-foreground truncate text-[13px]">
+                      <span className="text-muted-foreground text-13px truncate">
                         {hint ?? category.description}
                       </span>
                     </span>
@@ -212,7 +212,7 @@ function SettingsOverview({
                       <span className="truncate font-medium">
                         {category.label}
                       </span>
-                      <span className="text-muted-foreground truncate text-[13px]">
+                      <span className="text-muted-foreground text-13px truncate">
                         {hint ?? category.description}
                       </span>
                     </span>

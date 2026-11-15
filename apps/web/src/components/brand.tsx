@@ -67,7 +67,7 @@ export function Logo({ className }: { className?: string }) {
       viewBox={`0 0 ${LOGO.width} ${LOGO.height}`}
       role="img"
       aria-label="Matinee"
-      className={cn("h-[1em] w-auto shrink-0 text-[15px]", className)}
+      className={cn("h-[1em] w-auto shrink-0 text-15px", className)}
     >
       <Sunset id={gradient} transform={LOGO.mark} />
       <path

@@ -132,7 +132,7 @@ export function FilterPanel({
 /** A chip in the panel, smaller than a page's chips. */
 function smallChip(on: boolean) {
   return cn(
-    "focus-visible:ring-ring inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-[13px] font-medium outline-none select-none focus-visible:ring-2 [@media(pointer:coarse)]:h-10",
+    "focus-visible:ring-ring inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-13px font-medium outline-none select-none focus-visible:ring-2 [@media(pointer:coarse)]:h-10",
     on
       ? "bg-foreground text-background border-transparent"
       : "text-foreground/80 hover:text-foreground border-foreground/15 hover:border-foreground/30",
@@ -182,19 +182,17 @@ export function Section({
               // their fields.
               small
                 ? "text-muted-foreground text-xs font-medium"
-                : "text-[13px] font-medium"
+                : "text-13px font-medium"
             }
           >
             {label}
           </h3>
           {hint && (
-            <p className="text-muted-foreground text-[13px] leading-5">
-              {hint}
-            </p>
+            <p className="text-muted-foreground text-13px leading-5">{hint}</p>
           )}
         </div>
         {value && (
-          <span className="text-muted-foreground shrink-0 text-[13px] tabular-nums">
+          <span className="text-muted-foreground text-13px shrink-0 tabular-nums">
             {value}
           </span>
         )}
@@ -265,7 +263,7 @@ export function ToggleChips({
             }}
             placeholder={find.placeholder}
             aria-label={find.placeholder}
-            className="placeholder:text-muted-foreground h-full min-w-0 flex-1 bg-transparent text-[13px] outline-none [&::-webkit-search-cancel-button]:appearance-none"
+            className="placeholder:text-muted-foreground text-13px h-full min-w-0 flex-1 bg-transparent outline-none [&::-webkit-search-cancel-button]:appearance-none"
           />
         </label>
       )}
@@ -296,7 +294,7 @@ export function ToggleChips({
           )
         })}
         {shown.length === 0 && find && (
-          <p className="text-muted-foreground text-[13px] leading-8">
+          <p className="text-muted-foreground text-13px leading-8">
             {find.empty}
           </p>
         )}

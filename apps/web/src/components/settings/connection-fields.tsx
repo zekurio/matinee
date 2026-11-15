@@ -297,7 +297,7 @@ export function LandsIn({
   }))
   return (
     <div className="flex flex-col gap-2 pt-1">
-      <p className="flex items-start gap-1.5 text-[13px] leading-5">
+      <p className="text-13px flex items-start gap-1.5 leading-5">
         <TriangleAlertIcon
           aria-hidden
           className="text-warning mt-0.5 size-3.5 shrink-0"

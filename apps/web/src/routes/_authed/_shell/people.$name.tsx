@@ -150,7 +150,7 @@ function PersonDetails({ person }: { person: Person }) {
           )}
         />
         <div className="min-w-0">
-          <h1 className="text-[26px] leading-8 font-semibold tracking-tight text-balance break-words md:text-[32px] md:leading-10">
+          <h1 className="text-26px md:text-32px leading-8 font-semibold tracking-tight text-balance break-words md:leading-10">
             {person.name}
           </h1>
           <p className="text-muted-foreground mt-1 text-sm">

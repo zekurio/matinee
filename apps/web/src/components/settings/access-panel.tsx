@@ -181,7 +181,7 @@ function GroupRow({
           </span>
         </p>
         {group.providerGroup && (
-          <p className="text-muted-foreground mt-0.5 flex text-[13px] leading-5">
+          <p className="text-muted-foreground text-13px mt-0.5 flex leading-5">
             <Fact icon={<LogInIcon />}>
               {tr("access.group.follows", { group: group.providerGroup })}
             </Fact>
