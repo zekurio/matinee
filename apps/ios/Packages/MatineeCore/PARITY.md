@@ -1,46 +1,44 @@
 # Android parity audit
 
-This is a partial audit, not a sign-off on browsing parity. Compared against the
-Android sources in this checkout and reviewed the last 40 relevant origin/main
-commits. Unreviewed areas below still need an audit before screen replacement.
-
-## Browse
-
-| Behaviour                                                                         | Kotlin location           | Swift location                                               | Action                                  |
-| --------------------------------------------------------------------------------- | ------------------------- | ------------------------------------------------------------ | --------------------------------------- |
-| All five sorts in both directions, default ascending name and descending others   | ui/browse/TitleFilters.kt | Browse/LibraryData.swift only has three legacy sorts         | Add TitleListState alongside legacy API |
-| Structured genre, studio, year, score, age, language, runtime and watched filters | ui/browse/TitleFilters.kt | Generated TitleFilters exists; observable list state missing | Add structured state and active count   |
-| Stable page identity includes filters, direction and settled search               | ui/browse/TitleFilters.kt | Legacy LibraryFilters.key omits new fields                   | Add structured key                      |
-| Search debounce and explicit settlement                                           | ui/browse/TitleFilters.kt | Browse/LibraryData.swift                                     | Reuse existing implementation           |
+Profile, statistics, actions, errors, state and general preferences are covered
+by another agent in `PARITY-profile.md`. Player, Auth, Admin, Home and Requests
+implementation remains assigned elsewhere.
 
 ## Title
 
-| Behaviour                                                                | Kotlin location          | Swift location        | Action                                                             |
-| ------------------------------------------------------------------------ | ------------------------ | --------------------- | ------------------------------------------------------------------ |
-| Season next episode, watched aggregation, multilingual trailer selection | ui/title/TitleData.kt    | Title/TitleData.swift | Existing helpers and tests present; full screen comparison pending |
-| Person biography, credits, specials preference                           | ui/title/TitleScreens.kt | Not audited           | Pending                                                            |
+| Behaviour | Kotlin location | Swift location | Action |
+| --- | --- | --- | --- |
+| Resume only unfinished positive progress | ui/title/TitleData.kt | Title/TitlePresentation.swift | Added helper and tests |
+| Season next, watched aggregation, next up | ui/title/TitleData.kt | Title/TitleData.swift | Existing helpers match; existing tests retained |
+| Trailer language base tag, then first trailer | ui/title/TitleParts.kt | Title/TitleData.swift | Existing helper matches |
+| Hidden specials remain addressable by direct link | ui/title/TitleScreens.kt | Title/TitlePresentation.swift | Added titleSeason |
+| Inline one regular season, exclude current season from rail | ui/title/TitleScreens.kt, TitleParts.kt | Title/TitlePresentation.swift | Added inlineSeason and titleSeasons |
+| Episode rail initially scrolls to next, else zero | ui/title/TitleScreens.kt | Title/TitlePresentation.swift | Added helper and tests |
+| Biography, local credits, catalog credits | ui/browse/BrowseScreen.kt | Api/ContractModels.swift, Title/TitlePresentation.swift | Added loadPerson; generated Person already carries all fields |
+| Specials visibility is account-owned and server-applied | ui/settings/SettingsData.kt | Api/ContractApi.swift | setPreferences exists; session update wiring belongs to Auth owner, no local filtering added |
+| Catalog gap recovery and live availability | ui/title/TitleScreens.kt, ui/browse/BrowseScreen.kt | Requests | Other agent owns request tracking |
+| File information prefers loaded track languages, falls back to probe | ui/title/TitleData.kt | missing | Still needs a dedicated track-info loader |
 
-## Remaining audit
+## Browse
 
-| Area                                          | Kotlin location                               | Swift location                          | Action                                                                             |
-| --------------------------------------------- | --------------------------------------------- | --------------------------------------- | ---------------------------------------------------------------------------------- |
-| Search                                        | ui/search/SearchData.kt                       | Browse/SearchData.swift                 | Pending detailed comparison                                                        |
-| Favourites and unified season presentation    | ui/media/FavoritesData.kt, FavoritesScreen.kt | State/ViewerState.swift                 | Pending detailed comparison                                                        |
-| Profile, stats, recent                        | ui/profile                                    | Profile                                 | Pending detailed comparison                                                        |
-| Card actions                                  | ui/components/Actions.kt                      | State/ViewerState.swift                 | Pending detailed comparison                                                        |
-| Error classification                          | ui/components/Errors.kt, ui/State.kt          | State/Load.swift                        | Existing disconnect classification present; presentation policy comparison pending |
-| Metadata                                      | ui/metadata/MetadataScreens.kt                | Metadata/Metadata.swift                 | Pending; no changes                                                                |
-| Routes and marks                              | ui/Nav.kt, ui/Marks.kt                        | State/Marks.swift; routes in app target | Pending; no changes                                                                |
-| Downloads and offline decisions               | downloads, ui/player/DownloadTracks.kt        | Downloads, Player/DownloadTracks.swift  | Pending; no changes                                                                |
-| Preferences and formatting                    | ui/settings/SettingsData.kt, ui/Format.kt     | Player/PlayerPrefs.swift, Format        | Pending; no changes                                                                |
-| Player, authentication, admin, home, requests | Corresponding Android areas                   | Corresponding Swift areas               | Excluded from implementation by assignment                                         |
+| Behaviour | Kotlin location | Swift location | Action |
+| --- | --- | --- | --- |
+| Five sorts, both directions, usual default | ui/browse/TitleFilters.kt | Browse/TitleFilters.swift | Added structured state alongside legacy API |
+| Structured filters and active count | ui/browse/TitleFilters.kt | Browse/TitleFilters.swift | Added state and count; generated filters passed unchanged |
+| Page identity includes filters, direction and settled search | ui/browse/TitleFilters.kt | Browse/TitleFilters.swift | Added JSON identity |
+| Search debounce, paging, refresh retention | ui/browse/LibraryData.kt, Grid.kt | Browse/LibraryData.swift, TitlePages.swift | Existing tests cover these |
+| Filter chips, sort-dependent card details | ui/browse/TitleFilters.kt | missing | Presentation helpers still needed |
 
-## Tests
+## Search
 
-BrowseTests and TitleDataTests were read before implementation. BrowseTests already
-covers paging, debounce, cancellation, empty states and retry. TitleDataTests covers
-season selection, watched aggregation, trailers and download sheets. Android has
-no TitleFilters test file. Add direct Swift coverage for structured filter counts,
-order defaults and page identity. No existing expectations changed.
+| Behaviour | Kotlin location | Swift location | Action |
+| --- | --- | --- | --- |
+| 250ms debounce, limit 40, trimmed query, cancellation | ui/search/SearchData.kt | Browse/SearchData.swift | Existing implementation and BrowseTests cover this |
+| Same successful query retained, failed query can retry | ui/search/SearchData.kt | Browse/SearchData.swift | Retry uses update with same text rather than attempt counter |
+| Empty includes users; grouping preserves server order | ui/search/SearchData.kt | Browse/SearchData.swift | Existing implementation and tests match |
 
-The per-file Android unit-test inventory and case comparison are still pending.
+## Remaining owned checks
+
+Favourites, Format, routes, Downloads and Metadata comparisons are not yet complete.
+No Android TitleData, TitleFilters or SearchData unit-test files exist in this
+checkout. Swift already has direct tests for these areas; no expectations changed.
