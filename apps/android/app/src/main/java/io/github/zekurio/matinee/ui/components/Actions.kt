@@ -8,6 +8,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -18,7 +19,10 @@ import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
+import io.github.zekurio.matinee.api.CatalogRef
+import io.github.zekurio.matinee.api.CatalogTitleSummary
 import io.github.zekurio.matinee.api.ImageTarget
+import io.github.zekurio.matinee.api.MatineeApi
 import io.github.zekurio.matinee.api.MediaItem
 import io.github.zekurio.matinee.api.Season as ShowSeason
 import io.github.zekurio.matinee.api.TitleKind
@@ -40,10 +44,13 @@ import io.github.zekurio.matinee.ui.kit.SheetItem
 import io.github.zekurio.matinee.ui.kit.ToastState
 import io.github.zekurio.matinee.ui.kit.rememberSheetState
 import io.github.zekurio.matinee.ui.metadata.rememberLibraryProvider
+import io.github.zekurio.matinee.ui.requests.NotInterestedSheet
+import io.github.zekurio.matinee.ui.requests.key
 import io.github.zekurio.matinee.ui.seasonName
 import io.github.zekurio.matinee.ui.theme.Palette
 import io.github.zekurio.matinee.ui.title.setSeasonWatched
 import java.io.IOException
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.serialization.SerializationException
@@ -59,8 +66,16 @@ sealed interface ActionTarget {
 
     data class Item(val item: MediaItem, override val here: Boolean) : ActionTarget
 
-    /** [file] is what Play starts, when known: a movie's file, which the menu downloads. */
-    data class Title(val title: TitleSummary, val file: MediaItem?, override val here: Boolean) : ActionTarget
+    /**
+     * [file] is what Play starts, when known: a movie's file, which the menu downloads.
+     * [recommended] is the title at TMDB when a recommendation row offered it, for "Not interested".
+     */
+    data class Title(
+        val title: TitleSummary,
+        val file: MediaItem?,
+        override val here: Boolean,
+        val recommended: CatalogRef? = null,
+    ) : ActionTarget
 
     data class Season(val title: TitleSummary, val season: ShowSeason, override val here: Boolean) : ActionTarget
 }
@@ -79,6 +94,9 @@ class Actions(val scope: CoroutineScope) {
     /** The show or season whose download sheet is open. */
     var files by mutableStateOf<FileSet?>(null)
 
+    /** A recommended title to request whose "Not interested" sheet is open. */
+    var notInterested by mutableStateOf<CatalogTitleSummary?>(null)
+
     /** Something being marked watched, while the person says when. */
     var watched by mutableStateOf<WatchedAsk?>(null)
 
@@ -91,8 +109,33 @@ class Actions(val scope: CoroutineScope) {
         target = ActionTarget.Item(item, here)
     }
 
-    fun title(title: TitleSummary, file: MediaItem? = null, here: Boolean = false) {
-        target = ActionTarget.Title(title, file, here)
+    fun title(title: TitleSummary, file: MediaItem? = null, here: Boolean = false, recommended: CatalogRef? = null) {
+        target = ActionTarget.Title(title, file, here, recommended)
+    }
+
+    /**
+     * Titles marked "Not interested" since the app started, by [CatalogRef.key].
+     * Recommendation rows leave them out at once; the server's next answer does too.
+     */
+    val hidden = mutableStateListOf<String>()
+
+    /** Leaves [ref] out of the viewer's recommendations, saying [done], or [failure] if the server refused. */
+    fun hideRecommendation(api: MatineeApi, snackbar: ToastState, ref: CatalogRef, done: String, failure: String) {
+        if (ref.key !in hidden) hidden.add(ref.key)
+        scope.launch {
+            try {
+                api.recommendations.dismiss(ref, dismissed = true)
+                snackbar.showSnackbar(done)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: IOException) {
+                hidden.remove(ref.key)
+                snackbar.showSnackbar(e.message?.let { "$failure: $it" } ?: failure)
+            } catch (_: SerializationException) {
+                hidden.remove(ref.key)
+                snackbar.showSnackbar(failure)
+            }
+        }
     }
 
     fun season(title: TitleSummary, season: ShowSeason, here: Boolean = false) {
@@ -148,6 +191,7 @@ fun ActionsSheet(actions: Actions) {
     actions.download?.let { item -> DownloadSheet(item) { actions.download = null } }
     actions.files?.let { files -> DownloadFilesSheet(files) { actions.files = null } }
     actions.watched?.let { ask -> WatchedAtSheet(ask) { actions.watched = null } }
+    actions.notInterested?.let { item -> NotInterestedSheet(item) { actions.notInterested = null } }
     val target = actions.target ?: return
     val sheet = rememberSheetState()
     val scope = rememberCoroutineScope()
@@ -159,7 +203,7 @@ fun ActionsSheet(actions: Actions) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(vertical = 12.dp)) {
             when (target) {
                 is ActionTarget.Item -> ItemActions(target.item, target.here, dismiss)
-                is ActionTarget.Title -> TitleActions(target.title, target.file, target.here, dismiss)
+                is ActionTarget.Title -> TitleActions(target.title, target.file, target.here, target.recommended, dismiss)
                 is ActionTarget.Season -> SeasonActions(target.title, target.season, target.here, dismiss)
             }
         }
@@ -251,7 +295,7 @@ private fun ItemActions(item: MediaItem, here: Boolean, dismiss: () -> Unit) {
 }
 
 @Composable
-private fun TitleActions(title: TitleSummary, file: MediaItem?, here: Boolean, dismiss: () -> Unit) {
+private fun TitleActions(title: TitleSummary, file: MediaItem?, here: Boolean, recommended: CatalogRef?, dismiss: () -> Unit) {
     val api = LocalApi.current
     val nav = LocalNavigator.current
     val actions = LocalActions.current
@@ -330,6 +374,14 @@ private fun TitleActions(title: TitleSummary, file: MediaItem?, here: Boolean, d
         SheetItem(Lucide.Info, stringResource(if (show) R.string.media_hero_episodes else R.string.media_hero_details)) {
             dismiss()
             nav.titleUp(title.id)
+        }
+    }
+    if (recommended != null) {
+        val done = stringResource(R.string.web_discover_dismissed, title.name)
+        val failure = stringResource(R.string.web_discover_dismissFailed, title.name)
+        SheetItem(Lucide.EyeOff, stringResource(R.string.web_discover_notInterested)) {
+            dismiss()
+            actions.hideRecommendation(api, snackbar, recommended, done, failure)
         }
     }
     MetadataItems(title, ImageTarget(title.id), matchable = true, dismiss = dismiss)

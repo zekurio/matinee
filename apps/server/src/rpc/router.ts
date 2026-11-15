@@ -23,6 +23,7 @@ import { party } from "./party"
 import { people } from "./people"
 import { home, playback } from "./playback"
 import { favorites, profiles } from "./profiles"
+import { recommendations } from "./recommendations"
 import { requests } from "./requests"
 import { search } from "./search"
 import { stats } from "./stats"
@@ -35,6 +36,7 @@ import { metadata, titles } from "./titles"
  * adds.
  */
 export const procedures = {
+  recommendations,
   catalog,
   discover,
   requests,

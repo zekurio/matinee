@@ -714,6 +714,7 @@ export function PosterCard({
   poster = art(title.images.poster),
   to,
   play,
+  dismiss,
 }: {
   title: TitleSummary
   detail?: string | null
@@ -723,6 +724,8 @@ export function PosterCard({
   to?: PosterTarget
   /** The file Play starts, when the card knows it. */
   play?: MediaItem
+  /** "Not interested" in its menu, for a recommended title. */
+  dismiss?: () => void
 }) {
   const watched = useTitleWatched(title)
   const favorite = useTitleFavorite(title)
@@ -771,6 +774,7 @@ export function PosterCard({
             <ActionsMenu
               target={{ kind: "title", title, file: play }}
               look="card"
+              dismiss={dismiss}
             />
           }
           className="pointer-events-auto absolute right-1 bottom-1"

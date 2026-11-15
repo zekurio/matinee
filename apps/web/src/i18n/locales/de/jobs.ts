@@ -26,6 +26,12 @@ export default {
   "jobs.queue.catalog.name": "Katalog",
   "jobs.queue.catalog.description":
     "Zwischengespeicherte Katalog- und Entdecken-Antworten aktualisieren.",
+  "jobs.queue.title-features.name": "Titelmerkmale",
+  "jobs.queue.title-features.description":
+    "Genres, Schlagwörter und Beteiligte von Titeln bei TMDB holen, für Empfehlungen.",
+  "jobs.queue.recommendations.name": "Empfehlungen",
+  "jobs.queue.recommendations.description":
+    "Die Empfehlungen jeder Person aus dem berechnen, was sie geschaut hat.",
 
   "jobs.queues": "Hintergrundaufgaben",
   "jobs.loadFailed": "Die Aufträge konnten nicht geladen werden. {error}",
@@ -122,6 +128,9 @@ export default {
   "jobs.task.prepare-discover.name": "Entdecken vorbereiten",
   "jobs.task.prepare-discover.description":
     "Liest die Reihen von Entdecken vorab und holt ihre Poster, damit sie schon beim ersten Öffnen ihre unscharfen Platzhalter zeigen.",
+  "jobs.task.recommend-titles.name": "Empfehlungen aktualisieren",
+  "jobs.task.recommend-titles.description":
+    "Berechnet die Empfehlungen neu für alle, die seitdem etwas geschaut haben oder deren Liste einen Tag alt ist. Wer einen Titel zu Ende schaut oder einen Favoriten markiert, kommt von selbst in die Warteschlange.",
   "jobs.task.make-trickplay.name": "Trickplay-Bilder erstellen",
   "jobs.task.make-trickplay.description":
     "Erstellt die Vorschaubilder der Zeitleiste für Videos, die keine haben oder deren Datei oder Einstellungen sich geändert haben, neueste zuerst. Scans reihen ihre neuen Dateien selbst ein. Löscht auch die Bilder von Dateien, die nicht mehr da sind.",

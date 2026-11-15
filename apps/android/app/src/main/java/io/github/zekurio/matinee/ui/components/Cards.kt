@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.ArtworkSize
+import io.github.zekurio.matinee.api.CatalogRef
 import io.github.zekurio.matinee.api.Favorite
 import io.github.zekurio.matinee.api.MediaItem
 import io.github.zekurio.matinee.api.Season
@@ -299,12 +300,14 @@ fun PosterCard(
     modifier: Modifier = Modifier,
     poster: ImageSource? = LocalApi.current.art(title.images.poster),
     onClick: (() -> Unit)? = null,
+    /** The title at TMDB when a recommendation row shows it, so its menu offers "Not interested". */
+    recommended: CatalogRef? = null,
 ) {
     val nav = LocalNavigator.current
     val actions = LocalActions.current
     val viewer = androidx.compose.ui.platform.LocalContext.current.app.viewer
     Column(modifier) {
-        Box(Modifier.cardClick(onClick ?: { nav.title(title) }, { actions.title(title) })) {
+        Box(Modifier.cardClick(onClick ?: { nav.title(title) }, { actions.title(title, recommended = recommended) })) {
             PosterArt(title.name, poster, watched = viewer.isWatched(title))
         }
         CardText(title.name, detail)

@@ -11,6 +11,7 @@ import {
   saveArtwork,
   toArtwork,
 } from "../media/artwork"
+import { discoverRails, discoverPage, sameSeed } from "../recommendations/read"
 import { availability } from "../requests/availability"
 import { withCachedDetails } from "../requests/cached-details"
 import { destinations, lookupLanguage } from "../requests/destinations"
@@ -34,13 +35,13 @@ export async function rails(viewer: Viewer) {
   const kinds: CatalogRef["kind"][] = []
   if (movies.length) kinds.push("movie")
   if (shows.length) kinds.push("show")
-  const result: Rail[] = []
+  const result: Rail[] = await discoverRails(viewer)
   const popular: Rail["id"][] = []
   if (movies.length) popular.push("popularFilms")
   if (shows.length) popular.push("popularShows")
   popular.push("comingSoon")
   for (const id of popular) {
-    result.push({ id })
+    result.push({ id, seed: null })
   }
   return { enabled: true, rails: result, browse: kinds }
 }
@@ -52,9 +53,11 @@ export async function page(
   const empty = { items: [], nextPage: null, stale: false }
   // Rebuild the rows from this viewer, so a client can't ask for another.
   const descriptor = (await rails(viewer)).rails.find(
-    (rail) => rail.id === input.rail.id,
+    (rail) => rail.id === input.rail.id && sameSeed(rail.seed, input.rail.seed),
   )
   if (!descriptor) return empty
+  if (descriptor.id === "forYou" || descriptor.id === "becauseWatched")
+    return discoverPage(viewer, descriptor, input.page)
   const [movies, shows] = await Promise.all([
     destinations(viewer, "movie"),
     destinations(viewer, "show"),

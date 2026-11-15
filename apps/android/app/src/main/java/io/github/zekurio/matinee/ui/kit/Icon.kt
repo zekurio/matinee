@@ -38,6 +38,7 @@ object Lucide {
     val Compass = R.drawable.lucide_compass
     val Download = R.drawable.lucide_download
     val Ellipsis = R.drawable.lucide_ellipsis
+    val EyeOff = R.drawable.lucide_eye_off
     val FastForward = R.drawable.lucide_fast_forward_filled
     val Film = R.drawable.lucide_film
     val FolderPlus = R.drawable.lucide_folder_plus

@@ -13,6 +13,7 @@ import { and, eq, inArray, type SQL, sql } from "drizzle-orm"
 
 import type { Tx } from "../auth/users"
 import { db } from "../db"
+import { queueRecommendations } from "../recommendations/enqueue"
 import { fileDuration } from "../stats/sql"
 
 /*
@@ -164,6 +165,7 @@ export async function markWatched(
         set: { completed: true, updatedAt: sql`now()` },
       })
   })
+  queueRecommendations(userId)
 }
 
 /**
@@ -195,4 +197,5 @@ export async function markUnwatched(
         ),
       )
   })
+  queueRecommendations(userId)
 }

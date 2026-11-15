@@ -9,6 +9,7 @@ import io.github.zekurio.matinee.api.MatineeApi
 import io.github.zekurio.matinee.api.MediaItem
 import io.github.zekurio.matinee.api.ShelfEntry
 import io.github.zekurio.matinee.api.TitleKind
+import io.github.zekurio.matinee.api.TitleSummary
 import io.github.zekurio.matinee.api.isShow
 import io.github.zekurio.matinee.ui.components.ImageSource
 import io.github.zekurio.matinee.ui.components.ShelfCardModel
@@ -96,3 +97,18 @@ fun shelfInfo(entry: ShelfEntry, card: ShelfCardModel, api: MatineeApi, res: Res
         backdrop = listOfNotNull(api.art(title.images.backdrop, ArtworkSize.Large), api.frame(entry.item.id, large = true)),
     )
 }
+
+/** A movie or show by itself, as a recommendation row shows it. */
+fun titleInfo(title: TitleSummary, api: MatineeApi, res: Resources): FocusedItem = FocusedItem(
+    name = title.name,
+    logo = title.images.logo,
+    subtitle = null,
+    facts = listOfNotNull(
+        title.year?.toString(),
+        if (title.kind == TitleKind.MOVIE) formatRuntime(title.runtimeMinutes, res) else null,
+    ),
+    contentRating = title.contentRating,
+    rating = title.rating,
+    overview = title.overview,
+    backdrop = listOfNotNull(api.art(title.images.backdrop, ArtworkSize.Large)),
+)

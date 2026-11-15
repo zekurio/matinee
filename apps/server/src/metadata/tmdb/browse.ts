@@ -42,6 +42,9 @@ export const BrowseResult = t.object({
 /** A browse as TMDB's discover endpoint takes it, already checked. */
 export type DiscoverQuery = {
   genres: number[]
+  genreOr?: boolean
+  keywords?: number[]
+  people?: string[]
   yearFrom: number | null
   yearTo: number | null
   scoreMin: number | null
@@ -82,7 +85,12 @@ export async function discover(
     ["sort_by", `${by}.${query.sort.direction}`],
   ])
   // A comma asks for every genre at once, as TMDB's own site does.
-  if (query.genres.length) params.set("with_genres", query.genres.join(","))
+  if (query.genres.length)
+    params.set("with_genres", query.genres.join(query.genreOr ? "|" : ","))
+  if (query.keywords?.length)
+    params.set("with_keywords", query.keywords.join("|"))
+  if (kind === "movie" && query.people?.length)
+    params.set("with_people", query.people.join("|"))
   if (query.yearFrom !== null)
     params.set(`${date}.gte`, `${query.yearFrom}-01-01`)
   if (query.yearTo !== null) params.set(`${date}.lte`, `${query.yearTo}-12-31`)

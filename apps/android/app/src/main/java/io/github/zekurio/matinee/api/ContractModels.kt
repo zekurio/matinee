@@ -409,8 +409,15 @@ data class RequestQueue(
 }
 
 @Serializable
+data class RecommendationSeed(
+    val ref: CatalogRef,
+    val name: String,
+)
+
+@Serializable
 data class DiscoverRail(
     val id: String,
+    val seed: RecommendationSeed? = null,
 )
 
 @Serializable
@@ -418,6 +425,38 @@ data class DiscoverRails(
     val enabled: Boolean,
     val rails: List<DiscoverRail>,
     val browse: List<String>,
+)
+
+@Serializable
+data class RecommendationReason(
+    val kind: String,
+    val name: String?,
+)
+
+object RecommendationRailId {
+    const val FOR_YOU = "forYou"
+    const val BECAUSE_WATCHED = "becauseWatched"
+    val all = listOf(FOR_YOU, BECAUSE_WATCHED)
+}
+
+@Serializable
+data class RecommendedTitle(
+    val ref: CatalogRef,
+    val title: TitleSummary,
+    val reason: RecommendationReason?,
+)
+
+@Serializable
+data class HomeRecommendationRail(
+    val id: String,
+    val seed: RecommendationSeed?,
+    val items: List<RecommendedTitle>,
+)
+
+@Serializable
+data class HomeRecommendations(
+    val rails: List<HomeRecommendationRail>,
+    val computedAt: String?,
 )
 
 object CatalogSort {
@@ -1929,7 +1968,9 @@ object JobQueueId {
     const val REQUEST_ARRIVAL = "request-arrival"
     const val NOTIFICATIONS = "notifications"
     const val CATALOG = "catalog"
-    val all = listOf(LIBRARY_SCAN, MEDIA_PROBE, METADATA, THUMBNAILS, SUBTITLE_PREPARE, TRICKPLAY, MEDIA_SEGMENTS, ARTWORK, SUBTITLES, SUBTITLE_FONTS, AVATARS, DOWNLOADS, DOWNLOAD_COPIES, REQUEST_DISPATCH, REQUEST_PROGRESS, REQUEST_ARRIVAL, NOTIFICATIONS, CATALOG)
+    const val TITLE_FEATURES = "title-features"
+    const val RECOMMENDATIONS = "recommendations"
+    val all = listOf(LIBRARY_SCAN, MEDIA_PROBE, METADATA, THUMBNAILS, SUBTITLE_PREPARE, TRICKPLAY, MEDIA_SEGMENTS, ARTWORK, SUBTITLES, SUBTITLE_FONTS, AVATARS, DOWNLOADS, DOWNLOAD_COPIES, REQUEST_DISPATCH, REQUEST_PROGRESS, REQUEST_ARRIVAL, NOTIFICATIONS, CATALOG, TITLE_FEATURES, RECOMMENDATIONS)
 }
 
 @Serializable
@@ -1966,6 +2007,7 @@ object TaskId {
     const val PROBE_MEDIA = "probe-media"
     const val PREFETCH_ARTWORK = "prefetch-artwork"
     const val PREPARE_DISCOVER = "prepare-discover"
+    const val RECOMMEND_TITLES = "recommend-titles"
     const val PREPARE_SUBTITLES = "prepare-subtitles"
     const val MAKE_TRICKPLAY = "make-trickplay"
     const val FIND_SEGMENTS = "find-segments"
@@ -1973,7 +2015,7 @@ object TaskId {
     const val CLEAN_SESSIONS = "clean-sessions"
     const val FORGET_BROWSED_PAGES = "forget-browsed-pages"
     const val SYNC_OIDC_ACCOUNTS = "sync-oidc-accounts"
-    val all = listOf(DISPATCH_REQUESTS, POLL_REQUESTS, RECONCILE_REQUESTS, SCAN_LIBRARIES, REFRESH_METADATA, PROBE_MEDIA, PREFETCH_ARTWORK, PREPARE_DISCOVER, PREPARE_SUBTITLES, MAKE_TRICKPLAY, FIND_SEGMENTS, CLEAN_TRANSCODES, CLEAN_SESSIONS, FORGET_BROWSED_PAGES, SYNC_OIDC_ACCOUNTS)
+    val all = listOf(DISPATCH_REQUESTS, POLL_REQUESTS, RECONCILE_REQUESTS, SCAN_LIBRARIES, REFRESH_METADATA, PROBE_MEDIA, PREFETCH_ARTWORK, PREPARE_DISCOVER, RECOMMEND_TITLES, PREPARE_SUBTITLES, MAKE_TRICKPLAY, FIND_SEGMENTS, CLEAN_TRANSCODES, CLEAN_SESSIONS, FORGET_BROWSED_PAGES, SYNC_OIDC_ACCOUNTS)
 }
 
 object TaskResult {
@@ -2904,6 +2946,12 @@ object WatchedAt {
     const val UNKNOWN = "unknown"
     val all = listOf(RELEASED, UNKNOWN)
 }
+
+@Serializable
+data class RecommendationsDismissInput(
+    val ref: CatalogRef,
+    val dismissed: Boolean,
+)
 
 @Serializable
 data class CatalogRelatedTitlesInput(

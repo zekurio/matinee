@@ -13,6 +13,7 @@ import {
   type UseQueryResult,
   useQueries,
   useQuery,
+  useQueryClient,
 } from "@tanstack/react-query"
 import { Link, useRouteContext } from "@tanstack/react-router"
 import {
@@ -34,12 +35,14 @@ import {
 import { Rail, RailItem } from "@/components/rail"
 import { tr } from "@/i18n"
 import { formatDay, parseDay } from "@/lib/format"
+import { useDismissedStore } from "@/stores/recommendations"
 
 import {
   type Rail as RailInfo,
   RAIL_CARDS,
   railName,
   railPageOptions,
+  railKey,
   railLink,
   railsOptions,
 } from "./discover-data"
@@ -104,7 +107,7 @@ export function DiscoverRails() {
         </RailsNote>
       )}
       {rows.map(({ rail, page }) => (
-        <DiscoverRow key={rail.id} rail={rail} page={page} live={live} />
+        <DiscoverRow key={railKey(rail)} rail={rail} page={page} live={live} />
       ))}
     </div>
   )
@@ -148,7 +151,7 @@ export function releaseLine(
 export function RailHeading({ rail }: { rail: RailInfo }) {
   return (
     <Link
-      {...railLink(rail.id)}
+      {...railLink(rail)}
       className="focus-visible:ring-ring group/heading inline-flex max-w-full items-center gap-1 rounded-sm outline-none focus-visible:ring-2"
     >
       <span className="truncate">{railName(rail)}</span>
@@ -170,6 +173,7 @@ function DiscoverRow({
   live: LiveEntry[] | undefined
 }) {
   const title = railName(rail)
+  const dismiss = useRailDismiss(rail)
   return (
     <Rail title={title} heading={<RailHeading rail={rail} />}>
       {page.isPending || (page.isError && page.isFetching) ? (
@@ -177,18 +181,38 @@ function DiscoverRow({
       ) : page.isError ? (
         <RailFailed onRetry={() => void page.refetch()} />
       ) : (
-        page.data.items.slice(0, RAIL_CARDS).map((item) => (
-          <RailItem key={refKey(item.ref)} artwork="poster">
-            <CatalogCard
-              title={item}
-              availability={liveEntry(live, item.ref)?.availability}
-              detail={releaseLine(rail.id, item)}
-            />
-          </RailItem>
-        ))
+        page.data.items
+          .filter((item) => !dismiss.hidden.has(refKey(item.ref)))
+          .slice(0, RAIL_CARDS)
+          .map((item) => (
+            <RailItem key={refKey(item.ref)} artwork="poster">
+              <CatalogCard
+                title={item}
+                availability={liveEntry(live, item.ref)?.availability}
+                detail={releaseLine(rail.id, item)}
+                dismiss={dismiss.of(item)}
+              />
+            </RailItem>
+          ))
       )}
     </Rail>
   )
+}
+
+/**
+ * "Not interested" for the cards of a recommendation row, and the titles
+ * already hidden from it. Other rows offer none.
+ */
+export function useRailDismiss(rail: RailInfo) {
+  const queryClient = useQueryClient()
+  const hidden = useDismissedStore((state) => state.hidden)
+  const dismiss = useDismissedStore((state) => state.dismiss)
+  const recommended = rail.id === "forYou" || rail.id === "becauseWatched"
+  return {
+    hidden: recommended ? hidden : new Set<string>(),
+    of: (item: CatalogSummary) =>
+      recommended ? () => dismiss(queryClient, item.ref, item.name) : undefined,
+  }
 }
 
 /** In a row's place, when its cards didn't load. */

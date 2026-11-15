@@ -11,6 +11,7 @@ import kotlinx.serialization.json.JsonElement
 
 /** The contract's procedures, grouped as its router is. */
 open class ContractApi(transport: ApiTransport) {
+    val recommendations = RecommendationsApi(transport)
     val catalog = CatalogApi(transport)
     val discover = DiscoverApi(transport)
     val requests = RequestsApi(transport)
@@ -31,6 +32,28 @@ open class ContractApi(transport: ApiTransport) {
     val profiles = ProfilesApi(transport)
     val stats = StatsApi(transport)
     val admin = AdminApi(transport)
+}
+
+class RecommendationsApi internal constructor(private val transport: ApiTransport) {
+    /** `GET /recommendations/home` */
+    suspend fun home(): HomeRecommendations =
+        transport.call(
+            "GET",
+            listOf("recommendations", "home"),
+            emptyList(),
+            null,
+            HomeRecommendations.serializer(),
+        )
+
+    /** `PUT /recommendations/dismissed` */
+    suspend fun dismiss(ref: CatalogRef, dismissed: Boolean) {
+        transport.send(
+            "PUT",
+            listOf("recommendations", "dismissed"),
+            emptyList(),
+            transport.json(RecommendationsDismissInput.serializer(), RecommendationsDismissInput(ref = ref, dismissed = dismissed)),
+        )
+    }
 }
 
 class CatalogApi internal constructor(private val transport: ApiTransport) {

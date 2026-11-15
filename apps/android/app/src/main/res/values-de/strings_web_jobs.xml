@@ -17,6 +17,10 @@
     <string name="web_jobs_queue_notifications_description">Gespeicherte Benachrichtigungen per Web-Push zustellen.</string>
     <string name="web_jobs_queue_catalog_name">Katalog</string>
     <string name="web_jobs_queue_catalog_description">Zwischengespeicherte Katalog- und Entdecken-Antworten aktualisieren.</string>
+    <string name="web_jobs_queue_title_features_name">Titelmerkmale</string>
+    <string name="web_jobs_queue_title_features_description">Genres, Schlagwörter und Beteiligte von Titeln bei TMDB holen, für Empfehlungen.</string>
+    <string name="web_jobs_queue_recommendations_name">Empfehlungen</string>
+    <string name="web_jobs_queue_recommendations_description">Die Empfehlungen jeder Person aus dem berechnen, was sie geschaut hat.</string>
     <string name="web_jobs_queues">Hintergrundaufgaben</string>
     <string name="web_jobs_loadFailed">Die Aufträge konnten nicht geladen werden. %1$s</string>
     <string name="web_jobs_retry">Erneut versuchen</string>
@@ -39,6 +43,8 @@
     <string name="web_jobs_task_prepare_subtitles_description">Indizierte Textuntertitel zwischenspeichern und Ausgaben entfernter oder geänderter Dateien löschen. Bilduntertitel bleiben auf Abruf.</string>
     <string name="web_jobs_queue_trickplay_name">Trickplay-Bilder</string>
     <string name="web_jobs_queue_trickplay_description">Erstellt die Vorschaubilder, die die Zeitleiste beim Spulen zeigt.</string>
+    <string name="web_jobs_queue_media_segments_name">Intros und Abspann</string>
+    <string name="web_jobs_queue_media_segments_description">Findet Intro und Abspann jeder Folge, für „Intro überspringen“ und um die nächste Folge schon während des Abspanns anzubieten.</string>
     <string name="web_jobs_queue_artwork_name">Artwork</string>
     <string name="web_jobs_queue_artwork_description">Lädt Bilder vom Metadatenanbieter herunter, skaliert sie und liest ihre unscharfen Platzhalter aus.</string>
     <string name="web_jobs_queue_subtitle_fonts_name">Untertitelschriften</string>
@@ -85,8 +91,12 @@
     <string name="web_jobs_task_prefetch_artwork_description">Lädt Bilder herunter, für die der Server noch keinen unscharfen Platzhalter hat, Poster und Hintergründe zuerst. Metadatenabrufe reihen ihre Bilder selbst ein; diese Aufgabe holt nach einem Neustart oder einem fehlgeschlagenen Download auf.</string>
     <string name="web_jobs_task_prepare_discover_name">Entdecken vorbereiten</string>
     <string name="web_jobs_task_prepare_discover_description">Liest die Reihen von Entdecken vorab und holt ihre Poster, damit sie schon beim ersten Öffnen ihre unscharfen Platzhalter zeigen.</string>
+    <string name="web_jobs_task_recommend_titles_name">Empfehlungen aktualisieren</string>
+    <string name="web_jobs_task_recommend_titles_description">Berechnet die Empfehlungen neu für alle, die seitdem etwas geschaut haben oder deren Liste einen Tag alt ist. Wer einen Titel zu Ende schaut oder einen Favoriten markiert, kommt von selbst in die Warteschlange.</string>
     <string name="web_jobs_task_make_trickplay_name">Trickplay-Bilder erstellen</string>
     <string name="web_jobs_task_make_trickplay_description">Erstellt die Vorschaubilder der Zeitleiste für Videos, die keine haben oder deren Datei oder Einstellungen sich geändert haben, neueste zuerst. Scans reihen ihre neuen Dateien selbst ein. Löscht auch die Bilder von Dateien, die nicht mehr da sind.</string>
+    <string name="web_jobs_task_find_segments_name">Intros und Abspann finden</string>
+    <string name="web_jobs_task_find_segments_description">Sucht Intro und Abspann von Folgen, die noch nicht untersucht wurden oder deren Datei sich geändert hat, in ihren Kapiteln und im Ton, den sie mit ihrer Staffel teilen. Scans reihen ihre neuen Dateien selbst ein.</string>
     <string name="web_jobs_task_clean_transcodes_name">Transkodierungen aufräumen</string>
     <string name="web_jobs_task_clean_sessions_name">Abgelaufene Sitzungen löschen</string>
     <string name="web_jobs_task_clean_sessions_description">Entfernt abgelaufene Anmeldungen aus der Datenbank.</string>

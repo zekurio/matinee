@@ -45,7 +45,9 @@ import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.Loader
 import io.github.zekurio.matinee.ui.LocalNavigator
 import io.github.zekurio.matinee.ui.TopBar
+import io.github.zekurio.matinee.ui.components.LocalActions
 import io.github.zekurio.matinee.ui.components.LocalApi
+import io.github.zekurio.matinee.ui.components.LocalSnackbar
 import io.github.zekurio.matinee.ui.components.Rail
 import io.github.zekurio.matinee.ui.components.RailArt
 import io.github.zekurio.matinee.ui.components.railItemWidth
@@ -55,7 +57,12 @@ import io.github.zekurio.matinee.ui.kit.Gutter
 import io.github.zekurio.matinee.ui.kit.Lucide
 import io.github.zekurio.matinee.ui.kit.LucideIcon
 import io.github.zekurio.matinee.ui.kit.MatineeButton
+import io.github.zekurio.matinee.ui.kit.Sheet
+import io.github.zekurio.matinee.ui.kit.SheetHeader
+import io.github.zekurio.matinee.ui.kit.SheetItem
 import io.github.zekurio.matinee.ui.kit.Spinner
+import io.github.zekurio.matinee.ui.kit.rememberSheetCloser
+import io.github.zekurio.matinee.ui.kit.rememberSheetState
 import io.github.zekurio.matinee.ui.rememberLoader
 import io.github.zekurio.matinee.ui.theme.Palette
 import java.io.IOException
@@ -72,12 +79,20 @@ import kotlinx.coroutines.launch
 /** How many cards a row shows. Its heading leads to the rest. */
 private const val RAIL_CARDS = 20
 
-/** "Popular movies". */
+/** "Popular movies", or "Because you watched Dune". */
 fun railName(rail: DiscoverRail, res: Resources): String = when (rail.id) {
     "popularFilms" -> res.getString(R.string.web_discover_rail_popularFilms)
     "popularShows" -> res.getString(R.string.web_discover_rail_popularShows)
+    "forYou" -> res.getString(R.string.web_discover_rail_forYou)
+    "becauseWatched" -> res.getString(R.string.web_discover_rail_becauseWatched, rail.seed?.name.orEmpty())
     else -> res.getString(R.string.web_discover_rail_comingSoon)
 }
+
+/** Tells rows apart, for keys and the row's own screen: there can be several "Because you watched". */
+fun railKey(rail: DiscoverRail): String = rail.seed?.let { "${rail.id}:${it.ref.key}" } ?: rail.id
+
+/** Whether the row holds the viewer's recommendations, whose cards offer "Not interested". */
+private fun recommended(rail: DiscoverRail) = rail.id == "forYou" || rail.id == "becauseWatched"
 
 /** Coming soon says when, where other rows say the year: "14 Aug · Movie". */
 fun releaseLine(rail: String, item: CatalogTitleSummary, res: Resources): String? {
@@ -97,15 +112,15 @@ fun rememberDiscover(): Loader<io.github.zekurio.matinee.api.DiscoverRails> = re
  */
 fun LazyListScope.discoverRails(rails: List<DiscoverRail>, pages: Map<String, Loader<CatalogPage>>) {
     rails.forEach { rail ->
-        val page = pages[rail.id] ?: return@forEach
-        item(key = "discover-${rail.id}") { DiscoverRow(rail, page) }
+        val page = pages[railKey(rail)] ?: return@forEach
+        item(key = "discover-${railKey(rail)}") { DiscoverRow(rail, page) }
     }
 }
 
 /** The first page of each of [rails], kept while the search tab is. */
 @Composable
 fun rememberRailPages(rails: List<DiscoverRail>): Map<String, Loader<CatalogPage>> =
-    rails.associate { rail -> rail.id to rememberLoader("discover-${rail.id}") { discover.page(rail, 1) } }
+    rails.associate { rail -> railKey(rail) to rememberLoader("discover-${railKey(rail)}") { discover.page(rail, 1) } }
 
 /** Follows the titles the rows show, once each, under the stream's hundred. */
 @Composable
@@ -124,7 +139,8 @@ private fun DiscoverRow(rail: DiscoverRail, page: Loader<CatalogPage>) {
         Load.Loading -> io.github.zekurio.matinee.ui.home.RailSkeleton(title, RailArt.Poster)
         is Load.Failed -> RailFailed(title, page::reload)
         is Load.Ready -> {
-            val items = state.value.items.take(RAIL_CARDS)
+            val hidden = LocalActions.current.hidden
+            val items = state.value.items.filter { !recommended(rail) || it.ref.key !in hidden }.take(RAIL_CARDS)
             if (items.isEmpty()) return
             // The popular rows' headings open browsing that kind, as the web's do.
             Rail(
@@ -133,13 +149,45 @@ private fun DiscoverRow(rail: DiscoverRail, page: Loader<CatalogPage>) {
                     when (rail.id) {
                         "popularFilms" -> nav.catalogBrowse(TitleKind.MOVIE)
                         "popularShows" -> nav.catalogBrowse(TitleKind.SHOW)
-                        else -> nav.discoverRail(rail.id)
+                        else -> nav.discoverRail(railKey(rail))
                     }
                 },
             ) {
                 items(items, key = { it.ref.key }) { item ->
-                    CatalogCard(item, Modifier.width(railItemWidth(RailArt.Poster)), detail = releaseLine(rail.id, item, res))
+                    CatalogCard(
+                        item,
+                        Modifier.width(railItemWidth(RailArt.Poster)),
+                        detail = releaseLine(rail.id, item, res),
+                        onLongClick = notInterested(rail, item),
+                    )
                 }
+            }
+        }
+    }
+}
+
+/** A long press for [item]'s card in [rail]: "Not interested" in a recommendation, nothing elsewhere. */
+@Composable
+private fun notInterested(rail: DiscoverRail, item: CatalogTitleSummary): (() -> Unit)? {
+    val actions = LocalActions.current
+    return if (recommended(rail)) ({ actions.notInterested = item }) else null
+}
+
+/** The sheet a recommended title's long press opens, with "Not interested". The app's root holds it. */
+@Composable
+fun NotInterestedSheet(item: CatalogTitleSummary, onDismiss: () -> Unit) {
+    val api = LocalApi.current
+    val actions = LocalActions.current
+    val snackbar = LocalSnackbar.current
+    val sheet = rememberSheetState()
+    val close = rememberSheetCloser(sheet, onDismiss)
+    val done = stringResource(R.string.web_discover_dismissed, item.name)
+    val failure = stringResource(R.string.web_discover_dismissFailed, item.name)
+    Sheet(onDismissRequest = onDismiss, state = sheet) {
+        Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(vertical = 12.dp)) {
+            SheetHeader(item.name, item.year?.toString())
+            SheetItem(Lucide.EyeOff, stringResource(R.string.web_discover_notInterested)) {
+                close { actions.hideRecommendation(api, snackbar, item.ref, done, failure) }
             }
         }
     }
@@ -217,7 +265,7 @@ fun DiscoverRailScreen(id: String) {
     val res = LocalResources.current
     val rails = rememberDiscover()
     val answer = (rails.state as? Load.Ready)?.value
-    val rail = answer?.takeIf { it.enabled }?.rails?.firstOrNull { it.id == id }
+    val rail = answer?.takeIf { it.enabled }?.rails?.firstOrNull { railKey(it) == id }
     Column(Modifier.fillMaxSize()) {
         TopBar(rail?.let { railName(it, res) } ?: stringResource(R.string.web_discover_title))
         when {
@@ -238,6 +286,7 @@ fun DiscoverRailScreen(id: String) {
 @Composable
 private fun RailGrid(rail: DiscoverRail, api: io.github.zekurio.matinee.api.MatineeApi) {
     val res = LocalResources.current
+    val hidden = LocalActions.current.hidden
     val pages = remember(rail) { RailPages() }
     val scope = rememberCoroutineScope()
     val more = {
@@ -303,8 +352,8 @@ private fun RailGrid(rail: DiscoverRail, api: io.github.zekurio.matinee.api.Mati
                 Text(stringResource(R.string.web_discover_stale), style = MaterialTheme.typography.bodyMedium, color = Palette.Muted)
             }
         }
-        itemsIndexed(pages.items, key = { _, item -> item.ref.key }) { _, item ->
-            CatalogCard(item, detail = releaseLine(rail.id, item, res))
+        itemsIndexed(pages.items.filter { !recommended(rail) || it.ref.key !in hidden }, key = { _, item -> item.ref.key }) { _, item ->
+            CatalogCard(item, detail = releaseLine(rail.id, item, res), onLongClick = notInterested(rail, item))
         }
         item(span = { GridItemSpan(maxLineSpan) }, key = "end") {
             Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {

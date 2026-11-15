@@ -21,6 +21,7 @@ import {
 import { discoverContract } from "./discover"
 import { adminFulfilmentContract } from "./fulfilment"
 import { notificationsContract } from "./notifications"
+import { recommendationsContract } from "./recommendations"
 import { requestsContract, adminRequestsContract } from "./requests"
 
 /**
@@ -33,6 +34,7 @@ import { requestsContract, adminRequestsContract } from "./requests"
 export const contract = {
   catalog: catalogContract,
   discover: discoverContract,
+  recommendations: recommendationsContract,
   requests: requestsContract,
   notifications: notificationsContract,
   auth: authContract,

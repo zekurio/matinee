@@ -1,10 +1,23 @@
 import { CatalogPage, RelatedTitle } from "./catalog"
 import { get, post } from "./contract-routes"
+import { RecommendationSeed } from "./recommendations"
 import { t } from "./schema"
 import { TitleKind } from "./schemas"
 
+/**
+ * A row of Discover. "forYou" and "becauseWatched" are the viewer's
+ * recommendations of titles to ask for; a "becauseWatched" row names
+ * the title it starts from in `seed`, which is null for every other row.
+ */
 export const DiscoverRail = t.object({
-  id: t.enum(["popularFilms", "popularShows", "comingSoon"]),
+  id: t.enum([
+    "popularFilms",
+    "popularShows",
+    "comingSoon",
+    "forYou",
+    "becauseWatched",
+  ]),
+  seed: RecommendationSeed.nullable().$default(null),
 })
 
 export const DiscoverRails = t.object({

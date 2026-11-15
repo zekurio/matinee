@@ -18,6 +18,7 @@ import { prepareMissingSubtitles } from "../media/subtitles"
 import { makeMissingTrickplay, sweepTrickplay } from "../media/trickplay"
 import { refreshMetadata } from "../metadata/refresh"
 import { events } from "../realtime/events"
+import { queueStaleRecommendations } from "../recommendations/compute"
 import { arrivals } from "../requests/arrival"
 import { dispatchQueued } from "../requests/dispatch"
 import { pollProgress } from "../requests/poll"
@@ -100,6 +101,17 @@ const readDiscover: TaskDefinition = {
   // As long as a feed stays cached.
   intervalMs: CACHE_HOURS.feed * HOUR_MS,
   run: ({ signal }) => prepareDiscover({ signal }),
+}
+
+const recommendTitles: TaskDefinition = {
+  id: "recommend-titles",
+  name: "Update recommendations",
+  description:
+    "Work out recommendations again for people who watched something since, or whose list is a day old. Finishing a title or marking a favorite queues the person on its own.",
+  queue: "recommendations",
+  startupDelayMs: 5 * MINUTE_MS,
+  intervalMs: 6 * HOUR_MS,
+  run: () => queueStaleRecommendations(),
 }
 
 const fetchArtwork: TaskDefinition = {
@@ -232,6 +244,7 @@ export const TASKS: TaskDefinition[] = [
   probeMedia,
   fetchArtwork,
   readDiscover,
+  recommendTitles,
   prepareSubtitles,
   makeTrickplay,
   findSegments,

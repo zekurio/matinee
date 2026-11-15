@@ -147,6 +147,7 @@ private fun OnlineHomeScreen() {
 
             episodeRail("continue", R.string.browse_continue_watching, R.string.home_continue_failed, resume)
             episodeRail("nextUp", R.string.browse_next_up, R.string.home_next_up_failed, nextUp)
+            recommendationRails(loaders.recommendations)
             item(key = "asked") { HomeAskedRail() }
             when (val state = libraries.state) {
                 Load.Loading -> item(key = "shelves-loading") { RailSkeleton(null, RailArt.Poster) }
