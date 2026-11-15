@@ -616,6 +616,7 @@ export async function queue(
           ? {
               id: connection.id,
               name: connection.name,
+              sourceName: source?.name ?? connection.name,
               reportsProgress: !!source?.progress,
             }
           : null,

@@ -371,6 +371,7 @@ data class AdminRequestItem(
     data class Connection(
         val id: String,
         val name: String,
+        val sourceName: String,
         val reportsProgress: Boolean,
     )
 

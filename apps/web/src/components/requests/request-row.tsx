@@ -610,7 +610,9 @@ function RowMenu({
             }
           >
             <ExternalLinkIcon />
-            {tr("requests.openRemote", { connection: item.connection.name })}
+            {tr("requests.openRemote", {
+              connection: item.connection.sourceName,
+            })}
           </DropdownMenuItem>
         )}
         {/* A declined request's removal is "Allow requests again",
