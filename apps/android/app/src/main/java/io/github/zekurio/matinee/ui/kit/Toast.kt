@@ -7,7 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.indication
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
@@ -69,27 +69,33 @@ fun ToastHost(state: ToastState, modifier: Modifier = Modifier, toast: (@Composa
 
 /**
  * One toast: the popover's color, `rounded-xl`, a border, and a shadow
- * under it. An [action] sits under the message at the end, in the
- * primary color, as sonner's button does; [onClose] adds the round close
- * button over the top corner.
+ * under it. An [action] sits right of the message, centered on the
+ * toast's height, in the primary color, as sonner's button does;
+ * [onClose] adds the round close button over the top corner.
  */
 @Composable
 fun Toast(message: String, modifier: Modifier = Modifier, action: String? = null, onAction: () -> Unit = {}, onClose: (() -> Unit)? = null) {
     Box(modifier.padding(16.dp).fillMaxWidth()) {
-        Column(
+        // With an action, the button's finger room stands in for most of
+        // the vertical padding, so the toast stays 52dp tall as the web's.
+        val inset = if (action != null) 2.dp else 12.dp
+        Row(
             Modifier
                 .fillMaxWidth()
                 .shadow(16.dp, Shapes.Xl)
                 .clip(Shapes.Xl)
                 .background(Palette.Raised)
                 .border(1.dp, Palette.Border, Shapes.Xl)
-                // A button's finger room stands in for the bottom padding.
-                .padding(start = 14.dp, end = 14.dp, top = 12.dp, bottom = if (action != null) 2.dp else 12.dp),
+                .padding(start = 14.dp, end = 14.dp, top = inset, bottom = inset),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
                 message,
+                Modifier
+                    .weight(1f)
+                    .padding(vertical = 12.dp - inset),
                 style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium,
+                fontWeight = FontWeight.SemiBold,
                 color = Palette.Foreground,
             )
             if (action != null) {
@@ -97,7 +103,7 @@ fun Toast(message: String, modifier: Modifier = Modifier, action: String? = null
                 // 28dp tall as the web's, in 48dp a finger can hit.
                 Box(
                     Modifier
-                        .align(Alignment.End)
+                        .padding(start = 10.dp)
                         .minimumInteractiveComponentSize()
                         .clickable(interaction, indication = null, role = Role.Button, onClick = onAction),
                     contentAlignment = Alignment.Center,
