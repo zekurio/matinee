@@ -1,4 +1,4 @@
-import type { PlaybackQuality, PlaybackSnap } from "@matinee/contracts"
+import type { PlaybackQuality } from "@matinee/contracts"
 import { type RefObject, useEffect } from "react"
 import { useShallow } from "zustand/shallow"
 
@@ -61,13 +61,14 @@ export function usePlayback(options: PlaybackOptions) {
   )
   const clock = playbackClock(core)
   const starters = sourceStarters(core)
-  const seek = seeker(core, clock, starters)
+  const { onLoaded, onBuffered, onTimeUpdate, heldStill, setPlayOnLoad } =
+    loadEvents(core)
+  const seek = seeker(core, clock, starters, onBuffered)
   const { selectAudio, selectQuality, selectSubtitle } = sourceSwitch(
     core,
     clock.now,
     starters,
   )
-  const { onLoaded, onTimeUpdate, heldStill, setPlayOnLoad } = loadEvents(core)
   const onError = errorFallback(core, clock.position, starters)
 
   return {
@@ -82,12 +83,14 @@ export function usePlayback(options: PlaybackOptions) {
     tracks: plan.audioTracks,
     quality,
     position: clock.position,
+    now: clock.now,
     duration: clock.duration,
     seek,
     selectAudio,
     selectQuality,
     selectSubtitle,
     onLoaded,
+    onBuffered,
     onTimeUpdate,
     heldStill,
     setPlayOnLoad,
@@ -99,14 +102,15 @@ function seeker(
   { video, store, refs }: PlaybackCore,
   { duration }: ReturnType<typeof playbackClock>,
   { ask, seekStream }: SourceStarters,
+  begin: () => void,
 ) {
-  return (to: number, snap: PlaybackSnap = "nearest") => {
+  return (to: number) => {
     const el = video.current
     if (!el) return
     const target = Math.max(0, Math.min(duration() || to, to))
     // An answer on its way would start where the viewer was, so ask again.
     if (refs.asking.current) {
-      void ask({ at: target, snap, still: true })
+      void ask({ at: target, still: true })
       return
     }
     const { source } = store.getState()
@@ -118,12 +122,21 @@ function seeker(
       return
     }
     if (inSource >= 0 && canSeekTo(el, inSource)) {
+      // A copied stream still waiting for the frames up to its start
+      // plays from here instead, or it would jump back there later.
+      if (refs.seekOnLoad.current !== null) {
+        refs.seekOnLoad.current = inSource
+        refs.startsAt.current = target
+        store.getState().setPending(target)
+        begin()
+        return
+      }
       el.currentTime = inSource
       return
     }
-    if (source.method === "remux") void seekStream(target, snap)
+    if (source.method === "remux") void seekStream(target)
     // An encode that isn't HLS starts anywhere, from a new answer.
-    else void ask({ at: target, snap, still: true })
+    else void ask({ at: target, still: true })
   }
 }
 
@@ -164,14 +177,24 @@ function sourceSwitch(
 function loadEvents({ video, store, refs }: PlaybackCore) {
   const { seekOnLoad, startsAt, playOnLoad, holding, played } = refs
 
-  /** For the video's `loadedmetadata`. */
-  const onLoaded = () => {
+  /**
+   * Plays the source that loaded from its start. A copied stream begins on
+   * the keyframe before it and can only seek within what it has, so it
+   * waits for the frames up to its start, which come in quickly; until
+   * then the seek bar stays where the viewer asked. Once the stream has
+   * all it will send, it goes as far as it can.
+   */
+  const begin = () => {
     const el = video.current
-    if (!el) return
-    // A new source drops the hold's pause event if it hadn't fired yet.
-    holding.current = false
-    if (seekOnLoad.current !== null) {
-      el.currentTime = seekOnLoad.current
+    // Nothing on its way, or it hasn't loaded yet.
+    if (!el || startsAt.current === null) return
+    if (el.readyState < HTMLMediaElement.HAVE_METADATA) return
+    const target = seekOnLoad.current
+    if (target !== null) {
+      const copied = store.getState().source.method === "remux"
+      const done = el.networkState === HTMLMediaElement.NETWORK_IDLE
+      if (copied && !done && !canSeekTo(el, target)) return
+      el.currentTime = target
       seekOnLoad.current = null
     }
     startsAt.current = null
@@ -181,6 +204,13 @@ function loadEvents({ video, store, refs }: PlaybackCore) {
         // Autoplay is blocked until the viewer interacts; they press play.
       })
     }
+  }
+
+  /** For the video's `loadedmetadata`. */
+  const onLoaded = () => {
+    // A new source drops the hold's pause event if it hadn't fired yet.
+    holding.current = false
+    begin()
   }
 
   /** For the video's `timeupdate`: notes the methods that play. */
@@ -207,7 +237,7 @@ function loadEvents({ video, store, refs }: PlaybackCore) {
     playOnLoad.current = on
   }
 
-  return { onLoaded, onTimeUpdate, heldStill, setPlayOnLoad }
+  return { onLoaded, onBuffered: begin, onTimeUpdate, heldStill, setPlayOnLoad }
 }
 
 /**

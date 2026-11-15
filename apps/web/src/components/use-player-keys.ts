@@ -1,4 +1,4 @@
-import { type LucideIcon, RotateCcwIcon, RotateCwIcon } from "lucide-react"
+import { FastForwardIcon, type LucideIcon, RewindIcon } from "lucide-react"
 import { useEffect, useEffectEvent } from "react"
 
 import { tr } from "@/i18n"
@@ -58,12 +58,12 @@ export function usePlayerKeys({
     if (event.metaKey || event.ctrlKey || event.altKey) return
     const back = () => {
       skip(-skipBackSeconds)
-      show(RotateCcwIcon, tr("player.flash.skip", { seconds: skipBackSeconds }))
+      show(RewindIcon, tr("player.flash.skip", { seconds: skipBackSeconds }))
     }
     const ahead = () => {
       skip(skipForwardSeconds)
       show(
-        RotateCwIcon,
+        FastForwardIcon,
         tr("player.flash.skip", { seconds: skipForwardSeconds }),
       )
     }

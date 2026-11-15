@@ -267,7 +267,9 @@ function Player({
     tellPlaying(play)
   }
   const skip = (by: number) => {
-    const target = Math.max(0, position() + by)
+    // From where a seek on its way is headed, so presses while the new
+    // stream loads add up instead of starting from the old picture.
+    const target = Math.max(0, playback.now() + by)
     actions.setTime(target)
     seek(target)
   }
@@ -452,6 +454,7 @@ function Player({
         }}
         onDurationChange={() => actions.setDuration(lengthOf())}
         onProgress={(event) => {
+          playback.onBuffered()
           const el = event.currentTarget
           for (let i = 0; i < el.buffered.length; i++) {
             if (el.buffered.start(i) <= el.currentTime) {

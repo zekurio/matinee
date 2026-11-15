@@ -2,12 +2,12 @@ import { Slider } from "@base-ui/react/slider"
 import { Spinner } from "@matinee/ui/components/spinner"
 import { cn } from "@matinee/ui/lib/utils"
 import {
+  FastForwardIcon,
   MaximizeIcon,
   MinimizeIcon,
   PauseIcon,
   PlayIcon,
-  RotateCcwIcon,
-  RotateCwIcon,
+  RewindIcon,
   SkipBackIcon,
   SkipForwardIcon,
   Volume1Icon,
@@ -72,34 +72,6 @@ export function ControlButton({
     >
       {children}
     </button>
-  )
-}
-
-/** A circular arrow with the skip length inside it. */
-export function SkipIcon({
-  direction,
-  seconds,
-  big = false,
-}: {
-  direction: "back" | "forward"
-  /** How far it skips, written inside the arrow. */
-  seconds: number
-  /** For the row in the middle of a touch screen. */
-  big?: boolean
-}) {
-  const Icon = direction === "back" ? RotateCcwIcon : RotateCwIcon
-  return (
-    <span aria-hidden className="relative grid place-items-center">
-      <Icon className={big ? "!size-9" : "!size-6"} strokeWidth={1.75} />
-      <span
-        className={cn(
-          "absolute pt-px leading-none font-bold tabular-nums",
-          big ? "text-xs" : "text-9px",
-        )}
-      >
-        {seconds}
-      </span>
-    </span>
   )
 }
 
@@ -494,30 +466,13 @@ export function ElapsedTime({ className }: { className?: string }) {
   )
 }
 
-/** The time left, or the length, which a click switches between. */
+/** The video's length, shown after the elapsed time. */
 export function TotalTime({ className }: { className?: string }) {
-  const { shown, duration } = usePlayerStore(
-    useShallow((state) => ({
-      shown: selectShown(state),
-      duration: state.duration,
-    })),
-  )
-  const [remaining, setRemaining] = useState(true)
+  const duration = usePlayerStore((state) => state.duration)
   return (
-    <button
-      type="button"
-      title={remaining ? tr("player.showLength") : tr("player.showTimeLeft")}
-      onClick={() => setRemaining((on) => !on)}
-      className={cn(
-        "rounded outline-none focus-visible:ring-2 focus-visible:ring-white",
-        overlayTextClass,
-        className,
-      )}
-    >
-      {remaining
-        ? `-${formatTime(Math.max(0, duration - shown))}`
-        : formatTime(duration)}
-    </button>
+    <span className={cn(overlayTextClass, className)}>
+      {formatTime(duration)}
+    </span>
   )
 }
 
@@ -613,7 +568,9 @@ export function Transport({
   const side = cn(
     big && "size-12 [@media(pointer:coarse)]:size-12 [&_svg]:size-6",
   )
-  const skip = cn(big && "size-14 [@media(pointer:coarse)]:size-14")
+  const skip = cn(
+    big && "size-14 [@media(pointer:coarse)]:size-14 [&_svg]:size-7",
+  )
   return (
     <div
       className={cn("flex items-center", big ? "gap-2 sm:gap-8" : "gap-0.5")}
@@ -633,7 +590,7 @@ export function Transport({
         onClick={() => onSkip(-skipBackSeconds)}
         className={skip}
       >
-        <SkipIcon direction="back" seconds={skipBackSeconds} big={big} />
+        <RewindIcon className="fill-current" />
       </ControlButton>
       {big && busy ? (
         // The spinner in the middle of the player shows here.
@@ -646,7 +603,7 @@ export function Transport({
         onClick={() => onSkip(skipForwardSeconds)}
         className={skip}
       >
-        <SkipIcon direction="forward" seconds={skipForwardSeconds} big={big} />
+        <FastForwardIcon className="fill-current" />
       </ControlButton>
       {episodes && (
         <ControlButton

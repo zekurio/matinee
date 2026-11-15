@@ -28,8 +28,6 @@ export default {
   "player.exitFullscreenKey": "Vollbild beenden (f)",
   "player.seek": "Springen",
   "player.seekValue": "{time} von {duration}",
-  "player.showLength": "Gesamtlänge anzeigen",
-  "player.showTimeLeft": "Restzeit anzeigen",
   "player.endsAt": "Endet um {time}",
 
   "player.upNext": "Als Nächstes",

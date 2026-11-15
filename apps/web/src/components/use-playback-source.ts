@@ -29,9 +29,9 @@ import {
 export function useSourceRefs(store: PlayerStore) {
   const { source } = store.getInitialState()
   // Where the source on its way plays from once it loads, in its own time.
-  // A copied stream starts where it should by itself.
+  // A copied stream begins on the keyframe before it.
   const seekOnLoad = useRef<number | null>(
-    source.method !== "remux" && source.start > 0 ? source.start : null,
+    source.start > 0 ? source.start : null,
   )
   // Where in the file the source on its way starts, until it loads, so a
   // failure before then still knows where the viewer was.
@@ -162,8 +162,7 @@ export function sourceStarters(core: PlaybackCore) {
     const state = store.getState()
     // The same address doesn't reload by itself.
     const reloads = !next.hls && state.source.url === next.url
-    seekOnLoad.current =
-      next.method !== "remux" && next.start > 0 ? next.start : null
+    seekOnLoad.current = next.start > 0 ? next.start : null
     startsAt.current = next.offset + next.start
     if (state.pending === null) state.setPending(next.offset + next.start)
     if (plan) state.setPlan(plan, next)
@@ -267,9 +266,10 @@ export function sourceStarters(core: PlaybackCore) {
 
   /**
    * Seek in a copied stream, which can't by itself: a new stream from the
-   * keyframe near `at`.
+   * keyframe at or before `at`, which plays from `at` once it has the
+   * frames up to it, so the seek lands where it was asked to.
    */
-  const seekStream = async (at: number, snap: PlaybackSnap) => {
+  const seekStream = async (at: number) => {
     const id = ++generation.current
     holdPlayState()
     holdStill()
@@ -281,12 +281,13 @@ export function sourceStarters(core: PlaybackCore) {
         sessionId: state.sessionId,
         audio: state.plan.audio?.index ?? 0,
         position: at,
-        snap,
+        snap: "before",
         audioCodecs: state.device.streamAudio,
       })
       if (id !== generation.current) return
       const { source } = store.getState()
-      load({ ...source, url, offset, start: 0, attempt: id })
+      const start = Math.max(0, at - offset)
+      load({ ...source, url, offset, start, attempt: id })
     } catch (cause) {
       if (id !== generation.current) return
       state.setPending(null)

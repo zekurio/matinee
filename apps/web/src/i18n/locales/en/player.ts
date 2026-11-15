@@ -33,8 +33,6 @@ export default defineMessages("player", {
   "player.seek": "Seek",
   // What a screen reader says for the seek bar, like "1:02 of 45:10".
   "player.seekValue": "{time} of {duration}",
-  "player.showLength": "Show length",
-  "player.showTimeLeft": "Show time left",
   "player.endsAt": "Ends at {time}",
 
   // The card that offers the next episode while the credits roll, or
