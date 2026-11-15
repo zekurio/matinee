@@ -45,8 +45,9 @@ export type DiscoverQuery = {
   genreOr?: boolean
   keywords?: number[]
   people?: string[]
-  yearFrom: number | null
-  yearTo: number | null
+  /** Released on or after this day, and on or before `to`, as YYYY-MM-DD. */
+  from: string | null
+  to: string | null
   scoreMin: number | null
   scoreMax: number | null
   votesMin: number | null
@@ -91,9 +92,8 @@ export async function discover(
     params.set("with_keywords", query.keywords.join("|"))
   if (kind === "movie" && query.people?.length)
     params.set("with_people", query.people.join("|"))
-  if (query.yearFrom !== null)
-    params.set(`${date}.gte`, `${query.yearFrom}-01-01`)
-  if (query.yearTo !== null) params.set(`${date}.lte`, `${query.yearTo}-12-31`)
+  if (query.from !== null) params.set(`${date}.gte`, query.from)
+  if (query.to !== null) params.set(`${date}.lte`, query.to)
   if (query.scoreMin !== null) params.set("vote_average.gte", query.scoreMin)
   if (query.scoreMax !== null) params.set("vote_average.lte", query.scoreMax)
   if (query.votesMin !== null) params.set("vote_count.gte", query.votesMin)

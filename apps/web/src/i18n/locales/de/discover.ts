@@ -19,8 +19,6 @@ export default {
   "discover.dismissFailed": "{name} ließ sich nicht ausblenden.",
   "discover.undo": "Rückgängig",
 
-  "discover.card.release": "{date} · {kind}",
-
   "discover.stale": "Einiges davon ist vielleicht nicht aktuell.",
   "discover.railFailed": "Diese Reihe hat nicht geladen.",
   "discover.railsFailed": plural({
@@ -37,14 +35,16 @@ export default {
     "Die Suche findet weiter alles in den Mediatheken, die du öffnen kannst.",
   "discover.offAdmin":
     "Dafür braucht es einen TMDB-API-Schlüssel und eine Mediathek, in die Anfragen gehen können.",
-  "discover.gone": "Diese Reihe gibt es bei Entdecken nicht mehr",
-  "discover.back": "Zurück zu Entdecken",
   "discover.end": "Das ist die ganze Liste.",
   "discover.moreFailed": "Die nächsten Titel haben nicht geladen.",
 
   "discover.browse.movie": "Filme durchstöbern",
   "discover.browse.show": "Serien durchstöbern",
+  "discover.browse.kind": "Filme oder Serien",
+  "discover.browse.kind.movie": "Filme",
+  "discover.browse.kind.show": "Serien",
   "discover.browse.sort.popular": "Beliebt",
+  "discover.browse.sort.forYou": "Beste Treffer",
   "discover.browse.sort.votes": "Meiste Stimmen",
   "discover.browse.scoreHint": "Von TMDB, von 10",
   "discover.browse.votes": "Stimmen",
@@ -53,6 +53,11 @@ export default {
     other: "Mindestens {count} Stimmen",
   }),
   "discover.browse.votesStep": "{count}+",
+  "discover.browse.only": "Nur",
+  "discover.browse.onlyHint": "Demnächst heißt in den nächsten drei Monaten.",
+  "discover.browse.recommended": "Empfehlungen für dich",
+  "discover.browse.upcoming": "Demnächst",
+  "discover.browse.requestable": "Was du anfragen kannst",
   "discover.browse.floorScore":
     "Nur Titel mit mindestens {count} Stimmen, damit nicht eine Handvoll Stimmen die Liste anführt.",
   "discover.browse.floorList":
@@ -61,6 +66,9 @@ export default {
   "discover.browse.none.movie": "Keine Filme passen zu diesen Filtern",
   "discover.browse.none.show": "Keine Serien passen zu diesen Filtern",
   "discover.browse.nothing": "Gerade nichts zu zeigen",
+  "discover.browse.forYouNone": "Noch keine Empfehlungen",
+  "discover.browse.forYouHint":
+    "Sie kommen aus dem, was du schaust. Spiel ein paar Titel ab und schau morgen wieder vorbei.",
   "discover.browse.failed": "Diese Titel haben nicht geladen.",
   "discover.browse.optionsFailed": "Die Filter haben nicht geladen.",
 } satisfies TranslationOf<typeof source>

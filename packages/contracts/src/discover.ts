@@ -1,42 +1,21 @@
-import { CatalogPage, RelatedTitle } from "./catalog"
+import { RelatedTitle } from "./catalog"
 import { get, post } from "./contract-routes"
 import { RecommendationSeed } from "./recommendations"
 import { t } from "./schema"
 import { TitleKind } from "./schemas"
 
-/**
- * A row of Discover. "forYou" and "becauseWatched" are the viewer's
- * recommendations of titles to ask for; a "becauseWatched" row names
- * the title it starts from in `seed`, which is null for every other row.
- */
-export const DiscoverRail = t.object({
-  id: t.enum([
-    "popularFilms",
-    "popularShows",
-    "comingSoon",
-    "forYou",
-    "becauseWatched",
-  ]),
-  seed: RecommendationSeed.nullable().$default(null),
-})
-
-export const DiscoverRails = t.object({
-  enabled: t.boolean(),
-  rails: t.array(DiscoverRail),
-  /** The kinds this viewer can browse with filters, through `browse`. */
-  browse: t.array(TitleKind),
-})
-
 /*
- * Browsing the whole catalog of one kind, films or shows, narrowed by
- * filters and in an order the viewer picks. The server lists what each
- * filter offers (`browseOptions`), so no client keeps TMDB's ids or
- * retypes the steps.
+ * Browsing the whole catalog of one kind, films or shows, or the
+ * viewer's recommendations of it, narrowed by filters and in an order
+ * the viewer picks. The server lists what each filter offers
+ * (`browseOptions`), so no client keeps TMDB's ids or retypes the steps.
  */
 
 /** The orders a browse can take. Each client words them itself. */
 export const CATALOG_SORTS = [
   "popular",
+  /** Best match first, only among the viewer's recommendations. */
+  "forYou",
   "scoreHigh",
   "scoreLow",
   "votes",
@@ -99,6 +78,12 @@ export const CatalogFilters = t
     /** A film's runtime, or a show's episodes', in minutes. */
     runtimeMin: runtime,
     runtimeMax: runtime,
+    /** Only the viewer's recommendations, in place of TMDB's whole catalog. */
+    recommended: t.boolean().$default(false),
+    /** Out within the next three months, and not yet. */
+    upcoming: t.boolean().$default(false),
+    /** Only titles the viewer can ask for: none that are here or declined. */
+    requestable: t.boolean().$default(false),
   })
   .refine((value) => ordered(value.yearFrom, value.yearTo), {
     path: ["yearTo"],
@@ -114,12 +99,34 @@ export const CatalogFilters = t
   })
 export type CatalogFilters = t.infer<typeof CatalogFilters>
 
-export const CatalogBrowseInput = t.object({
-  kind: TitleKind,
-  filters: CatalogFilters,
-  sort: CatalogSort.$default("popular"),
-  page: t.number().int().min(1).max(500).$default(1),
-})
+/** Every filter off. */
+export const NO_CATALOG_FILTERS: CatalogFilters = {
+  genres: [],
+  yearFrom: null,
+  yearTo: null,
+  scoreMin: null,
+  scoreMax: null,
+  votesMin: null,
+  rating: null,
+  language: null,
+  runtimeMin: null,
+  runtimeMax: null,
+  recommended: false,
+  upcoming: false,
+  requestable: false,
+}
+
+export const CatalogBrowseInput = t
+  .object({
+    kind: TitleKind,
+    filters: CatalogFilters,
+    sort: CatalogSort.$default("popular"),
+    page: t.number().int().min(1).max(500).$default(1),
+  })
+  .refine((value) => value.sort !== "forYou" || value.filters.recommended, {
+    path: ["sort"],
+    message: "Sort by best match only among your recommendations.",
+  })
 
 /** A span a filter's bounds move in, by `step`. */
 export const CatalogRange = t.object({
@@ -172,6 +179,9 @@ export const CatalogBrowseTitle = RelatedTitle.extend({
   releaseDate: t.string().nullable(),
 })
 
+/** What a card says under its name in place of the year: its score or its release date. */
+export const CatalogCardDetail = t.enum(["score", "releaseDate"])
+
 export const CatalogBrowsePage = t.object({
   items: t.array(CatalogBrowseTitle),
   nextPage: t.number().int().nullable(),
@@ -183,20 +193,65 @@ export const CatalogBrowsePage = t.object({
    * when the viewer chose one, or the order needs none.
    */
   voteFloor: t.number().int().nullable(),
-  /** What a card says under its name in place of the year: its score or its release date. */
-  detail: t.enum(["score", "releaseDate"]).nullable(),
+  detail: CatalogCardDetail.nullable(),
+})
+
+export const DiscoverRailId = t.enum([
+  "popularFilms",
+  "popularShows",
+  "comingSoon",
+  "forYou",
+  "becauseWatched",
+])
+
+/**
+ * The browse a row is the start of, which its heading opens: of the
+ * first of `kinds`, which can switch to the other.
+ */
+export const DiscoverBrowse = t.object({
+  /** The kinds the row holds, films and shows taking turns. */
+  kinds: t.array(TitleKind).min(1),
+  filters: CatalogFilters,
+  sort: CatalogSort,
+})
+
+/**
+ * A row of Discover. "forYou" and "becauseWatched" are the viewer's
+ * recommendations; a "becauseWatched" row names the title it starts
+ * from in `seed`, which is null for every other row. It's the one row
+ * with no browse behind it, since it holds what came from one title.
+ */
+export const DiscoverRail = t.object({
+  id: DiscoverRailId,
+  seed: RecommendationSeed.nullable().$default(null),
+  browse: DiscoverBrowse.nullable(),
+})
+
+export const DiscoverRails = t.object({
+  enabled: t.boolean(),
+  rails: t.array(DiscoverRail),
+  /** The kinds this viewer can browse with filters, through `browse`. */
+  browse: t.array(TitleKind),
+})
+
+/** The cards a row of Discover shows: the first page of its browse, or what came from its seed. */
+export const DiscoverRow = t.object({
+  items: t.array(CatalogBrowseTitle),
+  stale: t.boolean(),
+  detail: CatalogCardDetail.nullable(),
 })
 
 export const discoverContract = {
   rails: get("/discover/rails").output(DiscoverRails),
-  page: post("/discover/page")
+  /** A row's cards, by its `id` and `seed`. */
+  row: post("/discover/row")
     .input(
       t.object({
-        rail: DiscoverRail,
-        page: t.number().int().min(1).$default(1),
+        id: DiscoverRailId,
+        seed: RecommendationSeed.nullable().$default(null),
       }),
     )
-    .output(CatalogPage),
+    .output(DiscoverRow),
   /** What browsing a kind offers. */
   browseOptions: get("/discover/browse/options")
     .input(t.object({ kind: TitleKind }))

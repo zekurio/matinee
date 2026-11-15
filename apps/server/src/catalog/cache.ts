@@ -22,8 +22,6 @@ import { titleFacts } from "../metadata/tmdb/details"
 import {
   collection,
   Collection,
-  feed,
-  FeedPage,
   related,
   Related,
 } from "../metadata/tmdb/feeds"
@@ -204,23 +202,6 @@ export function detailProvider(ref: CatalogRef, language: string) {
       value.studios !== undefined &&
       value.credits !== undefined &&
       value.trailers !== undefined,
-  )
-}
-
-export function feedProvider(
-  kind: CatalogRef["kind"],
-  language: string,
-  operation: "popular" | "soon",
-  page: number,
-) {
-  // Date windows change at midnight, even while a previous page is still fresh.
-  const day =
-    operation === "soon" ? new Date().toISOString().slice(0, 10) : null
-  return cached(
-    JSON.stringify(["tmdb", language, "feed", kind, operation, page, day]),
-    CACHE_HOURS.feed,
-    (body) => FeedPage.parse(body),
-    () => feed(kind, language, operation, page),
   )
 }
 

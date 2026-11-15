@@ -26,9 +26,6 @@ export default defineMessages("discover", {
   "discover.dismissFailed": "Couldn't hide {name}.",
   "discover.undo": "Undo",
 
-  // A card in Coming soon, in place of the year: "14 Aug · Movie".
-  "discover.card.release": "{date} · {kind}",
-
   "discover.stale": "Some of these may be out of date.",
   "discover.railFailed": "This row didn't load.",
   "discover.railsFailed": plural({
@@ -45,15 +42,20 @@ export default defineMessages("discover", {
     "Search still finds everything in the libraries you can open.",
   "discover.offAdmin":
     "It needs a TMDB API key and a library that requests can go to.",
-  "discover.gone": "This row isn't on Discover anymore",
-  "discover.back": "Back to Discover",
   "discover.end": "That's the whole list.",
   "discover.moreFailed": "The next titles didn't load.",
 
-  // Browsing all movies or all shows with filters and a sort.
+  // Browsing all movies or all shows with filters and a sort. Each row's
+  // heading opens one, with the row's filters and sort.
   "discover.browse.movie": "Browse movies",
   "discover.browse.show": "Browse shows",
+  // The switch between the two, keeping the filters both have.
+  "discover.browse.kind": "Movies or shows",
+  "discover.browse.kind.movie": "Movies",
+  "discover.browse.kind.show": "Shows",
   "discover.browse.sort.popular": "Popular",
+  // The viewer's recommendations, best first.
+  "discover.browse.sort.forYou": "Best match",
   "discover.browse.sort.votes": "Most votes",
   "discover.browse.scoreHint": "From TMDB, out of 10",
   "discover.browse.votes": "Votes",
@@ -63,6 +65,12 @@ export default defineMessages("discover", {
   }),
   // A vote step as a chip: "1,000+".
   "discover.browse.votesStep": "{count}+",
+  // Filters that narrow what's listed rather than describe a title.
+  "discover.browse.only": "Only",
+  "discover.browse.onlyHint": "Coming soon looks three months ahead.",
+  "discover.browse.recommended": "Recommended for you",
+  "discover.browse.upcoming": "Coming soon",
+  "discover.browse.requestable": "Ones to ask for",
   "discover.browse.floorScore":
     "Only titles with at least {count} votes, so a handful of votes can't top the list.",
   "discover.browse.floorList":
@@ -71,6 +79,9 @@ export default defineMessages("discover", {
   "discover.browse.none.movie": "No movies match these filters",
   "discover.browse.none.show": "No shows match these filters",
   "discover.browse.nothing": "Nothing to show right now",
+  "discover.browse.forYouNone": "No recommendations yet",
+  "discover.browse.forYouHint":
+    "They come from what you watch. Play a few things and look again tomorrow.",
   "discover.browse.failed": "These titles didn't load.",
   "discover.browse.optionsFailed": "The filters didn't load.",
 })

@@ -25,7 +25,6 @@ import { Route as AuthedShellStatsRouteImport } from './routes/_authed/_shell/st
 import { Route as AuthedPartyPartyIdRouteImport } from './routes/_authed/party.$partyId'
 import { Route as AuthedWatchItemIdRouteImport } from './routes/_authed/watch.$itemId'
 import { Route as AuthedShellDiscoverIndexRouteImport } from './routes/_authed/_shell/discover.index'
-import { Route as AuthedShellDiscoverRailRouteImport } from './routes/_authed/_shell/discover.$rail'
 import { Route as AuthedShellDiscoverMoviesRouteImport } from './routes/_authed/_shell/discover.movies'
 import { Route as AuthedShellDiscoverShowsRouteImport } from './routes/_authed/_shell/discover.shows'
 import { Route as AuthedShellEpisodesItemIdRouteImport } from './routes/_authed/_shell/episodes.$itemId'
@@ -120,11 +119,6 @@ const AuthedShellDiscoverIndexRoute =
     path: '/discover/',
     getParentRoute: () => AuthedShellRoute,
   } as any)
-const AuthedShellDiscoverRailRoute = AuthedShellDiscoverRailRouteImport.update({
-  id: '/discover/$rail',
-  path: '/discover/$rail',
-  getParentRoute: () => AuthedShellRoute,
-} as any)
 const AuthedShellDiscoverMoviesRoute =
   AuthedShellDiscoverMoviesRouteImport.update({
     id: '/discover/movies',
@@ -222,7 +216,6 @@ export interface FileRoutesByFullPath {
   '/stats': typeof AuthedShellStatsRoute
   '/party/$partyId': typeof AuthedPartyPartyIdRoute
   '/watch/$itemId': typeof AuthedWatchItemIdRoute
-  '/discover/$rail': typeof AuthedShellDiscoverRailRoute
   '/discover/movies': typeof AuthedShellDiscoverMoviesRoute
   '/discover/shows': typeof AuthedShellDiscoverShowsRoute
   '/episodes/$itemId': typeof AuthedShellEpisodesItemIdRoute
@@ -253,7 +246,6 @@ export interface FileRoutesByTo {
   '/stats': typeof AuthedShellStatsRoute
   '/party/$partyId': typeof AuthedPartyPartyIdRoute
   '/watch/$itemId': typeof AuthedWatchItemIdRoute
-  '/discover/$rail': typeof AuthedShellDiscoverRailRoute
   '/discover/movies': typeof AuthedShellDiscoverMoviesRoute
   '/discover/shows': typeof AuthedShellDiscoverShowsRoute
   '/episodes/$itemId': typeof AuthedShellEpisodesItemIdRoute
@@ -287,7 +279,6 @@ export interface FileRoutesById {
   '/_authed/party/$partyId': typeof AuthedPartyPartyIdRoute
   '/_authed/watch/$itemId': typeof AuthedWatchItemIdRoute
   '/_authed/_shell/': typeof AuthedShellIndexRoute
-  '/_authed/_shell/discover/$rail': typeof AuthedShellDiscoverRailRoute
   '/_authed/_shell/discover/movies': typeof AuthedShellDiscoverMoviesRoute
   '/_authed/_shell/discover/shows': typeof AuthedShellDiscoverShowsRoute
   '/_authed/_shell/episodes/$itemId': typeof AuthedShellEpisodesItemIdRoute
@@ -320,7 +311,6 @@ export interface FileRouteTypes {
     | '/stats'
     | '/party/$partyId'
     | '/watch/$itemId'
-    | '/discover/$rail'
     | '/discover/movies'
     | '/discover/shows'
     | '/episodes/$itemId'
@@ -351,7 +341,6 @@ export interface FileRouteTypes {
     | '/stats'
     | '/party/$partyId'
     | '/watch/$itemId'
-    | '/discover/$rail'
     | '/discover/movies'
     | '/discover/shows'
     | '/episodes/$itemId'
@@ -384,7 +373,6 @@ export interface FileRouteTypes {
     | '/_authed/party/$partyId'
     | '/_authed/watch/$itemId'
     | '/_authed/_shell/'
-    | '/_authed/_shell/discover/$rail'
     | '/_authed/_shell/discover/movies'
     | '/_authed/_shell/discover/shows'
     | '/_authed/_shell/episodes/$itemId'
@@ -524,13 +512,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedShellDiscoverIndexRouteImport
       parentRoute: typeof AuthedShellRoute
     }
-    '/_authed/_shell/discover/$rail': {
-      id: '/_authed/_shell/discover/$rail'
-      path: '/discover/$rail'
-      fullPath: '/discover/$rail'
-      preLoaderRoute: typeof AuthedShellDiscoverRailRouteImport
-      parentRoute: typeof AuthedShellRoute
-    }
     '/_authed/_shell/discover/movies': {
       id: '/_authed/_shell/discover/movies'
       path: '/discover/movies'
@@ -638,7 +619,6 @@ interface AuthedShellRouteChildren {
   AuthedShellSearchRoute: typeof AuthedShellSearchRoute
   AuthedShellStatsRoute: typeof AuthedShellStatsRoute
   AuthedShellIndexRoute: typeof AuthedShellIndexRoute
-  AuthedShellDiscoverRailRoute: typeof AuthedShellDiscoverRailRoute
   AuthedShellDiscoverMoviesRoute: typeof AuthedShellDiscoverMoviesRoute
   AuthedShellDiscoverShowsRoute: typeof AuthedShellDiscoverShowsRoute
   AuthedShellEpisodesItemIdRoute: typeof AuthedShellEpisodesItemIdRoute
@@ -662,7 +642,6 @@ const AuthedShellRouteChildren: AuthedShellRouteChildren = {
   AuthedShellSearchRoute: AuthedShellSearchRoute,
   AuthedShellStatsRoute: AuthedShellStatsRoute,
   AuthedShellIndexRoute: AuthedShellIndexRoute,
-  AuthedShellDiscoverRailRoute: AuthedShellDiscoverRailRoute,
   AuthedShellDiscoverMoviesRoute: AuthedShellDiscoverMoviesRoute,
   AuthedShellDiscoverShowsRoute: AuthedShellDiscoverShowsRoute,
   AuthedShellEpisodesItemIdRoute: AuthedShellEpisodesItemIdRoute,

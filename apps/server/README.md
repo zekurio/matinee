@@ -309,13 +309,23 @@ library a request would land in. Discover, browsing with filters, the
 rows of related titles on a title's page, and person pages' TMDB part
 come from TMDB and need `MATINEE_TMDB_API_KEY`.
 
-- Discover's rows are TMDB's weekly trending movies and shows,
-  recommendations for the viewer's last watched title, popular titles out
-  in the next 90 days, and what others requested.
+- Discover's rows are the viewer's recommendations ("Recommended for
+  you", then up to two "Because you watched"), popular movies, popular
+  shows, and what's coming out in the next 90 days, each limited to
+  titles the viewer can request. Every row but "Because you watched" is
+  the start of a browse, a kind with filters and a sort, and its heading
+  opens that browse in full. A row that holds movies and shows
+  alternates between them, and its heading opens the movies.
 - Browsing filters TMDB's movies or shows by genre, release year, user
-  score, votes, age rating, original language, and runtime. The age
-  ratings are those of the library language's country. Sorting by score
-  leaves out titles with fewer than 250 votes.
+  score, votes, age rating, original language, and runtime, and can
+  limit them to titles coming out in the next 90 days or to titles the
+  viewer can request. The age ratings are those of the library
+  language's country. Sorting by score leaves out titles with fewer than
+  250 votes. TMDB can't leave out what's here, so a page of only titles
+  to request can come back short.
+- Limiting to recommendations browses the viewer's stored ones instead
+  of TMDB's catalog, with the same filters and sorts, checked against
+  each title's features, plus "Best match", their own order.
 - A title's page lists its recommendations and, for a movie, the rest of
   its collection.
 - A person's page adds TMDB's photo, biography, and their other titles,
@@ -439,8 +449,8 @@ the decline from the request under Done. Allow requests again removes the
 request, so the title can be requested afresh. Add after all accepts it as
 it was, with its requesters, and sends it. Only the people who requested
 a declined title see who declined it, why, and the admin's note.
-Discover's rows leave declined titles out; search and browsing still show
-them. A declined request doesn't count against anyone's limit.
+Discover's rows leave declined titles out, since they hold only titles
+to request; search and browsing still show them. A declined request doesn't count against anyone's limit.
 
 ## Jobs
 
@@ -723,8 +733,10 @@ the rows don't appear.
   two weeks.
 - Features. For every title involved, the server fetches its genres,
   keywords, directors, writers, creators, top-billed cast, companies,
-  language, and year from TMDB into `title_features` through the
-  `title-features` queue. Features refresh after 30 days.
+  language, year, runtime, and age ratings from TMDB into
+  `title_features` through the `title-features` queue. Missing features
+  are fetched before scoring; ones older than 30 days, or from before age
+  ratings were stored, are queued and used until they're replaced.
 - Candidates. Candidates are every library title the person can see.
   For the kinds they can request, TMDB's recommended and similar titles
   for their eight top-scoring titles are added, plus TMDB discover results
@@ -744,8 +756,10 @@ the rows don't appear.
   a list older than a day, or plays since their last run.
 - Rows. "Recommended for you" holds the best 20. Up to two "Because you
   watched" rows of at least five titles come from the next ones, grouped
-  by the title they came from. Discover checks each title's availability
-  again when it reads a page.
+  by the title they came from, for the titles the person watched most
+  recently. On Discover, "Recommended for you" opens a browse of the
+  recommendations to request, and each title's availability is checked
+  again when a page is read.
 - Feedback. "Not interested" hides a title until the person undoes it.
   Each title a row shows is logged once a day in
   `recommendation_impression`, with its position, score, and the

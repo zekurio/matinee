@@ -6,6 +6,7 @@ import type {
   CatalogRef,
   CatalogTitleDetail,
   CatalogTitleSummary,
+  DiscoverRow,
   RelatedRail,
   RelatedTitle,
   SeasonAvailability,
@@ -155,23 +156,13 @@ export function applyAvailability(
     { queryKey: orpc.catalog.search.key() },
     (old) => old && withAvailability(old, ref, availability),
   )
-  queryClient.setQueriesData<t.infer<typeof CatalogPage>>(
-    { queryKey: orpc.discover.page.key({ type: "query" }) },
+  queryClient.setQueriesData<t.infer<typeof DiscoverRow>>(
+    { queryKey: orpc.discover.row.key() },
     (old) => old && withAvailability(old, ref, availability),
   )
   queryClient.setQueriesData<{ items: RelatedEntry[]; stale: boolean }>(
     { queryKey: orpc.catalog.relatedTitles.key() },
     (old) => old && withAvailability(old, ref, availability),
-  )
-  queryClient.setQueriesData<InfiniteData<t.infer<typeof CatalogPage>>>(
-    { queryKey: orpc.discover.page.key({ type: "infinite" }) },
-    (old) =>
-      old && {
-        ...old,
-        pages: old.pages.map((page) =>
-          withAvailability(page, ref, availability),
-        ),
-      },
   )
   queryClient.setQueriesData<InfiniteData<t.infer<typeof CatalogBrowsePage>>>(
     { queryKey: orpc.discover.browse.key({ type: "infinite" }) },

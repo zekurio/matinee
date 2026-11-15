@@ -1,8 +1,10 @@
-import type {
-  CatalogRef,
-  HomeRecommendations,
-  RecommendationSeed,
-  DiscoverRail,
+import {
+  NO_CATALOG_FILTERS,
+  type HomeRecommendations,
+  type RecommendationSeed,
+  type DiscoverRail,
+  type TitleKind,
+  type CatalogRef,
 } from "@matinee/contracts"
 import { t } from "@matinee/contracts/schema"
 import {
@@ -11,6 +13,7 @@ import {
   recommendationRun,
   recommendationImpression,
   title,
+  userTitleSignal,
   type RecommendationRow,
 } from "@matinee/db"
 import { and, desc, eq, isNull, notExists } from "drizzle-orm"
@@ -20,30 +23,24 @@ import { visibleTitles } from "../access/visible"
 import { db } from "../db"
 import { env } from "../env"
 import { log } from "../log"
-import {
-  placeholders,
-  saveArtwork,
-  queueArtwork,
-  toArtwork,
-} from "../media/artwork"
 import { toSummaries } from "../media/items"
-import { availability } from "../requests/availability"
-import { destinations } from "../requests/destinations"
 
 /*
- * The rows Home and Discover show from a viewer's stored recommendations.
- * "Recommended for you" takes the best twenty; the rest that came from
- * one watched title make up to two "Because you watched" rows of at
- * least five. Home takes the titles on the server, under the viewer's
- * library access; Discover the ones to ask for, with their availability
- * read again. Whatever a row shows is logged once a day per title, to
- * measure against what the viewer went on to play or ask for.
+ * The rows Home and Discover show from a viewer's stored
+ * recommendations. "Recommended for you" takes the best twenty; the
+ * rest that came from one watched title make up to two "Because you
+ * watched" rows of at least five, for the titles watched last. Home
+ * takes the titles on the server, under the viewer's library access;
+ * Discover the ones to ask for, its "For you" as a browse that
+ * `browse.ts` reads. Whatever a row shows is logged once a day per
+ * title, to measure against what the viewer went on to play or ask for.
  */
 
 const FOR_YOU = 20
 const BECAUSE_ROWS = 2
 const BECAUSE_MIN = 5
-const PAGE = 20
+
+type Rail = t.infer<typeof DiscoverRail>
 
 /** A stored reason, as the scoring job wrote it. */
 const Reason = t.union([
@@ -67,7 +64,7 @@ const refOf = (row: RecommendationRow): CatalogRef => ({
   kind: row.kind,
   providerId: row.tmdbId,
 })
-function notDismissed(viewer: Viewer) {
+export function notDismissed(viewer: Viewer) {
   return notExists(
     db
       .select()
@@ -81,14 +78,19 @@ function notDismissed(viewer: Viewer) {
       ),
   )
 }
-function groups(rows: RecommendationRow[]) {
-  const result: {
-    id: "forYou" | "becauseWatched"
-    seed: RecommendationSeed | null
-    rows: RecommendationRow[]
-  }[] = []
-  if (!rows.length) return result
-  result.push({ id: "forYou", seed: null, rows: rows.slice(0, FOR_YOU) })
+type Group = {
+  id: "forYou" | "becauseWatched"
+  seed: RecommendationSeed | null
+  rows: RecommendationRow[]
+}
+/**
+ * The rows of `rows`, best first. "Recommended for you" takes the best
+ * twenty. Of the rest, five or more that came from one title the viewer
+ * watched make a "Because you watched" row, up to two, for the titles
+ * they watched last.
+ */
+async function groups(viewer: Viewer, rows: RecommendationRow[]) {
+  if (!rows.length) return []
   const seeds = new Map<
     string,
     { seed: RecommendationSeed; rows: RecommendationRow[] }
@@ -111,17 +113,35 @@ function groups(rows: RecommendationRow[]) {
     }
     group.rows.push(row)
   }
-  for (const group of [...seeds.values()]
-    .filter((g) => g.rows.length >= BECAUSE_MIN)
+  const enough = [...seeds.values()].filter((g) => g.rows.length >= BECAUSE_MIN)
+  const watched = enough.length
+    ? await db
+        .select()
+        .from(userTitleSignal)
+        .where(eq(userTitleSignal.userId, viewer.id))
+    : []
+  const last = new Map(
+    watched.map((w) => [
+      `${w.kind}:${w.tmdbId}`,
+      w.lastWatchedAt?.getTime() ?? 0,
+    ]),
+  )
+  const lastOf = (g: { seed: RecommendationSeed }) =>
+    last.get(`${g.seed.ref.kind}:${g.seed.ref.providerId}`) ?? 0
+  const result: Group[] = [
+    { id: "forYou", seed: null, rows: rows.slice(0, FOR_YOU) },
+  ]
+  for (const group of enough
+    .toSorted((a, b) => lastOf(b) - lastOf(a))
     .slice(0, BECAUSE_ROWS))
     result.push({
       id: "becauseWatched",
-      ...group,
+      seed: group.seed,
       rows: group.rows.slice(0, FOR_YOU),
     })
   return result
 }
-function impressions(
+export function impressions(
   viewer: Viewer,
   rows: RecommendationRow[],
   surface: "home" | "discover",
@@ -170,7 +190,12 @@ export async function home(
     viewer.id,
   )
   const byId = new Map(rows.map((row, i) => [row.title.id, summaries[i]]))
-  const rails = groups(rows.map((r) => r.recommendation)).map((group) => {
+  const rails = (
+    await groups(
+      viewer,
+      rows.map((r) => r.recommendation),
+    )
+  ).map((group) => {
     impressions(viewer, group.rows, "home", group.id)
     return {
       id: group.id,
@@ -203,12 +228,10 @@ export async function home(
     .where(eq(recommendationRun.userId, viewer.id))
   return { rails, computedAt: run?.computedAt ?? null }
 }
-async function discoverRows(viewer: Viewer) {
-  if (!env.MATINEE_TMDB_API_KEY) return []
-  const [movies, shows] = await Promise.all([
-    destinations(viewer, "movie"),
-    destinations(viewer, "show"),
-  ])
+/** The viewer's recommendations to ask for, of `kinds`, best first. */
+async function discoverRows(viewer: Viewer, kinds: TitleKind[]) {
+  if (!env.MATINEE_TMDB_API_KEY || !kinds.length) return []
+  // ACCESS: titles to ask for only, which no library holds.
   const rows = await db
     .select()
     .from(recommendation)
@@ -220,69 +243,47 @@ async function discoverRows(viewer: Viewer) {
       ),
     )
     .orderBy(desc(recommendation.score))
-  return rows.filter((row) =>
-    row.kind === "movie" ? movies.length : shows.length,
-  )
+  return rows.filter((row) => kinds.includes(row.kind))
 }
-/** Discover's recommendation rows, first among its rows. */
+/**
+ * Discover's recommendation rows, first among its rows, of the kinds
+ * the viewer can ask for. "For you" is a browse of their
+ * recommendations to ask for; "Because you watched" holds what came
+ * from one title, with no browse behind it.
+ */
 export async function discoverRails(
   viewer: Viewer,
-): Promise<t.infer<typeof DiscoverRail>[]> {
-  return groups(await discoverRows(viewer)).map(({ id, seed }) => ({
-    id,
-    seed,
+  kinds: TitleKind[],
+): Promise<Rail[]> {
+  const rows = await discoverRows(viewer, kinds)
+  const held = kinds.filter((kind) => rows.some((row) => row.kind === kind))
+  return (await groups(viewer, rows)).map((group) => ({
+    id: group.id,
+    seed: group.seed,
+    browse:
+      group.id === "forYou"
+        ? {
+            kinds: held,
+            filters: {
+              ...NO_CATALOG_FILTERS,
+              recommended: true,
+              requestable: true,
+            },
+            sort: "forYou",
+          }
+        : null,
   }))
 }
-/** A page of one of Discover's recommendation rows; "For you" pages through all of them. */
-export async function discoverPage(
+/** What a "Because you watched" row of Discover holds, best first; none for a title it isn't for. */
+export async function discoverBecause(
   viewer: Viewer,
-  rail: t.infer<typeof DiscoverRail>,
-  page: number,
+  kinds: TitleKind[],
+  seed: RecommendationSeed,
 ) {
-  const rows = await discoverRows(viewer)
-  const group = groups(rows).find(
-    (g) => g.id === rail.id && sameSeed(g.seed, rail.seed),
+  const group = (await groups(viewer, await discoverRows(viewer, kinds))).find(
+    (g) => g.id === "becauseWatched" && sameSeed(g.seed, seed),
   )
-  const selected = rail.id === "forYou" ? rows : (group?.rows ?? [])
-  const states = await availability(
-    viewer,
-    selected.map((r) => ({
-      ref: refOf(r),
-      externalIds: { tmdb: r.tmdbId },
-      releaseDate: r.releaseDate,
-    })),
-  )
-  const available = selected.flatMap((row, i) => {
-    const state = states[i]?.availability
-    return state && state.state !== "here" && state.state !== "unavailable"
-      ? [{ row, state }]
-      : []
-  })
-  const start = (page - 1) * PAGE
-  const chunk = available.slice(start, start + PAGE)
-  const saved = await saveArtwork(chunk.map((r) => r.row.poster))
-  const art = await placeholders([...saved.values()])
-  queueArtwork([...saved.values()], "low")
-  impressions(
-    viewer,
-    chunk.map((r) => r.row),
-    "discover",
-    rail.id,
-  )
-  return {
-    items: chunk.map(({ row, state }) => ({
-      ref: refOf(row),
-      name: row.name,
-      year: row.year,
-      poster: toArtwork(
-        row.poster ? (saved.get(row.poster) ?? null) : null,
-        art,
-      ),
-      availability: state,
-    })),
-    nextPage: available.length > start + PAGE ? page + 1 : null,
-    stale: false,
-  }
+  return group?.rows ?? []
 }
 export function sameSeed(
   a: RecommendationSeed | null,

@@ -13,7 +13,6 @@ const Result = t.object({
   first_air_date: t.string().optional(),
   poster_path: t.string().nullable().optional(),
 })
-const Page = t.object({ results: t.array(Result), total_pages: t.number() })
 
 const FeedItem = t.object({
   id: t.string(),
@@ -21,11 +20,6 @@ const FeedItem = t.object({
   year: t.number().nullable(),
   poster: t.string().nullable(),
   releaseDate: t.string().nullable(),
-})
-
-export const FeedPage = t.object({
-  items: t.array(FeedItem),
-  nextPage: t.number().nullable(),
 })
 
 /** A title as a feed lists it, without the adult ones. */
@@ -39,38 +33,6 @@ function feedItems(rows: t.infer<typeof Result>[]) {
       poster: image(row.poster_path, "w342"),
       releaseDate: row.release_date || row.first_air_date || null,
     }))
-}
-
-export async function feed(
-  kind: CatalogRef["kind"],
-  language: string,
-  operation: "popular" | "soon",
-  page: number,
-) {
-  const type = kind === "movie" ? "movie" : "tv"
-  const today = new Date().toISOString().slice(0, 10)
-  const until = new Date(Date.now() + 90 * 86400000).toISOString().slice(0, 10)
-  const date = kind === "movie" ? "primary_release_date" : "first_air_date"
-  const path =
-    operation === "popular" ? `/trending/${type}/week` : `/discover/${type}`
-  const params = new Map<string, string | number>([
-    ["language", language],
-    ["page", page],
-    ["include_adult", "false"],
-  ])
-  if (operation === "soon") {
-    params.set(`${date}.gte`, today)
-    params.set(`${date}.lte`, until)
-    // By date alone, the window opens on whatever anyone listed for
-    // today, mostly titles nobody has heard of. Popular ones first; each
-    // card says its date.
-    params.set("sort_by", "popularity.desc")
-  }
-  const data = Page.parse(await request(path, Object.fromEntries(params)))
-  return {
-    items: feedItems(data.results),
-    nextPage: page < Math.min(data.total_pages, 500) ? page + 1 : null,
-  }
 }
 
 export const Related = t.object({

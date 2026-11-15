@@ -27,9 +27,11 @@ import {
 import { type BrowseOptions, filterCount, NO_FILTERS } from "./browse-params"
 
 /*
- * A browse's filters: genres, release year, user score, votes, age
- * rating, original language and runtime, all from what the server
- * offers, in the panel the libraries share.
+ * A browse's filters: whether to list only the viewer's
+ * recommendations, what's coming soon, or what can be asked for, then
+ * genres, release year, user score, votes, age rating, original language
+ * and runtime, all from what the server offers, in the panel the
+ * libraries share.
  */
 
 /**
@@ -42,6 +44,27 @@ export function activeFilters(
   change: (patch: Partial<CatalogFilters>) => void,
 ): ActiveFilter[] {
   const active: ActiveFilter[] = []
+  if (filters.recommended) {
+    active.push({
+      key: "recommended",
+      label: tr("discover.browse.recommended"),
+      remove: () => change({ recommended: false }),
+    })
+  }
+  if (filters.upcoming) {
+    active.push({
+      key: "upcoming",
+      label: tr("discover.browse.upcoming"),
+      remove: () => change({ upcoming: false }),
+    })
+  }
+  if (filters.requestable) {
+    active.push({
+      key: "requestable",
+      label: tr("discover.browse.requestable"),
+      remove: () => change({ requestable: false }),
+    })
+  }
   for (const id of filters.genres) {
     const genre = options.genres.find((entry) => entry.id === id)
     if (!genre) continue
@@ -125,6 +148,11 @@ export function BrowseFilterPanel({
   const genres = new Map(
     options.genres.map((genre) => [String(genre.id), genre.id]),
   )
+  const only = [
+    ...(filters.recommended ? ["recommended"] : []),
+    ...(filters.upcoming ? ["upcoming"] : []),
+    ...(filters.requestable ? ["requestable"] : []),
+  ]
   return (
     <FilterPanel
       active={filterCount(filters)}
@@ -133,6 +161,35 @@ export function BrowseFilterPanel({
       onOpenChange={onOpenChange}
       compact={compact}
     >
+      <Section
+        label={tr("discover.browse.only")}
+        hint={tr("discover.browse.onlyHint")}
+      >
+        {(labelId) => (
+          <ToggleChips
+            labelId={labelId}
+            choices={[
+              {
+                value: "recommended",
+                label: tr("discover.browse.recommended"),
+              },
+              { value: "upcoming", label: tr("discover.browse.upcoming") },
+              {
+                value: "requestable",
+                label: tr("discover.browse.requestable"),
+              },
+            ]}
+            value={only}
+            onChange={(next) =>
+              change({
+                recommended: next.includes("recommended"),
+                upcoming: next.includes("upcoming"),
+                requestable: next.includes("requestable"),
+              })
+            }
+          />
+        )}
+      </Section>
       {options.genres.length > 0 && (
         <Section label={tr("filters.genres")}>
           {(labelId) => (

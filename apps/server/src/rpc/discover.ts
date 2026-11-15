@@ -23,8 +23,8 @@ export const discover = {
   rails: authed.discover.rails.handler(({ context }) =>
     discoverReads.rails(context.user),
   ),
-  page: authed.discover.page.handler(({ context, input }) =>
-    discoverReads.page(context.user, input).catch(catalogFailure),
+  row: authed.discover.row.handler(({ context, input }) =>
+    discoverReads.row(context.user, input).catch(browseFailure),
   ),
   browseOptions: authed.discover.browseOptions.handler(({ context, input }) =>
     browse.options(context.user, input.kind).catch(catalogFailure),

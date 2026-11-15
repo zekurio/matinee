@@ -50,6 +50,13 @@
       "when": 1794758951423,
       "tag": "0006_drop_notifications",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794767381309,
+      "tag": "0007_title_feature_runtime_and_ratings",
+      "breakpoints": true
     }
   ]
 }

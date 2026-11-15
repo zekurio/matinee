@@ -1,4 +1,8 @@
-import type { CatalogRef } from "@matinee/contracts"
+import type {
+  CatalogRef,
+  DiscoverRow as DiscoverRowSchema,
+} from "@matinee/contracts"
+import type { t } from "@matinee/contracts/schema"
 import { Button } from "@matinee/ui/components/button"
 import {
   Empty,
@@ -24,30 +28,27 @@ import {
 } from "lucide-react"
 import type { ReactNode } from "react"
 
-import { CatalogCard } from "@/components/catalog/catalog-card"
 import {
-  type CatalogSummary,
   type LiveEntry,
-  liveEntry,
   refKey,
   useLiveAvailability,
 } from "@/components/catalog/catalog-data"
 import { Rail, RailItem } from "@/components/rail"
 import { tr } from "@/i18n"
-import { formatDay, parseDay } from "@/lib/format"
 import { useDismissedStore } from "@/stores/recommendations"
 
+import { type BrowseEntry, BrowseCard, cardDetail } from "./browse-card"
 import {
   type Rail as RailInfo,
   RAIL_CARDS,
   railName,
-  railPageOptions,
+  railRowOptions,
   railKey,
   railLink,
   railsOptions,
 } from "./discover-data"
 
-type Page = UseQueryResult<{ items: CatalogSummary[]; stale: boolean }>
+type Page = UseQueryResult<t.infer<typeof DiscoverRowSchema>>
 
 /**
  * Discover's rows, in the order the server sends them, each loading on
@@ -57,7 +58,7 @@ type Page = UseQueryResult<{ items: CatalogSummary[]; stale: boolean }>
 export function DiscoverRails() {
   const rails = useQuery(railsOptions())
   const list = rails.data?.enabled ? rails.data.rails : []
-  const pages = useQueries({ queries: list.map(railPageOptions) })
+  const pages = useQueries({ queries: list.map(railRowOptions) })
   const settled = pages.every((page) => !page.isPending)
   const live = useLiveAvailability(
     settled ? followed(pages.map((page) => page.data)) : [],
@@ -116,42 +117,30 @@ export function DiscoverRails() {
 /**
  * The titles the rows show, once, for the stream of what changes: a
  * card on two rows is one title, and the rows stay under the stream's
- * hundred.
+ * hundred. Library cards play, so only the rest are followed.
  */
 function followed(
-  pages: ({ items: CatalogSummary[] } | undefined)[],
+  pages: ({ items: BrowseEntry[] } | undefined)[],
 ): { ref: CatalogRef }[] {
   const seen = new Map<string, { ref: CatalogRef }>()
   for (const page of pages) {
     for (const item of page?.items.slice(0, RAIL_CARDS) ?? []) {
-      seen.set(refKey(item.ref), { ref: item.ref })
+      if (!item.title) seen.set(refKey(item.ref), { ref: item.ref })
     }
   }
   return [...seen.values()]
 }
 
-/** "Coming soon" says when, where other rows say the year. */
-export function releaseLine(
-  rail: RailInfo["id"],
-  item: CatalogSummary,
-): string | undefined {
-  if (rail !== "comingSoon" || !item.availability.releaseDate) return undefined
-  const day = parseDay(item.availability.releaseDate)
-  if (!day) return undefined
-  return tr("discover.card.release", {
-    date: formatDay(day),
-    kind: tr(`search.kind.${item.ref.kind}`),
-  })
-}
-
 /**
- * A row's heading, which leads to all of it: its own grid, or for the
- * popular rows, browsing that kind.
+ * A row's heading, which leads to all of it: browsing with the row's
+ * filters and sort. A row with no browse behind it has its name alone.
  */
 export function RailHeading({ rail }: { rail: RailInfo }) {
+  const link = railLink(rail)
+  if (!link) return railName(rail)
   return (
     <Link
-      {...railLink(rail)}
+      {...link}
       className="focus-visible:ring-ring group/heading inline-flex max-w-full items-center gap-1 rounded-sm outline-none focus-visible:ring-2"
     >
       <span className="truncate">{railName(rail)}</span>
@@ -186,10 +175,16 @@ function DiscoverRow({
           .slice(0, RAIL_CARDS)
           .map((item) => (
             <RailItem key={refKey(item.ref)} artwork="poster">
-              <CatalogCard
-                title={item}
-                availability={liveEntry(live, item.ref)?.availability}
-                detail={releaseLine(rail.id, item)}
+              <BrowseCard
+                item={item}
+                live={live}
+                // Without a date or a score to say, the year and the kind,
+                // since a row can hold both.
+                detail={
+                  page.data.detail
+                    ? cardDetail(page.data.detail, item)
+                    : undefined
+                }
                 dismiss={dismiss.of(item)}
               />
             </RailItem>
@@ -210,7 +205,7 @@ export function useRailDismiss(rail: RailInfo) {
   const recommended = rail.id === "forYou" || rail.id === "becauseWatched"
   return {
     hidden: recommended ? hidden : new Set<string>(),
-    of: (item: CatalogSummary) =>
+    of: (item: BrowseEntry) =>
       recommended ? () => dismiss(queryClient, item.ref, item.name) : undefined,
   }
 }

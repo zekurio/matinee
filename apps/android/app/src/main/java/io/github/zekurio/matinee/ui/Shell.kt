@@ -70,7 +70,6 @@ import io.github.zekurio.matinee.ui.profile.RecentScreen
 import io.github.zekurio.matinee.ui.requests.AskedScreen
 import io.github.zekurio.matinee.ui.requests.CatalogBrowseScreen
 import io.github.zekurio.matinee.ui.requests.CatalogScreen
-import io.github.zekurio.matinee.ui.requests.DiscoverRailScreen
 import io.github.zekurio.matinee.ui.requests.LocalRequests
 import io.github.zekurio.matinee.ui.requests.RequestsAround
 import io.github.zekurio.matinee.ui.requests.RequestsHub
@@ -221,8 +220,10 @@ private fun Pages(controller: NavHostController, session: Session, offline: Bool
         screen<DownloadsRoute>(tab = DownloadsRoute) { DownloadsScreen() }
         screen<DownloadsShowRoute> { DownloadsShowScreen(it.toRoute<DownloadsShowRoute>().titleId) }
         screen<CatalogRoute> { CatalogScreen(it.toRoute<CatalogRoute>()) }
-        screen<DiscoverRailRoute> { DiscoverRailScreen(it.toRoute<DiscoverRailRoute>().rail) }
-        screen<CatalogBrowseRoute> { CatalogBrowseScreen(it.toRoute<CatalogBrowseRoute>().kind) }
+        screen<CatalogBrowseRoute> {
+            val route = it.toRoute<CatalogBrowseRoute>()
+            CatalogBrowseScreen(route.kind, route.filters, route.sort)
+        }
         screen<AskedRoute> { AskedScreen() }
         screen<RequestsRoute> { RequestsScreen(it.toRoute<RequestsRoute>().list) }
     }

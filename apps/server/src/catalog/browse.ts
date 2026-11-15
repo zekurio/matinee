@@ -14,6 +14,7 @@ import { ORPCError } from "@orpc/server"
 import type { Viewer } from "../access/viewer"
 import { env } from "../env"
 import type { DiscoverQuery } from "../metadata/tmdb/browse"
+import { recommendedPage } from "../recommendations/browse"
 import { destinations, lookupLanguage } from "../requests/destinations"
 import {
   browseProvider,
@@ -21,7 +22,7 @@ import {
   genreProvider,
   languageProvider,
 } from "./cache"
-import { catalogCards } from "./cards"
+import { askable, catalogCards } from "./cards"
 
 /*
  * Browsing TMDB's catalog of one kind with filters and a sort. Titles
@@ -50,6 +51,7 @@ const LONGEST = { movie: 240, show: 120 } satisfies Record<Kind, number>
 /** Codes TMDB lists among a country's ratings for "not rated". */
 const UNRATED = new Set(["NR", "UR"])
 
+/** The order TMDB's lists take for each sort; "For you" is the viewer's own and has none. */
 const TMDB_SORT = {
   popular: { by: "popularity", direction: "desc" },
   scoreHigh: { by: "vote_average", direction: "desc" },
@@ -59,7 +61,22 @@ const TMDB_SORT = {
   oldest: { by: "date", direction: "asc" },
   nameAsc: { by: "name", direction: "asc" },
   nameDesc: { by: "name", direction: "desc" },
-} satisfies Record<CatalogSort, DiscoverQuery["sort"]>
+} satisfies Record<Exclude<CatalogSort, "forYou">, DiscoverQuery["sort"]>
+
+/** How far ahead "coming soon" looks, in days. */
+const UPCOMING_DAYS = 90
+/** A day as TMDB takes it, `days` from today. */
+function dayFrom(days: number) {
+  return new Date(Date.now() + days * 86400000).toISOString().slice(0, 10)
+}
+/** The later of two days, either open. */
+function later(a: string | null, b: string | null) {
+  return a === null ? b : b === null || a > b ? a : b
+}
+/** The earlier of two days, either open. */
+function earlier(a: string | null, b: string | null) {
+  return a === null ? b : b === null || a < b ? a : b
+}
 
 function bounds(kind: Kind) {
   return {
@@ -74,7 +91,7 @@ function bounds(kind: Kind) {
  * the US, and a bare de is Germany. Null without a TMDB key or a
  * library of the kind the viewer can ask into.
  */
-async function setting(viewer: Viewer, kind: Kind) {
+export async function setting(viewer: Viewer, kind: Kind) {
   if (!env.MATINEE_TMDB_API_KEY) return null
   const candidates = await destinations(viewer, kind)
   if (!candidates.length) return null
@@ -177,7 +194,7 @@ function refused(): never {
  * bound at an end of its span is no bound, so a range dragged to its
  * end and one never touched share a cache entry.
  */
-async function query(
+export async function query(
   kind: Kind,
   from: { language: string; country: string | null },
   filters: CatalogFilters,
@@ -210,19 +227,28 @@ async function query(
     const offered = await languageProvider()
     if (!offered.value.some((entry) => entry.id === filters.language)) refused()
   }
+  // Titles not out yet have hardly any votes, so none is asked of them.
   const floor =
-    filters.votesMin !== null
+    filters.votesMin !== null || filters.upcoming
       ? null
       : sort === "scoreHigh" || sort === "scoreLow"
         ? SCORE_FLOOR
-        : sort === "popular" || sort === "votes"
+        : sort === "popular" || sort === "votes" || sort === "forYou"
           ? null
           : LISTING_FLOOR
+  const yearFrom = open(filters.yearFrom, span.years.min, true)
+  const yearTo = open(filters.yearTo, span.years.max, false)
   return {
     query: {
       genres,
-      yearFrom: open(filters.yearFrom, span.years.min, true),
-      yearTo: open(filters.yearTo, span.years.max, false),
+      from: later(
+        yearFrom === null ? null : `${yearFrom}-01-01`,
+        filters.upcoming ? dayFrom(0) : null,
+      ),
+      to: earlier(
+        yearTo === null ? null : `${yearTo}-12-31`,
+        filters.upcoming ? dayFrom(UPCOMING_DAYS) : null,
+      ),
       scoreMin: open(filters.scoreMin, span.scores.min, true),
       scoreMax: open(filters.scoreMax, span.scores.max, false),
       votesMin: filters.votesMin ?? floor,
@@ -230,20 +256,42 @@ async function query(
       language: filters.language,
       runtimeMin: open(filters.runtimeMin, span.runtime.min, true),
       runtimeMax: open(filters.runtimeMax, span.runtime.max, false),
-      sort: TMDB_SORT[sort],
+      sort: TMDB_SORT[sort === "forYou" ? "popular" : sort],
     },
     floor,
   }
 }
 
+/** What a card says under its name for a browse, by its sort and filters. */
+export function detailFor(
+  sort: CatalogSort,
+  filters: CatalogFilters,
+  query: DiscoverQuery,
+): t.infer<typeof CatalogBrowsePage>["detail"] {
+  if (sort === "newest" || sort === "oldest" || filters.upcoming)
+    return "releaseDate"
+  return query.scoreMin !== null ||
+    query.scoreMax !== null ||
+    sort === "scoreHigh" ||
+    sort === "scoreLow"
+    ? "score"
+    : null
+}
+
+export type BrowseInput = {
+  kind: Kind
+  filters: CatalogFilters
+  sort: CatalogSort
+  page: number
+}
+
+/**
+ * A page of a browse: of the viewer's stored recommendations, or else
+ * of TMDB's catalog.
+ */
 export async function page(
   viewer: Viewer,
-  input: {
-    kind: Kind
-    filters: CatalogFilters
-    sort: CatalogSort
-    page: number
-  },
+  input: BrowseInput,
 ): Promise<t.infer<typeof CatalogBrowsePage>> {
   const from = await setting(viewer, input.kind)
   if (!from)
@@ -260,6 +308,14 @@ export async function page(
     input.filters,
     input.sort,
   )
+  const detail = detailFor(input.sort, input.filters, built)
+  if (input.filters.recommended)
+    return {
+      ...(await recommendedPage(viewer, input, built, from.language)),
+      stale: false,
+      voteFloor: floor,
+      detail,
+    }
   const result = await browseProvider(
     input.kind,
     from.language,
@@ -267,26 +323,24 @@ export async function page(
     input.page,
   )
   const cards = await catalogCards(viewer, input.kind, result.value.items)
-  const scored =
-    built.scoreMin !== null ||
-    built.scoreMax !== null ||
-    input.sort === "scoreHigh" ||
-    input.sort === "scoreLow"
   return {
-    items: cards.map(({ row, card }) => ({
-      ...card,
-      score: row.score,
-      votes: row.votes,
-      releaseDate: row.releaseDate,
-    })),
+    // TMDB can't leave out what's here, so a page of only titles to ask
+    // for can come back short.
+    items: cards.flatMap(({ row, card }) =>
+      input.filters.requestable && !askable(card.availability)
+        ? []
+        : [
+            {
+              ...card,
+              score: row.score,
+              votes: row.votes,
+              releaseDate: row.releaseDate,
+            },
+          ],
+    ),
     nextPage: result.value.nextPage,
     stale: result.stale,
     voteFloor: floor,
-    detail:
-      input.sort === "newest" || input.sort === "oldest"
-        ? "releaseDate"
-        : scored
-          ? "score"
-          : null,
+    detail,
   }
 }
