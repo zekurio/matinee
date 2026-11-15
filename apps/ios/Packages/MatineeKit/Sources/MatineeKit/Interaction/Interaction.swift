@@ -55,11 +55,16 @@ struct FocusIndicator<S: InsettableShape>: View {
   @Environment(\.palette) private var palette
 
   var body: some View {
-    switch placement {
-    case .outside: shape.inset(by: -4).strokeBorder(color ?? palette.ring, lineWidth: 2)
-    case .inside: shape.strokeBorder(color ?? palette.ring, lineWidth: 2)
-    case .none: EmptyView()
-    }
+    #if os(tvOS)
+      // The TV's ring, in the text color and clear of the shape (TV/TVFocus.swift).
+      TVFocusRing(shape: shape, placement: placement, color: color)
+    #else
+      switch placement {
+      case .outside: shape.inset(by: -4).strokeBorder(color ?? palette.ring, lineWidth: 2)
+      case .inside: shape.strokeBorder(color ?? palette.ring, lineWidth: 2)
+      case .none: EmptyView()
+      }
+    #endif
   }
 }
 

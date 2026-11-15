@@ -301,9 +301,301 @@ and as part of `just ios test`.
 
 ## TV
 
-The kit builds for tvOS, and its controls take focus: everything pressable
-is a SwiftUI button, sliders move with the remote, overlays close on Menu.
-Focus is drawn by `FocusIndicator` in `Interaction/Interaction.swift`, the
-web's ring for now; the TV's own focus design (pictures grow and gain a
-ring, controls fill with the text color, as Android's `ui/tv/Focus.kt`)
-replaces it there, and sizes for the couch come with it.
+`Sources/MatineeKit/TV` is the kit for Apple TV: Android TV's `ui/tv`
+(`apps/android/.../ui/tv`) ported the way the rest of the kit ports
+`ui/kit`, with the web's colors, Red Hat Text, and radii. Every file is
+`#if os(tvOS)`, so none of it exists on a phone. A TV screen imports
+`SwiftUI` and `MatineeKit` and builds from the `TV` components; the phone's
+still compile for tvOS, and the TV boundary test (below) keeps them out
+of TV screens.
+
+### Focus
+
+Focus moves by the system's focus engine. Every focusable thing takes one
+of two looks, as on Android TV:
+
+- A picture (a poster, a still, a person's photo) lifts with the system's
+  own focus effect: it grows (about 11% for a poster, more for smaller
+  things), casts a shadow, tilts under the thumb on the remote's touch
+  surface, and a sheen runs across it. `TVPictureButton`, and every card.
+- A control (a button, a chip, a list row, a drawer entry, the search
+  field) fills with the text color and its content takes the page's color.
+  It grows by `TVFocus.controlScale` (1.05), a list row by `rowScale`
+  (1.02), with a soft shadow. Pressed, it sinks back most of the way.
+  `TVControlButton`, and every TV control. This is also how tvOS draws its
+  own buttons, so the two halves agree.
+
+Android TV draws a ring round a focused picture, because Android has no
+lift of its own. On Apple TV the kit takes the system's lift instead and
+drops the ring. The alternatives, side by side on the gallery's Focus page:
+
+- Matinee's own, Android's 6% grow, shadow, and a ring in the text color
+  6 points clear of the edge, still under the thumb. Consistent with
+  Android, crisp, but static: no tilt, no sheen, and it reads as foreign
+  next to every other Apple TV app. One line away for an app that wants
+  it: `.tvPictureFocus(.matinee)` on the root.
+- The system's lift, the kit's choice. The tilt is how a viewer feels
+  where focus is while the thumb rests on the remote, and Apple TV viewers
+  expect it from every poster. It reads in light mode too, by its shadow.
+- Both. The ring can't ride the lift. Drawn outside the picture, the
+  lift's platter clips it. Drawn on the picture's edge, tvOS 26's glass rim
+  lights it in color (the third poster). Drawn as a layer of its own, it
+  stays flat while the picture tilts.
+
+The phone kit's controls on a TV draw focus through `FocusIndicator`, whose
+tvOS branch draws the TV ring (`TVFocusRing`): the text color, 6 points, 6
+clear of the shape or inside it for rows.
+
+Rows and panels are focus sections, so a move lands in the nearest row or
+panel along its way. `TVFocusMemory` keeps where focus was per row and per
+page, as Android's `TvFocusMemory`: focus coming back into a row lands on
+the card it left, and `restore(fallback:)` puts focus back on the card that
+had it last when a page appears or the drawer hands focus back. A page owns
+one (`@State private var memory = TVFocusMemory()`), gives it to its
+`TVRow`s and `TVPosterGrid`, and calls `memory.restore(fallback: (row, item))`
+in `onAppear`. For a row of something else, `.tvFocusRow(key, memory:,
+focused:, first:)` does the same with the row's own `@FocusState`.
+
+A page puts its first focus itself, with `restore` or a `defaultFocus`;
+otherwise the focus engine starts at the top left, in the drawer.
+
+### Scale
+
+Apple TV lays out 1920 by 1080 points, at 1x on a 1080p set and 2x on a 4K
+one, so one scale serves both. Android TV lays out 960 by 540 dp, so the kit
+takes its numbers at two points a dp, and a page takes the same share of the
+screen on both TVs. Where Apple has a number of its own, the margins and the
+least text size, Apple's wins.
+
+| Token                                                                | Value                     | From                                                                          |
+| -------------------------------------------------------------------- | ------------------------- | ----------------------------------------------------------------------------- |
+| `.textStyle(.hero)`                                                  | 88/100 bold, -0.02 em     | `TvType.Hero` 44/50                                                           |
+| `.display`, `.headline`                                              | 68/80 bold, 52/64 bold    | `Display` 34/40, `Headline` 26/32                                             |
+| `.title`                                                             | 40/52 semibold            | `Title` 20/26, a row's heading                                                |
+| `.facts`, `.body`                                                    | 32/44 medium, 32/48       | `Facts`, `Body` 16; Apple's body is 29                                        |
+| `.label`, `.caption`                                                 | 30/40 medium, 28/40       | `Label` 15, `Caption` 14; Apple's least is 23                                 |
+| `.clock`, `.iconNumber`, `TVCodeText`                                | 40/52, 22/24, 88/108 mono | `Clock`, `IconNumber`, `Code`                                                 |
+| `TVOverscan.horizontal`, `.vertical`                                 | 80, 60                    | Apple's safe area (Android's 32 and 27 dp would be 64 and 54)                 |
+| `TVPage.start`, `.end`                                               | 176, 80                   | Past the drawer's rail, with room for a card's lift; Android's 80 dp, rounded |
+| `TVButtons.height`, `.iconSize`                                      | 88, 40                    | Apple's buttons are 86; Android's 48 dp would be 96                           |
+| `TVListItems.height`, `.inset`, `.radius`                            | 96, 40, 28                | Android's 60, 20, 14 dp; a row with a subtitle grows                          |
+| `TVCards.posterWidth`, `.landscapeWidth`, `.gap`, `.radius`          | 248, 448, 40, 20          | Android's 124, 224, 20, 10 dp; Apple's catalog sample has 250 and 40          |
+| `TVGrid.columns`, `.gap`, `.rowGap`                                  | 7, 36, 48                 | Android's 7, 18, 24 dp                                                        |
+| `TVPanels.width`                                                     | 760                       | Android's 380 dp                                                              |
+| `TVDrawerSize.row`, `.expanded`                                      | 88, 472                   | Android's 48, 236 dp, the row as tall as a button                             |
+| `TVFocus.ring`, `.gap`, `.room`, `.captionGap`                       | 6, 6, 40, 32              | Android's 3 dp ring and gap; room and gap clear the system's lift             |
+| `TVSpace.s1` … `.s8`, `.rows`; `TVRadius.sm`, `.card`, `.row`, `.lg` | 8 … 56, 56; 8, 20, 28, 32 | Android TV's steps, doubled                                                   |
+
+tvOS has no Dynamic Type: the system offers no text size (`simctl ui
+content_size` says "unsupported"), and the TV styles stay as they are. Bold
+Text in the TV's accessibility settings is honoured: every style's weight
+goes up a step. The phone's `.textStyle(.sm)` and the rest still exist on
+tvOS, and the TV boundary test flags them in a TV screen.
+
+TV pages lay out from the screen's edges, the kit's margins being the safe
+area: give a page's root `.ignoresSafeArea()`, so rows can run off the
+right edge and backdrops fill the screen.
+
+### Components
+
+- `TVButton("Resume", icon: .play, detail: "18 min left", trailingIcon:, active:, rest:) { }`:
+  the pill. `active` is a choice in force, in the accent; `rest` replaces
+  its fill without focus, as over the moving picture.
+- `TVIconButton(.heart, label: "Favorite", tint:) { }`: a round icon that
+  opens to say its label while focused.
+- `TVRoundButton(.pause, label: "Pause", size: 88, lit:) { }`, or with any
+  content: stays an icon, like the player's. `lit` shows focus before it
+  arrives.
+- `TVChip("Drama", selected:) { }`.
+- `TVListItem("Subtitles", subtitle:, icon:, quiet:, selected:, destructive:, checked:, action:, onLongPress:) { leading } trailing: { TVListValue("English") }`:
+  the row. `quiet` rows have no fill until focused, for long lists and
+  panels. `TVListValue(value, chevron:)`, `TVListSwitch(isOn)`,
+  `TVListHeading("Account")` go with it, and
+  `TVStepRow(value, title:) { step in }` is a value Left and Right step,
+  like a subtitle delay or a date's day.
+- `TVControlButton(shape:, rest:, content:, scale:, lit:, action:, onLongPress:) { }`
+  and `TVPictureButton(shape:, action:, onLongPress:, onPlayPause:) { }`:
+  anything else pressed, in the control or the picture look. Inside a
+  control, `@Environment(\.tvFocused)` says whether it shows focus.
+- `.tvSidePanel(isPresented:, title:, description:, loading:) { rows }`,
+  or `item:`: the right-edge panel, in place of sheets and menus. It slides
+  in over a dimmed screen, focus starts on its first row (or where a
+  `defaultFocus` inside says) and stays in it, Menu closes it, and focus
+  goes back to what opened it. `@Environment(\.overlayDismiss)` closes it
+  from inside, then runs what it's given.
+- `.tvOptionsPanel(isPresented:, title:, selection: $sort, options: [TVOption(value, "Name", detail:)])`:
+  pick one; focus starts on the one in force, which is checked.
+- `.tvActionsPanel(isPresented:, title:, subtitle:, actions: [TVAction("Play", icon: .playOutline) { }])`,
+  or `item:` with `actions: { item in [...] }`: a card's actions, as a long
+  press opens them. Choosing one closes the panel, then runs it.
+- `TVSearchField(text: $query, placeholder:, focus: $focused) { submit }`:
+  rests like a button, so moving past it doesn't raise the keyboard;
+  Select opens the system's full-screen keyboard, with dictation, and the
+  text shows in the field as it's typed. Search or Menu closes it, focus
+  back on the field. A clear button follows while there's text.
+- `TVClock()`, and `.tvClock(visible:)` to put it top right, fading out
+  under a panel or while a grid has the top. It follows the locale's 12 or
+  24 hour style.
+
+The words the TV components say on their own (Watched, Clear search, the
+search field's placeholder, a card's progress) are in the `TV` table of
+`Resources/en.lproj` and `de.lproj`, through `TVText`.
+
+- `TVNavDrawer(top:, entries:, bottom:, selection:, state:, onLeave:, onPick:) { avatar }`
+  with `TVDrawerEntry(id, label:, icon:)` (no icon draws the avatar): the
+  rail at the left edge, which grows into a labelled drawer on a shade
+  while it has focus. Left from a page's first column comes in, on the
+  current page's entry; Right leaves and calls `onLeave`, for the page to
+  `restore` its focus. `TVDrawerState.open()` comes in from code, as Back
+  on Home does on Android.
+
+### Layout pieces
+
+Each takes plain values, a title, a key, a progress, and the picture as a
+view the app supplies, or a `URL` for the kit's `TVPicture`
+(`AsyncImage`, faded in) when the app has no loader of its own. None knows
+MatineeCore.
+
+- `TVPosterCard("Dune", watched:, width:, action:, onLongPress:, onPlayPause:) { art }`
+  or `url:`: a 2:3 poster, its name on a tone until the picture is in.
+  `width: nil` fills a grid's column.
+- `TVLandscapeCard("Severance", detail: "S2 · E4 · 18 min left", progress: 0.6, watched:, action:) { art }`
+  or `url:`: a 16:9 still with its progress or watched dot and the caption
+  under it.
+- `TVCaptionedPoster("Season 2", detail:, badge: "3", watched:) { art }`.
+- `TVPersonCard("Zendaya", role: "Chani") { photo }` or `url:`: a round
+  photo, initials until it's in.
+- `TVArtCard(toneKey:, aspect:, label:, action:) { art }`, `TVProgress(0.6)`,
+  `TVWatchedMark()`.
+- `TVRow("Continue watching", key: "continue", items:, itemKey: \.id, memory:) { item in card }`:
+  a titled row that scrolls sideways, cards going out of sight just right
+  of the drawer's rail, remembering its card.
+- `TVPosterGrid(items, itemKey:, memory:, columns:, onNearEnd:, onHeaderChange:) { card } header: { } line: { TVFocusLine(info) } footer: { }`:
+  a library's grid. The header folds away once focus leaves the first row
+  and comes back with it; `onNearEnd` loads the next page.
+- `TVItemInfo(name:, subtitle:, facts:, contentRating:, rating:, overview:)`
+  with `TVFacts(info)`, `TVFocusLine(info)`, and
+  `TVItemHeader(info, height:) { info in TVTitleLogo(info.name, url: logo) }`:
+  what a page says about the focused item.
+- `TVTitleLogo("Dune", url:, style:, width:, height:, alignment:)`, or with
+  the app's own logo view: the logo, or the name when there's none or it
+  fails.
+- `TVBackdrop(focused) { item in TVPicture(item.backdrop, alignment: .topTrailing) }`:
+  the picture behind a page under `TVScrim`, crossfading once focus rests
+  for 350 ms.
+
+Long press of Select on a card runs its `onLongPress`, Apple TV's way to
+ask for more, which opens the actions panel where Android TV uses Menu;
+Play/Pause on a focused card runs its `onPlayPause`, as the TV app plays a
+focused title.
+
+### The remote
+
+`TVRemote.swift` gives screens the remote without UIKit:
+
+- `.onTVPlayPause { }`.
+- `.tvBackLayers([TVBackLayer(isActive: menuOpen) { menuOpen = false }, TVBackLayer(isActive: controls) { controls = false }])`:
+  Menu closes the first active layer, one per press; with none active it
+  goes on to the system, which leaves the page or the app. `.onTVBack(isActive:) { }`
+  for one layer. A side panel closes itself.
+- `.onTVPress([.left, .right], isEnabled: focused) { button, phase in }`:
+  a press going down and coming up, for a held press. While it listens,
+  that arrow doesn't move focus.
+- `.onTVSwipe(isEnabled: focused) { swipe in }`: the touch surface's
+  translation and velocity.
+- `TVScrub(step: 10)` with `.tvScrubbing(scrub, position:, duration:, isEnabled:) { seekTo in }`:
+  Android's `KeySeek`. A press steps, a held press glides faster the longer
+  it's held, up to a tenth of the video a second, and a swipe across the
+  whole surface moves a tenth of the video. It seeks once, when the press
+  or the swipe ends; `scrub.target` is where to draw the head meanwhile.
+- `TVFocusSurface { showControls() }`: holds focus and draws nothing, the
+  player's picture while its controls are away.
+
+Presses and swipes reach every listener on screen, so give `isEnabled` only
+while what listens has focus.
+
+### Phone components on TV
+
+They compile and take focus, wearing the TV ring, at phone sizes. Use the
+TV components instead; the TV boundary test flags these:
+
+| Phone                                                      | On TV                                                          |
+| ---------------------------------------------------------- | -------------------------------------------------------------- |
+| `.matineeSheet`, `.dropdownMenu`                           | `.tvSidePanel`, `.tvActionsPanel`, `.tvOptionsPanel`           |
+| `BottomBar`, `TopBar`                                      | `TVNavDrawer`; a `.headline` title, Menu to go back            |
+| `MatineeButton`, `RoundIconButton`, `Pressable`            | `TVButton`, `TVIconButton`, `TVRoundButton`, `TVControlButton` |
+| `Chip`, `ChoiceChip`, `ToggleChip`                         | `TVChip`                                                       |
+| `ListSection`, `ListRow`, `SwitchRow`, `SelectRow`         | `TVListItem` with `TVListValue`, `TVListSwitch`                |
+| `Select`, `SegmentedControl`, `Switch`, `Slider`, calendar | a `TVListItem` opening `.tvOptionsPanel`, `TVStepRow`          |
+| `MatineeTextField`                                         | `TVSearchField`                                                |
+| `.textStyle(.sm)` and the phone sizes                      | `TVTextStyle`                                                  |
+
+Sheets and the bottom bar are left available on tvOS rather than marked
+unavailable: the gallery's phone pages build for tvOS, and marking them
+would mean wrapping those pages too. `Spinner`, `ProgressBar`, `Avatar`,
+`Badge`, `LucideIcon`, and `Separator` take no focus and are fine on a TV
+at a size the screen gives them. Toasts and dialogs work, at phone sizes;
+the TV app will want TV versions of both.
+
+### The TV gallery
+
+On tvOS the gallery app opens the TV gallery (`TVKitGallery`), whose last
+page is the phone gallery as it looks on a TV. Its pages: `focus`,
+`scale`, `buttons`, `lists`, `panels`, `search`, `cards`, `grid`, `home`
+(a mock-up of Home with the backdrop, header, rows, drawer, and clock),
+`remote` (a mock player), and `phone`. Launch arguments: `-page`, `-scheme
+light|dark`, `-accent matinee|ember|moss|sun`, `-locale de`, and `-open
+sort|actions|day|loading` on `panels`, `drawer` on `search`, `grid`, and
+`home`, `keyboard` on `search`. Its home page changes the appearance, the
+accent, and the language live.
+
+The simulators are "Apple TV 4K (4th generation)" and "Apple TV 4K (4th
+generation) (at 1080p)"; `TVKitGallery()` is also a view the TV app can
+show in a debug build.
+
+### Driving the remote
+
+`xcrun simctl` can't press the Siri Remote, and scripting the Simulator's
+keyboard takes over the Mac's screen and needs accessibility rights. The
+gallery's project has a UI test, `KitGalleryRemote`, that presses the remote
+through `XCUIRemote`, which goes through the real focus engine, and saves
+screenshots. `Gallery/remote.sh` runs it:
+
+```sh
+cd apps/ios/Packages/MatineeKit/Gallery
+nix run nixpkgs#xcodegen -- generate
+./remote.sh run "-page buttons -scheme dark" "shot:start right*2 shot:third select menu"
+```
+
+A run builds, starts a test session (most of a minute), runs the steps, and
+quits. To iterate, keep a session and send it steps, which run at once:
+
+```sh
+./remote.sh serve "-page home"                     # build, launch, stay
+./remote.sh send "down right*3 shot:row hold:select:1 shot:panel menu"
+./remote.sh install                                # rebuild the app; the session stays
+./remote.sh send "relaunch:-page+home+-scheme+light shot:light"
+./remote.sh stop
+```
+
+Steps: `up`, `down`, `left`, `right`, `select`, `menu`, `playpause`,
+`home`, each with `*n` to repeat; `hold:<button>:<seconds>`;
+`wait:<seconds>`; `shot:<name>`, saved as `OUT/<name>.png`; and
+`relaunch:<arguments>` with `+` for spaces. `SIMULATOR` picks the device
+(the 4K one unless set), `OUT` the folder (`apps/ios/build/tv-kit-screenshots`,
+fixed when the session starts), `SETTLE` the seconds before a shot. A
+session ends after two hours without steps. `XCUIRemote` has buttons but no
+touch surface, so swipes can only be tried by hand, in the Simulator's Apple
+TV Remote window.
+
+A screen of the TV app can take the same approach: a UI test in its own
+project, `XCUIRemote.shared.press(.right)`, and
+`XCUIScreen.main.screenshot()`.
+
+### The TV boundary test
+
+`Tests/MatineeKitBoundaryTests/TVBoundaryTests.swift` scans TV screens for
+phone components and phone type sizes, and for the stock controls the main
+boundary test catches. By default it scans the TV gallery; point it at the
+TV app's screens with `KIT_TV_BOUNDARY_ROOT` (`TEST_RUNNER_KIT_TV_BOUNDARY_ROOT`
+through `xcodebuild`).
