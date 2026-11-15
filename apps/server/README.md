@@ -28,6 +28,7 @@ For NixOS and the dev shell, see the [repository README](../../README.md).
 - [Local and remote](#local-and-remote)
 - [Statistics](#statistics)
 - [Profiles and favorites](#profiles-and-favorites)
+- [Recommendations](#recommendations)
 - [How auth works](#how-auth-works)
 - [Signing in apps](#signing-in-apps)
 - [Local server discovery](#local-server-discovery)
@@ -718,6 +719,54 @@ Everyone has a profile at `/profiles/<username>` showing their name and
 picture. In Settings → Account, owners can also share their favorites and
 their statistics. Both are off by default. Profiles require an account on
 the server.
+
+## Recommendations
+
+Home and Discover each show recommendation rows based on what a person
+watched. Home's rows hold titles already on the server. Discover's hold
+titles the person could request. They need a TMDB API key. Without one,
+the rows don't appear.
+
+- Signals. Each played title gets a score from its watch time. A sitting
+  counts the share of the file it covered, and a file marked watched
+  counts 0.6. Each sitting loses half its weight every 90 days. A movie
+  scores at most 1, plus 0.5 for each rewatch, up to two. A show scores
+  the log of the episodes watched, so long shows don't take over. A
+  favorite adds 1, and a favorite season or episode adds 0.3. Some titles
+  count against what they're about: a movie stopped before 15% and left
+  for three days, or a show stopped in its first episode and left for
+  two weeks.
+- Features. For every title involved, the server fetches its genres,
+  keywords, directors, writers, creators, top-billed cast, companies,
+  language, and year from TMDB into `title_features` through the
+  `title-features` queue. Features refresh after 30 days.
+- Candidates. Candidates are every library title the person can see.
+  For the kinds they can request, TMDB's recommended and similar titles
+  for their eight top-scoring titles are added, plus TMDB discover results
+  for their top genres, keywords, and directors.
+- Scoring. `src/recommendations/score.ts` holds every weight in
+  `WEIGHTS`. A candidate's score is its similarity to the person's
+  profile, plus bonuses for being related to titles they watched, for
+  its TMDB rating, and for how much other people on the server liked it.
+  The ranking is then reordered so similar titles don't bunch together.
+  The 100 best titles on the server and the 100 best to request are
+  saved per person, each with a reason: a title they watched, a person,
+  or their overall taste.
+- When it runs. The `recommendations` queue works out one person at a
+  time. Finishing or closing a playback session, marking something
+  watched, changing a favorite, and "Not interested" all queue the
+  person. The "Update recommendations" task catches anyone with no list,
+  a list older than a day, or plays since their last run.
+- Rows. "Recommended for you" holds the best 20. Up to two "Because you
+  watched" rows of at least five titles come from the next ones, grouped
+  by the title they came from. Discover checks each title's availability
+  again when it reads a page.
+- Feedback. "Not interested" hides a title until the person undoes it.
+  Each title a row shows is logged once a day in
+  `recommendation_impression`, with its position, score, and the
+  algorithm version (`profile-v1`). Comparing those rows with
+  `playback_session` and `request` shows what people played or
+  requested from a recommendation.
 
 ## How auth works
 

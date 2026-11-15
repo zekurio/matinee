@@ -44,6 +44,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.FeaturedTitle
+import io.github.zekurio.matinee.api.HomeRecommendationRail
 import io.github.zekurio.matinee.api.Library
 import io.github.zekurio.matinee.api.MediaItem
 import io.github.zekurio.matinee.api.isAdmin
@@ -54,6 +55,7 @@ import io.github.zekurio.matinee.ui.LocalNavigator
 import io.github.zekurio.matinee.ui.LocalUser
 import io.github.zekurio.matinee.ui.Motion
 import io.github.zekurio.matinee.ui.components.ActionTarget
+import io.github.zekurio.matinee.ui.components.LocalActions
 import io.github.zekurio.matinee.ui.components.LocalApi
 import io.github.zekurio.matinee.ui.components.art
 import io.github.zekurio.matinee.ui.components.landscape
@@ -63,8 +65,11 @@ import io.github.zekurio.matinee.ui.formatRating
 import io.github.zekurio.matinee.ui.home.RailState
 import io.github.zekurio.matinee.ui.home.failedOutright
 import io.github.zekurio.matinee.ui.home.railState
+import io.github.zekurio.matinee.ui.home.recommendationRailKey
+import io.github.zekurio.matinee.ui.home.recommendationRailName
 import io.github.zekurio.matinee.ui.home.rememberHomeLoaders
 import io.github.zekurio.matinee.ui.home.rememberShelf
+import io.github.zekurio.matinee.ui.home.visibleItems
 import io.github.zekurio.matinee.ui.itemLabel
 import io.github.zekurio.matinee.ui.kit.Lucide
 import io.github.zekurio.matinee.ui.kit.LucideIcon
@@ -143,10 +148,12 @@ fun TvHomeScreen() {
             model.pending != null && memory.lastRow != FEATURED && info.visibleItemsInfo.isNotEmpty() && !seen
         }.collect { hidden -> if (hidden) model.swap() }
     }
+    val recommended = (loaders.recommendations.state as? Load.Ready)?.value?.rails.orEmpty()
     val rows = buildList {
         if (!featured.isNullOrEmpty()) add(FEATURED)
         add(CONTINUE)
         add(NEXT_UP)
+        recommended.forEach { add(recommendedKey(it)) }
         libs?.forEach { add(shelfKey(it)) }
     }
     SideEffect { order.value = rows }
@@ -165,6 +172,7 @@ fun TvHomeScreen() {
                 featuredRow(featured, memory, firsts, onFocus)
                 itemRow(CONTINUE, R.string.browse_continue_watching, R.string.home_continue_failed, loaders.resume, memory, firsts, onFocus)
                 itemRow(NEXT_UP, R.string.browse_next_up, R.string.home_next_up_failed, loaders.nextUp, memory, firsts, onFocus)
+                recommendedRows(recommended, memory, firsts, onFocus)
                 when (val state = libraries.state) {
                     Load.Loading -> item(key = "loading") { Loading() }
                     is Load.Failed -> item(key = "libraries-failed") {
@@ -214,6 +222,8 @@ private const val CONTINUE = "continue"
 private const val NEXT_UP = "nextUp"
 
 private fun shelfKey(library: Library) = "shelf-${library.id}"
+
+private fun recommendedKey(rail: HomeRecommendationRail) = "recommended-${recommendationRailKey(rail)}"
 
 /** Puts [row]'s first card in [firsts] while it shows one. */
 @Composable
@@ -288,6 +298,43 @@ private fun LazyListScope.itemRow(
                         watched = viewer.isWatched(item),
                         menu = ActionTarget.Item(item, here = false),
                         focus = with(memory) { Modifier.item(key, item.id) }.onFocusChanged { if (it.isFocused) onFocus(info) },
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * The recommendation rows, as on the phone: nothing until they've loaded,
+ * and a row whose titles were all marked "Not interested" goes.
+ */
+private fun LazyListScope.recommendedRows(
+    rails: List<HomeRecommendationRail>,
+    memory: TvFocusMemory,
+    firsts: MutableMap<String, String>,
+    onFocus: (FocusedItem) -> Unit,
+) {
+    rails.forEach { rail ->
+        val key = recommendedKey(rail)
+        item(key = key) {
+            val api = LocalApi.current
+            val nav = LocalNavigator.current
+            val res = LocalResources.current
+            val viewer = androidx.compose.ui.platform.LocalContext.current.app.viewer
+            val shown = visibleItems(rail, LocalActions.current.hidden)
+            FirstCard(firsts, key, shown.firstOrNull()?.title?.id)
+            if (shown.isEmpty()) return@item
+            TvRow(recommendationRailName(rail.id, rail.seed?.name, res), key, memory) {
+                items(shown, key = { it.title.id }) { item ->
+                    val info = remember(item) { titleInfo(item.title, api, res) }
+                    TvPosterCard(
+                        item.title.name,
+                        api.art(item.title.images.poster),
+                        onClick = { nav.title(item.title) },
+                        watched = viewer.isWatched(item.title),
+                        menu = ActionTarget.Title(item.title, null, here = false, recommended = item.ref),
+                        modifier = with(memory) { Modifier.item(key, item.title.id) }.onFocusChanged { if (it.isFocused) onFocus(info) },
                     )
                 }
             }

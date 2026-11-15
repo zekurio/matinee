@@ -2,6 +2,8 @@ import type { TranslationOf } from "../../catalog"
 import type source from "../en/server"
 
 export default {
+  "server.recommendations.tmdbRequired":
+    "Wähle einen TMDB-Titel, um deine Empfehlungen zu ändern.",
   "server.catalog.titleNotFound": "Matinee findet diesen Titel nicht.",
   "server.catalog.lookupDown":
     "Matinee kann gerade keine Titel nachschlagen. Versuch es in einer Minute noch einmal.",

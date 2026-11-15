@@ -34,7 +34,7 @@ import {
   railsOptions,
 } from "./discover-data"
 import { useOnScreenCards } from "./discover-live"
-import { releaseLine } from "./discover-rails"
+import { releaseLine, useRailDismiss } from "./discover-rails"
 import { CardSkeletons, Retry, unique, useNextPage } from "./grid-parts"
 
 /** One of Discover's rows in full, as a grid that loads more as it scrolls. */
@@ -82,7 +82,10 @@ export function RailGridPage({ slug }: { slug: string }) {
 function RailGrid({ rail }: { rail: Rail }) {
   const queryClient = useQueryClient()
   const titles = useInfiniteQuery(railGridOptions(queryClient, rail))
-  const rows = unique(titles.data?.pages.flatMap((page) => page.items) ?? [])
+  const dismiss = useRailDismiss(rail)
+  const rows = unique(
+    titles.data?.pages.flatMap((page) => page.items) ?? [],
+  ).filter((item) => !dismiss.hidden.has(refKey(item.ref)))
   const stale = titles.data?.pages.some((page) => page.stale) ?? false
   const { track, start, end } = useOnScreenCards()
   const live = useLiveAvailability(
@@ -134,6 +137,7 @@ function RailGrid({ rail }: { rail: Rail }) {
                   title={item}
                   availability={liveEntry(live, item.ref)?.availability}
                   detail={releaseLine(rail.id, item)}
+                  dismiss={dismiss.of(item)}
                 />
               </li>
             ))}

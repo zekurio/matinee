@@ -5,6 +5,16 @@
     <string name="web_discover_rail_popularFilms">Beliebte Filme</string>
     <string name="web_discover_rail_popularShows">Beliebte Serien</string>
     <string name="web_discover_rail_comingSoon">Demnächst</string>
+    <string name="web_discover_rail_forYou">Empfehlungen für dich</string>
+    <string name="web_discover_rail_becauseWatched">Weil du %1$s geschaut hast</string>
+    <string name="web_discover_reason_watched">Weil du %1$s geschaut hast</string>
+    <string name="web_discover_reason_person">Mit %1$s</string>
+    <string name="web_discover_reason_taste">Passend zu dem, was du schaust</string>
+    <string name="web_discover_notInterested">Kein Interesse</string>
+    <string name="web_discover_notInterestedNamed">Kein Interesse an %1$s</string>
+    <string name="web_discover_dismissed">%1$s taucht nicht mehr in deinen Empfehlungen auf.</string>
+    <string name="web_discover_dismissFailed">%1$s ließ sich nicht ausblenden.</string>
+    <string name="web_discover_undo">Rückgängig</string>
     <string name="web_discover_card_release">%1$s · %2$s</string>
     <string name="web_discover_stale">Einiges davon ist vielleicht nicht aktuell.</string>
     <string name="web_discover_railFailed">Diese Reihe hat nicht geladen.</string>

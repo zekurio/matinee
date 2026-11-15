@@ -13,6 +13,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { getRouteApi, useNavigate } from "@tanstack/react-router"
 import {
   EllipsisIcon,
+  EyeOffIcon,
   ImageIcon,
   RefreshCwIcon,
   RotateCcwIcon,
@@ -58,7 +59,8 @@ import { createTitleActionsStore } from "@/stores/title-actions"
  * In a watch party, a file can go to its queue, or be proposed for it.
  * Everyone gets Download…; admins also get fix match and refresh, which
  * act on the movie or show, and the image editor for what the menu is of.
- * Those need the whole title, which loads when they open.
+ * Those need the whole title, which loads when they open. A recommended
+ * title's card adds "Not interested" at the end.
  */
 
 const authed = getRouteApi("/_authed")
@@ -253,10 +255,13 @@ function triggerButton(
 export function ActionsMenu({
   target,
   look,
+  dismiss,
   className,
 }: {
   target: ActionsTarget
   look: MenuLook
+  /** "Not interested", for a title the viewer was recommended. */
+  dismiss?: () => void
   /** For the trigger, to place it. */
   className?: string
 }) {
@@ -271,12 +276,13 @@ export function ActionsMenu({
     party: role && file ? { role, file } : null,
     admin,
     images: admin && scope.title ? scope.images : null,
+    dismiss: dismiss ?? null,
     look,
   }
   // Most menus hold something whatever the server says: playing from the
   // start, or an admin's image editor. Only the rest ask it before
   // showing a trigger.
-  if (plan.restart || plan.party || plan.images) {
+  if (plan.restart || plan.party || plan.images || plan.dismiss) {
     return <DeferredActionsMenu {...plan} className={className} />
   }
   return <CheckedActionsMenu {...plan} className={className} />
@@ -292,6 +298,8 @@ type MenuPlan = {
   admin: boolean
   /** Whose images the editor edits, for an admin. */
   images: ImageOwner | null
+  /** "Not interested", for a recommended title. */
+  dismiss: (() => void) | null
   look: MenuLook
 }
 
@@ -350,6 +358,7 @@ function MountedActionsMenu({
   party,
   admin,
   images,
+  dismiss,
   look,
   trigger,
   defaultOpen,
@@ -500,6 +509,17 @@ function MountedActionsMenu({
               <ImageIcon />
               {tr("title.menu.editImages")}
             </DropdownMenuItem>
+          )}
+          {dismiss && (
+            <>
+              {(playItems || downloads || adminItems) && (
+                <DropdownMenuSeparator />
+              )}
+              <DropdownMenuItem onClick={dismiss}>
+                <EyeOffIcon />
+                {tr("discover.notInterested")}
+              </DropdownMenuItem>
+            </>
           )}
         </DropdownMenuContent>
       </DropdownMenu>

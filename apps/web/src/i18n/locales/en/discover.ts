@@ -12,6 +12,19 @@ export default defineMessages("discover", {
   "discover.rail.popularFilms": "Popular movies",
   "discover.rail.popularShows": "Popular shows",
   "discover.rail.comingSoon": "Coming soon",
+  // Recommendations from what the viewer watched, on Discover and on Home.
+  "discover.rail.forYou": "Recommended for you",
+  "discover.rail.becauseWatched": "Because you watched {name}",
+
+  // Why a title is recommended, on its card's tooltip.
+  "discover.reason.watched": "Because you watched {name}",
+  "discover.reason.person": "With {name}",
+  "discover.reason.taste": "Picked from what you watch",
+  "discover.notInterested": "Not interested",
+  "discover.notInterestedNamed": "Not interested in {name}",
+  "discover.dismissed": "You won't see {name} in your recommendations.",
+  "discover.dismissFailed": "Couldn't hide {name}.",
+  "discover.undo": "Undo",
 
   // A card in Coming soon, in place of the year: "14 Aug · Movie".
   "discover.card.release": "{date} · {kind}",

@@ -16,6 +16,8 @@ export const homeQueries = {
   // new next episode. What the user is watching has its own rows.
   featured: () =>
     orpc.home.featured.queryOptions({ input: { limit: HERO_SLIDES } }),
+  /** What the viewer would likely watch next, worked out on the server. */
+  recommendations: () => orpc.recommendations.home.queryOptions(),
   /** A library's latest, for its shelf. */
   shelf: (libraryId: string) =>
     orpc.media.shelf.queryOptions({ input: { libraryId, limit: SHELF } }),
@@ -30,6 +32,7 @@ export function prefetchHome(queryClient: QueryClient) {
   void queryClient.prefetchQuery(homeQueries.resume())
   void queryClient.prefetchQuery(homeQueries.nextUp())
   void queryClient.prefetchQuery(homeQueries.featured())
+  void queryClient.prefetchQuery(homeQueries.recommendations())
   void prefetchShelves(queryClient)
 }
 

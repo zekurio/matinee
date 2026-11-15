@@ -2,6 +2,7 @@ import type { DiscoverRail } from "@matinee/contracts"
 import type { t } from "@matinee/contracts/schema"
 import { type QueryClient, useQuery } from "@tanstack/react-query"
 
+import { refKey } from "@/components/catalog/catalog-data"
 import { tr } from "@/i18n"
 import { orpc } from "@/lib/rpc"
 
@@ -53,33 +54,52 @@ export function railGridOptions(queryClient: QueryClient, rail: Rail) {
   })
 }
 
-/** "Popular movies". */
+/** "Popular movies", or "Because you watched Dune". */
 export function railName(rail: Rail): string {
+  if (rail.id === "becauseWatched") {
+    return tr("discover.rail.becauseWatched", { name: rail.seed?.name ?? "" })
+  }
   return tr(`discover.rail.${rail.id}`)
+}
+
+/** Tells rows apart, as a React key: there can be several "Because you watched". */
+export function railKey(rail: Rail): string {
+  return rail.seed ? `${rail.id}:${refKey(rail.seed.ref)}` : rail.id
 }
 
 /**
  * The address of each row's own grid under /discover. The popular rows
- * have none: their headings open browsing that kind.
+ * have none: their headings open browsing that kind. A "Because you
+ * watched" row's names the title it starts from.
  */
 const slugs = {
   comingSoon: "coming-soon",
+  forYou: "for-you",
 } satisfies Partial<Record<RailId, string>>
+
+function railSlug(rail: Rail): string | null {
+  switch (rail.id) {
+    case "popularFilms":
+    case "popularShows":
+      return null
+    case "becauseWatched":
+      return rail.seed
+        ? `because-${rail.seed.ref.kind}-${rail.seed.ref.provider}-${rail.seed.ref.providerId}`
+        : null
+    default:
+      return slugs[rail.id]
+  }
+}
 
 /** Where a row's heading leads. */
 export function railLink(
-  id: RailId,
+  rail: Rail,
 ):
   | { to: "/discover/movies" | "/discover/shows" }
   | { to: "/discover/$rail"; params: { rail: string } } {
-  switch (id) {
-    case "popularFilms":
-      return { to: "/discover/movies" }
-    case "popularShows":
-      return { to: "/discover/shows" }
-    default:
-      return { to: "/discover/$rail", params: { rail: slugs[id] } }
-  }
+  if (rail.id === "popularFilms") return { to: "/discover/movies" }
+  if (rail.id === "popularShows") return { to: "/discover/shows" }
+  return { to: "/discover/$rail", params: { rail: railSlug(rail) ?? "" } }
 }
 
 /** The row an address names, among the rows this viewer gets. */
@@ -87,10 +107,5 @@ export function railAt(
   rails: Rail[] | undefined,
   slug: string,
 ): Rail | undefined {
-  return rails?.find(
-    (rail) =>
-      rail.id !== "popularFilms" &&
-      rail.id !== "popularShows" &&
-      slugs[rail.id] === slug,
-  )
+  return rails?.find((rail) => railSlug(rail) === slug)
 }

@@ -4,6 +4,7 @@ import { and, count, eq, gt, isNull, ne, or, type SQL, sql } from "drizzle-orm"
 
 import { db } from "../db"
 import { events } from "../realtime/events"
+import { queueRecommendations } from "../recommendations/enqueue"
 
 /*
  * Playback sessions, for statistics. The player names a session with a
@@ -212,6 +213,7 @@ export async function recordReport(
     })
     .returning({ inserted })
   if (row?.inserted) await endLeftBehind(owner)
+  if (report.closed || report.completed) queueRecommendations(owner.userId)
   events.publish("playback", undefined)
 }
 
@@ -261,6 +263,7 @@ export async function recordOfflinePlay(
       },
       setWhere: sameOwner(owner),
     })
+  queueRecommendations(owner.userId)
 }
 
 /** Rank of a method, so a session keeps the most the server did. */

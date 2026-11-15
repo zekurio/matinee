@@ -26,6 +26,12 @@ export default defineMessages("jobs", {
   "jobs.queue.catalog.name": "Catalog",
   "jobs.queue.catalog.description":
     "Refresh cached catalog and Discover responses.",
+  "jobs.queue.title-features.name": "Title features",
+  "jobs.queue.title-features.description":
+    "Fetch the genres, keywords, and people of titles from TMDB, for recommendations.",
+  "jobs.queue.recommendations.name": "Recommendations",
+  "jobs.queue.recommendations.description":
+    "Work out each person's recommendations from what they watched.",
 
   // The jobs panel under Settings → Jobs.
   "jobs.queues": "Background work",
@@ -125,6 +131,9 @@ export default defineMessages("jobs", {
   "jobs.task.prepare-discover.name": "Prepare Discover",
   "jobs.task.prepare-discover.description":
     "Read Discover's rows ahead and fetch their posters, so they show their blurred placeholders the first time someone opens Discover.",
+  "jobs.task.recommend-titles.name": "Update recommendations",
+  "jobs.task.recommend-titles.description":
+    "Work out recommendations again for people who watched something since, or whose list is a day old. Finishing a title or marking a favorite queues the person on its own.",
   "jobs.task.make-trickplay.name": "Make trickplay images",
   "jobs.task.make-trickplay.description":
     "Make the seek bar's thumbnails for videos without them, or whose file or settings changed, newest first. Scans queue their new files on their own. Also deletes the images of files that are gone.",

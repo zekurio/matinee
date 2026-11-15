@@ -12,11 +12,15 @@ import { NoLibraries } from "@/components/library/no-libraries"
 import { EpisodeCard, TitleCard } from "@/components/media-item"
 import { PageHeader } from "@/components/page-header"
 import { Rail, RailItem } from "@/components/rail"
+import { RecommendationRails } from "@/components/recommendations"
 import { tr } from "@/i18n"
 import { homeQueries } from "@/lib/home-queries"
 import { orpc } from "@/lib/rpc"
 
-/** Home: what to watch next, then each library's latest. */
+/**
+ * Home: what to watch next, what the viewer might like from the
+ * libraries, then each library's latest.
+ */
 export function Home() {
   const { user } = useRouteContext({ from: "/_authed/_shell" })
   const libraries = useQuery(orpc.libraries.list.queryOptions())
@@ -110,6 +114,8 @@ export function Home() {
           )
         )}
       </div>
+
+      <RecommendationRails />
 
       <AskedRail username={user.username} />
 

@@ -17,6 +17,10 @@
     <string name="web_jobs_queue_notifications_description">Deliver stored notifications through web push.</string>
     <string name="web_jobs_queue_catalog_name">Catalog</string>
     <string name="web_jobs_queue_catalog_description">Refresh cached catalog and Discover responses.</string>
+    <string name="web_jobs_queue_title_features_name">Title features</string>
+    <string name="web_jobs_queue_title_features_description">Fetch the genres, keywords, and people of titles from TMDB, for recommendations.</string>
+    <string name="web_jobs_queue_recommendations_name">Recommendations</string>
+    <string name="web_jobs_queue_recommendations_description">Work out each person\'s recommendations from what they watched.</string>
     <string name="web_jobs_queues">Background work</string>
     <string name="web_jobs_loadFailed">Couldn\'t load the jobs. %1$s</string>
     <string name="web_jobs_retry">Try again</string>
@@ -39,6 +43,8 @@
     <string name="web_jobs_task_prepare_subtitles_description">Cache indexed text subtitles and delete outputs of removed or changed files. Picture subtitles stay on demand.</string>
     <string name="web_jobs_queue_trickplay_name">Trickplay images</string>
     <string name="web_jobs_queue_trickplay_description">Make the thumbnails the seek bar shows while scrubbing.</string>
+    <string name="web_jobs_queue_media_segments_name">Intros and credits</string>
+    <string name="web_jobs_queue_media_segments_description">Find the intro and credits of each episode, for Skip intro and for offering the next episode while the credits roll.</string>
     <string name="web_jobs_queue_artwork_name">Artwork</string>
     <string name="web_jobs_queue_artwork_description">Download images from the metadata provider, scale them, and read their blurred placeholders.</string>
     <string name="web_jobs_queue_subtitle_fonts_name">Subtitle fonts</string>
@@ -85,8 +91,12 @@
     <string name="web_jobs_task_prefetch_artwork_description">Download images the server has no blurred placeholder for yet, posters and backdrops first. Metadata fetches queue their images on their own; this catches up after a restart or a failed download.</string>
     <string name="web_jobs_task_prepare_discover_name">Prepare Discover</string>
     <string name="web_jobs_task_prepare_discover_description">Read Discover\'s rows ahead and fetch their posters, so they show their blurred placeholders the first time someone opens Discover.</string>
+    <string name="web_jobs_task_recommend_titles_name">Update recommendations</string>
+    <string name="web_jobs_task_recommend_titles_description">Work out recommendations again for people who watched something since, or whose list is a day old. Finishing a title or marking a favorite queues the person on its own.</string>
     <string name="web_jobs_task_make_trickplay_name">Make trickplay images</string>
     <string name="web_jobs_task_make_trickplay_description">Make the seek bar\'s thumbnails for videos without them, or whose file or settings changed, newest first. Scans queue their new files on their own. Also deletes the images of files that are gone.</string>
+    <string name="web_jobs_task_find_segments_name">Find intros and credits</string>
+    <string name="web_jobs_task_find_segments_description">Look for the intro and credits of episodes not looked at yet, or whose file changed, in their chapters and in the audio they share with their season. Scans queue their new files on their own.</string>
     <string name="web_jobs_task_clean_transcodes_name">Clean up encodes</string>
     <string name="web_jobs_task_clean_sessions_name">Delete expired sessions</string>
     <string name="web_jobs_task_clean_sessions_description">Remove sign-ins that expired from the database.</string>

@@ -7,6 +7,17 @@ export default {
   "discover.rail.popularFilms": "Beliebte Filme",
   "discover.rail.popularShows": "Beliebte Serien",
   "discover.rail.comingSoon": "Demnächst",
+  "discover.rail.forYou": "Empfehlungen für dich",
+  "discover.rail.becauseWatched": "Weil du {name} geschaut hast",
+
+  "discover.reason.watched": "Weil du {name} geschaut hast",
+  "discover.reason.person": "Mit {name}",
+  "discover.reason.taste": "Passend zu dem, was du schaust",
+  "discover.notInterested": "Kein Interesse",
+  "discover.notInterestedNamed": "Kein Interesse an {name}",
+  "discover.dismissed": "{name} taucht nicht mehr in deinen Empfehlungen auf.",
+  "discover.dismissFailed": "{name} ließ sich nicht ausblenden.",
+  "discover.undo": "Rückgängig",
 
   "discover.card.release": "{date} · {kind}",
 

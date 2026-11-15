@@ -5,6 +5,16 @@
     <string name="web_discover_rail_popularFilms">Popular movies</string>
     <string name="web_discover_rail_popularShows">Popular shows</string>
     <string name="web_discover_rail_comingSoon">Coming soon</string>
+    <string name="web_discover_rail_forYou">Recommended for you</string>
+    <string name="web_discover_rail_becauseWatched">Because you watched %1$s</string>
+    <string name="web_discover_reason_watched">Because you watched %1$s</string>
+    <string name="web_discover_reason_person">With %1$s</string>
+    <string name="web_discover_reason_taste">Picked from what you watch</string>
+    <string name="web_discover_notInterested">Not interested</string>
+    <string name="web_discover_notInterestedNamed">Not interested in %1$s</string>
+    <string name="web_discover_dismissed">You won\'t see %1$s in your recommendations.</string>
+    <string name="web_discover_dismissFailed">Couldn\'t hide %1$s.</string>
+    <string name="web_discover_undo">Undo</string>
     <string name="web_discover_card_release">%1$s · %2$s</string>
     <string name="web_discover_stale">Some of these may be out of date.</string>
     <string name="web_discover_railFailed">This row didn\'t load.</string>

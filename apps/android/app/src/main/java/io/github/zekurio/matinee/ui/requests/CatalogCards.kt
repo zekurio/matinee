@@ -160,6 +160,8 @@ fun CatalogCard(
     /** Already here when the list loaded: the library's card at once, without the badge going. */
     hereAtFirst: Boolean = false,
     fresh: Boolean = false,
+    /** A long press, as a recommendation's "Not interested". */
+    onLongClick: (() -> Unit)? = null,
 ) {
     val hub = LocalRequests.current
     val availability = hub.availability(title.ref, title.availability)
@@ -175,17 +177,24 @@ fun CatalogCard(
             return
         }
     }
-    CatalogPoster(title, availability, modifier, detail, leaving = here != null)
+    CatalogPoster(title, availability, modifier, detail, leaving = here != null, onLongClick = onLongClick)
 }
 
 @Composable
-private fun CatalogPoster(title: CatalogTitleSummary, availability: Availability, modifier: Modifier, detail: String?, leaving: Boolean) {
+private fun CatalogPoster(
+    title: CatalogTitleSummary,
+    availability: Availability,
+    modifier: Modifier,
+    detail: String?,
+    leaving: Boolean,
+    onLongClick: (() -> Unit)? = null,
+) {
     val api = LocalApi.current
     val nav = LocalNavigator.current
     val res = LocalResources.current
     val line = cardLineText(title.year, title.ref, availability, res, detail)
     Column(modifier) {
-        Box(Modifier.cardTap({ nav.catalog(title.ref) })) {
+        Box(Modifier.cardTap({ nav.catalog(title.ref) }, onLongClick)) {
             PosterArt(title.name, api.art(title.poster))
             CatalogBadge(availability, Modifier.align(Alignment.TopEnd).padding(6.dp), leaving = leaving)
         }

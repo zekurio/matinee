@@ -28,6 +28,7 @@ import { profileUser } from "../auth/session"
 import { db } from "../db"
 import { publicItems, toSummaries } from "../media/items"
 import { seasonsByTitle } from "../media/seasons"
+import { queueRecommendations } from "../recommendations/compute"
 import { recentlyWatched, watchStats } from "../stats/queries"
 import { authed, badRequest, notFound } from "./base"
 
@@ -224,12 +225,14 @@ export const favorites = {
             eq(favorite.titleId, input.titleId),
           ),
         )
+      queueRecommendations(context.user.id)
       return
     }
     await db
       .insert(favorite)
       .values({ userId: context.user.id, titleId: row.id })
       .onConflictDoNothing()
+    queueRecommendations(context.user.id)
   }),
 
   setSeason: authed.favorites.setSeason.handler(async ({ context, input }) => {
@@ -247,6 +250,7 @@ export const favorites = {
             eq(favoriteSeason.seasonNumber, input.season),
           ),
         )
+      queueRecommendations(context.user.id)
       return
     }
     if (row.kind !== "show") throw badRequest("Only a show has seasons.")
@@ -272,6 +276,7 @@ export const favorites = {
         seasonNumber: input.season,
       })
       .onConflictDoNothing()
+    queueRecommendations(context.user.id)
   }),
 
   setItem: authed.favorites.setItem.handler(async ({ context, input }) => {
@@ -288,12 +293,14 @@ export const favorites = {
             eq(favoriteItem.mediaItemId, input.itemId),
           ),
         )
+      queueRecommendations(context.user.id)
       return
     }
     await db
       .insert(favoriteItem)
       .values({ userId: context.user.id, mediaItemId: row.id })
       .onConflictDoNothing()
+    queueRecommendations(context.user.id)
   }),
 }
 

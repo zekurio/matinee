@@ -1,4 +1,5 @@
 import type { Availability } from "@matinee/contracts"
+import { Button } from "@matinee/ui/components/button"
 import {
   Tooltip,
   TooltipContent,
@@ -7,10 +8,15 @@ import {
 import { cn } from "@matinee/ui/lib/utils"
 import { useQuery } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
-import { CalendarIcon, CircleSlashIcon, ClockIcon } from "lucide-react"
+import {
+  CalendarIcon,
+  CircleSlashIcon,
+  ClockIcon,
+  EyeOffIcon,
+} from "lucide-react"
 import { type ReactNode, useEffect, useId, useState } from "react"
 
-import { CardScrim } from "@/components/card-actions"
+import { CardScrim, cardIconButton } from "@/components/card-actions"
 import {
   cardClass,
   CardText,
@@ -273,12 +279,15 @@ export function CatalogCard({
   title,
   availability = title.availability,
   detail,
+  dismiss,
 }: {
   title: CatalogSummary
   /** What the stream says now, in place of what the card loaded with. */
   availability?: Availability
   /** The second line in place of the year and kind, while there's no state. */
   detail?: string
+  /** "Not interested", for a title the viewer was recommended. */
+  dismiss?: () => void
 }) {
   const here =
     availability.state === "here" ? availability.libraryTitleId : null
@@ -293,7 +302,12 @@ export function CatalogCard({
     )
   }
   return (
-    <CatalogPoster title={title} availability={availability} detail={detail} />
+    <CatalogPoster
+      title={title}
+      availability={availability}
+      detail={detail}
+      dismiss={dismiss}
+    />
   )
 }
 
@@ -302,11 +316,13 @@ function CatalogPoster({
   availability,
   leaving = false,
   detail,
+  dismiss,
 }: {
   title: CatalogSummary
   availability: Availability
   leaving?: boolean
   detail?: string
+  dismiss?: () => void
 }) {
   const ask = useAsk()
   const name = title.name
@@ -323,9 +339,9 @@ function CatalogPoster({
           name={name}
           toneKey={refKey(title.ref)}
           poster={art(title.poster)}
-          scrim={acts}
+          scrim={acts || dismiss !== undefined}
         >
-          {acts && <CardScrim />}
+          {(acts || dismiss) && <CardScrim />}
         </PosterArt>
         <CardText
           primary={name}
@@ -340,6 +356,21 @@ function CatalogPoster({
           leaving={leaving}
           className="absolute top-1.5 right-1.5"
         />
+        {dismiss && !leaving && (
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label={tr("discover.notInterestedNamed", { name })}
+            title={tr("discover.notInterested")}
+            onClick={dismiss}
+            className={cn(
+              cardIconButton,
+              "pointer-events-auto absolute top-0.5 left-0.5 opacity-0 transition-opacity group-hover/card:opacity-100 group-has-[:focus-visible]/card:opacity-100 motion-reduce:transition-none [@media(pointer:coarse)]:hidden",
+            )}
+          >
+            <EyeOffIcon className="size-5" />
+          </Button>
+        )}
         {acts && (
           <CardActionButton
             availability={availability}

@@ -26,6 +26,8 @@ export const JOB_QUEUE_IDS = [
   "request-arrival",
   "notifications",
   "catalog",
+  "title-features",
+  "recommendations",
 ] as const
 export const JobQueueId = t.enum(JOB_QUEUE_IDS)
 export type JobQueueId = t.infer<typeof JobQueueId>
@@ -87,6 +89,7 @@ export const TASK_IDS = [
   "probe-media",
   "prefetch-artwork",
   "prepare-discover",
+  "recommend-titles",
   "prepare-subtitles",
   "make-trickplay",
   "find-segments",

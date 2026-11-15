@@ -14,6 +14,7 @@ import { EventPublisher } from "@orpc/server"
  * carries the event.
  */
 export type Topics = {
+  recommendations: { userId: string }
   /** Request status, followers, scope or in-memory progress changed. */
   requests: undefined
   /** Scan or metadata matching changed library identity or playable files. */

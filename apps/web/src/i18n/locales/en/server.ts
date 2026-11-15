@@ -7,6 +7,8 @@ import { defineMessages } from "../../catalog"
  * pattern would also match a longer text, the longer one comes first.
  */
 export default defineMessages("server", {
+  "server.recommendations.tmdbRequired":
+    "Choose a TMDB title to change your recommendations.",
   "server.catalog.titleNotFound": "Matinee can't find this title.",
   "server.catalog.lookupDown":
     "Matinee can't look titles up right now. Try again in a minute.",
