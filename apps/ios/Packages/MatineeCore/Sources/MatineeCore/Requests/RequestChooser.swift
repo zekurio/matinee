@@ -38,7 +38,10 @@ import Observation
   public private(set) var wantsNotificationPermission = false
   @ObservationIgnored private var expiry: Task<Void, Never>?
   @ObservationIgnored private let duration: Duration
-  public init(undoDuration: Duration = .seconds(6)) { duration = undoDuration }
+  @ObservationIgnored private let sleep: @Sendable (Duration) async throws -> Void
+  public init(undoDuration: Duration = .seconds(6), sleep: @escaping @Sendable (Duration) async throws -> Void = { try await Task.sleep(for: $0) }) {
+    duration = undoDuration; self.sleep = sleep
+  }
   public func submit(_ chooser: RequestChooser, availability: Availability, askedPermission: Bool, actions: RequestActions) async {
     guard !busy, availability.requestBlocked == nil, chooser.label != .pickOne else { return }
     busy = true; failure = nil
@@ -50,9 +53,9 @@ import Observation
       expiry?.cancel()
       undoId = chooser.first && (result.availability.action == "cancel" || result.season?.action == "cancel") ? result.id : nil
       if undoId != nil {
-        let duration = duration
+        let duration = duration, sleep = sleep
         expiry = Task { [weak self] in
-          do { try await Task.sleep(for: duration) } catch { return }
+          do { try await sleep(duration) } catch { return }
           self?.undoId = nil
         }
       }

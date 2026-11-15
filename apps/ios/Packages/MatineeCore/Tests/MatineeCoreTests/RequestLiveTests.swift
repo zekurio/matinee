@@ -2,6 +2,21 @@ import Foundation
 import Testing
 @testable import MatineeCore
 
+actor RequestTestClock {
+  let sleeping = AsyncStream<Void>.makeStream()
+  private var waiters: [AsyncStream<Void>.Continuation] = []
+  func sleep(_ duration: Duration) async throws {
+    let gate = AsyncStream<Void>.makeStream()
+    waiters.append(gate.continuation)
+    sleeping.continuation.yield(())
+    for await _ in gate.stream { break }
+    try Task.checkCancellation()
+  }
+  func advance() {
+    let ready = waiters; waiters = []
+    for waiter in ready { waiter.finish() }
+  }
+}
 private actor RequestConnections {
   var count = 0
   func connect() -> AsyncThrowingStream<[RequestsLiveEvent], any Error> {
@@ -11,18 +26,17 @@ private actor RequestConnections {
 }
 @MainActor struct RequestLiveTests {
   @Test func reconnectsUntilHiddenAndReloadsStructures() async throws {
-    let connections = RequestConnections()
+    let connections = RequestConnections(), clock = RequestTestClock()
+    var sleeps = clock.sleeping.stream.makeAsyncIterator()
     var reloads = 0
-    let live = RequestLiveController(retryDelay: .milliseconds(2), stream: { _ in await connections.connect() }, reload: { reloads += 1 })
+    let live = RequestLiveController(sleep: { try await clock.sleep($0) }, stream: { _ in await connections.connect() }, reload: { reloads += 1 })
     live.updateVisible([CatalogInput(ref: CatalogRef(kind: "movie", provider: "tmdb", providerId: "1"), libraryId: nil)])
-    for _ in 0..<100 {
-      if await connections.count >= 2 { break }
-      try await Task.sleep(for: .milliseconds(2))
-    }
+    _ = await sleeps.next()
+    #expect(await connections.count == 1)
+    await clock.advance()
+    _ = await sleeps.next()
     live.hide()
-    let count = await connections.count
-    #expect(count >= 2 && reloads >= 2)
-    try await Task.sleep(for: .milliseconds(20))
-    #expect(await connections.count == count)
+    #expect(await connections.count == 2 && reloads == 4)
+    await clock.advance()
   }
 }

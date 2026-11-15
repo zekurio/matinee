@@ -10,13 +10,14 @@ public final class RequestLiveController {
   @ObservationIgnored private var inputs: [CatalogInput] = []
   @ObservationIgnored private let stream: @Sendable ([CatalogInput]) async throws -> AsyncThrowingStream<[RequestsLiveEvent], any Error>
   @ObservationIgnored private let reload: @MainActor () async -> Void
-  @ObservationIgnored private let retryDelay: Duration
+  @ObservationIgnored private let sleep: @Sendable (Duration) async throws -> Void
   public init(
     retryDelay: Duration = .seconds(1),
+    sleep: @escaping @Sendable (Duration) async throws -> Void = { try await Task.sleep(for: $0) },
     stream: @escaping @Sendable ([CatalogInput]) async throws -> AsyncThrowingStream<[RequestsLiveEvent], any Error>,
     reload: @escaping @MainActor () async -> Void = {}
   ) {
-    self.retryDelay = retryDelay; self.stream = stream; self.reload = reload
+    self.sleep = { _ in try await sleep(retryDelay) }; self.stream = stream; self.reload = reload
   }
   public convenience init(api: ContractApi, reload: @escaping @MainActor () async -> Void = {}) {
     self.init(stream: { try await api.requests.live(titles: $0) }, reload: reload)
@@ -27,7 +28,7 @@ public final class RequestLiveController {
     guard inputs != titles else { return }
     task?.cancel(); inputs = titles
     guard !titles.isEmpty else { task = nil; return }
-    let state = state, stream = stream, reload = reload, delay = retryDelay
+    let state = state, stream = stream, reload = reload, sleep = sleep
     task = Task {
       while !Task.isCancelled {
         await state.follow(titles, stream: stream, changed: reload)
@@ -35,7 +36,7 @@ public final class RequestLiveController {
         // Refresh non-streamed structures (gaps, My requests and the queue),
         // not just badges, after any closed connection before reopening it.
         await reload()
-        do { try await Task.sleep(for: delay) } catch { return }
+        do { try await sleep(.zero) } catch { return }
       }
     }
   }
