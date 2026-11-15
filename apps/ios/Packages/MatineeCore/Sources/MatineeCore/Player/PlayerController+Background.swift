@@ -123,6 +123,7 @@ extension PlayerController {
     countDown(now)
     let every: TimeInterval = playing ? 10 : 30
     if wasPlaying != playing || now.timeIntervalSince(lastReport) >= every { sendReport() }
+    diagnostics.mpvStatistics = engine.mpvStatistics
     if let player { diagnostics.sample(player) }
     nowPlaying?.update()
   }

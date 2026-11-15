@@ -4,6 +4,7 @@ import Foundation
 /// What the controller drives: AVPlayer today, mpv later, a fake in tests.
 /// Times are in the source's own timeline; the controller adds the offset.
 @MainActor public protocol PlaybackEngine: AnyObject {
+  var mpvStatistics: MPVStatistics? { get }
   var avPlayer: AVPlayer? { get }
   var durationSeconds: Double { get }
   var isPlaying: Bool { get }
@@ -32,6 +33,7 @@ import Foundation
   func clear()
 }
 extension PlaybackEngine {
+  public var mpvStatistics: MPVStatistics? { nil }
   public func loadSubtitle(url: URL, headers: [String: String]) async throws -> Bool { false }
   public var avPlayer: AVPlayer? { nil }
 }

@@ -62,6 +62,7 @@ public struct PlaybackReport: Codable, Sendable, Equatable {
   public var capabilities: CapabilityDiagnostics?
   public var attempts: [AttemptDiagnostics] = []
   public var droppedAttempts = 0
+  public var mpvStatistics: MPVStatistics?
   public var tracks: [TrackDiagnostics] = []
   public var decoders: [DecoderDiagnostics] = []
   public var notes: [DiagnosticsNote: Int] = [:]
@@ -241,7 +242,9 @@ public func formatReport(_ report: PlaybackReport) -> String {
     lines.append("os: \(opt(d.osRelease)), \(opt(d.abi))")
     lines.append("device: \(opt(d.manufacturer)) \(opt(d.model))")
   }
-  lines.append("player: AVPlayer; renderer and decoder names unavailable")
+  lines.append(
+    report.mpvStatistics != nil || report.settings?.engine.text == "mpv"
+      ? "player: mpv" : "player: AVPlayer; renderer and decoder names unavailable")
   if let s = report.settings {
     lines.append("engine: \(s.engine), decoders: \(s.decoders)")
     lines.append(
@@ -316,12 +319,18 @@ public func formatReport(_ report: PlaybackReport) -> String {
           "\($0.rawValue) x\(report.notes[$0] ?? 0)"
         }.joined(separator: ", "))
   }
-  lines.append(
-    "avplayer: status=\(opt(report.itemStatus)) dropped_frames=\(report.droppedFrames) stalls=\(report.stalls) indicated_bitrate=\(report.indicatedBitrate) observed_bitrate=\(report.observedBitrate)"
-  )
-  lines.append(
-    "buffer: empty=\(yesNo(report.bufferEmpty)) full=\(yesNo(report.bufferFull)) likely_to_keep_up=\(yesNo(report.likelyToKeepUp)) seconds=\(report.bufferedSeconds)"
-  )
+  if let m = report.mpvStatistics {
+    lines.append(
+      "mpv: decoder=\(opt(m.decoder)) decode=\(opt(m.decode)) video_output=\(opt(m.videoOutput)) decoder_dropped_frames=\(opt(m.decoderDroppedFrames)) output_dropped_frames=\(opt(m.outputDroppedFrames)) samples=\(opt(m.samples)) active_audio=\(opt(m.activeAudioOrdinal)) audio_codec=\(opt(m.audioCodec))"
+    )
+  } else if report.settings?.engine.text != "mpv" {
+    lines.append(
+      "avplayer: status=\(opt(report.itemStatus)) dropped_frames=\(report.droppedFrames) stalls=\(report.stalls) indicated_bitrate=\(report.indicatedBitrate) observed_bitrate=\(report.observedBitrate)"
+    )
+    lines.append(
+      "buffer: empty=\(yesNo(report.bufferEmpty)) full=\(yesNo(report.bufferFull)) likely_to_keep_up=\(yesNo(report.likelyToKeepUp)) seconds=\(report.bufferedSeconds)"
+    )
+  }
   if let seconds = report.firstFrameSeconds { lines.append("first_decoded_frame: \(seconds)s") }
   if !report.errorLogCodes.isEmpty {
     lines.append(

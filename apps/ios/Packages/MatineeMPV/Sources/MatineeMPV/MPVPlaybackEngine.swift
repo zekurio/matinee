@@ -1,6 +1,6 @@
 import Foundation
-import MatineeCore
 import MPVUI
+import MatineeCore
 import Observation
 import SwiftUI
 
@@ -16,7 +16,10 @@ import SwiftUI
       options["sub-fonts-dir"] = font.deletingLastPathComponent().path
       options["sub-font"] = "Red Hat Text"
     }
-    mpv = MPVPlayer(configuration: .init(additionalOptions: options, audio: .init(audioSession: .hostManaged), automaticallyPlays: false))
+    mpv = MPVPlayer(
+      configuration: .init(
+        additionalOptions: options, audio: .init(audioSession: .hostManaged),
+        automaticallyPlays: false))
     mpv.setDiagnosticsEnabled(true)
     mpv.setTextSubtitleInterceptionEnabled(true)
     let stream = mpv.makeTextSubtitleStream()
@@ -26,6 +29,22 @@ import SwiftUI
         self?.text = snapshot.text
       }
     }
+  }
+  public var mpvStatistics: MPVStatistics? {
+    let d = mpv.playbackDiagnostics
+    let decode: String?
+    switch d.decoder.session {
+    case .unknown: decode = nil
+    case .software: decode = "software"
+    case .hardware(let name): decode = "hardware-\(name)"
+    }
+    return MPVStatistics(
+      activeAudioOrdinal: mpv.audioTracks.firstIndex(where: \.isSelected).map { $0 + 1 },
+      audioCodec: mpv.mediaInformation.audioCodec,
+      decoder: d.decoder.codec, decode: decode,
+      videoOutput: "sample-buffer", decoderDroppedFrames: d.decoderDroppedFrames,
+      outputDroppedFrames: d.outputDroppedFrames,
+      samples: d.nativeOutputStatistics?.sampleBuildCount)
   }
   public var isPlaying: Bool { mpv.state == .playing && !mpv.isPaused }
   public var isLoading: Bool { mpv.state == .loading || mpv.bufferStatus.isBuffering }
@@ -41,14 +60,21 @@ import SwiftUI
     if case .failed(let error) = mpv.state { return error }
     return nil
   }
-  public func play(atRate rate: Float) { mpv.setPlaybackRate(Double(rate)); mpv.play() }
+  public func play(atRate rate: Float) {
+    mpv.setPlaybackRate(Double(rate))
+    mpv.play()
+  }
   public func pause() { mpv.pause() }
   public func load(_ source: Source, headers: [String: String]) async throws {
     guard let url = URL(string: source.url) else { throw URLError(.badURL) }
     // mpv string-list syntax escapes commas and backslashes. No headers for local files.
-    let fields = url.isFileURL ? [] : headers.sorted { $0.key < $1.key }.map { key, value in
-      "\(key): \(value)".replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: ",", with: "\\,")
-    }
+    let fields =
+      url.isFileURL
+      ? []
+      : headers.sorted { $0.key < $1.key }.map { key, value in
+        "\(key): \(value)".replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(
+          of: ",", with: "\\,")
+      }
     mpv.setProperty("http-header-fields", to: fields.joined(separator: ","))
     mpv.load(url, playAutomatically: false, startTime: .seconds(source.start))
     let generation = mpv.generation
@@ -68,7 +94,9 @@ import SwiftUI
     mpv.selectTrack(mpv.audioTracks[ordinal].id)
   }
   public func selectSubtitle(_ ordinal: Int?) async {
-    let track = ordinal.flatMap { mpv.subtitleTracks.indices.contains($0) ? mpv.subtitleTracks[$0] : nil }
+    let track = ordinal.flatMap {
+      mpv.subtitleTracks.indices.contains($0) ? mpv.subtitleTracks[$0] : nil
+    }
     mpv.selectSubtitle(track?.id)
   }
   public func hasVideoFrame() -> Bool {
@@ -78,19 +106,30 @@ import SwiftUI
     return sample != nil && sample != lastSample
   }
   public func loadSubtitle(url: URL, headers: [String: String]) async throws -> Bool {
-    guard url.pathExtension.lowercased() == "ass" || URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.contains(where: { $0.name == "delivery" && $0.value == "ass" }) == true else { return false }
+    guard
+      url.pathExtension.lowercased() == "ass"
+        || URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.contains(where: {
+          $0.name == "delivery" && $0.value == "ass"
+        }) == true
+    else { return false }
     _ = try await mpv.loadExternalTrack(.init(url: url, type: .subtitle, selection: .selected))
     return true
   }
   public func tracks() async -> [TrackDiagnostics] {
     mpv.mediaInformation.tracks.prefix(12).map { track in
-      var result = TrackDiagnostics(mediaType: track.type == .audio ? "audio" : track.type == .video ? "video" : "text", codec: track.codec ?? "other", width: 0, height: 0, channels: nil, sampleRate: nil)
+      var result = TrackDiagnostics(
+        mediaType: track.type == .audio ? "audio" : track.type == .video ? "video" : "text",
+        codec: track.codec ?? "other", width: 0, height: 0, channels: nil, sampleRate: nil)
       result.type = track.type == .audio ? .audio : track.type == .video ? .video : .text
       result.selected = track.isSelected
       return result
     }
   }
-  public func clear() { mpv.stop(); text = ""; lastSample = nil }
+  public func clear() {
+    mpv.stop()
+    text = ""
+    lastSample = nil
+  }
   private func seconds(_ value: Duration) -> Double {
     Double(value.components.seconds) + Double(value.components.attoseconds) / 1e18
   }
@@ -100,10 +139,15 @@ import SwiftUI
 public struct MPVPlaybackSurface: View {
   let engine: MPVPlaybackEngine
   let fill: Bool
-  public init(engine: MPVPlaybackEngine, fill: Bool = false) { self.engine = engine; self.fill = fill }
+  public init(engine: MPVPlaybackEngine, fill: Bool = false) {
+    self.engine = engine
+    self.fill = fill
+  }
   public var body: some View {
     MPVVideoPlayer(player: engine.mpv)
-      .onChange(of: fill, initial: true) { _, value in engine.mpv.setProperty("panscan", to: value ? "1" : "0") }
+      .onChange(of: fill, initial: true) { _, value in
+        engine.mpv.setProperty("panscan", to: value ? "1" : "0")
+      }
 
   }
 }
