@@ -1,5 +1,5 @@
 {
-  "id": "085229e9-db98-45aa-89ce-8899e3e5d012",
+  "id": "fc32c821-30cb-48b4-8d97-b5b52c84cf11",
   "prevId": "ac0b8266-a2be-43df-8478-7da790e0efd6",
   "version": "7",
   "dialect": "postgresql",
@@ -4611,6 +4611,18 @@
         "year": {
           "name": "year",
           "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "runtime_minutes": {
+          "name": "runtime_minutes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ratings": {
+          "name": "ratings",
+          "type": "jsonb",
           "primaryKey": false,
           "notNull": false
         },

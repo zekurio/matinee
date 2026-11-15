@@ -74,7 +74,8 @@ for building and sideloading the app.
 - No automated tests yet. Check affected flows by hand in the browser.
 - Generate migrations with a descriptive snake_case name:
   `pnpm db:generate --name watch_progress`. Never edit a migration after it
-  merges; add a new one.
+  ships in a release; add a new one. Unreleased migrations may be consolidated
+  before the next release.
 - Add shadcn components from `packages/ui`:
   `pnpm dlx shadcn@latest add <name>`. The CLI's output is ours to edit.
 
