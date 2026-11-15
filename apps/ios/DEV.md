@@ -127,7 +127,7 @@ the new schema when necessary. Back up `postgres/` before a destructive update.
 
 These are labeled test patterns, **not the real films or episodes**. Every
 video draws its file stem and advancing frame timecode, and has an audio
-tone. About 131 MB total, 14 videos, eight movie files grouped into seven
+tone. 15 videos, nine movie files grouped into eight
 movie titles plus one show. Most are 24 seconds at 640x360 and 10 fps.
 
 | Library / title                         | Exercise                                                                                                                                                                                                                            |
@@ -136,11 +136,18 @@ movie titles plus one show. Most are 24 seconds at 640x360 and 10 fps.
 | Movies / The Matrix Alternate           | Second short MP4 version in `The Matrix (1999)/Extras`, grouped under the same movie without metadata. It is labeled as an extra by the server, not a theatrical/director's-cut edition.                                            |
 | Movies / Back to the Future, 1985       | H.264/AAC MP4, two audio languages, two embedded mov_text subtitle languages.                                                                                                                                                       |
 | Movies / Toy Story, 1995                | H.264/AAC MP4 direct play, external matching `.en.srt`.                                                                                                                                                                             |
+| Movies / MPV Styled Verification        | Two-minute 640x360, 10 fps H.264/AAC mono MKV. Identical styled ASS tracks embedded as German and external as `.en.ass`: bold yellow Arial 32, positioned at (80,140), seconds 1-115. Checks mpv styling for both subtitle sources. |
 | Movies / Interstellar, 2014             | HEVC MKV, AC-3 5.1, two audio languages and embedded English/German SRT. Remux selection verified with an MP4-only device.                                                                                                          |
 | Restricted movies / Blade Runner, 1982  | 3840x2160 HEVC MKV, AC-3 5.1, eight seconds.                                                                                                                                                                                        |
 | Restricted movies / Dune, 2021          | 10-bit HEVC MKV tagged BT.2020/PQ, AC-3 5.1, twelve seconds. Synthetic HDR tags, not mastered HDR imagery or Dolby Vision.                                                                                                          |
 | Restricted movies / Jurassic Park, 1993 | MPEG-2 video and Opus in MKV, two audio languages, English/German SRT and embedded PGS. Requires video encode for AVPlayer. The generated PGS displays a white bitmap bar at seconds 1-8; decoded successfully with ffmpeg overlay. |
 | Shows / Breaking Bad, 2008              | `Season 01` and `Season 02`, S01E01-E03 and S02E01-E03, each one minute, H.264/AAC MP4.                                                                                                                                             |
+
+To regenerate just the styled fixture safely outside the shared state:
+
+```sh
+python3 apps/ios/scripts/dev/media.py --root /tmp/matinee-media --only-styled
+```
 
 The scanner reads the actual library folders and creates the title/file rows.
 Movie folders with one video group by folder; shows group by their top-level

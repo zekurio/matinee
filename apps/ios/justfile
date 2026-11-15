@@ -49,7 +49,7 @@ dev account="ios-admin" *args: build
 test:
     cd Packages/MatineeCore && swift test
     scripts/strings.py --check
-    scripts/lucide.py --check
+    scripts/lucide.py --kit --check
     {{ env("NODE", "nix shell nixpkgs#nodejs_24 -c node") }} scripts/themes.mjs --check
 
 # Generate the API client again after a contract change

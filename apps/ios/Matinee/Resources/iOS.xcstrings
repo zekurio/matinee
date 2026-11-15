@@ -1,222 +1,443 @@
 {
-  "sourceLanguage": "en",
-  "strings": {
-    "ios_appearance_language_description": {
-      "comment": "Under Interface language in Settings, Appearance: the row opens Matinee's page in the iOS Settings app, where its language is picked.",
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wird in der Einstellungen-App gewählt"
+  "sourceLanguage" : "en",
+  "strings" : {
+    "favorites_titles" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Titel"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Picked in the Settings app"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Titles"
           }
         }
       }
     },
-    "ios_connect_local_network": {
-      "comment": "Under a failed connect to a server on the local network; iOS asks for Local Network access, which the person can turn on in the app's settings.",
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wenn der Server in deinem lokalen Netzwerk ist, schalte in den Einstellungen „Lokales Netzwerk“ für Matinee ein."
+    "home_featured_failed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die vorgestellten Titel konnten nicht geladen werden"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "If the server is on your local network, turn on Local Network for Matinee in Settings."
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't load the featured titles"
           }
         }
       }
     },
-    "ios_diagnostics_share": {
-      "comment": "Row in Settings, About, Playback report: opens the share sheet with the report's text.",
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bericht teilen"
+    "ios_appearance_language_description" : {
+      "comment" : "Under Interface language in Settings, Appearance: the row opens Matinee's page in the iOS Settings app, where its language is picked.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wird in der Einstellungen-App gewählt"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Share report"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Picked in the Settings app"
           }
         }
       }
     },
-    "ios_images_from_files": {
-      "comment": "In the image editor's Upload menu: pick the image from the Files app. Android has one picker, iOS two.",
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Datei auswählen"
+    "ios_connect_local_network" : {
+      "comment" : "Under a failed connect to a server on the local network; iOS asks for Local Network access, which the person can turn on in the app's settings.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wenn der Server in deinem lokalen Netzwerk ist, schalte in den Einstellungen „Lokales Netzwerk“ für Matinee ein."
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Choose File"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "If the server is on your local network, turn on Local Network for Matinee in Settings."
           }
         }
       }
     },
-    "ios_images_from_photos": {
-      "comment": "In the image editor's Upload menu: pick the image from the photo library. Android has one picker, iOS two.",
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fotomediathek"
+    "ios_diagnostics_share" : {
+      "comment" : "Row in Settings, About, Playback report: opens the share sheet with the report's text.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bericht teilen"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Photo Library"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Share report"
           }
         }
       }
     },
-    "ios_open_settings": {
-      "comment": "Button that opens Matinee's page in the iOS Settings app.",
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Einstellungen öffnen"
+    "ios_images_from_files" : {
+      "comment" : "In the image editor's Upload menu: pick the image from the Files app. Android has one picker, iOS two.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Datei auswählen"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Open Settings"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose File"
           }
         }
       }
     },
-    "ios_playback_audio_remember": {
-      "comment": "Switch in Settings, Playback, Languages: an audio track picked in the player comes back when the file plays again. The web's playback.audio.remember; Android has no switch for it yet.",
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Audioauswahl merken"
+    "ios_images_from_photos" : {
+      "comment" : "In the image editor's Upload menu: pick the image from the photo library. Android has one picker, iOS two.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fotomediathek"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Remember audio picks"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Photo Library"
           }
         }
       }
     },
-    "ios_progress_watched": {
-      "comment": "VoiceOver's value for the bar of how much of a file was watched.",
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld %% gesehen"
+    "ios_open_settings" : {
+      "comment" : "Button that opens Matinee's page in the iOS Settings app.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einstellungen öffnen"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld%% watched"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Settings"
           }
         }
       }
     },
-    "ios_settings_subtitles_system_where": {
-      "comment": "Under Caption preferences in Settings, Subtitles: where iOS keeps its caption style, which no app can open directly.",
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "In Einstellungen › Bedienungshilfen › Untertitel & erweiterte Untertitel"
+    "ios_playback_audio_remember" : {
+      "comment" : "Switch in Settings, Playback, Languages: an audio track picked in the player comes back when the file plays again. The web's playback.audio.remember; Android has no switch for it yet.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Audioauswahl merken"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "In Settings › Accessibility › Subtitles & Captioning"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remember audio picks"
           }
         }
       }
     },
-    "ios_settings_version": {
-      "comment": "Under the server's address in Settings: the app and its version, as Android's settings_version says Matinee for Android.",
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Matinee für iOS %@"
+    "ios_progress_watched" : {
+      "comment" : "VoiceOver's value for the bar of how much of a file was watched.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld %% gesehen"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Matinee for iOS %@"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld%% watched"
           }
         }
       }
     },
-    "ios_title_trailer": {
-      "comment": "The button beside Play on a title's page, which opens the trailer on YouTube; the web's title.trailer, which Android doesn't have yet.",
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Trailer"
+    "ios_settings_subtitles_system_where" : {
+      "comment" : "Under Caption preferences in Settings, Subtitles: where iOS keeps its caption style, which no app can open directly.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In Einstellungen › Bedienungshilfen › Untertitel & erweiterte Untertitel"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Trailer"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In Settings › Accessibility › Subtitles & Captioning"
           }
         }
       }
     },
-    "ios_title_trailer_hint": {
-      "comment": "What the trailer button does, for VoiceOver; the web's title.trailerHint.",
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Trailer auf YouTube ansehen"
+    "ios_settings_version" : {
+      "comment" : "Under the server's address in Settings: the app and its version, as Android's settings_version says Matinee for Android.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Matinee für iOS %@"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Watch the trailer on YouTube"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Matinee for iOS %@"
+          }
+        }
+      }
+    },
+    "ios_title_trailer" : {
+      "comment" : "The button beside Play on a title's page, which opens the trailer on YouTube; the web's title.trailer, which Android doesn't have yet.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trailer"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trailer"
+          }
+        }
+      }
+    },
+    "ios_title_trailer_hint" : {
+      "comment" : "What the trailer button does, for VoiceOver; the web's title.trailerHint.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trailer auf YouTube ansehen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watch the trailer on YouTube"
+          }
+        }
+      }
+    },
+    "profile_favorite_episodes" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lieblingsfolgen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Favorite episodes"
+          }
+        }
+      }
+    },
+    "profile_no_favorites_hint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tippe bei einem Film, einer Serie oder einer Folge auf das Herz, um sie hier zu sammeln."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tap the heart on a movie, show, or episode to keep it here."
+          }
+        }
+      }
+    },
+    "settings_admin_appearance" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Darstellung"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Appearance"
+          }
+        }
+      }
+    },
+    "web_serverAppearance_accent_dark" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Akzentfarbe im dunklen Modus"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dark mode accent"
+          }
+        }
+      }
+    },
+    "web_serverAppearance_accent_light" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Akzentfarbe im hellen Modus"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Light mode accent"
+          }
+        }
+      }
+    },
+    "web_serverAppearance_default" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Standard"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Default"
+          }
+        }
+      }
+    },
+    "web_serverAppearance_loadFailed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Akzentfarbe konnte nicht geladen werden. %1$@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't load the accent color. %1$@"
+          }
+        }
+      }
+    },
+    "web_serverAppearance_mode_dark" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dunkler Modus"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dark mode"
+          }
+        }
+      }
+    },
+    "web_serverAppearance_mode_light" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Heller Modus"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Light mode"
+          }
+        }
+      }
+    },
+    "web_serverAppearance_presets" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vorgeschlagene Akzentfarben"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suggested accents"
+          }
+        }
+      }
+    },
+    "web_serverAppearance_title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Akzentfarbe"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Accent color"
           }
         }
       }
     }
   },
-  "version": "1.0"
+  "version" : "1.0"
 }

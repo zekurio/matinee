@@ -16,8 +16,10 @@ accessors in `Str` too; a key may not be in both.
 An Android key becomes an accessor in lower camel case:
 `R.string.home_continue_watching` is `Str.homeContinueWatching`, and one
 with arguments is a function, typed by its format specifiers: `%1$s` takes a
-String, `%1$d` an Int. A plural's first argument is its count:
+String, `%1$d` an Int. Usually a plural's first argument is its count:
 `R.plurals.media_episode_count` is `Str.mediaEpisodeCount(_ count: Int)`.
+For web_requests_scope_seasons Android formats a season range as %1$s;
+its accessor takes that String followed by a separate Int count.
 
     scripts/strings.py           # write the catalog and the accessors
     scripts/strings.py --check   # fail when they're out of date
@@ -146,10 +148,13 @@ def read_language(folder: str) -> dict[str, dict]:
                     args.update(item_args)
                 if "other" not in forms:
                     fail(f"{where} has no 'other' form")
-                if args.get(1, "Int") != "Int":
-                    fail(f"{where}: a plural's first argument is its count")
-                args[1] = "Int"
-                entries[name] = {"plural": forms, "args": args, "translatable": translatable}
+                # Admin.kt passes seasonRuns(numbers), not the quantity, as %1$s.
+                # Keep the formatting argument and add a separate plural selector.
+                count_arg = max(args, default=0) + 1 if name == "web_requests_scope_seasons" else 1
+                if args.get(count_arg, "Int") != "Int":
+                    fail(f"{where}: plural count argument is not an integer")
+                args[count_arg] = "Int"
+                entries[name] = {"plural": forms, "args": args, "count_arg": count_arg, "translatable": translatable}
             elif element.tag == "string-array":
                 fail(f"{where}: string arrays aren't supported; use a string per item")
     return entries
@@ -163,15 +168,16 @@ def localization(entry: dict) -> dict:
     if "plural" not in entry:
         return unit(entry["value"])
     forms = {quantity: unit(text) for quantity, text in entry["plural"].items()}
-    if any("%1$" in text for text in entry["plural"].values()):
+    count_arg = entry.get("count_arg", 1)
+    if count_arg == 1 and any("%1$" in text for text in entry["plural"].values()):
         # The count is the first argument. The plural varies the whole
         # string, so the other arguments can sit anywhere in each form.
         return {"variations": {"plural": forms}}
     # A plural that doesn't show its count, like "Director" and "Directors":
     # Xcode only takes that as a substitution of the count.
     return {
-        "stringUnit": {"state": "translated", "value": "%#@count@"},
-        "substitutions": {"count": {"argNum": 1, "formatSpecifier": "lld", "variations": {"plural": forms}}},
+        "stringUnit": {"state": "translated", "value": "%#@count@" if count_arg == 1 else f"%{count_arg}$#@count@"},
+        "substitutions": {"count": {"argNum": count_arg, "formatSpecifier": "lld", "variations": {"plural": forms}}},
     }
 
 
@@ -261,7 +267,7 @@ def accessor(key: str, entry: dict, table: str) -> str:
     params = []
     values = []
     for number in range(1, count + 1):
-        label = "count" if "plural" in entry and number == 1 else f"p{number}"
+        label = "count" if "plural" in entry and number == entry.get("count_arg", 1) else f"p{number}"
         params.append(f"_ {label}: {args[number]}")
         values.append(label)
     lines.append(

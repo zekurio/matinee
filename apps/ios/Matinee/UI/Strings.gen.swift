@@ -34,6 +34,8 @@ nonisolated enum Str {
   static func accountDeviceApp(_ p1: String) -> String { tr("account_device_app", p1) }
   /// Browser
   static var accountDeviceBrowser: String { tr("account_device_browser") }
+  /// Couldn't load your sessions
+  static var accountSessionsFailed: String { tr("account_sessions_failed") }
   /// Couldn't load your sessions. %1$@
   static func accountSessionsLoadFailed(_ p1: String) -> String { tr("account_sessions_load_failed", p1) }
   /// Couldn't sign out that session
@@ -52,14 +54,28 @@ nonisolated enum Str {
   static func actionsGoToShow(_ p1: String) -> String { tr("actions_go_to_show", p1) }
   /// Play from the start
   static var actionsPlayFromStart: String { tr("actions_play_from_start") }
+  /// Couldn't load these settings
+  static var adminLoadFailed: String { tr("admin_load_failed") }
   /// Matinee
   static var appName: String { tr("app_name") }
   /// Wallpaper colors
   static var appearanceMaterialYou: String { tr("appearance_material_you") }
+  /// Couldn't load your requests
+  static var askedLoadFailed: String { tr("asked_load_failed") }
+  /// Clear all
+  static var browseClearAll: String { tr("browse_clear_all") }
+  /// Clear filters
+  static var browseClearFilters: String { tr("browse_clear_filters") }
   /// Continue watching
   static var browseContinueWatching: String { tr("browse_continue_watching") }
   /// Nothing here yet.
   static var browseEmptyShelf: String { tr("browse_empty_shelf") }
+  /// Couldn't load the filters
+  static var browseFiltersFailed: String { tr("browse_filters_failed") }
+  /// Filters, %1$lld on / Filters, %1$lld on
+  static func browseFiltersOn(_ count: Int) -> String { tr("browse_filters_on", count) }
+  /// Find a language
+  static var browseFindLanguage: String { tr("browse_find_language") }
   /// Genre
   static var browseGenre: String { tr("browse_genre") }
   /// Nothing in this genre
@@ -80,18 +96,32 @@ nonisolated enum Str {
   static var browseKindShow: String { tr("browse_kind_show") }
   /// Next up
   static var browseNextUp: String { tr("browse_next_up") }
+  /// Nothing here matches these filters
+  static var browseNoFilterMatch: String { tr("browse_no_filter_match") }
   /// Recently added in %1$@
   static func browseRecentlyAdded(_ p1: String) -> String { tr("browse_recently_added", p1) }
+  /// Remove filter %1$@
+  static func browseRemoveFilter(_ p1: String) -> String { tr("browse_remove_filter", p1) }
+  /// Sort: %1$@
+  static func browseSortCurrent(_ p1: String) -> String { tr("browse_sort_current", p1) }
   /// Studio
   static var browseStudio: String { tr("browse_studio") }
   /// Nothing from this studio
   static var browseStudioEmpty: String { tr("browse_studio_empty") }
   /// %1$lld title / %1$lld titles
   static func browseTitleCount(_ count: Int) -> String { tr("browse_title_count", count) }
+  /// Go to the next month
+  static var calendarNextMonth: String { tr("calendar_next_month") }
+  /// Go to the previous month
+  static var calendarPreviousMonth: String { tr("calendar_previous_month") }
+  /// Couldn't search the catalog
+  static var catalogSearchFailed: String { tr("catalog_search_failed") }
   /// and
   static var commonAnd: String { tr("common_and") }
   /// Back
   static var commonBack: String { tr("common_back") }
+  /// Back to Home
+  static var commonBackHome: String { tr("common_back_home") }
   /// Cancel
   static var commonCancel: String { tr("common_cancel") }
   /// Remove
@@ -152,6 +182,8 @@ nonisolated enum Str {
   static func diagnosticsStatusReplaced(_ p1: String) -> String { tr("diagnostics_status_replaced", p1) }
   /// Playback report
   static var diagnosticsTitle: String { tr("diagnostics_title") }
+  /// Couldn't load Discover
+  static var discoverFailed: String { tr("discover_failed") }
   /// About %1$@
   static func downloadsAbout(_ p1: String) -> String { tr("downloads_about", p1) }
   /// Download
@@ -210,6 +242,8 @@ nonisolated enum Str {
   static var downloadsErrorUnreachable: String { tr("downloads_error_unreachable") }
   /// Couldn't get this file's tracks
   static var downloadsFailed: String { tr("downloads_failed") }
+  /// Couldn't list the files
+  static var downloadsFilesFailed: String { tr("downloads_files_failed") }
   /// %1$@ of %2$@
   static func downloadsOf(_ p1: String, _ p2: String) -> String { tr("downloads_of", p1, p2) }
   /// Your account can't download. Ask whoever runs this server if you need to.
@@ -276,24 +310,30 @@ nonisolated enum Str {
   static var downloadsUnmetered: String { tr("downloads_unmetered") }
   /// Watch downloads
   static var downloadsWatchOffline: String { tr("downloads_watch_offline") }
-  /// The connection to the server broke off.
+  /// The connection dropped.
   static var errorConnectionLost: String { tr("error_connection_lost") }
-  /// The server can't be reached right now.
+  /// The server isn't answering.
   static var errorUnreachable: String { tr("error_unreachable") }
-  /// The server sent something this app can't read. Updating the app or the server may help.
+  /// The app couldn't read the server's answer.
   static var errorUnreadable: String { tr("error_unreadable") }
   /// No favorites yet
   static var favoritesEmpty: String { tr("favorites_empty") }
-  /// Tap the heart on a movie, show, or episode to keep it here.
+  /// Tap the heart on a title to save it here.
   static var favoritesEmptyHint: String { tr("favorites_empty_hint") }
-  /// Favorite episodes
+  /// Episodes
   static var favoritesEpisodes: String { tr("favorites_episodes") }
   /// Couldn't load your favorites
   static var favoritesLoadFailed: String { tr("favorites_load_failed") }
+  /// Movies
+  static var favoritesMovies: String { tr("favorites_movies") }
+  /// Seasons
+  static var favoritesSeasons: String { tr("favorites_seasons") }
+  /// Shows
+  static var favoritesShows: String { tr("favorites_shows") }
   /// Favorites
   static var favoritesTitle: String { tr("favorites_title") }
-  /// Titles
-  static var favoritesTitles: String { tr("favorites_titles") }
+  /// Couldn't open this folder
+  static var foldersLoadFailed: String { tr("folders_load_failed") }
   /// %1$lldh
   static func formatHours(_ p1: Int) -> String { tr("format_hours", p1) }
   /// %1$lldh %2$lldm
@@ -306,12 +346,14 @@ nonisolated enum Str {
   static func formatMinutes(_ p1: Int) -> String { tr("format_minutes", p1) }
   /// %1$lldm
   static func formatMinutesShort(_ p1: Int) -> String { tr("format_minutes_short", p1) }
+  /// Couldn't load these titles
+  static var gridLoadFailed: String { tr("grid_load_failed") }
+  /// Couldn't load more titles
+  static var gridMoreFailed: String { tr("grid_more_failed") }
   /// Couldn't load what you're watching
   static var homeContinueFailed: String { tr("home_continue_failed") }
   /// Couldn't load Home
   static var homeFailed: String { tr("home_failed") }
-  /// Couldn't load the featured titles
-  static var homeFeaturedFailed: String { tr("home_featured_failed") }
   /// Couldn't load your libraries
   static var homeLoadFailed: String { tr("home_load_failed") }
   /// Couldn't load what's next
@@ -404,6 +446,8 @@ nonisolated enum Str {
   static func linkWants(_ p1: String) -> String { tr("link_wants", p1) }
   /// Only approve a code from a device in front of you. Anyone who sends you a code gets into your account when you approve it.
   static var linkWarning: String { tr("link_warning") }
+  /// Couldn't load more
+  static var listMoreFailed: String { tr("list_more_failed") }
   /// Loading
   static var loadingInProgress: String { tr("loading_in_progress") }
   /// Couldn't refresh
@@ -510,6 +554,36 @@ nonisolated enum Str {
   static func peopleCreditWriter(_ count: Int) -> String { tr("people_credit_writer", count) }
   /// Studio / Studios
   static func peopleStudio(_ count: Int) -> String { tr("people_studio", count) }
+  /// Born %1$@
+  static func personBorn(_ p1: String) -> String { tr("person_born", p1) }
+  /// Acting
+  static var personDepartmentActing: String { tr("person_department_acting") }
+  /// Art
+  static var personDepartmentArt: String { tr("person_department_art") }
+  /// Camera
+  static var personDepartmentCamera: String { tr("person_department_camera") }
+  /// Costume & Make-Up
+  static var personDepartmentCostume: String { tr("person_department_costume") }
+  /// Creating
+  static var personDepartmentCreator: String { tr("person_department_creator") }
+  /// Crew
+  static var personDepartmentCrew: String { tr("person_department_crew") }
+  /// Directing
+  static var personDepartmentDirecting: String { tr("person_department_directing") }
+  /// Editing
+  static var personDepartmentEditing: String { tr("person_department_editing") }
+  /// Lighting
+  static var personDepartmentLighting: String { tr("person_department_lighting") }
+  /// Production
+  static var personDepartmentProduction: String { tr("person_department_production") }
+  /// Sound
+  static var personDepartmentSound: String { tr("person_department_sound") }
+  /// Visual Effects
+  static var personDepartmentVisualEffects: String { tr("person_department_visualEffects") }
+  /// Writing
+  static var personDepartmentWriting: String { tr("person_department_writing") }
+  /// Died %1$@
+  static func personDied(_ p1: String) -> String { tr("person_died", p1) }
   /// Couldn't load this person
   static var personLoadFailed: String { tr("person_load_failed") }
   /// Audio codec
@@ -522,6 +596,16 @@ nonisolated enum Str {
   static var playbackAudioTitle: String { tr("playback_audio_title") }
   /// Play the next episode
   static var playbackAutoplayTitle: String { tr("playback_autoplay_title") }
+  /// Audio
+  static var playbackButtonsAudio: String { tr("playback_buttons_audio") }
+  /// Lock
+  static var playbackButtonsLock: String { tr("playback_buttons_lock") }
+  /// Skip back and forward
+  static var playbackButtonsSkip: String { tr("playback_buttons_skip") }
+  /// Subtitles
+  static var playbackButtonsSubtitles: String { tr("playback_buttons_subtitles") }
+  /// Player buttons
+  static var playbackButtonsTitle: String { tr("playback_buttons_title") }
   /// Automatic (%1$@)
   static func playbackCodecAutomatic(_ p1: String) -> String { tr("playback_codec_automatic", p1) }
   /// Hardware first
@@ -534,6 +618,16 @@ nonisolated enum Str {
   static var playbackDeviceTitle: String { tr("playback_device_title") }
   /// Player
   static var playbackEngineTitle: String { tr("playback_engine_title") }
+  /// Hold for double speed
+  static var playbackGesturesHold: String { tr("playback_gestures_hold") }
+  /// Brightness and volume
+  static var playbackGesturesLevels: String { tr("playback_gestures_levels") }
+  /// Remember brightness
+  static var playbackGesturesRememberBrightness: String { tr("playback_gestures_remember_brightness") }
+  /// Seeking
+  static var playbackGesturesSeek: String { tr("playback_gestures_seek") }
+  /// Gestures
+  static var playbackGesturesTitle: String { tr("playback_gestures_title") }
   /// Languages
   static var playbackLanguagesTitle: String { tr("playback_languages_title") }
   /// Audio passthrough
@@ -546,6 +640,8 @@ nonisolated enum Str {
   static func playbackQualityPreset(_ p1: Int, _ p2: String) -> String { tr("playback_quality_preset", p1, p2) }
   /// Quality
   static var playbackQualityTitle: String { tr("playback_quality_title") }
+  /// Shows
+  static var playbackShowsTitle: String { tr("playback_shows_title") }
   /// Skip back
   static var playbackSkipBack: String { tr("playback_skip_back") }
   /// Skip forward
@@ -554,6 +650,10 @@ nonisolated enum Str {
   static func playbackSkipSeconds(_ count: Int) -> String { tr("playback_skip_seconds", count) }
   /// Skipping
   static var playbackSkipTitle: String { tr("playback_skip_title") }
+  /// Couldn't change whether specials show
+  static var playbackSpecialsFailed: String { tr("playback_specials_failed") }
+  /// Show specials
+  static var playbackSpecialsTitle: String { tr("playback_specials_title") }
   /// This device's (%1$@)
   static func playbackSubtitlesDeviceLanguage(_ p1: String) -> String { tr("playback_subtitles_device_language", p1) }
   /// Subtitle language
@@ -608,6 +708,8 @@ nonisolated enum Str {
   static var playerFit: String { tr("player_fit") }
   /// Couldn't load this title
   static var playerLoadFailed: String { tr("player_load_failed") }
+  /// Lock controls
+  static var playerLock: String { tr("player_lock") }
   /// Audio
   static var playerMenuAudio: String { tr("player_menu_audio") }
   /// Settings
@@ -628,8 +730,12 @@ nonisolated enum Str {
   static var playerPause: String { tr("player_pause") }
   /// Picture
   static var playerPicture: String { tr("player_picture") }
+  /// Picture in picture
+  static var playerPip: String { tr("player_pip") }
   /// Play
   static var playerPlay: String { tr("player_play") }
+  /// Previous episode
+  static var playerPreviousEpisode: String { tr("player_previous_episode") }
   /// Quality
   static var playerQuality: String { tr("player_quality") }
   /// Original
@@ -638,8 +744,16 @@ nonisolated enum Str {
   static var playerRestricted: String { tr("player_restricted") }
   /// Back %1$lld seconds
   static func playerSkipBack(_ p1: Int) -> String { tr("player_skip_back", p1) }
+  /// Skip credits
+  static var playerSkipCredits: String { tr("player_skip_credits") }
   /// Forward %1$lld seconds
   static func playerSkipForward(_ p1: Int) -> String { tr("player_skip_forward", p1) }
+  /// Skip intro
+  static var playerSkipIntro: String { tr("player_skip_intro") }
+  /// Skip preview
+  static var playerSkipPreview: String { tr("player_skip_preview") }
+  /// Skip recap
+  static var playerSkipRecap: String { tr("player_skip_recap") }
   /// Speed
   static var playerSpeed: String { tr("player_speed") }
   /// Normal
@@ -658,24 +772,24 @@ nonisolated enum Str {
   static func playerTrackUnnamed(_ p1: Int) -> String { tr("player_track_unnamed", p1) }
   /// %1$@ (%2$@)
   static func playerTrackWithTitle(_ p1: String, _ p2: String) -> String { tr("player_track_with_title", p1, p2) }
+  /// Unlock
+  static var playerUnlock: String { tr("player_unlock") }
   /// This device can't play this file.
   static var playerUnplayable: String { tr("player_unplayable") }
   /// Up next
   static var playerUpNext: String { tr("player_up_next") }
   /// Cancel
   static var playerUpNextCancel: String { tr("player_up_next_cancel") }
+  /// Hide
+  static var playerUpNextHide: String { tr("player_up_next_hide") }
   /// Playing in %1$lld
   static func playerUpNextIn(_ p1: Int) -> String { tr("player_up_next_in", p1) }
   /// Admin
   static var profileAdmin: String { tr("profile_admin") }
-  /// Favorite episodes
-  static var profileFavoriteEpisodes: String { tr("profile_favorite_episodes") }
   /// Joined %1$@
   static func profileJoined(_ p1: String) -> String { tr("profile_joined", p1) }
   /// Couldn't load your profile
   static var profileLoadFailed: String { tr("profile_load_failed") }
-  /// Tap the heart on a movie, show, or episode to keep it here.
-  static var profileNoFavoritesHint: String { tr("profile_no_favorites_hint") }
   /// Nothing watched %1$@
   static func profileNothingWatched(_ p1: String) -> String { tr("profile_nothing_watched", p1) }
   /// Recently watched
@@ -684,18 +798,62 @@ nonisolated enum Str {
   static var profileRecentEmpty: String { tr("profile_recent_empty") }
   /// Couldn't load what you watched
   static var profileRecentLoadFailed: String { tr("profile_recent_load_failed") }
-  /// Your statistics fill in as you watch
+  /// Nothing watched yet
   static var profileSelfEmpty: String { tr("profile_self_empty") }
-  /// Watch time and your most watched titles show up here after your first play.
+  /// Your watch time and most watched titles show up here.
   static var profileSelfEmptyHint: String { tr("profile_self_empty_hint") }
   /// Show all time
   static var profileShowAllTime: String { tr("profile_show_all_time") }
   /// Statistics
   static var profileStatistics: String { tr("profile_statistics") }
+  /// Couldn't load your statistics
+  static var profileStatsFailed: String { tr("profile_stats_failed") }
+  /// Couldn't load this row
+  static var railFailed: String { tr("rail_failed") }
+  /// When something you requested is ready or isn't coming, and for admins, requests that wait.
+  static var requestsChannelDescription: String { tr("requests_channel_description") }
+  /// Couldn't load requests
+  static var requestsLoadFailed: String { tr("requests_load_failed") }
+  /// Blocked in Android's settings. Allow notifications for Matinee there.
+  static var requestsNotifyBlocked: String { tr("requests_notify_blocked") }
+  /// Get one when something you requested is ready or isn't coming, even with Matinee closed. Matinee looks about every 15 minutes.
+  static var requestsNotifyDescription: String { tr("requests_notify_description") }
+  /// Open Android's settings
+  static var requestsNotifyOpenSettings: String { tr("requests_notify_open_settings") }
+  /// Notifications
+  static var requestsNotifySection: String { tr("requests_notify_section") }
+  /// Notifications on this device
+  static var requestsNotifyTitle: String { tr("requests_notify_title") }
+  /// Request the rest
+  static var requestsRestAsk: String { tr("requests_rest_ask") }
+  /// %1$lld more episode / %1$lld more episodes
+  static func requestsRestMore(_ count: Int) -> String { tr("requests_rest_more", count) }
+  /// the rest of %1$@
+  static func requestsRestName(_ p1: String) -> String { tr("requests_rest_name", p1) }
+  /// %1$lld season / %1$lld seasons
+  static func requestsSeasonCount(_ count: Int) -> String { tr("requests_season_count", count) }
+  /// %1$@ isn't here yet
+  static func requestsSeasonNotHere(_ p1: String) -> String { tr("requests_season_not_here", p1) }
+  /// %1$lld of %2$lld episodes here
+  static func requestsSeasonPartial(_ p1: Int, _ p2: Int) -> String { tr("requests_season_partial", p1, p2) }
+  /// %1$@ · %2$@
+  static func requestsSeasonState(_ p1: String, _ p2: String) -> String { tr("requests_season_state", p1, p2) }
+  /// %1$lld day / %1$lld days
+  static func requestsSpanDays(_ count: Int) -> String { tr("requests_span_days", count) }
+  /// %1$lld hour / %1$lld hours
+  static func requestsSpanHours(_ count: Int) -> String { tr("requests_span_hours", count) }
+  /// %1$lld minute / %1$lld minutes
+  static func requestsSpanMinutes(_ count: Int) -> String { tr("requests_span_minutes", count) }
+  /// %1$lld second / %1$lld seconds
+  static func requestsSpanSeconds(_ count: Int) -> String { tr("requests_span_seconds", count) }
+  /// %1$@ · %2$@
+  static func requestsYearKind(_ p1: String, _ p2: String) -> String { tr("requests_year_kind", p1, p2) }
   /// Clear search
   static var searchClear: String { tr("search_clear") }
   /// The search didn't go through. Try again in a moment.
   static var searchFailed: String { tr("search_failed") }
+  /// Couldn't search
+  static var searchFailedTitle: String { tr("search_failed_title") }
   /// Search movies, shows, people, and more
   static var searchField: String { tr("search_field") }
   /// Nothing matches “%1$@”
@@ -740,10 +898,10 @@ nonisolated enum Str {
   static var serversTitle: String { tr("servers_title") }
   /// Administration
   static var settingsAdmin: String { tr("settings_admin") }
-  /// Appearance
-  static var settingsAdminAppearance: String { tr("settings_admin_appearance") }
   /// Authentication
   static var settingsAdminAuthentication: String { tr("settings_admin_authentication") }
+  /// Branding
+  static var settingsAdminBranding: String { tr("settings_admin_branding") }
   /// Jobs
   static var settingsAdminJobs: String { tr("settings_admin_jobs") }
   /// Libraries
@@ -810,10 +968,14 @@ nonisolated enum Str {
   static var shellSignOut: String { tr("shell_sign_out") }
   /// Sign in with your browser
   static var signinBrowser: String { tr("signin_browser") }
+  /// Approve this device from one that's already signed in to Matinee.
+  static var signinCodeApprove: String { tr("signin_code_approve") }
   /// Sign in with the browser instead
   static var signinCodeBack: String { tr("signin_code_back") }
   /// Or enter this code at %1$@
   static func signinCodeEnter(_ p1: String) -> String { tr("signin_code_enter", p1) }
+  /// Enter this code at %1$@
+  static func signinCodeEnterOnly(_ p1: String) -> String { tr("signin_code_enter_only", p1) }
   /// Getting a code…
   static var signinCodeLoading: String { tr("signin_code_loading") }
   /// Open the link page
@@ -824,6 +986,8 @@ nonisolated enum Str {
   static var signinCodeScan: String { tr("signin_code_scan") }
   /// Scan to sign in
   static var signinCodeTitle: String { tr("signin_code_title") }
+  /// Sign in with a code
+  static var signinCodeTitleTyped: String { tr("signin_code_title_typed") }
   /// Waiting for approval…
   static var signinCodeWaiting: String { tr("signin_code_waiting") }
   /// Couldn't sign in.
@@ -928,6 +1092,8 @@ nonisolated enum Str {
   static func titleEpisodesCodedName(_ p1: String, _ p2: String) -> String { tr("title_episodes_coded_name", p1, p2) }
   /// Couldn't load the episodes. %1$@
   static func titleEpisodesError(_ p1: String) -> String { tr("title_episodes_error", p1) }
+  /// Couldn't load the episodes
+  static var titleEpisodesFailed: String { tr("title_episodes_failed") }
   /// Any
   static var titleIdentifyAnyYear: String { tr("title_identify_any_year") }
   /// Current match
@@ -936,6 +1102,8 @@ nonisolated enum Str {
   static func titleIdentifyDescription(_ p1: String, _ p2: String) -> String { tr("title_identify_description", p1, p2) }
   /// %1$@ found nothing for “%2$@”. Try the original title, or leave the year empty.
   static func titleIdentifyEmpty(_ p1: String, _ p2: String) -> String { tr("title_identify_empty", p1, p2) }
+  /// Couldn't search for matches
+  static var titleIdentifyFailed: String { tr("title_identify_failed") }
   /// Matched to %1$@
   static func titleIdentifyMatched(_ p1: String) -> String { tr("title_identify_matched", p1) }
   /// Name
@@ -958,6 +1126,8 @@ nonisolated enum Str {
   static func titleImagesEmptyLanguage(_ p1: String) -> String { tr("title_images_empty_language", p1) }
   /// Couldn't change the image
   static var titleImagesError: String { tr("title_images_error") }
+  /// Couldn't load the images
+  static var titleImagesFailed: String { tr("title_images_failed") }
   /// In use
   static var titleImagesInUse: String { tr("title_images_in_use") }
   /// Couldn't load the images. %1$@
@@ -966,6 +1136,8 @@ nonisolated enum Str {
   static var titleImagesNoProvider: String { tr("title_images_no_provider") }
   /// No text
   static var titleImagesNoText: String { tr("title_images_no_text") }
+  /// Couldn't load the provider's images
+  static var titleImagesRemoteFailed: String { tr("title_images_remote_failed") }
   /// Remove
   static var titleImagesRemove: String { tr("title_images_remove") }
   /// Use %1$@'s
@@ -1044,6 +1216,10 @@ nonisolated enum Str {
   static var titleSeasons: String { tr("title_seasons") }
   /// More seasons
   static var titleSeasonsMore: String { tr("title_seasons_more") }
+  /// Watch the trailer on YouTube
+  static var titleTrailer: String { tr("title_trailer") }
+  /// Close notification
+  static var toastClose: String { tr("toast_close") }
   /// Back to servers found
   static var tvConnectBackToList: String { tr("tv_connect_back_to_list") }
   /// Matinee servers on this network show up here. Pick yours, or type its address.
@@ -1068,7 +1244,7 @@ nonisolated enum Str {
   static var tvDetailLinks: String { tr("tv_detail_links") }
   /// Cast and crew
   static var tvDetailPeople: String { tr("tv_detail_people") }
-  /// Mark a movie, show, or episode as a favorite on its page to keep it here.
+  /// Mark a movie, show, season, or episode as a favorite on its page to keep it here.
   static var tvFavoritesEmptyHint: String { tr("tv_favorites_empty_hint") }
   /// Couldn't load these titles
   static var tvGridFailed: String { tr("tv_grid_failed") }
@@ -1152,6 +1328,168 @@ nonisolated enum Str {
   static func webAppearanceLanguageAuto(_ p1: String) -> String { tr("web_appearance_language_auto", p1) }
   /// Interface language
   static var webAppearanceLanguageTitle: String { tr("web_appearance_language_title") }
+  /// Request
+  static var webAskAsk: String { tr("web_ask_ask") }
+  /// Cancel request
+  static var webAskCancel: String { tr("web_ask_cancel") }
+  /// New seasons as they air
+  static var webAskChooserFuture: String { tr("web_ask_chooser_future") }
+  /// Request %1$lld season / Request %1$lld seasons
+  static func webAskChooserMany(_ count: Int) -> String { tr("web_ask_chooser_many", count) }
+  /// Request new seasons
+  static var webAskChooserNewOnly: String { tr("web_ask_chooser_newOnly") }
+  /// Pick a season
+  static var webAskChooserNone: String { tr("web_ask_chooser_none") }
+  /// Request season %1$@
+  static func webAskChooserOne(_ p1: String) -> String { tr("web_ask_chooser_one", p1) }
+  /// Seasons
+  static var webAskChooserSeasons: String { tr("web_ask_chooser_seasons") }
+  /// Request the specials
+  static var webAskChooserSpecials: String { tr("web_ask_chooser_specials") }
+  /// Not offered
+  static var webAskChooserUnavailable: String { tr("web_ask_chooser_unavailable") }
+  /// No copy of this could be found.
+  static var webAskDeclinedNotFound: String { tr("web_ask_declined_notFound") }
+  /// “%1$@”
+  static func webAskDeclinedNote(_ p1: String) -> String { tr("web_ask_declined_note", p1) }
+  /// Declined: %1$@.
+  static func webAskDeclinedWhy(_ p1: String) -> String { tr("web_ask_declined_why", p1) }
+  /// Request %1$@
+  static func webAskDialogTitle(_ p1: String) -> String { tr("web_ask_dialog_title", p1) }
+  /// An admin declined this title, so it can't be requested.
+  static var webAskDisabledDeclined: String { tr("web_ask_disabled_declined") }
+  /// Declined. To allow requests again, find it under Done in Requests.
+  static var webAskDisabledDeclinedAdmin: String { tr("web_ask_disabled_declinedAdmin") }
+  /// No library here takes this.
+  static var webAskDisabledNoDestination: String { tr("web_ask_disabled_noDestination") }
+  /// Your account can't request titles.
+  static var webAskDisabledOff: String { tr("web_ask_disabled_off") }
+  /// %1$lld request left. / %1$lld requests left.
+  static func webAskLeft(_ count: Int) -> String { tr("web_ask_left", count) }
+  /// No requests left for now.
+  static var webAskLimitLater: String { tr("web_ask_limit_later") }
+  /// No requests left until %1$@.
+  static func webAskLimitUntil(_ p1: String) -> String { tr("web_ask_limit_until", p1) }
+  /// All
+  static var webAskMineAll: String { tr("web_ask_mine_all") }
+  /// Nothing requested yet
+  static var webAskMineEmpty: String { tr("web_ask_mine_empty") }
+  /// Search for a film or show that isn't here and request it from its page.
+  static var webAskMineEmptyHint: String { tr("web_ask_mine_emptyHint") }
+  /// Nothing on its way
+  static var webAskMineEmptyInProgress: String { tr("web_ask_mine_emptyInProgress") }
+  /// Couldn't load your requests. %1$@
+  static func webAskMineError(_ p1: String) -> String { tr("web_ask_mine_error", p1) }
+  /// Show
+  static var webAskMineFilter: String { tr("web_ask_mine_filter") }
+  /// In progress
+  static var webAskMineInProgress: String { tr("web_ask_mine_inProgress") }
+  /// See all
+  static var webAskMineSeeAll: String { tr("web_ask_mine_seeAll") }
+  /// My requests
+  static var webAskMineTitle: String { tr("web_ask_mine_title") }
+  /// Request more
+  static var webAskMore: String { tr("web_ask_more") }
+  /// Notify me
+  static var webAskNotify: String { tr("web_ask_notify") }
+  /// Already have it.
+  static var webAskReasonAlreadyHere: String { tr("web_ask_reason_alreadyHere") }
+  /// Declined.
+  static var webAskReasonDeclined: String { tr("web_ask_reason_declined") }
+  /// Not for this server.
+  static var webAskReasonNotForServer: String { tr("web_ask_reason_notForServer") }
+  /// No copy found.
+  static var webAskReasonNotFound: String { tr("web_ask_reason_notFound") }
+  /// Stop notifying
+  static var webAskStopNotifying: String { tr("web_ask_stopNotifying") }
+  /// Requested %1$@
+  static func webAskToastAsked(_ p1: String) -> String { tr("web_ask_toast_asked", p1) }
+  /// Couldn't cancel %1$@
+  static func webAskToastCancelFailed(_ p1: String) -> String { tr("web_ask_toast_cancelFailed", p1) }
+  /// Couldn't request %1$@
+  static func webAskToastFailed(_ p1: String) -> String { tr("web_ask_toast_failed", p1) }
+  /// Couldn't change your notifications
+  static var webAskToastFollowFailed: String { tr("web_ask_toast_followFailed") }
+  /// Undo
+  static var webAskToastUndo: String { tr("web_ask_toast_undo") }
+  /// Dark mode accent
+  static var webBrandingAccentDark: String { tr("web_branding_accent_dark") }
+  /// Light mode accent
+  static var webBrandingAccentLight: String { tr("web_branding_accent_light") }
+  /// Artwork
+  static var webBrandingBackdropArtwork: String { tr("web_branding_backdrop_artwork") }
+  /// Posters and thumbs
+  static var webBrandingBackdropArtworkMixed: String { tr("web_branding_backdrop_artwork_mixed") }
+  /// Posters
+  static var webBrandingBackdropArtworkPosters: String { tr("web_branding_backdrop_artwork_posters") }
+  /// Thumbs
+  static var webBrandingBackdropArtworkThumbs: String { tr("web_branding_backdrop_artwork_thumbs") }
+  /// Blur
+  static var webBrandingBackdropBlur: String { tr("web_branding_backdrop_blur") }
+  /// %1$@ px
+  static func webBrandingBackdropBlurValue(_ p1: String) -> String { tr("web_branding_backdrop_blurValue", p1) }
+  /// No artwork to show yet. The libraries the Everyone group opens have no titles with images the server has downloaded.
+  static var webBrandingBackdropEmpty: String { tr("web_branding_backdrop_empty") }
+  /// Show artwork behind the form
+  static var webBrandingBackdropEnabled: String { tr("web_branding_backdrop_enabled") }
+  /// Fade
+  static var webBrandingBackdropFade: String { tr("web_branding_backdrop_fade") }
+  /// %1$@ %%
+  static func webBrandingBackdropFadeValue(_ p1: String) -> String { tr("web_branding_backdrop_fadeValue", p1) }
+  /// Preview
+  static var webBrandingBackdropPreview: String { tr("web_branding_backdrop_preview") }
+  /// The login screen shows no artwork.
+  static var webBrandingBackdropPreviewOff: String { tr("web_branding_backdrop_previewOff") }
+  /// Shuffle
+  static var webBrandingBackdropShuffle: String { tr("web_branding_backdrop_shuffle") }
+  /// Shows titles from the libraries the Everyone group opens.
+  static var webBrandingBackdropSource: String { tr("web_branding_backdrop_source") }
+  /// Login screen
+  static var webBrandingBackdropTitle: String { tr("web_branding_backdrop_title") }
+  /// Default
+  static var webBrandingDefault: String { tr("web_branding_default") }
+  /// Couldn't load the branding settings. %1$@
+  static func webBrandingLoadFailed(_ p1: String) -> String { tr("web_branding_loadFailed", p1) }
+  /// Dark mode
+  static var webBrandingModeDark: String { tr("web_branding_mode_dark") }
+  /// Light mode
+  static var webBrandingModeLight: String { tr("web_branding_mode_light") }
+  /// Suggested accents
+  static var webBrandingPresets: String { tr("web_branding_presets") }
+  /// Accent color
+  static var webBrandingTitle: String { tr("web_branding_title") }
+  /// New, from your request
+  static var webCatalogBadgeFresh: String { tr("web_catalog_badge_fresh") }
+  /// Here now
+  static var webCatalogBadgeHere: String { tr("web_catalog_badge_here") }
+  /// Not here yet
+  static var webCatalogNotHere: String { tr("web_catalog_notHere") }
+  /// This link doesn't lead to a title.
+  static var webCatalogPageBadLink: String { tr("web_catalog_page_badLink") }
+  /// These details may be out of date.
+  static var webCatalogPageStale: String { tr("web_catalog_page_stale") }
+  /// More like this
+  static var webCatalogRelatedMoreLikeThis: String { tr("web_catalog_related_moreLikeThis") }
+  /// Some of these may be out of date.
+  static var webCatalogRelatedStale: String { tr("web_catalog_related_stale") }
+  /// Couldn't search for new titles right now.
+  static var webCatalogSearchFailed: String { tr("web_catalog_search_failed") }
+  /// Some of these may be out of date.
+  static var webCatalogSearchStale: String { tr("web_catalog_search_stale") }
+  /// Airing · %1$@ of %2$@
+  static func webCatalogSeasonAiring(_ p1: String, _ p2: String) -> String { tr("web_catalog_season_airing", p1, p2) }
+  /// Requested
+  static var webCatalogStateAsked: String { tr("web_catalog_state_asked") }
+  /// On its way
+  static var webCatalogStateComing: String { tr("web_catalog_state_coming") }
+  /// On its way · %1$@
+  static func webCatalogStateComingPercent(_ p1: String) -> String { tr("web_catalog_state_comingPercent", p1) }
+  /// Not out yet
+  static var webCatalogStateNotOut: String { tr("web_catalog_state_notOut") }
+  /// Out %1$@
+  static func webCatalogStateOut(_ p1: String) -> String { tr("web_catalog_state_out", p1) }
+  /// Not available
+  static var webCatalogStateUnavailable: String { tr("web_catalog_state_unavailable") }
   /// The passkey prompt was closed before it finished.
   static var webCommonErrorPasskeyClosed: String { tr("web_common_error_passkeyClosed") }
   /// This device already has a passkey for your account.
@@ -1176,6 +1514,214 @@ nonisolated enum Str {
   static var webCommonSaveBarSaving: String { tr("web_common_saveBar_saving") }
   /// Unsaved changes
   static var webCommonSaveBarUnsaved: String { tr("web_common_saveBar_unsaved") }
+  /// Back to Discover
+  static var webDiscoverBack: String { tr("web_discover_back") }
+  /// At least %1$lld vote / At least %1$lld votes
+  static func webDiscoverBrowseChipVotes(_ count: Int) -> String { tr("web_discover_browse_chip_votes", count) }
+  /// These titles didn't load.
+  static var webDiscoverBrowseFailed: String { tr("web_discover_browse_failed") }
+  /// Choose a minimum
+  static var webDiscoverBrowseFloorChange: String { tr("web_discover_browse_floorChange") }
+  /// Only titles with at least %1$@ votes, so the list isn't filled with ones hardly anyone has seen.
+  static func webDiscoverBrowseFloorList(_ p1: String) -> String { tr("web_discover_browse_floorList", p1) }
+  /// Only titles with at least %1$@ votes, so a handful of votes can't top the list.
+  static func webDiscoverBrowseFloorScore(_ p1: String) -> String { tr("web_discover_browse_floorScore", p1) }
+  /// Browse movies
+  static var webDiscoverBrowseMovie: String { tr("web_discover_browse_movie") }
+  /// No movies match these filters
+  static var webDiscoverBrowseNoneMovie: String { tr("web_discover_browse_none_movie") }
+  /// No shows match these filters
+  static var webDiscoverBrowseNoneShow: String { tr("web_discover_browse_none_show") }
+  /// Nothing to show right now
+  static var webDiscoverBrowseNothing: String { tr("web_discover_browse_nothing") }
+  /// The filters didn't load.
+  static var webDiscoverBrowseOptionsFailed: String { tr("web_discover_browse_optionsFailed") }
+  /// From TMDB, out of 10
+  static var webDiscoverBrowseScoreHint: String { tr("web_discover_browse_scoreHint") }
+  /// Browse shows
+  static var webDiscoverBrowseShow: String { tr("web_discover_browse_show") }
+  /// Popular
+  static var webDiscoverBrowseSortPopular: String { tr("web_discover_browse_sort_popular") }
+  /// Most votes
+  static var webDiscoverBrowseSortVotes: String { tr("web_discover_browse_sort_votes") }
+  /// Votes
+  static var webDiscoverBrowseVotes: String { tr("web_discover_browse_votes") }
+  /// %1$@+
+  static func webDiscoverBrowseVotesStep(_ p1: String) -> String { tr("web_discover_browse_votesStep", p1) }
+  /// %1$@ · %2$@
+  static func webDiscoverCardRelease(_ p1: String, _ p2: String) -> String { tr("web_discover_card_release", p1, p2) }
+  /// Couldn't hide %1$@.
+  static func webDiscoverDismissFailed(_ p1: String) -> String { tr("web_discover_dismissFailed", p1) }
+  /// You won't see %1$@ in your recommendations.
+  static func webDiscoverDismissed(_ p1: String) -> String { tr("web_discover_dismissed", p1) }
+  /// Nothing to suggest right now
+  static var webDiscoverEmpty: String { tr("web_discover_empty") }
+  /// Search finds the rest.
+  static var webDiscoverEmptyHint: String { tr("web_discover_emptyHint") }
+  /// That's the whole list.
+  static var webDiscoverEnd: String { tr("web_discover_end") }
+  /// Discover isn't available right now.
+  static var webDiscoverFailed: String { tr("web_discover_failed") }
+  /// The catalog didn't answer. Search still works.
+  static var webDiscoverFailedHint: String { tr("web_discover_failedHint") }
+  /// This row isn't on Discover anymore
+  static var webDiscoverGone: String { tr("web_discover_gone") }
+  /// The next titles didn't load.
+  static var webDiscoverMoreFailed: String { tr("web_discover_moreFailed") }
+  /// Not interested
+  static var webDiscoverNotInterested: String { tr("web_discover_notInterested") }
+  /// Not interested in %1$@
+  static func webDiscoverNotInterestedNamed(_ p1: String) -> String { tr("web_discover_notInterestedNamed", p1) }
+  /// Discover isn't set up here
+  static var webDiscoverOff: String { tr("web_discover_off") }
+  /// It needs a TMDB API key and a library that requests can go to.
+  static var webDiscoverOffAdmin: String { tr("web_discover_offAdmin") }
+  /// Search still finds everything in the libraries you can open.
+  static var webDiscoverOffHint: String { tr("web_discover_offHint") }
+  /// This row didn't load.
+  static var webDiscoverRailFailed: String { tr("web_discover_railFailed") }
+  /// Because you watched %1$@
+  static func webDiscoverRailBecauseWatched(_ p1: String) -> String { tr("web_discover_rail_becauseWatched", p1) }
+  /// Coming soon
+  static var webDiscoverRailComingSoon: String { tr("web_discover_rail_comingSoon") }
+  /// Recommended for you
+  static var webDiscoverRailForYou: String { tr("web_discover_rail_forYou") }
+  /// Popular movies
+  static var webDiscoverRailPopularFilms: String { tr("web_discover_rail_popularFilms") }
+  /// Popular shows
+  static var webDiscoverRailPopularShows: String { tr("web_discover_rail_popularShows") }
+  /// %1$lld row didn't load. / %1$lld rows didn't load.
+  static func webDiscoverRailsFailed(_ count: Int) -> String { tr("web_discover_railsFailed", count) }
+  /// With %1$@
+  static func webDiscoverReasonPerson(_ p1: String) -> String { tr("web_discover_reason_person", p1) }
+  /// Picked from what you watch
+  static var webDiscoverReasonTaste: String { tr("web_discover_reason_taste") }
+  /// Because you watched %1$@
+  static func webDiscoverReasonWatched(_ p1: String) -> String { tr("web_discover_reason_watched", p1) }
+  /// Try again
+  static var webDiscoverRetry: String { tr("web_discover_retry") }
+  /// Some of these may be out of date.
+  static var webDiscoverStale: String { tr("web_discover_stale") }
+  /// Discover
+  static var webDiscoverTitle: String { tr("web_discover_title") }
+  /// Undo
+  static var webDiscoverUndo: String { tr("web_discover_undo") }
+  /// Any
+  static var webFiltersAny: String { tr("web_filters_any") }
+  /// Any language
+  static var webFiltersAnyLanguage: String { tr("web_filters_anyLanguage") }
+  /// Any length
+  static var webFiltersAnyLength: String { tr("web_filters_anyLength") }
+  /// Any score
+  static var webFiltersAnyScore: String { tr("web_filters_anyScore") }
+  /// Any year
+  static var webFiltersAnyYear: String { tr("web_filters_anyYear") }
+  /// At least %1$@
+  static func webFiltersAtLeast(_ p1: String) -> String { tr("web_filters_atLeast", p1) }
+  /// %1$@ to %2$@
+  static func webFiltersBetween(_ p1: String, _ p2: String) -> String { tr("web_filters_between", p1, p2) }
+  /// %1$@ · %2$@
+  static func webFiltersCardRuntime(_ p1: String, _ p2: String) -> String { tr("web_filters_card_runtime", p1, p2) }
+  /// %1$@
+  static func webFiltersCardRuntimeOnly(_ p1: String) -> String { tr("web_filters_card_runtimeOnly", p1) }
+  /// ★ %1$@ · %2$@
+  static func webFiltersCardScore(_ p1: String, _ p2: String) -> String { tr("web_filters_card_score", p1, p2) }
+  /// ★ %1$@
+  static func webFiltersCardScoreOnly(_ p1: String) -> String { tr("web_filters_card_scoreOnly", p1) }
+  /// Movies rated up to %1$@
+  static func webFiltersChipMovieRating(_ p1: String) -> String { tr("web_filters_chip_movieRating", p1) }
+  /// Rated up to %1$@
+  static func webFiltersChipRating(_ p1: String) -> String { tr("web_filters_chip_rating", p1) }
+  /// At least %1$@ long
+  static func webFiltersChipRuntimeAtLeast(_ p1: String) -> String { tr("web_filters_chip_runtimeAtLeast", p1) }
+  /// %1$@ to %2$@ long
+  static func webFiltersChipRuntimeBetween(_ p1: String, _ p2: String) -> String { tr("web_filters_chip_runtimeBetween", p1, p2) }
+  /// Up to %1$@ long
+  static func webFiltersChipRuntimeUpTo(_ p1: String) -> String { tr("web_filters_chip_runtimeUpTo", p1) }
+  /// Score at least %1$@
+  static func webFiltersChipScoreAtLeast(_ p1: String) -> String { tr("web_filters_chip_scoreAtLeast", p1) }
+  /// Score %1$@ to %2$@
+  static func webFiltersChipScoreBetween(_ p1: String, _ p2: String) -> String { tr("web_filters_chip_scoreBetween", p1, p2) }
+  /// Score up to %1$@
+  static func webFiltersChipScoreUpTo(_ p1: String) -> String { tr("web_filters_chip_scoreUpTo", p1) }
+  /// Shows rated up to %1$@
+  static func webFiltersChipShowRating(_ p1: String) -> String { tr("web_filters_chip_showRating", p1) }
+  /// Show titles
+  static var webFiltersDone: String { tr("web_filters_done") }
+  /// Find a studio
+  static var webFiltersFindStudio: String { tr("web_filters_findStudio") }
+  /// From %1$@
+  static func webFiltersFrom(_ p1: String) -> String { tr("web_filters_from", p1) }
+  /// Genres
+  static var webFiltersGenres: String { tr("web_filters_genres") }
+  /// Highest
+  static var webFiltersHighest: String { tr("web_filters_highest") }
+  /// Original language
+  static var webFiltersLanguage: String { tr("web_filters_language") }
+  /// Lowest
+  static var webFiltersLowest: String { tr("web_filters_lowest") }
+  /// No studio by that name
+  static var webFiltersNoStudio: String { tr("web_filters_noStudio") }
+  /// Take a filter off, or widen a range.
+  static var webFiltersNoneHint: String { tr("web_filters_noneHint") }
+  /// Progress
+  static var webFiltersProgress: String { tr("web_filters_progress") }
+  /// Age rating
+  static var webFiltersRating: String { tr("web_filters_rating") }
+  /// Up to the rating you pick · %1$@
+  static func webFiltersRatingHint(_ p1: String) -> String { tr("web_filters_ratingHint", p1) }
+  /// Up to the rating you pick
+  static var webFiltersRatingHintBoth: String { tr("web_filters_ratingHintBoth") }
+  /// Movies · %1$@
+  static func webFiltersRatingRowMovie(_ p1: String) -> String { tr("web_filters_ratingRow_movie", p1) }
+  /// Shows · %1$@
+  static func webFiltersRatingRowShow(_ p1: String) -> String { tr("web_filters_ratingRow_show", p1) }
+  /// Runtime
+  static var webFiltersRuntime: String { tr("web_filters_runtime") }
+  /// How long the movie or an episode is
+  static var webFiltersRuntimeHintBoth: String { tr("web_filters_runtimeHint_both") }
+  /// How long the movie is
+  static var webFiltersRuntimeHintMovie: String { tr("web_filters_runtimeHint_movie") }
+  /// How long an episode is
+  static var webFiltersRuntimeHintShow: String { tr("web_filters_runtimeHint_show") }
+  /// User score
+  static var webFiltersScore: String { tr("web_filters_score") }
+  /// Out of 10
+  static var webFiltersScoreHint: String { tr("web_filters_scoreHint") }
+  /// Longest
+  static var webFiltersSortLongest: String { tr("web_filters_sort_longest") }
+  /// Name, A to Z
+  static var webFiltersSortNameAsc: String { tr("web_filters_sort_nameAsc") }
+  /// Name, Z to A
+  static var webFiltersSortNameDesc: String { tr("web_filters_sort_nameDesc") }
+  /// Newest
+  static var webFiltersSortNewest: String { tr("web_filters_sort_newest") }
+  /// Oldest
+  static var webFiltersSortOldest: String { tr("web_filters_sort_oldest") }
+  /// Recently added
+  static var webFiltersSortRecentNew: String { tr("web_filters_sort_recentNew") }
+  /// First added
+  static var webFiltersSortRecentOld: String { tr("web_filters_sort_recentOld") }
+  /// Highest score
+  static var webFiltersSortScoreHigh: String { tr("web_filters_sort_scoreHigh") }
+  /// Lowest score
+  static var webFiltersSortScoreLow: String { tr("web_filters_sort_scoreLow") }
+  /// Shortest
+  static var webFiltersSortShortest: String { tr("web_filters_sort_shortest") }
+  /// Studios
+  static var webFiltersStudios: String { tr("web_filters_studios") }
+  /// Filters
+  static var webFiltersTitle: String { tr("web_filters_title") }
+  /// Up to %1$@
+  static func webFiltersUpTo(_ p1: String) -> String { tr("web_filters_upTo", p1) }
+  /// In progress
+  static var webFiltersWatchInProgress: String { tr("web_filters_watch_inProgress") }
+  /// Unwatched
+  static var webFiltersWatchUnwatched: String { tr("web_filters_watch_unwatched") }
+  /// Watched
+  static var webFiltersWatchWatched: String { tr("web_filters_watch_watched") }
+  /// Release year
+  static var webFiltersYears: String { tr("web_filters_years") }
   /// Concurrency
   static var webJobsConcurrency: String { tr("web_jobs_concurrency") }
   /// %1$lld job at once / %1$lld jobs at once
@@ -1224,6 +1770,10 @@ nonisolated enum Str {
   static var webJobsQueueAvatarsDescription: String { tr("web_jobs_queue_avatars_description") }
   /// Profile pictures
   static var webJobsQueueAvatarsName: String { tr("web_jobs_queue_avatars_name") }
+  /// Refresh cached catalog and Discover responses.
+  static var webJobsQueueCatalogDescription: String { tr("web_jobs_queue_catalog_description") }
+  /// Catalog
+  static var webJobsQueueCatalogName: String { tr("web_jobs_queue_catalog_name") }
   /// Clear waiting jobs
   static var webJobsQueueClear: String { tr("web_jobs_queue_clear") }
   /// Couldn't clear %1$@
@@ -1254,16 +1804,40 @@ nonisolated enum Str {
   static var webJobsQueueMediaProbeDescription: String { tr("web_jobs_queue_media_probe_description") }
   /// Media info
   static var webJobsQueueMediaProbeName: String { tr("web_jobs_queue_media_probe_name") }
+  /// Find the intro and credits of each episode, for Skip intro and for offering the next episode while the credits roll.
+  static var webJobsQueueMediaSegmentsDescription: String { tr("web_jobs_queue_media_segments_description") }
+  /// Intros and credits
+  static var webJobsQueueMediaSegmentsName: String { tr("web_jobs_queue_media_segments_name") }
   /// Fetch details, artwork, and episodes from TMDB or TheTVDB.
   static var webJobsQueueMetadataDescription: String { tr("web_jobs_queue_metadata_description") }
   /// Metadata
   static var webJobsQueueMetadataName: String { tr("web_jobs_queue_metadata_name") }
+  /// Deliver stored notifications through web push.
+  static var webJobsQueueNotificationsDescription: String { tr("web_jobs_queue_notifications_description") }
+  /// Notifications
+  static var webJobsQueueNotificationsName: String { tr("web_jobs_queue_notifications_name") }
   /// Pause
   static var webJobsQueuePause: String { tr("web_jobs_queue_pause") }
   /// Couldn't pause %1$@
   static func webJobsQueuePauseFailed(_ p1: String) -> String { tr("web_jobs_queue_pauseFailed", p1) }
   /// Paused
   static var webJobsQueuePaused: String { tr("web_jobs_queue_paused") }
+  /// Work out each person's recommendations from what they watched.
+  static var webJobsQueueRecommendationsDescription: String { tr("web_jobs_queue_recommendations_description") }
+  /// Recommendations
+  static var webJobsQueueRecommendationsName: String { tr("web_jobs_queue_recommendations_name") }
+  /// Match library arrivals and notify followers.
+  static var webJobsQueueRequestArrivalDescription: String { tr("web_jobs_queue_request_arrival_description") }
+  /// Request arrivals
+  static var webJobsQueueRequestArrivalName: String { tr("web_jobs_queue_request_arrival_name") }
+  /// Send accepted titles to their library connection.
+  static var webJobsQueueRequestDispatchDescription: String { tr("web_jobs_queue_request_dispatch_description") }
+  /// Request delivery
+  static var webJobsQueueRequestDispatchName: String { tr("web_jobs_queue_request_dispatch_name") }
+  /// Check progress for titles on their way.
+  static var webJobsQueueRequestProgressDescription: String { tr("web_jobs_queue_request_progress_description") }
+  /// Request progress
+  static var webJobsQueueRequestProgressName: String { tr("web_jobs_queue_request_progress_name") }
   /// Resume
   static var webJobsQueueResume: String { tr("web_jobs_queue_resume") }
   /// Couldn't resume %1$@
@@ -1288,6 +1862,10 @@ nonisolated enum Str {
   static var webJobsQueueThumbnailsDescription: String { tr("web_jobs_queue_thumbnails_description") }
   /// Thumbnails
   static var webJobsQueueThumbnailsName: String { tr("web_jobs_queue_thumbnails_name") }
+  /// Fetch the genres, keywords, and people of titles from TMDB, for recommendations.
+  static var webJobsQueueTitleFeaturesDescription: String { tr("web_jobs_queue_title_features_description") }
+  /// Title features
+  static var webJobsQueueTitleFeaturesName: String { tr("web_jobs_queue_title_features_name") }
   /// Make the thumbnails the seek bar shows while scrubbing.
   static var webJobsQueueTrickplayDescription: String { tr("web_jobs_queue_trickplay_description") }
   /// Trickplay images
@@ -1338,10 +1916,22 @@ nonisolated enum Str {
   static var webJobsTaskCleanSessionsName: String { tr("web_jobs_task_clean_sessions_name") }
   /// Clean up encodes
   static var webJobsTaskCleanTranscodesName: String { tr("web_jobs_task_clean_transcodes_name") }
+  /// Find accepted requests waiting to be sent.
+  static var webJobsTaskDispatchRequestsDescription: String { tr("web_jobs_task_dispatch_requests_description") }
+  /// Send requests
+  static var webJobsTaskDispatchRequestsName: String { tr("web_jobs_task_dispatch_requests_name") }
   /// Failed
   static var webJobsTaskFailed: String { tr("web_jobs_task_failed") }
   /// Failed: %1$@
   static func webJobsTaskFailedWith(_ p1: String) -> String { tr("web_jobs_task_failedWith", p1) }
+  /// Look for the intro and credits of episodes not looked at yet, or whose file changed, in their chapters and in the audio they share with their season. Scans queue their new files on their own.
+  static var webJobsTaskFindSegmentsDescription: String { tr("web_jobs_task_find_segments_description") }
+  /// Find intros and credits
+  static var webJobsTaskFindSegmentsName: String { tr("web_jobs_task_find_segments_name") }
+  /// Delete pages of the filtered catalog that nobody opened for a week.
+  static var webJobsTaskForgetBrowsedPagesDescription: String { tr("web_jobs_task_forget_browsed_pages_description") }
+  /// Forget browsed catalog pages
+  static var webJobsTaskForgetBrowsedPagesName: String { tr("web_jobs_task_forget_browsed_pages_name") }
   /// Make the seek bar's thumbnails for videos without them, or whose file or settings changed, newest first. Scans queue their new files on their own. Also deletes the images of files that are gone.
   static var webJobsTaskMakeTrickplayDescription: String { tr("web_jobs_task_make_trickplay_description") }
   /// Make trickplay images
@@ -1350,10 +1940,18 @@ nonisolated enum Str {
   static var webJobsTaskNeverRan: String { tr("web_jobs_task_neverRan") }
   /// %1$@%%
   static func webJobsTaskPercent(_ p1: String) -> String { tr("web_jobs_task_percent", p1) }
+  /// Check active requests through each connection once.
+  static var webJobsTaskPollRequestsDescription: String { tr("web_jobs_task_poll_requests_description") }
+  /// Read request progress
+  static var webJobsTaskPollRequestsName: String { tr("web_jobs_task_poll_requests_name") }
   /// Download images the server has no blurred placeholder for yet, posters and backdrops first. Metadata fetches queue their images on their own; this catches up after a restart or a failed download.
   static var webJobsTaskPrefetchArtworkDescription: String { tr("web_jobs_task_prefetch_artwork_description") }
   /// Fetch artwork
   static var webJobsTaskPrefetchArtworkName: String { tr("web_jobs_task_prefetch_artwork_name") }
+  /// Read Discover's rows ahead and fetch their posters, so they show their blurred placeholders the first time someone opens Discover.
+  static var webJobsTaskPrepareDiscoverDescription: String { tr("web_jobs_task_prepare_discover_description") }
+  /// Prepare Discover
+  static var webJobsTaskPrepareDiscoverName: String { tr("web_jobs_task_prepare_discover_name") }
   /// Cache indexed text subtitles and delete outputs of removed or changed files. Picture subtitles stay on demand.
   static var webJobsTaskPrepareSubtitlesDescription: String { tr("web_jobs_task_prepare_subtitles_description") }
   /// Prepare subtitles
@@ -1364,6 +1962,14 @@ nonisolated enum Str {
   static var webJobsTaskProbeMediaName: String { tr("web_jobs_task_probe_media_name") }
   /// %1$@ progress
   static func webJobsTaskProgress(_ p1: String) -> String { tr("web_jobs_task_progress", p1) }
+  /// Work out recommendations again for people who watched something since, or whose list is a day old. Finishing a title or marking a favorite queues the person on its own.
+  static var webJobsTaskRecommendTitlesDescription: String { tr("web_jobs_task_recommend_titles_description") }
+  /// Update recommendations
+  static var webJobsTaskRecommendTitlesName: String { tr("web_jobs_task_recommend_titles_name") }
+  /// Find playable films and seasons for accepted requests.
+  static var webJobsTaskReconcileRequestsDescription: String { tr("web_jobs_task_reconcile_requests_description") }
+  /// Reconcile request arrivals
+  static var webJobsTaskReconcileRequestsName: String { tr("web_jobs_task_reconcile_requests_name") }
   /// Fetch metadata for titles without a match and for ones that went stale, for new episodes and artwork.
   static var webJobsTaskRefreshMetadataDescription: String { tr("web_jobs_task_refresh_metadata_description") }
   /// Refresh metadata
@@ -1502,6 +2108,26 @@ nonisolated enum Str {
   static var webLibrariesScanning: String { tr("web_libraries_scanning") }
   /// Libraries
   static var webLibrariesTitle: String { tr("web_libraries_title") }
+  /// %1$@ requests need attention
+  static func webNotificationsAttention(_ p1: String) -> String { tr("web_notifications_attention", p1) }
+  /// 1 request needs attention
+  static var webNotificationsAttentionOne: String { tr("web_notifications_attentionOne") }
+  /// %1$@ is ready
+  static func webNotificationsReady(_ p1: String) -> String { tr("web_notifications_ready", p1) }
+  /// %1$@: %2$@ is ready
+  static func webNotificationsReadySeason(_ p1: String, _ p2: String) -> String { tr("web_notifications_readySeason", p1, p2) }
+  /// %1$@: Season %2$@ is ready
+  static func webNotificationsReadySeasonNumber(_ p1: String, _ p2: String) -> String { tr("web_notifications_readySeasonNumber", p1, p2) }
+  /// Requests
+  static var webNotificationsRequests: String { tr("web_notifications_requests") }
+  /// %1$@: Not available
+  static func webNotificationsUnavailable(_ p1: String) -> String { tr("web_notifications_unavailable", p1) }
+  /// It won't come to this server.
+  static var webNotificationsUnavailableHint: String { tr("web_notifications_unavailableHint") }
+  /// %1$@ requests waiting
+  static func webNotificationsWaiting(_ p1: String) -> String { tr("web_notifications_waiting", p1) }
+  /// 1 request waiting
+  static var webNotificationsWaitingOne: String { tr("web_notifications_waitingOne") }
   /// Groups and access
   static var webOidcAccessTitle: String { tr("web_oidc_access_title") }
   /// Advanced
@@ -1552,6 +2178,8 @@ nonisolated enum Str {
   static var webOidcFieldGroupsClaim: String { tr("web_oidc_field_groupsClaim") }
   /// Issuer URL
   static var webOidcFieldIssuerUrl: String { tr("web_oidc_field_issuerUrl") }
+  /// Display name claim
+  static var webOidcFieldNameClaim: String { tr("web_oidc_field_nameClaim") }
   /// Policy claim
   static var webOidcFieldPolicyClaim: String { tr("web_oidc_field_policyClaim") }
   /// Role claim
@@ -1590,22 +2218,208 @@ nonisolated enum Str {
   static func webOidcSsoOnly(_ count: Int, _ p2: String) -> String { tr("web_oidc_ssoOnly", count, p2) }
   /// Single sign-on
   static var webOidcTitle: String { tr("web_oidc_title") }
-  /// Dark mode accent
-  static var webServerAppearanceAccentDark: String { tr("web_serverAppearance_accent_dark") }
-  /// Light mode accent
-  static var webServerAppearanceAccentLight: String { tr("web_serverAppearance_accent_light") }
-  /// Default
-  static var webServerAppearanceDefault: String { tr("web_serverAppearance_default") }
-  /// Couldn't load the accent color. %1$@
-  static func webServerAppearanceLoadFailed(_ p1: String) -> String { tr("web_serverAppearance_loadFailed", p1) }
-  /// Dark mode
-  static var webServerAppearanceModeDark: String { tr("web_serverAppearance_mode_dark") }
-  /// Light mode
-  static var webServerAppearanceModeLight: String { tr("web_serverAppearance_mode_light") }
-  /// Suggested accents
-  static var webServerAppearancePresets: String { tr("web_serverAppearance_presets") }
-  /// Accent color
-  static var webServerAppearanceTitle: String { tr("web_serverAppearance_title") }
+  /// Add
+  static var webRequestsAdd: String { tr("web_requests_add") }
+  /// Add after all
+  static var webRequestsAddAfterAll: String { tr("web_requests_addAfterAll") }
+  /// Add %1$@ after all
+  static func webRequestsAddAfterAllNamed(_ p1: String) -> String { tr("web_requests_addAfterAllNamed", p1) }
+  /// Add %1$lld / Add all %1$lld
+  static func webRequestsAddAll(_ count: Int) -> String { tr("web_requests_addAll", count) }
+  /// Add %1$@
+  static func webRequestsAddNamed(_ p1: String) -> String { tr("web_requests_addNamed", p1) }
+  /// Add to %1$@
+  static func webRequestsAddTo(_ p1: String) -> String { tr("web_requests_addTo", p1) }
+  /// Allow requests again
+  static var webRequestsAllowAgain: String { tr("web_requests_allowAgain") }
+  /// Allow requests for %1$@ again
+  static func webRequestsAllowAgainNamed(_ p1: String) -> String { tr("web_requests_allowAgainNamed", p1) }
+  /// also %1$@
+  static func webRequestsAlsoRequested(_ p1: String) -> String { tr("web_requests_alsoRequested", p1) }
+  /// Failed without a reason
+  static var webRequestsAttentionUnknown: String { tr("web_requests_attention_unknown") }
+  /// %1$@ requested this %2$@
+  static func webRequestsBadgeRequested(_ p1: String, _ p2: String) -> String { tr("web_requests_badge_requested", p1, p2) }
+  /// %1$@ requested this
+  static func webRequestsBadgeRequestedMany(_ p1: String) -> String { tr("web_requests_badge_requestedMany", p1) }
+  /// Someone requested this
+  static var webRequestsBadgeWaiting: String { tr("web_requests_badge_waiting") }
+  /// Decline
+  static var webRequestsDecline: String { tr("web_requests_decline") }
+  /// Cancel
+  static var webRequestsDeclineCancel: String { tr("web_requests_decline_cancel") }
+  /// Note
+  static var webRequestsDeclineNote: String { tr("web_requests_decline_note") }
+  /// Note for %1$@
+  static func webRequestsDeclineNoteFor(_ p1: String) -> String { tr("web_requests_decline_noteFor", p1) }
+  /// Optional
+  static var webRequestsDeclineNotePlaceholder: String { tr("web_requests_decline_notePlaceholder") }
+  /// Reason
+  static var webRequestsDeclineReason: String { tr("web_requests_decline_reason") }
+  /// Decline
+  static var webRequestsDeclineSubmit: String { tr("web_requests_decline_submit") }
+  /// Decline %1$@
+  static func webRequestsDeclineTitle(_ p1: String) -> String { tr("web_requests_decline_title", p1) }
+  /// Arrived %1$@
+  static func webRequestsDoneArrived(_ p1: String) -> String { tr("web_requests_done_arrived", p1) }
+  /// Declined %1$@
+  static func webRequestsDoneDeclined(_ p1: String) -> String { tr("web_requests_done_declined", p1) }
+  /// Declined
+  static var webRequestsDoneDeclinedUndated: String { tr("web_requests_done_declinedUndated") }
+  /// Given up %1$@
+  static func webRequestsDoneGaveUp(_ p1: String) -> String { tr("web_requests_done_gaveUp", p1) }
+  /// Given up
+  static var webRequestsDoneGaveUpUndated: String { tr("web_requests_done_gaveUpUndated") }
+  /// Requests need you
+  static var webRequestsDot: String { tr("web_requests_dot") }
+  /// Nothing done yet
+  static var webRequestsEmptyDone: String { tr("web_requests_empty_done") }
+  /// Nothing needs attention
+  static var webRequestsEmptyNeedsAttention: String { tr("web_requests_empty_needsAttention") }
+  /// Nothing is on the way
+  static var webRequestsEmptyOnTheWay: String { tr("web_requests_empty_onTheWay") }
+  /// Set up requests
+  static var webRequestsEmptySetupAction: String { tr("web_requests_empty_setup_action") }
+  /// Add a connection, then choose the libraries it fills.
+  static var webRequestsEmptySetupDescription: String { tr("web_requests_empty_setup_description") }
+  /// Nothing fills your libraries yet
+  static var webRequestsEmptySetupTitle: String { tr("web_requests_empty_setup_title") }
+  /// Nothing is waiting
+  static var webRequestsEmptyWaiting: String { tr("web_requests_empty_waiting") }
+  /// Give up
+  static var webRequestsGiveUp: String { tr("web_requests_giveUp") }
+  /// Give up on %1$@
+  static func webRequestsGiveUpNamed(_ p1: String) -> String { tr("web_requests_giveUpNamed", p1) }
+  /// %1$@ keeps what it has. If the file turns up anyway, it arrives as usual.
+  static func webRequestsGiveUpKeeps(_ p1: String) -> String { tr("web_requests_giveUp_keeps", p1) }
+  /// Give up
+  static var webRequestsGiveUpSubmit: String { tr("web_requests_giveUp_submit") }
+  /// Give up on %1$@
+  static func webRequestsGiveUpTitle(_ p1: String) -> String { tr("web_requests_giveUp_title", p1) }
+  /// If the file turns up anyway, it arrives as usual.
+  static var webRequestsGiveUpTurnsUp: String { tr("web_requests_giveUp_turnsUp") }
+  /// Change where %1$@ goes, now %2$@
+  static func webRequestsGoesToChange(_ p1: String, _ p2: String) -> String { tr("web_requests_goesTo_change", p1, p2) }
+  /// Goes to
+  static var webRequestsGoesToLabel: String { tr("web_requests_goesTo_label") }
+  /// Goes to
+  static var webRequestsGoesToTitle: String { tr("web_requests_goesTo_title") }
+  /// Add all
+  static var webRequestsKeysAddAll: String { tr("web_requests_keys_addAll") }
+  /// Movie
+  static var webRequestsKindMovie: String { tr("web_requests_kind_movie") }
+  /// Show
+  static var webRequestsKindShow: String { tr("web_requests_kind_show") }
+  /// Done
+  static var webRequestsListDone: String { tr("web_requests_list_done") }
+  /// Needs attention
+  static var webRequestsListNeedsAttention: String { tr("web_requests_list_needsAttention") }
+  /// On the way
+  static var webRequestsListOnTheWay: String { tr("web_requests_list_onTheWay") }
+  /// Waiting
+  static var webRequestsListWaiting: String { tr("web_requests_list_waiting") }
+  /// Lists
+  static var webRequestsLists: String { tr("web_requests_lists") }
+  /// Couldn't load requests. %1$@
+  static func webRequestsLoadFailed(_ p1: String) -> String { tr("web_requests_loadFailed", p1) }
+  /// Requests
+  static var webRequestsMenu: String { tr("web_requests_menu") }
+  /// Requests, %1$lld needs you / Requests, %1$lld need you
+  static func webRequestsMenuWaiting(_ count: Int) -> String { tr("web_requests_menuWaiting", count) }
+  /// More for %1$@
+  static func webRequestsMore(_ p1: String) -> String { tr("web_requests_more", p1) }
+  /// No connection
+  static var webRequestsNoConnection: String { tr("web_requests_noConnection") }
+  /// Open in %1$@
+  static func webRequestsOpenRemote(_ p1: String) -> String { tr("web_requests_openRemote", p1) }
+  /// Open title
+  static var webRequestsOpenTitle: String { tr("web_requests_openTitle") }
+  /// +%1$@
+  static func webRequestsOthersCount(_ p1: String) -> String { tr("web_requests_othersCount", p1) }
+  /// Waiting for the file
+  static var webRequestsProgressByHand: String { tr("web_requests_progress_byHand") }
+  /// Progress for %1$@
+  static func webRequestsProgressLabel(_ p1: String) -> String { tr("web_requests_progress_label", p1) }
+  /// %1$@ left
+  static func webRequestsProgressLeft(_ p1: String) -> String { tr("web_requests_progress_left", p1) }
+  /// Looking for a copy
+  static var webRequestsProgressLooking: String { tr("web_requests_progress_looking") }
+  /// Not out yet
+  static var webRequestsProgressNotOut: String { tr("web_requests_progress_notOut") }
+  /// Not sent yet
+  static var webRequestsProgressQueued: String { tr("web_requests_progress_queued") }
+  /// Out %1$@
+  static func webRequestsProgressRelease(_ p1: String) -> String { tr("web_requests_progress_release", p1) }
+  /// Sent
+  static var webRequestsProgressSent: String { tr("web_requests_progress_sent") }
+  /// Already have it
+  static var webRequestsReasonAlreadyHere: String { tr("web_requests_reason_alreadyHere") }
+  /// Not for this server
+  static var webRequestsReasonNotForServer: String { tr("web_requests_reason_notForServer") }
+  /// Can't find a copy
+  static var webRequestsReasonNotFound: String { tr("web_requests_reason_notFound") }
+  /// Try again
+  static var webRequestsReload: String { tr("web_requests_reload") }
+  /// Remove request…
+  static var webRequestsRemove: String { tr("web_requests_remove") }
+  /// Couldn't remove the request
+  static var webRequestsRemoveFailed: String { tr("web_requests_removeFailed") }
+  /// Remove
+  static var webRequestsRemoveConfirm: String { tr("web_requests_remove_confirm") }
+  /// %1$@ won't be told and can request it again.
+  static func webRequestsRemoveDescription(_ p1: String) -> String { tr("web_requests_remove_description", p1) }
+  /// Nobody is told.
+  static var webRequestsRemoveDescriptionNobody: String { tr("web_requests_remove_descriptionNobody") }
+  /// Remove the request for %1$@?
+  static func webRequestsRemoveTitle(_ p1: String) -> String { tr("web_requests_remove_title", p1) }
+  /// Removed the request for %1$@
+  static func webRequestsRemoved(_ p1: String) -> String { tr("web_requests_removed", p1) }
+  /// Sending %1$@ again
+  static func webRequestsRetried(_ p1: String) -> String { tr("web_requests_retried", p1) }
+  /// Retry
+  static var webRequestsRetry: String { tr("web_requests_retry") }
+  /// Couldn't send %1$@ again
+  static func webRequestsRetryFailed(_ p1: String) -> String { tr("web_requests_retryFailed", p1) }
+  /// Retry %1$@
+  static func webRequestsRetryNamed(_ p1: String) -> String { tr("web_requests_retryNamed", p1) }
+  /// %1$@ + new
+  static func webRequestsScopeAndFuture(_ p1: String) -> String { tr("web_requests_scope_andFuture", p1) }
+  /// New seasons
+  static var webRequestsScopeFutureOnly: String { tr("web_requests_scope_futureOnly") }
+  /// Season %1$@ / Seasons %1$@
+  static func webRequestsScopeSeasons(_ p1: String, _ count: Int) -> String { tr("web_requests_scope_seasons", p1, count) }
+  /// Specials
+  static var webRequestsScopeSpecials: String { tr("web_requests_scope_specials") }
+  /// Specials and %1$@
+  static func webRequestsScopeSpecialsAnd(_ p1: String) -> String { tr("web_requests_scope_specialsAnd", p1) }
+  /// Requests
+  static var webRequestsTitle: String { tr("web_requests_title") }
+  /// Couldn't add %1$@
+  static func webRequestsToastAddAfterAllFailed(_ p1: String) -> String { tr("web_requests_toast_addAfterAllFailed", p1) }
+  /// Couldn't add
+  static var webRequestsToastAddFailed: String { tr("web_requests_toast_addFailed") }
+  /// Added %1$@
+  static func webRequestsToastAdded(_ p1: String) -> String { tr("web_requests_toast_added", p1) }
+  /// Added %1$@ after all
+  static func webRequestsToastAddedAfterAll(_ p1: String) -> String { tr("web_requests_toast_addedAfterAll", p1) }
+  /// Added %1$lld title / Added %1$lld titles
+  static func webRequestsToastAddedMany(_ count: Int) -> String { tr("web_requests_toast_addedMany", count) }
+  /// Added %1$@ to %2$@
+  static func webRequestsToastAddedTo(_ p1: String, _ p2: String) -> String { tr("web_requests_toast_addedTo", p1, p2) }
+  /// Couldn't allow requests for %1$@ again
+  static func webRequestsToastAllowAgainFailed(_ p1: String) -> String { tr("web_requests_toast_allowAgainFailed", p1) }
+  /// %1$@ can be requested again
+  static func webRequestsToastAllowedAgain(_ p1: String) -> String { tr("web_requests_toast_allowedAgain", p1) }
+  /// Couldn't decline %1$@
+  static func webRequestsToastDeclineFailed(_ p1: String) -> String { tr("web_requests_toast_declineFailed", p1) }
+  /// Declined %1$@
+  static func webRequestsToastDeclined(_ p1: String) -> String { tr("web_requests_toast_declined", p1) }
+  /// Gave up on %1$@
+  static func webRequestsToastGaveUp(_ p1: String) -> String { tr("web_requests_toast_gaveUp", p1) }
+  /// Couldn't give up on %1$@
+  static func webRequestsToastGiveUpFailed(_ p1: String) -> String { tr("web_requests_toast_giveUpFailed", p1) }
+  /// Undo
+  static var webRequestsToastUndo: String { tr("web_requests_toast_undo") }
   /// None (software)
   static var webTranscodingAccelerationNone: String { tr("web_transcoding_acceleration_none") }
   /// NVIDIA NVENC
@@ -1984,6 +2798,10 @@ nonisolated enum Str {
   static var webUsersTitle: String { tr("web_users_title") }
   /// (you)
   static var webUsersYou: String { tr("web_users_you") }
+  /// Titles
+  static var favoritesTitles: String { tr("favorites_titles", table: "iOS") }
+  /// Couldn't load the featured titles
+  static var homeFeaturedFailed: String { tr("home_featured_failed", table: "iOS") }
   /// Picked in the Settings app
   static var iosAppearanceLanguageDescription: String { tr("ios_appearance_language_description", table: "iOS") }
   /// If the server is on your local network, turn on Local Network for Matinee in Settings.
@@ -2008,6 +2826,28 @@ nonisolated enum Str {
   static var iosTitleTrailer: String { tr("ios_title_trailer", table: "iOS") }
   /// Watch the trailer on YouTube
   static var iosTitleTrailerHint: String { tr("ios_title_trailer_hint", table: "iOS") }
+  /// Favorite episodes
+  static var profileFavoriteEpisodes: String { tr("profile_favorite_episodes", table: "iOS") }
+  /// Tap the heart on a movie, show, or episode to keep it here.
+  static var profileNoFavoritesHint: String { tr("profile_no_favorites_hint", table: "iOS") }
+  /// Appearance
+  static var settingsAdminAppearance: String { tr("settings_admin_appearance", table: "iOS") }
+  /// Dark mode accent
+  static var webServerAppearanceAccentDark: String { tr("web_serverAppearance_accent_dark", table: "iOS") }
+  /// Light mode accent
+  static var webServerAppearanceAccentLight: String { tr("web_serverAppearance_accent_light", table: "iOS") }
+  /// Default
+  static var webServerAppearanceDefault: String { tr("web_serverAppearance_default", table: "iOS") }
+  /// Couldn't load the accent color. %1$@
+  static func webServerAppearanceLoadFailed(_ p1: String) -> String { tr("web_serverAppearance_loadFailed", table: "iOS", p1) }
+  /// Dark mode
+  static var webServerAppearanceModeDark: String { tr("web_serverAppearance_mode_dark", table: "iOS") }
+  /// Light mode
+  static var webServerAppearanceModeLight: String { tr("web_serverAppearance_mode_light", table: "iOS") }
+  /// Suggested accents
+  static var webServerAppearancePresets: String { tr("web_serverAppearance_presets", table: "iOS") }
+  /// Accent color
+  static var webServerAppearanceTitle: String { tr("web_serverAppearance_title", table: "iOS") }
 }
 
 nonisolated private func tr(_ key: String, table: String = "Localizable") -> String {

@@ -3,8 +3,14 @@
 from pathlib import Path
 import subprocess
 import struct
+import argparse
 
-ROOT = Path.home() / '.t3/scratch/matinee-ios-dev/media'
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument("--root", type=Path, default=Path.home() / ".t3/scratch/matinee-ios-dev/media")
+parser.add_argument("--only-styled", action="store_true", help="Generate only the styled subtitle fixture")
+args = parser.parse_args()
+
+ROOT = args.root
 ROOT.mkdir(parents=True, exist_ok=True)
 en = ROOT / 'en.srt'
 de = ROOT / 'de.srt'
@@ -43,6 +49,30 @@ def make(relative, codec='h264', size='640x360', duration=24, multi=False, hdr=F
         cmd += ['-movflags', '+faststart']
     subprocess.run(cmd + [str(dest)], check=True)
 
+
+# Keep an external English track and an identical embedded German-tagged track
+# so either subtitle source can be selected when checking mpv's ASS renderer.
+def styled():
+    folder = ROOT / 'movies/MPV Styled Verification'
+    folder.mkdir(parents=True, exist_ok=True)
+    subtitle = folder / 'MPV Styled Verification.en.ass'
+    subtitle.write_text('[Script Info]\nScriptType: v4.00+\nPlayResX: 640\nPlayResY: 360\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\nStyle: Default,Arial,32,&H0000FFFF,&H0000FFFF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,2,0,7,30,30,100,1\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\nDialogue: 0,0:00:01.00,0:01:55.00,Default,,0,0,0,,{\\pos(80,140)\\c&H00FFFF&}YELLOW ASS AT LEFT\n')
+    movie = folder / 'MPV Styled Verification.mkv'
+    if movie.exists():
+        return
+    base = folder / 'MPV Styled Verification.mp4'
+    make(str(base.relative_to(ROOT)), duration=120)
+    try:
+        subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', str(base), '-i', str(subtitle),
+                        '-map', '0:v', '-map', '0:a', '-map', '1:s', '-c', 'copy',
+                        '-metadata:s:s:0', 'language=deu', '-disposition:s:0', '0', str(movie)], check=True)
+    finally:
+        base.unlink(missing_ok=True)
+
+
+styled()
+if args.only_styled:
+    raise SystemExit(0)
 
 make('movies/The Matrix (1999)/The Matrix (1999).mp4', duration=1320, multi=True)
 # Extras are grouped with their parent movie even without a metadata provider.

@@ -156,7 +156,8 @@ struct BrowseTests {
 
   // MARK: Search
 
-  final class Searches: @unchecked Sendable {
+  @MainActor final class Searches {
+    let events = AsyncStream<String>.makeStream()
     var asked: [String] = []
     var cancelled: [String] = []
     var failing = false
@@ -165,9 +166,11 @@ struct BrowseTests {
 
     func search(_ text: String) async throws -> SearchResults {
       asked.append(text)
+      events.continuation.yield("started:\(text)")
       if wait > .zero {
         do { try await Task.sleep(for: wait) } catch {
           cancelled.append(text)
+          events.continuation.yield("cancelled:\(text)")
           throw error
         }
       }
@@ -191,10 +194,13 @@ struct BrowseTests {
   @Test func aNewQueryCancelsTheSearchStillOut() async {
     let server = Searches(wait: .milliseconds(200))
     let state = SearchState(debounce: .zero)
+    var events = server.events.stream.makeAsyncIterator()
     state.update("dune", now: true) { try await server.search($0) }
-    await waitFor { state.searching }
+    #expect(await events.next() == "started:dune")
     state.update("matrix", now: true) { try await server.search($0) }
-    await waitFor { !server.cancelled.isEmpty }
+    while let event = await events.next() {
+      if event == "cancelled:dune" { break }
+    }
     #expect(server.cancelled == ["dune"])
     await state.settled()
     #expect(state.results?.titles.first?.id == "matrix")

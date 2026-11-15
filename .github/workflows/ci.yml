@@ -28,6 +28,7 @@ jobs:
     outputs:
       pnpm: ${{ steps.changes.outputs.pnpm }}
       android: ${{ steps.changes.outputs.android }}
+      ios: ${{ steps.changes.outputs.ios }}
       nix: ${{ steps.changes.outputs.nix }}
 
     steps:
@@ -38,7 +39,7 @@ jobs:
 
       - name: find the checks to run
         id: changes
-        run: node tools/ci/changes.mjs pnpm android nix
+        run: node tools/ci/changes.mjs pnpm android ios nix
         env:
           BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
           PATHS_PNPM: |
@@ -58,6 +59,24 @@ jobs:
             !**/*.md
           # What the derivation builds from, since the pnpm checks don't
           # run it.
+          PATHS_IOS: |
+            apps/ios/**
+            brand/ios/**
+            brand/logo*.svg
+            brand/mark.svg
+            apps/android/app/src/main/java/io/github/zekurio/matinee/ui/kit/Icon.kt
+            apps/android/app/src/main/res/values*/**
+            apps/android/app/src/main/res/drawable/lucide_*
+            apps/android/app/src/main/res/font/**
+            packages/ui/src/lib/theme-presets.ts
+            packages/contracts/**
+            apps/server/scripts/**
+            package.json
+            flake.nix
+            flake.lock
+            tools/ci/**
+            .github/workflows/ci.yml
+            !**/*.md
           PATHS_NIX: |
             nix/**
             apps/**
@@ -73,6 +92,7 @@ jobs:
             .github/workflows/ci.yml
             !**/*.md
             !apps/android/**
+            !apps/ios/**
 
   checks:
     name: ${{ matrix.name }}
@@ -144,6 +164,41 @@ jobs:
         working-directory: apps/android
         run: nix develop ../..#android -c ./gradlew assembleDebug testDebugUnitTest
 
+  ios:
+    name: ios build and test
+    needs: changes
+    if: needs.changes.outputs.ios == 'true' && github.event_name != 'push'
+    runs-on: macos-26
+    timeout-minutes: 45
+
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Use Nix for XcodeGen, just, and Node, as the local recipes do.
+      # The flake's dev shell is Linux-only; use Nixpkgs tools directly.
+      - name: install nix
+        uses: cachix/install-nix-action@448cde739abec1eaf0646249e3d25bb8d9bc7702 # v31.11.2
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+
+      # Minimum Xcode 26 / Swift 6.2 for default main-actor isolation.
+      # macos-26 supplies Xcode 26.6 at this path; select its installed default.
+      - name: select xcode
+        run: |
+          sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
+          xcodebuild -version
+
+      # Includes swift test in Packages/MatineeCore. No simulator is booted.
+      - name: test core and check generated resources
+        run: nix shell nixpkgs#just -c just ios test
+
+      - name: generate project and build unsigned simulator app
+        run: nix shell nixpkgs#just -c just ios build
+
   nix:
     name: nix flake check
     needs: changes
@@ -188,7 +243,7 @@ jobs:
   # fails only on a check that failed or was cancelled, `changes` included.
   ci:
     name: ci
-    needs: [changes, checks, android, nix]
+    needs: [changes, checks, android, ios, nix]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
