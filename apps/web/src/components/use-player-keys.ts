@@ -48,11 +48,13 @@ export function usePlayerKeys({
   // Each key runs the actions from the latest render.
   const onKey = useEffectEvent((event: KeyboardEvent) => {
     const target = event.target instanceof Element ? event.target : null
-    // Sliders, buttons, and open menus handle their own keys.
+    // Sliders, buttons, and open menus handle their own keys. The seek
+    // bar, which a click on it focuses, leaves them to the player.
     if (
       target?.closest(
         '[role="slider"], [role="menu"], [role="dialog"], input, textarea',
-      )
+      ) &&
+      !target.closest("[data-player-keys]")
     )
       return
     if (event.metaKey || event.ctrlKey || event.altKey) return
