@@ -37,6 +37,17 @@ import Testing
     #expect(mpvPlaybackProfile(snapshot: hardware).video.contains { $0.codec == "av1" })
   }
 
+  /// Passthrough offers what the engine plays as it is: AudioToolbox's
+  /// formats for AVPlayer, and every optional one for mpv, which the mpv
+  /// profile claims whatever the device decodes.
+  @Test func passthroughFollowsTheEngine() {
+    let lean = CapabilitySnapshot(codecs: .init(video: phone.codecs.video, audio: ["aac", "ac3"], dolbyVision: false))
+    #expect(Capabilities.passthrough(lean, engine: .avPlayer) == ["ac3"])
+    #expect(Capabilities.passthrough(lean, engine: .mpv) == OPTIONAL_PASSTHROUGH)
+    let claimed = Set(mpvPlaybackProfile(snapshot: lean).audio)
+    #expect(OPTIONAL_PASSTHROUGH.allSatisfy(claimed.contains))
+  }
+
   @Test func theSimulatorDecodesH264AndHevcWithoutHardware() {
     let none: (CMVideoCodecType) -> Bool = { _ in false }
     #expect(Capabilities.videoDecodes(kCMVideoCodecType_H264, hardware: none, simulator: true))

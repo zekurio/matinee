@@ -30,6 +30,23 @@ public let SUBTITLE_SCALES: [Double] = [0.75, 1, 1.25, 1.5, 2]
   public var fillScreen: Bool { didSet { save() } }
   /// Keep playing in a small window on leaving the app.
   public var pictureInPicture: Bool { didSet { save() } }
+  /// Up and down swipes on the video's sides change brightness and volume, as Android's.
+  public var swipeLevels: Bool { didSet { save() } }
+  /// Start each video at the brightness the last swipe left, rather than the screen's own.
+  public var rememberBrightness: Bool { didSet { save() } }
+  /// The brightness the last swipe left, 0 to 1, or -1 for none kept.
+  public var brightness: Double { didSet { save() } }
+  /// A sideways swipe on the video seeks.
+  public var swipeSeek: Bool { didSet { save() } }
+  /// Holding the video plays it at double speed until let go.
+  public var holdSpeed: Bool { didSet { save() } }
+  /// Which buttons the controls show. Back, play, and the settings menu
+  /// always show, so none of these strands anyone.
+  public var skipButtons: Bool { didSet { save() } }
+  public var pictureInPictureButton: Bool { didSet { save() } }
+  public var lockButton: Bool { didSet { save() } }
+  public var audioButton: Bool { didSet { save() } }
+  public var subtitlesButton: Bool { didSet { save() } }
   /// Draw subtitles as the system's caption settings say, instead of our choices.
   public var subtitleSystemStyle: Bool { didSet { save() } }
   public var subtitleScale: Double { didSet { save() } }
@@ -38,6 +55,12 @@ public let SUBTITLE_SCALES: [Double] = [0.75, 1, 1.25, 1.5, 2]
   public var subtitleEdge: SubtitleEdge { didSet { save() } }
   // AVPlayer selects its own decoder. It exposes no hardware/software preference.
   public var engine: PlayerEngine { didSet { save() } }
+  /// Turns off remembering the brightness, and forgets the one kept, so the
+  /// next video starts at the screen's own rather than one from before.
+  public func setRememberBrightness(_ on: Bool) {
+    rememberBrightness = on
+    if !on { brightness = -1 }
+  }
   public var decoders: Decoders { .hardware }
   public init(defaults: UserDefaults = .standard) {
     self.defaults = defaults
@@ -50,6 +73,16 @@ public let SUBTITLE_SCALES: [Double] = [0.75, 1, 1.25, 1.5, 2]
     autoplayNext = p["autoplay_next"] as? Bool ?? true
     fillScreen = p["fill_screen"] as? Bool ?? false
     pictureInPicture = p["picture_in_picture"] as? Bool ?? true
+    swipeLevels = p["swipe_levels"] as? Bool ?? true
+    rememberBrightness = p["remember_brightness"] as? Bool ?? false
+    brightness = p["brightness_level"] as? Double ?? -1
+    swipeSeek = p["swipe_seek"] as? Bool ?? true
+    holdSpeed = p["hold_speed"] as? Bool ?? true
+    skipButtons = p["button_skip"] as? Bool ?? true
+    pictureInPictureButton = p["button_picture_in_picture"] as? Bool ?? true
+    lockButton = p["button_lock"] as? Bool ?? true
+    audioButton = p["button_audio"] as? Bool ?? true
+    subtitlesButton = p["button_subtitles"] as? Bool ?? true
     subtitleSystemStyle = p["subtitle_system_style"] as? Bool ?? false
     subtitleScale = p["subtitle_scale"] as? Double ?? 1
     subtitleColor = SubtitleColor(rawValue: p["subtitle_color"] as? String ?? "") ?? .white
@@ -65,6 +98,10 @@ public let SUBTITLE_SCALES: [Double] = [0.75, 1, 1.25, 1.5, 2]
         "convert_audio": Array(convertAudio), "autoplay_next": autoplayNext,
         "fill_screen": fillScreen,
         "picture_in_picture": pictureInPicture, "subtitle_system_style": subtitleSystemStyle,
+        "swipe_levels": swipeLevels, "remember_brightness": rememberBrightness, "brightness_level": brightness,
+        "swipe_seek": swipeSeek, "hold_speed": holdSpeed, "button_skip": skipButtons,
+        "button_picture_in_picture": pictureInPictureButton, "button_lock": lockButton,
+        "button_audio": audioButton, "button_subtitles": subtitlesButton,
         "subtitle_scale": subtitleScale, "subtitle_color": subtitleColor.rawValue,
         "subtitle_background": subtitleBackground.rawValue, "subtitle_edge": subtitleEdge.rawValue,
       ], forKey: "player")

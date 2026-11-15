@@ -36,6 +36,13 @@ public enum Capabilities {
   public static func passthrough(_ snapshot: CapabilitySnapshot) -> [String] {
     OPTIONAL_PASSTHROUGH.filter { decodesAudio($0, snapshot: snapshot) }
   }
+  /// The formats `engine` plays as they are that streams could convert
+  /// anyway, for Settings' passthrough switches: AVPlayer's are what
+  /// AudioToolbox decodes, and mpv, whose FFmpeg decodes them all, has
+  /// every one of them, as `mpvPlaybackProfile` claims.
+  public static func passthrough(_ snapshot: CapabilitySnapshot, engine: PlayerEngine) -> [String] {
+    engine == .mpv ? OPTIONAL_PASSTHROUGH : passthrough(snapshot)
+  }
   public static func encodeVideoChoices(server: [String], snapshot: CapabilitySnapshot) -> [String]
   {
     ["h264", "hevc", "av1"].filter { codec in
