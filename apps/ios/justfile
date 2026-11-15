@@ -63,9 +63,8 @@ shot name:
 
 # Run MatineeCore's tests on the Mac, check that screens build only from the kit, and that the generated files are current
 test: boundary
-    # One at a time: the parallel run has hung on a loaded Mac, in AuthTests
-    # among others, and the cause isn't known yet.
-    cd Packages/MatineeCore && swift test --no-parallel
+    # Parallel hangs came from a search fake finishing before cancellation, leaving its test waiting for an event that could never arrive.
+    cd Packages/MatineeCore && swift test
     scripts/strings.py --check
     scripts/lucide.py --kit --check
     scripts/lucide.py --check

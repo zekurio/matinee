@@ -191,6 +191,7 @@ private final class PlayerProtocol: URLProtocol, @unchecked Sendable {
   var failure: (any Error)?
   var isReady = false
   var sources: [Source] = []
+  let loading = AsyncStream<Source>.makeStream()
   var seeks: [Double] = []
   var rates: [Float] = []
   var audioPicks: [Int] = []
@@ -203,6 +204,7 @@ private final class PlayerProtocol: URLProtocol, @unchecked Sendable {
   var failNextLoad = false
   func load(_ source: Source, headers: [String: String]) async throws {
     sources.append(source)
+    loading.continuation.yield(source)
     failure = nil
     positionSeconds = 0
     while holdLoad { try? await Task.sleep(for: .milliseconds(5)) }
@@ -338,15 +340,17 @@ private final class PlayerProtocol: URLProtocol, @unchecked Sendable {
     let controller = harness.controller()
     harness.engine.holdLoad = true
     harness.engine.failNextLoad = true
+    var loading = harness.engine.loading.stream.makeAsyncIterator()
     let opening = Task { await controller.start(itemId: "item-1", at: 30) }
-    await eventually { !harness.engine.sources.isEmpty }
+    #expect(await loading.next()?.method == "direct")
     // A tick while the engine still reads the file leaves the position be.
     await controller.tick()
     #expect(controller.position == 30)
     harness.engine.holdLoad = false
     await opening.value
     await controller.tick()
-    await eventually { harness.server.starts.count == 2 }
+    // Receiving the request is not enough: wait until its answer reaches the engine.
+    #expect(await loading.next()?.method == "remux")
     #expect(harness.server.starts.last?.failed == ["direct"])
     #expect(harness.server.starts.last?.position == 30)
     #expect(controller.source?.method == "remux")
