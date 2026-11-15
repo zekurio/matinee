@@ -45,17 +45,51 @@ import SwiftUI
   }
 }
 
-/// The audio languages to pick from: the file's default, the original, then the server's.
-func audioLanguageChoices(_ options: PlaybackOptions?) -> [(String?, String)] {
-  [(nil, Str.playbackAudioFileDefault), (ORIGINAL_LANGUAGE, Str.playbackAudioOriginal)]
-    + (options?.audioLanguages ?? []).map { ($0, languageName($0)) }
+/// Saves whether a show's specials list with its seasons, which the server
+/// applies for every device of the account, as the web's ShowsSection: the
+/// switch moves at once, and a refusal puts it back with a message. The
+/// pages that list seasons fetch again after it.
+@Observable final class SpecialsSave {
+  /// The value on its way to the server.
+  private(set) var pending: Bool?
+
+  /// What the switch shows: the value on its way, else the account's.
+  func shown(_ user: User?) -> Bool { pending ?? user?.library.showSpecials ?? true }
+
+  func save(
+    _ show: Bool, api: MatineeApi?, session: MatineeSession, viewer: ViewerState?, snackbar: Snackbar
+  ) {
+    guard let api else { return }
+    pending = show
+    launchShowing(snackbar, Str.playbackSpecialsFailed) { [self] in
+      defer { if pending == show { pending = nil } }
+      let user = try await api.account.library.setPreferences(showSpecials: show)
+      session.updateUser(user: user)
+      viewer?.changed()
+    }
+  }
+}
+
+/// The audio languages to pick from: the file's default, the original, then
+/// the server's, with `current` among them when another app set one the
+/// server doesn't list, as the web's `languageOptions`.
+func audioLanguageChoices(_ options: PlaybackOptions?, current: String?) -> [(String?, String)] {
+  let fixed: [(String?, String)] = [(nil, Str.playbackAudioFileDefault), (ORIGINAL_LANGUAGE, Str.playbackAudioOriginal)]
+  return fixed + languageTags(options?.audioLanguages, current: current, fixed: [ORIGINAL_LANGUAGE]).map { ($0, languageName($0)) }
 }
 
 /// The subtitle languages to pick from: this device's, then the server's.
-func subtitleLanguageChoices(_ options: PlaybackOptions?) -> [(String?, String)] {
+func subtitleLanguageChoices(_ options: PlaybackOptions?, current: String?) -> [(String?, String)] {
   let device = Locale.app.language.languageCode?.identifier ?? "en"
   return [(nil, Str.playbackSubtitlesDeviceLanguage(languageName(device)))]
-    + (options?.subtitleLanguages ?? []).map { ($0, languageName($0)) }
+    + languageTags(options?.subtitleLanguages, current: current, fixed: []).map { ($0, languageName($0)) }
+}
+
+/// The server's languages, `current` first when it isn't one of them or of `fixed`.
+private func languageTags(_ available: [String]?, current: String?, fixed: [String]) -> [String] {
+  let tags = available ?? []
+  guard let current, !fixed.contains(current), !tags.contains(current) else { return tags }
+  return [current] + tags
 }
 
 /// The skip lengths to pick from, with `current` too when another app set one the steps don't have.

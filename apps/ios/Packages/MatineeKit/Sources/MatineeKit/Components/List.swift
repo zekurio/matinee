@@ -181,8 +181,9 @@ public struct ListRow<Trailing: View>: View {
           .textStyle(.sm)
           .foregroundStyle(palette.mutedForeground)
           .lineLimit(1)
+          // As wide as it needs, up to 180, never squeezing the title beside it into wrapping.
           .frame(maxWidth: 180, alignment: .trailing)
-          .fixedSize(horizontal: false, vertical: true)
+          .fixedSize()
       }
       trailing()
       switch accessory ?? (action != nil && !destructive ? .chevron : .none) {
@@ -219,6 +220,8 @@ private struct SettingRowLayout<Control: View>: View {
   let icon: Lucide?
   let stacked: Bool
   var stacksWhenLarge = true
+  /// The control names itself, as a Select does, so VoiceOver doesn't read the name twice.
+  var titleHidden = false
   @ViewBuilder let control: () -> Control
   @Environment(\.palette) private var palette
   @Environment(\.dynamicTypeSize) private var dynamicType
@@ -230,6 +233,7 @@ private struct SettingRowLayout<Control: View>: View {
       Text(title).textStyle(.sm, weight: .medium).foregroundStyle(palette.foreground)
       if let subtitle { Text(subtitle).textStyle(.px13).foregroundStyle(palette.mutedForeground) }
     }
+    .accessibilityHidden(titleHidden)
     Group {
       if stacked {
         VStack(alignment: .leading, spacing: Space.s2_5) {
@@ -316,7 +320,7 @@ public struct SelectRow<Value: Hashable>: View {
 
   public var body: some View {
     if stacked {
-      SettingRowLayout(title: title, subtitle: nil, icon: nil, stacked: true) {
+      SettingRowLayout(title: title, subtitle: nil, icon: nil, stacked: true, titleHidden: true) {
         Select(title, selection: $selection, options: options)
       }
     } else {
