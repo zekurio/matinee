@@ -17,118 +17,117 @@ extension SavedServer {
   private var hostAndPort: String { address.components(separatedBy: "://").last ?? address }
 }
 
-/// Settings' row that opens the server list.
+/// Settings' row that opens the server list, for a `ListSection`.
 struct ChangeServerRow: View {
   @State private var open = false
 
   var body: some View {
-    LinkRow(Str.connectChangeServer, icon: .refreshCw) { open = true }
-      .sheet(isPresented: $open) { ServerSwitcherSheet() }
+    ListRow(Str.connectChangeServer, icon: .refreshCw) { open = true }
+      .matineeSheet(isPresented: $open) { ServerSwitcherSheet() }
   }
 }
 
 /// The quiet button under the sign-in and unreachable screens that opens the server list.
 struct ChangeServerButton: View {
   @State private var open = false
-  @Environment(\.palette) private var palette
+  @Environment(\.MatineeKit::palette) private var palette
 
   var body: some View {
-    Button { open = true } label: { Text(Str.connectChangeServer).foregroundStyle(palette.mutedForeground) }
-      .buttonStyle(.legacy(.ghost))
-      .sheet(isPresented: $open) { ServerSwitcherSheet() }
+    MatineeKit.MatineeButton(look: .ghost) {
+      open = true
+    } label: {
+      MatineeKit.LucideIcon(.server, size: 16, tint: palette.mutedForeground)
+      Text(Str.connectChangeServer).foregroundStyle(palette.mutedForeground)
+    }
+    .matineeSheet(isPresented: $open) { ServerSwitcherSheet() }
   }
 }
 
-/// The saved servers in a sheet, the one in use checked. A tap on another
-/// switches to it, signed in still where its session stands; Add server
-/// connects to a new one, which can be left to come back here; the bin
-/// removes one, after asking.
+/// The saved servers, the one in use checked, as the content of a
+/// `.matineeSheet`. A tap on another switches to it, signed in still where
+/// its session stands; Add server connects to a new one, which can be
+/// left to come back here; the bin removes one, after asking, since that
+/// signs out there and deletes its downloads.
 struct ServerSwitcherSheet: View {
   @Environment(MatineeSession.self) private var session
-  @Environment(\.dismiss) private var dismiss
-  @Environment(\.palette) private var palette
+  @Environment(\.sheetDismiss) private var dismiss
+  /// The server the dialog asks about. It stays set while the dialog leaves, so its title doesn't empty.
   @State private var asking: SavedServer?
+  @State private var confirming = false
 
   var body: some View {
-    ScrollView {
-      VStack(alignment: .leading, spacing: 0) {
-        LegacySheetHeader(Str.serversTitle)
-        ForEach(session.servers) { server in
-          ServerRow(
-            server: server, busy: session.removing.contains(server.origin),
-            onTap: { close { await session.switchTo(origin: server.origin) } },
-            onRemove: { asking = server })
-        }
-        LegacySheetItem(.plus, Str.serversAdd) { close { session.addServer() } }
+    VStack(alignment: .leading, spacing: 0) {
+      MatineeKit.SheetHeader(Str.serversTitle)
+      ForEach(session.servers) { server in
+        ServerRow(
+          server: server, busy: session.removing.contains(server.origin),
+          onTap: { dismiss { Task { await session.switchTo(origin: server.origin) } } },
+          onRemove: {
+            asking = server
+            confirming = true
+          })
       }
-      .padding(.vertical, 12)
+      MatineeKit.SheetItem(Str.serversAdd, icon: .plus) { session.addServer() }
     }
-    .scrollBounceBehavior(.basedOnSize)
-    .legacySheet([.medium, .large])
-    .alert(
-      asking.map { Str.serversRemoveTitle($0.title) } ?? "",
-      isPresented: Binding(get: { asking != nil }, set: { if !$0 { asking = nil } }),
-      presenting: asking
-    ) { server in
-      Button(Str.commonRemove, role: .destructive) {
-        asking = nil
-        Task { try? await session.removeServer(origin: server.origin) }
-      }
-      Button(Str.commonCancel, role: .cancel) { asking = nil }
-    } message: { _ in
-      Text(Str.serversRemoveBody)
+    .confirmDialog(
+      isPresented: $confirming, title: asking.map { Str.serversRemoveTitle($0.title) } ?? "",
+      message: Str.serversRemoveBody, confirm: Str.commonRemove
+    ) {
+      guard let origin = asking?.origin else { return }
+      Task { try? await session.removeServer(origin: origin) }
     }
-  }
-
-  /// Closes the sheet, then does what was picked, so the screen it changes isn't under it.
-  private func close(_ then: @escaping () async -> Void) {
-    dismiss()
-    Task { await then() }
   }
 }
 
+/// A saved server: what it's called and who's signed in, a tap to switch to it, and the bin.
 private struct ServerRow: View {
   let server: SavedServer
   let busy: Bool
   let onTap: () -> Void
   let onRemove: () -> Void
-  @Environment(\.palette) private var palette
+  @Environment(\.MatineeKit::palette) private var palette
 
   var body: some View {
-    HStack(spacing: 4) {
-      Button(action: onTap) {
-        HStack(spacing: 16) {
-          LucideIcon(.server, tint: server.active ? palette.accent : palette.mutedForeground)
-          VStack(alignment: .leading, spacing: 0) {
-            Text(server.title).textStyle(.base).foregroundStyle(palette.foreground).lineLimit(1)
+    HStack(spacing: 0) {
+      Pressable(action: onTap) {
+        HStack(spacing: Space.s3) {
+          MatineeKit.LucideIcon(.server, size: 16, tint: server.active ? palette.accent : palette.mutedForeground)
+            .frame(width: 36, height: 36)
+            .background(server.active ? palette.accentSoft : palette.secondary, in: RoundedRectangle.kit(Radius.lg))
+          VStack(alignment: .leading, spacing: 2) {
+            Text(server.title)
+              .textStyle(.base, weight: server.active ? .medium : .regular)
+              .foregroundStyle(palette.foreground)
+              .lineLimit(1)
             Text(busy ? Str.serversRemoving : server.facts)
-              .textStyle(.px13).foregroundStyle(palette.mutedForeground).lineLimit(2)
+              .textStyle(.sm)
+              .foregroundStyle(palette.mutedForeground)
+              .lineLimit(2)
           }
-          .padding(.vertical, 6)
-          Spacer(minLength: 0)
+          .frame(maxWidth: .infinity, alignment: .leading)
           if server.active {
-            LucideIcon(.check, label: Str.serversInUse, size: 20, tint: palette.accent)
+            MatineeKit.LucideIcon(.check, label: Str.serversInUse, size: 18, tint: palette.accent)
           }
         }
         .padding(.leading, 20)
-        .padding(.vertical, 6)
-        .frame(minHeight: TouchTarget)
+        .padding(.trailing, Space.s2)
+        .padding(.vertical, Space.s2_5)
+        .frame(minHeight: 56)
         .contentShape(Rectangle())
       }
-      .buttonStyle(LegacyRowPress())
       .disabled(busy)
       .accessibilityAddTraits(server.active ? .isSelected : [])
-      Group {
+      ZStack {
         if busy {
-          ProgressView().controlSize(.small).tint(palette.mutedForeground)
+          Spinner(size: 18, tint: palette.mutedForeground)
         } else {
-          LegacyRoundIconButton(
-            .trash, label: Str.serversRemove(server.title), size: 40, tint: palette.mutedForeground, background: .clear,
-            action: onRemove)
+          MatineeKit.RoundIconButton(
+            .trash, label: Str.serversRemove(server.title), look: .ghost, size: 36, iconSize: 18,
+            tint: palette.mutedForeground, action: onRemove)
         }
       }
-      .frame(width: 48, height: 48)
-      .padding(.trailing, 8)
+      .frame(width: TouchTarget, height: TouchTarget)
+      .padding(.trailing, Space.s3)
     }
   }
 }
@@ -136,17 +135,16 @@ private struct ServerRow: View {
 /// Under the connect and sign-in screens while adding a server: back to the one in use, as it was.
 struct BackToServer: View {
   @Environment(MatineeSession.self) private var session
-  @Environment(\.palette) private var palette
+  @Environment(\.MatineeKit::palette) private var palette
 
   var body: some View {
     if let current = session.servers.first(where: \.active) {
-      Button {
+      MatineeKit.MatineeButton(look: .ghost) {
         Task { await session.cancelAdd() }
       } label: {
-        LucideIcon(.arrowLeft, size: 18, tint: palette.mutedForeground)
+        MatineeKit.LucideIcon(.arrowLeft, size: 16, tint: palette.mutedForeground)
         Text(Str.serversBackTo(current.title)).foregroundStyle(palette.mutedForeground)
       }
-      .buttonStyle(.legacy(.ghost))
     }
   }
 }

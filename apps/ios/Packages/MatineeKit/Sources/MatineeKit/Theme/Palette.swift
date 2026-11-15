@@ -123,5 +123,9 @@ public nonisolated struct Palette: Hashable, Sendable {
 
 extension EnvironmentValues {
   /// The theme's colors for the appearance on screen.
-  @Entry public var palette = Palette.matineeDark
+  // Disfavored while the app keeps its old theme's `palette` beside this
+  // one: an app file that doesn't import the kit still sees this (Swift
+  // without MemberImportVisibility), and its own must win there. A screen
+  // on the kit reads `\.MatineeKit::palette` until then.
+  @_disfavoredOverload @Entry public var palette = Palette.matineeDark
 }
