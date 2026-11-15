@@ -88,13 +88,14 @@ data class IdentifyRoute(val titleId: String)
 @Serializable
 data class CatalogRoute(val kind: String, val provider: String, val providerId: String, val library: String? = null)
 
-/** One of Discover's rows in full, by its `DiscoverRail.id`. */
+/**
+ * All of TMDB's movies or shows with filters, or the viewer's
+ * recommendations of them, from Discover, by `TitleKind`. A Discover
+ * row's heading opens it with the row's [filters], as `CatalogFilters`
+ * JSON, and [sort].
+ */
 @Serializable
-data class DiscoverRailRoute(val rail: String)
-
-/** All of TMDB's movies or shows with filters, from Discover, by `TitleKind`. */
-@Serializable
-data class CatalogBrowseRoute(val kind: String)
+data class CatalogBrowseRoute(val kind: String, val filters: String? = null, val sort: String? = null)
 
 /** Everything the signed-in person asked for, from Home's rail and the profile. */
 @Serializable
@@ -187,9 +188,8 @@ class Navigator(private val controller: NavHostController) {
         popUpTo<CatalogRoute> { inclusive = true }
     }
 
-    fun discoverRail(id: String) = controller.navigate(DiscoverRailRoute(id)) { launchSingleTop = true }
-
-    fun catalogBrowse(kind: String) = controller.navigate(CatalogBrowseRoute(kind)) { launchSingleTop = true }
+    fun catalogBrowse(kind: String, filters: String? = null, sort: String? = null) =
+        controller.navigate(CatalogBrowseRoute(kind, filters, sort)) { launchSingleTop = true }
 
     fun asked() = controller.navigate(AskedRoute) { launchSingleTop = true }
 

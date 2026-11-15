@@ -16,6 +16,11 @@ import { toSummaries } from "../media/items"
 import { availability } from "../requests/availability"
 import { withCachedDetails } from "../requests/cached-details"
 
+/** Whether the viewer can ask for a title in this state: not here, nor declined. */
+export function askable(state: { state: string }) {
+  return state.state !== "here" && state.state !== "unavailable"
+}
+
 /** A TMDB title as a feed or a browse lists it. */
 type Row = {
   id: string

@@ -1,11 +1,5 @@
 import { ORPCError } from "@matinee/client"
-import type {
-  CatalogBrowsePage,
-  CatalogFilters,
-  CatalogSort,
-  TitleKind,
-} from "@matinee/contracts"
-import type { t } from "@matinee/contracts/schema"
+import type { CatalogFilters, CatalogSort, TitleKind } from "@matinee/contracts"
 import { Button } from "@matinee/ui/components/button"
 import { Skeleton } from "@matinee/ui/components/skeleton"
 import { cn } from "@matinee/ui/lib/utils"
@@ -13,35 +7,38 @@ import {
   keepPreviousData,
   useInfiniteQuery,
   useQuery,
+  useQueryClient,
 } from "@tanstack/react-query"
+import { Link } from "@tanstack/react-router"
 import {
   CloudOffIcon,
   ListFilterIcon,
   RotateCwIcon,
   SearchXIcon,
+  SparklesIcon,
 } from "lucide-react"
 import { type ReactNode, useState } from "react"
 
-import { CatalogCard } from "@/components/catalog/catalog-card"
-import {
-  type LiveEntry,
-  liveEntry,
-  refKey,
-  useLiveAvailability,
-} from "@/components/catalog/catalog-data"
+import { refKey, useLiveAvailability } from "@/components/catalog/catalog-data"
+import { chipClass, chipRow } from "@/components/chips"
 import { PosterGridSkeleton } from "@/components/library/library-states"
 import {
   FilterChips,
   SortMenu,
   SortSelect,
 } from "@/components/library/list-controls"
-import { PosterCard, posterGrid } from "@/components/media-item"
-import { PageHeader, useDocumentTitle } from "@/components/page-header"
+import { posterGrid } from "@/components/media-item"
+import {
+  belowHeader,
+  PageHeader,
+  useDocumentTitle,
+} from "@/components/page-header"
 import { usePhone } from "@/components/sheet-menu"
 import { tr } from "@/i18n"
-import { formatDate, formatScore, parseDay } from "@/lib/format"
 import { errorMessage, orpc } from "@/lib/rpc"
+import { useDismissedStore } from "@/stores/recommendations"
 
+import { BrowseCard, cardDetail, recommends } from "./browse-card"
 import { activeFilters, BrowseFilterPanel } from "./browse-filters"
 import {
   type Browse,
@@ -50,18 +47,20 @@ import {
   type BrowseSearch,
   NO_FILTERS,
   searchFor,
+  sortFits,
 } from "./browse-params"
+import { railsOptions } from "./discover-data"
 import { useOnScreenCards } from "./discover-live"
 import { DiscoverEmpty, DiscoverOff } from "./discover-rails"
 import { CardSkeletons, Retry, unique, useNextPage } from "./grid-parts"
 
 /*
- * All of TMDB's movies or shows, narrowed by filters and in the order the
- * viewer picks, as a grid that loads more as it scrolls. Titles that are
- * here are the library's cards and play; the rest ask, as on Discover.
+ * All of TMDB's movies or shows, or the viewer's recommendations of
+ * them, narrowed by filters and in the order the viewer picks, as a grid
+ * that loads more as it scrolls. Each of Discover's rows opens here with
+ * its own filters and sort. Titles that are here are the library's cards
+ * and play; the rest ask, as on Discover.
  */
-
-type Entry = t.infer<typeof CatalogBrowsePage>["items"][number]
 
 export function browseOptionsQuery(kind: TitleKind) {
   return orpc.discover.browseOptions.queryOptions({ input: { kind } })
@@ -85,6 +84,7 @@ function sortOptions(options: BrowseOptions) {
 
 const SORT_WORDS = {
   popular: "discover.browse.sort.popular",
+  forYou: "discover.browse.sort.forYou",
   votes: "discover.browse.sort.votes",
   scoreHigh: "filters.sort.scoreHigh",
   scoreLow: "filters.sort.scoreLow",
@@ -168,12 +168,18 @@ function BrowseGrid({
   navigate: (browse: Browse) => void
 }) {
   const [panelOpen, setPanelOpen] = useState(false)
+  const queryClient = useQueryClient()
+  const hidden = useDismissedStore((state) => state.hidden)
+  const dismiss = useDismissedStore((state) => state.dismiss)
+  const recommended = recommends(browse)
   const titles = useInfiniteQuery({
     ...browseQuery(kind, browse),
     // The last answer stays, dimmed, while a change of filter loads.
     placeholderData: keepPreviousData,
   })
-  const rows = unique(titles.data?.pages.flatMap((page) => page.items) ?? [])
+  const rows = unique(
+    titles.data?.pages.flatMap((page) => page.items) ?? [],
+  ).filter((item) => !recommended || !hidden.has(refKey(item.ref)))
   const first = titles.data?.pages[0]
   const stale = titles.data?.pages.some((page) => page.stale) ?? false
   const { track, start, end } = useOnScreenCards()
@@ -194,12 +200,22 @@ function BrowseGrid({
     pages: titles.data?.pages.length ?? 0,
   })
 
+  // Best match goes with the recommendations, and back to popular without them.
+  const withFilters = (filters: CatalogFilters) =>
+    navigate({
+      filters,
+      sort: sortFits(browse.sort, filters.recommended)
+        ? browse.sort
+        : "popular",
+    })
   const change = (patch: Partial<CatalogFilters>) =>
-    navigate({ ...browse, filters: { ...browse.filters, ...patch } })
+    withFilters({ ...browse.filters, ...patch })
   const setSort = (sort: CatalogSort) => navigate({ ...browse, sort })
-  const clear = () => navigate({ ...browse, filters: NO_FILTERS })
+  const clear = () => withFilters(NO_FILTERS)
   const chips = activeFilters(browse.filters, options, change)
-  const sorts = sortOptions(options)
+  const sorts = sortOptions(options).filter(({ value }) =>
+    sortFits(value, browse.filters.recommended),
+  )
   // One panel, in the bar that shows; both share its open state.
   const phone = usePhone()
   const panel = (compact: boolean) => (
@@ -243,6 +259,7 @@ function BrowseGrid({
           )
         }
       />
+      <KindSwitch kind={kind} browse={browse} />
       <FilterChips active={chips} clear={clear} />
       {first?.voteFloor != null && (
         <Note
@@ -288,6 +305,18 @@ function BrowseGrid({
           message={tr("discover.browse.failed")}
           onRetry={() => void titles.refetch()}
         />
+      ) : rows.length === 0 && recommended ? (
+        <DiscoverEmpty
+          icon={<SparklesIcon />}
+          title={tr("discover.browse.forYouNone")}
+          description={tr("discover.browse.forYouHint")}
+        >
+          {chips.length > 0 && (
+            <Button variant="outline" onClick={clear}>
+              {tr("library.clearFilters")}
+            </Button>
+          )}
+        </DiscoverEmpty>
       ) : rows.length === 0 ? (
         <DiscoverEmpty
           icon={<SearchXIcon />}
@@ -320,6 +349,11 @@ function BrowseGrid({
                   item={item}
                   live={live}
                   detail={cardDetail(first?.detail ?? null, item)}
+                  dismiss={
+                    recommended
+                      ? () => dismiss(queryClient, item.ref, item.name)
+                      : undefined
+                  }
                 />
               </li>
             ))}
@@ -350,48 +384,33 @@ function turnedDown(error: Error): boolean {
   return error instanceof ORPCError && error.status === 400
 }
 
-/** What a card says under its name, as the server says the list calls for. */
-function cardDetail(
-  detail: t.infer<typeof CatalogBrowsePage>["detail"],
-  item: Entry,
-): string | undefined {
-  if (detail === "score" && item.score !== null) {
-    const score = formatScore(item.score)
-    return item.year
-      ? tr("filters.card.score", { score, year: String(item.year) })
-      : tr("filters.card.scoreOnly", { score })
-  }
-  if (detail === "releaseDate" && item.releaseDate) {
-    const day = parseDay(item.releaseDate)
-    if (day) return formatDate(day)
-  }
-  // Every card is the same kind, so the year alone.
-  return item.year ? String(item.year) : undefined
-}
-
 /**
- * A title the viewer can watch is the library's card, with Play. The
- * rest are catalog cards with what the stream says now.
+ * Movies and Shows, for a viewer who can browse both. The other kind
+ * keeps the filters it has too.
  */
-function BrowseCard({
-  item,
-  live,
-  detail,
-}: {
-  item: Entry
-  live: LiveEntry[] | undefined
-  detail: string | undefined
-}) {
-  const availability =
-    liveEntry(live, item.ref)?.availability ?? item.availability
-  if (
-    item.title &&
-    availability.state === "here" &&
-    availability.libraryTitleId === item.title.id
-  )
-    return <PosterCard title={item.title} detail={detail} />
+function KindSwitch({ kind, browse }: { kind: TitleKind; browse: Browse }) {
+  const kinds = useQuery(railsOptions()).data?.browse ?? []
+  if (kinds.length < 2) return null
+  const search = searchFor(browse)
   return (
-    <CatalogCard title={item} availability={availability} detail={detail} />
+    <div
+      role="group"
+      aria-label={tr("discover.browse.kind")}
+      className={cn(chipRow, belowHeader)}
+    >
+      {kinds.map((other) => (
+        <Link
+          key={other}
+          to={other === "movie" ? "/discover/movies" : "/discover/shows"}
+          search={search}
+          replace
+          aria-current={other === kind ? "page" : undefined}
+          className={chipClass(other === kind)}
+        >
+          {tr(`discover.browse.kind.${other}`)}
+        </Link>
+      ))}
+    </div>
   )
 }
 

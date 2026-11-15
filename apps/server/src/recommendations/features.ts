@@ -26,6 +26,10 @@ export const Feature = t.object({
   ),
   originalLanguage: t.string().nullable(),
   year: t.number().nullable(),
+  runtimeMinutes: t.number().nullable(),
+  ratings: t
+    .array(t.object({ country: t.string(), rating: t.string() }))
+    .nullable(),
   rating: t.number().nullable(),
   votes: t.number(),
   popularity: t.number(),
@@ -61,9 +65,11 @@ export const featureJobs = defineQueue({
   },
 })
 /**
- * The stored features of `refs`, by `keyOf`. Missing and month-old ones
- * are fetched: waited for with `wait`, which a job of another queue may
- * do, or else queued for next time.
+ * The stored features of `refs`, by `keyOf`. Missing ones are fetched:
+ * waited for with `wait`, which a job of another queue may do, or else
+ * queued for next time. Old ones, month-old or from before ratings were
+ * fetched, are queued and serve until then, so a refresh of many never
+ * holds up a list.
  */
 export async function featuresFor(
   refs: { kind: TitleKind; tmdbId: string }[],
@@ -93,8 +99,13 @@ export async function featuresFor(
   await Promise.all(
     unique.map(async (ref) => {
       const old = result.get(keyOf(ref))
-      if (old && old.fetchedAt.getTime() > Date.now() - FRESH_MS) return
-      if (wait) {
+      if (
+        old &&
+        old.ratings !== null &&
+        old.fetchedAt.getTime() > Date.now() - FRESH_MS
+      )
+        return
+      if (wait && !old) {
         try {
           const value = await featureJobs.run(ref, { priority: "low" })
           if (value) result.set(keyOf(ref), value)

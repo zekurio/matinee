@@ -1,9 +1,10 @@
-import type {
-  CatalogBrowseOptions,
-  CatalogFilters,
-  CatalogSort,
+import {
+  type CatalogBrowseOptions,
+  type CatalogFilters,
+  type CatalogSort,
+  CatalogSort as SortSchema,
+  NO_CATALOG_FILTERS,
 } from "@matinee/contracts"
-import { CatalogSort as SortSchema } from "@matinee/contracts"
 import { t } from "@matinee/contracts/schema"
 
 import { plain, span } from "@/components/filters/ranges"
@@ -20,6 +21,7 @@ export type BrowseOptions = t.infer<typeof CatalogBrowseOptions>
 /** The router reads `878` and `12` as numbers, the rest as text. */
 const text = t.union([t.string().min(1).max(64), t.number()])
 const number = t.number().optional().catch(undefined)
+const on = t.boolean().optional().catch(undefined)
 
 /** A browse's search params. Every one is optional; a bad one is ignored. */
 export const BrowseSearch = t.object({
@@ -38,6 +40,9 @@ export const BrowseSearch = t.object({
     .catch(undefined),
   runtime: number,
   runtimeMax: number,
+  recommended: on,
+  upcoming: on,
+  requestable: on,
   /** Popular, the default, is left out. */
   sort: SortSchema.optional().catch(undefined),
 })
@@ -46,17 +51,11 @@ export type BrowseSearch = t.infer<typeof BrowseSearch>
 /** A browse the server can answer: filters and a sort from what it offers. */
 export type Browse = { filters: CatalogFilters; sort: CatalogSort }
 
-export const NO_FILTERS: CatalogFilters = {
-  genres: [],
-  yearFrom: null,
-  yearTo: null,
-  scoreMin: null,
-  scoreMax: null,
-  votesMin: null,
-  rating: null,
-  language: null,
-  runtimeMin: null,
-  runtimeMax: null,
+export const NO_FILTERS = NO_CATALOG_FILTERS
+
+/** Whether a sort goes with the list: best match only among recommendations, as the server has it. */
+export function sortFits(sort: CatalogSort, recommended: boolean): boolean {
+  return sort !== "forYou" || recommended
 }
 
 /** What the URL asks for, as far as `options` offers it. */
@@ -100,9 +99,14 @@ export function browseFrom(
         : null,
       runtimeMin,
       runtimeMax,
+      recommended: search.recommended === true,
+      upcoming: search.upcoming === true,
+      requestable: search.requestable === true,
     },
     sort:
-      search.sort && options.sorts.includes(search.sort)
+      search.sort &&
+      options.sorts.includes(search.sort) &&
+      sortFits(search.sort, search.recommended === true)
         ? search.sort
         : "popular",
   }
@@ -123,6 +127,9 @@ export function searchFor(browse: Browse): BrowseSearch {
     lang: filters.language ?? undefined,
     runtime: filters.runtimeMin ?? undefined,
     runtimeMax: filters.runtimeMax ?? undefined,
+    recommended: filters.recommended || undefined,
+    upcoming: filters.upcoming || undefined,
+    requestable: filters.requestable || undefined,
     sort: browse.sort === "popular" ? undefined : browse.sort,
   }
 }
@@ -136,6 +143,9 @@ export function filterCount(filters: CatalogFilters): number {
     Number(filters.votesMin !== null) +
     Number(filters.rating !== null) +
     Number(filters.language !== null) +
-    Number(filters.runtimeMin !== null || filters.runtimeMax !== null)
+    Number(filters.runtimeMin !== null || filters.runtimeMax !== null) +
+    Number(filters.recommended) +
+    Number(filters.upcoming) +
+    Number(filters.requestable)
   )
 }

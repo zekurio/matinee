@@ -38,6 +38,13 @@ export type FeaturePerson = {
   role: "director" | "writer" | "creator" | "actor"
 }
 
+/** A title's age rating in one country, as TMDB lists it. */
+export type FeatureRating = {
+  /** ISO 3166-1, like US or DE. */
+  country: string
+  rating: string
+}
+
 /** What a title is about at TMDB, for scoring what's like it. */
 export const titleFeatures = pgTable(
   "title_features",
@@ -52,6 +59,13 @@ export const titleFeatures = pgTable(
     /** ISO 639-1, as TMDB gives it. */
     originalLanguage: text(),
     year: integer(),
+    /** A film's runtime, or a show's episodes', in minutes. */
+    runtimeMinutes: integer(),
+    /**
+     * Its age rating in each country TMDB has one for. Null for features
+     * fetched before ratings were, which are fetched again.
+     */
+    ratings: jsonb().$type<FeatureRating[]>(),
     /** TMDB's user score, 0 to 10, and how many voted. */
     rating: doublePrecision(),
     votes: integer().notNull().default(0),

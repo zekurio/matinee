@@ -48,7 +48,6 @@ import io.github.zekurio.matinee.api.CatalogTitleSummary
 import io.github.zekurio.matinee.api.MatineeJson
 import io.github.zekurio.matinee.api.TitleKind
 import io.github.zekurio.matinee.ui.Load
-import io.github.zekurio.matinee.ui.LocalNavigator
 import io.github.zekurio.matinee.ui.TopBar
 import io.github.zekurio.matinee.ui.components.ErrorSection
 import io.github.zekurio.matinee.ui.components.ErrorState
@@ -61,6 +60,7 @@ import io.github.zekurio.matinee.ui.components.FilterChoice
 import io.github.zekurio.matinee.ui.components.FilterSection
 import io.github.zekurio.matinee.ui.components.FilterSheet
 import io.github.zekurio.matinee.ui.components.FilterSpan
+import io.github.zekurio.matinee.ui.components.LocalActions
 import io.github.zekurio.matinee.ui.components.LocalApi
 import io.github.zekurio.matinee.ui.components.OptionRow
 import io.github.zekurio.matinee.ui.components.OptionSheet
@@ -78,8 +78,8 @@ import io.github.zekurio.matinee.ui.components.runtimeText
 import io.github.zekurio.matinee.ui.components.yearText
 import io.github.zekurio.matinee.ui.formatDay
 import io.github.zekurio.matinee.ui.formatRating
-import io.github.zekurio.matinee.ui.formatRuntime
 import io.github.zekurio.matinee.ui.kit.ButtonLook
+import io.github.zekurio.matinee.ui.kit.Chip
 import io.github.zekurio.matinee.ui.kit.Gap
 import io.github.zekurio.matinee.ui.kit.Gutter
 import io.github.zekurio.matinee.ui.kit.Lucide
@@ -98,15 +98,17 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.SerializationException
 
 /*
- * All of TMDB's movies or shows, narrowed by filters and in the order the
- * viewer picks, as the web's browse pages under Discover have them: a
- * grid that loads more as it scrolls, the filters in a bottom sheet as a
- * library's genre is, and the sort in the bar's menu. What each filter
- * offers comes from the server. Titles that are here are the library's
- * cards; the rest ask, as on Discover.
+ * All of TMDB's movies or shows, or the viewer's recommendations of
+ * them, narrowed by filters and in the order the viewer picks, as the
+ * web's browse pages under Discover have them: a grid that loads more as
+ * it scrolls, the filters in a bottom sheet as a library's genre is, and
+ * the sort in the bar's menu. Each Discover row's heading opens one with
+ * the row's filters and sort. What each filter offers comes from the
+ * server. Titles that are here are the library's cards; the rest ask, as
+ * on Discover.
  */
 
-private val NO_FILTERS = CatalogFilters(
+val NO_FILTERS = CatalogFilters(
     genres = emptyList(),
     yearFrom = null,
     yearTo = null,
@@ -117,7 +119,16 @@ private val NO_FILTERS = CatalogFilters(
     language = null,
     runtimeMin = null,
     runtimeMax = null,
+    recommended = null,
+    upcoming = null,
+    requestable = null,
 )
+
+/** Whether a browse lists the viewer's recommendations, whose cards offer "Not interested". */
+fun recommends(filters: CatalogFilters) = filters.recommended == true
+
+/** Whether a sort goes with the list: best match only among recommendations, as the server has it. */
+private fun sortFits(sort: String, filters: CatalogFilters) = sort != CatalogSort.FOR_YOU || recommends(filters)
 
 /** Kept across rotation and process death, as JSON. */
 private val FiltersSaver = Saver<CatalogFilters, String>(
@@ -127,6 +138,7 @@ private val FiltersSaver = Saver<CatalogFilters, String>(
 
 /** The sorts' words, by the server's ids. */
 private fun sortWord(sort: String): Int = when (sort) {
+    CatalogSort.FOR_YOU -> R.string.web_discover_browse_sort_forYou
     CatalogSort.SCORE_HIGH -> R.string.web_filters_sort_scoreHigh
     CatalogSort.SCORE_LOW -> R.string.web_filters_sort_scoreLow
     CatalogSort.VOTES -> R.string.web_discover_browse_sort_votes
@@ -144,11 +156,34 @@ fun browseName(kind: String, res: Resources): String =
 /** How many filters are on, a range counting once. */
 private fun CatalogFilters.count(): Int =
     genres.orEmpty().size +
-        listOf(yearFrom != null || yearTo != null, scoreMin != null || scoreMax != null, votesMin != null, rating != null, language != null, runtimeMin != null || runtimeMax != null)
-            .count { it }
+        listOf(
+            yearFrom != null || yearTo != null,
+            scoreMin != null || scoreMax != null,
+            votesMin != null,
+            rating != null,
+            language != null,
+            runtimeMin != null || runtimeMax != null,
+            recommended == true,
+            upcoming == true,
+            requestable == true,
+        ).count { it }
 
-private fun activeFilters(filters: CatalogFilters, options: CatalogBrowseOptions, res: Resources, change: (CatalogFilters) -> Unit): List<ActiveFilter> {
+private fun activeFilters(
+    filters: CatalogFilters,
+    options: CatalogBrowseOptions,
+    res: Resources,
+    change: (CatalogFilters) -> Unit,
+): List<ActiveFilter> {
     val active = mutableListOf<ActiveFilter>()
+    if (filters.recommended == true) {
+        active += ActiveFilter("recommended", res.getString(R.string.web_discover_browse_recommended)) { change(filters.copy(recommended = null)) }
+    }
+    if (filters.upcoming == true) {
+        active += ActiveFilter("upcoming", res.getString(R.string.web_discover_browse_upcoming)) { change(filters.copy(upcoming = null)) }
+    }
+    if (filters.requestable == true) {
+        active += ActiveFilter("requestable", res.getString(R.string.web_discover_browse_requestable)) { change(filters.copy(requestable = null)) }
+    }
     val genres = filters.genres.orEmpty()
     genres.forEach { id ->
         val genre = options.genres.firstOrNull { it.id == id } ?: return@forEach
@@ -185,7 +220,7 @@ private fun activeFilters(filters: CatalogFilters, options: CatalogBrowseOptions
 }
 
 /** What a card says under its name, as the server says the list calls for; else the year. */
-private fun browseDetail(detail: String?, item: CatalogBrowseTitle, res: Resources): String? {
+fun browseDetail(detail: String?, item: CatalogBrowseTitle, res: Resources): String? {
     val score = item.score
     if (detail == "score" && score != null) {
         return item.year?.let { res.getString(R.string.web_filters_card_score, formatRating(score), it.toString()) }
@@ -195,19 +230,41 @@ private fun browseDetail(detail: String?, item: CatalogBrowseTitle, res: Resourc
     return item.year?.toString()
 }
 
+/**
+ * Browsing [startKind], with [startFilters] (`CatalogFilters` JSON) and
+ * [startSort] from a Discover row's heading, or none. A viewer who can
+ * browse both kinds switches between them in place, keeping the filters
+ * both have.
+ */
 @Composable
-fun CatalogBrowseScreen(kind: String) {
+fun CatalogBrowseScreen(startKind: String, startFilters: String? = null, startSort: String? = null) {
     val res = LocalResources.current
+    var kind by rememberSaveable { mutableStateOf(startKind) }
     val options = rememberLoader("browse-options-$kind") { discover.browseOptions(kind) }
-    var filters by rememberSaveable(stateSaver = FiltersSaver) { mutableStateOf(NO_FILTERS) }
-    var sort by rememberSaveable { mutableStateOf(CatalogSort.POPULAR) }
+    var filters by rememberSaveable(stateSaver = FiltersSaver) {
+        mutableStateOf(startFilters?.let { FiltersSaver.restore(it) } ?: NO_FILTERS)
+    }
+    var sort by rememberSaveable { mutableStateOf(startSort ?: CatalogSort.POPULAR) }
     var filtering by rememberSaveable { mutableStateOf(false) }
     val ready = (options.state as? Load.Ready)?.value?.takeIf { it.enabled }
+    val kinds = (rememberDiscover().state as? Load.Ready)?.value?.browse.orEmpty()
+    // Best match goes with the recommendations, and back to popular without them.
+    val change = { next: CatalogFilters ->
+        filters = next
+        if (!sortFits(sort, next)) sort = CatalogSort.POPULAR
+    }
+    // What the other kind lacks goes: their genres and ratings differ.
+    val switchTo = { other: String ->
+        if (other != kind) {
+            kind = other
+            filters = filters.copy(genres = null, rating = null)
+        }
+    }
     Column(Modifier.fillMaxSize()) {
         TopBar(browseName(kind, res)) {
             if (ready != null) {
                 FilterButton(filters.count()) { filtering = true }
-                SortButton(ready.sorts, sort) { sort = it }
+                SortButton(ready.sorts.filter { sortFits(it, filters) }, sort) { sort = it }
             }
         }
         when (val state = options.state) {
@@ -221,12 +278,21 @@ fun CatalogBrowseScreen(kind: String) {
             is Load.Ready -> if (!state.value.enabled) {
                 Message(Lucide.Compass, stringResource(R.string.web_discover_off), stringResource(R.string.web_discover_offHint))
             } else {
-                BrowseGrid(kind, state.value, filters, sort, onChange = { filters = it }, onFilters = { filtering = true })
+                BrowseGrid(
+                    kind,
+                    state.value,
+                    filters,
+                    sort,
+                    kinds = kinds,
+                    onKind = switchTo,
+                    onChange = change,
+                    onFilters = { filtering = true },
+                )
             }
         }
     }
     if (filtering && ready != null) {
-        BrowseFilterSheet(kind, ready, filters, onChange = { filters = it }, onDismiss = { filtering = false })
+        BrowseFilterSheet(kind, ready, filters, onChange = change, onDismiss = { filtering = false })
     }
 }
 
@@ -286,6 +352,9 @@ private class BrowsePages {
     var stale by mutableStateOf(false)
     var floor by mutableStateOf<Int?>(null)
     var detail by mutableStateOf<String?>(null)
+
+    /** Pages read, so one that brought nothing new still moves on to the next. */
+    var reads by mutableStateOf(0)
 }
 
 @Composable
@@ -294,11 +363,15 @@ private fun BrowseGrid(
     options: CatalogBrowseOptions,
     filters: CatalogFilters,
     sort: String,
+    kinds: List<String>,
+    onKind: (String) -> Unit,
     onChange: (CatalogFilters) -> Unit,
     onFilters: () -> Unit,
 ) {
     val api = LocalApi.current
     val res = LocalResources.current
+    val actions = LocalActions.current
+    val recommended = recommends(filters)
     // A new browse starts its own pages, at the top.
     val pages = remember(kind, filters, sort) { BrowsePages() }
     val scope = rememberCoroutineScope()
@@ -314,6 +387,7 @@ private fun BrowseGrid(
                     pages.stale = pages.stale || answer.stale
                     pages.floor = answer.voteFloor
                     pages.detail = answer.detail
+                    pages.reads++
                     pages.error = false
                 } catch (e: CancellationException) {
                     throw e
@@ -334,7 +408,7 @@ private fun BrowseGrid(
             last >= grid.layoutInfo.totalItemsCount - 12
         }
     }
-    LaunchedEffect(pages, nearEnd, pages.items.size) { if (nearEnd && !pages.error) more() }
+    LaunchedEffect(pages, nearEnd, pages.reads) { if (nearEnd && !pages.error) more() }
     val window by remember(grid) {
         derivedStateOf {
             val shown = grid.layoutInfo.visibleItemsInfo.map { it.index }
@@ -351,6 +425,7 @@ private fun BrowseGrid(
     FollowTitles(followed.map { CatalogInput(it.ref) })
     val chips = activeFilters(filters, options, res, onChange)
     val clear = { onChange(NO_FILTERS) }
+    val shown = pages.items.filter { !recommended || it.ref.key !in actions.hidden }
 
     LazyVerticalGrid(
         columns = GridCells.Adaptive(150.dp),
@@ -360,6 +435,19 @@ private fun BrowseGrid(
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
+        if (kinds.size > 1) {
+            item(span = { GridItemSpan(maxLineSpan) }, key = "kinds") {
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    kinds.forEach { other ->
+                        Chip(
+                            stringResource(if (other == TitleKind.SHOW) R.string.web_discover_browse_kind_show else R.string.web_discover_browse_kind_movie),
+                            selected = other == kind,
+                            onClick = { onKind(other) },
+                        )
+                    }
+                }
+            }
+        }
         if (chips.isNotEmpty()) {
             item(span = { GridItemSpan(maxLineSpan) }, key = "chips") {
                 ActiveFilterChips(chips, clear)
@@ -407,6 +495,15 @@ private fun BrowseGrid(
                     pages.loading || pages.next != null -> Box(Modifier.fillMaxWidth().padding(48.dp), contentAlignment = Alignment.Center) {
                         Spinner(size = 32.dp, color = Palette.Accent)
                     }
+                    recommended -> Message(
+                        Lucide.Compass,
+                        stringResource(R.string.web_discover_browse_forYouNone),
+                        stringResource(R.string.web_discover_browse_forYouHint),
+                    ) {
+                        if (chips.isNotEmpty()) {
+                            MatineeButton(onClick = clear, look = ButtonLook.Outline) { Text(stringResource(R.string.browse_clear_filters)) }
+                        }
+                    }
                     chips.isNotEmpty() -> Message(
                         Lucide.SearchX,
                         stringResource(if (kind == TitleKind.SHOW) R.string.web_discover_browse_none_show else R.string.web_discover_browse_none_movie),
@@ -418,8 +515,8 @@ private fun BrowseGrid(
                 }
             }
         }
-        itemsIndexed(pages.items, key = { _, item -> item.ref.key }) { _, item ->
-            BrowseCard(item, browseDetail(pages.detail, item, res))
+        itemsIndexed(shown, key = { _, item -> item.ref.key }) { _, item ->
+            BrowseCard(item, browseDetail(pages.detail, item, res), recommended)
         }
         if (pages.items.isNotEmpty()) {
             item(span = { GridItemSpan(maxLineSpan) }, key = "end") {
@@ -442,13 +539,21 @@ private fun BrowseGrid(
  * screen turns into the library's card in place.
  */
 @Composable
-private fun BrowseCard(item: CatalogBrowseTitle, detail: String?) {
+fun BrowseCard(item: CatalogBrowseTitle, detail: String?, recommended: Boolean, modifier: Modifier = Modifier) {
     val availability = LocalRequests.current.availability(item.ref, item.availability)
     val library = item.title
+    val actions = LocalActions.current
     if (library != null && availability.state == AvailabilityState.HERE && availability.libraryTitleId == library.id) {
-        PosterCard(library, detail)
+        PosterCard(library, detail, modifier)
     } else {
-        CatalogCard(CatalogTitleSummary(item.ref, item.name, item.year, item.poster, item.availability), detail = detail)
+        val summary = CatalogTitleSummary(item.ref, item.name, item.year, item.poster, item.availability)
+        CatalogCard(
+            summary,
+            modifier,
+            detail = detail,
+            // "Not interested", for a recommendation.
+            onLongClick = if (recommended) ({ actions.notInterested = summary }) else null,
+        )
     }
 }
 
@@ -464,6 +569,29 @@ private fun BrowseFilterSheet(
     val res = LocalResources.current
     var choosingLanguage by remember { mutableStateOf(false) }
     FilterSheet(filters.count(), onClear = { onChange(NO_FILTERS) }, onDismiss = onDismiss) {
+        FilterSection(stringResource(R.string.web_discover_browse_only), stringResource(R.string.web_discover_browse_onlyHint)) {
+            ToggleChips(
+                listOf(
+                    FilterChoice("recommended", stringResource(R.string.web_discover_browse_recommended)),
+                    FilterChoice("upcoming", stringResource(R.string.web_discover_browse_upcoming)),
+                    FilterChoice("requestable", stringResource(R.string.web_discover_browse_requestable)),
+                ),
+                listOfNotNull(
+                    "recommended".takeIf { filters.recommended == true },
+                    "upcoming".takeIf { filters.upcoming == true },
+                    "requestable".takeIf { filters.requestable == true },
+                ),
+                { picked ->
+                    onChange(
+                        filters.copy(
+                            recommended = true.takeIf { "recommended" in picked },
+                            upcoming = true.takeIf { "upcoming" in picked },
+                            requestable = true.takeIf { "requestable" in picked },
+                        ),
+                    )
+                },
+            )
+        }
         if (options.genres.isNotEmpty()) {
             FilterSection(stringResource(R.string.web_filters_genres)) {
                 val genres = filters.genres.orEmpty()

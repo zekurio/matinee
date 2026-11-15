@@ -127,14 +127,14 @@ class DiscoverApi internal constructor(private val transport: ApiTransport) {
             DiscoverRails.serializer(),
         )
 
-    /** `POST /discover/page` */
-    suspend fun page(rail: DiscoverRail, page: Int? = null): CatalogPage =
+    /** `POST /discover/row` */
+    suspend fun row(id: String, seed: RecommendationSeed? = null): DiscoverRow =
         transport.call(
             "POST",
-            listOf("discover", "page"),
+            listOf("discover", "row"),
             emptyList(),
-            transport.json(DiscoverPageInput.serializer(), DiscoverPageInput(rail = rail, page = page)),
-            CatalogPage.serializer(),
+            transport.json(DiscoverRowInput.serializer(), DiscoverRowInput(id = id, seed = seed)),
+            DiscoverRow.serializer(),
         )
 
     /** `GET /discover/browse/options` */

@@ -78,6 +78,7 @@ import io.github.zekurio.matinee.ui.requests.askable
 import io.github.zekurio.matinee.ui.requests.discoverRails
 import io.github.zekurio.matinee.ui.requests.key
 import io.github.zekurio.matinee.ui.requests.rememberDiscover
+import io.github.zekurio.matinee.ui.requests.railKey
 import io.github.zekurio.matinee.ui.requests.rememberRailPages
 import io.github.zekurio.matinee.ui.tabBarPadding
 import io.github.zekurio.matinee.ui.theme.Palette
@@ -309,12 +310,12 @@ private fun LazyGridScope.notHereSection(query: String, catalog: CatalogSearchSt
 @Composable
 private fun DiscoverList(
     rails: List<io.github.zekurio.matinee.api.DiscoverRail>,
-    pages: Map<String, io.github.zekurio.matinee.ui.Loader<io.github.zekurio.matinee.api.CatalogPage>>,
+    pages: Map<String, io.github.zekurio.matinee.ui.Loader<io.github.zekurio.matinee.api.DiscoverRow>>,
     discover: io.github.zekurio.matinee.ui.Loader<io.github.zekurio.matinee.api.DiscoverRails>,
 ) {
     FollowRails(pages.values)
-    val states = rails.mapNotNull { pages[it.id]?.state }
-    val failed = rails.filter { pages[it.id]?.state is Load.Failed }
+    val states = rails.mapNotNull { pages[railKey(it)]?.state }
+    val failed = rails.filter { pages[railKey(it)]?.state is Load.Failed }
     when {
         states.isNotEmpty() && states.all { it is Load.Failed } -> DiscoverFailed(Modifier.fillMaxWidth().padding(vertical = 48.dp)) { pages.values.forEach { it.reload() }; discover.reload() }
         states.isNotEmpty() && states.all { it is Load.Ready && it.value.items.isEmpty() } -> DiscoverNothing()
@@ -340,7 +341,7 @@ private fun DiscoverList(
                     ErrorSection(
                         res.getQuantityString(R.plurals.web_discover_railsFailed, failed.size, failed.size),
                         null,
-                        { failed.forEach { pages[it.id]?.reload() } },
+                        { failed.forEach { pages[railKey(it)]?.reload() } },
                     )
                 }
             }

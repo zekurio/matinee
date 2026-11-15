@@ -406,6 +406,52 @@ data class RequestQueue(
     )
 }
 
+object DiscoverRailId {
+    const val POPULAR_FILMS = "popularFilms"
+    const val POPULAR_SHOWS = "popularShows"
+    const val COMING_SOON = "comingSoon"
+    const val FOR_YOU = "forYou"
+    const val BECAUSE_WATCHED = "becauseWatched"
+    val all = listOf(POPULAR_FILMS, POPULAR_SHOWS, COMING_SOON, FOR_YOU, BECAUSE_WATCHED)
+}
+
+@Serializable
+data class CatalogFilters(
+    val genres: List<Int>? = null,
+    val yearFrom: Int? = null,
+    val yearTo: Int? = null,
+    val scoreMin: Double? = null,
+    val scoreMax: Double? = null,
+    val votesMin: Int? = null,
+    val rating: String? = null,
+    val language: String? = null,
+    val runtimeMin: Int? = null,
+    val runtimeMax: Int? = null,
+    val recommended: Boolean? = null,
+    val upcoming: Boolean? = null,
+    val requestable: Boolean? = null,
+)
+
+object CatalogSort {
+    const val POPULAR = "popular"
+    const val FOR_YOU = "forYou"
+    const val SCORE_HIGH = "scoreHigh"
+    const val SCORE_LOW = "scoreLow"
+    const val VOTES = "votes"
+    const val NEWEST = "newest"
+    const val OLDEST = "oldest"
+    const val NAME_ASC = "nameAsc"
+    const val NAME_DESC = "nameDesc"
+    val all = listOf(POPULAR, FOR_YOU, SCORE_HIGH, SCORE_LOW, VOTES, NEWEST, OLDEST, NAME_ASC, NAME_DESC)
+}
+
+@Serializable
+data class DiscoverBrowse(
+    val kinds: List<String>,
+    val filters: CatalogFilters,
+    val sort: String,
+)
+
 @Serializable
 data class RecommendationSeed(
     val ref: CatalogRef,
@@ -416,6 +462,7 @@ data class RecommendationSeed(
 data class DiscoverRail(
     val id: String,
     val seed: RecommendationSeed? = null,
+    val browse: DiscoverBrowse?,
 )
 
 @Serializable
@@ -423,6 +470,26 @@ data class DiscoverRails(
     val enabled: Boolean,
     val rails: List<DiscoverRail>,
     val browse: List<String>,
+)
+
+@Serializable
+data class CatalogBrowseTitle(
+    val ref: CatalogRef,
+    val name: String,
+    val year: Int?,
+    val poster: Artwork?,
+    val availability: Availability,
+    val title: TitleSummary?,
+    val score: Double?,
+    val votes: Int,
+    val releaseDate: String?,
+)
+
+@Serializable
+data class DiscoverRow(
+    val items: List<CatalogBrowseTitle>,
+    val stale: Boolean,
+    val detail: String?,
 )
 
 @Serializable
@@ -455,32 +522,6 @@ data class HomeRecommendationRail(
 data class HomeRecommendations(
     val rails: List<HomeRecommendationRail>,
     val computedAt: String?,
-)
-
-object CatalogSort {
-    const val POPULAR = "popular"
-    const val SCORE_HIGH = "scoreHigh"
-    const val SCORE_LOW = "scoreLow"
-    const val VOTES = "votes"
-    const val NEWEST = "newest"
-    const val OLDEST = "oldest"
-    const val NAME_ASC = "nameAsc"
-    const val NAME_DESC = "nameDesc"
-    val all = listOf(POPULAR, SCORE_HIGH, SCORE_LOW, VOTES, NEWEST, OLDEST, NAME_ASC, NAME_DESC)
-}
-
-@Serializable
-data class CatalogFilters(
-    val genres: List<Int>? = null,
-    val yearFrom: Int? = null,
-    val yearTo: Int? = null,
-    val scoreMin: Double? = null,
-    val scoreMax: Double? = null,
-    val votesMin: Int? = null,
-    val rating: String? = null,
-    val language: String? = null,
-    val runtimeMin: Int? = null,
-    val runtimeMax: Int? = null,
 )
 
 @Serializable
@@ -529,19 +570,6 @@ data class CatalogBrowseOptions(
         val ratings: List<String>,
     )
 }
-
-@Serializable
-data class CatalogBrowseTitle(
-    val ref: CatalogRef,
-    val name: String,
-    val year: Int?,
-    val poster: Artwork?,
-    val availability: Availability,
-    val title: TitleSummary?,
-    val score: Double?,
-    val votes: Int,
-    val releaseDate: String?,
-)
 
 @Serializable
 data class CatalogBrowsePage(
@@ -2932,9 +2960,9 @@ data class CatalogMissingSeasonsOutput(
 )
 
 @Serializable
-data class DiscoverPageInput(
-    val rail: DiscoverRail,
-    val page: Int? = null,
+data class DiscoverRowInput(
+    val id: String,
+    val seed: RecommendationSeed? = null,
 )
 
 @Serializable

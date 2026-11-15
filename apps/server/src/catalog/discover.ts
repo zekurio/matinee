@@ -1,132 +1,145 @@
-import type { CatalogRef, DiscoverRail } from "@matinee/contracts"
-import { t } from "@matinee/contracts/schema"
+import {
+  NO_CATALOG_FILTERS,
+  type CatalogRef,
+  type DiscoverRail,
+  type DiscoverRow,
+} from "@matinee/contracts"
+import type { t } from "@matinee/contracts/schema"
 import { library } from "@matinee/db"
 
 import type { Viewer } from "../access/viewer"
 import { db } from "../db"
 import { env } from "../env"
+import { queueArtwork, saveArtwork } from "../media/artwork"
 import {
-  placeholders,
-  queueArtwork,
-  saveArtwork,
-  toArtwork,
-} from "../media/artwork"
-import { discoverRails, discoverPage, sameSeed } from "../recommendations/read"
-import { availability } from "../requests/availability"
-import { withCachedDetails } from "../requests/cached-details"
-import { destinations, lookupLanguage } from "../requests/destinations"
+  discoverBecause,
+  discoverRails,
+  impressions,
+} from "../recommendations/read"
+import { destinations } from "../requests/destinations"
 import { loadRouting } from "../requests/fulfilment/connections"
-import { feedProvider } from "./cache"
+import { page, query } from "./browse"
+import { browseProvider } from "./cache"
+import { askable, catalogCards } from "./cards"
+
+/*
+ * Discover's rows: the viewer's recommendations first, then what's
+ * popular, then what's coming out, each holding only titles the viewer
+ * can ask for. Each but "Because you watched" is the start of a browse,
+ * a kind with filters and a sort, which its heading opens in full.
+ */
 
 type Rail = t.infer<typeof DiscoverRail>
+type Kind = CatalogRef["kind"]
 
-function tmdbRef(kind: CatalogRef["kind"], providerId: string): CatalogRef {
-  return { kind, provider: "tmdb", providerId }
+/** The rows every viewer gets, of the kinds they can ask for. */
+function catalogRails(kinds: Kind[]): Rail[] {
+  const filters = { ...NO_CATALOG_FILTERS, requestable: true }
+  const result: Rail[] = []
+  if (kinds.includes("movie"))
+    result.push({
+      id: "popularFilms",
+      seed: null,
+      browse: { kinds: ["movie"], filters, sort: "popular" },
+    })
+  if (kinds.includes("show"))
+    result.push({
+      id: "popularShows",
+      seed: null,
+      browse: { kinds: ["show"], filters, sort: "popular" },
+    })
+  result.push({
+    id: "comingSoon",
+    seed: null,
+    browse: { kinds, filters: { ...filters, upcoming: true }, sort: "popular" },
+  })
+  return result
+}
+
+/** The kinds this viewer can ask for, which Discover is of; none without TMDB. */
+async function askableKinds(viewer: Viewer) {
+  if (!env.MATINEE_TMDB_API_KEY) return []
+  const [movies, shows] = await Promise.all([
+    destinations(viewer, "movie"),
+    destinations(viewer, "show"),
+  ])
+  const kinds: Kind[] = []
+  if (movies.length) kinds.push("movie")
+  if (shows.length) kinds.push("show")
+  return kinds
 }
 
 export async function rails(viewer: Viewer) {
-  const [movies, shows] = await Promise.all([
-    destinations(viewer, "movie"),
-    destinations(viewer, "show"),
-  ])
+  const kinds = await askableKinds(viewer)
   // Discover is for eligible request destinations, not a standalone TMDB browser.
-  if (!env.MATINEE_TMDB_API_KEY || (!movies.length && !shows.length))
-    return { enabled: false, rails: [], browse: [] }
-  const kinds: CatalogRef["kind"][] = []
-  if (movies.length) kinds.push("movie")
-  if (shows.length) kinds.push("show")
-  const result: Rail[] = await discoverRails(viewer)
-  const popular: Rail["id"][] = []
-  if (movies.length) popular.push("popularFilms")
-  if (shows.length) popular.push("popularShows")
-  popular.push("comingSoon")
-  for (const id of popular) {
-    result.push({ id, seed: null })
+  if (!kinds.length) return { enabled: false, rails: [], browse: [] }
+  return {
+    enabled: true,
+    rails: [...(await discoverRails(viewer, kinds)), ...catalogRails(kinds)],
+    browse: kinds,
   }
-  return { enabled: true, rails: result, browse: kinds }
 }
 
-export async function page(
+/**
+ * A row's cards: the first page of its browse, of each of its kinds in
+ * turn, or what came from a "Because you watched" row's title. Only the
+ * row asked for is worked out, from this viewer, so a client can't ask
+ * for another's.
+ */
+export async function row(
   viewer: Viewer,
-  input: { rail: Rail; page: number },
-) {
-  const empty = { items: [], nextPage: null, stale: false }
-  // Rebuild the rows from this viewer, so a client can't ask for another.
-  const descriptor = (await rails(viewer)).rails.find(
-    (rail) => rail.id === input.rail.id && sameSeed(rail.seed, input.rail.seed),
-  )
-  if (!descriptor) return empty
-  if (descriptor.id === "forYou" || descriptor.id === "becauseWatched")
-    return discoverPage(viewer, descriptor, input.page)
-  const [movies, shows] = await Promise.all([
-    destinations(viewer, "movie"),
-    destinations(viewer, "show"),
-  ])
-  const kinds: CatalogRef["kind"][] = []
-  if (descriptor.id === "popularFilms") kinds.push("movie")
-  else if (descriptor.id === "popularShows") kinds.push("show")
-  else {
-    if (movies.length) kinds.push("movie")
-    if (shows.length) kinds.push("show")
+  input: { id: Rail["id"]; seed: Rail["seed"] },
+): Promise<t.infer<typeof DiscoverRow>> {
+  const empty = { items: [], stale: false, detail: null }
+  const kinds = await askableKinds(viewer)
+  if (!kinds.length) return empty
+  if (input.id === "becauseWatched") {
+    if (!input.seed) return empty
+    const rows = await discoverBecause(viewer, kinds, input.seed)
+    const kind = input.seed.ref.kind
+    const cards = await catalogCards(
+      viewer,
+      kind,
+      rows.map((r) => ({
+        id: r.tmdbId,
+        name: r.name,
+        year: r.year,
+        poster: r.poster,
+        releaseDate: r.releaseDate,
+      })),
+    )
+    impressions(viewer, rows, "discover", input.id)
+    return {
+      items: cards.flatMap(({ row, card }) =>
+        askable(card.availability)
+          ? [{ ...card, score: null, votes: 0, releaseDate: row.releaseDate }]
+          : [],
+      ),
+      stale: false,
+      detail: null,
+    }
   }
-  const results = await Promise.all(
-    kinds.map(async (kind) => {
-      const candidates = kind === "movie" ? movies : shows
-      if (!candidates.length) return { items: [], nextPage: null, stale: false }
-      const result = await feedProvider(
+  const rail = (
+    input.id === "forYou"
+      ? await discoverRails(viewer, kinds)
+      : catalogRails(kinds)
+  ).find((r) => r.id === input.id)
+  const browse = rail?.browse
+  if (!browse) return empty
+  const pages = await Promise.all(
+    browse.kinds.map((kind) =>
+      page(viewer, {
         kind,
-        lookupLanguage(candidates),
-        descriptor.id === "comingSoon" ? "soon" : "popular",
-        input.page,
-      )
-      const states = await availability(
-        viewer,
-        await withCachedDetails(
-          viewer,
-          result.value.items.map((row) => ({
-            ref: { kind, provider: "tmdb", providerId: row.id },
-            releaseDate: row.releaseDate,
-          })),
-        ),
-      )
-      const saved = await saveArtwork(
-        result.value.items.map((row) => row.poster),
-      )
-      const art = await placeholders([...saved.values()])
-      queueArtwork([...saved.values()], "low")
-      return {
-        items: result.value.items.flatMap((row, index) => {
-          const state = states[index]?.availability
-          // Discover offers titles to request, so a declined one, which
-          // nobody can request, is left out. Search still finds it.
-          if (!state || state.state === "here" || state.state === "unavailable")
-            return []
-          return [
-            {
-              ref: tmdbRef(kind, row.id),
-              name: row.name,
-              year: row.year,
-              poster: toArtwork(
-                row.poster ? (saved.get(row.poster) ?? null) : null,
-                art,
-              ),
-              availability: state,
-            },
-          ]
-        }),
-        nextPage: result.value.nextPage,
-        stale: result.stale,
-      }
-    }),
+        filters: browse.filters,
+        sort: browse.sort,
+        page: 1,
+      }),
+    ),
   )
-  // Films and shows take turns, each in the provider's order, most
-  // popular first. Sorting a page by date would start every page of the
-  // grid back at today.
-  const items = interleave(results.map((result) => result.items))
   return {
-    items,
-    nextPage: results.some((result) => result.nextPage) ? input.page + 1 : null,
-    stale: results.some((result) => result.stale),
+    items: interleave(pages.map((p) => p.items)),
+    stale: pages.some((p) => p.stale),
+    detail: pages[0]?.detail ?? null,
   }
 }
 
@@ -142,11 +155,11 @@ function interleave<T>(lists: T[][]): T[] {
 }
 
 /**
- * Discover's rows read ahead, with their posters fetched, so the first
- * person to open Discover after a feed changes sees each poster's
- * placeholder rather than an empty card. The rows are the same for
- * everyone who reads them in a language, one per language a library that
- * takes requests uses.
+ * The catalog rows' first pages read ahead, with their posters fetched,
+ * so the first person to open Discover after TMDB's lists change sees
+ * each poster's placeholder rather than an empty card. The pages are the
+ * same for everyone who reads them in a language, one per language a
+ * library that takes requests uses.
  */
 export async function prepareDiscover({
   signal,
@@ -154,7 +167,7 @@ export async function prepareDiscover({
   if (!env.MATINEE_TMDB_API_KEY) return
   const routing = await loadRouting()
   // ACCESS: no viewer; only each library's kind and language are read, to
-  // fill the shared feed cache. Pages still filter by what a viewer sees.
+  // fill the shared cache. Pages still filter by what a viewer sees.
   const rows = await db.select().from(library)
   for (const kind of ["movie", "show"] as const) {
     const reached = routing.reached(kind)
@@ -168,9 +181,16 @@ export async function prepareDiscover({
         .map((row) => row.metadataLanguage),
     )
     for (const language of languages) {
-      for (const operation of ["popular", "soon"] as const) {
+      for (const { browse } of catalogRails([kind])) {
         if (signal?.aborted) return
-        const result = await feedProvider(kind, language, operation, 1)
+        if (!browse) continue
+        const built = await query(
+          kind,
+          { language, country: null },
+          browse.filters,
+          browse.sort,
+        )
+        const result = await browseProvider(kind, language, built.query, 1)
         const saved = await saveArtwork(
           result.value.items.map((row) => row.poster),
         )
