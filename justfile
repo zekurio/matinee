@@ -1,7 +1,9 @@
 # Shortcuts for the repository. `just` lists them. The Android app's are
-# under `just android`, from apps/android/justfile.
+# under `just android`, from apps/android/justfile, and the iOS app's under
+# `just ios`, from apps/ios/justfile.
 
 mod android "apps/android"
+mod ios "apps/ios"
 
 [private]
 default:
@@ -11,7 +13,7 @@ default:
 dev:
     pnpm dev
 
-# Format check, lint, typecheck, and the Android client check, as CI runs
+# Format check, lint, typecheck, and the native API client checks, as CI runs
 verify:
     pnpm verify
 

@@ -1,0 +1,9 @@
+# Generated: XcodeGen writes the project and Info.plist, scripts/version.sh
+# the version, and scripts/appicon.sh copies the icon from brand/ios.
+Matinee.xcodeproj/
+Matinee/Info.plist
+Config/
+Matinee/Resources/AppIcon.xcassets/
+# Build output, kept here so agents' builds don't share one.
+build/
+DerivedData/

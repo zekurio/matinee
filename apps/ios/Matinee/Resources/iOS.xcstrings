@@ -1,0 +1,222 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "ios_appearance_language_description": {
+      "comment": "Under Interface language in Settings, Appearance: the row opens Matinee's page in the iOS Settings app, where its language is picked.",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wird in der Einstellungen-App gewählt"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Picked in the Settings app"
+          }
+        }
+      }
+    },
+    "ios_connect_local_network": {
+      "comment": "Under a failed connect to a server on the local network; iOS asks for Local Network access, which the person can turn on in the app's settings.",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wenn der Server in deinem lokalen Netzwerk ist, schalte in den Einstellungen „Lokales Netzwerk“ für Matinee ein."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "If the server is on your local network, turn on Local Network for Matinee in Settings."
+          }
+        }
+      }
+    },
+    "ios_diagnostics_share": {
+      "comment": "Row in Settings, About, Playback report: opens the share sheet with the report's text.",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bericht teilen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Share report"
+          }
+        }
+      }
+    },
+    "ios_images_from_files": {
+      "comment": "In the image editor's Upload menu: pick the image from the Files app. Android has one picker, iOS two.",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Datei auswählen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose File"
+          }
+        }
+      }
+    },
+    "ios_images_from_photos": {
+      "comment": "In the image editor's Upload menu: pick the image from the photo library. Android has one picker, iOS two.",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fotomediathek"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Photo Library"
+          }
+        }
+      }
+    },
+    "ios_open_settings": {
+      "comment": "Button that opens Matinee's page in the iOS Settings app.",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einstellungen öffnen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Settings"
+          }
+        }
+      }
+    },
+    "ios_playback_audio_remember": {
+      "comment": "Switch in Settings, Playback, Languages: an audio track picked in the player comes back when the file plays again. The web's playback.audio.remember; Android has no switch for it yet.",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Audioauswahl merken"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remember audio picks"
+          }
+        }
+      }
+    },
+    "ios_progress_watched": {
+      "comment": "VoiceOver's value for the bar of how much of a file was watched.",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld %% gesehen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld%% watched"
+          }
+        }
+      }
+    },
+    "ios_settings_subtitles_system_where": {
+      "comment": "Under Caption preferences in Settings, Subtitles: where iOS keeps its caption style, which no app can open directly.",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In Einstellungen › Bedienungshilfen › Untertitel & erweiterte Untertitel"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In Settings › Accessibility › Subtitles & Captioning"
+          }
+        }
+      }
+    },
+    "ios_settings_version": {
+      "comment": "Under the server's address in Settings: the app and its version, as Android's settings_version says Matinee for Android.",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Matinee für iOS %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Matinee for iOS %@"
+          }
+        }
+      }
+    },
+    "ios_title_trailer": {
+      "comment": "The button beside Play on a title's page, which opens the trailer on YouTube; the web's title.trailer, which Android doesn't have yet.",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trailer"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trailer"
+          }
+        }
+      }
+    },
+    "ios_title_trailer_hint": {
+      "comment": "What the trailer button does, for VoiceOver; the web's title.trailerHint.",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trailer auf YouTube ansehen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Watch the trailer on YouTube"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

@@ -1,0 +1,123 @@
+# The Xcode project, for XcodeGen. Matinee.xcodeproj is generated from this
+# and git-ignored: run `just generate` (or `nix run nixpkgs#xcodegen --
+# generate`) in apps/ios. Sources and resources are picked up by folder, so
+# adding a file never edits this spec.
+name: Matinee
+
+options:
+  bundleIdPrefix: io.github.zekurio
+  deploymentTarget:
+    iOS: "18.0"
+  createIntermediateGroups: true
+  # Before each generate: the version from the root package.json, as
+  # everywhere else, into Config/Version.xcconfig, and the app icon from
+  # brand/ios into Matinee/Resources/AppIcon.xcassets, both git-ignored.
+  preGenCommand: scripts/version.sh && scripts/appicon.sh
+
+packages:
+  MatineeCore:
+    path: Packages/MatineeCore
+  Nuke:
+    url: https://github.com/kean/Nuke
+    exactVersion: 13.2.3
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    # Text the app shows comes from the generated accessors in
+    # UI/Strings.gen.swift, so nothing should be extracted from code into
+    # the catalogs, which Xcode would otherwise rewrite on every build.
+    SWIFT_EMIT_LOC_STRINGS: NO
+    LOCALIZATION_PREFERS_STRING_CATALOGS: YES
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    DEAD_CODE_STRIPPING: YES
+
+targets:
+  Matinee:
+    type: application
+    platform: iOS
+    configFiles:
+      Debug: Config/Version.xcconfig
+      Release: Config/Version.xcconfig
+    sources:
+      - path: Matinee
+        excludes:
+          - Info.plist
+      # The font is Android's copy, so there's one in the repository.
+      - path: ../android/app/src/main/res/font/red_hat_text.ttf
+        group: Matinee/Resources
+        buildPhase: resources
+    dependencies:
+      - package: MatineeCore
+      - package: Nuke
+        product: Nuke
+      - package: Nuke
+        product: NukeUI
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.zekurio.matinee
+        PRODUCT_NAME: Matinee
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SUPPORTS_MACCATALYST: NO
+        SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
+        SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD: NO
+        # Swift 6 with the main actor as the default: views and the state
+        # they own need no annotations, and what runs elsewhere says so.
+        SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+        SWIFT_APPROACHABLE_CONCURRENCY: YES
+        SWIFT_STRICT_CONCURRENCY: complete
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: ""
+        ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: NO
+        GENERATE_INFOPLIST_FILE: NO
+        CURRENT_PROJECT_VERSION: "1"
+      configs:
+        Debug:
+          SWIFT_ACTIVE_COMPILATION_CONDITIONS: DEBUG
+    info:
+      path: Matinee/Info.plist
+      properties:
+        CFBundleDisplayName: Matinee
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        CFBundleDevelopmentRegion: en
+        CFBundleAllowMixedLocalizations: false
+        CFBundleLocalizations: [en, de]
+        LSRequiresIPhoneOS: true
+        ITSAppUsesNonExemptEncryption: false
+        UILaunchScreen:
+          UIColorName: LaunchBackground
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        UISupportedInterfaceOrientations:
+          [
+            UIInterfaceOrientationPortrait,
+            UIInterfaceOrientationLandscapeLeft,
+            UIInterfaceOrientationLandscapeRight,
+          ]
+        UISupportedInterfaceOrientations~ipad:
+          [
+            UIInterfaceOrientationPortrait,
+            UIInterfaceOrientationPortraitUpsideDown,
+            UIInterfaceOrientationLandscapeLeft,
+            UIInterfaceOrientationLandscapeRight,
+          ]
+        # Red Hat Text, a variable font; Theme.swift names its weights.
+        UIAppFonts: [red_hat_text.ttf]
+        # Where the browser hands back the sign-in code, matinee://auth/callback.
+        CFBundleURLTypes:
+          - CFBundleURLName: io.github.zekurio.matinee
+            CFBundleURLSchemes: [matinee]
+        # Playback goes on with the screen locked and in picture in picture.
+        UIBackgroundModes: [audio]
+        # English here; every language's words, these included, are in
+        # Resources/InfoPlist.xcstrings.
+        NSLocalNetworkUsageDescription: Matinee connects to your media server on your local network.
+        NSCameraUsageDescription: Matinee uses the camera to scan the code a TV shows to sign it in.
+        # Matinee is self-hosted: servers on a home network often speak plain
+        # HTTP, which Android's network_security_config allows everywhere, so
+        # this does too. A certificate from the owner's own authority works
+        # once its profile is installed and trusted in Settings, as iOS has it.
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: true
+          NSAllowsLocalNetworking: true
