@@ -3,12 +3,14 @@ package io.github.zekurio.matinee
 import android.content.Intent
 import android.content.res.Configuration
 import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.lifecycleScope
 import io.github.zekurio.matinee.launcher.WatchNextLink
 import io.github.zekurio.matinee.auth.BrowserSignIn
@@ -29,11 +31,17 @@ class MainActivity : ComponentActivity() {
         app.theme.setSystemDark(systemDark(resources.configuration))
         systemBars(Palette.isDark)
         super.onCreate(savedInstanceState)
+        window.setBackgroundDrawable(ColorDrawable(Palette.Background.toArgb()))
         if (savedInstanceState == null) handle(intent)
         setContent {
             // The system bars' icons follow the theme on screen, not the device.
             val dark = Palette.isDark
             LaunchedEffect(dark) { systemBars(dark) }
+            // So does the window behind the pages, which shows wherever
+            // Compose hasn't drawn yet, as when the app comes back. The
+            // manifest's theme can only give it Matinee's dark.
+            val background = Palette.Background
+            LaunchedEffect(background) { window.setBackgroundDrawable(ColorDrawable(background.toArgb())) }
             MatineeTheme {
                 MatineeRoot(app.session, signInError)
             }

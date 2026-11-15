@@ -25,6 +25,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import io.github.zekurio.matinee.ui.components.ErrorSection
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.ArtworkSize
 import io.github.zekurio.matinee.api.MediaItem
@@ -295,11 +296,12 @@ private fun SeasonPage(title: Title, season: Season) {
             when (val state = items.state) {
                 Load.Loading -> item(key = "loading") { LoadingBox(Modifier.padding(32.dp)) }
                 is Load.Failed -> item(key = "error") {
-                    Text(
-                        stringResource(R.string.title_episodes_error, state.message),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Palette.Muted,
-                        modifier = Modifier.padding(horizontal = Gutter),
+                    ErrorSection(
+                        stringResource(R.string.title_episodes_failed),
+                        state.message,
+                        items::reload,
+                        retrying = items.refreshing,
+                        disconnected = state.disconnected,
                     )
                 }
                 is Load.Ready -> items(state.value, key = { it.id }) { item ->

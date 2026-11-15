@@ -25,6 +25,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -42,6 +43,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.SavedStateHandle
+import io.github.zekurio.matinee.ui.components.ErrorState
+import io.github.zekurio.matinee.ui.isDisconnect
+import io.github.zekurio.matinee.ui.describeFailure
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.DirectoryListing
 import io.github.zekurio.matinee.api.Library
@@ -108,7 +112,7 @@ fun LibrariesSettings() {
         }
     }
     SettingsScaffold(stringResource(R.string.settings_admin_libraries)) {
-        loaded(loader, { stringResource(R.string.web_libraries_loadFailed, it) }) { list ->
+        loaded(loader) { list ->
             item(key = "list") {
                 Column {
                     if (list.isEmpty()) {
@@ -421,12 +425,17 @@ fun FolderPickerScreen(start: String?, added: List<String>) {
     var path by rememberSaveable { mutableStateOf(start) }
     var listing by remember { mutableStateOf<DirectoryListing?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(path) {
+    var disconnected by remember { mutableStateOf(false) }
+    // Moved to open the same folder again after it failed.
+    var attempt by remember { mutableIntStateOf(0) }
+    val res = LocalResources.current
+    LaunchedEffect(path, attempt) {
         error = null
         listing = try {
             api.admin.browse(path)
         } catch (e: java.io.IOException) {
-            error = e.message
+            error = describeFailure(res, e)
+            disconnected = isDisconnect(e)
             null
         }
     }
@@ -455,7 +464,13 @@ fun FolderPickerScreen(start: String?, added: List<String>) {
                         )
                     }
                 }
-                error != null -> Text(error.orEmpty(), color = Palette.Danger, style = MaterialTheme.typography.bodySmall, modifier = Modifier.align(Alignment.Center).padding(Gutter))
+                error != null -> ErrorState(
+                    stringResource(R.string.folders_load_failed),
+                    error,
+                    { attempt++ },
+                    Modifier.align(Alignment.Center),
+                    disconnected = disconnected,
+                )
                 else -> Spinner(Modifier.align(Alignment.Center), size = 32.dp, color = Palette.Accent)
             }
         }

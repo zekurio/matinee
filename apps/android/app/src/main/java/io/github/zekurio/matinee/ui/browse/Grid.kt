@@ -24,15 +24,21 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import io.github.zekurio.matinee.ui.components.homeAction
 import io.github.zekurio.matinee.api.MatineeApi
 import io.github.zekurio.matinee.api.TitleList
 import io.github.zekurio.matinee.api.TitleSummary
 import io.github.zekurio.matinee.app
-import io.github.zekurio.matinee.ui.components.ErrorBox
+import io.github.zekurio.matinee.R
+import io.github.zekurio.matinee.ui.components.ErrorState
+import io.github.zekurio.matinee.ui.components.ErrorSection
+import io.github.zekurio.matinee.ui.describeFailure
+import io.github.zekurio.matinee.ui.isDisconnect
 import io.github.zekurio.matinee.ui.components.PosterCard
 import io.github.zekurio.matinee.ui.kit.Gutter
 import io.github.zekurio.matinee.ui.kit.Spinner
@@ -45,11 +51,18 @@ import kotlinx.coroutines.launch
 private const val PAGE = 60
 
 /** A list of titles the server hands out a page at a time, loading more as it scrolls. */
-class TitlePages(private val fetch: suspend (offset: Int, limit: Int) -> TitleList) : ViewModel() {
+class TitlePages(
+    private val describe: (Exception) -> String,
+    private val fetch: suspend (offset: Int, limit: Int) -> TitleList,
+) : ViewModel() {
     val items = mutableStateListOf<TitleSummary>()
     var total by mutableStateOf<Int?>(null)
         private set
     var error by mutableStateOf<String?>(null)
+        private set
+
+    /** [error] came from not reaching the server. */
+    var disconnected by mutableStateOf(false)
         private set
     var loading by mutableStateOf(false)
         private set
@@ -73,7 +86,8 @@ class TitlePages(private val fetch: suspend (offset: Int, limit: Int) -> TitleLi
             } catch (e: CancellationException) {
                 throw e
             } catch (e: IOException) {
-                error = e.message ?: e.javaClass.simpleName
+                error = describe(e)
+                disconnected = isDisconnect(e)
             } finally {
                 loading = false
             }
@@ -94,7 +108,7 @@ fun rememberTitlePages(key: String, fetch: suspend MatineeApi.(offset: Int, limi
     val app = LocalContext.current.app
     val pages: TitlePages = viewModel(key = key) {
         val api = app.session.requireApi()
-        TitlePages { offset, limit -> api.fetch(offset, limit) }
+        TitlePages({ describeFailure(app.resources, it) }) { offset, limit -> api.fetch(offset, limit) }
     }
     // Marks changed elsewhere, like a show watched to the end: show them.
     val version = app.viewer.version
@@ -143,7 +157,17 @@ fun PosterGrid(
         val error = pages.error
         when {
             error != null && pages.items.isEmpty() -> item(span = { GridItemSpan(maxLineSpan) }) {
-                Box(Modifier.padding(top = 48.dp)) { ErrorBox(error, null, pages::more) }
+                ErrorState(
+                    stringResource(R.string.grid_load_failed),
+                    error,
+                    pages::more,
+                    Modifier.fillMaxWidth().padding(vertical = 48.dp),
+                    disconnected = pages.disconnected,
+                    onHome = homeAction(),
+                )
+            }
+            error != null -> item(span = { GridItemSpan(maxLineSpan) }) {
+                ErrorSection(stringResource(R.string.grid_more_failed), null, pages::more)
             }
             pages.loading -> item(span = { GridItemSpan(maxLineSpan) }) {
                 Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {

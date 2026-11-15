@@ -4,6 +4,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import io.github.zekurio.matinee.api.FeaturedTitle
 import io.github.zekurio.matinee.api.HomeRecommendations
 import io.github.zekurio.matinee.api.Library
@@ -31,7 +33,9 @@ class HomeLoaders(
  * offline Home as they come. Back on Home, what's in progress may have
  * moved on, here or on another device, so those refresh on resume, and
  * the recommendations once they're old. Featured stays: it's picked at
- * random, so fetching it again would swap it under the person.
+ * random, so fetching it again would swap it under the person. Home
+ * leaves out what failed, though, so a failed one tries again on return,
+ * whichever it is.
  */
 @Composable
 fun rememberHomeLoaders(): HomeLoaders {
@@ -47,6 +51,9 @@ fun rememberHomeLoaders(): HomeLoaders {
     RefreshOnResume(libraries, resume, nextUp)
     // They change only when the server works them out again, which takes a while.
     RefreshOnResume(recommendations, maxAgeMs = 10 * 60_000L)
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        listOf(featured, recommendations).forEach { if (it.state is Load.Failed) it.refreshIfStale() }
+    }
     return remember(libraries, resume, nextUp, featured, recommendations) {
         HomeLoaders(libraries, resume, nextUp, featured, recommendations)
     }

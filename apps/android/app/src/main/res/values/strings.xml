@@ -557,9 +557,9 @@
     <string name="player_next_episode">Next episode</string>
 
     <!-- Downloads -->
-    <string name="error_unreachable">The server can\'t be reached right now.</string>
+    <string name="error_unreachable">The server isn\'t answering.</string>
     <string name="server_unreachable">Server not reachable</string>
-    <string name="error_connection_lost">The connection to the server broke off.</string>
+    <string name="error_connection_lost">The connection dropped.</string>
     <string name="player_fill">Fill screen</string>
     <string name="player_fit">Whole picture</string>
     <string name="player_picture">Picture</string>

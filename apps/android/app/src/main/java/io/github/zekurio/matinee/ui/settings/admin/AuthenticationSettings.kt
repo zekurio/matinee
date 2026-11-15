@@ -110,7 +110,7 @@ fun AuthenticationSettings() {
         onReset = { form?.reset() },
         onSave = { form?.let { loader.show(api.admin.auth.update(it.input())) } },
     ) {
-        loaded(loader, { stringResource(R.string.web_oidc_loadFailed, it) }) { _ ->
+        loaded(loader) { _ ->
             if (form != null) item(key = "form") { AuthForm(form) }
         }
     }

@@ -25,6 +25,8 @@ import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import io.github.zekurio.matinee.ui.components.ErrorState
+import io.github.zekurio.matinee.ui.describeFailure
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.DownloadResolution
 import io.github.zekurio.matinee.api.DownloadVideoPreset
@@ -93,7 +95,7 @@ fun DownloadFilesSheet(files: FileSet, onDismiss: () -> Unit) {
             results = initial
             items = loaded
         } catch (e: IOException) {
-            error = res.getString(R.string.downloads_all_load_failed, e.message.orEmpty())
+            error = describeFailure(res, e)
         }
     }
 
@@ -106,7 +108,7 @@ fun DownloadFilesSheet(files: FileSet, onDismiss: () -> Unit) {
             results = downloads.resolve(api, loaded.filter { stored[it.id] == null }, wishes)
             resolvedWishes = wishes
         } catch (e: IOException) {
-            error = e.message
+            error = describeFailure(res, e)
         }
     }
 
@@ -126,11 +128,11 @@ fun DownloadFilesSheet(files: FileSet, onDismiss: () -> Unit) {
             Gap(12.dp)
             val list = items
             when {
-                error != null -> Text(
-                    error.orEmpty(),
-                    color = Palette.Danger,
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(horizontal = 20.dp),
+                error != null -> ErrorState(
+                    stringResource(R.string.downloads_files_failed),
+                    error,
+                    null,
+                    Modifier.fillMaxWidth().padding(vertical = 24.dp),
                 )
                 list == null || resolved == null -> Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
                     Spinner(size = 32.dp, color = Palette.Accent)

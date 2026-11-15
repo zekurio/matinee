@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.currentStateAsState
+import io.github.zekurio.matinee.ui.components.ErrorSection
 import io.github.zekurio.matinee.BuildConfig
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.DEFAULT_PLAYBACK_PREFERENCES
@@ -305,7 +306,13 @@ private fun AccountPage() {
         when (val state = sessions.state) {
             Load.Loading -> item(key = "loading") { Text("…", color = Palette.Muted) }
             is Load.Failed -> item(key = "failed") {
-                Text(stringResource(R.string.account_sessions_load_failed, state.message), color = Palette.Muted, style = MaterialTheme.typography.bodyMedium)
+                ErrorSection(
+                    stringResource(R.string.account_sessions_failed),
+                    state.message,
+                    sessions::reload,
+                    retrying = sessions.refreshing,
+                    disconnected = state.disconnected,
+                )
             }
             is Load.Ready -> items(state.value, key = { it.id }) { item ->
                 SessionRow(item) {

@@ -35,6 +35,7 @@ import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import io.github.zekurio.matinee.ui.components.homeAction
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.CatalogBrowseInput
 import io.github.zekurio.matinee.api.CatalogBrowseOptions
@@ -49,6 +50,9 @@ import io.github.zekurio.matinee.api.TitleKind
 import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.LocalNavigator
 import io.github.zekurio.matinee.ui.TopBar
+import io.github.zekurio.matinee.ui.components.ErrorSection
+import io.github.zekurio.matinee.ui.components.ErrorState
+import io.github.zekurio.matinee.ui.components.ErrorBox
 import io.github.zekurio.matinee.ui.components.ActiveFilter
 import io.github.zekurio.matinee.ui.components.ActiveFilterChips
 import io.github.zekurio.matinee.ui.components.ChoiceChips
@@ -208,12 +212,12 @@ fun CatalogBrowseScreen(kind: String) {
         }
         when (val state = options.state) {
             Load.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Spinner(size = 32.dp, color = Palette.Accent) }
-            is Load.Failed -> Message(Lucide.CloudOff, stringResource(R.string.web_discover_browse_optionsFailed), stringResource(R.string.web_discover_failedHint)) {
-                MatineeButton(onClick = options::reload, look = ButtonLook.Outline) {
-                    LucideIcon(Lucide.RotateCw, null, size = 16.dp)
-                    Text(stringResource(R.string.web_discover_retry))
-                }
-            }
+            is Load.Failed -> ErrorBox(
+                stringResource(R.string.browse_filters_failed),
+                stringResource(R.string.web_discover_failedHint),
+                options::reload,
+                icon = Lucide.CloudOff,
+            )
             is Load.Ready -> if (!state.value.enabled) {
                 Message(Lucide.Compass, stringResource(R.string.web_discover_off), stringResource(R.string.web_discover_offHint))
             } else {
@@ -392,12 +396,14 @@ private fun BrowseGrid(
             item(span = { GridItemSpan(maxLineSpan) }, key = "first") {
                 LaunchedEffect(pages) { more() }
                 when {
-                    pages.error -> Message(Lucide.CloudOff, stringResource(R.string.web_discover_browse_failed), null) {
-                        MatineeButton(onClick = { more() }, look = ButtonLook.Outline) {
-                            LucideIcon(Lucide.RotateCw, null, size = 16.dp)
-                            Text(stringResource(R.string.web_discover_retry))
-                        }
-                    }
+                    pages.error -> ErrorState(
+                        stringResource(R.string.grid_load_failed),
+                        stringResource(R.string.web_discover_failedHint),
+                        { more() },
+                        Modifier.fillMaxWidth().padding(vertical = 48.dp),
+                        icon = Lucide.CloudOff,
+                        onHome = homeAction(),
+                    )
                     pages.loading || pages.next != null -> Box(Modifier.fillMaxWidth().padding(48.dp), contentAlignment = Alignment.Center) {
                         Spinner(size = 32.dp, color = Palette.Accent)
                     }
@@ -420,11 +426,7 @@ private fun BrowseGrid(
                 Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
                     when {
                         pages.loading -> Spinner(size = 32.dp, color = Palette.Accent)
-                        pages.error -> Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(stringResource(R.string.web_discover_moreFailed), style = MaterialTheme.typography.bodyMedium, color = Palette.Muted)
-                            Gap(8.dp)
-                            MatineeButton(onClick = { more() }, look = ButtonLook.Outline) { Text(stringResource(R.string.web_discover_retry)) }
-                        }
+                        pages.error -> ErrorSection(stringResource(R.string.grid_more_failed), null, { more() })
                         pages.next == null -> Text(stringResource(R.string.web_discover_end), style = MaterialTheme.typography.bodyMedium, color = Palette.Muted)
                     }
                 }

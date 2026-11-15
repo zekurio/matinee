@@ -17,10 +17,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableStateMapOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
@@ -30,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.Library
 import io.github.zekurio.matinee.api.MediaItem
+import io.github.zekurio.matinee.api.ShelfEntry
 import io.github.zekurio.matinee.ui.requests.HomeAskedRail
 import io.github.zekurio.matinee.api.TitleSort
 import io.github.zekurio.matinee.api.isAdmin
@@ -39,6 +37,7 @@ import io.github.zekurio.matinee.ui.Loader
 import io.github.zekurio.matinee.ui.LocalNavigator
 import io.github.zekurio.matinee.ui.LocalOffline
 import io.github.zekurio.matinee.ui.LocalUser
+import io.github.zekurio.matinee.ui.RefreshOnResume
 import io.github.zekurio.matinee.ui.StatusBarScrim
 import io.github.zekurio.matinee.ui.components.DisconnectedAction
 import io.github.zekurio.matinee.ui.components.EpisodeCard
@@ -72,8 +71,6 @@ private fun OnlineHomeScreen() {
     val resume = loaders.resume
     val nextUp = loaders.nextUp
     val featured = loaders.featured
-    // Shelves on screen whose refresh failed, for the one notice that says so.
-    val staleShelves = remember { mutableStateMapOf<String, Loader<*>>() }
     val config = LocalConfiguration.current
     // On a phone, short enough that two rows of stills, captions and all,
     // fit under it above the bottom bar: 328dp of a 20:9 phone's 952. Under
@@ -82,14 +79,13 @@ private fun OnlineHomeScreen() {
     val heroHeight = if (isWide()) maxOf(config.screenHeightDp * 0.68f, 460f).dp
     else (config.screenHeightDp * 0.345f).coerceIn(320f, 400f).dp
 
-    val sections = listOf(libraries, resume, nextUp, featured)
     if (failedOutright(libraries.state, listOf(resume.state, nextUp.state, featured.state))) {
         Column(Modifier.fillMaxSize()) {
             AppHeader()
             ErrorBox(
                 stringResource(R.string.home_failed),
                 (libraries.state as? Load.Failed)?.message,
-                { sections.forEach { it.reload() } },
+                { loaders.all.forEach { it.reload() } },
                 aboveTabBar = true,
                 disconnected = (libraries.state as? Load.Failed)?.disconnected == true,
             )
@@ -97,9 +93,13 @@ private fun OnlineHomeScreen() {
         return
     }
 
-    val stale = sections + staleShelves.values
-    val staleError = stale.firstNotNullOfOrNull { it.refreshError }
     val libs = (libraries.state as? Load.Ready)?.value
+    // Every shelf loads with the page, as on the web, so the page knows
+    // which failed before they scroll into view.
+    val shelves = libs.orEmpty().map { library -> key(library.id) { library to rememberShelf(library) } }
+    // What failed is left out, as on the web, and loads again when Home
+    // comes back. Only a Home with nothing at all says so, above.
+    val onPage = loaders.all + shelves.map { it.second }
     val listState = rememberLazyListState()
     Box(Modifier.fillMaxSize()) {
         LazyColumn(
@@ -109,34 +109,15 @@ private fun OnlineHomeScreen() {
             verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
             item(key = "hero") {
-                // Showing what loaded before while the server can't be reached: the icon, up top.
-                val top: @Composable () -> Unit = { AppHeader { DisconnectedAction(*stale.toTypedArray()) } }
+                val top: @Composable () -> Unit = {
+                    // Showing what loaded before while the server can't be reached: the icon, up top.
+                    AppHeader { DisconnectedAction(*onPage.toTypedArray()) }
+                }
                 when (val state = featured.state) {
                     Load.Loading -> HeroSkeleton(Modifier.height(heroHeight), top)
-                    is Load.Failed -> Column {
-                        top()
-                        Notice(
-                            stringResource(R.string.home_featured_failed),
-                            state.message,
-                            featured::reload,
-                            Modifier.padding(top = 8.dp),
-                            disconnected = state.disconnected,
-                        )
-                    }
+                    is Load.Failed -> Column { top() }
                     is Load.Ready -> if (state.value.isNotEmpty()) Hero(state.value, Modifier.height(heroHeight), top)
                     else Column { top() }
-                }
-            }
-
-            // Other failures to refresh still say what happened; not reaching the server is the header's icon.
-            if (staleError != null && stale.any { it.refreshError != null && !it.refreshDisconnected }) {
-                item(key = "stale") {
-                    Notice(
-                        stringResource(R.string.loading_stale),
-                        staleError,
-                        { stale.filter { it.refreshError != null }.forEach { it.reload() } },
-                        retrying = stale.any { it.refreshError != null && it.refreshing },
-                    )
                 }
             }
 
@@ -145,18 +126,15 @@ private fun OnlineHomeScreen() {
                 return@LazyColumn
             }
 
-            episodeRail("continue", R.string.browse_continue_watching, R.string.home_continue_failed, resume)
-            episodeRail("nextUp", R.string.browse_next_up, R.string.home_next_up_failed, nextUp)
+            episodeRail("continue", R.string.browse_continue_watching, resume)
+            episodeRail("nextUp", R.string.browse_next_up, nextUp)
             recommendationRails(loaders.recommendations)
             item(key = "asked") { HomeAskedRail() }
-            when (val state = libraries.state) {
-                Load.Loading -> item(key = "shelves-loading") { RailSkeleton(null, RailArt.Poster) }
-                is Load.Failed -> item(key = "shelves-failed") {
-                    Notice(stringResource(R.string.home_load_failed), state.message, libraries::reload, retrying = libraries.refreshing, disconnected = state.disconnected)
-                }
-                is Load.Ready -> state.value.forEach { library ->
-                    item(key = "shelf-${library.id}") { LibraryShelf(library, staleShelves) }
-                }
+            if (libraries.state == Load.Loading) {
+                item(key = "shelves-loading") { RailSkeleton(null, RailArt.Poster) }
+            }
+            shelves.forEach { (library, entries) ->
+                if (entries.state !is Load.Failed) item(key = "shelf-${library.id}") { LibraryShelf(library, entries) }
             }
         }
         StatusBarScrim(listState)
@@ -166,14 +144,11 @@ private fun OnlineHomeScreen() {
 /**
  * Continue watching or Next up. Loading and empty show nothing: an empty
  * one is the usual case for someone not in the middle of anything, and a
- * placeholder there would only fold away. A failed one says so.
+ * placeholder there would only fold away. A failed one is left out too.
  */
-private fun LazyListScope.episodeRail(key: String, @StringRes title: Int, @StringRes failed: Int, loader: Loader<List<MediaItem>>) {
+private fun LazyListScope.episodeRail(key: String, @StringRes title: Int, loader: Loader<List<MediaItem>>) {
     when (val rail = railState(loader.state)) {
-        RailState.Loading, RailState.Empty -> Unit
-        is RailState.Failed -> item(key = key) {
-            RailFailure(stringResource(title), stringResource(failed), rail.message, loader::reload, retrying = loader.refreshing, disconnected = rail.disconnected)
-        }
+        RailState.Loading, RailState.Empty, is RailState.Failed -> Unit
         is RailState.Shown -> item(key = key) { EpisodeRail(stringResource(title), rail.items) }
     }
 }
@@ -190,29 +165,17 @@ private fun EpisodeRail(title: String, items: List<MediaItem>) {
     }
 }
 
-/** A library's newest titles. One whose refresh failed puts itself in [stale] while it's on screen. */
+/** A library's newest titles. One that failed isn't shown. */
 @Composable
-private fun LibraryShelf(library: Library, stale: MutableMap<String, Loader<*>>) {
+private fun LibraryShelf(library: Library, entries: Loader<List<ShelfEntry>>) {
     val nav = LocalNavigator.current
     // Also refreshes when it scrolls back into view, once the last answer is old enough.
-    val entries = rememberShelf(library)
-    val refreshFailed = entries.refreshError != null
-    DisposableEffect(entries, refreshFailed) {
-        if (refreshFailed) stale[library.id] = entries else stale.remove(library.id)
-        onDispose { stale.remove(library.id) }
-    }
+    RefreshOnResume(entries)
     val title = stringResource(R.string.browse_recently_added, library.name)
     val onTitleClick = if (library.itemCount > 0) ({ nav.library(library.id, TitleSort.RECENT) }) else null
     when (val state = railState(entries.state)) {
         RailState.Loading -> RailSkeleton(title, RailArt.Poster, onTitleClick)
-        is RailState.Failed -> RailFailure(
-            title,
-            stringResource(R.string.home_shelf_failed),
-            state.message,
-            entries::reload,
-            retrying = entries.refreshing,
-            disconnected = state.disconnected,
-        )
+        is RailState.Failed -> Unit
         RailState.Empty -> Rail(title, onTitleClick = onTitleClick) {
             item {
                 Text(

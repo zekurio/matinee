@@ -34,6 +34,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import io.github.zekurio.matinee.ui.components.ErrorSection
+import io.github.zekurio.matinee.ui.isDisconnect
+import io.github.zekurio.matinee.ui.describeFailure
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.CatalogInput
 import io.github.zekurio.matinee.api.RequestItem
@@ -49,13 +52,11 @@ import io.github.zekurio.matinee.ui.components.Rail
 import io.github.zekurio.matinee.ui.components.RailArt
 import io.github.zekurio.matinee.ui.components.art
 import io.github.zekurio.matinee.ui.components.railItemWidth
-import io.github.zekurio.matinee.ui.kit.ButtonLook
 import io.github.zekurio.matinee.ui.kit.Chip
 import io.github.zekurio.matinee.ui.kit.Gap
 import io.github.zekurio.matinee.ui.kit.Gutter
 import io.github.zekurio.matinee.ui.kit.Lucide
 import io.github.zekurio.matinee.ui.kit.LucideIcon
-import io.github.zekurio.matinee.ui.kit.MatineeButton
 import io.github.zekurio.matinee.ui.kit.Spinner
 import io.github.zekurio.matinee.ui.rememberLoader
 import io.github.zekurio.matinee.ui.theme.Palette
@@ -172,6 +173,7 @@ private class AskedPages {
     var done by mutableStateOf(false)
     var loading by mutableStateOf(false)
     var error by mutableStateOf<String?>(null)
+    var disconnected by mutableStateOf(false)
 }
 
 /**
@@ -184,6 +186,7 @@ fun AskedScreen() {
     val hub = LocalRequests.current
     var filter by rememberSaveable { mutableStateOf(IN_PROGRESS) }
     val pages = remember(filter, hub.version) { AskedPages() }
+    val res = LocalResources.current
     val scope = rememberCoroutineScope()
     val more = {
         if (!pages.loading && !pages.done) {
@@ -198,7 +201,8 @@ fun AskedScreen() {
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: IOException) {
-                    pages.error = e.message ?: ""
+                    pages.error = describeFailure(res, e)
+                    pages.disconnected = isDisconnect(e)
                 } finally {
                     pages.loading = false
                 }
@@ -216,7 +220,7 @@ fun AskedScreen() {
         val error = pages.error
         when {
             error != null && pages.items.isEmpty() ->
-                ErrorBox(stringResource(R.string.web_ask_mine_error, error), null, { more() })
+                ErrorBox(stringResource(R.string.asked_load_failed), error, { more() }, disconnected = pages.disconnected)
             !pages.done && pages.items.isEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Spinner(size = 32.dp, color = Palette.Accent)
             }
@@ -258,7 +262,7 @@ fun AskedScreen() {
                         LaunchedEffect(pages.items.size) { if (pages.error == null) more() }
                         Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
                             if (pages.error != null) {
-                                MatineeButton(onClick = { more() }, look = ButtonLook.Outline) { Text(stringResource(R.string.common_retry)) }
+                                ErrorSection(stringResource(R.string.list_more_failed), null, { more() })
                             } else {
                                 Spinner(size = 32.dp, color = Palette.Accent)
                             }

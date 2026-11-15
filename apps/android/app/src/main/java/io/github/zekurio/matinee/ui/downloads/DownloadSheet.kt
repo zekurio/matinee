@@ -35,6 +35,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import io.github.zekurio.matinee.ui.components.ErrorState
+import io.github.zekurio.matinee.ui.describeFailure
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.DownloadPlan
 import io.github.zekurio.matinee.api.DownloadResolution
@@ -103,7 +105,7 @@ fun DownloadSheet(item: MediaItem, onDismiss: () -> Unit) {
             picked = startingChoice(downloads, ready.choices.presets)
             source = loaded
         } catch (e: IOException) {
-            error = e.message ?: failure
+            error = describeFailure(context.resources, e)
         }
     }
 
@@ -132,7 +134,7 @@ fun DownloadSheet(item: MediaItem, onDismiss: () -> Unit) {
                     }
                 }
             } catch (e: IOException) {
-                error = e.message ?: failure
+                error = describeFailure(context.resources, e)
             }
         }
         planning = false
@@ -156,7 +158,7 @@ fun DownloadSheet(item: MediaItem, onDismiss: () -> Unit) {
             }
             Gap(12.dp)
             when {
-                error != null -> Text(error.orEmpty(), color = Palette.Danger, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(horizontal = 20.dp))
+                error != null -> ErrorState(failure, error, null, Modifier.fillMaxWidth().padding(vertical = 24.dp))
                 loaded == null -> Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
                     Spinner(size = 32.dp, color = Palette.Accent)
                 }

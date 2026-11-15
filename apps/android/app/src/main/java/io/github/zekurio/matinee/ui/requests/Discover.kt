@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -35,6 +34,7 @@ import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import io.github.zekurio.matinee.ui.components.homeAction
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.CatalogInput
 import io.github.zekurio.matinee.api.CatalogPage
@@ -45,9 +45,13 @@ import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.Loader
 import io.github.zekurio.matinee.ui.LocalNavigator
 import io.github.zekurio.matinee.ui.TopBar
+import io.github.zekurio.matinee.ui.components.ErrorBox
+import io.github.zekurio.matinee.ui.components.ErrorSection
+import io.github.zekurio.matinee.ui.components.ErrorState
 import io.github.zekurio.matinee.ui.components.LocalActions
 import io.github.zekurio.matinee.ui.components.LocalApi
 import io.github.zekurio.matinee.ui.components.LocalSnackbar
+import io.github.zekurio.matinee.ui.components.RailFailed
 import io.github.zekurio.matinee.ui.components.Rail
 import io.github.zekurio.matinee.ui.components.RailArt
 import io.github.zekurio.matinee.ui.components.railItemWidth
@@ -137,7 +141,7 @@ private fun DiscoverRow(rail: DiscoverRail, page: Loader<CatalogPage>) {
     val title = railName(rail, res)
     when (val state = page.state) {
         Load.Loading -> io.github.zekurio.matinee.ui.home.RailSkeleton(title, RailArt.Poster)
-        is Load.Failed -> RailFailed(title, page::reload)
+        is Load.Failed -> RailFailed(title, page::reload, page.refreshing, state.disconnected)
         is Load.Ready -> {
             val hidden = LocalActions.current.hidden
             val items = state.value.items.filter { !recommended(rail) || it.ref.key !in hidden }.take(RAIL_CARDS)
@@ -193,37 +197,17 @@ fun NotInterestedSheet(item: CatalogTitleSummary, onDismiss: () -> Unit) {
     }
 }
 
-/** A row under its heading whose cards didn't load, with a retry. */
-@Composable
-fun RailFailed(title: String, onRetry: () -> Unit) {
-    Column(Modifier.fillMaxWidth()) {
-        io.github.zekurio.matinee.ui.components.SectionTitle(title, Modifier.padding(horizontal = Gutter))
-        Gap(12.dp)
-        Row(Modifier.padding(horizontal = Gutter), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(stringResource(R.string.web_discover_railFailed), style = MaterialTheme.typography.bodyMedium, color = Palette.Muted, modifier = Modifier.weight(1f))
-            MatineeButton(onClick = onRetry, look = ButtonLook.Outline, height = 36.dp) {
-                LucideIcon(Lucide.RotateCw, null, size = 16.dp)
-                Text(stringResource(R.string.web_discover_retry))
-            }
-        }
-    }
-}
-
 /** Discover's whole answer couldn't be had: the catalog is down and nothing was kept. */
 @Composable
-fun DiscoverFailed(onRetry: () -> Unit) {
-    Column(Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 48.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        LucideIcon(Lucide.CloudOff, null, size = 28.dp, tint = Palette.Muted)
-        Gap(12.dp)
-        Text(stringResource(R.string.web_discover_failed), style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
-        Gap(4.dp)
-        Text(stringResource(R.string.web_discover_failedHint), style = MaterialTheme.typography.bodyMedium, color = Palette.Muted, textAlign = TextAlign.Center)
-        Gap(16.dp)
-        MatineeButton(onClick = onRetry, look = ButtonLook.Outline) {
-            LucideIcon(Lucide.RotateCw, null, size = 16.dp)
-            Text(stringResource(R.string.web_discover_retry))
-        }
-    }
+fun DiscoverFailed(modifier: Modifier = Modifier, onHome: (() -> Unit)? = null, onRetry: () -> Unit) {
+    ErrorState(
+        stringResource(R.string.discover_failed),
+        stringResource(R.string.web_discover_failedHint),
+        onRetry,
+        modifier,
+        icon = Lucide.CloudOff,
+        onHome = onHome,
+    )
 }
 
 /** Every row came back without a title this viewer lacks. */
@@ -270,7 +254,12 @@ fun DiscoverRailScreen(id: String) {
         TopBar(rail?.let { railName(it, res) } ?: stringResource(R.string.web_discover_title))
         when {
             rails.state is Load.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Spinner(size = 32.dp, color = Palette.Accent) }
-            rails.state is Load.Failed -> DiscoverFailed(rails::reload)
+            rails.state is Load.Failed -> ErrorBox(
+                stringResource(R.string.discover_failed),
+                stringResource(R.string.web_discover_failedHint),
+                rails::reload,
+                icon = Lucide.CloudOff,
+            )
             rail == null -> Column(Modifier.fillMaxWidth().padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 LucideIcon(Lucide.Compass, null, size = 28.dp, tint = Palette.Muted)
                 Gap(12.dp)
@@ -335,7 +324,7 @@ private fun RailGrid(rail: DiscoverRail, api: io.github.zekurio.matinee.api.Mati
     if (pages.items.isEmpty()) {
         LaunchedEffect(Unit) { more() }
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            if (pages.error) DiscoverFailed { more() } else Spinner(size = 32.dp, color = Palette.Accent)
+            if (pages.error) DiscoverFailed(onHome = homeAction()) { more() } else Spinner(size = 32.dp, color = Palette.Accent)
         }
         return
     }
@@ -359,11 +348,7 @@ private fun RailGrid(rail: DiscoverRail, api: io.github.zekurio.matinee.api.Mati
             Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
                 when {
                     pages.loading -> Spinner(size = 32.dp, color = Palette.Accent)
-                    pages.error -> Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(stringResource(R.string.web_discover_moreFailed), style = MaterialTheme.typography.bodyMedium, color = Palette.Muted)
-                        Gap(8.dp)
-                        MatineeButton(onClick = { more() }, look = ButtonLook.Outline) { Text(stringResource(R.string.web_discover_retry)) }
-                    }
+                    pages.error -> ErrorSection(stringResource(R.string.grid_more_failed), null, { more() })
                     pages.next == null && pages.items.isNotEmpty() ->
                         Text(stringResource(R.string.web_discover_end), style = MaterialTheme.typography.bodyMedium, color = Palette.Muted)
                 }

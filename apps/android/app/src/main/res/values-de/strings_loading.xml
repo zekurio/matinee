@@ -1,11 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="error_unreadable">Der Server hat etwas geschickt, das diese App nicht lesen kann. Ein Update der App oder des Servers kann helfen.</string>
+    <string name="error_unreadable">Die App konnte die Antwort des Servers nicht lesen.</string>
     <string name="loading_in_progress">Wird geladen</string>
     <string name="loading_stale">Nicht aktualisiert</string>
     <string name="home_failed">Die Startseite konnte nicht geladen werden</string>
-    <string name="home_featured_failed">Die vorgestellten Titel konnten nicht geladen werden</string>
     <string name="home_continue_failed">Was du gerade schaust, konnte nicht geladen werden</string>
     <string name="home_next_up_failed">Die nächsten Folgen konnten nicht geladen werden</string>
     <string name="home_shelf_failed">Die Neuheiten konnten nicht geladen werden</string>
+    <string name="search_failed_title">Die Suche ist fehlgeschlagen</string>
+    <string name="admin_load_failed">Diese Einstellungen konnten nicht geladen werden</string>
+    <string name="account_sessions_failed">Deine Sitzungen konnten nicht geladen werden</string>
+    <string name="profile_stats_failed">Deine Statistiken konnten nicht geladen werden</string>
+    <string name="title_episodes_failed">Die Folgen konnten nicht geladen werden</string>
+    <string name="title_images_failed">Die Bilder konnten nicht geladen werden</string>
+    <string name="title_images_remote_failed">Die Bilder des Anbieters konnten nicht geladen werden</string>
+    <string name="title_identify_failed">Die Suche nach Treffern ist fehlgeschlagen</string>
+    <string name="requests_load_failed">Anfragen konnten nicht geladen werden</string>
+    <string name="asked_load_failed">Deine Anfragen konnten nicht geladen werden</string>
+    <string name="grid_load_failed">Diese Titel konnten nicht geladen werden</string>
+    <string name="grid_more_failed">Weitere Titel konnten nicht geladen werden</string>
+    <string name="downloads_files_failed">Die Dateien konnten nicht aufgelistet werden</string>
+    <string name="folders_load_failed">Dieser Ordner konnte nicht geöffnet werden</string>
+    <string name="rail_failed">Diese Reihe konnte nicht geladen werden</string>
+    <string name="list_more_failed">Weitere Einträge konnten nicht geladen werden</string>
+    <string name="catalog_search_failed">Der Katalog konnte nicht durchsucht werden</string>
+    <string name="discover_failed">Entdecken konnte nicht geladen werden</string>
+    <string name="browse_filters_failed">Die Filter konnten nicht geladen werden</string>
+    <string name="common_back_home">Zurück zur Startseite</string>
 </resources>

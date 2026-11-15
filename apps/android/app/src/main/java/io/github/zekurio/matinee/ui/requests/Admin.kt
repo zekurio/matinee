@@ -44,6 +44,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import io.github.zekurio.matinee.ui.components.ErrorSection
+import io.github.zekurio.matinee.ui.isDisconnect
+import io.github.zekurio.matinee.ui.describeFailure
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.AdminRequestItem
 import io.github.zekurio.matinee.api.Availability
@@ -317,6 +320,7 @@ private class DonePages {
     var loaded by mutableStateOf(false)
     var loading by mutableStateOf(false)
     var error by mutableStateOf<String?>(null)
+    var disconnected by mutableStateOf(false)
 }
 
 /**
@@ -345,7 +349,8 @@ fun RequestsScreen(start: String) {
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: IOException) {
-                    done.error = e.message
+                    done.error = describeFailure(res, e)
+                    done.disconnected = isDisconnect(e)
                 } finally {
                     done.loading = false
                 }
@@ -386,7 +391,7 @@ fun RequestsScreen(start: String) {
         }
         if (list == "done" && !done.loaded) {
             if (done.error != null) {
-                ErrorBox(stringResource(R.string.web_requests_loadFailed, done.error.orEmpty()), null, { loadDone() })
+                ErrorBox(stringResource(R.string.requests_load_failed), done.error, { loadDone() }, disconnected = done.disconnected)
             } else {
                 LaunchedEffect(Unit) { loadDone() }
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Spinner(size = 32.dp, color = Palette.Accent) }
@@ -428,9 +433,7 @@ fun RequestsScreen(start: String) {
                     LaunchedEffect(done.cursor) { if (done.error == null) loadDone() }
                     Box(Modifier.fillMaxWidth().padding(vertical = 16.dp), contentAlignment = Alignment.Center) {
                         if (done.error != null) {
-                            MatineeButton(onClick = { done.error = null; loadDone() }, look = ButtonLook.Outline, height = 40.dp) {
-                                Text(stringResource(R.string.web_requests_reload))
-                            }
+                            ErrorSection(stringResource(R.string.list_more_failed), null, { done.error = null; loadDone() })
                         } else {
                             Spinner(size = 24.dp, color = Palette.Accent)
                         }

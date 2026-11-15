@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import io.github.zekurio.matinee.api.SearchResults
@@ -35,6 +36,14 @@ class SearchState {
         internal set
     var failed by mutableStateOf(false)
         internal set
+
+    /** Moved by [retry], so the same text goes out again. */
+    internal var attempt by mutableIntStateOf(0)
+
+    /** Send the search that failed again. */
+    fun retry() {
+        attempt++
+    }
 }
 
 /**
@@ -44,7 +53,7 @@ class SearchState {
 @Composable
 fun SearchEffect(state: SearchState, query: String) {
     val api = LocalApi.current
-    LaunchedEffect(state, query) {
+    LaunchedEffect(state, query, state.attempt) {
         val text = query.trim()
         if (text.isEmpty()) {
             state.results = null
