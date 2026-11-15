@@ -44,3 +44,19 @@ targets:
         INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
         INFOPLIST_KEY_CFBundleLocalizations: en de
+    scheme:
+      testTargets: [KitGalleryRemote]
+
+  # Presses the Siri Remote on an Apple TV simulator from a script, for
+  # remote.sh. A UI test only so XCUIRemote can reach the focus engine.
+  KitGalleryRemote:
+    type: bundle.ui-testing
+    supportedDestinations: [tvOS]
+    sources: [Remote]
+    dependencies:
+      - target: KitGallery
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.zekurio.matinee.kitgallery.remote
+        TEST_TARGET_NAME: KitGallery
+        SWIFT_DEFAULT_ACTOR_ISOLATION: nonisolated
