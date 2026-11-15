@@ -4,7 +4,9 @@ import { cn } from "@matinee/ui/lib/utils"
 import {
   ArrowLeftIcon,
   CaptionsIcon,
+  FastForwardIcon,
   GaugeIcon,
+  RewindIcon,
   UsersRoundIcon,
   Volume2Icon,
   VolumeXIcon,
@@ -286,6 +288,11 @@ function Player({
     const target = Math.max(0, playback.now() + by)
     actions.setTime(target)
     seek(target)
+    // The buttons, the keys, and the media keys all say how far it went.
+    show(
+      by < 0 ? RewindIcon : FastForwardIcon,
+      tr("player.flash.skip", { seconds: Math.abs(by) }),
+    )
   }
   const jump = (digit: number) => {
     const target = (lengthOf() * digit) / 10
@@ -371,7 +378,6 @@ function Player({
     skipBackSeconds,
     skipForwardSeconds,
     jump,
-    show,
     changeVolume,
     toggleMute,
     toggleFullscreen,

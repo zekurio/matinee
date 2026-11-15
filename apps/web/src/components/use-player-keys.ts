@@ -1,12 +1,10 @@
-import { FastForwardIcon, type LucideIcon, RewindIcon } from "lucide-react"
 import { useEffect, useEffectEvent } from "react"
-
-import { tr } from "@/i18n"
 
 import { SUBTITLE_STEP_MS, VOLUME_STEP } from "./player-controls"
 
 export type PlayerKeyActions = {
   toggle: () => void
+  /** Skips by `by` seconds and flashes how far. */
   skip: (by: number) => void
   /** How far left and J skip back, from the account's preferences. */
   skipBackSeconds: number
@@ -14,7 +12,6 @@ export type PlayerKeyActions = {
   skipForwardSeconds: number
   /** Jumps to `digit` tenths of the way. */
   jump: (digit: number) => void
-  show: (Icon: LucideIcon | null, text: string) => void
   changeVolume: (by: number) => void
   toggleMute: () => void
   toggleFullscreen: () => void
@@ -35,7 +32,6 @@ export function usePlayerKeys({
   skipBackSeconds,
   skipForwardSeconds,
   jump,
-  show,
   changeVolume,
   toggleMute,
   toggleFullscreen,
@@ -58,17 +54,8 @@ export function usePlayerKeys({
     )
       return
     if (event.metaKey || event.ctrlKey || event.altKey) return
-    const back = () => {
-      skip(-skipBackSeconds)
-      show(RewindIcon, tr("player.flash.skip", { seconds: skipBackSeconds }))
-    }
-    const ahead = () => {
-      skip(skipForwardSeconds)
-      show(
-        FastForwardIcon,
-        tr("player.flash.skip", { seconds: skipForwardSeconds }),
-      )
-    }
+    const back = () => skip(-skipBackSeconds)
+    const ahead = () => skip(skipForwardSeconds)
     const actions = new Map([
       [" ", toggle],
       ["k", toggle],
