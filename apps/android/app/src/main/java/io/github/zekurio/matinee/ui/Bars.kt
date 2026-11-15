@@ -127,11 +127,6 @@ fun BottomBar(current: Any?, onPick: (Any) -> Unit, modifier: Modifier = Modifie
     Row(
         modifier
             .fillMaxWidth()
-            // The page fades out under the bar, which Android can't blur
-            // behind it as iOS does, so rows passing beneath don't fight its labels.
-            .drawBehind {
-                drawRect(Brush.verticalGradient(0f to Color.Transparent, 0.55f to Palette.Background.copy(alpha = 0.85f), 1f to Palette.Background))
-            }
             .padding(top = 28.dp)
             .navigationBarsPadding()
             .padding(bottom = TAB_BAR_LIFT),
@@ -244,10 +239,11 @@ private fun TabButton(
 }
 
 /**
- * Home's header: room for the status bar over the banner's art, faded for
- * it to read, and whether the app is offline. It scrolls away with the
- * page. The banner's own title logo carries the top, so there's no app
- * logo competing with it; search and the account are in the tab bar.
+ * Home's header: room for the status bar over the banner's art, faded
+ * under the bar for it to read, and whether the app is offline. It scrolls
+ * away with the page. The banner's own title logo carries the top, so
+ * there's no app logo competing with it; search and the account are in the
+ * tab bar.
  */
 @Composable
 fun AppHeader(modifier: Modifier = Modifier, action: @Composable () -> Unit = {}) {
@@ -256,13 +252,13 @@ fun AppHeader(modifier: Modifier = Modifier, action: @Composable () -> Unit = {}
     Box(
         modifier
             .fillMaxWidth()
-            // Keeps the header readable over bright art, fading out a little
-            // below it as on the web. Behind the status bar it's denser:
-            // Android picks each part of the bar's icons light or dark by
-            // what's behind it, so over bright art the clock went dark while
-            // the rest stayed light, a different mix for every slide.
+            // A short fade behind the status bar, gone just below it, so it
+            // doesn't haze the art. Android picks each part of the bar's
+            // icons light or dark by what's behind it, so over bright art
+            // the clock went dark while the rest stayed light, a different
+            // mix for every slide.
             .drawBehind {
-                val height = size.height + 40.dp.toPx()
+                val height = (statusBar + 16.dp.toPx()).coerceAtMost(size.height)
                 val bar = (statusBar / height).coerceIn(0f, 1f)
                 drawRect(
                     Brush.verticalGradient(
@@ -388,8 +384,8 @@ fun StatusBarScrim(state: LazyListState, modifier: Modifier = Modifier) {
                 // or dark by what's behind each of them, so over bright art
                 // they'd come out mixed. A light shade keeps them the theme's.
                 val shown = 0.75f + 0.25f * scrolled
-                // Past the bar by half its height, so the fade has room.
-                val height = size.height * 1.5f
+                // Only a little past the bar, so it reads as no band at all.
+                val height = size.height * 1.15f
                 val shade = Palette.Background
                 drawRect(
                     Brush.verticalGradient(
