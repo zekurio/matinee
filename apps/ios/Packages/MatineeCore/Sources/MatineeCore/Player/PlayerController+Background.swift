@@ -71,7 +71,7 @@ extension PlayerController {
     let wasPlaying = playing
     playing = engine.isPlaying
     loading = engine.isLoading
-    if playing { playedSeconds += max(0, elapsed) * Double(speed) }
+    if playing { playedSeconds += max(0, elapsed) * Double(rate) }
     guard let current = source else { return }
     let clock = engine.positionSeconds
     // Only a source the engine has and plays tells where it is: one still
@@ -121,6 +121,7 @@ extension PlayerController {
     ended = duration > 0 && position >= duration - 0.3 && !playing
     if ended && !wasEnded { sendReport() }
     countDown(now)
+    followSegment(now)
     let every: TimeInterval = playing ? 10 : 30
     if wasPlaying != playing || now.timeIntervalSince(lastReport) >= every { sendReport() }
     diagnostics.mpvStatistics = engine.mpvStatistics

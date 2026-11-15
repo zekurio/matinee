@@ -260,6 +260,7 @@ private final class PlayerProtocol: URLProtocol, @unchecked Sendable {
       audio: [Answers.aac, Answers.ac3], subtitles: subtitles, saved: saved, at: 23)
   }
   func next(after item: MediaItem) async -> MediaItem? { Answers.item("item-2") }
+  func previous(before item: MediaItem) async -> MediaItem? { Answers.item("item-0") }
   func queueReport(itemId: String, report: PendingReport, play: PlaybackOfflineInput.Play?) async {
     queued.append((itemId, report, play))
   }
@@ -965,5 +966,301 @@ private final class PlayerProtocol: URLProtocol, @unchecked Sendable {
       #expect(!text.localizedCaseInsensitiveContains(secret), "\(secret)")
       #expect(!json.localizedCaseInsensitiveContains(secret), "\(secret)")
     }
+  }
+}
+
+/// An episode of a show, which gets the previous and next episode buttons.
+private func episode(_ id: String, duration: Double = 3000) -> MediaItem {
+  let json = """
+    {"id":"\(id)","libraryId":"library-1","fileTitle":"File","relativePath":"a.mkv","container":"mkv",
+     "mimeType":"video/x-matroska","sizeBytes":1,"modifiedAt":"2024-01-01T00:00:00Z","durationSeconds":\(duration),
+     "favorite":false,"seasonNumber":1,"episodeNumber":2,
+     "title":{"id":"title-1","libraryId":"library-1","kind":"show","name":"Show","images":{},"genres":[],
+      "favorite":false,"watched":false},
+     "label":{"show":"File","showName":"Show","showKey":"k","untitled":false,"group":"g","groupLabel":[]}}
+    """
+  return try! JSONDecoder().decode(MediaItem.self, from: Data(json.utf8))
+}
+
+/// The episode answers: segments, where to offer the next episode, and
+/// the episodes either side, on top of the stub server's usual answer.
+@MainActor private func episodeHarness(
+  segments: [MediaSegment] = [], upNextAt: Double? = nil, previous: MediaItem? = Answers.item("item-0"),
+  next: MediaItem? = Answers.item("item-2")
+) -> PlayerHarness {
+  let harness = PlayerHarness()
+  let server = harness.server
+  server.respond = { call in
+    guard call.path.hasSuffix("/playback/start"), let input = call.start else { return nil }
+    var answer = server.answer(input, host: "")
+    answer.item = episode("item-1")
+    answer.segments = segments
+    answer.upNextAt = upNextAt
+    answer.previous = previous
+    answer.next = next
+    return .init(body: try! JSONEncoder().encode(answer))
+  }
+  return harness
+}
+
+/// What `playback.start` now answers beside the source: the intro and
+/// credits to skip, where the credits start, and the episodes either side.
+/// The controller shows them when the server says and works none out.
+@MainActor struct PlayerEpisodeTests {
+  @Test func theSkipButtonFollowsTheServersSegments() async {
+    let intro = MediaSegment(kind: MediaSegmentKind.intro, start: 10, end: 40)
+    let credits = MediaSegment(kind: MediaSegmentKind.credits, start: 2700, end: 2900)
+    let harness = episodeHarness(segments: [intro, credits])
+    let controller = harness.controller()
+    await controller.start(itemId: "item-1", at: 0)
+    await controller.tick()
+    #expect(controller.segment == nil)
+    #expect(controller.skippable(controls: true) == nil)
+    harness.engine.positionSeconds = 12
+    await controller.tick()
+    #expect(controller.segment == intro)
+    // Fresh, it shows by itself, controls or not.
+    #expect(controller.skippable(controls: false) == intro)
+    harness.now += SKIP_SHOWN_SECONDS - 1
+    await controller.tick()
+    #expect(controller.skippable(controls: false) == intro)
+    harness.now += 1
+    await controller.tick()
+    // After that, only with the controls.
+    #expect(controller.skippable(controls: false) == nil)
+    #expect(controller.skippable(controls: true) == intro)
+    // The last second has nothing left worth skipping.
+    harness.engine.positionSeconds = 39.5
+    await controller.tick()
+    #expect(controller.segment == nil)
+    harness.engine.positionSeconds = 20
+    await controller.tick()
+    // Coming back into it, it's fresh again.
+    #expect(controller.skippable(controls: false) == intro)
+    await controller.skipSegment()
+    #expect(harness.engine.seeks.last == 40)
+    // The credits are a segment of their own.
+    harness.engine.positionSeconds = 2750
+    await controller.tick()
+    #expect(controller.segment == credits)
+    #expect(controller.skippable(controls: false) == credits)
+    await controller.stop()
+  }
+
+  @Test func aDownloadHasNoSegments() async {
+    let harness = PlayerHarness()
+    let controller = harness.controller()
+    await controller.startLocal(itemId: "item-1")
+    harness.engine.positionSeconds = 30
+    await controller.tick()
+    #expect(controller.segment == nil)
+    #expect(controller.upNextAt == nil)
+    await controller.stop()
+  }
+
+  @Test func theNextEpisodeOnceTheCreditsStart() async {
+    let harness = episodeHarness(upNextAt: 2700)
+    let controller = harness.controller()
+    var opened: [String] = []
+    controller.onNext = { opened.append($0.id) }
+    await controller.start(itemId: "item-1", at: 0)
+    harness.engine.positionSeconds = 2699
+    await controller.tick()
+    #expect(!controller.offersNext)
+    #expect(controller.upNext == nil)
+    #expect(!controller.showsUpNext)
+    harness.engine.positionSeconds = 2700
+    await controller.tick()
+    #expect(controller.offersNext)
+    #expect(controller.showsUpNext)
+    #expect(controller.upNext?.item.id == "item-2")
+    #expect(controller.upNext?.early == true)
+    // It counts down what's left of the file.
+    #expect(controller.nextCountdown == 300)
+    harness.engine.positionSeconds = 2990.5
+    await controller.tick()
+    #expect(controller.nextCountdown == 10)
+    // Back before the credits, it goes, and comes back afresh.
+    await controller.seekTo(100)
+    await controller.tick()
+    #expect(!controller.offersNext)
+    #expect(controller.upNext == nil)
+    harness.engine.positionSeconds = 2800
+    await controller.tick()
+    #expect(controller.nextCountdown == 200)
+    // The countdown ran while the credits rolled, so the end starts it.
+    harness.engine.positionSeconds = 3000
+    harness.engine.isPlaying = false
+    await controller.tick()
+    #expect(controller.ended)
+    #expect(opened == ["item-2"])
+    await controller.stop()
+  }
+
+  @Test func hiddenWhileTheCreditsRollItWaitsAtTheEnd() async {
+    let harness = episodeHarness(upNextAt: 2700)
+    let controller = harness.controller()
+    var opened: [String] = []
+    controller.onNext = { opened.append($0.id) }
+    await controller.start(itemId: "item-1", at: 0)
+    harness.engine.positionSeconds = 2750
+    await controller.tick()
+    controller.hideNext()
+    #expect(!controller.showsUpNext)
+    #expect(controller.nextCountdown == nil)
+    harness.engine.positionSeconds = 2800
+    await controller.tick()
+    #expect(!controller.showsUpNext)
+    harness.engine.positionSeconds = 3000
+    harness.engine.isPlaying = false
+    await controller.tick()
+    // Back at the end, waiting for Play.
+    #expect(controller.showsUpNext)
+    #expect(controller.nextCountdown == nil)
+    harness.now += 30
+    await controller.tick()
+    #expect(opened.isEmpty)
+    controller.playNext()
+    #expect(opened == ["item-2"])
+    await controller.stop()
+  }
+
+  @Test func withAutoplayOffTheCreditsOfferPlayAlone() async {
+    let harness = episodeHarness(upNextAt: 2700)
+    harness.prefs.autoplayNext = false
+    let controller = harness.controller()
+    var opened: [String] = []
+    controller.onNext = { opened.append($0.id) }
+    await controller.start(itemId: "item-1", at: 0)
+    harness.engine.positionSeconds = 2750
+    await controller.tick()
+    #expect(controller.showsUpNext)
+    #expect(controller.upNext?.cancelled == true)
+    #expect(controller.nextCountdown == nil)
+    harness.engine.positionSeconds = 3000
+    harness.engine.isPlaying = false
+    await controller.tick()
+    harness.now += 30
+    await controller.tick()
+    #expect(opened.isEmpty)
+    await controller.stop()
+  }
+
+  @Test func theLastEpisodeOffersNothing() async {
+    let harness = episodeHarness(upNextAt: nil, next: nil)
+    let controller = harness.controller()
+    await controller.start(itemId: "item-1", at: 0)
+    harness.engine.positionSeconds = 3000
+    harness.engine.isPlaying = false
+    await controller.tick()
+    #expect(controller.ended)
+    #expect(!controller.offersNext)
+    #expect(controller.upNext == nil)
+    #expect(controller.nextCountdown == nil)
+    #expect(controller.previous?.id == "item-0")
+    await controller.stop()
+  }
+
+  @Test func theEpisodesEitherSide() async {
+    let harness = episodeHarness()
+    let controller = harness.controller()
+    var opened: [String] = []
+    controller.onNext = { opened.append($0.id) }
+    await controller.start(itemId: "item-1")
+    #expect(controller.isEpisode)
+    #expect(controller.previous?.id == "item-0")
+    #expect(controller.next?.id == "item-2")
+    controller.playPrevious()
+    controller.playInstead(controller.next!)
+    #expect(opened == ["item-0", "item-2"])
+    await controller.stop()
+
+    // A movie has neither, and no buttons for them.
+    let movie = PlayerHarness().controller()
+    await movie.start(itemId: "item-1")
+    #expect(!movie.isEpisode)
+    #expect(movie.previous == nil)
+    movie.playPrevious()
+    await movie.stop()
+
+    // A download asks the downloads for both.
+    let local = PlayerHarness().controller()
+    await local.startLocal(itemId: "item-1")
+    await eventually { local.previous != nil }
+    #expect(local.previous?.id == "item-0")
+    #expect(local.next?.id == "item-2")
+    await local.stop()
+  }
+
+  @Test func aHeldFingerPlaysFaster() async {
+    let harness = PlayerHarness()
+    let controller = harness.controller()
+    await controller.start(itemId: "item-1")
+    // Not before the tick has seen it play.
+    #expect(!controller.startHold())
+    await controller.tick()
+    #expect(controller.startHold())
+    #expect(controller.holding)
+    #expect(harness.engine.rates.last == HOLD_SPEED)
+    #expect(!controller.startHold())
+    // Time played counts at the speed it plays.
+    harness.now += 4
+    await controller.tick()
+    controller.endHold()
+    #expect(!controller.holding)
+    #expect(harness.engine.rates.last == 1)
+    await controller.report()
+    #expect(harness.server.progress.contains { $0["playedSeconds"] as? Double == 8 })
+    // Already as fast, there's nothing to hold for.
+    controller.pickSpeed(2)
+    #expect(!controller.startHold())
+    // A pick of speed while holding ends the hold.
+    controller.pickSpeed(1.25)
+    #expect(controller.startHold())
+    controller.pickSpeed(1.5)
+    #expect(!controller.holding)
+    controller.endHold()
+    #expect(harness.engine.rates.last == 1.5)
+    // Paused, it doesn't hold, and a hold the pause ended doesn't play again.
+    #expect(controller.startHold())
+    controller.pause()
+    #expect(!controller.holding)
+    let rates = harness.engine.rates.count
+    controller.endHold()
+    #expect(harness.engine.rates.count == rates)
+    await controller.tick()
+    #expect(!controller.startHold())
+    await controller.stop()
+  }
+}
+
+/// Android's SwipeTest.
+struct SwipeTests {
+  @Test func upRaisesAndDownLowers() {
+    // A swipe across the whole range goes from nothing to full.
+    #expect(abs(swipeLevel(start: 0, dragY: -SWIPE_FULL_RANGE * 1000, height: 1000) - 1) < 1e-9)
+    #expect(swipeLevel(start: 0.5, dragY: 0, height: 1000) == 0.5)
+    #expect(abs(swipeLevel(start: 0.5, dragY: SWIPE_FULL_RANGE * 100, height: 1000) - 0.4) < 1e-9)
+  }
+
+  @Test func levelStaysWithinRange() {
+    #expect(swipeLevel(start: 0.9, dragY: -5000, height: 1000) == 1)
+    #expect(swipeLevel(start: 0.1, dragY: 5000, height: 1000) == 0)
+    #expect(swipeLevel(start: 3, dragY: 0, height: 1000) == 1)
+    #expect(swipeLevel(start: .nan, dragY: 0, height: 1000) == 0)
+    #expect(swipeLevel(start: 0.3, dragY: 50, height: 0) == 0.3)
+    #expect(swipeLevel(start: 0.3, dragY: .nan, height: 1000) == 0.3)
+  }
+
+  @Test func sidewaysMovesByDistance() {
+    #expect(swipeSeek(from: 100, dragX: 200, duration: 3600) == 100 + 200 * SWIPE_SECONDS_PER_POINT)
+    #expect(swipeSeek(from: 100, dragX: -200, duration: 3600) == 100 - 200 * SWIPE_SECONDS_PER_POINT)
+  }
+
+  @Test func seekStaysWithinTheVideo() {
+    #expect(swipeSeek(from: 10, dragX: -1000, duration: 3600) == 0)
+    #expect(swipeSeek(from: 50, dragX: 1000, duration: 60) == 60)
+    #expect(swipeSeek(from: 50, dragX: 100, duration: 0) == 0)
+    #expect(swipeSeek(from: 50, dragX: .nan, duration: 60) == 50)
   }
 }
