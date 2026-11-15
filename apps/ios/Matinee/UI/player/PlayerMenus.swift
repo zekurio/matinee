@@ -3,41 +3,56 @@ import MatineeKit
 import SwiftUI
 
 /*
- * PlayerScreen.kt's `PlayerPanel` and `menuEntries`: the audio, subtitle,
- * and settings menus, in a panel that slides in from the side over the
- * video, as Android and the web draw them. A sheet from the bottom would
- * cover the picture in landscape; the panel keeps it in view, and a tap
- * beside it closes it.
+ * PlayerScreen.kt's `menuEntries` and `PlayerPanel`: what the audio,
+ * subtitle, quality, and speed menus offer, and the panel a phone or iPad
+ * shows them in. The entries are plain data, the tracks and qualities the
+ * server answered and the speeds, so the TV's player can lay out the same
+ * list for a remote; only `PlayerMenuPanel` is for a finger.
  */
 
-enum PlayerMenu: Hashable { case audio, subtitles, settings }
+/// The player's menus. A phone has quality and speed apart, a button each, as Android's phone does.
+enum PlayerMenu: String, Hashable, CaseIterable, Identifiable {
+  case audio, subtitles, quality, speed
 
-/// One line of a player menu: a heading, a note, a divider, or a choice.
+  var id: String { rawValue }
+
+  /// What heads the menu, and names its button.
+  var title: String {
+    switch self {
+    case .audio: Str.playerMenuAudio
+    case .subtitles: Str.playerMenuSubtitles
+    case .quality: Str.playerQuality
+    case .speed: Str.playerSpeed
+    }
+  }
+}
+
+/// One line of a player menu: a group's name, a note, a rule, or a choice.
 enum MenuEntry: Identifiable {
-  case heading(String, key: String)
+  case label(String, key: String)
   case note(String, key: String)
   case divider(key: String)
   /// A choice, current when `selected`; `pick` makes it so.
-  case choice(title: String, detail: String?, selected: Bool, enabled: Bool = true, key: String, pick: () -> Void)
+  case choice(title: String, detail: String?, selected: Bool, enabled: Bool = true, key: String, pick: @MainActor () -> Void)
 
   var id: String {
     switch self {
-    case .heading(_, let key), .note(_, let key), .divider(let key): key
+    case .label(_, let key), .note(_, let key), .divider(let key): key
     case .choice(_, _, _, _, let key, _): key
     }
   }
 }
 
-/// The speeds the menu offers.
+/// The speeds the menu offers, from half to double, as Android's phone has them.
 let PLAYER_SPEEDS: [Float] = [0.5, 0.75, 1, 1.25, 1.5, 2]
 
 /// What `menu` offers: the tracks and qualities the server answered and the
-/// speeds, each marked when it's the current one.
+/// speeds, each marked when it's the current one. The menu's title names
+/// it, so nothing heads the list, as on the web.
 @MainActor func menuEntries(_ menu: PlayerMenu, _ controller: PlayerController) -> [MenuEntry] {
   var entries: [MenuEntry] = []
   switch menu {
   case .audio:
-    entries.append(.heading(Str.playerMenuAudio, key: "heading"))
     if controller.audioTracks.isEmpty { entries.append(.note(Str.playerAudioNoTracks, key: "none")) }
     for track in controller.audioTracks {
       entries.append(
@@ -47,7 +62,6 @@ let PLAYER_SPEEDS: [Float] = [0.5, 0.75, 1, 1.25, 1.5, 2]
         ) { Task { await controller.pickAudio(track) } })
     }
   case .subtitles:
-    entries.append(.heading(Str.playerMenuSubtitles, key: "heading"))
     entries.append(
       .choice(title: Str.playerSubtitlesOff, detail: nil, selected: controller.subtitle == nil, key: "off") {
         Task { await controller.pickSubtitle(nil) }
@@ -61,42 +75,42 @@ let PLAYER_SPEEDS: [Float] = [0.5, 0.75, 1, 1.25, 1.5, 2]
         ) { Task { await controller.pickSubtitle(track) } })
     }
     if controller.subtitleError { entries.append(.note(Str.playerErrorSubtitles, key: "error")) }
-  case .settings:
-    if !controller.isLocal {
-      entries.append(.heading(Str.playerQuality, key: "quality"))
-      // A file over the account's bit rate limit plays only as an encode.
-      if controller.offersOriginal {
-        entries.append(
-          .choice(
-            title: Str.playerQualityOriginal, detail: nil, selected: controller.quality == ORIGINAL_QUALITY,
-            key: "quality-original"
-          ) { Task { await controller.pickQuality(ORIGINAL_QUALITY) } })
-      }
-      for quality in controller.qualities {
-        entries.append(
-          .choice(
-            title: qualityLabel(quality), detail: nil, selected: controller.quality == quality.id,
-            key: "quality-\(quality.id)"
-          ) { Task { await controller.pickQuality(quality.id) } })
-      }
-      entries.append(.divider(key: "quality-end"))
+  case .quality:
+    // A file over the account's bit rate limit plays only as an encode.
+    if controller.offersOriginal {
+      entries.append(
+        .choice(
+          title: Str.playerQualityOriginal, detail: controller.item?.probe?.video?.resolution,
+          selected: controller.quality == ORIGINAL_QUALITY, key: "quality-original"
+        ) { Task { await controller.pickQuality(ORIGINAL_QUALITY) } })
     }
-    entries.append(.heading(Str.playerSpeed, key: "speed"))
+    for quality in controller.qualities {
+      entries.append(
+        .choice(
+          title: qualityLabel(quality), detail: nil, selected: controller.quality == quality.id,
+          key: "quality-\(quality.id)"
+        ) { Task { await controller.pickQuality(quality.id) } })
+    }
+  case .speed:
     for rate in PLAYER_SPEEDS {
       entries.append(
         .choice(
-          title: rate == 1 ? Str.playerSpeedNormal : Str.playerSpeedRate(speedText(rate)), detail: nil,
-          selected: controller.speed == rate, key: "speed-\(rate)"
+          title: speedLabel(rate), detail: nil, selected: controller.speed == rate, key: "speed-\(rate)"
         ) { controller.pickSpeed(rate) })
     }
   }
   return entries
 }
 
-/// "1.25", "0.5", "2", as Kotlin's `rate.toString().removeSuffix(".0")`.
-private func speedText(_ rate: Float) -> String {
-  let text = String(describing: rate)
-  return text.hasSuffix(".0") ? String(text.dropLast(2)) : text
+/// "Normal", or "1.25×" in the app's words.
+func speedLabel(_ rate: Float) -> String {
+  rate == 1 ? Str.playerSpeedNormal : Str.playerSpeedRate(speedText(rate))
+}
+
+/// "1.25", "0.5", "2", as Kotlin's `rate.toString().removeSuffix(".0")`,
+/// in the app's language: "1,25" in German, as the web formats it.
+func speedText(_ rate: Float) -> String {
+  Double(rate).formatted(.number.precision(.fractionLength(0...2)).locale(.app))
 }
 
 /// A track's language, plus its own title when that adds something.
@@ -119,7 +133,6 @@ func subtitleLabel(_ track: SubtitleTrack, _ tracks: [SubtitleTrack]) -> String 
   return trackLabel(language: track.language, title: track.title, unnamed: Str.playerTrackUnnamed(position))
 }
 
-/// A track's flags and format, and whether it is burned into the picture.
 /// A track's flags and format, and whether it's burned into the picture:
 /// by default for every track the screen can't draw, as the download sheet
 /// has it; the player says for each track what it does.
@@ -136,116 +149,20 @@ func subtitleDetail(_ track: SubtitleTrack, burns: Bool) -> String {
   ].compactMap { $0 }.joined(separator: " · ")
 }
 
-/// A menu's panel at the side, over a shade that closes it when tapped.
-/// It's laid out over the whole screen, `safe` being the screen's insets,
-/// so the panel runs to the screen's edge with its rows clear of the notch.
-struct PlayerPanel: View {
-  let open: PlayerMenu?
+/// A menu's choices in the side panel: each a row that picks and closes it.
+struct PlayerMenuPanel: View {
+  let menu: PlayerMenu
   let controller: PlayerController
-  let safe: EdgeInsets
-  let onDismiss: () -> Void
-  @Environment(\.palette) private var palette
-  /// The menu that was open stays drawn while the panel slides away.
-  @State private var last: PlayerMenu?
 
   var body: some View {
-    GeometryReader { geo in
-      let full = geo.size.width
-      let width = min(full, min(420, max(300, full * 0.42)))
-      ZStack(alignment: .trailing) {
-        if open != nil {
-          Color(white: 0, opacity: 0.45)
-            .contentShape(Rectangle())
-            .onTapGesture(perform: onDismiss)
-            .accessibilityElement()
-            .accessibilityLabel(Str.a11yPlayerCloseMenu)
-            .accessibilityAddTraits(.isButton)
-            .accessibilityAction { onDismiss() }
-            .transition(Motion.fade)
-        }
-        if open != nil, let menu = last ?? open {
-          panel(menu, width: width)
-            .transition(.move(edge: .trailing).combined(with: .opacity))
-        }
+    ForEach(menuEntries(menu, controller)) { entry in
+      switch entry {
+      case .label(let text, _): PanelLabel(text)
+      case .note(let text, _): PanelNote(text)
+      case .divider: PanelSeparator()
+      case .choice(let title, let detail, let selected, let enabled, _, let pick):
+        PanelChoice(title, detail: detail, selected: selected, enabled: enabled, action: pick)
       }
-      .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
     }
-    .ignoresSafeArea()
-    .motion(Motion.move, value: open)
-    .onChange(of: open, initial: true) { _, menu in if let menu { last = menu } }
-  }
-
-  private func panel(_ menu: PlayerMenu, width: CGFloat) -> some View {
-    ScrollView {
-      LazyVStack(alignment: .leading, spacing: 0) {
-        ForEach(menuEntries(menu, controller)) { entry in
-          switch entry {
-          case .heading(let text, _):
-            Text(text).textStyle(.base, weight: .semibold)
-              .padding(.horizontal, 20).padding(.vertical, 12)
-              .accessibilityAddTraits(.isHeader)
-          case .note(let text, _):
-            Text(text).textStyle(.px13).foregroundStyle(palette.mutedForeground)
-              .padding(.horizontal, 20).padding(.vertical, 10)
-          case .divider:
-            Rectangle().fill(palette.border).frame(height: 1).padding(.vertical, 8)
-          case .choice(let title, let detail, let selected, let enabled, _, let pick):
-            MenuRow(title: title, detail: detail, selected: selected, enabled: enabled) {
-              pick()
-              onDismiss()
-            }
-          }
-        }
-      }
-      .padding(.vertical, 12)
-      .padding(.top, safe.top)
-      .padding(.bottom, safe.bottom)
-      .padding(.trailing, safe.trailing)
-    }
-    .scrollBounceBehavior(.basedOnSize)
-    .frame(width: width + safe.trailing)
-    .frame(maxHeight: .infinity)
-    .background(
-      UnevenRoundedRectangle(topLeadingRadius: 16, bottomLeadingRadius: 16).fill(palette.popover)
-    )
-  }
-}
-
-/// One choice in a menu, heard as a button that's selected when `selected`.
-private struct MenuRow: View {
-  let title: String
-  let detail: String?
-  let selected: Bool
-  let enabled: Bool
-  let action: () -> Void
-  @Environment(\.palette) private var palette
-
-  var body: some View {
-    Button(action: action) {
-      HStack(spacing: 12) {
-        VStack(alignment: .leading, spacing: 0) {
-          Text(title).textStyle(.base).foregroundStyle(enabled ? palette.foreground : palette.foregroundFaint)
-          if let detail, !detail.isEmpty {
-            Text(detail).textStyle(.px13).foregroundStyle(palette.mutedForeground)
-          }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        if selected { LucideIcon(.check, size: 18, tint: palette.accent) }
-      }
-      .padding(.horizontal, 20)
-      .padding(.vertical, 14)
-      .frame(minHeight: 48)
-      .contentShape(Rectangle())
-    }
-    .buttonStyle(MenuRowStyle())
-    .disabled(!enabled)
-    .accessibilityAddTraits(selected ? .isSelected : [])
-  }
-}
-
-private struct MenuRowStyle: ButtonStyle {
-  @Environment(\.palette) private var palette
-  func makeBody(configuration: Configuration) -> some View {
-    configuration.label.background(configuration.isPressed ? palette.foreground.opacity(0.08) : .clear)
   }
 }

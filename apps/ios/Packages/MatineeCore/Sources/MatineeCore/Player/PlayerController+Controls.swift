@@ -18,11 +18,12 @@ extension PlayerController {
   /// Plays, as `player.play()` does from Android's screen and the system's controls.
   public func play() {
     wantPlay = true
-    engine.play(atRate: speed)
+    engine.play(atRate: rate)
   }
 
   public func pause() {
     wantPlay = false
+    holding = false
     engine.pause()
   }
 
@@ -147,8 +148,35 @@ extension PlayerController {
   public func pickSpeed(_ rate: Float) {
     guard rate.isFinite, rate > 0 else { return }
     speed = rate
+    holding = false
     // AVPlayer has no speed apart from its rate, so a paused player keeps
     // the speed for when it plays.
     if wantPlay { engine.play(atRate: rate) }
+  }
+
+  /// The rate the engine plays at: the picked speed, or `HOLD_SPEED` while a finger holds the video.
+  var rate: Float { holding ? HOLD_SPEED : speed }
+
+  /// Plays at `HOLD_SPEED` until `endHold`, if the video plays and slower
+  /// than that. Says whether it did.
+  @discardableResult public func startHold() -> Bool {
+    guard !holding, playing, wantPlay, speed < HOLD_SPEED else { return false }
+    holding = true
+    engine.play(atRate: HOLD_SPEED)
+    return true
+  }
+
+  /// Back to the picked speed after `startHold`.
+  public func endHold() {
+    guard holding else { return }
+    holding = false
+    // The finger may lift after the player closed, or paused it meanwhile.
+    if !stopped, wantPlay { engine.play(atRate: speed) }
+  }
+
+  /// Skips the segment that plays now, as its button does: to its end.
+  public func skipSegment() async {
+    guard let segment else { return }
+    await seekTo(segment.end)
   }
 }

@@ -159,6 +159,30 @@ struct Ask {
   /// The file after this one in its show, as the server answered, or as the downloads said for one.
   public var next: MediaItem? { plan?.next ?? localNext }
 
+  /// The file before this one in its show, as the server answered, or as the downloads said for one.
+  public var previous: MediaItem? { plan?.previous ?? localPrevious }
+
+  /// An episode of a show, which gets the previous and next episode
+  /// buttons, dimmed at either end of the show. A movie gets neither.
+  public var isEpisode: Bool { item?.title?.kind == TitleKind.show }
+
+  /// Where to start offering `next` before the file ends, as the server
+  /// answered: where the credits start, or a little before the end. Nil
+  /// offers it once the file ends, as a download does.
+  public var upNextAt: Double? { plan?.upNextAt }
+
+  /// Whether the player offers the next episode now: the credits started, or the file ended.
+  public var offersNext: Bool {
+    next != nil && (ended || upNextAt.map { position >= $0 } == true)
+  }
+
+  /// The part the server offers to skip that plays now, like the intro.
+  /// Its last second has nothing left worth skipping. The client never
+  /// finds one itself: a download, which has no answer, has none.
+  public var segment: MediaSegment? {
+    plan?.segments.first { position >= $0.start && position < $0.end - SEGMENT_END_SECONDS }
+  }
+
   public var duration: Double {
     item?.durationSeconds ?? (engine.durationSeconds.isFinite ? engine.durationSeconds + (source?.offset ?? 0) : 0)
   }
@@ -197,9 +221,20 @@ struct Ask {
   // What Android's player screen keeps, and the iOS view reads here.
   public internal(set) var options = FALLBACK_PLAYBACK_OPTIONS
   public internal(set) var localNext: MediaItem?
+  public internal(set) var localPrevious: MediaItem?
+  /// The next episode while the player offers it, and how its countdown goes.
+  public internal(set) var upNext: UpNextOffer?
+  /// Seconds until the next episode starts by itself: those left in the
+  /// file while the credits roll, then the countdown's own once it ended.
+  /// Nil while it waits for Play, or offers nothing.
   public internal(set) var nextCountdown: Int?
+  /// The skip button shows by itself, for a few seconds after its segment starts.
+  public internal(set) var segmentFresh = false
+  /// A finger holds the video, so it plays at `HOLD_SPEED` for now instead of `speed`.
+  public internal(set) var holding = false
   public internal(set) var scrubPosition: Double?
-  /// Stop this sitting and open the next item, as Android's `PlayerHost.playInstead`.
+  /// Stop this sitting and open another item in its place, as Android's
+  /// `PlayerHost.playInstead`: the next episode, or the previous one.
   public var onNext: (@MainActor (MediaItem) -> Void)?
   public var failedMethods: [String] { asking.failed }
   public var isLocal: Bool { local != nil }
@@ -216,8 +251,10 @@ struct Ask {
   /// The viewer had it playing when an audio interruption began.
   @ObservationIgnored var resumeAfterInterruption = false
   @ObservationIgnored var stalledSince: Date?
-  @ObservationIgnored var nextCancelled = false
   @ObservationIgnored var endedAt: Date?
+  /// The segment the skip button is for, and since when it plays.
+  @ObservationIgnored var shownSegment: MediaSegment?
+  @ObservationIgnored var segmentSince = Date.distantPast
   @ObservationIgnored var lastTick = Date()
 
   public init(
@@ -326,8 +363,10 @@ struct Ask {
     beginTick()
     if !offline { loadTrickplay(itemId) }
     nextTask = Task { [weak self] in
-      let next = await downloads.next(after: local.item)
-      self?.localNext = next
+      let after = await downloads.next(after: local.item)
+      self?.localNext = after
+      let before = await downloads.previous(before: local.item)
+      self?.localPrevious = before
     }
     await load(.local(url: local.file.absoluteString, at: at ?? local.at), reason: .start)
   }
@@ -420,7 +459,7 @@ struct Ask {
       // AVPlayer picks among the file's audio only once its tracks are known,
       // as ExoPlayer's pending override waits for `onTracksChanged`.
       if next.holdsTracks { await selectAudioInFile() }
-      if wantPlay { engine.play(atRate: speed) }
+      if wantPlay { engine.play(atRate: rate) }
       await recordTracks()
     } catch {
       if request == loads && !stopped { await sourceFailed(error) }

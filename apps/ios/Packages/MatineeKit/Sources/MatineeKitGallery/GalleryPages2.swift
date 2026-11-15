@@ -16,6 +16,8 @@ struct OverlaysPage: View {
   @State private var rename = "The Matrix (1999)"
   @State private var quality = "1080"
   @State private var lastAction = "Nothing yet"
+  @State private var panel = false
+  @State private var audio = "en"
 
   var body: some View {
     GalleryPage("Menus, sheets, dialogs, toasts") {
@@ -47,6 +49,24 @@ struct OverlaysPage: View {
           MatineeButton("Actions", icon: .ellipsis, look: .secondary, size: .md) { actions = true }
           MatineeButton("Long list", icon: .list, look: .secondary, size: .md) { longSheet = true }
         }
+      }
+      Demo("Side panel", note: "The player's menus: glass from the trailing edge, drawn in place over a backdrop.") {
+        MatineeButton("Audio", icon: .audioLines, look: .secondary, size: .md) { panel = true }
+        Caption("Picked: \(audio)")
+      }
+      Demo("Over the picture", note: "The web player's surfaces: black over a blur, a faint white ring.") {
+        HStack(spacing: 12) {
+          ForEach(Array([PictureShade.light, .medium, .strong, .solid].enumerated()), id: \.offset) { _, shade in
+            Text("Aa").textStyle(.sm, weight: .medium).foregroundStyle(.white).pictureShadow()
+              .frame(width: 56, height: 44)
+              .pictureGlass(in: RoundedRectangle.kit(Radius.lg), shade: shade)
+          }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity)
+        .background(
+          LinearGradient(colors: [.yellow, .cyan, .pink], startPoint: .leading, endPoint: .trailing),
+          in: RoundedRectangle.kit(Radius.xl))
       }
       Demo("Dialog", note: "A popover panel in the middle, its buttons stacked under a line.") {
         HStack(spacing: 10) {
@@ -89,6 +109,14 @@ struct OverlaysPage: View {
         }
         .padding(.top, 8)
       }
+    }
+    .sidePanel(isPresented: $panel, title: "Audio") {
+      PanelChoice("English", detail: "AAC · 5.1", selected: audio == "en") { audio = "en" }
+      PanelChoice("German", detail: "AC-3 · Stereo", selected: audio == "de") { audio = "de" }
+      PanelChoice("Commentary", detail: "DTS", enabled: false) {}
+      PanelSeparator()
+      PanelLabel("Subtitles")
+      PanelNote("This file has no subtitles.")
     }
     .matineeSheet(isPresented: $actions) {
       SheetHeader("The Matrix", subtitle: "1999 · Movie")
@@ -135,6 +163,7 @@ struct OverlaysPage: View {
       case "long": longSheet = true
       case "dialog": dialog = true
       case "confirm": confirm = true
+      case "panel": panel = true
       case "toast": toasts.post(ToastMessage("Marked as watched", action: "Undo", closeButton: true, duration: .indefinite))
       default: break
       }

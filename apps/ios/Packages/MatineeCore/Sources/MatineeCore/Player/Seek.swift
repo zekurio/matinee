@@ -20,3 +20,88 @@ public func seekStepped(from: Double, direction: Int, step: Double, duration: Do
     from + (direction == 0 || !step.isFinite || step <= 0 ? 0 : direction < 0 ? -step : step),
     duration: duration)
 }
+
+/*
+ * The web's seek bar under a finger (player-controls.tsx, `touchDragValue`):
+ * a drag moves the time by how far the finger travels rather than to
+ * where it is, so a slow drag moves a little at a time, and the thumb
+ * catches up with a quick finger. A press still jumps to where it lands.
+ * Speeds are in points per millisecond, the web's pixels.
+ */
+
+/// The thumb's width, the web's `size-3.5`. The thumb's centre runs half of it in from each end.
+public let SEEK_THUMB: Double = 14
+
+// At 0.04 (a finger creeping) a point moves a tenth as far as at 0.5, a
+// normal drag, which moves it the full way.
+let FINE_SPEED = 0.04
+let FULL_SPEED = 0.5
+let FINEST_GAIN = 0.1
+// No finer than this many seconds a point, so a short video doesn't crawl.
+let FINEST_PER_POINT = 0.25
+// From 0.25 a thumb behind the finger catches up to it, quicker the faster
+// it moves, up to 35% of the gap per move.
+let CATCH_UP_SPEED = 0.25
+let CATCH_UP_FULL_SPEED = 1.0
+let CATCH_UP_RATE = 0.35
+
+/// Where `value` sits between `from` and `to`, from 0 to 1.
+func ramp(_ value: Double, _ from: Double, _ to: Double) -> Double {
+  max(0, min(1, (value - from) / (to - from)))
+}
+
+/// The time under a point `x` along a bar `width` wide whose thumb runs half
+/// a thumb in from each end, as the web's edge-aligned thumb.
+public func seekUnder(x: Double, width: Double, duration: Double) -> Double {
+  let travel = max(1, width - SEEK_THUMB)
+  return seekAt(x: x - SEEK_THUMB / 2, width: travel, duration: duration)
+}
+
+/// Where the thumb's centre sits along a bar `width` wide for `seconds`.
+public func seekThumbX(_ seconds: Double, width: Double, duration: Double) -> Double {
+  SEEK_THUMB / 2 + max(0, width - SEEK_THUMB) * seekFraction(seconds, duration: duration)
+}
+
+/// A finger dragging the seek bar's thumb, from where it pressed.
+public struct SeekDrag: Sendable {
+  private var x: Double
+  private var at: Double
+  /// Smoothed speed, in points per millisecond.
+  private var speed = 0.0
+  /// Where the drag has the time.
+  public private(set) var value: Double
+
+  /// A press at `x`, `atMs`, which jumps to `value`, the time under it.
+  public init(x: Double, atMs: Double, value: Double) {
+    self.x = x
+    at = atMs
+    self.value = value
+  }
+
+  /// The finger moved to `x` along a bar `width` wide, `atMs`. The thumb
+  /// trails a slow finger and catches up with a quick one, and a finger past
+  /// either end of the bar takes it to that end. Returns the time it's at.
+  @discardableResult
+  public mutating func move(to x: Double, atMs: Double, width: Double, duration: Double) -> Double {
+    let dx = x - self.x
+    guard dx != 0, seekable(duration), !x.isNaN else { return value }
+    let sample = abs(dx) / max(1, atMs - at)
+    speed = speed * 0.6 + sample * 0.4
+    self.x = x
+    at = atMs
+    let travel = max(1, width - SEEK_THUMB)
+    let perPoint = duration / travel
+    let finest = min(1, max(FINEST_GAIN, FINEST_PER_POINT / perPoint))
+    let gain = finest + (1 - finest) * ramp(speed, FINE_SPEED, FULL_SPEED)
+    var next = value + dx * perPoint * gain
+    let under = seekUnder(x: x, width: width, duration: duration)
+    // Only toward the finger, so the thumb never runs against it.
+    if (under - next) * (dx > 0 ? 1 : -1) > 0 {
+      let outside = x < 0 || x > width
+      let rate = outside ? 1 : CATCH_UP_RATE * ramp(speed, CATCH_UP_SPEED, CATCH_UP_FULL_SPEED)
+      next += (under - next) * rate
+    }
+    value = max(0, min(duration, next))
+    return value
+  }
+}

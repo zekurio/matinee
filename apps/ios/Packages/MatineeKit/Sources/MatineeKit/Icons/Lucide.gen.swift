@@ -9,6 +9,7 @@ public nonisolated struct Lucide: Hashable, Sendable {
 
   private init(_ name: String) { self.name = name }
 
+  public static let airplay = Lucide("lucide_kit_airplay")
   public static let arrowLeft = Lucide("lucide_arrow_left")
   public static let arrowUpDown = Lucide("lucide_arrow_up_down")
   public static let audioLines = Lucide("lucide_audio_lines")
@@ -98,6 +99,7 @@ public nonisolated struct Lucide: Hashable, Sendable {
 
   /// Every icon, by its Swift name, for the gallery.
   public static let all: [(name: String, icon: Lucide)] = [
+    ("airplay", .airplay),
     ("arrowLeft", .arrowLeft),
     ("arrowUpDown", .arrowUpDown),
     ("audioLines", .audioLines),

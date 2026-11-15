@@ -1,22 +1,36 @@
-import MatineeMPV
 import MatineeCore
 import MatineeKit
+import MatineeMPV
 import SwiftUI
 import UIKit
 
 /*
- * PlayerScreen.kt and PlayerActivity.kt. The shell presents the player over
- * everything, in the dark theme, in landscape on a phone, without the status
- * bar and with the home indicator tucked away (`PlayerCover` in Nav.swift);
- * it leaves with `@Environment(\.dismiss)`, and the shell turns the screen
- * back. `PlayerController` (MatineeCore/Player) plays; this draws it and
- * makes the calls its README's Lifecycle lists at their moments.
+ * PlayerScreen.kt and PlayerActivity.kt, drawn as the web player draws
+ * itself on a touch screen (apps/web/src/components/video-player.tsx).
+ * The shell presents the player over everything, landscape on a phone
+ * (`PlayerCover` in Nav.swift); it leaves with `@Environment(\.dismiss)`,
+ * and the shell turns the screen back. `PlayerController` (MatineeCore/
+ * Player) plays; this draws it and makes the calls its README's Lifecycle
+ * lists at their moments.
  *
- * The pieces are beside it: the video and picture in picture
- * (PlayerVideo.swift), the controls and seek bar (PlayerControls.swift),
- * the menus (PlayerMenus.swift), the subtitles (PlayerSubtitles.swift), and
- * the notes over the video (PlayerNotes.swift).
+ * The pieces are beside it: the video, picture in picture, and AirPlay
+ * (PlayerVideo.swift), the controls (PlayerControls.swift) and seek bar
+ * (PlayerSeekBar.swift), the menus' choices (PlayerMenus.swift), the
+ * subtitles (PlayerSubtitles.swift), the touches on the video
+ * (PlayerGestures.swift), and what shows over the video besides the
+ * controls (PlayerNotes.swift).
+ *
+ * Everything here is from MatineeKit. The app's own theme and components
+ * have names the kit shares, and a name declared in the app wins over an
+ * imported one, so the kit's are written `MatineeKit.<name>` throughout.
  */
+
+extension EnvironmentValues {
+  /// The kit's palette under the player, which is dark whatever the theme.
+  /// The app's old theme declares `\.palette` too, which would win here.
+  // TODO(shell): read the kit's `\.palette` once the old theme in UI/theme is gone.
+  @Entry var playerPalette = MatineeKit.Palette.matineeDark
+}
 
 /// What plays: a file, from where the person left off or from `start`
 /// seconds. Each is a sitting of its own, which asks anew.
@@ -27,12 +41,14 @@ private struct PlayTarget: Hashable {
 }
 
 /// Plays `itemId` from where the person left off, or from `start` seconds.
-/// The next episode plays in its place, as Android's activity changes its
-/// target and `key(playing)` makes a new player for it.
+/// The next or previous episode plays in its place, as Android's activity
+/// changes its target and `key(playing)` makes a new player for it.
 struct PlayerScreen: View {
   let itemId: String
   let start: Double?
   @State private var target: PlayTarget
+  // TODO(shell): the server's accents from the shell's kit theme rather than the old ThemeStore.
+  @Environment(ThemeStore.self) private var themeStore
 
   init(itemId: String, start: Double?) {
     self.itemId = itemId
@@ -41,10 +57,19 @@ struct PlayerScreen: View {
   }
 
   var body: some View {
+    let theme = MatineeKit.MatineeTheme(accentLight: themeStore.accents.light, accentDark: themeStore.accents.dark)
     PlayerSitting(itemId: target.itemId, start: target.start) { next in
       target = PlayTarget(itemId: next, start: 0)
     }
     .id(target)
+    .forceDarkTheme(theme)
+    .environment(\.playerPalette, MatineeKit.Palette(theme.dark))
+    .background(Color.black.ignoresSafeArea())
+    // No status bar, the home indicator tucked away, and a swipe from the
+    // top or bottom edge asked twice, so a swipe on the video stays the player's.
+    .statusBarHidden()
+    .persistentSystemOverlays(.hidden)
+    .defersSystemGestures(on: .vertical)
   }
 }
 
@@ -65,15 +90,18 @@ private struct PlayerSitting: View {
   @Environment(Downloads.self) private var downloads
   @Environment(ViewerState.self) private var viewer: ViewerState?
   @State private var controller: PlayerController?
-  @State private var prefs = PlayerPrefs()
   /// The sign-in it opened in; another server or account closes it, as on Android.
   @State private var made: Int?
+  private let prefs = PlayerPrefs.shared
 
   var body: some View {
     ZStack {
       Color.black.ignoresSafeArea()
       if let controller {
         Playback(controller: controller, prefs: prefs, close: { dismiss() })
+      } else {
+        // Nothing to control before the controller exists, but the way back.
+        BackOnly(close: { dismiss() })
       }
     }
     .task { await open() }
@@ -95,16 +123,18 @@ private struct PlayerSitting: View {
     }
     let saved = try? downloads.playback(itemId)
     let server = saved?.entry.server ?? session.activeServer ?? api.base.absoluteString
+    let engine = PlayerDebug.engine ?? prefs.engine
     let player = PlayerController(
       api: api, device: device, prefs: prefs, tokenProvider: token,
       downloads: ServerPlayerDownloads(downloads: downloads, server: server, api: offline ? nil : api),
       preferences: user?.playback ?? DEFAULT_PLAYBACK_PREFERENCES, offline: offline,
-      playbackEngine: prefs.engine == .mpv ? MPVPlaybackEngine() : nil)
+      playbackEngine: engine == .mpv ? MPVPlaybackEngine() : nil)
     player.onNext = { next in playInstead(next.id) }
     player.sceneDidBecomeActive()
     controller = player
     guard saved != nil else {
       await player.start(itemId: itemId, at: start)
+      await PlayerDebug.apply(to: player)
       return
     }
     // A download plays from the device. Online, the server says where the
@@ -127,22 +157,30 @@ private struct PlayerSitting: View {
   }
 }
 
-/// The video, the subtitles, the gestures, and everything over them.
+/// The video, the subtitles, the touches on it, and everything over them.
 private struct Playback: View {
   let controller: PlayerController
   let prefs: PlayerPrefs
   let close: () -> Void
   @Environment(\.scenePhase) private var scenePhase
   @Environment(\.accessibilityVoiceOverEnabled) private var voiceOver
-  @Environment(\.palette) private var palette
-  @State private var controls = true
-  @State private var menu: PlayerMenu?
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @State private var controls = !PlayerDebug.flag("hidden")
+  /// Locked, touches on the screen do nothing; only the corner unlocks.
+  @State private var locked = PlayerDebug.flag("locked")
+  @State private var menu: PlayerMenu? = PlayerDebug.menu
+  /// The menu that was open stays drawn while its panel slides away.
+  @State private var shownMenu: PlayerMenu = PlayerDebug.menu ?? .audio
   @State private var touched = 0
   @State private var fill: Bool
   /// Counts pinches that switched, so the note shows again for each.
   @State private var zoomNote = 0
-  /// This pinch switched already, so it switches once.
-  @State private var pinched = false
+  @State private var gestures = GestureState()
+  @State private var levels = DeviceLevels()
+  @State private var pip = PictureInPictureModel()
+  /// How far up from the screen's bottom edge the controls reach, which the
+  /// subtitles and the skip button rise above while they show.
+  @State private var controlsTop: CGFloat = 0
   @FocusState private var focused: Bool
 
   init(controller: PlayerController, prefs: PlayerPrefs, close: @escaping () -> Void) {
@@ -155,47 +193,92 @@ private struct Playback: View {
   private var back: Double { Double(controller.preferences.skipBack) }
   private var ahead: Double { Double(controller.preferences.skipForward) }
   private var inPip: Bool { controller.pictureInPictureActive }
+  /// The controls show: asked for, or the file ended, unless locked or failed.
+  private var controlsShown: Bool {
+    (controls || controller.ended || PlayerDebug.flag("controls")) && !locked && controller.error == nil
+      && controller.item != nil && !inPip
+  }
 
   var body: some View {
     GeometryReader { outer in
       let safe = outer.safeAreaInsets
       let screen = CGSize(
         width: outer.size.width + safe.leading + safe.trailing, height: outer.size.height + safe.top + safe.bottom)
-      let rect = videoRect(aspect: controller.videoAspect, in: screen, fill: fill)
+      let rect = videoRect(aspect: controller.videoAspect, in: screen, fill: fill && !inPip)
       let visible = rect.intersection(CGRect(origin: .zero, size: screen))
       ZStack {
         ZStack {
           Color.black
-          if let engine = controller.playbackEngine as? MPVPlaybackEngine {
-            MPVPlaybackSurface(engine: engine, fill: fill)
-          } else {
-            VideoSurface(controller: controller, fill: fill, autoPicture: prefs.pictureInPicture && controller.playing)
-          }
-          Subtitles(
-            controller: controller, look: subtitleLook(prefs), lifted: controls && !inPip, video: visible,
-            screen: screen, safeBottom: safe.bottom)
-          touches(width: screen.width)
+          video
+          VideoTouches(
+            controller: controller, prefs: prefs, levels: levels, state: gestures, insets: safe,
+            allowed: controller.error == nil && menu == nil && !locked, controlsShown: controlsShown,
+            onTap: toggleControls,
+            onDoubleTap: { forward in
+              Task { await controller.skip(forward ? ahead : -back) }
+              touched += 1
+            },
+            onStart: { kind in
+              // A seek's note sits where the play button is.
+              if kind == .seek { hideControls() }
+              touched += 1
+            },
+            onPinch: { want in
+              fill = want
+              prefs.fillScreen = want
+              zoomNote += 1
+            })
+          VolumeHost(levels: levels)
         }
         .ignoresSafeArea()
-        overlays(safe: safe)
+        overlays(screen: screen, safe: safe)
+        // Over the shades, so the controls never dim them; they take no touches.
+        Subtitles(
+          controller: controller, look: subtitleLook(prefs), lift: controlsShown ? controlsTop : nil,
+          video: visible, screen: screen, safeBottom: safe.bottom
+        )
+        .ignoresSafeArea()
       }
     }
+    .sidePanel(isPresented: menuOpen, title: shownMenu.title) {
+      PlayerMenuPanel(menu: shownMenu, controller: controller)
+    }
+    .dynamicTypeSize(...DynamicTypeSize.accessibility2)
     .focusable()
     .focused($focused)
     .focusEffectDisabled()
     .onKeyPress(phases: .down, action: key)
-    .onAppear { focused = true }
-    .task(id: HideKey(controls, controller.playing, menu, controller.scrubPosition != nil, touched, voiceOver)) {
+    .onAppear {
+      focused = true
+      // The brightness the last swipe left, when settings keep it.
+      if prefs.swipeLevels, prefs.rememberBrightness, (0...1).contains(prefs.brightness) {
+        levels.setBrightness(prefs.brightness)
+      }
+    }
+    .task(id: HideKey(controls, controller.playing, menu, controller.scrubPosition != nil, touched, voiceOver, gestures.kind))
+    {
       // VoiceOver reads the controls one by one, so they stay until asked away.
-      guard controls, controller.playing, menu == nil, controller.scrubPosition == nil, !voiceOver else { return }
+      guard controls, controller.playing, menu == nil, controller.scrubPosition == nil, !voiceOver, gestures.kind == nil
+      else { return }
       try? await Task.sleep(for: .milliseconds(HIDE_AFTER_MS))
       guard !Task.isCancelled else { return }
-      withMotion(Motion.exit) { controls = false }
+      hideControls()
+    }
+    .onChange(of: menu) { _, open in if let open { shownMenu = open } }
+    .onChange(of: controller.duration > 0) { _, known in
+      // A seek swipe's note held for a screenshot lands a minute and a half on.
+      guard known, PlayerDebug.gesture == .seek else { return }
+      gestures.from = controller.position
+      gestures.target = min(controller.duration, controller.position + 95)
     }
     .onChange(of: scenePhase) { _, phase in
       switch phase {
-      case .background: controller.sceneDidEnterBackground()
-      case .active: controller.sceneDidBecomeActive()
+      case .background:
+        controller.sceneDidEnterBackground()
+        levels.restore()
+      case .active:
+        controller.sceneDidBecomeActive()
+        levels.reapply()
       default: break
       }
     }
@@ -203,9 +286,21 @@ private struct Playback: View {
     .onChange(of: controller.playing, initial: true) { _, playing in
       UIApplication.shared.isIdleTimerDisabled = playing
     }
+    .onChange(of: controller.error) { PlayerDebug.save(controller.diagnostics) }
+    .task {
+      #if DEBUG
+        while !Task.isCancelled {
+          PlayerDebug.save(controller.diagnostics)
+          try? await Task.sleep(for: .seconds(2))
+        }
+      #endif
+    }
     .onDisappear {
+      PlayerDebug.save(controller.diagnostics)
       UIApplication.shared.isIdleTimerDisabled = false
+      levels.restore()
       TrickplayTiles.shared.clear()
+      controller.endHold()
     }
     // The lock screen and Control Center name it in the app's language, "Episode 4" for an untitled one.
     .onChange(of: controller.item?.id, initial: true) {
@@ -213,91 +308,96 @@ private struct Playback: View {
     }
   }
 
-  /// Taps show and hide the controls; a double tap on either side skips;
-  /// spreading two fingers fills the screen, and pinching shows it whole.
-  /// VoiceOver gets the tap as this area's one action.
-  private func touches(width: CGFloat) -> some View {
-    Color.clear
-      .contentShape(Rectangle())
-      .onTapGesture(count: 2, coordinateSpace: .local) { point in
-        let step = point.x < width / 2 ? -back : ahead
-        Task { await controller.skip(step) }
-        touched += 1
-      }
-      .onTapGesture { toggleControls() }
-      .simultaneousGesture(
-        MagnifyGesture()
-          .onChanged { value in
-            let zoom = value.magnification
-            let want: Bool? = zoom > PINCH_FILL ? true : zoom < 1 / PINCH_FILL ? false : nil
-            if !pinched, let want, want != fill {
-              pinched = true
-              fill = want
-              prefs.fillScreen = want
-              zoomNote += 1
-            }
-          }
-          .onEnded { _ in pinched = false }
-      )
-      .accessibilityElement()
-      .accessibilityLabel(Str.a11yPlayerVideo)
-      .accessibilityAddTraits(.isButton)
-      .accessibilityHint(controls ? Str.a11yPlayerHideControls : Str.a11yPlayerShowControls)
-      .accessibilityAction { toggleControls() }
+  @ViewBuilder private var video: some View {
+    if let engine = controller.playbackEngine as? MPVPlaybackEngine {
+      // mpv fits or fills the video itself, its own subtitles with it.
+      MPVPlaybackSurface(engine: engine, fill: fill && !inPip)
+    } else {
+      VideoSurface(
+        controller: controller, pip: pip, fill: fill && !inPip,
+        autoPicture: prefs.pictureInPicture && controller.playing)
+    }
+  }
+
+  private var menuOpen: Binding<Bool> {
+    Binding(get: { menu != nil }, set: { if !$0 { menu = nil } })
   }
 
   private func toggleControls() {
-    withMotion(controls ? Motion.exit : Motion.enter) { controls.toggle() }
+    let show = !controls
+    MatineeKit.withMotion(show ? MatineeKit.Motion.enter : MatineeKit.Motion.exit) { controls = show }
     touched += 1
   }
 
-  @ViewBuilder private func overlays(safe: EdgeInsets) -> some View {
+  private func hideControls() {
+    MatineeKit.withMotion(MatineeKit.Motion.exit) { controls = false }
+  }
+
+  @ViewBuilder private func overlays(screen: CGSize, safe: EdgeInsets) -> some View {
+    let fade = MatineeKit.Motion.animation(MatineeKit.Motion.enter, reduceMotion: reduceMotion)
     // Up top, clear of the play button in the middle.
-    VStack(spacing: 8) {
+    VStack(spacing: MatineeKit.Space.s2) {
       ZoomNote(count: zoomNote, fill: fill)
       PlayerNoticeNote(controller: controller)
+      if controller.holding { HoldNote().transition(.opacity) }
     }
-    .padding(.top, 16)
-    .padding(.horizontal, 24)
+    .padding(.top, MatineeKit.Space.s4)
+    .padding(.horizontal, MatineeKit.Space.s6)
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+    .animation(fade, value: controller.holding)
     .allowsHitTesting(false)
+    if !inPip { GestureNotes(state: gestures, controller: controller) }
     if controller.loading && controller.error == nil {
-      ProgressView()
-        .controlSize(.large)
-        .tint(palette.foreground)
-        .frame(width: 48, height: 48)
+      // The web's spinner, `size-10 text-white/85`, where the play button is.
+      MatineeKit.Spinner(size: 40, tint: .white.opacity(0.85))
         .allowsHitTesting(false)
-        .accessibilityLabel(Str.loadingInProgress)
     }
     if !inPip {
-      if controller.item == nil {
-        // Nothing to control before the server answers, but the way back.
-        LegacyRoundIconButton(.arrowLeft, label: Str.playerBack, size: 52, iconSize: 26, background: .clear, action: close)
-          .padding(.horizontal, 12)
-          .padding(.vertical, 8)
-          .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-      } else if controls || controller.ended {
+      if controlsShown {
         PlayerControls(
-          controller: controller, close: close, onMenu: { menu = $0 },
-          onTouch: { touched += 1 }
+          controller: controller, prefs: prefs, pip: pip, close: close,
+          onMenu: { menu = $0 }, onTouch: { touched += 1 },
+          onLock: prefs.lockButton
+            ? {
+              locked = true
+              hideControls()
+            } : nil,
+          controlsTop: $controlsTop, screenHeight: screen.height
         )
-        .transition(Motion.fade)
-        .dynamicTypeSize(...DynamicTypeSize.accessibility2)
+        .transition(.opacity)
+        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
       }
+      // Clear of the controls while they show. Held sideways, a phone has
+      // no room above the seek bar for the card beside the play button, so
+      // while the controls show it's a row of its buttons beside the skip.
+      let compact = controlsShown && screen.height < 500
+      let column = compact ? AnyLayout(HStackLayout(alignment: .center, spacing: MatineeKit.Space.s3))
+        : AnyLayout(VStackLayout(alignment: .trailing, spacing: MatineeKit.Space.s3))
+      column {
+        if !locked, controller.error == nil { SkipSegmentButton(controller: controller, controls: controlsShown) }
+        if controller.showsUpNext, !locked { UpNextCard(controller: controller, compact: compact) }
+      }
+      .padding(.trailing, MatineeKit.Space.s5)
+      .padding(.bottom, controlsShown ? max(0, controlsTop - safe.bottom) + MatineeKit.Space.s4 : MatineeKit.Space.s6)
+      .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+      .animation(MatineeKit.Motion.animation(MatineeKit.Motion.move, reduceMotion: reduceMotion), value: controlsShown)
+      .animation(fade, value: controller.showsUpNext)
+      .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
       if let message = controller.error {
-        ZStack {
-          Color.black.opacity(0.8).ignoresSafeArea()
-          failure(message)
-        }
+        failure(message)
       }
-      if controller.ended, let next = controller.next {
-        UpNext(controller: controller, upcoming: next)
-          .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
-          .transition(Motion.fade)
-          .dynamicTypeSize(...DynamicTypeSize.accessibility2)
+      // Over everything else, so no touch reaches what's under it. It
+      // steps aside while an error shows, so its buttons stay in reach.
+      if locked && controller.error == nil {
+        LockedScreen(
+          keep: voiceOver || PlayerDebug.flag("locked"),
+          onUnlock: {
+            locked = false
+            MatineeKit.withMotion(MatineeKit.Motion.enter) { controls = true }
+            touched += 1
+          })
       }
     }
-    PlayerPanel(open: menu, controller: controller, safe: safe) { menu = nil }
   }
 
   @ViewBuilder private func failure(_ message: String) -> some View {
@@ -324,22 +424,34 @@ private struct Playback: View {
       if menu != nil { menu = nil } else { close() }
       return .handled
     }
-    if menu != nil { return .ignored }
+    if menu != nil || locked { return .ignored }
     switch press.key {
     case .space: controller.togglePlay()
     case .leftArrow: Task { await controller.skip(-back) }
     case .rightArrow: Task { await controller.skip(ahead) }
     case .upArrow, .downArrow, .return:
       guard !controls else { return .ignored }
-      withMotion(Motion.enter) { controls = true }
+      MatineeKit.withMotion(MatineeKit.Motion.enter) { controls = true }
     default: return .ignored
     }
     return .handled
   }
 }
 
-/// How far two fingers spread, or pinch by its inverse, before the video switches.
-private let PINCH_FILL: CGFloat = 1.15
+/// The way back alone, before there's anything to control.
+private struct BackOnly: View {
+  let close: () -> Void
+
+  var body: some View {
+    MatineeKit.RoundIconButton(
+      .arrowLeft, label: Str.playerBack, look: .ghost, size: 44, tint: .white.opacity(0.85), action: close
+    )
+    .frame(height: TOP_BAR_HEIGHT)
+    .padding(.horizontal, MatineeKit.Space.s3)
+    .padding(.top, MatineeKit.Space.s2)
+    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+  }
+}
 
 /// What the controls' hiding waits on: any change starts the wait again.
 private struct HideKey: Equatable {
@@ -349,12 +461,17 @@ private struct HideKey: Equatable {
   let scrubbing: Bool
   let touched: Int
   let voiceOver: Bool
-  init(_ controls: Bool, _ playing: Bool, _ menu: PlayerMenu?, _ scrubbing: Bool, _ touched: Int, _ voiceOver: Bool) {
+  let gesture: GestureKind?
+  init(
+    _ controls: Bool, _ playing: Bool, _ menu: PlayerMenu?, _ scrubbing: Bool, _ touched: Int, _ voiceOver: Bool,
+    _ gesture: GestureKind?
+  ) {
     self.controls = controls
     self.playing = playing
     self.menu = menu
     self.scrubbing = scrubbing
     self.touched = touched
     self.voiceOver = voiceOver
+    self.gesture = gesture
   }
 }

@@ -44,10 +44,36 @@ themselves: scrub, trickplay tiles, the countdown, the lifecycle calls).
 - `beginScrub`, `scrub(to:)`, async `endScrub(commit:)`; observe
   `scrubPosition`. `trickplayFrame(at:)` gives a tile URL and pixel crop.
   Use `mediaRequest(url:)` for authenticated artwork and tile requests.
-- Observe `next` and `nextCountdown`; call `cancelNext` or `playNext`.
-  Set `onNext` to stop this sitting and open the next item. Like Android, the
-  ten-second countdown starts after the file ends, and with autoplay off the
-  view offers Play without one.
+  `SeekDrag` (Seek.swift) is the web seek bar's drag under a finger: a press
+  jumps, a slow drag moves finer than the finger, and `seekUnder` and
+  `seekThumbX` place its edge-aligned thumb.
+- The episodes either side, as `playback.start` answers them (`previous`,
+  `next`) or, for a download, as `PlayerDownloads.previous(before:)` and
+  `next(after:)` find them. `isEpisode` says whether the buttons show.
+  `playPrevious()` and `playInstead(_:)` stop this sitting through `onNext`,
+  which the view sets to open that item in its place.
+- The server's `segments` and `upNextAt`; the client works out neither.
+  `segment` is the one that plays now, short of its last second, as
+  Android's. `skippable(controls:)` is the one whose button shows: for eight
+  seconds after it starts (`segmentFresh`), then only with the controls.
+  `skipSegment()` seeks to its end. A download has no segments.
+- `offersNext` is true once the position reaches `upNextAt`, or the file
+  ended. `upNext` holds the offer while it lasts: `early` when it came with
+  the credits, `cancelled` when it waits for Play (autoplay off, Cancel, or
+  Hide), `hidden` when Hide put it away until the end. `showsUpNext` says
+  whether its card shows. `nextCountdown` counts the seconds left in the
+  file while the credits roll, and the file's end then starts the next
+  item; offered only at the end, it counts ten seconds. Moving back before
+  `upNextAt` drops the offer, and reaching it again starts afresh. Call
+  `cancelNext`, `hideNext`, or `playNext`.
+- `startHold()` plays at `HOLD_SPEED` while a finger holds the video, if it
+  plays slower; `endHold()` goes back to `speed`. `holding` shows the note.
+  Swipe.swift has the swipes' arithmetic: `swipeLevel` for brightness and
+  volume, `swipeSeek` for seeking.
+- `PlayerPrefs` keeps the gestures (`swipeLevels`, `rememberBrightness` with
+  `brightness`, `swipeSeek`, `holdSpeed`) and which buttons the controls show
+  (`skipButtons`, `pictureInPictureButton`, `lockButton`, `audioButton`,
+  `subtitlesButton`), under Android's keys.
 - `retry`, `dismissNotice`, async `report` and `stop`.
 - Lock-screen controls start with the first source.
   `enableNowPlaying(title:subtitle:)` replaces their title with the view's
