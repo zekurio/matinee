@@ -84,18 +84,3 @@ export function useAsk() {
       }),
   })
 }
-
-/** "Notify me" on a title someone else asked for, and taking it back. */
-export function useFollow() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: ({ id, on }: { id: string; on: boolean }) =>
-      on ? client.requests.follow({ id }) : client.requests.unfollow({ id }),
-    // The button says the new state; a toast would only repeat it.
-    onSuccess: () => refresh(queryClient),
-    onError: (cause) =>
-      toast.error(tr("ask.toast.followFailed"), {
-        description: errorMessage(cause),
-      }),
-  })
-}

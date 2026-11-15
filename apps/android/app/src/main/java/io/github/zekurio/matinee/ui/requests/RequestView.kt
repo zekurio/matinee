@@ -30,8 +30,6 @@ object AvailabilityState {
 object AvailabilityAction {
     const val ASK = "ask"
     const val ADD = "add"
-    const val FOLLOW = "follow"
-    const val UNFOLLOW = "unfollow"
     const val CANCEL = "cancel"
 }
 
@@ -58,7 +56,6 @@ fun SeasonAvailability.asTitle(): Availability = Availability(
     stillLooking = stillLooking,
     reason = reason?.let { Availability.Reason(it.kind, it.code, it.note) },
     askedBySelf = askedBySelf,
-    following = following,
     requestId = requestId,
     others = Availability.Others(others.count, others.names),
     limit = limit?.let { Availability.Limit(it.left, it.resetsAt) },
@@ -152,22 +149,20 @@ fun cardLine(year: Int?, ref: CatalogRef, availability: Availability, today: Loc
 }
 
 /** The one thing a poster offers to do about a title. */
-enum class PosterAction { Request, Cancel, Follow, Unfollow }
+enum class PosterAction { Request, Cancel }
 
 /** What the server lets the viewer do, as the poster's one button, or null. */
 fun posterAction(availability: Availability): PosterAction? = when {
     availability.asks -> PosterAction.Request
     availability.requestId == null -> null
     availability.action == AvailabilityAction.CANCEL -> PosterAction.Cancel
-    availability.action == AvailabilityAction.FOLLOW -> PosterAction.Follow
-    availability.action == AvailabilityAction.UNFOLLOW -> PosterAction.Unfollow
     else -> null
 }
 
 /** Why a declined title isn't coming. */
 enum class ReasonWord { AlreadyHere, NotForServer, NotFound, Declined }
 
-/** The reason's words, for My requests and notifications. */
+/** The reason's words, for My requests. */
 data class Decline(val reason: ReasonWord)
 
 fun declineOf(reason: Availability.Reason): Decline = Decline(
@@ -194,7 +189,7 @@ sealed interface Blocked {
 
     /**
      * An admin declined the title, which closes it for everyone until an
-     * admin lifts it. Whoever requested or follows it has the answer.
+     * admin lifts it. Whoever requested it has the answer.
      */
     data object Declined : Blocked
 }

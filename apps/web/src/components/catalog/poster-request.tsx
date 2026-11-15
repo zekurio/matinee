@@ -7,18 +7,12 @@ import {
 } from "@matinee/ui/components/tooltip"
 import { cn } from "@matinee/ui/lib/utils"
 import { getRouteApi } from "@tanstack/react-router"
-import {
-  BellIcon,
-  BellRingIcon,
-  type LucideIcon,
-  PlusIcon,
-  XIcon,
-} from "lucide-react"
+import { type LucideIcon, PlusIcon, XIcon } from "lucide-react"
 import { type ReactNode, useId } from "react"
 
 import { tr } from "@/i18n"
 
-import { useCancel, useFollow } from "./use-ask"
+import { useCancel } from "./use-ask"
 import {
   type PosterAction,
   posterAction,
@@ -56,8 +50,6 @@ export type ActionLook = "poster" | "plain" | "page"
 const icons = {
   request: PlusIcon,
   cancel: XIcon,
-  follow: BellIcon,
-  unfollow: BellRingIcon,
 } satisfies Record<PosterAction, LucideIcon>
 
 /**
@@ -70,10 +62,10 @@ export function hasPosterButton(availability: Availability): boolean {
 }
 
 /**
- * The title's one button: "Request", "Cancel request", "Notify me" or
- * "Stop notifying", whichever the server's action allows, else nothing.
- * Cancelling and notifying happen here; a request goes to `onRequest`,
- * which asks at once or opens the request dialog. A Request the viewer
+ * The title's one button: "Request" or "Cancel request", whichever the
+ * server's action allows, else nothing. Cancelling happens here; a
+ * request goes to `onRequest`, which asks at once or opens the request
+ * dialog. A Request the viewer
  * can't make, out of requests, with requests off, or declined, stays,
  * looks disabled, and says why in a tooltip, as a blocked menu item in
  * Users does, with the admin's answer to a declined request; a working
@@ -105,7 +97,6 @@ export function PosterActionButton({
   className?: string
 }) {
   const cancel = useCancel()
-  const follow = useFollow()
   const tipId = useId()
   const { user } = authed.useRouteContext()
   const dimmed = !override && requestDimmed(availability)
@@ -118,18 +109,11 @@ export function PosterActionButton({
       : null
   const id = availability.requestId
   const Icon = icons[action]
-  const pending =
-    action === "request"
-      ? busy
-      : action === "cancel"
-        ? cancel.isPending
-        : follow.isPending
+  const pending = action === "request" ? busy : cancel.isPending
   const press = () => {
     if (dimmed) return
     if (action === "request") onRequest()
-    else if (!id) return
-    else if (action === "cancel") cancel.mutate({ id, name })
-    else follow.mutate({ id, on: action === "follow" })
+    else if (id) cancel.mutate({ id, name })
   }
   const page = look === "page"
   const button = (
@@ -160,11 +144,7 @@ export function PosterActionButton({
         className,
       )}
     >
-      <Icon
-        aria-hidden
-        strokeWidth={page ? 2 : 2.5}
-        className={cn(action === "unfollow" && "text-primary")}
-      />
+      <Icon aria-hidden strokeWidth={page ? 2 : 2.5} />
       <span
         key={action}
         className={cn(

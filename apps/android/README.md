@@ -121,11 +121,10 @@ folder as is.
   a sheet to pick seasons. A library show lists the seasons it lacks.
   Home and the profile have "My requests". Every state
   comes from the server's `Availability`, and screens follow
-  `requests.live`, so an approval or an arrival shows up at once. A
-  WorkManager job checks for notifications about every 15 minutes; the
-  open app doesn't show them. Admins get the queue behind the profile's
-  inbox button and Add and Decline on a title's page. Requests settings
-  stay on the web, and a TV shows none of it yet.
+  `requests.live`, so an approval or an arrival shows up at once. Admins
+  get the queue behind the profile's inbox button and Add and Decline on
+  a title's page. Requests settings stay on the web, and a TV shows none
+  of it yet.
 
 Not built yet: Chromecast, a lock screen media session, and season
 downloads.

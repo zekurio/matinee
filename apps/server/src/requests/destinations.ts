@@ -140,8 +140,7 @@ export async function requestedIn(
 /**
  * What each request's followers may open, by request id, for keeping a
  * moved request where all of them can still see it. One moved into a
- * library someone who asked can't see would drop out of their list and
- * never tell them it arrived.
+ * library someone who asked can't see would drop out of their list.
  */
 export async function followerAccess(
   requestIds: readonly string[],

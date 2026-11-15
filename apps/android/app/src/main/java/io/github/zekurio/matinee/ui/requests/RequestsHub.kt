@@ -66,7 +66,6 @@ class RequestsHub(
     private val api: MatineeApi,
     private val scope: CoroutineScope,
     private val snackbar: ToastState,
-    private val notices: RequestNotices,
 ) {
     /** Kept current by the composition, for the words in snackbars. */
     var resources: Resources? = null
@@ -74,7 +73,7 @@ class RequestsHub(
     /** The last word on each title, by [CatalogRef.key]: from a stream, or from an answer to an ask. */
     val live = mutableStateMapOf<String, LiveEntry>()
 
-    /** Moves on each ask, cancel, and follow, so lists and pages that hold asks fetch again. */
+    /** Moves on each ask and cancel, so lists and pages that hold asks fetch again. */
     var version by mutableIntStateOf(0)
         private set
 
@@ -90,9 +89,6 @@ class RequestsHub(
 
     /** The [version] each loader last fetched for, so one on a covered screen catches up when it shows again. */
     internal val seen = java.util.WeakHashMap<io.github.zekurio.matinee.ui.Loader<*>, Int>()
-
-    /** Set after an ask, for the notification permission to be asked for then. */
-    var wantsPermission by mutableStateOf(false)
 
     /** How many requests wait for the admin or need them, less the ones held for Undo. */
     val needsYou: Int
@@ -150,7 +146,6 @@ class RequestsHub(
                 apply(item.title.ref, item.availability)
                 bump()
                 onDone()
-                if (!notices.askedPermission) wantsPermission = true
                 val canUndo = undo && (item.availability.action == AvailabilityAction.CANCEL || item.season?.action == AvailabilityAction.CANCEL)
                 busy.remove(ref.key)
                 val message = text(R.string.web_ask_toast_asked, name)
@@ -186,23 +181,6 @@ class RequestsHub(
                 throw e
             } catch (e: IOException) {
                 fail(R.string.web_ask_toast_cancelFailed, name, e)
-            }
-        }
-    }
-
-    /** "Notify me" on a title someone else asked for, and taking it back. */
-    fun follow(id: String, on: Boolean, name: String, onDone: () -> Unit = {}) {
-        scope.launch {
-            try {
-                if (on) api.requests.follow(RequestId(id)) else api.requests.unfollow(RequestId(id))
-                bump()
-                onDone()
-                // The button says the new state; a snackbar would only repeat it.
-                if (on && !notices.askedPermission) wantsPermission = true
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: IOException) {
-                fail(R.string.web_ask_toast_followFailed, null, e)
             }
         }
     }

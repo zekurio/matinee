@@ -15,7 +15,6 @@ open class ContractApi(transport: ApiTransport) {
     val catalog = CatalogApi(transport)
     val discover = DiscoverApi(transport)
     val requests = RequestsApi(transport)
-    val notifications = NotificationsApi(transport)
     val auth = AuthApi(transport)
     val account = AccountApi(transport)
     val libraries = LibrariesApi(transport)
@@ -204,26 +203,6 @@ class RequestsApi internal constructor(private val transport: ApiTransport) {
         )
     }
 
-    /** `POST /requests/follow` */
-    suspend fun follow(requestId: RequestId) {
-        transport.send(
-            "POST",
-            listOf("requests", "follow"),
-            emptyList(),
-            transport.json(RequestId.serializer(), requestId),
-        )
-    }
-
-    /** `POST /requests/unfollow` */
-    suspend fun unfollow(requestId: RequestId) {
-        transport.send(
-            "POST",
-            listOf("requests", "unfollow"),
-            emptyList(),
-            transport.json(RequestId.serializer(), requestId),
-        )
-    }
-
     /** `GET /requests/mine` */
     suspend fun mine(
         cursor: String? = null,
@@ -237,68 +216,6 @@ class RequestsApi internal constructor(private val transport: ApiTransport) {
             null,
             RequestPage.serializer(),
         )
-}
-
-class NotificationsApi internal constructor(private val transport: ApiTransport) {
-    /** `GET /notifications` */
-    suspend fun list(cursor: String? = null, limit: Int? = null): NotificationPage =
-        transport.call(
-            "GET",
-            listOf("notifications"),
-            listOf("cursor" to cursor, "limit" to limit?.toString()),
-            null,
-            NotificationPage.serializer(),
-        )
-
-    /** `POST /notifications/read` */
-    suspend fun markRead(ids: List<String>, all: Boolean? = null) {
-        transport.send(
-            "POST",
-            listOf("notifications", "read"),
-            emptyList(),
-            transport.json(NotificationsMarkReadInput.serializer(), NotificationsMarkReadInput(ids = ids, all = all)),
-        )
-    }
-
-    /** `GET /notifications/unread` */
-    fun unreadCount(): Flow<NotificationsUnreadCountEvent> =
-        transport.events(
-            "GET",
-            listOf("notifications", "unread"),
-            emptyList(),
-            null,
-            NotificationsUnreadCountEvent.serializer(),
-        )
-
-    /** `GET /notifications/push-key` */
-    suspend fun pushPublicKey(): NotificationsPushPublicKeyOutput =
-        transport.call(
-            "GET",
-            listOf("notifications", "push-key"),
-            emptyList(),
-            null,
-            NotificationsPushPublicKeyOutput.serializer(),
-        )
-
-    /** `POST /notifications/subscribe` */
-    suspend fun subscribe(pushSubscriptionInput: PushSubscriptionInput) {
-        transport.send(
-            "POST",
-            listOf("notifications", "subscribe"),
-            emptyList(),
-            transport.json(PushSubscriptionInput.serializer(), pushSubscriptionInput),
-        )
-    }
-
-    /** `POST /notifications/unsubscribe` */
-    suspend fun unsubscribe(endpoint: String) {
-        transport.send(
-            "POST",
-            listOf("notifications", "unsubscribe"),
-            emptyList(),
-            transport.json(NotificationsUnsubscribeInput.serializer(), NotificationsUnsubscribeInput(endpoint = endpoint)),
-        )
-    }
 }
 
 class AuthApi internal constructor(private val transport: ApiTransport) {

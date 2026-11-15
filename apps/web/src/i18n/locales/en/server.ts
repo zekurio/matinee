@@ -51,7 +51,6 @@ export default defineMessages("server", {
     "Only an accepted request that hasn't arrived can be given up.",
   "server.requests.notDeclined":
     "This request isn't declined any more. Reload the list.",
-  "server.requests.cancel": "Cancel your request to stop following this title.",
   "server.requests.cursor": "Reload this list and try again.",
   "server.requests.noConnection":
     "Choose a usable fulfilment connection for this library.",
@@ -69,7 +68,6 @@ export default defineMessages("server", {
   "server.requests.moveTaken":
     "{library} already has a request for this title. Leave this one where it is, or decline it.",
 
-  "server.notifications.endpoint": "Use a supported browser push service.",
   "server.fulfilment.keyFile":
     "Cannot read the connection key file. Check its path and permissions.",
   "server.fulfilment.source.manual": "By hand",

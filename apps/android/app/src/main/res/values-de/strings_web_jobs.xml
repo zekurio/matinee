@@ -12,9 +12,7 @@
     <string name="web_jobs_queue_request_progress_name">Anfragenfortschritt</string>
     <string name="web_jobs_queue_request_progress_description">Fortschritt von Titeln prüfen, die unterwegs sind.</string>
     <string name="web_jobs_queue_request_arrival_name">Eingetroffene Anfragen</string>
-    <string name="web_jobs_queue_request_arrival_description">Neue Bibliothekstitel zuordnen und Interessierte benachrichtigen.</string>
-    <string name="web_jobs_queue_notifications_name">Benachrichtigungen</string>
-    <string name="web_jobs_queue_notifications_description">Gespeicherte Benachrichtigungen per Web-Push zustellen.</string>
+    <string name="web_jobs_queue_request_arrival_description">Neue Bibliothekstitel ihren Anfragen zuordnen.</string>
     <string name="web_jobs_queue_catalog_name">Katalog</string>
     <string name="web_jobs_queue_catalog_description">Zwischengespeicherte Katalog- und Entdecken-Antworten aktualisieren.</string>
     <string name="web_jobs_queue_title_features_name">Titelmerkmale</string>

@@ -308,8 +308,7 @@ function CatalogDetailPage({
 /**
  * The title's one action, leading the row of buttons as Play leads a
  * library title's, with Trailer after it: "Request", "Cancel request",
- * "Notify me" or "Stop notifying", or a dimmed Request with why in its
- * tooltip. A show's request opens the request dialog for its seasons.
+ * or a dimmed Request with why in its tooltip. A show's request opens the request dialog for its seasons.
  * Null while there's nothing to do.
  */
 function RequestControl({

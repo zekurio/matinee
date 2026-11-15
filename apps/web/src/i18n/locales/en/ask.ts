@@ -8,8 +8,6 @@ import { defineMessages, plural } from "../../catalog"
 export default defineMessages("ask", {
   "ask.ask": "Request",
   "ask.more": "Request more",
-  "ask.notify": "Notify me",
-  "ask.stopNotifying": "Stop notifying",
   "ask.cancel": "Cancel request",
 
   // The request dialog, for a show's seasons or a choice of library.
@@ -50,7 +48,7 @@ export default defineMessages("ask", {
     one: "{count} request left.",
     other: "{count} requests left.",
   }),
-  // My requests and notifications: "Declined by Lukas: Not for this server."
+  // My requests: "Declined by Lukas: Not for this server."
   "ask.reason.alreadyHere": "Already have it.",
   "ask.reason.notForServer": "Not for this server.",
   "ask.reason.notFound": "No copy found.",
@@ -61,7 +59,6 @@ export default defineMessages("ask", {
   "ask.toast.undo": "Undo",
   "ask.toast.failed": "Couldn't request {name}",
   "ask.toast.cancelFailed": "Couldn't cancel {name}",
-  "ask.toast.followFailed": "Couldn't change your notifications",
 
   // What the viewer requested: Home's row, the profile's section and its
   // page. Beside the admin's "Requests", so it says whose.

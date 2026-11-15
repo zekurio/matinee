@@ -47,8 +47,6 @@ export default {
     "Nur eine angenommene Anfrage, die noch nicht angekommen ist, lässt sich aufgeben.",
   "server.requests.notDeclined":
     "Diese Anfrage ist nicht mehr abgelehnt. Lade die Liste neu.",
-  "server.requests.cancel":
-    "Ziehe deine Anfrage zurück, um diesem Titel nicht mehr zu folgen.",
   "server.requests.cursor": "Lade diese Liste neu und versuche es erneut.",
   "server.requests.noConnection":
     "Wähle eine nutzbare Beschaffungsverbindung für diese Mediathek.",
@@ -66,8 +64,6 @@ export default {
     "{library} hat diese Serie schon, also kommen ihre neuen Staffeln auch dorthin.",
   "server.requests.moveTaken":
     "In {library} gibt es schon eine Anfrage für diesen Titel. Lass diese hier, wo sie ist, oder lehne sie ab.",
-  "server.notifications.endpoint":
-    "Verwende einen unterstützten Push-Dienst deines Browsers.",
   "server.fulfilment.keyFile":
     "Die Schlüsseldatei der Verbindung kann nicht gelesen werden. Prüfe Pfad und Berechtigungen.",
   "server.fulfilment.source.manual": "Von Hand",

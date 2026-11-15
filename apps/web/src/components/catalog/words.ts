@@ -71,20 +71,14 @@ export function asks(
 }
 
 /** The one thing a poster offers to do about a title. */
-export type PosterAction = "request" | "cancel" | "follow" | "unfollow"
+export type PosterAction = "request" | "cancel"
 
 /** What the server lets the viewer do, as the poster's one button, or null. */
 export function posterAction(availability: Availability): PosterAction | null {
   if (asks(availability)) return "request"
-  if (!availability.requestId) return null
-  switch (availability.action) {
-    case "cancel":
-    case "follow":
-    case "unfollow":
-      return availability.action
-    default:
-      return null
-  }
+  return availability.requestId && availability.action === "cancel"
+    ? "cancel"
+    : null
 }
 
 /** The poster button's words. */
@@ -94,10 +88,6 @@ export function posterActionLabel(action: PosterAction): string {
       return tr("ask.ask")
     case "cancel":
       return tr("ask.cancel")
-    case "follow":
-      return tr("ask.notify")
-    case "unfollow":
-      return tr("ask.stopNotifying")
   }
 }
 

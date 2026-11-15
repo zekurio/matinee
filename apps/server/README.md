@@ -437,25 +437,10 @@ A decline doesn't run out. The title shows as not available to everyone
 who can see its library, and nobody can request it, until an admin lifts
 the decline from the request under Done. Allow requests again removes the
 request, so the title can be requested afresh. Add after all accepts it as
-it was, with its requesters and followers, and sends it. Only the people
-who requested or follow a declined title are told who declined it, why,
-and the admin's note. Discover's rows leave declined titles out; search
-and browsing still show them. A declined request doesn't count against
-anyone's limit.
-
-### Notifications
-
-Everyone who requested a title or follows it is told once when it is ready,
-or when it is declined or given up on. Admins get a summary of waiting requests at most
-once an hour, and of failed ones once a day. Approvals and progress notify
-nobody. They reach people through web push and the Android app's
-background check; neither app shows them while it's open.
-
-Web push is opt-in and needs HTTPS. The server makes its VAPID keys on
-first use and keeps them in the database. It is the one place the server
-calls a URL a client sent, so only the browsers' push services are
-accepted: `fcm.googleapis.com`, `updates.push.services.mozilla.com`,
-`web.push.apple.com`, and `*.notify.windows.com`.
+it was, with its requesters, and sends it. Only the people who requested
+a declined title see who declined it, why, and the admin's note.
+Discover's rows leave declined titles out; search and browsing still show
+them. A declined request doesn't count against anyone's limit.
 
 ## Jobs
 

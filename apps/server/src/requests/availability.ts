@@ -112,7 +112,6 @@ export async function availability(
         .select({
           requestId: requestFollower.requestId,
           userId: requestFollower.userId,
-          asked: requestFollower.asked,
           createdAt: requestFollower.createdAt,
           name: user.displayName,
           username: user.username,
@@ -136,7 +135,6 @@ export async function availability(
         .where(
           and(
             eq(requestFollower.userId, viewer.id),
-            eq(requestFollower.asked, true),
             ne(request.status, "declined"),
             gt(
               requestFollower.createdAt,
@@ -246,7 +244,7 @@ export async function availability(
 
 // Playable holdings win over request history. A declined title is
 // unavailable to everyone, the whole of it, until an admin lifts the
-// decline; only its followers hear why.
+// decline; only the people who asked hear why.
 function availabilityState(
   here: string | null,
   status: "asked" | "approved" | "declined" | null,
@@ -299,24 +297,22 @@ function availabilityForScope(
   const action = requestAction(viewer, {
     destination: destination,
     existingTitle:
-      !!self?.asked && (row?.status === "asked" || row?.status === "approved"),
+      !!self && (row?.status === "asked" || row?.status === "approved"),
     approvedTitle: row?.status === "approved",
     declined,
     limit,
     status,
-    following: !!self,
-    asked: self?.asked ?? false,
-    undoable:
-      !!row && undoable(row, people.filter((person) => person.asked).length),
+    asked: !!self,
+    undoable: !!row && undoable(row, people.length),
     // An incomplete season still plays, but can ask for its missing episodes.
     here: !!here && !incomplete,
   })
   // Who else asked is part of a request's story, so only someone it is
   // told to hears it: nobody hears who asked for a declined title unless
-  // they asked or follow it too.
+  // they asked for it too.
   const others =
     row && (row.status !== "declined" || self)
-      ? people.filter((f) => f.asked && f.userId !== viewer.id)
+      ? people.filter((f) => f.userId !== viewer.id)
       : []
   const state = availabilityState(
     incomplete ? null : here,
@@ -333,7 +329,7 @@ function availabilityForScope(
     stillLooking: state === "coming" && (progress?.stillLooking ?? false),
     releaseDate,
     // The reason and the note are an answer to the people who requested
-    // or follow it, and only they hear it:
+    // it, and only they hear it:
     // "Already have it" could point at a library someone can't see.
     reason:
       state === "unavailable" && row && self
@@ -343,8 +339,7 @@ function availabilityForScope(
             note: row.declineNote,
           }
         : null,
-    askedBySelf: self?.asked ?? false,
-    following: !!self,
+    askedBySelf: !!self,
     requestId: row?.id ?? null,
     others: {
       count: others.length,

@@ -70,7 +70,7 @@ import io.github.zekurio.matinee.ui.title.Overview
 import io.github.zekurio.matinee.ui.title.TrailerButton
 
 /**
- * Fetches [loaders] again each time an ask, a cancel, or a follow changed
+ * Fetches [loaders] again each time an ask or a cancel changed
  * something, including while their screen was covered: what each loader
  * last saw is kept with the hub, not the screen.
  */

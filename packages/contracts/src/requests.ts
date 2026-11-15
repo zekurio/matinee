@@ -81,7 +81,6 @@ export const AdminRequestItem = RequestItem.extend({
       name: t.string(),
       /** Load it through `avatarPath()`. Null shows the initial instead. */
       avatarId: t.string().nullable(),
-      asked: t.boolean(),
       createdAt: t.date(),
     }),
   ),
@@ -89,7 +88,7 @@ export const AdminRequestItem = RequestItem.extend({
   /**
    * Where a waiting request could go instead, the one it goes to now
    * selected, for "Goes to" before Add: libraries of its kind that take
-   * requests and that everyone following it can see. Empty once it no
+   * requests and that everyone who asked for it can see. Empty once it no
    * longer waits, since only a waiting request can move.
    */
   destinations: t.array(AdminRequestDestination),
@@ -135,8 +134,6 @@ export const requestsContract = {
     .input(RequestId.extend({ scope: ShowScope }))
     .output(RequestItem),
   cancel: post("/requests/cancel").input(RequestId).output(t.void()),
-  follow: post("/requests/follow").input(RequestId).output(t.void()),
-  unfollow: post("/requests/unfollow").input(RequestId).output(t.void()),
   mine: get("/requests/mine")
     .input(
       RequestPageInput.extend({
@@ -182,9 +179,8 @@ export const adminRequestsContract = {
     .output(t.void()),
   /**
    * Gives up on an accepted request that hasn't arrived: declines it with
-   * "Can't find a copy" and tells its followers. Whatever the connection
-   * holds for it is left alone, and if the file turns up anyway the
-   * request counts as arrived.
+   * "Can't find a copy". Whatever the connection holds for it is left
+   * alone, and if the file turns up anyway the request counts as arrived.
    */
   giveUp: post("/admin/requests/give-up")
     .input(RequestId.extend({ note: t.string().trim().max(2000).nullable() }))
@@ -197,8 +193,8 @@ export const adminRequestsContract = {
     .input(RequestId)
     .output(t.void()),
   /**
-   * Accepts a declined request as it stands, with its requesters,
-   * followers and seasons, and sends it.
+   * Accepts a declined request as it stands, with its requesters and
+   * seasons, and sends it.
    */
   addAfterAll: post("/admin/requests/add-after-all")
     .input(RequestId)

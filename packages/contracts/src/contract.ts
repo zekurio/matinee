@@ -20,7 +20,6 @@ import {
 } from "./contract-watching"
 import { discoverContract } from "./discover"
 import { adminFulfilmentContract } from "./fulfilment"
-import { notificationsContract } from "./notifications"
 import { recommendationsContract } from "./recommendations"
 import { requestsContract, adminRequestsContract } from "./requests"
 
@@ -36,7 +35,6 @@ export const contract = {
   discover: discoverContract,
   recommendations: recommendationsContract,
   requests: requestsContract,
-  notifications: notificationsContract,
   auth: authContract,
   account: accountContract,
   libraries: librariesContract,

@@ -13,7 +13,6 @@ import { and, asc, eq, sql } from "drizzle-orm"
 import { db } from "../db"
 import { defineQueue } from "../jobs/queue"
 import { sources } from "../metadata/sources"
-import { notify } from "../notifications/notify"
 import { events } from "../realtime/events"
 import { ExternalIds } from "./availability"
 import { sendingFor } from "./fulfilment/connections"
@@ -39,10 +38,7 @@ export async function failRequest(id: string, message: string) {
     })
     .where(and(eq(request.id, id), eq(request.status, "approved")))
     .returning({ id: request.id })
-  if (rows.length) {
-    events.publish("requests", undefined)
-    await notify({ kind: "needsAttention" })
-  }
+  if (rows.length) events.publish("requests", undefined)
 }
 
 export const dispatch = defineQueue({
@@ -76,12 +72,7 @@ export const dispatch = defineQueue({
         .select({ id: user.id, username: user.username })
         .from(requestFollower)
         .innerJoin(user, eq(user.id, requestFollower.userId))
-        .where(
-          and(
-            eq(requestFollower.requestId, id),
-            eq(requestFollower.asked, true),
-          ),
-        )
+        .where(eq(requestFollower.requestId, id))
         .orderBy(asc(requestFollower.createdAt))
         .limit(1)
       // ACCESS: internal dispatch reads the destination of the approved request.

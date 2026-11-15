@@ -82,9 +82,7 @@ export function DeclinePopover({
   const title = giveUp
     ? tr("requests.giveUp.title", { name: item.title.name })
     : tr("requests.decline.title", { name: item.title.name })
-  const askers = item.followers
-    .filter((follower) => follower.asked)
-    .map((follower) => follower.name)
+  const askers = item.followers.map((follower) => follower.name)
   // Fresh for each opening.
   const form = open && (
     <AnswerForm

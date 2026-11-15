@@ -129,12 +129,10 @@ export function titleLink(item: AdminRequestItem) {
   })
 }
 
-/** Who requested first, and everyone else who requested or follows it. */
+/** Who requested first, and everyone else who requested it. */
 export function askers(item: AdminRequestItem) {
   const sorted = item.followers.toSorted(
-    (a, b) =>
-      Number(b.asked) - Number(a.asked) ||
-      a.createdAt.getTime() - b.createdAt.getTime(),
+    (a, b) => a.createdAt.getTime() - b.createdAt.getTime(),
   )
   const [first, ...rest] = sorted
   return { first: first ?? null, rest }

@@ -105,10 +105,10 @@ fun PosterBadge(availability: Availability, modifier: Modifier = Modifier, tip: 
 }
 
 /**
- * The title's one button: "Request", "Cancel request", "Notify me" or
- * "Stop notifying", whichever the server's action allows, else nothing.
- * Cancelling and notifying happen here; a request goes to [onRequest],
- * which requests at once or opens the request sheet. A Request the viewer
+ * The title's one button: "Request" or "Cancel request", whichever the
+ * server's action allows, else nothing. Cancelling happens here; a
+ * request goes to [onRequest], which requests at once or opens the
+ * request sheet. A Request the viewer
  * can't make, out of requests, with requests off, or declined, stays
  * dimmed, and a tap says why at the bottom of the screen ([dimmedText]),
  * as the web's tooltip does. [plain] draws it off a picture, as an
@@ -150,8 +150,6 @@ fun PosterActionButton(
             when (act) {
                 PosterAction.Request -> onRequest()
                 PosterAction.Cancel -> id?.let { hub.cancel(it, name) }
-                PosterAction.Follow -> id?.let { hub.follow(it, true, name) }
-                PosterAction.Unfollow -> id?.let { hub.follow(it, false, name) }
             }
         },
         modifier = if (why != null) modifier.semantics { stateDescription = why } else modifier,
@@ -168,10 +166,8 @@ fun PosterActionButton(
         val icon = when (act) {
             PosterAction.Request -> Lucide.Plus
             PosterAction.Cancel -> Lucide.X
-            PosterAction.Follow -> Lucide.Bell
-            PosterAction.Unfollow -> Lucide.BellRing
         }
-        LucideIcon(icon, null, size = if (page) 16.dp else 14.dp, tint = if (act == PosterAction.Unfollow) Palette.Accent else androidx.compose.material3.LocalContentColor.current)
+        LucideIcon(icon, null, size = if (page) 16.dp else 14.dp)
         Text(
             label?.takeIf { act == PosterAction.Request } ?: posterActionText(act, res),
             style = if (page) MaterialTheme.typography.labelLarge else MaterialTheme.typography.labelMedium,

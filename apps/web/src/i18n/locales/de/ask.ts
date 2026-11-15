@@ -4,8 +4,6 @@ import type source from "../en/ask"
 export default {
   "ask.ask": "Anfragen",
   "ask.more": "Mehr anfragen",
-  "ask.notify": "Mich benachrichtigen",
-  "ask.stopNotifying": "Nicht mehr benachrichtigen",
   "ask.cancel": "Anfrage zurückziehen",
 
   "ask.dialog.title": "{name} anfragen",
@@ -45,7 +43,6 @@ export default {
   "ask.toast.undo": "Rückgängig",
   "ask.toast.failed": "{name} konnte nicht angefragt werden",
   "ask.toast.cancelFailed": "{name} konnte nicht zurückgezogen werden",
-  "ask.toast.followFailed": "Benachrichtigungen konnten nicht geändert werden",
 
   "ask.mine.title": "Meine Anfragen",
   "ask.mine.seeAll": "Alle ansehen",

@@ -4,7 +4,7 @@ import type { Viewer } from "../access/viewer"
 
 const DAY = 86400000
 
-/** Rolling usage includes only asked followers of non-declined requests. */
+/** Rolling usage counts the asks of requests that aren't declined. */
 export function requestLimit(
   limit: RequestLimit,
   asks: Date[],
@@ -45,7 +45,7 @@ export function undoable(
   )
 }
 
-/** Used by mutations too. Follow/cancel permissions do not spend quota. */
+/** Used by mutations too. Cancelling does not spend quota. */
 export function requestAction(
   viewer: Viewer,
   input: {
@@ -58,7 +58,6 @@ export function requestAction(
     declined: boolean
     limit: Availability["limit"]
     status: "asked" | "approved" | "declined" | null
-    following: boolean
     asked: boolean
     here: boolean
     /** See `undoable`. */
@@ -73,18 +72,11 @@ export function requestAction(
   if (input.status === "asked" || input.status === "approved") {
     // Someone who asked can take the ask back until it is approved, or
     // until an approved one is sent, and after that only an admin removes
-    // it. An ask also counts against the limit, so it can't be dropped the
-    // way a "Notify me" can. An admin answers a waiting request rather
-    // than following it, so isn't offered "Notify me" before he has.
-    const action = !input.following
-      ? input.status === "asked" && viewer.role === "admin"
-        ? null
-        : "follow"
-      : !input.asked
-        ? "unfollow"
-        : input.status === "asked" || input.undoable
-          ? "cancel"
-          : null
+    // it. Everyone else has nothing to do with a title already requested.
+    const action =
+      input.asked && (input.status === "asked" || input.undoable)
+        ? "cancel"
+        : null
     return { action, disabledReason: null }
   }
   const disabledReason = !input.destination

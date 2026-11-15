@@ -14,13 +14,7 @@ export const requests = {
     lifecycle.addSeasons(context.user, input).catch(catalogFailure),
   ),
   cancel: authed.requests.cancel.handler(({ context, input }) =>
-    lifecycle.membership(context.user, input.id, "cancel"),
-  ),
-  follow: authed.requests.follow.handler(({ context, input }) =>
-    lifecycle.membership(context.user, input.id, "follow"),
-  ),
-  unfollow: authed.requests.unfollow.handler(({ context, input }) =>
-    lifecycle.membership(context.user, input.id, "unfollow"),
+    lifecycle.cancel(context.user, input.id),
   ),
   mine: authed.requests.mine.handler(({ context, input }) =>
     lifecycle.mine(context.user, input),

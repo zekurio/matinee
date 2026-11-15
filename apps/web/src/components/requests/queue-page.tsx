@@ -499,9 +499,7 @@ export function QueuePage({
         description={
           removing && askers(removing).first
             ? tr("requests.remove.description", {
-                names: formatNames(
-                  removing.followers.filter((f) => f.asked).map((f) => f.name),
-                ),
+                names: formatNames(removing.followers.map((f) => f.name)),
               })
             : tr("requests.remove.descriptionNobody")
         }
