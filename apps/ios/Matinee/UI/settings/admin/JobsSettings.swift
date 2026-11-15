@@ -1,34 +1,40 @@
 import MatineeCore
+import MatineeKit
 import SwiftUI
 
 /*
- * JobsSettings.kt: the server's background work. How busy a queue is and
- * how a task's runs read are MatineeCore's (Admin/JobsStatus.swift); this
- * puts them in words.
+ * JobsSettings.kt: the server's background work, as the web's jobs panel.
+ * How busy a queue is and how a task's runs read are MatineeCore's
+ * (Admin/JobsStatus.swift); this puts them in words.
  *
  * The server has no stream for the jobs; the page asks again every two
  * seconds while it shows, as the web's panel and Android's page do.
  */
 
-/// Background work, as the web's jobs panel: one list of the queues, how
-/// busy each is, and the scheduled task that fills it, then the tasks that
-/// fill none and do their upkeep themselves, and how many jobs each queue
-/// runs at once, saved from the save bar as on the web. A queue's sheet
-/// pauses it and clears what waits; a task runs now or stops from its row.
-/// The page keeps itself current while it shows.
+/// Background work: one list of the queues, how busy each is, and the
+/// scheduled task that fills it, then the tasks that fill none and do their
+/// upkeep themselves, and how many jobs each queue runs at once, saved from
+/// the save bar as on the web. A queue's sheet pauses it and clears what
+/// waits; a task runs now or stops from its row. The page keeps itself
+/// current while it shows.
 struct JobsSettings: View {
+  var body: some View { JobsPage().adminTheme() }
+}
+
+private struct JobsPage: View {
   @State private var loader = Loader<JobsOverview>()
   @State private var saver = Saver()
-  @State private var open: String?
+  @State private var open: Picked<String>?
   // The numbers changed and not saved yet, by queue; the rest follow the server as it polls.
   @State private var edits: [String: Int] = [:]
   @Environment(\.api) private var api
+  // TODO(shell): the kit's toasts, once the shell hosts them.
   @Environment(\.snackbar) private var snackbar
 
   var body: some View {
     let overview = loader.state.value
     let changed = changedConcurrency(overview, edits: edits)
-    SaveBarScaffold(
+    SaveBarPage(
       Str.settingsAdminJobs, dirty: !changed.isEmpty, onReset: { edits = [:] },
       onSave: {
         guard let api else { return }
@@ -36,30 +42,25 @@ struct JobsSettings: View {
         edits = [:]
       }
     ) {
-      AdminLoaded(loader, failed: Str.webJobsLoadFailed) { overview in
-        SettingsSection(Str.webJobsQueues) {
-          Panel {
-            ForEach(Array(overview.queues.enumerated()), id: \.element.id) { index, queue in
-              if index > 0 { RowDivider() }
-              let task = overview.tasks.first { $0.queue == queue.id }
-              QueueRow(queue: queue, task: task, onTask: { action in task.map { run($0, action) } }) { open = queue.id }
+      AdminLoaded(loader) { overview in
+        ListSection(Str.webJobsQueues) {
+          ForEach(overview.queues, id: \.id) { queue in
+            let task = overview.tasks.first { $0.queue == queue.id }
+            QueueRow(queue: queue, task: task, onTask: { action in task.map { run($0, action) } }) {
+              open = Picked(queue.id, queue.id)
             }
-            ForEach(overview.tasks.filter { $0.queue == nil }, id: \.id) { task in
-              RowDivider()
-              TaskRow(task: task) { run(task, $0) }
-            }
+          }
+          ForEach(overview.tasks.filter { $0.queue == nil }, id: \.id) { task in
+            TaskRow(task: task) { run(task, $0) }
           }
         }
         let queues = tunableQueues(overview)
         if !queues.isEmpty {
-          SettingsSection(Str.webJobsConcurrency) {
-            Panel {
-              ForEach(Array(queues.enumerated()), id: \.element.id) { index, queue in
-                if index > 0 { RowDivider() }
-                ConcurrencyRow(
-                  queue: queue,
-                  value: Binding(get: { edits[queue.id] ?? queue.concurrency }, set: { edits[queue.id] = $0 }))
-              }
+          ListSection(Str.webJobsConcurrency) {
+            ForEach(queues, id: \.id) { queue in
+              ConcurrencyRow(
+                queue: queue,
+                value: Binding(get: { edits[queue.id] ?? queue.concurrency }, set: { edits[queue.id] = $0 }))
             }
           }
         }
@@ -73,8 +74,16 @@ struct JobsSettings: View {
         if !Task.isCancelled { loader.reload() }
       }
     }
-    .sheet(isPresented: Binding(get: { open != nil }, set: { if !$0 { open = nil } })) {
-      if let queue = overview?.queues.first(where: { $0.id == open }) {
+    .onChange(of: loader.state.value?.queues.first?.id, initial: true) { _, first in
+      guard let first, open == nil, edits.isEmpty else { return }
+      if adminDemo("sheet") { open = Picked(first, first) }
+      if adminDemo("edit"), let queue = loader.state.value.flatMap(tunableQueues)?.first {
+        edits[queue.id] = min(queue.concurrency + 1, queue.maxConcurrency)
+      }
+    }
+    .matineeSheet(item: $open) { picked in
+      // The sheet follows the page as it polls.
+      if let queue = loader.state.value?.queues.first(where: { $0.id == picked.value }) {
         QueueSheet(queue: queue) { act(queue, $0) }
       }
     }
@@ -130,19 +139,21 @@ private func queueStatus(_ queue: JobQueueStatus) -> String {
   .joined(separator: " · ")
 }
 
-/// The task's last run and its schedule, or how far it is now.
-private func taskStatus(_ task: ScheduledTask) -> String {
-  let line: String =
-    switch taskRunLine(task) {
-    case .percent(let percent): Str.webJobsTaskPercent(String(percent))
-    case .running: Str.webJobsTaskRunning
-    case .completed(let endedAt, let took): "\(relativeTime(endedAt)) · \(Str.webJobsTaskTook(took))"
-    case .cancelled(let endedAt, let took): "\(relativeTime(endedAt)) · \(Str.webJobsTaskCancelledAfter(took))"
-    case .failed(let error?): Str.webJobsTaskFailedWith(error)
-    case .failed(nil): Str.webJobsTaskFailed
-    case .neverRan: Str.webJobsTaskNeverRan
-    }
-  if task.startedAt != nil { return line }
+/// How the task's last run went, or how far the one going is.
+private func taskRun(_ task: ScheduledTask) -> String {
+  switch taskRunLine(task) {
+  case .percent(let percent): Str.webJobsTaskPercent(String(percent))
+  case .running: Str.webJobsTaskRunning
+  case .completed(let endedAt, let took): "\(relativeTime(endedAt)) · \(Str.webJobsTaskTook(took))"
+  case .cancelled(let endedAt, let took): "\(relativeTime(endedAt)) · \(Str.webJobsTaskCancelledAfter(took))"
+  case .failed(let error?): Str.webJobsTaskFailedWith(error)
+  case .failed(nil): Str.webJobsTaskFailed
+  case .neverRan: Str.webJobsTaskNeverRan
+  }
+}
+
+/// How often the task runs, and when next.
+private func taskNext(_ task: ScheduledTask) -> String {
   let schedule: String =
     switch taskSchedule(task) {
     case .manual: Str.webJobsScheduleManual
@@ -150,70 +161,95 @@ private func taskStatus(_ task: ScheduledTask) -> String {
     case .hourly: Str.webJobsScheduleHourly
     case .every(let interval): Str.webJobsScheduleEvery(interval)
     }
-  let next = task.nextRunAt.map { "\(schedule) · \(relativeTime($0))" } ?? schedule
-  return "\(line)\n\(next)"
+  return task.nextRunAt.map { "\(schedule) · \(relativeTime($0))" } ?? schedule
 }
 
-/// A task's last run, or how far it is now, and its schedule, under the row's other lines.
-private struct TaskStatus: View {
-  let task: ScheduledTask
-  @Environment(\.palette) private var palette
+/// The dot before a queue's status: the accent while it works, the warning
+/// color while it's paused, the danger color with failures, else quiet.
+private struct StatusDot: View {
+  let queue: JobQueueStatus
+  @Environment(\.adminPalette) private var palette
 
   var body: some View {
-    Text(taskStatus(task)).textStyle(.bodySmall)
-      .foregroundStyle(taskFailed(task) ? palette.danger : palette.muted)
+    let color =
+      queue.failed > 0
+      ? palette.destructive
+      : queue.paused ? palette.warning : queue.active > 0 ? palette.accent : palette.foregroundFaint
+    Circle().fill(color).frame(width: 6, height: 6).accessibilityHidden(true)
   }
 }
 
-/// Runs the task now, or stops the run going on.
+/// A task's last run, or how far it is now, and its schedule, with a bar while it runs.
+private struct TaskLines: View {
+  let task: ScheduledTask
+  @Environment(\.adminPalette) private var palette
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 2) {
+      Text(taskRun(task)).textStyle(.px13)
+        .foregroundStyle(taskFailed(task) ? palette.destructive : palette.mutedForeground)
+      if task.startedAt == nil {
+        Text(taskNext(task)).textStyle(.px13).foregroundStyle(palette.mutedForeground)
+      }
+      if task.startedAt != nil, let progress = task.progress {
+        MatineeKit.ProgressBar(progress).padding(.top, Space.s1).frame(maxWidth: 240)
+          .accessibilityHidden(true)
+      }
+    }
+  }
+}
+
+/// Runs the task now, or stops the run going on: the web's outlined Run now.
 private struct TaskButton: View {
   let task: ScheduledTask
   let onAction: (TaskAction) -> Void
 
   var body: some View {
     let running = task.startedAt != nil
-    RoundIconButton(
-      running ? .x : .playOutline, label: running ? Str.webJobsTaskCancel : Str.webJobsTaskRun, background: .clear
+    MatineeKit.RoundIconButton(
+      running ? .x : .playOutline, label: running ? Str.webJobsTaskCancel : Str.webJobsTaskRun, look: .outline,
+      size: 36, iconSize: 16
     ) { onAction(running ? .cancel : .run) }
   }
 }
 
 /// A queue, how busy it is, and the task that fills it, with its run
-/// button; the row opens the queue's sheet.
+/// button; the rest of the row opens the queue's sheet.
 private struct QueueRow: View {
   let queue: JobQueueStatus
   let task: ScheduledTask?
   let onTask: (TaskAction) -> Void
   let onOpen: () -> Void
-  @Environment(\.palette) private var palette
-  @Environment(\.dynamicTypeSize) private var dynamicType
+  @Environment(\.adminPalette) private var palette
 
   var body: some View {
-    Button(action: onOpen) {
-      HStack(spacing: 4) {
-        VStack(alignment: .leading, spacing: 0) {
-          Text(queueName(queue)).textStyle(.bodyLarge).foregroundStyle(palette.foreground)
-          Text(queueStatus(queue)).textStyle(.bodySmall)
-            .foregroundStyle(queue.failed > 0 ? palette.danger : palette.muted)
-            .lineLimit(dynamicType.isAccessibilitySize ? nil : 1)
-          if let task { TaskStatus(task: task) }
+    Pressable(action: onOpen) {
+      HStack(alignment: .top, spacing: Space.s3) {
+        VStack(alignment: .leading, spacing: 2) {
+          Text(queueName(queue)).textStyle(.base).foregroundStyle(palette.foreground)
+          HStack(spacing: Space.s1_5) {
+            StatusDot(queue: queue)
+            Text(queueStatus(queue)).textStyle(.sm)
+              .foregroundStyle(queue.failed > 0 ? palette.destructive : palette.mutedForeground)
+          }
+          if let task { TaskLines(task: task).padding(.top, 2) }
         }
-        .multilineTextAlignment(.leading)
         .frame(maxWidth: .infinity, alignment: .leading)
         // The run button sits over this, outside the row's own button.
-        if task != nil { Color.clear.frame(width: MinTouch, height: MinTouch) }
-        LucideIcon(.chevronRight, size: 16, tint: palette.muted)
+        if task != nil { Color.clear.frame(width: TouchTarget, height: 36) }
+        MatineeKit.LucideIcon(.chevronRight, size: 16, tint: palette.mutedForeground).frame(height: 24)
       }
-      .padding(.leading, 16)
-      .padding(.trailing, 12)
-      .padding(.vertical, 12)
+      .padding(.horizontal, Space.s4)
+      .padding(.vertical, Space.s3)
       .contentShape(Rectangle())
     }
-    .buttonStyle(RowPress())
+    .accessibilityElement(children: .combine)
     .accessibilityHint(Str.webJobsQueueDetails)
-    .overlay(alignment: .trailing) {
+    .overlay(alignment: .topTrailing) {
       if let task {
-        TaskButton(task: task, onAction: onTask).padding(.trailing, 12 + 16 + 4)
+        TaskButton(task: task, onAction: onTask)
+          .padding(.top, Space.s3 - 6)
+          .padding(.trailing, Space.s4 + 16 + Space.s3 + 4)
       }
     }
   }
@@ -223,50 +259,55 @@ private struct QueueRow: View {
 private struct TaskRow: View {
   let task: ScheduledTask
   let onAction: (TaskAction) -> Void
+  @Environment(\.adminPalette) private var palette
 
   var body: some View {
-    HStack(spacing: 8) {
-      VStack(alignment: .leading, spacing: 0) {
-        Text(taskName(task)).textStyle(.bodyLarge)
-        TaskStatus(task: task)
+    HStack(alignment: .top, spacing: Space.s3) {
+      VStack(alignment: .leading, spacing: 2) {
+        Text(taskName(task)).textStyle(.base).foregroundStyle(palette.foreground)
+        TaskLines(task: task)
       }
       .frame(maxWidth: .infinity, alignment: .leading)
       .accessibilityElement(children: .combine)
-      TaskButton(task: task, onAction: onAction)
+      TaskButton(task: task, onAction: onAction).padding(.top, -6)
     }
-    .padding(.leading, 16)
-    .padding(.trailing, 8)
-    .padding(.vertical, 12)
+    .padding(.horizontal, Space.s4)
+    .padding(.vertical, Space.s3)
   }
 }
 
-/// How many jobs `queue` runs at once, `value` as it's edited, stepped between one and its maximum.
+/// How many jobs `queue` runs at once, `value` as it's edited, stepped
+/// between one and its maximum with the web's outlined minus and plus.
 private struct ConcurrencyRow: View {
   let queue: JobQueueStatus
   @Binding var value: Int
-  @Environment(\.palette) private var palette
+  @Environment(\.adminPalette) private var palette
+  @Environment(\.dynamicTypeSize) private var dynamicType
 
   var body: some View {
     let name = queueName(queue)
-    HStack(spacing: 0) {
-      VStack(alignment: .leading, spacing: 0) {
-        Text(name).textStyle(.bodyLarge)
-        Text(Str.webJobsConcurrencyLimits(String(queue.defaultConcurrency), String(queue.maxConcurrency)))
-          .textStyle(.bodySmall).foregroundStyle(palette.muted)
-      }
-      .frame(maxWidth: .infinity, alignment: .leading)
-      RoundIconButton(.chevronLeft, label: Str.webJobsConcurrencyDecrease(name), background: .clear) { value -= 1 }
-        .disabled(value <= 1)
-      Text(String(value)).textStyle(.titleMedium).monospacedDigit()
-        .frame(minWidth: 36)
-        .multilineTextAlignment(.center)
-        .accessibilityHidden(true)
-      RoundIconButton(.chevronRight, label: Str.webJobsConcurrencyIncrease(name), background: .clear) { value += 1 }
-        .disabled(value >= queue.maxConcurrency)
+    let text = VStack(alignment: .leading, spacing: 2) {
+      Text(name).textStyle(.sm, weight: .medium).foregroundStyle(palette.foreground)
+      Text(Str.webJobsConcurrencyLimits(String(queue.defaultConcurrency), String(queue.maxConcurrency)))
+        .textStyle(.px13).foregroundStyle(palette.mutedForeground)
     }
-    .padding(.leading, 16)
-    .padding(.trailing, 8)
-    .padding(.vertical, 8)
+    Group {
+      // At the accessibility sizes the stepper goes under its name.
+      if dynamicType.isAccessibilitySize {
+        VStack(alignment: .leading, spacing: Space.s2_5) {
+          text
+          stepper
+        }
+      } else {
+        HStack(spacing: Space.s3) {
+          text.frame(maxWidth: .infinity, alignment: .leading)
+          stepper
+        }
+      }
+    }
+    .padding(.horizontal, Space.s4)
+    .padding(.vertical, Space.s2_5)
+    .frame(maxWidth: .infinity, minHeight: 56, alignment: .leading)
     // VoiceOver reads the number as the row's value and steps it with a swipe.
     .accessibilityElement(children: .ignore)
     .accessibilityLabel(name)
@@ -279,52 +320,68 @@ private struct ConcurrencyRow: View {
       }
     }
   }
+
+  private var stepper: some View {
+    let name = queueName(queue)
+    return HStack(spacing: Space.s1_5) {
+      MatineeKit.RoundIconButton(
+        .minus, label: Str.webJobsConcurrencyDecrease(name), look: .outline, size: 32, iconSize: 16
+      ) { value -= 1 }
+      .disabled(value <= 1)
+      Text(String(value)).textStyle(.base, weight: .medium).monospacedDigit()
+        .foregroundStyle(palette.foreground)
+        .frame(minWidth: 32)
+        .contentTransition(.numericText(value: Double(value)))
+        .adminMotion(MatineeKit.Motion.color, value: value)
+      MatineeKit.RoundIconButton(
+        .plus, label: Str.webJobsConcurrencyIncrease(name), look: .outline, size: 32, iconSize: 16
+      ) { value += 1 }
+      .disabled(value >= queue.maxConcurrency)
+    }
+  }
 }
 
 /// A queue's details and what can be done to it.
 private struct QueueSheet: View {
   let queue: JobQueueStatus
   let onAction: (QueueAction) -> Void
-  @Environment(\.palette) private var palette
+  @Environment(\.adminPalette) private var palette
 
   var body: some View {
-    ScrollView {
-      VStack(alignment: .leading, spacing: 0) {
-        SheetHeader(queueName(queue), queueStatus(queue))
-        SheetItem(queue.paused ? .play : .pause, queue.paused ? Str.webJobsQueueResume : Str.webJobsQueuePause) {
-          onAction(queue.paused ? .resume : .pause)
-        }
-        if queue.waiting > 0 {
-          SheetItem(.trash, Str.webJobsQueueClear, destructive: true) { onAction(.clear) }
-        }
-        Rectangle().fill(palette.border).frame(height: 1).padding(.vertical, 6)
-        VStack(alignment: .leading, spacing: 6) {
-          Text(Str.webJobsDetailsRunning).textStyle(.titleSmall).accessibilityAddTraits(.isHeader)
-          if queue.running.isEmpty {
-            Note(queue.paused ? Str.webJobsDetailsPausedNothingRunning : Str.webJobsDetailsNothingRunning)
-          }
-          ForEach(Array(queue.running.enumerated()), id: \.offset) { _, job in
-            Text(job.label).textStyle(.bodySmall).lineLimit(2)
-          }
-          Text(Str.webJobsDetailsFailures).textStyle(.titleSmall).accessibilityAddTraits(.isHeader).padding(.top, 8)
-          if queue.failures.isEmpty {
-            Note(Str.webJobsDetailsNoFailures)
-          }
-          ForEach(Array(queue.failures.enumerated()), id: \.offset) { _, failure in
-            VStack(alignment: .leading, spacing: 0) {
-              Text(failure.label).textStyle(.bodySmall).lineLimit(2)
-              Text("\(relativeTime(failure.at)) · \(failure.message)").textStyle(.bodySmall)
-                .foregroundStyle(palette.danger).lineLimit(3)
-            }
-            .accessibilityElement(children: .combine)
-          }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 20)
-        .padding(.vertical, 8)
-      }
-      .padding(.vertical, 12)
+    MatineeKit.SheetHeader(queueName(queue), subtitle: queueStatus(queue))
+    MatineeKit.SheetItem(
+      queue.paused ? Str.webJobsQueueResume : Str.webJobsQueuePause, icon: queue.paused ? .play : .pause
+    ) { onAction(queue.paused ? .resume : .pause) }
+    if queue.waiting > 0 {
+      MatineeKit.SheetItem(Str.webJobsQueueClear, icon: .trash, destructive: true) { onAction(.clear) }
     }
-    .matineeSheet()
+    Separator().padding(.vertical, Space.s1_5)
+    VStack(alignment: .leading, spacing: Space.s1_5) {
+      Text(Str.webJobsDetailsRunning).textStyle(.sm, weight: .semibold).accessibilityAddTraits(.isHeader)
+      if queue.running.isEmpty {
+        Text(queue.paused ? Str.webJobsDetailsPausedNothingRunning : Str.webJobsDetailsNothingRunning)
+          .textStyle(.px13).foregroundStyle(palette.mutedForeground)
+      }
+      ForEach(Array(queue.running.enumerated()), id: \.offset) { _, job in
+        Text(job.label).textStyle(.px13).foregroundStyle(palette.foreground).lineLimit(2)
+      }
+      Text(Str.webJobsDetailsFailures).textStyle(.sm, weight: .semibold).accessibilityAddTraits(.isHeader)
+        .padding(.top, Space.s3)
+      if queue.failures.isEmpty {
+        Text(Str.webJobsDetailsNoFailures).textStyle(.px13).foregroundStyle(palette.mutedForeground)
+      }
+      ForEach(Array(queue.failures.enumerated()), id: \.offset) { _, failure in
+        VStack(alignment: .leading, spacing: 0) {
+          Text(failure.label).textStyle(.px13).foregroundStyle(palette.foreground).lineLimit(2)
+          Text("\(relativeTime(failure.at)) · \(failure.message)").textStyle(.px13)
+            .foregroundStyle(palette.destructive).lineLimit(3)
+        }
+        .accessibilityElement(children: .combine)
+      }
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .padding(.horizontal, 20)
+    .padding(.top, Space.s2)
+    .padding(.bottom, Space.s4)
   }
 }

@@ -56,7 +56,7 @@ recipes use those instead of Nix. The CI runner uses this option.
 - Title, season, and episode pages show watched marks and favorites.
   A long press opens a card's context menu. Profile shows watch statistics
   and Recently watched. Admin pages manage libraries, users, authentication,
-  transcoding, trickplay, jobs, and the server's accent. Fix match and the
+  transcoding, trickplay, jobs, and the server's branding. Fix match and the
   image editor change metadata and artwork.
 - The player sends a `PlaybackDevice` and plays the server's
   `playback.start` answer. AVPlayer opens MP4, M4V, and MOV and plays HLS.
