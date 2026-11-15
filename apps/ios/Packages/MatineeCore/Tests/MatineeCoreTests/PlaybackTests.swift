@@ -52,7 +52,7 @@ enum Answers {
       position: offset + start, audio: audio == 2 ? ac3 : aac, convertedAudio: convertedAudio,
       convertedVideo: nil, standIn: nil, subtitle: subtitle, subtitleMode: subtitleMode,
       subtitleUrl: subtitleUrl, audioTracks: [aac, ac3], subtitleTracks: subtitleTracks,
-      quality: quality, qualities: qualities, original: original, reasons: reasons, next: next, upNextAt: nil, segments: [])
+      quality: quality, qualities: qualities, original: original, reasons: reasons, previous: nil, next: next, upNextAt: nil, segments: [])
   }
 }
 

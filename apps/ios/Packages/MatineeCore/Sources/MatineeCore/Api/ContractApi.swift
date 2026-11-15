@@ -4,6 +4,7 @@ import Foundation
 public struct ContractApi: Sendable {
     public let transport: ApiTransport
     public init(transport: ApiTransport) { self.transport = transport }
+    public var recommendations: RecommendationsApi { .init(transport: transport) }
     public var catalog: CatalogApi { .init(transport: transport) }
     public var discover: DiscoverApi { .init(transport: transport) }
     public var requests: RequestsApi { .init(transport: transport) }
@@ -24,6 +25,16 @@ public struct ContractApi: Sendable {
     public var profiles: ProfilesApi { .init(transport: transport) }
     public var stats: StatsApi { .init(transport: transport) }
     public var admin: AdminApi { .init(transport: transport) }
+}
+public struct RecommendationsApi: Sendable {
+    public let transport: ApiTransport
+    public init(transport: ApiTransport) { self.transport = transport }
+    public func home() async throws -> HomeRecommendations {
+        return try await transport.call(method: "GET", path: ["recommendations", "home"], query: [], body: nil)
+    }
+    public func dismiss(ref: CatalogRef, dismissed: Bool) async throws {
+        try await transport.send(method: "PUT", path: ["recommendations", "dismissed"], query: [], body: try transport.json(RecommendationsDismissInput(ref: ref, dismissed: dismissed)))
+    }
 }
 public struct CatalogApi: Sendable {
     public let transport: ApiTransport

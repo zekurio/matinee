@@ -1497,21 +1497,49 @@ public struct RequestQueue: Codable, Sendable, Hashable {
     }
 }
 
+public struct RecommendationSeed: Codable, Sendable, Hashable {
+    public var ref: CatalogRef
+    public var name: String
+    public init(ref: CatalogRef, name: String) {
+        self.ref = ref
+        self.name = name
+    }
+    private enum CodingKeys: String, CodingKey {
+        case ref = "ref"
+        case name = "name"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.ref = try c.decode(CatalogRef.self, forKey: .ref)
+        self.name = try c.decode(String.self, forKey: .name)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.ref, forKey: .ref)
+        try c.encode(self.name, forKey: .name)
+    }
+}
+
 public struct DiscoverRail: Codable, Sendable, Hashable {
     public var id: String
-    public init(id: String) {
+    public var seed: RecommendationSeed?
+    public init(id: String, seed: RecommendationSeed? = nil) {
         self.id = id
+        self.seed = seed
     }
     private enum CodingKeys: String, CodingKey {
         case id = "id"
+        case seed = "seed"
     }
     public init(from decoder: any Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         self.id = try c.decode(String.self, forKey: .id)
+        self.seed = try c.decodeIfPresent(RecommendationSeed.self, forKey: .seed)
     }
     public func encode(to encoder: any Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
         try c.encode(self.id, forKey: .id)
+        try c.encodeIfPresent(self.seed, forKey: .seed)
     }
 }
 
@@ -1540,6 +1568,114 @@ public struct DiscoverRails: Codable, Sendable, Hashable {
         try c.encode(self.enabled, forKey: .enabled)
         try c.encode(self.rails, forKey: .rails)
         try c.encode(self.browse, forKey: .browse)
+    }
+}
+
+public struct RecommendationReason: Codable, Sendable, Hashable {
+    public var kind: String
+    public var name: String?
+    public init(kind: String, name: String?) {
+        self.kind = kind
+        self.name = name
+    }
+    private enum CodingKeys: String, CodingKey {
+        case kind = "kind"
+        case name = "name"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.kind = try c.decode(String.self, forKey: .kind)
+        self.name = try c.decodeIfPresent(String.self, forKey: .name)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.kind, forKey: .kind)
+        try c.encode(self.name, forKey: .name)
+    }
+}
+
+public enum RecommendationRailId {
+    public static let forYou = "forYou"
+    public static let becauseWatched = "becauseWatched"
+    public static let knownValues = ["forYou", "becauseWatched"]
+}
+
+public struct RecommendedTitle: Codable, Sendable, Hashable {
+    public var ref: CatalogRef
+    public var title: TitleSummary
+    public var reason: RecommendationReason?
+    public init(ref: CatalogRef, title: TitleSummary, reason: RecommendationReason?) {
+        self.ref = ref
+        self.title = title
+        self.reason = reason
+    }
+    private enum CodingKeys: String, CodingKey {
+        case ref = "ref"
+        case title = "title"
+        case reason = "reason"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.ref = try c.decode(CatalogRef.self, forKey: .ref)
+        self.title = try c.decode(TitleSummary.self, forKey: .title)
+        self.reason = try c.decodeIfPresent(RecommendationReason.self, forKey: .reason)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.ref, forKey: .ref)
+        try c.encode(self.title, forKey: .title)
+        try c.encode(self.reason, forKey: .reason)
+    }
+}
+
+public struct HomeRecommendationRail: Codable, Sendable, Hashable {
+    public var id: String
+    public var seed: RecommendationSeed?
+    public var items: [RecommendedTitle]
+    public init(id: String, seed: RecommendationSeed?, items: [RecommendedTitle]) {
+        self.id = id
+        self.seed = seed
+        self.items = items
+    }
+    private enum CodingKeys: String, CodingKey {
+        case id = "id"
+        case seed = "seed"
+        case items = "items"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try c.decode(String.self, forKey: .id)
+        self.seed = try c.decodeIfPresent(RecommendationSeed.self, forKey: .seed)
+        self.items = try c.decode([RecommendedTitle].self, forKey: .items)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.id, forKey: .id)
+        try c.encode(self.seed, forKey: .seed)
+        try c.encode(self.items, forKey: .items)
+    }
+}
+
+public struct HomeRecommendations: Codable, Sendable, Hashable {
+    public var rails: [HomeRecommendationRail]
+    public var computedAt: String?
+    public init(rails: [HomeRecommendationRail], computedAt: String?) {
+        self.rails = rails
+        self.computedAt = computedAt
+    }
+    private enum CodingKeys: String, CodingKey {
+        case rails = "rails"
+        case computedAt = "computedAt"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.rails = try c.decode([HomeRecommendationRail].self, forKey: .rails)
+        self.computedAt = try c.decodeIfPresent(String.self, forKey: .computedAt)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.rails, forKey: .rails)
+        try c.encode(self.computedAt, forKey: .computedAt)
     }
 }
 
@@ -3755,10 +3891,11 @@ public struct PlaybackStart: Codable, Sendable, Hashable {
     public var qualities: [PlaybackQualityPreset]
     public var original: Bool
     public var reasons: [String]
+    public var previous: MediaItem?
     public var next: MediaItem?
     public var upNextAt: Double?
     public var segments: [MediaSegment]
-    public init(item: MediaItem, method: String, url: String, hls: Bool, offset: Double, start: Double, position: Double, audio: AudioTrack?, convertedAudio: String?, convertedVideo: String?, standIn: AudioTrack?, subtitle: SubtitleTrack?, subtitleMode: String?, subtitleUrl: String?, audioTracks: [AudioTrack], subtitleTracks: [SubtitleTrack], quality: String, qualities: [PlaybackQualityPreset], original: Bool, reasons: [String], next: MediaItem?, upNextAt: Double?, segments: [MediaSegment]) {
+    public init(item: MediaItem, method: String, url: String, hls: Bool, offset: Double, start: Double, position: Double, audio: AudioTrack?, convertedAudio: String?, convertedVideo: String?, standIn: AudioTrack?, subtitle: SubtitleTrack?, subtitleMode: String?, subtitleUrl: String?, audioTracks: [AudioTrack], subtitleTracks: [SubtitleTrack], quality: String, qualities: [PlaybackQualityPreset], original: Bool, reasons: [String], previous: MediaItem?, next: MediaItem?, upNextAt: Double?, segments: [MediaSegment]) {
         self.item = item
         self.method = method
         self.url = url
@@ -3779,6 +3916,7 @@ public struct PlaybackStart: Codable, Sendable, Hashable {
         self.qualities = qualities
         self.original = original
         self.reasons = reasons
+        self.previous = previous
         self.next = next
         self.upNextAt = upNextAt
         self.segments = segments
@@ -3804,6 +3942,7 @@ public struct PlaybackStart: Codable, Sendable, Hashable {
         case qualities = "qualities"
         case original = "original"
         case reasons = "reasons"
+        case previous = "previous"
         case next = "next"
         case upNextAt = "upNextAt"
         case segments = "segments"
@@ -3830,6 +3969,7 @@ public struct PlaybackStart: Codable, Sendable, Hashable {
         self.qualities = try c.decode([PlaybackQualityPreset].self, forKey: .qualities)
         self.original = try c.decode(Bool.self, forKey: .original)
         self.reasons = try c.decode([String].self, forKey: .reasons)
+        self.previous = try c.decodeIfPresent(MediaItem.self, forKey: .previous)
         self.next = try c.decodeIfPresent(MediaItem.self, forKey: .next)
         self.upNextAt = try c.decodeIfPresent(Double.self, forKey: .upNextAt)
         self.segments = try c.decode([MediaSegment].self, forKey: .segments)
@@ -3856,6 +3996,7 @@ public struct PlaybackStart: Codable, Sendable, Hashable {
         try c.encode(self.qualities, forKey: .qualities)
         try c.encode(self.original, forKey: .original)
         try c.encode(self.reasons, forKey: .reasons)
+        try c.encode(self.previous, forKey: .previous)
         try c.encode(self.next, forKey: .next)
         try c.encode(self.upNextAt, forKey: .upNextAt)
         try c.encode(self.segments, forKey: .segments)
@@ -6949,7 +7090,9 @@ public enum JobQueueId {
     public static let request_arrival = "request-arrival"
     public static let notifications = "notifications"
     public static let catalog = "catalog"
-    public static let knownValues = ["library-scan", "media-probe", "metadata", "thumbnails", "subtitle-prepare", "trickplay", "media-segments", "artwork", "subtitles", "subtitle-fonts", "avatars", "downloads", "download-copies", "request-dispatch", "request-progress", "request-arrival", "notifications", "catalog"]
+    public static let title_features = "title-features"
+    public static let recommendations = "recommendations"
+    public static let knownValues = ["library-scan", "media-probe", "metadata", "thumbnails", "subtitle-prepare", "trickplay", "media-segments", "artwork", "subtitles", "subtitle-fonts", "avatars", "downloads", "download-copies", "request-dispatch", "request-progress", "request-arrival", "notifications", "catalog", "title-features", "recommendations"]
 }
 
 public struct RunningJob: Codable, Sendable, Hashable {
@@ -7072,6 +7215,7 @@ public enum TaskId {
     public static let probe_media = "probe-media"
     public static let prefetch_artwork = "prefetch-artwork"
     public static let prepare_discover = "prepare-discover"
+    public static let recommend_titles = "recommend-titles"
     public static let prepare_subtitles = "prepare-subtitles"
     public static let make_trickplay = "make-trickplay"
     public static let find_segments = "find-segments"
@@ -7079,7 +7223,7 @@ public enum TaskId {
     public static let clean_sessions = "clean-sessions"
     public static let forget_browsed_pages = "forget-browsed-pages"
     public static let sync_oidc_accounts = "sync-oidc-accounts"
-    public static let knownValues = ["dispatch-requests", "poll-requests", "reconcile-requests", "scan-libraries", "refresh-metadata", "probe-media", "prefetch-artwork", "prepare-discover", "prepare-subtitles", "make-trickplay", "find-segments", "clean-transcodes", "clean-sessions", "forget-browsed-pages", "sync-oidc-accounts"]
+    public static let knownValues = ["dispatch-requests", "poll-requests", "reconcile-requests", "scan-libraries", "refresh-metadata", "probe-media", "prefetch-artwork", "prepare-discover", "recommend-titles", "prepare-subtitles", "make-trickplay", "find-segments", "clean-transcodes", "clean-sessions", "forget-browsed-pages", "sync-oidc-accounts"]
 }
 
 public enum TaskResult {
@@ -10645,6 +10789,29 @@ public enum WatchedAt {
     public static let released = "released"
     public static let unknown = "unknown"
     public static let knownValues = ["released", "unknown"]
+}
+
+public struct RecommendationsDismissInput: Codable, Sendable, Hashable {
+    public var ref: CatalogRef
+    public var dismissed: Bool
+    public init(ref: CatalogRef, dismissed: Bool) {
+        self.ref = ref
+        self.dismissed = dismissed
+    }
+    private enum CodingKeys: String, CodingKey {
+        case ref = "ref"
+        case dismissed = "dismissed"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.ref = try c.decode(CatalogRef.self, forKey: .ref)
+        self.dismissed = try c.decode(Bool.self, forKey: .dismissed)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.ref, forKey: .ref)
+        try c.encode(self.dismissed, forKey: .dismissed)
+    }
 }
 
 public struct CatalogRelatedTitlesInput: Codable, Sendable, Hashable {
