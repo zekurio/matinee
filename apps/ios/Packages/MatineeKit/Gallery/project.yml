@@ -1,0 +1,46 @@
+# The kit's gallery as an app of its own, so it runs without the main app.
+# XcodeGen writes KitGallery.xcodeproj from this (git-ignored); see the
+# package's README, "The gallery".
+name: KitGallery
+
+options:
+  bundleIdPrefix: io.github.zekurio
+  deploymentTarget:
+    iOS: "18.0"
+    tvOS: "18.0"
+  createIntermediateGroups: true
+
+packages:
+  MatineeKit:
+    path: ..
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+    SWIFT_APPROACHABLE_CONCURRENCY: YES
+    SWIFT_STRICT_CONCURRENCY: complete
+    CODE_SIGNING_ALLOWED: NO
+    GENERATE_INFOPLIST_FILE: YES
+    CURRENT_PROJECT_VERSION: "1"
+    MARKETING_VERSION: "1.0"
+    ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: NO
+
+targets:
+  KitGallery:
+    type: application
+    supportedDestinations: [iOS, tvOS]
+    sources: [App]
+    dependencies:
+      - package: MatineeKit
+        product: MatineeKitGallery
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.zekurio.matinee.kitgallery
+        PRODUCT_NAME: KitGallery
+        TARGETED_DEVICE_FAMILY: "1,2,3"
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Kit Gallery
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
+        INFOPLIST_KEY_CFBundleLocalizations: en de
