@@ -24,6 +24,8 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.rememberHazeState
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.Library
 import io.github.zekurio.matinee.api.MediaItem
@@ -101,9 +103,10 @@ private fun OnlineHomeScreen() {
     // comes back. Only a Home with nothing at all says so, above.
     val onPage = loaders.all + shelves.map { it.second }
     val listState = rememberLazyListState()
+    val haze = rememberHazeState()
     Box(Modifier.fillMaxSize()) {
         LazyColumn(
-            Modifier.fillMaxSize(),
+            Modifier.fillMaxSize().hazeSource(haze),
             state = listState,
             contentPadding = PaddingValues(bottom = tabBarPadding() + 24.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp),
@@ -137,7 +140,7 @@ private fun OnlineHomeScreen() {
                 if (entries.state !is Load.Failed) item(key = "shelf-${library.id}") { LibraryShelf(library, entries) }
             }
         }
-        StatusBarScrim(listState)
+        StatusBarScrim(listState, haze)
     }
 }
 

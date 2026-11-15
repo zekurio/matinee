@@ -148,6 +148,9 @@ dependencies {
     implementation(libs.media3.ffmpeg.decoder)
     implementation(libs.libmpv)
 
+    implementation(libs.haze)
+    implementation(libs.haze.blur)
+
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)
 

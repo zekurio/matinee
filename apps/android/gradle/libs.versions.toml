@@ -7,6 +7,9 @@ browser = "1.10.0"
 camerax = "1.6.2"
 coil = "3.6.3"
 core = "1.19.1"
+# Blurs the page under the status bar and the tab bar. Compose blurs only a
+# composable's own content, not what's behind it.
+haze = "2.1.0"
 coroutines = "1.11.0"
 lifecycle = "2.11.0"
 profileinstaller = "1.4.1"
@@ -54,6 +57,9 @@ media3-ui-compose = { module = "androidx.media3:media3-ui-compose", version.ref 
 media3-session = { module = "androidx.media3:media3-session", version.ref = "media3" }
 media3-ffmpeg-decoder = { module = "org.jellyfin.media3:media3-ffmpeg-decoder", version.ref = "media3-ffmpeg-decoder" }
 libmpv = { module = "dev.jdtech.mpv:libmpv", version.ref = "libmpv" }
+
+haze = { module = "dev.chrisbanes.haze:haze", version.ref = "haze" }
+haze-blur = { module = "dev.chrisbanes.haze:haze-blur", version.ref = "haze" }
 
 coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
 coil-network-okhttp = { module = "io.coil-kt.coil3:coil-network-okhttp", version.ref = "coil" }

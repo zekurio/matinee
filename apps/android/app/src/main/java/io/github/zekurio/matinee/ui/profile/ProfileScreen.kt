@@ -26,6 +26,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.ui.components.ErrorSection
 import io.github.zekurio.matinee.ui.components.ErrorState
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.rememberHazeState
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.Profile
 import io.github.zekurio.matinee.api.isAdmin
@@ -103,9 +105,10 @@ fun ProfileScreen(session: Session) {
 private fun ProfilePage(state: Load<Profile>?, loader: Loader<Profile>?, stats: ProfileStats) {
     val loaded = (state as? Load.Ready)?.value
     val listState = rememberLazyListState()
+    val haze = rememberHazeState()
     Box(Modifier.fillMaxSize()) {
         LazyColumn(
-            Modifier.fillMaxSize(),
+            Modifier.fillMaxSize().hazeSource(haze),
             state = listState,
             contentPadding = PaddingValues(bottom = tabBarPadding() + 24.dp),
         ) {
@@ -152,7 +155,7 @@ private fun ProfilePage(state: Load<Profile>?, loader: Loader<Profile>?, stats: 
                 }
             }
         }
-        StatusBarScrim(listState)
+        StatusBarScrim(listState, haze)
     }
 }
 
