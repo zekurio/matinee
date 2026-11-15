@@ -248,6 +248,20 @@ function Player({
     el.muted = muted
   }, [])
 
+  // A video taken out of the page keeps its stream open, and buffering,
+  // until the browser collects it. Unread, those streams fill the
+  // connection to the server, and every request after them stalls. So
+  // the player lets go of its stream when it goes.
+  useEffect(() => {
+    const el = video.current
+    return () => {
+      // Still in the page when StrictMode only rehearses the unmount.
+      if (!el || el.isConnected) return
+      el.removeAttribute("src")
+      el.load()
+    }
+  }, [])
+
   const show = actions.showFlash
   const toggle = () => {
     const el = video.current

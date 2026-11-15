@@ -301,7 +301,7 @@ export type OpenedPlayback = {
  * Start ffmpeg and resolve with its output once the first bytes arrive, so
  * a command that fails at once is an error rather than an empty video.
  * Null when the file has no such audio track or ffmpeg can't play it.
- * Aborting `signal` stops ffmpeg.
+ * Aborting `signal` stops ffmpeg and ends the stream where it is.
  */
 export async function openPlayback(
   item: MediaItemRow,
@@ -392,11 +392,15 @@ export async function openPlayback(
     // A command that never started has nothing to close.
     child.once("error", () => resolve(0))
   })
-  // Set when the player went away, which is how every seek ends a stream.
+  // Set when the player went away, which is how every seek ends a stream,
+  // or when a newer stream for the same player took its place.
   let stopped = false
+  // Ends the body, once it exists and while it's still open.
+  let end = () => {}
   const stop = () => {
     stopped = true
     child.kill("SIGKILL")
+    end()
   }
   signal.addEventListener("abort", stop, { once: true })
   const stderr: string[] = []
@@ -441,6 +445,14 @@ export async function openPlayback(
   const stream = new ReadableStream<Uint8Array>(
     {
       start(controller) {
+        let open = true
+        // A stream that was stopped while its reader is still there ends
+        // cleanly, so the response doesn't hang open with nothing coming.
+        end = () => {
+          if (!open) return
+          open = false
+          controller.close()
+        }
         controller.enqueue(first)
         stdout.on("data", (chunk: Buffer) => {
           if (stopped) return
@@ -448,16 +460,20 @@ export async function openPlayback(
           if ((controller.desiredSize ?? 0) <= 0) stdout.pause()
         })
         stdout.once("end", () => {
-          if (!stopped) controller.close()
+          if (!stopped) end()
         })
         stdout.once("error", (cause) => {
-          if (!stopped) controller.error(cause)
+          if (stopped || !open) return
+          open = false
+          controller.error(cause)
         })
       },
       pull() {
         stdout.resume()
       },
       cancel() {
+        // The reader is gone, so there's nothing left to close.
+        end = () => {}
         stop()
       },
     },
