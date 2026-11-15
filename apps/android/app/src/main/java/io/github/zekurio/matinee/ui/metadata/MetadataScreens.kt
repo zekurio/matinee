@@ -40,6 +40,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -60,6 +61,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import io.github.zekurio.matinee.ui.components.homeAction
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.ArtworkSize
 import io.github.zekurio.matinee.api.FilePart
@@ -76,6 +78,8 @@ import io.github.zekurio.matinee.app
 import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.LocalNavigator
 import io.github.zekurio.matinee.ui.TopBar
+import io.github.zekurio.matinee.ui.components.ErrorSection
+import io.github.zekurio.matinee.ui.components.ErrorState
 import io.github.zekurio.matinee.ui.components.ErrorBox
 import io.github.zekurio.matinee.ui.components.LoadingBox
 import io.github.zekurio.matinee.ui.components.LocalActions
@@ -173,8 +177,10 @@ private fun IdentifyForm(title: Title) {
     var results by remember { mutableStateOf<Load<List<MetadataMatch>>>(Load.Loading) }
     var matching by remember { mutableStateOf<String?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
+    // Moved to send the same search again after it failed.
+    var attempt by remember { mutableIntStateOf(0) }
 
-    LaunchedEffect(submitted) {
+    LaunchedEffect(submitted, attempt) {
         results = Load.Loading
         results = try {
             Load.Ready(api.titles.findMatches(title.id, submitted.first, submitted.second))
@@ -258,7 +264,7 @@ private fun IdentifyForm(title: Title) {
         when (val state = results) {
             Load.Loading -> item(key = "loading") { LoadingBox(Modifier.padding(32.dp)) }
             is Load.Failed -> item(key = "failed") {
-                Text(state.message, style = MaterialTheme.typography.bodyMedium, color = Palette.Danger)
+                ErrorSection(stringResource(R.string.title_identify_failed), state.message, { attempt++ })
             }
             is Load.Ready -> if (state.value.isEmpty()) {
                 item(key = "empty") {
@@ -365,8 +371,10 @@ private fun ImageEditor(title: Title, target: ImageTarget) {
     var allLanguages by rememberSaveable(slot) { mutableStateOf(false) }
     var remote by remember { mutableStateOf<Load<List<RemoteImage>>>(Load.Loading) }
     var busy by remember { mutableStateOf<Change?>(null) }
+    // Moved to ask for the provider's images again after that failed.
+    var attempt by remember { mutableIntStateOf(0) }
 
-    LaunchedEffect(slot, allLanguages, lists) {
+    LaunchedEffect(slot, allLanguages, lists, attempt) {
         if (!lists) return@LaunchedEffect
         remote = Load.Loading
         remote = try {
@@ -450,12 +458,16 @@ private fun ImageEditor(title: Title, target: ImageTarget) {
                 color = Palette.Muted,
             )
         }
-        if (images.state is Load.Failed) {
+        val failed = images.state as? Load.Failed
+        if (failed != null) {
             wide("loadError") {
-                Text(
-                    stringResource(R.string.title_images_load_error, (images.state as Load.Failed).message),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Palette.Danger,
+                ErrorState(
+                    stringResource(R.string.title_images_failed),
+                    failed.message,
+                    images::reload,
+                    Modifier.fillMaxWidth().padding(vertical = 48.dp),
+                    disconnected = failed.disconnected,
+                    onHome = homeAction(),
                 )
             }
             return@LazyVerticalGrid
@@ -544,7 +556,7 @@ private fun ImageEditor(title: Title, target: ImageTarget) {
             else -> when (val state = remote) {
                 Load.Loading -> wide("remote") { LoadingBox(Modifier.padding(32.dp)) }
                 is Load.Failed -> wide("remoteError") {
-                    Text(state.message, style = MaterialTheme.typography.bodyMedium, color = Palette.Danger)
+                    ErrorSection(stringResource(R.string.title_images_remote_failed), state.message, { attempt++ })
                 }
                 is Load.Ready -> if (state.value.isEmpty()) {
                     wide("empty") {

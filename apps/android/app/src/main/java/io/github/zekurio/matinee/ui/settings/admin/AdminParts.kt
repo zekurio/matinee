@@ -41,12 +41,14 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import io.github.zekurio.matinee.ui.components.homeAction
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.Loader
 import io.github.zekurio.matinee.ui.Reveal
 import io.github.zekurio.matinee.ui.TopBar
 import io.github.zekurio.matinee.ui.components.LocalSnackbar
+import io.github.zekurio.matinee.ui.components.ErrorState
 import io.github.zekurio.matinee.ui.kit.ButtonLook
 import io.github.zekurio.matinee.ui.kit.Gap
 import io.github.zekurio.matinee.ui.kit.Gutter
@@ -66,9 +68,9 @@ import kotlinx.coroutines.launch
 
 /**
  * The page's data from [loader]: a spinner while it loads, the error when
- * it doesn't, which [failed] words, and then [content].
+ * it doesn't, and then [content].
  */
-internal fun <T> LazyListScope.loaded(loader: Loader<T>, failed: @Composable (String) -> String, content: LazyListScope.(T) -> Unit) {
+internal fun <T> LazyListScope.loaded(loader: Loader<T>, content: LazyListScope.(T) -> Unit) {
     when (val state = loader.state) {
         Load.Loading -> item(key = "loading") {
             Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
@@ -76,11 +78,14 @@ internal fun <T> LazyListScope.loaded(loader: Loader<T>, failed: @Composable (St
             }
         }
         is Load.Failed -> item(key = "failed") {
-            Column {
-                Text(failed(state.message), style = MaterialTheme.typography.bodyMedium, color = Palette.Muted)
-                Gap(12.dp)
-                MatineeButton(onClick = loader::reload, look = ButtonLook.Outline) { Text(stringResource(R.string.common_retry)) }
-            }
+            ErrorState(
+                stringResource(R.string.admin_load_failed),
+                state.message,
+                loader::reload,
+                Modifier.fillMaxWidth().padding(vertical = 48.dp),
+                disconnected = state.disconnected,
+                onHome = homeAction(),
+            )
         }
         is Load.Ready -> content(state.value)
     }

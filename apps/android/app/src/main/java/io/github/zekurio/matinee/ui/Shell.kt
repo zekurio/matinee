@@ -176,9 +176,11 @@ private fun Pages(controller: NavHostController, session: Session, offline: Bool
         // played backwards, by the back button or following the back gesture.
         // Navigation's own gesture motion shrinks the page instead, and fades
         // the one below in, which isn't how either page came. The covered
-        // page dims as it moves aside, but each page has its own background,
-        // so they never show through each other. Tabs slide side by side;
-        // search fades through. Timings are Motion's.
+        // page only moves aside, without fading: a fade blends the page into
+        // the background under it, so going back showed its art and colors
+        // shifting as they came back to full. Each page has its own
+        // background, so they never show through each other. Tabs slide
+        // side by side; search fades through. Timings are Motion's.
         enterTransition = { enter(pop = false) },
         exitTransition = { exit(pop = false) },
         popEnterTransition = { enter(pop = true) },
@@ -298,19 +300,14 @@ private fun AnimatedContentTransitionScope<NavBackStackEntry>.tabStep(): Int {
 /** How far the covered page moves aside: a quarter of the width, for depth. */
 private fun aside(width: Int) = width / 4
 
-/** How dark the covered page gets, as alpha over the background. */
-private const val COVERED_ALPHA = 0.5f
-
 /** Pages move as everything else that moves: the web's 280 ms, off at once and settling softly. */
 private fun <T> slide() = Motion.move<T>()
 
 private fun coverIn(): EnterTransition = slideInHorizontally(slide()) { it }
 
-private fun coveredOut(): ExitTransition =
-    slideOutHorizontally(slide()) { -aside(it) } + fadeOut(slide(), targetAlpha = COVERED_ALPHA)
+private fun coveredOut(): ExitTransition = slideOutHorizontally(slide()) { -aside(it) }
 
-private fun uncoveredIn(): EnterTransition =
-    slideInHorizontally(slide()) { -aside(it) } + fadeIn(slide(), initialAlpha = COVERED_ALPHA)
+private fun uncoveredIn(): EnterTransition = slideInHorizontally(slide()) { -aside(it) }
 
 private fun uncoverOut(): ExitTransition = slideOutHorizontally(slide()) { it }
 

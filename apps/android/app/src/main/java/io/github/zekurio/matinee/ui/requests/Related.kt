@@ -23,6 +23,7 @@ import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.Loader
 import io.github.zekurio.matinee.ui.components.PosterCard
 import io.github.zekurio.matinee.ui.components.Rail
+import io.github.zekurio.matinee.ui.components.RailFailed
 import io.github.zekurio.matinee.ui.components.RailArt
 import io.github.zekurio.matinee.ui.components.railItemWidth
 import io.github.zekurio.matinee.ui.home.RailSkeleton
@@ -96,7 +97,7 @@ private fun RelatedRow(rail: RelatedRail, page: Loader<RelatedPage>) {
     val title = rail.name?.takeIf { rail.id == RelatedRailId.COLLECTION } ?: stringResource(R.string.web_catalog_related_moreLikeThis)
     when (val state = page.state) {
         Load.Loading -> RailSkeleton(title, RailArt.Poster)
-        is Load.Failed -> RailFailed(title, page::reload)
+        is Load.Failed -> RailFailed(title, page::reload, page.refreshing, state.disconnected)
         is Load.Ready -> Rail(title) {
             items(state.value.items, key = { it.ref.key }) { item ->
                 RelatedCard(item, Modifier.width(railItemWidth(RailArt.Poster)))

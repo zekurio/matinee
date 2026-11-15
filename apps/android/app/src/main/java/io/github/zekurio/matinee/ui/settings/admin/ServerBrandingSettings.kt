@@ -133,7 +133,7 @@ fun ServerBrandingSettings() {
             }
         },
     ) {
-        loaded(loader, { stringResource(R.string.web_branding_loadFailed, it) }) { _ ->
+        loaded(loader) { _ ->
             if (form != null) item(key = "accents") { AccentForm(form) }
         }
     }

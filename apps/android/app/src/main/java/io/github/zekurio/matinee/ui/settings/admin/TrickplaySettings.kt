@@ -43,7 +43,7 @@ fun TrickplaySettings() {
         onReset = { draft = data?.settings },
         onSave = { draft?.let { loader.show(api.admin.trickplay.update(it)) } },
     ) {
-        loaded(loader, { stringResource(R.string.web_trickplay_loadFailed, it) }) { data ->
+        loaded(loader) { data ->
             item(key = "settings") { TrickplayForm(data, draft ?: data.settings) { draft = it } }
         }
     }

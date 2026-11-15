@@ -73,7 +73,7 @@ fun UsersSettings() {
     val saver = rememberSaver()
     val scope = rememberCoroutineScope()
     SettingsScaffold(stringResource(R.string.settings_admin_users)) {
-        loaded(loader, { stringResource(R.string.web_users_loadFailed, it) }) { users ->
+        loaded(loader) { users ->
             item(key = "users") {
                 Panel {
                     users.forEachIndexed { index, user ->

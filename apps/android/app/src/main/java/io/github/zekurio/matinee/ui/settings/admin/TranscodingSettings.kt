@@ -153,7 +153,7 @@ fun TranscodingSettings() {
         onReset = { form?.reset() },
         onSave = { form?.let { loader.show(api.admin.transcoding.update(settings(it.draft))) } },
     ) {
-        loaded(loader, { stringResource(R.string.web_transcoding_loadFailed, it) }) { _ ->
+        loaded(loader) { _ ->
             if (form != null) {
                 item(key = "form") {
                     TranscodingForm(form, saver, onDetect = { saver { loader.show(api.admin.transcoding.detect()) } })

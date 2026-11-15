@@ -51,7 +51,9 @@ import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.LocalNavigator
 import io.github.zekurio.matinee.ui.TopBar
 import io.github.zekurio.matinee.ui.browse.creditKind
+import io.github.zekurio.matinee.ui.components.ErrorState
 import io.github.zekurio.matinee.ui.components.LocalApi
+import io.github.zekurio.matinee.ui.components.ErrorSection
 import io.github.zekurio.matinee.ui.components.PersonCard
 import io.github.zekurio.matinee.ui.components.PosterCard
 import io.github.zekurio.matinee.ui.components.RailArt
@@ -157,13 +159,13 @@ fun SearchScreen() {
         when {
             // The field's placeholder already says what search finds; Discover sits under it.
             text.isEmpty() -> if (rails.isNotEmpty()) DiscoverList(rails, railPages, discover)
-            failed -> Hint(stringResource(R.string.search_failed))
+            failed -> ErrorState(stringResource(R.string.search_failed_title), null, search::retry, Modifier.fillMaxWidth().padding(vertical = 48.dp))
             found == null -> Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
                 Spinner(size = 32.dp, color = Palette.Accent)
             }
             found.isEmpty && !(catalogPending || !notHere.isNullOrEmpty()) -> Column {
                 Hint(stringResource(R.string.search_no_match, text), stringResource(R.string.search_no_match_hint), Lucide.SearchX)
-                if (catalog.failed) Hint(stringResource(R.string.web_catalog_search_failed))
+                if (catalog.failed) ErrorSection(stringResource(R.string.catalog_search_failed), null, null)
             }
             else -> LazyVerticalGrid(
                 columns = GridCells.Adaptive(150.dp),
@@ -289,7 +291,7 @@ private fun LazyGridScope.notHereSection(query: String, catalog: CatalogSearchSt
                 }
             }
             when {
-                catalog.failed -> Text(stringResource(R.string.web_catalog_search_failed), style = MaterialTheme.typography.bodyMedium, color = Palette.Muted)
+                catalog.failed -> ErrorSection(stringResource(R.string.catalog_search_failed), null, null)
                 items == null -> Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
                     Spinner(size = 32.dp, color = Palette.Accent)
                 }
@@ -314,7 +316,7 @@ private fun DiscoverList(
     val states = rails.mapNotNull { pages[it.id]?.state }
     val failed = rails.filter { pages[it.id]?.state is Load.Failed }
     when {
-        states.isNotEmpty() && states.all { it is Load.Failed } -> DiscoverFailed { pages.values.forEach { it.reload() }; discover.reload() }
+        states.isNotEmpty() && states.all { it is Load.Failed } -> DiscoverFailed(Modifier.fillMaxWidth().padding(vertical = 48.dp)) { pages.values.forEach { it.reload() }; discover.reload() }
         states.isNotEmpty() && states.all { it is Load.Ready && it.value.items.isEmpty() } -> DiscoverNothing()
         else -> androidx.compose.foundation.lazy.LazyColumn(
             Modifier.fillMaxSize(),
@@ -335,7 +337,7 @@ private fun DiscoverList(
             if (failed.size > 1) {
                 item(key = "failed") {
                     val res = LocalResources.current
-                    io.github.zekurio.matinee.ui.home.Notice(
+                    ErrorSection(
                         res.getQuantityString(R.plurals.web_discover_railsFailed, failed.size, failed.size),
                         null,
                         { failed.forEach { pages[it.id]?.reload() } },

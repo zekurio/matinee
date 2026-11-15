@@ -333,7 +333,8 @@ internal fun refusalTitle(refusal: Refusal) = stringResource(
 private fun PlayerFailure(title: String, message: String?, retry: (() -> Unit)?) {
     Column(Modifier.fillMaxSize().safeDrawingPadding()) {
         RoundIconButton(Lucide.ArrowLeft, stringResource(R.string.player_back), LocalPlayerHost.current.close, Modifier.padding(8.dp), background = Color.Transparent)
-        ErrorBox(title, message, retry, Modifier.weight(1f))
+        // The player has no Home of its own; the back button above closes it.
+        ErrorBox(title, message, retry, Modifier.weight(1f), onHome = null)
     }
 }
 

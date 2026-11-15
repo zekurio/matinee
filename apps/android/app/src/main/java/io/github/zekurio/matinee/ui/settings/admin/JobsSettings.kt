@@ -90,7 +90,7 @@ fun JobsSettings() {
             edits = emptyMap()
         },
     ) {
-        loaded(loader, { stringResource(R.string.web_jobs_loadFailed, it) }) { overview ->
+        loaded(loader) { overview ->
             item(key = "jobs") {
                 val runTask = { task: ScheduledTask, action: String ->
                     saver {

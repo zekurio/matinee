@@ -24,6 +24,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import io.github.zekurio.matinee.ui.components.ErrorSection
+import io.github.zekurio.matinee.ui.components.ErrorState
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.Profile
 import io.github.zekurio.matinee.api.isAdmin
@@ -38,7 +40,6 @@ import io.github.zekurio.matinee.ui.LocalUser
 import io.github.zekurio.matinee.ui.RefreshOnResume
 import io.github.zekurio.matinee.ui.StatusBarScrim
 import io.github.zekurio.matinee.ui.components.Avatar
-import io.github.zekurio.matinee.ui.components.Disconnected
 import io.github.zekurio.matinee.ui.components.DisconnectedAction
 import io.github.zekurio.matinee.ui.components.EpisodeCard
 import io.github.zekurio.matinee.ui.components.FavoriteCard
@@ -115,16 +116,13 @@ private fun ProfilePage(state: Load<Profile>?, loader: Loader<Profile>?, stats: 
             when (state) {
                 null -> Unit
                 is Load.Failed -> item(key = "failed") {
-                    if (state.disconnected) {
-                        Disconnected(loader?.let { it::reload }, Modifier.fillMaxWidth().padding(top = SectionGap))
-                    } else {
-                        Text(
-                            stringResource(R.string.profile_load_failed),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Palette.Muted,
-                            modifier = Modifier.padding(start = Gutter, end = Gutter, top = SectionGap),
-                        )
-                    }
+                    ErrorState(
+                        stringResource(R.string.profile_load_failed),
+                        state.message,
+                        loader?.let { it::reload },
+                        Modifier.fillMaxWidth().padding(vertical = 48.dp),
+                        disconnected = state.disconnected,
+                    )
                 }
                 is Load.Ready -> {
                     item(key = "favorites") { Box(Modifier.padding(top = SectionGap)) { Favorites(state.value) } }
@@ -290,8 +288,14 @@ private fun LazyListScope.statistics(model: ProfileStats) {
     val card = Modifier.padding(start = Gutter, end = Gutter, top = 16.dp)
     when {
         state is Load.Failed && stats == null -> item(key = "stats-failed") {
-            if (state.disconnected) Disconnected(model.loader?.let { it::reload }, card.fillMaxWidth())
-            else Text(state.message, style = MaterialTheme.typography.bodyMedium, color = Palette.Muted, modifier = card)
+            ErrorSection(
+                stringResource(R.string.profile_stats_failed),
+                state.message,
+                model.loader?.let { it::reload },
+                Modifier.padding(top = 16.dp),
+                retrying = model.loader?.refreshing == true,
+                disconnected = state.disconnected,
+            )
         }
         stats == null -> item(key = "stats-loading") {
             Box(card.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {

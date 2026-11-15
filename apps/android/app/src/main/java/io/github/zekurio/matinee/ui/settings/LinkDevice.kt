@@ -592,7 +592,6 @@ private fun ApproveStep(userCode: String, from: String?, typed: Boolean, onAgain
             description = current.message,
         ) {
             MatineeButton(onClick = { attempt++ }, look = ButtonLook.Outline, modifier = Modifier.fillMaxWidth()) {
-                LucideIcon(Lucide.RefreshCw, null, size = 16.dp)
                 Text(stringResource(R.string.common_retry))
             }
             Gap(10.dp)
