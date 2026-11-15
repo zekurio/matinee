@@ -25,16 +25,6 @@ func episodeFacts(_ item: MediaItem, watched: Bool, left: Bool = false) -> [Stri
     .compactMap(\.self)
 }
 
-/// The words for a kind of credit, for `count` names: "Director", "Writers".
-func creditKindName(_ kind: String, count: Int) -> String {
-  switch kind {
-  case CreditKind.creator: Str.peopleCreditCreator(count)
-  case CreditKind.director: Str.peopleCreditDirector(count)
-  case CreditKind.writer: Str.peopleCreditWriter(count)
-  default: Str.peopleCreditActor(count)
-  }
-}
-
 /// What a file holds, a line each: the picture, the audio, the subtitles.
 struct FileInfo: Equatable {
   var video: String?

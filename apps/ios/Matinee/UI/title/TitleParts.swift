@@ -366,7 +366,7 @@ struct CrewLines: View {
     if !lines.isEmpty || !studios.isEmpty {
       VStack(alignment: .leading, spacing: 6) {
         ForEach(lines, id: \.0) { kind, names in
-          CreditLine(label: creditKindName(kind, count: names.count), names: names, onTap: nav.person)
+          CreditLine(label: creditKind(kind, count: names.count), names: names, onTap: nav.person)
         }
         if !studios.isEmpty {
           CreditLine(label: Str.peopleStudio(studios.count), names: studios, onTap: nav.studio)
@@ -456,22 +456,6 @@ private struct SeasonCard: View {
   }
 }
 
-/// Play over a still while a pointer hovers it, as the web shows it on a
-/// desktop: an iPad with a trackpad. A touch has no hover; the still plays.
-private struct HoverPlay: ViewModifier {
-  let label: String
-  let action: () -> Void
-  @State private var hovered = false
-
-  func body(content: Content) -> some View {
-    content
-      .overlay {
-        if hovered { PlayGlyph(label: label, size: 64, action: action).transition(Motion.fade) }
-      }
-      .onHover { hovered = $0 }
-  }
-}
-
 /// The episode up next on a show's page, as the web's EpisodeRow: a big
 /// still that opens it, with Play on hover, its number and name, air date
 /// and runtime, and what happens in it.
@@ -499,7 +483,7 @@ struct NextUpEpisode: View {
         }
       }
       .buttonStyle(CardPress())
-      .modifier(HoverPlay(label: Str.mediaPlayNamed(label.title)) { nav.play(item.id, nil) })
+      .modifier(HoverPlay(label: Str.mediaPlayNamed(label.title), size: 64) { nav.play(item.id, nil) })
       .cardMenu(.item(item, here: false))
       .accessibilityLabel(label.title)
       .padding(.top, 12)
@@ -561,7 +545,7 @@ struct StillFrame: View {
         .shadow(color: .black.opacity(0.5), radius: 24, y: 8)
     }
     .buttonStyle(CardPress())
-    .modifier(HoverPlay(label: play) { nav.play(item.id, nil) })
+    .modifier(HoverPlay(label: play, size: 64) { nav.play(item.id, nil) })
     // A still as wide as an iPad in landscape would be taller than the screen; it stops at half its height.
     .frame(maxWidth: window.height * 0.55 * 16 / 9)
     .frame(maxWidth: .infinity, alignment: .leading)

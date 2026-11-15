@@ -344,13 +344,3 @@ private struct CheckRow: View {
     .accessibilityAddTraits(checked ? .isSelected : [])
   }
 }
-
-/// A track's flags and format, and whether it is burned into the picture,
-/// for every track the screen can't draw, as the download sheet has it.
-private func subtitleDetail(_ track: SubtitleTrack) -> String {
-  let burns = track.delivery != SubtitleDelivery.webvtt
-  return [
-    track.forced ? Str.playerSubtitlesForced : nil, track.sdh ? "SDH" : nil, track.format,
-    track.delivery != nil && burns ? Str.playerSubtitlesBurnedIn : nil,
-  ].compactMap(\.self).joined(separator: " · ")
-}

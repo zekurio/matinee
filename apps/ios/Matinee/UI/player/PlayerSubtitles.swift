@@ -49,7 +49,8 @@ struct Subtitles: View {
 
 /// One cue, centered, at `size` times the look's scale: the text over its
 /// background, inside the window, with a shadow, a hard edge, or an outline
-/// drawn under the fill.
+/// drawn under the fill. Settings' Subtitles page draws its sample with it
+/// too, so the sample is what the player shows.
 struct SubtitleLine: View {
   let cue: Cue
   let look: SubtitleLook

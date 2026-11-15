@@ -49,7 +49,22 @@ struct MatineeRoot: View {
       pipeline = .matinee(server: session.activeServer.flatMap(URL.init(string:)), headers: session.playerHeaders())
     }
     .onChange(of: session.activeServer, initial: true) { downloads.store.server = session.activeServer }
-    .onChange(of: session.state, initial: true) { _, state in follow(state) }
+    .onChange(of: session.state, initial: true) { old, state in
+      follow(state)
+      if signedOut(from: old, to: state) { ImagePipeline.forgetAll() }
+    }
+  }
+
+  /// The account on a server went, by signing out or the server ending its
+  /// session: what its pictures were, its own and its libraries', goes too.
+  /// Switching to another server leaves them, as that account is still signed in.
+  private func signedOut(from old: AuthState, to new: AuthState) -> Bool {
+    guard case .signedOut(let server, _, _) = new else { return false }
+    switch old {
+    case .signedIn(let before, _), .offline(let before, _): return before == server
+    case .connecting(let before), .unreachable(let before, _, _): return before == server
+    default: return false
+    }
   }
 
   private func follow(_ state: AuthState) {
@@ -70,45 +85,5 @@ struct MatineeRoot: View {
       theme.setAccents(config.themeAccents)
     default: break
     }
-  }
-}
-
-extension ImagePipeline {
-  /// The pipeline for the server in use: `headers`, the session's
-  /// `Authorization`, go with requests to `server` and nowhere else, so an
-  /// image from anywhere else never gets the token.
-  nonisolated static func matinee(server: URL?, headers: [String: String]) -> ImagePipeline {
-    guard let server, !headers.isEmpty else { return .anonymous }
-    return ImagePipeline(delegate: SignedImages(server: server, headers: headers)) {
-      $0.dataLoader = DataLoader(configuration: DataLoader.defaultConfiguration)
-      $0.dataCache = try? DataCache(name: "io.github.zekurio.matinee.images")
-    }
-  }
-
-  /// Every image the app keeps, in memory and on disk: a removed server's go with it.
-  nonisolated static func forgetAll() {
-    ImageCache.shared.removeAll()
-    (try? DataCache(name: "io.github.zekurio.matinee.images"))?.removeAll()
-  }
-}
-
-/// Adds the session's headers to requests for its server's origin.
-private final class SignedImages: ImagePipeline.Delegate {
-  let server: URL
-  let headers: [String: String]
-
-  init(server: URL, headers: [String: String]) {
-    self.server = server
-    self.headers = headers
-  }
-
-  func willLoadData(for request: ImageRequest, urlRequest: URLRequest, pipeline: ImagePipeline) async throws
-    -> URLRequest
-  {
-    guard let url = urlRequest.url, url.scheme == server.scheme, url.host == server.host, url.port == server.port
-    else { return urlRequest }
-    var signed = urlRequest
-    for (name, value) in headers { signed.setValue(value, forHTTPHeaderField: name) }
-    return signed
   }
 }

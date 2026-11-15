@@ -96,7 +96,7 @@ private struct PlayerSitting: View {
     let player = PlayerController(
       api: api, device: device, prefs: prefs, tokenProvider: token,
       downloads: ServerPlayerDownloads(downloads: downloads, server: server, api: offline ? nil : api),
-      preferences: user?.playback ?? DEFAULT_PLAYBACK_PREFERENCES)
+      preferences: user?.playback ?? DEFAULT_PLAYBACK_PREFERENCES, offline: offline)
     player.onNext = { next in playInstead(next.id) }
     player.sceneDidBecomeActive()
     controller = player

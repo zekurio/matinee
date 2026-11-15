@@ -5,12 +5,25 @@ public struct CueSpan: Sendable, Equatable {
   public var bold: Bool
   public var italic: Bool
   public var underline: Bool
+  public init(text: String, bold: Bool = false, italic: Bool = false, underline: Bool = false) {
+    self.text = text
+    self.bold = bold
+    self.italic = italic
+    self.underline = underline
+  }
 }
 public struct Cue: Sendable, Equatable {
   public var start: Double
   public var end: Double
   public var spans: [CueSpan]
   public var text: String { spans.map(\.text).joined() }
+  public init(start: Double, end: Double, spans: [CueSpan]) {
+    self.start = start
+    self.end = end
+    self.spans = spans
+  }
+  /// Plain text as a cue, as the Settings preview draws its sample line.
+  public init(text: String) { self.init(start: 0, end: 0, spans: [CueSpan(text: text)]) }
 }
 public struct CueTrack: Sendable {
   public let cues: [Cue]

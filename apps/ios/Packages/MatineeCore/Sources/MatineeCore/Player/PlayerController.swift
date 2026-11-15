@@ -58,6 +58,10 @@ struct Ask {
   @ObservationIgnored let session: URLSession
   /// The account's playback preferences, for a download's tracks and the skip steps.
   public let preferences: PlaybackPreferences
+  /// Offline mode, which leaves the server alone even when it answers: a
+  /// download's reports wait with the downloads, where offline Home reads
+  /// where the viewer got to, and go once the app is back online.
+  @ObservationIgnored let offline: Bool
 
   /// The file this sitting plays; Kotlin has it from the opening.
   @ObservationIgnored var itemId: String?
@@ -223,9 +227,10 @@ struct Ask {
     api: MatineeApi, device: PlaybackDevice, prefs: PlayerPrefs,
     tokenProvider: @escaping @Sendable () async -> String? = { nil },
     downloads: (any PlayerDownloads)? = nil,
-    preferences: PlaybackPreferences = DEFAULT_PLAYBACK_PREFERENCES
+    preferences: PlaybackPreferences = DEFAULT_PLAYBACK_PREFERENCES, offline: Bool = false
   ) {
     self.preferences = preferences
+    self.offline = offline
     self.api = api
     self.device = device
     self.prefs = prefs
@@ -241,8 +246,10 @@ struct Ask {
     engine: any PlaybackEngine, clock: @escaping @MainActor () -> Date,
     tokenProvider: @escaping @Sendable () async -> String? = { nil },
     downloads: (any PlayerDownloads)? = nil,
-    preferences: PlaybackPreferences = DEFAULT_PLAYBACK_PREFERENCES, session: URLSession = .shared
+    preferences: PlaybackPreferences = DEFAULT_PLAYBACK_PREFERENCES, session: URLSession = .shared,
+    offline: Bool = false
   ) {
+    self.offline = offline
     self.session = session
     self.api = api
     self.device = device
@@ -319,7 +326,7 @@ struct Ask {
     diagnostics.capabilities(.of(device, options: options))
     recordSelection()
     beginTick()
-    loadTrickplay(itemId)
+    if !offline { loadTrickplay(itemId) }
     nextTask = Task { [weak self] in
       let next = await downloads.next(after: local.item)
       self?.localNext = next

@@ -19,6 +19,10 @@
 
     /// Saves `-dev.server`, and `-dev.token` as its sign-in, as the server in use.
     static func prepare(_ store: SessionStore) {
+      // On its own too, for the server already in use.
+      if defaults.object(forKey: "dev.offline") != nil {
+        store.offlineMode = defaults.bool(forKey: "dev.offline")
+      }
       guard let address = defaults.string(forKey: "dev.server"),
         let url = MatineeSession.serverCandidates(address).first
       else { return }
@@ -39,9 +43,6 @@
       }
       store.active = key
       store.lastServer = key
-      if defaults.object(forKey: "dev.offline") != nil {
-        store.offlineMode = defaults.bool(forKey: "dev.offline")
-      }
     }
 
     /// Offline mode needs the account, which a new token only gets once the

@@ -170,16 +170,18 @@ struct PlayGlyph: View {
 
 /// Play over a card's still while a pointer hovers it, as the web shows it
 /// on a desktop: an iPad with a trackpad. A touch has no hover, so cards
-/// stay clean; a tap opens the item, and its page has Play.
-private struct HoverPlay: ViewModifier {
+/// stay clean; a tap opens the item, and its page has Play. A title's
+/// page has it over its big stills too, a little bigger.
+struct HoverPlay: ViewModifier {
   let label: String
+  var size: CGFloat = 56
   let action: () -> Void
   @State private var hovered = false
 
   func body(content: Content) -> some View {
     content
       .overlay {
-        if hovered { PlayGlyph(label: label, action: action).transition(Motion.fade) }
+        if hovered { PlayGlyph(label: label, size: size, action: action).transition(Motion.fade) }
       }
       .onHover { hovered = $0 }
   }
@@ -429,15 +431,19 @@ struct PersonCard: View {
           }
           .overlay { Picture(photo) }
           .clipShape(Circle())
+        // The card is as wide as the rail makes it, so at a large text size a
+        // long word, "Schauspieler", shrinks to fit rather than break.
         Text(name)
           .textStyle(.bodyMedium, weight: .medium)
           .foregroundStyle(palette.foreground)
           .multilineTextAlignment(.center)
           .lineLimit(2)
+          .keepsWordsWhole(name, .bodyMedium, weight: .medium, alignment: .center)
           .padding(.top, 8)
         if let role {
           Text(role).textStyle(.bodySmall).foregroundStyle(palette.muted).multilineTextAlignment(.center)
             .lineLimit(2)
+            .keepsWordsWhole(role, .bodySmall, alignment: .center)
         }
       }
       .frame(maxWidth: .infinity)

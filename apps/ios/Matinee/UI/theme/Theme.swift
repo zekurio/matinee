@@ -218,6 +218,56 @@ extension View {
   func textStyle(_ style: Typography, weight: Font.Weight? = nil) -> some View {
     modifier(TypographyModifier(style: style, weight: weight))
   }
+
+  /// Keeps every word of `text`, set in `style`, whole. SwiftUI breaks a
+  /// word that's wider than the line in the middle ("Schauspi/el", a long
+  /// German compound at an accessibility size); this steps the text down
+  /// Dynamic Type sizes, as far as needed and no further, until its widest
+  /// word fits. Goes after `.textStyle` on the `Text` that shows `text`,
+  /// and gives it the line's full width, with `alignment` in it.
+  func keepsWordsWhole(
+    _ text: String, _ style: Typography, weight: Font.Weight? = nil, alignment: Alignment = .leading
+  ) -> some View {
+    modifier(WholeWords(text: text, style: style, weight: weight, alignment: alignment))
+  }
+}
+
+private struct WholeWords: ViewModifier {
+  let text: String
+  let style: Typography
+  let weight: Font.Weight?
+  let alignment: Alignment
+  @Environment(\.dynamicTypeSize) private var dynamicType
+  @State private var width: CGFloat?
+
+  func body(content: Content) -> some View {
+    content
+      .dynamicTypeSize(fitting)
+      // The line's width, whatever size the text is set at, so a smaller size can't narrow it again.
+      .frame(maxWidth: .infinity, alignment: alignment)
+      .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
+  }
+
+  private var fitting: DynamicTypeSize {
+    guard let width, width > 0 else { return dynamicType }
+    var size = dynamicType
+    while widest(at: size) > width, let smaller = DynamicTypeSize.allCases.last(where: { $0 < size }) {
+      size = smaller
+    }
+    return size
+  }
+
+  /// The widest word's width at `size`, with the font and tracking `TypographyModifier` sets there.
+  private func widest(at size: DynamicTypeSize) -> CGFloat {
+    let spec = style.spec
+    let scale = style.scale(at: size)
+    let attributes: [NSAttributedString.Key: Any] = [
+      .font: RedHatText.uiFont(size: (spec.size * scale).rounded(), weight: weight ?? spec.weight),
+      .kern: spec.tracking * spec.size * scale,
+    ]
+    let words = text.split(whereSeparator: \.isWhitespace)
+    return words.map { ceil(NSAttributedString(string: String($0), attributes: attributes).size().width) }.max() ?? 0
+  }
 }
 
 extension View {

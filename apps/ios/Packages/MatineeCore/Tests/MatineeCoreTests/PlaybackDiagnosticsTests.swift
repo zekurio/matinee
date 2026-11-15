@@ -311,6 +311,18 @@ import Testing
       ))
     #expect(!formatReport(r).contains("media.example.com"))
   }
+  /// The server names an MP4's mov_text track "TX3G", and every other format by its display name.
+  @Test func subtitleFormatsByTheServersNames() {
+    for (format, safe) in [
+      ("TX3G", "tx3g"), ("SRT", "srt"), ("WebVTT", "webvtt"), ("ASS", "ass"), ("SSA", "ssa"), ("PGS", "pgs"),
+      ("VobSub", "vobsub"), ("DVB", "dvb"), ("Teletext", "teletext"),
+    ] {
+      let track = SubtitleTrack(
+        id: "stream-2", label: "English", language: "en", title: nil, forced: false, sdh: false, default: false,
+        source: "embedded", format: format, delivery: "webvtt")
+      #expect(SelectionDiagnostics.of(audio: nil, subtitle: track, rendering: .screen).subtitleFormat?.text == safe)
+    }
+  }
   @Test func fileSelectionAndCapabilitiesExcludePrivateMetadata() throws {
     var media = item()
     media.probe = try decodeSaved(

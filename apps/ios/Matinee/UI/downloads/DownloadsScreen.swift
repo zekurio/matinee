@@ -52,9 +52,6 @@ struct DownloadsScreen: View {
           }
         }
       }
-      if !items.isEmpty {
-        DownloadsStorage().downloadRow(top: 24, bottom: 24)
-      }
     }
     .listStyle(.plain)
     .scrollContentBackground(.hidden)
@@ -84,44 +81,6 @@ struct DownloadsScreen: View {
       for id in ids {
         do { try await change(downloads, id) } catch { AppLog.downloads.error("Could not change a download") }
       }
-    }
-  }
-}
-
-/// How much room the downloads take and what's left, read from the disk,
-/// and removing every download of the server in use, after asking.
-/// Android keeps these on Settings' Downloads page; the tab shows them too,
-/// where the downloads are.
-struct DownloadsStorage: View {
-  @Environment(Downloads.self) private var downloads
-  @Environment(\.snackbar) private var snackbar
-  @State private var storage: DownloadStorage?
-  @State private var confirm = false
-
-  var body: some View {
-    let items = downloads.store.items
-    let total = storage.map { formatBytes($0.used) } ?? formatBytes(items.values.reduce(Int64(0)) { $0 + $1.bytes })
-    Panel {
-      ValueRow(
-        Str.downloadsStorage,
-        value: Str.downloadsStorageValue(total, storage?.free.map(formatBytes) ?? "–"))
-      if !items.isEmpty {
-        RowDivider()
-        LinkRow(Str.downloadsRemoveAll, destructive: true) { confirm = true }
-      }
-    }
-    // Again as files come and go, and as they grow.
-    .task(id: items.values.reduce(Int64(items.count)) { $0 + $1.bytes }) {
-      storage = await downloads.store.storage()
-    }
-    .alert(Str.downloadsRemoveAllConfirm, isPresented: $confirm) {
-      Button(Str.commonRemove, role: .destructive) {
-        let downloads = downloads
-        launchShowing(snackbar, Str.downloadsFailed) { try await downloads.removeAll() }
-      }
-      Button(Str.commonCancel, role: .cancel) {}
-    } message: {
-      Text(Str.downloadsRemoveAllBody(total))
     }
   }
 }

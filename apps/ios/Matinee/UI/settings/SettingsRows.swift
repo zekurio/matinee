@@ -42,20 +42,6 @@ struct SettingsScaffold<Content: View>: View {
   }
 }
 
-/// The small print under a panel, like a limit or what a section is for.
-struct PanelNote: View {
-  let text: String
-  @Environment(\.palette) private var palette
-
-  init(_ text: String) { self.text = text }
-
-  var body: some View {
-    Text(text).textStyle(.bodySmall).foregroundStyle(palette.muted)
-      .frame(maxWidth: .infinity, alignment: .leading)
-      .padding(.top, 8)
-  }
-}
-
 /// A titled group of settings. Android's `Section`, renamed, as SwiftUI has one.
 struct SettingsSection<Content: View>: View {
   let title: String
@@ -68,7 +54,8 @@ struct SettingsSection<Content: View>: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 14) {
-      Text(title).textStyle(.titleLarge).accessibilityAddTraits(.isHeader)
+      // A long German title, "Hardwarebeschleunigung", shrinks to fit rather than break.
+      Text(title).textStyle(.titleLarge).keepsWordsWhole(title, .titleLarge).accessibilityAddTraits(.isHeader)
       content()
     }
     .frame(maxWidth: .infinity, alignment: .leading)
@@ -135,7 +122,7 @@ private struct TitleValue<Trailing: View>: View {
     HStack(spacing: 0) {
       if dynamicType.isAccessibilitySize {
         VStack(alignment: .leading, spacing: 2) {
-          Text(title).textStyle(.bodyLarge).foregroundStyle(palette.foreground)
+          Text(title).textStyle(.bodyLarge).foregroundStyle(palette.foreground).keepsWordsWhole(title, .bodyLarge)
           Text(value).textStyle(.bodyMedium).foregroundStyle(palette.muted)
         }
         .multilineTextAlignment(.leading)
@@ -284,7 +271,7 @@ struct SwitchRow: View {
     Toggle(isOn: $isOn) {
       HStack(spacing: 0) {
         RowIcon(icon: icon, tint: palette.muted)
-        Text(title).textStyle(.bodyLarge).foregroundStyle(palette.foreground)
+        Text(title).textStyle(.bodyLarge).foregroundStyle(palette.foreground).keepsWordsWhole(title, .bodyLarge)
       }
     }
     .toggleStyle(.matinee)
@@ -348,7 +335,12 @@ struct LinkRow: View {
         // At the accessibility sizes the value goes under the title, as in `TitleValue`.
         let stacked = dynamicType.isAccessibilitySize
         VStack(alignment: .leading, spacing: 0) {
-          Text(title).textStyle(.bodyLarge).foregroundStyle(color)
+          // Across the row when nothing sits at its end; beside a value it takes only what it needs.
+          if stacked || value == nil {
+            Text(title).textStyle(.bodyLarge).foregroundStyle(color).keepsWordsWhole(title, .bodyLarge)
+          } else {
+            Text(title).textStyle(.bodyLarge).foregroundStyle(color)
+          }
           if stacked, let value {
             Text(value).textStyle(.bodyMedium).foregroundStyle(palette.muted)
           }
@@ -385,7 +377,7 @@ struct NoteRow: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 0) {
-      Text(title).textStyle(.bodyLarge).foregroundStyle(palette.foreground)
+      Text(title).textStyle(.bodyLarge).foregroundStyle(palette.foreground).keepsWordsWhole(title, .bodyLarge)
       Text(description).textStyle(.bodySmall).foregroundStyle(palette.muted)
     }
     .modifier(RowFrame())

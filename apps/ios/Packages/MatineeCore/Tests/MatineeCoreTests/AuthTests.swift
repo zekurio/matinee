@@ -56,6 +56,14 @@ final class AuthProtocol: URLProtocol, @unchecked Sendable {
 }
 
 @Suite(.serialized) struct AuthTests {
+  /// The account's answers stay off the disk, as OkHttp keeps no cache on Android.
+  @Test func serverClientsKeepNoCacheOrCookies() {
+    let config = MatineeSession.apiConfiguration(.default)
+    #expect(config.urlCache == nil)
+    #expect(config.requestCachePolicy == .reloadIgnoringLocalCacheData)
+    #expect(config.httpCookieStorage == nil && !config.httpShouldSetCookies)
+    #expect(config.httpAdditionalHeaders?["User-Agent"] as? String == "Matinee (iOS)")
+  }
   @Test func addressesAndPKCE() throws {
     #expect(
       MatineeSession.serverCandidates(" media.EXAMPLE:8420/path?x=1 ").map(\.absoluteString) == [

@@ -82,9 +82,12 @@ public let KNOWN_CONTAINERS: Set<String> = [
   "mp4", "m4v", "mov", "webm", "mkv", "avi", "ts", "m2ts", "mts", "mpg", "mpeg", "ogv", "wmv",
   "flv",
 ]
+/// ffmpeg's codec names and the server's display names for them alike: a
+/// `SubtitleTrack.format` is the server's (`FORMAT_NAMES` in its
+/// subtitles.ts), which calls an MP4's `mov_text` "TX3G".
 public let KNOWN_SUBTITLE_FORMATS: Set<String> = [
   "srt", "subrip", "ass", "ssa", "vtt", "webvtt", "pgs", "vobsub", "dvdsub", "dvb", "mov_text",
-  "ttml", "teletext",
+  "tx3g", "ttml", "teletext",
 ]
 let KNOWN_HDR: Set<String> = ["hdr10", "hdr10+", "hlg", "dolby-vision", "dolby vision", "sdr"]
 let KNOWN_SETTING_CODECS = KNOWN_VIDEO_CODECS.union(KNOWN_AUDIO_CODECS).union(["auto"])
