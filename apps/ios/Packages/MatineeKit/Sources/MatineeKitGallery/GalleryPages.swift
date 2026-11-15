@@ -419,6 +419,8 @@ struct ListsPage: View {
   @State private var skip = 10
   @State private var subtitles = "auto"
   @State private var picked = 1
+  @State private var issuer = "auth.example.com"
+  @State private var clientId = ""
   @Environment(\.palette) private var palette
 
   var body: some View {
@@ -443,6 +445,12 @@ struct ListsPage: View {
       ListSection("Skipping") {
         SelectRow("Skip back", selection: $skip, options: [(5, "5 seconds"), (10, "10 seconds"), (30, "30 seconds")], stacked: false)
         ValueRow("Version", value: "0.42.0")
+      }
+      ListSection("Typed in") {
+        InputRow("Client ID", text: $clientId, placeholder: "matinee", help: "From the provider's app settings.")
+        InputRow(
+          "Issuer URL", text: $issuer, placeholder: "https://auth.example.com",
+          error: issuer.hasPrefix("http") ? nil : "Check Issuer URL.")
       }
       ListSection("Pick one") {
         ForEach(["Original", "1080p", "720p"].indices, id: \.self) { index in

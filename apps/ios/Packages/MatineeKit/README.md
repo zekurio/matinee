@@ -52,7 +52,9 @@ WindowGroup {
 `MatineeTheme(accentLight:accentDark:)` takes the server's `themeAccents`
 (`#rrggbb`) and fits them to Matinee's palettes for contrast;
 `MatineeTheme.matinee` is Matinee's own. `ThemeMode` is system, light, or
-dark. `.forceDarkTheme()` is for the player.
+dark. `.forceDarkTheme()` is for the player. `\.matineePalette` is the
+palette under a second name, for a module that still has an environment
+value of its own called `palette`, as the app's old theme does.
 
 Every page in a `NavigationStack` gets `.topBar("Title")`, or
 `.hidesSystemNavigationBar()` when it draws its own top (Back floating over
@@ -125,6 +127,9 @@ disabled. Every pressable thing takes 44 points to hit.
 - `SelectRow("Title", selection:, options:, stacked:)`: the Select under the
   name (the web on a phone), or its value at the end (`stacked: false`).
 - `ValueRow("Title", value:)`.
+- `InputRow("Title", text: $text, placeholder:, kind:, help:, error:) { trailing }`:
+  the web's InputField, the name over a `MatineeTextField`, help or the
+  error under it.
 - `ListBlock { }`: the block alone.
 
 ### Overlays
