@@ -99,10 +99,11 @@ public func heroIsWide(width: Double, height: Double) -> Bool { width >= 600 && 
 /// enough that two rows of stills fit under it, and no shorter than 320, or
 /// its title and buttons would reach the header; `topInset` is the status
 /// bar's, which it reaches under, beyond the 24 Android's leaves it. Tablets
-/// keep a tall banner, which on a phone turned on its side, wide but short,
-/// leaves a little of the page showing under it.
+/// keep a tall banner, at most 720 as the web's `h-[min(68vh,720px)]`, which
+/// on a phone turned on its side, wide but short, leaves a little of the
+/// page showing under it.
 public func heroHeight(window height: Double, wide: Bool, topInset: Double = 24) -> Double {
-  if wide { return max(height * 0.68, min(460, height * 0.9)) }
+  if wide { return min(max(height * 0.68, min(460, height * 0.9)), 720) }
   return min(max(height * 0.345, 320), 400) + max(topInset - 24, 0)
 }
 

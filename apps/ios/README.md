@@ -1,8 +1,9 @@
 # Matinee for iOS
 
 A native SwiftUI app for iPhone and iPad, on iOS 18.0 or later, written in
-Swift 6. It follows the Android phone app's screens, with Matinee's palettes,
-Red Hat Text, and lucide icons. Text comes in English and German.
+Swift 6. It follows the Android phone app's screens, drawn with MatineeKit,
+the SwiftUI port of the web's components, so it looks like the web app.
+Text comes in English and German.
 There is no tvOS app.
 
 ## Build
@@ -12,14 +13,14 @@ The app uses Swift 6.2's default main-actor isolation. The repository's
 flake dev shell is Linux-only. The recipes use Nixpkgs for XcodeGen and
 Node 24 on macOS; install `just` too. Run these from the repository root:
 
-| Recipe              | What it does                                                                     |
-| ------------------- | -------------------------------------------------------------------------------- |
-| `just ios generate` | Writes the ignored Xcode project, version config, and app icon catalog           |
-| `just ios build`    | Builds the unsigned debug app for the simulator in `apps/ios/build/DerivedData/` |
-| `just ios test`     | Runs MatineeCore's Mac tests and checks generated strings, icons, and palettes   |
-| `just ios api`      | Generates the API client after a contract change                                 |
-| `just ios strings`  | Generates the string catalog and Swift accessors                                 |
-| `just ios icons`    | Generates icons and palettes                                                     |
+| Recipe              | What it does                                                                                                       |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `just ios generate` | Writes the ignored Xcode project, version config, and app icon catalog                                             |
+| `just ios build`    | Builds the unsigned debug app for the simulator in `apps/ios/build/DerivedData/`                                   |
+| `just ios test`     | Runs MatineeCore's tests and the kit's boundary test on the Mac, and checks generated strings, icons, and palettes |
+| `just ios api`      | Generates the API client after a contract change                                                                   |
+| `just ios strings`  | Generates the string catalog and Swift accessors                                                                   |
+| `just ios icons`    | Generates the kit's icons, the app's logo, and the palettes                                                        |
 
 In `apps/ios`, leave out `ios`: `just build`. The same build by hand:
 
@@ -50,11 +51,14 @@ recipes use those instead of Nix. The CI runner uses this option.
   sign-in sheet through `ASWebAuthenticationSession`, PKCE, and
   `matinee://auth/callback`. The browser page offers passkeys and OIDC.
   See [Signing in apps](../server/README.md#signing-in-apps).
-- Home has the featured banner, Continue watching, Next up, and recently
-  added titles. Libraries have sorting, genre filters, and search. Browse
-  genres, studios, and people, or search across the server.
+- The tabs float at the bottom of a phone, as on the web and Android, and
+  at the top of an iPad, as the web's bar from tablet widths up.
+- Home has the featured banner, Continue watching, Next up, the server's
+  recommendations with "Not interested", and recently added titles.
+  Libraries have sorting, genre filters, and search. Browse genres,
+  studios, and people, or search across the server.
 - Title, season, and episode pages show watched marks and favorites.
-  A long press opens a card's context menu. Profile shows watch statistics
+  A long press on a card opens its actions in a sheet, as on the web. Profile shows watch statistics
   and Recently watched. Admin pages manage libraries, users, authentication,
   transcoding, trickplay, jobs, and the server's accent. Fix match and the
   image editor change metadata and artwork.
@@ -112,11 +116,13 @@ palette, session, viewer, and downloads rather than globals. Load through
 `Loader` and `.loads`, using `UI/State.swift` as the pattern. Logic that
 isn't a view belongs in MatineeCore with Swift Testing tests.
 
-Use `UI/components/`, `.textStyle`, and the palette, not system font sizes
-or fixed colors. Set bars with `.topBar` or `.itemTopBar`, sheets with
-`.matineeSheet()`, and animations with `Motion` so Reduce Motion applies.
-Views default to the main actor; pure app-target helpers use `nonisolated`.
-Shared components belong in the debug gallery in `UI/gallery/` too.
+Screens build from MatineeKit (`Packages/MatineeKit`, its README) and
+`UI/components/`, never stock SwiftUI controls: [UI/README.md](Matinee/UI/README.md)
+says how a screen is put together, with Home as the example. `just ios test`
+fails on a stock control outside the folders `UI/kit-exclusions.txt` lists,
+which are the screens not yet rebuilt. Views default to the main actor;
+pure app-target helpers use `nonisolated`. Shared components belong in the
+debug gallery in `UI/gallery/` too.
 
 Strings come from Android's `res/values*/strings*.xml` through
 `scripts/strings.py`. Use `Str` accessors, including their typed arguments
@@ -126,11 +132,11 @@ Info.plist text lives in `Matinee/Resources/InfoPlist.xcstrings`.
 Format dates, numbers, sizes, and durations through `UI/Format.swift` in
 the app's language. Commit regenerated catalogs and accessors.
 
-Add lucide icons to Android's drawables and its `Lucide` object first,
-then run `just ios icons`. `LucideIcon(.arrowLeft, size: 20)` grows with
-Dynamic Type; give icon-only controls a label. `Logo` and `LogoMark` use
-brand assets. `scripts/themes.mjs` reads the web's palettes and writes
-`UI/theme/ThemePresets.swift`; `just ios icons` regenerates that too.
+Icons and palettes are the kit's. Add a lucide icon to the Android kit's
+drawables and `Lucide` object first, then run `just ios icons`.
+`LucideIcon(.arrowLeft, size: 20)` grows with Dynamic Type; give icon-only
+controls a label. `Logo` and `LogoMark` use brand assets.
+`scripts/themes.mjs` reads the web's palettes into the kit.
 
 ### The dev server and launch arguments
 
@@ -143,8 +149,12 @@ The fixture scripts are local development tools, not a production setup.
 For simulator UI work, the recipes `run`, `dev`, and `gallery` build,
 install, and launch on `MATINEE_SIMULATOR`, default `iPhone 17`. `dev` accepts
 an account, default `ios-admin`, then launch arguments; `gallery` opens the
-component gallery. They boot a simulator if needed. These interactive
-recipes are separate from the headless build and test checks.
+component gallery. They boot a simulator if needed, and sign the build ad
+hoc, without which the Keychain doesn't keep the sign-in from one launch to
+the next. `MATINEE_DERIVED_DATA` gives a build a derived data folder of its
+own under `build/`, and `just shot <name>` saves the simulator's screen to
+`build/screenshots/`. These interactive recipes are separate from the
+headless build and test checks.
 
 Debug builds read these arguments; release builds don't compile `DevLaunch`:
 
@@ -153,6 +163,7 @@ Debug builds read these arguments; release builds don't compile `DevLaunch`:
 | `-dev.server URL -dev.token TOKEN`                                          | Saves a server and token before the normal session check                |
 | `-dev.route PATH`                                                           | Opens a tab or route, parsed by `RoutePath` in `UI/Nav.swift`           |
 | `-dev.offline YES`                                                          | Saves offline mode; `NO` clears it                                      |
+| `-dev.art YES`, `-dev.recommendations YES`                                  | Fills Home's banner and recommendation rows on the artless dev server   |
 | `-theme.mode dark`                                                          | Selects `system`, `light`, or `dark`                                    |
 | `-AppleLanguages "(de)"`                                                    | Selects German through iOS                                              |
 | `-UIPreferredContentSizeCategoryName UICTContentSizeCategoryAccessibilityL` | Selects an accessibility text size                                      |
@@ -174,8 +185,11 @@ apps/ios/
     DevLaunch.swift            Debug-only server, token, and route injection
     Resources/                 Catalogs, generated icons, and brand assets
     UI/                        SwiftUI screens, navigation, and shared components
-    UI/theme/                  Palette, typography, and theme state
+    UI/components/             Shared components on the kit: cards, rails, states, sheets
+    UI/legacy/                 The old controls, until the last screens move onto the kit
     UI/gallery/                Debug component gallery
+    UI/README.md               How a screen is built
+  Packages/MatineeKit/          The design kit: theme, type, icons, controls (its README)
   Packages/MatineeCore/
     Sources/MatineeCore/Api/    Generated client, transport, routes, saved data
     Sources/MatineeCore/Auth/   Sessions, Keychain, browser sign-in, discovery

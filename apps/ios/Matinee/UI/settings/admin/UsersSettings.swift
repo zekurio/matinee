@@ -1,4 +1,5 @@
 import MatineeCore
+import MatineeKit
 import SwiftUI
 
 /*
@@ -116,31 +117,31 @@ private struct UserRow: View {
   var body: some View {
     Menu {
       Section("@\(user.username)") {
-        MenuItem(
+        LegacyMenuItem(
           .shield,
           !user.isAdmin ? Str.webUsersMenuMakeAdmin : isSelf ? Str.webUsersMenuStepDown : Str.webUsersMenuRemoveAdmin
         ) { onPick(.role(user, admin: !user.isAdmin)) }
-        MenuItem(.logOut, isSelf ? Str.webUsersMenuSignOutOthers : Str.webUsersMenuSignOut) { onPick(.signOut(user)) }
-        MenuItem(.trash, isSelf ? Str.webUsersMenuDeleteOwn : Str.webUsersMenuDelete, destructive: true) {
+        LegacyMenuItem(.logOut, isSelf ? Str.webUsersMenuSignOutOthers : Str.webUsersMenuSignOut) { onPick(.signOut(user)) }
+        LegacyMenuItem(.trash, isSelf ? Str.webUsersMenuDeleteOwn : Str.webUsersMenuDelete, destructive: true) {
           onPick(.delete(user))
         }
       }
     } label: {
       HStack(spacing: 14) {
-        Avatar(user.name, url: user.avatarId.flatMap { api?.paths.avatar($0) }, size: 40)
+        ProfileAvatar(user.name, url: user.avatarId.flatMap { api?.paths.avatar($0) }, size: 40)
         VStack(alignment: .leading, spacing: 0) {
           // At large text sizes the badge goes under the name rather than squeeze it.
           ViewThatFits(in: .horizontal) {
             HStack(spacing: 8) {
               name.lineLimit(1)
-              if user.isAdmin { Badge(Str.webUsersAdmin, outlined: true) }
+              if user.isAdmin { LegacyBadge(Str.webUsersAdmin, outlined: true) }
             }
             VStack(alignment: .leading, spacing: 4) {
               name
-              if user.isAdmin { Badge(Str.webUsersAdmin, outlined: true) }
+              if user.isAdmin { LegacyBadge(Str.webUsersAdmin, outlined: true) }
             }
           }
-          Text(detail).textStyle(.bodySmall).foregroundStyle(palette.muted)
+          Text(detail).textStyle(.px13).foregroundStyle(palette.mutedForeground)
             .lineLimit(dynamicType.isAccessibilitySize ? nil : 2)
         }
         .multilineTextAlignment(.leading)
@@ -150,12 +151,12 @@ private struct UserRow: View {
       .padding(.vertical, 12)
       .contentShape(Rectangle())
     }
-    .buttonStyle(RowPress())
+    .buttonStyle(LegacyRowPress())
     .accessibilityHint(Str.webUsersActions(user.name))
   }
 
   private var name: some View {
-    Text(isSelf ? "\(user.name) \(Str.webUsersYou)" : user.name).textStyle(.bodyLarge)
+    Text(isSelf ? "\(user.name) \(Str.webUsersYou)" : user.name).textStyle(.base)
       .foregroundStyle(palette.foreground)
   }
 

@@ -1,4 +1,5 @@
 import MatineeCore
+import MatineeKit
 import Nuke
 import OSLog
 import SwiftUI
@@ -13,6 +14,8 @@ import UIKit
   let downloads: Downloads
   let theme = ThemeStore()
   let signInErrors = SignInErrors()
+  /// The messages that pop up at the bottom, one host for the whole app (Root.swift).
+  let toasts = ToastState()
 
   init() {
     let store = SessionStore()
@@ -149,7 +152,10 @@ struct MatineeApp: App {
         .environment(model.session)
         .environment(model.downloads)
         .environment(model.signInErrors)
+        .environment(model.toasts)
         .measuresWindow()
+        // UIKit's bars, which the screens not yet on the kit still show (legacy/).
+        .legacySystemBars()
         .matineeTheme(model.theme)
         .onOpenURL(perform: model.open)
     }

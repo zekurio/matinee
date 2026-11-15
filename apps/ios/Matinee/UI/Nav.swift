@@ -1,4 +1,5 @@
 import MatineeCore
+import MatineeKit
 import SwiftUI
 
 /*
@@ -6,11 +7,12 @@ import SwiftUI
  * and how one opens another. Android keeps one back stack with the tab
  * bar on each tab's first page; iOS gives each tab a stack of its own, as
  * its apps do, so a tab keeps its place while another is open. Pages
- * opened from a tab go on that tab's stack. The player opens over
- * everything, in landscape on a phone, as Android's own PlayerActivity.
+ * opened from a tab go on that tab's stack, and cover its tabs, as on
+ * Android and the web's phone layout. The player opens over everything,
+ * in landscape on a phone, as Android's own PlayerActivity.
  *
- * Pages don't edit this file: they open each other through the
- * environment's `Navigator`, and every route a page needs is here.
+ * Pages don't edit this file except to add their route: they open each
+ * other through the environment's `Navigator`.
  */
 
 /// The shell's tabs, by their first page, in the tab bar's order: Home,
@@ -75,7 +77,10 @@ struct PlayerRequest: Identifiable, Hashable {
 /// The signed-in shell's navigation: the tab open, each tab's stack, and
 /// the player. One per signed-in app, as Android's `Navigator`.
 @Observable final class ShellNav {
-  var tab: ShellTab = .home
+  private(set) var tab: ShellTab = .home
+  /// The tab the bars draw as open: it follows `tab` a moment later, so the
+  /// new tab's bar, which appears with the page, slides its pill across.
+  private(set) var barTab: ShellTab = .home
   var paths: [ShellTab: [Route]] = [:]
   var player: PlayerRequest?
   /// Moves each time the open tab is picked again on its first page, for
@@ -107,7 +112,15 @@ struct PlayerRequest: Identifiable, Hashable {
         reselected[tab, default: 0] += 1
       }
     } else {
-      self.tab = tab
+      show(tab)
+    }
+  }
+
+  /// Opens `tab`, and moves the bars' pill to it once its page is up.
+  private func show(_ tab: ShellTab) {
+    self.tab = tab
+    DispatchQueue.main.async { [weak self] in
+      withMotion(Motion.move) { self?.barTab = tab }
     }
   }
 
@@ -137,7 +150,7 @@ struct PlayerRequest: Identifiable, Hashable {
   func home() {
     paths[tab] = []
     paths[.home] = []
-    tab = .home
+    show(.home)
   }
 
   var navigator: Navigator {
@@ -211,6 +224,7 @@ struct PlayerRequest: Identifiable, Hashable {
     else { return }
     for pages in saved.paths where tabs.contains(pages.tab) { paths[pages.tab] = pages.routes }
     tab = tabs.contains(saved.tab) ? saved.tab : .home
+    barTab = tab
   }
 }
 
@@ -257,26 +271,34 @@ struct RouteScreen: View {
   }
 }
 
-/// One tab: its first page, and the pages opened from it on a stack of its own.
+/// One tab: its first page with the tabs on it, and the pages opened from
+/// it on a stack of its own.
 struct TabStack: View {
   let tab: ShellTab
   @Environment(ShellNav.self) private var nav
-  @Environment(\.palette) private var palette
 
   var body: some View {
     // Every page on the stack, the first too, on the theme's background:
     // the stack's own is the system's black or white.
     NavigationStack(path: nav.path(tab)) {
-      TabRoot(tab: tab)
-        .background(palette.background.ignoresSafeArea())
-        .environment(\.tabReselected, nav.reselected[tab, default: 0])
-        .environment(\.tabRoot, true)
-        .navigationDestination(for: Route.self) { route in
-          RouteScreen(route: route)
-            .background(palette.background.ignoresSafeArea())
-            .environment(\.tabRoot, false)
-        }
+      root.navigationDestination(for: Route.self) { route in page(route) }
     }
+  }
+
+  private var root: some View {
+    TabRoot(tab: tab)
+      .tabBars(tab)
+      .pageBackground()
+      .environment(\.tabReselected, nav.reselected[tab, default: 0])
+      .environment(\.tabRoot, true)
+  }
+
+  private func page(_ route: Route) -> some View {
+    let home: (() -> Void)? = nav.offline ? nil : { [nav] in nav.home() }
+    return RouteScreen(route: route)
+      .pageBackground()
+      .environment(\.tabRoot, false)
+      .environment(\.homeAction, home)
   }
 }
 
@@ -386,11 +408,11 @@ extension ShellNav {
     switch target {
     case .tab(let tab):
       guard tabs.contains(tab) else { return }
-      self.tab = tab
+      show(tab)
       paths[tab] = []
     case .page(let tab, let route):
       let tab = tabs.contains(tab) ? tab : .home
-      self.tab = tab
+      show(tab)
       paths[tab] = [route]
     case .player(let itemId, let start):
       player = PlayerRequest(itemId: itemId, start: start)

@@ -69,17 +69,20 @@ public struct ProgressRing: View {
 
 /// How far along something is, as a bar: the accent on a track, round at
 /// both ends. Over a picture, as a card's watched progress, give it the
-/// dark `track` the web's cards use.
+/// dark `track` the web's cards use; the banner's is the text's color on a
+/// faint one, `fill:`.
 public struct ProgressBar: View {
   let value: Double
   let height: CGFloat
   let track: Color?
+  let fill: Color?
   @Environment(\.palette) private var palette
 
-  public init(_ value: Double, height: CGFloat = 4, track: Color? = nil) {
+  public init(_ value: Double, height: CGFloat = 4, track: Color? = nil, fill: Color? = nil) {
     self.value = value
     self.height = height
     self.track = track
+    self.fill = fill
   }
 
   public var body: some View {
@@ -88,7 +91,7 @@ public struct ProgressBar: View {
       .fill(track ?? palette.muted)
       .overlay(alignment: .leading) {
         GeometryReader { proxy in
-          Capsule().fill(palette.accent).frame(width: max(height, proxy.size.width * shown))
+          Capsule().fill(fill ?? palette.accent).frame(width: max(height, proxy.size.width * shown))
             .opacity(shown > 0 ? 1 : 0)
         }
       }

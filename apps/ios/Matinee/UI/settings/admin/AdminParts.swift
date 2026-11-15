@@ -1,4 +1,5 @@
 import MatineeCore
+import MatineeKit
 import SwiftUI
 
 /*
@@ -37,7 +38,7 @@ struct AdminLoaded<T: Sendable, Content: View>: View {
         Disconnected(onRetry: loader.reload).frame(maxWidth: .infinity).padding(.vertical, 32)
       } else {
         VStack(alignment: .leading, spacing: 12) {
-          Text(failed(message)).textStyle(.bodyMedium).foregroundStyle(palette.muted)
+          Text(failed(message)).textStyle(.sm).foregroundStyle(palette.mutedForeground)
           RetryButton(action: loader.reload)
         }
       }
@@ -114,7 +115,7 @@ struct SaveBarScaffold<Content: View>: View {
     let visible = stored.barVisible(dirty: dirty)
     ScrollView {
       LazyVStack(alignment: .leading, spacing: 28) { content() }
-        .padding(.horizontal, Gutter)
+        .padding(.horizontal, Space.gutter)
         .padding(.top, 8)
         .padding(.bottom, 20)
     }
@@ -129,7 +130,7 @@ struct SaveBarScaffold<Content: View>: View {
       }
       .motion(Motion.enter, value: visible)
     }
-    .topBar(title)
+    .legacyTopBar(title)
     // The system's back would leave the edits behind; this one asks the bar to say so.
     .navigationBarBackButtonHidden(dirty)
     .toolbar {
@@ -212,8 +213,8 @@ private struct SaveBar: View {
             .frame(maxWidth: .infinity, alignment: .trailing)
         }
       }
-      .padding(.leading, Gutter)
-      .padding(.trailing, Gutter - 4)
+      .padding(.leading, Space.gutter)
+      .padding(.trailing, Space.gutter - 4)
       .padding(.vertical, 10)
       .keyframeAnimator(initialValue: CGFloat(0), trigger: attention) { content, shake in
         content.offset(x: still ? 0 : shake)
@@ -227,15 +228,15 @@ private struct SaveBar: View {
         }
       }
     }
-    .background(palette.raised)
+    .background(palette.popover)
   }
 
   private var status: some View {
     VStack(alignment: .leading, spacing: 0) {
-      Text(statusText).textStyle(.bodyMedium)
-        .foregroundStyle(isFailed ? palette.danger : palette.foreground)
+      Text(statusText).textStyle(.sm)
+        .foregroundStyle(isFailed ? palette.destructive : palette.foreground)
       if case .failed(let message?) = feedback {
-        Text(message).textStyle(.bodySmall).foregroundStyle(palette.muted).lineLimit(3)
+        Text(message).textStyle(.px13).foregroundStyle(palette.mutedForeground).lineLimit(3)
       }
     }
     .accessibilityElement(children: .combine)
@@ -244,9 +245,9 @@ private struct SaveBar: View {
   /// Reset and Save, for a row or a column.
   @ViewBuilder private var buttons: some View {
     let pending = feedback == .pending
-    MatineeButton(.ghost, action: onReset) { Text(Str.webCommonSaveBarReset) }
+    LegacyButton(.ghost, action: onReset) { Text(Str.webCommonSaveBarReset) }
       .disabled(!dirty || pending)
-    MatineeButton(.primary, action: onSave) {
+    LegacyButton(.primary, action: onSave) {
       switch feedback {
       case .pending: ProgressView().controlSize(.small).tint(palette.accentForeground)
       case .success: LucideIcon(.check, size: 16)
@@ -309,15 +310,15 @@ struct TextRow<Trailing: View>: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 6) {
-      Text(label).textStyle(.bodyMedium).foregroundStyle(palette.muted)
-      MatineeTextField($text, placeholder: placeholder, isError: error != nil, secure: secret, trailing: trailing)
+      Text(label).textStyle(.sm).foregroundStyle(palette.mutedForeground)
+      LegacyTextField($text, placeholder: placeholder, isError: error != nil, secure: secret, trailing: trailing)
         .keyboardType(keyboard)
         .textInputAutocapitalization(.never)
         .autocorrectionDisabled()
         .submitLabel(.done)
       // The last error stays while it closes, so the text doesn't vanish first.
       Reveal(error != nil) {
-        Text(shownError).textStyle(.bodySmall).foregroundStyle(palette.danger)
+        Text(shownError).textStyle(.px13).foregroundStyle(palette.destructive)
           .frame(maxWidth: .infinity, alignment: .leading)
           .padding(.top, -2)
       }
@@ -366,8 +367,8 @@ extension View {
   }
 }
 
-/// A menu's row: an icon and a label, as Android's `SheetItem`.
-struct MenuItem: View {
+/// A menu's row: an icon and a label, as Android's `LegacySheetItem`.
+struct LegacyMenuItem: View {
   let icon: Lucide
   let label: String
   var destructive = false
@@ -399,7 +400,7 @@ struct Note: View {
   }
 
   var body: some View {
-    Text(text).textStyle(.bodySmall).foregroundStyle(color ?? palette.muted)
+    Text(text).textStyle(.px13).foregroundStyle(color ?? palette.mutedForeground)
       .frame(maxWidth: .infinity, alignment: .leading)
   }
 }

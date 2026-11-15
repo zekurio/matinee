@@ -1,4 +1,5 @@
 import MatineeCore
+import MatineeKit
 import SwiftUI
 
 /*
@@ -78,20 +79,20 @@ private struct TranscodingForm: View {
             }
             Reveal(hardware) {
               RowDivider()
-              SwitchRow(Str.webTranscodingHardwareEncoding, isOn: $form.draft.enableHardwareEncoding)
+              LegacySwitchRow(Str.webTranscodingHardwareEncoding, isOn: $form.draft.enableHardwareEncoding)
             }
             // Intel's low-power encoders, on QSV and on VAAPI.
             if isIntel(acceleration) {
               RowDivider()
-              SwitchRow(Str.webTranscodingHardwareLowPower("H.264"), isOn: $form.draft.enableIntelLowPowerH264HwEncoder)
+              LegacySwitchRow(Str.webTranscodingHardwareLowPower("H.264"), isOn: $form.draft.enableIntelLowPowerH264HwEncoder)
               RowDivider()
-              SwitchRow(Str.webTranscodingHardwareLowPower("HEVC"), isOn: $form.draft.enableIntelLowPowerHevcHwEncoder)
+              LegacySwitchRow(Str.webTranscodingHardwareLowPower("HEVC"), isOn: $form.draft.enableIntelLowPowerHevcHwEncoder)
             }
           }
           if let problem = deviceProblem(capabilities, acceleration) {
             Note(
               problem == .notInBuild ? Str.webTranscodingHardwareNotInBuild : Str.webTranscodingHardwareDeviceFailed,
-              color: palette.danger)
+              color: palette.destructive)
           }
         }
       }
@@ -103,20 +104,20 @@ private struct TranscodingForm: View {
               let codecs = DECODE_SUPPORT[acceleration] ?? []
               ForEach(Array(codecs.enumerated()), id: \.element) { index, codec in
                 if index > 0 { RowDivider() }
-                SwitchRow(
+                LegacySwitchRow(
                   videoCodecName(codec),
                   isOn: Binding(
                     get: { form.draft.hardwareDecodingCodecs.contains(codec) }, set: { form.decode(codec, $0) }))
               }
             }
             Panel {
-              SwitchRow(Str.webTranscodingDecodingHevc10, isOn: $form.draft.enableDecodingColorDepth10Hevc)
+              LegacySwitchRow(Str.webTranscodingDecodingHevc10, isOn: $form.draft.enableDecodingColorDepth10Hevc)
               RowDivider()
-              SwitchRow(Str.webTranscodingDecodingVp910, isOn: $form.draft.enableDecodingColorDepth10Vp9)
+              LegacySwitchRow(Str.webTranscodingDecodingVp910, isOn: $form.draft.enableDecodingColorDepth10Vp9)
               RowDivider()
-              SwitchRow(Str.webTranscodingDecodingHevcRext, isOn: $form.draft.enableDecodingColorDepth10HevcRext)
+              LegacySwitchRow(Str.webTranscodingDecodingHevcRext, isOn: $form.draft.enableDecodingColorDepth10HevcRext)
               RowDivider()
-              SwitchRow(Str.webTranscodingDecodingHevcRext12, isOn: $form.draft.enableDecodingColorDepth12HevcRext)
+              LegacySwitchRow(Str.webTranscodingDecodingHevcRext12, isOn: $form.draft.enableDecodingColorDepth12HevcRext)
             }
           }
         }
@@ -124,9 +125,9 @@ private struct TranscodingForm: View {
 
       SettingsSection(Str.webTranscodingEncodingTitle) {
         Panel {
-          SwitchRow(Str.webTranscodingEncodingHevc, isOn: $form.draft.allowHevcEncoding)
+          LegacySwitchRow(Str.webTranscodingEncodingHevc, isOn: $form.draft.allowHevcEncoding)
           RowDivider()
-          SwitchRow(Str.webTranscodingEncodingAv1, isOn: $form.draft.allowAv1Encoding)
+          LegacySwitchRow(Str.webTranscodingEncodingAv1, isOn: $form.draft.allowAv1Encoding)
           RowDivider()
           ListPickerRow(
             Str.webTranscodingEncodingPreset,
@@ -142,14 +143,14 @@ private struct TranscodingForm: View {
 
       SettingsSection(Str.webTranscodingToneMappingTitle) {
         Panel {
-          SwitchRow(Str.webTranscodingToneMappingHardware, isOn: $form.draft.enableTonemapping)
+          LegacySwitchRow(Str.webTranscodingToneMappingHardware, isOn: $form.draft.enableTonemapping)
           if isIntel(acceleration) {
             RowDivider()
-            SwitchRow(Str.webTranscodingToneMappingVpp, isOn: $form.draft.enableVppTonemapping)
+            LegacySwitchRow(Str.webTranscodingToneMappingVpp, isOn: $form.draft.enableVppTonemapping)
           }
           if acceleration == HardwareAcceleration.videotoolbox {
             RowDivider()
-            SwitchRow(Str.webTranscodingToneMappingVideoToolbox, isOn: $form.draft.enableVideoToolboxTonemapping)
+            LegacySwitchRow(Str.webTranscodingToneMappingVideoToolbox, isOn: $form.draft.enableVideoToolboxTonemapping)
           }
           RowDivider()
           ListPickerRow(
@@ -189,7 +190,7 @@ private struct TranscodingForm: View {
             current: form.draft.deinterlaceMethod
           ) { form.draft.deinterlaceMethod = $0 }
           RowDivider()
-          SwitchRow(Str.webTranscodingDeinterlacingDoubleRate, isOn: $form.draft.deinterlaceDoubleRate)
+          LegacySwitchRow(Str.webTranscodingDeinterlacingDoubleRate, isOn: $form.draft.deinterlaceDoubleRate)
         }
       }
 
@@ -202,19 +203,19 @@ private struct TranscodingForm: View {
           RowDivider()
           number(.downMixAudioBoost, Str.webTranscodingFieldDownMixAudioBoost)
           RowDivider()
-          SwitchRow(Str.webTranscodingAudioVbr, isOn: $form.draft.enableAudioVbr)
+          LegacySwitchRow(Str.webTranscodingAudioVbr, isOn: $form.draft.enableAudioVbr)
         }
       }
 
       SettingsSection(Str.webTranscodingSegmentsTitle) {
         Panel {
-          SwitchRow(Str.webTranscodingSegmentsThrottle, isOn: $form.draft.enableThrottling)
+          LegacySwitchRow(Str.webTranscodingSegmentsThrottle, isOn: $form.draft.enableThrottling)
           Reveal(form.draft.enableThrottling) {
             RowDivider()
             number(.throttleDelaySeconds, Str.webTranscodingFieldThrottleDelaySeconds)
           }
           RowDivider()
-          SwitchRow(Str.webTranscodingSegmentsDelete, isOn: $form.draft.enableSegmentDeletion)
+          LegacySwitchRow(Str.webTranscodingSegmentsDelete, isOn: $form.draft.enableSegmentDeletion)
           Reveal(form.draft.enableSegmentDeletion) {
             RowDivider()
             number(.segmentKeepSeconds, Str.webTranscodingFieldSegmentKeepSeconds)
@@ -247,13 +248,13 @@ private struct FfmpegSection: View {
       Panel {
         // What runs, and when the server last looked; not a link.
         HStack(spacing: 14) {
-          LucideIcon(.film, size: 20, tint: palette.muted)
+          LucideIcon(.film, size: 20, tint: palette.mutedForeground)
           VStack(alignment: .leading, spacing: 0) {
-            Text(verbatim: "ffmpeg").textStyle(.bodyLarge)
+            Text(verbatim: "ffmpeg").textStyle(.base)
             if error == nil {
               // The time as the web shows it: a relative one reads wrong in German's "erkannt am …".
               Text(Str.webTranscodingFfmpegDetected(version, detectedAt(capabilities.detectedAt)))
-                .textStyle(.bodySmall).foregroundStyle(palette.muted)
+                .textStyle(.px13).foregroundStyle(palette.mutedForeground)
             }
           }
           .frame(maxWidth: .infinity, alignment: .leading)
@@ -267,7 +268,7 @@ private struct FfmpegSection: View {
       }
       if let error {
         VStack(alignment: .leading, spacing: 0) {
-          Note(Str.webTranscodingFfmpegFailed, color: palette.danger)
+          Note(Str.webTranscodingFfmpegFailed, color: palette.destructive)
           Note(error)
         }
       }

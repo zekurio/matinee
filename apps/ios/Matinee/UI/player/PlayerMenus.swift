@@ -1,4 +1,5 @@
 import MatineeCore
+import MatineeKit
 import SwiftUI
 
 /*
@@ -180,11 +181,11 @@ struct PlayerPanel: View {
         ForEach(menuEntries(menu, controller)) { entry in
           switch entry {
           case .heading(let text, _):
-            Text(text).textStyle(.titleMedium)
+            Text(text).textStyle(.base, weight: .semibold)
               .padding(.horizontal, 20).padding(.vertical, 12)
               .accessibilityAddTraits(.isHeader)
           case .note(let text, _):
-            Text(text).textStyle(.bodySmall).foregroundStyle(palette.muted)
+            Text(text).textStyle(.px13).foregroundStyle(palette.mutedForeground)
               .padding(.horizontal, 20).padding(.vertical, 10)
           case .divider:
             Rectangle().fill(palette.border).frame(height: 1).padding(.vertical, 8)
@@ -205,7 +206,7 @@ struct PlayerPanel: View {
     .frame(width: width + safe.trailing)
     .frame(maxHeight: .infinity)
     .background(
-      UnevenRoundedRectangle(topLeadingRadius: 16, bottomLeadingRadius: 16).fill(palette.raised)
+      UnevenRoundedRectangle(topLeadingRadius: 16, bottomLeadingRadius: 16).fill(palette.popover)
     )
   }
 }
@@ -223,9 +224,9 @@ private struct MenuRow: View {
     Button(action: action) {
       HStack(spacing: 12) {
         VStack(alignment: .leading, spacing: 0) {
-          Text(title).textStyle(.bodyLarge).foregroundStyle(enabled ? palette.foreground : palette.faint)
+          Text(title).textStyle(.base).foregroundStyle(enabled ? palette.foreground : palette.foregroundFaint)
           if let detail, !detail.isEmpty {
-            Text(detail).textStyle(.bodySmall).foregroundStyle(palette.muted)
+            Text(detail).textStyle(.px13).foregroundStyle(palette.mutedForeground)
           }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

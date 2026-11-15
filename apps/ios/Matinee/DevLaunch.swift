@@ -1,6 +1,7 @@
 #if DEBUG
   import MatineeCore
-  import SwiftUI
+  import MatineeKit
+import SwiftUI
 
   /// Launch arguments for development and scripted screenshots, in debug
   /// builds only: release builds don't compile this file's code, so nothing

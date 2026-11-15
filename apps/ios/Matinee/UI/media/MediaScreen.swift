@@ -1,4 +1,5 @@
 import MatineeCore
+import MatineeKit
 import SwiftUI
 
 /*
@@ -35,7 +36,7 @@ struct MediaScreen: View {
       }
     }
     // Still showing the libraries from before, while the server can't be reached.
-    .topBar(Str.tabMedia) { DisconnectedAction(libraries) }
+    .legacyTopBar(Str.tabMedia) { DisconnectedAction(libraries) }
     .loads(libraries) { api in try await api.libraries.list() }
   }
 }
@@ -57,13 +58,13 @@ private struct LibraryCard: View {
             Picture(art)
             Color.black.opacity(0.35)
           } else {
-            LucideIcon(library.kind == "shows" ? .tv : .film, size: 28, tint: palette.muted)
+            LucideIcon(library.kind == "shows" ? .tv : .film, size: 28, tint: palette.mutedForeground)
               .padding(12)
               .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
           }
           // Big enough to read across the room, over the backdrop.
           Text(library.name)
-            .textStyle(.headlineSmall, weight: .bold)
+            .textStyle(.px22, weight: .bold, tracking: .tight)
             .foregroundStyle(.white)
             .multilineTextAlignment(.center)
             .lineLimit(2)
@@ -71,13 +72,13 @@ private struct LibraryCard: View {
             .padding(.horizontal, 12)
         }
         Text(Str.browseTitleCount(library.titleCount))
-          .textStyle(.bodySmall)
-          .foregroundStyle(palette.muted)
+          .textStyle(.px13)
+          .foregroundStyle(palette.mutedForeground)
           .lineLimit(1)
       }
       .contentShape(Rectangle())
     }
-    .buttonStyle(CardPress())
+    .buttonStyle(LegacyCardPress())
     .hoverEffect(.highlight)
     .accessibilityElement(children: .combine)
   }

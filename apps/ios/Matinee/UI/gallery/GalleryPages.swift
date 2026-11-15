@@ -1,241 +1,17 @@
 #if DEBUG
   import MatineeCore
+  import MatineeKit
   import SwiftUI
 
-  struct ColorsPage: View {
-    @Environment(\.palette) private var palette
-
-    var body: some View {
-      VStack(alignment: .leading, spacing: 28) {
-        HStack(spacing: 20) {
-          Logo(height: 28)
-          LogoMark(size: 32)
-        }
-        .padding(.horizontal, Gutter)
-
-        GalleryHeading("Palette")
-        let named: [(String, Color)] = [
-          ("background", palette.background), ("card", palette.card), ("raised", palette.raised),
-          ("secondary", palette.secondary), ("border", palette.border), ("input", palette.input),
-          ("faint", palette.faint), ("muted", palette.muted), ("foreground", palette.foreground),
-          ("accent", palette.accent), ("accentForeground", palette.accentForeground),
-          ("accentSoft", palette.accentSoft), ("danger", palette.danger), ("star", palette.star),
-          ("success", palette.colors.success.color), ("warning", palette.colors.warning.color),
-        ]
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: 104), spacing: 12)], spacing: 12) {
-          ForEach(named, id: \.0) { name, color in
-            VStack(alignment: .leading, spacing: 6) {
-              RoundedRectangle(cornerRadius: 8).fill(color).frame(height: 44)
-                .overlay { RoundedRectangle(cornerRadius: 8).strokeBorder(palette.border) }
-              Text(name).textStyle(.labelSmall).foregroundStyle(palette.muted).lineLimit(1)
-            }
-          }
-        }
-        .padding(.horizontal, Gutter)
-
-        GalleryHeading("Tones for missing art")
-        HStack(spacing: 12) {
-          ForEach(["a", "b", "c", "d"], id: \.self) { key in
-            Tone(key).aspectRatio(2 / 3, contentMode: .fit).clipShape(CardShape)
-          }
-        }
-        .padding(.horizontal, Gutter)
-
-        GalleryHeading("Type")
-        VStack(alignment: .leading, spacing: 14) {
-          ForEach(Typography.allCases, id: \.self) { style in
-            VStack(alignment: .leading, spacing: 2) {
-              Text(verbatim: "\(style)").textStyle(.labelSmall).foregroundStyle(palette.faint)
-              Text(Str.browseContinueWatching + " · Größe").textStyle(style)
-            }
-          }
-          Text("bodyMedium, medium: " + Str.browseHomeNothingYetDescription)
-            .textStyle(.bodyMedium, weight: .medium)
-          Text("bodyMedium: " + Str.browseHomeNothingYetDescription).textStyle(.bodyMedium)
-            .foregroundStyle(palette.muted)
-        }
-        .padding(.horizontal, Gutter)
-
-        GalleryHeading("Plurals, numbers, and dates in the app's language")
-        VStack(alignment: .leading, spacing: 4) {
-          Text([Str.mediaEpisodeCount(1), Str.mediaEpisodeCount(12), Str.mediaNewEpisodes(3)].joined(separator: " · "))
-          Text(
-            [formatRuntime(135), formatBytes(1_400_000_000), formatBitrate(2_500_000), formatCount(12_400)]
-              .compactMap(\.self).joined(separator: " · "))
-          Text([formatDay("2024-03-05"), formatRating(7.84), languageList(["de", "en"])].compactMap(\.self)
-            .joined(separator: " · "))
-        }
-        .textStyle(.bodyMedium)
-        .foregroundStyle(palette.muted)
-        .padding(.horizontal, Gutter)
-      }
-    }
-  }
-
-  struct IconsPage: View {
-    @Environment(\.palette) private var palette
-
-    var body: some View {
-      VStack(alignment: .leading, spacing: 20) {
-        GalleryHeading("Lucide, in the foreground color, scaling with the text size")
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: 84), spacing: 8)], spacing: 16) {
-          ForEach(Lucide.all, id: \.name) { name, icon in
-            VStack(spacing: 6) {
-              LucideIcon(icon, size: 24)
-              Text(name).textStyle(.labelSmall).foregroundStyle(palette.muted).lineLimit(1)
-                .minimumScaleFactor(0.7)
-            }
-          }
-        }
-        .padding(.horizontal, Gutter)
-        GalleryHeading("Tinted")
-        HStack(spacing: 16) {
-          LucideIcon(.heartFilled, size: 24, tint: palette.danger)
-          LucideIcon(.star, size: 24, tint: palette.star)
-          LucideIcon(.play, size: 24, tint: palette.accent)
-          LucideIcon(.cloudOff, size: 24, tint: palette.muted)
-          Label { Text(Str.downloadsAction) } icon: { Image(Lucide.download) }.textStyle(.labelLarge)
-        }
-        .padding(.horizontal, Gutter)
-      }
-    }
-  }
-
-  struct ControlsPage: View {
-    @Environment(\.palette) private var palette
-    @State private var chip = 0
-    @State private var segment = ThemeMode.system
-    @State private var on = true
-    @State private var level = 0.4
-    @State private var text = ""
-    @State private var address = "media.example"
-    @State private var query = "Matrix"
-
-    var body: some View {
-      VStack(alignment: .leading, spacing: 24) {
-        GalleryHeading("Buttons")
-        VStack(alignment: .leading, spacing: 12) {
-          GalleryRow {
-            MatineeButton(.primary, action: {}) {
-              LucideIcon(.play, size: 16)
-              Text(Str.titlePlay)
-            }
-            MatineeButton(.secondary, action: {}) { Text(Str.titleResume) }
-            MatineeButton(.outline, action: {}) { Text(Str.commonCancel) }
-          }
-          GalleryRow {
-            MatineeButton(.frosted, action: {}) {
-              LucideIcon(.info, size: 16)
-              Text(Str.mediaHeroDetails)
-            }
-            MatineeButton(.ghost, action: {}) { Text(Str.commonBack) }
-            MatineeButton(.primary, action: {}) { Text(Str.connectButton) }.disabled(true)
-          }
-          RetryButton {}
-        }
-        .padding(.horizontal, Gutter)
-
-        GalleryHeading("Round icon buttons")
-        HStack(spacing: 8) {
-          RoundIconButton(.check, label: Str.mediaMarkWatched) {}
-          RoundIconButton(.heartFilled, label: Str.mediaRemoveFavorite, tint: palette.danger) {}
-          RoundIconButton(.ellipsis, label: Str.commonBack) {}
-          RoundIconButton(.arrowLeft, label: Str.commonBack, background: .clear) {}
-          PlayGlyph(label: Str.mediaPlayNamed("The Matrix")) {}
-            .background(Tone("x").clipShape(Circle()))
-        }
-        .padding(.horizontal, Gutter)
-
-        GalleryHeading("Chips")
-        ScrollView(.horizontal) {
-          HStack(spacing: 8) {
-            ForEach(Array([Str.browseKindAll, Str.browseKindMovie, Str.browseKindShow].enumerated()), id: \.0) {
-              index, label in
-              Chip(label, selected: chip == index) { withMotion(Motion.color) { chip = index } }
-            }
-            Chip(Str.browseGenre, trailingIcon: .x) {}
-            Chip(Str.browseStudio, frosted: true) {}
-          }
-        }
-        .contentMargins(.horizontal, Gutter, for: .scrollContent)
-        .scrollIndicators(.hidden)
-
-        GalleryHeading("Segmented control, switch, slider")
-        VStack(alignment: .leading, spacing: 12) {
-          SegmentedControl(
-            [
-              (ThemeMode.system, Str.webAppearanceColorSchemeSystem),
-              (.light, Str.webAppearanceColorSchemeLight), (.dark, Str.webAppearanceColorSchemeDark),
-            ], selection: $segment)
-          Toggle(Str.mediaWatched, isOn: $on).toggleStyle(.matinee).textStyle(.bodyLarge)
-          MatineeSlider(Str.a11yPlayerSeek, value: $level, in: 0...1)
-        }
-        .padding(.horizontal, Gutter)
-
-        GalleryHeading("Badges, progress, avatars")
-        VStack(alignment: .leading, spacing: 10) {
-          HStack(spacing: 10) {
-            WatchedBadge()
-            Badge("1080p")
-            Badge("HDR10", outlined: true)
-            Badge("FSK 12")
-          }
-          HStack(spacing: 10) {
-            Avatar("Masi Oka", url: nil)
-            Avatar("zekurio", url: nil, size: 28)
-            Avatar("Face", url: Sample.face?.url.absoluteString)
-          }
-        }
-        .padding(.horizontal, Gutter)
-        ArtFrame("progress", aspect: 16 / 9) {
-          Picture(Sample.still)
-          ProgressBar(progress: 0.62).frame(maxHeight: .infinity, alignment: .bottom)
-        }
-        .frame(width: 240)
-        .padding(.horizontal, Gutter)
-
-        GalleryHeading("Text fields")
-        VStack(spacing: 12) {
-          MatineeTextField($address, placeholder: Str.connectPlaceholder, leadingIcon: .server)
-          MatineeTextField($text, placeholder: Str.connectPlaceholder)
-          MatineeTextField($address, placeholder: Str.connectPlaceholder, isError: true)
-          SearchField($query)
-          SearchField(.constant(""))
-        }
-        .padding(.horizontal, Gutter)
-
-        GalleryHeading("Section titles")
-        VStack(alignment: .leading, spacing: 8) {
-          SectionTitle(Str.browseNextUp)
-          SectionTitle(Str.browseRecentlyAdded("Movies")) {}
-        }
-        .padding(.horizontal, Gutter)
-
-        GalleryHeading("QR code")
-        QrCode("http://localhost:18420/link?code=BCDF-GHJK", label: Str.signinCodeScan, size: 200)
-          .padding(.horizontal, Gutter)
-      }
-    }
-  }
-
-  /// A row of controls, stacked when the text size leaves no room for it.
-  struct GalleryRow<Content: View>: View {
-    @ViewBuilder let content: () -> Content
-
-    var body: some View {
-      ViewThatFits(in: .horizontal) {
-        HStack(spacing: 8, content: content)
-        VStack(alignment: .leading, spacing: 8, content: content)
-      }
-    }
-  }
+  // MARK: Cards
 
   struct CardsPage: View {
     let server: GalleryServer
     @Environment(\.windowSize) private var window
+    @Environment(\.gutter) private var gutter
 
     var body: some View {
-      VStack(alignment: .leading, spacing: 28) {
+      VStack(alignment: .leading, spacing: Space.s7) {
         GalleryHeading("Made up here, no artwork: the placeholders")
         Rail(Str.browseContinueWatching) {
           ForEach(Sample.episodes, id: \.id) { item in RailItem(.landscape) { EpisodeCard(item) } }
@@ -255,7 +31,7 @@
           RailItem(.person) { PersonCard("Carrie-Anne Moss", role: "Trinity", photo: nil) }
           RailItem(.person) { PersonCard("Hugo Weaving", role: "Agent Smith", photo: Sample.loading) }
         }
-        Rail(Str.searchTitlesHeading) {
+        Rail(Str.webDiscoverRailForYou) {
           ForEach(Array(Sample.posters.enumerated()), id: \.0) { index, poster in
             RailItem(.poster) {
               VStack(alignment: .leading, spacing: 0) {
@@ -273,12 +49,12 @@
         }
 
         GalleryHeading("Episode rows")
-        VStack(spacing: 4) {
+        VStack(spacing: Space.s1) {
           ForEach(Sample.episodes.prefix(3), id: \.id) { EpisodeRow($0) }
         }
-        .padding(.horizontal, Gutter)
+        .padding(.horizontal, gutter)
 
-        GalleryHeading("Grid: \(isWide(window) ? "wide" : "phone"), adaptive columns")
+        GalleryHeading("Grid: \(window.width < 640 ? "two columns" : "176 and up")")
         CardGrid {
           ForEach(Sample.movies + [Sample.show], id: \.id) { PosterCard($0, detail: formatYear($0.year)) }
         }
@@ -296,7 +72,7 @@
       if server.api == nil {
         GalleryHeading("No dev server: launch with -gallery.server and -gallery.token")
       } else {
-        VStack(alignment: .leading, spacing: 28) {
+        VStack(alignment: .leading, spacing: Space.s7) {
           GalleryHeading("From the dev server")
           rail(Str.browseContinueWatching, server.resume)
             .loads(server.resume) { try await $0.home.continueWatching() }
@@ -317,10 +93,8 @@
     @ViewBuilder private func rail(_ title: String, _ loader: Loader<[MediaItem]>) -> some View {
       switch loader.state {
       case .loading: RailSkeleton(title: title, art: .landscape)
-      case .failed(let message, let disconnected):
-        RailFailure(
-          title: title, headline: Str.homeContinueFailed, message: message, disconnected: disconnected,
-          onRetry: loader.reload)
+      case .failed(_, let disconnected):
+        RailFailed(title: title, retrying: loader.refreshing, disconnected: disconnected, onRetry: loader.reload)
       case .ready(let items):
         Rail(title) { ForEach(items, id: \.id) { item in RailItem(.landscape) { EpisodeCard(item) } } }
       }
@@ -330,9 +104,9 @@
       switch server.shelves.state {
       case .loading: RailSkeleton(title: nil, art: .poster)
       case .failed(let message, let disconnected):
-        Notice(Str.homeLoadFailed, message, disconnected: disconnected, onRetry: server.shelves.reload)
+        ErrorSection(Str.homeLoadFailed, message, disconnected: disconnected, onRetry: server.shelves.reload)
       case .ready(let shelves):
-        VStack(alignment: .leading, spacing: 28) {
+        VStack(alignment: .leading, spacing: Space.s7) {
           ForEach(shelves, id: \.0.id) { library, entries in
             Rail(Str.browseRecentlyAdded(library.name), onTitleTap: {}) {
               ForEach(entries, id: \.title.id) { entry in RailItem(.poster) { ShelfCard(entry) } }
@@ -343,122 +117,152 @@
     }
   }
 
-  struct RowsPage: View {
-    @Environment(ThemeStore.self) private var theme
+  // MARK: States
+
+  struct StatesPage: View {
     @Environment(\.palette) private var palette
-    @State private var on = true
-    @State private var off = false
-    @State private var ask: WatchedAsk?
-    @State private var sheet = false
-    @State private var more = false
 
     var body: some View {
-      VStack(alignment: .leading, spacing: 28) {
-        SettingsSection(Str.settingsPageAppearance) {
-          Panel {
-            PickerRow(
-              Str.webAppearanceColorScheme,
-              options: [
-                (ThemeMode.system, Str.webAppearanceColorSchemeSystem),
-                (.light, Str.webAppearanceColorSchemeLight), (.dark, Str.webAppearanceColorSchemeDark),
-              ], current: theme.mode, onPick: theme.setMode)
-            RowDivider()
-            SwitchRow(Str.mediaWatched, isOn: $on, icon: .check)
-            RowDivider()
-            SwitchRow(Str.downloadsTitle, isOn: $off)
-            Reveal(off) {
-              RowDivider()
-              ValueRow(Str.aboutVersion, value: "0.0.1")
-            }
-          }
-        }
-        .padding(.horizontal, Gutter)
+      VStack(alignment: .leading, spacing: Space.s7) {
+        GalleryHeading("A page's spinner")
+        LoadingBox().frame(height: 120)
 
-        SettingsSection(Str.aboutTitle) {
-          Panel {
-            ValueRow(Str.aboutVersion, value: "0.0.1")
-            RowDivider()
-            ValueRow(Str.aboutDevice, value: "iPhone Simulator")
-            RowDivider()
-            LinkRow(Str.accountSessionsTitle, value: "3", icon: .smartphone) {}
-            RowDivider()
-            LinkRow(Str.connectChangeServer, icon: .server, description: Str.connectDescription) {}
-            RowDivider()
-            LinkRow(Str.commonRemove, destructive: true, icon: .trash) {}
-            RowDivider()
-            PickerRow(Str.aboutDevice, options: [(1, "One")], current: 1, enabled: false) { _ in }
-          }
-        }
-        .padding(.horizontal, Gutter)
+        GalleryHeading("A page that failed, from a tab and from a page opened from one")
+        ErrorBox(Str.homeFailed, Str.errorUnreadable) {}.frame(height: 260)
+        ErrorBox(Str.titleLoadError, Str.errorConnectionLost) {}
+          .environment(\.homeAction, {})
+          .frame(height: 260)
 
-        SettingsSection("Sheets") {
-          Panel {
-            LinkRow(Str.mediaMarkWatched, icon: .calendarClock) {
-              ask = WatchedAsk(name: "The Matrix") { _ in try await Task.sleep(for: .milliseconds(300)) }
-            }
-            RowDivider()
-            LinkRow(Str.actionsEpisodeDetails, icon: .list) { sheet = true }
-          }
-        }
-        .padding(.horizontal, Gutter)
+        GalleryHeading("Without the server: the cloud, no words")
+        ErrorBox(Str.homeFailed, Str.errorUnreachable, disconnected: true) {}.frame(height: 200)
 
-        GalleryHeading("A sheet's rows, inline")
-        VStack(spacing: 0) {
-          sheetRows
-        }
-        .background(palette.raised, in: PanelShape)
-        .padding(.horizontal, Gutter)
+        GalleryHeading("A section that failed, among what loaded")
+        ErrorSection(Str.homeShelfFailed, Str.errorConnectionLost) {}
+        ErrorSection(Str.homeShelfFailed, retrying: true) {}
+        RailFailed(title: Str.browseNextUp) {}
+
+        GalleryHeading("Loading rails")
+        RailSkeleton(title: Str.browseRecentlyAdded("Movies"), art: .poster)
+        RailSkeleton(title: nil, art: .landscape)
+
+        GalleryHeading("Nothing yet")
+        EmptyState(icon: .folderPlus, title: Str.browseHomeNoLibraries, description: Str.browseHomeNoLibrariesAdmin)
+        EmptyState(icon: .download, title: Str.downloadsEmpty, description: Str.downloadsEmptyHint)
       }
-      .sheet(item: $ask) { WatchedAtSheet($0) }
-      .sheet(isPresented: $sheet) {
-        VStack(spacing: 0) { sheetRows }.padding(.vertical, 12).frame(maxHeight: .infinity, alignment: .top)
-          .matineeSheet([.medium])
-      }
-    }
-
-    @ViewBuilder private var sheetRows: some View {
-      SheetHeader("Pilot", Sample.show.name)
-      SheetItem(.playOutline, Str.titleResume) {}
-      SheetItem(.rotateCcw, Str.actionsPlayFromStart) {}
-      SheetItem(.check, Str.mediaMarkWatched) {}
-      SheetItem(.heart, Str.mediaAddFavorite) {}
-      SheetItem(.trash, Str.downloadsRemove, destructive: true) {}
     }
   }
 
-  struct StatesPage: View {
-    @State private var shown = true
-    @Environment(\.palette) private var palette
+  // MARK: Bars
+
+  struct BarsPage: View {
+    @Environment(\.windowSize) private var window
+    @Environment(\.gutter) private var gutter
 
     var body: some View {
-      VStack(alignment: .leading, spacing: 28) {
-        GalleryHeading("Loading")
-        LoadingBox().frame(height: 120)
-        RailSkeleton(title: Str.browseContinueWatching, art: .landscape)
-        RailSkeleton(title: nil, art: .poster)
-
-        GalleryHeading("Failed")
-        ErrorBox(Str.homeFailed, Str.errorUnreadable) {}
-          .frame(minHeight: 300)
-        ErrorBox(Str.homeFailed, Str.errorUnreachable, disconnected: true) {}
-          .frame(minHeight: 160)
-        Notice(Str.loadingStale, Str.errorConnectionLost) {}
-        Notice(Str.homeFeaturedFailed, nil, disconnected: true) {}
-        RailFailure(
-          title: Str.browseNextUp, headline: Str.homeNextUpFailed, message: Str.errorUnreachable, onRetry: {})
-
-        GalleryHeading("Empty")
-        EmptyState(.popcorn, Str.browseHomeNothingYet, Str.browseHomeNothingYetDescription)
-        EmptyState(.folderPlus, Str.browseHomeNoLibraries, Str.browseHomeNoLibrariesAdmin)
-
-        GalleryHeading("Bars")
-        NavigationLink(value: "The Matrix") {
-          Text("Open a title page (floating bar, scrim, back swipe)").textStyle(.bodyLarge)
-            .foregroundStyle(palette.accent)
+      VStack(alignment: .leading, spacing: Space.s7) {
+        GalleryHeading("The banner, with what a provider would send")
+        Hero(slides: Sample.featured, height: heroHeight(window: window.height, wide: heroIsWide(width: window.width, height: window.height)), topInset: 0) {
+          AppHeader { RoundIconButton(.cloudOff, label: Str.serverUnreachable, look: .ghost, size: 40, iconSize: 20) {} }
         }
-        .padding(.horizontal, Gutter)
-        AppHeader { RoundIconButton(.cloudOff, label: Str.serverUnreachable, background: .clear) {} }
-          .background(Tone("header"))
+
+        GalleryHeading("Back and Home over art, and the back swipe")
+        NavigationLink(value: Sample.movies[0].name) {
+          ZStack(alignment: .topLeading) {
+            Picture(Sample.still).aspectRatio(16 / 9, contentMode: .fit).background(Tone("bars"))
+            ItemTopBar(parent: Sample.show.name) {}
+          }
+          .clipShape(RoundedRectangle.kit(Radius.xl))
+        }
+        .padding(.horizontal, gutter)
+
+        GalleryHeading("Search")
+        SearchFieldDemo().padding(.horizontal, gutter)
+        SearchBarButton {}.padding(.horizontal, gutter)
+      }
+    }
+  }
+
+  private struct SearchFieldDemo: View {
+    @State private var query = "Matrix"
+
+    var body: some View { SearchField($query) }
+  }
+
+  // MARK: Sheets
+
+  struct SheetsPage: View {
+    @Environment(\.actions) private var actions
+    @Environment(\.gutter) private var gutter
+    @State private var filtering = UserDefaults.standard.string(forKey: "gallery.open") == "filters"
+    @State private var genres: [String] = ["Drama"]
+    @State private var kind: String?
+    @State private var years: (Double?, Double?) = (1990, nil)
+    @State private var picking = false
+    @State private var language: String?
+
+    var body: some View {
+      VStack(alignment: .leading, spacing: Space.s7) {
+        GalleryHeading("A long press on a card opens these")
+        VStack(alignment: .leading, spacing: Space.s3) {
+          MatineeButton("A file's actions", look: .secondary) { actions?.open(.item(Sample.episodes[0], here: false)) }
+          MatineeButton("A title's, from a recommendation", look: .secondary) {
+            actions?.open(
+              .title(
+                Sample.movies[0], file: nil, here: false,
+                recommended: CatalogRef(kind: TitleKind.movie, provider: "tmdb", providerId: "603")))
+          }
+          MatineeButton("When it was watched", look: .secondary) {
+            actions?.askWatched(Sample.movies[0].name) { _ in }
+          }
+        }
+        .padding(.horizontal, gutter)
+
+        GalleryHeading("The filters a library opens")
+        HStack {
+          FilterButton(active: genres.count + (kind == nil ? 0 : 1)) { filtering = true }
+          ActiveFilterChips(
+            chips: genres.map { genre in ActiveFilter(key: genre, label: genre) { genres.removeAll { $0 == genre } } },
+            onClear: { genres = [] })
+        }
+        .padding(.leading, gutter)
+
+        GalleryHeading("A QR code, for a TV to sign in")
+        QrCode("http://localhost:18420/link?code=BCDF-GHJK", label: "Sign-in code", size: 200)
+          .padding(.horizontal, gutter)
+      }
+      .filterSheet(isPresented: $filtering, active: genres.count, onClear: { genres = [] }) {
+        FilterSection(Str.webFiltersProgress) {
+          ChoiceChips(
+            choices: [FilterChoice(value: "movie", label: Str.webLibrariesDialogKindMovies, count: 1204),
+              FilterChoice(value: "show", label: Str.webLibrariesDialogKindShows, count: 86)],
+            value: $kind)
+        }
+        FilterSection(Str.webFiltersGenres) {
+          ToggleChips(
+            choices: ["Action", "Comedy", "Drama", "Science Fiction", "Thriller", "Western"].map {
+              FilterChoice(value: $0, label: $0, count: $0.count * 7)
+            }, value: $genres)
+        }
+        RangeField(
+          title: Str.webFiltersYears, span: FilterSpan(min: 1950, max: 2026, step: 1), low: years.0, high: years.1,
+          words: { rangeText($0, $1, format: yearText, any: Str.webFiltersAnyYear, words: .year) }
+        ) { years = ($0, $1) }
+        FilterSection(Str.webFiltersLanguage) {
+          OptionRow(label: language ?? Str.webFiltersAnyLanguage) { picking = true }
+        }
+      }
+      .optionSheet(
+        isPresented: $picking, title: Str.webFiltersLanguage, any: Str.webFiltersAnyLanguage,
+        findPlaceholder: Str.searchField,
+        choices: ["English", "German", "Japanese", "Korean"].map { FilterChoice(value: $0, label: $0) },
+        current: language
+      ) { language = $0 }
+      .onAppear {
+        switch UserDefaults.standard.string(forKey: "gallery.open") {
+        case "actions": actions?.open(.item(Sample.episodes[0], here: false))
+        case "watched": actions?.askWatched(Sample.movies[0].name) { _ in }
+        default: break
+        }
       }
     }
   }

@@ -1,4 +1,5 @@
 import MatineeCore
+import MatineeKit
 import SwiftUI
 
 /*
@@ -50,7 +51,7 @@ private struct RecentList: View {
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .background(palette.background)
-    .topBar(Str.profileRecent) { DisconnectedAction(recent) }
+    .legacyTopBar(Str.profileRecent) { DisconnectedAction(recent) }
     .loads(recent) { api in try await api.profiles.recent(username: username, limit: LIMIT) }
   }
 }
@@ -60,8 +61,8 @@ private struct Empty: View {
 
   var body: some View {
     VStack(spacing: 12) {
-      LucideIcon(.clock, size: 28, tint: palette.muted)
-      Text(Str.profileRecentEmpty).textStyle(.titleMedium).foregroundStyle(palette.foreground)
+      LucideIcon(.clock, size: 28, tint: palette.mutedForeground)
+      Text(Str.profileRecentEmpty).textStyle(.base, weight: .semibold).foregroundStyle(palette.foreground)
         .multilineTextAlignment(.center)
     }
     .frame(maxWidth: .infinity)

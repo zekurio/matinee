@@ -1,5 +1,6 @@
 import AVKit
 import MatineeCore
+import MatineeKit
 import SwiftUI
 import UIKit
 
@@ -43,13 +44,13 @@ struct PlayerControls: View {
 
   private var top: some View {
     HStack(spacing: 8) {
-      RoundIconButton(.arrowLeft, label: Str.playerBack, size: 52, iconSize: 26, background: .clear, action: close)
+      LegacyRoundIconButton(.arrowLeft, label: Str.playerBack, size: 52, iconSize: 26, background: .clear, action: close)
       if let item = controller.item {
         let label = itemLabel(item)
         VStack(alignment: .leading, spacing: 0) {
-          Text(label.title).textStyle(.titleLarge).lineLimit(1)
+          Text(label.title).textStyle(.xl, weight: .semibold, tracking: .tight).lineLimit(1)
           if let code = label.code {
-            Text("\(code) · \(label.showName)").textStyle(.bodyMedium)
+            Text("\(code) · \(label.showName)").textStyle(.sm)
               .foregroundStyle(palette.foreground.opacity(0.75)).lineLimit(1)
           }
         }
@@ -72,7 +73,7 @@ struct PlayerControls: View {
       // controls are hidden. Its slot stays without a button over it.
       ZStack {
         if !controller.loading {
-          RoundIconButton(
+          LegacyRoundIconButton(
             controller.playing ? .pause : .play, label: controller.playing ? Str.playerPause : Str.playerPlay,
             size: 96, iconSize: 48, background: .clear
           ) {
@@ -96,10 +97,10 @@ struct PlayerControls: View {
         EndsAt(controller: controller)
         Spacer(minLength: 8)
         AirPlayButton()
-        RoundIconButton(.audioLines, label: Str.playerMenuAudio, size: 52, iconSize: 26, background: .clear) {
+        LegacyRoundIconButton(.audioLines, label: Str.playerMenuAudio, size: 52, iconSize: 26, background: .clear) {
           onMenu(.audio)
         }
-        RoundIconButton(.captions, label: Str.playerMenuSubtitles, size: 52, iconSize: 26, background: .clear) {
+        LegacyRoundIconButton(.captions, label: Str.playerMenuSubtitles, size: 52, iconSize: 26, background: .clear) {
           onMenu(.subtitles)
         }
         // The line under the icon shows subtitles are on; VoiceOver hears which.
@@ -109,7 +110,7 @@ struct PlayerControls: View {
           }
         }
         .accessibilityValue(controller.subtitle.map { subtitleLabel($0, controller.subtitles) } ?? Str.playerSubtitlesOff)
-        RoundIconButton(.settings, label: Str.playerMenuSettings, size: 52, iconSize: 26, background: .clear) {
+        LegacyRoundIconButton(.settings, label: Str.playerMenuSettings, size: 52, iconSize: 26, background: .clear) {
           onMenu(.settings)
         }
       }
@@ -130,7 +131,7 @@ private struct EndsAt: View {
       let step = Int(controller.position) / 30
       let left = (duration - controller.position) / Double(max(controller.speed, 0.1))
       Text(Str.playerEndsAt(Self.time(step: step, left: left)))
-        .textStyle(.bodyMedium)
+        .textStyle(.sm)
         .foregroundStyle(palette.foreground.opacity(0.8))
         .lineLimit(1)
     }
@@ -197,11 +198,11 @@ private struct SeekBar: View {
           .frame(maxWidth: .infinity, alignment: .leading)
       }
       HStack(spacing: 0) {
-        Text(formatClock(shown)).textStyle(.bodyMedium).monospacedDigit().frame(minWidth: 56, alignment: .leading)
+        Text(formatClock(shown)).textStyle(.sm).monospacedDigit().frame(minWidth: 56, alignment: .leading)
         SeekTrack(controller: controller, position: shown, duration: duration, back: back, ahead: ahead, onTouch: onTouch)
           .padding(.horizontal, 12)
         let remaining = formatClock(max(0, duration - shown))
-        Text("-\(remaining)").textStyle(.bodyMedium).monospacedDigit()
+        Text("-\(remaining)").textStyle(.sm).monospacedDigit()
           .frame(minWidth: 64, alignment: .trailing)
           .accessibilityLabel(Str.a11yPlayerRemaining(remaining))
       }
@@ -292,7 +293,7 @@ private struct TrickplayPreview: View {
         .frame(width: width, height: height)
         .clipShape(RoundedRectangle(cornerRadius: 6))
         .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(palette.foreground.opacity(0.3), lineWidth: 1))
-        Text(formatClock(seconds)).textStyle(.labelMedium).monospacedDigit()
+        Text(formatClock(seconds)).textStyle(.px13, weight: .medium).monospacedDigit()
       }
       .frame(width: width)
       .padding(.bottom, 6)

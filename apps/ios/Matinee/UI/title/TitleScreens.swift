@@ -1,4 +1,5 @@
 import MatineeCore
+import MatineeKit
 import SwiftUI
 
 /*
@@ -16,7 +17,7 @@ private struct PageState<T: Sendable, Content: View>: View {
   var body: some View {
     switch loader.state {
     case .loading:
-      LoadingBox().frame(maxWidth: .infinity, maxHeight: .infinity).itemTopBar()
+      LoadingBox().frame(maxWidth: .infinity, maxHeight: .infinity).legacyItemTopBar()
     case .failed(let message, let disconnected):
       VStack(spacing: 0) {
         // Under the floating Back and Home, as Android stacks them.
@@ -24,7 +25,7 @@ private struct PageState<T: Sendable, Content: View>: View {
         ErrorBox(error, message, disconnected: disconnected, onRetry: loader.reload)
         Spacer(minLength: 0)
       }
-      .itemTopBar()
+      .legacyItemTopBar()
     case .ready(let value):
       content(value)
     }
@@ -46,7 +47,7 @@ private struct ItemPage<Content: View>: View {
     }
     .ignoresSafeArea(edges: .top)
     .statusBarScrim()
-    .itemTopBar(parent: parent, onParent: onParent)
+    .legacyItemTopBar(parent: parent, onParent: onParent)
   }
 }
 
@@ -83,12 +84,12 @@ private struct TitlePage: View {
           .padding(.top, wide ? headingTop(window) : phoneHeadingTop(window))
       }
       if let overview = title.overview {
-        Overview(overview, tagline: title.tagline).padding(.horizontal, Gutter)
+        Overview(overview, tagline: title.tagline).padding(.horizontal, Space.gutter)
       }
       CrewLines(credits: title.credits, studios: title.studios)
       // A movie's file: its picture, audio, and subtitles. A show's differ by episode.
       if !title.isShow, let next {
-        MediaInfo(next).padding(.horizontal, Gutter)
+        MediaInfo(next).padding(.horizontal, Space.gutter)
       }
       ActionRow(
         play: next, resume: isResumable(next), name: title.name,
@@ -129,7 +130,7 @@ private struct SeasonEpisodesRail: View {
     Group {
       if let list = items.state.value {
         VStack(alignment: .leading, spacing: 12) {
-          SectionTitle(Str.titleEpisodes).padding(.horizontal, Gutter)
+          SectionTitle(Str.titleEpisodes).padding(.horizontal, Space.gutter)
           ScrollViewReader { proxy in
             ScrollView(.horizontal) {
               LazyHStack(alignment: .top, spacing: 12) {
@@ -139,7 +140,7 @@ private struct SeasonEpisodesRail: View {
               }
               .scrollTargetLayout()
             }
-            .contentMargins(.horizontal, Gutter, for: .scrollContent)
+            .contentMargins(.horizontal, Space.gutter, for: .scrollContent)
             .scrollIndicators(.hidden)
             .scrollTargetBehavior(.viewAligned)
             .onAppear {
@@ -172,7 +173,7 @@ struct SeasonScreen: View {
           ErrorBox(Str.titleSeasonMissing(title.name))
           Spacer(minLength: 0)
         }
-        .itemTopBar()
+        .legacyItemTopBar()
       }
     }
     .loads(loader) { [titleId] api in try await api.titles.get(id: titleId) }
@@ -203,26 +204,26 @@ private struct SeasonPage: View {
             .frame(width: isWide(window) ? 180 : 112)
           VStack(alignment: .leading, spacing: 0) {
             Button { nav.titleUp(title.id) } label: {
-              Text(title.name).textStyle(.titleMedium).foregroundStyle(palette.muted).multilineTextAlignment(.leading)
+              Text(title.name).textStyle(.base, weight: .semibold).foregroundStyle(palette.mutedForeground).multilineTextAlignment(.leading)
             }
-            .buttonStyle(RoundPress())
-            Text(name).textStyle(.headlineLarge).foregroundStyle(palette.foreground).accessibilityAddTraits(.isHeader)
+            .buttonStyle(LegacyRoundPress())
+            Text(name).textStyle(.xl3, weight: .bold, tracking: .tight).foregroundStyle(palette.foreground).accessibilityAddTraits(.isHeader)
             Text(
               [Str.mediaEpisodeCount(season.itemCount), Str.titleSeasonWatchedCount(season.watchedCount)]
                 .joined(separator: " · ")
             )
-            .textStyle(.bodyMedium)
+            .textStyle(.sm)
             .foregroundStyle(palette.foreground.opacity(0.8))
             .padding(.top, 6)
           }
           .frame(maxWidth: .infinity, alignment: .leading)
           .padding(.bottom, 4)
         }
-        .padding(.horizontal, Gutter)
+        .padding(.horizontal, Space.gutter)
         .padding(.top, headingTop(window))
       }
       if let overview = season.overview {
-        Overview(overview).padding(.horizontal, Gutter)
+        Overview(overview).padding(.horizontal, Space.gutter)
       }
       ActionRow(
         play: next, resume: isResumable(next), name: "\(title.name) · \(name)",
@@ -237,18 +238,18 @@ private struct SeasonPage: View {
           try await viewer.setFavorite(api, summary, !viewer.isFavorite(summary))
         },
         more: .season(summary, season, here: true))
-      SectionTitle(Str.titleEpisodes).padding(.horizontal, Gutter)
+      SectionTitle(Str.titleEpisodes).padding(.horizontal, Space.gutter)
       switch items.state {
       case .loading:
         LoadingBox().padding(32)
       case .failed(let message, _):
-        Text(Str.titleEpisodesError(message)).textStyle(.bodyMedium).foregroundStyle(palette.muted)
-          .padding(.horizontal, Gutter)
+        Text(Str.titleEpisodesError(message)).textStyle(.sm).foregroundStyle(palette.mutedForeground)
+          .padding(.horizontal, Space.gutter)
       case .ready(let episodes):
         VStack(spacing: 4) {
           ForEach(episodes, id: \.id) { EpisodeRow(shown($0)) }
         }
-        .padding(.horizontal, Gutter)
+        .padding(.horizontal, Space.gutter)
       }
       SeasonsRail(title: title, current: season)
     }
@@ -301,7 +302,7 @@ private struct EpisodePage: View {
       }
       if wide { EpisodeHeading(item: item) }
       if let overview = item.episode?.overview {
-        Overview(overview, lines: 6).padding(.horizontal, Gutter)
+        Overview(overview, lines: 6).padding(.horizontal, Space.gutter)
       }
       ActionRow(
         play: item, resume: isResumable(item), name: label.title, watched: watched,
@@ -336,7 +337,7 @@ private struct EpisodeHeading: View {
     let watched = viewer?.isWatched(item) ?? (item.progress?.completed ?? false)
     VStack(alignment: .leading, spacing: 0) {
       link(title.map { title in { nav.titleUp(title.id) } }) {
-        Text(label.showName).textStyle(.titleLarge).foregroundStyle(palette.foreground)
+        Text(label.showName).textStyle(.xl, weight: .semibold, tracking: .tight).foregroundStyle(palette.foreground)
       }
       let place = [
         season.map { $0 == 0 ? Str.titleEpisodeSpecials : Str.titleEpisodeSeason($0) },
@@ -344,10 +345,10 @@ private struct EpisodeHeading: View {
       ].compactMap(\.self).joined(separator: " · ")
       if !place.isEmpty {
         link(title.map { title in { nav.seasonUp(title.id, season) } }) {
-          Text(place).textStyle(.titleMedium).foregroundStyle(palette.muted)
+          Text(place).textStyle(.base, weight: .semibold).foregroundStyle(palette.mutedForeground)
         }
       }
-      Text(label.title).textStyle(.headlineLarge).lineLimit(3).foregroundStyle(palette.foreground)
+      Text(label.title).textStyle(.xl3, weight: .bold, tracking: .tight).lineLimit(3).foregroundStyle(palette.foreground)
         .accessibilityAddTraits(.isHeader)
         .padding(.top, 6)
       let facts = episodeFacts(item, watched: watched).joined(separator: " · ")
@@ -355,22 +356,22 @@ private struct EpisodeHeading: View {
       if !facts.isEmpty || rating != nil {
         HStack(spacing: 10) {
           if !facts.isEmpty {
-            Text(facts).textStyle(.bodyMedium).foregroundStyle(palette.foreground.opacity(0.8))
+            Text(facts).textStyle(.sm).foregroundStyle(palette.foreground.opacity(0.8))
           }
-          if let rating { Badge(rating, outlined: true) }
+          if let rating { LegacyBadge(rating, outlined: true) }
         }
         .padding(.top, 10)
       }
       MediaInfo(item).padding(.top, 12)
     }
     .frame(maxWidth: .infinity, alignment: .leading)
-    .padding(.horizontal, Gutter)
+    .padding(.horizontal, Space.gutter)
   }
 
   /// `content`, opening a page when there's one to open.
   @ViewBuilder private func link(_ action: (() -> Void)?, @ViewBuilder content: () -> some View) -> some View {
     if let action {
-      Button(action: action) { content().multilineTextAlignment(.leading) }.buttonStyle(RoundPress())
+      Button(action: action) { content().multilineTextAlignment(.leading) }.buttonStyle(LegacyRoundPress())
     } else {
       content()
     }

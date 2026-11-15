@@ -1,4 +1,5 @@
 import MatineeCore
+import MatineeKit
 import SwiftUI
 import UIKit
 
@@ -21,7 +22,7 @@ struct PlaybackDiagnosticsSection: View {
     SettingsSection(Str.diagnosticsTitle) {
       Panel {
         if let text, let latest = report?.latest {
-          ValueRow(Str.diagnosticsLatest, value: statusLabel(latest))
+          LegacyValueRow(Str.diagnosticsLatest, value: statusLabel(latest))
           RowDivider()
           LinkRow(Str.diagnosticsShow) { open = true }
           RowDivider()
@@ -34,7 +35,7 @@ struct PlaybackDiagnosticsSection: View {
             PlaybackDiagnostics.clear()
           }
         } else {
-          Text(Str.diagnosticsEmpty).textStyle(.bodyMedium).foregroundStyle(palette.muted)
+          Text(Str.diagnosticsEmpty).textStyle(.sm).foregroundStyle(palette.mutedForeground)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(16)
         }
@@ -92,7 +93,7 @@ struct TextSheet: View {
 
   var body: some View {
     VStack(spacing: 0) {
-      SheetHeader(title).padding(.top, 12)
+      LegacySheetHeader(title).padding(.top, 12)
       ScrollView([.vertical]) {
         Text(text)
           // A report and a log line up in columns, as Android shows them, in its monospace.
@@ -107,14 +108,14 @@ struct TextSheet: View {
       .defaultScrollAnchor(latestLast ? .bottom : .top)
       Rectangle().fill(palette.border).frame(height: 1)
       HStack(spacing: 10) {
-        MatineeButton(.ghost) { dismiss() } label: { Text(Str.diagnosticsClose) }
+        LegacyButton(.ghost) { dismiss() } label: { Text(Str.diagnosticsClose) }
         Spacer(minLength: 0)
-        MatineeButton(.secondary, action: onCopy) { Text(copyLabel) }
+        LegacyButton(.secondary, action: onCopy) { Text(copyLabel) }
       }
       .padding(.horizontal, 16)
       .padding(.vertical, 10)
     }
-    .matineeSheet([.large])
+    .legacySheet([.large])
   }
 }
 

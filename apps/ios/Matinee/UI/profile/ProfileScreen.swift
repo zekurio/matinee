@@ -1,4 +1,5 @@
 import MatineeCore
+import MatineeKit
 import SwiftUI
 
 /*
@@ -151,7 +152,7 @@ private struct ProfileHeader<Action: View>: View {
           }
           who(user, stacked: true)
         }
-        .padding(.horizontal, Gutter)
+        .padding(.horizontal, Space.gutter)
         .padding(.top, 16)
       } else {
         // One row, as a profile's header on a phone: the picture, who it is,
@@ -162,14 +163,14 @@ private struct ProfileHeader<Action: View>: View {
           Spacer().frame(width: 12)
           buttons
         }
-        .padding(.horizontal, Gutter)
+        .padding(.horizontal, Space.gutter)
         .padding(.top, 16)
       }
     }
   }
 
   private func picture(_ user: User) -> some View {
-    Avatar(user.name, url: user.avatarId.flatMap { api?.paths.avatar($0) }, size: 64)
+    ProfileAvatar(user.name, url: user.avatarId.flatMap { api?.paths.avatar($0) }, size: 64)
   }
 
   /// The name, with Admin beside it, over the username and the month they joined.
@@ -182,13 +183,13 @@ private struct ProfileHeader<Action: View>: View {
       .joined(separator: " · ")
     return VStack(alignment: .leading, spacing: 0) {
       HStack(spacing: 8) {
-        Text(user.name).textStyle(.titleLarge).foregroundStyle(palette.foreground).lineLimit(stacked ? nil : 1)
+        Text(user.name).textStyle(.xl, weight: .semibold, tracking: .tight).foregroundStyle(palette.foreground).lineLimit(stacked ? nil : 1)
           .accessibilityAddTraits(.isHeader)
-        if user.isAdmin { Badge(Str.profileAdmin, outlined: true) }
+        if user.isAdmin { LegacyBadge(Str.profileAdmin, outlined: true) }
       }
       if !facts.isEmpty {
         // Two lines rather than an ellipsis, where the language's words are long.
-        Text(facts).textStyle(.bodyMedium).foregroundStyle(palette.muted).lineLimit(stacked ? nil : 2)
+        Text(facts).textStyle(.sm).foregroundStyle(palette.mutedForeground).lineLimit(stacked ? nil : 2)
       }
     }
     .frame(maxWidth: .infinity, alignment: .leading)
@@ -198,12 +199,12 @@ private struct ProfileHeader<Action: View>: View {
   /// The disconnect icon or offline, then Settings.
   @ViewBuilder private var buttons: some View {
     if offline {
-      LucideIcon(.cloudOff, label: Str.downloadsOffline, size: 20, tint: palette.muted)
+      LucideIcon(.cloudOff, label: Str.downloadsOffline, size: 20, tint: palette.mutedForeground)
       Spacer().frame(width: 12)
     } else {
       action()
     }
-    RoundIconButton(.settings, label: Str.shellSettings, iconSize: 20, action: nav.settings)
+    LegacyRoundIconButton(.settings, label: Str.shellSettings, iconSize: 20, action: nav.settings)
   }
 }
 
@@ -232,9 +233,9 @@ private struct Favorites: View {
     if titles.isEmpty && items.isEmpty {
       VStack(alignment: .leading, spacing: 8) {
         SectionTitle(Str.favoritesTitle)
-        Text(Str.profileNoFavoritesHint).textStyle(.bodyMedium).foregroundStyle(palette.muted)
+        Text(Str.profileNoFavoritesHint).textStyle(.sm).foregroundStyle(palette.mutedForeground)
       }
-      .padding(.horizontal, Gutter)
+      .padding(.horizontal, Space.gutter)
     } else {
       VStack(alignment: .leading, spacing: 32) {
         if !titles.isEmpty {
@@ -267,13 +268,13 @@ private struct Statistics: View {
     let state = model.state(offline: offline)
     let never = model.neverWatched(offline: offline)
     VStack(alignment: .leading, spacing: 16) {
-      SectionTitle(Str.profileStatistics).padding(.horizontal, Gutter)
+      SectionTitle(Str.profileStatistics).padding(.horizontal, Space.gutter)
       if !never { RangeChips(current: model.range) { range in withMotion(Motion.color) { model.pick(range) } } }
     }
     .padding(.top, SectionGap)
     content(state: state, stats: stats, never: never)
       .frame(maxWidth: .infinity, alignment: .leading)
-      .padding(.horizontal, Gutter)
+      .padding(.horizontal, Space.gutter)
       .padding(.top, 16)
   }
 
@@ -283,8 +284,8 @@ private struct Statistics: View {
     } else if let stats {
       if never {
         VStack(alignment: .leading, spacing: 4) {
-          Text(Str.profileSelfEmpty).textStyle(.bodyLarge).foregroundStyle(palette.foreground)
-          Text(Str.profileSelfEmptyHint).textStyle(.bodyMedium).foregroundStyle(palette.muted)
+          Text(Str.profileSelfEmpty).textStyle(.base).foregroundStyle(palette.foreground)
+          Text(Str.profileSelfEmptyHint).textStyle(.sm).foregroundStyle(palette.mutedForeground)
         }
         .accessibilityElement(children: .combine)
       } else if stats.totals.plays == 0 {
@@ -306,16 +307,16 @@ private struct Statistics: View {
     } else {
       // A notice keeps the gutter itself.
       Notice(message, retrying: loader.refreshing, onRetry: { loader.reload() })
-        .padding(.horizontal, -Gutter)
+        .padding(.horizontal, -Space.gutter)
     }
   }
 
   /// Nothing in the range picked: how to see everything instead.
   private var nothingWatched: some View {
     VStack(alignment: .leading, spacing: 12) {
-      Text(Str.profileNothingWatched(rangePhrase(model.range))).textStyle(.bodyLarge)
+      Text(Str.profileNothingWatched(rangePhrase(model.range))).textStyle(.base)
         .foregroundStyle(palette.foreground)
-      MatineeButton(.outline, action: { model.pick(StatsRange.all) }) { Text(Str.profileShowAllTime) }
+      LegacyButton(.outline, action: { model.pick(StatsRange.all) }) { Text(Str.profileShowAllTime) }
     }
   }
 

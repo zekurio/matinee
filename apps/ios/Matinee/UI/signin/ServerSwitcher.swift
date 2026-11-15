@@ -1,4 +1,5 @@
 import MatineeCore
+import MatineeKit
 import SwiftUI
 
 /* The saved servers: switching between them, adding one, and removing one. ServerSwitcher.kt. */
@@ -32,8 +33,8 @@ struct ChangeServerButton: View {
   @Environment(\.palette) private var palette
 
   var body: some View {
-    Button { open = true } label: { Text(Str.connectChangeServer).foregroundStyle(palette.muted) }
-      .buttonStyle(.matinee(.ghost))
+    Button { open = true } label: { Text(Str.connectChangeServer).foregroundStyle(palette.mutedForeground) }
+      .buttonStyle(.legacy(.ghost))
       .sheet(isPresented: $open) { ServerSwitcherSheet() }
   }
 }
@@ -51,19 +52,19 @@ struct ServerSwitcherSheet: View {
   var body: some View {
     ScrollView {
       VStack(alignment: .leading, spacing: 0) {
-        SheetHeader(Str.serversTitle)
+        LegacySheetHeader(Str.serversTitle)
         ForEach(session.servers) { server in
           ServerRow(
             server: server, busy: session.removing.contains(server.origin),
             onTap: { close { await session.switchTo(origin: server.origin) } },
             onRemove: { asking = server })
         }
-        SheetItem(.plus, Str.serversAdd) { close { session.addServer() } }
+        LegacySheetItem(.plus, Str.serversAdd) { close { session.addServer() } }
       }
       .padding(.vertical, 12)
     }
     .scrollBounceBehavior(.basedOnSize)
-    .matineeSheet([.medium, .large])
+    .legacySheet([.medium, .large])
     .alert(
       asking.map { Str.serversRemoveTitle($0.title) } ?? "",
       isPresented: Binding(get: { asking != nil }, set: { if !$0 { asking = nil } }),
@@ -97,11 +98,11 @@ private struct ServerRow: View {
     HStack(spacing: 4) {
       Button(action: onTap) {
         HStack(spacing: 16) {
-          LucideIcon(.server, tint: server.active ? palette.accent : palette.muted)
+          LucideIcon(.server, tint: server.active ? palette.accent : palette.mutedForeground)
           VStack(alignment: .leading, spacing: 0) {
-            Text(server.title).textStyle(.bodyLarge).foregroundStyle(palette.foreground).lineLimit(1)
+            Text(server.title).textStyle(.base).foregroundStyle(palette.foreground).lineLimit(1)
             Text(busy ? Str.serversRemoving : server.facts)
-              .textStyle(.bodySmall).foregroundStyle(palette.muted).lineLimit(2)
+              .textStyle(.px13).foregroundStyle(palette.mutedForeground).lineLimit(2)
           }
           .padding(.vertical, 6)
           Spacer(minLength: 0)
@@ -111,18 +112,18 @@ private struct ServerRow: View {
         }
         .padding(.leading, 20)
         .padding(.vertical, 6)
-        .frame(minHeight: MinTouch)
+        .frame(minHeight: TouchTarget)
         .contentShape(Rectangle())
       }
-      .buttonStyle(RowPress())
+      .buttonStyle(LegacyRowPress())
       .disabled(busy)
       .accessibilityAddTraits(server.active ? .isSelected : [])
       Group {
         if busy {
-          ProgressView().controlSize(.small).tint(palette.muted)
+          ProgressView().controlSize(.small).tint(palette.mutedForeground)
         } else {
-          RoundIconButton(
-            .trash, label: Str.serversRemove(server.title), size: 40, tint: palette.muted, background: .clear,
+          LegacyRoundIconButton(
+            .trash, label: Str.serversRemove(server.title), size: 40, tint: palette.mutedForeground, background: .clear,
             action: onRemove)
         }
       }
@@ -142,10 +143,10 @@ struct BackToServer: View {
       Button {
         Task { await session.cancelAdd() }
       } label: {
-        LucideIcon(.arrowLeft, size: 18, tint: palette.muted)
-        Text(Str.serversBackTo(current.title)).foregroundStyle(palette.muted)
+        LucideIcon(.arrowLeft, size: 18, tint: palette.mutedForeground)
+        Text(Str.serversBackTo(current.title)).foregroundStyle(palette.mutedForeground)
       }
-      .buttonStyle(.matinee(.ghost))
+      .buttonStyle(.legacy(.ghost))
     }
   }
 }

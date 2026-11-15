@@ -1,5 +1,6 @@
 @preconcurrency import AVFoundation
 import MatineeCore
+import MatineeKit
 import SwiftUI
 import UIKit
 
@@ -69,13 +70,13 @@ struct LinkDeviceScreen: View {
       }
       .frame(maxWidth: 440)
       .frame(maxWidth: .infinity)
-      .padding(.horizontal, Gutter)
+      .padding(.horizontal, Space.gutter)
       .padding(.top, 8)
       .padding(.bottom, 24)
     }
     .scrollDismissesKeyboard(.interactively)
     .background(palette.background)
-    .topBar(Str.linkTitle)
+    .legacyTopBar(Str.linkTitle)
   }
 }
 
@@ -98,10 +99,10 @@ private struct ScanStep: View {
       if hasCamera {
         CameraScanner { onCode($0, false) }
         Gap(32)
-        Text(Str.linkOrEnter).textStyle(.titleMedium).accessibilityAddTraits(.isHeader)
+        Text(Str.linkOrEnter).textStyle(.base, weight: .semibold).accessibilityAddTraits(.isHeader)
       } else {
         // No camera, as on a TV signing in another TV, or the simulator: only the code.
-        Text(Str.linkEnterCode).textStyle(.bodyMedium).foregroundStyle(palette.muted)
+        Text(Str.linkEnterCode).textStyle(.sm).foregroundStyle(palette.mutedForeground)
       }
       Gap(12)
       CodeField { onCode(ScannedCode(userCode: $0, server: nil), true) }
@@ -127,7 +128,7 @@ private struct CodeField: View {
     let parsed = UserCode.parse(text)
     let invalid = tried && parsed == nil
     VStack(alignment: .leading, spacing: 0) {
-      MatineeTextField(
+      LegacyTextField(
         Binding(get: { text }, set: { text = String($0.prefix(9)) }), placeholder: Str.linkCodePlaceholder,
         isError: invalid
       )
@@ -140,13 +141,13 @@ private struct CodeField: View {
       .accessibilityLabel(Str.linkOrEnter)
       if invalid {
         Gap(6)
-        Text(Str.linkCodeInvalid).textStyle(.bodySmall).foregroundStyle(palette.danger)
+        Text(Str.linkCodeInvalid).textStyle(.px13).foregroundStyle(palette.destructive)
       }
       Gap(12)
       Button(action: submit) {
         Text(Str.linkContinue).frame(maxWidth: .infinity)
       }
-      .buttonStyle(.matinee(.secondary))
+      .buttonStyle(.legacy(.secondary))
       .disabled(text.trimmingCharacters(in: .whitespaces).isEmpty)
     }
   }
@@ -182,12 +183,12 @@ private struct CameraScanner: View {
           ScanCorners().padding(40)
         } else if status == .notDetermined {
           CameraNotice(text: Str.linkCameraNeeded) {
-            MatineeButton(.outline, action: ask) { Text(Str.linkCameraAllow) }
+            LegacyButton(.outline, action: ask) { Text(Str.linkCameraAllow) }
           }
         } else {
           // iOS asks once; after a no, only its Settings can allow it.
           CameraNotice(text: Str.linkCameraNeeded) {
-            MatineeButton(.outline) {
+            LegacyButton(.outline) {
               if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
             } label: {
               LucideIcon(.settings, size: 18)
@@ -203,8 +204,8 @@ private struct CameraScanner: View {
       // What to do with the picture, while there is one.
       if granted && !failed {
         Text(foreignAt != nil ? Str.linkScanForeign : Str.linkScanHint)
-          .textStyle(.bodyMedium)
-          .foregroundStyle(foreignAt != nil ? palette.foreground : palette.muted)
+          .textStyle(.sm)
+          .foregroundStyle(foreignAt != nil ? palette.foreground : palette.mutedForeground)
           .multilineTextAlignment(.center)
           .frame(maxWidth: .infinity)
       }
@@ -247,8 +248,8 @@ private struct CameraNotice<Action: View>: View {
 
   var body: some View {
     VStack(spacing: 12) {
-      LucideIcon(.cameraOff, size: 28, tint: palette.muted)
-      Text(text).textStyle(.bodyMedium).foregroundStyle(palette.muted).multilineTextAlignment(.center)
+      LucideIcon(.cameraOff, size: 28, tint: palette.mutedForeground)
+      Text(text).textStyle(.sm).foregroundStyle(palette.mutedForeground).multilineTextAlignment(.center)
       action().padding(.top, 4)
     }
     .padding(28)
@@ -409,17 +410,17 @@ private struct ApproveStep: View {
       case .waiting(let request):
         DeviceCard(request: request)
         Gap(20)
-        Text(emphasized(Str.linkWants(name), name, font: Font(Typography.bodyLarge.uiFont(.semibold))))
-          .textStyle(.bodyLarge)
+        Text(emphasized(Str.linkWants(name), name, font: Font(TextSize.base.uiFont(.semibold, dynamicType: dynamicType))))
+          .textStyle(.base)
         Gap(6)
         Text(
           emphasized(
             Str.linkCodeShown(request.userCode), request.userCode,
-            font: .system(size: Typography.bodyMedium.spec.size * Typography.bodyMedium.scale(at: dynamicType), weight: .medium, design: .monospaced),
+            font: .system(size: TextSize.sm.metrics.size * TextSize.sm.scale(at: dynamicType), weight: .medium, design: .monospaced),
             color: palette.foreground)
         )
-        .textStyle(.bodyMedium)
-        .foregroundStyle(palette.muted)
+        .textStyle(.sm)
+        .foregroundStyle(palette.mutedForeground)
         Gap(24)
         Button(action: approve) {
           HStack(spacing: 8) {
@@ -432,35 +433,35 @@ private struct ApproveStep: View {
           }
           .frame(maxWidth: .infinity)
         }
-        .buttonStyle(.matinee())
+        .buttonStyle(.legacy())
         .disabled(approving)
         if let approveError {
           Gap(10)
-          Text(approveError).textStyle(.bodySmall).foregroundStyle(palette.danger)
+          Text(approveError).textStyle(.px13).foregroundStyle(palette.destructive)
         }
         Gap(10)
         Button(action: onAgain) { Text(Str.commonCancel).frame(maxWidth: .infinity) }
-          .buttonStyle(.matinee(.ghost))
+          .buttonStyle(.legacy(.ghost))
         Gap(20)
-        Text(Str.linkWarning).textStyle(.bodySmall).foregroundStyle(palette.muted)
+        Text(Str.linkWarning).textStyle(.px13).foregroundStyle(palette.mutedForeground)
       case .approved(let request):
         Outcome(
           icon: .circleCheck, tint: palette.accent, title: Str.linkSignedIn,
           description: Str.linkSignedInDescription(deviceLabel(request), name)
         ) {
           Button { nav.back() } label: { Text(Str.linkDone).frame(maxWidth: .infinity) }
-            .buttonStyle(.matinee())
+            .buttonStyle(.legacy())
         }
       case .gone:
         Outcome(
-          icon: .circleAlert, tint: palette.muted, title: Str.linkCodeGone,
+          icon: .circleAlert, tint: palette.mutedForeground, title: Str.linkCodeGone,
           description: Str.linkCodeGoneDescription, detail: otherServer
         ) {
           Button(action: onAgain) { Text(again).frame(maxWidth: .infinity) }
-            .buttonStyle(.matinee(.outline))
+            .buttonStyle(.legacy(.outline))
         }
       case .failed(let message):
-        Outcome(icon: .circleAlert, tint: palette.muted, title: Str.linkLookupFailed, description: message) {
+        Outcome(icon: .circleAlert, tint: palette.mutedForeground, title: Str.linkLookupFailed, description: message) {
           VStack(spacing: 10) {
             Button { attempt += 1 } label: {
               HStack(spacing: 8) {
@@ -469,9 +470,9 @@ private struct ApproveStep: View {
               }
               .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.matinee(.outline))
+            .buttonStyle(.legacy(.outline))
             Button(action: onAgain) { Text(again).frame(maxWidth: .infinity) }
-              .buttonStyle(.matinee(.ghost))
+              .buttonStyle(.legacy(.ghost))
           }
         }
       }
@@ -538,12 +539,12 @@ private struct DeviceCard: View {
 
   var body: some View {
     HStack(spacing: 14) {
-      LucideIcon(platformIcon(request.platform), tint: palette.muted)
+      LucideIcon(platformIcon(request.platform), tint: palette.mutedForeground)
         .frame(width: 44, height: 44)
         .background(palette.secondary, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
       VStack(alignment: .leading, spacing: 0) {
-        Text(deviceLabel(request)).textStyle(.bodyLarge, weight: .medium)
-        Text(platformLabel(request.platform)).textStyle(.bodySmall).foregroundStyle(palette.muted)
+        Text(deviceLabel(request)).textStyle(.base, weight: .medium)
+        Text(platformLabel(request.platform)).textStyle(.px13).foregroundStyle(palette.mutedForeground)
       }
       .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -569,12 +570,12 @@ private struct Outcome<Actions: View>: View {
       Gap(24)
       LucideIcon(icon, size: 36, tint: tint)
       Gap(16)
-      Text(title).textStyle(.headlineSmall).accessibilityAddTraits(.isHeader)
+      Text(title).textStyle(.px22, weight: .semibold, tracking: .tight).accessibilityAddTraits(.isHeader)
       Gap(8)
-      Text(description).textStyle(.bodyMedium).foregroundStyle(palette.muted)
+      Text(description).textStyle(.sm).foregroundStyle(palette.mutedForeground)
       if let detail {
         Gap(8)
-        Text(detail).textStyle(.bodyMedium).foregroundStyle(palette.muted)
+        Text(detail).textStyle(.sm).foregroundStyle(palette.mutedForeground)
       }
       Gap(28)
       actions()

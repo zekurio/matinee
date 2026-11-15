@@ -1,4 +1,5 @@
 import MatineeCore
+import MatineeKit
 import SwiftUI
 import UIKit
 
@@ -75,8 +76,8 @@ private struct SchemePicker: View {
             case .light: Miniature(colors: theme.light)
             case .dark: Miniature(colors: theme.dark)
             }
-            Text(label(mode)).textStyle(.labelMedium)
-              .foregroundStyle(selected ? palette.foreground : palette.muted)
+            Text(label(mode)).textStyle(.px13, weight: .medium)
+              .foregroundStyle(selected ? palette.foreground : palette.mutedForeground)
               .lineLimit(2)
               .minimumScaleFactor(0.8)
               .padding(.horizontal, 2)
@@ -87,7 +88,7 @@ private struct SchemePicker: View {
           .overlay { shape.strokeBorder(selected ? palette.accent : palette.border) }
           .contentShape(shape)
         }
-        .buttonStyle(RoundPress())
+        .buttonStyle(LegacyRoundPress())
         .accessibilityLabel(label(mode))
         .accessibilityAddTraits(selected ? [.isSelected] : [])
       }

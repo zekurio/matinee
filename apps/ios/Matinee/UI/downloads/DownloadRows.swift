@@ -1,4 +1,5 @@
 import MatineeCore
+import MatineeKit
 import SwiftUI
 
 /*
@@ -78,7 +79,7 @@ private struct DownloadRowLook: ViewModifier {
 
   func body(content: Content) -> some View {
     content
-      .listRowInsets(EdgeInsets(top: 2 + top, leading: Gutter, bottom: 2 + bottom, trailing: Gutter))
+      .listRowInsets(EdgeInsets(top: 2 + top, leading: Space.gutter, bottom: 2 + bottom, trailing: Space.gutter))
       .listRowBackground(palette.background)
       .listRowSeparator(.hidden)
   }
@@ -122,11 +123,11 @@ struct ListHeading<Action: View>: View {
 
   var body: some View {
     HStack(spacing: 8) {
-      Text(text).textStyle(.titleMedium).accessibilityAddTraits(.isHeader)
+      Text(text).textStyle(.base, weight: .semibold).accessibilityAddTraits(.isHeader)
         .frame(maxWidth: .infinity, alignment: .leading)
       action()
     }
-    .frame(minHeight: MinTouch)
+    .frame(minHeight: TouchTarget)
     .padding(.top, 12)
     .padding(.bottom, 4)
   }
@@ -149,12 +150,12 @@ struct HeadingButton: View {
 
   var body: some View {
     Button(action: action) {
-      Text(label).textStyle(.labelLarge).foregroundStyle(palette.accent)
+      Text(label).textStyle(.sm, weight: .medium).foregroundStyle(palette.accent)
         .padding(.horizontal, 12)
-        .frame(minHeight: MinTouch)
+        .frame(minHeight: TouchTarget)
         .contentShape(Rectangle())
     }
-    .buttonStyle(RoundPress())
+    .buttonStyle(LegacyRoundPress())
   }
 }
 
@@ -167,7 +168,7 @@ struct DownloadThumb: View {
 
   var body: some View {
     ArtFrame(toneKey, aspect: 16 / 9) {
-      LucideIcon(.film, size: 18, tint: palette.muted.opacity(0.5))
+      LucideIcon(.film, size: 18, tint: palette.mutedForeground.opacity(0.5))
       if let image = entry?.image {
         Picture(ImageSource(url: downloads.store.root.appending(path: image)))
       }
@@ -224,7 +225,7 @@ private struct RowIconButton: View {
   @Environment(\.palette) private var palette
 
   var body: some View {
-    RoundIconButton(icon, label: label, size: 40, iconSize: iconSize, tint: palette.muted, background: .clear, action: action)
+    LegacyRoundIconButton(icon, label: label, size: 40, iconSize: iconSize, tint: palette.mutedForeground, background: .clear, action: action)
   }
 }
 
@@ -237,12 +238,12 @@ private struct RowMenuButton<Items: View>: View {
     Menu {
       items().tint(palette.foreground)
     } label: {
-      LucideIcon(.ellipsis, size: 18, tint: palette.muted, scales: false)
+      LucideIcon(.ellipsis, size: 18, tint: palette.mutedForeground, scales: false)
         .frame(width: 40, height: 40)
-        .frame(minWidth: MinTouch, minHeight: MinTouch)
+        .frame(minWidth: TouchTarget, minHeight: TouchTarget)
         .contentShape(Rectangle())
     }
-    .buttonStyle(RoundPress())
+    .buttonStyle(LegacyRoundPress())
     .accessibilityLabel(Str.titleMoreActions)
     .accessibilityShowsLargeContentViewer {
       Image(Lucide.ellipsis)
@@ -266,16 +267,16 @@ struct ShowRow: View {
       HStack(spacing: 14) {
         RowBody(entry: show.newestEntry, toneKey: title.name) {
           VStack(alignment: .leading, spacing: 0) {
-            Text(title.name).textStyle(.bodyMedium, weight: .medium).foregroundStyle(palette.foreground).rowLines(1)
-            Text(episodesAndSize(entries)).textStyle(.bodySmall).foregroundStyle(palette.muted).rowLines(1)
+            Text(title.name).textStyle(.sm, weight: .medium).foregroundStyle(palette.foreground).rowLines(1)
+            Text(episodesAndSize(entries)).textStyle(.px13).foregroundStyle(palette.mutedForeground).rowLines(1)
           }
         }
-        LucideIcon(.chevronRight, size: 18, tint: palette.muted)
+        LucideIcon(.chevronRight, size: 18, tint: palette.mutedForeground)
       }
       .accessibilityElement(children: .combine)
     }
-    .buttonStyle(CardPress())
-    .contentShape(.contextMenuPreview, CardShape)
+    .buttonStyle(LegacyCardPress())
+    .contentShape(.contextMenuPreview, RoundedRectangle.kit(Radius.md))
     .contextMenu {
       Group {
         if !offline {
@@ -295,7 +296,7 @@ struct ShowRow: View {
       } label: {
         Label { Text(Str.downloadsRemoveNamed(title.name)) } icon: { Image(Lucide.trash) }
       }
-      .tint(palette.danger)
+      .tint(palette.destructive)
     }
   }
 }
@@ -313,18 +314,18 @@ struct DoneRow: View {
       Button { nav.play(entry.id, nil) } label: {
         RowBody(entry: entry, toneKey: entry.item.title?.name ?? primary) {
           VStack(alignment: .leading, spacing: 0) {
-            Text(primary).textStyle(.bodyMedium).foregroundStyle(palette.foreground).rowLines(2)
+            Text(primary).textStyle(.sm).foregroundStyle(palette.foreground).rowLines(2)
             if let secondary {
-              Text(secondary).textStyle(.bodySmall).foregroundStyle(palette.muted).rowLines(1)
+              Text(secondary).textStyle(.px13).foregroundStyle(palette.mutedForeground).rowLines(1)
             }
-            Text(formatBytes(entry.bytes)).textStyle(.bodySmall).foregroundStyle(palette.faint).rowLines(1)
+            Text(formatBytes(entry.bytes)).textStyle(.px13).foregroundStyle(palette.foregroundFaint).rowLines(1)
           }
         }
         .accessibilityElement(children: .combine)
         .accessibilityHint(Str.titlePlay)
       }
-      .buttonStyle(CardPress())
-      .contentShape(.contextMenuPreview, CardShape)
+      .buttonStyle(LegacyCardPress())
+      .contentShape(.contextMenuPreview, RoundedRectangle.kit(Radius.md))
       .contextMenu { DownloadMenuItems(entry: entry).tint(palette.foreground) }
       RowMenuButton { DownloadMenuItems(entry: entry) }
     }
@@ -351,24 +352,24 @@ struct ComingRow: View {
         RowBody(entry: entry, toneKey: entry.item.title?.name ?? primary) {
           // One line each, so the name, the bar, and how it stands fit beside the picture.
           VStack(alignment: .leading, spacing: 2) {
-            Text(primary).textStyle(.bodyMedium).foregroundStyle(palette.foreground).rowLines(1)
+            Text(primary).textStyle(.sm).foregroundStyle(palette.foreground).rowLines(1)
             if let secondary {
-              Text(secondary).textStyle(.bodySmall).foregroundStyle(palette.muted).rowLines(1)
+              Text(secondary).textStyle(.px13).foregroundStyle(palette.mutedForeground).rowLines(1)
             }
             if let progress = entry.progress {
               DownloadProgress(
-                progress: progress, color: broken ? palette.danger : entry.isMoving ? palette.accent : palette.muted)
+                progress: progress, color: broken ? palette.destructive : entry.isMoving ? palette.accent : palette.mutedForeground)
             }
-            Text(downloadStatus(entry, unmetered: downloads.unmeteredOnly)).textStyle(.bodySmall)
-              .foregroundStyle(broken ? palette.danger : palette.faint)
+            Text(downloadStatus(entry, unmetered: downloads.unmeteredOnly)).textStyle(.px13)
+              .foregroundStyle(broken ? palette.destructive : palette.foregroundFaint)
               // What went wrong, often the server's own words, gets a second line rather than being cut.
               .rowLines(broken ? 2 : 1)
           }
         }
         .accessibilityElement(children: .combine)
       }
-      .buttonStyle(CardPress())
-      .contentShape(.contextMenuPreview, CardShape)
+      .buttonStyle(LegacyCardPress())
+      .contentShape(.contextMenuPreview, RoundedRectangle.kit(Radius.md))
       .contextMenu { DownloadMenuItems(entry: entry).tint(palette.foreground) }
       // The same weight as a finished row's menu button, so the column of buttons matches.
       if entry.isRefused {
@@ -434,7 +435,7 @@ private struct DownloadSwipes: ViewModifier {
         Button { run { try await $0.remove(entry.id) } } label: {
           Label { Text(Str.downloadsRemove) } icon: { Image(Lucide.trash) }
         }
-        .tint(palette.danger)
+        .tint(palette.destructive)
       }
       .swipeActions(edge: .leading) {
         if let action = stateAction(entry) {

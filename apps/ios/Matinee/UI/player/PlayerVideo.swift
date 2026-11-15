@@ -1,5 +1,6 @@
 import AVKit
 import MatineeCore
+import MatineeKit
 import SwiftUI
 import UIKit
 

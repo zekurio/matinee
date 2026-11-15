@@ -1,5 +1,6 @@
 import AVKit
 import MatineeCore
+import MatineeKit
 import SwiftUI
 import UIKit
 
@@ -91,7 +92,7 @@ struct SettingsScreen: View {
     SettingsScaffold(Str.shellSettings) {
       // On top, as Findroid has it: the app starts with the downloads and leaves the server alone.
       Panel {
-        SwitchRow(
+        LegacySwitchRow(
           Str.settingsOfflineMode,
           isOn: Binding(
             get: { session.offlineMode },
@@ -141,10 +142,10 @@ struct SettingsServerSection: View {
     SettingsSection(Str.settingsServer) {
       Panel {
         HStack(spacing: 14) {
-          LucideIcon(.server, tint: palette.muted)
+          LucideIcon(.server, tint: palette.mutedForeground)
           VStack(alignment: .leading, spacing: 0) {
-            Text(server).textStyle(.bodyLarge).lineLimit(1)
-            Text(Str.iosSettingsVersion(appVersion)).textStyle(.bodySmall).foregroundStyle(palette.muted)
+            Text(server).textStyle(.base).lineLimit(1)
+            Text(Str.iosSettingsVersion(appVersion)).textStyle(.px13).foregroundStyle(palette.mutedForeground)
           }
           Spacer(minLength: 0)
         }
@@ -219,10 +220,10 @@ struct AccountPage: View {
         LazyVStack(alignment: .leading, spacing: 10) {
           switch sessions.state {
           case .loading:
-            Text(verbatim: "…").textStyle(.bodyLarge).foregroundStyle(palette.muted)
+            Text(verbatim: "…").textStyle(.base).foregroundStyle(palette.mutedForeground)
               .accessibilityLabel(Str.loadingInProgress)
           case .failed(let message, _):
-            Text(Str.accountSessionsLoadFailed(message)).textStyle(.bodyMedium).foregroundStyle(palette.muted)
+            Text(Str.accountSessionsLoadFailed(message)).textStyle(.sm).foregroundStyle(palette.mutedForeground)
           case .ready(let list):
             ForEach(list, id: \.id) { item in
               SessionRow(session: item) { signOut(item) }
@@ -263,28 +264,28 @@ private struct SessionRow: View {
   var body: some View {
     let name = sessionName(session)
     HStack(spacing: 14) {
-      LucideIcon(platformIcon(session.platform), tint: palette.muted)
+      LucideIcon(platformIcon(session.platform), tint: palette.mutedForeground)
         .frame(width: 40, height: 40)
         .background(palette.secondary, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
       VStack(alignment: .leading, spacing: 0) {
         ViewThatFits(in: .horizontal) {
           HStack(spacing: 8) {
-            Text(name).textStyle(.bodyLarge).lineLimit(1)
+            Text(name).textStyle(.base).lineLimit(1)
             if session.current { ThisDevice() }
           }
           // At large text sizes the badge goes under the name rather than squeeze it.
           VStack(alignment: .leading, spacing: 4) {
-            Text(name).textStyle(.bodyLarge)
+            Text(name).textStyle(.base)
             if session.current { ThisDevice() }
           }
         }
-        Text(detail).textStyle(.bodySmall).foregroundStyle(palette.muted)
+        Text(detail).textStyle(.px13).foregroundStyle(palette.mutedForeground)
           .lineLimit(dynamicType.isAccessibilitySize ? nil : 2)
       }
       .frame(maxWidth: .infinity, alignment: .leading)
       .accessibilityElement(children: .combine)
       if !session.current {
-        RoundIconButton(
+        LegacyRoundIconButton(
           .logOut, label: Str.accountSessionsSignOutNamed(name), size: 40, iconSize: 18,
           background: .clear, action: onSignOut)
       }
@@ -306,7 +307,7 @@ private struct ThisDevice: View {
   @Environment(\.palette) private var palette
 
   var body: some View {
-    Text(Str.accountSessionsThisDevice).textStyle(.labelSmall).foregroundStyle(palette.foreground)
+    Text(Str.accountSessionsThisDevice).textStyle(.px11, weight: .medium).foregroundStyle(palette.foreground)
       .padding(.horizontal, 8)
       .padding(.vertical, 2)
       .background(palette.secondary, in: Capsule())
@@ -393,7 +394,7 @@ private struct LanguagesSection: View {
         }
         RowDivider()
         // The account keeps audio picks too, as the web's Playback settings offer.
-        SwitchRow(
+        LegacySwitchRow(
           Str.iosPlaybackAudioRemember,
           isOn: Binding(
             get: { playback.rememberAudio ?? true },
@@ -403,7 +404,7 @@ private struct LanguagesSection: View {
               save(changed)
             }))
         RowDivider()
-        SwitchRow(
+        LegacySwitchRow(
           Str.playbackSubtitlesRemember,
           isOn: Binding(
             get: { playback.rememberSubtitles },
@@ -466,10 +467,10 @@ private struct DeviceSection: View {
             enabled: options == nil || qualities.count > 1
           ) { prefs.quality = $0 }
           RowDivider()
-          SwitchRow(Str.playbackAutoplayTitle, isOn: $prefs.autoplayNext)
+          LegacySwitchRow(Str.playbackAutoplayTitle, isOn: $prefs.autoplayNext)
           if AVPictureInPictureController.isPictureInPictureSupported() {
             RowDivider()
-            SwitchRow(Str.playbackPipTitle, isOn: $prefs.pictureInPicture)
+            LegacySwitchRow(Str.playbackPipTitle, isOn: $prefs.pictureInPicture)
           }
         }
         if let limit = options?.maxBitrate {
@@ -499,7 +500,7 @@ private struct TranscodingSection: View {
         VStack(spacing: 0) {
           Panel {
             if noEncodes {
-              ValueRow(Str.playbackVideoCodecTitle, value: Str.playbackVideoCodecNone)
+              LegacyValueRow(Str.playbackVideoCodecTitle, value: Str.playbackVideoCodecNone)
             } else if video.count > 1 {
               PickerRow(
                 Str.playbackVideoCodecTitle,
@@ -535,7 +536,7 @@ private struct PassthroughSection: View {
       Panel {
         ForEach(Array(codecs.enumerated()), id: \.offset) { index, codec in
           if index > 0 { RowDivider() }
-          SwitchRow(
+          LegacySwitchRow(
             audioFormatName(codec),
             isOn: Binding(
               get: { !prefs.convertAudio.contains(codec) },
@@ -573,7 +574,7 @@ struct SubtitlesPage: View {
 
   private var rows: some View {
     Panel {
-      SwitchRow(Str.settingsSubtitlesSystem, isOn: $prefs.subtitleSystemStyle)
+      LegacySwitchRow(Str.settingsSubtitlesSystem, isOn: $prefs.subtitleSystemStyle)
       RowDivider()
       // One set of rows closes as the other opens, rather than the panel jumping.
       Reveal(prefs.subtitleSystemStyle) {
@@ -666,15 +667,15 @@ struct DownloadsSettingsPage: View {
     SettingsScaffold(Str.downloadsTitle) {
       if off {
         VStack(alignment: .leading, spacing: 4) {
-          Text(Str.downloadsOffTitle).textStyle(.titleMedium)
-          Text(Str.downloadsOffDescription).textStyle(.bodyMedium).foregroundStyle(palette.muted)
+          Text(Str.downloadsOffTitle).textStyle(.base, weight: .semibold)
+          Text(Str.downloadsOffDescription).textStyle(.sm).foregroundStyle(palette.mutedForeground)
         }
       }
       Panel {
-        ValueRow(Str.downloadsStorage, value: Str.downloadsStorageValue(total, storage?.free.map(formatBytes) ?? "–"))
+        LegacyValueRow(Str.downloadsStorage, value: Str.downloadsStorageValue(total, storage?.free.map(formatBytes) ?? "–"))
         if !off {
           RowDivider()
-          SwitchRow(Str.downloadsUnmetered, isOn: $downloads.unmeteredOnly)
+          LegacySwitchRow(Str.downloadsUnmetered, isOn: $downloads.unmeteredOnly)
         }
       }
       if !off {

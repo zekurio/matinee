@@ -10,6 +10,16 @@ public enum TextFieldKind: Sendable {
   case search
 }
 
+/// How a text field is drawn.
+public enum TextFieldLook: Sendable {
+  /// The web's Input: the sunken field, `rounded-lg`, 44 tall.
+  case field
+  /// The search page's pill, Android's `SearchBarFrame`: the foreground at
+  /// 6% with a 12% rim, round at the ends, 48 tall, standing alone at the
+  /// top of a page rather than in a form.
+  case pill
+}
+
 /// A text field as the web's Input: the sunken `--field` surface, a quiet
 /// `--input` border that turns the accent with a soft halo around it while
 /// focused (`focus-visible:border-ring ring-3 ring-ring/20`), the danger
@@ -29,6 +39,7 @@ public struct MatineeTextField<Trailing: View>: View {
   let isError: Bool
   let lines: ClosedRange<Int>?
   let focus: Binding<Bool>?
+  let look: TextFieldLook
   @ViewBuilder let trailing: () -> Trailing
 
   @Environment(\.palette) private var palette
@@ -43,7 +54,7 @@ public struct MatineeTextField<Trailing: View>: View {
   public init(
     _ placeholder: String, text: Binding<String>, kind: TextFieldKind = .text, icon: Lucide? = nil,
     isError: Bool = false, lines: ClosedRange<Int>? = nil, focused: Binding<Bool>? = nil,
-    @ViewBuilder trailing: @escaping () -> Trailing
+    look: TextFieldLook = .field, @ViewBuilder trailing: @escaping () -> Trailing
   ) {
     self.placeholder = placeholder
     self._text = text
@@ -52,16 +63,17 @@ public struct MatineeTextField<Trailing: View>: View {
     self.isError = isError
     self.lines = lines
     self.focus = focused
+    self.look = look
     self.trailing = trailing
   }
 
   public var body: some View {
-    let shape = RoundedRectangle.kit(Radius.lg)
+    let shape = KitShape(radius: look == .pill ? 0 : Radius.lg).capsule(look == .pill)
     let isFocused = focused || forced == .focused
     let tint = isError ? palette.destructive : palette.ring
-    HStack(alignment: lines == nil ? .center : .top, spacing: 8) {
+    HStack(alignment: lines == nil ? .center : .top, spacing: look == .pill ? Space.s3 : Space.s2) {
       if let icon {
-        LucideIcon(icon, size: 18, tint: palette.mutedForeground)
+        LucideIcon(icon, size: look == .pill ? 20 : 18, tint: palette.mutedForeground)
           .padding(.top, lines == nil ? 0 : 3)
       }
       field
@@ -84,20 +96,18 @@ public struct MatineeTextField<Trailing: View>: View {
       }
       trailing()
     }
-    .padding(.leading, 12)
+    .padding(.leading, look == .pill ? Space.s4 : Space.s3)
     .padding(.trailing, kind == .text && Trailing.self == EmptyView.self ? 12 : 6)
     .padding(.vertical, lines == nil ? 0 : 10)
-    .frame(minHeight: TouchTarget)
-    .background(palette.field, in: shape)
+    .frame(minHeight: look == .pill ? 48 : TouchTarget)
+    .background(look == .pill ? palette.foreground.opacity(0.06) : palette.field, in: shape)
     .overlay {
-      shape.strokeBorder(
-        isError ? palette.destructive.opacity(0.6) : isFocused ? palette.ring : hovered ? palette.inputHover : palette.input,
-        lineWidth: 1)
+      shape.strokeBorder(border(focused: isFocused), lineWidth: 1)
     }
     // The halo, `ring-3` at 20%, outside the border.
     .background {
       if isFocused || isError {
-        RoundedRectangle.kit(Radius.lg + 3).inset(by: -3).fill(tint.opacity(0.2))
+        shape.inset(by: -3).fill(tint.opacity(0.2))
       }
     }
     .opacity(enabled ? 1 : 0.5)
@@ -111,6 +121,13 @@ public struct MatineeTextField<Trailing: View>: View {
     .onChange(of: focus?.wrappedValue) { _, wanted in
       if let wanted, wanted != focused { focused = wanted }
     }
+  }
+
+  private func border(focused: Bool) -> Color {
+    if isError { return palette.destructive.opacity(0.6) }
+    if focused { return palette.ring }
+    if look == .pill { return palette.foreground.opacity(hovered ? 0.2 : 0.12) }
+    return hovered ? palette.inputHover : palette.input
   }
 
   @ViewBuilder private var field: some View {
@@ -133,10 +150,12 @@ public struct MatineeTextField<Trailing: View>: View {
 extension MatineeTextField where Trailing == EmptyView {
   public init(
     _ placeholder: String, text: Binding<String>, kind: TextFieldKind = .text, icon: Lucide? = nil,
-    isError: Bool = false, lines: ClosedRange<Int>? = nil, focused: Binding<Bool>? = nil
+    isError: Bool = false, lines: ClosedRange<Int>? = nil, focused: Binding<Bool>? = nil,
+    look: TextFieldLook = .field
   ) {
     self.init(
-      placeholder, text: text, kind: kind, icon: icon, isError: isError, lines: lines, focused: focused
+      placeholder, text: text, kind: kind, icon: icon, isError: isError, lines: lines, focused: focused,
+      look: look
     ) { EmptyView() }
   }
 }

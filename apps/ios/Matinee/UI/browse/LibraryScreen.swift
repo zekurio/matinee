@@ -1,4 +1,5 @@
 import MatineeCore
+import MatineeKit
 import SwiftUI
 
 /*
@@ -18,7 +19,7 @@ struct LibraryScreen: View {
   @State private var pages = makeTitlePages()
   @State private var searching = false
   @State private var filtering = false
-  @FocusState private var fieldFocused: Bool
+  @State private var fieldFocused = false
   @Environment(\.palette) private var palette
 
   init(id: String, sort: String?) {
@@ -41,7 +42,7 @@ struct LibraryScreen: View {
       empty: { GridEmpty(libraryEmptyMessage(library, filters)) }
     ) {
       if let genre {
-        Chip(genre, selected: true, trailingIcon: .x) { filters.genre = nil }
+        LegacyChip(genre, selected: true, trailingIcon: .x) { filters.genre = nil }
           .accessibilityHint(Str.libraryFilter)
           .padding(.bottom, 12)
       }
@@ -55,7 +56,7 @@ struct LibraryScreen: View {
     .safeAreaInset(edge: .top, spacing: 0) {
       if searching { searchBar(library) }
     }
-    .topBar(library?.name) { actions }
+    .legacyTopBar(library?.name) { actions }
     .sheet(isPresented: $filtering) {
       GenreSheet(libraryId: id, current: genre) { picked in
         filtering = false
@@ -110,11 +111,11 @@ struct LibraryScreen: View {
         filters.clearQuery()
         withMotion(Motion.exit) { searching = false }
       }
-      .textStyle(.bodyLarge)
+      .textStyle(.base)
       .foregroundStyle(palette.accent)
-      .frame(minHeight: MinTouch)
+      .frame(minHeight: TouchTarget)
     }
-    .padding(.horizontal, Gutter)
+    .padding(.horizontal, Space.gutter)
     .padding(.vertical, 8)
     .background(palette.background)
     .transition(.opacity)
@@ -137,7 +138,7 @@ private struct GenreSheet: View {
   var body: some View {
     let libraryId = libraryId
     VStack(spacing: 0) {
-      SheetHeader(Str.libraryGenre).padding(.top, 12)
+      LegacySheetHeader(Str.libraryGenre).padding(.top, 12)
       ScrollView {
         LazyVStack(spacing: 0) {
           GenreRow(name: Str.libraryAnyGenre, count: nil, selected: current == nil) { onPick(nil) }
@@ -162,7 +163,7 @@ private struct GenreSheet: View {
       #endif
       return try await api.titles.facets(libraryId: libraryId).genres
     }
-    .matineeSheet()
+    .legacySheet()
   }
 }
 
@@ -176,18 +177,18 @@ private struct GenreRow: View {
   var body: some View {
     Button(action: action) {
       HStack(spacing: 12) {
-        Text(name).textStyle(.bodyLarge).foregroundStyle(palette.foreground)
+        Text(name).textStyle(.base).foregroundStyle(palette.foreground)
           .frame(maxWidth: .infinity, alignment: .leading)
           .multilineTextAlignment(.leading)
-        if let count { Text(formatCount(count)).textStyle(.bodyMedium).foregroundStyle(palette.muted) }
+        if let count { Text(formatCount(count)).textStyle(.sm).foregroundStyle(palette.mutedForeground) }
         if selected { LucideIcon(.check, size: 18, tint: palette.accent) }
       }
       .padding(.horizontal, 20)
       .padding(.vertical, 14)
-      .frame(minHeight: MinTouch)
+      .frame(minHeight: TouchTarget)
       .contentShape(Rectangle())
     }
-    .buttonStyle(RowPress())
+    .buttonStyle(LegacyRowPress())
     .accessibilityAddTraits(selected ? .isSelected : [])
   }
 }

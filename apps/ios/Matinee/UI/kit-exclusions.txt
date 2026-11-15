@@ -1,0 +1,19 @@
+# The folders under Matinee/UI not yet rebuilt on MatineeKit, which may
+# still use stock SwiftUI controls. `just ios test` runs the kit's boundary
+# test over Matinee/UI and lets these through, and nothing else: a stock
+# control anywhere else fails it. A folder on this list that no longer uses
+# a stock control fails it too, so take each off as its area is rebuilt.
+# When this list is empty, the rebuild is done; legacy/ goes last, once no
+# screen uses the Legacy… controls in it. See Matinee/UI/README.md.
+
+browse/
+downloads/
+legacy/
+media/
+metadata/
+player/
+profile/
+search/
+settings/
+signin/
+title/

@@ -1,71 +1,64 @@
 import MatineeCore
+import MatineeKit
 import SwiftUI
 
 /*
  * HomeSections.kt and the sections of HomeScreen.kt: Continue watching and
- * Next up, a library's newest titles, and the note for an account with no
- * library. `RailState`, `railState`, and `failedOutright` are MatineeCore's
- * (Home/), where they're tested; `Notice`, `RailFailure`, and
- * `RailSkeleton` are shared, in components/States.swift.
+ * Next up, a library's newest titles, and what an account with no library
+ * is told. `RailState`, `railState`, and `failedOutright` are MatineeCore's
+ * (Home/), where they're tested.
+ *
+ * What failed is left out, as on the web and Android, and loads again when
+ * Home comes back; only a Home with nothing at all says so, with an
+ * `ErrorBox`. Not reaching the server is the cloud in Home's header.
  */
 
 /// Continue watching or Next up. Loading and empty show nothing: an empty
 /// one is the usual case for someone not in the middle of anything, and a
-/// placeholder there would only fold away. A failed one says so.
+/// placeholder there would only fold away. A failed one is left out too.
 struct EpisodeSection: View {
   let title: String
-  let failed: String
   let loader: Loader<[MediaItem]>
 
   var body: some View {
-    switch railState(loader.state) {
-    case .loading, .empty: EmptyView()
-    case .failed(let message, let disconnected):
-      RailFailure(
-        title: title, headline: failed, message: message, retrying: loader.refreshing,
-        disconnected: disconnected, onRetry: loader.reload)
-    case .shown(let items): EpisodeRail(title: title, items: items)
-    }
-  }
-}
-
-/// A row of files to start or resume. One that moved to the front starts the row there again.
-private struct EpisodeRail: View {
-  let title: String
-  let items: [MediaItem]
-
-  var body: some View {
-    Rail(title) {
-      ForEach(items, id: \.id) { item in
-        RailItem(.landscape) { EpisodeCard(item) }
+    if case .shown(let items) = railState(loader.state) {
+      Rail(title) {
+        ForEach(items, id: \.id) { item in
+          RailItem(.landscape) { EpisodeCard(item) }
+        }
       }
+      // By the rail as well: Continue watching and Next up can start with the
+      // same file, as one just started moves from one to the other, and two
+      // views with one id in Home's lazy stack show as one, the other gone.
+      // One that moved to the front starts the row there again.
+      .id("\(title)\n\(items.first?.id ?? "")")
     }
-    // By the rail as well: Continue watching and Next up can start with the
-    // same file, as one just started moves from one to the other, and two
-    // views with one id in Home's lazy stack show as one, the other gone.
-    .id("\(title)\n\(items.first?.id ?? "")")
   }
 }
 
-/// Home's shelves: those whose refresh failed while they're on screen, for
-/// the one notice that says so, and a pull to refresh, which each fetches on.
+/// Home's shelves, each loading on its own: the ones that can't reach the
+/// server, for the cloud in Home's header, and a pull to refresh, which
+/// each fetches again on.
 @Observable final class HomeShelves {
-  var stale: [String: any Reloadable] = [:]
+  private(set) var loaders: [String: any Reloadable] = [:]
   /// Moves with each pull to refresh.
   private(set) var pulls = 0
 
   func refresh() { pulls += 1 }
+
+  func track(_ id: String, _ loader: (any Reloadable)?) { loaders[id] = loader }
 }
 
-/// A library's newest titles. One whose refresh failed puts itself in
-/// `shelves` while it's on screen. It refreshes when Home comes back, and
-/// when it scrolls back into view once the last answer is old enough.
+/// A library's newest titles, its heading a link to the whole library.
+/// One that failed is left out. It refreshes when Home comes back, and when
+/// it scrolls back into view once the last answer is old enough.
 struct LibraryShelf: View {
   let library: Library
   let shelves: HomeShelves
   @State private var entries = Loader<[ShelfEntry]>()
   @Environment(\.navigator) private var nav
   @Environment(\.palette) private var palette
+  @Environment(\.gutter) private var gutter
 
   var body: some View {
     let title = Str.browseRecentlyAdded(library.name)
@@ -74,15 +67,15 @@ struct LibraryShelf: View {
     Group {
       switch railState(entries.state) {
       case .loading: RailSkeleton(title: title, art: .poster, onTitleTap: onTitleTap)
-      case .failed(let message, let disconnected):
-        RailFailure(
-          title: title, headline: Str.homeShelfFailed, message: message, retrying: entries.refreshing,
-          disconnected: disconnected, onRetry: entries.reload)
+      case .failed: EmptyView()
       case .empty:
-        Rail(title, onTitleTap: onTitleTap) {
-          Text(Str.browseEmptyShelf).textStyle(.bodyMedium).foregroundStyle(palette.muted)
-            .padding(.vertical, 24)
+        VStack(alignment: .leading, spacing: Space.s3) {
+          SectionTitle(title, action: onTitleTap)
+          Text(Str.browseEmptyShelf).textStyle(.sm).foregroundStyle(palette.mutedForeground)
+            .padding(.vertical, Space.s6)
         }
+        .padding(.horizontal, gutter)
+        .frame(maxWidth: .infinity, alignment: .leading)
       case .shown(let shown):
         Rail(title, onTitleTap: onTitleTap) {
           ForEach(shown, id: \.title.id) { entry in
@@ -92,22 +85,66 @@ struct LibraryShelf: View {
       }
     }
     .loads(entries) { api in try await api.media.shelf(libraryId: id, limit: 12) }
-    .onChange(of: entries.refreshError != nil, initial: true) { _, failed in
-      if failed { shelves.stale[id] = entries } else { shelves.stale[id] = nil }
-    }
+    .onAppear { shelves.track(id, entries) }
+    .onDisappear { shelves.track(id, nil) }
     .onChange(of: shelves.pulls) { entries.reload() }
-    .onDisappear { shelves.stale[id] = nil }
   }
 }
 
-/// What Home and Media say to an account that may open no library.
+/// What Home says to an account that may open no library: an admin, that
+/// there are none yet and where to add one; anyone else, that none is open
+/// to them yet.
 struct NoLibrariesNote: View {
   @Environment(\.user) private var user
 
   var body: some View {
     switch NoLibraries(admin: user?.isAdmin == true) {
-    case .noneExist: EmptyState(.folderPlus, Str.browseHomeNoLibraries, Str.browseHomeNoLibrariesAdmin)
-    case .noneOpen: EmptyState(.popcorn, Str.browseHomeNothingYet, Str.browseHomeNothingYetDescription)
+    case .noneExist:
+      EmptyState(icon: .folderPlus, title: Str.browseHomeNoLibraries, description: Str.browseHomeNoLibrariesAdmin)
+        .padding(.vertical, Space.s8)
+    case .noneOpen:
+      EmptyState(icon: .popcorn, title: Str.browseHomeNothingYet, description: Str.browseHomeNothingYetDescription)
+        .padding(.vertical, Space.s8)
+    }
+  }
+}
+
+/// Home's recommendation rows, of titles on the server the viewer hasn't
+/// watched: "Recommended for you", then a row or two of what's like
+/// something they watched. Loading, failing, and having none show nothing:
+/// a new account has none, and a placeholder would only fold away. A long
+/// press on a card offers "Not interested", which takes it off at once.
+struct RecommendationRails: View {
+  let loader: Loader<HomeRecommendations>
+  @Environment(\.actions) private var actions
+
+  var body: some View {
+    let hidden = actions?.hidden.keys ?? []
+    if let recommendations = shown(loader.state.value) {
+      ForEach(recommendations.shownRails(hiding: hidden), id: \.key) { rail in
+        Rail(name(rail.name)) {
+          ForEach(rail.visible(hiding: hidden), id: \.title.id) { pick in
+            RailItem(.poster) {
+              PosterCard(pick.title, detail: formatYear(pick.title.year), recommended: pick.ref)
+            }
+          }
+        }
+      }
+    }
+  }
+
+  private func shown(_ value: HomeRecommendations?) -> HomeRecommendations? {
+    #if DEBUG
+      return HomeDevData.recommendations(value)
+    #else
+      return value
+    #endif
+  }
+
+  private func name(_ name: RecommendationRailName) -> String {
+    switch name {
+    case .forYou: Str.webDiscoverRailForYou
+    case .becauseWatched(let title): Str.webDiscoverRailBecauseWatched(title)
     }
   }
 }

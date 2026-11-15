@@ -1,30 +1,35 @@
 #if DEBUG
   import MatineeCore
+  import MatineeKit
+  import MatineeKitGallery
   import Nuke
   import SwiftUI
 
-  /// The pages of the gallery, in debug builds with `-gallery YES`: every
-  /// component, on the theme, in both appearances. Launch arguments pick
-  /// what shows, so screenshots can be scripted:
+  /// The app's shared components (components/ and the bars), on the kit, in
+  /// debug builds with `-gallery YES`; the kit's own controls are in its
+  /// gallery, a page here. Launch arguments pick what shows, so screenshots
+  /// can be scripted:
   ///
   ///     -gallery YES               the gallery instead of the app
-  ///     -gallery.page cards        colors, icons, controls, cards, rows, states
+  ///     -gallery.page cards        cards, states, bars, sheets, kit
   ///     -theme.mode dark           system, light, dark (ThemeStore's own key)
   ///     -gallery.accent rose       matinee, rose, emerald, amber: a server accent
   ///     -gallery.scroll 2          scrolled down that many screens, for the rest of a long page
+  ///     -gallery.open actions      a sheet open at launch: actions, watched, filters
   ///     -gallery.server URL -gallery.token TOKEN   the dev server's library
+  ///
+  /// `just gallery` passes the dev server's.
   enum GalleryPage: String, CaseIterable, Identifiable {
-    case colors, icons, controls, cards, rows, states
+    case cards, states, bars, sheets, kit
     var id: Self { self }
 
     var name: String {
       switch self {
-      case .colors: "Colors & type"
-      case .icons: "Icons"
-      case .controls: "Controls"
       case .cards: "Cards"
-      case .rows: "Rows"
       case .states: "States"
+      case .bars: "Bars"
+      case .sheets: "Sheets"
+      case .kit: "Kit"
       }
     }
   }
@@ -48,7 +53,7 @@
     @Environment(ThemeStore.self) private var theme
     @State private var server = GalleryServer()
     @State private var page =
-      GalleryPage(rawValue: UserDefaults.standard.string(forKey: "gallery.page") ?? "") ?? .colors
+      GalleryPage(rawValue: UserDefaults.standard.string(forKey: "gallery.page") ?? "") ?? .cards
     @State private var accent =
       GalleryAccent(rawValue: UserDefaults.standard.string(forKey: "gallery.accent") ?? "") ?? .matinee
     /// One for the run, made before the first image asks: a new one would start them all again.
@@ -56,37 +61,38 @@
       server: UserDefaults.standard.string(forKey: "gallery.server").flatMap(URL.init(string:)),
       headers: GalleryServer.imageHeaders)
     @State private var position = ScrollPosition(edge: .top)
-    @Environment(\.palette) private var palette
+    @State private var choosing = false
     @Environment(\.windowSize) private var window
 
     var body: some View {
       NavigationStack {
-        ScrollView {
-          VStack(alignment: .leading, spacing: 28) {
-            pagePicker
-            switch page {
-            case .colors: ColorsPage()
-            case .icons: IconsPage()
-            case .controls: ControlsPage()
-            case .cards: CardsPage(server: server)
-            case .rows: RowsPage()
-            case .states: StatesPage()
+        Group {
+          if page == .kit {
+            KitGallery()
+          } else {
+            ScrollView {
+              VStack(alignment: .leading, spacing: Space.s7) {
+                switch page {
+                case .cards: CardsPage(server: server)
+                case .states: StatesPage()
+                case .bars: BarsPage()
+                case .sheets: SheetsPage()
+                case .kit: EmptyView()
+                }
+              }
+              .padding(.bottom, Space.s12)
             }
+            .scrollPosition($position)
           }
-          .padding(.bottom, 48)
         }
-        .scrollPosition($position)
-        .scrollContentBackground(.hidden)
-        .background(palette.background)
-        .topBar(page.name) { themeMenu }
+        .safeAreaInset(edge: .top, spacing: 0) { pagePicker }
+        .topBar(page.name, leading: .none) { themeMenu }
         .navigationDestination(for: String.self) { name in GalleryTitlePage(name: name) }
       }
+      .modifier(ActionsHost())
       .environment(\.api, server.api)
-      .environment(\.actionMenu, ActionMenu { AnyView(GalleryMenu(target: $0)) })
       .environment(\.imagePipeline, pipeline)
-      .onAppear {
-        theme.setAccents(accent.accents)
-      }
+      .onAppear { theme.setAccents(accent.accents) }
       .task {
         let screens = UserDefaults.standard.integer(forKey: "gallery.scroll")
         guard screens > 0 else { return }
@@ -99,68 +105,56 @@
 
     private var pagePicker: some View {
       ScrollView(.horizontal) {
-        HStack(spacing: 8) {
+        HStack(spacing: Space.s2) {
           ForEach(GalleryPage.allCases) { item in
             Chip(item.name, selected: item == page) { page = item }
           }
         }
       }
-      .contentMargins(.horizontal, Gutter, for: .scrollContent)
+      .contentMargins(.horizontal, Space.gutter, for: .scrollContent)
       .scrollIndicators(.hidden)
+      .padding(.bottom, Space.s2)
     }
 
     private var themeMenu: some View {
-      Menu {
-        Picker(Str.webAppearanceColorScheme, selection: Binding(get: { theme.mode }, set: theme.setMode)) {
-          Text(Str.webAppearanceColorSchemeSystem).tag(ThemeMode.system)
-          Text(Str.webAppearanceColorSchemeLight).tag(ThemeMode.light)
-          Text(Str.webAppearanceColorSchemeDark).tag(ThemeMode.dark)
-        }
-        Picker("Accent", selection: $accent) {
-          ForEach(GalleryAccent.allCases) { Text($0.rawValue.capitalized).tag($0) }
-        }
-      } label: {
-        Image(Lucide.palette)
+      RoundIconButton(.palette, label: Str.settingsPageAppearance, look: .ghost, size: 48, iconSize: 22) {
+        choosing = true
       }
-      .accessibilityLabel(Str.settingsPageAppearance)
+      .dropdownMenu(isPresented: $choosing, align: .trailing) {
+        MenuLabel(Str.webAppearanceColorScheme)
+        MenuItem(Str.webAppearanceColorSchemeSystem, selected: theme.mode == .system) { theme.setMode(.system) }
+        MenuItem(Str.webAppearanceColorSchemeLight, selected: theme.mode == .light) { theme.setMode(.light) }
+        MenuItem(Str.webAppearanceColorSchemeDark, selected: theme.mode == .dark) { theme.setMode(.dark) }
+        MenuSeparator()
+        MenuLabel("Accent")
+        ForEach(GalleryAccent.allCases) { option in
+          MenuItem(option.rawValue.capitalized, selected: option == accent) { accent = option }
+        }
+      }
     }
   }
 
   /// A page pushed from the gallery, to see the floating bar over art, the
-  /// status bar's scrim, and the back swipe.
+  /// status bar's shade, and the back swipe.
   struct GalleryTitlePage: View {
     let name: String
     @Environment(\.palette) private var palette
 
     var body: some View {
       ScrollView {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: Space.s4) {
           Picture(Sample.still)
             .aspectRatio(16 / 10, contentMode: .fit)
             .background(Tone(name))
-          Text(name).textStyle(.headlineMedium).padding(.horizontal, Gutter)
+          Text(name).textStyle(.px26, weight: .bold, tracking: .tight).padding(.horizontal, Space.gutter)
           Text(String(repeating: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. ", count: 30))
-            .textStyle(.bodyMedium).foregroundStyle(palette.muted).padding(.horizontal, Gutter)
+            .textStyle(.sm).foregroundStyle(palette.mutedForeground).padding(.horizontal, Space.gutter)
         }
       }
       .ignoresSafeArea(edges: .top)
       .statusBarScrim()
-      .itemTopBar(parent: Sample.show.name) {}
-    }
-  }
-
-  /// A stand-in for Actions.kt's menus, to show the long press works.
-  struct GalleryMenu: View {
-    let target: ActionTarget
-
-    var body: some View {
-      Button {} label: { Label { Text(Str.titlePlay) } icon: { Image(Lucide.playOutline) } }
-      Button {} label: { Label { Text(Str.mediaMarkWatched) } icon: { Image(Lucide.check) } }
-      Button {} label: { Label { Text(Str.mediaAddFavorite) } icon: { Image(Lucide.heart) } }
-      Divider()
-      Button(role: .destructive) {} label: {
-        Label { Text(Str.downloadsRemove) } icon: { Image(Lucide.trash) }
-      }
+      .overlay(alignment: .top) { ItemTopBar(parent: Sample.show.name) {} }
+      .hidesSystemNavigationBar()
     }
   }
 
@@ -173,9 +167,9 @@
 
     var body: some View {
       Text(text.uppercased())
-        .textStyle(.labelSmall)
-        .foregroundStyle(palette.faint)
-        .padding(.horizontal, Gutter)
+        .textStyle(.px11, weight: .medium)
+        .foregroundStyle(palette.foregroundFaint)
+        .padding(.horizontal, Space.gutter)
     }
   }
 #endif

@@ -31,6 +31,13 @@ public struct KitShape: InsettableShape {
     return shape
   }
 
+  /// This shape, or a capsule when `on`.
+  public func capsule(_ on: Bool) -> KitShape {
+    var shape = self
+    shape.capsule = on
+    return shape
+  }
+
   public nonisolated func path(in rect: CGRect) -> Path {
     let rect = rect.insetBy(dx: inset, dy: inset)
     guard rect.width > 0, rect.height > 0 else { return Path() }
@@ -62,6 +69,9 @@ public enum ButtonLook: String, CaseIterable, Sendable {
   case frosted
   /// White at 15% over a blur, white text, whatever the theme: over a picture or the player.
   case glass
+  /// The page's color at 60% over a blur, as the round `.floating` buttons
+  /// beside it: the page above, in a pill beside Back over a title's art.
+  case floating
   case outline
   case ghost
   /// The danger color on its own tint: Delete, Sign out.
@@ -233,7 +243,7 @@ private struct ButtonFace<Label: View>: View {
       .padding(.vertical, dynamicType.isAccessibilitySize ? 6 : 0)
       .frame(maxWidth: fullWidth ? .infinity : nil, minHeight: size.height)
       .background {
-        if look == .frosted || look == .glass, !reduceTransparency {
+        if [.frosted, .glass, .floating].contains(look), !reduceTransparency {
           outline.fill(.ultraThinMaterial).environment(\.colorScheme, look == .glass ? .dark : palette.scheme)
         }
       }
@@ -247,7 +257,7 @@ private struct ButtonFace<Label: View>: View {
   private var foreground: Color {
     switch look {
     case .primary: palette.accentForeground
-    case .secondary, .outline, .frosted: palette.foreground
+    case .secondary, .outline, .frosted, .floating: palette.foreground
     case .ghost: palette.foreground.opacity(0.75)
     case .glass: .white
     case .destructive: palette.destructive
@@ -261,6 +271,7 @@ private struct ButtonFace<Label: View>: View {
     case .secondary: palette.secondary
     case .frosted: palette.foreground.opacity(0.15)
     case .glass: reduceTransparency ? .black.opacity(0.6) : .white.opacity(0.15)
+    case .floating: palette.background.opacity(reduceTransparency ? 0.9 : 0.6)
     case .destructive: palette.colors.danger.opacity(palette.isDark ? 0.2 : 0.1)
     case .outline, .ghost, .link: .clear
     }

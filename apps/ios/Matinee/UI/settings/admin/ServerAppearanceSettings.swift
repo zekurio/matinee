@@ -1,4 +1,5 @@
 import MatineeCore
+import MatineeKit
 import SwiftUI
 
 /*
@@ -91,10 +92,10 @@ private struct Swatch: View {
       .frame(width: 30, height: 30)
       .padding(4)
       .overlay { Circle().strokeBorder(selected ? palette.foreground : .clear, lineWidth: 2) }
-      .frame(width: MinTouch, height: MinTouch)
+      .frame(width: TouchTarget, height: TouchTarget)
       .contentShape(Circle())
     }
-    .buttonStyle(RoundPress())
+    .buttonStyle(LegacyRoundPress())
     .accessibilityLabel(name)
     .accessibilityAddTraits(selected ? .isSelected : [])
     .motion(Motion.color, value: selected)
@@ -126,12 +127,12 @@ private struct ColorRow: View {
   var body: some View {
     ViewThatFits(in: .horizontal) {
       HStack(spacing: 12) {
-        Text(label).textStyle(.bodyLarge).frame(maxWidth: .infinity, alignment: .leading)
+        Text(label).textStyle(.base).frame(maxWidth: .infinity, alignment: .leading)
         field
       }
       // At large text sizes the field goes under its name.
       VStack(alignment: .leading, spacing: 8) {
-        Text(label).textStyle(.bodyLarge)
+        Text(label).textStyle(.base)
         field
       }
       .frame(maxWidth: .infinity, alignment: .leading)
@@ -149,7 +150,7 @@ private struct ColorRow: View {
         .frame(width: 20, height: 20)
         .accessibilityHidden(true)
       TextField("", text: Binding(get: { value }, set: { value = String($0.prefix(7)) }))
-        .textStyle(.bodyLarge)
+        .textStyle(.base)
         .foregroundStyle(palette.foreground)
         .tint(palette.accent)
         .keyboardType(.asciiCapable)
@@ -163,7 +164,7 @@ private struct ColorRow: View {
     .frame(minHeight: 40)
     .background(palette.secondary, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
     .overlay {
-      RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(parsed == nil ? palette.danger : palette.border)
+      RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(parsed == nil ? palette.destructive : palette.border)
     }
   }
 }

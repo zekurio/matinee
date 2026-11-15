@@ -4,6 +4,8 @@
 
 /* common_back */
 "back" = "Back";
+/* The bar's house, to the app's first page: shell_home_link */
+"home" = "Home";
 /* The web's uiText().close */
 "close" = "Close";
 /* common_cancel */

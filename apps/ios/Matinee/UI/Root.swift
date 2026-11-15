@@ -1,11 +1,13 @@
 import MatineeCore
 import Nuke
+import MatineeKit
 import SwiftUI
 
 /*
  * Root.kt: server, then sign-in, then the app, by the session's state. A
  * new server's sign-in starts afresh, with its own code, and a new account
- * starts the screens, and what they keep, afresh.
+ * starts the screens, and what they keep, afresh. Toasts show over all of
+ * it, from the one host here.
  *
  * And MatineeApp.kt's part that follows the session: the images' sign-in,
  * the theme's accent, the downloads' server, and the progress watched
@@ -15,8 +17,10 @@ struct MatineeRoot: View {
   @Environment(MatineeSession.self) private var session
   @Environment(Downloads.self) private var downloads
   @Environment(ThemeStore.self) private var theme
+  @Environment(ToastState.self) private var toasts
   @Environment(\.palette) private var palette
   @State private var pipeline = ImagePipeline.anonymous
+  @State private var toastClearance: CGFloat = 0
 
   var body: some View {
     Group {
@@ -24,12 +28,12 @@ struct MatineeRoot: View {
       case .noServer(let canCancel):
         ConnectScreen(canCancel: canCancel)
       case .connecting(let server):
-        VStack(spacing: 16) {
-          ProgressView().controlSize(.large).tint(palette.accent)
-          Text(Str.connectConnecting(server)).textStyle(.bodyMedium).foregroundStyle(palette.muted)
+        VStack(spacing: Space.s4) {
+          Spinner(size: 32, tint: palette.accent)
+          Text(Str.connectConnecting(server)).textStyle(.sm).foregroundStyle(palette.mutedForeground)
             .multilineTextAlignment(.center)
         }
-        .padding(Gutter)
+        .padding(Space.gutter)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
       case .unreachable(let server, let reason, let retrying):
         UnreachableScreen(server: server, reason: reason, retrying: retrying)
@@ -43,6 +47,9 @@ struct MatineeRoot: View {
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .background(palette.background.ignoresSafeArea())
+    .onPreferenceChange(ToastClearanceKey.self) { toastClearance = $0 }
+    .toastHost(toasts, clearance: toastClearance)
+    .environment(\.snackbar, Snackbar(post: toasts.post))
     .environment(\.imagePipeline, pipeline)
     // Images ask with the sign-in in use; a new server or sign-in gets a pipeline of its own.
     .onChange(of: session.version, initial: true) {

@@ -1,4 +1,5 @@
 import MatineeCore
+import MatineeKit
 import SwiftUI
 
 /*
@@ -160,8 +161,8 @@ private struct TaskStatus: View {
   @Environment(\.palette) private var palette
 
   var body: some View {
-    Text(taskStatus(task)).textStyle(.bodySmall)
-      .foregroundStyle(taskFailed(task) ? palette.danger : palette.muted)
+    Text(taskStatus(task)).textStyle(.px13)
+      .foregroundStyle(taskFailed(task) ? palette.destructive : palette.mutedForeground)
   }
 }
 
@@ -172,7 +173,7 @@ private struct TaskButton: View {
 
   var body: some View {
     let running = task.startedAt != nil
-    RoundIconButton(
+    LegacyRoundIconButton(
       running ? .x : .playOutline, label: running ? Str.webJobsTaskCancel : Str.webJobsTaskRun, background: .clear
     ) { onAction(running ? .cancel : .run) }
   }
@@ -192,24 +193,24 @@ private struct QueueRow: View {
     Button(action: onOpen) {
       HStack(spacing: 4) {
         VStack(alignment: .leading, spacing: 0) {
-          Text(queueName(queue)).textStyle(.bodyLarge).foregroundStyle(palette.foreground)
-          Text(queueStatus(queue)).textStyle(.bodySmall)
-            .foregroundStyle(queue.failed > 0 ? palette.danger : palette.muted)
+          Text(queueName(queue)).textStyle(.base).foregroundStyle(palette.foreground)
+          Text(queueStatus(queue)).textStyle(.px13)
+            .foregroundStyle(queue.failed > 0 ? palette.destructive : palette.mutedForeground)
             .lineLimit(dynamicType.isAccessibilitySize ? nil : 1)
           if let task { TaskStatus(task: task) }
         }
         .multilineTextAlignment(.leading)
         .frame(maxWidth: .infinity, alignment: .leading)
         // The run button sits over this, outside the row's own button.
-        if task != nil { Color.clear.frame(width: MinTouch, height: MinTouch) }
-        LucideIcon(.chevronRight, size: 16, tint: palette.muted)
+        if task != nil { Color.clear.frame(width: TouchTarget, height: TouchTarget) }
+        LucideIcon(.chevronRight, size: 16, tint: palette.mutedForeground)
       }
       .padding(.leading, 16)
       .padding(.trailing, 12)
       .padding(.vertical, 12)
       .contentShape(Rectangle())
     }
-    .buttonStyle(RowPress())
+    .buttonStyle(LegacyRowPress())
     .accessibilityHint(Str.webJobsQueueDetails)
     .overlay(alignment: .trailing) {
       if let task {
@@ -227,7 +228,7 @@ private struct TaskRow: View {
   var body: some View {
     HStack(spacing: 8) {
       VStack(alignment: .leading, spacing: 0) {
-        Text(taskName(task)).textStyle(.bodyLarge)
+        Text(taskName(task)).textStyle(.base)
         TaskStatus(task: task)
       }
       .frame(maxWidth: .infinity, alignment: .leading)
@@ -250,18 +251,18 @@ private struct ConcurrencyRow: View {
     let name = queueName(queue)
     HStack(spacing: 0) {
       VStack(alignment: .leading, spacing: 0) {
-        Text(name).textStyle(.bodyLarge)
+        Text(name).textStyle(.base)
         Text(Str.webJobsConcurrencyLimits(String(queue.defaultConcurrency), String(queue.maxConcurrency)))
-          .textStyle(.bodySmall).foregroundStyle(palette.muted)
+          .textStyle(.px13).foregroundStyle(palette.mutedForeground)
       }
       .frame(maxWidth: .infinity, alignment: .leading)
-      RoundIconButton(.chevronLeft, label: Str.webJobsConcurrencyDecrease(name), background: .clear) { value -= 1 }
+      LegacyRoundIconButton(.chevronLeft, label: Str.webJobsConcurrencyDecrease(name), background: .clear) { value -= 1 }
         .disabled(value <= 1)
-      Text(String(value)).textStyle(.titleMedium).monospacedDigit()
+      Text(String(value)).textStyle(.base, weight: .semibold).monospacedDigit()
         .frame(minWidth: 36)
         .multilineTextAlignment(.center)
         .accessibilityHidden(true)
-      RoundIconButton(.chevronRight, label: Str.webJobsConcurrencyIncrease(name), background: .clear) { value += 1 }
+      LegacyRoundIconButton(.chevronRight, label: Str.webJobsConcurrencyIncrease(name), background: .clear) { value += 1 }
         .disabled(value >= queue.maxConcurrency)
     }
     .padding(.leading, 16)
@@ -290,31 +291,31 @@ private struct QueueSheet: View {
   var body: some View {
     ScrollView {
       VStack(alignment: .leading, spacing: 0) {
-        SheetHeader(queueName(queue), queueStatus(queue))
-        SheetItem(queue.paused ? .play : .pause, queue.paused ? Str.webJobsQueueResume : Str.webJobsQueuePause) {
+        LegacySheetHeader(queueName(queue), queueStatus(queue))
+        LegacySheetItem(queue.paused ? .play : .pause, queue.paused ? Str.webJobsQueueResume : Str.webJobsQueuePause) {
           onAction(queue.paused ? .resume : .pause)
         }
         if queue.waiting > 0 {
-          SheetItem(.trash, Str.webJobsQueueClear, destructive: true) { onAction(.clear) }
+          LegacySheetItem(.trash, Str.webJobsQueueClear, destructive: true) { onAction(.clear) }
         }
         Rectangle().fill(palette.border).frame(height: 1).padding(.vertical, 6)
         VStack(alignment: .leading, spacing: 6) {
-          Text(Str.webJobsDetailsRunning).textStyle(.titleSmall).accessibilityAddTraits(.isHeader)
+          Text(Str.webJobsDetailsRunning).textStyle(.sm, weight: .medium).accessibilityAddTraits(.isHeader)
           if queue.running.isEmpty {
             Note(queue.paused ? Str.webJobsDetailsPausedNothingRunning : Str.webJobsDetailsNothingRunning)
           }
           ForEach(Array(queue.running.enumerated()), id: \.offset) { _, job in
-            Text(job.label).textStyle(.bodySmall).lineLimit(2)
+            Text(job.label).textStyle(.px13).lineLimit(2)
           }
-          Text(Str.webJobsDetailsFailures).textStyle(.titleSmall).accessibilityAddTraits(.isHeader).padding(.top, 8)
+          Text(Str.webJobsDetailsFailures).textStyle(.sm, weight: .medium).accessibilityAddTraits(.isHeader).padding(.top, 8)
           if queue.failures.isEmpty {
             Note(Str.webJobsDetailsNoFailures)
           }
           ForEach(Array(queue.failures.enumerated()), id: \.offset) { _, failure in
             VStack(alignment: .leading, spacing: 0) {
-              Text(failure.label).textStyle(.bodySmall).lineLimit(2)
-              Text("\(relativeTime(failure.at)) · \(failure.message)").textStyle(.bodySmall)
-                .foregroundStyle(palette.danger).lineLimit(3)
+              Text(failure.label).textStyle(.px13).lineLimit(2)
+              Text("\(relativeTime(failure.at)) · \(failure.message)").textStyle(.px13)
+                .foregroundStyle(palette.destructive).lineLimit(3)
             }
             .accessibilityElement(children: .combine)
           }
@@ -325,6 +326,6 @@ private struct QueueSheet: View {
       }
       .padding(.vertical, 12)
     }
-    .matineeSheet()
+    .legacySheet()
   }
 }

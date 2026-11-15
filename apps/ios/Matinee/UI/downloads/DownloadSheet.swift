@@ -1,4 +1,5 @@
 import MatineeCore
+import MatineeKit
 import SwiftUI
 
 /*
@@ -39,16 +40,16 @@ struct DownloadSheet: View {
     let (primary, secondary) = downloadNames(item)
     VStack(alignment: .leading, spacing: 0) {
       VStack(alignment: .leading, spacing: 0) {
-        Text(Str.downloadsSheetTitleNamed(primary)).textStyle(.titleLarge).lineLimit(2)
+        Text(Str.downloadsSheetTitleNamed(primary)).textStyle(.xl, weight: .semibold, tracking: .tight).lineLimit(2)
           .accessibilityAddTraits(.isHeader)
         if let secondary {
-          Text(secondary).textStyle(.bodyMedium).foregroundStyle(palette.muted).lineLimit(1)
+          Text(secondary).textStyle(.sm).foregroundStyle(palette.mutedForeground).lineLimit(1)
         }
       }
       .padding(.horizontal, 20)
       .padding(.bottom, 12)
       if let error {
-        Text(error).textStyle(.bodyMedium).foregroundStyle(palette.danger).padding(.horizontal, 20)
+        Text(error).textStyle(.sm).foregroundStyle(palette.destructive).padding(.horizontal, 20)
         Spacer(minLength: 0)
       } else if let source {
         options(source)
@@ -59,7 +60,7 @@ struct DownloadSheet: View {
     }
     .padding(.top, 28)
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-    .matineeSheet([.medium, .large])
+    .legacySheet([.medium, .large])
     .task { await load() }
     .task(id: PlanKey(loaded: source != nil, audio: audio, codec: codec)) { await plan() }
   }
@@ -98,7 +99,7 @@ struct DownloadSheet: View {
             }
           }
           if noAudio {
-            Text(Str.downloadsAudioNone).textStyle(.bodySmall).foregroundStyle(palette.danger).padding(.horizontal, 20)
+            Text(Str.downloadsAudioNone).textStyle(.px13).foregroundStyle(palette.destructive).padding(.horizontal, 20)
           }
         }
         if !texts.isEmpty {
@@ -116,7 +117,7 @@ struct DownloadSheet: View {
     }
     .scrollBounceBehavior(.basedOnSize)
     .safeAreaInset(edge: .bottom) {
-      MatineeButton(.primary, action: { start(source, texts: texts) }) {
+      LegacyButton(.primary, action: { start(source, texts: texts) }) {
         // As wide as the sheet, as Android's.
         HStack(spacing: 8) {
           LucideIcon(.download, size: 18)
@@ -127,7 +128,7 @@ struct DownloadSheet: View {
       .disabled(!(picked == .original || (!planning && !noAudio && plans[picked] != nil)))
       .padding(.horizontal, 20)
       .padding(.vertical, 12)
-      .background(palette.raised)
+      .background(palette.popover)
     }
   }
 
@@ -276,7 +277,7 @@ struct VersionPanel: View {
         }
       }
       if let detail, !detail.isEmpty {
-        Text(detail).textStyle(.bodySmall).foregroundStyle(palette.muted)
+        Text(detail).textStyle(.px13).foregroundStyle(palette.mutedForeground)
       }
     }
     .padding(.horizontal, 20)
@@ -290,7 +291,7 @@ struct SheetHeading: View {
   init(_ text: String) { self.text = text }
 
   var body: some View {
-    Text(text).textStyle(.titleSmall, weight: .semibold)
+    Text(text).textStyle(.sm, weight: .semibold)
       .accessibilityAddTraits(.isHeader)
       .padding(.horizontal, 20)
       .padding(.top, 16)
@@ -327,9 +328,9 @@ private struct CheckRow: View {
         }
         .frame(width: 20, height: 20)
         VStack(alignment: .leading, spacing: 0) {
-          Text(title).textStyle(.bodyLarge).foregroundStyle(palette.foreground).lineLimit(1)
+          Text(title).textStyle(.base).foregroundStyle(palette.foreground).lineLimit(1)
           if let detail, !detail.isEmpty {
-            Text(detail).textStyle(.bodySmall).foregroundStyle(palette.muted)
+            Text(detail).textStyle(.px13).foregroundStyle(palette.mutedForeground)
           }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -337,10 +338,10 @@ private struct CheckRow: View {
       }
       .padding(.horizontal, 20)
       .padding(.vertical, 12)
-      .frame(minHeight: MinTouch)
+      .frame(minHeight: TouchTarget)
       .contentShape(Rectangle())
     }
-    .buttonStyle(RowPress())
+    .buttonStyle(LegacyRowPress())
     .accessibilityAddTraits(checked ? .isSelected : [])
   }
 }

@@ -1,4 +1,5 @@
 import MatineeCore
+import MatineeKit
 import SwiftUI
 
 /*
@@ -45,7 +46,7 @@ struct SearchScreen: View {
     .autocorrectionDisabled()
     .searchEffect(search, query: query, submitted: submitted)
     .loads(libraries) { api in try await api.libraries.list() }
-    .topBar(Str.searchTitle)
+    .legacyTopBar(Str.searchTitle)
     .onAppear {
       // The field takes the keyboard when the tab first opens, as Android's does.
       if !focusedOnce, query.isEmpty {
@@ -79,12 +80,12 @@ private struct SearchResultsList: View {
           VStack(alignment: .leading, spacing: 20) {
             // On one baseline: the count's smaller line would sit low at the boxes' bottom.
             HStack(alignment: .firstTextBaseline, spacing: 10) {
-              Text(names[group.libraryId] ?? Str.searchTitlesHeading).textStyle(.titleLarge)
+              Text(names[group.libraryId] ?? Str.searchTitlesHeading).textStyle(.xl, weight: .semibold, tracking: .tight)
                 .foregroundStyle(palette.foreground)
                 .accessibilityAddTraits(.isHeader)
-              Text(Str.browseTitleCount(group.titles.count)).textStyle(.bodyMedium).foregroundStyle(palette.muted)
+              Text(Str.browseTitleCount(group.titles.count)).textStyle(.sm).foregroundStyle(palette.mutedForeground)
             }
-            .padding(.horizontal, Gutter)
+            .padding(.horizontal, Space.gutter)
             CardGrid {
               ForEach(group.titles, id: \.id) { title in PosterCard(title, detail: formatYear(title.year)) }
             }
@@ -106,7 +107,7 @@ private struct SearchResultsList: View {
           Facets(title: Str.searchSectionStudios, facets: found.studios) { nav.studio($0) }
         }
         if searching {
-          Text(Str.searchSearching).textStyle(.bodySmall).foregroundStyle(palette.muted).padding(.horizontal, Gutter)
+          Text(Str.searchSearching).textStyle(.px13).foregroundStyle(palette.mutedForeground).padding(.horizontal, Space.gutter)
         }
       }
       .padding(.top, 8)
@@ -127,10 +128,10 @@ private struct Facets: View {
     VStack(alignment: .leading, spacing: 12) {
       SectionTitle(title)
       FlowRow(spacing: 6) {
-        ForEach(facets, id: \.name) { facet in Chip(facet.name) { open(facet.name) } }
+        ForEach(facets, id: \.name) { facet in LegacyChip(facet.name) { open(facet.name) } }
       }
     }
-    .padding(.horizontal, Gutter)
+    .padding(.horizontal, Space.gutter)
   }
 }
 
@@ -150,13 +151,13 @@ private struct Hint: View {
   var body: some View {
     VStack(spacing: 0) {
       if let icon {
-        LucideIcon(icon, size: 28, tint: palette.muted)
+        LucideIcon(icon, size: 28, tint: palette.mutedForeground)
         Gap(12)
       }
-      Text(text).textStyle(.bodyLarge).foregroundStyle(detail != nil ? palette.foreground : palette.muted)
+      Text(text).textStyle(.base).foregroundStyle(detail != nil ? palette.foreground : palette.mutedForeground)
       if let detail {
         Gap(4)
-        Text(detail).textStyle(.bodyMedium).foregroundStyle(palette.muted)
+        Text(detail).textStyle(.sm).foregroundStyle(palette.mutedForeground)
       }
     }
     .multilineTextAlignment(.center)

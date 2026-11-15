@@ -74,6 +74,21 @@
       item(title("The Matrix"), name: "The Matrix", duration: 8160, position: 3000),
     ]
 
+    /// The banner's slides, with what a provider would send: genres, a rating, an overview.
+    static var featured: [FeaturedTitle] {
+      var matrix = title("The Matrix")
+      matrix.genres = ["Science Fiction", "Action"]
+      matrix.rating = 8.2
+      matrix.contentRating = "R"
+      matrix.overview = "A hacker learns the world he lives in is a simulation, and joins the people fighting it."
+      var show = Sample.show
+      show.genres = ["Drama", "Crime"]
+      return [
+        FeaturedTitle(title: matrix, item: item(matrix, name: "The Matrix", duration: 8160, position: 3000), count: 1),
+        FeaturedTitle(title: show, item: episodes[0], count: 6),
+      ]
+    }
+
     static func shelf(_ title: TitleSummary, added: Int?) -> ShelfEntry {
       let episode = item(title, season: 2, episode: 3, name: "Grilled", position: nil)
       return ShelfEntry(

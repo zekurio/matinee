@@ -1,4 +1,5 @@
 import MatineeCore
+import MatineeKit
 import SwiftUI
 
 /*
@@ -24,7 +25,7 @@ struct PlayerFailure: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 0) {
-      RoundIconButton(.arrowLeft, label: Str.playerBack, size: 52, iconSize: 26, background: .clear, action: close)
+      LegacyRoundIconButton(.arrowLeft, label: Str.playerBack, size: 52, iconSize: 26, background: .clear, action: close)
         .padding(8)
       ErrorBox(title, message, onRetry: retry)
     }
@@ -42,7 +43,7 @@ struct ZoomNote: View {
     ZStack {
       if shown {
         Text(fill ? Str.playerFill : Str.playerFit)
-          .textStyle(.titleMedium)
+          .textStyle(.base, weight: .semibold)
           .foregroundStyle(.white)
           .padding(.horizontal, 18)
           .padding(.vertical, 10)
@@ -73,9 +74,9 @@ struct PlayerNoticeNote: View {
     ZStack {
       if let note = shown {
         VStack(spacing: 0) {
-          Text(title(note)).textStyle(.titleMedium).foregroundStyle(.white)
+          Text(title(note)).textStyle(.base, weight: .semibold).foregroundStyle(.white)
           if let detail = detail(note), !detail.isEmpty {
-            Text(detail).textStyle(.bodyMedium).foregroundStyle(.white.opacity(0.8))
+            Text(detail).textStyle(.sm).foregroundStyle(.white.opacity(0.8))
           }
         }
         .multilineTextAlignment(.center)
@@ -140,18 +141,18 @@ struct UpNext: View {
     let label = itemLabel(upcoming)
     let left = controller.nextCountdown
     VStack(alignment: .leading, spacing: 0) {
-      Text(Str.playerUpNext).textStyle(.labelLarge).foregroundStyle(palette.muted)
+      Text(Str.playerUpNext).textStyle(.sm, weight: .medium).foregroundStyle(palette.mutedForeground)
       Text(episodeCode(upcoming).map { Str.mediaCodeTitle($0, label.title) } ?? label.title)
-        .textStyle(.titleMedium)
+        .textStyle(.base, weight: .semibold)
         .lineLimit(2)
         .padding(.top, 4)
       HStack(spacing: 8) {
-        MatineeButton(height: 40, action: controller.playNext) {
+        LegacyButton(height: 40, action: controller.playNext) {
           LucideIcon(.play, size: 14)
           Text(left.map(Str.playerUpNextIn) ?? Str.playerPlay).monospacedDigit()
         }
         if left != nil {
-          MatineeButton(.frosted, height: 40, action: controller.cancelNext) {
+          LegacyButton(.frosted, height: 40, action: controller.cancelNext) {
             Text(Str.playerUpNextCancel)
           }
         }
@@ -160,7 +161,7 @@ struct UpNext: View {
     }
     .padding(16)
     .frame(maxWidth: 360, alignment: .leading)
-    .background(palette.raised.opacity(0.95), in: RoundedRectangle(cornerRadius: 12))
+    .background(palette.popover.opacity(0.95), in: RoundedRectangle(cornerRadius: 12))
     .padding(24)
   }
 }

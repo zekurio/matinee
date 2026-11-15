@@ -1,4 +1,5 @@
 import MatineeCore
+import MatineeKit
 import SwiftUI
 
 /*
@@ -33,8 +34,8 @@ struct LibrariesSettings: View {
         VStack(alignment: .leading, spacing: 16) {
           if list.isEmpty {
             VStack(alignment: .leading, spacing: 4) {
-              Text(Str.webLibrariesEmptyTitle).textStyle(.titleMedium)
-              Text(Str.webLibrariesEmptyDescription).textStyle(.bodyMedium).foregroundStyle(palette.muted)
+              Text(Str.webLibrariesEmptyTitle).textStyle(.base, weight: .semibold)
+              Text(Str.webLibrariesEmptyDescription).textStyle(.sm).foregroundStyle(palette.mutedForeground)
             }
           } else {
             Panel {
@@ -47,7 +48,7 @@ struct LibrariesSettings: View {
               }
             }
           }
-          MatineeButton { nav.libraryEditor(nil) } label: {
+          LegacyButton { nav.libraryEditor(nil) } label: {
             HStack(spacing: 8) {
               LucideIcon(.folderPlus, size: 18)
               Text(Str.webLibrariesAdd)
@@ -122,19 +123,19 @@ private struct LibraryRow: View {
     let lines = dynamicType.isAccessibilitySize ? nil : 1
     Menu {
       Section(library.paths.joined(separator: ", ")) {
-        MenuItem(.refreshCw, Str.webLibrariesScanNow, action: onScan)
+        LegacyMenuItem(.refreshCw, Str.webLibrariesScanNow, action: onScan)
         if library.metadataProvider != nil {
-          MenuItem(.image, Str.webLibrariesRefreshMetadata, action: onRefresh)
+          LegacyMenuItem(.image, Str.webLibrariesRefreshMetadata, action: onRefresh)
         }
-        MenuItem(.settings, Str.webLibrariesEdit, action: onEdit)
-        MenuItem(.trash, Str.webLibrariesRemove, destructive: true, action: onRemove)
+        LegacyMenuItem(.settings, Str.webLibrariesEdit, action: onEdit)
+        LegacyMenuItem(.trash, Str.webLibrariesRemove, destructive: true, action: onRemove)
       }
     } label: {
       HStack(spacing: 14) {
-        LucideIcon(library.kind == LibraryKind.shows ? .tv : .film, size: 20, tint: palette.muted)
+        LucideIcon(library.kind == LibraryKind.shows ? .tv : .film, size: 20, tint: palette.mutedForeground)
         VStack(alignment: .leading, spacing: 0) {
-          Text(library.name).textStyle(.bodyLarge).foregroundStyle(palette.foreground).lineLimit(lines)
-          Text(status).textStyle(.bodySmall).foregroundStyle(palette.muted).lineLimit(lines)
+          Text(library.name).textStyle(.base).foregroundStyle(palette.foreground).lineLimit(lines)
+          Text(status).textStyle(.px13).foregroundStyle(palette.mutedForeground).lineLimit(lines)
         }
         .multilineTextAlignment(.leading)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -144,10 +145,10 @@ private struct LibraryRow: View {
       }
       .padding(.horizontal, 16)
       .padding(.vertical, 12)
-      .frame(minHeight: MinTouch)
+      .frame(minHeight: TouchTarget)
       .contentShape(Rectangle())
     }
-    .buttonStyle(RowPress())
+    .buttonStyle(LegacyRowPress())
     .accessibilityHint(Str.webLibrariesActions(library.name))
   }
 
@@ -193,7 +194,7 @@ struct LibraryEditorScreen: View {
           title: title, existing: existing, providers: providers.state.value ?? [],
           knownPath: list?.first?.paths.first, results: results)
       } else {
-        LoadingBox().background(palette.background).topBar(title)
+        LoadingBox().background(palette.background).legacyTopBar(title)
       }
     }
     .loads(libraries) { api in try await api.libraries.list() }
@@ -285,10 +286,10 @@ private struct LibraryEditor: View {
       Panel {
         ForEach(draft.paths, id: \.self) { path in
           HStack(spacing: 12) {
-            LucideIcon(.server, size: 18, tint: palette.muted)
-            Text(path).textStyle(.bodyMedium).lineLimit(2).truncationMode(.middle)
+            LucideIcon(.server, size: 18, tint: palette.mutedForeground)
+            Text(path).textStyle(.sm).lineLimit(2).truncationMode(.middle)
               .frame(maxWidth: .infinity, alignment: .leading)
-            RoundIconButton(.x, label: Str.webLibrariesDialogRemoveFolder(path), background: .clear) {
+            LegacyRoundIconButton(.x, label: Str.webLibrariesDialogRemoveFolder(path), background: .clear) {
               withMotion(Motion.exit) { draft.remove(path) }
             }
           }
@@ -304,15 +305,15 @@ private struct LibraryEditor: View {
         } label: {
           HStack(spacing: 12) {
             LucideIcon(.folderPlus, size: 18, tint: palette.accent)
-            Text(Str.webLibrariesDialogAddFolder).textStyle(.bodyLarge).foregroundStyle(palette.accent)
+            Text(Str.webLibrariesDialogAddFolder).textStyle(.base).foregroundStyle(palette.accent)
             Spacer(minLength: 0)
           }
           .padding(.horizontal, 16)
           .padding(.vertical, 14)
-          .frame(minHeight: MinTouch)
+          .frame(minHeight: TouchTarget)
           .contentShape(Rectangle())
         }
-        .buttonStyle(RowPress())
+        .buttonStyle(LegacyRowPress())
       }
     }
   }
@@ -347,7 +348,7 @@ private struct EditorSaveButton: View {
       if busy {
         ProgressView().controlSize(.small)
       } else {
-        Text(label).textStyle(.labelLarge)
+        Text(label).textStyle(.sm, weight: .medium)
       }
     }
     .tint(palette.accent)
@@ -379,7 +380,7 @@ struct FolderPickerScreen: View {
       // Keyed by the folder, so opening another one shows its path.
       PathField(path: current?.path ?? path ?? "/") { path = $0 }
         .id(current?.path ?? path)
-        .padding(.horizontal, Gutter)
+        .padding(.horizontal, Space.gutter)
         .padding(.bottom, 8)
       ZStack {
         if let current {
@@ -389,7 +390,7 @@ struct FolderPickerScreen: View {
                 FolderRow(name: "..", up: true, label: Str.webLibrariesBrowserParent) { path = parent }
               }
               if current.directories.isEmpty {
-                Note(Str.webLibrariesBrowserEmpty).padding(.horizontal, Gutter).padding(.vertical, 16)
+                Note(Str.webLibrariesBrowserEmpty).padding(.horizontal, Space.gutter).padding(.vertical, 16)
               }
               ForEach(current.directories, id: \.path) { directory in
                 FolderRow(
@@ -401,8 +402,8 @@ struct FolderPickerScreen: View {
           }
           .scrollDismissesKeyboard(.interactively)
         } else if let error {
-          Text(error).textStyle(.bodySmall).foregroundStyle(palette.danger).multilineTextAlignment(.center)
-            .padding(Gutter)
+          Text(error).textStyle(.px13).foregroundStyle(palette.destructive).multilineTextAlignment(.center)
+            .padding(Space.gutter)
         } else {
           ProgressView().tint(palette.accent).accessibilityLabel(Str.loadingInProgress)
         }
@@ -412,7 +413,7 @@ struct FolderPickerScreen: View {
     // Always there, so the list above doesn't jump when the first folder loads.
     .safeAreaInset(edge: .bottom, spacing: 0) { bar(current) }
     .background(palette.background)
-    .topBar(Str.webLibrariesDialogBrowse)
+    .legacyTopBar(Str.webLibrariesDialogBrowse)
     .task(id: path ?? "") { await open(path) }
   }
 
@@ -452,14 +453,14 @@ struct FolderPickerScreen: View {
       }
     return VStack(alignment: .leading, spacing: 10) {
       Note(note)
-      MatineeButton {
+      LegacyButton {
         if case .adds(let path, _) = state { add(path) }
       } label: {
         Text(button).truncationMode(.middle).frame(maxWidth: .infinity)
       }
       .disabled(!isAdds(state))
     }
-    .padding(.horizontal, Gutter)
+    .padding(.horizontal, Space.gutter)
     .padding(.vertical, 12)
     .background(palette.card)
     .overlay(alignment: .top) { RowDivider() }
@@ -487,9 +488,9 @@ private struct PathField: View {
   var body: some View {
     let typed = draft.trimmingCharacters(in: .whitespacesAndNewlines)
     let can = !typed.isEmpty && typed != path
-    MatineeTextField($draft, placeholder: Str.webLibrariesBrowserPath) {
-      RoundIconButton(
-        .chevronRight, label: Str.webLibrariesBrowserGo, size: 36, iconSize: 18, tint: palette.muted, background: .clear
+    LegacyTextField($draft, placeholder: Str.webLibrariesBrowserPath) {
+      LegacyRoundIconButton(
+        .chevronRight, label: Str.webLibrariesBrowserGo, size: 36, iconSize: 18, tint: palette.mutedForeground, background: .clear
       ) { if can { onOpen(typed) } }
       .disabled(!can)
       .padding(.trailing, -10)
@@ -522,28 +523,28 @@ private struct FolderRow: View {
     HStack(spacing: 0) {
       Button(action: onOpen) {
         HStack(spacing: 14) {
-          if up { LucideIcon(.arrowLeft, size: 16, tint: palette.muted) }
-          Text(name).textStyle(.bodyLarge).foregroundStyle(palette.foreground).lineLimit(1)
+          if up { LucideIcon(.arrowLeft, size: 16, tint: palette.mutedForeground) }
+          Text(name).textStyle(.base).foregroundStyle(palette.foreground).lineLimit(1)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(.leading, Gutter)
+        .padding(.leading, Space.gutter)
         .frame(minHeight: 52)
         .contentShape(Rectangle())
       }
-      .buttonStyle(RowPress())
+      .buttonStyle(LegacyRowPress())
       .accessibilityLabel(label)
       if let onAdd {
-        RoundIconButton(.folderPlus, label: Str.webLibrariesBrowserAddNamed(name), tint: palette.muted, background: .clear, action: onAdd)
+        LegacyRoundIconButton(.folderPlus, label: Str.webLibrariesBrowserAddNamed(name), tint: palette.mutedForeground, background: .clear, action: onAdd)
           .padding(.trailing, 4)
       }
       if !up {
         Button(action: onOpen) {
-          LucideIcon(.chevronRight, size: 16, tint: palette.muted)
+          LucideIcon(.chevronRight, size: 16, tint: palette.mutedForeground)
             .frame(minWidth: 28, minHeight: 52)
-            .padding(.trailing, Gutter - 6)
+            .padding(.trailing, Space.gutter - 6)
             .contentShape(Rectangle())
         }
-        .buttonStyle(RowPress())
+        .buttonStyle(LegacyRowPress())
         .accessibilityHidden(true)
       }
     }

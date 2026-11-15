@@ -1,5 +1,6 @@
 import CoreImage
 import CoreImage.CIFilterBuiltins
+import MatineeKit
 import SwiftUI
 
 /// `text` as a QR code, black on a white card whatever the theme: phones'

@@ -6,7 +6,7 @@ import SwiftUI
 /// the environment's locale, so a preview or the gallery can switch
 /// language, and otherwise the device's.
 nonisolated enum KitText: String {
-  case back, close, cancel, closeToast, loading, previousMonth, nextMonth, clearText
+  case back, home, close, cancel, closeToast, loading, previousMonth, nextMonth, clearText
   case showPassword, hidePassword, rangeStart, rangeEnd
 
   func callAsFunction(_ locale: Locale) -> String { KitText.lookup(rawValue, locale) }

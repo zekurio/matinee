@@ -1,4 +1,5 @@
 import MatineeCore
+import MatineeKit
 import SwiftUI
 
 /*
@@ -42,7 +43,7 @@ private struct TrickplayForm: View {
       VStack(spacing: 12) {
         Note(Str.webTrickplayDescriptionCount(data.videos, formatCount(data.ready)))
         Panel {
-          SwitchRow(Str.webTrickplayEnabled, isOn: $settings.enabled)
+          LegacySwitchRow(Str.webTrickplayEnabled, isOn: $settings.enabled)
           RowDivider()
           PickerRow(
             Str.webTrickplayInterval, options: TrickplayInterval.knownValues.map { ($0, Str.webTrickplayIntervalOption($0)) },
@@ -54,11 +55,11 @@ private struct TrickplayForm: View {
             current: settings.width
           ) { settings.width = $0 }
           RowDivider()
-          SwitchRow(Str.webTrickplayKeyframesOnly, isOn: $settings.keyframesOnly)
+          LegacySwitchRow(Str.webTrickplayKeyframesOnly, isOn: $settings.keyframesOnly)
           // Decoding on the GPU needs one set up for transcoding.
           if data.hardwareAcceleration != nil {
             RowDivider()
-            SwitchRow(Str.webTrickplayHardwareDecoding, isOn: $settings.hardwareDecoding)
+            LegacySwitchRow(Str.webTrickplayHardwareDecoding, isOn: $settings.hardwareDecoding)
           }
         }
       }

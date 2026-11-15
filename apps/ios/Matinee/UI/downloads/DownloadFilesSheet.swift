@@ -1,4 +1,5 @@
 import MatineeCore
+import MatineeKit
 import SwiftUI
 
 /*
@@ -42,12 +43,12 @@ struct DownloadFilesSheet: View {
   var body: some View {
     let name = files.season.map { Str.titleSeasonOf(files.title.name, seasonName($0.number)) } ?? files.title.name
     VStack(alignment: .leading, spacing: 0) {
-      Text(Str.downloadsSheetTitleNamed(name)).textStyle(.titleLarge).lineLimit(2)
+      Text(Str.downloadsSheetTitleNamed(name)).textStyle(.xl, weight: .semibold, tracking: .tight).lineLimit(2)
         .accessibilityAddTraits(.isHeader)
         .padding(.horizontal, 20)
         .padding(.bottom, 12)
       if let error {
-        Text(error).textStyle(.bodyMedium).foregroundStyle(palette.danger).padding(.horizontal, 20)
+        Text(error).textStyle(.sm).foregroundStyle(palette.destructive).padding(.horizontal, 20)
       } else if let items, let results {
         content(items, results)
       } else {
@@ -57,7 +58,7 @@ struct DownloadFilesSheet: View {
     }
     .padding(.top, 28)
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-    .matineeSheet([.medium, .large])
+    .legacySheet([.medium, .large])
     .task { await load() }
     .task(id: Wanted(loaded: items != nil, picked: picked, codec: codec)) { await again() }
   }
@@ -80,8 +81,8 @@ struct DownloadFilesSheet: View {
     ].compactMap(\.self).joined(separator: " · ")
     ScrollView {
       VStack(alignment: .leading, spacing: 0) {
-        Text(summary.isEmpty ? Str.downloadsAllEmpty : summary).textStyle(.bodyMedium)
-          .foregroundStyle(palette.muted)
+        Text(summary.isEmpty ? Str.downloadsAllEmpty : summary).textStyle(.sm)
+          .foregroundStyle(palette.mutedForeground)
           .padding(.horizontal, 20)
         if !missing.isEmpty {
           let ready = results.compactMap(\.ready)
@@ -96,7 +97,7 @@ struct DownloadFilesSheet: View {
           )
           .padding(.top, 12)
           ForEach(Array(results.compactMap(\.unavailable).enumerated()), id: \.offset) { _, refused in
-            Text(refused.message).textStyle(.bodyMedium).foregroundStyle(palette.danger)
+            Text(refused.message).textStyle(.sm).foregroundStyle(palette.destructive)
               .padding(.horizontal, 20)
               .padding(.top, 8)
           }
@@ -108,7 +109,7 @@ struct DownloadFilesSheet: View {
     .scrollBounceBehavior(.basedOnSize)
     .safeAreaInset(edge: .bottom) {
       if !missing.isEmpty {
-        MatineeButton(.primary, action: { start(missing, results) }) {
+        LegacyButton(.primary, action: { start(missing, results) }) {
           HStack(spacing: 8) {
             LucideIcon(.download, size: 18)
             Text(Str.downloadsStart)
@@ -117,7 +118,7 @@ struct DownloadFilesSheet: View {
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 12)
-        .background(palette.raised)
+        .background(palette.popover)
       }
     }
   }

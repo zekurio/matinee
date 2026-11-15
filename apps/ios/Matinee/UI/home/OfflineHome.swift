@@ -1,4 +1,5 @@
 import MatineeCore
+import MatineeKit
 import SwiftUI
 
 /*
@@ -15,6 +16,7 @@ struct OfflineHomeScreen: View {
   @Environment(MatineeSession.self) private var session
   @Environment(ViewerState.self) private var viewer: ViewerState?
   @Environment(\.scenePhase) private var scenePhase
+  @Environment(\.shellStyle) private var style
   /// Where the person got to offline, which the player keeps; observed, so a place moved on shows.
   @State private var pending: PendingProgress?
   /// Continue watching and Next up as the server last sent them.
@@ -24,28 +26,28 @@ struct OfflineHomeScreen: View {
     let rows = offlineHomeRows(
       Array(downloads.store.items.values), place: place, watched: watched, served: served)
     ScrollView {
-      LazyVStack(alignment: .leading, spacing: 28) {
-        AppHeader()
-        if rows.isEmpty {
-          NothingDownloaded()
-        } else {
-          OfflineRail(title: Str.browseContinueWatching, entries: rows.resume, place: place, watched: watched)
-          OfflineRail(title: Str.browseNextUp, entries: rows.nextUp, place: place, watched: watched)
-          OfflineRail(title: Str.webLibrariesDialogKindMovies, entries: rows.movies, place: place, watched: watched)
-          if !rows.shows.isEmpty {
-            Rail(Str.webLibrariesDialogKindShows) {
-              ForEach(rows.shows, id: \.title.id) { show in
-                RailItem(.landscape) { ShowCard(show: show) }
+        LazyVStack(alignment: .leading, spacing: style == .tablet ? Space.s10 : Space.s7) {
+          AppHeader()
+          if rows.isEmpty {
+            EmptyState(icon: .download, title: Str.downloadsEmpty, description: Str.downloadsEmptyHint)
+              .padding(.vertical, Space.s8)
+          } else {
+            OfflineRail(title: Str.browseContinueWatching, entries: rows.resume, place: place, watched: watched)
+            OfflineRail(title: Str.browseNextUp, entries: rows.nextUp, place: place, watched: watched)
+            OfflineRail(title: Str.webLibrariesDialogKindMovies, entries: rows.movies, place: place, watched: watched)
+            if !rows.shows.isEmpty {
+              Rail(Str.webLibrariesDialogKindShows) {
+                ForEach(rows.shows, id: \.title.id) { show in
+                  RailItem(.landscape) { ShowCard(show: show) }
+                }
               }
             }
           }
         }
+        .padding(.bottom, Space.s6)
       }
-      .padding(.bottom, 24)
-    }
     .scrollsToTopOnReselect()
     .statusBarScrim()
-    .toolbar(.hidden, for: .navigationBar)
     .task(id: session.activeServer) { read() }
     // The player keeps places offline; back from it, or from another app, read them again.
     .onAppear(perform: read)
@@ -97,7 +99,8 @@ private struct OfflineRail: View {
   }
 }
 
-/// A downloaded movie or episode, its saved picture, and how far in; a tap plays it from the phone.
+/// A downloaded movie or episode, its saved picture, and how far in; a tap
+/// plays it from the phone. Offline there's no page to open and no actions.
 private struct FileCard: View {
   let entry: OfflineItem
   let place: Place?
@@ -107,20 +110,20 @@ private struct FileCard: View {
   var body: some View {
     let label = itemLabel(entry.item)
     let code = episodeCode(entry.item)
-    Button { nav.play(entry.id, nil) } label: {
-      VStack(alignment: .leading, spacing: 0) {
+    VStack(alignment: .leading, spacing: 0) {
+      Pressable(shape: .kit(Radius.md), action: { nav.play(entry.id, nil) }) {
         OfflineArt(entry: entry, toneKey: label.showName) {
           if watched {
-            WatchedBadge().padding(6).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+            WatchedBadge().padding(Space.s1_5).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
           } else if let ratio = place?.ratio, ratio > 0 {
-            ProgressBar(progress: ratio).frame(maxHeight: .infinity, alignment: .bottom)
+            ArtProgressBar(progress: ratio)
           }
         }
-        CardText(label.showName, code.map { Str.mediaCodeTitle($0, label.title) } ?? label.year)
       }
-      .contentShape(Rectangle())
+      CardText(label.showName, code.map { Str.mediaCodeTitle($0, label.title) } ?? label.year)
+        .contentShape(Rectangle())
+        .onTapGesture { nav.play(entry.id, nil) }
     }
-    .buttonStyle(CardPress())
     .accessibilityElement(children: .combine)
     .accessibilityHint(Str.titlePlay)
   }
@@ -132,14 +135,14 @@ private struct ShowCard: View {
   @Environment(\.navigator) private var nav
 
   var body: some View {
-    Button { nav.downloadsShow(show.title.id) } label: {
-      VStack(alignment: .leading, spacing: 0) {
+    VStack(alignment: .leading, spacing: 0) {
+      Pressable(shape: .kit(Radius.md), action: { nav.downloadsShow(show.title.id) }) {
         OfflineArt(entry: show.newest, toneKey: show.title.name) {}
-        CardText(show.title.name, Str.mediaEpisodeCount(show.episodes.count))
       }
-      .contentShape(Rectangle())
+      CardText(show.title.name, Str.mediaEpisodeCount(show.episodes.count))
+        .contentShape(Rectangle())
+        .onTapGesture { nav.downloadsShow(show.title.id) }
     }
-    .buttonStyle(CardPress())
     .accessibilityElement(children: .combine)
   }
 }
@@ -154,18 +157,11 @@ private struct OfflineArt<Overlay: View>: View {
 
   var body: some View {
     ArtFrame(toneKey, aspect: 16 / 9) {
-      LucideIcon(.film, size: 20, tint: palette.muted.opacity(0.4))
+      LucideIcon(.film, size: 20, tint: palette.mutedForeground.opacity(0.4))
       if let image = entry.image {
         Picture(ImageSource(url: downloads.store.root.appending(path: image)))
       }
       overlay()
     }
-  }
-}
-
-/// Offline with nothing downloaded: what there would be, and where it comes from.
-private struct NothingDownloaded: View {
-  var body: some View {
-    EmptyState(.download, Str.downloadsEmpty, Str.downloadsEmptyHint).padding(.horizontal, 16)
   }
 }

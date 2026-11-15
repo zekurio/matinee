@@ -248,6 +248,8 @@ struct NavigationPage: View {
             RoundIconButton(.search, label: "Search", look: .ghost, size: 48, iconSize: 22) {}
           }
           .overlay { RoundedRectangle.kit(Radius.lg).strokeBorder(palette.border) }
+          TopBar(nil, onHome: {})
+            .overlay { RoundedRectangle.kit(Radius.lg).strokeBorder(palette.border) }
         }
       }
       Demo("Floating over art", note: "Back and Home on a title's picture, the web's ItemTopBar.") {
@@ -274,20 +276,46 @@ struct NavigationPage: View {
           .padding(12)
           BottomBar(
             [
-              BottomBarItem("home", label: "Home", icon: .house),
-              BottomBarItem("media", label: "Media", icon: .libraryBig),
-              BottomBarItem("downloads", label: "Downloads", icon: .download),
-              BottomBarItem("profile", label: "Profile") { selected in
+              TabBarItem("home", label: "Home", icon: .house),
+              TabBarItem("media", label: "Media", icon: .libraryBig),
+              TabBarItem("downloads", label: "Downloads", icon: .download),
+              TabBarItem("profile", label: "Profile") { selected in
                 Avatar("iOS Admin", size: selected ? 22 : 28, dot: true)
                   .padding(selected ? 2 : 0)
                   .overlay { if selected { Circle().strokeBorder(palette.foreground, lineWidth: 1.5) } }
               },
-            ], accessory: BottomBarItem("search", label: "Search", icon: .search), selection: tab
+            ], accessory: TabBarItem("search", label: "Search", icon: .search), selection: tab
           ) { tab = $0 }
         }
         .frame(height: 300)
         .clipShape(RoundedRectangle.kit(Radius.xl))
         .overlay { RoundedRectangle.kit(Radius.xl).strokeBorder(palette.border) }
+      }
+      Demo("Nav bar", note: "A tablet's tabs, the web's bar from sm up: the logo, the tabs by name, search and the account.") {
+        ZStack(alignment: .top) {
+          FakeArt(seed: 2).frame(height: 160)
+          NavBar(
+            [
+              TabBarItem("home", label: "Home", icon: .house),
+              TabBarItem("media", label: "Media", icon: .libraryBig),
+              TabBarItem("downloads", label: "Downloads", icon: .download),
+            ],
+            trailing: [
+              TabBarItem("search", label: "Search", icon: .search),
+              TabBarItem("profile", label: "Profile") { _ in
+                HStack(spacing: 8) {
+                  Avatar("iOS Admin", size: 28)
+                  Text("iOS Admin").textStyle(.sm, weight: .medium).lineLimit(1).fixedSize()
+                }
+              },
+            ], selection: tab
+          ) { tab = $0 } leading: {
+            Circle().fill(palette.accent).frame(width: 24, height: 24).padding(.horizontal, 10)
+          }
+          .padding(.top, 12)
+        }
+        .frame(height: 160)
+        .clipShape(RoundedRectangle.kit(Radius.xl))
       }
     }
   }

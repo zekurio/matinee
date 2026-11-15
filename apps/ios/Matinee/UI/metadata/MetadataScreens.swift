@@ -1,5 +1,6 @@
 import MatineeCore
 import PhotosUI
+import MatineeKit
 import SwiftUI
 import UIKit
 import UniformTypeIdentifiers
@@ -44,7 +45,7 @@ private struct TitlePage<Content: View>: View {
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .background(palette.background)
-    .topBar(heading)
+    .legacyTopBar(heading)
     .loads(loader) { [titleId] api in try await api.titles.get(id: titleId) }
   }
 
@@ -116,15 +117,15 @@ private struct IdentifyForm: View {
       Group {
         if let providerName {
           Text(Str.titleIdentifyDescription(providerName, title.path))
-            .textStyle(.bodyMedium).foregroundStyle(palette.muted)
+            .textStyle(.sm).foregroundStyle(palette.mutedForeground)
             .padding(.bottom, 16)
         }
         form
         if let error {
-          Text(error).textStyle(.bodyMedium).foregroundStyle(palette.danger).padding(.bottom, 8)
+          Text(error).textStyle(.sm).foregroundStyle(palette.destructive).padding(.bottom, 8)
         }
       }
-      .padding(.horizontal, Gutter)
+      .padding(.horizontal, Space.gutter)
       found(providerName)
     }
     .loads(provider) { [libraryId = title.libraryId] api in try await libraryProvider(api, libraryId) }
@@ -139,7 +140,7 @@ private struct IdentifyForm: View {
     let stacked = dynamicType.isAccessibilitySize
     let fields = Group {
       Field(label: Str.titleIdentifyName) {
-        MatineeTextField($name)
+        LegacyTextField($name)
           .textInputAutocapitalization(.words)
           .autocorrectionDisabled()
           .submitLabel(.search)
@@ -147,7 +148,7 @@ private struct IdentifyForm: View {
       }
       Field(label: Str.titleIdentifyYear) {
         // Digits and punctuation rather than the number pad, which has no Search key.
-        MatineeTextField($year, placeholder: Str.titleIdentifyAnyYear)
+        LegacyTextField($year, placeholder: Str.titleIdentifyAnyYear)
           .keyboardType(.numbersAndPunctuation)
           .submitLabel(.search)
           .onSubmit(submit)
@@ -159,7 +160,7 @@ private struct IdentifyForm: View {
       .frame(width: stacked ? nil : yearWidth)
     }
     let button = { (fill: Bool) in
-      MatineeButton(.secondary, action: submit) {
+      LegacyButton(.secondary, action: submit) {
         ButtonContent(Str.titleIdentifySearch, icon: .search, fill: fill)
       }
     }
@@ -186,14 +187,14 @@ private struct IdentifyForm: View {
     case .loading:
       LoadingBox().padding(32)
     case .failed(let message, _):
-      Text(message).textStyle(.bodyMedium).foregroundStyle(palette.danger).padding(.horizontal, Gutter)
+      Text(message).textStyle(.sm).foregroundStyle(palette.destructive).padding(.horizontal, Space.gutter)
     case .ready(let matches) where matches.isEmpty:
       Text(Str.titleIdentifyEmpty(providerName ?? "", submitted.name))
-        .textStyle(.bodyMedium).foregroundStyle(palette.muted)
+        .textStyle(.sm).foregroundStyle(palette.mutedForeground)
         .multilineTextAlignment(.center)
         .frame(maxWidth: .infinity)
         .padding(.vertical, 32)
-        .padding(.horizontal, Gutter)
+        .padding(.horizontal, Space.gutter)
     case .ready(let matches):
       // Two to a row on a tablet, as its width leaves a phone's row mostly empty.
       let columns = isWide(window) ? 2 : 1
@@ -208,7 +209,7 @@ private struct IdentifyForm: View {
           .disabled(matching != nil)
         }
       }
-      .padding(.horizontal, Gutter - 8)
+      .padding(.horizontal, Space.gutter - 8)
     }
   }
 
@@ -281,7 +282,7 @@ private struct Field<Content: View>: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 6) {
-      Text(label).textStyle(.labelMedium).foregroundStyle(palette.muted).accessibilityHidden(true)
+      Text(label).textStyle(.px13, weight: .medium).foregroundStyle(palette.mutedForeground).accessibilityHidden(true)
       // The field says what it's for, as the label above can't to VoiceOver.
       content().accessibilityLabel(label)
     }
@@ -308,14 +309,14 @@ private struct MatchRow: View {
           .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
         VStack(alignment: .leading, spacing: 2) {
           WrappingRow(spacing: 8, lineSpacing: 4) {
-            Text(match.name).textStyle(.bodyLarge, weight: .medium).foregroundStyle(palette.foreground)
+            Text(match.name).textStyle(.base, weight: .medium).foregroundStyle(palette.foreground)
             if let year = match.year {
-              Text(String(year)).textStyle(.bodyMedium).foregroundStyle(palette.muted)
+              Text(String(year)).textStyle(.sm).foregroundStyle(palette.mutedForeground)
             }
-            if current { Badge(Str.titleIdentifyCurrent) }
+            if current { LegacyBadge(Str.titleIdentifyCurrent) }
           }
           if let overview = match.overview {
-            Text(overview).textStyle(.bodySmall).foregroundStyle(palette.muted).lineLimit(2)
+            Text(overview).textStyle(.px13).foregroundStyle(palette.mutedForeground).lineLimit(2)
               .multilineTextAlignment(.leading)
           }
         }
@@ -326,7 +327,7 @@ private struct MatchRow: View {
       }
       .padding(.vertical, 10)
       .padding(.horizontal, 8)
-      .contentShape(ControlShape)
+      .contentShape(RoundedRectangle.kit(Radius.lg))
     }
     .buttonStyle(MatchPress())
     .accessibilityElement(children: .combine)
@@ -341,7 +342,7 @@ private struct MatchPress: ButtonStyle {
 
   func makeBody(configuration: Configuration) -> some View {
     configuration.label
-      .background(palette.foreground.opacity(configuration.isPressed ? 0.08 : 0), in: ControlShape)
+      .background(palette.foreground.opacity(configuration.isPressed ? 0.08 : 0), in: RoundedRectangle.kit(Radius.lg))
       .opacity(enabled ? 1 : 0.6)
       .motion(Motion.color, value: configuration.isPressed)
   }
@@ -472,25 +473,25 @@ private struct ImageEditor: View {
       Text(
         providerName.map { Str.titleImagesDescription(name, $0) } ?? Str.titleImagesDescriptionLocal(name)
       )
-      .textStyle(.bodyMedium).foregroundStyle(palette.muted)
-      .padding(.horizontal, Gutter)
+      .textStyle(.sm).foregroundStyle(palette.mutedForeground)
+      .padding(.horizontal, Space.gutter)
       .padding(.bottom, 16)
       if case .failed(let message, _) = images.state {
         VStack(alignment: .leading, spacing: 12) {
-          Text(Str.titleImagesLoadError(message)).textStyle(.bodyMedium).foregroundStyle(palette.danger)
+          Text(Str.titleImagesLoadError(message)).textStyle(.sm).foregroundStyle(palette.destructive)
           RetryButton(action: images.reload)
         }
-        .padding(.horizontal, Gutter)
+        .padding(.horizontal, Space.gutter)
       } else {
         slots(current, providerName: providerName)
           .padding(.bottom, 16)
         buttons(inUse, providerName: providerName, lists: lists)
-          .padding(.horizontal, Gutter)
+          .padding(.horizontal, Space.gutter)
           .padding(.bottom, 16)
         // The grid's width, inside the safe area and the gutters, for its columns.
         Color.clear.frame(height: 0)
-          .padding(.horizontal, Gutter)
-          .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { gridWidth = $0 - 2 * Gutter }
+          .padding(.horizontal, Space.gutter)
+          .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { gridWidth = $0 - 2 * Space.gutter }
         candidates(inUse, providerName: providerName, lists: lists)
       }
     }
@@ -535,12 +536,12 @@ private struct ImageEditor: View {
         onSelect: several ? { withMotion(Motion.color) { slot = each } } : nil)
     }
     if !several || dynamicType.isAccessibilitySize {
-      VStack(alignment: .leading, spacing: 8) { cards }.padding(.horizontal, Gutter)
+      VStack(alignment: .leading, spacing: 8) { cards }.padding(.horizontal, Space.gutter)
     } else {
       ScrollView(.horizontal, showsIndicators: false) {
         HStack(spacing: 8) { cards }
       }
-      .contentMargins(.horizontal, Gutter, for: .scrollContent)
+      .contentMargins(.horizontal, Space.gutter, for: .scrollContent)
       .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
     }
   }
@@ -566,10 +567,10 @@ private struct ImageEditor: View {
       }
       if lists {
         Toggle(isOn: $allLanguages) {
-          Text(Str.titleImagesAllLanguages).textStyle(.bodyMedium).foregroundStyle(palette.foreground)
+          Text(Str.titleImagesAllLanguages).textStyle(.sm).foregroundStyle(palette.foreground)
         }
-        .toggleStyle(.matinee)
-        .frame(minHeight: MinTouch)
+        .toggleStyle(.legacy)
+        .frame(minHeight: TouchTarget)
       }
     }
     .disabled(busy != nil)
@@ -585,17 +586,17 @@ private struct ImageEditor: View {
       ButtonContent(Str.titleImagesUpload, icon: .imageUp, busy: busy?.isUpload == true, fill: fill)
     }
     .menuStyle(.button)
-    .buttonStyle(.matinee(.secondary, height: 40))
+    .buttonStyle(.legacy(.secondary, height: 40))
   }
 
   private func removeButton(fill: Bool) -> some View {
-    MatineeButton(.outline, height: 40) { change(.pick(nil)) } label: {
+    LegacyButton(.outline, height: 40) { change(.pick(nil)) } label: {
       ButtonContent(Str.titleImagesRemove, icon: .trash, busy: busy == .pick(nil), fill: fill)
     }
   }
 
   private func resetButton(_ providerName: String, fill: Bool) -> some View {
-    MatineeButton(.outline, height: 40) { change(.reset) } label: {
+    LegacyButton(.outline, height: 40) { change(.reset) } label: {
       ButtonContent(Str.titleImagesReset(providerName), icon: .rotateCcw, busy: busy == .reset, fill: fill)
     }
   }
@@ -611,17 +612,17 @@ private struct ImageEditor: View {
         LoadingBox().padding(32)
       case .failed(let message, _):
         VStack(alignment: .leading, spacing: 12) {
-          Text(message).textStyle(.bodyMedium).foregroundStyle(palette.danger)
+          Text(message).textStyle(.sm).foregroundStyle(palette.destructive)
           RetryButton { remoteAttempt += 1 }
         }
-        .padding(.horizontal, Gutter)
+        .padding(.horizontal, Space.gutter)
       case .ready(let found) where found.isEmpty:
         EmptyNote(
           text: allLanguages
             ? Str.titleImagesEmpty(providerName ?? "") : Str.titleImagesEmptyLanguage(providerName ?? ""))
       case .ready(let found):
         let columns = imageColumns(
-          slot, width: gridWidth > 0 ? gridWidth : window.width - 2 * Gutter,
+          slot, width: gridWidth > 0 ? gridWidth : window.width - 2 * Space.gutter,
           largeText: dynamicType.isAccessibilitySize)
         LazyVGrid(
           columns: Array(repeating: GridItem(.flexible(), spacing: 12, alignment: .top), count: columns),
@@ -635,7 +636,7 @@ private struct ImageEditor: View {
             .disabled(busy != nil)
           }
         }
-        .padding(.horizontal, Gutter)
+        .padding(.horizontal, Space.gutter)
       }
     }
   }
@@ -780,11 +781,11 @@ private struct EmptyNote: View {
   @Environment(\.palette) private var palette
 
   var body: some View {
-    Text(text).textStyle(.bodyMedium).foregroundStyle(palette.muted)
+    Text(text).textStyle(.sm).foregroundStyle(palette.mutedForeground)
       .multilineTextAlignment(.center)
       .frame(maxWidth: .infinity)
       .padding(.vertical, 32)
-      .padding(.horizontal, Gutter)
+      .padding(.horizontal, Space.gutter)
   }
 }
 
@@ -845,8 +846,8 @@ private struct SlotCard: View {
         .frame(width: height * imageAspect(slot), height: height)
         .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
       VStack(alignment: .leading, spacing: 0) {
-        Text(slotName(slot)).textStyle(.bodyMedium, weight: .medium).foregroundStyle(palette.foreground)
-        Text(state ?? " ").textStyle(.bodySmall).foregroundStyle(palette.muted)
+        Text(slotName(slot)).textStyle(.sm, weight: .medium).foregroundStyle(palette.foreground)
+        Text(state ?? " ").textStyle(.px13).foregroundStyle(palette.mutedForeground)
       }
       .lineLimit(wraps ? nil : 1)
       .fixedSize(horizontal: !wraps, vertical: false)
@@ -854,12 +855,12 @@ private struct SlotCard: View {
     }
     .padding(6)
     .padding(.trailing, 10)
-    .background(selected ? palette.accent.opacity(0.1) : .clear, in: ControlShape)
-    .overlay { ControlShape.strokeBorder(selected ? palette.accent : palette.border) }
-    .contentShape(ControlShape)
+    .background(selected ? palette.accent.opacity(0.1) : .clear, in: RoundedRectangle.kit(Radius.lg))
+    .overlay { RoundedRectangle.kit(Radius.lg).strokeBorder(selected ? palette.accent : palette.border) }
+    .contentShape(RoundedRectangle.kit(Radius.lg))
     if let onSelect {
       Button(action: onSelect) { card }
-        .buttonStyle(RoundPress())
+        .buttonStyle(LegacyRoundPress())
         .accessibilityAddTraits(selected ? .isSelected : [])
     } else {
       card.accessibilityElement(children: .combine)
@@ -893,8 +894,8 @@ private struct Choice: View {
               ProgressView().tint(.white)
             }
           }
-          .clipShape(ControlShape)
-          .overlay { ControlShape.strokeBorder(inUse ? palette.accent : palette.border, lineWidth: inUse ? 2 : 1) }
+          .clipShape(RoundedRectangle.kit(Radius.lg))
+          .overlay { RoundedRectangle.kit(Radius.lg).strokeBorder(inUse ? palette.accent : palette.border, lineWidth: inUse ? 2 : 1) }
           .overlay(alignment: .topTrailing) {
             if inUse {
               LucideIcon(.check, size: 14, tint: palette.accentForeground, scales: false)
@@ -906,13 +907,13 @@ private struct Choice: View {
         // A line each, as three posters to a row leave no room for both on one.
         VStack(alignment: .leading, spacing: 0) {
           ForEach(lines, id: \.self) { line in
-            Text(line).textStyle(.bodySmall).foregroundStyle(palette.muted).lineLimit(1)
+            Text(line).textStyle(.px13).foregroundStyle(palette.mutedForeground).lineLimit(1)
           }
         }
       }
       .contentShape(Rectangle())
     }
-    .buttonStyle(RoundPress())
+    .buttonStyle(LegacyRoundPress())
     .accessibilityElement(children: .ignore)
     .accessibilityLabel(lines.joined(separator: ", "))
     .accessibilityValue(inUse ? Str.titleImagesInUse : "")

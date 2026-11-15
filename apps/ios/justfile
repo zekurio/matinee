@@ -6,10 +6,14 @@
 set shell := ["bash", "-euo", "pipefail", "-c"]
 
 app := "io.github.zekurio.matinee"
-derived := "build/DerivedData"
+# Another checkout's or agent's build can share neither: give each its own
+# with MATINEE_DERIVED_DATA, under build/.
+derived := env("MATINEE_DERIVED_DATA", "build/DerivedData")
 simulator := env("MATINEE_SIMULATOR", "iPhone 17")
 built_app := derived / "Build/Products/Debug-iphonesimulator/Matinee.app"
 xcodebuild := "xcodebuild -project Matinee.xcodeproj -scheme Matinee -derivedDataPath " + derived
+# The Mac's own copy of the kit's boundary test (Matinee/UI/README.md).
+boundary := "build/KitBoundary"
 
 [private]
 default:
@@ -23,34 +27,55 @@ generate:
 build *args: generate
     {{ xcodebuild }} -configuration Debug -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build {{ args }}
 
+# The simulator's build for running: signed ad hoc, which the Keychain
+# needs to keep a sign-in from one launch to the next; unsigned, the app
+# signs in and forgets it.
+[private]
+sim-build: generate
+    {{ xcodebuild }} -configuration Debug -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- build
+
 # Build, install, and open the app on a simulator (MATINEE_SIMULATOR names it), with launch arguments after
-run *args: build
+run *args: sim-build
     xcrun simctl boot "{{ simulator }}" 2>/dev/null || true
     open -a Simulator
     xcrun simctl install "{{ simulator }}" "{{ built_app }}"
     xcrun simctl launch --terminate-running-process "{{ simulator }}" {{ app }} {{ args }}
 
 # Open the gallery on the dev server's library (apps/ios/DEV.md), with more launch arguments after
-gallery *args: build
+gallery *args: sim-build
     xcrun simctl boot "{{ simulator }}" 2>/dev/null || true
     xcrun simctl install "{{ simulator }}" "{{ built_app }}"
     xcrun simctl launch --terminate-running-process "{{ simulator }}" {{ app }} -gallery YES \
         -gallery.server http://localhost:18420 -gallery.token "$(scripts/dev/token ios-admin)" {{ args }}
 
 # Open the app signed in to the dev server (DEV.md) as `account`, ios-admin or ios-viewer, with more launch arguments after
-dev account="ios-admin" *args: build
+dev account="ios-admin" *args: sim-build
     xcrun simctl boot "{{ simulator }}" 2>/dev/null || true
     open -a Simulator 2>/dev/null || true
     xcrun simctl install "{{ simulator }}" "{{ built_app }}"
     xcrun simctl launch --terminate-running-process "{{ simulator }}" {{ app }} \
         -dev.server http://localhost:18420 -dev.token "$(scripts/dev/token {{ account }})" {{ args }}
 
-# Run MatineeCore's tests on the Mac, and check the generated files are current
-test:
+# Save what the simulator shows as build/screenshots/<name>.png (MATINEE_SIMULATOR names it)
+shot name:
+    mkdir -p build/screenshots
+    xcrun simctl io "{{ simulator }}" screenshot "build/screenshots/{{ name }}.png"
+
+# Run MatineeCore's tests on the Mac, check that screens build only from the kit, and that the generated files are current
+test: boundary
     cd Packages/MatineeCore && swift test
     scripts/strings.py --check
     scripts/lucide.py --kit --check
+    scripts/lucide.py --check
     {{ env("NODE", "nix shell nixpkgs#nodejs_24 -c node") }} scripts/themes.mjs --check
+
+# Fail on a stock SwiftUI control outside the kit, but in the folders Matinee/UI/kit-exclusions.txt lets through
+boundary:
+    cd Packages/MatineeKit && swift build --scratch-path ../../{{ boundary }} --target MatineeKitBoundaryTests -q
+    cd Packages/MatineeKit && swift test --scratch-path ../../{{ boundary }} --skip-build --filter MatineeKitBoundaryTests -q
+    cd Packages/MatineeKit && KIT_BOUNDARY_ROOT="$PWD/../../Matinee/UI" \
+        KIT_BOUNDARY_ALLOW_FILE="$PWD/../../Matinee/UI/kit-exclusions.txt" \
+        swift test --scratch-path ../../{{ boundary }} --skip-build --filter MatineeKitBoundaryTests -q
 
 # Generate the API client again after a contract change
 api:
@@ -60,8 +85,9 @@ api:
 strings:
     scripts/strings.py
 
-# Write the icon assets and Lucide.gen.swift from Android's drawables, and the palettes from the web's
+# Write the kit's icons from Android's, the app's logo from brand/, and the palettes from the web's
 icons:
+    scripts/lucide.py --kit
     scripts/lucide.py
     {{ env("NODE", "nix shell nixpkgs#nodejs_24 -c node") }} scripts/themes.mjs
 

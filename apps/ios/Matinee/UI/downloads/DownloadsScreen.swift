@@ -1,4 +1,5 @@
 import MatineeCore
+import MatineeKit
 import SwiftUI
 
 /*
@@ -28,7 +29,7 @@ struct DownloadsScreen: View {
       if items.isEmpty {
         // Offline, the server can't say, so the usual hint stays.
         let off = !offline && viewer?.mayDownload == false && viewer?.options != nil
-        EmptyState(
+        LegacyEmptyState(
           .download, off ? Str.downloadsOffTitle : Str.downloadsEmpty,
           off ? Str.downloadsOffDescription : Str.downloadsEmptyHint
         )
@@ -58,8 +59,8 @@ struct DownloadsScreen: View {
     .environment(\.defaultMinListRowHeight, 0)
     .motion(Motion.move, value: list.coming.map(\.id) + list.finished.map(\.id))
     .scrollsToTopOnReselect()
-    .topBar(Str.downloadsTitle) {
-      if offline { LucideIcon(.cloudOff, label: Str.downloadsOffline, size: 20, tint: palette.muted) }
+    .legacyTopBar(Str.downloadsTitle) {
+      if offline { LucideIcon(.cloudOff, label: Str.downloadsOffline, size: 20, tint: palette.mutedForeground) }
     }
     .removalAlert($removing)
   }
@@ -116,12 +117,12 @@ struct DownloadsShowScreen: View {
   private func page(_ title: TitleSummary, entries: [OfflineItem]) -> some View {
     let seasons = seasonsOf(entries)
     return List {
-      Text(episodesAndSize(entries)).textStyle(.bodyMedium).foregroundStyle(palette.muted).downloadRow()
+      Text(episodesAndSize(entries)).textStyle(.sm).foregroundStyle(palette.mutedForeground).downloadRow()
       ForEach(seasons, id: \.number) { season in
         let name = seasonName(season.number)
         ListHeading(name) {
-          RoundIconButton(
-            .trash, label: Str.downloadsRemoveNamed(name), size: 40, iconSize: 18, tint: palette.muted,
+          LegacyRoundIconButton(
+            .trash, label: Str.downloadsRemoveNamed(name), size: 40, iconSize: 18, tint: palette.mutedForeground,
             background: .clear
           ) {
             removing = Removal(name: Str.titleSeasonOf(title.name, name), entries: season.entries)
@@ -144,7 +145,7 @@ struct DownloadsShowScreen: View {
     .environment(\.defaultMinListRowHeight, 0)
     .motion(Motion.move, value: entries.map { "\($0.id)\($0.state)" }.sorted())
     .background(palette.background.ignoresSafeArea())
-    .topBar(title.name) { showMenu(title, entries: entries) }
+    .legacyTopBar(title.name) { showMenu(title, entries: entries) }
   }
 
   /// The show's menu: pause or resume what's still coming, its page, and removing every episode.

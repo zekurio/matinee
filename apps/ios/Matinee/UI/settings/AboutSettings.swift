@@ -1,4 +1,5 @@
 import MatineeCore
+import MatineeKit
 import SwiftUI
 import UIKit
 
@@ -16,7 +17,7 @@ struct AboutPage: View {
       Panel {
         ForEach(Array(appInfo().enumerated()), id: \.offset) { index, row in
           if index > 0 { RowDivider() }
-          ValueRow(row.0, value: row.1)
+          LegacyValueRow(row.0, value: row.1)
         }
       }
       PlaybackDiagnosticsSection()

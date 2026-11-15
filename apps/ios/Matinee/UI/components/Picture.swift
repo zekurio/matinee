@@ -1,14 +1,15 @@
 import MatineeCore
 import Nuke
 import NukeUI
+import MatineeKit
 import SwiftUI
 import UIKit
 
 /*
  * Picture.kt: images from the server over their blurred placeholders, the
- * tones that stand in for missing art, the lucide icons, and the logo.
- * `ImageSource` and the API's `art`, `frame`, and `landscape` are
- * MatineeCore's (Images/), as is the blur hash decoder.
+ * tones that stand in for missing art, and the logo. `ImageSource` and the
+ * API's `art`, `frame`, and `landscape` are MatineeCore's (Images/), as is
+ * the blur hash decoder. Icons are the kit's `LucideIcon`.
  */
 
 extension ImagePipeline {
@@ -75,7 +76,14 @@ extension EnvironmentValues {
 
 /// The first of `sources` that loads, fading in over its blurred placeholder
 /// while it loads. Nothing when every one fails, so what's beneath shows:
-/// the tone and name of `PosterArt`, or the film icon of a still.
+/// the tone and name of `PosterArt`, or the film icon of a still. It fills
+/// what it's given and never sizes it, so give it a frame or put it in an
+/// `ArtFrame`:
+///
+///     ArtFrame(title.name, aspect: 16 / 9) { Picture(api?.landscape(item) ?? []) }
+///
+/// Images load with the session's sign-in through the root's pipeline, and
+/// only from the server in use (`ImagePipeline.matinee`).
 struct Picture: View {
   let sources: [ImageSource]
   var contentMode: ContentMode = .fill
@@ -154,52 +162,6 @@ struct Tone: View {
     let tones = palette.tones
     let (from, to) = tones[toneIndex(key, count: tones.count)]
     LinearGradient(colors: [from, to], startPoint: .topLeading, endPoint: .bottomTrailing)
-  }
-}
-
-/// A lucide icon (see `Lucide`), in the foreground color unless `tint` says
-/// otherwise. `size` is in points at the default text size and grows with
-/// Dynamic Type, as an SF Symbol in a label does. With a `label`, VoiceOver
-/// reads it; without, the icon is decoration and VoiceOver skips it.
-struct LucideIcon: View {
-  let icon: Lucide
-  var label: String?
-  var size: CGFloat
-  var tint: Color?
-  /// False for an icon in a frame of fixed size, like a round button's,
-  /// which VoiceOver's large content viewer shows bigger instead.
-  var scales = true
-  /// How Dynamic Type has grown body text, which icons follow.
-  @ScaledMetric(relativeTo: .body) private var scale: CGFloat = 1
-
-  init(_ icon: Lucide, label: String? = nil, size: CGFloat = 20, tint: Color? = nil, scales: Bool = true) {
-    self.icon = icon
-    self.label = label
-    self.size = size
-    self.tint = tint
-    self.scales = scales
-  }
-
-  var body: some View {
-    let side = scales ? size * scale : size
-    let image = Image(icon)
-      .resizable()
-      .frame(width: side, height: side)
-    Group {
-      if let tint { image.foregroundStyle(tint) } else { image }
-    }
-    .accessibilityHidden(label == nil)
-    .accessibilityLabel(label ?? "")
-  }
-}
-
-extension Image {
-  /// A lucide icon as a template image, for a `Label`, a menu item, or a
-  /// button the system draws. VoiceOver skips it: the label or button
-  /// around it says what it is.
-  init(_ icon: Lucide) {
-    self.init(decorative: icon.name)
-    self = self.renderingMode(.template)
   }
 }
 

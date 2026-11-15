@@ -18,11 +18,14 @@ public enum TopBarLeading: Sendable {
 /// tracking-tight`, and what the page can do, on the page's background,
 /// 64 tall. `centered` centers the name over a hairline, as the web's
 /// settings sheet has it. Back does `onLeading`, or dismisses the page.
+/// With `onHome`, a house beside Back goes to the app's first page, as the
+/// web's bar has it on a page with no name of its own.
 public struct TopBar<Actions: View>: View {
   let title: String?
   let leading: TopBarLeading
   let centered: Bool
   let onLeading: (() -> Void)?
+  let onHome: (() -> Void)?
   @ViewBuilder let actions: () -> Actions
   @Environment(\.palette) private var palette
   @Environment(\.dismiss) private var dismiss
@@ -30,12 +33,13 @@ public struct TopBar<Actions: View>: View {
 
   public init(
     _ title: String?, leading: TopBarLeading = .back, centered: Bool = false, onLeading: (() -> Void)? = nil,
-    @ViewBuilder actions: @escaping () -> Actions
+    onHome: (() -> Void)? = nil, @ViewBuilder actions: @escaping () -> Actions
   ) {
     self.title = title
     self.leading = leading
     self.centered = centered
     self.onLeading = onLeading
+    self.onHome = onHome
     self.actions = actions
   }
 
@@ -59,6 +63,9 @@ public struct TopBar<Actions: View>: View {
             ) { (onLeading ?? { dismiss() })() }
           case .none: EmptyView()
           }
+          if let onHome {
+            RoundIconButton(.house, label: KitText.home(locale), look: .ghost, size: 48, iconSize: 22, action: onHome)
+          }
           if !centered, let title {
             Text(title)
               .textStyle(.xl, weight: .semibold, tracking: .tight)
@@ -81,9 +88,10 @@ public struct TopBar<Actions: View>: View {
 
 extension TopBar where Actions == EmptyView {
   public init(
-    _ title: String?, leading: TopBarLeading = .back, centered: Bool = false, onLeading: (() -> Void)? = nil
+    _ title: String?, leading: TopBarLeading = .back, centered: Bool = false, onLeading: (() -> Void)? = nil,
+    onHome: (() -> Void)? = nil
   ) {
-    self.init(title, leading: leading, centered: centered, onLeading: onLeading) { EmptyView() }
+    self.init(title, leading: leading, centered: centered, onLeading: onLeading, onHome: onHome) { EmptyView() }
   }
 }
 
@@ -94,7 +102,7 @@ extension View {
   /// nothing: the bar stays put above it.
   public func topBar<Actions: View>(
     _ title: String?, leading: TopBarLeading = .back, centered: Bool = false, onLeading: (() -> Void)? = nil,
-    @ViewBuilder actions: @escaping () -> Actions
+    onHome: (() -> Void)? = nil, @ViewBuilder actions: @escaping () -> Actions
   ) -> some View {
     self
       #if os(iOS)
@@ -102,15 +110,16 @@ extension View {
         .background(SwipeBack())
       #endif
       .safeAreaInset(edge: .top, spacing: 0) {
-        TopBar(title, leading: leading, centered: centered, onLeading: onLeading, actions: actions)
+        TopBar(title, leading: leading, centered: centered, onLeading: onLeading, onHome: onHome, actions: actions)
       }
       .pageBackground()
   }
 
   public func topBar(
-    _ title: String?, leading: TopBarLeading = .back, centered: Bool = false, onLeading: (() -> Void)? = nil
+    _ title: String?, leading: TopBarLeading = .back, centered: Bool = false, onLeading: (() -> Void)? = nil,
+    onHome: (() -> Void)? = nil
   ) -> some View {
-    topBar(title, leading: leading, centered: centered, onLeading: onLeading) { EmptyView() }
+    topBar(title, leading: leading, centered: centered, onLeading: onLeading, onHome: onHome) { EmptyView() }
   }
 
   /// Hides the system's navigation bar on a page that draws its own top,
@@ -195,10 +204,11 @@ private struct PageBackground: ViewModifier {
   }
 #endif
 
-/// A destination in the bottom bar: its name, which shows beside its icon
-/// while it's the open one and is what VoiceOver reads, and a lucide icon
-/// or, `picture`, a view of its own, as the profile tab's avatar.
-public struct BottomBarItem<ID: Hashable> {
+/// A destination in the tab bars: its name, which shows beside its icon
+/// while it's the open one (always, in the `NavBar`) and is what VoiceOver
+/// reads, and a lucide icon or, `picture`, a view of its own, as the
+/// profile tab's avatar.
+public struct TabBarItem<ID: Hashable> {
   let id: ID
   let label: String
   let icon: Lucide?
@@ -231,16 +241,28 @@ struct BottomBarHeightKey: PreferenceKey {
 /// phone TabBar and Android's `BottomBar`: a frosted capsule of the tabs,
 /// and `accessory`, as search, in a circle of its own beside it. The open
 /// tab shows its name beside its icon in a pill; the rest show only their
-/// icons. The page fades out under it and scrolls on beneath.
+/// icons. The page scrolls on beneath it, with no fade: the frost alone
+/// keeps it readable, as Android has it since its fade went.
+///
+/// It keeps its size at the accessibility text sizes, as iOS's tab bar
+/// does; a long press on a tab shows its name large instead. With a
+/// keyboard, ⌘1, ⌘2, … pick the tabs in order.
 public struct BottomBar<ID: Hashable>: View {
-  let items: [BottomBarItem<ID>]
-  let accessory: BottomBarItem<ID>?
+  let items: [TabBarItem<ID>]
+  let accessory: TabBarItem<ID>?
   let selection: ID?
   let onSelect: (ID) -> Void
   @Environment(\.palette) private var palette
 
+  /// What the bar takes above the bottom safe area: itself and the gap
+  /// under it, and 8 above it so a page's last row clears it, as
+  /// Android's `BOTTOM_BAR_HEIGHT`. What a toast rises over.
+  public static var clearance: CGFloat { barHeight + lift + Space.s2 }
+  static var barHeight: CGFloat { 60 }
+  static var lift: CGFloat { Space.s3 }
+
   public init(
-    _ items: [BottomBarItem<ID>], accessory: BottomBarItem<ID>? = nil, selection: ID?, onSelect: @escaping (ID) -> Void
+    _ items: [TabBarItem<ID>], accessory: TabBarItem<ID>? = nil, selection: ID?, onSelect: @escaping (ID) -> Void
   ) {
     self.items = items
     self.accessory = accessory
@@ -252,44 +274,29 @@ public struct BottomBar<ID: Hashable>: View {
     HStack(spacing: 10) {
       HStack(spacing: 0) {
         ForEach(items.indices, id: \.self) { index in
-          tab(items[index], wide: true)
+          tab(items[index], wide: true, shortcut: index)
         }
       }
       .floating(Capsule())
       if let accessory {
-        tab(accessory, wide: false).floating(Circle())
+        tab(accessory, wide: false, shortcut: items.count).floating(Circle())
       }
     }
-    .padding(.top, 28)
-    .padding(.bottom, 12)
+    .padding(.top, Space.s7)
+    .padding(.bottom, Self.lift)
     .frame(maxWidth: .infinity)
-    .background {
-      // `from-background/0 via-background/85 via-55% to-background`.
-      LinearGradient(
-        stops: [
-          .init(color: palette.background.opacity(0), location: 0),
-          .init(color: palette.background.opacity(0.85), location: 0.55),
-          .init(color: palette.background, location: 1),
-        ], startPoint: .top, endPoint: .bottom
-      )
-      .ignoresSafeArea(edges: .bottom)
-      .allowsHitTesting(false)
-    }
     .motion(Motion.move, value: selection)
+    .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
     .accessibilityElement(children: .contain)
   }
 
-  private func tab(_ item: BottomBarItem<ID>, wide: Bool) -> some View {
+  private func tab(_ item: TabBarItem<ID>, wide: Bool, shortcut: Int) -> some View {
     let selected = item.id == selection
     return Button {
       onSelect(item.id)
     } label: {
-      HStack(spacing: 8) {
-        if let icon = item.icon {
-          LucideIcon(icon, size: 22, scales: false)
-        } else if let picture = item.picture {
-          picture(selected)
-        }
+      HStack(spacing: Space.s2) {
+        TabGlyph(item: item, selected: selected, size: 22)
         if selected && wide {
           Text(item.label).textStyle(.sm, weight: .medium).lineLimit(1).fixedSize()
         }
@@ -301,8 +308,45 @@ public struct BottomBar<ID: Hashable>: View {
       .contentShape(Capsule())
     }
     .buttonStyle(KitPressStyle(shape: Capsule(), wash: false, pressScale: 0.92))
+    .modifier(TabShortcut(index: shortcut))
     .accessibilityLabel(item.label)
     .accessibilityAddTraits(selected ? .isSelected : [])
+    .accessibilityShowsLargeContentViewer {
+      if let icon = item.icon { Image(icon) }
+      Text(item.label)
+    }
+  }
+}
+
+/// A tab's icon, or its picture.
+struct TabGlyph<ID: Hashable>: View {
+  let item: TabBarItem<ID>
+  let selected: Bool
+  let size: CGFloat
+
+  var body: some View {
+    if let icon = item.icon {
+      LucideIcon(icon, size: size, scales: false)
+    } else if let picture = item.picture {
+      picture(selected)
+    }
+  }
+}
+
+/// ⌘1 to ⌘9 for the first nine tabs.
+struct TabShortcut: ViewModifier {
+  let index: Int
+
+  func body(content: Content) -> some View {
+    #if os(iOS)
+      if index < 9, let digit = "\(index + 1)".first {
+        content.keyboardShortcut(KeyEquivalent(digit), modifiers: .command)
+      } else {
+        content
+      }
+    #else
+      content
+    #endif
   }
 }
 
@@ -324,7 +368,7 @@ private struct BottomBarModifier<ID: Hashable>: ViewModifier {
       .safeAreaInset(edge: .bottom, spacing: 0) {
         if !keyboard {
           bar
-            .onGeometryChange(for: CGFloat.self) { $0.size.height - 28 } action: { height = $0 }
+            .onGeometryChange(for: CGFloat.self) { $0.size.height - Space.s7 } action: { height = $0 }
             .transition(.opacity)
         }
       }

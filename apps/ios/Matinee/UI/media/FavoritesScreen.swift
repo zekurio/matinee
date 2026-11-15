@@ -1,4 +1,5 @@
 import MatineeCore
+import MatineeKit
 import SwiftUI
 
 /*
@@ -32,7 +33,7 @@ struct FavoritesScreen: View {
         LoadingBox()
       }
     }
-    .topBar(Str.favoritesTitle)
+    .legacyTopBar(Str.favoritesTitle)
     .loads(titles) { api in
       guard let username = await session.lastUser?.username,
         let saved = try await api.profiles.favorites(username: username, limit: LIMIT) else { return [] }
@@ -48,7 +49,7 @@ struct FavoritesScreen: View {
     ScrollView {
       VStack(alignment: .leading, spacing: 20) {
         if !shows.isEmpty && !episodes.isEmpty {
-          SectionTitle(Str.favoritesTitles).padding(.horizontal, Gutter)
+          SectionTitle(Str.favoritesTitles).padding(.horizontal, Space.gutter)
         }
         if !shows.isEmpty {
           CardGrid {
@@ -57,7 +58,7 @@ struct FavoritesScreen: View {
         }
         if !episodes.isEmpty {
           SectionTitle(Str.favoritesEpisodes)
-            .padding(.horizontal, Gutter)
+            .padding(.horizontal, Space.gutter)
             .padding(.top, shows.isEmpty ? 0 : 8)
           CardGrid {
             ForEach(episodes, id: \.id) { item in EpisodeCard(item) }
@@ -83,11 +84,11 @@ private struct FavoritesEmpty: View {
 
   var body: some View {
     VStack(spacing: 0) {
-      LucideIcon(.heart, size: 28, tint: palette.muted)
+      LucideIcon(.heart, size: 28, tint: palette.mutedForeground)
       Gap(12)
-      Text(Str.favoritesEmpty).textStyle(.titleMedium).multilineTextAlignment(.center)
+      Text(Str.favoritesEmpty).textStyle(.base, weight: .semibold).multilineTextAlignment(.center)
       Gap(4)
-      Text(Str.favoritesEmptyHint).textStyle(.bodyMedium).foregroundStyle(palette.muted)
+      Text(Str.favoritesEmptyHint).textStyle(.sm).foregroundStyle(palette.mutedForeground)
         .multilineTextAlignment(.center)
     }
     .padding(.horizontal, 32)

@@ -1,3 +1,4 @@
+import MatineeKit
 import SwiftUI
 import UIKit
 
@@ -17,8 +18,8 @@ struct LocalNetworkHint: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 8) {
-      Text(Str.iosConnectLocalNetwork).textStyle(.bodySmall).foregroundStyle(palette.danger)
-      MatineeButton(.outline) {
+      Text(Str.iosConnectLocalNetwork).textStyle(.px13).foregroundStyle(palette.destructive)
+      LegacyButton(.outline) {
         if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
       } label: {
         LucideIcon(.settings, size: 18)

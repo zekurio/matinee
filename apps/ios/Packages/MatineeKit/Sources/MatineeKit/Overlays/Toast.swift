@@ -135,20 +135,26 @@ extension View {
   /// are on a phone, full width and 16 points in, above the bottom bar when
   /// the page has one. Goes once, on the root; a toast shown while a sheet
   /// is up shows under it, as Android's do.
-  public func toastHost(_ state: ToastState) -> some View {
-    modifier(ToastHostModifier(state: state))
+  ///
+  /// `clearance` is how far above the bottom safe area toasts sit, for an
+  /// app that knows whether its bar shows, as one that keeps pages under
+  /// pages does (`BottomBar.clearance` while it shows, 0 when it doesn't).
+  /// Without it, the host measures the `.bottomBar` below it.
+  public func toastHost(_ state: ToastState, clearance: CGFloat? = nil) -> some View {
+    modifier(ToastHostModifier(state: state, clearance: clearance))
   }
 }
 
 private struct ToastHostModifier: ViewModifier {
   let state: ToastState
-  @State private var barHeight: CGFloat = 0
+  let clearance: CGFloat?
+  @State private var measured: CGFloat = 0
   @State private var drag: CGFloat = 0
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   func body(content: Content) -> some View {
     content
-      .onPreferenceChange(BottomBarHeightKey.self) { barHeight = $0 }
+      .onPreferenceChange(BottomBarHeightKey.self) { measured = $0 }
       .overlay(alignment: .bottom) {
         ZStack {
           if let message = state.current {
@@ -168,7 +174,8 @@ private struct ToastHostModifier: ViewModifier {
           }
         }
         .padding(.horizontal, Space.gutter)
-        .padding(.bottom, barHeight + Space.s4)
+        .padding(.bottom, (clearance ?? measured) + Space.s4)
+        .motion(Motion.move, value: clearance ?? measured)
         .animation(Motion.animation(state.current == nil ? Motion.exit : Motion.move, reduceMotion: reduceMotion), value: state.current?.id)
       }
   }

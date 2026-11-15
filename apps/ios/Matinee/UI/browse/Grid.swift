@@ -1,4 +1,5 @@
 import MatineeCore
+import MatineeKit
 import SwiftUI
 
 /*
@@ -87,7 +88,7 @@ struct PosterGrid<Header: View, Empty: View>: View {
   var body: some View {
     ScrollView {
       VStack(alignment: .leading, spacing: 0) {
-        header().padding(.horizontal, Gutter)
+        header().padding(.horizontal, Space.gutter)
         if pages.firstLoading {
           PosterGridSkeleton()
         } else {
@@ -132,7 +133,7 @@ struct PosterGrid<Header: View, Empty: View>: View {
         .padding(24)
         .accessibilityLabel(Str.loadingInProgress)
     } else if pages.done, pages.items.isEmpty {
-      empty().padding(.horizontal, Gutter)
+      empty().padding(.horizontal, Space.gutter)
     }
   }
 }
@@ -156,8 +157,8 @@ struct PosterGridSkeleton: View {
     CardGrid {
       ForEach(0..<count, id: \.self) { _ in
         VStack(alignment: .leading, spacing: 0) {
-          CardShape.fill(palette.card).aspectRatio(2 / 3, contentMode: .fit)
-            .overlay { CardShape.strokeBorder(palette.border) }
+          RoundedRectangle.kit(Radius.md).fill(palette.card).aspectRatio(2 / 3, contentMode: .fit)
+            .overlay { RoundedRectangle.kit(Radius.md).strokeBorder(palette.border) }
           small.fill(palette.secondary).frame(height: 14).padding(.trailing, 40).padding(.top, 10)
           small.fill(palette.secondary).frame(width: 40, height: 12).padding(.top, 6)
         }
@@ -176,6 +177,6 @@ struct GridEmpty: View {
   init(_ text: String) { self.text = text }
 
   var body: some View {
-    Text(text).textStyle(.bodyMedium).foregroundStyle(palette.muted).padding(.vertical, 48)
+    Text(text).textStyle(.sm).foregroundStyle(palette.mutedForeground).padding(.vertical, 48)
   }
 }

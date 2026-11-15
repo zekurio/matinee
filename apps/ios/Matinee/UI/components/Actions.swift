@@ -1,62 +1,89 @@
 import MatineeCore
+import MatineeKit
 import SwiftUI
 
 /*
  * Actions.kt: what can be done with a title, a season, or a file, from a
- * long press on any card and from the menu button on its page. Android
- * opens a bottom sheet of rows; iOS a context menu over the card, and a
- * `Menu` from the page's button, with Android's items, in its order, with
- * its icons and words. The sheets those items open, a download's, a
- * season's downloads, and when it was watched, are presented once for the
- * whole app by `ActionsHost`, as Android's `ActionsSheet` lives once at its
- * root, so a menu that goes away doesn't take its sheet with it.
+ * long press on any card and from the "more" button on its page. As on the
+ * web on a phone and on Android, they're a sheet from the bottom of rows,
+ * with Android's items, in its order, with its icons and words, rather
+ * than iOS's context menu: the sheet looks like the rest of the app and
+ * holds a header naming what it's for.
+ *
+ * The sheets live once, around the shell (`ActionsHost`), so a card that
+ * scrolls away or a page that closes doesn't take them along. A row closes
+ * the sheet and then runs, so what it opens next, as the question of when
+ * something was watched, arrives once the sheet has gone.
  */
 
-/// A sheet an action opened.
-enum ActionSheet: Identifiable {
-  /// The download sheet for a file.
-  case download(MediaItem)
-  /// The download sheet for a show, or one of its seasons.
-  case files(FileSet)
-  /// When something being marked watched was watched.
-  case watched(WatchedAsk)
+/// What a sheet of actions is for: a file, a whole title, or one season of
+/// a show. One opened on the page of what it's for is `here`: that page
+/// already shows Play, the tick, and the heart, and opening the page again
+/// would only stack another copy of it, so the sheet leaves those out.
+enum ActionTarget: Hashable, Identifiable {
+  case item(MediaItem, here: Bool)
+  /// `file` is what Play starts, when known: a movie's file, which the sheet
+  /// downloads. `recommended` is the title at its provider when a
+  /// recommendation row offered it, for "Not interested".
+  case title(TitleSummary, file: MediaItem?, here: Bool, recommended: CatalogRef? = nil)
+  case season(TitleSummary, Season, here: Bool)
 
   var id: String {
     switch self {
-    case .download(let item): "download-\(item.id)"
-    case .files(let files): "files-\(files.title.id)-\(files.season.map { String(describing: $0.number) } ?? "all")"
-    case .watched(let ask): "watched-\(ask.id)"
+    case .item(let item, let here): "item/\(item.id)/\(here)"
+    case .title(let title, _, let here, _): "title/\(title.id)/\(here)"
+    case .season(let title, let season, let here): "season/\(title.id)/\(season.number ?? -1)/\(here)"
+    }
+  }
+
+  var here: Bool {
+    switch self {
+    case .item(_, let here), .title(_, _, let here, _), .season(_, _, let here): here
     }
   }
 }
 
-/// Opens the actions' sheets, and keeps what the metadata items need to
-/// know: Android's `Actions`. One for the signed-in app, in the
-/// environment as `\.actions`.
+/// The app's actions and the sheets they open: Android's `Actions`. One for
+/// the signed-in app, in the environment as `\.actions`; nil outside it, as
+/// in the gallery, where long presses do nothing.
 @Observable final class Actions {
-  var sheet: ActionSheet?
+  /// The sheet of actions showing, if one is.
+  var target: ActionTarget?
+  /// A file whose download sheet is open.
+  var download: MediaItem?
+  /// A show or season whose download sheet is open.
+  var files: FileSet?
+  /// Something being marked watched, while the person says when.
+  var watched: WatchedAsk?
+  /// The same, while the person picks the day.
+  var watchedDay: WatchedAsk?
+  /// Titles marked "Not interested" in this sign-in, which recommendation rows leave out.
+  let hidden = HiddenRecommendations()
 
   /// Each library's metadata provider, nil for none, once asked; an admin's
   /// fix match and refresh show only for a library whose provider has its key.
   private(set) var providers: [String: MetadataProvider?] = [:]
   @ObservationIgnored private var asking = false
 
+  /// Opens the sheet of `target`'s actions.
+  func open(_ target: ActionTarget) { self.target = target }
+
   /// Ask when the person watched `name`, then `mark` it with the answer.
   func askWatched(_ name: String, mark: @escaping (_ watchedAt: String?) async throws -> Void) {
-    present(.watched(WatchedAsk(name: name, mark: mark)))
+    watched = WatchedAsk(name: name, mark: mark)
   }
 
-  func download(_ item: MediaItem) { present(.download(item)) }
-
-  func files(_ files: FileSet) { present(.files(files)) }
-
-  /// A menu's item opens its sheet once the menu has gone, as Android's
-  /// sheet slides away before the next opens; while a context menu is still
-  /// leaving, UIKit refuses to present over it.
-  private func present(_ sheet: ActionSheet) {
+  /// Leaves `ref` out of the viewer's recommendations, saying so, or putting
+  /// it back and saying why if the server refused.
+  func hideRecommendation(_ ref: CatalogRef, name: String, api: MatineeApi, snackbar: Snackbar) {
+    let hidden = hidden
     Task {
-      try? await Task.sleep(for: .milliseconds(350))
-      self.sheet = sheet
+      do {
+        try await hidden.dismiss(ref) { try await api.recommendations.dismiss(ref: ref, dismissed: true) }
+        snackbar.show(Str.webDiscoverDismissed(name))
+      } catch {
+        launchShowing(snackbar, Str.webDiscoverDismissFailed(name)) { throw error }
+      }
     }
   }
 
@@ -65,7 +92,7 @@ enum ActionSheet: Identifiable {
 
   /// What the metadata items need, asked once for an admin: every library's
   /// provider. The server turns anyone else away. A failure is asked again
-  /// when a title's page shows.
+  /// when the shell next shows.
   func loadProviders(_ api: MatineeApi) async {
     guard !asking, providers.isEmpty else { return }
     asking = true
@@ -84,12 +111,11 @@ enum ActionSheet: Identifiable {
 }
 
 extension EnvironmentValues {
-  /// The app's actions; nil outside the signed-in app, as in the gallery.
   @Entry var actions: Actions? = nil
 }
 
-/// Installs the actions for everything under it: the context menus' items
-/// and the sheets they open. The shell puts it around its tabs.
+/// Installs the actions for everything under it, and the sheets they open.
+/// The shell puts it around its tabs, once.
 struct ActionsHost: ViewModifier {
   @State private var actions = Actions()
   @Environment(\.api) private var api
@@ -98,16 +124,20 @@ struct ActionsHost: ViewModifier {
   @Environment(ViewerState.self) private var viewer: ViewerState?
 
   func body(content: Content) -> some View {
+    @Bindable var actions = actions
     content
       .environment(\.actions, actions)
-      .environment(\.actionMenu, ActionMenu { AnyView(ActionItems(target: $0)) })
-      .sheet(item: $actions.sheet) { sheet in
-        switch sheet {
-        case .download(let item): DownloadSheet(item: item)
-        case .files(let files): DownloadFilesSheet(files: files)
-        case .watched(let ask): WatchedAtSheet(ask)
+      .background {
+        Color.clear.matineeSheet(item: $actions.target) { target in
+          ActionItems(target: target).padding(.vertical, Space.s2)
         }
       }
+      .background {
+        Color.clear.matineeSheet(item: $actions.watched) { ask in WatchedAtSheet(ask) }
+      }
+      .background { WatchedDayDialog(ask: $actions.watchedDay) }
+      // The download sheets are the downloads screens' own, not yet on the kit (legacy/).
+      .legacyDownloadSheets(download: $actions.download, files: $actions.files)
       .task(id: user?.isAdmin == true && !offline) {
         guard user?.isAdmin == true, !offline, let api else { return }
         await actions.loadProviders(api)
@@ -124,7 +154,7 @@ struct ActionsHost: ViewModifier {
   }
 }
 
-/// Whether `target`'s menu has anything in it. One opened on its own page
+/// Whether `target`'s sheet has anything in it. One opened on its own page
 /// holds only starting over, downloads, and an admin's items, so for an
 /// account that may not download it can be empty, and the page leaves its
 /// button out.
@@ -134,80 +164,65 @@ struct ActionsHost: ViewModifier {
   let stored = downloads.store.items
   switch target {
   case .item(let item, _): return admin || isResumable(item) || stored[item.id] != nil
-  case .title(_, let file, _): return admin || isResumable(file) || file.flatMap { stored[$0.id] } != nil
+  case .title(_, let file, _, _): return admin || isResumable(file) || file.flatMap { stored[$0.id] } != nil
   case .season(_, let season, _): return admin && season.number != nil
   }
 }
 
-extension ActionTarget {
-  var here: Bool {
-    switch self {
-    case .item(_, let here), .title(_, _, let here), .season(_, _, let here): here
-    }
-  }
-}
-
-/// A page's menu button: the round ellipsis, opening the same items a long
-/// press on its card offers. Nothing when the menu would be empty.
+/// A page's "more" button: the round ellipsis, opening the same sheet a long
+/// press on its card does. Nothing when the sheet would be empty.
 struct ActionsButton: View {
   let target: ActionTarget
+  var look: IconButtonLook = .secondary
   @Environment(ViewerState.self) private var viewer: ViewerState?
   @Environment(Downloads.self) private var downloads
   @Environment(\.user) private var user
-  @Environment(\.palette) private var palette
+  @Environment(\.actions) private var actions
 
-  init(_ target: ActionTarget) { self.target = target }
+  init(_ target: ActionTarget, look: IconButtonLook = .secondary) {
+    self.target = target
+    self.look = look
+  }
 
   var body: some View {
     if hasActions(target, viewer: viewer, user: user, downloads: downloads) {
-      Menu {
-        ActionItems(target: target).tint(palette.foreground)
-      } label: {
-        LucideIcon(.ellipsis, size: 20, tint: palette.foreground, scales: false)
-          .frame(width: 44, height: 44)
-          .background(palette.secondary, in: Circle())
-          .contentShape(Circle())
-      }
-      .buttonStyle(RoundPress())
-      .accessibilityLabel(Str.titleMoreActions)
-      .accessibilityShowsLargeContentViewer {
-        Image(Lucide.ellipsis)
-        Text(Str.titleMoreActions)
+      RoundIconButton(.ellipsis, label: Str.titleMoreActions, look: look, size: TouchTarget) {
+        actions?.open(target)
       }
     }
   }
 }
 
-/// A menu's items for `target`, as `Button`s and `Divider`s.
+extension View {
+  /// A long press on this opens `target`'s actions, for something pressable
+  /// that isn't a card. Cards have it already.
+  func cardMenu(_ target: ActionTarget) -> some View { modifier(CardMenu(target: target)) }
+}
+
+private struct CardMenu: ViewModifier {
+  let target: ActionTarget
+  @Environment(\.actions) private var actions
+  @Environment(\.offline) private var offline
+
+  func body(content: Content) -> some View {
+    content
+      .onLongPressGesture(minimumDuration: 0.45) { if !offline { actions?.open(target) } }
+      .accessibilityAction(named: Text(Str.titleMoreActions)) { if !offline { actions?.open(target) } }
+  }
+}
+
+/// A sheet's rows for `target`.
 struct ActionItems: View {
   let target: ActionTarget
 
   var body: some View {
-    switch target {
-    case .item(let item, let here): ItemActions(item: item, here: here)
-    case .title(let title, let file, let here): TitleActions(title: title, file: file, here: here)
-    case .season(let title, let season, let here): SeasonActions(title: title, season: season, here: here)
-    }
-  }
-}
-
-/// A menu's row: an icon and a label, as Android's `SheetItem`.
-private struct ActionItem: View {
-  let icon: Lucide
-  let label: String
-  var destructive = false
-  let action: () -> Void
-
-  init(_ icon: Lucide, _ label: String, destructive: Bool = false, action: @escaping () -> Void) {
-    self.icon = icon
-    self.label = label
-    self.destructive = destructive
-    self.action = action
-  }
-
-  var body: some View {
-    Button(role: destructive ? .destructive : nil, action: action) {
-      Label { Text(label) } icon: { Image(icon) }
+    VStack(spacing: 0) {
+      switch target {
+      case .item(let item, let here): ItemActions(item: item, here: here)
+      case .title(let title, let file, let here, let recommended):
+        TitleActions(title: title, file: file, here: here, recommended: recommended)
+      case .season(let title, let season, let here): SeasonActions(title: title, season: season, here: here)
+      }
     }
   }
 }
@@ -227,14 +242,15 @@ private struct ItemActions: View {
     let watched = viewer?.isWatched(item) ?? (item.progress?.completed ?? false)
     let favorite = viewer?.isFavorite(item) ?? item.favorite
     let resume = isResumable(item)
+    SheetHeader(code != nil ? label.title : label.showName, subtitle: code != nil ? label.showName : label.year)
     if !here {
-      ActionItem(.playOutline, resume ? Str.titleResume : Str.titlePlay) { nav.play(item.id, nil) }
+      SheetItem(resume ? Str.titleResume : Str.titlePlay, icon: .playOutline) { nav.play(item.id, nil) }
     }
     if resume {
-      ActionItem(.rotateCcw, Str.actionsPlayFromStart) { nav.play(item.id, 0) }
+      SheetItem(Str.actionsPlayFromStart, icon: .rotateCcw) { nav.play(item.id, 0) }
     }
     if !here {
-      ActionItem(.check, watched ? Str.mediaMarkUnwatched : Str.mediaMarkWatched) {
+      SheetItem(watched ? Str.mediaMarkUnwatched : Str.mediaMarkWatched, icon: .check) {
         guard let api, let viewer else { return }
         // Unwatched at once; watched asks when first.
         if watched {
@@ -245,7 +261,7 @@ private struct ItemActions: View {
           }
         }
       }
-      ActionItem(favorite ? .heartFilled : .heart, favorite ? Str.mediaRemoveFavorite : Str.mediaAddFavorite) {
+      SheetItem(favorite ? Str.mediaRemoveFavorite : Str.mediaAddFavorite, icon: favorite ? .heartFilled : .heart) {
         guard let api, let viewer else { return }
         launchShowing(snackbar, Str.mediaFavoriteFailed) { try await viewer.setFavorite(api, item, !favorite) }
       }
@@ -254,10 +270,10 @@ private struct ItemActions: View {
     if let title = item.title {
       let show = title.kind == TitleKind.show
       if !here && show {
-        ActionItem(.info, Str.actionsEpisodeDetails) { nav.episode(item.id) }
-        ActionItem(.tv, Str.actionsGoToShow(title.name)) { nav.titleUp(title.id) }
+        SheetItem(Str.actionsEpisodeDetails, icon: .info) { nav.episode(item.id) }
+        SheetItem(Str.actionsGoToShow(title.name), icon: .tv) { nav.titleUp(title.id) }
       } else if !here {
-        ActionItem(.info, Str.mediaHeroDetails) { nav.titleUp(title.id) }
+        SheetItem(Str.mediaHeroDetails, icon: .info) { nav.titleUp(title.id) }
       }
       // A movie's file is the movie, so it has the movie's; an episode has its still.
       MetadataItems(title: title, images: images(title, show: show), matchable: !show)
@@ -275,6 +291,7 @@ private struct TitleActions: View {
   let title: TitleSummary
   let file: MediaItem?
   let here: Bool
+  let recommended: CatalogRef?
   @Environment(\.api) private var api
   @Environment(\.navigator) private var nav
   @Environment(\.snackbar) private var snackbar
@@ -286,20 +303,19 @@ private struct TitleActions: View {
     let favorite = viewer?.isFavorite(title) ?? title.favorite
     let show = title.isShow
     let mayDownload = viewer?.mayDownload == true
+    SheetHeader(title.name, subtitle: formatYear(title.year))
     if !here {
-      ActionItem(.playOutline, Str.titlePlay) {
-        withNext { nav.play($0.id, nil) }
-      }
+      SheetItem(Str.titlePlay, icon: .playOutline) { withNext { nav.play($0.id, nil) } }
     }
     if let file, isResumable(file) {
-      ActionItem(.rotateCcw, Str.actionsPlayFromStart) { nav.play(file.id, 0) }
+      SheetItem(Str.actionsPlayFromStart, icon: .rotateCcw) { nav.play(file.id, 0) }
     }
     if !here {
       let words =
         show
         ? (watched ? Str.mediaMarkAllUnwatched : Str.mediaMarkAllWatched)
         : (watched ? Str.mediaMarkUnwatched : Str.mediaMarkWatched)
-      ActionItem(.check, words) {
+      SheetItem(words, icon: .check) {
         guard let api, let viewer else { return }
         // Unwatched at once; watched asks when first.
         if watched {
@@ -308,7 +324,7 @@ private struct TitleActions: View {
           actions?.askWatched(title.name) { at in try await viewer.setWatched(api, title, true, watchedAt: at) }
         }
       }
-      ActionItem(favorite ? .heartFilled : .heart, favorite ? Str.mediaRemoveFavorite : Str.mediaAddFavorite) {
+      SheetItem(favorite ? Str.mediaRemoveFavorite : Str.mediaAddFavorite, icon: favorite ? .heartFilled : .heart) {
         guard let api, let viewer else { return }
         launchShowing(snackbar, Str.mediaFavoriteFailed) { try await viewer.setFavorite(api, title, !favorite) }
       }
@@ -317,16 +333,19 @@ private struct TitleActions: View {
       // What's on the phone already can still go.
       if let file { DownloadItem(item: file) }
     } else if show {
-      ActionItem(.download, Str.downloadsAction) { actions?.files(FileSet(title: title)) }
+      SheetItem(Str.downloadsAction, icon: .download) { actions?.files = FileSet(title: title) }
     } else if let file {
       DownloadItem(item: file)
     } else {
-      ActionItem(.download, Str.downloadsAction) {
-        withNext { actions?.download($0) }
-      }
+      SheetItem(Str.downloadsAction, icon: .download) { withNext { actions?.download = $0 } }
     }
     if !here {
-      ActionItem(.info, show ? Str.mediaHeroEpisodes : Str.mediaHeroDetails) { nav.titleUp(title.id) }
+      SheetItem(show ? Str.mediaHeroEpisodes : Str.mediaHeroDetails, icon: .info) { nav.titleUp(title.id) }
+    }
+    if let recommended, let api {
+      SheetItem(Str.webDiscoverNotInterested, icon: .eyeOff) {
+        actions?.hideRecommendation(recommended, name: title.name, api: api, snackbar: snackbar)
+      }
     }
     MetadataItems(title: title, images: ImageTarget(titleId: title.id), matchable: true)
   }
@@ -346,22 +365,43 @@ private struct TitleActions: View {
   }
 }
 
-/// A season's menu: its download, and its page from its card. Its tick is
-/// on its page, where the season's own episodes say whether it's watched.
+/// A season's sheet: its tick from its card, its download, and its page. The card goes by the season's counts for whether it's watched; its
+/// page, by its episodes.
 private struct SeasonActions: View {
   let title: TitleSummary
   let season: Season
   let here: Bool
+  @Environment(\.api) private var api
   @Environment(\.navigator) private var nav
+  @Environment(\.snackbar) private var snackbar
   @Environment(\.actions) private var actions
   @Environment(ViewerState.self) private var viewer: ViewerState?
 
   var body: some View {
+    SheetHeader(seasonName(season.number), subtitle: title.name)
+    if !here {
+      let watched = season.itemCount > 0 && season.watchedCount >= season.itemCount
+      SheetItem(watched ? Str.mediaMarkUnwatched : Str.mediaMarkWatched, icon: .check) {
+        guard let api, let viewer else { return }
+        let number = season.number
+        if watched {
+          launchShowing(snackbar, Str.mediaMarkUnwatchedFailed) {
+            try await setSeasonWatched(api, viewer, title, season: number, watched: false, watchedAt: nil)
+          }
+        } else {
+          actions?.askWatched(Str.titleSeasonOf(title.name, seasonName(number))) { at in
+            try await setSeasonWatched(api, viewer, title, season: number, watched: true, watchedAt: at)
+          }
+        }
+      }
+    }
+    // TODO: a season's heart, as Android's SeasonActions has it, once
+    // MatineeCore's ViewerState has season favorites (another agent's work).
     if viewer?.mayDownload == true {
-      ActionItem(.download, Str.downloadsAction) { actions?.files(FileSet(title: title, season: season)) }
+      SheetItem(Str.downloadsAction, icon: .download) { actions?.files = FileSet(title: title, season: season) }
     }
     if !here {
-      ActionItem(.list, Str.mediaHeroEpisodes) { nav.season(title.id, season.number) }
+      SheetItem(Str.mediaHeroEpisodes, icon: .list) { nav.season(title.id, season.number) }
     }
     // Files without a season number aren't a season to give a poster.
     MetadataItems(
@@ -387,13 +427,13 @@ private struct MetadataItems: View {
     if user?.isAdmin == true {
       let provider = matchable ? actions?.provider(title.libraryId).flatMap { $0.configured ? $0 : nil } : nil
       if provider != nil || images != nil {
-        Divider()
+        Separator().padding(.vertical, Space.s1_5)
         if provider != nil {
-          ActionItem(.search, Str.titleMenuFixMatch) { nav.identify(title.id) }
-          ActionItem(.refreshCw, Str.titleMenuRefresh) { refresh() }
+          SheetItem(Str.titleMenuFixMatch, icon: .search) { nav.identify(title.id) }
+          SheetItem(Str.titleMenuRefresh, icon: .refreshCw) { refresh() }
         }
         if let images {
-          ActionItem(.image, Str.titleMenuEditImages) { nav.images(images) }
+          SheetItem(Str.titleMenuEditImages, icon: .image) { nav.images(images) }
         }
       }
     }
@@ -407,7 +447,7 @@ private struct MetadataItems: View {
     launchShowing(snackbar, Str.titleRefreshError) {
       _ = try await api.titles.refresh(id: title.id)
       viewer?.changed()
-      snackbar.show(Str.titleRefreshDone(title.name))
+      snackbar.post(ToastMessage(Str.titleRefreshDone(title.name), kind: .success))
     }
   }
 }
@@ -424,10 +464,10 @@ private struct DownloadItem: View {
   var body: some View {
     if downloads.store.items[item.id] == nil {
       if viewer?.mayDownload == true {
-        ActionItem(.download, Str.downloadsAction) { actions?.download(item) }
+        SheetItem(Str.downloadsAction, icon: .download) { actions?.download = item }
       }
     } else {
-      ActionItem(.trash, Str.downloadsRemove, destructive: true) {
+      SheetItem(Str.downloadsRemove, icon: .trash, destructive: true) {
         let id = item.id
         let downloads = downloads
         launchShowing(snackbar, Str.downloadsFailed) { try await downloads.remove(id) }

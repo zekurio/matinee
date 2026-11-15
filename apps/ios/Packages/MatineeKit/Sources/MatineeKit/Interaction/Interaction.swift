@@ -146,36 +146,79 @@ private struct PressBody<S: InsettableShape>: View {
 /// a custom row: the kit's press, focus, and disabled states over it, a
 /// button to VoiceOver. `shape` is where the wash and the ring go.
 ///
-///     Pressable(shape: .kit(Radius.sm), action: open) { PosterCard(title) }
+///     Pressable(shape: .kit(Radius.md), action: open) { PosterArt(…) }
+///
+/// With `onLongPress`, holding it does that instead, with a tap of haptic
+/// feedback, as a card's long press opens its actions. VoiceOver offers it
+/// as an action named `longPressLabel`.
 public struct Pressable<Label: View, S: InsettableShape>: View {
   let shape: S
   let wash: Bool
   let ring: FocusRingPlacement
   let action: () -> Void
+  let onLongPress: (() -> Void)?
+  let longPressLabel: String?
   @ViewBuilder let label: () -> Label
+  @State private var longPressed = false
+  @State private var longPresses = 0
 
   public init(
     shape: S, wash: Bool = true, ring: FocusRingPlacement = .outside, action: @escaping () -> Void,
-    @ViewBuilder label: @escaping () -> Label
+    onLongPress: (() -> Void)? = nil, longPressLabel: String? = nil, @ViewBuilder label: @escaping () -> Label
   ) {
     self.shape = shape
     self.wash = wash
     self.ring = ring
     self.action = action
+    self.onLongPress = onLongPress
+    self.longPressLabel = longPressLabel
     self.label = label
   }
 
   public var body: some View {
-    Button(action: action, label: label)
-      .buttonStyle(KitPressStyle(shape: shape, wash: wash, ring: ring))
+    let button = Button {
+      // The finger lifting after a long press isn't also a tap.
+      if longPressed {
+        longPressed = false
+      } else {
+        action()
+      }
+    } label: {
+      label()
+    }
+    .buttonStyle(KitPressStyle(shape: shape, wash: wash, ring: ring))
+    if let onLongPress {
+      button
+        .simultaneousGesture(
+          LongPressGesture(minimumDuration: 0.45).onEnded { _ in
+            longPressed = true
+            longPresses += 1
+            onLongPress()
+            // What the long press opened usually takes the touch, so no lift
+            // comes to clear it; a tap after that is a tap again.
+            let press = longPresses
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+              if longPresses == press { longPressed = false }
+            }
+          }
+        )
+        #if os(iOS)
+          .sensoryFeedback(.impact(weight: .medium), trigger: longPresses)
+        #endif
+        .accessibilityAction(named: Text(longPressLabel ?? "")) { onLongPress() }
+    } else {
+      button
+    }
   }
 }
 
 extension Pressable where S == Rectangle {
   public init(
     wash: Bool = true, ring: FocusRingPlacement = .inside, action: @escaping () -> Void,
-    @ViewBuilder label: @escaping () -> Label
+    onLongPress: (() -> Void)? = nil, longPressLabel: String? = nil, @ViewBuilder label: @escaping () -> Label
   ) {
-    self.init(shape: Rectangle(), wash: wash, ring: ring, action: action, label: label)
+    self.init(
+      shape: Rectangle(), wash: wash, ring: ring, action: action, onLongPress: onLongPress,
+      longPressLabel: longPressLabel, label: label)
   }
 }

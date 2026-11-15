@@ -1,5 +1,6 @@
 import Accessibility
 import MatineeCore
+import MatineeKit
 import SwiftUI
 import UIKit
 
@@ -21,11 +22,11 @@ struct RangeChips: View {
     ScrollView(.horizontal) {
       HStack(spacing: 6) {
         ForEach(STATS_RANGES, id: \.self) { range in
-          Chip(rangeName(range), selected: range == current) { onPick(range) }
+          LegacyChip(rangeName(range), selected: range == current) { onPick(range) }
         }
       }
     }
-    .contentMargins(.horizontal, Gutter, for: .scrollContent)
+    .contentMargins(.horizontal, Space.gutter, for: .scrollContent)
     .scrollIndicators(.hidden)
   }
 }
@@ -41,9 +42,9 @@ private struct StatsCardLook: ViewModifier {
   func body(content: Content) -> some View {
     content
       .frame(maxWidth: .infinity, alignment: .leading)
-      .background(palette.card, in: CardShape)
-      .clipShape(CardShape)
-      .overlay { CardShape.strokeBorder(palette.border) }
+      .background(palette.card, in: RoundedRectangle.kit(Radius.md))
+      .clipShape(RoundedRectangle.kit(Radius.md))
+      .overlay { RoundedRectangle.kit(Radius.md).strokeBorder(palette.border) }
   }
 }
 
@@ -55,7 +56,7 @@ private struct StatsCard<Content: View>: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 0) {
-      Text(label).textStyle(.bodyMedium).foregroundStyle(palette.muted)
+      Text(label).textStyle(.sm).foregroundStyle(palette.mutedForeground)
         .padding(.horizontal, 16).padding(.top, 14).padding(.bottom, 4)
         .accessibilityAddTraits(.isHeader)
       content()
@@ -109,10 +110,10 @@ struct StatList: View {
       ForEach(Array(rows.enumerated()), id: \.offset) { index, row in
         if index > 0 { CardDivider(inset: 0) }
         HStack(spacing: 14) {
-          LucideIcon(row.0, size: 20, tint: palette.muted)
-          Text(row.1).textStyle(.bodyLarge).foregroundStyle(palette.foreground)
+          LucideIcon(row.0, size: 20, tint: palette.mutedForeground)
+          Text(row.1).textStyle(.base).foregroundStyle(palette.foreground)
             .frame(maxWidth: .infinity, alignment: .leading)
-          Text(formatCount(row.2)).textStyle(.bodyLarge, weight: .semibold).foregroundStyle(palette.foreground)
+          Text(formatCount(row.2)).textStyle(.base, weight: .semibold).foregroundStyle(palette.foreground)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
@@ -138,9 +139,9 @@ struct WatchTimeCard: View {
     VStack(alignment: .leading, spacing: 0) {
       VStack(alignment: .leading, spacing: 0) {
         Text(shown.map { bucketName($0.start, unit: stats.unit) } ?? "\(Str.statsWatchTime) · \(rangeName(stats.range))")
-          .textStyle(.bodyMedium).foregroundStyle(palette.muted)
+          .textStyle(.sm).foregroundStyle(palette.mutedForeground)
         Text(formatWatchTime(shown?.watchSeconds ?? stats.totals.watchSeconds))
-          .textStyle(.displaySmall, weight: .bold).foregroundStyle(palette.foreground)
+          .textStyle(.xl4, weight: .bold, tracking: .tight).foregroundStyle(palette.foreground)
           .contentTransition(.numericText())
       }
       // The chart says the same, bar by bar.
@@ -273,19 +274,19 @@ struct TopTitles: View {
           Button { nav.title(entry.title) } label: {
             HStack(spacing: 0) {
               Text(formatCount(index + 1))
-                .textStyle(.titleMedium, weight: .semibold)
-                .foregroundStyle(index < 3 ? palette.foreground : palette.muted)
+                .textStyle(.base, weight: .semibold)
+                .foregroundStyle(index < 3 ? palette.foreground : palette.mutedForeground)
                 .frame(width: rankWidth, alignment: .leading)
               // The poster alone: at this size the name the art falls back to would be an ellipsis.
               ArtFrame(entry.title.name, aspect: 2 / 3) { Picture(api?.art(entry.title.images.poster)) }
                 .frame(width: 40)
               LabelValue {
                 VStack(alignment: .leading, spacing: 0) {
-                  Text(entry.title.name).textStyle(.bodyLarge).foregroundStyle(palette.foreground).lineLimit(3)
-                  Text(Str.statsPlayCount(entry.plays)).textStyle(.bodySmall).foregroundStyle(palette.muted)
+                  Text(entry.title.name).textStyle(.base).foregroundStyle(palette.foreground).lineLimit(3)
+                  Text(Str.statsPlayCount(entry.plays)).textStyle(.px13).foregroundStyle(palette.mutedForeground)
                 }
               } value: {
-                Text(formatWatchTime(entry.watchSeconds)).textStyle(.bodyLarge, weight: .semibold)
+                Text(formatWatchTime(entry.watchSeconds)).textStyle(.base, weight: .semibold)
                   .foregroundStyle(palette.foreground)
               }
               .padding(.leading, 14)
@@ -294,7 +295,7 @@ struct TopTitles: View {
             .padding(.vertical, 12)
             .contentShape(Rectangle())
           }
-          .buttonStyle(RowPress())
+          .buttonStyle(LegacyRowPress())
           .disabled(offline)
           .accessibilityElement(children: .combine)
         }
@@ -318,16 +319,16 @@ struct Genres: View {
           if index > 0 { CardDivider() }
           Button { nav.genre(genre.name) } label: {
             LabelValue {
-              Text(genre.name).textStyle(.bodyLarge).foregroundStyle(palette.foreground)
+              Text(genre.name).textStyle(.base).foregroundStyle(palette.foreground)
             } value: {
-              Text(formatWatchTime(genre.watchSeconds)).textStyle(.bodyLarge, weight: .semibold)
+              Text(formatWatchTime(genre.watchSeconds)).textStyle(.base, weight: .semibold)
                 .foregroundStyle(palette.foreground)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 14)
             .contentShape(Rectangle())
           }
-          .buttonStyle(RowPress())
+          .buttonStyle(LegacyRowPress())
           .disabled(offline)
           .accessibilityElement(children: .combine)
         }
@@ -360,13 +361,13 @@ struct Standing: View {
             VStack(alignment: .leading, spacing: 6) {
               Button { open = OpenBoard(board: standing.board) } label: {
                 HStack(spacing: 2) {
-                  Text(metricName(standing.board.metric)).textStyle(.bodySmall).foregroundStyle(palette.muted)
-                  LucideIcon(.chevronRight, size: 14, tint: palette.muted)
+                  Text(metricName(standing.board.metric)).textStyle(.px13).foregroundStyle(palette.mutedForeground)
+                  LucideIcon(.chevronRight, size: 14, tint: palette.mutedForeground)
                 }
                 .frame(minHeight: 28)
                 .contentShape(Rectangle())
               }
-              .buttonStyle(RoundPress())
+              .buttonStyle(LegacyRoundPress())
               .accessibilityAddTraits(.isHeader)
               ForEach(standing.places, id: \.rank) { place in
                 PlaceRow(place: place, value: metricValue(standing.board.metric, place.value))
@@ -403,7 +404,7 @@ private struct BoardSheet: View {
   var body: some View {
     ScrollView {
       VStack(alignment: .leading, spacing: 0) {
-        SheetHeader(metricName(board.metric), rangeName(range))
+        LegacySheetHeader(metricName(board.metric), rangeName(range))
         VStack(spacing: 2) {
           ForEach(Array(board.entries.enumerated()), id: \.offset) { index, place in
             // Set off when it doesn't carry straight on from the top places.
@@ -415,7 +416,7 @@ private struct BoardSheet: View {
       }
       .padding(.vertical, 12)
     }
-    .matineeSheet()
+    .legacySheet()
   }
 }
 
@@ -438,19 +439,19 @@ private struct PlaceRow: View {
       }
     HStack(spacing: 10) {
       Text(formatCount(place.rank))
-        .textStyle(.labelMedium, weight: .semibold)
+        .textStyle(.px13, weight: .semibold)
         .foregroundStyle(
-          place.rank == 1 ? palette.accentForeground : place.rank <= 3 ? palette.foreground : palette.muted)
+          place.rank == 1 ? palette.accentForeground : place.rank <= 3 ? palette.foreground : palette.mutedForeground)
         .lineLimit(1)
         .minimumScaleFactor(0.7)
         .frame(minWidth: rankSize, minHeight: rankSize)
         .background(podium, in: Capsule())
-      Avatar(user.name, url: user.avatarId.flatMap { api?.paths.avatar($0) }, size: 28)
+      ProfileAvatar(user.name, url: user.avatarId.flatMap { api?.paths.avatar($0) }, size: 28)
       LabelValue(spacing: 10) {
         Text(place.isSelf ? "\(user.name) \(Str.statsYou)" : user.name)
-          .textStyle(.bodyLarge).foregroundStyle(palette.foreground).lineLimit(2)
+          .textStyle(.base).foregroundStyle(palette.foreground).lineLimit(2)
       } value: {
-        Text(value).textStyle(.bodyMedium, weight: .semibold).foregroundStyle(palette.foreground)
+        Text(value).textStyle(.sm, weight: .semibold).foregroundStyle(palette.foreground)
       }
     }
     .padding(.horizontal, 8)
@@ -478,7 +479,7 @@ struct Activity: View {
           Grid(alignment: .leading, horizontalSpacing: 6, verticalSpacing: 3) {
             ForEach(1...7, id: \.self) { weekday in
               GridRow {
-                Text(weekdayName(weekday, short: true)).textStyle(.labelSmall).foregroundStyle(palette.muted)
+                Text(weekdayName(weekday, short: true)).textStyle(.px11, weight: .medium).foregroundStyle(palette.mutedForeground)
                   .lineLimit(1).frame(minWidth: dayWidth, alignment: .leading)
                 Squares(grid: grid, weekday: weekday).frame(height: 12)
               }
@@ -489,7 +490,7 @@ struct Activity: View {
               Color.clear.frame(width: 1, height: 1).gridCellUnsizedAxes([.horizontal, .vertical])
               HStack(spacing: 0) {
                 ForEach(marks, id: \.self) { hour in
-                  Text(hourName(hour)).textStyle(.labelSmall).foregroundStyle(palette.muted)
+                  Text(hourName(hour)).textStyle(.px11, weight: .medium).foregroundStyle(palette.mutedForeground)
                     .lineLimit(1).minimumScaleFactor(0.7)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
@@ -502,7 +503,7 @@ struct Activity: View {
             grid.busiestWeekdays.map { "\(weekdayName($0, short: false)): \(formatWatchTime(grid.total(weekday: $0)))" }
               .joined(separator: ", "))
           Text(Str.statsHeatmapPeak(weekdayName(peak.weekday, short: false), hourName(peak.hour)))
-            .textStyle(.bodySmall).foregroundStyle(palette.muted)
+            .textStyle(.px13).foregroundStyle(palette.mutedForeground)
             .padding(.top, 6)
         }
         .padding(.horizontal, 16)

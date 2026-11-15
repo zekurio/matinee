@@ -1,4 +1,5 @@
 import MatineeCore
+import MatineeKit
 import SwiftUI
 import UIKit
 
@@ -50,14 +51,14 @@ private struct AuthForm: View {
       SettingsSection(Str.webOidcPasskeysTitle) {
         VStack(alignment: .leading, spacing: 8) {
           Panel {
-            SwitchRow(Str.webOidcPasskeysTitle, isOn: $form.passkeys.enabled, icon: .keyRound)
+            LegacySwitchRow(Str.webOidcPasskeysTitle, isOn: $form.passkeys.enabled, icon: .keyRound)
             RowDivider()
-            SwitchRow(Str.webOidcPasskeysAllowSignUp, isOn: $form.passkeys.allowSignUp)
+            LegacySwitchRow(Str.webOidcPasskeysAllowSignUp, isOn: $form.passkeys.allowSignUp)
           }
           Note(Str.webOidcPasskeysAllowSignUpHint)
           // Accounts that can only sign in with a passkey, told before they're locked out.
           if !form.passkeys.enabled && saved.unlinkedUsers > 0 {
-            Note(Str.webOidcPasskeysUnlinked(saved.unlinkedUsers, provider), color: palette.danger)
+            Note(Str.webOidcPasskeysUnlinked(saved.unlinkedUsers, provider), color: palette.destructive)
           }
         }
       }
@@ -65,12 +66,12 @@ private struct AuthForm: View {
         VStack(alignment: .leading, spacing: 12) {
           VStack(alignment: .leading, spacing: 8) {
             Panel {
-              SwitchRow(Str.webOidcEnabled, isOn: $form.oidc.enabled, icon: .logIn)
+              LegacySwitchRow(Str.webOidcEnabled, isOn: $form.oidc.enabled, icon: .logIn)
               RowDivider()
-              SwitchRow(Str.webOidcAllowSignUp, isOn: $form.oidc.allowSignUp)
+              LegacySwitchRow(Str.webOidcAllowSignUp, isOn: $form.oidc.allowSignUp)
             }
             if !form.oidc.enabled && saved.ssoOnlyUsers > 0 {
-              Note(Str.webOidcSsoOnly(saved.ssoOnlyUsers, provider), color: palette.danger)
+              Note(Str.webOidcSsoOnly(saved.ssoOnlyUsers, provider), color: palette.destructive)
             }
           }
           Panel {
@@ -90,12 +91,12 @@ private struct AuthForm: View {
             ) {
               // Remove the saved secret, or take the removal back until the save.
               if form.offersSecretToggle {
-                RoundIconButton(
+                LegacyRoundIconButton(
                   form.dropSecret ? .rotateCcw : .trash,
                   label: form.dropSecret
                     ? Str.webOidcClientSecretKeep
                     : saved.clientSecret.environment ? Str.webOidcClientSecretUseEnvironment : Str.webOidcClientSecretRemove,
-                  size: 36, iconSize: 18, tint: form.dropSecret ? palette.muted : palette.danger, background: .clear
+                  size: 36, iconSize: 18, tint: form.dropSecret ? palette.mutedForeground : palette.destructive, background: .clear
                 ) { form.dropSecret.toggle() }
                 .padding(.trailing, -10)
               }
@@ -104,7 +105,7 @@ private struct AuthForm: View {
             RedirectRow(url: saved.callbackUrl)
           }
           Panel {
-            SwitchRow(Str.webOidcAdvanced, isOn: $advanced, icon: .settings)
+            LegacySwitchRow(Str.webOidcAdvanced, isOn: $advanced, icon: .settings)
             Reveal(advanced) {
               RowDivider()
               TextRow(
@@ -149,12 +150,12 @@ private struct RedirectRow: View {
   var body: some View {
     HStack(spacing: 4) {
       VStack(alignment: .leading, spacing: 0) {
-        Text(Str.webOidcRedirectUri).textStyle(.bodyMedium).foregroundStyle(palette.muted)
-        Text(url).textStyle(.bodyMedium).foregroundStyle(palette.foreground).textSelection(.enabled)
+        Text(Str.webOidcRedirectUri).textStyle(.sm).foregroundStyle(palette.mutedForeground)
+        Text(url).textStyle(.sm).foregroundStyle(palette.foreground).textSelection(.enabled)
       }
       .frame(maxWidth: .infinity, alignment: .leading)
       .accessibilityElement(children: .combine)
-      RoundIconButton(.link, label: Str.webOidcCopy, background: .clear) {
+      LegacyRoundIconButton(.link, label: Str.webOidcCopy, background: .clear) {
         UIPasteboard.general.string = url
         snackbar.show(Str.webOidcCopied)
       }

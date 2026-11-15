@@ -54,6 +54,8 @@ struct HomeSectionsTest {
     #expect(heroHeight(window: 1000, wide: true) == 680)
     #expect(heroHeight(window: 600, wide: true) == 460)
     #expect(heroHeight(window: 400, wide: true) == 360)
+    // A tall tablet's stops at the web's 720.
+    #expect(heroHeight(window: 1366, wide: true) == 720)
   }
 
   @Test func onlyATabletSizedWindowGetsTheTallBanner() {

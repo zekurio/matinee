@@ -2,6 +2,8 @@
    en.lproj for what each is. */
 
 "back" = "Zurück";
+/* The bar's house, to the app's first page: shell_home_link */
+"home" = "Startseite";
 "close" = "Schließen";
 "cancel" = "Abbrechen";
 "closeToast" = "Benachrichtigung schließen";

@@ -1,5 +1,6 @@
 import MatineeMPV
 import MatineeCore
+import MatineeKit
 import SwiftUI
 import UIKit
 
@@ -271,7 +272,7 @@ private struct Playback: View {
     if !inPip {
       if controller.item == nil {
         // Nothing to control before the server answers, but the way back.
-        RoundIconButton(.arrowLeft, label: Str.playerBack, size: 52, iconSize: 26, background: .clear, action: close)
+        LegacyRoundIconButton(.arrowLeft, label: Str.playerBack, size: 52, iconSize: 26, background: .clear, action: close)
           .padding(.horizontal, 12)
           .padding(.vertical, 8)
           .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)

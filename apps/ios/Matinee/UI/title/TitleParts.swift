@@ -1,4 +1,5 @@
 import MatineeCore
+import MatineeKit
 import SwiftUI
 
 /*
@@ -90,12 +91,12 @@ struct LinkedNames: View {
       text += link
       if index < names.count - 1 {
         var gap = AttributedString(index == names.count - 2 ? " \(Str.commonAnd) " : ", ")
-        gap.foregroundColor = palette.muted
+        gap.foregroundColor = palette.mutedForeground
         text += gap
       }
     }
     return Text(text)
-      .textStyle(.bodyMedium)
+      .textStyle(.sm)
       .tint(color)
       .environment(
         \.openURL,
@@ -119,7 +120,7 @@ struct CreditLine: View {
   var body: some View {
     if !names.isEmpty {
       HStack(alignment: .firstTextBaseline, spacing: 8) {
-        Text(label).textStyle(.bodyMedium).foregroundStyle(palette.muted)
+        Text(label).textStyle(.sm).foregroundStyle(palette.mutedForeground)
         LinkedNames(names: names, color: palette.foreground, onTap: onTap)
           .frame(maxWidth: .infinity, alignment: .leading)
       }
@@ -156,7 +157,7 @@ struct Overview: View {
             .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { whole = $0 }
         }
       if overflows || open {
-        Text(open ? Str.titleLess : Str.titleMore).textStyle(.bodyLarge).foregroundStyle(palette.muted)
+        Text(open ? Str.titleLess : Str.titleMore).textStyle(.base).foregroundStyle(palette.mutedForeground)
           .accessibilityHidden(true)
       }
     }
@@ -177,7 +178,7 @@ struct Overview: View {
       } else {
         Text(text).foregroundStyle(body)
       }
-    return words.textStyle(.bodyLarge).lineLimit(lines)
+    return words.textStyle(.base).lineLimit(lines)
   }
 }
 
@@ -222,14 +223,14 @@ struct ActionRow: View {
         }
       }
     }
-    .padding(.horizontal, Gutter)
+    .padding(.horizontal, Space.gutter)
   }
 
   @ViewBuilder private func buttons(wide: Bool) -> some View {
     if let trailer, let url = URL(string: trailer.url) {
       TrailerButton(wide: wide) { openURL(url) }
     }
-    RoundIconButton(
+    LegacyRoundIconButton(
       .check, label: watched ? Str.mediaMarkUnwatched : Str.mediaMarkWatched,
       tint: watched ? palette.accent : palette.foreground
     ) {
@@ -240,9 +241,9 @@ struct ActionRow: View {
       }
     }
     .accessibilityAddTraits(watched ? .isSelected : [])
-    RoundIconButton(
+    LegacyRoundIconButton(
       favorite ? .heartFilled : .heart, label: favorite ? Str.mediaRemoveFavorite : Str.mediaAddFavorite,
-      tint: favorite ? palette.danger : palette.foreground
+      tint: favorite ? palette.destructive : palette.foreground
     ) {
       launchShowing(snackbar, Str.mediaFavoriteFailed) { try await onFavorite() }
     }
@@ -266,7 +267,7 @@ struct ActionRow: View {
       // The button's width, not the words', is what's drawn.
       .frame(maxWidth: .infinity)
     }
-    .buttonStyle(.matinee(.primary))
+    .buttonStyle(.legacy(.primary))
     .frame(width: wide ? 260 : nil)
     .disabled(play == nil)
     .accessibilityElement(children: .ignore)
@@ -288,10 +289,10 @@ private struct TrailerButton: View {
         LucideIcon(.clapperboard, size: 16)
         Text(Str.iosTitleTrailer)
       }
-      .buttonStyle(.matinee(.frosted))
+      .buttonStyle(.legacy(.frosted))
       .accessibilityHint(Str.iosTitleTrailerHint)
     } else {
-      RoundIconButton(.clapperboard, label: Str.iosTitleTrailer, action: action)
+      LegacyRoundIconButton(.clapperboard, label: Str.iosTitleTrailer, action: action)
         .accessibilityHint(Str.iosTitleTrailerHint)
     }
   }
@@ -315,14 +316,14 @@ struct TitleHeading: View {
           .frame(width: isWide(window) ? 180 : 112)
       }
       VStack(alignment: .leading, spacing: 0) {
-        Text(title.name).textStyle(.headlineLarge).lineLimit(3).foregroundStyle(palette.foreground)
+        Text(title.name).textStyle(.xl3, weight: .bold, tracking: .tight).lineLimit(3).foregroundStyle(palette.foreground)
           .accessibilityAddTraits(.isHeader)
         if let original = title.originalName, original != title.name {
-          Text(original).textStyle(.bodyLarge).foregroundStyle(palette.muted).lineLimit(1)
+          Text(original).textStyle(.base).foregroundStyle(palette.mutedForeground).lineLimit(1)
         }
         let facts = titleFacts(title)
         if !facts.isEmpty {
-          Text(facts.joined(separator: " · ")).textStyle(.bodyMedium)
+          Text(facts.joined(separator: " · ")).textStyle(.sm)
             .foregroundStyle(palette.foreground.opacity(0.8))
             .padding(.top, 8)
         }
@@ -330,27 +331,27 @@ struct TitleHeading: View {
         // narrow screen doesn't strand the last one under the facts.
         if title.contentRating != nil || title.rating != nil || !flags.isEmpty {
           FlowRow(spacing: 8, lineSpacing: 6) {
-            if let rating = title.contentRating { Badge(rating, outlined: true) }
+            if let rating = title.contentRating { LegacyBadge(rating, outlined: true) }
             if let rating = title.rating {
               HStack(spacing: 4) {
                 LucideIcon(.star, size: 14, tint: palette.star)
-                Text(formatRating(rating)).textStyle(.bodyMedium).foregroundStyle(palette.foreground)
+                Text(formatRating(rating)).textStyle(.sm).foregroundStyle(palette.foreground)
               }
               .accessibilityElement(children: .ignore)
               .accessibilityLabel("\(Str.mediaHeroRated) \(formatRating(rating))")
             }
-            ForEach(flags, id: \.self) { Badge($0) }
+            ForEach(flags, id: \.self) { LegacyBadge($0) }
           }
           .padding(.top, 6)
         }
         if !title.genres.isEmpty {
-          LinkedNames(names: title.genres, color: palette.muted, onTap: nav.genre).padding(.top, 6)
+          LinkedNames(names: title.genres, color: palette.mutedForeground, onTap: nav.genre).padding(.top, 6)
         }
       }
       .frame(maxWidth: .infinity, alignment: .leading)
       .padding(.bottom, 4)
     }
-    .padding(.horizontal, Gutter)
+    .padding(.horizontal, Space.gutter)
   }
 }
 
@@ -372,7 +373,7 @@ struct CrewLines: View {
           CreditLine(label: Str.peopleStudio(studios.count), names: studios, onTap: nav.studio)
         }
       }
-      .padding(.horizontal, Gutter)
+      .padding(.horizontal, Space.gutter)
     }
   }
 }
@@ -438,7 +439,7 @@ private struct SeasonCard: View {
           if left == 0 {
             WatchedBadge().padding(6)
           } else {
-            Text(String(left)).textStyle(.labelSmall, weight: .semibold)
+            Text(String(left)).textStyle(.px11, weight: .semibold)
               .foregroundStyle(palette.accentForeground)
               .padding(.horizontal, 6)
               .padding(.vertical, 1)
@@ -450,7 +451,7 @@ private struct SeasonCard: View {
       }
       .contentShape(Rectangle())
     }
-    .buttonStyle(CardPress())
+    .buttonStyle(LegacyCardPress())
     .cardMenu(.season(title.summary, season, here: false))
     .accessibilityElement(children: .combine)
   }
@@ -478,11 +479,11 @@ struct NextUpEpisode: View {
           if watched {
             WatchedBadge().padding(8).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
           } else if let ratio, ratio > 0 {
-            ProgressBar(progress: ratio).frame(maxHeight: .infinity, alignment: .bottom)
+            ArtProgressBar(progress: ratio).frame(maxHeight: .infinity, alignment: .bottom)
           }
         }
       }
-      .buttonStyle(CardPress())
+      .buttonStyle(LegacyCardPress())
       .modifier(HoverPlay(label: Str.mediaPlayNamed(label.title), size: 64) { nav.play(item.id, nil) })
       .cardMenu(.item(item, here: false))
       .accessibilityLabel(label.title)
@@ -493,16 +494,16 @@ struct NextUpEpisode: View {
       } label: {
         VStack(alignment: .leading, spacing: 0) {
           let heading = episodeNumber(item).map { Str.titleEpisodesCodedName($0, label.title) } ?? label.title
-          Text(heading).textStyle(.titleMedium).lineLimit(2).foregroundStyle(palette.foreground)
+          Text(heading).textStyle(.base, weight: .semibold).lineLimit(2).foregroundStyle(palette.foreground)
           let detail = [
             formatDay(item.episode?.airDate),
             item.progress?.completed == false ? timeLeft(item) : formatRuntime(runtimeMinutes(item)),
           ].compactMap(\.self).joined(separator: " · ")
           if !detail.isEmpty {
-            Text(detail).textStyle(.bodySmall).foregroundStyle(palette.muted)
+            Text(detail).textStyle(.px13).foregroundStyle(palette.mutedForeground)
           }
           if let overview = item.episode?.overview {
-            Text(overview).textStyle(.bodyMedium).foregroundStyle(palette.foreground.opacity(0.8)).lineLimit(3)
+            Text(overview).textStyle(.sm).foregroundStyle(palette.foreground.opacity(0.8)).lineLimit(3)
               .padding(.top, 6)
           }
         }
@@ -511,10 +512,10 @@ struct NextUpEpisode: View {
         .contentShape(Rectangle())
       }
       .menuStyle(.button)
-      .buttonStyle(CardPress())
+      .buttonStyle(LegacyCardPress())
       .padding(.top, 10)
     }
-    .padding(.horizontal, Gutter)
+    .padding(.horizontal, Space.gutter)
   }
 }
 
@@ -537,19 +538,19 @@ struct StillFrame: View {
         .overlay { Picture(api?.landscape(item, size: .medium) ?? []) }
         .overlay(alignment: .topTrailing) { if watched { WatchedBadge(size: 24).padding(10) } }
         .overlay(alignment: .bottom) {
-          if !watched, let ratio, ratio > 0 { ProgressBar(progress: ratio) }
+          if !watched, let ratio, ratio > 0 { ArtProgressBar(progress: ratio) }
         }
         .aspectRatio(16 / 9, contentMode: .fit)
-        .clipShape(ControlShape)
-        .overlay { ControlShape.strokeBorder(palette.border) }
+        .clipShape(RoundedRectangle.kit(Radius.lg))
+        .overlay { RoundedRectangle.kit(Radius.lg).strokeBorder(palette.border) }
         .shadow(color: .black.opacity(0.5), radius: 24, y: 8)
     }
-    .buttonStyle(CardPress())
+    .buttonStyle(LegacyCardPress())
     .modifier(HoverPlay(label: play, size: 64) { nav.play(item.id, nil) })
     // A still as wide as an iPad in landscape would be taller than the screen; it stops at half its height.
     .frame(maxWidth: window.height * 0.55 * 16 / 9)
     .frame(maxWidth: .infinity, alignment: .leading)
-    .padding(.horizontal, Gutter)
+    .padding(.horizontal, Space.gutter)
     .accessibilityLabel(play)
   }
 }
@@ -588,9 +589,9 @@ private struct InfoLine: View {
   var body: some View {
     HStack(alignment: .firstTextBaseline, spacing: 10) {
       // Level with the first line of text, which may wrap.
-      LucideIcon(icon, label: label, size: 16, tint: palette.muted)
+      LucideIcon(icon, label: label, size: 16, tint: palette.mutedForeground)
         .alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + 5 }
-      Text(text).textStyle(.bodyMedium).foregroundStyle(palette.foreground.opacity(0.8)).lineLimit(3)
+      Text(text).textStyle(.sm).foregroundStyle(palette.foreground.opacity(0.8)).lineLimit(3)
     }
     .accessibilityElement(children: .combine)
   }

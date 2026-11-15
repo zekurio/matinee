@@ -1,66 +1,54 @@
+import MatineeCore
+import MatineeKit
 import SwiftUI
 
-/// The search field's pill on the search page: full width, with room for a
-/// button at each end. `SearchField` fills it the usual way; a page that
-/// lays it out itself, as Android's search page does, gives it its content.
-struct SearchBarFrame<Content: View>: View {
-  var action: (() -> Void)?
-  @ViewBuilder let content: () -> Content
-  @Environment(\.palette) private var palette
+/*
+ * SearchBar.kt: the search field's pill, at the top of the search page and
+ * of a library being searched. The field itself is the kit's, in its pill
+ * look.
+ */
 
-  init(action: (() -> Void)? = nil, @ViewBuilder content: @escaping () -> Content) {
-    self.action = action
-    self.content = content
-  }
-
-  var body: some View {
-    let pill = HStack(spacing: 0) { content() }
-      .padding(.horizontal, 4)
-      .frame(maxWidth: .infinity, minHeight: 48)
-      .background(palette.foreground.opacity(0.06), in: Capsule())
-      .overlay { Capsule().strokeBorder(palette.foreground.opacity(0.12)) }
-    if let action {
-      Button(action: action) { pill.contentShape(Capsule()) }.buttonStyle(CardPress())
-    } else {
-      pill
-    }
-  }
-}
-
-/// The search pill with its field: the search icon, the query, and a
-/// button to clear it once there's one.
+/// The search pill with its field: the search icon, the query, and a button
+/// to clear it once there's one. `focused` follows and moves the keyboard.
+/// SwiftUI's `.onSubmit` and `.submitLabel` reach the field.
 struct SearchField: View {
   @Binding var query: String
   var placeholder: String = Str.searchField
-  var focused: FocusState<Bool>.Binding?
-  @Environment(\.palette) private var palette
+  var focused: Binding<Bool>?
 
-  init(_ query: Binding<String>, placeholder: String = Str.searchField, focused: FocusState<Bool>.Binding? = nil) {
+  init(_ query: Binding<String>, placeholder: String = Str.searchField, focused: Binding<Bool>? = nil) {
     self._query = query
     self.placeholder = placeholder
     self.focused = focused
   }
 
   var body: some View {
-    SearchBarFrame {
-      LucideIcon(.search, size: 20, tint: palette.muted).frame(width: 40, height: 40)
-      field
-        .textStyle(.bodyLarge)
-        .foregroundStyle(palette.foreground)
-        .tint(palette.accent)
-        .submitLabel(.search)
-        .autocorrectionDisabled()
-        .frame(maxWidth: .infinity)
-      if !query.isEmpty {
-        RoundIconButton(.x, label: Str.searchClear, size: 32, iconSize: 18, tint: palette.muted, background: .clear) {
-          query = ""
-        }
-      }
-    }
+    MatineeTextField(placeholder, text: $query, kind: .search, focused: focused, look: .pill)
+      .submitLabel(.search)
+      .autocorrectionDisabled()
   }
+}
 
-  @ViewBuilder private var field: some View {
-    let text = TextField("", text: $query, prompt: Text(placeholder).foregroundStyle(palette.faint))
-    if let focused { text.focused(focused) } else { text }
+/// The search pill as a button, where a page leads to search rather than
+/// holding the field: the icon and the placeholder, opening `action`.
+struct SearchBarButton: View {
+  var placeholder: String = Str.searchField
+  let action: () -> Void
+  @Environment(\.palette) private var palette
+
+  var body: some View {
+    Pressable(shape: Capsule(), action: action) {
+      HStack(spacing: Space.s3) {
+        LucideIcon(.search, size: 20, tint: palette.mutedForeground)
+        Text(placeholder).textStyle(.base).foregroundStyle(palette.mutedForeground).lineLimit(1)
+        Spacer(minLength: 0)
+      }
+      .padding(.horizontal, Space.s4)
+      .frame(maxWidth: .infinity, minHeight: 48)
+      .background(palette.foreground.opacity(0.06), in: Capsule())
+      .overlay { Capsule().strokeBorder(palette.foreground.opacity(0.12)) }
+    }
+    .accessibilityLabel(placeholder)
+    .accessibilityAddTraits(.isSearchField)
   }
 }

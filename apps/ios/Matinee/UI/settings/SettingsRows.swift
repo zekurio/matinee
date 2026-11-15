@@ -1,3 +1,4 @@
+import MatineeKit
 import SwiftUI
 
 /*
@@ -9,7 +10,7 @@ import SwiftUI
  *       Panel {
  *         PickerRow(Str.webAppearanceColorScheme, options: modes, current: theme.mode) { theme.setMode($0) }
  *         RowDivider()
- *         SwitchRow(Str.…, isOn: $on)
+ *         LegacySwitchRow(Str.…, isOn: $on)
  *       }
  *     }
  */
@@ -32,13 +33,13 @@ struct SettingsScaffold<Content: View>: View {
   var body: some View {
     ScrollView {
       LazyVStack(alignment: .leading, spacing: 28) { content() }
-        .padding(.horizontal, Gutter)
+        .padding(.horizontal, Space.gutter)
         .padding(.top, 8)
         .padding(.bottom, 20)
     }
     .scrollDismissesKeyboard(.interactively)
     .background(palette.background)
-    .topBar(title)
+    .legacyTopBar(title)
   }
 }
 
@@ -55,7 +56,7 @@ struct SettingsSection<Content: View>: View {
   var body: some View {
     VStack(alignment: .leading, spacing: 14) {
       // A long German title, "Hardwarebeschleunigung", shrinks to fit rather than break.
-      Text(title).textStyle(.titleLarge).keepsWordsWhole(title, .titleLarge).accessibilityAddTraits(.isHeader)
+      Text(title).textStyle(.xl, weight: .semibold, tracking: .tight).keepsWordsWhole(title, .xl, weight: .semibold, tracking: .tight).accessibilityAddTraits(.isHeader)
       content()
     }
     .frame(maxWidth: .infinity, alignment: .leading)
@@ -92,7 +93,7 @@ private struct RowFrame: ViewModifier {
     content
       .padding(.horizontal, 16)
       .padding(.vertical, 14)
-      .frame(maxWidth: .infinity, minHeight: MinTouch, alignment: .leading)
+      .frame(maxWidth: .infinity, minHeight: TouchTarget, alignment: .leading)
       .contentShape(Rectangle())
   }
 }
@@ -122,16 +123,16 @@ private struct TitleValue<Trailing: View>: View {
     HStack(spacing: 0) {
       if dynamicType.isAccessibilitySize {
         VStack(alignment: .leading, spacing: 2) {
-          Text(title).textStyle(.bodyLarge).foregroundStyle(palette.foreground).keepsWordsWhole(title, .bodyLarge)
-          Text(value).textStyle(.bodyMedium).foregroundStyle(palette.muted)
+          Text(title).textStyle(.base).foregroundStyle(palette.foreground).keepsWordsWhole(title, .base)
+          Text(value).textStyle(.sm).foregroundStyle(palette.mutedForeground)
         }
         .multilineTextAlignment(.leading)
         .frame(maxWidth: .infinity, alignment: .leading)
       } else {
-        Text(title).textStyle(.bodyLarge).foregroundStyle(palette.foreground).layoutPriority(1)
+        Text(title).textStyle(.base).foregroundStyle(palette.foreground).layoutPriority(1)
           .multilineTextAlignment(.leading)
         Spacer(minLength: 12)
-        Text(value).textStyle(.bodyMedium).foregroundStyle(palette.muted).lineLimit(1)
+        Text(value).textStyle(.sm).foregroundStyle(palette.mutedForeground).lineLimit(1)
           .frame(maxWidth: 160, alignment: .trailing)
       }
       trailing()
@@ -164,7 +165,7 @@ struct PickerRow<Value: Hashable>: View {
   var body: some View {
     let value = options.first { $0.0 == current }?.1 ?? String(describing: current)
     let row = TitleValue(title: title, value: value) {
-      if enabled { LucideIcon(.chevronDown, size: 16, tint: palette.muted).padding(.leading, 4) }
+      if enabled { LucideIcon(.chevronDown, size: 16, tint: palette.mutedForeground).padding(.leading, 4) }
     }
     .modifier(RowFrame())
     if enabled {
@@ -179,7 +180,7 @@ struct PickerRow<Value: Hashable>: View {
       } label: {
         row
       }
-      .buttonStyle(RowPress())
+      .buttonStyle(LegacyRowPress())
       .accessibilityValue(value)
     } else {
       row.accessibilityElement(children: .combine)
@@ -210,11 +211,11 @@ struct ListPickerRow<Value: Hashable>: View {
       ChoicePage(title: title, options: options, current: current, onPick: onPick)
     } label: {
       TitleValue(title: title, value: value) {
-        LucideIcon(.chevronRight, size: 16, tint: palette.muted).padding(.leading, 4)
+        LucideIcon(.chevronRight, size: 16, tint: palette.mutedForeground).padding(.leading, 4)
       }
       .modifier(RowFrame())
     }
-    .buttonStyle(RowPress())
+    .buttonStyle(LegacyRowPress())
     .accessibilityValue(value)
   }
 }
@@ -239,14 +240,14 @@ private struct ChoicePage<Value: Hashable>: View {
             dismiss()
           } label: {
             HStack(spacing: 12) {
-              Text(option.1).textStyle(.bodyLarge).foregroundStyle(palette.foreground)
+              Text(option.1).textStyle(.base).foregroundStyle(palette.foreground)
                 .multilineTextAlignment(.leading)
                 .frame(maxWidth: .infinity, alignment: .leading)
               if selected { LucideIcon(.check, size: 18, tint: palette.accent) }
             }
             .modifier(RowFrame())
           }
-          .buttonStyle(RowPress())
+          .buttonStyle(LegacyRowPress())
           .accessibilityAddTraits(selected ? .isSelected : [])
         }
       }
@@ -255,7 +256,7 @@ private struct ChoicePage<Value: Hashable>: View {
 }
 
 /// A setting that's on or off, the switch at its end; the whole row flips it.
-struct SwitchRow: View {
+struct LegacySwitchRow: View {
   let title: String
   @Binding var isOn: Bool
   var icon: Lucide?
@@ -270,11 +271,11 @@ struct SwitchRow: View {
   var body: some View {
     Toggle(isOn: $isOn) {
       HStack(spacing: 0) {
-        RowIcon(icon: icon, tint: palette.muted)
-        Text(title).textStyle(.bodyLarge).foregroundStyle(palette.foreground).keepsWordsWhole(title, .bodyLarge)
+        RowIcon(icon: icon, tint: palette.mutedForeground)
+        Text(title).textStyle(.base).foregroundStyle(palette.foreground).keepsWordsWhole(title, .base)
       }
     }
-    .toggleStyle(.matinee)
+    .toggleStyle(.legacy)
     .modifier(RowFrame())
     // The switch takes its own taps; the rest of the row flips it too, as on Android.
     .onTapGesture { isOn.toggle() }
@@ -282,7 +283,7 @@ struct SwitchRow: View {
 }
 
 /// A row that only tells something, its value at its end.
-struct ValueRow: View {
+struct LegacyValueRow: View {
   let title: String
   let value: String
   @Environment(\.palette) private var palette
@@ -294,9 +295,9 @@ struct ValueRow: View {
 
   var body: some View {
     HStack(spacing: 0) {
-      Text(title).textStyle(.bodyLarge).foregroundStyle(palette.foreground).layoutPriority(1)
+      Text(title).textStyle(.base).foregroundStyle(palette.foreground).layoutPriority(1)
       Spacer(minLength: 12)
-      Text(value).textStyle(.bodyMedium).foregroundStyle(palette.muted).multilineTextAlignment(.trailing)
+      Text(value).textStyle(.sm).foregroundStyle(palette.mutedForeground).multilineTextAlignment(.trailing)
     }
     .modifier(RowFrame())
     .accessibilityElement(children: .combine)
@@ -328,38 +329,38 @@ struct LinkRow: View {
   }
 
   var body: some View {
-    let color = destructive ? palette.danger : palette.foreground
+    let color = destructive ? palette.destructive : palette.foreground
     Button(action: action) {
       HStack(spacing: 0) {
-        RowIcon(icon: icon, tint: destructive ? palette.danger : palette.muted)
+        RowIcon(icon: icon, tint: destructive ? palette.destructive : palette.mutedForeground)
         // At the accessibility sizes the value goes under the title, as in `TitleValue`.
         let stacked = dynamicType.isAccessibilitySize
         VStack(alignment: .leading, spacing: 0) {
           // Across the row when nothing sits at its end; beside a value it takes only what it needs.
           if stacked || value == nil {
-            Text(title).textStyle(.bodyLarge).foregroundStyle(color).keepsWordsWhole(title, .bodyLarge)
+            Text(title).textStyle(.base).foregroundStyle(color).keepsWordsWhole(title, .base)
           } else {
-            Text(title).textStyle(.bodyLarge).foregroundStyle(color)
+            Text(title).textStyle(.base).foregroundStyle(color)
           }
           if stacked, let value {
-            Text(value).textStyle(.bodyMedium).foregroundStyle(palette.muted)
+            Text(value).textStyle(.sm).foregroundStyle(palette.mutedForeground)
           }
           if let description {
-            Text(description).textStyle(.bodySmall).foregroundStyle(palette.muted)
+            Text(description).textStyle(.px13).foregroundStyle(palette.mutedForeground)
           }
         }
         .multilineTextAlignment(.leading)
         .layoutPriority(1)
         Spacer(minLength: value == nil || stacked ? 0 : 12)
         if !stacked, let value {
-          Text(value).textStyle(.bodyMedium).foregroundStyle(palette.muted).lineLimit(1)
+          Text(value).textStyle(.sm).foregroundStyle(palette.mutedForeground).lineLimit(1)
             .frame(maxWidth: 160, alignment: .trailing)
         }
-        if !destructive { LucideIcon(.chevronRight, size: 16, tint: palette.muted).padding(.leading, 4) }
+        if !destructive { LucideIcon(.chevronRight, size: 16, tint: palette.mutedForeground).padding(.leading, 4) }
       }
       .modifier(RowFrame())
     }
-    .buttonStyle(RowPress())
+    .buttonStyle(LegacyRowPress())
   }
 }
 
@@ -377,8 +378,8 @@ struct NoteRow: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 0) {
-      Text(title).textStyle(.bodyLarge).foregroundStyle(palette.foreground).keepsWordsWhole(title, .bodyLarge)
-      Text(description).textStyle(.bodySmall).foregroundStyle(palette.muted)
+      Text(title).textStyle(.base).foregroundStyle(palette.foreground).keepsWordsWhole(title, .base)
+      Text(description).textStyle(.px13).foregroundStyle(palette.mutedForeground)
     }
     .modifier(RowFrame())
     .accessibilityElement(children: .combine)

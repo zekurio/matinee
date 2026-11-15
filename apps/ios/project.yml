@@ -19,6 +19,8 @@ packages:
     path: Packages/MatineeMPV
   MatineeCore:
     path: Packages/MatineeCore
+  MatineeKit:
+    path: Packages/MatineeKit
   Nuke:
     url: https://github.com/kean/Nuke
     exactVersion: 13.2.3
@@ -45,13 +47,16 @@ targets:
       - path: Matinee
         excludes:
           - Info.plist
-      # The font is Android's copy, so there's one in the repository.
-      - path: ../android/app/src/main/res/font/red_hat_text.ttf
-        group: Matinee/Resources
-        buildPhase: resources
+          - UI/README.md
+          - UI/kit-exclusions.txt
     dependencies:
       - package: MatineeMPV
       - package: MatineeCore
+      # The design kit: theme, type, icons, and every control (its README).
+      - package: MatineeKit
+        product: MatineeKit
+      - package: MatineeKit
+        product: MatineeKitGallery
       - package: Nuke
         product: Nuke
       - package: Nuke
@@ -105,8 +110,6 @@ targets:
             UIInterfaceOrientationLandscapeLeft,
             UIInterfaceOrientationLandscapeRight,
           ]
-        # Red Hat Text, a variable font; Theme.swift names its weights.
-        UIAppFonts: [red_hat_text.ttf]
         # Where the browser hands back the sign-in code, matinee://auth/callback.
         CFBundleURLTypes:
           - CFBundleURLName: io.github.zekurio.matinee

@@ -1,4 +1,5 @@
 import MatineeCore
+import MatineeKit
 import SwiftUI
 
 /// The saved server didn't answer. Laid out like sign-in: what happened, one
@@ -17,10 +18,10 @@ struct UnreachableScreen: View {
     let noNetwork = reason == .noNetwork
     AuthLayout {
       Text(noNetwork ? Str.unreachableOfflineTitle : Str.unreachableTitle)
-        .textStyle(.headlineMedium).accessibilityAddTraits(.isHeader)
+        .textStyle(.px26, weight: .bold, tracking: .tight).accessibilityAddTraits(.isHeader)
       Gap(8)
       Text(unreachableMessage(reason, server: server, canWatchOffline: canWatchOffline))
-        .textStyle(.bodyMedium).foregroundStyle(palette.muted)
+        .textStyle(.sm).foregroundStyle(palette.mutedForeground)
       // A saved server on the local network can't be reached without the access, which Settings can take back.
       if !noNetwork, isLocal {
         Gap(12)
@@ -45,7 +46,7 @@ struct UnreachableScreen: View {
 
   private var isLocal: Bool { URL(string: server).map(MatineeSession.isLocalNetwork) ?? false }
 
-  private func retry(_ look: ButtonLook) -> some View {
+  private func retry(_ look: LegacyButtonLook) -> some View {
     Button {
       Task { await session.start() }
     } label: {
@@ -59,11 +60,11 @@ struct UnreachableScreen: View {
       }
       .frame(maxWidth: .infinity)
     }
-    .buttonStyle(.matinee(look))
+    .buttonStyle(.legacy(look))
     .disabled(retrying)
   }
 
-  private func watchOffline(_ look: ButtonLook) -> some View {
+  private func watchOffline(_ look: LegacyButtonLook) -> some View {
     Button {
       Task { await session.setOfflineMode(true) }
     } label: {
@@ -73,6 +74,6 @@ struct UnreachableScreen: View {
       }
       .frame(maxWidth: .infinity)
     }
-    .buttonStyle(.matinee(look))
+    .buttonStyle(.legacy(look))
   }
 }

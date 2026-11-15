@@ -1,4 +1,5 @@
 import MatineeCore
+import MatineeKit
 import SwiftUI
 
 /*
@@ -28,13 +29,13 @@ struct BrowseScreen: View {
           [genre != nil ? Str.browseGenre : Str.browseStudio, pages.total.map { Str.browseTitleCount($0) }]
             .compactMap(\.self).joined(separator: " · ")
         )
-        .textStyle(.bodyMedium)
-        .foregroundStyle(palette.muted)
+        .textStyle(.sm)
+        .foregroundStyle(palette.mutedForeground)
         Gap(12)
         ScrollView(.horizontal) {
           HStack(spacing: 6) {
             ForEach(BROWSE_KINDS, id: \.self) { value in
-              Chip(browseKindLabel(value), selected: self.kind == value) { self.kind = value }
+              LegacyChip(browseKindLabel(value), selected: self.kind == value) { self.kind = value }
             }
           }
         }
@@ -53,7 +54,7 @@ struct BrowseScreen: View {
       let page = try await api.titles.browse(kind: kind, filters: TitleFilters(genres: genre.map { [$0] }, studios: studio.map { [$0] }), limit: limit, offset: offset)
       return TitleList(items: page.items, total: page.total)
     }
-    .topBar(genre ?? studio ?? "")
+    .legacyTopBar(genre ?? studio ?? "")
   }
 }
 
@@ -81,14 +82,14 @@ struct PersonScreen: View {
       #endif
       return try await api.people.get(name: name)
     }
-    .topBar(nil, home: true) { DisconnectedAction(person) }
+    .legacyTopBar(nil, home: true) { DisconnectedAction(person) }
   }
 
   private func content(_ value: Person) -> some View {
     ScrollView {
       VStack(alignment: .leading, spacing: 0) {
         PersonHeader(person: value, photo: api?.art(value.photo, size: .medium))
-          .padding(.horizontal, Gutter)
+          .padding(.horizontal, Space.gutter)
           .padding(.top, 8)
           .padding(.bottom, 32)
         CardGrid {
@@ -123,7 +124,7 @@ private struct PersonHeader: View {
       Circle()
         .fill(palette.secondary)
         .overlay {
-          Text(initials(person.name)).textStyle(.headlineMedium).foregroundStyle(palette.muted)
+          Text(initials(person.name)).textStyle(.px26, weight: .bold, tracking: .tight).foregroundStyle(palette.mutedForeground)
             .accessibilityHidden(true)
         }
         .overlay { Picture(photo) }
@@ -131,11 +132,11 @@ private struct PersonHeader: View {
         .frame(width: 112, height: 112)
         .accessibilityHidden(true)
       VStack(alignment: .leading, spacing: 4) {
-        Text(person.name).textStyle(.headlineMedium).foregroundStyle(palette.foreground)
+        Text(person.name).textStyle(.px26, weight: .bold, tracking: .tight).foregroundStyle(palette.foreground)
           .accessibilityAddTraits(.isHeader)
         Text([creditKind(person.kind, count: 1), Str.browseTitleCount(person.titleCount)].joined(separator: " · "))
-          .textStyle(.bodyMedium)
-          .foregroundStyle(palette.muted)
+          .textStyle(.sm)
+          .foregroundStyle(palette.mutedForeground)
       }
       .frame(maxWidth: .infinity, alignment: .leading)
     }

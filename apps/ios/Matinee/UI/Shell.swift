@@ -1,19 +1,25 @@
 import MatineeCore
+import MatineeKit
 import Nuke
 import SwiftUI
 import UIKit
 
 /*
- * Shell.kt: the signed-in app. Its tabs, as Android's: Home, Media,
- * Downloads, and the profile behind the person's picture, then search on
- * its own, as iOS lays a search tab out. Offline only Home, Downloads, and
- * the profile stay. The tab bar is the system's, in the theme's colors
- * (Theme.swift): at the bottom of a phone; on an iPad at the top, with the
- * sidebar it opens into, as iPad apps have it.
+ * Shell.kt: the signed-in app. Its tabs, as Android's and the web's on a
+ * phone: Home, Media, Downloads, and the profile behind the person's
+ * picture in a floating capsule at the bottom of each tab's first page,
+ * with search in a circle beside it. Offline only Home, Downloads, and the
+ * profile stay. On an iPad the same tabs sit at the top, in the web's bar
+ * from `sm` up (Bars.swift, and apps/ios/Matinee/UI/README.md for why).
+ *
+ * Each tab keeps a stack of its own, as iOS apps do, so a tab keeps its
+ * place while another is open. Switching tabs is immediate, as on iOS,
+ * rather than Android's slide; pages opened from a tab slide in over it and
+ * follow the edge swipe back, which is the system's.
  *
  * Everything a page reads comes from here: the API, the account, the
- * navigator, the snackbar, offline, the viewer's marks, and the context
- * menus' hook, which the Actions task fills in.
+ * navigator, toasts, offline, the viewer's marks, and the actions a long
+ * press on a card offers.
  */
 
 extension EnvironmentValues {
@@ -27,16 +33,17 @@ struct SignedInApp: View {
   let offline: Bool
   @Environment(MatineeSession.self) private var session
   @Environment(\.palette) private var palette
-  @Environment(\.imagePipeline) private var pipeline
   @Environment(\.scenePhase) private var scenePhase
+  @Environment(\.horizontalSizeClass) private var sizeClass
   @State private var nav: ShellNav
   /// Watched and favorite marks last only for this sign-in.
   @State private var viewer = ViewerState()
-  @State private var snackbar = SnackbarModel()
-  @State private var picture: UIImage?
+  /// The tabs opened so far: each is made the first time it's picked, and kept.
+  @State private var opened: Set<ShellTab> = []
+  @State private var keyboard = false
   @SceneStorage("shell.nav") private var savedNav: Data?
-  /// The tabs show once the pages kept from before are back, so the tab
-  /// view starts on the tab that was open rather than picking the first.
+  /// The tabs show once the pages kept from before are back, so the shell
+  /// starts on the tab that was open rather than on Home.
   @State private var restored = false
 
   init(user: User, offline: Bool) {
@@ -53,34 +60,23 @@ struct SignedInApp: View {
     }
   }
 
+  private var style: ShellStyle { ShellStyle(idiom: UIDevice.current.userInterfaceIdiom, sizeClass: sizeClass) }
+
   private var tabs: some View {
-    TabView(selection: Binding(get: { nav.tab }, set: { nav.select($0) })) {
-      ForEach(nav.tabs.filter { $0 != .search }, id: \.self) { tab in
-        Tab(value: tab) {
-          page(tab)
-        } label: {
-          Label {
-            Text(tab.label)
-          } icon: {
-            if tab == .profile {
-              Image(uiImage: ProfilePicture.image(picture, name: user.name, palette: palette))
-            } else {
-              Image(tab.icon)
-            }
-          }
-        }
-      }
-      // Search in a circle of its own beside the bar, as iOS lays out a search tab.
-      if nav.tabs.contains(.search) {
-        Tab(value: ShellTab.search, role: .search) {
-          page(.search)
-        } label: {
-          Label { Text(ShellTab.search.label) } icon: { Image(ShellTab.search.icon) }
+    ZStack {
+      ForEach(nav.tabs, id: \.self) { tab in
+        if opened.contains(tab) || tab == nav.tab {
+          let open = tab == nav.tab
+          TabStack(tab: tab)
+            .opacity(open ? 1 : 0)
+            .allowsHitTesting(open)
+            .accessibilityHidden(!open)
+            .zIndex(open ? 1 : 0)
         }
       }
     }
-    .modifier(TabStyle())
-    // The context menus' items and the sheets they open (Actions.swift), under everything below.
+    .onChange(of: nav.tab, initial: true) { _, tab in opened.insert(tab) }
+    // The actions a long press offers, and the sheets they open, over every tab.
     .modifier(ActionsHost())
     .fullScreenCover(item: $nav.player) { PlayerCover(request: $0) }
     .environment(nav)
@@ -89,7 +85,15 @@ struct SignedInApp: View {
     .environment(\.api, session.api)
     .environment(\.user, user)
     .environment(\.offline, offline)
-    .environment(\.snackbar, Snackbar(show: snackbar.show))
+    .environment(\.shellStyle, style)
+    // Toasts rise over the phone's tabs while a tab's first page shows them.
+    .preference(key: ToastClearanceKey.self, value: tabBarShows ? BottomBar<ShellTab>.clearance : 0)
+    .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
+      keyboard = true
+    }
+    .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
+      keyboard = false
+    }
     .onAppear {
       #if DEBUG
         DevLaunch.openRoute(nav)
@@ -102,88 +106,25 @@ struct SignedInApp: View {
       guard scenePhase == .active, !offline, let api = session.api else { return }
       if let options = try? await api.playback.options() { viewer.options = options }
     }
-    .task(id: user.avatarId) { await loadPicture() }
+  }
+
+  /// The phone's tabs are on screen: a tab's first page, no keyboard.
+  private var tabBarShows: Bool {
+    style == .phone && !keyboard && (nav.paths[nav.tab] ?? []).isEmpty
   }
 
   /// The account and server the saved pages belong to.
   private var owner: String { "\(session.activeServer ?? "")\n\(user.id)" }
 
-  private func page(_ tab: ShellTab) -> some View {
-    TabStack(tab: tab).overlay(alignment: .bottom) { SnackbarHost(model: snackbar) }
-  }
-
   private func restore() {
     nav.restore(savedNav, owner: owner)
     restored = true
   }
-
-  private func loadPicture() async {
-    guard let id = user.avatarId, let api = session.api, let url = URL(string: api.paths.avatar(id)) else {
-      picture = nil
-      return
-    }
-    picture = try? await pipeline.image(for: url)
-  }
 }
 
-/// The tab bar as each device has it: a bar at the bottom of a phone; on an
-/// iPad, the bar at the top, which opens into a sidebar with the logo at
-/// its head, as iPad apps have it.
-private struct TabStyle: ViewModifier {
-  func body(content: Content) -> some View {
-    if UIDevice.current.userInterfaceIdiom == .pad {
-      content
-        .tabViewStyle(.sidebarAdaptable)
-        .defaultAdaptableTabBarPlacement(.tabBar)
-        .tabViewSidebarHeader { Logo(height: 22).frame(maxWidth: .infinity, alignment: .leading) }
-    } else {
-      content
-    }
-  }
-}
-
-/// Android's snackbar: one message at a time at the bottom, above the tab
-/// bar, gone after a few seconds or a tap. VoiceOver reads it out.
-@Observable final class SnackbarModel {
-  private(set) var message: String?
-  @ObservationIgnored private var hiding: Task<Void, Never>?
-
-  func show(_ text: String) {
-    withMotion(Motion.enter) { message = text }
-    AccessibilityNotification.Announcement(text).post()
-    hiding?.cancel()
-    hiding = Task { [weak self] in
-      try? await Task.sleep(for: .seconds(4))
-      guard !Task.isCancelled else { return }
-      self?.dismiss()
-    }
-  }
-
-  func dismiss() {
-    hiding?.cancel()
-    withMotion(Motion.exit) { message = nil }
-  }
-}
-
-private struct SnackbarHost: View {
-  let model: SnackbarModel
-  @Environment(\.palette) private var palette
-
-  var body: some View {
-    if let message = model.message {
-      Text(message)
-        .textStyle(.bodyMedium)
-        .foregroundStyle(palette.background)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
-        .background(palette.foreground, in: ControlShape)
-        .frame(maxWidth: 560)
-        .padding(.horizontal, Gutter)
-        .padding(.bottom, 12)
-        .onTapGesture(perform: model.dismiss)
-        .transition(.move(edge: .bottom).combined(with: .opacity))
-        .accessibilityAddTraits(.isStaticText)
-    }
-  }
+/// How far above the bottom safe area toasts sit: the shell says, as it
+/// knows whether its tabs show. The root reads it for its toast host.
+struct ToastClearanceKey: PreferenceKey {
+  static let defaultValue: CGFloat = 0
+  static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
 }

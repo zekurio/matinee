@@ -1,5 +1,6 @@
 import AuthenticationServices
 import MatineeCore
+import MatineeKit
 import SwiftUI
 import UIKit
 
@@ -70,11 +71,11 @@ struct ConnectScreen: View {
 
   var body: some View {
     AuthLayout {
-      Text(Str.connectTitle).textStyle(.headlineMedium).accessibilityAddTraits(.isHeader)
+      Text(Str.connectTitle).textStyle(.px26, weight: .bold, tracking: .tight).accessibilityAddTraits(.isHeader)
       Gap(8)
-      Text(Str.connectDescription).textStyle(.bodyMedium).foregroundStyle(palette.muted)
+      Text(Str.connectDescription).textStyle(.sm).foregroundStyle(palette.mutedForeground)
       Gap(24)
-      MatineeTextField($address, placeholder: Str.connectPlaceholder, leadingIcon: .server, isError: connector.error != nil)
+      LegacyTextField($address, placeholder: Str.connectPlaceholder, leadingIcon: .server, isError: connector.error != nil)
         .keyboardType(.URL)
         .textContentType(.URL)
         .textInputAutocapitalization(.never)
@@ -85,7 +86,7 @@ struct ConnectScreen: View {
         .accessibilityLabel(Str.connectPlaceholder)
       if let error = connector.error {
         Gap(8)
-        Text(error).textStyle(.bodySmall).foregroundStyle(palette.danger)
+        Text(error).textStyle(.px13).foregroundStyle(palette.destructive)
         if connector.local {
           Gap(8)
           LocalNetworkHint()
@@ -98,7 +99,7 @@ struct ConnectScreen: View {
           Text(Str.connectButton)
         }
       }
-      .buttonStyle(.matinee())
+      .buttonStyle(.legacy())
       .disabled(address.trimmingCharacters(in: .whitespaces).isEmpty || connector.busy)
       if canCancel {
         Gap(32)
@@ -129,12 +130,12 @@ struct SignInScreen: View {
       DeviceCodeSignIn { withMotion(Motion.enter) { withCode = false } }
     } else {
       AuthLayout {
-        Text(Str.signinTitle).textStyle(.headlineMedium).accessibilityAddTraits(.isHeader)
+        Text(Str.signinTitle).textStyle(.px26, weight: .bold, tracking: .tight).accessibilityAddTraits(.isHeader)
         Gap(8)
-        Text(Str.signinServer(server)).textStyle(.bodyMedium).foregroundStyle(palette.muted)
+        Text(Str.signinServer(server)).textStyle(.sm).foregroundStyle(palette.mutedForeground)
         Gap(28)
         if config.setup != nil {
-          Text(Str.signinSetup).textStyle(.bodyMedium).foregroundStyle(palette.muted)
+          Text(Str.signinSetup).textStyle(.sm).foregroundStyle(palette.mutedForeground)
           Gap(16)
         }
         Button(action: signInInBrowser) {
@@ -147,7 +148,7 @@ struct SignInScreen: View {
             Text(browserLabel)
           }
         }
-        .buttonStyle(.matinee())
+        .buttonStyle(.legacy())
         .disabled(browser != nil)
         Gap(10)
         Button {
@@ -159,10 +160,10 @@ struct SignInScreen: View {
             Text(Str.signinWithCode)
           }
         }
-        .buttonStyle(.matinee(.ghost))
+        .buttonStyle(.legacy(.ghost))
         if let error = errors.browser {
           Gap(12)
-          Text(error).textStyle(.bodySmall).foregroundStyle(palette.danger)
+          Text(error).textStyle(.px13).foregroundStyle(palette.destructive)
             .multilineTextAlignment(.center).frame(maxWidth: .infinity)
         }
         Gap(32)
@@ -279,11 +280,11 @@ private struct DeviceCodeSignIn: View {
           Text(Str.signinCodeOpen)
         }
       }
-      .buttonStyle(.matinee(.outline))
+      .buttonStyle(.legacy(.outline))
       Gap(12)
     }
     Button(action: onBack) { Wide { Text(Str.signinCodeBack) } }
-      .buttonStyle(.matinee(.ghost))
+      .buttonStyle(.legacy(.ghost))
   }
 }
 
@@ -291,9 +292,9 @@ private struct CodeHeading: View {
   @Environment(\.palette) private var palette
 
   var body: some View {
-    Text(Str.signinCodeTitle).textStyle(.headlineMedium).accessibilityAddTraits(.isHeader)
+    Text(Str.signinCodeTitle).textStyle(.px26, weight: .bold, tracking: .tight).accessibilityAddTraits(.isHeader)
     Gap(8)
-    Text(Str.signinCodeScan).textStyle(.bodyMedium).foregroundStyle(palette.muted)
+    Text(Str.signinCodeScan).textStyle(.sm).foregroundStyle(palette.mutedForeground)
   }
 }
 
@@ -325,7 +326,7 @@ private struct CodeDetails: View {
     if let code {
       // The page without its scheme: shorter, and what people type anyway.
       Text(Str.signinCodeEnter(code.verificationUri.components(separatedBy: "://").last ?? code.verificationUri))
-        .textStyle(.bodyMedium).foregroundStyle(palette.muted)
+        .textStyle(.sm).foregroundStyle(palette.mutedForeground)
       Gap(4)
       // Monospaced, as Android draws it, so the letters can't be mistaken for each other.
       Text(code.userCode)
@@ -337,19 +338,19 @@ private struct CodeDetails: View {
         .accessibilityLabel(code.userCode.map(String.init).joined(separator: " "))
       Gap(20)
       HStack(spacing: 10) {
-        ProgressView().controlSize(.mini).tint(palette.muted)
-        Text(Str.signinCodeWaiting).textStyle(.bodySmall).foregroundStyle(palette.muted)
+        ProgressView().controlSize(.mini).tint(palette.mutedForeground)
+        Text(Str.signinCodeWaiting).textStyle(.px13).foregroundStyle(palette.mutedForeground)
       }
     } else if error == nil {
-      Text(Str.signinCodeLoading).textStyle(.bodyMedium).foregroundStyle(palette.muted)
+      Text(Str.signinCodeLoading).textStyle(.sm).foregroundStyle(palette.mutedForeground)
     }
     if let error {
       Gap(12)
-      Text(error).textStyle(.bodySmall).foregroundStyle(palette.danger)
+      Text(error).textStyle(.px13).foregroundStyle(palette.destructive)
       if let onRetry {
         Gap(8)
         Button(action: onRetry) { Wide { Text(Str.commonRetry) } }
-          .buttonStyle(.matinee(.outline))
+          .buttonStyle(.legacy(.outline))
       }
     }
   }

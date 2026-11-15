@@ -294,6 +294,8 @@ struct InputsPage: View {
         MatineeTextField("Username", text: $name, isError: true)
         Caption("Search, with a clear button")
         MatineeTextField("Search", text: $search, kind: .search)
+        Caption("The search page's pill")
+        MatineeTextField("Search titles, people, and genres", text: $search, kind: .search, look: .pill)
         Caption("Password, with show and hide")
         MatineeTextField("Password", text: $password, kind: .secure)
         Caption("Several lines")
