@@ -52,7 +52,9 @@ WindowGroup {
 `MatineeTheme(accentLight:accentDark:)` takes the server's `themeAccents`
 (`#rrggbb`) and fits them to Matinee's palettes for contrast;
 `MatineeTheme.matinee` is Matinee's own. `ThemeMode` is system, light, or
-dark. `.forceDarkTheme()` is for the player.
+dark. `.forceDarkTheme()` is for the player. `.matineePalette(theme)` puts
+another theme on one part of the screen, in the root's light or dark, as the
+sign-in page of a server shows that server's accent.
 
 Every page in a `NavigationStack` gets `.topBar("Title")`, or
 `.hidesSystemNavigationBar()` when it draws its own top (Back floating over
@@ -70,6 +72,7 @@ hiding the system bar would otherwise lose.
 | `palette.destructive`, `success`, `warning`, `info`, `live`, `*Soft`                                           | Status colors and their 12% tints                                                                                                                                                                                                                                           |
 | `palette.popoverGlass`, `.glassBackground(in:)`                                                                | The web's `glass`: the popover at 65% (84% in light) over a blur; solid under Reduce Transparency                                                                                                                                                                           |
 | `.textStyle(.sm, weight: .medium, tracking: .tight)`                                                           | The web's type scale in Red Hat Text: `.xs` 12/16, `.sm` 14/20, `.base` 16/24, `.lg` 18/28, `.xl` 20/28, `.xl2` 24/32, `.xl3` 30/36, `.xl4` 36/40, `.xl5` 48/48, and globals.css's `.px9` … `.px32` (`text-13px` is `.px13`). Sizes and line heights grow with Dynamic Type |
+| `.monoTextStyle(.xl4, weight: .semibold, tracking: Tracking.codeEm)`                                           | The web's `font-mono` (SF Mono) at a size of the scale, for a code to type elsewhere                                                                                                                                                                                        |
 | `Radius.sm` 6, `.md` 8, `.lg` 10, `.xl` 14, `.xl2` 18; `RoundedRectangle.kit(_:)`                              | The web's radius scale, circular corners as the web's                                                                                                                                                                                                                       |
 | `Space.s1` 4 … `Space.s16` 64, `Space.gutter` 16, `Space.section` 32                                           | Tailwind's 4-point steps (`gap-2.5` is `Space.s2_5`)                                                                                                                                                                                                                        |
 | `TouchTarget` 44                                                                                               | The least a finger gets; every kit control takes it to hit                                                                                                                                                                                                                  |
@@ -153,6 +156,8 @@ disabled. Every pressable thing takes 44 points to hit.
   `ProgressBar(value, height:, track:)`, `Skeleton(radius:)` or
   `Skeleton(shape:)`.
 - `EmptyState(icon:, title:, description:) { actions }`.
+- `Callout("Title", description:, icon:, look: .standard | .destructive) { actions }`:
+  the web's Alert, a note that stays because it holds the page back.
 - `Badge("4K", look: .primary | .secondary | .destructive | .outline | .meta | .metaOutline, icon:)`.
 - `Avatar("Name", size: 32, dot:) { picture }`: initials until the app
   gives it the loaded picture. The kit doesn't load images.

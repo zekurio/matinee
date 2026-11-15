@@ -209,6 +209,15 @@ struct FeedbackPage: View {
           }
         }
       }
+      Demo("Callout", note: "The web's Alert: a note that holds the page back, with a way to put it right.") {
+        Callout(nil, description: "This server isn't set up yet. Finish setup in a browser, then sign in here.", icon: .info)
+        Callout(
+          "Couldn't reach 192.168.1.20.", description: "Turn on Local Network for Matinee in Settings.",
+          icon: .circleAlert, look: .destructive
+        ) {
+          MatineeButton("Open Settings", icon: .settings, look: .outline, size: .sm) {}
+        }
+      }
       Demo("Empty state") {
         ListBlock {
           EmptyState(
