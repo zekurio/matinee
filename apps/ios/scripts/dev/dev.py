@@ -16,7 +16,7 @@ import urllib.request
 
 ROOT = Path.home() / '.t3/scratch/matinee-ios-dev'
 SERVER = ROOT / 'server'
-PIN = '3b7ff41bdef281fae760e0bd2f4b7973918052ac'
+PIN = 'cfb1cb519647949deadcaf809fb415dbd7bb3af6'
 URL = 'http://localhost:18420'
 SOCKET = ROOT / 'socket'
 ENV = dict(os.environ, PGHOST=str(SOCKET), PGUSER='postgres', PGDATABASE='matinee', PYTHONDONTWRITEBYTECODE='1')
