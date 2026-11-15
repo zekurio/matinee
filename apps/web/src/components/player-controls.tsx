@@ -2,10 +2,12 @@ import { Slider } from "@base-ui/react/slider"
 import { Spinner } from "@matinee/ui/components/spinner"
 import { cn } from "@matinee/ui/lib/utils"
 import {
+  FastForwardIcon,
   MaximizeIcon,
   MinimizeIcon,
   PauseIcon,
   PlayIcon,
+  RewindIcon,
   SkipBackIcon,
   SkipForwardIcon,
   Volume1Icon,
@@ -70,60 +72,6 @@ export function ControlButton({
     >
       {children}
     </button>
-  )
-}
-
-/**
- * A circle with the skip length inside it and an arrowhead at the top
- * pointing the way it skips, drawn in Lucide's stroke. Lucide's rotate
- * arrows end in a corner bracket off to the side, which reads as a reload
- * rather than a skip, and leave no room for the number.
- */
-export function SkipIcon({
-  direction,
-  seconds,
-  big = false,
-}: {
-  direction: "back" | "forward"
-  /** How far it skips, written inside the arrow. */
-  seconds: number
-  /** For the row in the middle of a touch screen. */
-  big?: boolean
-}) {
-  return (
-    <svg
-      aria-hidden
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.75}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={big ? "!size-9" : "!size-6"}
-    >
-      {/* Drawn going back; the forward one is its mirror image. */}
-      <g
-        transform={
-          direction === "forward" ? "matrix(-1 0 0 1 24 0)" : undefined
-        }
-      >
-        <path d="M6.34 7.34A8 8 0 1 0 12 5" />
-        <path d="m14.5 2.5-2.5 2.5 2.5 2.5" />
-      </g>
-      <text
-        x="12"
-        y="13.5"
-        fill="currentColor"
-        stroke="none"
-        fontSize="7.5"
-        fontWeight="700"
-        textAnchor="middle"
-        dominantBaseline="central"
-        className="tabular-nums"
-      >
-        {seconds}
-      </text>
-    </svg>
   )
 }
 
@@ -620,7 +568,9 @@ export function Transport({
   const side = cn(
     big && "size-12 [@media(pointer:coarse)]:size-12 [&_svg]:size-6",
   )
-  const skip = cn(big && "size-14 [@media(pointer:coarse)]:size-14")
+  const skip = cn(
+    big && "size-14 [@media(pointer:coarse)]:size-14 [&_svg]:size-7",
+  )
   return (
     <div
       className={cn("flex items-center", big ? "gap-2 sm:gap-8" : "gap-0.5")}
@@ -640,7 +590,7 @@ export function Transport({
         onClick={() => onSkip(-skipBackSeconds)}
         className={skip}
       >
-        <SkipIcon direction="back" seconds={skipBackSeconds} big={big} />
+        <RewindIcon className="fill-current" />
       </ControlButton>
       {big && busy ? (
         // The spinner in the middle of the player shows here.
@@ -653,7 +603,7 @@ export function Transport({
         onClick={() => onSkip(skipForwardSeconds)}
         className={skip}
       >
-        <SkipIcon direction="forward" seconds={skipForwardSeconds} big={big} />
+        <FastForwardIcon className="fill-current" />
       </ControlButton>
       {episodes && (
         <ControlButton
