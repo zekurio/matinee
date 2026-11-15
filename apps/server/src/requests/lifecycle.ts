@@ -36,7 +36,6 @@ import { details, routedDetails } from "../catalog"
 import { detailProvider } from "../catalog/cache"
 import { db } from "../db"
 import { placeholders, toArtwork } from "../media/artwork"
-import { notify } from "../notifications/notify"
 import { events } from "../realtime/events"
 import { availability, ExternalIds } from "./availability"
 import { withCachedDetails } from "./cached-details"
@@ -91,7 +90,6 @@ async function quota(tx: Transaction, viewer: Viewer) {
     .where(
       and(
         eq(requestFollower.userId, viewer.id),
-        eq(requestFollower.asked, true),
         ne(request.status, "declined"),
         gt(
           requestFollower.createdAt,
@@ -192,10 +190,9 @@ export async function ask(
       declined: row.status === "declined",
       limit,
       status: null,
-      following: !!self,
-      asked: self?.asked ?? false,
+      asked: !!self,
       here: false,
-      existingTitle: !!self?.asked,
+      existingTitle: !!self,
       approvedTitle: row.status === "approved",
     })
     if (action.disabledReason === "declined")
@@ -233,22 +230,11 @@ export async function ask(
     if (!self)
       await tx
         .insert(requestFollower)
-        .values({ requestId: row.id, userId: viewer.id, asked: true })
-    else if (!self.asked)
-      await tx
-        .update(requestFollower)
-        .set({ asked: true, createdAt: new Date() })
-        .where(
-          and(
-            eq(requestFollower.requestId, row.id),
-            eq(requestFollower.userId, viewer.id),
-          ),
-        )
-    return { id: row.id, waiting: status === "asked" }
+        .values({ requestId: row.id, userId: viewer.id })
+    return row.id
   })
   events.publish("requests", undefined)
-  if (result.waiting) await notify({ kind: "waiting" })
-  return itemById(viewer, result.id)
+  return itemById(viewer, result)
 }
 
 export async function addSeasons(
@@ -264,11 +250,8 @@ export async function addSeasons(
   })
 }
 
-export async function membership(
-  viewer: Viewer,
-  id: string,
-  operation: "cancel" | "follow" | "unfollow",
-) {
+/** Takes the viewer's ask back, and the request with it once nobody asks. An admin removes it outright. */
+export async function cancel(viewer: Viewer, id: string) {
   await db.transaction(async (tx) => {
     const row = await visibleRequest(viewer, id, tx)
     const identity = and(
@@ -276,47 +259,25 @@ export async function membership(
       eq(requestFollower.userId, viewer.id),
     )
     const [self] = await tx.select().from(requestFollower).where(identity)
-    if (operation === "cancel" && viewer.role === "admin") {
+    if (viewer.role === "admin") {
       await tx.delete(request).where(eq(request.id, id))
-    } else if (operation === "cancel") {
-      if (!self?.asked) unavailable()
-      if (row.status !== "asked") {
-        const askers = await tx
-          .select({ id: requestFollower.userId })
-          .from(requestFollower)
-          .where(
-            and(
-              eq(requestFollower.requestId, id),
-              eq(requestFollower.asked, true),
-            ),
-          )
-        if (!undoable(row, askers.length)) unavailable()
-      }
-      await tx.delete(requestFollower).where(identity)
-      const [remaining] = await tx
-        .select()
-        .from(requestFollower)
-        .where(
-          and(
-            eq(requestFollower.requestId, id),
-            eq(requestFollower.asked, true),
-          ),
-        )
-        .limit(1)
-      if (!remaining) await tx.delete(request).where(eq(request.id, id))
-    } else if (operation === "follow") {
-      await tx
-        .insert(requestFollower)
-        .values({ requestId: id, userId: viewer.id })
-        .onConflictDoNothing()
-    } else {
-      // Asked rows are quota attribution as well as subscriptions. Do not erase a debit.
-      if (self?.asked)
-        throw new ORPCError("BAD_REQUEST", {
-          message: "Cancel your request to stop following this title.",
-        })
-      await tx.delete(requestFollower).where(identity)
+      return
     }
+    if (!self) unavailable()
+    if (row.status !== "asked") {
+      const askers = await tx
+        .select({ id: requestFollower.userId })
+        .from(requestFollower)
+        .where(eq(requestFollower.requestId, id))
+      if (!undoable(row, askers.length)) unavailable()
+    }
+    await tx.delete(requestFollower).where(identity)
+    const [remaining] = await tx
+      .select()
+      .from(requestFollower)
+      .where(eq(requestFollower.requestId, id))
+      .limit(1)
+    if (!remaining) await tx.delete(request).where(eq(request.id, id))
   })
   events.publish("requests", undefined)
 }
@@ -626,7 +587,6 @@ export async function queue(
             id: f.follower.userId,
             name: f.name ?? f.username,
             avatarId: f.avatarId,
-            asked: f.follower.asked,
             createdAt: f.follower.createdAt,
           })),
         destinationDescription: [card.library.name, connection?.name]
@@ -710,12 +670,7 @@ async function requestFacts(row: Row) {
   const [first] = await db
     .select({ userId: requestFollower.userId })
     .from(requestFollower)
-    .where(
-      and(
-        eq(requestFollower.requestId, row.id),
-        eq(requestFollower.asked, true),
-      ),
-    )
+    .where(eq(requestFollower.requestId, row.id))
     .orderBy(asc(requestFollower.createdAt))
     .limit(1)
   return { facts, user: first?.userId ?? null }
@@ -849,8 +804,8 @@ function duplicate(cause: unknown) {
 /**
  * Approves waiting requests, or retries one. Approving one with
  * `libraryId` moves it there first, in the same transaction: the title's
- * identity in that library, with its askers, followers, seasons and dates
- * as they were.
+ * identity in that library, with its askers, seasons and dates as they
+ * were.
  */
 export async function moderate(
   viewer: Viewer,
@@ -967,9 +922,9 @@ export async function moderate(
 /**
  * An admin's no: declining a waiting request with a reason, or giving up
  * on an accepted one that hasn't come, which can only be for want of a
- * copy. Either closes the title for everyone until an admin lifts it, and
- * tells its followers. Giving up leaves the connection alone; if the file
- * turns up anyway, the arrival check takes the decline back.
+ * copy. Either closes the title for everyone until an admin lifts it.
+ * Giving up leaves the connection alone; if the file turns up anyway, the
+ * arrival check takes the decline back.
  */
 export async function decline(
   viewer: Viewer,
@@ -1014,14 +969,13 @@ export async function decline(
   })
   clearProgress(id)
   events.publish("requests", undefined)
-  await notify({ kind: "unavailable", requestId: id })
 }
 
 /**
  * Lifts a decline. "Allow requests again" removes the declined request,
  * as Remove does, so the title can be requested afresh by anyone and
- * starts as a new request; nobody is told. "Add after all" accepts it as
- * it stands, with its requesters, followers and seasons, and sends it.
+ * starts as a new request. "Add after all" accepts it as it stands, with
+ * its requesters and seasons, and sends it.
  */
 export async function reopen(
   viewer: Viewer,

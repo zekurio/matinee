@@ -22,11 +22,9 @@
     "blurhash": "catalog:",
     "drizzle-orm": "catalog:",
     "hono": "4.13.16",
-    "openid-client": "6.8.9",
-    "web-push": "^4.0.0"
+    "openid-client": "6.8.9"
   },
   "devDependencies": {
-    "@types/web-push": "^3.6.4",
     "esbuild": "0.28.2",
     "tsx": "4.23.15"
   }

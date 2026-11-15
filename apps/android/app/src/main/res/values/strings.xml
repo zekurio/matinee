@@ -677,8 +677,8 @@
     <string name="tv_profile_see_all">See all</string>
     <string name="tv_stats_heatmap_cell">%1$s, %2$s to %3$s</string>
     <!-- Requests: words the web has in other areas, and the app's own. The
-         rest are the web's, in strings_web_ask, _catalog, _discover,
-         _notifications, and _requests. None says "download". -->
+         rest are the web's, in strings_web_ask, _catalog, _discover, and
+         _requests. None says "download". -->
     <string name="requests_season_not_here">%1$s isn\'t here yet</string>
     <string name="requests_season_state">%1$s · %2$s</string>
     <plurals name="requests_rest_more">
@@ -709,10 +709,4 @@
         <item quantity="one">%1$d day</item>
         <item quantity="other">%1$d days</item>
     </plurals>
-    <string name="requests_channel_description">When something you requested is ready or isn\'t coming, and for admins, requests that wait.</string>
-    <string name="requests_notify_section">Notifications</string>
-    <string name="requests_notify_title">Notifications on this device</string>
-    <string name="requests_notify_description">Get one when something you requested is ready or isn\'t coming, even with Matinee closed. Matinee looks about every 15 minutes.</string>
-    <string name="requests_notify_blocked">Blocked in Android\'s settings. Allow notifications for Matinee there.</string>
-    <string name="requests_notify_open_settings">Open Android\'s settings</string>
 </resources>

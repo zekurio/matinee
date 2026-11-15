@@ -18,8 +18,6 @@ object Lucide {
     val ArrowLeft = R.drawable.lucide_arrow_left
     val ArrowUpDown = R.drawable.lucide_arrow_up_down
     val AudioLines = R.drawable.lucide_audio_lines
-    val Bell = R.drawable.lucide_bell
-    val BellRing = R.drawable.lucide_bell_ring
     val Calendar = R.drawable.lucide_calendar
     val CalendarClock = R.drawable.lucide_calendar_clock
     val CalendarOff = R.drawable.lucide_calendar_off

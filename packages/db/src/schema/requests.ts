@@ -138,7 +138,7 @@ export const request = pgTable(
     }),
     options: jsonb().$type<FulfilmentValues>(),
     sentAt: instant(),
-    /** First film arrival, for notification deduplication only, never availability. */
+    /** When the film first arrived. Never read as availability. */
     arrivedAt: instant(),
     approvedAt: instant(),
     createdAt: createdAt(),
@@ -174,56 +174,12 @@ export const requestFollower = pgTable(
     userId: uuid()
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
-    /** True for an ask, false for Notify me. Only asks consume a title quota. */
-    asked: boolean().notNull().default(false),
     createdAt: createdAt(),
   },
   (t) => [
     primaryKey({ columns: [t.requestId, t.userId] }),
     index("request_follower_user_idx").on(t.userId, t.createdAt),
   ],
-)
-
-export const notification = pgTable(
-  "notification",
-  {
-    id: uuid().primaryKey().defaultRandom(),
-    userId: uuid()
-      .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
-    kind: text()
-      .$type<"ready" | "unavailable" | "waiting" | "needsAttention">()
-      .notNull(),
-    requestId: uuid().references(() => request.id, { onDelete: "set null" }),
-    /** Null for a film or an admin summary. */
-    season: integer(),
-    count: integer().notNull().default(1),
-    /** Stable event identity prevents repeated delivery on retries. */
-    dedupeKey: text().notNull(),
-    readAt: instant(),
-    pushSentAt: instant(),
-    createdAt: createdAt(),
-  },
-  (t) => [
-    uniqueIndex("notification_dedupe").on(t.userId, t.dedupeKey),
-    index("notification_user_idx").on(t.userId, t.createdAt),
-    index("notification_unread_idx").on(t.userId, t.readAt),
-  ],
-)
-
-export const webPushSubscription = pgTable(
-  "web_push_subscription",
-  {
-    id: uuid().primaryKey().defaultRandom(),
-    userId: uuid()
-      .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
-    endpoint: text().notNull().unique(),
-    p256dh: text().notNull(),
-    auth: text().notNull(),
-    createdAt: createdAt(),
-  },
-  (t) => [index("web_push_user_idx").on(t.userId)],
 )
 
 export const providerCache = pgTable("provider_cache", {

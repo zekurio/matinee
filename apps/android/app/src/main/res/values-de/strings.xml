@@ -677,10 +677,4 @@
         <item quantity="one">%1$d Tag</item>
         <item quantity="other">%1$d Tage</item>
     </plurals>
-    <string name="requests_channel_description">Wenn etwas, das du angefragt hast, bereit ist oder nicht kommt, und für Admins, wenn Anfragen warten.</string>
-    <string name="requests_notify_section">Benachrichtigungen</string>
-    <string name="requests_notify_title">Benachrichtigungen auf diesem Gerät</string>
-    <string name="requests_notify_description">Erhalte eine, wenn etwas, das du angefragt hast, bereit ist oder nicht kommt, auch wenn Matinee geschlossen ist. Matinee sieht etwa alle 15 Minuten nach.</string>
-    <string name="requests_notify_blocked">In den Android-Einstellungen blockiert. Erlaube dort Benachrichtigungen für Matinee.</string>
-    <string name="requests_notify_open_settings">Android-Einstellungen öffnen</string>
 </resources>

@@ -62,7 +62,6 @@ import { useAuthErrorToast } from "@/lib/use-auth-error-toast"
 import { createSettingsPasskeysStore } from "@/stores/settings-passkeys"
 
 import { SharingRows } from "./profile-sharing"
-import { PushSetting } from "./push-setting"
 import { Sessions } from "./sessions"
 import { RowIcon, SettingsSections, SettingsSubsection } from "./settings-panel"
 
@@ -84,7 +83,6 @@ export function AccountPanel() {
       ) : null}
       {config.data?.passkeys ? <Passkeys oidcEnabled={oidc !== null} /> : null}
       {oidc ? <LinkedAccount displayName={oidc.displayName} /> : null}
-      <PushSetting />
       <Sessions />
     </SettingsSections>
   )

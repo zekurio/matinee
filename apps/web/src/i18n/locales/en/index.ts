@@ -18,7 +18,6 @@ import library from "./library"
 import link from "./link"
 import media from "./media"
 import network from "./network"
-import notifications from "./notifications"
 import oidc from "./oidc"
 import party from "./party"
 import people from "./people"
@@ -47,7 +46,6 @@ import validation from "./validation"
  * one in each other language, and a line in each index.
  */
 export default {
-  ...notifications,
   ...format,
   ...shell,
   ...auth,

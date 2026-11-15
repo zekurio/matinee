@@ -12,9 +12,7 @@
     <string name="web_jobs_queue_request_progress_name">Request progress</string>
     <string name="web_jobs_queue_request_progress_description">Check progress for titles on their way.</string>
     <string name="web_jobs_queue_request_arrival_name">Request arrivals</string>
-    <string name="web_jobs_queue_request_arrival_description">Match library arrivals and notify followers.</string>
-    <string name="web_jobs_queue_notifications_name">Notifications</string>
-    <string name="web_jobs_queue_notifications_description">Deliver stored notifications through web push.</string>
+    <string name="web_jobs_queue_request_arrival_description">Match library arrivals to their requests.</string>
     <string name="web_jobs_queue_catalog_name">Catalog</string>
     <string name="web_jobs_queue_catalog_description">Refresh cached catalog and Discover responses.</string>
     <string name="web_jobs_queue_title_features_name">Title features</string>

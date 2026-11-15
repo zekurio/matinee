@@ -19,7 +19,6 @@ import library from "./library"
 import link from "./link"
 import media from "./media"
 import network from "./network"
-import notifications from "./notifications"
 import oidc from "./oidc"
 import party from "./party"
 import people from "./people"
@@ -40,7 +39,6 @@ import users from "./users"
 import validation from "./validation"
 
 export default {
-  ...notifications,
   ...format,
   ...shell,
   ...auth,

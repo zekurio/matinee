@@ -135,9 +135,9 @@ fun adminScopeText(scope: ShowScope?, res: Resources): String? {
     return if (scope.future) res.getString(R.string.web_requests_scope_andFuture, seasons) else seasons
 }
 
-/** Who requested it first, and everyone else who requested or follows it. */
+/** Who requested it first, and everyone else who requested it. */
 private fun askers(item: AdminRequestItem): Pair<AdminRequestItem.Follower?, List<AdminRequestItem.Follower>> {
-    val sorted = item.followers.sortedWith(compareByDescending<AdminRequestItem.Follower> { it.asked }.thenBy { it.createdAt })
+    val sorted = item.followers.sortedBy { it.createdAt }
     return sorted.firstOrNull() to sorted.drop(1)
 }
 
@@ -242,7 +242,7 @@ fun DeclineSheet(item: AdminRequestItem, onDismiss: () -> Unit, giveUp: Boolean 
     val res = LocalResources.current
     var reason by remember { mutableStateOf<String?>(null) }
     var note by remember { mutableStateOf("") }
-    val askedBy = item.followers.filter { it.asked }.map { it.name }
+    val askedBy = item.followers.map { it.name }
     val title = if (giveUp) R.string.web_requests_giveUp_title else R.string.web_requests_decline_title
     AskSheet(stringResource(title, item.title.name), onDismiss) { close ->
         Text(stringResource(R.string.web_requests_decline_reason), style = MaterialTheme.typography.labelLarge, color = Palette.Muted)

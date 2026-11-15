@@ -3,7 +3,6 @@ import { and, eq, isNull, or, sql } from "drizzle-orm"
 
 import { db } from "../db"
 import { defineQueue } from "../jobs/queue"
-import { notify } from "../notifications/notify"
 import { events } from "../realtime/events"
 import { ExternalIds } from "./availability"
 import { clearProgress } from "./progress"
@@ -11,7 +10,7 @@ import { clearProgress } from "./progress"
 export const arrivals = defineQueue({
   id: "request-arrival",
   name: "Request arrivals",
-  description: "Match library arrivals and notify followers.",
+  description: "Match library arrivals to their requests.",
   concurrency: 1,
   key: (libraryId: string | null) => libraryId ?? "all",
   label: (libraryId) => libraryId ?? "All libraries",
@@ -70,7 +69,6 @@ export const arrivals = defineQueue({
           .where(and(eq(request.id, row.id), isNull(request.arrivedAt)))
           .returning({ id: request.id })
         if (!updated.length) continue
-        await notify({ kind: "ready", requestId: row.id, season: null })
         clearProgress(row.id)
         events.publish("requests", undefined)
       } else {
@@ -121,7 +119,6 @@ export const arrivals = defineQueue({
               )
             row.status = "approved"
           }
-          await notify({ kind: "ready", requestId: row.id, season: number })
           clearProgress(row.id, number)
           clearProgress(row.id, null)
           events.publish("requests", undefined)

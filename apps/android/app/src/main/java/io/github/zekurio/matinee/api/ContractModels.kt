@@ -58,7 +58,6 @@ data class Availability(
     val stillLooking: Boolean,
     val reason: Availability.Reason?,
     val askedBySelf: Boolean,
-    val following: Boolean,
     val requestId: String?,
     val others: Availability.Others,
     val limit: Availability.Limit?,
@@ -95,7 +94,6 @@ data class SeasonAvailability(
     val stillLooking: Boolean,
     val reason: SeasonAvailability.Reason?,
     val askedBySelf: Boolean,
-    val following: Boolean,
     val requestId: String?,
     val others: SeasonAvailability.Others,
     val limit: SeasonAvailability.Limit?,
@@ -380,7 +378,6 @@ data class AdminRequestItem(
         val id: String,
         val name: String,
         val avatarId: String?,
-        val asked: Boolean,
         val createdAt: String,
     )
 
@@ -707,43 +704,6 @@ data class FulfilmentRuleChoices(
     val languages: List<FulfilmentRuleLanguage>,
     val users: List<FulfilmentRuleAccount>,
 )
-
-object NotificationKind {
-    const val READY = "ready"
-    const val UNAVAILABLE = "unavailable"
-    const val WAITING = "waiting"
-    const val NEEDS_ATTENTION = "needsAttention"
-    val all = listOf(READY, UNAVAILABLE, WAITING, NEEDS_ATTENTION)
-}
-
-@Serializable
-data class Notification(
-    val id: String,
-    val kind: String,
-    val title: CatalogTitleSummary?,
-    val season: Int?,
-    val count: Int,
-    val createdAt: String,
-    val readAt: String?,
-)
-
-@Serializable
-data class NotificationPage(
-    val items: List<Notification>,
-    val nextCursor: String?,
-)
-
-@Serializable
-data class PushSubscriptionInput(
-    val endpoint: String,
-    val keys: PushSubscriptionInput.Keys,
-) {
-    @Serializable
-    data class Keys(
-        val p256dh: String,
-        val auth: String,
-    )
-}
 
 @Serializable
 data class PlaybackSeek(
@@ -1968,11 +1928,10 @@ object JobQueueId {
     const val REQUEST_DISPATCH = "request-dispatch"
     const val REQUEST_PROGRESS = "request-progress"
     const val REQUEST_ARRIVAL = "request-arrival"
-    const val NOTIFICATIONS = "notifications"
     const val CATALOG = "catalog"
     const val TITLE_FEATURES = "title-features"
     const val RECOMMENDATIONS = "recommendations"
-    val all = listOf(LIBRARY_SCAN, MEDIA_PROBE, METADATA, THUMBNAILS, SUBTITLE_PREPARE, TRICKPLAY, MEDIA_SEGMENTS, ARTWORK, SUBTITLES, SUBTITLE_FONTS, AVATARS, DOWNLOADS, DOWNLOAD_COPIES, REQUEST_DISPATCH, REQUEST_PROGRESS, REQUEST_ARRIVAL, NOTIFICATIONS, CATALOG, TITLE_FEATURES, RECOMMENDATIONS)
+    val all = listOf(LIBRARY_SCAN, MEDIA_PROBE, METADATA, THUMBNAILS, SUBTITLE_PREPARE, TRICKPLAY, MEDIA_SEGMENTS, ARTWORK, SUBTITLES, SUBTITLE_FONTS, AVATARS, DOWNLOADS, DOWNLOAD_COPIES, REQUEST_DISPATCH, REQUEST_PROGRESS, REQUEST_ARRIVAL, CATALOG, TITLE_FEATURES, RECOMMENDATIONS)
 }
 
 @Serializable
@@ -3001,27 +2960,6 @@ data class RequestsAskInput(
 data class RequestsAddSeasonsInput(
     val id: String,
     val scope: ShowScope,
-)
-
-@Serializable
-data class NotificationsMarkReadInput(
-    val ids: List<String>,
-    val all: Boolean? = null,
-)
-
-@Serializable
-data class NotificationsUnreadCountEvent(
-    val count: Int,
-)
-
-@Serializable
-data class NotificationsPushPublicKeyOutput(
-    val publicKey: String?,
-)
-
-@Serializable
-data class NotificationsUnsubscribeInput(
-    val endpoint: String,
 )
 
 @Serializable

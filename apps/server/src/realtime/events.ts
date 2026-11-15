@@ -19,8 +19,6 @@ export type Topics = {
   requests: undefined
   /** Scan or metadata matching changed library identity or playable files. */
   library: undefined
-  /** Stored notification rows or read state changed. Reload per viewer. */
-  notifications: undefined
   /** Connections or per-library mappings changed. */
   fulfilment: undefined
   /** A playback session reported, or a stream started or stopped. */

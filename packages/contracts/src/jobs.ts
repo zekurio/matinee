@@ -24,7 +24,6 @@ export const JOB_QUEUE_IDS = [
   "request-dispatch",
   "request-progress",
   "request-arrival",
-  "notifications",
   "catalog",
   "title-features",
   "recommendations",

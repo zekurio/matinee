@@ -110,9 +110,8 @@ fun SignedInApp(session: Session, user: User, offline: Boolean = false) {
     val actionScope = rememberCoroutineScope()
     val actions = remember { Actions(actionScope) }
     val snackbar = remember { ToastState() }
-    val app = LocalContext.current.app
     val api = session.requireApi()
-    val requests = remember(api) { RequestsHub(api, actionScope, snackbar, app.notices) }
+    val requests = remember(api) { RequestsHub(api, actionScope, snackbar) }
     requests.resources = LocalResources.current
     CompositionLocalProvider(
         LocalApi provides api,
@@ -139,7 +138,7 @@ fun SignedInApp(session: Session, user: User, offline: Boolean = false) {
         ActionsSheet(actions)
         if (!offline) {
             FollowPlaybackOptions()
-            RequestsAround(session)
+            RequestsAround()
         }
     }
 }

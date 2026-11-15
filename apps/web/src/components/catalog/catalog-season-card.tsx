@@ -41,7 +41,7 @@ export function CatalogSeasonCard({
           percent: formatPercent(availability.progress),
         })
       : (stateWord(availability) ?? seasonDetail(season))
-  // A season's own button only requests: cancelling or following is the
+  // A season's own button only requests: cancelling is the
   // whole show's, on its poster.
   const requests = posterAction(availability) === "request"
   return (

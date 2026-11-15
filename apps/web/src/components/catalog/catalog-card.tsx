@@ -268,9 +268,8 @@ function badgeGlyph(
  * it sits in the same rails and grids: the poster in full colour, the
  * state in the corner and on the second line. Hovered or focused, the
  * poster dims and offers its one button, as Seerr's cards do: "Request",
- * which requests in place, a show the server's default seasons, or for a
- * title already requested, cancelling or "Notify me". Nothing shows at
- * rest. Touch screens open the title's page with a tap.
+ * which requests in place, a show the server's default seasons, or
+ * cancelling for a title the viewer requested. Nothing shows at rest. Touch screens open the title's page with a tap.
  *
  * When the title arrives, the badge fades and the card becomes the
  * library's card, on the same poster.

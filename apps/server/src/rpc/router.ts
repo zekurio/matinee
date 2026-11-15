@@ -18,7 +18,6 @@ import { discover } from "./discover"
 import { downloads } from "./downloads"
 import { titleImages } from "./images"
 import { adminRoutes, libraries, media } from "./libraries"
-import { notifications } from "./notifications"
 import { party } from "./party"
 import { people } from "./people"
 import { home, playback } from "./playback"
@@ -40,7 +39,6 @@ export const procedures = {
   catalog,
   discover,
   requests,
-  notifications,
   auth,
   account,
   libraries,

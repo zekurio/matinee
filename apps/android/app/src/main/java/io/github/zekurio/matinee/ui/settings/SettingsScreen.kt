@@ -299,7 +299,6 @@ private fun AccountPage() {
                 )
             }
         }
-        item(key = "notifications") { io.github.zekurio.matinee.ui.requests.NotificationsSection() }
         item(key = "sessionsTitle") {
             Text(stringResource(R.string.account_sessions_title), style = MaterialTheme.typography.titleLarge)
         }

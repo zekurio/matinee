@@ -19,10 +19,7 @@ export default defineMessages("jobs", {
     "Check progress for titles on their way.",
   "jobs.queue.request-arrival.name": "Request arrivals",
   "jobs.queue.request-arrival.description":
-    "Match library arrivals and notify followers.",
-  "jobs.queue.notifications.name": "Notifications",
-  "jobs.queue.notifications.description":
-    "Deliver stored notifications through web push.",
+    "Match library arrivals to their requests.",
   "jobs.queue.catalog.name": "Catalog",
   "jobs.queue.catalog.description":
     "Refresh cached catalog and Discover responses.",

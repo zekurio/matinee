@@ -49,14 +49,14 @@ export type RequestLimit = t.infer<typeof RequestLimit>
  */
 export const Availability = t.object({
   state: t.enum(["none", "asked", "coming", "release", "unavailable", "here"]),
-  action: t.enum(["ask", "add", "follow", "unfollow", "cancel"]).nullable(),
+  action: t.enum(["ask", "add", "cancel"]).nullable(),
   progress: t.number().min(0).max(1).nullable(),
   etaSeconds: t.number().int().min(0).nullable(),
   releaseDate: t.string().nullable(),
   stillLooking: t.boolean(),
   /**
    * Why a declined title is unavailable, with who declined it and the
-   * admin's note. Only for the people who requested or follow it;
+   * admin's note. Only for the people who requested it;
    * everyone else sees the title as unavailable without it.
    */
   reason: t
@@ -67,7 +67,6 @@ export const Availability = t.object({
     })
     .nullable(),
   askedBySelf: t.boolean(),
-  following: t.boolean(),
   requestId: t.uuid().nullable(),
   others: t.object({
     count: t.number().int().min(0),

@@ -23,7 +23,6 @@ class RequestViewTest {
         releaseDate: String? = null,
         reason: Availability.Reason? = null,
         askedBySelf: Boolean = false,
-        following: Boolean = false,
         requestId: String? = null,
         others: Availability.Others = Availability.Others(0, emptyList()),
         limit: Availability.Limit? = null,
@@ -32,7 +31,7 @@ class RequestViewTest {
         stillLooking: Boolean = false,
     ) = Availability(
         state = state, action = action, progress = progress, etaSeconds = etaSeconds, releaseDate = releaseDate,
-        stillLooking = stillLooking, reason = reason, askedBySelf = askedBySelf, following = following,
+        stillLooking = stillLooking, reason = reason, askedBySelf = askedBySelf,
         requestId = requestId, others = others, limit = limit, libraryTitleId = null,
         disabledReason = disabledReason,
     )
@@ -42,7 +41,7 @@ class RequestViewTest {
             number = number, overview = null, poster = null, episodeCount = count, airDate = null, selected = selected,
             availability = SeasonAvailability(
                 state = state, action = action, progress = null, etaSeconds = null, releaseDate = null, stillLooking = false,
-                reason = null, askedBySelf = false, following = false, requestId = null,
+                reason = null, askedBySelf = false, requestId = null,
                 others = SeasonAvailability.Others(0, emptyList()), limit = null, libraryTitleId = null,
                 disabledReason = null, number = number, episodesHere = 0, episodesAired = aired,
             ),
@@ -116,18 +115,16 @@ class RequestViewTest {
     @Test
     fun aRequestGivenUpOnSaysNoCopyWasFound() {
         val reason = Availability.Reason("declined", "notFound", null)
-        val a = availability(AvailabilityState.UNAVAILABLE, null, reason = reason, disabledReason = DisabledReason.DECLINED, following = true)
+        val a = availability(AvailabilityState.UNAVAILABLE, null, reason = reason, disabledReason = DisabledReason.DECLINED, askedBySelf = true)
         assertEquals(Answer("notFound", null), declineAnswer(a))
         assertEquals(Decline(ReasonWord.NotFound), declineOf(reason))
     }
 
     @Test
-    fun someoneElseRequestedOffersNotifyMe() {
-        val a = availability(AvailabilityState.ASKED, AvailabilityAction.FOLLOW, requestId = "r", others = Availability.Others(2, listOf("Anna")))
-        assertEquals(PosterAction.Follow, posterAction(a))
+    fun someoneElseRequestedOffersNothing() {
+        val a = availability(AvailabilityState.ASKED, null, requestId = "r", others = Availability.Others(2, listOf("Anna")))
+        assertNull(posterAction(a))
         assertNull(requestBlocked(a))
-        val following = a.copy(action = AvailabilityAction.UNFOLLOW, following = true, state = AvailabilityState.COMING)
-        assertEquals(PosterAction.Unfollow, posterAction(following))
     }
 
     @Test

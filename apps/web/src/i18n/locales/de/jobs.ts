@@ -19,10 +19,7 @@ export default {
     "Fortschritt von Titeln prüfen, die unterwegs sind.",
   "jobs.queue.request-arrival.name": "Eingetroffene Anfragen",
   "jobs.queue.request-arrival.description":
-    "Neue Bibliothekstitel zuordnen und Interessierte benachrichtigen.",
-  "jobs.queue.notifications.name": "Benachrichtigungen",
-  "jobs.queue.notifications.description":
-    "Gespeicherte Benachrichtigungen per Web-Push zustellen.",
+    "Neue Bibliothekstitel ihren Anfragen zuordnen.",
   "jobs.queue.catalog.name": "Katalog",
   "jobs.queue.catalog.description":
     "Zwischengespeicherte Katalog- und Entdecken-Antworten aktualisieren.",

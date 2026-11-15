@@ -154,7 +154,7 @@ private const val NOTE_LENGTH = 140
 
 /**
  * What a tap on a dimmed Request says, as the web's tooltip: for whoever
- * requested or follows a declined title, the admin's answer, as "Lukas
+ * requested a declined title, the admin's answer, as "Lukas
  * declined this: Not for this server.", with his note, cut short, on a
  * line of its own; for anyone else, why it can't be pressed. [admin]
  * points an admin to where a decline is lifted. Null for a Request that
@@ -184,8 +184,6 @@ fun posterActionText(action: PosterAction, res: Resources): String = res.getStri
     when (action) {
         PosterAction.Request -> R.string.web_ask_ask
         PosterAction.Cancel -> R.string.web_ask_cancel
-        PosterAction.Follow -> R.string.web_ask_notify
-        PosterAction.Unfollow -> R.string.web_ask_stopNotifying
     },
 )
 
