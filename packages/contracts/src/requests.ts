@@ -66,6 +66,8 @@ export const AdminRequestItem = RequestItem.extend({
     .object({
       id: t.uuid(),
       name: t.string(),
+      /** What kind of connection it is, like "Radarr". */
+      sourceName: t.string(),
       /**
        * Whether it reports how far along a request is. A by-hand one
        * doesn't: once sent, its requests wait for someone to add the file.

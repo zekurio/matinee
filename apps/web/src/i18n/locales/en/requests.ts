@@ -69,6 +69,7 @@ export default defineMessages("requests", {
   "requests.addAfterAllNamed": "Add {name} after all",
   "requests.more": "More for {name}",
   "requests.openTitle": "Open title",
+  // {connection} is the kind of service, like "Radarr" or "Sonarr".
   "requests.openRemote": "Open in {connection}",
   "requests.remove": "Remove request…",
   "requests.remove.title": "Remove the request for {name}?",
