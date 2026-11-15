@@ -1672,8 +1672,9 @@ object DevicePlatform {
     const val LINUX = "linux"
     const val MACOS = "macos"
     const val TIZEN = "tizen"
+    const val TVOS = "tvos"
     const val WINDOWS = "windows"
-    val all = listOf(ANDROID, ANDROIDTV, IOS, LINUX, MACOS, TIZEN, WINDOWS)
+    val all = listOf(ANDROID, ANDROIDTV, IOS, LINUX, MACOS, TIZEN, TVOS, WINDOWS)
 }
 
 @Serializable

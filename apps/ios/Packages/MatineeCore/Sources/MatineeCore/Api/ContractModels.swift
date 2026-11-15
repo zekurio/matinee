@@ -5858,8 +5858,9 @@ public enum DevicePlatform {
     public static let linux = "linux"
     public static let macos = "macos"
     public static let tizen = "tizen"
+    public static let tvos = "tvos"
     public static let windows = "windows"
-    public static let knownValues = ["android", "androidtv", "ios", "linux", "macos", "tizen", "windows"]
+    public static let knownValues = ["android", "androidtv", "ios", "linux", "macos", "tizen", "tvos", "windows"]
 }
 
 public struct DeviceRequest: Codable, Sendable, Hashable {

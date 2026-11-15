@@ -3,7 +3,7 @@ import Foundation
 import ImageIO
 import MediaPlayer
 
-#if os(iOS)
+#if os(iOS) || os(tvOS)
   import UIKit
 #else
   import AppKit
@@ -127,7 +127,7 @@ enum NowPlayingAudioEvent {
 @MainActor private final class SystemAudioSession: NowPlayingAudioSession {
   private var observers: [NSObjectProtocol] = []
   func start(_ event: @escaping @MainActor (NowPlayingAudioEvent) -> Void) {
-    #if os(iOS)
+    #if os(iOS) || os(tvOS)
       let session = AVAudioSession.sharedInstance()
       try? session.setCategory(.playback, mode: .moviePlayback)
       observers.append(
@@ -159,14 +159,14 @@ enum NowPlayingAudioEvent {
     #endif
   }
   func activate() throws {
-    #if os(iOS)
+    #if os(iOS) || os(tvOS)
       try AVAudioSession.sharedInstance().setActive(true)
     #endif
   }
   func stop() {
     for observer in observers { NotificationCenter.default.removeObserver(observer) }
     observers.removeAll()
-    #if os(iOS)
+    #if os(iOS) || os(tvOS)
       try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
     #endif
   }
@@ -297,7 +297,7 @@ private struct SystemArtworkLoader: NowPlayingArtworkLoader {
               kCGImageSourceCreateThumbnailWithTransform: true,
             ] as CFDictionary)
         else { return }
-        #if os(iOS)
+        #if os(iOS) || os(tvOS)
           let image = UIImage(cgImage: thumbnail)
         #else
           let image = NSImage(

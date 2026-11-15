@@ -3,6 +3,9 @@ import Testing
 
 @testable import MatineeCore
 
+// Runs the dev fixture's scripts through Process, which only the Mac has.
+#if os(macOS)
+
 struct LiveAuthTests {
   @Test(.enabled(if: ProcessInfo.processInfo.environment["MATINEE_LIVE_AUTH"] == "1"))
   @MainActor func deviceGrant() async throws {
@@ -50,3 +53,4 @@ struct LiveAuthTests {
     print("LIVE discovery: \(found) replies, loopback PUBLIC_URL is not advertised")
   }
 }
+#endif

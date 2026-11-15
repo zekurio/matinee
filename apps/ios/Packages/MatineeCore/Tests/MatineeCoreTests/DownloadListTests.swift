@@ -52,7 +52,7 @@ import Testing
     #expect(comingAction([gaveUp, forbidden]) == .retryAll(["gave-up"]))
   }
 
-  @Test func storageCountsOnlyTheServerInUse() async throws {
+  @Test(.enabled(if: ClientCapabilities.downloads)) func storageCountsOnlyTheServerInUse() async throws {
     let root = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
     defer { try? FileManager.default.removeItem(at: root) }
     let store = try DownloadStore(root: root)

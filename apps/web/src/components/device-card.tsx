@@ -15,6 +15,7 @@ export function PlatformIcon({
       return <GlobeIcon />
     case "androidtv":
     case "tizen":
+    case "tvos":
       return <TvIcon />
     case "android":
     case "ios":

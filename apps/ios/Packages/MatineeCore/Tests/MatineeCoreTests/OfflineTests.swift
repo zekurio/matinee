@@ -64,7 +64,7 @@ func offlineFixture(
     #expect(separated.movies.map(\.id) == ["movie"])
     #expect(separated.shows.count == 1)
   }
-  @Test func persistenceAndServers() async throws {
+  @Test(.enabled(if: ClientCapabilities.downloads)) func persistenceAndServers() async throws {
     let root = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
     defer { try? FileManager.default.removeItem(at: root) }
     let store = try DownloadStore(root: root)

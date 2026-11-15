@@ -76,6 +76,15 @@ private struct Transfer: Codable, Sendable {
       }
     }
   }
+  #if os(tvOS)
+  public init(
+    store: DownloadStore, configuration: URLSessionConfiguration? = nil, unmeteredOnly: Bool = true,
+    networkAllowed: @escaping @MainActor (Bool) -> Bool = { _ in true },
+    client: @escaping @MainActor (String) -> MatineeApi?
+  ) throws {
+    throw UnsupportedClientFeature.downloads
+  }
+  #else
   public init(
     store: DownloadStore, configuration: URLSessionConfiguration? = nil, unmeteredOnly: Bool = true,
     networkAllowed: @escaping @MainActor (Bool) -> Bool = { _ in true },
@@ -98,6 +107,7 @@ private struct Transfer: Codable, Sendable {
     config.timeoutIntervalForRequest = 300
     session = URLSession(configuration: config, delegate: self, delegateQueue: nil)
   }
+  #endif
   /// Call during app launch as well as from the UIApplicationDelegate hook,
   /// retaining Downloads for the app's lifetime so the session can reattach.
   public func handleEventsForBackgroundURLSession(

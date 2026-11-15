@@ -4,7 +4,7 @@ import Testing
 @testable import MatineeCore
 
 @Suite @MainActor struct OfflinePlaybackTests {
-  @Test func serverBoundPlaybackAndQueuedReports() async throws {
+  @Test(.enabled(if: ClientCapabilities.downloads)) func serverBoundPlaybackAndQueuedReports() async throws {
     let root = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
     defer { try? FileManager.default.removeItem(at: root) }
     let downloads = try Downloads(root: root, configuration: .ephemeral, client: { _ in nil })
@@ -42,7 +42,7 @@ import Testing
     await #expect(throws: NoDownload.self) { try await adapter.playback(itemId: a.id) }
   }
 
-  @Test func nextDownloadedEpisode() async throws {
+  @Test(.enabled(if: ClientCapabilities.downloads)) func nextDownloadedEpisode() async throws {
     let root = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
     defer { try? FileManager.default.removeItem(at: root) }
     let downloads = try Downloads(root: root, configuration: .ephemeral, client: { _ in nil })

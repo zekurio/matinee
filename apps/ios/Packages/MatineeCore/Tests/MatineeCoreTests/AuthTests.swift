@@ -106,12 +106,15 @@ final class AuthProtocol: URLProtocol, @unchecked Sendable {
     #expect(
       restored.artworkHeaders(for: URL(string: "http://fallback.example/api/artwork/1")!)[
         "Authorization"] == "Bearer saved")
+    // tvOS has no offline mode; see ClientCapabilities.
+    #if !os(tvOS)
     await restored.setOfflineMode(true)
     #expect(restored.state == .offline(server: "http://fallback.example", user: authUser))
     await restored.setOfflineMode(false)
     #expect(restored.state == .signedIn(server: "http://fallback.example", user: authUser))
+    #endif
   }
-  @Test @MainActor func transitionsAndStorage() async throws {
+  @Test(.enabled(if: ClientCapabilities.browserSignIn)) @MainActor func transitionsAndStorage() async throws {
     AuthProtocol.lock.withLock {
       AuthProtocol.mode = "ok"
       AuthProtocol.requests = []

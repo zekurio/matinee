@@ -80,7 +80,7 @@ public enum Capabilities {
       VideoDecoder(codec: $0.0, widest: size, tallest: portrait, tenBit: $0.0 != "h264")
     }
     var hdr: [String] = []
-    #if os(iOS)
+    #if os(iOS) || os(tvOS)
       let modes = AVPlayer.availableHDRModes
       if modes.contains(.hdr10) { hdr.append(HdrFormat.hdr10) }
       if modes.contains(.hlg) { hdr.append(HdrFormat.hlg) }
@@ -110,7 +110,7 @@ public enum Capabilities {
       ("alac", kAudioFormatAppleLossless), ("opus", kAudioFormatOpus),
     ]
     var channels = 2
-    #if os(iOS)
+    #if os(iOS) || os(tvOS)
       channels = max(1, AVAudioSession.sharedInstance().outputNumberOfChannels)
     #endif
     return CapabilitySnapshot(

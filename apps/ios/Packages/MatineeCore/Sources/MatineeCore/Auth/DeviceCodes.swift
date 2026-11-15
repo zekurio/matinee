@@ -32,7 +32,7 @@ public func scannedCode(_ text: String) -> ScannedCode? {
 public struct DeviceCodes: Sendable {
   public let api: MatineeApi
   public init(api: MatineeApi) { self.api = api }
-  public func start(name: String?, platform: String = "ios") async throws -> DeviceCode {
+  public func start(name: String?, platform: String = ClientCapabilities.sessionPlatform) async throws -> DeviceCode {
     try await api.auth.device.start(appDevice: .init(name: name, platform: platform))
   }
   public func poll(

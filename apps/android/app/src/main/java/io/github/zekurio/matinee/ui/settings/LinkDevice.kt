@@ -135,6 +135,7 @@ fun platformLabel(platform: String): String = when (platform) {
     "linux" -> "Linux"
     "macos" -> "macOS"
     "tizen" -> "Samsung TV"
+    "tvos" -> "Apple TV"
     "windows" -> "Windows"
     else -> platform.replaceFirstChar(Char::titlecase)
 }
@@ -142,7 +143,7 @@ fun platformLabel(platform: String): String = when (platform) {
 /** What a device is, at a glance. Null is a browser. */
 @DrawableRes
 fun platformIcon(platform: String?): Int = when (platform) {
-    "androidtv", "tizen" -> Lucide.Tv
+    "androidtv", "tizen", "tvos" -> Lucide.Tv
     "android", "ios" -> Lucide.Smartphone
     else -> Lucide.Monitor
 }

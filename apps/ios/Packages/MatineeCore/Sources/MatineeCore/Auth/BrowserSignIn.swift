@@ -33,6 +33,7 @@ public struct BrowserSignIn: Sendable {
   func authenticate(url: URL) async throws -> URL
 }
 
+#if !os(tvOS)
 @MainActor public final class SystemBrowserAuthenticator: NSObject, BrowserAuthenticator {
   private let presentation: any ASWebAuthenticationPresentationContextProviding
   private var session: ASWebAuthenticationSession?
@@ -62,3 +63,4 @@ public struct BrowserSignIn: Sendable {
     }
   }
 }
+#endif

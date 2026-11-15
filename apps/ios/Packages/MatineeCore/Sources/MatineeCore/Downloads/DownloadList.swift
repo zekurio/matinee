@@ -149,8 +149,12 @@ extension DownloadStore {
   public func storage() async -> DownloadStorage {
     let keys = items.values.map(\.key)
     let used = await files.storageUsed(keys: keys)
+    #if os(tvOS)
+    let free: Int64? = nil
+    #else
     let free = try? root.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey])
       .volumeAvailableCapacityForImportantUsage
+    #endif
     return DownloadStorage(used: used, free: free)
   }
 }

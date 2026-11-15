@@ -43,8 +43,12 @@ public struct SessionChanged: Error {}
   public private(set) var api: MatineeApi?
   public var onRemove: ((String, MatineeApi?) async -> Void)?
   public let deviceName: String
-  public let platform = "ios"
+  public let platform = ClientCapabilities.sessionPlatform
+  #if os(tvOS)
+  public let isTv = true
+  #else
   public let isTv = false
+  #endif
   private let store: SessionStore
   private let configuration: URLSessionConfiguration
   private var candidate: (origin: String, name: String?)?
@@ -125,7 +129,7 @@ public struct SessionChanged: Error {}
     serverCandidates(url.absoluteString).first!.absoluteString
   }
   private func display(_ key: String) -> String { String(key.dropLast()) }
-  public var offlineMode: Bool { store.offlineMode }
+  public var offlineMode: Bool { ClientCapabilities.offlineMode && store.offlineMode }
   public var lastServer: String? {
     guard let last = store.lastServer, !store.servers.contains(where: { $0.origin == last }) else {
       return nil
@@ -412,6 +416,12 @@ public struct SessionChanged: Error {}
     }
     publish()
   }
+  #if os(tvOS)
+  public func setOfflineMode(_ on: Bool) async throws {
+    if on { throw UnsupportedClientFeature.offlineMode }
+    store.offlineMode = false
+  }
+  #else
   public func setOfflineMode(_ on: Bool) async {
     store.offlineMode = on
     if on, let key = activeServer, let user = lastUser {
@@ -420,7 +430,9 @@ public struct SessionChanged: Error {}
       await start()
     }
   }
+  #endif
   public func browserSignInUrl() throws -> URL {
+    guard ClientCapabilities.browserSignIn else { throw UnsupportedClientFeature.browserSignIn }
     let request = try BrowserSignIn.create()
     let key = candidate?.origin ?? activeServer!
     store.pendingSignIn = .init(state: request.state, verifier: request.verifier, origin: key)
@@ -431,6 +443,7 @@ public struct SessionChanged: Error {}
         platform: platform))!
   }
   public func finishBrowserSignIn(_ url: URL) async throws {
+    guard ClientCapabilities.browserSignIn else { throw UnsupportedClientFeature.browserSignIn }
     guard BrowserSignIn.isCallback(url), let pending = store.pendingSignIn else {
       throw URLError(.badURL)
     }

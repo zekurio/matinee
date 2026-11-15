@@ -23,6 +23,7 @@ nonisolated func platformLabel(_ platform: String) -> String {
   case "linux": "Linux"
   case "macos": "macOS"
   case "tizen": "Samsung TV"
+  case "tvos": "Apple TV"
   case "windows": "Windows"
   default: platform.prefix(1).uppercased() + platform.dropFirst()
   }
@@ -31,7 +32,7 @@ nonisolated func platformLabel(_ platform: String) -> String {
 /// What a device is, at a glance. Nil is a browser.
 nonisolated func platformIcon(_ platform: String?) -> Lucide {
   switch platform {
-  case "androidtv", "tizen": .tv
+  case "androidtv", "tizen", "tvos": .tv
   case "android", "ios": .smartphone
   default: .monitor
   }

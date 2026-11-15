@@ -49,6 +49,9 @@ public struct OfflinePlayback: Sendable {
     configuration: URLSessionConfiguration? = nil,
     client: @escaping @MainActor (String) -> MatineeApi?
   ) throws {
+    #if os(tvOS)
+    throw UnsupportedClientFeature.downloads
+    #else
     store = try DownloadStore(root: root)
     self.defaults = defaults
     unmeteredOnly = defaults.object(forKey: "downloads.unmetered") as? Bool ?? true
@@ -60,6 +63,7 @@ public struct OfflinePlayback: Sendable {
       store: store, configuration: configuration,
       unmeteredOnly: defaults.object(forKey: "downloads.unmetered") as? Bool ?? true, client: client
     )
+    #endif
   }
   /// Only the active server's completed file can be handed to the player.
   /// The player chooses offline tracks from entry.audio and these saved VTTs.

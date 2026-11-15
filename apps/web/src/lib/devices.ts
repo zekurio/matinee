@@ -10,6 +10,7 @@ const PLATFORM_LABELS = {
   linux: "Linux",
   macos: "macOS",
   tizen: "Samsung TV",
+  tvos: "Apple TV",
   windows: "Windows",
 } satisfies Record<DevicePlatform, string>
 

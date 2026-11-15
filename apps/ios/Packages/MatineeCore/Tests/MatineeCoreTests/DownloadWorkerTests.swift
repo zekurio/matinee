@@ -3,6 +3,9 @@ import Testing
 
 @testable import MatineeCore
 
+// tvOS has no downloads; see ClientCapabilities.
+#if !os(tvOS)
+
 private final class DownloadStub: URLProtocol, @unchecked Sendable {
   nonisolated(unsafe) static var handler: ((URLRequest) throws -> (Int, [String: String], Data))?
   override class func canInit(with request: URLRequest) -> Bool { true }
@@ -303,3 +306,4 @@ private final class DownloadStub: URLProtocol, @unchecked Sendable {
     try await wait { store.all[entry.key]?.state == .done }
   }
 }
+#endif

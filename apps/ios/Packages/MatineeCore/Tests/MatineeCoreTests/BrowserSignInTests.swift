@@ -14,7 +14,7 @@ import Testing
 }
 
 extension AuthTests {
-  @Test @MainActor func browserAndPendingRestoration() async throws {
+  @Test(.enabled(if: ClientCapabilities.browserSignIn)) @MainActor func browserAndPendingRestoration() async throws {
     AuthProtocol.lock.withLock { AuthProtocol.mode = "ok" }
     let config = URLSessionConfiguration.ephemeral
     config.protocolClasses = [AuthProtocol.self]
