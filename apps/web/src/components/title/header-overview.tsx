@@ -120,7 +120,7 @@ export function HeaderOverview({
         ref={textRef}
         style={{ WebkitLineClamp: lines }}
         className={cn(
-          "text-foreground/85 line-clamp-3 text-sm leading-6 sm:text-[15px]",
+          "text-foreground/85 line-clamp-3 text-sm leading-6 sm:text-15px",
           // Three lines run its paragraphs on rather than spend one on a
           // gap. The dialog keeps them.
           fit ? "whitespace-pre-line" : "whitespace-normal",
@@ -146,14 +146,14 @@ export function HeaderOverview({
                 {name}
               </DialogTitle>
               {tagline && (
-                <p className="text-foreground text-[15px] font-medium">
+                <p className="text-foreground text-15px font-medium">
                   {tagline}
                 </p>
               )}
             </DialogHeader>
             {overview && (
               <div className="-mx-6 min-h-0 overflow-y-auto px-6">
-                <p className="text-foreground/85 text-[15px] leading-6 whitespace-pre-line">
+                <p className="text-foreground/85 text-15px leading-6 whitespace-pre-line">
                   {overview}
                 </p>
               </div>

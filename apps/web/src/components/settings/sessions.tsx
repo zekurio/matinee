@@ -221,7 +221,7 @@ function SessionRow({
             </Badge>
           )}
         </div>
-        <p className="text-muted-foreground truncate text-[13px] leading-5">
+        <p className="text-muted-foreground text-13px truncate leading-5">
           {details.filter(Boolean).join(" · ")}
         </p>
       </div>

@@ -46,7 +46,7 @@ export function Methods({ methods }: { methods: MethodStat[] }) {
           return (
             <li
               key={entry.method}
-              className="flex items-center gap-2.5 text-[13px] leading-5"
+              className="text-13px flex items-center gap-2.5 leading-5"
             >
               <span
                 aria-hidden
@@ -136,7 +136,7 @@ export function Viewers({ stats }: { stats: ServerStats }) {
             >
               <UserAvatar
                 user={entry.user}
-                className="size-5 shrink-0 text-[10px]"
+                className="text-10px size-5 shrink-0"
               />
               <span className="truncate">
                 {entry.user.displayName ?? entry.user.username}

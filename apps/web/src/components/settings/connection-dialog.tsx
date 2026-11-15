@@ -523,7 +523,7 @@ function ConnectionForm({
                         values.slug && !slugValid ? true : undefined
                       }
                       aria-describedby={`${id}-slug-hint`}
-                      className="font-mono text-[13px] uppercase"
+                      className="text-13px font-mono uppercase"
                       onChange={(event) => {
                         field.handleChange(event.target.value.toUpperCase())
                         form.setFieldValue("slugEdited", true)
@@ -667,7 +667,7 @@ function TestRow({
         {connected && !pending && (
           <span
             role="status"
-            className="text-muted-foreground flex items-center gap-1.5 text-[13px]"
+            className="text-muted-foreground text-13px flex items-center gap-1.5"
           >
             <CircleCheckIcon aria-hidden className="text-success size-3.5" />
             {tr("connections.connected")}
@@ -677,7 +677,7 @@ function TestRow({
       {error && !pending && !untested && (
         <p
           role="alert"
-          className="flex items-start gap-1.5 text-[13px] leading-5"
+          className="text-13px flex items-start gap-1.5 leading-5"
         >
           <OctagonXIcon
             aria-hidden

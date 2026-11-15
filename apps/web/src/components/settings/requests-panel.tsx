@@ -241,7 +241,7 @@ function ConnectionCard({
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm leading-5">
             <span className="truncate font-medium">{connection.name}</span>
-            <span className="text-muted-foreground shrink-0 text-[13px]">
+            <span className="text-muted-foreground text-13px shrink-0">
               {sourceName}
             </span>
             {connection.defaultFor.map((kind) => (
@@ -253,7 +253,7 @@ function ConnectionCard({
           <span
             role="status"
             className={cn(
-              "flex min-w-0 items-start gap-1.5 text-[13px] leading-5",
+              "flex min-w-0 items-start gap-1.5 text-13px leading-5",
               test.isError ? "text-foreground" : "text-muted-foreground",
             )}
           >
@@ -285,7 +285,7 @@ function ConnectionCard({
             ) : null}
           </span>
           {lines.length > 0 && (
-            <span className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-0.5 text-[13px] leading-5">
+            <span className="text-13px grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-0.5 leading-5">
               {lines.map(({ landing, quality }) => (
                 <LandingLine
                   key={`${landing.kind}-${landing.folder}`}
@@ -482,7 +482,7 @@ function ConnectionRules({
   return (
     <div className="flex flex-col gap-2 border-t px-4 py-3">
       <div className="flex items-center justify-between gap-3">
-        <h5 className="text-[13px] font-medium">
+        <h5 className="text-13px font-medium">
           {tr("connections.rules.title")}
         </h5>
         <Button
@@ -505,7 +505,7 @@ function ConnectionRules({
               key={rule.id}
               className="flex items-start gap-2 py-2 pr-1.5 pl-3"
             >
-              <span className="text-muted-foreground w-4 shrink-0 pt-px text-[13px] tabular-nums">
+              <span className="text-muted-foreground text-13px w-4 shrink-0 pt-px tabular-nums">
                 {index + 1}
               </span>
               <RuleSummary
@@ -658,7 +658,7 @@ function RuleSummary({
     )
   })
   return (
-    <div className="flex min-w-0 flex-1 flex-col gap-0.5 text-[13px] leading-5">
+    <div className="text-13px flex min-w-0 flex-1 flex-col gap-0.5 leading-5">
       <p className="min-w-0 break-words">
         {conditions.map((entry, index) => (
           <span key={entry.label}>
@@ -719,7 +719,7 @@ function LibraryCoverage({
               <span className="min-w-0 truncate font-medium">
                 {library.name}
               </span>
-              <span className="text-muted-foreground ml-auto min-w-0 truncate text-[13px]">
+              <span className="text-muted-foreground text-13px ml-auto min-w-0 truncate">
                 {library.metadataProvider === null
                   ? tr("connections.libraries.noProvider")
                   : filling.length

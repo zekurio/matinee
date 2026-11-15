@@ -77,6 +77,17 @@
     "require-unicode-regexp": "off",
     "sort-imports": "off",
     "no-console": "error",
+    "no-restricted-imports": [
+      "error",
+      {
+        "paths": [
+          {
+            "name": "cn",
+            "message": "Import cn from @matinee/ui/lib/utils, which knows the theme's font sizes."
+          }
+        ]
+      }
+    ],
     "no-restricted-properties": [
       "error",
       {
@@ -175,6 +186,10 @@
         "apps/server/src/media/trickplay.ts"
       ],
       "rules": { "matinee/require-access-filter": "off" }
+    },
+    {
+      "files": ["apps/web/src/**", "packages/ui/src/**"],
+      "rules": { "matinee/no-arbitrary-font-size": "error" }
     },
     {
       "files": ["**/*.config.ts"],

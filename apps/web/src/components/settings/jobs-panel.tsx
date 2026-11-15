@@ -237,7 +237,7 @@ function JobRow({
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
           <h4 className="text-sm leading-5 font-medium">{name}</h4>
-          <p className="text-muted-foreground text-[13px] leading-5">
+          <p className="text-muted-foreground text-13px leading-5">
             {description}
           </p>
         </div>
@@ -270,7 +270,7 @@ function Fact({
       <dt className="text-foreground-faint text-xs leading-4">{label}</dt>
       <dd
         className={cn(
-          "mt-1 flex h-5 min-w-0 items-center gap-1.5 text-[13px] leading-5 tabular-nums",
+          "mt-1 flex h-5 min-w-0 items-center gap-1.5 text-13px leading-5 tabular-nums",
           tone === "muted" && "text-muted-foreground",
         )}
       >

@@ -2,7 +2,7 @@
 
 import { Button, buttonVariants } from "@matinee/ui/components/button"
 import { uiText, type UiText } from "@matinee/ui/lib/ui-text"
-import { cn } from "cn"
+import { cn } from "@matinee/ui/lib/utils"
 import {
   ChevronDownIcon,
   ChevronLeftIcon,
@@ -161,7 +161,7 @@ function Calendar({
         month_grid: cn("w-full border-collapse", defaultClassNames.month_grid),
         weekdays: cn("flex", defaultClassNames.weekdays),
         weekday: cn(
-          "flex-1 rounded-(--cell-radius) text-[0.8rem] font-normal text-muted-foreground select-none",
+          "flex-1 rounded-(--cell-radius) text-13px font-normal text-muted-foreground select-none",
           defaultClassNames.weekday,
         ),
         week: cn("mt-2 flex w-full", defaultClassNames.week),
@@ -170,7 +170,7 @@ function Calendar({
           defaultClassNames.week_number_header,
         ),
         week_number: cn(
-          "text-[0.8rem] text-muted-foreground select-none",
+          "text-13px text-muted-foreground select-none",
           defaultClassNames.week_number,
         ),
         day: cn(

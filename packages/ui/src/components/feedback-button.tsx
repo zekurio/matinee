@@ -1,6 +1,6 @@
 import { Button } from "@matinee/ui/components/button"
 import { Spinner } from "@matinee/ui/components/spinner"
-import { cn } from "cn"
+import { cn } from "@matinee/ui/lib/utils"
 import { CheckIcon, CircleAlertIcon } from "lucide-react"
 import {
   type ComponentProps,

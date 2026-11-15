@@ -80,7 +80,7 @@ function RangesField({ title, footer }: { title: string; footer: ReactNode }) {
           spellCheck={false}
           autoCapitalize="none"
           autoComplete="off"
-          className="font-mono text-[13px]"
+          className="text-13px font-mono"
           onChange={(event) => field.handleChange(event.target.value)}
         />
       )}

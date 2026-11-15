@@ -1,5 +1,5 @@
 import { ScrollArea as ScrollAreaPrimitive } from "@base-ui/react/scroll-area"
-import { cn } from "cn"
+import { cn } from "@matinee/ui/lib/utils"
 import * as React from "react"
 
 function ScrollArea({

@@ -6,7 +6,7 @@ import {
   MODAL_OVERLAY_CLASS_NAME,
   MODAL_OVERLAY_FORCE_RENDER,
 } from "@matinee/ui/lib/modal"
-import { cn } from "cn"
+import { cn } from "@matinee/ui/lib/utils"
 import * as React from "react"
 
 function AlertDialog({ ...props }: AlertDialogPrimitive.Root.Props) {

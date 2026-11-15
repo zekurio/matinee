@@ -123,7 +123,7 @@ function IdentifyForm({
           {trRich("title.identify.description", {
             provider: providerName,
             path: (
-              <span className="text-foreground font-mono text-[13px] break-all">
+              <span className="text-foreground text-13px font-mono break-all">
                 {title.path}
               </span>
             ),
@@ -218,7 +218,7 @@ function IdentifyForm({
                       )}
                     </span>
                     {match.overview && (
-                      <span className="text-muted-foreground mt-1 line-clamp-2 text-[13px] leading-5">
+                      <span className="text-muted-foreground text-13px mt-1 line-clamp-2 leading-5">
                         {match.overview}
                       </span>
                     )}

@@ -102,7 +102,7 @@ export function LeaderboardView({
   return (
     <div className="flex flex-col gap-6">
       {!sharing && (
-        <p className="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px]">
+        <p className="text-muted-foreground text-13px flex flex-wrap items-center gap-x-2 gap-y-1">
           <LockIcon aria-hidden className="size-3.5 shrink-0" />
           {/* One run of text, so the message's own spaces and commas hold. */}
           <span>
@@ -134,7 +134,7 @@ function Board({ board }: { board: LeaderboardBoard }) {
   return (
     <StatsSection title={tr(`stats.leaderboard.metric.${metric}`)}>
       {board.entries.length === 0 ? (
-        <p className="text-muted-foreground text-[13px]">
+        <p className="text-muted-foreground text-13px">
           {tr(`stats.leaderboard.none.${metric}`)}
         </p>
       ) : (
@@ -186,7 +186,7 @@ export function Place({
     >
       <span
         className={cn(
-          "grid size-5 shrink-0 place-items-center rounded-full text-[11px] font-semibold tabular-nums",
+          "grid size-5 shrink-0 place-items-center rounded-full text-11px font-semibold tabular-nums",
           PODIUM.get(entry.rank) ?? "text-muted-foreground",
         )}
       >
@@ -195,11 +195,11 @@ export function Place({
         </span>
         <span aria-hidden>{entry.rank}</span>
       </span>
-      <UserAvatar user={user} className="size-6 shrink-0 text-[11px]" />
+      <UserAvatar user={user} className="text-11px size-6 shrink-0" />
       <Link
         to="/profiles/$username"
         params={{ username: user.username }}
-        className="min-w-0 flex-1 truncate text-[13px] underline-offset-2 hover:underline"
+        className="text-13px min-w-0 flex-1 truncate underline-offset-2 hover:underline"
       >
         {user.displayName ?? user.username}
         {entry.self && (
@@ -209,7 +209,7 @@ export function Place({
           </span>
         )}
       </Link>
-      <span className="shrink-0 text-[13px] font-medium tabular-nums">
+      <span className="text-13px shrink-0 font-medium tabular-nums">
         {format(entry.value)}
       </span>
     </li>

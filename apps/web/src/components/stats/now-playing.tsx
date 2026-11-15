@@ -310,7 +310,7 @@ function NowPlayingRow({
           </span>
         </div>
         <p className="text-muted-foreground flex min-w-0 items-center gap-1.5 text-xs leading-5">
-          <UserAvatar user={user} className="size-4 shrink-0 text-[9px]" />
+          <UserAvatar user={user} className="text-9px size-4 shrink-0" />
           <Link
             to="/profiles/$username"
             params={{ username: user.username }}

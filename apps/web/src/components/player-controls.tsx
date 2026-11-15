@@ -81,7 +81,7 @@ export function SkipIcon({
   return (
     <span aria-hidden className="relative grid place-items-center">
       <Icon className={cn("!size-6", className)} strokeWidth={1.75} />
-      <span className="absolute pt-px text-[9px] leading-none font-bold tabular-nums">
+      <span className="text-9px absolute pt-px leading-none font-bold tabular-nums">
         {seconds}
       </span>
     </span>

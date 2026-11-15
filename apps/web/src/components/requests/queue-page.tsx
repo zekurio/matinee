@@ -464,7 +464,7 @@ export function QueuePage({
       </div>
 
       {noConnection && visible.length > 0 && list !== "done" && (
-        <p className="text-muted-foreground mb-3 flex items-center gap-1.5 text-[13px]">
+        <p className="text-muted-foreground text-13px mb-3 flex items-center gap-1.5">
           <TriangleAlertIcon
             aria-hidden
             className="text-warning size-3.5 shrink-0"

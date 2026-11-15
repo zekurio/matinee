@@ -771,7 +771,7 @@ function VersionChoice({
                 : "downloads.custom",
             )}
           </span>
-          <span className="text-muted-foreground text-[13px] leading-5">
+          <span className="text-muted-foreground text-13px leading-5">
             {descriptions.get(version)}
           </span>
         </label>

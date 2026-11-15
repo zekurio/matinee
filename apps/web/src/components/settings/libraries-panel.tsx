@@ -179,7 +179,7 @@ function LibraryRow({
           {library.name}
         </h4>
         {(library.scanning || library.refreshing) && (
-          <p className="text-muted-foreground flex items-center gap-1.5 text-[13px] leading-5">
+          <p className="text-muted-foreground text-13px flex items-center gap-1.5 leading-5">
             <Spinner className="size-3.5" />
             {library.scanning
               ? tr("libraries.scanning")

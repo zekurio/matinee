@@ -33,7 +33,7 @@ function AuthorizeApp() {
         title={tr("link.app.invalid")}
         description={tr("link.app.invalidDescription")}
       >
-        <p className="text-muted-foreground text-[13px] leading-5">
+        <p className="text-muted-foreground text-13px leading-5">
           {translateKnown(request.error.issues[0]?.message ?? "")}
         </p>
       </AuthScreen>
@@ -74,7 +74,7 @@ function AuthorizeApp() {
             {tr("link.app.signIn")}
           </Button>
         </form>
-        <p className="text-muted-foreground text-[13px] leading-5">
+        <p className="text-muted-foreground text-13px leading-5">
           {sent ? tr("link.app.sent") : tr("link.app.caution")}
         </p>
       </div>

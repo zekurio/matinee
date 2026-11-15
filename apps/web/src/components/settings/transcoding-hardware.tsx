@@ -147,7 +147,7 @@ export const HardwareSection = withForm({
                   title={tr(`transcoding.field.${device}`)}
                   autoComplete="off"
                   spellCheck={false}
-                  className="font-mono text-[13px]"
+                  className="text-13px font-mono"
                   placeholder={
                     settings.defaults[device] ||
                     // Detection ran with the saved device, so its node is the

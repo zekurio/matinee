@@ -239,7 +239,7 @@ export function PersonCard({
             {name}
           </span>
           {detail && (
-            <span className="text-muted-foreground mt-0.5 line-clamp-2 text-[13px] leading-[1.125rem] text-balance">
+            <span className="text-muted-foreground text-13px mt-0.5 line-clamp-2 leading-[1.125rem] text-balance">
               {detail}
             </span>
           )}

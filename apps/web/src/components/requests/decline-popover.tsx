@@ -218,7 +218,7 @@ function AnswerForm({
     >
       <div className={cn("flex flex-col gap-4", phone ? "px-5 py-4" : "p-3")}>
         <Field className="gap-1.5">
-          <FieldLabel id={`${id}-reason`} className="text-[13px]">
+          <FieldLabel id={`${id}-reason`} className="text-13px">
             {tr("requests.decline.reason")}
           </FieldLabel>
           {giveUp ? (
@@ -270,7 +270,7 @@ function AnswerForm({
           )}
         </Field>
         <Field className="gap-1.5">
-          <FieldLabel htmlFor={`${id}-note`} className="text-[13px]">
+          <FieldLabel htmlFor={`${id}-note`} className="text-13px">
             {askers.length > 0
               ? tr("requests.decline.noteFor", { names: formatNames(askers) })
               : tr("requests.decline.note")}
@@ -288,7 +288,7 @@ function AnswerForm({
           />
         </Field>
         {giveUp && (
-          <p className="text-muted-foreground text-[13px] leading-5 text-pretty">
+          <p className="text-muted-foreground text-13px leading-5 text-pretty">
             {connection
               ? tr("requests.giveUp.keeps", { connection })
               : tr("requests.giveUp.turnsUp")}

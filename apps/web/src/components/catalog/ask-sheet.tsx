@@ -50,7 +50,7 @@ export function AskSheet({
           </DrawerTitle>
           <div
             className={cn(
-              "flex min-h-0 flex-col gap-3 overflow-y-auto px-5 pt-2 pb-[max(1.25rem,env(safe-area-inset-bottom))] text-[15px]",
+              "flex min-h-0 flex-col gap-3 overflow-y-auto px-5 pt-2 pb-[max(1.25rem,env(safe-area-inset-bottom))] text-15px",
               className,
             )}
           >

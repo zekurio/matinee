@@ -160,7 +160,7 @@ export function PosterBadge({
       className={cn(
         "border-foreground/10 bg-background/70 animate-in fade-in-0 inline-flex max-w-full items-center rounded-full border font-medium shadow-sm backdrop-blur-md duration-200 motion-reduce:animate-none",
         size === "lg"
-          ? "h-8 gap-2 px-3 text-[13px] [&_svg:not([class*='size-'])]:size-4"
+          ? "h-8 gap-2 px-3 text-13px [&_svg:not([class*='size-'])]:size-4"
           : "h-7 gap-1.5 px-2.5 text-xs [&_svg:not([class*='size-'])]:size-3.5",
         tip &&
           "focus-visible:outline-ring cursor-default outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-solid",

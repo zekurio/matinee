@@ -80,7 +80,7 @@ export function LibraryPicker({
   if (!libraries) return null
   if (libraries.length === 0) {
     return (
-      <p className="text-muted-foreground text-[13px] leading-5">
+      <p className="text-muted-foreground text-13px leading-5">
         {tr("access.libraries.noneOnServer")}
       </p>
     )

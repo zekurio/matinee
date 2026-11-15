@@ -43,7 +43,7 @@ export function StatsSection({
       className={cn(statsCard, "flex min-w-0 flex-col gap-4 p-4", className)}
     >
       <div className="-mx-4 flex min-h-6 flex-wrap items-baseline gap-x-2 gap-y-1 border-b px-4 pb-3">
-        <h2 id={id} className="text-[15px] leading-6 font-semibold">
+        <h2 id={id} className="text-15px leading-6 font-semibold">
           {title}
         </h2>
         {action && <div className="ml-auto">{action}</div>}
@@ -112,14 +112,14 @@ export function StatFigures({
         <li key={label} className="flex min-w-0 items-center gap-3.5 px-4 py-3">
           <Icon aria-hidden className="text-muted-foreground size-5 shrink-0" />
           <span className="flex min-w-0 flex-1 flex-col">
-            <span className="truncate text-[15px] leading-6">{label}</span>
+            <span className="text-15px truncate leading-6">{label}</span>
             {detail && (
               <span className="text-muted-foreground truncate text-xs">
                 {detail}
               </span>
             )}
           </span>
-          <span className="shrink-0 text-[15px] leading-6 font-semibold tabular-nums">
+          <span className="text-15px shrink-0 leading-6 font-semibold tabular-nums">
             {value}
           </span>
         </li>
@@ -178,14 +178,14 @@ export function RankedBars({
           className="flex items-center justify-between gap-4 px-4 py-3"
         >
           <span className="flex min-w-0 flex-col">
-            <span className="truncate text-[15px] leading-6">{row.label}</span>
+            <span className="text-15px truncate leading-6">{row.label}</span>
             {row.note && (
               <span className="text-muted-foreground truncate text-sm tabular-nums">
                 {row.note}
               </span>
             )}
           </span>
-          <span className="shrink-0 text-[15px] leading-6 font-semibold tabular-nums">
+          <span className="text-15px shrink-0 leading-6 font-semibold tabular-nums">
             {row.detail}
           </span>
         </li>

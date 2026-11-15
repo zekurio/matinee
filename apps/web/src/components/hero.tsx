@@ -309,7 +309,7 @@ function TitleMark({ item, primed }: { item: MediaItem; primed: boolean }) {
     // shares the first screen with the rows below it, and a phone on its
     // side has little height to give. A phone's banner is short; a name
     // that big would reach its top.
-    <h2 className="text-foreground line-clamp-2 max-w-2xl text-[28px] leading-[1.1] font-bold tracking-tight text-balance [text-shadow:0_2px_24px_rgb(0_0_0/0.45)] sm:text-[clamp(2.25rem,7vh,3rem)] lg:text-[clamp(3rem,5.5vh,4.5rem)]">
+    <h2 className="text-foreground text-28px line-clamp-2 max-w-2xl leading-[1.1] font-bold tracking-tight text-balance [text-shadow:0_2px_24px_rgb(0_0_0/0.45)] sm:text-[clamp(2.25rem,7vh,3rem)] lg:text-[clamp(3rem,5.5vh,4.5rem)]">
       {name}
     </h2>
   )

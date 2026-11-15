@@ -349,7 +349,7 @@ function KeywordField({
           {value.map((keyword) => (
             <span
               key={keyword.id}
-              className="bg-secondary text-secondary-foreground inline-flex h-7 items-center gap-1 rounded-full pr-1 pl-2.5 text-[13px]"
+              className="bg-secondary text-secondary-foreground text-13px inline-flex h-7 items-center gap-1 rounded-full pr-1 pl-2.5"
             >
               {keyword.name}
               <button

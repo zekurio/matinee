@@ -1,7 +1,7 @@
 "use client"
 
 import { Checkbox as CheckboxPrimitive } from "@base-ui/react/checkbox"
-import { cn } from "cn"
+import { cn } from "@matinee/ui/lib/utils"
 import { CheckIcon } from "lucide-react"
 
 /** A square box that ticks, in the accent once checked, like the switch. */

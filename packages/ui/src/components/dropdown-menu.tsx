@@ -2,7 +2,7 @@
 
 import { Menu as MenuPrimitive } from "@base-ui/react/menu"
 import { useReturnFocus } from "@matinee/ui/hooks/use-return-focus"
-import { cn } from "cn"
+import { cn } from "@matinee/ui/lib/utils"
 import { ChevronRightIcon, CheckIcon } from "lucide-react"
 import * as React from "react"
 

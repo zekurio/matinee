@@ -43,7 +43,7 @@ export function DeviceCard({
         <p className="truncate text-sm leading-5 font-medium">
           {deviceLabel(name, platform)}
         </p>
-        <p className="text-muted-foreground text-[13px] leading-5">
+        <p className="text-muted-foreground text-13px leading-5">
           {platformLabel(platform)}
         </p>
       </div>

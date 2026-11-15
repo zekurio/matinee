@@ -176,7 +176,7 @@ function RequestForm({
                     >
                       {seasonName(season.number)}
                     </span>
-                    <span className="text-muted-foreground shrink-0 text-[13px] tabular-nums">
+                    <span className="text-muted-foreground text-13px shrink-0 tabular-nums">
                       {open
                         ? seasonDetail(season)
                         : (stateWord(season.availability) ??

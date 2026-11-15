@@ -90,6 +90,10 @@ for building and sideloading the app.
   element, hls.js, timers, storage, subscriptions. Compute derived values
   in render, reset on a prop change with `key`, and do an event's work in
   its handler.
+- Font sizes come from the theme (`text-xs`, `text-13px`, `text-sm`, ...),
+  each with a line height of even whole pixels, which keeps text centered
+  on the icons beside it. Lint rejects an arbitrary `text-[13px]`; add a
+  `--text-*` size to `globals.css` when none fits.
 - Text the user reads goes through `tr("area.key", params)` from `@/i18n`,
   with the message added to its area in `src/i18n/locales/en/` first and
   translated in the other languages' folders (see `apps/web/README.md`,

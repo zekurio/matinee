@@ -1,6 +1,6 @@
 import { Input as InputPrimitive } from "@base-ui/react/input"
 import { FIELD_CLASS_NAME } from "@matinee/ui/lib/field"
-import { cn } from "cn"
+import { cn } from "@matinee/ui/lib/utils"
 import * as React from "react"
 
 function Input({ className, type, ...props }: React.ComponentProps<"input">) {
