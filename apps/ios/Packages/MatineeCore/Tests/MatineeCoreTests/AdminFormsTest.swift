@@ -134,6 +134,47 @@ struct AdminFormsTest {
     #expect(!form.dirty)
   }
 
+  @Test func authSendsTheClaimsAndSignOutItEdits() throws {
+    var form = AuthDraft(AdminFixtures.decode(AdminAuthSettings.self, AdminFixtures.auth))
+    form.oidc.nameClaim = "nickname"
+    form.oidc.groupsClaim = "groups"
+    form.oidc.policyClaim = "matinee_policy"
+    form.oidc.signOutRefused = true
+    #expect(form.dirty)
+    let input = form.input().oidc
+    #expect(input.nameClaim == "nickname")
+    #expect(input.groupsClaim == "groups")
+    #expect(input.policyClaim == "matinee_policy")
+    #expect(input.signOutRefused)
+    form.reset()
+    #expect(form.input().oidc.nameClaim == "name")
+  }
+
+  @Test func brandingSavesTheAccentsAndTheBackdropTogether() {
+    let saved = Branding(
+      themeAccents: ThemeAccents(light: nil, dark: "#38bdf8"),
+      loginBackdrop: LoginBackdrop(enabled: false, artwork: LoginBackdropArtwork.mixed, blur: 12, fade: 70))
+    var form = BrandingDraft(saved)
+    #expect(!form.dirty)
+    #expect(form.draft == saved)
+    form.backdrop.enabled = true
+    form.setBlur(60.4)
+    form.setFade(-3)
+    #expect(form.dirty)
+    #expect(form.backdrop.blur == LOGIN_BACKDROP_MAX_BLUR)
+    #expect(form.backdrop.fade == 0)
+    form.setBlur(7.6)
+    #expect(form.backdrop.blur == 8)
+    form.accents.light = DEFAULT_ACCENT_LIGHT.uppercased()
+    #expect(form.draft.themeAccents.light == nil)
+    form.accents.dark = "#38"
+    #expect(!form.valid)
+    #expect(form.dirty)
+    form.reset()
+    #expect(!form.dirty)
+    #expect(form.draft == saved)
+  }
+
   @Test func folders() {
     #expect(parentFolder("/media/movies") == "/media")
     #expect(parentFolder("/media/movies/") == "/media")

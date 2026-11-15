@@ -9,34 +9,46 @@ import SwiftUI
  */
 
 /// Everyone's accounts, as the web's users panel: who they are, how they
-/// sign in, and when they were last here. A tap offers the admin role,
-/// signing out everywhere, and deleting the account, each asked first.
+/// sign in, and when they were last here. A tap opens what can be done to
+/// the account, the admin role, signing out everywhere, and deleting it,
+/// each asked first.
 struct UsersSettings: View {
+  var body: some View { UsersPage().adminTheme() }
+}
+
+private struct UsersPage: View {
   @State private var loader = Loader<[AdminUser]>()
-  // The page's, so a save goes on after its menu or question closes.
+  // The page's, so a change goes on after its sheet or question closes.
   @State private var saver = Saver()
+  @State private var acting: Picked<AdminUser>?
   @State private var confirmation: Confirmation?
   @Environment(\.api) private var api
   @Environment(\.user) private var me
+  // TODO(shell): the kit's toasts, once the shell hosts them.
   @Environment(\.snackbar) private var snackbar
   @Environment(MatineeSession.self) private var session
 
   var body: some View {
-    SettingsScaffold(Str.settingsAdminUsers) {
-      AdminLoaded(loader, failed: Str.webUsersLoadFailed) { users in
-        Panel {
-          ForEach(Array(users.enumerated()), id: \.element.id) { index, user in
-            if index > 0 { RowDivider() }
-            UserRow(user: user, isSelf: me?.id == user.id) { pick($0, lastAdmin: isLastAdmin(user, of: users)) }
+    let users = loader.state.value ?? []
+    AdminPage(Str.settingsAdminUsers) {
+      AdminLoaded(loader) { users in
+        ListSection(Str.webUsersTitle) {
+          ForEach(users, id: \.id) { user in
+            UserRow(user: user, isSelf: me?.id == user.id) { acting = Picked(user.id, user) }
           }
         }
       }
     }
     .loads(loader) { api in try await api.admin.users.list() }
+    .onChange(of: users.count, initial: true) { _, _ in demo(users) }
+    .matineeSheet(item: $acting) { picked in
+      let user = picked.value
+      UserSheet(user: user, isSelf: me?.id == user.id) { pick($0, lastAdmin: isLastAdmin(user, of: users)) }
+    }
     .confirming($confirmation)
   }
 
-  /// The server keeps one admin who can sign in; say so before asking.
+  /// The server keeps one admin who can sign in; say so rather than ask.
   private func pick(_ action: UserAction, lastAdmin: Bool) {
     if action.strandsServer(lastAdmin: lastAdmin) {
       snackbar.show(Str.webUsersLastAdmin)
@@ -54,10 +66,12 @@ struct UsersSettings: View {
       return Confirmation(
         title: admin
           ? Str.webUsersRoleMakeTitle(user.name) : stepDown ? Str.webUsersRoleStepDownTitle : Str.webUsersRoleRemoveTitle(user.name),
-        body: admin
+        message: admin
           ? Str.webUsersRoleMakeDescription : stepDown ? Str.webUsersRoleStepDownDescription : Str.webUsersRoleRemoveDescription,
         confirm: admin
-          ? Str.webUsersRoleMakeConfirm : stepDown ? Str.webUsersRoleStepDownConfirm : Str.webUsersRoleRemoveConfirm
+          ? Str.webUsersRoleMakeConfirm : stepDown ? Str.webUsersRoleStepDownConfirm : Str.webUsersRoleRemoveConfirm,
+        // Making an admin takes nothing away; the web asks in its plain look.
+        destructive: !admin
       ) {
         run {
           _ = try await $0.admin.users.setRole(id: user.id, role: admin ? UserRole.admin : UserRole.user)
@@ -70,7 +84,7 @@ struct UsersSettings: View {
     case .signOut:
       return Confirmation(
         title: isSelf ? Str.webUsersSignOutOwnTitle : Str.webUsersSignOutTitle(user.name),
-        body: isSelf ? Str.webUsersSignOutOwnDescription : Str.webUsersSignOutDescription,
+        message: isSelf ? Str.webUsersSignOutOwnDescription : Str.webUsersSignOutDescription,
         confirm: isSelf ? Str.webUsersSignOutOwnConfirm : Str.webUsersSignOutConfirm
       ) {
         run {
@@ -82,7 +96,7 @@ struct UsersSettings: View {
     case .delete:
       return Confirmation(
         title: isSelf ? Str.webUsersDeleteOwnTitle : Str.webUsersDeleteTitle(user.name),
-        body: isSelf ? Str.webUsersDeleteOwnDescription : Str.webUsersDeleteDescription,
+        message: isSelf ? Str.webUsersDeleteOwnDescription : Str.webUsersDeleteDescription,
         confirm: isSelf ? Str.webUsersDeleteOwnConfirm : Str.webUsersDeleteConfirm
       ) {
         run {
@@ -99,73 +113,108 @@ struct UsersSettings: View {
     }
   }
 
+  /// What a debug build was launched to show, on the first account that isn't this one.
+  private func demo(_ users: [AdminUser]) {
+    guard let other = users.first(where: { $0.id != me?.id }), acting == nil, confirmation == nil else { return }
+    if adminDemo("sheet") { acting = Picked(other.id, other) }
+    // Only the question: the answer changes a real account.
+    if adminDemo("role") { pick(.role(other, admin: !other.isAdmin), lastAdmin: false) }
+  }
+
   private func run(_ block: @escaping (MatineeApi) async throws -> Void) {
     guard let api else { return }
     saver(snackbar) { try await block(api) }
   }
 }
 
-/// An account: its picture, name, role, how it signs in, and when it was last here.
+/// An account: its picture, name and username, whether it's an admin, how
+/// it signs in, and when it was last here. The whole row opens its actions.
 private struct UserRow: View {
   let user: AdminUser
   let isSelf: Bool
-  let onPick: (UserAction) -> Void
+  let onOpen: () -> Void
   @Environment(\.api) private var api
-  @Environment(\.palette) private var palette
-  @Environment(\.dynamicTypeSize) private var dynamicType
+  @Environment(\.adminPalette) private var palette
 
   var body: some View {
-    Menu {
-      Section("@\(user.username)") {
-        LegacyMenuItem(
-          .shield,
-          !user.isAdmin ? Str.webUsersMenuMakeAdmin : isSelf ? Str.webUsersMenuStepDown : Str.webUsersMenuRemoveAdmin
-        ) { onPick(.role(user, admin: !user.isAdmin)) }
-        LegacyMenuItem(.logOut, isSelf ? Str.webUsersMenuSignOutOthers : Str.webUsersMenuSignOut) { onPick(.signOut(user)) }
-        LegacyMenuItem(.trash, isSelf ? Str.webUsersMenuDeleteOwn : Str.webUsersMenuDelete, destructive: true) {
-          onPick(.delete(user))
+    Pressable(action: onOpen) {
+      HStack(spacing: Space.s3) {
+        MatineeKit.Avatar(user.name, size: 40) {
+          // TODO(shell): the shared artwork view.
+          Picture(user.avatarId.flatMap { api?.paths.avatar($0) }.flatMap { ImageSource($0) })
         }
-      }
-    } label: {
-      HStack(spacing: 14) {
-        ProfileAvatar(user.name, url: user.avatarId.flatMap { api?.paths.avatar($0) }, size: 40)
-        VStack(alignment: .leading, spacing: 0) {
-          // At large text sizes the badge goes under the name rather than squeeze it.
-          ViewThatFits(in: .horizontal) {
-            HStack(spacing: 8) {
-              name.lineLimit(1)
-              if user.isAdmin { LegacyBadge(Str.webUsersAdmin, outlined: true) }
+        VStack(alignment: .leading, spacing: 2) {
+          name
+          Text(verbatim: "@\(user.username)").textStyle(.sm).foregroundStyle(palette.mutedForeground)
+          HStack(alignment: .firstTextBaseline, spacing: Space.s1_5) {
+            // An account with no way in, flagged as the web flags it.
+            if signIn.isEmpty {
+              MatineeKit.LucideIcon(.triangleAlert, size: 14, tint: palette.warning)
             }
-            VStack(alignment: .leading, spacing: 4) {
-              name
-              if user.isAdmin { LegacyBadge(Str.webUsersAdmin, outlined: true) }
-            }
+            Text(detail).textStyle(.sm).foregroundStyle(palette.mutedForeground)
           }
-          Text(detail).textStyle(.px13).foregroundStyle(palette.mutedForeground)
-            .lineLimit(dynamicType.isAccessibilitySize ? nil : 2)
         }
-        .multilineTextAlignment(.leading)
         .frame(maxWidth: .infinity, alignment: .leading)
+        MatineeKit.LucideIcon(.ellipsis, size: 18, tint: palette.mutedForeground)
       }
-      .padding(.horizontal, 16)
-      .padding(.vertical, 12)
+      .padding(.horizontal, Space.s4)
+      .padding(.vertical, Space.s3)
+      .frame(minHeight: 64)
       .contentShape(Rectangle())
     }
-    .buttonStyle(LegacyRowPress())
+    .accessibilityElement(children: .combine)
     .accessibilityHint(Str.webUsersActions(user.name))
   }
 
+  /// The name, "(you)", and the admin badge, which goes under the name when
+  /// the text is large or the name is long.
   private var name: some View {
-    Text(isSelf ? "\(user.name) \(Str.webUsersYou)" : user.name).textStyle(.base)
-      .foregroundStyle(palette.foreground)
+    ViewThatFits(in: .horizontal) {
+      HStack(spacing: Space.s2) { nameText.lineLimit(1); badge }
+      VStack(alignment: .leading, spacing: Space.s1) { nameText; badge }
+    }
+  }
+
+  private var nameText: some View {
+    (Text(user.name).foregroundStyle(palette.foreground)
+      + Text(verbatim: isSelf ? " \(Str.webUsersYou)" : "").foregroundStyle(palette.mutedForeground))
+      .textStyle(.base)
+  }
+
+  @ViewBuilder private var badge: some View {
+    if user.isAdmin { MatineeKit.Badge(Str.webUsersAdmin, look: .outline, icon: .shield) }
+  }
+
+  private var signIn: [String] {
+    var ways: [String] = []
+    if user.passkeys > 0 { ways.append(Str.webUsersPasskeys(user.passkeys)) }
+    if user.oidcLinked { ways.append("SSO") }
+    return ways
   }
 
   private var detail: String {
-    var signIn: [String] = []
-    if user.passkeys > 0 { signIn.append(Str.webUsersPasskeys(user.passkeys)) }
-    if user.oidcLinked { signIn.append("SSO") }
-    if signIn.isEmpty { signIn.append(Str.webUsersNoSignIn) }
     let seen = user.lastSeenAt.map { Str.webUsersLastSeen(formatInstant($0)) } ?? Str.webUsersJoined(formatInstant(user.createdAt))
-    return (signIn + [seen]).joined(separator: " · ")
+    return ((signIn.isEmpty ? [Str.webUsersNoSignIn] : signIn) + [seen]).joined(separator: " · ")
+  }
+}
+
+/// What can be done to an account: its role, its sessions, the account itself.
+private struct UserSheet: View {
+  let user: AdminUser
+  let isSelf: Bool
+  let onPick: (UserAction) -> Void
+
+  var body: some View {
+    MatineeKit.SheetHeader(user.name, subtitle: "@\(user.username)")
+    MatineeKit.SheetItem(
+      !user.isAdmin ? Str.webUsersMenuMakeAdmin : isSelf ? Str.webUsersMenuStepDown : Str.webUsersMenuRemoveAdmin,
+      icon: .shield
+    ) { onPick(.role(user, admin: !user.isAdmin)) }
+    MatineeKit.SheetItem(isSelf ? Str.webUsersMenuSignOutOthers : Str.webUsersMenuSignOut, icon: .logOut) {
+      onPick(.signOut(user))
+    }
+    MatineeKit.SheetItem(isSelf ? Str.webUsersMenuDeleteOwn : Str.webUsersMenuDelete, icon: .trash, destructive: true) {
+      onPick(.delete(user))
+    }
   }
 }
