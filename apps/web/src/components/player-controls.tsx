@@ -6,8 +6,6 @@ import {
   MinimizeIcon,
   PauseIcon,
   PlayIcon,
-  RotateCcwIcon,
-  RotateCwIcon,
   SkipBackIcon,
   SkipForwardIcon,
   Volume1Icon,
@@ -75,7 +73,12 @@ export function ControlButton({
   )
 }
 
-/** A circular arrow with the skip length inside it. */
+/**
+ * A circle with the skip length inside it and an arrowhead at the top
+ * pointing the way it skips, drawn in Lucide's stroke. Lucide's rotate
+ * arrows end in a corner bracket off to the side, which reads as a reload
+ * rather than a skip, and leave no room for the number.
+ */
 export function SkipIcon({
   direction,
   seconds,
@@ -87,19 +90,40 @@ export function SkipIcon({
   /** For the row in the middle of a touch screen. */
   big?: boolean
 }) {
-  const Icon = direction === "back" ? RotateCcwIcon : RotateCwIcon
   return (
-    <span aria-hidden className="relative grid place-items-center">
-      <Icon className={big ? "!size-9" : "!size-6"} strokeWidth={1.75} />
-      <span
-        className={cn(
-          "absolute pt-px leading-none font-bold tabular-nums",
-          big ? "text-xs" : "text-9px",
-        )}
+    <svg
+      aria-hidden
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.75}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={big ? "!size-9" : "!size-6"}
+    >
+      {/* Drawn going back; the forward one is its mirror image. */}
+      <g
+        transform={
+          direction === "forward" ? "matrix(-1 0 0 1 24 0)" : undefined
+        }
+      >
+        <path d="M6.34 7.34A8 8 0 1 0 12 5" />
+        <path d="m14.5 2.5-2.5 2.5 2.5 2.5" />
+      </g>
+      <text
+        x="12"
+        y="13.5"
+        fill="currentColor"
+        stroke="none"
+        fontSize="7.5"
+        fontWeight="700"
+        textAnchor="middle"
+        dominantBaseline="central"
+        className="tabular-nums"
       >
         {seconds}
-      </span>
-    </span>
+      </text>
+    </svg>
   )
 }
 
@@ -494,30 +518,13 @@ export function ElapsedTime({ className }: { className?: string }) {
   )
 }
 
-/** The time left, or the length, which a click switches between. */
+/** The video's length, shown after the elapsed time. */
 export function TotalTime({ className }: { className?: string }) {
-  const { shown, duration } = usePlayerStore(
-    useShallow((state) => ({
-      shown: selectShown(state),
-      duration: state.duration,
-    })),
-  )
-  const [remaining, setRemaining] = useState(true)
+  const duration = usePlayerStore((state) => state.duration)
   return (
-    <button
-      type="button"
-      title={remaining ? tr("player.showLength") : tr("player.showTimeLeft")}
-      onClick={() => setRemaining((on) => !on)}
-      className={cn(
-        "rounded outline-none focus-visible:ring-2 focus-visible:ring-white",
-        overlayTextClass,
-        className,
-      )}
-    >
-      {remaining
-        ? `-${formatTime(Math.max(0, duration - shown))}`
-        : formatTime(duration)}
-    </button>
+    <span className={cn(overlayTextClass, className)}>
+      {formatTime(duration)}
+    </span>
   )
 }
 
