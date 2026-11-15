@@ -36,6 +36,7 @@ import io.github.zekurio.matinee.app
 import io.github.zekurio.matinee.ui.ItemTopBar
 import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.LocalNavigator
+import io.github.zekurio.matinee.ui.StatusBarScrim
 import io.github.zekurio.matinee.ui.components.ActionTarget
 import io.github.zekurio.matinee.ui.components.EpisodeCard
 import io.github.zekurio.matinee.ui.components.EpisodeRow
@@ -169,6 +170,7 @@ private fun TitlePage(title: Title, reload: () -> Unit) {
             item(key = "cast") { CastRail(title.credits) }
             item(key = "bottom") { Box(Modifier.navigationBarsPadding()) }
         }
+        StatusBarScrim(listState)
         ItemTopBar()
     }
 }
@@ -312,6 +314,7 @@ private fun SeasonPage(title: Title, season: Season) {
             item(key = "seasons") { SeasonsRail(title, season, gaps) }
             item(key = "bottom") { Box(Modifier.navigationBarsPadding()) }
         }
+        StatusBarScrim(listState)
         ItemTopBar(parent = title.name, onParent = { nav.titleUp(title.id) })
     }
 }
@@ -382,6 +385,7 @@ private fun EpisodePage(item: MediaItem) {
             }
             item(key = "bottom") { Box(Modifier.navigationBarsPadding()) }
         }
+        StatusBarScrim(listState)
         ItemTopBar(
             parent = if (title == null) null else if (season != null) seasonName(season, res) else label.showName,
             onParent = title?.let { { if (season != null) nav.seasonUp(it.id, season) else nav.titleUp(it.id) } },

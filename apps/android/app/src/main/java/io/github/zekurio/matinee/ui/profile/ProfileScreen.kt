@@ -36,6 +36,7 @@ import io.github.zekurio.matinee.ui.LocalNavigator
 import io.github.zekurio.matinee.ui.LocalOffline
 import io.github.zekurio.matinee.ui.LocalUser
 import io.github.zekurio.matinee.ui.RefreshOnResume
+import io.github.zekurio.matinee.ui.StatusBarScrim
 import io.github.zekurio.matinee.ui.components.Avatar
 import io.github.zekurio.matinee.ui.components.Disconnected
 import io.github.zekurio.matinee.ui.components.DisconnectedAction
@@ -153,6 +154,7 @@ private fun ProfilePage(state: Load<Profile>?, loader: Loader<Profile>?, stats: 
                 }
             }
         }
+        StatusBarScrim(listState)
     }
 }
 
