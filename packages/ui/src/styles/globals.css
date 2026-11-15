@@ -449,6 +449,13 @@ html[data-theme-inspecting] *:not([data-theme-editor], [data-theme-editor] *) {
   grid-template-columns: minmax(0, 1fr) auto;
   grid-template-areas: "content action";
 }
+/* The action is taller than the title's line. Drop the icon and the text
+   by the difference, so the title line runs through the button's middle,
+   and the description, if any, continues below it. */
+.matinee-toast:has(> [data-button]) > .matinee-toast-icon,
+.matinee-toast:has(> [data-button]) > [data-content] {
+  margin-top: 4px !important;
+}
 .matinee-toast-icon {
   grid-area: icon;
   display: inline-flex;
@@ -521,7 +528,7 @@ html[data-theme-inspecting] *:not([data-theme-editor], [data-theme-editor] *) {
 }
 .matinee-toast[data-styled="true"] > [data-button] {
   grid-area: action;
-  align-self: center;
+  align-self: start;
   height: 28px !important;
   margin: 0 0 0 4px !important;
   padding-inline: 12px !important;
