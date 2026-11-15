@@ -13,7 +13,8 @@ public final class RequestAvailabilityState {
   }
   public func follow(
     _ inputs: [CatalogInput],
-    stream: @Sendable ([CatalogInput]) async throws -> AsyncThrowingStream<[RequestsLiveEvent], any Error>
+    stream: @Sendable ([CatalogInput]) async throws -> AsyncThrowingStream<[RequestsLiveEvent], any Error>,
+    changed: @MainActor () async -> Void = {}
   ) async {
     var seen = Set<CatalogInput>()
     let refs = Array(inputs.filter { seen.insert($0).inserted }.prefix(100))
@@ -23,6 +24,7 @@ public final class RequestAvailabilityState {
         try Task.checkCancellation()
         for event in events { titles[event.ref] = event }
         failure = nil
+        await changed()
       }
     } catch {
       if Failure(error) != .cancelled { failure = Failure(error) }
