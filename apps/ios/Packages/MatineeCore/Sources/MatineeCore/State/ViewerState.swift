@@ -17,6 +17,7 @@ public final class ViewerState {
 
   @ObservationIgnored private let onChanged: @MainActor () -> Void
   @ObservationIgnored private let titleFavorites = Marks()
+  @ObservationIgnored private let seasonFavorites = Marks()
   @ObservationIgnored private let itemFavorites = Marks()
   @ObservationIgnored private let itemWatched = Marks()
   @ObservationIgnored private let titleWatched = Marks()
@@ -26,7 +27,7 @@ public final class ViewerState {
 
   public init(onChanged: @escaping @MainActor () -> Void = {}) {
     self.onChanged = onChanged
-    for marks in [titleFavorites, itemFavorites, itemWatched, titleWatched] {
+    for marks in [titleFavorites, seasonFavorites, itemFavorites, itemWatched, titleWatched] {
       marks.reconcile = { [weak self] in self?.changed() }
     }
   }
@@ -45,6 +46,16 @@ public final class ViewerState {
   public func isFavorite(_ item: MediaItem) -> Bool {
     if let title = item.title, title.kind == TitleKind.movie { return isFavorite(title) }
     return itemFavorites[item.id] ?? item.favorite
+  }
+
+  public func isSeasonFavorite(_ title: TitleSummary, number: Int, fallback: Bool) -> Bool {
+    seasonFavorites["\(title.id)/\(number)"] ?? fallback
+  }
+
+  public func setSeasonFavorite(_ api: MatineeApi, _ title: TitleSummary, number: Int, favorite: Bool) async throws {
+    try await seasonFavorites.send("\(title.id)/\(number)", favorite) {
+      try await api.favorites.setSeason(titleId: title.id, season: number, favorite: favorite)
+    }
   }
 
   public func isWatched(_ title: TitleSummary) -> Bool { titleWatched[title.id] ?? title.watched }
