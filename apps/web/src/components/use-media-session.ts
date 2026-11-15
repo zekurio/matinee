@@ -25,6 +25,8 @@ export type MediaSessionActions = {
   /** Where the file is, which a stream's own clock doesn't say. */
   position: () => number
   duration: () => number
+  /** Starts the episode before this one, when there is one. */
+  previous: (() => void) | null
   /** Starts the next episode, when there is one. */
   next: (() => void) | null
 }
@@ -55,6 +57,7 @@ export function useMediaSession(
     seek,
     position,
     duration,
+    previous,
     next,
   }: MediaSessionActions,
 ) {
@@ -123,20 +126,8 @@ export function useMediaSession(
     }
   }, [])
 
-  const hasNext = next !== null
-  const playNext = useEffectEvent(() => next?.())
-  useEffect(() => {
-    if (!("mediaSession" in navigator) || !hasNext) return
-    const session = navigator.mediaSession
-    try {
-      session.setActionHandler("nexttrack", playNext)
-    } catch {}
-    return () => {
-      try {
-        session.setActionHandler("nexttrack", null)
-      } catch {}
-    }
-  }, [hasNext])
+  useTrackAction("previoustrack", previous)
+  useTrackAction("nexttrack", next)
 
   const sync = useEffectEvent(() => {
     const el = video.current
@@ -167,4 +158,25 @@ export function useMediaSession(
       } catch {}
     }
   }, [video])
+}
+
+/** Sets a handler for `action` while `run` is there, so the button shows only then. */
+function useTrackAction(
+  action: "previoustrack" | "nexttrack",
+  run: (() => void) | null,
+) {
+  const has = run !== null
+  const handler = useEffectEvent(() => run?.())
+  useEffect(() => {
+    if (!("mediaSession" in navigator) || !has) return
+    const session = navigator.mediaSession
+    try {
+      session.setActionHandler(action, handler)
+    } catch {}
+    return () => {
+      try {
+        session.setActionHandler(action, null)
+      } catch {}
+    }
+  }, [action, has])
 }

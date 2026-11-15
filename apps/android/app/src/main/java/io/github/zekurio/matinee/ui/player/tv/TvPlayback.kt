@@ -62,6 +62,7 @@ import io.github.zekurio.matinee.ui.player.PlayerNoticeNote
 import io.github.zekurio.matinee.ui.player.Subtitles
 import io.github.zekurio.matinee.ui.player.Video
 import io.github.zekurio.matinee.ui.player.refusalTitle
+import io.github.zekurio.matinee.ui.player.rememberEpisodes
 import io.github.zekurio.matinee.ui.player.rememberPlayerController
 import io.github.zekurio.matinee.ui.player.rememberSubtitleLook
 import io.github.zekurio.matinee.ui.player.rememberSkipSegment
@@ -173,6 +174,8 @@ private fun TvPlayback(itemId: String, data: PlayerData, start: Double?) {
     var focusSeek by remember { mutableStateOf(false) }
     // Once the credits start or the file ends: the next episode, counting down as on the phone.
     val next = if (controller.offersNext) rememberUpNext(controller, prefs.autoplayNext) else null
+    // An episode's neighbours, for the buttons beside the skips and the media keys.
+    val episodes = rememberEpisodes(controller)
     // Back took its button off the picture. It stays with the controls, as Play stays on the web's card.
     var nextAway by remember(next) { mutableStateOf(false) }
     // Otherwise Skip intro, or the like, while the video is in a segment the server found.
@@ -275,7 +278,8 @@ private fun TvPlayback(itemId: String, data: PlayerData, start: Double?) {
                     Key.MediaPause -> controller.player::pause
                     Key.MediaFastForward, Key.MediaSkipForward -> ({ controller.skip(ahead) })
                     Key.MediaRewind, Key.MediaSkipBackward -> ({ controller.skip(-back) })
-                    Key.MediaNext -> controller.next?.let { next -> { host.playInstead(next.id) } }
+                    Key.MediaPrevious -> episodes?.previous?.let { previous -> { host.playInstead(previous.id) } }
+                    Key.MediaNext -> episodes?.next?.let { next -> { host.playInstead(next.id) } }
                     Key.Captions -> ({ openMenu(Menu.Subtitles) })
                     Key.MediaAudioTrack -> ({ openMenu(Menu.Audio) })
                     else -> null
@@ -343,7 +347,7 @@ private fun TvPlayback(itemId: String, data: PlayerData, start: Double?) {
         BackHandler(enabled = controls && menu == null) { controls = false }
         AnimatedVisibility(visible, enter = Motion.fadeIn, exit = Motion.fadeOut) {
             val playRests = menu == null && !focusSeek && !(action != null && !away)
-            TvOverlay(controller, targets, back = back, ahead = ahead, scrub = scrub, keys = seekKeys, playRests = playRests, action = action, onMenu = ::openMenu)
+            TvOverlay(controller, targets, back = back, ahead = ahead, scrub = scrub, keys = seekKeys, playRests = playRests, action = action, episodes = episodes, onEpisode = { host.playInstead(it.id) }, onMenu = ::openMenu)
         }
         // Over the scrim, so it doesn't dim them; they rise clear of the controls.
         Subtitles(

@@ -1,5 +1,10 @@
 import { PlaybackQuality as PlaybackQualitySchema } from "@matinee/contracts"
-import { AudioLinesIcon, CaptionsIcon, SettingsIcon } from "lucide-react"
+import {
+  AudioLinesIcon,
+  CaptionsIcon,
+  GaugeIcon,
+  SettingsIcon,
+} from "lucide-react"
 import type { RefObject } from "react"
 import { useShallow } from "zustand/shallow"
 
@@ -22,14 +27,20 @@ import type { useSubtitles } from "./use-subtitles"
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]
 const OFF = "off"
 
-/** The audio, subtitle, and settings menus in the control bar. */
+/**
+ * The audio, subtitle, and settings menus in the control bar. `split`, as
+ * on a touch screen, gives speed and quality a menu each, as the phone app
+ * does.
+ */
 export function PlayerMenus({
   playback,
   subs,
+  split,
   onSpeedChange,
   onPickAudio,
   container,
 }: {
+  split: boolean
   playback: ReturnType<typeof usePlayback>
   subs: ReturnType<typeof useSubtitles>
   onSpeedChange: (speed: number) => void
@@ -153,29 +164,32 @@ export function PlayerMenus({
       disabled: playback.tracks.length === 0,
     })),
   ]
-  const settingsSections: MenuSection[] = [
-    {
-      title: tr("player.quality"),
-      value: playback.quality,
-      choices: qualities,
-      onSelect: (id) => {
-        const parsed = PlaybackQualitySchema.safeParse(id)
-        if (parsed.success) playback.selectQuality(parsed.data)
-      },
+  const qualitySection: MenuSection = {
+    title: tr("player.quality"),
+    value: playback.quality,
+    choices: qualities,
+    onSelect: (id) => {
+      const parsed = PlaybackQualitySchema.safeParse(id)
+      if (parsed.success) playback.selectQuality(parsed.data)
     },
-    {
-      title: tr("player.speed"),
-      value: String(speed),
-      choices: SPEEDS.map((rate) => ({
-        id: String(rate),
-        label:
-          rate === 1
-            ? tr("player.speed.normal")
-            : tr("player.speed.rate", { rate }),
-      })),
-      onSelect: (id) => onSpeedChange(Number(id)),
-    },
-  ]
+  }
+  const speedSection: MenuSection = {
+    title: tr("player.speed"),
+    value: String(speed),
+    choices: SPEEDS.map((rate) => ({
+      id: String(rate),
+      label:
+        rate === 1
+          ? tr("player.speed.normal")
+          : tr("player.speed.rate", { rate }),
+    })),
+    onSelect: (id) => onSpeedChange(Number(id)),
+  }
+  const statsToggle = {
+    label: tr("player.stats.toggle"),
+    checked: statsOpen,
+    onChange: setStatsOpen,
+  }
   return (
     <>
       <PlayerMenu
@@ -191,18 +205,28 @@ export function PlayerMenus({
         sections={[subtitleSection]}
         adjust={subtitleTiming}
       />
-      <PlayerMenu
-        {...menuProps("settings", tr("player.menu.settings"))}
-        icon={<SettingsIcon />}
-        sections={settingsSections}
-        toggles={[
-          {
-            label: tr("player.stats.toggle"),
-            checked: statsOpen,
-            onChange: setStatsOpen,
-          },
-        ]}
-      />
+      {split ? (
+        <>
+          <PlayerMenu
+            {...menuProps("speed", tr("player.speed"))}
+            icon={<GaugeIcon />}
+            sections={[speedSection]}
+          />
+          <PlayerMenu
+            {...menuProps("quality", tr("player.quality"))}
+            icon={<SettingsIcon />}
+            sections={[qualitySection]}
+            toggles={[statsToggle]}
+          />
+        </>
+      ) : (
+        <PlayerMenu
+          {...menuProps("settings", tr("player.menu.settings"))}
+          icon={<SettingsIcon />}
+          sections={[qualitySection, speedSection]}
+          toggles={[statsToggle]}
+        />
+      )}
     </>
   )
 }

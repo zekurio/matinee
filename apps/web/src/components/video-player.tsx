@@ -29,14 +29,16 @@ import { usePlayerPreferencesStore } from "@/stores/player-preferences"
 import { playbackNotice } from "./playback-notices"
 import { sourceOf } from "./playback-source"
 import {
-  CenterControls,
   ControlButton,
+  ElapsedTime,
   EndsAt,
+  type Episodes,
   FlashNote,
   FullscreenButton,
-  PlayButton,
+  LoadingSpinner,
   SeekBar,
-  SkipIcon,
+  TotalTime,
+  Transport,
   VolumeControl,
 } from "./player-controls"
 import { formatDelay, formatPercent } from "./player-format"
@@ -59,6 +61,8 @@ import { useSubtitles } from "./use-subtitles"
 
 const IDLE_MS = 2500
 
+export type { Episodes }
+
 type VideoPlayerProps = {
   /** The server's first answer for this sitting with the file. */
   start: FirstStart
@@ -70,6 +74,8 @@ type VideoPlayerProps = {
   trickplay: TrickplayTiles | null
   /** The episode after this one, offered once this one ends. */
   upNext?: UpNext | null
+  /** For an episode, the buttons for the one before and the one after. */
+  episodes?: Episodes | null
   /**
    * The watch party this file plays in. The player then follows it, and
    * tells it when the viewer plays, pauses, or seeks.
@@ -91,7 +97,8 @@ type VideoPlayerProps = {
  * and ahead by the lengths in the settings, up and down change the volume, 0 to 9 jump
  * to a tenth of the way, M mutes, F toggles full screen, C turns subtitles
  * on and off, G and H show them earlier and later, I shows the playback
- * stats. In a watch party, playing, pausing, and seeking do so for
+ * stats, and shift with P or N plays the previous or next episode. In a
+ * watch party, playing, pausing, and seeking do so for
  * everyone in it.
  */
 export function VideoPlayer(props: VideoPlayerProps) {
@@ -149,6 +156,7 @@ function Player({
   nowPlaying,
   trickplay,
   upNext,
+  episodes = null,
   party = null,
   onBack,
   onUnplayable,
@@ -160,7 +168,8 @@ function Player({
   const container = useRef<HTMLDivElement>(null)
   const video = useRef<HTMLVideoElement>(null)
   const pgsLayer = useRef<HTMLDivElement>(null)
-  const seekBar = useRef<HTMLDivElement>(null)
+  // What the subtitles rise above: the seek bar, and the times over it.
+  const controls = useRef<HTMLDivElement>(null)
   const coarse = useMediaQuery("(pointer: coarse)")
   const { skipBackSeconds, skipForwardSeconds } = usePlaybackPreferences()
   const playedTime = usePlayedTime()
@@ -211,7 +220,7 @@ function Player({
   const segments = usePlayerStore((state) => state.plan.segments)
   const subs = useSubtitles(
     video,
-    seekBar,
+    controls,
     pgsLayer,
     !hidden,
     playback.offset,
@@ -319,6 +328,27 @@ function Player({
     )
   }
 
+  const menus = (
+    <PlayerMenus
+      playback={playback}
+      subs={subs}
+      split={coarse}
+      onSpeedChange={changeSpeed}
+      onPickAudio={(audio) => onPickTracks({ audio })}
+      container={container}
+    />
+  )
+  const transport = (big: boolean) => (
+    <Transport
+      big={big}
+      episodes={episodes}
+      skipBackSeconds={skipBackSeconds}
+      skipForwardSeconds={skipForwardSeconds}
+      onSkip={skip}
+      onToggle={toggle}
+    />
+  )
+
   usePlayerKeys({
     toggle,
     skip,
@@ -332,6 +362,8 @@ function Player({
     toggleSubtitles: subs.toggle,
     moveSubtitles,
     toggleStats: () => actions.setStatsOpen(!store.getState().statsOpen),
+    previous: episodes?.previous ?? null,
+    next: episodes?.next ?? null,
   })
 
   useMediaSession(video, {
@@ -348,7 +380,8 @@ function Player({
     },
     position,
     duration: lengthOf,
-    next: upNext?.play ?? null,
+    previous: episodes?.previous ?? null,
+    next: episodes?.next ?? null,
   })
 
   return (
@@ -458,9 +491,11 @@ function Player({
 
       {statsOpen && <PlayerStats video={video} sessionId={sessionId} />}
 
-      <CenterControls coarse={coarse} hidden={hidden} onToggle={toggle} />
+      <LoadingSpinner />
       <FlashNote />
 
+      {/* On a touch screen, the menus go up top and play in the middle,
+          flanked by the skips and the episodes, as in the phone app. */}
       <div
         {...focusHandlers}
         className={cn(
@@ -471,7 +506,7 @@ function Player({
         <ControlButton label={tr("player.back")} onClick={onBack}>
           <ArrowLeftIcon />
         </ControlButton>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <h1 className="truncate text-lg leading-tight font-semibold [text-shadow:0_1px_2px_rgb(0_0_0/0.5)]">
             {title}
           </h1>
@@ -482,13 +517,33 @@ function Player({
           )}
         </div>
         {party && (
-          <p className="ml-auto flex shrink-0 items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-sm font-medium backdrop-blur-md [&_svg]:size-4">
+          <p className="flex shrink-0 items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-sm font-medium backdrop-blur-md [&_svg]:size-4">
             <UsersRoundIcon aria-hidden />
             {tr("party.player.watching", { count: party.watching })}
           </p>
         )}
+        {coarse && (
+          <div className="flex shrink-0 items-center gap-0.5">
+            {menus}
+            <FullscreenButton onToggle={toggleFullscreen} />
+          </div>
+        )}
       </div>
 
+      {coarse && (
+        <div
+          {...focusHandlers}
+          className={cn(
+            "pointer-events-none absolute inset-0 grid place-items-center transition-opacity duration-300 motion-reduce:transition-none *:pointer-events-auto",
+            hidden && "opacity-0 *:pointer-events-none",
+          )}
+        >
+          {transport(true)}
+        </div>
+      )}
+
+      {/* The seek bar runs the full width. With a mouse, the controls sit
+          in a row under it; on a touch screen, nothing does. */}
       <div
         {...focusHandlers}
         className={cn(
@@ -496,34 +551,35 @@ function Player({
           hidden && "pointer-events-none opacity-0",
         )}
       >
-        <SeekBar ref={seekBar} trickplay={trickplay} onSeek={seek} />
-        <div className="flex items-center gap-0.5">
-          <PlayButton onToggle={toggle} />
-          <ControlButton
-            label={tr("player.skipBack", { seconds: skipBackSeconds })}
-            onClick={() => skip(-skipBackSeconds)}
-          >
-            <SkipIcon direction="back" seconds={skipBackSeconds} />
-          </ControlButton>
-          <ControlButton
-            label={tr("player.skipForward", { seconds: skipForwardSeconds })}
-            onClick={() => skip(skipForwardSeconds)}
-          >
-            <SkipIcon direction="forward" seconds={skipForwardSeconds} />
-          </ControlButton>
-          <VolumeControl onToggleMute={toggleMute} onChange={setVolume} />
-          <div className="ml-auto flex items-center gap-0.5">
-            <EndsAt className="mr-2 hidden sm:block" />
-            <PlayerMenus
-              playback={playback}
-              subs={subs}
-              onSpeedChange={changeSpeed}
-              onPickAudio={(audio) => onPickTracks({ audio })}
-              container={container}
-            />
-            <FullscreenButton onToggle={toggleFullscreen} />
-          </div>
+        <div ref={controls} className="flex flex-col">
+          {coarse && (
+            <div className="flex items-center gap-3 px-1">
+              <ElapsedTime />
+              <span className="flex-1" />
+              <EndsAt className="text-white/75" />
+              <TotalTime />
+            </div>
+          )}
+          <SeekBar trickplay={trickplay} onSeek={seek} />
         </div>
+        {!coarse && (
+          <div className="flex items-center gap-0.5">
+            {transport(false)}
+            <VolumeControl onToggleMute={toggleMute} onChange={setVolume} />
+            <div className="ml-2 flex items-center gap-1">
+              <ElapsedTime />
+              <span aria-hidden className="text-sm text-white/60">
+                /
+              </span>
+              <TotalTime />
+            </div>
+            <div className="ml-auto flex items-center gap-0.5">
+              <EndsAt className="mr-2 hidden sm:block" />
+              {menus}
+              <FullscreenButton onToggle={toggleFullscreen} />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Last, so they're over the controls' gradient and take the clicks. */}

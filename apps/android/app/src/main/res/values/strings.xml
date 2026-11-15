@@ -553,6 +553,7 @@
     <string name="player_skip_recap">Skip recap</string>
     <string name="player_skip_credits">Skip credits</string>
     <string name="player_skip_preview">Skip preview</string>
+    <string name="player_previous_episode">Previous episode</string>
     <string name="player_next_episode">Next episode</string>
 
     <!-- Downloads -->

@@ -525,6 +525,7 @@
     <string name="player_skip_recap">Rückblick überspringen</string>
     <string name="player_skip_credits">Abspann überspringen</string>
     <string name="player_skip_preview">Vorschau überspringen</string>
+    <string name="player_previous_episode">Vorherige Folge</string>
     <string name="player_next_episode">Nächste Folge</string>
 
     <string name="error_unreachable">Der Server ist gerade nicht erreichbar.</string>

@@ -8,6 +8,8 @@ import {
   PlayIcon,
   RotateCcwIcon,
   RotateCwIcon,
+  SkipBackIcon,
+  SkipForwardIcon,
   Volume1Icon,
   Volume2Icon,
   VolumeXIcon,
@@ -45,11 +47,13 @@ export const controlButtonClass =
 export function ControlButton({
   label,
   onClick,
+  disabled = false,
   children,
   className,
 }: {
   label: string
   onClick: () => void
+  disabled?: boolean
   children: ReactNode
   className?: string
 }) {
@@ -59,7 +63,12 @@ export function ControlButton({
       aria-label={label}
       title={label}
       onClick={onClick}
-      className={cn(controlButtonClass, className)}
+      disabled={disabled}
+      className={cn(
+        controlButtonClass,
+        "disabled:pointer-events-none disabled:opacity-40",
+        className,
+      )}
     >
       {children}
     </button>
@@ -70,18 +79,24 @@ export function ControlButton({
 export function SkipIcon({
   direction,
   seconds,
-  className,
+  big = false,
 }: {
   direction: "back" | "forward"
   /** How far it skips, written inside the arrow. */
   seconds: number
-  className?: string
+  /** For the row in the middle of a touch screen. */
+  big?: boolean
 }) {
   const Icon = direction === "back" ? RotateCcwIcon : RotateCwIcon
   return (
     <span aria-hidden className="relative grid place-items-center">
-      <Icon className={cn("!size-6", className)} strokeWidth={1.75} />
-      <span className="text-9px absolute pt-px leading-none font-bold tabular-nums">
+      <Icon className={big ? "!size-9" : "!size-6"} strokeWidth={1.75} />
+      <span
+        className={cn(
+          "absolute pt-px leading-none font-bold tabular-nums",
+          big ? "text-xs" : "text-9px",
+        )}
+      >
         {seconds}
       </span>
     </span>
@@ -402,7 +417,19 @@ function SeekPreview({
   )
 }
 
-/** The time, the seek bar, and the time left or the length. */
+/** Where the seek bar shows: a drag, then a switch on its way, show where they're headed. */
+function selectShown(state: {
+  scrub: number | null
+  pending: number | null
+  time: number
+}): number {
+  return state.scrub ?? state.pending ?? state.time
+}
+
+/**
+ * The seek bar, the full width of the controls. The times are beside it in
+ * the controls rather than at its ends.
+ */
 export function SeekBar({
   ref,
   trickplay,
@@ -416,8 +443,7 @@ export function SeekBar({
   const { shown, scrubbing, duration, buffered, setScrub, commitScrub } =
     usePlayerStore(
       useShallow((state) => ({
-        // A drag, then a switch on its way, show where they're headed.
-        shown: state.scrub ?? state.pending ?? state.time,
+        shown: selectShown(state),
         scrubbing: state.scrub !== null,
         duration: state.duration,
         buffered: state.buffered,
@@ -425,7 +451,6 @@ export function SeekBar({
         commitScrub: state.commitScrub,
       })),
     )
-  const [remaining, setRemaining] = useState(true)
   const timeText = (value: number) =>
     tr("player.seekValue", {
       time: formatTime(value),
@@ -433,12 +458,8 @@ export function SeekBar({
     })
 
   return (
-    <div data-preview-bounds className="flex items-center gap-3 px-1">
-      <span className={cn("min-w-11", overlayTextClass)}>
-        {formatTime(shown)}
-      </span>
+    <div ref={ref} data-preview-bounds>
       <MediaSlider
-        ref={ref}
         label={tr("player.seek")}
         value={shown}
         max={duration}
@@ -457,25 +478,46 @@ export function SeekBar({
           onSeek(value)
         }}
         className={cn(
-          "flex-1",
           // Half the thumbnail and its padding, for 10rem and 15rem.
           trickplay && "[--preview-inset:5.25rem] sm:[--preview-inset:7.75rem]",
         )}
       />
-      <button
-        type="button"
-        title={remaining ? tr("player.showLength") : tr("player.showTimeLeft")}
-        onClick={() => setRemaining((on) => !on)}
-        className={cn(
-          "min-w-11 rounded text-right outline-none focus-visible:ring-2 focus-visible:ring-white",
-          overlayTextClass,
-        )}
-      >
-        {remaining
-          ? `-${formatTime(Math.max(0, duration - shown))}`
-          : formatTime(duration)}
-      </button>
     </div>
+  )
+}
+
+/** How far the video is, or where the seek bar is headed. */
+export function ElapsedTime({ className }: { className?: string }) {
+  const shown = usePlayerStore(selectShown)
+  return (
+    <span className={cn(overlayTextClass, className)}>{formatTime(shown)}</span>
+  )
+}
+
+/** The time left, or the length, which a click switches between. */
+export function TotalTime({ className }: { className?: string }) {
+  const { shown, duration } = usePlayerStore(
+    useShallow((state) => ({
+      shown: selectShown(state),
+      duration: state.duration,
+    })),
+  )
+  const [remaining, setRemaining] = useState(true)
+  return (
+    <button
+      type="button"
+      title={remaining ? tr("player.showLength") : tr("player.showTimeLeft")}
+      onClick={() => setRemaining((on) => !on)}
+      className={cn(
+        "rounded outline-none focus-visible:ring-2 focus-visible:ring-white",
+        overlayTextClass,
+        className,
+      )}
+    >
+      {remaining
+        ? `-${formatTime(Math.max(0, duration - shown))}`
+        : formatTime(duration)}
+    </button>
   )
 }
 
@@ -487,7 +529,7 @@ export function SeekBar({
 export function EndsAt({ className }: { className?: string }) {
   const { left, speed, advancing } = usePlayerStore(
     useShallow((state) => ({
-      left: state.duration - (state.scrub ?? state.pending ?? state.time),
+      left: state.duration - selectShown(state),
       speed: state.speed,
       advancing: state.playing && !state.waiting && state.scrub === null,
     })),
@@ -509,57 +551,124 @@ export function EndsAt({ className }: { className?: string }) {
   )
 }
 
-export function PlayButton({ onToggle }: { onToggle: () => void }) {
+/** The episodes either side of this one, for a show's file. */
+export type Episodes = {
+  /** Null for a show's first episode. */
+  previous: (() => void) | null
+  /** Null for a show's last episode. */
+  next: (() => void) | null
+}
+
+/** Play and pause, as one of the controls or the big one in the middle. */
+function PlayButton({ big, onToggle }: { big: boolean; onToggle: () => void }) {
   const playing = usePlayerStore((state) => state.playing)
+  const label = big
+    ? playing
+      ? tr("player.pause")
+      : tr("player.play")
+    : playing
+      ? tr("player.pauseKey")
+      : tr("player.playKey")
   return (
     <ControlButton
-      label={playing ? tr("player.pauseKey") : tr("player.playKey")}
+      label={label}
       onClick={onToggle}
+      className={cn(
+        big &&
+          "size-18 bg-black/45 text-white ring-1 ring-white/15 backdrop-blur-md [@media(pointer:coarse)]:size-18 [&_svg]:size-8",
+      )}
     >
       {playing ? (
         <PauseIcon className="fill-current" />
       ) : (
-        <PlayIcon className="fill-current" />
+        <PlayIcon className={cn("fill-current", big && "translate-x-0.5")} />
       )}
     </ControlButton>
   )
 }
 
-/** The spinner while loading, or a big play button over the picture. */
-export function CenterControls({
-  coarse,
-  hidden,
+/**
+ * Play, with the skips on either side of it and, for an episode, the
+ * previous and next episodes outside those, as the phone app has them.
+ * `big` is the row in the middle of a touch screen; without it, the row
+ * starts the control bar. While the video loads, the big play button
+ * leaves its place to the spinner.
+ */
+export function Transport({
+  big,
+  episodes,
+  skipBackSeconds,
+  skipForwardSeconds,
+  onSkip,
   onToggle,
 }: {
-  /** On touch screens the button stays while the controls show. */
-  coarse: boolean
-  hidden: boolean
+  big: boolean
+  episodes: Episodes | null
+  skipBackSeconds: number
+  skipForwardSeconds: number
+  onSkip: (by: number) => void
   onToggle: () => void
 }) {
-  const { busy, playing } = usePlayerStore(
-    useShallow((state) => ({
-      busy: selectBusy(state),
-      playing: state.playing,
-    })),
+  const busy = usePlayerStore(selectBusy)
+  const side = cn(
+    big && "size-12 [@media(pointer:coarse)]:size-12 [&_svg]:size-6",
   )
-  const button = !busy && (!playing || (coarse && !hidden))
+  const skip = cn(big && "size-14 [@media(pointer:coarse)]:size-14")
+  return (
+    <div
+      className={cn("flex items-center", big ? "gap-2 sm:gap-8" : "gap-0.5")}
+    >
+      {episodes && (
+        <ControlButton
+          label={tr("player.previousEpisode")}
+          onClick={() => episodes.previous?.()}
+          disabled={episodes.previous === null}
+          className={side}
+        >
+          <SkipBackIcon className="fill-current" />
+        </ControlButton>
+      )}
+      <ControlButton
+        label={tr("player.skipBack", { seconds: skipBackSeconds })}
+        onClick={() => onSkip(-skipBackSeconds)}
+        className={skip}
+      >
+        <SkipIcon direction="back" seconds={skipBackSeconds} big={big} />
+      </ControlButton>
+      {big && busy ? (
+        // The spinner in the middle of the player shows here.
+        <span aria-hidden className="size-18" />
+      ) : (
+        <PlayButton big={big} onToggle={onToggle} />
+      )}
+      <ControlButton
+        label={tr("player.skipForward", { seconds: skipForwardSeconds })}
+        onClick={() => onSkip(skipForwardSeconds)}
+        className={skip}
+      >
+        <SkipIcon direction="forward" seconds={skipForwardSeconds} big={big} />
+      </ControlButton>
+      {episodes && (
+        <ControlButton
+          label={tr("player.nextEpisode")}
+          onClick={() => episodes.next?.()}
+          disabled={episodes.next === null}
+          className={side}
+        >
+          <SkipForwardIcon className="fill-current" />
+        </ControlButton>
+      )}
+    </div>
+  )
+}
+
+/** The spinner in the middle of the player while the video loads. */
+export function LoadingSpinner() {
+  const busy = usePlayerStore(selectBusy)
+  if (!busy) return null
   return (
     <div className="pointer-events-none absolute inset-0 grid place-items-center">
-      {busy && <Spinner className="size-10 text-white/85" />}
-      {button && (
-        <button
-          type="button"
-          aria-label={playing ? tr("player.pause") : tr("player.play")}
-          onClick={onToggle}
-          className="pointer-events-auto grid size-18 place-items-center rounded-full bg-black/45 text-white ring-1 ring-white/15 backdrop-blur-md transition-transform outline-none hover:scale-105 focus-visible:ring-2 focus-visible:ring-white motion-reduce:transition-none [&_svg]:size-8"
-        >
-          {playing ? (
-            <PauseIcon className="fill-current" />
-          ) : (
-            <PlayIcon className="translate-x-0.5 fill-current" />
-          )}
-        </button>
-      )}
+      <Spinner className="size-10 text-white/85" />
     </div>
   )
 }

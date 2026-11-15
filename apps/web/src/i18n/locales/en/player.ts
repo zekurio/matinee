@@ -19,6 +19,8 @@ export default defineMessages("player", {
   "player.back": "Back",
   "player.skipBack": "Back {seconds} seconds (j)",
   "player.skipForward": "Forward {seconds} seconds (l)",
+  "player.previousEpisode": "Previous episode (shift+p)",
+  "player.nextEpisode": "Next episode (shift+n)",
   "player.play": "Play",
   "player.pause": "Pause",
   "player.playKey": "Play (k)",

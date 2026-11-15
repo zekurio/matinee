@@ -86,6 +86,8 @@ internal fun TvMenuPanel(open: Menu?, controller: PlayerController, prefs: Playe
 private fun menuName(menu: Menu) = when (menu) {
     Menu.Audio -> R.string.player_menu_audio
     Menu.Subtitles -> R.string.player_menu_subtitles
+    Menu.Quality -> R.string.player_quality
+    Menu.Speed -> R.string.player_speed
     Menu.Settings -> R.string.player_menu_settings
 }
 

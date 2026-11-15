@@ -22,6 +22,10 @@ export type PlayerKeyActions = {
   /** Moves the subtitles later by `ms`, earlier when negative. */
   moveSubtitles: (ms: number) => void
   toggleStats: () => void
+  /** Plays the episode before this one, when there is one. */
+  previous: (() => void) | null
+  /** Plays the episode after this one, when there is one. */
+  next: (() => void) | null
 }
 
 /** The player's keyboard shortcuts, on the whole window. */
@@ -38,6 +42,8 @@ export function usePlayerKeys({
   toggleSubtitles,
   moveSubtitles,
   toggleStats,
+  previous,
+  next,
 }: PlayerKeyActions) {
   // Each key runs the actions from the latest render.
   const onKey = useEffectEvent((event: KeyboardEvent) => {
@@ -77,6 +83,9 @@ export function usePlayerKeys({
       ["g", () => moveSubtitles(-SUBTITLE_STEP_MS)],
       ["h", () => moveSubtitles(SUBTITLE_STEP_MS)],
       ["i", toggleStats],
+      // YouTube's keys for the previous and next video.
+      ...(previous ? [["P", previous] as const] : []),
+      ...(next ? [["N", next] as const] : []),
     ])
     const digit = /^\d$/.test(event.key) ? Number(event.key) : null
     const action = digit !== null ? () => jump(digit) : actions.get(event.key)

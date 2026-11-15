@@ -69,11 +69,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.R
+import io.github.zekurio.matinee.api.MediaItem
 import io.github.zekurio.matinee.ui.Motion
 import io.github.zekurio.matinee.ui.formatClock
 import io.github.zekurio.matinee.ui.itemLabel
 import io.github.zekurio.matinee.ui.kit.Lucide
 import io.github.zekurio.matinee.ui.kit.LucideIcon
+import io.github.zekurio.matinee.ui.player.Episodes
 import io.github.zekurio.matinee.ui.player.Menu
 import io.github.zekurio.matinee.ui.player.PlayerController
 import io.github.zekurio.matinee.ui.player.SeekClock
@@ -115,7 +117,8 @@ internal class TvSeekKeys(val press: (direction: Int, repeat: Int, atMs: Long) -
  * The TV player's controls, kept low and small so the picture stays the
  * thing to look at: a scrim up from the bottom, the title at the left, one
  * wide seek bar with the time on either side, and one row of small round
- * buttons, play and the skips at the left, the menus at the right, and
+ * buttons, play and the skips at the left with an episode's previous and
+ * next outside them, the menus at the right, and
  * [action], the button for the next episode, beside the menus when there
  * is one. All of it inside the overscan margins.
  */
@@ -129,6 +132,8 @@ internal fun TvOverlay(
     keys: TvSeekKeys,
     playRests: Boolean,
     action: TvPictureAction?,
+    episodes: Episodes?,
+    onEpisode: (MediaItem) -> Unit,
     onMenu: (Menu) -> Unit,
 ) {
     // Play is where focus rests, so it looks focused unless another control here has focus.
@@ -159,6 +164,11 @@ internal fun TvOverlay(
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 val up = Modifier.focusProperties { this.up = targets.seek }
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    // Only an episode there is, so the D-pad never stops on one that does nothing.
+                    episodes?.previous?.let { previous ->
+                        val name = stringResource(R.string.player_previous_episode)
+                        TvRoundButton(name, { onEpisode(previous) }, up, size = SMALL) { LucideIcon(Lucide.SkipBack, name, size = 20.dp) }
+                    }
                     TvRoundButton(null, { controller.skip(-back) }, up, size = SMALL) {
                         SkipIcon(Lucide.RotateCcw, back, stringResource(R.string.player_skip_back, back.toInt()))
                     }
@@ -172,6 +182,10 @@ internal fun TvOverlay(
                     }
                     TvRoundButton(null, { controller.skip(ahead) }, up, size = SMALL) {
                         SkipIcon(Lucide.RotateCw, ahead, stringResource(R.string.player_skip_forward, ahead.toInt()))
+                    }
+                    episodes?.next?.let { next ->
+                        val name = stringResource(R.string.player_next_episode)
+                        TvRoundButton(name, { onEpisode(next) }, up, size = SMALL) { LucideIcon(Lucide.SkipForward, name, size = 20.dp) }
                     }
                 }
                 Box(Modifier.weight(1f))

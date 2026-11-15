@@ -510,6 +510,7 @@ function playbackAnswer(
     qualities: file.qualities,
     original: file.original,
     reasons,
+    previous: null,
     next: null,
     upNextAt: null,
     segments: [],
