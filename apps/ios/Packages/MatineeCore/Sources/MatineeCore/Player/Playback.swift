@@ -248,7 +248,7 @@ public func subtitleShow(_ plan: PlaybackStart, mpv: Bool = false) -> SubtitleSh
   case PlaybackSubtitleMode.client:
     guard let url = plan.subtitleUrl else { return .off }
     if track.delivery == SubtitleDelivery.webvtt { return .screen(track, url) }
-    if track.delivery == SubtitleDelivery.pgs && mpv { return .overlay(track, url) }
+    if (track.delivery == SubtitleDelivery.pgs || track.delivery == "ass") && mpv { return .overlay(track, url) }
     return .off
   default: return .off
   }

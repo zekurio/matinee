@@ -20,6 +20,23 @@ import Testing
         dolbyVision: false))
   }
 
+  @Test func mpvFormatsComeFromItsBuild() {
+    let device = mpvPlaybackProfile(settings: .init(convertAudio: ["dts"], audioCodec: "aac"), snapshot: phone, locale: Locale(identifier: "de_DE"))
+    #expect(device.containers.contains("mkv") && device.containers.contains("webm"))
+    #expect(device.audio.contains("truehd") && device.audio.contains("opus"))
+    #expect(!device.audio.contains("dts"))
+    #expect(device.streamAudio.first == "aac")
+    #expect(device.video.contains { $0.codec == "mpeg2video" })
+    #expect(!device.video.contains { $0.codec == "av1" })
+    #expect(device.video.allSatisfy { $0.dolbyVisionProfiles == [] })
+    #expect(device.embeddedSubtitles.contains("PGS") && device.embeddedSubtitles.contains("ASS"))
+    #expect(device.subtitles == ["webvtt", "ass"])
+    #expect(device.sidecarSubtitles.isEmpty)
+    #expect(device.language == "de")
+    let hardware = CapabilitySnapshot(codecs: .init(video: phone.codecs.video + [.init(codec: "av1", widest: nil, tallest: nil, tenBit: true)], audio: phone.codecs.audio, dolbyVision: false))
+    #expect(mpvPlaybackProfile(snapshot: hardware).video.contains { $0.codec == "av1" })
+  }
+
   @Test func theSimulatorDecodesH264AndHevcWithoutHardware() {
     let none: (CMVideoCodecType) -> Bool = { _ in false }
     #expect(Capabilities.videoDecodes(kCMVideoCodecType_H264, hardware: none, simulator: true))

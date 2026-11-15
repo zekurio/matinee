@@ -1,3 +1,4 @@
+import MatineeMPV
 import MatineeCore
 import SwiftUI
 import UIKit
@@ -96,7 +97,8 @@ private struct PlayerSitting: View {
     let player = PlayerController(
       api: api, device: device, prefs: prefs, tokenProvider: token,
       downloads: ServerPlayerDownloads(downloads: downloads, server: server, api: offline ? nil : api),
-      preferences: user?.playback ?? DEFAULT_PLAYBACK_PREFERENCES, offline: offline)
+      preferences: user?.playback ?? DEFAULT_PLAYBACK_PREFERENCES, offline: offline,
+      playbackEngine: prefs.engine == .mpv ? MPVPlaybackEngine() : nil)
     player.onNext = { next in playInstead(next.id) }
     player.sceneDidBecomeActive()
     controller = player
@@ -163,7 +165,11 @@ private struct Playback: View {
       ZStack {
         ZStack {
           Color.black
-          VideoSurface(controller: controller, fill: fill, autoPicture: prefs.pictureInPicture && controller.playing)
+          if let engine = controller.playbackEngine as? MPVPlaybackEngine {
+            MPVPlaybackSurface(engine: engine, fill: fill)
+          } else {
+            VideoSurface(controller: controller, fill: fill, autoPicture: prefs.pictureInPicture && controller.playing)
+          }
           Subtitles(
             controller: controller, look: subtitleLook(prefs), lifted: controls && !inPip, video: visible,
             screen: screen, safeBottom: safe.bottom)

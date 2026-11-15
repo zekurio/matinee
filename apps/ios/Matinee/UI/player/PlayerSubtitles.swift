@@ -1,3 +1,4 @@
+import MatineeMPV
 import MatineeCore
 import SwiftUI
 import UIKit
@@ -24,7 +25,8 @@ struct Subtitles: View {
   let safeBottom: CGFloat
 
   var body: some View {
-    let shown = controller.cues?.at(controller.position) ?? []
+    let embedded = (controller.playbackEngine as? MPVPlaybackEngine)?.text ?? ""
+    let shown = embedded.isEmpty ? controller.cues?.at(controller.position) ?? [] : [Cue(text: embedded)]
     // 20 points on a phone held sideways, as Android's 20 sp there, and in
     // step with the picture elsewhere.
     let size = max(12, min(video.height, video.width * 9 / 16) / 19.5)

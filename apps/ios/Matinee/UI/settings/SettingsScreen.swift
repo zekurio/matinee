@@ -338,6 +338,11 @@ struct PlaybackPage: View {
     let playback = save.shown(user)
     let store: (PlaybackPreferences) -> Void = { save.save($0, api: api, session: session, snackbar: snackbar) }
     SettingsScaffold(Str.settingsPagePlayback) {
+      Panel {
+        PickerRow(Str.playbackEngineTitle, options: PlayerEngine.allCases.map { ($0, $0 == .mpv ? "mpv" : "AVPlayer") }, current: PlayerPrefs.shared.engine) {
+          PlayerPrefs.shared.engine = $0
+        }
+      }
       LanguagesSection(playback: playback, options: loaded, save: store)
       SkipsSection(playback: playback, options: loaded, save: store)
       DeviceSection(prefs: PlayerPrefs.shared, options: loaded)

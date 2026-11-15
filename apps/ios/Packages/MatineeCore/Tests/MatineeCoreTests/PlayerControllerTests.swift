@@ -181,7 +181,7 @@ private final class PlayerProtocol: URLProtocol, @unchecked Sendable {
   }
 }
 
-@MainActor private final class FakeEngine: PlaybackEngine {
+@MainActor private final class FakeEngine: AVPlaybackEngine {
   let player = AVPlayer()
   var isPlaying = false
   var isLoading = false

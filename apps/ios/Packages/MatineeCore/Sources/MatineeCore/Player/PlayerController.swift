@@ -81,7 +81,8 @@ struct Ask {
   public var offersOriginal: Bool { plan?.original ?? true }
 
   /// AVPlayer, for the view's `AVPlayerLayer`.
-  public var player: AVPlayer { engine.player }
+  public var player: AVPlayer? { engine.avPlayer }
+  public var playbackEngine: any PlaybackEngine { engine }
 
   /// Notices the picture freezing while playback runs on.
   @ObservationIgnored var freeze = FreezeWatch()
@@ -159,11 +160,7 @@ struct Ask {
   public var next: MediaItem? { plan?.next ?? localNext }
 
   public var duration: Double {
-    item?.durationSeconds
-      ?? player.currentItem.flatMap {
-        let d = $0.duration.seconds
-        return d.isFinite ? d + (source?.offset ?? 0) : nil
-      } ?? 0
+    item?.durationSeconds ?? (engine.durationSeconds.isFinite ? engine.durationSeconds + (source?.offset ?? 0) : 0)
   }
 
   /// Where a switch or seek is headed, shown until the source for it loads.
@@ -227,7 +224,8 @@ struct Ask {
     api: MatineeApi, device: PlaybackDevice, prefs: PlayerPrefs,
     tokenProvider: @escaping @Sendable () async -> String? = { nil },
     downloads: (any PlayerDownloads)? = nil,
-    preferences: PlaybackPreferences = DEFAULT_PLAYBACK_PREFERENCES, offline: Bool = false
+    preferences: PlaybackPreferences = DEFAULT_PLAYBACK_PREFERENCES, offline: Bool = false,
+    playbackEngine: (any PlaybackEngine)? = nil
   ) {
     self.preferences = preferences
     self.offline = offline
@@ -238,7 +236,7 @@ struct Ask {
     self.downloads = downloads
     self.clock = { Date() }
     session = .shared
-    engine = AVPlayerEngine()
+    engine = playbackEngine ?? AVPlayerEngine()
   }
 
   init(
@@ -345,9 +343,9 @@ struct Ask {
 
   /// Who draws the subtitle that shows: the answer's, or the download's.
   func shown() -> SubtitleShow {
-    if let plan { return subtitleShow(plan) }
+    if let plan { return subtitleShow(plan, mpv: engine.avPlayer == nil) }
     guard let item, let track = localSubtitle else { return .off }
-    return downloadSubtitleShow(track, url: api.paths.subtitle(item.id, trackId: track.id))
+    return downloadSubtitleShow(track, mpv: engine.avPlayer == nil, url: api.paths.subtitle(item.id, trackId: track.id))
   }
 
   /// Whether `track` in the menu is burned into the picture: the one shown as the answer has it, else by its format alone.
@@ -448,6 +446,12 @@ struct Ask {
       cuesFor = nil
     }
     await applyTextOverride(show)
+    if case .overlay(let track, let url) = show {
+      do {
+        guard let address = URL(string: resolve(url)) else { throw URLError(.badURL) }
+        _ = try await engine.loadSubtitle(url: address, headers: await headers())
+      } catch { subtitleError = true }
+    }
     if let (track, url) = fetch { await loadCues(track, url: url) }
   }
 

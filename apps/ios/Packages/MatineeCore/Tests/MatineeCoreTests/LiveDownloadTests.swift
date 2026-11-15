@@ -83,10 +83,10 @@ import Testing
         preferences: .init(
           audioLanguage: "en", subtitleMode: SubtitleMode.always, subtitleLanguage: "en",
           rememberSubtitles: false, skipBackSeconds: 10, skipForwardSeconds: 30))
-      player.player.isMuted = true
+      player.player?.isMuted = true
       await player.startLocal(itemId: item.id)
       try await Task.sleep(for: .seconds(3))
-      #expect(player.player.currentItem?.status == .readyToPlay)
+      #expect(player.player?.currentItem?.status == .readyToPlay)
       #expect(player.position > 0)
       #expect(player.subtitle != nil)
       #expect(player.cues?.cues.isEmpty == false)

@@ -132,7 +132,7 @@ struct LivePlayerTests {
         let picked = controller.audioTracks[1]
         await controller.pickAudio(picked)
         #expect(controller.audio?.index == picked.index)
-        if controller.source?.holdsTracks == true, let item = controller.player.currentItem,
+        if controller.source?.holdsTracks == true, let item = controller.player?.currentItem,
           let group = try await item.asset.loadMediaSelectionGroup(for: .audible)
         {
           #expect(item.currentMediaSelection.selectedMediaOption(in: group) == group.options[1])

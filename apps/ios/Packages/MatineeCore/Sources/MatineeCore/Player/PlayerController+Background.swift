@@ -14,6 +14,8 @@ extension PlayerController {
   func loadCues(_ track: SubtitleTrack, url: String) async {
     cuesFor = track.id
     do {
+      let address = local?.saved[track.id] ?? URL(string: resolve(url))
+      if let address, try await engine.loadSubtitle(url: address, headers: await headers()) { return }
       let text: String
       if let saved = local?.saved[track.id] {
         text = try String(contentsOf: saved, encoding: .utf8)
@@ -121,7 +123,7 @@ extension PlayerController {
     countDown(now)
     let every: TimeInterval = playing ? 10 : 30
     if wasPlaying != playing || now.timeIntervalSince(lastReport) >= every { sendReport() }
-    diagnostics.sample(player)
+    if let player { diagnostics.sample(player) }
     nowPlaying?.update()
   }
 

@@ -19,8 +19,9 @@ themselves: scrub, trickplay tiles, the countdown, the lifecycle calls).
 
 ## View contract
 
-- Attach `player` to an `AVPlayerLayer`. The view owns AVKit presentation and
-  restoration, not the media session. Make the lifecycle calls below.
+- For AVPlayer, attach optional `player` to an `AVPlayerLayer`. For an injected
+  engine, host that engine's view. MatineeMPV provides `MPVPlaybackSurface`
+  on iOS and tvOS. The controller owns neither view nor AVKit presentation.
 - `start(itemId:at:sessionId:)` asks the server; `at` nil resumes where the
   server says. `startLocal(itemId:at:)` plays a download from the injected
   `PlayerDownloads`, from `at` or where it stopped. `item` is nil until the
@@ -129,8 +130,8 @@ measurement of a frame reaching a physical display.
 
 ## Deliberate omissions
 
-- No mpv engine, FFmpeg extension, renderer ordering, or decoder selection.
-  AVPlayer chooses its decoders and exposes no equivalent controls.
+- MatineeCore has no mpv dependency. The app injects MatineeMPV's engine;
+  AVPlayer continues to select its own decoder.
 - No Android TV display-mode switching or Watch Next sync. There is no tvOS target.
 - No bitmap cue extraction. AVFoundation supplies no bitmap cues to the app;
   AVPlayer draws supported in-file tracks, and the server burns unsupported ones.

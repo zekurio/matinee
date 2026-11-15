@@ -222,8 +222,7 @@ limits that still need hardware measurements.
 
 ## License
 
-MIT, see the repository's [LICENSE](../../LICENSE). MatineeCore has no
-external package dependencies. The app links Apple's playback frameworks
-and Nuke, which is MIT, not Android's GPL FFmpeg or mpv builds. The Android
-app's GPL license therefore doesn't apply to this target. Red Hat Text and
-lucide keep their own font and icon licenses.
+GPL-3.0, see [LICENSE](LICENSE). The rest of the repo, including
+MatineeCore, remains MIT. The app links MPVUI's GPL builds of libmpv and
+FFmpeg. MatineeMPV is GPL-3.0; MPVUI's Swift wrapper is MIT. Red Hat Text,
+lucide, and Nuke retain their own licenses.

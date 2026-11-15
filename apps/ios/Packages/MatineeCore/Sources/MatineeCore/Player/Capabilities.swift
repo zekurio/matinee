@@ -183,13 +183,13 @@ public func playbackProfile(
 @MainActor public func downloadDevice(
   _ prefs: PlayerPrefs, probe: @MainActor () -> CapabilitySnapshot = Capabilities.probe
 ) -> PlaybackDevice {
-  playbackProfile(settings: ProfileSettings(convertAudio: prefs.convertAudio), snapshot: probe())
+  (prefs.engine == .mpv ? mpvPlaybackProfile : playbackProfile)(ProfileSettings(convertAudio: prefs.convertAudio), probe(), .current)
 }
 @MainActor public func playbackDevice(
   _ prefs: PlayerPrefs, probe: @MainActor () -> CapabilitySnapshot = Capabilities.probe
 ) -> PlaybackDevice {
-  playbackProfile(
-    settings: ProfileSettings(
+  (prefs.engine == .mpv ? mpvPlaybackProfile : playbackProfile)(
+    ProfileSettings(
       convertAudio: prefs.convertAudio, audioCodec: prefs.audioCodec, videoCodec: prefs.videoCodec),
-    snapshot: probe())
+    probe(), .current)
 }

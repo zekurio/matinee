@@ -1,7 +1,7 @@
 import Foundation
 import Observation
 
-public enum PlayerEngine: String, Sendable, CaseIterable { case avPlayer }
+public enum PlayerEngine: String, Sendable, CaseIterable { case avPlayer, mpv }
 public enum Decoders: String, Sendable { case hardware }
 public enum SubtitleColor: String, Sendable { case white, yellow, cyan, green }
 public enum SubtitleBackground: String, Sendable { case none, shaded, black }
@@ -37,11 +37,12 @@ public let SUBTITLE_SCALES: [Double] = [0.75, 1, 1.25, 1.5, 2]
   public var subtitleBackground: SubtitleBackground { didSet { save() } }
   public var subtitleEdge: SubtitleEdge { didSet { save() } }
   // AVPlayer selects its own decoder. It exposes no hardware/software preference.
-  public var engine: PlayerEngine { .avPlayer }
+  public var engine: PlayerEngine { didSet { save() } }
   public var decoders: Decoders { .hardware }
   public init(defaults: UserDefaults = .standard) {
     self.defaults = defaults
     let p = defaults.dictionary(forKey: "player") ?? [:]
+    engine = PlayerEngine(rawValue: p["engine"] as? String ?? "") ?? .mpv
     quality = p["quality"] as? String ?? ORIGINAL_QUALITY
     videoCodec = p["video_codec"] as? String ?? AUTOMATIC
     audioCodec = p["audio_codec"] as? String ?? AUTOMATIC
@@ -59,6 +60,7 @@ public let SUBTITLE_SCALES: [Double] = [0.75, 1, 1.25, 1.5, 2]
   private func save() {
     defaults.set(
       [
+        "engine": engine.rawValue,
         "quality": quality, "video_codec": videoCodec, "audio_codec": audioCodec,
         "convert_audio": Array(convertAudio), "autoplay_next": autoplayNext,
         "fill_screen": fillScreen,

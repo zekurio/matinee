@@ -3,8 +3,9 @@ import Foundation
 
 /// What the controller drives: AVPlayer today, mpv later, a fake in tests.
 /// Times are in the source's own timeline; the controller adds the offset.
-@MainActor protocol PlaybackEngine: AnyObject {
-  var player: AVPlayer { get }
+@MainActor public protocol PlaybackEngine: AnyObject {
+  var avPlayer: AVPlayer? { get }
+  var durationSeconds: Double { get }
   var isPlaying: Bool { get }
   var isLoading: Bool { get }
   var positionSeconds: Double { get }
@@ -27,9 +28,20 @@ import Foundation
   func hasVideoFrame() -> Bool
   /// The tracks of what plays, which of them are selected, for the report.
   func tracks() async -> [TrackDiagnostics]
+  func loadSubtitle(url: URL, headers: [String: String]) async throws -> Bool
   func clear()
 }
 extension PlaybackEngine {
+  public func loadSubtitle(url: URL, headers: [String: String]) async throws -> Bool { false }
+  public var avPlayer: AVPlayer? { nil }
+}
+
+@MainActor protocol AVPlaybackEngine: PlaybackEngine {
+  var player: AVPlayer { get }
+}
+extension AVPlaybackEngine {
+  var avPlayer: AVPlayer? { player }
+  var durationSeconds: Double { player.currentItem?.duration.seconds ?? 0 }
   var isPlaying: Bool { player.timeControlStatus == .playing }
   var isLoading: Bool { player.timeControlStatus == .waitingToPlayAtSpecifiedRate }
   var positionSeconds: Double { player.currentTime().seconds }
@@ -49,7 +61,7 @@ extension PlaybackEngine {
   func pause() { player.pause() }
 }
 
-@MainActor final class AVPlayerEngine: PlaybackEngine {
+@MainActor final class AVPlayerEngine: AVPlaybackEngine {
   let player = AVPlayer()
   private var videoOutput: AVPlayerItemVideoOutput?
   private var generation = 0

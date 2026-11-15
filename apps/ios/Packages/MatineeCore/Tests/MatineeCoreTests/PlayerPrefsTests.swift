@@ -9,6 +9,7 @@ import Testing
     let defaults = try #require(UserDefaults(suiteName: name))
     defer { defaults.removePersistentDomain(forName: name) }
     let prefs = PlayerPrefs(defaults: defaults)
+    #expect(prefs.engine == .mpv)
     #expect(prefs.quality == ORIGINAL_QUALITY)
     #expect(prefs.videoCodec == AUTOMATIC)
     #expect(prefs.audioCodec == AUTOMATIC)
@@ -46,6 +47,7 @@ import Testing
     let defaults = try #require(UserDefaults(suiteName: name))
     defer { defaults.removePersistentDomain(forName: name) }
     let prefs = PlayerPrefs(defaults: defaults)
+    prefs.engine = .avPlayer
     prefs.quality = "2160p"
     prefs.videoCodec = "hevc"
     prefs.audioCodec = "aac"
@@ -59,6 +61,7 @@ import Testing
     prefs.subtitleBackground = .black
     prefs.subtitleEdge = .outline
     let loaded = PlayerPrefs(defaults: defaults)
+    #expect(loaded.engine == .avPlayer)
     #expect(loaded.quality == "2160p")
     #expect(loaded.videoCodec == "hevc")
     #expect(loaded.audioCodec == "aac")
@@ -69,7 +72,7 @@ import Testing
     #expect(loaded.subtitleEdge == .outline)
     #expect(
       Set(try #require(defaults.dictionary(forKey: "player")).keys) == [
-        "quality", "video_codec", "audio_codec", "convert_audio", "autoplay_next", "fill_screen",
+        "engine", "quality", "video_codec", "audio_codec", "convert_audio", "autoplay_next", "fill_screen",
         "picture_in_picture", "subtitle_system_style", "subtitle_scale", "subtitle_color",
         "subtitle_background", "subtitle_edge",
       ])
