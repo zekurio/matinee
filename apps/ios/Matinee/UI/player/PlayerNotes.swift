@@ -1,10 +1,13 @@
 import MatineeCore
+import MatineeKit
 import SwiftUI
 
 /*
  * What PlayerScreen.kt draws over the video besides the controls: the
- * failure with its way back, the note after a pinch, the note about the
- * last answer, and the next episode once one ended.
+ * failure with its way back, the note after a pinch, the note about what
+ * the server did instead, Skip intro and the like, the next episode, and
+ * the lock. Each in the web player's look (skip-segment.tsx, up-next.tsx,
+ * playback-notices.ts) where the web has it.
  */
 
 /// The heading over the server's words when it won't play the file for this account.
@@ -15,7 +18,9 @@ func refusalTitle(_ refusal: Refusal) -> String {
   }
 }
 
-/// What failed, with the way back and, unless trying again gets the same answer, Retry.
+/// What failed, with the way back and, unless trying again gets the same
+/// answer, Retry: the web's empty state over the dimmed picture. It takes
+/// every touch, so none reaches the video under it.
 struct PlayerFailure: View {
   let title: String
   let message: String?
@@ -23,12 +28,25 @@ struct PlayerFailure: View {
   let close: () -> Void
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 0) {
-      RoundIconButton(.arrowLeft, label: Str.playerBack, size: 52, iconSize: 26, background: .clear, action: close)
-        .padding(8)
-      ErrorBox(title, message, onRetry: retry)
+    ZStack(alignment: .topLeading) {
+      Color.black.opacity(0.8).ignoresSafeArea()
+        .contentShape(Rectangle())
+        .onTapGesture {}
+      MatineeKit.EmptyState(icon: .circleAlert, title: title, description: message) {
+        if let retry {
+          MatineeKit.MatineeButton(Str.commonRetry, icon: .refreshCw, look: .secondary, size: .md, action: retry)
+        }
+      }
+      .frame(maxWidth: .infinity, maxHeight: .infinity)
+      MatineeKit.RoundIconButton(
+        .arrowLeft, label: Str.playerBack, look: .ghost, size: MatineeKit.TouchTarget, tint: .white.opacity(0.85),
+        action: close
+      )
+      // Where the controls' back button is.
+      .frame(height: TOP_BAR_HEIGHT)
+      .padding(.horizontal, MatineeKit.Space.s3)
+      .padding(.top, MatineeKit.Space.s2)
     }
-    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
   }
 }
 
@@ -42,20 +60,20 @@ struct ZoomNote: View {
     ZStack {
       if shown {
         Text(fill ? Str.playerFill : Str.playerFit)
-          .textStyle(.titleMedium)
+          .textStyle(.sm, weight: .medium)
           .foregroundStyle(.white)
-          .padding(.horizontal, 18)
-          .padding(.vertical, 10)
-          .background(.black.opacity(0.6), in: RoundedRectangle(cornerRadius: 12))
-          .transition(Motion.fade)
+          .padding(.horizontal, MatineeKit.Space.s4)
+          .padding(.vertical, MatineeKit.Space.s2)
+          .pictureGlass(in: Capsule(), shade: .medium, ring: 0)
+          .transition(.opacity)
       }
     }
     .task(id: count) {
       guard count > 0 else { return }
-      withMotion(Motion.enter) { shown = true }
+      MatineeKit.withMotion(MatineeKit.Motion.enter) { shown = true }
       try? await Task.sleep(for: .milliseconds(1200))
       guard !Task.isCancelled else { return }
-      withMotion(Motion.exit) { shown = false }
+      MatineeKit.withMotion(MatineeKit.Motion.exit) { shown = false }
     }
   }
 }
@@ -63,42 +81,34 @@ struct ZoomNote: View {
 /// How long a note about the last answer stays.
 private let NOTICE_SECONDS = 5
 
-/// Says what the server did instead of what the viewer asked for, for a few seconds.
+/// Says what the server did instead of what the viewer asked for, for a
+/// few seconds, as the web's toast does: a subtitle it couldn't burn in, a
+/// quality it couldn't encode, a switch that didn't go through.
 struct PlayerNoticeNote: View {
   let controller: PlayerController
-  @State private var shown: MatineeCore.Notice?
+  @State private var shown: MatineeCore.Notice? = PlayerDebug.notice
   @State private var count = 0
 
   var body: some View {
     ZStack {
       if let note = shown {
-        VStack(spacing: 0) {
-          Text(title(note)).textStyle(.titleMedium).foregroundStyle(.white)
-          if let detail = detail(note), !detail.isEmpty {
-            Text(detail).textStyle(.bodyMedium).foregroundStyle(.white.opacity(0.8))
-          }
-        }
-        .multilineTextAlignment(.center)
-        .padding(.horizontal, 18)
-        .padding(.vertical, 10)
-        .frame(maxWidth: 420)
-        .background(.black.opacity(0.75), in: RoundedRectangle(cornerRadius: 12))
-        .accessibilityElement(children: .combine)
-        .transition(Motion.fade)
+        MatineeKit.Toast(MatineeKit.ToastMessage(title(note), description: detail(note), kind: .warning))
+          .frame(maxWidth: 420)
+          .transition(.opacity)
       }
     }
     // Each notice is new, even when it says the same as the last.
     .onChange(of: controller.notice.map { NoticeKey($0) }) { _, _ in
       guard let notice = controller.notice else { return }
       count += 1
-      withMotion(Motion.enter) { shown = notice }
+      MatineeKit.withMotion(MatineeKit.Motion.enter) { shown = notice }
       controller.dismissNotice()
     }
     .task(id: count) {
       guard count > 0 else { return }
       try? await Task.sleep(for: .seconds(NOTICE_SECONDS))
       guard !Task.isCancelled else { return }
-      withMotion(Motion.exit) { shown = nil }
+      MatineeKit.withMotion(MatineeKit.Motion.exit) { shown = nil }
     }
   }
 
@@ -110,11 +120,13 @@ struct PlayerNoticeNote: View {
   }
 
   private func detail(_ note: MatineeCore.Notice) -> String? {
-    switch note.kind {
-    case .burnInFailed: Str.playerNoticeBurnInFailedDetail
-    case .qualityFailed: Str.playerNoticeQualityFailedDetail
-    case .switchFailed: note.detail
-    }
+    let detail: String? =
+      switch note.kind {
+      case .burnInFailed: Str.playerNoticeBurnInFailedDetail
+      case .qualityFailed: Str.playerNoticeQualityFailedDetail
+      case .switchFailed: note.detail
+      }
+    return detail?.isEmpty == false ? detail : nil
   }
 }
 
@@ -128,39 +140,157 @@ private struct NoticeKey: Equatable {
   }
 }
 
-/// The next episode once one ended, starting by itself after the
-/// controller's countdown, or waiting for Play when it was cancelled or
-/// settings turned autoplay off.
-struct UpNext: View {
+/// What the button that skips `kind` says, like "Skip intro".
+func skipSegmentLabel(_ kind: String) -> String {
+  switch kind {
+  case MediaSegmentKind.recap: Str.playerSkipRecap
+  case MediaSegmentKind.credits: Str.playerSkipCredits
+  case MediaSegmentKind.preview: Str.playerSkipPreview
+  default: Str.playerSkipIntro
+  }
+}
+
+/// Skip intro, and the like for the other segments the server found: for
+/// a few seconds once the segment starts, and with the controls after
+/// that, as in Jellyfin. The web's button, `bg-black/70` glass.
+struct SkipSegmentButton: View {
   let controller: PlayerController
-  let upcoming: MediaItem
-  @Environment(\.palette) private var palette
+  let controls: Bool
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   var body: some View {
-    let label = itemLabel(upcoming)
-    let left = controller.nextCountdown
-    VStack(alignment: .leading, spacing: 0) {
-      Text(Str.playerUpNext).textStyle(.labelLarge).foregroundStyle(palette.muted)
-      Text(episodeCode(upcoming).map { Str.mediaCodeTitle($0, label.title) } ?? label.title)
-        .textStyle(.titleMedium)
-        .lineLimit(2)
-        .padding(.top, 4)
-      HStack(spacing: 8) {
-        MatineeButton(height: 40, action: controller.playNext) {
-          LucideIcon(.play, size: 14)
-          Text(left.map(Str.playerUpNextIn) ?? Str.playerPlay).monospacedDigit()
-        }
-        if left != nil {
-          MatineeButton(.frosted, height: 40, action: controller.cancelNext) {
-            Text(Str.playerUpNextCancel)
+    let segment = controller.skippable(controls: controls)
+    ZStack {
+      if let segment {
+        MatineeKit.Pressable(shape: RoundedRectangle.kit(MatineeKit.Radius.lg)) {
+          Task { await controller.skipSegment() }
+        } label: {
+          HStack(spacing: MatineeKit.Space.s2) {
+            Text(skipSegmentLabel(segment.kind))
+            MatineeKit.LucideIcon(.skipForward, size: 16, tint: .white, scales: false)
           }
+          .textStyle(.sm, weight: .medium)
+          .foregroundStyle(.white)
+          .padding(.horizontal, MatineeKit.Space.s4)
+          .frame(minHeight: MatineeKit.TouchTarget)
+          .pictureGlass(in: RoundedRectangle.kit(MatineeKit.Radius.lg), shade: .strong)
+          .kitShadow(.menu)
         }
+        .transition(.opacity)
       }
-      .padding(.top, 12)
     }
-    .padding(16)
-    .frame(maxWidth: 360, alignment: .leading)
-    .background(palette.raised.opacity(0.95), in: RoundedRectangle(cornerRadius: 12))
-    .padding(24)
+    .animation(MatineeKit.Motion.animation(MatineeKit.Motion.enter, reduceMotion: reduceMotion), value: segment)
+  }
+}
+
+/// The next episode while the credits roll or once the file ended, starting
+/// by itself after the controller's countdown, or waiting for Play when
+/// settings turned autoplay off. Hide puts it away until the end. The
+/// web's card: `rounded-xl bg-black/80` glass.
+struct UpNextCard: View {
+  let controller: PlayerController
+  /// Its buttons alone, in a row, where there's no room for the card.
+  var compact = false
+
+  var body: some View {
+    if let offer = controller.upNext {
+      let upcoming = offer.item
+      let label = itemLabel(upcoming)
+      let name = episodeCode(upcoming).map { Str.mediaCodeTitle($0, label.title) } ?? label.title
+      if compact {
+        buttons(offer)
+          .padding(MatineeKit.Space.s2)
+          .pictureGlass(in: RoundedRectangle.kit(MatineeKit.Radius.xl), shade: .solid, ring: 0.1)
+          .kitShadow(.menu)
+          .accessibilityElement(children: .contain)
+          .accessibilityLabel("\(Str.playerUpNext): \(name)")
+      } else {
+        VStack(alignment: .leading, spacing: 0) {
+          Text(Str.playerUpNext).textStyle(.sm).foregroundStyle(.white.opacity(0.7))
+          Text(name)
+            .textStyle(.base, weight: .semibold)
+            .foregroundStyle(.white)
+            .lineLimit(2)
+            .padding(.top, MatineeKit.Space.s1)
+          buttons(offer).padding(.top, MatineeKit.Space.s3)
+        }
+        .padding(MatineeKit.Space.s4)
+        .frame(maxWidth: 352, alignment: .leading)
+        .pictureGlass(in: RoundedRectangle.kit(MatineeKit.Radius.xl), shade: .solid, ring: 0.1)
+        .kitShadow(.menu)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(Str.playerUpNext)
+      }
+    }
+  }
+
+  /// Play, counting down while it does, and Hide while the credits roll or Cancel once it ended.
+  private func buttons(_ offer: UpNextOffer) -> some View {
+    HStack(spacing: MatineeKit.Space.s2) {
+      MatineeKit.MatineeButton(look: .primary, size: .md, action: controller.playNext) {
+        MatineeKit.LucideIcon(.play, size: 16)
+        Text(controller.nextCountdown.map(Str.playerUpNextIn) ?? Str.playerPlay).monospacedDigit()
+      }
+      if !controller.ended {
+        MatineeKit.MatineeButton(Str.playerUpNextHide, look: .secondary, size: .md, action: controller.hideNext)
+      } else if !offer.cancelled {
+        MatineeKit.MatineeButton(Str.playerUpNextCancel, look: .secondary, size: .md, action: controller.cancelNext)
+      }
+    }
+  }
+}
+
+/// Covers the player while it's locked and takes every touch, so none
+/// reaches the controls or the gestures under it. An open lock shows in the
+/// corner, where the lock button was, for a few seconds, and tapping it
+/// unlocks. Once it's gone, a tap on that spot brings it back, and a touch
+/// anywhere else does nothing. With `keep`, as while VoiceOver runs, it stays.
+struct LockedScreen: View {
+  let keep: Bool
+  let onUnlock: () -> Void
+  @State private var shown = true
+  /// Counts taps on the hidden button's spot, each showing it again.
+  @State private var tapped = 0
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+  var body: some View {
+    ZStack(alignment: .topTrailing) {
+      Color.clear
+        .contentShape(Rectangle())
+        .onTapGesture {}
+        .gesture(DragGesture(minimumDistance: 0).onChanged { _ in })
+        .simultaneousGesture(MagnifyGesture().onChanged { _ in })
+        .ignoresSafeArea()
+        .accessibilityHidden(true)
+      // The same size and place as the lock button in the controls' top bar.
+      MatineeKit.Pressable(shape: Circle()) {
+        if shown { onUnlock() } else { tapped += 1 }
+      } label: {
+        MatineeKit.LucideIcon(.lockOpen, size: 22, tint: .white, scales: false)
+          .frame(width: MatineeKit.TouchTarget, height: MatineeKit.TouchTarget)
+          .pictureGlass(in: Circle(), shade: .medium)
+          .opacity(shown ? 1 : 0)
+          .contentShape(Circle())
+      }
+      .accessibilityLabel(Str.playerUnlock)
+      .frame(height: TOP_BAR_HEIGHT)
+      .padding(.horizontal, MatineeKit.Space.s3)
+      .padding(.top, MatineeKit.Space.s2)
+    }
+    .animation(MatineeKit.Motion.animation(MatineeKit.Motion.color, reduceMotion: reduceMotion), value: shown)
+    .accessibilityElement(children: .contain)
+    .accessibilityAddTraits(.isModal)
+    .task(id: TaskKey(tapped: tapped, keep: keep)) {
+      shown = true
+      if keep { return }
+      try? await Task.sleep(for: .milliseconds(HIDE_AFTER_MS))
+      guard !Task.isCancelled else { return }
+      shown = false
+    }
+  }
+
+  private struct TaskKey: Equatable {
+    let tapped: Int
+    let keep: Bool
   }
 }

@@ -19,6 +19,8 @@ packages:
     path: Packages/MatineeMPV
   MatineeCore:
     path: Packages/MatineeCore
+  MatineeKit:
+    path: Packages/MatineeKit
   Nuke:
     url: https://github.com/kean/Nuke
     exactVersion: 13.2.3
@@ -52,6 +54,7 @@ targets:
     dependencies:
       - package: MatineeMPV
       - package: MatineeCore
+      - package: MatineeKit
       - package: Nuke
         product: Nuke
       - package: Nuke
