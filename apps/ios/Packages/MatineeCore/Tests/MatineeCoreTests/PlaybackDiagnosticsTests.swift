@@ -300,7 +300,7 @@ import Testing
       offset: 120.4, start: 0, position: 120.4, audio: audio(), convertedAudio: "opus",
       convertedVideo: nil, standIn: nil, subtitle: subtitle(), subtitleMode: "burn-in",
       subtitleUrl: nil, audioTracks: [audio()], subtitleTracks: [subtitle()], quality: "720p-4",
-      qualities: [], original: true, reasons: ["subtitle", "secret words"], next: nil)
+      qualities: [], original: true, reasons: ["subtitle", "secret words"], next: nil, upNextAt: nil, segments: [])
     var r = report()
     r.attempt(
       Source.of(plan) { "https://media.example.com\($0)" }, plan: plan, reason: .subtitleChange,

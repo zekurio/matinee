@@ -64,7 +64,7 @@ public struct AuthDraft: Equatable, Sendable {
         // The app has no fields for these yet, so a save keeps what the web set.
         signOutRefused: oidc.signOutRefused,
         displayName: oidc.displayName, issuerUrl: oidc.issuerUrl, clientId: oidc.clientId, scopes: oidc.scopes,
-        usernameClaim: oidc.usernameClaim, roleClaim: oidc.roleClaim, groupsClaim: oidc.groupsClaim,
+        usernameClaim: oidc.usernameClaim, nameClaim: oidc.nameClaim, roleClaim: oidc.roleClaim, groupsClaim: oidc.groupsClaim,
         policyClaim: oidc.policyClaim, clientSecret: change))
   }
 

@@ -84,7 +84,7 @@ struct HomeSectionsTest {
   private func featured(kind: String, year: Int?, count: Int, genres: [String] = []) -> FeaturedTitle {
     let title = TitleSummary(
       id: "t", libraryId: "l", kind: kind, name: "Name", year: year, overview: nil,
-      images: .init(poster: nil, backdrop: nil, logo: nil), genres: genres, rating: nil, contentRating: nil,
+      images: .init(poster: nil, backdrop: nil, logo: nil), genres: genres, rating: nil, contentRating: nil, runtimeMinutes: nil,
       originalLanguage: nil, favorite: false, watched: false)
     return FeaturedTitle(title: title, item: Answers.item(), count: count)
   }

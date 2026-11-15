@@ -12,7 +12,7 @@ import SwiftUI
 /// saved from the save bar. The app previews each edit at once, as the web
 /// does, and goes back to the saved accents when the page closes.
 struct ServerAppearanceSettings: View {
-  @State private var loader = Loader<ThemeAccents>()
+  @State private var loader = Loader<Branding>()
   @State private var form: AccentDraft?
   @Environment(\.api) private var api
   @Environment(ThemeStore.self) private var theme
@@ -22,21 +22,22 @@ struct ServerAppearanceSettings: View {
       Str.settingsAdminAppearance, dirty: form?.dirty == true, canSave: form?.valid == true,
       onReset: { form?.reset() },
       onSave: {
-        guard let api, let draft = form?.draft else { return }
-        let accents = try await api.admin.appearance.update(themeAccents: draft)
-        loader.show(accents)
+        guard let api, let draft = form?.draft, var branding = loader.state.value else { return }
+        branding.themeAccents = draft
+        let saved = try await api.admin.branding.update(branding: branding)
+        loader.show(saved)
         // The app shows the new accent at once, as the web does.
-        theme.setAccents(accents)
+        theme.setAccents(saved.themeAccents)
       }
     ) {
       AdminLoaded(loader, failed: Str.webServerAppearanceLoadFailed) { _ in
         if let binding = Binding($form) { AccentForm(form: binding) }
       }
     }
-    .loads(loader) { api in try await api.admin.appearance.get() }
-    .onChange(of: loader.state.value, initial: true) { _, saved in form = saved.map(AccentDraft.init) }
+    .loads(loader) { api in try await api.admin.branding.get() }
+    .onChange(of: loader.state.value, initial: true) { _, saved in form = saved.map { AccentDraft($0.themeAccents) } }
     .onChange(of: form?.valid == true ? form?.draft : nil) { _, draft in if let draft { theme.setAccents(draft) } }
-    .onDisappear { if let saved = loader.state.value { theme.setAccents(saved) } }
+    .onDisappear { if let saved = loader.state.value { theme.setAccents(saved.themeAccents) } }
   }
 }
 

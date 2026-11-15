@@ -6,7 +6,7 @@ import Testing
 private func title(_ id: String, library: String = "movies") -> TitleSummary {
   TitleSummary(
     id: id, libraryId: library, kind: TitleKind.movie, name: id, year: nil, overview: nil,
-    images: Images(poster: nil, backdrop: nil, logo: nil), genres: [], rating: nil, contentRating: nil,
+    images: Images(poster: nil, backdrop: nil, logo: nil), genres: [], rating: nil, contentRating: nil, runtimeMinutes: nil,
     originalLanguage: nil, favorite: false, watched: false)
 }
 

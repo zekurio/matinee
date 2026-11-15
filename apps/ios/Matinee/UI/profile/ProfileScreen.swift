@@ -218,8 +218,17 @@ private struct Favorites: View {
   var body: some View {
     // Offline the whole lists are the server's to send.
     let openAll = offline ? nil : nav.favorites
-    let titles = profile.favorites ?? []
-    let items = profile.favoriteItems ?? []
+    let titles: [TitleSummary] = (profile.favorites ?? []).compactMap {
+      switch $0 {
+      case .movie(let value): value.title
+      case .show(let value): value.title
+      default: nil
+      }
+    }
+    let items: [MediaItem] = (profile.favorites ?? []).compactMap {
+      if case .episode(let value) = $0 { return value.item }
+      return nil
+    }
     if titles.isEmpty && items.isEmpty {
       VStack(alignment: .leading, spacing: 8) {
         SectionTitle(Str.favoritesTitle)

@@ -4,6 +4,10 @@ import Foundation
 public struct ContractApi: Sendable {
     public let transport: ApiTransport
     public init(transport: ApiTransport) { self.transport = transport }
+    public var catalog: CatalogApi { .init(transport: transport) }
+    public var discover: DiscoverApi { .init(transport: transport) }
+    public var requests: RequestsApi { .init(transport: transport) }
+    public var notifications: NotificationsApi { .init(transport: transport) }
     public var auth: AuthApi { .init(transport: transport) }
     public var account: AccountApi { .init(transport: transport) }
     public var libraries: LibrariesApi { .init(transport: transport) }
@@ -14,11 +18,94 @@ public struct ContractApi: Sendable {
     public var media: MediaApi { .init(transport: transport) }
     public var downloads: DownloadsApi { .init(transport: transport) }
     public var playback: PlaybackApi { .init(transport: transport) }
+    public var party: PartyApi { .init(transport: transport) }
     public var home: HomeApi { .init(transport: transport) }
     public var favorites: FavoritesApi { .init(transport: transport) }
     public var profiles: ProfilesApi { .init(transport: transport) }
     public var stats: StatsApi { .init(transport: transport) }
     public var admin: AdminApi { .init(transport: transport) }
+}
+public struct CatalogApi: Sendable {
+    public let transport: ApiTransport
+    public init(transport: ApiTransport) { self.transport = transport }
+    public func search(query: String, kind: String? = nil, libraryId: String? = nil, page: Int? = nil) async throws -> CatalogPage {
+        return try await transport.call(method: "GET", path: ["catalog", "search"], query: [("query", wireText(query)), ("kind", wireText(kind)), ("libraryId", wireText(libraryId)), ("page", wireText(page))], body: nil)
+    }
+    public func details(catalogInput: CatalogInput) async throws -> CatalogTitleDetail {
+        return try await transport.call(method: "POST", path: ["catalog", "details"], query: [], body: try transport.json(catalogInput))
+    }
+    public func related(catalogInput: CatalogInput) async throws -> RelatedRails {
+        return try await transport.call(method: "POST", path: ["catalog", "related"], query: [], body: try transport.json(catalogInput))
+    }
+    public func relatedTitles(ref: CatalogRef, rail: String, libraryId: String? = nil) async throws -> RelatedPage {
+        return try await transport.call(method: "POST", path: ["catalog", "related", "titles"], query: [], body: try transport.json(CatalogRelatedTitlesInput(ref: ref, libraryId: libraryId, rail: rail)))
+    }
+    public func missingSeasons(titleId: String) async throws -> CatalogMissingSeasonsOutput {
+        return try await transport.call(method: "GET", path: ["catalog", "missing-seasons"], query: [("titleId", wireText(titleId))], body: nil)
+    }
+}
+public struct DiscoverApi: Sendable {
+    public let transport: ApiTransport
+    public init(transport: ApiTransport) { self.transport = transport }
+    public func rails() async throws -> DiscoverRails {
+        return try await transport.call(method: "GET", path: ["discover", "rails"], query: [], body: nil)
+    }
+    public func page(rail: DiscoverRail, page: Int? = nil) async throws -> CatalogPage {
+        return try await transport.call(method: "POST", path: ["discover", "page"], query: [], body: try transport.json(DiscoverPageInput(rail: rail, page: page)))
+    }
+    public func browseOptions(kind: String) async throws -> CatalogBrowseOptions {
+        return try await transport.call(method: "GET", path: ["discover", "browse", "options"], query: [("kind", wireText(kind))], body: nil)
+    }
+    public func browse(catalogBrowseInput: CatalogBrowseInput) async throws -> CatalogBrowsePage {
+        return try await transport.call(method: "POST", path: ["discover", "browse"], query: [], body: try transport.json(catalogBrowseInput))
+    }
+}
+public struct RequestsApi: Sendable {
+    public let transport: ApiTransport
+    public init(transport: ApiTransport) { self.transport = transport }
+    public func live(titles: [CatalogInput]) async throws -> AsyncThrowingStream<[RequestsLiveEvent], any Error> {
+        return transport.events(method: "POST", path: ["requests", "live"], query: [], body: try transport.json(RequestsLiveInput(titles: titles)))
+    }
+    public func ask(ref: CatalogRef, libraryId: String? = nil, scope: ShowScope? = nil) async throws -> RequestItem {
+        return try await transport.call(method: "POST", path: ["requests", "ask"], query: [], body: try transport.json(RequestsAskInput(ref: ref, libraryId: libraryId, scope: scope)))
+    }
+    public func addSeasons(id: String, scope: ShowScope) async throws -> RequestItem {
+        return try await transport.call(method: "POST", path: ["requests", "add-seasons"], query: [], body: try transport.json(RequestsAddSeasonsInput(id: id, scope: scope)))
+    }
+    public func cancel(requestId: RequestId) async throws {
+        try await transport.send(method: "POST", path: ["requests", "cancel"], query: [], body: try transport.json(requestId))
+    }
+    public func follow(requestId: RequestId) async throws {
+        try await transport.send(method: "POST", path: ["requests", "follow"], query: [], body: try transport.json(requestId))
+    }
+    public func unfollow(requestId: RequestId) async throws {
+        try await transport.send(method: "POST", path: ["requests", "unfollow"], query: [], body: try transport.json(requestId))
+    }
+    public func mine(cursor: String? = nil, limit: Int? = nil, filter: String? = nil) async throws -> RequestPage {
+        return try await transport.call(method: "GET", path: ["requests", "mine"], query: [("cursor", wireText(cursor)), ("limit", wireText(limit)), ("filter", wireText(filter))], body: nil)
+    }
+}
+public struct NotificationsApi: Sendable {
+    public let transport: ApiTransport
+    public init(transport: ApiTransport) { self.transport = transport }
+    public func list(cursor: String? = nil, limit: Int? = nil) async throws -> NotificationPage {
+        return try await transport.call(method: "GET", path: ["notifications"], query: [("cursor", wireText(cursor)), ("limit", wireText(limit))], body: nil)
+    }
+    public func markRead(ids: [String], all: Bool? = nil) async throws {
+        try await transport.send(method: "POST", path: ["notifications", "read"], query: [], body: try transport.json(NotificationsMarkReadInput(ids: ids, all: all)))
+    }
+    public func unreadCount() async throws -> AsyncThrowingStream<NotificationsUnreadCountEvent, any Error> {
+        return transport.events(method: "GET", path: ["notifications", "unread"], query: [], body: nil)
+    }
+    public func pushPublicKey() async throws -> NotificationsPushPublicKeyOutput {
+        return try await transport.call(method: "GET", path: ["notifications", "push-key"], query: [], body: nil)
+    }
+    public func subscribe(pushSubscriptionInput: PushSubscriptionInput) async throws {
+        try await transport.send(method: "POST", path: ["notifications", "subscribe"], query: [], body: try transport.json(pushSubscriptionInput))
+    }
+    public func unsubscribe(endpoint: String) async throws {
+        try await transport.send(method: "POST", path: ["notifications", "unsubscribe"], query: [], body: try transport.json(NotificationsUnsubscribeInput(endpoint: endpoint)))
+    }
 }
 public struct AuthApi: Sendable {
     public let transport: ApiTransport
@@ -30,6 +117,9 @@ public struct AuthApi: Sendable {
     public var device: AuthDeviceApi { .init(transport: transport) }
     public func config() async throws -> AuthConfig {
         return try await transport.call(method: "GET", path: ["auth", "config"], query: [], body: nil)
+    }
+    public func loginBackdrop() async throws -> LoginBackdropTiles {
+        return try await transport.call(method: "GET", path: ["auth", "login-backdrop"], query: [], body: nil)
     }
     public func session() async throws -> AuthSessionOutput {
         return try await transport.call(method: "GET", path: ["auth", "session"], query: [], body: nil)
@@ -114,6 +204,7 @@ public struct AccountApi: Sendable {
     public var profile: AccountProfileApi { .init(transport: transport) }
     public var avatar: AccountAvatarApi { .init(transport: transport) }
     public var playback: AccountPlaybackApi { .init(transport: transport) }
+    public var library: AccountLibraryApi { .init(transport: transport) }
     public var passkeys: AccountPasskeysApi { .init(transport: transport) }
     public var oidc: AccountOidcApi { .init(transport: transport) }
     public var sessions: AccountSessionsApi { .init(transport: transport) }
@@ -143,6 +234,13 @@ public struct AccountPlaybackApi: Sendable {
     public init(transport: ApiTransport) { self.transport = transport }
     public func setPreferences(playbackPreferences: PlaybackPreferences) async throws -> User {
         return try await transport.call(method: "PUT", path: ["account", "playback"], query: [], body: try transport.json(playbackPreferences))
+    }
+}
+public struct AccountLibraryApi: Sendable {
+    public let transport: ApiTransport
+    public init(transport: ApiTransport) { self.transport = transport }
+    public func setPreferences(showSpecials: Bool? = nil) async throws -> User {
+        return try await transport.call(method: "PATCH", path: ["account", "library"], query: [], body: try transport.json(AccountLibrarySetPreferencesInput(showSpecials: showSpecials)))
     }
 }
 public struct AccountPasskeysApi: Sendable {
@@ -222,11 +320,14 @@ public struct MetadataApi: Sendable {
 public struct TitlesApi: Sendable {
     public let transport: ApiTransport
     public init(transport: ApiTransport) { self.transport = transport }
-    public func list(libraryId: String, query: String? = nil, kind: String? = nil, genre: String? = nil, studio: String? = nil, sort: String? = nil, limit: Int? = nil, offset: Int? = nil) async throws -> TitleList {
-        return try await transport.call(method: "GET", path: ["libraries", wireText(libraryId)!, "titles"], query: [("query", wireText(query)), ("kind", wireText(kind)), ("genre", wireText(genre)), ("studio", wireText(studio)), ("sort", wireText(sort)), ("limit", wireText(limit)), ("offset", wireText(offset))], body: nil)
+    public func list(libraryId: String, query: String? = nil, kind: String? = nil, filters: TitleFilters? = nil, sort: String? = nil, order: String? = nil, limit: Int? = nil, offset: Int? = nil) async throws -> TitleList {
+        return try await transport.call(method: "POST", path: ["libraries", wireText(libraryId)!, "titles", "browse"], query: [], body: try transport.json(TitlesListInput(query: query, kind: kind, filters: filters, sort: sort, order: order, limit: limit, offset: offset)))
     }
-    public func browse(query: String? = nil, kind: String? = nil, genre: String? = nil, studio: String? = nil, sort: String? = nil, limit: Int? = nil, offset: Int? = nil) async throws -> BrowsedTitles {
-        return try await transport.call(method: "GET", path: ["titles"], query: [("query", wireText(query)), ("kind", wireText(kind)), ("genre", wireText(genre)), ("studio", wireText(studio)), ("sort", wireText(sort)), ("limit", wireText(limit)), ("offset", wireText(offset))], body: nil)
+    public func browse(query: String? = nil, kind: String? = nil, filters: TitleFilters? = nil, sort: String? = nil, order: String? = nil, limit: Int? = nil, offset: Int? = nil) async throws -> BrowsedTitles {
+        return try await transport.call(method: "POST", path: ["titles", "browse"], query: [], body: try transport.json(TitlesBrowseInput(query: query, kind: kind, filters: filters, sort: sort, order: order, limit: limit, offset: offset)))
+    }
+    public func filterOptions(libraryId: String? = nil, kind: String? = nil, genre: String? = nil, studio: String? = nil) async throws -> TitleFilterOptions {
+        return try await transport.call(method: "GET", path: ["titles", "filter-options"], query: [("libraryId", wireText(libraryId)), ("kind", wireText(kind)), ("genre", wireText(genre)), ("studio", wireText(studio))], body: nil)
     }
     public func facets(libraryId: String? = nil, kind: String? = nil) async throws -> TitleFacets {
         return try await transport.call(method: "GET", path: ["titles", "facets"], query: [("libraryId", wireText(libraryId)), ("kind", wireText(kind))], body: nil)
@@ -265,8 +366,8 @@ public struct TitlesApi: Sendable {
 public struct PeopleApi: Sendable {
     public let transport: ApiTransport
     public init(transport: ApiTransport) { self.transport = transport }
-    public func get(name: String) async throws -> Person {
-        return try await transport.call(method: "GET", path: ["people", wireText(name)!], query: [], body: nil)
+    public func get(name: String, tmdbId: String? = nil) async throws -> Person {
+        return try await transport.call(method: "GET", path: ["people", wireText(name)!], query: [("tmdbId", wireText(tmdbId))], body: nil)
     }
 }
 public struct SearchApi: Sendable {
@@ -351,6 +452,63 @@ public struct PlaybackApi: Sendable {
         try await transport.send(method: "PUT", path: ["titles", wireText(titleId)!, "watched"], query: [], body: try transport.json(PlaybackSetTitleWatchedInput(season: season, watched: watched, watchedAt: watchedAt)))
     }
 }
+public struct PartyApi: Sendable {
+    public let transport: ApiTransport
+    public init(transport: ApiTransport) { self.transport = transport }
+    public var queue: PartyQueueApi { .init(transport: transport) }
+    public func get() async throws -> Party? {
+        return try await transport.call(method: "GET", path: ["party"], query: [], body: nil)
+    }
+    public func create(name: String? = nil) async throws -> Party {
+        return try await transport.call(method: "POST", path: ["party"], query: [], body: try transport.json(PartyCreateInput(name: name)))
+    }
+    public func follow() async throws -> AsyncThrowingStream<Party?, any Error> {
+        return transport.events(method: "GET", path: ["party", "live"], query: [], body: nil)
+    }
+    public func invite(partyId: String) async throws -> PartyInvite {
+        return try await transport.call(method: "GET", path: ["parties", wireText(partyId)!], query: [], body: nil)
+    }
+    public func join(partyId: String) async throws -> Party {
+        return try await transport.call(method: "POST", path: ["parties", wireText(partyId)!, "join"], query: [], body: nil)
+    }
+    public func leave() async throws {
+        try await transport.send(method: "POST", path: ["party", "leave"], query: [], body: nil)
+    }
+    public func rename(name: String) async throws {
+        try await transport.send(method: "PUT", path: ["party", "name"], query: [], body: try transport.json(PartyRenameInput(name: name)))
+    }
+    public func transfer(userId: String) async throws {
+        try await transport.send(method: "PUT", path: ["party", "owner"], query: [], body: try transport.json(PartyTransferInput(userId: userId)))
+    }
+    public func kick(userId: String) async throws {
+        try await transport.send(method: "DELETE", path: ["party", "members", wireText(userId)!], query: [], body: nil)
+    }
+    public func play(itemId: String, positionSeconds: Double? = nil) async throws {
+        try await transport.send(method: "PUT", path: ["party", "item"], query: [], body: try transport.json(PartyPlayInput(itemId: itemId, positionSeconds: positionSeconds)))
+    }
+    public func control(itemId: String, playing: Bool, positionSeconds: Double) async throws {
+        try await transport.send(method: "PUT", path: ["party", "playback"], query: [], body: try transport.json(PartyControlInput(itemId: itemId, playing: playing, positionSeconds: positionSeconds)))
+    }
+    public func next(itemId: String) async throws {
+        try await transport.send(method: "POST", path: ["party", "next"], query: [], body: try transport.json(PartyNextInput(itemId: itemId)))
+    }
+}
+public struct PartyQueueApi: Sendable {
+    public let transport: ApiTransport
+    public init(transport: ApiTransport) { self.transport = transport }
+    public func add(itemId: String) async throws {
+        try await transport.send(method: "POST", path: ["party", "queue"], query: [], body: try transport.json(PartyQueueAddInput(itemId: itemId)))
+    }
+    public func accept(entryId: String) async throws {
+        try await transport.send(method: "POST", path: ["party", "queue", wireText(entryId)!, "accept"], query: [], body: nil)
+    }
+    public func move(entryId: String, index: Int) async throws {
+        try await transport.send(method: "PUT", path: ["party", "queue", wireText(entryId)!], query: [], body: try transport.json(PartyQueueMoveInput(index: index)))
+    }
+    public func remove(entryId: String) async throws {
+        try await transport.send(method: "DELETE", path: ["party", "queue", wireText(entryId)!], query: [], body: nil)
+    }
+}
 public struct HomeApi: Sendable {
     public let transport: ApiTransport
     public init(transport: ApiTransport) { self.transport = transport }
@@ -367,14 +525,11 @@ public struct HomeApi: Sendable {
 public struct FavoritesApi: Sendable {
     public let transport: ApiTransport
     public init(transport: ApiTransport) { self.transport = transport }
-    public func list(limit: Int? = nil) async throws -> [TitleSummary] {
-        return try await transport.call(method: "GET", path: ["favorites"], query: [("limit", wireText(limit))], body: nil)
-    }
-    public func items(limit: Int? = nil) async throws -> [MediaItem] {
-        return try await transport.call(method: "GET", path: ["favorites", "items"], query: [("limit", wireText(limit))], body: nil)
-    }
     public func set(titleId: String, favorite: Bool) async throws {
         try await transport.send(method: "PUT", path: ["titles", wireText(titleId)!, "favorite"], query: [], body: try transport.json(FavoritesSetInput(favorite: favorite)))
+    }
+    public func setSeason(titleId: String, season: Int, favorite: Bool) async throws {
+        try await transport.send(method: "PUT", path: ["titles", wireText(titleId)!, "season-favorite"], query: [], body: try transport.json(FavoritesSetSeasonInput(season: season, favorite: favorite)))
     }
     public func setItem(itemId: String, favorite: Bool) async throws {
         try await transport.send(method: "PUT", path: ["media", wireText(itemId)!, "favorite"], query: [], body: try transport.json(FavoritesSetItemInput(favorite: favorite)))
@@ -391,6 +546,9 @@ public struct ProfilesApi: Sendable {
     }
     public func recent(username: String, limit: Int? = nil) async throws -> [WatchedEntry]? {
         return try await transport.call(method: "GET", path: ["profiles", wireText(username)!, "recent"], query: [("limit", wireText(limit))], body: nil)
+    }
+    public func favorites(username: String, limit: Int? = nil) async throws -> Favorites? {
+        return try await transport.call(method: "GET", path: ["profiles", wireText(username)!, "favorites"], query: [("limit", wireText(limit))], body: nil)
     }
 }
 public struct StatsApi: Sendable {
@@ -412,11 +570,14 @@ public struct StatsApi: Sendable {
 public struct AdminApi: Sendable {
     public let transport: ApiTransport
     public init(transport: ApiTransport) { self.transport = transport }
-    public var appearance: AdminAppearanceApi { .init(transport: transport) }
+    public var requests: AdminRequestsApi { .init(transport: transport) }
+    public var fulfilment: AdminFulfilmentApi { .init(transport: transport) }
     public var auth: AdminAuthApi { .init(transport: transport) }
+    public var branding: AdminBrandingApi { .init(transport: transport) }
     public var groups: AdminGroupsApi { .init(transport: transport) }
     public var invites: AdminInvitesApi { .init(transport: transport) }
     public var jobs: AdminJobsApi { .init(transport: transport) }
+    public var network: AdminNetworkApi { .init(transport: transport) }
     public var setup: AdminSetupApi { .init(transport: transport) }
     public var transcoding: AdminTranscodingApi { .init(transport: transport) }
     public var trickplay: AdminTrickplayApi { .init(transport: transport) }
@@ -425,14 +586,84 @@ public struct AdminApi: Sendable {
         return try await transport.call(method: "GET", path: ["admin", "browse"], query: [("path", wireText(path))], body: nil)
     }
 }
-public struct AdminAppearanceApi: Sendable {
+public struct AdminRequestsApi: Sendable {
     public let transport: ApiTransport
     public init(transport: ApiTransport) { self.transport = transport }
-    public func get() async throws -> ThemeAccents {
-        return try await transport.call(method: "GET", path: ["admin", "appearance"], query: [], body: nil)
+    public func queue(cursor: String? = nil, limit: Int? = nil) async throws -> RequestQueue {
+        return try await transport.call(method: "GET", path: ["admin", "requests"], query: [("cursor", wireText(cursor)), ("limit", wireText(limit))], body: nil)
     }
-    public func update(themeAccents: ThemeAccents) async throws -> ThemeAccents {
-        return try await transport.call(method: "PUT", path: ["admin", "appearance"], query: [], body: try transport.json(themeAccents))
+    public func live(cursor: String? = nil, limit: Int? = nil) async throws -> AsyncThrowingStream<RequestQueue, any Error> {
+        return transport.events(method: "GET", path: ["admin", "requests", "live"], query: [("cursor", wireText(cursor)), ("limit", wireText(limit))], body: nil)
+    }
+    public func approve(id: String, libraryId: String? = nil) async throws {
+        try await transport.send(method: "POST", path: ["admin", "requests", "approve"], query: [], body: try transport.json(AdminRequestsApproveInput(id: id, libraryId: libraryId)))
+    }
+    public func approveAll(ids: [String]) async throws {
+        try await transport.send(method: "POST", path: ["admin", "requests", "approve-all"], query: [], body: try transport.json(AdminRequestsApproveAllInput(ids: ids)))
+    }
+    public func decline(id: String, reason: String, note: String?) async throws {
+        try await transport.send(method: "POST", path: ["admin", "requests", "decline"], query: [], body: try transport.json(AdminRequestsDeclineInput(id: id, reason: reason, note: note)))
+    }
+    public func giveUp(id: String, note: String?) async throws {
+        try await transport.send(method: "POST", path: ["admin", "requests", "give-up"], query: [], body: try transport.json(AdminRequestsGiveUpInput(id: id, note: note)))
+    }
+    public func allowAgain(requestId: RequestId) async throws {
+        try await transport.send(method: "POST", path: ["admin", "requests", "allow-again"], query: [], body: try transport.json(requestId))
+    }
+    public func addAfterAll(requestId: RequestId) async throws {
+        try await transport.send(method: "POST", path: ["admin", "requests", "add-after-all"], query: [], body: try transport.json(requestId))
+    }
+    public func retry(requestId: RequestId) async throws {
+        try await transport.send(method: "POST", path: ["admin", "requests", "retry"], query: [], body: try transport.json(requestId))
+    }
+}
+public struct AdminFulfilmentApi: Sendable {
+    public let transport: ApiTransport
+    public init(transport: ApiTransport) { self.transport = transport }
+    public func sources() async throws -> [FulfilmentSourceDescription] {
+        return try await transport.call(method: "GET", path: ["admin", "fulfilment", "sources"], query: [], body: nil)
+    }
+    public func connections() async throws -> [FulfilmentConnection] {
+        return try await transport.call(method: "GET", path: ["admin", "fulfilment", "connections"], query: [], body: nil)
+    }
+    public func create(fulfilmentConnectionInput: FulfilmentConnectionInput) async throws -> FulfilmentConnection {
+        return try await transport.call(method: "POST", path: ["admin", "fulfilment", "connections"], query: [], body: try transport.json(fulfilmentConnectionInput))
+    }
+    public func update(id: String, name: String, slug: String, source: String, settings: [String: JSONValue], options: [String: JSONValue]? = nil, defaultFor: [String]? = nil, folderLibraries: [String: String]? = nil, apiKey: Explicit<String> = .omitted) async throws -> FulfilmentConnection {
+        return try await transport.call(method: "PUT", path: ["admin", "fulfilment", "connections", wireText(id)!], query: [], body: try transport.json(AdminFulfilmentUpdateInput(name: name, slug: slug, source: source, settings: settings, options: options, defaultFor: defaultFor, folderLibraries: folderLibraries, apiKey: apiKey)))
+    }
+    public func remove(id: String) async throws {
+        try await transport.send(method: "DELETE", path: ["admin", "fulfilment", "connections", wireText(id)!], query: [], body: nil)
+    }
+    public func test(id: String) async throws {
+        try await transport.send(method: "POST", path: ["admin", "fulfilment", "test"], query: [], body: try transport.json(AdminFulfilmentTestInput(id: id)))
+    }
+    public func options(source: String, slug: String, settings: [String: JSONValue], id: String? = nil, apiKey: String? = nil) async throws -> FulfilmentOptions {
+        return try await transport.call(method: "POST", path: ["admin", "fulfilment", "options"], query: [], body: try transport.json(AdminFulfilmentOptionsInput(id: id, source: source, slug: slug, settings: settings, apiKey: apiKey)))
+    }
+    public func landing(kind: String, folder: String) async throws -> AdminFulfilmentLandingOutput {
+        return try await transport.call(method: "GET", path: ["admin", "fulfilment", "landing"], query: [("kind", wireText(kind)), ("folder", wireText(folder))], body: nil)
+    }
+    public func rules(connectionId: String) async throws -> [FulfilmentRule] {
+        return try await transport.call(method: "GET", path: ["admin", "fulfilment", "connections", wireText(connectionId)!, "rules"], query: [], body: nil)
+    }
+    public func createRule(connectionId: String, settings: [String: JSONValue], users: [String]? = nil, genres: [Int]? = nil, languages: [String]? = nil, keywords: [FulfilmentKeyword]? = nil, folderLibraryId: Explicit<String> = .omitted) async throws -> FulfilmentRule {
+        return try await transport.call(method: "POST", path: ["admin", "fulfilment", "connections", wireText(connectionId)!, "rules"], query: [], body: try transport.json(AdminFulfilmentCreateRuleInput(users: users, genres: genres, languages: languages, keywords: keywords, settings: settings, folderLibraryId: folderLibraryId)))
+    }
+    public func updateRule(id: String, connectionId: String, settings: [String: JSONValue], users: [String]? = nil, genres: [Int]? = nil, languages: [String]? = nil, keywords: [FulfilmentKeyword]? = nil, folderLibraryId: Explicit<String> = .omitted) async throws -> FulfilmentRule {
+        return try await transport.call(method: "PUT", path: ["admin", "fulfilment", "rules", wireText(id)!], query: [], body: try transport.json(AdminFulfilmentUpdateRuleInput(connectionId: connectionId, users: users, genres: genres, languages: languages, keywords: keywords, settings: settings, folderLibraryId: folderLibraryId)))
+    }
+    public func removeRule(id: String) async throws {
+        try await transport.send(method: "DELETE", path: ["admin", "fulfilment", "rules", wireText(id)!], query: [], body: nil)
+    }
+    public func reorderRules(connectionId: String, ids: [String]) async throws -> [FulfilmentRule] {
+        return try await transport.call(method: "PUT", path: ["admin", "fulfilment", "connections", wireText(connectionId)!, "rules", "order"], query: [], body: try transport.json(AdminFulfilmentReorderRulesInput(ids: ids)))
+    }
+    public func ruleChoices(kind: String) async throws -> FulfilmentRuleChoices {
+        return try await transport.call(method: "GET", path: ["admin", "fulfilment", "rule-choices"], query: [("kind", wireText(kind))], body: nil)
+    }
+    public func keywords(query: String) async throws -> [FulfilmentKeyword] {
+        return try await transport.call(method: "GET", path: ["admin", "fulfilment", "keywords"], query: [("query", wireText(query))], body: nil)
     }
 }
 public struct AdminAuthApi: Sendable {
@@ -443,6 +674,19 @@ public struct AdminAuthApi: Sendable {
     }
     public func update(authSettingsInput: AuthSettingsInput) async throws -> AdminAuthSettings {
         return try await transport.call(method: "PUT", path: ["admin", "auth"], query: [], body: try transport.json(authSettingsInput))
+    }
+}
+public struct AdminBrandingApi: Sendable {
+    public let transport: ApiTransport
+    public init(transport: ApiTransport) { self.transport = transport }
+    public func get() async throws -> Branding {
+        return try await transport.call(method: "GET", path: ["admin", "branding"], query: [], body: nil)
+    }
+    public func update(branding: Branding) async throws -> Branding {
+        return try await transport.call(method: "PUT", path: ["admin", "branding"], query: [], body: try transport.json(branding))
+    }
+    public func preview(artwork: String) async throws -> LoginBackdropTiles {
+        return try await transport.call(method: "GET", path: ["admin", "branding", "login-backdrop"], query: [("artwork", wireText(artwork))], body: nil)
     }
 }
 public struct AdminGroupsApi: Sendable {
@@ -500,6 +744,16 @@ public struct AdminJobsApi: Sendable {
     }
     public func cancelTask(task: String) async throws -> ScheduledTask {
         return try await transport.call(method: "POST", path: ["admin", "tasks", wireText(task)!, "cancel"], query: [], body: nil)
+    }
+}
+public struct AdminNetworkApi: Sendable {
+    public let transport: ApiTransport
+    public init(transport: ApiTransport) { self.transport = transport }
+    public func get() async throws -> AdminNetworkSettings {
+        return try await transport.call(method: "GET", path: ["admin", "network"], query: [], body: nil)
+    }
+    public func update(networkSettings: NetworkSettings) async throws -> AdminNetworkSettings {
+        return try await transport.call(method: "PUT", path: ["admin", "network"], query: [], body: try transport.json(networkSettings))
     }
 }
 public struct AdminSetupApi: Sendable {

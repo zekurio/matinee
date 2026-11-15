@@ -8,10 +8,10 @@ struct MetadataTests {
     Title(
       id: "t", libraryId: "l", kind: TitleKind.movie, name: "The Matrix", year: 1999, overview: nil,
       images: Images(poster: nil, backdrop: nil, logo: nil), genres: [], rating: nil,
-      contentRating: nil, originalLanguage: nil, favorite: false, watched: false,
-      originalName: nil, tagline: nil, releaseDate: nil, status: nil, runtimeMinutes: nil,
+      contentRating: nil, runtimeMinutes: nil, originalLanguage: nil, favorite: false, watched: false,
+      originalName: nil, tagline: nil, releaseDate: nil, status: nil,
       path: "The Matrix (1999)", provider: provider, providerId: providerId, externalIds: [:],
-      refreshedAt: nil, studios: [], credits: [], trailers: [], itemCount: 1, seasons: [], next: nil)
+      refreshedAt: nil, studios: [], credits: [], trailers: [], itemCount: 1, seasons: [], specials: nil, next: nil)
   }
 
   private func match(_ id: String, provider: String = "tmdb") -> MetadataMatch {

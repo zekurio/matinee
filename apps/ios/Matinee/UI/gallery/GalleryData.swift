@@ -33,7 +33,7 @@
     ) -> TitleSummary {
       TitleSummary(
         id: "sample-\(name)", libraryId: "sample", kind: kind, name: name, year: year, overview: nil,
-        images: Images(poster: nil, backdrop: nil, logo: nil), genres: [], rating: nil, contentRating: nil,
+        images: Images(poster: nil, backdrop: nil, logo: nil), genres: [], rating: nil, contentRating: nil, runtimeMinutes: nil,
         originalLanguage: nil, favorite: false, watched: watched)
     }
 
@@ -81,7 +81,7 @@
         added: added.map {
           ShelfAdditions(
             count: $0, item: episode,
-            season: Season(number: 2, name: "Season 2", overview: nil, poster: nil, itemCount: 3, watchedCount: 0))
+            season: Season(number: 2, name: "Season 2", overview: nil, poster: nil, itemCount: 3, watchedCount: 0, favorite: false))
         })
     }
   }

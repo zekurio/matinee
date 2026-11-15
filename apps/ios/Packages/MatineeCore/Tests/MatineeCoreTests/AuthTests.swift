@@ -14,9 +14,9 @@ import Testing
 }
 let authUser = User(
   id: "one", username: "viewer", displayName: nil, role: "user", avatarId: nil,
-  avatarSource: "none", playback: nil, sharing: .init(favorites: false, stats: false))
+  avatarSource: "none", playback: nil, library: .init(showSpecials: false), sharing: .init(favorites: false, stats: false))
 let authConfig =
-  #"{"setup":null,"passkeys":true,"passkeySignUp":false,"oidc":null,"themeAccents":{"light":null,"dark":null}}"#
+  #"{"setup":null,"passkeys":true,"passkeySignUp":false,"oidc":null,"themeAccents":{"light":null,"dark":null},"loginBackdrop":{"enabled":false,"artwork":"","blur":0,"fade":0}}"#
 
 final class AuthProtocol: URLProtocol, @unchecked Sendable {
   static let lock = NSLock()

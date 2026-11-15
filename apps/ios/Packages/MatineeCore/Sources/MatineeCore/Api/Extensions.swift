@@ -6,7 +6,7 @@ extension Title {
   public var summary: TitleSummary {
     TitleSummary(
       id: id, libraryId: libraryId, kind: kind, name: name, year: year, overview: overview,
-      images: images, genres: genres, rating: rating, contentRating: contentRating,
+      images: images, genres: genres, rating: rating, contentRating: contentRating, runtimeMinutes: runtimeMinutes,
       originalLanguage: originalLanguage, favorite: favorite, watched: watched)
   }
 }

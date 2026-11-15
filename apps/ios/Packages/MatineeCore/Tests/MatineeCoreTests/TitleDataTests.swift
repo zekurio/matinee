@@ -16,13 +16,13 @@ struct TitleDataTests {
     Title(
       id: "t", libraryId: "l", kind: kind, name: "Show", year: nil, overview: nil,
       images: Images(poster: nil, backdrop: nil, logo: nil), genres: [], rating: nil,
-      contentRating: nil, originalLanguage: nil, favorite: false, watched: false,
-      originalName: nil, tagline: nil, releaseDate: nil, status: nil, runtimeMinutes: nil,
+      contentRating: nil, runtimeMinutes: nil, originalLanguage: nil, favorite: false, watched: false,
+      originalName: nil, tagline: nil, releaseDate: nil, status: nil,
       path: "Show", provider: nil, providerId: nil, externalIds: [:], refreshedAt: nil,
       studios: [], credits: [], trailers: [], itemCount: 3,
       seasons: (0..<seasons).map {
-        Season(number: $0 + 1, name: "S", overview: nil, poster: nil, itemCount: 3, watchedCount: 0)
-      }, next: next)
+        Season(number: $0 + 1, name: "S", overview: nil, poster: nil, itemCount: 3, watchedCount: 0, favorite: false)
+      }, specials: nil, next: next)
   }
 
   @Test func playStartsTheEpisodeInProgressThenTheFirstUnwatched() {
@@ -54,10 +54,10 @@ struct TitleDataTests {
 
   @Test func creditsAreNamedOnceInOrder() {
     let credits = [
-      Credit(kind: CreditKind.director, name: "B", role: nil, photo: nil),
-      Credit(kind: CreditKind.actor, name: "A", role: "Neo", photo: nil),
-      Credit(kind: CreditKind.director, name: "A", role: nil, photo: nil),
-      Credit(kind: CreditKind.director, name: "B", role: nil, photo: nil),
+      Credit(kind: CreditKind.director, name: "B", role: nil, photo: nil, tmdbId: nil),
+      Credit(kind: CreditKind.actor, name: "A", role: "Neo", photo: nil, tmdbId: nil),
+      Credit(kind: CreditKind.director, name: "A", role: nil, photo: nil, tmdbId: nil),
+      Credit(kind: CreditKind.director, name: "B", role: nil, photo: nil, tmdbId: nil),
     ]
     #expect(creditNames(credits, CreditKind.director) == ["B", "A"])
     #expect(creditNames(credits, CreditKind.writer).isEmpty)

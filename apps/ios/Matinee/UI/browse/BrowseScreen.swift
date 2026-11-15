@@ -50,7 +50,7 @@ struct BrowseScreen: View {
         // The fixtures' genres and studios aren't the server's: show its titles.
         if BrowseFixtures.on { (genre, studio) = (nil, nil) }
       #endif
-      let page = try await api.titles.browse(kind: kind, genre: genre, studio: studio, limit: limit, offset: offset)
+      let page = try await api.titles.browse(kind: kind, filters: TitleFilters(genres: genre.map { [$0] }, studios: studio.map { [$0] }), limit: limit, offset: offset)
       return TitleList(items: page.items, total: page.total)
     }
     .topBar(genre ?? studio ?? "")

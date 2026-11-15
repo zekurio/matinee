@@ -14,6 +14,7 @@ private let LIMIT = 200
 struct FavoritesScreen: View {
   @State private var titles = Loader<[TitleSummary]>()
   @State private var items = Loader<[MediaItem]>()
+  @Environment(MatineeSession.self) private var session
   @Environment(ViewerState.self) private var viewer: ViewerState?
 
   var body: some View {
@@ -32,8 +33,15 @@ struct FavoritesScreen: View {
       }
     }
     .topBar(Str.favoritesTitle)
-    .loads(titles) { api in try await api.favorites.list(limit: LIMIT) }
-    .loads(items) { api in try await api.favorites.items(limit: LIMIT) }
+    .loads(titles) { api in
+      guard let username = await session.lastUser?.username,
+        let saved = try await api.profiles.favorites(username: username, limit: LIMIT) else { return [] }
+      return saved.shows + saved.movies
+    }
+    .loads(items) { api in
+      guard let username = await session.lastUser?.username else { return [] }
+      return try await api.profiles.favorites(username: username, limit: LIMIT)?.episodes ?? []
+    }
   }
 
   private func list(shows: [TitleSummary], episodes: [MediaItem]) -> some View {

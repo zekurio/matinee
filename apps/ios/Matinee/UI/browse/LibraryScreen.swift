@@ -48,7 +48,7 @@ struct LibraryScreen: View {
     }
     .pages(pages, key: filters.key) { api, offset, limit in
       try await api.titles.list(
-        libraryId: id, query: settled.isEmpty ? nil : settled, genre: genre, sort: sort, limit: limit,
+        libraryId: id, query: settled.isEmpty ? nil : settled, filters: genre.map { TitleFilters(genres: [$0]) }, sort: sort, limit: limit,
         offset: offset)
     }
     .loads(libraries) { api in try await api.libraries.list() }

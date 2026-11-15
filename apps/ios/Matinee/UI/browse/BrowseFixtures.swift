@@ -43,7 +43,7 @@
       let credits = titles.enumerated().map { index, title in
         PersonCredit(title: title, kind: kind, role: index == 0 && kind == CreditKind.actor ? "Neo" : nil)
       }
-      return Person(name: name, photo: nil, kind: kind, titleCount: credits.count, credits: credits)
+      return Person(name: name, photo: nil, kind: kind, titleCount: credits.count, credits: credits, profile: nil, catalog: [], stale: false)
     }
   }
 #endif

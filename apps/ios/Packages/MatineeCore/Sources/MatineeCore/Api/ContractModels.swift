@@ -2,6 +2,2632 @@
 import Foundation
 
 // Enums stay strings so newer server values decode. Unknown union tags fail, as on Android.
+public enum TitleKind {
+    public static let movie = "movie"
+    public static let show = "show"
+    public static let knownValues = ["movie", "show"]
+}
+
+public enum MetadataProviderId {
+    public static let tmdb = "tmdb"
+    public static let tvdb = "tvdb"
+    public static let knownValues = ["tmdb", "tvdb"]
+}
+
+public struct CatalogRef: Codable, Sendable, Hashable {
+    public var kind: String
+    public var provider: String
+    public var providerId: String
+    public init(kind: String, provider: String, providerId: String) {
+        self.kind = kind
+        self.provider = provider
+        self.providerId = providerId
+    }
+    private enum CodingKeys: String, CodingKey {
+        case kind = "kind"
+        case provider = "provider"
+        case providerId = "providerId"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.kind = try c.decode(String.self, forKey: .kind)
+        self.provider = try c.decode(String.self, forKey: .provider)
+        self.providerId = try c.decode(String.self, forKey: .providerId)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.kind, forKey: .kind)
+        try c.encode(self.provider, forKey: .provider)
+        try c.encode(self.providerId, forKey: .providerId)
+    }
+}
+
+public enum DeclineReason {
+    public static let alreadyHere = "alreadyHere"
+    public static let notForServer = "notForServer"
+    public static let notFound = "notFound"
+    public static let knownValues = ["alreadyHere", "notForServer", "notFound"]
+}
+
+public enum WaitingDeclineReason {
+    public static let alreadyHere = "alreadyHere"
+    public static let notForServer = "notForServer"
+    public static let knownValues = ["alreadyHere", "notForServer"]
+}
+
+public struct RequestQuota: Codable, Sendable, Hashable {
+    public var titles: Int
+    public var days: Int
+    public init(titles: Int, days: Int) {
+        self.titles = titles
+        self.days = days
+    }
+    private enum CodingKeys: String, CodingKey {
+        case titles = "titles"
+        case days = "days"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.titles = try c.decode(Int.self, forKey: .titles)
+        self.days = try c.decode(Int.self, forKey: .days)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.titles, forKey: .titles)
+        try c.encode(self.days, forKey: .days)
+    }
+}
+
+public struct Availability: Codable, Sendable, Hashable {
+    public var state: String
+    public var action: String?
+    public var progress: Double?
+    public var etaSeconds: Int?
+    public var releaseDate: String?
+    public var stillLooking: Bool
+    public var reason: Availability.Reason?
+    public var askedBySelf: Bool
+    public var following: Bool
+    public var requestId: String?
+    public var others: Availability.Others
+    public var limit: Availability.Limit?
+    public var libraryTitleId: String?
+    public var disabledReason: String?
+    public init(state: String, action: String?, progress: Double?, etaSeconds: Int?, releaseDate: String?, stillLooking: Bool, reason: Availability.Reason?, askedBySelf: Bool, following: Bool, requestId: String?, others: Availability.Others, limit: Availability.Limit?, libraryTitleId: String?, disabledReason: String?) {
+        self.state = state
+        self.action = action
+        self.progress = progress
+        self.etaSeconds = etaSeconds
+        self.releaseDate = releaseDate
+        self.stillLooking = stillLooking
+        self.reason = reason
+        self.askedBySelf = askedBySelf
+        self.following = following
+        self.requestId = requestId
+        self.others = others
+        self.limit = limit
+        self.libraryTitleId = libraryTitleId
+        self.disabledReason = disabledReason
+    }
+    private enum CodingKeys: String, CodingKey {
+        case state = "state"
+        case action = "action"
+        case progress = "progress"
+        case etaSeconds = "etaSeconds"
+        case releaseDate = "releaseDate"
+        case stillLooking = "stillLooking"
+        case reason = "reason"
+        case askedBySelf = "askedBySelf"
+        case following = "following"
+        case requestId = "requestId"
+        case others = "others"
+        case limit = "limit"
+        case libraryTitleId = "libraryTitleId"
+        case disabledReason = "disabledReason"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.state = try c.decode(String.self, forKey: .state)
+        self.action = try c.decodeIfPresent(String.self, forKey: .action)
+        self.progress = try c.decodeIfPresent(Double.self, forKey: .progress)
+        self.etaSeconds = try c.decodeIfPresent(Int.self, forKey: .etaSeconds)
+        self.releaseDate = try c.decodeIfPresent(String.self, forKey: .releaseDate)
+        self.stillLooking = try c.decode(Bool.self, forKey: .stillLooking)
+        self.reason = try c.decodeIfPresent(Availability.Reason.self, forKey: .reason)
+        self.askedBySelf = try c.decode(Bool.self, forKey: .askedBySelf)
+        self.following = try c.decode(Bool.self, forKey: .following)
+        self.requestId = try c.decodeIfPresent(String.self, forKey: .requestId)
+        self.others = try c.decode(Availability.Others.self, forKey: .others)
+        self.limit = try c.decodeIfPresent(Availability.Limit.self, forKey: .limit)
+        self.libraryTitleId = try c.decodeIfPresent(String.self, forKey: .libraryTitleId)
+        self.disabledReason = try c.decodeIfPresent(String.self, forKey: .disabledReason)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.state, forKey: .state)
+        try c.encode(self.action, forKey: .action)
+        try c.encode(self.progress, forKey: .progress)
+        try c.encode(self.etaSeconds, forKey: .etaSeconds)
+        try c.encode(self.releaseDate, forKey: .releaseDate)
+        try c.encode(self.stillLooking, forKey: .stillLooking)
+        try c.encode(self.reason, forKey: .reason)
+        try c.encode(self.askedBySelf, forKey: .askedBySelf)
+        try c.encode(self.following, forKey: .following)
+        try c.encode(self.requestId, forKey: .requestId)
+        try c.encode(self.others, forKey: .others)
+        try c.encode(self.limit, forKey: .limit)
+        try c.encode(self.libraryTitleId, forKey: .libraryTitleId)
+        try c.encode(self.disabledReason, forKey: .disabledReason)
+    }
+    public struct Reason: Codable, Sendable, Hashable {
+        public var kind: String
+        public var code: String?
+        public var note: String?
+        public init(kind: String, code: String?, note: String?) {
+            self.kind = kind
+            self.code = code
+            self.note = note
+        }
+        private enum CodingKeys: String, CodingKey {
+            case kind = "kind"
+            case code = "code"
+            case note = "note"
+        }
+        public init(from decoder: any Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            self.kind = try c.decode(String.self, forKey: .kind)
+            self.code = try c.decodeIfPresent(String.self, forKey: .code)
+            self.note = try c.decodeIfPresent(String.self, forKey: .note)
+        }
+        public func encode(to encoder: any Encoder) throws {
+            var c = encoder.container(keyedBy: CodingKeys.self)
+            try c.encode(self.kind, forKey: .kind)
+            try c.encode(self.code, forKey: .code)
+            try c.encode(self.note, forKey: .note)
+        }
+    }
+    public struct Others: Codable, Sendable, Hashable {
+        public var count: Int
+        public var names: [String]
+        public init(count: Int, names: [String]) {
+            self.count = count
+            self.names = names
+        }
+        private enum CodingKeys: String, CodingKey {
+            case count = "count"
+            case names = "names"
+        }
+        public init(from decoder: any Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            self.count = try c.decode(Int.self, forKey: .count)
+            self.names = try c.decode([String].self, forKey: .names)
+        }
+        public func encode(to encoder: any Encoder) throws {
+            var c = encoder.container(keyedBy: CodingKeys.self)
+            try c.encode(self.count, forKey: .count)
+            try c.encode(self.names, forKey: .names)
+        }
+    }
+    public struct Limit: Codable, Sendable, Hashable {
+        public var left: Int
+        public var resetsAt: String
+        public init(left: Int, resetsAt: String) {
+            self.left = left
+            self.resetsAt = resetsAt
+        }
+        private enum CodingKeys: String, CodingKey {
+            case left = "left"
+            case resetsAt = "resetsAt"
+        }
+        public init(from decoder: any Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            self.left = try c.decode(Int.self, forKey: .left)
+            self.resetsAt = try c.decode(String.self, forKey: .resetsAt)
+        }
+        public func encode(to encoder: any Encoder) throws {
+            var c = encoder.container(keyedBy: CodingKeys.self)
+            try c.encode(self.left, forKey: .left)
+            try c.encode(self.resetsAt, forKey: .resetsAt)
+        }
+    }
+}
+
+public struct SeasonAvailability: Codable, Sendable, Hashable {
+    public var state: String
+    public var action: String?
+    public var progress: Double?
+    public var etaSeconds: Int?
+    public var releaseDate: String?
+    public var stillLooking: Bool
+    public var reason: SeasonAvailability.Reason?
+    public var askedBySelf: Bool
+    public var following: Bool
+    public var requestId: String?
+    public var others: SeasonAvailability.Others
+    public var limit: SeasonAvailability.Limit?
+    public var libraryTitleId: String?
+    public var disabledReason: String?
+    public var number: Int
+    public var episodesHere: Int
+    public var episodesAired: Int
+    public init(state: String, action: String?, progress: Double?, etaSeconds: Int?, releaseDate: String?, stillLooking: Bool, reason: SeasonAvailability.Reason?, askedBySelf: Bool, following: Bool, requestId: String?, others: SeasonAvailability.Others, limit: SeasonAvailability.Limit?, libraryTitleId: String?, disabledReason: String?, number: Int, episodesHere: Int, episodesAired: Int) {
+        self.state = state
+        self.action = action
+        self.progress = progress
+        self.etaSeconds = etaSeconds
+        self.releaseDate = releaseDate
+        self.stillLooking = stillLooking
+        self.reason = reason
+        self.askedBySelf = askedBySelf
+        self.following = following
+        self.requestId = requestId
+        self.others = others
+        self.limit = limit
+        self.libraryTitleId = libraryTitleId
+        self.disabledReason = disabledReason
+        self.number = number
+        self.episodesHere = episodesHere
+        self.episodesAired = episodesAired
+    }
+    private enum CodingKeys: String, CodingKey {
+        case state = "state"
+        case action = "action"
+        case progress = "progress"
+        case etaSeconds = "etaSeconds"
+        case releaseDate = "releaseDate"
+        case stillLooking = "stillLooking"
+        case reason = "reason"
+        case askedBySelf = "askedBySelf"
+        case following = "following"
+        case requestId = "requestId"
+        case others = "others"
+        case limit = "limit"
+        case libraryTitleId = "libraryTitleId"
+        case disabledReason = "disabledReason"
+        case number = "number"
+        case episodesHere = "episodesHere"
+        case episodesAired = "episodesAired"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.state = try c.decode(String.self, forKey: .state)
+        self.action = try c.decodeIfPresent(String.self, forKey: .action)
+        self.progress = try c.decodeIfPresent(Double.self, forKey: .progress)
+        self.etaSeconds = try c.decodeIfPresent(Int.self, forKey: .etaSeconds)
+        self.releaseDate = try c.decodeIfPresent(String.self, forKey: .releaseDate)
+        self.stillLooking = try c.decode(Bool.self, forKey: .stillLooking)
+        self.reason = try c.decodeIfPresent(SeasonAvailability.Reason.self, forKey: .reason)
+        self.askedBySelf = try c.decode(Bool.self, forKey: .askedBySelf)
+        self.following = try c.decode(Bool.self, forKey: .following)
+        self.requestId = try c.decodeIfPresent(String.self, forKey: .requestId)
+        self.others = try c.decode(SeasonAvailability.Others.self, forKey: .others)
+        self.limit = try c.decodeIfPresent(SeasonAvailability.Limit.self, forKey: .limit)
+        self.libraryTitleId = try c.decodeIfPresent(String.self, forKey: .libraryTitleId)
+        self.disabledReason = try c.decodeIfPresent(String.self, forKey: .disabledReason)
+        self.number = try c.decode(Int.self, forKey: .number)
+        self.episodesHere = try c.decode(Int.self, forKey: .episodesHere)
+        self.episodesAired = try c.decode(Int.self, forKey: .episodesAired)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.state, forKey: .state)
+        try c.encode(self.action, forKey: .action)
+        try c.encode(self.progress, forKey: .progress)
+        try c.encode(self.etaSeconds, forKey: .etaSeconds)
+        try c.encode(self.releaseDate, forKey: .releaseDate)
+        try c.encode(self.stillLooking, forKey: .stillLooking)
+        try c.encode(self.reason, forKey: .reason)
+        try c.encode(self.askedBySelf, forKey: .askedBySelf)
+        try c.encode(self.following, forKey: .following)
+        try c.encode(self.requestId, forKey: .requestId)
+        try c.encode(self.others, forKey: .others)
+        try c.encode(self.limit, forKey: .limit)
+        try c.encode(self.libraryTitleId, forKey: .libraryTitleId)
+        try c.encode(self.disabledReason, forKey: .disabledReason)
+        try c.encode(self.number, forKey: .number)
+        try c.encode(self.episodesHere, forKey: .episodesHere)
+        try c.encode(self.episodesAired, forKey: .episodesAired)
+    }
+    public struct Reason: Codable, Sendable, Hashable {
+        public var kind: String
+        public var code: String?
+        public var note: String?
+        public init(kind: String, code: String?, note: String?) {
+            self.kind = kind
+            self.code = code
+            self.note = note
+        }
+        private enum CodingKeys: String, CodingKey {
+            case kind = "kind"
+            case code = "code"
+            case note = "note"
+        }
+        public init(from decoder: any Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            self.kind = try c.decode(String.self, forKey: .kind)
+            self.code = try c.decodeIfPresent(String.self, forKey: .code)
+            self.note = try c.decodeIfPresent(String.self, forKey: .note)
+        }
+        public func encode(to encoder: any Encoder) throws {
+            var c = encoder.container(keyedBy: CodingKeys.self)
+            try c.encode(self.kind, forKey: .kind)
+            try c.encode(self.code, forKey: .code)
+            try c.encode(self.note, forKey: .note)
+        }
+    }
+    public struct Others: Codable, Sendable, Hashable {
+        public var count: Int
+        public var names: [String]
+        public init(count: Int, names: [String]) {
+            self.count = count
+            self.names = names
+        }
+        private enum CodingKeys: String, CodingKey {
+            case count = "count"
+            case names = "names"
+        }
+        public init(from decoder: any Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            self.count = try c.decode(Int.self, forKey: .count)
+            self.names = try c.decode([String].self, forKey: .names)
+        }
+        public func encode(to encoder: any Encoder) throws {
+            var c = encoder.container(keyedBy: CodingKeys.self)
+            try c.encode(self.count, forKey: .count)
+            try c.encode(self.names, forKey: .names)
+        }
+    }
+    public struct Limit: Codable, Sendable, Hashable {
+        public var left: Int
+        public var resetsAt: String
+        public init(left: Int, resetsAt: String) {
+            self.left = left
+            self.resetsAt = resetsAt
+        }
+        private enum CodingKeys: String, CodingKey {
+            case left = "left"
+            case resetsAt = "resetsAt"
+        }
+        public init(from decoder: any Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            self.left = try c.decode(Int.self, forKey: .left)
+            self.resetsAt = try c.decode(String.self, forKey: .resetsAt)
+        }
+        public func encode(to encoder: any Encoder) throws {
+            var c = encoder.container(keyedBy: CodingKeys.self)
+            try c.encode(self.left, forKey: .left)
+            try c.encode(self.resetsAt, forKey: .resetsAt)
+        }
+    }
+}
+
+public struct ShowScope: Codable, Sendable, Hashable {
+    public var seasons: [Int]
+    public var future: Bool
+    public init(seasons: [Int], future: Bool) {
+        self.seasons = seasons
+        self.future = future
+    }
+    private enum CodingKeys: String, CodingKey {
+        case seasons = "seasons"
+        case future = "future"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.seasons = try c.decode([Int].self, forKey: .seasons)
+        self.future = try c.decode(Bool.self, forKey: .future)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.seasons, forKey: .seasons)
+        try c.encode(self.future, forKey: .future)
+    }
+}
+
+public struct CatalogDestination: Codable, Sendable, Hashable {
+    public var id: String
+    public var name: String
+    public var selected: Bool
+    public init(id: String, name: String, selected: Bool) {
+        self.id = id
+        self.name = name
+        self.selected = selected
+    }
+    private enum CodingKeys: String, CodingKey {
+        case id = "id"
+        case name = "name"
+        case selected = "selected"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try c.decode(String.self, forKey: .id)
+        self.name = try c.decode(String.self, forKey: .name)
+        self.selected = try c.decode(Bool.self, forKey: .selected)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.id, forKey: .id)
+        try c.encode(self.name, forKey: .name)
+        try c.encode(self.selected, forKey: .selected)
+    }
+}
+
+public struct ImagePlaceholder: Codable, Sendable, Hashable {
+    public var blurhash: String
+    public var aspectRatio: Double
+    public init(blurhash: String, aspectRatio: Double) {
+        self.blurhash = blurhash
+        self.aspectRatio = aspectRatio
+    }
+    private enum CodingKeys: String, CodingKey {
+        case blurhash = "blurhash"
+        case aspectRatio = "aspectRatio"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.blurhash = try c.decode(String.self, forKey: .blurhash)
+        self.aspectRatio = try c.decode(Double.self, forKey: .aspectRatio)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.blurhash, forKey: .blurhash)
+        try c.encode(self.aspectRatio, forKey: .aspectRatio)
+    }
+}
+
+public struct Artwork: Codable, Sendable, Hashable {
+    public var id: String
+    public var placeholder: ImagePlaceholder?
+    public init(id: String, placeholder: ImagePlaceholder?) {
+        self.id = id
+        self.placeholder = placeholder
+    }
+    private enum CodingKeys: String, CodingKey {
+        case id = "id"
+        case placeholder = "placeholder"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try c.decode(String.self, forKey: .id)
+        self.placeholder = try c.decodeIfPresent(ImagePlaceholder.self, forKey: .placeholder)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.id, forKey: .id)
+        try c.encode(self.placeholder, forKey: .placeholder)
+    }
+}
+
+public struct CatalogTitleSummary: Codable, Sendable, Hashable {
+    public var ref: CatalogRef
+    public var name: String
+    public var year: Int?
+    public var poster: Artwork?
+    public var availability: Availability
+    public init(ref: CatalogRef, name: String, year: Int?, poster: Artwork?, availability: Availability) {
+        self.ref = ref
+        self.name = name
+        self.year = year
+        self.poster = poster
+        self.availability = availability
+    }
+    private enum CodingKeys: String, CodingKey {
+        case ref = "ref"
+        case name = "name"
+        case year = "year"
+        case poster = "poster"
+        case availability = "availability"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.ref = try c.decode(CatalogRef.self, forKey: .ref)
+        self.name = try c.decode(String.self, forKey: .name)
+        self.year = try c.decodeIfPresent(Int.self, forKey: .year)
+        self.poster = try c.decodeIfPresent(Artwork.self, forKey: .poster)
+        self.availability = try c.decode(Availability.self, forKey: .availability)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.ref, forKey: .ref)
+        try c.encode(self.name, forKey: .name)
+        try c.encode(self.year, forKey: .year)
+        try c.encode(self.poster, forKey: .poster)
+        try c.encode(self.availability, forKey: .availability)
+    }
+}
+
+public struct CatalogSeason: Codable, Sendable, Hashable {
+    public var number: Int
+    public var overview: String?
+    public var poster: Artwork?
+    public var episodeCount: Int?
+    public var airDate: String?
+    public var availability: SeasonAvailability
+    public var selected: Bool
+    public init(number: Int, overview: String?, poster: Artwork?, episodeCount: Int?, airDate: String?, availability: SeasonAvailability, selected: Bool) {
+        self.number = number
+        self.overview = overview
+        self.poster = poster
+        self.episodeCount = episodeCount
+        self.airDate = airDate
+        self.availability = availability
+        self.selected = selected
+    }
+    private enum CodingKeys: String, CodingKey {
+        case number = "number"
+        case overview = "overview"
+        case poster = "poster"
+        case episodeCount = "episodeCount"
+        case airDate = "airDate"
+        case availability = "availability"
+        case selected = "selected"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.number = try c.decode(Int.self, forKey: .number)
+        self.overview = try c.decodeIfPresent(String.self, forKey: .overview)
+        self.poster = try c.decodeIfPresent(Artwork.self, forKey: .poster)
+        self.episodeCount = try c.decodeIfPresent(Int.self, forKey: .episodeCount)
+        self.airDate = try c.decodeIfPresent(String.self, forKey: .airDate)
+        self.availability = try c.decode(SeasonAvailability.self, forKey: .availability)
+        self.selected = try c.decode(Bool.self, forKey: .selected)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.number, forKey: .number)
+        try c.encode(self.overview, forKey: .overview)
+        try c.encode(self.poster, forKey: .poster)
+        try c.encode(self.episodeCount, forKey: .episodeCount)
+        try c.encode(self.airDate, forKey: .airDate)
+        try c.encode(self.availability, forKey: .availability)
+        try c.encode(self.selected, forKey: .selected)
+    }
+}
+
+public enum CreditKind {
+    public static let actor = "actor"
+    public static let creator = "creator"
+    public static let director = "director"
+    public static let writer = "writer"
+    public static let knownValues = ["actor", "creator", "director", "writer"]
+}
+
+public struct Credit: Codable, Sendable, Hashable {
+    public var kind: String
+    public var name: String
+    public var role: String?
+    public var photo: Artwork?
+    public var tmdbId: String?
+    public init(kind: String, name: String, role: String?, photo: Artwork?, tmdbId: String?) {
+        self.kind = kind
+        self.name = name
+        self.role = role
+        self.photo = photo
+        self.tmdbId = tmdbId
+    }
+    private enum CodingKeys: String, CodingKey {
+        case kind = "kind"
+        case name = "name"
+        case role = "role"
+        case photo = "photo"
+        case tmdbId = "tmdbId"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.kind = try c.decode(String.self, forKey: .kind)
+        self.name = try c.decode(String.self, forKey: .name)
+        self.role = try c.decodeIfPresent(String.self, forKey: .role)
+        self.photo = try c.decodeIfPresent(Artwork.self, forKey: .photo)
+        self.tmdbId = try c.decodeIfPresent(String.self, forKey: .tmdbId)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.kind, forKey: .kind)
+        try c.encode(self.name, forKey: .name)
+        try c.encode(self.role, forKey: .role)
+        try c.encode(self.photo, forKey: .photo)
+        try c.encode(self.tmdbId, forKey: .tmdbId)
+    }
+}
+
+public struct Trailer: Codable, Sendable, Hashable {
+    public var url: String
+    public var name: String?
+    public var language: String?
+    public init(url: String, name: String?, language: String?) {
+        self.url = url
+        self.name = name
+        self.language = language
+    }
+    private enum CodingKeys: String, CodingKey {
+        case url = "url"
+        case name = "name"
+        case language = "language"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.url = try c.decode(String.self, forKey: .url)
+        self.name = try c.decodeIfPresent(String.self, forKey: .name)
+        self.language = try c.decodeIfPresent(String.self, forKey: .language)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.url, forKey: .url)
+        try c.encode(self.name, forKey: .name)
+        try c.encode(self.language, forKey: .language)
+    }
+}
+
+public struct CatalogTitleDetail: Codable, Sendable, Hashable {
+    public var ref: CatalogRef
+    public var name: String
+    public var year: Int?
+    public var poster: Artwork?
+    public var availability: Availability
+    public var stale: Bool
+    public var overview: String?
+    public var genres: [String]
+    public var rating: Double?
+    public var contentRating: String?
+    public var backdrop: Artwork?
+    public var credits: [Credit]
+    public var studios: [String]
+    public var trailers: [Trailer]
+    public var seasons: [CatalogSeason]
+    public var defaultScope: ShowScope?
+    public var destinations: [CatalogDestination]
+    public init(ref: CatalogRef, name: String, year: Int?, poster: Artwork?, availability: Availability, stale: Bool, overview: String?, genres: [String], rating: Double?, contentRating: String?, backdrop: Artwork?, credits: [Credit], studios: [String], trailers: [Trailer], seasons: [CatalogSeason], defaultScope: ShowScope?, destinations: [CatalogDestination]) {
+        self.ref = ref
+        self.name = name
+        self.year = year
+        self.poster = poster
+        self.availability = availability
+        self.stale = stale
+        self.overview = overview
+        self.genres = genres
+        self.rating = rating
+        self.contentRating = contentRating
+        self.backdrop = backdrop
+        self.credits = credits
+        self.studios = studios
+        self.trailers = trailers
+        self.seasons = seasons
+        self.defaultScope = defaultScope
+        self.destinations = destinations
+    }
+    private enum CodingKeys: String, CodingKey {
+        case ref = "ref"
+        case name = "name"
+        case year = "year"
+        case poster = "poster"
+        case availability = "availability"
+        case stale = "stale"
+        case overview = "overview"
+        case genres = "genres"
+        case rating = "rating"
+        case contentRating = "contentRating"
+        case backdrop = "backdrop"
+        case credits = "credits"
+        case studios = "studios"
+        case trailers = "trailers"
+        case seasons = "seasons"
+        case defaultScope = "defaultScope"
+        case destinations = "destinations"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.ref = try c.decode(CatalogRef.self, forKey: .ref)
+        self.name = try c.decode(String.self, forKey: .name)
+        self.year = try c.decodeIfPresent(Int.self, forKey: .year)
+        self.poster = try c.decodeIfPresent(Artwork.self, forKey: .poster)
+        self.availability = try c.decode(Availability.self, forKey: .availability)
+        self.stale = try c.decode(Bool.self, forKey: .stale)
+        self.overview = try c.decodeIfPresent(String.self, forKey: .overview)
+        self.genres = try c.decode([String].self, forKey: .genres)
+        self.rating = try c.decodeIfPresent(Double.self, forKey: .rating)
+        self.contentRating = try c.decodeIfPresent(String.self, forKey: .contentRating)
+        self.backdrop = try c.decodeIfPresent(Artwork.self, forKey: .backdrop)
+        self.credits = try c.decode([Credit].self, forKey: .credits)
+        self.studios = try c.decode([String].self, forKey: .studios)
+        self.trailers = try c.decode([Trailer].self, forKey: .trailers)
+        self.seasons = try c.decode([CatalogSeason].self, forKey: .seasons)
+        self.defaultScope = try c.decodeIfPresent(ShowScope.self, forKey: .defaultScope)
+        self.destinations = try c.decode([CatalogDestination].self, forKey: .destinations)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.ref, forKey: .ref)
+        try c.encode(self.name, forKey: .name)
+        try c.encode(self.year, forKey: .year)
+        try c.encode(self.poster, forKey: .poster)
+        try c.encode(self.availability, forKey: .availability)
+        try c.encode(self.stale, forKey: .stale)
+        try c.encode(self.overview, forKey: .overview)
+        try c.encode(self.genres, forKey: .genres)
+        try c.encode(self.rating, forKey: .rating)
+        try c.encode(self.contentRating, forKey: .contentRating)
+        try c.encode(self.backdrop, forKey: .backdrop)
+        try c.encode(self.credits, forKey: .credits)
+        try c.encode(self.studios, forKey: .studios)
+        try c.encode(self.trailers, forKey: .trailers)
+        try c.encode(self.seasons, forKey: .seasons)
+        try c.encode(self.defaultScope, forKey: .defaultScope)
+        try c.encode(self.destinations, forKey: .destinations)
+    }
+}
+
+public struct CatalogPage: Codable, Sendable, Hashable {
+    public var items: [CatalogTitleSummary]
+    public var nextPage: Int?
+    public var stale: Bool
+    public init(items: [CatalogTitleSummary], nextPage: Int?, stale: Bool) {
+        self.items = items
+        self.nextPage = nextPage
+        self.stale = stale
+    }
+    private enum CodingKeys: String, CodingKey {
+        case items = "items"
+        case nextPage = "nextPage"
+        case stale = "stale"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.items = try c.decode([CatalogTitleSummary].self, forKey: .items)
+        self.nextPage = try c.decodeIfPresent(Int.self, forKey: .nextPage)
+        self.stale = try c.decode(Bool.self, forKey: .stale)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.items, forKey: .items)
+        try c.encode(self.nextPage, forKey: .nextPage)
+        try c.encode(self.stale, forKey: .stale)
+    }
+}
+
+public struct CatalogInput: Codable, Sendable, Hashable {
+    public var ref: CatalogRef
+    public var libraryId: String?
+    public init(ref: CatalogRef, libraryId: String? = nil) {
+        self.ref = ref
+        self.libraryId = libraryId
+    }
+    private enum CodingKeys: String, CodingKey {
+        case ref = "ref"
+        case libraryId = "libraryId"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.ref = try c.decode(CatalogRef.self, forKey: .ref)
+        self.libraryId = try c.decodeIfPresent(String.self, forKey: .libraryId)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.ref, forKey: .ref)
+        try c.encodeIfPresent(self.libraryId, forKey: .libraryId)
+    }
+}
+
+public enum RelatedRailId {
+    public static let collection = "collection"
+    public static let moreLikeThis = "moreLikeThis"
+    public static let knownValues = ["collection", "moreLikeThis"]
+}
+
+public struct RelatedRail: Codable, Sendable, Hashable {
+    public var id: String
+    public var name: String?
+    public init(id: String, name: String?) {
+        self.id = id
+        self.name = name
+    }
+    private enum CodingKeys: String, CodingKey {
+        case id = "id"
+        case name = "name"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try c.decode(String.self, forKey: .id)
+        self.name = try c.decodeIfPresent(String.self, forKey: .name)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.id, forKey: .id)
+        try c.encode(self.name, forKey: .name)
+    }
+}
+
+public struct RelatedRails: Codable, Sendable, Hashable {
+    public var rails: [RelatedRail]
+    public var stale: Bool
+    public init(rails: [RelatedRail], stale: Bool) {
+        self.rails = rails
+        self.stale = stale
+    }
+    private enum CodingKeys: String, CodingKey {
+        case rails = "rails"
+        case stale = "stale"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.rails = try c.decode([RelatedRail].self, forKey: .rails)
+        self.stale = try c.decode(Bool.self, forKey: .stale)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.rails, forKey: .rails)
+        try c.encode(self.stale, forKey: .stale)
+    }
+}
+
+public struct Images: Codable, Sendable, Hashable {
+    public var poster: Artwork?
+    public var backdrop: Artwork?
+    public var logo: Artwork?
+    public init(poster: Artwork?, backdrop: Artwork?, logo: Artwork?) {
+        self.poster = poster
+        self.backdrop = backdrop
+        self.logo = logo
+    }
+    private enum CodingKeys: String, CodingKey {
+        case poster = "poster"
+        case backdrop = "backdrop"
+        case logo = "logo"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.poster = try c.decodeIfPresent(Artwork.self, forKey: .poster)
+        self.backdrop = try c.decodeIfPresent(Artwork.self, forKey: .backdrop)
+        self.logo = try c.decodeIfPresent(Artwork.self, forKey: .logo)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.poster, forKey: .poster)
+        try c.encode(self.backdrop, forKey: .backdrop)
+        try c.encode(self.logo, forKey: .logo)
+    }
+}
+
+public struct TitleSummary: Codable, Sendable, Hashable {
+    public var id: String
+    public var libraryId: String
+    public var kind: String
+    public var name: String
+    public var year: Int?
+    public var overview: String?
+    public var images: Images
+    public var genres: [String]
+    public var rating: Double?
+    public var contentRating: String?
+    public var runtimeMinutes: Int?
+    public var originalLanguage: String?
+    public var favorite: Bool
+    public var watched: Bool
+    public init(id: String, libraryId: String, kind: String, name: String, year: Int?, overview: String?, images: Images, genres: [String], rating: Double?, contentRating: String?, runtimeMinutes: Int?, originalLanguage: String?, favorite: Bool, watched: Bool) {
+        self.id = id
+        self.libraryId = libraryId
+        self.kind = kind
+        self.name = name
+        self.year = year
+        self.overview = overview
+        self.images = images
+        self.genres = genres
+        self.rating = rating
+        self.contentRating = contentRating
+        self.runtimeMinutes = runtimeMinutes
+        self.originalLanguage = originalLanguage
+        self.favorite = favorite
+        self.watched = watched
+    }
+    private enum CodingKeys: String, CodingKey {
+        case id = "id"
+        case libraryId = "libraryId"
+        case kind = "kind"
+        case name = "name"
+        case year = "year"
+        case overview = "overview"
+        case images = "images"
+        case genres = "genres"
+        case rating = "rating"
+        case contentRating = "contentRating"
+        case runtimeMinutes = "runtimeMinutes"
+        case originalLanguage = "originalLanguage"
+        case favorite = "favorite"
+        case watched = "watched"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try c.decode(String.self, forKey: .id)
+        self.libraryId = try c.decode(String.self, forKey: .libraryId)
+        self.kind = try c.decode(String.self, forKey: .kind)
+        self.name = try c.decode(String.self, forKey: .name)
+        self.year = try c.decodeIfPresent(Int.self, forKey: .year)
+        self.overview = try c.decodeIfPresent(String.self, forKey: .overview)
+        self.images = try c.decode(Images.self, forKey: .images)
+        self.genres = try c.decode([String].self, forKey: .genres)
+        self.rating = try c.decodeIfPresent(Double.self, forKey: .rating)
+        self.contentRating = try c.decodeIfPresent(String.self, forKey: .contentRating)
+        self.runtimeMinutes = try c.decodeIfPresent(Int.self, forKey: .runtimeMinutes)
+        self.originalLanguage = try c.decodeIfPresent(String.self, forKey: .originalLanguage)
+        self.favorite = try c.decode(Bool.self, forKey: .favorite)
+        self.watched = try c.decode(Bool.self, forKey: .watched)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.id, forKey: .id)
+        try c.encode(self.libraryId, forKey: .libraryId)
+        try c.encode(self.kind, forKey: .kind)
+        try c.encode(self.name, forKey: .name)
+        try c.encode(self.year, forKey: .year)
+        try c.encode(self.overview, forKey: .overview)
+        try c.encode(self.images, forKey: .images)
+        try c.encode(self.genres, forKey: .genres)
+        try c.encode(self.rating, forKey: .rating)
+        try c.encode(self.contentRating, forKey: .contentRating)
+        try c.encode(self.runtimeMinutes, forKey: .runtimeMinutes)
+        try c.encode(self.originalLanguage, forKey: .originalLanguage)
+        try c.encode(self.favorite, forKey: .favorite)
+        try c.encode(self.watched, forKey: .watched)
+    }
+}
+
+public struct RelatedTitle: Codable, Sendable, Hashable {
+    public var ref: CatalogRef
+    public var name: String
+    public var year: Int?
+    public var poster: Artwork?
+    public var availability: Availability
+    public var title: TitleSummary?
+    public init(ref: CatalogRef, name: String, year: Int?, poster: Artwork?, availability: Availability, title: TitleSummary?) {
+        self.ref = ref
+        self.name = name
+        self.year = year
+        self.poster = poster
+        self.availability = availability
+        self.title = title
+    }
+    private enum CodingKeys: String, CodingKey {
+        case ref = "ref"
+        case name = "name"
+        case year = "year"
+        case poster = "poster"
+        case availability = "availability"
+        case title = "title"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.ref = try c.decode(CatalogRef.self, forKey: .ref)
+        self.name = try c.decode(String.self, forKey: .name)
+        self.year = try c.decodeIfPresent(Int.self, forKey: .year)
+        self.poster = try c.decodeIfPresent(Artwork.self, forKey: .poster)
+        self.availability = try c.decode(Availability.self, forKey: .availability)
+        self.title = try c.decodeIfPresent(TitleSummary.self, forKey: .title)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.ref, forKey: .ref)
+        try c.encode(self.name, forKey: .name)
+        try c.encode(self.year, forKey: .year)
+        try c.encode(self.poster, forKey: .poster)
+        try c.encode(self.availability, forKey: .availability)
+        try c.encode(self.title, forKey: .title)
+    }
+}
+
+public struct RelatedPage: Codable, Sendable, Hashable {
+    public var items: [RelatedTitle]
+    public var stale: Bool
+    public init(items: [RelatedTitle], stale: Bool) {
+        self.items = items
+        self.stale = stale
+    }
+    private enum CodingKeys: String, CodingKey {
+        case items = "items"
+        case stale = "stale"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.items = try c.decode([RelatedTitle].self, forKey: .items)
+        self.stale = try c.decode(Bool.self, forKey: .stale)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.items, forKey: .items)
+        try c.encode(self.stale, forKey: .stale)
+    }
+}
+
+public enum RequestStatus {
+    public static let asked = "asked"
+    public static let approved = "approved"
+    public static let declined = "declined"
+    public static let knownValues = ["asked", "approved", "declined"]
+}
+
+public enum FulfilmentState {
+    public static let queued = "queued"
+    public static let sent = "sent"
+    public static let failed = "failed"
+    public static let knownValues = ["queued", "sent", "failed"]
+}
+
+public struct RequestId: Codable, Sendable, Hashable {
+    public var id: String
+    public init(id: String) {
+        self.id = id
+    }
+    private enum CodingKeys: String, CodingKey {
+        case id = "id"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try c.decode(String.self, forKey: .id)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.id, forKey: .id)
+    }
+}
+
+public struct RequestDestination: Codable, Sendable, Hashable {
+    public var id: String
+    public var name: String
+    public init(id: String, name: String) {
+        self.id = id
+        self.name = name
+    }
+    private enum CodingKeys: String, CodingKey {
+        case id = "id"
+        case name = "name"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try c.decode(String.self, forKey: .id)
+        self.name = try c.decode(String.self, forKey: .name)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.id, forKey: .id)
+        try c.encode(self.name, forKey: .name)
+    }
+}
+
+public struct AdminRequestDestination: Codable, Sendable, Hashable {
+    public var id: String
+    public var name: String
+    public var selected: Bool
+    public var connection: String?
+    public init(id: String, name: String, selected: Bool, connection: String?) {
+        self.id = id
+        self.name = name
+        self.selected = selected
+        self.connection = connection
+    }
+    private enum CodingKeys: String, CodingKey {
+        case id = "id"
+        case name = "name"
+        case selected = "selected"
+        case connection = "connection"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try c.decode(String.self, forKey: .id)
+        self.name = try c.decode(String.self, forKey: .name)
+        self.selected = try c.decode(Bool.self, forKey: .selected)
+        self.connection = try c.decodeIfPresent(String.self, forKey: .connection)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.id, forKey: .id)
+        try c.encode(self.name, forKey: .name)
+        try c.encode(self.selected, forKey: .selected)
+        try c.encode(self.connection, forKey: .connection)
+    }
+}
+
+public struct RequestItem: Codable, Sendable, Hashable {
+    public var id: String
+    public var title: CatalogTitleSummary
+    public var library: RequestDestination
+    public var scope: ShowScope?
+    public var createdAt: String
+    public var arrivedAt: String?
+    public var availability: Availability
+    public var season: SeasonAvailability?
+    public init(id: String, title: CatalogTitleSummary, library: RequestDestination, scope: ShowScope?, createdAt: String, arrivedAt: String?, availability: Availability, season: SeasonAvailability?) {
+        self.id = id
+        self.title = title
+        self.library = library
+        self.scope = scope
+        self.createdAt = createdAt
+        self.arrivedAt = arrivedAt
+        self.availability = availability
+        self.season = season
+    }
+    private enum CodingKeys: String, CodingKey {
+        case id = "id"
+        case title = "title"
+        case library = "library"
+        case scope = "scope"
+        case createdAt = "createdAt"
+        case arrivedAt = "arrivedAt"
+        case availability = "availability"
+        case season = "season"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try c.decode(String.self, forKey: .id)
+        self.title = try c.decode(CatalogTitleSummary.self, forKey: .title)
+        self.library = try c.decode(RequestDestination.self, forKey: .library)
+        self.scope = try c.decodeIfPresent(ShowScope.self, forKey: .scope)
+        self.createdAt = try c.decode(String.self, forKey: .createdAt)
+        self.arrivedAt = try c.decodeIfPresent(String.self, forKey: .arrivedAt)
+        self.availability = try c.decode(Availability.self, forKey: .availability)
+        self.season = try c.decodeIfPresent(SeasonAvailability.self, forKey: .season)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.id, forKey: .id)
+        try c.encode(self.title, forKey: .title)
+        try c.encode(self.library, forKey: .library)
+        try c.encode(self.scope, forKey: .scope)
+        try c.encode(self.createdAt, forKey: .createdAt)
+        try c.encode(self.arrivedAt, forKey: .arrivedAt)
+        try c.encode(self.availability, forKey: .availability)
+        try c.encode(self.season, forKey: .season)
+    }
+}
+
+public struct RequestPage: Codable, Sendable, Hashable {
+    public var items: [RequestItem]
+    public var nextCursor: String?
+    public init(items: [RequestItem], nextCursor: String?) {
+        self.items = items
+        self.nextCursor = nextCursor
+    }
+    private enum CodingKeys: String, CodingKey {
+        case items = "items"
+        case nextCursor = "nextCursor"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.items = try c.decode([RequestItem].self, forKey: .items)
+        self.nextCursor = try c.decodeIfPresent(String.self, forKey: .nextCursor)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.items, forKey: .items)
+        try c.encode(self.nextCursor, forKey: .nextCursor)
+    }
+}
+
+public struct RequestPageInput: Codable, Sendable, Hashable {
+    public var cursor: String?
+    public var limit: Int?
+    public init(cursor: String? = nil, limit: Int? = nil) {
+        self.cursor = cursor
+        self.limit = limit
+    }
+    private enum CodingKeys: String, CodingKey {
+        case cursor = "cursor"
+        case limit = "limit"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.cursor = try c.decodeIfPresent(String.self, forKey: .cursor)
+        self.limit = try c.decodeIfPresent(Int.self, forKey: .limit)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encodeIfPresent(self.cursor, forKey: .cursor)
+        try c.encodeIfPresent(self.limit, forKey: .limit)
+    }
+}
+
+public struct AdminRequestItem: Codable, Sendable, Hashable {
+    public var id: String
+    public var title: CatalogTitleSummary
+    public var library: RequestDestination
+    public var scope: ShowScope?
+    public var createdAt: String
+    public var arrivedAt: String?
+    public var availability: Availability
+    public var season: SeasonAvailability?
+    public var status: String
+    public var fulfilmentState: String?
+    public var error: String?
+    public var reason: String?
+    public var note: String?
+    public var declinedAt: String?
+    public var connection: AdminRequestItem.Connection?
+    public var followers: [AdminRequestItem.Follower]
+    public var destinationDescription: String
+    public var destinations: [AdminRequestDestination]
+    public var remoteUrl: String?
+    public var diagnostics: [AdminRequestItem.Diagnostic]
+    public init(id: String, title: CatalogTitleSummary, library: RequestDestination, scope: ShowScope?, createdAt: String, arrivedAt: String?, availability: Availability, season: SeasonAvailability?, status: String, fulfilmentState: String?, error: String?, reason: String?, note: String?, declinedAt: String?, connection: AdminRequestItem.Connection?, followers: [AdminRequestItem.Follower], destinationDescription: String, destinations: [AdminRequestDestination], remoteUrl: String?, diagnostics: [AdminRequestItem.Diagnostic]) {
+        self.id = id
+        self.title = title
+        self.library = library
+        self.scope = scope
+        self.createdAt = createdAt
+        self.arrivedAt = arrivedAt
+        self.availability = availability
+        self.season = season
+        self.status = status
+        self.fulfilmentState = fulfilmentState
+        self.error = error
+        self.reason = reason
+        self.note = note
+        self.declinedAt = declinedAt
+        self.connection = connection
+        self.followers = followers
+        self.destinationDescription = destinationDescription
+        self.destinations = destinations
+        self.remoteUrl = remoteUrl
+        self.diagnostics = diagnostics
+    }
+    private enum CodingKeys: String, CodingKey {
+        case id = "id"
+        case title = "title"
+        case library = "library"
+        case scope = "scope"
+        case createdAt = "createdAt"
+        case arrivedAt = "arrivedAt"
+        case availability = "availability"
+        case season = "season"
+        case status = "status"
+        case fulfilmentState = "fulfilmentState"
+        case error = "error"
+        case reason = "reason"
+        case note = "note"
+        case declinedAt = "declinedAt"
+        case connection = "connection"
+        case followers = "followers"
+        case destinationDescription = "destinationDescription"
+        case destinations = "destinations"
+        case remoteUrl = "remoteUrl"
+        case diagnostics = "diagnostics"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try c.decode(String.self, forKey: .id)
+        self.title = try c.decode(CatalogTitleSummary.self, forKey: .title)
+        self.library = try c.decode(RequestDestination.self, forKey: .library)
+        self.scope = try c.decodeIfPresent(ShowScope.self, forKey: .scope)
+        self.createdAt = try c.decode(String.self, forKey: .createdAt)
+        self.arrivedAt = try c.decodeIfPresent(String.self, forKey: .arrivedAt)
+        self.availability = try c.decode(Availability.self, forKey: .availability)
+        self.season = try c.decodeIfPresent(SeasonAvailability.self, forKey: .season)
+        self.status = try c.decode(String.self, forKey: .status)
+        self.fulfilmentState = try c.decodeIfPresent(String.self, forKey: .fulfilmentState)
+        self.error = try c.decodeIfPresent(String.self, forKey: .error)
+        self.reason = try c.decodeIfPresent(String.self, forKey: .reason)
+        self.note = try c.decodeIfPresent(String.self, forKey: .note)
+        self.declinedAt = try c.decodeIfPresent(String.self, forKey: .declinedAt)
+        self.connection = try c.decodeIfPresent(AdminRequestItem.Connection.self, forKey: .connection)
+        self.followers = try c.decode([AdminRequestItem.Follower].self, forKey: .followers)
+        self.destinationDescription = try c.decode(String.self, forKey: .destinationDescription)
+        self.destinations = try c.decode([AdminRequestDestination].self, forKey: .destinations)
+        self.remoteUrl = try c.decodeIfPresent(String.self, forKey: .remoteUrl)
+        self.diagnostics = try c.decode([AdminRequestItem.Diagnostic].self, forKey: .diagnostics)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.id, forKey: .id)
+        try c.encode(self.title, forKey: .title)
+        try c.encode(self.library, forKey: .library)
+        try c.encode(self.scope, forKey: .scope)
+        try c.encode(self.createdAt, forKey: .createdAt)
+        try c.encode(self.arrivedAt, forKey: .arrivedAt)
+        try c.encode(self.availability, forKey: .availability)
+        try c.encode(self.season, forKey: .season)
+        try c.encode(self.status, forKey: .status)
+        try c.encode(self.fulfilmentState, forKey: .fulfilmentState)
+        try c.encode(self.error, forKey: .error)
+        try c.encode(self.reason, forKey: .reason)
+        try c.encode(self.note, forKey: .note)
+        try c.encode(self.declinedAt, forKey: .declinedAt)
+        try c.encode(self.connection, forKey: .connection)
+        try c.encode(self.followers, forKey: .followers)
+        try c.encode(self.destinationDescription, forKey: .destinationDescription)
+        try c.encode(self.destinations, forKey: .destinations)
+        try c.encode(self.remoteUrl, forKey: .remoteUrl)
+        try c.encode(self.diagnostics, forKey: .diagnostics)
+    }
+    public struct Connection: Codable, Sendable, Hashable {
+        public var id: String
+        public var name: String
+        public var reportsProgress: Bool
+        public init(id: String, name: String, reportsProgress: Bool) {
+            self.id = id
+            self.name = name
+            self.reportsProgress = reportsProgress
+        }
+        private enum CodingKeys: String, CodingKey {
+            case id = "id"
+            case name = "name"
+            case reportsProgress = "reportsProgress"
+        }
+        public init(from decoder: any Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            self.id = try c.decode(String.self, forKey: .id)
+            self.name = try c.decode(String.self, forKey: .name)
+            self.reportsProgress = try c.decode(Bool.self, forKey: .reportsProgress)
+        }
+        public func encode(to encoder: any Encoder) throws {
+            var c = encoder.container(keyedBy: CodingKeys.self)
+            try c.encode(self.id, forKey: .id)
+            try c.encode(self.name, forKey: .name)
+            try c.encode(self.reportsProgress, forKey: .reportsProgress)
+        }
+    }
+    public struct Follower: Codable, Sendable, Hashable {
+        public var id: String
+        public var name: String
+        public var avatarId: String?
+        public var asked: Bool
+        public var createdAt: String
+        public init(id: String, name: String, avatarId: String?, asked: Bool, createdAt: String) {
+            self.id = id
+            self.name = name
+            self.avatarId = avatarId
+            self.asked = asked
+            self.createdAt = createdAt
+        }
+        private enum CodingKeys: String, CodingKey {
+            case id = "id"
+            case name = "name"
+            case avatarId = "avatarId"
+            case asked = "asked"
+            case createdAt = "createdAt"
+        }
+        public init(from decoder: any Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            self.id = try c.decode(String.self, forKey: .id)
+            self.name = try c.decode(String.self, forKey: .name)
+            self.avatarId = try c.decodeIfPresent(String.self, forKey: .avatarId)
+            self.asked = try c.decode(Bool.self, forKey: .asked)
+            self.createdAt = try c.decode(String.self, forKey: .createdAt)
+        }
+        public func encode(to encoder: any Encoder) throws {
+            var c = encoder.container(keyedBy: CodingKeys.self)
+            try c.encode(self.id, forKey: .id)
+            try c.encode(self.name, forKey: .name)
+            try c.encode(self.avatarId, forKey: .avatarId)
+            try c.encode(self.asked, forKey: .asked)
+            try c.encode(self.createdAt, forKey: .createdAt)
+        }
+    }
+    public struct Diagnostic: Codable, Sendable, Hashable {
+        public var label: String
+        public var value: String
+        public init(label: String, value: String) {
+            self.label = label
+            self.value = value
+        }
+        private enum CodingKeys: String, CodingKey {
+            case label = "label"
+            case value = "value"
+        }
+        public init(from decoder: any Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            self.label = try c.decode(String.self, forKey: .label)
+            self.value = try c.decode(String.self, forKey: .value)
+        }
+        public func encode(to encoder: any Encoder) throws {
+            var c = encoder.container(keyedBy: CodingKeys.self)
+            try c.encode(self.label, forKey: .label)
+            try c.encode(self.value, forKey: .value)
+        }
+    }
+}
+
+public struct RequestQueue: Codable, Sendable, Hashable {
+    public var waiting: [AdminRequestItem]
+    public var needsAttention: [AdminRequestItem]
+    public var onTheWay: [AdminRequestItem]
+    public var done: [AdminRequestItem]
+    public var counts: RequestQueue.Counts
+    public var nextCursor: String?
+    public init(waiting: [AdminRequestItem], needsAttention: [AdminRequestItem], onTheWay: [AdminRequestItem], done: [AdminRequestItem], counts: RequestQueue.Counts, nextCursor: String?) {
+        self.waiting = waiting
+        self.needsAttention = needsAttention
+        self.onTheWay = onTheWay
+        self.done = done
+        self.counts = counts
+        self.nextCursor = nextCursor
+    }
+    private enum CodingKeys: String, CodingKey {
+        case waiting = "waiting"
+        case needsAttention = "needsAttention"
+        case onTheWay = "onTheWay"
+        case done = "done"
+        case counts = "counts"
+        case nextCursor = "nextCursor"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.waiting = try c.decode([AdminRequestItem].self, forKey: .waiting)
+        self.needsAttention = try c.decode([AdminRequestItem].self, forKey: .needsAttention)
+        self.onTheWay = try c.decode([AdminRequestItem].self, forKey: .onTheWay)
+        self.done = try c.decode([AdminRequestItem].self, forKey: .done)
+        self.counts = try c.decode(RequestQueue.Counts.self, forKey: .counts)
+        self.nextCursor = try c.decodeIfPresent(String.self, forKey: .nextCursor)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.waiting, forKey: .waiting)
+        try c.encode(self.needsAttention, forKey: .needsAttention)
+        try c.encode(self.onTheWay, forKey: .onTheWay)
+        try c.encode(self.done, forKey: .done)
+        try c.encode(self.counts, forKey: .counts)
+        try c.encode(self.nextCursor, forKey: .nextCursor)
+    }
+    public struct Counts: Codable, Sendable, Hashable {
+        public var waiting: Int
+        public var needsAttention: Int
+        public var onTheWay: Int
+        public var done: Int
+        public init(waiting: Int, needsAttention: Int, onTheWay: Int, done: Int) {
+            self.waiting = waiting
+            self.needsAttention = needsAttention
+            self.onTheWay = onTheWay
+            self.done = done
+        }
+        private enum CodingKeys: String, CodingKey {
+            case waiting = "waiting"
+            case needsAttention = "needsAttention"
+            case onTheWay = "onTheWay"
+            case done = "done"
+        }
+        public init(from decoder: any Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            self.waiting = try c.decode(Int.self, forKey: .waiting)
+            self.needsAttention = try c.decode(Int.self, forKey: .needsAttention)
+            self.onTheWay = try c.decode(Int.self, forKey: .onTheWay)
+            self.done = try c.decode(Int.self, forKey: .done)
+        }
+        public func encode(to encoder: any Encoder) throws {
+            var c = encoder.container(keyedBy: CodingKeys.self)
+            try c.encode(self.waiting, forKey: .waiting)
+            try c.encode(self.needsAttention, forKey: .needsAttention)
+            try c.encode(self.onTheWay, forKey: .onTheWay)
+            try c.encode(self.done, forKey: .done)
+        }
+    }
+}
+
+public struct DiscoverRail: Codable, Sendable, Hashable {
+    public var id: String
+    public init(id: String) {
+        self.id = id
+    }
+    private enum CodingKeys: String, CodingKey {
+        case id = "id"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try c.decode(String.self, forKey: .id)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.id, forKey: .id)
+    }
+}
+
+public struct DiscoverRails: Codable, Sendable, Hashable {
+    public var enabled: Bool
+    public var rails: [DiscoverRail]
+    public var browse: [String]
+    public init(enabled: Bool, rails: [DiscoverRail], browse: [String]) {
+        self.enabled = enabled
+        self.rails = rails
+        self.browse = browse
+    }
+    private enum CodingKeys: String, CodingKey {
+        case enabled = "enabled"
+        case rails = "rails"
+        case browse = "browse"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.enabled = try c.decode(Bool.self, forKey: .enabled)
+        self.rails = try c.decode([DiscoverRail].self, forKey: .rails)
+        self.browse = try c.decode([String].self, forKey: .browse)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.enabled, forKey: .enabled)
+        try c.encode(self.rails, forKey: .rails)
+        try c.encode(self.browse, forKey: .browse)
+    }
+}
+
+public enum CatalogSort {
+    public static let popular = "popular"
+    public static let scoreHigh = "scoreHigh"
+    public static let scoreLow = "scoreLow"
+    public static let votes = "votes"
+    public static let newest = "newest"
+    public static let oldest = "oldest"
+    public static let nameAsc = "nameAsc"
+    public static let nameDesc = "nameDesc"
+    public static let knownValues = ["popular", "scoreHigh", "scoreLow", "votes", "newest", "oldest", "nameAsc", "nameDesc"]
+}
+
+public struct CatalogFilters: Codable, Sendable, Hashable {
+    public var genres: [Int]?
+    public var yearFrom: Int?
+    public var yearTo: Int?
+    public var scoreMin: Double?
+    public var scoreMax: Double?
+    public var votesMin: Int?
+    public var rating: String?
+    public var language: String?
+    public var runtimeMin: Int?
+    public var runtimeMax: Int?
+    public init(genres: [Int]? = nil, yearFrom: Int? = nil, yearTo: Int? = nil, scoreMin: Double? = nil, scoreMax: Double? = nil, votesMin: Int? = nil, rating: String? = nil, language: String? = nil, runtimeMin: Int? = nil, runtimeMax: Int? = nil) {
+        self.genres = genres
+        self.yearFrom = yearFrom
+        self.yearTo = yearTo
+        self.scoreMin = scoreMin
+        self.scoreMax = scoreMax
+        self.votesMin = votesMin
+        self.rating = rating
+        self.language = language
+        self.runtimeMin = runtimeMin
+        self.runtimeMax = runtimeMax
+    }
+    private enum CodingKeys: String, CodingKey {
+        case genres = "genres"
+        case yearFrom = "yearFrom"
+        case yearTo = "yearTo"
+        case scoreMin = "scoreMin"
+        case scoreMax = "scoreMax"
+        case votesMin = "votesMin"
+        case rating = "rating"
+        case language = "language"
+        case runtimeMin = "runtimeMin"
+        case runtimeMax = "runtimeMax"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.genres = try c.decodeIfPresent([Int].self, forKey: .genres)
+        self.yearFrom = try c.decodeIfPresent(Int.self, forKey: .yearFrom)
+        self.yearTo = try c.decodeIfPresent(Int.self, forKey: .yearTo)
+        self.scoreMin = try c.decodeIfPresent(Double.self, forKey: .scoreMin)
+        self.scoreMax = try c.decodeIfPresent(Double.self, forKey: .scoreMax)
+        self.votesMin = try c.decodeIfPresent(Int.self, forKey: .votesMin)
+        self.rating = try c.decodeIfPresent(String.self, forKey: .rating)
+        self.language = try c.decodeIfPresent(String.self, forKey: .language)
+        self.runtimeMin = try c.decodeIfPresent(Int.self, forKey: .runtimeMin)
+        self.runtimeMax = try c.decodeIfPresent(Int.self, forKey: .runtimeMax)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encodeIfPresent(self.genres, forKey: .genres)
+        try c.encodeIfPresent(self.yearFrom, forKey: .yearFrom)
+        try c.encodeIfPresent(self.yearTo, forKey: .yearTo)
+        try c.encodeIfPresent(self.scoreMin, forKey: .scoreMin)
+        try c.encodeIfPresent(self.scoreMax, forKey: .scoreMax)
+        try c.encodeIfPresent(self.votesMin, forKey: .votesMin)
+        try c.encodeIfPresent(self.rating, forKey: .rating)
+        try c.encodeIfPresent(self.language, forKey: .language)
+        try c.encodeIfPresent(self.runtimeMin, forKey: .runtimeMin)
+        try c.encodeIfPresent(self.runtimeMax, forKey: .runtimeMax)
+    }
+}
+
+public struct CatalogBrowseInput: Codable, Sendable, Hashable {
+    public var kind: String
+    public var filters: CatalogFilters
+    public var sort: String?
+    public var page: Int?
+    public init(kind: String, filters: CatalogFilters, sort: String? = nil, page: Int? = nil) {
+        self.kind = kind
+        self.filters = filters
+        self.sort = sort
+        self.page = page
+    }
+    private enum CodingKeys: String, CodingKey {
+        case kind = "kind"
+        case filters = "filters"
+        case sort = "sort"
+        case page = "page"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.kind = try c.decode(String.self, forKey: .kind)
+        self.filters = try c.decode(CatalogFilters.self, forKey: .filters)
+        self.sort = try c.decodeIfPresent(String.self, forKey: .sort)
+        self.page = try c.decodeIfPresent(Int.self, forKey: .page)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.kind, forKey: .kind)
+        try c.encode(self.filters, forKey: .filters)
+        try c.encodeIfPresent(self.sort, forKey: .sort)
+        try c.encodeIfPresent(self.page, forKey: .page)
+    }
+}
+
+public struct CatalogRange: Codable, Sendable, Hashable {
+    public var min: Double
+    public var max: Double
+    public var step: Double
+    public init(min: Double, max: Double, step: Double) {
+        self.min = min
+        self.max = max
+        self.step = step
+    }
+    private enum CodingKeys: String, CodingKey {
+        case min = "min"
+        case max = "max"
+        case step = "step"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.min = try c.decode(Double.self, forKey: .min)
+        self.max = try c.decode(Double.self, forKey: .max)
+        self.step = try c.decode(Double.self, forKey: .step)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.min, forKey: .min)
+        try c.encode(self.max, forKey: .max)
+        try c.encode(self.step, forKey: .step)
+    }
+}
+
+public struct CatalogChoice: Codable, Sendable, Hashable {
+    public var id: String
+    public var name: String
+    public init(id: String, name: String) {
+        self.id = id
+        self.name = name
+    }
+    private enum CodingKeys: String, CodingKey {
+        case id = "id"
+        case name = "name"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try c.decode(String.self, forKey: .id)
+        self.name = try c.decode(String.self, forKey: .name)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.id, forKey: .id)
+        try c.encode(self.name, forKey: .name)
+    }
+}
+
+public struct CatalogBrowseOptions: Codable, Sendable, Hashable {
+    public var enabled: Bool
+    public var stale: Bool
+    public var genres: [CatalogBrowseOptions.Genre]
+    public var ratings: CatalogBrowseOptions.Ratings?
+    public var languages: [CatalogChoice]
+    public var sorts: [String]
+    public var votes: [Int]
+    public var years: CatalogRange
+    public var scores: CatalogRange
+    public var runtime: CatalogRange
+    public init(enabled: Bool, stale: Bool, genres: [CatalogBrowseOptions.Genre], ratings: CatalogBrowseOptions.Ratings?, languages: [CatalogChoice], sorts: [String], votes: [Int], years: CatalogRange, scores: CatalogRange, runtime: CatalogRange) {
+        self.enabled = enabled
+        self.stale = stale
+        self.genres = genres
+        self.ratings = ratings
+        self.languages = languages
+        self.sorts = sorts
+        self.votes = votes
+        self.years = years
+        self.scores = scores
+        self.runtime = runtime
+    }
+    private enum CodingKeys: String, CodingKey {
+        case enabled = "enabled"
+        case stale = "stale"
+        case genres = "genres"
+        case ratings = "ratings"
+        case languages = "languages"
+        case sorts = "sorts"
+        case votes = "votes"
+        case years = "years"
+        case scores = "scores"
+        case runtime = "runtime"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.enabled = try c.decode(Bool.self, forKey: .enabled)
+        self.stale = try c.decode(Bool.self, forKey: .stale)
+        self.genres = try c.decode([CatalogBrowseOptions.Genre].self, forKey: .genres)
+        self.ratings = try c.decodeIfPresent(CatalogBrowseOptions.Ratings.self, forKey: .ratings)
+        self.languages = try c.decode([CatalogChoice].self, forKey: .languages)
+        self.sorts = try c.decode([String].self, forKey: .sorts)
+        self.votes = try c.decode([Int].self, forKey: .votes)
+        self.years = try c.decode(CatalogRange.self, forKey: .years)
+        self.scores = try c.decode(CatalogRange.self, forKey: .scores)
+        self.runtime = try c.decode(CatalogRange.self, forKey: .runtime)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.enabled, forKey: .enabled)
+        try c.encode(self.stale, forKey: .stale)
+        try c.encode(self.genres, forKey: .genres)
+        try c.encode(self.ratings, forKey: .ratings)
+        try c.encode(self.languages, forKey: .languages)
+        try c.encode(self.sorts, forKey: .sorts)
+        try c.encode(self.votes, forKey: .votes)
+        try c.encode(self.years, forKey: .years)
+        try c.encode(self.scores, forKey: .scores)
+        try c.encode(self.runtime, forKey: .runtime)
+    }
+    public struct Genre: Codable, Sendable, Hashable {
+        public var id: Int
+        public var name: String
+        public init(id: Int, name: String) {
+            self.id = id
+            self.name = name
+        }
+        private enum CodingKeys: String, CodingKey {
+            case id = "id"
+            case name = "name"
+        }
+        public init(from decoder: any Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            self.id = try c.decode(Int.self, forKey: .id)
+            self.name = try c.decode(String.self, forKey: .name)
+        }
+        public func encode(to encoder: any Encoder) throws {
+            var c = encoder.container(keyedBy: CodingKeys.self)
+            try c.encode(self.id, forKey: .id)
+            try c.encode(self.name, forKey: .name)
+        }
+    }
+    public struct Ratings: Codable, Sendable, Hashable {
+        public var country: String
+        public var ratings: [String]
+        public init(country: String, ratings: [String]) {
+            self.country = country
+            self.ratings = ratings
+        }
+        private enum CodingKeys: String, CodingKey {
+            case country = "country"
+            case ratings = "ratings"
+        }
+        public init(from decoder: any Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            self.country = try c.decode(String.self, forKey: .country)
+            self.ratings = try c.decode([String].self, forKey: .ratings)
+        }
+        public func encode(to encoder: any Encoder) throws {
+            var c = encoder.container(keyedBy: CodingKeys.self)
+            try c.encode(self.country, forKey: .country)
+            try c.encode(self.ratings, forKey: .ratings)
+        }
+    }
+}
+
+public struct CatalogBrowseTitle: Codable, Sendable, Hashable {
+    public var ref: CatalogRef
+    public var name: String
+    public var year: Int?
+    public var poster: Artwork?
+    public var availability: Availability
+    public var title: TitleSummary?
+    public var score: Double?
+    public var votes: Int
+    public var releaseDate: String?
+    public init(ref: CatalogRef, name: String, year: Int?, poster: Artwork?, availability: Availability, title: TitleSummary?, score: Double?, votes: Int, releaseDate: String?) {
+        self.ref = ref
+        self.name = name
+        self.year = year
+        self.poster = poster
+        self.availability = availability
+        self.title = title
+        self.score = score
+        self.votes = votes
+        self.releaseDate = releaseDate
+    }
+    private enum CodingKeys: String, CodingKey {
+        case ref = "ref"
+        case name = "name"
+        case year = "year"
+        case poster = "poster"
+        case availability = "availability"
+        case title = "title"
+        case score = "score"
+        case votes = "votes"
+        case releaseDate = "releaseDate"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.ref = try c.decode(CatalogRef.self, forKey: .ref)
+        self.name = try c.decode(String.self, forKey: .name)
+        self.year = try c.decodeIfPresent(Int.self, forKey: .year)
+        self.poster = try c.decodeIfPresent(Artwork.self, forKey: .poster)
+        self.availability = try c.decode(Availability.self, forKey: .availability)
+        self.title = try c.decodeIfPresent(TitleSummary.self, forKey: .title)
+        self.score = try c.decodeIfPresent(Double.self, forKey: .score)
+        self.votes = try c.decode(Int.self, forKey: .votes)
+        self.releaseDate = try c.decodeIfPresent(String.self, forKey: .releaseDate)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.ref, forKey: .ref)
+        try c.encode(self.name, forKey: .name)
+        try c.encode(self.year, forKey: .year)
+        try c.encode(self.poster, forKey: .poster)
+        try c.encode(self.availability, forKey: .availability)
+        try c.encode(self.title, forKey: .title)
+        try c.encode(self.score, forKey: .score)
+        try c.encode(self.votes, forKey: .votes)
+        try c.encode(self.releaseDate, forKey: .releaseDate)
+    }
+}
+
+public struct CatalogBrowsePage: Codable, Sendable, Hashable {
+    public var items: [CatalogBrowseTitle]
+    public var nextPage: Int?
+    public var stale: Bool
+    public var voteFloor: Int?
+    public var detail: String?
+    public init(items: [CatalogBrowseTitle], nextPage: Int?, stale: Bool, voteFloor: Int?, detail: String?) {
+        self.items = items
+        self.nextPage = nextPage
+        self.stale = stale
+        self.voteFloor = voteFloor
+        self.detail = detail
+    }
+    private enum CodingKeys: String, CodingKey {
+        case items = "items"
+        case nextPage = "nextPage"
+        case stale = "stale"
+        case voteFloor = "voteFloor"
+        case detail = "detail"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.items = try c.decode([CatalogBrowseTitle].self, forKey: .items)
+        self.nextPage = try c.decodeIfPresent(Int.self, forKey: .nextPage)
+        self.stale = try c.decode(Bool.self, forKey: .stale)
+        self.voteFloor = try c.decodeIfPresent(Int.self, forKey: .voteFloor)
+        self.detail = try c.decodeIfPresent(String.self, forKey: .detail)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.items, forKey: .items)
+        try c.encode(self.nextPage, forKey: .nextPage)
+        try c.encode(self.stale, forKey: .stale)
+        try c.encode(self.voteFloor, forKey: .voteFloor)
+        try c.encode(self.detail, forKey: .detail)
+    }
+}
+
+public enum ExternalIdSite {
+    public static let tmdb = "tmdb"
+    public static let tvdb = "tvdb"
+    public static let imdb = "imdb"
+    public static let knownValues = ["tmdb", "tvdb", "imdb"]
+}
+
+public enum FieldSection {
+    public static let connection = "connection"
+    public static let defaults = "defaults"
+    public static let anime = "anime"
+    public static let behaviour = "behaviour"
+    public static let knownValues = ["connection", "defaults", "anime", "behaviour"]
+}
+
+public struct DescribedField: Codable, Sendable, Hashable {
+    public var key: String
+    public var label: String
+    public var kind: String
+    public var required: Bool
+    public var choices: [DescribedField.Choice]
+    public var section: String
+    public var folder: String?
+    public init(key: String, label: String, kind: String, required: Bool, choices: [DescribedField.Choice], section: String, folder: String?) {
+        self.key = key
+        self.label = label
+        self.kind = kind
+        self.required = required
+        self.choices = choices
+        self.section = section
+        self.folder = folder
+    }
+    private enum CodingKeys: String, CodingKey {
+        case key = "key"
+        case label = "label"
+        case kind = "kind"
+        case required = "required"
+        case choices = "choices"
+        case section = "section"
+        case folder = "folder"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.key = try c.decode(String.self, forKey: .key)
+        self.label = try c.decode(String.self, forKey: .label)
+        self.kind = try c.decode(String.self, forKey: .kind)
+        self.required = try c.decode(Bool.self, forKey: .required)
+        self.choices = try c.decode([DescribedField.Choice].self, forKey: .choices)
+        self.section = try c.decode(String.self, forKey: .section)
+        self.folder = try c.decodeIfPresent(String.self, forKey: .folder)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.key, forKey: .key)
+        try c.encode(self.label, forKey: .label)
+        try c.encode(self.kind, forKey: .kind)
+        try c.encode(self.required, forKey: .required)
+        try c.encode(self.choices, forKey: .choices)
+        try c.encode(self.section, forKey: .section)
+        try c.encode(self.folder, forKey: .folder)
+    }
+    public struct Choice: Codable, Sendable, Hashable {
+        public var value: String
+        public var label: String
+        public var description: String?
+        public init(value: String, label: String, description: String?) {
+            self.value = value
+            self.label = label
+            self.description = description
+        }
+        private enum CodingKeys: String, CodingKey {
+            case value = "value"
+            case label = "label"
+            case description = "description"
+        }
+        public init(from decoder: any Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            self.value = try c.decode(String.self, forKey: .value)
+            self.label = try c.decode(String.self, forKey: .label)
+            self.description = try c.decodeIfPresent(String.self, forKey: .description)
+        }
+        public func encode(to encoder: any Encoder) throws {
+            var c = encoder.container(keyedBy: CodingKeys.self)
+            try c.encode(self.value, forKey: .value)
+            try c.encode(self.label, forKey: .label)
+            try c.encode(self.description, forKey: .description)
+        }
+    }
+}
+
+public struct FulfilmentSourceDescription: Codable, Sendable, Hashable {
+    public var id: String
+    public var name: String
+    public var kinds: [String]
+    public var needs: [String]
+    public var scope: String
+    public var apiKey: Bool
+    public var rules: Bool
+    public var fields: [DescribedField]
+    public var values: [String: JSONValue]
+    public init(id: String, name: String, kinds: [String], needs: [String], scope: String, apiKey: Bool, rules: Bool, fields: [DescribedField], values: [String: JSONValue]) {
+        self.id = id
+        self.name = name
+        self.kinds = kinds
+        self.needs = needs
+        self.scope = scope
+        self.apiKey = apiKey
+        self.rules = rules
+        self.fields = fields
+        self.values = values
+    }
+    private enum CodingKeys: String, CodingKey {
+        case id = "id"
+        case name = "name"
+        case kinds = "kinds"
+        case needs = "needs"
+        case scope = "scope"
+        case apiKey = "apiKey"
+        case rules = "rules"
+        case fields = "fields"
+        case values = "values"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try c.decode(String.self, forKey: .id)
+        self.name = try c.decode(String.self, forKey: .name)
+        self.kinds = try c.decode([String].self, forKey: .kinds)
+        self.needs = try c.decode([String].self, forKey: .needs)
+        self.scope = try c.decode(String.self, forKey: .scope)
+        self.apiKey = try c.decode(Bool.self, forKey: .apiKey)
+        self.rules = try c.decode(Bool.self, forKey: .rules)
+        self.fields = try c.decode([DescribedField].self, forKey: .fields)
+        self.values = try c.decode([String: JSONValue].self, forKey: .values)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.id, forKey: .id)
+        try c.encode(self.name, forKey: .name)
+        try c.encode(self.kinds, forKey: .kinds)
+        try c.encode(self.needs, forKey: .needs)
+        try c.encode(self.scope, forKey: .scope)
+        try c.encode(self.apiKey, forKey: .apiKey)
+        try c.encode(self.rules, forKey: .rules)
+        try c.encode(self.fields, forKey: .fields)
+        try c.encode(self.values, forKey: .values)
+    }
+}
+
+public struct FulfilmentLibrary: Codable, Sendable, Hashable {
+    public var id: String
+    public var name: String
+    public init(id: String, name: String) {
+        self.id = id
+        self.name = name
+    }
+    private enum CodingKeys: String, CodingKey {
+        case id = "id"
+        case name = "name"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try c.decode(String.self, forKey: .id)
+        self.name = try c.decode(String.self, forKey: .name)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.id, forKey: .id)
+        try c.encode(self.name, forKey: .name)
+    }
+}
+
+public struct FulfilmentLanding: Codable, Sendable, Hashable {
+    public var kind: String
+    public var from: String
+    public var folder: String
+    public var library: FulfilmentLibrary?
+    public init(kind: String, from: String, folder: String, library: FulfilmentLibrary?) {
+        self.kind = kind
+        self.from = from
+        self.folder = folder
+        self.library = library
+    }
+    private enum CodingKeys: String, CodingKey {
+        case kind = "kind"
+        case from = "from"
+        case folder = "folder"
+        case library = "library"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.kind = try c.decode(String.self, forKey: .kind)
+        self.from = try c.decode(String.self, forKey: .from)
+        self.folder = try c.decode(String.self, forKey: .folder)
+        self.library = try c.decodeIfPresent(FulfilmentLibrary.self, forKey: .library)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.kind, forKey: .kind)
+        try c.encode(self.from, forKey: .from)
+        try c.encode(self.folder, forKey: .folder)
+        try c.encode(self.library, forKey: .library)
+    }
+}
+
+public struct FulfilmentConnection: Codable, Sendable, Hashable {
+    public var id: String
+    public var name: String
+    public var slug: String
+    public var source: String
+    public var settings: [String: JSONValue]
+    public var options: [String: JSONValue]
+    public var defaultFor: [String]
+    public var folderLibraries: [String: String]
+    public var apiKey: FulfilmentConnection.ApiKey
+    public var landings: [FulfilmentLanding]
+    public init(id: String, name: String, slug: String, source: String, settings: [String: JSONValue], options: [String: JSONValue], defaultFor: [String], folderLibraries: [String: String], apiKey: FulfilmentConnection.ApiKey, landings: [FulfilmentLanding]) {
+        self.id = id
+        self.name = name
+        self.slug = slug
+        self.source = source
+        self.settings = settings
+        self.options = options
+        self.defaultFor = defaultFor
+        self.folderLibraries = folderLibraries
+        self.apiKey = apiKey
+        self.landings = landings
+    }
+    private enum CodingKeys: String, CodingKey {
+        case id = "id"
+        case name = "name"
+        case slug = "slug"
+        case source = "source"
+        case settings = "settings"
+        case options = "options"
+        case defaultFor = "defaultFor"
+        case folderLibraries = "folderLibraries"
+        case apiKey = "apiKey"
+        case landings = "landings"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try c.decode(String.self, forKey: .id)
+        self.name = try c.decode(String.self, forKey: .name)
+        self.slug = try c.decode(String.self, forKey: .slug)
+        self.source = try c.decode(String.self, forKey: .source)
+        self.settings = try c.decode([String: JSONValue].self, forKey: .settings)
+        self.options = try c.decode([String: JSONValue].self, forKey: .options)
+        self.defaultFor = try c.decode([String].self, forKey: .defaultFor)
+        self.folderLibraries = try c.decode([String: String].self, forKey: .folderLibraries)
+        self.apiKey = try c.decode(FulfilmentConnection.ApiKey.self, forKey: .apiKey)
+        self.landings = try c.decode([FulfilmentLanding].self, forKey: .landings)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.id, forKey: .id)
+        try c.encode(self.name, forKey: .name)
+        try c.encode(self.slug, forKey: .slug)
+        try c.encode(self.source, forKey: .source)
+        try c.encode(self.settings, forKey: .settings)
+        try c.encode(self.options, forKey: .options)
+        try c.encode(self.defaultFor, forKey: .defaultFor)
+        try c.encode(self.folderLibraries, forKey: .folderLibraries)
+        try c.encode(self.apiKey, forKey: .apiKey)
+        try c.encode(self.landings, forKey: .landings)
+    }
+    public struct ApiKey: Codable, Sendable, Hashable {
+        public var source: String?
+        public var environment: Bool
+        public init(source: String?, environment: Bool) {
+            self.source = source
+            self.environment = environment
+        }
+        private enum CodingKeys: String, CodingKey {
+            case source = "source"
+            case environment = "environment"
+        }
+        public init(from decoder: any Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            self.source = try c.decodeIfPresent(String.self, forKey: .source)
+            self.environment = try c.decode(Bool.self, forKey: .environment)
+        }
+        public func encode(to encoder: any Encoder) throws {
+            var c = encoder.container(keyedBy: CodingKeys.self)
+            try c.encode(self.source, forKey: .source)
+            try c.encode(self.environment, forKey: .environment)
+        }
+    }
+}
+
+public struct FulfilmentConnectionInput: Codable, Sendable, Hashable {
+    public var name: String
+    public var slug: String
+    public var source: String
+    public var settings: [String: JSONValue]
+    public var options: [String: JSONValue]?
+    public var defaultFor: [String]?
+    public var folderLibraries: [String: String]?
+    public var apiKey: Explicit<String>
+    public init(name: String, slug: String, source: String, settings: [String: JSONValue], options: [String: JSONValue]? = nil, defaultFor: [String]? = nil, folderLibraries: [String: String]? = nil, apiKey: Explicit<String> = .omitted) {
+        self.name = name
+        self.slug = slug
+        self.source = source
+        self.settings = settings
+        self.options = options
+        self.defaultFor = defaultFor
+        self.folderLibraries = folderLibraries
+        self.apiKey = apiKey
+    }
+    private enum CodingKeys: String, CodingKey {
+        case name = "name"
+        case slug = "slug"
+        case source = "source"
+        case settings = "settings"
+        case options = "options"
+        case defaultFor = "defaultFor"
+        case folderLibraries = "folderLibraries"
+        case apiKey = "apiKey"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.name = try c.decode(String.self, forKey: .name)
+        self.slug = try c.decode(String.self, forKey: .slug)
+        self.source = try c.decode(String.self, forKey: .source)
+        self.settings = try c.decode([String: JSONValue].self, forKey: .settings)
+        self.options = try c.decodeIfPresent([String: JSONValue].self, forKey: .options)
+        self.defaultFor = try c.decodeIfPresent([String].self, forKey: .defaultFor)
+        self.folderLibraries = try c.decodeIfPresent([String: String].self, forKey: .folderLibraries)
+        self.apiKey = try !c.contains(.apiKey) ? .omitted : c.decodeNil(forKey: .apiKey) ? .null : .value(c.decode(String.self, forKey: .apiKey))
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.name, forKey: .name)
+        try c.encode(self.slug, forKey: .slug)
+        try c.encode(self.source, forKey: .source)
+        try c.encode(self.settings, forKey: .settings)
+        try c.encodeIfPresent(self.options, forKey: .options)
+        try c.encodeIfPresent(self.defaultFor, forKey: .defaultFor)
+        try c.encodeIfPresent(self.folderLibraries, forKey: .folderLibraries)
+        switch apiKey {
+        case .omitted: break
+        case .null: try c.encodeNil(forKey: .apiKey)
+        case .value(let value): try c.encode(value, forKey: .apiKey)
+        }
+    }
+}
+
+public struct FulfilmentOptions: Codable, Sendable, Hashable {
+    public var fields: [DescribedField]
+    public var values: [String: JSONValue]
+    public var rule: [DescribedField]
+    public init(fields: [DescribedField], values: [String: JSONValue], rule: [DescribedField]) {
+        self.fields = fields
+        self.values = values
+        self.rule = rule
+    }
+    private enum CodingKeys: String, CodingKey {
+        case fields = "fields"
+        case values = "values"
+        case rule = "rule"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.fields = try c.decode([DescribedField].self, forKey: .fields)
+        self.values = try c.decode([String: JSONValue].self, forKey: .values)
+        self.rule = try c.decode([DescribedField].self, forKey: .rule)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.fields, forKey: .fields)
+        try c.encode(self.values, forKey: .values)
+        try c.encode(self.rule, forKey: .rule)
+    }
+}
+
+public struct FulfilmentKeyword: Codable, Sendable, Hashable {
+    public var id: Int
+    public var name: String
+    public init(id: Int, name: String) {
+        self.id = id
+        self.name = name
+    }
+    private enum CodingKeys: String, CodingKey {
+        case id = "id"
+        case name = "name"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try c.decode(Int.self, forKey: .id)
+        self.name = try c.decode(String.self, forKey: .name)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.id, forKey: .id)
+        try c.encode(self.name, forKey: .name)
+    }
+}
+
+public struct FulfilmentRule: Codable, Sendable, Hashable {
+    public var id: String
+    public var connectionId: String
+    public var users: [String]
+    public var genres: [Int]
+    public var languages: [String]
+    public var keywords: [FulfilmentKeyword]
+    public var settings: [String: JSONValue]
+    public init(id: String, connectionId: String, users: [String], genres: [Int], languages: [String], keywords: [FulfilmentKeyword], settings: [String: JSONValue]) {
+        self.id = id
+        self.connectionId = connectionId
+        self.users = users
+        self.genres = genres
+        self.languages = languages
+        self.keywords = keywords
+        self.settings = settings
+    }
+    private enum CodingKeys: String, CodingKey {
+        case id = "id"
+        case connectionId = "connectionId"
+        case users = "users"
+        case genres = "genres"
+        case languages = "languages"
+        case keywords = "keywords"
+        case settings = "settings"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try c.decode(String.self, forKey: .id)
+        self.connectionId = try c.decode(String.self, forKey: .connectionId)
+        self.users = try c.decode([String].self, forKey: .users)
+        self.genres = try c.decode([Int].self, forKey: .genres)
+        self.languages = try c.decode([String].self, forKey: .languages)
+        self.keywords = try c.decode([FulfilmentKeyword].self, forKey: .keywords)
+        self.settings = try c.decode([String: JSONValue].self, forKey: .settings)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.id, forKey: .id)
+        try c.encode(self.connectionId, forKey: .connectionId)
+        try c.encode(self.users, forKey: .users)
+        try c.encode(self.genres, forKey: .genres)
+        try c.encode(self.languages, forKey: .languages)
+        try c.encode(self.keywords, forKey: .keywords)
+        try c.encode(self.settings, forKey: .settings)
+    }
+}
+
+public struct FulfilmentRuleInput: Codable, Sendable, Hashable {
+    public var connectionId: String
+    public var users: [String]?
+    public var genres: [Int]?
+    public var languages: [String]?
+    public var keywords: [FulfilmentKeyword]?
+    public var settings: [String: JSONValue]
+    public var folderLibraryId: Explicit<String>
+    public init(connectionId: String, users: [String]? = nil, genres: [Int]? = nil, languages: [String]? = nil, keywords: [FulfilmentKeyword]? = nil, settings: [String: JSONValue], folderLibraryId: Explicit<String> = .omitted) {
+        self.connectionId = connectionId
+        self.users = users
+        self.genres = genres
+        self.languages = languages
+        self.keywords = keywords
+        self.settings = settings
+        self.folderLibraryId = folderLibraryId
+    }
+    private enum CodingKeys: String, CodingKey {
+        case connectionId = "connectionId"
+        case users = "users"
+        case genres = "genres"
+        case languages = "languages"
+        case keywords = "keywords"
+        case settings = "settings"
+        case folderLibraryId = "folderLibraryId"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.connectionId = try c.decode(String.self, forKey: .connectionId)
+        self.users = try c.decodeIfPresent([String].self, forKey: .users)
+        self.genres = try c.decodeIfPresent([Int].self, forKey: .genres)
+        self.languages = try c.decodeIfPresent([String].self, forKey: .languages)
+        self.keywords = try c.decodeIfPresent([FulfilmentKeyword].self, forKey: .keywords)
+        self.settings = try c.decode([String: JSONValue].self, forKey: .settings)
+        self.folderLibraryId = try !c.contains(.folderLibraryId) ? .omitted : c.decodeNil(forKey: .folderLibraryId) ? .null : .value(c.decode(String.self, forKey: .folderLibraryId))
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.connectionId, forKey: .connectionId)
+        try c.encodeIfPresent(self.users, forKey: .users)
+        try c.encodeIfPresent(self.genres, forKey: .genres)
+        try c.encodeIfPresent(self.languages, forKey: .languages)
+        try c.encodeIfPresent(self.keywords, forKey: .keywords)
+        try c.encode(self.settings, forKey: .settings)
+        switch folderLibraryId {
+        case .omitted: break
+        case .null: try c.encodeNil(forKey: .folderLibraryId)
+        case .value(let value): try c.encode(value, forKey: .folderLibraryId)
+        }
+    }
+}
+
+public struct FulfilmentRuleGenre: Codable, Sendable, Hashable {
+    public var id: Int
+    public var name: String
+    public init(id: Int, name: String) {
+        self.id = id
+        self.name = name
+    }
+    private enum CodingKeys: String, CodingKey {
+        case id = "id"
+        case name = "name"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try c.decode(Int.self, forKey: .id)
+        self.name = try c.decode(String.self, forKey: .name)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.id, forKey: .id)
+        try c.encode(self.name, forKey: .name)
+    }
+}
+
+public struct FulfilmentRuleLanguage: Codable, Sendable, Hashable {
+    public var id: String
+    public var name: String
+    public init(id: String, name: String) {
+        self.id = id
+        self.name = name
+    }
+    private enum CodingKeys: String, CodingKey {
+        case id = "id"
+        case name = "name"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try c.decode(String.self, forKey: .id)
+        self.name = try c.decode(String.self, forKey: .name)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.id, forKey: .id)
+        try c.encode(self.name, forKey: .name)
+    }
+}
+
+public struct FulfilmentRuleAccount: Codable, Sendable, Hashable {
+    public var id: String
+    public var name: String
+    public init(id: String, name: String) {
+        self.id = id
+        self.name = name
+    }
+    private enum CodingKeys: String, CodingKey {
+        case id = "id"
+        case name = "name"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try c.decode(String.self, forKey: .id)
+        self.name = try c.decode(String.self, forKey: .name)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.id, forKey: .id)
+        try c.encode(self.name, forKey: .name)
+    }
+}
+
+public struct FulfilmentRuleChoices: Codable, Sendable, Hashable {
+    public var tmdb: Bool
+    public var genres: [FulfilmentRuleGenre]
+    public var languages: [FulfilmentRuleLanguage]
+    public var users: [FulfilmentRuleAccount]
+    public init(tmdb: Bool, genres: [FulfilmentRuleGenre], languages: [FulfilmentRuleLanguage], users: [FulfilmentRuleAccount]) {
+        self.tmdb = tmdb
+        self.genres = genres
+        self.languages = languages
+        self.users = users
+    }
+    private enum CodingKeys: String, CodingKey {
+        case tmdb = "tmdb"
+        case genres = "genres"
+        case languages = "languages"
+        case users = "users"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.tmdb = try c.decode(Bool.self, forKey: .tmdb)
+        self.genres = try c.decode([FulfilmentRuleGenre].self, forKey: .genres)
+        self.languages = try c.decode([FulfilmentRuleLanguage].self, forKey: .languages)
+        self.users = try c.decode([FulfilmentRuleAccount].self, forKey: .users)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.tmdb, forKey: .tmdb)
+        try c.encode(self.genres, forKey: .genres)
+        try c.encode(self.languages, forKey: .languages)
+        try c.encode(self.users, forKey: .users)
+    }
+}
+
+public enum NotificationKind {
+    public static let ready = "ready"
+    public static let unavailable = "unavailable"
+    public static let waiting = "waiting"
+    public static let needsAttention = "needsAttention"
+    public static let knownValues = ["ready", "unavailable", "waiting", "needsAttention"]
+}
+
+public struct Notification: Codable, Sendable, Hashable {
+    public var id: String
+    public var kind: String
+    public var title: CatalogTitleSummary?
+    public var season: Int?
+    public var count: Int
+    public var createdAt: String
+    public var readAt: String?
+    public init(id: String, kind: String, title: CatalogTitleSummary?, season: Int?, count: Int, createdAt: String, readAt: String?) {
+        self.id = id
+        self.kind = kind
+        self.title = title
+        self.season = season
+        self.count = count
+        self.createdAt = createdAt
+        self.readAt = readAt
+    }
+    private enum CodingKeys: String, CodingKey {
+        case id = "id"
+        case kind = "kind"
+        case title = "title"
+        case season = "season"
+        case count = "count"
+        case createdAt = "createdAt"
+        case readAt = "readAt"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try c.decode(String.self, forKey: .id)
+        self.kind = try c.decode(String.self, forKey: .kind)
+        self.title = try c.decodeIfPresent(CatalogTitleSummary.self, forKey: .title)
+        self.season = try c.decodeIfPresent(Int.self, forKey: .season)
+        self.count = try c.decode(Int.self, forKey: .count)
+        self.createdAt = try c.decode(String.self, forKey: .createdAt)
+        self.readAt = try c.decodeIfPresent(String.self, forKey: .readAt)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.id, forKey: .id)
+        try c.encode(self.kind, forKey: .kind)
+        try c.encode(self.title, forKey: .title)
+        try c.encode(self.season, forKey: .season)
+        try c.encode(self.count, forKey: .count)
+        try c.encode(self.createdAt, forKey: .createdAt)
+        try c.encode(self.readAt, forKey: .readAt)
+    }
+}
+
+public struct NotificationPage: Codable, Sendable, Hashable {
+    public var items: [Notification]
+    public var nextCursor: String?
+    public init(items: [Notification], nextCursor: String?) {
+        self.items = items
+        self.nextCursor = nextCursor
+    }
+    private enum CodingKeys: String, CodingKey {
+        case items = "items"
+        case nextCursor = "nextCursor"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.items = try c.decode([Notification].self, forKey: .items)
+        self.nextCursor = try c.decodeIfPresent(String.self, forKey: .nextCursor)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.items, forKey: .items)
+        try c.encode(self.nextCursor, forKey: .nextCursor)
+    }
+}
+
+public struct PushSubscriptionInput: Codable, Sendable, Hashable {
+    public var endpoint: String
+    public var keys: PushSubscriptionInput.Keys
+    public init(endpoint: String, keys: PushSubscriptionInput.Keys) {
+        self.endpoint = endpoint
+        self.keys = keys
+    }
+    private enum CodingKeys: String, CodingKey {
+        case endpoint = "endpoint"
+        case keys = "keys"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.endpoint = try c.decode(String.self, forKey: .endpoint)
+        self.keys = try c.decode(PushSubscriptionInput.Keys.self, forKey: .keys)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.endpoint, forKey: .endpoint)
+        try c.encode(self.keys, forKey: .keys)
+    }
+    public struct Keys: Codable, Sendable, Hashable {
+        public var p256dh: String
+        public var auth: String
+        public init(p256dh: String, auth: String) {
+            self.p256dh = p256dh
+            self.auth = auth
+        }
+        private enum CodingKeys: String, CodingKey {
+            case p256dh = "p256dh"
+            case auth = "auth"
+        }
+        public init(from decoder: any Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            self.p256dh = try c.decode(String.self, forKey: .p256dh)
+            self.auth = try c.decode(String.self, forKey: .auth)
+        }
+        public func encode(to encoder: any Encoder) throws {
+            var c = encoder.container(keyedBy: CodingKeys.self)
+            try c.encode(self.p256dh, forKey: .p256dh)
+            try c.encode(self.auth, forKey: .auth)
+        }
+    }
+}
+
 public struct PlaybackSeek: Codable, Sendable, Hashable {
     public var url: String
     public var offset: Double
@@ -304,164 +2930,6 @@ public struct ItemLabel: Codable, Sendable, Hashable {
         try c.encode(self.shortCode, forKey: .shortCode)
         try c.encode(self.group, forKey: .group)
         try c.encode(self.groupLabel, forKey: .groupLabel)
-    }
-}
-
-public enum TitleKind {
-    public static let movie = "movie"
-    public static let show = "show"
-    public static let knownValues = ["movie", "show"]
-}
-
-public struct ImagePlaceholder: Codable, Sendable, Hashable {
-    public var blurhash: String
-    public var aspectRatio: Double
-    public init(blurhash: String, aspectRatio: Double) {
-        self.blurhash = blurhash
-        self.aspectRatio = aspectRatio
-    }
-    private enum CodingKeys: String, CodingKey {
-        case blurhash = "blurhash"
-        case aspectRatio = "aspectRatio"
-    }
-    public init(from decoder: any Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        self.blurhash = try c.decode(String.self, forKey: .blurhash)
-        self.aspectRatio = try c.decode(Double.self, forKey: .aspectRatio)
-    }
-    public func encode(to encoder: any Encoder) throws {
-        var c = encoder.container(keyedBy: CodingKeys.self)
-        try c.encode(self.blurhash, forKey: .blurhash)
-        try c.encode(self.aspectRatio, forKey: .aspectRatio)
-    }
-}
-
-public struct Artwork: Codable, Sendable, Hashable {
-    public var id: String
-    public var placeholder: ImagePlaceholder?
-    public init(id: String, placeholder: ImagePlaceholder?) {
-        self.id = id
-        self.placeholder = placeholder
-    }
-    private enum CodingKeys: String, CodingKey {
-        case id = "id"
-        case placeholder = "placeholder"
-    }
-    public init(from decoder: any Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        self.id = try c.decode(String.self, forKey: .id)
-        self.placeholder = try c.decodeIfPresent(ImagePlaceholder.self, forKey: .placeholder)
-    }
-    public func encode(to encoder: any Encoder) throws {
-        var c = encoder.container(keyedBy: CodingKeys.self)
-        try c.encode(self.id, forKey: .id)
-        try c.encode(self.placeholder, forKey: .placeholder)
-    }
-}
-
-public struct Images: Codable, Sendable, Hashable {
-    public var poster: Artwork?
-    public var backdrop: Artwork?
-    public var logo: Artwork?
-    public init(poster: Artwork?, backdrop: Artwork?, logo: Artwork?) {
-        self.poster = poster
-        self.backdrop = backdrop
-        self.logo = logo
-    }
-    private enum CodingKeys: String, CodingKey {
-        case poster = "poster"
-        case backdrop = "backdrop"
-        case logo = "logo"
-    }
-    public init(from decoder: any Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        self.poster = try c.decodeIfPresent(Artwork.self, forKey: .poster)
-        self.backdrop = try c.decodeIfPresent(Artwork.self, forKey: .backdrop)
-        self.logo = try c.decodeIfPresent(Artwork.self, forKey: .logo)
-    }
-    public func encode(to encoder: any Encoder) throws {
-        var c = encoder.container(keyedBy: CodingKeys.self)
-        try c.encode(self.poster, forKey: .poster)
-        try c.encode(self.backdrop, forKey: .backdrop)
-        try c.encode(self.logo, forKey: .logo)
-    }
-}
-
-public struct TitleSummary: Codable, Sendable, Hashable {
-    public var id: String
-    public var libraryId: String
-    public var kind: String
-    public var name: String
-    public var year: Int?
-    public var overview: String?
-    public var images: Images
-    public var genres: [String]
-    public var rating: Double?
-    public var contentRating: String?
-    public var originalLanguage: String?
-    public var favorite: Bool
-    public var watched: Bool
-    public init(id: String, libraryId: String, kind: String, name: String, year: Int?, overview: String?, images: Images, genres: [String], rating: Double?, contentRating: String?, originalLanguage: String?, favorite: Bool, watched: Bool) {
-        self.id = id
-        self.libraryId = libraryId
-        self.kind = kind
-        self.name = name
-        self.year = year
-        self.overview = overview
-        self.images = images
-        self.genres = genres
-        self.rating = rating
-        self.contentRating = contentRating
-        self.originalLanguage = originalLanguage
-        self.favorite = favorite
-        self.watched = watched
-    }
-    private enum CodingKeys: String, CodingKey {
-        case id = "id"
-        case libraryId = "libraryId"
-        case kind = "kind"
-        case name = "name"
-        case year = "year"
-        case overview = "overview"
-        case images = "images"
-        case genres = "genres"
-        case rating = "rating"
-        case contentRating = "contentRating"
-        case originalLanguage = "originalLanguage"
-        case favorite = "favorite"
-        case watched = "watched"
-    }
-    public init(from decoder: any Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        self.id = try c.decode(String.self, forKey: .id)
-        self.libraryId = try c.decode(String.self, forKey: .libraryId)
-        self.kind = try c.decode(String.self, forKey: .kind)
-        self.name = try c.decode(String.self, forKey: .name)
-        self.year = try c.decodeIfPresent(Int.self, forKey: .year)
-        self.overview = try c.decodeIfPresent(String.self, forKey: .overview)
-        self.images = try c.decode(Images.self, forKey: .images)
-        self.genres = try c.decode([String].self, forKey: .genres)
-        self.rating = try c.decodeIfPresent(Double.self, forKey: .rating)
-        self.contentRating = try c.decodeIfPresent(String.self, forKey: .contentRating)
-        self.originalLanguage = try c.decodeIfPresent(String.self, forKey: .originalLanguage)
-        self.favorite = try c.decode(Bool.self, forKey: .favorite)
-        self.watched = try c.decode(Bool.self, forKey: .watched)
-    }
-    public func encode(to encoder: any Encoder) throws {
-        var c = encoder.container(keyedBy: CodingKeys.self)
-        try c.encode(self.id, forKey: .id)
-        try c.encode(self.libraryId, forKey: .libraryId)
-        try c.encode(self.kind, forKey: .kind)
-        try c.encode(self.name, forKey: .name)
-        try c.encode(self.year, forKey: .year)
-        try c.encode(self.overview, forKey: .overview)
-        try c.encode(self.images, forKey: .images)
-        try c.encode(self.genres, forKey: .genres)
-        try c.encode(self.rating, forKey: .rating)
-        try c.encode(self.contentRating, forKey: .contentRating)
-        try c.encode(self.originalLanguage, forKey: .originalLanguage)
-        try c.encode(self.favorite, forKey: .favorite)
-        try c.encode(self.watched, forKey: .watched)
     }
 }
 
@@ -1230,6 +3698,42 @@ public enum PlaybackReason {
     public static let knownValues = ["container", "video", "audio", "audio-selection", "subtitle", "quality", "failed", "limit"]
 }
 
+public enum MediaSegmentKind {
+    public static let recap = "recap"
+    public static let intro = "intro"
+    public static let credits = "credits"
+    public static let preview = "preview"
+    public static let knownValues = ["recap", "intro", "credits", "preview"]
+}
+
+public struct MediaSegment: Codable, Sendable, Hashable {
+    public var kind: String
+    public var start: Double
+    public var end: Double
+    public init(kind: String, start: Double, end: Double) {
+        self.kind = kind
+        self.start = start
+        self.end = end
+    }
+    private enum CodingKeys: String, CodingKey {
+        case kind = "kind"
+        case start = "start"
+        case end = "end"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.kind = try c.decode(String.self, forKey: .kind)
+        self.start = try c.decode(Double.self, forKey: .start)
+        self.end = try c.decode(Double.self, forKey: .end)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.kind, forKey: .kind)
+        try c.encode(self.start, forKey: .start)
+        try c.encode(self.end, forKey: .end)
+    }
+}
+
 public struct PlaybackStart: Codable, Sendable, Hashable {
     public var item: MediaItem
     public var method: String
@@ -1252,7 +3756,9 @@ public struct PlaybackStart: Codable, Sendable, Hashable {
     public var original: Bool
     public var reasons: [String]
     public var next: MediaItem?
-    public init(item: MediaItem, method: String, url: String, hls: Bool, offset: Double, start: Double, position: Double, audio: AudioTrack?, convertedAudio: String?, convertedVideo: String?, standIn: AudioTrack?, subtitle: SubtitleTrack?, subtitleMode: String?, subtitleUrl: String?, audioTracks: [AudioTrack], subtitleTracks: [SubtitleTrack], quality: String, qualities: [PlaybackQualityPreset], original: Bool, reasons: [String], next: MediaItem?) {
+    public var upNextAt: Double?
+    public var segments: [MediaSegment]
+    public init(item: MediaItem, method: String, url: String, hls: Bool, offset: Double, start: Double, position: Double, audio: AudioTrack?, convertedAudio: String?, convertedVideo: String?, standIn: AudioTrack?, subtitle: SubtitleTrack?, subtitleMode: String?, subtitleUrl: String?, audioTracks: [AudioTrack], subtitleTracks: [SubtitleTrack], quality: String, qualities: [PlaybackQualityPreset], original: Bool, reasons: [String], next: MediaItem?, upNextAt: Double?, segments: [MediaSegment]) {
         self.item = item
         self.method = method
         self.url = url
@@ -1274,6 +3780,8 @@ public struct PlaybackStart: Codable, Sendable, Hashable {
         self.original = original
         self.reasons = reasons
         self.next = next
+        self.upNextAt = upNextAt
+        self.segments = segments
     }
     private enum CodingKeys: String, CodingKey {
         case item = "item"
@@ -1297,6 +3805,8 @@ public struct PlaybackStart: Codable, Sendable, Hashable {
         case original = "original"
         case reasons = "reasons"
         case next = "next"
+        case upNextAt = "upNextAt"
+        case segments = "segments"
     }
     public init(from decoder: any Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -1321,6 +3831,8 @@ public struct PlaybackStart: Codable, Sendable, Hashable {
         self.original = try c.decode(Bool.self, forKey: .original)
         self.reasons = try c.decode([String].self, forKey: .reasons)
         self.next = try c.decodeIfPresent(MediaItem.self, forKey: .next)
+        self.upNextAt = try c.decodeIfPresent(Double.self, forKey: .upNextAt)
+        self.segments = try c.decode([MediaSegment].self, forKey: .segments)
     }
     public func encode(to encoder: any Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
@@ -1345,6 +3857,8 @@ public struct PlaybackStart: Codable, Sendable, Hashable {
         try c.encode(self.original, forKey: .original)
         try c.encode(self.reasons, forKey: .reasons)
         try c.encode(self.next, forKey: .next)
+        try c.encode(self.upNextAt, forKey: .upNextAt)
+        try c.encode(self.segments, forKey: .segments)
     }
 }
 
@@ -1487,18 +4001,20 @@ public struct OidcSettings: Codable, Sendable, Hashable {
     public var clientId: String
     public var scopes: String
     public var usernameClaim: String
+    public var nameClaim: String
     public var roleClaim: String
     public var groupsClaim: String
     public var policyClaim: String
     public var allowSignUp: Bool
     public var signOutRefused: Bool
-    public init(enabled: Bool, displayName: String, issuerUrl: String, clientId: String, scopes: String, usernameClaim: String, roleClaim: String, groupsClaim: String, policyClaim: String, allowSignUp: Bool, signOutRefused: Bool) {
+    public init(enabled: Bool, displayName: String, issuerUrl: String, clientId: String, scopes: String, usernameClaim: String, nameClaim: String, roleClaim: String, groupsClaim: String, policyClaim: String, allowSignUp: Bool, signOutRefused: Bool) {
         self.enabled = enabled
         self.displayName = displayName
         self.issuerUrl = issuerUrl
         self.clientId = clientId
         self.scopes = scopes
         self.usernameClaim = usernameClaim
+        self.nameClaim = nameClaim
         self.roleClaim = roleClaim
         self.groupsClaim = groupsClaim
         self.policyClaim = policyClaim
@@ -1512,6 +4028,7 @@ public struct OidcSettings: Codable, Sendable, Hashable {
         case clientId = "clientId"
         case scopes = "scopes"
         case usernameClaim = "usernameClaim"
+        case nameClaim = "nameClaim"
         case roleClaim = "roleClaim"
         case groupsClaim = "groupsClaim"
         case policyClaim = "policyClaim"
@@ -1526,6 +4043,7 @@ public struct OidcSettings: Codable, Sendable, Hashable {
         self.clientId = try c.decode(String.self, forKey: .clientId)
         self.scopes = try c.decode(String.self, forKey: .scopes)
         self.usernameClaim = try c.decode(String.self, forKey: .usernameClaim)
+        self.nameClaim = try c.decode(String.self, forKey: .nameClaim)
         self.roleClaim = try c.decode(String.self, forKey: .roleClaim)
         self.groupsClaim = try c.decode(String.self, forKey: .groupsClaim)
         self.policyClaim = try c.decode(String.self, forKey: .policyClaim)
@@ -1540,6 +4058,7 @@ public struct OidcSettings: Codable, Sendable, Hashable {
         try c.encode(self.clientId, forKey: .clientId)
         try c.encode(self.scopes, forKey: .scopes)
         try c.encode(self.usernameClaim, forKey: .usernameClaim)
+        try c.encode(self.nameClaim, forKey: .nameClaim)
         try c.encode(self.roleClaim, forKey: .roleClaim)
         try c.encode(self.groupsClaim, forKey: .groupsClaim)
         try c.encode(self.policyClaim, forKey: .policyClaim)
@@ -2209,6 +4728,85 @@ public struct AdminTranscodingSettings: Codable, Sendable, Hashable {
     }
 }
 
+public struct NetworkSettings: Codable, Sendable, Hashable {
+    public var localNetworks: [String]
+    public var trustedProxies: [String]
+    public var uploadBitrate: Int?
+    public init(localNetworks: [String], trustedProxies: [String], uploadBitrate: Int?) {
+        self.localNetworks = localNetworks
+        self.trustedProxies = trustedProxies
+        self.uploadBitrate = uploadBitrate
+    }
+    private enum CodingKeys: String, CodingKey {
+        case localNetworks = "localNetworks"
+        case trustedProxies = "trustedProxies"
+        case uploadBitrate = "uploadBitrate"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.localNetworks = try c.decode([String].self, forKey: .localNetworks)
+        self.trustedProxies = try c.decode([String].self, forKey: .trustedProxies)
+        self.uploadBitrate = try c.decodeIfPresent(Int.self, forKey: .uploadBitrate)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.localNetworks, forKey: .localNetworks)
+        try c.encode(self.trustedProxies, forKey: .trustedProxies)
+        try c.encode(self.uploadBitrate, forKey: .uploadBitrate)
+    }
+}
+
+public struct NetworkConnection: Codable, Sendable, Hashable {
+    public var address: String?
+    public var local: Bool
+    public var unheededProxy: Bool
+    public init(address: String?, local: Bool, unheededProxy: Bool) {
+        self.address = address
+        self.local = local
+        self.unheededProxy = unheededProxy
+    }
+    private enum CodingKeys: String, CodingKey {
+        case address = "address"
+        case local = "local"
+        case unheededProxy = "unheededProxy"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.address = try c.decodeIfPresent(String.self, forKey: .address)
+        self.local = try c.decode(Bool.self, forKey: .local)
+        self.unheededProxy = try c.decode(Bool.self, forKey: .unheededProxy)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.address, forKey: .address)
+        try c.encode(self.local, forKey: .local)
+        try c.encode(self.unheededProxy, forKey: .unheededProxy)
+    }
+}
+
+public struct AdminNetworkSettings: Codable, Sendable, Hashable {
+    public var settings: NetworkSettings
+    public var connection: NetworkConnection
+    public init(settings: NetworkSettings, connection: NetworkConnection) {
+        self.settings = settings
+        self.connection = connection
+    }
+    private enum CodingKeys: String, CodingKey {
+        case settings = "settings"
+        case connection = "connection"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.settings = try c.decode(NetworkSettings.self, forKey: .settings)
+        self.connection = try c.decode(NetworkConnection.self, forKey: .connection)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.settings, forKey: .settings)
+        try c.encode(self.connection, forKey: .connection)
+    }
+}
+
 public enum TrickplayInterval {
     public static let _2 = 2
     public static let _5 = 5
@@ -2366,6 +4964,24 @@ public struct PlaybackPreferences: Codable, Sendable, Hashable {
     }
 }
 
+public struct LibraryPreferences: Codable, Sendable, Hashable {
+    public var showSpecials: Bool
+    public init(showSpecials: Bool) {
+        self.showSpecials = showSpecials
+    }
+    private enum CodingKeys: String, CodingKey {
+        case showSpecials = "showSpecials"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.showSpecials = try c.decode(Bool.self, forKey: .showSpecials)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.showSpecials, forKey: .showSpecials)
+    }
+}
+
 public struct ProfileSharing: Codable, Sendable, Hashable {
     public var favorites: Bool
     public var stats: Bool
@@ -2397,6 +5013,7 @@ public struct AdminUser: Codable, Sendable, Hashable {
     public var avatarId: String?
     public var avatarSource: String
     public var playback: PlaybackPreferences?
+    public var library: LibraryPreferences
     public var sharing: ProfileSharing
     public var createdAt: String
     public var lastSeenAt: String?
@@ -2405,7 +5022,7 @@ public struct AdminUser: Codable, Sendable, Hashable {
     public var sessions: Int
     public var claimsSyncedAt: String?
     public var access: AdminUser.Access
-    public init(id: String, username: String, displayName: String?, role: String, avatarId: String?, avatarSource: String, playback: PlaybackPreferences?, sharing: ProfileSharing, createdAt: String, lastSeenAt: String?, passkeys: Int, oidcLinked: Bool, sessions: Int, claimsSyncedAt: String?, access: AdminUser.Access) {
+    public init(id: String, username: String, displayName: String?, role: String, avatarId: String?, avatarSource: String, playback: PlaybackPreferences?, library: LibraryPreferences, sharing: ProfileSharing, createdAt: String, lastSeenAt: String?, passkeys: Int, oidcLinked: Bool, sessions: Int, claimsSyncedAt: String?, access: AdminUser.Access) {
         self.id = id
         self.username = username
         self.displayName = displayName
@@ -2413,6 +5030,7 @@ public struct AdminUser: Codable, Sendable, Hashable {
         self.avatarId = avatarId
         self.avatarSource = avatarSource
         self.playback = playback
+        self.library = library
         self.sharing = sharing
         self.createdAt = createdAt
         self.lastSeenAt = lastSeenAt
@@ -2430,6 +5048,7 @@ public struct AdminUser: Codable, Sendable, Hashable {
         case avatarId = "avatarId"
         case avatarSource = "avatarSource"
         case playback = "playback"
+        case library = "library"
         case sharing = "sharing"
         case createdAt = "createdAt"
         case lastSeenAt = "lastSeenAt"
@@ -2448,6 +5067,7 @@ public struct AdminUser: Codable, Sendable, Hashable {
         self.avatarId = try c.decodeIfPresent(String.self, forKey: .avatarId)
         self.avatarSource = try c.decode(String.self, forKey: .avatarSource)
         self.playback = try c.decodeIfPresent(PlaybackPreferences.self, forKey: .playback)
+        self.library = try c.decode(LibraryPreferences.self, forKey: .library)
         self.sharing = try c.decode(ProfileSharing.self, forKey: .sharing)
         self.createdAt = try c.decode(String.self, forKey: .createdAt)
         self.lastSeenAt = try c.decodeIfPresent(String.self, forKey: .lastSeenAt)
@@ -2466,6 +5086,7 @@ public struct AdminUser: Codable, Sendable, Hashable {
         try c.encode(self.avatarId, forKey: .avatarId)
         try c.encode(self.avatarSource, forKey: .avatarSource)
         try c.encode(self.playback, forKey: .playback)
+        try c.encode(self.library, forKey: .library)
         try c.encode(self.sharing, forKey: .sharing)
         try c.encode(self.createdAt, forKey: .createdAt)
         try c.encode(self.lastSeenAt, forKey: .lastSeenAt)
@@ -2543,12 +5164,16 @@ public struct AdminUser: Codable, Sendable, Hashable {
             public var maxBitrate: Explicit<Int>
             public var transcode: Bool?
             public var downloads: Bool?
+            public var requests: String?
+            public var requestLimit: Explicit<RequestQuota>
             public var maxStreams: Explicit<Int>
-            public init(libraries: AdminUser.Access.Override.Libraries? = nil, maxBitrate: Explicit<Int> = .omitted, transcode: Bool? = nil, downloads: Bool? = nil, maxStreams: Explicit<Int> = .omitted) {
+            public init(libraries: AdminUser.Access.Override.Libraries? = nil, maxBitrate: Explicit<Int> = .omitted, transcode: Bool? = nil, downloads: Bool? = nil, requests: String? = nil, requestLimit: Explicit<RequestQuota> = .omitted, maxStreams: Explicit<Int> = .omitted) {
                 self.libraries = libraries
                 self.maxBitrate = maxBitrate
                 self.transcode = transcode
                 self.downloads = downloads
+                self.requests = requests
+                self.requestLimit = requestLimit
                 self.maxStreams = maxStreams
             }
             private enum CodingKeys: String, CodingKey {
@@ -2556,6 +5181,8 @@ public struct AdminUser: Codable, Sendable, Hashable {
                 case maxBitrate = "maxBitrate"
                 case transcode = "transcode"
                 case downloads = "downloads"
+                case requests = "requests"
+                case requestLimit = "requestLimit"
                 case maxStreams = "maxStreams"
             }
             public init(from decoder: any Decoder) throws {
@@ -2564,6 +5191,8 @@ public struct AdminUser: Codable, Sendable, Hashable {
                 self.maxBitrate = try !c.contains(.maxBitrate) ? .omitted : c.decodeNil(forKey: .maxBitrate) ? .null : .value(c.decode(Int.self, forKey: .maxBitrate))
                 self.transcode = try c.decodeIfPresent(Bool.self, forKey: .transcode)
                 self.downloads = try c.decodeIfPresent(Bool.self, forKey: .downloads)
+                self.requests = try c.decodeIfPresent(String.self, forKey: .requests)
+                self.requestLimit = try !c.contains(.requestLimit) ? .omitted : c.decodeNil(forKey: .requestLimit) ? .null : .value(c.decode(RequestQuota.self, forKey: .requestLimit))
                 self.maxStreams = try !c.contains(.maxStreams) ? .omitted : c.decodeNil(forKey: .maxStreams) ? .null : .value(c.decode(Int.self, forKey: .maxStreams))
             }
             public func encode(to encoder: any Encoder) throws {
@@ -2576,6 +5205,12 @@ public struct AdminUser: Codable, Sendable, Hashable {
                 }
                 try c.encodeIfPresent(self.transcode, forKey: .transcode)
                 try c.encodeIfPresent(self.downloads, forKey: .downloads)
+                try c.encodeIfPresent(self.requests, forKey: .requests)
+                switch requestLimit {
+                case .omitted: break
+                case .null: try c.encodeNil(forKey: .requestLimit)
+                case .value(let value): try c.encode(value, forKey: .requestLimit)
+                }
                 switch maxStreams {
                 case .omitted: break
                 case .null: try c.encodeNil(forKey: .maxStreams)
@@ -2610,12 +5245,16 @@ public struct AdminUser: Codable, Sendable, Hashable {
             public var maxBitrate: Int?
             public var transcode: Bool
             public var downloads: Bool
+            public var requests: String
+            public var requestLimit: RequestQuota?
             public var maxStreams: Int?
-            public init(libraries: AdminUser.Access.FromGroups.Libraries, maxBitrate: Int?, transcode: Bool, downloads: Bool, maxStreams: Int?) {
+            public init(libraries: AdminUser.Access.FromGroups.Libraries, maxBitrate: Int?, transcode: Bool, downloads: Bool, requests: String, requestLimit: RequestQuota?, maxStreams: Int?) {
                 self.libraries = libraries
                 self.maxBitrate = maxBitrate
                 self.transcode = transcode
                 self.downloads = downloads
+                self.requests = requests
+                self.requestLimit = requestLimit
                 self.maxStreams = maxStreams
             }
             private enum CodingKeys: String, CodingKey {
@@ -2623,6 +5262,8 @@ public struct AdminUser: Codable, Sendable, Hashable {
                 case maxBitrate = "maxBitrate"
                 case transcode = "transcode"
                 case downloads = "downloads"
+                case requests = "requests"
+                case requestLimit = "requestLimit"
                 case maxStreams = "maxStreams"
             }
             public init(from decoder: any Decoder) throws {
@@ -2631,6 +5272,8 @@ public struct AdminUser: Codable, Sendable, Hashable {
                 self.maxBitrate = try c.decodeIfPresent(Int.self, forKey: .maxBitrate)
                 self.transcode = try c.decode(Bool.self, forKey: .transcode)
                 self.downloads = try c.decode(Bool.self, forKey: .downloads)
+                self.requests = try c.decode(String.self, forKey: .requests)
+                self.requestLimit = try c.decodeIfPresent(RequestQuota.self, forKey: .requestLimit)
                 self.maxStreams = try c.decodeIfPresent(Int.self, forKey: .maxStreams)
             }
             public func encode(to encoder: any Encoder) throws {
@@ -2639,6 +5282,8 @@ public struct AdminUser: Codable, Sendable, Hashable {
                 try c.encode(self.maxBitrate, forKey: .maxBitrate)
                 try c.encode(self.transcode, forKey: .transcode)
                 try c.encode(self.downloads, forKey: .downloads)
+                try c.encode(self.requests, forKey: .requests)
+                try c.encode(self.requestLimit, forKey: .requestLimit)
                 try c.encode(self.maxStreams, forKey: .maxStreams)
             }
             public struct Libraries: Codable, Sendable, Hashable {
@@ -2669,12 +5314,16 @@ public struct AdminUser: Codable, Sendable, Hashable {
             public var maxBitrate: Int?
             public var transcode: Bool
             public var downloads: Bool
+            public var requests: String
+            public var requestLimit: RequestQuota?
             public var maxStreams: Int?
-            public init(libraries: AdminUser.Access.Effective.Libraries, maxBitrate: Int?, transcode: Bool, downloads: Bool, maxStreams: Int?) {
+            public init(libraries: AdminUser.Access.Effective.Libraries, maxBitrate: Int?, transcode: Bool, downloads: Bool, requests: String, requestLimit: RequestQuota?, maxStreams: Int?) {
                 self.libraries = libraries
                 self.maxBitrate = maxBitrate
                 self.transcode = transcode
                 self.downloads = downloads
+                self.requests = requests
+                self.requestLimit = requestLimit
                 self.maxStreams = maxStreams
             }
             private enum CodingKeys: String, CodingKey {
@@ -2682,6 +5331,8 @@ public struct AdminUser: Codable, Sendable, Hashable {
                 case maxBitrate = "maxBitrate"
                 case transcode = "transcode"
                 case downloads = "downloads"
+                case requests = "requests"
+                case requestLimit = "requestLimit"
                 case maxStreams = "maxStreams"
             }
             public init(from decoder: any Decoder) throws {
@@ -2690,6 +5341,8 @@ public struct AdminUser: Codable, Sendable, Hashable {
                 self.maxBitrate = try c.decodeIfPresent(Int.self, forKey: .maxBitrate)
                 self.transcode = try c.decode(Bool.self, forKey: .transcode)
                 self.downloads = try c.decode(Bool.self, forKey: .downloads)
+                self.requests = try c.decode(String.self, forKey: .requests)
+                self.requestLimit = try c.decodeIfPresent(RequestQuota.self, forKey: .requestLimit)
                 self.maxStreams = try c.decodeIfPresent(Int.self, forKey: .maxStreams)
             }
             public func encode(to encoder: any Encoder) throws {
@@ -2698,6 +5351,8 @@ public struct AdminUser: Codable, Sendable, Hashable {
                 try c.encode(self.maxBitrate, forKey: .maxBitrate)
                 try c.encode(self.transcode, forKey: .transcode)
                 try c.encode(self.downloads, forKey: .downloads)
+                try c.encode(self.requests, forKey: .requests)
+                try c.encode(self.requestLimit, forKey: .requestLimit)
                 try c.encode(self.maxStreams, forKey: .maxStreams)
             }
             public struct Libraries: Codable, Sendable, Hashable {
@@ -2734,8 +5389,9 @@ public struct User: Codable, Sendable, Hashable {
     public var avatarId: String?
     public var avatarSource: String
     public var playback: PlaybackPreferences?
+    public var library: LibraryPreferences
     public var sharing: ProfileSharing
-    public init(id: String, username: String, displayName: String?, role: String, avatarId: String?, avatarSource: String, playback: PlaybackPreferences?, sharing: ProfileSharing) {
+    public init(id: String, username: String, displayName: String?, role: String, avatarId: String?, avatarSource: String, playback: PlaybackPreferences?, library: LibraryPreferences, sharing: ProfileSharing) {
         self.id = id
         self.username = username
         self.displayName = displayName
@@ -2743,6 +5399,7 @@ public struct User: Codable, Sendable, Hashable {
         self.avatarId = avatarId
         self.avatarSource = avatarSource
         self.playback = playback
+        self.library = library
         self.sharing = sharing
     }
     private enum CodingKeys: String, CodingKey {
@@ -2753,6 +5410,7 @@ public struct User: Codable, Sendable, Hashable {
         case avatarId = "avatarId"
         case avatarSource = "avatarSource"
         case playback = "playback"
+        case library = "library"
         case sharing = "sharing"
     }
     public init(from decoder: any Decoder) throws {
@@ -2764,6 +5422,7 @@ public struct User: Codable, Sendable, Hashable {
         self.avatarId = try c.decodeIfPresent(String.self, forKey: .avatarId)
         self.avatarSource = try c.decode(String.self, forKey: .avatarSource)
         self.playback = try c.decodeIfPresent(PlaybackPreferences.self, forKey: .playback)
+        self.library = try c.decode(LibraryPreferences.self, forKey: .library)
         self.sharing = try c.decode(ProfileSharing.self, forKey: .sharing)
     }
     public func encode(to encoder: any Encoder) throws {
@@ -2775,6 +5434,7 @@ public struct User: Codable, Sendable, Hashable {
         try c.encode(self.avatarId, forKey: .avatarId)
         try c.encode(self.avatarSource, forKey: .avatarSource)
         try c.encode(self.playback, forKey: .playback)
+        try c.encode(self.library, forKey: .library)
         try c.encode(self.sharing, forKey: .sharing)
     }
 }
@@ -2878,18 +5538,60 @@ public struct ThemeAccents: Codable, Sendable, Hashable {
     }
 }
 
+public enum LoginBackdropArtwork {
+    public static let mixed = "mixed"
+    public static let posters = "posters"
+    public static let thumbs = "thumbs"
+    public static let knownValues = ["mixed", "posters", "thumbs"]
+}
+
+public struct LoginBackdrop: Codable, Sendable, Hashable {
+    public var enabled: Bool
+    public var artwork: String
+    public var blur: Int
+    public var fade: Int
+    public init(enabled: Bool, artwork: String, blur: Int, fade: Int) {
+        self.enabled = enabled
+        self.artwork = artwork
+        self.blur = blur
+        self.fade = fade
+    }
+    private enum CodingKeys: String, CodingKey {
+        case enabled = "enabled"
+        case artwork = "artwork"
+        case blur = "blur"
+        case fade = "fade"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.enabled = try c.decode(Bool.self, forKey: .enabled)
+        self.artwork = try c.decode(String.self, forKey: .artwork)
+        self.blur = try c.decode(Int.self, forKey: .blur)
+        self.fade = try c.decode(Int.self, forKey: .fade)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.enabled, forKey: .enabled)
+        try c.encode(self.artwork, forKey: .artwork)
+        try c.encode(self.blur, forKey: .blur)
+        try c.encode(self.fade, forKey: .fade)
+    }
+}
+
 public struct AuthConfig: Codable, Sendable, Hashable {
     public var setup: AuthConfig.Setup?
     public var passkeys: Bool
     public var passkeySignUp: Bool
     public var oidc: AuthConfig.Oidc?
     public var themeAccents: ThemeAccents
-    public init(setup: AuthConfig.Setup?, passkeys: Bool, passkeySignUp: Bool, oidc: AuthConfig.Oidc?, themeAccents: ThemeAccents) {
+    public var loginBackdrop: LoginBackdrop
+    public init(setup: AuthConfig.Setup?, passkeys: Bool, passkeySignUp: Bool, oidc: AuthConfig.Oidc?, themeAccents: ThemeAccents, loginBackdrop: LoginBackdrop) {
         self.setup = setup
         self.passkeys = passkeys
         self.passkeySignUp = passkeySignUp
         self.oidc = oidc
         self.themeAccents = themeAccents
+        self.loginBackdrop = loginBackdrop
     }
     private enum CodingKeys: String, CodingKey {
         case setup = "setup"
@@ -2897,6 +5599,7 @@ public struct AuthConfig: Codable, Sendable, Hashable {
         case passkeySignUp = "passkeySignUp"
         case oidc = "oidc"
         case themeAccents = "themeAccents"
+        case loginBackdrop = "loginBackdrop"
     }
     public init(from decoder: any Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -2905,6 +5608,7 @@ public struct AuthConfig: Codable, Sendable, Hashable {
         self.passkeySignUp = try c.decode(Bool.self, forKey: .passkeySignUp)
         self.oidc = try c.decodeIfPresent(AuthConfig.Oidc.self, forKey: .oidc)
         self.themeAccents = try c.decode(ThemeAccents.self, forKey: .themeAccents)
+        self.loginBackdrop = try c.decode(LoginBackdrop.self, forKey: .loginBackdrop)
     }
     public func encode(to encoder: any Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
@@ -2913,6 +5617,7 @@ public struct AuthConfig: Codable, Sendable, Hashable {
         try c.encode(self.passkeySignUp, forKey: .passkeySignUp)
         try c.encode(self.oidc, forKey: .oidc)
         try c.encode(self.themeAccents, forKey: .themeAccents)
+        try c.encode(self.loginBackdrop, forKey: .loginBackdrop)
     }
     public struct Setup: Codable, Sendable, Hashable {
         public var accountRequired: Bool
@@ -2965,6 +5670,29 @@ public struct AuthConfig: Codable, Sendable, Hashable {
     }
 }
 
+public struct Branding: Codable, Sendable, Hashable {
+    public var themeAccents: ThemeAccents
+    public var loginBackdrop: LoginBackdrop
+    public init(themeAccents: ThemeAccents, loginBackdrop: LoginBackdrop) {
+        self.themeAccents = themeAccents
+        self.loginBackdrop = loginBackdrop
+    }
+    private enum CodingKeys: String, CodingKey {
+        case themeAccents = "themeAccents"
+        case loginBackdrop = "loginBackdrop"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.themeAccents = try c.decode(ThemeAccents.self, forKey: .themeAccents)
+        self.loginBackdrop = try c.decode(LoginBackdrop.self, forKey: .loginBackdrop)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.themeAccents, forKey: .themeAccents)
+        try c.encode(self.loginBackdrop, forKey: .loginBackdrop)
+    }
+}
+
 public struct BrowsedTitles: Codable, Sendable, Hashable {
     public var items: [TitleSummary]
     public var total: Int
@@ -3012,47 +5740,6 @@ public struct BrowsedTitles: Codable, Sendable, Hashable {
             try c.encode(self.movie, forKey: .movie)
             try c.encode(self.show, forKey: .show)
         }
-    }
-}
-
-public enum CreditKind {
-    public static let actor = "actor"
-    public static let creator = "creator"
-    public static let director = "director"
-    public static let writer = "writer"
-    public static let knownValues = ["actor", "creator", "director", "writer"]
-}
-
-public struct Credit: Codable, Sendable, Hashable {
-    public var kind: String
-    public var name: String
-    public var role: String?
-    public var photo: Artwork?
-    public init(kind: String, name: String, role: String?, photo: Artwork?) {
-        self.kind = kind
-        self.name = name
-        self.role = role
-        self.photo = photo
-    }
-    private enum CodingKeys: String, CodingKey {
-        case kind = "kind"
-        case name = "name"
-        case role = "role"
-        case photo = "photo"
-    }
-    public init(from decoder: any Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        self.kind = try c.decode(String.self, forKey: .kind)
-        self.name = try c.decode(String.self, forKey: .name)
-        self.role = try c.decodeIfPresent(String.self, forKey: .role)
-        self.photo = try c.decodeIfPresent(Artwork.self, forKey: .photo)
-    }
-    public func encode(to encoder: any Encoder) throws {
-        var c = encoder.container(keyedBy: CodingKeys.self)
-        try c.encode(self.kind, forKey: .kind)
-        try c.encode(self.name, forKey: .name)
-        try c.encode(self.role, forKey: .role)
-        try c.encode(self.photo, forKey: .photo)
     }
 }
 
@@ -4249,13 +6936,19 @@ public enum JobQueueId {
     public static let thumbnails = "thumbnails"
     public static let subtitle_prepare = "subtitle-prepare"
     public static let trickplay = "trickplay"
+    public static let media_segments = "media-segments"
     public static let artwork = "artwork"
     public static let subtitles = "subtitles"
     public static let subtitle_fonts = "subtitle-fonts"
     public static let avatars = "avatars"
     public static let downloads = "downloads"
     public static let download_copies = "download-copies"
-    public static let knownValues = ["library-scan", "media-probe", "metadata", "thumbnails", "subtitle-prepare", "trickplay", "artwork", "subtitles", "subtitle-fonts", "avatars", "downloads", "download-copies"]
+    public static let request_dispatch = "request-dispatch"
+    public static let request_progress = "request-progress"
+    public static let request_arrival = "request-arrival"
+    public static let notifications = "notifications"
+    public static let catalog = "catalog"
+    public static let knownValues = ["library-scan", "media-probe", "metadata", "thumbnails", "subtitle-prepare", "trickplay", "media-segments", "artwork", "subtitles", "subtitle-fonts", "avatars", "downloads", "download-copies", "request-dispatch", "request-progress", "request-arrival", "notifications", "catalog"]
 }
 
 public struct RunningJob: Codable, Sendable, Hashable {
@@ -4370,16 +7063,22 @@ public struct JobQueueStatus: Codable, Sendable, Hashable {
 }
 
 public enum TaskId {
+    public static let dispatch_requests = "dispatch-requests"
+    public static let poll_requests = "poll-requests"
+    public static let reconcile_requests = "reconcile-requests"
     public static let scan_libraries = "scan-libraries"
     public static let refresh_metadata = "refresh-metadata"
     public static let probe_media = "probe-media"
     public static let prefetch_artwork = "prefetch-artwork"
+    public static let prepare_discover = "prepare-discover"
     public static let prepare_subtitles = "prepare-subtitles"
     public static let make_trickplay = "make-trickplay"
+    public static let find_segments = "find-segments"
     public static let clean_transcodes = "clean-transcodes"
     public static let clean_sessions = "clean-sessions"
+    public static let forget_browsed_pages = "forget-browsed-pages"
     public static let sync_oidc_accounts = "sync-oidc-accounts"
-    public static let knownValues = ["scan-libraries", "refresh-metadata", "probe-media", "prefetch-artwork", "prepare-subtitles", "make-trickplay", "clean-transcodes", "clean-sessions", "sync-oidc-accounts"]
+    public static let knownValues = ["dispatch-requests", "poll-requests", "reconcile-requests", "scan-libraries", "refresh-metadata", "probe-media", "prefetch-artwork", "prepare-discover", "prepare-subtitles", "make-trickplay", "find-segments", "clean-transcodes", "clean-sessions", "forget-browsed-pages", "sync-oidc-accounts"]
 }
 
 public enum TaskResult {
@@ -4535,12 +7234,6 @@ public enum LibraryKind {
     public static let movies = "movies"
     public static let shows = "shows"
     public static let knownValues = ["movies", "shows"]
-}
-
-public enum MetadataProviderId {
-    public static let tmdb = "tmdb"
-    public static let tvdb = "tvdb"
-    public static let knownValues = ["tmdb", "tvdb"]
 }
 
 public struct Library: Codable, Sendable, Hashable {
@@ -5115,6 +7808,53 @@ public struct LiveActivity: Codable, Sendable, Hashable {
     }
 }
 
+public enum LoginBackdropKind {
+    public static let poster = "poster"
+    public static let thumb = "thumb"
+    public static let knownValues = ["poster", "thumb"]
+}
+
+public struct LoginBackdropTile: Codable, Sendable, Hashable {
+    public var artwork: Artwork
+    public var kind: String
+    public init(artwork: Artwork, kind: String) {
+        self.artwork = artwork
+        self.kind = kind
+    }
+    private enum CodingKeys: String, CodingKey {
+        case artwork = "artwork"
+        case kind = "kind"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.artwork = try c.decode(Artwork.self, forKey: .artwork)
+        self.kind = try c.decode(String.self, forKey: .kind)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.artwork, forKey: .artwork)
+        try c.encode(self.kind, forKey: .kind)
+    }
+}
+
+public struct LoginBackdropTiles: Codable, Sendable, Hashable {
+    public var tiles: [LoginBackdropTile]
+    public init(tiles: [LoginBackdropTile]) {
+        self.tiles = tiles
+    }
+    private enum CodingKeys: String, CodingKey {
+        case tiles = "tiles"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.tiles = try c.decode([LoginBackdropTile].self, forKey: .tiles)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.tiles, forKey: .tiles)
+    }
+}
+
 public struct VideoStream: Codable, Sendable, Hashable {
     public var index: Int
     public var codec: String
@@ -5304,6 +8044,219 @@ public struct MediaProbe: Codable, Sendable, Hashable {
             }
             try c.encode(self.bitRate, forKey: .bitRate)
         }
+    }
+}
+
+public struct Season: Codable, Sendable, Hashable {
+    public var number: Int?
+    public var name: String
+    public var overview: String?
+    public var poster: Artwork?
+    public var itemCount: Int
+    public var watchedCount: Int
+    public var favorite: Bool
+    public init(number: Int?, name: String, overview: String?, poster: Artwork?, itemCount: Int, watchedCount: Int, favorite: Bool) {
+        self.number = number
+        self.name = name
+        self.overview = overview
+        self.poster = poster
+        self.itemCount = itemCount
+        self.watchedCount = watchedCount
+        self.favorite = favorite
+    }
+    private enum CodingKeys: String, CodingKey {
+        case number = "number"
+        case name = "name"
+        case overview = "overview"
+        case poster = "poster"
+        case itemCount = "itemCount"
+        case watchedCount = "watchedCount"
+        case favorite = "favorite"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.number = try c.decodeIfPresent(Int.self, forKey: .number)
+        self.name = try c.decode(String.self, forKey: .name)
+        self.overview = try c.decodeIfPresent(String.self, forKey: .overview)
+        self.poster = try c.decodeIfPresent(Artwork.self, forKey: .poster)
+        self.itemCount = try c.decode(Int.self, forKey: .itemCount)
+        self.watchedCount = try c.decode(Int.self, forKey: .watchedCount)
+        self.favorite = try c.decode(Bool.self, forKey: .favorite)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.number, forKey: .number)
+        try c.encode(self.name, forKey: .name)
+        try c.encode(self.overview, forKey: .overview)
+        try c.encode(self.poster, forKey: .poster)
+        try c.encode(self.itemCount, forKey: .itemCount)
+        try c.encode(self.watchedCount, forKey: .watchedCount)
+        try c.encode(self.favorite, forKey: .favorite)
+    }
+}
+
+public enum Favorite: Codable, Sendable, Hashable {
+    case movie(Movie)
+    case show(Show)
+    case showSeason(ShowSeason)
+    case episode(Episode)
+    private enum CodingKeys: String, CodingKey { case tag = "kind" }
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let tag = try container.decode(String.self, forKey: .tag)
+        switch tag {
+        case "movie": self = .movie(try Movie(from: decoder))
+        case "show": self = .show(try Show(from: decoder))
+        case "showSeason": self = .showSeason(try ShowSeason(from: decoder))
+        case "episode": self = .episode(try Episode(from: decoder))
+        default: throw DecodingError.dataCorruptedError(forKey: .tag, in: container, debugDescription: "Unknown union tag: \(tag)")
+        }
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        switch self {
+        case .movie(let value):
+            try container.encode("movie", forKey: .tag)
+            try value.encode(to: encoder)
+        case .show(let value):
+            try container.encode("show", forKey: .tag)
+            try value.encode(to: encoder)
+        case .showSeason(let value):
+            try container.encode("showSeason", forKey: .tag)
+            try value.encode(to: encoder)
+        case .episode(let value):
+            try container.encode("episode", forKey: .tag)
+            try value.encode(to: encoder)
+        }
+    }
+    public struct Movie: Codable, Sendable, Hashable {
+        public var title: TitleSummary
+        public init(title: TitleSummary) {
+            self.title = title
+        }
+        private enum CodingKeys: String, CodingKey {
+            case title = "title"
+        }
+        public init(from decoder: any Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            self.title = try c.decode(TitleSummary.self, forKey: .title)
+        }
+        public func encode(to encoder: any Encoder) throws {
+            var c = encoder.container(keyedBy: CodingKeys.self)
+            try c.encode(self.title, forKey: .title)
+        }
+    }
+    public struct Show: Codable, Sendable, Hashable {
+        public var title: TitleSummary
+        public init(title: TitleSummary) {
+            self.title = title
+        }
+        private enum CodingKeys: String, CodingKey {
+            case title = "title"
+        }
+        public init(from decoder: any Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            self.title = try c.decode(TitleSummary.self, forKey: .title)
+        }
+        public func encode(to encoder: any Encoder) throws {
+            var c = encoder.container(keyedBy: CodingKeys.self)
+            try c.encode(self.title, forKey: .title)
+        }
+    }
+    public struct ShowSeason: Codable, Sendable, Hashable {
+        public var title: TitleSummary
+        public var season: Season
+        public init(title: TitleSummary, season: Season) {
+            self.title = title
+            self.season = season
+        }
+        private enum CodingKeys: String, CodingKey {
+            case title = "title"
+            case season = "season"
+        }
+        public init(from decoder: any Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            self.title = try c.decode(TitleSummary.self, forKey: .title)
+            self.season = try c.decode(Season.self, forKey: .season)
+        }
+        public func encode(to encoder: any Encoder) throws {
+            var c = encoder.container(keyedBy: CodingKeys.self)
+            try c.encode(self.title, forKey: .title)
+            try c.encode(self.season, forKey: .season)
+        }
+    }
+    public struct Episode: Codable, Sendable, Hashable {
+        public var item: MediaItem
+        public init(item: MediaItem) {
+            self.item = item
+        }
+        private enum CodingKeys: String, CodingKey {
+            case item = "item"
+        }
+        public init(from decoder: any Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            self.item = try c.decode(MediaItem.self, forKey: .item)
+        }
+        public func encode(to encoder: any Encoder) throws {
+            var c = encoder.container(keyedBy: CodingKeys.self)
+            try c.encode(self.item, forKey: .item)
+        }
+    }
+}
+
+public struct FavoriteSeason: Codable, Sendable, Hashable {
+    public var title: TitleSummary
+    public var season: Season
+    public init(title: TitleSummary, season: Season) {
+        self.title = title
+        self.season = season
+    }
+    private enum CodingKeys: String, CodingKey {
+        case title = "title"
+        case season = "season"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.title = try c.decode(TitleSummary.self, forKey: .title)
+        self.season = try c.decode(Season.self, forKey: .season)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.title, forKey: .title)
+        try c.encode(self.season, forKey: .season)
+    }
+}
+
+public struct Favorites: Codable, Sendable, Hashable {
+    public var shows: [TitleSummary]
+    public var seasons: [FavoriteSeason]
+    public var episodes: [MediaItem]
+    public var movies: [TitleSummary]
+    public init(shows: [TitleSummary], seasons: [FavoriteSeason], episodes: [MediaItem], movies: [TitleSummary]) {
+        self.shows = shows
+        self.seasons = seasons
+        self.episodes = episodes
+        self.movies = movies
+    }
+    private enum CodingKeys: String, CodingKey {
+        case shows = "shows"
+        case seasons = "seasons"
+        case episodes = "episodes"
+        case movies = "movies"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.shows = try c.decode([TitleSummary].self, forKey: .shows)
+        self.seasons = try c.decode([FavoriteSeason].self, forKey: .seasons)
+        self.episodes = try c.decode([MediaItem].self, forKey: .episodes)
+        self.movies = try c.decode([TitleSummary].self, forKey: .movies)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.shows, forKey: .shows)
+        try c.encode(self.seasons, forKey: .seasons)
+        try c.encode(self.episodes, forKey: .episodes)
+        try c.encode(self.movies, forKey: .movies)
     }
 }
 
@@ -5500,6 +8453,196 @@ public struct OidcAccount: Codable, Sendable, Hashable {
     }
 }
 
+public struct PartyMember: Codable, Sendable, Hashable {
+    public var user: ProfileUser
+    public var owner: Bool
+    public init(user: ProfileUser, owner: Bool) {
+        self.user = user
+        self.owner = owner
+    }
+    private enum CodingKeys: String, CodingKey {
+        case user = "user"
+        case owner = "owner"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.user = try c.decode(ProfileUser.self, forKey: .user)
+        self.owner = try c.decode(Bool.self, forKey: .owner)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.user, forKey: .user)
+        try c.encode(self.owner, forKey: .owner)
+    }
+}
+
+public struct PartyPlayback: Codable, Sendable, Hashable {
+    public var playing: Bool
+    public var positionSeconds: Double
+    public var at: String
+    public var by: String?
+    public init(playing: Bool, positionSeconds: Double, at: String, by: String?) {
+        self.playing = playing
+        self.positionSeconds = positionSeconds
+        self.at = at
+        self.by = by
+    }
+    private enum CodingKeys: String, CodingKey {
+        case playing = "playing"
+        case positionSeconds = "positionSeconds"
+        case at = "at"
+        case by = "by"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.playing = try c.decode(Bool.self, forKey: .playing)
+        self.positionSeconds = try c.decode(Double.self, forKey: .positionSeconds)
+        self.at = try c.decode(String.self, forKey: .at)
+        self.by = try c.decodeIfPresent(String.self, forKey: .by)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.playing, forKey: .playing)
+        try c.encode(self.positionSeconds, forKey: .positionSeconds)
+        try c.encode(self.at, forKey: .at)
+        try c.encode(self.by, forKey: .by)
+    }
+}
+
+public struct PartyEntry: Codable, Sendable, Hashable {
+    public var id: String
+    public var item: MediaItem
+    public var by: ProfileUser?
+    public var removable: Bool
+    public init(id: String, item: MediaItem, by: ProfileUser?, removable: Bool) {
+        self.id = id
+        self.item = item
+        self.by = by
+        self.removable = removable
+    }
+    private enum CodingKeys: String, CodingKey {
+        case id = "id"
+        case item = "item"
+        case by = "by"
+        case removable = "removable"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try c.decode(String.self, forKey: .id)
+        self.item = try c.decode(MediaItem.self, forKey: .item)
+        self.by = try c.decodeIfPresent(ProfileUser.self, forKey: .by)
+        self.removable = try c.decode(Bool.self, forKey: .removable)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.id, forKey: .id)
+        try c.encode(self.item, forKey: .item)
+        try c.encode(self.by, forKey: .by)
+        try c.encode(self.removable, forKey: .removable)
+    }
+}
+
+public struct Party: Codable, Sendable, Hashable {
+    public var id: String
+    public var name: String?
+    public var owner: Bool
+    public var members: [PartyMember]
+    public var item: MediaItem?
+    public var restricted: Bool
+    public var playback: PartyPlayback?
+    public var queue: [PartyEntry]
+    public var proposals: [PartyEntry]
+    public var now: String
+    public init(id: String, name: String?, owner: Bool, members: [PartyMember], item: MediaItem?, restricted: Bool, playback: PartyPlayback?, queue: [PartyEntry], proposals: [PartyEntry], now: String) {
+        self.id = id
+        self.name = name
+        self.owner = owner
+        self.members = members
+        self.item = item
+        self.restricted = restricted
+        self.playback = playback
+        self.queue = queue
+        self.proposals = proposals
+        self.now = now
+    }
+    private enum CodingKeys: String, CodingKey {
+        case id = "id"
+        case name = "name"
+        case owner = "owner"
+        case members = "members"
+        case item = "item"
+        case restricted = "restricted"
+        case playback = "playback"
+        case queue = "queue"
+        case proposals = "proposals"
+        case now = "now"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try c.decode(String.self, forKey: .id)
+        self.name = try c.decodeIfPresent(String.self, forKey: .name)
+        self.owner = try c.decode(Bool.self, forKey: .owner)
+        self.members = try c.decode([PartyMember].self, forKey: .members)
+        self.item = try c.decodeIfPresent(MediaItem.self, forKey: .item)
+        self.restricted = try c.decode(Bool.self, forKey: .restricted)
+        self.playback = try c.decodeIfPresent(PartyPlayback.self, forKey: .playback)
+        self.queue = try c.decode([PartyEntry].self, forKey: .queue)
+        self.proposals = try c.decode([PartyEntry].self, forKey: .proposals)
+        self.now = try c.decode(String.self, forKey: .now)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.id, forKey: .id)
+        try c.encode(self.name, forKey: .name)
+        try c.encode(self.owner, forKey: .owner)
+        try c.encode(self.members, forKey: .members)
+        try c.encode(self.item, forKey: .item)
+        try c.encode(self.restricted, forKey: .restricted)
+        try c.encode(self.playback, forKey: .playback)
+        try c.encode(self.queue, forKey: .queue)
+        try c.encode(self.proposals, forKey: .proposals)
+        try c.encode(self.now, forKey: .now)
+    }
+}
+
+public struct PartyInvite: Codable, Sendable, Hashable {
+    public var id: String
+    public var name: String?
+    public var owner: ProfileUser
+    public var members: Int
+    public var joined: Bool
+    public init(id: String, name: String?, owner: ProfileUser, members: Int, joined: Bool) {
+        self.id = id
+        self.name = name
+        self.owner = owner
+        self.members = members
+        self.joined = joined
+    }
+    private enum CodingKeys: String, CodingKey {
+        case id = "id"
+        case name = "name"
+        case owner = "owner"
+        case members = "members"
+        case joined = "joined"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try c.decode(String.self, forKey: .id)
+        self.name = try c.decodeIfPresent(String.self, forKey: .name)
+        self.owner = try c.decode(ProfileUser.self, forKey: .owner)
+        self.members = try c.decode(Int.self, forKey: .members)
+        self.joined = try c.decode(Bool.self, forKey: .joined)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.id, forKey: .id)
+        try c.encode(self.name, forKey: .name)
+        try c.encode(self.owner, forKey: .owner)
+        try c.encode(self.members, forKey: .members)
+        try c.encode(self.joined, forKey: .joined)
+    }
+}
+
 public struct Passkey: Codable, Sendable, Hashable {
     public var id: String
     public var name: String?
@@ -5630,18 +8773,122 @@ public struct PersonCredit: Codable, Sendable, Hashable {
     }
 }
 
+public enum PersonDepartment {
+    public static let acting = "acting"
+    public static let directing = "directing"
+    public static let writing = "writing"
+    public static let creator = "creator"
+    public static let production = "production"
+    public static let editing = "editing"
+    public static let camera = "camera"
+    public static let sound = "sound"
+    public static let art = "art"
+    public static let costume = "costume"
+    public static let visualEffects = "visualEffects"
+    public static let lighting = "lighting"
+    public static let crew = "crew"
+    public static let knownValues = ["acting", "directing", "writing", "creator", "production", "editing", "camera", "sound", "art", "costume", "visualEffects", "lighting", "crew"]
+}
+
+public struct PersonProfile: Codable, Sendable, Hashable {
+    public var tmdbId: String
+    public var knownFor: String?
+    public var birthday: String?
+    public var deathday: String?
+    public var biography: String?
+    public init(tmdbId: String, knownFor: String?, birthday: String?, deathday: String?, biography: String?) {
+        self.tmdbId = tmdbId
+        self.knownFor = knownFor
+        self.birthday = birthday
+        self.deathday = deathday
+        self.biography = biography
+    }
+    private enum CodingKeys: String, CodingKey {
+        case tmdbId = "tmdbId"
+        case knownFor = "knownFor"
+        case birthday = "birthday"
+        case deathday = "deathday"
+        case biography = "biography"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.tmdbId = try c.decode(String.self, forKey: .tmdbId)
+        self.knownFor = try c.decodeIfPresent(String.self, forKey: .knownFor)
+        self.birthday = try c.decodeIfPresent(String.self, forKey: .birthday)
+        self.deathday = try c.decodeIfPresent(String.self, forKey: .deathday)
+        self.biography = try c.decodeIfPresent(String.self, forKey: .biography)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.tmdbId, forKey: .tmdbId)
+        try c.encode(self.knownFor, forKey: .knownFor)
+        try c.encode(self.birthday, forKey: .birthday)
+        try c.encode(self.deathday, forKey: .deathday)
+        try c.encode(self.biography, forKey: .biography)
+    }
+}
+
+public struct PersonCatalogCredit: Codable, Sendable, Hashable {
+    public var ref: CatalogRef
+    public var name: String
+    public var year: Int?
+    public var poster: Artwork?
+    public var availability: Availability
+    public var role: String?
+    public init(ref: CatalogRef, name: String, year: Int?, poster: Artwork?, availability: Availability, role: String?) {
+        self.ref = ref
+        self.name = name
+        self.year = year
+        self.poster = poster
+        self.availability = availability
+        self.role = role
+    }
+    private enum CodingKeys: String, CodingKey {
+        case ref = "ref"
+        case name = "name"
+        case year = "year"
+        case poster = "poster"
+        case availability = "availability"
+        case role = "role"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.ref = try c.decode(CatalogRef.self, forKey: .ref)
+        self.name = try c.decode(String.self, forKey: .name)
+        self.year = try c.decodeIfPresent(Int.self, forKey: .year)
+        self.poster = try c.decodeIfPresent(Artwork.self, forKey: .poster)
+        self.availability = try c.decode(Availability.self, forKey: .availability)
+        self.role = try c.decodeIfPresent(String.self, forKey: .role)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.ref, forKey: .ref)
+        try c.encode(self.name, forKey: .name)
+        try c.encode(self.year, forKey: .year)
+        try c.encode(self.poster, forKey: .poster)
+        try c.encode(self.availability, forKey: .availability)
+        try c.encode(self.role, forKey: .role)
+    }
+}
+
 public struct Person: Codable, Sendable, Hashable {
     public var name: String
     public var photo: Artwork?
     public var kind: String
     public var titleCount: Int
     public var credits: [PersonCredit]
-    public init(name: String, photo: Artwork?, kind: String, titleCount: Int, credits: [PersonCredit]) {
+    public var profile: PersonProfile?
+    public var catalog: [PersonCatalogCredit]
+    public var stale: Bool
+    public init(name: String, photo: Artwork?, kind: String, titleCount: Int, credits: [PersonCredit], profile: PersonProfile?, catalog: [PersonCatalogCredit], stale: Bool) {
         self.name = name
         self.photo = photo
         self.kind = kind
         self.titleCount = titleCount
         self.credits = credits
+        self.profile = profile
+        self.catalog = catalog
+        self.stale = stale
     }
     private enum CodingKeys: String, CodingKey {
         case name = "name"
@@ -5649,6 +8896,9 @@ public struct Person: Codable, Sendable, Hashable {
         case kind = "kind"
         case titleCount = "titleCount"
         case credits = "credits"
+        case profile = "profile"
+        case catalog = "catalog"
+        case stale = "stale"
     }
     public init(from decoder: any Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -5657,6 +8907,9 @@ public struct Person: Codable, Sendable, Hashable {
         self.kind = try c.decode(String.self, forKey: .kind)
         self.titleCount = try c.decode(Int.self, forKey: .titleCount)
         self.credits = try c.decode([PersonCredit].self, forKey: .credits)
+        self.profile = try c.decodeIfPresent(PersonProfile.self, forKey: .profile)
+        self.catalog = try c.decode([PersonCatalogCredit].self, forKey: .catalog)
+        self.stale = try c.decode(Bool.self, forKey: .stale)
     }
     public func encode(to encoder: any Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
@@ -5665,6 +8918,9 @@ public struct Person: Codable, Sendable, Hashable {
         try c.encode(self.kind, forKey: .kind)
         try c.encode(self.titleCount, forKey: .titleCount)
         try c.encode(self.credits, forKey: .credits)
+        try c.encode(self.profile, forKey: .profile)
+        try c.encode(self.catalog, forKey: .catalog)
+        try c.encode(self.stale, forKey: .stale)
     }
 }
 
@@ -5791,15 +9047,13 @@ public struct Profile: Codable, Sendable, Hashable {
     public var user: ProfileUser
     public var isSelf: Bool
     public var sharing: ProfileSharing
-    public var favorites: [TitleSummary]?
-    public var favoriteItems: [MediaItem]?
+    public var favorites: [Favorite]?
     public var recent: [WatchedEntry]?
-    public init(user: ProfileUser, isSelf: Bool, sharing: ProfileSharing, favorites: [TitleSummary]?, favoriteItems: [MediaItem]?, recent: [WatchedEntry]?) {
+    public init(user: ProfileUser, isSelf: Bool, sharing: ProfileSharing, favorites: [Favorite]?, recent: [WatchedEntry]?) {
         self.user = user
         self.isSelf = isSelf
         self.sharing = sharing
         self.favorites = favorites
-        self.favoriteItems = favoriteItems
         self.recent = recent
     }
     private enum CodingKeys: String, CodingKey {
@@ -5807,7 +9061,6 @@ public struct Profile: Codable, Sendable, Hashable {
         case isSelf = "self"
         case sharing = "sharing"
         case favorites = "favorites"
-        case favoriteItems = "favoriteItems"
         case recent = "recent"
     }
     public init(from decoder: any Decoder) throws {
@@ -5815,8 +9068,7 @@ public struct Profile: Codable, Sendable, Hashable {
         self.user = try c.decode(ProfileUser.self, forKey: .user)
         self.isSelf = try c.decode(Bool.self, forKey: .isSelf)
         self.sharing = try c.decode(ProfileSharing.self, forKey: .sharing)
-        self.favorites = try c.decodeIfPresent([TitleSummary].self, forKey: .favorites)
-        self.favoriteItems = try c.decodeIfPresent([MediaItem].self, forKey: .favoriteItems)
+        self.favorites = try c.decodeIfPresent([Favorite].self, forKey: .favorites)
         self.recent = try c.decodeIfPresent([WatchedEntry].self, forKey: .recent)
     }
     public func encode(to encoder: any Encoder) throws {
@@ -5825,7 +9077,6 @@ public struct Profile: Codable, Sendable, Hashable {
         try c.encode(self.isSelf, forKey: .isSelf)
         try c.encode(self.sharing, forKey: .sharing)
         try c.encode(self.favorites, forKey: .favorites)
-        try c.encode(self.favoriteItems, forKey: .favoriteItems)
         try c.encode(self.recent, forKey: .recent)
     }
 }
@@ -5903,49 +9154,6 @@ public struct SearchResults: Codable, Sendable, Hashable {
         try c.encode(self.people, forKey: .people)
         try c.encode(self.genres, forKey: .genres)
         try c.encode(self.studios, forKey: .studios)
-    }
-}
-
-public struct Season: Codable, Sendable, Hashable {
-    public var number: Int?
-    public var name: String
-    public var overview: String?
-    public var poster: Artwork?
-    public var itemCount: Int
-    public var watchedCount: Int
-    public init(number: Int?, name: String, overview: String?, poster: Artwork?, itemCount: Int, watchedCount: Int) {
-        self.number = number
-        self.name = name
-        self.overview = overview
-        self.poster = poster
-        self.itemCount = itemCount
-        self.watchedCount = watchedCount
-    }
-    private enum CodingKeys: String, CodingKey {
-        case number = "number"
-        case name = "name"
-        case overview = "overview"
-        case poster = "poster"
-        case itemCount = "itemCount"
-        case watchedCount = "watchedCount"
-    }
-    public init(from decoder: any Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        self.number = try c.decodeIfPresent(Int.self, forKey: .number)
-        self.name = try c.decode(String.self, forKey: .name)
-        self.overview = try c.decodeIfPresent(String.self, forKey: .overview)
-        self.poster = try c.decodeIfPresent(Artwork.self, forKey: .poster)
-        self.itemCount = try c.decode(Int.self, forKey: .itemCount)
-        self.watchedCount = try c.decode(Int.self, forKey: .watchedCount)
-    }
-    public func encode(to encoder: any Encoder) throws {
-        var c = encoder.container(keyedBy: CodingKeys.self)
-        try c.encode(self.number, forKey: .number)
-        try c.encode(self.name, forKey: .name)
-        try c.encode(self.overview, forKey: .overview)
-        try c.encode(self.poster, forKey: .poster)
-        try c.encode(self.itemCount, forKey: .itemCount)
-        try c.encode(self.watchedCount, forKey: .watchedCount)
     }
 }
 
@@ -6405,34 +9613,6 @@ public enum ThemeMode {
     public static let knownValues = ["system", "light", "dark"]
 }
 
-public struct Trailer: Codable, Sendable, Hashable {
-    public var url: String
-    public var name: String?
-    public var language: String?
-    public init(url: String, name: String?, language: String?) {
-        self.url = url
-        self.name = name
-        self.language = language
-    }
-    private enum CodingKeys: String, CodingKey {
-        case url = "url"
-        case name = "name"
-        case language = "language"
-    }
-    public init(from decoder: any Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        self.url = try c.decode(String.self, forKey: .url)
-        self.name = try c.decodeIfPresent(String.self, forKey: .name)
-        self.language = try c.decodeIfPresent(String.self, forKey: .language)
-    }
-    public func encode(to encoder: any Encoder) throws {
-        var c = encoder.container(keyedBy: CodingKeys.self)
-        try c.encode(self.url, forKey: .url)
-        try c.encode(self.name, forKey: .name)
-        try c.encode(self.language, forKey: .language)
-    }
-}
-
 public struct Title: Codable, Sendable, Hashable {
     public var id: String
     public var libraryId: String
@@ -6444,6 +9624,7 @@ public struct Title: Codable, Sendable, Hashable {
     public var genres: [String]
     public var rating: Double?
     public var contentRating: String?
+    public var runtimeMinutes: Int?
     public var originalLanguage: String?
     public var favorite: Bool
     public var watched: Bool
@@ -6451,7 +9632,6 @@ public struct Title: Codable, Sendable, Hashable {
     public var tagline: String?
     public var releaseDate: String?
     public var status: String?
-    public var runtimeMinutes: Int?
     public var path: String
     public var provider: String?
     public var providerId: String?
@@ -6462,8 +9642,9 @@ public struct Title: Codable, Sendable, Hashable {
     public var trailers: [Trailer]
     public var itemCount: Int
     public var seasons: [Season]
+    public var specials: Season?
     public var next: MediaItem?
-    public init(id: String, libraryId: String, kind: String, name: String, year: Int?, overview: String?, images: Images, genres: [String], rating: Double?, contentRating: String?, originalLanguage: String?, favorite: Bool, watched: Bool, originalName: String?, tagline: String?, releaseDate: String?, status: String?, runtimeMinutes: Int?, path: String, provider: String?, providerId: String?, externalIds: [String: String], refreshedAt: String?, studios: [String], credits: [Credit], trailers: [Trailer], itemCount: Int, seasons: [Season], next: MediaItem?) {
+    public init(id: String, libraryId: String, kind: String, name: String, year: Int?, overview: String?, images: Images, genres: [String], rating: Double?, contentRating: String?, runtimeMinutes: Int?, originalLanguage: String?, favorite: Bool, watched: Bool, originalName: String?, tagline: String?, releaseDate: String?, status: String?, path: String, provider: String?, providerId: String?, externalIds: [String: String], refreshedAt: String?, studios: [String], credits: [Credit], trailers: [Trailer], itemCount: Int, seasons: [Season], specials: Season?, next: MediaItem?) {
         self.id = id
         self.libraryId = libraryId
         self.kind = kind
@@ -6474,6 +9655,7 @@ public struct Title: Codable, Sendable, Hashable {
         self.genres = genres
         self.rating = rating
         self.contentRating = contentRating
+        self.runtimeMinutes = runtimeMinutes
         self.originalLanguage = originalLanguage
         self.favorite = favorite
         self.watched = watched
@@ -6481,7 +9663,6 @@ public struct Title: Codable, Sendable, Hashable {
         self.tagline = tagline
         self.releaseDate = releaseDate
         self.status = status
-        self.runtimeMinutes = runtimeMinutes
         self.path = path
         self.provider = provider
         self.providerId = providerId
@@ -6492,6 +9673,7 @@ public struct Title: Codable, Sendable, Hashable {
         self.trailers = trailers
         self.itemCount = itemCount
         self.seasons = seasons
+        self.specials = specials
         self.next = next
     }
     private enum CodingKeys: String, CodingKey {
@@ -6505,6 +9687,7 @@ public struct Title: Codable, Sendable, Hashable {
         case genres = "genres"
         case rating = "rating"
         case contentRating = "contentRating"
+        case runtimeMinutes = "runtimeMinutes"
         case originalLanguage = "originalLanguage"
         case favorite = "favorite"
         case watched = "watched"
@@ -6512,7 +9695,6 @@ public struct Title: Codable, Sendable, Hashable {
         case tagline = "tagline"
         case releaseDate = "releaseDate"
         case status = "status"
-        case runtimeMinutes = "runtimeMinutes"
         case path = "path"
         case provider = "provider"
         case providerId = "providerId"
@@ -6523,6 +9705,7 @@ public struct Title: Codable, Sendable, Hashable {
         case trailers = "trailers"
         case itemCount = "itemCount"
         case seasons = "seasons"
+        case specials = "specials"
         case next = "next"
     }
     public init(from decoder: any Decoder) throws {
@@ -6537,6 +9720,7 @@ public struct Title: Codable, Sendable, Hashable {
         self.genres = try c.decode([String].self, forKey: .genres)
         self.rating = try c.decodeIfPresent(Double.self, forKey: .rating)
         self.contentRating = try c.decodeIfPresent(String.self, forKey: .contentRating)
+        self.runtimeMinutes = try c.decodeIfPresent(Int.self, forKey: .runtimeMinutes)
         self.originalLanguage = try c.decodeIfPresent(String.self, forKey: .originalLanguage)
         self.favorite = try c.decode(Bool.self, forKey: .favorite)
         self.watched = try c.decode(Bool.self, forKey: .watched)
@@ -6544,7 +9728,6 @@ public struct Title: Codable, Sendable, Hashable {
         self.tagline = try c.decodeIfPresent(String.self, forKey: .tagline)
         self.releaseDate = try c.decodeIfPresent(String.self, forKey: .releaseDate)
         self.status = try c.decodeIfPresent(String.self, forKey: .status)
-        self.runtimeMinutes = try c.decodeIfPresent(Int.self, forKey: .runtimeMinutes)
         self.path = try c.decode(String.self, forKey: .path)
         self.provider = try c.decodeIfPresent(String.self, forKey: .provider)
         self.providerId = try c.decodeIfPresent(String.self, forKey: .providerId)
@@ -6555,6 +9738,7 @@ public struct Title: Codable, Sendable, Hashable {
         self.trailers = try c.decode([Trailer].self, forKey: .trailers)
         self.itemCount = try c.decode(Int.self, forKey: .itemCount)
         self.seasons = try c.decode([Season].self, forKey: .seasons)
+        self.specials = try c.decodeIfPresent(Season.self, forKey: .specials)
         self.next = try c.decodeIfPresent(MediaItem.self, forKey: .next)
     }
     public func encode(to encoder: any Encoder) throws {
@@ -6569,6 +9753,7 @@ public struct Title: Codable, Sendable, Hashable {
         try c.encode(self.genres, forKey: .genres)
         try c.encode(self.rating, forKey: .rating)
         try c.encode(self.contentRating, forKey: .contentRating)
+        try c.encode(self.runtimeMinutes, forKey: .runtimeMinutes)
         try c.encode(self.originalLanguage, forKey: .originalLanguage)
         try c.encode(self.favorite, forKey: .favorite)
         try c.encode(self.watched, forKey: .watched)
@@ -6576,7 +9761,6 @@ public struct Title: Codable, Sendable, Hashable {
         try c.encode(self.tagline, forKey: .tagline)
         try c.encode(self.releaseDate, forKey: .releaseDate)
         try c.encode(self.status, forKey: .status)
-        try c.encode(self.runtimeMinutes, forKey: .runtimeMinutes)
         try c.encode(self.path, forKey: .path)
         try c.encode(self.provider, forKey: .provider)
         try c.encode(self.providerId, forKey: .providerId)
@@ -6587,6 +9771,7 @@ public struct Title: Codable, Sendable, Hashable {
         try c.encode(self.trailers, forKey: .trailers)
         try c.encode(self.itemCount, forKey: .itemCount)
         try c.encode(self.seasons, forKey: .seasons)
+        try c.encode(self.specials, forKey: .specials)
         try c.encode(self.next, forKey: .next)
     }
 }
@@ -6611,6 +9796,316 @@ public struct TitleFacets: Codable, Sendable, Hashable {
         var c = encoder.container(keyedBy: CodingKeys.self)
         try c.encode(self.genres, forKey: .genres)
         try c.encode(self.studios, forKey: .studios)
+    }
+}
+
+public struct AgeLimit: Codable, Sendable, Hashable {
+    public var country: String
+    public var rating: String
+    public init(country: String, rating: String) {
+        self.country = country
+        self.rating = rating
+    }
+    private enum CodingKeys: String, CodingKey {
+        case country = "country"
+        case rating = "rating"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.country = try c.decode(String.self, forKey: .country)
+        self.rating = try c.decode(String.self, forKey: .rating)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.country, forKey: .country)
+        try c.encode(self.rating, forKey: .rating)
+    }
+}
+
+public enum WatchFilter {
+    public static let unwatched = "unwatched"
+    public static let inProgress = "inProgress"
+    public static let watched = "watched"
+    public static let knownValues = ["unwatched", "inProgress", "watched"]
+}
+
+public struct TitleFilters: Codable, Sendable, Hashable {
+    public var genres: [String]?
+    public var studios: [String]?
+    public var yearFrom: Int?
+    public var yearTo: Int?
+    public var scoreMin: Double?
+    public var scoreMax: Double?
+    public var movieRating: AgeLimit?
+    public var showRating: AgeLimit?
+    public var language: String?
+    public var runtimeMin: Int?
+    public var runtimeMax: Int?
+    public var watched: String?
+    public init(genres: [String]? = nil, studios: [String]? = nil, yearFrom: Int? = nil, yearTo: Int? = nil, scoreMin: Double? = nil, scoreMax: Double? = nil, movieRating: AgeLimit? = nil, showRating: AgeLimit? = nil, language: String? = nil, runtimeMin: Int? = nil, runtimeMax: Int? = nil, watched: String? = nil) {
+        self.genres = genres
+        self.studios = studios
+        self.yearFrom = yearFrom
+        self.yearTo = yearTo
+        self.scoreMin = scoreMin
+        self.scoreMax = scoreMax
+        self.movieRating = movieRating
+        self.showRating = showRating
+        self.language = language
+        self.runtimeMin = runtimeMin
+        self.runtimeMax = runtimeMax
+        self.watched = watched
+    }
+    private enum CodingKeys: String, CodingKey {
+        case genres = "genres"
+        case studios = "studios"
+        case yearFrom = "yearFrom"
+        case yearTo = "yearTo"
+        case scoreMin = "scoreMin"
+        case scoreMax = "scoreMax"
+        case movieRating = "movieRating"
+        case showRating = "showRating"
+        case language = "language"
+        case runtimeMin = "runtimeMin"
+        case runtimeMax = "runtimeMax"
+        case watched = "watched"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.genres = try c.decodeIfPresent([String].self, forKey: .genres)
+        self.studios = try c.decodeIfPresent([String].self, forKey: .studios)
+        self.yearFrom = try c.decodeIfPresent(Int.self, forKey: .yearFrom)
+        self.yearTo = try c.decodeIfPresent(Int.self, forKey: .yearTo)
+        self.scoreMin = try c.decodeIfPresent(Double.self, forKey: .scoreMin)
+        self.scoreMax = try c.decodeIfPresent(Double.self, forKey: .scoreMax)
+        self.movieRating = try c.decodeIfPresent(AgeLimit.self, forKey: .movieRating)
+        self.showRating = try c.decodeIfPresent(AgeLimit.self, forKey: .showRating)
+        self.language = try c.decodeIfPresent(String.self, forKey: .language)
+        self.runtimeMin = try c.decodeIfPresent(Int.self, forKey: .runtimeMin)
+        self.runtimeMax = try c.decodeIfPresent(Int.self, forKey: .runtimeMax)
+        self.watched = try c.decodeIfPresent(String.self, forKey: .watched)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encodeIfPresent(self.genres, forKey: .genres)
+        try c.encodeIfPresent(self.studios, forKey: .studios)
+        try c.encodeIfPresent(self.yearFrom, forKey: .yearFrom)
+        try c.encodeIfPresent(self.yearTo, forKey: .yearTo)
+        try c.encodeIfPresent(self.scoreMin, forKey: .scoreMin)
+        try c.encodeIfPresent(self.scoreMax, forKey: .scoreMax)
+        try c.encodeIfPresent(self.movieRating, forKey: .movieRating)
+        try c.encodeIfPresent(self.showRating, forKey: .showRating)
+        try c.encodeIfPresent(self.language, forKey: .language)
+        try c.encodeIfPresent(self.runtimeMin, forKey: .runtimeMin)
+        try c.encodeIfPresent(self.runtimeMax, forKey: .runtimeMax)
+        try c.encodeIfPresent(self.watched, forKey: .watched)
+    }
+}
+
+public enum SortOrder {
+    public static let asc = "asc"
+    public static let desc = "desc"
+    public static let knownValues = ["asc", "desc"]
+}
+
+public struct FilterRange: Codable, Sendable, Hashable {
+    public var min: Double
+    public var max: Double
+    public var step: Double
+    public init(min: Double, max: Double, step: Double) {
+        self.min = min
+        self.max = max
+        self.step = step
+    }
+    private enum CodingKeys: String, CodingKey {
+        case min = "min"
+        case max = "max"
+        case step = "step"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.min = try c.decode(Double.self, forKey: .min)
+        self.max = try c.decode(Double.self, forKey: .max)
+        self.step = try c.decode(Double.self, forKey: .step)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.min, forKey: .min)
+        try c.encode(self.max, forKey: .max)
+        try c.encode(self.step, forKey: .step)
+    }
+}
+
+public struct RatingCount: Codable, Sendable, Hashable {
+    public var rating: String
+    public var titleCount: Int
+    public init(rating: String, titleCount: Int) {
+        self.rating = rating
+        self.titleCount = titleCount
+    }
+    private enum CodingKeys: String, CodingKey {
+        case rating = "rating"
+        case titleCount = "titleCount"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.rating = try c.decode(String.self, forKey: .rating)
+        self.titleCount = try c.decode(Int.self, forKey: .titleCount)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.rating, forKey: .rating)
+        try c.encode(self.titleCount, forKey: .titleCount)
+    }
+}
+
+public struct RatingSystem: Codable, Sendable, Hashable {
+    public var kind: String
+    public var country: String
+    public var ratings: [RatingCount]
+    public init(kind: String, country: String, ratings: [RatingCount]) {
+        self.kind = kind
+        self.country = country
+        self.ratings = ratings
+    }
+    private enum CodingKeys: String, CodingKey {
+        case kind = "kind"
+        case country = "country"
+        case ratings = "ratings"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.kind = try c.decode(String.self, forKey: .kind)
+        self.country = try c.decode(String.self, forKey: .country)
+        self.ratings = try c.decode([RatingCount].self, forKey: .ratings)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.kind, forKey: .kind)
+        try c.encode(self.country, forKey: .country)
+        try c.encode(self.ratings, forKey: .ratings)
+    }
+}
+
+public struct LanguageCount: Codable, Sendable, Hashable {
+    public var language: String
+    public var titleCount: Int
+    public init(language: String, titleCount: Int) {
+        self.language = language
+        self.titleCount = titleCount
+    }
+    private enum CodingKeys: String, CodingKey {
+        case language = "language"
+        case titleCount = "titleCount"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.language = try c.decode(String.self, forKey: .language)
+        self.titleCount = try c.decode(Int.self, forKey: .titleCount)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.language, forKey: .language)
+        try c.encode(self.titleCount, forKey: .titleCount)
+    }
+}
+
+public enum TitleSort {
+    public static let name = "name"
+    public static let recent = "recent"
+    public static let year = "year"
+    public static let score = "score"
+    public static let runtime = "runtime"
+    public static let knownValues = ["name", "recent", "year", "score", "runtime"]
+}
+
+public struct TitleFilterOptions: Codable, Sendable, Hashable {
+    public var genres: [Facet]
+    public var studios: [Facet]
+    public var ratings: [RatingSystem]
+    public var languages: [LanguageCount]
+    public var years: FilterRange?
+    public var scores: FilterRange?
+    public var runtime: FilterRange?
+    public var watched: TitleFilterOptions.Watched
+    public var total: Int
+    public var sorts: [String]
+    public init(genres: [Facet], studios: [Facet], ratings: [RatingSystem], languages: [LanguageCount], years: FilterRange?, scores: FilterRange?, runtime: FilterRange?, watched: TitleFilterOptions.Watched, total: Int, sorts: [String]) {
+        self.genres = genres
+        self.studios = studios
+        self.ratings = ratings
+        self.languages = languages
+        self.years = years
+        self.scores = scores
+        self.runtime = runtime
+        self.watched = watched
+        self.total = total
+        self.sorts = sorts
+    }
+    private enum CodingKeys: String, CodingKey {
+        case genres = "genres"
+        case studios = "studios"
+        case ratings = "ratings"
+        case languages = "languages"
+        case years = "years"
+        case scores = "scores"
+        case runtime = "runtime"
+        case watched = "watched"
+        case total = "total"
+        case sorts = "sorts"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.genres = try c.decode([Facet].self, forKey: .genres)
+        self.studios = try c.decode([Facet].self, forKey: .studios)
+        self.ratings = try c.decode([RatingSystem].self, forKey: .ratings)
+        self.languages = try c.decode([LanguageCount].self, forKey: .languages)
+        self.years = try c.decodeIfPresent(FilterRange.self, forKey: .years)
+        self.scores = try c.decodeIfPresent(FilterRange.self, forKey: .scores)
+        self.runtime = try c.decodeIfPresent(FilterRange.self, forKey: .runtime)
+        self.watched = try c.decode(TitleFilterOptions.Watched.self, forKey: .watched)
+        self.total = try c.decode(Int.self, forKey: .total)
+        self.sorts = try c.decode([String].self, forKey: .sorts)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.genres, forKey: .genres)
+        try c.encode(self.studios, forKey: .studios)
+        try c.encode(self.ratings, forKey: .ratings)
+        try c.encode(self.languages, forKey: .languages)
+        try c.encode(self.years, forKey: .years)
+        try c.encode(self.scores, forKey: .scores)
+        try c.encode(self.runtime, forKey: .runtime)
+        try c.encode(self.watched, forKey: .watched)
+        try c.encode(self.total, forKey: .total)
+        try c.encode(self.sorts, forKey: .sorts)
+    }
+    public struct Watched: Codable, Sendable, Hashable {
+        public var unwatched: Int
+        public var inProgress: Int
+        public var watched: Int
+        public init(unwatched: Int, inProgress: Int, watched: Int) {
+            self.unwatched = unwatched
+            self.inProgress = inProgress
+            self.watched = watched
+        }
+        private enum CodingKeys: String, CodingKey {
+            case unwatched = "unwatched"
+            case inProgress = "inProgress"
+            case watched = "watched"
+        }
+        public init(from decoder: any Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            self.unwatched = try c.decode(Int.self, forKey: .unwatched)
+            self.inProgress = try c.decode(Int.self, forKey: .inProgress)
+            self.watched = try c.decode(Int.self, forKey: .watched)
+        }
+        public func encode(to encoder: any Encoder) throws {
+            var c = encoder.container(keyedBy: CodingKeys.self)
+            try c.encode(self.unwatched, forKey: .unwatched)
+            try c.encode(self.inProgress, forKey: .inProgress)
+            try c.encode(self.watched, forKey: .watched)
+        }
     }
 }
 
@@ -6642,13 +10137,6 @@ public struct TitleList: Codable, Sendable, Hashable {
         try c.encode(self.items, forKey: .items)
         try c.encode(self.total, forKey: .total)
     }
-}
-
-public enum TitleSort {
-    public static let name = "name"
-    public static let recent = "recent"
-    public static let year = "year"
-    public static let knownValues = ["name", "recent", "year"]
 }
 
 public struct TrackPicks: Codable, Sendable, Hashable {
@@ -6910,11 +10398,12 @@ public struct OidcSettingsInput: Codable, Sendable, Hashable {
     public var clientId: String
     public var scopes: String
     public var usernameClaim: String
+    public var nameClaim: String
     public var roleClaim: String
     public var groupsClaim: String
     public var policyClaim: String
     public var clientSecret: Explicit<String>
-    public init(enabled: Bool, allowSignUp: Bool, signOutRefused: Bool, displayName: String, issuerUrl: String, clientId: String, scopes: String, usernameClaim: String, roleClaim: String, groupsClaim: String, policyClaim: String, clientSecret: Explicit<String> = .omitted) {
+    public init(enabled: Bool, allowSignUp: Bool, signOutRefused: Bool, displayName: String, issuerUrl: String, clientId: String, scopes: String, usernameClaim: String, nameClaim: String, roleClaim: String, groupsClaim: String, policyClaim: String, clientSecret: Explicit<String> = .omitted) {
         self.enabled = enabled
         self.allowSignUp = allowSignUp
         self.signOutRefused = signOutRefused
@@ -6923,6 +10412,7 @@ public struct OidcSettingsInput: Codable, Sendable, Hashable {
         self.clientId = clientId
         self.scopes = scopes
         self.usernameClaim = usernameClaim
+        self.nameClaim = nameClaim
         self.roleClaim = roleClaim
         self.groupsClaim = groupsClaim
         self.policyClaim = policyClaim
@@ -6937,6 +10427,7 @@ public struct OidcSettingsInput: Codable, Sendable, Hashable {
         case clientId = "clientId"
         case scopes = "scopes"
         case usernameClaim = "usernameClaim"
+        case nameClaim = "nameClaim"
         case roleClaim = "roleClaim"
         case groupsClaim = "groupsClaim"
         case policyClaim = "policyClaim"
@@ -6952,6 +10443,7 @@ public struct OidcSettingsInput: Codable, Sendable, Hashable {
         self.clientId = try c.decode(String.self, forKey: .clientId)
         self.scopes = try c.decode(String.self, forKey: .scopes)
         self.usernameClaim = try c.decode(String.self, forKey: .usernameClaim)
+        self.nameClaim = try c.decode(String.self, forKey: .nameClaim)
         self.roleClaim = try c.decode(String.self, forKey: .roleClaim)
         self.groupsClaim = try c.decode(String.self, forKey: .groupsClaim)
         self.policyClaim = try c.decode(String.self, forKey: .policyClaim)
@@ -6967,6 +10459,7 @@ public struct OidcSettingsInput: Codable, Sendable, Hashable {
         try c.encode(self.clientId, forKey: .clientId)
         try c.encode(self.scopes, forKey: .scopes)
         try c.encode(self.usernameClaim, forKey: .usernameClaim)
+        try c.encode(self.nameClaim, forKey: .nameClaim)
         try c.encode(self.roleClaim, forKey: .roleClaim)
         try c.encode(self.groupsClaim, forKey: .groupsClaim)
         try c.encode(self.policyClaim, forKey: .policyClaim)
@@ -7151,6 +10644,274 @@ public enum WatchedAt {
     public static let released = "released"
     public static let unknown = "unknown"
     public static let knownValues = ["released", "unknown"]
+}
+
+public struct CatalogRelatedTitlesInput: Codable, Sendable, Hashable {
+    public var ref: CatalogRef
+    public var libraryId: String?
+    public var rail: String
+    public init(ref: CatalogRef, libraryId: String? = nil, rail: String) {
+        self.ref = ref
+        self.libraryId = libraryId
+        self.rail = rail
+    }
+    private enum CodingKeys: String, CodingKey {
+        case ref = "ref"
+        case libraryId = "libraryId"
+        case rail = "rail"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.ref = try c.decode(CatalogRef.self, forKey: .ref)
+        self.libraryId = try c.decodeIfPresent(String.self, forKey: .libraryId)
+        self.rail = try c.decode(String.self, forKey: .rail)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.ref, forKey: .ref)
+        try c.encodeIfPresent(self.libraryId, forKey: .libraryId)
+        try c.encode(self.rail, forKey: .rail)
+    }
+}
+
+public struct CatalogMissingSeasonsOutput: Codable, Sendable, Hashable {
+    public var ref: CatalogRef
+    public var stale: Bool
+    public var seasons: [CatalogSeason]
+    public var partialSeasons: [CatalogSeason]
+    public var defaultScope: ShowScope
+    public var destinations: [CatalogDestination]
+    public init(ref: CatalogRef, stale: Bool, seasons: [CatalogSeason], partialSeasons: [CatalogSeason], defaultScope: ShowScope, destinations: [CatalogDestination]) {
+        self.ref = ref
+        self.stale = stale
+        self.seasons = seasons
+        self.partialSeasons = partialSeasons
+        self.defaultScope = defaultScope
+        self.destinations = destinations
+    }
+    private enum CodingKeys: String, CodingKey {
+        case ref = "ref"
+        case stale = "stale"
+        case seasons = "seasons"
+        case partialSeasons = "partialSeasons"
+        case defaultScope = "defaultScope"
+        case destinations = "destinations"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.ref = try c.decode(CatalogRef.self, forKey: .ref)
+        self.stale = try c.decode(Bool.self, forKey: .stale)
+        self.seasons = try c.decode([CatalogSeason].self, forKey: .seasons)
+        self.partialSeasons = try c.decode([CatalogSeason].self, forKey: .partialSeasons)
+        self.defaultScope = try c.decode(ShowScope.self, forKey: .defaultScope)
+        self.destinations = try c.decode([CatalogDestination].self, forKey: .destinations)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.ref, forKey: .ref)
+        try c.encode(self.stale, forKey: .stale)
+        try c.encode(self.seasons, forKey: .seasons)
+        try c.encode(self.partialSeasons, forKey: .partialSeasons)
+        try c.encode(self.defaultScope, forKey: .defaultScope)
+        try c.encode(self.destinations, forKey: .destinations)
+    }
+}
+
+public struct DiscoverPageInput: Codable, Sendable, Hashable {
+    public var rail: DiscoverRail
+    public var page: Int?
+    public init(rail: DiscoverRail, page: Int? = nil) {
+        self.rail = rail
+        self.page = page
+    }
+    private enum CodingKeys: String, CodingKey {
+        case rail = "rail"
+        case page = "page"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.rail = try c.decode(DiscoverRail.self, forKey: .rail)
+        self.page = try c.decodeIfPresent(Int.self, forKey: .page)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.rail, forKey: .rail)
+        try c.encodeIfPresent(self.page, forKey: .page)
+    }
+}
+
+public struct RequestsLiveInput: Codable, Sendable, Hashable {
+    public var titles: [CatalogInput]
+    public init(titles: [CatalogInput]) {
+        self.titles = titles
+    }
+    private enum CodingKeys: String, CodingKey {
+        case titles = "titles"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.titles = try c.decode([CatalogInput].self, forKey: .titles)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.titles, forKey: .titles)
+    }
+}
+
+public struct RequestsLiveEvent: Codable, Sendable, Hashable {
+    public var ref: CatalogRef
+    public var availability: Availability
+    public var seasons: [SeasonAvailability]
+    public init(ref: CatalogRef, availability: Availability, seasons: [SeasonAvailability]) {
+        self.ref = ref
+        self.availability = availability
+        self.seasons = seasons
+    }
+    private enum CodingKeys: String, CodingKey {
+        case ref = "ref"
+        case availability = "availability"
+        case seasons = "seasons"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.ref = try c.decode(CatalogRef.self, forKey: .ref)
+        self.availability = try c.decode(Availability.self, forKey: .availability)
+        self.seasons = try c.decode([SeasonAvailability].self, forKey: .seasons)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.ref, forKey: .ref)
+        try c.encode(self.availability, forKey: .availability)
+        try c.encode(self.seasons, forKey: .seasons)
+    }
+}
+
+public struct RequestsAskInput: Codable, Sendable, Hashable {
+    public var ref: CatalogRef
+    public var libraryId: String?
+    public var scope: ShowScope?
+    public init(ref: CatalogRef, libraryId: String? = nil, scope: ShowScope? = nil) {
+        self.ref = ref
+        self.libraryId = libraryId
+        self.scope = scope
+    }
+    private enum CodingKeys: String, CodingKey {
+        case ref = "ref"
+        case libraryId = "libraryId"
+        case scope = "scope"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.ref = try c.decode(CatalogRef.self, forKey: .ref)
+        self.libraryId = try c.decodeIfPresent(String.self, forKey: .libraryId)
+        self.scope = try c.decodeIfPresent(ShowScope.self, forKey: .scope)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.ref, forKey: .ref)
+        try c.encodeIfPresent(self.libraryId, forKey: .libraryId)
+        try c.encodeIfPresent(self.scope, forKey: .scope)
+    }
+}
+
+public struct RequestsAddSeasonsInput: Codable, Sendable, Hashable {
+    public var id: String
+    public var scope: ShowScope
+    public init(id: String, scope: ShowScope) {
+        self.id = id
+        self.scope = scope
+    }
+    private enum CodingKeys: String, CodingKey {
+        case id = "id"
+        case scope = "scope"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try c.decode(String.self, forKey: .id)
+        self.scope = try c.decode(ShowScope.self, forKey: .scope)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.id, forKey: .id)
+        try c.encode(self.scope, forKey: .scope)
+    }
+}
+
+public struct NotificationsMarkReadInput: Codable, Sendable, Hashable {
+    public var ids: [String]
+    public var all: Bool?
+    public init(ids: [String], all: Bool? = nil) {
+        self.ids = ids
+        self.all = all
+    }
+    private enum CodingKeys: String, CodingKey {
+        case ids = "ids"
+        case all = "all"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.ids = try c.decode([String].self, forKey: .ids)
+        self.all = try c.decodeIfPresent(Bool.self, forKey: .all)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.ids, forKey: .ids)
+        try c.encodeIfPresent(self.all, forKey: .all)
+    }
+}
+
+public struct NotificationsUnreadCountEvent: Codable, Sendable, Hashable {
+    public var count: Int
+    public init(count: Int) {
+        self.count = count
+    }
+    private enum CodingKeys: String, CodingKey {
+        case count = "count"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.count = try c.decode(Int.self, forKey: .count)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.count, forKey: .count)
+    }
+}
+
+public struct NotificationsPushPublicKeyOutput: Codable, Sendable, Hashable {
+    public var publicKey: String?
+    public init(publicKey: String?) {
+        self.publicKey = publicKey
+    }
+    private enum CodingKeys: String, CodingKey {
+        case publicKey = "publicKey"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.publicKey = try c.decodeIfPresent(String.self, forKey: .publicKey)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.publicKey, forKey: .publicKey)
+    }
+}
+
+public struct NotificationsUnsubscribeInput: Codable, Sendable, Hashable {
+    public var endpoint: String
+    public init(endpoint: String) {
+        self.endpoint = endpoint
+    }
+    private enum CodingKeys: String, CodingKey {
+        case endpoint = "endpoint"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.endpoint = try c.decode(String.self, forKey: .endpoint)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.endpoint, forKey: .endpoint)
+    }
 }
 
 public struct AuthSessionOutput: Codable, Sendable, Hashable {
@@ -7421,6 +11182,24 @@ public struct AccountProfileUpdateInput: Codable, Sendable, Hashable {
     }
 }
 
+public struct AccountLibrarySetPreferencesInput: Codable, Sendable, Hashable {
+    public var showSpecials: Bool?
+    public init(showSpecials: Bool? = nil) {
+        self.showSpecials = showSpecials
+    }
+    private enum CodingKeys: String, CodingKey {
+        case showSpecials = "showSpecials"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.showSpecials = try c.decodeIfPresent(Bool.self, forKey: .showSpecials)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encodeIfPresent(self.showSpecials, forKey: .showSpecials)
+    }
+}
+
 public struct AccountPasskeysRegisterInput: Codable, Sendable, Hashable {
     public var challengeId: String
     public var response: RegistrationResponse
@@ -7524,6 +11303,102 @@ public struct LibrariesUpdateInput: Codable, Sendable, Hashable {
         try c.encode(self.paths, forKey: .paths)
         try c.encode(self.metadataProvider, forKey: .metadataProvider)
         try c.encode(self.metadataLanguage, forKey: .metadataLanguage)
+    }
+}
+
+public struct TitlesListInput: Codable, Sendable, Hashable {
+    public var query: String?
+    public var kind: String?
+    public var filters: TitleFilters?
+    public var sort: String?
+    public var order: String?
+    public var limit: Int?
+    public var offset: Int?
+    public init(query: String? = nil, kind: String? = nil, filters: TitleFilters? = nil, sort: String? = nil, order: String? = nil, limit: Int? = nil, offset: Int? = nil) {
+        self.query = query
+        self.kind = kind
+        self.filters = filters
+        self.sort = sort
+        self.order = order
+        self.limit = limit
+        self.offset = offset
+    }
+    private enum CodingKeys: String, CodingKey {
+        case query = "query"
+        case kind = "kind"
+        case filters = "filters"
+        case sort = "sort"
+        case order = "order"
+        case limit = "limit"
+        case offset = "offset"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.query = try c.decodeIfPresent(String.self, forKey: .query)
+        self.kind = try c.decodeIfPresent(String.self, forKey: .kind)
+        self.filters = try c.decodeIfPresent(TitleFilters.self, forKey: .filters)
+        self.sort = try c.decodeIfPresent(String.self, forKey: .sort)
+        self.order = try c.decodeIfPresent(String.self, forKey: .order)
+        self.limit = try c.decodeIfPresent(Int.self, forKey: .limit)
+        self.offset = try c.decodeIfPresent(Int.self, forKey: .offset)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encodeIfPresent(self.query, forKey: .query)
+        try c.encodeIfPresent(self.kind, forKey: .kind)
+        try c.encodeIfPresent(self.filters, forKey: .filters)
+        try c.encodeIfPresent(self.sort, forKey: .sort)
+        try c.encodeIfPresent(self.order, forKey: .order)
+        try c.encodeIfPresent(self.limit, forKey: .limit)
+        try c.encodeIfPresent(self.offset, forKey: .offset)
+    }
+}
+
+public struct TitlesBrowseInput: Codable, Sendable, Hashable {
+    public var query: String?
+    public var kind: String?
+    public var filters: TitleFilters?
+    public var sort: String?
+    public var order: String?
+    public var limit: Int?
+    public var offset: Int?
+    public init(query: String? = nil, kind: String? = nil, filters: TitleFilters? = nil, sort: String? = nil, order: String? = nil, limit: Int? = nil, offset: Int? = nil) {
+        self.query = query
+        self.kind = kind
+        self.filters = filters
+        self.sort = sort
+        self.order = order
+        self.limit = limit
+        self.offset = offset
+    }
+    private enum CodingKeys: String, CodingKey {
+        case query = "query"
+        case kind = "kind"
+        case filters = "filters"
+        case sort = "sort"
+        case order = "order"
+        case limit = "limit"
+        case offset = "offset"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.query = try c.decodeIfPresent(String.self, forKey: .query)
+        self.kind = try c.decodeIfPresent(String.self, forKey: .kind)
+        self.filters = try c.decodeIfPresent(TitleFilters.self, forKey: .filters)
+        self.sort = try c.decodeIfPresent(String.self, forKey: .sort)
+        self.order = try c.decodeIfPresent(String.self, forKey: .order)
+        self.limit = try c.decodeIfPresent(Int.self, forKey: .limit)
+        self.offset = try c.decodeIfPresent(Int.self, forKey: .offset)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encodeIfPresent(self.query, forKey: .query)
+        try c.encodeIfPresent(self.kind, forKey: .kind)
+        try c.encodeIfPresent(self.filters, forKey: .filters)
+        try c.encodeIfPresent(self.sort, forKey: .sort)
+        try c.encodeIfPresent(self.order, forKey: .order)
+        try c.encodeIfPresent(self.limit, forKey: .limit)
+        try c.encodeIfPresent(self.offset, forKey: .offset)
     }
 }
 
@@ -7863,6 +11738,165 @@ public struct PlaybackSetTitleWatchedInput: Codable, Sendable, Hashable {
     }
 }
 
+public struct PartyCreateInput: Codable, Sendable, Hashable {
+    public var name: String?
+    public init(name: String? = nil) {
+        self.name = name
+    }
+    private enum CodingKeys: String, CodingKey {
+        case name = "name"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.name = try c.decodeIfPresent(String.self, forKey: .name)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encodeIfPresent(self.name, forKey: .name)
+    }
+}
+
+public struct PartyRenameInput: Codable, Sendable, Hashable {
+    public var name: String
+    public init(name: String) {
+        self.name = name
+    }
+    private enum CodingKeys: String, CodingKey {
+        case name = "name"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.name = try c.decode(String.self, forKey: .name)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.name, forKey: .name)
+    }
+}
+
+public struct PartyTransferInput: Codable, Sendable, Hashable {
+    public var userId: String
+    public init(userId: String) {
+        self.userId = userId
+    }
+    private enum CodingKeys: String, CodingKey {
+        case userId = "userId"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.userId = try c.decode(String.self, forKey: .userId)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.userId, forKey: .userId)
+    }
+}
+
+public struct PartyPlayInput: Codable, Sendable, Hashable {
+    public var itemId: String
+    public var positionSeconds: Double?
+    public init(itemId: String, positionSeconds: Double? = nil) {
+        self.itemId = itemId
+        self.positionSeconds = positionSeconds
+    }
+    private enum CodingKeys: String, CodingKey {
+        case itemId = "itemId"
+        case positionSeconds = "positionSeconds"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.itemId = try c.decode(String.self, forKey: .itemId)
+        self.positionSeconds = try c.decodeIfPresent(Double.self, forKey: .positionSeconds)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.itemId, forKey: .itemId)
+        try c.encodeIfPresent(self.positionSeconds, forKey: .positionSeconds)
+    }
+}
+
+public struct PartyControlInput: Codable, Sendable, Hashable {
+    public var itemId: String
+    public var playing: Bool
+    public var positionSeconds: Double
+    public init(itemId: String, playing: Bool, positionSeconds: Double) {
+        self.itemId = itemId
+        self.playing = playing
+        self.positionSeconds = positionSeconds
+    }
+    private enum CodingKeys: String, CodingKey {
+        case itemId = "itemId"
+        case playing = "playing"
+        case positionSeconds = "positionSeconds"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.itemId = try c.decode(String.self, forKey: .itemId)
+        self.playing = try c.decode(Bool.self, forKey: .playing)
+        self.positionSeconds = try c.decode(Double.self, forKey: .positionSeconds)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.itemId, forKey: .itemId)
+        try c.encode(self.playing, forKey: .playing)
+        try c.encode(self.positionSeconds, forKey: .positionSeconds)
+    }
+}
+
+public struct PartyNextInput: Codable, Sendable, Hashable {
+    public var itemId: String
+    public init(itemId: String) {
+        self.itemId = itemId
+    }
+    private enum CodingKeys: String, CodingKey {
+        case itemId = "itemId"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.itemId = try c.decode(String.self, forKey: .itemId)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.itemId, forKey: .itemId)
+    }
+}
+
+public struct PartyQueueAddInput: Codable, Sendable, Hashable {
+    public var itemId: String
+    public init(itemId: String) {
+        self.itemId = itemId
+    }
+    private enum CodingKeys: String, CodingKey {
+        case itemId = "itemId"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.itemId = try c.decode(String.self, forKey: .itemId)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.itemId, forKey: .itemId)
+    }
+}
+
+public struct PartyQueueMoveInput: Codable, Sendable, Hashable {
+    public var index: Int
+    public init(index: Int) {
+        self.index = index
+    }
+    private enum CodingKeys: String, CodingKey {
+        case index = "index"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.index = try c.decode(Int.self, forKey: .index)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.index, forKey: .index)
+    }
+}
+
 public struct FavoritesSetInput: Codable, Sendable, Hashable {
     public var favorite: Bool
     public init(favorite: Bool) {
@@ -7877,6 +11911,29 @@ public struct FavoritesSetInput: Codable, Sendable, Hashable {
     }
     public func encode(to encoder: any Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.favorite, forKey: .favorite)
+    }
+}
+
+public struct FavoritesSetSeasonInput: Codable, Sendable, Hashable {
+    public var season: Int
+    public var favorite: Bool
+    public init(season: Int, favorite: Bool) {
+        self.season = season
+        self.favorite = favorite
+    }
+    private enum CodingKeys: String, CodingKey {
+        case season = "season"
+        case favorite = "favorite"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.season = try c.decode(Int.self, forKey: .season)
+        self.favorite = try c.decode(Bool.self, forKey: .favorite)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.season, forKey: .season)
         try c.encode(self.favorite, forKey: .favorite)
     }
 }
@@ -7896,6 +11953,346 @@ public struct FavoritesSetItemInput: Codable, Sendable, Hashable {
     public func encode(to encoder: any Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
         try c.encode(self.favorite, forKey: .favorite)
+    }
+}
+
+public struct AdminRequestsApproveInput: Codable, Sendable, Hashable {
+    public var id: String
+    public var libraryId: String?
+    public init(id: String, libraryId: String? = nil) {
+        self.id = id
+        self.libraryId = libraryId
+    }
+    private enum CodingKeys: String, CodingKey {
+        case id = "id"
+        case libraryId = "libraryId"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try c.decode(String.self, forKey: .id)
+        self.libraryId = try c.decodeIfPresent(String.self, forKey: .libraryId)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.id, forKey: .id)
+        try c.encodeIfPresent(self.libraryId, forKey: .libraryId)
+    }
+}
+
+public struct AdminRequestsApproveAllInput: Codable, Sendable, Hashable {
+    public var ids: [String]
+    public init(ids: [String]) {
+        self.ids = ids
+    }
+    private enum CodingKeys: String, CodingKey {
+        case ids = "ids"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.ids = try c.decode([String].self, forKey: .ids)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.ids, forKey: .ids)
+    }
+}
+
+public struct AdminRequestsDeclineInput: Codable, Sendable, Hashable {
+    public var id: String
+    public var reason: String
+    public var note: String?
+    public init(id: String, reason: String, note: String?) {
+        self.id = id
+        self.reason = reason
+        self.note = note
+    }
+    private enum CodingKeys: String, CodingKey {
+        case id = "id"
+        case reason = "reason"
+        case note = "note"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try c.decode(String.self, forKey: .id)
+        self.reason = try c.decode(String.self, forKey: .reason)
+        self.note = try c.decodeIfPresent(String.self, forKey: .note)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.id, forKey: .id)
+        try c.encode(self.reason, forKey: .reason)
+        try c.encode(self.note, forKey: .note)
+    }
+}
+
+public struct AdminRequestsGiveUpInput: Codable, Sendable, Hashable {
+    public var id: String
+    public var note: String?
+    public init(id: String, note: String?) {
+        self.id = id
+        self.note = note
+    }
+    private enum CodingKeys: String, CodingKey {
+        case id = "id"
+        case note = "note"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try c.decode(String.self, forKey: .id)
+        self.note = try c.decodeIfPresent(String.self, forKey: .note)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.id, forKey: .id)
+        try c.encode(self.note, forKey: .note)
+    }
+}
+
+public struct AdminFulfilmentUpdateInput: Codable, Sendable, Hashable {
+    public var name: String
+    public var slug: String
+    public var source: String
+    public var settings: [String: JSONValue]
+    public var options: [String: JSONValue]?
+    public var defaultFor: [String]?
+    public var folderLibraries: [String: String]?
+    public var apiKey: Explicit<String>
+    public init(name: String, slug: String, source: String, settings: [String: JSONValue], options: [String: JSONValue]? = nil, defaultFor: [String]? = nil, folderLibraries: [String: String]? = nil, apiKey: Explicit<String> = .omitted) {
+        self.name = name
+        self.slug = slug
+        self.source = source
+        self.settings = settings
+        self.options = options
+        self.defaultFor = defaultFor
+        self.folderLibraries = folderLibraries
+        self.apiKey = apiKey
+    }
+    private enum CodingKeys: String, CodingKey {
+        case name = "name"
+        case slug = "slug"
+        case source = "source"
+        case settings = "settings"
+        case options = "options"
+        case defaultFor = "defaultFor"
+        case folderLibraries = "folderLibraries"
+        case apiKey = "apiKey"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.name = try c.decode(String.self, forKey: .name)
+        self.slug = try c.decode(String.self, forKey: .slug)
+        self.source = try c.decode(String.self, forKey: .source)
+        self.settings = try c.decode([String: JSONValue].self, forKey: .settings)
+        self.options = try c.decodeIfPresent([String: JSONValue].self, forKey: .options)
+        self.defaultFor = try c.decodeIfPresent([String].self, forKey: .defaultFor)
+        self.folderLibraries = try c.decodeIfPresent([String: String].self, forKey: .folderLibraries)
+        self.apiKey = try !c.contains(.apiKey) ? .omitted : c.decodeNil(forKey: .apiKey) ? .null : .value(c.decode(String.self, forKey: .apiKey))
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.name, forKey: .name)
+        try c.encode(self.slug, forKey: .slug)
+        try c.encode(self.source, forKey: .source)
+        try c.encode(self.settings, forKey: .settings)
+        try c.encodeIfPresent(self.options, forKey: .options)
+        try c.encodeIfPresent(self.defaultFor, forKey: .defaultFor)
+        try c.encodeIfPresent(self.folderLibraries, forKey: .folderLibraries)
+        switch apiKey {
+        case .omitted: break
+        case .null: try c.encodeNil(forKey: .apiKey)
+        case .value(let value): try c.encode(value, forKey: .apiKey)
+        }
+    }
+}
+
+public struct AdminFulfilmentTestInput: Codable, Sendable, Hashable {
+    public var id: String
+    public init(id: String) {
+        self.id = id
+    }
+    private enum CodingKeys: String, CodingKey {
+        case id = "id"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try c.decode(String.self, forKey: .id)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.id, forKey: .id)
+    }
+}
+
+public struct AdminFulfilmentOptionsInput: Codable, Sendable, Hashable {
+    public var id: String?
+    public var source: String
+    public var slug: String
+    public var settings: [String: JSONValue]
+    public var apiKey: String?
+    public init(id: String? = nil, source: String, slug: String, settings: [String: JSONValue], apiKey: String? = nil) {
+        self.id = id
+        self.source = source
+        self.slug = slug
+        self.settings = settings
+        self.apiKey = apiKey
+    }
+    private enum CodingKeys: String, CodingKey {
+        case id = "id"
+        case source = "source"
+        case slug = "slug"
+        case settings = "settings"
+        case apiKey = "apiKey"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try c.decodeIfPresent(String.self, forKey: .id)
+        self.source = try c.decode(String.self, forKey: .source)
+        self.slug = try c.decode(String.self, forKey: .slug)
+        self.settings = try c.decode([String: JSONValue].self, forKey: .settings)
+        self.apiKey = try c.decodeIfPresent(String.self, forKey: .apiKey)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encodeIfPresent(self.id, forKey: .id)
+        try c.encode(self.source, forKey: .source)
+        try c.encode(self.slug, forKey: .slug)
+        try c.encode(self.settings, forKey: .settings)
+        try c.encodeIfPresent(self.apiKey, forKey: .apiKey)
+    }
+}
+
+public struct AdminFulfilmentLandingOutput: Codable, Sendable, Hashable {
+    public var library: FulfilmentLibrary?
+    public init(library: FulfilmentLibrary?) {
+        self.library = library
+    }
+    private enum CodingKeys: String, CodingKey {
+        case library = "library"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.library = try c.decodeIfPresent(FulfilmentLibrary.self, forKey: .library)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.library, forKey: .library)
+    }
+}
+
+public struct AdminFulfilmentCreateRuleInput: Codable, Sendable, Hashable {
+    public var users: [String]?
+    public var genres: [Int]?
+    public var languages: [String]?
+    public var keywords: [FulfilmentKeyword]?
+    public var settings: [String: JSONValue]
+    public var folderLibraryId: Explicit<String>
+    public init(users: [String]? = nil, genres: [Int]? = nil, languages: [String]? = nil, keywords: [FulfilmentKeyword]? = nil, settings: [String: JSONValue], folderLibraryId: Explicit<String> = .omitted) {
+        self.users = users
+        self.genres = genres
+        self.languages = languages
+        self.keywords = keywords
+        self.settings = settings
+        self.folderLibraryId = folderLibraryId
+    }
+    private enum CodingKeys: String, CodingKey {
+        case users = "users"
+        case genres = "genres"
+        case languages = "languages"
+        case keywords = "keywords"
+        case settings = "settings"
+        case folderLibraryId = "folderLibraryId"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.users = try c.decodeIfPresent([String].self, forKey: .users)
+        self.genres = try c.decodeIfPresent([Int].self, forKey: .genres)
+        self.languages = try c.decodeIfPresent([String].self, forKey: .languages)
+        self.keywords = try c.decodeIfPresent([FulfilmentKeyword].self, forKey: .keywords)
+        self.settings = try c.decode([String: JSONValue].self, forKey: .settings)
+        self.folderLibraryId = try !c.contains(.folderLibraryId) ? .omitted : c.decodeNil(forKey: .folderLibraryId) ? .null : .value(c.decode(String.self, forKey: .folderLibraryId))
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encodeIfPresent(self.users, forKey: .users)
+        try c.encodeIfPresent(self.genres, forKey: .genres)
+        try c.encodeIfPresent(self.languages, forKey: .languages)
+        try c.encodeIfPresent(self.keywords, forKey: .keywords)
+        try c.encode(self.settings, forKey: .settings)
+        switch folderLibraryId {
+        case .omitted: break
+        case .null: try c.encodeNil(forKey: .folderLibraryId)
+        case .value(let value): try c.encode(value, forKey: .folderLibraryId)
+        }
+    }
+}
+
+public struct AdminFulfilmentUpdateRuleInput: Codable, Sendable, Hashable {
+    public var connectionId: String
+    public var users: [String]?
+    public var genres: [Int]?
+    public var languages: [String]?
+    public var keywords: [FulfilmentKeyword]?
+    public var settings: [String: JSONValue]
+    public var folderLibraryId: Explicit<String>
+    public init(connectionId: String, users: [String]? = nil, genres: [Int]? = nil, languages: [String]? = nil, keywords: [FulfilmentKeyword]? = nil, settings: [String: JSONValue], folderLibraryId: Explicit<String> = .omitted) {
+        self.connectionId = connectionId
+        self.users = users
+        self.genres = genres
+        self.languages = languages
+        self.keywords = keywords
+        self.settings = settings
+        self.folderLibraryId = folderLibraryId
+    }
+    private enum CodingKeys: String, CodingKey {
+        case connectionId = "connectionId"
+        case users = "users"
+        case genres = "genres"
+        case languages = "languages"
+        case keywords = "keywords"
+        case settings = "settings"
+        case folderLibraryId = "folderLibraryId"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.connectionId = try c.decode(String.self, forKey: .connectionId)
+        self.users = try c.decodeIfPresent([String].self, forKey: .users)
+        self.genres = try c.decodeIfPresent([Int].self, forKey: .genres)
+        self.languages = try c.decodeIfPresent([String].self, forKey: .languages)
+        self.keywords = try c.decodeIfPresent([FulfilmentKeyword].self, forKey: .keywords)
+        self.settings = try c.decode([String: JSONValue].self, forKey: .settings)
+        self.folderLibraryId = try !c.contains(.folderLibraryId) ? .omitted : c.decodeNil(forKey: .folderLibraryId) ? .null : .value(c.decode(String.self, forKey: .folderLibraryId))
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.connectionId, forKey: .connectionId)
+        try c.encodeIfPresent(self.users, forKey: .users)
+        try c.encodeIfPresent(self.genres, forKey: .genres)
+        try c.encodeIfPresent(self.languages, forKey: .languages)
+        try c.encodeIfPresent(self.keywords, forKey: .keywords)
+        try c.encode(self.settings, forKey: .settings)
+        switch folderLibraryId {
+        case .omitted: break
+        case .null: try c.encodeNil(forKey: .folderLibraryId)
+        case .value(let value): try c.encode(value, forKey: .folderLibraryId)
+        }
+    }
+}
+
+public struct AdminFulfilmentReorderRulesInput: Codable, Sendable, Hashable {
+    public var ids: [String]
+    public init(ids: [String]) {
+        self.ids = ids
+    }
+    private enum CodingKeys: String, CodingKey {
+        case ids = "ids"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.ids = try c.decode([String].self, forKey: .ids)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.ids, forKey: .ids)
     }
 }
 
@@ -7950,12 +12347,16 @@ public struct AdminGroupsListOutput: Codable, Sendable, Hashable {
         public var maxBitrate: Int?
         public var transcode: Bool
         public var downloads: Bool
+        public var requests: String
+        public var requestLimit: RequestQuota?
         public var maxStreams: Int?
-        public init(libraries: AdminGroupsListOutput.Policy.Libraries, maxBitrate: Int?, transcode: Bool, downloads: Bool, maxStreams: Int?) {
+        public init(libraries: AdminGroupsListOutput.Policy.Libraries, maxBitrate: Int?, transcode: Bool, downloads: Bool, requests: String, requestLimit: RequestQuota?, maxStreams: Int?) {
             self.libraries = libraries
             self.maxBitrate = maxBitrate
             self.transcode = transcode
             self.downloads = downloads
+            self.requests = requests
+            self.requestLimit = requestLimit
             self.maxStreams = maxStreams
         }
         private enum CodingKeys: String, CodingKey {
@@ -7963,6 +12364,8 @@ public struct AdminGroupsListOutput: Codable, Sendable, Hashable {
             case maxBitrate = "maxBitrate"
             case transcode = "transcode"
             case downloads = "downloads"
+            case requests = "requests"
+            case requestLimit = "requestLimit"
             case maxStreams = "maxStreams"
         }
         public init(from decoder: any Decoder) throws {
@@ -7971,6 +12374,8 @@ public struct AdminGroupsListOutput: Codable, Sendable, Hashable {
             self.maxBitrate = try c.decodeIfPresent(Int.self, forKey: .maxBitrate)
             self.transcode = try c.decode(Bool.self, forKey: .transcode)
             self.downloads = try c.decode(Bool.self, forKey: .downloads)
+            self.requests = try c.decode(String.self, forKey: .requests)
+            self.requestLimit = try c.decodeIfPresent(RequestQuota.self, forKey: .requestLimit)
             self.maxStreams = try c.decodeIfPresent(Int.self, forKey: .maxStreams)
         }
         public func encode(to encoder: any Encoder) throws {
@@ -7979,6 +12384,8 @@ public struct AdminGroupsListOutput: Codable, Sendable, Hashable {
             try c.encode(self.maxBitrate, forKey: .maxBitrate)
             try c.encode(self.transcode, forKey: .transcode)
             try c.encode(self.downloads, forKey: .downloads)
+            try c.encode(self.requests, forKey: .requests)
+            try c.encode(self.requestLimit, forKey: .requestLimit)
             try c.encode(self.maxStreams, forKey: .maxStreams)
         }
         public struct Libraries: Codable, Sendable, Hashable {
@@ -8037,12 +12444,16 @@ public struct AdminGroupsCreateInput: Codable, Sendable, Hashable {
         public var maxBitrate: Int?
         public var transcode: Bool
         public var downloads: Bool
+        public var requests: String
+        public var requestLimit: RequestQuota?
         public var maxStreams: Int?
-        public init(libraries: AdminGroupsCreateInput.Policy.Libraries, maxBitrate: Int?, transcode: Bool, downloads: Bool, maxStreams: Int?) {
+        public init(libraries: AdminGroupsCreateInput.Policy.Libraries, maxBitrate: Int?, transcode: Bool, downloads: Bool, requests: String, requestLimit: RequestQuota?, maxStreams: Int?) {
             self.libraries = libraries
             self.maxBitrate = maxBitrate
             self.transcode = transcode
             self.downloads = downloads
+            self.requests = requests
+            self.requestLimit = requestLimit
             self.maxStreams = maxStreams
         }
         private enum CodingKeys: String, CodingKey {
@@ -8050,6 +12461,8 @@ public struct AdminGroupsCreateInput: Codable, Sendable, Hashable {
             case maxBitrate = "maxBitrate"
             case transcode = "transcode"
             case downloads = "downloads"
+            case requests = "requests"
+            case requestLimit = "requestLimit"
             case maxStreams = "maxStreams"
         }
         public init(from decoder: any Decoder) throws {
@@ -8058,6 +12471,8 @@ public struct AdminGroupsCreateInput: Codable, Sendable, Hashable {
             self.maxBitrate = try c.decodeIfPresent(Int.self, forKey: .maxBitrate)
             self.transcode = try c.decode(Bool.self, forKey: .transcode)
             self.downloads = try c.decode(Bool.self, forKey: .downloads)
+            self.requests = try c.decode(String.self, forKey: .requests)
+            self.requestLimit = try c.decodeIfPresent(RequestQuota.self, forKey: .requestLimit)
             self.maxStreams = try c.decodeIfPresent(Int.self, forKey: .maxStreams)
         }
         public func encode(to encoder: any Encoder) throws {
@@ -8066,6 +12481,8 @@ public struct AdminGroupsCreateInput: Codable, Sendable, Hashable {
             try c.encode(self.maxBitrate, forKey: .maxBitrate)
             try c.encode(self.transcode, forKey: .transcode)
             try c.encode(self.downloads, forKey: .downloads)
+            try c.encode(self.requests, forKey: .requests)
+            try c.encode(self.requestLimit, forKey: .requestLimit)
             try c.encode(self.maxStreams, forKey: .maxStreams)
         }
         public struct Libraries: Codable, Sendable, Hashable {
@@ -8144,12 +12561,16 @@ public struct AdminGroupsCreateOutput: Codable, Sendable, Hashable {
         public var maxBitrate: Int?
         public var transcode: Bool
         public var downloads: Bool
+        public var requests: String
+        public var requestLimit: RequestQuota?
         public var maxStreams: Int?
-        public init(libraries: AdminGroupsCreateOutput.Policy.Libraries, maxBitrate: Int?, transcode: Bool, downloads: Bool, maxStreams: Int?) {
+        public init(libraries: AdminGroupsCreateOutput.Policy.Libraries, maxBitrate: Int?, transcode: Bool, downloads: Bool, requests: String, requestLimit: RequestQuota?, maxStreams: Int?) {
             self.libraries = libraries
             self.maxBitrate = maxBitrate
             self.transcode = transcode
             self.downloads = downloads
+            self.requests = requests
+            self.requestLimit = requestLimit
             self.maxStreams = maxStreams
         }
         private enum CodingKeys: String, CodingKey {
@@ -8157,6 +12578,8 @@ public struct AdminGroupsCreateOutput: Codable, Sendable, Hashable {
             case maxBitrate = "maxBitrate"
             case transcode = "transcode"
             case downloads = "downloads"
+            case requests = "requests"
+            case requestLimit = "requestLimit"
             case maxStreams = "maxStreams"
         }
         public init(from decoder: any Decoder) throws {
@@ -8165,6 +12588,8 @@ public struct AdminGroupsCreateOutput: Codable, Sendable, Hashable {
             self.maxBitrate = try c.decodeIfPresent(Int.self, forKey: .maxBitrate)
             self.transcode = try c.decode(Bool.self, forKey: .transcode)
             self.downloads = try c.decode(Bool.self, forKey: .downloads)
+            self.requests = try c.decode(String.self, forKey: .requests)
+            self.requestLimit = try c.decodeIfPresent(RequestQuota.self, forKey: .requestLimit)
             self.maxStreams = try c.decodeIfPresent(Int.self, forKey: .maxStreams)
         }
         public func encode(to encoder: any Encoder) throws {
@@ -8173,6 +12598,8 @@ public struct AdminGroupsCreateOutput: Codable, Sendable, Hashable {
             try c.encode(self.maxBitrate, forKey: .maxBitrate)
             try c.encode(self.transcode, forKey: .transcode)
             try c.encode(self.downloads, forKey: .downloads)
+            try c.encode(self.requests, forKey: .requests)
+            try c.encode(self.requestLimit, forKey: .requestLimit)
             try c.encode(self.maxStreams, forKey: .maxStreams)
         }
         public struct Libraries: Codable, Sendable, Hashable {
@@ -8231,12 +12658,16 @@ public struct AdminGroupsUpdateInput: Codable, Sendable, Hashable {
         public var maxBitrate: Int?
         public var transcode: Bool
         public var downloads: Bool
+        public var requests: String
+        public var requestLimit: RequestQuota?
         public var maxStreams: Int?
-        public init(libraries: AdminGroupsUpdateInput.Policy.Libraries, maxBitrate: Int?, transcode: Bool, downloads: Bool, maxStreams: Int?) {
+        public init(libraries: AdminGroupsUpdateInput.Policy.Libraries, maxBitrate: Int?, transcode: Bool, downloads: Bool, requests: String, requestLimit: RequestQuota?, maxStreams: Int?) {
             self.libraries = libraries
             self.maxBitrate = maxBitrate
             self.transcode = transcode
             self.downloads = downloads
+            self.requests = requests
+            self.requestLimit = requestLimit
             self.maxStreams = maxStreams
         }
         private enum CodingKeys: String, CodingKey {
@@ -8244,6 +12675,8 @@ public struct AdminGroupsUpdateInput: Codable, Sendable, Hashable {
             case maxBitrate = "maxBitrate"
             case transcode = "transcode"
             case downloads = "downloads"
+            case requests = "requests"
+            case requestLimit = "requestLimit"
             case maxStreams = "maxStreams"
         }
         public init(from decoder: any Decoder) throws {
@@ -8252,6 +12685,8 @@ public struct AdminGroupsUpdateInput: Codable, Sendable, Hashable {
             self.maxBitrate = try c.decodeIfPresent(Int.self, forKey: .maxBitrate)
             self.transcode = try c.decode(Bool.self, forKey: .transcode)
             self.downloads = try c.decode(Bool.self, forKey: .downloads)
+            self.requests = try c.decode(String.self, forKey: .requests)
+            self.requestLimit = try c.decodeIfPresent(RequestQuota.self, forKey: .requestLimit)
             self.maxStreams = try c.decodeIfPresent(Int.self, forKey: .maxStreams)
         }
         public func encode(to encoder: any Encoder) throws {
@@ -8260,6 +12695,8 @@ public struct AdminGroupsUpdateInput: Codable, Sendable, Hashable {
             try c.encode(self.maxBitrate, forKey: .maxBitrate)
             try c.encode(self.transcode, forKey: .transcode)
             try c.encode(self.downloads, forKey: .downloads)
+            try c.encode(self.requests, forKey: .requests)
+            try c.encode(self.requestLimit, forKey: .requestLimit)
             try c.encode(self.maxStreams, forKey: .maxStreams)
         }
         public struct Libraries: Codable, Sendable, Hashable {
@@ -8338,12 +12775,16 @@ public struct AdminGroupsUpdateOutput: Codable, Sendable, Hashable {
         public var maxBitrate: Int?
         public var transcode: Bool
         public var downloads: Bool
+        public var requests: String
+        public var requestLimit: RequestQuota?
         public var maxStreams: Int?
-        public init(libraries: AdminGroupsUpdateOutput.Policy.Libraries, maxBitrate: Int?, transcode: Bool, downloads: Bool, maxStreams: Int?) {
+        public init(libraries: AdminGroupsUpdateOutput.Policy.Libraries, maxBitrate: Int?, transcode: Bool, downloads: Bool, requests: String, requestLimit: RequestQuota?, maxStreams: Int?) {
             self.libraries = libraries
             self.maxBitrate = maxBitrate
             self.transcode = transcode
             self.downloads = downloads
+            self.requests = requests
+            self.requestLimit = requestLimit
             self.maxStreams = maxStreams
         }
         private enum CodingKeys: String, CodingKey {
@@ -8351,6 +12792,8 @@ public struct AdminGroupsUpdateOutput: Codable, Sendable, Hashable {
             case maxBitrate = "maxBitrate"
             case transcode = "transcode"
             case downloads = "downloads"
+            case requests = "requests"
+            case requestLimit = "requestLimit"
             case maxStreams = "maxStreams"
         }
         public init(from decoder: any Decoder) throws {
@@ -8359,6 +12802,8 @@ public struct AdminGroupsUpdateOutput: Codable, Sendable, Hashable {
             self.maxBitrate = try c.decodeIfPresent(Int.self, forKey: .maxBitrate)
             self.transcode = try c.decode(Bool.self, forKey: .transcode)
             self.downloads = try c.decode(Bool.self, forKey: .downloads)
+            self.requests = try c.decode(String.self, forKey: .requests)
+            self.requestLimit = try c.decodeIfPresent(RequestQuota.self, forKey: .requestLimit)
             self.maxStreams = try c.decodeIfPresent(Int.self, forKey: .maxStreams)
         }
         public func encode(to encoder: any Encoder) throws {
@@ -8367,6 +12812,8 @@ public struct AdminGroupsUpdateOutput: Codable, Sendable, Hashable {
             try c.encode(self.maxBitrate, forKey: .maxBitrate)
             try c.encode(self.transcode, forKey: .transcode)
             try c.encode(self.downloads, forKey: .downloads)
+            try c.encode(self.requests, forKey: .requests)
+            try c.encode(self.requestLimit, forKey: .requestLimit)
             try c.encode(self.maxStreams, forKey: .maxStreams)
         }
         public struct Libraries: Codable, Sendable, Hashable {
@@ -8507,12 +12954,16 @@ public struct AdminUsersSetAccessInput: Codable, Sendable, Hashable {
         public var maxBitrate: Explicit<Int>
         public var transcode: Bool?
         public var downloads: Bool?
+        public var requests: String?
+        public var requestLimit: Explicit<RequestQuota>
         public var maxStreams: Explicit<Int>
-        public init(libraries: AdminUsersSetAccessInput.Override.Libraries? = nil, maxBitrate: Explicit<Int> = .omitted, transcode: Bool? = nil, downloads: Bool? = nil, maxStreams: Explicit<Int> = .omitted) {
+        public init(libraries: AdminUsersSetAccessInput.Override.Libraries? = nil, maxBitrate: Explicit<Int> = .omitted, transcode: Bool? = nil, downloads: Bool? = nil, requests: String? = nil, requestLimit: Explicit<RequestQuota> = .omitted, maxStreams: Explicit<Int> = .omitted) {
             self.libraries = libraries
             self.maxBitrate = maxBitrate
             self.transcode = transcode
             self.downloads = downloads
+            self.requests = requests
+            self.requestLimit = requestLimit
             self.maxStreams = maxStreams
         }
         private enum CodingKeys: String, CodingKey {
@@ -8520,6 +12971,8 @@ public struct AdminUsersSetAccessInput: Codable, Sendable, Hashable {
             case maxBitrate = "maxBitrate"
             case transcode = "transcode"
             case downloads = "downloads"
+            case requests = "requests"
+            case requestLimit = "requestLimit"
             case maxStreams = "maxStreams"
         }
         public init(from decoder: any Decoder) throws {
@@ -8528,6 +12981,8 @@ public struct AdminUsersSetAccessInput: Codable, Sendable, Hashable {
             self.maxBitrate = try !c.contains(.maxBitrate) ? .omitted : c.decodeNil(forKey: .maxBitrate) ? .null : .value(c.decode(Int.self, forKey: .maxBitrate))
             self.transcode = try c.decodeIfPresent(Bool.self, forKey: .transcode)
             self.downloads = try c.decodeIfPresent(Bool.self, forKey: .downloads)
+            self.requests = try c.decodeIfPresent(String.self, forKey: .requests)
+            self.requestLimit = try !c.contains(.requestLimit) ? .omitted : c.decodeNil(forKey: .requestLimit) ? .null : .value(c.decode(RequestQuota.self, forKey: .requestLimit))
             self.maxStreams = try !c.contains(.maxStreams) ? .omitted : c.decodeNil(forKey: .maxStreams) ? .null : .value(c.decode(Int.self, forKey: .maxStreams))
         }
         public func encode(to encoder: any Encoder) throws {
@@ -8540,6 +12995,12 @@ public struct AdminUsersSetAccessInput: Codable, Sendable, Hashable {
             }
             try c.encodeIfPresent(self.transcode, forKey: .transcode)
             try c.encodeIfPresent(self.downloads, forKey: .downloads)
+            try c.encodeIfPresent(self.requests, forKey: .requests)
+            switch requestLimit {
+            case .omitted: break
+            case .null: try c.encodeNil(forKey: .requestLimit)
+            case .value(let value): try c.encode(value, forKey: .requestLimit)
+            }
             switch maxStreams {
             case .omitted: break
             case .null: try c.encodeNil(forKey: .maxStreams)

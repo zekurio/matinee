@@ -99,14 +99,14 @@ func seasonItems(_ api: MatineeApi, _ titleId: String, _ season: Int?) async thr
       if title.isShow { title.status = title.status ?? "Ended" }
       if title.credits.isEmpty {
         title.credits = [
-          Credit(kind: title.isShow ? CreditKind.creator : CreditKind.director, name: "Ada Lovelace", role: nil, photo: nil),
-          Credit(kind: CreditKind.writer, name: "Grace Hopper", role: nil, photo: nil),
-          Credit(kind: CreditKind.writer, name: "Alan Turing", role: nil, photo: nil),
-          Credit(kind: CreditKind.writer, name: "Ada Lovelace", role: nil, photo: nil),
-          Credit(kind: CreditKind.actor, name: "Keanu Reeves", role: "Neo", photo: nil),
-          Credit(kind: CreditKind.actor, name: "Carrie-Anne Moss", role: "Trinity", photo: nil),
-          Credit(kind: CreditKind.actor, name: "Laurence Fishburne", role: "Morpheus", photo: nil),
-          Credit(kind: CreditKind.actor, name: "Hugo Weaving", role: "Agent Smith", photo: nil),
+          Credit(kind: title.isShow ? CreditKind.creator : CreditKind.director, name: "Ada Lovelace", role: nil, photo: nil, tmdbId: nil),
+          Credit(kind: CreditKind.writer, name: "Grace Hopper", role: nil, photo: nil, tmdbId: nil),
+          Credit(kind: CreditKind.writer, name: "Alan Turing", role: nil, photo: nil, tmdbId: nil),
+          Credit(kind: CreditKind.writer, name: "Ada Lovelace", role: nil, photo: nil, tmdbId: nil),
+          Credit(kind: CreditKind.actor, name: "Keanu Reeves", role: "Neo", photo: nil, tmdbId: nil),
+          Credit(kind: CreditKind.actor, name: "Carrie-Anne Moss", role: "Trinity", photo: nil, tmdbId: nil),
+          Credit(kind: CreditKind.actor, name: "Laurence Fishburne", role: "Morpheus", photo: nil, tmdbId: nil),
+          Credit(kind: CreditKind.actor, name: "Hugo Weaving", role: "Agent Smith", photo: nil, tmdbId: nil),
         ]
       }
       if title.trailers.isEmpty {
