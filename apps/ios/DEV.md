@@ -83,7 +83,7 @@ ffmpeg has libx264, libx265, AC-3, Opus, drawtext and VideoToolbox.
 ## Server and state
 
 The dedicated independent clone is `~/.t3/scratch/matinee-ios-dev/server`,
-detached at `62bf9c16201b0e23f5753cb0e826d0c8cb2ef8ea`. It does not borrow
+detached at `3b7ff41bdef281fae760e0bd2f4b7973918052ac`. It does not borrow
 Git objects from an agent worktree. The production build serves the web
 client and API in one Node process, without Vite or file watchers. This
 avoids rebuilds and extra processes during hours of concurrent simulator use.

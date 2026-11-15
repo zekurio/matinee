@@ -39,7 +39,8 @@ for account in ('ios-admin', 'ios-viewer'):
         rows = curl('/api/v1/home/' + endpoint, bearer=bearer)
         assert rows, endpoint
         print(account, endpoint, len(rows))
-    assert curl('/api/v1/favorites', bearer=bearer)
+    favorites = curl('/api/v1/profiles/' + account + '/favorites', bearer=bearer)
+    assert favorites and favorites['movies'], (account, favorites)
     # Also prove that the directly created CLI token is accepted.
     assert curl('/api/v1/auth/session', bearer=dev.token(account))['user']['username'] == account
 

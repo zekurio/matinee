@@ -55,13 +55,43 @@ base language. The server alone chooses playback methods and tracks.
   `apps/ios/build/MPVDerivedData`.
 - The generated Matinee project built for generic iOS Simulator.
 - Root `pnpm verify` passed under Node 24 / pnpm 11 through Nix.
-- Real playback is **unverified**. Installed and launched on
-  `matinee-player-iphone`. The app showed "Server nicht erreichbar" for
-  localhost:18420. The fixture health endpoint was healthy, but its auth config
-  response lacks the `loginBackdrop` field required by this checkout's generated
-  `AuthConfig`. No fixture or server code was changed to bypass that mismatch.
-  No MKV pixels, direct-play method, seeking, audio switch, or subtitle switch
-  was observed. Those still require a compatible fixture.
+- Simulator playback was exercised on `matinee-player-iphone`, iOS 27.2,
+  against the shared fixture at revision `3b7ff41`. Interstellar's HEVC/AC-3
+  MKV displayed its timecode and English embedded SRT. Its copied playback
+  report contains one attempt, `direct reason=start at=0s -> playing`, with
+  HEVC and AC-3 tracks. No remux or encode was requested in that sitting.
+- The Matrix's MP4 displayed advancing timecodes. Pausing held at 1:52;
+  forward/back buttons moved to 2:02 and back to 1:52. Resuming advanced
+  again. Selecting 1.25x changed the finish estimate. The audio menu changed
+  from English to German, and the report selected audio #2. This was not a
+  listening test or a measured rate-accuracy test.
+- Selecting `360p, 1 Mbit/s` produced an HLS `quality_change` attempt with
+  `video_to=h264 -> playing`. Screenshots showed 2:09.9 before loading and
+  2:28.5 afterward. The final report had no failed attempts.
+- Closing that sitting left server watch progress at 151.7 seconds with
+  `completed=false`; Home showed a partly watched Matrix entry.
+- AVPlayer was selected in Settings and the Matrix MP4 displayed advancing
+  timecode at 1:07. This is a basic regression smoke test, not coverage of
+  every AVPlayer path.
+- Subtitle coverage is incomplete. Embedded English text was visible in the
+  MKV. Toy Story's sidecar was not captured during an active cue. Jurassic
+  Park's PGS selection reached the adapter as ordinal 2 and mpv listed the
+  PGS track, but screenshots did not establish bitmap rendering. PGS and ASS
+  are not certified by this pass. No profile claims were changed on that
+  inconclusive evidence.
+- Early runs reached freeze-triggered fallback through direct, stream and
+  HLS to an unplayable message. Later clean-build runs played normally.
+  The cause of the earlier failures remains unresolved. A deliberately broken
+  source and recovery were not tested, so fallback is not certified.
+- Screenshots were taken with `xcrun simctl io ... screenshot` and inspected.
+  Local evidence is in `apps/ios/build/MPVVerification/`, not tracked in Git.
+  The diagnostic report still hardcodes an AVPlayer heading and empty AVPlayer
+  statistics even for mpv. Use its `engine` and `attempts` fields instead.
+- The unsigned simulator build could not retain authentication. Testing used
+  an ad-hoc signed simulator build with `CODE_SIGNING_ALLOWED=YES
+  CODE_SIGN_IDENTITY=-`, after `clean build`, in `apps/ios/build/DerivedData`.
+  The first Core test run failed the existing search cancellation timing test;
+  an unchanged rerun passed all 257 tests. Root `pnpm verify` passed.
 - Debug simulator app size was 106 MiB before linking mpv and 202 MiB after,
   from `du -sh`. This is not a release archive or App Store download measurement.
 
@@ -74,8 +104,8 @@ base language. The server alone chooses playback methods and tracks.
 | Offline playback                           | File URL and embedded-track paths implemented; not tested with mpv.                             |
 | HDR / ASS / bitmap rendering               | Implemented through MPVUI; not tested on hardware.                                              |
 | Fill geometry                              | mpv panscan wired; not tested.                                                                  |
-| Plain embedded subtitle styling            | Existing app caption renderer and preferences retained; not tested with mpv.                    |
+| Plain embedded subtitle styling            | English SRT displayed on the simulator; accessibility preference variations not tested.         |
 | Diagnostics                                | Track selection and native sample-frame counters implemented; AVPlayer access logs unavailable. |
 
-No runtime claims above should be read as playback evidence. Policy ceilings
-and format lists are source-based assumptions pending actual media tests.
+The observations above cover only these synthetic fixtures on this simulator.
+Policy ceilings and untested format lists remain source-based assumptions.
