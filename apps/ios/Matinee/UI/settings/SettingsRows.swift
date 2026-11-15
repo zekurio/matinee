@@ -1,51 +1,97 @@
+import MatineeCore
+import MatineeKit
 import SwiftUI
 
 /*
- * The rows Settings is built from, as the web's setting-controls and
- * Android's SettingsRows.kt: a titled section, a panel of rows with lines
- * between them, and rows that pick, switch, tell, or go somewhere.
+ * SettingsRows.kt: the page and the rows Settings is built from, drawn by
+ * MatineeKit as the web's settings sheet draws them at phone width
+ * (settings-panel.tsx, setting-controls.tsx): sections 32 apart under a
+ * heading, each a bordered block of rows split by hairlines.
  *
- *     SettingsSection(Str.settingsPageAppearance) {
- *       Panel {
- *         PickerRow(Str.webAppearanceColorScheme, options: modes, current: theme.mode) { theme.setMode($0) }
- *         RowDivider()
- *         SwitchRow(Str.…, isOn: $on)
- *       }
- *     }
+ * Settings' own pages use the kit's `ListSection`, `ListRow`, and
+ * `MatineeKit.SwitchRow` directly, with `ChoiceRow` below for a choice.
+ * The older names here, `Panel`, `RowDivider`, `PickerRow`, `SwitchRow`,
+ * and the rest, keep their signatures for the pages that still call them
+ * (the admin pages, the download sheet, the gallery), now drawn by the kit.
  */
 
-let PanelShape = RoundedRectangle(cornerRadius: 12, style: .continuous)
+extension EnvironmentValues {
+  /// The page is wide enough for a choice to sit beside its name, as the
+  /// web's `split` rows do from a container of 32rem.
+  @Entry var settingsWide = false
+}
 
-/// A Settings page: its top bar, then its sections down a list, 28 apart,
-/// within the gutter. The admin pages build on it too. Across an iPad it
-/// takes the width, as Android's pages do on a tablet.
+/// The kit's theme, from the app's theme store: Matinee's palettes with the
+/// server's accent, in the mode picked on this device.
+// TODO(shell): the shell puts the kit's theme on the root once it moves onto
+// the kit; this goes then, and Settings reads it from there.
+struct KitTheme: ViewModifier {
+  @Environment(ThemeStore.self) private var theme
+
+  func body(content: Content) -> some View {
+    content.matineeTheme(
+      MatineeKit.MatineeTheme(accentLight: theme.accents.light, accentDark: theme.accents.dark),
+      mode: MatineeKit.ThemeMode(rawValue: theme.mode.rawValue) ?? .system)
+  }
+}
+
+/// The widest a Settings page's column grows, so rows don't stretch across
+/// an iPad, as the web's settings dialog caps its panel.
+let SETTINGS_COLUMN: CGFloat = 720
+
+/// A Settings page: its top bar, then its sections down a column, 32 apart,
+/// as the web's settings sheet on a phone (`px-4 py-6`, `gap-8`). The bar's
+/// title is centered over a hairline, as the web's phone settings and iOS's
+/// own settings pages have it. Across an iPad the column stays at most
+/// `SETTINGS_COLUMN` wide, in the middle. The admin pages build on it too.
 struct SettingsScaffold<Content: View>: View {
   let title: String
+  var spacing: CGFloat = MatineeKit.Space.section
   @ViewBuilder let content: () -> Content
-  @Environment(\.palette) private var palette
+  @State private var wide = false
+  @State private var position = ScrollPosition(edge: .top)
 
-  init(_ title: String, @ViewBuilder content: @escaping () -> Content) {
+  /// `spacing` is what's between the sections, the web's `gap-8` unless given.
+  init(_ title: String, spacing: CGFloat = MatineeKit.Space.section, @ViewBuilder content: @escaping () -> Content) {
     self.title = title
+    self.spacing = spacing
     self.content = content
   }
 
   var body: some View {
     ScrollView {
-      LazyVStack(alignment: .leading, spacing: 28) { content() }
-        .padding(.horizontal, Gutter)
-        .padding(.top, 8)
-        .padding(.bottom, 20)
+      VStack(alignment: .leading, spacing: spacing) { content() }
+        .frame(maxWidth: SETTINGS_COLUMN, alignment: .leading)
+        .onGeometryChange(for: Bool.self) { $0.size.width >= 512 } action: { wide = $0 }
+        .padding(.horizontal, MatineeKit.Space.gutter)
+        .padding(.top, MatineeKit.Space.s6)
+        .padding(.bottom, MatineeKit.Space.s8)
+        .frame(maxWidth: .infinity)
     }
     .scrollDismissesKeyboard(.interactively)
-    .background(palette.background)
-    .topBar(title)
+    .scrollPosition($position)
+    #if DEBUG
+      // -settings.scroll 600: starts that far down, or at the end for `bottom`, to see a long page in a screenshot.
+      .task {
+        guard let to = UserDefaults.standard.string(forKey: "settings.scroll") else { return }
+        try? await Task.sleep(for: .seconds(2))
+        if to == "bottom" { position.scrollTo(edge: .bottom) } else if let y = Double(to) { position.scrollTo(y: y) }
+      }
+    #endif
+    .environment(\.settingsWide, wide)
+    .topBar(title, leading: .back, centered: true)
+    .modifier(KitTheme())
   }
 }
 
-/// A titled group of settings. Android's `Section`, renamed, as SwiftUI has one.
+/// A titled group of settings, as the web's SettingsSubsection: its heading
+/// in `text-base font-semibold tracking-tight`, 12 over what it holds.
+/// Android's `Section`, renamed, as SwiftUI has one. For a block of rows
+/// alone, `ListSection` says the same in one.
 struct SettingsSection<Content: View>: View {
   let title: String
   @ViewBuilder let content: () -> Content
+  @Environment(\.kitPalette) private var palette
 
   init(_ title: String, @ViewBuilder content: @escaping () -> Content) {
     self.title = title
@@ -53,102 +99,127 @@ struct SettingsSection<Content: View>: View {
   }
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 14) {
-      // A long German title, "Hardwarebeschleunigung", shrinks to fit rather than break.
-      Text(title).textStyle(.titleLarge).keepsWordsWhole(title, .titleLarge).accessibilityAddTraits(.isHeader)
+    VStack(alignment: .leading, spacing: MatineeKit.Space.s3) {
+      Text(title)
+        .textStyle(.base, weight: .semibold, tracking: .tight)
+        .foregroundStyle(palette.foreground)
+        .accessibilityAddTraits(.isHeader)
       content()
     }
     .frame(maxWidth: .infinity, alignment: .leading)
   }
 }
 
-/// A card of rows, with lines between them.
+/// The block rows sit in, as the web's SettingRows and List:
+/// `rounded-xl border bg-foreground/[0.02]`.
+let PanelShape = RoundedRectangle.kit(MatineeKit.Radius.xl)
+
+/// A block of rows that puts its own lines between them with `RowDivider`.
+/// `ListBlock` puts them in by itself.
 struct Panel<Content: View>: View {
   @ViewBuilder let content: () -> Content
-  @Environment(\.palette) private var palette
+  @Environment(\.kitPalette) private var palette
 
   init(@ViewBuilder content: @escaping () -> Content) { self.content = content }
 
   var body: some View {
     VStack(spacing: 0) { content() }
       .frame(maxWidth: .infinity)
-      .background(palette.card, in: PanelShape)
+      .background(palette.foreground.opacity(0.02), in: PanelShape)
       .clipShape(PanelShape)
       .overlay { PanelShape.strokeBorder(palette.border) }
   }
 }
 
+/// The hairline between rows in a `Panel`.
 struct RowDivider: View {
-  @Environment(\.palette) private var palette
-
-  var body: some View { Rectangle().fill(palette.border).frame(height: 1) }
+  var body: some View { MatineeKit.Separator() }
 }
 
-/// A row's padding and minimum height, the same for every kind. Its title
-/// takes the room it needs first, wrapping at large text sizes, and what's
-/// at its end, at most 160 points, gets the rest.
-private struct RowFrame: ViewModifier {
-  func body(content: Content) -> some View {
-    content
-      .padding(.horizontal, 16)
-      .padding(.vertical, 14)
-      .frame(maxWidth: .infinity, minHeight: MinTouch, alignment: .leading)
-      .contentShape(Rectangle())
-  }
-}
-
-/// A row's icon, ahead of its title.
-private struct RowIcon: View {
-  let icon: Lucide?
-  var tint: Color
-
-  var body: some View {
-    if let icon { LucideIcon(icon, size: 20, tint: tint).padding(.trailing, 14) }
-  }
-}
-
-/// A row's title and the value at its end, which takes at most 160 points
-/// and the room the title leaves. At the accessibility text sizes the value
-/// goes under the title instead, as iOS's own settings put it, rather than
-/// be cut to an ellipsis.
-private struct TitleValue<Trailing: View>: View {
+/// A choice among `options`, as the web's SelectRow in its `split` layout:
+/// the name, and the Select under it on a phone, or beside it, 288 wide, on
+/// a page with room, as an iPad's. At the accessibility text sizes it stays
+/// under the name. One that isn't `enabled`, as a choice with only one
+/// option the server allows, shows its value as text, as the web's FixedRow.
+struct ChoiceRow<Value: Hashable>: View {
   let title: String
-  let value: String
-  @ViewBuilder let trailing: () -> Trailing
-  @Environment(\.palette) private var palette
+  let options: [(Value, String)]
+  @Binding var selection: Value
+  var enabled = true
+  @Environment(\.settingsWide) private var wide
   @Environment(\.dynamicTypeSize) private var dynamicType
+  @Environment(\.kitPalette) private var palette
+
+  init(_ title: String, selection: Binding<Value>, options: [(Value, String)], enabled: Bool = true) {
+    self.title = title
+    self._selection = selection
+    self.options = options
+    self.enabled = enabled
+  }
 
   var body: some View {
-    HStack(spacing: 0) {
-      if dynamicType.isAccessibilitySize {
-        VStack(alignment: .leading, spacing: 2) {
-          Text(title).textStyle(.bodyLarge).foregroundStyle(palette.foreground).keepsWordsWhole(title, .bodyLarge)
-          Text(value).textStyle(.bodyMedium).foregroundStyle(palette.muted)
-        }
-        .multilineTextAlignment(.leading)
-        .frame(maxWidth: .infinity, alignment: .leading)
-      } else {
-        Text(title).textStyle(.bodyLarge).foregroundStyle(palette.foreground).layoutPriority(1)
-          .multilineTextAlignment(.leading)
-        Spacer(minLength: 12)
-        Text(value).textStyle(.bodyMedium).foregroundStyle(palette.muted).lineLimit(1)
-          .frame(maxWidth: 160, alignment: .trailing)
+    if !enabled {
+      MatineeKit.ValueRow(title, value: options.first { $0.0 == selection }?.1 ?? options.first?.1 ?? "")
+    } else if wide && !dynamicType.isAccessibilitySize {
+      HStack(spacing: MatineeKit.Space.s6) {
+        Text(title).textStyle(.sm, weight: .medium).foregroundStyle(palette.foreground)
+          .frame(maxWidth: .infinity, alignment: .leading)
+          .accessibilityHidden(true)
+        MatineeKit.Select(title, selection: $selection, options: options).frame(width: 288)
       }
-      trailing()
+      .padding(.horizontal, MatineeKit.Space.s4)
+      .padding(.vertical, MatineeKit.Space.s2_5)
+      .frame(minHeight: 52)
+    } else {
+      MatineeKit.SelectRow(title, selection: $selection, options: options, stacked: true)
     }
   }
 }
 
-/// A choice among `options`, shown at the row's end and picked from a menu
-/// that opens there, with a check by the current one. A row that isn't
-/// `enabled` only shows its value.
+extension ChoiceRow {
+  /// A choice that calls `onPick` with a new value, rather than writing to a binding.
+  init(_ title: String, current: Value, options: [(Value, String)], enabled: Bool = true, onPick: @escaping (Value) -> Void) {
+    self.init(
+      title, selection: Binding(get: { current }, set: { if $0 != current { onPick($0) } }), options: options,
+      enabled: enabled)
+  }
+}
+
+#if DEBUG
+  /// `-settings.open NAME`: opens a dialog, sheet, or menu of a page as it
+  /// shows, to see it in a screenshot without a finger on the simulator.
+  func debugOpens(_ name: String) -> Bool { UserDefaults.standard.string(forKey: "settings.open") == name }
+#endif
+
+/// A short line of status under a block, as the web's SettingNote:
+/// `text-13px` muted, 4 in from the block's edge.
+struct SettingNote: View {
+  let text: String
+  var color: Color?
+  @Environment(\.kitPalette) private var palette
+
+  init(_ text: String, color: Color? = nil) {
+    self.text = text
+    self.color = color
+  }
+
+  var body: some View {
+    Text(text).textStyle(.px13).foregroundStyle(color ?? palette.mutedForeground)
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .padding(.horizontal, MatineeKit.Space.s1)
+  }
+}
+
+// MARK: The older rows
+
+/// A choice among `options`, picked from a Select: `ChoiceRow` under the
+/// name the older pages call it by. A row that isn't `enabled` only shows its value.
 struct PickerRow<Value: Hashable>: View {
   let title: String
   let options: [(Value, String)]
   let current: Value
   var enabled = true
   let onPick: (Value) -> Void
-  @Environment(\.palette) private var palette
 
   init(
     _ title: String, options: [(Value, String)], current: Value, enabled: Bool = true,
@@ -162,40 +233,17 @@ struct PickerRow<Value: Hashable>: View {
   }
 
   var body: some View {
-    let value = options.first { $0.0 == current }?.1 ?? String(describing: current)
-    let row = TitleValue(title: title, value: value) {
-      if enabled { LucideIcon(.chevronDown, size: 16, tint: palette.muted).padding(.leading, 4) }
-    }
-    .modifier(RowFrame())
-    if enabled {
-      Menu {
-        Picker(
-          title,
-          selection: Binding(get: { current }, set: { if $0 != current { onPick($0) } })
-        ) {
-          ForEach(options, id: \.0) { option, label in Text(label).tag(option) }
-        }
-        .pickerStyle(.inline)
-      } label: {
-        row
-      }
-      .buttonStyle(RowPress())
-      .accessibilityValue(value)
-    } else {
-      row.accessibilityElement(children: .combine)
-    }
+    ChoiceRow(title, current: current, options: options, enabled: enabled, onPick: onPick)
   }
 }
 
-/// A choice among many, like the languages: the row shows the current one
-/// and opens a page of them all, a check by the current one, as iOS's own
-/// settings do where a menu would run off the screen. Picking goes back.
+/// A choice among many, like the languages. The kit's Select scrolls a long
+/// list in its menu, as the web's does, so it's a `ChoiceRow` too.
 struct ListPickerRow<Value: Hashable>: View {
   let title: String
   let options: [(Value, String)]
   let current: Value
   let onPick: (Value) -> Void
-  @Environment(\.palette) private var palette
 
   init(_ title: String, options: [(Value, String)], current: Value, onPick: @escaping (Value) -> Void) {
     self.title = title
@@ -205,79 +253,24 @@ struct ListPickerRow<Value: Hashable>: View {
   }
 
   var body: some View {
-    let value = options.first { $0.0 == current }?.1 ?? String(describing: current)
-    NavigationLink {
-      ChoicePage(title: title, options: options, current: current, onPick: onPick)
-    } label: {
-      TitleValue(title: title, value: value) {
-        LucideIcon(.chevronRight, size: 16, tint: palette.muted).padding(.leading, 4)
-      }
-      .modifier(RowFrame())
-    }
-    .buttonStyle(RowPress())
-    .accessibilityValue(value)
+    ChoiceRow(title, current: current, options: options, onPick: onPick)
   }
 }
 
-/// The page a `ListPickerRow` opens.
-private struct ChoicePage<Value: Hashable>: View {
-  let title: String
-  let options: [(Value, String)]
-  let current: Value
-  let onPick: (Value) -> Void
-  @Environment(\.dismiss) private var dismiss
-  @Environment(\.palette) private var palette
-
-  var body: some View {
-    SettingsScaffold(title) {
-      Panel {
-        ForEach(Array(options.enumerated()), id: \.offset) { index, option in
-          if index > 0 { RowDivider() }
-          let selected = option.0 == current
-          Button {
-            if !selected { onPick(option.0) }
-            dismiss()
-          } label: {
-            HStack(spacing: 12) {
-              Text(option.1).textStyle(.bodyLarge).foregroundStyle(palette.foreground)
-                .multilineTextAlignment(.leading)
-                .frame(maxWidth: .infinity, alignment: .leading)
-              if selected { LucideIcon(.check, size: 18, tint: palette.accent) }
-            }
-            .modifier(RowFrame())
-          }
-          .buttonStyle(RowPress())
-          .accessibilityAddTraits(selected ? .isSelected : [])
-        }
-      }
-    }
-  }
-}
-
-/// A setting that's on or off, the switch at its end; the whole row flips it.
+/// A setting that's on or off: the kit's `SwitchRow`, with the older argument order.
 struct SwitchRow: View {
   let title: String
   @Binding var isOn: Bool
-  var icon: Lucide?
-  @Environment(\.palette) private var palette
+  var icon: MatineeKit.Lucide?
 
-  init(_ title: String, isOn: Binding<Bool>, icon: Lucide? = nil) {
+  init(_ title: String, isOn: Binding<Bool>, icon: MatineeKit.Lucide? = nil) {
     self.title = title
     self._isOn = isOn
     self.icon = icon
   }
 
   var body: some View {
-    Toggle(isOn: $isOn) {
-      HStack(spacing: 0) {
-        RowIcon(icon: icon, tint: palette.muted)
-        Text(title).textStyle(.bodyLarge).foregroundStyle(palette.foreground).keepsWordsWhole(title, .bodyLarge)
-      }
-    }
-    .toggleStyle(.matinee)
-    .modifier(RowFrame())
-    // The switch takes its own taps; the rest of the row flips it too, as on Android.
-    .onTapGesture { isOn.toggle() }
+    MatineeKit.SwitchRow(title, icon: icon, isOn: $isOn)
   }
 }
 
@@ -285,38 +278,27 @@ struct SwitchRow: View {
 struct ValueRow: View {
   let title: String
   let value: String
-  @Environment(\.palette) private var palette
 
   init(_ title: String, value: String) {
     self.title = title
     self.value = value
   }
 
-  var body: some View {
-    HStack(spacing: 0) {
-      Text(title).textStyle(.bodyLarge).foregroundStyle(palette.foreground).layoutPriority(1)
-      Spacer(minLength: 12)
-      Text(value).textStyle(.bodyMedium).foregroundStyle(palette.muted).multilineTextAlignment(.trailing)
-    }
-    .modifier(RowFrame())
-    .accessibilityElement(children: .combine)
-  }
+  var body: some View { MatineeKit.ValueRow(title, value: value) }
 }
 
-/// A row that goes somewhere else, like the system's settings, with what's
-/// set there at its end, or what it's for under its title.
+/// A row that goes somewhere else, with what's set there at its end, or
+/// what it's for under its title: the kit's `ListRow`.
 struct LinkRow: View {
   let title: String
   var value: String?
   var destructive = false
-  var icon: Lucide?
+  var icon: MatineeKit.Lucide?
   var description: String?
   let action: () -> Void
-  @Environment(\.palette) private var palette
-  @Environment(\.dynamicTypeSize) private var dynamicType
 
   init(
-    _ title: String, value: String? = nil, destructive: Bool = false, icon: Lucide? = nil,
+    _ title: String, value: String? = nil, destructive: Bool = false, icon: MatineeKit.Lucide? = nil,
     description: String? = nil, action: @escaping () -> Void
   ) {
     self.title = title
@@ -328,38 +310,8 @@ struct LinkRow: View {
   }
 
   var body: some View {
-    let color = destructive ? palette.danger : palette.foreground
-    Button(action: action) {
-      HStack(spacing: 0) {
-        RowIcon(icon: icon, tint: destructive ? palette.danger : palette.muted)
-        // At the accessibility sizes the value goes under the title, as in `TitleValue`.
-        let stacked = dynamicType.isAccessibilitySize
-        VStack(alignment: .leading, spacing: 0) {
-          // Across the row when nothing sits at its end; beside a value it takes only what it needs.
-          if stacked || value == nil {
-            Text(title).textStyle(.bodyLarge).foregroundStyle(color).keepsWordsWhole(title, .bodyLarge)
-          } else {
-            Text(title).textStyle(.bodyLarge).foregroundStyle(color)
-          }
-          if stacked, let value {
-            Text(value).textStyle(.bodyMedium).foregroundStyle(palette.muted)
-          }
-          if let description {
-            Text(description).textStyle(.bodySmall).foregroundStyle(palette.muted)
-          }
-        }
-        .multilineTextAlignment(.leading)
-        .layoutPriority(1)
-        Spacer(minLength: value == nil || stacked ? 0 : 12)
-        if !stacked, let value {
-          Text(value).textStyle(.bodyMedium).foregroundStyle(palette.muted).lineLimit(1)
-            .frame(maxWidth: 160, alignment: .trailing)
-        }
-        if !destructive { LucideIcon(.chevronRight, size: 16, tint: palette.muted).padding(.leading, 4) }
-      }
-      .modifier(RowFrame())
-    }
-    .buttonStyle(RowPress())
+    MatineeKit.ListRow(
+      title, subtitle: description, icon: icon, value: value, destructive: destructive, action: action)
   }
 }
 
@@ -368,19 +320,11 @@ struct LinkRow: View {
 struct NoteRow: View {
   let title: String
   let description: String
-  @Environment(\.palette) private var palette
 
   init(_ title: String, description: String) {
     self.title = title
     self.description = description
   }
 
-  var body: some View {
-    VStack(alignment: .leading, spacing: 0) {
-      Text(title).textStyle(.bodyLarge).foregroundStyle(palette.foreground).keepsWordsWhole(title, .bodyLarge)
-      Text(description).textStyle(.bodySmall).foregroundStyle(palette.muted)
-    }
-    .modifier(RowFrame())
-    .accessibilityElement(children: .combine)
-  }
+  var body: some View { MatineeKit.ListRow(title, subtitle: description) }
 }

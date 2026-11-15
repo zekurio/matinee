@@ -1,4 +1,5 @@
 import MatineeCore
+import MatineeKit
 import SwiftUI
 import UIKit
 
@@ -13,10 +14,9 @@ import UIKit
 struct AboutPage: View {
   var body: some View {
     SettingsScaffold(Str.aboutTitle) {
-      Panel {
-        ForEach(Array(appInfo().enumerated()), id: \.offset) { index, row in
-          if index > 0 { RowDivider() }
-          ValueRow(row.0, value: row.1)
+      ListBlock {
+        ForEach(appInfo(), id: \.0) { row in
+          MatineeKit.ValueRow(row.0, value: row.1)
         }
       }
       PlaybackDiagnosticsSection()
@@ -78,20 +78,23 @@ private struct AppLogSection: View {
   @Environment(\.snackbar) private var snackbar
 
   var body: some View {
-    SettingsSection(Str.logsTitle) {
-      Panel {
-        LinkRow(Str.logsShow, description: Str.logsNote) { withLog { shown = $0 } }
-        RowDivider()
-        LinkRow(Str.logsCopy) { withLog { copyText($0, snackbar: snackbar, copied: Str.logsCopied) } }
-        RowDivider()
-        LinkRow(Str.logsShare) { withLog { shareText($0, subject: Str.logsTitle) } }
+    ListSection(Str.logsTitle) {
+      MatineeKit.ListRow(Str.logsShow, subtitle: Str.logsNote) { withLog { shown = $0 } }
+      MatineeKit.ListRow(Str.logsCopy, accessory: MatineeKit.ListRowAccessory.none) {
+        withLog { copyText($0, snackbar: snackbar, copied: Str.logsCopied) }
+      }
+      MatineeKit.ListRow(Str.logsShare, accessory: MatineeKit.ListRowAccessory.none) {
+        withLog { shareText($0, subject: Str.logsTitle) }
       }
     }
-    .sheet(isPresented: Binding(get: { shown != nil }, set: { if !$0 { shown = nil } })) {
+    .matineeSheet(isPresented: Binding(get: { shown != nil }, set: { if !$0 { shown = nil } }), size: .large) {
       TextSheet(title: Str.logsTitle, text: shown ?? "", copyLabel: Str.logsCopy, latestLast: true) {
         copyText(shown ?? "", snackbar: snackbar, copied: Str.logsCopied)
       }
     }
+    #if DEBUG
+      .onAppear { if debugOpens("log") { withLog { shown = $0 } } }
+    #endif
   }
 
   private func withLog(_ use: @escaping (String) -> Void) {

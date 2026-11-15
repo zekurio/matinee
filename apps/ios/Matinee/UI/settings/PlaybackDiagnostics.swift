@@ -1,4 +1,5 @@
 import MatineeCore
+import MatineeKit
 import SwiftUI
 import UIKit
 
@@ -13,34 +14,33 @@ import UIKit
 struct PlaybackDiagnosticsSection: View {
   @State private var open = false
   @Environment(\.snackbar) private var snackbar
-  @Environment(\.palette) private var palette
+  @Environment(\.kitPalette) private var palette
 
   var body: some View {
     let report = PlaybackDiagnostics.shared.report
     let text = report.map(formatReport)
-    SettingsSection(Str.diagnosticsTitle) {
-      Panel {
-        if let text, let latest = report?.latest {
-          ValueRow(Str.diagnosticsLatest, value: statusLabel(latest))
-          RowDivider()
-          LinkRow(Str.diagnosticsShow) { open = true }
-          RowDivider()
-          LinkRow(Str.diagnosticsCopy) { copyText(text, snackbar: snackbar, copied: Str.diagnosticsCopied) }
-          RowDivider()
-          LinkRow(Str.iosDiagnosticsShare) { shareText(text, subject: Str.diagnosticsTitle) }
-          RowDivider()
-          LinkRow(Str.diagnosticsClear, destructive: true) {
-            open = false
-            PlaybackDiagnostics.clear()
-          }
-        } else {
-          Text(Str.diagnosticsEmpty).textStyle(.bodyMedium).foregroundStyle(palette.muted)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(16)
+    ListSection(Str.diagnosticsTitle) {
+      if let text, let latest = report?.latest {
+        MatineeKit.ValueRow(Str.diagnosticsLatest, value: statusLabel(latest))
+        MatineeKit.ListRow(Str.diagnosticsShow) { open = true }
+        MatineeKit.ListRow(Str.diagnosticsCopy, accessory: MatineeKit.ListRowAccessory.none) {
+          copyText(text, snackbar: snackbar, copied: Str.diagnosticsCopied)
         }
+        MatineeKit.ListRow(Str.iosDiagnosticsShare, accessory: MatineeKit.ListRowAccessory.none) {
+          shareText(text, subject: Str.diagnosticsTitle)
+        }
+        MatineeKit.ListRow(Str.diagnosticsClear, destructive: true) {
+          open = false
+          PlaybackDiagnostics.clear()
+        }
+      } else {
+        Text(Str.diagnosticsEmpty).textStyle(.sm).foregroundStyle(palette.mutedForeground)
+          .frame(maxWidth: .infinity, alignment: .leading)
+          .padding(.horizontal, MatineeKit.Space.s4)
+          .padding(.vertical, MatineeKit.Space.s4)
       }
     }
-    .sheet(isPresented: Binding(get: { open && text != nil }, set: { open = $0 })) {
+    .matineeSheet(isPresented: Binding(get: { open && text != nil }, set: { open = $0 }), size: .large) {
       TextSheet(title: Str.diagnosticsTitle, text: text ?? "", copyLabel: Str.diagnosticsCopy) {
         copyText(text ?? "", snackbar: snackbar, copied: Str.diagnosticsCopied)
       }
@@ -56,6 +56,7 @@ struct PlaybackDiagnosticsSection: View {
           why: [PlaybackReason.video, PlaybackReason.failed], videoTo: "h264", audioTo: "aac")
         sample.failed(errorDiagnostics(NSError(domain: "AVFoundationErrorDomain", code: -11828)))
         PlaybackDiagnostics.latest = sample
+        if debugOpens("report") { open = true }
       }
     #endif
   }
@@ -79,42 +80,41 @@ func statusLabel(_ attempt: AttemptDiagnostics) -> String {
   }
 }
 
-/// A report or a log to read, in a sheet: the text, selectable, with Copy and Close.
+/// A report or a log to read, in a sheet: its title over a line, the text
+/// in the web's `font-mono`, selectable, and Copy and Close at the bottom,
+/// as Android's dialog has them. A log opens at its end, where the latest
+/// lines are.
 struct TextSheet: View {
   let title: String
   let text: String
   let copyLabel: String
-  /// Opens at the bottom, where a log's latest lines are.
   var latestLast = false
   let onCopy: () -> Void
-  @Environment(\.dismiss) private var dismiss
-  @Environment(\.palette) private var palette
+  @Environment(\.sheetDismiss) private var dismiss
+  @Environment(\.kitPalette) private var palette
 
   var body: some View {
     VStack(spacing: 0) {
-      SheetHeader(title).padding(.top, 12)
+      MatineeKit.SheetHeader(title)
       ScrollView([.vertical]) {
         Text(text)
-          // A report and a log line up in columns, as Android shows them, in its monospace.
-          .font(.system(size: 12, design: .monospaced))
-          .lineSpacing(4)
+          .monoStyle(.xs)
           .foregroundStyle(palette.foreground)
           .textSelection(.enabled)
           .frame(maxWidth: .infinity, alignment: .leading)
-          .padding(.horizontal, 20)
-          .padding(.vertical, 8)
+          .padding(.horizontal, MatineeKit.Space.s5)
+          .padding(.vertical, MatineeKit.Space.s2)
       }
       .defaultScrollAnchor(latestLast ? .bottom : .top)
-      Rectangle().fill(palette.border).frame(height: 1)
-      HStack(spacing: 10) {
-        MatineeButton(.ghost) { dismiss() } label: { Text(Str.diagnosticsClose) }
+      MatineeKit.Separator()
+      HStack(spacing: MatineeKit.Space.s2_5) {
+        MatineeKit.MatineeButton(Str.diagnosticsClose, look: .ghost) { dismiss() }
         Spacer(minLength: 0)
-        MatineeButton(.secondary, action: onCopy) { Text(copyLabel) }
+        MatineeKit.MatineeButton(copyLabel, icon: nil, look: .secondary, action: onCopy)
       }
-      .padding(.horizontal, 16)
-      .padding(.vertical, 10)
+      .padding(.horizontal, MatineeKit.Space.s4)
+      .padding(.vertical, MatineeKit.Space.s2_5)
     }
-    .matineeSheet([.large])
   }
 }
 
