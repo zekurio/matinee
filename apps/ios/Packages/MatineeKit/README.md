@@ -439,6 +439,26 @@ right edge and backdrops fill the screen.
 - `TVClock()`, and `.tvClock(visible:)` to put it top right, fading out
   under a panel or while a grid has the top. It follows the locale's 12 or
   24 hour style.
+- `TVTextField(text: $address, placeholder:, icon:, kind: .text | .url, isError:, focus:) { submit }`:
+  a field laid out as a list row, for a server's address. It rests like a
+  row; Select opens the system's keyboard (the URL layout and Go for
+  `.url`); Go runs the submit. `isError` rings it in the danger color.
+- `.tvToastHost(state)`: the phone's `ToastState` at a TV's size, once on
+  the root. A toast rises at the bottom between the drawer's rail and the
+  right margin and goes by itself; nothing in it takes focus, so a TV
+  offers no toast action (Undo): what needs an answer goes in a panel or
+  a dialog. `TVToast(message)` is one toast.
+- `.tvDialog(isPresented:, title:, message:, buttons: [TVDialogButton("Sign out", icon:, destructive:, preferred:) { }])`
+  and `.tvConfirmDialog(isPresented:, title:, message:, confirm:, confirmIcon:, cancel:, destructive:) { }`:
+  a question in the middle of the screen, its answers as rows, focus on
+  the `preferred` one (Cancel), Menu closing it. For what stops
+  everything; a choice among things, or a card's actions, is a side panel.
+- `TVRowNotice("Recently added", headline:, message:, height:, action: TVNoticeAction("Try again", icon:) { })`:
+  a row with no cards, its heading and why, with Try again; no `headline`
+  is a row still loading, a spinner. `TVRowNotice.posterHeight` keeps a
+  poster row's height so the rows under it stay put. `TVLoadingRow()` is a
+  spinner across the page; `TVMessage("No libraries yet", message:, icon:, centered:, action:, actionFocus:)`
+  a page, or part of one, with only something to say.
 
 The words the TV components say on their own (Watched, Clear search, the
 search field's placeholder, a card's progress) are in the `TV` table of
@@ -486,6 +506,15 @@ MatineeCore.
 - `TVBackdrop(focused) { item in TVPicture(item.backdrop, alignment: .topTrailing) }`:
   the picture behind a page under `TVScrim`, crossfading once focus rests
   for 350 ms.
+- `TVPinnedRows(memory:, spacing:, fade:, end:, lazy:) { rows }`: a page of
+  `TVRow`s under a fixed header, as Home: whichever row takes focus
+  scrolls up to the top of the rows, under a fade, so the header above can
+  speak for the focused card. `lazy: false` makes every row at once, for a
+  few rows that each load on their own.
+
+The TV app loads its artwork through Nuke with the blur hash, as the
+iPhone app does, and passes it to these as their `art`; `TVPicture` is for
+the gallery and for anything with no loader of its own.
 
 Long press of Select on a card runs its `onLongPress`, Apple TV's way to
 ask for more, which opens the actions panel where Android TV uses Menu;
@@ -530,25 +559,28 @@ TV components instead; the TV boundary test flags these:
 | `Chip`, `ChoiceChip`, `ToggleChip`                         | `TVChip`                                                       |
 | `ListSection`, `ListRow`, `SwitchRow`, `SelectRow`         | `TVListItem` with `TVListValue`, `TVListSwitch`                |
 | `Select`, `SegmentedControl`, `Switch`, `Slider`, calendar | a `TVListItem` opening `.tvOptionsPanel`, `TVStepRow`          |
-| `MatineeTextField`                                         | `TVSearchField`                                                |
+| `MatineeTextField`                                         | `TVSearchField`, `TVTextField`                                 |
 | `.textStyle(.sm)` and the phone sizes                      | `TVTextStyle`                                                  |
+| `.toastHost`, `.dialog`, `.confirmDialog`                  | `.tvToastHost`, `.tvDialog`, `.tvConfirmDialog`                |
+| `EmptyState`, `Callout`                                    | `TVMessage`, `TVRowNotice`                                     |
 
 Sheets and the bottom bar are left available on tvOS rather than marked
 unavailable: the gallery's phone pages build for tvOS, and marking them
 would mean wrapping those pages too. `Spinner`, `ProgressBar`, `Avatar`,
 `Badge`, `LucideIcon`, and `Separator` take no focus and are fine on a TV
-at a size the screen gives them. Toasts and dialogs work, at phone sizes;
-the TV app will want TV versions of both.
+at a size the screen gives them.
 
 ### The TV gallery
 
 On tvOS the gallery app opens the TV gallery (`TVKitGallery`), whose last
 page is the phone gallery as it looks on a TV. Its pages: `focus`,
-`scale`, `buttons`, `lists`, `panels`, `search`, `cards`, `grid`, `home`
+`scale`, `buttons`, `lists`, `panels`, `feedback` (notices, toasts, the
+dialog, and the text field), `search`, `cards`, `grid`, `home`
 (a mock-up of Home with the backdrop, header, rows, drawer, and clock),
 `remote` (a mock player), and `phone`. Launch arguments: `-page`, `-scheme
 light|dark`, `-accent matinee|ember|moss|sun`, `-locale de`, and `-open
-sort|actions|day|loading` on `panels`, `drawer` on `search`, `grid`, and
+sort|actions|day|loading` on `panels`, `toast|dialog` on `feedback`,
+`drawer` on `search`, `grid`, and
 `home`, `keyboard` on `search`. Its home page changes the appearance, the
 accent, and the language live.
 
@@ -583,17 +615,20 @@ quits. To iterate, keep a session and send it steps, which run at once:
 
 Steps: `up`, `down`, `left`, `right`, `select`, `menu`, `playpause`,
 `home`, each with `*n` to repeat; `hold:<button>:<seconds>`;
-`wait:<seconds>`; `shot:<name>`, saved as `OUT/<name>.png`; and
-`relaunch:<arguments>` with `+` for spaces. `SIMULATOR` picks the device
+`wait:<seconds>`; `shot:<name>`, saved as `OUT/<name>.png`;
+`type:<text>` into the system keyboard while it's up; and
+`relaunch:<arguments>` with `+` for spaces. A failed step ends that
+script but not the session. `SIMULATOR` picks the device
 (the 4K one unless set), `OUT` the folder (`apps/ios/build/tv-kit-screenshots`,
 fixed when the session starts), `SETTLE` the seconds before a shot. A
 session ends after two hours without steps. `XCUIRemote` has buttons but no
 touch surface, so swipes can only be tried by hand, in the Simulator's Apple
 TV Remote window.
 
-A screen of the TV app can take the same approach: a UI test in its own
-project, `XCUIRemote.shared.press(.right)`, and
-`XCUIScreen.main.screenshot()`.
+The TV app takes the same approach with the same script: its project's
+`MatineeTVRemote` UI test compiles `Gallery/Remote/RemoteScript.swift`, and
+`apps/ios/MatineeTV/Remote/remote.sh` (`just tv-remote`) drives it
+(`apps/ios/MatineeTV/README.md`, "Driving the remote").
 
 ### The TV boundary test
 
@@ -601,4 +636,5 @@ project, `XCUIRemote.shared.press(.right)`, and
 phone components and phone type sizes, and for the stock controls the main
 boundary test catches. By default it scans the TV gallery; point it at the
 TV app's screens with `KIT_TV_BOUNDARY_ROOT` (`TEST_RUNNER_KIT_TV_BOUNDARY_ROOT`
-through `xcodebuild`).
+through `xcodebuild`). `just tv-boundary` in `apps/ios`, part of
+`just test`, runs it over `MatineeTV/`.

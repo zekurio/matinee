@@ -27,6 +27,8 @@ let tvRules: [Rule] = [
   Rule(name: "MatineeTextField", pattern: #"(?<![\w.])MatineeTextField\s*\("#, instead: "TVSearchField"),
   Rule(name: "phone inputs", pattern: #"(?<![\w.])(Select|SegmentedControl|Switch|Checkbox|MatineeSlider|RangeSlider|MatineeCalendar)\s*\("#, instead: "TVListItem with TVListValue or TVListSwitch, .tvOptionsPanel, TVStepRow"),
   Rule(name: "phone type", pattern: #"\.textStyle\(\s*\.(px\d+|xs|sm|base|lg|xl|xl2|xl3|xl4|xl5)\b"#, instead: ".textStyle(.body), .title, .headline, and the rest of TVTextStyle"),
+  Rule(name: "phone overlays", pattern: #"\.(toastHost|dialog|confirmDialog)\s*\("#, instead: ".tvToastHost, .tvDialog, .tvConfirmDialog"),
+  Rule(name: "phone notices", pattern: #"(?<![\w.])(EmptyState|Callout)\s*\("#, instead: "TVMessage, TVRowNotice"),
 ]
 
 /// The folder to scan: KIT_TV_BOUNDARY_ROOT, or the TV gallery's sources.
@@ -88,9 +90,12 @@ func scanTV(_ root: URL) -> [Finding] {
     .matineeSheet(isPresented: $open) {}
     Text("x").textStyle(.sm, weight: .medium)
     // ListRow("in a comment") {}
+    .tvDialog(isPresented: $asking, title: "x", buttons: [])
+    .dialog(isPresented: $asking, title: "x") {}
     """
   try source.write(to: folder.appendingPathComponent("Screen.swift"), atomically: true, encoding: .utf8)
   let found = scanTV(folder)
-  #expect(Set(found.map(\.rule)) == ["MatineeButton", "Chip", "matineeSheet", "phone type"])
+  #expect(Set(found.map(\.rule)) == ["MatineeButton", "Chip", "matineeSheet", "phone type", "phone overlays"])
   #expect(found.allSatisfy { $0.line > 3 })
+  #expect(!found.contains { $0.line == 9 })
 }
