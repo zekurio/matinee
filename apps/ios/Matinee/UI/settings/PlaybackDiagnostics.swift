@@ -37,11 +37,10 @@ struct PlaybackDiagnosticsSection: View {
         EmptyRow(Str.diagnosticsEmpty)
       }
     }
-    .matineeSheet(isPresented: Binding(get: { open && text != nil }, set: { open = $0 }), size: .large) {
-      TextSheet(title: Str.diagnosticsTitle, text: text ?? "", copyLabel: Str.diagnosticsCopy) {
-        copyText(text ?? "", snackbar: snackbar, copied: Str.diagnosticsCopied)
-      }
-    }
+    .modifier(
+      TextDialog(
+        isPresented: Binding(get: { open && text != nil }, set: { open = $0 }), title: Str.diagnosticsTitle,
+        text: text ?? "", copyLabel: Str.diagnosticsCopy, copied: Str.diagnosticsCopied))
     #if DEBUG
       // -dev.report YES: a report as a failed encode leaves it, to see this section before anything played.
       .onAppear {
@@ -77,38 +76,71 @@ func statusLabel(_ attempt: AttemptDiagnostics) -> String {
   }
 }
 
-/// A report or a log to read, in a sheet: its title over a line, the text
-/// in the web's `font-mono`, selectable, and Copy and Close at the bottom,
-/// as Android's dialog has them. A log opens at its end, where the latest
-/// lines are.
-struct TextSheet: View {
+/// A report or a log to read, in the kit's dialog, as Android's: its
+/// title, the text in the web's `font-mono` scrolling in a box at most 420
+/// tall, selectable, and Copy, which keeps the dialog open, over Close. A
+/// log opens at its end, where the latest lines are, and keeps the whole
+/// 420, as Android's list does; a report is as tall as it runs.
+struct TextDialog: ViewModifier {
+  @Binding var isPresented: Bool
   let title: String
   let text: String
   let copyLabel: String
+  let copied: String
   var latestLast = false
-  let onCopy: () -> Void
-  @Environment(\.sheetDismiss) private var dismiss
+  @Environment(\.snackbar) private var snackbar
+
+  func body(content: Content) -> some View {
+    content.dialog(isPresented: $isPresented, title: title) {
+      TextDialogBody(text: text, latestLast: latestLast)
+    } footer: {
+      DialogButton(copyLabel, look: .secondary, closes: false, action: copy)
+      DialogButton(Str.diagnosticsClose, action: close)
+    }
+  }
+
+  private func copy() { copyText(text, snackbar: snackbar, copied: copied) }
+  private func close() {}
+}
+
+/// The text of a `TextDialog`, in a box that scrolls once it runs past 420.
+private struct TextDialogBody: View {
+  let text: String
+  let latestLast: Bool
   @Environment(\.palette) private var palette
 
   var body: some View {
-    SheetHeader(title)
-    SheetBody(sides: Space.sheet, top: Space.s2, bottom: Space.s2) {
-      Text(text)
-        .monoTextStyle(.xs)
-        .foregroundStyle(palette.foreground)
-        .textSelection(.enabled)
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-    .defaultScrollAnchor(latestLast ? .bottom : .top)
-    SheetFooter {
-      HStack(spacing: Space.s2_5) {
-        MatineeButton(Str.diagnosticsClose, look: .ghost) { dismiss() }
-        Spacer(minLength: 0)
-        MatineeButton(copyLabel, icon: nil, look: .secondary, action: onCopy)
+    Group {
+      if latestLast {
+        scrolling
+      } else {
+        ViewThatFits(in: .vertical) {
+          words
+          scrolling
+        }
       }
     }
+    .frame(maxHeight: TEXT_DIALOG_HEIGHT)
+  }
+
+  private var words: some View {
+    Text(text)
+      .monoTextStyle(.xs)
+      .foregroundStyle(palette.foreground)
+      .textSelection(.enabled)
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .fixedSize(horizontal: false, vertical: true)
+  }
+
+  private var scrolling: some View {
+    ScrollView { words }
+      .defaultScrollAnchor(latestLast ? .bottom : .top)
+      .scrollBounceBehavior(.basedOnSize)
   }
 }
+
+/// Android's 420 for the text of a log or report dialog.
+private let TEXT_DIALOG_HEIGHT: CGFloat = 420
 
 /// Puts `text` on the pasteboard and says so, as iOS doesn't.
 func copyText(_ text: String, snackbar: Snackbar, copied: String) {

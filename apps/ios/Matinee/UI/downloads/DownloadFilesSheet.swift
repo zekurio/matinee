@@ -137,7 +137,7 @@ struct DownloadFilesSheet: View {
       let loaded = try await files.load(api)
       let wishes = downloads.wishes()
       let initial = try await downloads.resolve(
-        api: api, items: missing(loaded), device: downloadDevice(PlayerPrefs()), wishes: wishes)
+        api: api, items: missing(loaded), device: downloadDevice(PlayerPrefs.shared), wishes: wishes)
       presets = mergedPresets(initial)
       codecs = mergedCodecs(initial)
       // Empty for the server's first, as Settings' "auto" asks it, until one's picked.
@@ -162,7 +162,7 @@ struct DownloadFilesSheet: View {
     defer { resolving = false }
     do {
       let answer = try await downloads.resolve(
-        api: api, items: missing(items), device: downloadDevice(PlayerPrefs()), wishes: wishes)
+        api: api, items: missing(items), device: downloadDevice(PlayerPrefs.shared), wishes: wishes)
       results = answer
       resolvedWishes = wishes
     } catch {

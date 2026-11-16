@@ -79,19 +79,19 @@ struct BrowseScreen: View {
       .textStyle(.sm)
       .foregroundStyle(palette.mutedForeground)
       .padding(.horizontal, gutter)
-      if let choices = browseKindChoices(kinds.value, picked: kind) {
-        ScrollView(.horizontal) {
-          HStack(spacing: Space.s1_5) {
-            ForEach(choices, id: \.kind) { choice in
-              Chip(browseKindLabel(choice.kind), selected: kind == choice.kind) {
-                withMotion(Motion.move) { kind = choice.kind }
-              }
+      // All three always, as Android's, whether the page has both kinds or one.
+      ScrollView(.horizontal) {
+        HStack(spacing: Space.s1_5) {
+          ForEach(browseKinds(kinds.value), id: \.kind) { choice in
+            Chip(browseKindLabel(choice.kind), selected: kind == choice.kind) {
+              withMotion(Motion.move) { kind = choice.kind }
             }
+            .accessibilityValue(choice.count.map { Str.browseTitleCount($0) } ?? "")
           }
         }
-        .contentMargins(.horizontal, gutter, for: .scrollContent)
-        .scrollIndicators(.hidden)
       }
+      .contentMargins(.horizontal, gutter, for: .scrollContent)
+      .scrollIndicators(.hidden)
       if !chips.isEmpty { ActiveFilterChips(chips: chips, onClear: state.clearFilters) }
     }
     .padding(.top, Space.s1)
@@ -107,7 +107,7 @@ struct BrowseScreen: View {
 }
 
 /// How many movies and shows a genre or studio has, as the server counted
-/// them with the newest page, for the kind chips.
+/// them with the newest page, for what the kind chips say to VoiceOver.
 @Observable final class BrowseKinds {
   private(set) var value: BrowsedTitles.Kinds?
 

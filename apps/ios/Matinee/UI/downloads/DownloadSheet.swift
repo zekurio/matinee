@@ -125,7 +125,7 @@ struct DownloadSheet: View {
     guard source == nil, error == nil, let api else { return }
     do {
       let result = try await downloads.resolve(
-        api: api, items: [item], device: downloadDevice(PlayerPrefs()), wishes: downloads.wishes()
+        api: api, items: [item], device: downloadDevice(PlayerPrefs.shared), wishes: downloads.wishes()
       ).first
       switch result {
       case .unavailable(let refused): error = refused.message
@@ -152,7 +152,7 @@ struct DownloadSheet: View {
       return
     }
     planning = true
-    let device = downloadDevice(PlayerPrefs())
+    let device = downloadDevice(PlayerPrefs.shared)
     for choice in downloadChoices(source.resolved.choices.presets) where choice != .original {
       let wishes = downloads.wishes(
         preset: choice.preset.map { DownloadWishes.Preset(height: $0.height, bitrate: $0.bitrate) }, codec: codec,

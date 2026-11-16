@@ -11,9 +11,8 @@ import SwiftUI
  * finished download takes its place without a reload. They show the
  * server in use's downloads only, as the store does.
  *
- * Android's tab has no storage figure; Settings has it. Here it also heads
- * the tab, as the web's page header has a line under its name, since
- * what's on the device is what the page is about.
+ * Android's tab has no storage figure; Settings' Downloads page has it,
+ * and so it is here, on a phone and an iPad alike.
  */
 
 /// How wide the lists get on an iPad: a row's bar and words stay a line's
@@ -35,7 +34,6 @@ struct DownloadsScreen: View {
   @State private var acting: OfflineItem?
   @State private var actingShow: ShowDownloads?
   @State private var removing: Removal?
-  @State private var storage: DownloadStorage?
 
   var body: some View {
     let entries = shownEntries(downloads)
@@ -45,14 +43,14 @@ struct DownloadsScreen: View {
       if entries.isEmpty {
         VStack(spacing: 0) {
           if style == .tablet {
-            header(storage: nil).frame(maxWidth: LIST_WIDTH).padding(.horizontal, gutter).frame(maxWidth: .infinity)
+            header.frame(maxWidth: LIST_WIDTH).padding(.horizontal, gutter).frame(maxWidth: .infinity)
           }
           empty(notice)
         }
       } else {
         ScrollView {
           LazyVStack(alignment: .leading, spacing: Space.s1) {
-            if style == .tablet { header(storage: storage) } else { storageLine }
+            if style == .tablet { header }
             if notice == .off {
               Callout(Str.downloadsOffTitle, description: Str.downloadsOffDescription, icon: .info)
                 .padding(.top, Space.s3)
@@ -69,7 +67,6 @@ struct DownloadsScreen: View {
       }
     }
     .modifier(TabTop(tablet: style == .tablet))
-    .task(id: storageKey(entries)) { storage = await downloads.store.storage() }
     .matineeSheet(item: $acting) { DownloadActions(entry: $0) }
     .matineeSheet(item: $actingShow) { show in
       ShowActions(title: show.title, entries: show.entries) {
@@ -151,26 +148,18 @@ struct DownloadsScreen: View {
     }
   }
 
-  /// The web's page header from `sm` up: the page's name large, what's on
-  /// the device under it, and whether the app is offline at its end.
-  private func header(storage: DownloadStorage?) -> some View {
+  /// The web's page header from `sm` up: the page's name large, and
+  /// whether the app is offline at its end.
+  private var header: some View {
     HStack(alignment: .firstTextBaseline, spacing: Space.s4) {
-      VStack(alignment: .leading, spacing: Space.s1) {
-        Text(Str.downloadsTitle).textStyle(.px32, weight: .semibold, tracking: .tight)
-          .foregroundStyle(palette.foreground)
-          .accessibilityAddTraits(.isHeader)
-        if let storage { StorageText(storage: storage) }
-      }
-      .frame(maxWidth: .infinity, alignment: .leading)
+      Text(Str.downloadsTitle).textStyle(.px32, weight: .semibold, tracking: .tight)
+        .foregroundStyle(palette.foreground)
+        .accessibilityAddTraits(.isHeader)
+        .frame(maxWidth: .infinity, alignment: .leading)
       if offline { LucideIcon(.cloudOff, label: Str.downloadsOffline, size: 20, tint: palette.mutedForeground) }
     }
     .padding(.top, Space.s6)
     .padding(.bottom, Space.s2)
-  }
-
-  /// A phone's line under the bar: what the downloads take, and what's left.
-  @ViewBuilder private var storageLine: some View {
-    if let storage { StorageText(storage: storage).padding(.bottom, Space.s1) }
   }
 
   /// What the heading offers for every file still coming: what broke off
@@ -194,11 +183,6 @@ struct DownloadsScreen: View {
       Text(label).foregroundStyle(palette.accent)
     }
   }
-
-  /// Asks for the storage figures again when a download comes, goes, or finishes.
-  private func storageKey(_ entries: [OfflineItem]) -> [String] {
-    entries.map { "\($0.key)\($0.state)" }.sorted()
-  }
 }
 
 /// The page's top on a tab's first page: the phone's bar with the page's
@@ -220,24 +204,6 @@ private struct TabTop: ViewModifier {
         }
       }
     }
-  }
-}
-
-/// "1.2 GB used · 30 GB free".
-private struct StorageText: View {
-  let storage: DownloadStorage
-  @Environment(\.palette) private var palette
-
-  var body: some View {
-    Group {
-      if let free = storage.free {
-        Text(Str.downloadsStorageValue(formatBytes(storage.used), formatBytes(free)))
-      } else {
-        Text(formatBytes(storage.used))
-      }
-    }
-    .textStyle(.sm)
-    .foregroundStyle(palette.mutedForeground)
   }
 }
 

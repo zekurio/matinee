@@ -112,11 +112,7 @@ private struct TitlePage: View {
           SeasonsRail(title: title, gaps: gaps).id("seasons")
         }
       }
-      if showsFiles(title) {
-        FilesSection(title: title).id("files")
-      }
       CastRail(credits: title.credits).id("cast")
-      TitleRelatedRows(title: title).id("related")
     }
     .task(id: title.id) {
       guard let api else { return }
@@ -178,20 +174,20 @@ private struct TitleHeader: View {
 
   private var heading: some View {
     VStack(alignment: .leading, spacing: 0) {
-      // A phone names the title in words, as Android's; wider, its logo where the provider has one.
-      HeadingMark(
-        name: title.name, logo: layout.wide ? titleLogoURL(title.summary, api: api) : nil, size: layout.nameSize,
-        weight: layout.nameWeight, wide: layout.wide)
+      // The name in words on a phone and wider alike, as Android's; never the provider's logo.
+      HeadingMark(name: title.name, size: layout.nameSize, weight: layout.nameWeight)
       if let original = title.originalName, original != title.name {
         Text(original).textStyle(.sm).foregroundStyle(palette.mutedForeground).lineLimit(1).padding(.top, Space.s1)
       }
-      FactsRow(
-        facts: titleFacts(title), contentRating: title.contentRating, rating: title.rating, flags: titleFlags(title)
-      )
-      .padding(.top, Space.s3)
+      FactsRow(facts: titleFacts(title))
+        .padding(.top, layout.wide ? Space.s3 : Space.s2)
+      // The rating and the file's badges on a line of their own, as Android's,
+      // so a narrow screen doesn't strand the last one under the facts.
+      RatingBadges(contentRating: title.contentRating, rating: title.rating, flags: titleFlags(title))
+        .padding(.top, Space.s1_5)
       if !title.genres.isEmpty {
         LinkedNames(names: Array(title.genres.prefix(4)), sentence: false, color: palette.mutedForeground, onTap: nav.genre)
-          .padding(.top, Space.s1)
+          .padding(.top, Space.s1_5)
       }
     }
   }
@@ -214,28 +210,23 @@ private struct TitleHeader: View {
   }
 }
 
-/// A title's buttons, and its file's download under them.
+/// A title's buttons. A movie's several files, as a director's cut beside
+/// the film, are in its sheet, each to play or download on its own.
 private struct TitleActions: View {
   let title: Title
   let wide: Bool
   @Environment(\.api) private var api
-  @Environment(\.navigator) private var nav
   @Environment(ViewerState.self) private var viewer: ViewerState?
 
   var body: some View {
     let summary = title.summary
     let next = title.next
-    VStack(alignment: .leading, spacing: Space.s2) {
-      ActionRow(
-        play: next, name: title.name, watched: viewer?.isWatched(summary) ?? title.watched,
-        favorite: viewer?.isFavorite(summary) ?? title.favorite,
-        trailer: preferredTrailer(title.trailers, language: Locale.app.identifier),
-        onWatched: onWatched, onFavorite: onFavorite,
-        more: .title(summary, file: title.isShow ? nil : next, here: true), wide: wide)
-      if !title.isShow, let next {
-        DownloadLine(file: next) { nav.downloads() }
-      }
-    }
+    ActionRow(
+      play: next, name: title.name, watched: viewer?.isWatched(summary) ?? title.watched,
+      favorite: viewer?.isFavorite(summary) ?? title.favorite,
+      trailer: preferredTrailer(title.trailers, language: Locale.app.identifier),
+      onWatched: onWatched, onFavorite: onFavorite,
+      more: .title(summary, file: title.isShow ? nil : next, here: true, severalFiles: showsFiles(title)), wide: wide)
   }
 
   // Outside the body, with their types written out: Xcode 26's compiler
@@ -410,7 +401,8 @@ private struct SeasonHeader: View {
         .lineLimit(2)
         .fixedSize(horizontal: false, vertical: true)
         .accessibilityAddTraits(.isHeader)
-      FactsRow(facts: seasonFacts(season, items: items), contentRating: title.contentRating)
+      // The counts alone, as Android's season heading has them.
+      FactsRow(facts: seasonFacts(season, items: items))
         .padding(.top, Space.s2)
     }
   }
@@ -697,35 +689,32 @@ private struct EpisodeHeader: View {
     }
   }
 
+  /// What happens and the file; on a phone the file first, under the facts,
+  /// as Android's heading has it, and wider after, as the web's.
   private var details: some View {
     VStack(alignment: .leading, spacing: Space.s4) {
+      if !layout.wide { MediaInfo(item) }
       if let overview = item.episode?.overview {
         // Six lines of it, as Android's.
         Overview(text: overview, lines: 6, size: layout.overviewSize)
       }
-      MediaInfo(item)
+      if layout.wide { MediaInfo(item) }
     }
   }
 
   private func actions(watched: Bool) -> some View {
     let label = itemLabel(item)
-    let title = item.title
-    return VStack(alignment: .leading, spacing: Space.s2) {
-      ActionRow(
-        play: item, name: label.title, watched: watched, favorite: viewer?.isFavorite(item) ?? item.favorite,
-        onWatched: { watched, at in
-          guard let api, let viewer else { return }
-          try await viewer.setWatched(api, item, watched, watchedAt: at)
-        },
-        onFavorite: {
-          guard let api, let viewer else { return }
-          try await viewer.setFavorite(api, item, !viewer.isFavorite(item))
-        },
-        more: .item(item, here: true), wide: layout.wide)
-      DownloadLine(file: item) {
-        if let title { nav.downloadsShow(title.id) } else { nav.downloads() }
-      }
-    }
+    return ActionRow(
+      play: item, name: label.title, watched: watched, favorite: viewer?.isFavorite(item) ?? item.favorite,
+      onWatched: { watched, at in
+        guard let api, let viewer else { return }
+        try await viewer.setWatched(api, item, watched, watchedAt: at)
+      },
+      onFavorite: {
+        guard let api, let viewer else { return }
+        try await viewer.setFavorite(api, item, !viewer.isFavorite(item))
+      },
+      more: .item(item, here: true), wide: layout.wide)
   }
 
   /// `content`, opening a page when there's one to open.

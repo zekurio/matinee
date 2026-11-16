@@ -148,6 +148,13 @@ public func browseFilters(genre: String?, studio: String?, picked: TitleFilters)
   return filters
 }
 
+/// The kind chips of a genre's or a studio's page: all, movies, and shows,
+/// always, as Android's `BROWSE_KINDS`, each with how many titles it has
+/// once the server has counted them, for a screen reader to say.
+public func browseKinds(_ counts: BrowsedTitles.Kinds?) -> [(kind: String?, count: Int?)] {
+  [(nil, counts.map { $0.movie + $0.show }), (TitleKind.movie, counts?.movie), (TitleKind.show, counts?.show)]
+}
+
 /// The kind chips of a genre's or a studio's page, each with how many
 /// titles it has: all, movies, and shows, as the web's `KindPicker`. Nil
 /// when there's only one kind to pick, unless one is picked, which keeps a

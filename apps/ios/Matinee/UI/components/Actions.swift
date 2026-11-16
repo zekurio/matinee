@@ -24,21 +24,29 @@ enum ActionTarget: Hashable, Identifiable {
   case item(MediaItem, here: Bool)
   /// `file` is what Play starts, when known: a movie's file, which the sheet
   /// downloads. `recommended` is the title at its provider when a
-  /// recommendation row offered it, for "Not interested".
-  case title(TitleSummary, file: MediaItem?, here: Bool, recommended: CatalogRef? = nil)
+  /// recommendation row offered it, for "Not interested". `severalFiles`
+  /// is a movie with more than one file, as a director's cut beside the
+  /// film, whose sheet lists them, each opening its own.
+  case title(
+    TitleSummary, file: MediaItem?, here: Bool, recommended: CatalogRef? = nil, severalFiles: Bool = false)
   case season(TitleSummary, Season, here: Bool)
+  /// One of a movie's several files, from the movie's sheet: playing it,
+  /// starting it over, and its download.
+  case file(MediaItem)
 
   var id: String {
     switch self {
     case .item(let item, let here): "item/\(item.id)/\(here)"
-    case .title(let title, _, let here, _): "title/\(title.id)/\(here)"
+    case .title(let title, _, let here, _, _): "title/\(title.id)/\(here)"
     case .season(let title, let season, let here): "season/\(title.id)/\(season.number ?? -1)/\(here)"
+    case .file(let item): "file/\(item.id)"
     }
   }
 
   var here: Bool {
     switch self {
-    case .item(_, let here), .title(_, _, let here, _), .season(_, _, let here): here
+    case .item(_, let here), .title(_, _, let here, _, _), .season(_, _, let here): here
+    case .file: true
     }
   }
 }
@@ -171,8 +179,10 @@ struct ActionsHost: ViewModifier {
   let stored = downloads.store.items
   switch target {
   case .item(let item, _): return admin || isResumable(item) || stored[item.id] != nil
-  case .title(_, let file, _, _): return admin || isResumable(file) || file.flatMap { stored[$0.id] } != nil
+  case .title(_, let file, _, _, let several):
+    return admin || several || isResumable(file) || file.flatMap { stored[$0.id] } != nil
   case .season(_, let season, _): return admin && season.number != nil
+  case .file: return true
   }
 }
 
@@ -226,9 +236,10 @@ struct ActionItems: View {
     VStack(spacing: 0) {
       switch target {
       case .item(let item, let here): ItemActions(item: item, here: here)
-      case .title(let title, let file, let here, let recommended):
-        TitleActions(title: title, file: file, here: here, recommended: recommended)
+      case .title(let title, let file, let here, let recommended, let several):
+        TitleActions(title: title, file: file, here: here, recommended: recommended, severalFiles: several)
       case .season(let title, let season, let here): SeasonActions(title: title, season: season, here: here)
+      case .file(let item): FileActions(item: item)
       }
     }
   }
@@ -299,6 +310,7 @@ private struct TitleActions: View {
   let file: MediaItem?
   let here: Bool
   let recommended: CatalogRef?
+  let severalFiles: Bool
   @Environment(\.api) private var api
   @Environment(\.navigator) private var nav
   @Environment(\.snackbar) private var snackbar
@@ -346,6 +358,9 @@ private struct TitleActions: View {
     } else {
       SheetItem(Str.downloadsAction, icon: .download) { withNext { actions?.download = $0 } }
     }
+    if severalFiles && !show {
+      MovieFiles(titleId: title.id)
+    }
     if !here {
       SheetItem(show ? Str.mediaHeroEpisodes : Str.mediaHeroDetails, icon: .info) { nav.titleUp(title.id) }
     }
@@ -369,6 +384,53 @@ private struct TitleActions: View {
       }
       then(next)
     }
+  }
+}
+
+/// A movie's files, when it has several, under its sheet's download: each
+/// by where the server says it sits, opening its own sheet to play it,
+/// start it over, or download it. Android's phone has no such list; the
+/// iPhone's page dropped its Files section for Android's layout, and this
+/// is where they went, as the Apple TV keeps them under More.
+private struct MovieFiles: View {
+  let titleId: String
+  @State private var files = Loader<[MediaItem]>()
+  @Environment(\.actions) private var actions
+
+  var body: some View {
+    VStack(spacing: 0) {
+      if let list = files.state.value, list.count > 1 {
+        Separator().padding(.vertical, Space.s1_5)
+        ForEach(list, id: \.id) { item in
+          SheetItem(movieFileName(item), icon: .film) { actions?.open(.file(item)) }
+        }
+      }
+    }
+    .loads(files) { [titleId] api in try await api.titleItems(titleId) }
+  }
+}
+
+/// What a movie's file is called among its others: where it sits, or its name.
+func movieFileName(_ item: MediaItem) -> String { fileFolders(item) ?? itemLabel(item).title }
+
+/// One of a movie's several files: Play or Resume it, start it over, and
+/// download it or take its download back, under its name and what it holds.
+private struct FileActions: View {
+  let item: MediaItem
+  @Environment(\.navigator) private var nav
+  @Environment(ViewerState.self) private var viewer: ViewerState?
+
+  var body: some View {
+    let watched = viewer?.isWatched(item) ?? (item.progress?.completed ?? false)
+    let resume = isResumable(item) && !watched
+    let left = resume ? timeLeft(item) : nil
+    let detail = [left ?? formatRuntime(runtimeMinutes(item)), fileInfo(item, tracks: nil)?.video].compactMap(\.self)
+    SheetHeader(movieFileName(item), subtitle: detail.isEmpty ? nil : detail.joined(separator: " · "))
+    SheetItem(resume ? Str.titleResume : Str.titlePlay, icon: .playOutline) { nav.play(item.id, nil) }
+    if resume {
+      SheetItem(Str.actionsPlayFromStart, icon: .rotateCcw) { nav.play(item.id, 0) }
+    }
+    DownloadItem(item: item)
   }
 }
 

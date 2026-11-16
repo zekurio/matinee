@@ -61,15 +61,10 @@ private struct TrickplayForm: View {
           Str.webTrickplayWidth, selection: $settings.width,
           options: TrickplayWidth.knownValues.map { ($0, Str.webTrickplayWidthOption(String($0))) })
         SwitchRow(Str.webTrickplayKeyframesOnly, isOn: $settings.keyframesOnly)
-        // Decoding on the GPU needs one set up for transcoding; the web says so rather than hide it.
+        // Decoding on the GPU needs one set up for transcoding; without one the row
+        // stays out, as Android's.
         if data.hardwareAcceleration != nil {
           SwitchRow(Str.webTrickplayHardwareDecoding, isOn: $settings.hardwareDecoding)
-        } else {
-          SwitchRow(
-            Str.webTrickplayHardwareDecoding, subtitle: Str.webTrickplayHardwareDecodingUnavailable,
-            isOn: .constant(false)
-          )
-          .disabled(true)
         }
       }
     }
