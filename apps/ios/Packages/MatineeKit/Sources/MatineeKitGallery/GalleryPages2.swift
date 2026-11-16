@@ -74,7 +74,11 @@ struct OverlaysPage: View {
           MatineeButton("Delete", look: .destructive, size: .md) { confirm = true }
         }
       }
-      Demo("Toast", note: "Sonner's look: the status icon, the action at the end, the close button on the corner.") {
+      Demo(
+        "Toast",
+        note:
+          "Sonner's look: the status icon, the action at the end centered on the toast's height, the close button on the corner. Full width, never as wide as its text."
+      ) {
         Flow(spacing: 8) {
           MatineeButton("Plain", look: .secondary, size: .sm) { toasts.post(ToastMessage("Added to favorites")) }
           MatineeButton("Success", look: .secondary, size: .sm) {
@@ -88,6 +92,11 @@ struct OverlaysPage: View {
               let result = await toasts.show(ToastMessage("Marked as watched", action: "Undo", closeButton: true))
               lastAction = result == .actionPerformed ? "Undo" : "Toast went away"
             }
+          }
+          MatineeButton("Wrapped, with action", look: .secondary, size: .sm) {
+            toasts.post(
+              ToastMessage(
+                "Removed The Matrix from Continue watching on every device", action: "Undo", closeButton: true))
           }
           MatineeButton("Loading", look: .secondary, size: .sm) {
             toasts.post(ToastMessage("Downloading", kind: .loading))
@@ -106,7 +115,13 @@ struct OverlaysPage: View {
           Toast(ToastMessage("Couldn't reach the server", kind: .error), onClose: {})
           Toast(ToastMessage("Downloading", kind: .loading))
           Toast(ToastMessage("Marked as watched", action: "Undo"), onClose: {})
+          Toast(ToastMessage("Removed The Matrix from Continue watching on every device", action: "Undo"), onClose: {})
+          Toast(
+            ToastMessage("Request sent", description: "You'll hear when it's in the library", kind: .success, action: "View"))
+          Toast(ToastMessage("Ok", action: "Undo"))
         }
+        Caption("With an action, the button sits in the middle of the toast's height, however many lines the text has.")
+          .padding(.top, 4)
         .padding(.top, 8)
       }
     }

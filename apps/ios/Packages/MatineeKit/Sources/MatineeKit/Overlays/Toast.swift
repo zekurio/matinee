@@ -201,7 +201,14 @@ private struct ToastHostModifier: ViewModifier {
 /// `.matinee-toast`): frosted popover, `rounded-xl`, a border and a shadow;
 /// the status icon on the title's line, the description under it, the
 /// action at the end in the primary color, and the round close button over
-/// the top corner.
+/// the top corner. The action is centered on the toast's height however
+/// many lines the text runs to, as the web's and Android's are, and a
+/// one-line toast with one is 52 tall, as theirs; the text is centered
+/// beside it while it's shorter than the button, as Android's.
+///
+/// It takes the whole width the host gives it, up to 560 on a wide
+/// screen, never only as wide as its text, as the web's toasts keep
+/// sonner's full width.
 public struct Toast: View {
   let message: ToastMessage
   let onAction: () -> Void
@@ -217,24 +224,26 @@ public struct Toast: View {
 
   public var body: some View {
     let shape = RoundedRectangle.kit(Radius.xl)
-    HStack(alignment: .top, spacing: 10) {
-      if let icon {
-        icon.frame(height: 20).padding(.top, message.action == nil ? 0 : 4)
-      }
-      VStack(alignment: .leading, spacing: 2) {
-        Text(message.title)
-          .textStyle(.sm, weight: .semibold)
-          .foregroundStyle(palette.foreground)
-        if let description = message.description {
-          Text(description)
-            .font(Font(RedHatText.uiFont(size: 13, weight: .regular)))
-            .foregroundStyle(palette.mutedForeground)
+    HStack(alignment: .center, spacing: 10) {
+      HStack(alignment: .top, spacing: 10) {
+        if let icon {
+          // The title's line box, so the glyph sits on its line.
+          icon.frame(height: 20)
         }
+        VStack(alignment: .leading, spacing: 2) {
+          Text(message.title)
+            .textStyle(.sm, weight: .semibold)
+            .foregroundStyle(palette.foreground)
+          if let description = message.description {
+            Text(description)
+              .font(Font(RedHatText.uiFont(size: 13, weight: .regular)))
+              .foregroundStyle(palette.mutedForeground)
+          }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
+        .accessibilitySortPriority(2)
       }
-      .padding(.top, message.action == nil ? 0 : 4)
-      .frame(maxWidth: .infinity, alignment: .leading)
-      .accessibilityElement(children: .combine)
-      .accessibilitySortPriority(2)
       if let action = message.action {
         Button(action: onAction) {
           Text(action)
