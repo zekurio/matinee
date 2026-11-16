@@ -10,11 +10,25 @@ import SwiftUI
  * playback-notices.ts) where the web has it.
  */
 
-/// The heading over the server's words when it won't play the file for this account.
+/// The heading over `refusalMessage` when the server won't play the file for this account.
 func refusalTitle(_ refusal: Refusal) -> String {
   switch refusal {
   case .restricted: Str.playerRestricted
   case .busy: Str.playerBusy
+  }
+}
+
+/// What the player says under `refusalTitle`: why, in the app's language for a
+/// reason it knows, else in the server's words, as Android's `refusalMessage`.
+func refusalMessage(_ reason: RefusalReason?, fallback: String) -> String {
+  switch reason {
+  case .restricted(PlaybackRestriction.bitrate_original): Str.playerRestrictedOriginal
+  case .restricted(PlaybackRestriction.bitrate_transcode): Str.playerRestrictedNoTranscode
+  case .restricted(PlaybackRestriction.bitrate_failed): Str.playerRestrictedFailed
+  case .restricted(PlaybackRestriction.bitrate): Str.playerRestrictedBitrate
+  case .restricted(PlaybackRestriction.transcode): Str.playerRestrictedTranscode
+  case .busy(let playing): Str.playerBusyDetail(playing)
+  case .restricted, nil: fallback
   }
 }
 
@@ -124,7 +138,7 @@ struct PlayerNoticeNote: View {
       switch note.kind {
       case .burnInFailed: Str.playerNoticeBurnInFailedDetail
       case .qualityFailed: Str.playerNoticeQualityFailedDetail
-      case .switchFailed: note.detail
+      case .switchFailed: note.detail.map { refusalMessage(note.refusal, fallback: $0) }
       }
     return detail?.isEmpty == false ? detail : nil
   }

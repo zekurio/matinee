@@ -27,10 +27,13 @@ themselves: scrub, trickplay tiles, the countdown, the lifecycle calls).
   `PlayerDownloads`, from `at` or where it stopped. `item` is nil until the
   first answer or the download arrives.
 - Observe `position`, `duration`, `buffered`, `playing`, `loading`, `ended`,
-  `speed`, `videoAspect`, `source`, `error`, `unplayable`, `refusal`, and
-  `notice`. When `unplayable` is set, show `player_unplayable` in place of
-  `error`, as Android does; a `refusal` shows `error`, the server's words,
-  with no retry.
+  `speed`, `videoAspect`, `source`, `error`, `unplayable`, `refusal`,
+  `refusalReason`, and `notice`. When `unplayable` is set, show
+  `player_unplayable` in place of `error`, as Android does; a `refusal` says
+  why with no retry: the app's words for `refusalReason` (the server's
+  `PlaybackRestriction`, or how many devices play), else `error`, the
+  server's English. A seek's `switchFailed` notice carries the same reason
+  in `refusal`.
 - `play`, `pause`, `togglePlay`, `pickSpeed`, async `seekTo` and `skip`.
 - Observe `audio`, `subtitle`, `quality`, `audioTracks`, `subtitles`,
   `qualities`, `offersOriginal`, and `options`. Call async `pickAudio`,

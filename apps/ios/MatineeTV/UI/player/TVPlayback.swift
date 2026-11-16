@@ -368,7 +368,9 @@ struct TVPlayback: View {
   @ViewBuilder private func failure(_ message: String) -> some View {
     if let refusal = controller.refusal {
       // Asking again gets the same answer, so there's nothing to try.
-      TVPlayerFailure(title: tvRefusalTitle(refusal), message: message, retry: nil, close: close)
+      TVPlayerFailure(
+        title: tvRefusalTitle(refusal), message: tvRefusalMessage(controller.refusalReason, fallback: message), retry: nil,
+        close: close)
     } else if controller.unplayable {
       TVPlayerFailure(title: Str.playerErrorLost, message: Str.playerUnplayable, retry: retry, close: close)
     } else {

@@ -389,7 +389,9 @@ private struct Playback: View {
   @ViewBuilder private func failure(_ message: String) -> some View {
     if let refusal = controller.refusal {
       // Asking again gets the same answer, so there's nothing to try.
-      PlayerFailure(title: refusalTitle(refusal), message: message, retry: nil, close: close)
+      PlayerFailure(
+        title: refusalTitle(refusal), message: refusalMessage(controller.refusalReason, fallback: message), retry: nil,
+        close: close)
     } else if controller.unplayable {
       PlayerFailure(title: Str.playerErrorLost, message: Str.playerUnplayable, retry: retry, close: close)
     } else {

@@ -63,11 +63,25 @@ public enum JSONValue: Codable, Sendable, Hashable {
 }
 
 func wireText<T>(_ value: T?) -> String? { value.map { String(describing: $0) } }
+/// A request the server answered with an error, with its message to show.
+/// `data` is what the error carries beside it, as JSON, as the contract
+/// says for its code, such as a `PlaybackRestrictedData`.
 public struct ApiException: Error, Sendable, Equatable, LocalizedError {
   public let status: Int
   public let code: String?
   public let message: String
+  public let data: Data?
   public var errorDescription: String? { message }
+  public init(status: Int, code: String?, message: String, data: Data? = nil) {
+    self.status = status
+    self.code = code
+    self.message = message
+    self.data = data
+  }
+  /// `data` read as `type`, or nil when it's missing or reads otherwise, as from an older server.
+  public func data<T: Decodable>(as type: T.Type) -> T? {
+    data.flatMap { try? JSONDecoder().decode(type, from: $0) }
+  }
 }
 public struct ApiErrorBody: Codable, Sendable, Hashable {
   public var code: String?
@@ -78,6 +92,13 @@ public struct ApiErrorBody: Codable, Sendable, Hashable {
     self.status = status
     self.message = message
   }
+}
+/// The `data` member of an error's body, as JSON of its own, for `ApiException.data(as:)`.
+func errorData(_ body: Data) -> Data? {
+  guard let object = try? JSONSerialization.jsonObject(with: body) as? [String: Any], let value = object["data"],
+    JSONSerialization.isValidJSONObject(value)
+  else { return nil }
+  return try? JSONSerialization.data(withJSONObject: value)
 }
 public struct FilePart: Sendable {
   public let bytes: Data
@@ -191,7 +212,7 @@ public final class ApiTransport: Sendable {
       let parsed = try? JSONDecoder().decode(ApiErrorBody.self, from: data)
       throw ApiException(
         status: http.statusCode, code: parsed?.code,
-        message: parsed?.message ?? "The server answered \(http.statusCode).")
+        message: parsed?.message ?? "The server answered \(http.statusCode).", data: errorData(data))
     }
   }
   public func call<T: Decodable & Sendable>(

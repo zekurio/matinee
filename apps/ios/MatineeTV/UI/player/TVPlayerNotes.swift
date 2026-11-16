@@ -8,17 +8,31 @@ import SwiftUI
  * instead (PlayerScreen.kt's `PlayerNoticeNote`), and, Apple TV's own,
  * the mark a skip leaves while the controls are away.
  *
- * TODO(share): `refusalTitle`, the notices' words, and `skipSegmentLabel`
+ * TODO(share): `refusalTitle`, `refusalMessage`, the notices' words, and `skipSegmentLabel`
  * are the iPhone's (Matinee/UI/player/PlayerNotes.swift), copied because
  * that file holds the phone's failure, lock, and up-next views too. The
  * split: the words into `PlayerWords.swift`, shared by both targets.
  */
 
-/// The heading over the server's words when it won't play the file for this account.
+/// The heading over `tvRefusalMessage` when the server won't play the file for this account.
 func tvRefusalTitle(_ refusal: Refusal) -> String {
   switch refusal {
   case .restricted: Str.playerRestricted
   case .busy: Str.playerBusy
+  }
+}
+
+/// What the player says under `tvRefusalTitle`: why, in the app's language for a
+/// reason it knows, else in the server's words, as Android's `refusalMessage`.
+func tvRefusalMessage(_ reason: RefusalReason?, fallback: String) -> String {
+  switch reason {
+  case .restricted(PlaybackRestriction.bitrate_original): Str.playerRestrictedOriginal
+  case .restricted(PlaybackRestriction.bitrate_transcode): Str.playerRestrictedNoTranscode
+  case .restricted(PlaybackRestriction.bitrate_failed): Str.playerRestrictedFailed
+  case .restricted(PlaybackRestriction.bitrate): Str.playerRestrictedBitrate
+  case .restricted(PlaybackRestriction.transcode): Str.playerRestrictedTranscode
+  case .busy(let playing): Str.playerBusyDetail(playing)
+  case .restricted, nil: fallback
   }
 }
 
@@ -134,7 +148,7 @@ struct TVPlayerNoticeNote: View {
       switch note.kind {
       case .burnInFailed: Str.playerNoticeBurnInFailedDetail
       case .qualityFailed: Str.playerNoticeQualityFailedDetail
-      case .switchFailed: note.detail
+      case .switchFailed: note.detail.map { tvRefusalMessage(note.refusal, fallback: $0) }
       }
     return detail?.isEmpty == false ? detail : nil
   }

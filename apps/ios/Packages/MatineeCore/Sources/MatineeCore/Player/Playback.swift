@@ -31,8 +31,7 @@ public enum NoticeKind: Sendable { case burnInFailed, qualityFailed, switchFaile
 
 /// Why the server won't play the file for this account now: its access
 /// rules out every way left, or it plays on as many devices as it may.
-/// Asking again gets the same answer, so the player shows the server's
-/// message and stops.
+/// Asking again gets the same answer, so the player says why and stops.
 public enum Refusal: Sendable { case restricted, busy }
 
 /// The refusal `error` is, or nil for any other failure.
@@ -42,6 +41,33 @@ public func refusal(_ error: any Error) -> Refusal? {
   case PLAYBACK_BUSY: .busy
   default: nil
   }
+}
+
+/// Why the server refused, for the player to say in the app's language:
+/// the `PlaybackRestriction` a restricted refusal carries, or how many
+/// devices play for a busy one, as Android's `restriction` and `busyPlaying`.
+public enum RefusalReason: Sendable, Equatable {
+  case restricted(String)
+  case busy(playing: Int)
+}
+
+/// The `PlaybackRestriction` a restricted refusal carries. Nil from a
+/// server that sends none, which leaves the server's message.
+public func restriction(_ error: any Error) -> String? {
+  guard let error = error as? ApiException, error.code == PLAYBACK_RESTRICTED else { return nil }
+  return error.data(as: PlaybackRestrictedData.self)?.reason
+}
+
+/// How many other devices play, from a busy refusal. Nil from a server that sends none.
+public func busyPlaying(_ error: any Error) -> Int? {
+  guard let error = error as? ApiException, error.code == PLAYBACK_BUSY else { return nil }
+  return error.data(as: PlaybackBusyData.self)?.playing
+}
+
+/// Why `error` refused, or nil when it isn't a refusal or says nothing more than its message.
+public func refusalReason(_ error: any Error) -> RefusalReason? {
+  if let reason = restriction(error) { return .restricted(reason) }
+  return busyPlaying(error).map { .busy(playing: $0) }
 }
 
 /// What every `playback.start` of a sitting carries again, since the server

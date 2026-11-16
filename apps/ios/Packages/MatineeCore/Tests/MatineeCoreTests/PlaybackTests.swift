@@ -238,6 +238,30 @@ struct PlaybackTests {
     #expect(refusal(URLError(.networkConnectionLost)) == nil)
   }
 
+  @Test func refusalsCarryTheirReason() {
+    let reason = Data(#"{"reason":"bitrate-failed"}"#.utf8)
+    let restricted = ApiException(status: 403, code: "PLAYBACK_RESTRICTED", message: "Over the limit.", data: reason)
+    #expect(restriction(restricted) == PlaybackRestriction.bitrate_failed)
+    #expect(refusalReason(restricted) == .restricted(PlaybackRestriction.bitrate_failed))
+    let playing = Data(#"{"playing":2}"#.utf8)
+    let busy = ApiException(status: 429, code: "TOO_MANY_STREAMS", message: "Playing on 2 devices.", data: playing)
+    #expect(busyPlaying(busy) == 2)
+    #expect(refusalReason(busy) == .busy(playing: 2))
+    // An older server sends none, or data of another shape: the server's message shows.
+    #expect(restriction(ApiException(status: 403, code: "PLAYBACK_RESTRICTED", message: "Over the limit.")) == nil)
+    #expect(restriction(ApiException(status: 403, code: "PLAYBACK_RESTRICTED", message: "Over the limit.", data: playing)) == nil)
+    #expect(busyPlaying(ApiException(status: 403, code: "PLAYBACK_RESTRICTED", message: "Over the limit.", data: playing)) == nil)
+    #expect(refusalReason(ApiException(status: 422, code: "UNPLAYABLE", message: "Nothing plays.", data: reason)) == nil)
+  }
+
+  @Test func anErrorKeepsTheDataBesideItsMessage() throws {
+    let body = Data(#"{"code":"PLAYBACK_RESTRICTED","status":403,"message":"Over","data":{"reason":"transcode"}}"#.utf8)
+    let data = try #require(errorData(body))
+    #expect(try JSONDecoder().decode(PlaybackRestrictedData.self, from: data).reason == "transcode")
+    #expect(errorData(Data(#"{"code":"X","message":"No data"}"#.utf8)) == nil)
+    #expect(errorData(Data("not json".utf8)) == nil)
+  }
+
   @Test func theSameSourcePlaysOn() {
     let file = Answers.plan()
     // Another audio track in the file is picked inside it.

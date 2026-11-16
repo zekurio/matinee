@@ -159,7 +159,8 @@ private final class PlayerProtocol: URLProtocol, @unchecked Sendable {
     if path.hasSuffix("/playback/start"), let input = call.start {
       if ["restricted", "busy"].contains(where: { host.hasPrefix($0) }) {
         let code = host.hasPrefix("busy") ? PLAYBACK_BUSY : PLAYBACK_RESTRICTED
-        return .init(status: 403, body: Data("{\"code\":\"\(code)\",\"message\":\"Refused\"}".utf8))
+        let data = host.hasPrefix("busy") ? #"{"playing":3}"# : #"{"reason":"bitrate-transcode"}"#
+        return .init(status: 403, body: Data("{\"code\":\"\(code)\",\"message\":\"Refused\",\"data\":\(data)}".utf8))
       }
       return .init(body: try! JSONEncoder().encode(server.answer(input, host: host)))
     }
@@ -371,7 +372,9 @@ private final class PlayerProtocol: URLProtocol, @unchecked Sendable {
     let controller = harness.controller()
     await controller.start(itemId: "item-1")
     #expect(controller.refusal == (kind == "busy" ? .busy : .restricted))
-    #expect(controller.error != nil)
+    // Why, for the app's words, beside the server's message.
+    #expect(controller.refusalReason == (kind == "busy" ? .busy(playing: 3) : .restricted(PlaybackRestriction.bitrate_transcode)))
+    #expect(controller.error == "Refused")
     #expect(harness.engine.sources.isEmpty)
     #expect(!harness.engine.isPlaying)
     await controller.stop()

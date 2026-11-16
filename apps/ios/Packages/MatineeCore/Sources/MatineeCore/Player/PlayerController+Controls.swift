@@ -86,7 +86,8 @@ extension PlayerController {
     case .failure(let error):
       pendingAt = nil
       diagnostics.note(.seekFailed)
-      notice = Notice(.switchFailed, detail: error.localizedDescription)
+      // The original of a file over the account's bit rate: the app says why in its words.
+      notice = Notice(.switchFailed, detail: error.localizedDescription, refusal: MatineeCore.refusalReason(error))
     case .success(let answer):
       var next = current
       next.url = resolve(answer.url)

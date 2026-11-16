@@ -5,10 +5,14 @@ import Observation
 /// A note over the picture about the last answer: its kind and, for some, the server's words.
 public struct Notice: Sendable {
   public let kind: NoticeKind
+  /// What went wrong, in the server's words.
   public let detail: String?
-  public init(_ kind: NoticeKind, detail: String? = nil) {
+  /// Why the server refused, for the app to say in its words in place of `detail`.
+  public let refusal: RefusalReason?
+  public init(_ kind: NoticeKind, detail: String? = nil, refusal: RefusalReason? = nil) {
     self.kind = kind
     self.detail = detail
+    self.refusal = refusal
   }
 }
 
@@ -150,6 +154,8 @@ struct Ask {
 
   /// The server refused to play the file for this account, which `error` holds its words for. Trying again won't help.
   public internal(set) var refusal: Refusal?
+  /// Why it refused, for the view to say in the app's language in place of `error`'s English; nil from a server that doesn't say.
+  public internal(set) var refusalReason: RefusalReason?
   public internal(set) var notice: Notice?
   public internal(set) var trickplay: Trickplay?
 
@@ -436,6 +442,7 @@ struct Ask {
     error = nil
     unplayable = false
     refusal = nil
+    refusalReason = nil
     ended = false
     sourceFailed = false
     sourceLoaded = false
@@ -609,7 +616,7 @@ struct Ask {
   /// A call that failed. When the source failed too, nothing plays, so the
   /// player says why, as when the server finds nothing this device plays.
   /// A switch that didn't go through leaves what plays, and says so. A
-  /// refusal stops the player either way, with the server's words.
+  /// refusal stops the player either way, saying why.
   func refused(_ change: Ask, _ undo: Asking, _ cause: any Error) async {
     inFlight = nil
     pendingAt = nil
@@ -624,6 +631,7 @@ struct Ask {
     seekOnAnswer = nil
     if let refusal {
       self.refusal = refusal
+      refusalReason = MatineeCore.refusalReason(cause)
       error = message
       wantPlay = false
       engine.pause()
@@ -652,6 +660,7 @@ struct Ask {
     error = nil
     unplayable = false
     refusal = nil
+    refusalReason = nil
     wantPlay = true
     if local != nil {
       if var current = source {
