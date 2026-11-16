@@ -142,17 +142,15 @@ private struct TitleHeader: View {
   }
 }
 
-/// The title as its logo, or as its name when it has none or the logo won't load.
+/// The title as its logo, or as its name when it has none or the logo won't
+/// load, as Android TV's `TitleMark`.
 private struct TitleMark: View {
   let title: Title
   @Environment(\.api) private var api
 
   var body: some View {
-    if let logo = logo {
-      TVLogo(name: title.name, source: logo, width: 840, height: 200)
-    } else {
-      TVTitleLogo(title.name, style: .hero, width: 1440, height: 200)
-    }
+    // Android TV's 420 by 110 dp for the logo, the name 720 dp wide in two lines of `Hero`.
+    TVLogo(name: title.name, source: logo, width: 840, height: 220, style: .hero, nameWidth: 1440)
   }
 
   private var logo: ImageSource? {

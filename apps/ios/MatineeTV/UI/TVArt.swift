@@ -16,46 +16,46 @@ import SwiftUI
  */
 
 /// A title's logo, from the server, fitted into `width` by `height`, or its
-/// name in the display style when it has none or the logo won't load: the
-/// kit's `TVTitleLogo` with the logo loaded as the rest of the art is.
+/// name in `style`, `nameWidth` wide, when it has none or the logo won't
+/// load: Android TV's `TvTitleLogo`, the kit's `TVTitleLogo` with the logo
+/// loaded as the rest of the art is.
 struct TVLogo: View {
   let name: String
   let source: ImageSource?
   var width: CGFloat = 720
   var height: CGFloat = 140
+  var style: TVTextStyle = .display
+  /// The name's width when it stands in, as Android TV gives the name its own; `width` unless set.
+  var nameWidth: CGFloat?
+  @State private var failed: URL?
 
   var body: some View {
-    if let source {
+    if let source, failed != source.url {
       TVTitleLogo(name, width: width, height: height) {
-        LogoImage(name: name, source: source, width: width, height: height)
+        LogoImage(source: source) { failed = source.url }
       }
     } else {
-      TVTitleLogo(name, width: width, height: height)
+      TVTitleLogo(name, style: style, width: nameWidth ?? width, height: height)
     }
   }
 }
 
 private struct LogoImage: View {
-  let name: String
   let source: ImageSource
-  let width: CGFloat
-  let height: CGFloat
+  let onFailure: () -> Void
   @Environment(\.imagePipeline) private var pipeline
 
   var body: some View {
     LazyImage(request: ImageRequest(url: source.url), transaction: Transaction(animation: Motion.image)) { state in
       if let image = state.image {
-        image.resizable().aspectRatio(contentMode: .fit)
-          .frame(maxWidth: width, maxHeight: height, alignment: .bottomLeading)
-          .transition(.opacity)
-      } else if state.error != nil {
-        // As the kit's own: the name, when the logo won't come.
-        TVTitleLogo(name, width: width, height: height)
+        image.resizable().aspectRatio(contentMode: .fit).transition(.opacity)
       } else {
         Color.clear
       }
     }
     .pipeline(pipeline)
+    // The name takes its place, in its own style and width, when the logo won't come.
+    .onCompletion { result in if case .failure = result { onFailure() } }
     .id(source.url)
   }
 }
