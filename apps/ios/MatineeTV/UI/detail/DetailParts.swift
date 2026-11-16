@@ -48,10 +48,11 @@ struct DetailScroll<Header: View, Rows: View>: View {
   var freeRows: Set<String> = []
   @ViewBuilder let header: () -> Header
   @ViewBuilder let rows: () -> Rows
-  @State private var scrolled = false
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   var body: some View {
+    // The page has scrolled once a row below the header has focus.
+    let scrolled = memory.lastRow.map { !headerRows.contains($0) } ?? false
     ScrollViewReader { reader in
       ScrollView(.vertical) {
         VStack(alignment: .leading, spacing: TVSpace.rows) {
@@ -63,7 +64,6 @@ struct DetailScroll<Header: View, Rows: View>: View {
         .frame(maxWidth: .infinity, alignment: .leading)
       }
       .scrollIndicators(.hidden)
-      .onScrollGeometryChange(for: Bool.self) { $0.contentOffset.y > 4 } action: { _, now in scrolled = now }
       .onChange(of: memory.lastRow) { _, row in scroll(reader, row: row) }
     }
     // Rows that go up past the top fade out there rather than end at a hard edge under the clock.
