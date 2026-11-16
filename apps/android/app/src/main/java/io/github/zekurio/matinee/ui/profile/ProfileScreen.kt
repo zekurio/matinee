@@ -8,12 +8,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -26,8 +27,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.zekurio.matinee.ui.components.ErrorSection
 import io.github.zekurio.matinee.ui.components.ErrorState
-import dev.chrisbanes.haze.hazeSource
-import dev.chrisbanes.haze.rememberHazeState
 import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.Profile
 import io.github.zekurio.matinee.api.isAdmin
@@ -40,7 +39,7 @@ import io.github.zekurio.matinee.ui.LocalNavigator
 import io.github.zekurio.matinee.ui.LocalOffline
 import io.github.zekurio.matinee.ui.LocalUser
 import io.github.zekurio.matinee.ui.RefreshOnResume
-import io.github.zekurio.matinee.ui.StatusBarScrim
+import io.github.zekurio.matinee.ui.TopBar
 import io.github.zekurio.matinee.ui.components.Avatar
 import io.github.zekurio.matinee.ui.components.DisconnectedAction
 import io.github.zekurio.matinee.ui.components.EpisodeCard
@@ -68,20 +67,21 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalResources
-import io.github.zekurio.matinee.ui.settings.LinkRow
-import io.github.zekurio.matinee.ui.settings.Panel
-import io.github.zekurio.matinee.ui.tabBarPadding
 import io.github.zekurio.matinee.ui.theme.Palette
 import java.time.ZoneId
 
 /**
- * The profile tab, behind the person's picture in the tab bar, as the web's
- * profile page: who's signed in, their favorites, their statistics, and
- * what they watched last, with the way on to Settings, where signing out
- * is. What the server sent last is kept, as Home keeps its rows: while the
- * server can't be reached it stays up with the disconnect icon in the
- * header, and offline mode shows it, though nothing in it opens.
+ * The profile, as the web's profile page: who's signed in, their
+ * favorites, their statistics, and what they watched last, with the way on
+ * to Settings, where signing out is. It's a page on Home, opened from the
+ * account in Home's header, as Findroid's user button opens its settings:
+ * a top bar with Back, its name, and at its end an admin's inbox and
+ * Settings, which open on top of it. What the server sent last is kept, as
+ * Home keeps its rows: while the server can't be reached it stays up with
+ * the disconnect icon in the bar, and offline mode shows it, though
+ * nothing in it opens.
  */
 @Composable
 fun ProfileScreen(session: Session) {
@@ -95,7 +95,7 @@ fun ProfileScreen(session: Session) {
         return
     }
     val profile = rememberLoader("profile-${user.username}", snapshot.profile) { profiles.get(user.username) }
-    // Back on the tab, favorites and what was watched may have moved on.
+    // Back on the page, favorites and what was watched may have moved on.
     RefreshOnResume(profile)
     ProfilePage(profile.state, profile, rememberProfileStats(user.username, snapshot))
 }
@@ -104,18 +104,16 @@ fun ProfileScreen(session: Session) {
 @Composable
 private fun ProfilePage(state: Load<Profile>?, loader: Loader<Profile>?, stats: ProfileStats) {
     val loaded = (state as? Load.Ready)?.value
-    val listState = rememberLazyListState()
-    val haze = rememberHazeState()
-    Box(Modifier.fillMaxSize()) {
+    Column(Modifier.fillMaxSize()) {
+        TopBar(stringResource(R.string.tab_profile)) {
+            // Showing what loaded before while the server can't be reached: the icon, up top.
+            BarButtons { if (loader != null) DisconnectedAction(*listOfNotNull(loader, stats.loader).toTypedArray()) }
+        }
         LazyColumn(
-            Modifier.fillMaxSize().hazeSource(haze),
-            state = listState,
-            contentPadding = PaddingValues(bottom = tabBarPadding() + 24.dp),
+            Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 24.dp),
         ) {
-            item(key = "who") {
-                // Showing what loaded before while the server can't be reached: the icon, up top.
-                Header(loaded) { if (loader != null) DisconnectedAction(*listOfNotNull(loader, stats.loader).toTypedArray()) }
-            }
+            item(key = "who") { Header(loaded) }
             when (state) {
                 null -> Unit
                 is Load.Failed -> item(key = "failed") {
@@ -155,25 +153,21 @@ private fun ProfilePage(state: Load<Profile>?, loader: Loader<Profile>?, stats: 
                 }
             }
         }
-        StatusBarScrim(listState, haze)
     }
 }
 
 /**
- * The picture and name, the username under a display name, and since when
- * they're here, with Settings in the corner as on most profiles. [action]
- * goes before Settings; offline, the offline icon, as on Home.
+ * The picture and name, the username under a display name, Admin, and
+ * since when they're here, as a profile's header on a phone. Settings and
+ * the inbox are in the bar above it.
  */
 @Composable
-private fun Header(profile: Profile?, action: @Composable () -> Unit) {
+private fun Header(profile: Profile?) {
     val api = LocalApi.current
-    val nav = LocalNavigator.current
     val user = LocalUser.current
     val joined = profile?.let(::joinedMonth)
-    // One row, as a profile's header on a phone: the picture, who it is,
-    // and Settings at its end, a button of the same weight as the avatar.
     Row(
-        Modifier.fillMaxWidth().statusBarsPadding().padding(start = Gutter, end = Gutter, top = 16.dp),
+        Modifier.fillMaxWidth().padding(start = Gutter, end = Gutter, top = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Avatar(user.name, user.avatarId?.let(api.paths::avatar), size = 64.dp)
@@ -197,22 +191,27 @@ private fun Header(profile: Profile?, action: @Composable () -> Unit) {
                 Text(facts, style = MaterialTheme.typography.bodyMedium, color = Palette.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
-        Gap(12.dp)
-        if (LocalOffline.current) {
-            LucideIcon(Lucide.CloudOff, stringResource(R.string.downloads_offline), size = 20.dp, tint = Palette.Muted)
-            Gap(12.dp)
-        } else {
-            action()
-            if (user.isAdmin) {
-                RequestsButton()
-                Gap(8.dp)
-            }
-        }
-        RoundIconButton(Lucide.Settings, stringResource(R.string.shell_settings), nav::settings, iconSize = 20.dp)
     }
 }
 
-/** The admin's way to the queue on a phone, with the accent dot while requests need them. */
+/**
+ * The bar's buttons: offline the offline icon, as on Home, or [action];
+ * then an admin's inbox, and Settings, as every bar's ghost icons.
+ */
+@Composable
+private fun BarButtons(action: @Composable () -> Unit) {
+    val nav = LocalNavigator.current
+    val user = LocalUser.current
+    if (LocalOffline.current) {
+        LucideIcon(Lucide.CloudOff, stringResource(R.string.downloads_offline), size = 20.dp, tint = Palette.Muted, modifier = Modifier.padding(horizontal = 12.dp))
+    } else {
+        action()
+        if (user.isAdmin) RequestsButton()
+    }
+    RoundIconButton(Lucide.Settings, stringResource(R.string.shell_settings), nav::settings, size = 48.dp, iconSize = 22.dp, background = Color.Transparent)
+}
+
+/** The admin's way to the queue, with the accent dot, ringed in the page's color, while requests need them. */
 @Composable
 private fun RequestsButton() {
     val nav = LocalNavigator.current
@@ -223,14 +222,19 @@ private fun RequestsButton() {
             Lucide.Inbox,
             if (needsYou > 0) res.getQuantityString(R.plurals.web_requests_menuWaiting, needsYou, needsYou) else res.getString(R.string.web_requests_menu),
             { nav.requests() },
-            iconSize = 20.dp,
+            size = 48.dp,
+            iconSize = 22.dp,
+            background = Color.Transparent,
         )
         if (needsYou > 0) {
             Box(
                 Modifier
                     .align(Alignment.TopEnd)
-                    .padding(top = 8.dp, end = 8.dp)
-                    .size(8.dp)
+                    .padding(top = 10.dp, end = 10.dp)
+                    .size(12.dp)
+                    .clip(CircleShape)
+                    .background(Palette.Background)
+                    .padding(2.dp)
                     .clip(CircleShape)
                     .background(Palette.Accent),
             )

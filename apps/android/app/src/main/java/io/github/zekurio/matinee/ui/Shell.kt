@@ -6,20 +6,20 @@ import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.SharedTransitionScope
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -62,7 +62,9 @@ import io.github.zekurio.matinee.ui.components.LocalSnackbar
 import io.github.zekurio.matinee.ui.downloads.DownloadsScreen
 import io.github.zekurio.matinee.ui.downloads.DownloadsShowScreen
 import io.github.zekurio.matinee.ui.home.HomeScreen
+import io.github.zekurio.matinee.ui.kit.TabBarState
 import io.github.zekurio.matinee.ui.kit.ToastHost
+import io.github.zekurio.matinee.ui.kit.rememberTabBarState
 import io.github.zekurio.matinee.ui.kit.ToastState
 import io.github.zekurio.matinee.ui.media.FavoritesScreen
 import io.github.zekurio.matinee.ui.media.MediaScreen
@@ -77,7 +79,6 @@ import io.github.zekurio.matinee.ui.requests.LocalRequests
 import io.github.zekurio.matinee.ui.requests.RequestsAround
 import io.github.zekurio.matinee.ui.requests.RequestsHub
 import io.github.zekurio.matinee.ui.requests.RequestsScreen
-import io.github.zekurio.matinee.ui.search.SearchScreen
 import io.github.zekurio.matinee.ui.settings.LinkDeviceScreen
 import io.github.zekurio.matinee.ui.settings.SettingsPageScreen
 import io.github.zekurio.matinee.ui.settings.SettingsScreen
@@ -98,8 +99,12 @@ val LocalUser = staticCompositionLocalOf<User> { error("not signed in") }
 
 /**
  * The signed-in app as Findroid lays it out: Home, Media, and Downloads in
- * a bottom bar on their first pages. Pages opened from them have none.
+ * a bar along the bottom of their first pages, or offline Home and
+ * Downloads (`shellTabs`). Pages opened from them have none. Search is the
+ * field at the top of Media, and the profile a page on Home, opened from
+ * the account in Home's header.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SignedInApp(session: Session, user: User, offline: Boolean = false) {
     // A TV has pages of its own; none of the phone's are composed there.
@@ -108,7 +113,7 @@ fun SignedInApp(session: Session, user: User, offline: Boolean = false) {
         return
     }
     val controller = rememberNavController()
-    val navigator = remember(controller) { Navigator(controller) }
+    val navigator = remember(controller, offline) { Navigator(controller, offline) }
     val actionScope = rememberCoroutineScope()
     val actions = remember { Actions(actionScope) }
     val snackbar = remember { ToastState() }
@@ -125,16 +130,19 @@ fun SignedInApp(session: Session, user: User, offline: Boolean = false) {
         LocalRequests provides requests,
     ) {
         Box(Modifier.fillMaxSize()) {
+            val entry by controller.currentBackStackEntryAsState()
+            val tab = entry?.destination?.let(::tabOf)
+            // The open tab's capsule, the same on every page's copy of the bar, and left be while a page covers it.
+            val tabs = rememberTabBarState(tab, TAB_ROUTES)
             SharedTransitionLayout {
-                CompositionLocalProvider(LocalPageTransitions provides this) {
-                    Pages(controller, session, offline)
+                CompositionLocalProvider(LocalPageTransitions provides this, LocalTabBarState provides tabs) {
+                    Pages(controller, session)
                 }
             }
-            val entry by controller.currentBackStackEntryAsState()
-            val bar = entry?.destination?.let(::tabOf) != null
+            val bar = tab != null && !WindowInsets.isImeVisible
             ToastHost(
                 snackbar,
-                Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = if (bar) BOTTOM_BAR_HEIGHT else 0.dp),
+                Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = if (bar) tabBarHeight() + 8.dp else 0.dp),
             )
         }
         ActionsSheet(actions)
@@ -168,7 +176,7 @@ private fun FollowPlaybackOptions() {
 }
 
 @Composable
-private fun Pages(controller: NavHostController, session: Session, offline: Boolean) {
+private fun Pages(controller: NavHostController, session: Session) {
     NavHost(
         controller,
         startDestination = HomeRoute,
@@ -181,7 +189,7 @@ private fun Pages(controller: NavHostController, session: Session, offline: Bool
         // the background under it, so going back showed its art and colors
         // shifting as they came back to full. Each page has its own
         // background, so they never show through each other. Tabs slide
-        // side by side; search fades through. Timings are Motion's.
+        // side by side. Timings are Motion's.
         enterTransition = { enter(pop = false) },
         exitTransition = { exit(pop = false) },
         popEnterTransition = { enter(pop = true) },
@@ -205,8 +213,12 @@ private fun Pages(controller: NavHostController, session: Session, offline: Bool
             val route = it.toRoute<BrowseRoute>()
             BrowseScreen(route.genre, route.studio)
         }
-        screen<SearchRoute>(tab = SearchRoute) { SearchScreen() }
-        screen<ProfileRoute>(tab = ProfileRoute) { ProfileScreen(session) }
+        // Search was a tab once; a back stack an older version saved may still have it.
+        screen<SearchRoute> {
+            val nav = LocalNavigator.current
+            LaunchedEffect(Unit) { nav.searchInstead() }
+        }
+        screen<ProfileRoute> { ProfileScreen(session) }
         screen<SettingsRoute> { SettingsScreen(session) }
         screen<SettingsPageRoute> { SettingsPageScreen(session, it.toRoute<SettingsPageRoute>().page) }
         screen<LinkDeviceRoute> { LinkDeviceScreen() }
@@ -235,6 +247,9 @@ private fun Pages(controller: NavHostController, session: Session, offline: Bool
 /** The layout the pages move in, which carries the bottom bar from one tab's page to the next. */
 private val LocalPageTransitions = staticCompositionLocalOf<SharedTransitionScope?> { null }
 
+/** Which tab the bar shows as open, for every page's copy of it. */
+private val LocalTabBarState = staticCompositionLocalOf<TabBarState?> { null }
+
 /**
  * The bottom bar on a tab's first page. Between two tabs it's the same bar
  * on both pages, so it holds still while they slide past it; to any other
@@ -247,7 +262,7 @@ private fun TabBar(tab: Any, page: AnimatedVisibilityScope, haze: HazeState, mod
     val shared = if (transitions == null) Modifier else with(transitions) {
         Modifier.sharedElement(rememberSharedContentState(TabBarKey), page)
     }
-    BottomBar(tab, nav::tab, haze, modifier.then(shared))
+    BottomBar(tab, nav::tab, haze, LocalTabBarState.current, modifier.then(shared))
 }
 
 private const val TabBarKey = "tab-bar"
@@ -262,16 +277,12 @@ private enum class Move {
 
     /** One tab's first page for another's, in the order of the bottom bar. */
     Tab,
-
-    /** Into or out of search, which isn't opened from a page. */
-    FadeThrough,
 }
 
 private fun AnimatedContentTransitionScope<NavBackStackEntry>.move(): Move {
     val from = initialState.destination
     val to = targetState.destination
     return when {
-        from.hasRoute<SearchRoute>() || to.hasRoute<SearchRoute>() -> Move.FadeThrough
         tabOf(from) != null && tabOf(to) != null -> Move.Tab
         else -> Move.Page
     }
@@ -280,13 +291,11 @@ private fun AnimatedContentTransitionScope<NavBackStackEntry>.move(): Move {
 private fun AnimatedContentTransitionScope<NavBackStackEntry>.enter(pop: Boolean): EnterTransition = when (move()) {
     Move.Page -> if (pop) uncoveredIn() else coverIn()
     Move.Tab -> slideInHorizontally(slide()) { it * tabStep() }
-    Move.FadeThrough -> fadeThroughIn()
 }
 
 private fun AnimatedContentTransitionScope<NavBackStackEntry>.exit(pop: Boolean): ExitTransition = when (move()) {
     Move.Page -> if (pop) uncoverOut() else coveredOut()
     Move.Tab -> slideOutHorizontally(slide()) { -it * tabStep() }
-    Move.FadeThrough -> fadeThroughOut()
 }
 
 /**
@@ -313,12 +322,6 @@ private fun coveredOut(): ExitTransition = slideOutHorizontally(slide()) { -asid
 private fun uncoveredIn(): EnterTransition = slideInHorizontally(slide()) { -aside(it) }
 
 private fun uncoverOut(): ExitTransition = slideOutHorizontally(slide()) { it }
-
-/** Material's fade through: the old page goes quickly, then the new one grows in. */
-private fun fadeThroughIn(): EnterTransition =
-    fadeIn(Motion.enter(delay = 60)) + scaleIn(Motion.enter(delay = 60), initialScale = 0.96f)
-
-private fun fadeThroughOut(): ExitTransition = fadeOut(tween(60, easing = Motion.ExitEasing))
 
 /**
  * A page on the background of its own, so pages coming and going never show

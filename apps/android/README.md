@@ -92,6 +92,12 @@ folder as is.
   `/link`. TVs only offer the code. See
   [Signing in apps](../server/README.md#signing-in-apps). Tokens are
   encrypted with an Android Keystore key and excluded from backups.
+- The phone's shell is Findroid's: Home, Media, and Downloads in a
+  full-width bar along the bottom, each always named, or offline Home and
+  Downloads. Home's header has the logo, search, and the account, which
+  opens the profile. Search is the field at the top of Media, and Home's
+  search button opens Media with it focused. Which tabs there are and
+  where a place lands is `ui/ShellLayout.kt`, with its tests.
 - Home opens with the featured titles in a row of cards, after Findroid's:
   one on a phone, two from 600 dp, three from 840, each with its genres and
   its name over the backdrop. Then libraries with sort and genre filters,
@@ -116,8 +122,8 @@ folder as is.
   gestures, which buttons the player shows, passthrough, downloads,
   sessions, and an About page with the last playback report and a
   redacted app log.
-- Requests, on phones. Titles the server doesn't have show under Search's
-  "Not here yet", in the Discover rows under the empty search field, in
+- Requests, on phones. Titles the server doesn't have show under search's
+  "Not here yet", in the Discover rows under Media's empty search field, in
   Browse movies and Browse shows with the server's filters, which every
   Discover row's heading opens with the row's filters and sort, and on a
   person's page under their library titles. Their page carries the state
@@ -226,6 +232,10 @@ Requests and the filters added these, each after its web counterpart:
 - `MatineeButton` takes a `shape`, for half of a split button, and
   `dimmed`, for a button that looks disabled but still says why on a tap.
   `ButtonLook.Glass` is white over a dark shade on a picture.
+
+The phone's shell added `TabBar`, the full-width bar of tabs, each its
+icon over its name, frosted over the page, with `TabBarState` so every
+page's copy of it shows the same open tab.
 
 Home's featured cards added `PageDots`, the web carousel's dots for where
 a row of pages rests, the current one long.
