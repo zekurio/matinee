@@ -87,11 +87,10 @@ private struct AppLogSection: View {
         withLog { shareText($0, subject: Str.logsTitle) }
       }
     }
-    .matineeSheet(isPresented: Binding(get: { shown != nil }, set: { if !$0 { shown = nil } }), size: .large) {
-      TextSheet(title: Str.logsTitle, text: shown ?? "", copyLabel: Str.logsCopy, latestLast: true) {
-        copyText(shown ?? "", snackbar: snackbar, copied: Str.logsCopied)
-      }
-    }
+    .modifier(
+      TextDialog(
+        isPresented: Binding(get: { shown != nil }, set: { if !$0 { shown = nil } }), title: Str.logsTitle,
+        text: shown ?? "", copyLabel: Str.logsCopy, copied: Str.logsCopied, latestLast: true))
     #if DEBUG
       .onAppear { if debugOpens("log") { withLog { shown = $0 } } }
     #endif
