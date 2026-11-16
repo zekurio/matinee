@@ -33,9 +33,6 @@
     <string name="web_discover_moreFailed">Die nächsten Titel haben nicht geladen.</string>
     <string name="web_discover_browse_movie">Filme durchstöbern</string>
     <string name="web_discover_browse_show">Serien durchstöbern</string>
-    <string name="web_discover_browse_kind">Filme oder Serien</string>
-    <string name="web_discover_browse_kind_movie">Filme</string>
-    <string name="web_discover_browse_kind_show">Serien</string>
     <string name="web_discover_browse_sort_popular">Beliebt</string>
     <string name="web_discover_browse_sort_forYou">Beste Treffer</string>
     <string name="web_discover_browse_sort_votes">Meiste Stimmen</string>

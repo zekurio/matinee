@@ -9,7 +9,6 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query"
-import { Link } from "@tanstack/react-router"
 import {
   CloudOffIcon,
   ListFilterIcon,
@@ -20,7 +19,6 @@ import {
 import { type ReactNode, useState } from "react"
 
 import { refKey, useLiveAvailability } from "@/components/catalog/catalog-data"
-import { chipClass, chipRow } from "@/components/chips"
 import { PosterGridSkeleton } from "@/components/library/library-states"
 import {
   FilterChips,
@@ -28,11 +26,7 @@ import {
   SortSelect,
 } from "@/components/library/list-controls"
 import { posterGrid } from "@/components/media-item"
-import {
-  belowHeader,
-  PageHeader,
-  useDocumentTitle,
-} from "@/components/page-header"
+import { PageHeader, useDocumentTitle } from "@/components/page-header"
 import { usePhone } from "@/components/sheet-menu"
 import { tr } from "@/i18n"
 import { errorMessage, orpc } from "@/lib/rpc"
@@ -49,7 +43,6 @@ import {
   searchFor,
   sortFits,
 } from "./browse-params"
-import { railsOptions } from "./discover-data"
 import { useOnScreenCards } from "./discover-live"
 import { DiscoverEmpty, DiscoverOff } from "./discover-rails"
 import { CardSkeletons, Retry, unique, useNextPage } from "./grid-parts"
@@ -259,7 +252,6 @@ function BrowseGrid({
           )
         }
       />
-      <KindSwitch kind={kind} browse={browse} />
       <FilterChips active={chips} clear={clear} />
       {first?.voteFloor != null && (
         <Note
@@ -382,36 +374,6 @@ function BrowseGrid({
 /** The server refused the filters, which only a hand-made or old link gets. */
 function turnedDown(error: Error): boolean {
   return error instanceof ORPCError && error.status === 400
-}
-
-/**
- * Movies and Shows, for a viewer who can browse both. The other kind
- * keeps the filters it has too.
- */
-function KindSwitch({ kind, browse }: { kind: TitleKind; browse: Browse }) {
-  const kinds = useQuery(railsOptions()).data?.browse ?? []
-  if (kinds.length < 2) return null
-  const search = searchFor(browse)
-  return (
-    <div
-      role="group"
-      aria-label={tr("discover.browse.kind")}
-      className={cn(chipRow, belowHeader)}
-    >
-      {kinds.map((other) => (
-        <Link
-          key={other}
-          to={other === "movie" ? "/discover/movies" : "/discover/shows"}
-          search={search}
-          replace
-          aria-current={other === kind ? "page" : undefined}
-          className={chipClass(other === kind)}
-        >
-          {tr(`discover.browse.kind.${other}`)}
-        </Link>
-      ))}
-    </div>
-  )
 }
 
 /** A line above the grid about the whole list. */

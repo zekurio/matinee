@@ -49,10 +49,6 @@ export default defineMessages("discover", {
   // heading opens one, with the row's filters and sort.
   "discover.browse.movie": "Browse movies",
   "discover.browse.show": "Browse shows",
-  // The switch between the two, keeping the filters both have.
-  "discover.browse.kind": "Movies or shows",
-  "discover.browse.kind.movie": "Movies",
-  "discover.browse.kind.show": "Shows",
   "discover.browse.sort.popular": "Popular",
   // The viewer's recommendations, best first.
   "discover.browse.sort.forYou": "Best match",

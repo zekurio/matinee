@@ -33,9 +33,6 @@
     <string name="web_discover_moreFailed">The next titles didn\'t load.</string>
     <string name="web_discover_browse_movie">Browse movies</string>
     <string name="web_discover_browse_show">Browse shows</string>
-    <string name="web_discover_browse_kind">Movies or shows</string>
-    <string name="web_discover_browse_kind_movie">Movies</string>
-    <string name="web_discover_browse_kind_show">Shows</string>
     <string name="web_discover_browse_sort_popular">Popular</string>
     <string name="web_discover_browse_sort_forYou">Best match</string>
     <string name="web_discover_browse_sort_votes">Most votes</string>

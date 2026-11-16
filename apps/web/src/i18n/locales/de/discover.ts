@@ -40,9 +40,6 @@ export default {
 
   "discover.browse.movie": "Filme durchstöbern",
   "discover.browse.show": "Serien durchstöbern",
-  "discover.browse.kind": "Filme oder Serien",
-  "discover.browse.kind.movie": "Filme",
-  "discover.browse.kind.show": "Serien",
   "discover.browse.sort.popular": "Beliebt",
   "discover.browse.sort.forYou": "Beste Treffer",
   "discover.browse.sort.votes": "Meiste Stimmen",
