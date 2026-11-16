@@ -362,11 +362,14 @@ private struct Transfer: Codable, Sendable {
     await waitForStorage(key)
     wakeForStorage(key)
   }
-  public func remove(_ key: String) async throws {
+  /// Removes a download: its tasks stop, its files go, and, unless
+  /// `dropServerCopy` is false because the caller asked already, the server
+  /// is asked to drop the version it was making.
+  public func remove(_ key: String, dropServerCopy: Bool = true) async throws {
     let entry = store.all[key]
     try await pause(key)
     try await store.remove(key)
-    if let entry, let id = entry.serverId, let api = client(entry.server) {
+    if dropServerCopy, let entry, let id = entry.serverId, let api = client(entry.server) {
       Task { try? await api.downloads.remove(downloadId: id) }
     }
   }

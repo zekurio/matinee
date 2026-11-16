@@ -31,6 +31,9 @@ public struct OfflinePlayback: Sendable {
   public let worker: DownloadWorker
   private let defaults: UserDefaults
   private var pendings: [String: PendingProgress] = [:]
+  /// How long removing a server waits on it, as Android's eight seconds.
+  @ObservationIgnored var forgetLimit: Duration = .seconds(8)
+  @ObservationIgnored var sleep: @Sendable (Duration) async throws -> Void = { try await Task.sleep(for: $0) }
   public var unmeteredOnly: Bool {
     didSet {
       defaults.set(unmeteredOnly, forKey: "downloads.unmetered")
@@ -182,13 +185,39 @@ public struct OfflinePlayback: Sendable {
     for id in Array(store.items.keys) { try await remove(id) }
   }
   public func forgetServer(_ server: String, api: MatineeApi? = nil) async throws {
-    // Local deletion must not wait for an unreachable server. Unlike Android's
-    // eight-second best effort flush, callers flush before this if desired.
-    for entry in store.all.values.filter({ $0.server == server }) {
-      try await worker.remove(entry.key)
+    // Android's `forgetServer`: with a client still signed in there, what
+    // waited to reach the server is sent, then it's asked to let go of the
+    // versions it was making for this device, as far as it answers within
+    // eight seconds. Unreachable, both fail and the rest goes on. Then the
+    // downloads go from the device, and what waited with them.
+    let entries = store.all.values.filter { $0.server == server }
+    let pending = try pendingFor(server)
+    if let api {
+      let copies = entries.compactMap(\.serverId)
+      await withDeadline(forgetLimit, sleep: sleep) {
+        try? await pending.flush { _ in api }
+        for id in copies { try? await api.downloads.remove(downloadId: id) }
+      }
     }
-    try pendingFor(server).clear()
+    for entry in entries {
+      try await worker.remove(entry.key, dropServerCopy: false)
+    }
+    try pending.clear()
     pendings[server] = nil
   }
   public func restore() async { await worker.restore() }
+}
+
+/// Runs `work` until it's done or `limit` has passed, whichever comes
+/// first, as Kotlin's `withTimeoutOrNull`: past the limit, it's cancelled.
+func withDeadline(
+  _ limit: Duration, sleep: @escaping @Sendable (Duration) async throws -> Void,
+  _ work: @escaping @Sendable @MainActor () async -> Void
+) async {
+  await withTaskGroup(of: Void.self) { group in
+    group.addTask { await work() }
+    group.addTask { try? await sleep(limit) }
+    await group.next()
+    group.cancelAll()
+  }
 }

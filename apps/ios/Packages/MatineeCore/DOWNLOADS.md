@@ -33,7 +33,8 @@ The app must update `store.server` whenever `activeServer` changes. Compose
 - `enqueue(source, server:original:spec:plan:subtitles:)` accepts a ready
   resolution. Optional spec/plan are a server-approved customization.
 - `pause`, `resume` (also retry), `remove`, and `removeAll` use selected-server
-  item ids. `forgetServer` removes just that server, including pending progress.
+  item ids. `forgetServer` removes just that server, including pending progress
+  (see Player for what it sends first).
 - Settings are `unmeteredOnly`, `defaultVersion`, `videoCodec`, and `subtitles`.
   Pass `wishes()` to resolve to apply them. `await store.storageUsed` counts disk bytes.
 - Low storage holds downloads back, as Android's `setRequiresStorageNotLow`:
@@ -73,8 +74,12 @@ try await downloads.pendingFor(origin).flush { origin in
 
 Flush sends sittings in batches of 200 before positions. It retains failures,
 except permanent 4xx responses, and never removes a newer value written while
-the request was in flight. Removing a server does not wait on remote IO. If
-wanted, flush its progress with a caller-owned timeout before local deletion.
+the request was in flight. Removing a server, `forgetServer(origin, api:)`
+with the session's `onRemove` client, does as Android's: still signed in
+there, it flushes what waited, then asks the server to drop the versions it
+was making for this device's downloads, within eight seconds in all; an
+unreachable server fails both and is left. Then the downloads go from the
+device and what waited is cleared, whatever the server said.
 
 ## Versions and background handoff
 

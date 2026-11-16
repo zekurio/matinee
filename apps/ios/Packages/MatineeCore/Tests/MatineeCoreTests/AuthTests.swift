@@ -164,6 +164,48 @@ final class AuthProtocol: URLProtocol, @unchecked Sendable {
     try await session.removeServer(origin: "http://two.example/")
     #expect(session.state == .noServer())
   }
+  /// Android's order: what's on the device for a server goes while it's
+  /// still signed in there, then its session ends, then its token.
+  @Test @MainActor func removingAServerClearsItsThingsBeforeSigningOut() async throws {
+    AuthProtocol.lock.withLock {
+      AuthProtocol.mode = "ok"
+      AuthProtocol.requests = []
+    }
+    let config = URLSessionConfiguration.ephemeral
+    config.protocolClasses = [AuthProtocol.self]
+    let store = testStore()
+    let session = MatineeSession(store: store, configuration: config, automaticallyStart: false)
+    #expect(await session.connect("http://one.example") == nil)
+    try session.signedIn(.init(token: "one", user: authUser))
+    var handed: [String: Bool] = [:]
+    var signedOutFirst = false
+    session.onRemove = { origin, api in
+      handed[origin] = api != nil
+      // Still signed in there: a call goes out with its token.
+      _ = try? await api?.auth.session()
+      signedOutFirst = AuthProtocol.lock.withLock { AuthProtocol.requests.contains { $0.path.hasSuffix("sign-out") } }
+      #expect(session.removing.contains(origin))
+      #expect(try! store.secrets.token(for: origin) == "one")
+    }
+    AuthProtocol.lock.withLock { AuthProtocol.requests = [] }
+    try await session.removeServer(origin: "http://one.example/")
+    #expect(handed == ["http://one.example/": true])
+    #expect(!signedOutFirst)
+    let paths = AuthProtocol.lock.withLock { AuthProtocol.requests.map(\.path) }
+    #expect(paths.first?.hasSuffix("session") == true)
+    #expect(paths.contains { $0.hasSuffix("sign-out") })
+    #expect(try store.secrets.token(for: "http://one.example/") == nil)
+    #expect(session.servers.isEmpty && session.removing.isEmpty)
+    // Signed out there already: nothing to send it, and no sign-out.
+    #expect(await session.connect("http://two.example") == nil)
+    try session.signedIn(.init(token: "two", user: authUser))
+    try await session.signOut()
+    AuthProtocol.lock.withLock { AuthProtocol.requests = [] }
+    session.onRemove = { origin, api in handed[origin] = api != nil }
+    try await session.removeServer(origin: "http://two.example/")
+    #expect(handed["http://two.example/"] == false)
+    #expect(AuthProtocol.lock.withLock { AuthProtocol.requests.contains { $0.path.hasSuffix("sign-out") } } == false)
+  }
   @Test @MainActor func connectFailuresSayWhy() async throws {
     AuthProtocol.lock.withLock {
       AuthProtocol.mode = "offline"

@@ -41,6 +41,10 @@ public struct SessionChanged: Error {}
   public private(set) var removing: Set<String> = []
   public private(set) var version = 0
   public private(set) var api: MatineeApi?
+  /// Runs as a server is removed, before its session ends, as Android's:
+  /// what's on this device for it goes, sent first where it can be with the
+  /// client given, still signed in there with requests that give up after
+  /// ten seconds, or nil when it wasn't signed in.
   public var onRemove: ((String, MatineeApi?) async -> Void)?
   public let deviceName: String
   public let platform = ClientCapabilities.sessionPlatform
@@ -394,6 +398,10 @@ public struct SessionChanged: Error {}
     try clearToken(key)
     await start()
   }
+  /// Forgets the saved server `origin`, in Android's order: what's on this
+  /// device for it goes first (`onRemove`), with what waited sent there if
+  /// it answers; then its session ends on the server, as far as it answers;
+  /// then its token goes. Removing the one in use moves to the next saved one.
   public func removeServer(origin: String) async throws {
     guard store.servers.contains(where: { $0.origin == origin }), !removing.contains(origin) else {
       return
