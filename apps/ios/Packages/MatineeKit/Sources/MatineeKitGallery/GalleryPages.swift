@@ -52,6 +52,10 @@ struct FoundationsPage: View {
             LucideIcon(.film, size: 16)
             Text("Text centers on the icon beside it").textStyle(.sm)
           }
+          HStack(alignment: .firstTextBaseline, spacing: 12) {
+            Text("font-mono").textStyle(.xs).foregroundStyle(palette.mutedForeground).frame(width: 84, alignment: .leading)
+            Text(verbatim: "BCDF-GHJK").monoTextStyle(.xl2, weight: .semibold, tracking: Tracking.codeEm)
+          }
         }
       }
       Demo("Radii", note: "`rounded-sm` to `rounded-2xl`, from the web's 0.625rem.") {
