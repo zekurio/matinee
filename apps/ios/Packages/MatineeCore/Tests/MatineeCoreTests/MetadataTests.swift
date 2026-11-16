@@ -118,4 +118,26 @@ struct MetadataTests {
     big.append(Data(count: Int(MAX_IMAGE_BYTES)))
     #expect(throws: UploadProblem.tooBig) { try checkUpload(big).get() }
   }
+
+  private func library(_ id: String, provider: String?) -> Library {
+    Library(
+      id: id, name: id, kind: "movies", paths: [], itemCount: 0, titleCount: 0, metadataProvider: provider,
+      metadataLanguage: "en", lastScannedAt: nil, scanning: false, refreshing: false, backdrop: nil)
+  }
+
+  @Test func aLibrarysProviderIsTheOneItNames() {
+    let libraries = [library("a", provider: "tmdb"), library("b", provider: nil), library("c", provider: "tvdb")]
+    let providers = [provider(configured: false)]
+    #expect(libraryProvider("a", libraries: libraries, providers: providers)?.id == "tmdb")
+    #expect(libraryProvider("b", libraries: libraries, providers: providers) == nil)
+    // A provider the server doesn't list, and a library it doesn't.
+    #expect(libraryProvider("c", libraries: libraries, providers: providers) == nil)
+    #expect(libraryProvider("z", libraries: libraries, providers: providers) == nil)
+  }
+
+  @Test func theOwnerOfTheImagesFollowsTheTarget() {
+    #expect(ImageOwner(ImageTarget(titleId: "t")) == .title)
+    #expect(ImageOwner(ImageTarget(titleId: "t", season: 0)) == .season(0))
+    #expect(ImageOwner(ImageTarget(titleId: "t", season: 2, episode: 3)) == .episode(season: 2, episode: 3))
+  }
 }

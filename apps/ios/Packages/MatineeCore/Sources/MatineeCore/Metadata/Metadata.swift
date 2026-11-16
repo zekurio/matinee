@@ -55,6 +55,33 @@ public func listsImages(provider: MetadataProvider?, title: Title) -> Bool {
   usableProvider(provider) != nil && title.providerId != nil
 }
 
+/// The metadata provider of the library `libraryId`, which fix match and
+/// the image editor ask, as Android's `rememberLibraryProvider`: nil when
+/// the library has none, or names one the server doesn't know.
+public func libraryProvider(
+  _ libraryId: String, libraries: [Library], providers: [MetadataProvider]
+) -> MetadataProvider? {
+  guard let id = libraries.first(where: { $0.id == libraryId })?.metadataProvider else { return nil }
+  return providers.first { $0.id == id }
+}
+
+/// Whose images the editor changes, from its target: the title's own, a
+/// season's poster, or an episode's still.
+public enum ImageOwner: Hashable, Sendable {
+  case title
+  case season(Int)
+  case episode(season: Int, episode: Int)
+
+  public init(_ target: ImageTarget) {
+    self =
+      switch (target.season, target.episode) {
+      case (let season?, let episode?): .episode(season: season, episode: episode)
+      case (let season?, nil): .season(season)
+      default: .title
+      }
+  }
+}
+
 /// What a slot's card says about the image it has: "Picked from TMDB",
 /// "Uploaded", "None", and so on.
 public enum ImageState: Hashable, Sendable {

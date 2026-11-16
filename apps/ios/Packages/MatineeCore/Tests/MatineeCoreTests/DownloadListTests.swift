@@ -52,6 +52,76 @@ import Testing
     #expect(comingAction([gaveUp, forbidden]) == .retryAll(["gave-up"]))
   }
 
+  @Test func eachStateSaysWhereItStands() throws {
+    var entry = try offlineFixture("a", state: .done)
+    entry.bytes = 500
+    #expect(downloadStatus(entry, wifiOnly: true) == .size(500))
+    #expect(rowAction(entry) == .none)
+    entry.state = .running
+    entry.totalBytes = 2000
+    #expect(downloadStatus(entry, wifiOnly: true) == .progress(500, of: 2000))
+    #expect(rowAction(entry) == .pause)
+    entry.totalBytes = nil
+    #expect(downloadStatus(entry, wifiOnly: true) == .size(500))
+    entry.state = .queued
+    #expect(downloadStatus(entry, wifiOnly: true) == .waiting(wifi: true))
+    #expect(downloadStatus(entry, wifiOnly: false) == .waiting(wifi: false))
+    #expect(rowAction(entry) == .pause)
+    entry.failure = .unreachable
+    #expect(downloadStatus(entry, wifiOnly: true) == .broken(.unreachable))
+    #expect(rowAction(entry) == .retry)
+    entry.state = .running
+    #expect(downloadStatus(entry, wifiOnly: true) == .broken(.unreachable))
+    entry.state = .paused
+    entry.failure = nil
+    #expect(downloadStatus(entry, wifiOnly: true) == .paused)
+    #expect(rowAction(entry) == .resume)
+    entry.state = .failed
+    entry.failure = .brokeOff
+    #expect(downloadStatus(entry, wifiOnly: true) == .stopped(.brokeOff))
+    #expect(rowAction(entry) == .retry)
+    entry.failure = .forbidden
+    #expect(rowAction(entry) == .remove)
+    // An entry from before the worker kept its reason, with the server's words only.
+    entry.failure = nil
+    entry.error = "Gone"
+    #expect(downloadStatus(entry, wifiOnly: true) == .stopped(.server("Gone")))
+  }
+
+  @Test func aShowsMenuPausesWhatMovesAndResumesWhatStopped() throws {
+    let running = try offlineFixture("running", state: .running)
+    let queued = try offlineFixture("queued", state: .queued)
+    let paused = try offlineFixture("paused", state: .paused)
+    var gaveUp = try offlineFixture("gave-up", state: .failed)
+    gaveUp.failure = .unreachable
+    var refused = try offlineFixture("refused", state: .failed)
+    refused.failure = .server("No")
+    let done = try offlineFixture("done")
+    let commands = ShowCommands([running, queued, paused, gaveUp, refused, done])
+    #expect(commands.pause == ["running", "queued"])
+    #expect(commands.resume == ["paused", "gave-up"])
+  }
+
+  @Test func theTabSaysDownloadsAreOffOnlyWhenTheServerSaidSo() {
+    #expect(downloadsNotice(count: 0, offline: false, mayDownload: true) == .empty)
+    #expect(downloadsNotice(count: 0, offline: false, mayDownload: nil) == .empty)
+    #expect(downloadsNotice(count: 0, offline: false, mayDownload: false) == .off)
+    #expect(downloadsNotice(count: 3, offline: false, mayDownload: false) == .off)
+    #expect(downloadsNotice(count: 0, offline: true, mayDownload: false) == .empty)
+    #expect(downloadsNotice(count: 3, offline: true, mayDownload: false) == .none)
+    #expect(downloadsNotice(count: 3, offline: false, mayDownload: true) == .none)
+  }
+
+  @Test func theSavedPictureIsTheStillOrBackdropElseAFrame() throws {
+    let paths = Paths(URL(string: "https://one/")!)
+    var item = try offlineFixture("a").item
+    #expect(downloadImageURL(item, paths: paths) == "https://one/api/media/a/thumbnail?size=small")
+    item.title?.images.backdrop = Artwork(id: "back", placeholder: nil)
+    #expect(downloadImageURL(item, paths: paths) == "https://one/api/artwork/back?size=small")
+    item.episode = EpisodeInfo(name: nil, overview: nil, airDate: nil, runtimeMinutes: nil, still: Artwork(id: "still", placeholder: nil))
+    #expect(downloadImageURL(item, paths: paths) == "https://one/api/artwork/still?size=small")
+  }
+
   @Test(.enabled(if: ClientCapabilities.downloads)) func storageCountsOnlyTheServerInUse() async throws {
     let root = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
     defer { try? FileManager.default.removeItem(at: root) }

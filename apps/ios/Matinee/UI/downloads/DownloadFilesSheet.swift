@@ -6,13 +6,15 @@ import SwiftUI
  * DownloadFilesSheet.kt: every file of a show, or of one of its seasons, at
  * once. The server resolves them in batches for this device; the sheet
  * offers the versions they share and queues the answers it got, without
- * asking again per file.
+ * asking again per file. It looks like the file's sheet (DownloadSheet.swift).
  */
 
 /// Every file of a show, or of one of its seasons when `season` is set.
-struct FileSet: Hashable {
+struct FileSet: Hashable, Identifiable {
   let title: TitleSummary
   var season: Season?
+
+  var id: String { "\(title.id)/\(season.map { String(describing: $0.number) } ?? "all")" }
 
   func load(_ api: MatineeApi) async throws -> [MediaItem] {
     guard let season else { return try await api.titleItems(title.id) }
@@ -27,38 +29,38 @@ struct DownloadFilesSheet: View {
   @Environment(\.api) private var api
   @Environment(Downloads.self) private var downloads
   @Environment(MatineeSession.self) private var session
+  @Environment(ViewerState.self) private var viewer: ViewerState?
   @Environment(\.snackbar) private var snackbar
-  @Environment(\.dismiss) private var dismiss
-  @Environment(\.palette) private var palette
+  @Environment(\.sheetDismiss) private var dismiss
 
   @State private var items: [MediaItem]?
   @State private var error: String?
   @State private var picked: DownloadChoice = .device(nil)
   @State private var presets: [DownloadVideoPreset] = []
   @State private var codecs: [String] = []
+  /// The server's answers for what's picked; the last ones stay while new ones come.
   @State private var results: [DownloadResolution]?
   @State private var resolvedWishes: DownloadWishes?
-  @State private var codec: String?
+  @State private var resolving = false
+  /// Empty for the server's first.
+  @State private var codec = ""
 
   var body: some View {
     let name = files.season.map { Str.titleSeasonOf(files.title.name, seasonName($0.number)) } ?? files.title.name
-    VStack(alignment: .leading, spacing: 0) {
-      Text(Str.downloadsSheetTitleNamed(name)).textStyle(.xl, weight: .semibold, tracking: .tight).lineLimit(2)
-        .accessibilityAddTraits(.isHeader)
-        .padding(.horizontal, 20)
-        .padding(.bottom, 12)
-      if let error {
-        Text(error).textStyle(.sm).foregroundStyle(palette.destructive).padding(.horizontal, 20)
+    VStack(spacing: 0) {
+      SheetTitle(Str.downloadsSheetTitleNamed(name), subtitle: items.map(summary))
+      if viewer?.options?.downloads == false {
+        DownloadsOff()
+      } else if let error {
+        ErrorState(Str.downloadsFilesFailed, error)
+          .padding(.vertical, Space.s12)
+          .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
       } else if let items, let results {
         content(items, results)
       } else {
-        ProgressView().controlSize(.large).tint(palette.accent).padding(24).frame(maxWidth: .infinity)
+        SheetSpinner()
       }
-      Spacer(minLength: 0)
     }
-    .padding(.top, 28)
-    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-    .legacySheet([.medium, .large])
     .task { await load() }
     .task(id: Wanted(loaded: items != nil, picked: picked, codec: codec)) { await again() }
   }
@@ -66,61 +68,68 @@ struct DownloadFilesSheet: View {
   private struct Wanted: Hashable {
     let loaded: Bool
     let picked: DownloadChoice
-    let codec: String?
+    let codec: String
   }
 
   private func missing(_ items: [MediaItem]) -> [MediaItem] {
     items.filter { downloads.store.items[$0.id] == nil }
   }
 
+  /// "3 files · 1 on this device", or that there are none.
+  private func summary(_ items: [MediaItem]) -> String {
+    let missing = missing(items).count
+    let have = items.count - missing
+    let parts = [missing == 0 ? nil : Str.downloadsAllFiles(missing), have > 0 ? Str.downloadsAllHave(have) : nil]
+    let summary = parts.compactMap(\.self).joined(separator: " · ")
+    return summary.isEmpty ? Str.downloadsAllEmpty : summary
+  }
+
   @ViewBuilder private func content(_ items: [MediaItem], _ results: [DownloadResolution]) -> some View {
     let missing = missing(items)
-    let have = items.count - missing.count
-    let summary = [
-      missing.isEmpty ? nil : Str.downloadsAllFiles(missing.count), have > 0 ? Str.downloadsAllHave(have) : nil,
-    ].compactMap(\.self).joined(separator: " · ")
-    ScrollView {
-      VStack(alignment: .leading, spacing: 0) {
-        Text(summary.isEmpty ? Str.downloadsAllEmpty : summary).textStyle(.sm)
-          .foregroundStyle(palette.mutedForeground)
-          .padding(.horizontal, 20)
-        if !missing.isEmpty {
-          let ready = results.compactMap(\.ready)
-          let size =
-            picked == .original
-            ? missing.reduce(Int64(0)) { $0 + $1.sizeBytes } : ready.reduce(Int64(0)) { $0 + $1.plan.estimatedBytes }
-          // Files that get encoded come in the codec picked; a preset encodes every file.
-          VersionPanel(
-            choices: downloadChoices(presets), picked: picked, onPick: { picked = $0 }, codecs: codecs,
-            codec: codec ?? codecs.first, onCodec: { codec = $0 }, plan: nil,
-            detail: Str.downloadsAbout(formatBytes(size))
-          )
-          .padding(.top, 12)
-          ForEach(Array(results.compactMap(\.unavailable).enumerated()), id: \.offset) { _, refused in
-            Text(refused.message).textStyle(.sm).foregroundStyle(palette.destructive)
-              .padding(.horizontal, 20)
-              .padding(.top, 8)
+    // One line for each thing the server said, however many files it said it of.
+    let refusals = results.compactMap(\.unavailable).map(\.message).reduce(into: [String]()) {
+      if !$0.contains($1) { $0.append($1) }
+    }
+    VStack(spacing: 0) {
+      ScrollView {
+        VStack(alignment: .leading, spacing: Space.s6) {
+          if !missing.isEmpty {
+            SheetGroup(Str.downloadsDefaultTitle) {
+              VersionCards(
+                choices: downloadChoices(presets), picked: $picked,
+                detail: { detail($0, missing: missing, results: results) },
+                waiting: { $0 == picked && resolving })
+            }
+            // Files that get encoded come in the codec picked; a preset encodes every file.
+            CodecField(
+              row: codecRow(picked, plan: nil, codecs: codecs),
+              codec: Binding(get: { codec.isEmpty ? codecs.first ?? "" : codec }, set: { codec = $0 }))
+            ForEach(refusals, id: \.self) { message in
+              Callout(message, icon: .circleAlert, look: .destructive)
+            }
           }
         }
+        .padding(.horizontal, SHEET_INSET)
+        .padding(.bottom, Space.s4)
       }
-      .frame(maxWidth: .infinity, alignment: .leading)
-      .padding(.bottom, 16)
-    }
-    .scrollBounceBehavior(.basedOnSize)
-    .safeAreaInset(edge: .bottom) {
+      .scrollBounceBehavior(.basedOnSize)
       if !missing.isEmpty {
-        LegacyButton(.primary, action: { start(missing, results) }) {
-          HStack(spacing: 8) {
-            LucideIcon(.download, size: 18)
-            Text(Str.downloadsStart)
+        SheetFooter {
+          MatineeButton(Str.downloadsStart, icon: .download, pending: resolving, fullWidth: true) {
+            start(missing, results)
           }
-          .frame(maxWidth: .infinity)
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 12)
-        .background(palette.popover)
       }
     }
+  }
+
+  /// What a version of the files comes to: the files as they are, or, for
+  /// the one picked, what the server estimates. The others aren't asked
+  /// for until they're picked.
+  private func detail(_ choice: DownloadChoice, missing: [MediaItem], results: [DownloadResolution]) -> String? {
+    if choice == .original { return formatBytes(filesSize(.original, missing: missing, results: results)) }
+    guard choice == picked, !resolving else { return nil }
+    return Str.downloadsAbout(formatBytes(filesSize(choice, missing: missing, results: results)))
   }
 
   private func load() async {
@@ -132,7 +141,8 @@ struct DownloadFilesSheet: View {
         api: api, items: missing(loaded), device: downloadDevice(PlayerPrefs()), wishes: wishes)
       presets = mergedPresets(initial)
       codecs = mergedCodecs(initial)
-      codec = codecs.contains(downloads.videoCodec) ? downloads.videoCodec : nil
+      // Empty for the server's first, as Settings' "auto" asks it, until one's picked.
+      codec = codecs.contains(downloads.videoCodec) ? downloads.videoCodec : ""
       picked = startingChoice(downloads.defaultVersion, presets: presets)
       resolvedWishes = wishes
       results = initial
@@ -146,12 +156,15 @@ struct DownloadFilesSheet: View {
   private func again() async {
     guard let items, let api else { return }
     let wishes = downloads.wishes(
-      preset: picked.preset.map { DownloadWishes.Preset(height: $0.height, bitrate: $0.bitrate) }, codec: codec)
+      preset: picked.preset.map { DownloadWishes.Preset(height: $0.height, bitrate: $0.bitrate) },
+      codec: codec.isEmpty ? nil : codec)
     guard wishes != resolvedWishes else { return }
-    results = nil
+    resolving = true
+    defer { resolving = false }
     do {
-      results = try await downloads.resolve(
+      let answer = try await downloads.resolve(
         api: api, items: missing(items), device: downloadDevice(PlayerPrefs()), wishes: wishes)
+      results = answer
       resolvedWishes = wishes
     } catch {
       if Failure(error) != .cancelled { self.error = describeFailure(error) }
@@ -179,7 +192,7 @@ struct DownloadFilesSheet: View {
           failed += 1
         }
       }
-      if failed > 0 { snackbar.show(Str.downloadsAllFailed(failed)) }
+      if failed > 0 { snackbar.post(ToastMessage(Str.downloadsAllFailed(failed), kind: .error)) }
     }
     dismiss()
   }

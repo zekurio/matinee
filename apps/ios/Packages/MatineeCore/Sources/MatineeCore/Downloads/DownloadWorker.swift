@@ -4,6 +4,14 @@ public enum DownloadFailure: Codable, Sendable, Hashable {
   case server(String)
   case unreachable, brokeOff, forbidden
 }
+/// The picture a download keeps for the lists that show it without the
+/// server, as Android's worker saves it: the episode's still or the
+/// title's backdrop, small, and a frame from the file when it has neither.
+public func downloadImageURL(_ item: MediaItem, paths: Paths) -> String {
+  guard let artwork = item.episode?.still ?? item.title?.images.backdrop else { return paths.thumbnail(item.id) }
+  return paths.artwork(artwork.id, size: .small)
+}
+
 public func downloadFailure(_ error: any Error) -> DownloadFailure {
   if let api = error as? ApiException {
     return api.status == 403 ? .forbidden : .server(api.message)
@@ -215,7 +223,7 @@ private struct Transfer: Codable, Sendable {
         entry = current
       }
       if entry.image == nil, !active.contains(where: { Transfer.read($0)?.part == -3 }) {
-        try await enqueue(entry, part: -3, url: api.paths.thumbnail(entry.id))
+        try await enqueue(entry, part: -3, url: downloadImageURL(entry.item, paths: api.paths))
       }
       // The server deletes segments behind the index requested. Background
       // URLSession does not promise task order, even with one connection, so

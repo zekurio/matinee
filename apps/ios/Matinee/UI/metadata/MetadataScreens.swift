@@ -1,29 +1,39 @@
 import MatineeCore
-import PhotosUI
 import MatineeKit
+import PhotosUI
 import SwiftUI
 import UIKit
 import UniformTypeIdentifiers
 
 /*
- * MetadataScreens.kt: an admin's metadata tools, as the web's: fix a
- * title's match, and pick or upload the images of a title, season, or
- * episode. Pages rather than the web's dialogs, as a phone's keyboard and
- * a grid of images need the whole screen. What they decide is MatineeCore's
- * (Metadata/); the words are here.
+ * MetadataScreens.kt: an admin's metadata tools, drawn as the web's
+ * identify dialog and image editor: fix a title's match, and pick or
+ * upload the images of a title, season, or episode. Pages rather than the
+ * web's dialogs, as Android has them, since a phone's keyboard and a grid
+ * of images need the whole screen; on an iPad the page keeps to the
+ * dialog's width, so its rows don't stretch across the screen. What they
+ * decide is MatineeCore's (Metadata/); the words are here.
+ *
+ * The photo library and Files are the system's pickers, which are services
+ * of the platform rather than a look: Android has one picker, iOS keeps
+ * photos and files apart, so Upload offers both.
  */
+
+/// How wide the tools' column gets: the web's identify dialog's `max-w-xl`
+/// leaves a row of results this wide, and the image editor's `max-w-3xl`.
+private let FORM_WIDTH: CGFloat = 640
+private let EDITOR_WIDTH: CGFloat = 840
 
 /// The metadata provider of a library, which fix match and the image
 /// editor ask: the provider, or nil when the library has none. For admins
-/// only; the server turns anyone else away, which reads as none.
-private func libraryProvider(_ api: MatineeApi, _ libraryId: String) async throws -> MetadataProvider? {
+/// only; the server turns anyone else away.
+private func loadProvider(_ api: MatineeApi, _ libraryId: String) async throws -> MetadataProvider? {
   #if DEBUG
     if MetadataFixtures.on { return MetadataFixtures.provider }
   #endif
-  guard let id = try await api.libraries.list().first(where: { $0.id == libraryId })?.metadataProvider else {
-    return nil
-  }
-  return try await api.metadata.providers().first { $0.id == id }
+  async let libraries = api.libraries.list()
+  async let providers = api.metadata.providers()
+  return libraryProvider(libraryId, libraries: try await libraries, providers: try await providers)
 }
 
 /// The page's title loaded, or its loading and failure under the top bar.
@@ -32,7 +42,6 @@ private struct TitlePage<Content: View>: View {
   let heading: String
   @ViewBuilder let content: (Title) -> Content
   @State private var loader = Loader<Title>()
-  @Environment(\.palette) private var palette
 
   var body: some View {
     Group {
@@ -43,9 +52,7 @@ private struct TitlePage<Content: View>: View {
       case .ready(let title): content(shown(title))
       }
     }
-    .frame(maxWidth: .infinity, maxHeight: .infinity)
-    .background(palette.background)
-    .legacyTopBar(heading)
+    .topBar(heading) { DisconnectedAction(loader) }
     .loads(loader) { [titleId] api in try await api.titles.get(id: titleId) }
   }
 
@@ -57,16 +64,22 @@ private struct TitlePage<Content: View>: View {
   }
 }
 
-/// A page's rows, in the gutter, with room at the bottom.
-private struct FormPage<Content: View>: View {
+/// A tool's page: its rows in the gutter, kept to `width` on a wide screen,
+/// with room at the bottom.
+private struct ToolPage<Content: View>: View {
+  let width: CGFloat
   @ViewBuilder let content: () -> Content
+  @Environment(\.gutter) private var gutter
 
   var body: some View {
     ScrollView {
       VStack(alignment: .leading, spacing: 0) { content() }
+        .frame(maxWidth: width, alignment: .leading)
+        .padding(.horizontal, gutter)
+        // Under the page's name, where the eye starts, rather than centered away from it.
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.top, 8)
-        .padding(.bottom, 24)
+        .padding(.top, Space.s1)
+        .padding(.bottom, Space.s8)
     }
     .scrollDismissesKeyboard(.interactively)
   }
@@ -98,11 +111,15 @@ private struct IdentifyForm: View {
   @State private var name: String
   @State private var year: String
   @State private var submitted: IdentifyQuery
+  /// Moves to send the same search again after it failed.
+  @State private var attempt = 0
   @State private var results: Load<[MetadataMatch]> = .loading
   /// The entry being matched, whose answer the page waits for.
   @State private var matching: MetadataMatch?
   @State private var error: String?
-  @ScaledMetric(relativeTo: .body) private var yearWidth: CGFloat = 92
+  @State private var nameFocused = false
+  @State private var yearFocused = false
+  @ScaledMetric(relativeTo: .body) private var yearWidth: CGFloat = 96
 
   init(title: Title) {
     self.title = title
@@ -113,110 +130,122 @@ private struct IdentifyForm: View {
 
   var body: some View {
     let providerName = provider.state.value??.name
-    FormPage {
-      Group {
-        if let providerName {
-          Text(Str.titleIdentifyDescription(providerName, title.path))
-            .textStyle(.sm).foregroundStyle(palette.mutedForeground)
-            .padding(.bottom, 16)
-        }
-        form
-        if let error {
-          Text(error).textStyle(.sm).foregroundStyle(palette.destructive).padding(.bottom, 8)
-        }
+    ToolPage(width: FORM_WIDTH) {
+      if let providerName {
+        Text(Str.titleIdentifyDescription(providerName, title.path))
+          .textStyle(.sm).foregroundStyle(palette.mutedForeground)
+          .fixedSize(horizontal: false, vertical: true)
+          .padding(.bottom, Space.s5)
       }
-      .padding(.horizontal, Space.gutter)
+      form
+      if let error {
+        Callout(error, icon: .circleAlert, look: .destructive).padding(.top, Space.s4)
+      }
+      Separator().padding(.top, Space.s5).padding(.bottom, Space.s2)
       found(providerName)
     }
-    .loads(provider) { [libraryId = title.libraryId] api in try await libraryProvider(api, libraryId) }
-    .task(id: submitted) { await search(submitted) }
+    .loads(provider) { [libraryId = title.libraryId] api in try await loadProvider(api, libraryId) }
+    .task(id: SearchKey(query: submitted, attempt: attempt)) { await search(submitted) }
     .task(id: matching) { await identify() }
   }
 
+  private struct SearchKey: Hashable {
+    let query: IdentifyQuery
+    let attempt: Int
+  }
+
   /// The name and year, and the button that searches for them; the
-  /// keyboard's Search key does too.
-  private var form: some View {
-    let wide = isWide(window)
+  /// keyboard's Search key does too. A tablet has the room for the button
+  /// beside them, as the web's dialog; a phone puts it under them, the
+  /// width of the page, and the largest text sizes stack everything.
+  @ViewBuilder private var form: some View {
     let stacked = dynamicType.isAccessibilitySize
-    let fields = Group {
-      Field(label: Str.titleIdentifyName) {
-        LegacyTextField($name)
-          .textInputAutocapitalization(.words)
-          .autocorrectionDisabled()
-          .submitLabel(.search)
-          .onSubmit(submit)
+    if stacked {
+      VStack(alignment: .leading, spacing: Space.s3) {
+        nameField
+        yearField
+        searchButton(fill: true)
       }
-      Field(label: Str.titleIdentifyYear) {
-        // Digits and punctuation rather than the number pad, which has no Search key.
-        LegacyTextField($year, placeholder: Str.titleIdentifyAnyYear)
-          .keyboardType(.numbersAndPunctuation)
-          .submitLabel(.search)
-          .onSubmit(submit)
-          .onChange(of: year) { _, typed in
-            let digits = yearDigits(typed)
-            if digits != typed { year = digits }
-          }
+    } else if isWide(window) {
+      HStack(alignment: .bottom, spacing: Space.s2) {
+        nameField
+        yearField.frame(width: yearWidth)
+        searchButton(fill: false)
       }
-      .frame(width: stacked ? nil : yearWidth)
-    }
-    let button = { (fill: Bool) in
-      LegacyButton(.secondary, action: submit) {
-        ButtonContent(Str.titleIdentifySearch, icon: .search, fill: fill)
-      }
-    }
-    return VStack(alignment: .leading, spacing: 12) {
-      if stacked {
-        VStack(alignment: .leading, spacing: 12) { fields }
-        button(true)
-      } else if wide {
-        // A tablet's width has room for the button beside the fields.
-        HStack(alignment: .bottom, spacing: 8) {
-          fields
-          button(false).padding(.bottom, 4)
+    } else {
+      VStack(spacing: Space.s3) {
+        HStack(alignment: .bottom, spacing: Space.s2) {
+          nameField
+          yearField.frame(width: yearWidth)
         }
-      } else {
-        HStack(alignment: .bottom, spacing: 8) { fields }
-        button(true)
+        searchButton(fill: true)
       }
     }
-    .padding(.bottom, 12)
+  }
+
+  private var nameField: some View {
+    FormField(Str.titleIdentifyName) {
+      MatineeTextField("", text: $name, focused: $nameFocused)
+        .textInputAutocapitalization(.words)
+        .autocorrectionDisabled()
+        .submitLabel(.search)
+        .onSubmit(submit)
+        .accessibilityLabel(Str.titleIdentifyName)
+    }
+  }
+
+  private var yearField: some View {
+    FormField(Str.titleIdentifyYear) {
+      // Digits and punctuation rather than the number pad, which has no Search key.
+      MatineeTextField(Str.titleIdentifyAnyYear, text: $year, focused: $yearFocused)
+        .keyboardType(.numbersAndPunctuation)
+        .submitLabel(.search)
+        .onSubmit(submit)
+        .accessibilityLabel(Str.titleIdentifyYear)
+        .onChange(of: year) { _, typed in
+          let digits = yearDigits(typed)
+          if digits != typed { year = digits }
+        }
+    }
+  }
+
+  private func searchButton(fill: Bool) -> some View {
+    MatineeButton(Str.titleIdentifySearch, icon: .search, look: .secondary, fullWidth: fill, action: submit)
   }
 
   @ViewBuilder private func found(_ providerName: String?) -> some View {
     switch results {
     case .loading:
-      LoadingBox().padding(32)
-    case .failed(let message, _):
-      Text(message).textStyle(.sm).foregroundStyle(palette.destructive).padding(.horizontal, Space.gutter)
+      Spinner(size: 24, tint: palette.accent).frame(maxWidth: .infinity).padding(.vertical, Space.s10)
+    case .failed(let message, let disconnected):
+      ErrorSection(Str.titleIdentifyFailed, message, disconnected: disconnected) { attempt += 1 }
     case .ready(let matches) where matches.isEmpty:
       Text(Str.titleIdentifyEmpty(providerName ?? "", submitted.name))
         .textStyle(.sm).foregroundStyle(palette.mutedForeground)
         .multilineTextAlignment(.center)
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 32)
-        .padding(.horizontal, Space.gutter)
+        .padding(.vertical, Space.s10)
     case .ready(let matches):
-      // Two to a row on a tablet, as its width leaves a phone's row mostly empty.
-      let columns = isWide(window) ? 2 : 1
-      LazyVGrid(
-        columns: Array(repeating: GridItem(.flexible(), spacing: 16, alignment: .top), count: columns),
-        alignment: .leading, spacing: 0
-      ) {
+      VStack(spacing: 0) {
         ForEach(matches, id: \.id) { match in
-          MatchRow(
-            match: match, current: isCurrentMatch(match, of: title), pending: matching?.id == match.id
-          ) { pick(match) }
+          MatchRow(match: match, current: isCurrentMatch(match, of: title), pending: matching?.id == match.id) {
+            pick(match)
+          }
           .disabled(matching != nil)
         }
       }
-      .padding(.horizontal, Space.gutter - 8)
+      // The rows' wash reaches past the text, which lines up with the page's.
+      .padding(.horizontal, -Space.s3)
     }
   }
 
   private func submit() {
-    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+    nameFocused = false
+    yearFocused = false
     error = nil
-    submitted = IdentifyQuery(typed: name, year: year, fallback: title.name)
+    let query = IdentifyQuery(typed: name, year: year, fallback: title.name)
+    // The same search again, as after one failed, still goes out.
+    if query == submitted { attempt += 1 } else { submitted = query }
   }
 
   private func search(_ query: IdentifyQuery) async {
@@ -237,7 +266,7 @@ private struct IdentifyForm: View {
     } catch {
       // A newer search took over.
       if Failure(error) == .cancelled || Task.isCancelled { return }
-      results = .failed(describeFailure(error))
+      results = .failed(describeFailure(error), disconnected: Failure(error).isDisconnect)
     }
   }
 
@@ -264,7 +293,7 @@ private struct IdentifyForm: View {
         updated = try await api.titles.identify(id: title.id, providerId: match.id)
       #endif
       viewer?.changed()
-      snackbar.show(Str.titleIdentifyMatched(updated.name))
+      snackbar.post(ToastMessage(Str.titleIdentifyMatched(updated.name), kind: .success))
       nav.back()
     } catch {
       if Failure(error) == .cancelled || Task.isCancelled { return }
@@ -274,23 +303,8 @@ private struct IdentifyForm: View {
   }
 }
 
-/// A field's label above it.
-private struct Field<Content: View>: View {
-  let label: String
-  @ViewBuilder let content: () -> Content
-  @Environment(\.palette) private var palette
-
-  var body: some View {
-    VStack(alignment: .leading, spacing: 6) {
-      Text(label).textStyle(.px13, weight: .medium).foregroundStyle(palette.mutedForeground).accessibilityHidden(true)
-      // The field says what it's for, as the label above can't to VoiceOver.
-      content().accessibilityLabel(label)
-    }
-  }
-}
-
-/// A provider's entry: its poster, name and year, whether it's the match
-/// now, and what it's about.
+/// A provider's entry, as the web's result row: its poster, name and year,
+/// whether it's the match now, and what it's about.
 private struct MatchRow: View {
   let match: MetadataMatch
   let current: Bool
@@ -301,105 +315,34 @@ private struct MatchRow: View {
   @ScaledMetric(relativeTo: .body) private var posterWidth: CGFloat = 48
 
   var body: some View {
-    Button(action: onPick) {
-      HStack(alignment: .top, spacing: 12) {
+    Pressable(shape: .kit(Radius.lg), action: onPick) {
+      HStack(alignment: .top, spacing: Space.s3) {
         Tone(match.id)
           .overlay { Picture(api?.art(match.poster)) }
           .frame(width: posterWidth, height: posterWidth * 3 / 2)
-          .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
-        VStack(alignment: .leading, spacing: 2) {
-          WrappingRow(spacing: 8, lineSpacing: 4) {
-            Text(match.name).textStyle(.base, weight: .medium).foregroundStyle(palette.foreground)
+          .clipShape(RoundedRectangle.kit(Radius.sm))
+          .overlay { RoundedRectangle.kit(Radius.sm).strokeBorder(palette.border) }
+        VStack(alignment: .leading, spacing: Space.s1) {
+          FlowRow(spacing: Space.s2, lineSpacing: Space.s1) {
+            Text(match.name).textStyle(.sm, weight: .medium).foregroundStyle(palette.foreground)
             if let year = match.year {
-              Text(String(year)).textStyle(.sm).foregroundStyle(palette.mutedForeground)
+              Text(String(year)).textStyle(.sm).foregroundStyle(palette.mutedForeground).monospacedDigit()
             }
-            if current { LegacyBadge(Str.titleIdentifyCurrent) }
+            if current { Badge(Str.titleIdentifyCurrent, look: .secondary) }
           }
           if let overview = match.overview {
             Text(overview).textStyle(.px13).foregroundStyle(palette.mutedForeground).lineLimit(2)
-              .multilineTextAlignment(.leading)
           }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        if pending {
-          ProgressView().tint(palette.accent).controlSize(.small)
-        }
+        .multilineTextAlignment(.leading)
+        if pending { Spinner(size: 16, tint: palette.accent).padding(.top, Space.s1) }
       }
-      .padding(.vertical, 10)
-      .padding(.horizontal, 8)
+      .padding(Space.s3)
       .contentShape(RoundedRectangle.kit(Radius.lg))
+      .accessibilityElement(children: .combine)
     }
-    .buttonStyle(MatchPress())
-    .accessibilityElement(children: .combine)
     .accessibilityAddTraits(current ? .isSelected : [])
-  }
-}
-
-/// A row that tints when pressed, as Android's ripple on a clickable row.
-private struct MatchPress: ButtonStyle {
-  @Environment(\.palette) private var palette
-  @Environment(\.isEnabled) private var enabled
-
-  func makeBody(configuration: Configuration) -> some View {
-    configuration.label
-      .background(palette.foreground.opacity(configuration.isPressed ? 0.08 : 0), in: RoundedRectangle.kit(Radius.lg))
-      .opacity(enabled ? 1 : 0.6)
-      .motion(Motion.color, value: configuration.isPressed)
-  }
-}
-
-/// Views side by side, wrapping onto more lines as they need, each line's
-/// views centred on each other: Compose's `FlowRow`. A view wider than the
-/// row gets the row's width, so a long name wraps rather than runs off.
-private struct WrappingRow: Layout {
-  var spacing: CGFloat = 8
-  var lineSpacing: CGFloat = 6
-
-  func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-    let width = proposal.width ?? .infinity
-    let lines = arrange(subviews, width: width)
-    let used = lines.map(\.width).max() ?? 0
-    let height = lines.map(\.height).reduce(0, +) + lineSpacing * CGFloat(max(lines.count - 1, 0))
-    return CGSize(width: proposal.width.map { min($0, used) } ?? used, height: height)
-  }
-
-  func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-    var y = bounds.minY
-    for line in arrange(subviews, width: bounds.width) {
-      var x = bounds.minX
-      for (index, size) in zip(line.indices, line.sizes) {
-        subviews[index].place(
-          at: CGPoint(x: x, y: y + (line.height - size.height) / 2), proposal: ProposedViewSize(size))
-        x += size.width + spacing
-      }
-      y += line.height + lineSpacing
-    }
-  }
-
-  private struct Line {
-    var indices: [Int] = []
-    var sizes: [CGSize] = []
-    var width: CGFloat = 0
-    var height: CGFloat = 0
-  }
-
-  private func arrange(_ subviews: Subviews, width: CGFloat) -> [Line] {
-    var lines: [Line] = []
-    var line = Line()
-    for index in subviews.indices {
-      var size = subviews[index].sizeThatFits(.unspecified)
-      if size.width > width { size = subviews[index].sizeThatFits(ProposedViewSize(width: width, height: nil)) }
-      if !line.indices.isEmpty && line.width + spacing + size.width > width {
-        lines.append(line)
-        line = Line()
-      }
-      line.width = line.indices.isEmpty ? size.width : line.width + spacing + size.width
-      line.height = max(line.height, size.height)
-      line.indices.append(index)
-      line.sizes.append(size)
-    }
-    if !line.indices.isEmpty { lines.append(line) }
-    return lines
   }
 }
 
@@ -425,7 +368,9 @@ struct ImagesScreen: View {
   let target: ImageTarget
 
   var body: some View {
-    TitlePage(titleId: target.titleId, heading: Str.titleImagesTitle) { ImageEditor(title: $0, target: target) }
+    TitlePage(titleId: target.titleId, heading: Str.titleImagesTitle) {
+      ImageEditor(title: $0, target: target)
+    }
   }
 }
 
@@ -444,6 +389,7 @@ private struct ImageEditor: View {
   @Environment(\.snackbar) private var snackbar
   @Environment(\.palette) private var palette
   @Environment(\.windowSize) private var window
+  @Environment(\.gutter) private var gutter
   @Environment(\.dynamicTypeSize) private var dynamicType
   @Environment(ViewerState.self) private var viewer: ViewerState?
   @State private var slot: String
@@ -454,6 +400,7 @@ private struct ImageEditor: View {
   @State private var remoteAttempt = 0
   @State private var busy: Change?
   @State private var gridWidth: CGFloat = 0
+  @State private var uploadMenu = false
   @State private var picking = false
   @State private var importing = false
   @State private var photo: PhotosPickerItem?
@@ -469,40 +416,31 @@ private struct ImageEditor: View {
     let lists = listsImages(provider: provider.state.value ?? nil, title: title)
     let current = images.state.value
     let inUse = current?.first { $0.slot == slot }
-    FormPage {
-      Text(
-        providerName.map { Str.titleImagesDescription(name, $0) } ?? Str.titleImagesDescriptionLocal(name)
-      )
-      .textStyle(.sm).foregroundStyle(palette.mutedForeground)
-      .padding(.horizontal, Space.gutter)
-      .padding(.bottom, 16)
-      if case .failed(let message, _) = images.state {
-        VStack(alignment: .leading, spacing: 12) {
-          Text(Str.titleImagesLoadError(message)).textStyle(.sm).foregroundStyle(palette.destructive)
-          RetryButton(action: images.reload)
-        }
-        .padding(.horizontal, Space.gutter)
+    ToolPage(width: EDITOR_WIDTH) {
+      Text(providerName.map { Str.titleImagesDescription(name, $0) } ?? Str.titleImagesDescriptionLocal(name))
+        .textStyle(.sm).foregroundStyle(palette.mutedForeground)
+        .fixedSize(horizontal: false, vertical: true)
+        .padding(.bottom, Space.s5)
+      if case .failed(let message, let disconnected) = images.state, current == nil {
+        ErrorSection(Str.titleImagesFailed, message, disconnected: disconnected, onRetry: images.reload)
       } else {
         slots(current, providerName: providerName)
-          .padding(.bottom, 16)
         buttons(inUse, providerName: providerName, lists: lists)
-          .padding(.horizontal, Space.gutter)
-          .padding(.bottom, 16)
-        // The grid's width, inside the safe area and the gutters, for its columns.
-        Color.clear.frame(height: 0)
-          .padding(.horizontal, Space.gutter)
-          .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { gridWidth = $0 - 2 * Space.gutter }
+          .padding(.top, Space.s4)
+        Separator().padding(.top, Space.s3).padding(.bottom, Space.s4)
         candidates(inUse, providerName: providerName, lists: lists)
+          .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { gridWidth = $0 }
       }
     }
     .loads(images) { [target] api in
       try await api.titles.images(id: target.titleId, season: target.season, episode: target.episode)
     }
-    .loads(provider) { [libraryId = title.libraryId] api in try await libraryProvider(api, libraryId) }
+    .loads(provider) { [libraryId = title.libraryId] api in try await loadProvider(api, libraryId) }
     .task(id: RemoteKey(slot: slot, allLanguages: allLanguages, lists: lists, attempt: remoteAttempt)) {
       guard lists else { return }
       await loadRemote()
     }
+    // A slot starts over, with its own language switch, as the web's panel does.
     .onChange(of: slot) { allLanguages = false }
     .photosPicker(isPresented: $picking, selection: $photo, matching: .images, preferredItemEncoding: .compatible)
     .onChange(of: photo) { _, item in
@@ -513,120 +451,158 @@ private struct ImageEditor: View {
     .fileImporter(isPresented: $importing, allowedContentTypes: [.jpeg, .png, .webP]) { result in
       if case .success(let url) = result { upload(file: url) }
     }
+    #if DEBUG
+      .task { await devDo() }
+    #endif
   }
+
+  #if DEBUG
+    /// `-dev.metadataDo upload|remove|reset|menu`, without a finger: upload a
+    /// made-up picture to the first slot, remove its image, put the
+    /// provider's back, or open Upload's menu. Once.
+    private func devDo() async {
+      guard let what = UserDefaults.standard.string(forKey: "dev.metadataDo") else { return }
+      UserDefaults.standard.removeObject(forKey: "dev.metadataDo")
+      try? await Task.sleep(for: .seconds(2))
+      switch what {
+      case "upload":
+        let size = CGSize(width: 400, height: imageAspect(slot) < 1 ? 600 : 225)
+        let picture = UIGraphicsImageRenderer(size: size).image { context in
+          UIColor(red: 0.1, green: 0.55, blue: 0.6, alpha: 1).setFill()
+          context.fill(CGRect(origin: .zero, size: size))
+          UIColor.white.setFill()
+          context.fill(CGRect(x: size.width * 0.2, y: size.height * 0.4, width: size.width * 0.6, height: size.height * 0.2))
+        }
+        send(checkUpload(picture.jpegData(compressionQuality: 0.8)))
+      case "remove": change(.pick(nil))
+      case "reset": change(.reset)
+      case "menu": uploadMenu = true
+      default: break
+      }
+    }
+  #endif
 
   /// What the images are of: the title, a season of it, or an episode.
   private var name: String {
-    guard let season = target.season else { return title.name }
-    guard let episode = target.episode else { return Str.titleSeasonOf(title.name, seasonName(season)) }
-    return Str.titleSeasonOf(
-      title.name, season == 0 ? Str.mediaSpecial(episode) : Str.mediaEpisodeCode(season, episode))
+    switch ImageOwner(target) {
+    case .title: title.name
+    case .season(let season): Str.titleSeasonOf(title.name, seasonName(season))
+    case .episode(let season, let episode):
+      Str.titleSeasonOf(title.name, season == 0 ? Str.mediaSpecial(episode) : Str.mediaEpisodeCode(season, episode))
+    }
   }
 
-  /// Each slot with the image it has, which also picks the slot to change.
-  /// Scrolls sideways when they don't fit. A slot alone, and each at the
-  /// accessibility text sizes, takes the width instead, so what it says
-  /// wraps rather than runs off the screen.
+  /// Each slot with the image it has, which also picks the slot to change,
+  /// in a row that scrolls sideways when they don't fit, past the page's
+  /// edges. At the accessibility text sizes they stack, so what each says
+  /// wraps rather than runs off.
   @ViewBuilder private func slots(_ current: [ItemImage]?, providerName: String?) -> some View {
     let several = target.slots.count > 1
+    let stacked = dynamicType.isAccessibilitySize
     let cards = ForEach(target.slots, id: \.self) { each in
       SlotCard(
-        slot: each, current: current?.first { $0.slot == each }, toneKey: title.id,
-        providerName: providerName, selected: several && each == slot, wraps: !several || dynamicType.isAccessibilitySize,
+        slot: each, current: current?.first { $0.slot == each }, loading: current == nil, toneKey: title.id,
+        providerName: providerName, selected: several && each == slot, wraps: stacked,
         onSelect: several ? { withMotion(Motion.color) { slot = each } } : nil)
     }
-    if !several || dynamicType.isAccessibilitySize {
-      VStack(alignment: .leading, spacing: 8) { cards }.padding(.horizontal, Space.gutter)
+    if stacked || !several {
+      VStack(alignment: .leading, spacing: Space.s2) { cards }
     } else {
       ScrollView(.horizontal, showsIndicators: false) {
-        HStack(spacing: 8) { cards }
+        HStack(spacing: Space.s2) { cards }
       }
-      .contentMargins(.horizontal, Space.gutter, for: .scrollContent)
+      .contentMargins(.horizontal, gutter, for: .scrollContent)
       .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
+      .padding(.horizontal, -gutter)
     }
   }
 
+  /// Upload, remove, and back to the provider's, then the language switch:
+  /// one line on a tablet, as the web's panel; a phone's buttons fill the
+  /// width, upload and remove side by side and going back to the
+  /// provider's, whose name is long, on a line of its own, as Android's.
   @ViewBuilder private func buttons(_ inUse: ItemImage?, providerName: String?, lists: Bool) -> some View {
     let offered = ImageButtons(inUse: inUse, lists: lists)
-    VStack(alignment: .leading, spacing: 8) {
-      if isWide(window) {
-        HStack(spacing: 8) {
-          uploadButton(fill: false)
-          if offered.remove { removeButton(fill: false) }
-          if offered.reset { resetButton(providerName ?? "", fill: false) }
-        }
-      } else {
-        // A phone's buttons fill the width: upload and remove side by
-        // side, and going back to the provider's, whose name is long, on a
-        // line of its own.
-        HStack(spacing: 8) {
-          uploadButton(fill: true)
-          if offered.remove { removeButton(fill: true) }
-        }
-        if offered.reset { resetButton(providerName ?? "", fill: true) }
+    if isWide(window) && !dynamicType.isAccessibilitySize {
+      HStack(spacing: Space.s2) {
+        uploadButton(fill: false, size: .md)
+        if offered.remove { removeButton(fill: false, size: .md) }
+        if offered.reset { resetButton(providerName ?? "", fill: false, size: .md) }
+        Spacer(minLength: Space.s4)
+        if lists { languageSwitch }
       }
-      if lists {
-        Toggle(isOn: $allLanguages) {
-          Text(Str.titleImagesAllLanguages).textStyle(.sm).foregroundStyle(palette.foreground)
+      .disabled(busy != nil)
+    } else {
+      VStack(alignment: .leading, spacing: Space.s2) {
+        HStack(spacing: Space.s2) {
+          uploadButton(fill: true, size: .touch)
+          if offered.remove { removeButton(fill: true, size: .touch) }
         }
-        .toggleStyle(.legacy)
-        .frame(minHeight: TouchTarget)
+        if offered.reset { resetButton(providerName ?? "", fill: true, size: .touch) }
+        if lists { languageSwitch.frame(maxWidth: .infinity, alignment: .trailing) }
       }
+      .disabled(busy != nil)
     }
-    .disabled(busy != nil)
+  }
+
+  private var languageSwitch: some View {
+    HStack(spacing: Space.s3) {
+      Text(Str.titleImagesAllLanguages).textStyle(.sm).foregroundStyle(palette.mutedForeground)
+        .accessibilityHidden(true)
+      Switch(isOn: $allLanguages, label: Str.titleImagesAllLanguages)
+    }
+    .frame(minHeight: TouchTarget)
   }
 
   /// Upload offers both of iOS's pickers, where Android has one: the photo
   /// library, which needs no permission, and Files.
-  private func uploadButton(fill: Bool) -> some View {
-    Menu {
-      Button(Str.iosImagesFromPhotos) { picking = true }
-      Button(Str.iosImagesFromFiles) { importing = true }
-    } label: {
-      ButtonContent(Str.titleImagesUpload, icon: .imageUp, busy: busy?.isUpload == true, fill: fill)
-    }
-    .menuStyle(.button)
-    .buttonStyle(.legacy(.secondary, height: 40))
-  }
-
-  private func removeButton(fill: Bool) -> some View {
-    LegacyButton(.outline, height: 40) { change(.pick(nil)) } label: {
-      ButtonContent(Str.titleImagesRemove, icon: .trash, busy: busy == .pick(nil), fill: fill)
+  private func uploadButton(fill: Bool, size: ButtonSize) -> some View {
+    MatineeButton(
+      Str.titleImagesUpload, icon: .imageUp, look: .secondary, size: size, pending: busy?.isUpload == true,
+      fullWidth: fill
+    ) { uploadMenu = true }
+    .dropdownMenu(isPresented: $uploadMenu) {
+      MenuItem(Str.iosImagesFromPhotos) { picking = true }
+      MenuItem(Str.iosImagesFromFiles) { importing = true }
     }
   }
 
-  private func resetButton(_ providerName: String, fill: Bool) -> some View {
-    LegacyButton(.outline, height: 40) { change(.reset) } label: {
-      ButtonContent(Str.titleImagesReset(providerName), icon: .rotateCcw, busy: busy == .reset, fill: fill)
-    }
+  private func removeButton(fill: Bool, size: ButtonSize) -> some View {
+    MatineeButton(
+      Str.titleImagesRemove, icon: .trash, look: fill ? .outline : .ghost, size: size, pending: busy == .pick(nil),
+      fullWidth: fill
+    ) { change(.pick(nil)) }
+  }
+
+  private func resetButton(_ providerName: String, fill: Bool, size: ButtonSize) -> some View {
+    MatineeButton(
+      Str.titleImagesReset(providerName), icon: .rotateCcw, look: fill ? .outline : .ghost, size: size,
+      pending: busy == .reset, fullWidth: fill
+    ) { change(.reset) }
   }
 
   @ViewBuilder private func candidates(_ inUse: ItemImage?, providerName: String?, lists: Bool) -> some View {
     if provider.state.isLoading {
-      LoadingBox().padding(32)
+      Spinner(size: 24, tint: palette.accent).frame(maxWidth: .infinity).padding(.vertical, Space.s10)
     } else if !lists {
       EmptyNote(text: providerName.map(Str.titleImagesUnmatched) ?? Str.titleImagesNoProvider)
     } else {
       switch remote {
       case .loading:
-        LoadingBox().padding(32)
-      case .failed(let message, _):
-        VStack(alignment: .leading, spacing: 12) {
-          Text(message).textStyle(.sm).foregroundStyle(palette.destructive)
-          RetryButton { remoteAttempt += 1 }
-        }
-        .padding(.horizontal, Space.gutter)
+        Spinner(size: 24, tint: palette.accent).frame(maxWidth: .infinity).padding(.vertical, Space.s10)
+      case .failed(let message, let disconnected):
+        ErrorSection(Str.titleImagesRemoteFailed, message, disconnected: disconnected) { remoteAttempt += 1 }
       case .ready(let found) where found.isEmpty:
         EmptyNote(
           text: allLanguages
             ? Str.titleImagesEmpty(providerName ?? "") : Str.titleImagesEmptyLanguage(providerName ?? ""))
       case .ready(let found):
         let columns = imageColumns(
-          slot, width: gridWidth > 0 ? gridWidth : window.width - 2 * Space.gutter,
+          slot, width: gridWidth > 0 ? gridWidth : window.width - 2 * gutter,
           largeText: dynamicType.isAccessibilitySize)
         LazyVGrid(
-          columns: Array(repeating: GridItem(.flexible(), spacing: 12, alignment: .top), count: columns),
-          alignment: .leading, spacing: 16
+          columns: Array(repeating: GridItem(.flexible(), spacing: Space.s3, alignment: .top), count: columns),
+          alignment: .leading, spacing: Space.s4
         ) {
           ForEach(found, id: \.id) { image in
             Choice(
@@ -636,7 +612,6 @@ private struct ImageEditor: View {
             .disabled(busy != nil)
           }
         }
-        .padding(.horizontal, Space.gutter)
       }
     }
   }
@@ -661,12 +636,13 @@ private struct ImageEditor: View {
       remote = .ready(found)
     } catch {
       if Failure(error) == .cancelled || Task.isCancelled { return }
-      remote = .failed(describeFailure(error))
+      remote = .failed(describeFailure(error), disconnected: Failure(error).isDisconnect)
     }
   }
 
   private func showError(_ message: String?) {
-    snackbar.show([Str.titleImagesError, message].compactMap { $0?.isEmpty == false ? $0 : nil }.joined(separator: ": "))
+    snackbar.post(
+      ToastMessage(Str.titleImagesError, description: message?.isEmpty == false ? message : nil, kind: .error))
   }
 
   private func change(_ action: Change) {
@@ -732,50 +708,7 @@ private struct ImageEditor: View {
   }
 }
 
-/// A button's icon and words, filling its width with `fill`.
-private struct ButtonContent: View {
-  let text: String
-  let icon: Lucide
-  var busy = false
-  let fill: Bool
-
-  init(_ text: String, icon: Lucide, busy: Bool = false, fill: Bool) {
-    self.text = text
-    self.icon = icon
-    self.busy = busy
-    self.fill = fill
-  }
-
-  var body: some View {
-    HStack(spacing: 8) {
-      Busy(busy, icon: icon)
-      Text(text)
-    }
-    .frame(maxWidth: fill ? .infinity : nil)
-  }
-}
-
-/// A button's icon, or its spinner while what it does is out.
-private struct Busy: View {
-  let busy: Bool
-  let icon: Lucide
-  @Environment(\.palette) private var palette
-
-  init(_ busy: Bool, icon: Lucide) {
-    self.busy = busy
-    self.icon = icon
-  }
-
-  var body: some View {
-    if busy {
-      ProgressView().controlSize(.small).tint(palette.foreground).frame(width: 16, height: 16)
-    } else {
-      LucideIcon(icon, size: 16)
-    }
-  }
-}
-
-/// Why there's nothing to pick, in the middle of the page.
+/// Why there's nothing to pick, in the middle of where the images go.
 private struct EmptyNote: View {
   let text: String
   @Environment(\.palette) private var palette
@@ -784,8 +717,7 @@ private struct EmptyNote: View {
     Text(text).textStyle(.sm).foregroundStyle(palette.mutedForeground)
       .multilineTextAlignment(.center)
       .frame(maxWidth: .infinity)
-      .padding(.vertical, 32)
-      .padding(.horizontal, Space.gutter)
+      .padding(.vertical, Space.s10)
   }
 }
 
@@ -811,23 +743,27 @@ private func stateText(_ state: ImageState) -> String {
   }
 }
 
-/// A slot's image: a logo whole and clear of the edges, the rest filling the frame.
+/// A slot's image over the title's tone: a logo whole and clear of the
+/// edges, the rest filling the frame.
 private struct SlotImage: View {
   let slot: String
   let source: ImageSource?
   let inset: CGFloat
+  let toneKey: String
 
   var body: some View {
     let logo = slot == ImageSlot.logo
-    Picture(source, contentMode: logo ? .fit : .fill).padding(logo ? inset : 0)
+    Tone(toneKey).overlay { Picture(source, contentMode: logo ? .fit : .fill).padding(logo ? inset : 0) }
   }
 }
 
 /// A slot's name and the image it has, all at one height whatever the
-/// image's shape. Picks the slot when there are several.
+/// image's shape, as the web's slot card: `rounded-lg border p-1.5 pr-4`,
+/// the one picked on the accent's tint. Picks the slot when there are several.
 private struct SlotCard: View {
   let slot: String
   let current: ItemImage?
+  let loading: Bool
   let toneKey: String
   let providerName: String?
   let selected: Bool
@@ -839,28 +775,33 @@ private struct SlotCard: View {
   @ScaledMetric(relativeTo: .body) private var height: CGFloat = 56
 
   var body: some View {
-    let state = current.map { stateText(ImageState(slot: slot, current: $0, providerName: providerName)) }
-    let card = HStack(spacing: 12) {
-      Tone(toneKey)
-        .overlay { SlotImage(slot: slot, source: api?.art(current?.image, size: .thumb), inset: 4) }
+    let shape = RoundedRectangle.kit(Radius.lg)
+    let card = HStack(spacing: Space.s3) {
+      SlotImage(slot: slot, source: api?.art(current?.image, size: .thumb), inset: 4, toneKey: toneKey)
         .frame(width: height * imageAspect(slot), height: height)
-        .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+        .clipShape(RoundedRectangle.kit(Radius.md))
+        .overlay { RoundedRectangle.kit(Radius.md).strokeBorder(palette.border) }
       VStack(alignment: .leading, spacing: 0) {
         Text(slotName(slot)).textStyle(.sm, weight: .medium).foregroundStyle(palette.foreground)
-        Text(state ?? " ").textStyle(.px13).foregroundStyle(palette.mutedForeground)
+        if let current {
+          Text(stateText(ImageState(slot: slot, current: current, providerName: providerName)))
+            .textStyle(.xs).foregroundStyle(palette.mutedForeground)
+        } else if loading {
+          Skeleton(radius: Radius.sm).frame(width: 72, height: 10).padding(.vertical, 3)
+        }
       }
       .lineLimit(wraps ? nil : 1)
       .fixedSize(horizontal: !wraps, vertical: false)
       .frame(maxWidth: wraps ? .infinity : nil, alignment: .leading)
     }
-    .padding(6)
-    .padding(.trailing, 10)
-    .background(selected ? palette.accent.opacity(0.1) : .clear, in: RoundedRectangle.kit(Radius.lg))
-    .overlay { RoundedRectangle.kit(Radius.lg).strokeBorder(selected ? palette.accent : palette.border) }
-    .contentShape(RoundedRectangle.kit(Radius.lg))
+    .padding(Space.s1_5)
+    .padding(.trailing, Space.s2_5)
+    .background(selected ? palette.accentSoft : .clear, in: shape)
+    .overlay { shape.strokeBorder(selected ? palette.accent : palette.hairline) }
+    .contentShape(shape)
     if let onSelect {
-      Button(action: onSelect) { card }
-        .buttonStyle(LegacyRoundPress())
+      Pressable(shape: shape, action: onSelect) { card }
+        .accessibilityElement(children: .combine)
         .accessibilityAddTraits(selected ? .isSelected : [])
     } else {
       card.accessibilityElement(children: .combine)
@@ -869,7 +810,7 @@ private struct SlotCard: View {
 }
 
 /// One of the provider's images: the picture, a tick on the one in use,
-/// and its size and language.
+/// and its size and language under it.
 private struct Choice: View {
   let image: RemoteImage
   let slot: String
@@ -882,43 +823,50 @@ private struct Choice: View {
 
   var body: some View {
     let lines = captionLines(ImageCaption(image, slot: slot))
-    Button(action: onPick) {
-      VStack(alignment: .leading, spacing: 6) {
-        Tone(toneKey)
+    let shape = RoundedRectangle.kit(Radius.md)
+    Pressable(shape: shape, action: onPick) {
+      VStack(alignment: .leading, spacing: Space.s1_5) {
+        Color.clear
           .aspectRatio(imageAspect(slot), contentMode: .fit)
           .frame(maxWidth: .infinity)
-          .overlay { SlotImage(slot: slot, source: api?.art(image.preview), inset: 8) }
+          .overlay { SlotImage(slot: slot, source: api?.art(image.preview), inset: 8, toneKey: toneKey) }
           .overlay {
             if pending {
               Color.black.opacity(0.5)
-              ProgressView().tint(.white)
+              Spinner(size: 20, tint: .white)
             }
           }
-          .clipShape(RoundedRectangle.kit(Radius.lg))
-          .overlay { RoundedRectangle.kit(Radius.lg).strokeBorder(inUse ? palette.accent : palette.border, lineWidth: inUse ? 2 : 1) }
+          .clipShape(shape)
+          .overlay { shape.strokeBorder(inUse ? palette.accent : palette.border, lineWidth: inUse ? 2 : 1) }
           .overlay(alignment: .topTrailing) {
             if inUse {
               LucideIcon(.check, size: 14, tint: palette.accentForeground, scales: false)
                 .frame(width: 20, height: 20)
                 .background(palette.accent, in: Circle())
-                .padding(6)
+                .padding(Space.s1_5)
             }
           }
-        // A line each, as three posters to a row leave no room for both on one.
-        VStack(alignment: .leading, spacing: 0) {
-          ForEach(lines, id: \.self) { line in
-            Text(line).textStyle(.px13).foregroundStyle(palette.mutedForeground).lineLimit(1)
+        // On one line where it fits, as the web's; a line each where three
+        // posters to a row leave no room for both.
+        if !lines.isEmpty {
+          ViewThatFits(in: .horizontal) {
+            Text(lines.joined(separator: " · ")).lineLimit(1).fixedSize()
+            VStack(alignment: .leading, spacing: 0) {
+              ForEach(lines, id: \.self) { Text($0).lineLimit(1) }
+            }
           }
+          .textStyle(.xs)
+          .foregroundStyle(palette.mutedForeground)
+          .monospacedDigit()
         }
       }
       .contentShape(Rectangle())
     }
-    .buttonStyle(LegacyRoundPress())
     .accessibilityElement(children: .ignore)
     .accessibilityLabel(lines.joined(separator: ", "))
     .accessibilityValue(inUse ? Str.titleImagesInUse : "")
     .accessibilityHint(inUse ? "" : Str.titleImagesUse)
-    .accessibilityAddTraits(inUse ? .isSelected : [])
+    .accessibilityAddTraits(inUse ? [.isSelected, .isButton] : .isButton)
   }
 
   /// "1000 × 1500" and "English", from what the provider says.
