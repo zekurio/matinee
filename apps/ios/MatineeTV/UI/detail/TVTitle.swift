@@ -70,22 +70,26 @@ private struct TVTitlePage: View {
 
   private func marks(_ next: MediaItem?) -> DetailMarks {
     let summary = title.summary
+    // Typed and outside the call: Swift 6.3 can't work out the closures inside it.
+    let onWatched: ((_ watched: Bool, _ watchedAt: String?) async throws -> Void)? =
+      title.itemCount == 0
+      ? nil
+      : { [api, viewer] watched, at in
+        guard let api, let viewer else { return }
+        try await viewer.setWatched(api, summary, watched, watchedAt: at)
+      }
+    let onFavorite: (() async throws -> Void)? = { [api, viewer] in
+      guard let api, let viewer else { return }
+      try await viewer.setFavorite(api, summary, !viewer.isFavorite(summary))
+    }
     return DetailMarks(
       play: next, playDetail: playDetail(next, showsEpisode: title.isShow),
       restart: !title.isShow && isResuming(next),
       trailer: preferredTrailer(title.trailers, language: Locale.app.identifier),
       name: title.name, watched: viewer?.isWatched(summary) ?? title.watched,
-      onWatched: title.itemCount == 0
-        ? nil
-        : { [api, viewer] watched, at in
-          guard let api, let viewer else { return }
-          try await viewer.setWatched(api, summary, watched, watchedAt: at)
-        },
+      onWatched: onWatched,
       favorite: viewer?.isFavorite(summary) ?? title.favorite,
-      onFavorite: { [api, viewer] in
-        guard let api, let viewer else { return }
-        try await viewer.setFavorite(api, summary, !viewer.isFavorite(summary))
-      })
+      onFavorite: onFavorite)
   }
 
   /// More: a movie's files, each to play by itself, when it has several,

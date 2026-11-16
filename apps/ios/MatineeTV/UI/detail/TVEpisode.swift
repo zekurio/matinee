@@ -59,18 +59,21 @@ private struct TVEpisodePage: View {
   private var marks: DetailMarks {
     let label = itemLabel(item)
     let watched = viewer?.isWatched(item) ?? (item.progress?.completed ?? false)
+    // Typed and outside the call: Swift 6.3 can't work out the closures inside it.
+    let onWatched: ((_ watched: Bool, _ watchedAt: String?) async throws -> Void)? = { [api, viewer, item] watched, at in
+      guard let api, let viewer else { return }
+      try await viewer.setWatched(api, item, watched, watchedAt: at)
+    }
+    let onFavorite: (() async throws -> Void)? = { [api, viewer, item] in
+      guard let api, let viewer else { return }
+      try await viewer.setFavorite(api, item, !viewer.isFavorite(item))
+    }
     return DetailMarks(
       play: item, playDetail: playDetail(item, showsEpisode: false), restart: isResuming(item) && !watched,
       name: label.title, watched: watched,
-      onWatched: { [api, viewer, item] watched, at in
-        guard let api, let viewer else { return }
-        try await viewer.setWatched(api, item, watched, watchedAt: at)
-      },
+      onWatched: onWatched,
       favorite: viewer?.isFavorite(item) ?? item.favorite,
-      onFavorite: { [api, viewer, item] in
-        guard let api, let viewer else { return }
-        try await viewer.setFavorite(api, item, !viewer.isFavorite(item))
-      })
+      onFavorite: onFavorite)
   }
 
   /// Up to the season's page, then the show's, each the one on the stack if it's there.

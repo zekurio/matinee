@@ -114,22 +114,26 @@ private struct TVSeasonPage: View {
     let watched =
       list.map { seasonWatched($0, isWatched: isWatched) }
       ?? (season.itemCount > 0 && season.watchedCount >= season.itemCount)
+    // Typed and outside the call: Swift 6.3 can't work out the closures inside it.
+    let onWatched: ((_ watched: Bool, _ watchedAt: String?) async throws -> Void)? = { [api, viewer] watched, at in
+      guard let api, let viewer else { return }
+      try await setSeasonWatched(api, viewer, summary, season: number, watched: watched, watchedAt: at)
+    }
+    // The files without a season number aren't a season to mark.
+    var onFavorite: (() async throws -> Void)? = nil
+    if let number {
+      onFavorite = { [api, viewer] in
+        guard let api, let viewer else { return }
+        let on = viewer.isSeasonFavorite(summary, number: number, fallback: season.favorite)
+        try await viewer.setSeasonFavorite(api, summary, number: number, favorite: !on)
+      }
+    }
     return DetailMarks(
       play: up, playDetail: playDetail(up, showsEpisode: true),
       name: Str.titleSeasonOf(title.name, seasonName(number)), watched: watched,
-      onWatched: { [api, viewer] watched, at in
-        guard let api, let viewer else { return }
-        try await setSeasonWatched(api, viewer, summary, season: number, watched: watched, watchedAt: at)
-      },
-      // The files without a season number aren't a season to mark.
+      onWatched: onWatched,
       favorite: number.map { viewer?.isSeasonFavorite(summary, number: $0, fallback: season.favorite) ?? season.favorite },
-      onFavorite: number.map { number in
-        { [api, viewer] in
-          guard let api, let viewer else { return }
-          let on = viewer.isSeasonFavorite(summary, number: number, fallback: season.favorite)
-          try await viewer.setSeasonFavorite(api, summary, number: number, favorite: !on)
-        }
-      })
+      onFavorite: onFavorite)
   }
 }
 
