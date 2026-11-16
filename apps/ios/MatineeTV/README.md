@@ -7,29 +7,28 @@ TV's screens (`apps/android/.../ui/tv/`, and `apps/android/README.md`,
 (`Packages/MatineeKit/README.md`, "TV"), over the same MatineeCore as the
 iPhone app. Read the kit's TV section first; this builds on it.
 
-Built so far: the target, the shell (drawer, clock, navigation, Menu,
-toasts, the actions panel), everything before sign-in, and Home. Every
-other page is a placeholder that names itself ("What's left").
+It has the shell (drawer, clock, navigation, Menu, toasts, the actions
+panel), everything before sign-in, and every page Android TV has; "What's
+left" lists what remains.
 
 ## What's where
 
-| Path                      | What it is                                                                                 |
-| ------------------------- | ------------------------------------------------------------------------------------------ |
-| `MatineeTVApp.swift`      | Entry point: the session, the theme, the toasts; `-gallery YES` opens the kit's TV gallery |
-| `TVDevLaunch.swift`       | Debug-only `-dev.server`, `-dev.token`, `-dev.route`                                       |
-| `Info.plist`              | Written by hand (not by XcodeGen), with `UIUserInterfaceStyle` Automatic                   |
-| `Resources/`              | Info.plist words in English and German; `TVAppIcon.xcassets` from `scripts/tvicon.sh`      |
-| `UI/TVRoot.swift`         | `TvRoot.kt`: connect, connecting, unreachable, sign-in, or the app; the one toast host     |
-| `UI/TVShell.swift`        | `TvApp.kt`: the signed-in app, drawer, clock, pages, player cover, `\.user`                |
-| `UI/TVNav.swift`          | The routes, `TVNav`, the `Navigator` for a TV, `TVRouteScreen`, `TVRoutePath`              |
-| `UI/TVPlaceholders.swift` | The pages not built yet, one placeholder type each                                         |
-| `UI/TVActions.swift`      | `ActionsPanel.kt`: a card's actions panel, the watched question, Play/Pause                |
-| `UI/TVPageFocus.swift`    | `.tvPageFocus`: first focus on every page                                                  |
-| `UI/TVArt.swift`          | `TVLogo` and `TVAvatar`, over the shared `Picture`                                         |
-| `UI/auth/`                | `ui/tv/auth/`: the frame, connect and discovery, address, sign-in by code, servers panel   |
-| `UI/home/`                | `ui/tv/home/`: Home, its rows, and what the header says                                    |
-| `UI/detail/`              | `ui/tv/detail/`: the title, season, episode, and person pages, their header and rows       |
-| `Remote/remote.sh`        | Drives the app with the Siri Remote and takes screenshots                                  |
+| Path                   | What it is                                                                                 |
+| ---------------------- | ------------------------------------------------------------------------------------------ |
+| `MatineeTVApp.swift`   | Entry point: the session, the theme, the toasts; `-gallery YES` opens the kit's TV gallery |
+| `TVDevLaunch.swift`    | Debug-only `-dev.server`, `-dev.token`, `-dev.route`                                       |
+| `Info.plist`           | Written by hand (not by XcodeGen), with `UIUserInterfaceStyle` Automatic                   |
+| `Resources/`           | Info.plist words in English and German; `TVAppIcon.xcassets` from `scripts/tvicon.sh`      |
+| `UI/TVRoot.swift`      | `TvRoot.kt`: connect, connecting, unreachable, sign-in, or the app; the one toast host     |
+| `UI/TVShell.swift`     | `TvApp.kt`: the signed-in app, drawer, clock, pages, player cover, `\.user`                |
+| `UI/TVNav.swift`       | The routes, `TVNav`, the `Navigator` for a TV, `TVRouteScreen`, `TVRoutePath`              |
+| `UI/TVActions.swift`   | `ActionsPanel.kt`: a card's actions panel, the watched question, Play/Pause                |
+| `UI/TVPageFocus.swift` | `.tvPageFocus`: first focus on every page                                                  |
+| `UI/TVArt.swift`       | `TVLogo` and `TVAvatar`, over the shared `Picture`                                         |
+| `UI/auth/`             | `ui/tv/auth/`: the frame, connect and discovery, address, sign-in by code, servers panel   |
+| `UI/home/`             | `ui/tv/home/`: Home, its rows, and what the header says                                    |
+| `UI/detail/`           | `ui/tv/detail/`: the title, season, episode, and person pages, their header and rows       |
+| `Remote/remote.sh`     | Drives the app with the Siri Remote and takes screenshots                                  |
 
 ## What it shares with the iPhone app
 
@@ -117,8 +116,7 @@ struct TVKindScreen: View {
 
 1. **One file per Android file**, in the folder Android uses (`UI/detail/`,
    `UI/browse/`, ...), named as the type `TVRouteScreen` already calls.
-   Start it with a comment naming the Kotlin it ports, then delete the
-   page's placeholder from `TVPlaceholders.swift`.
+   Start it with a comment naming the Kotlin it ports.
 2. **Its layout** runs from the screen's edges: `.ignoresSafeArea()` on
    the root, content from `TVPage.start` (clear of the drawer's rail) to
    `TVPage.end`, rows running off the right edge. A page title is
@@ -268,24 +266,15 @@ TV app handles by opening `TVRoutePath`). None of it exists yet.
 
 ## What's left
 
-The placeholders, by area. Each area owns its folder and deletes only its
-own section of `TVPlaceholders.swift`, so the five can be built at once
-without editing the same lines:
+Every route has its page: Home, the detail pages (`UI/detail/`), the grids,
+favourites, and search (`UI/browse/`), the profile (`UI/profile/`), Settings
+(`UI/settings/`), and the player (`UI/player/`). Still to do:
 
-| Area     | Pages (`TVRouteScreen` types)                                                           | Android                                         | Folder         |
-| -------- | --------------------------------------------------------------------------------------- | ----------------------------------------------- | -------------- |
-| Detail   | `TVTitleScreen`, `TVSeasonScreen`, `TVEpisodeScreen`, `TVPersonScreen`                  | `ui/tv/detail/` (+ `DetailRows`, `DetailParts`) | `UI/detail/`   |
-| Browse   | `TVKindScreen` (Movies, Shows), `TVBrowseScreen`, `TVFavoritesScreen`, `TVSearchScreen` | `ui/tv/browse/`                                 | `UI/browse/`   |
-| Profile  | `TVProfileScreen`, `TVRecentScreen`                                                     | `ui/tv/profile/`                                | `UI/profile/`  |
-| Settings | `TVSettingsScreen(page:)`, sign out, servers, about                                     | `ui/tv/settings/`                               | `UI/settings/` |
-| Player   | `TVPlayerScreen(request:close:)` over MatineeCore's player and MatineeMPV               | `ui/player/tv/`                                 | `UI/player/`   |
-
-Kit pieces the areas will want that don't exist yet: the player's TV
-controls (Player). Detail added `TVEpisodeRow`, a season's list.
-Detail and Browse reuse `TVActions`; Settings reuses `TVServers.swift`'s
-panel for its server list. A shared component two areas need goes in the
-kit (pure presentation) or in `UI/` beside `TVArt.swift` (needs Nuke or
-MatineeCore), added by whichever area needs it first.
+- Top Shelf content (below).
+- The player copies four pieces of the iPhone's player, each marked
+  `TODO(share)` with the split that would let both targets share them.
+- Nothing has run on an Apple TV: remote swipes, display matching, the
+  screen saver, and local discovery have only been built, not tried.
 
 ## Off limits
 

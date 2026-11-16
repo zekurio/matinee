@@ -148,19 +148,7 @@ private func speedLabel(_ rate: Float) -> String {
     : Str.playerSpeedRate(Double(rate).formatted(.number.precision(.fractionLength(0...2)).locale(.app)))
 }
 
-/// "German" for `de`, in the app's language.
-private func languageName(_ tag: String) -> String {
-  let locale = Locale.app
-  guard let name = locale.localizedString(forIdentifier: tag), !name.isEmpty else { return tag }
-  return name.prefix(1).uppercased(with: locale) + name.dropFirst()
-}
-
-/// "1080p, 20 Mbps" for an encode, the height as plain digits rather than "1,080p".
-private func qualityLabel(_ quality: PlaybackQualityPreset) -> String {
-  let formatted = Str.playbackQualityPreset(quality.height, Str.playerBitrateMbps(quality.bitrate / 1_000_000))
-  return formatted.replacingOccurrences(
-    of: quality.height.formatted(.number.locale(.app)), with: String(quality.height))
-}
+// `languageName` and `qualityLabel` are Settings' (settings/TVSettingsData.swift).
 
 /// A track's language, plus its own title when that adds something.
 private func trackLabel(language: String?, title: String?, unnamed: String) -> String {

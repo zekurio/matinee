@@ -90,16 +90,16 @@ import Testing
     #expect(loaded.subtitleColor == .yellow && loaded.subtitleBackground == .black)
     #expect(loaded.subtitleEdge == .outline)
     #expect(!loaded.swipeLevels && loaded.rememberBrightness && loaded.brightness == 0.4)
-    #expect(!loaded.swipeSeek && !loaded.holdSpeed)
-    #expect(!loaded.skipButtons && !loaded.pictureInPictureButton && !loaded.lockButton)
-    #expect(!loaded.audioButton && !loaded.subtitlesButton)
+    #expect(!loaded.swipeSeek && !loaded.holdSpeed && !loaded.skipButtons)
+    #expect(!loaded.pictureInPictureButton && !loaded.lockButton && !loaded.audioButton)
+    #expect(!loaded.subtitlesButton)
     #expect(
       Set(try #require(defaults.dictionary(forKey: "player")).keys) == [
         "engine", "quality", "video_codec", "audio_codec", "convert_audio", "autoplay_next", "fill_screen",
         "picture_in_picture", "subtitle_system_style", "subtitle_scale", "subtitle_color",
-        "subtitle_background", "subtitle_edge", "swipe_levels", "remember_brightness", "brightness_level",
-        "swipe_seek", "hold_speed", "button_skip", "button_picture_in_picture", "button_lock", "button_audio",
-        "button_subtitles",
+        "subtitle_background", "subtitle_edge", "swipe_levels", "remember_brightness",
+        "brightness_level", "swipe_seek", "hold_speed", "button_skip", "button_picture_in_picture",
+        "button_lock", "button_audio", "button_subtitles",
       ])
   }
 

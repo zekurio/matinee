@@ -8,7 +8,6 @@ public struct ContractApi: Sendable {
     public var catalog: CatalogApi { .init(transport: transport) }
     public var discover: DiscoverApi { .init(transport: transport) }
     public var requests: RequestsApi { .init(transport: transport) }
-    public var notifications: NotificationsApi { .init(transport: transport) }
     public var auth: AuthApi { .init(transport: transport) }
     public var account: AccountApi { .init(transport: transport) }
     public var libraries: LibrariesApi { .init(transport: transport) }
@@ -61,8 +60,8 @@ public struct DiscoverApi: Sendable {
     public func rails() async throws -> DiscoverRails {
         return try await transport.call(method: "GET", path: ["discover", "rails"], query: [], body: nil)
     }
-    public func page(rail: DiscoverRail, page: Int? = nil) async throws -> CatalogPage {
-        return try await transport.call(method: "POST", path: ["discover", "page"], query: [], body: try transport.json(DiscoverPageInput(rail: rail, page: page)))
+    public func row(id: String, seed: RecommendationSeed? = nil) async throws -> DiscoverRow {
+        return try await transport.call(method: "POST", path: ["discover", "row"], query: [], body: try transport.json(DiscoverRowInput(id: id, seed: seed)))
     }
     public func browseOptions(kind: String) async throws -> CatalogBrowseOptions {
         return try await transport.call(method: "GET", path: ["discover", "browse", "options"], query: [("kind", wireText(kind))], body: nil)
@@ -86,36 +85,8 @@ public struct RequestsApi: Sendable {
     public func cancel(requestId: RequestId) async throws {
         try await transport.send(method: "POST", path: ["requests", "cancel"], query: [], body: try transport.json(requestId))
     }
-    public func follow(requestId: RequestId) async throws {
-        try await transport.send(method: "POST", path: ["requests", "follow"], query: [], body: try transport.json(requestId))
-    }
-    public func unfollow(requestId: RequestId) async throws {
-        try await transport.send(method: "POST", path: ["requests", "unfollow"], query: [], body: try transport.json(requestId))
-    }
     public func mine(cursor: String? = nil, limit: Int? = nil, filter: String? = nil) async throws -> RequestPage {
         return try await transport.call(method: "GET", path: ["requests", "mine"], query: [("cursor", wireText(cursor)), ("limit", wireText(limit)), ("filter", wireText(filter))], body: nil)
-    }
-}
-public struct NotificationsApi: Sendable {
-    public let transport: ApiTransport
-    public init(transport: ApiTransport) { self.transport = transport }
-    public func list(cursor: String? = nil, limit: Int? = nil) async throws -> NotificationPage {
-        return try await transport.call(method: "GET", path: ["notifications"], query: [("cursor", wireText(cursor)), ("limit", wireText(limit))], body: nil)
-    }
-    public func markRead(ids: [String], all: Bool? = nil) async throws {
-        try await transport.send(method: "POST", path: ["notifications", "read"], query: [], body: try transport.json(NotificationsMarkReadInput(ids: ids, all: all)))
-    }
-    public func unreadCount() async throws -> AsyncThrowingStream<NotificationsUnreadCountEvent, any Error> {
-        return transport.events(method: "GET", path: ["notifications", "unread"], query: [], body: nil)
-    }
-    public func pushPublicKey() async throws -> NotificationsPushPublicKeyOutput {
-        return try await transport.call(method: "GET", path: ["notifications", "push-key"], query: [], body: nil)
-    }
-    public func subscribe(pushSubscriptionInput: PushSubscriptionInput) async throws {
-        try await transport.send(method: "POST", path: ["notifications", "subscribe"], query: [], body: try transport.json(pushSubscriptionInput))
-    }
-    public func unsubscribe(endpoint: String) async throws {
-        try await transport.send(method: "POST", path: ["notifications", "unsubscribe"], query: [], body: try transport.json(NotificationsUnsubscribeInput(endpoint: endpoint)))
     }
 }
 public struct AuthApi: Sendable {

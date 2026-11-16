@@ -165,9 +165,7 @@ enum TVDrawerPage: String, CaseIterable {
   }
 }
 
-/// The page for `route`. Each is named by the type it has, so building a
-/// page never edits this: the type is a placeholder (TVPlaceholders.swift)
-/// until its own file replaces it.
+/// The page for `route`.
 struct TVRouteScreen: View {
   let route: TVRoute
 

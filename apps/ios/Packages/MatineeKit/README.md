@@ -55,9 +55,9 @@ screens follow `Matinee/UI/README.md`, which builds on this one.
 `MatineeTheme(accentLight:accentDark:)` takes the server's `themeAccents`
 (`#rrggbb`) and fits them to Matinee's palettes for contrast;
 `MatineeTheme.matinee` is Matinee's own. `ThemeMode` is system, light, or
-dark. `.forceDarkTheme()` is for the player. `\.matineePalette` is the
-palette under a second name, for a module that still has an environment
-value of its own called `palette`, as the app's old theme does.
+dark. `.forceDarkTheme()` is for the player. `.matineePalette(theme)` puts
+another theme on one part of the screen, in the root's light or dark, as the
+sign-in page of a server shows that server's accent.
 
 Every page in a `NavigationStack` gets `.topBar("Title")`, or
 `.hidesSystemNavigationBar()` when it draws its own top (Back floating over

@@ -11,27 +11,23 @@
 
 ---
 
-Point Matinee at the folders your videos already live in. It groups the
-files into movies and shows, fetches posters, cast, and episode details from
-TMDB or TheTVDB, and picks up new files as Sonarr, Radarr, or Bazarr drop
-them in. People sign in with a passkey or your OIDC provider and watch in
-the browser, the Android app, or the iOS app. A file plays as it is when the device can
-decode it. When it can't, the server copies the video and converts only
-the audio, or transcodes on your GPU with jellyfin-ffmpeg, HDR tone mapping
-included.
+Matinee reads the folders your videos are already in, groups them into
+movies and shows, and pulls metadata from TMDB or TheTVDB. New files from
+Sonarr, Radarr, or Bazarr show up on their own. People sign in with a
+passkey or OIDC and watch in the browser or the Android app. Files play
+as they are when the device can decode them. Otherwise the server copies
+the video and converts the audio, or transcodes on the GPU with
+jellyfin-ffmpeg.
 
 It's an early MVP. Expect breaking changes until the first release.
 
-| Part                    | What it is                                                                       |
-| ----------------------- | -------------------------------------------------------------------------------- |
-| [Server](apps/server)   | Hono and oRPC, Postgres, the library scanner, streaming and transcoding, sign-in |
-| [Web](apps/web)         | The React client the server serves                                               |
-| [Android](apps/android) | A native app for phones, tablets, and Android TV, with offline downloads         |
-| [iOS](apps/ios)         | A native SwiftUI app for iPhone and iPad, with offline downloads                 |
-| [Brand](brand)          | The logo, the wordmark, the app icons, and the script that renders them          |
-
-Each one's README goes into detail. The server's covers configuration,
-access groups, transcoding, and the API.
+| Part                    | What it is                                                |
+| ----------------------- | --------------------------------------------------------- |
+| [Server](apps/server)   | Hono and oRPC on Postgres. Scanning, streaming, sign-in   |
+| [Web](apps/web)         | The React client, served by the server                    |
+| [Android](apps/android) | Phones, tablets, and Android TV, with offline downloads   |
+| [iOS](apps/ios)         | iPhone and iPad, in SwiftUI, with offline downloads       |
+| [Brand](brand)          | Logo, wordmark, app icons, and the scripts that draw them |
 
 ## Run it on NixOS
 
@@ -124,23 +120,12 @@ the first time. Migrations run when the server starts. On localhost,
 `/setup` doesn't ask for a token. `matinee-postgres stop` stops the
 database.
 
-Run `pnpm verify` before you commit. It checks formatting, runs oxlint and
-the type checker, and fails if the Android or iOS API client is out of date.
-[`AGENTS.md`](AGENTS.md) has the repository's conventions, for people and
-coding agents alike. The Android app builds in its own shell, see
-[its README](apps/android/README.md#build). The iOS app needs a Mac and
-Xcode, see [its README](apps/ios/README.md#build).
+Without Nix, install Node 24 and pnpm 11, copy `.env.example` to `.env`,
+and point `DATABASE_URL` at your own Postgres.
 
-| Command                          | What it does                                                         |
-| -------------------------------- | -------------------------------------------------------------------- |
-| `pnpm db:generate --name <what>` | Writes a migration for a change in `packages/db/src/schema`          |
-| `pnpm api:android`               | Generates the Android API client after a contract change             |
-| `pnpm api:ios`                   | Generates the iOS API client after a contract change                 |
-| `nix build`                      | Builds the server package                                            |
-| `nix flake check`                | Builds it and runs the NixOS module's tests                          |
-| `nix develop .#android`          | Enters a shell with a JDK and the Android SDK                        |
-| `just`                           | Lists the shortcuts, including `just android ...` and `just ios ...` |
-| `just tag <version>`             | Releases that version, see [Release](#release)                       |
+Run `pnpm verify` before you commit. [`AGENTS.md`](AGENTS.md) has the
+conventions, and [`CONTRIBUTING.md`](CONTRIBUTING.md) covers issues and
+pull requests.
 
 | Command                          | What it does                              |
 | -------------------------------- | ----------------------------------------- |
@@ -178,9 +163,7 @@ it.
 
 ## Release
 
-The server, the web app, and both native apps share one version, the
-`version` in the root `package.json`. The Nix package, Android build, and
-iOS project generator read it from there. A release is a `v<version>` tag on `main`:
+Everything shares the `version` in the root `package.json`. To release:
 
 ```sh
 just tag 0.2.0
@@ -212,26 +195,9 @@ keytool -genkeypair -v -keystore matinee.jks -alias matinee \
   -keyalg RSA -keysize 4096 -validity 10000
 ```
 
-Give the `release` environment a required reviewer to approve each
-release's signing by hand.
-
-## Repository layout
-
-```
-apps/
-  server/      Hono server: oRPC and REST, auth, library scanner, streaming
-  web/         React web client (Vite, TanStack Router and Query)
-  android/     Android app (Kotlin, Compose, Media3), a Gradle project
-  ios/         iPhone and iPad app, SwiftUI with a shared Swift package
-packages/
-  contracts/   The oRPC contract and its schemas, shared by the server and clients
-  client/      The typed client every TypeScript app uses
-  db/          Drizzle schema and migrations
-  ui/          shadcn components on Base UI, and the theme
-brand/         Logo, wordmark, app icons
-tools/         The lint rules and the release scripts
-nix/           The package, the NixOS module and its tests, the dev shells
-```
+Keep an offline copy of the keystore. Android only installs updates signed
+with the same key, so losing it means everyone reinstalls and loses their
+downloads.
 
 ## License
 

@@ -158,19 +158,9 @@ struct Hero<Top: View>: View {
 
   /// The web's previous and next, beside the dots on a wide banner.
   private func arrows(count: Int) -> some View {
-    let slide = HeroPaging.slide(current, count: count)
-    // TODO(strings): media_hero_previous and media_hero_next, the web's
-    // media.hero.previous and media.hero.next ("Previous slide", "Next slide"),
-    // which Android doesn't have yet; meanwhile they name the slide they show.
-    return HStack(spacing: Space.s1) {
-      RoundIconButton(
-        .chevronLeft, label: Str.mediaHeroShowSlide(HeroPaging.slide(slide - 1, count: count) + 1), look: .ghost,
-        size: TouchTarget
-      ) { _ = step(-1) }
-      RoundIconButton(
-        .chevronRight, label: Str.mediaHeroShowSlide(HeroPaging.slide(slide + 1, count: count) + 1), look: .ghost,
-        size: TouchTarget
-      ) { _ = step(1) }
+    HStack(spacing: Space.s1) {
+      RoundIconButton(.chevronLeft, label: Str.iosMediaHeroPrevious, look: .ghost, size: TouchTarget) { _ = step(-1) }
+      RoundIconButton(.chevronRight, label: Str.iosMediaHeroNext, look: .ghost, size: TouchTarget) { _ = step(1) }
     }
   }
 }

@@ -52,23 +52,6 @@
         }
       }
     },
-    "a11y_player_remaining" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Noch %1$@"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ remaining"
-          }
-        }
-      }
-    },
     "a11y_player_seek" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -6335,19 +6318,43 @@
         }
       }
     },
-    "player_ends_at" : {
+    "player_busy_detail" : {
       "extractionState" : "manual",
       "localizations" : {
         "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Endet um %1$@"
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Dein Konto spielt auf %1$lld Gerät ab, mehr sind nicht erlaubt. Beende die Wiedergabe dort, um hier zu schauen."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Dein Konto spielt auf %1$lld Geräten ab, mehr sind nicht erlaubt. Beende die Wiedergabe auf einem, um hier zu schauen."
+                }
+              }
+            }
           }
         },
         "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ends at %1$@"
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Your account is playing on %1$lld device, the most it may. Stop one to watch here."
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Your account is playing on %1$lld devices, the most it may. Stop one to watch here."
+                }
+              }
+            }
           }
         }
       }
@@ -6739,6 +6746,91 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Your account can't play this"
+          }
+        }
+      }
+    },
+    "player_restricted_bitrate" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Datei liegt über der Bitrate, die dein Konto streamen darf, und der Server kann unter diesem Limit keine Version erstellen, die dieses Gerät abspielt. Versuch ein anderes Gerät oder frag die Person, die den Server betreibt."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This file is over the bit rate your account may stream, and the server can't make a version this device plays under that limit. Try another device or ask whoever runs the server."
+          }
+        }
+      }
+    },
+    "player_restricted_failed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Datei liegt über der Bitrate, die dein Konto streamen darf, und das Umwandeln des Videos ist fehlgeschlagen. Versuch es noch einmal oder frag die Person, die den Server betreibt."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This file is over the bit rate your account may stream, and converting its video failed. Try again or ask whoever runs the server."
+          }
+        }
+      }
+    },
+    "player_restricted_no_transcode" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Datei liegt über der Bitrate, die dein Konto streamen darf, und der Server darf für dein Konto kein Video umwandeln. Frag die Person, die den Server betreibt."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This file is over the bit rate your account may stream, and the server may not convert video for your account. Ask whoever runs the server."
+          }
+        }
+      }
+    },
+    "player_restricted_original" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Datei liegt über der Bitrate, die dein Konto streamen darf. Wähle eine niedrigere Qualität, um sie anzusehen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This file is over the bit rate your account may stream. Pick a lower quality to watch it."
+          }
+        }
+      }
+    },
+    "player_restricted_transcode" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieses Gerät braucht das Video umgewandelt, aber der Server darf für dein Konto kein Video umwandeln. Versuch ein anderes Gerät oder frag die Person, die den Server betreibt."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This device needs the video converted, but the server may not convert video for your account. Try another device or ask whoever runs the server."
           }
         }
       }
@@ -7321,23 +7413,6 @@
         }
       }
     },
-    "requests_channel_description" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Wenn etwas, das du angefragt hast, bereit ist oder nicht kommt, und für Admins, wenn Anfragen warten."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "When something you requested is ready or isn't coming, and for admins, requests that wait."
-          }
-        }
-      }
-    },
     "requests_load_failed" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -7351,91 +7426,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Couldn't load requests"
-          }
-        }
-      }
-    },
-    "requests_notify_blocked" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "In den Android-Einstellungen blockiert. Erlaube dort Benachrichtigungen für Matinee."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Blocked in Android's settings. Allow notifications for Matinee there."
-          }
-        }
-      }
-    },
-    "requests_notify_description" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Erhalte eine, wenn etwas, das du angefragt hast, bereit ist oder nicht kommt, auch wenn Matinee geschlossen ist. Matinee sieht etwa alle 15 Minuten nach."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Get one when something you requested is ready or isn't coming, even with Matinee closed. Matinee looks about every 15 minutes."
-          }
-        }
-      }
-    },
-    "requests_notify_open_settings" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Android-Einstellungen öffnen"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Open Android's settings"
-          }
-        }
-      }
-    },
-    "requests_notify_section" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Benachrichtigungen"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Notifications"
-          }
-        }
-      }
-    },
-    "requests_notify_title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Benachrichtigungen auf diesem Gerät"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Notifications on this device"
           }
         }
       }
@@ -12563,23 +12553,6 @@
         }
       }
     },
-    "web_ask_notify" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mich benachrichtigen"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Notify me"
-          }
-        }
-      }
-    },
     "web_ask_reason_alreadyHere" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -12648,23 +12621,6 @@
         }
       }
     },
-    "web_ask_stopNotifying" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nicht mehr benachrichtigen"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Stop notifying"
-          }
-        }
-      }
-    },
     "web_ask_toast_asked" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -12712,23 +12668,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Couldn't request %1$@"
-          }
-        }
-      }
-    },
-    "web_ask_toast_followFailed" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Benachrichtigungen konnten nicht geändert werden"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Couldn't change your notifications"
           }
         }
       }
@@ -13617,23 +13556,6 @@
         }
       }
     },
-    "web_discover_back" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Zurück zu Entdecken"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Back to Discover"
-          }
-        }
-      }
-    },
     "web_discover_browse_chip_votes" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -13743,6 +13665,91 @@
         }
       }
     },
+    "web_discover_browse_forYouHint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sie kommen aus dem, was du schaust. Spiel ein paar Titel ab und schau morgen wieder vorbei."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "They come from what you watch. Play a few things and look again tomorrow."
+          }
+        }
+      }
+    },
+    "web_discover_browse_forYouNone" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noch keine Empfehlungen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No recommendations yet"
+          }
+        }
+      }
+    },
+    "web_discover_browse_kind" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Filme oder Serien"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Movies or shows"
+          }
+        }
+      }
+    },
+    "web_discover_browse_kind_movie" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Filme"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Movies"
+          }
+        }
+      }
+    },
+    "web_discover_browse_kind_show" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Serien"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shows"
+          }
+        }
+      }
+    },
     "web_discover_browse_movie" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -13811,6 +13818,40 @@
         }
       }
     },
+    "web_discover_browse_only" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nur"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Only"
+          }
+        }
+      }
+    },
+    "web_discover_browse_onlyHint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Demnächst heißt in den nächsten drei Monaten."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Coming soon looks three months ahead."
+          }
+        }
+      }
+    },
     "web_discover_browse_optionsFailed" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -13824,6 +13865,40 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "The filters didn't load."
+          }
+        }
+      }
+    },
+    "web_discover_browse_recommended" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Empfehlungen für dich"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recommended for you"
+          }
+        }
+      }
+    },
+    "web_discover_browse_requestable" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Was du anfragen kannst"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ones to ask for"
           }
         }
       }
@@ -13862,6 +13937,23 @@
         }
       }
     },
+    "web_discover_browse_sort_forYou" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beste Treffer"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Best match"
+          }
+        }
+      }
+    },
     "web_discover_browse_sort_popular" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -13896,6 +13988,23 @@
         }
       }
     },
+    "web_discover_browse_upcoming" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Demnächst"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Coming soon"
+          }
+        }
+      }
+    },
     "web_discover_browse_votes" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -13926,23 +14035,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%1$@+"
-          }
-        }
-      }
-    },
-    "web_discover_card_release" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ · %2$@"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ · %2$@"
           }
         }
       }
@@ -14062,23 +14154,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "The catalog didn't answer. Search still works."
-          }
-        }
-      }
-    },
-    "web_discover_gone" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Diese Reihe gibt es bei Entdecken nicht mehr"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "This row isn't on Discover anymore"
           }
         }
       }
@@ -16270,40 +16345,6 @@
         }
       }
     },
-    "web_jobs_queue_notifications_description" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gespeicherte Benachrichtigungen per Web-Push zustellen."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Deliver stored notifications through web push."
-          }
-        }
-      }
-    },
-    "web_jobs_queue_notifications_name" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Benachrichtigungen"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Notifications"
-          }
-        }
-      }
-    },
     "web_jobs_queue_pause" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -16395,13 +16436,13 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Neue Bibliothekstitel zuordnen und Interessierte benachrichtigen."
+            "value" : "Neue Bibliothekstitel ihren Anfragen zuordnen."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Match library arrivals and notify followers."
+            "value" : "Match library arrivals to their requests."
           }
         }
       }
@@ -18830,176 +18871,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Libraries"
-          }
-        }
-      }
-    },
-    "web_notifications_attention" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ Anfragen brauchen Aufmerksamkeit"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ requests need attention"
-          }
-        }
-      }
-    },
-    "web_notifications_attentionOne" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1 Anfrage braucht Aufmerksamkeit"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1 request needs attention"
-          }
-        }
-      }
-    },
-    "web_notifications_ready" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ ist bereit"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ is ready"
-          }
-        }
-      }
-    },
-    "web_notifications_readySeason" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@: %2$@ ist bereit"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@: %2$@ is ready"
-          }
-        }
-      }
-    },
-    "web_notifications_readySeasonNumber" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@: Staffel %2$@ ist bereit"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@: Season %2$@ is ready"
-          }
-        }
-      }
-    },
-    "web_notifications_requests" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Anfragen"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Requests"
-          }
-        }
-      }
-    },
-    "web_notifications_unavailable" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@: Nicht verfügbar"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@: Not available"
-          }
-        }
-      }
-    },
-    "web_notifications_unavailableHint" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Das kommt nicht auf diesen Server."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "It won't come to this server."
-          }
-        }
-      }
-    },
-    "web_notifications_waiting" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ Anfragen warten"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ requests waiting"
-          }
-        }
-      }
-    },
-    "web_notifications_waitingOne" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1 Anfrage wartet"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1 request waiting"
           }
         }
       }

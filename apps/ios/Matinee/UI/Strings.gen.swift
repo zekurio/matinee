@@ -12,8 +12,6 @@ nonisolated enum Str {
   static var a11yPlayerHideControls: String { tr("a11y_player_hide_controls") }
   /// %1$@ of %2$@
   static func a11yPlayerPosition(_ p1: String, _ p2: String) -> String { tr("a11y_player_position", p1, p2) }
-  /// %1$@ remaining
-  static func a11yPlayerRemaining(_ p1: String) -> String { tr("a11y_player_remaining", p1) }
   /// Playback position
   static var a11yPlayerSeek: String { tr("a11y_player_seek") }
   /// Seek
@@ -694,8 +692,8 @@ nonisolated enum Str {
   static func playerBitrateMbpsExact(_ p1: String) -> String { tr("player_bitrate_mbps_exact", p1) }
   /// Playing on too many devices
   static var playerBusy: String { tr("player_busy") }
-  /// Ends at %1$@
-  static func playerEndsAt(_ p1: String) -> String { tr("player_ends_at", p1) }
+  /// Your account is playing on %1$lld device, the most it may. Stop one to watch here. / Your account is playing on %1$lld devices, the most it may. Stop one to watch here.
+  static func playerBusyDetail(_ count: Int) -> String { tr("player_busy_detail", count) }
   /// Couldn't play this video
   static var playerErrorLost: String { tr("player_error_lost") }
   /// Couldn't save your playback preferences
@@ -742,6 +740,16 @@ nonisolated enum Str {
   static var playerQualityOriginal: String { tr("player_quality_original") }
   /// Your account can't play this
   static var playerRestricted: String { tr("player_restricted") }
+  /// This file is over the bit rate your account may stream, and the server can't make a version this device plays under that limit. Try another device or ask whoever runs the server.
+  static var playerRestrictedBitrate: String { tr("player_restricted_bitrate") }
+  /// This file is over the bit rate your account may stream, and converting its video failed. Try again or ask whoever runs the server.
+  static var playerRestrictedFailed: String { tr("player_restricted_failed") }
+  /// This file is over the bit rate your account may stream, and the server may not convert video for your account. Ask whoever runs the server.
+  static var playerRestrictedNoTranscode: String { tr("player_restricted_no_transcode") }
+  /// This file is over the bit rate your account may stream. Pick a lower quality to watch it.
+  static var playerRestrictedOriginal: String { tr("player_restricted_original") }
+  /// This device needs the video converted, but the server may not convert video for your account. Try another device or ask whoever runs the server.
+  static var playerRestrictedTranscode: String { tr("player_restricted_transcode") }
   /// Back %1$lld seconds
   static func playerSkipBack(_ p1: Int) -> String { tr("player_skip_back", p1) }
   /// Skip credits
@@ -810,20 +818,8 @@ nonisolated enum Str {
   static var profileStatsFailed: String { tr("profile_stats_failed") }
   /// Couldn't load this row
   static var railFailed: String { tr("rail_failed") }
-  /// When something you requested is ready or isn't coming, and for admins, requests that wait.
-  static var requestsChannelDescription: String { tr("requests_channel_description") }
   /// Couldn't load requests
   static var requestsLoadFailed: String { tr("requests_load_failed") }
-  /// Blocked in Android's settings. Allow notifications for Matinee there.
-  static var requestsNotifyBlocked: String { tr("requests_notify_blocked") }
-  /// Get one when something you requested is ready or isn't coming, even with Matinee closed. Matinee looks about every 15 minutes.
-  static var requestsNotifyDescription: String { tr("requests_notify_description") }
-  /// Open Android's settings
-  static var requestsNotifyOpenSettings: String { tr("requests_notify_open_settings") }
-  /// Notifications
-  static var requestsNotifySection: String { tr("requests_notify_section") }
-  /// Notifications on this device
-  static var requestsNotifyTitle: String { tr("requests_notify_title") }
   /// Request the rest
   static var requestsRestAsk: String { tr("requests_rest_ask") }
   /// %1$lld more episode / %1$lld more episodes
@@ -1390,8 +1386,6 @@ nonisolated enum Str {
   static var webAskMineTitle: String { tr("web_ask_mine_title") }
   /// Request more
   static var webAskMore: String { tr("web_ask_more") }
-  /// Notify me
-  static var webAskNotify: String { tr("web_ask_notify") }
   /// Already have it.
   static var webAskReasonAlreadyHere: String { tr("web_ask_reason_alreadyHere") }
   /// Declined.
@@ -1400,16 +1394,12 @@ nonisolated enum Str {
   static var webAskReasonNotForServer: String { tr("web_ask_reason_notForServer") }
   /// No copy found.
   static var webAskReasonNotFound: String { tr("web_ask_reason_notFound") }
-  /// Stop notifying
-  static var webAskStopNotifying: String { tr("web_ask_stopNotifying") }
   /// Requested %1$@
   static func webAskToastAsked(_ p1: String) -> String { tr("web_ask_toast_asked", p1) }
   /// Couldn't cancel %1$@
   static func webAskToastCancelFailed(_ p1: String) -> String { tr("web_ask_toast_cancelFailed", p1) }
   /// Couldn't request %1$@
   static func webAskToastFailed(_ p1: String) -> String { tr("web_ask_toast_failed", p1) }
-  /// Couldn't change your notifications
-  static var webAskToastFollowFailed: String { tr("web_ask_toast_followFailed") }
   /// Undo
   static var webAskToastUndo: String { tr("web_ask_toast_undo") }
   /// Dark mode accent
@@ -1514,8 +1504,6 @@ nonisolated enum Str {
   static var webCommonSaveBarSaving: String { tr("web_common_saveBar_saving") }
   /// Unsaved changes
   static var webCommonSaveBarUnsaved: String { tr("web_common_saveBar_unsaved") }
-  /// Back to Discover
-  static var webDiscoverBack: String { tr("web_discover_back") }
   /// At least %1$lld vote / At least %1$lld votes
   static func webDiscoverBrowseChipVotes(_ count: Int) -> String { tr("web_discover_browse_chip_votes", count) }
   /// These titles didn't load.
@@ -1526,6 +1514,16 @@ nonisolated enum Str {
   static func webDiscoverBrowseFloorList(_ p1: String) -> String { tr("web_discover_browse_floorList", p1) }
   /// Only titles with at least %1$@ votes, so a handful of votes can't top the list.
   static func webDiscoverBrowseFloorScore(_ p1: String) -> String { tr("web_discover_browse_floorScore", p1) }
+  /// They come from what you watch. Play a few things and look again tomorrow.
+  static var webDiscoverBrowseForYouHint: String { tr("web_discover_browse_forYouHint") }
+  /// No recommendations yet
+  static var webDiscoverBrowseForYouNone: String { tr("web_discover_browse_forYouNone") }
+  /// Movies or shows
+  static var webDiscoverBrowseKind: String { tr("web_discover_browse_kind") }
+  /// Movies
+  static var webDiscoverBrowseKindMovie: String { tr("web_discover_browse_kind_movie") }
+  /// Shows
+  static var webDiscoverBrowseKindShow: String { tr("web_discover_browse_kind_show") }
   /// Browse movies
   static var webDiscoverBrowseMovie: String { tr("web_discover_browse_movie") }
   /// No movies match these filters
@@ -1534,22 +1532,32 @@ nonisolated enum Str {
   static var webDiscoverBrowseNoneShow: String { tr("web_discover_browse_none_show") }
   /// Nothing to show right now
   static var webDiscoverBrowseNothing: String { tr("web_discover_browse_nothing") }
+  /// Only
+  static var webDiscoverBrowseOnly: String { tr("web_discover_browse_only") }
+  /// Coming soon looks three months ahead.
+  static var webDiscoverBrowseOnlyHint: String { tr("web_discover_browse_onlyHint") }
   /// The filters didn't load.
   static var webDiscoverBrowseOptionsFailed: String { tr("web_discover_browse_optionsFailed") }
+  /// Recommended for you
+  static var webDiscoverBrowseRecommended: String { tr("web_discover_browse_recommended") }
+  /// Ones to ask for
+  static var webDiscoverBrowseRequestable: String { tr("web_discover_browse_requestable") }
   /// From TMDB, out of 10
   static var webDiscoverBrowseScoreHint: String { tr("web_discover_browse_scoreHint") }
   /// Browse shows
   static var webDiscoverBrowseShow: String { tr("web_discover_browse_show") }
+  /// Best match
+  static var webDiscoverBrowseSortForYou: String { tr("web_discover_browse_sort_forYou") }
   /// Popular
   static var webDiscoverBrowseSortPopular: String { tr("web_discover_browse_sort_popular") }
   /// Most votes
   static var webDiscoverBrowseSortVotes: String { tr("web_discover_browse_sort_votes") }
+  /// Coming soon
+  static var webDiscoverBrowseUpcoming: String { tr("web_discover_browse_upcoming") }
   /// Votes
   static var webDiscoverBrowseVotes: String { tr("web_discover_browse_votes") }
   /// %1$@+
   static func webDiscoverBrowseVotesStep(_ p1: String) -> String { tr("web_discover_browse_votesStep", p1) }
-  /// %1$@ · %2$@
-  static func webDiscoverCardRelease(_ p1: String, _ p2: String) -> String { tr("web_discover_card_release", p1, p2) }
   /// Couldn't hide %1$@.
   static func webDiscoverDismissFailed(_ p1: String) -> String { tr("web_discover_dismissFailed", p1) }
   /// You won't see %1$@ in your recommendations.
@@ -1564,8 +1572,6 @@ nonisolated enum Str {
   static var webDiscoverFailed: String { tr("web_discover_failed") }
   /// The catalog didn't answer. Search still works.
   static var webDiscoverFailedHint: String { tr("web_discover_failedHint") }
-  /// This row isn't on Discover anymore
-  static var webDiscoverGone: String { tr("web_discover_gone") }
   /// The next titles didn't load.
   static var webDiscoverMoreFailed: String { tr("web_discover_moreFailed") }
   /// Not interested
@@ -1812,10 +1818,6 @@ nonisolated enum Str {
   static var webJobsQueueMetadataDescription: String { tr("web_jobs_queue_metadata_description") }
   /// Metadata
   static var webJobsQueueMetadataName: String { tr("web_jobs_queue_metadata_name") }
-  /// Deliver stored notifications through web push.
-  static var webJobsQueueNotificationsDescription: String { tr("web_jobs_queue_notifications_description") }
-  /// Notifications
-  static var webJobsQueueNotificationsName: String { tr("web_jobs_queue_notifications_name") }
   /// Pause
   static var webJobsQueuePause: String { tr("web_jobs_queue_pause") }
   /// Couldn't pause %1$@
@@ -1826,7 +1828,7 @@ nonisolated enum Str {
   static var webJobsQueueRecommendationsDescription: String { tr("web_jobs_queue_recommendations_description") }
   /// Recommendations
   static var webJobsQueueRecommendationsName: String { tr("web_jobs_queue_recommendations_name") }
-  /// Match library arrivals and notify followers.
+  /// Match library arrivals to their requests.
   static var webJobsQueueRequestArrivalDescription: String { tr("web_jobs_queue_request_arrival_description") }
   /// Request arrivals
   static var webJobsQueueRequestArrivalName: String { tr("web_jobs_queue_request_arrival_name") }
@@ -2108,26 +2110,6 @@ nonisolated enum Str {
   static var webLibrariesScanning: String { tr("web_libraries_scanning") }
   /// Libraries
   static var webLibrariesTitle: String { tr("web_libraries_title") }
-  /// %1$@ requests need attention
-  static func webNotificationsAttention(_ p1: String) -> String { tr("web_notifications_attention", p1) }
-  /// 1 request needs attention
-  static var webNotificationsAttentionOne: String { tr("web_notifications_attentionOne") }
-  /// %1$@ is ready
-  static func webNotificationsReady(_ p1: String) -> String { tr("web_notifications_ready", p1) }
-  /// %1$@: %2$@ is ready
-  static func webNotificationsReadySeason(_ p1: String, _ p2: String) -> String { tr("web_notifications_readySeason", p1, p2) }
-  /// %1$@: Season %2$@ is ready
-  static func webNotificationsReadySeasonNumber(_ p1: String, _ p2: String) -> String { tr("web_notifications_readySeasonNumber", p1, p2) }
-  /// Requests
-  static var webNotificationsRequests: String { tr("web_notifications_requests") }
-  /// %1$@: Not available
-  static func webNotificationsUnavailable(_ p1: String) -> String { tr("web_notifications_unavailable", p1) }
-  /// It won't come to this server.
-  static var webNotificationsUnavailableHint: String { tr("web_notifications_unavailableHint") }
-  /// %1$@ requests waiting
-  static func webNotificationsWaiting(_ p1: String) -> String { tr("web_notifications_waiting", p1) }
-  /// 1 request waiting
-  static var webNotificationsWaitingOne: String { tr("web_notifications_waitingOne") }
   /// Groups and access
   static var webOidcAccessTitle: String { tr("web_oidc_access_title") }
   /// Advanced

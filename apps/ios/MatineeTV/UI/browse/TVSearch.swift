@@ -187,7 +187,7 @@ private struct SearchRows: View {
     if !found.people.isEmpty {
       TVRow(Str.searchSectionCast, key: SearchRow.people, items: found.people, itemKey: \.name, memory: memory) {
         person in
-        TVPersonCard(person.name, role: creditText(person.kind), action: { nav.person(person.name) }) {
+        TVPersonCard(person.name, role: creditText(person.kind), action: { nav.person(person.name, nil) }) {
           Picture(api?.art(person.photo, size: .thumb))
         }
         .focusedValue(\.tvBrowseFocused, personInfo(person))
