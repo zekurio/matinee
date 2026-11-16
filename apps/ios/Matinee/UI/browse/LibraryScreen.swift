@@ -35,11 +35,13 @@ struct LibraryScreen: View {
   }
 
   var body: some View {
+    // First, since the closure below reads it: Xcode 26 refuses a closure that
+    // captures a local declared after it, even one shadowing a property.
+    let id = id
     let library = libraries.state.value?.first { $0.id == id }
     let offered = options.state.value
     let state = state
     let chips = titleFilterChips(state.filters, options: offered) { state.filters = $0 }
-    let id = id
     let (sort, order, filters) = (state.sort, state.order, state.filters)
     PosterGrid(
       pages,
