@@ -151,9 +151,10 @@ private struct OnlineHomeScreen: View {
 }
 
 /// Home's header over the featured titles. A phone's, always: the logo,
-/// and the cloud while the server can't be reached. An iPad's tabs have the
-/// logo, so there it shows only with the cloud, and is a little room under
-/// the tabs otherwise.
+/// the cloud while the server can't be reached, search, and the account
+/// (`AppHeader`). An iPad's tabs have the logo, search, and the account, so
+/// there it shows only with the cloud, and is a little room under the tabs
+/// otherwise.
 private struct HomeHeader: View {
   let stale: [any Reloadable]
   @Environment(\.offline) private var offline

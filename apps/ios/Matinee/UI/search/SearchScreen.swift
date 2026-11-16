@@ -3,15 +3,17 @@ import MatineeKit
 import SwiftUI
 
 /*
- * SearchScreen.kt: search across the server, the search tab's first page.
- * The bar names it and the field sits under it, as Android's, taking the
- * keyboard when the tab first opens; on an iPad, under the tabs, it's the
- * web's page heading over the field. What it finds is grouped as
- * Android's: the titles by library, in the order the server ranked them,
- * then cast and crew, genres, and studios.
+ * SearchScreen.kt: search across the server. On an iPad it's the search
+ * tab's first page, under the web's page heading, its field taking the
+ * keyboard when the tab first opens. On a phone search is the field at the
+ * top of Media (media/MediaScreen.swift), which shows what's here the same
+ * way: `SearchFound` for text, `SearchSuggestions` for the empty field.
+ * What it finds is grouped as Android's: the titles by library, in the
+ * order the server ranked them, then cast and crew, genres, and studios,
+ * then the catalog's "Not here yet".
  */
 
-/// Search across the server: the search tab's first page.
+/// Search across the server: an iPad's search tab.
 struct SearchScreen: View {
   @State private var query = ""
   @State private var search = SearchState()
@@ -26,75 +28,136 @@ struct SearchScreen: View {
   @State private var discover = Loader<DiscoverRails>()
   /// The catalog's answer for the text, for "Not here yet" and for whether nothing matched at all.
   @State private var catalog = CatalogSearch()
-  @Environment(\.shellStyle) private var style
-  @Environment(\.palette) private var palette
   @Environment(\.gutter) private var gutter
 
   var body: some View {
-    Group {
-      if style == .tablet {
-        page.hidesSystemNavigationBar()
-          .safeAreaInset(edge: .top, spacing: 0) {
-            VStack(alignment: .leading, spacing: 0) {
-              PageHeading(Str.searchTitle)
-              field.frame(maxWidth: 640, alignment: .leading)
+    page.hidesSystemNavigationBar()
+      .safeAreaInset(edge: .top, spacing: 0) {
+        VStack(alignment: .leading, spacing: 0) {
+          PageHeading(Str.searchTitle)
+          field.frame(maxWidth: 640, alignment: .leading)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(PageColor())
+      }
+      .searchEffect(search, query: query, submitted: submitted)
+      .catalogSearch(catalog, query: query)
+      .loads(libraries) { api in try await api.libraries.list() }
+      .loadsDiscover(discover)
+      // A hardware keyboard's ⌘F goes to the field, as in iOS's own apps.
+      .keyCommand("f", label: Str.searchTitle) { focused = true }
+      .onAppear {
+        // The field takes the keyboard when the tab first opens, as Android's
+        // does while there's no Discover under it to look around in.
+        if !focusedOnce, query.isEmpty {
+          focusedOnce = true
+          awaitingFocus = true
+          #if DEBUG
+            if let asked = BrowseFixtures.query {
+              query = asked
+              awaitingFocus = false
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(PageColor())
-          }
-      } else {
-        page
-          .safeAreaInset(edge: .top, spacing: 0) { field.background(PageColor()) }
-          .topBar(Str.searchTitle, leading: .none)
+          #endif
+        }
       }
-    }
-    .searchEffect(search, query: query, submitted: submitted)
-    .catalogSearch(catalog, query: query)
-    .loads(libraries) { api in try await api.libraries.list() }
-    .loadsDiscover(discover)
-    // A hardware keyboard's ⌘F goes to the field, as in iOS's own apps.
-    .keyCommand("f", label: Str.searchTitle) { focused = true }
-    .onAppear {
-      // The field takes the keyboard when the tab first opens, as Android's
-      // does while there's no Discover under it to look around in.
-      if !focusedOnce, query.isEmpty {
-        focusedOnce = true
-        awaitingFocus = true
-        #if DEBUG
-          if let asked = BrowseFixtures.query {
-            query = asked
-            awaitingFocus = false
-          }
-        #endif
+      // Discover is for looking around, so with it under the field the keyboard waits for a tap.
+      .onChange(of: discover.state.isLoading, initial: true) { _, loading in
+        guard awaitingFocus, !loading else { return }
+        awaitingFocus = false
+        if query.isEmpty, discover.state.value?.enabled != true { focused = true }
       }
-    }
-    // Discover is for looking around, so with it under the field the keyboard waits for a tap.
-    .onChange(of: discover.state.isLoading, initial: true) { _, loading in
-      guard awaitingFocus, !loading else { return }
-      awaitingFocus = false
-      if query.isEmpty, discover.state.value?.enabled != true { focused = true }
-    }
   }
 
   /// The field in the search page's pill, with a spinner at its end while a search is out.
   private var field: some View {
-    SearchPill(query: $query, focused: $focused, searching: search.searching) { submitted += 1 }
+    SearchPill(query: $query, focused: $focused, searching: search.searching, submit: submit)
+      .padding(.horizontal, gutter)
+      .padding(.bottom, Space.s3)
   }
+
+  private func submit() { submitted += 1 }
 
   @ViewBuilder private var page: some View {
     let text = query.trimmingCharacters(in: .whitespacesAndNewlines)
     Group {
       if text.isEmpty {
-        // The field's placeholder already says what search finds; Discover's rows sit under it when it's on.
-        if discover.state.value?.enabled == true {
-          ScrollView { DiscoverRows(discover: discover).padding(.top, Space.s2).padding(.bottom, Space.s6) }
-            .scrollDismissesKeyboard(.immediately)
-            .scrollsToTopOnReselect()
-        } else {
-          Color.clear
-        }
-      } else if search.failed {
-        ErrorState(Str.searchFailedTitle, onRetry: { submitted += 1 })
+        SearchSuggestions(discover: discover)
+      } else {
+        SearchFound(text: text, search: search, catalog: catalog, libraries: libraries, retry: submit)
+      }
+    }
+    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+  }
+}
+
+/// The search field: Android's `SearchBarFrame`, the kit's pill, with a
+/// spinner at its end while a search is out, and with `back`, Back in place
+/// of its magnifier, as Findroid's while its search is open. The page puts
+/// it in place.
+struct SearchPill: View {
+  @Binding var query: String
+  @Binding var focused: Bool
+  let searching: Bool
+  var back: TextFieldBack?
+  let submit: () -> Void
+  @Environment(\.palette) private var palette
+  @Environment(\.windowSize) private var window
+  @Environment(\.dynamicTypeSize) private var typeSize
+
+  var body: some View {
+    MatineeTextField(placeholder, text: $query, kind: .search, focused: $focused, look: .pill, back: back) {
+      if searching { Spinner(size: 16, tint: palette.mutedForeground).padding(.trailing, Space.s2) }
+    }
+    .submitLabel(.search)
+    .autocorrectionDisabled()
+    .onSubmit(submit)
+  }
+
+  /// What search finds, or at the accessibility sizes in a phone's width,
+  /// where that won't fit on the field's line, only Search.
+  private var placeholder: String {
+    typeSize.isAccessibilitySize && window.width < 640 ? Str.searchTitle : Str.searchField
+  }
+}
+
+/// Under the empty field: Discover's rows when the server has Discover on,
+/// for looking around with nothing in mind, each heading opening its Browse;
+/// else nothing, as Findroid's and Android's search leave it. The field's
+/// placeholder already says what search finds.
+struct SearchSuggestions: View {
+  let discover: Loader<DiscoverRails>
+
+  var body: some View {
+    if discover.state.value?.enabled == true {
+      // Interactively: the keyboard follows a drag down, and isn't put away by the rows' own
+      // first layout, as `.immediately` does to a field just focused.
+      ScrollView { DiscoverRows(discover: discover).padding(.top, Space.s2).padding(.bottom, Space.s6) }
+        .scrollDismissesKeyboard(.interactively)
+        .scrollsToTopOnReselect()
+    } else {
+      Color.clear
+    }
+  }
+}
+
+/// What search shows for `text`: the results, grouped; with nothing here,
+/// the catalog's titles unheaded, then that nothing matched once the
+/// catalog has nothing either; a failure with Try again; or a spinner
+/// while the first answer is out. The page runs the searches
+/// (`.searchEffect`, `.catalogSearch`).
+struct SearchFound: View {
+  let text: String
+  let search: SearchState
+  let catalog: CatalogSearch
+  let libraries: Loader<[Library]>
+  let retry: () -> Void
+  @Environment(\.palette) private var palette
+  @Environment(\.gutter) private var gutter
+
+  var body: some View {
+    Group {
+      if search.failed {
+        ErrorState(Str.searchFailedTitle, onRetry: retry)
           .frame(maxWidth: .infinity)
           .padding(.vertical, Space.s12)
       } else if let found = search.results {
@@ -128,27 +191,6 @@ struct SearchScreen: View {
 
   private var names: [String: String] {
     Dictionary((libraries.state.value ?? []).map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
-  }
-}
-
-/// The search page's field: Android's `SearchBarFrame`, the kit's pill.
-private struct SearchPill: View {
-  @Binding var query: String
-  @Binding var focused: Bool
-  let searching: Bool
-  let submit: () -> Void
-  @Environment(\.gutter) private var gutter
-  @Environment(\.palette) private var palette
-
-  var body: some View {
-    MatineeTextField(Str.searchField, text: $query, kind: .search, focused: $focused, look: .pill) {
-      if searching { Spinner(size: 16, tint: palette.mutedForeground).padding(.trailing, Space.s2) }
-    }
-    .submitLabel(.search)
-    .autocorrectionDisabled()
-    .onSubmit(submit)
-    .padding(.horizontal, gutter)
-    .padding(.bottom, Space.s3)
   }
 }
 

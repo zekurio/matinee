@@ -6,9 +6,11 @@ import SwiftUI
  * ProfileScreen.kt, drawn as the web's profiles.$username.tsx draws your
  * own profile: who's signed in, their favorites, what they asked for,
  * their statistics, and what they watched last, with the way on to
- * Settings, where signing out is. It's the profile tab's first page, so
- * it has no bar of its own: its header carries Settings, and on a phone
- * starts under the status bar, as Android's and the web's phone layout.
+ * Settings, where signing out is. On a phone it's a page on Home's stack,
+ * opened from the account in Home's header, as Findroid's user button
+ * opens its settings: the kit's bar with Back, and Settings and the
+ * admin's inbox at its end. On an iPad it's the account tab's first page,
+ * with no bar of its own, its header carrying Settings.
  *
  * What the server sent last is kept per account, as Home keeps its rows
  * (ProfileData.swift): while the server can't be reached it stays up with
@@ -16,7 +18,7 @@ import SwiftUI
  * opens. The cards are Stats.swift's, the charts StatsCharts.swift's.
  */
 
-/// The profile tab, behind the person's picture in the tabs.
+/// The profile: a page on Home on a phone, the account tab on an iPad.
 struct ProfileScreen: View {
   @Environment(\.user) private var user
 
@@ -33,6 +35,8 @@ private struct ProfilePage: View {
   @Environment(\.shellStyle) private var style
   @Environment(\.requests) private var requests
   @Environment(\.navigator) private var nav
+  /// The account tab's first page, on an iPad; else a page opened from Home's header.
+  @Environment(\.tabRoot) private var tabRoot
 
   init(username: String) {
     _loads = State(initialValue: ProfileLoads(username: username))
@@ -45,12 +49,7 @@ private struct ProfilePage: View {
       LazyVStack(alignment: .leading, spacing: style == .tablet ? Space.s10 : Space.s8) {
         // Showing what loaded before while the server can't be reached: the cloud, up top.
         // The inbox opens the admin's queue, with the count of what needs them.
-        ProfileHeader(
-          profile: state?.value, onRequests: requests == nil ? devInbox.open : { nav.requests(nil) },
-          needsYou: max(requests?.queue.needsYou ?? 0, devInbox.count)
-        ) {
-          DisconnectedAction(loads.reloadable)
-        }
+        ProfileHeader(profile: state?.value, buttons: tabRoot ? buttons : nil)
         switch state {
         case nil:
           // Offline with nothing kept: the header, and Settings in it, alone.
@@ -84,10 +83,35 @@ private struct ProfilePage: View {
       }
     }
     .scrollsToTopOnReselect()
-    .statusBarScrim()
+    .modifier(ProfileTop(tabRoot: tabRoot, buttons: buttons))
     .modifier(RefreshesOnline(loads: loads))
-    .hidesSystemNavigationBar()
     .loadsProfile(loads)
+  }
+
+  /// Settings, and an admin's inbox with the count of what needs them;
+  /// before them the cloud while the server can't be reached, or offline.
+  private var buttons: ProfileButtons {
+    ProfileButtons(
+      onRequests: requests == nil ? devInbox.open : openRequests,
+      needsYou: max(requests?.queue.needsYou ?? 0, devInbox.count), stale: loads.reloadable, inBar: !tabRoot)
+  }
+
+  private func openRequests() { nav.requests(nil) }
+}
+
+/// The page's top: on an iPad's account tab, nothing over the header, which
+/// starts under the status bar's frost; on a page opened from Home, the
+/// kit's bar with Back, the page's name, and its buttons.
+private struct ProfileTop: ViewModifier {
+  let tabRoot: Bool
+  let buttons: ProfileButtons
+
+  func body(content: Content) -> some View {
+    if tabRoot {
+      content.statusBarScrim().hidesSystemNavigationBar()
+    } else {
+      content.topBar(Str.tabProfile) { buttons.padding(.trailing, Space.s1) }
+    }
   }
 }
 
@@ -120,22 +144,16 @@ private struct RefreshesOnline: ViewModifier {
 // MARK: Who
 
 /// The picture and name, the username under a display name, Admin, and
-/// since when they're here, with Settings at the row's end, as the web's
-/// own profile on a phone and Android's. `action` goes before Settings;
-/// offline, the offline cloud, as on Home. At the largest text sizes who
-/// it is gets the width under the picture and the buttons, rather than an
-/// ellipsis beside them.
-private struct ProfileHeader<Action: View>: View {
+/// since when they're here, as the web's own profile on a phone and
+/// Android's; on an iPad's account tab with the buttons at the row's end.
+/// At the largest text sizes who it is gets the width under the picture and
+/// the buttons, rather than an ellipsis beside them.
+private struct ProfileHeader: View {
   let profile: Profile?
-  /// Opens the requests hub, for the admin's inbox; nil leaves it out.
-  let onRequests: (() -> Void)?
-  /// How many requests wait on the admin, for the inbox's dot.
-  let needsYou: Int
-  @ViewBuilder let action: () -> Action
+  /// The buttons at the row's end, on an iPad's account tab; a page with a bar has them in the bar.
+  let buttons: ProfileButtons?
   @Environment(\.api) private var api
   @Environment(\.gutter) private var gutter
-  @Environment(\.navigator) private var nav
-  @Environment(\.offline) private var offline
   @Environment(\.palette) private var palette
   @Environment(\.user) private var user
   @Environment(\.windowSize) private var window
@@ -149,7 +167,7 @@ private struct ProfileHeader<Action: View>: View {
             HStack(spacing: Space.s3) {
               picture(user)
               Spacer(minLength: 0)
-              buttons(user)
+              buttons
             }
             who(user, stacked: true)
           }
@@ -157,12 +175,12 @@ private struct ProfileHeader<Action: View>: View {
           HStack(spacing: window.width < 640 ? Space.s4 : Space.s6) {
             picture(user)
             who(user, stacked: false)
-            buttons(user)
+            buttons
           }
         }
       }
       .padding(.horizontal, gutter)
-      .padding(.top, Space.s4)
+      .padding(.top, buttons == nil ? Space.s2 : Space.s4)
     }
   }
 
@@ -199,22 +217,38 @@ private struct ProfileHeader<Action: View>: View {
     .frame(maxWidth: .infinity, alignment: .leading)
     .accessibilityElement(children: .combine)
   }
+}
 
-  /// The cloud or offline, the admin's requests, then Settings: the web's round `size-11` buttons.
-  @ViewBuilder private func buttons(_ user: User) -> some View {
-    HStack(spacing: Space.s2) {
+/// The cloud or offline, the admin's requests, then Settings: the web's
+/// round `size-11` buttons at the header's end, or in a bar, its ghost
+/// icons, as every bar's actions.
+private struct ProfileButtons: View {
+  /// Opens the requests hub, for the admin's inbox; nil leaves it out.
+  let onRequests: (() -> Void)?
+  /// How many requests wait on the admin, for the inbox's dot.
+  let needsYou: Int
+  /// What's shown from before, for the cloud while the server can't be reached.
+  let stale: [any Reloadable]
+  let inBar: Bool
+  @Environment(\.navigator) private var nav
+  @Environment(\.offline) private var offline
+  @Environment(\.palette) private var palette
+  @Environment(\.user) private var user
+
+  var body: some View {
+    HStack(spacing: inBar ? 0 : Space.s2) {
       if offline {
         LucideIcon(.cloudOff, label: Str.downloadsOffline, size: 20, tint: palette.mutedForeground)
-          .padding(.horizontal, Space.s1)
+          .padding(.horizontal, inBar ? Space.s3 : Space.s1)
       } else {
-        action()
-        if user.isAdmin, let onRequests {
-          RequestsButton(needsYou: needsYou, action: onRequests)
+        DisconnectedAction(stale)
+        if user?.isAdmin == true, let onRequests {
+          RequestsButton(needsYou: needsYou, inBar: inBar, action: onRequests)
         }
       }
-      RoundIconButton(.settings, label: Str.shellSettings, look: .secondary, size: TouchTarget, iconSize: 20) {
-        nav.settings()
-      }
+      RoundIconButton(
+        .settings, label: Str.shellSettings, look: inBar ? .ghost : .secondary, size: inBar ? 48 : TouchTarget,
+        iconSize: inBar ? 22 : 20, action: nav.settings)
     }
   }
 }
@@ -223,23 +257,25 @@ private struct ProfileHeader<Action: View>: View {
 /// a phone: the inbox, with the accent's dot while requests need them.
 private struct RequestsButton: View {
   let needsYou: Int
+  /// A bar's ghost icon rather than the header's round button.
+  var inBar = false
   let action: () -> Void
   @Environment(\.palette) private var palette
 
   var body: some View {
     RoundIconButton(
-      .inbox, label: needsYou > 0 ? Str.webRequestsMenuWaiting(needsYou) : Str.webRequestsMenu, look: .secondary,
-      size: TouchTarget, iconSize: 20, action: action
+      .inbox, label: needsYou > 0 ? Str.webRequestsMenuWaiting(needsYou) : Str.webRequestsMenu,
+      look: inBar ? .ghost : .secondary, size: inBar ? 48 : TouchTarget, iconSize: inBar ? 22 : 20, action: action
     )
     .overlay(alignment: .topTrailing) {
       if needsYou > 0 {
-        // The web's `size-2 ring-2 ring-secondary`, `top-1.5 right-1.5`.
+        // The web's `size-2 ring-2 ring-secondary`, `top-1.5 right-1.5`; in a bar, ringed in the page's color.
         Circle()
           .fill(palette.accent)
           .frame(width: Space.s2, height: Space.s2)
           .padding(2)
-          .background(palette.secondary, in: Circle())
-          .padding(Space.s1)
+          .background(inBar ? palette.background : palette.secondary, in: Circle())
+          .padding(inBar ? Space.s2_5 : Space.s1)
           .allowsHitTesting(false)
           .accessibilityHidden(true)
       }

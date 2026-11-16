@@ -5,9 +5,9 @@ import SwiftUI
 /*
  * Bars.kt: the bars around pages. The tabs on a tab's first page, at the
  * bottom of a phone and at the top of an iPad (Shell.swift says which);
- * Home's header, the logo on a phone; the floating buttons over a title's
- * art; and the frost that keeps the status bar readable over art and once
- * a page scrolls under it.
+ * Home's header, on a phone the logo, search, and the account, after
+ * Findroid's; the floating buttons over a title's art; and the frost that
+ * keeps the status bar readable over art and once a page scrolls under it.
  *
  * A page opened from a tab gets its top from the kit, `.topBar(title)`,
  * which hides the system's bar and keeps the edge swipe back; one that
@@ -47,6 +47,14 @@ enum ShellStyle: Sendable {
   init(idiom: UIUserInterfaceIdiom, sizeClass: UserInterfaceSizeClass?) {
     self = idiom == .pad && sizeClass == .regular ? .tablet : .phone
   }
+
+  /// MatineeCore's name for it, which decides the tabs.
+  var layout: ShellLayout {
+    switch self {
+    case .phone: .phone
+    case .tablet: .tablet
+    }
+  }
 }
 
 extension EnvironmentValues {
@@ -57,7 +65,8 @@ extension EnvironmentValues {
 extension View {
   /// The tabs on `tab`'s first page: the kit's `BottomBar` on a phone, its
   /// `NavBar` on an iPad. They belong to the page, so a page opened from it
-  /// covers them, and swiping back brings them back with it.
+  /// covers them, as on Android and in Findroid, and swiping back brings
+  /// them back with it.
   func tabBars(_ tab: ShellTab) -> some View { modifier(TabBars(tab: tab)) }
 }
 
@@ -71,12 +80,8 @@ private struct TabBars: ViewModifier {
   func body(content: Content) -> some View {
     switch style {
     case .phone:
-      content.bottomBar(
-        BottomBar(
-          nav.tabs.filter { $0 != .search }.map(item),
-          accessory: nav.tabs.contains(.search) ? item(.search) : nil,
-          selection: nav.barTab
-        ) { nav.select($0) })
+      // Home, Media, and Downloads, each always named; search and the account are in Home's header.
+      content.bottomBar(BottomBar(nav.tabs.map(item), selection: nav.barTab) { nav.select($0) })
     case .tablet:
       content.navBar(
         NavBar(
@@ -98,68 +103,133 @@ private struct TabBars: ViewModifier {
   private func item(_ tab: ShellTab) -> TabBarItem<ShellTab> {
     guard tab == .profile, let user else { return TabBarItem(tab, label: tab.label, icon: tab.icon) }
     let url = user.avatarId.flatMap { api?.paths.avatar($0) }
-    return TabBarItem(tab, label: tab.label) { selected in
-      ProfileTabPicture(name: user.name, url: url, selected: selected, named: style == .tablet)
-    }
+    return TabBarItem(tab, label: tab.label) { _ in ProfileTabPicture(name: user.name, url: url) }
   }
 }
 
-/// The profile tab's picture, as the web's and Android's tab bars draw it:
-/// the person's avatar, ringed in the text's color while the tab is open.
-/// An iPad's bar names them beside it, as the web's account button does.
+/// The account at the end of an iPad's bar, as the web's account button:
+/// the person's avatar with their name beside it. A phone's is in Home's
+/// header (`AccountButton`).
 private struct ProfileTabPicture: View {
   let name: String
   let url: String?
-  let selected: Bool
-  let named: Bool
-  @Environment(\.palette) private var palette
 
   var body: some View {
     HStack(spacing: Space.s2) {
-      ProfileAvatar(name, url: url, size: selected && !named ? 22 : 28)
-        .padding(selected && !named ? 3 : 0)
-        .overlay { if selected && !named { Circle().strokeBorder(palette.foreground, lineWidth: 1.5) } }
-      if named {
-        Text(name).textStyle(.sm, weight: .medium).lineLimit(1).frame(maxWidth: 128).fixedSize()
-      }
+      ProfileAvatar(name, url: url, size: 28)
+      Text(name).textStyle(.sm, weight: .medium).lineLimit(1).frame(maxWidth: 128).fixedSize()
     }
     .accessibilityHidden(true)
   }
 }
 
-/// Home's header, over its featured titles and over offline Home's rows:
-/// on a phone, the logo, as the top edge the tab's first page has; and
-/// whether the app is offline, or `action`, as the icon to reach the server
-/// again. An iPad's tabs have the logo already, so there it holds only the
-/// icon. It sits below the status bar and scrolls away with the page.
-/// Search and the account are in the tabs. The frost under the status bar
-/// is the page's `statusBarScrim(fadesIn: true)`, which stays away at rest
-/// so it doesn't blur the logo.
+/// Home's header, over its featured titles and over offline Home's rows,
+/// after Findroid's `HomeHeader`. On a phone: the logo at the start, and at
+/// the end whether the app is offline, or `action`, the icon to reach the
+/// server again; search, which opens Media with its field taking the
+/// keyboard; and the account, which opens the profile on Home's stack. It's
+/// 44 tall, right under the status bar, where a navigation bar sits. An
+/// iPad's bar has the logo, search, and the account already, so there it
+/// holds only the icon. It scrolls away with the page. The frost under the
+/// status bar is the page's `statusBarScrim(fadesIn: true)`, which stays
+/// away at rest so it doesn't blur the logo.
 struct AppHeader<Action: View>: View {
   @ViewBuilder var action: () -> Action
   @Environment(\.offline) private var offline
   @Environment(\.palette) private var palette
   @Environment(\.gutter) private var gutter
   @Environment(\.shellStyle) private var style
+  @Environment(\.navigator) private var nav
 
   init(@ViewBuilder action: @escaping () -> Action) {
     self.action = action
   }
 
   var body: some View {
-    HStack(spacing: Space.s3) {
+    HStack(spacing: Space.s2) {
       if style == .phone {
-        Logo(height: 20).accessibilityAddTraits(.isHeader)
+        Logo(height: 18).accessibilityAddTraits(.isHeader)
       }
       Spacer(minLength: 0)
       if offline {
         LucideIcon(.cloudOff, label: Str.downloadsOffline, size: 20, tint: palette.mutedForeground)
+          .padding(.horizontal, style == .phone ? Space.s2 : 0)
       } else {
         action()
       }
+      if style == .phone {
+        // Offline there's nothing to search, as Findroid leaves it out.
+        if !offline {
+          RoundIconButton(.search, label: Str.searchTitle, look: .secondary, size: 36, iconSize: 18, action: nav.search)
+        }
+        AccountButton()
+      }
     }
-    .frame(height: 56)
+    .frame(height: style == .phone ? TouchTarget : 56)
     .padding(.horizontal, gutter)
+    #if DEBUG
+      .task { await devPress() }
+    #endif
+  }
+
+  #if DEBUG
+    /// `-dev.header search|account`: that button pressed once, two seconds
+    /// after Home shows, as a finger would, for a screenshot of where it goes.
+    private func devPress() async {
+      guard !AppHeaderDebug.pressed, style == .phone,
+        let button = UserDefaults.standard.string(forKey: "dev.header")
+      else { return }
+      AppHeaderDebug.pressed = true
+      try? await Task.sleep(for: .seconds(2))
+      switch button {
+      case "search": nav.search()
+      case "account": nav.profile()
+      default: break
+      }
+    }
+  #endif
+}
+
+#if DEBUG
+  /// `-dev.header` presses once a launch, not each time Home comes back.
+  enum AppHeaderDebug {
+    static var pressed = false
+  }
+#endif
+
+/// The account at the end of a phone's Home header, as Findroid's user
+/// button: the person's picture, or their initials, opening the profile.
+/// An admin gets the accent's dot on it while requests need them, as
+/// Android's profile tab and the web's avatar have it; the count is
+/// VoiceOver's, and the profile's inbox.
+private struct AccountButton: View {
+  @Environment(\.user) private var user
+  @Environment(\.api) private var api
+  @Environment(\.navigator) private var nav
+  @Environment(\.requests) private var requests
+
+  var body: some View {
+    if let user {
+      let waiting = user.isAdmin ? max(requests?.queue.needsYou ?? 0, Self.devInbox) : Self.devInbox
+      Pressable(shape: Circle(), action: nav.profile) {
+        // 36 to see, as the search beside it, and 44 to hit.
+        ProfileAvatar(user.name, url: user.avatarId.flatMap { api?.paths.avatar($0) }, size: 36, dot: waiting > 0)
+          .padding(Space.s1)
+      }
+      // The picture's edge on the gutter, as the logo's at the other end.
+      .padding(.trailing, -Space.s1)
+      .accessibilityLabel(Str.tabProfile)
+      .accessibilityValue(waiting > 0 ? Str.webRequestsMenuWaiting(waiting) : "")
+    }
+  }
+
+  /// `-dev.profileInbox 3`: the dot as with three waiting, for a screenshot.
+  private static var devInbox: Int {
+    #if DEBUG
+      UserDefaults.standard.integer(forKey: "dev.profileInbox")
+    #else
+      0
+    #endif
   }
 }
 

@@ -8,22 +8,31 @@ import SwiftUI
  * bar on each tab's first page; iOS gives each tab a stack of its own, as
  * its apps do, so a tab keeps its place while another is open. Pages
  * opened from a tab go on that tab's stack, and cover its tabs, as on
- * Android and the web's phone layout. The player opens over everything,
- * in landscape on a phone, as Android's own PlayerActivity.
+ * Android, Findroid, and the web's phone layout. The player opens over
+ * everything, in landscape on a phone, as Android's own PlayerActivity.
+ *
+ * A phone's tabs are Home, Media, and Downloads, after Findroid's: search
+ * is the field at the top of Media, and the profile a page on Home's
+ * stack, opened from the account in Home's header. A tablet keeps both as
+ * places of their own in the web's bar. Which tabs there are and where
+ * each place lands is MatineeCore's (Shell/ShellLayout.swift), where it's
+ * tested.
  *
  * Pages don't edit this file except to add their route: they open each
  * other through the environment's `Navigator`.
  */
 
-/// The shell's tabs, by their first page, in the tab bar's order: Home,
-/// Media, Downloads, and the profile, then search on its own.
-enum ShellTab: String, Codable, CaseIterable, Hashable {
-  case home, media, downloads, profile, search
-}
+/// The shell's places, by their first page: Home, Media, and Downloads,
+/// the phone's tabs, then the profile and search, which a tablet's bar has
+/// too. MatineeCore's `ShellPage`; the Apple TV app has its own `ShellTab`
+/// for the shared `Navigator`.
+typealias ShellTab = ShellPage
 
 /// A page opened from a tab's first page, with what it needs to load.
 /// Android's `…Route` classes, less the tabs' own, which are `ShellTab`.
 enum Route: Hashable, Codable {
+  /// The signed-in person's profile, on Home's stack on a phone, from the account in Home's header.
+  case profile
   case favorites
   /// Everything the signed-in person watched last, a file per title, from the profile.
   case recent
@@ -97,15 +106,62 @@ struct PlayerRequest: Identifiable, Hashable {
   /// Moves each time the open tab is picked again on its first page, for
   /// that page to scroll to its top.
   private(set) var reselected: [ShellTab: Int] = [:]
+  /// Search was asked for on a phone: Media's field takes the keyboard once
+  /// Media shows, and puts this back.
+  var searchPending = false
   let results = NavResults()
   let offline: Bool
+  /// A phone's tabs or a tablet's, as the shell is laid out now.
+  private(set) var layout: ShellLayout = .phone
 
   init(offline: Bool) { self.offline = offline }
 
-  /// The tabs there are: offline, only what works without the server, Home
-  /// from the downloads, the downloads, and the profile with settings.
-  var tabs: [ShellTab] {
-    offline ? [.home, .downloads, .profile] : ShellTab.allCases
+  /// The tabs there are (MatineeCore's `shellTabs`): on a phone Home,
+  /// Media, and Downloads; on a tablet the profile and search too.
+  /// Offline, only what works without the server.
+  var tabs: [ShellTab] { shellTabs(layout, offline: offline) }
+
+  /// The shell's layout changed, as an iPad's split view narrows: the open
+  /// place, if the new layout has no tab for it, moves with its pages to
+  /// where it lives there, the profile onto Home and search onto Media.
+  func setLayout(_ layout: ShellLayout) {
+    guard layout != self.layout else { return }
+    self.layout = layout
+    settle()
+  }
+
+  /// Moves the open place to its landing when it isn't a tab now.
+  private func settle() {
+    guard !tabs.contains(tab) else { return }
+    let old = tab
+    let landing = shellLanding(old, layout: layout, offline: offline)
+    let pages = paths[old] ?? []
+    if landing.underProfile {
+      paths[landing.tab] = [.profile] + pages
+    } else if landing.tab == .media {
+      // Search's pages, as a Discover row's Browse, on Media.
+      paths[.media] = pages
+    }
+    paths[old] = []
+    tab = landing.tab
+    barTab = landing.tab
+  }
+
+  /// Opens `page` where it lives (MatineeCore's `shellLanding`): a tab as
+  /// `select` does; on a phone, search as Media with its field taking the
+  /// keyboard, and the profile as a page on Home.
+  func go(_ page: ShellTab) {
+    let landing = shellLanding(page, layout: layout, offline: offline)
+    if landing.underProfile {
+      paths[landing.tab] = [.profile]
+      if tab != landing.tab { show(landing.tab) }
+    } else if landing.focusesSearch {
+      paths[landing.tab] = []
+      searchPending = true
+      if tab != landing.tab { show(landing.tab) }
+    } else {
+      select(landing.tab)
+    }
   }
 
   func path(_ tab: ShellTab) -> Binding<[Route]> {
@@ -177,7 +233,7 @@ struct PlayerRequest: Identifiable, Hashable {
     Navigator(
       back: { [weak self] in self?.back() },
       home: { [weak self] in self?.home() },
-      tab: { [weak self] in self?.select($0) },
+      tab: { [weak self] in self?.go($0) },
       item: { [weak self] item in
         if let title = item.title, title.kind == TitleKind.movie {
           self?.push(.title(id: title.id))
@@ -245,12 +301,17 @@ struct PlayerRequest: Identifiable, Hashable {
       })
   }
 
-  /// Puts back what `data` kept, if it was this `owner`'s.
+  /// Puts back what `data` kept, if it was this `owner`'s. The place that
+  /// was open, when this layout has no tab for it, moves to where it lives
+  /// here, with its pages.
   func restore(_ data: Data?, owner: String) {
     guard let data, let saved = try? JSONDecoder().decode(Saved.self, from: data), saved.owner == owner
     else { return }
-    for pages in saved.paths where tabs.contains(pages.tab) { paths[pages.tab] = pages.routes }
-    tab = tabs.contains(saved.tab) ? saved.tab : .home
+    for pages in saved.paths where tabs.contains(pages.tab) || pages.tab == saved.tab {
+      paths[pages.tab] = pages.routes
+    }
+    tab = saved.tab
+    settle()
     barTab = tab
   }
 }
@@ -277,6 +338,7 @@ struct RouteScreen: View {
 
   var body: some View {
     switch route {
+    case .profile: ProfileScreen()
     case .favorites: FavoritesScreen()
     case .recent: RecentScreen()
     case .library(let id, let sort): LibraryScreen(id: id, sort: sort)
@@ -442,17 +504,22 @@ enum RoutePath {
 }
 
 extension ShellNav {
-  /// Opens what `path` names (`RoutePath`): its tab, with the page on top of its first page.
+  /// Opens what `path` names (`RoutePath`) where it lives in this layout
+  /// (MatineeCore's `shellLanding` and `shellStack`): a place, with search
+  /// taking the keyboard on a phone; a page on top of its place's first
+  /// page, which on a phone puts a page of the profile's, as Settings, on
+  /// Home over the profile.
   func open(_ target: RoutePath.Target) {
     switch target {
-    case .tab(let tab):
-      guard tabs.contains(tab) else { return }
-      show(tab)
-      paths[tab] = []
-    case .page(let tab, let route):
-      let tab = tabs.contains(tab) ? tab : .home
-      show(tab)
-      paths[tab] = [route]
+    case .tab(let page):
+      let landing = shellLanding(page, layout: layout, offline: offline)
+      show(landing.tab)
+      paths[landing.tab] = landing.underProfile ? [.profile] : []
+      if landing.focusesSearch { searchPending = true }
+    case .page(let owner, let route):
+      let landing = shellStack(for: owner, layout: layout, offline: offline)
+      show(landing.tab)
+      paths[landing.tab] = (landing.underProfile ? [.profile] : []) + [route]
     case .player(let itemId, let start):
       player = PlayerRequest(itemId: itemId, start: start)
     }
