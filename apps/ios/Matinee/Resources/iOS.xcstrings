@@ -800,24 +800,6 @@
         }
       }
     },
-    "ios_title_files" : {
-      "comment" : "The heading over a title's files on its page. The web has no such heading.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dateien"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Files"
-          }
-        }
-      }
-    },
     "ios_title_trailer" : {
       "comment" : "The button beside Play on a title's page, which opens the trailer on YouTube; the web's title.trailer, which Android doesn't have yet.",
       "extractionState" : "manual",
