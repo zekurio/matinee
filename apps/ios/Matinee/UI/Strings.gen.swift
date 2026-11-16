@@ -352,6 +352,12 @@ nonisolated enum Str {
   static var homeContinueFailed: String { tr("home_continue_failed") }
   /// Couldn't load Home
   static var homeFailed: String { tr("home_failed") }
+  /// Next slide
+  static var homeFeaturedNext: String { tr("home_featured_next") }
+  /// %1$lld of %2$lld
+  static func homeFeaturedPosition(_ p1: Int, _ p2: Int) -> String { tr("home_featured_position", p1, p2) }
+  /// Previous slide
+  static var homeFeaturedPrevious: String { tr("home_featured_previous") }
   /// Couldn't load your libraries
   static var homeLoadFailed: String { tr("home_load_failed") }
   /// Couldn't load what's next
@@ -480,12 +486,8 @@ nonisolated enum Str {
   static var mediaHeroDetails: String { tr("media_hero_details") }
   /// Episodes
   static var mediaHeroEpisodes: String { tr("media_hero_episodes") }
-  /// Play
-  static var mediaHeroPlay: String { tr("media_hero_play") }
   /// Rated
   static var mediaHeroRated: String { tr("media_hero_rated") }
-  /// Show slide %1$lld
-  static func mediaHeroShowSlide(_ p1: Int) -> String { tr("media_hero_show_slide", p1) }
   /// Audio
   static var mediaInfoAudio: String { tr("media_info_audio") }
   /// Subtitles

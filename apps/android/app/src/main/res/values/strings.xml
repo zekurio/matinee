@@ -142,6 +142,11 @@
 
     <!-- Home -->
     <string name="home_load_failed">Couldn\'t load your libraries</string>
+    <!-- TalkBack's word for where a card is in Home's featured carousel: its place, then how many there are. -->
+    <string name="home_featured_position">%1$d of %2$d</string>
+    <!-- The buttons beside the featured carousel's dots on a tablet, which move it a card back or on. -->
+    <string name="home_featured_previous">Previous slide</string>
+    <string name="home_featured_next">Next slide</string>
     <string name="browse_continue_watching">Continue watching</string>
     <string name="browse_next_up">Next up</string>
     <string name="browse_recently_added">Recently added in %1$s</string>
@@ -222,9 +227,7 @@
     <string name="media_watched_at_unknown">Don\'t remember</string>
     <string name="media_watched_date_title">When did you watch it?</string>
     <string name="media_mark_unwatched_failed">Couldn\'t mark as unwatched</string>
-    <string name="media_hero_show_slide">Show slide %1$d</string>
     <string name="media_hero_rated">Rated</string>
-    <string name="media_hero_play">Play</string>
     <string name="media_hero_episodes">Episodes</string>
     <string name="media_hero_details">Details</string>
     <plurals name="media_episode_count">
