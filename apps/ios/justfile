@@ -67,7 +67,7 @@ shot name:
     xcrun simctl io "{{ simulator }}" screenshot "build/screenshots/{{ name }}.png"
 
 # Run MatineeCore's tests on the Mac, check that screens build only from the kit, and that the generated files are current
-test: boundary tv-boundary
+test: boundary
     # One at a time: the parallel run has hung on a loaded Mac, in AuthTests
     # among others, and the cause isn't known yet.
     cd Packages/MatineeCore && swift test --no-parallel
@@ -76,8 +76,8 @@ test: boundary tv-boundary
     scripts/lucide.py --check
     {{ env("NODE", "nix shell nixpkgs#nodejs_24 -c node") }} scripts/themes.mjs --check
 
-# Fail on a stock SwiftUI control outside the kit, but in the folders Matinee/UI/kit-exclusions.txt lets through
-boundary:
+# Fail on a stock SwiftUI control outside the kit, but in the folders Matinee/UI/kit-exclusions.txt lets through, and on a phone component in the TV app
+boundary: tv-boundary
     cd Packages/MatineeKit && swift build --scratch-path ../../{{ boundary }} --target MatineeKitBoundaryTests -q
     cd Packages/MatineeKit && swift test --scratch-path ../../{{ boundary }} --skip-build --filter MatineeKitBoundaryTests -q
     cd Packages/MatineeKit && KIT_BOUNDARY_ROOT="$PWD/../../Matinee/UI" \
