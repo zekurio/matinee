@@ -13573,47 +13573,6 @@
         }
       }
     },
-    "web_discover_browse_chip_votes" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "Mindestens %1$lld Stimme"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "Mindestens %1$lld Stimmen"
-                }
-              }
-            }
-          }
-        },
-        "en" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "At least %1$lld vote"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "At least %1$lld votes"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "web_discover_browse_failed" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -13627,23 +13586,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "These titles didn't load."
-          }
-        }
-      }
-    },
-    "web_discover_browse_floorChange" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mindestzahl wählen"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Choose a minimum"
           }
         }
       }
@@ -13712,57 +13654,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "No recommendations yet"
-          }
-        }
-      }
-    },
-    "web_discover_browse_kind" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Filme oder Serien"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Movies or shows"
-          }
-        }
-      }
-    },
-    "web_discover_browse_kind_movie" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Filme"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Movies"
-          }
-        }
-      }
-    },
-    "web_discover_browse_kind_show" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Serien"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Shows"
           }
         }
       }

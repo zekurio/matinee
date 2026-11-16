@@ -51,14 +51,12 @@ export function IdentifyDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex h-[min(36rem,calc(100dvh-2rem))] flex-col gap-5 p-6 sm:max-w-xl [&_[data-slot=dialog-close]]:top-4 [&_[data-slot=dialog-close]]:right-4">
-        {open && (
-          <IdentifyForm
-            key={title.id}
-            title={title}
-            providerName={providerName}
-            onDone={() => onOpenChange(false)}
-          />
-        )}
+        <IdentifyForm
+          key={title.id}
+          title={title}
+          providerName={providerName}
+          onDone={() => onOpenChange(false)}
+        />
       </DialogContent>
     </Dialog>
   )

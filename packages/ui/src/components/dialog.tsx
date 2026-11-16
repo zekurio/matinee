@@ -114,10 +114,13 @@ function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
 function DialogFooter({
   className,
   showCloseButton = false,
+  showCancelButton = false,
   children,
   ...props
 }: React.ComponentProps<"div"> & {
   showCloseButton?: boolean
+  /** A Cancel button before the actions, for a form's footer. */
+  showCancelButton?: boolean
 }) {
   return (
     <div
@@ -128,6 +131,13 @@ function DialogFooter({
       )}
       {...props}
     >
+      {showCancelButton && (
+        <DialogPrimitive.Close
+          render={<Button type="button" variant="ghost" />}
+        >
+          {uiText().cancel}
+        </DialogPrimitive.Close>
+      )}
       {children}
       {showCloseButton && (
         <DialogPrimitive.Close render={<Button variant="outline" />}>

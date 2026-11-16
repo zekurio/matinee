@@ -75,6 +75,16 @@ export function hasPlayed(el: HTMLVideoElement): boolean {
   return false
 }
 
+/** Where the buffered range around `time` ends, in the video's own time. */
+export function bufferedEnd(el: HTMLVideoElement, time: number): number | null {
+  for (let i = 0; i < el.buffered.length; i++) {
+    if (el.buffered.start(i) <= time && time <= el.buffered.end(i)) {
+      return el.buffered.end(i)
+    }
+  }
+  return null
+}
+
 /** Whether `time` of the current resource can be seeked to without a reload. */
 export function canSeekTo(el: HTMLVideoElement, time: number): boolean {
   for (let i = 0; i < el.seekable.length; i++) {

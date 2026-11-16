@@ -61,14 +61,18 @@ export function libraryTitlesOptions(libraryId: string, list: TitleListInput) {
   })
 }
 
-/** Titles from every library, for a genre's or a studio's page. */
+/**
+ * Titles from every library, for a genre's or a studio's page, or from
+ * one library, for the Movies or Shows page with a library picked.
+ */
 export function browsedTitlesOptions(
-  list: TitleListInput & Pick<TitleScope, "kind">,
+  list: TitleListInput & Pick<TitleScope, "kind" | "libraryId">,
 ) {
   return orpc.titles.browse.infiniteOptions({
     input: (offset: number) => ({
       query: list.query?.trim() || undefined,
       kind: list.kind,
+      libraryId: list.libraryId,
       filters: list.filters,
       sort: list.order.sort,
       order: list.order.order,

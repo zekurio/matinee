@@ -51,7 +51,10 @@ export function RequestDialog({
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[calc(100dvh-2rem)] flex-col gap-5 p-6 sm:max-w-md [&_[data-slot=dialog-close]]:top-4 [&_[data-slot=dialog-close]]:right-4">
+      <DialogContent
+        showCloseButton={false}
+        className="flex max-h-[calc(100dvh-2rem)] flex-col gap-5 p-6 sm:max-w-md"
+      >
         {/* Another library's provider can number the seasons differently,
             so a new pick starts again from the server's. */}
         <RequestForm
@@ -199,7 +202,7 @@ function RequestForm({
         </div>
       )}
 
-      <DialogFooter className="-mx-6 -mb-6 px-6 py-4">
+      <DialogFooter showCancelButton className="-mx-6 -mb-6 px-6 py-4">
         <Button disabled={nothing || ask.isPending} onClick={submit}>
           {show ? submitLabel(chosen, future && first) : tr("ask.ask")}
         </Button>

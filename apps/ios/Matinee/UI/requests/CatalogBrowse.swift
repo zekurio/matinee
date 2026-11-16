@@ -15,19 +15,14 @@ import SwiftUI
  *     CatalogBrowseScreen(start: CatalogBrowseStart(kind: TitleKind.movie))   // nav.catalogBrowse(start)
  */
 
-/// Browsing `start`'s kind with its filters and sort. A viewer who can
-/// browse both kinds switches between them in place, keeping the filters
-/// both have.
+/// Browsing `start`'s fixed kind with its filters and sort.
 struct CatalogBrowseScreen: View {
   let start: CatalogBrowseStart
-  @State private var kind: String
   @State private var filters: CatalogFilters
   @State private var sort: String
-  @State private var discover = Loader<DiscoverRails>()
 
   init(start: CatalogBrowseStart) {
     self.start = start
-    _kind = State(initialValue: start.kind)
     _filters = State(initialValue: start.filters)
     _sort = State(initialValue: start.sort)
   }
@@ -45,19 +40,7 @@ struct CatalogBrowseScreen: View {
   }
 
   private var page: some View {
-    // Each kind has its own filters to offer, so its page loads them afresh.
-    BrowseKindPage(
-      kind: kind, kinds: discover.state.value?.browse ?? [], filters: $filters, sort: $sort, onKind: switchTo
-    )
-    .id(kind)
-    .loadsDiscover(discover)
-  }
-
-  /// To the other kind, without what it lacks: their genres and ratings differ.
-  private func switchTo(_ other: String) {
-    guard other != kind else { return }
-    filters = filters.forOtherKind
-    kind = other
+    BrowseKindPage(kind: start.kind, filters: $filters, sort: $sort)
   }
 }
 
@@ -65,18 +48,17 @@ struct CatalogBrowseScreen: View {
 /// menu, and the grid.
 private struct BrowseKindPage: View {
   let kind: String
-  let kinds: [String]
   @Binding var filters: CatalogFilters
   @Binding var sort: String
-  let onKind: (String) -> Void
   @State private var options = Loader<CatalogBrowseOptions>()
   @State private var filtering = false
   @State private var sorting = false
+  @State private var voteFloor: Int?
 
   var body: some View {
-    let ready = options.state.value.flatMap { $0.enabled ? $0 : nil }
+    let ready: CatalogBrowseOptions? = options.state.value.flatMap { $0.enabled ? $0 : nil }
     // Best match goes with the recommendations, and back to popular without them.
-    let change = Binding(
+    let change = Binding<CatalogFilters>(
       get: { filters },
       set: { next in
         filters = next
@@ -89,9 +71,7 @@ private struct BrowseKindPage: View {
         ErrorBox(Str.browseFiltersFailed, Str.webDiscoverFailedHint, disconnected: disconnected, onRetry: options.reload)
       case .ready(let value):
         if value.enabled {
-          BrowseGrid(kind: kind, options: value, filters: change, sort: sort, kinds: kinds, onKind: onKind) {
-            filtering = true
-          }
+          BrowseGrid(kind: kind, filters: change, sort: sort, onFloor: { voteFloor = $0 })
         } else {
           EmptyState(icon: .compass, title: Str.webDiscoverOff, description: Str.webDiscoverOffHint)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -111,7 +91,7 @@ private struct BrowseKindPage: View {
         }
       }
     }
-    .loads(options) { [kind] api in try await requestApi(api).discover.browseOptions(kind: kind) }
+    .loads(options, fetch: fetchOptions)
     #if DEBUG
       // `-requests.open filters|sort|scored`: the filters, the sort's menu, or the best-scored first, for a screenshot.
       .task(id: ready != nil) {
@@ -130,8 +110,12 @@ private struct BrowseKindPage: View {
       }
     #endif
     .filterSheet(isPresented: $filtering, active: filters.count, onClear: { change.wrappedValue = .none }) {
-      if let ready { BrowseFilters(kind: kind, options: ready, filters: change) }
+      if let ready { BrowseFilters(kind: kind, options: ready, filters: change, sort: sort, voteFloor: voteFloor) }
     }
+  }
+  private var fetchOptions: @Sendable (MatineeApi) async throws -> CatalogBrowseOptions {
+    let kind = kind
+    return { api in try await requestApi(api).discover.browseOptions(kind: kind) }
   }
 }
 
@@ -152,13 +136,9 @@ func browseSortName(_ sort: String) -> String {
 
 private struct BrowseGrid: View {
   let kind: String
-  let options: CatalogBrowseOptions
   @Binding var filters: CatalogFilters
   let sort: String
-  /// The kinds the viewer can browse, the server's; with both, chips switch between them.
-  let kinds: [String]
-  let onKind: (String) -> Void
-  let onFilters: () -> Void
+  let onFloor: (Int?) -> Void
   @State private var pages = RequestPages<CatalogBrowseTitle> { $0.ref.requestKey }
   @State private var visible: Set<Int> = []
   @Environment(\.api) private var api
@@ -167,43 +147,19 @@ private struct BrowseGrid: View {
   @Environment(\.palette) private var palette
 
   var body: some View {
-    let chips = activeFilters
-    let recommended = filters.recommends
+    let filtered: Bool = filters.count > 0
+    let recommended: Bool = filters.recommends
     let hidden = actions?.hidden.keys ?? []
     // What the viewer said they're not interested in leaves a list of recommendations.
-    let shown = pages.items.filter { !recommended || !hidden.contains($0.ref.key) }
+    let shown: [CatalogBrowseTitle] = pages.items.filter { !recommended || !hidden.contains($0.ref.key) }
+    let window: Range<Int> = requestFollowWindow(visible: visible, count: shown.count)
+    let followed: [CatalogInput] = shown[window].filter { $0.title == nil }
+      .map { CatalogInput(ref: $0.ref, libraryId: nil) }
     ScrollView {
       VStack(alignment: .leading, spacing: Space.s4) {
-        if kinds.count > 1 {
-          HStack(spacing: Space.s1_5) {
-            ForEach(kinds, id: \.self) { other in
-              Chip(
-                other == TitleKind.show ? Str.webDiscoverBrowseKindShow : Str.webDiscoverBrowseKindMovie,
-                selected: other == kind
-              ) { onKind(other) }
-            }
-          }
-          .padding(.horizontal, gutter)
-          .accessibilityElement(children: .contain)
-          .accessibilityLabel(Str.webDiscoverBrowseKind)
-        }
-        if !chips.isEmpty {
-          ActiveFilterChips(chips: chips) { filters = .none }
-        }
-        if let floor = pages.voteFloor {
-          VStack(alignment: .leading, spacing: Space.s2) {
-            Text(
-              sort == "scoreHigh" || sort == "scoreLow"
-                ? Str.webDiscoverBrowseFloorScore(formatCount(floor)) : Str.webDiscoverBrowseFloorList(formatCount(floor))
-            )
-            .textStyle(.sm).foregroundStyle(palette.mutedForeground)
-            MatineeButton(Str.webDiscoverBrowseFloorChange, icon: .listFilter, look: .outline, size: .md, action: onFilters)
-          }
-          .padding(.horizontal, gutter)
-        }
         if pages.stale { StaleNote(text: Str.webDiscoverStale) }
         if pages.items.isEmpty {
-          first(chips: chips, recommended: recommended)
+          first(filtered: filtered, recommended: recommended)
         } else {
           CardGrid {
             ForEach(Array(shown.enumerated()), id: \.element.ref) { index, item in
@@ -214,34 +170,33 @@ private struct BrowseGrid: View {
           }
           PageEnd(
             loading: pages.loading, failed: pages.failure != nil, more: pages.nextPage != nil, end: Str.webDiscoverEnd,
-            onMore: pages.more)
+            onMore: { pages.more() })
         }
       }
       .padding(.bottom, Space.s8)
     }
-    .onAppear(perform: configure)
+    .onAppear { configure() }
+    .onChange(of: pages.voteFloor) { onFloor(pages.voteFloor) }
     .onChange(of: filters) { configure() }
     .onChange(of: sort) { configure() }
     // Library cards play; only the rest can change.
-    .followsRequests(
-      Array(shown[requestFollowWindow(visible: visible, count: shown.count)])
-        .filter { $0.title == nil }.map { CatalogInput(ref: $0.ref, libraryId: nil) })
+    .followsRequests(followed)
   }
 
   /// The grid's first page: loading, failed, or nothing to show.
-  @ViewBuilder private func first(chips: [ActiveFilter], recommended: Bool) -> some View {
+  @ViewBuilder private func first(filtered: Bool, recommended: Bool) -> some View {
     Group {
       if let failure = pages.failure {
-        ErrorState(Str.gridLoadFailed, Str.webDiscoverFailedHint, icon: .cloudOff, disconnected: failure.isDisconnect, onRetry: pages.more)
+        ErrorState(Str.gridLoadFailed, Str.webDiscoverFailedHint, icon: .cloudOff, disconnected: failure.isDisconnect, onRetry: { pages.more() })
       } else if pages.loading || pages.nextPage != nil {
         Spinner(size: 32, tint: palette.accent)
       } else if recommended {
         EmptyState(icon: .compass, title: Str.webDiscoverBrowseForYouNone, description: Str.webDiscoverBrowseForYouHint) {
-          if !chips.isEmpty {
+          if filtered {
             MatineeButton(Str.browseClearFilters, look: .outline) { filters = .none }
           }
         }
-      } else if !chips.isEmpty {
+      } else if filtered {
         EmptyState(
           icon: .searchX, title: kind == TitleKind.show ? Str.webDiscoverBrowseNoneShow : Str.webDiscoverBrowseNoneMovie,
           description: Str.webFiltersNoneHint
@@ -262,60 +217,10 @@ private struct BrowseGrid: View {
     let input = CatalogBrowseInput(kind: kind, filters: filters, sort: sort, page: nil)
     let key = (try? String(decoding: JSONEncoder().encode(input), as: UTF8.self)) ?? "\(kind)\(sort)"
     visible = []
-    pages.configure(key: key) { page in try await data.browseBatch(input, page: page) }
-  }
-
-  /// The filters on, as chips that take themselves off.
-  private var activeFilters: [ActiveFilter] {
-    var active: [ActiveFilter] = []
-    if filters.recommended == true {
-      active.append(ActiveFilter(key: "recommended", label: Str.webDiscoverBrowseRecommended) { filters.recommended = nil })
+    let loadPage: @Sendable (Int) async throws -> RequestPageBatch<CatalogBrowseTitle> = { page in
+      try await data.browseBatch(input, page: page)
     }
-    if filters.upcoming == true {
-      active.append(ActiveFilter(key: "upcoming", label: Str.webDiscoverBrowseUpcoming) { filters.upcoming = nil })
-    }
-    if filters.requestable == true {
-      active.append(ActiveFilter(key: "requestable", label: Str.webDiscoverBrowseRequestable) { filters.requestable = nil })
-    }
-    let genres = filters.genres ?? []
-    for id in genres {
-      guard let genre = options.genres.first(where: { $0.id == id }) else { continue }
-      active.append(ActiveFilter(key: "genre-\(id)", label: genre.name) { filters.genres = genres.filter { $0 != id } })
-    }
-    if filters.yearFrom != nil || filters.yearTo != nil {
-      let label = rangeText(filters.yearFrom.map(Double.init), filters.yearTo.map(Double.init), format: yearText, any: "", words: .year)
-      active.append(ActiveFilter(key: "years", label: label) {
-        filters.yearFrom = nil
-        filters.yearTo = nil
-      })
-    }
-    if filters.scoreMin != nil || filters.scoreMax != nil {
-      let label = rangeText(filters.scoreMin, filters.scoreMax, format: formatRating, any: "", words: .scoreChip)
-      active.append(ActiveFilter(key: "score", label: label) {
-        filters.scoreMin = nil
-        filters.scoreMax = nil
-      })
-    }
-    if let votes = filters.votesMin {
-      active.append(ActiveFilter(key: "votes", label: Str.webDiscoverBrowseChipVotes(votes)) { filters.votesMin = nil })
-    }
-    if let rating = filters.rating {
-      active.append(ActiveFilter(key: "rating", label: Str.webFiltersChipRating(rating)) { filters.rating = nil })
-    }
-    if let language = filters.language {
-      let name = options.languages.first { $0.id == language }?.name ?? language
-      active.append(ActiveFilter(key: "language", label: name) { filters.language = nil })
-    }
-    if filters.runtimeMin != nil || filters.runtimeMax != nil {
-      let label = rangeText(
-        filters.runtimeMin.map(Double.init), filters.runtimeMax.map(Double.init), format: runtimeText, any: "",
-        words: .runtimeChip)
-      active.append(ActiveFilter(key: "runtime", label: label) {
-        filters.runtimeMin = nil
-        filters.runtimeMax = nil
-      })
-    }
-    return active
+    pages.configure(key: key, fetch: loadPage)
   }
 }
 
@@ -346,6 +251,8 @@ private struct BrowseFilters: View {
   let kind: String
   let options: CatalogBrowseOptions
   @Binding var filters: CatalogFilters
+  let sort: String
+  let voteFloor: Int?
   @State private var choosingLanguage = false
 
   var body: some View {
@@ -409,7 +316,7 @@ private struct BrowseFilters: View {
       filters.scoreMax = high
     }
     if !options.votes.isEmpty {
-      FilterSection(Str.webDiscoverBrowseVotes) {
+      FilterSection(Str.webDiscoverBrowseVotes, hint: voteHint) {
         ChoiceChips(
           choices: options.votes.map { FilterChoice(value: $0, label: Str.webDiscoverBrowseVotesStep(formatCount($0))) },
           value: $filters.votesMin)
@@ -439,6 +346,13 @@ private struct BrowseFilters: View {
       filters.runtimeMin = low.map { Int($0.rounded()) }
       filters.runtimeMax = high.map { Int($0.rounded()) }
     }
+  }
+
+  private var voteHint: String? {
+    guard let voteFloor else { return nil }
+    let count = formatCount(voteFloor)
+    return sort == "scoreHigh" || sort == "scoreLow"
+      ? Str.webDiscoverBrowseFloorScore(count) : Str.webDiscoverBrowseFloorList(count)
   }
 
   private func span(_ range: CatalogRange) -> FilterSpan { FilterSpan(min: range.min, max: range.max, step: range.step) }

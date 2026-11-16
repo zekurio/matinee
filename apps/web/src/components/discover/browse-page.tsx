@@ -9,10 +9,8 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query"
-import { Link } from "@tanstack/react-router"
 import {
   CloudOffIcon,
-  ListFilterIcon,
   RotateCwIcon,
   SearchXIcon,
   SparklesIcon,
@@ -20,36 +18,27 @@ import {
 import { type ReactNode, useState } from "react"
 
 import { refKey, useLiveAvailability } from "@/components/catalog/catalog-data"
-import { chipClass, chipRow } from "@/components/chips"
 import { PosterGridSkeleton } from "@/components/library/library-states"
-import {
-  FilterChips,
-  SortMenu,
-  SortSelect,
-} from "@/components/library/list-controls"
+import { SortMenu, SortSelect } from "@/components/library/list-controls"
 import { posterGrid } from "@/components/media-item"
-import {
-  belowHeader,
-  PageHeader,
-  useDocumentTitle,
-} from "@/components/page-header"
+import { PageHeader, useDocumentTitle } from "@/components/page-header"
 import { usePhone } from "@/components/sheet-menu"
 import { tr } from "@/i18n"
 import { errorMessage, orpc } from "@/lib/rpc"
 import { useDismissedStore } from "@/stores/recommendations"
 
 import { BrowseCard, cardDetail, recommends } from "./browse-card"
-import { activeFilters, BrowseFilterPanel } from "./browse-filters"
+import { BrowseFilterPanel } from "./browse-filters"
 import {
   type Browse,
   browseFrom,
   type BrowseOptions,
   type BrowseSearch,
+  filterCount,
   NO_FILTERS,
   searchFor,
   sortFits,
 } from "./browse-params"
-import { railsOptions } from "./discover-data"
 import { useOnScreenCards } from "./discover-live"
 import { DiscoverEmpty, DiscoverOff } from "./discover-rails"
 import { CardSkeletons, Retry, unique, useNextPage } from "./grid-parts"
@@ -212,7 +201,7 @@ function BrowseGrid({
     withFilters({ ...browse.filters, ...patch })
   const setSort = (sort: CatalogSort) => navigate({ ...browse, sort })
   const clear = () => withFilters(NO_FILTERS)
-  const chips = activeFilters(browse.filters, options, change)
+  const filtered = filterCount(browse.filters) > 0
   const sorts = sortOptions(options).filter(({ value }) =>
     sortFits(value, browse.filters.recommended),
   )
@@ -223,6 +212,8 @@ function BrowseGrid({
       kind={kind}
       options={options}
       filters={browse.filters}
+      sort={browse.sort}
+      voteFloor={first?.voteFloor ?? null}
       change={change}
       open={panelOpen}
       onOpenChange={setPanelOpen}
@@ -259,29 +250,6 @@ function BrowseGrid({
           )
         }
       />
-      <KindSwitch kind={kind} browse={browse} />
-      <FilterChips active={chips} clear={clear} />
-      {first?.voteFloor != null && (
-        <Note
-          action={
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPanelOpen(true)}
-            >
-              <ListFilterIcon />
-              {tr("discover.browse.floorChange")}
-            </Button>
-          }
-        >
-          {tr(
-            browse.sort === "scoreHigh" || browse.sort === "scoreLow"
-              ? "discover.browse.floorScore"
-              : "discover.browse.floorList",
-            { count: first.voteFloor },
-          )}
-        </Note>
-      )}
       {stale && (
         <Note icon={<CloudOffIcon aria-hidden className="size-4 shrink-0" />}>
           {tr("discover.stale")}
@@ -311,7 +279,7 @@ function BrowseGrid({
           title={tr("discover.browse.forYouNone")}
           description={tr("discover.browse.forYouHint")}
         >
-          {chips.length > 0 && (
+          {filtered && (
             <Button variant="outline" onClick={clear}>
               {tr("library.clearFilters")}
             </Button>
@@ -321,13 +289,13 @@ function BrowseGrid({
         <DiscoverEmpty
           icon={<SearchXIcon />}
           title={
-            chips.length > 0
+            filtered
               ? tr(`discover.browse.none.${kind}`)
               : tr("discover.browse.nothing")
           }
-          description={chips.length > 0 ? tr("filters.noneHint") : ""}
+          description={filtered ? tr("filters.noneHint") : ""}
         >
-          {chips.length > 0 && (
+          {filtered && (
             <Button variant="outline" onClick={clear}>
               {tr("library.clearFilters")}
             </Button>
@@ -384,53 +352,12 @@ function turnedDown(error: Error): boolean {
   return error instanceof ORPCError && error.status === 400
 }
 
-/**
- * Movies and Shows, for a viewer who can browse both. The other kind
- * keeps the filters it has too.
- */
-function KindSwitch({ kind, browse }: { kind: TitleKind; browse: Browse }) {
-  const kinds = useQuery(railsOptions()).data?.browse ?? []
-  if (kinds.length < 2) return null
-  const search = searchFor(browse)
-  return (
-    <div
-      role="group"
-      aria-label={tr("discover.browse.kind")}
-      className={cn(chipRow, belowHeader)}
-    >
-      {kinds.map((other) => (
-        <Link
-          key={other}
-          to={other === "movie" ? "/discover/movies" : "/discover/shows"}
-          search={search}
-          replace
-          aria-current={other === kind ? "page" : undefined}
-          className={chipClass(other === kind)}
-        >
-          {tr(`discover.browse.kind.${other}`)}
-        </Link>
-      ))}
-    </div>
-  )
-}
-
 /** A line above the grid about the whole list. */
-function Note({
-  icon,
-  action,
-  children,
-}: {
-  icon?: ReactNode
-  action?: ReactNode
-  children: ReactNode
-}) {
+function Note({ icon, children }: { icon?: ReactNode; children: ReactNode }) {
   return (
-    <div className="text-muted-foreground mb-5 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm">
-      <p className="flex items-center gap-2">
-        {icon}
-        {children}
-      </p>
-      {action}
-    </div>
+    <p className="text-muted-foreground mb-5 flex items-center gap-2 text-sm">
+      {icon}
+      {children}
+    </p>
   )
 }

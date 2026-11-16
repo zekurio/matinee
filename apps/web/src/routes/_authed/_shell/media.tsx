@@ -25,8 +25,8 @@ const libraryGrid =
 
 /**
  * The Media tab on phones: every library as a card, which opens the
- * library. Wider screens have the libraries in the bar, but the page
- * works there too.
+ * library. Wider screens have Movies and Shows in the bar instead, but
+ * the page works there too.
  */
 function MediaPage() {
   const { user } = Route.useRouteContext()

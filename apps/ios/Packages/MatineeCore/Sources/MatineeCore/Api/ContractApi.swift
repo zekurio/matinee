@@ -305,8 +305,8 @@ public struct TitlesApi: Sendable {
     public func list(libraryId: String, query: String? = nil, kind: String? = nil, filters: TitleFilters? = nil, sort: String? = nil, order: String? = nil, limit: Int? = nil, offset: Int? = nil) async throws -> TitleList {
         return try await transport.call(method: "POST", path: ["libraries", wireText(libraryId)!, "titles", "browse"], query: [], body: try transport.json(TitlesListInput(query: query, kind: kind, filters: filters, sort: sort, order: order, limit: limit, offset: offset)))
     }
-    public func browse(query: String? = nil, kind: String? = nil, filters: TitleFilters? = nil, sort: String? = nil, order: String? = nil, limit: Int? = nil, offset: Int? = nil) async throws -> BrowsedTitles {
-        return try await transport.call(method: "POST", path: ["titles", "browse"], query: [], body: try transport.json(TitlesBrowseInput(query: query, kind: kind, filters: filters, sort: sort, order: order, limit: limit, offset: offset)))
+    public func browse(query: String? = nil, kind: String? = nil, filters: TitleFilters? = nil, sort: String? = nil, order: String? = nil, limit: Int? = nil, offset: Int? = nil, libraryId: String? = nil) async throws -> BrowsedTitles {
+        return try await transport.call(method: "POST", path: ["titles", "browse"], query: [], body: try transport.json(TitlesBrowseInput(query: query, kind: kind, filters: filters, sort: sort, order: order, limit: limit, offset: offset, libraryId: libraryId)))
     }
     public func filterOptions(libraryId: String? = nil, kind: String? = nil, genre: String? = nil, studio: String? = nil) async throws -> TitleFilterOptions {
         return try await transport.call(method: "GET", path: ["titles", "filter-options"], query: [("libraryId", wireText(libraryId)), ("kind", wireText(kind)), ("genre", wireText(genre)), ("studio", wireText(studio))], body: nil)
@@ -473,6 +473,12 @@ public struct PartyApi: Sendable {
     }
     public func next(itemId: String) async throws {
         try await transport.send(method: "POST", path: ["party", "next"], query: [], body: try transport.json(PartyNextInput(itemId: itemId)))
+    }
+    public func status(partyStatusReport: PartyStatusReport) async throws {
+        try await transport.send(method: "PUT", path: ["party", "status"], query: [], body: try transport.json(partyStatusReport))
+    }
+    public func health() async throws -> AsyncThrowingStream<PartyHealth?, any Error> {
+        return transport.events(method: "GET", path: ["party", "health"], query: [], body: nil)
     }
 }
 public struct PartyQueueApi: Sendable {

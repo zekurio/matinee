@@ -100,23 +100,30 @@ export type ActiveFilter = { key: string; label: string; remove: () => void }
 
 /**
  * Chips for the filters in use, each taking its own off, and "Clear all"
- * once there are two. Nothing when none is on.
+ * once there are two. Nothing when none is on. From `sm` up they sit in
+ * the header's row, as its `chips`, so the list below doesn't move when
+ * one goes on; phones have no room there and get them as a row below.
  */
 export function FilterChips({
   active,
   clear,
-  className,
+  inline = false,
 }: {
   active: ActiveFilter[]
   clear: () => void
-  className?: string
+  /** In the header's row: one line that scrolls sideways, no gap below. */
+  inline?: boolean
 }) {
   if (active.length === 0) return null
   return (
     <div
       role="group"
       aria-label={tr("library.filters")}
-      className={cn(chipRow, belowHeader, className)}
+      className={
+        inline
+          ? "flex min-w-0 [scrollbar-width:none] items-center gap-1.5 overflow-x-auto [&::-webkit-scrollbar]:hidden"
+          : cn(chipRow, belowHeader, "sm:hidden")
+      }
     >
       {active.map((filter) => (
         <button

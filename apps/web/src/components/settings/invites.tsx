@@ -112,18 +112,20 @@ export function Invites({ passkeysOn }: { passkeysOn: boolean }) {
         onOpenChange={setCreating}
         disablePointerDismissal={created !== null}
       >
-        <DialogContent className="gap-5 p-6 sm:max-w-md">
-          {creating &&
-            (created ? (
-              <CreatedLink invite={created} onDone={() => setCreating(false)} />
-            ) : (
-              <InviteForm
-                onCreated={(invite) => {
-                  setCreated(invite)
-                  void refresh()
-                }}
-              />
-            ))}
+        <DialogContent
+          showCloseButton={false}
+          className="gap-5 p-6 sm:max-w-md"
+        >
+          {created ? (
+            <CreatedLink invite={created} onDone={() => setCreating(false)} />
+          ) : (
+            <InviteForm
+              onCreated={(invite) => {
+                setCreated(invite)
+                void refresh()
+              }}
+            />
+          )}
         </DialogContent>
       </Dialog>
     </SettingsSubsection>
@@ -298,7 +300,7 @@ function InviteForm({
             </form.Field>
           )}
         </FieldGroup>
-        <DialogFooter className="-mx-6 -mb-6 px-6 py-4">
+        <DialogFooter showCancelButton className="-mx-6 -mb-6 px-6 py-4">
           <form.SubmitButton pending={create.isPending}>
             {tr("users.invites.dialog.submit")}
           </form.SubmitButton>

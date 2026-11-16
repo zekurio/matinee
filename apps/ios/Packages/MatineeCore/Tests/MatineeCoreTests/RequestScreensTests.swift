@@ -275,10 +275,6 @@ struct RequestScreensTests {
     filters.requestable = true
     #expect(filters.count == 6)
     #expect(filters.recommends)
-    // Switching kind keeps all but what the other kind lacks.
-    filters.rating = "PG"
-    let other = filters.forOtherKind
-    #expect(other.genres == nil && other.rating == nil && other.yearFrom == 1990 && other.language == "de" && other.recommends)
     let summary = TitleSummary(
       id: "t", libraryId: "l", kind: TitleKind.movie, name: "Dune", year: 2021, overview: nil,
       images: Images(poster: nil, backdrop: nil, logo: nil), genres: [], rating: nil, contentRating: nil,
@@ -292,6 +288,28 @@ struct RequestScreensTests {
     #expect(browseLibraryTitle(summary, item.availability) == summary)
     #expect(browseLibraryTitle(summary, value("coming", nil, here: "t")) == nil)
     #expect(browseLibraryTitle(nil, item.availability) == nil)
+  }
+
+  @Test func browseFiltersCountEvenWhenOptionsDoNotOfferThem() {
+    // The header and empty state's Clear action use the count, not chips
+    // built from the currently loaded options. A row can bring any genre.
+    var filters = CatalogFilters.none
+    filters.genres = [99999]
+    filters.rating = "PG"
+    filters.votesMin = 100
+    filters.scoreMin = 5
+    filters.scoreMax = 9
+    filters.runtimeMin = 30
+    filters.runtimeMax = 120
+    #expect(filters.count == 5)
+    let start = CatalogBrowseStart(kind: TitleKind.show, filters: filters, sort: CatalogSort.scoreHigh)
+    #expect(start.kind == TitleKind.show)
+    #expect(start.filters == filters)
+    #expect(catalogSort(start.sort, fitting: filters) == CatalogSort.scoreHigh)
+    filters = .none
+    #expect(filters.count == 0)
+    #expect(start.filters.rating == "PG")
+    #expect(start.filters.genres == [99999])
   }
 
   @Test func bestMatchGoesOnlyWithRecommendations() {

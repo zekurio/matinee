@@ -1506,12 +1506,8 @@ nonisolated enum Str {
   static var webCommonSaveBarSaving: String { tr("web_common_saveBar_saving") }
   /// Unsaved changes
   static var webCommonSaveBarUnsaved: String { tr("web_common_saveBar_unsaved") }
-  /// At least %1$lld vote / At least %1$lld votes
-  static func webDiscoverBrowseChipVotes(_ count: Int) -> String { tr("web_discover_browse_chip_votes", count) }
   /// These titles didn't load.
   static var webDiscoverBrowseFailed: String { tr("web_discover_browse_failed") }
-  /// Choose a minimum
-  static var webDiscoverBrowseFloorChange: String { tr("web_discover_browse_floorChange") }
   /// Only titles with at least %1$@ votes, so the list isn't filled with ones hardly anyone has seen.
   static func webDiscoverBrowseFloorList(_ p1: String) -> String { tr("web_discover_browse_floorList", p1) }
   /// Only titles with at least %1$@ votes, so a handful of votes can't top the list.
@@ -1520,12 +1516,6 @@ nonisolated enum Str {
   static var webDiscoverBrowseForYouHint: String { tr("web_discover_browse_forYouHint") }
   /// No recommendations yet
   static var webDiscoverBrowseForYouNone: String { tr("web_discover_browse_forYouNone") }
-  /// Movies or shows
-  static var webDiscoverBrowseKind: String { tr("web_discover_browse_kind") }
-  /// Movies
-  static var webDiscoverBrowseKindMovie: String { tr("web_discover_browse_kind_movie") }
-  /// Shows
-  static var webDiscoverBrowseKindShow: String { tr("web_discover_browse_kind_show") }
   /// Browse movies
   static var webDiscoverBrowseMovie: String { tr("web_discover_browse_movie") }
   /// No movies match these filters

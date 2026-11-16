@@ -8693,8 +8693,9 @@ public struct Party: Codable, Sendable, Hashable {
     public var playback: PartyPlayback?
     public var queue: [PartyEntry]
     public var proposals: [PartyEntry]
+    public var waitingFor: [String]
     public var now: String
-    public init(id: String, name: String?, owner: Bool, members: [PartyMember], item: MediaItem?, restricted: Bool, playback: PartyPlayback?, queue: [PartyEntry], proposals: [PartyEntry], now: String) {
+    public init(id: String, name: String?, owner: Bool, members: [PartyMember], item: MediaItem?, restricted: Bool, playback: PartyPlayback?, queue: [PartyEntry], proposals: [PartyEntry], waitingFor: [String], now: String) {
         self.id = id
         self.name = name
         self.owner = owner
@@ -8704,6 +8705,7 @@ public struct Party: Codable, Sendable, Hashable {
         self.playback = playback
         self.queue = queue
         self.proposals = proposals
+        self.waitingFor = waitingFor
         self.now = now
     }
     private enum CodingKeys: String, CodingKey {
@@ -8716,6 +8718,7 @@ public struct Party: Codable, Sendable, Hashable {
         case playback = "playback"
         case queue = "queue"
         case proposals = "proposals"
+        case waitingFor = "waitingFor"
         case now = "now"
     }
     public init(from decoder: any Decoder) throws {
@@ -8729,6 +8732,7 @@ public struct Party: Codable, Sendable, Hashable {
         self.playback = try c.decodeIfPresent(PartyPlayback.self, forKey: .playback)
         self.queue = try c.decode([PartyEntry].self, forKey: .queue)
         self.proposals = try c.decode([PartyEntry].self, forKey: .proposals)
+        self.waitingFor = try c.decode([String].self, forKey: .waitingFor)
         self.now = try c.decode(String.self, forKey: .now)
     }
     public func encode(to encoder: any Encoder) throws {
@@ -8742,7 +8746,79 @@ public struct Party: Codable, Sendable, Hashable {
         try c.encode(self.playback, forKey: .playback)
         try c.encode(self.queue, forKey: .queue)
         try c.encode(self.proposals, forKey: .proposals)
+        try c.encode(self.waitingFor, forKey: .waitingFor)
         try c.encode(self.now, forKey: .now)
+    }
+}
+
+public struct PartyMemberHealth: Codable, Sendable, Hashable {
+    public var userId: String
+    public var state: String
+    public var driftSeconds: Double?
+    public var bufferedSeconds: Double?
+    public var method: String?
+    public var quality: String?
+    public var remote: Bool
+    public var waitedFor: Bool
+    public init(userId: String, state: String, driftSeconds: Double?, bufferedSeconds: Double?, method: String?, quality: String?, remote: Bool, waitedFor: Bool) {
+        self.userId = userId
+        self.state = state
+        self.driftSeconds = driftSeconds
+        self.bufferedSeconds = bufferedSeconds
+        self.method = method
+        self.quality = quality
+        self.remote = remote
+        self.waitedFor = waitedFor
+    }
+    private enum CodingKeys: String, CodingKey {
+        case userId = "userId"
+        case state = "state"
+        case driftSeconds = "driftSeconds"
+        case bufferedSeconds = "bufferedSeconds"
+        case method = "method"
+        case quality = "quality"
+        case remote = "remote"
+        case waitedFor = "waitedFor"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.userId = try c.decode(String.self, forKey: .userId)
+        self.state = try c.decode(String.self, forKey: .state)
+        self.driftSeconds = try c.decodeIfPresent(Double.self, forKey: .driftSeconds)
+        self.bufferedSeconds = try c.decodeIfPresent(Double.self, forKey: .bufferedSeconds)
+        self.method = try c.decodeIfPresent(String.self, forKey: .method)
+        self.quality = try c.decodeIfPresent(String.self, forKey: .quality)
+        self.remote = try c.decode(Bool.self, forKey: .remote)
+        self.waitedFor = try c.decode(Bool.self, forKey: .waitedFor)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.userId, forKey: .userId)
+        try c.encode(self.state, forKey: .state)
+        try c.encode(self.driftSeconds, forKey: .driftSeconds)
+        try c.encode(self.bufferedSeconds, forKey: .bufferedSeconds)
+        try c.encode(self.method, forKey: .method)
+        try c.encode(self.quality, forKey: .quality)
+        try c.encode(self.remote, forKey: .remote)
+        try c.encode(self.waitedFor, forKey: .waitedFor)
+    }
+}
+
+public struct PartyHealth: Codable, Sendable, Hashable {
+    public var members: [PartyMemberHealth]
+    public init(members: [PartyMemberHealth]) {
+        self.members = members
+    }
+    private enum CodingKeys: String, CodingKey {
+        case members = "members"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.members = try c.decode([PartyMemberHealth].self, forKey: .members)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.members, forKey: .members)
     }
 }
 
@@ -8781,6 +8857,56 @@ public struct PartyInvite: Codable, Sendable, Hashable {
         try c.encode(self.owner, forKey: .owner)
         try c.encode(self.members, forKey: .members)
         try c.encode(self.joined, forKey: .joined)
+    }
+}
+
+public enum PartyPlayerState {
+    public static let playing = "playing"
+    public static let paused = "paused"
+    public static let buffering = "buffering"
+    public static let knownValues = ["playing", "paused", "buffering"]
+}
+
+public struct PartyStatusReport: Codable, Sendable, Hashable {
+    public var itemId: String
+    public var state: String
+    public var positionSeconds: Double
+    public var bufferedSeconds: Double
+    public var method: String
+    public var quality: String
+    public init(itemId: String, state: String, positionSeconds: Double, bufferedSeconds: Double, method: String, quality: String) {
+        self.itemId = itemId
+        self.state = state
+        self.positionSeconds = positionSeconds
+        self.bufferedSeconds = bufferedSeconds
+        self.method = method
+        self.quality = quality
+    }
+    private enum CodingKeys: String, CodingKey {
+        case itemId = "itemId"
+        case state = "state"
+        case positionSeconds = "positionSeconds"
+        case bufferedSeconds = "bufferedSeconds"
+        case method = "method"
+        case quality = "quality"
+    }
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.itemId = try c.decode(String.self, forKey: .itemId)
+        self.state = try c.decode(String.self, forKey: .state)
+        self.positionSeconds = try c.decode(Double.self, forKey: .positionSeconds)
+        self.bufferedSeconds = try c.decode(Double.self, forKey: .bufferedSeconds)
+        self.method = try c.decode(String.self, forKey: .method)
+        self.quality = try c.decode(String.self, forKey: .quality)
+    }
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(self.itemId, forKey: .itemId)
+        try c.encode(self.state, forKey: .state)
+        try c.encode(self.positionSeconds, forKey: .positionSeconds)
+        try c.encode(self.bufferedSeconds, forKey: .bufferedSeconds)
+        try c.encode(self.method, forKey: .method)
+        try c.encode(self.quality, forKey: .quality)
     }
 }
 
@@ -11449,7 +11575,8 @@ public struct TitlesBrowseInput: Codable, Sendable, Hashable {
     public var order: String?
     public var limit: Int?
     public var offset: Int?
-    public init(query: String? = nil, kind: String? = nil, filters: TitleFilters? = nil, sort: String? = nil, order: String? = nil, limit: Int? = nil, offset: Int? = nil) {
+    public var libraryId: String?
+    public init(query: String? = nil, kind: String? = nil, filters: TitleFilters? = nil, sort: String? = nil, order: String? = nil, limit: Int? = nil, offset: Int? = nil, libraryId: String? = nil) {
         self.query = query
         self.kind = kind
         self.filters = filters
@@ -11457,6 +11584,7 @@ public struct TitlesBrowseInput: Codable, Sendable, Hashable {
         self.order = order
         self.limit = limit
         self.offset = offset
+        self.libraryId = libraryId
     }
     private enum CodingKeys: String, CodingKey {
         case query = "query"
@@ -11466,6 +11594,7 @@ public struct TitlesBrowseInput: Codable, Sendable, Hashable {
         case order = "order"
         case limit = "limit"
         case offset = "offset"
+        case libraryId = "libraryId"
     }
     public init(from decoder: any Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -11476,6 +11605,7 @@ public struct TitlesBrowseInput: Codable, Sendable, Hashable {
         self.order = try c.decodeIfPresent(String.self, forKey: .order)
         self.limit = try c.decodeIfPresent(Int.self, forKey: .limit)
         self.offset = try c.decodeIfPresent(Int.self, forKey: .offset)
+        self.libraryId = try c.decodeIfPresent(String.self, forKey: .libraryId)
     }
     public func encode(to encoder: any Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
@@ -11486,6 +11616,7 @@ public struct TitlesBrowseInput: Codable, Sendable, Hashable {
         try c.encodeIfPresent(self.order, forKey: .order)
         try c.encodeIfPresent(self.limit, forKey: .limit)
         try c.encodeIfPresent(self.offset, forKey: .offset)
+        try c.encodeIfPresent(self.libraryId, forKey: .libraryId)
     }
 }
 

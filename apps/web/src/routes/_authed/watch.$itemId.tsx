@@ -167,7 +167,9 @@ function WatchItem({
       ? {
           playback: party.playback,
           offsetMs,
-          watching: party.members.length,
+          members: party.members,
+          selfId: user.id,
+          waitingFor: party.waitingFor,
           nameOf: (id) => {
             if (id === user.id) return null
             const member = party.members.find((other) => other.user.id === id)
@@ -179,6 +181,8 @@ function WatchItem({
             void client.party
               .control({ itemId, playing, positionSeconds })
               .catch(() => {}),
+          report: (status) =>
+            void client.party.status({ itemId, ...status }).catch(() => {}),
           // The party goes on to its queue, and this player after it.
           ended: () => void client.party.next({ itemId }).catch(() => {}),
         }

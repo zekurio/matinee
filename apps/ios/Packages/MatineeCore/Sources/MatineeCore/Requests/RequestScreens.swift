@@ -298,14 +298,7 @@ extension CatalogFilters {
   /// The browse lists the viewer's recommendations, whose cards offer "Not interested".
   public var recommends: Bool { recommended == true }
 
-  /// The filters kept on switching to the other kind: all but the genres
-  /// and the rating, which differ between movies and shows.
-  public var forOtherKind: CatalogFilters {
-    var filters = self
-    filters.genres = nil
-    filters.rating = nil
-    return filters
-  }
+
 }
 
 /// Whether `sort` goes with `filters`: best match only among the viewer's

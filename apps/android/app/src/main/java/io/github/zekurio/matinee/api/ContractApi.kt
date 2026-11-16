@@ -678,12 +678,13 @@ class TitlesApi internal constructor(private val transport: ApiTransport) {
         order: String? = null,
         limit: Int? = null,
         offset: Int? = null,
+        libraryId: String? = null,
     ): BrowsedTitles =
         transport.call(
             "POST",
             listOf("titles", "browse"),
             emptyList(),
-            transport.json(TitlesBrowseInput.serializer(), TitlesBrowseInput(query = query, kind = kind, filters = filters, sort = sort, order = order, limit = limit, offset = offset)),
+            transport.json(TitlesBrowseInput.serializer(), TitlesBrowseInput(query = query, kind = kind, filters = filters, sort = sort, order = order, limit = limit, offset = offset, libraryId = libraryId)),
             BrowsedTitles.serializer(),
         )
 
@@ -1185,6 +1186,26 @@ class PartyApi internal constructor(private val transport: ApiTransport) {
             transport.json(PartyNextInput.serializer(), PartyNextInput(itemId = itemId)),
         )
     }
+
+    /** `PUT /party/status` */
+    suspend fun status(partyStatusReport: PartyStatusReport) {
+        transport.send(
+            "PUT",
+            listOf("party", "status"),
+            emptyList(),
+            transport.json(PartyStatusReport.serializer(), partyStatusReport),
+        )
+    }
+
+    /** `GET /party/health` */
+    fun health(): Flow<PartyHealth?> =
+        transport.events(
+            "GET",
+            listOf("party", "health"),
+            emptyList(),
+            null,
+            PartyHealth.serializer().nullable,
+        )
 }
 
 class PartyQueueApi internal constructor(private val transport: ApiTransport) {

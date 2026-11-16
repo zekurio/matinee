@@ -40,18 +40,11 @@ export default {
 
   "discover.browse.movie": "Filme durchstöbern",
   "discover.browse.show": "Serien durchstöbern",
-  "discover.browse.kind": "Filme oder Serien",
-  "discover.browse.kind.movie": "Filme",
-  "discover.browse.kind.show": "Serien",
   "discover.browse.sort.popular": "Beliebt",
   "discover.browse.sort.forYou": "Beste Treffer",
   "discover.browse.sort.votes": "Meiste Stimmen",
   "discover.browse.scoreHint": "Von TMDB, von 10",
   "discover.browse.votes": "Stimmen",
-  "discover.browse.chip.votes": plural({
-    one: "Mindestens {count} Stimme",
-    other: "Mindestens {count} Stimmen",
-  }),
   "discover.browse.votesStep": "{count}+",
   "discover.browse.only": "Nur",
   "discover.browse.onlyHint": "Demnächst heißt in den nächsten drei Monaten.",
@@ -62,7 +55,6 @@ export default {
     "Nur Titel mit mindestens {count} Stimmen, damit nicht eine Handvoll Stimmen die Liste anführt.",
   "discover.browse.floorList":
     "Nur Titel mit mindestens {count} Stimmen, damit die Liste nicht voller Titel ist, die kaum jemand kennt.",
-  "discover.browse.floorChange": "Mindestzahl wählen",
   "discover.browse.none.movie": "Keine Filme passen zu diesen Filtern",
   "discover.browse.none.show": "Keine Serien passen zu diesen Filtern",
   "discover.browse.nothing": "Gerade nichts zu zeigen",
