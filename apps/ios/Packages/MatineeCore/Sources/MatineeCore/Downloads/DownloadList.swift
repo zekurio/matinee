@@ -7,9 +7,10 @@ import Foundation
  */
 
 /// A downloaded show: its files by season. `newest` puts what came last at the top.
-public struct ShowDownloads: Sendable, Hashable {
+public struct ShowDownloads: Sendable, Hashable, Identifiable {
   public var title: TitleSummary
   public var seasons: [SeasonDownloads]
+  public var id: String { title.id }
   public var entries: [OfflineItem] { seasons.flatMap(\.entries) }
   public var newest: Double { entries.map(\.addedAt).max() ?? 0 }
   /// The file whose picture stands for the show: the one that came last.
@@ -116,6 +117,95 @@ public func comingAction(_ coming: [OfflineItem]) -> ComingAction {
   if !moving.isEmpty { return .pauseAll(moving.map(\.id)) }
   let stopped = coming.filter { !$0.isRefused }
   return stopped.isEmpty ? .none : .resumeAll(stopped.map(\.id))
+}
+
+/// What a show's downloads page offers for all of its files at once, from
+/// its menu: pausing what moves, and going on with what stopped. A refusal
+/// isn't offered again, as its row doesn't offer it either.
+public struct ShowCommands: Sendable, Hashable {
+  public var pause: [String]
+  public var resume: [String]
+
+  public init(_ entries: [OfflineItem]) {
+    pause = entries.filter(\.isMoving).map(\.id)
+    resume = entries.filter { ($0.state == .paused || $0.state == .failed) && !$0.isRefused }.map(\.id)
+  }
+}
+
+/// How a download stands, for the line under its name: the words are the app's.
+public enum DownloadStatus: Sendable, Hashable {
+  /// On the device, or coming with no size known yet: how much it holds.
+  case size(Int64)
+  /// Coming: how much of how much.
+  case progress(Int64, of: Int64)
+  case paused
+  /// Given up, and why, when it's known.
+  case stopped(DownloadFailure?)
+  /// Waiting to try again after `DownloadFailure`: why, alone, as the
+  /// danger color and the retry button say the rest.
+  case broken(DownloadFailure)
+  /// Waiting its turn, or for Wi-Fi when Settings says so.
+  case waiting(wifi: Bool)
+}
+
+extension OfflineItem {
+  /// What went wrong with it: what the worker worked out, or, from an older
+  /// entry, the server's message it kept.
+  public var problem: DownloadFailure? { failure ?? error.map(DownloadFailure.server) }
+}
+
+/// How `entry` stands, with `wifiOnly` as Settings has it.
+public func downloadStatus(_ entry: OfflineItem, wifiOnly: Bool) -> DownloadStatus {
+  switch entry.state {
+  case .done: return .size(entry.bytes)
+  case .running:
+    // Waiting to try again after an error, its task held back until then: why.
+    if let problem = entry.problem { return .broken(problem) }
+    guard let total = entry.totalBytes, total > 0 else { return .size(entry.bytes) }
+    return .progress(entry.bytes, of: total)
+  case .paused: return .paused
+  case .failed: return .stopped(entry.problem)
+  case .queued: return entry.problem.map(DownloadStatus.broken) ?? .waiting(wifi: wifiOnly)
+  }
+}
+
+/// What a row's button, and its menu's first item, do about where a
+/// download stands. Android's ComingRow, with a refusal only removable.
+public enum DownloadRowAction: Sendable, Hashable {
+  /// Broke off, or waits to try again: try again now.
+  case retry
+  case pause
+  case resume
+  /// Refused: trying again would only be refused again, so what's left is removing it.
+  case remove
+  /// On the device: nothing about its state to do.
+  case none
+}
+
+public func rowAction(_ entry: OfflineItem) -> DownloadRowAction {
+  if entry.state == .done { return .none }
+  if entry.isRefused { return .remove }
+  if entry.isBroken { return .retry }
+  return entry.isMoving ? .pause : .resume
+}
+
+/// What the Downloads tab says over its list, or in its place.
+public enum DownloadsNotice: Sendable, Hashable {
+  /// Nothing yet: how to download something.
+  case empty
+  /// The account may not download: nothing new can come. With nothing
+  /// on the device it's the page's message; with files, a note over them,
+  /// as they still play and can still go.
+  case off
+  case none
+}
+
+/// What the tab says for `count` downloads. Offline, the server can't say
+/// whether the account may download, so the usual hint stays; `mayDownload`
+/// is nil until the server has said.
+public func downloadsNotice(count: Int, offline: Bool, mayDownload: Bool?) -> DownloadsNotice {
+  if !offline && mayDownload == false { return .off }
+  return count == 0 ? .empty : .none
 }
 
 extension OfflineItem {
