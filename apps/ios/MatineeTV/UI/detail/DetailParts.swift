@@ -280,7 +280,7 @@ struct DetailActions: View {
   let memory: TVFocusMemory
   /// Ways to the pages above this one, as icons after the heart: its season, its show.
   var links: [TVAction] = []
-  var more: [TVAction] = []
+  var more: [DetailMoreRow] = []
   var moreTitle: String = ""
   var moreSubtitle: String?
   @FocusState private var focused: String?
@@ -350,7 +350,33 @@ struct DetailActions: View {
       }
     }
     .tvFocusRow(DetailKey.actions, memory: memory, focused: $focused, first: Self.first(marks))
-    .tvActionsPanel(isPresented: $showingMore, title: moreTitle, subtitle: moreSubtitle, actions: more)
+    .tvSidePanel(isPresented: $showingMore, title: moreTitle, description: moreSubtitle) {
+      DetailMoreRows(rows: more)
+    }
+  }
+}
+
+/// A row in a page's More panel: a title and a line under it, as a movie's
+/// file with where it sits and how long it runs.
+struct DetailMoreRow: Identifiable {
+  let id: String
+  let title: String
+  var subtitle: String?
+  var icon: Lucide?
+  let action: @MainActor () -> Void
+}
+
+private struct DetailMoreRows: View {
+  let rows: [DetailMoreRow]
+  @FocusState private var focused: String?
+  @Environment(\.overlayDismiss) private var dismiss
+
+  var body: some View {
+    ForEach(rows) { row in
+      TVListItem(row.title, subtitle: row.subtitle, icon: row.icon, quiet: true) { dismiss(then: row.action) }
+        .focused($focused, equals: row.id)
+    }
+    .defaultFocus($focused, rows.first?.id)
   }
 }
 

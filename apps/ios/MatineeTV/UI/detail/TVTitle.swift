@@ -89,13 +89,20 @@ private struct TVTitlePage: View {
   }
 
   /// More: a movie's files, each to play by itself, when it has several,
-  /// as a director's cut beside the film.
-  private var more: [TVAction] {
+  /// as a director's cut beside the film: each by where the server says it
+  /// sits, with how long it runs or how much is left, and its picture.
+  private var more: [DetailMoreRow] {
     guard let list = files.state.value, list.count > 1 else { return [] }
     return list.map { item in
       let label = itemLabel(item)
-      let words = [label.title, fileFolders(item)].compactMap(\.self).joined(separator: " · ")
-      return TVAction(Str.mediaPlayNamed(words), icon: .playOutline, id: item.id) { nav.play(item.id, nil) }
+      let watched = viewer?.isWatched(item) ?? (item.progress?.completed ?? false)
+      let left = isResuming(item) && !watched ? timeLeft(item) : nil
+      let subtitle = [left ?? formatRuntime(runtimeMinutes(item)), fileInfo(item, tracks: nil)?.video]
+        .compactMap(\.self).joined(separator: " · ")
+      return DetailMoreRow(
+        id: item.id, title: fileFolders(item) ?? label.title, subtitle: subtitle.isEmpty ? nil : subtitle,
+        icon: .playOutline
+      ) { nav.play(item.id, nil) }
     }
   }
 }
@@ -106,7 +113,7 @@ private struct TitleHeader: View {
   let title: Title
   let next: MediaItem?
   let marks: DetailMarks
-  let more: [TVAction]
+  let more: [DetailMoreRow]
   let memory: TVFocusMemory
   @Environment(\.api) private var api
   @Environment(\.palette) private var palette
