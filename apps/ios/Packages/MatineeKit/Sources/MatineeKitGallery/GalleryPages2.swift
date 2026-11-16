@@ -480,11 +480,64 @@ struct NavigationPage: View {
         .frame(height: 160)
         .clipShape(RoundedRectangle.kit(Radius.xl))
       }
+      Demo(
+        "Status bar frost",
+        note: "Android's: the page blurred and veiled across the status bar, thinning out 48 below it. "
+          + "Light at rest, deeper once the page has scrolled 40; the app gives the veil."
+      ) {
+        HStack(spacing: 12) {
+          // The app's strengths (MatineeCore's `StatusBarFrostStrength`): 35% at rest, 75% scrolled;
+          // 60% and 85% with no blur under Reduce Transparency.
+          StatusBarFrostDemo(label: "At rest", veil: 0.35, reducedVeil: 0.6, scrolled: false)
+          StatusBarFrostDemo(label: "Scrolled", veil: 0.75, reducedVeil: 0.85, scrolled: true)
+        }
+      }
       Demo("Keyboard shortcuts", note: "The bars give their tabs ⌘1, ⌘2, …; `.keyCommand` gives a page one of its own, as ⌘F to search.") {
         Text("⌘K pressed \(pressed) times").textStyle(.sm).foregroundStyle(palette.mutedForeground)
           .keyCommand("k", label: "Count") { pressed += 1 }
       }
     }
+  }
+}
+
+/// A page under a status bar, with the frost over its top: at rest, art
+/// under the bar; scrolled, the page's rows under it.
+private struct StatusBarFrostDemo: View {
+  let label: String
+  let veil: Double
+  let reducedVeil: Double
+  let scrolled: Bool
+  @Environment(\.palette) private var palette
+
+  /// A phone's status bar, as the frost is given it.
+  private let bar: CGFloat = 47
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 6) {
+      ZStack(alignment: .top) {
+        VStack(alignment: .leading, spacing: 8) {
+          if !scrolled { FakeArt(seed: 1).frame(height: 120) }
+          ForEach(0..<6) { index in
+            HStack(spacing: 8) {
+              FakeArt(seed: index + 2).frame(width: 44, height: 30).clipShape(RoundedRectangle.kit(Radius.sm))
+              Text("Row \(index + 1)").textStyle(.sm).foregroundStyle(palette.foreground)
+            }
+            .padding(.horizontal, 10)
+          }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        // Scrolled, the rows run up under the bar.
+        .padding(.top, scrolled ? 8 : 0)
+        StatusBarFrost(bar: bar, veil: veil, reducedVeil: reducedVeil)
+        Text("9:41").textStyle(.sm, weight: .semibold).foregroundStyle(palette.foreground)
+          .frame(height: bar)
+      }
+      .frame(height: 260)
+      .clipShape(RoundedRectangle.kit(Radius.xl))
+      .overlay { RoundedRectangle.kit(Radius.xl).strokeBorder(palette.border) }
+      Text(label).textStyle(.xs).foregroundStyle(palette.mutedForeground)
+    }
+    .frame(maxWidth: .infinity)
   }
 }
 
