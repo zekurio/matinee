@@ -246,8 +246,13 @@ export async function routedDetails(
   ])
   if (!state) throw new Error("Missing availability result")
   const credits = data.credits ?? []
+  // The poster of the reference the page was opened with, which is the
+  // one its card showed. The destination's details can hold another, from
+  // TheTVDB or in the language of the library a rule picked. A request
+  // keeps this one too, so the picture stays put until the title arrives.
+  const poster = first.value.images.poster ?? data.images.poster
   const art = await artwork([
-    data.images.poster,
+    poster,
     data.images.backdrop,
     ...seasons.map((season) => season.poster),
     ...credits.map((credit) => credit.photo),
@@ -266,7 +271,7 @@ export async function routedDetails(
     stale: result.stale,
     name: data.name,
     year: data.year,
-    poster: art(data.images.poster),
+    poster: art(poster),
     availability: state.availability,
     overview: data.overview,
     genres: data.genres,
