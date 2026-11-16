@@ -327,6 +327,11 @@ private struct QueueSheet: View {
   @Environment(\.palette) private var palette
 
   var body: some View {
+    // A long list of failures scrolls, the header and the actions with it, as Android's.
+    SheetBody { content }
+  }
+
+  @ViewBuilder private var content: some View {
     SheetHeader(queueName(queue), subtitle: queueStatus(queue))
     SheetItem(
       queue.paused ? Str.webJobsQueueResume : Str.webJobsQueuePause, icon: queue.paused ? .play : .pause
@@ -359,7 +364,7 @@ private struct QueueSheet: View {
       }
     }
     .frame(maxWidth: .infinity, alignment: .leading)
-    .padding(.horizontal, 20)
+    .padding(.horizontal, Space.sheet)
     .padding(.top, Space.s2)
     .padding(.bottom, Space.s4)
   }

@@ -92,7 +92,8 @@ struct DownloadFilesSheet: View {
       if !$0.contains($1) { $0.append($1) }
     }
     VStack(spacing: 0) {
-      ScrollView {
+      // Scrolls above the button, which stays in reach.
+      SheetBody(top: Space.s3, bottom: Space.s4) {
         // What's here and what's not, then the version, as Android's.
         VStack(alignment: .leading, spacing: Space.s3) {
           Text(summary(items)).textStyle(.sm).foregroundStyle(palette.mutedForeground)
@@ -110,12 +111,9 @@ struct DownloadFilesSheet: View {
             }
           }
         }
-        .padding(.top, Space.s3)
-        .padding(.bottom, Space.s4)
       }
-      .scrollBounceBehavior(.basedOnSize)
       if !missing.isEmpty {
-        SheetFooter {
+        SheetFooter(line: false) {
           MatineeButton(Str.downloadsStart, icon: .download, pending: resolving, fullWidth: true) {
             start(missing, results)
           }

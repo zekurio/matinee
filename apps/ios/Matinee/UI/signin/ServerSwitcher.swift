@@ -56,7 +56,7 @@ struct ServerSwitcherSheet: View {
   @State private var confirming = false
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 0) {
+    SheetBody(bottom: Space.s2) {
       SheetHeader(Str.serversTitle)
       ForEach(session.servers) { server in
         ServerRow(
@@ -109,7 +109,7 @@ private struct ServerRow: View {
             LucideIcon(.check, label: Str.serversInUse, size: 18, tint: palette.accent)
           }
         }
-        .padding(.leading, 20)
+        .padding(.leading, Space.sheet)
         .padding(.trailing, Space.s2)
         .padding(.vertical, Space.s2_5)
         .frame(minHeight: 56)

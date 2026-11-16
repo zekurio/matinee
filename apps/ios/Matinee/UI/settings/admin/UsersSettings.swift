@@ -189,16 +189,18 @@ private struct UserSheet: View {
   let onPick: (UserAction) -> Void
 
   var body: some View {
-    SheetHeader(user.name, subtitle: "@\(user.username)")
-    SheetItem(
-      !user.isAdmin ? Str.webUsersMenuMakeAdmin : isSelf ? Str.webUsersMenuStepDown : Str.webUsersMenuRemoveAdmin,
-      icon: .shield
-    ) { onPick(.role(user, admin: !user.isAdmin)) }
-    SheetItem(isSelf ? Str.webUsersMenuSignOutOthers : Str.webUsersMenuSignOut, icon: .logOut) {
-      onPick(.signOut(user))
-    }
-    SheetItem(isSelf ? Str.webUsersMenuDeleteOwn : Str.webUsersMenuDelete, icon: .trash, destructive: true) {
-      onPick(.delete(user))
+    SheetBody(bottom: Space.s2) {
+      SheetHeader(user.name, subtitle: "@\(user.username)")
+      SheetItem(
+        !user.isAdmin ? Str.webUsersMenuMakeAdmin : isSelf ? Str.webUsersMenuStepDown : Str.webUsersMenuRemoveAdmin,
+        icon: .shield
+      ) { onPick(.role(user, admin: !user.isAdmin)) }
+      SheetItem(isSelf ? Str.webUsersMenuSignOutOthers : Str.webUsersMenuSignOut, icon: .logOut) {
+        onPick(.signOut(user))
+      }
+      SheetItem(isSelf ? Str.webUsersMenuDeleteOwn : Str.webUsersMenuDelete, icon: .trash, destructive: true) {
+        onPick(.delete(user))
+      }
     }
   }
 }

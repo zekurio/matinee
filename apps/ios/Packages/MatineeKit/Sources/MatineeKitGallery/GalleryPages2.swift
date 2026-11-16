@@ -11,6 +11,12 @@ struct OverlaysPage: View {
   @State private var selectMenu = false
   @State private var actions = false
   @State private var longSheet = false
+  @State private var footerSheet = false
+  @State private var formSheet = false
+  @State private var picked: Set<Int> = [1, 2]
+  @State private var future = true
+  @State private var note = ""
+  @State private var reason: String?
   @State private var dialog = false
   @State private var confirm = false
   @State private var rename = "The Matrix (1999)"
@@ -44,11 +50,20 @@ struct OverlaysPage: View {
         Caption("Static, every row state:")
         StaticMenu()
       }
-      Demo("Sheet", note: "The web's Drawer: glass, rounded at the top, the grip. The system sheet drags it.") {
-        HStack(spacing: 10) {
+      Demo(
+        "Sheet",
+        note:
+          "The web's Drawer: glass, rounded at the top, the grip on every sheet, its ring moving with it. The system sheet drags it. A header, a body that scrolls, a footer that stays."
+      ) {
+        Flow(spacing: 10) {
           MatineeButton("Actions", icon: .ellipsis, look: .secondary, size: .md) { actions = true }
           MatineeButton("Long list", icon: .list, look: .secondary, size: .md) { longSheet = true }
+          MatineeButton("Pinned footer", icon: .listChecks, look: .secondary, size: .md) { footerSheet = true }
+          MatineeButton("With a field", icon: .x, look: .secondary, size: .md) { formSheet = true }
         }
+        Caption(
+          "Pinned footer: 24 seasons scroll between the title and the button, which stay put. With a field: the button stays above the keyboard."
+        )
       }
       Demo("Side panel", note: "The player's menus: glass from the trailing edge, drawn in place over a backdrop.") {
         MatineeButton("Audio", icon: .audioLines, look: .secondary, size: .md) { panel = true }
@@ -74,7 +89,11 @@ struct OverlaysPage: View {
           MatineeButton("Delete", look: .destructive, size: .md) { confirm = true }
         }
       }
-      Demo("Toast", note: "Sonner's look: the status icon, the action at the end, the close button on the corner.") {
+      Demo(
+        "Toast",
+        note:
+          "Sonner's look: the status icon, the action at the end centered on the toast's height, the close button on the corner. Full width, never as wide as its text."
+      ) {
         Flow(spacing: 8) {
           MatineeButton("Plain", look: .secondary, size: .sm) { toasts.post(ToastMessage("Added to favorites")) }
           MatineeButton("Success", look: .secondary, size: .sm) {
@@ -88,6 +107,11 @@ struct OverlaysPage: View {
               let result = await toasts.show(ToastMessage("Marked as watched", action: "Undo", closeButton: true))
               lastAction = result == .actionPerformed ? "Undo" : "Toast went away"
             }
+          }
+          MatineeButton("Wrapped, with action", look: .secondary, size: .sm) {
+            toasts.post(
+              ToastMessage(
+                "Removed The Matrix from Continue watching on every device", action: "Undo", closeButton: true))
           }
           MatineeButton("Loading", look: .secondary, size: .sm) {
             toasts.post(ToastMessage("Downloading", kind: .loading))
@@ -106,7 +130,13 @@ struct OverlaysPage: View {
           Toast(ToastMessage("Couldn't reach the server", kind: .error), onClose: {})
           Toast(ToastMessage("Downloading", kind: .loading))
           Toast(ToastMessage("Marked as watched", action: "Undo"), onClose: {})
+          Toast(ToastMessage("Removed The Matrix from Continue watching on every device", action: "Undo"), onClose: {})
+          Toast(
+            ToastMessage("Request sent", description: "You'll hear when it's in the library", kind: .success, action: "View"))
+          Toast(ToastMessage("Ok", action: "Undo"))
         }
+        Caption("With an action, the button sits in the middle of the toast's height, however many lines the text has.")
+          .padding(.top, 4)
         .padding(.top, 8)
       }
     }
@@ -119,26 +149,29 @@ struct OverlaysPage: View {
       PanelNote("This file has no subtitles.")
     }
     .matineeSheet(isPresented: $actions) {
-      SheetHeader("The Matrix", subtitle: "1999 · Movie")
-      SheetItem("Play from the start", icon: .rotateCcw) { lastAction = "Play from start" }
-      SheetItem("Download", icon: .download) { lastAction = "Download" }
-      SheetItem("Edit images", icon: .imageUp) { lastAction = "Edit images" }
-      SheetItem("Refresh metadata", icon: .refreshCw) { lastAction = "Refresh" }
-      SheetItem("Remove", icon: .trash, destructive: true) { confirm = true }
+      // A sheet of actions: its header scrolls with its items.
+      SheetBody(bottom: Space.s2) {
+        SheetHeader("The Matrix", subtitle: "1999 · Movie")
+        SheetItem("Play from the start", icon: .rotateCcw) { lastAction = "Play from start" }
+        SheetItem("Download", icon: .download) { lastAction = "Download" }
+        SheetItem("Edit images", icon: .imageUp) { lastAction = "Edit images" }
+        SheetItem("Refresh metadata", icon: .refreshCw) { lastAction = "Refresh" }
+        SheetItem("Remove", icon: .trash, destructive: true) { confirm = true }
+      }
     }
     .matineeSheet(isPresented: $longSheet, size: .mediumAndLarge) {
       SheetHeader("Quality")
-      ScrollView {
-        VStack(spacing: 0) {
-          ForEach(["Original", "4K", "1080p", "720p", "480p", "360p", "Audio only"], id: \.self) { option in
-            SheetItem(option, selected: option == "1080p") {}
-          }
-          ForEach(1...14, id: \.self) { index in
-            SheetItem("Episode \(index)", icon: .tvPlay) {}
-          }
+      SheetBody(bottom: Space.s2) {
+        ForEach(["Original", "4K", "1080p", "720p", "480p", "360p", "Audio only"], id: \.self) { option in
+          SheetItem(option, selected: option == "1080p") {}
+        }
+        ForEach(1...14, id: \.self) { index in
+          SheetItem("Episode \(index)", icon: .tvPlay) {}
         }
       }
     }
+    .matineeSheet(isPresented: $footerSheet) { FooterSheet(picked: $picked, future: $future) }
+    .matineeSheet(isPresented: $formSheet) { FormSheet(reason: $reason, note: $note) }
     .dialog(
       isPresented: $dialog, title: "Rename file", description: "The new name shows in every library it's in.",
       showsClose: true
@@ -161,6 +194,8 @@ struct OverlaysPage: View {
       case "more": selectMenu = true
       case "sheet": actions = true
       case "long": longSheet = true
+      case "footer": footerSheet = true
+      case "form": formSheet = true
       case "dialog": dialog = true
       case "confirm": confirm = true
       case "panel": panel = true
@@ -168,6 +203,79 @@ struct OverlaysPage: View {
       default: break
       }
       settings.open = nil
+    }
+  }
+}
+
+/// A fitted sheet whose body runs past the screen, as the request sheet's
+/// seasons: they scroll between the header and the footer, which stay put.
+private struct FooterSheet: View {
+  @Binding var picked: Set<Int>
+  @Binding var future: Bool
+  @Environment(\.sheetDismiss) private var dismiss
+  @Environment(\.palette) private var palette
+
+  var body: some View {
+    SheetHeader("Request Doctor Who")
+    SheetBody(sides: Space.s3, top: Space.s2, bottom: Space.s2) {
+      ForEach(1...24, id: \.self) { season in
+        let on = picked.contains(season)
+        Pressable(shape: .kit(Radius.md)) {
+          if on { picked.remove(season) } else { picked.insert(season) }
+        } label: {
+          HStack(spacing: Space.s3) {
+            Checkbox(isOn: .constant(on), label: "Season \(season)").allowsHitTesting(false)
+            Text("Season \(season)").textStyle(.base, weight: .medium).frame(maxWidth: .infinity, alignment: .leading)
+            Text("\(8 + season % 5) episodes").textStyle(.px13).foregroundStyle(palette.mutedForeground)
+          }
+          .padding(.horizontal, Space.s2)
+          .frame(minHeight: 52)
+          .contentShape(Rectangle())
+        }
+      }
+    }
+    SheetFooter {
+      SwitchRow("New seasons as they air", isOn: $future).padding(.horizontal, -Space.s4)
+      MatineeButton("Request \(picked.count) seasons", look: .primary, fullWidth: true) { dismiss() }
+    }
+  }
+}
+
+/// A fitted sheet with a field in its body, as the decline sheet: the
+/// footer's button stays above the keyboard.
+private struct FormSheet: View {
+  @Binding var reason: String?
+  @Binding var note: String
+  @Environment(\.sheetDismiss) private var dismiss
+  @Environment(\.palette) private var palette
+
+  var body: some View {
+    SheetHeader("Decline The Matrix", subtitle: "Asked by Ada and Grace")
+    SheetBody(sides: Space.sheet, top: Space.s4, bottom: Space.s4, spacing: Space.s3) {
+      Text("Why").textStyle(.sm, weight: .medium).foregroundStyle(palette.mutedForeground)
+      VStack(spacing: 0) {
+        ForEach(["Not available", "Already in the library", "Not wanted here", "Something else"], id: \.self) { why in
+          // A choice, not an action: it picks and leaves the sheet up.
+          Pressable(shape: Rectangle()) {
+            reason = why
+          } label: {
+            HStack(spacing: Space.s4) {
+              Text(why).textStyle(.base).frame(maxWidth: .infinity, alignment: .leading)
+              if reason == why { LucideIcon(.check, size: 18, tint: palette.accent) }
+            }
+            .padding(.horizontal, Space.sheet)
+            .frame(minHeight: 48)
+            .contentShape(Rectangle())
+          }
+        }
+      }
+      .padding(.horizontal, -Space.sheet)
+      FormField("A note for Ada and Grace") {
+        MatineeTextField("Optional", text: $note)
+      }
+    }
+    SheetFooter {
+      MatineeButton("Decline", look: .primary, dimmed: reason == nil, fullWidth: true) { dismiss() }
     }
   }
 }

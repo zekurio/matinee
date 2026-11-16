@@ -21,9 +21,12 @@ struct RequestSheet: View {
   @Environment(\.user) private var user
   @Environment(\.sheetDismiss) private var dismiss
   @Environment(\.palette) private var palette
+  /// The season the list starts at: the one a season's card asked for.
+  @State private var start: Int?
 
   init(model: RequestSheetModel) {
     self.model = model
+    _start = State(initialValue: model.only)
     // Made for each opening, so each starts from the server's pick.
     _chooser = State(
       initialValue: RequestChooser(
@@ -36,49 +39,42 @@ struct RequestSheet: View {
     let permission = RequestPermission(availability)
     let show = model.ref.kind == TitleKind.show
     let busy = hub?.busy.contains(model.ref.requestKey) == true
-    ScrollView {
-      VStack(alignment: .leading, spacing: Space.s3) {
-        Text(Str.webAskDialogTitle(model.name))
-          .textStyle(.lg, weight: .semibold, tracking: .tight)
-          .foregroundStyle(palette.foreground)
-          .lineLimit(2)
-          .accessibilityAddTraits(.isHeader)
-        if show {
-          seasons
-          if chooser.first {
-            Separator()
-            SwitchRow(
-              Str.webAskChooserFuture, isOn: Binding(get: { chooser.future }, set: { chooser.setFuture($0) })
-            )
-            .padding(.horizontal, -Space.s4)
-          }
-        }
-        if let blocked = permission.blocked {
-          let why = requestDimmedText(availability, admin: user?.isAdmin == true)
-          Callout(
-            why?.text ?? requestBlockedText(blocked, admin: user?.isAdmin == true), description: why?.note,
-            icon: .circleSlash)
-        }
-        MatineeButton(
-          requestChooserText(chooser.label), look: .primary,
-          dimmed: !chooser.canSubmit(availability: availability, busy: false), pending: busy, fullWidth: true
-        ) {
-          guard chooser.canSubmit(availability: availability, busy: busy), let hub else { return }
-          Task {
-            if await hub.ask(chooser, name: model.name, availability: availability) { dismiss() }
-          }
-        }
-        .padding(.top, Space.s1)
-        if let left = permission.leftToSay(asks: availability.asks || chooser.seasons.contains { $0.availability.asks }) {
-          Text(Str.webAskLeft(left)).textStyle(.px13).foregroundStyle(palette.mutedForeground)
-            .frame(maxWidth: .infinity)
+    SheetHeader(Str.webAskDialogTitle(model.name))
+    if show {
+      // The seasons scroll between the title and the button, which stay
+      // put however many seasons a show has, as Android's and the web's.
+      // Opened from a season's card, the list starts at that season.
+      SheetBody(sides: Space.s3, top: Space.s2, bottom: Space.s2) { seasons }
+        .scrollPosition(id: $start, anchor: .top)
+    }
+    SheetFooter(line: show) {
+      if show && chooser.first {
+        SwitchRow(
+          Str.webAskChooserFuture, isOn: Binding(get: { chooser.future }, set: { chooser.setFuture($0) })
+        )
+        .padding(.horizontal, -Space.s4)
+      }
+      // Why the button can't be pressed, beside it, where it stays in sight.
+      if let blocked = permission.blocked {
+        let why = requestDimmedText(availability, admin: user?.isAdmin == true)
+        Callout(
+          why?.text ?? requestBlockedText(blocked, admin: user?.isAdmin == true), description: why?.note,
+          icon: .circleSlash)
+      }
+      MatineeButton(
+        requestChooserText(chooser.label), look: .primary,
+        dimmed: !chooser.canSubmit(availability: availability, busy: false), pending: busy, fullWidth: true
+      ) {
+        guard chooser.canSubmit(availability: availability, busy: busy), let hub else { return }
+        Task {
+          if await hub.ask(chooser, name: model.name, availability: availability) { dismiss() }
         }
       }
-      .padding(.horizontal, Space.s5)
-      .padding(.top, Space.s2)
-      .padding(.bottom, Space.s5)
+      if let left = permission.leftToSay(asks: availability.asks || chooser.seasons.contains { $0.availability.asks }) {
+        Text(Str.webAskLeft(left)).textStyle(.px13).foregroundStyle(palette.mutedForeground)
+          .frame(maxWidth: .infinity)
+      }
     }
-    .scrollBounceBehavior(.basedOnSize)
   }
 
   private var seasons: some View {
@@ -90,6 +86,7 @@ struct RequestSheet: View {
         ) { chooser.toggle(season.number) }
       }
     }
+    .scrollTargetLayout()
   }
 }
 
@@ -141,6 +138,7 @@ private struct SeasonChoice: View {
           .lineLimit(dynamicType.isAccessibilitySize ? 2 : 1)
       }
     }
+    .padding(.horizontal, Space.s2)
     .padding(.vertical, Space.s1)
     .frame(minHeight: 52)
     .contentShape(Rectangle())

@@ -158,13 +158,15 @@ private struct LibrarySheet: View {
   let onRemove: () -> Void
 
   var body: some View {
-    SheetHeader(library.name, subtitle: library.paths.joined(separator: ", "))
-    SheetItem(Str.webLibrariesScanNow, icon: .refreshCw, action: onScan)
-    if library.metadataProvider != nil {
-      SheetItem(Str.webLibrariesRefreshMetadata, icon: .image, action: onRefresh)
+    SheetBody(bottom: Space.s2) {
+      SheetHeader(library.name, subtitle: library.paths.joined(separator: ", "))
+      SheetItem(Str.webLibrariesScanNow, icon: .refreshCw, action: onScan)
+      if library.metadataProvider != nil {
+        SheetItem(Str.webLibrariesRefreshMetadata, icon: .image, action: onRefresh)
+      }
+      SheetItem(Str.webLibrariesEdit, icon: .settings, action: onEdit)
+      SheetItem(Str.webLibrariesRemove, icon: .trash, destructive: true, action: onRemove)
     }
-    SheetItem(Str.webLibrariesEdit, icon: .settings, action: onEdit)
-    SheetItem(Str.webLibrariesRemove, icon: .trash, destructive: true, action: onRemove)
   }
 }
 

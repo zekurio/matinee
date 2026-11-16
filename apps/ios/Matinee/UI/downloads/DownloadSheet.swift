@@ -75,7 +75,8 @@ struct DownloadSheet: View {
     let noAudio = missingAudio(source, choice: picked, indices: audio)
     let texts = source.subtitles
     return VStack(spacing: 0) {
-      ScrollView {
+      // The options scroll above the button, which stays in reach.
+      SheetBody(top: Space.s3, bottom: Space.s4) {
         VStack(alignment: .leading, spacing: 0) {
           VersionPanel(
             choices: shownChoices(source.resolved.choices.presets, plans: plans), picked: $picked,
@@ -98,11 +99,8 @@ struct DownloadSheet: View {
             }
           }
         }
-        .padding(.top, Space.s3)
-        .padding(.bottom, Space.s4)
       }
-      .scrollBounceBehavior(.basedOnSize)
-      SheetFooter {
+      SheetFooter(line: false) {
         MatineeButton(
           Str.downloadsStart, icon: .download, pending: device && planning && plans[picked] == nil, fullWidth: true
         ) { start(source, texts: texts) }
@@ -242,8 +240,8 @@ func choiceName(_ choice: DownloadChoice) -> String {
   }
 }
 
-/// How far a download sheet's content sits from its edges, as the web's drawer's `px-5`.
-let SHEET_INSET: CGFloat = Space.s5
+/// How far a download sheet's content sits from its edges: the kit's, the web drawer's `px-5`.
+let SHEET_INSET: CGFloat = Space.sheet
 
 /// A group's name in a sheet, like the audio tracks', as Android's
 /// SheetHeading: `text-sm font-semibold`, 16 above it and 4 under.
@@ -309,18 +307,6 @@ struct SheetProblem: View {
 
   var body: some View {
     Text(text).textStyle(.px13).foregroundStyle(palette.destructive)
-  }
-}
-
-/// The sheet's button, full width under what scrolls, as Android's.
-struct SheetFooter<Content: View>: View {
-  @ViewBuilder let content: () -> Content
-
-  var body: some View {
-    content()
-      .padding(.horizontal, SHEET_INSET)
-      .padding(.top, Space.s3)
-      .padding(.bottom, Space.s2)
   }
 }
 

@@ -157,11 +157,22 @@ a value or a line of detail muted.
 - `.dropdownMenu(isPresented: $open, align: .leading | .trailing, matchWidth:) { MenuItem…; MenuLabel(""); MenuSeparator() }`
   on what opens it. `MenuItem("Name", icon:, selected:, destructive:) { }`
   closes the menu, then runs.
-- `.matineeSheet(isPresented: $open, size: .fitted | .mediumAndLarge | .large, handle:) { SheetHeader(…); SheetItem(…) }`,
+- `.matineeSheet(isPresented: $open, size: .fitted | .mediumAndLarge | .large) { SheetHeader(…); SheetBody { … }; SheetFooter { … } }`,
   or `item:`. The web's Drawer and its backdrop over the system sheet's
-  dragging. `SheetItem("Name", icon:, destructive:, selected:) { }` closes
-  the sheet, then runs. A title's actions go here, as the web shows them on
-  a phone; a short list of choices goes in a dropdown.
+  dragging, detents, and keyboard, with the grip on every sheet and the
+  ring drawn by the sheet's own surface, so it moves with it. `.fitted`
+  is as tall as its content, up to most of the screen.
+  - `SheetHeader("Title", subtitle:, line:)`: every sheet's title, in
+    `text-base` semibold over a line, as Android's.
+  - `SheetBody(sides:, top:, bottom:, spacing:) { }`: what scrolls once the
+    sheet runs out of room, the padding inside the scroll. A sheet of
+    actions puts its header in it too, with `bottom: Space.s2`.
+  - `SheetFooter(line:, spacing:) { }`: what stays at the bottom under the
+    body, above the keyboard, like the sheet's button.
+  - `SheetItem("Name", icon:, destructive:, selected:) { }` closes the
+    sheet, then runs. A title's actions go here, as the web shows them on
+    a phone; a short list of choices goes in a dropdown.
+  - `Space.sheet` (20) is how far everything in a sheet sits from its sides.
 - `.dialog(isPresented:, title:, description:, centered:, showsClose:, dismissible:) { content } footer: { DialogButton(…); DialogButton.cancel() }`.
   `DialogButton("Save", look:, closes:, pending:) { }` closes the dialog
   and then runs, unless `closes: false`.
@@ -172,7 +183,9 @@ a value or a line of detail muted.
   `duration: .seconds(6)` keeps one up as long as what it offers lasts, as
   an Undo with a window of its own.
   Toasts rise over a `.bottomBar` below the host, or by `clearance`, for an
-  app that knows whether its bar shows (`BottomBar.clearance`).
+  app that knows whether its bar shows (`BottomBar.clearance`). A toast
+  takes the full width (up to 560), and its action sits at the end,
+  centered on the toast's height however many lines the text runs to.
 - `.sidePanel(isPresented:, title:) { PanelChoice(…); PanelLabel(""); PanelNote(""); PanelSeparator() }`:
   the player's menus, a glass panel from the trailing edge drawn in the
   view's own window (a presentation would bring back the status bar the
@@ -287,7 +300,7 @@ arguments: `-page` (`foundations`, `palettes`, `buttons`, `inputs`,
 `chips`, `lists`, `overlays`, `feedback`, `navigation`, `calendar`,
 `icons`), `-scheme light|dark`, `-accent matinee|ember|moss|sun`,
 `-locale de`, `-rtl YES`, `-text xxxLarge|accessibility2|…`, `-open
-menu|more|sheet|long|dialog|confirm|toast|panel`, and `-scroll "<demo title>"`.
+menu|more|sheet|long|footer|form|dialog|confirm|toast|panel`, and `-scroll "<demo title>"`.
 Or open `KitGallery.xcodeproj` and run it; the settings at its top change
 all of these live. `KitGallery()` is also a view the main app can show in
 a debug build.

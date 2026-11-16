@@ -76,12 +76,13 @@ struct ActiveFilterChips: View {
 extension View {
   /// The sheet the filters open in: their title, `content` scrolling under
   /// it, and Clear filters while any is on (`active`), beside Show titles,
-  /// which closes it.
+  /// which closes it, pinned at the bottom. As tall as the filters, as
+  /// Android's, and past the screen they scroll.
   func filterSheet<Content: View>(
     isPresented: Binding<Bool>, active: Int, onClear: @escaping () -> Void,
     @ViewBuilder content: @escaping () -> Content
   ) -> some View {
-    matineeSheet(isPresented: isPresented, size: .mediumAndLarge) {
+    matineeSheet(isPresented: isPresented) {
       FilterSheetBody(active: active, onClear: onClear, content: content)
     }
   }
@@ -92,22 +93,11 @@ private struct FilterSheetBody<Content: View>: View {
   let onClear: () -> Void
   @ViewBuilder let content: () -> Content
   @Environment(\.sheetDismiss) private var dismiss
-  @Environment(\.palette) private var palette
 
   var body: some View {
-    VStack(spacing: 0) {
-      Text(Str.webFiltersTitle)
-        .textStyle(.base, weight: .semibold)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, Space.gutter)
-        .padding(.vertical, Space.s2)
-        .accessibilityAddTraits(.isHeader)
-      ScrollView {
-        VStack(alignment: .leading, spacing: Space.s6) { content() }
-          .padding(.horizontal, Space.gutter)
-          .padding(.vertical, Space.s2)
-      }
-      Separator()
+    SheetHeader(Str.webFiltersTitle)
+    SheetBody(sides: Space.sheet, top: Space.s4, bottom: Space.s4, spacing: Space.s6) { content() }
+    SheetFooter {
       HStack {
         if active > 0 {
           MatineeButton(Str.browseClearFilters, icon: .x, look: .ghost, action: onClear)
@@ -115,8 +105,6 @@ private struct FilterSheetBody<Content: View>: View {
         Spacer(minLength: 0)
         MatineeButton(Str.webFiltersDone) { dismiss() }
       }
-      .padding(.horizontal, Space.gutter)
-      .padding(.vertical, Space.s3)
     }
   }
 }
@@ -312,7 +300,10 @@ struct OptionRow: View {
 }
 
 extension View {
-  /// A long list to pick one from, or none with `any`, with a field to find one.
+  /// A long list to pick one from, or none with `any`, with a field to find
+  /// one. Full height from the start, where Android's fits the list: the
+  /// keyboard comes up as the field is used, and a sheet that shrank and
+  /// grew with what the field finds would jump under the finger.
   func optionSheet(
     isPresented: Binding<Bool>, title: String, any: String, findPlaceholder: String,
     choices: [FilterChoice<String>], current: String?, onPick: @escaping (String?) -> Void
@@ -336,28 +327,21 @@ private struct OptionSheetBody: View {
   var body: some View {
     let needle = query.trimmingCharacters(in: .whitespaces)
     let shown = choices.filter { needle.isEmpty || $0.label.localizedCaseInsensitiveContains(needle) }
-    VStack(spacing: 0) {
-      Text(title)
-        .textStyle(.base, weight: .semibold)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, Space.gutter)
-        .padding(.vertical, Space.s2)
-        .accessibilityAddTraits(.isHeader)
-      MatineeTextField(findPlaceholder, text: $query, kind: .search)
-        .padding(.horizontal, Space.gutter)
-        .padding(.vertical, Space.s2)
-      Separator()
-      ScrollView {
-        LazyVStack(spacing: 0) {
-          if needle.isEmpty {
-            SheetItem(any, selected: current == nil) { onPick(nil) }
-          }
-          ForEach(shown) { choice in
-            SheetItem(
-              choice.count.map { "\(choice.label)  ·  \(formatCount($0))" } ?? choice.label,
-              selected: current == choice.value
-            ) { onPick(choice.value) }
-          }
+    SheetHeader(title, line: false)
+    MatineeTextField(findPlaceholder, text: $query, kind: .search)
+      .padding(.horizontal, Space.sheet)
+      .padding(.vertical, Space.s2)
+    Separator()
+    SheetBody {
+      LazyVStack(spacing: 0) {
+        if needle.isEmpty {
+          SheetItem(any, selected: current == nil) { onPick(nil) }
+        }
+        ForEach(shown) { choice in
+          SheetItem(
+            choice.count.map { "\(choice.label)  ·  \(formatCount($0))" } ?? choice.label,
+            selected: current == choice.value
+          ) { onPick(choice.value) }
         }
       }
     }

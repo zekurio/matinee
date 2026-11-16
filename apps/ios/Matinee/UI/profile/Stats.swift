@@ -487,17 +487,11 @@ private struct BoardSheet: View {
   let range: String
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 0) {
-      SheetHeader(metricName(board.metric), subtitle: rangeName(range))
-      ScrollView {
-        VStack(spacing: 0) {
-          ForEach(Array(board.entries.enumerated()), id: \.offset) { index, place in
-            PlaceRow(place: place, value: metricValue(board.metric, place.value))
-              .padding(.top, startsNeighborhood(board, index) ? Space.s1_5 : 0)
-          }
-        }
-        .padding(.horizontal, Space.s3)
-        .padding(.bottom, Space.s6)
+    SheetHeader(metricName(board.metric), subtitle: rangeName(range))
+    SheetBody(sides: Space.s3, top: Space.s2, bottom: Space.s2) {
+      ForEach(Array(board.entries.enumerated()), id: \.offset) { index, place in
+        PlaceRow(place: place, value: metricValue(board.metric, place.value))
+          .padding(.top, startsNeighborhood(board, index) ? Space.s1_5 : 0)
       }
     }
   }

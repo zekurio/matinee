@@ -129,7 +129,7 @@ struct ActionsHost: ViewModifier {
       .environment(\.actions, actions)
       .background {
         Color.clear.matineeSheet(item: $actions.target) { target in
-          ActionItems(target: target).padding(.vertical, Space.s2)
+          SheetBody(bottom: Space.s2) { ActionItems(target: target) }
         }
       }
       .background {
@@ -137,13 +137,13 @@ struct ActionsHost: ViewModifier {
       }
       .background { WatchedDayDialog(ask: $actions.watchedDay) }
       .background {
+        // Both fitted, as Android's: the options scroll above the button.
         Color.clear.matineeSheet(
-          isPresented: Binding(get: { actions.download != nil }, set: { if !$0 { actions.download = nil } }),
-          size: .large
+          isPresented: Binding(get: { actions.download != nil }, set: { if !$0 { actions.download = nil } })
         ) { if let item = actions.download { DownloadSheet(item: item).id(item.id) } }
       }
       .background {
-        Color.clear.matineeSheet(item: $actions.files, size: .mediumAndLarge) { DownloadFilesSheet(files: $0) }
+        Color.clear.matineeSheet(item: $actions.files) { DownloadFilesSheet(files: $0) }
       }
       .task(id: user?.isAdmin == true && !offline) {
         guard user?.isAdmin == true, !offline, let api else { return }

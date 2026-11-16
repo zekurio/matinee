@@ -60,56 +60,49 @@ struct DeclineSheet: View {
 
   var body: some View {
     let askedBy = item.followers.map(\.name)
-    ScrollView {
-      VStack(alignment: .leading, spacing: Space.s4) {
-        Text(giveUp ? Str.webRequestsGiveUpTitle(item.title.name) : Str.webRequestsDeclineTitle(item.title.name))
-          .textStyle(.lg, weight: .semibold, tracking: .tight)
-          .foregroundStyle(palette.foreground)
-          .lineLimit(2)
-          .accessibilityAddTraits(.isHeader)
-        VStack(alignment: .leading, spacing: Space.s1) {
-          Text(Str.webRequestsDeclineReason).textStyle(.sm, weight: .medium).foregroundStyle(palette.mutedForeground)
-          VStack(spacing: 0) {
-            if giveUp {
-              // Only one reason fits giving up, so it's said, not offered.
-              ReasonRow(label: requestReasonLabel(DeclineReason.notFound), selected: true) {}
-            } else {
-              ForEach(WaitingDeclineReason.knownValues, id: \.self) { code in
-                ReasonRow(label: requestReasonLabel(code), selected: reason == code) { reason = code }
-              }
+    SheetHeader(giveUp ? Str.webRequestsGiveUpTitle(item.title.name) : Str.webRequestsDeclineTitle(item.title.name))
+    SheetBody(sides: Space.sheet, top: Space.s4, bottom: Space.s4, spacing: Space.s4) {
+      VStack(alignment: .leading, spacing: Space.s1) {
+        Text(Str.webRequestsDeclineReason).textStyle(.sm, weight: .medium).foregroundStyle(palette.mutedForeground)
+        VStack(spacing: 0) {
+          if giveUp {
+            // Only one reason fits giving up, so it's said, not offered.
+            ReasonRow(label: requestReasonLabel(DeclineReason.notFound), selected: true) {}
+          } else {
+            ForEach(WaitingDeclineReason.knownValues, id: \.self) { code in
+              ReasonRow(label: requestReasonLabel(code), selected: reason == code) { reason = code }
             }
           }
-          .padding(.horizontal, -Space.s5)
         }
-        FormField(askedBy.isEmpty ? Str.webRequestsDeclineNote : Str.webRequestsDeclineNoteFor(requestNames(askedBy))) {
-          MatineeTextField(Str.webRequestsDeclineNotePlaceholder, text: $note)
-        }
+        .padding(.horizontal, -Space.sheet)
+      }
+      FormField(askedBy.isEmpty ? Str.webRequestsDeclineNote : Str.webRequestsDeclineNoteFor(requestNames(askedBy))) {
+        MatineeTextField(Str.webRequestsDeclineNotePlaceholder, text: $note)
+      }
+      if giveUp {
+        // A by-hand connection holds nothing to keep.
+        Text(item.connection.flatMap { $0.reportsProgress ? Str.webRequestsGiveUpKeeps($0.name) : nil } ?? Str.webRequestsGiveUpTurnsUp)
+          .textStyle(.px13).foregroundStyle(palette.mutedForeground)
+      }
+    }
+    // The button stays in reach, above the keyboard while the note is typed.
+    SheetFooter {
+      MatineeButton(
+        giveUp ? Str.webRequestsGiveUpSubmit : Str.webRequestsDeclineSubmit, look: .primary, dimmed: !giveUp && reason == nil,
+        fullWidth: true
+      ) {
+        guard let hub else { return }
+        let text = note.trimmingCharacters(in: .whitespacesAndNewlines)
+        let note = text.isEmpty ? nil : text
+        let item = item
         if giveUp {
-          // A by-hand connection holds nothing to keep.
-          Text(item.connection.flatMap { $0.reportsProgress ? Str.webRequestsGiveUpKeeps($0.name) : nil } ?? Str.webRequestsGiveUpTurnsUp)
-            .textStyle(.px13).foregroundStyle(palette.mutedForeground)
-        }
-        MatineeButton(
-          giveUp ? Str.webRequestsGiveUpSubmit : Str.webRequestsDeclineSubmit, look: .primary, dimmed: !giveUp && reason == nil,
-          fullWidth: true
-        ) {
-          guard let hub else { return }
-          let text = note.trimmingCharacters(in: .whitespacesAndNewlines)
-          let note = text.isEmpty ? nil : text
-          let item = item
-          if giveUp {
-            dismiss { hub.answer(item, .giveUp(note: note)) }
-          } else {
-            guard let reason else { return }
-            dismiss { hub.answer(item, .decline(reason: reason, note: note)) }
-          }
+          dismiss { hub.answer(item, .giveUp(note: note)) }
+        } else {
+          guard let reason else { return }
+          dismiss { hub.answer(item, .decline(reason: reason, note: note)) }
         }
       }
-      .padding(.horizontal, Space.s5)
-      .padding(.top, Space.s2)
-      .padding(.bottom, Space.s5)
     }
-    .scrollBounceBehavior(.basedOnSize)
   }
 }
 
@@ -126,7 +119,7 @@ private struct ReasonRow: View {
         Text(label).textStyle(.base).foregroundStyle(palette.foreground).frame(maxWidth: .infinity, alignment: .leading)
         if selected { LucideIcon(.check, size: 18, tint: palette.accent) }
       }
-      .padding(.horizontal, Space.s5)
+      .padding(.horizontal, Space.sheet)
       .frame(minHeight: 48)
       .contentShape(Rectangle())
     }
@@ -406,7 +399,7 @@ private struct RowMenu: View {
   @Environment(\.navigator) private var nav
 
   var body: some View {
-    VStack(spacing: 0) {
+    SheetBody(bottom: Space.s2) {
       SheetHeader(item.title.name, subtitle: [item.library.name, item.connection?.name ?? Str.webRequestsNoConnection].joined(separator: " · "))
       if hub?.queue.canAnswer(item) == true {
         ForEach(requestQueueActions(item, in: list), id: \.self, content: entry)
@@ -419,7 +412,6 @@ private struct RowMenu: View {
         }
       }
     }
-    .padding(.vertical, Space.s2)
   }
 
   @ViewBuilder private func entry(_ action: RequestQueueAction) -> some View {
