@@ -370,6 +370,5 @@ private struct SystemArtworkLoader: NowPlayingArtworkLoader {
 /// own, so the closure must not be the main actor's: made inside a main-actor
 /// method it would be, and Swift stops the app when it's called from elsewhere.
 nonisolated private func nowPlayingArtwork(_ image: NowPlayingImage) -> MPMediaItemArtwork {
-  nonisolated(unsafe) let image = image
   return MPMediaItemArtwork(boundsSize: image.size) { @Sendable _ in image }
 }

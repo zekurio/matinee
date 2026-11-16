@@ -192,12 +192,19 @@ jobs:
           sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
           xcodebuild -version
 
+      # The kit's icon check reads lucide-react from node_modules.
+      - name: install dependencies
+        run: nix shell nixpkgs#nodejs_24 nixpkgs#pnpm_11 -c pnpm install --frozen-lockfile
+
       # Includes swift test in Packages/MatineeCore. No simulator is booted.
       - name: test core and check generated resources
         run: nix shell nixpkgs#just -c just ios test
 
       - name: generate project and build unsigned simulator app
         run: nix shell nixpkgs#just -c just ios build
+
+      - name: build unsigned Apple TV simulator app
+        run: nix shell nixpkgs#just -c just ios tv-build
 
   nix:
     name: nix flake check
