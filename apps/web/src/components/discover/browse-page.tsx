@@ -2,6 +2,11 @@ import { ORPCError } from "@matinee/client"
 import type { CatalogFilters, CatalogSort, TitleKind } from "@matinee/contracts"
 import { Button } from "@matinee/ui/components/button"
 import { Skeleton } from "@matinee/ui/components/skeleton"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@matinee/ui/components/tooltip"
 import { cn } from "@matinee/ui/lib/utils"
 import {
   keepPreviousData,
@@ -9,18 +14,17 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query"
-import { Link } from "@tanstack/react-router"
 import {
   CloudOffIcon,
-  ListFilterIcon,
+  InfoIcon,
   RotateCwIcon,
   SearchXIcon,
   SparklesIcon,
 } from "lucide-react"
-import { type ReactNode, useState } from "react"
+import { type ReactNode, useId, useState } from "react"
 
 import { refKey, useLiveAvailability } from "@/components/catalog/catalog-data"
-import { chipClass, chipRow } from "@/components/chips"
+import { chipClass } from "@/components/chips"
 import { PosterGridSkeleton } from "@/components/library/library-states"
 import {
   FilterChips,
@@ -28,11 +32,7 @@ import {
   SortSelect,
 } from "@/components/library/list-controls"
 import { posterGrid } from "@/components/media-item"
-import {
-  belowHeader,
-  PageHeader,
-  useDocumentTitle,
-} from "@/components/page-header"
+import { PageHeader, useDocumentTitle } from "@/components/page-header"
 import { usePhone } from "@/components/sheet-menu"
 import { tr } from "@/i18n"
 import { errorMessage, orpc } from "@/lib/rpc"
@@ -49,7 +49,6 @@ import {
   searchFor,
   sortFits,
 } from "./browse-params"
-import { railsOptions } from "./discover-data"
 import { useOnScreenCards } from "./discover-live"
 import { DiscoverEmpty, DiscoverOff } from "./discover-rails"
 import { CardSkeletons, Retry, unique, useNextPage } from "./grid-parts"
@@ -218,6 +217,14 @@ function BrowseGrid({
   )
   // One panel, in the bar that shows; both share its open state.
   const phone = usePhone()
+  // The votes the server asks of a list no one set a minimum for.
+  const floor = first?.voteFloor != null && (
+    <FloorChip
+      count={first.voteFloor}
+      score={browse.sort === "scoreHigh" || browse.sort === "scoreLow"}
+      onClick={() => setPanelOpen(true)}
+    />
+  )
   const panel = (compact: boolean) => (
     <BrowseFilterPanel
       kind={kind}
@@ -246,6 +253,11 @@ function BrowseGrid({
             </>
           )
         }
+        chips={
+          <FilterChips inline active={chips} clear={clear}>
+            {floor}
+          </FilterChips>
+        }
         phoneActions={
           phone && (
             <>
@@ -259,29 +271,9 @@ function BrowseGrid({
           )
         }
       />
-      <KindSwitch kind={kind} browse={browse} />
-      <FilterChips active={chips} clear={clear} />
-      {first?.voteFloor != null && (
-        <Note
-          action={
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPanelOpen(true)}
-            >
-              <ListFilterIcon />
-              {tr("discover.browse.floorChange")}
-            </Button>
-          }
-        >
-          {tr(
-            browse.sort === "scoreHigh" || browse.sort === "scoreLow"
-              ? "discover.browse.floorScore"
-              : "discover.browse.floorList",
-            { count: first.voteFloor },
-          )}
-        </Note>
-      )}
+      <FilterChips active={chips} clear={clear}>
+        {floor}
+      </FilterChips>
       {stale && (
         <Note icon={<CloudOffIcon aria-hidden className="size-4 shrink-0" />}>
           {tr("discover.stale")}
@@ -385,52 +377,65 @@ function turnedDown(error: Error): boolean {
 }
 
 /**
- * Movies and Shows, for a viewer who can browse both. The other kind
- * keeps the filters it has too.
+ * The minimum votes a list holds to when no one chose one, as a chip
+ * beside the filters in use: it says why, and opens the filters to pick
+ * another.
  */
-function KindSwitch({ kind, browse }: { kind: TitleKind; browse: Browse }) {
-  const kinds = useQuery(railsOptions()).data?.browse ?? []
-  if (kinds.length < 2) return null
-  const search = searchFor(browse)
+function FloorChip({
+  count,
+  score,
+  onClick,
+}: {
+  count: number
+  /** Sorted by score, where a few votes could top the list. */
+  score: boolean
+  onClick: () => void
+}) {
+  const whyId = useId()
+  const why = tr(
+    score ? "discover.browse.floorScore" : "discover.browse.floorList",
+    { count },
+  )
   return (
-    <div
-      role="group"
-      aria-label={tr("discover.browse.kind")}
-      className={cn(chipRow, belowHeader)}
-    >
-      {kinds.map((other) => (
-        <Link
-          key={other}
-          to={other === "movie" ? "/discover/movies" : "/discover/shows"}
-          search={search}
-          replace
-          aria-current={other === kind ? "page" : undefined}
-          className={chipClass(other === kind)}
+    <>
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <button
+              type="button"
+              onClick={onClick}
+              aria-describedby={whyId}
+              className={chipClass(false, "gap-1.5 border-dashed pr-2.5")}
+            />
+          }
         >
-          {tr(`discover.browse.kind.${other}`)}
-        </Link>
-      ))}
-    </div>
+          {tr("discover.browse.chip.votes", { count })}
+          <InfoIcon aria-hidden className="size-3.5 opacity-60" />
+        </TooltipTrigger>
+        <TooltipContent
+          side="bottom"
+          className="max-w-64 flex-col items-start gap-0.5 leading-4 text-pretty"
+        >
+          <span>{why}</span>
+          <span className="text-background/75">
+            {tr("discover.browse.floorChange")}
+          </span>
+        </TooltipContent>
+      </Tooltip>
+      {/* The tooltip is for eyes; this reads the same words aloud. */}
+      <span id={whyId} hidden>
+        {why}
+      </span>
+    </>
   )
 }
 
 /** A line above the grid about the whole list. */
-function Note({
-  icon,
-  action,
-  children,
-}: {
-  icon?: ReactNode
-  action?: ReactNode
-  children: ReactNode
-}) {
+function Note({ icon, children }: { icon?: ReactNode; children: ReactNode }) {
   return (
-    <div className="text-muted-foreground mb-5 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm">
-      <p className="flex items-center gap-2">
-        {icon}
-        {children}
-      </p>
-      {action}
-    </div>
+    <p className="text-muted-foreground mb-5 flex items-center gap-2 text-sm">
+      {icon}
+      {children}
+    </p>
   )
 }

@@ -130,6 +130,7 @@ export function BrowsePage({
             : groupLabel
         }
         actions={<HeaderControls {...controls} />}
+        chips={<FilterChips inline active={chips} clear={list.clear} />}
         phoneActions={<PhoneControls {...controls} />}
       />
       {counts && (

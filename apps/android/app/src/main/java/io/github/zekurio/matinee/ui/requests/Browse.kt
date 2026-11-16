@@ -79,7 +79,6 @@ import io.github.zekurio.matinee.ui.components.yearText
 import io.github.zekurio.matinee.ui.formatDay
 import io.github.zekurio.matinee.ui.formatRating
 import io.github.zekurio.matinee.ui.kit.ButtonLook
-import io.github.zekurio.matinee.ui.kit.Chip
 import io.github.zekurio.matinee.ui.kit.Gap
 import io.github.zekurio.matinee.ui.kit.Gutter
 import io.github.zekurio.matinee.ui.kit.Lucide
@@ -232,14 +231,12 @@ fun browseDetail(detail: String?, item: CatalogBrowseTitle, res: Resources): Str
 
 /**
  * Browsing [startKind], with [startFilters] (`CatalogFilters` JSON) and
- * [startSort] from a Discover row's heading, or none. A viewer who can
- * browse both kinds switches between them in place, keeping the filters
- * both have.
+ * [startSort] from a Discover row's heading, or none.
  */
 @Composable
 fun CatalogBrowseScreen(startKind: String, startFilters: String? = null, startSort: String? = null) {
     val res = LocalResources.current
-    var kind by rememberSaveable { mutableStateOf(startKind) }
+    val kind = startKind
     val options = rememberLoader("browse-options-$kind") { discover.browseOptions(kind) }
     var filters by rememberSaveable(stateSaver = FiltersSaver) {
         mutableStateOf(startFilters?.let { FiltersSaver.restore(it) } ?: NO_FILTERS)
@@ -247,18 +244,10 @@ fun CatalogBrowseScreen(startKind: String, startFilters: String? = null, startSo
     var sort by rememberSaveable { mutableStateOf(startSort ?: CatalogSort.POPULAR) }
     var filtering by rememberSaveable { mutableStateOf(false) }
     val ready = (options.state as? Load.Ready)?.value?.takeIf { it.enabled }
-    val kinds = (rememberDiscover().state as? Load.Ready)?.value?.browse.orEmpty()
     // Best match goes with the recommendations, and back to popular without them.
     val change = { next: CatalogFilters ->
         filters = next
         if (!sortFits(sort, next)) sort = CatalogSort.POPULAR
-    }
-    // What the other kind lacks goes: their genres and ratings differ.
-    val switchTo = { other: String ->
-        if (other != kind) {
-            kind = other
-            filters = filters.copy(genres = null, rating = null)
-        }
     }
     Column(Modifier.fillMaxSize()) {
         TopBar(browseName(kind, res)) {
@@ -283,8 +272,6 @@ fun CatalogBrowseScreen(startKind: String, startFilters: String? = null, startSo
                     state.value,
                     filters,
                     sort,
-                    kinds = kinds,
-                    onKind = switchTo,
                     onChange = change,
                     onFilters = { filtering = true },
                 )
@@ -363,8 +350,6 @@ private fun BrowseGrid(
     options: CatalogBrowseOptions,
     filters: CatalogFilters,
     sort: String,
-    kinds: List<String>,
-    onKind: (String) -> Unit,
     onChange: (CatalogFilters) -> Unit,
     onFilters: () -> Unit,
 ) {
@@ -435,19 +420,6 @@ private fun BrowseGrid(
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
-        if (kinds.size > 1) {
-            item(span = { GridItemSpan(maxLineSpan) }, key = "kinds") {
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    kinds.forEach { other ->
-                        Chip(
-                            stringResource(if (other == TitleKind.SHOW) R.string.web_discover_browse_kind_show else R.string.web_discover_browse_kind_movie),
-                            selected = other == kind,
-                            onClick = { onKind(other) },
-                        )
-                    }
-                }
-            }
-        }
         if (chips.isNotEmpty()) {
             item(span = { GridItemSpan(maxLineSpan) }, key = "chips") {
                 ActiveFilterChips(chips, clear)

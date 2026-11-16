@@ -33,6 +33,7 @@ export function PageHeader({
   title,
   description,
   actions,
+  chips,
   phoneActions,
   className,
 }: {
@@ -43,6 +44,11 @@ export function PageHeader({
    * give phones theirs in `phoneActions`.
    */
   actions?: ReactNode
+  /**
+   * The filters in use, between the title and `actions` from `sm` up,
+   * taking the room the title leaves and scrolling sideways past it.
+   */
+  chips?: ReactNode
   /** Controls at the end of the bar on phones only. */
   phoneActions?: ReactNode
   className?: string
@@ -58,7 +64,7 @@ export function PageHeader({
         className,
       )}
     >
-      <div className="min-w-0 flex-1">
+      <div className={cn("min-w-0", chips ? "shrink" : "flex-1")}>
         {/* An open phone filter (`data-filter-open`) takes the bar. */}
         <div
           className={cn(
@@ -93,6 +99,11 @@ export function PageHeader({
           </p>
         )}
       </div>
+      {chips && (
+        <div className="flex min-w-40 flex-1 basis-0 justify-end empty:hidden max-sm:hidden">
+          {chips}
+        </div>
+      )}
       {actions && (
         <div className="flex items-center gap-2 max-sm:hidden">{actions}</div>
       )}
