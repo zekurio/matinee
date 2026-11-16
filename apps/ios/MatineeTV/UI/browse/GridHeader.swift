@@ -11,13 +11,6 @@ import SwiftUI
  * TV has only a genre, which its button names.
  */
 
-/// The key a grid page's controls have in its focus memory, and the sort button's.
-enum GridControls {
-  static let row = "controls"
-  static let sort = "sort"
-  static let filters = "filters"
-}
-
 /// The top of a grid page: `title` with `detail` after it, like a count,
 /// the `controls` under them, and the filters in use under those.
 struct TVGridHeader<Controls: View>: View {
@@ -72,13 +65,13 @@ struct TVGridHeader<Controls: View>: View {
 
 /// The sort button, naming the order in force, and the filters button with
 /// how many are on, as a grid page's first controls. Both open a panel at
-/// the right; focus comes back to them as it closes.
+/// the right; focus comes back to them as it closes. `sortFocus` binds the
+/// sort's focus, where a grid with nothing in it starts.
 struct GridSortAndFilters: View {
   let state: TitleListState
-  let memory: TVFocusMemory
+  let sortFocus: FocusState<Bool>.Binding
   let onSort: () -> Void
   let onFilters: () -> Void
-  @FocusState private var focused: String?
 
   var body: some View {
     let active = state.activeFilters
@@ -87,15 +80,13 @@ struct GridSortAndFilters: View {
         state.currentOrder.map(titleOrderText) ?? Str.librarySort, icon: .arrowUpDown, trailingIcon: .chevronDown,
         action: onSort
       )
-      .focused($focused, equals: GridControls.sort)
+      .focused(sortFocus)
       .accessibilityLabel(Str.browseSortCurrent(state.currentOrder.map(titleOrderText) ?? Str.librarySortName))
       TVButton(
         Str.webFiltersTitle, icon: .listFilter, detail: active > 0 ? formatCount(active) : nil,
         trailingIcon: .chevronDown, active: active > 0, action: onFilters
       )
-      .focused($focused, equals: GridControls.filters)
       .accessibilityLabel(active > 0 ? Str.browseFiltersOn(active) : Str.webFiltersTitle)
     }
-    .tvFocusRow(GridControls.row, memory: memory, focused: $focused, first: GridControls.sort)
   }
 }

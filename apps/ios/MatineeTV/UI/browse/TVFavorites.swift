@@ -94,6 +94,12 @@ struct TVFavoritesScreen: View {
         .padding(.trailing, TVGrid.clockRoom)
         .accessibilityAddTraits(.isHeader)
       TVFocusLine(focused?.info).padding(.top, TVSpace.s4)
+      // Which season or episode, under the show's name.
+      if let subtitle = focused?.info.subtitle {
+        Text(subtitle).textStyle(.body).foregroundStyle(palette.foreground.opacity(0.9)).lineLimit(1)
+          .id("subtitle-\(focused?.key ?? "")")
+          .transition(.opacity)
+      }
       if let overview = focused?.info.overview {
         Text(overview).textStyle(.body).foregroundStyle(palette.foreground.opacity(0.75)).lineLimit(2)
           .frame(maxWidth: 1200, alignment: .leading)

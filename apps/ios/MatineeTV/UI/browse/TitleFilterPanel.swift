@@ -332,7 +332,8 @@ private struct TVFilterRows: View {
     let country = countryText(system.country)
     let title =
       both ? (show ? Str.webFiltersRatingRowShow(country) : Str.webFiltersRatingRowMovie(country)) : country
-    let value = limit.flatMap { $0.country == system.country ? Str.webFiltersUpTo($0.rating) : nil } ?? Str.webFiltersAny
+    let value =
+      limit.flatMap { $0.country == system.country ? Str.webFiltersUpTo($0.rating) : nil } ?? Str.webFiltersAny
     return TVStepRow(value, title: title, label: "\(Str.webFiltersRating), \(title)") { by in
       step { next in
         if show {

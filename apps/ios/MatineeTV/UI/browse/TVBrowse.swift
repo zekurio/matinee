@@ -23,13 +23,16 @@ struct TVBrowseScreen: View {
   @State private var filterPage: TVFilterPage?
   @State private var sorting = false
   @State private var devStarted = false
-  @FocusState private var kindFocused: String?
+  @FocusState private var sortFocused: Bool
 
   var body: some View {
     let (genre, studio, kind, kinds) = (genre, studio, kind, kinds)
     let (sort, order, filters) = (state.sort, state.order, state.filters)
     let state = state
-    TVTitleGrid(pages: pages, memory: memory, listKey: "\(kind ?? "")\n\(state.key)", sort: sort, showKind: kind == nil, empty: empty) {
+    TVTitleGrid(
+      pages: pages, memory: memory, listKey: "\(kind ?? "")\n\(state.key)", sort: sort, showKind: kind == nil,
+      empty: empty
+    ) {
       TVGridHeader(
         title: genre ?? studio ?? "",
         detail: [genre != nil ? Str.browseGenre : Str.browseStudio, pages.total.map(Str.browseTitleCount)]
@@ -38,22 +41,19 @@ struct TVBrowseScreen: View {
         onRemove: { chip in state.filters = chip.removed(from: state.filters) }, onClear: state.clearFilters
       ) {
         if let choices = browseKindChoices(kinds.value, picked: kind) {
-          HStack(spacing: TVButtons.gap) {
-            ForEach(choices, id: \.kind) { choice in
-              // The header's count says how many the kind picked has; on every button, five controls
-              // wouldn't fit beside the sort in every language.
-              TVButton(browseKindText(choice.kind), icon: kindIcon(choice.kind), active: kind == choice.kind) {
-                self.kind = choice.kind
-              }
-              .focused($kindFocused, equals: kindKey(choice.kind))
-              .accessibilityValue(Str.browseTitleCount(choice.count))
+          ForEach(choices, id: \.kind) { choice in
+            // The header's count says how many the kind picked has; on every button, five controls
+            // wouldn't fit beside the sort in every language.
+            TVButton(browseKindText(choice.kind), icon: kindIcon(choice.kind), active: kind == choice.kind) {
+              self.kind = choice.kind
             }
+            .accessibilityValue(Str.browseTitleCount(choice.count))
           }
-          .tvFocusRow(KIND_ROW, memory: memory, focused: $kindFocused, first: kindKey(kind))
           // Between the kinds and the sort: two groups of controls, not one row of five.
           Spacer().frame(width: TVSpace.s5)
         }
-        GridSortAndFilters(state: state, memory: memory, onSort: { sorting = true }, onFilters: { filterPage = .filters })
+        GridSortAndFilters(
+          state: state, sortFocus: $sortFocused, onSort: { sorting = true }, onFilters: { filterPage = .filters })
       }
     }
     .ignoresSafeArea()
@@ -74,10 +74,7 @@ struct TVBrowseScreen: View {
     .tvLoadsFilterOptions(options, kind: kind, genre: genre, studio: studio)
     .tvTitleFilters(
       page: $filterPage, sorting: $sorting, options: options, state: state, kind: kind, own: (genre, studio))
-    .tvPageFocus(memory) { firstFocus }
-    .onChange(of: firstFocus?.item) { _, first in
-      if first != nil, memory.lastRow == nil { memory.restore(fallback: firstFocus) }
-    }
+    .tvBrowseFocus(memory, sort: $sortFocused) { firstFocus }
     #if DEBUG
       .onAppear {
         guard !devStarted else { return }
@@ -88,9 +85,9 @@ struct TVBrowseScreen: View {
   }
 
   /// The first poster; with none to show, the sort, so the drawer and the filters are still in reach.
-  private var firstFocus: (row: String, item: String)? {
-    if let first = pages.items.first { return (TVGrid.row, first.id) }
-    if pages.done || pages.error != nil { return (GridControls.row, GridControls.sort) }
+  private var firstFocus: BrowseFocusTarget? {
+    if let first = pages.items.first { return .card(row: TVGrid.row, item: first.id) }
+    if pages.done || pages.error != nil { return .sort }
     return nil
   }
 
@@ -111,10 +108,6 @@ struct TVBrowseScreen: View {
 
   func show(_ kinds: BrowsedTitles.Kinds) { if value != kinds { value = kinds } }
 }
-
-private let KIND_ROW = "kinds"
-
-private func kindKey(_ kind: String?) -> String { kind ?? "all" }
 
 private func kindIcon(_ kind: String?) -> Lucide {
   switch kind {

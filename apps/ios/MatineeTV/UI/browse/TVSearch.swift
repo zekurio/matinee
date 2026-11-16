@@ -24,7 +24,8 @@ private enum SearchRow {
 /// How wide the field grows, Android TV's 640 dp less the room its keyboard row would need.
 private let FIELD_WIDTH: CGFloat = 1120
 /// The field and the focused result's line above the rows.
-private let HEADER_HEIGHT: CGFloat = TVOverscan.vertical + TVButtons.height + TVSpace.s5 + TVFocusLineHeight + TVSpace.s5
+private let HEADER_HEIGHT: CGFloat =
+  TVOverscan.vertical + TVButtons.height + TVSpace.s5 + TVFocusLineHeight + TVSpace.s5
 
 struct TVSearchScreen: View {
   @State private var query = ""
@@ -76,7 +77,7 @@ struct TVSearchScreen: View {
     .onChange(of: focusedNow) { _, item in if let item { focused = item } }
     // The page's focus, when the focus engine looks for one, is the field.
     .defaultFocus($fieldFocused, true)
-    .tvBrowseFocus(memory, field: $fieldFocused, startOnField: true) { nil }
+    .tvBrowseFocus(memory, field: $fieldFocused) { .field }
     #if DEBUG
       .onAppear {
         guard !devStarted else { return }

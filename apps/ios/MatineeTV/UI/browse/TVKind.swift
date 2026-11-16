@@ -27,6 +27,7 @@ struct TVKindScreen: View {
   @State private var sorting = false
   @State private var devStarted = false
   @FocusState private var fieldFocused: Bool
+  @FocusState private var sortFocused: Bool
 
   var body: some View {
     @Bindable var state = state
@@ -38,7 +39,8 @@ struct TVKindScreen: View {
         chips: activeTitleFilters(filters, options: options.state.value),
         onRemove: { chip in state.filters = chip.removed(from: state.filters) }, onClear: state.clearFilters
       ) {
-        GridSortAndFilters(state: state, memory: memory, onSort: { sorting = true }, onFilters: { filterPage = .filters })
+        GridSortAndFilters(
+          state: state, sortFocus: $sortFocused, onSort: { sorting = true }, onFilters: { filterPage = .filters })
         TVSearchField(
           text: $state.query, placeholder: shows ? Str.librarySearchShows : Str.librarySearchMovies,
           focus: $fieldFocused, onSubmit: state.settleNow
@@ -64,16 +66,16 @@ struct TVKindScreen: View {
     }
     .tvLoadsFilterOptions(options, kind: kind)
     .tvTitleFilters(page: $filterPage, sorting: $sorting, options: options, state: state, kind: kind)
-    .tvBrowseFocus(memory, field: $fieldFocused) { firstFocus }
+    .tvBrowseFocus(memory, field: $fieldFocused, sort: $sortFocused) { firstFocus }
     #if DEBUG
       .onAppear(perform: devStart)
     #endif
   }
 
   /// The first poster; with none to show, the sort, so the drawer and the filters are still in reach.
-  private var firstFocus: (row: String, item: String)? {
-    if let first = pages.items.first { return (TVGrid.row, first.id) }
-    if pages.done || pages.error != nil { return (GridControls.row, GridControls.sort) }
+  private var firstFocus: BrowseFocusTarget? {
+    if let first = pages.items.first { return .card(row: TVGrid.row, item: first.id) }
+    if pages.done || pages.error != nil { return .sort }
     return nil
   }
 

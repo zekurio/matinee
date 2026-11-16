@@ -60,9 +60,11 @@ struct TitleFilterStepsTests {
       kind: TitleKind.movie, country: "DE",
       ratings: ["0", "6", "12"].map { RatingCount(rating: $0, titleCount: 1) })
     #expect(stepAgeLimit(system, current: nil, by: 1) == AgeLimit(country: "DE", rating: "0"))
-    #expect(stepAgeLimit(system, current: AgeLimit(country: "DE", rating: "6"), by: 1) == AgeLimit(country: "DE", rating: "12"))
+    #expect(
+      stepAgeLimit(system, current: AgeLimit(country: "DE", rating: "6"), by: 1) == AgeLimit(country: "DE", rating: "12"))
     #expect(stepAgeLimit(system, current: AgeLimit(country: "DE", rating: "0"), by: -1) == nil)
     // Another country's limit is none here.
-    #expect(stepAgeLimit(system, current: AgeLimit(country: "US", rating: "PG"), by: 1) == AgeLimit(country: "DE", rating: "0"))
+    #expect(
+      stepAgeLimit(system, current: AgeLimit(country: "US", rating: "PG"), by: 1) == AgeLimit(country: "DE", rating: "0"))
   }
 }
