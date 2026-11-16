@@ -216,20 +216,49 @@ struct RequestScreensTests {
 
   // MARK: Discover and browse
 
+  func browseTitle(_ id: String, here: TitleSummary? = nil) -> CatalogBrowseTitle {
+    CatalogBrowseTitle(
+      ref: CatalogRef(kind: "movie", provider: "tmdb", providerId: id), name: id, year: nil, poster: nil,
+      availability: here.map { value("here", nil, here: $0.id) } ?? value(), title: here, score: nil, votes: 0,
+      releaseDate: nil)
+  }
+
   @Test func discoverRows() {
     let seed = RecommendationSeed(ref: movie, name: "Dune")
-    #expect(discoverRailKey(DiscoverRail(id: "becauseWatched", seed: seed)) == "becauseWatched:movie:tmdb:438631")
-    #expect(discoverRailKey(DiscoverRail(id: "comingSoon", seed: nil)) == "comingSoon")
-    #expect(discoverRailTarget(DiscoverRail(id: "popularFilms", seed: nil)) == .browse(kind: "movie"))
-    #expect(discoverRailTarget(DiscoverRail(id: "popularShows", seed: nil)) == .browse(kind: "show"))
-    #expect(discoverRailTarget(DiscoverRail(id: "forYou", seed: nil)) == .rail(key: "forYou"))
-    let items = (0..<30).map {
-      CatalogTitleSummary(ref: CatalogRef(kind: "movie", provider: "tmdb", providerId: "\($0)"), name: "\($0)", year: nil, poster: nil, availability: value())
-    }
+    #expect(discoverRailKey(DiscoverRail(id: "becauseWatched", seed: seed, browse: nil)) == "becauseWatched:movie:tmdb:438631")
+    #expect(discoverRailKey(DiscoverRail(id: "comingSoon", browse: nil)) == "comingSoon")
+    let items = (0..<30).map { browseTitle("\($0)") }
     let hidden: Set<String> = [items[0].ref.key]
-    #expect(discoverRailCards(DiscoverRail(id: "forYou", seed: nil), items, hidden: hidden).first?.name == "1")
-    #expect(discoverRailCards(DiscoverRail(id: "popularFilms", seed: nil), items, hidden: hidden).first?.name == "0")
-    #expect(discoverRailCards(DiscoverRail(id: "popularFilms", seed: nil), items, hidden: []).count == DISCOVER_RAIL_CARDS)
+    #expect(discoverRailCards(DiscoverRail(id: "forYou", browse: nil), items, hidden: hidden).first?.name == "1")
+    #expect(discoverRailCards(DiscoverRail(id: "popularFilms", browse: nil), items, hidden: hidden).first?.name == "0")
+    #expect(discoverRailCards(DiscoverRail(id: "popularFilms", browse: nil), items, hidden: []).count == DISCOVER_RAIL_CARDS)
+  }
+
+  @Test func aRowsHeadingOpensTheServersBrowse() {
+    var filters = CatalogFilters.none
+    filters.upcoming = true
+    filters.requestable = true
+    let soon = DiscoverRail(
+      id: DiscoverRailId.comingSoon, browse: DiscoverBrowse(kinds: ["show", "movie"], filters: filters, sort: CatalogSort.popular))
+    // Of its first kind, with its filters and sort, as Android's heading.
+    #expect(discoverRailBrowse(soon) == CatalogBrowseStart(kind: "show", filters: filters, sort: CatalogSort.popular))
+    // "Because you watched" has no browse, so its heading opens nothing.
+    let seed = RecommendationSeed(ref: movie, name: "Dune")
+    #expect(discoverRailBrowse(DiscoverRail(id: DiscoverRailId.becauseWatched, seed: seed, browse: nil)) == nil)
+  }
+
+  @Test func theRowsFollowOnlyTheirCatalogCards() {
+    let summary = TitleSummary(
+      id: "t", libraryId: "l", kind: TitleKind.movie, name: "Dune", year: 2021, overview: nil,
+      images: Images(poster: nil, backdrop: nil, logo: nil), genres: [], rating: nil, contentRating: nil,
+      runtimeMinutes: nil, originalLanguage: nil, favorite: false, watched: false)
+    let first = DiscoverRow(items: [browseTitle("1"), browseTitle("2", here: summary)], stale: false, detail: nil)
+    let second = DiscoverRow(items: (3..<30).map { browseTitle("\($0)") }, stale: false, detail: nil)
+    let followed = discoverRailFollowed([first, second])
+    // Library cards play and don't change; a row's cards past the twentieth don't show.
+    #expect(followed.first?.ref.providerId == "1")
+    #expect(!followed.contains { $0.ref.providerId == "2" })
+    #expect(followed.count == 1 + DISCOVER_RAIL_CARDS)
   }
 
   @Test func browseFiltersAndCards() {
@@ -240,6 +269,16 @@ struct RequestScreensTests {
     filters.yearTo = 2000
     filters.language = "de"
     #expect(filters.count == 4)
+    // The server's three switches count once each, when on.
+    filters.recommended = true
+    filters.upcoming = false
+    filters.requestable = true
+    #expect(filters.count == 6)
+    #expect(filters.recommends)
+    // Switching kind keeps all but what the other kind lacks.
+    filters.rating = "PG"
+    let other = filters.forOtherKind
+    #expect(other.genres == nil && other.rating == nil && other.yearFrom == 1990 && other.language == "de" && other.recommends)
     let summary = TitleSummary(
       id: "t", libraryId: "l", kind: TitleKind.movie, name: "Dune", year: 2021, overview: nil,
       images: Images(poster: nil, backdrop: nil, logo: nil), genres: [], rating: nil, contentRating: nil,
@@ -253,6 +292,17 @@ struct RequestScreensTests {
     #expect(browseLibraryTitle(summary, item.availability) == summary)
     #expect(browseLibraryTitle(summary, value("coming", nil, here: "t")) == nil)
     #expect(browseLibraryTitle(nil, item.availability) == nil)
+  }
+
+  @Test func bestMatchGoesOnlyWithRecommendations() {
+    var filters = CatalogFilters.none
+    #expect(!catalogSortFits(CatalogSort.forYou, filters))
+    #expect(catalogSortFits(CatalogSort.scoreHigh, filters))
+    #expect(catalogSort(CatalogSort.forYou, fitting: filters) == CatalogSort.popular)
+    #expect(catalogSort(CatalogSort.newest, fitting: filters) == CatalogSort.newest)
+    filters.recommended = true
+    #expect(catalogSortFits(CatalogSort.forYou, filters))
+    #expect(catalogSort(CatalogSort.forYou, fitting: filters) == CatalogSort.forYou)
   }
 
   @Test func aLongGridFollowsTheBlocksOnScreen() {

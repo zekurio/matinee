@@ -13,7 +13,7 @@ public struct RequestPageBatch<Item: Sendable>: Sendable {
   }
 }
 /// Browse.kt and Discover.kt: first occurrence wins when pages overlap.
-/// Change the key when query, rail, filters or sort change. Failed pages
+/// Change the key when query, kind, filters or sort change. Failed pages
 /// retain their cursor and can be retried explicitly with more().
 @MainActor @Observable
 public final class RequestPages<Item: Sendable> {
@@ -70,10 +70,6 @@ extension RequestData {
     var input = input; input.page = page
     let result = try await browse(input)
     return .init(items: result.items, nextPage: result.nextPage, stale: result.stale, voteFloor: result.voteFloor, detail: result.detail)
-  }
-  public func railBatch(_ rail: DiscoverRail, page: Int) async throws -> RequestPageBatch<CatalogTitleSummary> {
-    let result = try await self.rail(rail, page: page)
-    return .init(items: result.items, nextPage: result.nextPage, stale: result.stale)
   }
   public func searchBatch(_ query: String, kind: String? = nil, page: Int) async throws -> RequestPageBatch<CatalogTitleSummary> {
     let result = try await search(query, kind: kind, page: page)

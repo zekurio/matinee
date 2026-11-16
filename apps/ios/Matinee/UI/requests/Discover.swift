@@ -3,13 +3,13 @@ import MatineeKit
 import SwiftUI
 
 /*
- * Discover.kt, after the web's discover-rails.tsx and rail-grid.tsx: for
- * when there's nothing in mind yet. Rows of titles under the empty search
- * field, as the web's phone has them, in the server's order, each loading
- * on its own, and each row's whole list behind its heading; the popular
- * rows' headings browse their kind instead. Nothing of it shows when the
- * server says Discover is off. A long press on a recommendation offers
- * "Not interested".
+ * Discover.kt, after the web's discover-rails.tsx: for when there's
+ * nothing in mind yet. Rows of titles under the empty search field, as
+ * the web's phone has them, in the server's order, each loading on its
+ * own. Each row but "Because you watched" is the start of a browse, which
+ * its heading opens with the row's filters and sort (CatalogBrowse.swift).
+ * Nothing of it shows when the server says Discover is off. A long press
+ * on a recommendation offers "Not interested".
  *
  *     DiscoverRows()                       // under the empty search field
  */
@@ -51,7 +51,7 @@ struct DiscoverRows: View {
           } else {
             VStack(alignment: .leading, spacing: Space.s6) {
               ForEach(answer.rails, id: \.self) { rail in
-                DiscoverRow(rail: rail, page: pages.page(rail), cards: shown[discoverRailKey(rail)] ?? [])
+                DiscoverRailRow(rail: rail, page: pages.page(rail), cards: shown[discoverRailKey(rail)] ?? [])
               }
             }
           }
@@ -83,14 +83,14 @@ extension View {
   func loadsDiscover(_ loader: Loader<DiscoverRails>) -> some View { modifier(LoadsDiscover(loader: loader)) }
 }
 
-/// The first page of each of Discover's rows, kept for the rows and their one stream.
+/// Each of Discover's rows' cards, kept for the rows and their one stream.
 @Observable final class DiscoverPages {
-  private(set) var pages: [String: Loader<CatalogPage>] = [:]
+  private(set) var pages: [String: Loader<DiscoverRow>] = [:]
 
-  func page(_ rail: DiscoverRail) -> Loader<CatalogPage> {
+  func page(_ rail: DiscoverRail) -> Loader<DiscoverRow> {
     let key = discoverRailKey(rail)
     if let page = pages[key] { return page }
-    let page = Loader<CatalogPage>()
+    let page = Loader<DiscoverRow>()
     DispatchQueue.main.async { self.pages[key] = page }
     return page
   }
@@ -98,7 +98,7 @@ extension View {
   func reload() { pages.values.forEach { $0.reload() } }
 
   /// Each row's cards, by its key.
-  func shown(_ rails: [DiscoverRail], hidden: Set<String>) -> [String: [CatalogTitleSummary]] {
+  func shown(_ rails: [DiscoverRail], hidden: Set<String>) -> [String: [CatalogBrowseTitle]] {
     return Dictionary(
       rails.compactMap { rail in
         pages[discoverRailKey(rail)]?.state.value.map { (discoverRailKey(rail), discoverRailCards(rail, $0.items, hidden: hidden)) }
@@ -113,18 +113,17 @@ extension View {
     !rails.isEmpty && rails.allSatisfy { pages[discoverRailKey($0)]?.state.isFailed == true }
   }
 
-  /// The cards the rows show, once each, under the stream's hundred.
+  /// The catalog cards the rows show, once each, under the stream's hundred.
   func followed(_ rails: [DiscoverRail]) -> [CatalogInput] {
-    rails.flatMap { rail in (pages[discoverRailKey(rail)]?.state.value?.items ?? []).prefix(DISCOVER_RAIL_CARDS) }
-      .map { CatalogInput(ref: $0.ref, libraryId: nil) }
+    discoverRailFollowed(rails.compactMap { pages[discoverRailKey($0)]?.state.value })
   }
 }
 
-/// One of Discover's rows: its heading, which leads to the rest, and its cards.
-struct DiscoverRow: View {
+/// One of Discover's rows: its heading, which opens its browse, and its cards.
+struct DiscoverRailRow: View {
   let rail: DiscoverRail
-  let page: Loader<CatalogPage>
-  let cards: [CatalogTitleSummary]
+  let page: Loader<DiscoverRow>
+  let cards: [CatalogBrowseTitle]
   @Environment(\.navigator) private var nav
 
   var body: some View {
@@ -134,30 +133,46 @@ struct DiscoverRow: View {
       case .loading: RailSkeleton(title: title, art: .poster)
       case .failed(_, let disconnected):
         RailFailed(title: title, retrying: page.refreshing, disconnected: disconnected, onRetry: page.reload)
-      case .ready:
+      case .ready(let row):
         if cards.isEmpty {
           Color.clear.frame(height: 0)
         } else {
-          Rail(title, onTitleTap: open) {
+          // The heading opens the row's browse; a row without one has none.
+          let browse = discoverRailBrowse(rail)
+          Rail(title, onTitleTap: browse.map { start in { nav.catalogBrowse(start) } }) {
             ForEach(cards, id: \.ref) { item in
               RailItem(.poster) {
-                CatalogCard(item, detail: discoverReleaseLine(rail.id, item), recommended: discoverRecommends(rail))
+                // Without a date or a score to say, the year and the kind, since a row can hold both.
+                BrowseCard(
+                  item: item, detail: row.detail.flatMap { browseDetailText(browseCardDetail($0, item)) },
+                  recommended: discoverRecommends(rail))
               }
             }
           }
         }
       }
     }
-    .loads(page) { [rail] api in try await requestApi(api).discover.page(rail: rail, page: 1) }
-  }
-
-  private func open() {
-    switch discoverRailTarget(rail) {
-    case .browse(let kind): nav.catalogBrowse(kind)
-    case .rail(let key): nav.discoverRail(key)
-    }
+    .loads(page) { [rail] api in try await RequestData(api: requestApi(api)).row(rail) }
+    #if DEBUG
+      // `-requests.heading forYou`: that row's heading pressed once its cards show, for a screenshot of what it opens.
+      .task(id: cards.isEmpty) {
+        guard !cards.isEmpty, !DiscoverDebug.pressed, UserDefaults.standard.string(forKey: "requests.heading") == rail.id,
+          let start = discoverRailBrowse(rail)
+        else { return }
+        DiscoverDebug.pressed = true
+        try? await Task.sleep(for: .seconds(1.5))
+        nav.catalogBrowse(start)
+      }
+    #endif
   }
 }
+
+#if DEBUG
+  /// `-requests.heading` presses a heading once a launch, not each time the rows come back.
+  enum DiscoverDebug {
+    static var pressed = false
+  }
+#endif
 
 /// Discover's whole answer couldn't be had: the catalog is down and nothing was kept.
 struct DiscoverFailed: View {
@@ -168,97 +183,6 @@ struct DiscoverFailed: View {
     ErrorState(Str.discoverFailed, Str.webDiscoverFailedHint, disconnected: disconnected, onRetry: onRetry)
       .frame(maxWidth: .infinity)
       .padding(.vertical, Space.s12)
-  }
-}
-
-/// One of Discover's rows in full, as a grid that loads more as it
-/// scrolls. It follows only the cards around the screen, in blocks, since
-/// the stream takes a hundred titles and a row can hold more.
-struct DiscoverRailScreen: View {
-  let key: String
-  @State private var discover = Loader<DiscoverRails>()
-  @Environment(\.navigator) private var nav
-
-  var body: some View {
-    #if DEBUG
-      if key == "_preview" {
-        RequestsPreview()
-      } else {
-        page
-      }
-    #else
-      page
-    #endif
-  }
-
-  @ViewBuilder private var page: some View {
-    let rail = discover.state.value.flatMap { $0.enabled ? $0.rails.first { discoverRailKey($0) == key } : nil }
-    Group {
-      switch discover.state {
-      case .loading: LoadingBox()
-      case .failed(_, let disconnected):
-        ErrorBox(Str.discoverFailed, Str.webDiscoverFailedHint, disconnected: disconnected, onRetry: discover.reload)
-      case .ready:
-        if let rail {
-          RailGrid(rail: rail)
-        } else {
-          EmptyState(icon: .compass, title: Str.webDiscoverGone) {
-            MatineeButton(Str.webDiscoverBack, look: .outline) { nav.search() }
-          }
-          .frame(maxWidth: .infinity, maxHeight: .infinity)
-        }
-      }
-    }
-    .topBar(rail.map(discoverRailName) ?? Str.webDiscoverTitle)
-    .loads(discover) { api in try await requestApi(api).discover.rails() }
-  }
-}
-
-private struct RailGrid: View {
-  let rail: DiscoverRail
-  @State private var pages = RequestPages<CatalogTitleSummary> { $0.ref.requestKey }
-  @State private var visible: Set<Int> = []
-  @Environment(\.api) private var api
-  @Environment(\.actions) private var actions
-  @Environment(\.palette) private var palette
-
-  var body: some View {
-    let hidden = actions?.hidden.keys ?? []
-    let items = pages.items.filter { !discoverRecommends(rail) || !hidden.contains($0.ref.key) }
-    Group {
-      if items.isEmpty, let failure = pages.failure {
-        DiscoverFailed(disconnected: failure.isDisconnect, onRetry: pages.more)
-      } else if items.isEmpty {
-        LoadingBox()
-      } else {
-        ScrollView {
-          VStack(alignment: .leading, spacing: Space.s4) {
-            if pages.stale {
-              StaleNote(text: Str.webDiscoverStale)
-            }
-            CardGrid {
-              ForEach(Array(items.enumerated()), id: \.element.ref) { index, item in
-                CatalogCard(item, detail: discoverReleaseLine(rail.id, item), recommended: discoverRecommends(rail))
-                  .onAppear { visible.insert(index) }
-                  .onDisappear { visible.remove(index) }
-              }
-            }
-            PageEnd(
-              loading: pages.loading, failed: pages.failure != nil, more: pages.nextPage != nil, end: Str.webDiscoverEnd,
-              onMore: pages.more)
-          }
-          .padding(.bottom, Space.s8)
-        }
-      }
-    }
-    .onAppear {
-      guard let api else { return }
-      let data = RequestData(api: requestApi(api))
-      let rail = rail
-      pages.configure(key: discoverRailKey(rail)) { page in try await data.railBatch(rail, page: page) }
-    }
-    .followsRequests(
-      Array(items[requestFollowWindow(visible: visible, count: items.count)]).map { CatalogInput(ref: $0.ref, libraryId: nil) })
   }
 }
 
@@ -278,11 +202,11 @@ struct StaleNote: View {
 }
 
 #if DEBUG
-  /// `-dev.route discover/_preview`: the parts other pages place, on a page
+  /// `-dev.route discover-browse/_preview`: the parts other pages place, on a page
   /// of their own, as they'd sit there: Discover's rows under the empty
   /// search field, "Not here yet" for a search, and a person's catalog
   /// credits. `-requests.query` names the search.
-  private struct RequestsPreview: View {
+  struct RequestsPreview: View {
     @State private var search = CatalogSearch()
     @State private var person = Loader<[PersonCatalogCredit]>()
 

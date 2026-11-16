@@ -14,8 +14,8 @@ public enum CoreRoute: Codable, Hashable, Sendable {
   case downloadsShow(String)
   case identify(titleId: String)
   case catalog(kind: String, provider: String, providerId: String, library: String? = nil)
-  case discoverRail(String)
-  case catalogBrowse(kind: String)
+  /// A Discover row's heading opens it with the row's filters and sort.
+  case catalogBrowse(kind: String, filters: CatalogFilters? = nil, sort: String? = nil)
   case asked
   case requests(list: String = "waiting")
   /// Nil represents Android's -1 sentinel for an absent season or episode.

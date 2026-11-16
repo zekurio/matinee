@@ -21,6 +21,7 @@ struct FavoritesDataTests {
       .browse(genre: "Drama", studio: "Studio"),
       .images(titleId: "show", season: 0, episode: 2),
       .folderPicker(start: "/media", added: ["/media/a"]),
+      .catalogBrowse(kind: "show", filters: .none, sort: CatalogSort.forYou), .catalogBrowse(kind: "movie"),
     ]
     #expect(try JSONDecoder().decode([CoreRoute].self, from: JSONEncoder().encode(routes)) == routes)
   }

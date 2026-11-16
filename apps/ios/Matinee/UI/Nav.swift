@@ -58,10 +58,10 @@ enum Route: Hashable, Codable {
   case asked
   /// An admin's queue of requests, on `list` (a `RequestQueueList`), or Waiting.
   case requests(list: String?)
-  /// One of Discover's rows in full, by its `discoverRailKey`.
-  case discoverRail(key: String)
-  /// All the provider's movies or shows, with the server's filters.
-  case catalogBrowse(kind: String)
+  /// All the provider's movies or shows, or the viewer's recommendations
+  /// of them, with the server's filters; a Discover row's heading opens it
+  /// with the row's filters and sort.
+  case catalogBrowse(CatalogBrowseStart)
 }
 
 /// The player, over everything: a file, and where to start, or nil to go on where the person left off.
@@ -217,8 +217,7 @@ struct PlayerRequest: Identifiable, Hashable {
       arrived: { [weak self] in self?.replaceTop(with: .title(id: $0)) },
       asked: { [weak self] in self?.push(.asked, single: true) },
       requests: { [weak self] in self?.push(.requests(list: $0), single: true) },
-      discoverRail: { [weak self] in self?.push(.discoverRail(key: $0), single: true) },
-      catalogBrowse: { [weak self] in self?.push(.catalogBrowse(kind: $0), single: true) }
+      catalogBrowse: { [weak self] in self?.push(.catalogBrowse($0), single: true) }
     )
   }
 
@@ -299,8 +298,7 @@ struct RouteScreen: View {
       CatalogScreen(ref: CatalogRef(kind: kind, provider: provider, providerId: providerId), library: library)
     case .asked: AskedScreen()
     case .requests(let list): RequestsScreen(start: list)
-    case .discoverRail(let key): DiscoverRailScreen(key: key)
-    case .catalogBrowse(let kind): CatalogBrowseScreen(kind: kind)
+    case .catalogBrowse(let start): CatalogBrowseScreen(start: start)
     }
   }
 }
@@ -437,8 +435,7 @@ enum RoutePath {
       return .page(.home, .catalog(kind: kind, provider: ids[0], providerId: ids[1], library: query["library"]))
     case ("asked", nil): return .page(.profile, .asked)
     case ("requests", let list): return .page(.profile, .requests(list: list))
-    case ("discover", let key?): return .page(.search, .discoverRail(key: key))
-    case ("discover-browse", let kind?): return .page(.search, .catalogBrowse(kind: kind))
+    case ("discover-browse", let kind?): return .page(.search, .catalogBrowse(CatalogBrowseStart(kind: kind)))
     default: return nil
     }
   }

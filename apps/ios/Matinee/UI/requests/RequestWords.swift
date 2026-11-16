@@ -229,18 +229,12 @@ func requestListLabel(_ list: RequestQueueList) -> String {
 /// "Popular movies", or "Because you watched Dune".
 func discoverRailName(_ rail: DiscoverRail) -> String {
   switch rail.id {
-  case "popularFilms": Str.webDiscoverRailPopularFilms
-  case "popularShows": Str.webDiscoverRailPopularShows
-  case "forYou": Str.webDiscoverRailForYou
-  case "becauseWatched": Str.webDiscoverRailBecauseWatched(rail.seed?.name ?? "")
+  case DiscoverRailId.popularFilms: Str.webDiscoverRailPopularFilms
+  case DiscoverRailId.popularShows: Str.webDiscoverRailPopularShows
+  case DiscoverRailId.forYou: Str.webDiscoverRailForYou
+  case DiscoverRailId.becauseWatched: Str.webDiscoverRailBecauseWatched(rail.seed?.name ?? "")
   default: Str.webDiscoverRailComingSoon
   }
-}
-
-/// Coming soon says when, where other rows say the year: "14 Aug · Movie".
-func discoverReleaseLine(_ rail: String, _ item: CatalogTitleSummary) -> String? {
-  guard rail == "comingSoon", let day = item.availability.releaseDate, parseDay(day) != nil else { return nil }
-  return Str.webDiscoverCardRelease(formatShortDay(day), requestKindWord(item.ref.kind))
 }
 
 /// "Browse movies", "Browse shows".

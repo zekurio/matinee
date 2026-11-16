@@ -22,7 +22,7 @@ struct RequestApiTests {
     let input = CatalogInput(ref: CatalogRef(kind: "show", provider: "tmdb", providerId: "1"), libraryId: "shows")
     let calls: [@Sendable () async throws -> Void] = [
       { _ = try await data.title(input) }, { _ = try await data.discover() },
-      { _ = try await data.browseOptions(kind: "show") },
+      { _ = try await data.browseOptions(kind: "show") }, { _ = try await data.row(DiscoverRail(id: "forYou", browse: nil)) },
       { _ = try await data.search("Dune") }, { _ = try await data.gaps(titleId: "show") },
       { _ = try await data.mine() }, { _ = try await data.queue() },
       { _ = try await data.related(input) }, { _ = try await data.relatedTitles(input, rail: "similar") },

@@ -67,8 +67,9 @@ public struct RequestData: Sendable {
     try await api.catalog.details(catalogInput: input)
   }
   public func discover() async throws -> DiscoverRails { try await api.discover.rails() }
-  public func rail(_ rail: DiscoverRail, page: Int = 1) async throws -> CatalogPage {
-    try await api.discover.page(rail: rail, page: page)
+  /// A Discover row's cards: the first page of its browse, or what came from its seed.
+  public func row(_ rail: DiscoverRail) async throws -> DiscoverRow {
+    try await api.discover.row(id: rail.id, seed: rail.seed)
   }
   public func browseOptions(kind: String) async throws -> CatalogBrowseOptions {
     try await api.discover.browseOptions(kind: kind)

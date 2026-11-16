@@ -13,7 +13,8 @@
    * the dev server as usual. Release builds don't compile this.
    *
    * - `YES`: every state a title or season can be in, a queue of waiting
-   *   requests, Discover's rows, and Browse with the server's filters.
+   *   requests, Discover's rows, and Browse with the server's filters,
+   *   which each row's heading opens with its own.
    * - `limit`: the same, with this account's requests used up.
    * - `left`: two requests left.
    * - `off`: asking turned off on the server.
@@ -256,7 +257,7 @@
             season(2, availability("coming", id: "r-bear", progress: 0.3, mine: true), episodes: 10),
             season(3, availability("unavailable", reason: .init(kind: "notFound", code: nil, note: nil)), episodes: 10),
           ], score: 8.2, votes: 1500, releaseDate: "2022-06-23"))
-      // Enough more for Browse and a row's whole list to page.
+      // Enough more for Browse to page.
       let more = [
         "Arrival", "Blade Runner 2049", "Her", "Moonlight", "Parasite", "Roma", "Nomadland", "Tár", "Drive My Car",
         "The Zone of Interest", "Poor Things", "Killers of the Flower Moon", "Barbie", "Asteroid City", "Godzilla Minus One",
@@ -415,24 +416,17 @@
           let found = order.compactMap { titles[$0] }.filter { !needle.isEmpty && $0.name.lowercased().contains(needle) && $0.availability.state != "here" }
           return ok(CatalogPage(items: found.compactMap { summary($0.ref.requestKey) }, nextPage: nil, stale: false))
         case "discover/rails":
-          let seed = RecommendationSeed(ref: CatalogRef(kind: "movie", provider: "tmdb", providerId: "603"), name: "The Matrix")
-          return ok(DiscoverRails(
-            enabled: true,
-            rails: [DiscoverRail(id: "forYou", seed: nil), DiscoverRail(id: "popularFilms", seed: nil), DiscoverRail(id: "popularShows", seed: nil), DiscoverRail(id: "becauseWatched", seed: seed), DiscoverRail(id: "comingSoon", seed: nil)],
-            browse: ["movie", "show"]))
-        case "discover/page":
-          guard let input = try? JSONSerialization.jsonObject(with: body) as? [String: Any], let rail = (input["rail"] as? [String: Any])?["id"] as? String else { return notFound() }
-          let page = input["page"] as? Int ?? 1
-          let all = railItems(rail)
-          let slice = Array(all.dropFirst((page - 1) * 24).prefix(24))
-          return ok(CatalogPage(items: slice, nextPage: all.count > page * 24 ? page + 1 : nil, stale: false))
+          return ok(DiscoverRails(enabled: true, rails: rails(), browse: ["movie", "show"]))
+        case "discover/row":
+          guard let input = try? decoder.decode(DiscoverRowInput.self, from: body) else { return notFound() }
+          return ok(row(input))
         case "discover/browse/options":
           return ok(CatalogBrowseOptions(
             enabled: true, stale: false,
             genres: [.init(id: 28, name: "Action"), .init(id: 35, name: "Comedy"), .init(id: 18, name: "Drama"), .init(id: 878, name: "Science Fiction"), .init(id: 10749, name: "Romance")],
             ratings: .init(country: "US", ratings: ["G", "PG", "PG-13", "R"]),
             languages: [CatalogChoice(id: "en", name: "English"), CatalogChoice(id: "de", name: "German"), CatalogChoice(id: "ja", name: "Japanese"), CatalogChoice(id: "ko", name: "Korean")],
-            sorts: ["popular", "scoreHigh", "scoreLow", "votes", "newest", "oldest", "nameAsc", "nameDesc"],
+            sorts: CatalogSort.knownValues,
             votes: [100, 500, 1000, 5000],
             years: CatalogRange(min: 1920, max: 2026, step: 1), scores: CatalogRange(min: 0, max: 10, step: 0.5),
             runtime: CatalogRange(min: 0, max: 240, step: 5)))
@@ -488,22 +482,60 @@
       return RelatedTitle(ref: title.ref, name: title.name, year: title.year, poster: nil, availability: title.availability, title: library)
     }
 
-    private func railItems(_ rail: String) -> [CatalogTitleSummary] {
-      let all = order.compactMap { titles[$0] }.filter { $0.availability.state != "here" }
-      let picked: [FixtureTitle] =
-        switch rail {
-        case "popularFilms": all.filter { $0.ref.kind == "movie" }
-        case "popularShows": all.filter { $0.ref.kind == "show" }
-        case "comingSoon": all.filter { $0.availability.state == "release" }
-        case "becauseWatched": all.filter { $0.genres.contains("Science Fiction") }
-        default: Array(all.reversed().prefix(12))
-        }
-      return picked.compactMap { summary($0.ref.requestKey) }
+    /// Discover's rows as the server makes them: each but "Because you
+    /// watched" the start of a browse, with the filters and sort its
+    /// heading opens.
+    private func rails() -> [DiscoverRail] {
+      let seed = RecommendationSeed(ref: CatalogRef(kind: "movie", provider: "tmdb", providerId: "603"), name: "The Matrix")
+      var askable = CatalogFilters.none
+      askable.requestable = true
+      var recommended = askable
+      recommended.recommended = true
+      var upcoming = askable
+      upcoming.upcoming = true
+      return [
+        DiscoverRail(id: DiscoverRailId.forYou, browse: DiscoverBrowse(kinds: ["movie", "show"], filters: recommended, sort: CatalogSort.forYou)),
+        DiscoverRail(id: DiscoverRailId.popularFilms, browse: DiscoverBrowse(kinds: ["movie"], filters: askable, sort: CatalogSort.popular)),
+        DiscoverRail(id: DiscoverRailId.popularShows, browse: DiscoverBrowse(kinds: ["show"], filters: askable, sort: CatalogSort.popular)),
+        DiscoverRail(id: DiscoverRailId.becauseWatched, seed: seed, browse: nil),
+        DiscoverRail(id: DiscoverRailId.comingSoon, browse: DiscoverBrowse(kinds: ["movie", "show"], filters: upcoming, sort: CatalogSort.popular)),
+      ]
+    }
+
+    /// A row's cards: the first page of its browse, of each kind in turn,
+    /// or for "Because you watched", what came from its title.
+    private func row(_ input: DiscoverRowInput) -> DiscoverRow {
+      if input.id == DiscoverRailId.becauseWatched {
+        let items = order.compactMap { titles[$0] }
+          .filter { $0.availability.state != "here" && $0.genres.contains("Science Fiction") }
+          .map { browseTitle($0) }
+        return DiscoverRow(items: items, stale: false, detail: nil)
+      }
+      guard let browse = rails().first(where: { $0.id == input.id })?.browse else {
+        return DiscoverRow(items: [], stale: false, detail: nil)
+      }
+      let pages = browse.kinds.map { kind in
+        self.browse(CatalogBrowseInput(kind: kind, filters: browse.filters, sort: browse.sort, page: 1))
+      }
+      let longest = pages.map(\.items.count).max() ?? 0
+      let items = (0..<longest).flatMap { index in pages.compactMap { index < $0.items.count ? $0.items[index] : nil } }
+      return DiscoverRow(items: items, stale: false, detail: pages.first?.detail ?? nil)
+    }
+
+    private func browseTitle(_ title: FixtureTitle) -> CatalogBrowseTitle {
+      CatalogBrowseTitle(
+        ref: title.ref, name: title.name, year: title.year, poster: nil, availability: title.availability,
+        title: title.availability.state == "here" ? library.first { $0.id == title.availability.libraryTitleId } : nil,
+        score: title.score, votes: title.votes, releaseDate: title.releaseDate)
     }
 
     private func browse(_ input: CatalogBrowseInput) -> CatalogBrowsePage {
       let filters = input.filters
       var all = order.compactMap { titles[$0] }.filter { $0.ref.kind == input.kind }
+      // The viewer's recommendations: the stand-in's are the later half of its titles.
+      if filters.recommended == true { all = all.filter { (order.firstIndex(of: $0.ref.requestKey) ?? 0) >= order.count / 2 } }
+      if filters.upcoming == true { all = all.filter { $0.availability.state == "release" } }
+      if filters.requestable == true { all = all.filter { !["here", "unavailable"].contains($0.availability.state) } }
       if let genres = filters.genres, !genres.isEmpty { all = all.filter { !Set($0.genreIds).isDisjoint(with: genres) } }
       if let from = filters.yearFrom { all = all.filter { ($0.year ?? 0) >= from } }
       if let to = filters.yearTo { all = all.filter { ($0.year ?? 0) <= to } }
@@ -520,18 +552,15 @@
       case "oldest": all.sort { ($0.year ?? 0) < ($1.year ?? 0) }
       case "nameAsc": all.sort { $0.name < $1.name }
       case "nameDesc": all.sort { $0.name > $1.name }
+      case CatalogSort.forYou: all.reverse()
       default: break
       }
       let page = input.page ?? 1
-      let items = all.dropFirst((page - 1) * 24).prefix(24).map { title in
-        CatalogBrowseTitle(
-          ref: title.ref, name: title.name, year: title.year, poster: nil, availability: title.availability,
-          title: title.availability.state == "here" ? library.first { $0.id == title.availability.libraryTitleId } : nil,
-          score: title.score, votes: title.votes, releaseDate: title.releaseDate)
-      }
+      let items = all.dropFirst((page - 1) * 24).prefix(24).map(browseTitle)
+      let dated = input.sort == "newest" || input.sort == "oldest" || filters.upcoming == true
       return CatalogBrowsePage(
         items: Array(items), nextPage: all.count > page * 24 ? page + 1 : nil, stale: false, voteFloor: scored ? 500 : nil,
-        detail: scored ? "score" : input.sort == "newest" || input.sort == "oldest" ? "releaseDate" : nil)
+        detail: scored ? "score" : dated ? "releaseDate" : nil)
     }
 
     // MARK: Changing
@@ -681,7 +710,7 @@
     private var stream: UUID?
 
     private static let served: Set<String> = [
-      "catalog/details", "catalog/related", "catalog/related/titles", "catalog/search", "discover/rails", "discover/page",
+      "catalog/details", "catalog/related", "catalog/related/titles", "catalog/search", "discover/rails", "discover/row",
       "discover/browse/options", "discover/browse", "requests/live", "admin/requests/live", "requests/mine",
       "requests/ask", "requests/cancel", "admin/requests", "admin/requests/approve", "admin/requests/decline",
     ]

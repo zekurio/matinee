@@ -233,7 +233,7 @@ public func requestOutcome(_ item: AdminRequestItem) -> RequestOutcome {
 
 // MARK: Discover
 
-/// How many cards a Discover row shows; its heading leads to the rest.
+/// How many cards a Discover row shows; its heading leads to its browse.
 public let DISCOVER_RAIL_CARDS = 20
 
 /// Tells Discover's rows apart: there can be several "Because you watched".
@@ -242,25 +242,39 @@ public func discoverRailKey(_ rail: DiscoverRail) -> String {
 }
 
 /// The row holds the viewer's recommendations, whose cards offer "Not interested".
-public func discoverRecommends(_ rail: DiscoverRail) -> Bool { rail.id == "forYou" || rail.id == "becauseWatched" }
-
-/// Where a Discover row's heading leads: the popular rows browse their kind, as the web's do.
-public enum DiscoverRailTarget: Sendable, Equatable {
-  case browse(kind: String), rail(key: String)
+public func discoverRecommends(_ rail: DiscoverRail) -> Bool {
+  rail.id == DiscoverRailId.forYou || rail.id == DiscoverRailId.becauseWatched
 }
 
-public func discoverRailTarget(_ rail: DiscoverRail) -> DiscoverRailTarget {
-  switch rail.id {
-  case "popularFilms": .browse(kind: "movie")
-  case "popularShows": .browse(kind: "show")
-  default: .rail(key: discoverRailKey(rail))
+/// A browse as it opens: its kind, filters, and order.
+public struct CatalogBrowseStart: Sendable, Hashable, Codable {
+  public let kind: String
+  public let filters: CatalogFilters
+  public let sort: String
+  public init(kind: String, filters: CatalogFilters = .none, sort: String = CatalogSort.popular) {
+    self.kind = kind; self.filters = filters; self.sort = sort
   }
+}
+
+/// The browse a Discover row's heading opens, as Android's `DiscoverRailRow`:
+/// the server's, of its first kind, with its filters and sort. Nil for a
+/// row without one, as "Because you watched", whose heading opens nothing.
+public func discoverRailBrowse(_ rail: DiscoverRail) -> CatalogBrowseStart? {
+  guard let browse = rail.browse else { return nil }
+  return CatalogBrowseStart(kind: browse.kinds.first ?? TitleKind.movie, filters: browse.filters, sort: browse.sort)
 }
 
 /// A row's cards: the first twenty, less what the viewer said they're not
 /// interested in, by `CatalogRef.key`, as `HiddenRecommendations` keeps them.
-public func discoverRailCards(_ rail: DiscoverRail, _ items: [CatalogTitleSummary], hidden: Set<String>) -> [CatalogTitleSummary] {
+public func discoverRailCards(_ rail: DiscoverRail, _ items: [CatalogBrowseTitle], hidden: Set<String>) -> [CatalogBrowseTitle] {
   Array(items.filter { !discoverRecommends(rail) || !hidden.contains($0.ref.key) }.prefix(DISCOVER_RAIL_CARDS))
+}
+
+/// The cards of Discover's rows that one stream follows: the catalog's,
+/// since library cards play and don't change, once each.
+public func discoverRailFollowed(_ rows: [DiscoverRow]) -> [CatalogInput] {
+  rows.flatMap { $0.items.prefix(DISCOVER_RAIL_CARDS) }.filter { $0.title == nil }
+    .map { CatalogInput(ref: $0.ref, libraryId: nil) }
 }
 
 // MARK: Browse
@@ -269,16 +283,41 @@ extension CatalogFilters {
   /// No filter on.
   public static let none = CatalogFilters(
     genres: [], yearFrom: nil, yearTo: nil, scoreMin: nil, scoreMax: nil, votesMin: nil, rating: nil, language: nil,
-    runtimeMin: nil, runtimeMax: nil)
+    runtimeMin: nil, runtimeMax: nil, recommended: nil, upcoming: nil, requestable: nil)
 
   /// How many filters are on, a range counting once, as Android's.
   public var count: Int {
     (genres ?? []).count
       + [
         yearFrom != nil || yearTo != nil, scoreMin != nil || scoreMax != nil, votesMin != nil, rating != nil,
-        language != nil, runtimeMin != nil || runtimeMax != nil,
+        language != nil, runtimeMin != nil || runtimeMax != nil, recommended == true, upcoming == true,
+        requestable == true,
       ].filter(\.self).count
   }
+
+  /// The browse lists the viewer's recommendations, whose cards offer "Not interested".
+  public var recommends: Bool { recommended == true }
+
+  /// The filters kept on switching to the other kind: all but the genres
+  /// and the rating, which differ between movies and shows.
+  public var forOtherKind: CatalogFilters {
+    var filters = self
+    filters.genres = nil
+    filters.rating = nil
+    return filters
+  }
+}
+
+/// Whether `sort` goes with `filters`: best match only among the viewer's
+/// recommendations, as the server has it.
+public func catalogSortFits(_ sort: String, _ filters: CatalogFilters) -> Bool {
+  sort != CatalogSort.forYou || filters.recommends
+}
+
+/// The order a browse keeps once its filters change: its own while it
+/// fits them, else popular, as Android's browse goes back to it.
+public func catalogSort(_ sort: String, fitting filters: CatalogFilters) -> String {
+  catalogSortFits(sort, filters) ? sort : CatalogSort.popular
 }
 
 /// What a browse card says under its name, as the server says the list calls for.
