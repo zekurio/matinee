@@ -18,7 +18,7 @@ left" lists what remains.
 | `MatineeTVApp.swift`   | Entry point: the session, the theme, the toasts; `-gallery YES` opens the kit's TV gallery |
 | `TVDevLaunch.swift`    | Debug-only `-dev.server`, `-dev.token`, `-dev.route`                                       |
 | `Info.plist`           | Written by hand (not by XcodeGen), with `UIUserInterfaceStyle` Automatic                   |
-| `Resources/`           | Info.plist words in English and German; `TVAppIcon.xcassets` from `scripts/tvicon.sh`      |
+| `Resources/`           | Info.plist words in English and German; `TVAppIcon.xcassets`, rendered from `brand/tvos`   |
 | `UI/TVRoot.swift`      | `TvRoot.kt`: connect, connecting, unreachable, sign-in, or the app; the one toast host     |
 | `UI/TVShell.swift`     | `TvApp.kt`: the signed-in app, drawer, clock, pages, player cover, `\.user`                |
 | `UI/TVNav.swift`       | The routes, `TVNav`, the `Navigator` for a TV, `TVRouteScreen`, `TVRoutePath`              |
@@ -184,7 +184,7 @@ From `apps/ios`, with `just` (or `nix shell nixpkgs#just -c just …`):
 | `just tv-remote-dev [account] [args]` | Starts a remote session signed in to the dev server                             |
 | `just tv-remote send "<steps>"`       | Presses the remote in that session; `install`, `stop`, `run` too                |
 | `just tv-boundary`                    | The kit's TV boundary test over `MatineeTV/`, also part of `just test`          |
-| `just tv-icons`                       | Draws the icon and Top Shelf image again from `brand/`                          |
+| `just tv-icons`                       | Renders the icon and Top Shelf images again from `brand/` (`brand/render.sh`)   |
 
 `MATINEE_TV_SIMULATOR` defaults to "Apple TV 4K (4th generation)";
 `MATINEE_TV_DERIVED_DATA` to `build/TVDerivedData`. Use one Apple TV
@@ -246,15 +246,23 @@ MatineeCore's loopback test, never on a real network.
 
 ## Icon and Top Shelf image
 
-`scripts/tvicon.sh` draws `Resources/TVAppIcon.xcassets` from the mark's
-paths and colors in `brand/`: a three-layer image stack (dusk sky at the
-back, the sun's dome in the middle, the horizon bands in front, so the sun
-moves behind the horizon as the icon tilts) at 400×240 @1x/@2x and
-1280×768 for the App Store, and the Top Shelf images (1920×720 and the
-wide 2320×720, @1x/@2x), which are the logo on the same sky. It's a
-placeholder by the brand's rules: `brand/` has no tvOS artwork, so these
-should move to `brand/tvos/` and `brand/render.sh` once someone owning the
-brand signs off on the layering.
+The artwork is the brand's, drawn by `brand/tvos.py` into `brand/tvos/`;
+"Apple TV" in `brand/README.md` says how it's composed and why the layers
+are split as they are. `brand/render.sh` renders it into
+`Resources/TVAppIcon.xcassets`, which is committed: the icon as a stack
+of three layers (the sky at the back, the sun in the middle, the water
+and the mark's bands in front) at 400×240 @1x/@2x and 1280×768 for the
+App Store, and the Top Shelf images (1920×720 and the wide 2320×720,
+@1x/@2x), the same scene with the wordmark. `scripts/tvicon.sh` and
+`just tv-icons` run `render.sh`. The catalog's `Contents.json` files are
+written by hand, and `project.yml` names the set
+(`ASSETCATALOG_COMPILER_APPICON_NAME`).
+
+On the simulator's Home Screen the icon and Top Shelf image show once
+the app sits in the top row and has focus: `just tv-remote` with `home`
+and `left`/`right` gets there. The tilt that moves the layers comes from
+the touch surface, which the remote script can't press; try it by hand
+in the Simulator's Apple TV Remote window.
 
 ## Top Shelf content
 

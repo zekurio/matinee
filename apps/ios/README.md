@@ -37,6 +37,9 @@ swift test
 XcodeGen reads `project.yml`; don't commit `Matinee.xcodeproj`.
 It also runs `scripts/version.sh` to read the root `package.json`, and
 `scripts/appicon.sh` to copy the icon from `brand/ios`.
+The Apple TV app's layered icon and Top Shelf images come from `brand/` too,
+but `brand/render.sh` renders them straight into the TV target's committed
+catalog ([MatineeTV/README.md](MatineeTV/README.md#icon-and-top-shelf-image)).
 Keep derived data inside your checkout so concurrent builds don't share it.
 With tools already installed, `XCODEGEN=xcodegen` and `NODE=node` let the
 recipes use those instead of Nix. The CI runner uses this option.
