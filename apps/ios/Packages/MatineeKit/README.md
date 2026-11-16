@@ -174,6 +174,9 @@ disabled. Every pressable thing takes 44 points to hit.
 - `Spinner(size:, tint:)`, `ProgressRing(progress or nil, size:)`,
   `ProgressBar(value, height:, track:, fill:)`, `Skeleton(radius:)` or
   `Skeleton(shape:)`.
+- `PageDots(count:, current:, tint:)`: where a row of pages rests, the
+  current dot long. It only shows, and is hidden from VoiceOver; the row
+  is what's swiped, and its pages say where they are.
 - `EmptyState(icon:, title:, description:) { actions }`.
 - `Callout("Title", description:, icon:, look: .standard | .destructive) { actions }`:
   the web's Alert, a note that stays because it holds the page back.
