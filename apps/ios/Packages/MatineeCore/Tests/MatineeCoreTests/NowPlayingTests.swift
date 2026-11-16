@@ -113,6 +113,8 @@ import Testing
     let (session, player, info, _, audio) = fixture()
     #expect(info.nowPlayingInfo?[MPMediaItemPropertyTitle] as? String == "Episode")
     #expect(info.nowPlayingInfo?[MPMediaItemPropertyArtist] as? String == "Show · S1 E2")
+    #expect(
+      info.nowPlayingInfo?[MPNowPlayingInfoPropertyMediaType] as? UInt == MPNowPlayingInfoMediaType.video.rawValue)
     #expect(audio.activations == 0)
     player.play()
     session.update()

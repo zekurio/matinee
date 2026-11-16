@@ -66,34 +66,6 @@ struct TVSettingsScreen: View {
   }
 }
 
-// MARK: Player: ui/player/tv
-
-/// The player, over everything: the file it would play, until Menu or Back closes it.
-struct TVPlayerScreen: View {
-  let request: TVPlayerRequest
-  let close: () -> Void
-  @Environment(\.palette) private var palette
-  @FocusState private var focused: Bool
-
-  var body: some View {
-    VStack(alignment: .leading, spacing: 0) {
-      Text(verbatim: "player/\(request.itemId)\(request.start.map { "?start=\(Int($0))" } ?? "")")
-        .textStyle(.title).foregroundStyle(palette.foreground)
-      Text(verbatim: "ui/player/tv").textStyle(.caption).foregroundStyle(palette.mutedForeground)
-        .padding(.top, TVSpace.s2)
-      TVButton(Str.commonBack, icon: .arrowLeft, action: close)
-        .focused($focused)
-        .padding(.top, TVSpace.s8)
-    }
-    .padding(TVOverscan.insets)
-    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-    .background(Color.black)
-    .ignoresSafeArea()
-    .tvPageFocus($focused)
-    .onTVBack(perform: close)
-  }
-}
-
 // MARK: The placeholder
 
 /// A page still to be built: its name, its route as `-dev.route` takes it,
