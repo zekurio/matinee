@@ -108,4 +108,4 @@ data class CarouselLayout(val perRow: Int, val stops: Int, val gap: Float, val c
  * The card says nothing else but the name.
  */
 fun FeaturedTitle.cardLine(separator: String = " · "): String? =
-    title.genres.take(3).takeIf { it.isNotEmpty() }?.joinToString(separator)
+    shownGenres.takeIf { it.isNotEmpty() }?.joinToString(separator)

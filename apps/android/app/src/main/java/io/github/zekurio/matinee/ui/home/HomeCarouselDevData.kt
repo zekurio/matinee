@@ -9,8 +9,9 @@ import java.io.File
 import java.util.Properties
 
 /*
- * Real pictures for Home's featured carousel, for judging white text on
- * them, which the dev server's test patterns can't tell. Debug builds
+ * Real pictures for Home's featured carousel and the tablet's banner
+ * (Hero.kt), for judging text on them, which the dev server's test
+ * patterns can't tell. Debug builds
  * only, by build type: they aren't debuggable, so BuildConfig.DEBUG is
  * false in them too. A release reads nothing. No picture is in the
  * repository; they're pushed to the device, into the folder the app makes
