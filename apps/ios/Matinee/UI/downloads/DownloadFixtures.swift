@@ -46,6 +46,14 @@
     /// The made-up show's id, for `-dev.route downloads/fixture-show`.
     static let showId = "fixture-show"
 
+    /// `-dev.lowStorage YES`: the worker reads the device as low on storage,
+    /// 100 MB left of 64 GB, so a download started from a sheet stays
+    /// Waiting, as Android's does, until the app is launched without it.
+    @MainActor static func lowStorage(_ downloads: Downloads) {
+      guard UserDefaults.standard.bool(forKey: "dev.lowStorage") else { return }
+      downloads.worker.capacity = { DownloadCapacity(available: 100_000_000, total: 64_000_000_000) }
+    }
+
     private static let MB: Int64 = 1_000_000
 
     static let entries: [OfflineItem] = {

@@ -8,7 +8,7 @@ import SwiftUI
  * screen, one overlay for every page (MatineeCore's
  * `RequestAvailabilityState`), so what one page hears every page shows;
  * asking and taking an ask back with the toast's Undo (`RequestAskFlow`);
- * for an admin, the live queue with Add and Decline behind a delayed Undo
+ * for an admin, the live queue with its answers behind a delayed Undo
  * (`RequestAdminQueue`); and the request and decline sheets, shown once
  * around the shell, so a card that scrolls away doesn't take them along.
  *
@@ -130,29 +130,50 @@ struct RequestSheetModel: Identifiable {
 
   // MARK: Answering
 
-  /// An admin's Add or Decline: the request leaves the lists at once, and
-  /// the answer goes once the toast's Undo has passed, as the web's queue holds it.
-  func answer(_ item: AdminRequestItem, _ answer: RequestAdminAnswer) {
+  /// An admin's answer to one request: Add or Decline a waiting one, Give
+  /// up on an accepted one, or Allow requests again or Add after all for a
+  /// declined one. The request leaves the lists at once, and the answer
+  /// goes once the toast's Undo has passed, as the web's queue holds it.
+  /// `onDone` runs once the server took it, as Done drops its row then.
+  func answer(_ item: AdminRequestItem, _ answer: RequestAdminAnswer, onDone: (@MainActor () -> Void)? = nil) {
     guard let api else { return }
     let name = item.title.name
-    let failed =
-      switch answer {
-      case .add: Str.webRequestsToastAddFailed
-      case .decline: Str.webRequestsToastDeclineFailed(name)
-      }
     queue.answer(id: item.id, answer: answer, actions: RequestActions(api: api)) { [weak self] in
       self?.bump()
+      onDone?()
     }
     Task {
-      let said =
-        switch answer {
-        case .add: Str.webRequestsToastAdded(name)
-        case .decline: Str.webRequestsToastDeclined(name)
-        }
-      let result = await toasts?.show(ToastMessage(said, action: Str.webRequestsToastUndo, duration: .seconds(6)))
-      if result == .actionPerformed { queue.undo(id: item.id) }
-      await queue.settled(id: item.id)
-      if let failure = queue.failure { fail(failed, failure) }
+      let said = ToastMessage(requestAnsweredText(answer, name), action: Str.webRequestsToastUndo, duration: .seconds(6))
+      if await toasts?.show(said) == .actionPerformed { queue.undo(id: item.id) }
+      if let failure = await queue.settled(id: item.id) { fail(requestAnswerFailedText(answer, name), failure) }
+    }
+  }
+
+  /// Add for every request in `items`, the waiting list as shown, held for
+  /// one Undo, as Android's `answerAll`.
+  func answerAll(_ items: [AdminRequestItem]) {
+    guard let api else { return }
+    let count = items.filter(queue.canAnswer).count
+    guard let key = queue.answerAll(ids: items.map(\.id), actions: RequestActions(api: api), changed: { [weak self] in self?.bump() })
+    else { return }
+    Task {
+      let said = ToastMessage(Str.webRequestsToastAddedMany(count), action: Str.webRequestsToastUndo, duration: .seconds(6))
+      if await toasts?.show(said) == .actionPerformed { queue.undo(id: key) }
+      if let failure = await queue.settled(id: key) { fail(Str.webRequestsToastAddFailed, failure) }
+    }
+  }
+
+  /// Sends a request that needs attention again, at once and with no Undo, as Android's.
+  func retry(_ item: AdminRequestItem) {
+    guard let api else { return }
+    let name = item.title.name
+    Task {
+      do {
+        try await RequestActions(api: api).retry(id: item.id)
+        toasts?.post(ToastMessage(Str.webRequestsRetried(name)))
+      } catch {
+        fail(Str.webRequestsRetryFailed(name), Failure(error))
+      }
     }
   }
 

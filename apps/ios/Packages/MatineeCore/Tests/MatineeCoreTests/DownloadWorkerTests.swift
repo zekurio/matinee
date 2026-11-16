@@ -224,6 +224,82 @@ private final class DownloadStub: URLProtocol, @unchecked Sendable {
     await worker.schedule(entry.key)
     try await wait { store.all[entry.key]?.state == .done }
   }
+  @Test func lowStorageIsAndroidsThreshold() {
+    let MiB: Int64 = 1024 * 1024, GB: Int64 = 1_000_000_000
+    // On a big volume, 500 MiB.
+    #expect(storageLow(.init(available: 500 * MiB, total: 128 * GB)))
+    #expect(!storageLow(.init(available: 500 * MiB + 1, total: 128 * GB)))
+    // On a small one, 5% of it.
+    #expect(storageLow(.init(available: 4 * GB / 20, total: 4 * GB)))
+    #expect(!storageLow(.init(available: 4 * GB / 20 + 1, total: 4 * GB)))
+  }
+  @Test func lowStorageHoldsADownloadUntilThereIsRoom() async throws {
+    let root = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+    let release = DispatchSemaphore(value: 0)
+    final class Count: @unchecked Sendable {
+      private let lock = NSLock()
+      private var value = 0
+      func add() { lock.withLock { value += 1 } }
+      var count: Int { lock.withLock { value } }
+    }
+    let requests = Count()
+    defer {
+      release.signal()
+      release.signal()
+      try? FileManager.default.removeItem(at: root)
+      DownloadStub.handler = nil
+    }
+    let config = URLSessionConfiguration.ephemeral
+    config.protocolClasses = [DownloadStub.self]
+    let api = MatineeApi(base: URL(string: "https://one/")!, configuration: config)
+    let store = try DownloadStore(root: root)
+    let entry = try offlineFixture("space", state: .queued)
+    try FileManager.default.createDirectory(
+      at: root.appending(path: entry.key), withIntermediateDirectories: true)
+    try await store.put(entry)
+    DownloadStub.handler = { _ in
+      requests.add()
+      release.wait()
+      return (200, ["Content-Length": "2"], Data("ok".utf8))
+    }
+    let full = DownloadCapacity(available: 100_000_000, total: 64_000_000_000)
+    let roomy = DownloadCapacity(available: 10_000_000_000, total: 64_000_000_000)
+    var room = full
+    let clock = RequestTestClock()
+    var rechecks = clock.sleeping.stream.makeAsyncIterator()
+    let worker = DownloadWorker(
+      store: store, configuration: config, capacity: { room }, sleep: { try await clock.sleep($0) },
+      client: { _ in api })
+    // Short of room: it waits, asks the server for nothing, and looks again later.
+    await worker.schedule(entry.key)
+    _ = await rechecks.next()
+    #expect(store.all[entry.key]?.state == .queued)
+    #expect(downloadStatus(store.all[entry.key]!, wifiOnly: false) == .waiting(wifi: false))
+    #expect(requests.count == 0)
+    room = roomy
+    await clock.advance()
+    try await wait { store.all[entry.key]?.state == .running && requests.count == 1 }
+    // Running when the disk fills: back to waiting, its task stopped.
+    let running = store.all[entry.key]!.generation
+    room = full
+    await worker.schedule(entry.key)
+    _ = await rechecks.next()
+    #expect(store.all[entry.key]?.state == .queued)
+    #expect(store.all[entry.key]?.generation != running)
+    release.signal()
+    room = roomy
+    release.signal()
+    await clock.advance()
+    try await wait { store.all[entry.key]?.state == .done }
+    #expect(try Data(contentsOf: store.file(entry)) == Data("ok".utf8))
+  }
+  @Test func storageReadsTheVolume() throws {
+    let root = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+    defer { try? FileManager.default.removeItem(at: root) }
+    let store = try DownloadStore(root: root)
+    let capacity = try #require(store.capacity())
+    #expect(capacity.total > 0 && capacity.available <= capacity.total)
+  }
   @Test func missingSegmentAndProgressRouting() async throws {
     let root = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
     defer {

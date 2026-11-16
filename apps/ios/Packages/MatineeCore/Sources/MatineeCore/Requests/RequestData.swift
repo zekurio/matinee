@@ -119,4 +119,32 @@ public struct RequestActions: Sendable {
   public func decline(id: String, reason: String, note: String? = nil) async throws {
     try await api.admin.requests.decline(id: id, reason: reason, note: note)
   }
+  /// Add all: the waiting requests in `ids`, the ones on screen, in one call.
+  public func addAll(ids: [String]) async throws {
+    try await api.admin.requests.approveAll(ids: ids)
+  }
+  /// Give up on an accepted request; the server declines it with "Can't find a copy".
+  public func giveUp(id: String, note: String? = nil) async throws {
+    try await api.admin.requests.giveUp(id: id, note: note)
+  }
+  public func allowAgain(id: String) async throws {
+    try await api.admin.requests.allowAgain(requestId: RequestId(id: id))
+  }
+  public func addAfterAll(id: String) async throws {
+    try await api.admin.requests.addAfterAll(requestId: RequestId(id: id))
+  }
+  /// Sends a request that needs attention again. Nothing holds it: no Undo, as Android's.
+  public func retry(id: String) async throws {
+    try await api.admin.requests.retry(requestId: RequestId(id: id))
+  }
+  /// Sends one answer from the queue or a title's page.
+  public func answer(id: String, _ answer: RequestAdminAnswer) async throws {
+    switch answer {
+    case .add: try await add(id: id)
+    case .decline(let reason, let note): try await decline(id: id, reason: reason, note: note)
+    case .giveUp(let note): try await giveUp(id: id, note: note)
+    case .allowAgain: try await allowAgain(id: id)
+    case .addAfterAll: try await addAfterAll(id: id)
+    }
+  }
 }

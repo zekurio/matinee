@@ -69,6 +69,14 @@ private struct Transfer: Codable, Sendable {
     completion()
   }
   private let networkAllowed: @MainActor (Bool) -> Bool
+  /// The room downloads have to go to; nil reads as room enough. The
+  /// volume's own figures, unless a test or a debug build says otherwise.
+  public var capacity: @MainActor () -> DownloadCapacity?
+  /// How long a download held back by low storage waits before it looks
+  /// again; Android's WorkManager hears from the system instead.
+  var storageRecheck: Duration = .seconds(60)
+  private let sleep: @Sendable (Duration) async throws -> Void
+  private var lastStorageCheck: [String: Date] = [:]
   public var unmeteredOnly: Bool {
     didSet {
       guard oldValue != unmeteredOnly else { return }
@@ -88,6 +96,8 @@ private struct Transfer: Codable, Sendable {
   public init(
     store: DownloadStore, configuration: URLSessionConfiguration? = nil, unmeteredOnly: Bool = true,
     networkAllowed: @escaping @MainActor (Bool) -> Bool = { _ in true },
+    capacity: (@MainActor () -> DownloadCapacity?)? = nil,
+    sleep: @escaping @Sendable (Duration) async throws -> Void = { try await Task.sleep(for: $0) },
     client: @escaping @MainActor (String) -> MatineeApi?
   ) throws {
     throw UnsupportedClientFeature.downloads
@@ -96,12 +106,16 @@ private struct Transfer: Codable, Sendable {
   public init(
     store: DownloadStore, configuration: URLSessionConfiguration? = nil, unmeteredOnly: Bool = true,
     networkAllowed: @escaping @MainActor (Bool) -> Bool = { _ in true },
+    capacity: (@MainActor () -> DownloadCapacity?)? = nil,
+    sleep: @escaping @Sendable (Duration) async throws -> Void = { try await Task.sleep(for: $0) },
     client: @escaping @MainActor (String) -> MatineeApi?
   ) {
     self.store = store
     self.client = client
     self.unmeteredOnly = unmeteredOnly
     self.networkAllowed = networkAllowed
+    self.capacity = capacity ?? { [store] in store.capacity() }
+    self.sleep = sleep
     super.init()
     let config =
       configuration ?? URLSessionConfiguration.background(withIdentifier: Self.identifier)
@@ -179,6 +193,13 @@ private struct Transfer: Codable, Sendable {
     else { return }
     if entry.videoComplete {
       await finish(key)
+      return
+    }
+    // Low on storage: it waits, as Android's work does, and one already
+    // running stops back to waiting with what it has.
+    if lowOnStorage {
+      if entry.state == .running { await waitForStorage(key) }
+      wakeForStorage(key)
       return
     }
     if let retry = entry.retryAt, retry > Date(), !isBackground {
@@ -294,6 +315,10 @@ private struct Transfer: Codable, Sendable {
       $0.generation = UUID().uuidString
     }
     wakeups[key]?.cancel()
+    try await cancelTasks(key)
+  }
+  /// Cancels what's in flight for `key`, keeping an original's resume data.
+  private func cancelTasks(_ key: String) async throws {
     for task in await tasks(key) {
       if let download = task as? URLSessionDownloadTask, Transfer.read(task)?.part == -2 {
         let data = await download.cancelByProducingResumeData()
@@ -305,11 +330,46 @@ private struct Transfer: Codable, Sendable {
       }
     }
   }
-  public func remove(_ key: String) async throws {
+  private var lowOnStorage: Bool { capacity().map(storageLow) ?? false }
+  /// Stops a running download back to waiting, as WorkManager stops
+  /// Android's worker when storage runs low: its tasks go, what it has stays.
+  private func waitForStorage(_ key: String) async {
+    do {
+      try await store.update(key) {
+        guard $0.state == .running else { return }
+        $0.state = .queued
+        $0.generation = UUID().uuidString
+      }
+      try await cancelTasks(key)
+    } catch { AppLog.downloads.error("Could not hold a download for storage") }
+  }
+  /// Looks again after `storageRecheck`, as nothing tells the app when room is made.
+  private func wakeForStorage(_ key: String) {
+    wakeups[key]?.cancel()
+    let sleep = sleep, recheck = storageRecheck
+    wakeups[key] = Task { [weak self] in
+      do { try await sleep(recheck) } catch { return }
+      if !Task.isCancelled { await self?.schedule(key) }
+    }
+  }
+  /// While an original comes in, a look at the room left every five
+  /// seconds of progress at most, so a filling disk stops it.
+  private func checkStorage(_ key: String) async {
+    let now = Date()
+    guard now.timeIntervalSince(lastStorageCheck[key] ?? .distantPast) >= 5 else { return }
+    lastStorageCheck[key] = now
+    guard lowOnStorage, store.all[key]?.state == .running else { return }
+    await waitForStorage(key)
+    wakeForStorage(key)
+  }
+  /// Removes a download: its tasks stop, its files go, and, unless
+  /// `dropServerCopy` is false because the caller asked already, the server
+  /// is asked to drop the version it was making.
+  public func remove(_ key: String, dropServerCopy: Bool = true) async throws {
     let entry = store.all[key]
     try await pause(key)
     try await store.remove(key)
-    if let entry, let id = entry.serverId, let api = client(entry.server) {
+    if dropServerCopy, let entry, let id = entry.serverId, let api = client(entry.server) {
       Task { try? await api.downloads.remove(downloadId: id) }
     }
   }
@@ -393,6 +453,7 @@ private struct Transfer: Codable, Sendable {
         $0.bytes = t.offset + totalBytesWritten
         if totalBytesExpectedToWrite > 0 { $0.totalBytes = t.offset + totalBytesExpectedToWrite }
       }
+      await self.checkStorage(t.key)
     }
   }
   nonisolated public func urlSessionDidFinishEvents(forBackgroundURLSession session: URLSession) {

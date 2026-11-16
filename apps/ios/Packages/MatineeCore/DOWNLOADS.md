@@ -33,9 +33,20 @@ The app must update `store.server` whenever `activeServer` changes. Compose
 - `enqueue(source, server:original:spec:plan:subtitles:)` accepts a ready
   resolution. Optional spec/plan are a server-approved customization.
 - `pause`, `resume` (also retry), `remove`, and `removeAll` use selected-server
-  item ids. `forgetServer` removes just that server, including pending progress.
+  item ids. `forgetServer` removes just that server, including pending progress
+  (see Player for what it sends first).
 - Settings are `unmeteredOnly`, `defaultVersion`, `videoCodec`, and `subtitles`.
   Pass `wishes()` to resolve to apply them. `await store.storageUsed` counts disk bytes.
+- Low storage holds downloads back, as Android's `setRequiresStorageNotLow`:
+  while `volumeAvailableCapacityForImportantUsage` is at or under the lesser
+  of 5% of the volume and 500 MiB (`storageLow`), a download stays queued,
+  and one running goes back to queued with what it has, its tasks cancelled
+  and an original's resume data kept. The worker checks before each start,
+  as each version fragment lands, and every five seconds of an original's
+  progress, and looks again a minute after it held one back. Nothing weighs
+  the server's size estimate, and the row reads Waiting, as on Android.
+  `worker.capacity` is injectable; tests and the app's `-dev.lowStorage`
+  replace it.
 - `OfflineItem` exposes state, optional ratio, bytes, tracks, subtitles, image,
   and a typed `DownloadFailure`. Translate the failure cases in the app. A
   server failure carries its message unchanged.
@@ -63,8 +74,12 @@ try await downloads.pendingFor(origin).flush { origin in
 
 Flush sends sittings in batches of 200 before positions. It retains failures,
 except permanent 4xx responses, and never removes a newer value written while
-the request was in flight. Removing a server does not wait on remote IO. If
-wanted, flush its progress with a caller-owned timeout before local deletion.
+the request was in flight. Removing a server, `forgetServer(origin, api:)`
+with the session's `onRemove` client, does as Android's: still signed in
+there, it flushes what waited, then asks the server to drop the versions it
+was making for this device's downloads, within eight seconds in all; an
+unreachable server fails both and is left. Then the downloads go from the
+device and what waited is cleared, whatever the server said.
 
 ## Versions and background handoff
 

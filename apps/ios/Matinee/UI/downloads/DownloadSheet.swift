@@ -197,6 +197,9 @@ struct DownloadSheet: View {
     if !original && (spec == nil || plan == nil) { return }
     let downloads = downloads
     let snackbar = snackbar
+    #if DEBUG
+      DownloadFixtures.lowStorage(downloads)
+    #endif
     // On in a task of its own, so it's queued whether or not the sheet is still there.
     Task {
       do {
