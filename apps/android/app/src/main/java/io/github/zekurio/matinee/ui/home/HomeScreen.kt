@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -18,9 +17,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.key
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -49,7 +51,6 @@ import io.github.zekurio.matinee.ui.components.LocalActions
 import io.github.zekurio.matinee.ui.components.Rail
 import io.github.zekurio.matinee.ui.components.RailArt
 import io.github.zekurio.matinee.ui.components.ShelfCard
-import io.github.zekurio.matinee.ui.components.isWide
 import io.github.zekurio.matinee.ui.components.railItemWidth
 import io.github.zekurio.matinee.ui.kit.Gap
 import io.github.zekurio.matinee.ui.kit.Gutter
@@ -75,13 +76,9 @@ private fun OnlineHomeScreen() {
     val resume = loaders.resume
     val nextUp = loaders.nextUp
     val featured = loaders.featured
-    val config = LocalConfiguration.current
-    // On a phone, short enough that two rows of stills, captions and all,
-    // fit under it above the bottom bar: 328dp of a 20:9 phone's 952. Under
-    // 320dp its title and buttons would reach the header. Tablets and
-    // TVs keep a tall banner.
-    val heroHeight = if (isWide()) maxOf(config.screenHeightDp * 0.68f, 460f).dp
-    else (config.screenHeightDp * 0.345f).coerceIn(320f, 400f).dp
+    val context = LocalContext.current
+    // A debug build's real pictures for the featured cards, when a folder of them was pushed.
+    val dev = remember { HomeCarouselDevData.read(context) }
 
     if (failedOutright(libraries.state, listOf(resume.state, nextUp.state, featured.state))) {
         Column(Modifier.fillMaxSize()) {
@@ -117,16 +114,19 @@ private fun OnlineHomeScreen() {
             contentPadding = PaddingValues(bottom = tabBarPadding() + 24.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
-            item(key = "hero") {
-                val top: @Composable () -> Unit = {
+            item(key = "top") {
+                Column {
                     // Showing what loaded before while the server can't be reached: the icon, up top.
                     AppHeader { DisconnectedAction(*onPage.toTypedArray()) }
-                }
-                when (val state = featured.state) {
-                    Load.Loading -> HeroSkeleton(Modifier.height(heroHeight), top)
-                    is Load.Failed -> Column { top() }
-                    is Load.Ready -> if (state.value.isNotEmpty()) Hero(state.value, Modifier.height(heroHeight), top)
-                    else Column { top() }
+                    when (val state = featured.state) {
+                        Load.Loading -> HomeCarouselSkeleton()
+                        is Load.Failed -> Unit
+                        is Load.Ready -> {
+                            val slides = dev?.slides(state.value) ?: state.value
+                            // Other titles start the row at its first card again.
+                            if (slides.isNotEmpty()) key(slides.map { it.title.id }) { HomeCarousel(slides, dev) }
+                        }
+                    }
                 }
             }
 
@@ -146,7 +146,17 @@ private fun OnlineHomeScreen() {
                 if (entries.state !is Load.Failed) item(key = "shelf-${library.id}") { LibraryShelf(library, entries) }
             }
         }
-        StatusBarScrim(listState, haze)
+        // Home's header sits below the status bar, not behind it, so at rest
+        // there's nothing to shade, and the frost's feather would blur the
+        // logo. It comes in as the page scrolls under the bar.
+        val fade = with(LocalDensity.current) { 40.dp.toPx() }
+        StatusBarScrim(
+            listState,
+            haze,
+            Modifier.graphicsLayer {
+                alpha = if (listState.firstVisibleItemIndex > 0) 1f else (listState.firstVisibleItemScrollOffset / fade).coerceIn(0f, 1f)
+            },
+        )
     }
 }
 
