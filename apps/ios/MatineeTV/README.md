@@ -13,22 +13,22 @@ other page is a placeholder that names itself ("What's left").
 
 ## What's where
 
-| Path                        | What it is                                                                              |
-| --------------------------- | --------------------------------------------------------------------------------------- |
-| `MatineeTVApp.swift`        | Entry point: the session, the theme, the toasts; `-gallery YES` opens the kit's TV gallery |
-| `TVDevLaunch.swift`         | Debug-only `-dev.server`, `-dev.token`, `-dev.route`                                    |
-| `Info.plist`                | Written by hand (not by XcodeGen), with `UIUserInterfaceStyle` Automatic                |
-| `Resources/`                | Info.plist words in English and German; `TVAppIcon.xcassets` from `scripts/tvicon.sh`   |
-| `UI/TVRoot.swift`           | `TvRoot.kt`: connect, connecting, unreachable, sign-in, or the app; the one toast host  |
-| `UI/TVShell.swift`          | `TvApp.kt`: the signed-in app, drawer, clock, pages, player cover, `\.user`             |
-| `UI/TVNav.swift`            | The routes, `TVNav`, the `Navigator` for a TV, `TVRouteScreen`, `TVRoutePath`           |
-| `UI/TVPlaceholders.swift`   | The pages not built yet, one placeholder type each                                      |
-| `UI/TVActions.swift`        | `ActionsPanel.kt`: a card's actions panel, the watched question, Play/Pause            |
-| `UI/TVPageFocus.swift`      | `.tvPageFocus`: first focus on every page                                               |
-| `UI/TVArt.swift`            | `TVLogo` and `TVAvatar`, over the shared `Picture`                                      |
-| `UI/auth/`                  | `ui/tv/auth/`: the frame, connect and discovery, address, sign-in by code, servers panel |
-| `UI/home/`                  | `ui/tv/home/`: Home, its rows, and what the header says                                 |
-| `Remote/remote.sh`          | Drives the app with the Siri Remote and takes screenshots                               |
+| Path                      | What it is                                                                                 |
+| ------------------------- | ------------------------------------------------------------------------------------------ |
+| `MatineeTVApp.swift`      | Entry point: the session, the theme, the toasts; `-gallery YES` opens the kit's TV gallery |
+| `TVDevLaunch.swift`       | Debug-only `-dev.server`, `-dev.token`, `-dev.route`                                       |
+| `Info.plist`              | Written by hand (not by XcodeGen), with `UIUserInterfaceStyle` Automatic                   |
+| `Resources/`              | Info.plist words in English and German; `TVAppIcon.xcassets` from `scripts/tvicon.sh`      |
+| `UI/TVRoot.swift`         | `TvRoot.kt`: connect, connecting, unreachable, sign-in, or the app; the one toast host     |
+| `UI/TVShell.swift`        | `TvApp.kt`: the signed-in app, drawer, clock, pages, player cover, `\.user`                |
+| `UI/TVNav.swift`          | The routes, `TVNav`, the `Navigator` for a TV, `TVRouteScreen`, `TVRoutePath`              |
+| `UI/TVPlaceholders.swift` | The pages not built yet, one placeholder type each                                         |
+| `UI/TVActions.swift`      | `ActionsPanel.kt`: a card's actions panel, the watched question, Play/Pause                |
+| `UI/TVPageFocus.swift`    | `.tvPageFocus`: first focus on every page                                                  |
+| `UI/TVArt.swift`          | `TVLogo` and `TVAvatar`, over the shared `Picture`                                         |
+| `UI/auth/`                | `ui/tv/auth/`: the frame, connect and discovery, address, sign-in by code, servers panel   |
+| `UI/home/`                | `ui/tv/home/`: Home, its rows, and what the header says                                    |
+| `Remote/remote.sh`        | Drives the app with the Siri Remote and takes screenshots                                  |
 
 ## What it shares with the iPhone app
 
@@ -39,21 +39,21 @@ targets from where they are: `project.yml` lists them one by one under
 loading helpers, and the artwork pipeline can't drift apart between the
 apps.
 
-| Shared file                              | What the TV takes from it                                              |
-| ---------------------------------------- | ---------------------------------------------------------------------- |
-| `Matinee/UI/Strings.gen.swift`           | `Str`, every word, from Android's strings (TV strings included)       |
-| `Matinee/Resources/Localizable.xcstrings`, `iOS.xcstrings` | The catalogs `Str` reads                             |
-| `Matinee/Resources/Assets.xcassets`      | The logo and mark, and the launch color                                |
-| `Matinee/UI/State.swift`                 | `.loads`, `describeFailure`, `\.api`                                   |
-| `Matinee/UI/Format.swift`                | Names, numbers, and dates in the app's language                        |
-| `Matinee/UI/ThemeStore.swift`            | The mode and the server's accents                                      |
-| `Matinee/UI/Navigator.swift`             | `Navigator`, which `TVNav.navigator` fills in                          |
-| `Matinee/UI/components/Toasts.swift`     | `Snackbar`, `launchShowing`                                            |
-| `Matinee/UI/components/Picture.swift`    | `Picture` over Nuke with the blur hash, the image pipeline, `Logo`, `LogoMark` |
-| `Matinee/UI/components/QrCode.swift`     | `QrCode`, the sign-in QR                                               |
-| `Matinee/UI/signin/SignInState.swift`    | `ServerConnect`, `DeviceCodeState`, `unreachableMessage`               |
-| `Matinee/UI/signin/LoginBackdrop.swift`  | The server's login backdrop behind sign-in                             |
-| `Matinee/UI/home/HomeDevData.swift`      | `-dev.art` and `-dev.recommendations`                                  |
+| Shared file                                                | What the TV takes from it                                                      |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| `Matinee/UI/Strings.gen.swift`                             | `Str`, every word, from Android's strings (TV strings included)                |
+| `Matinee/Resources/Localizable.xcstrings`, `iOS.xcstrings` | The catalogs `Str` reads                                                       |
+| `Matinee/Resources/Assets.xcassets`                        | The logo and mark, and the launch color                                        |
+| `Matinee/UI/State.swift`                                   | `.loads`, `describeFailure`, `\.api`                                           |
+| `Matinee/UI/Format.swift`                                  | Names, numbers, and dates in the app's language                                |
+| `Matinee/UI/ThemeStore.swift`                              | The mode and the server's accents                                              |
+| `Matinee/UI/Navigator.swift`                               | `Navigator`, which `TVNav.navigator` fills in                                  |
+| `Matinee/UI/components/Toasts.swift`                       | `Snackbar`, `launchShowing`                                                    |
+| `Matinee/UI/components/Picture.swift`                      | `Picture` over Nuke with the blur hash, the image pipeline, `Logo`, `LogoMark` |
+| `Matinee/UI/components/QrCode.swift`                       | `QrCode`, the sign-in QR                                                       |
+| `Matinee/UI/signin/SignInState.swift`                      | `ServerConnect`, `DeviceCodeState`, `unreachableMessage`                       |
+| `Matinee/UI/signin/LoginBackdrop.swift`                    | The server's login backdrop behind sign-in                                     |
+| `Matinee/UI/home/HomeDevData.swift`                        | `-dev.art` and `-dev.recommendations`                                          |
 
 Why sharing by file and not a package: these depend on the app's
 generated strings and on each other, and moving them into a package would
@@ -169,16 +169,16 @@ struct TVKindScreen: View {
 
 From `apps/ios`, with `just` (or `nix shell nixpkgs#just -c just …`):
 
-| Recipe                           | What it does                                                                          |
-| -------------------------------- | ------------------------------------------------------------------------------------- |
-| `just tv-build`                  | Builds the TV app for any tvOS simulator into `build/TVDerivedData/`                  |
-| `just tv-run`                    | Builds signed ad hoc, installs, and opens it on `MATINEE_TV_SIMULATOR`               |
-| `just tv-dev [account] [args]`   | The same, signed in to the dev server (`DEV.md`) as `ios-admin` or `ios-viewer`       |
-| `just tv-shot <name>`            | Saves the simulator's screen as `build/tv-screenshots/<name>.png`                     |
-| `just tv-remote-dev [account] [args]` | Starts a remote session signed in to the dev server                              |
-| `just tv-remote send "<steps>"`  | Presses the remote in that session; `install`, `stop`, `run` too                      |
-| `just tv-boundary`               | The kit's TV boundary test over `MatineeTV/`, also part of `just test`               |
-| `just tv-icons`                  | Draws the icon and Top Shelf image again from `brand/`                                |
+| Recipe                                | What it does                                                                    |
+| ------------------------------------- | ------------------------------------------------------------------------------- |
+| `just tv-build`                       | Builds the TV app for any tvOS simulator into `build/TVDerivedData/`            |
+| `just tv-run`                         | Builds signed ad hoc, installs, and opens it on `MATINEE_TV_SIMULATOR`          |
+| `just tv-dev [account] [args]`        | The same, signed in to the dev server (`DEV.md`) as `ios-admin` or `ios-viewer` |
+| `just tv-shot <name>`                 | Saves the simulator's screen as `build/tv-screenshots/<name>.png`               |
+| `just tv-remote-dev [account] [args]` | Starts a remote session signed in to the dev server                             |
+| `just tv-remote send "<steps>"`       | Presses the remote in that session; `install`, `stop`, `run` too                |
+| `just tv-boundary`                    | The kit's TV boundary test over `MatineeTV/`, also part of `just test`          |
+| `just tv-icons`                       | Draws the icon and Top Shelf image again from `brand/`                          |
 
 `MATINEE_TV_SIMULATOR` defaults to "Apple TV 4K (4th generation)";
 `MATINEE_TV_DERIVED_DATA` to `build/TVDerivedData`. Use one Apple TV
@@ -269,13 +269,13 @@ The placeholders, by area. Each area owns its folder and deletes only its
 own section of `TVPlaceholders.swift`, so the five can be built at once
 without editing the same lines:
 
-| Area      | Pages (`TVRouteScreen` types)                                                     | Android                                   | Folder           |
-| --------- | --------------------------------------------------------------------------------- | ----------------------------------------- | ---------------- |
-| Detail    | `TVTitleScreen`, `TVSeasonScreen`, `TVEpisodeScreen`, `TVPersonScreen`            | `ui/tv/detail/` (+ `DetailRows`, `DetailParts`) | `UI/detail/`     |
-| Browse    | `TVKindScreen` (Movies, Shows), `TVBrowseScreen`, `TVFavoritesScreen`, `TVSearchScreen` | `ui/tv/browse/`                     | `UI/browse/`     |
-| Profile   | `TVProfileScreen`, `TVRecentScreen`                                               | `ui/tv/profile/`                          | `UI/profile/`    |
-| Settings  | `TVSettingsScreen(page:)`, sign out, servers, about                               | `ui/tv/settings/`                         | `UI/settings/`   |
-| Player    | `TVPlayerScreen(request:close:)` over MatineeCore's player and MatineeMPV         | `ui/player/tv/`                           | `UI/player/`     |
+| Area     | Pages (`TVRouteScreen` types)                                                           | Android                                         | Folder         |
+| -------- | --------------------------------------------------------------------------------------- | ----------------------------------------------- | -------------- |
+| Detail   | `TVTitleScreen`, `TVSeasonScreen`, `TVEpisodeScreen`, `TVPersonScreen`                  | `ui/tv/detail/` (+ `DetailRows`, `DetailParts`) | `UI/detail/`   |
+| Browse   | `TVKindScreen` (Movies, Shows), `TVBrowseScreen`, `TVFavoritesScreen`, `TVSearchScreen` | `ui/tv/browse/`                                 | `UI/browse/`   |
+| Profile  | `TVProfileScreen`, `TVRecentScreen`                                                     | `ui/tv/profile/`                                | `UI/profile/`  |
+| Settings | `TVSettingsScreen(page:)`, sign out, servers, about                                     | `ui/tv/settings/`                               | `UI/settings/` |
+| Player   | `TVPlayerScreen(request:close:)` over MatineeCore's player and MatineeMPV               | `ui/player/tv/`                                 | `UI/player/`   |
 
 Kit pieces the areas will want that don't exist yet: an episode row
 (Detail: Android's `TvEpisodeRow`), and the player's TV controls (Player).
