@@ -115,11 +115,13 @@ private struct OnlineHomeScreen: View {
   /// load, their place. With none, or when they failed, the header alone.
   private var top: some View {
     let stale: [any Reloadable] = loaders.all + Array(shelves.loaders.values)
+    // A phone's header is 44 with the logo in its middle, which alone leaves the cards crowding it.
+    let below: CGFloat = style == .phone ? Space.s2 : 0
     return VStack(alignment: .leading, spacing: 0) {
       HomeHeader(stale: stale)
       switch loaders.featured.state {
       case .loading:
-        HomeCarouselSkeleton()
+        HomeCarouselSkeleton().padding(.top, below)
       case .failed:
         EmptyView()
       case .ready(let featured):
@@ -128,7 +130,7 @@ private struct OnlineHomeScreen: View {
             featured, standIns: (loaders.resume.state.value ?? []) + (loaders.nextUp.state.value ?? [])))
         if !slides.isEmpty {
           // Other titles start the row at its first card again.
-          HomeCarousel(slides: slides).id(slides.map(\.title.id))
+          HomeCarousel(slides: slides).id(slides.map(\.title.id)).padding(.top, below)
         }
       }
     }
