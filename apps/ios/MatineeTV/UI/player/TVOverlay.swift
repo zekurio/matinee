@@ -82,7 +82,7 @@ struct TVOverlay: View {
       action: onSelectSeek
     ) {
       if let images = controller.trickplay, images.width > 0, images.height > 0 {
-        TVTrickplayFrame(controller: controller, seconds: shown)
+        TrickplayFrameView(controller: controller, seconds: shown)
           .frame(
             width: TVSeekBars.previewWidth,
             height: TVSeekBars.previewWidth * CGFloat(images.height) / CGFloat(images.width))

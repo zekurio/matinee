@@ -206,7 +206,7 @@ struct TVPlayback: View {
     .onDisappear {
       TVPlayerDebug.save(controller.diagnostics)
       UIApplication.shared.isIdleTimerDisabled = false
-      TVTrickplayTiles.shared.clear()
+      TrickplayTiles.shared.clear()
       _ = scrub.release()
     }
   }

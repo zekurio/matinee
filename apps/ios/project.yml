@@ -172,6 +172,7 @@ targets:
       - Matinee/UI/player/PlayerSubtitles.swift
       - Matinee/UI/player/PlayerMenuEntries.swift
       - Matinee/UI/player/PlayerLayer.swift
+      - Matinee/UI/player/PlayerTrickplay.swift
       - Matinee/Resources/Localizable.xcstrings
       - Matinee/Resources/iOS.xcstrings
       - Matinee/Resources/Assets.xcassets
