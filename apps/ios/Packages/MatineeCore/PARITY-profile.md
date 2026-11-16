@@ -1,28 +1,40 @@
 # Profile parity progress
 
-Profile loaders, card actions, and error state policy are implemented. Profile rail
-favorite filtering and the preferences inventory remain open for a later run.
+Profile loaders, card actions, error state policy, and the profile rail's
+favorite filtering are implemented. The preferences inventory remains open for
+a later run.
 No generated API files or old screen entry points changed.
 
 ## Profile and statistics
 
-| Behaviour                                              | Kotlin location                    | Swift location                  | Work                                                      |
-| ------------------------------------------------------ | ---------------------------------- | ------------------------------- | --------------------------------------------------------- |
-| Per-account profile and per-range stats cache          | `profile/ProfileSnapshot.kt`       | `Profile/ProfileSnapshot.swift` | Already present                                           |
-| Chart scale, bars, bucket labels, standings, activity  | `profile/StatsData.kt`, `Stats.kt` | `Profile/Stats.swift`           | Already present; no arithmetic changed                    |
-| Range starts at all; last figures stay while switching | `profile/ProfileData.kt`           | `Profile/ProfileData.swift`     | Added observable `ProfileStats`                           |
-| Offline range reads only its own saved answer          | `profile/ProfileData.kt`           | `Profile/ProfileData.swift`     | Added `showSaved`; missing range is disconnected          |
-| Profile cache loader                                   | `profile/ProfileScreen.kt`         | `Profile/ProfileData.swift`     | Added factory; caller configures fetch and resume refresh |
-| Recent page limit 100                                  | `profile/RecentScreen.kt`          | `Profile/ProfileData.swift`     | Added loader                                              |
-| Full favorites uses profiles.favorites                 | Favorites page                     | `Profile/ProfileData.swift`     | Added loader returning contract `Favorites`               |
-| Tagged profile rail favorites and viewer overrides     | `profile/ProfileScreen.kt`         | missing                         | Not ported; `Favorite` already generated                  |
-| Leaderboard fetch with range and zone                  | `profile/StatsData.kt`             | `Profile/ProfileData.swift`     | Added loader                                              |
-| My requests                                            | `profile/ProfileScreen.kt`         | separate Requests area          | Left to other agent; attaches beside profile data         |
+| Behaviour                                              | Kotlin location                                      | Swift location                   | Work                                                       |
+| ------------------------------------------------------ | ---------------------------------------------------- | -------------------------------- | ---------------------------------------------------------- |
+| Per-account profile and per-range stats cache          | `profile/ProfileSnapshot.kt`                         | `Profile/ProfileSnapshot.swift`  | Already present                                            |
+| Chart scale, bars, bucket labels, standings, activity  | `profile/StatsData.kt`, `Stats.kt`                   | `Profile/Stats.swift`            | Present; added the web's bar share and lit hours           |
+| Range starts at all; last figures stay while switching | `profile/ProfileData.kt`                             | `Profile/ProfileData.swift`      | Added observable `ProfileStats`; a loader per range        |
+| Statistics section state: failed, never, empty range   | `profile/ProfileScreen.kt`                           | `Profile/ProfileData.swift`      | Added `ProfileStats.content`, `StatsContent`               |
+| Offline range reads only its own saved answer          | `profile/ProfileData.kt`                             | `Profile/ProfileData.swift`      | Added `showSaved`; missing range is disconnected           |
+| Profile cache loader                                   | `profile/ProfileScreen.kt`                           | `Profile/ProfileData.swift`      | Added factory; caller configures fetch and resume refresh  |
+| Recent page limit 100                                  | `profile/RecentScreen.kt`                            | `Profile/ProfileData.swift`      | Added loader                                               |
+| Full favorites uses profiles.favorites                 | Favorites page                                       | `Profile/ProfileData.swift`      | Added loader returning contract `Favorites`                |
+| Tagged profile rail favorites and viewer overrides     | `profile/ProfileScreen.kt`, `media/FavoritesData.kt` | `Profile/ProfileFavorites.swift` | Added `ViewerState.isFavorite(Favorite)`, `shownFavorites` |
+| Leaderboard fetch with range and zone                  | `profile/StatsData.kt`                               | `Profile/ProfileData.swift`      | Added loader                                               |
+| My requests                                            | `profile/ProfileScreen.kt`                           | separate Requests area           | Left to other agent; attaches beside profile data          |
 
 `profiles.favorites` currently returns grouped `Favorites` lists. The profile
 rail's `Profile.favorites` is the tagged `Favorite` union. Neither contract shape
 was changed. Resume refresh remains the screen's responsibility, using existing
 `Loader.refreshIfStale` and viewer version observation.
+
+`ProfileStats` keeps one loader per range, as Android's `rememberLoader` keys
+one per range, so a range picked again shows its last answer at once and the
+screen's `.loads` refreshes it when stale. `shownFavorites` keeps the server's
+order and drops what was un-favorited in this run: a movie or show by its
+title's mark, a season by its numbered season mark (a season without a number
+never counts, as Android's `isFavorite(title, season)`), an episode by its own
+mark. A favorite added elsewhere shows once the profile is fetched again.
+`BarLayout(width:count:share:)` is the web's `w-2/3` bar, which the app's
+watch chart draws; Android's 4-point gap stays the default.
 
 ## Card actions
 

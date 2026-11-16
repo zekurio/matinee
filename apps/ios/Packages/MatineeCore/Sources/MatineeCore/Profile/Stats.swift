@@ -61,6 +61,16 @@ public struct BarLayout: Equatable, Sendable {
     radius = min(maxRadius, (slot - gap) / 2)
   }
 
+  /// The web's bars, each `share` of its bucket's width and centered in
+  /// it (bucket-bars.tsx's `w-2/3`), however many there are, so a week's
+  /// seven stay as slim against their gaps as a year's fifty-three.
+  public init(width: Double, count: Int, share: Double, maxRadius: Double = 2) {
+    self.count = count
+    slot = count > 0 ? width / Double(count) : width
+    gap = slot * (1 - min(max(share, 0), 1))
+    radius = min(maxRadius, (slot - gap) / 2)
+  }
+
   public var barWidth: Double { slot - gap }
 
   /// The leading edge of bar `index`.
@@ -233,6 +243,10 @@ public struct ActivityGrid: Equatable, Sendable {
 
   /// A weekday's watch time over all its hours.
   public func total(weekday: Int) -> Double { (0..<24).reduce(0) { $0 + value(weekday: weekday, hour: $1) } }
+
+  /// The hours of a weekday with any watch time, earliest first, for a
+  /// reader to hear the squares that are lit.
+  public func activeHours(weekday: Int) -> [Int] { (0..<24).filter { value(weekday: weekday, hour: $0) > 0 } }
 
   /// The weekdays with any watch time, most first, for VoiceOver to read out.
   public var busiestWeekdays: [Int] {
