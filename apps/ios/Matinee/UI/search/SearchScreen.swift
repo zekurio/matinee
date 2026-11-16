@@ -4,9 +4,11 @@ import SwiftUI
 
 /*
  * SearchScreen.kt: search across the server, the search tab's first page.
- * The field is the system's for a search tab, where iOS puts it; what it
- * finds is Android's: the titles by library, then cast and crew, genres,
- * and studios.
+ * The bar names it and the field sits under it, as Android's, taking the
+ * keyboard when the tab first opens; on an iPad, under the tabs, it's the
+ * web's page heading over the field. What it finds is grouped as
+ * Android's: the titles by library, in the order the server ranked them,
+ * then cast and crew, genres, and studios.
  */
 
 /// Search across the server: the search tab's first page.
@@ -14,49 +16,85 @@ struct SearchScreen: View {
   @State private var query = ""
   @State private var search = SearchState()
   @State private var libraries = Loader<[Library]>()
-  /// Moves with the keyboard's Search key, which searches without waiting.
+  /// Moves with the keyboard's Search key and Try again, which search without waiting.
   @State private var submitted = 0
   @State private var focusedOnce = false
-  @FocusState private var focused: Bool
+  @State private var focused = false
+  @Environment(\.shellStyle) private var style
   @Environment(\.palette) private var palette
 
   var body: some View {
+    Group {
+      if style == .tablet {
+        page.hidesSystemNavigationBar()
+          .safeAreaInset(edge: .top, spacing: 0) {
+            VStack(alignment: .leading, spacing: 0) {
+              PageHeading(Str.searchTitle) { EmptyView() }
+              field.frame(maxWidth: 640, alignment: .leading)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(PageColor())
+          }
+      } else {
+        page
+          .safeAreaInset(edge: .top, spacing: 0) { field.background(PageColor()) }
+          .topBar(Str.searchTitle, leading: .none)
+      }
+    }
+    .searchEffect(search, query: query, submitted: submitted)
+    .loads(libraries) { api in try await api.libraries.list() }
+    .onAppear {
+      // The field takes the keyboard when the tab first opens, as Android's
+      // does while there's no Discover under it to look around in.
+      if !focusedOnce, query.isEmpty {
+        focusedOnce = true
+        focused = true
+        #if DEBUG
+          if let asked = BrowseFixtures.query {
+            query = asked
+            focused = false
+          }
+        #endif
+      }
+    }
+  }
+
+  /// The field in the search page's pill, with a spinner at its end while a search is out.
+  private var field: some View {
+    SearchPill(query: $query, focused: $focused, searching: search.searching) { submitted += 1 }
+  }
+
+  @ViewBuilder private var page: some View {
     let text = query.trimmingCharacters(in: .whitespacesAndNewlines)
     Group {
       if text.isEmpty {
-        // The field's prompt already says what search finds.
-        Color.clear
+        // The field's placeholder already says what search finds.
+        // TODO(requests): Discover's rows under the empty field (Android's `DiscoverList`, the
+        // web's `DiscoverRails`), when the server has Discover on. Nothing renders here until then.
+        SearchDiscoverSlot()
       } else if search.failed {
-        Hint(Str.searchFailed)
+        ErrorState(Str.searchFailedTitle, onRetry: { submitted += 1 })
+          .frame(maxWidth: .infinity)
+          .padding(.vertical, Space.s12)
       } else if let found = search.results {
         if !found.hasShown {
-          Hint(Str.searchNoMatch(text), detail: Str.searchNoMatchHint, icon: .searchX)
+          // TODO(requests): Android shows "Not here yet" in this place instead when the catalog has
+          // titles for the text, and only says nothing matched once the catalog has none either.
+          EmptyState(icon: .searchX, title: Str.searchNoMatch(text), description: Str.searchNoMatchHint)
+            .padding(.vertical, Space.s8)
         } else {
-          SearchResultsList(found: found, names: names, searching: search.searching)
+          SearchResultsList(found: found, query: text, names: names)
+            // An answer for older text, while the newer one is out, as the web's placeholder.
+            .opacity(search.searching && search.resultsFor != text ? 0.5 : 1)
+            .motion(Motion.color, value: search.searching)
         }
       } else {
-        ProgressView().tint(palette.accent).padding(32).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        Spinner(size: 32, tint: palette.accent)
+          .padding(Space.s8)
           .accessibilityLabel(Str.searchSearching)
       }
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-    .searchable(text: $query, prompt: Text(Str.searchField))
-    .searchFocused($focused)
-    .onSubmit(of: .search) { submitted += 1 }
-    .autocorrectionDisabled()
-    .searchEffect(search, query: query, submitted: submitted)
-    .loads(libraries) { api in try await api.libraries.list() }
-    .legacyTopBar(Str.searchTitle)
-    .onAppear {
-      // The field takes the keyboard when the tab first opens, as Android's does.
-      if !focusedOnce, query.isEmpty {
-        focusedOnce = true
-        focused = true
-      }
-    }
-    .background {
-      Button(Str.searchTitle) { focused = true }.keyboardShortcut("f").hidden()
-    }
   }
 
   private var names: [String: String] {
@@ -64,28 +102,56 @@ struct SearchScreen: View {
   }
 }
 
-/// What a search found, in Android's order.
-private struct SearchResultsList: View {
-  let found: SearchResults
-  let names: [String: String]
+/// Where Discover's rows go under the empty field, for the requests pages to fill. Empty today.
+private struct SearchDiscoverSlot: View {
+  var body: some View { Color.clear }
+}
+
+/// Where the catalog's titles go after the library's results, "Not here yet",
+/// for the requests pages to fill: headed after the library's sections, or
+/// first and unheaded when the library has none. Empty today.
+private struct SearchNotHereSlot: View {
+  let query: String
+  var body: some View { EmptyView() }
+}
+
+/// The search page's field: Android's `SearchBarFrame`, the kit's pill.
+private struct SearchPill: View {
+  @Binding var query: String
+  @Binding var focused: Bool
   let searching: Bool
-  @Environment(\.api) private var api
-  @Environment(\.navigator) private var nav
+  let submit: () -> Void
+  @Environment(\.gutter) private var gutter
   @Environment(\.palette) private var palette
 
   var body: some View {
+    MatineeTextField(Str.searchField, text: $query, kind: .search, focused: $focused, look: .pill) {
+      if searching { Spinner(size: 16, tint: palette.mutedForeground).padding(.trailing, Space.s2) }
+    }
+    .submitLabel(.search)
+    .autocorrectionDisabled()
+    .onSubmit(submit)
+    .padding(.horizontal, gutter)
+    .padding(.bottom, Space.s3)
+  }
+}
+
+/// What a search found, in Android's order.
+private struct SearchResultsList: View {
+  let found: SearchResults
+  let query: String
+  let names: [String: String]
+  @Environment(\.api) private var api
+  @Environment(\.navigator) private var nav
+  @Environment(\.gutter) private var gutter
+
+  var body: some View {
     ScrollView {
-      VStack(alignment: .leading, spacing: 20) {
+      LazyVStack(alignment: .leading, spacing: Space.s10) {
         ForEach(found.titlesByLibrary(), id: \.libraryId) { group in
-          VStack(alignment: .leading, spacing: 20) {
-            // On one baseline: the count's smaller line would sit low at the boxes' bottom.
-            HStack(alignment: .firstTextBaseline, spacing: 10) {
-              Text(names[group.libraryId] ?? Str.searchTitlesHeading).textStyle(.xl, weight: .semibold, tracking: .tight)
-                .foregroundStyle(palette.foreground)
-                .accessibilityAddTraits(.isHeader)
-              Text(Str.browseTitleCount(group.titles.count)).textStyle(.sm).foregroundStyle(palette.mutedForeground)
-            }
-            .padding(.horizontal, Space.gutter)
+          VStack(alignment: .leading, spacing: Space.s3) {
+            CountedHeading(names[group.libraryId] ?? Str.searchTitlesHeading, count: group.titles.count)
+              .padding(.horizontal, gutter)
             CardGrid {
               ForEach(group.titles, id: \.id) { title in PosterCard(title, detail: formatYear(title.year)) }
             }
@@ -96,6 +162,9 @@ private struct SearchResultsList: View {
             ForEach(found.people, id: \.name) { person in
               RailItem(.person) {
                 PersonCard(person.name, role: creditKind(person.kind, count: 1), photo: api?.art(person.photo, size: .thumb))
+                  // Its own height: a lazy row offers each card the first one's, which would
+                  // shrink the portrait of a name on two lines.
+                  .fixedSize(horizontal: false, vertical: true)
               }
             }
           }
@@ -106,15 +175,36 @@ private struct SearchResultsList: View {
         if !found.studios.isEmpty {
           Facets(title: Str.searchSectionStudios, facets: found.studios) { nav.studio($0) }
         }
-        if searching {
-          Text(Str.searchSearching).textStyle(.px13).foregroundStyle(palette.mutedForeground).padding(.horizontal, Space.gutter)
-        }
+        // TODO(requests): "Not here yet", the catalog's titles for the text that no library here has.
+        SearchNotHereSlot(query: query)
       }
-      .padding(.top, 8)
-      .padding(.bottom, 24)
+      .padding(.top, Space.s2)
+      .padding(.bottom, Space.s6)
     }
     .scrollDismissesKeyboard(.immediately)
     .scrollsToTopOnReselect()
+  }
+}
+
+/// A section's heading with how many it holds after it, on one baseline.
+private struct CountedHeading: View {
+  let title: String
+  let count: Int
+  @Environment(\.palette) private var palette
+
+  init(_ title: String, count: Int) {
+    self.title = title
+    self.count = count
+  }
+
+  var body: some View {
+    HStack(alignment: .firstTextBaseline, spacing: Space.s2_5) {
+      Text(title)
+        .textStyle(.xl, weight: .semibold, tracking: .tight)
+        .foregroundStyle(palette.foreground)
+        .accessibilityAddTraits(.isHeader)
+      Text(Str.browseTitleCount(count)).textStyle(.sm).foregroundStyle(palette.mutedForeground)
+    }
   }
 }
 
@@ -123,48 +213,16 @@ private struct Facets: View {
   let title: String
   let facets: [Facet]
   let open: (String) -> Void
+  @Environment(\.gutter) private var gutter
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 12) {
+    VStack(alignment: .leading, spacing: Space.s3) {
       SectionTitle(title)
-      FlowRow(spacing: 6) {
-        ForEach(facets, id: \.name) { facet in LegacyChip(facet.name) { open(facet.name) } }
+      FlowRow(spacing: Space.s1_5, lineSpacing: Space.s1_5) {
+        ForEach(facets, id: \.name) { facet in Chip(facet.name) { open(facet.name) } }
       }
     }
-    .padding(.horizontal, Space.gutter)
-  }
-}
-
-/// Why there's nothing to show: an icon, what happened, and what to try.
-private struct Hint: View {
-  let text: String
-  var detail: String?
-  var icon: Lucide?
-  @Environment(\.palette) private var palette
-
-  init(_ text: String, detail: String? = nil, icon: Lucide? = nil) {
-    self.text = text
-    self.detail = detail
-    self.icon = icon
-  }
-
-  var body: some View {
-    VStack(spacing: 0) {
-      if let icon {
-        LucideIcon(icon, size: 28, tint: palette.mutedForeground)
-        Gap(12)
-      }
-      Text(text).textStyle(.base).foregroundStyle(detail != nil ? palette.foreground : palette.mutedForeground)
-      if let detail {
-        Gap(4)
-        Text(detail).textStyle(.sm).foregroundStyle(palette.mutedForeground)
-      }
-    }
-    .multilineTextAlignment(.center)
-    .padding(.horizontal, 32)
-    .padding(.vertical, 48)
-    .frame(maxWidth: .infinity)
-    .accessibilityElement(children: .combine)
+    .padding(.horizontal, gutter)
   }
 }
 

@@ -6,34 +6,34 @@ implementation remains assigned elsewhere.
 
 ## Title
 
-| Behaviour                                                                   | Kotlin location                                     | Swift location                                          | Action                                                                                                                 |
-| --------------------------------------------------------------------------- | --------------------------------------------------- | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| Resume only unfinished positive progress                                    | ui/title/TitleData.kt                               | Title/TitlePresentation.swift                           | Added helper and tests                                                                                                 |
-| Season next, watched aggregation, next up                                   | ui/title/TitleData.kt                               | Title/TitleData.swift                                   | Existing helpers match; existing tests retained                                                                        |
-| Trailer language base tag, then first trailer                               | ui/title/TitleParts.kt                              | Title/TitleData.swift                                   | Existing helper matches                                                                                                |
-| Hidden specials remain addressable by direct link                           | ui/title/TitleScreens.kt                            | Title/TitlePresentation.swift                           | Added titleSeason                                                                                                      |
-| Inline one regular season, exclude current season from rail                 | ui/title/TitleScreens.kt, TitleParts.kt             | Title/TitlePresentation.swift                           | Added inlineSeason and titleSeasons                                                                                    |
-| Episode rail initially scrolls to next, else zero                           | ui/title/TitleScreens.kt                            | Title/TitlePresentation.swift                           | Added helper and tests                                                                                                 |
-| Biography, local credits, catalog credits                                   | ui/browse/BrowseScreen.kt                           | Api/ContractModels.swift, Title/TitlePresentation.swift | Added loadPerson; generated Person already carries all fields                                                          |
-| Specials visibility is account-owned and server-applied                     | ui/settings/SettingsData.kt                         | Title/TitlePresentation.swift                           | Added setShowSpecials and isHiddenSpecials with tests; the caller hands the account to the session; no local filtering |
-| Catalog gap recovery and live availability                                  | ui/title/TitleScreens.kt, ui/browse/BrowseScreen.kt | Requests                                                | Other agent owns request tracking                                                                                      |
-| File information prefers loaded track languages, falls back to probe        | ui/title/TitleData.kt                               | Title/FileInfo.swift                                    | Added FileTracks.load and fileInfoParts with tests; the app words languages and counts                                 |
-| Title facts: movie runtime falls back to its file, show seasons or episodes | web title-header.tsx                                | Title/TitlePresentation.swift                           | Added titleRuntime, showSize, titleFlags with tests; Android lists episodes only                                       |
-| Season facts, season Play prefers the title's next file                     | web season-page.tsx, seasons.ts                     | Title/TitlePresentation.swift                           | Added seasonYear, seasonProgress, seasonPlay with tests; Android's seasonNext is the fallback                          |
-| Episode page's season row starts on the episode before                      | web episodes.$itemId.tsx                            | Title/TitlePresentation.swift                           | Added moreFromSeasonStart with tests; Android starts at the first                                                      |
-| A movie's several files, by the server's folders                            | none (iOS addition)                                 | Title/TitlePresentation.swift                           | Added showsFiles and fileFolders with tests                                                                            |
-| Missing seasons' state and ask on a library show                            | ui/requests/ShowGaps.kt, RequestWords.kt            | Title/TitlePresentation.swift                           | Added gapStateWord, gapBadge, gapAsks, gapMoreEpisodes for SeasonAvailability with tests                               |
-| Person page presentation helpers                                            | ui/browse/BrowseScreen.kt                           | missing                                                 | Still open: the title pages don't need them; the person page's owner                                                   |
+| Behaviour                                                                | Kotlin location                                     | Swift location                                          | Action                                                                                                         |
+| ------------------------------------------------------------------------ | --------------------------------------------------- | ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Resume only unfinished positive progress                                 | ui/title/TitleData.kt                               | Title/TitlePresentation.swift                           | Added helper and tests                                                                                         |
+| Season next, watched aggregation, next up                                | ui/title/TitleData.kt                               | Title/TitleData.swift                                   | Existing helpers match; existing tests retained                                                                |
+| Trailer language base tag, then first trailer                            | ui/title/TitleParts.kt                              | Title/TitleData.swift                                   | Existing helper matches                                                                                        |
+| Hidden specials remain addressable by direct link                        | ui/title/TitleScreens.kt                            | Title/TitlePresentation.swift                           | Added titleSeason                                                                                              |
+| Inline one regular season, exclude current season from rail              | ui/title/TitleScreens.kt, TitleParts.kt             | Title/TitlePresentation.swift                           | Added inlineSeason and titleSeasons                                                                            |
+| Episode rail initially scrolls to next, else zero                        | ui/title/TitleScreens.kt                            | Title/TitlePresentation.swift                           | Added helper and tests                                                                                         |
+| Biography, local credits, catalog credits                                | ui/browse/BrowseScreen.kt                           | Api/ContractModels.swift, Title/TitlePresentation.swift | Added loadPerson; generated Person already carries all fields                                                  |
+| Person line, credit sections known-for first, kind counts, credit detail | ui/browse/BrowseScreen.kt, web people.$name.tsx     | Title/PersonPresentation.swift                          | Added helpers and PersonPresentationTests; sections and the kind picker follow the web, Android lists one grid |
+| Specials visibility is account-owned and server-applied                  | ui/settings/SettingsData.kt                         | Api/ContractApi.swift                                   | setPreferences exists; session update wiring belongs to Auth owner, no local filtering added                   |
+| Catalog gap recovery and live availability                               | ui/title/TitleScreens.kt, ui/browse/BrowseScreen.kt | Requests                                                | Other agent owns request tracking                                                                              |
+| File information prefers loaded track languages, falls back to probe     | ui/title/TitleData.kt                               | missing                                                 | Still needs a dedicated track-info loader                                                                      |
 
 ## Browse
 
-| Behaviour                                                    | Kotlin location                   | Swift location                             | Action                                                    |
-| ------------------------------------------------------------ | --------------------------------- | ------------------------------------------ | --------------------------------------------------------- |
-| Five sorts, both directions, usual default                   | ui/browse/TitleFilters.kt         | Browse/TitleFilters.swift                  | Added structured state alongside legacy API               |
-| Structured filters and active count                          | ui/browse/TitleFilters.kt         | Browse/TitleFilters.swift                  | Added state and count; generated filters passed unchanged |
-| Page identity includes filters, direction and settled search | ui/browse/TitleFilters.kt         | Browse/TitleFilters.swift                  | Added JSON identity                                       |
-| Search debounce, paging, refresh retention                   | ui/browse/LibraryData.kt, Grid.kt | Browse/LibraryData.swift, TitlePages.swift | Existing tests cover these                                |
-| Filter chips, sort-dependent card details                    | ui/browse/TitleFilters.kt         | missing                                    | Presentation helpers still needed                         |
+| Behaviour                                                                   | Kotlin location                   | Swift location                             | Action                                                                                    |
+| --------------------------------------------------------------------------- | --------------------------------- | ------------------------------------------ | ----------------------------------------------------------------------------------------- |
+| Five sorts, both directions, usual default                                  | ui/browse/TitleFilters.kt         | Browse/TitleFilters.swift                  | Added structured state alongside legacy API                                               |
+| Structured filters and active count                                         | ui/browse/TitleFilters.kt         | Browse/TitleFilters.swift                  | Added state and count; generated filters passed unchanged                                 |
+| Page identity includes filters, direction and settled search                | ui/browse/TitleFilters.kt         | Browse/TitleFilters.swift                  | Added JSON identity                                                                       |
+| Search debounce, paging, refresh retention                                  | ui/browse/LibraryData.kt, Grid.kt | Browse/LibraryData.swift, TitlePages.swift | Existing tests cover these                                                                |
+| Filter chips, each removing only itself, rating chips named with both kinds | ui/browse/TitleFilters.kt         | Browse/TitleFilterChips.swift              | Added `activeTitleFilters` and `TitleFilterChip`, words in the app; TitleFilterChipsTests |
+| Sort-dependent card detail (score or runtime before the year)               | ui/browse/TitleFilters.kt         | Browse/TitleFilterChips.swift              | Added `titleCardDetail`; TitleFilterChipsTests                                            |
+| Sort menu offers the list's sorts, both ways; current order                 | ui/browse/TitleFilters.kt         | Browse/TitleFilterChips.swift              | Added `offeredTitleOrders`, `currentOrder`, `apply`                                       |
+| Empty reason: search, then filters, then none                               | ui/browse/LibraryData.kt          | Browse/TitleFilterChips.swift              | Added `libraryEmpty(TitleListState)`                                                      |
+| Genre or studio page sends its own scope first, once                        | ui/browse/LibraryData.kt          | Browse/TitleFilterChips.swift              | Added `browseFilters`                                                                     |
+| Kind chips with counts, hidden with one kind                                | web browse/kind-picker.tsx        | Browse/TitleFilterChips.swift              | Added `browseKindChoices`; Android always shows three chips without counts                |
 
 ## Search
 
@@ -45,12 +45,12 @@ implementation remains assigned elsewhere.
 
 ## Favourites
 
-| Behaviour                                            | Kotlin location             | Swift location             | Action                                                    |
-| ---------------------------------------------------- | --------------------------- | -------------------------- | --------------------------------------------------------- |
-| Own favourites limit 200, null means empty           | ui/media/FavoritesData.kt   | Browse/FavoritesData.swift | Added loader                                              |
-| Shows, seasons, episodes, movies retain server order | ui/media/FavoritesScreen.kt | Browse/FavoritesData.swift | Added filtering with independent season predicate         |
-| Unified Favorite dispatch includes showSeason        | ui/media/FavoritesData.kt   | Browse/FavoritesData.swift | Added four-kind predicate dispatch                        |
-| Live season marks                                    | ui/ViewerState.kt           | State/ViewerState.swift    | State owner must supply season predicate; not edited here |
+| Behaviour                                            | Kotlin location             | Swift location             | Action                                                                        |
+| ---------------------------------------------------- | --------------------------- | -------------------------- | ----------------------------------------------------------------------------- |
+| Own favourites limit 200, null means empty           | ui/media/FavoritesData.kt   | Browse/FavoritesData.swift | Added loader                                                                  |
+| Shows, seasons, episodes, movies retain server order | ui/media/FavoritesScreen.kt | Browse/FavoritesData.swift | Added filtering with independent season predicate                             |
+| Unified Favorite dispatch includes showSeason        | ui/media/FavoritesData.kt   | Browse/FavoritesData.swift | Added four-kind predicate dispatch                                            |
+| Live season marks                                    | ui/ViewerState.kt           | Browse/FavoritesData.swift | Added `Favorites.live(viewer)`, seasons by their own mark; FavoritesLiveTests |
 
 ## Routes
 
@@ -121,7 +121,5 @@ Compared `ui/metadata/MetadataScreens.kt` with `Sources/MatineeCore/Metadata/Met
 
 No Android TitleData, TitleFilters or SearchData unit-test files exist in this
 checkout. Swift already has direct tests for these areas; no expectations changed.
-This remains a partial audit: title file-info loading and Browse presentation
-helpers are not signed off. Downloads and Metadata were compared in full above;
-the device-only behaviour they list (suspended transfers, Wi-Fi changes) still
-needs a physical device.
+This remains a partial audit: title file-info loading and full download/metadata
+mutation comparisons are not signed off.

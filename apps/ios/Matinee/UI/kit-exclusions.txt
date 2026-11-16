@@ -6,9 +6,9 @@
 # When this list is empty, the rebuild is done; legacy/ goes last, once no
 # screen uses the Legacy… controls in it. See Matinee/UI/README.md.
 
-browse/
+downloads/
 legacy/
-media/
+metadata/
+player/
 profile/
-search/
 settings/

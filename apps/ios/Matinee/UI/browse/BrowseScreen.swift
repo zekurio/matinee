@@ -3,8 +3,12 @@ import MatineeKit
 import SwiftUI
 
 /*
- * BrowseScreen.kt: a genre's or a studio's titles from every library, and
- * a person's page, which Android keeps here too.
+ * BrowseScreen.kt: a genre's or a studio's titles from every library, with
+ * the filters and sorts a library has, and a person's page, which Android
+ * keeps here too. The person's page is laid out as the web's
+ * people.$name.tsx: the portrait and name, the biography, the choice of
+ * movies or shows, and a section for each kind of credit. What it decides
+ * is MatineeCore's (Title/PersonPresentation.swift).
  */
 
 /// A genre's or a studio's titles across the server.
@@ -13,64 +17,117 @@ struct BrowseScreen: View {
   let studio: String?
 
   @State private var kind: String?
+  @State private var state = TitleListState()
+  @State private var options = Loader<TitleFilterOptions>()
   @State private var pages = makeTitlePages()
+  @State private var kinds = BrowseKinds()
+  @State private var filtering = false
+  @State private var devStarted = false
+  @Environment(\.windowSize) private var window
+  @Environment(\.dynamicTypeSize) private var typeSize
+  @Environment(\.gutter) private var gutter
   @Environment(\.palette) private var palette
 
   var body: some View {
-    let genre = genre
-    let studio = studio
-    let kind = kind
-    PosterGrid(
-      pages, detail: { formatYear($0.year) },
-      empty: { GridEmpty(genre != nil ? Str.browseGenreEmpty : Str.browseStudioEmpty) }
-    ) {
-      VStack(alignment: .leading, spacing: 0) {
-        Text(
-          [genre != nil ? Str.browseGenre : Str.browseStudio, pages.total.map { Str.browseTitleCount($0) }]
-            .compactMap(\.self).joined(separator: " · ")
-        )
-        .textStyle(.sm)
-        .foregroundStyle(palette.mutedForeground)
-        Gap(12)
+    let (genre, studio, kind, kinds) = (genre, studio, kind, kinds)
+    let state = state
+    let offered = options.state.value
+    let chips = titleFilterChips(state.filters, options: offered) { state.filters = $0 }
+    let (sort, order, filters) = (state.sort, state.order, state.filters)
+    PosterGrid(pages, detail: { titleCardDetailText($0, sort: sort) }, empty: { empty(filtered: !chips.isEmpty) }) {
+      header(chips: chips)
+    }
+    .pages(pages, key: "\(kind ?? "")\n\(state.key)") { api, offset, limit in
+      var sent = browseFilters(genre: genre, studio: studio, picked: filters)
+      #if DEBUG
+        // The fixtures' genres and studios aren't the server's: show its titles.
+        if BrowseFixtures.on { sent = BrowseFixtures.served(filters) }
+      #endif
+      let page = try await api.titles.browse(
+        kind: kind, filters: sent, sort: sort, order: order, limit: limit, offset: offset)
+      await kinds.show(page.kinds)
+      return TitleList(items: page.items, total: page.total)
+    }
+    .loadsFilterOptions(options, kind: kind, genre: genre, studio: studio)
+    .topBar(genre ?? studio ?? "") {
+      HStack(spacing: wideControls(window, typeSize) ? Space.s2 : 0) {
+        DisconnectedAction(options)
+        if offered != nil { TitleFilterButton(active: state.activeFilters) { filtering = true } }
+        TitleSortButton(state: state, options: offered)
+      }
+      .padding(.trailing, wideControls(window, typeSize) ? gutter - 4 : 0)
+    }
+    .titleFilterSheet(isPresented: $filtering, kind: kind, options: offered, state: state)
+    #if DEBUG
+      .onAppear {
+        guard !devStarted else { return }
+        devStarted = true
+        if let filters = BrowseFixtures.filters { state.filters = filters }
+        if BrowseFixtures.open == "filters" { filtering = true }
+      }
+    #endif
+  }
+
+  /// "Genre · 12 titles", the kinds to pick from, and the filters in use.
+  private func header(chips: [ActiveFilter]) -> some View {
+    VStack(alignment: .leading, spacing: Space.s3) {
+      Text(
+        [genre != nil ? Str.browseGenre : Str.browseStudio, pages.total.map { Str.browseTitleCount($0) }]
+          .compactMap(\.self).joined(separator: " · ")
+      )
+      .textStyle(.sm)
+      .foregroundStyle(palette.mutedForeground)
+      .padding(.horizontal, gutter)
+      if let choices = browseKindChoices(kinds.value, picked: kind) {
         ScrollView(.horizontal) {
-          HStack(spacing: 6) {
-            ForEach(BROWSE_KINDS, id: \.self) { value in
-              LegacyChip(browseKindLabel(value), selected: self.kind == value) { self.kind = value }
+          HStack(spacing: Space.s1_5) {
+            ForEach(choices, id: \.kind) { choice in
+              Chip(browseKindLabel(choice.kind), selected: kind == choice.kind) {
+                withMotion(Motion.move) { kind = choice.kind }
+              }
             }
           }
         }
+        .contentMargins(.horizontal, gutter, for: .scrollContent)
         .scrollIndicators(.hidden)
-        .scrollClipDisabled()
-        .padding(.bottom, 12)
       }
+      if !chips.isEmpty { ActiveFilterChips(chips: chips, onClear: state.clearFilters) }
     }
-    .pages(pages, key: kind ?? "") { api, offset, limit in
-      var genre = genre
-      var studio = studio
-      #if DEBUG
-        // The fixtures' genres and studios aren't the server's: show its titles.
-        if BrowseFixtures.on { (genre, studio) = (nil, nil) }
-      #endif
-      let page = try await api.titles.browse(kind: kind, filters: TitleFilters(genres: genre.map { [$0] }, studios: studio.map { [$0] }), limit: limit, offset: offset)
-      return TitleList(items: page.items, total: page.total)
+    .padding(.top, Space.s1)
+    .padding(.bottom, Space.s4)
+  }
+
+  private func empty(filtered: Bool) -> GridEmpty {
+    if filtered {
+      return GridEmpty(icon: .listFilter, title: Str.browseNoFilterMatch, action: (Str.browseClearFilters, state.clearFilters))
     }
-    .legacyTopBar(genre ?? studio ?? "")
+    return GridEmpty(icon: .popcorn, title: genre != nil ? Str.browseGenreEmpty : Str.browseStudioEmpty)
   }
 }
+
+/// How many movies and shows a genre or studio has, as the server counted
+/// them with the newest page, for the kind chips.
+@Observable final class BrowseKinds {
+  private(set) var value: BrowsedTitles.Kinds?
+
+  func show(_ kinds: BrowsedTitles.Kinds) { if value != kinds { value = kinds } }
+}
+
+// MARK: People
 
 /// A person's page: who they are and what they're in. Android keeps it in BrowseScreen.kt.
 struct PersonScreen: View {
   let name: String
 
   @State private var person = Loader<Person>()
-  @Environment(\.api) private var api
-  @Environment(\.palette) private var palette
+  @State private var kind: String?
+  @Environment(\.homeAction) private var homeAction
 
   var body: some View {
     let name = name
     Group {
       switch person.state {
-      case .loading: LoadingBox()
+      case .loading: PersonSkeleton()
       case .failed(let message, let disconnected):
         ErrorBox(Str.personLoadFailed, message, disconnected: disconnected, onRetry: person.reload)
       case .ready(let value): content(value)
@@ -80,27 +137,27 @@ struct PersonScreen: View {
       #if DEBUG
         if BrowseFixtures.on { return try await BrowseFixtures.person(name, api: api) }
       #endif
-      return try await api.people.get(name: name)
+      return try await loadPerson(api, name: name)
     }
-    .legacyTopBar(nil, home: true) { DisconnectedAction(person) }
+    // No name in the bar: the page's heading is the name, large, under it.
+    .topBar(nil, onHome: homeAction) { DisconnectedAction(person) }
   }
 
   private func content(_ value: Person) -> some View {
-    ScrollView {
-      VStack(alignment: .leading, spacing: 0) {
-        PersonHeader(person: value, photo: api?.art(value.photo, size: .medium))
-          .padding(.horizontal, Space.gutter)
-          .padding(.top, 8)
-          .padding(.bottom, 32)
-        CardGrid {
-          ForEach(value.credits, id: \.id) { credit in
-            PosterCard(
-              credit.title,
-              detail: credit.role ?? formatYear(credit.title.year) ?? creditKind(credit.kind, count: 1))
-          }
+    let shown = personShownKind(value, picked: kind)
+    return ScrollView {
+      VStack(alignment: .leading, spacing: Space.s10) {
+        PersonHeader(person: value, kind: shown) { picked in withMotion(Motion.move) { kind = picked } }
+        ForEach(personCreditSections(value, titleKind: shown), id: \.kind) { section in
+          CreditSection(section: section)
         }
+        // TODO(requests): catalog credits, "Not here yet": their titles at TMDB that no library here has,
+        // as catalog cards to request (Android's `value.catalog` items, the web's CatalogSection), filtered
+        // by `shown` like the sections above. Nothing renders here until the requests pages exist.
+        PersonCatalogSlot(person: value, kind: shown)
       }
-      .padding(.bottom, 32)
+      .padding(.top, Space.s2)
+      .padding(.bottom, Space.s8)
     }
     .refreshable {
       person.reload()
@@ -109,43 +166,230 @@ struct PersonScreen: View {
   }
 }
 
-/// The photo on its circle, the name, and what they're known for with how many titles.
+/// Where a person's titles at TMDB go, for the requests pages to fill. Empty today.
+private struct PersonCatalogSlot: View {
+  let person: Person
+  let kind: String?
+
+  var body: some View { EmptyView() }
+}
+
+/// The portrait, the name and what they're known for, and under them the
+/// biography and the choice of movies or shows. From the web's `sm` up, the
+/// part under the name sits beside the portrait, as the web's grid has it.
 private struct PersonHeader: View {
   let person: Person
-  let photo: ImageSource?
+  let kind: String?
+  let pick: (String?) -> Void
+  @Environment(\.api) private var api
   @Environment(\.palette) private var palette
+  @Environment(\.gutter) private var gutter
+  @Environment(\.windowSize) private var window
   @Environment(\.dynamicTypeSize) private var typeSize
 
   var body: some View {
-    let layout =
-      typeSize.isAccessibilitySize
-      ? AnyLayout(VStackLayout(alignment: .leading, spacing: 16)) : AnyLayout(HStackLayout(spacing: 20))
-    layout {
-      Circle()
-        .fill(palette.secondary)
-        .overlay {
-          Text(initials(person.name)).textStyle(.px26, weight: .bold, tracking: .tight).foregroundStyle(palette.mutedForeground)
-            .accessibilityHidden(true)
+    let wide = window.width >= 640
+    let biography = person.profile?.biography.flatMap { $0.isEmpty ? nil : $0 }
+    let counts = personKindCounts(person)
+    let picker = counts.movie > 0 && counts.show > 0
+    let stacked = typeSize.isAccessibilitySize
+    VStack(alignment: .leading, spacing: Space.s4) {
+      HStack(alignment: wide && biography != nil ? .top : .center, spacing: wide ? Space.s6 : Space.s5) {
+        if !stacked { portrait(wide: wide) }
+        VStack(alignment: .leading, spacing: Space.s4) {
+          if stacked { portrait(wide: false) }
+          VStack(alignment: .leading, spacing: Space.s1) {
+            Text(person.name)
+              .textStyle(wide ? .px32 : .px26, weight: .semibold, tracking: .tight)
+              .foregroundStyle(palette.foreground)
+              .accessibilityAddTraits(.isHeader)
+            Text(subtitle).textStyle(.sm).foregroundStyle(palette.mutedForeground)
+          }
+          if wide { below(biography: biography, picker: picker, counts: counts) }
         }
-        .overlay { Picture(photo) }
-        .clipShape(Circle())
-        .frame(width: 112, height: 112)
-        .accessibilityHidden(true)
-      VStack(alignment: .leading, spacing: 4) {
-        Text(person.name).textStyle(.px26, weight: .bold, tracking: .tight).foregroundStyle(palette.foreground)
-          .accessibilityAddTraits(.isHeader)
-        Text([creditKind(person.kind, count: 1), Str.browseTitleCount(person.titleCount)].joined(separator: " · "))
-          .textStyle(.sm)
+        .frame(maxWidth: .infinity, alignment: .leading)
+      }
+      .padding(.horizontal, gutter)
+      if !wide { below(biography: biography, picker: picker, counts: counts) }
+    }
+  }
+
+  private func portrait(wide: Bool) -> some View {
+    let size: CGFloat = wide ? 112 : 80
+    return Circle()
+      .fill(palette.secondary)
+      .overlay {
+        Text(initials(person.name))
+          .textStyle(wide ? .xl3 : .xl2, weight: .medium)
           .foregroundStyle(palette.mutedForeground)
       }
-      .frame(maxWidth: .infinity, alignment: .leading)
+      .overlay { Picture(api?.art(person.photo, size: .medium)) }
+      .clipShape(Circle())
+      .overlay { Circle().strokeBorder(palette.border) }
+      .frame(width: size, height: size)
+      .kitShadow(.small)
+      .accessibilityHidden(true)
+  }
+
+  /// The biography and the kind chips, each where there's one.
+  @ViewBuilder private func below(biography: String?, picker: Bool, counts: BrowsedTitles.Kinds) -> some View {
+    if biography != nil || picker {
+      VStack(alignment: .leading, spacing: Space.s4) {
+        if let biography { Biography(text: biography).padding(.horizontal, window.width >= 640 ? 0 : gutter) }
+        if picker {
+          ScrollView(.horizontal) {
+            HStack(spacing: Space.s1_5) {
+              ForEach([nil, TitleKind.movie, TitleKind.show], id: \.self) { choice in
+                Chip(browseKindLabel(choice), selected: kind == choice) { pick(choice) }
+              }
+            }
+          }
+          .contentMargins(.horizontal, window.width >= 640 ? 0 : gutter, for: .scrollContent)
+          .scrollIndicators(.hidden)
+          .scrollClipDisabled()
+        }
+      }
+    }
+  }
+
+  /// "Acting · Born Sep 2, 1964", or "Actor, Director · 12 titles".
+  private var subtitle: String {
+    switch personSubtitle(person) {
+    case .profile(let knownFor, let born, let died):
+      return [
+        knownFor.flatMap(departmentName),
+        formatDay(born).map(Str.personBorn),
+        formatDay(died).map(Str.personDied),
+      ].compactMap(\.self).joined(separator: " · ")
+    case .credits(let kinds, let count):
+      let names = kinds.map { creditKind($0, count: 1) }.formatted(.list(type: .and).locale(.app))
+      return [names.isEmpty ? nil : names, Str.browseTitleCount(count)].compactMap(\.self).joined(separator: " · ")
     }
   }
 }
 
-extension PersonCredit {
-  /// A title once for each way they're credited on it, as Android keys them.
-  fileprivate var id: String { "\(title.id)-\(kind)" }
+/// A biography in three lines, with More to read the rest in place, as Android's `Overview`.
+private struct Biography: View {
+  let text: String
+  #if DEBUG
+    @State private var open = BrowseFixtures.open == "more"
+  #else
+    @State private var open = false
+  #endif
+  @State private var full: CGFloat = 0
+  @State private var clipped: CGFloat = 0
+  @Environment(\.palette) private var palette
+
+  var body: some View {
+    let overflows = full > clipped + 1
+    VStack(alignment: .leading, spacing: Space.s1) {
+      Text(text)
+        .textStyle(.sm)
+        .foregroundStyle(palette.foreground.opacity(0.85))
+        .lineLimit(open ? nil : 3)
+        .frame(maxWidth: 672, alignment: .leading)
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { if !open { clipped = $0 } }
+        .background {
+          // The whole text, unseen, to know whether three lines cut it short.
+          Text(text).textStyle(.sm).fixedSize(horizontal: false, vertical: true).hidden()
+            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { full = $0 }
+            .frame(maxWidth: 672, alignment: .leading)
+            .accessibilityHidden(true)
+        }
+      if overflows || open {
+        MatineeButton(open ? Str.titleLess : Str.titleMore, look: .link, size: .sm) {
+          withMotion(Motion.move) { open.toggle() }
+        }
+        .accessibilityHidden(true)
+      }
+    }
+    // VoiceOver reads all of it, whatever shows.
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel(text)
+  }
+}
+
+/// One kind of credit as a poster grid, with the year and the part under each.
+private struct CreditSection: View {
+  let section: PersonCreditSection
+  @Environment(\.gutter) private var gutter
+  @Environment(\.palette) private var palette
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: Space.s3) {
+      HStack(alignment: .firstTextBaseline, spacing: Space.s2) {
+        Text(sectionName(section.kind))
+          .textStyle(.xl, weight: .semibold, tracking: .tight)
+          .foregroundStyle(palette.foreground)
+          .accessibilityAddTraits(.isHeader)
+        Text(Str.browseTitleCount(section.credits.count)).textStyle(.sm).foregroundStyle(palette.mutedForeground)
+      }
+      .padding(.horizontal, gutter)
+      CardGrid {
+        ForEach(section.credits, id: \.title.id) { credit in
+          let detail = personCreditDetail(credit)
+          let line = [formatYear(detail.year), detail.role].compactMap(\.self).joined(separator: " · ")
+          PosterCard(credit.title, detail: line.isEmpty ? nil : line)
+        }
+      }
+    }
+  }
+
+  /// "Acting", "Directing": the web's section names, which are TMDB's departments' words.
+  private func sectionName(_ kind: String) -> String {
+    switch kind {
+    case CreditKind.director: Str.personDepartmentDirecting
+    case CreditKind.writer: Str.personDepartmentWriting
+    // TODO(strings): people_section_creator, the web's "Created".
+    case CreditKind.creator: Str.personDepartmentCreator
+    default: Str.personDepartmentActing
+    }
+  }
+}
+
+/// The page while the person loads, as the web's `PersonSkeleton`.
+private struct PersonSkeleton: View {
+  @Environment(\.gutter) private var gutter
+  @Environment(\.windowSize) private var window
+
+  var body: some View {
+    let size: CGFloat = window.width >= 640 ? 112 : 80
+    VStack(alignment: .leading, spacing: Space.s10) {
+      HStack(spacing: Space.s5) {
+        Skeleton(shape: Circle()).frame(width: size, height: size)
+        VStack(alignment: .leading, spacing: Space.s3) {
+          Skeleton(radius: Radius.md).frame(width: 220, height: 32)
+          Skeleton(radius: Radius.sm).frame(width: 160, height: 16)
+        }
+      }
+      .padding(.horizontal, gutter)
+      PosterGridSkeleton(count: 6)
+    }
+    .padding(.top, Space.s2)
+    .frame(maxHeight: .infinity, alignment: .top)
+    .accessibilityElement()
+    .accessibilityLabel(Str.loadingInProgress)
+  }
+}
+
+/// What TMDB says someone is known for, in the app's language.
+private func departmentName(_ id: String) -> String? {
+  switch id {
+  case PersonDepartment.acting: Str.personDepartmentActing
+  case PersonDepartment.directing: Str.personDepartmentDirecting
+  case PersonDepartment.writing: Str.personDepartmentWriting
+  case PersonDepartment.creator: Str.personDepartmentCreator
+  case PersonDepartment.production: Str.personDepartmentProduction
+  case PersonDepartment.editing: Str.personDepartmentEditing
+  case PersonDepartment.camera: Str.personDepartmentCamera
+  case PersonDepartment.sound: Str.personDepartmentSound
+  case PersonDepartment.art: Str.personDepartmentArt
+  case PersonDepartment.costume: Str.personDepartmentCostume
+  case PersonDepartment.visualEffects: Str.personDepartmentVisualEffects
+  case PersonDepartment.lighting: Str.personDepartmentLighting
+  case PersonDepartment.crew: Str.personDepartmentCrew
+  default: nil
+  }
 }
 
 /// "Director", or "Directors" for `count` above one.
