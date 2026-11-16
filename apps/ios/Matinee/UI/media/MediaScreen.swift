@@ -30,11 +30,11 @@ struct MediaScreen: View {
   @ViewBuilder private var page: some View {
     switch libraries.state {
     case .loading:
-      ScrollView {
+      // A spinner, as Android's; on an iPad under the page's heading.
+      VStack(spacing: 0) {
         heading
-        LibraryGrid { ForEach(0..<4, id: \.self) { _ in LibraryCardSkeleton() } }
+        LoadingBox()
       }
-      .scrollDisabled(true)
     case .failed(let message, let disconnected):
       ErrorBox(Str.homeLoadFailed, message, disconnected: disconnected, onRetry: libraries.reload)
     case .ready(let list):
@@ -132,16 +132,5 @@ private struct LibraryCard: View {
       .contentShape(Rectangle())
     }
     .accessibilityElement(children: .combine)
-  }
-}
-
-/// A library card while the libraries load, as the web's skeleton.
-private struct LibraryCardSkeleton: View {
-  var body: some View {
-    VStack(alignment: .leading, spacing: Space.s2_5) {
-      Skeleton(radius: Radius.md).aspectRatio(16 / 9, contentMode: .fit)
-      Skeleton(radius: Radius.sm).frame(width: 64, height: 12)
-    }
-    .accessibilityHidden(true)
   }
 }
