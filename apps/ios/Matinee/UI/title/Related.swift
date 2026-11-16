@@ -10,9 +10,9 @@ import SwiftUI
  * matched (`titleCatalogRef`). A title the viewer can watch is the
  * library's card; the rest show the server's state for them.
  *
- * The catalog title's page, where those open on Android, belongs to the
- * requests screens, which aren't rebuilt yet: a catalog card opens it
- * through `openCatalogTitle`, the one place to wire it.
+ * The catalog title's page, where those open on Android, is the requests
+ * screens' (requests/CatalogScreen.swift): a catalog card opens it through
+ * `openCatalogTitle`.
  */
 
 /// The rows related to `title`, each loading on its own. Nothing until the
@@ -77,25 +77,22 @@ private struct RelatedRow: View {
 
 /// Opens the catalog page of a title the server doesn't have, as a catalog
 /// card does on Android (`CatalogRoute`).
-// TODO(requests): open the catalog title's page, Android's CatalogScreen
-// for `ref`, once the requests screens are rebuilt on the kit and the route
-// is in Nav.swift. Until then a catalog card shows its state and does
-// nothing more.
-@MainActor func openCatalogTitle(_ ref: CatalogRef, name: String) {}
+@MainActor func openCatalogTitle(_ ref: CatalogRef, name: String, nav: Navigator) { nav.catalog(ref, nil) }
 
 /// A related title: the library's card when the viewer can watch it, else
 /// its poster with the server's state for it, in the corner and under its name.
 private struct RelatedCard: View {
   let item: RelatedTitle
   @Environment(\.api) private var api
+  @Environment(\.navigator) private var nav
   @Environment(\.palette) private var palette
 
   var body: some View {
     if let library = relatedLibraryTitle(item) {
       PosterCard(library, detail: formatYear(library.year))
     } else {
-      let line = item.availability.stateWord(today: todayDay(), percent: true).map(gapStateText) ?? formatYear(item.year)
-      Pressable(shape: .kit(Radius.md), wash: false, action: { openCatalogTitle(item.ref, name: item.name) }) {
+      let line = item.availability.stateWord(today: todayDay(), percent: true).map(requestStateText) ?? formatYear(item.year)
+      Pressable(shape: .kit(Radius.md), wash: false, action: { openCatalogTitle(item.ref, name: item.name, nav: nav) }) {
         VStack(alignment: .leading, spacing: 0) {
           PosterArt(name: item.name, poster: api?.art(item.poster))
             .overlay(alignment: .topTrailing) {

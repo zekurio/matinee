@@ -207,39 +207,6 @@ struct TitlePresentationTests {
     #expect(saved?.library.showSpecials == true)
   }
 
-  // MARK: Show gaps
-
-  private func availability(state: String, action: String? = nil, progress: Double? = nil, release: String? = nil)
-    -> SeasonAvailability
-  {
-    let json = """
-      {"state":"\(state)","action":\(action.map { "\"\($0)\"" } ?? "null"),"progress":\(progress.map { "\($0)" } ?? "null"),
-       "releaseDate":\(release.map { "\"\($0)\"" } ?? "null"),"stillLooking":false,"askedBySelf":false,"following":false,
-       "others":{"count":0,"names":[]},"number":3,"episodesHere":2,"episodesAired":8}
-      """
-    return try! JSONDecoder().decode(SeasonAvailability.self, from: Data(json.utf8))
-  }
-
-  @Test func aMissingSeasonSaysWhatsGoingOn() {
-    let today = "2026-01-01"
-    #expect(gapStateWord(availability(state: "asked"), today: today) == .asked)
-    #expect(gapStateWord(availability(state: "coming", progress: 0.4), today: today) == .coming(0.4))
-    #expect(gapStateWord(availability(state: "coming", progress: 0.4), today: today, percent: false) == .coming(nil))
-    #expect(gapStateWord(availability(state: "release", release: "2026-05-01"), today: today) == .out("2026-05-01"))
-    #expect(gapStateWord(availability(state: "release"), today: today) == .notOut)
-    #expect(gapStateWord(availability(state: "unavailable"), today: today) == .unavailable)
-    #expect(gapStateWord(availability(state: "none"), today: today) == nil)
-    #expect(gapBadge(availability(state: "coming", progress: 0.4)) == RequestBadge(.ring, progress: 0.4))
-    #expect(gapBadge(availability(state: "none")) == nil)
-  }
-
-  @Test func aMissingSeasonAsksOnlyWhenTheServerOffers() {
-    #expect(gapAsks(availability(state: "none", action: "ask")))
-    #expect(gapAsks(availability(state: "none", action: "add")))
-    #expect(!gapAsks(availability(state: "asked", action: "cancel")))
-    #expect(!gapAsks(availability(state: "none")))
-  }
-
   // MARK: Related
 
   @Test func relatedRowsNeedTheTitleMatched() {

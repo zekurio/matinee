@@ -156,6 +156,10 @@ disabled. Every pressable thing takes 44 points to hit.
 - `ToastState`, `.toastHost(state, clearance:)`, `state.post(ToastMessage("Saved", description:, kind: .success, action: "Undo", closeButton:, duration:))`,
   or `await state.show(…)` for whether its action was pressed.
   `state.replace(with:)` turns a `.loading` toast into its result.
+  `duration: .seconds(6)` keeps one up as long as what it offers lasts, as
+  an Undo with a window of its own.
+  Toasts rise over a `.bottomBar` below the host, or by `clearance`, for an
+  app that knows whether its bar shows (`BottomBar.clearance`).
 - `.sidePanel(isPresented:, title:) { PanelChoice(…); PanelLabel(""); PanelNote(""); PanelSeparator() }`:
   the player's menus, a glass panel from the trailing edge drawn in the
   view's own window (a presentation would bring back the status bar the

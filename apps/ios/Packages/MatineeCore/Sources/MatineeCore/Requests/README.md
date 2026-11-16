@@ -1,6 +1,6 @@
 # Requests logic port status
 
-This is a partial port, not ready to build all request screens on.
+The logic the app's request screens (`Matinee/UI/requests`) are built on. What's still open is listed at the end.
 
 ## Available
 
@@ -14,7 +14,10 @@ This is a partial port, not ready to build all request screens on.
 - View values: state words, actions, blocked reasons, decline answers, release dates, chooser labels/defaults, season ordering and episode details, askable results.
 - `RequestShowGaps`: loads a library show's missing/partial seasons with three provider-match retries at 5, 10 and 15 seconds. A recovery callback refreshes the library title. Missing and partial seasons read the live season overlay; use `followed` for visibility subscription, supplying the library ID when applicable. Attach this separately to library show detail.
 - `RequestData.personCredits`: reads the server's catalog credits from people.get. Attach to the person page and follow visible credit refs.
-- `RequestNoticeSettings`, `newRequestNotices`, `requestNoticeTarget`: settings values, fresh unseen notifications and IDs to mark read, navigation targets. Persist settings and seen IDs per server and account. Call after fetching notification pages when foregrounded or in an app-owned background task; present fresh results then mark all returned IDs read. The freshness window is Android's three days. No scheduling, permission prompts or notification delivery is implemented.
+- Seasons read as titles: `SeasonAvailability.asTitle`, with `stateWord`, `badge`, and `asks` on a season, and `requestRestCount`. These replace the title page's `gap…` helpers, which lived in `Title/TitlePresentation.swift`.
+- One overlay for every page: `RequestAvailabilityState.apply` shows an ask's answer at once, `seasons(_:_:)` and `season(_:_:fallback:)` overlay a show's seasons, and `RequestLiveController(state:)` lets every page's stream write to the app's one overlay.
+- `RequestScreens.swift`, what the screens decide, after Android's screens: `catalogPageAction` and `catalogAsksAtOnce` (the catalog page's button, "Request more"), `Availability.arrivedTitleId`, `RequestPermission.leftToSay` (the server's count, said when two or fewer, as the web's tip), `requestShortNote`, `askedCardKind` and `askedDeclined` (My requests), `RequestAdminQueue.needsYou`, `rows(_:)`, `count(_:)` and `RequestQueueList`, `requestAskers`, `requestedBy`, `requestSeasonRuns`, `requestScopeParts`, `requestProgress`, `requestOutcome` (the queue), the Discover helpers (`discoverRailKey`, `discoverRecommends`, `discoverRailTarget`, `discoverRailCards`), `CatalogFilters.none` and `count`, `browseCardDetail`, `browseLibraryTitle`, and `requestFollowWindow`, the blocks of a long grid one stream follows.
+- `RequestNoticeSettings`, `newRequestNotices`, `requestNoticeTarget`: settings values, fresh unseen notifications and IDs to mark read, navigation targets. Persist settings and seen IDs per server and account. Call after fetching notification pages when foregrounded or in an app-owned background task; present fresh results then mark all returned IDs read. The freshness window is Android's three days. `RequestNoticeStore` keeps the settings, the notices shown, and the last look per server and account; `checkRequestNotices` is one look (fetch, present, keep, mark read, never marking anything when presenting failed outright); `requestNoticeWords` and `RequestNoticeLink` are a notice's words and its tap's target. Scheduling, the permission prompt, and posting are the app's (`Matinee/UI/requests/Notices.swift`).
 
 ## Page attachment
 
@@ -24,7 +27,7 @@ Catalog detail uses title and related fetches. Search uses search and Discover. 
 
 View values derive from RequestView.kt; fetches correspond to CatalogScreen.kt, Browse.kt, Discover.kt, Related.kt, ShowGaps.kt, Asked.kt and Admin.kt. Mutations correspond to Ask.kt and RequestsHub.kt. Notices derive from Notices.kt and NoticeSettings.kt. Compose drawing, Android notification posting and scheduling are intentionally absent.
 
-Still missing: automatic page-specific wiring for My requests/queue/gaps reload callbacks; recommendation dismissal; complete resource-key comments; success-payload and request-body fake-transport loader/action tests and ask/undo timing integration tests. Admin bulk Add, Give up, Retry, Allow again and Add after all also remain unported. These omissions mean this remains a partial port.
+Still missing: success-payload and request-body fake-transport loader/action tests and ask/undo timing integration tests. Admin bulk Add, Give up, Retry, Allow again and Add after all remain unported, so the app's queue offers Add and Decline only and shows the other lists without their actions. The app checks every request flow against an in-app stand-in for these endpoints in debug builds (`-dev.requestFixtures`), since the dev server has no metadata provider.
 
 The client computes season ordering, chooser defaults, freshness and date-based release wording just as Android does. No contract or generator changes were made.
 

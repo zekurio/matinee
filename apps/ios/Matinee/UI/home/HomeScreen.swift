@@ -72,6 +72,8 @@ private struct OnlineHomeScreen: View {
           EpisodeSection(title: Str.browseContinueWatching, loader: loaders.resume)
           EpisodeSection(title: Str.browseNextUp, loader: loaders.nextUp)
           RecommendationRails(loader: loaders.recommendations)
+          // What the viewer asked for, on its way or lately come, as Android's Home has it.
+          AskedRail(.home)
           switch libraries.state {
           case .loading: RailSkeleton(title: nil, art: .poster)
           case .failed: EmptyView()

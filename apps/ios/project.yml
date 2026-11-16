@@ -111,8 +111,12 @@ targets:
         CFBundleURLTypes:
           - CFBundleURLName: io.github.zekurio.matinee
             CFBundleURLSchemes: [matinee]
-        # Playback goes on with the screen locked and in picture in picture.
-        UIBackgroundModes: [audio]
+        # Playback goes on with the screen locked and in picture in picture;
+        # `fetch` lets iOS run the background look for request notices.
+        UIBackgroundModes: [audio, fetch]
+        # The background look for request notices (UI/requests/Notices.swift).
+        BGTaskSchedulerPermittedIdentifiers:
+          [io.github.zekurio.matinee.requests.notices]
         # English here; every language's words, these included, are in
         # Resources/InfoPlist.xcstrings.
         NSLocalNetworkUsageDescription: Matinee connects to your media server on your local network.

@@ -11,6 +11,31 @@ public final class RequestAvailabilityState {
   public func availability(_ ref: CatalogRef, fallback: Availability) -> Availability {
     titles[ref]?.availability ?? fallback
   }
+  /// Each of `seasons` of `ref` with the season's live state, where the
+  /// stream has said one, as Android's `RequestsHub.seasons`.
+  public func seasons(_ ref: CatalogRef, _ seasons: [CatalogSeason]) -> [CatalogSeason] {
+    let live = titles[ref]?.seasons ?? []
+    guard !live.isEmpty else { return seasons }
+    return seasons.map { season in
+      var result = season
+      if let current = live.first(where: { $0.number == season.number }) { result.availability = current }
+      return result
+    }
+  }
+  /// The live state of season `number` of `ref`, or `fallback`.
+  public func season(_ ref: CatalogRef, _ number: Int, fallback: SeasonAvailability) -> SeasonAvailability {
+    titles[ref]?.seasons.first { $0.number == number } ?? fallback
+  }
+  /// What the server answered an ask with, shown everywhere at once, ahead
+  /// of the stream; the seasons the stream said stay until it says more.
+  public func apply(_ ref: CatalogRef, availability: Availability, season: SeasonAvailability? = nil) {
+    var seasons = titles[ref]?.seasons ?? []
+    if let season {
+      seasons.removeAll { $0.number == season.number }
+      seasons.append(season)
+    }
+    titles[ref] = RequestsLiveEvent(ref: ref, availability: availability, seasons: seasons)
+  }
   public func follow(
     _ inputs: [CatalogInput],
     stream: @Sendable ([CatalogInput]) async throws -> AsyncThrowingStream<[RequestsLiveEvent], any Error>,

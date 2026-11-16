@@ -31,6 +31,8 @@ private struct ProfilePage: View {
   @State private var loads: ProfileLoads
   @Environment(\.offline) private var offline
   @Environment(\.shellStyle) private var style
+  @Environment(\.requests) private var requests
+  @Environment(\.navigator) private var nav
 
   init(username: String) {
     _loads = State(initialValue: ProfileLoads(username: username))
@@ -42,10 +44,11 @@ private struct ProfilePage: View {
       ScrollViewReader { proxy in
       LazyVStack(alignment: .leading, spacing: style == .tablet ? Space.s10 : Space.s8) {
         // Showing what loaded before while the server can't be reached: the cloud, up top.
-        // TODO(requests): `onRequests: nav.requests` and the admin queue's
-        // count of what needs them (RequestAdminQueue), once the requests
-        // screens exist; until it has somewhere to go the inbox stays hidden.
-        ProfileHeader(profile: state?.value, onRequests: devInbox.open, needsYou: devInbox.count) {
+        // The inbox opens the admin's queue, with the count of what needs them.
+        ProfileHeader(
+          profile: state?.value, onRequests: requests == nil ? devInbox.open : { nav.requests(nil) },
+          needsYou: max(requests?.queue.needsYou ?? 0, devInbox.count)
+        ) {
           DisconnectedAction(loads.reloadable)
         }
         switch state {
@@ -280,12 +283,7 @@ private struct FavoritesRail: View {
 /// `ProfileAskedRail` and the web's: what you asked for is yours alone,
 /// and this is only ever your own profile. Online only.
 private struct ProfileRequests: View {
-  var body: some View {
-    // TODO(requests): the requests screens' rail of what this person asked
-    // for goes here (Android's ui/requests ProfileAskedRail, the web's
-    // components/asked). It draws nothing until then.
-    EmptyView()
-  }
+  var body: some View { AskedRail(.profile) }
 }
 
 /// What they watched last, a file per title, its heading opening the whole list.
