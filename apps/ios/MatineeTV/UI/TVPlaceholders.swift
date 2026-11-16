@@ -44,35 +44,6 @@ struct TVPersonScreen: View {
   var body: some View { TVPlaceholderPage(name, path: "person/\(name)", port: "detail/TvPerson.kt") }
 }
 
-// MARK: Browse: ui/tv/browse
-
-struct TVSearchScreen: View {
-  var body: some View { TVPlaceholderPage(Str.searchTitle, path: "search", port: "browse/TvSearch.kt") }
-}
-
-struct TVFavoritesScreen: View {
-  var body: some View { TVPlaceholderPage(Str.favoritesTitle, path: "favorites", port: "browse/TvFavorites.kt") }
-}
-
-struct TVKindScreen: View {
-  /// A `TitleKind`.
-  let kind: String
-  var body: some View {
-    TVPlaceholderPage(
-      kind == TitleKind.show ? Str.browseKindShow : Str.browseKindMovie,
-      path: kind == TitleKind.show ? "shows" : "movies", port: "browse/TvKind.kt")
-  }
-}
-
-struct TVBrowseScreen: View {
-  let genre: String?
-  let studio: String?
-  var body: some View {
-    TVPlaceholderPage(
-      genre ?? studio ?? "", path: genre.map { "genre/\($0)" } ?? "studio/\(studio ?? "")", port: "browse/TvBrowse.kt")
-  }
-}
-
 // MARK: Profile: ui/tv/profile
 
 struct TVProfileScreen: View {
