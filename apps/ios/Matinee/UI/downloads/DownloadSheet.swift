@@ -11,11 +11,9 @@ import SwiftUI
  * What it decides from the answers is MatineeCore's
  * (Downloads/DownloadSheetData.swift).
  *
- * Android picks the version from a dropdown and shows the size of the one
- * picked; the web has two cards, the file as it is and a version of one's
- * own. Here every version is a card, the web's, with the size the server
- * estimates for it on it, so they can be weighed against each other
- * before one is picked, and a finger has a big target for each.
+ * Laid out as Android's: the version picked from a menu at the end of its
+ * row, with the codec under it and the size of the one picked under both,
+ * then the audio tracks and subtitles to tick.
  *
  * The actions host (components/Actions.swift) presents both sheets.
  */
@@ -49,7 +47,7 @@ struct DownloadSheet: View {
   var body: some View {
     let (primary, secondary) = downloadNames(item)
     VStack(spacing: 0) {
-      SheetTitle(Str.downloadsSheetTitleNamed(primary), subtitle: secondary)
+      SheetHeader(Str.downloadsSheetTitleNamed(primary), subtitle: secondary)
       if viewer?.options?.downloads == false {
         DownloadsOff()
       } else if let error {
@@ -78,39 +76,29 @@ struct DownloadSheet: View {
     let texts = source.subtitles
     return VStack(spacing: 0) {
       ScrollView {
-        VStack(alignment: .leading, spacing: Space.s6) {
-          SheetGroup(Str.downloadsDefaultTitle) {
-            VersionCards(
-              choices: shownChoices(source.resolved.choices.presets, plans: plans), picked: $picked,
-              detail: { choiceDetail($0, source: source) }, waiting: { planning && plans[$0] == nil && $0 != .original })
-          }
-          CodecField(row: codecRow(picked, plan: plans[picked], codecs: source.resolved.choices.codecs), codec: $codec)
+        VStack(alignment: .leading, spacing: 0) {
+          VersionPanel(
+            choices: shownChoices(source.resolved.choices.presets, plans: plans), picked: $picked,
+            codecRow: codecRow(picked, plan: plans[picked], codecs: source.resolved.choices.codecs), codec: $codec,
+            detail: choiceDetail(picked, source: source))
           // The file as it is keeps every track.
           if device && !source.audio.isEmpty {
-            SheetGroup(Str.downloadsAudioTitle) {
-              ListBlock {
-                ForEach(source.audio, id: \.index) { track in
-                  let detail = [track.format, track.layout].compactMap(\.self).joined(separator: " · ")
-                  SwitchRow(audioLabel(track), subtitle: detail.isEmpty ? nil : detail, isOn: audioBinding(track.index))
-                }
-              }
-              if noAudio { SheetProblem(Str.downloadsAudioNone) }
+            SheetHeading(Str.downloadsAudioTitle)
+            ForEach(source.audio, id: \.index) { track in
+              let detail = [track.format, track.layout].compactMap(\.self).joined(separator: " · ")
+              CheckRow(audioLabel(track), detail: detail.isEmpty ? nil : detail, isOn: audioBinding(track.index))
             }
+            if noAudio { SheetProblem(Str.downloadsAudioNone).padding(.horizontal, SHEET_INSET) }
           }
           if !texts.isEmpty {
-            SheetGroup(Str.downloadsSubtitlesTitle) {
-              ListBlock {
-                ForEach(texts, id: \.id) { track in
-                  let detail = subtitleDetail(track)
-                  SwitchRow(
-                    subtitleLabel(track, texts), subtitle: detail.isEmpty ? nil : detail,
-                    isOn: subtitleBinding(track.id))
-                }
-              }
+            SheetHeading(Str.downloadsSubtitlesTitle)
+            ForEach(texts, id: \.id) { track in
+              let detail = subtitleDetail(track)
+              CheckRow(subtitleLabel(track, texts), detail: detail.isEmpty ? nil : detail, isOn: subtitleBinding(track.id))
             }
           }
         }
-        .padding(.horizontal, SHEET_INSET)
+        .padding(.top, Space.s3)
         .padding(.bottom, Space.s4)
       }
       .scrollBounceBehavior(.basedOnSize)
@@ -254,52 +242,58 @@ func choiceName(_ choice: DownloadChoice) -> String {
 /// How far a download sheet's content sits from its edges, as the web's drawer's `px-5`.
 let SHEET_INSET: CGFloat = Space.s5
 
-/// A download sheet's top: its name in the web dialog's `text-lg
-/// font-semibold`, and under it what it belongs to.
-struct SheetTitle: View {
+/// A group's name in a sheet, like the audio tracks', as Android's
+/// SheetHeading: `text-sm font-semibold`, 16 above it and 4 under.
+struct SheetHeading: View {
   let title: String
-  let subtitle: String?
   @Environment(\.palette) private var palette
 
-  init(_ title: String, subtitle: String? = nil) {
-    self.title = title
-    self.subtitle = subtitle
-  }
+  init(_ title: String) { self.title = title }
 
   var body: some View {
-    VStack(alignment: .leading, spacing: Space.s0_5) {
-      Text(title).textStyle(.lg, weight: .semibold, tracking: .tight).foregroundStyle(palette.foreground)
-        .lineLimit(2)
-        .accessibilityAddTraits(.isHeader)
-      if let subtitle {
-        Text(subtitle).textStyle(.sm).foregroundStyle(palette.mutedForeground).lineLimit(1)
-      }
-    }
-    .frame(maxWidth: .infinity, alignment: .leading)
-    .padding(.horizontal, SHEET_INSET)
-    .padding(.top, Space.s2)
-    .padding(.bottom, Space.s4)
+    Text(title).textStyle(.sm, weight: .semibold).foregroundStyle(palette.foreground)
+      .accessibilityAddTraits(.isHeader)
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .padding(.horizontal, SHEET_INSET)
+      .padding(.top, Space.s4)
+      .padding(.bottom, Space.s1)
   }
 }
 
-/// A group of a sheet's fields under its name, as the web's field legend: `text-sm font-medium`.
-struct SheetGroup<Content: View>: View {
+/// One of several to tick in a sheet, as Android's CheckRow: the kit's
+/// box, its name in `text-base`, and what it is under it. The whole row
+/// ticks it.
+struct CheckRow: View {
   let title: String
-  @ViewBuilder let content: () -> Content
+  let detail: String?
+  @Binding var isOn: Bool
   @Environment(\.palette) private var palette
 
-  init(_ title: String, @ViewBuilder content: @escaping () -> Content) {
+  init(_ title: String, detail: String?, isOn: Binding<Bool>) {
     self.title = title
-    self.content = content
+    self.detail = detail
+    self._isOn = isOn
   }
 
   var body: some View {
-    VStack(alignment: .leading, spacing: Space.s2) {
-      Text(title).textStyle(.sm, weight: .medium).foregroundStyle(palette.foreground)
-        .accessibilityAddTraits(.isHeader)
-      content()
+    Pressable {
+      isOn.toggle()
+    } label: {
+      HStack(spacing: Space.s3_5) {
+        Checkbox(isOn: $isOn, label: title).allowsHitTesting(false)
+        VStack(alignment: .leading, spacing: 0) {
+          Text(title).textStyle(.base).foregroundStyle(palette.foreground).lineLimit(1)
+          if let detail { Text(detail).textStyle(.px13).foregroundStyle(palette.mutedForeground) }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+      }
+      .padding(.horizontal, SHEET_INSET)
+      .padding(.vertical, Space.s3)
+      .contentShape(Rectangle())
     }
-    .frame(maxWidth: .infinity, alignment: .leading)
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel([title, detail].compactMap(\.self).joined(separator: ", "))
+    .accessibilityAddTraits(isOn ? [.isButton, .isSelected] : .isButton)
   }
 }
 
@@ -315,18 +309,15 @@ struct SheetProblem: View {
   }
 }
 
-/// The sheet's button, under a line, as the web's dialog footer, below what scrolls.
+/// The sheet's button, full width under what scrolls, as Android's.
 struct SheetFooter<Content: View>: View {
   @ViewBuilder let content: () -> Content
 
   var body: some View {
-    VStack(spacing: 0) {
-      Separator()
-      content()
-        .padding(.horizontal, SHEET_INSET)
-        .padding(.top, Space.s3)
-        .padding(.bottom, Space.s2)
-    }
+    content()
+      .padding(.horizontal, SHEET_INSET)
+      .padding(.top, Space.s3)
+      .padding(.bottom, Space.s2)
   }
 }
 
@@ -351,88 +342,40 @@ struct DownloadsOff: View {
   }
 }
 
-/// The versions to pick from, each a card with what it comes to, as the
-/// web's version cards: `rounded-lg border p-3`, the one picked on the
-/// accent's tint. Side by side where the sheet has the room.
-struct VersionCards: View {
+/// The version to download, as Android's VersionPanel: a block with the
+/// version picked at the end of its row and, for a version this device
+/// gets, the codec under it, which says what the video stays in when the
+/// server keeps it. Under the block, what the one picked comes to.
+struct VersionPanel: View {
   let choices: [DownloadChoice]
   @Binding var picked: DownloadChoice
-  /// What a choice comes to, nil while it isn't known yet.
-  let detail: (DownloadChoice) -> String?
-  /// Whether its size is on its way from the server.
-  let waiting: (DownloadChoice) -> Bool
-  @Environment(\.dynamicTypeSize) private var typeSize
-
-  var body: some View {
-    let columns =
-      typeSize.isAccessibilitySize
-      ? [GridItem(.flexible())] : [GridItem(.adaptive(minimum: 220), spacing: Space.s2, alignment: .top)]
-    LazyVGrid(columns: columns, alignment: .leading, spacing: Space.s2) {
-      ForEach(choices, id: \.self) { choice in
-        VersionCard(
-          name: choiceName(choice), detail: detail(choice), waiting: waiting(choice), selected: choice == picked
-        ) { withMotion(Motion.color) { picked = choice } }
-      }
-    }
-  }
-}
-
-private struct VersionCard: View {
-  let name: String
+  let codecRow: CodecRow
+  @Binding var codec: String
+  /// What the version picked comes to, nil while it isn't known yet.
   let detail: String?
-  let waiting: Bool
-  let selected: Bool
-  let action: () -> Void
   @Environment(\.palette) private var palette
 
   var body: some View {
-    let shape = RoundedRectangle.kit(Radius.lg)
-    Pressable(shape: shape, action: action) {
-      HStack(alignment: .top, spacing: Space.s2) {
-        VStack(alignment: .leading, spacing: Space.s0_5) {
-          Text(name).textStyle(.sm, weight: .medium).foregroundStyle(palette.foreground)
-          if let detail {
-            Text(detail).textStyle(.px13).foregroundStyle(palette.mutedForeground)
-          } else if waiting {
-            Skeleton(radius: Radius.sm).frame(width: 128, height: 12).padding(.vertical, 4)
+    VStack(alignment: .leading, spacing: Space.s1_5) {
+      ListBlock {
+        SelectRow(
+          Str.downloadsDefaultTitle, selection: Binding(get: { picked }, set: { new in withMotion(Motion.color) { picked = new } }),
+          options: choices.map { ($0, choiceName($0)) })
+        switch codecRow {
+        case .hidden: EmptyView()
+        case .kept(let kept): ValueRow(Str.downloadsCodec, value: Str.downloadsCodecKept(videoCodecName(kept)))
+        case .choose(let codecs):
+          if codecs.count < 2 {
+            ValueRow(Str.downloadsCodec, value: codecs.first.map(videoCodecName) ?? "")
+          } else {
+            SelectRow(Str.downloadsCodec, selection: $codec, options: codecs.map { ($0, videoCodecName($0)) })
           }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .multilineTextAlignment(.leading)
-        LucideIcon(.check, size: 16, tint: palette.accent, scales: false)
-          .opacity(selected ? 1 : 0)
-          .padding(.top, 2)
       }
-      .padding(Space.s3)
-      .frame(maxWidth: .infinity, alignment: .topLeading)
-      .background(selected ? palette.accentSoft : .clear, in: shape)
-      .overlay { shape.strokeBorder(selected ? palette.accentBorder : palette.border) }
-      .contentShape(shape)
-    }
-    .accessibilityAddTraits(selected ? .isSelected : [])
-  }
-}
-
-/// The codec a version's video is encoded in, under the versions: a menu
-/// of the server's codecs, or, when the server keeps the video, which it
-/// stays in. Nothing for the file as it is.
-struct CodecField: View {
-  let row: CodecRow
-  @Binding var codec: String
-
-  var body: some View {
-    switch row {
-    case .hidden: EmptyView()
-    case .kept(let kept):
-      SheetGroup(Str.downloadsCodec) {
-        Select(Str.downloadsCodec, selection: .constant(0), options: [(0, Str.downloadsCodecKept(videoCodecName(kept)))])
-          .disabled(true)
-      }
-    case .choose(let codecs):
-      SheetGroup(Str.downloadsCodec) {
-        Select(Str.downloadsCodec, selection: $codec, options: codecs.map { ($0, videoCodecName($0)) })
-          .disabled(codecs.count < 2)
+      if let detail, !detail.isEmpty {
+        Text(detail).textStyle(.px13).foregroundStyle(palette.mutedForeground)
       }
     }
+    .padding(.horizontal, SHEET_INSET)
   }
 }

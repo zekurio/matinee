@@ -32,6 +32,7 @@ struct DownloadFilesSheet: View {
   @Environment(ViewerState.self) private var viewer: ViewerState?
   @Environment(\.snackbar) private var snackbar
   @Environment(\.sheetDismiss) private var dismiss
+  @Environment(\.palette) private var palette
 
   @State private var items: [MediaItem]?
   @State private var error: String?
@@ -48,7 +49,7 @@ struct DownloadFilesSheet: View {
   var body: some View {
     let name = files.season.map { Str.titleSeasonOf(files.title.name, seasonName($0.number)) } ?? files.title.name
     VStack(spacing: 0) {
-      SheetTitle(Str.downloadsSheetTitleNamed(name), subtitle: items.map(summary))
+      SheetHeader(Str.downloadsSheetTitleNamed(name))
       if viewer?.options?.downloads == false {
         DownloadsOff()
       } else if let error {
@@ -92,24 +93,24 @@ struct DownloadFilesSheet: View {
     }
     VStack(spacing: 0) {
       ScrollView {
-        VStack(alignment: .leading, spacing: Space.s6) {
+        // What's here and what's not, then the version, as Android's.
+        VStack(alignment: .leading, spacing: Space.s3) {
+          Text(summary(items)).textStyle(.sm).foregroundStyle(palette.mutedForeground)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, SHEET_INSET)
           if !missing.isEmpty {
-            SheetGroup(Str.downloadsDefaultTitle) {
-              VersionCards(
-                choices: downloadChoices(presets), picked: $picked,
-                detail: { detail($0, missing: missing, results: results) },
-                waiting: { $0 == picked && resolving })
-            }
             // Files that get encoded come in the codec picked; a preset encodes every file.
-            CodecField(
-              row: codecRow(picked, plan: nil, codecs: codecs),
-              codec: Binding(get: { codec.isEmpty ? codecs.first ?? "" : codec }, set: { codec = $0 }))
+            VersionPanel(
+              choices: downloadChoices(presets), picked: $picked, codecRow: codecRow(picked, plan: nil, codecs: codecs),
+              codec: Binding(get: { codec.isEmpty ? codecs.first ?? "" : codec }, set: { codec = $0 }),
+              detail: detail(picked, missing: missing, results: results))
             ForEach(refusals, id: \.self) { message in
-              Callout(message, icon: .circleAlert, look: .destructive)
+              Text(message).textStyle(.sm).foregroundStyle(palette.destructive)
+                .padding(.horizontal, SHEET_INSET)
             }
           }
         }
-        .padding(.horizontal, SHEET_INSET)
+        .padding(.top, Space.s3)
         .padding(.bottom, Space.s4)
       }
       .scrollBounceBehavior(.basedOnSize)
