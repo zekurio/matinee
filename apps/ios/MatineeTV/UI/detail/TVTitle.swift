@@ -71,13 +71,14 @@ private struct TVTitlePage: View {
   private func marks(_ next: MediaItem?) -> DetailMarks {
     let summary = title.summary
     // Typed and outside the call: Swift 6.3 can't work out the closures inside it.
-    let onWatched: ((_ watched: Bool, _ watchedAt: String?) async throws -> Void)? =
-      title.itemCount == 0
-      ? nil
-      : { [api, viewer] watched, at in
+    // And not one arm of a conditional, which it can't work out either.
+    var onWatched: ((_ watched: Bool, _ watchedAt: String?) async throws -> Void)? = nil
+    if title.itemCount != 0 {
+      onWatched = { [api, viewer] watched, at in
         guard let api, let viewer else { return }
         try await viewer.setWatched(api, summary, watched, watchedAt: at)
       }
+    }
     let onFavorite: (() async throws -> Void)? = { [api, viewer] in
       guard let api, let viewer else { return }
       try await viewer.setFavorite(api, summary, !viewer.isFavorite(summary))
