@@ -45,6 +45,7 @@ public enum Space {
   public static let s8: CGFloat = 32
   public static let s10: CGFloat = 40
   public static let s12: CGFloat = 48
+  public static let s14: CGFloat = 56
   public static let s16: CGFloat = 64
 
   /// The page's side margin on phones, the web's `px-4`.

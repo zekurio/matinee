@@ -190,10 +190,10 @@ private struct PageBackground: ViewModifier {
   }
 #endif
 
-/// A destination in the tab bars: its name, which shows beside its icon
-/// while it's the open one (always, in the `NavBar`) and is what VoiceOver
-/// reads, and a lucide icon or, `picture`, a view of its own, as the
-/// profile tab's avatar.
+/// A destination in the tab bars: its name, which the `BottomBar` shows
+/// under its icon and the `NavBar` beside it, and which VoiceOver reads,
+/// and a lucide icon or, `picture`, a view of its own, as the tablet's
+/// account.
 public struct TabBarItem<ID: Hashable> {
   let id: ID
   let label: String
@@ -223,75 +223,106 @@ struct BottomBarHeightKey: PreferenceKey {
   static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
 }
 
-/// The tabs, floating over the bottom of a tab's first page, as the web's
-/// phone TabBar and Android's `BottomBar`: a frosted capsule of the tabs,
-/// and `accessory`, as search, in a circle of its own beside it. The open
-/// tab shows its name beside its icon in a pill; the rest show only their
-/// icons. The page scrolls on beneath it, with no fade: the frost alone
-/// keeps it readable, as Android has it since its fade went.
+/// The tabs along the bottom of a tab's first page, after Findroid's phone
+/// app and iOS's own tab bar: the full width, each tab its icon over its
+/// name, both always shown. The open tab's icon sits in a pill of the
+/// text's color at 10%, the kit's selected look, and its name turns from
+/// muted to the text's color. The bar is frosted as the status bar is once
+/// a page has scrolled under it, the page blurred under the background at
+/// 80%, with a line of `--border` along its top, and it runs on down under
+/// the home indicator. Solid under Reduce Transparency.
 ///
-/// It keeps its size at the accessibility text sizes, as iOS's tab bar
-/// does; a long press on a tab shows its name large instead. With a
-/// keyboard, ⌘1, ⌘2, … pick the tabs in order.
+/// Its names grow with Dynamic Type up to `xxLarge` and keep that size from
+/// there, as iOS's tab bar keeps its own; a long press on a tab at the
+/// accessibility sizes shows its name large instead. With a keyboard, ⌘1,
+/// ⌘2, … pick the tabs in order. VoiceOver reads it as a tab bar: each tab
+/// with its place among them, and which is open.
 public struct BottomBar<ID: Hashable>: View {
   let items: [TabBarItem<ID>]
-  let accessory: TabBarItem<ID>?
   let selection: ID?
   let onSelect: (ID) -> Void
+  @State private var bottomInset: CGFloat = 0
   @Environment(\.palette) private var palette
+  @Environment(\.displayScale) private var displayScale
+  @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
-  /// What the bar takes above the bottom safe area: itself and the gap
-  /// under it, and 8 above it so a page's last row clears it, as
-  /// Android's `BOTTOM_BAR_HEIGHT`. What a toast rises over.
-  public static var clearance: CGFloat { barHeight + lift + Space.s2 }
-  static var barHeight: CGFloat { 60 }
-  static var lift: CGFloat { Space.s3 }
+  /// What the bar takes above the bottom safe area at the default text
+  /// size, what a toast rises over.
+  public static var clearance: CGFloat { height }
+  /// The bar above the bottom safe area: 6 over the pill, the pill, 2, the
+  /// name's 16-point line, and 4 under it.
+  static var height: CGFloat { Space.s1_5 + pill.height + Space.s0_5 + 16 + Space.s1 }
+  /// The open tab's pill behind its icon, 56 by 32.
+  static var pill: CGSize { CGSize(width: Space.s14, height: Space.s8) }
+  /// How wide the tabs spread before they gather in the middle, as in a
+  /// landscape phone's bar.
+  static var spread: CGFloat { 480 }
 
-  public init(
-    _ items: [TabBarItem<ID>], accessory: TabBarItem<ID>? = nil, selection: ID?, onSelect: @escaping (ID) -> Void
-  ) {
+  public init(_ items: [TabBarItem<ID>], selection: ID?, onSelect: @escaping (ID) -> Void) {
     self.items = items
-    self.accessory = accessory
     self.selection = selection
     self.onSelect = onSelect
   }
 
   public var body: some View {
-    HStack(spacing: 10) {
-      HStack(spacing: 0) {
-        ForEach(items.indices, id: \.self) { index in
-          tab(items[index], wide: true, shortcut: index)
-        }
-      }
-      .floating(Capsule())
-      if let accessory {
-        tab(accessory, wide: false, shortcut: items.count).floating(Circle())
+    HStack(spacing: 0) {
+      ForEach(items.indices, id: \.self) { index in
+        tab(items[index], shortcut: index)
       }
     }
-    .padding(.top, Space.s7)
-    .padding(.bottom, Self.lift)
+    .frame(maxWidth: Self.spread)
+    .padding(.horizontal, Space.s2)
+    // A phone without a home indicator gets the room under the names that the indicator's inset gives the rest.
+    .padding(.bottom, bottomInset > 0 ? 0 : Space.s1_5)
     .frame(maxWidth: .infinity)
+    .onGeometryChange(for: CGFloat.self) { $0.safeAreaInsets.bottom } action: { bottomInset = $0 }
+    .background { surface.ignoresSafeArea(edges: .bottom) }
+    .overlay(alignment: .top) {
+      Rectangle().fill(palette.border).frame(height: 1 / displayScale).accessibilityHidden(true)
+    }
     .motion(Motion.move, value: selection)
-    .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+    .dynamicTypeSize(...DynamicTypeSize.xxLarge)
     .accessibilityElement(children: .contain)
+    .accessibilityAddTraits(.isTabBar)
   }
 
-  private func tab(_ item: TabBarItem<ID>, wide: Bool, shortcut: Int) -> some View {
+  @ViewBuilder private var surface: some View {
+    if reduceTransparency {
+      palette.background
+    } else {
+      // The thinnest material, which blurs as the others do but tints
+      // least, so the veil over it is what colors it.
+      Rectangle().fill(.ultraThinMaterial).environment(\.colorScheme, palette.scheme)
+        .overlay(palette.background.opacity(0.8))
+    }
+  }
+
+  private func tab(_ item: TabBarItem<ID>, shortcut: Int) -> some View {
     let selected = item.id == selection
     return Button {
       onSelect(item.id)
     } label: {
-      HStack(spacing: Space.s2) {
+      VStack(spacing: Space.s0_5) {
         TabGlyph(item: item, selected: selected, size: 22)
-        if selected && wide {
-          Text(item.label).textStyle(.sm, weight: .medium).lineLimit(1).fixedSize()
-        }
+          .frame(width: Self.pill.width, height: Self.pill.height)
+          .background {
+            // Grows out from the icon as the tab opens, as Material's indicator does; fades under Reduce Motion.
+            Capsule().fill(palette.foreground.opacity(0.1))
+              .scaleEffect(x: selected ? 1 : 0.5)
+              .opacity(selected ? 1 : 0)
+          }
+        // Its own width: a third of the narrowest phone holds the longest name at the largest size the
+        // bar takes, and a name squeezed by a layout pass mid-launch would stay clipped.
+        Text(item.label)
+          .textStyle(.xs, weight: .medium)
+          .lineLimit(1)
+          .fixedSize()
       }
       .foregroundStyle(selected ? palette.foreground : palette.mutedForeground)
-      .padding(.horizontal, selected && wide ? 18 : 0)
-      .frame(minWidth: wide ? 56 : 52, minHeight: 52)
-      .background(selected ? palette.foreground.opacity(0.1) : .clear, in: Capsule())
-      .contentShape(Capsule())
+      .padding(.top, Space.s1_5)
+      .padding(.bottom, Space.s1)
+      .frame(maxWidth: .infinity)
+      .contentShape(Rectangle())
     }
     .buttonStyle(KitPressStyle(shape: Capsule(), wash: false, pressScale: 0.92))
     .modifier(TabShortcut(index: shortcut))
@@ -337,8 +368,8 @@ struct TabShortcut: ViewModifier {
 }
 
 extension View {
-  /// Floats `bar` over the bottom of this page, which keeps scrolling under
-  /// it and ends clear of it. It steps aside while the keyboard is up.
+  /// Puts `bar` along the bottom of this page, which scrolls on under its
+  /// frost and ends clear of it. It steps aside while the keyboard is up.
   public func bottomBar<ID: Hashable>(_ bar: BottomBar<ID>) -> some View {
     modifier(BottomBarModifier(bar: bar))
   }
@@ -354,7 +385,7 @@ private struct BottomBarModifier<ID: Hashable>: ViewModifier {
       .safeAreaInset(edge: .bottom, spacing: 0) {
         if !keyboard {
           bar
-            .onGeometryChange(for: CGFloat.self) { $0.size.height - Space.s7 } action: { height = $0 }
+            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height = $0 }
             .transition(.opacity)
         }
       }
@@ -367,39 +398,6 @@ private struct BottomBarModifier<ID: Hashable>: ViewModifier {
           keyboard = false
         }
       #endif
-  }
-}
-
-extension View {
-  /// The bars' surfaces: the page under them frosted, as Android's tab bar
-  /// glass, the page blurred under a thin veil of the popover's color with a
-  /// faint rim, lifted off the page by a shadow. The art and rows passing
-  /// beneath show through as color. Solid under Reduce Transparency.
-  func floating<S: Shape>(_ shape: S) -> some View {
-    modifier(Floating(shape: shape))
-  }
-}
-
-private struct Floating<S: Shape>: ViewModifier {
-  let shape: S
-  @Environment(\.palette) private var palette
-  @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
-
-  func body(content: Content) -> some View {
-    content
-      .padding(4)
-      .background {
-        if reduceTransparency {
-          shape.fill(palette.popover)
-        } else {
-          // The thinnest material, which blurs as the others do but tints
-          // least, so the veil over it is what colors it, as Android's 50%.
-          shape.fill(.ultraThinMaterial).environment(\.colorScheme, palette.scheme)
-            .overlay(shape.fill(palette.popover.opacity(0.5)))
-        }
-      }
-      .overlay { shape.stroke(palette.foreground.opacity(0.1)) }
-      .kitShadow(.bar)
   }
 }
 

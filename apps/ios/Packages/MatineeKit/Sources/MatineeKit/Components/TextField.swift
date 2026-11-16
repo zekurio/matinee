@@ -10,6 +10,19 @@ public enum TextFieldKind: Sendable {
   case search
 }
 
+/// A way out in place of a search field's icon, as Findroid's search bar
+/// turns its magnifier into Back while it's open: `arrow-left`, named
+/// `label` for VoiceOver.
+public struct TextFieldBack {
+  let label: String
+  let action: () -> Void
+
+  public init(_ label: String, action: @escaping () -> Void) {
+    self.label = label
+    self.action = action
+  }
+}
+
 /// How a text field is drawn.
 public enum TextFieldLook: Sendable {
   /// The web's Input: the sunken field, `rounded-lg`, 44 tall.
@@ -40,6 +53,7 @@ public struct MatineeTextField<Trailing: View>: View {
   let lines: ClosedRange<Int>?
   let focus: Binding<Bool>?
   let look: TextFieldLook
+  let back: TextFieldBack?
   @ViewBuilder let trailing: () -> Trailing
 
   @Environment(\.palette) private var palette
@@ -50,11 +64,12 @@ public struct MatineeTextField<Trailing: View>: View {
   @State private var revealed = false
   @State private var hovered = false
 
-  /// `lines` makes it grow downward between that many lines, as the web's Textarea.
+  /// `lines` makes it grow downward between that many lines, as the web's
+  /// Textarea. `back` puts Back where the icon is.
   public init(
     _ placeholder: String, text: Binding<String>, kind: TextFieldKind = .text, icon: Lucide? = nil,
     isError: Bool = false, lines: ClosedRange<Int>? = nil, focused: Binding<Bool>? = nil,
-    look: TextFieldLook = .field, @ViewBuilder trailing: @escaping () -> Trailing
+    look: TextFieldLook = .field, back: TextFieldBack? = nil, @ViewBuilder trailing: @escaping () -> Trailing
   ) {
     self.placeholder = placeholder
     self._text = text
@@ -64,6 +79,7 @@ public struct MatineeTextField<Trailing: View>: View {
     self.lines = lines
     self.focus = focused
     self.look = look
+    self.back = back
     self.trailing = trailing
   }
 
@@ -72,9 +88,15 @@ public struct MatineeTextField<Trailing: View>: View {
     let isFocused = focused || forced == .focused
     let tint = isError ? palette.destructive : palette.ring
     HStack(alignment: lines == nil ? .center : .top, spacing: look == .pill ? Space.s3 : Space.s2) {
-      if let icon {
+      if let back {
+        // 36 across, centered where the icon was, and 44 to hit.
+        RoundIconButton(.arrowLeft, label: back.label, look: .ghost, size: 36, iconSize: 20, action: back.action)
+          .padding(.horizontal, look == .pill ? -8 : -9)
+          .transition(.opacity)
+      } else if let icon {
         LucideIcon(icon, size: look == .pill ? 20 : 18, tint: palette.mutedForeground)
           .padding(.top, lines == nil ? 0 : 3)
+          .transition(.opacity)
       }
       field
         .textStyle(.base)
@@ -151,11 +173,11 @@ extension MatineeTextField where Trailing == EmptyView {
   public init(
     _ placeholder: String, text: Binding<String>, kind: TextFieldKind = .text, icon: Lucide? = nil,
     isError: Bool = false, lines: ClosedRange<Int>? = nil, focused: Binding<Bool>? = nil,
-    look: TextFieldLook = .field
+    look: TextFieldLook = .field, back: TextFieldBack? = nil
   ) {
     self.init(
       placeholder, text: text, kind: kind, icon: icon, isError: isError, lines: lines, focused: focused,
-      look: look
+      look: look, back: back
     ) { EmptyView() }
   }
 }

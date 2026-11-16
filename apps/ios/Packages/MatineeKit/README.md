@@ -112,8 +112,10 @@ disabled. Every pressable thing takes 44 points to hit.
 
 ### Inputs
 
-- `MatineeTextField("Placeholder", text: $text, kind: .text | .secure | .search, icon:, isError:, lines: 2...4, focused:, look: .field | .pill)`
+- `MatineeTextField("Placeholder", text: $text, kind: .text | .secure | .search, icon:, isError:, lines: 2...4, focused:, look: .field | .pill, back:)`
   with an optional trailing view. `.pill` is the search page's capsule.
+  `back: TextFieldBack("Back") { }` puts Back in the icon's place, as
+  Findroid's search bar while its search is open.
   SwiftUI's `.keyboardType`, `.textContentType`, `.submitLabel`, and
   `.onSubmit` reach the field.
 - `FormField("Label", help:, error:) { control }`: a label over a control,
@@ -225,25 +227,31 @@ a value or a line of detail muted.
   and `.topBar(…)`: Android's `TopBar`, 64 tall, the name after Back in
   `pageTitleStyle()`. It's the one page title; there's no centered or
   smaller variant. `onHome` adds the house beside Back.
-- `BottomBar([TabBarItem(id, label:, icon:)], accessory:, selection:) { id in }`,
-  `TabBarItem(id, label:) { selected in picture }` for the avatar, and
-  `.bottomBar(bar)`: the web's floating tab capsule and search circle, with
-  no fade under it: the page shows through them blurred, under the popover
-  at 50%, as Android's glass. It steps aside for the keyboard; toasts rise
-  over it.
+- `BottomBar([TabBarItem(id, label:, icon:)], selection:) { id in }` and
+  `.bottomBar(bar)`: a phone's tabs, after Findroid's: the full width,
+  each tab its 22-point icon over its name in `text-xs` medium, always
+  both. The open tab's icon sits in a 56 by 32 pill of the text's color at
+  10%, its name in the text's color, the rest muted. 60 tall over the home
+  indicator, which it runs down under; the page scrolls under its frost,
+  `--background` at 80% over a blur (solid under Reduce Transparency),
+  with a hairline of `--border` along its top. The tabs gather in the
+  middle past 480. VoiceOver reads it as a tab bar. It steps aside for the
+  keyboard; toasts rise over it (`BottomBar.clearance`).
 - `NavBar([TabBarItem], trailing: [TabBarItem], selection:) { id in } leading: { logo }`
   and `.navBar(bar)`: the web's bar from `sm` up, for a tablet: one frosted
   capsule, centered at the top over the status bar's frost, of the logo,
-  the tabs by name, and search and the account. The page's safe area
-  starts below it.
+  the tabs by name, and search and the account, which
+  `TabBarItem(id, label:) { selected in picture }` draws as the avatar. The
+  page's safe area starts below it.
 - `StatusBarFrost(bar:, veil:, reducedVeil:)`: Android's status bar frost,
   the page blurred and veiled in `--background` across the status bar
   (`bar` tall), then thinning out over 48 below it, the blur easing off
   as the veil fades. The app gives the veil's strength for how far its
   page has scrolled; under Reduce Transparency there's no blur and the
   veil is `reducedVeil`.
-- Both bars keep their size at the accessibility text sizes, as iOS's tab
-  bar does, show a tab's name large on a long press, and take ⌘1, ⌘2, …
+- Both bars stop growing at `xxLarge` and keep that size at the
+  accessibility text sizes, as iOS's tab bar does, show a tab's name large
+  on a long press, and take ⌘1, ⌘2, …
 - `.keyCommand("f", modifiers: .command, label: "Search") { }`: a hardware
   keyboard's shortcut for what a page does without a control on screen,
   such as ⌘F to search. It draws nothing, and does nothing on tvOS.

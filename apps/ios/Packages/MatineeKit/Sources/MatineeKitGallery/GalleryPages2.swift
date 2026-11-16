@@ -431,23 +431,23 @@ struct NavigationPage: View {
         }
         .clipShape(RoundedRectangle.kit(Radius.xl))
       }
-      Demo("Bottom bar", note: "The tabs float over the page; the open one shows its name.") {
+      Demo(
+        "Bottom bar",
+        note: "A phone's tabs, after Findroid's: full width, every tab named, the open one's icon in a pill. "
+          + "The page shows through its frost; a line of --border along its top."
+      ) {
         ZStack(alignment: .bottom) {
           VStack(spacing: 8) {
             ForEach(0..<4) { index in FakeArt(seed: index).frame(height: 60).clipShape(RoundedRectangle.kit(Radius.sm)) }
           }
           .padding(12)
+          .frame(maxHeight: .infinity, alignment: .top)
           BottomBar(
             [
               TabBarItem("home", label: "Home", icon: .house),
               TabBarItem("media", label: "Media", icon: .libraryBig),
               TabBarItem("downloads", label: "Downloads", icon: .download),
-              TabBarItem("profile", label: "Profile") { selected in
-                Avatar("iOS Admin", size: selected ? 22 : 28, dot: true)
-                  .padding(selected ? 2 : 0)
-                  .overlay { if selected { Circle().strokeBorder(palette.foreground, lineWidth: 1.5) } }
-              },
-            ], accessory: TabBarItem("search", label: "Search", icon: .search), selection: tab
+            ], selection: tab
           ) { tab = $0 }
         }
         .frame(height: 300)
