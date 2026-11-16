@@ -24,7 +24,7 @@ struct NoticeSettingsScreen: View {
     ScrollView {
       VStack(alignment: .leading, spacing: Space.s6) {
         ListSection {
-          MatineeKit.SwitchRow(
+          SwitchRow(
             Str.requestsNotifyTitle,
             // TODO(strings): ios_requests_notify_description "Get one when something you requested is ready or isn't coming, even with Matinee closed. iOS decides how often Matinee may look."
             subtitle: Str.requestsNotifyDescription,

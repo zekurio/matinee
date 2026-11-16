@@ -45,10 +45,8 @@ struct MediaScreen: View {
         } else {
           LibraryGrid { ForEach(list, id: \.id) { library in LibraryCard(library: library) } }
         }
-        // TODO(requests): the ways into the catalog, Browse movies and Browse shows (Android's
-        // `nav.catalogBrowse(kind)`, the web's discover.movies and discover.shows), under the libraries.
-        // Nothing renders here until the requests pages exist.
-        MediaCatalogSlot()
+        // The ways into the catalog, Browse movies and Browse shows, while the server has Discover on.
+        CatalogBrowseEntries()
       }
       .scrollsToTopOnReselect()
       .refreshable {
@@ -66,11 +64,6 @@ struct MediaScreen: View {
       Color.clear.frame(height: Space.s2)
     }
   }
-}
-
-/// Where the catalog's ways in go, for the requests pages to fill. Empty today.
-private struct MediaCatalogSlot: View {
-  var body: some View { EmptyView() }
 }
 
 /// Library cards as wide as fit at 160 or more on a phone, 288 from the

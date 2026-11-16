@@ -561,7 +561,7 @@ struct PersonCard: View {
   }
 
   var body: some View {
-    Pressable(shape: .kit(Radius.md), wash: false, action: { nav.person(name) }) {
+    Pressable(shape: .kit(Radius.md), wash: false, action: { nav.person(name, tmdbId) }) {
       VStack(spacing: 0) {
         Circle()
           .fill(palette.secondary)

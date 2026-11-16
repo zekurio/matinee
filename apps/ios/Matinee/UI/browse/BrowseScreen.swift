@@ -137,6 +137,12 @@ struct PersonScreen: View {
     }
     .loads(person) { api in
       #if DEBUG
+        // The requests' stand-in's titles at TMDB, as the dev server has no provider to find them.
+        if RequestFixtures.mode != nil {
+          var found = try await BrowseFixtures.on ? BrowseFixtures.person(name, api: api) : loadPerson(api, name: name, tmdbId: tmdbId)
+          found.catalog = try await RequestData(api: requestApi(api)).personCredits(name: name, tmdbId: tmdbId)
+          return found
+        }
         if BrowseFixtures.on { return try await BrowseFixtures.person(name, api: api) }
       #endif
       return try await loadPerson(api, name: name, tmdbId: tmdbId)
@@ -147,16 +153,16 @@ struct PersonScreen: View {
 
   private func content(_ value: Person) -> some View {
     let shown = personShownKind(value, picked: kind)
-    return ScrollView {
+    return ScrollViewReader { proxy in
+    ScrollView {
       VStack(alignment: .leading, spacing: Space.s10) {
         PersonHeader(person: value, kind: shown) { picked in withMotion(Motion.move) { kind = picked } }
         ForEach(personCreditSections(value, titleKind: shown), id: \.kind) { section in
           CreditSection(section: section)
         }
-        // TODO(requests): catalog credits, "Not here yet": their titles at TMDB that no library here has,
-        // as catalog cards to request (Android's `value.catalog` items, the web's CatalogSection), filtered
-        // by `shown` like the sections above. Nothing renders here until the requests pages exist.
-        PersonCatalogSlot(person: value, kind: shown)
+        // "Not here yet": their titles at TMDB that no library here has, of the kind shown, as the sections above.
+        PersonCatalogCredits(credits: value.catalog.filter { shown == nil || $0.ref.kind == shown }, stale: value.stale)
+          .id("catalog")
       }
       .padding(.top, Space.s2)
       .padding(.bottom, Space.s8)
@@ -165,15 +171,11 @@ struct PersonScreen: View {
       person.reload()
       await person.settled()
     }
+    #if DEBUG
+      .modifier(PersonCatalogDevOpen(kind: $kind, proxy: proxy))
+    #endif
+    }
   }
-}
-
-/// Where a person's titles at TMDB go, for the requests pages to fill. Empty today.
-private struct PersonCatalogSlot: View {
-  let person: Person
-  let kind: String?
-
-  var body: some View { EmptyView() }
 }
 
 /// The portrait, the name and what they're known for, and under them the

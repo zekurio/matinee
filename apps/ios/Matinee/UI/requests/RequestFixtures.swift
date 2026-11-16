@@ -17,6 +17,8 @@
    * - `limit`: the same, with this account's requests used up.
    * - `left`: two requests left.
    * - `off`: asking turned off on the server.
+ *
+ * `-requests.slow YES` makes the catalog's search take six seconds.
    *
    * Asking, cancelling, following, Add, and Decline change the stand-in's
    * state and stream it. An added request comes in over some seconds and
@@ -745,8 +747,10 @@
         }
         return
       }
-      // A moment's wait, as a server takes one, so busy states show.
-      Thread.sleep(forTimeInterval: path.hasPrefix("requests/") || path.hasPrefix("admin/") ? 0.35 : 0.15)
+      // A moment's wait, as a server takes one, so busy states show; `-requests.slow YES` makes the
+      // catalog's search take six seconds, to see what shows while it's out.
+      let slow = path == "catalog/search" && UserDefaults.standard.bool(forKey: "requests.slow")
+      Thread.sleep(forTimeInterval: slow ? 6 : path.hasPrefix("requests/") || path.hasPrefix("admin/") ? 0.35 : 0.15)
       let (status, data) = RequestFixtureServer.shared.answer(path, query: query, body: body) ?? (404, Data())
       client?.urlProtocol(
         self, didReceive: HTTPURLResponse(url: url, statusCode: status, httpVersion: "HTTP/1.1", headerFields: ["Content-Type": "application/json"])!,

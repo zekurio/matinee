@@ -273,7 +273,7 @@ struct CrewLines: View {
     if !lines.isEmpty || !studios.isEmpty {
       FlowRow(spacing: Space.s6, lineSpacing: Space.s1) {
         ForEach(lines, id: \.0) { kind, names in
-          line(titleCreditLabel(kind, count: names.count), names, onTap: nav.person)
+          line(titleCreditLabel(kind, count: names.count), names, onTap: { nav.person($0, nil) })
         }
         if !studios.isEmpty {
           line(Str.peopleStudio(studios.count), studios, onTap: nav.studio)

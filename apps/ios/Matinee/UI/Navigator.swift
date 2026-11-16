@@ -33,7 +33,8 @@ struct Navigator {
   /// A season's page from one of its episodes, back to it when it came before.
   var seasonUp: (String, Int?) -> Void = { _, _ in }
   var episode: (String) -> Void = { _ in }
-  var person: (String) -> Void = { _ in }
+  /// A person's page, by name, and the provider's id when the credit has one, which tells two of one name apart.
+  var person: (_ name: String, _ tmdbId: String?) -> Void = { _, _ in }
   var genre: (String) -> Void = { _ in }
   var studio: (String) -> Void = { _ in }
   /// A library's page, sorted by `sort` (a `TitleSort`), or as it was.

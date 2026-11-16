@@ -321,3 +321,80 @@ private struct BrowseFilters: View {
 
   private func span(_ range: CatalogRange) -> FilterSpan { FilterSpan(min: range.min, max: range.max, step: range.step) }
 }
+
+/// The ways into the catalog for the Media tab, under the libraries: Browse
+/// movies and Browse shows, for the kinds the server says this viewer may
+/// browse, and only while Discover is on, so the tab looks as it always did
+/// on a server without it. Neither Android's Media screen nor the web's has
+/// them (both reach Browse from Discover's popular rows); here they sit
+/// under a "Discover" heading as two quiet tiles in the library grid's
+/// columns, so they read as somewhere to go, not as two more libraries.
+struct CatalogBrowseEntries: View {
+  @State private var discover = Loader<DiscoverRails>()
+  @Environment(\.navigator) private var nav
+  @Environment(\.gutter) private var gutter
+  @Environment(\.windowSize) private var window
+  @Environment(\.dynamicTypeSize) private var typeSize
+
+  var body: some View {
+    let kinds = discover.state.value.map { $0.enabled ? $0.browse : [] } ?? []
+    let shown = [TitleKind.movie, TitleKind.show].filter(kinds.contains)
+    Group {
+      if shown.isEmpty {
+        // Something to show, so it loads.
+        Color.clear.frame(height: 0)
+      } else {
+        VStack(alignment: .leading, spacing: Space.s3) {
+          SectionTitle(Str.webDiscoverTitle).padding(.horizontal, gutter)
+          // The library grid's columns: 160 and up on a phone, 288 from `sm`, a row each at the largest sizes.
+          let wide = window.width >= 640
+          let minimum: CGFloat = typeSize.isAccessibilitySize ? 280 : wide ? 288 : 160
+          LazyVGrid(
+            columns: [GridItem(.adaptive(minimum: minimum), spacing: wide ? Space.s6 : Space.s4, alignment: .top)],
+            alignment: .leading, spacing: Space.s3
+          ) {
+            ForEach(shown, id: \.self) { kind in
+              BrowseEntry(kind: kind) { nav.catalogBrowse(kind) }
+            }
+          }
+          .padding(.horizontal, gutter)
+        }
+        .padding(.bottom, Space.s6)
+        .transition(Motion.fade)
+      }
+    }
+    .loadsDiscover(discover)
+  }
+}
+
+/// One way into the catalog: the kind's icon in a tile and "Browse movies",
+/// in the web's bordered block.
+private struct BrowseEntry: View {
+  let kind: String
+  let action: () -> Void
+  @Environment(\.palette) private var palette
+
+  var body: some View {
+    let shape = RoundedRectangle.kit(Radius.xl)
+    Pressable(shape: shape, action: action) {
+      HStack(spacing: Space.s3) {
+        LucideIcon(kind == TitleKind.show ? .tv : .film, size: 18, tint: palette.foreground)
+          .frame(width: 36, height: 36)
+          .background(palette.secondary, in: RoundedRectangle.kit(Radius.md))
+          .accessibilityHidden(true)
+        Text(browseName(kind))
+          .textStyle(.sm, weight: .medium)
+          .foregroundStyle(palette.foreground)
+          .lineLimit(2)
+          .frame(maxWidth: .infinity, alignment: .leading)
+      }
+      .padding(.horizontal, Space.s3)
+      .frame(minHeight: 60)
+      .background(palette.foreground.opacity(0.02), in: shape)
+      .overlay { shape.strokeBorder(palette.border) }
+      .contentShape(shape)
+    }
+    .accessibilityElement(children: .combine)
+    .accessibilityAddTraits(.isButton)
+  }
+}
