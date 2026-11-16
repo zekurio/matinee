@@ -505,6 +505,24 @@
         }
       }
     },
+    "ios_home_featured_position" : {
+      "comment" : "VoiceOver's word for where a card is in Home's featured carousel: the card's place, then how many there are.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld von %2$lld"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld of %2$lld"
+          }
+        }
+      }
+    },
     "ios_images_from_files" : {
       "comment" : "In the image editor's Upload menu: pick the image from the Files app. Android has one picker, iOS two.",
       "extractionState" : "manual",
@@ -542,7 +560,7 @@
       }
     },
     "ios_media_hero_next" : {
-      "comment" : "The featured banner's button on a slide. The web's media.hero.next.",
+      "comment" : "The button on an iPad that moves Home's featured carousel on a card. The web's media.hero.next.",
       "extractionState" : "manual",
       "localizations" : {
         "de" : {
@@ -560,7 +578,7 @@
       }
     },
     "ios_media_hero_previous" : {
-      "comment" : "The featured banner's button back a slide. The web's media.hero.previous.",
+      "comment" : "The button on an iPad that moves Home's featured carousel back a card. The web's media.hero.previous.",
       "extractionState" : "manual",
       "localizations" : {
         "de" : {

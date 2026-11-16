@@ -196,6 +196,19 @@ private struct StaticMenu: View {
 
 // MARK: Feedback
 
+/// Dots that step along on a tap, to see the current one move.
+private struct PageDotsDemo: View {
+  @State private var current = 1
+
+  var body: some View {
+    HStack(spacing: 20) {
+      PageDots(count: 5, current: current)
+      MatineeButton("Next", look: .outline, size: .sm) { withMotion(Motion.move) { current = (current + 1) % 5 } }
+      PageDots(count: 3, current: 0, tint: .white).padding(8).background(.black, in: Capsule())
+    }
+  }
+}
+
 struct FeedbackPage: View {
   @Environment(\.palette) private var palette
 
@@ -226,6 +239,9 @@ struct FeedbackPage: View {
           ProgressBar(0.66, track: .black.opacity(0.45)).padding(8)
         }
         .clipShape(RoundedRectangle.kit(Radius.sm))
+      }
+      Demo("Page dots", note: "Where a row of pages rests: the current one long. Only shows; the row is what's swiped.") {
+        PageDotsDemo()
       }
       Demo("Skeleton", note: "Pulses; still under Reduce Motion.") {
         HStack(alignment: .top, spacing: 12) {

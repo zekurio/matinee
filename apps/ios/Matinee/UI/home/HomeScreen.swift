@@ -3,10 +3,10 @@ import MatineeKit
 import SwiftUI
 
 /*
- * HomeScreen.kt, after the web's home.tsx: the featured banner, Continue
+ * HomeScreen.kt, after the web's home.tsx: the featured carousel, Continue
  * watching, Next up, the recommendation rows, and what each library got
- * last. The loads are HomeData.swift's, the banner Hero.swift's, and the
- * sections HomeSections.swift's. Offline, Home is the downloads
+ * last. The loads are HomeData.swift's, the carousel HomeCarousel.swift's,
+ * and the sections HomeSections.swift's. Offline, Home is the downloads
  * (OfflineHome.swift).
  *
  * This is the pattern a screen follows (Matinee/UI/README.md): its loads in
@@ -15,7 +15,7 @@ import SwiftUI
  * everything with a look.
  */
 
-/// Home: the featured banner, what to watch next, what the viewer might
+/// Home: the featured titles, what to watch next, what the viewer might
 /// like, and what each library got last. Offline mode leaves the server
 /// alone: Home is the downloads.
 struct HomeScreen: View {
@@ -29,7 +29,7 @@ struct HomeScreen: View {
         OnlineHomeScreen()
       }
     }
-    // Home draws its own top: the banner's art reaches under the status bar.
+    // Home draws its own top: its header, the logo on a phone.
     .hidesSystemNavigationBar()
   }
 }
@@ -37,35 +37,32 @@ struct HomeScreen: View {
 private struct OnlineHomeScreen: View {
   @State private var loaders = HomeLoaders()
   @State private var shelves = HomeShelves()
-  @Environment(\.windowSize) private var window
   @Environment(\.shellStyle) private var style
 
   var body: some View {
-    GeometryReader { proxy in
-      page(topInset: proxy.safeAreaInsets.top)
-    }
-    .loadsHome(loaders)
+    page
+      .loadsHome(loaders)
     #if DEBUG
       .onChange(of: standIns, initial: true) { HomeDevData.standIns.titles = standIns }
     #endif
   }
 
-  @ViewBuilder private func page(topInset: CGFloat) -> some View {
+  @ViewBuilder private var page: some View {
     let libraries = loaders.libraries
     if failedOutright(libraries.state, [loaders.resume.state, loaders.nextUp.state, loaders.featured.state]) {
       if case .failed(let message, let disconnected) = libraries.state {
         ErrorBox(Str.homeFailed, message, disconnected: disconnected) { loaders.all.forEach { $0.reload() } }
       }
     } else {
-      content(topInset: topInset)
+      content
     }
   }
 
-  private func content(topInset: CGFloat) -> some View {
+  private var content: some View {
     let libraries = loaders.libraries
     return ScrollView {
       LazyVStack(alignment: .leading, spacing: style == .tablet ? Space.s10 : Space.s6) {
-        banner(topInset: topInset)
+        top
         if libraries.state.value?.isEmpty == true {
           NoLibrariesNote()
         } else {
@@ -89,29 +86,25 @@ private struct OnlineHomeScreen: View {
     .refreshable { await refresh() }
   }
 
-  /// The banner, or with none, Home's header alone. Showing what loaded
-  /// before while the server can't be reached: the cloud, up top.
-  @ViewBuilder private func banner(topInset: CGFloat) -> some View {
-    let featured = loaders.featured
-    let height = heroHeight(
-      window: window.height, wide: heroIsWide(width: window.width, height: window.height), topInset: topInset)
+  /// Home's header, then the featured titles: their cards, or while they
+  /// load, their place. With none, or when they failed, the header alone.
+  private var top: some View {
     let stale: [any Reloadable] = loaders.all + Array(shelves.loaders.values)
-    let header = { AppHeader(topInset: topInset) { DisconnectedAction(stale) } }
-    switch featured.state {
-    case .loading:
-      // The art reaches up under the status bar, and on an iPad the tabs.
-      HeroSkeleton(height: height, top: header).padding(.top, -topInset)
-    case .failed:
-      NoBanner(stale: stale)
-    case .ready(let featured):
-      let slides = HomeDevData.fill(
-        featured, standIns: (loaders.resume.state.value ?? []) + (loaders.nextUp.state.value ?? []))
-      if slides.isEmpty {
-        NoBanner(stale: stale)
-      } else {
-        Hero(slides: slides, height: height, topInset: topInset, top: header)
-          .id(slides.count)
-          .padding(.top, -topInset)
+    return VStack(alignment: .leading, spacing: 0) {
+      HomeHeader(stale: stale)
+      switch loaders.featured.state {
+      case .loading:
+        HomeCarouselSkeleton()
+      case .failed:
+        EmptyView()
+      case .ready(let featured):
+        let slides = HomeCarouselDevData.slides(
+          HomeDevData.fill(
+            featured, standIns: (loaders.resume.state.value ?? []) + (loaders.nextUp.state.value ?? [])))
+        if !slides.isEmpty {
+          // Other titles start the row at its first card again.
+          HomeCarousel(slides: slides).id(slides.map(\.title.id))
+        }
       }
     }
   }
@@ -138,17 +131,20 @@ private struct OnlineHomeScreen: View {
   #endif
 }
 
-/// Home's top without a banner: room under the status bar, as the web
-/// leaves, or the header when it has something to say.
-private struct NoBanner: View {
+/// Home's header over the featured titles. A phone's, always: the logo,
+/// and the cloud while the server can't be reached. An iPad's tabs have the
+/// logo, so there it shows only with the cloud, and is a little room under
+/// the tabs otherwise.
+private struct HomeHeader: View {
   let stale: [any Reloadable]
   @Environment(\.offline) private var offline
+  @Environment(\.shellStyle) private var style
 
   var body: some View {
-    if offline || stale.contains(where: { $0.refreshError != nil && $0.refreshDisconnected }) {
+    if style == .phone || offline || stale.contains(where: { $0.refreshError != nil && $0.refreshDisconnected }) {
       AppHeader { DisconnectedAction(stale) }
     } else {
-      Color.clear.frame(height: Space.s2)
+      Color.clear.frame(height: Space.s4)
     }
   }
 }

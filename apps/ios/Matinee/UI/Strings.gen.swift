@@ -2836,6 +2836,8 @@ nonisolated enum Str {
   static var iosDownloadsChangeFailed: String { tr("ios_downloads_change_failed", table: "iOS") }
   /// Couldn't start the download
   static var iosDownloadsQueueFailed: String { tr("ios_downloads_queue_failed", table: "iOS") }
+  /// %1$lld of %2$lld
+  static func iosHomeFeaturedPosition(_ p1: Int, _ p2: Int) -> String { tr("ios_home_featured_position", table: "iOS", p1, p2) }
   /// Choose File
   static var iosImagesFromFiles: String { tr("ios_images_from_files", table: "iOS") }
   /// Photo Library

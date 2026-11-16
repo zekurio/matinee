@@ -7,10 +7,11 @@ import MatineeCore
  * checking Home's layout. Debug builds only; release builds leave
  * everything as the server sent it.
  *
- * - `-dev.art YES`: fixed public pictures stand in for the banner's
- *   backdrops, the first slide gets a logo, and every slide an overview,
- *   genres, and ratings. With no featured titles, Continue watching and
- *   Next up stand in.
+ * - `-dev.art YES`: fixed public pictures stand in for the featured
+ *   titles' backdrops, and every one gets an overview, genres, and
+ *   ratings. With no featured titles, Continue watching and Next up stand
+ *   in. The iPhone's carousel takes real pictures from a folder with
+ *   `-dev.featuredArt` (HomeCarouselDevData.swift).
  * - `-dev.recommendations YES`: with no recommendation rows from the
  *   server, two made of Home's other titles, so the rows and "Not
  *   interested" can be tried.
@@ -55,7 +56,6 @@ enum HomeDevData {
       "https://images.unsplash.com/photo-1478720568477-152d9b164e26?w=1280",
       "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=1280",
     ]
-    private static let logoURL = "https://www.gstatic.com/images/branding/googlelogo/2x/googlelogo_light_color_272x92dp.png"
   #endif
 
   static func backdrop(_ slide: FeaturedTitle) -> [ImageSource]? {
@@ -63,15 +63,6 @@ enum HomeDevData {
       guard on else { return nil }
       let index = slide.title.id.unicodeScalars.reduce(0) { $0 + Int($1.value) } % backdrops.count
       return ImageSource(backdrops[index]).map { [$0] }
-    #else
-      return nil
-    #endif
-  }
-
-  static func logo(_ slide: FeaturedTitle) -> URL? {
-    #if DEBUG
-      guard on, slide.title.year == 1999 else { return nil }
-      return URL(string: logoURL)
     #else
       return nil
     #endif

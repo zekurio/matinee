@@ -155,15 +155,17 @@
   // MARK: Bars
 
   struct BarsPage: View {
-    @Environment(\.windowSize) private var window
     @Environment(\.gutter) private var gutter
 
     var body: some View {
       VStack(alignment: .leading, spacing: Space.s7) {
-        GalleryHeading("The banner, with what a provider would send")
-        Hero(slides: Sample.featured, height: heroHeight(window: window.height, wide: heroIsWide(width: window.width, height: window.height)), topInset: 0) {
+        GalleryHeading("Home's header and featured titles, with what a provider would send")
+        VStack(alignment: .leading, spacing: 0) {
           AppHeader { RoundIconButton(.cloudOff, label: Str.serverUnreachable, look: .ghost, size: 40, iconSize: 20) {} }
+          HomeCarousel(slides: Sample.featured)
         }
+        GalleryHeading("Featured titles while they load")
+        HomeCarouselSkeleton()
 
         GalleryHeading("Back and Home over art, and the back swipe")
         NavigationLink(value: Sample.movies[0].name) {

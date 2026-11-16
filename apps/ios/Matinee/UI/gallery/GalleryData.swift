@@ -74,7 +74,7 @@
       item(title("The Matrix"), name: "The Matrix", duration: 8160, position: 3000),
     ]
 
-    /// The banner's slides, with what a provider would send: genres, a rating, an overview.
+    /// Home's featured titles, with what a provider would send: genres, a rating, an overview.
     static var featured: [FeaturedTitle] {
       var matrix = title("The Matrix")
       matrix.genres = ["Science Fiction", "Action"]
