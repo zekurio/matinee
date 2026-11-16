@@ -685,6 +685,42 @@
         }
       }
     },
+    "ios_player_ends_at" : {
+      "comment" : "When the file ends at this speed, beside the seek bar of the phone's and the TV's player; %@ is the time of day. The web's player.endsAt, which Android's player no longer shows.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Endet um %@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ends at %@"
+          }
+        }
+      }
+    },
+    "ios_player_remaining" : {
+      "comment" : "VoiceOver's label for the time left beside the phone player's seek bar; %@ is the time, as 12:34.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noch %@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ remaining"
+          }
+        }
+      }
+    },
     "ios_player_show_length" : {
       "comment" : "What tapping the player's time at the end of the seek bar does while it shows the time left. The web's player.showLength.",
       "extractionState" : "manual",

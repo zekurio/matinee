@@ -325,7 +325,7 @@ private struct PlayerBottomBar: View {
           SteadyClock(seconds: remaining ? max(0, duration - shown) : duration, duration: duration, prefix: remaining ? "-" : "")
         }
         .accessibilityLabel(
-          remaining ? Str.a11yPlayerRemaining(formatClock(max(0, duration - shown))) : formatClock(duration))
+          remaining ? Str.iosPlayerRemaining(formatClock(max(0, duration - shown))) : formatClock(duration))
         .accessibilityHint(remaining ? Str.iosPlayerShowLength : Str.iosPlayerShowTimeLeft)
       }
       .padding(.horizontal, Space.s1)
@@ -379,7 +379,7 @@ private struct EndsAt: View {
     if duration > 0, left > 0 {
       let end = Date(timeIntervalSinceNow: left).formatted(
         Date.FormatStyle(date: .omitted, time: .shortened).locale(.app))
-      Text(Str.playerEndsAt(end)).modifier(OverlayText(opacity: 0.75))
+      Text(Str.iosPlayerEndsAt(end)).modifier(OverlayText(opacity: 0.75))
     }
   }
 }

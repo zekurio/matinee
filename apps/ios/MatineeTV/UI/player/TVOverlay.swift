@@ -183,7 +183,7 @@ private struct TVEndsAt: View {
       // To the minute, so it changes once a minute rather than with every frame.
       let end = Date(timeIntervalSinceNow: left).formatted(
         Date.FormatStyle(date: .omitted, time: .shortened).locale(.app))
-      Text(Str.playerEndsAt(end)).textStyle(.facts).opacity(0.75).lineLimit(1)
+      Text(Str.iosPlayerEndsAt(end)).textStyle(.facts).opacity(0.75).lineLimit(1)
     }
   }
 }
