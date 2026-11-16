@@ -370,7 +370,9 @@
         arrivedAt: item.arrivedAt, availability: item.availability, season: item.season, status: request.status,
         fulfilmentState: request.status == "accepted" ? "sent" : nil, error: nil, reason: request.reason, note: request.note,
         declinedAt: request.status == "declined" ? instant(-86_400) : nil,
-        connection: AdminRequestItem.Connection(id: "c-radarr", name: request.ref.kind == "show" ? "Sonarr" : "Radarr", reportsProgress: true),
+        connection: AdminRequestItem.Connection(
+          id: "c-radarr", name: request.ref.kind == "show" ? "Sonarr 4K" : "Radarr 4K",
+          sourceName: request.ref.kind == "show" ? "Sonarr" : "Radarr", reportsProgress: true),
         followers: request.followers, destinationDescription: item.library.name, destinations: [], remoteUrl: nil, diagnostics: [])
     }
 

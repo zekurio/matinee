@@ -207,7 +207,7 @@ struct RequestScreensTests {
     looking.stillLooking = true
     #expect(requestProgress(adminItem("r", availability: looking)) == .looking)
     #expect(requestProgress(adminItem("r", availability: value("coming", nil), fulfilment: "queued")) == .queued)
-    let byHand = AdminRequestItem.Connection(id: "c", name: "By hand", reportsProgress: false)
+    let byHand = AdminRequestItem.Connection(id: "c", name: "By hand", sourceName: "Manual", reportsProgress: false)
     #expect(requestProgress(adminItem("r", availability: value("coming", nil), connection: byHand)) == .byHand)
     #expect(requestProgress(adminItem("r", availability: value("coming", nil))) == .sent)
     #expect(requestOutcome(adminItem("r", status: "declined", reason: "notFound")) == .declined(at: nil, reason: "notFound", gaveUp: true))
