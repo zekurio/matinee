@@ -131,6 +131,9 @@
     <string name="favorites_empty_hint">Tippe bei einem Titel auf das Herz, um ihn hier zu speichern.</string>
     <string name="favorites_load_failed">Deine Favoriten konnten nicht geladen werden</string>
     <string name="home_load_failed">Deine Mediatheken konnten nicht geladen werden</string>
+    <string name="home_featured_position">%1$d von %2$d</string>
+    <string name="home_featured_previous">Vorherige Folie</string>
+    <string name="home_featured_next">Nächste Folie</string>
     <string name="browse_continue_watching">Weiterschauen</string>
     <string name="browse_next_up">Als Nächstes</string>
     <string name="browse_recently_added">Neu in %1$s</string>
@@ -206,9 +209,7 @@
     <string name="media_watched_at_unknown">Weiß nicht mehr</string>
     <string name="media_watched_date_title">Wann hast du es gesehen?</string>
     <string name="media_mark_unwatched_failed">Konnte nicht als ungesehen markiert werden</string>
-    <string name="media_hero_show_slide">Folie %1$d zeigen</string>
     <string name="media_hero_rated">Bewertung</string>
-    <string name="media_hero_play">Abspielen</string>
     <string name="media_hero_episodes">Folgen</string>
     <string name="media_hero_details">Details</string>
     <plurals name="media_episode_count">

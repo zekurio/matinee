@@ -10,7 +10,6 @@ import android.content.res.Resources
 import android.os.Build
 import android.util.Rational
 import android.view.WindowManager
-import android.view.accessibility.AccessibilityManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
@@ -188,6 +187,7 @@ import io.github.zekurio.matinee.ui.kit.Spinner
 import io.github.zekurio.matinee.ui.kit.focusRing
 import io.github.zekurio.matinee.ui.player.tv.TvPlayerScreen
 import io.github.zekurio.matinee.ui.rememberLoader
+import io.github.zekurio.matinee.ui.rememberTouchExploration
 import io.github.zekurio.matinee.ui.settings.languageName
 import io.github.zekurio.matinee.ui.settings.qualityLabel
 import io.github.zekurio.matinee.ui.theme.LocalTv
@@ -723,20 +723,6 @@ internal enum class Menu { Audio, Subtitles, Quality, Speed, Settings }
 
 /** The keys that skip or bring up the controls, which a locked player keeps from doing either. */
 private val NAVIGATION_KEYS = setOf(Key.DirectionLeft, Key.DirectionRight, Key.DirectionCenter, Key.Enter, Key.DirectionUp, Key.DirectionDown)
-
-/** Whether a screen reader explores the screen by touch, as TalkBack does. */
-@Composable
-private fun rememberTouchExploration(): Boolean {
-    val context = LocalContext.current
-    val manager = remember(context) { context.getSystemService(AccessibilityManager::class.java) }
-    var exploring by remember(manager) { mutableStateOf(manager?.isTouchExplorationEnabled == true) }
-    DisposableEffect(manager) {
-        val listener = AccessibilityManager.TouchExplorationStateChangeListener { exploring = it }
-        manager?.addTouchExplorationStateChangeListener(listener)
-        onDispose { manager?.removeTouchExplorationStateChangeListener(listener) }
-    }
-    return exploring
-}
 
 /** How far two fingers spread, or pinch by its inverse, before the video switches. */
 private const val PINCH_FILL = 1.15f

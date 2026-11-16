@@ -51,6 +51,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -65,6 +66,7 @@ import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.name
 import io.github.zekurio.matinee.ui.components.Avatar
 import io.github.zekurio.matinee.ui.components.LocalApi
+import io.github.zekurio.matinee.ui.components.Logo
 import io.github.zekurio.matinee.ui.kit.Gutter
 import io.github.zekurio.matinee.ui.kit.Lucide
 import io.github.zekurio.matinee.ui.kit.LucideIcon
@@ -268,12 +270,12 @@ private fun TabButton(
 }
 
 /**
- * Home's header: room for the status bar over the banner's art, and
- * whether the app is offline. It scrolls away with the page. The shade
- * under the status bar is Home's [StatusBarScrim], not this, so the two
- * don't stack into a band. The banner's own title logo carries the top, so
- * there's no app logo competing with it; search and the account are in the
- * tab bar.
+ * Home's header, over its featured titles and over offline Home's rows:
+ * the logo, as the top edge a tab's first page has, and whether the app is
+ * offline, or [action], as the icon to reach the server again. It sits under
+ * the status bar and scrolls away with the page. The shade under the status
+ * bar once the page scrolls is Home's [StatusBarScrim], not this. Search and
+ * the account are in the tab bar.
  */
 @Composable
 fun AppHeader(modifier: Modifier = Modifier, action: @Composable () -> Unit = {}) {
@@ -281,9 +283,11 @@ fun AppHeader(modifier: Modifier = Modifier, action: @Composable () -> Unit = {}
     Box(modifier.fillMaxWidth()) {
         Row(
             Modifier.statusBarsPadding().height(56.dp).fillMaxWidth().padding(horizontal = Gutter),
-            horizontalArrangement = Arrangement.End,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            Logo(Modifier.semantics { heading() }, height = 20.dp)
+            Box(Modifier.weight(1f))
             if (offline) LucideIcon(Lucide.CloudOff, stringResource(R.string.downloads_offline), size = 20.dp, tint = Palette.Muted)
             else action()
         }

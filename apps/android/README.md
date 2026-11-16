@@ -92,8 +92,11 @@ folder as is.
   `/link`. TVs only offer the code. See
   [Signing in apps](../server/README.md#signing-in-apps). Tokens are
   encrypted with an Android Keystore key and excluded from backups.
-- Home, libraries with sort and genre filters, search, title, season, and
-  episode pages, watched marks, and favorites. Long press a card for more.
+- Home opens with the featured titles in a row of cards, after Findroid's:
+  one on a phone, two from 600 dp, three from 840, each with its genres and
+  its name over the backdrop. Then libraries with sort and genre filters,
+  search, title, season, and episode pages, watched marks, and favorites.
+  Long press a card for more.
 - The player sends the server what the device can play and plays what
   `playback.start` returns. If a source fails, it asks again and the server
   falls back. It draws WebVTT itself, shows trickplay while scrubbing,
@@ -172,6 +175,13 @@ The flake has no emulator. Use your own SDK, Android Studio, or
 To reach the dev server, run `just android reverse` and connect to
 `http://localhost:5173`.
 
+The dev server's artwork is test patterns, which can't show whether white
+text reads on a picture. A debug build puts pictures from
+`files/featured-art/` in its external storage on Home's featured cards,
+named and configured as `ui/home/HomeCarouselDevData.kt` says. Open Home
+once so the app makes the folder, then push pictures into it with
+`adb push`. They stay out of the repository.
+
 ### The API client
 
 `api/ContractModels.kt` and `api/ContractApi.kt` are generated from the
@@ -216,6 +226,9 @@ Requests and the filters added these, each after its web counterpart:
 - `MatineeButton` takes a `shape`, for half of a split button, and
   `dimmed`, for a button that looks disabled but still says why on a tap.
   `ButtonLook.Glass` is white over a dark shade on a picture.
+
+Home's featured cards added `PageDots`, the web carousel's dots for where
+a row of pages rests, the current one long.
 
 ### Strings and icons
 
