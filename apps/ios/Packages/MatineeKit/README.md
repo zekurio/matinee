@@ -215,11 +215,20 @@ a value or a line of detail muted.
 - `BottomBar([TabBarItem(id, label:, icon:)], accessory:, selection:) { id in }`,
   `TabBarItem(id, label:) { selected in picture }` for the avatar, and
   `.bottomBar(bar)`: the web's floating tab capsule and search circle, with
-  no fade under it. It steps aside for the keyboard; toasts rise over it.
+  no fade under it: the page shows through them blurred, under the popover
+  at 50%, as Android's glass. It steps aside for the keyboard; toasts rise
+  over it.
 - `NavBar([TabBarItem], trailing: [TabBarItem], selection:) { id in } leading: { logo }`
   and `.navBar(bar)`: the web's bar from `sm` up, for a tablet: one frosted
-  capsule, centered at the top over a fade, of the logo, the tabs by name,
-  and search and the account. The page's safe area starts below it.
+  capsule, centered at the top over the status bar's frost, of the logo,
+  the tabs by name, and search and the account. The page's safe area
+  starts below it.
+- `StatusBarFrost(bar:, veil:, reducedVeil:)`: Android's status bar frost,
+  the page blurred and veiled in `--background` across the status bar
+  (`bar` tall), then thinning out over 48 below it, the blur easing off
+  as the veil fades. The app gives the veil's strength for how far its
+  page has scrolled; under Reduce Transparency there's no blur and the
+  veil is `reducedVeil`.
 - Both bars keep their size at the accessibility text sizes, as iOS's tab
   bar does, show a tab's name large on a long press, and take ⌘1, ⌘2, …
 - `.keyCommand("f", modifiers: .command, label: "Search") { }`: a hardware

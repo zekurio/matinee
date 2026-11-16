@@ -6,8 +6,8 @@ import SwiftUI
  * Bars.kt: the bars around pages. The tabs on a tab's first page, at the
  * bottom of a phone and at the top of an iPad (Shell.swift says which);
  * Home's header, the logo on a phone; the floating buttons over a title's
- * art; and the shade that keeps the status bar readable once a page
- * scrolls under it.
+ * art; and the frost that keeps the status bar readable over art and once
+ * a page scrolls under it.
  *
  * A page opened from a tab gets its top from the kit, `.topBar(title)`,
  * which hides the system's bar and keeps the edge swipe back; one that
@@ -131,8 +131,10 @@ private struct ProfileTabPicture: View {
 /// on a phone, the logo, as the top edge the tab's first page has; and
 /// whether the app is offline, or `action`, as the icon to reach the server
 /// again. An iPad's tabs have the logo already, so there it holds only the
-/// icon. It scrolls away with the page. Search and the account are in the
-/// tabs. The status bar's shade is the page's `statusBarScrim`.
+/// icon. It sits below the status bar and scrolls away with the page.
+/// Search and the account are in the tabs. The frost under the status bar
+/// is the page's `statusBarScrim(fadesIn: true)`, which stays away at rest
+/// so it doesn't blur the logo.
 struct AppHeader<Action: View>: View {
   @ViewBuilder var action: () -> Action
   @Environment(\.offline) private var offline
@@ -200,17 +202,19 @@ struct ItemTopBar: View {
 }
 
 extension View {
-  /// Keeps the status bar readable once a scroll view under it scrolls, as
-  /// Android's `StatusBarScrim`: never quite clear, deepening over the first
-  /// 40 points of scrolling, and ending just past the bar, so there's no
-  /// band across the art while the page sits at its top. Goes on the
-  /// `ScrollView` of a page whose art reaches under the status bar.
-  func statusBarScrim() -> some View { modifier(StatusBarScrim()) }
+  /// Keeps the status bar readable over art and once a scroll view under
+  /// it scrolls, as Android's `StatusBarScrim`: the kit's `StatusBarFrost`,
+  /// the page blurred and veiled across the whole bar and thinning out
+  /// below it, light at rest and deepening over the first 40 points of
+  /// scrolling. `fadesIn`, for Home, whose header sits below the bar, brings
+  /// the frost in over those 40 points, since at rest it would only blur the
+  /// logo. Goes on the `ScrollView` of a page that reaches under the status bar.
+  func statusBarScrim(fadesIn: Bool = false) -> some View { modifier(StatusBarScrim(fadesIn: fadesIn)) }
 }
 
 private struct StatusBarScrim: ViewModifier {
-  @State private var scrolled: CGFloat = 0
-  @Environment(\.palette) private var palette
+  let fadesIn: Bool
+  @State private var strength: StatusBarFrostStrength?
   @Environment(\.shellStyle) private var style
   @Environment(\.tabRoot) private var tabRoot
 
@@ -222,29 +226,22 @@ private struct StatusBarScrim: ViewModifier {
 
   func body(content: Content) -> some View {
     content
-      .onScrollGeometryChange(for: CGFloat.self) { geometry in
-        let down = (geometry.contentOffset.y + geometry.contentInsets.top) / 40
-        return down.isFinite ? min(max(down, 0), 1) : 0
+      .onScrollGeometryChange(for: StatusBarFrostStrength.self) { [fadesIn] geometry in
+        // Settles once the page is 40 down, so scrolling on redraws nothing.
+        StatusBarFrostStrength(offset: geometry.contentOffset.y + geometry.contentInsets.top, fadesIn: fadesIn)
       } action: { _, value in
-        scrolled = value
+        strength = value
       }
       .overlay(alignment: .top) {
-        // On an iPad the tabs' own fade does this, where they show: a page
+        // On an iPad the tabs' own frost does this, where they show: a page
         // opened from a tab covers them, and needs its own.
         if style == .phone || !tabRoot {
-          let shown = 0.75 + 0.25 * (scrolled.isFinite ? scrolled : 0)
+          let strength = strength ?? StatusBarFrostStrength(offset: 0, fadesIn: fadesIn)
           GeometryReader { proxy in
-            LinearGradient(
-              stops: [
-                .init(color: palette.background.opacity(0.85 * shown), location: 0),
-                .init(color: palette.background.opacity(0.6 * shown), location: 0.45),
-                .init(color: palette.background.opacity(0.2 * shown), location: 0.75),
-                .init(color: palette.background.opacity(0), location: 1),
-              ], startPoint: .top, endPoint: .bottom
-            )
-            .frame(height: statusBar(proxy) * 1.35)
-            // From the screen's top, wherever the scroll view itself starts.
-            .offset(y: -proxy.frame(in: .global).minY)
+            StatusBarFrost(bar: statusBar(proxy), veil: strength.veil, reducedVeil: strength.reducedVeil)
+              .opacity(strength.opacity)
+              // From the screen's top, wherever the scroll view itself starts.
+              .offset(y: -proxy.frame(in: .global).minY)
           }
           .ignoresSafeArea(edges: .horizontal)
           .allowsHitTesting(false)

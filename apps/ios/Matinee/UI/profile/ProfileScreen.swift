@@ -283,7 +283,7 @@ private struct FavoritesRail: View {
 /// `ProfileAskedRail` and the web's: what you asked for is yours alone,
 /// and this is only ever your own profile. Online only.
 private struct ProfileRequests: View {
-  var body: some View { AskedRail(.profile) }
+  var body: some View { AskedRail() }
 }
 
 /// What they watched last, a file per title, its heading opening the whole list.

@@ -371,8 +371,10 @@ private struct BottomBarModifier<ID: Hashable>: ViewModifier {
 }
 
 extension View {
-  /// The bars' surfaces: the popover, frosted, with a faint rim, lifted off
-  /// the page by a shadow: `bg-popover/85 backdrop-blur-xl border-foreground/[0.08]`.
+  /// The bars' surfaces: the page under them frosted, as Android's tab bar
+  /// glass, the page blurred under a thin veil of the popover's color with a
+  /// faint rim, lifted off the page by a shadow. The art and rows passing
+  /// beneath show through as color. Solid under Reduce Transparency.
   func floating<S: Shape>(_ shape: S) -> some View {
     modifier(Floating(shape: shape))
   }
@@ -390,10 +392,115 @@ private struct Floating<S: Shape>: ViewModifier {
         if reduceTransparency {
           shape.fill(palette.popover)
         } else {
-          shape.fill(.regularMaterial).overlay(shape.fill(palette.popover.opacity(0.85)))
+          // The thinnest material, which blurs as the others do but tints
+          // least, so the veil over it is what colors it, as Android's 50%.
+          shape.fill(.ultraThinMaterial).environment(\.colorScheme, palette.scheme)
+            .overlay(shape.fill(palette.popover.opacity(0.5)))
         }
       }
-      .overlay { shape.stroke(palette.foreground.opacity(0.08)) }
+      .overlay { shape.stroke(palette.foreground.opacity(0.1)) }
       .kitShadow(.bar)
+  }
+}
+
+/// The frost under the status bar, as Android's `StatusBarScrim`: the page
+/// behind it blurred and veiled in the page's color, evenly across the whole
+/// bar, so its clock and icons sit on one shade rather than half on shade
+/// and half on bare art. Below the bar it thins out over `feather`: the blur
+/// eases off as the veil fades, so the page comes back sharp gradually
+/// rather than a blurred band ending on a line. `bar` is the status bar's
+/// height; the frost is `bar + feather` tall, from the screen's top.
+///
+/// The app says how strong: `veil` over the blur, and `reducedVeil` under
+/// Reduce Transparency, where nothing is blurred and the veil alone, a
+/// stronger one, keeps the bar readable.
+public struct StatusBarFrost: View {
+  let bar: CGFloat
+  let veil: Double
+  let reducedVeil: Double
+  @Environment(\.palette) private var palette
+  @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+
+  /// How far below the bar the frost thins out: Android's 48 dp.
+  public static var feather: CGFloat { 48 }
+
+  public init(bar: CGFloat, veil: Double, reducedVeil: Double) {
+    self.bar = bar
+    self.veil = veil
+    self.reducedVeil = reducedVeil
+  }
+
+  public var body: some View {
+    let total = max(bar, 0) + Self.feather
+    let edge = max(bar, 0) / total
+    ZStack {
+      if !reduceTransparency {
+        // iOS's materials can't take a radius, nor blur by degrees, so
+        // the blur's ease is drawn as how much of it shows.
+        Rectangle().fill(.ultraThinMaterial).environment(\.colorScheme, palette.scheme)
+          .mask(Self.gradient(Self.blurMask(edge: edge)))
+      }
+      Rectangle().fill(palette.background.opacity(reduceTransparency ? reducedVeil : veil))
+        .mask(Self.gradient(Self.veilMask(edge: edge)))
+    }
+    .frame(height: total)
+    .frame(maxWidth: .infinity)
+    .allowsHitTesting(false)
+    .accessibilityHidden(true)
+  }
+
+  private static func gradient(_ stops: [(location: Double, opacity: Double)]) -> LinearGradient {
+    LinearGradient(
+      stops: stops.map { Gradient.Stop(color: .black.opacity($0.opacity), location: $0.location) },
+      startPoint: .top, endPoint: .bottom)
+  }
+
+  /// The veil's mask, as Android's: whole across the bar, then a smoothstep
+  /// out below it, so neither end of the fade shows as an edge. `edge` is
+  /// where the bar ends, as a fraction of the frost's height.
+  static func veilMask(edge: Double) -> [(location: Double, opacity: Double)] {
+    let feather = 1 - edge
+    return [
+      (0, 1), (edge, 1), (edge + feather * 0.25, 0.84), (edge + feather * 0.5, 0.5),
+      (edge + feather * 0.75, 0.16), (1, 0),
+    ]
+  }
+
+  /// The blur's: the veil's mask, and under it Android's progressive blur,
+  /// whole across the bar and easing in and out to none by the frost's end.
+  static func blurMask(edge: Double) -> [(location: Double, opacity: Double)] {
+    let veil = veilMask(edge: edge)
+    let steps = 12
+    return [(0, 1)]
+      + (0...steps).map { step in
+        let along = Double(step) / Double(steps)
+        let location = edge + (1 - edge) * along
+        return (location, opacity(of: veil, at: location) * (1 - easeInOut(along)))
+      }
+  }
+
+  /// `stops` read at `location`, as a gradient draws between them.
+  private static func opacity(of stops: [(location: Double, opacity: Double)], at location: Double) -> Double {
+    guard let after = stops.firstIndex(where: { $0.location >= location }) else { return stops.last?.opacity ?? 0 }
+    guard after > 0 else { return stops[after].opacity }
+    let from = stops[after - 1]
+    let to = stops[after]
+    let span = to.location - from.location
+    guard span > 0 else { return to.opacity }
+    return from.opacity + (to.opacity - from.opacity) * (location - from.location) / span
+  }
+
+  /// Compose's `EaseInOut`, `cubic-bezier(0.42, 0, 0.58, 1)`, at `x`.
+  private static func easeInOut(_ x: Double) -> Double {
+    func curve(_ t: Double, _ a: Double, _ b: Double) -> Double {
+      3 * (1 - t) * (1 - t) * t * a + 3 * (1 - t) * t * t * b + t * t * t
+    }
+    var low = 0.0
+    var high = 1.0
+    for _ in 0..<32 {
+      let middle = (low + high) / 2
+      if curve(middle, 0.42, 0.58) < x { low = middle } else { high = middle }
+    }
+    return curve((low + high) / 2, 0, 1)
   }
 }
