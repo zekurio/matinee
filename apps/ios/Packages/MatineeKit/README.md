@@ -607,13 +607,14 @@ focused title.
 - `.onTVTap(isEnabled: focused) { }`: a tap on the touch surface, which
   isn't a click; a tap that clicks counts only as the click, which the
   focused button hears. The player shows its controls for one.
-- `TVSeekBar(fraction:, buffered:, elapsed:, remaining:, bubble:, widest:, scrubbing:, label:, value:, action:) { preview }`:
-  the player's seek bar, Android TV's `TvSeekBar`: the time either side
-  of a track in the accent over what's buffered. Focused, it thickens and
-  shows its head with `bubble`, the time there, floating over it, and
-  `preview`, the trickplay frame, over that while `scrubbing`; Select runs
-  `action`. It only draws: the screen moves it with `TVScrub`, and leaves
-  `TVSeekBars.bubbleRoom` clear above it for the bubble.
+- `TVSeekBar(fraction:, buffered:, elapsed:, length:, bubble:, widest:, scrubbing:, label:, value:, action:) { preview }`:
+  the player's seek bar, Android TV's `TvSeekBar`: the time played and the
+  file's length either side of a track in the accent over what's buffered.
+  Focused, it thickens and shows its head with `bubble`, the time there,
+  floating over it, and `preview`, the trickplay frame, over that while
+  `scrubbing`; Select runs `action`. It only draws: the screen moves it
+  with `TVScrub`, and leaves `TVSeekBars.bubbleRoom` clear above it for
+  the bubble.
 
 Presses and swipes reach every listener on screen, so give `isEnabled` only
 while what listens has focus.

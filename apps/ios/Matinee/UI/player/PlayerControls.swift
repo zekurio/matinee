@@ -263,7 +263,9 @@ private struct PlayButton: View {
   }
 }
 
-/// A circular arrow with the skip length inside it: the web's `SkipIcon`, big.
+/// A circular arrow with the skip length inside it: Android's `SkipButton`.
+/// The web's player has drawn lucide's rewind and fast-forward since #42;
+/// Android kept the arrows, and the phone follows Android.
 private struct SkipButton: View {
   let icon: Lucide
   let seconds: Int
@@ -303,30 +305,20 @@ private struct EpisodeButton: View {
   }
 }
 
-/// The time played, when the file ends, and the time left, over the seek bar.
+/// The time played and the full length, over the seek bar: Android's
+/// `SeekBar` since it dropped the end time and the countdown (#54), and
+/// the web's `ElapsedTime` and `TotalTime`.
 private struct PlayerBottomBar: View {
   let controller: PlayerController
   let onTouch: () -> Void
-  /// The time left, or the length, which a tap switches between, as on the web.
-  @State private var remaining = true
 
   var body: some View {
-    let duration = max(0, controller.duration)
-    let shown = controller.scrubPosition ?? controller.position
+    let clocks = SeekClocks(position: controller.scrubPosition ?? controller.position, duration: controller.duration)
     VStack(spacing: 0) {
       HStack(spacing: Space.s3) {
-        SteadyClock(seconds: shown, duration: duration)
+        SteadyClock(text: clocks.elapsed, widest: clocks.widest, alignment: .leading)
         Spacer(minLength: 0)
-        EndsAt(controller: controller)
-        Pressable(shape: RoundedRectangle.kit(Radius.sm), wash: false) {
-          remaining.toggle()
-          onTouch()
-        } label: {
-          SteadyClock(seconds: remaining ? max(0, duration - shown) : duration, duration: duration, prefix: remaining ? "-" : "")
-        }
-        .accessibilityLabel(
-          remaining ? Str.iosPlayerRemaining(formatClock(max(0, duration - shown))) : formatClock(duration))
-        .accessibilityHint(remaining ? Str.iosPlayerShowLength : Str.iosPlayerShowTimeLeft)
+        SteadyClock(text: clocks.length, widest: clocks.widest, alignment: .trailing)
       }
       .padding(.horizontal, Space.s1)
       SeekBar(controller: controller, onTouch: onTouch)
@@ -338,48 +330,29 @@ private struct PlayerBottomBar: View {
 
 /// The web's text over the picture: `text-sm font-medium` white with tabular figures and a shadow.
 private struct OverlayText: ViewModifier {
-  var opacity = 1.0
   func body(content: Content) -> some View {
     content
       .textStyle(.sm, weight: .medium)
       .monospacedDigit()
-      .foregroundStyle(.white.opacity(opacity))
+      .foregroundStyle(.white)
       .lineLimit(1)
       .pictureShadow()
   }
 }
 
-/// A time beside the seek bar, as wide as the longest time `duration` can
-/// show, so neither it nor what sits beside it moves as it counts:
-/// Android's `SeekClock`.
+/// A time beside the seek bar, as wide as `widest`, the longest the
+/// length lets it show, so neither it nor what sits beside it moves as it
+/// counts: Android's `SeekClock`.
 private struct SteadyClock: View {
-  let seconds: Double
-  let duration: Double
-  var prefix = ""
+  let text: String
+  let widest: String
+  let alignment: Alignment
 
   var body: some View {
-    // With tabular figures every digit is as wide as a 0.
-    let longest = prefix + formatClock(duration).replacing(/[0-9]/, with: "0")
-    ZStack(alignment: .trailing) {
-      Text(longest).hidden()
-      Text(prefix + formatClock(seconds))
+    ZStack(alignment: alignment) {
+      Text(widest).hidden()
+      Text(text)
     }
     .modifier(OverlayText())
-  }
-}
-
-/// "Ends at 21:40", from where it plays and at what speed.
-private struct EndsAt: View {
-  let controller: PlayerController
-
-  var body: some View {
-    let duration = controller.duration
-    let shown = controller.scrubPosition ?? controller.position
-    let left = (duration - shown) / Double(max(controller.speed, 0.1))
-    if duration > 0, left > 0 {
-      let end = Date(timeIntervalSinceNow: left).formatted(
-        Date.FormatStyle(date: .omitted, time: .shortened).locale(.app))
-      Text(Str.iosPlayerEndsAt(end)).modifier(OverlayText(opacity: 0.75))
-    }
   }
 }

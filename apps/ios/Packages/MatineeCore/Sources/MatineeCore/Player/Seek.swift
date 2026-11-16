@@ -21,6 +21,26 @@ public func seekStepped(from: Double, direction: Int, step: Double, duration: Do
     duration: duration)
 }
 
+/// The times either side of the seek bar, as Android's players and the
+/// web's show them: the time played at the start, the file's full length
+/// at the end. A length the player doesn't know, or a live one, reads
+/// 0:00, as `formatClock` and the web's `formatTime` write it, so the bar
+/// keeps its shape. `widest` is the longest the length lets either show,
+/// every digit a 0, which tabular figures make as wide as any, so neither
+/// time nor the track between them moves as they count: Android's
+/// `longestClock`.
+public struct SeekClocks: Equatable, Sendable {
+  public let elapsed: String
+  public let length: String
+  public let widest: String
+
+  public init(position: Double, duration: Double) {
+    elapsed = formatClock(position)
+    length = formatClock(duration)
+    widest = length.replacing(/[0-9]/, with: "0")
+  }
+}
+
 /*
  * The web's seek bar under a finger (player-controls.tsx, `touchDragValue`):
  * a drag moves the time by how far the finger travels rather than to

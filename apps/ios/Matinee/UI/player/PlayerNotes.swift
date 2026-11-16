@@ -64,6 +64,40 @@ struct PlayerFailure: View {
   }
 }
 
+/// How far the last skips went, for a moment after the last press: the
+/// web's flash note (player-controls.tsx, `FlashNote`), which every skip
+/// shows since #52, from the buttons, a double tap, or a key. Presses in a
+/// row the same way add up (MatineeCore's `SkipFlash`), as the TV's mark
+/// does. Android's phone player has none. Its icon is the skip buttons'.
+struct SkipFlashNote: View {
+  let flash: SkipFlash?
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+  var body: some View {
+    ZStack {
+      if let flash {
+        HStack(spacing: Space.s2) {
+          LucideIcon(flash.forward ? .rotateCw : .rotateCcw, size: 16, tint: .white, scales: false)
+          Text(Str.iosPlayerFlashSkip(flash.seconds))
+            .textStyle(.sm, weight: .medium)
+            .monospacedDigit()
+            .foregroundStyle(.white)
+        }
+        .padding(.horizontal, Space.s4)
+        .padding(.vertical, Space.s2)
+        .pictureGlass(in: Capsule(), shade: .medium, ring: 0)
+        // The web's `zoom-in-95`, again when the way changes; a fade alone under Reduce Motion.
+        .id(flash.forward)
+        .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.95)))
+      }
+    }
+    .animation(Motion.animation(flash == nil ? Motion.exit : Motion.enter, reduceMotion: reduceMotion), value: flash)
+    .allowsHitTesting(false)
+    // The buttons and keys say how far already.
+    .accessibilityHidden(true)
+  }
+}
+
 /// Says how the video now shows, for a moment after a pinch switched it.
 struct ZoomNote: View {
   let count: Int

@@ -70,6 +70,72 @@ public func refusalReason(_ error: any Error) -> RefusalReason? {
   return busyPlaying(error).map { .busy(playing: $0) }
 }
 
+/// What an engine last logged going wrong while it loaded, which the error
+/// it fails with, or a stall it never fails with, may not say: AVPlayer's
+/// error log, whose last event has a domain and code, and an HTTP status
+/// when a request got that far. Nothing else of it is kept: its comment
+/// and addresses can name the server.
+public struct LoadTrouble: Sendable, Equatable {
+  public let domain: String
+  public let code: Int
+  public let httpStatus: Int?
+  public init(domain: String, code: Int, httpStatus: Int? = nil) {
+    self.domain = domain
+    self.code = code
+    self.httpStatus = httpStatus
+  }
+}
+
+/// URL loading's codes for a server that couldn't be reached or stopped
+/// answering: Media3's `ERROR_CODE_IO_NETWORK_CONNECTION_FAILED` and
+/// `_TIMEOUT`, which Android's player goes by. Not a certificate or a
+/// cleartext refusal, which are this device's settings, not the server
+/// going away.
+let OUT_OF_REACH_CODES: Set<Int> = Set(
+  [
+    URLError.Code.timedOut, .cannotFindHost, .cannotConnectToHost, .networkConnectionLost,
+    .dnsLookupFailed, .notConnectedToInternet, .internationalRoamingOff, .callIsActive,
+    .dataNotAllowed,
+  ].map(\.rawValue))
+
+/// Whether a source failed because the server was out of reach, not
+/// because its method doesn't play: the connection failed or timed out, or
+/// a proxy in front of the server answered that it couldn't reach it, as
+/// while the server restarts. That says nothing of the method, so the
+/// player doesn't count it among the failed: Android's `serverOutOfReach`.
+/// `cause` is what the engine failed with, nil for a failure the player
+/// noticed itself, as a stall; `logged` is what the engine logged last. An
+/// encode that fails on the server answers 503, which stays a failure of
+/// the method.
+public func serverOutOfReach(_ cause: (any Error)?, logged: LoadTrouble?) -> Bool {
+  if let status = logged?.httpStatus, status == 502 || status == 504 { return true }
+  var errors = cause.map { errorChain($0 as NSError) } ?? []
+  if let logged { errors.append(NSError(domain: logged.domain, code: logged.code)) }
+  return errors.contains { $0.domain == NSURLErrorDomain && OUT_OF_REACH_CODES.contains($0.code) }
+}
+
+/// The HTTP status in an error log's comment, as AVFoundation writes one:
+/// "HTTP 502: Bad Gateway".
+public func httpStatus(inLog comment: String?) -> Int? {
+  guard let comment, let match = comment.firstMatch(of: /HTTP (\d{3})\b/) else { return nil }
+  return Int(match.1)
+}
+
+/// `error` and the errors under it, as Foundation nests them.
+func errorChain(_ error: NSError) -> [NSError] {
+  var chain: [NSError] = []
+  var next: [NSError] = [error]
+  var seen: Set<ObjectIdentifier> = []
+  while !next.isEmpty, chain.count < 16 {
+    let current = next.removeFirst()
+    guard seen.insert(ObjectIdentifier(current)).inserted else { continue }
+    chain.append(current)
+    if let under = current.userInfo[NSUnderlyingErrorKey] as? NSError { next.append(under) }
+    if let under = current.userInfo[NSMultipleUnderlyingErrorsKey] as? [NSError] { next += under }
+  }
+  return chain
+}
+
 /// What every `playback.start` of a sitting carries again, since the server
 /// keeps nothing between calls: the viewer's picks, and the methods that
 /// didn't play, which the server never answers with.

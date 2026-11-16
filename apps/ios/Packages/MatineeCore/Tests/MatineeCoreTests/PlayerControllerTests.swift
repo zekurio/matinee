@@ -190,6 +190,8 @@ private final class PlayerProtocol: URLProtocol, @unchecked Sendable {
   var bufferedSeconds: Double?
   var videoSize = CGSize.zero
   var failure: (any Error)?
+  /// What AVPlayer's error log says last, which tells a server out of reach.
+  var loadTrouble: LoadTrouble?
   var isReady = false
   var sources: [Source] = []
   let loading = AsyncStream<Source>.makeStream()
@@ -739,6 +741,126 @@ private final class PlayerProtocol: URLProtocol, @unchecked Sendable {
     await controller.tick()
     #expect(controller.failedMethods == ["direct"])
     #expect(controller.source?.mode == .stream)
+    await controller.stop()
+  }
+
+  @Test func aServerOutOfReachBlamesNoMethod() async {
+    // Android's `fallBack` since #45: the server went away, as while it restarts.
+    let harness = PlayerHarness()
+    let controller = harness.controller()
+    await controller.start(itemId: "item-1")
+    let asked = harness.server.starts.count
+    await controller.seekTo(600)
+    await controller.sourceFailed(
+      NSError(
+        domain: AVFoundationErrorDomain, code: -11800,
+        userInfo: [NSUnderlyingErrorKey: URLError(.cannotConnectToHost) as NSError]))
+    #expect(controller.outOfReach)
+    #expect(controller.error != nil)
+    #expect(controller.refusal == nil && !controller.unplayable)
+    // No fallback: the method isn't counted among the failed, and nothing is asked.
+    #expect(controller.failedMethods.isEmpty)
+    #expect(harness.server.starts.count == asked)
+    #expect(controller.diagnostics.attempts.count == 1)
+    // Try again asks for the same, from where it was.
+    await controller.retry()
+    #expect(!controller.outOfReach)
+    #expect(controller.error == nil)
+    #expect(harness.server.starts.last?.failed == [])
+    #expect(harness.server.starts.last?.position == 600)
+    #expect(controller.source?.method == "direct")
+    await controller.stop()
+  }
+
+  @Test func aProxysBadGatewayIsTheServerOutOfReach() async {
+    let harness = PlayerHarness()
+    let controller = harness.controller()
+    await controller.start(itemId: "item-1")
+    // AVPlayer's own error says nothing of the network; its log has the status.
+    harness.engine.loadTrouble = LoadTrouble(domain: "CoreMediaErrorDomain", code: -12939, httpStatus: 502)
+    await controller.sourceFailed(NSError(domain: AVFoundationErrorDomain, code: -11850))
+    #expect(controller.outOfReach)
+    #expect(controller.failedMethods.isEmpty)
+    await controller.retry()
+    // The server's 503 for a source it couldn't make is the method's failure.
+    harness.engine.loadTrouble = LoadTrouble(domain: "CoreMediaErrorDomain", code: -12939, httpStatus: 503)
+    await controller.sourceFailed(NSError(domain: AVFoundationErrorDomain, code: -11850))
+    #expect(!controller.outOfReach)
+    #expect(controller.failedMethods == ["direct"])
+    #expect(controller.source?.method == "remux")
+    await controller.stop()
+  }
+
+  @Test func aStallIsTheServerOutOfReachOnlyWhenTheLogSaysSo() async {
+    let harness = PlayerHarness()
+    let controller = harness.controller()
+    await controller.start(itemId: "item-1")
+    harness.engine.isLoading = true
+    harness.engine.loadTrouble = LoadTrouble(domain: NSURLErrorDomain, code: NSURLErrorCannotConnectToHost)
+    await controller.tick()
+    harness.now += stallLimit + 1
+    await controller.tick()
+    #expect(controller.outOfReach)
+    #expect(controller.failedMethods.isEmpty)
+    // A freeze says nothing of the server, whatever the log has.
+    await controller.retry()
+    harness.engine.isLoading = false
+    await controller.frozen()
+    #expect(!controller.outOfReach)
+    #expect(controller.failedMethods == ["direct"])
+    await controller.stop()
+  }
+
+  @Test func aCallThatCantReachTheServerSaysSo() async {
+    let harness = PlayerHarness()
+    let controller = harness.controller()
+    await controller.start(itemId: "item-1")
+    await controller.sourceFailed(URLError(.timedOut))
+    #expect(controller.outOfReach)
+    // Still away when Try again asks.
+    harness.server.respond = { call in call.path.hasSuffix("/playback/start") ? .init(offline: true) : nil }
+    await controller.retry()
+    #expect(controller.outOfReach)
+    #expect(controller.error != nil)
+    // Back again: it plays.
+    harness.server.respond = { _ in nil }
+    await controller.retry()
+    #expect(!controller.outOfReach)
+    #expect(controller.error == nil)
+    #expect(controller.source?.method == "direct")
+    await controller.stop()
+  }
+
+  @Test func skipsFlashHowFarAndAddUp() async throws {
+    let harness = PlayerHarness()
+    let controller = harness.controller()
+    #expect(controller.skipFlash == nil)
+    // Nothing to skip before a source.
+    await controller.skip(10)
+    #expect(controller.skipFlash == nil)
+    await controller.start(itemId: "item-1")
+    await controller.skip(10)
+    await controller.skip(10)
+    #expect(controller.skipFlash?.forward == true)
+    #expect(controller.skipFlash?.seconds == 20)
+    #expect(controller.position == 62)
+    await controller.skip(-30)
+    #expect(controller.skipFlash?.forward == false)
+    #expect(controller.skipFlash?.seconds == 30)
+    // After the flash's time a press starts again.
+    harness.now += 1
+    await controller.skip(-30)
+    #expect(controller.skipFlash?.seconds == 30)
+    // The TV's arrows flash without skipping, and a glide takes it away.
+    controller.flashSkip(-10)
+    #expect(controller.skipFlash?.seconds == 40)
+    controller.endSkipFlash()
+    #expect(controller.skipFlash == nil)
+    // It goes by itself once the flash's time is up.
+    await controller.skip(10)
+    #expect(controller.skipFlash != nil)
+    try await Task.sleep(for: .milliseconds(SKIP_FLASH_MS + 300))
+    #expect(controller.skipFlash == nil)
     await controller.stop()
   }
 

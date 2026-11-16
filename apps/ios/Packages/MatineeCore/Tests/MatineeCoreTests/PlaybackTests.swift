@@ -1,3 +1,4 @@
+import AVFoundation
 import Foundation
 import Testing
 
@@ -252,6 +253,44 @@ struct PlaybackTests {
     #expect(restriction(ApiException(status: 403, code: "PLAYBACK_RESTRICTED", message: "Over the limit.", data: playing)) == nil)
     #expect(busyPlaying(ApiException(status: 403, code: "PLAYBACK_RESTRICTED", message: "Over the limit.", data: playing)) == nil)
     #expect(refusalReason(ApiException(status: 422, code: "UNPLAYABLE", message: "Nothing plays.", data: reason)) == nil)
+  }
+
+  @Test func aServerOutOfReachIsNoFailedMethod() {
+    // Android's PlaybackTest: the connection failed or timed out.
+    #expect(serverOutOfReach(URLError(.cannotConnectToHost), logged: nil))
+    #expect(serverOutOfReach(URLError(.timedOut), logged: nil))
+    #expect(serverOutOfReach(URLError(.cannotFindHost), logged: nil))
+    #expect(serverOutOfReach(URLError(.networkConnectionLost), logged: nil))
+    #expect(serverOutOfReach(URLError(.notConnectedToInternet), logged: nil))
+    // AVPlayer wraps what URL loading said in its own error.
+    let wrapped = NSError(
+      domain: AVFoundationErrorDomain, code: -11800,
+      userInfo: [NSUnderlyingErrorKey: NSError(domain: NSURLErrorDomain, code: NSURLErrorCannotConnectToHost)])
+    #expect(serverOutOfReach(wrapped, logged: nil))
+    // The proxy in front of a server that restarts, as AVPlayer's log says it.
+    let opaque = NSError(domain: "CoreMediaErrorDomain", code: -12939)
+    #expect(serverOutOfReach(opaque, logged: LoadTrouble(domain: "CoreMediaErrorDomain", code: -12939, httpStatus: 502)))
+    #expect(serverOutOfReach(opaque, logged: LoadTrouble(domain: "CoreMediaErrorDomain", code: -12939, httpStatus: 504)))
+    // The server's own answer for an encode that failed, and a file that isn't there.
+    #expect(!serverOutOfReach(opaque, logged: LoadTrouble(domain: "CoreMediaErrorDomain", code: -12939, httpStatus: 503)))
+    #expect(!serverOutOfReach(opaque, logged: LoadTrouble(domain: "CoreMediaErrorDomain", code: -12938, httpStatus: 404)))
+    // What doesn't play.
+    #expect(!serverOutOfReach(URLError(.cannotDecodeContentData), logged: nil))
+    #expect(!serverOutOfReach(NSError(domain: AVFoundationErrorDomain, code: -11850), logged: nil))
+    // A certificate the device won't take is its settings, not the server going away.
+    #expect(!serverOutOfReach(URLError(.serverCertificateUntrusted), logged: nil))
+    // A stall says nothing by itself; the engine's log may.
+    #expect(!serverOutOfReach(nil, logged: nil))
+    #expect(serverOutOfReach(nil, logged: LoadTrouble(domain: NSURLErrorDomain, code: NSURLErrorTimedOut)))
+    #expect(!serverOutOfReach(nil, logged: LoadTrouble(domain: "CoreMediaErrorDomain", code: -12642)))
+  }
+
+  @Test func theStatusInAnErrorLogsComment() {
+    #expect(httpStatus(inLog: "HTTP 502: Bad Gateway") == 502)
+    #expect(httpStatus(inLog: "Segment exceeds limit: HTTP 504: Gateway Time-out") == 504)
+    #expect(httpStatus(inLog: "Playlist parse error") == nil)
+    #expect(httpStatus(inLog: "HTTP 50") == nil)
+    #expect(httpStatus(inLog: nil) == nil)
   }
 
   @Test func anErrorKeepsTheDataBesideItsMessage() throws {

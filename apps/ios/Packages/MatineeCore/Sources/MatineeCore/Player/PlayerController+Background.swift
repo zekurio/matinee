@@ -111,7 +111,9 @@ extension PlayerController {
       stalledSince = since
       if now.timeIntervalSince(since) > stallLimit {
         stalledSince = nil
-        await sourceFailed(URLError(.timedOut))
+        // A wait the player noticed itself: only the engine's log says
+        // whether the server went away, or the source just doesn't play.
+        await sourceFailed(URLError(.timedOut), outOfReach: serverOutOfReach(nil, logged: engine.loadTrouble))
         return
       }
     } else {

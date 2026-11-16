@@ -97,7 +97,37 @@ extension PlayerController {
     }
   }
 
-  public func skip(_ seconds: Double) async { await seekTo(now() + seconds) }
+  /// Skips by `seconds`, back below 0, from where a seek on its way is
+  /// headed, so presses add up; and flashes how far, as the web's player
+  /// does for its buttons, keys, and media keys alike.
+  public func skip(_ seconds: Double) async {
+    guard source != nil else { return }
+    flashSkip(seconds)
+    await seekTo(now() + seconds)
+  }
+
+  /// Flashes a skip by `by` seconds over the picture, adding it to the
+  /// last while that still shows the same way (`SkipFlash.after`), and
+  /// takes it away `SKIP_FLASH_MS` after. `skip` calls it; the TV's Left
+  /// and Right, which move the seek bar's head rather than skip, call it
+  /// themselves.
+  public func flashSkip(_ by: Double) {
+    let atMs = clock().timeIntervalSince1970 * 1000
+    guard let next = SkipFlash.after(skipFlash, by: by, atMs: atMs) else { return }
+    skipFlash = next
+    flashTask?.cancel()
+    flashTask = Task { [weak self] in
+      try? await Task.sleep(for: .milliseconds(SKIP_FLASH_MS))
+      guard !Task.isCancelled, let self, self.skipFlash?.id == next.id else { return }
+      self.skipFlash = nil
+    }
+  }
+
+  /// Takes a skip's note away at once, as when a held press glides instead.
+  public func endSkipFlash() {
+    flashTask?.cancel()
+    skipFlash = nil
+  }
 
   /// Plays another audio track, which the server remembers for the next time.
   public func pickAudio(_ track: AudioTrack) async {

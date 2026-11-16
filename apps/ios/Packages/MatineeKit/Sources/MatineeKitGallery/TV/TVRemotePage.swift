@@ -89,7 +89,7 @@
         let shown = scrub.target ?? position
         TVSeekBar(
           fraction: shown / duration, buffered: min(1, (position + 120) / duration), elapsed: time(shown),
-          remaining: time(duration - shown), bubble: time(shown), widest: time(duration),
+          length: time(duration), bubble: time(shown), widest: time(duration),
           scrubbing: scrub.target != nil, label: settings.t("Seek", "Spulen"), value: time(shown),
           action: {
             playing.toggle()

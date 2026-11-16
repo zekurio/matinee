@@ -21,7 +21,7 @@
 
   /// The player's seek bar for a remote, as Android TV draws it: the time
   /// played at its start, a track across in the accent over what's
-  /// buffered, and the time left at its end. Focused, the track thickens,
+  /// buffered, and the file's full length at its end. Focused, the track thickens,
   /// its head shows, and `bubble`, the time at the head, floats over it;
   /// while `scrubbing`, `preview`, the trickplay frame there, floats over
   /// that. Select runs `action`, play and pause.
@@ -31,13 +31,13 @@
   /// screen decides what the arrows do while it has focus. `widest` is the
   /// longest time the clocks can show, so they keep their width as they count.
   ///
-  ///     TVSeekBar(fraction: 0.4, buffered: 0.6, elapsed: "8:40", remaining: "13:20", bubble: "8:40",
+  ///     TVSeekBar(fraction: 0.4, buffered: 0.6, elapsed: "8:40", length: "22:00", bubble: "8:40",
   ///       scrubbing: false, label: "Seek", value: "8:40 of 22:00", action: togglePlay) { EmptyView() }
   public struct TVSeekBar<Preview: View>: View {
     let fraction: Double
     let buffered: Double
     let elapsed: String
-    let remaining: String
+    let length: String
     let bubble: String
     let widest: String?
     let scrubbing: Bool
@@ -47,14 +47,14 @@
     @ViewBuilder let preview: () -> Preview
 
     public init(
-      fraction: Double, buffered: Double, elapsed: String, remaining: String, bubble: String, widest: String? = nil,
+      fraction: Double, buffered: Double, elapsed: String, length: String, bubble: String, widest: String? = nil,
       scrubbing: Bool, label: String, value: String, action: @escaping () -> Void,
       @ViewBuilder preview: @escaping () -> Preview
     ) {
       self.fraction = fraction
       self.buffered = buffered
       self.elapsed = elapsed
-      self.remaining = remaining
+      self.length = length
       self.bubble = bubble
       self.widest = widest
       self.scrubbing = scrubbing
@@ -67,7 +67,7 @@
     public var body: some View {
       Button(action: action) {
         SeekFace(
-          fraction: fraction, buffered: buffered, elapsed: elapsed, remaining: remaining, bubble: bubble,
+          fraction: fraction, buffered: buffered, elapsed: elapsed, length: length, bubble: bubble,
           widest: widest, scrubbing: scrubbing, preview: preview)
       }
       .buttonStyle(SeekStyle())
@@ -79,11 +79,11 @@
   extension TVSeekBar where Preview == EmptyView {
     /// A seek bar with no trickplay frame.
     public init(
-      fraction: Double, buffered: Double, elapsed: String, remaining: String, bubble: String, widest: String? = nil,
+      fraction: Double, buffered: Double, elapsed: String, length: String, bubble: String, widest: String? = nil,
       scrubbing: Bool, label: String, value: String, action: @escaping () -> Void
     ) {
       self.init(
-        fraction: fraction, buffered: buffered, elapsed: elapsed, remaining: remaining, bubble: bubble, widest: widest,
+        fraction: fraction, buffered: buffered, elapsed: elapsed, length: length, bubble: bubble, widest: widest,
         scrubbing: scrubbing, label: label, value: value, action: action, preview: { EmptyView() })
     }
   }
@@ -105,7 +105,7 @@
     let fraction: Double
     let buffered: Double
     let elapsed: String
-    let remaining: String
+    let length: String
     let bubble: String
     let widest: String?
     let scrubbing: Bool
@@ -149,7 +149,7 @@
               .allowsHitTesting(false)
           }
         }
-        SeekClock(text: "-" + remaining, widest: widest.map { "-" + $0 }, alignment: .trailing)
+        SeekClock(text: length, widest: widest, alignment: .trailing)
           .opacity(0.75)
       }
       .animation(Motion.animation(Motion.color, reduceMotion: reduceMotion), value: focused)

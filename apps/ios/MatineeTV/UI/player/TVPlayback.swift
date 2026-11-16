@@ -50,7 +50,6 @@ struct TVPlayback: View {
   @State private var focusSeek = false
   /// Menu put the skip button away for the segment that plays.
   @State private var skipAway: String?
-  @State private var skipMark: TVSkipMark?
   /// Counts presses of Left and Right, and which is still held, so only a held one glides.
   @State private var pressing = 0
   @State private var held: Int?
@@ -107,7 +106,7 @@ struct TVPlayback: View {
         if controller.loading && !failed {
           Spinner(size: 80, tint: .white.opacity(0.85)).allowsHitTesting(false)
         }
-        TVSkipMarkView(mark: controlsShown ? nil : skipMark)
+        TVSkipMarkView(flash: controller.skipFlash)
         if controlsShown {
           TVOverlay(
             controller: controller, focus: $focus, back: back, ahead: ahead, scrub: scrub.target,
@@ -179,12 +178,6 @@ struct TVPlayback: View {
       try? await Task.sleep(for: HIDE_AFTER)
       guard !Task.isCancelled else { return }
       hideControls()
-    }
-    .task(id: skipMark) {
-      guard skipMark != nil else { return }
-      try? await Task.sleep(for: .milliseconds(900))
-      guard !Task.isCancelled else { return }
-      skipMark = nil
     }
     .onChange(of: scenePhase) { _, phase in
       switch phase {
@@ -275,10 +268,9 @@ struct TVPlayback: View {
       scrub.step = direction < 0 ? back : ahead
       // From where the last press sought, while the player is still getting there.
       scrub.press(direction, from: sought ?? controller.position, duration: controller.duration)
-      if !controlsShown {
-        let total = skipMark.map { $0.direction == direction ? $0.total : 0 } ?? 0
-        skipMark = TVSkipMark(direction: direction, total: total + Int(scrub.step), id: (skipMark?.id ?? 0) + 1)
-      }
+      // A press with the controls away is a skip, which says how far as the
+      // skip buttons do; on the seek bar it moves the head, which says where.
+      if !controlsShown { controller.flashSkip(Double(direction) * scrub.step) }
       pressing += 1
       let press = pressing
       held = press
@@ -287,7 +279,7 @@ struct TVPlayback: View {
         try? await Task.sleep(for: GLIDE_AFTER)
         guard held == press, !controlsShown else { return }
         focusSeek = true
-        skipMark = nil
+        controller.endSkipFlash()
         showControls()
       }
     case .ended:
@@ -374,10 +366,12 @@ struct TVPlayback: View {
     } else if controller.unplayable {
       TVPlayerFailure(title: Str.playerErrorLost, message: Str.playerUnplayable, retry: retry, close: close)
     } else {
-      // The opening failed before anything played, as Android's page failing to load.
+      // The opening failed before anything played, as Android's page failing
+      // to load. The server out of reach blamed no method, so Try again asks
+      // for the same.
       TVPlayerFailure(
-        title: controller.item == nil ? Str.playerLoadFailed : Str.playerErrorLost, message: message, retry: retry,
-        close: close)
+        title: controller.item == nil ? Str.playerLoadFailed : Str.playerErrorLost,
+        message: controller.outOfReach ? Str.errorUnreachable : message, retry: retry, close: close)
     }
   }
 

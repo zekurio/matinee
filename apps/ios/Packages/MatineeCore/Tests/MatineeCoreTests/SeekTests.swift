@@ -11,6 +11,29 @@ struct SeekTests {
     #expect(seekAt(x: 50, width: 100, duration: 0) == 0)
     #expect(seekSteps(duration: 0, step: 10) == 0)
   }
+  @Test func theTimesBesideTheBarAreThePlayedTimeAndTheLength() {
+    // Android's SeekBar and TvSeekBar since #54: no countdown, no end time.
+    let clocks = SeekClocks(position: 62, duration: 2710)
+    #expect(clocks.elapsed == "1:02")
+    #expect(clocks.length == "45:10")
+    #expect(clocks.widest == "00:00")
+    // The length doesn't move while it plays.
+    #expect(SeekClocks(position: 2000, duration: 2710).length == "45:10")
+    let long = SeekClocks(position: 5, duration: 7384)
+    #expect(long.elapsed == "0:05")
+    #expect(long.length == "2:03:04")
+    #expect(long.widest == "0:00:00")
+  }
+  @Test func anUnknownOrLiveLengthReadsZero() {
+    for duration in [0, -1, Double.nan, .infinity] {
+      let clocks = SeekClocks(position: 75, duration: duration)
+      #expect(clocks.elapsed == "1:15")
+      #expect(clocks.length == "0:00")
+      #expect(clocks.widest == "0:00")
+    }
+    #expect(SeekClocks(position: .nan, duration: 100).elapsed == "0:00")
+    #expect(SeekClocks(position: -3, duration: 100).elapsed == "0:00")
+  }
   @Test func clampKeepsWithinTheVideo() {
     #expect(seekClamp(-3, duration: 100) == 0)
     #expect(seekClamp(130, duration: 100) == 100)

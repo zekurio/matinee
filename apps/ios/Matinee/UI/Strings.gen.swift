@@ -2852,14 +2852,8 @@ nonisolated enum Str {
   static var iosPeopleSectionCreator: String { tr("ios_people_section_creator", table: "iOS") }
   /// Remember audio picks
   static var iosPlaybackAudioRemember: String { tr("ios_playback_audio_remember", table: "iOS") }
-  /// Ends at %@
-  static func iosPlayerEndsAt(_ p1: String) -> String { tr("ios_player_ends_at", table: "iOS", p1) }
-  /// %@ remaining
-  static func iosPlayerRemaining(_ p1: String) -> String { tr("ios_player_remaining", table: "iOS", p1) }
-  /// Show length
-  static var iosPlayerShowLength: String { tr("ios_player_show_length", table: "iOS") }
-  /// Show time left
-  static var iosPlayerShowTimeLeft: String { tr("ios_player_show_time_left", table: "iOS") }
+  /// %lld s
+  static func iosPlayerFlashSkip(_ p1: Int) -> String { tr("ios_player_flash_skip", table: "iOS", p1) }
   /// %lld%% watched
   static func iosProgressWatched(_ p1: Int) -> String { tr("ios_progress_watched", table: "iOS", p1) }
   /// In Settings › Accessibility › Subtitles & Captioning

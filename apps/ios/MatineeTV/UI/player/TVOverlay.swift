@@ -5,8 +5,9 @@ import SwiftUI
 /*
  * TvOverlay.kt: the TV player's controls, kept low and small so the
  * picture stays the thing to look at. A shade up from the bottom; the
- * episode's number and show over its name at the left, when it ends at
- * the right; one wide seek bar with the time either side; and one row of
+ * episode's number and show over its name at the left; one wide seek bar
+ * with the time played and the file's length either side (Android TV
+ * dropped the end time and the countdown in #54); and one row of
  * round buttons: play between the skips, the episodes either side outside
  * them, and at the right the menus, with Skip intro or the next episode
  * before them when there is one. All inside the overscan margins.
@@ -56,7 +57,7 @@ struct TVOverlay: View {
       .containerRelativeFrame(.vertical) { height, _ in height * 0.62 }
       .allowsHitTesting(false)
       VStack(alignment: .leading, spacing: 0) {
-        TVPlayerHeading(controller: controller, scrub: scrub)
+        TVPlayerHeading(controller: controller)
         // Clear of the time that floats over the bar's head while it has focus.
         seekBar.padding(.top, TVSeekBars.bubbleRoom)
         buttons.padding(.top, TVSpace.s6)
@@ -71,10 +72,11 @@ struct TVOverlay: View {
   private var seekBar: some View {
     let duration = max(0, controller.duration)
     let shown = scrub ?? controller.position
+    let clocks = SeekClocks(position: shown, duration: duration)
     return TVSeekBar(
       fraction: seekFraction(shown, duration: duration), buffered: seekFraction(controller.buffered, duration: duration),
-      elapsed: formatClock(shown), remaining: formatClock(max(0, duration - shown)), bubble: formatClock(shown),
-      widest: formatClock(duration).replacing(/[0-9]/, with: "0"), scrubbing: scrub != nil,
+      elapsed: clocks.elapsed, length: clocks.length, bubble: clocks.elapsed, widest: clocks.widest,
+      scrubbing: scrub != nil,
       label: Str.a11yPlayerSeek,
       value: seekable(duration) ? Str.a11yPlayerPosition(formatClock(shown), formatClock(duration)) : formatClock(shown),
       action: onSelectSeek
@@ -148,42 +150,21 @@ private struct SkipFace: View {
   }
 }
 
-/// The name, with the episode's number and show over it, and when it ends at the right.
+/// The name, with the episode's number and show over it: Android TV's `Heading`.
 private struct TVPlayerHeading: View {
   let controller: PlayerController
-  let scrub: Double?
 
   var body: some View {
-    HStack(alignment: .lastTextBaseline, spacing: TVSpace.s6) {
+    VStack(alignment: .leading, spacing: 0) {
       if let item = controller.item {
         let label = itemLabel(item)
-        VStack(alignment: .leading, spacing: 0) {
-          if let code = label.code, item.title?.kind == TitleKind.show {
-            Text("\(code) · \(label.showName)").textStyle(.label).opacity(0.75).lineLimit(1)
-          }
-          Text(label.title).textStyle(.headline).lineLimit(1)
+        if let code = label.code, item.title?.kind == TitleKind.show {
+          Text("\(code) · \(label.showName)").textStyle(.label).opacity(0.75).lineLimit(1)
         }
+        Text(label.title).textStyle(.headline).lineLimit(1)
       }
-      Spacer(minLength: 0)
-      TVEndsAt(controller: controller, scrub: scrub)
     }
+    .frame(maxWidth: .infinity, alignment: .leading)
     .shadow(color: .black.opacity(0.6), radius: 5, y: 2)
-  }
-}
-
-/// "Ends at 21:40", from where it plays, or where the remote has taken it, and at what speed.
-private struct TVEndsAt: View {
-  let controller: PlayerController
-  let scrub: Double?
-
-  var body: some View {
-    let duration = controller.duration
-    let left = (duration - (scrub ?? controller.position)) / Double(max(controller.speed, 0.1))
-    if duration > 0, left > 0 {
-      // To the minute, so it changes once a minute rather than with every frame.
-      let end = Date(timeIntervalSinceNow: left).formatted(
-        Date.FormatStyle(date: .omitted, time: .shortened).locale(.app))
-      Text(Str.iosPlayerEndsAt(end)).textStyle(.facts).opacity(0.75).lineLimit(1)
-    }
   }
 }
