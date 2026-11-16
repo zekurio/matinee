@@ -118,13 +118,15 @@ struct BrowseScreen: View {
 /// A person's page: who they are and what they're in. Android keeps it in BrowseScreen.kt.
 struct PersonScreen: View {
   let name: String
+  /// The provider's id, from a credit that has one: it tells apart two people of one name.
+  var tmdbId: String?
 
   @State private var person = Loader<Person>()
   @State private var kind: String?
   @Environment(\.homeAction) private var homeAction
 
   var body: some View {
-    let name = name
+    let (name, tmdbId) = (name, tmdbId)
     Group {
       switch person.state {
       case .loading: PersonSkeleton()
@@ -137,7 +139,7 @@ struct PersonScreen: View {
       #if DEBUG
         if BrowseFixtures.on { return try await BrowseFixtures.person(name, api: api) }
       #endif
-      return try await loadPerson(api, name: name)
+      return try await loadPerson(api, name: name, tmdbId: tmdbId)
     }
     // No name in the bar: the page's heading is the name, large, under it.
     .topBar(nil, onHome: homeAction) { DisconnectedAction(person) }

@@ -156,23 +156,10 @@ own under `build/`, and `just shot <name>` saves the simulator's screen to
 `build/screenshots/`. These interactive recipes are separate from the
 headless build and test checks.
 
-Debug builds read these arguments; release builds don't compile `DevLaunch`:
-
-| Argument                                                                    | What it does                                                            |
-| --------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| `-dev.server URL -dev.token TOKEN`                                          | Saves a server and token before the normal session check                |
-| `-dev.route PATH`                                                           | Opens a tab or route, parsed by `RoutePath` in `UI/Nav.swift`           |
-| `-dev.offline YES`                                                          | Saves offline mode; `NO` clears it                                      |
-| `-dev.art YES`, `-dev.recommendations YES`                                  | Fills Home's banner and recommendation rows on the artless dev server   |
-| `-theme.mode dark`                                                          | Selects `system`, `light`, or `dark`                                    |
-| `-AppleLanguages "(de)"`                                                    | Selects German through iOS                                              |
-| `-UIPreferredContentSizeCategoryName UICTContentSizeCategoryAccessibilityL` | Selects an accessibility text size                                      |
-| `-gallery YES`                                                              | Opens the component gallery, with options in `UI/gallery/Gallery.swift` |
-
-Routes include `title/<id>`, `season/<titleId>/<n>`, `episode/<id>`,
-`settings/<page>`, and `player/<itemId>?start=<seconds>`. `Nav.swift` is the
-complete list. Scene state restores a page only after the app has gone to
-the background; terminating and launching alone doesn't save it.
+Debug builds read launch arguments that sign in, open a page, and put a
+page in a state for a screenshot; [UI/README.md](Matinee/UI/README.md#checking-it)
+lists them all by area. Scene state restores a page only after the app has
+gone to the background; terminating and launching alone doesn't save it.
 
 ## Layout
 

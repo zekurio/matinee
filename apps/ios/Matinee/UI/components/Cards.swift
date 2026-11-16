@@ -548,13 +548,16 @@ struct PersonCard: View {
   let name: String
   let role: String?
   let photo: ImageSource?
+  /// The provider's id for the person page, when the credit has one.
+  let tmdbId: String?
   @Environment(\.navigator) private var nav
   @Environment(\.palette) private var palette
 
-  init(_ name: String, role: String?, photo: ImageSource?) {
+  init(_ name: String, role: String?, photo: ImageSource?, tmdbId: String? = nil) {
     self.name = name
     self.role = role
     self.photo = photo
+    self.tmdbId = tmdbId
   }
 
   var body: some View {
@@ -584,6 +587,9 @@ struct PersonCard: View {
         }
       }
       .frame(maxWidth: .infinity)
+      // Its own height, whatever the row offers: a lazy row offers each card
+      // the first one's, which would shrink the portrait of a name on two lines.
+      .fixedSize(horizontal: false, vertical: true)
       .contentShape(Rectangle())
     }
     .accessibilityElement(children: .combine)

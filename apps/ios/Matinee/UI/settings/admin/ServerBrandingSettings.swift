@@ -9,10 +9,6 @@ import SwiftUI
  * MatineeCore's (Admin/AuthForms.swift, Admin/BrandingForm.swift).
  */
 
-/// The entry point Settings' row opens, under the name it had while the
-/// page edited only the accents.
-typealias ServerAppearanceSettings = ServerBrandingSettings
-
 /// How the server looks to everyone on it: the accent, a preset or a color
 /// per appearance, and whether the login screen shows the libraries'
 /// artwork behind its form, and how. The fields save together, from the

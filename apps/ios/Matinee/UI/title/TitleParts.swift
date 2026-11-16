@@ -677,9 +677,7 @@ struct CastRail: View {
         // The same actor can play two parts.
         ForEach(Array(cast.enumerated()), id: \.offset) { _, credit in
           RailItem(.person) {
-            PersonCard(credit.name, role: credit.role, photo: api?.art(credit.photo, size: .thumb))
-              // Its own height, so a name on two lines doesn't shrink the portrait.
-              .fixedSize(horizontal: false, vertical: true)
+            PersonCard(credit.name, role: credit.role, photo: api?.art(credit.photo, size: .thumb), tmdbId: credit.tmdbId)
           }
         }
       }

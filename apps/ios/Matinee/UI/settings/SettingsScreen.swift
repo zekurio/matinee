@@ -22,12 +22,12 @@ enum SettingsPage: String, CaseIterable {
   case account, appearance, playback, subtitles, downloads, about
   // The server's settings, for admins, as the web's admin sections. Each page lives in settings/admin.
   case libraries, users, authentication, transcoding, trickplay, jobs
-  case serverAppearance = "server-appearance"
+  case branding
 
   var key: String { rawValue }
 
-  /// The page for `key`, Android's `branding` too for the server's look.
-  static func of(_ key: String) -> SettingsPage? { key == "branding" ? .serverAppearance : SettingsPage(rawValue: key) }
+  /// The page for `key`; `server-appearance`, Branding's key before it took Android's, opens it too.
+  static func of(_ key: String) -> SettingsPage? { key == "server-appearance" ? .branding : SettingsPage(rawValue: key) }
 
   var admin: Bool {
     switch self {
@@ -50,7 +50,7 @@ enum SettingsPage: String, CaseIterable {
     case .transcoding: .film
     case .trickplay: .galleryHorizontalEnd
     case .jobs: .listChecks
-    case .serverAppearance: .paintbrush
+    case .branding: .paintbrush
     }
   }
 
@@ -68,8 +68,7 @@ enum SettingsPage: String, CaseIterable {
     case .transcoding: Str.settingsAdminTranscoding
     case .trickplay: Str.settingsAdminTrickplay
     case .jobs: Str.settingsAdminJobs
-    // Android's name for it, as Appearance is already the first block's.
-    case .serverAppearance: Str.settingsAdminBranding
+    case .branding: Str.settingsAdminBranding
     }
   }
 }
@@ -224,7 +223,7 @@ struct SettingsPageScreen: View {
     case .transcoding: TranscodingSettings()
     case .trickplay: TrickplaySettings()
     case .jobs: JobsSettings()
-    case .serverAppearance: ServerAppearanceSettings()
+    case .branding: ServerBrandingSettings()
     }
   }
 }
