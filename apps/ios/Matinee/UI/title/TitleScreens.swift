@@ -230,20 +230,30 @@ private struct TitleActions: View {
         play: next, name: title.name, watched: viewer?.isWatched(summary) ?? title.watched,
         favorite: viewer?.isFavorite(summary) ?? title.favorite,
         trailer: preferredTrailer(title.trailers, language: Locale.app.identifier),
-        onWatched: title.itemCount == 0
-          ? nil
-          : { watched, at in
-            guard let api, let viewer else { return }
-            try await viewer.setWatched(api, summary, watched, watchedAt: at)
-          },
-        onFavorite: {
-          guard let api, let viewer else { return }
-          try await viewer.setFavorite(api, summary, !viewer.isFavorite(summary))
-        },
+        onWatched: onWatched, onFavorite: onFavorite,
         more: .title(summary, file: title.isShow ? nil : next, here: true), wide: wide)
       if !title.isShow, let next {
         DownloadLine(file: next) { nav.downloads() }
       }
+    }
+  }
+
+  // Outside the body, with their types written out: Xcode 26's compiler
+  // gives up on the body when it has to work these out inside the call.
+  private var onWatched: ((_ watched: Bool, _ watchedAt: String?) async throws -> Void)? {
+    guard title.itemCount != 0 else { return nil }
+    let summary = title.summary
+    return { [api, viewer] watched, at in
+      guard let api, let viewer else { return }
+      try await viewer.setWatched(api, summary, watched, watchedAt: at)
+    }
+  }
+
+  private var onFavorite: (() async throws -> Void)? {
+    let summary = title.summary
+    return { [api, viewer] in
+      guard let api, let viewer else { return }
+      try await viewer.setFavorite(api, summary, !viewer.isFavorite(summary))
     }
   }
 }
