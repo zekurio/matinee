@@ -469,6 +469,12 @@ right edge and backdrops fill the screen.
   poster row's height so the rows under it stay put. `TVLoadingRow()` is a
   spinner across the page; `TVMessage("No libraries yet", message:, icon:, centered:, action:, actionFocus:)`
   a page, or part of one, with only something to say.
+- `.tvReader(isPresented:, title:, subtitle:, text:, fromEnd:)`: a long
+  text over the whole screen in monospace, as a playback report or the
+  app's log. Nothing in it takes focus: Up and Down turn most of a screen
+  (held, they keep turning), Menu closes it and focus goes back to what
+  opened it. `fromEnd` opens it at the bottom, for a log. A TV has nowhere
+  to copy or share text to, so it only reads.
 
 The words the TV components say on their own (Watched, Clear search, the
 search field's placeholder, a card's progress) are in the `TV` table of
@@ -530,6 +536,15 @@ MatineeCore.
   scrolls up to the top of the rows, under a fade, so the header above can
   speak for the focused card. `lazy: false` makes every row at once, for a
   few rows that each load on their own.
+- `TVBarChart(values, top:, scale: ["2h", "1h"], start:, end:, memory:, key:, first:, selection: $bar) { index in label }`
+  and `TVHeatmap(rows:, columns:, intensity: { cell in 0...1 or nil }, columnLabels:, memory:, key:, first:, selection: $cell) { cell in label }`
+  with `TVHeatmapCell(row:column:)`: charts the app draws at a TV's size,
+  from plain values, the heights and strengths already worked out. Every
+  bar and square takes focus, so the remote moves across them as across a
+  row, and leaves past an edge; the focused one is drawn in the text color
+  while the rest dim, and goes to `selection` for the page to name in a
+  caption above. Each chart is a row of `memory`. `TVCharts` has the
+  measures.
 
 The TV app loads its artwork through Nuke with the blur hash, as the
 iPhone app does, and passes it to these as their `art`; `TVPicture` is for

@@ -161,6 +161,12 @@ targets:
       - Matinee/UI/signin/LoginBackdrop.swift
       - Matinee/UI/home/HomeDevData.swift
       - Matinee/UI/browse/BrowseFixtures.swift
+      # The words the profile's statistics take, and -dev.statsFixtures, shared
+      # with the iPhone's profile.
+      - Matinee/UI/profile/StatsData.swift
+      - Matinee/UI/profile/StatsFixtures.swift
+      # The player's subtitle line, which Settings' caption preview draws as the player does.
+      - Matinee/UI/player/PlayerSubtitles.swift
       - Matinee/Resources/Localizable.xcstrings
       - Matinee/Resources/iOS.xcstrings
       - Matinee/Resources/Assets.xcassets

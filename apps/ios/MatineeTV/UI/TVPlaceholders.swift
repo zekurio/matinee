@@ -39,29 +39,31 @@ struct TVEpisodeScreen: View {
   }
 }
 
-struct TVPersonScreen: View {
-  let name: String
-  var body: some View { TVPlaceholderPage(name, path: "person/\(name)", port: "detail/TvPerson.kt") }
-}
+// MARK: Player: ui/player/tv
 
-// MARK: Profile: ui/tv/profile
+/// The player, over everything: the file it would play, until Menu or Back closes it.
+struct TVPlayerScreen: View {
+  let request: TVPlayerRequest
+  let close: () -> Void
+  @Environment(\.palette) private var palette
+  @FocusState private var focused: Bool
 
-struct TVProfileScreen: View {
-  var body: some View { TVPlaceholderPage(Str.tabProfile, path: "profile", port: "profile/TvProfile.kt") }
-}
-
-struct TVRecentScreen: View {
-  var body: some View { TVPlaceholderPage(Str.tabProfile, path: "recent", port: "profile/TvRecent.kt") }
-}
-
-// MARK: Settings: ui/tv/settings
-
-struct TVSettingsScreen: View {
-  /// One of Settings' categories, by its key, or nil for Settings itself.
-  var page: String? = nil
   var body: some View {
-    TVPlaceholderPage(
-      Str.shellSettings, path: page.map { "settings/\($0)" } ?? "settings", port: "settings/TvSettings.kt")
+    VStack(alignment: .leading, spacing: 0) {
+      Text(verbatim: "player/\(request.itemId)\(request.start.map { "?start=\(Int($0))" } ?? "")")
+        .textStyle(.title).foregroundStyle(palette.foreground)
+      Text(verbatim: "ui/player/tv").textStyle(.caption).foregroundStyle(palette.mutedForeground)
+        .padding(.top, TVSpace.s2)
+      TVButton(Str.commonBack, icon: .arrowLeft, action: close)
+        .focused($focused)
+        .padding(.top, TVSpace.s8)
+    }
+    .padding(TVOverscan.insets)
+    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    .background(Color.black)
+    .ignoresSafeArea()
+    .tvPageFocus($focused)
+    .onTVBack(perform: close)
   }
 }
 

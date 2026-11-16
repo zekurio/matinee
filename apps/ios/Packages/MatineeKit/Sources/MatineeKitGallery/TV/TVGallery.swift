@@ -4,7 +4,7 @@
 
   /// The TV pages of the gallery.
   enum TVRoute: String, CaseIterable, Hashable, Identifiable {
-    case focus, scale, buttons, lists, panels, feedback, search, cards, episodes, grid, home, remote, phone
+    case focus, scale, buttons, lists, panels, feedback, search, cards, episodes, grid, charts, home, remote, phone
 
     var id: String { rawValue }
 
@@ -20,6 +20,7 @@
       case .cards: de ? "Karten und Reihen" : "Cards and rows"
       case .episodes: de ? "Folgenzeilen" : "Episode rows"
       case .grid: de ? "Posterraster" : "Poster grid"
+      case .charts: de ? "Diagramme und Leser" : "Charts and the reader"
       case .home: de ? "Startseite (Entwurf)" : "Home, a mock-up"
       case .remote: de ? "Fernbedienung" : "Remote"
       case .phone: de ? "Telefon-Kit auf dem TV" : "The phone kit on TV"
@@ -38,6 +39,7 @@
       case .cards: de ? "Poster, Standbilder, Personen, Fokus-Gedächtnis" : "Posters, stills, people, focus memory"
       case .episodes: de ? "Die Folgen einer Staffel als Liste" : "A season's episodes, as a list"
       case .grid: de ? "Ein Raster mit Kopfzeile" : "A grid with its header and focus line"
+      case .charts: de ? "Balken und Heatmap mit der Fernbedienung, langer Text" : "Bars and a heatmap read with the remote, a long text"
       case .home: de ? "Alles zusammen über einem Hintergrund" : "Everything together over a backdrop"
       case .remote: de ? "Play/Pause, Menü, Wischen und Spulen" : "Play/Pause, Menu, presses, and a scrubber"
       case .phone: de ? "Die Telefon-Galerie, wie sie auf dem TV aussieht" : "The phone gallery, as it looks on a TV"
@@ -56,6 +58,7 @@
       case .cards: .film
       case .episodes: .list
       case .grid: .libraryBig
+      case .charts: .calendarClock
       case .home: .house
       case .remote: .tvPlay
       case .phone: .smartphone
@@ -131,6 +134,7 @@
       case .cards: TVCardsPage()
       case .episodes: TVEpisodesPage()
       case .grid: TVGridPage()
+      case .charts: TVChartsPage()
       case .home: TVHomePage()
       case .remote: TVRemotePage()
       case .phone: EmptyView()

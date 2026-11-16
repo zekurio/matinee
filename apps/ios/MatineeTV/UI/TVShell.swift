@@ -61,8 +61,9 @@ struct TVSignedInApp: View {
       NavigationStack(path: $nav.path) {
         TVHomeScreen(drawer: drawer)
           .toolbar(.hidden, for: .navigationBar)
+          .tvStackPage(nav, route: nil)
           .navigationDestination(for: TVRoute.self) { route in
-            TVRouteScreen(route: route).toolbar(.hidden, for: .navigationBar)
+            TVRouteScreen(route: route).toolbar(.hidden, for: .navigationBar).tvStackPage(nav, route: route)
           }
       }
       TVShellDrawer(user: user, nav: nav, drawer: drawer, counts: kinds.state.value) { returns.handBack() }
