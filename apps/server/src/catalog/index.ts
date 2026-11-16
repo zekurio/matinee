@@ -245,15 +245,15 @@ export async function routedDetails(
     },
   ])
   if (!state) throw new Error("Missing availability result")
-  const credits = data.credits ?? []
-  // The poster of the reference the page was opened with, which is the
-  // one its card showed. The destination's details can hold another, from
-  // TheTVDB or in the language of the library a rule picked. A request
-  // keeps this one too, so the picture stays put until the title arrives.
-  const poster = first.value.images.poster ?? data.images.poster
+  // The page shows the title as the reference it was opened with reads,
+  // which is what its card showed. The destination's details, from
+  // TheTVDB or in another library's language, give only what a request
+  // has to match there: the reference, the seasons, and what's here.
+  const shown = first.value
+  const credits = shown.credits ?? []
   const art = await artwork([
-    poster,
-    data.images.backdrop,
+    shown.images.poster,
+    shown.images.backdrop,
     ...seasons.map((season) => season.poster),
     ...credits.map((credit) => credit.photo),
   ])
@@ -268,25 +268,25 @@ export async function routedDetails(
       : null
   const detail = {
     ref,
-    stale: result.stale,
-    name: data.name,
-    year: data.year,
-    poster: art(poster),
+    stale: first.stale || result.stale,
+    name: shown.name,
+    year: shown.year,
+    poster: art(shown.images.poster),
     availability: state.availability,
-    overview: data.overview,
-    genres: data.genres,
-    rating: data.rating,
-    contentRating: data.contentRating,
-    backdrop: art(data.images.backdrop),
+    overview: shown.overview,
+    genres: shown.genres,
+    rating: shown.rating,
+    contentRating: shown.contentRating,
+    backdrop: art(shown.images.backdrop),
     credits: credits.map((credit) => ({
       kind: credit.kind,
       name: credit.name,
       role: credit.role,
       photo: art(credit.photo),
-      tmdbId: ref.provider === "tmdb" ? (credit.personId ?? null) : null,
+      tmdbId: input.ref.provider === "tmdb" ? (credit.personId ?? null) : null,
     })),
-    studios: data.studios ?? [],
-    trailers: (data.trailers ?? []).map((trailer) => ({
+    studios: shown.studios ?? [],
+    trailers: (shown.trailers ?? []).map((trailer) => ({
       url: youTubeUrl(trailer.key),
       name: trailer.name,
       language: trailer.language,
