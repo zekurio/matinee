@@ -172,16 +172,19 @@ function StartForm({
 
 /**
  * The party's name, which its owner edits in place: the title turns into
- * a field with a save button in it. Enter or leaving the field saves,
- * Escape puts the name back.
+ * a field with a save button beside it. Enter or leaving the field saves,
+ * Escape puts the name back. Both rows are 36px, and the field's 1px border
+ * and 8px padding sit left of the column, so the text stays put.
  */
 function PartyTitle({ party }: { party: Party }) {
   const [editing, setEditing] = useState(false)
   const title = party.name ?? tr("party.title")
   if (!editing) {
     return (
-      <div className="flex min-w-0 items-center gap-1 pr-8">
-        <DialogTitle className="truncate py-1 text-lg">{title}</DialogTitle>
+      <div className="flex h-9 min-w-0 items-center gap-1 pr-8">
+        <DialogTitle className="truncate text-lg leading-7">
+          {title}
+        </DialogTitle>
         {party.owner && (
           <Button
             variant="ghost"
@@ -198,7 +201,7 @@ function PartyTitle({ party }: { party: Party }) {
     )
   }
   return (
-    <div className="flex min-w-0 items-center pr-8">
+    <div className="flex h-9 min-w-0 items-center pr-8">
       <DialogTitle className="sr-only">{title}</DialogTitle>
       <RenameField name={party.name ?? ""} onDone={() => setEditing(false)} />
     </div>
@@ -250,7 +253,7 @@ function RenameField({
   }
   return (
     <form
-      className="relative -ml-2 min-w-0 flex-1"
+      className="-ml-2.25 flex min-w-0 flex-1 items-center gap-1"
       onSubmit={(event) => {
         event.preventDefault()
         commit()
@@ -277,7 +280,7 @@ function RenameField({
                 close()
               }
             }}
-            className="h-9 pr-10 pl-2 text-lg font-medium md:h-9 md:text-lg"
+            className="h-9 py-0 pr-2 pl-2 text-lg leading-7 font-medium md:h-9 md:text-lg [@media(pointer:coarse)]:h-9"
           />
         )}
       </form.Field>
@@ -285,11 +288,12 @@ function RenameField({
         {(submitting) => (
           <Button
             type="submit"
-            size="icon-xs"
+            variant="ghost"
+            size="icon-sm"
             disabled={submitting}
             aria-label={tr("party.rename.save")}
             title={tr("party.rename.save")}
-            className="absolute top-1/2 right-1 -translate-y-1/2"
+            className="text-muted-foreground shrink-0"
           >
             {submitting ? <Spinner /> : <CheckIcon />}
           </Button>
