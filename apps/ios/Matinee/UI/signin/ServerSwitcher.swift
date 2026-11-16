@@ -30,7 +30,7 @@ struct ChangeServerRow: View {
 /// The quiet button under the sign-in and unreachable screens that opens the server list.
 struct ChangeServerButton: View {
   @State private var open = false
-  @Environment(\.MatineeKit::palette) private var palette
+  @Environment(\.palette) private var palette
 
   var body: some View {
     MatineeKit.MatineeButton(look: .ghost) {
@@ -85,7 +85,7 @@ private struct ServerRow: View {
   let busy: Bool
   let onTap: () -> Void
   let onRemove: () -> Void
-  @Environment(\.MatineeKit::palette) private var palette
+  @Environment(\.palette) private var palette
 
   var body: some View {
     HStack(spacing: 0) {
@@ -135,7 +135,7 @@ private struct ServerRow: View {
 /// Under the connect and sign-in screens while adding a server: back to the one in use, as it was.
 struct BackToServer: View {
   @Environment(MatineeSession.self) private var session
-  @Environment(\.MatineeKit::palette) private var palette
+  @Environment(\.palette) private var palette
 
   var body: some View {
     if let current = session.servers.first(where: \.active) {

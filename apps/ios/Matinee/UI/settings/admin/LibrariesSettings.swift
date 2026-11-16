@@ -28,7 +28,7 @@ struct LibrariesSettings: View {
   @Environment(\.navigator) private var nav
   @Environment(\.snackbar) private var snackbar
   @Environment(ShellNav.self) private var shell: ShellNav?
-  @Environment(\.adminPalette) private var palette
+  @Environment(\.palette) private var palette
 
   var body: some View {
     let busy = librariesBusy(loader.state.value ?? [])
@@ -133,7 +133,7 @@ private struct LibraryRow: View {
   let library: Library
   let state: LibraryState
   let onOpen: () -> Void
-  @Environment(\.adminPalette) private var palette
+  @Environment(\.palette) private var palette
 
   var body: some View {
     let busy = state == .scanning || library.refreshing
@@ -227,7 +227,7 @@ private struct LibraryEditor: View {
   @Environment(\.api) private var api
   @Environment(\.navigator) private var nav
   @Environment(\.snackbar) private var snackbar
-  @Environment(\.adminPalette) private var palette
+  @Environment(\.palette) private var palette
 
   init(title: String, existing: Library?, providers: [MetadataProvider], knownPath: String?, results: NavResults) {
     self.title = title
@@ -287,7 +287,7 @@ private struct LibraryEditor: View {
         Note(Str.webLibrariesDialogNoProviderHint)
       }
     }
-    .adminMotion(MatineeKit.Motion.enter, value: draft.provider == nil)
+    .motion(MatineeKit.Motion.enter, value: draft.provider == nil)
   }
 
   private var folders: some View {
@@ -358,7 +358,7 @@ struct FolderPickerScreen: View {
   @State private var attempt = 0
   @Environment(\.api) private var api
   @Environment(\.navigator) private var nav
-  @Environment(\.adminPalette) private var palette
+  @Environment(\.palette) private var palette
 
   init(start: String?, added: [String]) {
     self.added = added
@@ -471,7 +471,7 @@ private struct PathField: View {
   let path: String
   let onOpen: (String) -> Void
   @State private var draft: String
-  @Environment(\.adminPalette) private var palette
+  @Environment(\.palette) private var palette
 
   init(path: String, onOpen: @escaping (String) -> Void) {
     self.path = path
@@ -504,7 +504,7 @@ private struct FolderRow: View {
   let label: String
   var onAdd: (() -> Void)?
   let onOpen: () -> Void
-  @Environment(\.adminPalette) private var palette
+  @Environment(\.palette) private var palette
 
   init(name: String, up: Bool = false, label: String, onAdd: (() -> Void)? = nil, onOpen: @escaping () -> Void) {
     self.name = name

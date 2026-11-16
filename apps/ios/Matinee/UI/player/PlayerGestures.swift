@@ -399,7 +399,7 @@ struct GestureNotes: View {
 private struct LevelNote: View {
   let icon: MatineeKit.Lucide
   let level: Double
-  @Environment(\.playerPalette) private var palette
+  @Environment(\.palette) private var palette
 
   var body: some View {
     let percent = FloatingPointFormatStyle<Double>.Percent.percent.precision(.fractionLength(0)).locale(.app)

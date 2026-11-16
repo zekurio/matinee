@@ -53,7 +53,7 @@ private struct TranscodingForm: View {
   @Binding var form: TranscodingDraft
   let detecting: Bool
   let onDetect: () -> Void
-  @Environment(\.adminPalette) private var palette
+  @Environment(\.palette) private var palette
 
   var body: some View {
     let acceleration = form.draft.hardwareAcceleration
@@ -180,10 +180,10 @@ private struct TranscodingForm: View {
       }
     }
     // Rows that come and go with a switch open and close rather than jump.
-    .adminMotion(MatineeKit.Motion.enter, value: form.draft.hardwareAcceleration)
-    .adminMotion(MatineeKit.Motion.enter, value: form.draft.enableThrottling)
-    .adminMotion(MatineeKit.Motion.enter, value: form.draft.enableSegmentDeletion)
-    .adminMotion(MatineeKit.Motion.enter, value: form.draft.enableVppTonemapping)
+    .motion(MatineeKit.Motion.enter, value: form.draft.hardwareAcceleration)
+    .motion(MatineeKit.Motion.enter, value: form.draft.enableThrottling)
+    .motion(MatineeKit.Motion.enter, value: form.draft.enableSegmentDeletion)
+    .motion(MatineeKit.Motion.enter, value: form.draft.enableVppTonemapping)
     .textInputAutocapitalization(.never)
     .autocorrectionDisabled()
     .submitLabel(.done)
@@ -205,7 +205,7 @@ private struct FfmpegSection: View {
   let capabilities: TranscodingCapabilities
   let detecting: Bool
   let onDetect: () -> Void
-  @Environment(\.adminPalette) private var palette
+  @Environment(\.palette) private var palette
 
   var body: some View {
     let version = capabilities.version.flatMap(nonBlank) ?? Str.webTranscodingFfmpegUnknownVersion

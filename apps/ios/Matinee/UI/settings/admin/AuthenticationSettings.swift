@@ -43,7 +43,7 @@ struct AuthenticationSettings: View {
 private struct AuthForm: View {
   @Binding var form: AuthDraft
   @State private var advanced = false
-  @Environment(\.adminPalette) private var palette
+  @Environment(\.palette) private var palette
 
   var body: some View {
     let saved = form.saved
@@ -171,7 +171,7 @@ private struct AuthForm: View {
 private struct RedirectRow: View {
   let url: String
   @Environment(\.snackbar) private var snackbar
-  @Environment(\.adminPalette) private var palette
+  @Environment(\.palette) private var palette
   @Environment(\.dynamicTypeSize) private var dynamicType
 
   var body: some View {

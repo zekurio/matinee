@@ -76,7 +76,7 @@ struct SettingsScaffold<Content: View>: View {
 struct SettingsSection<Content: View>: View {
   let title: String
   @ViewBuilder let content: () -> Content
-  @Environment(\.kitPalette) private var palette
+  @Environment(\.palette) private var palette
 
   init(_ title: String, @ViewBuilder content: @escaping () -> Content) {
     self.title = title
@@ -103,7 +103,7 @@ let PanelShape = RoundedRectangle.kit(MatineeKit.Radius.xl)
 /// `ListBlock` puts them in by itself.
 struct Panel<Content: View>: View {
   @ViewBuilder let content: () -> Content
-  @Environment(\.kitPalette) private var palette
+  @Environment(\.palette) private var palette
 
   init(@ViewBuilder content: @escaping () -> Content) { self.content = content }
 
@@ -133,7 +133,7 @@ struct ChoiceRow<Value: Hashable>: View {
   var enabled = true
   @Environment(\.settingsWide) private var wide
   @Environment(\.dynamicTypeSize) private var dynamicType
-  @Environment(\.kitPalette) private var palette
+  @Environment(\.palette) private var palette
 
   init(_ title: String, selection: Binding<Value>, options: [(Value, String)], enabled: Bool = true) {
     self.title = title
@@ -181,7 +181,7 @@ extension ChoiceRow {
 struct SettingNote: View {
   let text: String
   var color: Color?
-  @Environment(\.kitPalette) private var palette
+  @Environment(\.palette) private var palette
 
   init(_ text: String, color: Color? = nil) {
     self.text = text

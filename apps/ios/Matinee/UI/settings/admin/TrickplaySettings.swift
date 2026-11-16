@@ -46,7 +46,7 @@ struct TrickplaySettings: View {
 private struct TrickplayForm: View {
   let data: AdminTrickplaySettings
   @Binding var settings: MatineeCore.TrickplaySettings
-  @Environment(\.adminPalette) private var palette
+  @Environment(\.palette) private var palette
 
   var body: some View {
     VStack(alignment: .leading, spacing: Space.s3) {

@@ -129,7 +129,7 @@ struct SettingsScreen: View {
 /// end. A tap anywhere on the row flips it.
 private struct OfflineRow: View {
   @Environment(MatineeSession.self) private var session
-  @Environment(\.kitPalette) private var palette
+  @Environment(\.palette) private var palette
 
   var body: some View {
     let on = Binding(get: { session.offlineMode }, set: { on in Task { await session.setOfflineMode(on) } })
@@ -153,7 +153,7 @@ private struct OfflineRow: View {
 private struct AccountRow: View {
   let user: User
   @Environment(\.navigator) private var nav
-  @Environment(\.kitPalette) private var palette
+  @Environment(\.palette) private var palette
 
   var body: some View {
     Pressable {
@@ -517,7 +517,7 @@ struct SubtitlesPage: View {
 /// border, the cue at the size the player starts from.
 private struct SubtitlePreview: View {
   let look: SubtitleLook
-  @Environment(\.kitPalette) private var palette
+  @Environment(\.palette) private var palette
   @Environment(\.settingsWide) private var wide
 
   var body: some View {
@@ -560,7 +560,7 @@ struct DownloadsSettingsPage: View {
   @Environment(Downloads.self) private var downloads
   @Environment(ViewerState.self) private var viewer: ViewerState?
   @Environment(\.snackbar) private var snackbar
-  @Environment(\.kitPalette) private var palette
+  @Environment(\.palette) private var palette
 
   var body: some View {
     @Bindable var downloads = downloads

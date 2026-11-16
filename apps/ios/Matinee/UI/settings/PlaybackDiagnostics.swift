@@ -14,7 +14,7 @@ import UIKit
 struct PlaybackDiagnosticsSection: View {
   @State private var open = false
   @Environment(\.snackbar) private var snackbar
-  @Environment(\.kitPalette) private var palette
+  @Environment(\.palette) private var palette
 
   var body: some View {
     let report = PlaybackDiagnostics.shared.report
@@ -91,7 +91,7 @@ struct TextSheet: View {
   var latestLast = false
   let onCopy: () -> Void
   @Environment(\.sheetDismiss) private var dismiss
-  @Environment(\.kitPalette) private var palette
+  @Environment(\.palette) private var palette
 
   var body: some View {
     VStack(spacing: 0) {

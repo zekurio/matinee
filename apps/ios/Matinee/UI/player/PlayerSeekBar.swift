@@ -19,7 +19,7 @@ struct SeekBar: View {
   let onTouch: () -> Void
   @State private var width: CGFloat = 0
   @State private var drag: SeekDrag?
-  @Environment(\.playerPalette) private var palette
+  @Environment(\.palette) private var palette
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.horizontalSizeClass) private var sizeClass
 

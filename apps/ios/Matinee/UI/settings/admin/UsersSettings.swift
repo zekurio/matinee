@@ -129,7 +129,7 @@ private struct UserRow: View {
   let isSelf: Bool
   let onOpen: () -> Void
   @Environment(\.api) private var api
-  @Environment(\.adminPalette) private var palette
+  @Environment(\.palette) private var palette
 
   var body: some View {
     Pressable(action: onOpen) {

@@ -58,7 +58,7 @@ struct ServerBrandingSettings: View {
 
 private struct BrandingForm: View {
   @Binding var form: BrandingDraft
-  @Environment(\.adminPalette) private var palette
+  @Environment(\.palette) private var palette
 
   var body: some View {
     VStack(alignment: .leading, spacing: Space.section) {
@@ -126,7 +126,7 @@ private struct Swatch: View {
   let selected: Bool
   let name: String
   let action: () -> Void
-  @Environment(\.adminPalette) private var palette
+  @Environment(\.palette) private var palette
 
   var body: some View {
     Pressable(shape: Circle(), wash: false, action: action) {
@@ -142,7 +142,7 @@ private struct Swatch: View {
     }
     .accessibilityLabel(name)
     .accessibilityAddTraits(selected ? .isSelected : [])
-    .adminMotion(MatineeKit.Motion.color, value: selected)
+    .motion(MatineeKit.Motion.color, value: selected)
   }
 }
 
@@ -167,7 +167,7 @@ private struct ColorRow: View {
   let title: String
   let label: String
   @Binding var value: String
-  @Environment(\.adminPalette) private var palette
+  @Environment(\.palette) private var palette
 
   var body: some View {
     let parsed = normalizeHex(value)
@@ -188,7 +188,7 @@ private struct ColorRow: View {
           .overlay { RoundedRectangle.kit(Radius.lg).strokeBorder(palette.foreground.opacity(0.15)) }
           .frame(width: TouchTarget, height: TouchTarget)
           .accessibilityHidden(true)
-          .adminMotion(MatineeKit.Motion.color, value: parsed)
+          .motion(MatineeKit.Motion.color, value: parsed)
       }
     }
     .padding(.horizontal, Space.s4)
@@ -204,7 +204,7 @@ private struct SliderRow: View {
   let range: ClosedRange<Double>
   let text: (Int) -> String
   let onChange: (Double) -> Void
-  @Environment(\.adminPalette) private var palette
+  @Environment(\.palette) private var palette
 
   var body: some View {
     VStack(alignment: .leading, spacing: Space.s1) {

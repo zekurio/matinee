@@ -18,7 +18,7 @@ struct LoginBackdropWall: View {
   let api: MatineeApi
   let settings: LoginBackdrop
   @State private var tiles: [LoginBackdropTile] = []
-  @Environment(\.MatineeKit::palette) private var palette
+  @Environment(\.palette) private var palette
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   var body: some View {
@@ -70,7 +70,7 @@ private struct WallRow: View {
   let reverse: Bool
   let still: Bool
   @State private var moving = false
-  @Environment(\.MatineeKit::palette) private var palette
+  @Environment(\.palette) private var palette
 
   var body: some View {
     let copy = LoginBackdropLayout.copyWidth(tiles, rowHeight: height)

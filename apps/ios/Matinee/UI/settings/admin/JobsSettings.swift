@@ -163,7 +163,7 @@ private func taskNext(_ task: ScheduledTask) -> String {
 /// color while it's paused, the danger color with failures, else quiet.
 private struct StatusDot: View {
   let queue: JobQueueStatus
-  @Environment(\.adminPalette) private var palette
+  @Environment(\.palette) private var palette
 
   var body: some View {
     let color =
@@ -177,7 +177,7 @@ private struct StatusDot: View {
 /// A task's last run, or how far it is now, and its schedule, with a bar while it runs.
 private struct TaskLines: View {
   let task: ScheduledTask
-  @Environment(\.adminPalette) private var palette
+  @Environment(\.palette) private var palette
 
   var body: some View {
     VStack(alignment: .leading, spacing: 2) {
@@ -215,7 +215,7 @@ private struct QueueRow: View {
   let task: ScheduledTask?
   let onTask: (TaskAction) -> Void
   let onOpen: () -> Void
-  @Environment(\.adminPalette) private var palette
+  @Environment(\.palette) private var palette
 
   var body: some View {
     Pressable(action: onOpen) {
@@ -254,7 +254,7 @@ private struct QueueRow: View {
 private struct TaskRow: View {
   let task: ScheduledTask
   let onAction: (TaskAction) -> Void
-  @Environment(\.adminPalette) private var palette
+  @Environment(\.palette) private var palette
 
   var body: some View {
     HStack(alignment: .top, spacing: Space.s3) {
@@ -276,7 +276,7 @@ private struct TaskRow: View {
 private struct ConcurrencyRow: View {
   let queue: JobQueueStatus
   @Binding var value: Int
-  @Environment(\.adminPalette) private var palette
+  @Environment(\.palette) private var palette
   @Environment(\.dynamicTypeSize) private var dynamicType
 
   var body: some View {
@@ -327,7 +327,7 @@ private struct ConcurrencyRow: View {
         .foregroundStyle(palette.foreground)
         .frame(minWidth: 32)
         .contentTransition(.numericText(value: Double(value)))
-        .adminMotion(MatineeKit.Motion.color, value: value)
+        .motion(MatineeKit.Motion.color, value: value)
       MatineeKit.RoundIconButton(
         .plus, label: Str.webJobsConcurrencyIncrease(name), look: .outline, size: 32, iconSize: 16
       ) { value += 1 }
@@ -340,7 +340,7 @@ private struct ConcurrencyRow: View {
 private struct QueueSheet: View {
   let queue: JobQueueStatus
   let onAction: (QueueAction) -> Void
-  @Environment(\.adminPalette) private var palette
+  @Environment(\.palette) private var palette
 
   var body: some View {
     MatineeKit.SheetHeader(queueName(queue), subtitle: queueStatus(queue))

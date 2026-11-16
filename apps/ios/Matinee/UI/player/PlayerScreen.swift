@@ -19,18 +19,7 @@ import UIKit
  * subtitles (PlayerSubtitles.swift), the touches on the video
  * (PlayerGestures.swift), and what shows over the video besides the
  * controls (PlayerNotes.swift).
- *
- * Everything here is from MatineeKit. The app's own theme and components
- * have names the kit shares, and a name declared in the app wins over an
- * imported one, so the kit's are written `MatineeKit.<name>` throughout.
  */
-
-extension EnvironmentValues {
-  /// The kit's palette under the player, which is dark whatever the theme.
-  /// The app's old theme declares `\.palette` too, which would win here.
-  // TODO(shell): read the kit's `\.palette` once the old theme in UI/theme is gone.
-  @Entry var playerPalette = MatineeKit.Palette.matineeDark
-}
 
 /// What plays: a file, from where the person left off or from `start`
 /// seconds. Each is a sitting of its own, which asks anew.
@@ -56,13 +45,11 @@ struct PlayerScreen: View {
   }
 
   var body: some View {
-    let theme = themeStore.theme
     PlayerSitting(itemId: target.itemId, start: target.start) { next in
       target = PlayTarget(itemId: next, start: 0)
     }
     .id(target)
-    .forceDarkTheme(theme)
-    .environment(\.playerPalette, MatineeKit.Palette(theme.dark))
+    .forceDarkTheme(themeStore)
     .background(Color.black.ignoresSafeArea())
     // No status bar, the home indicator tucked away, and a swipe from the
     // top or bottom edge asked twice, so a swipe on the video stays the player's.

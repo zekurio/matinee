@@ -20,35 +20,6 @@ import UIKit
 /// web's settings panel, not the whole screen.
 let ADMIN_COLUMN: CGFloat = 680
 
-// MARK: - Theme
-
-extension EnvironmentValues {
-  /// The kit's palette, under a name of its own while the app's old theme
-  /// has an environment value called `palette` too.
-  // TODO(shell): `\.palette` once the old theme goes.
-  var adminPalette: MatineeKit.Palette { matineePalette }
-}
-
-extension View {
-  /// The kit's `motion`, under a name of its own while the app's old
-  /// `Motion.swift` has one too: `animation` on a change of `value`, a fade
-  /// under Reduce Motion.
-  // TODO(shell): `.motion` once the old one goes.
-  func adminMotion(_ animation: Animation, value: some Equatable) -> some View {
-    modifier(AdminMotion(animation: animation, value: value))
-  }
-}
-
-private struct AdminMotion<Value: Equatable>: ViewModifier {
-  let animation: Animation
-  let value: Value
-  @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-  func body(content: Content) -> some View {
-    content.animation(MatineeKit.Motion.animation(animation, reduceMotion: reduceMotion), value: value)
-  }
-}
-
 // MARK: - Pages
 
 /// An admin page: the kit's top bar, then its sections down the page, 32
@@ -97,7 +68,7 @@ extension AdminPage where Actions == EmptyView {
 struct AdminLoaded<T: Sendable, Content: View>: View {
   let loader: Loader<T>
   @ViewBuilder let content: (T) -> Content
-  @Environment(\.adminPalette) private var palette
+  @Environment(\.palette) private var palette
 
   init(_ loader: Loader<T>, @ViewBuilder content: @escaping (T) -> Content) {
     self.loader = loader
@@ -241,7 +212,7 @@ private struct SaveBar: View {
   let attention: Int
   let onReset: () -> Void
   let onSave: () -> Void
-  @Environment(\.adminPalette) private var palette
+  @Environment(\.palette) private var palette
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   var body: some View {
@@ -376,7 +347,7 @@ private struct HoldsBack: UIViewControllerRepresentable {
 struct Note: View {
   let text: String
   var color: Color?
-  @Environment(\.adminPalette) private var palette
+  @Environment(\.palette) private var palette
 
   init(_ text: String, color: Color? = nil) {
     self.text = text
@@ -397,7 +368,7 @@ struct AdminActionRow: View {
   let icon: MatineeKit.Lucide
   var pending = false
   let action: () -> Void
-  @Environment(\.adminPalette) private var palette
+  @Environment(\.palette) private var palette
 
   var body: some View {
     Pressable(action: action) {

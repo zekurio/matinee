@@ -156,7 +156,7 @@ struct VideoSurface: UIViewRepresentable {
 struct AirPlayButton: View {
   /// Video is on an AirPlay screen now, which lights the icon.
   let active: Bool
-  @Environment(\.playerPalette) private var palette
+  @Environment(\.palette) private var palette
 
   var body: some View {
     ZStack {

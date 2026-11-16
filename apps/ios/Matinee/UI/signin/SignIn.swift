@@ -76,7 +76,7 @@ struct AuthLayout<Content: View>: View {
 struct AuthHeading: View {
   let title: String
   let description: String?
-  @Environment(\.MatineeKit::palette) private var palette
+  @Environment(\.palette) private var palette
 
   init(_ title: String, description: String? = nil) {
     self.title = title
@@ -100,7 +100,7 @@ struct AuthHeading: View {
 /// A form's error, in the danger color under what it's about, read out by VoiceOver when it comes.
 private struct FieldError: View {
   let message: String
-  @Environment(\.MatineeKit::palette) private var palette
+  @Environment(\.palette) private var palette
 
   var body: some View {
     Text(message)
@@ -395,7 +395,7 @@ private struct CodeHeading: View {
 private struct CodeQr: View {
   let code: DeviceCode?
   let size: CGFloat
-  @Environment(\.MatineeKit::palette) private var palette
+  @Environment(\.palette) private var palette
 
   var body: some View {
     if let code {
@@ -413,7 +413,7 @@ private struct CodeDetails: View {
   let error: String?
   let afterQr: Bool
   let onRetry: (() -> Void)?
-  @Environment(\.MatineeKit::palette) private var palette
+  @Environment(\.palette) private var palette
   @Environment(\.horizontalSizeClass) private var sizeClass
   /// The spinners beside a line of text grow with it.
   @ScaledMetric(relativeTo: .footnote) private var spinner: CGFloat = 14

@@ -107,7 +107,7 @@ private struct PlayerTopBar: View {
   let close: () -> Void
   let onMenu: (PlayerMenu) -> Void
   let onLock: (() -> Void)?
-  @Environment(\.playerPalette) private var palette
+  @Environment(\.palette) private var palette
 
   var body: some View {
     HStack(spacing: MatineeKit.Space.s1) {
@@ -173,7 +173,7 @@ let TOP_BAR_HEIGHT: CGFloat = 48
 private struct SubtitlesButton: View {
   let controller: PlayerController
   let onMenu: (PlayerMenu) -> Void
-  @Environment(\.playerPalette) private var palette
+  @Environment(\.palette) private var palette
 
   var body: some View {
     ControlButton(icon: .captions, label: Str.playerMenuSubtitles) { onMenu(.subtitles) }

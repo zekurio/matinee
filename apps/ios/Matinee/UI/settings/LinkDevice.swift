@@ -94,7 +94,7 @@ struct LinkDeviceScreen: View {
 /// The camera, where the device has one, and the field for typing the code.
 private struct ScanStep: View {
   let onCode: (ScannedCode, _ byHand: Bool) -> Void
-  @Environment(\.kitPalette) private var palette
+  @Environment(\.palette) private var palette
 
   var body: some View {
     VStack(alignment: .leading, spacing: MatineeKit.Space.s3) {
@@ -126,7 +126,7 @@ private struct CodeField: View {
   let onCode: (String) -> Void
   @State private var text = ""
   @State private var tried = false
-  @Environment(\.kitPalette) private var palette
+  @Environment(\.palette) private var palette
 
   var body: some View {
     let invalid = tried && UserCode.parse(text) == nil
@@ -169,7 +169,7 @@ private struct CameraScanner: View {
   @State private var failed = false
   /// When the camera last saw a QR code that isn't a Matinee sign-in.
   @State private var foreignAt: Date?
-  @Environment(\.kitPalette) private var palette
+  @Environment(\.palette) private var palette
   @Environment(\.openURL) private var openURL
   @Environment(\.scenePhase) private var scenePhase
 
@@ -390,7 +390,7 @@ private struct ApproveStep: View {
   @Environment(\.api) private var api
   @Environment(\.navigator) private var nav
   @Environment(\.user) private var user
-  @Environment(\.kitPalette) private var palette
+  @Environment(\.palette) private var palette
   @Environment(\.dynamicTypeSize) private var dynamicType
   @Environment(MatineeSession.self) private var session
 
@@ -518,7 +518,7 @@ private func deviceLabel(_ request: DeviceRequest) -> String {
 /// px-4 py-3`, its tile, and its name over what it runs on.
 private struct DeviceCard: View {
   let request: DeviceRequest
-  @Environment(\.kitPalette) private var palette
+  @Environment(\.palette) private var palette
 
   var body: some View {
     HStack(spacing: MatineeKit.Space.s3) {
@@ -546,7 +546,7 @@ private struct Outcome<Actions: View>: View {
   let description: String
   var detail: String?
   @ViewBuilder let actions: () -> Actions
-  @Environment(\.kitPalette) private var palette
+  @Environment(\.palette) private var palette
 
   var body: some View {
     VStack(alignment: .leading, spacing: 0) {

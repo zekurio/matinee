@@ -55,7 +55,7 @@ struct AppearancePage: View {
 /// as three choices, the picked one selected.
 private struct SchemePicker: View {
   let theme: ThemeStore
-  @Environment(\.kitPalette) private var palette
+  @Environment(\.palette) private var palette
   @Environment(\.dynamicTypeSize) private var dynamicType
 
   var body: some View {

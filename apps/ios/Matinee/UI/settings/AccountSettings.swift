@@ -174,7 +174,7 @@ private struct AvatarPicker: View {
   @Environment(\.api) private var api
   @Environment(\.snackbar) private var snackbar
   @Environment(MatineeSession.self) private var session
-  @Environment(\.kitPalette) private var palette
+  @Environment(\.palette) private var palette
 
   var body: some View {
     Pressable(shape: Circle(), wash: false) {
@@ -312,7 +312,7 @@ private struct DisplayNameField: View {
 /// `size-9 rounded-lg bg-secondary`, a 16-point glyph.
 struct RowIcon: View {
   let icon: MatineeKit.Lucide
-  @Environment(\.kitPalette) private var palette
+  @Environment(\.palette) private var palette
 
   init(_ icon: MatineeKit.Lucide) { self.icon = icon }
 
@@ -332,7 +332,7 @@ struct AccountItemRow<Badge: View, Trailing: View>: View {
   let detail: String?
   @ViewBuilder let badge: () -> Badge
   @ViewBuilder let trailing: () -> Trailing
-  @Environment(\.kitPalette) private var palette
+  @Environment(\.palette) private var palette
   @Environment(\.dynamicTypeSize) private var dynamicType
 
   var body: some View {
