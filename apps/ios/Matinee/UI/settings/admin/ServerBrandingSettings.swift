@@ -211,7 +211,7 @@ private struct SliderRow: View {
         .accessibilityHidden(true)
       HStack(spacing: Space.s3) {
         MatineeSlider(
-          value: Binding(get: { value }, set: onChange), in: range, step: 1, label: title,
+          value: Binding(get: { value }, set: { onChange($0) }), in: range, step: 1, label: title,
           valueText: { text(Int($0.rounded())) })
         Text(text(Int(value.rounded()))).textStyle(.xs).monospacedDigit().foregroundStyle(palette.mutedForeground)
           .frame(minWidth: 48, alignment: .trailing)
