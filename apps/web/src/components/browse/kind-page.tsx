@@ -167,6 +167,7 @@ export function KindPage({
             : tr("browse.titleCount", { count: total })
         }
         actions={<HeaderControls {...controls} />}
+        chips={<FilterChips inline active={chips} clear={list.clear} />}
         phoneActions={<PhoneControls {...controls} />}
       />
       {ofKind.length > 1 && (

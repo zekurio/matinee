@@ -55,10 +55,6 @@ export default defineMessages("discover", {
   "discover.browse.sort.votes": "Most votes",
   "discover.browse.scoreHint": "From TMDB, out of 10",
   "discover.browse.votes": "Votes",
-  "discover.browse.chip.votes": plural({
-    one: "At least {count} vote",
-    other: "At least {count} votes",
-  }),
   // A vote step as a chip: "1,000+".
   "discover.browse.votesStep": "{count}+",
   // Filters that narrow what's listed rather than describe a title.
@@ -71,7 +67,6 @@ export default defineMessages("discover", {
     "Only titles with at least {count} votes, so a handful of votes can't top the list.",
   "discover.browse.floorList":
     "Only titles with at least {count} votes, so the list isn't filled with ones hardly anyone has seen.",
-  "discover.browse.floorChange": "Choose a minimum",
   "discover.browse.none.movie": "No movies match these filters",
   "discover.browse.none.show": "No shows match these filters",
   "discover.browse.nothing": "Nothing to show right now",
