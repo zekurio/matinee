@@ -156,6 +156,10 @@ targets:
       - Matinee/UI/signin/SignInState.swift
       - Matinee/UI/signin/LoginBackdrop.swift
       - Matinee/UI/home/HomeDevData.swift
+      # The detail pages' facts, file info, and debug fixtures (-title.fixture,
+      # -dev.browseFixtures), shared with the iPhone's title and person pages.
+      - Matinee/UI/title/TitleData.swift
+      - Matinee/UI/browse/BrowseFixtures.swift
       - Matinee/Resources/Localizable.xcstrings
       - Matinee/Resources/iOS.xcstrings
       - Matinee/Resources/Assets.xcassets
