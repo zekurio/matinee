@@ -33,7 +33,8 @@ enum Route: Hashable, Codable {
   /// `season` is nil for the files without a season number.
   case season(titleId: String, season: Int?)
   case episode(itemId: String)
-  case person(name: String)
+  /// `tmdbId` is the provider's, when the credit that opened it has one.
+  case person(name: String, tmdbId: String?)
   /// A genre's or a studio's titles, across the server.
   case browse(genre: String?, studio: String?)
   case settings
@@ -191,7 +192,7 @@ struct PlayerRequest: Identifiable, Hashable {
       season: { [weak self] in self?.push(.season(titleId: $0, season: $1)) },
       seasonUp: { [weak self] in self?.up(to: .season(titleId: $0, season: $1)) },
       episode: { [weak self] in self?.push(.episode(itemId: $0)) },
-      person: { [weak self] in self?.push(.person(name: $0)) },
+      person: { [weak self] in self?.push(.person(name: $0, tmdbId: $1)) },
       genre: { [weak self] in self?.push(.browse(genre: $0, studio: nil)) },
       studio: { [weak self] in self?.push(.browse(genre: nil, studio: $0)) },
       library: { [weak self] in self?.push(.library(id: $0, sort: $1)) },
@@ -286,7 +287,7 @@ struct RouteScreen: View {
     case .title(let id): TitleScreen(id: id)
     case .season(let titleId, let season): SeasonScreen(titleId: titleId, season: season)
     case .episode(let itemId): EpisodeScreen(itemId: itemId)
-    case .person(let name): PersonScreen(name: name)
+    case .person(let name, let tmdbId): PersonScreen(name: name, tmdbId: tmdbId)
     case .browse(let genre, let studio): BrowseScreen(genre: genre, studio: studio)
     case .settings: SettingsScreen()
     case .settingsPage(let key): SettingsPageScreen(key: key)
@@ -416,7 +417,7 @@ enum RoutePath {
     case ("season", let id?):
       return .page(.home, .season(titleId: id, season: rest.dropFirst().first.flatMap { Int($0) }))
     case ("episode", let id?): return .page(.home, .episode(itemId: id))
-    case ("person", let name?): return .page(.home, .person(name: name))
+    case ("person", let name?): return .page(.home, .person(name: name, tmdbId: query["tmdbId"]))
     case ("genre", let name?): return .page(.home, .browse(genre: name, studio: nil))
     case ("studio", let name?): return .page(.home, .browse(genre: nil, studio: name))
     case ("settings", nil): return .page(.profile, .settings)

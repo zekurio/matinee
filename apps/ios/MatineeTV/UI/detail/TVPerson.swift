@@ -18,11 +18,13 @@ import SwiftUI
 
 struct TVPersonScreen: View {
   let name: String
+  /// The provider's id, from a credit that has one: it tells apart two people of one name.
+  var tmdbId: String?
   @State private var person = Loader<Person>()
   @Environment(\.palette) private var palette
 
   var body: some View {
-    let name = name
+    let (name, tmdbId) = (name, tmdbId)
     DetailState(loader: person, error: Str.personLoadFailed) { person in TVPersonPage(person: person) }
       .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
       .background(palette.background)
@@ -31,7 +33,7 @@ struct TVPersonScreen: View {
         #if DEBUG
           if BrowseFixtures.on { return try await BrowseFixtures.person(name, api: api) }
         #endif
-        return try await loadPerson(api, name: name)
+        return try await loadPerson(api, name: name, tmdbId: tmdbId)
       }
   }
 }

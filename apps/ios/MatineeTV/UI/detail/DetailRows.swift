@@ -164,13 +164,14 @@ struct PeopleRow: View {
     let name: String
     let role: String?
     let photo: Artwork?
+    let tmdbId: String?
   }
 
   var body: some View {
     let people = Self.people(credits)
     if !people.isEmpty {
       TVRow(Str.tvDetailPeople, key: DetailRowKey.people, items: people, itemKey: \.key, memory: memory) { person in
-        TVPersonCard(person.name, role: person.role, action: { nav.person(person.name) }) {
+        TVPersonCard(person.name, role: person.role, action: { nav.person(person.name, person.tmdbId) }) {
           Picture(api?.art(person.photo, size: .small))
         }
       }
@@ -182,13 +183,14 @@ struct PeopleRow: View {
   /// parts twice, then each kind of crew, each name once.
   private static func people(_ credits: [Credit]) -> [Credited] {
     let cast = credits.enumerated().filter { $0.element.kind == CreditKind.actor }.map { index, credit in
-      Credited(key: "cast-\(index)", name: credit.name, role: credit.role, photo: credit.photo)
+      Credited(key: "cast-\(index)", name: credit.name, role: credit.role, photo: credit.photo, tmdbId: credit.tmdbId)
     }
     let crew = [CreditKind.creator, CreditKind.director, CreditKind.writer].flatMap { kind in
       creditNames(credits, kind).map { name in
         Credited(
           key: "\(kind)-\(name)", name: name, role: titleCreditLabel(kind, count: 1),
-          photo: credits.first { $0.kind == kind && $0.name == name }?.photo)
+          photo: credits.first { $0.kind == kind && $0.name == name }?.photo,
+          tmdbId: credits.first { $0.kind == kind && $0.name == name }?.tmdbId)
       }
     }
     return cast + crew
