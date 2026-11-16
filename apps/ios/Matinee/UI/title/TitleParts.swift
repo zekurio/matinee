@@ -1,7 +1,5 @@
 import MatineeCore
 import MatineeKit
-import Nuke
-import NukeUI
 import SwiftUI
 
 /*
@@ -153,77 +151,78 @@ struct HeaderPoster: View {
   }
 }
 
-/// A page's name as its logo when the provider has one, else as text. The
-/// logo keeps a fixed box, so it can't push the page around as it loads,
-/// the web's worry with logos; one that fails gives way to the name.
-struct HeadingMark: View {
-  let name: String
-  var logo: URL?
-  let size: TextSize
-  var weight: Font.Weight = .semibold
-  var wide = false
-  @Environment(\.imagePipeline) private var pipeline
-  @Environment(\.palette) private var palette
-  @State private var failed: URL?
-
-  var body: some View {
-    if let logo, failed != logo {
-      LazyImage(request: ImageRequest(url: logo), transaction: Transaction(animation: Motion.image)) { state in
-        if let image = state.image {
-          image.resizable().aspectRatio(contentMode: .fit)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
-            .shadow(color: .black.opacity(0.35), radius: 6, y: 2)
-        }
-      }
-      .pipeline(pipeline)
-      .onCompletion { result in
-        if case .failure = result { failed = logo }
-      }
-      .frame(maxWidth: wide ? 420 : 280, alignment: .leading)
-      .frame(height: wide ? 104 : 72)
-      .frame(maxWidth: .infinity, alignment: .leading)
-      .accessibilityElement()
-      .accessibilityLabel(name)
-      .accessibilityAddTraits(.isHeader)
-    } else {
-      Text(name)
-        .textStyle(size, weight: weight, tracking: .tight)
-        .foregroundStyle(palette.foreground)
-        .lineLimit(3)
-        .fixedSize(horizontal: false, vertical: true)
-        .accessibilityAddTraits(.isHeader)
-    }
-  }
-}
-
 /// The facts under a name, in a line that wraps: the facts themselves,
-/// the age rating outlined, the score by its star, and a movie's file's
-/// badges, as the web's title header.
+/// and after them the age rating outlined and the score by its star, as
+/// Android's episode and catalog headings have them. A title's page gives
+/// its badges a line of their own, `RatingBadges`.
 struct FactsRow: View {
   let facts: [String]
   var contentRating: String?
   var rating: Double?
-  var flags: [String] = []
   @Environment(\.palette) private var palette
 
   var body: some View {
-    if !facts.isEmpty || contentRating != nil || rating != nil || !flags.isEmpty {
-      FlowRow(spacing: Space.s3, lineSpacing: Space.s1_5) {
+    if !facts.isEmpty || contentRating != nil || rating != nil {
+      FlowRow(spacing: Space.s2_5, lineSpacing: Space.s1_5) {
         if !facts.isEmpty {
           Text(facts.joined(separator: " · ")).textStyle(.sm).foregroundStyle(palette.foreground.opacity(0.8))
         }
         if let contentRating { Badge(contentRating, look: .metaOutline) }
-        if let rating {
-          HStack(spacing: Space.s1) {
-            LucideIcon(.star, size: 14, tint: palette.star)
-            Text(formatRating(rating)).textStyle(.sm).foregroundStyle(palette.foreground.opacity(0.8))
-          }
-          .accessibilityElement(children: .ignore)
-          .accessibilityLabel("\(Str.mediaHeroRated) \(formatRating(rating))")
-        }
+        if let rating { RatingStar(rating: rating) }
+      }
+    }
+  }
+}
+
+/// The score by its star.
+private struct RatingStar: View {
+  let rating: Double
+  @Environment(\.palette) private var palette
+
+  var body: some View {
+    HStack(spacing: Space.s1) {
+      LucideIcon(.star, size: 14, tint: palette.star)
+      Text(formatRating(rating)).textStyle(.sm).foregroundStyle(palette.foreground.opacity(0.8))
+    }
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel("\(Str.mediaHeroRated) \(formatRating(rating))")
+  }
+}
+
+/// The age rating outlined, the score by its star, and a movie's file's
+/// badges, on a line of their own under a title's facts, as Android's
+/// `TitleHeading` sets them, 8 apart; nothing when there are none.
+struct RatingBadges: View {
+  var contentRating: String?
+  var rating: Double?
+  var flags: [String] = []
+
+  var body: some View {
+    if contentRating != nil || rating != nil || !flags.isEmpty {
+      FlowRow(spacing: Space.s2, lineSpacing: Space.s1_5) {
+        if let contentRating { Badge(contentRating, look: .metaOutline) }
+        if let rating { RatingStar(rating: rating) }
         ForEach(flags, id: \.self) { Badge($0, look: .meta) }
       }
     }
+  }
+}
+
+/// A page's name, in words: Android types it, and the owner wants it so on
+/// every screen, the provider's logo left out.
+struct HeadingMark: View {
+  let name: String
+  let size: TextSize
+  var weight: Font.Weight = .semibold
+  @Environment(\.palette) private var palette
+
+  var body: some View {
+    Text(name)
+      .textStyle(size, weight: weight, tracking: .tight)
+      .foregroundStyle(palette.foreground)
+      .lineLimit(3)
+      .fixedSize(horizontal: false, vertical: true)
+      .accessibilityAddTraits(.isHeader)
   }
 }
 
@@ -471,40 +470,6 @@ struct ActionRow: View {
   }
 }
 
-/// A file's download, under a page's buttons, while there is one: on its
-/// way, waiting, stopped, or on this device, opening the downloads.
-struct DownloadLine: View {
-  let file: MediaItem
-  let open: () -> Void
-  @Environment(Downloads.self) private var downloads
-  @Environment(\.palette) private var palette
-
-  var body: some View {
-    if let entry = downloads.store.items[file.id] {
-      Pressable(shape: Capsule(), wash: true, action: open) {
-        HStack(spacing: Space.s2) {
-          icon(entry)
-          Text(titleDownloadText(entry)).textStyle(.sm).foregroundStyle(palette.mutedForeground).lineLimit(1)
-          LucideIcon(.chevronRight, size: 14, tint: palette.foregroundFaint)
-        }
-        .padding(.vertical, Space.s1)
-        .frame(minHeight: TouchTarget)
-        .contentShape(Rectangle())
-      }
-      .accessibilityElement(children: .combine)
-    }
-  }
-
-  @ViewBuilder private func icon(_ entry: OfflineItem) -> some View {
-    switch entry.state {
-    case .done: LucideIcon(.circleCheck, size: 16, tint: palette.accent)
-    case .running: ProgressRing(entry.progress, size: 16)
-    case .failed: LucideIcon(.triangleAlert, size: 16, tint: palette.destructive)
-    case .queued, .paused: LucideIcon(.download, size: 16, tint: palette.mutedForeground)
-    }
-  }
-}
-
 // MARK: Files
 
 /// What a file holds, each part after its icon: the picture, the audio's
@@ -593,89 +558,6 @@ struct StreamLine: View {
       Text(text).textStyle(.xs)
     }
     .accessibilityElement(children: .combine)
-  }
-}
-
-/// A movie's files, when it has more than one: what the server calls each
-/// and where it sits, how its streams read, and how far in the person is.
-/// Each plays on its own; a long press offers starting over and its download.
-struct FilesSection: View {
-  let title: Title
-  @State private var files = Loader<[MediaItem]>()
-  @Environment(\.gutter) private var gutter
-
-  var body: some View {
-    Group {
-      switch files.state {
-      case .loading: Color.clear.frame(height: 0)
-      case .failed(let message, let disconnected):
-        VStack(alignment: .leading, spacing: 0) {
-          SectionTitle(Str.iosTitleFiles).padding(.horizontal, gutter)
-          ErrorSection(
-            Str.downloadsFilesFailed, message, retrying: files.refreshing, disconnected: disconnected,
-            onRetry: files.reload)
-        }
-      case .ready(let list):
-        if list.count > 1 {
-          VStack(alignment: .leading, spacing: Space.s3) {
-            SectionTitle(Str.iosTitleFiles)
-            VStack(spacing: Space.s1) {
-              ForEach(list, id: \.id) { FileRow(item: $0) }
-            }
-          }
-          .padding(.horizontal, gutter)
-        }
-      }
-    }
-    .loads(files) { [id = title.id] api in try await api.titleItems(id) }
-  }
-}
-
-private struct FileRow: View {
-  let item: MediaItem
-  @Environment(\.api) private var api
-  @Environment(\.navigator) private var nav
-  @Environment(\.actions) private var actions
-  @Environment(ViewerState.self) private var viewer: ViewerState?
-  @Environment(\.palette) private var palette
-
-  var body: some View {
-    let label = itemLabel(item)
-    let ratio = progressRatio(item)
-    let watched = viewer?.isWatched(item) ?? (item.progress?.completed ?? false)
-    let left = isResuming(item) && !watched ? timeLeft(item) : nil
-    Pressable(
-      shape: .kit(Radius.md), action: { nav.play(item.id, nil) },
-      onLongPress: { actions?.open(.item(item, here: true)) }, longPressLabel: Str.titleMoreActions
-    ) {
-      HStack(spacing: Space.s3_5) {
-        ArtFrame(label.showName, aspect: 16 / 9) {
-          Picture(api?.landscape(item, size: .thumb) ?? [])
-          PlayMark(size: 32)
-          if watched {
-            WatchedBadge(size: 18).padding(5).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
-          } else if let ratio, ratio > 0 {
-            ArtProgressBar(progress: ratio, inset: Space.s1_5)
-          }
-        }
-        .frame(width: 128)
-        VStack(alignment: .leading, spacing: Space.s0_5) {
-          Text(label.title).textStyle(.sm, weight: .medium).foregroundStyle(palette.foreground).lineLimit(1)
-          let detail = [fileFolders(item), left ?? formatRuntime(runtimeMinutes(item))].compactMap(\.self)
-          if !detail.isEmpty {
-            Text(detail.joined(separator: " · ")).textStyle(.px13).foregroundStyle(palette.mutedForeground)
-              .lineLimit(2)
-          }
-          StreamLine(item: item)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .multilineTextAlignment(.leading)
-      }
-      .padding(.vertical, Space.s1_5)
-      .contentShape(Rectangle())
-    }
-    .accessibilityElement(children: .combine)
-    .accessibilityHint(Str.mediaPlayNamed(label.title))
   }
 }
 

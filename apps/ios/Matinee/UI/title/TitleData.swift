@@ -74,25 +74,6 @@ func fileInfo(_ item: MediaItem, tracks: FileTracks?) -> FileInfo? {
   return info.video == nil && info.audio == nil && info.subtitles == nil ? nil : info
 }
 
-/// A download's state, for the line under a page's buttons.
-func titleDownloadText(_ entry: OfflineItem) -> String {
-  switch entry.state {
-  case .done: return Str.downloadsDone
-  case .running:
-    return entry.progress.map { "\(Str.downloadsStateRunning) · \(formatPercent($0))" } ?? Str.downloadsStateRunning
-  case .paused: return Str.downloadsStatePaused
-  case .queued: return Str.downloadsStateWaiting
-  case .failed:
-    let reason =
-      switch entry.failure {
-      case .forbidden: Str.downloadsErrorForbidden
-      case .unreachable: Str.downloadsErrorUnreachable
-      default: Str.downloadsErrorBrokeOff
-      }
-    return Str.downloadsStateFailed(reason)
-  }
-}
-
 /// "42 %", as the app's language writes a share.
 func formatPercent(_ share: Double) -> String {
   min(max(share, 0), 1).formatted(.percent.precision(.fractionLength(0)).locale(.app))
@@ -200,13 +181,4 @@ func itemShown(_ item: MediaItem) -> MediaItem {
   #else
     item
   #endif
-}
-
-/// The logo to show for `title`: the provider's, or in debug builds the fixture's stand-in.
-func titleLogoURL(_ title: TitleSummary, api: MatineeApi?) -> URL? {
-  #if DEBUG
-    if let logo = TitleFixture.logo(title) { return logo }
-  #endif
-  guard let api, let logo = title.images.logo else { return nil }
-  return URL(string: api.paths.artwork(logo.id, size: .medium))
 }
