@@ -4,12 +4,9 @@ import SwiftUI
 
 /*
  * RecentScreen.kt: the whole list behind the profile's Recently watched
- * row. The server sends it in one answer of up to a hundred titles, so it
- * loads at once rather than page by page.
+ * row. The server sends it in one answer of up to a hundred titles
+ * (`PROFILE_RECENT_LIMIT`), so it loads at once rather than page by page.
  */
-
-/// How many titles the list goes back.
-private let LIMIT = 100
 
 /// Everything the signed-in person watched last, the latest file of each
 /// title, newest first, as Favorites lists the favorites: the whole list
@@ -22,52 +19,50 @@ struct RecentScreen: View {
   }
 }
 
+/// The least a still takes in the grid from a tablet's width up, so a row
+/// of them reads as the rails' stills do.
+private let STILL_MINIMUM: CGFloat = 240
+
 private struct RecentList: View {
   let username: String
   @State private var recent = Loader<[WatchedEntry]?>()
-  @Environment(\.palette) private var palette
 
   var body: some View {
     let username = username
     Group {
       switch recent.state {
+      case .loading: LoadingBox()
       case .failed(let message, let disconnected):
         ErrorBox(Str.profileRecentLoadFailed, message, disconnected: disconnected, onRetry: recent.reload)
-      case .loading: LoadingBox()
       case .ready(let entries):
         let entries = entries ?? []
         if entries.isEmpty {
-          ScrollView { Empty() }
+          ScrollView {
+            EmptyState(icon: .clock, title: Str.profileRecentEmpty).padding(.vertical, Space.s12)
+          }
         } else {
           ScrollView {
-            CardGrid {
+            CardGrid(minimum: STILL_MINIMUM) {
               ForEach(entries, id: \.item.id) { entry in EpisodeCard(entry.item) }
             }
-            .padding(.top, 8)
-            .padding(.bottom, 32)
+            .padding(.top, Space.s2)
+            .padding(.bottom, Space.s8)
+          }
+          .refreshable {
+            recent.reload()
+            await recent.settled()
           }
         }
       }
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
-    .background(palette.background)
-    .legacyTopBar(Str.profileRecent) { DisconnectedAction(recent) }
-    .loads(recent) { api in try await api.profiles.recent(username: username, limit: LIMIT) }
-  }
-}
-
-private struct Empty: View {
-  @Environment(\.palette) private var palette
-
-  var body: some View {
-    VStack(spacing: 12) {
-      LucideIcon(.clock, size: 28, tint: palette.mutedForeground)
-      Text(Str.profileRecentEmpty).textStyle(.base, weight: .semibold).foregroundStyle(palette.foreground)
-        .multilineTextAlignment(.center)
+    .topBar(Str.profileRecent) { DisconnectedAction(recent) }
+    .loads(recent) { api in
+      let entries = try await api.profiles.recent(username: username, limit: PROFILE_RECENT_LIMIT)
+      #if DEBUG
+        if StatsFixtures.mode == .empty { return [] }
+      #endif
+      return entries
     }
-    .frame(maxWidth: .infinity)
-    .padding(.horizontal, 32)
-    .padding(.vertical, 64)
-    .accessibilityElement(children: .combine)
   }
 }

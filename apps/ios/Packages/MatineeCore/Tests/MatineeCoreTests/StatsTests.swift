@@ -50,6 +50,19 @@ struct StatsTests {
     #expect(BarLayout.height(0.1, top: 3600, in: 120) == 2)
   }
 
+  @Test func theWebsBarsTakeTwoThirdsOfTheirBucket() {
+    let week = BarLayout(width: 210, count: 7, share: 2.0 / 3)
+    #expect(week.slot == 30)
+    #expect(abs(week.barWidth - 20) < 1e-9)
+    #expect(abs(week.x(1) - 35) < 1e-9)
+    #expect(week.radius == 2)
+    let months = BarLayout(width: 300, count: 600, share: 2.0 / 3)
+    #expect(abs(months.barWidth - 1.0 / 3) < 1e-9)
+    #expect(abs(months.radius - 1.0 / 6) < 1e-9)
+    #expect(BarLayout(width: 100, count: 4, share: 2).gap == 0)
+    #expect(BarLayout(width: 100, count: 4, share: 2.0 / 3).index(at: 99) == 3)
+  }
+
   @Test func aTouchPicksTheBarUnderItAndStaysOnTheChart() {
     let layout = BarLayout(width: 70, count: 7)
     #expect(layout.index(at: 0) == 0)
@@ -143,6 +156,8 @@ struct StatsTests {
     #expect(grid.intensity(weekday: 3, hour: 3) == nil)
     #expect(grid.total(weekday: 5) == 900)
     #expect(grid.busiestWeekdays == [5, 1, 2])
+    #expect(grid.activeHours(weekday: 5) == [10, 12])
+    #expect(grid.activeHours(weekday: 3).isEmpty)
     let none = ActivityGrid([])
     #expect(none.isEmpty)
     #expect(none.max == 1)

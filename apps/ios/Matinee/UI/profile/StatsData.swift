@@ -54,6 +54,11 @@ nonisolated func weekdayName(_ weekday: Int, short: Bool) -> String {
   weekdayName(weekday, short: short, locale: .app)
 }
 
+/// "Saturday, 16:00 to 17:00": one square of the heatmap, its hour from the one it starts at.
+nonisolated func heatmapCellName(weekday: Int, hour: Int) -> String {
+  Str.tvStatsHeatmapCell(weekdayName(weekday, short: false), hourName(hour), hourName((hour + 1) % 24))
+}
+
 /// A board's value as the leaderboard shows it: "4h", "12 plays", "3 days".
 nonisolated func metricValue(_ metric: String, _ value: Double) -> String {
   switch MetricValue(metric: metric, value: value) {

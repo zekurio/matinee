@@ -1,83 +1,118 @@
-import Accessibility
 import MatineeCore
 import MatineeKit
 import SwiftUI
-import UIKit
 
 /*
- * Stats.kt: a profile's statistics, as the web's watch-stats: the range
- * chips, the headline figures, watch time per day, week, or month, the
- * most watched titles, the genres, where the person stands on the
- * leaderboard, and when in the week they watch. The charts are drawn with
- * shapes in the palette and given their values for VoiceOver, which reads
- * a drawing as nothing otherwise.
+ * Stats.kt: a profile's statistics, as the web's watch-stats.tsx,
+ * stat-blocks.tsx, and standing.tsx draw them: the range chips, the watch
+ * time over its bars, the headline figures, the most watched titles, the
+ * genres, where the person stands on the leaderboard, and when in the
+ * week they watch. The charts are StatsCharts.swift's; the words
+ * StatsData.swift's.
+ *
+ * The cards are the web's: `bg-card rounded-xl border`, a section's name
+ * in `text-15px font-semibold` over a line, and rows to the card's edges
+ * with a line between each. On a phone they're one column, in Android's
+ * order; from the web's `md` two, and from `xl` three, each card going
+ * where the columns are shortest so neither runs on alone.
  */
 
-/// The ranges as chips, scrolling sideways past the page's edge.
-struct RangeChips: View {
-  let current: String
-  let onPick: (String) -> Void
+/// The gap between the statistics' cards, both ways: the web's `gap-4`.
+private let CARD_GAP = Space.s4
 
-  var body: some View {
-    ScrollView(.horizontal) {
-      HStack(spacing: 6) {
-        ForEach(STATS_RANGES, id: \.self) { range in
-          LegacyChip(rangeName(range), selected: range == current) { onPick(range) }
-        }
-      }
-    }
-    .contentMargins(.horizontal, Space.gutter, for: .scrollContent)
-    .scrollIndicators(.hidden)
-  }
-}
+/// How many columns of cards a window takes: the web's `md:grid-cols-2 xl:grid-cols-3`.
+func statsColumns(_ window: CGSize) -> Int { window.width >= 1280 ? 3 : window.width >= 768 ? 2 : 1 }
+
+/// A ranking's poster's corners: the web's `rounded-[4px]` on a 40-point poster.
+private let THUMB_RADIUS: CGFloat = 4
+
+// MARK: Parts
 
 extension View {
-  /// The card statistics sit in: the app's card color with its rim.
-  fileprivate func statsCard() -> some View { modifier(StatsCardLook()) }
+  /// The surface statistics sit on: `bg-card rounded-xl border`.
+  func statsCard() -> some View { modifier(StatsCardLook()) }
 }
 
 private struct StatsCardLook: ViewModifier {
   @Environment(\.palette) private var palette
 
   func body(content: Content) -> some View {
+    let shape = RoundedRectangle.kit(Radius.xl)
     content
       .frame(maxWidth: .infinity, alignment: .leading)
-      .background(palette.card, in: RoundedRectangle.kit(Radius.md))
-      .clipShape(RoundedRectangle.kit(Radius.md))
-      .overlay { RoundedRectangle.kit(Radius.md).strokeBorder(palette.border) }
+      .background(palette.card, in: shape)
+      .clipShape(shape)
+      .overlay { shape.strokeBorder(palette.border) }
   }
 }
 
-/// A card with the section's name in small type at the top, as the watch time card has it.
-private struct StatsCard<Content: View>: View {
-  let label: String
+/// A titled card of statistics, as the web's `StatsSection`: its name at
+/// the top over a line across it, so the first row reads as a row and not
+/// part of the heading, then `content`, rows to the card's edges.
+struct StatsSection<Content: View>: View {
+  let title: String
   @ViewBuilder let content: () -> Content
   @Environment(\.palette) private var palette
 
+  init(_ title: String, @ViewBuilder content: @escaping () -> Content) {
+    self.title = title
+    self.content = content
+  }
+
   var body: some View {
     VStack(alignment: .leading, spacing: 0) {
-      Text(label).textStyle(.sm).foregroundStyle(palette.mutedForeground)
-        .padding(.horizontal, 16).padding(.top, 14).padding(.bottom, 4)
+      Text(title)
+        .textStyle(.px15, weight: .semibold)
+        .foregroundStyle(palette.foreground)
+        .padding(.horizontal, Space.s4)
+        .padding(.top, Space.s4)
+        .padding(.bottom, Space.s3)
         .accessibilityAddTraits(.isHeader)
+      Separator()
       content()
     }
     .statsCard()
+    .accessibilityElement(children: .contain)
   }
 }
 
-/// A line between a card's rows, from the rows' leading edge.
-private struct CardDivider: View {
-  var inset: CGFloat = 16
-  @Environment(\.palette) private var palette
+/// A card's rows with a line between each: the web's `divide-y`.
+private struct StatsRows<Content: View>: View {
+  @ViewBuilder let content: () -> Content
 
-  var body: some View { Rectangle().fill(palette.border).frame(height: 1).padding(.leading, inset) }
+  var body: some View {
+    VStack(spacing: 0) {
+      Group(subviews: content()) { rows in
+        ForEach(rows.indices, id: \.self) { index in
+          if index > 0 { Separator() }
+          rows[index]
+        }
+      }
+    }
+  }
+}
+
+/// A row that opens something when it can: offline, a title's or a
+/// genre's page is the server's, so the row only shows, at full strength.
+private struct RowButton<Label: View>: View {
+  let enabled: Bool
+  let action: () -> Void
+  @ViewBuilder let label: () -> Label
+
+  var body: some View {
+    if enabled {
+      Pressable(action: action) { label().contentShape(Rectangle()) }
+    } else {
+      label()
+    }
+  }
 }
 
 /// What a row counts and its figure: side by side, the figure at the end,
 /// or at the largest text sizes the figure under the words, so neither is
 /// squeezed into a column of letters.
 private struct LabelValue<Label: View, Value: View>: View {
-  var spacing: CGFloat = 14
+  var spacing: CGFloat = Space.s4
   @ViewBuilder let label: () -> Label
   @ViewBuilder let value: () -> Value
   @Environment(\.dynamicTypeSize) private var typeSize
@@ -92,9 +127,173 @@ private struct LabelValue<Label: View, Value: View>: View {
   }
 }
 
-/// Plays and what was finished, a row each as Settings lists its rows: an
-/// icon, what it counts, and the number at the end.
-struct StatList: View {
+// MARK: The range
+
+/// The ranges as chips: on a phone a row scrolling sideways past the
+/// page's edge, from the web's `sm` up wrapping at the heading's end.
+struct RangeChips: View {
+  let current: String
+  let onPick: (String) -> Void
+  var wraps = false
+  @Environment(\.gutter) private var gutter
+
+  var body: some View {
+    if wraps {
+      FlowRow(spacing: Space.s1_5, lineSpacing: Space.s1_5) { chips }
+    } else {
+      ScrollView(.horizontal) {
+        HStack(spacing: Space.s1_5) { chips }
+      }
+      .contentMargins(.horizontal, gutter, for: .scrollContent)
+      .scrollIndicators(.hidden)
+      .scrollClipDisabled()
+    }
+  }
+
+  @ViewBuilder private var chips: some View {
+    ForEach(STATS_RANGES, id: \.self) { range in
+      Chip(rangeName(range), selected: range == current) { onPick(range) }
+    }
+  }
+}
+
+/// The statistics' heading, the size of Home's rows, with the range chips:
+/// under it on a phone, at its end where they fit beside it, as the web's
+/// `SectionHeading` with its action.
+struct StatsHeading: View {
+  let range: String
+  let showsRange: Bool
+  let onPick: (String) -> Void
+  @Environment(\.gutter) private var gutter
+  @Environment(\.windowSize) private var window
+
+  var body: some View {
+    if showsRange && window.width >= 640 {
+      ViewThatFits(in: .horizontal) {
+        HStack(spacing: Space.s2_5) {
+          SectionTitle(Str.profileStatistics)
+          Spacer(minLength: Space.s4)
+          HStack(spacing: Space.s1_5) {
+            ForEach(STATS_RANGES, id: \.self) { range in
+              Chip(rangeName(range), selected: range == self.range) { onPick(range) }
+            }
+          }
+        }
+        VStack(alignment: .leading, spacing: Space.s2) {
+          SectionTitle(Str.profileStatistics)
+          RangeChips(current: range, onPick: onPick, wraps: true)
+        }
+      }
+      .padding(.horizontal, gutter)
+    } else {
+      VStack(alignment: .leading, spacing: Space.s2) {
+        SectionTitle(Str.profileStatistics).padding(.horizontal, gutter)
+        if showsRange { RangeChips(current: range, onPick: onPick) }
+      }
+    }
+  }
+}
+
+// MARK: The cards
+
+/// Every card for figures that have plays in them: the watch time and the
+/// figures, then the rankings, the standing, and the viewing times.
+/// `standing` is left out offline, as a board of everyone's isn't saved.
+struct StatsCards: View {
+  let stats: WatchStats
+  let range: String
+  let board: Leaderboard?
+  let standing: Bool
+  @Environment(\.windowSize) private var window
+  @State private var width: CGFloat = 0
+
+  var body: some View {
+    let columns = statsColumns(window)
+    VStack(alignment: .leading, spacing: CARD_GAP) {
+      WatchOverview(stats: stats, columns: columns, width: width)
+      StatsColumns(columns: columns, spacing: CARD_GAP) {
+        TopTitles(stats: stats).id("titles")
+        Genres(stats: stats)
+        if standing { Standing(board: board, range: range).id("standing") }
+        Activity(stats: stats).id("activity")
+      }
+    }
+    .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
+  }
+}
+
+/// The watch time card and the figures, as the web's `WatchOverview`: the
+/// card two columns wide and the figures in the third beside it, the
+/// card's bars filling the figures' height; with fewer columns, one over
+/// the other.
+private struct WatchOverview: View {
+  let stats: WatchStats
+  let columns: Int
+  let width: CGFloat
+
+  var body: some View {
+    if columns >= 3 && width > 0 {
+      let column = (width - CARD_GAP * 2) / 3
+      HStack(alignment: .top, spacing: CARD_GAP) {
+        WatchTimeCard(stats: stats, chartMinimum: 80).frame(width: column * 2 + CARD_GAP).frame(maxHeight: .infinity)
+        StatFigures(stats: stats).frame(width: column)
+      }
+      .fixedSize(horizontal: false, vertical: true)
+    } else {
+      VStack(spacing: CARD_GAP) {
+        WatchTimeCard(stats: stats)
+        StatFigures(stats: stats)
+      }
+    }
+  }
+}
+
+/// The range's watch time as a card, as the web shows it: the total, big,
+/// over watch time per day, week, or month as bars. Holding a bar reads
+/// that day, week, or month out in the total's place; VoiceOver's swipes
+/// up and down step through them the same way.
+struct WatchTimeCard: View {
+  let stats: WatchStats
+  /// The bars' least height: the web's `min-h-36`, or `xl:min-h-20` beside the figures.
+  var chartMinimum: CGFloat = 144
+  @State private var active: Int?
+  @Environment(\.palette) private var palette
+
+  var body: some View {
+    let buckets = stats.buckets
+    let shown = active.flatMap { buckets.indices.contains($0) ? buckets[$0] : nil }
+    VStack(alignment: .leading, spacing: Space.s4) {
+      VStack(alignment: .leading, spacing: 0) {
+        Text(shown.map { bucketName($0.start, unit: stats.unit) } ?? "\(Str.statsWatchTime) · \(rangeName(stats.range))")
+          .textStyle(.sm)
+          .foregroundStyle(palette.mutedForeground)
+          .lineLimit(2)
+        Text(formatWatchTime(shown?.watchSeconds ?? stats.totals.watchSeconds))
+          .textStyle(.xl4, weight: .bold, tracking: .tight)
+          .monospacedDigit()
+          .foregroundStyle(palette.foreground)
+          .contentTransition(.numericText())
+      }
+      .frame(maxWidth: .infinity, alignment: .leading)
+      // The chart says the same, and every bar's.
+      .accessibilityHidden(!buckets.isEmpty)
+      if !buckets.isEmpty {
+        WatchChart(stats: stats, active: $active)
+          .frame(minHeight: chartMinimum)
+          .frame(maxHeight: .infinity)
+      }
+    }
+    .padding(Space.s4)
+    .frame(maxHeight: .infinity, alignment: .top)
+    .statsCard()
+    .onChange(of: stats) { active = nil }
+  }
+}
+
+/// Plays and what was finished, as the web's `StatFigures`: a card of rows
+/// as Settings lists its rows, an icon, what it counts, and the number at
+/// the end, so it reads as a sentence rather than a wall of numbers.
+struct StatFigures: View {
   let stats: WatchStats
   @Environment(\.palette) private var palette
 
@@ -106,17 +305,20 @@ struct StatList: View {
       (.tv, Str.statsEpisodesFinished, totals.episodes),
       (.tvPlay, Str.statsShowsWatched, totals.shows),
     ]
-    VStack(spacing: 0) {
-      ForEach(Array(rows.enumerated()), id: \.offset) { index, row in
-        if index > 0 { CardDivider(inset: 0) }
-        HStack(spacing: 14) {
-          LucideIcon(row.0, size: 20, tint: palette.mutedForeground)
-          Text(row.1).textStyle(.base).foregroundStyle(palette.foreground)
-            .frame(maxWidth: .infinity, alignment: .leading)
-          Text(formatCount(row.2)).textStyle(.base, weight: .semibold).foregroundStyle(palette.foreground)
+    StatsRows {
+      ForEach(rows.indices, id: \.self) { index in
+        let (icon, label, value) = rows[index]
+        HStack(spacing: Space.s3_5) {
+          LucideIcon(icon, size: 20, tint: palette.mutedForeground)
+          LabelValue {
+            Text(label).textStyle(.px15).foregroundStyle(palette.foreground)
+          } value: {
+            Text(formatCount(value)).textStyle(.px15, weight: .semibold).monospacedDigit()
+              .foregroundStyle(palette.foreground)
+          }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
+        .padding(.horizontal, Space.s4)
+        .padding(.vertical, Space.s3)
         .accessibilityElement(children: .combine)
       }
     }
@@ -124,188 +326,69 @@ struct StatList: View {
   }
 }
 
-/// The range's watch time as a card, as the web shows it: the total, big,
-/// over watch time per day, week, or month as bars. Holding a bar reads
-/// that day, week, or month out in the total's place; VoiceOver's swipes
-/// up and down step through them the same way.
-struct WatchTimeCard: View {
-  let stats: WatchStats
-  @State private var active: Int?
-  @Environment(\.palette) private var palette
-
-  var body: some View {
-    let buckets = stats.buckets
-    let shown = active.flatMap { buckets.indices.contains($0) ? buckets[$0] : nil }
-    VStack(alignment: .leading, spacing: 0) {
-      VStack(alignment: .leading, spacing: 0) {
-        Text(shown.map { bucketName($0.start, unit: stats.unit) } ?? "\(Str.statsWatchTime) · \(rangeName(stats.range))")
-          .textStyle(.sm).foregroundStyle(palette.mutedForeground)
-        Text(formatWatchTime(shown?.watchSeconds ?? stats.totals.watchSeconds))
-          .textStyle(.xl4, weight: .bold, tracking: .tight).foregroundStyle(palette.foreground)
-          .contentTransition(.numericText())
-      }
-      // The chart says the same, bar by bar.
-      .accessibilityHidden(!buckets.isEmpty)
-      if !buckets.isEmpty {
-        WatchChart(stats: stats, active: $active).frame(height: 120).padding(.top, 16)
-      }
-    }
-    .padding(16)
-    .statsCard()
-    .onChange(of: stats) { active = nil }
-  }
-}
-
-/// Watch time per bucket as bars on a baseline, filling its box.
-private struct WatchChart: View {
-  let stats: WatchStats
-  @Binding var active: Int?
-  @Environment(\.palette) private var palette
-  @Environment(\.accessibilityReduceMotion) private var reduceMotion
-  @State private var width: CGFloat = 0
-
-  var body: some View {
-    let buckets = stats.buckets
-    let top = scaleTop(buckets.map(\.watchSeconds).max() ?? 0)
-    let accent = palette.accent
-    let baseline = palette.border
-    Canvas { context, size in
-      let layout = BarLayout(width: size.width, count: buckets.count)
-      context.fill(Path(CGRect(x: 0, y: size.height - 1, width: size.width, height: 1)), with: .color(baseline))
-      for (index, bucket) in buckets.enumerated() {
-        let height = BarLayout.height(bucket.watchSeconds, top: top, in: size.height)
-        guard height > 0 else { continue }
-        let rect = CGRect(x: layout.x(index), y: size.height - height, width: layout.barWidth, height: height)
-        let lit = active == nil || active == index
-        context.fill(
-          Path(roundedRect: rect, cornerRadius: layout.radius, style: .continuous),
-          with: .color(lit ? accent : accent.opacity(0.45)))
-      }
-    }
-    .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
-    .contentShape(Rectangle())
-    // Held, then slid along, as iOS's own charts read a point: a finger
-    // that moves at once scrolls the page instead.
-    .gesture(
-      BarPress { x in active = x.flatMap { BarLayout(width: width, count: buckets.count).index(at: $0) } }
-    )
-    .onContinuousHover { phase in
-      switch phase {
-      case .active(let point): active = BarLayout(width: width, count: buckets.count).index(at: point.x)
-      case .ended: active = nil
-      }
-    }
-    .accessibilityElement()
-    .accessibilityLabel("\(Str.statsWatchTime) · \(rangeName(stats.range))")
-    .accessibilityValue(accessibilityValue(buckets))
-    .accessibilityAdjustableAction { direction in
-      let last = buckets.count - 1
-      switch direction {
-      case .increment: active = min((active ?? -1) + 1, last)
-      case .decrement: active = max((active ?? buckets.count) - 1, 0)
-      @unknown default: break
-      }
-    }
-    .accessibilityChartDescriptor(WatchChartDescriptor(stats: stats, top: top))
-  }
-
-  /// The bar picked, or the total with none.
-  private func accessibilityValue(_ buckets: [StatsBucket]) -> String {
-    guard let active, buckets.indices.contains(active) else { return formatWatchTime(stats.totals.watchSeconds) }
-    let bucket = buckets[active]
-    return "\(bucketName(bucket.start, unit: stats.unit)), \(formatWatchTime(bucket.watchSeconds))"
-  }
-}
-
-/// A finger held on the chart, where it is along it while it stays down,
-/// nil once it lifts. SwiftUI's long press says nothing of where, and its
-/// drag would take the page's scrolling, so it's UIKit's long press.
-private struct BarPress: UIGestureRecognizerRepresentable {
-  let onChange: (CGFloat?) -> Void
-
-  func makeUIGestureRecognizer(context: Context) -> UILongPressGestureRecognizer {
-    let press = UILongPressGestureRecognizer()
-    press.minimumPressDuration = 0.2
-    return press
-  }
-
-  func handleUIGestureRecognizerAction(_ press: UILongPressGestureRecognizer, context: Context) {
-    switch press.state {
-    case .began, .changed: onChange(context.converter.localLocation.x)
-    default: onChange(nil)
-    }
-  }
-}
-
-/// The chart's values for VoiceOver's audio graph and its data table.
-private struct WatchChartDescriptor: AXChartDescriptorRepresentable {
-  let stats: WatchStats
-  let top: Double
-
-  func makeChartDescriptor() -> AXChartDescriptor {
-    let names = stats.buckets.map { bucketName($0.start, unit: stats.unit) }
-    let x = AXCategoricalDataAxisDescriptor(title: rangeName(stats.range), categoryOrder: names)
-    let y = AXNumericDataAxisDescriptor(
-      title: Str.statsWatchTime, range: 0...top, gridlinePositions: []
-    ) { formatWatchTime($0) }
-    let points = zip(names, stats.buckets).map { name, bucket in AXDataPoint(x: name, y: bucket.watchSeconds) }
-    return AXChartDescriptor(
-      title: Str.statsWatchTime, summary: formatWatchTime(stats.totals.watchSeconds), xAxis: x, yAxis: y,
-      additionalAxes: [], series: [AXDataSeriesDescriptor(name: Str.statsWatchTime, isContinuous: false, dataPoints: points)])
-  }
-}
-
-/// The most watched titles in a card, ranked: the poster, the name, how
-/// often it was played, and its watch time at the end.
+/// The most watched titles, ranked, as the web's `TopTitlesSection`: the
+/// first three stand out, each with a small poster, how often it was
+/// played, and its watch time at the end. A row opens the title.
 struct TopTitles: View {
   let stats: WatchStats
   @Environment(\.api) private var api
   @Environment(\.navigator) private var nav
-  // Offline, a title's page is the server's.
   @Environment(\.offline) private var offline
   @Environment(\.palette) private var palette
-  @ScaledMetric(relativeTo: .body) private var rankWidth: CGFloat = 26
+  @Environment(\.dynamicTypeSize) private var typeSize
+  @ScaledMetric(relativeTo: .body) private var rankWidth: CGFloat = 24
 
   var body: some View {
     if !stats.titles.isEmpty {
-      StatsCard(label: Str.statsTop) {
-        ForEach(Array(stats.titles.enumerated()), id: \.element.title.id) { index, entry in
-          if index > 0 { CardDivider() }
-          Button { nav.title(entry.title) } label: {
-            HStack(spacing: 0) {
-              Text(formatCount(index + 1))
-                .textStyle(.base, weight: .semibold)
-                .foregroundStyle(index < 3 ? palette.foreground : palette.mutedForeground)
-                .frame(width: rankWidth, alignment: .leading)
-              // The poster alone: at this size the name the art falls back to would be an ellipsis.
-              ArtFrame(entry.title.name, aspect: 2 / 3) { Picture(api?.art(entry.title.images.poster)) }
-                .frame(width: 40)
-              LabelValue {
-                VStack(alignment: .leading, spacing: 0) {
-                  Text(entry.title.name).textStyle(.base).foregroundStyle(palette.foreground).lineLimit(3)
-                  Text(Str.statsPlayCount(entry.plays)).textStyle(.px13).foregroundStyle(palette.mutedForeground)
-                }
-              } value: {
-                Text(formatWatchTime(entry.watchSeconds)).textStyle(.base, weight: .semibold)
-                  .foregroundStyle(palette.foreground)
-              }
-              .padding(.leading, 14)
+      StatsSection(Str.statsTop) {
+        StatsRows {
+          ForEach(Array(stats.titles.enumerated()), id: \.element.title.id) { index, entry in
+            RowButton(enabled: !offline, action: { nav.title(entry.title) }) {
+              row(index, entry)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .contentShape(Rectangle())
+            .accessibilityElement(children: .combine)
           }
-          .buttonStyle(LegacyRowPress())
-          .disabled(offline)
-          .accessibilityElement(children: .combine)
         }
       }
     }
   }
+
+  private func row(_ index: Int, _ entry: TitleStat) -> some View {
+    HStack(spacing: Space.s3_5) {
+      Text(formatCount(index + 1))
+        .textStyle(.base, weight: .semibold)
+        .monospacedDigit()
+        .foregroundStyle(index < 3 ? palette.foreground : palette.mutedForeground)
+        .frame(minWidth: rankWidth, alignment: .leading)
+      // The poster alone, on the title's tone: at this size a name over it would be an ellipsis.
+      ZStack {
+        Tone(entry.title.id)
+        Picture(api?.art(entry.title.images.poster))
+      }
+      .frame(width: 40, height: 60)
+      .clipShape(RoundedRectangle.kit(THUMB_RADIUS))
+      .overlay { RoundedRectangle.kit(THUMB_RADIUS).strokeBorder(palette.border) }
+      .accessibilityHidden(true)
+      LabelValue(spacing: Space.s3_5) {
+        VStack(alignment: .leading, spacing: 0) {
+          Text(entry.title.name).textStyle(.px15).foregroundStyle(palette.foreground)
+            .lineLimit(typeSize.isAccessibilitySize ? 3 : 1)
+          Text(Str.statsPlayCount(entry.plays)).textStyle(.sm).monospacedDigit()
+            .foregroundStyle(palette.mutedForeground)
+        }
+      } value: {
+        Text(formatWatchTime(entry.watchSeconds)).textStyle(.px15, weight: .semibold).monospacedDigit()
+          .foregroundStyle(palette.foreground)
+      }
+    }
+    .padding(.horizontal, Space.s4)
+    .padding(.vertical, Space.s3)
+  }
 }
 
-/// Watch time per genre in a card. A title can have several genres, so
-/// their times add up to more than the whole.
+/// Watch time per genre, as the web's rows: a title can have several
+/// genres, so their times add up to more than the whole, and there's no
+/// bar or share to measure them by. A row opens the genre, as on Android.
 struct Genres: View {
   let stats: WatchStats
   @Environment(\.navigator) private var nav
@@ -314,23 +397,21 @@ struct Genres: View {
 
   var body: some View {
     if !stats.genres.isEmpty {
-      StatsCard(label: Str.statsGenres) {
-        ForEach(Array(stats.genres.enumerated()), id: \.element.name) { index, genre in
-          if index > 0 { CardDivider() }
-          Button { nav.genre(genre.name) } label: {
-            LabelValue {
-              Text(genre.name).textStyle(.base).foregroundStyle(palette.foreground)
-            } value: {
-              Text(formatWatchTime(genre.watchSeconds)).textStyle(.base, weight: .semibold)
-                .foregroundStyle(palette.foreground)
+      StatsSection(Str.statsGenres) {
+        StatsRows {
+          ForEach(stats.genres, id: \.name) { genre in
+            RowButton(enabled: !offline, action: { nav.genre(genre.name) }) {
+              LabelValue {
+                Text(genre.name).textStyle(.px15).foregroundStyle(palette.foreground)
+              } value: {
+                Text(formatWatchTime(genre.watchSeconds)).textStyle(.px15, weight: .semibold).monospacedDigit()
+                  .foregroundStyle(palette.foreground)
+              }
+              .padding(.horizontal, Space.s4)
+              .padding(.vertical, Space.s3)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
-            .contentShape(Rectangle())
+            .accessibilityElement(children: .combine)
           }
-          .buttonStyle(LegacyRowPress())
-          .disabled(offline)
-          .accessibilityElement(children: .combine)
         }
       }
     }
@@ -338,56 +419,59 @@ struct Genres: View {
 }
 
 /// Where the signed-in user stands on each board of the leaderboard for the
-/// range, as the web's profile shows it: their place between the people
-/// just above and below them. A board's name opens it whole. Boards they
-/// aren't on are left out, and with none the card is too, `gap` and all.
+/// range, as the web's `StandingSection`: their place between the people
+/// just above and below them. A board's name opens it whole, in a sheet.
+/// Boards they aren't on are left out, and with none the card is too.
 struct Standing: View {
+  let board: Leaderboard?
   let range: String
-  var gap: CGFloat = 0
-  @State private var leaderboard = Loader<Leaderboard>()
   @State private var open: OpenBoard?
   @Environment(\.palette) private var palette
 
   var body: some View {
-    let range = range
-    let found = standings(leaderboard.state.value)
-    // Something to appear, so the leaderboard loads while the card can't show yet.
-    ZStack(alignment: .top) {
-      Color.clear.frame(height: 0)
-      if !found.isEmpty {
-        StatsCard(label: Str.statsStandingTitle) {
-          ForEach(Array(found.enumerated()), id: \.element.board.metric) { index, standing in
-            if index > 0 { CardDivider() }
-            VStack(alignment: .leading, spacing: 6) {
-              Button { open = OpenBoard(board: standing.board) } label: {
-                HStack(spacing: 2) {
-                  Text(metricName(standing.board.metric)).textStyle(.px13).foregroundStyle(palette.mutedForeground)
+    let found = standings(board)
+    if !found.isEmpty {
+      StatsSection(Str.statsStandingTitle) {
+        StatsRows {
+          ForEach(found, id: \.board.metric) { standing in
+            VStack(alignment: .leading, spacing: Space.s1_5) {
+              Pressable(shape: .kit(Radius.sm)) {
+                open = OpenBoard(board: standing.board)
+              } label: {
+                HStack(spacing: Space.s0_5) {
+                  Text(metricName(standing.board.metric)).textStyle(.sm).foregroundStyle(palette.mutedForeground)
                   LucideIcon(.chevronRight, size: 14, tint: palette.mutedForeground)
                 }
-                .frame(minHeight: 28)
+                .padding(.vertical, Space.s1)
+                .padding(.horizontal, Space.s1)
                 .contentShape(Rectangle())
               }
-              .buttonStyle(LegacyRoundPress())
+              .padding(.horizontal, -Space.s1)
               .accessibilityAddTraits(.isHeader)
-              ForEach(standing.places, id: \.rank) { place in
-                PlaceRow(place: place, value: metricValue(standing.board.metric, place.value))
+              VStack(spacing: 0) {
+                ForEach(standing.places, id: \.rank) { place in
+                  PlaceRow(place: place, value: metricValue(standing.board.metric, place.value))
+                }
               }
+              .padding(.horizontal, -Space.s2)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
+            .padding(.horizontal, Space.s4)
+            .padding(.vertical, Space.s3)
           }
         }
-        .padding(.top, gap)
       }
-    }
-    .loads(leaderboard) { api in
-      let board = try await api.stats.leaderboard(range: range, timeZone: statsTimeZone)
+      .matineeSheet(item: $open, size: .mediumAndLarge) { open in BoardSheet(board: open.board, range: range) }
       #if DEBUG
-        if StatsFixtures.on { return StatsFixtures.leaderboard(board) }
+        .task {
+          // `-dev.profileBoard watchTime`: that board's sheet open, for screenshots.
+          guard let metric = UserDefaults.standard.string(forKey: "dev.profileBoard"),
+            let shown = found.first(where: { $0.board.metric == metric })
+          else { return }
+          try? await Task.sleep(for: .seconds(3))
+          open = OpenBoard(board: shown.board)
+        }
       #endif
-      return board
     }
-    .sheet(item: $open) { open in BoardSheet(board: open.board, range: range) }
   }
 }
 
@@ -396,141 +480,171 @@ private struct OpenBoard: Identifiable {
   var id: String { board.metric }
 }
 
-/// A whole board, as the leaderboard has it: the top places, then the viewer's neighborhood, set off.
+/// A whole board, as the web's dialog over the profile: the top places,
+/// then the viewer's neighborhood, set off unless it carries straight on.
 private struct BoardSheet: View {
   let board: LeaderboardBoard
   let range: String
 
   var body: some View {
-    ScrollView {
-      VStack(alignment: .leading, spacing: 0) {
-        LegacySheetHeader(metricName(board.metric), rangeName(range))
-        VStack(spacing: 2) {
+    VStack(alignment: .leading, spacing: 0) {
+      SheetHeader(metricName(board.metric), subtitle: rangeName(range))
+      ScrollView {
+        VStack(spacing: 0) {
           ForEach(Array(board.entries.enumerated()), id: \.offset) { index, place in
-            // Set off when it doesn't carry straight on from the top places.
-            if startsNeighborhood(board, index) { Spacer().frame(height: 10) }
             PlaceRow(place: place, value: metricValue(board.metric, place.value))
+              .padding(.top, startsNeighborhood(board, index) ? Space.s1_5 : 0)
           }
         }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, Space.s3)
+        .padding(.bottom, Space.s6)
       }
-      .padding(.vertical, 12)
     }
-    .legacySheet()
   }
 }
 
-/// A place: the rank, the podium's in the accent, the person, and the value; the user's own lit.
+/// A place, as the web's `Place`: the rank, the podium's in the accent
+/// fading from first to third, the person, and the value; the user's own lit.
 private struct PlaceRow: View {
   let place: LeaderboardEntry
   let value: String
   @Environment(\.api) private var api
   @Environment(\.palette) private var palette
-  @ScaledMetric(relativeTo: .footnote) private var rankSize: CGFloat = 24
+  @ScaledMetric(relativeTo: .caption2) private var rankSize: CGFloat = 20
 
   var body: some View {
     let user = place.user
-    let podium: Color =
+    let (fill, ink): (Color, Color) =
       switch place.rank {
-      case 1: palette.accent
-      case 2: palette.accent.opacity(0.6)
-      case 3: palette.accent.opacity(0.3)
-      default: .clear
+      case 1: (palette.accent, palette.accentForeground)
+      case 2: (palette.accent.opacity(0.6), palette.accentForeground)
+      case 3: (palette.accent.opacity(0.3), palette.foreground)
+      default: (.clear, palette.mutedForeground)
       }
-    HStack(spacing: 10) {
+    HStack(spacing: Space.s2_5) {
       Text(formatCount(place.rank))
-        .textStyle(.px13, weight: .semibold)
-        .foregroundStyle(
-          place.rank == 1 ? palette.accentForeground : place.rank <= 3 ? palette.foreground : palette.mutedForeground)
+        .textStyle(.px11, weight: .semibold)
+        .monospacedDigit()
+        .foregroundStyle(ink)
         .lineLimit(1)
         .minimumScaleFactor(0.7)
         .frame(minWidth: rankSize, minHeight: rankSize)
-        .background(podium, in: Capsule())
-      ProfileAvatar(user.name, url: user.avatarId.flatMap { api?.paths.avatar($0) }, size: 28)
-      LabelValue(spacing: 10) {
-        Text(place.isSelf ? "\(user.name) \(Str.statsYou)" : user.name)
-          .textStyle(.base).foregroundStyle(palette.foreground).lineLimit(2)
+        .background(fill, in: Capsule())
+      ProfileAvatar(user.name, url: user.avatarId.flatMap { api?.paths.avatar($0) }, size: 24)
+        .accessibilityHidden(true)
+      LabelValue(spacing: Space.s2_5) {
+        (Text(user.name) + Text(place.isSelf ? " \(Str.statsYou)" : "").foregroundStyle(palette.mutedForeground))
+          .textStyle(.px13)
+          .foregroundStyle(palette.foreground)
+          .lineLimit(2)
       } value: {
-        Text(value).textStyle(.sm, weight: .semibold).foregroundStyle(palette.foreground)
+        Text(value).textStyle(.px13, weight: .medium).monospacedDigit().foregroundStyle(palette.foreground)
       }
     }
-    .padding(.horizontal, 8)
-    .padding(.vertical, 6)
-    .background(place.isSelf ? palette.accent.opacity(0.12) : .clear, in: RoundedRectangle(cornerRadius: 8))
+    .padding(.horizontal, Space.s2)
+    .padding(.vertical, Space.s1)
+    .background(place.isSelf ? palette.accent.opacity(0.1) : .clear, in: RoundedRectangle.kit(Radius.md))
     .accessibilityElement(children: .combine)
   }
 }
 
-/// When in the week watching starts, as the web's heatmap draws it: a
-/// square per hour of each weekday, deeper for more, and the busiest time
-/// under it.
+/// When in the week watching starts, as the web's `ActivitySection`: the
+/// heatmap, and under it the busiest time, or the square held.
 struct Activity: View {
   let stats: WatchStats
+  @State private var active: ActivityCell?
   @Environment(\.palette) private var palette
-  @Environment(\.dynamicTypeSize) private var typeSize
-  @ScaledMetric(relativeTo: .caption2) private var dayWidth: CGFloat = 24
 
   var body: some View {
     let grid = ActivityGrid(stats.activity)
     if let peak = grid.peak {
-      StatsCard(label: Str.statsHeatmapTitle) {
-        VStack(alignment: .leading, spacing: 3) {
-          // A grid, so the weekdays' column is as wide as the longest name in the language.
-          Grid(alignment: .leading, horizontalSpacing: 6, verticalSpacing: 3) {
-            ForEach(1...7, id: \.self) { weekday in
-              GridRow {
-                Text(weekdayName(weekday, short: true)).textStyle(.px11, weight: .medium).foregroundStyle(palette.mutedForeground)
-                  .lineLimit(1).frame(minWidth: dayWidth, alignment: .leading)
-                Squares(grid: grid, weekday: weekday).frame(height: 12)
-              }
-            }
-            // The hours under the squares, every six, or every twelve where the words are big.
-            let marks = activityHourMarks(roomy: !typeSize.isAccessibilitySize)
-            GridRow {
-              Color.clear.frame(width: 1, height: 1).gridCellUnsizedAxes([.horizontal, .vertical])
-              HStack(spacing: 0) {
-                ForEach(marks, id: \.self) { hour in
-                  Text(hourName(hour)).textStyle(.px11, weight: .medium).foregroundStyle(palette.mutedForeground)
-                    .lineLimit(1).minimumScaleFactor(0.7)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
-              }
+      StatsSection(Str.statsHeatmapTitle) {
+        VStack(alignment: .leading, spacing: Space.s2) {
+          Heatmap(grid: grid, active: $active)
+          Group {
+            if let active {
+              Text("\(heatmapCellName(weekday: active.weekday, hour: active.hour)) · \(formatWatchTime(active.watchSeconds))")
+                .foregroundStyle(palette.foreground)
+            } else {
+              Text(Str.statsHeatmapPeak(weekdayName(peak.weekday, short: false), hourName(peak.hour)))
+                .foregroundStyle(palette.mutedForeground)
             }
           }
-          .accessibilityElement()
-          .accessibilityLabel(Str.statsHeatmapTitle)
-          .accessibilityValue(
-            grid.busiestWeekdays.map { "\(weekdayName($0, short: false)): \(formatWatchTime(grid.total(weekday: $0)))" }
-              .joined(separator: ", "))
-          Text(Str.statsHeatmapPeak(weekdayName(peak.weekday, short: false), hourName(peak.hour)))
-            .textStyle(.px13).foregroundStyle(palette.mutedForeground)
-            .padding(.top, 6)
+          .textStyle(.xs)
+          // The heatmap reads it out itself.
+          .accessibilityHidden(true)
         }
-        .padding(.horizontal, 16)
-        .padding(.top, 8)
-        .padding(.bottom, 14)
+        .padding(Space.s4)
       }
+      .onChange(of: stats) { active = nil }
     }
   }
 }
 
-/// A weekday's 24 squares.
-private struct Squares: View {
-  let grid: ActivityGrid
-  let weekday: Int
-  @Environment(\.palette) private var palette
+/// Where the cards go while the first figures load, as the web's `WatchStatsSkeleton`.
+struct StatsSkeleton: View {
+  @Environment(\.windowSize) private var window
 
   var body: some View {
-    let accent = palette.accent
-    let empty = palette.foreground.opacity(0.06)
-    Canvas { context, size in
-      let gap: CGFloat = 2
-      let cell = (size.width - gap * 23) / 24
-      for hour in 0..<24 {
-        let rect = CGRect(x: CGFloat(hour) * (cell + gap), y: 0, width: cell, height: size.height)
-        let color = grid.intensity(weekday: weekday, hour: hour).map { accent.opacity($0) } ?? empty
-        context.fill(Path(roundedRect: rect, cornerRadius: 2, style: .continuous), with: .color(color))
-      }
+    let layout =
+      window.width >= 1024
+      ? AnyLayout(HStackLayout(alignment: .top, spacing: CARD_GAP))
+      : AnyLayout(VStackLayout(spacing: CARD_GAP))
+    layout {
+      Skeleton(radius: Radius.xl).frame(height: 256).layoutPriority(2)
+      Skeleton(radius: Radius.xl).frame(height: 192)
     }
+    .accessibilityElement()
+    .accessibilityLabel(Str.loadingInProgress)
+  }
+}
+
+// MARK: Columns
+
+/// Cards in `columns` columns of the same width, each going under the
+/// shortest column so far, in order: one column on a phone. A card that
+/// draws nothing, as the standing before its board loads, takes no room
+/// and no gap.
+struct StatsColumns: Layout {
+  let columns: Int
+  let spacing: CGFloat
+
+  func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+    let width = proposal.width ?? 360
+    return CGSize(width: width, height: arrange(width: width, subviews).height)
+  }
+
+  func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+    let arranged = arrange(width: bounds.width, subviews)
+    for (subview, spot) in zip(subviews, arranged.spots) {
+      subview.place(
+        at: CGPoint(x: bounds.minX + spot.x, y: bounds.minY + spot.y), anchor: .topLeading,
+        proposal: ProposedViewSize(width: arranged.column, height: spot.height))
+    }
+  }
+
+  private struct Spot {
+    var x: CGFloat
+    var y: CGFloat
+    var height: CGFloat
+  }
+
+  private func arrange(width: CGFloat, _ subviews: Subviews) -> (spots: [Spot], column: CGFloat, height: CGFloat) {
+    let count = max(columns, 1)
+    let column = max((width - spacing * CGFloat(count - 1)) / CGFloat(count), 0)
+    var heights = Array(repeating: CGFloat(0), count: count)
+    var spots: [Spot] = []
+    for subview in subviews {
+      let height = subview.sizeThatFits(ProposedViewSize(width: column, height: nil)).height
+      guard height > 0 else {
+        spots.append(Spot(x: 0, y: 0, height: 0))
+        continue
+      }
+      let shortest = heights.indices.min { heights[$0] < heights[$1] } ?? 0
+      let y = heights[shortest] > 0 ? heights[shortest] + spacing : 0
+      spots.append(Spot(x: CGFloat(shortest) * (column + spacing), y: y, height: height))
+      heights[shortest] = y + height
+    }
+    return (spots, column, heights.max() ?? 0)
   }
 }
