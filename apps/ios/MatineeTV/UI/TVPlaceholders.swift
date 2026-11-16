@@ -45,16 +45,6 @@ struct TVBrowseScreen: View {
   }
 }
 
-// MARK: Profile: ui/tv/profile
-
-struct TVProfileScreen: View {
-  var body: some View { TVPlaceholderPage(Str.tabProfile, path: "profile", port: "profile/TvProfile.kt") }
-}
-
-struct TVRecentScreen: View {
-  var body: some View { TVPlaceholderPage(Str.tabProfile, path: "recent", port: "profile/TvRecent.kt") }
-}
-
 // MARK: Settings: ui/tv/settings
 
 struct TVSettingsScreen: View {

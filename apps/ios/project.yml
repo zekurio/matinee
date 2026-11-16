@@ -164,6 +164,10 @@ targets:
       # -dev.browseFixtures), shared with the iPhone's title and person pages.
       - Matinee/UI/title/TitleData.swift
       - Matinee/UI/browse/BrowseFixtures.swift
+      # The words the profile's statistics take, and -dev.statsFixtures, shared
+      # with the iPhone's profile.
+      - Matinee/UI/profile/StatsData.swift
+      - Matinee/UI/profile/StatsFixtures.swift
       - Matinee/Resources/Localizable.xcstrings
       - Matinee/Resources/iOS.xcstrings
       - Matinee/Resources/Assets.xcassets

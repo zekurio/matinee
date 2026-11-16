@@ -524,6 +524,15 @@ MatineeCore.
   scrolls up to the top of the rows, under a fade, so the header above can
   speak for the focused card. `lazy: false` makes every row at once, for a
   few rows that each load on their own.
+- `TVBarChart(values, top:, scale: ["2h", "1h"], start:, end:, memory:, key:, first:, selection: $bar) { index in label }`
+  and `TVHeatmap(rows:, columns:, intensity: { cell in 0...1 or nil }, columnLabels:, memory:, key:, first:, selection: $cell) { cell in label }`
+  with `TVHeatmapCell(row:column:)`: charts the app draws at a TV's size,
+  from plain values, the heights and strengths already worked out. Every
+  bar and square takes focus, so the remote moves across them as across a
+  row, and leaves past an edge; the focused one is drawn in the text color
+  while the rest dim, and goes to `selection` for the page to name in a
+  caption above. Each chart is a row of `memory`. `TVCharts` has the
+  measures.
 
 The TV app loads its artwork through Nuke with the blur hash, as the
 iPhone app does, and passes it to these as their `art`; `TVPicture` is for

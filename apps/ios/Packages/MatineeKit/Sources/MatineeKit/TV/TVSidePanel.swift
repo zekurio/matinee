@@ -103,7 +103,13 @@
                 .padding(.bottom, TVOverscan.vertical + 32)
             }
             .scrollIndicators(.hidden)
-            .scrollClipDisabled()
+            // Rows scrolled up go under the title, fading out over the room above the first row.
+            .mask {
+              VStack(spacing: 0) {
+                LinearGradient(colors: [.clear, .black], startPoint: .top, endPoint: .bottom).frame(height: 40)
+                Color.black
+              }
+            }
           }
         }
         .foregroundStyle(palette.foreground)
