@@ -511,7 +511,6 @@
     <string name="player_pause">Pause</string>
     <string name="player_skip_back">Back %1$d seconds</string>
     <string name="player_skip_forward">Forward %1$d seconds</string>
-    <string name="player_ends_at">Ends at %1$s</string>
     <string name="player_menu_audio">Audio</string>
     <string name="player_menu_subtitles">Subtitles</string>
     <string name="player_menu_settings">Settings</string>

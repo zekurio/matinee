@@ -4,7 +4,6 @@
     <string name="a11y_player_seek">Wiedergabeposition</string>
     <string name="a11y_player_seek_action">Spulen</string>
     <string name="a11y_player_position">%1$s von %2$s</string>
-    <string name="a11y_player_remaining">Noch %1$s</string>
     <string name="a11y_player_video">Video</string>
     <string name="a11y_player_show_controls">Steuerung einblenden</string>
     <string name="a11y_player_hide_controls">Steuerung ausblenden</string>

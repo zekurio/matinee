@@ -195,8 +195,6 @@ import io.github.zekurio.matinee.ui.theme.Palette
 import io.github.zekurio.matinee.ui.theme.Theming
 import java.io.File
 import java.io.IOException
-import java.text.DateFormat
-import java.util.Date
 import java.util.UUID
 import kotlin.math.ceil
 import kotlinx.coroutines.Dispatchers
@@ -1123,7 +1121,7 @@ private fun SkipButton(icon: Int, seconds: Double, label: String, onClick: () ->
     }
 }
 
-/** The time played, when the file ends, and the time left, over the seek track. */
+/** The time played and the full length, over the seek track. */
 @Composable
 private fun SeekBar(
     controller: PlayerController,
@@ -1150,28 +1148,7 @@ private fun SeekBar(
         Row(verticalAlignment = Alignment.CenterVertically) {
             SeekClock(shown, duration, MaterialTheme.typography.bodyMedium)
             Box(Modifier.weight(1f))
-            if (duration > 0) {
-                val ends = remember(controller.position.toInt() / 30, duration, controller.speed) {
-                    val left = (duration - controller.position) / controller.speed
-                    DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(System.currentTimeMillis() + (left * 1000).toLong()))
-                }
-                Text(
-                    stringResource(R.string.player_ends_at, ends),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Palette.Foreground.copy(alpha = 0.75f),
-                    modifier = Modifier.padding(end = 12.dp),
-                )
-            }
-            val remaining = formatClock((duration - shown).coerceAtLeast(0.0))
-            val remainingLabel = stringResource(R.string.a11y_player_remaining, remaining)
-            SeekClock(
-                (duration - shown).coerceAtLeast(0.0),
-                duration,
-                MaterialTheme.typography.bodyMedium,
-                Modifier.semantics { contentDescription = remainingLabel },
-                prefix = "-",
-                textAlign = TextAlign.End,
-            )
+            SeekClock(duration, duration, MaterialTheme.typography.bodyMedium, textAlign = TextAlign.End)
         }
         SeekTrack(
             position = shown,

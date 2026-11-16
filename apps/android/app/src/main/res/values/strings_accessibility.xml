@@ -4,7 +4,6 @@
     <string name="a11y_player_seek">Playback position</string>
     <string name="a11y_player_seek_action">Seek</string>
     <string name="a11y_player_position">%1$s of %2$s</string>
-    <string name="a11y_player_remaining">%1$s remaining</string>
     <string name="a11y_player_video">Video</string>
     <string name="a11y_player_show_controls">Show controls</string>
     <string name="a11y_player_hide_controls">Hide controls</string>
