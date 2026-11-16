@@ -163,9 +163,10 @@ private struct SearchResultsList: View {
 
   var body: some View {
     ScrollView {
-      LazyVStack(alignment: .leading, spacing: Space.s10) {
+      // Every heading, grid, and row 20 apart, as Android's one grid of them.
+      LazyVStack(alignment: .leading, spacing: Space.s5) {
         ForEach(found.titlesByLibrary(), id: \.libraryId) { group in
-          VStack(alignment: .leading, spacing: Space.s3) {
+          VStack(alignment: .leading, spacing: Space.s5) {
             SectionTitle(names[group.libraryId] ?? Str.searchTitlesHeading, count: group.titles.count)
               .padding(.horizontal, gutter)
             CardGrid {

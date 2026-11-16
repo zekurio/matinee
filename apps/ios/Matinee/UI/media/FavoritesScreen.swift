@@ -53,7 +53,7 @@ struct FavoritesScreen: View {
 
   private func rails(_ lists: Favorites) -> some View {
     ScrollView {
-      LazyVStack(alignment: .leading, spacing: Space.s10) {
+      LazyVStack(alignment: .leading, spacing: Space.s8) {
         if !lists.shows.isEmpty {
           Rail(Str.favoritesShows) {
             ForEach(lists.shows, id: \.id) { title in

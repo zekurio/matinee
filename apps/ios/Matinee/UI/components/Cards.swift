@@ -147,9 +147,10 @@ struct RailItem<Content: View>: View {
   var body: some View { content().frame(width: art.width(in: window)) }
 }
 
-/// Posters in a grid, as the web's `posterGrid`: two columns on a phone,
-/// then as many of at least 176 as fit, 16 apart and 24 between rows. Its
-/// content goes in a lazy grid, so a long list only builds what shows.
+/// Posters in a grid: two columns on a phone, 16 apart and 20 between
+/// rows, as Android's poster grids; from the web's `sm` up, as many of at
+/// least 176 as fit, 24 between rows, as its `posterGrid`. Its content goes
+/// in a lazy grid, so a long list only builds what shows.
 struct CardGrid<Content: View>: View {
   var minimum: CGFloat = 176
   @ViewBuilder let content: () -> Content
@@ -166,7 +167,7 @@ struct CardGrid<Content: View>: View {
       window.width < 640
       ? Array(repeating: GridItem(.flexible(), spacing: Space.s4, alignment: .top), count: 2)
       : [GridItem(.adaptive(minimum: minimum), spacing: Space.s4, alignment: .top)]
-    LazyVGrid(columns: columns, alignment: .leading, spacing: Space.s6, content: content)
+    LazyVGrid(columns: columns, alignment: .leading, spacing: window.width < 640 ? Space.s5 : Space.s6, content: content)
       .padding(.horizontal, gutter)
   }
 }

@@ -97,7 +97,7 @@ private struct LibraryCard: View {
 
   var body: some View {
     let art = api?.art(library.backdrop, size: .medium)
-    // A phone's two columns are narrow for the web's `text-2xl` beside the kind's icon.
+    // Android's `headlineSmall` in a phone's two columns, the web's `text-2xl` with room.
     let roomy = window.width >= 640 || typeSize.isAccessibilitySize
     let icon: CGFloat = roomy ? 28 : 20
     let inset = roomy ? Space.s3 : Space.s2_5
@@ -116,11 +116,11 @@ private struct LibraryCard: View {
           // theme's text over the tone in its place, which here follows the theme, kept clear
           // of the icon in the corner.
           Text(library.name)
-            .textStyle(roomy ? .xl2 : .xl, weight: .bold, tracking: .tight)
+            .textStyle(roomy ? .xl2 : .px22, weight: .bold, tracking: .tight)
             .foregroundStyle(art != nil ? .white : palette.foreground.opacity(0.85))
             .multilineTextAlignment(.center)
             .lineLimit(2)
-            .keepsWordsWhole(library.name, roomy ? .xl2 : .xl, weight: .bold, tracking: .tight, alignment: .center)
+            .keepsWordsWhole(library.name, roomy ? .xl2 : .px22, weight: .bold, tracking: .tight, alignment: .center)
             .shadow(color: .black.opacity(art != nil ? 0.6 : 0), radius: 6, y: 1)
             .padding(.horizontal, art != nil ? Space.s3 : icon + inset + Space.s1)
         }

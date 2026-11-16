@@ -19,9 +19,10 @@ import SwiftUI
 private let STUDIOS_SHOWN = 10
 
 /// Wide enough for the web's header controls in words, its `sm` from 640 up,
-/// unless the text is so large that words wouldn't fit beside the name.
-func wideControls(_ window: CGSize, _ typeSize: DynamicTypeSize) -> Bool {
-  window.width >= 640 && !typeSize.isAccessibilitySize
+/// on an iPad, unless the text is so large that words wouldn't fit beside
+/// the name. A phone keeps Android's icons in the bar whichever way it's held.
+func wideControls(_ window: CGSize, _ typeSize: DynamicTypeSize, _ style: ShellStyle) -> Bool {
+  style == .tablet && window.width >= 640 && !typeSize.isAccessibilitySize
 }
 
 // MARK: Words
@@ -113,11 +114,12 @@ struct TitleFilterButton: View {
   let action: () -> Void
   @Environment(\.windowSize) private var window
   @Environment(\.dynamicTypeSize) private var typeSize
+  @Environment(\.shellStyle) private var style
   @Environment(\.palette) private var palette
 
   var body: some View {
     let label = active > 0 ? Str.browseFiltersOn(active) : Str.webFiltersTitle
-    if wideControls(window, typeSize) {
+    if wideControls(window, typeSize, style) {
       MatineeButton(look: .outline, action: action) {
         HStack(spacing: Space.s2) {
           LucideIcon(.listFilter, size: 16)
@@ -168,12 +170,13 @@ struct TitleSortButton: View {
   #endif
   @Environment(\.windowSize) private var window
   @Environment(\.dynamicTypeSize) private var typeSize
+  @Environment(\.shellStyle) private var style
 
   var body: some View {
     let current = state.currentOrder
     let label = current.map { Str.browseSortCurrent(titleOrderLabel($0)) } ?? Str.librarySort
     Group {
-      if wideControls(window, typeSize) {
+      if wideControls(window, typeSize, style) {
         MatineeButton(look: .outline, action: { open = true }) {
           HStack(spacing: Space.s1_5) {
             Text(label).lineLimit(1)

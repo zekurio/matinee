@@ -27,6 +27,7 @@ struct LibraryScreen: View {
   @State private var devStarted = false
   @Environment(\.windowSize) private var window
   @Environment(\.dynamicTypeSize) private var typeSize
+  @Environment(\.shellStyle) private var shellStyle
   @Environment(\.gutter) private var gutter
 
   init(id: String, sort: String?) {
@@ -84,7 +85,7 @@ struct LibraryScreen: View {
 
   /// The field, taking the keyboard: in the bar's place on a phone, beside the controls from `sm` up.
   private func openSearch() {
-    if !wideControls(window, typeSize) && !searching { withMotion(Motion.enter) { searching = true } }
+    if !wideControls(window, typeSize, shellStyle) && !searching { withMotion(Motion.enter) { searching = true } }
     fieldFocused = true
   }
 
@@ -111,7 +112,7 @@ struct LibraryScreen: View {
   /// The bar: the name and the controls, or on a phone while searching, the field.
   @ViewBuilder private func bar(_ library: Library?, _ offered: TitleFilterOptions?) -> some View {
     let placeholder = library?.kind == LibraryKind.shows ? Str.librarySearchShows : Str.librarySearchMovies
-    if wideControls(window, typeSize) {
+    if wideControls(window, typeSize, shellStyle) {
       TopBar(library?.name) {
         HStack(spacing: Space.s2) {
           DisconnectedAction(libraries, options)
@@ -130,7 +131,8 @@ struct LibraryScreen: View {
           fieldFocused = false
           withMotion(Motion.exit) { searching = false }
         }
-        field(placeholder, look: .pill)
+        // The kit's field, as Android's search bar has it.
+        field(placeholder, look: .field)
       }
       .padding(.leading, Space.s1)
       .padding(.trailing, gutter)
