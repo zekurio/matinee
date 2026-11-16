@@ -5,22 +5,29 @@ import Observation
 /// hide cancels it. Every connection is a fresh requests.live snapshot.
 @MainActor @Observable
 public final class RequestLiveController {
-  public let state = RequestAvailabilityState()
+  /// The overlay this controller's stream writes to: its own, or one shared
+  /// by every page, so what one page hears every page shows.
+  public let state: RequestAvailabilityState
   @ObservationIgnored private var task: Task<Void, Never>?
   @ObservationIgnored private var inputs: [CatalogInput] = []
   @ObservationIgnored private let stream: @Sendable ([CatalogInput]) async throws -> AsyncThrowingStream<[RequestsLiveEvent], any Error>
   @ObservationIgnored private let reload: @MainActor () async -> Void
   @ObservationIgnored private let sleep: @Sendable (Duration) async throws -> Void
   public init(
+    state: RequestAvailabilityState = RequestAvailabilityState(),
     retryDelay: Duration = .seconds(1),
     sleep: @escaping @Sendable (Duration) async throws -> Void = { try await Task.sleep(for: $0) },
     stream: @escaping @Sendable ([CatalogInput]) async throws -> AsyncThrowingStream<[RequestsLiveEvent], any Error>,
     reload: @escaping @MainActor () async -> Void = {}
   ) {
+    self.state = state
     self.sleep = { _ in try await sleep(retryDelay) }; self.stream = stream; self.reload = reload
   }
-  public convenience init(api: ContractApi, reload: @escaping @MainActor () async -> Void = {}) {
-    self.init(stream: { try await api.requests.live(titles: $0) }, reload: reload)
+  public convenience init(
+    api: ContractApi, state: RequestAvailabilityState = RequestAvailabilityState(),
+    reload: @escaping @MainActor () async -> Void = {}
+  ) {
+    self.init(state: state, stream: { try await api.requests.live(titles: $0) }, reload: reload)
   }
   public func updateVisible(_ titles: [CatalogInput]) {
     var seen = Set<CatalogInput>()

@@ -113,3 +113,36 @@ public func requestSeasonsInOrder(_ seasons: [CatalogSeason]) -> [CatalogSeason]
 public func requestAskable(_ items: [CatalogTitleSummary]) -> [CatalogTitleSummary] {
   items.filter { $0.availability.disabledReason != "off" }
 }
+
+// MARK: Seasons
+
+extension SeasonAvailability {
+  /// A season's state as a title's, Android's `asTitle()`: the same fields,
+  /// so its words, its badge, and its action read as a title's do.
+  public var asTitle: Availability {
+    Availability(
+      state: state, action: action, progress: progress, etaSeconds: etaSeconds, releaseDate: releaseDate,
+      stillLooking: stillLooking, reason: reason.map { .init(kind: $0.kind, code: $0.code, note: $0.note) },
+      askedBySelf: askedBySelf, following: following, requestId: requestId,
+      others: .init(count: others.count, names: others.names),
+      limit: limit.map { .init(left: $0.left, resetsAt: $0.resetsAt) }, libraryTitleId: libraryTitleId,
+      disabledReason: disabledReason)
+  }
+
+  /// What the server says of a season it lacks, as a title's `stateWord`.
+  public func stateWord(today: String, percent: Bool = true) -> RequestStateWord? {
+    asTitle.stateWord(today: today, percent: percent)
+  }
+
+  /// The badge over a missing season's poster, as a title's.
+  public var badge: RequestBadge? { asTitle.badge }
+
+  /// The season can be asked for: the server offers to ask, or for an admin, to add.
+  public var asks: Bool { asTitle.asks }
+}
+
+/// How many more episodes of a partly-here season have aired, for its
+/// "Request the rest" card.
+public func requestRestCount(_ season: CatalogSeason) -> Int {
+  max(0, season.availability.episodesAired - season.availability.episodesHere)
+}
