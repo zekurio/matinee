@@ -83,6 +83,7 @@ export function TitleGrid({ library }: { library: Library }) {
         title={library.name}
         description={libraryStatus(library)}
         actions={<HeaderControls {...controls} />}
+        chips={<FilterChips inline active={chips} clear={list.clear} />}
         phoneActions={<PhoneControls {...controls} />}
       />
       <FilterChips active={chips} clear={list.clear} />
