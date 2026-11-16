@@ -9,6 +9,7 @@ export type UiText = {
   /** The BCP 47 tag for dates and numbers, like `en` or `de`. */
   readonly locale: string
   readonly close: string
+  readonly cancel: string
   readonly loading: string
   /** The toaster's landmark, and each toast's close button. */
   readonly notifications: string
@@ -28,6 +29,7 @@ export type UiText = {
 let current: UiText = {
   locale: "en",
   close: "Close",
+  cancel: "Cancel",
   loading: "Loading",
   notifications: "Notifications",
   closeToast: "Close toast",

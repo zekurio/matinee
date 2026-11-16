@@ -471,7 +471,10 @@ function AddPasskey() {
         {tr("account.passkeys.add")}
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="gap-5 p-6 sm:max-w-md">
+        <DialogContent
+          showCloseButton={false}
+          className="gap-5 p-6 sm:max-w-md"
+        >
           <form
             className="contents"
             onSubmit={(event) => {
@@ -502,7 +505,7 @@ function AddPasskey() {
                 />
               )}
             </form.AppField>
-            <DialogFooter className="-mx-6 -mb-6 px-6 py-4">
+            <DialogFooter showCancelButton className="-mx-6 -mb-6 px-6 py-4">
               <form.AppForm>
                 <form.SubmitButton pending={add.isPending}>
                   {add.isPending

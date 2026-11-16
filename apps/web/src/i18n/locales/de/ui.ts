@@ -3,6 +3,7 @@ import type source from "../en/ui"
 
 export default {
   "ui.close": "Schließen",
+  "ui.cancel": "Abbrechen",
   "ui.loading": "Wird geladen",
   "ui.notifications": "Benachrichtigungen",
   "ui.closeToast": "Benachrichtigung schließen",

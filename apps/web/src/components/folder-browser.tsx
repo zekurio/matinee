@@ -47,18 +47,16 @@ export function FolderPicker({
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="gap-4 p-6 sm:max-w-lg [&_[data-slot=dialog-close]]:top-4 [&_[data-slot=dialog-close]]:right-4">
-        {open && (
-          <FolderBrowser
-            initialPath={initialPath}
-            picked={picked}
-            onCancel={() => onOpenChange(false)}
-            onPick={(path) => {
-              onPick(path)
-              onOpenChange(false)
-            }}
-          />
-        )}
+      <DialogContent showCloseButton={false} className="gap-4 p-6 sm:max-w-lg">
+        <FolderBrowser
+          initialPath={initialPath}
+          picked={picked}
+          onCancel={() => onOpenChange(false)}
+          onPick={(path) => {
+            onPick(path)
+            onOpenChange(false)
+          }}
+        />
       </DialogContent>
     </Dialog>
   )

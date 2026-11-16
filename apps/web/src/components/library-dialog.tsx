@@ -107,10 +107,8 @@ export function LibraryDialog({
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="gap-5 p-6 sm:max-w-lg [&_[data-slot=dialog-close]]:top-4 [&_[data-slot=dialog-close]]:right-4">
-        {open && (
-          <LibraryForm library={library} onDone={() => onOpenChange(false)} />
-        )}
+      <DialogContent showCloseButton={false} className="gap-5 p-6 sm:max-w-lg">
+        <LibraryForm library={library} onDone={() => onOpenChange(false)} />
       </DialogContent>
     </Dialog>
   )
@@ -379,7 +377,7 @@ function LibraryForm({
           </form.Field>
         </FieldGroup>
 
-        <DialogFooter className="-mx-6 -mb-6 px-6 py-4">
+        <DialogFooter showCancelButton className="-mx-6 -mb-6 px-6 py-4">
           <form.Subscribe
             selector={(state) =>
               !state.values.name.trim() || state.values.paths.length === 0

@@ -3,6 +3,7 @@ import { defineMessages } from "../../catalog"
 export default defineMessages("ui", {
   // Text the components in @matinee/ui show, handed over by lib/ui-text.ts.
   "ui.close": "Close",
+  "ui.cancel": "Cancel",
   "ui.loading": "Loading",
   "ui.notifications": "Notifications",
   "ui.closeToast": "Close notification",

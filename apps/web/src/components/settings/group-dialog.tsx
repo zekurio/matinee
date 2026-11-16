@@ -118,8 +118,11 @@ export function GroupDialog({
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[calc(100dvh-2rem)] gap-5 overflow-y-auto p-6 sm:max-w-lg">
-        {open && <GroupForm group={group} onDone={() => onOpenChange(false)} />}
+      <DialogContent
+        showCloseButton={false}
+        className="max-h-[calc(100dvh-2rem)] gap-5 overflow-y-auto p-6 sm:max-w-lg"
+      >
+        <GroupForm group={group} onDone={() => onOpenChange(false)} />
       </DialogContent>
     </Dialog>
   )
@@ -346,7 +349,7 @@ function GroupForm({
           </SettingRows>
         </div>
 
-        <DialogFooter className="-mx-6 -mb-6 px-6 py-4">
+        <DialogFooter showCancelButton className="-mx-6 -mb-6 px-6 py-4">
           <form.Subscribe
             selector={(state) => !everyone && !state.values.name.trim()}
           >

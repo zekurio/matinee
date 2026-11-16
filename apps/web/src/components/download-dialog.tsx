@@ -82,7 +82,10 @@ export function DownloadDialog({
   const allowed = useDownloadsAllowed()
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[calc(100dvh-2rem)] gap-5 overflow-y-auto p-6 sm:max-w-lg">
+      <DialogContent
+        showCloseButton={false}
+        className="max-h-[calc(100dvh-2rem)] gap-5 overflow-y-auto p-6 sm:max-w-lg"
+      >
         {/* The dialog unmounts its content when closed, so each opening
             starts from the defaults again. */}
         {allowed ? (
@@ -126,7 +129,7 @@ export function DownloadFilesDialog({
   const allowed = useDownloadsAllowed()
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="gap-5 p-6 sm:max-w-md">
+      <DialogContent showCloseButton={false} className="gap-5 p-6 sm:max-w-md">
         {allowed ? (
           <DownloadFiles
             title={title}
@@ -204,7 +207,7 @@ function DownloadFiles({
         </div>
       )}
 
-      <DialogFooter className="-mx-6 -mb-6 px-6 py-4">
+      <DialogFooter showCancelButton className="-mx-6 -mb-6 px-6 py-4">
         <Button type="button" disabled={files.length === 0} onClick={save}>
           <DownloadIcon />
           {tr("downloads.submit")}

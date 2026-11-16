@@ -7,6 +7,7 @@ function applyUiText() {
   setUiText({
     locale: getLocale(),
     close: tr("ui.close"),
+    cancel: tr("ui.cancel"),
     loading: tr("ui.loading"),
     notifications: tr("ui.notifications"),
     closeToast: tr("ui.closeToast"),
