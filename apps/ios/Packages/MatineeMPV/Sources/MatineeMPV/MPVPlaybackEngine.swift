@@ -4,11 +4,21 @@ import MatineeCore
 import Observation
 import SwiftUI
 
+enum MPVLoadError: LocalizedError {
+  case readinessTimedOut
+
+  var errorDescription: String? { "The player did not become ready in time." }
+}
+
 @MainActor @Observable public final class MPVPlaybackEngine: PlaybackEngine {
   public let mpv: MPVPlayer
   public private(set) var text = ""
   @ObservationIgnored private var lastSample: Int64?
   @ObservationIgnored private var subtitles: Task<Void, Never>?
+  #if DEBUG
+    @ObservationIgnored private var debugLoaded = false
+    @ObservationIgnored private var debugTrace: Task<Void, Never>?
+  #endif
 
   public init() {
     var options = ["sid": "no"]
@@ -66,7 +76,28 @@ import SwiftUI
   }
   public func pause() { mpv.pause() }
   public func load(_ source: Source, headers: [String: String]) async throws {
-    guard let url = URL(string: source.url) else { throw URLError(.badURL) }
+    #if DEBUG
+      var address = source.url
+      if !debugLoaded, let first = UserDefaults.standard.string(forKey: "player.firstURL") {
+        address = first
+      }
+      debugLoaded = true
+    #else
+      let address = source.url
+    #endif
+    guard let url = URL(string: address) else { throw URLError(.badURL) }
+    #if DEBUG
+      trace("load method=\(source.method ?? "local")")
+      if UserDefaults.standard.bool(forKey: "player.trace"), debugTrace == nil {
+        debugTrace = Task { [weak self] in
+          while !Task.isCancelled {
+            try? await Task.sleep(for: .seconds(1))
+            guard let self else { return }
+            self.trace("state=\(self.mpv.state) position=\(self.positionSeconds) ready=\(self.isReady) samples=\(self.mpvStatistics?.samples ?? 0)")
+          }
+        }
+      }
+    #endif
     // mpv string-list syntax escapes commas and backslashes. No headers for local files.
     let fields =
       url.isFileURL
@@ -81,10 +112,22 @@ import SwiftUI
     // Controller track ordinals must not be applied until this file's tracks arrive.
     let deadline = Date().addingTimeInterval(20)
     while !mpv.isPlaybackReady {
-      if Date() > deadline { throw URLError(.timedOut) }
+      if Date() > deadline {
+        #if DEBUG
+          trace("load timeout")
+        #endif
+        // This deadline covers demux, decoder and surface setup too. It is
+        // not evidence of a network outage, which would suppress fallback.
+        throw MPVLoadError.readinessTimedOut
+      }
       try Task.checkCancellation()
       guard generation == mpv.generation else { throw CancellationError() }
-      if let failure { throw failure }
+      if let failure {
+        #if DEBUG
+          trace("load failed: \(failure)")
+        #endif
+        throw failure
+      }
       try await Task.sleep(for: .milliseconds(20))
     }
   }
@@ -126,10 +169,28 @@ import SwiftUI
     }
   }
   public func clear() {
+    #if DEBUG
+      debugTrace?.cancel()
+      debugTrace = nil
+    #endif
     mpv.stop()
     text = ""
     lastSample = nil
   }
+  #if DEBUG
+    private func trace(_ line: String) {
+      guard UserDefaults.standard.bool(forKey: "player.trace") else { return }
+      let url = FileManager.default.temporaryDirectory.appending(path: "mpv-trace.txt")
+      let data = Data("\(Date().timeIntervalSince1970) \(line)\n".utf8)
+      if !FileManager.default.fileExists(atPath: url.path) {
+        FileManager.default.createFile(atPath: url.path, contents: nil)
+      }
+      guard let handle = try? FileHandle(forWritingTo: url) else { return }
+      defer { try? handle.close() }
+      _ = try? handle.seekToEnd()
+      try? handle.write(contentsOf: data)
+    }
+  #endif
   private func seconds(_ value: Duration) -> Double {
     Double(value.components.seconds) + Double(value.components.attoseconds) / 1e18
   }
