@@ -379,13 +379,14 @@ struct ActionRow: View {
 
   var body: some View {
     Group {
+      // Android's 10 between the buttons.
       if dynamicType.isAccessibilitySize && !wide {
-        VStack(alignment: .leading, spacing: Space.s2) {
+        VStack(alignment: .leading, spacing: Space.s2_5) {
           playButton
-          HStack(spacing: Space.s2) { buttons }
+          HStack(spacing: Space.s2_5) { buttons }
         }
       } else {
-        HStack(spacing: Space.s2) {
+        HStack(spacing: Space.s2_5) {
           playButton
           buttons
         }

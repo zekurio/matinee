@@ -159,10 +159,9 @@ private struct PlayerTopBar: View {
     .padding(.top, Space.s2)
   }
 
-  /// The web's line under the title: "S1:E2 · Show" for an episode, the year for a movie.
+  /// Android's line under the title: "S1:E2 · Show" for an episode, and none for a movie.
   private func subtitleLine(_ item: MediaItem, _ label: ItemNames) -> String? {
-    if let code = label.code { return "\(code) · \(label.showName)" }
-    return label.year
+    label.code.map { "\($0) · \(label.showName)" }
   }
 }
 

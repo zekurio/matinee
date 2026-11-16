@@ -689,13 +689,16 @@ private struct EpisodeHeader: View {
     }
   }
 
+  /// What happens and the file; on a phone the file first, under the facts,
+  /// as Android's heading has it, and wider after, as the web's.
   private var details: some View {
     VStack(alignment: .leading, spacing: Space.s4) {
+      if !layout.wide { MediaInfo(item) }
       if let overview = item.episode?.overview {
         // Six lines of it, as Android's.
         Overview(text: overview, lines: 6, size: layout.overviewSize)
       }
-      MediaInfo(item)
+      if layout.wide { MediaInfo(item) }
     }
   }
 
