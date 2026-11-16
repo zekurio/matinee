@@ -11,9 +11,6 @@ import UIKit
  * edits; asking before something can't be undone; and the words for times
  * the pages show. The logic under the forms is MatineeCore's (Admin/),
  * where it's tested on the Mac.
- *
- * Names the app and the kit both have are written `MatineeKit.<name>`
- * here, and `.topBar` takes `leading:` so it's the kit's.
  */
 
 /// How wide a page's column gets, on an iPad or a phone on its side: the
@@ -53,7 +50,7 @@ struct AdminPage<Content: View, Actions: View>: View {
     }
     .scrollDismissesKeyboard(.interactively)
     .adminDemoScroll()
-    .topBar(title, leading: .back, onLeading: onBack, actions: actions)
+    .topBar(title, onLeading: onBack, actions: actions)
   }
 }
 
@@ -155,7 +152,7 @@ struct SaveBarPage<Content: View>: View {
     let back: (() -> Void)? = dirty ? { attempt() } : nil
     AdminPage<Content, EmptyView>(title, onBack: back, actions: { EmptyView() }, content: content)
       .safeAreaInset(edge: .bottom, spacing: 0) {
-        MatineeKit.Reveal(visible) {
+        Reveal(visible) {
           SaveBar(
             feedback: feedback, dirty: dirty, canSave: canSave, attention: attention, onReset: reset, onSave: save)
         }
@@ -265,13 +262,13 @@ private struct SaveBar: View {
   private var buttons: some View {
     let pending = feedback == .pending
     return HStack(spacing: Space.s2) {
-      MatineeKit.MatineeButton(Str.webCommonSaveBarReset, look: .ghost, size: .md, action: onReset)
+      MatineeButton(Str.webCommonSaveBarReset, look: .ghost, size: .md, action: onReset)
         .disabled(!dirty || pending)
-      MatineeKit.MatineeButton(look: .primary, size: .md, pending: pending, action: onSave) {
+      MatineeButton(look: .primary, size: .md, pending: pending, action: onSave) {
         HStack(spacing: Space.s1_5) {
           switch feedback {
           case .pending: Spinner(size: 14, tint: palette.accentForeground)
-          case .success: MatineeKit.LucideIcon(.check, size: 16, scales: false)
+          case .success: LucideIcon(.check, size: 16, scales: false)
           default: EmptyView()
           }
           Text(saveText).textStyle(.sm, weight: .medium).lineLimit(1)
@@ -365,7 +362,7 @@ struct Note: View {
 /// again: its icon and words in the accent, the whole row one tap.
 struct AdminActionRow: View {
   let title: String
-  let icon: MatineeKit.Lucide
+  let icon: Lucide
   var pending = false
   let action: () -> Void
   @Environment(\.palette) private var palette
@@ -377,7 +374,7 @@ struct AdminActionRow: View {
           if pending {
             Spinner(size: 18, tint: palette.accent)
           } else {
-            MatineeKit.LucideIcon(icon, size: 18, tint: palette.accent)
+            LucideIcon(icon, size: 18, tint: palette.accent)
           }
         }
         .frame(width: 24)

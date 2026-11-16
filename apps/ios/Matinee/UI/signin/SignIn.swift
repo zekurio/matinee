@@ -129,7 +129,7 @@ struct ConnectScreen: View {
     AuthLayout {
       AuthHeading(Str.connectTitle, description: Str.connectDescription)
       Gap(Space.s8)
-      MatineeKit.MatineeTextField(
+      MatineeTextField(
         Str.connectPlaceholder, text: $address, icon: .server, isError: connector.error != nil
       )
       .keyboardType(.URL)
@@ -147,7 +147,7 @@ struct ConnectScreen: View {
         FieldError(message: error)
       }
       Gap(Space.s4)
-      MatineeKit.MatineeButton(Str.connectButton, pending: connector.busy, fullWidth: true, action: connect)
+      MatineeButton(Str.connectButton, pending: connector.busy, fullWidth: true, action: connect)
         .disabled(blank)
       if connector.local {
         Gap(Space.s4)
@@ -192,12 +192,12 @@ struct SignInScreen: View {
     ZStack {
       if withCode {
         DeviceCodeSignIn {
-          MatineeKit.withMotion(MatineeKit.Motion.enter) { withCode = false }
+          withMotion(Motion.enter) { withCode = false }
         }
         .transition(.opacity)
       } else {
         BrowserSignInForm(server: server, config: config, adding: adding) {
-          MatineeKit.withMotion(MatineeKit.Motion.enter) { withCode = true }
+          withMotion(Motion.enter) { withCode = true }
         }
         .transition(.opacity)
       }
@@ -226,10 +226,10 @@ private struct BrowserSignInForm: View {
         Gap(Space.s4)
       }
       VStack(spacing: Space.s3) {
-        MatineeKit.MatineeButton(
+        MatineeButton(
           browserLabel, icon: config.passkeys || config.oidc == nil ? .keyRound : .logIn, pending: browser != nil,
           fullWidth: true, action: signInInBrowser)
-        MatineeKit.MatineeButton(Str.signinWithCode, icon: .smartphone, look: .outline, fullWidth: true) {
+        MatineeButton(Str.signinWithCode, icon: .smartphone, look: .outline, fullWidth: true) {
           errors.browser = nil
           onCode()
         }
@@ -365,7 +365,7 @@ private struct DeviceCodeSignIn: View {
       if let code = flow.code, let url = URL(string: code.verificationUriComplete) {
         LinkPageButton(url: url)
       }
-      MatineeKit.MatineeButton(Str.signinCodeBack, look: .ghost, fullWidth: true, action: onBack)
+      MatineeButton(Str.signinCodeBack, look: .ghost, fullWidth: true, action: onBack)
     }
   }
 }
@@ -377,7 +377,7 @@ private struct LinkPageButton: View {
   @Environment(\.openURL) private var openURL
 
   var body: some View {
-    MatineeKit.MatineeButton(Str.signinCodeOpen, icon: .link, look: .outline, fullWidth: true) { openURL(url) }
+    MatineeButton(Str.signinCodeOpen, icon: .link, look: .outline, fullWidth: true) { openURL(url) }
   }
 }
 
@@ -432,7 +432,7 @@ private struct CodeDetails: View {
         Gap(Space.s3)
         Callout(error, icon: .circleAlert, look: .destructive) {
           if let onRetry {
-            MatineeKit.MatineeButton(Str.commonRetry, icon: .refreshCw, look: .outline, size: .sm, action: onRetry)
+            MatineeButton(Str.commonRetry, icon: .refreshCw, look: .outline, size: .sm, action: onRetry)
           }
         }
       }

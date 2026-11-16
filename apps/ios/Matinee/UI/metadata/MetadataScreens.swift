@@ -220,11 +220,7 @@ private struct IdentifyForm: View {
     case .failed(let message, let disconnected):
       ErrorSection(Str.titleIdentifyFailed, message, disconnected: disconnected) { attempt += 1 }
     case .ready(let matches) where matches.isEmpty:
-      Text(Str.titleIdentifyEmpty(providerName ?? "", submitted.name))
-        .textStyle(.sm).foregroundStyle(palette.mutedForeground)
-        .multilineTextAlignment(.center)
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, Space.s10)
+      EmptyNote(text: Str.titleIdentifyEmpty(providerName ?? "", submitted.name))
     case .ready(let matches):
       VStack(spacing: 0) {
         ForEach(matches, id: \.id) { match in

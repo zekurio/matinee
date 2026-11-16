@@ -46,7 +46,7 @@ struct VideoSurface: UIViewRepresentable {
     let gravity: AVLayerVideoGravity = fill ? .resizeAspectFill : .resizeAspect
     if view.playerLayer.videoGravity != gravity {
       CATransaction.begin()
-      CATransaction.setAnimationDuration(MatineeKit.Motion.moveDuration)
+      CATransaction.setAnimationDuration(Motion.moveDuration)
       view.playerLayer.videoGravity = gravity
       CATransaction.commit()
     }
@@ -161,12 +161,12 @@ struct AirPlayButton: View {
   var body: some View {
     ZStack {
       RoutePicker()
-      MatineeKit.LucideIcon(.airplay, size: 22, tint: active ? palette.accent : .white.opacity(0.85), scales: false)
+      LucideIcon(.airplay, size: 22, tint: active ? palette.accent : .white.opacity(0.85), scales: false)
         .pictureShadow()
         .allowsHitTesting(false)
         .accessibilityHidden(true)
     }
-    .frame(width: MatineeKit.TouchTarget, height: MatineeKit.TouchTarget)
+    .frame(width: TouchTarget, height: TouchTarget)
   }
 }
 

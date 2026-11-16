@@ -44,7 +44,7 @@ struct AccountPage: View {
         LinkedAccountSection(provider: provider.displayName, account: linked, loader: oidc)
       }
       ListBlock {
-        MatineeKit.ListRow(
+        ListRow(
           Str.linkTitle, subtitle: Str.linkRowDescription, icon: .scanQrCode, iconTile: true, action: nav.linkDevice)
       }
       SessionsSection(sessions: sessions)
@@ -69,31 +69,6 @@ struct AccountPage: View {
 
 // MARK: Profile
 
-/// The person's picture, loaded with the app's sign-in, or their initials
-/// until it is, as the web's UserAvatar.
-struct AccountAvatar: View {
-  let user: User
-  var size: CGFloat = 32
-  @State private var picture: UIImage?
-  @Environment(\.api) private var api
-  @Environment(\.imagePipeline) private var pipeline
-
-  var body: some View {
-    MatineeKit.Avatar(user.name, size: size) {
-      if let picture {
-        Image(uiImage: picture).resizable().scaledToFill()
-      }
-    }
-    .task(id: user.avatarId) {
-      guard let id = user.avatarId, let api, let url = URL(string: api.paths.avatar(id)) else {
-        picture = nil
-        return
-      }
-      picture = try? await pipeline.image(for: url)
-    }
-  }
-}
-
 /// The picture and the name others see, and what the profile shows them.
 private struct ProfileSection: View {
   let user: User
@@ -106,19 +81,19 @@ private struct ProfileSection: View {
     let shown = sharing.shown(user)
     // TODO(strings): account.profile.title "Profile"
     SettingsSection(Str.tabProfile) {
-      HStack(alignment: .center, spacing: MatineeKit.Space.s4) {
+      HStack(alignment: .center, spacing: Space.s4) {
         AvatarPicker(user: user)
         DisplayNameField(user: user)
       }
       ListBlock {
         // TODO(strings): account.sharing.favorites "Show my favorites"
-        MatineeKit.SwitchRow(
+        SwitchRow(
           Str.favoritesTitle,
           isOn: Binding(
             get: { shown.favorites },
             set: { sharing.save(.init(favorites: $0), api: api, session: session, snackbar: snackbar) }))
         // TODO(strings): account.sharing.stats "Show my statistics"
-        MatineeKit.SwitchRow(
+        SwitchRow(
           Str.profileStatistics,
           isOn: Binding(
             get: { shown.stats },
@@ -180,15 +155,15 @@ private struct AvatarPicker: View {
     Pressable(shape: Circle(), wash: false) {
       if user.avatarId != nil { menu = true } else { picking = true }
     } label: {
-      AccountAvatar(user: user, size: 64)
+      ProfileAvatar(user.name, url: user.avatarId.flatMap { api?.paths.avatar($0) }, size: 64)
         .overlay {
           if busy {
             Circle().fill(.black.opacity(0.5))
-            MatineeKit.Spinner(size: 20, tint: .white)
+            Spinner(size: 20, tint: .white)
           }
         }
         .overlay(alignment: .bottomTrailing) {
-          MatineeKit.LucideIcon(.imageUp, size: 14, tint: palette.foreground, scales: false)
+          LucideIcon(.imageUp, size: 14, tint: palette.foreground, scales: false)
             .frame(width: 26, height: 26)
             .background(palette.secondary, in: Circle())
             .overlay { Circle().strokeBorder(palette.background, lineWidth: 2) }
@@ -199,10 +174,10 @@ private struct AvatarPicker: View {
     // TODO(strings): account.picture.change "Change picture"
     .accessibilityLabel(Str.webJobsQueueAvatarsName)
     .dropdownMenu(isPresented: $menu) {
-      MatineeKit.MenuItem(Str.iosImagesFromPhotos, icon: .imageUp) { picking = true }
+      MenuItem(Str.iosImagesFromPhotos, icon: .imageUp) { picking = true }
       if user.avatarId != nil {
         // TODO(strings): account.picture.remove "Remove picture"
-        MatineeKit.MenuItem(Str.commonRemove, icon: .trash, destructive: true) {
+        MenuItem(Str.commonRemove, icon: .trash, destructive: true) {
           change { api in try await api.account.avatar.remove() }
         }
       }
@@ -272,8 +247,8 @@ private struct DisplayNameField: View {
   }
 
   var body: some View {
-    MatineeKit.FormField(Str.webOidcFieldDisplayName) {
-      MatineeKit.MatineeTextField(
+    FormField(Str.webOidcFieldDisplayName) {
+      MatineeTextField(
         user.username, text: Binding(get: { text }, set: { text = String($0.prefix(64)) }), focused: $focused
       )
       .textContentType(.nickname)
@@ -311,15 +286,15 @@ private struct DisplayNameField: View {
 /// The icon tile at the start of a row of the account's, as the web's RowIcon:
 /// `size-9 rounded-lg bg-secondary`, a 16-point glyph.
 struct RowIcon: View {
-  let icon: MatineeKit.Lucide
+  let icon: Lucide
   @Environment(\.palette) private var palette
 
-  init(_ icon: MatineeKit.Lucide) { self.icon = icon }
+  init(_ icon: Lucide) { self.icon = icon }
 
   var body: some View {
-    MatineeKit.LucideIcon(icon, size: 16, tint: palette.mutedForeground)
+    LucideIcon(icon, size: 16, tint: palette.mutedForeground)
       .frame(width: 36, height: 36)
-      .background(palette.secondary, in: RoundedRectangle.kit(MatineeKit.Radius.lg))
+      .background(palette.secondary, in: RoundedRectangle.kit(Radius.lg))
   }
 }
 
@@ -327,7 +302,7 @@ struct RowIcon: View {
 /// a name in `text-sm font-medium` and a line under it, and what can be
 /// done with it at its end.
 struct AccountItemRow<Badge: View, Trailing: View>: View {
-  let icon: MatineeKit.Lucide
+  let icon: Lucide
   let title: String
   let detail: String?
   @ViewBuilder let badge: () -> Badge
@@ -336,7 +311,7 @@ struct AccountItemRow<Badge: View, Trailing: View>: View {
   @Environment(\.dynamicTypeSize) private var dynamicType
 
   var body: some View {
-    HStack(spacing: MatineeKit.Space.s3) {
+    HStack(spacing: Space.s3) {
       RowIcon(icon)
       VStack(alignment: .leading, spacing: 0) {
         // At the large text sizes the badge goes under the name rather than squeeze it.
@@ -344,7 +319,7 @@ struct AccountItemRow<Badge: View, Trailing: View>: View {
           Text(title).textStyle(.sm, weight: .medium).foregroundStyle(palette.foreground)
           badge()
         } else {
-          HStack(spacing: MatineeKit.Space.s2) {
+          HStack(spacing: Space.s2) {
             Text(title).textStyle(.sm, weight: .medium).foregroundStyle(palette.foreground).lineLimit(1)
             badge()
           }
@@ -358,15 +333,15 @@ struct AccountItemRow<Badge: View, Trailing: View>: View {
       .accessibilityElement(children: .combine)
       trailing()
     }
-    .padding(.leading, MatineeKit.Space.s4)
-    .padding(.trailing, MatineeKit.Space.s2)
-    .padding(.vertical, MatineeKit.Space.s2_5)
+    .padding(.leading, Space.s4)
+    .padding(.trailing, Space.s2)
+    .padding(.vertical, Space.s2_5)
     .frame(minHeight: 56)
   }
 }
 
 extension AccountItemRow where Badge == EmptyView {
-  init(icon: MatineeKit.Lucide, title: String, detail: String?, @ViewBuilder trailing: @escaping () -> Trailing) {
+  init(icon: Lucide, title: String, detail: String?, @ViewBuilder trailing: @escaping () -> Trailing) {
     self.init(icon: icon, title: title, detail: detail, badge: { EmptyView() }, trailing: trailing)
   }
 }
@@ -393,7 +368,7 @@ private struct PasskeysSection: View {
           ) {
             if removable {
               // TODO(strings): account.passkeys.removeNamed "Remove {name}"
-              MatineeKit.RoundIconButton(.trash, label: Str.commonRemove, look: .ghost) { removing = passkey }
+              RoundIconButton(.trash, label: Str.commonRemove, look: .ghost) { removing = passkey }
             }
           }
         }
@@ -430,7 +405,7 @@ private struct LinkedAccountSection: View {
         // TODO(strings): account.oidc.linked "Linked {date}", account.oidc.stale
         AccountItemRow(icon: .link, title: account.label ?? provider, detail: formatInstant(account.createdAt)) {
           // TODO(strings): account.oidc.unlink "Unlink"
-          MatineeKit.MatineeButton(Str.commonRemove, look: .ghost, size: .md, pending: busy, action: unlink)
+          MatineeButton(Str.commonRemove, look: .ghost, size: .md, pending: busy, action: unlink)
         }
       }
     }
@@ -463,7 +438,7 @@ private struct SessionsSection: View {
     SettingsSection(Str.accountSessionsTitle) {
       switch sessions.state {
       case .loading:
-        Skeleton(radius: MatineeKit.Radius.xl).frame(height: 64)
+        Skeleton(radius: Radius.xl).frame(height: 64)
       case .failed(let message, let disconnected):
         ErrorSection(Str.accountSessionsFailed, message, disconnected: disconnected, onRetry: sessions.reload)
       case .ready(let list):
@@ -473,7 +448,7 @@ private struct SessionsSection: View {
           }
         }
         if list.contains(where: { !$0.current }) {
-          MatineeKit.MatineeButton(
+          MatineeButton(
             Str.webUsersMenuSignOutOthers, icon: .logOut, look: .outline, fullWidth: true
           ) { signingOutOthers = true }
         }
@@ -517,11 +492,11 @@ private struct SessionRow: View {
     let name = sessionName(session)
     AccountItemRow(icon: platformIcon(session.platform), title: name, detail: detail) {
       if session.current {
-        MatineeKit.Badge(Str.accountSessionsThisDevice, look: .secondary)
+        Badge(Str.accountSessionsThisDevice, look: .secondary)
       }
     } trailing: {
       if !session.current {
-        MatineeKit.RoundIconButton(.logOut, label: Str.accountSessionsSignOutNamed(name), look: .ghost, action: onSignOut)
+        RoundIconButton(.logOut, label: Str.accountSessionsSignOutNamed(name), look: .ghost, action: onSignOut)
       }
     }
   }

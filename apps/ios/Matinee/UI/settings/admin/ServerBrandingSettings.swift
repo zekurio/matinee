@@ -62,9 +62,7 @@ private struct BrandingForm: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: Space.section) {
-      VStack(alignment: .leading, spacing: Space.s3) {
-        Text(Str.webBrandingTitle).textStyle(.base, weight: .semibold, tracking: .tight)
-          .accessibilityAddTraits(.isHeader)
+      SettingsSection(Str.webBrandingTitle) {
         Presets(form: $form.accents)
         ListBlock {
           ColorRow(title: Str.webBrandingModeLight, label: Str.webBrandingAccentLight, value: $form.accents.light)
@@ -74,7 +72,7 @@ private struct BrandingForm: View {
 
       VStack(alignment: .leading, spacing: Space.s3) {
         ListSection(Str.webBrandingBackdropTitle) {
-          MatineeKit.SwitchRow(Str.webBrandingBackdropEnabled, isOn: $form.backdrop.enabled)
+          SwitchRow(Str.webBrandingBackdropEnabled, isOn: $form.backdrop.enabled)
           Group {
             SelectRow(
               Str.webBrandingBackdropArtwork, selection: $form.backdrop.artwork,
@@ -142,7 +140,7 @@ private struct Swatch: View {
     }
     .accessibilityLabel(name)
     .accessibilityAddTraits(selected ? .isSelected : [])
-    .motion(MatineeKit.Motion.color, value: selected)
+    .motion(Motion.color, value: selected)
   }
 }
 
@@ -158,7 +156,7 @@ private nonisolated struct DiagonalHalf: Shape {
   }
 }
 
-private func hexColor(_ hex: String) -> Color { MatineeKit.RGB(hex: hex)?.color ?? .clear }
+private func hexColor(_ hex: String) -> Color { RGB(hex: hex)?.color ?? .clear }
 
 /// An appearance's accent: its name, then the hex value with the color it
 /// names beside it, as the web's HexColorInput. A value that isn't a color
@@ -175,7 +173,7 @@ private struct ColorRow: View {
       Text(title).textStyle(.sm, weight: .medium).foregroundStyle(palette.foreground)
         .accessibilityHidden(true)
       HStack(spacing: Space.s2) {
-        MatineeKit.MatineeTextField(
+        MatineeTextField(
           "#rrggbb", text: Binding(get: { value }, set: { value = String($0.prefix(7)) }), isError: parsed == nil
         )
         .keyboardType(.asciiCapable)
@@ -188,7 +186,7 @@ private struct ColorRow: View {
           .overlay { RoundedRectangle.kit(Radius.lg).strokeBorder(palette.foreground.opacity(0.15)) }
           .frame(width: TouchTarget, height: TouchTarget)
           .accessibilityHidden(true)
-          .motion(MatineeKit.Motion.color, value: parsed)
+          .motion(Motion.color, value: parsed)
       }
     }
     .padding(.horizontal, Space.s4)
@@ -211,7 +209,7 @@ private struct SliderRow: View {
       Text(title).textStyle(.sm, weight: .medium).foregroundStyle(palette.foreground)
         .accessibilityHidden(true)
       HStack(spacing: Space.s3) {
-        MatineeKit.MatineeSlider(
+        MatineeSlider(
           value: Binding(get: { value }, set: onChange), in: range, step: 1, label: title,
           valueText: { text(Int($0.rounded())) })
         Text(text(Int(value.rounded()))).textStyle(.xs).monospacedDigit().foregroundStyle(palette.mutedForeground)

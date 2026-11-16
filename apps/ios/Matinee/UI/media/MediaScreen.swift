@@ -73,37 +73,6 @@ private struct MediaCatalogSlot: View {
   var body: some View { EmptyView() }
 }
 
-/// A tab's first page's name on an iPad, as the web's `PageHeader` from `sm`
-/// up: `text-26px md:text-32px font-semibold tracking-tight`, with what the
-/// page can do at its end.
-struct PageHeading<Actions: View>: View {
-  let title: String
-  @ViewBuilder let actions: () -> Actions
-  @Environment(\.palette) private var palette
-  @Environment(\.gutter) private var gutter
-  @Environment(\.windowSize) private var window
-
-  init(_ title: String, @ViewBuilder actions: @escaping () -> Actions) {
-    self.title = title
-    self.actions = actions
-  }
-
-  var body: some View {
-    HStack(alignment: .center, spacing: Space.s4) {
-      Text(title)
-        .textStyle(window.width >= 768 ? .px32 : .px26, weight: .semibold, tracking: .tight)
-        .foregroundStyle(palette.foreground)
-        .lineLimit(2)
-        .accessibilityAddTraits(.isHeader)
-      Spacer(minLength: 0)
-      actions()
-    }
-    .padding(.horizontal, gutter)
-    .padding(.top, Space.s4)
-    .padding(.bottom, window.width >= 768 ? Space.s6 : Space.s4)
-  }
-}
-
 /// Library cards as wide as fit at 160 or more on a phone, 288 from the
 /// web's `sm` up, as its `libraryGrid`; a whole row each at the largest
 /// text sizes, where a name over the art needs the width.

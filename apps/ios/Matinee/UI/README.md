@@ -122,7 +122,8 @@ example; `gallery/` shows them in every state (`just gallery`).
 | A person                                                 | `PersonCard(name, role:, photo:)`; `ProfileAvatar(name, url:, size:)` for an account                                                       |
 | A picture from the server                                | `Picture(sources)` in an `ArtFrame(toneKey, aspect:)`; it fades in over its blur hash, and falls back to the next source, then the tone    |
 | How far in, watched                                      | `ArtProgressBar(progress:)` and `WatchedBadge()` over art; the kit's `ProgressBar` elsewhere                                               |
-| A section's heading                                      | `SectionTitle(title, action:)`                                                                                                             |
+| A section's heading                                      | `SectionTitle(title, count:, action:)`; `count` puts how many titles after it                                                              |
+| A tab's first page's name                                | `PageHeading(title) { actions }`                                                                                                           |
 | A card's long press and a page's "more"                  | Cards have it. `ActionsButton(target)` on a page, `.cardMenu(target)` on anything else: the actions sheet for an `ActionTarget`            |
 | When something was watched                               | `actions?.askWatched(name) { at in … }`                                                                                                    |
 | Search                                                   | `SearchField($query, focused:)`; `SearchBarButton { … }` where a page leads to search                                                      |

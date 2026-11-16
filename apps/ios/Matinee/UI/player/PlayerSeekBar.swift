@@ -47,9 +47,9 @@ struct SeekBar: View {
         .shadow(color: .black.opacity(0.3), radius: 2, y: 1)
         .offset(x: thumbX - thumb / 2)
         .opacity(enabled ? 1 : 0)
-        .animation(MatineeKit.Motion.animation(MatineeKit.Motion.color, reduceMotion: reduceMotion), value: thumb)
+        .animation(Motion.animation(Motion.color, reduceMotion: reduceMotion), value: thumb)
     }
-    .frame(height: MatineeKit.TouchTarget)
+    .frame(height: TouchTarget)
     .frame(maxWidth: .infinity)
     .contentShape(Rectangle())
     .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
@@ -58,13 +58,13 @@ struct SeekBar: View {
         // Over the thumb, kept inside the controls: it may hang past the
         // track's ends over the padding beside it, as the web's does.
         let wide = controller.trickplay.map { $0.width > 0 } ?? false
-        let preview = wide ? previewWidth + 2 * MatineeKit.Space.s1 : 64
-        let room = MatineeKit.Space.s3
+        let preview = wide ? previewWidth + 2 * Space.s1 : 64
+        let room = Space.s3
         SeekPreview(controller: controller, seconds: scrub, width: previewWidth)
           .frame(width: preview)
           .offset(
             x: min(max(thumbX - preview / 2, -room), width - preview + room),
-            y: -(MatineeKit.TouchTarget / 2 + MatineeKit.Space.s5))
+            y: -(TouchTarget / 2 + Space.s5))
           .allowsHitTesting(false)
       }
     }
@@ -121,22 +121,22 @@ private struct SeekPreview: View {
       .monospacedDigit()
       .foregroundStyle(.white)
     if let images = controller.trickplay, images.width > 0 {
-      VStack(spacing: MatineeKit.Space.s1) {
+      VStack(spacing: Space.s1) {
         TrickplayFrameView(controller: controller, seconds: seconds)
           .frame(width: width, height: width * CGFloat(images.height) / CGFloat(images.width))
-          .clipShape(RoundedRectangle.kit(MatineeKit.Radius.md))
+          .clipShape(RoundedRectangle.kit(Radius.md))
         time
       }
-      .padding(MatineeKit.Space.s1)
+      .padding(Space.s1)
       .padding(.bottom, 2)
-      .pictureGlass(in: RoundedRectangle.kit(MatineeKit.Radius.lg))
+      .pictureGlass(in: RoundedRectangle.kit(Radius.lg))
       .kitShadow(.menu)
       .accessibilityHidden(true)
     } else {
       time
-        .padding(.horizontal, MatineeKit.Space.s2)
-        .padding(.vertical, MatineeKit.Space.s1)
-        .pictureGlass(in: RoundedRectangle.kit(MatineeKit.Radius.md))
+        .padding(.horizontal, Space.s2)
+        .padding(.vertical, Space.s1)
+        .pictureGlass(in: RoundedRectangle.kit(Radius.md))
         .accessibilityHidden(true)
     }
   }

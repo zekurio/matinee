@@ -52,8 +52,8 @@ private struct AuthForm: View {
     VStack(alignment: .leading, spacing: Space.section) {
       VStack(alignment: .leading, spacing: Space.s3) {
         ListSection(Str.webOidcPasskeysTitle) {
-          MatineeKit.SwitchRow(Str.webOidcEnabled, icon: .keyRound, isOn: $form.passkeys.enabled)
-          MatineeKit.SwitchRow(
+          SwitchRow(Str.webOidcEnabled, icon: .keyRound, isOn: $form.passkeys.enabled)
+          SwitchRow(
             Str.webOidcPasskeysAllowSignUp, subtitle: Str.webOidcPasskeysAllowSignUpHint,
             isOn: $form.passkeys.allowSignUp)
         }
@@ -65,8 +65,8 @@ private struct AuthForm: View {
 
       VStack(alignment: .leading, spacing: Space.s3) {
         ListSection(Str.webOidcTitle) {
-          MatineeKit.SwitchRow(Str.webOidcEnabled, icon: .logIn, isOn: $form.oidc.enabled)
-          MatineeKit.SwitchRow(Str.webOidcAllowSignUp, isOn: $form.oidc.allowSignUp)
+          SwitchRow(Str.webOidcEnabled, icon: .logIn, isOn: $form.oidc.enabled)
+          SwitchRow(Str.webOidcAllowSignUp, isOn: $form.oidc.allowSignUp)
           InputRow(
             Str.webOidcFieldDisplayName, text: $form.oidc.displayName,
             placeholder: nonBlank(defaults.displayName) ?? Str.webOidcTitle)
@@ -85,7 +85,7 @@ private struct AuthForm: View {
           ) {
             // Remove the saved secret, or take the removal back until the save.
             if form.offersSecretToggle {
-              MatineeKit.RoundIconButton(
+              RoundIconButton(
                 form.dropSecret ? .rotateCcw : .trash,
                 label: form.dropSecret
                   ? Str.webOidcClientSecretKeep
@@ -110,25 +110,23 @@ private struct AuthForm: View {
         InputRow(
           Str.webOidcFieldPolicyClaim, text: $form.oidc.policyClaim,
           placeholder: nonBlank(defaults.policyClaim) ?? Str.webOidcClaimOff, help: Str.webOidcPolicyClaimDescription)
-        MatineeKit.SwitchRow(
+        SwitchRow(
           Str.webOidcSignOutRefused, subtitle: Str.webOidcSignOutRefusedDescription, isOn: $form.oidc.signOutRefused)
       }
 
-      VStack(alignment: .leading, spacing: Space.s3) {
-        Text(Str.webOidcAdvanced).textStyle(.base, weight: .semibold, tracking: .tight)
-          .accessibilityAddTraits(.isHeader)
+      SettingsSection(Str.webOidcAdvanced) {
         // What most providers never need, behind a button as on the web.
-        MatineeKit.MatineeButton(look: .outline, fullWidth: true) {
-          MatineeKit.withMotion(MatineeKit.Motion.enter) { advanced.toggle() }
+        MatineeButton(look: .outline, fullWidth: true) {
+          withMotion(Motion.enter) { advanced.toggle() }
         } label: {
           HStack(spacing: Space.s1_5) {
             Text(advanced ? Str.webOidcAdvancedHide : Str.webOidcAdvancedShow).textStyle(.sm, weight: .medium)
-            MatineeKit.LucideIcon(.chevronDown, size: 16, scales: false)
+            LucideIcon(.chevronDown, size: 16, scales: false)
               .rotationEffect(.degrees(advanced ? 180 : 0))
           }
         }
         .accessibilityValue(advanced ? Str.webOidcAdvancedHide : Str.webOidcAdvancedShow)
-        MatineeKit.Reveal(advanced) {
+        Reveal(advanced) {
           ListBlock {
             InputRow(
               Str.webOidcFieldScopes, text: $form.oidc.scopes,
@@ -212,7 +210,7 @@ private struct RedirectRow: View {
   }
 
   private var copy: some View {
-    MatineeKit.MatineeButton(Str.webOidcCopy, icon: .link, look: .outline) {
+    MatineeButton(Str.webOidcCopy, icon: .link, look: .outline) {
       UIPasteboard.general.string = url
       snackbar.show(Str.webOidcCopied)
     }

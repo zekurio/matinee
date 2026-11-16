@@ -40,8 +40,8 @@ struct Subtitles: View {
     // Inside the picture, a twentieth of its height up from its bottom, and
     // clear of the home indicator.
     let inVideo = screen.height - video.maxY + video.height * 0.05
-    let rest = max(inVideo, MatineeKit.Space.s7 + safeBottom)
-    let bottom = lift.map { max(rest, $0 + MatineeKit.Space.s3) } ?? rest
+    let rest = max(inVideo, Space.s7 + safeBottom)
+    let bottom = lift.map { max(rest, $0 + Space.s3) } ?? rest
     VStack(spacing: 2) {
       ForEach(Array(shown.enumerated()), id: \.offset) { _, cue in
         SubtitleLine(cue: cue, look: look, size: size)
@@ -51,7 +51,7 @@ struct Subtitles: View {
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
     .padding(.bottom, bottom)
     // Moves with the controls rather than jumping when they come and go.
-    .animation(MatineeKit.Motion.animation(MatineeKit.Motion.move, reduceMotion: reduceMotion), value: lift == nil)
+    .animation(Motion.animation(Motion.move, reduceMotion: reduceMotion), value: lift == nil)
     .allowsHitTesting(false)
     .accessibilityHidden(true)
   }
@@ -117,7 +117,7 @@ struct SubtitleLine: View {
   /// weight as Android draws subtitles.
   private func font(_ fontSize: CGFloat, bold: Bool) -> UIFont {
     guard let name = look.font, let named = UIFont(name: name, size: fontSize) else {
-      return MatineeKit.RedHatText.uiFont(size: fontSize, weight: bold ? .bold : .medium)
+      return RedHatText.uiFont(size: fontSize, weight: bold ? .bold : .medium)
     }
     guard bold, let descriptor = named.fontDescriptor.withSymbolicTraits(.traitBold) else { return named }
     return UIFont(descriptor: descriptor, size: fontSize)

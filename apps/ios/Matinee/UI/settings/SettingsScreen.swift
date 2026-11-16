@@ -36,7 +36,7 @@ enum SettingsPage: String, CaseIterable {
     }
   }
 
-  var icon: MatineeKit.Lucide {
+  var icon: Lucide {
     switch self {
     case .account: .userRound
     case .appearance: .palette
@@ -82,7 +82,7 @@ private struct PageRow: View {
   init(_ page: SettingsPage) { self.page = page }
 
   var body: some View {
-    MatineeKit.ListRow(page.title, icon: page.icon) { nav.settingsPage(page.key) }
+    ListRow(page.title, icon: page.icon) { nav.settingsPage(page.key) }
   }
 }
 
@@ -96,7 +96,7 @@ struct SettingsScreen: View {
 
   var body: some View {
     // The web's phone menu spaces its blocks 20 apart, closer than a page's sections.
-    SettingsScaffold(Str.shellSettings, spacing: MatineeKit.Space.s5) {
+    SettingsScaffold(Str.shellSettings, spacing: Space.s5) {
       // The sessions and the profile live on the server.
       if let user, !offline {
         ListBlock { AccountRow(user: user) }
@@ -133,14 +133,14 @@ private struct OfflineRow: View {
 
   var body: some View {
     let on = Binding(get: { session.offlineMode }, set: { on in Task { await session.setOfflineMode(on) } })
-    HStack(spacing: MatineeKit.Space.s3) {
-      MatineeKit.LucideIcon(.cloudOff, size: 20, tint: palette.mutedForeground).frame(minWidth: 24)
+    HStack(spacing: Space.s3) {
+      LucideIcon(.cloudOff, size: 20, tint: palette.mutedForeground).frame(minWidth: 24)
       Text(Str.settingsOfflineMode).textStyle(.base).foregroundStyle(palette.foreground)
         .frame(maxWidth: .infinity, alignment: .leading)
-      MatineeKit.Switch(isOn: on, label: Str.settingsOfflineMode)
+      Switch(isOn: on, label: Str.settingsOfflineMode)
     }
-    .padding(.horizontal, MatineeKit.Space.s4)
-    .padding(.vertical, MatineeKit.Space.s2_5)
+    .padding(.horizontal, Space.s4)
+    .padding(.vertical, Space.s2_5)
     .frame(minHeight: 56)
     .contentShape(Rectangle())
     .onTapGesture { on.wrappedValue.toggle() }
@@ -152,6 +152,7 @@ private struct OfflineRow: View {
 /// has it: its picture, its name, and what the row opens.
 private struct AccountRow: View {
   let user: User
+  @Environment(\.api) private var api
   @Environment(\.navigator) private var nav
   @Environment(\.palette) private var palette
 
@@ -159,17 +160,17 @@ private struct AccountRow: View {
     Pressable {
       nav.settingsPage(SettingsPage.account.key)
     } label: {
-      HStack(spacing: MatineeKit.Space.s3) {
-        AccountAvatar(user: user, size: 40)
+      HStack(spacing: Space.s3) {
+        ProfileAvatar(user.name, url: user.avatarId.flatMap { api?.paths.avatar($0) }, size: 40)
         VStack(alignment: .leading, spacing: 0) {
           Text(user.name).textStyle(.base, weight: .medium).foregroundStyle(palette.foreground)
           Text(Str.settingsPageAccount).textStyle(.px13).foregroundStyle(palette.mutedForeground)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        MatineeKit.LucideIcon(.chevronRight, size: 16, tint: palette.mutedForeground)
+        LucideIcon(.chevronRight, size: 16, tint: palette.mutedForeground)
       }
-      .padding(.horizontal, MatineeKit.Space.s4)
-      .padding(.vertical, MatineeKit.Space.s2_5)
+      .padding(.horizontal, Space.s4)
+      .padding(.vertical, Space.s2_5)
       .frame(minHeight: 64)
       .contentShape(Rectangle())
     }
@@ -184,10 +185,10 @@ struct SettingsServerSection: View {
 
   var body: some View {
     ListSection(Str.settingsServer, titleStyle: .label) {
-      MatineeKit.ListRow(server, subtitle: Str.iosSettingsVersion(appVersion), icon: .server)
+      ListRow(server, subtitle: Str.iosSettingsVersion(appVersion), icon: .server)
       // Full rows, so the two ways out are easy to hit; signing out in red, as it ends the session.
       ChangeServerRow()
-      MatineeKit.ListRow(Str.shellSignOut, icon: .logOut, destructive: true) {
+      ListRow(Str.shellSignOut, icon: .logOut, destructive: true) {
         Task { try? await session.signOut() }
       }
     }
@@ -260,7 +261,7 @@ struct PlaybackPage: View {
       LanguagesSection(playback: playback, options: loaded, save: store)
       SkipsSection(playback: playback, options: loaded, save: store)
       ListSection(Str.playbackShowsTitle) {
-        MatineeKit.SwitchRow(
+        SwitchRow(
           Str.playbackSpecialsTitle,
           isOn: Binding(
             get: { specials.shown(user) },
@@ -314,12 +315,12 @@ private struct LanguagesSection: View {
         ) { value in changed(playback, save) { $0.subtitleLanguage = value } }
       }
       // The account keeps audio picks too, as the web's Playback settings offer.
-      MatineeKit.SwitchRow(
+      SwitchRow(
         Str.iosPlaybackAudioRemember,
         isOn: Binding(
           get: { playback.rememberAudio ?? true },
           set: { on in changed(playback, save) { $0.rememberAudio = on } }))
-      MatineeKit.SwitchRow(
+      SwitchRow(
         Str.playbackSubtitlesRemember,
         isOn: Binding(
           get: { playback.rememberSubtitles },
@@ -370,9 +371,9 @@ private struct DeviceSection: View {
       }
       // The engines' own names, the same in every language, as Android's ExoPlayer and mpv.
       ChoiceRow(Str.playbackEngineTitle, selection: $prefs.engine, options: [(.mpv, "mpv"), (.avPlayer, "AVPlayer")])
-      MatineeKit.SwitchRow(Str.playbackAutoplayTitle, isOn: $prefs.autoplayNext)
+      SwitchRow(Str.playbackAutoplayTitle, isOn: $prefs.autoplayNext)
       if pictureInPictureSupported {
-        MatineeKit.SwitchRow(Str.playbackPipTitle, isOn: $prefs.pictureInPicture)
+        SwitchRow(Str.playbackPipTitle, isOn: $prefs.pictureInPicture)
       }
     }
   }
@@ -384,14 +385,14 @@ private struct GesturesSection: View {
 
   var body: some View {
     ListSection(Str.playbackGesturesTitle) {
-      MatineeKit.SwitchRow(Str.playbackGesturesLevels, isOn: $prefs.swipeLevels)
+      SwitchRow(Str.playbackGesturesLevels, isOn: $prefs.swipeLevels)
       if prefs.swipeLevels {
-        MatineeKit.SwitchRow(
+        SwitchRow(
           Str.playbackGesturesRememberBrightness,
           isOn: Binding(get: { prefs.rememberBrightness }, set: { prefs.setRememberBrightness($0) }))
       }
-      MatineeKit.SwitchRow(Str.playbackGesturesSeek, isOn: $prefs.swipeSeek)
-      MatineeKit.SwitchRow(Str.playbackGesturesHold, isOn: $prefs.holdSpeed)
+      SwitchRow(Str.playbackGesturesSeek, isOn: $prefs.swipeSeek)
+      SwitchRow(Str.playbackGesturesHold, isOn: $prefs.holdSpeed)
     }
   }
 }
@@ -403,14 +404,14 @@ private struct ButtonsSection: View {
 
   var body: some View {
     ListSection(Str.playbackButtonsTitle) {
-      MatineeKit.SwitchRow(Str.playbackButtonsSkip, isOn: $prefs.skipButtons)
+      SwitchRow(Str.playbackButtonsSkip, isOn: $prefs.skipButtons)
       // With picture in picture off, there's no button to hide.
       if pictureInPictureSupported && prefs.pictureInPicture {
-        MatineeKit.SwitchRow(Str.playbackPipTitle, isOn: $prefs.pictureInPictureButton)
+        SwitchRow(Str.playbackPipTitle, isOn: $prefs.pictureInPictureButton)
       }
-      MatineeKit.SwitchRow(Str.playbackButtonsLock, isOn: $prefs.lockButton)
-      MatineeKit.SwitchRow(Str.playbackButtonsAudio, isOn: $prefs.audioButton)
-      MatineeKit.SwitchRow(Str.playbackButtonsSubtitles, isOn: $prefs.subtitlesButton)
+      SwitchRow(Str.playbackButtonsLock, isOn: $prefs.lockButton)
+      SwitchRow(Str.playbackButtonsAudio, isOn: $prefs.audioButton)
+      SwitchRow(Str.playbackButtonsSubtitles, isOn: $prefs.subtitlesButton)
     }
   }
 }
@@ -434,7 +435,7 @@ private struct TranscodingSection: View {
         Str.playbackTranscodingTitle, footer: noEncodes ? Str.playbackTranscodingNoEncodes : Str.playbackTranscodingNote
       ) {
         if noEncodes {
-          MatineeKit.ValueRow(Str.playbackVideoCodecTitle, value: Str.playbackVideoCodecNone)
+          ValueRow(Str.playbackVideoCodecTitle, value: Str.playbackVideoCodecNone)
         } else if video.count > 1 {
           ChoiceRow(
             Str.playbackVideoCodecTitle, current: video.contains(prefs.videoCodec) ? prefs.videoCodec : AUTOMATIC,
@@ -464,7 +465,7 @@ private struct PassthroughSection: View {
   var body: some View {
     ListSection(Str.playbackPassthroughTitle) {
       ForEach(codecs, id: \.self) { codec in
-        MatineeKit.SwitchRow(
+        SwitchRow(
           audioFormatName(codec),
           isOn: Binding(
             get: { !prefs.convertAudio.contains(codec) },
@@ -485,13 +486,13 @@ struct SubtitlesPage: View {
 
   var body: some View {
     SettingsScaffold(Str.settingsSubtitlesTitle) {
-      VStack(alignment: .leading, spacing: MatineeKit.Space.s3) {
+      VStack(alignment: .leading, spacing: Space.s3) {
         SubtitlePreview(look: subtitleLook(prefs))
         ListBlock {
-          MatineeKit.SwitchRow(Str.settingsSubtitlesSystem, isOn: $prefs.subtitleSystemStyle)
+          SwitchRow(Str.settingsSubtitlesSystem, isOn: $prefs.subtitleSystemStyle)
           if prefs.subtitleSystemStyle {
             // iOS keeps the caption style where no app can open it, so the row says where.
-            MatineeKit.ListRow(Str.settingsSubtitlesSystemOpen, subtitle: Str.iosSettingsSubtitlesSystemWhere)
+            ListRow(Str.settingsSubtitlesSystemOpen, subtitle: Str.iosSettingsSubtitlesSystemWhere)
           } else {
             ChoiceRow(
               Str.settingsSubtitlesSize, selection: $prefs.subtitleScale,
@@ -523,8 +524,8 @@ private struct SubtitlePreview: View {
   var body: some View {
     LinearGradient(
       colors: [
-        MatineeKit.RGB(0x9DB3D1).color, MatineeKit.RGB(0x55657F).color, MatineeKit.RGB(0x2B2622).color,
-        MatineeKit.RGB(0x6E5A45).color,
+        RGB(0x9DB3D1).color, RGB(0x55657F).color, RGB(0x2B2622).color,
+        RGB(0x6E5A45).color,
       ],
       startPoint: .topLeading, endPoint: .bottomTrailing
     )
@@ -537,7 +538,7 @@ private struct SubtitlePreview: View {
       // player's size scaled to the frame's width.
       GeometryReader { proxy in
         SubtitleLine(cue: Cue(text: Str.settingsSubtitlesPreview), look: look, size: min(26, max(14, proxy.size.width / 22)))
-          .padding(.horizontal, MatineeKit.Space.s4)
+          .padding(.horizontal, Space.s4)
           .padding(.bottom, proxy.size.height * 0.07)
           .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
       }
@@ -571,17 +572,17 @@ struct DownloadsSettingsPage: View {
     let total = formatBytes(storage?.used ?? items.values.reduce(0) { $0 + $1.bytes })
     SettingsScaffold(Str.downloadsTitle) {
       if off {
-        VStack(alignment: .leading, spacing: MatineeKit.Space.s1) {
+        VStack(alignment: .leading, spacing: Space.s1) {
           Text(Str.downloadsOffTitle).textStyle(.base, weight: .semibold, tracking: .tight)
             .foregroundStyle(palette.foreground)
           Text(Str.downloadsOffDescription).textStyle(.sm).foregroundStyle(palette.mutedForeground)
         }
       }
       ListBlock {
-        MatineeKit.ValueRow(
+        ValueRow(
           Str.downloadsStorage, value: Str.downloadsStorageValue(total, storage?.free.map(formatBytes) ?? "–"))
         if !off {
-          MatineeKit.SwitchRow(Str.downloadsUnmetered, isOn: $downloads.unmeteredOnly)
+          SwitchRow(Str.downloadsUnmetered, isOn: $downloads.unmeteredOnly)
         }
       }
       if !off {
@@ -613,7 +614,7 @@ struct DownloadsSettingsPage: View {
       }
       if !items.isEmpty {
         ListBlock {
-          MatineeKit.ListRow(Str.downloadsRemoveAll, icon: .trash, destructive: true) { confirm = true }
+          ListRow(Str.downloadsRemoveAll, icon: .trash, destructive: true) { confirm = true }
         }
       }
     }

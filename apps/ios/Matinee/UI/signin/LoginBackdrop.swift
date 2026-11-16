@@ -28,7 +28,7 @@ struct LoginBackdropWall: View {
           .transition(.opacity)
       }
     }
-    .animation(MatineeKit.Motion.animation(MatineeKit.Motion.move, reduceMotion: reduceMotion), value: tiles.isEmpty)
+    .animation(Motion.animation(Motion.move, reduceMotion: reduceMotion), value: tiles.isEmpty)
     .ignoresSafeArea()
     .allowsHitTesting(false)
     .accessibilityHidden(true)

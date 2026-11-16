@@ -49,25 +49,23 @@ private struct TrickplayForm: View {
   @Environment(\.palette) private var palette
 
   var body: some View {
-    VStack(alignment: .leading, spacing: Space.s3) {
-      Text(Str.webTrickplayTitle).textStyle(.base, weight: .semibold, tracking: .tight)
-        .accessibilityAddTraits(.isHeader)
+    SettingsSection(Str.webTrickplayTitle) {
       // What the images are and how many videos have them, as the web says it under the title.
       Note(Str.webTrickplayDescriptionCount(data.videos, formatCount(data.ready)))
       ListBlock {
-        MatineeKit.SwitchRow(Str.webTrickplayEnabled, isOn: $settings.enabled)
+        SwitchRow(Str.webTrickplayEnabled, isOn: $settings.enabled)
         SelectRow(
           Str.webTrickplayInterval, selection: $settings.intervalSeconds,
           options: TrickplayInterval.knownValues.map { ($0, Str.webTrickplayIntervalOption($0)) })
         SelectRow(
           Str.webTrickplayWidth, selection: $settings.width,
           options: TrickplayWidth.knownValues.map { ($0, Str.webTrickplayWidthOption(String($0))) })
-        MatineeKit.SwitchRow(Str.webTrickplayKeyframesOnly, isOn: $settings.keyframesOnly)
+        SwitchRow(Str.webTrickplayKeyframesOnly, isOn: $settings.keyframesOnly)
         // Decoding on the GPU needs one set up for transcoding; the web says so rather than hide it.
         if data.hardwareAcceleration != nil {
-          MatineeKit.SwitchRow(Str.webTrickplayHardwareDecoding, isOn: $settings.hardwareDecoding)
+          SwitchRow(Str.webTrickplayHardwareDecoding, isOn: $settings.hardwareDecoding)
         } else {
-          MatineeKit.SwitchRow(
+          SwitchRow(
             Str.webTrickplayHardwareDecoding, subtitle: Str.webTrickplayHardwareDecodingUnavailable,
             isOn: .constant(false)
           )

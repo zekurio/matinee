@@ -47,14 +47,14 @@ struct UnreachableScreen: View {
 
   private var isLocal: Bool { URL(string: server).map(MatineeSession.isLocalNetwork) ?? false }
 
-  private func retry(_ look: MatineeKit.ButtonLook) -> some View {
-    MatineeKit.MatineeButton(Str.commonRetry, icon: .refreshCw, look: look, pending: retrying, fullWidth: true) {
+  private func retry(_ look: ButtonLook) -> some View {
+    MatineeButton(Str.commonRetry, icon: .refreshCw, look: look, pending: retrying, fullWidth: true) {
       Task { await session.start() }
     }
   }
 
-  private func watchOffline(_ look: MatineeKit.ButtonLook) -> some View {
-    MatineeKit.MatineeButton(Str.downloadsWatchOffline, icon: .download, look: look, fullWidth: true) {
+  private func watchOffline(_ look: ButtonLook) -> some View {
+    MatineeButton(Str.downloadsWatchOffline, icon: .download, look: look, fullWidth: true) {
       Task { await session.setOfflineMode(true) }
     }
   }

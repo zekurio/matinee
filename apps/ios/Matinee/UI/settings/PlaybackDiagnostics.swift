@@ -21,23 +21,20 @@ struct PlaybackDiagnosticsSection: View {
     let text = report.map(formatReport)
     ListSection(Str.diagnosticsTitle) {
       if let text, let latest = report?.latest {
-        MatineeKit.ValueRow(Str.diagnosticsLatest, value: statusLabel(latest))
-        MatineeKit.ListRow(Str.diagnosticsShow) { open = true }
-        MatineeKit.ListRow(Str.diagnosticsCopy, accessory: MatineeKit.ListRowAccessory.none) {
+        ValueRow(Str.diagnosticsLatest, value: statusLabel(latest))
+        ListRow(Str.diagnosticsShow) { open = true }
+        ListRow(Str.diagnosticsCopy, accessory: ListRowAccessory.none) {
           copyText(text, snackbar: snackbar, copied: Str.diagnosticsCopied)
         }
-        MatineeKit.ListRow(Str.iosDiagnosticsShare, accessory: MatineeKit.ListRowAccessory.none) {
+        ListRow(Str.iosDiagnosticsShare, accessory: ListRowAccessory.none) {
           shareText(text, subject: Str.diagnosticsTitle)
         }
-        MatineeKit.ListRow(Str.diagnosticsClear, destructive: true) {
+        ListRow(Str.diagnosticsClear, destructive: true) {
           open = false
           PlaybackDiagnostics.clear()
         }
       } else {
-        Text(Str.diagnosticsEmpty).textStyle(.sm).foregroundStyle(palette.mutedForeground)
-          .frame(maxWidth: .infinity, alignment: .leading)
-          .padding(.horizontal, MatineeKit.Space.s4)
-          .padding(.vertical, MatineeKit.Space.s4)
+        EmptyRow(Str.diagnosticsEmpty)
       }
     }
     .matineeSheet(isPresented: Binding(get: { open && text != nil }, set: { open = $0 }), size: .large) {
@@ -95,25 +92,25 @@ struct TextSheet: View {
 
   var body: some View {
     VStack(spacing: 0) {
-      MatineeKit.SheetHeader(title)
+      SheetHeader(title)
       ScrollView([.vertical]) {
         Text(text)
-          .monoStyle(.xs)
+          .monoTextStyle(.xs)
           .foregroundStyle(palette.foreground)
           .textSelection(.enabled)
           .frame(maxWidth: .infinity, alignment: .leading)
-          .padding(.horizontal, MatineeKit.Space.s5)
-          .padding(.vertical, MatineeKit.Space.s2)
+          .padding(.horizontal, Space.s5)
+          .padding(.vertical, Space.s2)
       }
       .defaultScrollAnchor(latestLast ? .bottom : .top)
-      MatineeKit.Separator()
-      HStack(spacing: MatineeKit.Space.s2_5) {
-        MatineeKit.MatineeButton(Str.diagnosticsClose, look: .ghost) { dismiss() }
+      Separator()
+      HStack(spacing: Space.s2_5) {
+        MatineeButton(Str.diagnosticsClose, look: .ghost) { dismiss() }
         Spacer(minLength: 0)
-        MatineeKit.MatineeButton(copyLabel, icon: nil, look: .secondary, action: onCopy)
+        MatineeButton(copyLabel, icon: nil, look: .secondary, action: onCopy)
       }
-      .padding(.horizontal, MatineeKit.Space.s4)
-      .padding(.vertical, MatineeKit.Space.s2_5)
+      .padding(.horizontal, Space.s4)
+      .padding(.vertical, Space.s2_5)
     }
   }
 }

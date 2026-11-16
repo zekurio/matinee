@@ -141,13 +141,13 @@ private struct UserRow: View {
           HStack(alignment: .firstTextBaseline, spacing: Space.s1_5) {
             // An account with no way in, flagged as the web flags it.
             if signIn.isEmpty {
-              MatineeKit.LucideIcon(.triangleAlert, size: 14, tint: palette.warning)
+              LucideIcon(.triangleAlert, size: 14, tint: palette.warning)
             }
             Text(detail).textStyle(.sm).foregroundStyle(palette.mutedForeground)
           }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        MatineeKit.LucideIcon(.ellipsis, size: 18, tint: palette.mutedForeground)
+        LucideIcon(.ellipsis, size: 18, tint: palette.mutedForeground)
       }
       .padding(.horizontal, Space.s4)
       .padding(.vertical, Space.s3)
@@ -174,7 +174,7 @@ private struct UserRow: View {
   }
 
   @ViewBuilder private var badge: some View {
-    if user.isAdmin { MatineeKit.Badge(Str.webUsersAdmin, look: .outline, icon: .shield) }
+    if user.isAdmin { Badge(Str.webUsersAdmin, look: .outline, icon: .shield) }
   }
 
   private var signIn: [String] {
@@ -197,15 +197,15 @@ private struct UserSheet: View {
   let onPick: (UserAction) -> Void
 
   var body: some View {
-    MatineeKit.SheetHeader(user.name, subtitle: "@\(user.username)")
-    MatineeKit.SheetItem(
+    SheetHeader(user.name, subtitle: "@\(user.username)")
+    SheetItem(
       !user.isAdmin ? Str.webUsersMenuMakeAdmin : isSelf ? Str.webUsersMenuStepDown : Str.webUsersMenuRemoveAdmin,
       icon: .shield
     ) { onPick(.role(user, admin: !user.isAdmin)) }
-    MatineeKit.SheetItem(isSelf ? Str.webUsersMenuSignOutOthers : Str.webUsersMenuSignOut, icon: .logOut) {
+    SheetItem(isSelf ? Str.webUsersMenuSignOutOthers : Str.webUsersMenuSignOut, icon: .logOut) {
       onPick(.signOut(user))
     }
-    MatineeKit.SheetItem(isSelf ? Str.webUsersMenuDeleteOwn : Str.webUsersMenuDelete, icon: .trash, destructive: true) {
+    SheetItem(isSelf ? Str.webUsersMenuDeleteOwn : Str.webUsersMenuDelete, icon: .trash, destructive: true) {
       onPick(.delete(user))
     }
   }

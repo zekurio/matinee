@@ -44,14 +44,17 @@ struct ArtProgressBar: View {
 
 /// A rail's or a page section's heading, the web's `text-xl font-semibold
 /// tracking-tight`, and with `action` a link to the whole list, with a
-/// chevron after it.
+/// chevron after it. With `count`, how many titles it holds follows on its
+/// baseline, `text-sm` muted, as the web's search and person pages have it.
 struct SectionTitle: View {
   let title: String
+  var count: Int?
   var action: (() -> Void)?
   @Environment(\.palette) private var palette
 
-  init(_ title: String, action: (() -> Void)? = nil) {
+  init(_ title: String, count: Int? = nil, action: (() -> Void)? = nil) {
     self.title = title
+    self.count = count
     self.action = action
   }
 
@@ -66,15 +69,59 @@ struct SectionTitle: View {
     }
   }
 
-  private var heading: some View {
-    HStack(spacing: Space.s1) {
-      Text(title)
-        .textStyle(.xl, weight: .semibold, tracking: .tight)
-        .lineLimit(1)
-        .foregroundStyle(palette.foreground)
-      if action != nil { LucideIcon(.chevronRight, size: 20, tint: palette.mutedForeground) }
+  @ViewBuilder private var heading: some View {
+    if let count {
+      HStack(alignment: .firstTextBaseline, spacing: Space.s2) {
+        Text(title)
+          .textStyle(.xl, weight: .semibold, tracking: .tight)
+          .foregroundStyle(palette.foreground)
+        Text(Str.browseTitleCount(count)).textStyle(.sm).foregroundStyle(palette.mutedForeground)
+      }
+    } else {
+      HStack(spacing: Space.s1) {
+        Text(title)
+          .textStyle(.xl, weight: .semibold, tracking: .tight)
+          .lineLimit(1)
+          .foregroundStyle(palette.foreground)
+        if action != nil { LucideIcon(.chevronRight, size: 20, tint: palette.mutedForeground) }
+      }
     }
   }
+}
+
+/// A tab's first page's name on an iPad, as the web's `PageHeader` from `sm`
+/// up: `text-26px md:text-32px font-semibold tracking-tight`, with what the
+/// page can do at its end.
+struct PageHeading<Actions: View>: View {
+  let title: String
+  @ViewBuilder let actions: () -> Actions
+  @Environment(\.palette) private var palette
+  @Environment(\.gutter) private var gutter
+  @Environment(\.windowSize) private var window
+
+  init(_ title: String, @ViewBuilder actions: @escaping () -> Actions) {
+    self.title = title
+    self.actions = actions
+  }
+
+  var body: some View {
+    HStack(alignment: .center, spacing: Space.s4) {
+      Text(title)
+        .textStyle(window.width >= 768 ? .px32 : .px26, weight: .semibold, tracking: .tight)
+        .foregroundStyle(palette.foreground)
+        .lineLimit(2)
+        .accessibilityAddTraits(.isHeader)
+      Spacer(minLength: 0)
+      actions()
+    }
+    .padding(.horizontal, gutter)
+    .padding(.top, Space.s4)
+    .padding(.bottom, window.width >= 768 ? Space.s6 : Space.s4)
+  }
+}
+
+extension PageHeading where Actions == EmptyView {
+  init(_ title: String) { self.init(title) { EmptyView() } }
 }
 
 /// Someone's picture from the server, or their initials until it loads or

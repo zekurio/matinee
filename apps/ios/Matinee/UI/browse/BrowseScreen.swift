@@ -313,18 +313,11 @@ private struct Biography: View {
 private struct CreditSection: View {
   let section: PersonCreditSection
   @Environment(\.gutter) private var gutter
-  @Environment(\.palette) private var palette
 
   var body: some View {
     VStack(alignment: .leading, spacing: Space.s3) {
-      HStack(alignment: .firstTextBaseline, spacing: Space.s2) {
-        Text(sectionName(section.kind))
-          .textStyle(.xl, weight: .semibold, tracking: .tight)
-          .foregroundStyle(palette.foreground)
-          .accessibilityAddTraits(.isHeader)
-        Text(Str.browseTitleCount(section.credits.count)).textStyle(.sm).foregroundStyle(palette.mutedForeground)
-      }
-      .padding(.horizontal, gutter)
+      SectionTitle(sectionName(section.kind), count: section.credits.count)
+        .padding(.horizontal, gutter)
       CardGrid {
         ForEach(section.credits, id: \.title.id) { credit in
           let detail = personCreditDetail(credit)

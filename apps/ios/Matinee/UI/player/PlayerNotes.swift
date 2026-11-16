@@ -32,20 +32,20 @@ struct PlayerFailure: View {
       Color.black.opacity(0.8).ignoresSafeArea()
         .contentShape(Rectangle())
         .onTapGesture {}
-      MatineeKit.EmptyState(icon: .circleAlert, title: title, description: message) {
+      EmptyState(icon: .circleAlert, title: title, description: message) {
         if let retry {
-          MatineeKit.MatineeButton(Str.commonRetry, icon: .refreshCw, look: .secondary, size: .md, action: retry)
+          MatineeButton(Str.commonRetry, icon: .refreshCw, look: .secondary, size: .md, action: retry)
         }
       }
       .frame(maxWidth: .infinity, maxHeight: .infinity)
-      MatineeKit.RoundIconButton(
-        .arrowLeft, label: Str.playerBack, look: .ghost, size: MatineeKit.TouchTarget, tint: .white.opacity(0.85),
+      RoundIconButton(
+        .arrowLeft, label: Str.playerBack, look: .ghost, size: TouchTarget, tint: .white.opacity(0.85),
         action: close
       )
       // Where the controls' back button is.
       .frame(height: TOP_BAR_HEIGHT)
-      .padding(.horizontal, MatineeKit.Space.s3)
-      .padding(.top, MatineeKit.Space.s2)
+      .padding(.horizontal, Space.s3)
+      .padding(.top, Space.s2)
     }
   }
 }
@@ -62,18 +62,18 @@ struct ZoomNote: View {
         Text(fill ? Str.playerFill : Str.playerFit)
           .textStyle(.sm, weight: .medium)
           .foregroundStyle(.white)
-          .padding(.horizontal, MatineeKit.Space.s4)
-          .padding(.vertical, MatineeKit.Space.s2)
+          .padding(.horizontal, Space.s4)
+          .padding(.vertical, Space.s2)
           .pictureGlass(in: Capsule(), shade: .medium, ring: 0)
           .transition(.opacity)
       }
     }
     .task(id: count) {
       guard count > 0 else { return }
-      MatineeKit.withMotion(MatineeKit.Motion.enter) { shown = true }
+      withMotion(Motion.enter) { shown = true }
       try? await Task.sleep(for: .milliseconds(1200))
       guard !Task.isCancelled else { return }
-      MatineeKit.withMotion(MatineeKit.Motion.exit) { shown = false }
+      withMotion(Motion.exit) { shown = false }
     }
   }
 }
@@ -92,7 +92,7 @@ struct PlayerNoticeNote: View {
   var body: some View {
     ZStack {
       if let note = shown {
-        MatineeKit.Toast(MatineeKit.ToastMessage(title(note), description: detail(note), kind: .warning))
+        Toast(ToastMessage(title(note), description: detail(note), kind: .warning))
           .frame(maxWidth: 420)
           .transition(.opacity)
       }
@@ -101,14 +101,14 @@ struct PlayerNoticeNote: View {
     .onChange(of: controller.notice.map { NoticeKey($0) }) { _, _ in
       guard let notice = controller.notice else { return }
       count += 1
-      MatineeKit.withMotion(MatineeKit.Motion.enter) { shown = notice }
+      withMotion(Motion.enter) { shown = notice }
       controller.dismissNotice()
     }
     .task(id: count) {
       guard count > 0 else { return }
       try? await Task.sleep(for: .seconds(NOTICE_SECONDS))
       guard !Task.isCancelled else { return }
-      MatineeKit.withMotion(MatineeKit.Motion.exit) { shown = nil }
+      withMotion(Motion.exit) { shown = nil }
     }
   }
 
@@ -162,24 +162,24 @@ struct SkipSegmentButton: View {
     let segment = controller.skippable(controls: controls)
     ZStack {
       if let segment {
-        MatineeKit.Pressable(shape: RoundedRectangle.kit(MatineeKit.Radius.lg)) {
+        Pressable(shape: RoundedRectangle.kit(Radius.lg)) {
           Task { await controller.skipSegment() }
         } label: {
-          HStack(spacing: MatineeKit.Space.s2) {
+          HStack(spacing: Space.s2) {
             Text(skipSegmentLabel(segment.kind))
-            MatineeKit.LucideIcon(.skipForward, size: 16, tint: .white, scales: false)
+            LucideIcon(.skipForward, size: 16, tint: .white, scales: false)
           }
           .textStyle(.sm, weight: .medium)
           .foregroundStyle(.white)
-          .padding(.horizontal, MatineeKit.Space.s4)
-          .frame(minHeight: MatineeKit.TouchTarget)
-          .pictureGlass(in: RoundedRectangle.kit(MatineeKit.Radius.lg), shade: .strong)
+          .padding(.horizontal, Space.s4)
+          .frame(minHeight: TouchTarget)
+          .pictureGlass(in: RoundedRectangle.kit(Radius.lg), shade: .strong)
           .kitShadow(.menu)
         }
         .transition(.opacity)
       }
     }
-    .animation(MatineeKit.Motion.animation(MatineeKit.Motion.enter, reduceMotion: reduceMotion), value: segment)
+    .animation(Motion.animation(Motion.enter, reduceMotion: reduceMotion), value: segment)
   }
 }
 
@@ -199,8 +199,8 @@ struct UpNextCard: View {
       let name = episodeCode(upcoming).map { Str.mediaCodeTitle($0, label.title) } ?? label.title
       if compact {
         buttons(offer)
-          .padding(MatineeKit.Space.s2)
-          .pictureGlass(in: RoundedRectangle.kit(MatineeKit.Radius.xl), shade: .solid, ring: 0.1)
+          .padding(Space.s2)
+          .pictureGlass(in: RoundedRectangle.kit(Radius.xl), shade: .solid, ring: 0.1)
           .kitShadow(.menu)
           .accessibilityElement(children: .contain)
           .accessibilityLabel("\(Str.playerUpNext): \(name)")
@@ -211,12 +211,12 @@ struct UpNextCard: View {
             .textStyle(.base, weight: .semibold)
             .foregroundStyle(.white)
             .lineLimit(2)
-            .padding(.top, MatineeKit.Space.s1)
-          buttons(offer).padding(.top, MatineeKit.Space.s3)
+            .padding(.top, Space.s1)
+          buttons(offer).padding(.top, Space.s3)
         }
-        .padding(MatineeKit.Space.s4)
+        .padding(Space.s4)
         .frame(maxWidth: 352, alignment: .leading)
-        .pictureGlass(in: RoundedRectangle.kit(MatineeKit.Radius.xl), shade: .solid, ring: 0.1)
+        .pictureGlass(in: RoundedRectangle.kit(Radius.xl), shade: .solid, ring: 0.1)
         .kitShadow(.menu)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Str.playerUpNext)
@@ -226,15 +226,15 @@ struct UpNextCard: View {
 
   /// Play, counting down while it does, and Hide while the credits roll or Cancel once it ended.
   private func buttons(_ offer: UpNextOffer) -> some View {
-    HStack(spacing: MatineeKit.Space.s2) {
-      MatineeKit.MatineeButton(look: .primary, size: .md, action: controller.playNext) {
-        MatineeKit.LucideIcon(.play, size: 16)
+    HStack(spacing: Space.s2) {
+      MatineeButton(look: .primary, size: .md, action: controller.playNext) {
+        LucideIcon(.play, size: 16)
         Text(controller.nextCountdown.map(Str.playerUpNextIn) ?? Str.playerPlay).monospacedDigit()
       }
       if !controller.ended {
-        MatineeKit.MatineeButton(Str.playerUpNextHide, look: .secondary, size: .md, action: controller.hideNext)
+        MatineeButton(Str.playerUpNextHide, look: .secondary, size: .md, action: controller.hideNext)
       } else if !offer.cancelled {
-        MatineeKit.MatineeButton(Str.playerUpNextCancel, look: .secondary, size: .md, action: controller.cancelNext)
+        MatineeButton(Str.playerUpNextCancel, look: .secondary, size: .md, action: controller.cancelNext)
       }
     }
   }
@@ -263,21 +263,21 @@ struct LockedScreen: View {
         .ignoresSafeArea()
         .accessibilityHidden(true)
       // The same size and place as the lock button in the controls' top bar.
-      MatineeKit.Pressable(shape: Circle()) {
+      Pressable(shape: Circle()) {
         if shown { onUnlock() } else { tapped += 1 }
       } label: {
-        MatineeKit.LucideIcon(.lockOpen, size: 22, tint: .white, scales: false)
-          .frame(width: MatineeKit.TouchTarget, height: MatineeKit.TouchTarget)
+        LucideIcon(.lockOpen, size: 22, tint: .white, scales: false)
+          .frame(width: TouchTarget, height: TouchTarget)
           .pictureGlass(in: Circle(), shade: .medium)
           .opacity(shown ? 1 : 0)
           .contentShape(Circle())
       }
       .accessibilityLabel(Str.playerUnlock)
       .frame(height: TOP_BAR_HEIGHT)
-      .padding(.horizontal, MatineeKit.Space.s3)
-      .padding(.top, MatineeKit.Space.s2)
+      .padding(.horizontal, Space.s3)
+      .padding(.top, Space.s2)
     }
-    .animation(MatineeKit.Motion.animation(MatineeKit.Motion.color, reduceMotion: reduceMotion), value: shown)
+    .animation(Motion.animation(Motion.color, reduceMotion: reduceMotion), value: shown)
     .accessibilityElement(children: .contain)
     .accessibilityAddTraits(.isModal)
     .task(id: TaskKey(tapped: tapped, keep: keep)) {

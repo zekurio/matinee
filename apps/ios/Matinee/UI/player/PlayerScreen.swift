@@ -311,31 +311,31 @@ private struct Playback: View {
 
   private func toggleControls() {
     let show = !controls
-    MatineeKit.withMotion(show ? MatineeKit.Motion.enter : MatineeKit.Motion.exit) { controls = show }
+    withMotion(show ? Motion.enter : Motion.exit) { controls = show }
     touched += 1
   }
 
   private func hideControls() {
-    MatineeKit.withMotion(MatineeKit.Motion.exit) { controls = false }
+    withMotion(Motion.exit) { controls = false }
   }
 
   @ViewBuilder private func overlays(screen: CGSize, safe: EdgeInsets) -> some View {
-    let fade = MatineeKit.Motion.animation(MatineeKit.Motion.enter, reduceMotion: reduceMotion)
+    let fade = Motion.animation(Motion.enter, reduceMotion: reduceMotion)
     // Up top, clear of the play button in the middle.
-    VStack(spacing: MatineeKit.Space.s2) {
+    VStack(spacing: Space.s2) {
       ZoomNote(count: zoomNote, fill: fill)
       PlayerNoticeNote(controller: controller)
       if controller.holding { HoldNote().transition(.opacity) }
     }
-    .padding(.top, MatineeKit.Space.s4)
-    .padding(.horizontal, MatineeKit.Space.s6)
+    .padding(.top, Space.s4)
+    .padding(.horizontal, Space.s6)
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     .animation(fade, value: controller.holding)
     .allowsHitTesting(false)
     if !inPip { GestureNotes(state: gestures, controller: controller) }
     if controller.loading && controller.error == nil {
       // The web's spinner, `size-10 text-white/85`, where the play button is.
-      MatineeKit.Spinner(size: 40, tint: .white.opacity(0.85))
+      Spinner(size: 40, tint: .white.opacity(0.85))
         .allowsHitTesting(false)
     }
     if !inPip {
@@ -357,16 +357,16 @@ private struct Playback: View {
       // no room above the seek bar for the card beside the play button, so
       // while the controls show it's a row of its buttons beside the skip.
       let compact = controlsShown && screen.height < 500
-      let column = compact ? AnyLayout(HStackLayout(alignment: .center, spacing: MatineeKit.Space.s3))
-        : AnyLayout(VStackLayout(alignment: .trailing, spacing: MatineeKit.Space.s3))
+      let column = compact ? AnyLayout(HStackLayout(alignment: .center, spacing: Space.s3))
+        : AnyLayout(VStackLayout(alignment: .trailing, spacing: Space.s3))
       column {
         if !locked, controller.error == nil { SkipSegmentButton(controller: controller, controls: controlsShown) }
         if controller.showsUpNext, !locked { UpNextCard(controller: controller, compact: compact) }
       }
-      .padding(.trailing, MatineeKit.Space.s5)
-      .padding(.bottom, controlsShown ? max(0, controlsTop - safe.bottom) + MatineeKit.Space.s4 : MatineeKit.Space.s6)
+      .padding(.trailing, Space.s5)
+      .padding(.bottom, controlsShown ? max(0, controlsTop - safe.bottom) + Space.s4 : Space.s6)
       .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
-      .animation(MatineeKit.Motion.animation(MatineeKit.Motion.move, reduceMotion: reduceMotion), value: controlsShown)
+      .animation(Motion.animation(Motion.move, reduceMotion: reduceMotion), value: controlsShown)
       .animation(fade, value: controller.showsUpNext)
       .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
       if let message = controller.error {
@@ -379,7 +379,7 @@ private struct Playback: View {
           keep: voiceOver || PlayerDebug.flag("locked"),
           onUnlock: {
             locked = false
-            MatineeKit.withMotion(MatineeKit.Motion.enter) { controls = true }
+            withMotion(Motion.enter) { controls = true }
             touched += 1
           })
       }
@@ -417,7 +417,7 @@ private struct Playback: View {
     case .rightArrow: Task { await controller.skip(ahead) }
     case .upArrow, .downArrow, .return:
       guard !controls else { return .ignored }
-      MatineeKit.withMotion(MatineeKit.Motion.enter) { controls = true }
+      withMotion(Motion.enter) { controls = true }
     default: return .ignored
     }
     return .handled
@@ -429,12 +429,12 @@ private struct BackOnly: View {
   let close: () -> Void
 
   var body: some View {
-    MatineeKit.RoundIconButton(
+    RoundIconButton(
       .arrowLeft, label: Str.playerBack, look: .ghost, size: 44, tint: .white.opacity(0.85), action: close
     )
     .frame(height: TOP_BAR_HEIGHT)
-    .padding(.horizontal, MatineeKit.Space.s3)
-    .padding(.top, MatineeKit.Space.s2)
+    .padding(.horizontal, Space.s3)
+    .padding(.top, Space.s2)
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
   }
 }
