@@ -649,74 +649,20 @@
         }
       }
     },
-    "ios_player_ends_at" : {
-      "comment" : "When the file ends at this speed, beside the seek bar of the phone's and the TV's player; %@ is the time of day. The web's player.endsAt, which Android's player no longer shows.",
+    "ios_player_flash_skip" : {
+      "comment" : "The note over the picture after the player's skip buttons, a double tap, or a key: how far it went, the presses in a row added up; %lld is the seconds. The web's player.flash.skip, which Android lacks.",
       "extractionState" : "manual",
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Endet um %@"
+            "value" : "%lld s"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ends at %@"
-          }
-        }
-      }
-    },
-    "ios_player_remaining" : {
-      "comment" : "VoiceOver's label for the time left beside the phone player's seek bar; %@ is the time, as 12:34.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Noch %@"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ remaining"
-          }
-        }
-      }
-    },
-    "ios_player_show_length" : {
-      "comment" : "What tapping the player's time at the end of the seek bar does while it shows the time left. The web's player.showLength.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gesamtlänge anzeigen"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Show length"
-          }
-        }
-      }
-    },
-    "ios_player_show_time_left" : {
-      "comment" : "What tapping the player's time at the end of the seek bar does while it shows the length. The web's player.showTimeLeft.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Restzeit anzeigen"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Show time left"
+            "value" : "%lld s"
           }
         }
       }

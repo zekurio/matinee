@@ -27,14 +27,29 @@ themselves: scrub, trickplay tiles, the countdown, the lifecycle calls).
   `PlayerDownloads`, from `at` or where it stopped. `item` is nil until the
   first answer or the download arrives.
 - Observe `position`, `duration`, `buffered`, `playing`, `loading`, `ended`,
-  `speed`, `videoAspect`, `source`, `error`, `unplayable`, `refusal`,
-  `refusalReason`, and `notice`. When `unplayable` is set, show
-  `player_unplayable` in place of `error`, as Android does; a `refusal` says
+  `speed`, `videoAspect`, `source`, `error`, `unplayable`, `outOfReach`,
+  `refusal`, `refusalReason`, and `notice`. When `unplayable` is set, show
+  `player_unplayable` in place of `error`, as Android does; when
+  `outOfReach` is, `error_unreachable`, with Try again. A source fails out
+  of reach, as Android's `serverOutOfReach` (Playback.swift), when the
+  connection failed or timed out, or a proxy answered 502 or 504, by the
+  error and the engine's `loadTrouble` (AVPlayer's error log; mpv keeps
+  none). No method is blamed, so `retry` asks for the same. A stall the
+  player notices itself counts only when the log says so, and a frozen
+  picture never; both fall back otherwise. A `refusal` says
   why with no retry: the app's words for `refusalReason` (the server's
   `PlaybackRestriction`, or how many devices play), else `error`, the
   server's English. A seek's `switchFailed` notice carries the same reason
   in `refusal`.
 - `play`, `pause`, `togglePlay`, `pickSpeed`, async `seekTo` and `skip`.
+  `SeekClocks(position:duration:)` (Seek.swift) is what either side of the
+  seek bar says: the time played and the file's length, 0:00 for one not
+  known, and the widest they get.
+- Every `skip` flashes how far it went, as the web's player: observe
+  `skipFlash` (SkipFlash.swift), which presses in a row the same way add
+  up and which goes `SKIP_FLASH_MS` after the last. `flashSkip(_:)` notes
+  a skip that didn't go through `skip`, as the TV's Left and Right, and
+  `endSkipFlash()` takes it away.
 - Observe `audio`, `subtitle`, `quality`, `audioTracks`, `subtitles`,
   `qualities`, `offersOriginal`, and `options`. Call async `pickAudio`,
   `pickSubtitle`, or `pickQuality`. `burnsIn` says whether a menu track is

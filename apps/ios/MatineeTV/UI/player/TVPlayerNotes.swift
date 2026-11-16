@@ -6,7 +6,7 @@ import SwiftUI
  * What TvPlayback.kt draws over the picture besides the controls: why
  * nothing plays (`TvPlayerFailure`), the note about what the server did
  * instead (PlayerScreen.kt's `PlayerNoticeNote`), and, Apple TV's own,
- * the mark a skip leaves while the controls are away.
+ * the mark a skip leaves at the side it went to.
  *
  * TODO(share): `refusalTitle`, `refusalMessage`, the notices' words, and `skipSegmentLabel`
  * are the iPhone's (Matinee/UI/player/PlayerNotes.swift), copied because
@@ -164,39 +164,35 @@ private struct NoticeKey: Equatable {
   }
 }
 
-/// A skip while the controls are away: Left or Right went back or ahead
-/// by `seconds`. Apple TV's own player marks it at the side it went to,
-/// so a press that lands somewhere a picture doesn't show still says it
-/// did something. `total` adds up presses in a row.
-struct TVSkipMark: Equatable {
-  let direction: Int
-  let total: Int
-  let id: Int
-}
-
-/// The mark itself, at the left or the right of the picture's middle, fading as it goes.
+/// How far the last skips went, at the side they went to, as Apple TV's
+/// own player marks a skip, so a press that lands somewhere a picture
+/// doesn't show still says it did something. Every skip shows it, from the
+/// skip buttons or Left and Right while the controls are away, as the web
+/// player's note since #52 and the phone's; presses in a row the same way
+/// add up, and it goes `SKIP_FLASH_MS` after the last (MatineeCore's
+/// `SkipFlash`). Android TV has none.
 struct TVSkipMarkView: View {
-  let mark: TVSkipMark?
+  let flash: SkipFlash?
   @Environment(\.palette) private var palette
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   var body: some View {
     ZStack {
-      if let mark {
+      if let flash {
         ZStack {
-          LucideIcon(mark.direction < 0 ? .rotateCcw : .rotateCw, size: 104, scales: false)
-          Text(String(mark.total)).textStyle(.label).monospacedDigit().padding(.top, 6)
+          LucideIcon(flash.forward ? .rotateCw : .rotateCcw, size: 104, scales: false)
+          Text(String(flash.seconds)).textStyle(.label).monospacedDigit().padding(.top, 6)
         }
         .foregroundStyle(palette.foreground)
         .frame(width: 160, height: 160)
         .background(Color.black.opacity(0.45), in: Circle())
-        .frame(maxWidth: .infinity, alignment: mark.direction < 0 ? .leading : .trailing)
+        .frame(maxWidth: .infinity, alignment: flash.forward ? .trailing : .leading)
         .padding(.horizontal, 280)
-        .id(mark.direction)
-        .transition(.opacity.combined(with: .scale(scale: 0.9)))
+        .id(flash.forward)
+        .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.9)))
       }
     }
-    .animation(Motion.animation(mark == nil ? Motion.exit : Motion.enter, reduceMotion: reduceMotion), value: mark)
+    .animation(Motion.animation(flash == nil ? Motion.exit : Motion.enter, reduceMotion: reduceMotion), value: flash)
     .allowsHitTesting(false)
     .accessibilityHidden(true)
   }

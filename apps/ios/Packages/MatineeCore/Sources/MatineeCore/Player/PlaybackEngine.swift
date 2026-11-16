@@ -15,6 +15,10 @@ import Foundation
   /// The picture's size as it shows, its pixel aspect applied.
   var videoSize: CGSize { get }
   var failure: (any Error)? { get }
+  /// What the engine last logged going wrong while it loaded, for telling a
+  /// server out of reach from a method that doesn't play. Nil from an engine
+  /// that logs nothing the controller can read, as mpv.
+  var loadTrouble: LoadTrouble? { get }
   /// The source can play: ExoPlayer's `STATE_READY`.
   var isReady: Bool { get }
   func play(atRate rate: Float)
@@ -36,6 +40,7 @@ extension PlaybackEngine {
   public var mpvStatistics: MPVStatistics? { nil }
   public func loadSubtitle(url: URL, headers: [String: String]) async throws -> Bool { false }
   public var avPlayer: AVPlayer? { nil }
+  public var loadTrouble: LoadTrouble? { nil }
 }
 
 @MainActor protocol AVPlaybackEngine: PlaybackEngine {
@@ -53,6 +58,12 @@ extension AVPlaybackEngine {
   }
   var videoSize: CGSize { player.currentItem?.presentationSize ?? .zero }
   var failure: (any Error)? { player.currentItem?.error }
+  var loadTrouble: LoadTrouble? {
+    guard let event = player.currentItem?.errorLog()?.events.last else { return nil }
+    // Only the status out of the comment, which holds the address too.
+    return LoadTrouble(
+      domain: event.errorDomain, code: event.errorStatusCode, httpStatus: httpStatus(inLog: event.errorComment))
+  }
   var isReady: Bool { player.currentItem?.status == .readyToPlay }
   func tracks() async -> [TrackDiagnostics] {
     // The item knows which tracks play; its asset alone would call them all not selected.

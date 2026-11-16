@@ -152,6 +152,12 @@ struct Ask {
   /// words for that in place of `error`, as Android's `player_unplayable`.
   public internal(set) var unplayable = false
 
+  /// The server was out of reach: a source couldn't load from it, or the
+  /// call to it couldn't get through. The view says so in its words in
+  /// place of `error`, as Android's `error_unreachable`; Try again asks for
+  /// the same, since no method was blamed.
+  public internal(set) var outOfReach = false
+
   /// The server refused to play the file for this account, which `error` holds its words for. Trying again won't help.
   public internal(set) var refusal: Refusal?
   /// Why it refused, for the view to say in the app's language in place of `error`'s English; nil from a server that doesn't say.
@@ -238,6 +244,8 @@ struct Ask {
   public internal(set) var segmentFresh = false
   /// A finger holds the video, so it plays at `HOLD_SPEED` for now instead of `speed`.
   public internal(set) var holding = false
+  /// The note the last skips flash over the picture, while it shows (SkipFlash.swift).
+  public internal(set) var skipFlash: SkipFlash?
   public internal(set) var scrubPosition: Double?
   /// Stop this sitting and open another item in its place, as Android's
   /// `PlayerHost.playInstead`: the next episode, or the previous one.
@@ -248,6 +256,7 @@ struct Ask {
   @ObservationIgnored var ticking: Task<Void, Never>?
   @ObservationIgnored var trickTask: Task<Void, Never>?
   @ObservationIgnored var nextTask: Task<Void, Never>?
+  @ObservationIgnored var flashTask: Task<Void, Never>?
   /// The last report and pick sent, which tests wait for.
   @ObservationIgnored var reporting: Task<Void, Never>?
   @ObservationIgnored var picking: Task<Void, Never>?
@@ -306,6 +315,7 @@ struct Ask {
     ticking?.cancel()
     trickTask?.cancel()
     nextTask?.cancel()
+    flashTask?.cancel()
   }
 
   /// Asks the server how the file plays, loads the answer's source, and
@@ -441,6 +451,7 @@ struct Ask {
     }
     error = nil
     unplayable = false
+    outOfReach = false
     refusal = nil
     refusalReason = nil
     ended = false
@@ -537,7 +548,8 @@ struct Ask {
   /// What didn't play asks the server again with its method among the
   /// failed, and the server falls back: from the file to a stream, from a
   /// stream to an encode. A download has nothing to fall back to.
-  func fallBack(_ cause: any Error) async {
+  /// `outOfReach` says the server went away, which blames no method.
+  func fallBack(_ cause: any Error, outOfReach: Bool) async {
     guard let current = source else { return }
     sourceFailed = true
     cancelSeek()
@@ -548,15 +560,28 @@ struct Ask {
       error = cause.localizedDescription
       return
     }
+    // The server went away, as while it restarts. Falling back past the
+    // method would blame it, and an encode over the account's limit
+    // has nothing to fall back to, so Try again asks for the same.
+    if outOfReach {
+      error = cause.localizedDescription
+      self.outOfReach = true
+      return
+    }
     await ask(Ask(at: now(), reason: .fallback, failed: method, lost: plan))
   }
 
   /// What didn't play, as Kotlin's `onPlayerError`: the report notes it and
-  /// the server falls back. The live test also calls it to exercise the
-  /// chain without a client-side replacement source.
+  /// the server falls back, unless the error or the engine's log says the
+  /// server was out of reach (`serverOutOfReach`). The live test also
+  /// calls it to exercise the chain without a client-side replacement source.
   public func sourceFailed(_ cause: any Error) async {
+    await sourceFailed(cause, outOfReach: serverOutOfReach(cause, logged: engine.loadTrouble))
+  }
+
+  func sourceFailed(_ cause: any Error, outOfReach: Bool) async {
     diagnostics.failed(errorDiagnostics(cause as NSError))
-    await fallBack(cause)
+    await fallBack(cause, outOfReach: outOfReach)
   }
 
   /// The picture froze while playback ran on. From the server, that source
@@ -571,7 +596,8 @@ struct Ask {
       await engine.seek(engine.positionSeconds)
       return
     }
-    await sourceFailed(URLError(.cannotDecodeContentData))
+    // A picture that stops says nothing of the server.
+    await sourceFailed(URLError(.cannotDecodeContentData), outOfReach: false)
   }
 
   /// Asks the server how the file plays with `change`, and takes its answer.
@@ -641,6 +667,8 @@ struct Ask {
     // before its controller exists.
     if sourceFailed || change.failed != nil || plan == nil {
       self.unplayable = unplayable
+      // The call couldn't get through, which Android words as the server not answering.
+      outOfReach = Failure(cause) == .unreachable
       error = message
       return
     }
@@ -659,6 +687,7 @@ struct Ask {
   public func retry() async {
     error = nil
     unplayable = false
+    outOfReach = false
     refusal = nil
     refusalReason = nil
     wantPlay = true

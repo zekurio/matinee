@@ -353,6 +353,12 @@ private struct Playback: View {
         .transition(.opacity)
         .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
       }
+      // How far the last skips went, a quarter of the way down as the
+      // web's note, clear of the top bar and of play in the middle.
+      SkipFlashNote(flash: controller.skipFlash)
+        .padding(.top, max(0, screen.height * 0.25 - safe.top))
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
       // Clear of the controls while they show. Held sideways, a phone has
       // no room above the seek bar for the card beside the play button, so
       // while the controls show it's a row of its buttons beside the skip.
@@ -395,10 +401,12 @@ private struct Playback: View {
     } else if controller.unplayable {
       PlayerFailure(title: Str.playerErrorLost, message: Str.playerUnplayable, retry: retry, close: close)
     } else {
-      // The opening failed before anything played, as Android's page failing to load.
+      // The opening failed before anything played, as Android's page failing
+      // to load. The server out of reach blamed no method, so Try again asks
+      // for the same.
       PlayerFailure(
-        title: controller.item == nil ? Str.playerLoadFailed : Str.playerErrorLost, message: message, retry: retry,
-        close: close)
+        title: controller.item == nil ? Str.playerLoadFailed : Str.playerErrorLost,
+        message: controller.outOfReach ? Str.errorUnreachable : message, retry: retry, close: close)
     }
   }
 
