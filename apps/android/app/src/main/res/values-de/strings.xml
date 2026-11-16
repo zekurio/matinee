@@ -156,7 +156,6 @@
         <item quantity="other">%1$d Titel</item>
     </plurals>
 
-    <string name="library_search_titles">Titel durchsuchen</string>
     <string name="library_search_movies">Filme durchsuchen</string>
     <string name="library_search_shows">Serien durchsuchen</string>
     <string name="library_clear_search">Suche leeren</string>

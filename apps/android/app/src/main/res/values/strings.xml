@@ -172,7 +172,6 @@
     </plurals>
 
     <!-- A library -->
-    <string name="library_search_titles">Search titles</string>
     <string name="library_search_movies">Search movies</string>
     <string name="library_search_shows">Search shows</string>
     <string name="library_clear_search">Clear search</string>

@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
@@ -58,7 +57,6 @@ import io.github.zekurio.matinee.ui.kit.RoundIconButton
 import io.github.zekurio.matinee.ui.rememberLoader
 import io.github.zekurio.matinee.ui.settings.languageName
 import kotlin.math.roundToInt
-import kotlinx.coroutines.delay
 
 /*
  * A list of titles' filters and order on a phone, for a library's page
@@ -99,27 +97,21 @@ private val FiltersSaver = Saver<TitleFilters, String>(
 )
 
 /**
- * A list's search, filters, and order, kept while the page is on the
- * back stack. [settled] is [query] once typing pauses, trimmed; it's what
- * goes to the server.
+ * A list's filters and order, kept while the page is on the back stack.
+ * Search is Media's, so a list has none of its own.
  */
 @Stable
 class TitleListState internal constructor(
     sort: MutableState<String>,
     order: MutableState<String>,
     filters: MutableState<TitleFilters>,
-    query: MutableState<String>,
-    settled: MutableState<String>,
 ) {
     var sort by sort
     var order by order
     var filters by filters
-    var query by query
-    var settled by settled
-        internal set
 
-    /** What the list's pages are kept under: one set per search, filters, and order. */
-    val key get() = "$sort-$order-$settled-${MatineeJson.encodeToString(TitleFilters.serializer(), filters)}"
+    /** What the list's pages are kept under: one set per filters and order. */
+    val key get() = "$sort-$order-${MatineeJson.encodeToString(TitleFilters.serializer(), filters)}"
 }
 
 /** A list's state as [TitleListState], starting in [initialSort], or by name. */
@@ -129,14 +121,7 @@ fun rememberTitleListState(initialSort: String? = null): TitleListState {
     val sort = rememberSaveable { mutableStateOf(start) }
     val order = rememberSaveable { mutableStateOf(usual(start)) }
     val filters = rememberSaveable(stateSaver = FiltersSaver) { mutableStateOf(NO_TITLE_FILTERS) }
-    val query = rememberSaveable { mutableStateOf("") }
-    // Waits for a pause in typing before asking the server.
-    val settled = rememberSaveable { mutableStateOf("") }
-    LaunchedEffect(query.value) {
-        delay(LIBRARY_SEARCH_DEBOUNCE_MS)
-        settled.value = query.value.trim()
-    }
-    return remember { TitleListState(sort, order, filters, query, settled) }
+    return remember { TitleListState(sort, order, filters) }
 }
 
 /** What each filter offers for the titles in a scope, from the server. */
