@@ -16,45 +16,18 @@ import UIKit
  * on a screen that can, with nothing to set.
  */
 
-/// A view whose layer is the player's, so it follows the view's size and rotation.
-final class PlayerLayerView: UIView {
-  override static var layerClass: AnyClass { AVPlayerLayer.self }
-  // SAFETY: `layerClass` makes the view's layer an AVPlayerLayer.
-  var playerLayer: AVPlayerLayer { layer as! AVPlayerLayer }
-}
-
-/// The video, whole or filling the screen and cut at its edges. `autoPicture`
-/// lets picture in picture start by itself on leaving the app, as Android's
-/// `setAutoEnterEnabled`: while it plays, unless settings turned it off.
-struct VideoSurface: UIViewRepresentable {
+/// The phone's AVPlayer surface, with picture in picture attached to its layer.
+struct VideoSurface: View {
   let controller: PlayerController
   let pip: PictureInPictureModel
   let fill: Bool
   let autoPicture: Bool
 
-  func makeUIView(context: Context) -> PlayerLayerView {
-    let view = PlayerLayerView()
-    view.backgroundColor = .black
-    view.isUserInteractionEnabled = false
-    view.playerLayer.player = controller.player
-    view.playerLayer.videoGravity = fill ? .resizeAspectFill : .resizeAspect
-    pip.attach(view.playerLayer, controller: controller)
-    return view
-  }
-
-  func updateUIView(_ view: PlayerLayerView, context: Context) {
-    let gravity: AVLayerVideoGravity = fill ? .resizeAspectFill : .resizeAspect
-    if view.playerLayer.videoGravity != gravity {
-      CATransaction.begin()
-      CATransaction.setAnimationDuration(Motion.moveDuration)
-      view.playerLayer.videoGravity = gravity
-      CATransaction.commit()
-    }
-    pip.autoStart(autoPicture)
-  }
-
-  static func dismantleUIView(_ view: PlayerLayerView, coordinator: ()) {
-    view.playerLayer.player = nil
+  var body: some View {
+    PlayerSurface(
+      player: controller.player, fill: fill,
+      attached: { pip.attach($0, controller: controller) },
+      updated: { pip.autoStart(autoPicture) })
   }
 }
 
@@ -183,12 +156,3 @@ private struct RoutePicker: UIViewRepresentable {
   func updateUIView(_ picker: AVRoutePickerView, context: Context) {}
 }
 
-/// Where the video shows in `bounds`: fitted inside, or covering it when it fills.
-nonisolated func videoRect(aspect: Double, in bounds: CGSize, fill: Bool) -> CGRect {
-  guard aspect > 0, bounds.width > 0, bounds.height > 0 else { return CGRect(origin: .zero, size: bounds) }
-  let box = bounds.width / bounds.height
-  let wide = fill ? aspect < box : aspect > box
-  let width = wide ? bounds.width : bounds.height * aspect
-  let height = wide ? bounds.width / aspect : bounds.height
-  return CGRect(x: (bounds.width - width) / 2, y: (bounds.height - height) / 2, width: width, height: height)
-}

@@ -96,7 +96,7 @@ struct TVPlayback: View {
     GeometryReader { proxy in
       let screen = proxy.size
       let fill = prefs.fillScreen
-      let rect = tvVideoRect(aspect: controller.videoAspect, in: screen, fill: fill)
+      let rect = videoRect(aspect: controller.videoAspect, in: screen, fill: fill)
       ZStack {
         TVVideo(controller: controller, fill: fill)
         // With the controls away, the picture holds focus, unless the action alone on it has it.
@@ -206,7 +206,7 @@ struct TVPlayback: View {
     .onDisappear {
       TVPlayerDebug.save(controller.diagnostics)
       UIApplication.shared.isIdleTimerDisabled = false
-      TVTrickplayTiles.shared.clear()
+      TrickplayTiles.shared.clear()
       _ = scrub.release()
     }
   }
@@ -361,7 +361,7 @@ struct TVPlayback: View {
     if let refusal = controller.refusal {
       // Asking again gets the same answer, so there's nothing to try.
       TVPlayerFailure(
-        title: tvRefusalTitle(refusal), message: tvRefusalMessage(controller.refusalReason, fallback: message), retry: nil,
+        title: refusalTitle(refusal), message: refusalMessage(controller.refusalReason, fallback: message), retry: nil,
         close: close)
     } else if controller.unplayable {
       TVPlayerFailure(title: Str.playerErrorLost, message: Str.playerUnplayable, retry: retry, close: close)

@@ -107,3 +107,22 @@ nonisolated func formatBitrate(_ bits: Int) -> String {
 
 /// "German, English" for tracks' BCP 47 tags, named in the app's language.
 nonisolated func languageList(_ tags: [String?]) -> String? { MatineeCore.languageList(tags, locale: .app) }
+
+/// "German" for `de`, in the app's language.
+nonisolated func languageName(_ tag: String) -> String {
+  let locale = Locale.app
+  guard let name = locale.localizedString(forIdentifier: tag), !name.isEmpty else { return tag }
+  return name.prefix(1).uppercased(with: locale) + name.dropFirst()
+}
+
+/// "1080p, 20 Mbps" for an encode.
+nonisolated func qualityLabel(_ quality: PlaybackQualityPreset) -> String {
+  ungrouped(Str.playbackQualityPreset(quality.height, Str.playerBitrateMbps(quality.bitrate / 1_000_000)), quality.height)
+}
+
+/// `formatted` with `number` as plain digits. `Str`'s formats group a
+/// number as the app's language does, "2,160p", where Android's `%d`
+/// doesn't, and a height is a name rather than a count.
+nonisolated func ungrouped(_ formatted: String, _ number: Int) -> String {
+  formatted.replacingOccurrences(of: number.formatted(.number.locale(.app)), with: String(number))
+}

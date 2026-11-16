@@ -55,6 +55,11 @@ apps.
 | `Matinee/UI/signin/LoginBackdrop.swift`                    | The server's login backdrop behind sign-in                                     |
 | `Matinee/UI/home/HomeDevData.swift`                        | `-dev.art` and `-dev.recommendations`                                          |
 | `Matinee/UI/title/TitleData.swift`                         | The detail pages' facts, file info, season loads, and `-title.fixture`         |
+| `Matinee/UI/player/PlayerWords.swift`                      | Refusal, notice, and skip-button wording                                       |
+| `Matinee/UI/player/PlayerSubtitles.swift`                  | Subtitle lines, also used by Settings                                          |
+| `Matinee/UI/player/PlayerTrickplay.swift`                  | Trickplay frame and tile cache, sized by each player                           |
+| `Matinee/UI/player/PlayerLayer.swift`                      | AVPlayer layer and surface, without picture in picture or AirPlay              |
+| `Matinee/UI/player/PlayerMenuEntries.swift`                | Menu choices and track, quality, and speed labels                              |
 | `Matinee/UI/browse/BrowseFixtures.swift`                   | `-dev.browseFixtures`, the fixture people the cast cards open                  |
 
 Why sharing by file and not a package: these depend on the app's
@@ -271,8 +276,6 @@ favourites, and search (`UI/browse/`), the profile (`UI/profile/`), Settings
 (`UI/settings/`), and the player (`UI/player/`). Still to do:
 
 - Top Shelf content (below).
-- The player copies four pieces of the iPhone's player, each marked
-  `TODO(share)` with the split that would let both targets share them.
 - Nothing has run on an Apple TV: remote swipes, display matching, the
   screen saver, and local discovery have only been built, not tried.
 

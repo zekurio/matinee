@@ -192,23 +192,6 @@ func themeModeLabel(_ mode: ThemeMode) -> String {
   }
 }
 
-/// "German" for `de`, in the app's language.
-func languageName(_ tag: String) -> String {
-  let locale = Locale.app
-  guard let name = locale.localizedString(forIdentifier: tag), !name.isEmpty else { return tag }
-  return name.prefix(1).uppercased(with: locale) + name.dropFirst()
-}
-
-/// "1080p, 20 Mbps" for an encode.
-func qualityLabel(_ quality: PlaybackQualityPreset) -> String {
-  ungrouped(Str.playbackQualityPreset(quality.height, Str.playerBitrateMbps(quality.bitrate / 1_000_000)), quality.height)
-}
-
-/// `formatted` with `number` as plain digits: a height is a name, not a count, so "2160p", not "2,160p".
-func ungrouped(_ formatted: String, _ number: Int) -> String {
-  formatted.replacingOccurrences(of: number.formatted(.number.locale(.app)), with: String(number))
-}
-
 /// "Failed (stream)": how the latest playback went, and with which source.
 func statusLabel(_ attempt: AttemptDiagnostics) -> String {
   let mode =
