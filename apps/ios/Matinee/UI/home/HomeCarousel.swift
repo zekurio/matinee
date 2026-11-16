@@ -13,8 +13,8 @@ import SwiftUI
  */
 
 /// The sizes the carousel lays its cards out by, for a row `rowWidth`
-/// wide: one card on a phone, with the next one's edge showing at the
-/// right; two from 600 points, three from 840, filling the row between the
+/// wide: one card on a phone, from margin to margin; two from 600 points,
+/// three from 840, filling the row between the
 /// page's margins. Cards are 16:9, and no taller than 40% of the window, so
 /// one title alone on a wide iPad is a wide band rather than most of the
 /// screen.
@@ -28,14 +28,17 @@ struct CarouselLayout {
   init(rowWidth: CGFloat, window: CGSize, gutter: CGFloat, count: Int) {
     perRow = FeaturedCarousel.perRow(width: window.width, count: count)
     stops = FeaturedCarousel.stops(count: count, perRow: perRow)
-    // The rails' gap, so the row reads as one of Home's.
-    gap = isWide(window) ? Space.s4 : Space.s3
     let inner = max(rowWidth - 2 * gutter, 0)
     if perRow == 1 {
-      // One to a row: as much narrower as the gap, so the next card shows
-      // as wide a strip as the margin at the right.
-      cardWidth = count > 1 ? max(inner - gap, 0) : inner
+      // One to a row: the card runs from margin to margin, so it sits in the
+      // middle of the screen, in line with the logo above and the rails
+      // below. The cards are a margin apart, which leaves the ones either
+      // side just off the screen rather than showing as slivers at its edges.
+      gap = gutter
+      cardWidth = inner
     } else {
+      // The rails' gap, so the row reads as one of Home's.
+      gap = isWide(window) ? Space.s4 : Space.s3
       cardWidth = max((inner - gap * CGFloat(perRow - 1)) / CGFloat(perRow), 0)
     }
     cardHeight = min(cardWidth * 9 / 16, window.height * 0.4)
