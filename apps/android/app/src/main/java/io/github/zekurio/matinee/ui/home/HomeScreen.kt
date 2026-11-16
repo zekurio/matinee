@@ -30,7 +30,8 @@ import io.github.zekurio.matinee.R
 import io.github.zekurio.matinee.api.Library
 import io.github.zekurio.matinee.api.MediaItem
 import io.github.zekurio.matinee.api.ShelfEntry
-import io.github.zekurio.matinee.ui.requests.HomeAskedRail
+import io.github.zekurio.matinee.ui.requests.homeAskedRail
+import io.github.zekurio.matinee.ui.requests.rememberHomeAsked
 import io.github.zekurio.matinee.api.TitleSort
 import io.github.zekurio.matinee.api.isAdmin
 import io.github.zekurio.matinee.ui.AppHeader
@@ -44,6 +45,7 @@ import io.github.zekurio.matinee.ui.StatusBarScrim
 import io.github.zekurio.matinee.ui.components.DisconnectedAction
 import io.github.zekurio.matinee.ui.components.EpisodeCard
 import io.github.zekurio.matinee.ui.components.ErrorBox
+import io.github.zekurio.matinee.ui.components.LocalActions
 import io.github.zekurio.matinee.ui.components.Rail
 import io.github.zekurio.matinee.ui.components.RailArt
 import io.github.zekurio.matinee.ui.components.ShelfCard
@@ -102,6 +104,10 @@ private fun OnlineHomeScreen() {
     // What failed is left out, as on the web, and loads again when Home
     // comes back. Only a Home with nothing at all says so, above.
     val onPage = loaders.all + shelves.map { it.second }
+    // Rows that have nothing are left out of the list rather than drawn
+    // empty, since the list puts its gap around every item.
+    val asked = rememberHomeAsked()
+    val hidden = LocalActions.current.hidden
     val listState = rememberLazyListState()
     val haze = rememberHazeState()
     Box(Modifier.fillMaxSize()) {
@@ -131,8 +137,8 @@ private fun OnlineHomeScreen() {
 
             episodeRail("continue", R.string.browse_continue_watching, resume)
             episodeRail("nextUp", R.string.browse_next_up, nextUp)
-            recommendationRails(loaders.recommendations)
-            item(key = "asked") { HomeAskedRail() }
+            recommendationRails(loaders.recommendations, hidden)
+            homeAskedRail(asked)
             if (libraries.state == Load.Loading) {
                 item(key = "shelves-loading") { RailSkeleton(null, RailArt.Poster) }
             }
