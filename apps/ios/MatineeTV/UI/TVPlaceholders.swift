@@ -16,34 +16,6 @@ import SwiftUI
  * When the last is gone, so is this file.
  */
 
-// MARK: Detail: ui/tv/detail
-
-struct TVTitleScreen: View {
-  let id: String
-  var body: some View { TVPlaceholderPage(Str.mediaHeroDetails, path: "title/\(id)", port: "detail/TvTitle.kt") }
-}
-
-struct TVSeasonScreen: View {
-  let titleId: String
-  let season: Int?
-  var body: some View {
-    TVPlaceholderPage(
-      seasonName(season), path: "season/\(titleId)/\(season.map(String.init) ?? "-")", port: "detail/TvSeason.kt")
-  }
-}
-
-struct TVEpisodeScreen: View {
-  let itemId: String
-  var body: some View {
-    TVPlaceholderPage(Str.actionsEpisodeDetails, path: "episode/\(itemId)", port: "detail/TvEpisode.kt")
-  }
-}
-
-struct TVPersonScreen: View {
-  let name: String
-  var body: some View { TVPlaceholderPage(name, path: "person/\(name)", port: "detail/TvPerson.kt") }
-}
-
 // MARK: Browse: ui/tv/browse
 
 struct TVSearchScreen: View {

@@ -4,7 +4,7 @@
 
   /// The TV pages of the gallery.
   enum TVRoute: String, CaseIterable, Hashable, Identifiable {
-    case focus, scale, buttons, lists, panels, feedback, search, cards, grid, home, remote, phone
+    case focus, scale, buttons, lists, panels, feedback, search, cards, episodes, grid, home, remote, phone
 
     var id: String { rawValue }
 
@@ -18,6 +18,7 @@
       case .feedback: de ? "Hinweise, Toasts, Dialoge" : "Notices, toasts, dialogs"
       case .search: de ? "Suche, Uhr, Navigation" : "Search, clock, drawer"
       case .cards: de ? "Karten und Reihen" : "Cards and rows"
+      case .episodes: de ? "Folgenzeilen" : "Episode rows"
       case .grid: de ? "Posterraster" : "Poster grid"
       case .home: de ? "Startseite (Entwurf)" : "Home, a mock-up"
       case .remote: de ? "Fernbedienung" : "Remote"
@@ -35,6 +36,7 @@
       case .feedback: de ? "Leere und fehlgeschlagene Reihen, Meldungen, Textfeld" : "Empty and failed rows, messages, the text field"
       case .search: de ? "Suchfeld, Uhr, die Leiste links" : "The search field, the clock, the left drawer"
       case .cards: de ? "Poster, Standbilder, Personen, Fokus-Gedächtnis" : "Posters, stills, people, focus memory"
+      case .episodes: de ? "Die Folgen einer Staffel als Liste" : "A season's episodes, as a list"
       case .grid: de ? "Ein Raster mit Kopfzeile" : "A grid with its header and focus line"
       case .home: de ? "Alles zusammen über einem Hintergrund" : "Everything together over a backdrop"
       case .remote: de ? "Play/Pause, Menü, Wischen und Spulen" : "Play/Pause, Menu, presses, and a scrubber"
@@ -52,6 +54,7 @@
       case .feedback: .bell
       case .search: .search
       case .cards: .film
+      case .episodes: .list
       case .grid: .libraryBig
       case .home: .house
       case .remote: .tvPlay
@@ -126,6 +129,7 @@
       case .feedback: TVFeedbackPage()
       case .search: TVSearchPage()
       case .cards: TVCardsPage()
+      case .episodes: TVEpisodesPage()
       case .grid: TVGridPage()
       case .home: TVHomePage()
       case .remote: TVRemotePage()

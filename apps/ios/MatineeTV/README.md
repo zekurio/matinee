@@ -28,6 +28,7 @@ other page is a placeholder that names itself ("What's left").
 | `UI/TVArt.swift`          | `TVLogo` and `TVAvatar`, over the shared `Picture`                                         |
 | `UI/auth/`                | `ui/tv/auth/`: the frame, connect and discovery, address, sign-in by code, servers panel   |
 | `UI/home/`                | `ui/tv/home/`: Home, its rows, and what the header says                                    |
+| `UI/detail/`              | `ui/tv/detail/`: the title, season, episode, and person pages, their header and rows       |
 | `Remote/remote.sh`        | Drives the app with the Siri Remote and takes screenshots                                  |
 
 ## What it shares with the iPhone app
@@ -54,6 +55,8 @@ apps.
 | `Matinee/UI/signin/SignInState.swift`                      | `ServerConnect`, `DeviceCodeState`, `unreachableMessage`                       |
 | `Matinee/UI/signin/LoginBackdrop.swift`                    | The server's login backdrop behind sign-in                                     |
 | `Matinee/UI/home/HomeDevData.swift`                        | `-dev.art` and `-dev.recommendations`                                          |
+| `Matinee/UI/title/TitleData.swift`                         | The detail pages' facts, file info, season loads, and `-title.fixture`         |
+| `Matinee/UI/browse/BrowseFixtures.swift`                   | `-dev.browseFixtures`, the fixture people the cast cards open                  |
 
 Why sharing by file and not a package: these depend on the app's
 generated strings and on each other, and moving them into a package would
@@ -277,8 +280,8 @@ without editing the same lines:
 | Settings | `TVSettingsScreen(page:)`, sign out, servers, about                                     | `ui/tv/settings/`                               | `UI/settings/` |
 | Player   | `TVPlayerScreen(request:close:)` over MatineeCore's player and MatineeMPV               | `ui/player/tv/`                                 | `UI/player/`   |
 
-Kit pieces the areas will want that don't exist yet: an episode row
-(Detail: Android's `TvEpisodeRow`), and the player's TV controls (Player).
+Kit pieces the areas will want that don't exist yet: the player's TV
+controls (Player). Detail added `TVEpisodeRow`, a season's list.
 Detail and Browse reuse `TVActions`; Settings reuses `TVServers.swift`'s
 panel for its server list. A shared component two areas need goes in the
 kit (pure presentation) or in `UI/` beside `TVArt.swift` (needs Nuke or

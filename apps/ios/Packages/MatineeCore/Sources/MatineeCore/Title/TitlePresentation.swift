@@ -111,6 +111,15 @@ public func moreFromSeasonStart(_ items: [MediaItem], current: String) -> Int {
   return max(0, at - 1)
 }
 
+/// The episode a row of the rest of the season starts on, as a TV's focus
+/// comes into it: the one after `current`, or for the last, the one before
+/// it. Nil when `current` isn't in `items` or is all there is.
+public func episodeAfter(_ items: [MediaItem], current: String) -> MediaItem? {
+  guard let at = items.firstIndex(where: { $0.id == current }) else { return nil }
+  if items.indices.contains(at + 1) { return items[at + 1] }
+  return at > 0 ? items[at - 1] : nil
+}
+
 /// A movie's page lists its files when it has more than one, as a
 /// director's cut beside the film, or an extra: each with what the server
 /// calls it and how its streams read, to play on its own.

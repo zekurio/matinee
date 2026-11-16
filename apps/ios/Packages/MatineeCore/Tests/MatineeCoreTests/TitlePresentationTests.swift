@@ -162,6 +162,15 @@ struct TitlePresentationTests {
     #expect(episodeRailStart(list, next: list[2]) == 2)
   }
 
+  @Test func aTVsRestOfASeasonStartsOnTheEpisodeAfter() {
+    let list = ["a", "b", "c", "d"].map { item($0) }
+    #expect(episodeAfter(list, current: "b")?.id == "c")
+    // The last has none after it: the one before.
+    #expect(episodeAfter(list, current: "d")?.id == "c")
+    #expect(episodeAfter(list, current: "x") == nil)
+    #expect(episodeAfter([item("a")], current: "a") == nil)
+  }
+
   @Test func aMovieListsItsFilesWhenItHasSeveral() {
     #expect(showsFiles(title(itemCount: 2)))
     #expect(!showsFiles(title(itemCount: 1)))
