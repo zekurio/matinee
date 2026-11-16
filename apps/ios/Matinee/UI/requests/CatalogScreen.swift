@@ -203,7 +203,7 @@ private struct CatalogHeader: View {
       detail.ref.kind == TitleKind.show && numbered > 0 ? Str.requestsSeasonCount(numbered) : nil,
     ].compactMap(\.self)
     return VStack(alignment: .leading, spacing: 0) {
-      HeadingMark(name: detail.name, size: layout.wide ? layout.nameSize : .xl2, wide: layout.wide)
+      HeadingMark(name: detail.name, size: layout.nameSize, weight: layout.nameWeight, wide: layout.wide)
       FactsRow(facts: facts, contentRating: detail.contentRating, rating: detail.rating).padding(.top, Space.s2)
       // Plain text: genre pages list the library's titles.
       if !detail.genres.isEmpty {
@@ -220,7 +220,7 @@ private struct CatalogHeader: View {
         Text(Str.webCatalogPageStale).textStyle(.px13).foregroundStyle(palette.mutedForeground)
       }
       if let overview = detail.overview {
-        Overview(text: overview, size: layout.wide ? .px15 : .sm)
+        Overview(text: overview, size: layout.overviewSize)
       }
       CrewLines(credits: detail.credits, studios: Array(detail.studios.prefix(2)))
     }

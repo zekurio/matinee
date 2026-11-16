@@ -178,8 +178,10 @@ private struct TitleHeader: View {
 
   private var heading: some View {
     VStack(alignment: .leading, spacing: 0) {
+      // A phone names the title in words, as Android's; wider, its logo where the provider has one.
       HeadingMark(
-        name: title.name, logo: titleLogoURL(title.summary, api: api), size: layout.nameSize, wide: layout.wide)
+        name: title.name, logo: layout.wide ? titleLogoURL(title.summary, api: api) : nil, size: layout.nameSize,
+        weight: layout.nameWeight, wide: layout.wide)
       if let original = title.originalName, original != title.name {
         Text(original).textStyle(.sm).foregroundStyle(palette.mutedForeground).lineLimit(1).padding(.top, Space.s1)
       }
@@ -197,7 +199,7 @@ private struct TitleHeader: View {
   private var details: some View {
     VStack(alignment: .leading, spacing: Space.s4) {
       if let overview = title.overview {
-        Overview(text: overview, tagline: title.tagline, size: layout.wide ? .px15 : .sm)
+        Overview(text: overview, tagline: title.tagline, size: layout.overviewSize)
       }
       CrewLines(credits: title.credits, studios: Array(title.studios.prefix(2)))
       // A movie's file. A show's differ by episode.
@@ -385,14 +387,15 @@ private struct SeasonHeader: View {
   private var heading: some View {
     VStack(alignment: .leading, spacing: Space.s1) {
       Pressable(shape: .kit(Radius.sm), wash: false, action: { nav.titleUp(title.id) }) {
+        // The show's name over the season's, muted, as Android's `titleMedium`.
         Text(title.name)
-          .textStyle(layout.wide ? .xl2 : .lg, weight: .semibold, tracking: .tight)
-          .foregroundStyle(palette.foreground.opacity(0.85))
+          .textStyle(layout.wide ? .xl2 : .base, weight: .semibold, tracking: layout.wide ? .tight : .normal)
+          .foregroundStyle(layout.wide ? palette.foreground.opacity(0.85) : palette.mutedForeground)
           .lineLimit(2)
           .multilineTextAlignment(.leading)
       }
       Text(seasonName(season.number))
-        .textStyle(layout.nameSize, weight: .semibold, tracking: .tight)
+        .textStyle(layout.nameSize, weight: layout.nameWeight, tracking: .tight)
         .foregroundStyle(palette.foreground)
         .lineLimit(2)
         .fixedSize(horizontal: false, vertical: true)
@@ -405,7 +408,7 @@ private struct SeasonHeader: View {
   @ViewBuilder private var details: some View {
     VStack(alignment: .leading, spacing: Space.s4) {
       if let overview = season.overview {
-        Overview(text: overview, size: layout.wide ? .px15 : .sm)
+        Overview(text: overview, size: layout.overviewSize)
       }
       if isHiddenSpecials(title, season) {
         SpecialsNote()
@@ -666,18 +669,19 @@ private struct EpisodeHeader: View {
           }
           Text(" · \(Str.titleEpisodeNumber(number))")
         }
-        .textStyle(layout.wide ? .lg : .base, weight: .medium)
+        // Under the show's name, muted, as Android's `titleMedium`.
+        .textStyle(layout.wide ? .lg : .base, weight: layout.wide ? .medium : .semibold)
         .monospacedDigit()
-        .foregroundStyle(palette.foreground.opacity(0.8))
+        .foregroundStyle(layout.wide ? palette.foreground.opacity(0.8) : palette.mutedForeground)
         .padding(.top, Space.s1)
       }
       Text(label.title)
-        .textStyle(layout.nameSize, weight: .semibold, tracking: .tight)
+        .textStyle(layout.nameSize, weight: layout.nameWeight, tracking: .tight)
         .foregroundStyle(palette.foreground)
         .lineLimit(3)
         .fixedSize(horizontal: false, vertical: true)
         .accessibilityAddTraits(.isHeader)
-        .padding(.top, Space.s1)
+        .padding(.top, Space.s1_5)
       FactsRow(facts: episodeFacts(item, watched: watched), contentRating: title?.contentRating)
         .padding(.top, Space.s3)
     }
@@ -686,7 +690,8 @@ private struct EpisodeHeader: View {
   private var details: some View {
     VStack(alignment: .leading, spacing: Space.s4) {
       if let overview = item.episode?.overview {
-        Overview(text: overview, size: layout.wide ? .px15 : .sm)
+        // Six lines of it, as Android's.
+        Overview(text: overview, lines: 6, size: layout.overviewSize)
       }
       MediaInfo(item)
     }

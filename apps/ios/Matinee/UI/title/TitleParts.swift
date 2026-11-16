@@ -37,22 +37,27 @@ struct TitleLayout {
 
   /// Where the heading starts, from the screen's top. A phone's title and
   /// episode start low, `max(10rem, 30vh)`, for more of the art; a season's,
-  /// with its poster beside the name, `max(7rem, 20vh)`; wider, the poster's
-  /// top, `max(8rem, 14vh)`, or an episode's still's, `max(12rem, 32vh)`.
+  /// with its poster beside the name, 150 above the backdrop's end, as
+  /// Android's; wider, the poster's top, `max(8rem, 14vh)`, or an episode's
+  /// still's, `max(12rem, 32vh)`.
   func headingTop(season: Bool = false, episode: Bool = false) -> CGFloat {
     if wide { return episode ? max(192, window.height * 0.32) : max(128, window.height * 0.14) }
-    return season ? max(112, window.height * 0.2) : max(160, window.height * 0.3)
+    return season ? backdropHeight() - 150 : max(160, window.height * 0.3)
   }
 
-  /// The header poster: `w-24` beside a phone's season name, `w-48`, `lg:w-56`.
-  var posterWidth: CGFloat { !wide ? 96 : large ? 224 : 192 }
+  /// The header poster: 112 beside a phone's season name, as Android's, `w-48`, `lg:w-56`.
+  var posterWidth: CGFloat { !wide ? 112 : large ? 224 : 192 }
 
   /// An episode's still beside its details: `w-80`, `lg:w-[28rem]`, `xl:w-[32rem]`.
   var stillWidth: CGFloat { window.width >= 1280 ? 512 : large ? 448 : 320 }
 
-  /// The page's name: `text-[28px]` on a phone, as Home's banner names a
-  /// title, so Details opens on the same name; `text-4xl`, `lg:text-5xl`.
-  var nameSize: TextSize { !wide ? .px28 : large ? .xl5 : .xl4 }
+  /// The page's name: Android's `headlineLarge` on a phone, 30 bold;
+  /// `text-4xl`, `lg:text-5xl` semibold wider, as the web's.
+  var nameSize: TextSize { !wide ? .xl3 : large ? .xl5 : .xl4 }
+  var nameWeight: Font.Weight { wide ? .semibold : .bold }
+
+  /// A page's description: Android's `bodyLarge` on a phone, `text-15px` wider.
+  var overviewSize: TextSize { wide ? .px15 : .base }
 
   /// Room between a page's sections: `gap-6 sm:gap-8`.
   var sectionSpacing: CGFloat { wide ? Space.s8 : Space.s6 }
@@ -155,6 +160,7 @@ struct HeadingMark: View {
   let name: String
   var logo: URL?
   let size: TextSize
+  var weight: Font.Weight = .semibold
   var wide = false
   @Environment(\.imagePipeline) private var pipeline
   @Environment(\.palette) private var palette
@@ -181,7 +187,7 @@ struct HeadingMark: View {
       .accessibilityAddTraits(.isHeader)
     } else {
       Text(name)
-        .textStyle(size, weight: .semibold, tracking: .tight)
+        .textStyle(size, weight: weight, tracking: .tight)
         .foregroundStyle(palette.foreground)
         .lineLimit(3)
         .fixedSize(horizontal: false, vertical: true)
@@ -501,24 +507,31 @@ struct DownloadLine: View {
 
 // MARK: Files
 
-/// What a file holds, each part after its icon, in a row that wraps: the
-/// picture, the audio's languages with the main track's layout, and the
-/// subtitles' languages, as the web's `MediaInfo`. The languages are the
-/// server's track lists once they load, the probe's until then.
+/// What a file holds, each part after its icon: the picture, the audio's
+/// languages with the main track's layout, and the subtitles' languages, a
+/// line each on a phone, as Android's `MediaInfo`, in a row that wraps
+/// wider, as the web's. The languages are the server's track lists once
+/// they load, the probe's until then.
 struct MediaInfo: View {
   let item: MediaItem
   @State private var tracks = Loader<FileTracks>()
+  @Environment(\.windowSize) private var window
 
   init(_ item: MediaItem) { self.item = item }
 
   var body: some View {
     Group {
       if let info = fileInfo(item, tracks: tracks.state.value) {
-        FlowRow(spacing: Space.s5, lineSpacing: Space.s1) {
-          if let video = info.video { InfoLine(icon: .film, label: Str.mediaInfoVideo, text: video) }
-          if let audio = info.audio { InfoLine(icon: .audioLines, label: Str.mediaInfoAudio, text: audio) }
+        let wide = TitleLayout(window: window).wide
+        let layout =
+          wide
+          ? AnyLayout(FlowRow(spacing: Space.s5, lineSpacing: Space.s1))
+          : AnyLayout(VStackLayout(alignment: .leading, spacing: Space.s1_5))
+        layout {
+          if let video = info.video { InfoLine(icon: .film, label: Str.mediaInfoVideo, text: video, lines: wide ? 1 : 3) }
+          if let audio = info.audio { InfoLine(icon: .audioLines, label: Str.mediaInfoAudio, text: audio, lines: wide ? 1 : 3) }
           if let subtitles = info.subtitles {
-            InfoLine(icon: .captions, label: Str.mediaInfoSubtitles, text: subtitles)
+            InfoLine(icon: .captions, label: Str.mediaInfoSubtitles, text: subtitles, lines: wide ? 1 : 3)
           }
         }
         .frame(maxWidth: 672, alignment: .leading)
@@ -532,12 +545,15 @@ private struct InfoLine: View {
   let icon: Lucide
   let label: String
   let text: String
+  var lines = 1
   @Environment(\.palette) private var palette
 
   var body: some View {
-    HStack(spacing: Space.s2) {
+    // The icon level with the first line, which may wrap on a phone.
+    HStack(alignment: .firstTextBaseline, spacing: lines > 1 ? Space.s2_5 : Space.s2) {
       LucideIcon(icon, label: label, size: 16, tint: palette.mutedForeground)
-      Text(text).textStyle(.sm).foregroundStyle(palette.foreground.opacity(0.8)).lineLimit(1)
+        .alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + 5 }
+      Text(text).textStyle(.sm).foregroundStyle(palette.foreground.opacity(0.8)).lineLimit(lines)
     }
     .accessibilityElement(children: .combine)
   }
