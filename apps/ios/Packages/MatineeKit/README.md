@@ -463,6 +463,12 @@ right edge and backdrops fill the screen.
   poster row's height so the rows under it stay put. `TVLoadingRow()` is a
   spinner across the page; `TVMessage("No libraries yet", message:, icon:, centered:, action:, actionFocus:)`
   a page, or part of one, with only something to say.
+- `.tvReader(isPresented:, title:, subtitle:, text:, fromEnd:)`: a long
+  text over the whole screen in monospace, as a playback report or the
+  app's log. Nothing in it takes focus: Up and Down turn most of a screen
+  (held, they keep turning), Menu closes it and focus goes back to what
+  opened it. `fromEnd` opens it at the bottom, for a log. A TV has nowhere
+  to copy or share text to, so it only reads.
 
 The words the TV components say on their own (Watched, Clear search, the
 search field's placeholder, a card's progress) are in the `TV` table of

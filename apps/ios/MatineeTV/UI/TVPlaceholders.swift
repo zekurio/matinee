@@ -45,17 +45,6 @@ struct TVBrowseScreen: View {
   }
 }
 
-// MARK: Settings: ui/tv/settings
-
-struct TVSettingsScreen: View {
-  /// One of Settings' categories, by its key, or nil for Settings itself.
-  var page: String? = nil
-  var body: some View {
-    TVPlaceholderPage(
-      Str.shellSettings, path: page.map { "settings/\($0)" } ?? "settings", port: "settings/TvSettings.kt")
-  }
-}
-
 // MARK: Player: ui/player/tv
 
 /// The player, over everything: the file it would play, until Menu or Back closes it.
