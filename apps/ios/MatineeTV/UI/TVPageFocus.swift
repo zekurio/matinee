@@ -39,20 +39,31 @@ extension View {
   }
 }
 
+/// A page under another on the stack stays alive and keeps its modifiers,
+/// so each one notes whether its page is on screen: a hand-back is for the
+/// page on top only. A page beneath asking for focus sends it to the top
+/// left, into the drawer, which hands it back again, without end.
 private struct ClaimsFocus: ViewModifier {
   let focused: FocusState<Bool>.Binding
   @Environment(\.tvPageReturn) private var returns
+  @State private var onScreen = false
 
   func body(content: Content) -> some View {
     content
-      .onAppear(perform: claim)
-      .onChange(of: returns) { claim() }
+      .onAppear {
+        onScreen = true
+        claim()
+      }
+      .onDisappear { onScreen = false }
+      .onChange(of: returns?.count) { if onScreen { claim() } }
   }
 
   private func claim() {
     // A pushed page is laid out a frame later; a page settling as the app starts can lose it once.
     for delay in [0.0, 0.15, 0.4] {
-      DispatchQueue.main.asyncAfter(deadline: .now() + delay) { focused.wrappedValue = true }
+      DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+        if onScreen, !focused.wrappedValue { focused.wrappedValue = true }
+      }
     }
   }
 }
@@ -61,18 +72,23 @@ private struct ClaimsValueFocus<Value: Hashable>: ViewModifier {
   let focused: FocusState<Value?>.Binding
   let value: Value
   @Environment(\.tvPageReturn) private var returns
+  @State private var onScreen = false
 
   func body(content: Content) -> some View {
     content
-      .onAppear(perform: claim)
-      .onChange(of: returns) { claim() }
+      .onAppear {
+        onScreen = true
+        claim()
+      }
+      .onDisappear { onScreen = false }
+      .onChange(of: returns?.count) { if onScreen { claim() } }
   }
 
   private func claim() {
     for delay in [0.0, 0.15, 0.4] {
       DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
         // Not over a choice the person already moved to.
-        if focused.wrappedValue == nil { focused.wrappedValue = value }
+        if onScreen, focused.wrappedValue == nil { focused.wrappedValue = value }
       }
     }
   }
@@ -82,10 +98,15 @@ private struct RestoresFocus: ViewModifier {
   let memory: TVFocusMemory
   let fallback: () -> (row: String, item: String)?
   @Environment(\.tvPageReturn) private var returns
+  @State private var onScreen = false
 
   func body(content: Content) -> some View {
     content
-      .onAppear { memory.restore(fallback: fallback()) }
-      .onChange(of: returns) { memory.restore(fallback: fallback()) }
+      .onAppear {
+        onScreen = true
+        memory.restore(fallback: fallback())
+      }
+      .onDisappear { onScreen = false }
+      .onChange(of: returns?.count) { if onScreen { memory.restore(fallback: fallback()) } }
   }
 }

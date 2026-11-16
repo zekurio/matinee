@@ -25,9 +25,20 @@ extension EnvironmentValues {
   /// The signed-in account, Android's `LocalUser`; nil before the shell.
   @Entry var user: User? = nil
 
-  /// Moves each time focus is handed back to the page from the drawer: the
-  /// page puts focus back where it was (`TVFocusMemory.restore()`, or its own).
-  @Entry var tvPageReturn = 0
+  /// Focus handed back to the page from the drawer: the page puts focus
+  /// back where it was (`TVFocusMemory.restore()`, or its own) each time
+  /// its count moves. `.tvPageFocus` watches it.
+  @Entry var tvPageReturn: TVPageReturn? = nil
+}
+
+/// Counts the times the drawer handed focus back to the page. An object
+/// rather than a number in the environment: a number there would draw the
+/// whole shell again on each hand-back, and that moves focus to the top
+/// left, into the drawer, which hands it back again, without end.
+@Observable final class TVPageReturn {
+  private(set) var count = 0
+
+  func handBack() { count += 1 }
 }
 
 /// The signed-in TV app, for `user`.
@@ -42,7 +53,7 @@ struct TVSignedInApp: View {
   @State private var actions = TVActions()
   /// How many movies and shows there are, so the drawer offers only the kinds the server has.
   @State private var kinds = Loader<BrowsedTitles.Kinds>()
-  @State private var returns = 0
+  @State private var returns = TVPageReturn()
 
   var body: some View {
     @Bindable var nav = nav
@@ -54,7 +65,7 @@ struct TVSignedInApp: View {
             TVRouteScreen(route: route).toolbar(.hidden, for: .navigationBar)
           }
       }
-      TVShellDrawer(user: user, nav: nav, drawer: drawer, counts: kinds.state.value) { returns += 1 }
+      TVShellDrawer(user: user, nav: nav, drawer: drawer, counts: kinds.state.value) { returns.handBack() }
     }
     .ignoresSafeArea()
     .tvClock()
