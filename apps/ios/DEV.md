@@ -83,7 +83,7 @@ ffmpeg has libx264, libx265, AC-3, Opus, drawtext and VideoToolbox.
 ## Server and state
 
 The dedicated independent clone is `~/.t3/scratch/matinee-ios-dev/server`,
-detached at `2cde88b68e3b23d58e26f601ccd862a644901f8f`, the merge of `main`
+detached at `7709f47a5a6d1e72959c8a941c4caf12e8c63b28`, the merge of `main`
 that dropped request notifications and turned Discover's rows into browses.
 Its database migrated from the previous pin without a reseed. It does not
 borrow Git objects from an agent worktree. The production build serves the web
