@@ -126,8 +126,7 @@ private struct ServerRows: View {
       if let asked {
         let origin = asked.origin
         let name = asked.panelTitle
-        // TODO(strings): servers_remove_failed, "Couldn't remove %1$s"
-        launchShowing(snackbar, Str.serversRemove(name)) { try await session.removeServer(origin: origin) }
+        launchShowing(snackbar, Str.iosServersRemoveFailed(name)) { try await session.removeServer(origin: origin) }
       }
       // Back to the list, where it shows as being removed until it's gone.
       step = .list

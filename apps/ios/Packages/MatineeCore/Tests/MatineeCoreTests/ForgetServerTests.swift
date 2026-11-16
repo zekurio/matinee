@@ -10,8 +10,10 @@ private final class ForgetProtocol: URLProtocol, @unchecked Sendable {
   nonisolated(unsafe) private static var calls: [String: [String]] = [:]
   static func calls(_ host: String) -> [String] { lock.withLock { calls[host] ?? [] } }
 
-  static func api(_ mode: String) -> (MatineeApi, String) {
+  nonisolated(unsafe) private static var started: [String: @Sendable () -> Void] = [:]
+  static func api(_ mode: String, onStart: (@Sendable () -> Void)? = nil) -> (MatineeApi, String) {
     let host = "\(mode)-\(UUID().uuidString.lowercased())"
+    lock.withLock { started[host] = onStart }
     let configuration = URLSessionConfiguration.ephemeral
     configuration.protocolClasses = [ForgetProtocol.self]
     return (MatineeApi(base: URL(string: "http://\(host)/")!, configuration: configuration), host)
@@ -22,6 +24,8 @@ private final class ForgetProtocol: URLProtocol, @unchecked Sendable {
   override func startLoading() {
     let url = request.url!, host = url.host!
     Self.lock.withLock { Self.calls[host, default: []].append("\(request.httpMethod ?? "GET") \(url.path)") }
+    let onStart = Self.lock.withLock { Self.started.removeValue(forKey: host) }
+    onStart?()
     if host.hasPrefix("hangs") { return }
     if host.hasPrefix("down") {
       client?.urlProtocol(self, didFailWithError: URLError(.cannotConnectToHost))
@@ -100,9 +104,14 @@ private final class ForgetProtocol: URLProtocol, @unchecked Sendable {
     let clock = RequestTestClock()
     var waits = clock.sleeping.stream.makeAsyncIterator()
     downloads.sleep = { try await clock.sleep($0) }
-    let (api, host) = ForgetProtocol.api("hangs")
+    let requests = AsyncStream<Void>.makeStream()
+    var starts = requests.stream.makeAsyncIterator()
+    let (api, host) = ForgetProtocol.api("hangs", onStart: { requests.continuation.yield(()) })
     let removal = Task { try await downloads.forgetServer(gone, api: api) }
     _ = await waits.next()
+    // Starting the deadline doesn't mean URLSession has dispatched the request.
+    _ = await starts.next()
+    requests.continuation.finish()
     // Its eight seconds pass while the server sits on the first request.
     await clock.advance()
     try await removal.value
