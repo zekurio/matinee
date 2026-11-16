@@ -77,6 +77,8 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
     _ application: UIApplication, didFinishLaunchingWithOptions options: [UIApplication.LaunchOptionsKey: Any]? = nil
   ) -> Bool {
     _ = model
+    // Before launch finishes, as iOS requires: tapped notices and the background look for them.
+    RequestNoticeDelivery.register(session: model.session)
     return true
   }
 
