@@ -7,7 +7,6 @@ import {
   FastForwardIcon,
   GaugeIcon,
   RewindIcon,
-  UsersRoundIcon,
   Volume2Icon,
   VolumeXIcon,
 } from "lucide-react"
@@ -28,6 +27,7 @@ import {
 } from "@/stores/player"
 import { usePlayerPreferencesStore } from "@/stores/player-preferences"
 
+import { PartyHealthButton } from "./party/party-health"
 import { playbackNotice } from "./playback-notices"
 import { sourceOf } from "./playback-source"
 import {
@@ -51,6 +51,7 @@ import type { TrickplayTiles } from "./trickplay-thumb"
 import { type UpNext, UpNextCard } from "./up-next"
 import { useHls } from "./use-hls"
 import { type NowPlaying, useMediaSession } from "./use-media-session"
+import { usePartyStatus } from "./use-party-status"
 import { type PartyLink, usePartySync } from "./use-party-sync"
 import { usePlayback } from "./use-playback"
 import { usePlayerKeys } from "./use-player-keys"
@@ -187,6 +188,7 @@ function Player({
     { position, duration: lengthOf, seek: playback.seek },
     party,
   )
+  usePartyStatus(video, store, position, party)
   /** The viewer's own seek, which a party follows. */
   const seek = (to: number) => {
     playback.seek(to)
@@ -539,12 +541,7 @@ function Player({
             </p>
           )}
         </div>
-        {party && (
-          <p className="flex shrink-0 items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-sm font-medium backdrop-blur-md [&_svg]:size-4">
-            <UsersRoundIcon aria-hidden />
-            {tr("party.player.watching", { count: party.watching })}
-          </p>
-        )}
+        {party && <PartyHealthButton party={party} container={container} />}
         {coarse && (
           <div className="flex shrink-0 items-center gap-0.5">
             {menus}

@@ -25,6 +25,8 @@ export type Topics = {
   playback: undefined
   /** A watch party changed: its members, its file, where it is, its queue. */
   party: undefined
+  /** A member's player reported how it plays the party's file. */
+  partyHealth: undefined
   /** A file's trickplay images were made, or couldn't be. */
   trickplay: undefined
 }

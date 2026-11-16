@@ -80,8 +80,32 @@ export default defineMessages("party", {
     one: "{count} watching",
     other: "{count} watching",
   }),
+  // {names} are the members whose players couldn't keep up, as a list.
+  "party.player.waiting": "Waiting for {names}",
+  "party.player.waitingForYou": "The party waits for you",
   "party.flash.paused": "{name} paused",
   "party.flash.played": "{name} pressed play",
   "party.flash.moved": "{name} jumped to {time}",
   "party.flash.speed": "A party plays at normal speed",
+  "party.flash.waiting": "Waiting for {names} to catch up",
+  "party.flash.waitingForYou": "The party waits while this loads",
+  "party.flash.caughtUp": "Everyone caught up",
+
+  // The list from the player's "watching" button: how each member's
+  // player keeps up with the party.
+  "party.health.title": "How everyone keeps up",
+  "party.health.you": "{name} (you)",
+  "party.health.checking": "Checking…",
+  "party.health.inSync": "In sync",
+  // {seconds} is a number like 1.5.
+  "party.health.behind": "{seconds} s behind",
+  "party.health.ahead": "{seconds} s ahead",
+  "party.health.buffering": "Buffering",
+  "party.health.paused": "Paused",
+  "party.health.away": "Not in the player",
+  "party.health.loaded": "{seconds} s loaded",
+  // Watching from outside the server's home network.
+  "party.health.remote": "Remote",
+  "party.health.hint":
+    "When someone's player can't keep up, the party pauses and plays on once it has caught up.",
 })

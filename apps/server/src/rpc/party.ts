@@ -23,17 +23,22 @@ import {
   playInParty,
   removeFromParty,
   renameParty,
+  reportStatus,
   sweepParties,
   takeNext,
   transferParty,
 } from "../party/state"
-import { partyInvite, partyView } from "../party/view"
+import { partyHealth, partyInvite, partyView } from "../party/view"
 import { follow } from "../realtime/follow"
 import { authed, badRequest, notFound } from "./base"
 
 // Every stream sends the party again this often, for the players' clocks
 // and so members who went away drop out.
 const PARTY_REFRESH_MS = 20_000
+// The health stream loads again this often, so a player that stopped
+// reporting shows as away, and gathers reports this close together.
+const HEALTH_REFRESH_MS = 5_000
+const HEALTH_SETTLE_MS = 1_000
 
 function refusal(reason: PartyRefusal): ORPCError<string, unknown> {
   switch (reason) {
@@ -179,6 +184,34 @@ export const party = {
       playInParty(current, context.user.id, row, 0)
       return
     }
+  }),
+
+  status: authed.party.status.handler(async ({ context, input }) => {
+    const current = partyOf(context.user)
+    // Buffering pauses the party for everyone, like `control`, so only
+    // someone who may watch the file does that.
+    if (
+      input.state === "buffering" &&
+      input.itemId === current.itemId &&
+      !(await itemFor(context.user, input.itemId))
+    ) {
+      throw notFound("This title isn't in any library.")
+    }
+    reportStatus(current, context.user.id, input)
+  }),
+
+  health: authed.party.health.handler(async function* ({ context, signal }) {
+    yield* follow({
+      topics: ["party", "partyHealth"],
+      load: () => {
+        sweepParties()
+        const state = partyOfUser(context.user.id)
+        return Promise.resolve(state ? partyHealth(state) : null)
+      },
+      signal,
+      refreshMs: HEALTH_REFRESH_MS,
+      settleMs: HEALTH_SETTLE_MS,
+    })
   }),
 
   queue: {

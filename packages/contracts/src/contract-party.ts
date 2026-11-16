@@ -1,7 +1,13 @@
 import { eventIterator, oc } from "@orpc/contract"
 
 import { del, get, post, put } from "./contract-routes"
-import { Party, PartyInvite, PartyName } from "./party"
+import {
+  Party,
+  PartyHealth,
+  PartyInvite,
+  PartyName,
+  PartyStatusReport,
+} from "./party"
 import { t } from "./schema"
 
 export const partyContract = oc.tag("Watch party").router({
@@ -94,6 +100,19 @@ export const partyContract = oc.tag("Watch party").router({
   next: post("/party/next")
     .input(t.object({ itemId: t.uuid() }))
     .output(t.void()),
+  /**
+   * Tell the party how the viewer's player plays its file. A player sends
+   * it every few seconds while it follows the party, and at once when it
+   * starts or stops buffering. One that buffers while the party plays
+   * pauses it for everyone, until it has caught up. A member who keeps
+   * it waiting too long isn't waited for again in that file.
+   */
+  status: put("/party/status").input(PartyStatusReport).output(t.void()),
+  /**
+   * How each member's player keeps up, as a stream: now, then on each
+   * report. Null once the viewer is in no party.
+   */
+  health: get("/party/health").output(eventIterator(PartyHealth.nullable())),
   queue: {
     /**
      * From the owner, the file goes to the end of the queue. From anyone

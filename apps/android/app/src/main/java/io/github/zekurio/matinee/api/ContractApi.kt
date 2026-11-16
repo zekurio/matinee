@@ -1185,6 +1185,26 @@ class PartyApi internal constructor(private val transport: ApiTransport) {
             transport.json(PartyNextInput.serializer(), PartyNextInput(itemId = itemId)),
         )
     }
+
+    /** `PUT /party/status` */
+    suspend fun status(partyStatusReport: PartyStatusReport) {
+        transport.send(
+            "PUT",
+            listOf("party", "status"),
+            emptyList(),
+            transport.json(PartyStatusReport.serializer(), partyStatusReport),
+        )
+    }
+
+    /** `GET /party/health` */
+    fun health(): Flow<PartyHealth?> =
+        transport.events(
+            "GET",
+            listOf("party", "health"),
+            emptyList(),
+            null,
+            PartyHealth.serializer().nullable,
+        )
 }
 
 class PartyQueueApi internal constructor(private val transport: ApiTransport) {
