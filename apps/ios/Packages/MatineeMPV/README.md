@@ -201,10 +201,11 @@ its intact bytes were restored afterward and Movies was scanned again.
    that report. This establishes error propagation and a clear terminal failure,
    not successful playback of a fallback.
 
-An intentional stream HTTP error, mid-play network stall and successful
-mpv-to-next-source recovery were **not established** in the simulator.
-Existing Core fake-engine tests cover failed load, mid-sitting failure and
-stall fallback, but are not substitutes for those integration tests.
+A later dedicated simulator pass established first-load HTTP 404, invalid
+bytes, undecodable MP4 and no-response fallback to a playing remux. It also
+fixed the adapter's readiness deadline being classified as a server outage.
+See [MPV investigation](MPV-INVESTIGATION.md). A mid-play network stall is
+still not established by that pass.
 
 ### Audio switching
 

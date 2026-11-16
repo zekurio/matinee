@@ -9,5 +9,7 @@ let package = Package(
     .package(path: "../MatineeCore"),
     .package(url: "https://github.com/LePips/MPVUI", exact: "0.10.0"),
   ],
-  targets: [.target(name: "MatineeMPV", dependencies: ["MatineeCore", .product(name: "MPVUI", package: "MPVUI")])]
-)
+  targets: [
+    .target(name: "MatineeMPV", dependencies: ["MatineeCore", .product(name: "MPVUI", package: "MPVUI")]),
+    .testTarget(name: "MatineeMPVTests", dependencies: ["MatineeMPV", "MatineeCore"]),
+  ])
