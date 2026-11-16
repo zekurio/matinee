@@ -12,51 +12,7 @@ import UIKit
  * styled and bitmap subtitles. Neither takes focus or presses: the picture
  * holds focus through the kit's `TVFocusSurface` laid over it.
  *
- * TODO(share): `TVPlayerLayerView` and `tvVideoRect` are the iPhone's
- * `PlayerLayerView` and `videoRect` (Matinee/UI/player/PlayerVideo.swift),
- * copied because that file also holds picture in picture and AirPlay,
- * which a TV leaves out. The split: the layer view, `VideoSurface` without
- * its `pip`, and `videoRect` into `PlayerLayer.swift`, shared by both
- * targets, with picture in picture and AirPlay left in PlayerVideo.swift.
  */
-
-/// A view whose layer is the player's, so it follows the view's size.
-final class TVPlayerLayerView: UIView {
-  override static var layerClass: AnyClass { AVPlayerLayer.self }
-  // SAFETY: `layerClass` makes the view's layer an AVPlayerLayer.
-  var playerLayer: AVPlayerLayer { layer as! AVPlayerLayer }
-  override var canBecomeFocused: Bool { false }
-}
-
-/// AVPlayer's picture, whole or filling the screen.
-private struct TVAVPlayerSurface: UIViewRepresentable {
-  let player: AVPlayer?
-  let fill: Bool
-
-  func makeUIView(context: Context) -> TVPlayerLayerView {
-    let view = TVPlayerLayerView()
-    view.backgroundColor = .black
-    view.isUserInteractionEnabled = false
-    view.playerLayer.player = player
-    view.playerLayer.videoGravity = fill ? .resizeAspectFill : .resizeAspect
-    return view
-  }
-
-  func updateUIView(_ view: TVPlayerLayerView, context: Context) {
-    if view.playerLayer.player !== player { view.playerLayer.player = player }
-    let gravity: AVLayerVideoGravity = fill ? .resizeAspectFill : .resizeAspect
-    if view.playerLayer.videoGravity != gravity {
-      CATransaction.begin()
-      CATransaction.setAnimationDuration(Motion.moveDuration)
-      view.playerLayer.videoGravity = gravity
-      CATransaction.commit()
-    }
-  }
-
-  static func dismantleUIView(_ view: TVPlayerLayerView, coordinator: ()) {
-    view.playerLayer.player = nil
-  }
-}
 
 /// The video of whichever engine plays, on black.
 struct TVVideo: View {
@@ -70,22 +26,12 @@ struct TVVideo: View {
         // mpv fits or fills the video itself, its own subtitles with it.
         MPVPlaybackSurface(engine: engine, fill: fill)
       } else {
-        TVAVPlayerSurface(player: controller.player, fill: fill)
+        PlayerSurface(player: controller.player, fill: fill, rebindPlayer: true)
       }
     }
     .allowsHitTesting(false)
     .accessibilityHidden(true)
   }
-}
-
-/// Where the video shows in `bounds`: fitted inside, or covering it when it fills.
-nonisolated func tvVideoRect(aspect: Double, in bounds: CGSize, fill: Bool) -> CGRect {
-  guard aspect > 0, bounds.width > 0, bounds.height > 0 else { return CGRect(origin: .zero, size: bounds) }
-  let box = bounds.width / bounds.height
-  let wide = fill ? aspect < box : aspect > box
-  let width = wide ? bounds.width : bounds.height * aspect
-  let height = wide ? bounds.width / aspect : bounds.height
-  return CGRect(x: (bounds.width - width) / 2, y: (bounds.height - height) / 2, width: width, height: height)
 }
 
 /// The trickplay frame at `seconds`, cut from the server's tiles; black while its tile loads.

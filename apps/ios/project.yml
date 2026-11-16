@@ -171,6 +171,7 @@ targets:
       # The player's subtitle lines, which the TV's player and Settings' caption preview draw as the phone's does.
       - Matinee/UI/player/PlayerSubtitles.swift
       - Matinee/UI/player/PlayerMenuEntries.swift
+      - Matinee/UI/player/PlayerLayer.swift
       - Matinee/Resources/Localizable.xcstrings
       - Matinee/Resources/iOS.xcstrings
       - Matinee/Resources/Assets.xcassets

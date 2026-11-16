@@ -96,7 +96,7 @@ struct TVPlayback: View {
     GeometryReader { proxy in
       let screen = proxy.size
       let fill = prefs.fillScreen
-      let rect = tvVideoRect(aspect: controller.videoAspect, in: screen, fill: fill)
+      let rect = videoRect(aspect: controller.videoAspect, in: screen, fill: fill)
       ZStack {
         TVVideo(controller: controller, fill: fill)
         // With the controls away, the picture holds focus, unless the action alone on it has it.
