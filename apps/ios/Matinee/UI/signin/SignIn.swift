@@ -57,7 +57,7 @@ struct AuthLayout<Content: View>: View {
           Brand()
           Spacer(minLength: Space.s12)
           VStack(alignment: .leading, spacing: 0, content: content)
-            .frame(maxWidth: 360, alignment: .leading)
+            .frame(maxWidth: 420, alignment: .leading)
             .padding(.horizontal, Space.s6)
           Spacer(minLength: Space.s12)
           // The web's `pb-[calc(3rem+8vh)]` against its `pt-24`: what the logo's row takes, and 8% more.
@@ -85,8 +85,9 @@ struct AuthHeading: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: Space.s2) {
+      // Android's `headlineMedium`.
       Text(title)
-        .textStyle(.xl2, weight: .semibold, tracking: .tight)
+        .textStyle(.px26, weight: .bold, tracking: .tight)
         .foregroundStyle(palette.foreground)
         .accessibilityAddTraits(.isHeader)
       if let description {
@@ -214,6 +215,7 @@ private struct BrowserSignInForm: View {
   let onCode: () -> Void
   @Environment(MatineeSession.self) private var session
   @Environment(SignInErrors.self) private var errors
+  @Environment(\.palette) private var palette
   @State private var browser: SystemBrowserAuthenticator?
 
   var body: some View {
@@ -221,14 +223,14 @@ private struct BrowserSignInForm: View {
       AuthHeading(Str.signinTitle, description: Str.signinServer(server))
       Gap(Space.s8)
       if config.setup != nil {
-        Callout(nil, description: Str.signinSetup, icon: .info)
+        Text(Str.signinSetup).textStyle(.sm).foregroundStyle(palette.mutedForeground)
         Gap(Space.s4)
       }
-      VStack(spacing: Space.s3) {
+      VStack(spacing: Space.s2_5) {
         MatineeButton(
           browserLabel, icon: config.passkeys || config.oidc == nil ? .keyRound : .logIn, pending: browser != nil,
           fullWidth: true, action: signInInBrowser)
-        MatineeButton(Str.signinWithCode, icon: .smartphone, look: .outline, fullWidth: true) {
+        MatineeButton(Str.signinWithCode, icon: .smartphone, look: .ghost, fullWidth: true) {
           errors.browser = nil
           onCode()
         }
