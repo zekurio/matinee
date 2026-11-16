@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.MaterialTheme
@@ -128,16 +129,30 @@ private fun DeclinedNote(item: RequestItem) {
  * Home's "Asked for": what's on its way, and what came or was answered
  * in the last three days. Nothing when there's none of either, so Home
  * stays about what's here. The heading opens the whole list.
+ *
+ * Loaded with Home rather than in the row, so Home leaves the row out of
+ * its list when there's nothing: an empty item would still take the
+ * list's gap on both sides, a double gap between the rows around it.
  */
 @Composable
-fun HomeAskedRail() {
-    val nav = LocalNavigator.current
+fun rememberHomeAsked(): List<RequestItem> {
     val mine = rememberLoader("asked-home") { requests.mine(limit = 24, filter = IN_PROGRESS) }
     ReloadOnAsk(mine)
     RefreshOnResume(mine)
     val items = (mine.state as? Load.Ready)?.value?.items.orEmpty()
     FollowTitles(askedInputs(items))
+    return items
+}
+
+/** Home's "Asked for" row, from [rememberHomeAsked]; none when [items] is empty. */
+fun LazyListScope.homeAskedRail(items: List<RequestItem>) {
     if (items.isEmpty()) return
+    item(key = "asked") { HomeAskedRail(items) }
+}
+
+@Composable
+private fun HomeAskedRail(items: List<RequestItem>) {
+    val nav = LocalNavigator.current
     // A new ask at the front starts the row there again, rather than keeping the old first card in view.
     key(items.first().id) {
         Rail(stringResource(R.string.web_ask_mine_title), onTitleClick = nav::asked) {

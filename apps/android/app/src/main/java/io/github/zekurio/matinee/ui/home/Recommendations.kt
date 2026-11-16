@@ -14,7 +14,6 @@ import io.github.zekurio.matinee.api.RecommendationReason
 import io.github.zekurio.matinee.api.RecommendedTitle
 import io.github.zekurio.matinee.ui.Load
 import io.github.zekurio.matinee.ui.Loader
-import io.github.zekurio.matinee.ui.components.LocalActions
 import io.github.zekurio.matinee.ui.components.PosterCard
 import io.github.zekurio.matinee.ui.components.Rail
 import io.github.zekurio.matinee.ui.components.RailArt
@@ -51,15 +50,17 @@ fun visibleItems(rail: HomeRecommendationRail, hidden: Collection<String>): List
 
 /**
  * The rows, once loaded. Loading, failing, and having none show nothing:
- * a new account has none, and a placeholder would only fold away.
+ * a new account has none, and a placeholder would only fold away. A row
+ * whose every title is in [hidden] is left out as an item, not drawn as an
+ * empty one, which would still take the list's gap on both sides.
  */
-fun LazyListScope.recommendationRails(loader: Loader<HomeRecommendations>) {
+fun LazyListScope.recommendationRails(loader: Loader<HomeRecommendations>, hidden: Collection<String>) {
     val rails = (loader.state as? Load.Ready)?.value?.rails.orEmpty()
     rails.forEach { rail ->
+        val shown = visibleItems(rail, hidden)
+        if (shown.isEmpty()) return@forEach
         item(key = "recommended-${recommendationRailKey(rail)}") {
             val res = LocalResources.current
-            val shown = visibleItems(rail, LocalActions.current.hidden)
-            if (shown.isEmpty()) return@item
             Rail(recommendationRailName(rail.id, rail.seed?.name, res)) {
                 items(shown, key = { it.title.id }) { item ->
                     PosterCard(
