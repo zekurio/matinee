@@ -3,25 +3,50 @@
   import MatineeCore
 
   /*
-   * Debug builds' `-dev.statsFixtures YES`: a year and more of made-up
-   * watching over the account's real statistics, and a leaderboard of a
-   * dozen and more people, since the dev server's history is a few plays
-   * on one day and has one person on each board. The titles are the
-   * server's, so their pages open; the genres are made up, as the server
-   * has no metadata provider. Release builds don't compile this.
+   * Debug builds' `-dev.statsFixtures`: made-up watching over the
+   * account's real answers, since the dev server's history is a few plays
+   * on one day and has one person on each board. Release builds don't
+   * compile this.
+   *
+   * - `YES`: a year and more of watching for every range, and boards of a
+   *   dozen and more people around the viewer.
+   * - `quiet`: the same, but nothing in the last 7 and 30 days, for the
+   *   range with nothing in it.
+   * - `empty`: an account that never watched or kept anything: no
+   *   favorites, nothing recent, no figures in any range.
+   *
+   * The titles are the server's, so their pages open; the genres are made
+   * up, as the server has no metadata provider.
    */
 
   nonisolated enum StatsFixtures {
-    static var on: Bool { UserDefaults.standard.bool(forKey: "dev.statsFixtures") }
+    enum Mode { case off, full, quiet, empty }
+
+    static var mode: Mode {
+      switch UserDefaults.standard.string(forKey: "dev.statsFixtures")?.lowercased() {
+      case "yes", "true", "1", "full": .full
+      case "quiet": .quiet
+      case "empty": .empty
+      default: .off
+      }
+    }
 
     private static let genres = [
       "Science Fiction", "Drama", "Adventure", "Animation", "Thriller", "Comedy", "Crime", "Family",
     ]
 
+    /// `real` emptied for the `empty` mode; as it came otherwise.
+    static func profile(_ real: Profile) -> Profile {
+      guard mode == .empty else { return real }
+      var profile = real
+      profile.favorites = []
+      profile.recent = []
+      return profile
+    }
+
     /// `real` with its buckets, activity, titles, and genres made up for the range, and totals to match.
     static func stats(_ real: WatchStats?, range: String, api: MatineeApi) async throws -> WatchStats? {
       guard var stats = real else { return nil }
-      let titles = try await api.titles.browse(limit: 10).items
       var calendar = Calendar(identifier: .gregorian)
       calendar.firstWeekday = 2
       let today = calendar.startOfDay(for: .now)
@@ -45,6 +70,7 @@
         case StatsUnit.week: 5 * 3600
         default: 20 * 3600
         }
+      let silent = mode == .empty || (mode == .quiet && (range == StatsRange._7d || range == StatsRange._30d))
       stats.unit = unit
       stats.buckets = (0..<count).reversed().map { back in
         let start = calendar.date(byAdding: step, value: -back, to: first) ?? first
@@ -52,13 +78,20 @@
         let day = String(format: "%04d-%02d-%02d", parts.year ?? 0, parts.month ?? 0, parts.day ?? 0)
         // A wave with gaps, so empty buckets and the tallest bar both show.
         let wave = (sin(Double(back) * 0.9) + 1) / 2
-        let seconds = back % 5 == 3 ? 0 : (0.15 + wave) * scale
+        let seconds = silent || back % 5 == 3 ? 0 : (0.15 + wave) * scale
         return StatsBucket(start: day, watchSeconds: seconds, plays: seconds > 0 ? 1 + Int(wave * 4) : 0)
       }
       let total = stats.buckets.reduce(0) { $0 + $1.watchSeconds }
       let plays = stats.buckets.reduce(0) { $0 + $1.plays }
       stats.totals = WatchTotals(
         watchSeconds: total, plays: plays, movies: plays / 3, episodes: plays / 2, shows: min(3, plays))
+      guard !silent else {
+        stats.activity = []
+        stats.titles = []
+        stats.genres = []
+        return stats
+      }
+      let titles = try await api.titles.browse(limit: 10).items
       stats.activity = (1...7).flatMap { weekday in
         (0..<24).compactMap { hour -> ActivityCell? in
           // Evenings, and weekend afternoons.
@@ -80,9 +113,14 @@
     }
 
     /// `real` with its boards filled by people around the viewer: on the
-    /// first boards past the top ten, apart from it, on the others among it.
+    /// first boards past the top ten, apart from it, on the others among
+    /// it. The `empty` mode leaves every board without the viewer.
     static func leaderboard(_ real: Leaderboard) -> Leaderboard {
       var board = real
+      guard mode != .empty else {
+        board.boards = real.boards.map { LeaderboardBoard(metric: $0.metric, entries: []) }
+        return board
+      }
       let me = real.boards.lazy.flatMap(\.entries).first(where: \.isSelf)?.user
       guard let me else { return real }
       let names = [

@@ -3,24 +3,20 @@ import MatineeKit
 import SwiftUI
 
 /*
- * ProfileScreen.kt: the profile tab, behind the person's picture in the
- * tab bar. Android passes the session; here the account is `\.user`. The
- * page has no navigation bar of its own, as Android's has no top bar: its
- * header carries Settings, and the pages it opens get the bar back.
+ * ProfileScreen.kt, drawn as the web's profiles.$username.tsx draws your
+ * own profile: who's signed in, their favorites, what they asked for,
+ * their statistics, and what they watched last, with the way on to
+ * Settings, where signing out is. It's the profile tab's first page, so
+ * it has no bar of its own: its header carries Settings, and on a phone
+ * starts under the status bar, as Android's and the web's phone layout.
+ *
+ * What the server sent last is kept per account, as Home keeps its rows
+ * (ProfileData.swift): while the server can't be reached it stays up with
+ * the cloud in the header, and offline mode shows it, though nothing in it
+ * opens. The cards are Stats.swift's, the charts StatsCharts.swift's.
  */
 
-/// The gap between the page's sections.
-private let SectionGap: CGFloat = 32
-
-/// The gap between the statistics' cards.
-private let CardGap: CGFloat = 28
-
-/// The profile tab, as the web's profile page: who's signed in, their
-/// favorites, their statistics, and what they watched last, with the way
-/// on to Settings, where signing out is. What the server sent last is kept,
-/// as Home keeps its rows: while the server can't be reached it stays up
-/// with the disconnect icon in the header, and offline mode shows it,
-/// though nothing in it opens.
+/// The profile tab, behind the person's picture in the tabs.
 struct ProfileScreen: View {
   @Environment(\.user) private var user
 
@@ -32,322 +28,334 @@ struct ProfileScreen: View {
 }
 
 private struct ProfilePage: View {
-  let username: String
-  @State private var profile: Loader<Profile>
-  @State private var stats: ProfileStats
-  @Environment(\.navigator) private var nav
+  @State private var loads: ProfileLoads
   @Environment(\.offline) private var offline
-  @Environment(\.palette) private var palette
+  @Environment(\.shellStyle) private var style
 
   init(username: String) {
-    self.username = username
-    _profile = State(initialValue: Loader(kept: ProfileSnapshot(username: username).profile))
-    _stats = State(initialValue: ProfileStats(username: username))
+    _loads = State(initialValue: ProfileLoads(username: username))
   }
 
   var body: some View {
-    let username = username
-    // Offline mode leaves the server alone: only what it sent before.
-    let state: Load<Profile>? = offline ? stats.savedProfile().map { .ready($0) } : profile.state
+    let state = loads.profileState(offline: offline)
     ScrollView {
-      LazyVStack(alignment: .leading, spacing: 0) {
-        ProfileHeader(profile: state?.value) {
-          // Showing what loaded before while the server can't be reached: the icon, up top.
-          DisconnectedAction(profile, stats.current)
+      ScrollViewReader { proxy in
+      LazyVStack(alignment: .leading, spacing: style == .tablet ? Space.s10 : Space.s8) {
+        // Showing what loaded before while the server can't be reached: the cloud, up top.
+        // TODO(requests): `onRequests: nav.requests` and the admin queue's
+        // count of what needs them (RequestAdminQueue), once the requests
+        // screens exist; until it has somewhere to go the inbox stays hidden.
+        ProfileHeader(profile: state?.value, onRequests: devInbox.open, needsYou: devInbox.count) {
+          DisconnectedAction(loads.reloadable)
         }
         switch state {
-        case nil: EmptyView()
-        case .failed(let message, let disconnected):
-          Group {
-            if disconnected {
-              Disconnected(onRetry: profile.reload).frame(maxWidth: .infinity)
-            } else {
-              Notice(Str.profileLoadFailed, message, retrying: profile.refreshing, onRetry: profile.reload)
-            }
-          }
-          .padding(.top, SectionGap)
-        case .ready(let value):
-          Favorites(profile: value).padding(.top, SectionGap)
-          Statistics(model: stats)
-          if let recent = value.recent, !recent.isEmpty {
-            Rail(Str.profileRecent, onTitleTap: offline ? nil : nav.recent) {
-              ForEach(recent, id: \.item.id) { entry in RailItem(.landscape) { EpisodeCard(entry.item) } }
-            }
-            .padding(.top, SectionGap)
-          }
+        case nil:
+          // Offline with nothing kept: the header, and Settings in it, alone.
+          EmptyView()
         case .loading:
-          ProgressView().tint(palette.accent).frame(maxWidth: .infinity).padding(24)
-            .accessibilityLabel(Str.loadingInProgress)
+          RailSkeleton(title: Str.favoritesTitle, art: .poster)
+          StatsLoading()
+        case .failed(let message, let disconnected):
+          ErrorState(
+            Str.profileLoadFailed, message, disconnected: disconnected, retrying: loads.profile.refreshing,
+            onRetry: loads.profile.reload
+          )
+          .frame(maxWidth: .infinity)
+          .padding(.vertical, Space.s12)
+        case .ready(let profile):
+          FavoritesRail(profile: profile)
+          if !offline { ProfileRequests() }
+          Statistics(loads: loads).id("stats")
+          RecentRail(profile: profile).id("recent")
         }
       }
-      .padding(.bottom, 24)
+      .padding(.bottom, Space.s8)
+      #if DEBUG
+        .task(id: state?.value != nil) {
+          // `-dev.profileScroll stats|titles|standing|activity|recent`, for screenshots.
+          guard state?.value != nil, let anchor = UserDefaults.standard.string(forKey: "dev.profileScroll") else { return }
+          try? await Task.sleep(for: .seconds(2))
+          proxy.scrollTo(anchor, anchor: .top)
+        }
+      #endif
+      }
     }
     .scrollsToTopOnReselect()
     .statusBarScrim()
-    .toolbar(.hidden, for: .navigationBar)
-    .background {
-      if !offline {
-        // The figures' loader for the range picked: a view of its own, so a new range fetches when it's picked.
-        StatsLoad(loader: stats.current, username: username, range: stats.range).id(stats.range)
-      }
-    }
-    .modifier(LoadsUnlessOffline(loader: profile, offline: offline, username: username))
+    .modifier(RefreshesOnline(loads: loads))
+    .hidesSystemNavigationBar()
+    .loadsProfile(loads)
   }
 }
 
-/// Loads the profile from the server, except in offline mode.
-private struct LoadsUnlessOffline: ViewModifier {
-  let loader: Loader<Profile>
-  let offline: Bool
-  let username: String
+extension ProfilePage {
+  /// The inbox's stand-in: in debug builds, `-dev.profileInbox 3` shows it
+  /// with three waiting, going nowhere, to see how it looks.
+  fileprivate var devInbox: (open: (() -> Void)?, count: Int) {
+    #if DEBUG
+      let count = UserDefaults.standard.integer(forKey: "dev.profileInbox")
+      if count > 0 { return ({}, count) }
+    #endif
+    return (nil, 0)
+  }
+}
+
+/// A pull fetches everything on the page again; offline there's nothing to ask.
+private struct RefreshesOnline: ViewModifier {
+  let loads: ProfileLoads
+  @Environment(\.offline) private var offline
 
   func body(content: Content) -> some View {
     if offline {
       content
     } else {
-      let username = username
-      content.loads(loader) { api in try await api.profiles.get(username: username) }
+      content.refreshable { await loads.refresh() }
     }
   }
 }
 
-/// Nothing to see: what fetches the shown range's statistics.
-private struct StatsLoad: View {
-  let loader: Loader<WatchStats?>
-  let username: String
-  let range: String
+// MARK: Who
 
-  var body: some View {
-    let username = username
-    let range = range
-    Color.clear
-      .loads(loader) { api in try await ProfileStats.fetch(api, username: username, range: range) }
-  }
-}
-
-/// The picture and name, the username under a display name, and since when
-/// they're here, with Settings in the corner as on most profiles. `action`
-/// goes before Settings; offline, the offline icon, as on Home.
+/// The picture and name, the username under a display name, Admin, and
+/// since when they're here, with Settings at the row's end, as the web's
+/// own profile on a phone and Android's. `action` goes before Settings;
+/// offline, the offline cloud, as on Home. At the largest text sizes who
+/// it is gets the width under the picture and the buttons, rather than an
+/// ellipsis beside them.
 private struct ProfileHeader<Action: View>: View {
   let profile: Profile?
+  /// Opens the requests hub, for the admin's inbox; nil leaves it out.
+  let onRequests: (() -> Void)?
+  /// How many requests wait on the admin, for the inbox's dot.
+  let needsYou: Int
   @ViewBuilder let action: () -> Action
   @Environment(\.api) private var api
+  @Environment(\.gutter) private var gutter
   @Environment(\.navigator) private var nav
   @Environment(\.offline) private var offline
   @Environment(\.palette) private var palette
   @Environment(\.user) private var user
-
+  @Environment(\.windowSize) private var window
   @Environment(\.dynamicTypeSize) private var typeSize
 
   var body: some View {
     if let user {
-      // At the largest text sizes, who it is gets the width under the
-      // picture and Settings, rather than an ellipsis beside them.
-      if typeSize.isAccessibilitySize {
-        VStack(alignment: .leading, spacing: 12) {
-          HStack(spacing: 0) {
-            picture(user)
-            Spacer(minLength: 12)
-            buttons
+      Group {
+        if typeSize.isAccessibilitySize {
+          VStack(alignment: .leading, spacing: Space.s3) {
+            HStack(spacing: Space.s3) {
+              picture(user)
+              Spacer(minLength: 0)
+              buttons(user)
+            }
+            who(user, stacked: true)
           }
-          who(user, stacked: true)
+        } else {
+          HStack(spacing: window.width < 640 ? Space.s4 : Space.s6) {
+            picture(user)
+            who(user, stacked: false)
+            buttons(user)
+          }
         }
-        .padding(.horizontal, Space.gutter)
-        .padding(.top, 16)
-      } else {
-        // One row, as a profile's header on a phone: the picture, who it is,
-        // and Settings at its end, a button of the same weight as the avatar.
-        HStack(spacing: 0) {
-          picture(user)
-          who(user, stacked: false).padding(.leading, 16)
-          Spacer().frame(width: 12)
-          buttons
-        }
-        .padding(.horizontal, Space.gutter)
-        .padding(.top, 16)
       }
+      .padding(.horizontal, gutter)
+      .padding(.top, Space.s4)
     }
   }
 
+  /// The web's `size-16 sm:size-20` with its `shadow-lg shadow-black/40`.
   private func picture(_ user: User) -> some View {
-    ProfileAvatar(user.name, url: user.avatarId.flatMap { api?.paths.avatar($0) }, size: 64)
+    ProfileAvatar(user.name, url: user.avatarId.flatMap { api?.paths.avatar($0) }, size: window.width < 640 ? 64 : 80)
+      .kitShadow(.menu)
+      .accessibilityHidden(true)
   }
 
-  /// The name, with Admin beside it, over the username and the month they joined.
+  /// The name over the facts, `text-22px sm:text-26px md:text-32px`; the
+  /// facts wrap a whole one at a time, as the web's `flex-wrap gap-x-3`.
   private func who(_ user: User, stacked: Bool) -> some View {
-    let joined = profile.flatMap(joinedMonth)
-    // Each fact kept whole beside the picture, so a second line starts at a
-    // dot rather than inside "Joined November 2026".
-    let facts = [user.displayName.map { _ in "@\(user.username)" }, joined.map(Str.profileJoined)]
-      .compactMap { $0.map { stacked ? $0 : $0.replacingOccurrences(of: " ", with: "\u{00A0}") } }
-      .joined(separator: " · ")
-    return VStack(alignment: .leading, spacing: 0) {
-      HStack(spacing: 8) {
-        Text(user.name).textStyle(.xl, weight: .semibold, tracking: .tight).foregroundStyle(palette.foreground).lineLimit(stacked ? nil : 1)
-          .accessibilityAddTraits(.isHeader)
-        if user.isAdmin { LegacyBadge(Str.profileAdmin, outlined: true) }
+    let size: TextSize = window.width < 640 ? .px22 : window.width < 768 ? .px26 : .px32
+    return VStack(alignment: .leading, spacing: Space.s1) {
+      Text(user.name)
+        .textStyle(size, weight: .semibold, tracking: .tight)
+        .foregroundStyle(palette.foreground)
+        .lineLimit(stacked ? nil : 1)
+        .accessibilityAddTraits(.isHeader)
+      FlowRow(spacing: Space.s3, lineSpacing: Space.s1) {
+        if user.displayName != nil { Text(verbatim: "@\(user.username)") }
+        if user.isAdmin {
+          HStack(spacing: Space.s1) {
+            LucideIcon(.shield, size: 14, tint: palette.mutedForeground)
+            Text(Str.profileAdmin)
+          }
+        }
+        if let joined = profile.flatMap(joinedMonth) { Text(Str.profileJoined(joined)) }
       }
-      if !facts.isEmpty {
-        // Two lines rather than an ellipsis, where the language's words are long.
-        Text(facts).textStyle(.sm).foregroundStyle(palette.mutedForeground).lineLimit(stacked ? nil : 2)
-      }
+      .textStyle(.sm)
+      .foregroundStyle(palette.mutedForeground)
     }
     .frame(maxWidth: .infinity, alignment: .leading)
     .accessibilityElement(children: .combine)
   }
 
-  /// The disconnect icon or offline, then Settings.
-  @ViewBuilder private var buttons: some View {
-    if offline {
-      LucideIcon(.cloudOff, label: Str.downloadsOffline, size: 20, tint: palette.mutedForeground)
-      Spacer().frame(width: 12)
-    } else {
-      action()
+  /// The cloud or offline, the admin's requests, then Settings: the web's round `size-11` buttons.
+  @ViewBuilder private func buttons(_ user: User) -> some View {
+    HStack(spacing: Space.s2) {
+      if offline {
+        LucideIcon(.cloudOff, label: Str.downloadsOffline, size: 20, tint: palette.mutedForeground)
+          .padding(.horizontal, Space.s1)
+      } else {
+        action()
+        if user.isAdmin, let onRequests {
+          RequestsButton(needsYou: needsYou, action: onRequests)
+        }
+      }
+      RoundIconButton(.settings, label: Str.shellSettings, look: .secondary, size: TouchTarget, iconSize: 20) {
+        nav.settings()
+      }
     }
-    LegacyRoundIconButton(.settings, label: Str.shellSettings, iconSize: 20, action: nav.settings)
   }
 }
 
-/// Favorite titles as posters, then favorite episodes; each heading opens
-/// the whole list. With none yet, how to make one.
-private struct Favorites: View {
+/// The admin's way to the queue, as Android's and the web's own profile on
+/// a phone: the inbox, with the accent's dot while requests need them.
+private struct RequestsButton: View {
+  let needsYou: Int
+  let action: () -> Void
+  @Environment(\.palette) private var palette
+
+  var body: some View {
+    RoundIconButton(
+      .inbox, label: needsYou > 0 ? Str.webRequestsMenuWaiting(needsYou) : Str.webRequestsMenu, look: .secondary,
+      size: TouchTarget, iconSize: 20, action: action
+    )
+    .overlay(alignment: .topTrailing) {
+      if needsYou > 0 {
+        // The web's `size-2 ring-2 ring-secondary`, `top-1.5 right-1.5`.
+        Circle()
+          .fill(palette.accent)
+          .frame(width: Space.s2, height: Space.s2)
+          .padding(2)
+          .background(palette.secondary, in: Circle())
+          .padding(Space.s1)
+          .allowsHitTesting(false)
+          .accessibilityHidden(true)
+      }
+    }
+  }
+}
+
+// MARK: Sections
+
+/// Favorites of every kind in one rail of posters, newest first, as the
+/// web shows them; its heading opens the whole lists. One taken off here
+/// goes at once, before the profile is fetched again. With none yet, how
+/// to make one.
+private struct FavoritesRail: View {
+  let profile: Profile
+  @Environment(\.gutter) private var gutter
+  @Environment(\.navigator) private var nav
+  @Environment(\.offline) private var offline
+  @Environment(ViewerState.self) private var viewer: ViewerState?
+
+  var body: some View {
+    let favorites = shownFavorites(profile, viewer: viewer)
+    if favorites.isEmpty {
+      VStack(alignment: .leading, spacing: 0) {
+        SectionTitle(Str.favoritesTitle)
+        EmptyState(icon: .heart, title: Str.favoritesEmpty, description: Str.favoritesEmptyHint)
+      }
+      .padding(.horizontal, gutter)
+    } else {
+      // Offline the whole lists are the server's to send.
+      Rail(Str.favoritesTitle, onTitleTap: offline ? nil : nav.favorites) {
+        ForEach(favorites, id: \.key) { favorite in
+          RailItem(.poster) { FavoriteCard(favorite) }
+        }
+      }
+    }
+  }
+}
+
+/// "My requests", between the favorites and the statistics, as Android's
+/// `ProfileAskedRail` and the web's: what you asked for is yours alone,
+/// and this is only ever your own profile. Online only.
+private struct ProfileRequests: View {
+  var body: some View {
+    // TODO(requests): the requests screens' rail of what this person asked
+    // for goes here (Android's ui/requests ProfileAskedRail, the web's
+    // components/asked). It draws nothing until then.
+    EmptyView()
+  }
+}
+
+/// What they watched last, a file per title, its heading opening the whole list.
+private struct RecentRail: View {
   let profile: Profile
   @Environment(\.navigator) private var nav
   @Environment(\.offline) private var offline
-  @Environment(\.palette) private var palette
 
   var body: some View {
-    // Offline the whole lists are the server's to send.
-    let openAll = offline ? nil : nav.favorites
-    let titles: [TitleSummary] = (profile.favorites ?? []).compactMap {
-      switch $0 {
-      case .movie(let value): value.title
-      case .show(let value): value.title
-      default: nil
-      }
-    }
-    let items: [MediaItem] = (profile.favorites ?? []).compactMap {
-      if case .episode(let value) = $0 { return value.item }
-      return nil
-    }
-    if titles.isEmpty && items.isEmpty {
-      VStack(alignment: .leading, spacing: 8) {
-        SectionTitle(Str.favoritesTitle)
-        Text(Str.profileNoFavoritesHint).textStyle(.sm).foregroundStyle(palette.mutedForeground)
-      }
-      .padding(.horizontal, Space.gutter)
-    } else {
-      VStack(alignment: .leading, spacing: 32) {
-        if !titles.isEmpty {
-          Rail(Str.favoritesTitle, onTitleTap: openAll) {
-            ForEach(titles, id: \.id) { title in
-              RailItem(.poster) { PosterCard(title, detail: formatYear(title.year)) }
-            }
-          }
-        }
-        if !items.isEmpty {
-          Rail(Str.profileFavoriteEpisodes, onTitleTap: openAll) {
-            ForEach(items, id: \.id) { item in RailItem(.landscape) { EpisodeCard(item) } }
-          }
+    if let recent = profile.recent, !recent.isEmpty {
+      Rail(Str.profileRecent, onTitleTap: offline ? nil : nav.recent) {
+        ForEach(recent, id: \.item.id) { entry in
+          RailItem(.landscape) { EpisodeCard(entry.item) }
         }
       }
     }
   }
 }
 
-/// The statistics' heading and range, then the cards, a column on a phone
-/// and two side by side where the window has room, as a tablet's.
+/// The statistics' heading and range, then what the figures say: the
+/// cards, nothing ever watched, nothing in the range, or what went wrong.
+/// The last range's figures stay up while the next one loads.
 private struct Statistics: View {
-  let model: ProfileStats
+  let loads: ProfileLoads
+  @Environment(\.gutter) private var gutter
   @Environment(\.offline) private var offline
-  @Environment(\.palette) private var palette
-  @Environment(\.windowSize) private var window
 
   var body: some View {
-    let stats = model.figures(offline: offline)
-    let state = model.state(offline: offline)
-    let never = model.neverWatched(offline: offline)
-    VStack(alignment: .leading, spacing: 16) {
-      SectionTitle(Str.profileStatistics).padding(.horizontal, Space.gutter)
-      if !never { RangeChips(current: model.range) { range in withMotion(Motion.color) { model.pick(range) } } }
-    }
-    .padding(.top, SectionGap)
-    content(state: state, stats: stats, never: never)
-      .frame(maxWidth: .infinity, alignment: .leading)
-      .padding(.horizontal, Space.gutter)
-      .padding(.top, 16)
-  }
-
-  @ViewBuilder private func content(state: Load<WatchStats?>, stats: WatchStats?, never: Bool) -> some View {
-    if case .failed(let message, let disconnected) = state, stats == nil {
-      failed(message, disconnected: disconnected)
-    } else if let stats {
-      if never {
-        VStack(alignment: .leading, spacing: 4) {
-          Text(Str.profileSelfEmpty).textStyle(.base).foregroundStyle(palette.foreground)
-          Text(Str.profileSelfEmptyHint).textStyle(.sm).foregroundStyle(palette.mutedForeground)
-        }
-        .accessibilityElement(children: .combine)
-      } else if stats.totals.plays == 0 {
-        nothingWatched
-      } else {
-        cards(stats)
-      }
-    } else {
-      ProgressView().tint(palette.accent).frame(maxWidth: .infinity).padding(16)
-        .accessibilityLabel(Str.loadingInProgress)
+    let stats = loads.stats
+    let content = stats.content
+    VStack(alignment: .leading, spacing: Space.s4) {
+      // With nothing ever watched, picking a period changes nothing.
+      StatsHeading(range: stats.range, showsRange: content != .neverWatched) { loads.pick($0, offline: offline) }
+      section(content)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, gutter)
     }
   }
 
-  @ViewBuilder private func failed(_ message: String, disconnected: Bool) -> some View {
-    let loader = model.current
-    if disconnected {
+  @ViewBuilder private func section(_ content: StatsContent) -> some View {
+    let loader = loads.stats.loader
+    switch content {
+    case .failed(let message, let disconnected):
       // Offline there's no server to ask again.
-      Disconnected(onRetry: offline ? nil : { loader.reload() }).frame(maxWidth: .infinity)
-    } else {
-      // A notice keeps the gutter itself.
-      Notice(message, retrying: loader.refreshing, onRetry: { loader.reload() })
-        .padding(.horizontal, -Space.gutter)
+      ErrorSection(
+        Str.profileStatsFailed, message, retrying: loader.refreshing, disconnected: disconnected,
+        onRetry: offline ? nil : { loader.reload() })
+    case .loading: StatsSkeleton()
+    case .unavailable: EmptyView()
+    case .neverWatched:
+      EmptyState(icon: .popcorn, title: Str.profileSelfEmpty, description: Str.profileSelfEmptyHint)
+        .padding(.vertical, Space.s4)
+    case .nothingInRange:
+      EmptyState(icon: .calendar, title: Str.profileNothingWatched(rangePhrase(loads.range))) {
+        MatineeButton(Str.profileShowAllTime, look: .outline) { loads.pick(StatsRange.all, offline: offline) }
+      }
+    case .shown(let figures):
+      StatsCards(stats: figures, range: loads.range, board: loads.board, standing: !offline)
     }
   }
+}
 
-  /// Nothing in the range picked: how to see everything instead.
-  private var nothingWatched: some View {
-    VStack(alignment: .leading, spacing: 12) {
-      Text(Str.profileNothingWatched(rangePhrase(model.range))).textStyle(.base)
-        .foregroundStyle(palette.foreground)
-      LegacyButton(.outline, action: { model.pick(StatsRange.all) }) { Text(Str.profileShowAllTime) }
-    }
-  }
+/// The statistics' heading over their skeleton, while the profile loads.
+private struct StatsLoading: View {
+  @Environment(\.gutter) private var gutter
 
-  /// Where the leaderboard goes: it's a board of everyone's, which isn't saved, so it's left out offline.
-  @ViewBuilder private func standing(gap: CGFloat) -> some View {
-    if !offline { Standing(range: model.range, gap: gap).id(model.range) }
-  }
-
-  @ViewBuilder private func cards(_ stats: WatchStats) -> some View {
-    if isWide(window) && window.width >= 700 {
-      HStack(alignment: .top, spacing: 16) {
-        VStack(spacing: 0) {
-          WatchTimeCard(stats: stats)
-          TopTitles(stats: stats).padding(.top, stats.titles.isEmpty ? 0 : CardGap)
-          Genres(stats: stats).padding(.top, stats.genres.isEmpty ? 0 : CardGap)
-        }
-        VStack(spacing: 0) {
-          StatList(stats: stats)
-          Activity(stats: stats).padding(.top, stats.activity.isEmpty ? 0 : CardGap)
-          standing(gap: CardGap)
-        }
-      }
-    } else {
-      VStack(spacing: 0) {
-        WatchTimeCard(stats: stats)
-        StatList(stats: stats).padding(.top, CardGap)
-        TopTitles(stats: stats).padding(.top, stats.titles.isEmpty ? 0 : CardGap)
-        Genres(stats: stats).padding(.top, stats.genres.isEmpty ? 0 : CardGap)
-        standing(gap: CardGap)
-        Activity(stats: stats).padding(.top, stats.activity.isEmpty ? 0 : CardGap)
-      }
+  var body: some View {
+    VStack(alignment: .leading, spacing: Space.s4) {
+      SectionTitle(Str.profileStatistics).padding(.horizontal, gutter)
+      StatsSkeleton().padding(.horizontal, gutter)
     }
   }
 }
