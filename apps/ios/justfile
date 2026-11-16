@@ -10,6 +10,9 @@ app := "io.github.zekurio.matinee"
 # with MATINEE_DERIVED_DATA, under build/.
 derived := env("MATINEE_DERIVED_DATA", "build/DerivedData")
 simulator := env("MATINEE_SIMULATOR", "iPhone 17")
+# The window that shows a booted simulator: Simulator, or DeviceHub from Xcode 27 on. A build
+# doesn't need it, so not finding either isn't an error.
+show_simulator := 'open -a Simulator 2>/dev/null || open "$(xcode-select -p)/../Applications/DeviceHub.app" 2>/dev/null || true'
 built_app := derived / "Build/Products/Debug-iphonesimulator/Matinee.app"
 xcodebuild := "xcodebuild -project Matinee.xcodeproj -scheme Matinee -derivedDataPath " + derived
 # The Mac's own copy of the kit's boundary test (Matinee/UI/README.md).
@@ -45,7 +48,7 @@ sim-build: generate
 # Build, install, and open the app on a simulator (MATINEE_SIMULATOR names it), with launch arguments after
 run *args: sim-build
     xcrun simctl boot "{{ simulator }}" 2>/dev/null || true
-    open -a Simulator
+    {{ show_simulator }}
     xcrun simctl install "{{ simulator }}" "{{ built_app }}"
     xcrun simctl launch --terminate-running-process "{{ simulator }}" {{ app }} {{ args }}
 
@@ -59,7 +62,7 @@ gallery *args: sim-build
 # Open the app signed in to the dev server (DEV.md) as `account`, ios-admin or ios-viewer, with more launch arguments after
 dev account="ios-admin" *args: sim-build
     xcrun simctl boot "{{ simulator }}" 2>/dev/null || true
-    open -a Simulator 2>/dev/null || true
+    {{ show_simulator }}
     xcrun simctl install "{{ simulator }}" "{{ built_app }}"
     xcrun simctl launch --terminate-running-process "{{ simulator }}" {{ app }} \
         -dev.server http://localhost:18420 -dev.token "$(scripts/dev/token {{ account }})" {{ args }}
@@ -112,14 +115,14 @@ tv-sim-build: generate
 # Build, install, and open the Apple TV app on a simulator (MATINEE_TV_SIMULATOR names it), with launch arguments after
 tv-run *args: tv-sim-build
     xcrun simctl boot "{{ tv_simulator }}" 2>/dev/null || true
-    open -a Simulator
+    {{ show_simulator }}
     xcrun simctl install "{{ tv_simulator }}" "{{ tv_built_app }}"
     xcrun simctl launch --terminate-running-process "{{ tv_simulator }}" {{ app }} {{ args }}
 
 # Open the Apple TV app signed in to the dev server (DEV.md) as `account`, with more launch arguments after
 tv-dev account="ios-admin" *args: tv-sim-build
     xcrun simctl boot "{{ tv_simulator }}" 2>/dev/null || true
-    open -a Simulator 2>/dev/null || true
+    {{ show_simulator }}
     xcrun simctl install "{{ tv_simulator }}" "{{ tv_built_app }}"
     xcrun simctl launch --terminate-running-process "{{ tv_simulator }}" {{ app }} \
         -dev.server http://localhost:18420 -dev.token "$(scripts/dev/token {{ account }})" {{ args }}
