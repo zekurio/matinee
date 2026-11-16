@@ -160,8 +160,10 @@ struct PlayerRequest: Identifiable, Hashable {
   /// Puts `route` in place of the page on top, as a catalog page becomes
   /// the library title's once it arrives.
   func replaceTop(with route: Route) {
-    guard !current.isEmpty else { return push(route) }
-    paths[tab]?[current.count - 1] = route
+    var pages = current
+    guard !pages.isEmpty else { return push(route) }
+    pages[pages.count - 1] = route
+    paths[tab] = pages
   }
 
   /// Home's first page, from anywhere: Android's pop back to Home, which

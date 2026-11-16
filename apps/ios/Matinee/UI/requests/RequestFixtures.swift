@@ -60,7 +60,7 @@
       guard mode != nil else { return }
       RequestFixtureServer.shared.admin = admin
       Task {
-        guard let library = try? await real.libraries.list().first(where: { $0.kind == TitleKind.movie }),
+        guard let library = try? await real.libraries.list().first(where: { $0.kind == "movies" }),
           let shelf = try? await real.media.shelf(libraryId: library.id, limit: 4)
         else { return }
         RequestFixtureServer.shared.seed(shelf.map(\.title))

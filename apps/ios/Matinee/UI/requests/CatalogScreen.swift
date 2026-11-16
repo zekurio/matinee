@@ -297,8 +297,8 @@ private struct CatalogActions: View {
 }
 
 #if DEBUG
-  /// `-requests.open sheet|decline|ask|why`: the request sheet; for an admin
-  /// the decline sheet; a film asked for at once, for the toast with Undo;
+  /// `-requests.open sheet|decline|add|ask|why`: the request sheet; for an
+  /// admin the decline sheet, or Add; a film asked for at once, for the toast with Undo;
   /// or a dimmed Request's tap, for what it says. Once the page is up, for
   /// a screenshot of it.
   private struct CatalogDevOpen: ViewModifier {
@@ -318,6 +318,7 @@ private struct CatalogActions: View {
         switch what {
         case "sheet": open()
         case "decline": hub?.declining = hub?.waiting(availability)
+        case "add": if let item = hub?.waiting(availability) { hub?.answer(item, .add) }
         case "ask": await hub?.ask(RequestChooser(detail: detail, availability: availability), name: detail.name, availability: availability)
         case "why":
           if let why = requestDimmedText(availability, admin: user?.isAdmin == true) {
