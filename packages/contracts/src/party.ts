@@ -1,5 +1,7 @@
 import { t } from "./schema"
 import { MediaItem, ProfileUser } from "./schemas"
+import { PlaybackMethod } from "./stats"
+import { PlaybackQuality } from "./transcoding"
 
 /*
  * A watch party: accounts on the server that watch the same file at the
@@ -76,10 +78,64 @@ export const Party = t.object({
   queue: t.array(PartyEntry),
   /** What members asked the owner to queue, oldest first. */
   proposals: t.array(PartyEntry),
+  /**
+   * The members whose players couldn't keep up, which the party paused
+   * for. It plays on once each has loaded enough, or when someone presses
+   * play. Empty while it waits for nobody.
+   */
+  waitingFor: t.array(t.uuid()),
   /** The server's clock when it sent this, to read `playback.at` against. */
   now: t.date(),
 })
 export type Party = t.infer<typeof Party>
+
+/**
+ * What a member's player does in the party's file. `buffering` is that it
+ * can't play on: stuck loading for a moment while the party plays, or,
+ * while the party waits, not loaded enough yet where it waits.
+ */
+export const PARTY_PLAYER_STATES = ["playing", "paused", "buffering"] as const
+export const PartyPlayerState = t.enum(PARTY_PLAYER_STATES)
+export type PartyPlayerState = t.infer<typeof PartyPlayerState>
+
+/** How a member's player plays the party's file, which it sends now and then. */
+export const PartyStatusReport = t.object({
+  /** The file the player has, as in `control`. */
+  itemId: t.uuid(),
+  state: PartyPlayerState,
+  positionSeconds: t.number().min(0),
+  /** Seconds loaded past the position. */
+  bufferedSeconds: t.number().min(0),
+  method: PlaybackMethod,
+  quality: PlaybackQuality,
+})
+export type PartyStatusReport = t.infer<typeof PartyStatusReport>
+
+/**
+ * How one member's player keeps up, from its last report. `away` is a
+ * member whose player hasn't reported on the party's file lately: on
+ * another page, watching something else, or gone, and the rest is null.
+ */
+export const PartyMemberHealth = t.object({
+  userId: t.uuid(),
+  state: t.enum(["playing", "paused", "buffering", "away"]),
+  /** Seconds ahead of the party, or behind it when negative. */
+  driftSeconds: t.number().nullable(),
+  bufferedSeconds: t.number().nullable(),
+  method: PlaybackMethod.nullable(),
+  quality: PlaybackQuality.nullable(),
+  /** Their last request came from outside the server's local networks. */
+  remote: t.boolean(),
+  /** The party is paused for them. */
+  waitedFor: t.boolean(),
+})
+export type PartyMemberHealth = t.infer<typeof PartyMemberHealth>
+
+/** How every member of the viewer's party keeps up, in `Party.members` order. */
+export const PartyHealth = t.object({
+  members: t.array(PartyMemberHealth),
+})
+export type PartyHealth = t.infer<typeof PartyHealth>
 
 /**
  * What someone with a party's id sees of it before they join: enough to

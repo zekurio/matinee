@@ -30,6 +30,28 @@ export function setParty(party: Party | null): void {
   queryClient.setQueryData(orpc.party.get.queryKey(), party)
 }
 
+/**
+ * How far the server's clock is ahead of this one. Each state says the
+ * server's time when it left, and arrived some way later, so each sample
+ * is short by its trip. The quickest trip is the truest, so this takes
+ * the largest of the recent samples, from both the call and the stream.
+ * A few only, so a clock set anew here is followed soon. Samples are
+ * keyed by when they arrived, so reading one again changes nothing.
+ */
+const OFFSET_SAMPLES = 6
+const offsets = new Map<number, number>()
+
+function serverOffset(serverNow: Date, receivedAt: number): number {
+  if (!offsets.has(receivedAt)) {
+    offsets.set(receivedAt, serverNow.getTime() - receivedAt)
+    for (const key of offsets.keys()) {
+      if (offsets.size <= OFFSET_SAMPLES) break
+      offsets.delete(key)
+    }
+  }
+  return Math.max(...offsets.values())
+}
+
 /** The viewer's party, and how far the server's clock is ahead of ours. */
 export function useParty() {
   const asked = useQuery(orpc.party.get.queryOptions())
@@ -41,8 +63,7 @@ export function useParty() {
   const party: Party | null = (member && latest.data) || null
   return {
     party,
-    // The state is as old as its trip here, which this counts as none.
-    offsetMs: party ? party.now.getTime() - latest.dataUpdatedAt : 0,
+    offsetMs: party ? serverOffset(party.now, latest.dataUpdatedAt) : 0,
   }
 }
 

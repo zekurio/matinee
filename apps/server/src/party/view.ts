@@ -1,4 +1,10 @@
-import type { Party, PartyEntry, PartyInvite } from "@matinee/contracts"
+import type {
+  Party,
+  PartyEntry,
+  PartyHealth,
+  PartyInvite,
+  PartyMemberHealth,
+} from "@matinee/contracts"
 import { mediaItem, user } from "@matinee/db"
 import { and, eq, inArray } from "drizzle-orm"
 
@@ -7,7 +13,7 @@ import { visibleItems } from "../access/visible"
 import { profileUser } from "../auth/session"
 import { db } from "../db"
 import { publicItems } from "../media/items"
-import type { PartyEntryState, PartyState } from "./state"
+import { type PartyEntryState, type PartyState, statusOf } from "./state"
 
 /**
  * A party as the viewer sees it: its files as theirs, with their own
@@ -80,7 +86,49 @@ export async function partyView(
     queue: entries(party.queue),
     // A proposal is the proposer's to take back, not every member's.
     proposals: entries(party.proposals),
+    waitingFor: [...party.waitingFor].filter((id) => users.has(id)),
     now: new Date(),
+  }
+}
+
+/**
+ * How each member keeps up, owner first as in `partyView`. Only the
+ * party's own state, so a stream of it can load often.
+ */
+export function partyHealth(party: PartyState): PartyHealth {
+  const now = Date.now()
+  const ids = [
+    party.ownerId,
+    ...party.members.filter((id) => id !== party.ownerId),
+  ]
+  return {
+    members: ids.map((userId): PartyMemberHealth => {
+      const status = statusOf(party, userId, now)
+      const remote = party.remote.has(userId)
+      const waitedFor = party.waitingFor.has(userId)
+      if (!status) {
+        return {
+          userId,
+          state: "away",
+          driftSeconds: null,
+          bufferedSeconds: null,
+          method: null,
+          quality: null,
+          remote,
+          waitedFor,
+        }
+      }
+      return {
+        userId,
+        state: status.state,
+        driftSeconds: status.driftSeconds,
+        bufferedSeconds: status.bufferedSeconds,
+        method: status.method,
+        quality: status.quality,
+        remote,
+        waitedFor,
+      }
+    }),
   }
 }
 

@@ -4,6 +4,7 @@ import {
   MIN_BITRATE_LIMIT,
   PARTY_MAX_MEMBERS,
   PARTY_MAX_QUEUE,
+  type PartyStatusReport,
 } from "@matinee/contracts"
 
 import { events } from "../realtime/events"
@@ -20,12 +21,30 @@ import { events } from "../realtime/events"
  * the network takes a moment, which is what the wait is for. Nothing
  * runs on a timer. Every stream loads again each `PARTY_REFRESH_MS`, and
  * each load sweeps.
+ *
+ * Each member's player reports how it plays (`reportStatus`). One that
+ * buffers while the party plays pauses it, and the party plays on once
+ * every player it waits for says it has loaded enough. A player that
+ * stops reporting, or keeps it waiting past `MAX_WAIT_MS`, isn't waited
+ * for any more: the reports and the sweeps check, so it takes no timer.
  */
 
 /** A member with no stream open this long has left. */
 const AWAY_MS = 60_000
 /** A member may move the party on once its file is this close to the end. */
 const END_SLACK_S = 15
+/** A player that hasn't reported for this long is on another page, or gone. */
+const STATUS_STALE_MS = 15_000
+/** The longest the party waits for its slow members. */
+const MAX_WAIT_MS = 45_000
+
+/** A member's last report, with how far it was from the party then. */
+export type MemberStatus = PartyStatusReport & {
+  /** Milliseconds, as `Date.now()`. */
+  at: number
+  /** Seconds ahead of the party, behind when negative. */
+  driftSeconds: number | null
+}
 
 export type PartyEntryState = { id: string; itemId: string; by: string }
 
@@ -51,6 +70,14 @@ export type PartyState = {
   removed: Set<string>
   /** Members whose last request came from outside the local networks. */
   remote: Set<string>
+  /** Each member's player's last report. */
+  status: Map<string, MemberStatus>
+  /** Members the party paused for, until their players catch up. */
+  waitingFor: Set<string>
+  /** When it began waiting, milliseconds as `Date.now()`. */
+  waitingSince: number
+  /** Members it gave up waiting for in this file. */
+  givenUp: Set<string>
 }
 
 /** Why a change to a party didn't happen. */
@@ -77,6 +104,10 @@ function changed(): void {
   events.publish("party", undefined)
 }
 
+function healthChanged(): void {
+  events.publish("partyHealth", undefined)
+}
+
 export function partyOfUser(userId: string): PartyState | null {
   const id = partyOf.get(userId)
   return (id && parties.get(id)) || null
@@ -85,6 +116,7 @@ export function partyOfUser(userId: string): PartyState | null {
 function remove(party: PartyState, userId: string): void {
   party.members = party.members.filter((id) => id !== userId)
   party.remote.delete(userId)
+  party.status.delete(userId)
   partyOf.delete(userId)
   seenAt.delete(userId)
   const next = party.members[0]
@@ -93,6 +125,50 @@ function remove(party: PartyState, userId: string): void {
     return
   }
   if (party.ownerId === userId) party.ownerId = next
+  stopWaitingFor(party, userId)
+}
+
+/** Stops a pause for someone, and plays on when nobody else holds it. */
+function stopWaitingFor(
+  party: PartyState,
+  userId: string,
+  now = Date.now(),
+): boolean {
+  if (!party.waitingFor.delete(userId)) return false
+  if (party.waitingFor.size === 0 && party.playback) {
+    party.playback = {
+      playing: true,
+      positionSeconds: party.playback.positionSeconds,
+      at: now,
+      by: userId,
+    }
+  }
+  return true
+}
+
+/** A pause that someone pressed or a new file settles what it waited for. */
+function endWait(party: PartyState): void {
+  party.waitingFor.clear()
+}
+
+/**
+ * Gives up on the players the party waits for that stopped reporting on
+ * its file or took too long. True when that changed it.
+ */
+function sweepWait(party: PartyState, now: number): boolean {
+  let any = false
+  const tooLong = now - party.waitingSince > MAX_WAIT_MS
+  for (const userId of party.waitingFor) {
+    const status = party.status.get(userId)
+    const gone =
+      !status ||
+      status.itemId !== party.itemId ||
+      now - status.at > STATUS_STALE_MS
+    if (!gone && !tooLong) continue
+    if (tooLong) party.givenUp.add(userId)
+    any = stopWaitingFor(party, userId, now) || any
+  }
+  return any
 }
 
 /** Takes out the members who went away. */
@@ -107,6 +183,7 @@ export function sweepParties(now = Date.now()): void {
       remove(party, userId)
       any = true
     }
+    if (parties.has(party.id)) any = sweepWait(party, now) || any
   }
   if (any) changed()
 }
@@ -156,6 +233,10 @@ export function createParty(userId: string, name: string | null): PartyState {
     proposals: [],
     removed: new Set(),
     remote: new Set(),
+    status: new Map(),
+    waitingFor: new Set(),
+    waitingSince: 0,
+    givenUp: new Set(),
   }
   parties.set(party.id, party)
   partyOf.set(userId, party.id)
@@ -266,6 +347,62 @@ export function partyPosition(party: PartyState, now = Date.now()): number {
     : Math.min(position, durationSeconds)
 }
 
+/** Whether the member's last report is about the party's file, and recent. */
+export function statusOf(
+  party: PartyState,
+  userId: string,
+  now = Date.now(),
+): MemberStatus | null {
+  const status = party.status.get(userId)
+  if (!status || status.itemId !== party.itemId) return null
+  return now - status.at > STATUS_STALE_MS ? null : status
+}
+
+/**
+ * Takes a member's report. A player that buffers while the party plays
+ * pauses it where it is, and one that buffers while it waits already
+ * holds it too. The party plays on once the last of them reports in.
+ */
+export function reportStatus(
+  party: PartyState,
+  userId: string,
+  report: PartyStatusReport,
+  now = Date.now(),
+): void {
+  const ours = report.itemId === party.itemId && party.playback !== null
+  party.status.set(userId, {
+    ...report,
+    at: now,
+    driftSeconds: ours
+      ? report.positionSeconds - partyPosition(party, now)
+      : null,
+  })
+  let moved = sweepWait(party, now)
+  const playback = party.playback
+  if (ours && playback) {
+    if (report.state !== "buffering") {
+      moved = stopWaitingFor(party, userId, now) || moved
+    } else if (!party.givenUp.has(userId) && !party.waitingFor.has(userId)) {
+      if (playback.playing) {
+        party.playback = {
+          playing: false,
+          positionSeconds: partyPosition(party, now),
+          at: now,
+          by: userId,
+        }
+        party.waitingSince = now
+        party.waitingFor.add(userId)
+        moved = true
+      } else if (party.waitingFor.size > 0) {
+        party.waitingFor.add(userId)
+        moved = true
+      }
+    }
+  }
+  if (moved) changed()
+  healthChanged()
+}
+
 /** Has the party watch a file, which leaves the queue if it was in it. */
 export function playInParty(
   party: PartyState,
@@ -283,6 +420,8 @@ export function playInParty(
   }
   party.queue = party.queue.filter((entry) => entry.itemId !== item.id)
   party.proposals = party.proposals.filter((entry) => entry.itemId !== item.id)
+  endWait(party)
+  party.givenUp.clear()
   changed()
 }
 
@@ -293,6 +432,12 @@ export function controlParty(
 ): void {
   // The party moved on while the call was on its way.
   if (party.itemId !== change.itemId) return
+  // Pressing play while it waits goes on without the slow ones, which
+  // would only stop it again.
+  if (change.playing) {
+    for (const userId of party.waitingFor) party.givenUp.add(userId)
+  }
+  endWait(party)
   const length = party.durationSeconds
   party.playback = {
     playing: change.playing,
@@ -329,6 +474,7 @@ export function takeNext(
   }
   const entry = party.queue.shift()
   if (entry) return { entry }
+  endWait(party)
   if (party.playback?.playing) {
     party.playback = {
       playing: false,

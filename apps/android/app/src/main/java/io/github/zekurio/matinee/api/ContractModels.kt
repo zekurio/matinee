@@ -2418,7 +2418,25 @@ data class Party(
     val playback: PartyPlayback?,
     val queue: List<PartyEntry>,
     val proposals: List<PartyEntry>,
+    val waitingFor: List<String>,
     val now: String,
+)
+
+@Serializable
+data class PartyMemberHealth(
+    val userId: String,
+    val state: String,
+    val driftSeconds: Double?,
+    val bufferedSeconds: Double?,
+    val method: String?,
+    val quality: String?,
+    val remote: Boolean,
+    val waitedFor: Boolean,
+)
+
+@Serializable
+data class PartyHealth(
+    val members: List<PartyMemberHealth>,
 )
 
 @Serializable
@@ -2428,6 +2446,23 @@ data class PartyInvite(
     val owner: ProfileUser,
     val members: Int,
     val joined: Boolean,
+)
+
+object PartyPlayerState {
+    const val PLAYING = "playing"
+    const val PAUSED = "paused"
+    const val BUFFERING = "buffering"
+    val all = listOf(PLAYING, PAUSED, BUFFERING)
+}
+
+@Serializable
+data class PartyStatusReport(
+    val itemId: String,
+    val state: String,
+    val positionSeconds: Double,
+    val bufferedSeconds: Double,
+    val method: String,
+    val quality: String,
 )
 
 @Serializable
