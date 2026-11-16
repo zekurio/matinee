@@ -86,8 +86,8 @@ private let NOTICE_SECONDS = 5
 /// couldn't encode, a switch that didn't go through. Takes no focus.
 struct TVPlayerNoticeNote: View {
   let controller: PlayerController
-  @State private var shown: MatineeCore.Notice? = TVPlayerDebug.notice
-  @State private var count = TVPlayerDebug.notice == nil ? 0 : 1
+  @State private var shown: MatineeCore.Notice?
+  @State private var count = 0
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   var body: some View {
@@ -106,6 +106,12 @@ struct TVPlayerNoticeNote: View {
       count += 1
       shown = notice
       controller.dismissNotice()
+    }
+    // A notice held for a screenshot, once the file has loaded, as a real one comes.
+    .onChange(of: controller.item != nil) { _, loaded in
+      guard loaded, count == 0, let notice = TVPlayerDebug.notice else { return }
+      count += 1
+      shown = notice
     }
     .task(id: count) {
       guard count > 0 else { return }
@@ -164,8 +170,8 @@ struct TVSkipMarkView: View {
     ZStack {
       if let mark {
         ZStack {
-          LucideIcon(mark.direction < 0 ? .rotateCcw : .rotateCw, size: 72, scales: false)
-          Text(String(mark.total)).textStyle(.label).monospacedDigit().padding(.top, 4)
+          LucideIcon(mark.direction < 0 ? .rotateCcw : .rotateCw, size: 104, scales: false)
+          Text(String(mark.total)).textStyle(.label).monospacedDigit().padding(.top, 6)
         }
         .foregroundStyle(palette.foreground)
         .frame(width: 160, height: 160)

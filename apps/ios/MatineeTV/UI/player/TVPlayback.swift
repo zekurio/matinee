@@ -1,5 +1,6 @@
 import MatineeCore
 import MatineeKit
+import MatineeMPV
 import SwiftUI
 import UIKit
 
@@ -50,6 +51,10 @@ struct TVPlayback: View {
   /// Menu put the skip button away for the segment that plays.
   @State private var skipAway: String?
   @State private var skipMark: TVSkipMark?
+  /// Counts presses of Left and Right, and which is still held, so only a held one glides.
+  @State private var pressing = 0
+  @State private var held: Int?
+  @State private var sought: Double?
   /// How far up from the bottom the controls reach.
   @State private var controlsTop: CGFloat = 0
   @FocusState private var focus: TVPlayerFocus?
@@ -164,6 +169,9 @@ struct TVPlayback: View {
     .onChange(of: focus) { touched += 1 }
     .onChange(of: FocusKey(controlsShown, pictureAction?.key, failed), initial: true) { _, _ in placeFocus() }
     .onChange(of: controller.segment) { skipAway = nil }
+    .onChange(of: MPVLift(shown: controlsShown, top: controlsTop, subtitle: controller.subtitle?.format), initial: true) {
+      _, lift in liftEngineSubtitles(lift)
+    }
     .task(id: HideKey(controls, controller.playing, menu, scrub.target != nil, touched, voiceOver)) {
       // VoiceOver reads the controls one by one, so they stay until asked away.
       guard controls, controller.playing, menu == nil, scrub.target == nil, !voiceOver else { return }
@@ -263,24 +271,37 @@ struct TVPlayback: View {
     let direction = button == .left ? -1 : 1
     switch phase {
     case .began:
-      let pressed = scrub.target == nil
       scrub.step = direction < 0 ? back : ahead
-      scrub.press(direction, from: controller.position, duration: controller.duration)
+      // From where the last press sought, while the player is still getting there.
+      scrub.press(direction, from: sought ?? controller.position, duration: controller.duration)
       if !controlsShown {
         let total = skipMark.map { $0.direction == direction ? $0.total : 0 } ?? 0
         skipMark = TVSkipMark(direction: direction, total: total + Int(scrub.step), id: (skipMark?.id ?? 0) + 1)
       }
-      guard pressed else { return }
+      pressing += 1
+      let press = pressing
+      held = press
       // Held, it glides, and the controls come to show where to.
       Task {
         try? await Task.sleep(for: GLIDE_AFTER)
-        guard scrub.target != nil, !controlsShown else { return }
+        guard held == press, !controlsShown else { return }
         focusSeek = true
         skipMark = nil
         showControls()
       }
     case .ended:
-      if let to = scrub.release() { Task { await controller.seekTo(to) } }
+      held = nil
+      if let to = scrub.release() { seek(to) }
+    }
+  }
+
+  /// Seeks where the remote took the head, which the next press starts from for a moment.
+  private func seek(_ to: Double) {
+    sought = to
+    Task {
+      await controller.seekTo(to)
+      try? await Task.sleep(for: .milliseconds(1500))
+      if sought == to { sought = nil }
     }
   }
 
@@ -289,7 +310,7 @@ struct TVPlayback: View {
     touched += 1
     switch swipe.phase {
     case .began, .changed: scrub.swipe(swipe.translation.width, from: controller.position, duration: controller.duration)
-    case .ended: if let to = scrub.release() { Task { await controller.seekTo(to) } }
+    case .ended: if let to = scrub.release() { seek(to) }
     }
   }
 
@@ -358,6 +379,29 @@ struct TVPlayback: View {
   }
 
   private func retry() { Task { await controller.retry() } }
+
+  /// mpv draws picture subtitles (PGS, VobSub, DVB) into the video, under
+  /// the controls; while they show, it draws them higher, clear of the
+  /// controls, as the app's own lines rise. Styled ASS keeps the places its
+  /// author gave it, which mpv's `sub-pos` would move with everything else.
+  private func liftEngineSubtitles(_ lift: MPVLift) {
+    guard let engine = controller.playbackEngine as? MPVPlaybackEngine else { return }
+    let styled = ["ASS", "SSA"].contains(lift.subtitle?.uppercased() ?? "")
+    let raise = lift.shown && !styled ? lift.top / TVScreen.height * 100 : 0
+    engine.mpv.setProperty("sub-pos", to: String(Int(max(0, 100 - raise).rounded())))
+  }
+}
+
+/// What mpv's picture subtitles follow: the controls, how high they reach, and the track's format.
+private struct MPVLift: Equatable {
+  let shown: Bool
+  let top: CGFloat
+  let subtitle: String?
+}
+
+/// The TV's screen, which the player fills: 1080 points high at 1080p and at 4K.
+private enum TVScreen {
+  static let height: CGFloat = 1080
 }
 
 /// What the controls' hiding waits on: any change starts the wait again.
