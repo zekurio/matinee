@@ -8,6 +8,7 @@ options:
   bundleIdPrefix: io.github.zekurio
   deploymentTarget:
     iOS: "18.0"
+    tvOS: "18.0"
   createIntermediateGroups: true
   # Before each generate: the version from the root package.json, as
   # everywhere else, into Config/Version.xcconfig, and the app icon from
@@ -123,3 +124,90 @@ targets:
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: true
           NSAllowsLocalNetworking: true
+
+  # The Apple TV app (MatineeTV/README.md). Its own screens are in
+  # MatineeTV/; the app-level pieces it shares with the iPhone app are listed
+  # here one by one, compiled into both targets from where they are, so a
+  # change to one of them reaches both apps and has to build for both.
+  MatineeTV:
+    type: application
+    platform: tvOS
+    configFiles:
+      Debug: Config/Version.xcconfig
+      Release: Config/Version.xcconfig
+    sources:
+      - path: MatineeTV
+        excludes:
+          - Info.plist
+          - README.md
+          - Remote
+      # Shared with the iPhone app: the generated words and their catalogs,
+      # loading and failure words, formatting, the theme, the navigator,
+      # toasts, artwork over Nuke, the QR code, the sign-in flows' state,
+      # the login backdrop, and Home's debug stand-ins.
+      - Matinee/UI/Strings.gen.swift
+      - Matinee/UI/State.swift
+      - Matinee/UI/Format.swift
+      - Matinee/UI/ThemeStore.swift
+      - Matinee/UI/Navigator.swift
+      - Matinee/UI/components/Toasts.swift
+      - Matinee/UI/components/Picture.swift
+      - Matinee/UI/components/QrCode.swift
+      - Matinee/UI/signin/SignInState.swift
+      - Matinee/UI/signin/LoginBackdrop.swift
+      - Matinee/UI/home/HomeDevData.swift
+      - Matinee/Resources/Localizable.xcstrings
+      - Matinee/Resources/iOS.xcstrings
+      - Matinee/Resources/Assets.xcassets
+    dependencies:
+      - package: MatineeMPV
+      - package: MatineeCore
+      - package: MatineeKit
+        product: MatineeKit
+      - package: MatineeKit
+        product: MatineeKitGallery
+      - package: Nuke
+        product: Nuke
+      - package: Nuke
+        product: NukeUI
+    settings:
+      base:
+        # The same identifier as the iPhone app's, so the App Store sells
+        # them as one app (universal purchase).
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.zekurio.matinee
+        PRODUCT_NAME: Matinee
+        TARGETED_DEVICE_FAMILY: "3"
+        SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+        SWIFT_APPROACHABLE_CONCURRENCY: YES
+        SWIFT_STRICT_CONCURRENCY: complete
+        # The layered icon and the Top Shelf image, from scripts/tvicon.sh.
+        ASSETCATALOG_COMPILER_APPICON_NAME: App Icon & Top Shelf Image
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: ""
+        ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: NO
+        # Written by hand, not by XcodeGen, so it can live in the repository
+        # beside the sources: MatineeTV/Info.plist.
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: MatineeTV/Info.plist
+        CURRENT_PROJECT_VERSION: "1"
+      configs:
+        Debug:
+          SWIFT_ACTIVE_COMPILATION_CONDITIONS: DEBUG
+    scheme:
+      testTargets: [MatineeTVRemote]
+
+  # Presses the Siri Remote on an Apple TV simulator from a script, for
+  # MatineeTV/Remote/remote.sh: a UI test only so XCUIRemote can reach the
+  # focus engine. The script itself is the kit gallery's.
+  MatineeTVRemote:
+    type: bundle.ui-testing
+    platform: tvOS
+    sources:
+      - Packages/MatineeKit/Gallery/Remote/RemoteScript.swift
+    dependencies:
+      - target: MatineeTV
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.zekurio.matinee.tv-remote
+        TEST_TARGET_NAME: MatineeTV
+        GENERATE_INFOPLIST_FILE: YES
+        SWIFT_DEFAULT_ACTOR_ISOLATION: nonisolated
