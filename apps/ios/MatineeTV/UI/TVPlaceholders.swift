@@ -16,33 +16,32 @@ import SwiftUI
  * When the last is gone, so is this file.
  */
 
-// MARK: Browse: ui/tv/browse
+// MARK: Detail: ui/tv/detail
 
-struct TVSearchScreen: View {
-  var body: some View { TVPlaceholderPage(Str.searchTitle, path: "search", port: "browse/TvSearch.kt") }
+struct TVTitleScreen: View {
+  let id: String
+  var body: some View { TVPlaceholderPage(Str.mediaHeroDetails, path: "title/\(id)", port: "detail/TvTitle.kt") }
 }
 
-struct TVFavoritesScreen: View {
-  var body: some View { TVPlaceholderPage(Str.favoritesTitle, path: "favorites", port: "browse/TvFavorites.kt") }
-}
-
-struct TVKindScreen: View {
-  /// A `TitleKind`.
-  let kind: String
+struct TVSeasonScreen: View {
+  let titleId: String
+  let season: Int?
   var body: some View {
     TVPlaceholderPage(
-      kind == TitleKind.show ? Str.browseKindShow : Str.browseKindMovie,
-      path: kind == TitleKind.show ? "shows" : "movies", port: "browse/TvKind.kt")
+      seasonName(season), path: "season/\(titleId)/\(season.map(String.init) ?? "-")", port: "detail/TvSeason.kt")
   }
 }
 
-struct TVBrowseScreen: View {
-  let genre: String?
-  let studio: String?
+struct TVEpisodeScreen: View {
+  let itemId: String
   var body: some View {
-    TVPlaceholderPage(
-      genre ?? studio ?? "", path: genre.map { "genre/\($0)" } ?? "studio/\(studio ?? "")", port: "browse/TvBrowse.kt")
+    TVPlaceholderPage(Str.actionsEpisodeDetails, path: "episode/\(itemId)", port: "detail/TvEpisode.kt")
   }
+}
+
+struct TVPersonScreen: View {
+  let name: String
+  var body: some View { TVPlaceholderPage(name, path: "person/\(name)", port: "detail/TvPerson.kt") }
 }
 
 // MARK: Profile: ui/tv/profile

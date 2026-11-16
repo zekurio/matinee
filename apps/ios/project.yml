@@ -160,8 +160,7 @@ targets:
       - Matinee/UI/signin/SignInState.swift
       - Matinee/UI/signin/LoginBackdrop.swift
       - Matinee/UI/home/HomeDevData.swift
-      # The player's subtitle lines, which the TV's player draws as the phone's does.
-      - Matinee/UI/player/PlayerSubtitles.swift
+      - Matinee/UI/browse/BrowseFixtures.swift
       - Matinee/Resources/Localizable.xcstrings
       - Matinee/Resources/iOS.xcstrings
       - Matinee/Resources/Assets.xcassets
