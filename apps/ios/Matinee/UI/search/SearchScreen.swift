@@ -20,8 +20,15 @@ struct SearchScreen: View {
   @State private var submitted = 0
   @State private var focusedOnce = false
   @State private var focused = false
+  /// The tab opened with the field empty: the keyboard comes once it's known whether Discover is under it.
+  @State private var awaitingFocus = false
+  /// Whether the server has Discover on, and its rows, for under the empty field.
+  @State private var discover = Loader<DiscoverRails>()
+  /// The catalog's answer for the text, for "Not here yet" and for whether nothing matched at all.
+  @State private var catalog = CatalogSearch()
   @Environment(\.shellStyle) private var style
   @Environment(\.palette) private var palette
+  @Environment(\.gutter) private var gutter
 
   var body: some View {
     Group {
@@ -42,7 +49,9 @@ struct SearchScreen: View {
       }
     }
     .searchEffect(search, query: query, submitted: submitted)
+    .catalogSearch(catalog, query: query)
     .loads(libraries) { api in try await api.libraries.list() }
+    .loadsDiscover(discover)
     // A hardware keyboard's ⌘F goes to the field, as in iOS's own apps.
     .keyCommand("f", label: Str.searchTitle) { focused = true }
     .onAppear {
@@ -50,14 +59,20 @@ struct SearchScreen: View {
       // does while there's no Discover under it to look around in.
       if !focusedOnce, query.isEmpty {
         focusedOnce = true
-        focused = true
+        awaitingFocus = true
         #if DEBUG
           if let asked = BrowseFixtures.query {
             query = asked
-            focused = false
+            awaitingFocus = false
           }
         #endif
       }
+    }
+    // Discover is for looking around, so with it under the field the keyboard waits for a tap.
+    .onChange(of: discover.state.isLoading, initial: true) { _, loading in
+      guard awaitingFocus, !loading else { return }
+      awaitingFocus = false
+      if query.isEmpty, discover.state.value?.enabled != true { focused = true }
     }
   }
 
@@ -70,22 +85,34 @@ struct SearchScreen: View {
     let text = query.trimmingCharacters(in: .whitespacesAndNewlines)
     Group {
       if text.isEmpty {
-        // The field's placeholder already says what search finds.
-        // TODO(requests): Discover's rows under the empty field (Android's `DiscoverList`, the
-        // web's `DiscoverRails`), when the server has Discover on. Nothing renders here until then.
-        SearchDiscoverSlot()
+        // The field's placeholder already says what search finds; Discover's rows sit under it when it's on.
+        if discover.state.value?.enabled == true {
+          ScrollView { DiscoverRows(discover: discover).padding(.top, Space.s2).padding(.bottom, Space.s6) }
+            .scrollDismissesKeyboard(.immediately)
+            .scrollsToTopOnReselect()
+        } else {
+          Color.clear
+        }
       } else if search.failed {
         ErrorState(Str.searchFailedTitle, onRetry: { submitted += 1 })
           .frame(maxWidth: .infinity)
           .padding(.vertical, Space.s12)
       } else if let found = search.results {
-        if !found.hasShown {
-          // TODO(requests): Android shows "Not here yet" in this place instead when the catalog has
-          // titles for the text, and only says nothing matched once the catalog has none either.
-          EmptyState(icon: .searchX, title: Str.searchNoMatch(text), description: Str.searchNoMatchHint)
-            .padding(.vertical, Space.s8)
+        if !found.hasShown && catalog.mayHave {
+          // Nothing in the libraries: the catalog's titles follow the field, unheaded, as Android's,
+          // with placeholders while it's still out.
+          ScrollView { NotHereSection(search: catalog, first: true).padding(.top, Space.s2).padding(.bottom, Space.s6) }
+            .scrollDismissesKeyboard(.immediately)
+            .scrollsToTopOnReselect()
+        } else if !found.hasShown {
+          // Only once the catalog has nothing either.
+          VStack(spacing: 0) {
+            EmptyState(icon: .searchX, title: Str.searchNoMatch(text), description: Str.searchNoMatchHint)
+              .padding(.vertical, Space.s8)
+            if catalog.failed { ErrorSection(Str.catalogSearchFailed).padding(.horizontal, gutter) }
+          }
         } else {
-          SearchResultsList(found: found, query: text, names: names)
+          SearchResultsList(found: found, catalog: catalog, names: names)
             // An answer for older text, while the newer one is out, as the web's placeholder.
             .opacity(search.searching && search.resultsFor != text ? 0.5 : 1)
             .motion(Motion.color, value: search.searching)
@@ -102,19 +129,6 @@ struct SearchScreen: View {
   private var names: [String: String] {
     Dictionary((libraries.state.value ?? []).map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
   }
-}
-
-/// Where Discover's rows go under the empty field, for the requests pages to fill. Empty today.
-private struct SearchDiscoverSlot: View {
-  var body: some View { Color.clear }
-}
-
-/// Where the catalog's titles go after the library's results, "Not here yet",
-/// for the requests pages to fill: headed after the library's sections, or
-/// first and unheaded when the library has none. Empty today.
-private struct SearchNotHereSlot: View {
-  let query: String
-  var body: some View { EmptyView() }
 }
 
 /// The search page's field: Android's `SearchBarFrame`, the kit's pill.
@@ -141,7 +155,7 @@ private struct SearchPill: View {
 /// What a search found, in Android's order.
 private struct SearchResultsList: View {
   let found: SearchResults
-  let query: String
+  let catalog: CatalogSearch
   let names: [String: String]
   @Environment(\.api) private var api
   @Environment(\.navigator) private var nav
@@ -174,8 +188,8 @@ private struct SearchResultsList: View {
         if !found.studios.isEmpty {
           Facets(title: Str.searchSectionStudios, facets: found.studios) { nav.studio($0) }
         }
-        // TODO(requests): "Not here yet", the catalog's titles for the text that no library here has.
-        SearchNotHereSlot(query: query)
+        // "Not here yet": the catalog's titles for the text that no library here has.
+        NotHereSection(search: catalog)
       }
       .padding(.top, Space.s2)
       .padding(.bottom, Space.s6)

@@ -17,9 +17,17 @@ import SwiftUI
 /// Discover's rows, for the search page's empty field: one stream follows
 /// the cards they show. Rows whose titles are all here already leave
 /// nothing to show and stay out; one that failed says so in its place.
+/// `discover` is a page's own answer to whether Discover is on, when it
+/// needs it too, as search does to leave the keyboard down; else the rows
+/// ask themselves.
 struct DiscoverRows: View {
-  @State private var discover = Loader<DiscoverRails>()
+  @State private var own = Loader<DiscoverRails>()
+  private let given: Loader<DiscoverRails>?
   @State private var pages = DiscoverPages()
+
+  init(discover: Loader<DiscoverRails>? = nil) { given = discover }
+
+  private var discover: Loader<DiscoverRails> { given ?? own }
   @Environment(\.actions) private var actions
   @Environment(\.palette) private var palette
 
@@ -50,9 +58,29 @@ struct DiscoverRows: View {
         }
       }
     }
-    .loads(discover) { api in try await requestApi(api).discover.rails() }
+    .modifier(LoadsDiscover(loader: given == nil ? own : nil))
     .followsRequests(pages.followed(discover.state.value?.rails ?? []))
   }
+}
+
+/// Whether Discover is on and its rows, from the server, for a loader its
+/// page doesn't load itself.
+private struct LoadsDiscover: ViewModifier {
+  let loader: Loader<DiscoverRails>?
+
+  func body(content: Content) -> some View {
+    if let loader {
+      content.loads(loader) { api in try await requestApi(api).discover.rails() }
+    } else {
+      content
+    }
+  }
+}
+
+extension View {
+  /// Loads whether Discover is on and its rows into `loader`, for a page that
+  /// hands it to `DiscoverRows` or `CatalogBrowseEntries`.
+  func loadsDiscover(_ loader: Loader<DiscoverRails>) -> some View { modifier(LoadsDiscover(loader: loader)) }
 }
 
 /// The first page of each of Discover's rows, kept for the rows and their one stream.
@@ -255,13 +283,16 @@ struct StaleNote: View {
   /// search field, "Not here yet" for a search, and a person's catalog
   /// credits. `-requests.query` names the search.
   private struct RequestsPreview: View {
+    @State private var search = CatalogSearch()
+    @State private var person = Loader<[PersonCatalogCredit]>()
+
     var body: some View {
       ScrollViewReader { proxy in
         ScrollView {
           VStack(alignment: .leading, spacing: Space.s8) {
             DiscoverRows().id("discover")
-            NotHereSection(query: UserDefaults.standard.string(forKey: "requests.query") ?? "the").id("search")
-            PersonCatalogCredits(name: "Zendaya").id("person")
+            NotHereSection(search: search).id("search")
+            PersonCatalogCredits(credits: person.state.value ?? []).id("person")
           }
           .padding(.bottom, Space.s8)
         }
@@ -273,6 +304,8 @@ struct StaleNote: View {
         }
       }
       .topBar(Str.webDiscoverTitle)
+      .catalogSearch(search, query: UserDefaults.standard.string(forKey: "requests.query") ?? "the")
+      .loads(person) { api in try await RequestData(api: requestApi(api)).personCredits(name: "Zendaya") }
     }
   }
 #endif

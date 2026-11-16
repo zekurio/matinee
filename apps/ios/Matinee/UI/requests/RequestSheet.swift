@@ -47,7 +47,7 @@ struct RequestSheet: View {
           seasons
           if chooser.first {
             Separator()
-            MatineeKit.SwitchRow(
+            SwitchRow(
               Str.webAskChooserFuture, isOn: Binding(get: { chooser.future }, set: { chooser.setFuture($0) })
             )
             .padding(.horizontal, -Space.s4)
