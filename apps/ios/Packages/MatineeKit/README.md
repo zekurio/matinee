@@ -542,6 +542,16 @@ focused title.
   or the swipe ends; `scrub.target` is where to draw the head meanwhile.
 - `TVFocusSurface { showControls() }`: holds focus and draws nothing, the
   player's picture while its controls are away.
+- `.onTVTap(isEnabled: focused) { }`: a tap on the touch surface, which
+  isn't a click; a tap that clicks counts only as the click, which the
+  focused button hears. The player shows its controls for one.
+- `TVSeekBar(fraction:, buffered:, elapsed:, remaining:, bubble:, widest:, scrubbing:, label:, value:, action:) { preview }`:
+  the player's seek bar, Android TV's `TvSeekBar`: the time either side
+  of a track in the accent over what's buffered. Focused, it thickens and
+  shows its head with `bubble`, the time there, floating over it, and
+  `preview`, the trickplay frame, over that while `scrubbing`; Select runs
+  `action`. It only draws: the screen moves it with `TVScrub`, and leaves
+  `TVSeekBars.bubbleRoom` clear above it for the bubble.
 
 Presses and swipes reach every listener on screen, so give `isEnabled` only
 while what listens has focus.
@@ -577,7 +587,7 @@ page is the phone gallery as it looks on a TV. Its pages: `focus`,
 `scale`, `buttons`, `lists`, `panels`, `feedback` (notices, toasts, the
 dialog, and the text field), `search`, `cards`, `grid`, `home`
 (a mock-up of Home with the backdrop, header, rows, drawer, and clock),
-`remote` (a mock player), and `phone`. Launch arguments: `-page`, `-scheme
+`remote` (a mock player with the seek bar, presses, swipes, and taps), and `phone`. Launch arguments: `-page`, `-scheme
 light|dark`, `-accent matinee|ember|moss|sun`, `-locale de`, and `-open
 sort|actions|day|loading` on `panels`, `toast|dialog` on `feedback`,
 `drawer` on `search`, `grid`, and

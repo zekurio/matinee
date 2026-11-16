@@ -30,6 +30,11 @@
         TVFocusSurface { show() }
           .focused($focus, equals: .surface)
           .disabled(controls)
+          .onTVTap(isEnabled: !controls) {
+            controls = true
+            focus = .scrubber
+            note(settings.t("Tap: showed the controls", "Tippen: Steuerung eingeblendet"))
+          }
           .onMoveCommand { direction in
             guard !controls else { return }
             switch direction {
@@ -81,10 +86,18 @@
           Text(title.name).textStyle(.headline)
           Text("S1 · E4  Pressure").textStyle(.title).foregroundStyle(palette.foreground.opacity(0.8))
         }
-        Scrubber(
-          position: scrub.target ?? position, duration: duration, scrubbing: scrub.target != nil, focused: focus == .scrubber
-        )
-        .focusable()
+        let shown = scrub.target ?? position
+        TVSeekBar(
+          fraction: shown / duration, buffered: min(1, (position + 120) / duration), elapsed: time(shown),
+          remaining: time(duration - shown), bubble: time(shown), widest: time(duration),
+          scrubbing: scrub.target != nil, label: settings.t("Seek", "Spulen"), value: time(shown),
+          action: {
+            playing.toggle()
+            note(settings.t("Select: play or pause", "Select: Wiedergabe oder Pause"))
+          }
+        ) {
+          WideArt(title: title, variant: 2).frame(width: TVSeekBars.previewWidth, height: TVSeekBars.previewWidth * 9 / 16)
+        }
         .focused($focus, equals: .scrubber)
         .tvScrubbing(scrub, position: position, duration: duration, isEnabled: focus == .scrubber) { to in
           note(settings.t("Seek to \(time(to))", "Springe zu \(time(to))"))
@@ -138,44 +151,4 @@
     }
   }
 
-  /// A player's progress: the accent along a track, the head where the
-  /// remote has taken it, the time either side. Thicker while focused.
-  private struct Scrubber: View {
-    let position: Double
-    let duration: Double
-    let scrubbing: Bool
-    let focused: Bool
-    @Environment(\.palette) private var palette
-
-    var body: some View {
-      VStack(spacing: 16) {
-        GeometryReader { proxy in
-          let x = proxy.size.width * position / duration
-          ZStack(alignment: .leading) {
-            Capsule().fill(.white.opacity(0.3))
-            Capsule().fill(palette.accent).frame(width: max(x, 0))
-            Circle().fill(.white)
-              .frame(width: focused ? 36 : 0, height: focused ? 36 : 0)
-              .shadow(color: .black.opacity(0.4), radius: 6)
-              .offset(x: x - (focused ? 18 : 0))
-          }
-          .frame(height: focused ? 16 : 8)
-          .frame(maxHeight: .infinity)
-        }
-        .frame(height: 40)
-        HStack {
-          Text(time(position)).foregroundStyle(scrubbing ? palette.accent : .white)
-          Spacer()
-          Text("-" + time(duration - position)).foregroundStyle(.white.opacity(0.8))
-        }
-        .textStyle(.facts)
-        .monospacedDigit()
-      }
-      .animation(Motion.color, value: focused)
-    }
-
-    private func time(_ seconds: Double) -> String {
-      Duration.seconds(seconds).formatted(.time(pattern: .minuteSecond))
-    }
-  }
 #endif
