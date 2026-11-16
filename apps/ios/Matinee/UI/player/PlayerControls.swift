@@ -189,81 +189,75 @@ private struct SubtitlesButton: View {
 }
 
 /// Play in the middle, the skips either side and, for an episode, the
-/// previous and next episodes outside them: the web's touch row, `big`.
-/// While it loads, the spinner in the middle of the screen takes play's place.
+/// previous and next episodes outside them, as Android's row: 32 apart,
+/// play bare at 96, the skips 72, the episodes 64. While it loads, the
+/// spinner in the middle of the screen takes play's place.
 private struct Transport: View {
   let controller: PlayerController
   let prefs: PlayerPrefs
   let onTouch: () -> Void
-  @Environment(\.horizontalSizeClass) private var sizeClass
 
   private var back: Double { Double(controller.preferences.skipBack) }
   private var ahead: Double { Double(controller.preferences.skipForward) }
 
   var body: some View {
-    GeometryReader { proxy in
-      // The web's `gap-2 sm:gap-8`: tight on a narrow screen, roomy from 640 points.
-      let gap = proxy.size.width >= 640 ? Space.s8 : Space.s2
-      HStack(spacing: gap) {
-        if controller.isEpisode {
-          EpisodeButton(icon: .skipBack, label: Str.playerPreviousEpisode, enabled: controller.previous != nil) {
-            controller.playPrevious()
-            onTouch()
-          }
+    HStack(spacing: Space.s8) {
+      if controller.isEpisode {
+        EpisodeButton(icon: .skipBack, label: Str.playerPreviousEpisode, enabled: controller.previous != nil) {
+          controller.playPrevious()
+          onTouch()
         }
-        if prefs.skipButtons {
-          SkipButton(icon: .rotateCcw, seconds: Int(back), label: Str.playerSkipBack(Int(back))) {
-            Task { await controller.skip(-back) }
-            onTouch()
-          }
+      }
+      if prefs.skipButtons {
+        SkipButton(icon: .rotateCcw, seconds: Int(back), label: Str.playerSkipBack(Int(back))) {
+          Task { await controller.skip(-back) }
+          onTouch()
         }
-        ZStack {
-          if !controller.loading {
-            PlayButton(playing: controller.playing) {
-              controller.togglePlay()
-              onTouch()
-            }
-          }
-        }
-        .frame(width: 72, height: 72)
-        if prefs.skipButtons {
-          SkipButton(icon: .rotateCw, seconds: Int(ahead), label: Str.playerSkipForward(Int(ahead))) {
-            Task { await controller.skip(ahead) }
-            onTouch()
-          }
-        }
-        if controller.isEpisode {
-          EpisodeButton(icon: .skipForward, label: Str.playerNextEpisode, enabled: controller.next != nil) {
-            if let next = controller.next { controller.playInstead(next) }
+      }
+      ZStack {
+        if !controller.loading {
+          PlayButton(playing: controller.playing) {
+            controller.togglePlay()
             onTouch()
           }
         }
       }
-      .frame(maxWidth: .infinity, maxHeight: .infinity)
+      .frame(width: PLAY_SIZE, height: PLAY_SIZE)
+      if prefs.skipButtons {
+        SkipButton(icon: .rotateCw, seconds: Int(ahead), label: Str.playerSkipForward(Int(ahead))) {
+          Task { await controller.skip(ahead) }
+          onTouch()
+        }
+      }
+      if controller.isEpisode {
+        EpisodeButton(icon: .skipForward, label: Str.playerNextEpisode, enabled: controller.next != nil) {
+          if let next = controller.next { controller.playInstead(next) }
+          onTouch()
+        }
+      }
     }
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
   }
 }
 
-/// The web's big play button: 72 round, black at 45% over a blur with a
-/// faint ring, the filled icon at 32.
+/// Play's place in the row, Android's 96.
+private let PLAY_SIZE: CGFloat = 96
+
+/// Android's play button: bare, as the skips beside it, and bigger than
+/// them to lead without a circle, 96 round with the icon at 48.
 private struct PlayButton: View {
   let playing: Bool
   let action: () -> Void
 
   var body: some View {
-    Pressable(shape: Circle(), action: action) {
-      LucideIcon(playing ? .pause : .play, size: 32, tint: .white, scales: false)
-        // The triangle's weight sits left of its box; the web nudges it.
-        .offset(x: playing ? 0 : 2)
-        .frame(width: 72, height: 72)
-        .pictureGlass(in: Circle(), shade: .light)
-        .contentShape(Circle())
-    }
-    .accessibilityLabel(playing ? Str.playerPause : Str.playerPlay)
+    ControlButton(
+      icon: playing ? .pause : .play, label: playing ? Str.playerPause : Str.playerPlay, size: PLAY_SIZE,
+      iconSize: 48, action: action)
   }
 }
 
-/// A circular arrow with the skip length inside it: Android's `SkipButton`.
+/// A circular arrow with the skip length inside it: Android's `SkipButton`,
+/// 72 round, the arrow 40, the length 12 semibold.
 /// The web's player has drawn lucide's rewind and fast-forward since #42;
 /// Android kept the arrows, and the phone follows Android.
 private struct SkipButton: View {
@@ -275,17 +269,17 @@ private struct SkipButton: View {
   var body: some View {
     Pressable(shape: Circle(), action: action) {
       ZStack {
-        LucideIcon(icon, size: 36, tint: .white.opacity(0.85), scales: false)
+        LucideIcon(icon, size: 40, tint: .white.opacity(0.85), scales: false)
         // The label says how far already.
         Text("\(seconds)")
-          .font(RedHatText.font(fixedSize: 12, weight: .bold))
+          .font(RedHatText.font(fixedSize: 12, weight: .semibold))
           .monospacedDigit()
           .foregroundStyle(.white.opacity(0.85))
-          .padding(.top, 1)
+          .padding(.top, 2)
           .accessibilityHidden(true)
       }
       .pictureShadow()
-      .frame(width: 56, height: 56)
+      .frame(width: 72, height: 72)
       .contentShape(Circle())
     }
     .accessibilityLabel(label)
