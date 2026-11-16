@@ -4,8 +4,8 @@ import SwiftUI
 
 /*
  * TvBrowse.kt: a genre's or a studio's titles from every library on a TV:
- * its name, "Genre · 12 titles", the choice of movies, shows, or both
- * where it has both, the sort and the filters a library has, and the
+ * its name, "Genre · 12 titles", the choice of movies, shows, or both,
+ * always, as Android TV's, the sort and the filters a library has, and the
  * titles as a grid of posters. The page's own genre or studio goes to the
  * server with whatever the person picks (MatineeCore's `browseFilters`);
  * it isn't a filter to take off here, since it's the page.
@@ -40,18 +40,17 @@ struct TVBrowseScreen: View {
         chips: activeTitleFilters(filters, options: options.state.value),
         onRemove: { chip in state.filters = chip.removed(from: state.filters) }, onClear: state.clearFilters
       ) {
-        if let choices = browseKindChoices(kinds.value, picked: kind) {
-          ForEach(choices, id: \.kind) { choice in
-            // The header's count says how many the kind picked has; on every button, five controls
-            // wouldn't fit beside the sort in every language.
-            TVButton(browseKindText(choice.kind), icon: kindIcon(choice.kind), active: kind == choice.kind) {
-              self.kind = choice.kind
-            }
-            .accessibilityValue(Str.browseTitleCount(choice.count))
+        // All three always, as Android TV's, whether the page has both kinds or one.
+        ForEach(browseKinds(kinds.value), id: \.kind) { choice in
+          // The header's count says how many the kind picked has; on every button, five controls
+          // wouldn't fit beside the sort in every language.
+          TVButton(browseKindText(choice.kind), icon: kindIcon(choice.kind), active: kind == choice.kind) {
+            self.kind = choice.kind
           }
-          // Between the kinds and the sort: two groups of controls, not one row of five.
-          Spacer().frame(width: TVSpace.s5)
+          .accessibilityValue(choice.count.map { Str.browseTitleCount($0) } ?? "")
         }
+        // Between the kinds and the sort: two groups of controls, not one row of five.
+        Spacer().frame(width: TVSpace.s5)
         GridSortAndFilters(
           state: state, sortFocus: $sortFocused, onSort: { sorting = true }, onFilters: { filterPage = .filters })
       }
