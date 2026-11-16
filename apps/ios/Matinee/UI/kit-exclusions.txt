@@ -8,11 +8,9 @@
 
 downloads/
 legacy/
-media/
 metadata/
 player/
 profile/
-search/
 settings/
 signin/
 title/

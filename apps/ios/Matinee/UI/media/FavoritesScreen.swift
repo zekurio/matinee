@@ -3,97 +3,104 @@ import MatineeKit
 import SwiftUI
 
 /*
- * FavoritesScreen.kt and FavoritesData.kt: the titles and episodes the
- * person marked as favorites. Which still show is MatineeCore's
- * `FavoritesFilter` (Home/).
+ * FavoritesScreen.kt and FavoritesData.kt, after the web's favorites page:
+ * what the person marked as favorites, a rail for each kind, shows,
+ * seasons, episodes, then movies, each newest first, and only the kinds
+ * that have any. What still shows is MatineeCore's (Browse/FavoritesData.swift),
+ * with the marks made here over what the server sent, so one taken off goes
+ * at once.
  */
 
-/// At most this many of each, newest first.
-private let LIMIT = 200
-
-/// The titles and episodes the person marked as favorites, newest first.
+/// What the signed-in person marked as favorites, a rail for each kind.
 struct FavoritesScreen: View {
-  @State private var titles = Loader<[TitleSummary]>()
-  @State private var items = Loader<[MediaItem]>()
+  @State private var favorites = Loader<Favorites>()
   @Environment(MatineeSession.self) private var session
   @Environment(ViewerState.self) private var viewer: ViewerState?
 
   var body: some View {
     Group {
-      if case .failed(let message, let disconnected) = titles.state {
-        ErrorBox(Str.favoritesLoadFailed, message, disconnected: disconnected, onRetry: titles.reload)
-      } else if let viewer, let shows = FavoritesFilter.titles(titles.state, viewer) {
-        let episodes = FavoritesFilter.episodes(items.state, viewer)
-        if shows.isEmpty && episodes.isEmpty {
-          ScrollView { FavoritesEmpty() }.refreshable { await refresh() }
+      switch favorites.state {
+      case .loading: FavoritesSkeleton()
+      case .failed(let message, let disconnected):
+        ErrorBox(Str.favoritesLoadFailed, message, disconnected: disconnected, onRetry: favorites.reload)
+      case .ready(let all):
+        let lists = viewer.map { all.live($0) } ?? all
+        if lists.isEmpty {
+          ScrollView {
+            EmptyState(icon: .heart, title: Str.favoritesEmpty, description: Str.favoritesEmptyHint)
+              .padding(.vertical, Space.s16)
+          }
+          .refreshable { await refresh() }
         } else {
-          list(shows: shows, episodes: episodes)
+          rails(lists)
         }
-      } else {
-        LoadingBox()
       }
     }
-    .legacyTopBar(Str.favoritesTitle)
-    .loads(titles) { api in
-      guard let username = await session.lastUser?.username,
-        let saved = try await api.profiles.favorites(username: username, limit: LIMIT) else { return [] }
-      return saved.shows + saved.movies
-    }
-    .loads(items) { api in
-      guard let username = await session.lastUser?.username else { return [] }
-      return try await api.profiles.favorites(username: username, limit: LIMIT)?.episodes ?? []
+    .topBar(Str.favoritesTitle) { DisconnectedAction(favorites) }
+    .loads(favorites) { api in
+      // The server answers nil only for someone who doesn't share them, never for one's own.
+      guard let username = await session.lastUser?.username else {
+        return Favorites(shows: [], seasons: [], episodes: [], movies: [])
+      }
+      #if DEBUG
+        if BrowseFixtures.on {
+          return try await BrowseFixtures.favorites(loadFavorites(api, username: username), api: api)
+        }
+      #endif
+      return try await loadFavorites(api, username: username)
     }
   }
 
-  private func list(shows: [TitleSummary], episodes: [MediaItem]) -> some View {
+  private func rails(_ lists: Favorites) -> some View {
     ScrollView {
-      VStack(alignment: .leading, spacing: 20) {
-        if !shows.isEmpty && !episodes.isEmpty {
-          SectionTitle(Str.favoritesTitles).padding(.horizontal, Space.gutter)
-        }
-        if !shows.isEmpty {
-          CardGrid {
-            ForEach(shows, id: \.id) { title in PosterCard(title, detail: formatYear(title.year)) }
+      LazyVStack(alignment: .leading, spacing: Space.s10) {
+        if !lists.shows.isEmpty {
+          Rail(Str.favoritesShows) {
+            ForEach(lists.shows, id: \.id) { title in
+              RailItem(.poster) { PosterCard(title, detail: formatYear(title.year)) }
+            }
           }
         }
-        if !episodes.isEmpty {
-          SectionTitle(Str.favoritesEpisodes)
-            .padding(.horizontal, Space.gutter)
-            .padding(.top, shows.isEmpty ? 0 : 8)
-          CardGrid {
-            ForEach(episodes, id: \.id) { item in EpisodeCard(item) }
+        if !lists.seasons.isEmpty {
+          Rail(Str.favoritesSeasons) {
+            ForEach(lists.seasons, id: \.self) { entry in
+              RailItem(.poster) { SeasonPosterCard(title: entry.title, season: entry.season) }
+            }
+          }
+        }
+        if !lists.episodes.isEmpty {
+          Rail(Str.favoritesEpisodes) {
+            ForEach(lists.episodes, id: \.id) { item in RailItem(.landscape) { EpisodeCard(item) } }
+          }
+        }
+        if !lists.movies.isEmpty {
+          Rail(Str.favoritesMovies) {
+            ForEach(lists.movies, id: \.id) { title in
+              RailItem(.poster) { PosterCard(title, detail: formatYear(title.year)) }
+            }
           }
         }
       }
-      .padding(.top, 8)
-      .padding(.bottom, 32)
+      .padding(.top, Space.s2)
+      .padding(.bottom, Space.s8)
     }
     .refreshable { await refresh() }
   }
 
   private func refresh() async {
-    titles.reload()
-    items.reload()
-    await titles.settled()
-    await items.settled()
+    favorites.reload()
+    await favorites.settled()
   }
 }
 
-private struct FavoritesEmpty: View {
-  @Environment(\.palette) private var palette
-
+/// Favorites while they load: two rails of blank posters, as the web's skeleton.
+private struct FavoritesSkeleton: View {
   var body: some View {
-    VStack(spacing: 0) {
-      LucideIcon(.heart, size: 28, tint: palette.mutedForeground)
-      Gap(12)
-      Text(Str.favoritesEmpty).textStyle(.base, weight: .semibold).multilineTextAlignment(.center)
-      Gap(4)
-      Text(Str.favoritesEmptyHint).textStyle(.sm).foregroundStyle(palette.mutedForeground)
-        .multilineTextAlignment(.center)
+    VStack(alignment: .leading, spacing: Space.s10) {
+      RailSkeleton(title: nil, art: .poster)
+      RailSkeleton(title: nil, art: .poster)
     }
-    .padding(.horizontal, 32)
-    .padding(.vertical, 64)
-    .frame(maxWidth: .infinity)
-    .accessibilityElement(children: .combine)
+    .padding(.top, Space.s2)
+    .frame(maxHeight: .infinity, alignment: .top)
   }
 }
