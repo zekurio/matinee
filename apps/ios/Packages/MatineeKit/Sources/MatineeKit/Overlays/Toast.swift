@@ -14,12 +14,15 @@ public enum ToastDuration: Sendable {
   case long
   /// Until it's closed, or replaced.
   case indefinite
+  /// As long as something it offers lasts, like an Undo with a window of its own.
+  case seconds(Double)
 
   var seconds: Double? {
     switch self {
     case .short: 4
     case .long: 8
     case .indefinite: nil
+    case .seconds(let seconds): seconds
     }
   }
 }

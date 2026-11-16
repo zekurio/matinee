@@ -10,11 +10,11 @@ import SwiftUI
  * show-gaps.ts and rest-of-season.tsx. Loading, the retries while a new
  * show isn't matched yet, and the live state are MatineeCore's
  * `RequestShowGaps` and `RequestLiveController` (Requests/); the words for
- * a state, TitleData.swift's.
+ * a state, requests/RequestWords.swift's.
  *
- * The request sheet, Android's `RequestSheet`, belongs to the requests
- * screens, which aren't rebuilt yet: a missing season's card opens it
- * through `openSeasonRequest`, the one place to wire it.
+ * The request sheet, Android's `RequestSheet`, is the requests screens'
+ * (requests/RequestSheet.swift): a missing season's card opens it through
+ * `openSeasonRequest`.
  */
 
 /// A show's gaps on its page, with each season's state as the server
@@ -90,11 +90,13 @@ import SwiftUI
 
 /// Opens the request sheet for `season` of the show `gaps` is of, as a
 /// missing season's card does on Android (`RequestSheet` with `only`).
-// TODO(requests): open the request sheet, Android's RequestSheet(gaps.ref,
-// title.name, gaps.missing, gaps.first, defaultFuture = false, libraryId,
-// only = season), once the requests screens are rebuilt on the kit. Until
-// then the card shows the season's state and does nothing more.
-@MainActor func openSeasonRequest(title: Title, season: CatalogSeason, gaps: TitleGaps) {}
+@MainActor func openSeasonRequest(title: Title, season: CatalogSeason, gaps: TitleGaps, requests: RequestsHub?) {
+  guard let ref = gaps.ref else { return }
+  requests?.open(
+    RequestSheetModel(
+      ref: ref, name: title.name, seasons: gaps.missing, first: gaps.first, defaultFuture: false,
+      libraryId: title.libraryId, only: season.number, availability: season.availability.asTitle))
+}
 
 /// A season the server lacks, at the end of the seasons rail: its poster,
 /// or the show's, with its state in the corner and under its name. While
@@ -104,22 +106,23 @@ struct MissingSeasonCard: View {
   let season: CatalogSeason
   let gaps: TitleGaps
   @Environment(\.api) private var api
+  @Environment(\.requests) private var requests
 
   var body: some View {
     let label = seasonName(season.number)
-    let line = gapSeasonLine(season)
-    let asks = gapAsks(season.availability)
+    let line = requestSeasonLine(season)
+    let asks = season.availability.asks
     let card = VStack(alignment: .leading, spacing: 0) {
       PosterArt(name: Str.titleSeasonOf(title.name, label), poster: api?.art(season.poster ?? title.images.poster))
         .opacity(0.55)
         .overlay(alignment: .topTrailing) {
-          if let badge = gapBadge(season.availability) { RequestStateBadge(badge: badge).padding(Space.s1_5) }
+          if let badge = season.availability.badge { RequestStateBadge(badge: badge).padding(Space.s1_5) }
         }
       CardText(label, line)
     }
     Group {
       if asks {
-        Pressable(shape: .kit(Radius.md), wash: false, action: { openSeasonRequest(title: title, season: season, gaps: gaps) }) {
+        Pressable(shape: .kit(Radius.md), wash: false, action: { openSeasonRequest(title: title, season: season, gaps: gaps, requests: requests) }) {
           card
         }
       } else {
@@ -166,9 +169,9 @@ struct SeasonRestCard: View {
   @Environment(\.palette) private var palette
 
   var body: some View {
-    let more = gapMoreEpisodes(season)
+    let more = requestRestCount(season)
     let name = Str.requestsRestName(Str.titleSeasonOf(title.name, seasonName(season.number)))
-    let word = gapStateWord(season.availability, today: todayDay())
+    let word = season.availability.stateWord(today: todayDay())
     VStack(alignment: .leading, spacing: 0) {
       RoundedRectangle.kit(Radius.md)
         .fill(palette.foreground.opacity(0.03))
@@ -180,9 +183,9 @@ struct SeasonRestCard: View {
         .overlay {
           VStack(spacing: Space.s2) {
             if let word {
-              Text(gapStateText(word)).textStyle(.xs, weight: .medium).foregroundStyle(palette.mutedForeground)
+              Text(requestStateText(word)).textStyle(.xs, weight: .medium).foregroundStyle(palette.mutedForeground)
             }
-            if gapAsks(season.availability), let api {
+            if season.availability.asks, let api {
               MatineeButton(
                 Str.requestsRestAsk, icon: .plus, look: .secondary, size: .sm,
                 pending: gaps.asking.contains(season.number)

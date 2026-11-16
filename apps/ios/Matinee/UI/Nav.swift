@@ -51,6 +51,18 @@ enum Route: Hashable, Codable {
   case libraryEditor(id: String?)
   /// The server's folders, for the library being edited: opening at `start`, with the folders in `added` marked.
   case folderPicker(start: String?, added: [String])
+  /// A title the server doesn't have, by its provider's ids; `library`, where an ask would go.
+  case catalog(kind: String, provider: String, providerId: String, library: String?)
+  /// What the signed-in person asked for, from Home and the profile.
+  case asked
+  /// An admin's queue of requests, on `list` (a `RequestQueueList`), or Waiting.
+  case requests(list: String?)
+  /// One of Discover's rows in full, by its `discoverRailKey`.
+  case discoverRail(key: String)
+  /// All the provider's movies or shows, with the server's filters.
+  case catalogBrowse(kind: String)
+  /// Notices about requests on this device, from Settings.
+  case requestNotices
 }
 
 /// The player, over everything: a file, and where to start, or nil to go on where the person left off.
@@ -145,6 +157,13 @@ struct PlayerRequest: Identifiable, Hashable {
     if !current.isEmpty { paths[tab]?.removeLast() }
   }
 
+  /// Puts `route` in place of the page on top, as a catalog page becomes
+  /// the library title's once it arrives.
+  func replaceTop(with route: Route) {
+    guard !current.isEmpty else { return push(route) }
+    paths[tab]?[current.count - 1] = route
+  }
+
   /// Home's first page, from anywhere: Android's pop back to Home, which
   /// sits under every other page there.
   func home() {
@@ -190,7 +209,16 @@ struct PlayerRequest: Identifiable, Hashable {
         self?.push(.images(titleId: $0.titleId, season: $0.season, episode: $0.episode), single: true)
       },
       downloadsShow: { [weak self] in self?.push(.downloadsShow(titleId: $0), single: true) },
-      play: { [weak self] in self?.player = PlayerRequest(itemId: $0, start: $1) }
+      play: { [weak self] in self?.player = PlayerRequest(itemId: $0, start: $1) },
+      catalog: { [weak self] ref, library in
+        self?.push(.catalog(kind: ref.kind, provider: ref.provider, providerId: ref.providerId, library: library))
+      },
+      arrived: { [weak self] in self?.replaceTop(with: .title(id: $0)) },
+      asked: { [weak self] in self?.push(.asked, single: true) },
+      requests: { [weak self] in self?.push(.requests(list: $0), single: true) },
+      discoverRail: { [weak self] in self?.push(.discoverRail(key: $0), single: true) },
+      catalogBrowse: { [weak self] in self?.push(.catalogBrowse(kind: $0), single: true) },
+      requestNotices: { [weak self] in self?.push(.requestNotices, single: true) }
     )
   }
 
@@ -267,6 +295,13 @@ struct RouteScreen: View {
       ImagesScreen(target: ImageTarget(titleId: titleId, season: season, episode: episode))
     case .libraryEditor(let id): LibraryEditorScreen(id: id, results: nav.results)
     case .folderPicker(let start, let added): FolderPickerScreen(start: start, added: added)
+    case .catalog(let kind, let provider, let providerId, let library):
+      CatalogScreen(ref: CatalogRef(kind: kind, provider: provider, providerId: providerId), library: library)
+    case .asked: AskedScreen()
+    case .requests(let list): RequestsScreen(start: list)
+    case .discoverRail(let key): DiscoverRailScreen(key: key)
+    case .catalogBrowse(let kind): CatalogBrowseScreen(kind: kind)
+    case .requestNotices: NoticeSettingsScreen()
     }
   }
 }
@@ -397,6 +432,15 @@ enum RoutePath {
         .profile,
         .folderPicker(
           start: query["start"], added: query["added"].map { $0.split(separator: ",").map(String.init) } ?? []))
+    case ("catalog", let kind?):
+      let ids = Array(rest.dropFirst())
+      guard ids.count == 2 else { return nil }
+      return .page(.home, .catalog(kind: kind, provider: ids[0], providerId: ids[1], library: query["library"]))
+    case ("asked", nil): return .page(.profile, .asked)
+    case ("requests", let list): return .page(.profile, .requests(list: list))
+    case ("discover", let key?): return .page(.search, .discoverRail(key: key))
+    case ("discover-browse", let kind?): return .page(.search, .catalogBrowse(kind: kind))
+    case ("request-notices", nil): return .page(.profile, .requestNotices)
     default: return nil
     }
   }

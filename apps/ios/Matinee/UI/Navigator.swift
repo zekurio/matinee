@@ -63,6 +63,21 @@ struct Navigator {
   /// over everything, as Android's own player activity.
   var play: (_ itemId: String, _ start: Double?) -> Void = { _, _ in }
 
+  /// A title the server doesn't have, its catalog page; `library` is where an ask would go.
+  var catalog: (_ ref: CatalogRef, _ library: String?) -> Void = { _, _ in }
+  /// The library title's page in place of the catalog page on top, once the title arrived.
+  var arrived: (_ titleId: String) -> Void = { _ in }
+  /// What the signed-in person asked for.
+  var asked: () -> Void = {}
+  /// An admin's queue of requests, on a list (`RequestQueueList`), or Waiting.
+  var requests: (_ list: String?) -> Void = { _ in }
+  /// One of Discover's rows in full, by its `discoverRailKey`.
+  var discoverRail: (_ key: String) -> Void = { _ in }
+  /// All the provider's movies or shows, a `TitleKind`.
+  var catalogBrowse: (_ kind: String) -> Void = { _ in }
+  /// Notices about requests on this device.
+  var requestNotices: () -> Void = {}
+
   /// A movie's or show's page.
   func title(_ title: TitleSummary) { titleId(title.id) }
   func media() { tab(.media) }

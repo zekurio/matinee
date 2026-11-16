@@ -98,31 +98,6 @@ func formatPercent(_ share: Double) -> String {
   min(max(share, 0), 1).formatted(.percent.precision(.fractionLength(0)).locale(.app))
 }
 
-/// What the server says of a season it lacks, in words, as Android's
-/// `stateText`.
-func gapStateText(_ word: RequestStateWord) -> String {
-  switch word {
-  case .asked: Str.webCatalogStateAsked
-  case .coming(let progress):
-    progress.map { Str.webCatalogStateComingPercent(formatPercent($0)) } ?? Str.webCatalogStateComing
-  case .out(let day): Str.webCatalogStateOut(formatDay(day) ?? day)
-  case .notOut: Str.webCatalogStateNotOut
-  case .unavailable: Str.webCatalogStateUnavailable
-  }
-}
-
-/// A missing season under its name: its state, else its episodes, as
-/// Android's `seasonLineText`.
-func gapSeasonLine(_ season: CatalogSeason) -> String {
-  let today = todayDay()
-  if let word = gapStateWord(season.availability, today: today) { return gapStateText(word) }
-  switch requestSeasonDetail(season, today: today) {
-  case .episodes(let count): return Str.mediaEpisodeCount(count)
-  case .airing(let aired, let count): return Str.webCatalogSeasonAiring(String(aired), String(count))
-  case .release(let word): return gapStateText(word)
-  }
-}
-
 /// Today as the server writes a day, YYYY-MM-DD, for release dates.
 func todayDay() -> String {
   let formatter = DateFormatter()
