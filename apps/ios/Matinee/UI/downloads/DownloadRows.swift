@@ -3,12 +3,12 @@ import MatineeKit
 import SwiftUI
 
 /*
- * DownloadsScreen.kt's rows, its menu sheet, and the words for a
+ * DownloadsScreen.kt's rows, the sheet each opens, and the words for a
  * download's state, shared by the Downloads tab and a show's downloads
- * page. Android opens a bottom sheet from a row's menu button; iOS opens a
- * `Menu` there and a context menu on a long press, with the same items,
- * and adds swipe actions to the rows, as iOS lists have them. The sorting
- * is MatineeCore's (Downloads/DownloadList.swift), where it's tested.
+ * page. As on Android and the web on a phone, a row's actions are a sheet
+ * from the bottom, from its button or a long press, rather than iOS's
+ * context menu and swipes. What a row offers and how it stands are
+ * MatineeCore's (Downloads/DownloadList.swift), where they're tested.
  */
 
 /// Every row's picture is this wide, so the text beside them lines up down the list.
@@ -19,38 +19,78 @@ private let WIDE_THUMB_WIDTH: CGFloat = 160
 
 /// What went wrong with a download, in words: the server's own message as
 /// it sent it, or the app's for what it worked out itself.
-func failureText(_ entry: OfflineItem) -> String? {
-  switch entry.failure {
+func failureText(_ failure: DownloadFailure) -> String {
+  switch failure {
   case .server(let message): message
   case .forbidden: Str.downloadsErrorForbidden
   case .unreachable: Str.downloadsErrorUnreachable
   case .brokeOff: Str.downloadsErrorBrokeOff
-  case nil: entry.error
   }
 }
 
 /// How a download stands, in a line: its size, how far it is, paused,
 /// stopped and why, or waiting, for Wi-Fi when Settings says so.
-func downloadStatus(_ entry: OfflineItem, unmetered: Bool) -> String {
-  switch entry.state {
-  case .done: return formatBytes(entry.bytes)
-  case .running:
-    // Waiting to try again after an error, its task held back until then: why.
-    if entry.isBroken, let failure = failureText(entry) { return failure }
-    guard let total = entry.totalBytes else { return formatBytes(entry.bytes) }
-    return Str.downloadsOf(formatBytes(entry.bytes), formatBytes(total))
-  case .paused: return Str.downloadsStatePaused
-  case .failed: return Str.downloadsStateFailed(failureText(entry) ?? "")
-  case .queued:
-    // What went wrong, alone: the red and the retry button say the rest.
-    return failureText(entry) ?? (unmetered ? Str.downloadsStateWaitingUnmetered : Str.downloadsStateWaiting)
+func statusText(_ status: DownloadStatus) -> String {
+  switch status {
+  case .size(let bytes): formatBytes(bytes)
+  case .progress(let bytes, let total): Str.downloadsOf(formatBytes(bytes), formatBytes(total))
+  case .paused: Str.downloadsStatePaused
+  case .stopped(let failure): Str.downloadsStateFailed(failure.map(failureText) ?? "")
+  case .broken(let failure): failureText(failure)
+  case .waiting(let wifi): wifi ? Str.downloadsStateWaitingUnmetered : Str.downloadsStateWaiting
   }
 }
 
 /// "3 episodes · 1.2 GB", for a show's or a season's files.
 func episodesAndSize(_ entries: [OfflineItem]) -> String {
-  [Str.mediaEpisodeCount(entries.count), formatBytes(entries.reduce(Int64(0)) { $0 + $1.bytes })]
-    .joined(separator: " · ")
+  [Str.mediaEpisodeCount(entries.count), formatBytes(totalBytes(entries))].joined(separator: " · ")
+}
+
+func totalBytes(_ entries: [OfflineItem]) -> Int64 { entries.reduce(0) { $0 + $1.bytes } }
+
+/// The show and episode, or the movie, of a file.
+func downloadNames(_ item: MediaItem) -> (String, String?) {
+  let label = itemLabel(item)
+  if let code = episodeCode(item) { return (label.showName, Str.mediaCodeTitle(code, label.title)) }
+  return (label.title, nil)
+}
+
+/// Pause, resume, retry, or remove downloads, telling the person when one couldn't.
+@MainActor func changeDownloads(
+  _ downloads: Downloads, _ snackbar: Snackbar, _ ids: [String],
+  _ change: @escaping @MainActor (Downloads, String) async throws -> Void
+) {
+  // TODO(strings): downloads_change_failed, "Couldn't change the download".
+  launchShowing(snackbar, Str.downloadsFailed) {
+    for id in ids { try await change(downloads, id) }
+  }
+}
+
+/// What a row's button or menu does about where a download stands, as an icon and words.
+private struct StateCommand {
+  let icon: Lucide
+  let iconSize: CGFloat
+  let label: String
+  let change: @MainActor (Downloads, String) async throws -> Void
+
+  init?(_ action: DownloadRowAction) {
+    switch action {
+    case .retry: self.init(.rotateCw, 18, Str.downloadsRetry) { try await $0.resume($1) }
+    case .pause: self.init(.pause, 14, Str.downloadsPause) { try await $0.pause($1) }
+    case .resume: self.init(.refreshCw, 18, Str.downloadsResume) { try await $0.resume($1) }
+    case .remove, .none: return nil
+    }
+  }
+
+  private init(
+    _ icon: Lucide, _ iconSize: CGFloat, _ label: String,
+    change: @escaping @MainActor (Downloads, String) async throws -> Void
+  ) {
+    self.icon = icon
+    self.iconSize = iconSize
+    self.label = label
+    self.change = change
+  }
 }
 
 /// Files to remove at once, with what to call them in the question.
@@ -62,59 +102,40 @@ struct Removal: Identifiable {
 
 extension View {
   /// Asks before removing several files at once, saying how much space it frees.
-  func removalAlert(_ removal: Binding<Removal?>) -> some View {
-    modifier(RemovalAlert(removal: removal))
-  }
-
-  /// A row of a downloads list: the page's gutter, its background, no line between.
-  func downloadRow(top: CGFloat = 0, bottom: CGFloat = 0) -> some View {
-    modifier(DownloadRowLook(top: top, bottom: bottom))
+  func removalDialog(_ removal: Binding<Removal?>) -> some View {
+    modifier(RemovalDialog(removal: removal))
   }
 }
 
-private struct DownloadRowLook: ViewModifier {
-  let top: CGFloat
-  let bottom: CGFloat
-  @Environment(\.palette) private var palette
-
-  func body(content: Content) -> some View {
-    content
-      .listRowInsets(EdgeInsets(top: 2 + top, leading: Space.gutter, bottom: 2 + bottom, trailing: Space.gutter))
-      .listRowBackground(palette.background)
-      .listRowSeparator(.hidden)
-  }
-}
-
-private struct RemovalAlert: ViewModifier {
+private struct RemovalDialog: ViewModifier {
   @Binding var removal: Removal?
+  @State private var shown: Removal?
   @Environment(Downloads.self) private var downloads
   @Environment(\.snackbar) private var snackbar
 
   func body(content: Content) -> some View {
-    content.alert(
-      removal.map { Str.downloadsRemoveNamedConfirm($0.name) } ?? "",
-      isPresented: Binding(get: { removal != nil }, set: { if !$0 { removal = nil } }),
-      presenting: removal
-    ) { removal in
-      Button(Str.commonRemove, role: .destructive) {
-        self.removal = nil
-        let ids = removal.entries.map(\.id)
-        let downloads = downloads
-        launchShowing(snackbar, Str.downloadsFailed) {
-          for id in ids { try await downloads.remove(id) }
-        }
+    // The question keeps its words while it fades, after `removal` is cleared.
+    let asked = removal ?? shown
+    content
+      .confirmDialog(
+        isPresented: Binding(get: { removal != nil }, set: { if !$0 { removal = nil } }),
+        title: asked.map { Str.downloadsRemoveNamedConfirm($0.name) } ?? "",
+        message: asked.map { Str.downloadsRemoveAllBody(formatBytes(totalBytes($0.entries))) },
+        confirm: Str.commonRemove
+      ) {
+        guard let asked else { return }
+        changeDownloads(downloads, snackbar, asked.entries.map(\.id)) { try await $0.remove($1) }
       }
-      Button(Str.commonCancel, role: .cancel) { self.removal = nil }
-    } message: { removal in
-      Text(Str.downloadsRemoveAllBody(formatBytes(removal.entries.reduce(Int64(0)) { $0 + $1.bytes })))
-    }
+      .onChange(of: removal?.id) { if let removal { shown = removal } }
   }
 }
 
-/// A list's name, with room for an action at its end.
+/// A list's name, with room for an action at its end: the web's settings
+/// heading, `text-base font-semibold tracking-tight`.
 struct ListHeading<Action: View>: View {
   let text: String
   @ViewBuilder var action: () -> Action
+  @Environment(\.palette) private var palette
 
   init(_ text: String, @ViewBuilder action: @escaping () -> Action) {
     self.text = text
@@ -122,41 +143,20 @@ struct ListHeading<Action: View>: View {
   }
 
   var body: some View {
-    HStack(spacing: 8) {
-      Text(text).textStyle(.base, weight: .semibold).accessibilityAddTraits(.isHeader)
+    HStack(spacing: Space.s2) {
+      Text(text).textStyle(.base, weight: .semibold, tracking: .tight).foregroundStyle(palette.foreground)
+        .accessibilityAddTraits(.isHeader)
         .frame(maxWidth: .infinity, alignment: .leading)
       action()
     }
     .frame(minHeight: TouchTarget)
-    .padding(.top, 12)
-    .padding(.bottom, 4)
+    .padding(.top, Space.s4)
+    .padding(.bottom, Space.s1)
   }
 }
 
 extension ListHeading where Action == EmptyView {
   init(_ text: String) { self.init(text) { EmptyView() } }
-}
-
-/// A heading's action in words, in the accent, as Android's text button.
-struct HeadingButton: View {
-  let label: String
-  let action: () -> Void
-  @Environment(\.palette) private var palette
-
-  init(_ label: String, action: @escaping () -> Void) {
-    self.label = label
-    self.action = action
-  }
-
-  var body: some View {
-    Button(action: action) {
-      Text(label).textStyle(.sm, weight: .medium).foregroundStyle(palette.accent)
-        .padding(.horizontal, 12)
-        .frame(minHeight: TouchTarget)
-        .contentShape(Rectangle())
-    }
-    .buttonStyle(LegacyRoundPress())
-  }
 }
 
 /// A file's saved picture over the title's tone, or the film icon without one.
@@ -176,37 +176,54 @@ struct DownloadThumb: View {
   }
 }
 
-/// A row's picture and text beside it; at the accessibility sizes, the
-/// picture over the text, so the words get the row's width.
-private struct RowBody<Lines: View>: View {
+/// A row's picture and the lines beside it, pressed as one, with the
+/// button at its end; at the accessibility sizes, the picture over the
+/// lines, so the words get the row's width.
+private struct DownloadRowLayout<Lines: View, Trailing: View>: View {
   let entry: OfflineItem?
   let toneKey: String
-  @ViewBuilder let text: () -> Lines
+  let action: () -> Void
+  let onLongPress: (() -> Void)?
+  var hint: String?
+  @ViewBuilder let lines: () -> Lines
+  @ViewBuilder let trailing: () -> Trailing
   @Environment(\.dynamicTypeSize) private var typeSize
   @Environment(\.windowSize) private var window
 
   var body: some View {
     let large = typeSize.isAccessibilitySize
-    let layout = large ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8)) : AnyLayout(HStackLayout(spacing: 14))
-    layout {
-      DownloadThumb(entry: entry, toneKey: toneKey)
-        .frame(width: isWide(window) ? WIDE_THUMB_WIDTH : THUMB_WIDTH)
-      text()
+    let layout =
+      large
+      ? AnyLayout(VStackLayout(alignment: .leading, spacing: Space.s2)) : AnyLayout(HStackLayout(spacing: Space.s3_5))
+    HStack(spacing: Space.s2) {
+      Pressable(
+        shape: .kit(Radius.md), action: action, onLongPress: onLongPress, longPressLabel: Str.titleMoreActions
+      ) {
+        layout {
+          DownloadThumb(entry: entry, toneKey: toneKey)
+            .frame(width: isWide(window) ? WIDE_THUMB_WIDTH : THUMB_WIDTH)
+          lines()
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .multilineTextAlignment(.leading)
+        }
+        .padding(.vertical, Space.s2)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .multilineTextAlignment(.leading)
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
+        .accessibilityHint(hint ?? "")
+      }
+      trailing()
     }
-    .padding(.vertical, 8)
-    .contentShape(Rectangle())
   }
 }
 
-/// Lines that stay on one line beside a picture, and wrap at the accessibility sizes, where they have the row.
+/// Lines that stay on one line beside a picture, and wrap at the
+/// accessibility sizes, where they have the row.
 private struct RowLines: ViewModifier {
   let lines: Int
   @Environment(\.dynamicTypeSize) private var typeSize
 
   func body(content: Content) -> some View {
-    // A menu's label keeps to the height it's offered unless its lines may say so.
     content.lineLimit(typeSize.isAccessibilitySize ? nil : lines)
       .fixedSize(horizontal: false, vertical: true)
   }
@@ -217,7 +234,7 @@ extension View {
 }
 
 /// The round, quiet button at a row's end, its column the same down the list.
-private struct RowIconButton: View {
+private struct RowButton: View {
   let icon: Lucide
   let label: String
   var iconSize: CGFloat = 18
@@ -225,252 +242,119 @@ private struct RowIconButton: View {
   @Environment(\.palette) private var palette
 
   var body: some View {
-    LegacyRoundIconButton(icon, label: label, size: 40, iconSize: iconSize, tint: palette.mutedForeground, background: .clear, action: action)
+    RoundIconButton(icon, label: label, look: .ghost, size: 40, iconSize: iconSize, tint: palette.mutedForeground,
+      action: action)
   }
 }
 
-/// The menu button at a row's end, opening the same items a long press does.
-private struct RowMenuButton<Items: View>: View {
-  @ViewBuilder let items: () -> Items
-  @Environment(\.palette) private var palette
-
-  var body: some View {
-    Menu {
-      items().tint(palette.foreground)
-    } label: {
-      LucideIcon(.ellipsis, size: 18, tint: palette.mutedForeground, scales: false)
-        .frame(width: 40, height: 40)
-        .frame(minWidth: TouchTarget, minHeight: TouchTarget)
-        .contentShape(Rectangle())
-    }
-    .buttonStyle(LegacyRoundPress())
-    .accessibilityLabel(Str.titleMoreActions)
-    .accessibilityShowsLargeContentViewer {
-      Image(Lucide.ellipsis)
-      Text(Str.titleMoreActions)
-    }
-  }
-}
-
-/// A downloaded show: its name, how many episodes and how much space; a tap opens its episodes.
+/// A downloaded show: its name, how many episodes and how much space; a
+/// tap opens its episodes, a long press its sheet.
 struct ShowRow: View {
   let show: ShowDownloads
-  @Binding var removing: Removal?
+  let onMore: () -> Void
   @Environment(\.navigator) private var nav
-  @Environment(\.offline) private var offline
   @Environment(\.palette) private var palette
 
   var body: some View {
-    let entries = show.entries
-    let title = show.title
-    Button { nav.downloadsShow(title.id) } label: {
-      HStack(spacing: 14) {
-        RowBody(entry: show.newestEntry, toneKey: title.name) {
-          VStack(alignment: .leading, spacing: 0) {
-            Text(title.name).textStyle(.sm, weight: .medium).foregroundStyle(palette.foreground).rowLines(1)
-            Text(episodesAndSize(entries)).textStyle(.px13).foregroundStyle(palette.mutedForeground).rowLines(1)
-          }
-        }
-        LucideIcon(.chevronRight, size: 18, tint: palette.mutedForeground)
+    DownloadRowLayout(
+      entry: show.newestEntry, toneKey: show.title.name, action: { nav.downloadsShow(show.title.id) },
+      onLongPress: onMore
+    ) {
+      VStack(alignment: .leading, spacing: 0) {
+        Text(show.title.name).textStyle(.sm, weight: .medium).foregroundStyle(palette.foreground).rowLines(2)
+        Text(episodesAndSize(show.entries)).textStyle(.px13).foregroundStyle(palette.mutedForeground).rowLines(1)
       }
-      .accessibilityElement(children: .combine)
-    }
-    .buttonStyle(LegacyCardPress())
-    .contentShape(.contextMenuPreview, RoundedRectangle.kit(Radius.md))
-    .contextMenu {
-      Group {
-        if !offline {
-          Button { nav.titleId(title.id) } label: { Label { Text(Str.mediaHeroEpisodes) } icon: { Image(Lucide.info) } }
-        }
-        Button(role: .destructive) {
-          removing = Removal(name: title.name, entries: entries)
-        } label: {
-          Label { Text(Str.downloadsRemoveNamed(title.name)) } icon: { Image(Lucide.trash) }
-        }
-      }
-      .tint(palette.foreground)
-    }
-    .swipeActions(edge: .trailing) {
-      Button {
-        removing = Removal(name: title.name, entries: entries)
-      } label: {
-        Label { Text(Str.downloadsRemoveNamed(title.name)) } icon: { Image(Lucide.trash) }
-      }
-      .tint(palette.destructive)
+    } trailing: {
+      LucideIcon(.chevronRight, size: 18, tint: palette.mutedForeground)
+        .frame(width: 40, height: 40)
+        .accessibilityHidden(true)
     }
   }
 }
 
-/// A file on the phone: a tap plays it, the menu, a long press, or a swipe removes it.
+/// A file on the device: a tap plays it, its button or a long press opens its sheet.
 struct DoneRow: View {
   let entry: OfflineItem
   let primary: String
   let secondary: String?
+  let onMore: () -> Void
   @Environment(\.navigator) private var nav
   @Environment(\.palette) private var palette
 
   var body: some View {
-    HStack(spacing: 14) {
-      Button { nav.play(entry.id, nil) } label: {
-        RowBody(entry: entry, toneKey: entry.item.title?.name ?? primary) {
-          VStack(alignment: .leading, spacing: 0) {
-            Text(primary).textStyle(.sm).foregroundStyle(palette.foreground).rowLines(2)
-            if let secondary {
-              Text(secondary).textStyle(.px13).foregroundStyle(palette.mutedForeground).rowLines(1)
-            }
-            Text(formatBytes(entry.bytes)).textStyle(.px13).foregroundStyle(palette.foregroundFaint).rowLines(1)
-          }
+    DownloadRowLayout(
+      entry: entry, toneKey: entry.item.title?.name ?? primary, action: { nav.play(entry.id, nil) },
+      onLongPress: onMore, hint: Str.titlePlay
+    ) {
+      VStack(alignment: .leading, spacing: 0) {
+        Text(primary).textStyle(.sm, weight: .medium).foregroundStyle(palette.foreground).rowLines(2)
+        if let secondary {
+          Text(secondary).textStyle(.px13).foregroundStyle(palette.mutedForeground).rowLines(1)
         }
-        .accessibilityElement(children: .combine)
-        .accessibilityHint(Str.titlePlay)
+        Text(formatBytes(entry.bytes)).textStyle(.px13).foregroundStyle(palette.foregroundFaint).rowLines(1)
       }
-      .buttonStyle(LegacyCardPress())
-      .contentShape(.contextMenuPreview, RoundedRectangle.kit(Radius.md))
-      .contextMenu { DownloadMenuItems(entry: entry).tint(palette.foreground) }
-      RowMenuButton { DownloadMenuItems(entry: entry) }
+    } trailing: {
+      RowButton(icon: .ellipsis, label: Str.titleMoreActions, action: onMore)
     }
-    .downloadSwipes(entry)
   }
 }
 
 /// A file still coming: how far it is, as a bar and in words, and a button
-/// to pause it or go on. A tap opens its menu, as a long press does.
+/// to pause it, go on, try again, or, refused, remove it. A tap opens its
+/// sheet, as a long press does.
 struct ComingRow: View {
   let entry: OfflineItem
   let primary: String
   let secondary: String?
+  let onMore: () -> Void
   @Environment(Downloads.self) private var downloads
   @Environment(\.snackbar) private var snackbar
   @Environment(\.palette) private var palette
 
   var body: some View {
     let broken = entry.isBroken
-    HStack(spacing: 14) {
-      Menu {
-        DownloadMenuItems(entry: entry).tint(palette.foreground)
-      } label: {
-        RowBody(entry: entry, toneKey: entry.item.title?.name ?? primary) {
-          // One line each, so the name, the bar, and how it stands fit beside the picture.
-          VStack(alignment: .leading, spacing: 2) {
-            Text(primary).textStyle(.sm).foregroundStyle(palette.foreground).rowLines(1)
-            if let secondary {
-              Text(secondary).textStyle(.px13).foregroundStyle(palette.mutedForeground).rowLines(1)
-            }
-            if let progress = entry.progress {
-              DownloadProgress(
-                progress: progress, color: broken ? palette.destructive : entry.isMoving ? palette.accent : palette.mutedForeground)
-            }
-            Text(downloadStatus(entry, unmetered: downloads.unmeteredOnly)).textStyle(.px13)
-              .foregroundStyle(broken ? palette.destructive : palette.foregroundFaint)
-              // What went wrong, often the server's own words, gets a second line rather than being cut.
-              .rowLines(broken ? 2 : 1)
-          }
+    let status = downloadStatus(entry, wifiOnly: downloads.unmeteredOnly)
+    DownloadRowLayout(entry: entry, toneKey: entry.item.title?.name ?? primary, action: onMore, onLongPress: onMore) {
+      // One line each, so the name, the bar, and how it stands fit beside the picture.
+      VStack(alignment: .leading, spacing: Space.s0_5) {
+        Text(primary).textStyle(.sm, weight: .medium).foregroundStyle(palette.foreground).rowLines(1)
+        if let secondary {
+          Text(secondary).textStyle(.px13).foregroundStyle(palette.mutedForeground).rowLines(1)
         }
-        .accessibilityElement(children: .combine)
+        if let progress = entry.progress {
+          ProgressBar(
+            progress, height: 3, track: palette.secondary,
+            fill: broken ? palette.destructive : entry.isMoving ? palette.accent : palette.mutedForeground
+          )
+          .padding(.vertical, 3)
+          .motion(Motion.move, value: progress)
+          .accessibilityElement()
+          .accessibilityValue(Text(progress, format: .percent.precision(.fractionLength(0)).locale(.app)))
+        }
+        Text(statusText(status)).textStyle(.px13)
+          .foregroundStyle(broken ? palette.destructive : palette.foregroundFaint)
+          // What went wrong, often the server's own words, gets a second line rather than being cut.
+          .rowLines(broken ? 2 : 1)
       }
-      .buttonStyle(LegacyCardPress())
-      .contentShape(.contextMenuPreview, RoundedRectangle.kit(Radius.md))
-      .contextMenu { DownloadMenuItems(entry: entry).tint(palette.foreground) }
-      // The same weight as a finished row's menu button, so the column of buttons matches.
-      if entry.isRefused {
-        // Refused, trying again would only be refused again: what's left is to remove it.
-        RowIconButton(icon: .trash, label: Str.downloadsRemove) { run { try await $0.remove(entry.id) } }
-      } else if broken {
-        // One that broke off, or waits to try again, can be tried again at once.
-        RowIconButton(icon: .rotateCw, label: Str.downloadsRetry) { run { try await $0.resume(entry.id) } }
-      } else if entry.isMoving {
-        RowIconButton(icon: .pause, label: Str.downloadsPause, iconSize: 14) { run { try await $0.pause(entry.id) } }
-      } else {
-        RowIconButton(icon: .refreshCw, label: Str.downloadsResume) { run { try await $0.resume(entry.id) } }
+    } trailing: {
+      let action = rowAction(entry)
+      if let command = StateCommand(action) {
+        RowButton(icon: command.icon, label: command.label, iconSize: command.iconSize) {
+          changeDownloads(downloads, snackbar, [entry.id], command.change)
+        }
+      } else if action == .remove {
+        RowButton(icon: .trash, label: Str.downloadsRemove) {
+          changeDownloads(downloads, snackbar, [entry.id]) { try await $0.remove($1) }
+        }
       }
     }
-    .downloadSwipes(entry)
-  }
-
-  private func run(_ change: @escaping (Downloads) async throws -> Void) {
-    let downloads = downloads
-    launchShowing(snackbar, Str.downloadsFailed) { try await change(downloads) }
   }
 }
 
-/// How far a download is: a thin bar in its state's color, moving on as it comes.
-private struct DownloadProgress: View {
-  let progress: Double
-  let color: Color
-  @Environment(\.palette) private var palette
-
-  var body: some View {
-    Capsule()
-      .fill(palette.secondary)
-      .overlay(alignment: .leading) {
-        GeometryReader { proxy in
-          Capsule().fill(color).frame(width: proxy.size.width * min(max(progress, 0), 1))
-        }
-      }
-      .frame(height: 3)
-      .padding(.vertical, 3)
-      .motion(Motion.move, value: progress)
-      .accessibilityElement()
-      .accessibilityValue(Text(progress, format: .percent.precision(.fractionLength(0)).locale(.app)))
-  }
-}
-
-extension View {
-  /// A row's swipes: removing it from the end, and from the start pausing,
-  /// going on, or trying again, as the row's button does.
-  fileprivate func downloadSwipes(_ entry: OfflineItem) -> some View {
-    modifier(DownloadSwipes(entry: entry))
-  }
-}
-
-private struct DownloadSwipes: ViewModifier {
-  let entry: OfflineItem
-  @Environment(Downloads.self) private var downloads
-  @Environment(\.snackbar) private var snackbar
-  @Environment(\.palette) private var palette
-
-  func body(content: Content) -> some View {
-    content
-      .swipeActions(edge: .trailing) {
-        Button { run { try await $0.remove(entry.id) } } label: {
-          Label { Text(Str.downloadsRemove) } icon: { Image(Lucide.trash) }
-        }
-        .tint(palette.destructive)
-      }
-      .swipeActions(edge: .leading) {
-        if let action = stateAction(entry) {
-          Button { run(action.change) } label: { Label { Text(action.label) } icon: { Image(action.icon) } }
-            .tint(palette.accent)
-        }
-      }
-  }
-
-  private func run(_ change: @escaping (Downloads) async throws -> Void) {
-    let downloads = downloads
-    launchShowing(snackbar, Str.downloadsFailed) { try await change(downloads) }
-  }
-}
-
-/// What can be done about where a download stands: try it again, pause it,
-/// or go on with it. Nothing for one that's done, or that the server refused.
-private func stateAction(_ entry: OfflineItem) -> StateAction? {
-  let id = entry.id
-  if entry.state == .done || entry.isRefused { return nil }
-  if entry.isBroken { return StateAction(icon: .rotateCw, label: Str.downloadsRetry) { try await $0.resume(id) } }
-  if entry.isMoving { return StateAction(icon: .pause, label: Str.downloadsPause) { try await $0.pause(id) } }
-  return StateAction(icon: .refreshCw, label: Str.downloadsResume) { try await $0.resume(id) }
-}
-
-private struct StateAction {
-  let icon: Lucide
-  let label: String
-  let change: (Downloads) async throws -> Void
-}
-
-/// A download's menu, from its button, a long press, or a tap on one still
-/// coming: where it stands' action, Play once it's on the phone, its page
-/// while the server's there, and removing it.
-struct DownloadMenuItems: View {
+/// A download's sheet, from its button, a long press, or a tap on one still
+/// coming: what it is, where it stands' action, Play once it's on the
+/// device, its page while the server's there, and removing it.
+struct DownloadActions: View {
   let entry: OfflineItem
   @Environment(Downloads.self) private var downloads
   @Environment(\.navigator) private var nav
@@ -478,24 +362,63 @@ struct DownloadMenuItems: View {
   @Environment(\.snackbar) private var snackbar
 
   var body: some View {
-    if let action = stateAction(entry) {
-      Button { run(action.change) } label: { Label { Text(action.label) } icon: { Image(action.icon) } }
+    let (primary, secondary) = downloadNames(entry.item)
+    let id = entry.id
+    VStack(spacing: 0) {
+      SheetHeader(primary, subtitle: secondary ?? statusLine)
+      if let command = StateCommand(rowAction(entry)) {
+        SheetItem(command.label, icon: command.icon) { changeDownloads(downloads, snackbar, [id], command.change) }
+      }
+      if entry.state == .done {
+        SheetItem(Str.titlePlay, icon: .playOutline) { nav.play(id, nil) }
+      }
+      if !offline {
+        let item = entry.item
+        SheetItem(Str.mediaHeroDetails, icon: .info) { nav.item(item) }
+      }
+      SheetItem(Str.downloadsRemove, icon: .trash, destructive: true) {
+        changeDownloads(downloads, snackbar, [id]) { try await $0.remove($1) }
+      }
     }
-    if entry.state == .done {
-      Button { nav.play(entry.id, nil) } label: { Label { Text(Str.titlePlay) } icon: { Image(Lucide.playOutline) } }
-    }
-    if !offline {
-      Button { nav.item(entry.item) } label: { Label { Text(Str.mediaHeroDetails) } icon: { Image(Lucide.info) } }
-    }
-    Button(role: .destructive) {
-      run { try await $0.remove(entry.id) }
-    } label: {
-      Label { Text(Str.downloadsRemove) } icon: { Image(Lucide.trash) }
-    }
+    .padding(.vertical, Space.s2)
   }
 
-  private func run(_ change: @escaping (Downloads) async throws -> Void) {
-    let downloads = downloads
-    launchShowing(snackbar, Str.downloadsFailed) { try await change(downloads) }
+  /// A movie has no second name: how it stands goes under it instead.
+  private var statusLine: String {
+    statusText(downloadStatus(entry, wifiOnly: downloads.unmeteredOnly))
+  }
+}
+
+/// A downloaded show's sheet: pause or resume what's still coming, its
+/// page while the server's there, and removing every episode.
+struct ShowActions: View {
+  let title: TitleSummary
+  let entries: [OfflineItem]
+  let onRemove: () -> Void
+  @Environment(Downloads.self) private var downloads
+  @Environment(\.navigator) private var nav
+  @Environment(\.offline) private var offline
+  @Environment(\.snackbar) private var snackbar
+
+  var body: some View {
+    let commands = ShowCommands(entries)
+    VStack(spacing: 0) {
+      SheetHeader(title.name, subtitle: episodesAndSize(entries))
+      if !commands.pause.isEmpty {
+        SheetItem(Str.downloadsPauseAll, icon: .pause) {
+          changeDownloads(downloads, snackbar, commands.pause) { try await $0.pause($1) }
+        }
+      }
+      if !commands.resume.isEmpty {
+        SheetItem(Str.downloadsResumeAll, icon: .refreshCw) {
+          changeDownloads(downloads, snackbar, commands.resume) { try await $0.resume($1) }
+        }
+      }
+      if !offline {
+        SheetItem(Str.mediaHeroEpisodes, icon: .info) { nav.title(title) }
+      }
+      SheetItem(Str.downloadsRemoveNamed(title.name), icon: .trash, destructive: true, action: onRemove)
+    }
+    .padding(.vertical, Space.s2)
   }
 }

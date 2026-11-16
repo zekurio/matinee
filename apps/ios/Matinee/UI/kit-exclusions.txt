@@ -7,7 +7,6 @@
 # screen uses the Legacy… controls in it. See Matinee/UI/README.md.
 
 browse/
-downloads/
 legacy/
 media/
 metadata/

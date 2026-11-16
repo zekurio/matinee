@@ -136,8 +136,15 @@ struct ActionsHost: ViewModifier {
         Color.clear.matineeSheet(item: $actions.watched) { ask in WatchedAtSheet(ask) }
       }
       .background { WatchedDayDialog(ask: $actions.watchedDay) }
-      // The download sheets are the downloads screens' own, not yet on the kit (legacy/).
-      .legacyDownloadSheets(download: $actions.download, files: $actions.files)
+      .background {
+        Color.clear.matineeSheet(
+          isPresented: Binding(get: { actions.download != nil }, set: { if !$0 { actions.download = nil } }),
+          size: .large
+        ) { if let item = actions.download { DownloadSheet(item: item).id(item.id) } }
+      }
+      .background {
+        Color.clear.matineeSheet(item: $actions.files, size: .mediumAndLarge) { DownloadFilesSheet(files: $0) }
+      }
       .task(id: user?.isAdmin == true && !offline) {
         guard user?.isAdmin == true, !offline, let api else { return }
         await actions.loadProviders(api)
