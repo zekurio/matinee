@@ -22,37 +22,28 @@ struct TrickplayFrameView: View {
 /// holds many frames, so a scrub across it loads it once.
 @Observable final class TrickplayTiles {
   static let shared = TrickplayTiles()
-  private var sheets: [String: CGImage] = [:]
-  @ObservationIgnored private var loading: Set<String> = []
+  private let cache = TrickplayTileCache<CGImage>()
 
   /// The frame cut from its sheet, or nil while the sheet loads.
   func frame(_ frame: TrickplayFrame, _ controller: PlayerController) -> UIImage? {
-    guard let sheet = sheets[frame.url] else {
-      load(frame.url, controller)
-      return nil
-    }
+    guard let sheet = cache.tile(frame.url, load: loader(frame.url, controller)) else { return nil }
     let rect = CGRect(x: frame.x, y: frame.y, width: frame.width, height: frame.height)
     return sheet.cropping(to: rect).map { UIImage(cgImage: $0) }
   }
 
   func clear() {
-    sheets = [:]
-    loading = []
+    cache.clear()
   }
 
-  private func load(_ address: String, _ controller: PlayerController) {
-    guard !loading.contains(address), let url = URL(string: address) else { return }
-    loading.insert(address)
-    Task {
+  private func loader(_ address: String, _ controller: PlayerController) -> @MainActor () async -> CGImage? {
+    {
+      guard let url = URL(string: address) else { return nil }
       let request = await controller.mediaRequest(url: url)
-      guard let (data, response) = try? await URLSession.shared.data(for: request),
-        (response as? HTTPURLResponse)?.statusCode == 200,
-        let image = UIImage(data: data)?.cgImage
-      else {
-        loading.remove(address)
-        return
-      }
-      sheets[address] = image
+      guard !Task.isCancelled,
+        let (data, response) = try? await URLSession.shared.data(for: request),
+        (response as? HTTPURLResponse)?.statusCode == 200
+      else { return nil }
+      return UIImage(data: data)?.cgImage
     }
   }
 }
