@@ -10,28 +10,21 @@ import {
 } from "@matinee/ui/components/dropdown-menu"
 import { cn } from "@matinee/ui/lib/utils"
 import { useQuery } from "@tanstack/react-query"
-import { Link, useNavigate, useRouterState } from "@tanstack/react-router"
+import { Link, useNavigate } from "@tanstack/react-router"
 import {
   ChartColumnIcon,
-  CheckIcon,
   ChevronDownIcon,
   CompassIcon,
   FilmIcon,
   HouseIcon,
   InboxIcon,
-  LibraryBigIcon,
   LogOutIcon,
   SettingsIcon,
   ShieldIcon,
   TvIcon,
   UserRoundIcon,
 } from "lucide-react"
-import {
-  type ComponentProps,
-  type ComponentType,
-  type ReactNode,
-  useEffect,
-} from "react"
+import { type ComponentType, type ReactNode, useEffect } from "react"
 
 import { tr } from "@/i18n"
 import { formatCount } from "@/lib/format"
@@ -54,9 +47,6 @@ export const libraryIcons = {
   movies: FilmIcon,
   shows: TvIcon,
 } satisfies Record<Library["kind"], ComponentType<{ className?: string }>>
-
-// Past this many libraries, the bar folds them into one menu.
-const INLINE_LIBRARIES = 3
 
 /**
  * The page column: the full window with a fixed gutter, like Jellyfin, so
@@ -89,25 +79,6 @@ const pillActive = "bg-foreground/10 text-foreground"
 /** The translucent capsule the bar sits in. */
 const glass =
   "bg-background/60 rounded-full border border-foreground/10 p-1 shadow-[0_6px_20px_-8px_rgb(0_0_0/0.25)] dark:shadow-[0_8px_24px_-6px_rgb(0_0_0/0.6)] backdrop-blur-xl backdrop-saturate-150"
-
-/** A menu item that marks the page you're on with a check. */
-function CurrentItem({
-  current,
-  className,
-  children,
-  ...props
-}: ComponentProps<typeof DropdownMenuItem> & { current?: boolean }) {
-  return (
-    <DropdownMenuItem
-      aria-current={current ? "page" : undefined}
-      className={cn(current && "font-medium", className)}
-      {...props}
-    >
-      {children}
-      {current && <CheckIcon className="text-muted-foreground ml-auto" />}
-    </DropdownMenuItem>
-  )
-}
 
 /** A tab's name, cut short with an ellipsis when the bar runs out of room. */
 function NavLabel({
@@ -154,66 +125,27 @@ function PillLink({
 }
 
 /**
- * Libraries inline while there are few, one menu once there are many.
- * Phones list them on the Media tab instead.
+ * Movies and Shows, each across every library of its kind, and only when
+ * there's a library of it. Phones list the libraries on the Media tab
+ * instead.
  */
-function LibraryLinks() {
+function KindLinks() {
   const libraries = useQuery(orpc.libraries.list.queryOptions())
-  const navigate = useNavigate()
-  const pathname = useRouterState({ select: (s) => s.location.pathname })
-  const list = libraries.data ?? []
-
-  if (list.length <= INLINE_LIBRARIES) {
-    return list.map((library) => (
-      <PillLink
-        key={library.id}
-        to="/libraries/$libraryId"
-        params={{ libraryId: library.id }}
-        icon={libraryIcons[library.kind]}
-      >
-        {library.name}
-      </PillLink>
-    ))
-  }
-
-  const current = list.find((library) =>
-    pathname.startsWith(`/libraries/${library.id}`),
-  )
-  const open = (library: Library) =>
-    void navigate({
-      to: "/libraries/$libraryId",
-      params: { libraryId: library.id },
-    })
-
+  const has = (kind: Library["kind"]) =>
+    libraries.data?.some((library) => library.kind === kind) ?? false
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        className={cn(
-          pillItem,
-          current && pillActive,
-          "data-popup-open:bg-foreground/10",
-        )}
-      >
-        <LibraryBigIcon />
-        <NavLabel>{current?.name ?? tr("shell.libraries")}</NavLabel>
-        <ChevronDownIcon className="text-muted-foreground !size-3.5" />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="center" sideOffset={8} className="min-w-52">
-        {list.map((library) => {
-          const Icon = libraryIcons[library.kind]
-          return (
-            <CurrentItem
-              key={library.id}
-              current={library.id === current?.id}
-              onClick={() => open(library)}
-            >
-              <Icon />
-              {library.name}
-            </CurrentItem>
-          )
-        })}
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <>
+      {has("movies") && (
+        <PillLink to="/movies" icon={libraryIcons.movies}>
+          {tr("shell.movies")}
+        </PillLink>
+      )}
+      {has("shows") && (
+        <PillLink to="/shows" icon={libraryIcons.shows}>
+          {tr("shell.shows")}
+        </PillLink>
+      )}
+    </>
   )
 }
 
@@ -383,7 +315,7 @@ function NavBar({ user }: { user: User }) {
             <PillLink to="/" exact icon={HouseIcon}>
               {tr("shell.home")}
             </PillLink>
-            <LibraryLinks />
+            <KindLinks />
             {discover && (
               <PillLink to="/discover" icon={CompassIcon}>
                 {tr("discover.title")}

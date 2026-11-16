@@ -14,3 +14,15 @@ export const BrowseSearch = t.object({
   ...titleListSearch,
 })
 export type BrowseSearch = t.infer<typeof BrowseSearch>
+
+/**
+ * The Movies or Shows page's search params: the search, the library to
+ * narrow to, every one of the kind by default, and the titles' filters
+ * and order.
+ */
+export const KindSearch = t.object({
+  q: t.string().min(1).optional().catch(undefined),
+  library: t.uuid().optional().catch(undefined),
+  ...titleListSearch,
+})
+export type KindSearch = t.infer<typeof KindSearch>

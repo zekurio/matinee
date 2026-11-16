@@ -36,4 +36,6 @@ export default {
   "browse.kind.all": "Alle",
   "browse.kind.movie": "Filme",
   "browse.kind.show": "Serien",
+  "browse.library": "Mediathek",
+  "browse.library.all": "Alle",
 } satisfies TranslationOf<typeof source>

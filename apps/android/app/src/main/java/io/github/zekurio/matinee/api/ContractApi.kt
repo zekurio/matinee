@@ -678,12 +678,13 @@ class TitlesApi internal constructor(private val transport: ApiTransport) {
         order: String? = null,
         limit: Int? = null,
         offset: Int? = null,
+        libraryId: String? = null,
     ): BrowsedTitles =
         transport.call(
             "POST",
             listOf("titles", "browse"),
             emptyList(),
-            transport.json(TitlesBrowseInput.serializer(), TitlesBrowseInput(query = query, kind = kind, filters = filters, sort = sort, order = order, limit = limit, offset = offset)),
+            transport.json(TitlesBrowseInput.serializer(), TitlesBrowseInput(query = query, kind = kind, filters = filters, sort = sort, order = order, limit = limit, offset = offset, libraryId = libraryId)),
             BrowsedTitles.serializer(),
         )
 
