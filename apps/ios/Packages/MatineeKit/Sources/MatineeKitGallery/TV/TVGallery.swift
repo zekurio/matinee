@@ -4,7 +4,7 @@
 
   /// The TV pages of the gallery.
   enum TVRoute: String, CaseIterable, Hashable, Identifiable {
-    case focus, scale, buttons, lists, panels, search, cards, grid, home, remote, phone
+    case focus, scale, buttons, lists, panels, feedback, search, cards, grid, home, remote, phone
 
     var id: String { rawValue }
 
@@ -15,6 +15,7 @@
       case .buttons: de ? "Schaltflächen und Chips" : "Buttons and chips"
       case .lists: de ? "Listen" : "Lists"
       case .panels: de ? "Seitenleisten" : "Side panels"
+      case .feedback: de ? "Hinweise, Toasts, Dialoge" : "Notices, toasts, dialogs"
       case .search: de ? "Suche, Uhr, Navigation" : "Search, clock, drawer"
       case .cards: de ? "Karten und Reihen" : "Cards and rows"
       case .grid: de ? "Posterraster" : "Poster grid"
@@ -31,6 +32,7 @@
       case .buttons: de ? "TVButton, Symbol- und Rundknöpfe, Chips" : "TVButton, icon and round buttons, chips"
       case .lists: de ? "Zeilen, Werte, Schalter, Überschriften" : "Rows, values, switches, headings"
       case .panels: de ? "Optionen und Aktionen am rechten Rand" : "Options and actions at the right edge"
+      case .feedback: de ? "Leere und fehlgeschlagene Reihen, Meldungen, Textfeld" : "Empty and failed rows, messages, the text field"
       case .search: de ? "Suchfeld, Uhr, die Leiste links" : "The search field, the clock, the left drawer"
       case .cards: de ? "Poster, Standbilder, Personen, Fokus-Gedächtnis" : "Posters, stills, people, focus memory"
       case .grid: de ? "Ein Raster mit Kopfzeile" : "A grid with its header and focus line"
@@ -47,6 +49,7 @@
       case .buttons: .playOutline
       case .lists: .list
       case .panels: .galleryHorizontalEnd
+      case .feedback: .bell
       case .search: .search
       case .cards: .film
       case .grid: .libraryBig
@@ -120,6 +123,7 @@
       case .buttons: TVButtonsPage()
       case .lists: TVListsPage()
       case .panels: TVPanelsPage()
+      case .feedback: TVFeedbackPage()
       case .search: TVSearchPage()
       case .cards: TVCardsPage()
       case .grid: TVGridPage()

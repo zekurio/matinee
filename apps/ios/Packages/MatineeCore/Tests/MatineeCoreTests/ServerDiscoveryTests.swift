@@ -89,4 +89,26 @@ struct ServerDiscoveryTests {
     { count += 1 }
     #expect(count == 0)
   }
+  /// A scan is unavailable only when it tried to send and every send failed.
+  @Test func unavailableOnlyWhenEverySendFailed() {
+    #expect(probesFailed([-1]))
+    #expect(probesFailed([-1, -1]))
+    #expect(!probesFailed([512, -1]))
+    #expect(!probesFailed([512]))
+    // Nowhere to send, as with no network: an empty scan, not an unavailable one.
+    #expect(!probesFailed([]))
+  }
+  @Test func scanThatSendsIsNotUnavailable() async {
+    var events: [DiscoveryEvent] = []
+    for await event in scanForServers(
+      timeoutMillis: 20, destinations: { [.init("127.0.0.1", port: 9)] })
+    { events.append(event) }
+    #expect(!events.contains(.unavailable))
+    // Nothing to send to at all is an empty scan too.
+    for await event in scanForServers(timeoutMillis: 20, destinations: { [] }) { events.append(event) }
+    for await event in scanForServers(
+      timeoutMillis: 20, destinations: { [.init("not an address")] })
+    { events.append(event) }
+    #expect(events.isEmpty)
+  }
 }

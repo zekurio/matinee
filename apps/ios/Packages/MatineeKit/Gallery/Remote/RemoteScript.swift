@@ -11,6 +11,8 @@ import XCTest
 ///   one press; `right*3` presses three times.
 /// - `hold:right:1.5`: holds a button that long, in seconds.
 /// - `wait:0.5`: waits.
+/// - `type:media.example.com`: types into the system keyboard while it's up,
+///   `+` for spaces.
 /// - `shot:name`: saves the screen to `REMOTE_OUT/name.png`.
 /// - `relaunch:-page+tv-buttons+-scheme+light`: starts the gallery again
 ///   with other arguments, `+` for spaces.
@@ -29,6 +31,8 @@ final class RemoteScript: XCTestCase {
   @MainActor
   func testScript() throws {
     executionTimeAllowance = 4 * 60 * 60
+    // A step that fails, like typing with no keyboard up, ends that script, not the session.
+    continueAfterFailure = true
     app = XCUIApplication()
     try FileManager.default.createDirectory(at: out, withIntermediateDirectories: true)
     app.launchArguments = arguments(env["REMOTE_ARGS"] ?? "")
@@ -69,6 +73,13 @@ final class RemoteScript: XCTestCase {
       switch parts[0] {
       case "wait":
         pause(Double(parts.count > 1 ? parts[1] : "1") ?? 1)
+      case "type":
+        // Into the system keyboard while it's up; `+` for spaces, as in relaunch.
+        let text = (parts.count > 1 ? parts.dropFirst().joined(separator: ":") : "").replacingOccurrences(of: "+", with: " ")
+        // The keyboard can take a few seconds to come up on a loaded Mac.
+        _ = app.keyboards.firstMatch.waitForExistence(timeout: 15)
+        app.typeText(text)
+        pause(0.3)
       case "shot":
         let file = out.appendingPathComponent("\(parts.count > 1 ? parts[1] : "shot").png")
         pause(settle)
@@ -80,7 +91,9 @@ final class RemoteScript: XCTestCase {
         pause(0.3)
       case "relaunch":
         app.terminate()
-        app.launchArguments = arguments((parts.count > 1 ? parts[1] : "").replacingOccurrences(of: "+", with: " "))
+        // An argument may hold a colon, as a server's address does.
+        let text = parts.count > 1 ? parts.dropFirst().joined(separator: ":") : ""
+        app.launchArguments = arguments(text.replacingOccurrences(of: "+", with: " "))
         app.launch()
         pause(launchWait)
       default:

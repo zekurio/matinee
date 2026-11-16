@@ -14,6 +14,11 @@ built_app := derived / "Build/Products/Debug-iphonesimulator/Matinee.app"
 xcodebuild := "xcodebuild -project Matinee.xcodeproj -scheme Matinee -derivedDataPath " + derived
 # The Mac's own copy of the kit's boundary test (Matinee/UI/README.md).
 boundary := "build/KitBoundary"
+# The Apple TV app's (MatineeTV/README.md): its own derived data, simulator, and build.
+tv_derived := env("MATINEE_TV_DERIVED_DATA", "build/TVDerivedData")
+tv_simulator := env("MATINEE_TV_SIMULATOR", "Apple TV 4K (4th generation)")
+tv_built_app := tv_derived / "Build/Products/Debug-appletvsimulator/Matinee.app"
+tv_xcodebuild := "xcodebuild -project Matinee.xcodeproj -scheme MatineeTV -derivedDataPath " + tv_derived
 
 [private]
 default:
@@ -70,8 +75,8 @@ test: boundary
     scripts/lucide.py --check
     {{ env("NODE", "nix shell nixpkgs#nodejs_24 -c node") }} scripts/themes.mjs --check
 
-# Fail on a stock SwiftUI control outside the kit, but in the folders Matinee/UI/kit-exclusions.txt lets through
-boundary:
+# Fail on a stock SwiftUI control outside the kit, but in the folders Matinee/UI/kit-exclusions.txt lets through, and on a phone component in the TV app
+boundary: tv-boundary
     cd Packages/MatineeKit && swift build --scratch-path ../../{{ boundary }} --target MatineeKitBoundaryTests -q
     cd Packages/MatineeKit && swift test --scratch-path ../../{{ boundary }} --skip-build --filter MatineeKitBoundaryTests -q
     cd Packages/MatineeKit && KIT_BOUNDARY_ROOT="$PWD/../../Matinee/UI" \
@@ -91,6 +96,56 @@ icons:
     scripts/lucide.py --kit
     scripts/lucide.py
     {{ env("NODE", "nix shell nixpkgs#nodejs_24 -c node") }} scripts/themes.mjs
+
+# Build the Apple TV app for any tvOS simulator without booting one; extra xcodebuild flags follow
+tv-build *args: generate
+    {{ tv_xcodebuild }} -configuration Debug -destination 'generic/platform=tvOS Simulator' CODE_SIGNING_ALLOWED=NO build {{ args }}
+
+# The TV simulator's build for running, signed ad hoc as `sim-build` is, for the active architecture only
+[private]
+tv-sim-build: generate
+    {{ tv_xcodebuild }} -configuration Debug -destination 'platform=tvOS Simulator,name={{ tv_simulator }}' CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- build
+
+# Build, install, and open the Apple TV app on a simulator (MATINEE_TV_SIMULATOR names it), with launch arguments after
+tv-run *args: tv-sim-build
+    xcrun simctl boot "{{ tv_simulator }}" 2>/dev/null || true
+    open -a Simulator
+    xcrun simctl install "{{ tv_simulator }}" "{{ tv_built_app }}"
+    xcrun simctl launch --terminate-running-process "{{ tv_simulator }}" {{ app }} {{ args }}
+
+# Open the Apple TV app signed in to the dev server (DEV.md) as `account`, with more launch arguments after
+tv-dev account="ios-admin" *args: tv-sim-build
+    xcrun simctl boot "{{ tv_simulator }}" 2>/dev/null || true
+    open -a Simulator 2>/dev/null || true
+    xcrun simctl install "{{ tv_simulator }}" "{{ tv_built_app }}"
+    xcrun simctl launch --terminate-running-process "{{ tv_simulator }}" {{ app }} \
+        -dev.server http://localhost:18420 -dev.token "$(scripts/dev/token {{ account }})" {{ args }}
+
+# Save what the TV simulator shows as build/tv-screenshots/<name>.png (MATINEE_TV_SIMULATOR names it)
+tv-shot name:
+    mkdir -p build/tv-screenshots
+    xcrun simctl io "{{ tv_simulator }}" screenshot "build/tv-screenshots/{{ name }}.png"
+
+# Drive the TV app with the Siri Remote and take screenshots: run, serve, send, install, or stop (MatineeTV/Remote/remote.sh)
+[positional-arguments]
+tv-remote *args:
+    MATINEE_TV_DERIVED_DATA="{{ tv_derived }}" SIMULATOR="{{ tv_simulator }}" MatineeTV/Remote/remote.sh "$@"
+
+# Start a remote session in the TV app signed in to the dev server as `account`, with more launch arguments after; then `just tv-remote send "<steps>"`
+[positional-arguments]
+tv-remote-dev account="ios-admin" *args:
+    MATINEE_TV_DERIVED_DATA="{{ tv_derived }}" SIMULATOR="{{ tv_simulator }}" MatineeTV/Remote/remote.sh serve \
+        "-dev.server http://localhost:18420 -dev.token $(scripts/dev/token "$1") ${*:2}"
+
+# Fail on a phone component, a phone text size, or a stock control in the Apple TV app's screens
+tv-boundary:
+    cd Packages/MatineeKit && swift build --scratch-path ../../{{ boundary }} --target MatineeKitBoundaryTests -q
+    cd Packages/MatineeKit && KIT_TV_BOUNDARY_ROOT="$PWD/../../MatineeTV" \
+        swift test --scratch-path ../../{{ boundary }} --skip-build --filter MatineeKitBoundaryTests -q
+
+# Draw the Apple TV app's layered icon and Top Shelf image from brand/ (scripts/tvicon.sh)
+tv-icons:
+    scripts/tvicon.sh
 
 # Delete the build output and the generated project
 clean:
