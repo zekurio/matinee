@@ -4,9 +4,10 @@ import SwiftUI
 
 /*
  * HomeScreen.kt, after the web's home.tsx: the featured carousel, Continue
- * watching, Next up, the recommendation rows, and what each library got
- * last. The loads are HomeData.swift's, the carousel HomeCarousel.swift's,
- * and the sections HomeSections.swift's. Offline, Home is the downloads
+ * watching, Next up, the recommendation rows, My requests, and what each
+ * library got last. The loads are HomeData.swift's, the carousel
+ * HomeCarousel.swift's, and the sections HomeSections.swift's; which rows
+ * show is MatineeCore's `homeRows`. Offline, Home is the downloads
  * (OfflineHome.swift).
  *
  * This is the pattern a screen follows (Matinee/UI/README.md): its loads in
@@ -37,7 +38,10 @@ struct HomeScreen: View {
 private struct OnlineHomeScreen: View {
   @State private var loaders = HomeLoaders()
   @State private var shelves = HomeShelves()
+  /// My requests, loaded here rather than in its row, so an empty one is left out.
+  @State private var asked = Loader<RequestPage>()
   @Environment(\.shellStyle) private var style
+  @Environment(\.actions) private var actions
 
   var body: some View {
     page
@@ -60,17 +64,27 @@ private struct OnlineHomeScreen: View {
 
   private var content: some View {
     let libraries = loaders.libraries
+    // Rows that have nothing are left out of the list rather than drawn
+    // empty, since the list puts its gap around every one.
+    let rows = homeRows(
+      resume: loaders.resume.state, nextUp: loaders.nextUp.state,
+      recommendations: homeRecommendations(loaders.recommendations.state.value),
+      hiding: actions?.hidden.keys ?? [], asked: asked.state.value?.items ?? [])
     return ScrollView {
       LazyVStack(alignment: .leading, spacing: style == .tablet ? Space.s10 : Space.s6) {
         top
         if libraries.state.value?.isEmpty == true {
           NoLibrariesNote()
         } else {
-          EpisodeSection(title: Str.browseContinueWatching, loader: loaders.resume)
-          EpisodeSection(title: Str.browseNextUp, loader: loaders.nextUp)
-          RecommendationRails(loader: loaders.recommendations)
-          // What the viewer asked for, on its way or lately come, as Android's Home has it.
-          AskedRail(.home)
+          ForEach(rows) { row in
+            switch row {
+            case .continueWatching: EpisodeSection(title: Str.browseContinueWatching, loader: loaders.resume)
+            case .nextUp: EpisodeSection(title: Str.browseNextUp, loader: loaders.nextUp)
+            case .recommended(let rail, let shown): RecommendationRail(rail: rail, shown: shown)
+            // What the viewer asked for, on its way or lately come, as Android's Home has it.
+            case .asked: AskedRow(items: asked.state.value?.items ?? [], fresh: true)
+            }
+          }
           switch libraries.state {
           case .loading: RailSkeleton(title: nil, art: .poster)
           case .failed: EmptyView()
@@ -82,7 +96,11 @@ private struct OnlineHomeScreen: View {
       .padding(.bottom, Space.s6)
     }
     .scrollsToTopOnReselect()
-    .statusBarScrim()
+    // Home's header sits below the status bar, not behind it, so at rest
+    // there's nothing to shade, and the frost's feather would blur the
+    // logo. It comes in as the page scrolls under the bar.
+    .statusBarScrim(fadesIn: true)
+    .loadsHomeAsked(asked)
     .refreshable { await refresh() }
   }
 
@@ -112,6 +130,7 @@ private struct OnlineHomeScreen: View {
   /// Everything on Home again, as a pull asks; the shelves fetch on their own.
   private func refresh() async {
     loaders.all.forEach { $0.reload() }
+    asked.reload()
     shelves.refresh()
     // All of them are out at once already; this only waits for them.
     await loaders.libraries.settled()

@@ -47,17 +47,31 @@ struct AskedCard: View {
   }
 }
 
-/// "My requests" as a row: on Home what's on its way and what came or was
-/// answered in the last three days, nothing when there's none, so Home
-/// stays about what's here; on the profile the latest of everything. The
-/// heading opens the whole list.
-struct AskedRail: View {
-  enum Place { case home, profile }
-  let place: Place
-  @State private var mine = Loader<RequestPage>()
+/// "My requests" as a row, its heading opening the whole list: on Home
+/// what's on its way and what came or was answered in the last three days,
+/// each `fresh` one with the accent dot; on the profile the latest of
+/// everything. It's drawn only with something in it: Home leaves it out of
+/// its list rather than draw it empty (`homeRows`).
+struct AskedRow: View {
+  let items: [RequestItem]
+  var fresh = false
   @Environment(\.navigator) private var nav
 
-  init(_ place: Place) { self.place = place }
+  var body: some View {
+    Rail(Str.webAskMineTitle, onTitleTap: nav.asked) {
+      ForEach(items, id: \.id) { item in
+        RailItem(.poster) { AskedCard(item: item, fresh: fresh) }
+      }
+    }
+    // A new ask at the front starts the row there again.
+    .id(items.first?.id)
+  }
+}
+
+/// The profile's "My requests", of the latest of everything, loading on
+/// its own; nothing when there's none.
+struct AskedRail: View {
+  @State private var mine = Loader<RequestPage>()
 
   var body: some View {
     let items = mine.state.value?.items ?? []
@@ -66,20 +80,30 @@ struct AskedRail: View {
         // Something to show, so it loads.
         Color.clear.frame(height: 0)
       } else {
-        Rail(Str.webAskMineTitle, onTitleTap: nav.asked) {
-          ForEach(items, id: \.id) { item in
-            RailItem(.poster) { AskedCard(item: item, fresh: place == .home) }
-          }
-        }
-        // A new ask at the front starts the row there again.
-        .id(items.first?.id)
+        AskedRow(items: items)
       }
     }
-    .loads(mine) { [place] api in
-      try await requestApi(api).requests.mine(limit: 24, filter: place == .home ? AskedFilter.inProgress.rawValue : AskedFilter.all.rawValue)
+    .loads(mine) { api in
+      try await requestApi(api).requests.mine(limit: 24, filter: AskedFilter.all.rawValue)
     }
     .reloadsOnAsk(mine)
     .followsRequests(askedInputs(items))
+  }
+}
+
+extension View {
+  /// Home's "My requests" into `mine`: what's on its way, and what came or
+  /// was answered in the last three days. Loaded with Home rather than in
+  /// the row, as Asked.kt's `rememberHomeAsked`, so Home leaves the row out
+  /// of its list when there's nothing: an empty one would still take the
+  /// list's gap on both sides, a double gap between the rows around it.
+  func loadsHomeAsked(_ mine: Loader<RequestPage>) -> some View {
+    self
+      .loads(mine) { api in
+        try await requestApi(api).requests.mine(limit: 24, filter: AskedFilter.inProgress.rawValue)
+      }
+      .reloadsOnAsk(mine)
+      .followsRequests(askedInputs(mine.state.value?.items ?? []))
   }
 }
 

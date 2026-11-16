@@ -109,36 +109,25 @@ struct NoLibrariesNote: View {
   }
 }
 
-/// Home's recommendation rows, of titles on the server the viewer hasn't
-/// watched: "Recommended for you", then a row or two of what's like
-/// something they watched. Loading, failing, and having none show nothing:
-/// a new account has none, and a placeholder would only fold away. A long
-/// press on a card offers "Not interested", which takes it off at once.
-struct RecommendationRails: View {
-  let loader: Loader<HomeRecommendations>
-  @Environment(\.actions) private var actions
+/// One of Home's recommendation rows, of titles on the server the viewer
+/// hasn't watched: "Recommended for you", or what's like something they
+/// watched. `shown` is its titles not marked "Not interested"; Home lists
+/// the row only with some (`homeRows`), and loading, failing, and having
+/// none show nothing: a new account has none, and a placeholder would only
+/// fold away. A long press on a card offers "Not interested", which takes
+/// it off at once.
+struct RecommendationRail: View {
+  let rail: HomeRecommendationRail
+  let shown: [RecommendedTitle]
 
   var body: some View {
-    let hidden = actions?.hidden.keys ?? []
-    if let recommendations = shown(loader.state.value) {
-      ForEach(recommendations.shownRails(hiding: hidden), id: \.key) { rail in
-        Rail(name(rail.name)) {
-          ForEach(rail.visible(hiding: hidden), id: \.title.id) { pick in
-            RailItem(.poster) {
-              PosterCard(pick.title, detail: formatYear(pick.title.year), recommended: pick.ref)
-            }
-          }
+    Rail(name(rail.name)) {
+      ForEach(shown, id: \.title.id) { pick in
+        RailItem(.poster) {
+          PosterCard(pick.title, detail: formatYear(pick.title.year), recommended: pick.ref)
         }
       }
     }
-  }
-
-  private func shown(_ value: HomeRecommendations?) -> HomeRecommendations? {
-    #if DEBUG
-      return HomeDevData.recommendations(value)
-    #else
-      return value
-    #endif
   }
 
   private func name(_ name: RecommendationRailName) -> String {
@@ -147,4 +136,14 @@ struct RecommendationRails: View {
     case .becauseWatched(let title): Str.webDiscoverRailBecauseWatched(title)
     }
   }
+}
+
+/// Home's recommendations as they show: the server's, or in a debug build
+/// with `-dev.recommendations`, stand-ins.
+func homeRecommendations(_ value: HomeRecommendations?) -> HomeRecommendations? {
+  #if DEBUG
+    return HomeDevData.recommendations(value)
+  #else
+    return value
+  #endif
 }

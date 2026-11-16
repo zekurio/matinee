@@ -96,7 +96,8 @@ public struct NavBar<ID: Hashable, Leading: View>: View {
 }
 
 /// The NavBar's surface: the page's background at 60% over a blur, solid
-/// under Reduce Transparency.
+/// under Reduce Transparency. The thinnest material, as the phone's tabs
+/// have it, so the veil is what colors it rather than the material's tint.
 private struct GlassCapsule: View {
   @Environment(\.palette) private var palette
   @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
@@ -105,18 +106,18 @@ private struct GlassCapsule: View {
     if reduceTransparency {
       Capsule().fill(palette.popover)
     } else {
-      Capsule().fill(.regularMaterial).environment(\.colorScheme, palette.scheme)
+      Capsule().fill(.ultraThinMaterial).environment(\.colorScheme, palette.scheme)
         .overlay(Capsule().fill(palette.background.opacity(0.6)))
     }
   }
 }
 
 extension View {
-  /// Floats `bar` at the top of this page, centered over a fade of the
-  /// page's background, as the web's: `from-background/90 via-background/50`
-  /// down 96 points. The page's safe area starts below it, so content
-  /// starts clear of it; art that bleeds to the top ignores the safe area
-  /// and runs under it.
+  /// Floats `bar` at the top of this page, centered, over the status bar's
+  /// frost (`StatusBarFrost`), as a phone's page has it once it scrolls:
+  /// the page blurred and veiled across the status bar, thinning out below
+  /// it. The page's safe area starts below the bar, so content starts clear
+  /// of it; art that bleeds to the top ignores the safe area and runs under it.
   public func navBar<ID: Hashable, Leading: View>(_ bar: NavBar<ID, Leading>) -> some View {
     modifier(NavBarModifier(bar: bar))
   }
@@ -124,7 +125,6 @@ extension View {
 
 private struct NavBarModifier<ID: Hashable, Leading: View>: ViewModifier {
   let bar: NavBar<ID, Leading>
-  @Environment(\.palette) private var palette
 
   func body(content: Content) -> some View {
     content
@@ -135,14 +135,12 @@ private struct NavBarModifier<ID: Hashable, Leading: View>: ViewModifier {
           .padding(.bottom, Space.s2)
           .frame(maxWidth: .infinity)
           .background(alignment: .top) {
-            LinearGradient(
-              stops: [
-                .init(color: palette.background.opacity(0.9), location: 0),
-                .init(color: palette.background.opacity(0.5), location: 0.5),
-                .init(color: palette.background.opacity(0), location: 1),
-              ], startPoint: .top, endPoint: .bottom
-            )
-            .frame(height: 96)
+            // The bar doesn't know how far the page under it has scrolled,
+            // so its frost is a scrolled page's, which at rest, over only
+            // the page's background above its content, doesn't show.
+            GeometryReader { proxy in
+              StatusBarFrost(bar: proxy.safeAreaInsets.top, veil: 0.75, reducedVeil: 0.85)
+            }
             .ignoresSafeArea(edges: [.top, .horizontal])
             .allowsHitTesting(false)
           }
