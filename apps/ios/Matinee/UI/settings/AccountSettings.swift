@@ -44,7 +44,7 @@ struct AccountPage: View {
         LinkedAccountSection(provider: provider.displayName, account: linked, loader: oidc)
       }
       ListBlock {
-        MatineeKit.ListRow(
+        ListRow(
           Str.linkTitle, subtitle: Str.linkRowDescription, icon: .scanQrCode, iconTile: true, action: nav.linkDevice)
       }
       SessionsSection(sessions: sessions)
@@ -69,31 +69,6 @@ struct AccountPage: View {
 
 // MARK: Profile
 
-/// The person's picture, loaded with the app's sign-in, or their initials
-/// until it is, as the web's UserAvatar.
-struct AccountAvatar: View {
-  let user: User
-  var size: CGFloat = 32
-  @State private var picture: UIImage?
-  @Environment(\.api) private var api
-  @Environment(\.imagePipeline) private var pipeline
-
-  var body: some View {
-    MatineeKit.Avatar(user.name, size: size) {
-      if let picture {
-        Image(uiImage: picture).resizable().scaledToFill()
-      }
-    }
-    .task(id: user.avatarId) {
-      guard let id = user.avatarId, let api, let url = URL(string: api.paths.avatar(id)) else {
-        picture = nil
-        return
-      }
-      picture = try? await pipeline.image(for: url)
-    }
-  }
-}
-
 /// The picture and the name others see, and what the profile shows them.
 private struct ProfileSection: View {
   let user: User
@@ -104,22 +79,19 @@ private struct ProfileSection: View {
 
   var body: some View {
     let shown = sharing.shown(user)
-    // TODO(strings): account.profile.title "Profile"
-    SettingsSection(Str.tabProfile) {
-      HStack(alignment: .center, spacing: MatineeKit.Space.s4) {
+    SettingsSection(Str.iosAccountProfileTitle) {
+      HStack(alignment: .center, spacing: Space.s4) {
         AvatarPicker(user: user)
         DisplayNameField(user: user)
       }
       ListBlock {
-        // TODO(strings): account.sharing.favorites "Show my favorites"
-        MatineeKit.SwitchRow(
-          Str.favoritesTitle,
+        SwitchRow(
+          Str.iosAccountSharingFavorites,
           isOn: Binding(
             get: { shown.favorites },
             set: { sharing.save(.init(favorites: $0), api: api, session: session, snackbar: snackbar) }))
-        // TODO(strings): account.sharing.stats "Show my statistics"
-        MatineeKit.SwitchRow(
-          Str.profileStatistics,
+        SwitchRow(
+          Str.iosAccountSharingStats,
           isOn: Binding(
             get: { shown.stats },
             set: { sharing.save(.init(stats: $0), api: api, session: session, snackbar: snackbar) }))
@@ -143,8 +115,7 @@ private struct ProfileSection: View {
     if let favorites = change.favorites { next.favorites = favorites }
     if let stats = change.stats { next.stats = stats }
     pending = next
-    // TODO(strings): account.sharing.failed "Couldn't change what your profile shows"
-    launchShowing(snackbar, Str.webCommonSaveBarFailed) { [self] in
+    launchShowing(snackbar, Str.iosAccountSharingFailed) { [self] in
       defer { if pending == next { pending = nil } }
       session.updateUser(user: try await api.account.profile.update(sharing: change))
     }
@@ -174,21 +145,21 @@ private struct AvatarPicker: View {
   @Environment(\.api) private var api
   @Environment(\.snackbar) private var snackbar
   @Environment(MatineeSession.self) private var session
-  @Environment(\.kitPalette) private var palette
+  @Environment(\.palette) private var palette
 
   var body: some View {
     Pressable(shape: Circle(), wash: false) {
       if user.avatarId != nil { menu = true } else { picking = true }
     } label: {
-      AccountAvatar(user: user, size: 64)
+      ProfileAvatar(user.name, url: user.avatarId.flatMap { api?.paths.avatar($0) }, size: 64)
         .overlay {
           if busy {
             Circle().fill(.black.opacity(0.5))
-            MatineeKit.Spinner(size: 20, tint: .white)
+            Spinner(size: 20, tint: .white)
           }
         }
         .overlay(alignment: .bottomTrailing) {
-          MatineeKit.LucideIcon(.imageUp, size: 14, tint: palette.foreground, scales: false)
+          LucideIcon(.imageUp, size: 14, tint: palette.foreground, scales: false)
             .frame(width: 26, height: 26)
             .background(palette.secondary, in: Circle())
             .overlay { Circle().strokeBorder(palette.background, lineWidth: 2) }
@@ -196,13 +167,11 @@ private struct AvatarPicker: View {
         }
     }
     .disabled(busy)
-    // TODO(strings): account.picture.change "Change picture"
-    .accessibilityLabel(Str.webJobsQueueAvatarsName)
+    .accessibilityLabel(Str.iosAccountPictureChange)
     .dropdownMenu(isPresented: $menu) {
-      MatineeKit.MenuItem(Str.iosImagesFromPhotos, icon: .imageUp) { picking = true }
+      MenuItem(Str.iosImagesFromPhotos, icon: .imageUp) { picking = true }
       if user.avatarId != nil {
-        // TODO(strings): account.picture.remove "Remove picture"
-        MatineeKit.MenuItem(Str.commonRemove, icon: .trash, destructive: true) {
+        MenuItem(Str.iosAccountPictureRemove, icon: .trash, destructive: true) {
           change { api in try await api.account.avatar.remove() }
         }
       }
@@ -225,8 +194,7 @@ private struct AvatarPicker: View {
   private func change(_ send: @escaping (MatineeApi) async throws -> User) {
     guard let api, !busy else { return }
     busy = true
-    // TODO(strings): account.picture.changeFailed "Couldn't change your picture"
-    launchShowing(snackbar, Str.webCommonSaveBarFailed) {
+    launchShowing(snackbar, Str.iosAccountPictureChangeFailed) {
       defer { busy = false }
       session.updateUser(user: try await send(api))
     }
@@ -272,8 +240,8 @@ private struct DisplayNameField: View {
   }
 
   var body: some View {
-    MatineeKit.FormField(Str.webOidcFieldDisplayName) {
-      MatineeKit.MatineeTextField(
+    FormField(Str.webOidcFieldDisplayName) {
+      MatineeTextField(
         user.username, text: Binding(get: { text }, set: { text = String($0.prefix(64)) }), focused: $focused
       )
       .textContentType(.nickname)
@@ -299,8 +267,7 @@ private struct DisplayNameField: View {
       } catch {
         if Failure(error) == .cancelled { return }
         text = saved
-        // TODO(strings): account.displayName.saveFailed "Couldn't save your name. {reason}"
-        snackbar.show(Str.webCommonSaveBarFailed)
+        snackbar.post(ToastMessage(Str.iosAccountDisplayNameSaveFailed(describeFailure(error)), kind: .error))
       }
     }
   }
@@ -311,15 +278,15 @@ private struct DisplayNameField: View {
 /// The icon tile at the start of a row of the account's, as the web's RowIcon:
 /// `size-9 rounded-lg bg-secondary`, a 16-point glyph.
 struct RowIcon: View {
-  let icon: MatineeKit.Lucide
-  @Environment(\.kitPalette) private var palette
+  let icon: Lucide
+  @Environment(\.palette) private var palette
 
-  init(_ icon: MatineeKit.Lucide) { self.icon = icon }
+  init(_ icon: Lucide) { self.icon = icon }
 
   var body: some View {
-    MatineeKit.LucideIcon(icon, size: 16, tint: palette.mutedForeground)
+    LucideIcon(icon, size: 16, tint: palette.mutedForeground)
       .frame(width: 36, height: 36)
-      .background(palette.secondary, in: RoundedRectangle.kit(MatineeKit.Radius.lg))
+      .background(palette.secondary, in: RoundedRectangle.kit(Radius.lg))
   }
 }
 
@@ -327,16 +294,16 @@ struct RowIcon: View {
 /// a name in `text-sm font-medium` and a line under it, and what can be
 /// done with it at its end.
 struct AccountItemRow<Badge: View, Trailing: View>: View {
-  let icon: MatineeKit.Lucide
+  let icon: Lucide
   let title: String
   let detail: String?
   @ViewBuilder let badge: () -> Badge
   @ViewBuilder let trailing: () -> Trailing
-  @Environment(\.kitPalette) private var palette
+  @Environment(\.palette) private var palette
   @Environment(\.dynamicTypeSize) private var dynamicType
 
   var body: some View {
-    HStack(spacing: MatineeKit.Space.s3) {
+    HStack(spacing: Space.s3) {
       RowIcon(icon)
       VStack(alignment: .leading, spacing: 0) {
         // At the large text sizes the badge goes under the name rather than squeeze it.
@@ -344,7 +311,7 @@ struct AccountItemRow<Badge: View, Trailing: View>: View {
           Text(title).textStyle(.sm, weight: .medium).foregroundStyle(palette.foreground)
           badge()
         } else {
-          HStack(spacing: MatineeKit.Space.s2) {
+          HStack(spacing: Space.s2) {
             Text(title).textStyle(.sm, weight: .medium).foregroundStyle(palette.foreground).lineLimit(1)
             badge()
           }
@@ -358,15 +325,15 @@ struct AccountItemRow<Badge: View, Trailing: View>: View {
       .accessibilityElement(children: .combine)
       trailing()
     }
-    .padding(.leading, MatineeKit.Space.s4)
-    .padding(.trailing, MatineeKit.Space.s2)
-    .padding(.vertical, MatineeKit.Space.s2_5)
+    .padding(.leading, Space.s4)
+    .padding(.trailing, Space.s2)
+    .padding(.vertical, Space.s2_5)
     .frame(minHeight: 56)
   }
 }
 
 extension AccountItemRow where Badge == EmptyView {
-  init(icon: MatineeKit.Lucide, title: String, detail: String?, @ViewBuilder trailing: @escaping () -> Trailing) {
+  init(icon: Lucide, title: String, detail: String?, @ViewBuilder trailing: @escaping () -> Trailing) {
     self.init(icon: icon, title: title, detail: detail, badge: { EmptyView() }, trailing: trailing)
   }
 }
@@ -385,33 +352,40 @@ private struct PasskeysSection: View {
     SettingsSection(Str.webOidcPasskeysTitle) {
       ListBlock {
         ForEach(passkeys, id: \.id) { passkey in
-          // TODO(strings): account.passkeys.unnamed "Passkey"; account.passkeys.used "Used {time}",
-          // account.passkeys.added "Added {date}", account.passkeys.synced "Synced"
           AccountItemRow(
-            icon: .keyRound, title: passkey.name ?? Str.webOidcPasskeysTitle,
-            detail: formatInstant(passkey.lastUsedAt ?? passkey.createdAt)
+            icon: .keyRound, title: passkey.name ?? Str.iosAccountPasskeysUnnamed, detail: detail(passkey)
           ) {
             if removable {
-              // TODO(strings): account.passkeys.removeNamed "Remove {name}"
-              MatineeKit.RoundIconButton(.trash, label: Str.commonRemove, look: .ghost) { removing = passkey }
+              RoundIconButton(
+                .trash, label: passkey.name.map(Str.iosAccountPasskeysRemoveNamed) ?? Str.iosAccountPasskeysRemove,
+                look: .ghost
+              ) { removing = passkey }
             }
           }
         }
       }
     }
-    // TODO(strings): account.passkeys.removeTitle "Remove {name}?", account.passkeys.removeDescription
     .confirmDialog(
       isPresented: Binding(get: { removing != nil }, set: { if !$0 { removing = nil } }),
-      title: removing?.name ?? Str.webOidcPasskeysTitle, confirm: Str.commonRemove
+      title: removing?.name.map(Str.iosAccountPasskeysRemoveTitle) ?? Str.iosAccountPasskeysRemoveTitleUnnamed,
+      message: Str.iosAccountPasskeysRemoveDescription, confirm: Str.iosAccountPasskeysRemove
     ) {
       guard let api, let passkey = removing else { return }
       removing = nil
-      // TODO(strings): account.passkeys.removeFailed "Couldn't remove passkey"
-      launchShowing(snackbar, Str.webCommonErrorUnknown) {
+      launchShowing(snackbar, Str.iosAccountPasskeysRemoveFailed) {
         try await api.account.passkeys.remove(id: passkey.id)
         loader.reload()
       }
     }
+  }
+
+  /// Whether it's synced, and when it was last used, or added when it never was, as the web's.
+  private func detail(_ passkey: Passkey) -> String {
+    [
+      passkey.backedUp ? Str.iosAccountPasskeysSynced : nil,
+      passkey.lastUsedAt.map { Str.iosAccountPasskeysUsed(relativeTime($0)) }
+        ?? Str.iosAccountPasskeysAdded(formatInstant(passkey.createdAt)),
+    ].compactMap(\.self).joined(separator: " · ")
   }
 }
 
@@ -427,10 +401,12 @@ private struct LinkedAccountSection: View {
   var body: some View {
     SettingsSection(provider) {
       ListBlock {
-        // TODO(strings): account.oidc.linked "Linked {date}", account.oidc.stale
-        AccountItemRow(icon: .link, title: account.label ?? provider, detail: formatInstant(account.createdAt)) {
-          // TODO(strings): account.oidc.unlink "Unlink"
-          MatineeKit.MatineeButton(Str.commonRemove, look: .ghost, size: .md, pending: busy, action: unlink)
+        AccountItemRow(
+          icon: .link, title: account.label ?? provider,
+          detail: account.signsIn
+            ? Str.iosAccountOidcLinked(formatInstant(account.createdAt)) : Str.iosAccountOidcStale(provider)
+        ) {
+          MatineeButton(Str.iosAccountOidcUnlink, look: .ghost, size: .md, pending: busy, action: unlink)
         }
       }
     }
@@ -439,8 +415,7 @@ private struct LinkedAccountSection: View {
   private func unlink() {
     guard let api, !busy else { return }
     busy = true
-    // TODO(strings): account.oidc.unlinkFailed "Couldn't unlink {provider}"
-    launchShowing(snackbar, Str.webCommonErrorUnknown) {
+    launchShowing(snackbar, Str.iosAccountOidcUnlinkFailed(provider)) {
       defer { busy = false }
       try await api.account.oidc.unlink()
       loader.reload()
@@ -463,10 +438,9 @@ private struct SessionsSection: View {
     SettingsSection(Str.accountSessionsTitle) {
       switch sessions.state {
       case .loading:
-        Skeleton(radius: MatineeKit.Radius.xl).frame(height: 64)
+        Skeleton(radius: Radius.xl).frame(height: 64)
       case .failed(let message, let disconnected):
-        // TODO(shell): the shared error state
-        ErrorBox(Str.accountSessionsFailed, message, disconnected: disconnected, onRetry: sessions.reload)
+        ErrorSection(Str.accountSessionsFailed, message, disconnected: disconnected, onRetry: sessions.reload)
       case .ready(let list):
         ListBlock {
           ForEach(list, id: \.id) { item in
@@ -474,7 +448,7 @@ private struct SessionsSection: View {
           }
         }
         if list.contains(where: { !$0.current }) {
-          MatineeKit.MatineeButton(
+          MatineeButton(
             Str.webUsersMenuSignOutOthers, icon: .logOut, look: .outline, fullWidth: true
           ) { signingOutOthers = true }
         }
@@ -482,9 +456,9 @@ private struct SessionsSection: View {
     }
     .confirmDialog(
       isPresented: Binding(get: { signingOut != nil }, set: { if !$0 { signingOut = nil } }),
-      // TODO(strings): account.sessions.signOutTitle "Sign out {session}?", account.sessions.signOutDescription
-      title: signingOut.map { Str.accountSessionsSignOutNamed(sessionName($0)) } ?? Str.shellSignOut,
-      confirm: Str.shellSignOut
+      title: signingOut.map { Str.iosAccountSessionsSignOutTitle(sessionName($0)) }
+        ?? Str.iosAccountSessionsSignOutTitleUnnamed,
+      message: Str.iosAccountSessionsSignOutDescription, confirm: Str.shellSignOut
     ) {
       guard let api, let item = signingOut else { return }
       signingOut = nil
@@ -518,11 +492,11 @@ private struct SessionRow: View {
     let name = sessionName(session)
     AccountItemRow(icon: platformIcon(session.platform), title: name, detail: detail) {
       if session.current {
-        MatineeKit.Badge(Str.accountSessionsThisDevice, look: .secondary)
+        Badge(Str.accountSessionsThisDevice, look: .secondary)
       }
     } trailing: {
       if !session.current {
-        MatineeKit.RoundIconButton(.logOut, label: Str.accountSessionsSignOutNamed(name), look: .ghost, action: onSignOut)
+        RoundIconButton(.logOut, label: Str.accountSessionsSignOutNamed(name), look: .ghost, action: onSignOut)
       }
     }
   }

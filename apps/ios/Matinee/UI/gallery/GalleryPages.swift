@@ -178,6 +178,11 @@
         GalleryHeading("Search")
         SearchFieldDemo().padding(.horizontal, gutter)
         SearchBarButton {}.padding(.horizontal, gutter)
+
+        GalleryHeading("Headings: a tab's page, and sections with a link and a count")
+        PageHeading(Str.tabMedia) { RoundIconButton(.cloudOff, label: Str.serverUnreachable, look: .ghost, size: 40) {} }
+        SectionTitle(Str.browseContinueWatching) {}.padding(.horizontal, gutter)
+        SectionTitle(Str.searchTitlesHeading, count: 12).padding(.horizontal, gutter)
       }
     }
   }

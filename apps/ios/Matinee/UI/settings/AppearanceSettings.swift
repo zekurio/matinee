@@ -27,7 +27,7 @@ struct AppearancePage: View {
   var body: some View {
     SettingsScaffold(Str.settingsPageAppearance) {
       ListSection(Str.webAppearanceLanguage) {
-        MatineeKit.ListRow(
+        ListRow(
           Str.webAppearanceLanguageTitle, subtitle: Str.iosAppearanceLanguageDescription, value: appLanguage
         ) {
           if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
@@ -55,18 +55,17 @@ struct AppearancePage: View {
 /// as three choices, the picked one selected.
 private struct SchemePicker: View {
   let theme: ThemeStore
-  @Environment(\.kitPalette) private var palette
+  @Environment(\.palette) private var palette
   @Environment(\.dynamicTypeSize) private var dynamicType
 
   var body: some View {
-    let colors = MatineeKit.MatineeTheme(accentLight: theme.accents.light, accentDark: theme.accents.dark)
     // Side by side, as the web's `grid-cols-3`; at the accessibility sizes the
     // names no longer fit under a third of a phone, so the cards stack.
-    let layout = dynamicType.isAccessibilitySize ? AnyLayout(VStackLayout(spacing: MatineeKit.Space.s2))
-      : AnyLayout(HStackLayout(alignment: .top, spacing: MatineeKit.Space.s2))
+    let layout = dynamicType.isAccessibilitySize ? AnyLayout(VStackLayout(spacing: Space.s2))
+      : AnyLayout(HStackLayout(alignment: .top, spacing: Space.s2))
     layout {
-      ForEach(ThemeStore.modes, id: \.self) { mode in
-        card(mode, light: colors.light, dark: colors.dark)
+      ForEach(ThemeMode.allCases, id: \.self) { mode in
+        card(mode, light: theme.light, dark: theme.dark)
       }
     }
     .frame(maxWidth: 560, alignment: .leading)
@@ -74,15 +73,15 @@ private struct SchemePicker: View {
     .accessibilityLabel(Str.webAppearanceColorScheme)
   }
 
-  private func card(_ mode: ThemeStore.Mode, light: MatineeKit.ThemeColors, dark: MatineeKit.ThemeColors) -> some View {
+  private func card(_ mode: ThemeMode, light: ThemeColors, dark: ThemeColors) -> some View {
     let selected = theme.mode == mode
-    let shape = RoundedRectangle.kit(MatineeKit.Radius.xl)
+    let shape = RoundedRectangle.kit(Radius.xl)
     // At the accessibility sizes the cards stack, each its miniature beside its name.
     let layout = dynamicType.isAccessibilitySize
-      ? AnyLayout(HStackLayout(spacing: MatineeKit.Space.s3))
-      : AnyLayout(VStackLayout(alignment: .leading, spacing: MatineeKit.Space.s2))
+      ? AnyLayout(HStackLayout(spacing: Space.s3))
+      : AnyLayout(VStackLayout(alignment: .leading, spacing: Space.s2))
     return Pressable(shape: shape) {
-      MatineeKit.withMotion(MatineeKit.Motion.color) { theme.setMode(mode) }
+      withMotion(Motion.color) { theme.setMode(mode) }
     } label: {
       layout {
         Group {
@@ -110,22 +109,22 @@ private struct SchemePicker: View {
           .textStyle(.xs, weight: .medium)
           .foregroundStyle(selected ? palette.foreground : palette.mutedForeground)
           .lineLimit(dynamicType.isAccessibilitySize ? nil : 1)
-          .padding(.horizontal, MatineeKit.Space.s0_5)
+          .padding(.horizontal, Space.s0_5)
           .frame(maxWidth: dynamicType.isAccessibilitySize ? .infinity : nil, alignment: .leading)
       }
-      .padding(MatineeKit.Space.s1_5)
-      .padding(.bottom, MatineeKit.Space.s0_5)
+      .padding(Space.s1_5)
+      .padding(.bottom, Space.s0_5)
       .frame(maxWidth: .infinity, alignment: .leading)
       .background(selected ? palette.accentSoft : palette.foreground.opacity(0.02), in: shape)
       .overlay { shape.strokeBorder(selected ? palette.accent : palette.border) }
       .contentShape(shape)
     }
-    .motion(MatineeKit.Motion.color, value: selected)
+    .motion(Motion.color, value: selected)
     .accessibilityLabel(label(mode))
     .accessibilityAddTraits(selected ? [.isSelected] : [])
   }
 
-  private func label(_ mode: ThemeStore.Mode) -> String {
+  private func label(_ mode: ThemeMode) -> String {
     switch mode {
     case .system: Str.webAppearanceColorSchemeSystem
     case .light: Str.webAppearanceColorSchemeLight
@@ -134,22 +133,16 @@ private struct SchemePicker: View {
   }
 }
 
-extension ThemeStore {
-  /// The app's own theme modes, by the type the store keeps.
-  typealias Mode = ThemeMode
-  static var modes: [Mode] { Mode.allCases }
-}
-
 /// The home page in `colors`, as the web's AppMiniature: the floating bar
 /// over the featured banner, the banner's words and buttons, and a row of
 /// posters, each placed as a share of the miniature's size.
 private struct AppMiniature: View {
-  let colors: MatineeKit.ThemeColors
+  let colors: ThemeColors
 
   var body: some View {
     let page = colors.background
     let tint = colors.text.opacity(0.12)
-    let shape = RoundedRectangle.kit(MatineeKit.Radius.md)
+    let shape = RoundedRectangle.kit(Radius.md)
     Color.clear
       .aspectRatio(16 / 10, contentMode: .fit)
       .frame(maxWidth: .infinity)
@@ -200,7 +193,7 @@ private struct AppMiniature: View {
   }
 
   /// The floating tab bar: the accent's dot, the open tab, two more, and the profile.
-  private func bar(_ size: CGSize, page: MatineeKit.RGB, tint: Color) -> some View {
+  private func bar(_ size: CGSize, page: RGB, tint: Color) -> some View {
     let height = size.height * 0.10
     return HStack(spacing: 0) {
       Circle().fill(colors.accent.color).frame(width: height * 0.5, height: height * 0.5)

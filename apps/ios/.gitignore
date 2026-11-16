@@ -7,3 +7,7 @@ Matinee/Resources/AppIcon.xcassets/
 # Build output, kept here so agents' builds don't share one.
 build/
 DerivedData/
+# Xcode writes the app's whole resolution, Nuke included, into the
+# Package.resolved of each local package it builds. The app's own pins are
+# in project.yml, and a package's in its Package.swift, so these aren't kept.
+Packages/*/Package.resolved

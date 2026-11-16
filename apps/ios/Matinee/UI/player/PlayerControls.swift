@@ -84,14 +84,14 @@ private struct Shades: View {
 /// The web's control buttons over the picture: 44 round, the icon in white
 /// at 85%, nothing behind it until it's pressed.
 private struct ControlButton: View {
-  let icon: MatineeKit.Lucide
+  let icon: Lucide
   let label: String
-  var size: CGFloat = MatineeKit.TouchTarget
+  var size: CGFloat = TouchTarget
   var iconSize: CGFloat = 22
   let action: () -> Void
 
   var body: some View {
-    MatineeKit.RoundIconButton(
+    RoundIconButton(
       icon, label: label, look: .ghost, size: size, iconSize: iconSize, tint: .white.opacity(0.85), action: action
     )
     .pictureShadow()
@@ -107,10 +107,10 @@ private struct PlayerTopBar: View {
   let close: () -> Void
   let onMenu: (PlayerMenu) -> Void
   let onLock: (() -> Void)?
-  @Environment(\.playerPalette) private var palette
+  @Environment(\.palette) private var palette
 
   var body: some View {
-    HStack(spacing: MatineeKit.Space.s1) {
+    HStack(spacing: Space.s1) {
       ControlButton(icon: .arrowLeft, label: Str.playerBack, action: close)
       if let item = controller.item {
         let label = itemLabel(item)
@@ -124,7 +124,7 @@ private struct PlayerTopBar: View {
           }
         }
         .pictureShadow()
-        .padding(.leading, MatineeKit.Space.s2)
+        .padding(.leading, Space.s2)
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isHeader)
@@ -155,8 +155,8 @@ private struct PlayerTopBar: View {
       }
     }
     .frame(minHeight: TOP_BAR_HEIGHT)
-    .padding(.horizontal, MatineeKit.Space.s3)
-    .padding(.top, MatineeKit.Space.s2)
+    .padding(.horizontal, Space.s3)
+    .padding(.top, Space.s2)
   }
 
   /// The web's line under the title: "S1:E2 · Show" for an episode, the year for a movie.
@@ -173,7 +173,7 @@ let TOP_BAR_HEIGHT: CGFloat = 48
 private struct SubtitlesButton: View {
   let controller: PlayerController
   let onMenu: (PlayerMenu) -> Void
-  @Environment(\.playerPalette) private var palette
+  @Environment(\.palette) private var palette
 
   var body: some View {
     ControlButton(icon: .captions, label: Str.playerMenuSubtitles) { onMenu(.subtitles) }
@@ -203,7 +203,7 @@ private struct Transport: View {
   var body: some View {
     GeometryReader { proxy in
       // The web's `gap-2 sm:gap-8`: tight on a narrow screen, roomy from 640 points.
-      let gap = proxy.size.width >= 640 ? MatineeKit.Space.s8 : MatineeKit.Space.s2
+      let gap = proxy.size.width >= 640 ? Space.s8 : Space.s2
       HStack(spacing: gap) {
         if controller.isEpisode {
           EpisodeButton(icon: .skipBack, label: Str.playerPreviousEpisode, enabled: controller.previous != nil) {
@@ -251,8 +251,8 @@ private struct PlayButton: View {
   let action: () -> Void
 
   var body: some View {
-    MatineeKit.Pressable(shape: Circle(), action: action) {
-      MatineeKit.LucideIcon(playing ? .pause : .play, size: 32, tint: .white, scales: false)
+    Pressable(shape: Circle(), action: action) {
+      LucideIcon(playing ? .pause : .play, size: 32, tint: .white, scales: false)
         // The triangle's weight sits left of its box; the web nudges it.
         .offset(x: playing ? 0 : 2)
         .frame(width: 72, height: 72)
@@ -265,18 +265,18 @@ private struct PlayButton: View {
 
 /// A circular arrow with the skip length inside it: the web's `SkipIcon`, big.
 private struct SkipButton: View {
-  let icon: MatineeKit.Lucide
+  let icon: Lucide
   let seconds: Int
   let label: String
   let action: () -> Void
 
   var body: some View {
-    MatineeKit.Pressable(shape: Circle(), action: action) {
+    Pressable(shape: Circle(), action: action) {
       ZStack {
-        MatineeKit.LucideIcon(icon, size: 36, tint: .white.opacity(0.85), scales: false)
+        LucideIcon(icon, size: 36, tint: .white.opacity(0.85), scales: false)
         // The label says how far already.
         Text("\(seconds)")
-          .font(MatineeKit.RedHatText.font(fixedSize: 12, weight: .bold))
+          .font(RedHatText.font(fixedSize: 12, weight: .bold))
           .monospacedDigit()
           .foregroundStyle(.white.opacity(0.85))
           .padding(.top, 1)
@@ -292,7 +292,7 @@ private struct SkipButton: View {
 
 /// Plays the episode before or after this one, or sits dimmed at either end of the show.
 private struct EpisodeButton: View {
-  let icon: MatineeKit.Lucide
+  let icon: Lucide
   let label: String
   let enabled: Bool
   let action: () -> Void
@@ -314,11 +314,11 @@ private struct PlayerBottomBar: View {
     let duration = max(0, controller.duration)
     let shown = controller.scrubPosition ?? controller.position
     VStack(spacing: 0) {
-      HStack(spacing: MatineeKit.Space.s3) {
+      HStack(spacing: Space.s3) {
         SteadyClock(seconds: shown, duration: duration)
         Spacer(minLength: 0)
         EndsAt(controller: controller)
-        MatineeKit.Pressable(shape: RoundedRectangle.kit(MatineeKit.Radius.sm), wash: false) {
+        Pressable(shape: RoundedRectangle.kit(Radius.sm), wash: false) {
           remaining.toggle()
           onTouch()
         } label: {
@@ -326,14 +326,13 @@ private struct PlayerBottomBar: View {
         }
         .accessibilityLabel(
           remaining ? Str.a11yPlayerRemaining(formatClock(max(0, duration - shown))) : formatClock(duration))
-        // TODO(strings): a hint for the switch, the web's player.showLength and
-        // player.showTimeLeft ("Show length", "Show time left"); Android has neither.
+        .accessibilityHint(remaining ? Str.iosPlayerShowLength : Str.iosPlayerShowTimeLeft)
       }
-      .padding(.horizontal, MatineeKit.Space.s1)
+      .padding(.horizontal, Space.s1)
       SeekBar(controller: controller, onTouch: onTouch)
     }
-    .padding(.horizontal, MatineeKit.Space.s3)
-    .padding(.bottom, MatineeKit.Space.s1)
+    .padding(.horizontal, Space.s3)
+    .padding(.bottom, Space.s1)
   }
 }
 

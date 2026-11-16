@@ -14,15 +14,10 @@ import SwiftUI
 /// deinterlacing, audio, and throttling. The fields save together, from
 /// the save bar; a number out of its range holds the save and says why.
 struct TranscodingSettings: View {
-  var body: some View { TranscodingPage().adminTheme() }
-}
-
-private struct TranscodingPage: View {
   @State private var loader = Loader<AdminTranscodingSettings>()
   @State private var form: TranscodingDraft?
   @State private var saver = Saver()
   @Environment(\.api) private var api
-  // TODO(shell): the kit's toasts, once the shell hosts them.
   @Environment(\.snackbar) private var snackbar
 
   var body: some View {
@@ -58,7 +53,7 @@ private struct TranscodingForm: View {
   @Binding var form: TranscodingDraft
   let detecting: Bool
   let onDetect: () -> Void
-  @Environment(\.adminPalette) private var palette
+  @Environment(\.palette) private var palette
 
   var body: some View {
     let acceleration = form.draft.hardwareAcceleration
@@ -83,13 +78,13 @@ private struct TranscodingForm: View {
               placeholder: nonBlank(form.saved.defaults.qsvDevice) ?? "")
           }
           if hardware {
-            MatineeKit.SwitchRow(Str.webTranscodingHardwareEncoding, isOn: $form.draft.enableHardwareEncoding)
+            SwitchRow(Str.webTranscodingHardwareEncoding, isOn: $form.draft.enableHardwareEncoding)
           }
           // Intel's low-power encoders, on QSV and on VAAPI.
           if isIntel(acceleration) {
-            MatineeKit.SwitchRow(
+            SwitchRow(
               Str.webTranscodingHardwareLowPower("H.264"), isOn: $form.draft.enableIntelLowPowerH264HwEncoder)
-            MatineeKit.SwitchRow(
+            SwitchRow(
               Str.webTranscodingHardwareLowPower("HEVC"), isOn: $form.draft.enableIntelLowPowerHevcHwEncoder)
           }
         }
@@ -103,20 +98,20 @@ private struct TranscodingForm: View {
       if hardware {
         ListSection(Str.webTranscodingDecodingTitle) {
           ForEach(DECODE_SUPPORT[acceleration] ?? [], id: \.self) { codec in
-            MatineeKit.SwitchRow(
+            SwitchRow(
               videoCodecName(codec),
               isOn: Binding(get: { form.draft.hardwareDecodingCodecs.contains(codec) }, set: { form.decode(codec, $0) }))
           }
-          MatineeKit.SwitchRow(Str.webTranscodingDecodingHevc10, isOn: $form.draft.enableDecodingColorDepth10Hevc)
-          MatineeKit.SwitchRow(Str.webTranscodingDecodingVp910, isOn: $form.draft.enableDecodingColorDepth10Vp9)
-          MatineeKit.SwitchRow(Str.webTranscodingDecodingHevcRext, isOn: $form.draft.enableDecodingColorDepth10HevcRext)
-          MatineeKit.SwitchRow(Str.webTranscodingDecodingHevcRext12, isOn: $form.draft.enableDecodingColorDepth12HevcRext)
+          SwitchRow(Str.webTranscodingDecodingHevc10, isOn: $form.draft.enableDecodingColorDepth10Hevc)
+          SwitchRow(Str.webTranscodingDecodingVp910, isOn: $form.draft.enableDecodingColorDepth10Vp9)
+          SwitchRow(Str.webTranscodingDecodingHevcRext, isOn: $form.draft.enableDecodingColorDepth10HevcRext)
+          SwitchRow(Str.webTranscodingDecodingHevcRext12, isOn: $form.draft.enableDecodingColorDepth12HevcRext)
         }
       }
 
       ListSection(Str.webTranscodingEncodingTitle) {
-        MatineeKit.SwitchRow(Str.webTranscodingEncodingHevc, isOn: $form.draft.allowHevcEncoding)
-        MatineeKit.SwitchRow(Str.webTranscodingEncodingAv1, isOn: $form.draft.allowAv1Encoding)
+        SwitchRow(Str.webTranscodingEncodingHevc, isOn: $form.draft.allowHevcEncoding)
+        SwitchRow(Str.webTranscodingEncodingAv1, isOn: $form.draft.allowAv1Encoding)
         SelectRow(
           Str.webTranscodingEncodingPreset, selection: $form.draft.encoderPreset,
           options: EncoderPreset.knownValues.map { ($0, $0 == EncoderPreset.auto ? Str.webTranscodingAuto : $0) })
@@ -125,12 +120,12 @@ private struct TranscodingForm: View {
       }
 
       ListSection(Str.webTranscodingToneMappingTitle) {
-        MatineeKit.SwitchRow(Str.webTranscodingToneMappingHardware, isOn: $form.draft.enableTonemapping)
+        SwitchRow(Str.webTranscodingToneMappingHardware, isOn: $form.draft.enableTonemapping)
         if isIntel(acceleration) {
-          MatineeKit.SwitchRow(Str.webTranscodingToneMappingVpp, isOn: $form.draft.enableVppTonemapping)
+          SwitchRow(Str.webTranscodingToneMappingVpp, isOn: $form.draft.enableVppTonemapping)
         }
         if acceleration == HardwareAcceleration.videotoolbox {
-          MatineeKit.SwitchRow(
+          SwitchRow(
             Str.webTranscodingToneMappingVideoToolbox, isOn: $form.draft.enableVideoToolboxTonemapping)
         }
         SelectRow(
@@ -159,7 +154,7 @@ private struct TranscodingForm: View {
         SelectRow(
           Str.webTranscodingDeinterlacingMethod, selection: $form.draft.deinterlaceMethod,
           options: DeinterlaceMethod.knownValues.map { ($0, $0) })
-        MatineeKit.SwitchRow(Str.webTranscodingDeinterlacingDoubleRate, isOn: $form.draft.deinterlaceDoubleRate)
+        SwitchRow(Str.webTranscodingDeinterlacingDoubleRate, isOn: $form.draft.deinterlaceDoubleRate)
       }
 
       ListSection(Str.webTranscodingAudioTitle) {
@@ -167,17 +162,17 @@ private struct TranscodingForm: View {
           Str.webTranscodingAudioDownmix, selection: $form.draft.downMixStereoAlgorithm,
           options: DownmixAlgorithm.knownValues.map { ($0, downmixName($0)) })
         number(.downMixAudioBoost, Str.webTranscodingFieldDownMixAudioBoost, Str.webTranscodingNumberDownMixAudioBoost)
-        MatineeKit.SwitchRow(Str.webTranscodingAudioVbr, isOn: $form.draft.enableAudioVbr)
+        SwitchRow(Str.webTranscodingAudioVbr, isOn: $form.draft.enableAudioVbr)
       }
 
       ListSection(Str.webTranscodingSegmentsTitle) {
-        MatineeKit.SwitchRow(Str.webTranscodingSegmentsThrottle, isOn: $form.draft.enableThrottling)
+        SwitchRow(Str.webTranscodingSegmentsThrottle, isOn: $form.draft.enableThrottling)
         if form.draft.enableThrottling {
           number(
             .throttleDelaySeconds, Str.webTranscodingFieldThrottleDelaySeconds,
             Str.webTranscodingNumberThrottleDelaySeconds)
         }
-        MatineeKit.SwitchRow(Str.webTranscodingSegmentsDelete, isOn: $form.draft.enableSegmentDeletion)
+        SwitchRow(Str.webTranscodingSegmentsDelete, isOn: $form.draft.enableSegmentDeletion)
         if form.draft.enableSegmentDeletion {
           number(
             .segmentKeepSeconds, Str.webTranscodingFieldSegmentKeepSeconds, Str.webTranscodingNumberSegmentKeepSeconds)
@@ -185,10 +180,10 @@ private struct TranscodingForm: View {
       }
     }
     // Rows that come and go with a switch open and close rather than jump.
-    .adminMotion(MatineeKit.Motion.enter, value: form.draft.hardwareAcceleration)
-    .adminMotion(MatineeKit.Motion.enter, value: form.draft.enableThrottling)
-    .adminMotion(MatineeKit.Motion.enter, value: form.draft.enableSegmentDeletion)
-    .adminMotion(MatineeKit.Motion.enter, value: form.draft.enableVppTonemapping)
+    .motion(Motion.enter, value: form.draft.hardwareAcceleration)
+    .motion(Motion.enter, value: form.draft.enableThrottling)
+    .motion(Motion.enter, value: form.draft.enableSegmentDeletion)
+    .motion(Motion.enter, value: form.draft.enableVppTonemapping)
     .textInputAutocapitalization(.never)
     .autocorrectionDisabled()
     .submitLabel(.done)
@@ -210,14 +205,13 @@ private struct FfmpegSection: View {
   let capabilities: TranscodingCapabilities
   let detecting: Bool
   let onDetect: () -> Void
-  @Environment(\.adminPalette) private var palette
+  @Environment(\.palette) private var palette
 
   var body: some View {
     let version = capabilities.version.flatMap(nonBlank) ?? Str.webTranscodingFfmpegUnknownVersion
     let error = capabilities.error.flatMap(nonBlank)
-    VStack(alignment: .leading, spacing: Space.s3) {
-      Text(verbatim: "FFmpeg").textStyle(.base, weight: .semibold, tracking: .tight).accessibilityAddTraits(.isHeader)
-      MatineeKit.MatineeButton(
+    SettingsSection("FFmpeg") {
+      MatineeButton(
         detecting ? Str.webTranscodingFfmpegDetecting : Str.webTranscodingFfmpegDetect, icon: .refreshCw,
         look: .outline, pending: detecting, fullWidth: true, action: onDetect)
       if let error {

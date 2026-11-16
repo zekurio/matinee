@@ -35,7 +35,7 @@ nonisolated func platformLabel(_ platform: String) -> String {
 }
 
 /// What a device is, at a glance. Nil is a browser.
-nonisolated func platformIcon(_ platform: String?) -> MatineeKit.Lucide {
+nonisolated func platformIcon(_ platform: String?) -> Lucide {
   switch platform {
   case "androidtv", "tizen", "tvos": .tv
   case "android", "ios": .smartphone
@@ -55,7 +55,7 @@ struct LinkDeviceScreen: View {
       VStack(alignment: .leading, spacing: 0) {
         if let code {
           ApproveStep(userCode: code, from: from, typed: typed) {
-            MatineeKit.withMotion(MatineeKit.Motion.enter) {
+            withMotion(Motion.enter) {
               self.code = nil
               from = nil
             }
@@ -63,7 +63,7 @@ struct LinkDeviceScreen: View {
           .id(code)
         } else {
           ScanStep { scanned, byHand in
-            MatineeKit.withMotion(MatineeKit.Motion.enter) {
+            withMotion(Motion.enter) {
               code = scanned.userCode
               from = scanned.server
               typed = byHand
@@ -73,13 +73,12 @@ struct LinkDeviceScreen: View {
       }
       .frame(maxWidth: 440)
       .frame(maxWidth: .infinity)
-      .padding(.horizontal, MatineeKit.Space.gutter)
-      .padding(.top, MatineeKit.Space.s6)
-      .padding(.bottom, MatineeKit.Space.s8)
+      .padding(.horizontal, Space.gutter)
+      .padding(.top, Space.s6)
+      .padding(.bottom, Space.s8)
     }
     .scrollDismissesKeyboard(.interactively)
-    .topBar(Str.linkTitle, leading: .back, centered: true)
-    .modifier(KitTheme())
+    .topBar(Str.linkTitle, centered: true)
   }
 }
 
@@ -95,16 +94,16 @@ struct LinkDeviceScreen: View {
 /// The camera, where the device has one, and the field for typing the code.
 private struct ScanStep: View {
   let onCode: (ScannedCode, _ byHand: Bool) -> Void
-  @Environment(\.kitPalette) private var palette
+  @Environment(\.palette) private var palette
 
   var body: some View {
-    VStack(alignment: .leading, spacing: MatineeKit.Space.s3) {
+    VStack(alignment: .leading, spacing: Space.s3) {
       if hasCamera {
         CameraScanner { onCode($0, false) }
         Text(Str.linkOrEnter).textStyle(.base, weight: .semibold, tracking: .tight)
           .foregroundStyle(palette.foreground)
           .accessibilityAddTraits(.isHeader)
-          .padding(.top, MatineeKit.Space.s5)
+          .padding(.top, Space.s5)
       } else {
         // No camera, as on a TV signing in another TV, or the simulator: only the code.
         Text(Str.linkEnterCode).textStyle(.sm).foregroundStyle(palette.mutedForeground)
@@ -127,13 +126,13 @@ private struct CodeField: View {
   let onCode: (String) -> Void
   @State private var text = ""
   @State private var tried = false
-  @Environment(\.kitPalette) private var palette
+  @Environment(\.palette) private var palette
 
   var body: some View {
     let invalid = tried && UserCode.parse(text) == nil
-    VStack(alignment: .leading, spacing: MatineeKit.Space.s3) {
-      VStack(alignment: .leading, spacing: MatineeKit.Space.s1_5) {
-        MatineeKit.MatineeTextField(
+    VStack(alignment: .leading, spacing: Space.s3) {
+      VStack(alignment: .leading, spacing: Space.s1_5) {
+        MatineeTextField(
           Str.linkCodePlaceholder, text: Binding(get: { text }, set: { text = String($0.prefix(9)) }),
           isError: invalid
         )
@@ -150,7 +149,7 @@ private struct CodeField: View {
             .accessibilityHidden(true)
         }
       }
-      MatineeKit.MatineeButton(Str.linkContinue, look: .secondary, fullWidth: true, action: submit)
+      MatineeButton(Str.linkContinue, look: .secondary, fullWidth: true, action: submit)
         .disabled(text.trimmingCharacters(in: .whitespaces).isEmpty)
     }
   }
@@ -161,7 +160,7 @@ private struct CodeField: View {
   }
 }
 
-private let ViewfinderShape = RoundedRectangle.kit(MatineeKit.Radius.xl2)
+private let ViewfinderShape = RoundedRectangle.kit(Radius.xl2)
 
 /// A square of the camera's picture, once the person allows it, with what it found under it.
 private struct CameraScanner: View {
@@ -170,28 +169,28 @@ private struct CameraScanner: View {
   @State private var failed = false
   /// When the camera last saw a QR code that isn't a Matinee sign-in.
   @State private var foreignAt: Date?
-  @Environment(\.kitPalette) private var palette
+  @Environment(\.palette) private var palette
   @Environment(\.openURL) private var openURL
   @Environment(\.scenePhase) private var scenePhase
 
   var body: some View {
     let granted = status == .authorized
-    VStack(spacing: MatineeKit.Space.s3) {
+    VStack(spacing: Space.s3) {
       ZStack {
         palette.card
         if failed {
           CameraNotice(text: Str.linkCameraFailed)
         } else if granted {
           Viewfinder(onFailed: { failed = true }, onText: read)
-          ScanCorners().padding(MatineeKit.Space.s10)
+          ScanCorners().padding(Space.s10)
         } else if status == .notDetermined {
           CameraNotice(text: Str.linkCameraNeeded) {
-            MatineeKit.MatineeButton(Str.linkCameraAllow, look: .outline, action: ask)
+            MatineeButton(Str.linkCameraAllow, look: .outline, action: ask)
           }
         } else {
           // iOS asks once; after a no, only its Settings can allow it.
           CameraNotice(text: Str.linkCameraNeeded) {
-            MatineeKit.MatineeButton(Str.iosOpenSettings, icon: .settings, look: .outline) {
+            MatineeButton(Str.iosOpenSettings, icon: .settings, look: .outline) {
               if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
             }
           }
@@ -248,8 +247,8 @@ private struct CameraNotice<Action: View>: View {
   @ViewBuilder var action: () -> Action
 
   var body: some View {
-    MatineeKit.EmptyState(icon: .cameraOff, title: text) { action() }
-      .padding(MatineeKit.Space.s2)
+    EmptyState(icon: .cameraOff, title: text) { action() }
+      .padding(Space.s2)
   }
 }
 
@@ -391,7 +390,7 @@ private struct ApproveStep: View {
   @Environment(\.api) private var api
   @Environment(\.navigator) private var nav
   @Environment(\.user) private var user
-  @Environment(\.kitPalette) private var palette
+  @Environment(\.palette) private var palette
   @Environment(\.dynamicTypeSize) private var dynamicType
   @Environment(MatineeSession.self) private var session
 
@@ -401,12 +400,12 @@ private struct ApproveStep: View {
     VStack(alignment: .leading, spacing: 0) {
       switch state {
       case .checking:
-        MatineeKit.Spinner(size: 28, tint: palette.accent)
+        Spinner(size: 28, tint: palette.accent)
           .frame(maxWidth: .infinity, minHeight: 160)
       case .waiting(let request):
-        VStack(alignment: .leading, spacing: MatineeKit.Space.s4) {
+        VStack(alignment: .leading, spacing: Space.s4) {
           DeviceCard(request: request)
-          VStack(alignment: .leading, spacing: MatineeKit.Space.s1_5) {
+          VStack(alignment: .leading, spacing: Space.s1_5) {
             Text(emphasized(Str.linkWants(name), name, font: nameFont, color: palette.foreground))
               .textStyle(.base)
               .foregroundStyle(palette.foreground)
@@ -414,15 +413,15 @@ private struct ApproveStep: View {
               .textStyle(.sm)
               .foregroundStyle(palette.mutedForeground)
           }
-          VStack(spacing: MatineeKit.Space.s2) {
-            MatineeKit.MatineeButton(Str.linkApprove, icon: .check, pending: approving, fullWidth: true, action: approve)
+          VStack(spacing: Space.s2) {
+            MatineeButton(Str.linkApprove, icon: .check, pending: approving, fullWidth: true, action: approve)
             if let approveError {
               Text(approveError).textStyle(.px13).foregroundStyle(palette.destructive)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
-            MatineeKit.MatineeButton(Str.commonCancel, look: .ghost, fullWidth: true, action: onAgain)
+            MatineeButton(Str.commonCancel, look: .ghost, fullWidth: true, action: onAgain)
           }
-          .padding(.top, MatineeKit.Space.s2)
+          .padding(.top, Space.s2)
           Text(Str.linkWarning).textStyle(.px13).foregroundStyle(palette.mutedForeground)
         }
       case .approved(let request):
@@ -430,20 +429,20 @@ private struct ApproveStep: View {
           icon: .circleCheck, tint: palette.accent, title: Str.linkSignedIn,
           description: Str.linkSignedInDescription(deviceLabel(request), name)
         ) {
-          MatineeKit.MatineeButton(Str.linkDone, fullWidth: true) { nav.back() }
+          MatineeButton(Str.linkDone, fullWidth: true) { nav.back() }
         }
       case .gone:
         Outcome(
           icon: .circleAlert, tint: palette.mutedForeground, title: Str.linkCodeGone,
           description: Str.linkCodeGoneDescription, detail: otherServer
         ) {
-          MatineeKit.MatineeButton(again, look: .outline, fullWidth: true, action: onAgain)
+          MatineeButton(again, look: .outline, fullWidth: true, action: onAgain)
         }
       case .failed(let message):
         Outcome(icon: .circleAlert, tint: palette.mutedForeground, title: Str.linkLookupFailed, description: message) {
-          VStack(spacing: MatineeKit.Space.s2) {
-            MatineeKit.MatineeButton(Str.commonRetry, icon: .refreshCw, look: .outline, fullWidth: true) { attempt += 1 }
-            MatineeKit.MatineeButton(again, look: .ghost, fullWidth: true, action: onAgain)
+          VStack(spacing: Space.s2) {
+            MatineeButton(Str.commonRetry, icon: .refreshCw, look: .outline, fullWidth: true) { attempt += 1 }
+            MatineeButton(again, look: .ghost, fullWidth: true, action: onAgain)
           }
         }
       }
@@ -486,10 +485,10 @@ private struct ApproveStep: View {
       do {
         try await DeviceCodes(api: api).approve(userCode: userCode)
         UINotificationFeedbackGenerator().notificationOccurred(.success)
-        MatineeKit.withMotion(MatineeKit.Motion.enter) { state = .approved(request) }
+        withMotion(Motion.enter) { state = .approved(request) }
       } catch {
         if (error as? ApiException)?.status == 404 {
-          MatineeKit.withMotion(MatineeKit.Motion.enter) { state = .gone }
+          withMotion(Motion.enter) { state = .gone }
         } else {
           approveError = Str.linkApproveFailed(describeFailure(error))
         }
@@ -519,10 +518,10 @@ private func deviceLabel(_ request: DeviceRequest) -> String {
 /// px-4 py-3`, its tile, and its name over what it runs on.
 private struct DeviceCard: View {
   let request: DeviceRequest
-  @Environment(\.kitPalette) private var palette
+  @Environment(\.palette) private var palette
 
   var body: some View {
-    HStack(spacing: MatineeKit.Space.s3) {
+    HStack(spacing: Space.s3) {
       RowIcon(platformIcon(request.platform))
       VStack(alignment: .leading, spacing: 0) {
         Text(deviceLabel(request)).textStyle(.sm, weight: .medium).foregroundStyle(palette.foreground)
@@ -530,8 +529,8 @@ private struct DeviceCard: View {
       }
       .frame(maxWidth: .infinity, alignment: .leading)
     }
-    .padding(.horizontal, MatineeKit.Space.s4)
-    .padding(.vertical, MatineeKit.Space.s3)
+    .padding(.horizontal, Space.s4)
+    .padding(.vertical, Space.s3)
     .background(palette.foreground.opacity(0.02), in: PanelShape)
     .overlay { PanelShape.strokeBorder(palette.border) }
     .accessibilityElement(children: .combine)
@@ -541,29 +540,29 @@ private struct DeviceCard: View {
 /// How checking a code ended, with what to do next: the web's frame, its
 /// icon over a heading and what it means, then the way on.
 private struct Outcome<Actions: View>: View {
-  let icon: MatineeKit.Lucide
+  let icon: Lucide
   let tint: Color
   let title: String
   let description: String
   var detail: String?
   @ViewBuilder let actions: () -> Actions
-  @Environment(\.kitPalette) private var palette
+  @Environment(\.palette) private var palette
 
   var body: some View {
     VStack(alignment: .leading, spacing: 0) {
-      MatineeKit.LucideIcon(icon, size: 32, tint: tint)
-        .padding(.top, MatineeKit.Space.s4)
+      LucideIcon(icon, size: 32, tint: tint)
+        .padding(.top, Space.s4)
       Text(title).textStyle(.xl, weight: .semibold, tracking: .tight).foregroundStyle(palette.foreground)
         .accessibilityAddTraits(.isHeader)
-        .padding(.top, MatineeKit.Space.s4)
+        .padding(.top, Space.s4)
       Text(description).textStyle(.sm).foregroundStyle(palette.mutedForeground)
-        .padding(.top, MatineeKit.Space.s1_5)
+        .padding(.top, Space.s1_5)
       if let detail {
         Text(detail).textStyle(.sm).foregroundStyle(palette.mutedForeground)
-          .padding(.top, MatineeKit.Space.s2)
+          .padding(.top, Space.s2)
       }
       actions()
-        .padding(.top, MatineeKit.Space.s6)
+        .padding(.top, Space.s6)
     }
   }
 }

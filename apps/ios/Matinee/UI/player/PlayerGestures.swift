@@ -361,13 +361,13 @@ struct GestureNotes: View {
     ZStack {
       if shown == .brightness {
         LevelNote(icon: .sun, level: state.level)
-          .padding(.leading, MatineeKit.Space.s8)
+          .padding(.leading, Space.s8)
           .frame(maxWidth: .infinity, alignment: .leading)
           .transition(.opacity)
       }
       if shown == .volume {
         LevelNote(icon: state.level <= 0 ? .volumeX : .volume, level: state.level)
-          .padding(.trailing, MatineeKit.Space.s8)
+          .padding(.trailing, Space.s8)
           .frame(maxWidth: .infinity, alignment: .trailing)
           .transition(.opacity)
       }
@@ -379,7 +379,7 @@ struct GestureNotes: View {
     // The levels sit on their own sides of the screen whatever the language, as the swipes do.
     .environment(\.layoutDirection, .leftToRight)
     .frame(maxWidth: .infinity, maxHeight: .infinity)
-    .animation(MatineeKit.Motion.animation(MatineeKit.Motion.enter, reduceMotion: reduceMotion), value: shown)
+    .animation(Motion.animation(Motion.enter, reduceMotion: reduceMotion), value: shown)
     .allowsHitTesting(false)
     .accessibilityHidden(true)
     .task(id: state.kind) {
@@ -397,13 +397,13 @@ struct GestureNotes: View {
 /// A brightness or volume: how much as a number, as a bar filling up, and
 /// which one, in the web player's note glass.
 private struct LevelNote: View {
-  let icon: MatineeKit.Lucide
+  let icon: Lucide
   let level: Double
-  @Environment(\.playerPalette) private var palette
+  @Environment(\.palette) private var palette
 
   var body: some View {
     let percent = FloatingPointFormatStyle<Double>.Percent.percent.precision(.fractionLength(0)).locale(.app)
-    VStack(spacing: MatineeKit.Space.s2_5) {
+    VStack(spacing: Space.s2_5) {
       // As wide as the fullest level, so the box and its bar hold still.
       ZStack {
         Text(1.0.formatted(percent)).hidden()
@@ -418,11 +418,11 @@ private struct LevelNote: View {
           Capsule().fill(palette.accent).frame(width: 6, height: 120 * min(1, max(0, level)))
         }
         .clipShape(Capsule())
-      MatineeKit.LucideIcon(icon, size: 20, tint: .white, scales: false)
+      LucideIcon(icon, size: 20, tint: .white, scales: false)
     }
-    .padding(.horizontal, MatineeKit.Space.s3)
-    .padding(.vertical, MatineeKit.Space.s3_5)
-    .pictureGlass(in: RoundedRectangle.kit(MatineeKit.Radius.xl2), shade: .medium)
+    .padding(.horizontal, Space.s3)
+    .padding(.vertical, Space.s3_5)
+    .pictureGlass(in: RoundedRectangle.kit(Radius.xl2), shade: .medium)
   }
 }
 
@@ -436,12 +436,12 @@ private struct SeekNote: View {
     let delta = to - from
     let total = formatClock(controller.duration)
     let longest = formatClock(controller.duration).replacing(/[0-9]/, with: "0")
-    VStack(spacing: MatineeKit.Space.s1) {
+    VStack(spacing: Space.s1) {
       if let images = controller.trickplay, images.width > 0 {
         TrickplayFrameView(controller: controller, seconds: to)
           .frame(width: 200, height: 200 * CGFloat(images.height) / CGFloat(images.width))
-          .clipShape(RoundedRectangle.kit(MatineeKit.Radius.md))
-          .padding(.bottom, MatineeKit.Space.s1)
+          .clipShape(RoundedRectangle.kit(Radius.md))
+          .padding(.bottom, Space.s1)
       }
       ZStack {
         Text("+\(longest)").hidden()
@@ -457,23 +457,23 @@ private struct SeekNote: View {
       .foregroundStyle(.white.opacity(0.75))
     }
     .monospacedDigit()
-    .padding(MatineeKit.Space.s3)
-    .pictureGlass(in: RoundedRectangle.kit(MatineeKit.Radius.xl), shade: .medium)
+    .padding(Space.s3)
+    .pictureGlass(in: RoundedRectangle.kit(Radius.xl), shade: .medium)
   }
 }
 
 /// Says the video plays faster while the finger holds it: the web's flash note.
 struct HoldNote: View {
   var body: some View {
-    HStack(spacing: MatineeKit.Space.s2) {
-      MatineeKit.LucideIcon(.fastForward, size: 16, tint: .white, scales: false)
+    HStack(spacing: Space.s2) {
+      LucideIcon(.fastForward, size: 16, tint: .white, scales: false)
       Text(Str.playerSpeedRate(speedText(HOLD_SPEED)))
         .textStyle(.sm, weight: .medium)
         .monospacedDigit()
         .foregroundStyle(.white)
     }
-    .padding(.horizontal, MatineeKit.Space.s4)
-    .padding(.vertical, MatineeKit.Space.s2)
+    .padding(.horizontal, Space.s4)
+    .padding(.vertical, Space.s2)
     .pictureGlass(in: Capsule(), shade: .medium, ring: 0)
     .accessibilityElement(children: .combine)
   }

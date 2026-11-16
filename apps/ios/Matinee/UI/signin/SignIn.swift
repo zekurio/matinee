@@ -76,7 +76,7 @@ struct AuthLayout<Content: View>: View {
 struct AuthHeading: View {
   let title: String
   let description: String?
-  @Environment(\.MatineeKit::palette) private var palette
+  @Environment(\.palette) private var palette
 
   init(_ title: String, description: String? = nil) {
     self.title = title
@@ -100,7 +100,7 @@ struct AuthHeading: View {
 /// A form's error, in the danger color under what it's about, read out by VoiceOver when it comes.
 private struct FieldError: View {
   let message: String
-  @Environment(\.MatineeKit::palette) private var palette
+  @Environment(\.palette) private var palette
 
   var body: some View {
     Text(message)
@@ -129,7 +129,7 @@ struct ConnectScreen: View {
     AuthLayout {
       AuthHeading(Str.connectTitle, description: Str.connectDescription)
       Gap(Space.s8)
-      MatineeKit.MatineeTextField(
+      MatineeTextField(
         Str.connectPlaceholder, text: $address, icon: .server, isError: connector.error != nil
       )
       .keyboardType(.URL)
@@ -139,15 +139,14 @@ struct ConnectScreen: View {
       .submitLabel(.go)
       // Not disabled while it connects: the keyboard stays up, and the form doesn't jump.
       .onSubmit(connect)
-      // TODO(strings): connect_address, "Server address"
-      .accessibilityLabel(Str.connectTitle)
+      .accessibilityLabel(Str.iosConnectAddress)
       .accessibilityHint(Str.connectDescription)
       if let error = connector.error {
         Gap(Space.s2)
         FieldError(message: error)
       }
       Gap(Space.s4)
-      MatineeKit.MatineeButton(Str.connectButton, pending: connector.busy, fullWidth: true, action: connect)
+      MatineeButton(Str.connectButton, pending: connector.busy, fullWidth: true, action: connect)
         .disabled(blank)
       if connector.local {
         Gap(Space.s4)
@@ -192,12 +191,12 @@ struct SignInScreen: View {
     ZStack {
       if withCode {
         DeviceCodeSignIn {
-          MatineeKit.withMotion(MatineeKit.Motion.enter) { withCode = false }
+          withMotion(Motion.enter) { withCode = false }
         }
         .transition(.opacity)
       } else {
         BrowserSignInForm(server: server, config: config, adding: adding) {
-          MatineeKit.withMotion(MatineeKit.Motion.enter) { withCode = true }
+          withMotion(Motion.enter) { withCode = true }
         }
         .transition(.opacity)
       }
@@ -226,10 +225,10 @@ private struct BrowserSignInForm: View {
         Gap(Space.s4)
       }
       VStack(spacing: Space.s3) {
-        MatineeKit.MatineeButton(
+        MatineeButton(
           browserLabel, icon: config.passkeys || config.oidc == nil ? .keyRound : .logIn, pending: browser != nil,
           fullWidth: true, action: signInInBrowser)
-        MatineeKit.MatineeButton(Str.signinWithCode, icon: .smartphone, look: .outline, fullWidth: true) {
+        MatineeButton(Str.signinWithCode, icon: .smartphone, look: .outline, fullWidth: true) {
           errors.browser = nil
           onCode()
         }
@@ -365,7 +364,7 @@ private struct DeviceCodeSignIn: View {
       if let code = flow.code, let url = URL(string: code.verificationUriComplete) {
         LinkPageButton(url: url)
       }
-      MatineeKit.MatineeButton(Str.signinCodeBack, look: .ghost, fullWidth: true, action: onBack)
+      MatineeButton(Str.signinCodeBack, look: .ghost, fullWidth: true, action: onBack)
     }
   }
 }
@@ -377,7 +376,7 @@ private struct LinkPageButton: View {
   @Environment(\.openURL) private var openURL
 
   var body: some View {
-    MatineeKit.MatineeButton(Str.signinCodeOpen, icon: .link, look: .outline, fullWidth: true) { openURL(url) }
+    MatineeButton(Str.signinCodeOpen, icon: .link, look: .outline, fullWidth: true) { openURL(url) }
   }
 }
 
@@ -395,11 +394,10 @@ private struct CodeHeading: View {
 private struct CodeQr: View {
   let code: DeviceCode?
   let size: CGFloat
-  @Environment(\.MatineeKit::palette) private var palette
+  @Environment(\.palette) private var palette
 
   var body: some View {
     if let code {
-      // TODO(shell): the shared QR code view.
       QrCode(code.verificationUriComplete, label: Str.signinCodeQr(code.userCode), size: size)
     } else {
       Spinner(size: 32, tint: palette.accent).frame(width: size, height: size)
@@ -414,7 +412,7 @@ private struct CodeDetails: View {
   let error: String?
   let afterQr: Bool
   let onRetry: (() -> Void)?
-  @Environment(\.MatineeKit::palette) private var palette
+  @Environment(\.palette) private var palette
   @Environment(\.horizontalSizeClass) private var sizeClass
   /// The spinners beside a line of text grow with it.
   @ScaledMetric(relativeTo: .footnote) private var spinner: CGFloat = 14
@@ -433,7 +431,7 @@ private struct CodeDetails: View {
         Gap(Space.s3)
         Callout(error, icon: .circleAlert, look: .destructive) {
           if let onRetry {
-            MatineeKit.MatineeButton(Str.commonRetry, icon: .refreshCw, look: .outline, size: .sm, action: onRetry)
+            MatineeButton(Str.commonRetry, icon: .refreshCw, look: .outline, size: .sm, action: onRetry)
           }
         }
       }

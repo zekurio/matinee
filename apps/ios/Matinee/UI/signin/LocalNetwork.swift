@@ -28,7 +28,7 @@ struct LocalNetworkHint: View {
 
   var body: some View {
     Callout(nil, description: Str.iosConnectLocalNetwork, icon: .info) {
-      MatineeKit.MatineeButton(Str.iosOpenSettings, icon: .settings, look: .outline, size: .sm) {
+      MatineeButton(Str.iosOpenSettings, icon: .settings, look: .outline, size: .sm) {
         if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
       }
     }

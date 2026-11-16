@@ -62,9 +62,7 @@ private struct MotionModifier<Value: Equatable>: ViewModifier {
 
 extension View {
   /// `.animation(_:value:)` with one of `Motion`'s, as Reduce Motion allows it.
-  /// Disfavored, so an app whose own module still has a `motion` of the same
-  /// shape keeps using its own in files that don't import the kit.
-  @_disfavoredOverload public func motion(_ animation: Animation, value: some Equatable) -> some View {
+  public func motion(_ animation: Animation, value: some Equatable) -> some View {
     modifier(MotionModifier(animation: animation, value: value))
   }
 }

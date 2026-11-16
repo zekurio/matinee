@@ -75,9 +75,17 @@ struct LibraryScreen: View {
     .titleFilterSheet(
       isPresented: $filtering, kind: library?.kind == LibraryKind.shows ? TitleKind.show : TitleKind.movie,
       options: offered, state: state)
+    // A hardware keyboard's ⌘F opens the search, as in iOS's own apps.
+    .keyCommand("f", label: Str.librarySearchTitles, action: openSearch)
     #if DEBUG
       .onAppear(perform: devStart)
     #endif
+  }
+
+  /// The field, taking the keyboard: in the bar's place on a phone, beside the controls from `sm` up.
+  private func openSearch() {
+    if !wideControls(window, typeSize) && !searching { withMotion(Motion.enter) { searching = true } }
+    fieldFocused = true
   }
 
   #if DEBUG
@@ -132,10 +140,7 @@ struct LibraryScreen: View {
     } else {
       TopBar(library?.name) {
         DisconnectedAction(libraries, options)
-        RoundIconButton(.search, label: Str.librarySearchTitles, look: .ghost, size: 48, iconSize: 22) {
-          withMotion(Motion.enter) { searching = true }
-          fieldFocused = true
-        }
+        RoundIconButton(.search, label: Str.librarySearchTitles, look: .ghost, size: 48, iconSize: 22, action: openSearch)
         if offered != nil { TitleFilterButton(active: state.activeFilters) { filtering = true } }
         TitleSortButton(state: state, options: offered)
       }

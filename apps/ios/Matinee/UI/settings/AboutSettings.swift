@@ -16,7 +16,7 @@ struct AboutPage: View {
     SettingsScaffold(Str.aboutTitle) {
       ListBlock {
         ForEach(appInfo(), id: \.0) { row in
-          MatineeKit.ValueRow(row.0, value: row.1)
+          ValueRow(row.0, value: row.1)
         }
       }
       PlaybackDiagnosticsSection()
@@ -79,11 +79,11 @@ private struct AppLogSection: View {
 
   var body: some View {
     ListSection(Str.logsTitle) {
-      MatineeKit.ListRow(Str.logsShow, subtitle: Str.logsNote) { withLog { shown = $0 } }
-      MatineeKit.ListRow(Str.logsCopy, accessory: MatineeKit.ListRowAccessory.none) {
+      ListRow(Str.logsShow, subtitle: Str.logsNote) { withLog { shown = $0 } }
+      ListRow(Str.logsCopy, accessory: ListRowAccessory.none) {
         withLog { copyText($0, snackbar: snackbar, copied: Str.logsCopied) }
       }
-      MatineeKit.ListRow(Str.logsShare, accessory: MatineeKit.ListRowAccessory.none) {
+      ListRow(Str.logsShare, accessory: ListRowAccessory.none) {
         withLog { shareText($0, subject: Str.logsTitle) }
       }
     }

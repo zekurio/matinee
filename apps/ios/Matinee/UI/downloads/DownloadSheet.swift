@@ -91,7 +91,7 @@ struct DownloadSheet: View {
               ListBlock {
                 ForEach(source.audio, id: \.index) { track in
                   let detail = [track.format, track.layout].compactMap(\.self).joined(separator: " · ")
-                  MatineeKit.SwitchRow(audioLabel(track), subtitle: detail.isEmpty ? nil : detail, isOn: audioBinding(track.index))
+                  SwitchRow(audioLabel(track), subtitle: detail.isEmpty ? nil : detail, isOn: audioBinding(track.index))
                 }
               }
               if noAudio { SheetProblem(Str.downloadsAudioNone) }
@@ -102,7 +102,7 @@ struct DownloadSheet: View {
               ListBlock {
                 ForEach(texts, id: \.id) { track in
                   let detail = subtitleDetail(track)
-                  MatineeKit.SwitchRow(
+                  SwitchRow(
                     subtitleLabel(track, texts), subtitle: detail.isEmpty ? nil : detail,
                     isOn: subtitleBinding(track.id))
                 }
@@ -215,8 +215,7 @@ struct DownloadSheet: View {
         try await downloads.enqueue(source, server: server, original: original, spec: spec, plan: plan, subtitles: saved)
       } catch {
         AppLog.downloads.error("Could not queue a download")
-        // TODO(strings): downloads_queue_failed, "Couldn't start the download".
-        snackbar.post(ToastMessage(Str.downloadsFailed, kind: .error))
+        snackbar.post(ToastMessage(Str.iosDownloadsQueueFailed, kind: .error))
       }
     }
     dismiss()

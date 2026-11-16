@@ -9,24 +9,15 @@ import SwiftUI
  * MatineeCore's (Admin/AuthForms.swift, Admin/BrandingForm.swift).
  */
 
-/// The entry point Settings' row opens, under the name it had while the
-/// page edited only the accents.
-typealias ServerAppearanceSettings = ServerBrandingSettings
-
 /// How the server looks to everyone on it: the accent, a preset or a color
 /// per appearance, and whether the login screen shows the libraries'
 /// artwork behind its form, and how. The fields save together, from the
 /// save bar. The app previews each accent at once, as the web does, and
 /// goes back to the saved ones when the page closes.
 struct ServerBrandingSettings: View {
-  var body: some View { BrandingPage().adminTheme() }
-}
-
-private struct BrandingPage: View {
   @State private var loader = Loader<Branding>()
   @State private var form: BrandingDraft?
   @Environment(\.api) private var api
-  // TODO(shell): the old theme's store, until the shell's replaces it.
   @Environment(ThemeStore.self) private var theme
 
   var body: some View {
@@ -63,13 +54,11 @@ private struct BrandingPage: View {
 
 private struct BrandingForm: View {
   @Binding var form: BrandingDraft
-  @Environment(\.adminPalette) private var palette
+  @Environment(\.palette) private var palette
 
   var body: some View {
     VStack(alignment: .leading, spacing: Space.section) {
-      VStack(alignment: .leading, spacing: Space.s3) {
-        Text(Str.webBrandingTitle).textStyle(.base, weight: .semibold, tracking: .tight)
-          .accessibilityAddTraits(.isHeader)
+      SettingsSection(Str.webBrandingTitle) {
         Presets(form: $form.accents)
         ListBlock {
           ColorRow(title: Str.webBrandingModeLight, label: Str.webBrandingAccentLight, value: $form.accents.light)
@@ -79,7 +68,7 @@ private struct BrandingForm: View {
 
       VStack(alignment: .leading, spacing: Space.s3) {
         ListSection(Str.webBrandingBackdropTitle) {
-          MatineeKit.SwitchRow(Str.webBrandingBackdropEnabled, isOn: $form.backdrop.enabled)
+          SwitchRow(Str.webBrandingBackdropEnabled, isOn: $form.backdrop.enabled)
           Group {
             SelectRow(
               Str.webBrandingBackdropArtwork, selection: $form.backdrop.artwork,
@@ -131,7 +120,7 @@ private struct Swatch: View {
   let selected: Bool
   let name: String
   let action: () -> Void
-  @Environment(\.adminPalette) private var palette
+  @Environment(\.palette) private var palette
 
   var body: some View {
     Pressable(shape: Circle(), wash: false, action: action) {
@@ -147,7 +136,7 @@ private struct Swatch: View {
     }
     .accessibilityLabel(name)
     .accessibilityAddTraits(selected ? .isSelected : [])
-    .adminMotion(MatineeKit.Motion.color, value: selected)
+    .motion(Motion.color, value: selected)
   }
 }
 
@@ -163,7 +152,7 @@ private nonisolated struct DiagonalHalf: Shape {
   }
 }
 
-private func hexColor(_ hex: String) -> Color { MatineeKit.RGB(hex: hex)?.color ?? .clear }
+private func hexColor(_ hex: String) -> Color { RGB(hex: hex)?.color ?? .clear }
 
 /// An appearance's accent: its name, then the hex value with the color it
 /// names beside it, as the web's HexColorInput. A value that isn't a color
@@ -172,7 +161,7 @@ private struct ColorRow: View {
   let title: String
   let label: String
   @Binding var value: String
-  @Environment(\.adminPalette) private var palette
+  @Environment(\.palette) private var palette
 
   var body: some View {
     let parsed = normalizeHex(value)
@@ -180,7 +169,7 @@ private struct ColorRow: View {
       Text(title).textStyle(.sm, weight: .medium).foregroundStyle(palette.foreground)
         .accessibilityHidden(true)
       HStack(spacing: Space.s2) {
-        MatineeKit.MatineeTextField(
+        MatineeTextField(
           "#rrggbb", text: Binding(get: { value }, set: { value = String($0.prefix(7)) }), isError: parsed == nil
         )
         .keyboardType(.asciiCapable)
@@ -193,7 +182,7 @@ private struct ColorRow: View {
           .overlay { RoundedRectangle.kit(Radius.lg).strokeBorder(palette.foreground.opacity(0.15)) }
           .frame(width: TouchTarget, height: TouchTarget)
           .accessibilityHidden(true)
-          .adminMotion(MatineeKit.Motion.color, value: parsed)
+          .motion(Motion.color, value: parsed)
       }
     }
     .padding(.horizontal, Space.s4)
@@ -209,14 +198,14 @@ private struct SliderRow: View {
   let range: ClosedRange<Double>
   let text: (Int) -> String
   let onChange: (Double) -> Void
-  @Environment(\.adminPalette) private var palette
+  @Environment(\.palette) private var palette
 
   var body: some View {
     VStack(alignment: .leading, spacing: Space.s1) {
       Text(title).textStyle(.sm, weight: .medium).foregroundStyle(palette.foreground)
         .accessibilityHidden(true)
       HStack(spacing: Space.s3) {
-        MatineeKit.MatineeSlider(
+        MatineeSlider(
           value: Binding(get: { value }, set: onChange), in: range, step: 1, label: title,
           valueText: { text(Int($0.rounded())) })
         Text(text(Int(value.rounded()))).textStyle(.xs).monospacedDigit().foregroundStyle(palette.mutedForeground)

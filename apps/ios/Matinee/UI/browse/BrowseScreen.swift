@@ -118,13 +118,15 @@ struct BrowseScreen: View {
 /// A person's page: who they are and what they're in. Android keeps it in BrowseScreen.kt.
 struct PersonScreen: View {
   let name: String
+  /// The provider's id, from a credit that has one: it tells apart two people of one name.
+  var tmdbId: String?
 
   @State private var person = Loader<Person>()
   @State private var kind: String?
   @Environment(\.homeAction) private var homeAction
 
   var body: some View {
-    let name = name
+    let (name, tmdbId) = (name, tmdbId)
     Group {
       switch person.state {
       case .loading: PersonSkeleton()
@@ -137,7 +139,7 @@ struct PersonScreen: View {
       #if DEBUG
         if BrowseFixtures.on { return try await BrowseFixtures.person(name, api: api) }
       #endif
-      return try await loadPerson(api, name: name)
+      return try await loadPerson(api, name: name, tmdbId: tmdbId)
     }
     // No name in the bar: the page's heading is the name, large, under it.
     .topBar(nil, onHome: homeAction) { DisconnectedAction(person) }
@@ -313,18 +315,11 @@ private struct Biography: View {
 private struct CreditSection: View {
   let section: PersonCreditSection
   @Environment(\.gutter) private var gutter
-  @Environment(\.palette) private var palette
 
   var body: some View {
     VStack(alignment: .leading, spacing: Space.s3) {
-      HStack(alignment: .firstTextBaseline, spacing: Space.s2) {
-        Text(sectionName(section.kind))
-          .textStyle(.xl, weight: .semibold, tracking: .tight)
-          .foregroundStyle(palette.foreground)
-          .accessibilityAddTraits(.isHeader)
-        Text(Str.browseTitleCount(section.credits.count)).textStyle(.sm).foregroundStyle(palette.mutedForeground)
-      }
-      .padding(.horizontal, gutter)
+      SectionTitle(sectionName(section.kind), count: section.credits.count)
+        .padding(.horizontal, gutter)
       CardGrid {
         ForEach(section.credits, id: \.title.id) { credit in
           let detail = personCreditDetail(credit)
@@ -340,8 +335,7 @@ private struct CreditSection: View {
     switch kind {
     case CreditKind.director: Str.personDepartmentDirecting
     case CreditKind.writer: Str.personDepartmentWriting
-    // TODO(strings): people_section_creator, the web's "Created".
-    case CreditKind.creator: Str.personDepartmentCreator
+    case CreditKind.creator: Str.iosPeopleSectionCreator
     default: Str.personDepartmentActing
     }
   }

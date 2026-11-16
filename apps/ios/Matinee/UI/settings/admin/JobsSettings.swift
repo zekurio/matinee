@@ -18,17 +18,12 @@ import SwiftUI
 /// waits; a task runs now or stops from its row. The page keeps itself
 /// current while it shows.
 struct JobsSettings: View {
-  var body: some View { JobsPage().adminTheme() }
-}
-
-private struct JobsPage: View {
   @State private var loader = Loader<JobsOverview>()
   @State private var saver = Saver()
   @State private var open: Picked<String>?
   // The numbers changed and not saved yet, by queue; the rest follow the server as it polls.
   @State private var edits: [String: Int] = [:]
   @Environment(\.api) private var api
-  // TODO(shell): the kit's toasts, once the shell hosts them.
   @Environment(\.snackbar) private var snackbar
 
   var body: some View {
@@ -168,7 +163,7 @@ private func taskNext(_ task: ScheduledTask) -> String {
 /// color while it's paused, the danger color with failures, else quiet.
 private struct StatusDot: View {
   let queue: JobQueueStatus
-  @Environment(\.adminPalette) private var palette
+  @Environment(\.palette) private var palette
 
   var body: some View {
     let color =
@@ -182,7 +177,7 @@ private struct StatusDot: View {
 /// A task's last run, or how far it is now, and its schedule, with a bar while it runs.
 private struct TaskLines: View {
   let task: ScheduledTask
-  @Environment(\.adminPalette) private var palette
+  @Environment(\.palette) private var palette
 
   var body: some View {
     VStack(alignment: .leading, spacing: 2) {
@@ -192,7 +187,7 @@ private struct TaskLines: View {
         Text(taskNext(task)).textStyle(.px13).foregroundStyle(palette.mutedForeground)
       }
       if task.startedAt != nil, let progress = task.progress {
-        MatineeKit.ProgressBar(progress).padding(.top, Space.s1).frame(maxWidth: 240)
+        ProgressBar(progress).padding(.top, Space.s1).frame(maxWidth: 240)
           .accessibilityHidden(true)
       }
     }
@@ -206,7 +201,7 @@ private struct TaskButton: View {
 
   var body: some View {
     let running = task.startedAt != nil
-    MatineeKit.RoundIconButton(
+    RoundIconButton(
       running ? .x : .playOutline, label: running ? Str.webJobsTaskCancel : Str.webJobsTaskRun, look: .outline,
       size: 36, iconSize: 16
     ) { onAction(running ? .cancel : .run) }
@@ -220,7 +215,7 @@ private struct QueueRow: View {
   let task: ScheduledTask?
   let onTask: (TaskAction) -> Void
   let onOpen: () -> Void
-  @Environment(\.adminPalette) private var palette
+  @Environment(\.palette) private var palette
 
   var body: some View {
     Pressable(action: onOpen) {
@@ -237,7 +232,7 @@ private struct QueueRow: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         // The run button sits over this, outside the row's own button.
         if task != nil { Color.clear.frame(width: TouchTarget, height: 36) }
-        MatineeKit.LucideIcon(.chevronRight, size: 16, tint: palette.mutedForeground).frame(height: 24)
+        LucideIcon(.chevronRight, size: 16, tint: palette.mutedForeground).frame(height: 24)
       }
       .padding(.horizontal, Space.s4)
       .padding(.vertical, Space.s3)
@@ -259,7 +254,7 @@ private struct QueueRow: View {
 private struct TaskRow: View {
   let task: ScheduledTask
   let onAction: (TaskAction) -> Void
-  @Environment(\.adminPalette) private var palette
+  @Environment(\.palette) private var palette
 
   var body: some View {
     HStack(alignment: .top, spacing: Space.s3) {
@@ -281,7 +276,7 @@ private struct TaskRow: View {
 private struct ConcurrencyRow: View {
   let queue: JobQueueStatus
   @Binding var value: Int
-  @Environment(\.adminPalette) private var palette
+  @Environment(\.palette) private var palette
   @Environment(\.dynamicTypeSize) private var dynamicType
 
   var body: some View {
@@ -324,7 +319,7 @@ private struct ConcurrencyRow: View {
   private var stepper: some View {
     let name = queueName(queue)
     return HStack(spacing: Space.s1_5) {
-      MatineeKit.RoundIconButton(
+      RoundIconButton(
         .minus, label: Str.webJobsConcurrencyDecrease(name), look: .outline, size: 32, iconSize: 16
       ) { value -= 1 }
       .disabled(value <= 1)
@@ -332,8 +327,8 @@ private struct ConcurrencyRow: View {
         .foregroundStyle(palette.foreground)
         .frame(minWidth: 32)
         .contentTransition(.numericText(value: Double(value)))
-        .adminMotion(MatineeKit.Motion.color, value: value)
-      MatineeKit.RoundIconButton(
+        .motion(Motion.color, value: value)
+      RoundIconButton(
         .plus, label: Str.webJobsConcurrencyIncrease(name), look: .outline, size: 32, iconSize: 16
       ) { value += 1 }
       .disabled(value >= queue.maxConcurrency)
@@ -345,15 +340,15 @@ private struct ConcurrencyRow: View {
 private struct QueueSheet: View {
   let queue: JobQueueStatus
   let onAction: (QueueAction) -> Void
-  @Environment(\.adminPalette) private var palette
+  @Environment(\.palette) private var palette
 
   var body: some View {
-    MatineeKit.SheetHeader(queueName(queue), subtitle: queueStatus(queue))
-    MatineeKit.SheetItem(
+    SheetHeader(queueName(queue), subtitle: queueStatus(queue))
+    SheetItem(
       queue.paused ? Str.webJobsQueueResume : Str.webJobsQueuePause, icon: queue.paused ? .play : .pause
     ) { onAction(queue.paused ? .resume : .pause) }
     if queue.waiting > 0 {
-      MatineeKit.SheetItem(Str.webJobsQueueClear, icon: .trash, destructive: true) { onAction(.clear) }
+      SheetItem(Str.webJobsQueueClear, icon: .trash, destructive: true) { onAction(.clear) }
     }
     Separator().padding(.vertical, Space.s1_5)
     VStack(alignment: .leading, spacing: Space.s1_5) {

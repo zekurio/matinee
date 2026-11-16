@@ -11,61 +11,11 @@ import UIKit
  * edits; asking before something can't be undone; and the words for times
  * the pages show. The logic under the forms is MatineeCore's (Admin/),
  * where it's tested on the Mac.
- *
- * Names the app and the kit both have are written `MatineeKit.<name>`
- * here, and `.topBar` takes `leading:` so it's the kit's.
  */
 
 /// How wide a page's column gets, on an iPad or a phone on its side: the
 /// web's settings panel, not the whole screen.
 let ADMIN_COLUMN: CGFloat = 680
-
-// MARK: - Theme
-
-extension View {
-  /// The kit's palette, font, and background for an admin page, from the
-  /// app's theme store: its accents, and the appearance picked on this device.
-  // TODO(shell): the root puts `.matineeTheme` on the whole app once the shell moves onto the kit; then this goes.
-  func adminTheme() -> some View { modifier(AdminTheme()) }
-}
-
-private struct AdminTheme: ViewModifier {
-  // TODO(shell): the old theme's store, until the shell's replaces it.
-  @Environment(ThemeStore.self) private var store
-
-  func body(content: Content) -> some View {
-    content.matineeTheme(
-      MatineeKit.MatineeTheme(accentLight: store.accents.light, accentDark: store.accents.dark),
-      mode: MatineeKit.ThemeMode(rawValue: store.mode.rawValue) ?? .system)
-  }
-}
-
-extension EnvironmentValues {
-  /// The kit's palette, under a name of its own while the app's old theme
-  /// has an environment value called `palette` too.
-  // TODO(shell): `\.palette` once the old theme goes.
-  var adminPalette: MatineeKit.Palette { matineePalette }
-}
-
-extension View {
-  /// The kit's `motion`, under a name of its own while the app's old
-  /// `Motion.swift` has one too: `animation` on a change of `value`, a fade
-  /// under Reduce Motion.
-  // TODO(shell): `.motion` once the old one goes.
-  func adminMotion(_ animation: Animation, value: some Equatable) -> some View {
-    modifier(AdminMotion(animation: animation, value: value))
-  }
-}
-
-private struct AdminMotion<Value: Equatable>: ViewModifier {
-  let animation: Animation
-  let value: Value
-  @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-  func body(content: Content) -> some View {
-    content.animation(MatineeKit.Motion.animation(animation, reduceMotion: reduceMotion), value: value)
-  }
-}
 
 // MARK: - Pages
 
@@ -100,7 +50,7 @@ struct AdminPage<Content: View, Actions: View>: View {
     }
     .scrollDismissesKeyboard(.interactively)
     .adminDemoScroll()
-    .topBar(title, leading: .back, onLeading: onBack, actions: actions)
+    .topBar(title, onLeading: onBack, actions: actions)
   }
 }
 
@@ -115,7 +65,7 @@ extension AdminPage where Actions == EmptyView {
 struct AdminLoaded<T: Sendable, Content: View>: View {
   let loader: Loader<T>
   @ViewBuilder let content: (T) -> Content
-  @Environment(\.adminPalette) private var palette
+  @Environment(\.palette) private var palette
 
   init(_ loader: Loader<T>, @ViewBuilder content: @escaping (T) -> Content) {
     self.loader = loader
@@ -130,7 +80,6 @@ struct AdminLoaded<T: Sendable, Content: View>: View {
         .padding(.vertical, Space.s12)
         .accessibilityLabel(Str.loadingInProgress)
     case .failed(let message, let disconnected):
-      // TODO(shell): the shared error state.
       ErrorBox(Str.adminLoadFailed, message, disconnected: disconnected, onRetry: loader.reload)
     case .ready(let value):
       content(value)
@@ -152,10 +101,7 @@ struct AdminLoaded<T: Sendable, Content: View>: View {
       do {
         try await block()
       } catch {
-        let failure = Failure(error)
-        guard failure != .cancelled else { return }
-        // TODO(shell): the kit's toasts, once the shell hosts them.
-        snackbar.show("\(Str.webCommonSaveBarFailed): \(describeFailure(failure))")
+        snackbar.fail(Str.webCommonSaveBarFailed, error)
       }
     }
   }
@@ -206,7 +152,7 @@ struct SaveBarPage<Content: View>: View {
     let back: (() -> Void)? = dirty ? { attempt() } : nil
     AdminPage<Content, EmptyView>(title, onBack: back, actions: { EmptyView() }, content: content)
       .safeAreaInset(edge: .bottom, spacing: 0) {
-        MatineeKit.Reveal(visible) {
+        Reveal(visible) {
           SaveBar(
             feedback: feedback, dirty: dirty, canSave: canSave, attention: attention, onReset: reset, onSave: save)
         }
@@ -263,7 +209,7 @@ private struct SaveBar: View {
   let attention: Int
   let onReset: () -> Void
   let onSave: () -> Void
-  @Environment(\.adminPalette) private var palette
+  @Environment(\.palette) private var palette
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   var body: some View {
@@ -316,13 +262,13 @@ private struct SaveBar: View {
   private var buttons: some View {
     let pending = feedback == .pending
     return HStack(spacing: Space.s2) {
-      MatineeKit.MatineeButton(Str.webCommonSaveBarReset, look: .ghost, size: .md, action: onReset)
+      MatineeButton(Str.webCommonSaveBarReset, look: .ghost, size: .md, action: onReset)
         .disabled(!dirty || pending)
-      MatineeKit.MatineeButton(look: .primary, size: .md, pending: pending, action: onSave) {
+      MatineeButton(look: .primary, size: .md, pending: pending, action: onSave) {
         HStack(spacing: Space.s1_5) {
           switch feedback {
           case .pending: Spinner(size: 14, tint: palette.accentForeground)
-          case .success: MatineeKit.LucideIcon(.check, size: 16, scales: false)
+          case .success: LucideIcon(.check, size: 16, scales: false)
           default: EmptyView()
           }
           Text(saveText).textStyle(.sm, weight: .medium).lineLimit(1)
@@ -398,7 +344,7 @@ private struct HoldsBack: UIViewControllerRepresentable {
 struct Note: View {
   let text: String
   var color: Color?
-  @Environment(\.adminPalette) private var palette
+  @Environment(\.palette) private var palette
 
   init(_ text: String, color: Color? = nil) {
     self.text = text
@@ -416,10 +362,10 @@ struct Note: View {
 /// again: its icon and words in the accent, the whole row one tap.
 struct AdminActionRow: View {
   let title: String
-  let icon: MatineeKit.Lucide
+  let icon: Lucide
   var pending = false
   let action: () -> Void
-  @Environment(\.adminPalette) private var palette
+  @Environment(\.palette) private var palette
 
   var body: some View {
     Pressable(action: action) {
@@ -428,7 +374,7 @@ struct AdminActionRow: View {
           if pending {
             Spinner(size: 18, tint: palette.accent)
           } else {
-            MatineeKit.LucideIcon(icon, size: 18, tint: palette.accent)
+            LucideIcon(icon, size: 18, tint: palette.accent)
           }
         }
         .frame(width: 24)

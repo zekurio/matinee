@@ -19,10 +19,6 @@ private let BUSY_POLL: Duration = .seconds(2)
 /// A tap offers scanning it, fetching its metadata again, editing it, or
 /// removing it, which asks first; Add library opens the same editor empty.
 struct LibrariesSettings: View {
-  var body: some View { LibrariesPage().adminTheme() }
-}
-
-private struct LibrariesPage: View {
   @State private var loader = Loader<[Library]>()
   @State private var providers = Loader<[MetadataProvider]>()
   @State private var saver = Saver()
@@ -30,20 +26,17 @@ private struct LibrariesPage: View {
   @State private var confirmation: Confirmation?
   @Environment(\.api) private var api
   @Environment(\.navigator) private var nav
-  // TODO(shell): the kit's toasts, once the shell hosts them.
   @Environment(\.snackbar) private var snackbar
   @Environment(ShellNav.self) private var shell: ShellNav?
-  @Environment(\.adminPalette) private var palette
+  @Environment(\.palette) private var palette
 
   var body: some View {
     let busy = librariesBusy(loader.state.value ?? [])
     AdminPage(Str.settingsAdminLibraries) {
       AdminLoaded(loader) { list in
-        VStack(alignment: .leading, spacing: Space.s3) {
-          Text(Str.webLibrariesTitle).textStyle(.base, weight: .semibold, tracking: .tight)
-            .accessibilityAddTraits(.isHeader)
+        SettingsSection(Str.webLibrariesTitle) {
           if list.isEmpty {
-            MatineeKit.EmptyState(title: Str.webLibrariesEmptyTitle, description: Str.webLibrariesEmptyDescription) {
+            EmptyState(title: Str.webLibrariesEmptyTitle, description: Str.webLibrariesEmptyDescription) {
               addButton
             }
             .overlay {
@@ -97,7 +90,7 @@ private struct LibrariesPage: View {
   }
 
   private var addButton: some View {
-    MatineeKit.MatineeButton(Str.webLibrariesAdd, icon: .plus, fullWidth: true) { nav.libraryEditor(nil) }
+    MatineeButton(Str.webLibrariesAdd, icon: .plus, fullWidth: true) { nav.libraryEditor(nil) }
   }
 
   private func scan(_ library: Library) {
@@ -138,16 +131,16 @@ private struct LibraryRow: View {
   let library: Library
   let state: LibraryState
   let onOpen: () -> Void
-  @Environment(\.adminPalette) private var palette
+  @Environment(\.palette) private var palette
 
   var body: some View {
     let busy = state == .scanning || library.refreshing
-    MatineeKit.ListRow(
+    ListRow(
       library.name, subtitle: status, icon: library.kind == LibraryKind.shows ? .tv : .film, iconTile: true,
-      accessory: MatineeKit.ListRowAccessory.none, action: onOpen
+      accessory: ListRowAccessory.none, action: onOpen
     ) {
       if busy { Spinner(size: 16, tint: palette.accent) }
-      MatineeKit.LucideIcon(.ellipsis, size: 18, tint: palette.mutedForeground)
+      LucideIcon(.ellipsis, size: 18, tint: palette.mutedForeground)
     }
     .accessibilityHint(Str.webLibrariesActions(library.name))
   }
@@ -172,13 +165,13 @@ private struct LibrarySheet: View {
   let onRemove: () -> Void
 
   var body: some View {
-    MatineeKit.SheetHeader(library.name, subtitle: library.paths.joined(separator: ", "))
-    MatineeKit.SheetItem(Str.webLibrariesScanNow, icon: .refreshCw, action: onScan)
+    SheetHeader(library.name, subtitle: library.paths.joined(separator: ", "))
+    SheetItem(Str.webLibrariesScanNow, icon: .refreshCw, action: onScan)
     if library.metadataProvider != nil {
-      MatineeKit.SheetItem(Str.webLibrariesRefreshMetadata, icon: .image, action: onRefresh)
+      SheetItem(Str.webLibrariesRefreshMetadata, icon: .image, action: onRefresh)
     }
-    MatineeKit.SheetItem(Str.webLibrariesEdit, icon: .settings, action: onEdit)
-    MatineeKit.SheetItem(Str.webLibrariesRemove, icon: .trash, destructive: true, action: onRemove)
+    SheetItem(Str.webLibrariesEdit, icon: .settings, action: onEdit)
+    SheetItem(Str.webLibrariesRemove, icon: .trash, destructive: true, action: onRemove)
   }
 }
 
@@ -195,13 +188,6 @@ private let LIBRARY_SAVED = "library_saved"
 /// `nav.backWith(PICKED_FOLDER, folder)`. The draft lives on this page,
 /// which stays on the stack under the picker.
 struct LibraryEditorScreen: View {
-  let id: String?
-  let results: NavResults
-
-  var body: some View { LibraryEditorLoading(id: id, results: results).adminTheme() }
-}
-
-private struct LibraryEditorLoading: View {
   let id: String?
   let results: NavResults
   @State private var libraries = Loader<[Library]>()
@@ -238,9 +224,8 @@ private struct LibraryEditor: View {
   @FocusState private var naming: Bool
   @Environment(\.api) private var api
   @Environment(\.navigator) private var nav
-  // TODO(shell): the kit's toasts, once the shell hosts them.
   @Environment(\.snackbar) private var snackbar
-  @Environment(\.adminPalette) private var palette
+  @Environment(\.palette) private var palette
 
   init(title: String, existing: Library?, providers: [MetadataProvider], knownPath: String?, results: NavResults) {
     self.title = title
@@ -255,7 +240,7 @@ private struct LibraryEditor: View {
 
   var body: some View {
     AdminPage(title) {
-      MatineeKit.MatineeButton(
+      MatineeButton(
         existing == nil ? Str.webLibrariesBrowserAdd : Str.webLibrariesDialogSave, size: .md, pending: saver.saving,
         action: save
       )
@@ -268,7 +253,7 @@ private struct LibraryEditor: View {
     // The folder the picker handed back, added once, as this page shows again.
     .onChange(of: results.peek(PICKED_FOLDER), initial: true) {
       if let picked = results.take(PICKED_FOLDER) {
-        MatineeKit.withMotion(MatineeKit.Motion.enter) { draft.add(picked) }
+        withMotion(Motion.enter) { draft.add(picked) }
       }
     }
   }
@@ -300,26 +285,24 @@ private struct LibraryEditor: View {
         Note(Str.webLibrariesDialogNoProviderHint)
       }
     }
-    .adminMotion(MatineeKit.Motion.enter, value: draft.provider == nil)
+    .motion(Motion.enter, value: draft.provider == nil)
   }
 
   private var folders: some View {
     ListSection(Str.webLibrariesDialogFolders) {
       if draft.paths.isEmpty {
-        Text(Str.webLibrariesDialogNoFolders).textStyle(.sm).foregroundStyle(palette.mutedForeground)
-          .padding(.horizontal, Space.s4)
-          .frame(maxWidth: .infinity, minHeight: 52, alignment: .leading)
+        EmptyRow(Str.webLibrariesDialogNoFolders)
       }
       ForEach(draft.paths, id: \.self) { path in
         HStack(spacing: Space.s3) {
-          MatineeKit.LucideIcon(.server, size: 18, tint: palette.mutedForeground).frame(width: 24)
+          LucideIcon(.server, size: 18, tint: palette.mutedForeground).frame(width: 24)
           Text(path).textStyle(.sm).foregroundStyle(palette.foreground).lineLimit(2).truncationMode(.middle)
             .frame(maxWidth: .infinity, alignment: .leading)
-          MatineeKit.RoundIconButton(
+          RoundIconButton(
             .x, label: Str.webLibrariesDialogRemoveFolder(path), look: .ghost, size: 32, iconSize: 16,
             tint: palette.mutedForeground
           ) {
-            MatineeKit.withMotion(MatineeKit.Motion.exit) { draft.remove(path) }
+            withMotion(Motion.exit) { draft.remove(path) }
           }
         }
         .padding(.leading, Space.s4)
@@ -364,13 +347,6 @@ private func metadataLanguageName(_ tag: String) -> String {
 /// folder or adds it straight away; the bar at the bottom adds the one
 /// that's open. Adding goes back to the editor with the folder.
 struct FolderPickerScreen: View {
-  let start: String?
-  let added: [String]
-
-  var body: some View { FolderPicker(start: start, added: added).adminTheme() }
-}
-
-private struct FolderPicker: View {
   let added: [String]
   @State private var path: String?
   @State private var listing: DirectoryListing?
@@ -378,7 +354,7 @@ private struct FolderPicker: View {
   @State private var attempt = 0
   @Environment(\.api) private var api
   @Environment(\.navigator) private var nav
-  @Environment(\.adminPalette) private var palette
+  @Environment(\.palette) private var palette
 
   init(start: String?, added: [String]) {
     self.added = added
@@ -403,9 +379,7 @@ private struct FolderPicker: View {
                 FolderRow(name: "..", up: true, label: Str.webLibrariesBrowserParent) { path = parent }
               }
               if current.directories.isEmpty {
-                Text(Str.webLibrariesBrowserEmpty).textStyle(.sm).foregroundStyle(palette.mutedForeground)
-                  .padding(.horizontal, Space.s4)
-                  .frame(maxWidth: .infinity, minHeight: 52, alignment: .leading)
+                EmptyRow(Str.webLibrariesBrowserEmpty)
               }
               ForEach(current.directories, id: \.path) { directory in
                 FolderRow(
@@ -421,7 +395,6 @@ private struct FolderPicker: View {
           }
           .scrollDismissesKeyboard(.interactively)
         } else if let failure {
-          // TODO(shell): the shared error state.
           ErrorBox(Str.foldersLoadFailed, failure.message, disconnected: failure.disconnected) { attempt += 1 }
         } else {
           Spinner(size: 24, tint: palette.mutedForeground).accessibilityLabel(Str.loadingInProgress)
@@ -432,7 +405,7 @@ private struct FolderPicker: View {
     .frame(maxWidth: .infinity)
     // Always there, so the list above doesn't jump when the first folder loads.
     .safeAreaInset(edge: .bottom, spacing: 0) { bar(current) }
-    .topBar(Str.webLibrariesDialogBrowse, leading: .back)
+    .topBar(Str.webLibrariesDialogBrowse)
     .task(id: "\(path ?? "")#\(attempt)") { await open(path) }
   }
 
@@ -471,7 +444,7 @@ private struct FolderPicker: View {
       Separator()
       VStack(alignment: .leading, spacing: Space.s2_5) {
         Note(note)
-        MatineeKit.MatineeButton(look: .primary, fullWidth: true) {
+        MatineeButton(look: .primary, fullWidth: true) {
           if let adds { add(adds) }
         } label: {
           Text(button).textStyle(.sm, weight: .medium).lineLimit(1).truncationMode(.middle)
@@ -492,7 +465,7 @@ private struct PathField: View {
   let path: String
   let onOpen: (String) -> Void
   @State private var draft: String
-  @Environment(\.adminPalette) private var palette
+  @Environment(\.palette) private var palette
 
   init(path: String, onOpen: @escaping (String) -> Void) {
     self.path = path
@@ -503,8 +476,8 @@ private struct PathField: View {
   var body: some View {
     let typed = draft.trimmingCharacters(in: .whitespacesAndNewlines)
     let can = !typed.isEmpty && typed != path
-    MatineeKit.MatineeTextField(Str.webLibrariesBrowserPath, text: $draft) {
-      MatineeKit.RoundIconButton(
+    MatineeTextField(Str.webLibrariesBrowserPath, text: $draft) {
+      RoundIconButton(
         .chevronRight, label: Str.webLibrariesBrowserGo, look: .ghost, size: 32, iconSize: 18,
         tint: palette.mutedForeground
       ) { if can { onOpen(typed) } }
@@ -525,7 +498,7 @@ private struct FolderRow: View {
   let label: String
   var onAdd: (() -> Void)?
   let onOpen: () -> Void
-  @Environment(\.adminPalette) private var palette
+  @Environment(\.palette) private var palette
 
   init(name: String, up: Bool = false, label: String, onAdd: (() -> Void)? = nil, onOpen: @escaping () -> Void) {
     self.name = name
@@ -538,12 +511,12 @@ private struct FolderRow: View {
   var body: some View {
     Pressable(action: onOpen) {
       HStack(spacing: Space.s3) {
-        if up { MatineeKit.LucideIcon(.arrowLeft, size: 18, tint: palette.mutedForeground).frame(width: 24) }
+        if up { LucideIcon(.arrowLeft, size: 18, tint: palette.mutedForeground).frame(width: 24) }
         Text(name).textStyle(.base).foregroundStyle(palette.foreground).lineLimit(1)
           .frame(maxWidth: .infinity, alignment: .leading)
         // Room for the add button, which sits over the row outside its own tap.
         if onAdd != nil { Color.clear.frame(width: TouchTarget, height: 1) }
-        if !up { MatineeKit.LucideIcon(.chevronRight, size: 16, tint: palette.mutedForeground) }
+        if !up { LucideIcon(.chevronRight, size: 16, tint: palette.mutedForeground) }
       }
       .padding(.horizontal, Space.s4)
       .frame(minHeight: 52)
@@ -552,7 +525,7 @@ private struct FolderRow: View {
     .accessibilityLabel(label)
     .overlay(alignment: .trailing) {
       if let onAdd {
-        MatineeKit.RoundIconButton(
+        RoundIconButton(
           .folderPlus, label: Str.webLibrariesBrowserAddNamed(name), look: .ghost, size: 36, iconSize: 18,
           tint: palette.mutedForeground, action: onAdd
         )

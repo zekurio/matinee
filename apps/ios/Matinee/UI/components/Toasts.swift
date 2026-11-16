@@ -13,6 +13,17 @@ struct Snackbar {
 
   /// A plain message, gone after a few seconds.
   func show(_ text: String) { post(ToastMessage(text)) }
+
+  /// `error` as `failure`, an error toast, with the server's own words under
+  /// it when it sent some. A cancellation shows nothing.
+  func fail(_ failure: String, _ error: any Error) {
+    switch Failure(error) {
+    case .cancelled: break
+    // Parsing details can contain server data; the action's own message is enough here.
+    case .unreadable, .other: post(ToastMessage(failure, kind: .error))
+    default: post(ToastMessage(failure, description: describeFailure(error), kind: .error))
+    }
+  }
 }
 
 extension EnvironmentValues {
@@ -27,12 +38,7 @@ func launchShowing(_ snackbar: Snackbar, _ failure: String, _ block: @escaping (
     do {
       try await block()
     } catch {
-      switch Failure(error) {
-      case .cancelled: break
-      // Parsing details can contain server data; the action's own message is enough here.
-      case .unreadable, .other: snackbar.post(ToastMessage(failure, kind: .error))
-      default: snackbar.post(ToastMessage(failure, description: describeFailure(error), kind: .error))
-      }
+      snackbar.fail(failure, error)
     }
   }
 }

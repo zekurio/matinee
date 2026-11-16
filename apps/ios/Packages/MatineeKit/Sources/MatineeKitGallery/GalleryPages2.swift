@@ -270,6 +270,7 @@ struct FeedbackPage: View {
 
 struct NavigationPage: View {
   @State private var tab = "home"
+  @State private var pressed = 0
   @Environment(\.palette) private var palette
 
   var body: some View {
@@ -354,6 +355,10 @@ struct NavigationPage: View {
         }
         .frame(height: 160)
         .clipShape(RoundedRectangle.kit(Radius.xl))
+      }
+      Demo("Keyboard shortcuts", note: "The bars give their tabs ⌘1, ⌘2, …; `.keyCommand` gives a page one of its own, as ⌘F to search.") {
+        Text("⌘K pressed \(pressed) times").textStyle(.sm).foregroundStyle(palette.mutedForeground)
+          .keyCommand("k", label: "Count") { pressed += 1 }
       }
     }
   }

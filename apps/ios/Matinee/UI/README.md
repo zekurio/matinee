@@ -25,8 +25,7 @@ Read the kit's README first. Everything below assumes it.
 | `components/`        | The shared components below                                             |
 | `home/`              | Home, rebuilt: the pattern to copy                                      |
 | `gallery/`           | Debug gallery of the shared components, and the kit's                   |
-| `legacy/`            | The old controls, kept only for screens not yet rebuilt. Don't use them |
-| `kit-exclusions.txt` | The folders not yet rebuilt, which the boundary test lets through       |
+| `kit-exclusions.txt` | Folders the boundary test lets through: none, and it stays empty        |
 
 ## The shell
 
@@ -123,7 +122,8 @@ example; `gallery/` shows them in every state (`just gallery`).
 | A person                                                 | `PersonCard(name, role:, photo:)`; `ProfileAvatar(name, url:, size:)` for an account                                                       |
 | A picture from the server                                | `Picture(sources)` in an `ArtFrame(toneKey, aspect:)`; it fades in over its blur hash, and falls back to the next source, then the tone    |
 | How far in, watched                                      | `ArtProgressBar(progress:)` and `WatchedBadge()` over art; the kit's `ProgressBar` elsewhere                                               |
-| A section's heading                                      | `SectionTitle(title, action:)`                                                                                                             |
+| A section's heading                                      | `SectionTitle(title, count:, action:)`; `count` puts how many titles after it                                                              |
+| A tab's first page's name                                | `PageHeading(title) { actions }`                                                                                                           |
 | A card's long press and a page's "more"                  | Cards have it. `ActionsButton(target)` on a page, `.cardMenu(target)` on anything else: the actions sheet for an `ActionTarget`            |
 | When something was watched                               | `actions?.askWatched(name) { at in … }`                                                                                                    |
 | Search                                                   | `SearchField($query, focused:)`; `SearchBarButton { … }` where a page leads to search                                                      |
@@ -140,11 +140,11 @@ rails, and grids line up; `\.windowSize` for anything sized by the window.
 
 - Words come from `Str`, generated from Android's `strings.xml`. Use the
   accessor with its typed arguments and plural counts. A string Android
-  doesn't have: use the nearest accessor and mark it
-  `// TODO(strings): <android_key>` so the strings pass can swap it.
-  iOS-only text goes in `Resources/iOS.xcstrings` with an `ios_` key
-  (the app README, Conventions). Dates, numbers, and sizes go through
-  `Format.swift`.
+  doesn't have goes in `Resources/iOS.xcstrings` with an `ios_` key, in
+  English and German, worded as the web's message where it has one
+  (`apps/web/src/i18n/locales`), and `just ios strings` gives it an
+  accessor (the app README, Conventions). Dates, numbers, and sizes go
+  through `Format.swift`.
 - Icons are the kit's: `LucideIcon(.film, label:, size:)`. An icon-only
   control gets a label.
 - Sizes, colors, radii, spacing, and timing are the kit's tokens:
@@ -157,10 +157,8 @@ rails, and grids line up; `\.windowSize` for anything sized by the window.
 ## What's off limits
 
 - Stock SwiftUI controls and looks: the kit's README lists them, and
-  `just ios test` fails on each outside the folders in
-  `kit-exclusions.txt`. Take your folder off that list when your area is
-  rebuilt; the test fails if you don't.
-- Anything in `legacy/`, and any `Legacy…` name, in a rebuilt file.
+  `just ios test` fails on each anywhere under `Matinee/UI`.
+  `kit-exclusions.txt` is empty; don't add a folder to it.
 - Working around the kit. If it lacks something or draws it wrong, fix it
   in the kit, with its gallery and README.
 - Deciding what the server decides (AGENTS.md, Boundaries): which track
@@ -187,12 +185,68 @@ keep the sign-in. [DEV.md](../../DEV.md) describes the dev server; don't
 restart or reseed it. Its library has no artwork: `-dev.art YES` fills
 Home's banner, and `-dev.recommendations YES` Home's recommendation rows.
 
-Launch arguments for the rest (the app README has the full list):
-`-theme.mode dark`, `-AppleLanguages "(de)"`, right to left with
-`-AppleTextDirection YES -NSForceRightToLeftWritingDirection YES`, a large
-text size with
-`-UIPreferredContentSizeCategoryName UICTContentSizeCategoryAccessibilityL`,
-`-dev.offline YES`, and `-dev.route` for a page. Check an iPhone and an
-iPad (both orientations), light and dark, German, right to left, a large
-text size, and VoiceOver's reading of your cards and controls, and compare
-with the web app at the same width and with the Android screen.
+Debug builds read the launch arguments below, which are how a page is
+put in a state for a screenshot without a finger on the simulator. Each is
+read inside `#if DEBUG`, so a release build has none of them; `-theme.mode`
+is the setting's own key and the system's are iOS's, so those work in any
+build. Pass them after `just dev` or `just gallery`.
+
+| Area      | Argument                                                                    | What it does                                                                                                                                                                            |
+| --------- | --------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| System    | `-AppleLanguages "(de)"`                                                    | German, through iOS                                                                                                                                                                     |
+| System    | `-AppleTextDirection YES -NSForceRightToLeftWritingDirection YES`           | Right to left                                                                                                                                                                           |
+| System    | `-UIPreferredContentSizeCategoryName UICTContentSizeCategoryAccessibilityL` | An accessibility text size                                                                                                                                                              |
+| Theme     | `-theme.mode dark`                                                          | `system`, `light`, or `dark`. The setting's own saved key, so it works in any build                                                                                                     |
+| App       | `-dev.server URL -dev.token TOKEN`                                          | Saves a server and its sign-in before the session checks it (`DevLaunch.swift`); `just dev` passes both                                                                                 |
+| App       | `-dev.route PATH`                                                           | Opens a tab or a page, parsed by `RoutePath` in `Nav.swift`: `title/<id>`, `season/<titleId>/<n>`, `episode/<id>`, `library/<id>`, `settings/<page>`, `player/<itemId>?start=<seconds>` |
+| App       | `-dev.offline YES`                                                          | Offline mode on, as Settings' switch; `NO` turns it off                                                                                                                                 |
+| App       | `-gallery YES`                                                              | The component gallery instead of the app (`gallery/Gallery.swift`)                                                                                                                      |
+| Gallery   | `-gallery.page cards`                                                       | Its page: `cards`, `states`, `bars`, `sheets`, `kit`                                                                                                                                    |
+| Gallery   | `-gallery.accent rose`                                                      | A server accent: `matinee`, `rose`, `emerald`, `amber`                                                                                                                                  |
+| Gallery   | `-gallery.scroll 2`                                                         | Scrolled down that many screens                                                                                                                                                         |
+| Gallery   | `-gallery.open actions`                                                     | A sheet open at launch: `actions`, `watched`, `filters`                                                                                                                                 |
+| Gallery   | `-gallery.server URL -gallery.token TOKEN`                                  | Pictures from the dev server's library; `just gallery` passes both                                                                                                                      |
+| Home      | `-dev.art YES`                                                              | Fills the banner with art the artless dev server lacks                                                                                                                                  |
+| Home      | `-dev.recommendations YES`                                                  | Fills the recommendation rows                                                                                                                                                           |
+| Title     | `-title.fixture YES`                                                        | A provider's overview, credits, genres, ratings, trailer, and logo where the dev server has none                                                                                        |
+| Title     | `-title.scroll cast`                                                        | Scrolls to a section: `nextup`, `episodes`, `seasons`, `files`, `cast`, `related`, `actions`, `more`                                                                                    |
+| Title     | `-title.open actions`                                                       | The page's actions sheet, or `watched`, the question of when                                                                                                                            |
+| Browse    | `-dev.browseFixtures YES`                                                   | Genres, studios, ratings, languages, scores, runtimes, and people for libraries, browse, and person pages                                                                               |
+| Browse    | `-dev.browse.open filters`                                                  | What a page opens with: `filters`, `language`, `search`, `sort`, `more` (a biography in full)                                                                                           |
+| Browse    | `-dev.browse.query TEXT`                                                    | What the library's or the search page's field starts with                                                                                                                               |
+| Browse    | `-dev.browse.filters "genre=Drama;years=1980-2000"`                         | The filters a list starts with: `genre`, `studio`, `years`, `score`, `runtime`, `watched`, `rating=DE:12`, `language`                                                                   |
+| Browse    | `-dev.browse.sort score`                                                    | The order a list starts in                                                                                                                                                              |
+| Browse    | `-dev.pageSize 6`, `-dev.pageDelay 1500`                                    | A grid's page size, to see paging, and milliseconds added to each page                                                                                                                  |
+| Profile   | `-dev.statsFixtures YES`                                                    | A year of made-up watching and full boards; `quiet` leaves the last 30 days empty, `empty` is an account that never watched                                                             |
+| Profile   | `-dev.statsRange 7d`                                                        | The statistics' range                                                                                                                                                                   |
+| Profile   | `-dev.profileScroll stats`                                                  | Scrolls to `stats`, `titles`, `standing`, `activity`, or `recent`                                                                                                                       |
+| Profile   | `-dev.profileBoard watchTime`                                               | That board's sheet open                                                                                                                                                                 |
+| Profile   | `-dev.profileInbox 3`                                                       | The inbox's stand-in, with that many waiting                                                                                                                                            |
+| Downloads | `-dev.downloadFixtures YES`                                                 | A made-up download in every state a row can be in, beside the real ones                                                                                                                 |
+| Downloads | `-dev.downloadOpen actions:<itemId>`                                        | What the tab opens once: `actions:`, `show:`, `menu`, `remove`, `sheet:`, `files:<titleId>[:<season>]`, or `pause:`, `resume:`, `remove:` a download                                    |
+| Downloads | `-dev.downloadAfter pause:<itemId>:5`                                       | The same, that many seconds after the tab shows                                                                                                                                         |
+| Downloads | `-dev.downloadStart original`                                               | Presses Download in the download sheet once the server answers: `original`, `device`, or a preset's height                                                                              |
+| Actions   | `-dev.noDownloads YES`                                                      | The account as one that may not download                                                                                                                                                |
+| Metadata  | `-dev.metadataFixtures YES`                                                 | Matches and images a provider would offer, for fix match and the image editor                                                                                                           |
+| Metadata  | `-dev.metadataDo upload`                                                    | Once, in the image editor: `upload`, `remove`, `reset`, or `menu`                                                                                                                       |
+| Search    | `-dev.browse.query TEXT`                                                    | The field's text (above)                                                                                                                                                                |
+| Sign-in   | `-dev.signin code`                                                          | Opens sign-in with a code at once                                                                                                                                                       |
+| Settings  | `-settings.open log`                                                        | Opens a page's dialog, sheet, or menu: `log` (About), `report` (playback report), `avatar`, `signout-others` (Account)                                                                  |
+| Settings  | `-settings.scroll 600`                                                      | Starts a page that far down, or at its end with `bottom`                                                                                                                                |
+| Settings  | `-dev.report YES`                                                           | A playback report as a failed encode leaves it, before anything played                                                                                                                  |
+| Settings  | `-dev.camera YES`, `-dev.scan TEXT`                                         | Link device as with a camera, and a scanned QR code's text                                                                                                                              |
+| Admin     | `-admin.act sheet`                                                          | A step on an admin page: `sheet` (the first row's), `edit`, `save`, `invalid`, `remove`, `remove-yes`, `role`                                                                           |
+| Admin     | `-admin.target NAME`                                                        | The row `-admin.act` acts on, by name                                                                                                                                                   |
+| Admin     | `-admin.scroll bottom`                                                      | Opens an admin page at its end, or `center`                                                                                                                                             |
+| Player    | `-player.controls YES`, `-player.hidden YES`                                | Keeps the controls up, or starts with them away                                                                                                                                         |
+| Player    | `-player.menu audio`                                                        | Opens a menu: `audio`, `subtitles`, `quality`, `speed`                                                                                                                                  |
+| Player    | `-player.paused YES`, `-player.locked YES`                                  | Pauses once the first source plays; locks the controls                                                                                                                                  |
+| Player    | `-player.subtitle 2`, `-player.scrub 0.4`                                   | Picks that subtitle track; drags the seek bar that far along                                                                                                                            |
+| Player    | `-player.notice burnIn`                                                     | A note: `burnIn`, `quality`, `switch`                                                                                                                                                   |
+| Player    | `-player.gesture hold`                                                      | A gesture's note: `brightness`, `volume`, `seek`, `hold`                                                                                                                                |
+| Player    | `-player.engine mpv`                                                        | The engine for this launch: `avPlayer` or `mpv`                                                                                                                                         |
+
+Check an iPhone and an iPad (both orientations), light and dark, German,
+right to left, a large text size, and VoiceOver's reading of your cards and
+controls, and compare with the web app at the same width and with the
+Android screen.

@@ -29,7 +29,7 @@ struct SearchScreen: View {
         page.hidesSystemNavigationBar()
           .safeAreaInset(edge: .top, spacing: 0) {
             VStack(alignment: .leading, spacing: 0) {
-              PageHeading(Str.searchTitle) { EmptyView() }
+              PageHeading(Str.searchTitle)
               field.frame(maxWidth: 640, alignment: .leading)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -43,6 +43,8 @@ struct SearchScreen: View {
     }
     .searchEffect(search, query: query, submitted: submitted)
     .loads(libraries) { api in try await api.libraries.list() }
+    // A hardware keyboard's ⌘F goes to the field, as in iOS's own apps.
+    .keyCommand("f", label: Str.searchTitle) { focused = true }
     .onAppear {
       // The field takes the keyboard when the tab first opens, as Android's
       // does while there's no Discover under it to look around in.
@@ -150,7 +152,7 @@ private struct SearchResultsList: View {
       LazyVStack(alignment: .leading, spacing: Space.s10) {
         ForEach(found.titlesByLibrary(), id: \.libraryId) { group in
           VStack(alignment: .leading, spacing: Space.s3) {
-            CountedHeading(names[group.libraryId] ?? Str.searchTitlesHeading, count: group.titles.count)
+            SectionTitle(names[group.libraryId] ?? Str.searchTitlesHeading, count: group.titles.count)
               .padding(.horizontal, gutter)
             CardGrid {
               ForEach(group.titles, id: \.id) { title in PosterCard(title, detail: formatYear(title.year)) }
@@ -162,9 +164,6 @@ private struct SearchResultsList: View {
             ForEach(found.people, id: \.name) { person in
               RailItem(.person) {
                 PersonCard(person.name, role: creditKind(person.kind, count: 1), photo: api?.art(person.photo, size: .thumb))
-                  // Its own height: a lazy row offers each card the first one's, which would
-                  // shrink the portrait of a name on two lines.
-                  .fixedSize(horizontal: false, vertical: true)
               }
             }
           }
@@ -183,28 +182,6 @@ private struct SearchResultsList: View {
     }
     .scrollDismissesKeyboard(.immediately)
     .scrollsToTopOnReselect()
-  }
-}
-
-/// A section's heading with how many it holds after it, on one baseline.
-private struct CountedHeading: View {
-  let title: String
-  let count: Int
-  @Environment(\.palette) private var palette
-
-  init(_ title: String, count: Int) {
-    self.title = title
-    self.count = count
-  }
-
-  var body: some View {
-    HStack(alignment: .firstTextBaseline, spacing: Space.s2_5) {
-      Text(title)
-        .textStyle(.xl, weight: .semibold, tracking: .tight)
-        .foregroundStyle(palette.foreground)
-        .accessibilityAddTraits(.isHeader)
-      Text(Str.browseTitleCount(count)).textStyle(.sm).foregroundStyle(palette.mutedForeground)
-    }
   }
 }
 

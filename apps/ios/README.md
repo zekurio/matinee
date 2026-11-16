@@ -119,8 +119,8 @@ isn't a view belongs in MatineeCore with Swift Testing tests.
 Screens build from MatineeKit (`Packages/MatineeKit`, its README) and
 `UI/components/`, never stock SwiftUI controls: [UI/README.md](Matinee/UI/README.md)
 says how a screen is put together, with Home as the example. `just ios test`
-fails on a stock control outside the folders `UI/kit-exclusions.txt` lists,
-which are the screens not yet rebuilt. Views default to the main actor;
+fails on a stock control anywhere under `Matinee/UI`; its exclusion list,
+`UI/kit-exclusions.txt`, is empty. Views default to the main actor;
 pure app-target helpers use `nonisolated`. Shared components belong in the
 debug gallery in `UI/gallery/` too.
 
@@ -156,23 +156,10 @@ own under `build/`, and `just shot <name>` saves the simulator's screen to
 `build/screenshots/`. These interactive recipes are separate from the
 headless build and test checks.
 
-Debug builds read these arguments; release builds don't compile `DevLaunch`:
-
-| Argument                                                                    | What it does                                                            |
-| --------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| `-dev.server URL -dev.token TOKEN`                                          | Saves a server and token before the normal session check                |
-| `-dev.route PATH`                                                           | Opens a tab or route, parsed by `RoutePath` in `UI/Nav.swift`           |
-| `-dev.offline YES`                                                          | Saves offline mode; `NO` clears it                                      |
-| `-dev.art YES`, `-dev.recommendations YES`                                  | Fills Home's banner and recommendation rows on the artless dev server   |
-| `-theme.mode dark`                                                          | Selects `system`, `light`, or `dark`                                    |
-| `-AppleLanguages "(de)"`                                                    | Selects German through iOS                                              |
-| `-UIPreferredContentSizeCategoryName UICTContentSizeCategoryAccessibilityL` | Selects an accessibility text size                                      |
-| `-gallery YES`                                                              | Opens the component gallery, with options in `UI/gallery/Gallery.swift` |
-
-Routes include `title/<id>`, `season/<titleId>/<n>`, `episode/<id>`,
-`settings/<page>`, and `player/<itemId>?start=<seconds>`. `Nav.swift` is the
-complete list. Scene state restores a page only after the app has gone to
-the background; terminating and launching alone doesn't save it.
+Debug builds read launch arguments that sign in, open a page, and put a
+page in a state for a screenshot; [UI/README.md](Matinee/UI/README.md#checking-it)
+lists them all by area. Scene state restores a page only after the app has
+gone to the background; terminating and launching alone doesn't save it.
 
 ## Layout
 
@@ -186,7 +173,6 @@ apps/ios/
     Resources/                 Catalogs, generated icons, and brand assets
     UI/                        SwiftUI screens, navigation, and shared components
     UI/components/             Shared components on the kit: cards, rails, states, sheets
-    UI/legacy/                 The old controls, until the last screens move onto the kit
     UI/gallery/                Debug component gallery
     UI/README.md               How a screen is built
   Packages/MatineeKit/          The design kit: theme, type, icons, controls (its README)

@@ -28,11 +28,11 @@ enum PlayerDebug {
   static var gesture: GestureKind? { string("gesture").flatMap(GestureKind.init(rawValue:)) }
 
   /// A note about the last answer to show, as though the server had said it.
-  static var notice: MatineeCore.Notice? {
+  static var notice: Notice? {
     switch string("notice") {
-    case "burnIn": MatineeCore.Notice(.burnInFailed)
-    case "quality": MatineeCore.Notice(.qualityFailed)
-    case "switch": MatineeCore.Notice(.switchFailed, detail: "Encoder busy")
+    case "burnIn": Notice(.burnInFailed)
+    case "quality": Notice(.qualityFailed)
+    case "switch": Notice(.switchFailed, detail: "Encoder busy")
     default: nil
     }
   }
