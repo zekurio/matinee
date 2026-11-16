@@ -100,11 +100,10 @@ struct TVPlayback: View {
       let rect = tvVideoRect(aspect: controller.videoAspect, in: screen, fill: fill)
       ZStack {
         TVVideo(controller: controller, fill: fill)
-        // With the controls away, the picture holds focus.
+        // With the controls away, the picture holds focus, unless the action alone on it has it.
         TVFocusSurface(action: showControls)
           .focused($focus, equals: .surface)
-          .disabled(controlsShown || failed)
-          .onMoveCommand { _ in if !controlsShown { showControls() } }
+          .disabled(controlsShown || failed || pictureAction != nil)
         if controller.loading && !failed {
           Spinner(size: 80, tint: .white.opacity(0.85)).allowsHitTesting(false)
         }
@@ -155,6 +154,8 @@ struct TVPlayback: View {
       }
     }
     .onTVSwipe(isEnabled: menu == nil && !failed && focus == .seek, perform: swipe)
+    // A swipe while the controls are away brings them, as on Apple TV's own player.
+    .onMoveCommand { _ in if !controlsShown, !failed, menu == nil { showControls() } }
     .onTVTap(isEnabled: menu == nil && !failed && focus != .corner) {
       touched += 1
       if !controlsShown { showControls() }
