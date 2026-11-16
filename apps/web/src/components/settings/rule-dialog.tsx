@@ -94,17 +94,18 @@ export function RuleDialog({
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[calc(100dvh-2rem)] gap-5 overflow-y-auto p-6 sm:max-w-xl">
-        {open && (
-          <RuleForm
-            connection={connection}
-            kind={kind}
-            fields={fields}
-            choices={choices}
-            rule={rule}
-            onDone={() => onOpenChange(false)}
-          />
-        )}
+      <DialogContent
+        showCloseButton={false}
+        className="max-h-[calc(100dvh-2rem)] gap-5 overflow-y-auto p-6 sm:max-w-xl"
+      >
+        <RuleForm
+          connection={connection}
+          kind={kind}
+          fields={fields}
+          choices={choices}
+          rule={rule}
+          onDone={() => onOpenChange(false)}
+        />
       </DialogContent>
     </Dialog>
   )
@@ -297,7 +298,7 @@ function RuleForm({
           </FieldGroup>
         </Section>
 
-        <DialogFooter className="-mx-6 -mb-6 px-6 py-4">
+        <DialogFooter showCancelButton className="-mx-6 -mb-6 px-6 py-4">
           <form.SubmitButton
             disabled={conditions === 0 || Object.keys(settings).length === 0}
             pending={save.isPending}

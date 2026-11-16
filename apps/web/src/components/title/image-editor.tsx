@@ -125,7 +125,7 @@ export function ImageEditorDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex h-[min(44rem,calc(100dvh-2rem))] flex-col gap-5 p-6 sm:max-w-3xl [&_[data-slot=dialog-close]]:top-4 [&_[data-slot=dialog-close]]:right-4">
-        {open && <ImageEditor title={title} owner={owner} name={name} />}
+        <ImageEditor title={title} owner={owner} name={name} />
       </DialogContent>
     </Dialog>
   )

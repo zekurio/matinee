@@ -69,7 +69,7 @@ export function WatchedDateForm({
           />
         )}
       </form.Field>
-      <DialogFooter className="-mx-6 -mb-6 px-6 py-4">
+      <DialogFooter showCancelButton className="-mx-6 -mb-6 px-6 py-4">
         <form.AppForm>
           <form.SubmitButton icon={<CheckIcon />}>
             {tr("media.markWatched")}

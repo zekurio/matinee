@@ -23,6 +23,7 @@ export function WatchedDateDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
+        showCloseButton={false}
         initialFocus={triggerRef}
         className="gap-5 p-6 sm:max-w-sm"
       >

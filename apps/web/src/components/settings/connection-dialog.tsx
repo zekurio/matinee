@@ -185,17 +185,18 @@ export function ConnectionDialog({
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[calc(100dvh-2rem)] gap-5 overflow-y-auto p-6 sm:max-w-xl">
-        {open && (
-          <ConnectionForm
-            connection={connection}
-            sources={sources}
-            connections={connections.filter(
-              (entry) => entry.id !== connection?.id,
-            )}
-            onDone={() => onOpenChange(false)}
-          />
-        )}
+      <DialogContent
+        showCloseButton={false}
+        className="max-h-[calc(100dvh-2rem)] gap-5 overflow-y-auto p-6 sm:max-w-xl"
+      >
+        <ConnectionForm
+          connection={connection}
+          sources={sources}
+          connections={connections.filter(
+            (entry) => entry.id !== connection?.id,
+          )}
+          onDone={() => onOpenChange(false)}
+        />
       </DialogContent>
     </Dialog>
   )
@@ -616,7 +617,7 @@ function ConnectionForm({
           )
         })}
 
-        <DialogFooter className="-mx-6 -mb-6 px-6 py-4">
+        <DialogFooter showCancelButton className="-mx-6 -mb-6 px-6 py-4">
           <form.SubmitButton
             disabled={
               !values.name.trim() || !slugValid || (!ready && !connection)
