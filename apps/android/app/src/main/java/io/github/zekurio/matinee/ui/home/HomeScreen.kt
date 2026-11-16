@@ -126,13 +126,15 @@ private fun OnlineHomeScreen() {
                     HomeBanner(loaders, dev, header)
                 } else Column {
                     header()
+                    // The header is 44 with the logo in its middle, which alone leaves the cards crowding it.
+                    val below = Modifier.padding(top = 8.dp)
                     when (val state = featured.state) {
-                        Load.Loading -> HomeCarouselSkeleton()
+                        Load.Loading -> HomeCarouselSkeleton(below)
                         is Load.Failed -> Unit
                         is Load.Ready -> {
                             val slides = dev?.slides(state.value) ?: state.value
                             // Other titles start the row at its first card again.
-                            if (slides.isNotEmpty()) key(slides.map { it.title.id }) { HomeCarousel(slides, dev) }
+                            if (slides.isNotEmpty()) key(slides.map { it.title.id }) { HomeCarousel(slides, dev, below) }
                         }
                     }
                 }
