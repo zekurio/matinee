@@ -536,7 +536,7 @@ private struct SpecialsNote: View {
 
   var body: some View {
     ListBlock {
-      SwitchRow(Str.playbackSpecialsTitle, icon: .eye, isOn: Binding(get: { on }, set: save))
+      SwitchRow(Str.playbackSpecialsTitle, icon: .eye, isOn: Binding(get: { on }, set: { save($0) }))
         .disabled(saving)
     }
     .frame(maxWidth: 480)
