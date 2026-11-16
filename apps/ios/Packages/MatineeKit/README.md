@@ -286,8 +286,8 @@ It prints a count per stock control and every use. The rules are the
 `KIT_BOUNDARY_ALLOW_FILE` names a file of folders to let through, one a
 line, and a folder on it that no longer uses a stock control fails the test,
 so the list only shrinks. The app runs it on the Mac, without a simulator,
-over `Matinee/UI` with `Matinee/UI/kit-exclusions.txt`: `just ios boundary`,
-and as part of `just ios test`.
+over `Matinee/UI` with `Matinee/UI/kit-exclusions.txt`, which is empty:
+`just ios boundary`, and as part of `just ios test`.
 
 ## Generated files
 

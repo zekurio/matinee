@@ -154,8 +154,7 @@ struct MatineeApp: App {
         .environment(model.signInErrors)
         .environment(model.toasts)
         .measuresWindow()
-        // UIKit's bars, which the screens not yet on the kit still show (legacy/).
-        .legacySystemBars()
+        .systemColors()
         .matineeTheme(model.theme)
         .onOpenURL(perform: model.open)
     }
@@ -172,5 +171,32 @@ struct MatineeApp: App {
     #else
       MatineeRoot()
     #endif
+  }
+}
+
+extension View {
+  /// The theme's colors on what UIKit still draws for SwiftUI: the spinner
+  /// of pull to refresh, and the windows' tint and background, which the
+  /// system's own sheets and transitions show. Goes once, on the root.
+  fileprivate func systemColors() -> some View { modifier(SystemColors()) }
+}
+
+private struct SystemColors: ViewModifier {
+  @Environment(\.palette) private var palette
+
+  func body(content: Content) -> some View {
+    content.onChange(of: palette, initial: true) { apply(palette.colors) }
+  }
+
+  private func apply(_ colors: ThemeColors) {
+    UIRefreshControl.appearance().tintColor = colors.textDim.uiColor
+    for scene in UIApplication.shared.connectedScenes {
+      // Only the app's own windows: the system adds others over them, on an
+      // iPad, which an opaque background would hide the app behind.
+      for window in (scene as? UIWindowScene)?.windows ?? [] where window.windowLevel == .normal {
+        window.tintColor = colors.accent.uiColor
+        window.backgroundColor = colors.background.uiColor
+      }
+    }
   }
 }

@@ -86,7 +86,7 @@ private let NOTICE_SECONDS = 5
 /// quality it couldn't encode, a switch that didn't go through.
 struct PlayerNoticeNote: View {
   let controller: PlayerController
-  @State private var shown: MatineeCore.Notice? = PlayerDebug.notice
+  @State private var shown: Notice? = PlayerDebug.notice
   @State private var count = 0
 
   var body: some View {
@@ -112,14 +112,14 @@ struct PlayerNoticeNote: View {
     }
   }
 
-  private func title(_ note: MatineeCore.Notice) -> String {
+  private func title(_ note: Notice) -> String {
     switch note.kind {
     case .burnInFailed: Str.playerNoticeBurnInFailed
     case .qualityFailed, .switchFailed: Str.playerNoticeSwitchFailed
     }
   }
 
-  private func detail(_ note: MatineeCore.Notice) -> String? {
+  private func detail(_ note: Notice) -> String? {
     let detail: String? =
       switch note.kind {
       case .burnInFailed: Str.playerNoticeBurnInFailedDetail
@@ -134,7 +134,7 @@ struct PlayerNoticeNote: View {
 private struct NoticeKey: Equatable {
   let kind: NoticeKind
   let detail: String?
-  init(_ notice: MatineeCore.Notice) {
+  init(_ notice: Notice) {
     kind = notice.kind
     detail = notice.detail
   }

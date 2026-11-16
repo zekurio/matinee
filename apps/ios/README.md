@@ -119,8 +119,8 @@ isn't a view belongs in MatineeCore with Swift Testing tests.
 Screens build from MatineeKit (`Packages/MatineeKit`, its README) and
 `UI/components/`, never stock SwiftUI controls: [UI/README.md](Matinee/UI/README.md)
 says how a screen is put together, with Home as the example. `just ios test`
-fails on a stock control outside the folders `UI/kit-exclusions.txt` lists,
-which are the screens not yet rebuilt. Views default to the main actor;
+fails on a stock control anywhere under `Matinee/UI`; its exclusion list,
+`UI/kit-exclusions.txt`, is empty. Views default to the main actor;
 pure app-target helpers use `nonisolated`. Shared components belong in the
 debug gallery in `UI/gallery/` too.
 
@@ -186,7 +186,6 @@ apps/ios/
     Resources/                 Catalogs, generated icons, and brand assets
     UI/                        SwiftUI screens, navigation, and shared components
     UI/components/             Shared components on the kit: cards, rails, states, sheets
-    UI/legacy/                 The old controls, until the last screens move onto the kit
     UI/gallery/                Debug component gallery
     UI/README.md               How a screen is built
   Packages/MatineeKit/          The design kit: theme, type, icons, controls (its README)

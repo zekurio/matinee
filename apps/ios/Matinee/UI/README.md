@@ -25,8 +25,7 @@ Read the kit's README first. Everything below assumes it.
 | `components/`        | The shared components below                                             |
 | `home/`              | Home, rebuilt: the pattern to copy                                      |
 | `gallery/`           | Debug gallery of the shared components, and the kit's                   |
-| `legacy/`            | The old controls, kept only for screens not yet rebuilt. Don't use them |
-| `kit-exclusions.txt` | The folders not yet rebuilt, which the boundary test lets through       |
+| `kit-exclusions.txt` | Folders the boundary test lets through: none, and it stays empty        |
 
 ## The shell
 
@@ -157,10 +156,8 @@ rails, and grids line up; `\.windowSize` for anything sized by the window.
 ## What's off limits
 
 - Stock SwiftUI controls and looks: the kit's README lists them, and
-  `just ios test` fails on each outside the folders in
-  `kit-exclusions.txt`. Take your folder off that list when your area is
-  rebuilt; the test fails if you don't.
-- Anything in `legacy/`, and any `Legacy…` name, in a rebuilt file.
+  `just ios test` fails on each anywhere under `Matinee/UI`.
+  `kit-exclusions.txt` is empty; don't add a folder to it.
 - Working around the kit. If it lacks something or draws it wrong, fix it
   in the kit, with its gallery and README.
 - Deciding what the server decides (AGENTS.md, Boundaries): which track
