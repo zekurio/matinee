@@ -4,7 +4,8 @@ import Foundation
  * The rules the featured carousel at the top of Home (the app's
  * home/HomeCarousel.swift) lays itself out and moves by: how many cards
  * share the row, where its auto-advance goes next, and the line over a
- * card's name. After Findroid's HomeCarousel.kt.
+ * card's name. After Findroid's HomeCarousel.kt. The iPad's banner, in
+ * the carousel's place there, is HomeHero.swift.
  */
 
 /// The featured carousel's layout and paging.
@@ -52,11 +53,11 @@ public enum FeaturedCarousel {
 }
 
 extension FeaturedTitle {
-  /// The line over a card's name: up to three of the title's genres, in
-  /// plain words the card cuts short at its end when they don't fit; nil
-  /// with none. The card says nothing else but the name.
+  /// The line over a card's name: the genres the iPad's banner lists
+  /// (`shownGenres`), in plain words the card cuts short at its end when
+  /// they don't fit; nil with none. The card says nothing else but the name.
   public func cardLine(separator: String = " · ") -> String? {
-    let genres = title.genres.prefix(3)
+    let genres = shownGenres
     return genres.isEmpty ? nil : genres.joined(separator: separator)
   }
 }

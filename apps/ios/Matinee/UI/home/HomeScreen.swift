@@ -72,7 +72,14 @@ private struct OnlineHomeScreen: View {
       hiding: actions?.hidden.keys ?? [], asked: asked.state.value?.items ?? [])
     return ScrollView {
       LazyVStack(alignment: .leading, spacing: style == .tablet ? Space.s10 : Space.s6) {
-        top
+        // An iPad in a regular width opens with the web's banner
+        // (Hero.swift); the iPhone, and an iPad in a narrow split, with the cards.
+        if style == .tablet {
+          let stale: [any Reloadable] = loaders.all + Array(shelves.loaders.values)
+          HomeBanner(loaders: loaders) { HomeHeader(stale: stale) }
+        } else {
+          top
+        }
         if libraries.state.value?.isEmpty == true {
           NoLibrariesNote()
         } else {

@@ -2,22 +2,25 @@ import Foundation
 import MatineeCore
 
 /*
- * Real pictures for Home's featured carousel, for judging white text on
- * them, which the dev server's test patterns can't tell. Debug builds
+ * Real pictures for Home's featured titles, the iPhone's carousel and the
+ * iPad's banner (Hero.swift), for judging the text on them, which the dev
+ * server's test patterns can't tell. Debug builds
  * only; release builds have none of it, and no picture is in the
  * repository: they're read from a folder on the Mac.
  *
  * - `-dev.featuredArt PATH`: a folder of pictures (jpg, png, webp), one per
- *   card in name order. A file's name, less a leading number, is the
+ *   card or banner slide in name order. A file's name, less a leading number, is the
  *   card's name, `_` standing for `:`, with genres in brackets after it:
  *   `1 The Hunger Games_ Catching Fire [Action, Adventure].jpg`. With more
  *   pictures than featured titles, the titles repeat under the new names.
  *   Pass `-dev.art YES` too on a server that features nothing.
  * - `-dev.featuredCount 2`: only the first that many cards.
  * - `-dev.featuredFallback "2:none,3:poster"`: the second card with no
- *   picture at all, the third with its picture as the title's poster only.
+ *   picture at all, the third with its picture as the title's poster only
+ *   (which the banner, as the web's, doesn't show: it takes a frame).
  * - `-dev.featuredStop 1.5`: opens resting at that card, the first being 0,
  *   or part of the way to the next, as a swipe leaves it; and holds there.
+ *   The banner rests on the whole slide.
  * - `-dev.featuredOpen actions`: the first card's long press, once it shows.
  */
 enum HomeCarouselDevData {

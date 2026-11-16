@@ -2856,6 +2856,8 @@ nonisolated enum Str {
   static var iosMediaHeroNext: String { tr("ios_media_hero_next", table: "iOS") }
   /// Previous slide
   static var iosMediaHeroPrevious: String { tr("ios_media_hero_previous", table: "iOS") }
+  /// Show slide %lld
+  static func iosMediaHeroShowSlide(_ p1: Int) -> String { tr("ios_media_hero_show_slide", table: "iOS", p1) }
   /// Open Settings
   static var iosOpenSettings: String { tr("ios_open_settings", table: "iOS") }
   /// Created

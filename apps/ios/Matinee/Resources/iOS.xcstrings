@@ -621,7 +621,7 @@
       }
     },
     "ios_media_hero_next" : {
-      "comment" : "The button on an iPad that moves Home's featured carousel on a card. The web's media.hero.next.",
+      "comment" : "The button on an iPad that moves Home's featured banner on a slide. The web's media.hero.next.",
       "extractionState" : "manual",
       "localizations" : {
         "de" : {
@@ -639,7 +639,7 @@
       }
     },
     "ios_media_hero_previous" : {
-      "comment" : "The button on an iPad that moves Home's featured carousel back a card. The web's media.hero.previous.",
+      "comment" : "The button on an iPad that moves Home's featured banner back a slide. The web's media.hero.previous.",
       "extractionState" : "manual",
       "localizations" : {
         "de" : {
@@ -652,6 +652,24 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Previous slide"
+          }
+        }
+      }
+    },
+    "ios_media_hero_show_slide" : {
+      "comment" : "VoiceOver's name for one of the dots under Home's featured banner on an iPad, which shows that slide. The web's media.hero.showSlide.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Folie %lld zeigen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show slide %lld"
           }
         }
       }

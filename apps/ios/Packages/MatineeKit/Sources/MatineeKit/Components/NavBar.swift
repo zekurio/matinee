@@ -117,7 +117,9 @@ extension View {
   /// frost (`StatusBarFrost`), as a phone's page has it once it scrolls:
   /// the page blurred and veiled across the status bar, thinning out below
   /// it. The page's safe area starts below the bar, so content starts clear
-  /// of it; art that bleeds to the top ignores the safe area and runs under it.
+  /// of it; art that bleeds to the top ignores the safe area and runs under
+  /// it, or in a scroll view reaches up by `\.navBarClearance`. A page with
+  /// art under the bar at rest says how strong the frost is with `navBarFrost`.
   public func navBar<ID: Hashable, Leading: View>(_ bar: NavBar<ID, Leading>) -> some View {
     modifier(NavBarModifier(bar: bar))
   }
@@ -125,24 +127,36 @@ extension View {
 
 private struct NavBarModifier<ID: Hashable, Leading: View>: ViewModifier {
   let bar: NavBar<ID, Leading>
+  /// The status bar's height, where the bar starts, and where it ends.
+  @State private var statusBar: CGFloat = 0
+  @State private var clearance: CGFloat = 0
 
   func body(content: Content) -> some View {
     content
+      .environment(\.navBarClearance, clearance)
+      // Over the page and under the bar. The bar doesn't know how far the
+      // page under it has scrolled, so unless the page says otherwise
+      // (`navBarFrost`), its frost is a scrolled page's, which at rest, over
+      // only the page's background above its content, doesn't show.
+      .overlayPreferenceValue(NavBarFrostKey.self, alignment: .top) { said in
+        let frost = said ?? .scrolled
+        StatusBarFrost(bar: statusBar, veil: frost.veil, reducedVeil: frost.reducedVeil)
+          .opacity(frost.opacity)
+          .ignoresSafeArea(edges: [.top, .horizontal])
+          .allowsHitTesting(false)
+      }
       .safeAreaInset(edge: .top, spacing: 0) {
         bar
           .padding(.horizontal, Space.s3)
           .padding(.top, NavBar<ID, Leading>.inset)
           .padding(.bottom, Space.s2)
           .frame(maxWidth: .infinity)
-          .background(alignment: .top) {
-            // The bar doesn't know how far the page under it has scrolled,
-            // so its frost is a scrolled page's, which at rest, over only
-            // the page's background above its content, doesn't show.
-            GeometryReader { proxy in
-              StatusBarFrost(bar: proxy.safeAreaInsets.top, veil: 0.75, reducedVeil: 0.85)
-            }
-            .ignoresSafeArea(edges: [.top, .horizontal])
-            .allowsHitTesting(false)
+          .onGeometryChange(for: ClosedRange<CGFloat>.self) { proxy in
+            let frame = proxy.frame(in: .global)
+            return max(frame.minY, 0)...max(frame.maxY, frame.minY, 0)
+          } action: { span in
+            statusBar = span.lowerBound
+            clearance = span.upperBound
           }
       }
   }
