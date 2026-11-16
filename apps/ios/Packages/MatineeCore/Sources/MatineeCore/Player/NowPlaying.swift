@@ -336,6 +336,9 @@ private struct SystemArtworkLoader: NowPlayingArtworkLoader {
       MPMediaItemPropertyPlaybackDuration: controller.duration,
       MPNowPlayingInfoPropertyPlaybackRate: controller.playing ? controller.speed : Float(0),
       MPNowPlayingInfoPropertyDefaultPlaybackRate: controller.speed,
+      // Video, so Apple TV's Now Playing and Control Center show it as a
+      // film rather than a song; iOS reads it the same way.
+      MPNowPlayingInfoPropertyMediaType: MPNowPlayingInfoMediaType.video.rawValue,
     ]
     info[MPMediaItemPropertyArtist] = subtitle
     info[MPMediaItemPropertyArtwork] = artwork

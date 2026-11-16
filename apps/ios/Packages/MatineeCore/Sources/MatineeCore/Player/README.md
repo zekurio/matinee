@@ -78,7 +78,11 @@ themselves: scrub, trickplay tiles, the countdown, the lifecycle calls).
 - Lock-screen controls start with the first source.
   `enableNowPlaying(title:subtitle:)` replaces their title with the view's
   localized label. Artwork is fetched with the same bearer token. Skip
-  commands use the account's configured steps.
+  commands use the account's configured steps. The info marks the media as
+  video, which Apple TV's Now Playing and Control Center read. The TV
+  player takes the Siri Remote's Play/Pause in its view (`.onTVPlayPause`);
+  on the tvOS simulator that press toggles once, the command center not
+  toggling it back. Control Center's commands on a device are untested.
 - About can observe `PlaybackDiagnostics.shared.report`; `formatReport`
   serializes it and `PlaybackDiagnostics.clear()` discards it.
 
@@ -158,7 +162,10 @@ measurement of a frame reaching a physical display.
 
 - MatineeCore has no mpv dependency. The app injects MatineeMPV's engine;
   AVPlayer continues to select its own decoder.
-- No Android TV display-mode switching or Watch Next sync. There is no tvOS target.
+- No display-mode switching here: on Apple TV the system picks the mode
+  from the criteria the view's window asks for, which the TV app does itself
+  (`MatineeTV/UI/player/TVDisplayMode.swift` for AVPlayer; MPVUI's surface
+  for mpv). No Watch Next sync.
 - No bitmap cue extraction. AVFoundation supplies no bitmap cues to the app;
   AVPlayer draws supported in-file tracks, and the server burns unsupported ones.
 - No Android service or task-removed callback. iOS can end the app without a
