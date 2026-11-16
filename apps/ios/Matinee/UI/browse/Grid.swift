@@ -66,7 +66,8 @@ private struct LoadsPages: ViewModifier {
 
 /// Posters in as many columns as fit, two on a phone, with `header` across
 /// the top: Android's `PosterGrid`. Loads the next page when the end comes
-/// near, and the loaded ones again on a pull.
+/// near, and the loaded ones again on a pull. `header` spans the page and
+/// lays out its own margins, as a row of chips runs to the edge.
 struct PosterGrid<Header: View, Empty: View>: View {
   let pages: TitlePages
   let detail: (TitleSummary) -> String?
@@ -74,6 +75,7 @@ struct PosterGrid<Header: View, Empty: View>: View {
   @ViewBuilder let header: () -> Header
   @State private var nearEnd = false
   @Environment(\.palette) private var palette
+  @Environment(\.homeAction) private var homeAction
 
   init(
     _ pages: TitlePages, detail: @escaping (TitleSummary) -> String?, @ViewBuilder empty: @escaping () -> Empty,
@@ -88,7 +90,7 @@ struct PosterGrid<Header: View, Empty: View>: View {
   var body: some View {
     ScrollView {
       VStack(alignment: .leading, spacing: 0) {
-        header().padding(.horizontal, Space.gutter)
+        header()
         if pages.firstLoading {
           PosterGridSkeleton()
         } else {
@@ -98,8 +100,8 @@ struct PosterGrid<Header: View, Empty: View>: View {
         }
         footer
       }
-      .padding(.top, 8)
-      .padding(.bottom, 32)
+      .padding(.top, Space.s2)
+      .padding(.bottom, Space.s8)
     }
     .onScrollGeometryChange(for: Bool.self) { geometry in
       scrolledNearEnd(
@@ -120,20 +122,23 @@ struct PosterGrid<Header: View, Empty: View>: View {
   @ViewBuilder private var footer: some View {
     if let error = pages.error {
       if pages.items.isEmpty {
-        ErrorBox(describeFailure(error), disconnected: error.isDisconnect, onRetry: pages.more)
-          .padding(.top, 16)
+        ErrorState(
+          Str.gridLoadFailed, describeFailure(error), disconnected: error.isDisconnect, onRetry: pages.more,
+          onHome: homeAction
+        )
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, Space.s12)
       } else {
         // Android stops here quietly; a way on is kinder than a list that just ends.
-        Notice(describeFailure(error), disconnected: error.isDisconnect, onRetry: pages.more).padding(.top, 20)
+        ErrorSection(Str.gridMoreFailed, disconnected: error.isDisconnect, onRetry: pages.more)
       }
     } else if pages.loading, !pages.items.isEmpty {
-      ProgressView()
-        .tint(palette.accent)
+      Spinner(size: 32, tint: palette.accent)
         .frame(maxWidth: .infinity)
-        .padding(24)
+        .padding(Space.s6)
         .accessibilityLabel(Str.loadingInProgress)
     } else if pages.done, pages.items.isEmpty {
-      empty().padding(.horizontal, Space.gutter)
+      empty()
     }
   }
 }
@@ -150,17 +155,14 @@ extension PosterGrid where Header == EmptyView {
 /// the name and one for the year, as the web's `PosterGridSkeleton`.
 struct PosterGridSkeleton: View {
   var count = 12
-  @Environment(\.palette) private var palette
 
   var body: some View {
-    let small = RoundedRectangle(cornerRadius: 4, style: .continuous)
     CardGrid {
       ForEach(0..<count, id: \.self) { _ in
         VStack(alignment: .leading, spacing: 0) {
-          RoundedRectangle.kit(Radius.md).fill(palette.card).aspectRatio(2 / 3, contentMode: .fit)
-            .overlay { RoundedRectangle.kit(Radius.md).strokeBorder(palette.border) }
-          small.fill(palette.secondary).frame(height: 14).padding(.trailing, 40).padding(.top, 10)
-          small.fill(palette.secondary).frame(width: 40, height: 12).padding(.top, 6)
+          Skeleton(radius: Radius.md).aspectRatio(2 / 3, contentMode: .fit)
+          Skeleton(radius: Radius.sm).frame(height: 14).padding(.trailing, Space.s10).padding(.top, Space.s2_5)
+          Skeleton(radius: Radius.sm).frame(width: 40, height: 12).padding(.top, Space.s2)
         }
       }
     }
@@ -169,14 +171,17 @@ struct PosterGridSkeleton: View {
   }
 }
 
-/// A grid's line under its header, saying why there's nothing in it.
+/// Why a grid has nothing in it, as the web's `EmptyList`: an icon, what
+/// happened, and a way to take back what caused it.
 struct GridEmpty: View {
-  let text: String
-  @Environment(\.palette) private var palette
-
-  init(_ text: String) { self.text = text }
+  let icon: Lucide
+  let title: String
+  var action: (label: String, run: () -> Void)?
 
   var body: some View {
-    Text(text).textStyle(.sm).foregroundStyle(palette.mutedForeground).padding(.vertical, 48)
+    EmptyState(icon: icon, title: title) {
+      if let action { MatineeButton(action.label, look: .outline, size: .md, action: action.run) }
+    }
+    .padding(.vertical, Space.s10)
   }
 }

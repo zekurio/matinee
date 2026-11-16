@@ -3,192 +3,157 @@ import MatineeKit
 import SwiftUI
 
 /*
- * LibraryScreen.kt: a library's titles as posters, with search, a genre
- * filter, and the sort at the end of its bar. Searching puts the field
- * under the bar, where Android swaps the bar for it, so back and the
- * edge swipe stay the system's.
+ * LibraryScreen.kt: a library's titles as posters, with search, the
+ * structured filters, and the sort, all of which the server applies. On a
+ * phone they're icons at the end of the bar, as Android's, and searching
+ * takes the bar over with Back out of the search and the field, as Android's
+ * search bar does; from the web's `sm` width up they're its header controls
+ * in words, with the field beside them. The filters in use are chips over
+ * the grid that each take their own off.
  */
 
-/// A library's titles, with sorting, a genre filter, and search. `sort` is a `TitleSort`, or nil for the library's own.
+/// A library's titles, with sorting, filters, and search. `sort` is a `TitleSort`, or nil for the library's own.
 struct LibraryScreen: View {
   let id: String
   let sort: String?
 
   @State private var libraries = Loader<[Library]>()
-  @State private var filters: LibraryFilters
+  @State private var options = Loader<TitleFilterOptions>()
+  @State private var state: TitleListState
   @State private var pages = makeTitlePages()
   @State private var searching = false
   @State private var filtering = false
   @State private var fieldFocused = false
-  @Environment(\.palette) private var palette
+  @State private var devStarted = false
+  @Environment(\.windowSize) private var window
+  @Environment(\.dynamicTypeSize) private var typeSize
+  @Environment(\.gutter) private var gutter
 
   init(id: String, sort: String?) {
     self.id = id
     self.sort = sort
-    _filters = State(initialValue: LibraryFilters(sort: sort))
+    _state = State(initialValue: TitleListState(initialSort: sort))
   }
 
   var body: some View {
     let library = libraries.state.value?.first { $0.id == id }
-    let filters = filters
+    let offered = options.state.value
+    let state = state
+    let chips = titleFilterChips(state.filters, options: offered) { state.filters = $0 }
     let id = id
-    let sort = filters.sort
-    let genre = filters.genre
-    let settled = filters.settled
+    let (sort, order, filters, settled) = (state.sort, state.order, state.filters, state.settled)
     PosterGrid(
       pages,
-      // The year whatever the order, as the web's cards, so the cards don't change as the person sorts.
-      detail: { formatYear($0.year) },
-      empty: { GridEmpty(libraryEmptyMessage(library, filters)) }
+      // The year, or with the score or runtime while sorted by it.
+      detail: { titleCardDetailText($0, sort: sort) },
+      empty: { libraryEmptyState(library, state) }
     ) {
-      if let genre {
-        LegacyChip(genre, selected: true, trailingIcon: .x) { filters.genre = nil }
-          .accessibilityHint(Str.libraryFilter)
-          .padding(.bottom, 12)
+      if !chips.isEmpty {
+        ActiveFilterChips(chips: chips, onClear: state.clearFilters)
+          .padding(.top, Space.s1)
+          .padding(.bottom, Space.s4)
       }
     }
-    .pages(pages, key: filters.key) { api, offset, limit in
-      try await api.titles.list(
-        libraryId: id, query: settled.isEmpty ? nil : settled, filters: genre.map { TitleFilters(genres: [$0]) }, sort: sort, limit: limit,
+    .pages(pages, key: state.key) { api, offset, limit in
+      #if DEBUG
+        // The fixtures' filters aren't the server's: ask for what it can answer, and score what it sends.
+        if BrowseFixtures.on {
+          return BrowseFixtures.rated(
+            try await api.titles.list(
+              libraryId: id, query: settled.isEmpty ? nil : settled, filters: BrowseFixtures.served(filters), sort: sort,
+              order: order, limit: limit, offset: offset))
+        }
+      #endif
+      return try await api.titles.list(
+        libraryId: id, query: settled.isEmpty ? nil : settled, filters: filters, sort: sort, order: order, limit: limit,
         offset: offset)
     }
     .loads(libraries) { api in try await api.libraries.list() }
-    .safeAreaInset(edge: .top, spacing: 0) {
-      if searching { searchBar(library) }
-    }
-    .legacyTopBar(library?.name) { actions }
-    .sheet(isPresented: $filtering) {
-      GenreSheet(libraryId: id, current: genre) { picked in
-        filtering = false
-        filters.genre = picked
+    .loadsFilterOptions(options, libraryId: id)
+    .hidesSystemNavigationBar()
+    .safeAreaInset(edge: .top, spacing: 0) { bar(library, offered) }
+    .titleFilterSheet(
+      isPresented: $filtering, kind: library?.kind == LibraryKind.shows ? TitleKind.show : TitleKind.movie,
+      options: offered, state: state)
+    #if DEBUG
+      .onAppear(perform: devStart)
+    #endif
+  }
+
+  #if DEBUG
+    /// The page as `-dev.browse.*` asks to start it, once (BrowseFixtures.swift).
+    private func devStart() {
+      guard !devStarted else { return }
+      devStarted = true
+      if let filters = BrowseFixtures.filters { state.filters = filters }
+      if let order = TITLE_ORDERS.first(where: { $0.sort == BrowseFixtures.sort }) { state.apply(order) }
+      if let query = BrowseFixtures.query {
+        state.query = query
+        state.settleNow()
+        searching = true
+      }
+      switch BrowseFixtures.open {
+      case "filters", "language": filtering = true
+      case "search": searching = true
+      default: break
       }
     }
-    .background {
-      // A hardware keyboard's Cmd-F opens the search, as in iOS's own apps.
-      Button(Str.librarySearchTitles, action: openSearch).keyboardShortcut("f").hidden()
-    }
-  }
+  #endif
 
-  /// Search, a genre filter, and the sort, at the end of the bar.
-  @ViewBuilder private var actions: some View {
-    @Bindable var filters = filters
-    // Search stays while searching, where it puts the keyboard back in the
-    // field, so the bar's title doesn't move as the field opens. The labels
-    // have words for when an iPad's tabs crowd them into the bar's overflow menu.
-    Button(action: openSearch) {
-      Label { Text(Str.librarySearchTitles) } icon: { Image(Lucide.search) }
-    }
-    .tint(palette.foreground)
-    Button { filtering = true } label: {
-      Label { Text(Str.libraryFilter) } icon: { Image(Lucide.listFilter) }
-    }
-    // In the accent while a genre filters, as Android tints it.
-    .tint(filters.genre != nil ? palette.accent : palette.foreground)
-    .accessibilityValue(filters.genre ?? "")
-    Menu {
-      Picker(Str.librarySort, selection: $filters.sort) {
-        ForEach(LIBRARY_SORTS, id: \.self) { value in Text(librarySortLabel(value)).tag(value) }
-      }
-      .pickerStyle(.inline)
-    } label: {
-      Label { Text(Str.librarySort) } icon: { Image(Lucide.arrowUpDown) }
-    }
-    .tint(palette.foreground)
-    .accessibilityValue(librarySortLabel(filters.sort))
-  }
-
-  /// The field while searching the library, and Cancel, which closes it.
-  private func searchBar(_ library: Library?) -> some View {
-    @Bindable var filters = filters
-    let shows = library?.kind == LibraryKind.shows
-    return HStack(spacing: 12) {
-      SearchField(
-        $filters.query, placeholder: shows ? Str.librarySearchShows : Str.librarySearchMovies,
-        focused: $fieldFocused
-      )
-      .onSubmit(of: .text) { filters.settleNow() }
-      Button(Str.commonCancel) {
-        filters.clearQuery()
-        withMotion(Motion.exit) { searching = false }
-      }
-      .textStyle(.base)
-      .foregroundStyle(palette.accent)
-      .frame(minHeight: TouchTarget)
-    }
-    .padding(.horizontal, Space.gutter)
-    .padding(.vertical, 8)
-    .background(palette.background)
-    .transition(.opacity)
-  }
-
-  private func openSearch() {
-    withMotion(Motion.enter) { searching = true }
-    fieldFocused = true
-  }
-}
-
-/// The genres the library's titles have, with how many each, and Any genre first.
-private struct GenreSheet: View {
-  let libraryId: String
-  let current: String?
-  let onPick: (String?) -> Void
-  @State private var genres = Loader<[Facet]>()
-  @Environment(\.palette) private var palette
-
-  var body: some View {
-    let libraryId = libraryId
-    VStack(spacing: 0) {
-      LegacySheetHeader(Str.libraryGenre).padding(.top, 12)
-      ScrollView {
-        LazyVStack(spacing: 0) {
-          GenreRow(name: Str.libraryAnyGenre, count: nil, selected: current == nil) { onPick(nil) }
-          switch genres.state {
-          case .loading:
-            ProgressView().tint(palette.accent).padding(24).accessibilityLabel(Str.loadingInProgress)
-          case .failed(let message, let disconnected):
-            Notice(message, disconnected: disconnected, onRetry: genres.reload).padding(.vertical, 12)
-          case .ready(let list):
-            ForEach(list, id: \.name) { facet in
-              GenreRow(name: facet.name, count: facet.titleCount, selected: current == facet.name) {
-                onPick(facet.name)
-              }
-            }
-          }
+  /// The bar: the name and the controls, or on a phone while searching, the field.
+  @ViewBuilder private func bar(_ library: Library?, _ offered: TitleFilterOptions?) -> some View {
+    let placeholder = library?.kind == LibraryKind.shows ? Str.librarySearchShows : Str.librarySearchMovies
+    if wideControls(window, typeSize) {
+      TopBar(library?.name) {
+        HStack(spacing: Space.s2) {
+          DisconnectedAction(libraries, options)
+          if offered != nil { TitleFilterButton(active: state.activeFilters) { filtering = true } }
+          TitleSortButton(state: state, options: offered)
+          field(placeholder, look: .field).frame(width: 288)
         }
+        .padding(.trailing, gutter - 4)
+      }
+    } else if searching {
+      // Back out of the search, then the field, as Android's search bar: an x beside the
+      // field's own clear button would read as the same thing twice.
+      HStack(spacing: Space.s1) {
+        RoundIconButton(.arrowLeft, label: Str.libraryClearSearch, look: .ghost, size: 48, iconSize: 24) {
+          state.clearQuery()
+          fieldFocused = false
+          withMotion(Motion.exit) { searching = false }
+        }
+        field(placeholder, look: .pill)
+      }
+      .padding(.leading, Space.s1)
+      .padding(.trailing, gutter)
+      .frame(height: 64)
+      .background(PageColor().ignoresSafeArea(edges: .top))
+      .transition(.opacity)
+    } else {
+      TopBar(library?.name) {
+        DisconnectedAction(libraries, options)
+        RoundIconButton(.search, label: Str.librarySearchTitles, look: .ghost, size: 48, iconSize: 22) {
+          withMotion(Motion.enter) { searching = true }
+          fieldFocused = true
+        }
+        if offered != nil { TitleFilterButton(active: state.activeFilters) { filtering = true } }
+        TitleSortButton(state: state, options: offered)
       }
     }
-    .loads(genres) { api in
-      #if DEBUG
-        if BrowseFixtures.on { return BrowseFixtures.genres }
-      #endif
-      return try await api.titles.facets(libraryId: libraryId).genres
-    }
-    .legacySheet()
+  }
+
+  private func field(_ placeholder: String, look: TextFieldLook) -> some View {
+    @Bindable var state = state
+    return MatineeTextField(placeholder, text: $state.query, kind: .search, focused: $fieldFocused, look: look)
+      .submitLabel(.search)
+      .autocorrectionDisabled()
+      .onSubmit { state.settleNow() }
   }
 }
 
-private struct GenreRow: View {
-  let name: String
-  let count: Int?
-  let selected: Bool
-  let action: () -> Void
+/// The page's background, under a bar of the page's own.
+struct PageColor: View {
   @Environment(\.palette) private var palette
 
-  var body: some View {
-    Button(action: action) {
-      HStack(spacing: 12) {
-        Text(name).textStyle(.base).foregroundStyle(palette.foreground)
-          .frame(maxWidth: .infinity, alignment: .leading)
-          .multilineTextAlignment(.leading)
-        if let count { Text(formatCount(count)).textStyle(.sm).foregroundStyle(palette.mutedForeground) }
-        if selected { LucideIcon(.check, size: 18, tint: palette.accent) }
-      }
-      .padding(.horizontal, 20)
-      .padding(.vertical, 14)
-      .frame(minHeight: TouchTarget)
-      .contentShape(Rectangle())
-    }
-    .buttonStyle(LegacyRowPress())
-    .accessibilityAddTraits(selected ? .isSelected : [])
-  }
+  var body: some View { palette.background }
 }
