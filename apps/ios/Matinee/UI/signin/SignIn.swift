@@ -139,8 +139,7 @@ struct ConnectScreen: View {
       .submitLabel(.go)
       // Not disabled while it connects: the keyboard stays up, and the form doesn't jump.
       .onSubmit(connect)
-      // TODO(strings): connect_address, "Server address"
-      .accessibilityLabel(Str.connectTitle)
+      .accessibilityLabel(Str.iosConnectAddress)
       .accessibilityHint(Str.connectDescription)
       if let error = connector.error {
         Gap(Space.s2)

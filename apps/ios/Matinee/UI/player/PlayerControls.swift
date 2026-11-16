@@ -326,8 +326,7 @@ private struct PlayerBottomBar: View {
         }
         .accessibilityLabel(
           remaining ? Str.a11yPlayerRemaining(formatClock(max(0, duration - shown))) : formatClock(duration))
-        // TODO(strings): a hint for the switch, the web's player.showLength and
-        // player.showTimeLeft ("Show length", "Show time left"); Android has neither.
+        .accessibilityHint(remaining ? Str.iosPlayerShowLength : Str.iosPlayerShowTimeLeft)
       }
       .padding(.horizontal, Space.s1)
       SeekBar(controller: controller, onTouch: onTouch)

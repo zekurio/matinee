@@ -79,22 +79,19 @@ private struct ProfileSection: View {
 
   var body: some View {
     let shown = sharing.shown(user)
-    // TODO(strings): account.profile.title "Profile"
-    SettingsSection(Str.tabProfile) {
+    SettingsSection(Str.iosAccountProfileTitle) {
       HStack(alignment: .center, spacing: Space.s4) {
         AvatarPicker(user: user)
         DisplayNameField(user: user)
       }
       ListBlock {
-        // TODO(strings): account.sharing.favorites "Show my favorites"
         SwitchRow(
-          Str.favoritesTitle,
+          Str.iosAccountSharingFavorites,
           isOn: Binding(
             get: { shown.favorites },
             set: { sharing.save(.init(favorites: $0), api: api, session: session, snackbar: snackbar) }))
-        // TODO(strings): account.sharing.stats "Show my statistics"
         SwitchRow(
-          Str.profileStatistics,
+          Str.iosAccountSharingStats,
           isOn: Binding(
             get: { shown.stats },
             set: { sharing.save(.init(stats: $0), api: api, session: session, snackbar: snackbar) }))
@@ -118,8 +115,7 @@ private struct ProfileSection: View {
     if let favorites = change.favorites { next.favorites = favorites }
     if let stats = change.stats { next.stats = stats }
     pending = next
-    // TODO(strings): account.sharing.failed "Couldn't change what your profile shows"
-    launchShowing(snackbar, Str.webCommonSaveBarFailed) { [self] in
+    launchShowing(snackbar, Str.iosAccountSharingFailed) { [self] in
       defer { if pending == next { pending = nil } }
       session.updateUser(user: try await api.account.profile.update(sharing: change))
     }
@@ -171,13 +167,11 @@ private struct AvatarPicker: View {
         }
     }
     .disabled(busy)
-    // TODO(strings): account.picture.change "Change picture"
-    .accessibilityLabel(Str.webJobsQueueAvatarsName)
+    .accessibilityLabel(Str.iosAccountPictureChange)
     .dropdownMenu(isPresented: $menu) {
       MenuItem(Str.iosImagesFromPhotos, icon: .imageUp) { picking = true }
       if user.avatarId != nil {
-        // TODO(strings): account.picture.remove "Remove picture"
-        MenuItem(Str.commonRemove, icon: .trash, destructive: true) {
+        MenuItem(Str.iosAccountPictureRemove, icon: .trash, destructive: true) {
           change { api in try await api.account.avatar.remove() }
         }
       }
@@ -200,8 +194,7 @@ private struct AvatarPicker: View {
   private func change(_ send: @escaping (MatineeApi) async throws -> User) {
     guard let api, !busy else { return }
     busy = true
-    // TODO(strings): account.picture.changeFailed "Couldn't change your picture"
-    launchShowing(snackbar, Str.webCommonSaveBarFailed) {
+    launchShowing(snackbar, Str.iosAccountPictureChangeFailed) {
       defer { busy = false }
       session.updateUser(user: try await send(api))
     }
@@ -274,8 +267,7 @@ private struct DisplayNameField: View {
       } catch {
         if Failure(error) == .cancelled { return }
         text = saved
-        // TODO(strings): account.displayName.saveFailed "Couldn't save your name. {reason}"
-        snackbar.show(Str.webCommonSaveBarFailed)
+        snackbar.post(ToastMessage(Str.iosAccountDisplayNameSaveFailed(describeFailure(error)), kind: .error))
       }
     }
   }
@@ -360,33 +352,40 @@ private struct PasskeysSection: View {
     SettingsSection(Str.webOidcPasskeysTitle) {
       ListBlock {
         ForEach(passkeys, id: \.id) { passkey in
-          // TODO(strings): account.passkeys.unnamed "Passkey"; account.passkeys.used "Used {time}",
-          // account.passkeys.added "Added {date}", account.passkeys.synced "Synced"
           AccountItemRow(
-            icon: .keyRound, title: passkey.name ?? Str.webOidcPasskeysTitle,
-            detail: formatInstant(passkey.lastUsedAt ?? passkey.createdAt)
+            icon: .keyRound, title: passkey.name ?? Str.iosAccountPasskeysUnnamed, detail: detail(passkey)
           ) {
             if removable {
-              // TODO(strings): account.passkeys.removeNamed "Remove {name}"
-              RoundIconButton(.trash, label: Str.commonRemove, look: .ghost) { removing = passkey }
+              RoundIconButton(
+                .trash, label: passkey.name.map(Str.iosAccountPasskeysRemoveNamed) ?? Str.iosAccountPasskeysRemove,
+                look: .ghost
+              ) { removing = passkey }
             }
           }
         }
       }
     }
-    // TODO(strings): account.passkeys.removeTitle "Remove {name}?", account.passkeys.removeDescription
     .confirmDialog(
       isPresented: Binding(get: { removing != nil }, set: { if !$0 { removing = nil } }),
-      title: removing?.name ?? Str.webOidcPasskeysTitle, confirm: Str.commonRemove
+      title: removing?.name.map(Str.iosAccountPasskeysRemoveTitle) ?? Str.iosAccountPasskeysRemoveTitleUnnamed,
+      message: Str.iosAccountPasskeysRemoveDescription, confirm: Str.iosAccountPasskeysRemove
     ) {
       guard let api, let passkey = removing else { return }
       removing = nil
-      // TODO(strings): account.passkeys.removeFailed "Couldn't remove passkey"
-      launchShowing(snackbar, Str.webCommonErrorUnknown) {
+      launchShowing(snackbar, Str.iosAccountPasskeysRemoveFailed) {
         try await api.account.passkeys.remove(id: passkey.id)
         loader.reload()
       }
     }
+  }
+
+  /// Whether it's synced, and when it was last used, or added when it never was, as the web's.
+  private func detail(_ passkey: Passkey) -> String {
+    [
+      passkey.backedUp ? Str.iosAccountPasskeysSynced : nil,
+      passkey.lastUsedAt.map { Str.iosAccountPasskeysUsed(relativeTime($0)) }
+        ?? Str.iosAccountPasskeysAdded(formatInstant(passkey.createdAt)),
+    ].compactMap(\.self).joined(separator: " · ")
   }
 }
 
@@ -402,10 +401,12 @@ private struct LinkedAccountSection: View {
   var body: some View {
     SettingsSection(provider) {
       ListBlock {
-        // TODO(strings): account.oidc.linked "Linked {date}", account.oidc.stale
-        AccountItemRow(icon: .link, title: account.label ?? provider, detail: formatInstant(account.createdAt)) {
-          // TODO(strings): account.oidc.unlink "Unlink"
-          MatineeButton(Str.commonRemove, look: .ghost, size: .md, pending: busy, action: unlink)
+        AccountItemRow(
+          icon: .link, title: account.label ?? provider,
+          detail: account.signsIn
+            ? Str.iosAccountOidcLinked(formatInstant(account.createdAt)) : Str.iosAccountOidcStale(provider)
+        ) {
+          MatineeButton(Str.iosAccountOidcUnlink, look: .ghost, size: .md, pending: busy, action: unlink)
         }
       }
     }
@@ -414,8 +415,7 @@ private struct LinkedAccountSection: View {
   private func unlink() {
     guard let api, !busy else { return }
     busy = true
-    // TODO(strings): account.oidc.unlinkFailed "Couldn't unlink {provider}"
-    launchShowing(snackbar, Str.webCommonErrorUnknown) {
+    launchShowing(snackbar, Str.iosAccountOidcUnlinkFailed(provider)) {
       defer { busy = false }
       try await api.account.oidc.unlink()
       loader.reload()
@@ -456,9 +456,9 @@ private struct SessionsSection: View {
     }
     .confirmDialog(
       isPresented: Binding(get: { signingOut != nil }, set: { if !$0 { signingOut = nil } }),
-      // TODO(strings): account.sessions.signOutTitle "Sign out {session}?", account.sessions.signOutDescription
-      title: signingOut.map { Str.accountSessionsSignOutNamed(sessionName($0)) } ?? Str.shellSignOut,
-      confirm: Str.shellSignOut
+      title: signingOut.map { Str.iosAccountSessionsSignOutTitle(sessionName($0)) }
+        ?? Str.iosAccountSessionsSignOutTitleUnnamed,
+      message: Str.iosAccountSessionsSignOutDescription, confirm: Str.shellSignOut
     ) {
       guard let api, let item = signingOut else { return }
       signingOut = nil

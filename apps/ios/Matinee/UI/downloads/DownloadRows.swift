@@ -60,8 +60,7 @@ func downloadNames(_ item: MediaItem) -> (String, String?) {
   _ downloads: Downloads, _ snackbar: Snackbar, _ ids: [String],
   _ change: @escaping @MainActor (Downloads, String) async throws -> Void
 ) {
-  // TODO(strings): downloads_change_failed, "Couldn't change the download".
-  launchShowing(snackbar, Str.downloadsFailed) {
+  launchShowing(snackbar, Str.iosDownloadsChangeFailed) {
     for id in ids { try await change(downloads, id) }
   }
 }

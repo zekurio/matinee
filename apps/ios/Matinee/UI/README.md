@@ -140,11 +140,11 @@ rails, and grids line up; `\.windowSize` for anything sized by the window.
 
 - Words come from `Str`, generated from Android's `strings.xml`. Use the
   accessor with its typed arguments and plural counts. A string Android
-  doesn't have: use the nearest accessor and mark it
-  `// TODO(strings): <android_key>` so the strings pass can swap it.
-  iOS-only text goes in `Resources/iOS.xcstrings` with an `ios_` key
-  (the app README, Conventions). Dates, numbers, and sizes go through
-  `Format.swift`.
+  doesn't have goes in `Resources/iOS.xcstrings` with an `ios_` key, in
+  English and German, worded as the web's message where it has one
+  (`apps/web/src/i18n/locales`), and `just ios strings` gives it an
+  accessor (the app README, Conventions). Dates, numbers, and sizes go
+  through `Format.swift`.
 - Icons are the kit's: `LucideIcon(.film, label:, size:)`. An icon-only
   control gets a label.
 - Sizes, colors, radii, spacing, and timing are the kit's tokens:

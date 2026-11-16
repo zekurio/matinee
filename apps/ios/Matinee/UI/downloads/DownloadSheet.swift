@@ -215,8 +215,7 @@ struct DownloadSheet: View {
         try await downloads.enqueue(source, server: server, original: original, spec: spec, plan: plan, subtitles: saved)
       } catch {
         AppLog.downloads.error("Could not queue a download")
-        // TODO(strings): downloads_queue_failed, "Couldn't start the download".
-        snackbar.post(ToastMessage(Str.downloadsFailed, kind: .error))
+        snackbar.post(ToastMessage(Str.iosDownloadsQueueFailed, kind: .error))
       }
     }
     dismiss()

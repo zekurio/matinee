@@ -593,9 +593,8 @@ struct FilesSection: View {
       switch files.state {
       case .loading: Color.clear.frame(height: 0)
       case .failed(let message, let disconnected):
-        // TODO(strings): title_files, the heading "Files"; meanwhile the count's.
         VStack(alignment: .leading, spacing: 0) {
-          SectionTitle(Str.downloadsAllFiles(title.itemCount)).padding(.horizontal, gutter)
+          SectionTitle(Str.iosTitleFiles).padding(.horizontal, gutter)
           ErrorSection(
             Str.downloadsFilesFailed, message, retrying: files.refreshing, disconnected: disconnected,
             onRetry: files.reload)
@@ -603,8 +602,7 @@ struct FilesSection: View {
       case .ready(let list):
         if list.count > 1 {
           VStack(alignment: .leading, spacing: Space.s3) {
-            // TODO(strings): title_files, the heading "Files"; meanwhile the count's.
-            SectionTitle(Str.downloadsAllFiles(list.count))
+            SectionTitle(Str.iosTitleFiles)
             VStack(spacing: Space.s1) {
               ForEach(list, id: \.id) { FileRow(item: $0) }
             }

@@ -2798,56 +2798,98 @@ nonisolated enum Str {
   static var webUsersTitle: String { tr("web_users_title") }
   /// (you)
   static var webUsersYou: String { tr("web_users_you") }
-  /// Titles
-  static var favoritesTitles: String { tr("favorites_titles", table: "iOS") }
-  /// Couldn't load the featured titles
-  static var homeFeaturedFailed: String { tr("home_featured_failed", table: "iOS") }
+  /// Couldn't save your name. %@
+  static func iosAccountDisplayNameSaveFailed(_ p1: String) -> String { tr("ios_account_display_name_save_failed", table: "iOS", p1) }
+  /// Linked %@
+  static func iosAccountOidcLinked(_ p1: String) -> String { tr("ios_account_oidc_linked", table: "iOS", p1) }
+  /// Linked to an earlier %@ setup, so it can't sign you in. Link it again.
+  static func iosAccountOidcStale(_ p1: String) -> String { tr("ios_account_oidc_stale", table: "iOS", p1) }
+  /// Unlink
+  static var iosAccountOidcUnlink: String { tr("ios_account_oidc_unlink", table: "iOS") }
+  /// Couldn't unlink %@
+  static func iosAccountOidcUnlinkFailed(_ p1: String) -> String { tr("ios_account_oidc_unlink_failed", table: "iOS", p1) }
+  /// Added %@
+  static func iosAccountPasskeysAdded(_ p1: String) -> String { tr("ios_account_passkeys_added", table: "iOS", p1) }
+  /// Remove passkey
+  static var iosAccountPasskeysRemove: String { tr("ios_account_passkeys_remove", table: "iOS") }
+  /// You won't be able to sign in with it again.
+  static var iosAccountPasskeysRemoveDescription: String { tr("ios_account_passkeys_remove_description", table: "iOS") }
+  /// Couldn't remove passkey
+  static var iosAccountPasskeysRemoveFailed: String { tr("ios_account_passkeys_remove_failed", table: "iOS") }
+  /// Remove %@
+  static func iosAccountPasskeysRemoveNamed(_ p1: String) -> String { tr("ios_account_passkeys_remove_named", table: "iOS", p1) }
+  /// Remove %@?
+  static func iosAccountPasskeysRemoveTitle(_ p1: String) -> String { tr("ios_account_passkeys_remove_title", table: "iOS", p1) }
+  /// Remove this passkey?
+  static var iosAccountPasskeysRemoveTitleUnnamed: String { tr("ios_account_passkeys_remove_title_unnamed", table: "iOS") }
+  /// Synced
+  static var iosAccountPasskeysSynced: String { tr("ios_account_passkeys_synced", table: "iOS") }
+  /// Passkey
+  static var iosAccountPasskeysUnnamed: String { tr("ios_account_passkeys_unnamed", table: "iOS") }
+  /// Used %@
+  static func iosAccountPasskeysUsed(_ p1: String) -> String { tr("ios_account_passkeys_used", table: "iOS", p1) }
+  /// Change picture
+  static var iosAccountPictureChange: String { tr("ios_account_picture_change", table: "iOS") }
+  /// Couldn't change your picture
+  static var iosAccountPictureChangeFailed: String { tr("ios_account_picture_change_failed", table: "iOS") }
+  /// Remove picture
+  static var iosAccountPictureRemove: String { tr("ios_account_picture_remove", table: "iOS") }
+  /// Profile
+  static var iosAccountProfileTitle: String { tr("ios_account_profile_title", table: "iOS") }
+  /// It has to sign in again to use Matinee.
+  static var iosAccountSessionsSignOutDescription: String { tr("ios_account_sessions_sign_out_description", table: "iOS") }
+  /// Sign out %@?
+  static func iosAccountSessionsSignOutTitle(_ p1: String) -> String { tr("ios_account_sessions_sign_out_title", table: "iOS", p1) }
+  /// Sign out this session?
+  static var iosAccountSessionsSignOutTitleUnnamed: String { tr("ios_account_sessions_sign_out_title_unnamed", table: "iOS") }
+  /// Couldn't change what your profile shows
+  static var iosAccountSharingFailed: String { tr("ios_account_sharing_failed", table: "iOS") }
+  /// Show my favorites
+  static var iosAccountSharingFavorites: String { tr("ios_account_sharing_favorites", table: "iOS") }
+  /// Show my statistics
+  static var iosAccountSharingStats: String { tr("ios_account_sharing_stats", table: "iOS") }
   /// Picked in the Settings app
   static var iosAppearanceLanguageDescription: String { tr("ios_appearance_language_description", table: "iOS") }
+  /// Server address
+  static var iosConnectAddress: String { tr("ios_connect_address", table: "iOS") }
   /// If the server is on your local network, turn on Local Network for Matinee in Settings.
   static var iosConnectLocalNetwork: String { tr("ios_connect_local_network", table: "iOS") }
   /// Share report
   static var iosDiagnosticsShare: String { tr("ios_diagnostics_share", table: "iOS") }
+  /// Couldn't change the download
+  static var iosDownloadsChangeFailed: String { tr("ios_downloads_change_failed", table: "iOS") }
+  /// Couldn't start the download
+  static var iosDownloadsQueueFailed: String { tr("ios_downloads_queue_failed", table: "iOS") }
   /// Choose File
   static var iosImagesFromFiles: String { tr("ios_images_from_files", table: "iOS") }
   /// Photo Library
   static var iosImagesFromPhotos: String { tr("ios_images_from_photos", table: "iOS") }
+  /// Next slide
+  static var iosMediaHeroNext: String { tr("ios_media_hero_next", table: "iOS") }
+  /// Previous slide
+  static var iosMediaHeroPrevious: String { tr("ios_media_hero_previous", table: "iOS") }
   /// Open Settings
   static var iosOpenSettings: String { tr("ios_open_settings", table: "iOS") }
+  /// Created
+  static var iosPeopleSectionCreator: String { tr("ios_people_section_creator", table: "iOS") }
   /// Remember audio picks
   static var iosPlaybackAudioRemember: String { tr("ios_playback_audio_remember", table: "iOS") }
+  /// Show length
+  static var iosPlayerShowLength: String { tr("ios_player_show_length", table: "iOS") }
+  /// Show time left
+  static var iosPlayerShowTimeLeft: String { tr("ios_player_show_time_left", table: "iOS") }
   /// %lld%% watched
   static func iosProgressWatched(_ p1: Int) -> String { tr("ios_progress_watched", table: "iOS", p1) }
   /// In Settings › Accessibility › Subtitles & Captioning
   static var iosSettingsSubtitlesSystemWhere: String { tr("ios_settings_subtitles_system_where", table: "iOS") }
   /// Matinee for iOS %@
   static func iosSettingsVersion(_ p1: String) -> String { tr("ios_settings_version", table: "iOS", p1) }
+  /// Files
+  static var iosTitleFiles: String { tr("ios_title_files", table: "iOS") }
   /// Trailer
   static var iosTitleTrailer: String { tr("ios_title_trailer", table: "iOS") }
   /// Watch the trailer on YouTube
   static var iosTitleTrailerHint: String { tr("ios_title_trailer_hint", table: "iOS") }
-  /// Favorite episodes
-  static var profileFavoriteEpisodes: String { tr("profile_favorite_episodes", table: "iOS") }
-  /// Tap the heart on a movie, show, or episode to keep it here.
-  static var profileNoFavoritesHint: String { tr("profile_no_favorites_hint", table: "iOS") }
-  /// Appearance
-  static var settingsAdminAppearance: String { tr("settings_admin_appearance", table: "iOS") }
-  /// Dark mode accent
-  static var webServerAppearanceAccentDark: String { tr("web_serverAppearance_accent_dark", table: "iOS") }
-  /// Light mode accent
-  static var webServerAppearanceAccentLight: String { tr("web_serverAppearance_accent_light", table: "iOS") }
-  /// Default
-  static var webServerAppearanceDefault: String { tr("web_serverAppearance_default", table: "iOS") }
-  /// Couldn't load the accent color. %1$@
-  static func webServerAppearanceLoadFailed(_ p1: String) -> String { tr("web_serverAppearance_loadFailed", table: "iOS", p1) }
-  /// Dark mode
-  static var webServerAppearanceModeDark: String { tr("web_serverAppearance_mode_dark", table: "iOS") }
-  /// Light mode
-  static var webServerAppearanceModeLight: String { tr("web_serverAppearance_mode_light", table: "iOS") }
-  /// Suggested accents
-  static var webServerAppearancePresets: String { tr("web_serverAppearance_presets", table: "iOS") }
-  /// Accent color
-  static var webServerAppearanceTitle: String { tr("web_serverAppearance_title", table: "iOS") }
 }
 
 nonisolated private func tr(_ key: String, table: String = "Localizable") -> String {
