@@ -25,6 +25,20 @@ extension Favorites {
   }
 }
 
+extension Favorites {
+  /// The lists without what was taken off here or elsewhere, so it goes at
+  /// once, before they're fetched again: Android's `FavoritesLoader.lists`.
+  /// A season reads its own mark, so taking a show off keeps its seasons.
+  @MainActor public func live(_ viewer: ViewerState) -> Favorites {
+    filtering(
+      title: viewer.isFavorite,
+      season: { title, season in
+        season.number.map { viewer.isSeasonFavorite(title, number: $0, fallback: season.favorite) } ?? season.favorite
+      },
+      episode: viewer.isFavorite)
+  }
+}
+
 extension Favorite {
   /// Dispatches all four kinds through the same live-mark predicates.
   public func isFavorite(
