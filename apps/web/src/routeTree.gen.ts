@@ -19,8 +19,10 @@ import { Route as AuthedAuthorizeRouteImport } from './routes/_authed/authorize'
 import { Route as AuthedLinkRouteImport } from './routes/_authed/link'
 import { Route as AuthedShellIndexRouteImport } from './routes/_authed/_shell/index'
 import { Route as AuthedShellMediaRouteImport } from './routes/_authed/_shell/media'
+import { Route as AuthedShellMoviesRouteImport } from './routes/_authed/_shell/movies'
 import { Route as AuthedShellRequestsRouteImport } from './routes/_authed/_shell/requests'
 import { Route as AuthedShellSearchRouteImport } from './routes/_authed/_shell/search'
+import { Route as AuthedShellShowsRouteImport } from './routes/_authed/_shell/shows'
 import { Route as AuthedShellStatsRouteImport } from './routes/_authed/_shell/stats'
 import { Route as AuthedPartyPartyIdRouteImport } from './routes/_authed/party.$partyId'
 import { Route as AuthedWatchItemIdRouteImport } from './routes/_authed/watch.$itemId'
@@ -88,6 +90,11 @@ const AuthedShellMediaRoute = AuthedShellMediaRouteImport.update({
   path: '/media',
   getParentRoute: () => AuthedShellRoute,
 } as any)
+const AuthedShellMoviesRoute = AuthedShellMoviesRouteImport.update({
+  id: '/movies',
+  path: '/movies',
+  getParentRoute: () => AuthedShellRoute,
+} as any)
 const AuthedShellRequestsRoute = AuthedShellRequestsRouteImport.update({
   id: '/requests',
   path: '/requests',
@@ -96,6 +103,11 @@ const AuthedShellRequestsRoute = AuthedShellRequestsRouteImport.update({
 const AuthedShellSearchRoute = AuthedShellSearchRouteImport.update({
   id: '/search',
   path: '/search',
+  getParentRoute: () => AuthedShellRoute,
+} as any)
+const AuthedShellShowsRoute = AuthedShellShowsRouteImport.update({
+  id: '/shows',
+  path: '/shows',
   getParentRoute: () => AuthedShellRoute,
 } as any)
 const AuthedShellStatsRoute = AuthedShellStatsRouteImport.update({
@@ -211,8 +223,10 @@ export interface FileRoutesByFullPath {
   '/authorize': typeof AuthedAuthorizeRoute
   '/link': typeof AuthedLinkRoute
   '/media': typeof AuthedShellMediaRoute
+  '/movies': typeof AuthedShellMoviesRoute
   '/requests': typeof AuthedShellRequestsRoute
   '/search': typeof AuthedShellSearchRoute
+  '/shows': typeof AuthedShellShowsRoute
   '/stats': typeof AuthedShellStatsRoute
   '/party/$partyId': typeof AuthedPartyPartyIdRoute
   '/watch/$itemId': typeof AuthedWatchItemIdRoute
@@ -241,8 +255,10 @@ export interface FileRoutesByTo {
   '/authorize': typeof AuthedAuthorizeRoute
   '/link': typeof AuthedLinkRoute
   '/media': typeof AuthedShellMediaRoute
+  '/movies': typeof AuthedShellMoviesRoute
   '/requests': typeof AuthedShellRequestsRoute
   '/search': typeof AuthedShellSearchRoute
+  '/shows': typeof AuthedShellShowsRoute
   '/stats': typeof AuthedShellStatsRoute
   '/party/$partyId': typeof AuthedPartyPartyIdRoute
   '/watch/$itemId': typeof AuthedWatchItemIdRoute
@@ -273,8 +289,10 @@ export interface FileRoutesById {
   '/_authed/authorize': typeof AuthedAuthorizeRoute
   '/_authed/link': typeof AuthedLinkRoute
   '/_authed/_shell/media': typeof AuthedShellMediaRoute
+  '/_authed/_shell/movies': typeof AuthedShellMoviesRoute
   '/_authed/_shell/requests': typeof AuthedShellRequestsRoute
   '/_authed/_shell/search': typeof AuthedShellSearchRoute
+  '/_authed/_shell/shows': typeof AuthedShellShowsRoute
   '/_authed/_shell/stats': typeof AuthedShellStatsRoute
   '/_authed/party/$partyId': typeof AuthedPartyPartyIdRoute
   '/_authed/watch/$itemId': typeof AuthedWatchItemIdRoute
@@ -306,8 +324,10 @@ export interface FileRouteTypes {
     | '/authorize'
     | '/link'
     | '/media'
+    | '/movies'
     | '/requests'
     | '/search'
+    | '/shows'
     | '/stats'
     | '/party/$partyId'
     | '/watch/$itemId'
@@ -336,8 +356,10 @@ export interface FileRouteTypes {
     | '/authorize'
     | '/link'
     | '/media'
+    | '/movies'
     | '/requests'
     | '/search'
+    | '/shows'
     | '/stats'
     | '/party/$partyId'
     | '/watch/$itemId'
@@ -367,8 +389,10 @@ export interface FileRouteTypes {
     | '/_authed/authorize'
     | '/_authed/link'
     | '/_authed/_shell/media'
+    | '/_authed/_shell/movies'
     | '/_authed/_shell/requests'
     | '/_authed/_shell/search'
+    | '/_authed/_shell/shows'
     | '/_authed/_shell/stats'
     | '/_authed/party/$partyId'
     | '/_authed/watch/$itemId'
@@ -470,6 +494,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedShellMediaRouteImport
       parentRoute: typeof AuthedShellRoute
     }
+    '/_authed/_shell/movies': {
+      id: '/_authed/_shell/movies'
+      path: '/movies'
+      fullPath: '/movies'
+      preLoaderRoute: typeof AuthedShellMoviesRouteImport
+      parentRoute: typeof AuthedShellRoute
+    }
     '/_authed/_shell/requests': {
       id: '/_authed/_shell/requests'
       path: '/requests'
@@ -482,6 +513,13 @@ declare module '@tanstack/react-router' {
       path: '/search'
       fullPath: '/search'
       preLoaderRoute: typeof AuthedShellSearchRouteImport
+      parentRoute: typeof AuthedShellRoute
+    }
+    '/_authed/_shell/shows': {
+      id: '/_authed/_shell/shows'
+      path: '/shows'
+      fullPath: '/shows'
+      preLoaderRoute: typeof AuthedShellShowsRouteImport
       parentRoute: typeof AuthedShellRoute
     }
     '/_authed/_shell/stats': {
@@ -615,8 +653,10 @@ declare module '@tanstack/react-router' {
 
 interface AuthedShellRouteChildren {
   AuthedShellMediaRoute: typeof AuthedShellMediaRoute
+  AuthedShellMoviesRoute: typeof AuthedShellMoviesRoute
   AuthedShellRequestsRoute: typeof AuthedShellRequestsRoute
   AuthedShellSearchRoute: typeof AuthedShellSearchRoute
+  AuthedShellShowsRoute: typeof AuthedShellShowsRoute
   AuthedShellStatsRoute: typeof AuthedShellStatsRoute
   AuthedShellIndexRoute: typeof AuthedShellIndexRoute
   AuthedShellDiscoverMoviesRoute: typeof AuthedShellDiscoverMoviesRoute
@@ -638,8 +678,10 @@ interface AuthedShellRouteChildren {
 
 const AuthedShellRouteChildren: AuthedShellRouteChildren = {
   AuthedShellMediaRoute: AuthedShellMediaRoute,
+  AuthedShellMoviesRoute: AuthedShellMoviesRoute,
   AuthedShellRequestsRoute: AuthedShellRequestsRoute,
   AuthedShellSearchRoute: AuthedShellSearchRoute,
+  AuthedShellShowsRoute: AuthedShellShowsRoute,
   AuthedShellStatsRoute: AuthedShellStatsRoute,
   AuthedShellIndexRoute: AuthedShellIndexRoute,
   AuthedShellDiscoverMoviesRoute: AuthedShellDiscoverMoviesRoute,

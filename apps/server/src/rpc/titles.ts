@@ -168,20 +168,30 @@ export const titles = {
   }),
 
   browse: authed.titles.browse.handler(async ({ context, input }) => {
+    if (input.libraryId && !(await libraryFor(context.user, input.libraryId))) {
+      throw notFound("Library not found.")
+    }
     const limits = await ratingLimits(input.filters)
     // ACCESS: Both queries use titleWhere, which applies the viewer's visibleTitles filter.
     const [rows, kinds] = await Promise.all([
       db
         .select()
         .from(title)
-        .where(titleWhere(context.user, input, limits))
+        .where(titleWhere(context.user, input, limits, input.libraryId))
         .orderBy(...titleOrder(input.sort, input.order))
         .limit(input.limit)
         .offset(input.offset),
       db
         .select({ kind: title.kind, n: count() })
         .from(title)
-        .where(titleWhere(context.user, { ...input, kind: undefined }, limits))
+        .where(
+          titleWhere(
+            context.user,
+            { ...input, kind: undefined },
+            limits,
+            input.libraryId,
+          ),
+        )
         .groupBy(title.kind),
     ])
     const byKind = new Map(kinds.map((row) => [row.kind, row.n]))

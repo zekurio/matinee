@@ -3132,6 +3132,7 @@ data class TitlesBrowseInput(
     val order: String? = null,
     val limit: Int? = null,
     val offset: Int? = null,
+    val libraryId: String? = null,
 )
 
 @Serializable

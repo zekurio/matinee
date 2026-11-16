@@ -74,10 +74,13 @@ export const titlesContract = oc.tag("Titles").router({
     .input(TitleQuery.extend({ libraryId: t.uuid() }))
     .output(TitleList),
   /**
-   * Titles from every library, such as a genre's or a studio's. The
-   * query matches names only, not paths as in a library's list.
+   * Titles from every library, such as a genre's or a studio's, or from
+   * the one `libraryId` names. The query matches names, and paths too
+   * within one library, as in a library's list.
    */
-  browse: post("/titles/browse").input(TitleQuery).output(BrowsedTitles),
+  browse: post("/titles/browse")
+    .input(TitleQuery.extend({ libraryId: t.uuid().optional() }))
+    .output(BrowsedTitles),
   /**
    * What each of `list`'s and `browse`'s filters offers for the titles in
    * a scope, with how many titles have each choice.
