@@ -2874,8 +2874,6 @@ nonisolated enum Str {
   static var iosSettingsSubtitlesSystemWhere: String { tr("ios_settings_subtitles_system_where", table: "iOS") }
   /// Matinee for iOS %@
   static func iosSettingsVersion(_ p1: String) -> String { tr("ios_settings_version", table: "iOS", p1) }
-  /// Files
-  static var iosTitleFiles: String { tr("ios_title_files", table: "iOS") }
   /// Trailer
   static var iosTitleTrailer: String { tr("ios_title_trailer", table: "iOS") }
   /// Watch the trailer on YouTube

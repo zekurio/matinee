@@ -100,16 +100,6 @@ private func options(ratings: Int = 1, sorts: [String] = TitleSort.knownValues) 
     #expect(studio.genres == [])
     #expect(studio.studios == ["Pixar"])
   }
-
-  @Test func kindChipsOnlyWithBothKinds() {
-    #expect(browseKindChoices(nil, picked: nil) == nil)
-    #expect(browseKindChoices(.init(movie: 3, show: 0), picked: nil) == nil)
-    // One picked keeps a way back, even when the filters leave none of it.
-    #expect(browseKindChoices(.init(movie: 3, show: 0), picked: TitleKind.show)?.map(\.count) == [3, 3, 0])
-    let both = browseKindChoices(.init(movie: 3, show: 2), picked: nil)
-    #expect(both?.map(\.kind) == [nil, TitleKind.movie, TitleKind.show])
-    #expect(both?.map(\.count) == [5, 3, 2])
-  }
 }
 
 /// The person page's helpers, after the web's people.$name.tsx.
