@@ -5,8 +5,9 @@ import SwiftUI
 /*
  * Bars.kt: the bars around pages. The tabs on a tab's first page, at the
  * bottom of a phone and at the top of an iPad (Shell.swift says which);
- * Home's header; the floating buttons over a title's art; and the shade
- * that keeps the status bar readable once a page scrolls under it.
+ * Home's header, the logo on a phone; the floating buttons over a title's
+ * art; and the shade that keeps the status bar readable once a page
+ * scrolls under it.
  *
  * A page opened from a tab gets its top from the kit, `.topBar(title)`,
  * which hides the system's bar and keeps the edge swipe back; one that
@@ -126,45 +127,42 @@ private struct ProfileTabPicture: View {
   }
 }
 
-/// Home's header: room for the status bar over the banner's art, and
+/// Home's header, over its featured titles and over offline Home's rows:
+/// on a phone, the logo, as the top edge the tab's first page has; and
 /// whether the app is offline, or `action`, as the icon to reach the server
-/// again. It scrolls away with the page. The banner's own title carries the
-/// top, so there's no logo competing with it; search and the account are in
-/// the tabs. The status bar's shade is the page's `statusBarScrim`, one
-/// shade rather than two that would meet in a band.
-///
-/// Put it on top of the art with the height above the page's content as `topInset`.
+/// again. An iPad's tabs have the logo already, so there it holds only the
+/// icon. It scrolls away with the page. Search and the account are in the
+/// tabs. The status bar's shade is the page's `statusBarScrim`.
 struct AppHeader<Action: View>: View {
-  var topInset: CGFloat = 0
   @ViewBuilder var action: () -> Action
   @Environment(\.offline) private var offline
   @Environment(\.palette) private var palette
   @Environment(\.gutter) private var gutter
+  @Environment(\.shellStyle) private var style
 
-  init(topInset: CGFloat = 0, @ViewBuilder action: @escaping () -> Action) {
-    self.topInset = topInset
+  init(@ViewBuilder action: @escaping () -> Action) {
     self.action = action
   }
 
   var body: some View {
-    VStack(spacing: 0) {
-      Color.clear.frame(height: topInset)
-      HStack {
-        Spacer()
-        if offline {
-          LucideIcon(.cloudOff, label: Str.downloadsOffline, size: 20, tint: palette.mutedForeground)
-        } else {
-          action()
-        }
+    HStack(spacing: Space.s3) {
+      if style == .phone {
+        Logo(height: 20).accessibilityAddTraits(.isHeader)
       }
-      .frame(height: 56)
-      .padding(.horizontal, gutter)
+      Spacer(minLength: 0)
+      if offline {
+        LucideIcon(.cloudOff, label: Str.downloadsOffline, size: 20, tint: palette.mutedForeground)
+      } else {
+        action()
+      }
     }
+    .frame(height: 56)
+    .padding(.horizontal, gutter)
   }
 }
 
 extension AppHeader where Action == EmptyView {
-  init(topInset: CGFloat = 0) { self.init(topInset: topInset) { EmptyView() } }
+  init() { self.init { EmptyView() } }
 }
 
 /// Back and Home over a title's, season's, or episode's art, with the page

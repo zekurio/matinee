@@ -3,7 +3,7 @@ import Testing
 
 @testable import MatineeCore
 
-/// Android's HomeSectionsTest.kt, and the banner's rules from Hero.kt and HomeScreen.kt.
+/// Android's HomeSectionsTest.kt, and the featured carousel's rules.
 struct HomeSectionsTest {
   @Test func railsTellLoadingEmptyFailedAndShownApart() {
     #expect(railState(Load<[Int]>.loading) == .loading)
@@ -33,54 +33,51 @@ struct HomeSectionsTest {
     #expect(NoLibraries(admin: false) == .noneOpen)
   }
 
-  @Test func theBannerRepeatsForwardAndADotFindsTheNearestPage() {
-    #expect(HeroPaging.pages(1) == 1)
-    #expect(HeroPaging.initialPage(1) == 0)
-    #expect(HeroPaging.pages(3) == 3000)
-    #expect(HeroPaging.initialPage(3) == 1500)
-    #expect(HeroPaging.slide(1500, count: 3) == 0)
-    #expect(HeroPaging.slide(1502, count: 3) == 2)
-    #expect(HeroPaging.slide(1503, count: 3) == 0)
-    #expect(HeroPaging.page(showing: 2, from: 1504, count: 3) == 1505)
-    #expect(HeroPaging.page(showing: 0, from: 1505, count: 3) == 1503)
+  @Test func aPhoneShowsOneCardATabletTwoAndAWideWindowThree() {
+    #expect(FeaturedCarousel.columns(width: 402) == 1)
+    #expect(FeaturedCarousel.columns(width: 599) == 1)
+    #expect(FeaturedCarousel.columns(width: 600) == 2)
+    #expect(FeaturedCarousel.columns(width: 820) == 2)
+    #expect(FeaturedCarousel.columns(width: 840) == 3)
+    #expect(FeaturedCarousel.columns(width: 1366) == 3)
   }
 
-  @Test func aPhonesBannerIsShortAndATabletsTall() {
-    #expect(heroHeight(window: 952, wide: false) == 328.44)
-    #expect(heroHeight(window: 700, wide: false) == 320)
-    #expect(heroHeight(window: 1400, wide: false) == 400)
-    // Under a taller status bar, the banner reaches further up.
-    #expect(heroHeight(window: 700, wide: false, topInset: 62) == 358)
-    #expect(heroHeight(window: 1000, wide: true) == 680)
-    #expect(heroHeight(window: 600, wide: true) == 460)
-    #expect(heroHeight(window: 400, wide: true) == 360)
-    // A tall tablet's stops at the web's 720.
-    #expect(heroHeight(window: 1366, wide: true) == 720)
+  @Test func fewTitlesFillTheRowRatherThanLeaveAHole() {
+    #expect(FeaturedCarousel.perRow(width: 1032, count: 6) == 3)
+    #expect(FeaturedCarousel.perRow(width: 1032, count: 2) == 2)
+    #expect(FeaturedCarousel.perRow(width: 820, count: 1) == 1)
+    #expect(FeaturedCarousel.perRow(width: 402, count: 0) == 1)
   }
 
-  @Test func onlyATabletSizedWindowGetsTheTallBanner() {
-    #expect(heroIsWide(width: 820, height: 1180))
-    #expect(heroIsWide(width: 1180, height: 820))
-    #expect(!heroIsWide(width: 402, height: 874))
-    // A phone on its side.
-    #expect(!heroIsWide(width: 874, height: 402))
+  @Test func theRowRestsWhereACardCanLeadIt() {
+    #expect(FeaturedCarousel.stops(count: 6, perRow: 1) == 6)
+    #expect(FeaturedCarousel.stops(count: 6, perRow: 3) == 4)
+    #expect(FeaturedCarousel.stops(count: 2, perRow: 2) == 1)
+    #expect(FeaturedCarousel.stops(count: 0, perRow: 1) == 1)
   }
 
-  @Test func aSlideListsTheYearAndAShowsEpisodes() {
-    let episodes: (Int) -> String = { "\($0) episodes" }
-    #expect(featured(kind: TitleKind.movie, year: 1999, count: 1).facts(episodes: episodes) == ["1999"])
-    #expect(
-      featured(kind: TitleKind.show, year: 2008, count: 6).facts(episodes: episodes) == ["2008", "6 episodes"])
-    #expect(featured(kind: TitleKind.show, year: nil, count: 1).facts(episodes: episodes).isEmpty)
+  @Test func theAdvanceGoesBackToTheFirstAfterTheLast() {
+    #expect(FeaturedCarousel.next(after: 0, stops: 4) == 1)
+    #expect(FeaturedCarousel.next(after: 3, stops: 4) == 0)
+    #expect(FeaturedCarousel.next(after: 0, stops: 1) == 0)
+    #expect(FeaturedCarousel.previous(before: 0, stops: 4) == 3)
+    #expect(FeaturedCarousel.previous(before: 2, stops: 4) == 1)
   }
 
-  @Test func aPhoneShowsHowFarThePersonIsOverTheGenres() {
-    let slide = featured(kind: TitleKind.movie, year: 1999, count: 1, genres: ["Action", "Sci-Fi", "Drama", "War"])
-    #expect(slide.showsGenres(wide: false, resuming: false))
-    #expect(!slide.showsGenres(wide: false, resuming: true))
-    #expect(slide.showsGenres(wide: true, resuming: true))
-    #expect(slide.shownGenres == ["Action", "Sci-Fi", "Drama"])
-    #expect(!featured(kind: TitleKind.movie, year: 1999, count: 1).showsGenres(wide: true, resuming: false))
+  @Test func aScrolledRowRestsAtTheNearestStop() {
+    #expect(FeaturedCarousel.stop(offset: 0, stride: 370, stops: 6) == 0)
+    #expect(FeaturedCarousel.stop(offset: 190, stride: 370, stops: 6) == 1)
+    #expect(FeaturedCarousel.stop(offset: 5000, stride: 370, stops: 6) == 5)
+    #expect(FeaturedCarousel.stop(offset: -40, stride: 370, stops: 6) == 0)
+    #expect(FeaturedCarousel.stop(offset: 100, stride: 0, stops: 6) == 0)
+  }
+
+  @Test func aCardNamesUpToThreeGenresAndNothingElse() {
+    let genres = ["Action", "Sci-Fi", "Drama", "War"]
+    #expect(featured(kind: TitleKind.movie, year: 1999, count: 1, genres: genres).cardLine() == "Action · Sci-Fi · Drama")
+    #expect(featured(kind: TitleKind.movie, year: 1999, count: 1, genres: ["Drama"]).cardLine(separator: ", ") == "Drama")
+    #expect(featured(kind: TitleKind.movie, year: 1999, count: 1).cardLine() == nil)
+    #expect(featured(kind: TitleKind.show, year: nil, count: 1).cardLine() == nil)
   }
 
   private func featured(kind: String, year: Int?, count: Int, genres: [String] = []) -> FeaturedTitle {
